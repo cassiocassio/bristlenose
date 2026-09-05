@@ -28,17 +28,24 @@ PROTOCOL_VERSION = 1
 # whole line vanished (measured 5 Sep 2026). sink.sh normalises control bytes
 # before quoting, but the locale case is the writer's environment, not its
 # choice — so the ONE parser decodes the form itself, before shlex sees it.
-_ANSI_C = re.compile(r"\$'((?:[^'\\]|\\.)*)'")
+# (?<!\\): printf %q renders a literal $ as \$, so a value `cost $'5'` arrives as
+# `cost\ \$'5'` — that is data, not quoting, and must not be decoded.
+_ANSI_C = re.compile(r"(?<!\\)\$'((?:[^'\\]|\\.)*)'")
 _ESC = {"n": "\n", "t": "\t", "r": "\r", "\\": "\\", "'": "'", '"': '"', "a": "\a", "b": "\b", "f": "\f", "v": "\v", "e": "\x1b", "E": "\x1b"}
 
 
 def _decode_ansi_c(body: str) -> str:
+    """Byte-level: bash 3.2 under a UTF-8 locale writes a multibyte character as
+    its lead byte RAW plus the continuation bytes as octal (`\xe2\200\224` for an
+    em dash). The raw byte survives the file read only if the reader used
+    surrogateescape — see parse_stream — and is re-encoded here the same way, so
+    the sequence reassembles before the single UTF-8 decode at the end."""
     out = bytearray()
     i = 0
     while i < len(body):
         c = body[i]
         if c != "\\" or i + 1 >= len(body):
-            out += c.encode("utf-8")
+            out += c.encode("utf-8", errors="surrogateescape")
             i += 1
             continue
         n = body[i + 1]
@@ -57,7 +64,7 @@ def _decode_ansi_c(body: str) -> str:
                 out.append(int(body[i + 2:j], 16))
                 i = j
                 continue
-        out += _ESC.get(n, "\\" + n).encode("utf-8")
+        out += _ESC.get(n, "\\" + n).encode("utf-8", errors="surrogateescape")
         i += 2
     return out.decode("utf-8", errors="replace")
 
@@ -85,8 +92,16 @@ def parse_event(line: str) -> tuple[str, dict[str, str]] | None:
     return kind, fields
 
 
+def read_sink_text(path) -> str:
+    """Read a sink file for parse_stream: bytes, decoded with surrogateescape so an
+    invalid byte (bash 3.2's raw lead byte) reaches the ANSI-C decoder intact
+    instead of becoming U+FFFD on the way in."""
+    with open(path, "rb") as fh:
+        return fh.read().decode("utf-8", errors="surrogateescape")
+
+
 def parse_stream(text: str) -> tuple[list[tuple[int, str, dict[str, str]]], list[tuple[int, str]], bool]:
-    """Parse a whole sink file.
+    """Parse a whole sink file (text from read_sink_text, or any str).
 
     Returns (events, unparsed, partial):
       events   — [(line_no, kind, fields)] for every complete `@bn` line that parsed
@@ -112,5 +127,6 @@ def parse_stream(text: str) -> tuple[list[tuple[int, str, dict[str, str]]], list
             unparsed.append((no, raw))
             continue
         kind, fields = parsed
+        fields = {k: v.encode("utf-8", errors="surrogateescape").decode("utf-8", errors="replace") for k, v in fields.items()}
         events.append((no, kind, fields))
     return events, unparsed, partial

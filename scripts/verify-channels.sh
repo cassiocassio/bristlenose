@@ -378,9 +378,9 @@ for _ch in $CHANNELS; do
         if [ "$_declared" = 1 ]; then
             row "$_ch" "skipped" "declared unprobeable in project.conf"
         else
-            printf '  %b✗%b %-18s %sno probe_%s function — channel listed but unchecked%s\n' \
-                "$R" "$N" "$_ch" "$D" "$_ch" "$N"
-            VERDICTS+=("bad")
+            # Through row(): it pushes the verdict AND writes the sink line, so
+            # the board sees WHY the card is red instead of a missing row.
+            row "$_ch" "bad" "no probe_$_ch function — channel listed but unchecked"
         fi
         continue
     fi

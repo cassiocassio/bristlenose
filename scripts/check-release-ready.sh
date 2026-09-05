@@ -605,7 +605,7 @@ else
     # 2b. The file-age test says so up front, without duplicating
     # build-sidecar.sh's deps fingerprint in a second file.
     if [ pyproject.toml -nt .venv-sidecar/pyvenv.cfg ]; then
-        warn "dependency drift" "pyproject.toml is newer than the sidecar venv — the two rows below describe the LAST build; step 2b will re-resolve"
+        warn "dependency drift (age)" "pyproject.toml is newer than the sidecar venv — the two rows below describe the LAST build; step 2b will re-resolve"
     fi
     _drift=$(.venv/bin/python scripts/check-dep-drift.py 2>&1); _drift_rc=$?
     case "$_drift_rc" in

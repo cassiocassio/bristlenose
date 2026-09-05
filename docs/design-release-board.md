@@ -137,17 +137,23 @@ Inputs, and each pane's **no-data condition**:
 | Pane | Source | No data when |
 |---|---|---|
 | header | `context.json` allowlist (`os arch xcode python disk_free_gb git`), `ci-sha` | file absent (0.28.0 has none) — header shows version and started only |
-| the line | `steps.tbl` + `events.jsonl` folded | `steps.tbl` absent → exit 1; unparseable lines counted and shown |
+| the line | `steps.tbl` + `events.jsonl` folded | `steps.tbl` absent → ledger order, confounded log not computable; unparseable lines counted and shown; a partial trailing line **naming a step** folds that step to `corrupt`, as `release.sh` does |
 | liveness | `.lock/pid` + `os.kill(pid,0)`; heartbeat as a fact | no lock and no `running` → "not running"; lock + dead pid → stranded; empty heartbeat → "mid-write" |
 | preflight | sink `row src=preflight` | no rows → no-data; rows present → N of them, never a rollup the file did not make |
-| build steps / checks / gates / art | sink `@bn step/check/gate/art` inside the driver's `build-all` window | driver boundary present, zero child lines → "ran, sink received nothing"; no boundary → "not run" |
+| build steps / checks / gates / art | sink `@bn step/check/gate/art` inside the driver's window for each lane whose command is a `desktop/scripts/build-*.sh` (read from `steps.tbl`) | no boundary → not-run / skipped / failed-no-window by the ledger; boundary present, zero child lines → "ran, no @bn lines" — counted as *missing* only when that script emitted on this or the previous run (`build-dmg.sh` never has; a permanent entry would be the gate that cries wolf) |
 | CI | sink `ci` lines from `status` | none → "not queried (run `release.sh status`)" |
 | ratchets | `ratchet.json` | ceilings only: "ceiling N · current not measured" |
 | tag | `ci-sha` + the tag step's fold | as the line |
-| channels | `CHANNELS` from `project.conf` × newest complete verify's rows | no verify → no-data; verify without `done` → "partial, N of M"; `unreachable` amber never green; `as_of` age shown |
+| channels | `CHANNELS` from `project.conf` × newest complete verify's rows | no verify → no-data; verify without `done` → "partial, N of M"; a verify whose `version=` is not this run's → rows withheld and said (a bare `release.sh verify` probes the tree's version); `unreachable` amber never green; `as_of` is the batch's newest stamp |
 | clocks | sink `clock` | none → no-data; empty `expires` → no-data |
 | events | both ledgers merged `(ts, source_rank, line_index)`, conductor wins | — |
-| failed step | log **path** and exit code only; `--with-logs` adds a 12×200 tail with CSI/control bytes stripped, in `board-with-logs.html` | — |
+| failed step | log **path** and exit code only; `--with-logs` adds a 12×200 tail with CSI/control bytes stripped, in `board-with-logs.html` **and** `board-with-logs.json` — `board.json` is never overwritten with tails | — |
+
+Every sink string is scrubbed at the door (`scrub()`): signing-identity common
+names collapse to their kind, ten-character team ids after "Team" to `<team>`,
+and the home directory to `~`. `context.json` is allowlisted; the sink is the
+other door, and `bn_meta identity=` / `bn_art signed=` walk through it. Output
+files are 0600 and written `O_NOFOLLOW`.
 
 **The confounded-expectations log** (added 5 Sep 2026 after the drift
 review). The board's drift guard is one pane, always present, with its count in
@@ -292,7 +298,9 @@ Owed, and written down rather than done: the round-trip test that drives the
 real `release.sh` under a sink and asserts the board's fold equals the
 driver's (guard 3 of the drift review); a redacted `bn-events.log` fixture
 after the first real feed (guard 5); the orphaned Python suites in no
-workflow, now three. And one observation from the build: `test-release-sh.sh`
+workflow — `test-release-board.py` and `test-sink.sh` joined `ci.yml`'s
+release-suites job on 5 Sep 2026, which leaves the two that were there before.
+And one observation from the build: `test-release-sh.sh`
 still reaches the real `.release/` on some path with a version that resolves
 to 0.28.0 and declines at the prompt — harmless now that the driver's lines
 land after the prompt, and worth a look.

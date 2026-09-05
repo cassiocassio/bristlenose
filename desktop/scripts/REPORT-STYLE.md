@@ -70,9 +70,16 @@ Three rules the file taught, all measured:
 - **Normalise before `%q`.** `printf %q` renders control bytes — and, under a
   C locale, every non-ASCII byte — in ANSI-C quoting (`$'…'`), which `shlex`
   does not decode: a newline plus an apostrophe made the parser drop the whole
-  line. `sink_line` strips `\000-\037` (CR/LF/TAB → space) and caps at 200
-  bytes, which also keeps every line under `PIPE_BUF`; the parser decodes any
-  legacy `$'…'` it still meets, and **counts** what it cannot read.
+  line. `sink_line` strips `\000-\037` (CR/LF/TAB → space), caps at 200
+  bytes, drops an incomplete trailing UTF-8 sequence, and runs the pipeline
+  under `LC_ALL=C` (a UTF-8 BSD `tr`/`cut` aborts on the first invalid byte,
+  and a `set -e` caller dies inside the sink). The cap stops a value forging
+  a second `@bn` line; it does **not** make a line atomic — bash's `printf` to
+  a file is stdio-buffered at 1 KB and `%q` can expand a non-ASCII value
+  fourfold, so two writers can splice a long line, which the parser then
+  counts as unparsed rather than reading half of it. The parser decodes
+  `$'…'` byte-wise (bash 3.2 writes a raw lead byte plus octal continuations)
+  and **counts** what it cannot read.
 - **Ownership is one token.** The sink follows rendering ownership: a nested
   child that is silent on stdout is silent in the file. `bn_autowrap` claims
   `_bn_owner` on *every* standalone path — plain mode and no-renderer used to
@@ -154,7 +161,9 @@ bn_done ok
   they reappear under `BN_REPORT=0`. Don't convert every line.
 - **`bn_autowrap` handles every mode**: standalone → wraps + renders; nested under a
   rendering parent → silent (parent narrates); `BN_REPORT=0` or no python → plain
-  `==>` output.
+  `==>` output — and since 5 Sep 2026 a plain-mode parent claims ownership too,
+  so its nested children are silent under `BN_REPORT=0` as well (they used to
+  each print, and each write to the sink).
 - **Redirect a noisy/opaque subprocess** to `desktop/build/<name>.log` and pass
   `log=<path>` on `bn_step_start`; the renderer shows "tail `<basename>`" while it
   runs and points there on failure.

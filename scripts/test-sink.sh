@@ -47,8 +47,8 @@ parse_counts() {
 import os, sys
 sys.path.insert(0, os.path.join(os.environ["ROOTP"], "desktop", "scripts"))
 from bn_events import parse_stream
-text = open(sys.argv[1], encoding="utf-8", errors="replace").read()
-events, unparsed, partial = parse_stream(text)
+from bn_events import read_sink_text
+events, unparsed, partial = parse_stream(read_sink_text(sys.argv[1]))
 print(len(events), len(unparsed), int(partial))
 PYEOF
 }
@@ -56,8 +56,8 @@ field_of() { # field_of <file> <kind> <field> — first match
     ROOTP="$ROOT" "$PY" - "$1" "$2" "$3" <<'PYEOF'
 import os, sys
 sys.path.insert(0, os.path.join(os.environ["ROOTP"], "desktop", "scripts"))
-from bn_events import parse_stream
-events, _, _ = parse_stream(open(sys.argv[1], encoding="utf-8", errors="replace").read())
+from bn_events import parse_stream, read_sink_text
+events, _, _ = parse_stream(read_sink_text(sys.argv[1]))
 for _, kind, f in events:
     if kind == sys.argv[2] and sys.argv[3] in f:
         print(f[sys.argv[3]]); break
@@ -137,9 +137,18 @@ bn_done ok
 EOF
 chmod +x "$WORK/parent.sh"
 rm -f "$SINK"
-EVIDENCE=e CHILD="$WORK/fake.sh" BN_EVENT_SINK="$SINK" "$WORK/parent.sh" >/dev/null 2>&1
+EVIDENCE=e CHILD="$WORK/fake.sh" BN_EVENT_SINK="$SINK" "$WORK/parent.sh" >"$WORK/parent.out" 2>&1
 set -- $(parse_counts "$SINK")
 eq "renderer mode: parent's 3 events only, child silent" 3 "${1:-0}"
+# …and it WAS the renderer path, not plain mode wearing its clothes: rich is
+# importable here, so bn_autowrap must have re-exec'd under build_report.py and
+# no raw @bn line reaches stdout. Without this the count above would also pass
+# for a plain-mode run, and section 4's two cases would prove one thing twice.
+if "$PY" -c 'import rich' 2>/dev/null; then
+    if grep -q '^@bn ' "$WORK/parent.out"; then bad "renderer mode leaked raw @bn lines to stdout (plain mode ran instead)"; else ok "renderer mode: no raw @bn line on stdout"; fi
+else
+    ok "rich not importable — renderer-vs-plain distinction not provable here (skipped)"
+fi
 rm -f "$SINK"
 EVIDENCE=e CHILD="$WORK/fake.sh" BN_REPORT=0 BN_EVENT_SINK="$SINK" "$WORK/parent.sh" >/dev/null 2>&1
 set -- $(parse_counts "$SINK")
@@ -161,7 +170,12 @@ eq "a line shlex cannot read is COUNTED as unparsed, not dropped" 1 "${2:-0}"
 
 head_ "6 · bash 3.2 safety — the sink is sourced by a /bin/bash 3.2 build phase"
 for f in desktop/scripts/sink.sh desktop/scripts/report.sh; do
-    # comments stripped first: both headers SAY "no \${var,,}" and would match
+    # comments stripped first: both headers SAY "no \${var,,}" and would match.
+    # The strip is `#.*$`, which also removes a `#` inside `${var#pat}` and
+    # anything after it on that line — so a bash-4 construct to the RIGHT of a
+    # parameter expansion on the same line is invisible to this grep. Accepted:
+    # the two files are short, and bash 3.2 itself is the gate that matters
+    # (the Xcode build phase runs them).
     if sed 's/[[:space:]]*#.*$//' "$ROOT/$f" | grep -nE 'declare -A|\$\{[a-zA-Z_]+,,\}|mapfile' >/dev/null; then
         bad "$f uses a bash-4 construct"
     else
@@ -169,4 +183,5 @@ for f in desktop/scripts/sink.sh desktop/scripts/report.sh; do
     fi
 done
 
+meta_check
 finish

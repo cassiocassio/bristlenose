@@ -58,7 +58,10 @@ VERSION_RE = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+[A-Za-z0-9.+-]*")
 # The board's vocabulary. Anything outside it is a confounded expectation,
 # rendered raw and counted — never dropped.
 KNOWN_KINDS = {"meta", "step", "check", "gate", "art", "done", "bar", "run", "row", "verify", "clock", "ci"}
-LEDGER_STATES = {"ok", "fail", "running", "pending", "skipped", "started", "completed"}
+LEDGER_STATES = {"ok", "fail", "running", "pending", "skipped"}          # what fold_status accepts for a STEP
+RUN_STATES = {"started", "completed"}                                    # the `run` pseudo-step only
+CLOCK_NAMES = {"testflight", "dmg"}
+STEPS_TBL_VERSION = "# steps.tbl v1"
 STEP_STATES = {"start", "ok", "skip", "fail", "end"}
 ROW_RESULTS = {"ok", "warn", "bad", "skipped", "unreachable"}
 CI_RESULTS = {"success", "failure", "cancelled", "skipped", "queued", "in_progress", "waiting", "unreachable", "no run for sha", "neutral", "timed_out", "action_required", "stale", "startup_failure", "completed", "-"}
@@ -107,23 +110,29 @@ def resolve_version(arg: str | None, release_dir: Path, narrate=lambda s: None) 
     return candidates[0].name
 
 
-def read_steps(run_dir: Path) -> tuple[list[dict], str, str | None]:
-    """→ (steps, source, version_line). source: 'steps.tbl' | 'ledger'."""
+def read_steps(run_dir: Path) -> tuple[list[dict], str, str | None, list[str]]:
+    """→ (steps, source, version_line, problems). source: 'steps.tbl' | 'ledger'.
+    problems: an unknown version stamp, or rows with fewer than seven fields —
+    both are drift and are reported, never silently dropped."""
     p = run_dir / "steps.tbl"
     steps: list[dict] = []
+    problems: list[str] = []
     if p.is_file():
         lines = p.read_text(encoding="utf-8", errors="replace").splitlines()
         ver = lines[0] if lines and lines[0].startswith("#") else None
+        if ver != STEPS_TBL_VERSION:
+            problems.append(f"steps.tbl version stamp is {ver!r}, expected {STEPS_TBL_VERSION!r}")
         for line in lines:
             if not line or line.startswith("#"):
                 continue
             parts = line.split("|", 6)
             if len(parts) < 7:
+                problems.append(f"steps.tbl row with {len(parts)} fields, not 7: {line[:60]!r}")
                 continue
             sid, label, kind, est, tier, cons, cmd = parts
-            steps.append({"id": sid, "label": label, "kind": kind, "est": est, "tier": tier, "consequence": cons})
-        return steps, "steps.tbl", ver
-    return steps, "ledger", None
+            steps.append({"id": sid, "label": label, "kind": kind, "est": est, "tier": tier, "consequence": cons, "cmd": cmd})
+        return steps, "steps.tbl", ver, problems
+    return steps, "ledger", None, problems
 
 
 def read_ledger(run_dir: Path) -> dict:
@@ -138,8 +147,19 @@ def read_ledger(run_dir: Path) -> dict:
     text = p.read_text(encoding="utf-8", errors="replace")
     lines = text.split("\n")
     if text and not text.endswith("\n"):
+        # A torn last line: release.sh's awk reads it and folds the step it
+        # names to `corrupt` (it refuses to advance); the board must say the
+        # same, not `pending` (review, 5 Sep 2026). Only a fragment naming a
+        # step is folded; an unnamed fragment is counted.
         out["partial"] = True
+        frag = lines[-1]
         lines = lines[:-1]
+        m = re.search(r'"step"\s*:\s*"([^"]*)"', frag)
+        if m:
+            out["corrupt"].append(m.group(1))
+            out["_partial_step"] = m.group(1)
+        else:
+            out["unparsed"] += 1
     else:
         lines = [ln for ln in lines if ln != ""]
     for no, raw in enumerate(lines, 1):
@@ -164,7 +184,7 @@ def read_ledger(run_dir: Path) -> dict:
                 out["completed"] = True
             continue
         cur = out["fold"].setdefault(step, {"status": "pending", "attempt": 0, "elapsed": None, "detail": "", "ts": None})
-        cur["status"] = status if status in LEDGER_STATES else "corrupt"
+        cur["status"] = status if status in LEDGER_STATES else "corrupt"   # `started`/`completed` are run-only words
         cur["ts"] = ev.get("ts")
         cur["detail"] = ev.get("detail", "")
         m = re.fullmatch(r"attempt (\d+)", cur["detail"] or "")
@@ -173,6 +193,9 @@ def read_ledger(run_dir: Path) -> dict:
         m = re.fullmatch(r"(\d+)s", cur["detail"] or "")
         if m and status == "ok":
             cur["elapsed"] = int(m.group(1))
+    ps = out.pop("_partial_step", None)
+    if ps:
+        out["fold"].setdefault(ps, {"status": "pending", "attempt": 0, "elapsed": None, "detail": "", "ts": None})["status"] = "corrupt"
     return out
 
 
@@ -183,7 +206,7 @@ def read_liveness(run_dir: Path) -> dict:
     if pid_file.is_file():
         try:
             out["pid"] = int(pid_file.read_text().strip())
-        except ValueError:
+        except (ValueError, OSError):
             out["pid"] = None
         if out["pid"]:
             try:
@@ -202,10 +225,12 @@ def read_liveness(run_dir: Path) -> dict:
             parts = raw.split("\t")
             try:
                 epoch = int(parts[0])
+                if not (946684800 <= epoch <= 4102444800):   # 2000..2100: anything else is not a clock
+                    raise ValueError(parts[0])
                 age = int(dt.datetime.now(dt.timezone.utc).timestamp()) - epoch
             except ValueError:
                 epoch, age = None, None
-            out["heartbeat"] = {"state": "present", "epoch": epoch, "age_s": age,
+            out["heartbeat"] = {"state": "present" if epoch else "unparseable", "epoch": epoch, "age_s": age,
                                 "step": parts[1] if len(parts) > 1 else None,
                                 "elapsed_s": parts[2] if len(parts) > 2 else None,
                                 "last_line": _ANSI.sub("", parts[3])[:100] if len(parts) > 3 else ""}
@@ -258,14 +283,40 @@ def read_sink(run_dir: Path) -> dict:
     out = {"present": p.is_file(), "events": [], "unparsed": [], "partial": False, "as_of": mtime_iso(p)}
     if not p.is_file():
         return out
-    events, unparsed, partial = bn_events.parse_stream(p.read_text(encoding="utf-8", errors="replace"))
-    out["events"] = [{"line": no, "kind": kind, **fields} for no, kind, fields in events]
+    events, unparsed, partial = bn_events.parse_stream(bn_events.read_sink_text(p))
+    home = str(Path.home())
+    out["events"] = [{"line": no, "kind": kind, **scrub_fields(fields, home)} for no, kind, fields in events]
     out["unparsed"] = [{"line": no, "raw": raw[:200]} for no, raw in unparsed]
     out["partial"] = partial
     return out
 
 
-def read_logs(run_dir: Path, steps_needed: list[str], with_logs: bool) -> dict:
+_IDENTITY = re.compile(r"\b(Apple Distribution|Apple Development|Developer ID Application|Developer ID Installer|3rd Party Mac Developer (?:Application|Installer)|Mac Developer): [^()]+ \(([A-Z0-9]{10})\)")
+_TEAM = re.compile(r"\b[A-Z0-9]{10}\b")
+
+
+def scrub(value: str, home: str | None = None) -> str:
+    """The sink carries what the build scripts print: `bn_meta identity=`,
+    `bn_art signed=`, absolute paths under the home directory, `references Team
+    <id>`. context.json is allowlisted (read_context); this is the same rule for
+    the other door. Identity CNs collapse to their kind, ten-character team ids
+    to <team>, the home directory to ~. Scrubbing is lossy by design — the
+    terminal render keeps the originals."""
+    if not isinstance(value, str) or not value:
+        return value
+    v = _IDENTITY.sub(lambda m: f"{m.group(1)}: <identity>", value)
+    if home:
+        v = v.replace(home.rstrip("/") + "/", "~/").replace(home.rstrip("/"), "~")
+    if "Team" in v or "team" in v:
+        v = re.sub(r"(?i)(team\s+)[A-Z0-9]{10}\b", r"\1<team>", v)
+    return v
+
+
+def scrub_fields(fields: dict, home: str | None) -> dict:
+    return {k: (scrub(v, home) if isinstance(v, str) else v) for k, v in fields.items()}
+
+
+def read_logs(run_dir: Path, steps_needed: list[str], with_logs: bool, root: Path = ROOT) -> dict:
     logdir = run_dir / "logs"
     out: dict = {}
     for sid in steps_needed:
@@ -273,13 +324,13 @@ def read_logs(run_dir: Path, steps_needed: list[str], with_logs: bool) -> dict:
         if not attempts:
             continue
         newest = attempts[-1]
-        entry = {"path": str(newest.relative_to(ROOT)) if str(newest).startswith(str(ROOT)) else newest.name,
+        entry = {"path": str(newest.relative_to(root)) if str(newest).startswith(str(root)) else f"{run_dir.name}/logs/{newest.name}",
                  "attempts": len(attempts), "size": newest.stat().st_size}
         if with_logs:
             text = newest.read_text(encoding="utf-8", errors="replace").replace("\r", "\n")
             lines = [_ANSI.sub("", ln) for ln in text.split("\n")]
-            lines = ["".join(ch for ch in ln if ch >= " ")[:200] for ln in lines if ln.strip()]
-            entry["tail"] = lines[-12:]
+            lines = ["".join(ch for ch in ln if ch >= " " and ch != "\x7f" and not ("\x80" <= ch <= "\x9f"))[:200] for ln in lines if ln.strip()]
+            entry["tail"] = [scrub(ln, str(Path.home())) for ln in lines[-12:]]
         out[sid] = entry
     return out
 
@@ -379,8 +430,23 @@ def group_sink(sink: dict, steps: list[dict]) -> dict:
                 new_shape.append({"line": ev["line"], "kind": "row", "field": "result", "value": ev.get("result")})
             src = ev.get("src")
             if src == "preflight":
+                # A batch is the driver's `preflight` window when one brackets this
+                # row (exact — the driver wrote it); only a standalone preflight, run
+                # by hand under a sink, falls back to "a repeated label starts a new
+                # batch". The old rule alone split a real preflight in two on a
+                # label the preflight emits twice (review, 5 Sep 2026).
+                win = None
+                for w in reversed(windows):
+                    if w["id"] == "preflight" and w["start_line"] is not None and w["start_line"] < ev["line"] and (w["end_line"] is None or ev["line"] < w["end_line"]):
+                        win = w
+                        break
                 batch = preflight_batches[-1]
-                if any(r.get("label") == ev.get("label") for r in batch):
+                if win is not None:
+                    if batch and batch[0].get("_window") != id(win):
+                        preflight_batches.append([])
+                        batch = preflight_batches[-1]
+                    ev["_window"] = id(win)
+                elif any(r.get("label") == ev.get("label") for r in batch):
                     preflight_batches.append([ev])
                     continue
                 batch.append(ev)
@@ -400,6 +466,8 @@ def group_sink(sink: dict, steps: list[dict]) -> dict:
             else:
                 new_shape.append({"line": ev["line"], "kind": "verify", "field": "status", "value": ev.get("status")})
         elif kind == "clock":
+            if ev.get("name") not in CLOCK_NAMES:
+                new_shape.append({"line": ev["line"], "kind": "clock", "field": "name", "value": ev.get("name")})
             clocks[ev.get("name", "?")] = ev
         elif kind == "ci":
             if ev.get("result") not in CI_RESULTS:
@@ -410,18 +478,37 @@ def group_sink(sink: dict, steps: list[dict]) -> dict:
             "unknown_kinds": unknown_kinds, "new_shape": new_shape}
 
 
-def build_pane(grouped: dict, ledger: dict) -> dict:
-    """The build steps, from the sink's child events inside the driver's build-all
-    window (or a standalone bucket). Three states: not run / ran, sink empty / data."""
-    windows = [w for w in grouped["windows"] if w["id"] in ("build-all", "build-dmg")]
+def lane_ids(steps: list[dict]) -> list[str]:
+    """The build lanes are the steps whose command is a desktop build script —
+    read from steps.tbl, not hardcoded (principle 4). The fallback names the
+    two the table has carried since 27 Aug 2026, for runs that predate it."""
+    ids = [s["id"] for s in steps if re.search(r"desktop/scripts/build-[a-z-]+\.sh", s.get("cmd", ""))]
+    return ids or ["build-all", "build-dmg"]
+
+
+def build_pane(grouped: dict, ledger: dict, steps: list[dict], previous: dict | None) -> dict:
+    """The build steps, from the sink's child events inside the driver's window for
+    each lane. States: not-run · skipped · failed-no-window · ran-no-sink (the
+    ledger says it ran; the sink has no @bn lines from it) · running-no-sink · data."""
+    lanes = lane_ids(steps)
+    windows = [w for w in grouped["windows"] if w["id"] in lanes]
     fold = ledger["fold"]
-    out = {"lanes": []}
-    for lane_id in ("build-all", "build-dmg"):
+    prev_children = (previous or {}).get("lanes_with_children", set())
+    out = {"lanes": [], "lane_ids": lanes}
+    for lane_id in lanes:
         ws = [w for w in windows if w["id"] == lane_id]
         ledger_state = fold.get(lane_id, {}).get("status")
         if not ws:
-            state = "not-run" if ledger_state in (None, "pending") else "ran-no-sink"
-            out["lanes"].append({"id": lane_id, "state": state, "ledger_state": ledger_state, "steps": [], "checks": [], "gates": [], "arts": []})
+            if ledger_state in (None, "pending"):
+                state = "not-run"
+            elif ledger_state == "skipped":
+                state = "skipped"
+            elif ledger_state == "fail":
+                state = "failed-no-window"
+            else:
+                state = "ran-no-sink"
+            out["lanes"].append({"id": lane_id, "state": state, "ledger_state": ledger_state, "steps": [], "checks": [], "gates": [], "arts": [],
+                                 "emits_known": lane_id in prev_children})
             continue
         w = ws[-1]
         steps: dict[str, dict] = {}
@@ -457,15 +544,23 @@ def build_pane(grouped: dict, ledger: dict) -> dict:
             state = "running-no-sink"
         out["lanes"].append({"id": lane_id, "state": state, "ledger_state": ledger_state, "attempt": w["attempt"],
                              "rc": w["rc"], "elapsed": w["elapsed"], "steps": [steps[s] for s in order],
-                             "checks": checks, "gates": gates, "arts": arts})
+                             "checks": checks, "gates": gates, "arts": arts, "emits_known": lane_id in prev_children or bool(w["children"])})
     return out
 
 
-def channels_pane(conf: dict, grouped: dict, sink_as_of: str | None) -> dict:
+def channels_pane(conf: dict, grouped: dict, sink_as_of: str | None, version: str | None = None) -> dict:
     batches = grouped["verify_batches"]
     latest = batches[-1] if batches else None
-    rows = {r.get("label"): r for r in (latest["rows"] if latest else [])}
-    complete = bool(latest and latest.get("done"))
+    # A verify records the version it probed. `release.sh verify` with no
+    # argument probes the TREE's version and writes into the newest run dir, so
+    # the two can differ; a batch for another version is not this run's truth.
+    mismatch = None
+    if latest:
+        probed = (latest.get("start") or latest.get("done") or {}).get("version")
+        if version and probed and probed != version:
+            mismatch = probed
+    rows = {} if mismatch else {r.get("label"): r for r in (latest["rows"] if latest else [])}
+    complete = bool(latest and latest.get("done")) and not mismatch
     cards = []
     for ch in conf["CHANNELS"]:
         r = rows.get(ch)
@@ -479,8 +574,13 @@ def channels_pane(conf: dict, grouped: dict, sink_as_of: str | None) -> dict:
     if latest and latest.get("done"):
         d = latest["done"]
         rollup = {"rc": d.get("rollup"), "channels": d.get("channels"), "ok": d.get("ok"), "as_of": d.get("ts")}
+    batch_as_of = None
+    if latest:
+        stamps = [r.get("ts") for r in latest["rows"] if r.get("ts")] + [(latest.get("done") or {}).get("ts")]
+        batch_as_of = max((s for s in stamps if s), default=None)
     return {"cards": cards, "extras": extras, "complete": complete, "batches": len(batches),
-            "partial_rows": len(rows) if latest and not complete else 0, "rollup": rollup, "as_of": sink_as_of}
+            "partial_rows": len(rows) if latest and not complete else 0, "rollup": rollup,
+            "as_of": batch_as_of, "version_mismatch": mismatch}
 
 
 def clocks_pane(grouped: dict) -> list[dict]:
@@ -515,18 +615,24 @@ def ci_pane(grouped: dict, ci_sha: str | None) -> dict:
     runs = [v for (wf, job), v in latest_by_key.items() if not job]
     jobs = [v for (wf, job), v in latest_by_key.items() if job]
     matrix = []
+    job_rows = []
     for j in jobs:
-        m = re.fullmatch(r"(\w[\w-]*) \((\d+\.\d+), ([a-z]+)-latest\)", j.get("job", ""))
+        m = re.fullmatch(r"(\w[\w-]*) \((\d+\.\d+), ([a-z]+)-[a-z0-9.]+\)", j.get("job", ""))
         if m:
             matrix.append({"job": m.group(1), "python": m.group(2), "os": m.group(3), "result": j.get("result")})
-    return {"state": "data", "runs": [{"workflow": r.get("workflow"), "run_id": r.get("run_id"), "sha": r.get("sha"), "result": r.get("result"), "as_of": r.get("ts")} for r in runs],
-            "jobs": [{"job": j.get("job"), "result": j.get("result"), "workflow": j.get("workflow")} for j in jobs],
-            "matrix": matrix, "sha_matches": (ci_sha is not None and any(r.get("sha") == ci_sha for r in runs))}
+        job_rows.append({"job": j.get("job"), "result": j.get("result"), "workflow": j.get("workflow"), "matrix": bool(m)})
+    # No "sha matches" claim: `status` writes sha= from the same ci-sha file the
+    # board reads, so a comparison would be a file against a copy of itself.
+    return {"state": "data", "runs": [{"workflow": r.get("workflow"), "run_id": r.get("run_id"), "sha": r.get("sha"), "branch": r.get("branch"), "result": r.get("result"), "as_of": r.get("ts")} for r in runs],
+            "jobs": job_rows, "matrix": matrix, "ci_sha": ci_sha}
 
 
 def preflight_pane(grouped: dict) -> dict:
     batches = [b for b in grouped["preflight_batches"] if b]
     if not batches:
+        wins = [w for w in grouped["windows"] if w["id"] == "preflight"]
+        if wins:
+            return {"state": "ran-no-sink", "rows": [], "counts": {}, "attempt": wins[-1]["attempt"], "rc": wins[-1]["rc"]}
         return {"state": "no-data", "rows": [], "counts": {}}
     latest = batches[-1]
     counts: dict[str, int] = {}
@@ -550,36 +656,55 @@ def merged_events(ledger: dict, sink: dict, limit: int = 60) -> list[dict]:
     return rows[-limit:]
 
 
+def events_total(ledger: dict, sink: dict) -> int:
+    return len(ledger["events"]) + len(sink["events"])
+
+
 def activity(ledger: dict, sink: dict) -> dict:
     stamps = [ev.get("ts") for ev in ledger["events"]] + [ev.get("ts") for ev in sink["events"]]
     stamps = [s for s in stamps if s]
     if not stamps:
         return {"minutes": [], "start": None}
     parsed = []
+    bad = 0
     for s in stamps:
         try:
             parsed.append(dt.datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ"))
         except ValueError:
-            pass
+            bad += 1
     if not parsed:
-        return {"minutes": [], "start": None}
+        return {"minutes": [], "start": None, "unparseable": bad, "truncated": False}
     t0 = min(parsed).replace(second=0)
-    span = int((max(parsed) - t0).total_seconds() // 60) + 1
-    span = min(span, 600)
+    full = int((max(parsed) - t0).total_seconds() // 60) + 1
+    span = min(full, 600)
     counts = [0] * span
+    dropped = 0
     for t in parsed:
         i = int((t - t0).total_seconds() // 60)
         if 0 <= i < span:
             counts[i] += 1
-    return {"minutes": counts, "start": t0.strftime("%Y-%m-%dT%H:%M:%SZ")}
+        else:
+            dropped += 1
+    return {"minutes": counts, "start": t0.strftime("%Y-%m-%dT%H:%M:%SZ"), "unparseable": bad,
+            "truncated": full > span, "span_minutes": full, "dropped": dropped}
 
 
 def confounded(steps: list[dict], steps_source: str, stations: list[dict], unknown_steps: list[str], grouped: dict,
-               channels: dict, preflight: dict, ledger: dict, sink: dict, previous: dict | None) -> dict:
+               channels: dict, preflight: dict, ledger: dict, sink: dict, previous: dict | None,
+               steps_problems: list[str] | None = None, build: dict | None = None, act: dict | None = None) -> dict:
     log = {"unknown": [], "new_shape": [], "missing": [], "changed": [], "computable": True, "notes": []}
     if steps_source != "steps.tbl":
         log["computable"] = False
         log["notes"].append("no steps.tbl — the run predates the snapshot (5 Sep 2026); stations are the ledger's own step ids in first-seen order")
+    for pr in (steps_problems or []):
+        log["unknown"].append({"what": pr, "line": None, "raw": ""})
+    standalone = [w for w in grouped["windows"] if w["id"] == "standalone"]
+    if standalone and standalone[0]["children"]:
+        log["notes"].append(f"{len(standalone[0]['children'])} child @bn line(s) fell outside every rendered lane (a gate run standalone, or lines inside the preflight window) — counted, not drawn")
+    if channels.get("version_mismatch"):
+        log["new_shape"].append({"what": f"latest verify probed {channels['version_mismatch']}, not this run — its rows are not shown", "line": None})
+    if act and act.get("unparseable"):
+        log["unknown"].append({"what": f"{act['unparseable']} timestamp(s) not in the sink's own format, excluded from the activity strip", "line": None, "raw": ""})
     for u in grouped["unknown_kinds"]:
         log["unknown"].append({"what": f"@bn kind '{u['kind']}'", "line": u["line"], "raw": u["fields"]})
     for u in sink["unparsed"]:
@@ -602,9 +727,13 @@ def confounded(steps: list[dict], steps_source: str, stations: list[dict], unkno
         for st in stations:
             if st["state"] == "not-in-this-run":
                 log["missing"].append({"what": f"step '{st['id']}' declared in steps.tbl, no event in a completed run"})
-    for w in grouped["windows"]:
-        if w["id"] in ("build-all", "build-dmg") and w["end_line"] is not None and not w["children"]:
-            log["missing"].append({"what": f"driver window for '{w['id']}' (attempt {w['attempt']}) closed with zero child lines — BN_REPORT=0, unwritable sink, or a script that never sourced sink.sh"})
+    for lane in (build or {}).get("lanes", []):
+        # A closed window with no child lines is "missing" only when the lane's
+        # script is KNOWN to emit @bn lines (it did on this or a previous run).
+        # build-dmg.sh does not report steps, and a permanent entry for that is
+        # the gate that cries wolf (review, 5 Sep 2026).
+        if lane["state"] == "ran-no-sink" and lane.get("attempt") is not None and lane.get("emits_known"):
+            log["missing"].append({"what": f"driver window for '{lane['id']}' (attempt {lane['attempt']}) closed with zero child lines, and this script has emitted before — BN_REPORT=0, an unwritable sink, or a lost export"})
     if preflight["state"] == "data" and preflight.get("ci_verdict") is None:
         log["missing"].append({"what": f"preflight row '{CI_VERDICT_ROW}' absent from the latest preflight — the CI tile keys on it"})
     # changed since previous run
@@ -631,22 +760,29 @@ def confounded(steps: list[dict], steps_source: str, stations: list[dict], unkno
 
 
 def previous_run(release_dir: Path, version: str, conf: dict) -> dict | None:
-    """The next-newest run dir that carries a steps.tbl — the diff base."""
-    cands = [d for d in release_dir.glob("*/") if d.name != version and (d / "steps.tbl").is_file() and (d / "events.jsonl").is_file()]
+    """The newest run dir OLDER than this one that carries a steps.tbl — the diff
+    base. Drawing an old run must not diff it against a newer one and call the
+    difference "since" (review, 5 Sep 2026)."""
+    this = release_dir / version / "events.jsonl"
+    this_m = this.stat().st_mtime if this.is_file() else float("inf")
+    cands = [d for d in release_dir.glob("*/") if d.is_dir() and d.name != version and (d / "steps.tbl").is_file() and (d / "events.jsonl").is_file()
+             and (d / "events.jsonl").stat().st_mtime < this_m]
     if not cands:
         return None
     cands.sort(key=lambda d: (d / "events.jsonl").stat().st_mtime, reverse=True)
     d = cands[0]
-    steps, _, _ = read_steps(d)
+    steps, _, _, _ = read_steps(d)
     sink = read_sink(d)
     chans = sorted({ev.get("label") for ev in sink["events"] if ev["kind"] == "row" and ev.get("src") == "verify" and ev.get("label") in conf["CHANNELS"]})
-    return {"version": d.name, "steps": steps, "channels": chans or conf["CHANNELS"]}
+    grouped = group_sink(sink, steps)
+    with_children = {w["id"] for w in grouped["windows"] if w["children"] and w["id"] != "standalone"}
+    return {"version": d.name, "steps": steps, "channels": chans or conf["CHANNELS"], "lanes_with_children": with_children}
 
 
 def build_model(root: Path, version: str, with_logs: bool, narrate=lambda s: None) -> dict:
     release_dir = root / ".release"
     run_dir = release_dir / version
-    steps, steps_source, steps_ver = read_steps(run_dir)
+    steps, steps_source, steps_ver, steps_problems = read_steps(run_dir)
     ledger = read_ledger(run_dir)
     liveness = read_liveness(run_dir)
     sink = read_sink(run_dir)
@@ -656,15 +792,17 @@ def build_model(root: Path, version: str, with_logs: bool, narrate=lambda s: Non
     ci_sha = (run_dir / "ci-sha").read_text().strip() if (run_dir / "ci-sha").is_file() else None
     if ci_sha and not re.fullmatch(r"[0-9a-f]{40}", ci_sha):
         ci_sha = None
-    channels = channels_pane(conf, grouped, sink["as_of"])
+    prev = previous_run(release_dir, version, conf)
+    channels = channels_pane(conf, grouped, sink["as_of"], version)
     preflight = preflight_pane(grouped)
-    build = build_pane(grouped, ledger)
+    build = build_pane(grouped, ledger, steps, prev)
     ci = ci_pane(grouped, ci_sha)
     clocks = clocks_pane(grouped)
     needing_logs = [s["id"] for s in stations if s["state"] in ("fail", "running", "stranded", "corrupt")]
-    logs = read_logs(run_dir, needing_logs, with_logs)
-    prev = previous_run(release_dir, version, conf)
-    conf_log = confounded(steps, steps_source, stations, unknown_steps, grouped, channels, preflight, ledger, sink, prev)
+    logs = read_logs(run_dir, needing_logs, with_logs, root)
+    act = activity(ledger, sink)
+    conf_log = confounded(steps, steps_source, stations, unknown_steps, grouped, channels, preflight, ledger, sink, prev,
+                          steps_problems, build, act)
     running = [s for s in stations if s["state"] == "running"]
     stranded = [s for s in stations if s["state"] in ("stranded", "corrupt")]
     if ledger["completed"] and not running and not stranded:
@@ -683,7 +821,7 @@ def build_model(root: Path, version: str, with_logs: bool, narrate=lambda s: Non
         "schema": 1,
         "generated": utc_now(),
         "version": version,
-        "run_dir": str(run_dir),
+        "run_dir": str(run_dir.relative_to(root)) if str(run_dir).startswith(str(root)) else run_dir.name,
         "phase": phase,
         "header": {"started": ledger["started"], "attempts": ledger["attempts"], "completed": ledger["completed"],
                    "context": read_context(run_dir), "ci_sha": ci_sha, "newest_source": newest_source,
@@ -700,11 +838,12 @@ def build_model(root: Path, version: str, with_logs: bool, narrate=lambda s: Non
         "channels": channels,
         "clocks": clocks,
         "events": merged_events(ledger, sink),
-        "activity": activity(ledger, sink),
+        "events_total": events_total(ledger, sink),
+        "activity": act,
         "logs": logs,
         "sink": {"present": sink["present"], "events": len(sink["events"]), "unparsed": len(sink["unparsed"]),
                  "partial": sink["partial"], "as_of": sink["as_of"], "driver_runs": len(grouped["driver_runs"]),
-                 "meta": grouped["meta"]},
+                 "meta": {k: v for k, v in grouped["meta"].items() if k in ("title", "done_title", "bundle")}},
         "confounded": conf_log,
         "previous": prev["version"] if prev else None,
     }
@@ -729,10 +868,20 @@ def render_html(model: dict, template: Path) -> str:
 
 
 def write_private(path: Path, text: str) -> None:
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8") as fh:
-        fh.write(text)
-    os.chmod(path, 0o600)
+    """0600, and never through a symlink (O_NOFOLLOW; fchmod on the fd) — the
+    house standard for credential-class files (telemetry.py, MCPHandshake)."""
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(path, flags, 0o600)
+    try:
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(text)
+    except Exception:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        raise
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -764,14 +913,12 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     out = (args.out or run_dir).resolve()
     out.mkdir(parents=True, exist_ok=True)
-    write_private(out / "board.json", json.dumps(model, indent=1, ensure_ascii=True))
-    if args.with_logs:
-        html = render_html(model, TEMPLATE)
-        write_private(out / "board-with-logs.html", html)
-        target = out / "board-with-logs.html"
-    else:
-        write_private(out / "board.html", render_html(model, TEMPLATE))
-        target = out / "board.html"
+    # --with-logs changes the classification of BOTH outputs, so both carry the
+    # stamp in their name; the safe board.json is never overwritten with tails.
+    stem = "board-with-logs" if args.with_logs else "board"
+    write_private(out / f"{stem}.json", json.dumps(model, indent=1, ensure_ascii=True))
+    write_private(out / f"{stem}.html", render_html(model, TEMPLATE))
+    target = out / f"{stem}.html"
     c = model["confounded"]
     sys.stderr.write(f"  wrote {target}  ·  {version} {model['phase']}  ·  confounded: {c['count'] if c['computable'] else 'not computable'}\n")
     return 0

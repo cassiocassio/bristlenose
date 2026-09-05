@@ -132,11 +132,26 @@ class Fold(unittest.TestCase):
         self.assertEqual(stations(m)["build-all"], "corrupt")
         self.assertTrue(any("corrupt" in n["what"] for n in m["confounded"]["new_shape"]))
 
-    def test_partial_last_line_is_excluded_not_read(self):
+    def test_partial_last_line_naming_a_step_folds_to_corrupt(self):
+        # A write in progress is not read as an event — but release.sh's own fold
+        # treats a fragment naming a step as corrupt, and the board matches it
+        # rather than drawing the step as untouched (review, 5 Sep 2026).
         self.t.run(events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n" + ev("2026-09-05T10:00:01Z", "bump", "running", "attempt 1"))  # no trailing newline
         m = self.t.model()
         self.assertTrue(m["line"]["ledger_partial"])
-        self.assertEqual(stations(m)["bump"], "pending")
+        self.assertEqual(stations(m)["bump"], "corrupt")
+
+    def test_partial_last_line_naming_no_step_is_just_partial(self):
+        self.t.run(events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n" + '{"ts":"2026-09-05T10:00:01Z","ru')
+        m = self.t.model()
+        self.assertTrue(m["line"]["ledger_partial"])
+        self.assertTrue(all(s in ("pending", "later") for s in stations(m).values()), stations(m))
+
+    def test_steps_tbl_problems_reach_the_confounded_log(self):
+        self.t.run(steps="# steps.tbl v9\nbump|bump|plain|1m|||x\nshort|only|three\n", events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n")
+        c = self.t.model()["confounded"]
+        self.assertTrue(any("version stamp" in u["what"] for u in c["unknown"]), c["unknown"])
+        self.assertTrue(any("not 7" in u["what"] for u in c["unknown"]), c["unknown"])
 
     def test_skipped_later_unknown_and_not_in_this_run(self):
         self.t.run(events="\n".join([ev("2026-09-05T10:00:00Z", "run", "started"),
@@ -153,6 +168,14 @@ class Fold(unittest.TestCase):
         self.assertTrue(any("ci-green" in u["what"] for u in m["confounded"]["unknown"]))
         self.assertTrue(any("build-all" in x["what"] for x in m["confounded"]["missing"]))
         self.assertEqual(m["phase"], "completed")
+
+    def test_tier_two_step_reads_later_even_while_the_run_is_in_progress(self):
+        # snap-stable is a tier-2 step: it runs after publish, on its own. On a
+        # run still in progress it is "later", not "pending" — pending would
+        # promise the driver is about to reach it.
+        self.t.run(events="\n".join([ev("2026-09-05T10:00:00Z", "run", "started"),
+                                     ev("2026-09-05T10:00:01Z", "bump", "ok", "1s")]) + "\n")
+        self.assertEqual(stations(self.t.model())["snap-stable"], "later")
 
     def test_no_steps_tbl_falls_back_to_ledger_order_and_says_so(self):
         self.t.run(steps=None, events="\n".join([ev("2026-09-05T10:00:00Z", "run", "started"),
@@ -175,7 +198,7 @@ class NoData(unittest.TestCase):
         self.t.run(events="")
         m = self.t.model()
         self.assertEqual(m["preflight"]["state"], "no-data")
-        self.assertEqual([ln["state"] for ln in m["build"]["lanes"]], ["not-run", "not-run"])
+        self.assertEqual([ln["state"] for ln in m["build"]["lanes"]], ["not-run"])  # one build-*.sh in STEPS
         self.assertEqual(m["ci"]["state"], "not-queried")
         self.assertTrue(all(c["state"] in ("no-data", "skipped") for c in m["channels"]["cards"]))
         self.assertEqual(m["clocks"], [])
@@ -216,7 +239,10 @@ class NoData(unittest.TestCase):
         m = self.t.model()
         lane = [ln for ln in m["build"]["lanes"] if ln["id"] == "build-all"][0]
         self.assertEqual(lane["state"], "ran-no-sink")
-        self.assertTrue(any("zero child lines" in x["what"] for x in m["confounded"]["missing"]))
+        # no previous run, no children ever: the lane is named, not counted as
+        # missing — LaneEmission covers the case where the script is known to emit
+        self.assertFalse(lane["emits_known"])
+        self.assertFalse(any("zero child lines" in x["what"] for x in m["confounded"]["missing"]))
 
     def test_build_with_child_lines_has_data(self):
         sink = "@bn step ts=2026-09-05T10:00:01Z run=1.0.0 id=build-all attempt=1 status=start\n" \
@@ -232,6 +258,32 @@ class NoData(unittest.TestCase):
         self.assertEqual(lane["steps"][0]["elapsed"], 2.0)
         self.assertEqual(lane["checks"][0]["label"], "logging hygiene")
         self.assertEqual(lane["gates"][0]["id"], "a")
+
+
+class Preflight(unittest.TestCase):
+    def test_repeated_label_inside_one_driver_window_is_one_batch(self):
+        t = Tree()
+        try:
+            sink = ("@bn step ts=2026-09-05T10:00:00Z run=1.0.0 id=preflight attempt=1 status=start\n"
+                    "@bn row ts=2026-09-05T10:00:01Z run=1.0.0 src=preflight label=dependency\\ drift result=ok evidence=a\n"
+                    "@bn row ts=2026-09-05T10:00:02Z run=1.0.0 src=preflight label=dependency\\ drift result=warn evidence=b\n"
+                    "@bn step ts=2026-09-05T10:00:03Z run=1.0.0 id=preflight attempt=1 status=end rc=0 elapsed=3\n")
+            t.run(events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n" + ev("2026-09-05T10:00:03Z", "preflight", "ok", "3s") + "\n", sink=sink)
+            pf = t.model()["preflight"]
+            self.assertEqual(pf["state"], "data")
+            self.assertEqual(len(pf["rows"]), 2, pf)
+        finally:
+            t.close()
+
+    def test_window_with_no_rows_is_ran_no_sink(self):
+        t = Tree()
+        try:
+            sink = ("@bn step ts=2026-09-05T10:00:00Z run=1.0.0 id=preflight attempt=1 status=start\n"
+                    "@bn step ts=2026-09-05T10:00:03Z run=1.0.0 id=preflight attempt=1 status=end rc=0 elapsed=3\n")
+            t.run(events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n", sink=sink)
+            self.assertEqual(t.model()["preflight"]["state"], "ran-no-sink")
+        finally:
+            t.close()
 
 
 class Channels(unittest.TestCase):
@@ -270,6 +322,20 @@ class Channels(unittest.TestCase):
         m = self.t.model()
         self.assertTrue(any("github" in x["what"] for x in m["confounded"]["missing"]))
 
+    def test_verify_of_another_version_is_not_this_runs_truth(self):
+        s = self.verify([("pypi", "ok"), ("github", "ok"), ("testflight", "ok")]).replace("version=1.0.0", "version=2.0.0")
+        self.t.run(events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n", sink=s)
+        m = self.t.model()
+        self.assertEqual(m["channels"]["version_mismatch"], "2.0.0")
+        self.assertFalse(m["channels"]["complete"])
+        self.assertTrue(all(c["state"] in ("no-data", "skipped") for c in m["channels"]["cards"]))
+        self.assertTrue(any("2.0.0" in n["what"] for n in m["confounded"]["new_shape"]))
+
+    def test_channels_as_of_is_the_batch_not_the_sink(self):
+        s = self.verify([("pypi", "ok")]) + "@bn meta ts=2026-09-06T00:00:00Z run=1.0.0 title=later\n"
+        self.t.run(events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n", sink=s)
+        self.assertEqual(self.t.model()["channels"]["as_of"], "2026-09-05T12:00:09Z")
+
     def test_unprobeable_channel_with_no_verify_reads_skipped_with_reason(self):
         self.t.run(events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n")
         c = {c["name"]: c for c in self.t.model()["channels"]["cards"]}
@@ -290,6 +356,12 @@ class Clocks(unittest.TestCase):
         k = self.t.model()["clocks"][0]
         self.assertEqual(k["state"], "no-data")
         self.assertIsNone(k["expires"])
+
+    def test_unknown_clock_name_is_a_new_shape(self):
+        sink = "@bn clock ts=2026-09-05T12:00:00Z run=1.0.0 name=frob expires=2026-10-01T00:00:00Z\n"
+        self.t.run(events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n", sink=sink)
+        c = self.t.model()["confounded"]
+        self.assertTrue(any("clock.name = 'frob'" in n["what"] for n in c["new_shape"]), c["new_shape"])
 
     def test_dmg_expiry_is_built_plus_rule_and_rule_matches_swift(self):
         sink = "@bn clock ts=2026-09-05T12:00:00Z run=1.0.0 name=dmg version=1.0.0 built=2026-09-05T11:00:00Z commit=abc\n"
@@ -327,7 +399,22 @@ class Ci(unittest.TestCase):
             ci = t.model()["ci"]
             self.assertEqual(ci["state"], "data")
             self.assertEqual(ci["matrix"], [{"job": "test", "python": "3.12", "os": "macos", "result": "failure"}])
-            self.assertFalse(ci["sha_matches"])
+            self.assertEqual([j["matrix"] for j in ci["jobs"]], [True, False])
+        finally:
+            t.close()
+
+    def test_ci_pane_makes_no_sha_claim(self):
+        # `status` writes sha= from the same ci-sha file the board reads, so a
+        # "matches" tick would compare a file with a copy of itself.
+        t = Tree()
+        try:
+            t.run(events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n",
+                  sink="@bn ci ts=2026-09-05T12:00:00Z run=1.0.0 workflow=ci.yml sha=abc run_id=1 result=success\n"
+                       "@bn ci ts=2026-09-05T12:00:00Z run=1.0.0 workflow=ci.yml sha=abc run_id=1 job=ruff result=success\n", extra={"ci-sha": "a" * 40})
+            ci = t.model()["ci"]
+            self.assertNotIn("sha_matches", ci)
+            self.assertEqual(ci["ci_sha"], "a" * 40)
+            self.assertEqual([j["matrix"] for j in ci["jobs"]], [False])
         finally:
             t.close()
 
@@ -366,6 +453,7 @@ class Confounded(unittest.TestCase):
             self.assertTrue(any("old-step" in x["what"] and "removed" in x["what"] for x in c["changed"]), c["changed"])
             self.assertTrue(any("preflight row 'publish gate' absent" in x["what"] for x in c["missing"]))
             self.assertGreaterEqual(c["count"], 5)
+            self.assertEqual(c["count"], sum(len(c[k]) for k in ("unknown", "new_shape", "missing", "changed")))
             # and a clean run reports zero
             t2 = Tree()
             try:
@@ -375,6 +463,48 @@ class Confounded(unittest.TestCase):
                 self.assertEqual(c2["count"], 0)
             finally:
                 t2.close()
+        finally:
+            t.close()
+
+
+class LaneEmission(unittest.TestCase):
+    def test_zero_child_lines_is_missing_only_for_a_script_known_to_emit(self):
+        t = Tree()
+        try:
+            # previous run: build-all emitted children
+            prev = ("@bn step ts=2026-09-01T10:00:01Z run=0.9.0 id=build-all attempt=1 status=start\n"
+                    "@bn step ts=2026-09-01T10:00:02Z run=0.9.0 id=1 name=x status=start\n"
+                    "@bn step ts=2026-09-01T10:00:03Z run=0.9.0 id=1 status=ok elapsed=1\n"
+                    "@bn step ts=2026-09-01T10:00:04Z run=0.9.0 id=build-all attempt=1 status=end rc=0 elapsed=3\n")
+            t.run("0.9.0", events=ev("2026-09-01T10:00:00Z", "run", "started") + "\n", sink=prev)
+            time.sleep(0.05)
+            steps = STEPS + "build-dmg|build the dmg|plain|5m|||desktop/scripts/build-dmg.sh\n"
+            now = ("@bn step ts=2026-09-05T10:00:01Z run=1.0.0 id=build-all attempt=1 status=start\n"
+                   "@bn step ts=2026-09-05T10:00:04Z run=1.0.0 id=build-all attempt=1 status=end rc=0 elapsed=3\n"
+                   "@bn step ts=2026-09-05T10:00:05Z run=1.0.0 id=build-dmg attempt=1 status=start\n"
+                   "@bn step ts=2026-09-05T10:00:09Z run=1.0.0 id=build-dmg attempt=1 status=end rc=0 elapsed=4\n")
+            t.run("1.0.0", steps=steps, events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n" + ev("2026-09-05T10:00:04Z", "build-all", "ok", "3s") + "\n"
+                  + ev("2026-09-05T10:00:09Z", "build-dmg", "ok", "4s") + "\n", sink=now)
+            os.utime(t.root / ".release" / "1.0.0" / "events.jsonl", None)
+            m = t.model("1.0.0")
+            self.assertEqual(m["build"]["lane_ids"], ["build-all", "build-dmg"])
+            lanes = {ln["id"]: ln for ln in m["build"]["lanes"]}
+            self.assertEqual(lanes["build-all"]["state"], "ran-no-sink")
+            self.assertTrue(lanes["build-all"]["emits_known"])
+            self.assertFalse(lanes["build-dmg"]["emits_known"])
+            missing = [x["what"] for x in m["confounded"]["missing"] if "zero child lines" in x["what"]]
+            self.assertEqual(len(missing), 1, missing)
+            self.assertIn("build-all", missing[0])
+        finally:
+            t.close()
+
+    def test_skipped_and_failed_lanes_have_their_own_states(self):
+        t = Tree()
+        try:
+            t.run(events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n" + ev("2026-09-05T10:00:01Z", "build-all", "skipped", "--skip") + "\n")
+            self.assertEqual([ln["state"] for ln in t.model()["build"]["lanes"] if ln["id"] == "build-all"], ["skipped"])
+            t.run(events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n" + ev("2026-09-05T10:00:01Z", "build-all", "fail", "exit 1") + "\n")
+            self.assertEqual([ln["state"] for ln in t.model()["build"]["lanes"] if ln["id"] == "build-all"], ["failed-no-window"])
         finally:
             t.close()
 
@@ -432,6 +562,54 @@ class Html(unittest.TestCase):
         finally:
             t.close()
 
+    def test_canary_sink_identity_and_home_never_reach_the_board(self):
+        t = Tree()
+        try:
+            home = str(Path.home())
+            sink = ("@bn meta ts=2026-09-05T10:00:00Z run=1.0.0 title=x identity=Developer\\ ID\\ Application:\\ CANARY-NAME\\ \\(ABCDE12345\\)\n"
+                    f"@bn art ts=2026-09-05T10:00:01Z run=1.0.0 key=dmg value={home}/CANARY-DIR/x.dmg\n"
+                    "@bn gate ts=2026-09-05T10:00:02Z run=1.0.0 id=g result=ok desc=sign evidence=references\\ Team\\ ABCDE12345\n")
+            t.run(events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n", sink=sink)
+            html = rb.render_html(t.model(), TEMPLATE)
+            self.assertNotIn("CANARY-NAME", html)
+            self.assertNotIn("ABCDE12345", html)
+            self.assertNotIn(home, html)
+            self.assertIn("CANARY-DIR", html)  # the path survives, rooted at ~
+        finally:
+            t.close()
+
+    def test_click_map_names_real_stations_and_real_panes(self):
+        tpl = TEMPLATE.read_text()
+        m = re.search(r"var CLICK_MAP = (\{[^\n]*\});", tpl)
+        self.assertIsNotNone(m)
+        click = json.loads(m.group(1))
+        station_ids = {ln.split("|")[0] for ln in (FIXTURE / "steps.tbl").read_text().splitlines() if ln and not ln.startswith("#")}
+        self.assertTrue(set(click) <= station_ids, set(click) - station_ids)
+        panes = set(re.findall(r'panel\("([a-z-]+)"', tpl))
+        self.assertTrue(set(click.values()) <= panes, set(click.values()) - panes)
+
+    def test_json_flag_prints_what_the_file_would_hold_and_out_dir_is_honoured(self):
+        t = Tree()
+        try:
+            t.run(events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n")
+            out = t.root / "elsewhere"
+            r = t.cli("1.0.0", "--out", str(out))
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertTrue((out / "board.html").is_file() and (out / "board.json").is_file())
+            self.assertFalse((t.root / ".release" / "1.0.0" / "board.html").exists())
+            j = t.cli("1.0.0", "--json")
+            a = json.loads(j.stdout)
+            b = json.loads((out / "board.json").read_text())
+            a.pop("generated")
+            b.pop("generated")
+            self.assertEqual(a, b)
+            w = t.cli("1.0.0", "--out", str(out), "--with-logs")
+            self.assertEqual(w.returncode, 0, w.stderr)
+            self.assertTrue((out / "board-with-logs.json").is_file())
+            self.assertFalse(json.loads((out / "board.json").read_text())["header"]["with_logs"])
+        finally:
+            t.close()
+
     def test_logs_are_paths_only_unless_with_logs(self):
         t = Tree()
         try:
@@ -454,12 +632,22 @@ class Html(unittest.TestCase):
             self.assertEqual(r.returncode, 0, r.stderr)
             for name in ("board.html", "board.json"):
                 self.assertEqual(oct((t.root / ".release" / "1.0.0" / name).stat().st_mode & 0o777), "0o600")
+            # and never through a symlink
+            os.remove(t.root / ".release" / "1.0.0" / "board.html")
+            victim = t.root / "victim"
+            victim.write_text("keep")
+            os.symlink(victim, t.root / ".release" / "1.0.0" / "board.html")
+            r = t.cli("1.0.0")
+            self.assertNotEqual(r.returncode, 0)
+            self.assertEqual(victim.read_text(), "keep")
         finally:
             t.close()
 
 
 class RealRun(unittest.TestCase):
-    """The committed copy of the real 0.28.0 ledger: fail, retry, skip, resume, no context.json."""
+    """The committed copy of the real 0.28.0 ledger: fail, retry, skip, resume, no context.json.
+    steps.tbl in the fixture is RECONSTRUCTED (the driver did not write one in
+    0.28.0) — see the fixture's README."""
 
     def test_the_0_28_0_fixture_by_name(self):
         t = Tree()

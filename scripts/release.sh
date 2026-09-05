@@ -447,8 +447,11 @@ resolve_run() {
     [ "$n" -gt 1 ] && printf '  %s(%d runs under .release/ — using the newest, %s)%s\n' "$D" "$n" "$(basename "$newest")" "$N" >&2
     basename "$newest"
 }
-export_sink_for() { # export_sink_for <version> — no-op when the run dir is absent
-    [ -n "${1:-}" ] && [ -d ".release/$1" ] || return 0
+export_sink_for() { # export_sink_for <version> — says so when the run dir is absent
+    if [ -z "${1:-}" ] || [ ! -d ".release/$1" ]; then
+        printf '  %s(no run dir for %s under .release/ — rows will not be recorded)%s\n' "$D" "${1:-?}" "$N" >&2
+        return 0
+    fi
     export BN_RUN_ID="$1" BN_EVENT_SINK="$ROOT/.release/$1/bn-events.log"
 }
 
@@ -628,7 +631,9 @@ cmd_status() {
                         --jq '[.[]|select(.headSha==env.SHA)]|.[0] | "\(.databaseId) \(.status) \(.conclusion // "-")"' 2>/dev/null)"
                 if [ -z "$_ci" ]; then
                     sink_line ci workflow="$WF_CI" sha="$_sha" result=unreachable
-                elif [ "$_ci" = "null" ] || [ "$_ci" = "  " ]; then
+                elif [ "${_ci%% *}" = null ]; then
+                    # jq interpolates a null .[0] as "null null -" — the first
+                    # word is the test, not the whole string (review, 5 Sep 2026)
                     sink_line ci workflow="$WF_CI" sha="$_sha" result="no run for sha"
                 else
                     set -- $_ci
@@ -647,8 +652,17 @@ cmd_status() {
         fi
         run=$(gh run list --workflow=$WF_RELEASE --limit 1 --json databaseId,status,conclusion \
                 --jq '.[0] | "\(.databaseId) \(.status) \(.conclusion // "-")"' 2>/dev/null || echo "")
-        if [ -z "$run" ]; then sink_line ci workflow="$WF_RELEASE" result=unreachable
-        else set -- $run; _rr="${3-}"; [ "${2-}" = completed ] || _rr="${2-}"; sink_line ci workflow="$WF_RELEASE" run_id="${1-}" result="$_rr"; fi
+        # The sink's release row is keyed to THIS run's tag branch, never the
+        # newest run of the workflow: a 0.30.0 dir must not receive 0.29.1's
+        # success (review, 5 Sep 2026). The status line above stays as it was.
+        if [ -n "${_sv:-}" ] && [ -n "$BN_EVENT_SINK" ]; then
+            _rel="$(BR="v$_sv" gh run list --workflow=$WF_RELEASE --branch "v$_sv" --limit 1 \
+                    --json databaseId,status,conclusion,headBranch \
+                    --jq '.[0] | "\(.databaseId) \(.status) \(.conclusion // "-") \(.headBranch)"' 2>/dev/null)"
+            if [ -z "$_rel" ]; then sink_line ci workflow="$WF_RELEASE" branch="v$_sv" result=unreachable
+            elif [ "${_rel%% *}" = null ]; then sink_line ci workflow="$WF_RELEASE" branch="v$_sv" result="no run for sha"
+            else set -- $_rel; _rr="${3-}"; [ "${2-}" = completed ] || _rr="${2-}"; sink_line ci workflow="$WF_RELEASE" branch="${4-}" run_id="${1-}" result="$_rr"; fi
+        fi
         if [ -z "$run" ]; then
             printf '  %s⚠%s release runs   %scould not query — unverified%s\n' "$Y" "$N" "$D" "$N"
         else
@@ -909,6 +923,9 @@ cmd_run() {
     # One driver at a time. mkdir is atomic on every POSIX filesystem and its
     # failure is unambiguous — flock does not exist on macOS.
     mkdir -p "$RUNDIR"
+    # Private: context.json carries the host name and signing identity, logs/
+    # carry raw tool output. One mode on the directory beats one per file.
+    chmod 700 "$RUNDIR" 2>/dev/null || true
     LOCK="$RUNDIR/.lock"
     if ! mkdir "$LOCK" 2>/dev/null; then
         printf 'error: another run holds %s (pid %s)\n' \
@@ -1189,6 +1206,10 @@ cmd_run() {
     # level, and the sha never passes through a string the shell re-parses.
     CI_CMD="SHA=\$(cat '$CI_SHA_FILE' 2>/dev/null); [ -n \"\$SHA\" ] || { echo 'strict-ci recorded no dispatched sha — release.sh retry $V strict-ci'; exit 1; }; export SHA; _id=\$(gh run list --workflow=$WF_CI --event workflow_dispatch --branch main --limit 10 --json databaseId,headSha --jq '[.[]|select(.headSha==env.SHA)]|.[0].databaseId'); [ -n \"\$_id\" ] && [ \"\$_id\" != null ] && gh run watch \"\$_id\" --exit-status"
 
+    # Count prior invocations BEFORE this one is appended (it was counted after,
+    # and every run recorded one attempt too many — review, 5 Sep 2026).
+    _attempt=$(grep -c '"step":"run","status":"started"' "$EVENTS" 2>/dev/null || true)
+    _attempt=$(( ${_attempt:-0} + 1 ))
     ev_append run started "bump=$BUMP"
     # The board's inputs (after the prompt: a declined run must leave an EMPTY
     # dir for the EXIT trap's rmdir — test-release-sh pins it), written by the driver (docs/design-release-board.md
@@ -1197,8 +1218,6 @@ cmd_run() {
     # (RELEASE_STEPS_FILE) can feed it a synthetic one after the fact.
     export BN_RUN_ID="$V" BN_EVENT_SINK="$ROOT/$RUNDIR/bn-events.log"
     { echo "# steps.tbl v1"; run_steps; } > "$RUNDIR/steps.tbl" || die "could not snapshot the step table"
-    _attempt=$(grep -c '"step":"run","status":"started"' "$EVENTS" 2>/dev/null || true)
-    _attempt=$(( ${_attempt:-0} + 1 ))
     sink_line_or_die run status=start attempt="$_attempt" proto=1 \
         || die "cannot write the event sink at $BN_EVENT_SINK"
     write_context "$RUNDIR"

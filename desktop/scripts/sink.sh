@@ -17,9 +17,16 @@
 #     for control bytes, which shlex does not decode: a value with a newline and
 #     an apostrophe made parse_event raise and the whole line was dropped
 #     (measured 5 Sep 2026). CR/LF/TAB become spaces, the rest of \000-\037 is
-#     removed, and the value is cut to 200 bytes — which also keeps every line
-#     under PIPE_BUF so concurrent appenders cannot interleave, and stops a
-#     value from forging a second "@bn" line.
+#     removed, the value is cut to 200 BYTES, and an incomplete trailing UTF-8
+#     sequence is dropped (iconv -c, as release.sh's ev_append does). The
+#     pipeline runs under LC_ALL=C: under a UTF-8 locale BSD tr/cut abort on the
+#     first invalid byte, the assignment fails, and a `set -e` caller — every
+#     build script — would die inside the sink (measured 5 Sep 2026, review).
+#     The cap stops a value from forging a second "@bn" line. It does NOT make
+#     a line atomic under concurrent append: bash's printf to a file is
+#     stdio-buffered at 1 KB, and %q can expand a non-ASCII value fourfold, so
+#     two writers (a `status` during a `run`) can splice a long line — the
+#     parser then counts it as unparsed rather than reading half of it.
 #   - ts is written HERE, in UTC, so a child cannot write local time into the
 #     merge with events.jsonl.
 #   - run is $BN_RUN_ID, or standalone-<epoch> when a sink is set by hand.
@@ -36,7 +43,8 @@ sink_line() {
     for pair in "$@"; do
         k="${pair%%=*}"
         v="${pair#*=}"
-        v="$(printf '%s' "$v" | tr '\r\n\t' '   ' | tr -d '\000-\037' | cut -c1-200)"
+        v="$(printf '%s' "$v" | LC_ALL=C tr '\r\n\t' '   ' | LC_ALL=C tr -d '\000-\037' \
+                | LC_ALL=C cut -c1-200 | iconv -c -f UTF-8 -t UTF-8 2>/dev/null || true)"
         out="$out $k=$(printf '%q' "$v")"
     done
     ( umask 077; printf '%s\n' "$out" >> "$BN_EVENT_SINK" ) 2>/dev/null || true
@@ -54,7 +62,8 @@ sink_line_or_die() {
     for pair in "$@"; do
         k="${pair%%=*}"
         v="${pair#*=}"
-        v="$(printf '%s' "$v" | tr '\r\n\t' '   ' | tr -d '\000-\037' | cut -c1-200)"
+        v="$(printf '%s' "$v" | LC_ALL=C tr '\r\n\t' '   ' | LC_ALL=C tr -d '\000-\037' \
+                | LC_ALL=C cut -c1-200 | iconv -c -f UTF-8 -t UTF-8 2>/dev/null || true)"
         out="$out $k=$(printf '%q' "$v")"
     done
     ( umask 077; printf '%s\n' "$out" >> "$BN_EVENT_SINK" )

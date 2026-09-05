@@ -104,6 +104,8 @@
 <script>
 (function(){
   "use strict";
+  var screenEl = document.getElementById("screen");
+  try {
   var data = JSON.parse(document.getElementById("board-data").textContent);
   var $ = function(tag, cls, text){ var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = String(text); return e; };
   var add = function(parent){ for (var i = 1; i < arguments.length; i++) if (arguments[i]) parent.appendChild(arguments[i]); return parent; };
@@ -115,7 +117,7 @@
   var nodata = function(msg){ return $("div","nodata", msg || "no data"); };
   var chip = function(state, label, evidence){ var c = $("div","chip "+(state||"no-data")); add(c, $("i","dot"), $("span",null,label)); if (evidence) c.title = evidence; return c; };
 
-  var screen = document.getElementById("screen");
+  var screen = screenEl;
   screen.textContent = "";
 
   // ── header ──────────────────────────────────────────────────────────────
@@ -127,13 +129,18 @@
   add(top, $("span","m", "started "+fmtT(h.started)+(h.attempts>1?" · "+h.attempts+" invocations":"")));
   if (h.context && h.context.git) add(top, $("span","m", "git "+(h.context.git.sha||"?")+(h.context.git.dirty?" (dirty)":"")+(h.context.xcode?" · "+h.context.xcode:"")));
   var live = data.liveness;
-  var liveTxt = !live.lock ? "not running" : (live.alive ? "driver alive (pid "+live.pid+")" : "driver DEAD — stranded?");
+  var liveTxt = !live.lock ? "no lock — not running" : (live.alive ? "lock held · a process with pid "+live.pid+" exists" : "lock held · no process with pid "+live.pid+" — stranded?");
   add(top, $("span","pill "+(!live.lock?"":(live.alive?"now":"bad")), liveTxt));
-  if (live.heartbeat) add(top, $("span","m", live.heartbeat.state==="mid-write" ? "heartbeat mid-write" : "heartbeat "+age(new Date(live.heartbeat.epoch*1000).toISOString())+" · "+(live.heartbeat.step||"")+" · "+(live.heartbeat.last_line||"")));
+  if (live.heartbeat) add(top, $("span","m", live.heartbeat.state==="mid-write" ? "heartbeat mid-write" : (live.heartbeat.state==="unparseable" || !isFinite(live.heartbeat.epoch)) ? "heartbeat: timestamp unparseable" : "heartbeat "+age(new Date(live.heartbeat.epoch*1000).toISOString())+" · "+(live.heartbeat.step||"")+" · "+(live.heartbeat.last_line||"")));
   var conf = data.confounded;
   add(top, $("span","pill "+(conf.computable ? (conf.count ? "warn" : "ok") : "hatch"), conf.computable ? ("confounded expectations: "+conf.count) : "confounded log: not computable"));
   add(top, $("span","m", "snapshot generated "+fmtT(data.generated)+" · newest source "+fmtT(h.newest_source)+(h.with_logs ? " · CONTAINS RAW BUILD LOGS — do not attach to anything" : "")));
   add(screen, top);
+
+  // Station → pane. Build lanes are mapped from data.build.lane_ids; these are
+  // the rest. test-release-board.py asserts every key is a station id in the
+  // fixture's steps.tbl and every value a pane this file creates.
+  var CLICK_MAP = {"preflight":"preflight","ci-green":"ci","strict-ci":"ci","testflight":"channels","dmg":"channels","tag":"tag","snap":"channels","snap-stable":"channels"};
 
   // ── the line ────────────────────────────────────────────────────────────
   var lineP = $("div","line");
@@ -146,7 +153,7 @@
     if (s.id === "tag") st.classList.add("irrev-after");
     add(st, $("i"), $("b",null,s.id), $("small",null, s.state + (s.elapsed!=null ? " · "+elapsed(s.elapsed) : (s.est && s.state==="pending" ? " · est "+s.est : "")) + (s.attempt>1 ? " · #"+s.attempt : "")));
     st.title = (s.label||s.id)+" — "+s.kind+(s.consequence?" — "+s.consequence:"");
-    st.addEventListener("click", function(){ var target = {"preflight":"preflight","build-all":"build","build-dmg":"build","ci-green":"ci","strict-ci":"ci","testflight":"channels","dmg":"channels","tag":"tag","snap":"channels","snap-stable":"channels"}[s.id]; var el = target && document.getElementById("pane-"+target); if (el) el.scrollIntoView({behavior:"smooth", block:"center"}); });
+    st.addEventListener("click", function(){ var target = (data.build.lane_ids||[]).indexOf(s.id) >= 0 ? "build-"+s.id : CLICK_MAP[s.id]; var el = target && document.getElementById("pane-"+target); if (el) el.scrollIntoView({behavior:"smooth", block:"center"}); });
     add(track, st);
   });
   add(lineP, track);
@@ -158,15 +165,21 @@
   // preflight
   var pf = data.preflight;
   var pfP = panel("preflight","Pre-flight","check-release-ready.sh", pf.state==="data" ? (pf.rows.length+" rows · "+Object.keys(pf.counts).map(function(k){return pf.counts[k]+" "+k;}).join(" · ")+" · "+age(pf.as_of)) : "");
-  if (pf.state !== "data") add(pfP, nodata("no preflight rows in the sink — run release.sh run (or check-release-ready.sh under a sink)"));
+  if (pf.state === "ran-no-sink") add(pfP, nodata("the driver ran preflight (attempt "+pf.attempt+", rc "+pf.rc+") but no row lines reached the sink — an older check-release-ready.sh, or BN_EVENT_SINK not exported"));
+  else if (pf.state !== "data") add(pfP, nodata("no preflight rows in the sink — run release.sh run (or check-release-ready.sh under a sink)"));
   else { var g = $("div","chips"); pf.rows.forEach(function(r){ add(g, chip(r.result, r.label, r.evidence)); }); add(pfP, g); }
   add(left, pfP);
 
   // build
   var bd = data.build;
   bd.lanes.forEach(function(lane){
-    var st = {"not-run":"not run","ran-no-sink":"ran (ledger: "+lane.ledger_state+") — the sink has no record of it","running-no-sink":"running — no child lines yet","data":(lane.steps.length+" steps · attempt "+lane.attempt+" · rc "+lane.rc+" · "+elapsed(lane.elapsed))}[lane.state];
-    var bp = panel("build","Build","desktop/scripts/"+lane.id+".sh", st);
+    var st = {"not-run":"not run",
+              "skipped":"skipped by the driver",
+              "failed-no-window":"failed (ledger) — the driver wrote no window for it, so nothing from inside it reached the sink",
+              "ran-no-sink":"ran (ledger: "+lane.ledger_state+") — no @bn lines from this script"+(lane.emits_known ? " (it has emitted before: BN_REPORT=0, an unwritable sink, or a lost export)" : " (this script does not report steps; nothing is missing)"),
+              "running-no-sink":"running — no child lines yet",
+              "data":(lane.steps.length+" steps · attempt "+lane.attempt+" · rc "+lane.rc+" · "+elapsed(lane.elapsed))}[lane.state] || lane.state;
+    var bp = panel("build-"+lane.id,"Build","desktop/scripts/"+lane.id+".sh", st);
     if (lane.state !== "data") { add(bp, nodata(st)); add(left, bp); return; }
     var maxE = Math.max.apply(null, lane.steps.map(function(s){return s.elapsed||0;}).concat([1]));
     var grid = $("div","steps");
@@ -184,18 +197,18 @@
 
   // ci
   var ci = data.ci;
-  var ciP = panel("ci","CI", ci.state==="data" ? ("strict run on "+(ci.runs[0]&&ci.runs[0].sha ? ci.runs[0].sha.slice(0,8) : "?")) : "", ci.state==="data" ? (ci.jobs.length+" jobs · "+(ci.sha_matches?"sha matches ci-sha":"SHA DOES NOT MATCH ci-sha")+" · "+age(ci.runs[0]&&ci.runs[0].as_of)) : "");
+  var ciP = panel("ci","CI", ci.state==="data" ? ("run on "+(ci.runs[0]&&ci.runs[0].sha ? ci.runs[0].sha.slice(0,8) : "?")+(ci.runs[0]&&ci.runs[0].branch ? " · "+ci.runs[0].branch : "")) : "", ci.state==="data" ? (ci.jobs.length+" jobs · as `status` recorded it · "+age(ci.runs[0]&&ci.runs[0].as_of)) : "");
   if (ci.state !== "data") add(ciP, nodata("not queried — "+ci.hint));
   else {
     if (ci.matrix.length){
       var pys = [], oss = []; ci.matrix.forEach(function(c){ if(pys.indexOf(c.python)<0) pys.push(c.python); if(oss.indexOf(c.os)<0) oss.push(c.os); }); pys.sort(); oss.sort();
       var m = $("div","matrix"); m.style.gridTemplateColumns = "70px repeat("+pys.length+",1fr)";
       add(m, $("span","rl","")); pys.forEach(function(p){ add(m, $("span","h",p)); });
-      oss.forEach(function(o){ add(m, $("span","rl",o)); pys.forEach(function(p){ var c = ci.matrix.filter(function(x){return x.os===o&&x.python===p;})[0]; var cell = $("div","cell "+(c?c.result:"na"), c ? (c.result==="success"?"✓":(c.result==="failure"?"✗":"…")) : ""); if (c) cell.title = c.job+" — "+c.result; add(m, cell); }); });
+      oss.forEach(function(o){ add(m, $("span","rl",o)); pys.forEach(function(p){ var c = ci.matrix.filter(function(x){return x.os===o&&x.python===p;})[0]; var cell = $("div","cell "+(c?c.result:"na"), c ? (c.result==="success"?"✓":(c.result==="failure"?"✗":c.result)) : ""); if (c) cell.title = c.job+" — "+c.result; add(m, cell); }); });
       add(ciP, m);
     }
     var gates = $("div","gates");
-    ci.jobs.filter(function(j){ return !/^\w[\w-]* \(\d/.test(j.job); }).forEach(function(j){ var e = $("div","gate "+(j.result||"")); add(e, $("span",null,j.job), $("small",null,j.result)); add(gates, e); });
+    ci.jobs.filter(function(j){ return !j.matrix; }).forEach(function(j){ var e = $("div","gate "+(j.result||"")); add(e, $("span",null,j.job), $("small",null,j.result)); add(gates, e); });
     add(ciP, gates);
     var rl = $("div","sub"); ci.runs.forEach(function(r){ add(rl, $("span",null, r.workflow+": "+r.result+(r.run_id?" · run "+r.run_id:""))); }); add(ciP, rl);
     if (pf.state==="data") add(ciP, $("div","sub", pf.ci_verdict ? ("publish gate (preflight): "+pf.ci_verdict.result+" — "+pf.ci_verdict.evidence) : "publish gate row absent from the latest preflight"));
@@ -219,6 +232,7 @@
   // channels
   var chn = data.channels;
   var cP = panel("channels","Channels","release.sh verify", chn.batches ? ((chn.complete ? "latest verify complete" : "latest verify PARTIAL — "+chn.partial_rows+" rows, no done line")+(chn.rollup?" · rollup rc "+chn.rollup.rc+" · "+chn.rollup.ok+" of "+chn.rollup.channels:"")+" · "+age(chn.as_of)) : "no verify recorded — run release.sh verify");
+  if (chn.version_mismatch) add(cP, $("div","nodata", "the latest verify probed v"+chn.version_mismatch+", not v"+data.version+" — its rows are not shown here (a bare `release.sh verify` probes the tree's version)"));
   var cg = $("div","channels");
   chn.cards.forEach(function(c, i){
     var card = $("div","ch "+c.state); var n = $("div","n"); add(n, $("i","dot"), $("span",null,c.name), $("span","idx",(i+1)+"/"+chn.cards.length)); add(card, n);
@@ -254,12 +268,12 @@
 
   // ── bottom: events, activity, failed-step log ───────────────────────────
   var bottom = $("div","log");
-  var eP = panel("events","Events","ledger + sink, merged by (ts, source, line)", data.sink.present ? (data.sink.events+" sink events"+(data.sink.unparsed?" · "+data.sink.unparsed+" UNPARSED":"")+(data.sink.partial?" · partial trailing line":"")) : "no sink file");
+  var eP = panel("events","Events","ledger + sink, merged by (ts, source, line)", "last "+data.events.length+" of "+(data.events_total!=null?data.events_total:"?")+(data.sink.present ? (" · "+data.sink.events+" sink events"+(data.sink.unparsed?" · "+data.sink.unparsed+" UNPARSED":"")+(data.sink.partial?" · partial trailing line":"")) : " · no sink file"));
   var ev = $("div","ev");
   data.events.forEach(function(r){ add(ev, $("span","ts",fmtT(r.ts)), $("span","src "+(r.src==="ledger"?"ledger":""), r.src), $("span",null,r.text)); });
   add(eP, data.events.length ? ev : nodata());
   add(bottom, eP);
-  var aP = panel("activity","Activity","events per minute", data.activity.start ? ("from "+fmtT(data.activity.start)+" · "+data.activity.minutes.length+" min") : "");
+  var aP = panel("activity","Activity","events per minute", data.activity.start ? ("from "+fmtT(data.activity.start)+" · "+data.activity.minutes.length+" min"+(data.activity.truncated ? " of "+data.activity.span_minutes+" — TRUNCATED, "+data.activity.dropped+" events beyond the strip" : "")+(data.activity.unparseable ? " · "+data.activity.unparseable+" unparseable timestamps excluded" : "")) : (data.activity.unparseable ? data.activity.unparseable+" unparseable timestamps, nothing to draw" : ""));
   var strip = $("div","strip"); var maxC = Math.max.apply(null, data.activity.minutes.concat([1]));
   data.activity.minutes.forEach(function(c){ var b = $("i"); b.style.height = Math.max(2, Math.round(24*c/maxC))+"px"; b.title = c+" events"; add(strip, b); });
   add(aP, data.activity.minutes.length ? strip : nodata());
@@ -273,6 +287,15 @@
             $("span",null,"Colour carries ok · warn · fail · running; everything else is outlined or hatched."),
             $("span",null,"Snapshot. Regenerate: .venv/bin/python scripts/release-board.py "+data.version+" — then reload."));
   add(screen, foot);
+  } catch (err) {
+    // The page opens from file:// with no console anyone reads. A renderer
+    // fault must be a band on the page, not a blank one.
+    var band = document.createElement("div");
+    band.style.cssText = "margin:8px;padding:10px 14px;border:2px solid #d0342c;border-radius:8px;background:#fff1f0;color:#d0342c;font:12px/1.4 -apple-system,system-ui,sans-serif";
+    band.textContent = "The board failed to render: " + (err && err.message ? err.message : String(err)) + " — the data block is intact; regenerate with scripts/release-board.py and reload.";
+    screenEl.insertBefore(band, screenEl.firstChild);
+    throw err;
+  }
 })();
 </script>
 </body>

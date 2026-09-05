@@ -47,7 +47,10 @@ _bn_field() {
 # owner's events are also appended to that file with ts= and run=. Same
 # directory as this file; a partial checkout without it must not break a build
 # phase, so the source is guarded and sink_line degrades to a no-op.
-_BN_SINK_SH="${BASH_SOURCE[0]%/*}/sink.sh"
+# Resolved through `cd … && pwd`, not `${BASH_SOURCE[0]%/*}`: sourced bare
+# (`. report.sh`) that expands to `report.sh/sink.sh`, and through a symlink
+# it names the link's directory — both silently fell to the no-op stub.
+_BN_SINK_SH="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)/sink.sh"
 if [ -f "$_BN_SINK_SH" ]; then
     # shellcheck source=desktop/scripts/sink.sh
     . "$_BN_SINK_SH"

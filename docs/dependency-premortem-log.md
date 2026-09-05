@@ -906,8 +906,9 @@ constraint of ours, so they emit ordinary version-update PRs.
   next step: `copy_metadata("starlette")` in the spec, so the bundle records it.
   _5 Sep 2026: the 0.29.1 question stays unanswerable, but from here on the
   inventory is regenerated from the sidecar venv, so the **next** artefact's
-  starlette is recorded (1.6.0 today). The `copy_metadata` line is still the
-  only way to read it off the bundle itself; not taken._
+  starlette is recorded (1.6.0 today). And the `copy_metadata` line was taken
+  the same day (`4b5fd8d3`, spec `datas`): `starlette-1.6.0.dist-info`, 28 KB,
+  is in `_internal/` of the bundle built 5 Sep 2026._
 - ❔ **Whether `presidio-anonymizer` intends to float `cryptography<49`.**
   2.2.364 is latest and no upstream signal was found either way — which is why
   it is a predicate rather than a verdict.

@@ -210,6 +210,13 @@ old pinned versions):
   version) or warn against the target.
 - The target package's own changelog / release notes for the predicate's
   specific condition ("did spaCy 4 ship GA?").
+- **First, an abandonment check on whatever the predicate names.** Is that
+  upstream alive (recent release or commit, open-PR activity, no yanked
+  latest), and is it the publisher (`fork: true` and `parent` on GitHub; an
+  org that migrated its repos)? "spaCy 4 reaches GA" waited on a line whose
+  newest artefact was a two-year-old dev release; "snapcore ships node24"
+  waited on an abandoned fork of `canonical/*`. A predicate on a dead or
+  wrong upstream is not *unmet*, it is *unfireable* — say so and re-specify.
 
 For each held row, emit one of: **still held** (predicate unmet — restate
 the reason and the date last checked), **wave forming** (predicate partly

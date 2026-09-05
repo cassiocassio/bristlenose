@@ -133,11 +133,16 @@ So Cassandra models a held bump not as a tombstone but as a
 
 Two rules for writing a row, each paid for once (Entries 5 and 7):
 
-- **A row may not restate a value that lives in a tracked config file; it
-  may only name the file.** A register that said "CI is on Node 20" was wrong
-  for two months after `.tool-versions` moved, and a "corrected" row saying
-  24 would rot at the next LTS. Mechanically checkable: any literal version
-  in a row that also appears in a tracked config file is drift by definition.
+- **A row may not restate one of OUR pins; it may only name the file that
+  holds it.** Our pins are `.tool-versions`, `pyproject.toml`, `package.json`,
+  `dependabot.yml`. A register that said "CI is on Node 20" was wrong for two
+  months after `.tool-versions` moved, and a "corrected" row saying 24 would
+  rot at the next LTS. Upstream facts are different: "spaCy 3.8.16 requires
+  `weasel<2`" is a measurement of someone else's metadata and belongs in the
+  row, dated. A graduation receipt that quotes the floor it set ("floor now
+  `>=1.0`") is a dated record of a change, not a live claim, and is fine.
+  Nothing checks this mechanically yet; when something does, it should look
+  for a literal from one of those four files inside a row's *reason* column.
 - **A predicate that waits on a maintainer needs an abandonment check, not
   just a release check.** Four predicates in one week could never fire:
   "once jsdom #89 merges" (closed), "spaCy 4 reaches GA" (newest artefact a

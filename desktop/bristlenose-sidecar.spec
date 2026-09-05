@@ -6,9 +6,12 @@
 #   - Presidio + spaCy excluded (Background Assets post-alpha)
 #   - Keeps mlx + mlx_whisper (Apple Silicon transcription)
 #
-# Usage (via desktop/scripts/build-sidecar.sh):
+# Usage (via desktop/scripts/build-sidecar.sh — run it, don't hand-invoke):
 #   cd <repo-root>
-#   .venv/bin/python -m PyInstaller \
+#   .venv-sidecar/bin/python -m PyInstaller \
+#   # .venv-sidecar, NOT .venv: copy_metadata() and collect_all() resolve in
+#   # the interpreter running PyInstaller, and .venv is a different resolve
+#   # (it held starlette 1.3.1 against the sidecar's 1.6.0 on 5 Sep 2026).
 #       --distpath desktop/Bristlenose/Resources \
 #       --workpath desktop/build/pyinstaller \
 #       --clean --noconfirm \

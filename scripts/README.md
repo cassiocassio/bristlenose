@@ -80,12 +80,16 @@ done
 .venv/bin/python scripts/test-tap-provenance.py
 ```
 
-> **Use `.venv/bin/python`, not `python3`, for anything that inspects installed
-> packages.** `check-dep-drift.py` under the system interpreter reports 110
-> packages "absent" and four bogus MAJOR drifts — the system `certifi` read as
-> our `certifi`. It does not error; it answers confidently about the wrong
-> environment, and `test-dep-drift.py` then fails its own restore assertion.
-> Same trap, one layer out, as everything in Part 2's closing section.
+> **The inventory scripts read `.venv-sidecar`, not the interpreter that runs
+> them.** Since 5 Sep 2026 `check-dep-drift.py` and
+> `generate-third-party-binaries.py` take `--python` (default
+> `.venv-sidecar/bin/python`, the venv the bundle is built from), so the
+> launching interpreter no longer decides the answer. The trap moved rather
+> than vanished: a `--python` that is a symlink to the venv's python from
+> *outside* its `bin/` lands on the base interpreter, and a half-built sidecar
+> venv is a real interpreter with a wrong site-packages — both answer
+> confidently about the wrong environment. The tool itself (`pip-licenses`)
+> still comes from `.venv`'s `[release]` extra.
 
 | | |
 |---|---|

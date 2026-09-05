@@ -161,6 +161,14 @@ ecosystem until the day a coupling cluster becomes safe to take as a wave.
    - **OSV** (`https://api.osv.dev/v1/query`) — advisories that force or
      forbid a move.
    - the target's own changelog for the predicate's specific condition.
+   **Before any of that, check the predicate CAN fire.** Ask two things of
+   the upstream the predicate names: is it alive (last release, last commit,
+   open-PR activity — a line whose newest artefact is a years-old dev
+   release with yanked siblings is not alive), and is it the upstream at all
+   (`fork: true` / `parent` on the GitHub repo; an org whose repos all
+   migrated elsewhere). A predicate that waits on a dead or wrong upstream
+   is retired and re-specified, never "still held". Four in one week could
+   not fire (Entry 7 / 4 Sep 2026: jsdom, thinc, tokenizers, snapcore).
 3. **Classify each row**: **still held** (predicate unmet — restate the
    reason, stamp the date checked), **wave forming** (partly met — name
    what's still missing, e.g. "spaCy 4 GA'd but `en_core_web_lg` hasn't

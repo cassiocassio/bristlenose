@@ -585,8 +585,9 @@ class LLMClient:
         # the promise in docs/design-decisions.md § "Temperature is not a
         # control we ship" — *"nobody's analysis changes"*.
         #
-        # `extra_body` exists on 0.x and 1.x alike, so this is version-agnostic
-        # and lifts the `anthropic<1` ceiling without a second code change.
+        # `extra_body` exists on 0.x and 1.x alike, so this is version-agnostic;
+        # it is what let the `anthropic<1` ceiling go (5 Sep 2026) without a
+        # second code change.
         sampling: dict[str, float] = {}
         if request_model in _ANTHROPIC_ACCEPTS_SAMPLING:
             sampling["temperature"] = self.settings.llm_temperature

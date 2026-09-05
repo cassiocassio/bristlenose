@@ -253,15 +253,80 @@ def read_context(run_dir: Path) -> dict | None:
     return {k: ctx[k] for k in CONTEXT_ALLOWLIST if k in ctx}
 
 
+_CONF_SCALARS = ("PROJECT_NAME", "PROJECT_DISPLAY", "GH_REPO", "TAP_REPO", "COPR_OWNER", "COPR_PROJECT", "SITE", "DMG_PERMALINK", "CHANGELOG_URL")
+
+
 def read_conf(conf: Path) -> dict:
-    out = {"CHANNELS": [], "CHANNELS_UNPROBEABLE": []}
+    """The channel lists plus the scalars the links are built from, with the
+    file's own `${VAR}` references expanded (COPR_PROJECT="${PROJECT_NAME}")."""
+    out: dict = {"CHANNELS": [], "CHANNELS_UNPROBEABLE": []}
     if not conf.is_file():
         return out
+    raw: dict[str, str] = {}
     for line in conf.read_text(encoding="utf-8", errors="replace").splitlines():
-        m = re.match(r'^(CHANNELS|CHANNELS_UNPROBEABLE)="([^"]*)"\s*(#.*)?$', line)
+        m = re.match(r'^([A-Z_]+)=(?:"([^"]*)"|\'([^\']*)\'|(\S*))\s*(#.*)?$', line)
         if m:
-            out[m.group(1)] = m.group(2).split()
+            raw[m.group(1)] = m.group(2) if m.group(2) is not None else (m.group(3) if m.group(3) is not None else m.group(4) or "")
+    for _ in range(4):
+        raw = {k: re.sub(r"\$\{([A-Z_]+)\}", lambda mm: raw.get(mm.group(1), ""), v) for k, v in raw.items()}
+    for k in ("CHANNELS", "CHANNELS_UNPROBEABLE"):
+        out[k] = raw.get(k, "").split()
+    for k in _CONF_SCALARS:
+        if raw.get(k):
+            out[k] = raw[k]
     return out
+
+
+_SHA = re.compile(r"^[0-9a-f]{7,40}$")
+_RUN_ID = re.compile(r"^\d{1,20}$")
+
+
+def https(url: str | None) -> str | None:
+    """Every href on the board passes through here: https only, and never a
+    string that came out of the sink or the ledger unvalidated."""
+    return url if url and url.startswith("https://") and not any(c in url for c in ' <>"\'') else None
+
+
+def build_links(conf: dict, version: str, ci_sha: str | None) -> dict:
+    """Pointers, not claims: where each channel's public page is, the commit,
+    the release tag. Built from project.conf constants and validated ids only."""
+    name, site = conf.get("PROJECT_NAME"), conf.get("SITE")
+    repo, tap = conf.get("GH_REPO"), conf.get("TAP_REPO")
+    out: dict = {"channels": {}}
+    if name:
+        out["channels"]["pypi"] = f"https://pypi.org/project/{name}/{version}/"
+        out["channels"]["snap"] = f"https://snapcraft.io/{name}"
+    if repo:
+        out["repo"] = f"https://github.com/{repo}"
+        out["channels"]["github"] = f"https://github.com/{repo}/releases/tag/v{version}"
+        out["tag"] = out["channels"]["github"]
+        out["actions"] = f"https://github.com/{repo}/actions"
+        if ci_sha and _SHA.match(ci_sha):
+            out["ci_sha"] = f"https://github.com/{repo}/commit/{ci_sha}"
+            out["ratchets"] = f"https://github.com/{repo}/blob/{ci_sha}/docs/testing/ratchet.json"
+    if tap and name:
+        out["channels"]["homebrew"] = f"https://github.com/{tap}/blob/main/Formula/{name}.rb"
+    if conf.get("COPR_OWNER") and conf.get("COPR_PROJECT"):
+        out["channels"]["copr"] = f"https://copr.fedorainfracloud.org/coprs/{conf['COPR_OWNER']}/{conf['COPR_PROJECT']}/"
+    if conf.get("DMG_PERMALINK"):
+        out["channels"]["dmg"] = conf["DMG_PERMALINK"]
+    if conf.get("CHANGELOG_URL"):
+        out["channels"]["website"] = conf["CHANGELOG_URL"]
+    elif site:
+        out["channels"]["website"] = f"https://{site}/"
+    out["channels"]["testflight"] = "https://appstoreconnect.apple.com/apps"
+    out["channels"] = {k: v for k, v in ((k, https(v)) for k, v in out["channels"].items()) if v}
+    return {k: (https(v) if isinstance(v, str) else v) for k, v in out.items()}
+
+
+def sha_url(conf: dict, sha: str | None) -> str | None:
+    repo = conf.get("GH_REPO")
+    return https(f"https://github.com/{repo}/commit/{sha}") if repo and sha and _SHA.match(sha) else None
+
+
+def run_url(conf: dict, run_id: str | None) -> str | None:
+    repo = conf.get("GH_REPO")
+    return https(f"https://github.com/{repo}/actions/runs/{run_id}") if repo and run_id and _RUN_ID.match(str(run_id)) else None
 
 
 def read_ratchet(p: Path) -> list[dict]:
@@ -488,7 +553,24 @@ def lane_ids(steps: list[dict]) -> list[str]:
     return ids or ["build-all", "build-dmg"]
 
 
-def build_pane(grouped: dict, ledger: dict, steps: list[dict], previous: dict | None) -> dict:
+def source_emits(root: Path, cmd: str) -> bool | None:
+    """Does the lane's script, as it stands in the tree TODAY, report steps
+    through report.sh? Read, not inferred: the file is grepped for bn_autowrap.
+    None when the command names no readable file. The tree now is not the tree
+    at the time of the run, which the wording says."""
+    m = re.search(r"(desktop/scripts/[a-z-]+\.sh)", cmd or "")
+    if not m:
+        return None
+    p = root / m.group(1)
+    if not p.is_file():
+        return None
+    try:
+        return "bn_autowrap" in p.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+
+
+def build_pane(grouped: dict, ledger: dict, steps: list[dict], previous: dict | None, root: Path = ROOT, logs: dict | None = None) -> dict:
     """The build steps, from the sink's child events inside the driver's window for
     each lane. States: not-run · skipped · failed-no-window · ran-no-sink (the
     ledger says it ran; the sink has no @bn lines from it) · running-no-sink · data."""
@@ -496,10 +578,12 @@ def build_pane(grouped: dict, ledger: dict, steps: list[dict], previous: dict | 
     windows = [w for w in grouped["windows"] if w["id"] in lanes]
     fold = ledger["fold"]
     prev_children = (previous or {}).get("lanes_with_children", set())
+    cmds = {s["id"]: s.get("cmd", "") for s in steps}
     out = {"lanes": [], "lane_ids": lanes}
     for lane_id in lanes:
         ws = [w for w in windows if w["id"] == lane_id]
         ledger_state = fold.get(lane_id, {}).get("status")
+        common = {"source_emits": source_emits(root, cmds.get(lane_id, "")), "log": (logs or {}).get(lane_id)}
         if not ws:
             if ledger_state in (None, "pending"):
                 state = "not-run"
@@ -510,7 +594,7 @@ def build_pane(grouped: dict, ledger: dict, steps: list[dict], previous: dict | 
             else:
                 state = "ran-no-sink"
             out["lanes"].append({"id": lane_id, "state": state, "ledger_state": ledger_state, "steps": [], "checks": [], "gates": [], "arts": [],
-                                 "emits_known": lane_id in prev_children})
+                                 "emits_known": lane_id in prev_children, **common})
             continue
         w = ws[-1]
         steps: dict[str, dict] = {}
@@ -546,7 +630,7 @@ def build_pane(grouped: dict, ledger: dict, steps: list[dict], previous: dict | 
             state = "running-no-sink"
         out["lanes"].append({"id": lane_id, "state": state, "ledger_state": ledger_state, "attempt": w["attempt"],
                              "rc": w["rc"], "elapsed": w["elapsed"], "steps": [steps[s] for s in order],
-                             "checks": checks, "gates": gates, "arts": arts, "emits_known": lane_id in prev_children or bool(w["children"])})
+                             "checks": checks, "gates": gates, "arts": arts, "emits_known": lane_id in prev_children or bool(w["children"]), **common})
     return out
 
 
@@ -606,7 +690,7 @@ def clocks_pane(grouped: dict) -> list[dict]:
     return out
 
 
-def ci_pane(grouped: dict, ci_sha: str | None) -> dict:
+def ci_pane(grouped: dict, ci_sha: str | None, conf: dict | None = None) -> dict:
     lines = grouped["ci"]
     if not lines:
         return {"state": "not-queried", "hint": "run `release.sh status`", "runs": [], "jobs": []}
@@ -625,7 +709,9 @@ def ci_pane(grouped: dict, ci_sha: str | None) -> dict:
         job_rows.append({"job": j.get("job"), "result": j.get("result"), "workflow": j.get("workflow"), "matrix": bool(m)})
     # No "sha matches" claim: `status` writes sha= from the same ci-sha file the
     # board reads, so a comparison would be a file against a copy of itself.
-    return {"state": "data", "runs": [{"workflow": r.get("workflow"), "run_id": r.get("run_id"), "sha": r.get("sha"), "branch": r.get("branch"), "result": r.get("result"), "as_of": r.get("ts")} for r in runs],
+    conf = conf or {}
+    return {"state": "data", "runs": [{"workflow": r.get("workflow"), "run_id": r.get("run_id"), "sha": r.get("sha"), "branch": r.get("branch"), "result": r.get("result"), "as_of": r.get("ts"),
+                                       "url": run_url(conf, r.get("run_id")), "sha_url": sha_url(conf, r.get("sha"))} for r in runs],
             "jobs": job_rows, "matrix": matrix, "ci_sha": ci_sha}
 
 
@@ -795,11 +881,15 @@ def build_model(root: Path, version: str, with_logs: bool, narrate=lambda s: Non
     prev = previous_run(release_dir, version, conf)
     channels = channels_pane(conf, grouped, sink["as_of"], version)
     preflight = preflight_pane(grouped)
-    build = build_pane(grouped, ledger, steps, prev)
-    ci = ci_pane(grouped, ci_sha)
+    ci = ci_pane(grouped, ci_sha, conf)
+    links = build_links(conf, version, ci_sha)
+    for c in channels["cards"]:
+        c["url"] = links["channels"].get(c["name"])
     clocks = clocks_pane(grouped)
     needing_logs = [s["id"] for s in stations if s["state"] in ("fail", "running", "stranded", "corrupt")]
+    lane_logs = read_logs(run_dir, [ln for ln in lane_ids(steps) if ln not in needing_logs], False, root)
     logs = read_logs(run_dir, needing_logs, with_logs, root)
+    build = build_pane(grouped, ledger, steps, prev, root, {**lane_logs, **logs})
     act = activity(ledger, sink)
     conf_log = confounded(steps, steps_source, stations, unknown_steps, grouped, channels, preflight, ledger, sink, prev,
                           steps_problems, build, act)
@@ -835,6 +925,7 @@ def build_model(root: Path, version: str, with_logs: bool, narrate=lambda s: Non
         "ci": ci,
         "ratchets": read_ratchet(root / "docs" / "testing" / "ratchet.json"),
         "tag": {"ci_sha": ci_sha, "station": next((s for s in stations if s["id"] == "tag"), None)},
+        "links": links,
         "channels": channels,
         "clocks": clocks,
         "events": merged_events(ledger, sink),

@@ -513,6 +513,26 @@ class LaneEmission(unittest.TestCase):
         finally:
             t.close()
 
+    def test_lane_says_whether_its_source_reports_steps_and_where_its_output_went(self):
+        t = Tree()
+        try:
+            (t.root / "desktop" / "scripts").mkdir(parents=True)
+            (t.root / "desktop" / "scripts" / "build-all.sh").write_text("#!/bin/bash\nsource report.sh\nbn_autowrap \"$0\"\n")
+            (t.root / "desktop" / "scripts" / "build-dmg.sh").write_text("#!/bin/bash\necho plain\n")
+            steps = STEPS + "build-dmg|build the dmg|plain|5m|||desktop/scripts/build-dmg.sh\n"
+            t.run(steps=steps, events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n" + ev("2026-09-05T10:00:04Z", "build-all", "ok", "3s") + "\n"
+                  + ev("2026-09-05T10:00:09Z", "build-dmg", "ok", "4s") + "\n",
+                  extra={"logs/build-all.1.log": "x" * 300, "logs/build-all.2.log": "y" * 500, "logs/build-dmg.1.log": "z" * 10})
+            lanes = {ln["id"]: ln for ln in t.model()["build"]["lanes"]}
+            self.assertTrue(lanes["build-all"]["source_emits"])
+            self.assertFalse(lanes["build-dmg"]["source_emits"])
+            self.assertEqual(lanes["build-all"]["log"]["attempts"], 2)
+            self.assertEqual(lanes["build-all"]["log"]["size"], 500)
+            self.assertTrue(lanes["build-all"]["log"]["path"].endswith("logs/build-all.2.log"))
+            self.assertNotIn("tail", lanes["build-all"]["log"])
+        finally:
+            t.close()
+
     def test_skipped_and_failed_lanes_have_their_own_states(self):
         t = Tree()
         try:
@@ -522,6 +542,36 @@ class LaneEmission(unittest.TestCase):
             self.assertEqual([ln["state"] for ln in t.model()["build"]["lanes"] if ln["id"] == "build-all"], ["failed-no-window"])
         finally:
             t.close()
+
+
+class Links(unittest.TestCase):
+    def test_links_are_https_from_conf_and_validated_ids_only(self):
+        t = Tree()
+        try:
+            (t.root / "scripts" / "project.conf").write_text(CONF + 'GH_REPO="o/r"\nTAP_REPO="o/homebrew-r"\nSITE="x.app"\nCOPR_OWNER="o"\nCOPR_PROJECT="${PROJECT_NAME}"\nCHANGELOG_URL="https://${SITE}/docs/changelog.html"\n')
+            sink = ("@bn ci ts=2026-09-05T12:00:00Z run=1.0.0 workflow=ci.yml sha=javascript:alert(1) run_id=12 result=success\n"
+                    "@bn ci ts=2026-09-05T12:00:01Z run=1.0.0 workflow=release.yml sha=abcdef0123456789abcdef0123456789abcdef01 run_id=../x result=success\n")
+            t.run(events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n", sink=sink, extra={"ci-sha": "a" * 40})
+            m = t.model()
+            links = m["links"]
+            self.assertEqual(links["channels"]["pypi"], "https://pypi.org/project/bristlenose/1.0.0/")
+            self.assertEqual(links["channels"]["copr"], "https://copr.fedorainfracloud.org/coprs/o/bristlenose/")
+            self.assertEqual(links["channels"]["website"], "https://x.app/docs/changelog.html")
+            self.assertEqual(links["ci_sha"], "https://github.com/o/r/commit/" + "a" * 40)
+            self.assertEqual(links["tag"], "https://github.com/o/r/releases/tag/v1.0.0")
+            self.assertTrue(all(v.startswith("https://") for v in links["channels"].values()))
+            runs = {r["workflow"]: r for r in m["ci"]["runs"]}
+            self.assertIsNone(runs["ci.yml"]["sha_url"])      # not a sha
+            self.assertEqual(runs["ci.yml"]["url"], "https://github.com/o/r/actions/runs/12")
+            self.assertIsNone(runs["release.yml"]["url"])     # not a run id
+            self.assertTrue(runs["release.yml"]["sha_url"].endswith("/commit/abcdef0123456789abcdef0123456789abcdef01"))
+            self.assertEqual({c["name"]: bool(c["url"]) for c in m["channels"]["cards"]}, {"pypi": True, "github": True, "testflight": True})
+        finally:
+            t.close()
+
+    def test_template_sets_href_in_exactly_one_place(self):
+        code = TEMPLATE.read_text().split("<script>", 1)[1]
+        self.assertEqual(len(re.findall(r"\.href\s*=", code)), 1)
 
 
 class _ScriptGrabber(HTMLParser):

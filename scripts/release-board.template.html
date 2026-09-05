@@ -28,6 +28,7 @@
   .top h1{margin:0;font-size:14px;font-weight:600}
   .top .v{font:600 15px var(--mono)}
   .top .m{color:var(--mute);font-size:11px}
+  a{color:inherit;text-decoration:underline dotted;text-underline-offset:2px} a:hover{text-decoration-style:solid;color:var(--now)}
   .pill{padding:3px 9px;border-radius:12px;border:1px solid var(--rule2);font-size:11px;color:var(--mute)}
   .pill.ok{background:#eaf6ee;border-color:#cfe9d8;color:var(--ok)} .pill.bad{background:#fff1f0;border-color:#f1c9c6;color:var(--bad)}
   .pill.now{background:#e9f0ff;border-color:#bcd0ff;color:var(--now);font-weight:600} .pill.warn{background:#fff8e8;border-color:#f3dfa5;color:var(--warn)}
@@ -138,6 +139,10 @@
   var panel = function(key, title, sub, right){ var p = $("div","panel"); p.id = "pane-"+key; var h = $("h2"); add(h, $("span",null,title), sub ? $("b",null,sub) : null, right ? $("span","r",right) : null); add(p, h); panelSize(p, key); return p; };
   var nodata = function(msg){ return $("div","nodata", msg || "no data"); };
   var idle = function(el, when){ if (when) el.classList.add("idle"); return el; };
+  // The one place an href is set. Every url comes from the generator's links
+  // (project.conf constants + validated ids), never from a sink or ledger string.
+  var link = function(text, url, cls){ if (!url) return $("span", cls, text); var a = $("a", cls, text); a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer"; return a; };
+  var L = data.links || {channels: {}};
   var chip = function(state, label, evidence){ var c = $("div","chip "+(state||"no-data")); add(c, $("i","dot"), $("span",null,label)); if (evidence) c.title = evidence; return c; };
 
   var screen = screenEl;
@@ -150,7 +155,7 @@
   add(top, $("span","pill "+phaseCls, data.phase));
   var h = data.header;
   add(top, $("span","m", "started "+fmtT(h.started)+(h.attempts>1?" · "+h.attempts+" invocations":"")));
-  if (h.context && h.context.git) add(top, $("span","m", "git "+(h.context.git.sha||"?")+(h.context.git.dirty?" (dirty)":"")+(h.context.xcode?" · "+h.context.xcode:"")));
+  if (h.context && h.context.git) { var gm = $("span","m"); add(gm, $("span",null,"git "), link(h.context.git.sha||"?", L.ci_sha && h.context.git.sha && L.ci_sha.slice(-((h.context.git.sha||"").length)) === h.context.git.sha ? L.ci_sha : null), $("span",null,(h.context.git.dirty?" (dirty)":"")+(h.context.xcode?" · "+h.context.xcode:""))); add(top, gm); }
   var live = data.liveness;
   var liveTxt = !live.lock ? "no lock — not running" : (live.alive ? "lock held · a process with pid "+live.pid+" exists" : "lock held · no process with pid "+live.pid+" — stranded?");
   add(top, $("span","pill "+(!live.lock?"":(live.alive?"now":"bad")), liveTxt));
@@ -210,15 +215,19 @@
   // build
   var bd = data.build;
   bd.lanes.forEach(function(lane){
-    var st = {"not-run":"not run",
-              "skipped":"skipped by the driver",
-              "failed-no-window":"failed (ledger) — the driver wrote no window for it, so nothing from inside it reached the sink",
-              "ran-no-sink":"ran (ledger: "+lane.ledger_state+") — no @bn lines from this script"+(lane.emits_known ? " (it has emitted before: BN_REPORT=0, an unwritable sink, or a lost export)" : " (this script does not report steps; nothing is missing)"),
-              "running-no-sink":"running — no child lines yet",
-              "data":(lane.steps.length+" steps · attempt "+lane.attempt+" · rc "+lane.rc+" · "+elapsed(lane.elapsed))}[lane.state] || lane.state;
-    var bp = panel("build-"+lane.id,"Build","desktop/scripts/"+lane.id+".sh", st);
+    // header: the short state; body: why the sink has nothing, in three tenses —
+    // observed to emit before / the source reports steps today / neither
+    var why = lane.emits_known ? "it has emitted before — BN_REPORT=0, an unwritable sink, or a lost export"
+            : lane.source_emits === true ? "the script reports steps today (bn_autowrap) — this run predates the sink (5 Sep 2026), or BN_EVENT_SINK was not exported"
+            : lane.source_emits === false ? "this script does not report steps; nothing is missing"
+            : "whether this script reports steps could not be read from the tree";
+    var head = {"not-run":"not run","skipped":"skipped by the driver","failed-no-window":"failed (ledger)","ran-no-sink":"ran (ledger: "+lane.ledger_state+") · nothing in the sink","running-no-sink":"running · nothing in the sink yet",
+                "data":(lane.steps.length+" steps · attempt "+lane.attempt+" · rc "+lane.rc+" · "+elapsed(lane.elapsed))}[lane.state] || lane.state;
+    var body = {"failed-no-window":"the driver wrote no window for it, so nothing from inside it reached the sink","ran-no-sink":"no @bn lines from this script reached the sink: "+why,"running-no-sink":"no child lines yet"}[lane.state];
+    var bp = panel("build-"+lane.id,"Build","desktop/scripts/"+lane.id+".sh", head);
     idle(bp, lane.state === "not-run");
-    if (lane.state !== "data") { add(bp, nodata(st)); add(left, bp); return; }
+    if (lane.log) add(bp, $("div","sub", "output: "+lane.log.path+" · "+lane.log.attempts+" attempt(s) · "+lane.log.size+" bytes — the driver captured this script's stdout/stderr there"));
+    if (lane.state !== "data") { if (body) add(bp, nodata(body)); add(left, bp); return; }
     var maxE = Math.max.apply(null, lane.steps.map(function(s){return s.elapsed||0;}).concat([1]));
     var grid = $("div","steps");
     lane.steps.forEach(function(s){
@@ -236,6 +245,7 @@
   // ci
   var ci = data.ci;
   var ciP = panel("ci","CI", ci.state==="data" ? ("run on "+(ci.runs[0]&&ci.runs[0].sha ? ci.runs[0].sha.slice(0,8) : "?")+(ci.runs[0]&&ci.runs[0].branch ? " · "+ci.runs[0].branch : "")) : "", ci.state==="data" ? (ci.jobs.length+" jobs · as `status` recorded it · "+age(ci.runs[0]&&ci.runs[0].as_of)) : "");
+  if (ci.state==="data" && ci.runs[0] && ci.runs[0].sha_url) { var cb = ciP.querySelector("h2 b"); if (cb) { cb.textContent = ""; add(cb, $("span",null,"run on "), link(ci.runs[0].sha.slice(0,8), ci.runs[0].sha_url), $("span",null, ci.runs[0].branch ? " · "+ci.runs[0].branch : "")); } }
   idle(ciP, ci.state !== "data");
   if (ci.state !== "data") add(ciP, nodata("not queried — "+ci.hint));
   else {
@@ -249,13 +259,14 @@
     var gates = $("div","gates");
     ci.jobs.filter(function(j){ return !j.matrix; }).forEach(function(j){ var e = $("div","gate "+(j.result||"")); add(e, $("span",null,j.job), $("small",null,j.result)); add(gates, e); });
     add(ciP, gates);
-    var rl = $("div","sub"); ci.runs.forEach(function(r){ add(rl, $("span",null, r.workflow+": "+r.result+(r.run_id?" · run "+r.run_id:""))); }); add(ciP, rl);
+    var rl = $("div","sub"); ci.runs.forEach(function(r){ var row = $("span"); add(row, $("span",null, r.workflow+": "+r.result+(r.run_id?" · ":"")), r.run_id ? link("run "+r.run_id, r.url) : null); add(rl, row); }); add(ciP, rl);
     if (pf.state==="data") add(ciP, $("div","sub", pf.ci_verdict ? ("publish gate (preflight): "+pf.ci_verdict.result+" — "+pf.ci_verdict.evidence) : "publish gate row absent from the latest preflight"));
   }
   add(left, ciP);
 
   // ratchets
   var rP = panel("ratchets","Ratchets","docs/testing/ratchet.json","ceilings only · current values are not measured here");
+  if (L.ratchets) { var rb = rP.querySelector("h2 b"); if (rb) { rb.textContent = ""; add(rb, link("docs/testing/ratchet.json", L.ratchets)); } }
   var rg = $("div","ratchets");
   data.ratchets.forEach(function(r){ var e = $("div","rat"); add(e, $("span",null,r.name.replace(/_/g," ")), $("b",null,"ceiling "+r.ceiling+" · "+r.authority+(r.measured?" · measured "+r.measured:""))); e.title = r.why; add(rg, e); });
   add(rP, data.ratchets.length ? rg : nodata());
@@ -263,7 +274,8 @@
 
   // right: tag
   var tag = data.tag;
-  var tP = panel("tag","Tag", tag.station ? (tag.station.state) : "—", tag.ci_sha ? "ci-sha "+tag.ci_sha.slice(0,12) : "no ci-sha recorded");
+  var tP = panel("tag","Tag", tag.station ? (tag.station.state) : "—", "");
+  var tr = tP.querySelector("h2 .r") || $("span","r"); tr.textContent = ""; add(tr, tag.ci_sha ? $("span",null,"ci-sha ") : null, tag.ci_sha ? link(tag.ci_sha.slice(0,12), L.ci_sha) : $("span",null,"no ci-sha recorded"), L.tag ? $("span",null," · ") : null, L.tag ? link("v"+data.version+" on GitHub", L.tag) : null); if (!tr.parentNode) tP.querySelector("h2").appendChild(tr);
   add(tP, tag.station ? chip(tag.station.state, "tag + push — "+tag.station.state+(tag.station.elapsed!=null?" · "+elapsed(tag.station.elapsed):""), tag.station.consequence) : nodata("tag is not a station of this run"));
   idle(tP, !tag.station || tag.station.state === "pending" || tag.station.state === "later");
   add(tP, $("div","sub","Nothing here is derived: the sha is the one strict-ci dispatched, the state is the ledger's fold. Preconditions are the CI pane's verdict and the calendar, read by a human."));
@@ -275,7 +287,7 @@
   if (chn.version_mismatch) add(cP, $("div","nodata", "the latest verify probed v"+chn.version_mismatch+", not v"+data.version+" — its rows are not shown here (a bare `release.sh verify` probes the tree's version)"));
   var cg = $("div","channels");
   chn.cards.forEach(function(c, i){
-    var card = $("div","ch "+c.state); idle(card, c.state === "no-data"); var n = $("div","n"); add(n, $("i","dot"), $("span",null,c.name), $("span","idx",(i+1)+"/"+chn.cards.length)); add(card, n);
+    var card = $("div","ch "+c.state); idle(card, c.state === "no-data"); var n = $("div","n"); add(n, $("i","dot"), link(c.name, c.url), $("span","idx",(i+1)+"/"+chn.cards.length)); add(card, n);
     var rows = $("div","rows"); add(rows, $("span",null,"state"), $("span",null,c.state), $("span",null,"evidence"), $("span","mono",c.evidence||"—"), $("span",null,"as of"), $("span","mono",c.as_of ? fmtT(c.as_of)+" ("+age(c.as_of)+")" : "—")); add(card, rows);
     add(cg, card);
   });
@@ -346,6 +358,7 @@
 
   var foot = $("footer");
   add(foot, $("span",null,"Read, never derived: every tile is a file the train wrote. No data is a third state."),
+            L.repo ? link(L.repo.replace("https://github.com/",""), L.repo) : null, L.actions ? link("actions", L.actions) : null,
             $("span",null,"Colour carries ok · warn · fail · running; everything else is outlined or hatched. Dim means its inputs have not been written yet."),
             $("span",null,"Snapshot. Regenerate: .venv/bin/python scripts/release-board.py "+data.version+" — then reload."));
   add(screen, foot);

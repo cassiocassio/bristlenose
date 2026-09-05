@@ -205,6 +205,53 @@ Those are covered by the stress test and FOSSDA plans.
 2. **DOM count and export size are blocking.** API latency is warn-only (too noisy across CI runners)
 3. **Doubling rule for thresholds.** Fail at 2x baseline, warn at 1.5x. Simple, auditable, catches real regressions without false positives from normal feature work
 
+## The bundle budget excludes by CHUNK FILENAME, so a bundler upgrade moves it (measured 5 Sep 2026)
+
+`frontend/package.json`'s `size-limit` entry is one glob plus **22 negations**,
+each naming a chunk (`!.../common-*.js`, `!.../settings-*.js`, …). The negations
+exist for a good reason — the lazy locale chunks are excluded, so adding a
+language is size-neutral on the web (`CLAUDE.md` § i18n). But a chunk filename is
+a bundler implementation detail, and **Rolldown rechunks between vite minors.**
+
+`#143`'s reported +24 kB overage was traced to `vite 8.0.10 → 8.2.2` alone. Both
+builds measured on this Mac, same source, nothing else changed:
+
+| | 8.0.10 | 8.2.2 | Δ |
+|---|---:|---:|---:|
+| All emitted JS, gzipped | 944.9 kB | 938.5 kB | **−6.3 kB** |
+| Excluded by the negation list | 736.2 kB (204 chunks) | 705.9 kB (199 chunks) | −30.3 kB |
+| **Counted against the 220 kB budget** | **207.7 kB** | **231.9 kB** | **+24.1 kB** |
+
+vite 8.2 merges 225 chunks into 211. Roughly 30 kB crossed from names the
+negation list matches into names it does not — the 21 kB `i18n-*.js` chunk is
+gone and a 52 kB `useRefetching-*.js` chunk (app code, not locale data) has
+appeared. **What actually ships got 6.3 kB smaller.** The gate reported a
+regression on a build that is strictly better.
+
+**So neither option in `#143` is the right one.** Moving the budget would ratify
+a mismeasurement — the bytes were always shipping, they were only named
+differently. Major-ignoring vite does nothing at all: `8.0.10 → 8.2.2` is a
+*minor*, so the existing `semver-major` ignore never touched it, and an ignore at
+the minor freezes vite entirely to hide a number that is wrong.
+
+**The fix is to stop keying the exclusion on filenames.** Emit the locale chunks
+into their own directory (`output.chunkFileNames` → `assets/locales/[name]-[hash].js`)
+and the budget becomes one glob and one negation, robust to any future
+rechunking. Until that lands the budget number cannot be compared across a
+bundler upgrade, and `size-limit` will keep reporting build-tool churn as
+product regression.
+
+Two things this does not settle, both recorded rather than guessed: whether the
+counted set is still the *right* set once locales are cleanly separable (it may
+want to be larger), and whether `#143` should be split — the eight non-vite
+members are budget-neutral either way, so splitting is free and correct
+regardless of what happens to vite.
+
+**Stale nearby:** the threshold table above says the bundle baseline is ~267 KB
+failing over 305 KB. The real budget is 220 kB in `frontend/package.json`. One of
+those numbers is enforced and it is not the one in this doc.
+
+
 ## Resolved
 
 1. **Initial placement inside the `e2e` job, then split into a dedicated `perf-gate` job** (17 Apr 2026). The first attempt folded perf-gate into the existing `e2e` job, but `_BRISTLENOSE_AUTH_TOKEN` wasn't set — every CI run was red and nobody noticed because `e2e` is `continue-on-error: true`. Splitting into a dedicated job made failures visible: red-is-red, artifact scope is clean, perf signal isn't entangled with parked S2 smoke failures.

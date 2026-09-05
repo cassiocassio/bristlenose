@@ -38,20 +38,27 @@ def _decode_ansi_c(body: str) -> str:
     while i < len(body):
         c = body[i]
         if c != "\\" or i + 1 >= len(body):
-            out += c.encode("utf-8"); i += 1; continue
+            out += c.encode("utf-8")
+            i += 1
+            continue
         n = body[i + 1]
         if n in "01234567":
             j = i + 1
             while j < len(body) and j < i + 4 and body[j] in "01234567":
                 j += 1
-            out.append(int(body[i + 1:j], 8) & 0xFF); i = j; continue
+            out.append(int(body[i + 1:j], 8) & 0xFF)
+            i = j
+            continue
         if n == "x":
             j = i + 2
             while j < len(body) and j < i + 4 and body[j] in "0123456789abcdefABCDEF":
                 j += 1
             if j > i + 2:
-                out.append(int(body[i + 2:j], 16)); i = j; continue
-        out += _ESC.get(n, "\\" + n).encode("utf-8"); i += 2
+                out.append(int(body[i + 2:j], 16))
+                i = j
+                continue
+        out += _ESC.get(n, "\\" + n).encode("utf-8")
+        i += 2
     return out.decode("utf-8", errors="replace")
 
 

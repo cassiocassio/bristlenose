@@ -1,5 +1,5 @@
 ---
-status: plan v2 — reviewed 5 Sep 2026 (four lanes + William), building
+status: built 5 Sep 2026 — feed, generator, template and suites on main; as-built notes at the end
 date: 2026-09-05
 decides: docs/design-release-train-dashboard.md § 3 → sketch B, the board
 sketch: docs/mockups/release-train-board.html
@@ -261,3 +261,38 @@ is swallowed and the driver's boundary write dies loud, which is the right
 asymmetry — the driver already dies on `events.jsonl`. File growth: a run is a
 few hundred lines. The EXIT trap's `rmdir` only succeeds on an empty dir, and
 the sink makes it non-empty exactly as `events.jsonl` already does.
+
+## 7 · As built (5 Sep 2026)
+
+Landed as three commits — the feed, the board, the docs — plus the key-id
+slip on its own. What differs from §1–§3 as written:
+
+- **A run that predates `steps.tbl` still draws.** The line falls back to the
+  ledger's own step ids in first-seen order, labelled *ledger order (no
+  steps.tbl)*, and the confounded log reports *cannot be computed* rather than
+  zero. Every run on disk today is that shape; the next `release.sh run` is not.
+- **The channel count is read, not written.** `CHANNELS` from `project.conf`
+  drives the cards; no document holds the number (review Finding 21).
+- **A build lane has three states, not two.** *not run* (no ledger event), *ran
+  — the sink has no record* (the ledger says ok, the sink has no window: every
+  historical run), *data*. A driver window that closed with zero child lines is
+  a *missing* entry in the confounded log.
+- **The parser decodes ANSI-C quoting itself**, so a line a pre-normalisation
+  writer produced still parses; a line `shlex` genuinely cannot read is
+  counted. Both are in `test-sink.sh`.
+- **`resolve_run`** is the shared "which run" rule for `verify`, `status` and
+  the board: the sole run, or the newest by ledger mtime, narrated. The
+  generator repeats the rule in Python because it does not source bash;
+  both are tested.
+- **Exit codes:** `0` written · `1` no run dir or no ledger · `2` usage — and a
+  stranded run is `0` (it drew).
+- **`docs/testing/inventory.md` moved** by the two suites, regenerated.
+
+Owed, and written down rather than done: the round-trip test that drives the
+real `release.sh` under a sink and asserts the board's fold equals the
+driver's (guard 3 of the drift review); a redacted `bn-events.log` fixture
+after the first real feed (guard 5); the orphaned Python suites in no
+workflow, now three. And one observation from the build: `test-release-sh.sh`
+still reaches the real `.release/` on some path with a version that resolves
+to 0.28.0 and declines at the prompt — harmless now that the driver's lines
+land after the prompt, and worth a look.

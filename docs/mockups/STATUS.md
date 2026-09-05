@@ -220,7 +220,7 @@ carries no date the evidence gave none — the state is still evidenced, the day
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
 | `release-train-marey.html` | 5 Sep 2026 | PROPOSED 5 Sep 2026 — sketch A of three for the build-and-release "watching GUI": Marey/Ibry train chart, stations across (build → gates → tag → channels), time down, one polyline per release; effort is the slope. Options in `docs/design-release-train-dashboard.md` |
-| `release-train-board.html` | 5 Sep 2026 | PROPOSED 5 Sep 2026 — sketch B: one fixed 16" screen (1728×1117), build stack left, nine channel cards right, irreversible line between, event log + activity strip along the bottom. Grid of grids, no scrolling |
+| `release-train-board.html` | 5 Sep 2026 | PROPOSED 5 Sep 2026 · IMPLEMENTED 5 Sep 2026 as `scripts/release-board.template.html` + `scripts/release-board.py` (the channel count is read from `project.conf`, not written anywhere) — sketch B: one fixed 16" screen (1728×1117), build stack left, nine channel cards right, irreversible line between, event log + activity strip along the bottom. Grid of grids, no scrolling |
 | `release-train-scroll.html` | 5 Sep 2026 | PROPOSED 5 Sep 2026 — sketch C: long scrolling page, time down to scale (1 px = 6 s), swimlanes by architecture chunk, every bar anchored to the event line that emitted it; gaps are waiting |
 
 ## sessions

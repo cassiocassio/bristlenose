@@ -52,6 +52,37 @@ renderer parses lines beginning `@bn ` and maps them 1:1 onto the schema below.
   shows the step's log tail inside its block and a red footer. Scripts still
   `set -euo pipefail`; the report is a view, not the control flow.
 
+## The sink — the file form of the same protocol (5 Sep 2026)
+
+`_bn_emit` also appends every line it renders to `$BN_EVENT_SINK` when that
+is set — the `@bn` line itself with `ts=` (UTC, stamped by the sink) and
+`run=` added — via `sink.sh` next to this file. `release.sh run` exports the
+sink as `.release/<v>/bn-events.log` (absolute; a child's cwd is not ours),
+writes its own boundary lines (`@bn run`, `@bn step … attempt=N
+status=start|end rc=…`) with the write **asserted**, and snapshots the step
+table to `steps.tbl`. The preflight's rows, `verify`'s rows and rollup,
+`status`'s CI facts and the two expiry clocks ride the same file. The board
+(`scripts/release-board.py`) reads it and nothing else; `bn_events.py` is the
+one parser, shared with the renderer.
+
+Three rules the file taught, all measured:
+
+- **Normalise before `%q`.** `printf %q` renders control bytes — and, under a
+  C locale, every non-ASCII byte — in ANSI-C quoting (`$'…'`), which `shlex`
+  does not decode: a newline plus an apostrophe made the parser drop the whole
+  line. `sink_line` strips `\000-\037` (CR/LF/TAB → space) and caps at 200
+  bytes, which also keeps every line under `PIPE_BUF`; the parser decodes any
+  legacy `$'…'` it still meets, and **counts** what it cannot read.
+- **Ownership is one token.** The sink follows rendering ownership: a nested
+  child that is silent on stdout is silent in the file. `bn_autowrap` claims
+  `_bn_owner` on *every* standalone path — plain mode and no-renderer used to
+  skip it, so a parent and its children would all have recorded.
+- **The driver's write fails loud; the children's swallow.** A dashboard must
+  never fail a build step, but "the sink received nothing" has to be
+  readable as such — so the driver's own lines are the assertion.
+
+`scripts/test-sink.sh` is the proof.
+
 ## The three section schemas
 
 | Section | Fields |

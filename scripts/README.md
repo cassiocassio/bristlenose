@@ -47,6 +47,7 @@ given.
 | [`check-release-ready.sh`](check-release-ready.sh) | Preflight. The mechanical half of the release skill: a precondition inside a script is structurally unskippable, one in a skill is an instruction a model can misread. `run` calls it as step 1; run it alone any time. |
 | [`verify-channels.sh`](verify-channels.sh) | Is a version live on all seven channels? No version = the tree's. Iterates `CHANNELS` from `project.conf`, one tri-state probe each — including TestFlight, asked directly via `upload-testflight.sh --probe` when the ASC key is present. |
 | [`project.conf`](project.conf) | Every project-specific literal — name, repo, tap, site, version file, derived URLs, workflow names, and the channel set. Sourced by the three above. Change identity here, never in a script. |
+| [`release-board.py`](release-board.py) | **Watching it.** Draws `.release/<v>/board.html` — the Tube map of a release: the line of stations from the run's own `steps.tbl`, the ledger folded with `release.sh`'s rules, the sink's build steps / checks / gates / preflight rows / channel verdicts / clocks / CI, liveness from the lock's pid. No network, no time axis, no data is a third state, and a **confounded-expectations log** counts everything the feed said that the board has no rule for. Snapshot: regenerate and reload (`while sleep 5; do …; done`). `--with-logs` writes a separately named file that carries raw log tails and says not to attach it. Design: `docs/design-release-board.md`. |
 | [`bump-version.py`](bump-version.py) | Writes and **stages** the version files. Deliberately does not commit and does not tag — the tag belongs on a commit that does not exist yet. |
 
 ## Gates
@@ -78,6 +79,7 @@ for t in scripts/test-*.sh; do
 done
 .venv/bin/python scripts/test-dep-drift.py
 .venv/bin/python scripts/test-tap-provenance.py
+.venv/bin/python scripts/test-release-board.py
 ```
 
 > **The inventory scripts read `.venv-sidecar`, not the interpreter that runs
@@ -100,6 +102,8 @@ done
 | [`test-preflight-substance.sh`](test-preflight-substance.sh) · [`test-preflight-gates.sh`](test-preflight-gates.sh) | The preflight's substance verdicts; and a replay of the 0.27.0 build failure where a rename made a gate's assertion unsatisfiable. |
 | [`test-doc-surfaces.sh`](test-doc-surfaces.sh) · [`test-dep-drift.py`](test-dep-drift.py) · [`test-tap-provenance.py`](test-tap-provenance.py) | Their namesake gates, same pattern. |
 | [`test-check-ratchet.py`](test-check-ratchet.py) | The ratchet's **write** path — `--tighten`, which `ratchet-tighten.yml` runs unattended, and `--adopt`, which installs a CI measurement here. Points `CEILINGS`/`METRICS` at temp objects rather than mutating a tracked file, so it needs no restore and never runs mypy. Proven red against the pre-fix script. |
+| [`test-sink.sh`](test-sink.sh) | The event sink (`desktop/scripts/sink.sh` + the tee in `report.sh`): the round-trips `printf %q` used to break (newline + apostrophe, tab, non-ASCII under `LC_ALL=C`), the no-ops (no sink, unwritable, relative), ownership in renderer and plain mode with a nested child, the partial-line rule, and a grep for bash-4 constructs, since a `/bin/bash` 3.2 build phase sources it. |
+| [`test-release-board.py`](test-release-board.py) | The board's fold against dead and live pids, the no-data table pane by pane, partial verifies, the dmg clock's parity with `AlphaBuild.swift`, merge order, the CI matrix, a confounded fixture with one of each section, the escaping and canary rules, and the real 0.28.0 ledger as a committed fixture. |
 | [`test-pre-push.sh`](test-pre-push.sh) | The pre-push guard, driven with fabricated ref lines against a leaky commit built from plumbing — no index or working-tree mutation. The case that matters is the offender **second** in a multi-ref push, the one pre-commit's stage cannot fail. |
 
 ## Performance

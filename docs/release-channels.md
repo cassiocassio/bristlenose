@@ -138,6 +138,19 @@ curl -s -o /dev/null -w '%{http_code}\n' https://pypi.org/pypi/bristlenose/<X.Y.
 
 **Snap:** run *Snap Build & Publish* from the Actions tab.
 
+**Watching it** — the release board, a Tube map of the run drawn from the
+files the train writes (no network, no time axis, no data is a third state):
+
+```bash
+.venv/bin/python scripts/release-board.py            # → .release/<v>/board.html, open it
+./scripts/release.sh status                          # asks GitHub; writes the CI tiles
+./scripts/release.sh verify <X.Y.Z>                  # asks the channels; writes the cards
+```
+
+Regenerate and reload to watch; `while sleep 5; do …; done` is the live mode.
+The page never inlines log text — `--with-logs` writes a separately named file
+that says not to attach it. Design: `docs/design-release-board.md`.
+
 ---
 
 ## What bites

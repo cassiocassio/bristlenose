@@ -118,6 +118,7 @@
   .ch .n .idx{font:10px var(--mono);color:var(--mute);margin-left:auto}
   .ch .rows{display:grid;grid-template-columns:auto 1fr;gap:1px 8px;font-size:10.5px}
   .ch .rows span{min-width:0;overflow-wrap:anywhere}
+  .ch .rows .ev-cell{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
   /* the dot lives in the name row, not as the card's child — colour it from the card's state */
   .ch.ok .n .dot{background:var(--ok)} .ch.bad .n .dot{background:var(--bad)} .ch.unreachable .n .dot{background:var(--warn)}
   .ch.no-data .n .dot,.ch.skipped .n .dot{background:transparent;border-color:var(--skip)}
@@ -165,13 +166,17 @@
   var nodata = function(msg){ return $("div","nodata", msg || "no data"); };
   var idle = function(el, when){ if (when) el.classList.add("idle"); return el; };
   var ageEl = function(iso, cls){ var e = $("span", cls, age(iso)); if (iso) e.setAttribute("data-ts", iso); return e; };
+  // A URL in evidence reads as host/…/last-segment; the whole string stays in the tooltip.
+  // Display only — never an href: evidence is third-party text from a probe.
+  var shortUrl = function(u){ var m = /^([a-z]+:\/\/)([^\/?#]+)(\/[^?#]*)?/.exec(u); if (!m) return u; var path = m[3] || "/"; var segs = path.split("/").filter(Boolean); var last = segs.length ? segs[segs.length - 1] : ""; return m[2] + (segs.length > 1 ? "/…/" : "/") + last; };
+  var evidence = function(text, cls){ var t = String(text == null ? "" : text); var shown = t.replace(/https?:\/\/[^\s"')]+/g, shortUrl); var e = $("span", cls, shown); if (shown !== t || t.length > 60) e.title = t; return e; };
   var frag = function(){ var f = document.createDocumentFragment(); for (var i = 0; i < arguments.length; i++) if (arguments[i] != null) f.appendChild(typeof arguments[i] === "string" ? document.createTextNode(arguments[i]) : arguments[i]); return f; };
   // The one place an href is set. Every url comes from the generator's links
   // (project.conf constants + validated ids), never from a sink or ledger string.
   var link = function(text, url, cls){ if (!url) return $("span", cls, text); var a = $("a", cls, text); a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer"; return a; };
   var render = function(data, root){
   var L = data.links || {channels: {}};
-  var chip = function(state, label, evidence){ var c = $("div","chip "+(state||"no-data")); add(c, $("i","dot"), $("span",null,label)); if (evidence) c.title = evidence; return c; };
+  var chip = function(state, label, evidence){ var c = $("div","chip "+(state||"no-data")); add(c, $("i","dot"), $("span",null,String(label).replace(/https?:\/\/[^\s"')]+/g, shortUrl))); if (evidence) c.title = evidence; return c; };
 
   var screen = root || screenEl;
   screen.textContent = "";
@@ -321,7 +326,7 @@
   chn.cards.forEach(function(c, i){
     var card = $("div","ch "+c.state); idle(card, c.state === "no-data"); var n = $("div","n"); add(n, $("i","dot"), link(c.name, c.url), $("span","idx",(i+1)+"/"+chn.cards.length)); add(card, n);
     var asof = $("span","mono"); if (c.as_of) add(asof, frag(fmtT(c.as_of)+" (", ageEl(c.as_of), ")")); else asof.textContent = "—";
-    var rows = $("div","rows"); add(rows, $("span",null,"state"), $("span",null,c.state), $("span",null,"evidence"), $("span","mono",c.evidence||"—"), $("span",null,"as of"), asof); add(card, rows);
+    var rows = $("div","rows"); add(rows, $("span",null,"state"), $("span",null,c.state), $("span",null,"evidence"), c.evidence ? evidence(c.evidence, "mono ev-cell") : $("span","mono","—"), $("span",null,"as of"), asof); add(card, rows);
     add(cg, card);
   });
   add(cP, cg);

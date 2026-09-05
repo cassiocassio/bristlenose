@@ -78,9 +78,18 @@ def shipped_models(provider: str) -> list[str]:
     block = re.search(r"var availableModels: \[String\] \{(.*?)\n    \}", src, re.S)
     if not block:
         raise RuntimeError(f"could not find availableModels in {SWIFT}")
-    m = re.search(rf'case \.{SWIFT_CASE[provider]}: \[([^\]]*)\]', block.group(1))
-    if m:
-        models += re.findall(r'"([^"]+)"', m.group(1))
+    m = re.search(rf'case \.{SWIFT_CASE[provider]}:[^\[]*\[([^\]]*)\]', block.group(1))
+    if not m:
+        # Not `if m:`. A miss here used to fall through to the registry default
+        # alone, so one `return` added to a Swift case dropped two of Claude's
+        # three models and the run still printed "N/N passed" and exited 0 --
+        # the same green-light-that-is-a-lie this script exists to catch, one
+        # layer up. Enumeration is all-or-nothing; a partial list is exit 2.
+        raise RuntimeError(
+            f"could not find the .{SWIFT_CASE[provider]} case inside availableModels "
+            f"in {SWIFT} -- refusing to test a partial list"
+        )
+    models += re.findall(r'"([^"]+)"', m.group(1))
     seen: list[str] = []
     for x in models:
         if x and x not in seen:

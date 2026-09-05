@@ -124,6 +124,23 @@ verdict_json_field() {
     esac
 }
 
+# verdict_edge <edge_version> <want> — the snap's edge channel is rebuilt by
+# snap.yml on EVERY push to main, stamped <version>+git.<sha>, so the exact
+# match that is right on release day is wrong by the next push: every release
+# read "bad" on the snap card the following morning (5 Sep 2026, seen on the
+# board). A post-release edge build of the same version is ok — edge carries
+# what was released, then moved on. A different version is still bad.
+verdict_edge() {
+    local got="${1-}" want="${2-}"
+    [ -z "$got" ] && { echo unreachable; return; }
+    case "$got" in
+        null|"null")        echo unreachable ;;
+        "$want")            echo ok ;;
+        "$want+git."*)      echo ok ;;
+        *)                  echo bad ;;
+    esac
+}
+
 # verdict_gate <query_output> — the publish hold.
 #   An EMPTY result must never read as "no pending deployment": `gh api` with
 #   expired auth, a rate limit or no network returns empty and exits non-zero,
@@ -305,7 +322,8 @@ for m in d.get('channel-map',[]):
     if m.get('channel',{}).get('name')=='edge':
         print(m.get('version','')); break
 " 2>/dev/null || true)
-    printf '%s|channel-map: %s' "$(verdict_json_field "$edge" "$VERSION")" "${edge:-unparseable}"
+    case "$edge" in "$VERSION+git."*) printf '%s|edge has moved on to %s (a post-release build of %s)' "$(verdict_edge "$edge" "$VERSION")" "$edge" "$VERSION" ;;
+                    *) printf '%s|channel-map: %s' "$(verdict_edge "$edge" "$VERSION")" "${edge:-unparseable}" ;; esac
 }
 
 probe_copr() {

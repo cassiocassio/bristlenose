@@ -78,6 +78,13 @@ eq "field differs"              bad         "$(verdict_json_field 'v0.27.0' 'v0.
 eq "EMPTY is unreachable"       unreachable "$(verdict_json_field '' 'v0.28.0')"
 eq "literal null unreachable"   unreachable "$(verdict_json_field 'null' 'v0.28.0')"
 
+head_ "verdict_edge — the edge channel moves on every push; a post-release build is not a broken one"
+eq "release-day exact"          ok          "$(verdict_edge '0.29.1' '0.29.1')"
+eq "post-release edge build"    ok          "$(verdict_edge '0.29.1+git.30483d1' '0.29.1')"
+eq "a different version"        bad         "$(verdict_edge '0.29.0+git.abc1234' '0.29.1')"
+eq "a longer version is not a prefix match" bad "$(verdict_edge '0.29.10' '0.29.1')"
+eq "EMPTY is unreachable"       unreachable "$(verdict_edge '' '0.29.1')"
+
 head_ "verdict_gate — expired auth must not read as a human approval"
 eq "query failed"               unreachable "$(verdict_gate QUERY_FAILED)"
 eq "EMPTY ≠ gate cleared"       unreachable "$(verdict_gate '')"

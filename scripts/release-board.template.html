@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Release board</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  The release board — rendered from board.json inlined below by
+  scripts/release-board.py. Maintainer tooling: hand-rolled tokens, not the
+  design system (docs/design-release-board.md §0.6).
+
+  RENDER RULE: every string from the data reaches the DOM through textContent
+  on a node made with createElement. No innerHTML, no insertAdjacentHTML, no
+  outerHTML, no document.write — test-release-board.py greps this file for
+  those four names. Channel verdicts and preflight evidence are third-party
+  text (Copr, the Snap store, the web host) and this page opens from file://.
+
+  This is a SNAPSHOT. There is no live mode; regenerate and reload.
+-->
+<style>
+  :root{--bg:#f4f4f2;--panel:#fff;--ink:#1d1d1f;--mute:#8a8a8e;--rule:#e3e3e0;--rule2:#cfcfcc;
+    --ok:#2e9e5b;--bad:#d0342c;--warn:#d9930d;--soft:#d9d9d6;--now:#0a66ff;--skip:#b9b9b7;--hatch:repeating-linear-gradient(135deg,#f3f3f1 0 4px,#fff 4px 8px);
+    --font:-apple-system,"SF Pro Text",Inter,system-ui,sans-serif;--mono:"SF Mono",ui-monospace,Menlo,monospace}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:11.5px/1.3 var(--font)}
+  .screen{max-width:1728px;margin:0 auto;padding:8px;display:grid;grid-template-rows:auto auto 1fr auto;gap:8px}
+  .top{display:flex;flex-wrap:wrap;gap:16px;align-items:center;background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:8px 14px}
+  .top h1{margin:0;font-size:14px;font-weight:600}
+  .top .v{font:600 15px var(--mono)}
+  .top .m{color:var(--mute);font-size:11px}
+  .pill{padding:3px 9px;border-radius:12px;border:1px solid var(--rule2);font-size:11px;color:var(--mute)}
+  .pill.ok{background:#eaf6ee;border-color:#cfe9d8;color:var(--ok)} .pill.bad{background:#fff1f0;border-color:#f1c9c6;color:var(--bad)}
+  .pill.now{background:#e9f0ff;border-color:#bcd0ff;color:var(--now);font-weight:600} .pill.warn{background:#fff8e8;border-color:#f3dfa5;color:var(--warn)}
+  .pill.hatch{background:var(--hatch)}
+  /* the line */
+  .line{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:10px 14px 6px;overflow-x:auto}
+  .track{display:flex;align-items:flex-start;gap:0;min-width:900px}
+  .station{flex:1;display:flex;flex-direction:column;align-items:center;position:relative;min-width:64px;cursor:pointer}
+  .station::before{content:"";position:absolute;top:9px;left:0;right:0;height:4px;background:var(--rule2);z-index:0}
+  .station:first-child::before{left:50%} .station:last-child::before{right:50%}
+  .station i{width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--rule2);z-index:1;box-sizing:border-box;margin-top:4px}
+  .station.ok i{border-color:var(--ok);background:var(--ok)} .station.fail i{border-color:var(--bad);background:var(--bad)}
+  .station.running i{border-color:var(--now);background:var(--now);box-shadow:0 0 0 4px #dbe7ff} .station.skipped i{border-color:var(--skip)}
+  .station.stranded i,.station.corrupt i{border-color:var(--bad);background:var(--hatch)} .station.later i,.station.not-in-this-run i{border-color:var(--soft);border-style:dotted}
+  .station.gate i{width:18px;height:18px;margin-top:2px;border-width:4px} .station.hard i{border-radius:2px;width:16px;height:16px;margin-top:3px}
+  .station.soft i{border-style:dashed}
+  .station b{font-size:10.5px;font-weight:500;margin-top:5px;text-align:center;white-space:nowrap}
+  .station small{font:10px var(--mono);color:var(--mute)}
+  .station.irrev-after{border-right:1px dashed var(--bad);padding-right:4px}
+  /* main grid */
+  .main{display:grid;grid-template-columns:1fr 14px 1fr;gap:8px;min-height:0}
+  .col{display:grid;gap:8px;align-content:start}
+  .divider{writing-mode:vertical-rl;text-orientation:mixed;display:flex;align-items:center;justify-content:center;color:var(--bad);font:600 9px var(--font);letter-spacing:.14em;border-left:1px dashed var(--bad);opacity:.8}
+  .panel{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:8px 10px;resize:vertical;overflow:auto;min-height:44px;max-height:520px}
+  .panel h2{margin:0 0 6px;font-size:10.5px;font-weight:600;letter-spacing:.07em;color:var(--mute);text-transform:uppercase;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+  .panel h2 b{color:var(--ink);font-weight:600;letter-spacing:0;text-transform:none;font-size:11.5px}
+  .panel h2 .r{margin-left:auto;font:10px var(--mono);color:var(--mute);letter-spacing:0;text-transform:none}
+  .nodata{color:var(--mute);font-style:italic;padding:4px 0}
+  .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:3px 8px}
+  .chip{display:flex;align-items:center;gap:5px;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chip span{overflow:hidden;text-overflow:ellipsis}
+  .dot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--soft);border:1px solid transparent}
+  .ok>.dot{background:var(--ok)} .bad>.dot,.fail>.dot{background:var(--bad)} .warn>.dot{background:var(--warn)} .now>.dot,.running>.dot{background:var(--now);box-shadow:0 0 0 3px #dbe7ff}
+  .skipped>.dot,.no-data>.dot,.unreachable>.dot,.pending>.dot,.later>.dot{background:transparent;border-color:var(--skip)}
+  .unreachable>.dot{border-color:var(--warn)} .stranded>.dot,.corrupt>.dot{background:var(--hatch);border-color:var(--bad)}
+  .steps{display:grid;grid-template-columns:34px 1fr 150px 48px;gap:2px 8px;align-items:center;font-size:11px}
+  .steps .k{font:10px var(--mono);color:var(--mute)}
+  .bar{height:6px;background:#ececea;border-radius:3px;position:relative;overflow:hidden}
+  .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--ok);border-radius:3px}
+  .bar i.fail{background:var(--bad)} .bar i.running{background:var(--now)} .bar i.skipped{background:var(--soft)} .bar i.est{background:repeating-linear-gradient(90deg,#c9d7ff 0 4px,#fff 4px 6px)}
+  .t{font:10px var(--mono);color:var(--mute);text-align:right}
+  .sub{margin:2px 0 4px 34px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1px 10px;font-size:10px;color:var(--mute)}
+  .matrix{display:grid;gap:3px;font-size:10.5px;margin-bottom:6px}
+  .matrix .h{color:var(--mute);font:10px var(--mono);text-align:center} .matrix .rl{color:var(--mute);font:10px var(--mono)}
+  .cell{height:18px;border-radius:3px;background:var(--soft);display:flex;align-items:center;justify-content:center;font:600 10px var(--mono);color:#fff}
+  .cell.success{background:var(--ok)} .cell.failure{background:var(--bad)} .cell.in_progress,.cell.queued,.cell.waiting{background:var(--now)} .cell.na{background:transparent;border:1px dashed var(--soft);color:var(--skip)} .cell.cancelled,.cell.skipped{background:var(--skip)}
+  .gates{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:3px}
+  .gate{border-radius:3px;padding:3px 5px;font:10px var(--font);border:1px solid var(--rule);display:flex;justify-content:space-between;gap:4px}
+  .gate.success,.gate.ok{border-color:#cfe9d8;background:#f2faf5} .gate.failure,.gate.fail{border-color:#f1c9c6;background:#fff4f3} .gate.skip,.gate.skipped{border-style:dashed;color:var(--mute)}
+  .gate small{font-family:var(--mono);color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ratchets{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+  .rat{font-size:10px;color:var(--mute)} .rat b{display:block;font:600 11px var(--mono);color:var(--ink)}
+  .channels{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .ch{border:1px solid var(--rule);border-radius:7px;padding:7px 9px;display:grid;gap:3px}
+  .ch.ok{border-color:#cfe9d8} .ch.bad{border-color:#f1c9c6} .ch.unreachable{border-color:#f3dfa5} .ch.no-data,.ch.skipped{opacity:.7;background:var(--hatch)}
+  .ch .n{display:flex;align-items:center;gap:7px;font-weight:600;font-size:12px}
+  .ch .n .idx{font:10px var(--mono);color:var(--mute);margin-left:auto}
+  .ch .rows{display:grid;grid-template-columns:auto 1fr;gap:1px 8px;font-size:10.5px}
+  .ch .rows span:nth-child(odd){color:var(--mute)}
+  .mono{font-family:var(--mono);font-size:10px}
+  .log{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  pre{margin:0;font:10px/1.35 var(--mono);white-space:pre;overflow:auto}
+  .ev{display:grid;grid-template-columns:150px 60px 1fr;gap:8px;font:10px/1.35 var(--mono)}
+  .ev .ts{color:var(--mute)} .ev .src{color:var(--now)} .ev .src.ledger{color:var(--ink);font-weight:600}
+  .strip{display:flex;gap:2px;align-items:flex-end;height:26px}
+  .strip i{flex:1;background:#dfe6ff;border-radius:2px 2px 0 0;min-width:1px}
+  .conf ul{margin:0;padding-left:16px} .conf li{margin:1px 0} .conf h3{margin:6px 0 2px;font-size:10.5px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em}
+  .conf .count{font:600 12px var(--mono)}
+  footer{color:var(--mute);font-size:10.5px;padding:4px 2px 20px;display:flex;gap:18px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="screen" id="screen"><div class="top"><h1>Release board</h1><span class="m">rendering…</span></div></div>
+<script type="application/json" id="board-data">__BOARD_JSON__</script>
+<script>
+(function(){
+  "use strict";
+  var data = JSON.parse(document.getElementById("board-data").textContent);
+  var $ = function(tag, cls, text){ var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = String(text); return e; };
+  var add = function(parent){ for (var i = 1; i < arguments.length; i++) if (arguments[i]) parent.appendChild(arguments[i]); return parent; };
+  var fmtT = function(iso){ return iso ? iso.replace("T"," ").replace("Z","Z") : "—"; };
+  var age = function(iso){ if(!iso) return ""; var d=(Date.now()-Date.parse(iso))/1000; if(d<90) return Math.round(d)+"s ago"; if(d<5400) return Math.round(d/60)+"m ago"; if(d<172800) return Math.round(d/3600)+"h ago"; return Math.round(d/86400)+"d ago"; };
+  var elapsed = function(s){ if(s==null) return "—"; s=Number(s); if(isNaN(s)) return "—"; if(s<90) return Math.round(s)+"s"; return Math.round(s/60)+"m"; };
+  var panelSize = function(panel, key){ try{ var h = localStorage.getItem("rb-h-"+key); if(h) panel.style.height = h; panel.addEventListener("mouseup", function(){ try{ localStorage.setItem("rb-h-"+key, panel.style.height); }catch(e){} }); }catch(e){} };
+  var panel = function(key, title, sub, right){ var p = $("div","panel"); p.id = "pane-"+key; var h = $("h2"); add(h, $("span",null,title), sub ? $("b",null,sub) : null, right ? $("span","r",right) : null); add(p, h); panelSize(p, key); return p; };
+  var nodata = function(msg){ return $("div","nodata", msg || "no data"); };
+  var chip = function(state, label, evidence){ var c = $("div","chip "+(state||"no-data")); add(c, $("i","dot"), $("span",null,label)); if (evidence) c.title = evidence; return c; };
+
+  var screen = document.getElementById("screen");
+  screen.textContent = "";
+
+  // ── header ──────────────────────────────────────────────────────────────
+  var top = $("div","top");
+  add(top, $("h1",null,"Release board"), $("span","v", "v"+data.version));
+  var phaseCls = {completed:"ok", running:"now", stranded:"bad", stopped:"warn", "no-ledger":"hatch"}[data.phase] || "";
+  add(top, $("span","pill "+phaseCls, data.phase));
+  var h = data.header;
+  add(top, $("span","m", "started "+fmtT(h.started)+(h.attempts>1?" · "+h.attempts+" invocations":"")));
+  if (h.context && h.context.git) add(top, $("span","m", "git "+(h.context.git.sha||"?")+(h.context.git.dirty?" (dirty)":"")+(h.context.xcode?" · "+h.context.xcode:"")));
+  var live = data.liveness;
+  var liveTxt = !live.lock ? "not running" : (live.alive ? "driver alive (pid "+live.pid+")" : "driver DEAD — stranded?");
+  add(top, $("span","pill "+(!live.lock?"":(live.alive?"now":"bad")), liveTxt));
+  if (live.heartbeat) add(top, $("span","m", live.heartbeat.state==="mid-write" ? "heartbeat mid-write" : "heartbeat "+age(new Date(live.heartbeat.epoch*1000).toISOString())+" · "+(live.heartbeat.step||"")+" · "+(live.heartbeat.last_line||"")));
+  var conf = data.confounded;
+  add(top, $("span","pill "+(conf.computable ? (conf.count ? "warn" : "ok") : "hatch"), conf.computable ? ("confounded expectations: "+conf.count) : "confounded log: not computable"));
+  add(top, $("span","m", "snapshot generated "+fmtT(data.generated)+" · newest source "+fmtT(h.newest_source)+(h.with_logs ? " · CONTAINS RAW BUILD LOGS — do not attach to anything" : "")));
+  add(screen, top);
+
+  // ── the line ────────────────────────────────────────────────────────────
+  var lineP = $("div","line");
+  var lh = $("h2"); add(lh, $("span",null,"THE LINE"), $("b",null, data.line.source==="steps.tbl" ? "steps.tbl" : "ledger order (no steps.tbl)"), $("span","r", (data.line.stations.length)+" stations"+(data.line.unknown_steps.length?" · "+data.line.unknown_steps.length+" unknown":"")+(data.line.ledger_unparsed?" · "+data.line.ledger_unparsed+" unparsed":"")+(data.line.ledger_partial?" · partial line":"")));
+  lh.style.margin = "0 0 6px"; lh.style.font = "600 10.5px var(--font)"; lh.style.color = "var(--mute)"; lh.style.letterSpacing = ".07em"; lh.style.display = "flex"; lh.style.gap = "8px";
+  add(lineP, lh);
+  var track = $("div","track");
+  data.line.stations.forEach(function(s){
+    var st = $("div","station "+s.state+" "+s.kind);
+    if (s.id === "tag") st.classList.add("irrev-after");
+    add(st, $("i"), $("b",null,s.id), $("small",null, s.state + (s.elapsed!=null ? " · "+elapsed(s.elapsed) : (s.est && s.state==="pending" ? " · est "+s.est : "")) + (s.attempt>1 ? " · #"+s.attempt : "")));
+    st.title = (s.label||s.id)+" — "+s.kind+(s.consequence?" — "+s.consequence:"");
+    st.addEventListener("click", function(){ var target = {"preflight":"preflight","build-all":"build","build-dmg":"build","ci-green":"ci","strict-ci":"ci","testflight":"channels","dmg":"channels","tag":"tag","snap":"channels","snap-stable":"channels"}[s.id]; var el = target && document.getElementById("pane-"+target); if (el) el.scrollIntoView({behavior:"smooth", block:"center"}); });
+    add(track, st);
+  });
+  add(lineP, track);
+  add(screen, lineP);
+
+  // ── main ────────────────────────────────────────────────────────────────
+  var main = $("div","main"), left = $("div","col"), right = $("div","col");
+
+  // preflight
+  var pf = data.preflight;
+  var pfP = panel("preflight","Pre-flight","check-release-ready.sh", pf.state==="data" ? (pf.rows.length+" rows · "+Object.keys(pf.counts).map(function(k){return pf.counts[k]+" "+k;}).join(" · ")+" · "+age(pf.as_of)) : "");
+  if (pf.state !== "data") add(pfP, nodata("no preflight rows in the sink — run release.sh run (or check-release-ready.sh under a sink)"));
+  else { var g = $("div","chips"); pf.rows.forEach(function(r){ add(g, chip(r.result, r.label, r.evidence)); }); add(pfP, g); }
+  add(left, pfP);
+
+  // build
+  var bd = data.build;
+  bd.lanes.forEach(function(lane){
+    var st = {"not-run":"not run","ran-no-sink":"ran (ledger: "+lane.ledger_state+") — the sink has no record of it","running-no-sink":"running — no child lines yet","data":(lane.steps.length+" steps · attempt "+lane.attempt+" · rc "+lane.rc+" · "+elapsed(lane.elapsed))}[lane.state];
+    var bp = panel("build","Build","desktop/scripts/"+lane.id+".sh", st);
+    if (lane.state !== "data") { add(bp, nodata(st)); add(left, bp); return; }
+    var maxE = Math.max.apply(null, lane.steps.map(function(s){return s.elapsed||0;}).concat([1]));
+    var grid = $("div","steps");
+    lane.steps.forEach(function(s){
+      add(grid, $("span","k",s.id), $("span",null,(s.phase?s.phase+" · ":"")+(s.name||"")+(s.detail?" — "+s.detail:"")));
+      var bar = $("div","bar"); var fill = $("i",s.state); fill.style.width = (100*(s.elapsed||0)/maxE)+"%"; add(bar, fill); add(grid, bar);
+      add(grid, $("span","t", s.state==="running" ? "…" : elapsed(s.elapsed)));
+    });
+    add(bp, grid);
+    if (lane.checks.length){ var sub = $("div","sub"); lane.checks.forEach(function(c){ add(sub, chip(c.result, c.label+" — "+(c.evidence||""), c.evidence)); }); add(bp, sub); }
+    if (lane.gates.length){ var gg = $("div","gates"); lane.gates.forEach(function(gt){ var e = $("div","gate "+(gt.result||"")); add(e, $("span",null,gt.id+" "+(gt.desc||"")), $("small",null,gt.evidence||"")); e.title = gt.evidence||""; add(gg, e); }); add(bp, gg); }
+    if (lane.arts.length){ var ar = $("div","sub"); lane.arts.forEach(function(a){ add(ar, $("span",null,a.key+": "+a.value)); }); add(bp, ar); }
+    add(left, bp);
+  });
+
+  // ci
+  var ci = data.ci;
+  var ciP = panel("ci","CI", ci.state==="data" ? ("strict run on "+(ci.runs[0]&&ci.runs[0].sha ? ci.runs[0].sha.slice(0,8) : "?")) : "", ci.state==="data" ? (ci.jobs.length+" jobs · "+(ci.sha_matches?"sha matches ci-sha":"SHA DOES NOT MATCH ci-sha")+" · "+age(ci.runs[0]&&ci.runs[0].as_of)) : "");
+  if (ci.state !== "data") add(ciP, nodata("not queried — "+ci.hint));
+  else {
+    if (ci.matrix.length){
+      var pys = [], oss = []; ci.matrix.forEach(function(c){ if(pys.indexOf(c.python)<0) pys.push(c.python); if(oss.indexOf(c.os)<0) oss.push(c.os); }); pys.sort(); oss.sort();
+      var m = $("div","matrix"); m.style.gridTemplateColumns = "70px repeat("+pys.length+",1fr)";
+      add(m, $("span","rl","")); pys.forEach(function(p){ add(m, $("span","h",p)); });
+      oss.forEach(function(o){ add(m, $("span","rl",o)); pys.forEach(function(p){ var c = ci.matrix.filter(function(x){return x.os===o&&x.python===p;})[0]; var cell = $("div","cell "+(c?c.result:"na"), c ? (c.result==="success"?"✓":(c.result==="failure"?"✗":"…")) : ""); if (c) cell.title = c.job+" — "+c.result; add(m, cell); }); });
+      add(ciP, m);
+    }
+    var gates = $("div","gates");
+    ci.jobs.filter(function(j){ return !/^\w[\w-]* \(\d/.test(j.job); }).forEach(function(j){ var e = $("div","gate "+(j.result||"")); add(e, $("span",null,j.job), $("small",null,j.result)); add(gates, e); });
+    add(ciP, gates);
+    var rl = $("div","sub"); ci.runs.forEach(function(r){ add(rl, $("span",null, r.workflow+": "+r.result+(r.run_id?" · run "+r.run_id:""))); }); add(ciP, rl);
+    if (pf.state==="data") add(ciP, $("div","sub", pf.ci_verdict ? ("publish gate (preflight): "+pf.ci_verdict.result+" — "+pf.ci_verdict.evidence) : "publish gate row absent from the latest preflight"));
+  }
+  add(left, ciP);
+
+  // ratchets
+  var rP = panel("ratchets","Ratchets","docs/testing/ratchet.json","ceilings only · current values are not measured here");
+  var rg = $("div","ratchets");
+  data.ratchets.forEach(function(r){ var e = $("div","rat"); add(e, $("span",null,r.name.replace(/_/g," ")), $("b",null,"ceiling "+r.ceiling+" · "+r.authority+(r.measured?" · measured "+r.measured:""))); e.title = r.why; add(rg, e); });
+  add(rP, data.ratchets.length ? rg : nodata());
+  add(left, rP);
+
+  // right: tag
+  var tag = data.tag;
+  var tP = panel("tag","Tag", tag.station ? (tag.station.state) : "—", tag.ci_sha ? "ci-sha "+tag.ci_sha.slice(0,12) : "no ci-sha recorded");
+  add(tP, tag.station ? chip(tag.station.state, "tag + push — "+tag.station.state+(tag.station.elapsed!=null?" · "+elapsed(tag.station.elapsed):""), tag.station.consequence) : nodata("tag is not a station of this run"));
+  add(tP, $("div","sub","Nothing here is derived: the sha is the one strict-ci dispatched, the state is the ledger's fold. Preconditions are the CI pane's verdict and the calendar, read by a human."));
+  add(right, tP);
+
+  // channels
+  var chn = data.channels;
+  var cP = panel("channels","Channels","release.sh verify", chn.batches ? ((chn.complete ? "latest verify complete" : "latest verify PARTIAL — "+chn.partial_rows+" rows, no done line")+(chn.rollup?" · rollup rc "+chn.rollup.rc+" · "+chn.rollup.ok+" of "+chn.rollup.channels:"")+" · "+age(chn.as_of)) : "no verify recorded — run release.sh verify");
+  var cg = $("div","channels");
+  chn.cards.forEach(function(c, i){
+    var card = $("div","ch "+c.state); var n = $("div","n"); add(n, $("i","dot"), $("span",null,c.name), $("span","idx",(i+1)+"/"+chn.cards.length)); add(card, n);
+    var rows = $("div","rows"); add(rows, $("span",null,"state"), $("span",null,c.state), $("span",null,"evidence"), $("span","mono",c.evidence||"—"), $("span",null,"as of"), $("span","mono",c.as_of ? fmtT(c.as_of)+" ("+age(c.as_of)+")" : "—")); add(card, rows);
+    add(cg, card);
+  });
+  add(cP, cg);
+  if (chn.extras.length){ var ex = $("div","sub"); chn.extras.forEach(function(e){ add(ex, chip(e.state, e.label+" — "+e.evidence, e.evidence)); }); add(cP, ex); }
+  add(right, cP);
+
+  // clocks
+  var kP = panel("clocks","Clocks","expiry", "as Apple gave it, or the build time plus the app's rule");
+  if (!data.clocks.length) add(kP, nodata("no clock lines in the sink — upload-testflight.sh and build-dmg.sh write them"));
+  data.clocks.forEach(function(k){
+    var e = $("div","chip "+(k.state==="known"?"ok":"no-data")); add(e, $("i","dot"), $("span",null, k.name+": "+(k.state==="known" ? "expires "+k.expires : "no expiry recorded")+(k.build?" · build "+k.build:"")+(k.built?" · built "+k.built:"")+(k.rule?" · "+k.rule:"")+" · "+age(k.as_of)));
+    add(kP, e);
+  });
+  add(right, kP);
+
+  // confounded expectations
+  var xP = panel("confounded","Confounded expectations","the drift guard", conf.computable ? (conf.count+" total") : "not computable");
+  xP.classList.add("conf");
+  add(xP, $("div","count", conf.computable ? (conf.count===0 ? "0 — every expectation met" : conf.count+" confounded") : "cannot be computed for this run"));
+  [["unknown","Unknown — in the feed, not in the vocabulary"],["new_shape","New shape — a known thing, an unknown value"],["missing","Missing — declared by the run, never seen"],["changed","Changed since the previous run"+(data.previous?" ("+data.previous+")":"")]].forEach(function(sec){
+    var items = conf[sec[0]] || []; if (!items.length) return;
+    add(xP, $("h3",null,sec[1])); var ul = $("ul"); items.forEach(function(it){ var li = $("li",null,it.what+(it.line?" (line "+it.line+")":"")); if (it.raw && typeof it.raw === "object") li.title = JSON.stringify(it.raw); else if (it.raw) li.title = it.raw; add(ul, li); }); add(xP, ul);
+  });
+  if (conf.notes && conf.notes.length){ var nl = $("ul"); conf.notes.forEach(function(n){ add(nl, $("li","nodata",n)); }); add(xP, nl); }
+  add(right, xP);
+
+  add(main, left, $("div","divider","IRREVERSIBLE — THE TAG PUSH"), right);
+  add(screen, main);
+
+  // ── bottom: events, activity, failed-step log ───────────────────────────
+  var bottom = $("div","log");
+  var eP = panel("events","Events","ledger + sink, merged by (ts, source, line)", data.sink.present ? (data.sink.events+" sink events"+(data.sink.unparsed?" · "+data.sink.unparsed+" UNPARSED":"")+(data.sink.partial?" · partial trailing line":"")) : "no sink file");
+  var ev = $("div","ev");
+  data.events.forEach(function(r){ add(ev, $("span","ts",fmtT(r.ts)), $("span","src "+(r.src==="ledger"?"ledger":""), r.src), $("span",null,r.text)); });
+  add(eP, data.events.length ? ev : nodata());
+  add(bottom, eP);
+  var aP = panel("activity","Activity","events per minute", data.activity.start ? ("from "+fmtT(data.activity.start)+" · "+data.activity.minutes.length+" min") : "");
+  var strip = $("div","strip"); var maxC = Math.max.apply(null, data.activity.minutes.concat([1]));
+  data.activity.minutes.forEach(function(c){ var b = $("i"); b.style.height = Math.max(2, Math.round(24*c/maxC))+"px"; b.title = c+" events"; add(strip, b); });
+  add(aP, data.activity.minutes.length ? strip : nodata());
+  var logs = data.logs || {};
+  Object.keys(logs).forEach(function(sid){ var l = logs[sid]; add(aP, $("div","sub", sid+": log "+l.path+" · "+l.attempts+" attempt(s) · "+l.size+" bytes")); if (l.tail){ var pre = $("pre"); pre.textContent = l.tail.join("\n"); add(aP, pre); } });
+  add(bottom, aP);
+  add(screen, bottom);
+
+  var foot = $("footer");
+  add(foot, $("span",null,"Read, never derived: every tile is a file the train wrote. No data is a third state."),
+            $("span",null,"Colour carries ok · warn · fail · running; everything else is outlined or hatched."),
+            $("span",null,"Snapshot. Regenerate: .venv/bin/python scripts/release-board.py "+data.version+" — then reload."));
+  add(screen, foot);
+})();
+</script>
+</body>
+</html>

@@ -8,7 +8,7 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 4481
+        "tests": 4507
       },
       {
         "basis": "test files",
@@ -21,12 +21,12 @@
       },
       {
         "basis": "declared \u2014 a floor; parameterised cases expand at runtime",
-        "files": 109,
+        "files": 110,
         "kind": "swift unit",
         "runner": "xcodebuild",
         "source": "desktop/Bristlenose/BristlenoseTests/",
         "suite": "BristlenoseTests",
-        "tests": 1394
+        "tests": 1417
       },
       {
         "basis": "spec files",
@@ -177,7 +177,7 @@
       {
         "can_skip": false,
         "id": "9",
-        "name": "Manifest",
+        "name": "Sidecar SBOM",
         "phase": "Build manifest / provenance",
         "script": "build-dmg.sh"
       },
@@ -325,13 +325,6 @@
                 "name": "Frontend tests (Vitest)",
                 "piped": false,
                 "runs_tests": true
-              },
-              {
-                "colour": "hard",
-                "is_gate": true,
-                "name": "Check bundle size",
-                "piped": false,
-                "runs_tests": false
               }
             ],
             "runs_on": "ubuntu-latest"

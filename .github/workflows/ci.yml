@@ -261,6 +261,11 @@ jobs:
             bash "scripts/$s.sh" </dev/null || { echo "::error::$s failed"; rc=1; }
             echo "::endgroup::"
           done
+          # The board's suite is Python (unittest, stdlib); the venv above is the
+          # interpreter it documents. One line, because the loop is bash-only.
+          echo "::group::test-release-board"
+          .venv/bin/python scripts/test-release-board.py </dev/null || { echo "::error::test-release-board failed"; rc=1; }
+          echo "::endgroup::"
           exit $rc
 
   frontend-lint-type-test:

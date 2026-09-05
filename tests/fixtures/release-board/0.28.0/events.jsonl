@@ -1,0 +1,40 @@
+{"ts":"2026-08-27T21:04:28Z","run":"0.28.0","step":"run","status":"started","detail":"bump=minor"}
+{"ts":"2026-08-27T21:04:28Z","run":"0.28.0","step":"preflight","status":"running","detail":"attempt 1"}
+{"ts":"2026-08-27T21:04:55Z","run":"0.28.0","step":"preflight","status":"ok","detail":"27s"}
+{"ts":"2026-08-27T21:04:55Z","run":"0.28.0","step":"bump","status":"running","detail":"attempt 1"}
+{"ts":"2026-08-27T21:04:56Z","run":"0.28.0","step":"bump","status":"fail","detail":"exit 1"}
+{"ts":"2026-08-27T21:15:08Z","run":"0.28.0","step":"run","status":"started","detail":"bump=minor"}
+{"ts":"2026-08-27T21:15:08Z","run":"0.28.0","step":"bump","status":"running","detail":"attempt 2"}
+{"ts":"2026-08-27T21:15:08Z","run":"0.28.0","step":"bump","status":"ok","detail":"0s"}
+{"ts":"2026-08-27T21:15:08Z","run":"0.28.0","step":"push-main","status":"running","detail":"attempt 1"}
+{"ts":"2026-08-27T21:15:08Z","run":"0.28.0","step":"push-main","status":"ok","detail":"0s"}
+{"ts":"2026-08-27T21:15:08Z","run":"0.28.0","step":"strict-ci","status":"running","detail":"attempt 1"}
+{"ts":"2026-08-27T21:15:10Z","run":"0.28.0","step":"strict-ci","status":"ok","detail":"2s"}
+{"ts":"2026-08-27T21:15:10Z","run":"0.28.0","step":"build-all","status":"running","detail":"attempt 1"}
+{"ts":"2026-08-27T21:15:10Z","run":"0.28.0","step":"build-all","status":"fail","detail":"exit 2"}
+{"ts":"2026-08-27T21:17:54Z","run":"0.28.0","step":"run","status":"started","detail":"bump=minor"}
+{"ts":"2026-08-27T21:17:54Z","run":"0.28.0","step":"build-all","status":"running","detail":"attempt 2"}
+{"ts":"2026-08-27T21:24:00Z","run":"0.28.0","step":"build-all","status":"ok","detail":"366s"}
+{"ts":"2026-08-27T21:24:00Z","run":"0.28.0","step":"build-dmg","status":"running","detail":"attempt 1"}
+{"ts":"2026-08-27T21:43:07Z","run":"0.28.0","step":"build-dmg","status":"fail","detail":"exit 1"}
+{"ts":"2026-08-27T22:33:17Z","run":"0.28.0","step":"run","status":"started","detail":"bump=minor"}
+{"ts":"2026-08-27T22:33:17Z","run":"0.28.0","step":"build-dmg","status":"running","detail":"attempt 2"}
+{"ts":"2026-08-27T22:53:15Z","run":"0.28.0","step":"build-dmg","status":"ok","detail":"1198s"}
+{"ts":"2026-08-27T22:53:15Z","run":"0.28.0","step":"ci-green","status":"running","detail":"attempt 1"}
+{"ts":"2026-08-27T23:12:54Z","run":"0.28.0","step":"ci-green","status":"fail","detail":"exit 1"}
+{"ts":"2026-08-28T05:05:04Z","run":"0.28.0","step":"run","status":"started","detail":"bump=minor"}
+{"ts":"2026-08-28T05:05:04Z","run":"0.28.0","step":"ci-green","status":"running","detail":"attempt 2"}
+{"ts":"2026-08-28T05:05:06Z","run":"0.28.0","step":"ci-green","status":"ok","detail":"2s"}
+{"ts":"2026-08-28T05:05:06Z","run":"0.28.0","step":"testflight","status":"running","detail":"attempt 1"}
+{"ts":"2026-08-28T05:12:10Z","run":"0.28.0","step":"testflight","status":"ok","detail":"424s"}
+{"ts":"2026-08-28T05:12:10Z","run":"0.28.0","step":"dmg","status":"running","detail":"attempt 1"}
+{"ts":"2026-08-28T05:13:44Z","run":"0.28.0","step":"dmg","status":"ok","detail":"94s"}
+{"ts":"2026-08-28T05:13:44Z","run":"0.28.0","step":"run","status":"completed","detail":""}
+{"ts":"2026-08-28T05:25:42Z","run":"0.28.0","step":"run","status":"started","detail":"bump=minor"}
+{"ts":"2026-08-28T05:38:29Z","run":"0.28.0","step":"run","status":"started","detail":"bump=minor"}
+{"ts":"2026-08-28T05:38:29Z","run":"0.28.0","step":"testflight","status":"skipped","detail":"--skip"}
+{"ts":"2026-08-28T05:38:29Z","run":"0.28.0","step":"tag","status":"running","detail":"attempt 1"}
+{"ts":"2026-08-28T05:38:31Z","run":"0.28.0","step":"tag","status":"ok","detail":"2s"}
+{"ts":"2026-08-28T05:38:31Z","run":"0.28.0","step":"snap","status":"running","detail":"attempt 1"}
+{"ts":"2026-08-28T05:38:32Z","run":"0.28.0","step":"snap","status":"ok","detail":"1s"}
+{"ts":"2026-08-28T05:38:32Z","run":"0.28.0","step":"run","status":"completed","detail":""}

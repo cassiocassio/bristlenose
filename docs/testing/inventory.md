@@ -9,9 +9,9 @@
 
 | suite | kind | size | what the number counts | source |
 |---|---|---|---|---|
-| `pytest` | python unit/integration | 4463 | collected (expands parametrize — authoritative) | `tests/` |
+| `pytest` | python unit/integration | 4507 | collected (expands parametrize — authoritative) | `tests/` |
 | `vitest` | frontend unit | 114 files | test files | `frontend/src/**/*.test.*` |
-| `BristlenoseTests` | swift unit | 1394 in 109 files | declared — a floor; parameterised cases expand at runtime | `desktop/Bristlenose/BristlenoseTests/` |
+| `BristlenoseTests` | swift unit | 1417 in 110 files | declared — a floor; parameterised cases expand at runtime | `desktop/Bristlenose/BristlenoseTests/` |
 | `playwright` | browser e2e | 8 files | spec files | `e2e/tests/ (console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts)` |
 
 **Ingest formats: 27** (audio 10, docx 1, subtitle_srt 1, subtitle_vtt 1, video 14) — from `models.ALL_EXTENSIONS`. Do not restate this number in prose; link here. It was simultaneously 16 and 27 in two docs on 2 Sep 2026, one of which named the other as its single source.
@@ -35,7 +35,6 @@
     - Audit frontend dependencies for known vulnerabilities — step, **soft**
     - Generate frontend SBOM — step, **soft**
     - Frontend tests (Vitest) — runs tests, **hard**
-    - Check bundle size — gate, **hard**
   - `e2e` · on `ubuntu-latest`
     - Run E2E tests — runs tests, **hard**
   - `package` · on `ubuntu-latest`
@@ -149,13 +148,14 @@ Two scripts, two certificates, two channels. Neither covers the other.
 | `build-dmg.sh` | 5 | Verify the exported .app BEFORE the expensive notarise round-trip | Verify exported .app | no |
 | `build-dmg.sh` | 6 | (retired 14 Aug 2026) Notarise + staple the .app | Build .dmg | no |
 | `build-dmg.sh` | 8 | Sign + notarise + staple the .dmg | Sign + notarise .dmg | no |
-| `build-dmg.sh` | 9 | Build manifest / provenance | Manifest | no |
+| `build-dmg.sh` | 9 | Build manifest / provenance | Sidecar SBOM | no |
 | `build-dmg.sh` | 10 | Final gates | Final verification | no |
 
 ## Local gates
 
 **pre-commit:** gitleaks, no tracked files match .gitignore
 
+- `SessionStart:* -> install-git-guards.sh`
 - `PreToolUse:Bash -> block-checkout.sh`
 - `PreToolUse:Bash -> block-private-add.sh`
 - `PreToolUse:Edit|Write|MultiEdit -> block-env-edits.sh`

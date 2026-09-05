@@ -23,8 +23,12 @@ How "what ships" is determined:
 
   This produces a slight over-estimate of what's bundled — PyInstaller
   may further strip transitive deps that nothing imports — but never
-  under-estimates. For procurement-readiness that's the safer error
-  direction.
+  under-estimates the CODE that ships. For procurement-readiness that's
+  the safer error direction. One known exception, metadata only: a
+  package the spec `excludes` can still leave its `*.dist-info` in
+  `_internal/` (presidio_analyzer-2.2.364.dist-info was there on 5 Sep
+  2026 with no package directory), so an SCA scanner reading dist-info
+  will name it while this table, which follows the code, does not.
 
 Prerequisites:
   - .venv with [release] extra installed: `pip install -e '.[dev,serve,apple,release]'`
@@ -172,9 +176,11 @@ def _pip_licenses_json(target_python: Path) -> list[dict]:
     The tool comes from .venv (release extra); `--python` points it at the
     venv the bundle is built from, so the two never have to be the same
     environment and the sidecar venv stays free of dev tooling."""
-    pip_licenses = shutil.which("pip-licenses") or str(
-        REPO_ROOT / ".venv" / "bin" / "pip-licenses"
-    )
+    # .venv's copy first (the [release] extra pins pip-licenses>=5, which has
+    # --python); PATH is the fallback, not the preference — a stranger's
+    # pip-licenses may predate the one flag this script depends on.
+    venv_tool = REPO_ROOT / ".venv" / "bin" / "pip-licenses"
+    pip_licenses = str(venv_tool) if venv_tool.exists() else (shutil.which("pip-licenses") or str(venv_tool))
     if not Path(pip_licenses).exists():
         sys.stderr.write(
             "error: pip-licenses not on PATH and not in .venv/bin/\n"
@@ -250,7 +256,7 @@ def _probe_framework_libs(target_python: Path) -> str:
     .venv-sidecar, so that is the one whose linked OpenSSL/SQLite ship. Each
     stdlib module that wraps a C library exposes the linked version as an
     attribute; libraries the stdlib doesn't expose are "tracks Python
-    release" — they move with the python.org installer on the build runner.
+    release" — they move with whichever interpreter created .venv-sidecar.
     """
     proc = subprocess.run(
         [str(target_python), "-c", _PROBE_SRC],
@@ -263,7 +269,7 @@ def _probe_framework_libs(target_python: Path) -> str:
         sys.exit(2)
     v = json.loads(proc.stdout)
     rows = [
-        ("Python", v["python"], "Tracks the build runner's `python.org` install"),
+        ("Python", v["python"], "The interpreter that created `.venv-sidecar` (Homebrew `python3.12` on the dev Mac today)"),
         ("OpenSSL", v["openssl"], "Linked into `_ssl` and `_hashlib`"),
         ("SQLite", v["sqlite"], "Linked into `_sqlite3`"),
         ("zlib", v["zlib"], "Linked into `zlib`"),
@@ -330,7 +336,27 @@ def main() -> int:
         return 2
 
     excludes = _spec_excludes()
-    records = _filtered_records(_pip_licenses_json(target_python), excludes)
+    raw = _pip_licenses_json(target_python)
+    # The anchor, on the RAW records because _filtered_records drops the
+    # project by name. bristlenose is installed in any venv this inventory can
+    # describe, so its absence means the target is not a project venv: a bare
+    # or half-built .venv-sidecar, a --python symlinked from outside the venv's
+    # bin/ (lands on the base interpreter), or a plain wrong interpreter. The
+    # `if not records` guard below is an existence check, not a floor — the
+    # 5 Sep 2026 incident wrote ONE row through it and was caught by a human
+    # reading stdout. Also the empty case: pip-licenses splits the target's
+    # sys.path on whitespace, so a venv under a path containing a space (this
+    # repo's documented worktree layout) yields zero records.
+    if not any(_normalise(r["Name"]) == "bristlenose" for r in raw):
+        sys.stderr.write(
+            f"error: {target_python} does not carry the bristlenose distribution "
+            f"({len(raw)} records) — not a project venv, refusing to inventory it.\n"
+            "       Half-built .venv-sidecar? run desktop/scripts/build-sidecar.sh.\n"
+            "       Path with whitespace? pip-licenses --python cannot read it; "
+            "inventory from a space-free checkout.\n"
+        )
+        return 2
+    records = _filtered_records(raw, excludes)
     if not records:
         sys.stderr.write("error: no packages survived filtering\n")
         return 2
@@ -363,4 +389,17 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    # Exit codes are the contract: 1 means "--check: the file would change",
+    # which both shell callers answer with "regenerate". An uncaught exception
+    # also exits 1 by Python's default, so a JSONDecodeError from a chatty
+    # target interpreter or a KeyError from pip-licenses field drift used to
+    # read as "stale" and prescribe a remedy that crashes identically. Every
+    # failure that is not the --check verdict is 2.
+    try:
+        sys.exit(main())
+    except SystemExit:
+        raise
+    except Exception:  # noqa: BLE001 — the exit code is the contract
+        import traceback
+        traceback.print_exc()
+        sys.exit(2)

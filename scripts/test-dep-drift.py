@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import importlib.util
 import pathlib
+import re
 import signal
 import subprocess
 import sys
@@ -92,15 +93,29 @@ try:
     # Downgrade a genuinely-installed package's recorded major, so the live
     # resolve reads as a major jump. This is the 0.27.0 shape exactly.
     import importlib.metadata as md
-    victim = next(dist.metadata["Name"] for dist in md.distributions()
-                  if (dist.metadata["Name"] or "").lower() in
-                  {n.lower() for n in dd.parse_inventory(inv_real)})
+    # The inventory is generated from .venv-sidecar; this harness runs under
+    # .venv, and the two legitimately differ on ~a quarter of shared names. A
+    # victim whose .venv version is not the inventory's row cannot be faked
+    # (the replace is a no-op), and the first-in-filesystem-order candidate
+    # used to be the only one tried — so on a machine where it differed the
+    # MAJOR case printed "skipped" and the harness exited 0 having proved
+    # nothing. Walk the candidates until one row actually replaces; none is a
+    # failure, not a skip.
+    inv_names = {n.lower() for n in dd.parse_inventory(inv_real)}
     txt = inv_real.read_text()
-    cur = md.version(victim)
-    faked = f"0.{cur}"
-    txt2 = txt.replace(f"| `{victim}` | {cur} |", f"| `{victim}` | {faked} |", 1)
-    if txt2 == txt:
-        print(f"  \033[2m—\033[0m skipped: could not fake a row for {victim}")
+    victim = cur = None
+    txt2 = txt
+    for dist in md.distributions():
+        name = dist.metadata["Name"] or ""
+        if name.lower() not in inv_names:
+            continue
+        candidate = txt.replace(f"| `{name}` | {dist.version} |",
+                                f"| `{name}` | 0.{dist.version} |", 1)
+        if candidate != txt:
+            victim, cur, txt2 = name, dist.version, candidate
+            break
+    if victim is None:
+        bad("could not construct a MAJOR case: no .venv package matches an inventory row")
     else:
         inv_real.write_text(txt2)
         # --python sys.executable: the victim and its version were read from
@@ -120,8 +135,17 @@ finally:
 r = subprocess.run([sys.executable, str(HERE / "check-dep-drift.py"), "--python", sys.executable],
                    capture_output=True, text=True)
 # 0 or 1, never 2: the harness's own venv is not the inventory's source, so
-# it may legitimately drift; what it must not do is fail to run.
-eq("inventory restored, run completes (not exit 2)", True, r.returncode in (0, 1))
+# it may legitimately drift; what it must not do is fail to run. Since the
+# anchor landed, exit 2 also means "not a project venv" — so this harness
+# must run under .venv (the documented invocation), never the system python.
+# And "1" is
+# also Python's exit code for an uncaught exception, so the code alone cannot
+# tell drift from a crash — the summary line and a clean stderr can.
+_last = r.stdout.strip().splitlines()[-1] if r.stdout.strip() else ""
+eq("inventory restored, run completes with a verdict line", True,
+   r.returncode in (0, 1)
+   and "Traceback" not in r.stderr
+   and re.search(r"none drifted|non-major change|major version change", _last) is not None)
 
 print("\n\033[1mrefuses to report 'no drift' when it parsed nothing\033[0m")
 with tempfile.TemporaryDirectory() as d:

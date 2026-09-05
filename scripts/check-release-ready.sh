@@ -561,6 +561,11 @@ esac
 # calls "always first, always free". Same command, same artefact, no new machinery.
 if [ ! -x .venv/bin/python ]; then
     warn "dependency drift" "no venv — cannot resolve"
+elif [ ! -x .venv-sidecar/bin/python ]; then
+    # Both scripts inventory the SIDECAR venv (the one the bundle is built
+    # from), not .venv; without it they exit 2 and the rows below would only
+    # say "unverified". Name the real precondition.
+    warn "dependency drift" "no .venv-sidecar — run desktop/scripts/build-sidecar.sh first"
 elif [ ! -f THIRD-PARTY-BINARIES.md ]; then
     warn "dependency drift" "no inventory to compare against"
 else
@@ -574,10 +579,24 @@ else
     # is what a human needs at the free first step: release-log 0.27.0 #5 is not
     # a complaint that openai moved, it is a complaint that the discovery moment
     # was "10pm, mid-release". A yes/no cannot move that moment; a named list can.
+    # What these two rows measure is the sidecar venv AS IT STANDS — i.e. the
+    # last sidecar build. build-all.sh --force recreates that venv (with
+    # --no-cache-dir, a live re-resolve) AFTER this preflight, so a pyproject
+    # edit made since the last build is invisible here and only surfaces at
+    # step 2b, mid-release. This commit range was the worked example: the
+    # anthropic ceiling lift read green at preflight and would have died at
+    # 2b. The file-age test says so up front, without duplicating
+    # build-sidecar.sh's deps fingerprint in a second file.
+    if [ pyproject.toml -nt .venv-sidecar/pyvenv.cfg ]; then
+        warn "dependency drift" "pyproject.toml is newer than the sidecar venv — the two rows below describe the LAST build; step 2b will re-resolve"
+    fi
     _drift=$(.venv/bin/python scripts/check-dep-drift.py 2>&1); _drift_rc=$?
     case "$_drift_rc" in
         1) bad  "dependency majors" "$(printf '%s' "$_drift" | grep '^MAJOR' | head -3 | tr '\n' ' ')" ;;
-        2) warn "dependency majors" "could not compare — unverified" ;;
+        # The script's own message is the diagnosis ("not a project venv",
+        # "target interpreter not found — build the sidecar"); "unverified"
+        # alone threw it away.
+        2) warn "dependency majors" "could not compare — $(printf '%s' "$_drift" | tail -1 | sed 's/^::error:://' | cut -c1-140)" ;;
         0) # NAME what moved, not just a count. The whole reason this row exists
            # over the yes/no one below is that a count cannot help you decide.
            _moved=$(printf '%s' "$_drift" | grep -E '^(minor|patch|absent)' | head -3 | tr '\n' ' ')

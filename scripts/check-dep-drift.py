@@ -94,7 +94,9 @@ def _site_packages(target_python: pathlib.Path) -> pathlib.Path | None:
         capture_output=True,
         text=True,
     )
-    if proc.returncode != 0:
+    if proc.returncode != 0 or not proc.stdout.strip():
+        # Empty stdout would become Path("") == Path("."), which is_dir()
+        # accepts — the script would then inventory the current directory.
         return None
     return pathlib.Path(proc.stdout.strip())
 
@@ -135,6 +137,22 @@ def main() -> int:
         if name:
             installed[name] = dist.version
 
+    # The anchor. The project itself is installed in any venv this inventory
+    # can describe, and the inventory deliberately omits it — so its absence
+    # means the target is not a project venv at all: a bare or half-built
+    # .venv-sidecar (build-sidecar.sh interrupted between `venv` and `pip
+    # install`), a --python that is a symlink to the venv python from OUTSIDE
+    # its bin/ (lands on the base interpreter even with .absolute()), or a
+    # plain wrong interpreter. Without this, every row lands in `gone`, no
+    # major is seen, and the script exits 0 — reproduced 5 Sep 2026 against
+    # /usr/bin/true and an empty venv, and rendered as a green preflight row.
+    if "bristlenose" not in installed:
+        print(
+            f"::error::{target_python} does not carry the bristlenose distribution — "
+            "not a project venv (empty, half-built, or the wrong interpreter); refusing to compare"
+        )
+        return 2
+
     majors, minors, gone = [], [], []
     for name, old in sorted(inventory.items()):
         new = installed.get(name)
@@ -161,6 +179,10 @@ def main() -> int:
     if majors:
         print(f"::error::{len(majors)} major version change(s) since the inventory")
         return 1
+    # `gone` (a tracked package no longer installed) exits 0 like a patch bump,
+    # by decision: a vanished dependency is not a major-version risk, and the
+    # wholesale case — everything gone because the target is wrong — is
+    # refused above by the anchor. It is still NAMED in the output.
     print(f"{len(minors) + len(gone)} non-major change(s)")
     return 0
 

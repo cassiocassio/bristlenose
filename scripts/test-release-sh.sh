@@ -34,6 +34,23 @@ eq "spaces"                malformed "$(verdict_version '0.28.0 ')"
 eq "shell metachars"       malformed "$(verdict_version '0.28.0;rm -rf /')"
 eq "two-part rejected"     malformed "$(verdict_version 0.28)"
 
+head_ "board_link — the board is optional: one file, one line, never a failure"
+_bl_root="$(mktemp -d)"; mkdir -p "$_bl_root/.release/1.2.3"
+( cd "$_bl_root" && board_link 1.2.3 ); eq "no handshake → exit 0" 0 "$?"
+eq "no handshake → prints nothing" "" "$(cd "$_bl_root" && board_link 1.2.3)"
+printf '{"url":"http://127.0.0.1:4321/","pid":999999}' > "$_bl_root/.release/1.2.3/board-server.json"
+eq "dead pid → prints nothing" "" "$(cd "$_bl_root" && board_link 1.2.3)"
+printf '{"url":"http://127.0.0.1:4321/","pid":%s}' "$$" > "$_bl_root/.release/1.2.3/board-server.json"
+case "$(cd "$_bl_root" && board_link 1.2.3)" in *"http://127.0.0.1:4321/"*) ok "live pid → prints the url" ;; *) bad "live pid → url not printed" ;; esac
+printf '{"url":"http://evil.example/","pid":%s}' "$$" > "$_bl_root/.release/1.2.3/board-server.json"
+eq "non-loopback url → prints nothing" "" "$(cd "$_bl_root" && board_link 1.2.3)"
+printf 'not json' > "$_bl_root/.release/1.2.3/board-server.json"
+( cd "$_bl_root" && board_link 1.2.3 ); eq "unreadable handshake → exit 0" 0 "$?"
+rm -rf "$_bl_root"
+# and the driver has no other knowledge of the board: no script it runs names the generator
+eq "release.sh never invokes the generator or server" 0 "$(grep -c 'release-board\.py\|--serve' "$ROOT/scripts/release.sh")"
+eq "build scripts never name the generator, server or handshake" 0 "$(grep -l 'release-board\.py\|board-server' "$ROOT"/desktop/scripts/*.sh 2>/dev/null | wc -l | tr -d ' ')"
+
 head_ "verdict_act — release / rebuild / nothing"
 eq "wheel moved"           release "$(verdict_act ' 5 files' '')"
 eq "wheel + desktop"       release "$(verdict_act ' 5 files' ' 2 files')"

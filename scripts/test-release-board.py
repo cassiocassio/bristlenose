@@ -18,14 +18,17 @@ for the exit codes.
 
 from __future__ import annotations
 
+import http.client
 import importlib.util
 import json
 import os
 import re
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from html.parser import HTMLParser
@@ -664,6 +667,9 @@ class Html(unittest.TestCase):
         self.assertIn('idle(pfP, pf.state === "no-data")', code)
         self.assertNotIn('idle(bp, lane.state !== "data")', code, "ran-no-sink and failed lanes must not be dimmed")
         self.assertIn("minmax(0,var(--c1,1fr)) 14px minmax(0,var(--c2,1fr)) 14px minmax(0,var(--c3,1.25fr))", tpl)
+        # live mode: one place patches, and only when a pane's slice moved
+        for token in ("var patch = function(next)", "JSON.stringify(sN[id]) === JSON.stringify(sO[id])", 'new EventSource("/events")', "HB_STALE_S", "data-since"):
+            self.assertIn(token, code, token)
         self.assertNotIn('+"px")', code, "column widths persist as fractions, never pixels — a saved layout must fit any window")
 
     def test_replay_is_the_real_generator_on_ledger_prefixes(self):
@@ -736,16 +742,101 @@ class Html(unittest.TestCase):
             self.assertEqual(r.returncode, 0, r.stderr)
             for name in ("board.html", "board.json"):
                 self.assertEqual(oct((t.root / ".release" / "1.0.0" / name).stat().st_mode & 0o777), "0o600")
-            # and never through a symlink
+            # and never through a symlink: the link is replaced, its target untouched
             os.remove(t.root / ".release" / "1.0.0" / "board.html")
             victim = t.root / "victim"
             victim.write_text("keep")
             os.symlink(victim, t.root / ".release" / "1.0.0" / "board.html")
             r = t.cli("1.0.0")
-            self.assertNotEqual(r.returncode, 0)
+            self.assertEqual(r.returncode, 0, r.stderr)
             self.assertEqual(victim.read_text(), "keep")
+            self.assertFalse((t.root / ".release" / "1.0.0" / "board.html").is_symlink())
+            self.assertFalse(list((t.root / ".release" / "1.0.0").glob(".board.*.tmp-*")), "temp file left behind")
         finally:
             t.close()
+
+
+class Server(unittest.TestCase):
+    """The live server: loopback, serves the page and the model, ticks on change,
+    refuses a foreign Host, writes and removes the handshake."""
+
+    def setUp(self):
+        self.t = Tree()
+        self.t.run(events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n" + ev("2026-09-05T10:00:01Z", "bump", "running", "attempt 1") + "\n")
+        self.httpd, self.state, self.watcher = rb.make_server(self.t.root, "1.0.0", 0, 0.1)
+        self.port = self.httpd.server_address[1]
+        self.hs = rb.write_handshake(self.t.root / ".release" / "1.0.0", self.port, "1.0.0")
+        self.thread = threading.Thread(target=self.httpd.serve_forever, kwargs={"poll_interval": 0.1}, daemon=True)
+        self.thread.start()
+
+    def tearDown(self):
+        self.state.stop()
+        self.httpd.shutdown()
+        self.httpd.server_close()
+        rb.remove_handshake(self.hs)
+        self.t.close()
+
+    def get(self, path, host=None):
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        c.request("GET", path, headers={"Host": host or f"127.0.0.1:{self.port}"})
+        r = c.getresponse()
+        body = r.read()
+        c.close()
+        return r.status, dict(r.getheaders()), body
+
+    def test_page_and_model_are_served_live_on_loopback(self):
+        self.assertEqual(self.httpd.server_address[0], "127.0.0.1")
+        st, hd, body = self.get("/")
+        self.assertEqual(st, 200)
+        self.assertIn(b'id="board-data"', body)
+        self.assertRegex(body, rb'"live":\s*\{')
+        self.assertEqual(hd["Cache-Control"], "no-store")
+        st, _, body = self.get("/board.json")
+        j = json.loads(body)
+        self.assertEqual(j["live"]["generation"], 1)
+        self.assertTrue(j["header"]["with_logs"])
+        self.assertEqual(self.get("/nope")[0], 404)
+
+    def test_foreign_host_is_refused(self):
+        self.assertEqual(self.get("/board.json", host="evil.example")[0], 400)
+        self.assertEqual(self.get("/board.json", host="localhost")[0], 200)
+
+    def test_a_write_to_the_run_dir_bumps_the_generation_and_ticks_sse(self):
+        sock = socket.create_connection(("127.0.0.1", self.port), timeout=5)
+        sock.sendall(f"GET /events HTTP/1.1\r\nHost: 127.0.0.1:{self.port}\r\n\r\n".encode())
+        first = b""
+        while b"data: " not in first:
+            first += sock.recv(4096)
+        self.assertIn(b"text/event-stream", first)
+        with open(self.t.root / ".release" / "1.0.0" / "events.jsonl", "a") as fh:
+            fh.write(ev("2026-09-05T10:00:09Z", "bump", "ok", "8s") + "\n")
+        got = b""
+        deadline = time.time() + 5
+        while b"data: 2" not in got and time.time() < deadline:
+            got += sock.recv(4096)
+        sock.close()
+        self.assertIn(b"data: 2", got)
+        j = json.loads(self.get("/board.json")[2])
+        self.assertEqual(j["live"]["generation"], 2)
+        self.assertEqual(stations(j)["bump"], "ok")
+
+    def test_handshake_is_private_and_removed_on_stop(self):
+        self.assertEqual(oct(self.hs.stat().st_mode & 0o777), "0o600")
+        h = json.loads(self.hs.read_text())
+        self.assertEqual((h["port"], h["pid"], h["url"]), (self.port, os.getpid(), f"http://127.0.0.1:{self.port}/"))
+        rb.remove_handshake(self.hs)
+        self.assertFalse(self.hs.exists())
+        self.hs.write_text(json.dumps({"pid": 999999}))
+        rb.remove_handshake(self.hs)   # not ours: left alone
+        self.assertTrue(self.hs.exists())
+
+    def test_generator_failure_keeps_the_last_model_and_says_so(self):
+        (self.t.root / ".release" / "1.0.0" / "events.jsonl").unlink()
+        self.state.refresh(force=True)
+        j = json.loads(self.get("/board.json")[2])
+        self.assertEqual(stations(j)["bump"], "stranded")   # the last good model: running, no lock → stranded
+        self.assertIsNotNone(j["live"]["error"])
+        self.assertIn("lost its ledger", j["live"]["error"])
 
 
 class RealRun(unittest.TestCase):

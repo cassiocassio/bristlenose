@@ -76,6 +76,16 @@
   .panel.idle,.band.idle{opacity:.42}
   .station.idle,.ch.idle,.chip.idle,.cell.idle{opacity:.38}
   @media (prefers-reduced-motion: reduce){ .panel,.band,.station,.ch,.cell,.chip,.rat{transition:none} }
+  /* live: motion carries liveness, and every motion is driven by a stamp that expires */
+  @keyframes rb-pulse{0%{box-shadow:0 0 0 0 rgba(10,102,255,.5)}100%{box-shadow:0 0 0 12px rgba(10,102,255,0)}}
+  @keyframes rb-glisten{0%{background:#fff6d6}100%{background:var(--panel)}}
+  .station.running.fresh i{animation:rb-pulse 1.4s ease-out infinite}
+  .station.running.stale i{background:var(--warn);border-color:var(--warn);box-shadow:none}
+  .station.running.stale small{color:var(--warn)}
+  .panel.changed,.band.changed{animation:rb-glisten 1.2s ease-out}
+  .panel.fresh{border-color:#bcd0ff;box-shadow:0 0 0 2px #e9f0ff}
+  .pill.live{background:#e9f0ff;border-color:#bcd0ff;color:var(--now)} .pill.live.stale{background:#fff8e8;border-color:#f3dfa5;color:var(--warn)}
+  @media (prefers-reduced-motion: reduce){ .station.running.fresh i{animation:none;outline:2px solid var(--now);outline-offset:2px} .panel.changed,.band.changed{animation:none} }
   .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:3px 8px}
   .chip{display:flex;align-items:center;gap:5px;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .chip span{overflow:hidden;text-overflow:ellipsis}
@@ -129,27 +139,30 @@
   var payload = JSON.parse(document.getElementById("board-data").textContent);
   // The renderer is a function of one model, called once for a board and once
   // per frame for a replay (and, later, once per update for a live view).
-  var render = function(data){
+  // helpers: shared by render, the tick and the patch
   var $ = function(tag, cls, text){ var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = String(text); return e; };
   var add = function(parent){ for (var i = 1; i < arguments.length; i++) if (arguments[i]) parent.appendChild(arguments[i]); return parent; };
   var fmtT = function(iso){ return iso ? iso.replace("T"," ").replace("Z","Z") : "—"; };
   var age = function(iso){ if(!iso) return ""; var d=(Date.now()-Date.parse(iso))/1000; if(d<90) return Math.round(d)+"s ago"; if(d<5400) return Math.round(d/60)+"m ago"; if(d<172800) return Math.round(d/3600)+"h ago"; return Math.round(d/86400)+"d ago"; };
   var elapsed = function(s){ if(s==null) return "—"; s=Number(s); if(isNaN(s)) return "—"; if(s<90) return Math.round(s)+"s"; return Math.round(s/60)+"m"; };
   var panelSize = function(panel, key){ try{ var h = localStorage.getItem("rb-h-"+key); if(h) panel.style.height = h; panel.addEventListener("mouseup", function(){ try{ localStorage.setItem("rb-h-"+key, panel.style.height); }catch(e){} }); }catch(e){} };
-  var panel = function(key, title, sub, right){ var p = $("div","panel"); p.id = "pane-"+key; var h = $("h2"); add(h, $("span",null,title), sub ? $("b",null,sub) : null, right ? $("span","r",right) : null); add(p, h); panelSize(p, key); return p; };
+  var panel = function(key, title, sub, right){ var p = $("div","panel"); p.id = "pane-"+key; var h = $("h2"); var r = null; if (right) { r = $("span","r"); if (typeof right === "string") r.textContent = right; else r.appendChild(right); } add(h, $("span",null,title), sub ? $("b",null,sub) : null, r); add(p, h); panelSize(p, key); return p; };
   var nodata = function(msg){ return $("div","nodata", msg || "no data"); };
   var idle = function(el, when){ if (when) el.classList.add("idle"); return el; };
+  var ageEl = function(iso, cls){ var e = $("span", cls, age(iso)); if (iso) e.setAttribute("data-ts", iso); return e; };
+  var frag = function(){ var f = document.createDocumentFragment(); for (var i = 0; i < arguments.length; i++) if (arguments[i] != null) f.appendChild(typeof arguments[i] === "string" ? document.createTextNode(arguments[i]) : arguments[i]); return f; };
   // The one place an href is set. Every url comes from the generator's links
   // (project.conf constants + validated ids), never from a sink or ledger string.
   var link = function(text, url, cls){ if (!url) return $("span", cls, text); var a = $("a", cls, text); a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer"; return a; };
+  var render = function(data, root){
   var L = data.links || {channels: {}};
   var chip = function(state, label, evidence){ var c = $("div","chip "+(state||"no-data")); add(c, $("i","dot"), $("span",null,label)); if (evidence) c.title = evidence; return c; };
 
-  var screen = screenEl;
+  var screen = root || screenEl;
   screen.textContent = "";
 
   // ── header ──────────────────────────────────────────────────────────────
-  var top = $("div","top");
+  var top = $("div","top"); top.id = "top";
   add(top, $("h1",null,"Release board"), $("span","v", "v"+data.version));
   var phaseCls = {completed:"ok", running:"now", stranded:"bad", stopped:"warn", "no-ledger":"hatch"}[data.phase] || "";
   add(top, $("span","pill "+phaseCls, data.phase));
@@ -159,7 +172,8 @@
   var live = data.liveness;
   var liveTxt = !live.lock ? "no lock — not running" : (live.alive ? "lock held · a process with pid "+live.pid+" exists" : "lock held · no process with pid "+live.pid+" — stranded?");
   add(top, $("span","pill "+(!live.lock?"":(live.alive?"now":"bad")), liveTxt));
-  if (live.heartbeat) add(top, $("span","m", live.heartbeat.state==="mid-write" ? "heartbeat mid-write" : (live.heartbeat.state==="unparseable" || !isFinite(live.heartbeat.epoch)) ? "heartbeat: timestamp unparseable" : "heartbeat "+age(new Date(live.heartbeat.epoch*1000).toISOString())+" · "+(live.heartbeat.step||"")+" · "+(live.heartbeat.last_line||"")));
+  if (live.heartbeat) { var hb = $("span","m"); hb.setAttribute("data-hb", "1"); if (live.heartbeat.state==="mid-write") hb.textContent = "heartbeat mid-write"; else if (live.heartbeat.state==="unparseable" || !isFinite(live.heartbeat.epoch)) hb.textContent = "heartbeat: timestamp unparseable"; else add(hb, frag("heartbeat ", ageEl(new Date(live.heartbeat.epoch*1000).toISOString()), " · "+(live.heartbeat.step||"")+" · "+(live.heartbeat.last_line||""))); add(top, hb); }
+  if (data.live) add(top, frag(function(){ var p = $("span","pill live"); p.id = "live-pill"; add(p, frag("live · ", ageEl(data.live.served_at), data.live.error ? " · generator error: "+data.live.error : "")); return p; }()));
   var conf = data.confounded;
   add(top, $("span","pill "+(conf.computable ? (conf.count ? "warn" : "ok") : "hatch"), conf.computable ? ("confounded expectations: "+conf.count) : "confounded log: not computable"));
   add(top, $("span","m", "snapshot generated "+fmtT(data.generated)+" · newest source "+fmtT(h.newest_source)+(h.with_logs ? " · CONTAINS RAW BUILD LOGS — do not attach to anything" : "")));
@@ -171,7 +185,7 @@
   var CLICK_MAP = {"preflight":"preflight","ci-green":"ci","strict-ci":"ci","testflight":"channels","dmg":"channels","tag":"tag","snap":"channels","snap-stable":"channels"};
 
   // ── the line ────────────────────────────────────────────────────────────
-  var lineP = $("div","line");
+  var lineP = $("div","line"); lineP.id = "line";
   var lh = $("h2"); add(lh, $("span",null,"THE LINE"), $("b",null, data.line.source==="steps.tbl" ? "steps.tbl" : "ledger order (no steps.tbl)"), $("span","r", (data.line.stations.length)+" stations"+(data.line.unknown_steps.length?" · "+data.line.unknown_steps.length+" unknown":"")+(data.line.ledger_unparsed?" · "+data.line.ledger_unparsed+" unparsed":"")+(data.line.ledger_partial?" · partial line":"")));
   lh.style.margin = "0 0 6px"; lh.style.font = "600 10.5px var(--font)"; lh.style.color = "var(--mute)"; lh.style.letterSpacing = ".07em"; lh.style.display = "flex"; lh.style.gap = "8px";
   add(lineP, lh);
@@ -180,7 +194,8 @@
     var st = $("div","station "+s.state+" "+s.kind);
     idle(st, s.state === "pending" || s.state === "later" || s.state === "not-in-this-run");
     if (s.id === "tag") st.classList.add("irrev-after");
-    add(st, $("i"), $("b",null,s.id), $("small",null, s.state + (s.elapsed!=null ? " · "+elapsed(s.elapsed) : (s.est && s.state==="pending" ? " · est "+s.est : "")) + (s.attempt>1 ? " · #"+s.attempt : "")));
+    var sm = $("small"); if (s.state === "running" && s.ts) { sm.setAttribute("data-since", s.ts); sm.textContent = "running · "+elapsed((Date.now()-Date.parse(s.ts))/1000)+(s.attempt>1 ? " · #"+s.attempt : ""); } else sm.textContent = s.state + (s.elapsed!=null ? " · "+elapsed(s.elapsed) : (s.est && s.state==="pending" ? " · est "+s.est : "")) + (s.attempt>1 ? " · #"+s.attempt : "");
+    add(st, $("i"), $("b",null,s.id), sm);
     st.title = (s.label||s.id)+" — "+s.kind+(s.consequence?" — "+s.consequence:"");
     st.addEventListener("click", function(){ var target = (data.build.lane_ids||[]).indexOf(s.id) >= 0 ? "build-"+s.id : CLICK_MAP[s.id]; var el = target && document.getElementById("pane-"+target); if (el) el.scrollIntoView({behavior:"smooth", block:"center"}); });
     add(track, st);
@@ -201,11 +216,11 @@
   add(screen, band);
 
   // ── main ────────────────────────────────────────────────────────────────
-  var main = $("div","main"), left = $("div","col"), right = $("div","col"), stream = $("div","col");
+  var main = $("div","main"), left = $("div","col"), right = $("div","col"), stream = $("div","col"); main.id = "main";
 
   // preflight
   var pf = data.preflight;
-  var pfP = panel("preflight","Pre-flight","check-release-ready.sh", pf.state==="data" ? (pf.rows.length+" rows · "+Object.keys(pf.counts).map(function(k){return pf.counts[k]+" "+k;}).join(" · ")+" · "+age(pf.as_of)) : "");
+  var pfP = panel("preflight","Pre-flight","check-release-ready.sh", pf.state==="data" ? frag(pf.rows.length+" rows · "+Object.keys(pf.counts).map(function(k){return pf.counts[k]+" "+k;}).join(" · ")+" · ", ageEl(pf.as_of)) : "");
   if (pf.state === "ran-no-sink") add(pfP, nodata("the driver ran preflight (attempt "+pf.attempt+", rc "+pf.rc+") but no row lines reached the sink — an older check-release-ready.sh, or BN_EVENT_SINK not exported"));
   else if (pf.state !== "data") add(pfP, nodata("no preflight rows in the sink — run release.sh run (or check-release-ready.sh under a sink)"));
   else { var g = $("div","chips"); pf.rows.forEach(function(r){ add(g, chip(r.result, r.label, r.evidence)); }); add(pfP, g); }
@@ -244,7 +259,7 @@
 
   // ci
   var ci = data.ci;
-  var ciP = panel("ci","CI", ci.state==="data" ? ("run on "+(ci.runs[0]&&ci.runs[0].sha ? ci.runs[0].sha.slice(0,8) : "?")+(ci.runs[0]&&ci.runs[0].branch ? " · "+ci.runs[0].branch : "")) : "", ci.state==="data" ? (ci.jobs.length+" jobs · as `status` recorded it · "+age(ci.runs[0]&&ci.runs[0].as_of)) : "");
+  var ciP = panel("ci","CI", ci.state==="data" ? ("run on "+(ci.runs[0]&&ci.runs[0].sha ? ci.runs[0].sha.slice(0,8) : "?")+(ci.runs[0]&&ci.runs[0].branch ? " · "+ci.runs[0].branch : "")) : "", ci.state==="data" ? frag(ci.jobs.length+" jobs · as `status` recorded it · ", ageEl(ci.runs[0]&&ci.runs[0].as_of)) : "");
   if (ci.state==="data" && ci.runs[0] && ci.runs[0].sha_url) { var cb = ciP.querySelector("h2 b"); if (cb) { cb.textContent = ""; add(cb, $("span",null,"run on "), link(ci.runs[0].sha.slice(0,8), ci.runs[0].sha_url), $("span",null, ci.runs[0].branch ? " · "+ci.runs[0].branch : "")); } }
   idle(ciP, ci.state !== "data");
   if (ci.state !== "data") add(ciP, nodata("not queried — "+ci.hint));
@@ -283,7 +298,7 @@
 
   // channels
   var chn = data.channels;
-  var cP = panel("channels","Channels","release.sh verify", chn.batches ? ((chn.complete ? "latest verify complete" : "latest verify PARTIAL — "+chn.partial_rows+" rows, no done line")+(chn.rollup?" · rollup rc "+chn.rollup.rc+" · "+chn.rollup.ok+" of "+chn.rollup.channels:"")+" · "+age(chn.as_of)) : "no verify recorded — run release.sh verify");
+  var cP = panel("channels","Channels","release.sh verify", chn.batches ? frag((chn.complete ? "latest verify complete" : "latest verify PARTIAL — "+chn.partial_rows+" rows, no done line")+(chn.rollup?" · rollup rc "+chn.rollup.rc+" · "+chn.rollup.ok+" of "+chn.rollup.channels:"")+" · ", ageEl(chn.as_of)) : "no verify recorded — run release.sh verify");
   if (chn.version_mismatch) add(cP, $("div","nodata", "the latest verify probed v"+chn.version_mismatch+", not v"+data.version+" — its rows are not shown here (a bare `release.sh verify` probes the tree's version)"));
   var cg = $("div","channels");
   chn.cards.forEach(function(c, i){
@@ -360,7 +375,7 @@
   add(foot, $("span",null,"Read, never derived: every tile is a file the train wrote. No data is a third state."),
             L.repo ? link(L.repo.replace("https://github.com/",""), L.repo) : null, L.actions ? link("actions", L.actions) : null,
             $("span",null,"Colour carries ok · warn · fail · running; everything else is outlined or hatched. Dim means its inputs have not been written yet."),
-            $("span",null,"Snapshot. Regenerate: .venv/bin/python scripts/release-board.py "+data.version+" — then reload."));
+            $("span",null, data.live ? "Live: served on loopback by scripts/release-board.py "+data.version+" --serve; panes patch in place as the run dir changes." : "Snapshot. Regenerate: .venv/bin/python scripts/release-board.py "+data.version+" — then reload."));
   add(screen, foot);
   };
 
@@ -388,6 +403,53 @@
     show(at);
   } else {
     render(payload);
+  }
+
+  // ── the tick: ages count, running elapsed counts, freshness expires ────────
+  var HB_STALE_S = 60, PANE_FRESH_S = 10, latest = payload.replay ? null : payload;
+  var tick = function(){
+    var now = Date.now();
+    var els = document.querySelectorAll("[data-ts]");
+    for (var i = 0; i < els.length; i++) { els[i].textContent = age(els[i].getAttribute("data-ts")); var pane = els[i].closest(".panel"); if (pane) pane.classList.toggle("fresh", (now - Date.parse(els[i].getAttribute("data-ts")))/1000 < PANE_FRESH_S); }
+    var since = document.querySelectorAll("[data-since]");
+    for (var j = 0; j < since.length; j++) since[j].textContent = "running · "+elapsed((now - Date.parse(since[j].getAttribute("data-since")))/1000);
+    var lv = latest && latest.liveness, fresh = false;
+    if (lv && lv.replay) fresh = true;
+    else if (lv && lv.heartbeat && isFinite(lv.heartbeat.epoch)) fresh = (now/1000 - lv.heartbeat.epoch) < HB_STALE_S;
+    else if (lv && lv.alive) fresh = true;  // a pid exists and no heartbeat file: the driver predates heartbeats
+    var run = document.querySelectorAll(".station.running");
+    for (var k = 0; k < run.length; k++) { run[k].classList.toggle("fresh", fresh); run[k].classList.toggle("stale", !fresh); }
+    var pill = document.getElementById("live-pill"); if (pill && latest && latest.live) pill.classList.toggle("stale", (now - Date.parse(latest.live.served_at))/1000 > 3 * (latest.live.poll_ms/1000) + 10);
+  };
+  tick(); setInterval(tick, 1000);
+
+  if (!payload.replay && payload.live) {
+    // ── live: SSE says "changed", the page fetches board.json and swaps only the panes whose data moved ──
+    var slices = function(d){
+      var m = {top: [d.version, d.phase, d.header, d.liveness && {lock: d.liveness.lock, alive: d.liveness.alive, pid: d.liveness.pid, hbs: d.liveness.heartbeat && d.liveness.heartbeat.state}, d.confounded.count, d.confounded.computable, d.live && d.live.error],
+               line: d.line, "pane-activity": d.activity, "pane-preflight": d.preflight, "pane-ci": d.ci, "pane-ratchets": d.ratchets, "pane-tag": d.tag,
+               "pane-channels": d.channels, "pane-clocks": d.clocks, "pane-confounded": d.confounded, "pane-log": d.logs, "pane-events": [d.events, d.events_total, d.sink]};
+      (d.build.lanes || []).forEach(function(l){ m["pane-build-"+l.id] = l; });
+      return m;
+    };
+    var patch = function(next){
+      var sN = slices(next), sO = slices(latest), ids = Object.keys(sN);
+      var sameShape = ids.length === Object.keys(sO).length && ids.every(function(id){ return id in sO; });
+      if (!sameShape) { render(next); latest = next; tick(); return; }
+      var tmp = document.createElement("div"); render(next, tmp);
+      ids.forEach(function(id){
+        if (JSON.stringify(sN[id]) === JSON.stringify(sO[id])) return;
+        var o = document.getElementById(id), n = tmp.querySelector("#"+(window.CSS && CSS.escape ? CSS.escape(id) : id));
+        if (o && n) { o.replaceWith(n); n.classList.add("changed"); }
+      });
+      var hbEl = document.querySelector("[data-hb] [data-ts]"); if (hbEl && next.liveness && next.liveness.heartbeat && isFinite(next.liveness.heartbeat.epoch)) hbEl.setAttribute("data-ts", new Date(next.liveness.heartbeat.epoch*1000).toISOString());
+      var pill = document.getElementById("live-pill"); if (pill) { var pa = pill.querySelector("[data-ts]"); if (pa && next.live) pa.setAttribute("data-ts", next.live.served_at); }
+      latest = next; tick();
+    };
+    var pull = function(){ if (typeof fetch !== "function") return; fetch("/board.json", {cache: "no-store"}).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){ if (j && j.live) patch(j); }).catch(function(){}); };
+    var es = null;
+    try { if (typeof EventSource === "function") { es = new EventSource("/events"); es.onmessage = function(){ pull(); }; es.onerror = function(){ /* the browser reconnects; the safety poll covers the gap */ }; } } catch(e4) {}
+    setInterval(pull, Math.max(2000, (payload.live.poll_ms || 1000) * (es ? 10 : 2)));
   }
   } catch (err) {
     // The page opens from file:// with no console anyone reads. A renderer

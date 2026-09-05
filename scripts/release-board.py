@@ -37,14 +37,18 @@ stdlib only, plus desktop/scripts/bn_events.py imported by path.
 from __future__ import annotations
 
 import argparse
+import atexit
 import datetime as dt
+import http.server
 import importlib.util
 import json
 import os
 import re
 import shutil
+import signal
 import sys
 import tempfile
+import threading
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -1012,20 +1016,249 @@ def render_html(model: dict, template: Path) -> str:
 
 
 def write_private(path: Path, text: str) -> None:
-    """0600, and never through a symlink (O_NOFOLLOW; fchmod on the fd) — the
-    house standard for credential-class files (telemetry.py, MCPHandshake)."""
-    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
-    fd = os.open(path, flags, 0o600)
+    """0600, atomic, and never through a symlink: written to a sibling temp file
+    (O_EXCL|O_NOFOLLOW, fchmod on the fd) and renamed into place, so a reader —
+    a browser reloading, a poller — never sees a half file, and a symlink at the
+    destination is replaced rather than followed. The house standard for
+    credential-class files (telemetry.py, MCPHandshake)."""
+    tmp = path.with_name(f".{path.name}.tmp-{os.getpid()}")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        os.unlink(tmp)
+    except FileNotFoundError:
+        pass
+    fd = os.open(tmp, flags, 0o600)
     try:
         os.fchmod(fd, 0o600)
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(text)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(tmp, path)
     except Exception:
         try:
-            os.close(fd)
+            os.unlink(tmp)
         except OSError:
             pass
         raise
+
+
+# ── the live server ──────────────────────────────────────────────────────────
+#
+# Transport only. It watches the run dir, rebuilds the model when a file the
+# train writes changes, and serves the page, board.json and an SSE tick on
+# loopback. It knows the generator and the run dir; the writers know nothing of
+# it (docs/design-release-board.md §1 — the scripts must never need the board).
+
+BOARD_SERVER_FILE = "board-server.json"
+_HOSTS = ("127.0.0.1", "localhost", "[::1]")
+
+
+class BoardState:
+    """The current model, rebuilt when the run dir's watched files move."""
+
+    def __init__(self, root: Path, version: str, poll_s: float = 1.0) -> None:
+        self.root, self.version, self.poll_s = root, version, poll_s
+        self.run_dir = root / ".release" / version
+        self.lock = threading.Lock()
+        self.cond = threading.Condition(self.lock)
+        self.generation = 0
+        self.model: dict | None = None
+        self.error: str | None = None
+        self.stamp: tuple | None = None
+        self._stop = threading.Event()
+
+    def newest(self) -> tuple:
+        """(mtime_ns, size) of every watched file — size too, since two writes
+        inside one mtime tick are common on a fast step."""
+        out = []
+        for p in (self.run_dir / "events.jsonl", self.run_dir / "bn-events.log", self.run_dir / "heartbeat",
+                  self.run_dir / "steps.tbl", self.run_dir / "ci-sha", self.run_dir / "context.json", self.run_dir / ".lock" / "pid"):
+            try:
+                st = p.stat()
+                out.append((str(p.name), st.st_mtime_ns, st.st_size))
+            except OSError:
+                out.append((str(p.name), None, None))
+        logs = self.run_dir / "logs"
+        if logs.is_dir():
+            for p in sorted(logs.glob("*.log")):
+                try:
+                    st = p.stat()
+                    out.append((p.name, st.st_mtime_ns, st.st_size))
+                except OSError:
+                    pass
+        return tuple(out)
+
+    def refresh(self, force: bool = False) -> bool:
+        st = self.newest()
+        if not force and st == self.stamp and self.model is not None:
+            return False
+        try:
+            if not (self.run_dir / "events.jsonl").is_file():
+                raise FileNotFoundError(f"{self.run_dir / 'events.jsonl'} is gone — the run dir lost its ledger")
+            model = build_model(self.root, self.version, True)
+            err = None
+        except Exception as e:  # the last good model stays; the page says why
+            model, err = None, f"{type(e).__name__}: {e}"
+        with self.cond:
+            self.stamp = st
+            self.generation += 1
+            if model is not None:
+                self.model = model
+            self.error = err
+            if self.model is not None:
+                self.model["live"] = {"generation": self.generation, "poll_ms": int(self.poll_s * 1000),
+                                      "served_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "error": self.error}
+            self.cond.notify_all()
+        return True
+
+    def watch(self) -> None:
+        while not self._stop.is_set():
+            try:
+                self.refresh()
+            except Exception:
+                pass
+            self._stop.wait(self.poll_s)
+
+    def stop(self) -> None:
+        self._stop.set()
+        with self.cond:
+            self.cond.notify_all()
+
+    def wait_change(self, seen: int, timeout: float) -> int:
+        with self.cond:
+            self.cond.wait_for(lambda: self.generation != seen or self._stop.is_set(), timeout)
+            return self.generation
+
+
+class BoardHandler(http.server.BaseHTTPRequestHandler):
+    state: BoardState  # set on the server class
+    server_version = "release-board/1"
+    sys_version = ""
+
+    def log_message(self, fmt, *args):  # quiet; errors go through log_error
+        return
+
+    def _headers(self, code: int, ctype: str, length: int | None = None) -> None:
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Content-Security-Policy", "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'")
+        if length is not None:
+            self.send_header("Content-Length", str(length))
+        self.end_headers()
+
+    def _host_ok(self) -> bool:
+        host = (self.headers.get("Host") or "").strip()
+        bare = host.rsplit(":", 1)[0] if not host.startswith("[") else host.split("]")[0] + "]"
+        return bare in _HOSTS
+
+    def do_GET(self) -> None:
+        if not self._host_ok():  # DNS rebinding: a page on another origin naming this port by a hostname
+            self._headers(400, "text/plain; charset=utf-8", 0)
+            return
+        path = self.path.split("?", 1)[0]
+        st = self.state
+        if path in ("/", "/board.html"):
+            with st.lock:
+                model = st.model
+            if model is None:
+                body = b"no model yet"
+                self._headers(503, "text/plain; charset=utf-8", len(body))
+                self.wfile.write(body)
+                return
+            body = render_html(model, TEMPLATE).encode("utf-8")
+            self._headers(200, "text/html; charset=utf-8", len(body))
+            self.wfile.write(body)
+        elif path == "/board.json":
+            with st.lock:
+                model = st.model
+            body = json.dumps(model if model is not None else {"error": st.error}, ensure_ascii=True).encode("utf-8")
+            self._headers(200 if model is not None else 503, "application/json; charset=utf-8", len(body))
+            self.wfile.write(body)
+        elif path == "/health":
+            with st.lock:
+                body = json.dumps({"generation": st.generation, "version": st.version, "error": st.error}).encode("utf-8")
+            self._headers(200, "application/json; charset=utf-8", len(body))
+            self.wfile.write(body)
+        elif path == "/events":
+            self._headers(200, "text/event-stream; charset=utf-8")
+            seen = -1
+            try:
+                while True:
+                    gen = st.wait_change(seen, 15.0)
+                    if st._stop.is_set():
+                        break
+                    if gen != seen:
+                        seen = gen
+                        self.wfile.write(f"data: {gen}\n\n".encode("ascii"))
+                    else:
+                        self.wfile.write(b": ping\n\n")
+                    self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError, OSError):
+                return
+        else:
+            self._headers(404, "text/plain; charset=utf-8", 0)
+
+
+class BoardServer(http.server.ThreadingHTTPServer):
+    daemon_threads = True
+    allow_reuse_address = True
+
+
+def make_server(root: Path, version: str, port: int = 0, poll_s: float = 1.0) -> tuple[BoardServer, BoardState, threading.Thread]:
+    """Bind loopback, build the first model, start the watcher. The caller
+    serves (serve_forever) and stops (shutdown + state.stop)."""
+    state = BoardState(root, version, poll_s)
+    state.refresh(force=True)
+    handler = type("Handler", (BoardHandler,), {"state": state})
+    httpd = BoardServer(("127.0.0.1", port), handler)
+    watcher = threading.Thread(target=state.watch, name="board-watch", daemon=True)
+    watcher.start()
+    return httpd, state, watcher
+
+
+def write_handshake(run_dir: Path, port: int, version: str) -> Path:
+    """The one file the driver may read: where the board is, and whose it is.
+    release.sh prints the url when this exists and the pid is alive; it never
+    starts, waits on, or fails because of the server."""
+    p = run_dir / BOARD_SERVER_FILE
+    write_private(p, json.dumps({"schema": 1, "url": f"http://127.0.0.1:{port}/", "port": port, "pid": os.getpid(),
+                                 "version": version, "started": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}, indent=1))
+    return p
+
+
+def remove_handshake(p: Path) -> None:
+    try:
+        if json.loads(p.read_text()).get("pid") == os.getpid():
+            p.unlink()
+    except (OSError, ValueError):
+        pass
+
+
+def serve_board(root: Path, version: str, port: int, poll_s: float) -> int:
+    run_dir = root / ".release" / version
+    httpd, state, _ = make_server(root, version, port, poll_s)
+    actual = httpd.server_address[1]
+    hs = write_handshake(run_dir, actual, version)
+    atexit.register(remove_handshake, hs)
+
+    def _stop(*_):
+        state.stop()
+        threading.Thread(target=httpd.shutdown, daemon=True).start()
+
+    signal.signal(signal.SIGINT, _stop)
+    signal.signal(signal.SIGTERM, _stop)
+    sys.stderr.write(f"  board: http://127.0.0.1:{actual}/  ·  {version}  ·  loopback only, carries log tails  ·  ^C stops\n")
+    try:
+        httpd.serve_forever(poll_interval=0.5)
+    finally:
+        state.stop()
+        remove_handshake(hs)
+        httpd.server_close()
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1035,6 +1268,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--with-logs", action="store_true", help="also write board-with-logs.html carrying raw log tails — do not attach it to anything")
     ap.add_argument("--json", action="store_true", help="print board.json to stdout instead of writing files")
     ap.add_argument("--replay", action="store_true", help="write board-replay.html: the board at every ledger line, with back/forward controls (design tool — not a live view)")
+    ap.add_argument("--serve", action="store_true", help="serve the board live on loopback: the page patches itself as the run dir changes (carries log tails; never leaves this machine)")
+    ap.add_argument("--port", type=int, default=0, help="with --serve: port (default: a free one)")
+    ap.add_argument("--poll", type=float, default=1.0, help="with --serve: seconds between run-dir checks")
     ap.add_argument("--root", type=Path, default=ROOT, help=argparse.SUPPRESS)
     args = ap.parse_args(argv)
     root = args.root.resolve()
@@ -1052,6 +1288,8 @@ def main(argv: list[str] | None = None) -> int:
     if not (run_dir / "events.jsonl").is_file():
         sys.stderr.write(f"error: {run_dir} has no events.jsonl — not a run\n")
         return 1
+    if args.serve:
+        return serve_board(root, version, args.port, args.poll)
     if args.replay:
         out = (args.out or run_dir).resolve()
         out.mkdir(parents=True, exist_ok=True)

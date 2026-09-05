@@ -420,6 +420,21 @@ verdict_recover() {
     esac
 }
 
+# board_link <version> — print the live board's url if one is serving this run.
+# The board is optional and the driver must not need it (design-release-board
+# §1): this reads one file the server wrote, checks its pid is alive, prints
+# one line, and is silent on every other outcome. Never starts, waits, or fails.
+board_link() {
+    local _f=".release/$1/board-server.json" _url _pid
+    [ -f "$_f" ] || return 0
+    _url="$(jq -r '.url // empty' "$_f" 2>/dev/null)" || return 0
+    _pid="$(jq -r '.pid // empty' "$_f" 2>/dev/null)" || return 0
+    case "$_pid" in ''|*[!0-9]*) return 0 ;; esac
+    kill -0 "$_pid" 2>/dev/null || return 0
+    case "$_url" in http://127.0.0.1:*/) printf '  %sboard%s  %s\n' "${B:-}" "${N:-}" "$_url" ;; esac
+    return 0
+}
+
 [ "${RELEASE_LIB:-0}" = "1" ] && return 0 2>/dev/null
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"; cd "$ROOT"
@@ -607,6 +622,7 @@ cmd_verify() {
     local _v=""
     case "${1-}" in ""|-*) _v="$(resolve_run)" ;; *) _v="$1" ;; esac
     export_sink_for "$_v"
+    board_link "$_v" || true
     exec "$ROOT/scripts/verify-channels.sh" "$@"
 }
 
@@ -1220,6 +1236,7 @@ cmd_run() {
     { echo "# steps.tbl v1"; run_steps; } > "$RUNDIR/steps.tbl" || die "could not snapshot the step table"
     sink_line_or_die run status=start attempt="$_attempt" proto=1 \
         || die "cannot write the event sink at $BN_EVENT_SINK"
+    board_link "$V" || true
     write_context "$RUNDIR"
     # Idle sleep parks xcodebuild/notarytool/altool with no error — the
     # overnight run's quietest failure mode, and no env var converts machine

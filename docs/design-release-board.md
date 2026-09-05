@@ -304,3 +304,81 @@ And one observation from the build: `test-release-sh.sh`
 still reaches the real `.release/` on some path with a version that resolves
 to 0.28.0 and declines at the prompt — harmless now that the driver's lines
 land after the prompt, and worth a look.
+
+## 8 · Live, replay, and what the driver knows (5 Sep 2026, second day)
+
+The snapshot was the layout to critique; the connection between the board and
+reality is the thing. Five layers, each knowing only the one below, and the
+writers knowing nothing above the files:
+
+| Layer | Knows | Never knows |
+|---|---|---|
+| writers — `release.sh`, `build-*.sh`, the gates | a sink path that may be set; the run dir | generator, server, page |
+| files — `.release/<v>/` | — | — |
+| generator — `release-board.py` | the files, `steps.tbl`, `project.conf` | server, page |
+| server — `release-board.py <v> --serve` | the generator, the run dir's mtimes | the writers |
+| page | `board.json` over loopback HTTP | everything else |
+
+**The server** is stdlib `ThreadingHTTPServer` on `127.0.0.1` (port 0 unless
+`--port`). A watcher thread stats the watched files every `--poll` seconds
+(`(name, mtime_ns, size)` — size too, since two writes can share an mtime tick)
+and rebuilds the with-logs model when anything moved; a generator failure keeps
+the last good model and puts the error on the page. `GET /` is the page with the
+model inlined, `/board.json` the model, `/events` an SSE tick per generation
+(`: ping` every 15 s), `/health` the generation. A `Host` header that is not
+loopback is a 400 — the DNS-rebinding case. `Cache-Control: no-store`, a CSP
+that allows only inline script and style and `connect-src 'self'`. It carries
+log tails because it is the view on your own screen; it never leaves the
+machine, and `board.html` on disk stays the clean one.
+
+**The page** renders from one model, `render(data, root)`, and in live mode
+patches: SSE says changed, the page fetches `board.json`, renders into a
+detached tree, and swaps only the panes whose data slice moved
+(`JSON.stringify` of a per-pane slice; a pane set that changed shape falls back
+to a full render). A one-second tick counts every age from its stamp
+(`data-ts`), counts a running station's elapsed from its ledger stamp
+(`data-since`), and decides freshness: **motion carries liveness, and every
+motion is driven by a stamp that expires.** The running station pulses only
+while the heartbeat is under 60 s old (or a pid exists and no heartbeat file
+does; or the frame is a replay, which says so); stale turns it amber. A pane
+whose newest stamp is under 10 s old is outlined; a swapped pane glistens once.
+`prefers-reduced-motion` replaces the pulse with an outline and drops the
+glisten. Widths of the three columns are fractions of the row, set by dragging
+the two gutters (the red IRREVERSIBLE band is the first) and kept in
+`localStorage`; dim means a pane's inputs have not been written yet.
+
+**The one seam into the driver.** The server writes
+`.release/<v>/board-server.json` — `{schema, url, port, pid, version, started}`,
+0600, removed on exit if the pid is its own. `release.sh`'s `board_link`
+prints one line, `board  http://127.0.0.1:<port>/`, when that file exists,
+its pid is alive and its url is loopback; on every other outcome it is silent.
+It never starts, waits on, or fails because of the server, and
+`test-release-sh.sh` pins that the driver never invokes the generator and no
+build script names the server or the handshake.
+
+**Replay** — `--replay` writes `board-replay.html`: frame *i* is the real
+generator on the first *i* ledger lines and the sink lines stamped no later, in
+a throwaway copy of the run dir; a fixed scrubber (buttons, arrow keys) steps
+through them. Liveness is the one thing a prefix cannot read, so a step a
+prefix leaves running is shown running and the frame says "liveness assumed".
+A design tool for the info design; the real board never renders the scrubber.
+
+**Links.** Every public page is an anchor built in the generator from
+`project.conf` constants (`read_conf` expands its own `${VAR}`s) and validated
+ids: PyPI at the version, the release tag, the tap formula, snapcraft, Copr,
+the dmg permalink, the changelog, App Store Connect; the ci-sha as a commit,
+each CI run id as an Actions run, `ratchet.json` pinned to the ci-sha. The
+template sets `href` in one place, every url is https, and a sha that is not
+hex or a run id that is not digits gets plain text.
+
+**Writes are atomic**: `write_private` writes a sibling temp file
+(`O_EXCL|O_NOFOLLOW`, 0600, fsync) and renames it over the destination, so a
+reloading browser or a poller never reads a half file and a symlink at the
+destination is replaced, never followed.
+
+Proof: `Server` in `test-release-board.py` (loopback bind, page and model,
+generation bump and SSE tick on a ledger write, foreign Host refused, handshake
+0600 and removed, lost ledger keeps the last model); `board_link` cases in
+`test-release-sh.sh`; the served page rendered in jsdom with every pane, the
+live pill and no renderer error. Not mechanised: the in-place patch and the
+tick run only in a browser — the jsdom check is a scratch script, not a suite.

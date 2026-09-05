@@ -118,6 +118,11 @@ desktop/testtest/
 # Thematic-analysis spike output (private corpus data derived from gitignored trial-runs)
 experiments/thematic-spike/output/
 experiments/thematic-spike/**/__pycache__/
+# Raw re-extraction passes. Same posture as thematic-spike/output above:
+# the harness and FINDINGS.md are the durable artefacts, the LLM output is
+# evidence for them and is re-derivable for a couple of dollars.
+experiments/quote-stability/out/
+experiments/quote-stability/**/__pycache__/
 
 # Stray worktree dirs from spawned background sessions
 .claude/worktrees/

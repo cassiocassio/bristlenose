@@ -22,7 +22,7 @@
     --ok:#2e9e5b;--bad:#d0342c;--warn:#d9930d;--soft:#d9d9d6;--now:#0a66ff;--skip:#b9b9b7;--hatch:repeating-linear-gradient(135deg,#f3f3f1 0 4px,#fff 4px 8px);
     --font:-apple-system,"SF Pro Text",Inter,system-ui,sans-serif;--mono:"SF Mono",ui-monospace,Menlo,monospace}
   html,body{margin:0;background:var(--bg);color:var(--ink);font:11.5px/1.3 var(--font)}
-  .screen{margin:0;padding:8px;display:grid;grid-template-rows:auto auto auto 1fr auto;gap:8px}
+  .screen{margin:0;padding:8px;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto 1fr auto;gap:8px}
   .top{display:flex;flex-wrap:wrap;gap:16px;align-items:center;background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:8px 14px}
   .top h1{margin:0;font-size:14px;font-weight:600}
   .top .v{font:600 15px var(--mono)}
@@ -49,7 +49,7 @@
   /* main grid */
   /* three columns: before the tag · after the tag · the stream. The gutters set
      the widths by drag (persisted); double-click a gutter to reset. */
-  .main{display:grid;grid-template-columns:var(--c1,1fr) 14px var(--c2,1fr) 14px var(--c3,640px);gap:8px;min-height:0}
+  .main{display:grid;grid-template-columns:minmax(0,var(--c1,1fr)) 14px minmax(0,var(--c2,1fr)) 14px minmax(0,var(--c3,1.25fr));gap:8px;min-height:0;min-width:0}
   .col{display:grid;gap:8px;align-content:start;min-width:0}
   .gutter{cursor:col-resize;user-select:none;touch-action:none;border-radius:4px}
   .gutter:hover,.gutter.dragging{background:#e9f0ff}
@@ -66,6 +66,13 @@
   .panel h2 b{color:var(--ink);font-weight:600;letter-spacing:0;text-transform:none;font-size:11.5px}
   .panel h2 .r{margin-left:auto;font:10px var(--mono);color:var(--mute);letter-spacing:0;text-transform:none}
   .nodata{color:var(--mute);font-style:italic;padding:4px 0}
+  /* idle: the pane's (or element's) inputs have not been written yet — the third
+     state as contrast, not just as text. Anything that HAPPENED (fail, skip,
+     ran-no-sink) is full contrast. The transition is the fill-in on a live update. */
+  .panel,.band,.station,.ch,.cell,.chip,.rat{transition:opacity .6s ease}
+  .panel.idle,.band.idle{opacity:.42}
+  .station.idle,.ch.idle,.chip.idle,.cell.idle{opacity:.38}
+  @media (prefers-reduced-motion: reduce){ .panel,.band,.station,.ch,.cell,.chip,.rat{transition:none} }
   .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:3px 8px}
   .chip{display:flex;align-items:center;gap:5px;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .chip span{overflow:hidden;text-overflow:ellipsis}
@@ -100,7 +107,7 @@
   .mono{font-family:var(--mono);font-size:10px}
   pre{margin:0;font:10px/1.35 var(--mono);white-space:pre;overflow:auto}
   .ev{display:grid;grid-template-columns:150px 60px 1fr;gap:8px;font:10px/1.35 var(--mono)}
-  .ev .ts{color:var(--mute)} .ev .src{color:var(--now)} .ev .src.ledger{color:var(--ink);font-weight:600}
+  .ev .ts{color:var(--mute)} .ev .src{color:var(--now)} .ev .src.ledger{color:var(--ink);font-weight:600} .ev span{overflow-wrap:anywhere;min-width:0}
   .strip{display:flex;gap:2px;align-items:flex-end;height:26px}
   .strip i{flex:1;background:#dfe6ff;border-radius:2px 2px 0 0;min-width:1px}
   .conf ul{margin:0;padding-left:16px} .conf li{margin:1px 0} .conf h3{margin:6px 0 2px;font-size:10.5px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em}
@@ -125,6 +132,7 @@
   var panelSize = function(panel, key){ try{ var h = localStorage.getItem("rb-h-"+key); if(h) panel.style.height = h; panel.addEventListener("mouseup", function(){ try{ localStorage.setItem("rb-h-"+key, panel.style.height); }catch(e){} }); }catch(e){} };
   var panel = function(key, title, sub, right){ var p = $("div","panel"); p.id = "pane-"+key; var h = $("h2"); add(h, $("span",null,title), sub ? $("b",null,sub) : null, right ? $("span","r",right) : null); add(p, h); panelSize(p, key); return p; };
   var nodata = function(msg){ return $("div","nodata", msg || "no data"); };
+  var idle = function(el, when){ if (when) el.classList.add("idle"); return el; };
   var chip = function(state, label, evidence){ var c = $("div","chip "+(state||"no-data")); add(c, $("i","dot"), $("span",null,label)); if (evidence) c.title = evidence; return c; };
 
   var screen = screenEl;
@@ -160,6 +168,7 @@
   var track = $("div","track");
   data.line.stations.forEach(function(s){
     var st = $("div","station "+s.state+" "+s.kind);
+    idle(st, s.state === "pending" || s.state === "later" || s.state === "not-in-this-run");
     if (s.id === "tag") st.classList.add("irrev-after");
     add(st, $("i"), $("b",null,s.id), $("small",null, s.state + (s.elapsed!=null ? " · "+elapsed(s.elapsed) : (s.est && s.state==="pending" ? " · est "+s.est : "")) + (s.attempt>1 ? " · #"+s.attempt : "")));
     st.title = (s.label||s.id)+" — "+s.kind+(s.consequence?" — "+s.consequence:"");
@@ -176,6 +185,7 @@
   var strip = $("div","strip"); var maxC = Math.max.apply(null, act.minutes.concat([1]));
   act.minutes.forEach(function(c){ var b = $("i"); b.style.height = Math.max(2, Math.round(20*c/maxC))+"px"; b.title = c+" events"; add(strip, b); });
   add(band, act.minutes.length ? strip : $("span","nodata","no timestamped events"));
+  idle(band, !act.minutes.length);
   add(band, $("span","r", act.start ? ("from "+fmtT(act.start)+" · "+act.minutes.length+" min"+(act.truncated ? " of "+act.span_minutes+" — TRUNCATED, "+act.dropped+" events beyond the strip" : "")+(act.unparseable ? " · "+act.unparseable+" unparseable timestamps excluded" : "")) : (act.unparseable ? act.unparseable+" unparseable timestamps, nothing to draw" : "")));
   add(screen, band);
 
@@ -188,6 +198,7 @@
   if (pf.state === "ran-no-sink") add(pfP, nodata("the driver ran preflight (attempt "+pf.attempt+", rc "+pf.rc+") but no row lines reached the sink — an older check-release-ready.sh, or BN_EVENT_SINK not exported"));
   else if (pf.state !== "data") add(pfP, nodata("no preflight rows in the sink — run release.sh run (or check-release-ready.sh under a sink)"));
   else { var g = $("div","chips"); pf.rows.forEach(function(r){ add(g, chip(r.result, r.label, r.evidence)); }); add(pfP, g); }
+  idle(pfP, pf.state === "no-data");
   add(left, pfP);
 
   // build
@@ -200,6 +211,7 @@
               "running-no-sink":"running — no child lines yet",
               "data":(lane.steps.length+" steps · attempt "+lane.attempt+" · rc "+lane.rc+" · "+elapsed(lane.elapsed))}[lane.state] || lane.state;
     var bp = panel("build-"+lane.id,"Build","desktop/scripts/"+lane.id+".sh", st);
+    idle(bp, lane.state === "not-run");
     if (lane.state !== "data") { add(bp, nodata(st)); add(left, bp); return; }
     var maxE = Math.max.apply(null, lane.steps.map(function(s){return s.elapsed||0;}).concat([1]));
     var grid = $("div","steps");
@@ -218,13 +230,14 @@
   // ci
   var ci = data.ci;
   var ciP = panel("ci","CI", ci.state==="data" ? ("run on "+(ci.runs[0]&&ci.runs[0].sha ? ci.runs[0].sha.slice(0,8) : "?")+(ci.runs[0]&&ci.runs[0].branch ? " · "+ci.runs[0].branch : "")) : "", ci.state==="data" ? (ci.jobs.length+" jobs · as `status` recorded it · "+age(ci.runs[0]&&ci.runs[0].as_of)) : "");
+  idle(ciP, ci.state !== "data");
   if (ci.state !== "data") add(ciP, nodata("not queried — "+ci.hint));
   else {
     if (ci.matrix.length){
       var pys = [], oss = []; ci.matrix.forEach(function(c){ if(pys.indexOf(c.python)<0) pys.push(c.python); if(oss.indexOf(c.os)<0) oss.push(c.os); }); pys.sort(); oss.sort();
       var m = $("div","matrix"); m.style.gridTemplateColumns = "70px repeat("+pys.length+",1fr)";
       add(m, $("span","rl","")); pys.forEach(function(p){ add(m, $("span","h",p)); });
-      oss.forEach(function(o){ add(m, $("span","rl",o)); pys.forEach(function(p){ var c = ci.matrix.filter(function(x){return x.os===o&&x.python===p;})[0]; var cell = $("div","cell "+(c?c.result:"na"), c ? (c.result==="success"?"✓":(c.result==="failure"?"✗":c.result)) : ""); if (c) cell.title = c.job+" — "+c.result; add(m, cell); }); });
+      oss.forEach(function(o){ add(m, $("span","rl",o)); pys.forEach(function(p){ var c = ci.matrix.filter(function(x){return x.os===o&&x.python===p;})[0]; var cell = $("div","cell "+(c?c.result:"na"), c ? (c.result==="success"?"✓":(c.result==="failure"?"✗":c.result)) : ""); idle(cell, !c); if (c) cell.title = c.job+" — "+c.result; add(m, cell); }); });
       add(ciP, m);
     }
     var gates = $("div","gates");
@@ -246,6 +259,7 @@
   var tag = data.tag;
   var tP = panel("tag","Tag", tag.station ? (tag.station.state) : "—", tag.ci_sha ? "ci-sha "+tag.ci_sha.slice(0,12) : "no ci-sha recorded");
   add(tP, tag.station ? chip(tag.station.state, "tag + push — "+tag.station.state+(tag.station.elapsed!=null?" · "+elapsed(tag.station.elapsed):""), tag.station.consequence) : nodata("tag is not a station of this run"));
+  idle(tP, !tag.station || tag.station.state === "pending" || tag.station.state === "later");
   add(tP, $("div","sub","Nothing here is derived: the sha is the one strict-ci dispatched, the state is the ledger's fold. Preconditions are the CI pane's verdict and the calendar, read by a human."));
   add(right, tP);
 
@@ -255,16 +269,18 @@
   if (chn.version_mismatch) add(cP, $("div","nodata", "the latest verify probed v"+chn.version_mismatch+", not v"+data.version+" — its rows are not shown here (a bare `release.sh verify` probes the tree's version)"));
   var cg = $("div","channels");
   chn.cards.forEach(function(c, i){
-    var card = $("div","ch "+c.state); var n = $("div","n"); add(n, $("i","dot"), $("span",null,c.name), $("span","idx",(i+1)+"/"+chn.cards.length)); add(card, n);
+    var card = $("div","ch "+c.state); idle(card, c.state === "no-data"); var n = $("div","n"); add(n, $("i","dot"), $("span",null,c.name), $("span","idx",(i+1)+"/"+chn.cards.length)); add(card, n);
     var rows = $("div","rows"); add(rows, $("span",null,"state"), $("span",null,c.state), $("span",null,"evidence"), $("span","mono",c.evidence||"—"), $("span",null,"as of"), $("span","mono",c.as_of ? fmtT(c.as_of)+" ("+age(c.as_of)+")" : "—")); add(card, rows);
     add(cg, card);
   });
   add(cP, cg);
+  idle(cP, !chn.batches);
   if (chn.extras.length){ var ex = $("div","sub"); chn.extras.forEach(function(e){ add(ex, chip(e.state, e.label+" — "+e.evidence, e.evidence)); }); add(cP, ex); }
   add(right, cP);
 
   // clocks
   var kP = panel("clocks","Clocks","expiry", "as Apple gave it, or the build time plus the app's rule");
+  idle(kP, !data.clocks.length);
   if (!data.clocks.length) add(kP, nodata("no clock lines in the sink — upload-testflight.sh and build-dmg.sh write them"));
   data.clocks.forEach(function(k){
     var e = $("div","chip "+(k.state==="known"?"ok":"no-data")); add(e, $("i","dot"), $("span",null, k.name+": "+(k.state==="known" ? "expires "+k.expires : "no expiry recorded")+(k.build?" · build "+k.build:"")+(k.built?" · built "+k.built:"")+(k.rule?" · "+k.rule:"")+" · "+age(k.as_of)));
@@ -287,6 +303,7 @@
   var logs = data.logs || {};
   var logIds = Object.keys(logs);
   var lP = panel("log","Log", logIds.length ? logIds.join(", ") : "no failed or running step", h.with_logs ? "tails embedded" : "paths only — tails need --with-logs");
+  idle(lP, !logIds.length);
   if (!logIds.length) add(lP, nodata("the driver keeps one log per step attempt under logs/; this pane shows the failed or running one"));
   logIds.forEach(function(sid){ var l = logs[sid]; add(lP, $("div","sub", sid+": "+l.path+" · "+l.attempts+" attempt(s) · "+l.size+" bytes")); if (l.tail){ var pre = $("pre"); pre.textContent = l.tail.join("\n"); add(lP, pre); } });
   add(stream, lP);
@@ -295,19 +312,24 @@
   // a 40-hex sha is a third of the column: show 8, keep the whole line in the tooltip
   data.events.forEach(function(r){ var short = String(r.text).replace(/\b([0-9a-f]{8})[0-9a-f]{32}\b/g, "$1…"); var cell = $("span",null,short); if (short !== r.text) cell.title = r.text; add(ev, $("span","ts",fmtT(r.ts)), $("span","src "+(r.src==="ledger"?"ledger":""), r.src), cell); });
   add(eP, data.events.length ? ev : nodata());
+  idle(eP, !data.events.length);
   add(stream, eP);
 
   // ── gutters: drag to set the three widths; double-click resets ──────────
-  var COLS_KEY = "rb-cols", MIN = 360;
-  var applyCols = function(w){ main.style.setProperty("--c1", w[0]+"px"); main.style.setProperty("--c2", w[1]+"px"); main.style.setProperty("--c3", w[2]+"px"); };
+  // Widths are fractions of the row, never pixels: a saved layout must fit
+  // whatever window opens it (a 640px fixed column plus two 1fr blew past a
+  // narrower window, 5 Sep 2026). The 360px floor applies only while dragging.
+  var COLS_KEY = "rb-cols-fr", MIN = 360;
+  var applyFr = function(f){ main.style.setProperty("--c1", f[0]+"fr"); main.style.setProperty("--c2", f[1]+"fr"); main.style.setProperty("--c3", f[2]+"fr"); };
   var currentCols = function(){ return [left, right, stream].map(function(c){ return c.getBoundingClientRect().width; }); };
-  try { var saved = JSON.parse(localStorage.getItem(COLS_KEY) || "null"); if (saved && saved.length === 3 && saved.every(function(x){ return x >= MIN; })) applyCols(saved); } catch(e) {}
+  var toFr = function(w){ var t = w[0]+w[1]+w[2] || 1; return w.map(function(x){ return Math.round(1000*x/t)/1000; }); };
+  try { var saved = JSON.parse(localStorage.getItem(COLS_KEY) || "null"); if (saved && saved.length === 3 && saved.every(function(x){ return x > 0.05; })) applyFr(saved); } catch(e) {}
   var gutter = function(cls, text, a, b){
     var g = $("div", "gutter "+cls, text); g.id = "gutter-"+(a === 0 ? "tag" : "stream");
     g.addEventListener("pointerdown", function(e){
       var x0 = e.clientX, w = currentCols(); g.setPointerCapture(e.pointerId); g.classList.add("dragging");
-      var move = function(ev2){ var d = ev2.clientX - x0; var na = w[a] + d, nb = w[b] - d; if (na < MIN || nb < MIN) return; var nw = w.slice(); nw[a] = na; nw[b] = nb; applyCols(nw); };
-      var up = function(){ g.classList.remove("dragging"); g.removeEventListener("pointermove", move); g.removeEventListener("pointerup", up); try { localStorage.setItem(COLS_KEY, JSON.stringify(currentCols())); } catch(e2) {} };
+      var move = function(ev2){ var d = ev2.clientX - x0; var na = w[a] + d, nb = w[b] - d; if (na < MIN || nb < MIN) return; var nw = w.slice(); nw[a] = na; nw[b] = nb; applyFr(toFr(nw)); };
+      var up = function(){ g.classList.remove("dragging"); g.removeEventListener("pointermove", move); g.removeEventListener("pointerup", up); try { localStorage.setItem(COLS_KEY, JSON.stringify(toFr(currentCols()))); } catch(e2) {} };
       g.addEventListener("pointermove", move); g.addEventListener("pointerup", up);
     });
     g.addEventListener("dblclick", function(){ ["--c1","--c2","--c3"].forEach(function(v){ main.style.removeProperty(v); }); try { localStorage.removeItem(COLS_KEY); } catch(e3) {} });
@@ -318,7 +340,7 @@
 
   var foot = $("footer");
   add(foot, $("span",null,"Read, never derived: every tile is a file the train wrote. No data is a third state."),
-            $("span",null,"Colour carries ok · warn · fail · running; everything else is outlined or hatched."),
+            $("span",null,"Colour carries ok · warn · fail · running; everything else is outlined or hatched. Dim means its inputs have not been written yet."),
             $("span",null,"Snapshot. Regenerate: .venv/bin/python scripts/release-board.py "+data.version+" — then reload."));
   add(screen, foot);
   } catch (err) {

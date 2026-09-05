@@ -594,7 +594,12 @@ class Html(unittest.TestCase):
         for token in ('"gutter-"+(a === 0 ? "tag" : "stream")', 'panel("log"', 'panel("events"', 'band.id = "pane-activity"', "--c3"):
             self.assertIn(token, code, token)
         self.assertNotIn('panel("activity"', code, "activity is the band under the line, not a pane")
-        self.assertIn("var(--c1,1fr) 14px var(--c2,1fr) 14px var(--c3,640px)", tpl)
+        # dim = inputs not written yet; anything that happened stays full contrast
+        self.assertIn(".panel.idle", tpl)
+        self.assertIn('idle(pfP, pf.state === "no-data")', code)
+        self.assertNotIn('idle(bp, lane.state !== "data")', code, "ran-no-sink and failed lanes must not be dimmed")
+        self.assertIn("minmax(0,var(--c1,1fr)) 14px minmax(0,var(--c2,1fr)) 14px minmax(0,var(--c3,1.25fr))", tpl)
+        self.assertNotIn('+"px")', code, "column widths persist as fractions, never pixels — a saved layout must fit any window")
 
     def test_json_flag_prints_what_the_file_would_hold_and_out_dir_is_honoured(self):
         t = Tree()

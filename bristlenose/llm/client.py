@@ -9,7 +9,7 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 if TYPE_CHECKING:
     # Type-only imports — keeps the lazy-import discipline (SDKs are imported
@@ -21,7 +21,7 @@ from bristlenose.config import BristlenoseSettings
 from bristlenose.llm import telemetry
 from bristlenose.llm.pricing import PRICE_TABLE_VERSION
 from bristlenose.llm.prompts import PromptTemplate
-from bristlenose.llm.structured import drop_nulls, openai_strict_schema
+from bristlenose.llm.structured import drop_nulls, openai_strict_schema, repair_candidates
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +116,51 @@ def _clamp_max_tokens(model: str, requested: int) -> int:
     """Clamp requested output tokens to the model's known ceiling (if any)."""
     cap = _MODEL_MAX_OUTPUT_TOKENS.get(model)
     return min(requested, cap) if cap else requested
+
+
+def _validate_repairing(
+    data: Any,
+    response_model: type[T],
+    *,
+    provider: str,
+    model: str,
+) -> T:
+    """Validate, and on failure try the payload re-readings in ``repair_candidates``.
+
+    ONLY FOR PROVIDERS THAT MAKE NO SHAPE GUARANTEE. Anthropic's tool-use and
+    Gemini's ``response_schema`` both *describe* the shape and neither enforces
+    it at decode time, so a well-formed request can still return a malformed
+    object -- measured on ``claude-sonnet-5`` at quote-clustering (2/2 passes)
+    and thematic-grouping (1/2), after transcription and every per-session quote
+    call had already been paid for.
+
+    Deliberately NOT used on OpenAI or Azure. Those go through strict Structured
+    Outputs, where the API itself guarantees the shape, so a validation failure
+    there is a real break in the contract and repairing it would hide exactly the
+    regression we would need to see. Ollama is also left alone: it is on
+    ``json_object`` with no schema at all, and its path already retries the whole
+    call, which is a different remedy.
+
+    A repair is a WARNING, never silent. A provider quietly degrading its output
+    shape is a thing to notice, not a thing to absorb -- the repair buys the
+    researcher their run, and the log line is what says the run needed buying.
+    """
+    try:
+        return response_model.model_validate(data)
+    except ValidationError as first_error:
+        for what, candidate in repair_candidates(data, response_model):
+            try:
+                repaired = response_model.model_validate(candidate)
+            except ValidationError:
+                continue
+            logger.warning(
+                "llm_shape_repair | provider=%s | model=%s | schema=%s | repair=%s",
+                provider, model, response_model.__name__, what,
+            )
+            return repaired
+        # Nothing plausible parsed -- raise the ORIGINAL error, not the last
+        # repair's. The first one describes the response we actually got.
+        raise first_error
 
 
 # Claude models that still accept sampling parameters. Anthropic removed
@@ -697,7 +742,10 @@ class LLMClient:
                     "Anthropic tool input fields: %s",
                     {k: type(v).__name__ for k, v in block.input.items()},
                 )
-                return response_model.model_validate(block.input)
+                return _validate_repairing(
+                    block.input, response_model,
+                    provider="anthropic", model=request_model,
+                )
 
         raise RuntimeError("No structured output found in Anthropic response")
 
@@ -749,8 +797,12 @@ class LLMClient:
                 # that the text parses; the schema matches ~80% of the time, and
                 # the other 20% surfaced here as a ValidationError that failed
                 # the run — there is no repair step below, model_validate is the
-                # first and only check. strict=True constrains decoding, so the
-                # shape is guaranteed. See openai_strict_schema for the rewrites
+                # first and only check, and that is DELIBERATE: the Anthropic and
+                # Gemini paths gained `_validate_repairing` on 5 Sep 2026 because
+                # neither API enforces the shape it is given, whereas strict
+                # Structured Outputs does. Repairing here would hide a break in a
+                # guarantee we are relying on. strict=True constrains decoding, so
+                # the shape is guaranteed. See openai_strict_schema for the rewrites
                 # Pydantic's schema needs before strict mode will accept it.
                 #
                 # Deliberately NOT applied to _analyze_local: Ollama serves an
@@ -885,8 +937,12 @@ class LLMClient:
                 # that the text parses; the schema matches ~80% of the time, and
                 # the other 20% surfaced here as a ValidationError that failed
                 # the run — there is no repair step below, model_validate is the
-                # first and only check. strict=True constrains decoding, so the
-                # shape is guaranteed. See openai_strict_schema for the rewrites
+                # first and only check, and that is DELIBERATE: the Anthropic and
+                # Gemini paths gained `_validate_repairing` on 5 Sep 2026 because
+                # neither API enforces the shape it is given, whereas strict
+                # Structured Outputs does. Repairing here would hide a break in a
+                # guarantee we are relying on. strict=True constrains decoding, so
+                # the shape is guaranteed. See openai_strict_schema for the rewrites
                 # Pydantic's schema needs before strict mode will accept it.
                 #
                 # Deliberately NOT applied to _analyze_local: Ollama serves an
@@ -1090,7 +1146,9 @@ class LLMClient:
             if isinstance(data, dict)
             else type(data).__name__,
         )
-        return response_model.model_validate(data)
+        return _validate_repairing(
+            data, response_model, provider="google", model=request_model,
+        )
 
     async def _analyze_local(
         self,

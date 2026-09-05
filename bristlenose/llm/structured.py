@@ -586,3 +586,105 @@ def drop_nulls(data: Any) -> Any:
     if isinstance(data, dict):
         return {k: drop_nulls(v) for k, v in data.items() if v is not None}
     return data
+
+
+# ---------------------------------------------------------------------------
+# Malformed-payload repair — for providers with no decode-time enforcement
+# ---------------------------------------------------------------------------
+
+
+def _as_json(value: Any) -> Any:
+    """``json.loads`` a string that looks like JSON; otherwise return it unchanged."""
+    if not isinstance(value, str):
+        return value
+    s = value.strip()
+    if not s or s[0] not in "[{":
+        return value
+    try:
+        return json.loads(s)
+    except (json.JSONDecodeError, ValueError):
+        return value
+
+
+def repair_candidates(data: Any, model: type[BaseModel]) -> list[tuple[str, Any]]:
+    """Plausible re-readings of a payload that failed ``model_validate``.
+
+    Two shapes were observed on ``claude-sonnet-5`` at quote-clustering and
+    thematic-grouping (see ``docs/design-llm-live-checking.md``): a field
+    arriving as a **JSON string** carrying the whole result re-serialised, and a
+    field arriving as a **dict** carrying the expected container inside it. Both
+    are one level deep, so this looks exactly one level and no further.
+
+    Every candidate is derived from ``model``'s own declared fields — this is not
+    a general "make it parse" pass. A repair that guesses is a repair that hides
+    the next genuine break, which is the whole reason it is confined to the
+    providers where the API makes no shape guarantee at all.
+
+    Returns ``(what_was_done, candidate)`` pairs, cheapest reading first. The
+    caller validates each in turn; nothing here decides anything.
+    """
+    out: list[tuple[str, Any]] = []
+    fields = set(model.model_fields)
+
+    # 1. The whole payload came back re-serialised as one string.
+    if isinstance(data, str):
+        decoded = _as_json(data)
+        if decoded is not data:
+            out.append(("whole payload was a JSON string", decoded))
+        return out
+
+    if not isinstance(data, dict):
+        return out
+
+    # 1b. The whole result nested under a key the model does NOT declare.
+    #
+    # Measured on claude-sonnet-5 at quote-clustering, 5 Sep 2026: the tool input
+    # came back as {"parameters": {"clusters": [...]}} -- the JSON-Schema keyword
+    # for a tool's argument object, leaking into the argument object itself. The
+    # recorded analysis had named only the str/dict field shapes, so the first
+    # version of this repair could not touch it: it iterates the model's own
+    # fields, and `parameters` is not one.
+    #
+    # The guard is structural rather than a list of wrapper names, so a different
+    # vendor's leak (`arguments`, `input`, `properties`) is covered too -- but it
+    # is narrow: exactly one key, not a field of the model, and an inner object
+    # whose keys look like the model's. A wrapper carrying anything else is left
+    # alone to fail.
+    if len(data) == 1:
+        key, inner = next(iter(data.items()))
+        inner = _as_json(inner)
+        if (
+            key not in fields
+            and isinstance(inner, dict)
+            and fields & set(inner)
+            and set(inner) <= fields
+        ):
+            out.append((f"the whole result was wrapped in a {key!r} envelope", inner))
+
+    for name in model.model_fields:
+        if name not in data:
+            continue
+        value = data[name]
+
+        # 2. The field arrived as a JSON string.
+        decoded = _as_json(value)
+        if decoded is not value:
+            out.append((f"field {name!r} was a JSON string", {**data, name: decoded}))
+
+        # 3. The field arrived as a dict wrapping what was expected.
+        if isinstance(decoded, dict):
+            # 3a. ...the parent object, nested inside one of its own fields.
+            if fields & set(decoded) and set(decoded) <= fields:
+                out.append((f"the whole result was nested inside {name!r}", decoded))
+            # 3b. ...a dict keyed by the field's own name.
+            if name in decoded:
+                out.append((f"field {name!r} was wrapped in a dict keyed {name!r}",
+                            {**data, name: decoded[name]}))
+            # 3c. ...a single-key dict whose value is the container.
+            elif len(decoded) == 1:
+                only = next(iter(decoded.values()))
+                if isinstance(only, list):
+                    out.append((f"field {name!r} was wrapped in a single-key dict",
+                                {**data, name: only}))
+
+    return out

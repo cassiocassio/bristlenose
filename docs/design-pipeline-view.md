@@ -13,6 +13,29 @@ trued-against: HEAD@pipeline-view-models (working tree — v2 uncommitted) on 20
 
 ## Changelog
 
+- _2026-09-05_ — **the catalogue's model ids caught up with what ships, and a
+  test now stops them drifting again.** Every cloud id here was a May 2026
+  snapshot: Sonnet 4 and Opus 4 (dated `20250514`), `gpt-4o`, and
+  `gemini-2.5-pro` — which had been **404 for new accounts** since at least
+  4 Sep, when all three *other* model tables moved and this one did not. The
+  view therefore offered a model a researcher could not call, marked
+  `default` and rated `good`, directly above a synthesised row for the model
+  that actually ran, marked untested. The `(current)` badge was the only true
+  thing in the group. Now: Claude → Sonnet 4.6 / Opus 5 / Haiku 4.5, ChatGPT →
+  GPT-5.6 Terra / Luna, Gemini → 3.8 Flash / 3.5 Flash-Lite.
+  **Gemini ships unrated**, and so do Haiku and Luna: the retired `good` was a
+  judgement about a *Pro*-class model, and carrying it onto Flash would assert
+  something nobody measured. Where a rating did move (Sonnet 4 → 4.6, Opus 4 →
+  5, gpt-4o → Terra) it is a judgement about the class, and each of those ran
+  the six real stage templates live on 4–5 Sep. The gate is
+  `test_models.py::test_catalogue_ids_match_the_shipping_model_lists` +
+  `…_default_model_is_the_registry_default`, which read `providers.py` and
+  parse `LLMProvider.swift`; both were mutation-checked (retired id → red,
+  wrong default flag → red) rather than assumed. Note for whoever adds the
+  next model: **the per-stage `default` badge comes from the *rating*, not
+  from `ModelOption.default`** — it is singular per stage and belongs to the
+  provider BN dispatches, so an unselected provider correctly shows no badge;
+  which model *it* would use is answered by `(current)` on selection.
 - _2026-06-04_ — trued up v1.9 → v2: schema 3→4 + per-(provider, model) grain
   (`ModelOption` on `BackendOption.models`); `BackendAvailability` → `ModelAvailability`,
   `reason` → `reason_key` + new `action_key`; `llm_summary` deleted (per-stage
@@ -98,14 +121,17 @@ A researcher opens the Pipeline view for *quote_extraction* with all four cloud 
 
 v1.9 flagged only Claude `recommended=true` — the one cell with evidence.
 
-**v2 (per-model grain):** each provider expands into its catalogued models, and v2 is the **first build where `recommended ≠ default` fires** — Claude is endorsed at *two* models (Sonnet 4 the default, Opus 4 recommended-but-not-default), and gpt-4o is recommended without being the default (`catalogue.py:500-505`):
+**v2 (per-model grain):** each provider expands into its catalogued models, and v2 is the **first build where `recommended ≠ default` fires** — Claude is endorsed at *two* models (Sonnet 4.6 the default, Opus 5 recommended-but-not-default), and GPT-5.6 Terra is recommended without being the default (`_LLM_QUALITY` in `catalogue.py`):
 
 | Provider | Model | `available` | `quality` | `default` | `recommended` |
 |---|---|---|---|---|---|
-| Claude | Sonnet 4 | ✓ | excellent | **true** | **true** |
-| Claude | Opus 4 | ✓ | excellent | false | **true** |
-| ChatGPT | gpt-4o | ✓ | excellent | false | **true** |
-| Gemini | 2.5 Pro | ✓ | good | false | false |
+| Claude | Sonnet 4.6 | ✓ | excellent | **true** | **true** |
+| Claude | Opus 5 | ✓ | excellent | false | **true** |
+| Claude | Haiku 4.5 | ✓ | — untested | false | false |
+| ChatGPT | GPT-5.6 Terra | ✓ | excellent | false | **true** |
+| ChatGPT | GPT-5.6 Luna | ✓ | — untested | false | false |
+| Gemini | 3.8 Flash | ✓ | — untested | false | false |
+| Gemini | 3.5 Flash-Lite | ✓ | — untested | false | false |
 | Local | llama3.2:3b | ✓ | marginal | false | false |
 
 As more cohort data arrives — "Local on a 30B+ model now handles structural stages well" — we flip the relevant `recommended` flag without touching `default`. The view becomes more permissive over time; the singular default stays singular. **Caveat:** as of v2 `recommended` is carried in data + JSON + tests but renders no badge in any surface — see §"Why `recommended` is foundational, not dead weight".

@@ -25,7 +25,7 @@ _ALL_QUALITY = list(_LLM_QUALITY.items()) + list(_TRANSCRIPTION_QUALITY.items())
 
 
 def test_quality_for_unknown_cell_returns_none() -> None:
-    assert quality_for("not_a_stage", "claude", "claude-sonnet-4-20250514") is None
+    assert quality_for("not_a_stage", "claude", "claude-sonnet-4-6") is None
     assert quality_for("quote_extraction", "not_a_backend", "x") is None
 
 
@@ -33,7 +33,7 @@ def test_quality_for_known_cell_returns_rating() -> None:
     """Structural: a known (stage, provider, model) cell returns a rating.
     Editorial values are covered by the parametrised enum sweep below — don't
     pin them here, they're catalogue editorial data that will shift."""
-    r = quality_for("quote_extraction", "claude", "claude-sonnet-4-20250514")
+    r = quality_for("quote_extraction", "claude", "claude-sonnet-4-6")
     assert isinstance(r, QualityRating)
 
 
@@ -167,7 +167,7 @@ def test_unrated_available_backend_is_a_distinct_state() -> None:
     settings = BristlenoseSettings(
         anthropic_api_key="sk-test",
         llm_provider="anthropic",
-        llm_model="claude-sonnet-4-20250514",
+        llm_model="claude-sonnet-4-6",
     )  # type: ignore[arg-type]
     host = HostFacts(
         os="Darwin", arch="arm64", os_version="26.0", memory_gb=32.0,

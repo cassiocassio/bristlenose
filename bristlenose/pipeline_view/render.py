@@ -87,7 +87,14 @@ class ModelAvailability(BaseModel):
       stage — dispatch is singular.
     - `recommended`: True when BN actively endorses the cell. Plural by design;
       `default ⇒ recommended`. v2 is the first time `recommended ≠ default`
-      fires (Opus 4, gpt-4o are recommended but not default).
+      fires (Opus 5 and GPT-5.6 Terra are recommended but not default).
+
+      Both flags come from the *rating*, not from `ModelOption.default`, and
+      that is deliberate: `default` here means "the cell BN dispatches out of
+      the box", singular per stage, so it sits on one provider's model only.
+      A provider you have not selected shows no default badge even though its
+      own list names one — which model that provider would use is answered by
+      the `(current)` badge once you select it.
 
     `synthesised` is True for rows the render layer composed from settings
     rather than the catalogue (the Azure deployment, user-pulled Ollama models,

@@ -53,8 +53,8 @@ def test_collapse_single_no_model_grain() -> None:
 def test_collapse_all_unavailable_uniform_reason() -> None:
     """Every model failing the same provider-level reason collapses to one line."""
     rows = [
-        _row(model_id="claude-opus-4-20250514", available=False, reason_key="no_key"),
-        _row(model_id="claude-sonnet-4-20250514", available=False, reason_key="no_key"),
+        _row(model_id="claude-opus-5", available=False, reason_key="no_key"),
+        _row(model_id="claude-sonnet-4-6", available=False, reason_key="no_key"),
     ]
     collapsed, rep = _collapse(rows)
     assert collapsed is True
@@ -65,9 +65,9 @@ def test_collapse_all_unavailable_divergent_reasons_expands() -> None:
     """Divergent per-model failure reasons must stay expanded — one line would
     lose the distinction between why each model is unavailable."""
     rows = [
-        _row(model_id="claude-opus-4-20250514", available=False, reason_key="no_key"),
+        _row(model_id="claude-opus-5", available=False, reason_key="no_key"),
         _row(
-            model_id="claude-sonnet-4-20250514",
+            model_id="claude-sonnet-4-6",
             available=False,
             reason_key="not_in_account",
         ),

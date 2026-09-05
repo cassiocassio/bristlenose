@@ -26,7 +26,7 @@ def _settings(**overrides: object) -> BristlenoseSettings:
     """Build a settings object that ignores env/keychain side effects."""
     defaults: dict[str, object] = {
         "llm_provider": "anthropic",
-        "llm_model": "claude-sonnet-4-20250514",
+        "llm_model": "claude-sonnet-4-6",
         "anthropic_api_key": "sk-test",
         "openai_api_key": "",
         "azure_api_key": "",
@@ -44,8 +44,8 @@ def _settings(**overrides: object) -> BristlenoseSettings:
 @pytest.mark.parametrize(
     "provider,model,expected_chosen",
     [
-        ("anthropic", "claude-sonnet-4-20250514", "Claude · claude-sonnet-4-20250514"),
-        ("openai", "gpt-4o", "ChatGPT · gpt-4o"),
+        ("anthropic", "claude-sonnet-4-6", "Claude · claude-sonnet-4-6"),
+        ("openai", "gpt-5.6-terra", "ChatGPT · gpt-5.6-terra"),
         ("google", "gemini-1.5-pro", "Gemini · gemini-1.5-pro"),
         ("local", "llama3.2:3b", "Local (Ollama) · llama3.2:3b"),
     ],

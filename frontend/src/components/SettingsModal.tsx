@@ -132,7 +132,7 @@ const CONFIG_DATA: SettingCategory[] = [
     labelKey: "configReference.categories.llm",
     settings: [
       { labelKey: "configReference.settings.llm.provider", envVar: "BRISTLENOSE_LLM_PROVIDER", default: "anthropic", file: ".env", filePath: "bristlenose/config.py", options: ["anthropic", "openai", "azure", "google", "local"] },
-      { labelKey: "configReference.settings.llm.model", envVar: "BRISTLENOSE_LLM_MODEL", default: "claude-sonnet-4-20250514", file: ".env", filePath: "bristlenose/config.py" },
+      { labelKey: "configReference.settings.llm.model", envVar: "BRISTLENOSE_LLM_MODEL", default: "claude-sonnet-4-6", file: ".env", filePath: "bristlenose/config.py" },
       { labelKey: "configReference.settings.llm.temperature", envVar: "BRISTLENOSE_LLM_TEMPERATURE", default: "0.1", file: ".env", filePath: "bristlenose/config.py", options: ["0.0\u20131.0"] },
       { labelKey: "configReference.settings.llm.maxTokens", envVar: "BRISTLENOSE_LLM_MAX_TOKENS", default: "32768", file: ".env", filePath: "bristlenose/config.py" },
       { labelKey: "configReference.settings.llm.concurrency", envVar: "BRISTLENOSE_LLM_CONCURRENCY", default: "3", file: ".env", filePath: "bristlenose/config.py", options: ["1\u201310"] },

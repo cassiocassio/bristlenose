@@ -69,12 +69,21 @@ class ModelOption(BaseModel):
     """One specific model within a provider — the actual dispatch unit.
 
     `id` is the string the provider's API accepts unchanged
-    ("claude-sonnet-4-20250514", "gpt-4o", "llama3.2:3b"). BN treats it as
+    ("claude-sonnet-4-6", "gpt-5.6-terra", "llama3.2:3b"). BN treats it as
     opaque — provider-specific id conventions differ; we don't normalise.
+
+    **Every cloud id here must be one `providers.py` or the macOS picker
+    ships** — pinned by `test_catalogue_ids_match_the_shipping_model_lists`.
+    This list is a *fourth* place model ids are written down, and on 4 Sep 2026
+    the other three moved (retired Gemini models, a Claude default that failed
+    our tool schema, a ChatGPT default from May 2024) while this one did not.
+    A stale id here is not inert: the researcher sees a model they cannot call
+    marked as the recommended one, beside a synthesised row for the model that
+    actually runs, labelled untested.
 
     `publisher` names who *made* the model when distinct from the provider that
     serves it (Meta publishes Llama, served via Ollama). Omit when provider ==
-    publisher (Claude, gpt-4o, Gemini). Data-only in v4; not rendered yet.
+    publisher (Claude, ChatGPT, Gemini). Data-only in v4; not rendered yet.
 
     `requires` adds model-level eligibility on top of the provider's (e.g. a
     paid-tier requirement for Opus, RAM threshold for llama-70b). Empty for
@@ -145,8 +154,9 @@ _LLM_BACKENDS: list[BackendOption] = [
             ),
         ],
         models=[
-            ModelOption(id="claude-sonnet-4-20250514", display="Sonnet 4", default=True),
-            ModelOption(id="claude-opus-4-20250514", display="Opus 4"),
+            ModelOption(id="claude-sonnet-4-6", display="Sonnet 4.6", default=True),
+            ModelOption(id="claude-opus-5", display="Opus 5"),
+            ModelOption(id="claude-haiku-4-5-20251001", display="Haiku 4.5"),
         ],
     ),
     BackendOption(
@@ -160,7 +170,10 @@ _LLM_BACKENDS: list[BackendOption] = [
                 action_key="pipeline.actions.obtain_openai_key",
             ),
         ],
-        models=[ModelOption(id="gpt-4o", display="gpt-4o", default=True)],
+        models=[
+            ModelOption(id="gpt-5.6-terra", display="GPT-5.6 Terra", default=True),
+            ModelOption(id="gpt-5.6-luna", display="GPT-5.6 Luna"),
+        ],
     ),
     BackendOption(
         id="azure",
@@ -198,7 +211,10 @@ _LLM_BACKENDS: list[BackendOption] = [
                 action_key="pipeline.actions.obtain_google_key",
             ),
         ],
-        models=[ModelOption(id="gemini-2.5-pro", display="2.5 Pro", default=True)],
+        models=[
+            ModelOption(id="gemini-3.8-flash", display="3.8 Flash", default=True),
+            ModelOption(id="gemini-3.5-flash-lite", display="3.5 Flash-Lite"),
+        ],
     ),
     BackendOption(
         id="local",
@@ -510,8 +526,8 @@ class QualityRating(BaseModel):
     the trade-off is worth it. **Plural by design** — multiple cells may
     be recommended per stage. **Invariant: `default ⇒ recommended`** — BN
     cannot default to a cell it doesn't actively endorse. v2 is the first
-    time `recommended ≠ default` fires (Opus 4, gpt-4o are recommended but
-    not default).
+    time `recommended ≠ default` fires (Opus 5 and GPT-5.6 Terra are
+    recommended but not default).
 
     `note_key` is a translation key for the one-line editorial caveat
     (e.g. "pipeline.quality.local_quote_extraction_miss_rate"). Locale
@@ -543,20 +559,30 @@ class QualityRating(BaseModel):
 # Structural stages (speaker_identification, topic_segmentation) rate Local as
 # `good`; synthesis stages (quote_extraction, quote_clustering,
 # thematic_grouping) rate it `marginal` — the per-stage variation v2 exists to
-# surface. claude/openai/google ratings are uniform across all five stages.
+# surface. claude/openai ratings are uniform across all five stages.
+#
+# **Gemini ships unrated (renders as ? untested), and so do Haiku 4.5 and Luna.**
+# The ratings this table used to carry were editorial judgements about specific
+# models — `good` was about Gemini 2.5 Pro, a Pro-class model that is now 404
+# for new accounts. 3.8 Flash is a different class, and carrying Pro's rating
+# onto it would assert something nobody has measured. Where a rating DID move
+# (Sonnet 4 → 4.6, Opus 4 → 5, gpt-4o → GPT-5.6 Terra) the judgement is about
+# the *class* — a vendor's flagship handling this stage — and the successor
+# holds the same role; all three ran the full six-template fixture live on
+# 4–5 Sep. Haiku and Luna are new to this table in a cheaper class nobody has
+# an opinion about yet. Unrated is the honest state, not a gap to fill: the
+# eval harness (design-stage-backends.md §Recommendation) flips cells to
+# `internal_bench` when it ships.
 _LLM_QUALITY: dict[tuple[str, str, str], QualityRating] = {
     # ── speaker_identification — structural; most LLMs handle it well ──
-    ("speaker_identification", "claude", "claude-sonnet-4-20250514"): QualityRating(
+    ("speaker_identification", "claude", "claude-sonnet-4-6"): QualityRating(
         rating="excellent", source="editorial", default=True, recommended=True
     ),
-    ("speaker_identification", "claude", "claude-opus-4-20250514"): QualityRating(
+    ("speaker_identification", "claude", "claude-opus-5"): QualityRating(
         rating="excellent", source="editorial", recommended=True
     ),
-    ("speaker_identification", "openai", "gpt-4o"): QualityRating(
+    ("speaker_identification", "openai", "gpt-5.6-terra"): QualityRating(
         rating="excellent", source="editorial", recommended=True
-    ),
-    ("speaker_identification", "google", "gemini-2.5-pro"): QualityRating(
-        rating="good", source="editorial"
     ),
     ("speaker_identification", "local", "llama3.2:3b"): QualityRating(
         rating="good",
@@ -564,17 +590,14 @@ _LLM_QUALITY: dict[tuple[str, str, str], QualityRating] = {
         source="community",
     ),
     # ── topic_segmentation — structural; similar profile to speaker_id ──
-    ("topic_segmentation", "claude", "claude-sonnet-4-20250514"): QualityRating(
+    ("topic_segmentation", "claude", "claude-sonnet-4-6"): QualityRating(
         rating="excellent", source="editorial", default=True, recommended=True
     ),
-    ("topic_segmentation", "claude", "claude-opus-4-20250514"): QualityRating(
+    ("topic_segmentation", "claude", "claude-opus-5"): QualityRating(
         rating="excellent", source="editorial", recommended=True
     ),
-    ("topic_segmentation", "openai", "gpt-4o"): QualityRating(
+    ("topic_segmentation", "openai", "gpt-5.6-terra"): QualityRating(
         rating="excellent", source="editorial", recommended=True
-    ),
-    ("topic_segmentation", "google", "gemini-2.5-pro"): QualityRating(
-        rating="good", source="editorial"
     ),
     ("topic_segmentation", "local", "llama3.2:3b"): QualityRating(
         rating="good",
@@ -582,17 +605,14 @@ _LLM_QUALITY: dict[tuple[str, str, str], QualityRating] = {
         source="community",
     ),
     # ── quote_extraction — high-stakes; longest prompts, smallest-model risk ──
-    ("quote_extraction", "claude", "claude-sonnet-4-20250514"): QualityRating(
+    ("quote_extraction", "claude", "claude-sonnet-4-6"): QualityRating(
         rating="excellent", source="editorial", default=True, recommended=True
     ),
-    ("quote_extraction", "claude", "claude-opus-4-20250514"): QualityRating(
+    ("quote_extraction", "claude", "claude-opus-5"): QualityRating(
         rating="excellent", source="editorial", recommended=True
     ),
-    ("quote_extraction", "openai", "gpt-4o"): QualityRating(
+    ("quote_extraction", "openai", "gpt-5.6-terra"): QualityRating(
         rating="excellent", source="editorial", recommended=True
-    ),
-    ("quote_extraction", "google", "gemini-2.5-pro"): QualityRating(
-        rating="good", source="editorial"
     ),
     ("quote_extraction", "local", "llama3.2:3b"): QualityRating(
         rating="marginal",
@@ -600,17 +620,14 @@ _LLM_QUALITY: dict[tuple[str, str, str], QualityRating] = {
         source="community",
     ),
     # ── quote_clustering — high-stakes; nuance matters ──
-    ("quote_clustering", "claude", "claude-sonnet-4-20250514"): QualityRating(
+    ("quote_clustering", "claude", "claude-sonnet-4-6"): QualityRating(
         rating="excellent", source="editorial", default=True, recommended=True
     ),
-    ("quote_clustering", "claude", "claude-opus-4-20250514"): QualityRating(
+    ("quote_clustering", "claude", "claude-opus-5"): QualityRating(
         rating="excellent", source="editorial", recommended=True
     ),
-    ("quote_clustering", "openai", "gpt-4o"): QualityRating(
+    ("quote_clustering", "openai", "gpt-5.6-terra"): QualityRating(
         rating="excellent", source="editorial", recommended=True
-    ),
-    ("quote_clustering", "google", "gemini-2.5-pro"): QualityRating(
-        rating="good", source="editorial"
     ),
     ("quote_clustering", "local", "llama3.2:3b"): QualityRating(
         rating="marginal",
@@ -618,17 +635,14 @@ _LLM_QUALITY: dict[tuple[str, str, str], QualityRating] = {
         source="community",
     ),
     # ── thematic_grouping — high-stakes synthesis; small-model drift highest ──
-    ("thematic_grouping", "claude", "claude-sonnet-4-20250514"): QualityRating(
+    ("thematic_grouping", "claude", "claude-sonnet-4-6"): QualityRating(
         rating="excellent", source="editorial", default=True, recommended=True
     ),
-    ("thematic_grouping", "claude", "claude-opus-4-20250514"): QualityRating(
+    ("thematic_grouping", "claude", "claude-opus-5"): QualityRating(
         rating="excellent", source="editorial", recommended=True
     ),
-    ("thematic_grouping", "openai", "gpt-4o"): QualityRating(
+    ("thematic_grouping", "openai", "gpt-5.6-terra"): QualityRating(
         rating="excellent", source="editorial", recommended=True
-    ),
-    ("thematic_grouping", "google", "gemini-2.5-pro"): QualityRating(
-        rating="good", source="editorial"
     ),
     ("thematic_grouping", "local", "llama3.2:3b"): QualityRating(
         rating="marginal",

@@ -21,6 +21,7 @@ import pytest
 
 from bristlenose.config import BristlenoseSettings
 from bristlenose.pipeline_view import host as host_module
+from bristlenose.pipeline_view.catalogue import _LLM_BACKENDS
 from bristlenose.pipeline_view.render import ModelAvailability, build_pipeline_view
 
 
@@ -37,7 +38,7 @@ def _clear_installed_packages_cache() -> None:
 def _settings(**overrides: object) -> BristlenoseSettings:
     defaults: dict[str, object] = {
         "llm_provider": "anthropic",
-        "llm_model": "claude-sonnet-4-20250514",
+        "llm_model": "claude-sonnet-4-6",
         "anthropic_api_key": "",
         "openai_api_key": "",
         "azure_api_key": "",
@@ -217,11 +218,14 @@ def test_llm_stages_carry_per_model_alternatives() -> None:
             f"LLM stage {stage.id} should carry per-model alternatives in v2; "
             f"got {stage.alternatives}"
         )
-        # Claude is catalogued with two models. Pin the count (the per-model
-        # grain invariant), not the exact ids — those churn on model bumps and
-        # are covered by test_models.py's declaration invariants.
+        # Every catalogued Claude model gets its own row — the per-model grain
+        # invariant. Counted against the catalogue rather than a literal: the
+        # number churns on every model bump (2 → 3 on 5 Sep 2026), and a magic
+        # number here just fails the next one. Which ids ship is
+        # test_models.py's job.
+        claude_models = next(b for b in _LLM_BACKENDS if b.id == "claude").models
         claude_rows = [r for r in stage.alternatives if r.provider_id == "claude"]
-        assert len(claude_rows) == 2
+        assert len(claude_rows) == len(claude_models)
 
 
 def test_declaration_order_no_quality_sort() -> None:
@@ -269,13 +273,13 @@ def test_quality_fields_populate_from_catalogue() -> None:
     quote = next(s for s in view.catalogue if s.id == "quote_extraction")
     by_model = {r.model_id: r for r in quote.alternatives}
 
-    sonnet = by_model["claude-sonnet-4-20250514"]
+    sonnet = by_model["claude-sonnet-4-6"]
     assert sonnet.quality is not None
     assert sonnet.quality_source is not None
     assert sonnet.default is True  # BN's default model
     assert sonnet.recommended is True
 
-    opus = by_model["claude-opus-4-20250514"]
+    opus = by_model["claude-opus-5"]
     # First time recommended != default: Opus 4 is endorsed but not the default.
     assert opus.recommended is True
     assert opus.default is False

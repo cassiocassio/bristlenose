@@ -135,6 +135,12 @@ mcp = [
 # runtime dep, not in the sidecar bundle, not needed by contributors.
 release = [
     "pip-licenses>=5.0",
+    # Machine-readable sibling of THIRD-PARTY-BINARIES.md, generated from
+    # .venv-sidecar at .dmg build time. The Markdown inventory is for humans and
+    # is deliberately an over-estimate; an SCA scanner reading the bundle sees
+    # only the 21 dist-infos PyInstaller happened to keep, which agrees with
+    # neither. The SBOM is the artefact that answers the scanner.
+    "cyclonedx-bom>=7.0",
 ]
 
 # macOS desktop sidecar build tooling. Run on the Mac where the

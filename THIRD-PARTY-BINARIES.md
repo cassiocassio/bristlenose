@@ -9,6 +9,18 @@ This file covers the **macOS desktop app** specifically. CLI distributions
 (Homebrew, Snap, pip) bundle nothing of their own — they pull from the
 system / package manager and the user's chosen Python environment.
 
+**For a scanner, read the SBOM, not this file.** `desktop/scripts/build-dmg.sh`
+emits `Bristlenose-<version>.sidecar-sbom.json` — CycloneDX 1.6, generated from
+`.venv-sidecar`, hashed into the build manifest beside the `.dmg` — and that is
+the machine-readable answer. This Markdown is for people, and it is deliberately
+an **over-estimate**: it lists what is installed in the venv the bundle is built
+from, and PyInstaller may strip transitive packages nothing imports. The bundle's
+own metadata is a third answer and the least useful one — pure-Python packages
+are bytecompiled into the archive and leave no `dist-info` unless the spec
+`copy_metadata`s them, so a scanner reading `_internal/` sees roughly 21
+packages, one of which (`presidio_analyzer`) is metadata for code the spec
+excludes. Three counts, one artefact to hand over.
+
 ## Native binaries (hand-curated)
 
 These are signed under our Apple Distribution identity (Team ID

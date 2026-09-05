@@ -132,6 +132,7 @@ VERSION="$("$ROOT/.venv/bin/python" -c 'import bristlenose; print(bristlenose.__
 DMG_NAME="Bristlenose-$VERSION.dmg"
 DMG_PATH="$BUILD_DIR/$DMG_NAME"
 MANIFEST_PATH="$BUILD_DIR/Bristlenose-$VERSION.manifest.txt"
+SBOM_PATH="$BUILD_DIR/Bristlenose-$VERSION.sidecar-sbom.json"
 
 say()  { printf '\n\033[1m==>\033[0m %s\n' "$*"; }
 ok()   { printf '    \033[32m✓\033[0m %s\n' "$*"; }
@@ -448,6 +449,53 @@ notarize_and_staple "$DMG_PATH"
 # ------------------------------------------------------------
 # 9. Build manifest / provenance
 # ------------------------------------------------------------
+# The sidecar SBOM, first: it is hashed into the manifest below, so the
+# provenance record covers it.
+#
+# WHY IT EXISTS. Three answers to "what is in the sidecar" disagree, and until
+# now none of them was machine-readable. THIRD-PARTY-BINARIES.md carries 130
+# rows and is a deliberate over-estimate (it lists what is installed, not what
+# PyInstaller kept). The bundle itself carries ~21 dist-infos, because pure-
+# Python packages are bytecompiled into the archive and leave no metadata unless
+# the spec copy_metadata's them -- and one of those 21, presidio_analyzer, is
+# metadata for code the spec excludes. An SCA scanner reads that third set and
+# concludes we ship 21 packages. This is the artefact to hand it instead.
+#
+# Generated from .venv-sidecar, never .venv: the two resolve separately and have
+# differed by whole minors (see CLAUDE.md, the two-venv gotcha). Verified 5 Sep
+# 2026 against `pip list` on that venv -- 130 components, zero discrepancy once
+# names are normalised.
+say "Sidecar SBOM"
+CYCLONEDX="$ROOT/.venv/bin/cyclonedx-py"
+if [ -x "$CYCLONEDX" ] && [ -x "$ROOT/.venv-sidecar/bin/python" ]; then
+    # --pyproject is what produces a root component at all (without it
+    # metadata.component is absent entirely). It reads the version from
+    # pyproject.toml, which by house rule NEVER carries one -- the single source
+    # is bristlenose/__init__.py -- so the root lands with version null and has
+    # to be stamped. Not a workaround for a bug; the two rules simply meet here.
+    "$CYCLONEDX" environment --pyproject "$ROOT/pyproject.toml" \
+        --output-reproducible -o "$SBOM_PATH" "$ROOT/.venv-sidecar/bin/python" \
+        || die "cyclonedx-py failed"
+    "$ROOT/.venv/bin/python" - "$SBOM_PATH" "$VERSION" <<'PY' || die "could not stamp the SBOM version"
+import json, sys
+path, version = sys.argv[1], sys.argv[2]
+d = json.load(open(path))
+d["metadata"]["component"]["version"] = version
+json.dump(d, open(path, "w"), indent=2, sort_keys=True)
+PY
+    ok "sbom: $(basename "$SBOM_PATH") ($("$ROOT/.venv/bin/python" -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["components"]))' "$SBOM_PATH") components)"
+elif [ "$SIGN_IDENTITY" != "-" ]; then
+    # Same reasoning as build-all.sh step 2b: on a real signing identity this is
+    # a release build, and a supply-chain artefact that silently does not get
+    # generated is worse than one that is missing loudly.
+    die "cyclonedx-py not installed, and this is a signed build.
+         .venv/bin/pip install -e '.[release]'
+       For a deliberately unsigned local build, use SIGN_IDENTITY=-."
+else
+    ok "sbom: skipped (cyclonedx-py not installed, ad-hoc build)"
+    SBOM_PATH=""
+fi
+
 say "Manifest"
 SIDECAR_BIN="$PROJECT_DIR/Resources/bristlenose-sidecar/bristlenose-sidecar"
 {
@@ -460,6 +508,7 @@ SIDECAR_BIN="$PROJECT_DIR/Resources/bristlenose-sidecar/bristlenose-sidecar"
     shasum -a 256 "$DMG_PATH" | sed 's/^/  /'
     shasum -a 256 "$APP/Contents/MacOS/Bristlenose" 2>/dev/null | sed 's/^/  /'
     [ -f "$SIDECAR_BIN" ] && shasum -a 256 "$SIDECAR_BIN" | sed 's/^/  /'
+    [ -n "$SBOM_PATH" ] && [ -f "$SBOM_PATH" ] && shasum -a 256 "$SBOM_PATH" | sed 's/^/  /'
 } > "$MANIFEST_PATH"
 ok "manifest: $(basename "$MANIFEST_PATH")"
 

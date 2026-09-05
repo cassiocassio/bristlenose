@@ -167,6 +167,20 @@ else
     bad "venv python" "$VENV_PY but .tool-versions pins $PINNED — env has drifted"
 fi
 
+# .venv is the dev env; .venv-sidecar is what SHIPS. They are separate venvs
+# (build-sidecar.sh:45) and only one of them was ever checked here, so a sidecar
+# left on the old minor by a .tool-versions bump reached the bundle with every
+# row above it green. The deps fingerprint cannot see it either: it hashes
+# pyproject + `pip freeze`, both identical across minors.
+SIDECAR_PY=$(.venv-sidecar/bin/python -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null || echo "")
+if [ -z "$SIDECAR_PY" ]; then
+    warn "sidecar venv" "no .venv-sidecar — nothing built here yet, so nothing to verify"
+elif [ "$SIDECAR_PY" = "$PINNED" ]; then
+    ok "sidecar venv python" "$SIDECAR_PY matches .tool-versions"
+else
+    bad "sidecar venv python" "$SIDECAR_PY but .tool-versions pins $PINNED — rebuild the sidecar (build-sidecar.sh --force); the bundle carries this one"
+fi
+
 # ---------------------------------------------------------------------------
 head_ "Version consistency"
 # ---------------------------------------------------------------------------

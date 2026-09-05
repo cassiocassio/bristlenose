@@ -23,7 +23,7 @@
 #   --force    rebuild every layer from scratch (original behaviour; release uses this)
 #   --dry-run  report what WOULD rebuild and why; do no work; exit 0
 #
-# Prerequisites: python3.12 + Node 24 on PATH; frontend deps installed.
+# Prerequisites: the .tool-versions python + Node 24 on PATH; frontend deps installed.
 # The dedicated .venv-sidecar carries only .[serve,apple,desktop,mcp] so
 # contributor packages never reach PyInstaller's analysis.
 
@@ -42,6 +42,18 @@ done
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DESKTOP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ROOT="$(cd "$DESKTOP_DIR/.." && pwd)"
+# The interpreter is DERIVED from .tool-versions, not spelled here. It used to
+# be a literal `python3.12` in three places, which is a pin that cannot fail
+# loudly: move .tool-versions to 3.13 and this script goes on building a 3.12
+# sidecar, silently, because the only check was "does python3.12 exist". The
+# bundle is what ships, so that drift reaches users while every local venv check
+# stays green. Matters on 1 Nov 2026, when the floor moves.
+PY_PIN="$(sed -n 's/^python *//p' "$ROOT/.tool-versions" | cut -d. -f1,2)"
+if [ -z "$PY_PIN" ]; then
+    echo "error: could not read the python pin from $ROOT/.tool-versions" >&2
+    exit 1
+fi
+PY_PIN_BIN="python${PY_PIN}"
 SIDECAR_VENV="$ROOT/.venv-sidecar"
 PYTHON="$SIDECAR_VENV/bin/python"
 SPEC="$DESKTOP_DIR/bristlenose-sidecar.spec"
@@ -80,16 +92,16 @@ robust_rmrf() {
 # must be a loud error, never a quiet skip). Per review finding 6.
 # ---------------------------------------------------------------------------
 # Xcode build phases run with a stripped PATH (/usr/bin:/bin:/usr/sbin:/sbin +
-# the developer dir) that omits whatever toolchain installs python3.12 / node —
+# the developer dir) that omits whatever toolchain installs the pinned python / node —
 # so these resolve in a login shell but not when ensure-sidecar.sh calls us from
 # the "Ensure Sidecar Fresh" build phase. We RESPECT an already-resolvable tool
 # (a correctly-configured PATH wins untouched) and only fall back to this
 # project's documented Mac toolchain — the Homebrew prefix (.tool-versions /
 # desktop/CLAUDE.md) — when the tool is missing. A contributor on a different
-# toolchain (mise/asdf/pyenv/python.org) just needs their python3.12 + node on
+# toolchain (mise/asdf/pyenv/python.org) just needs that python + node on
 # the build's PATH; we never override it. Not a universal resolver by design —
 # the loud errors below tell a non-Homebrew setup exactly what to do.
-if ! command -v python3.12 >/dev/null 2>&1; then
+if ! command -v "$PY_PIN_BIN" >/dev/null 2>&1; then
     for _brew_bin in /opt/homebrew/bin /usr/local/bin; do
         [ -d "$_brew_bin" ] && PATH="$_brew_bin:$PATH"
     done
@@ -108,9 +120,9 @@ if [ ! -d "$FRONTEND_DIR/node_modules" ]; then
     echo "error: frontend/node_modules missing — (cd frontend && npm ci --legacy-peer-deps)" >&2
     exit 1
 fi
-if ! command -v python3.12 >/dev/null; then
-    echo "error: python3.12 not found on PATH. This project pins python 3.12 (.tool-versions)." >&2
-    echo "       Install it (brew install python@3.12) or put your python3.12 on the build's PATH." >&2
+if ! command -v "$PY_PIN_BIN" >/dev/null; then
+    echo "error: $PY_PIN_BIN not found on PATH. This project pins python $PY_PIN (.tool-versions)." >&2
+    echo "       Install it (brew install python@$PY_PIN) or put your $PY_PIN_BIN on the build's PATH." >&2
     echo "       (Xcode build phases use a stripped PATH; this script falls back to the Homebrew prefix.)" >&2
     exit 1
 fi
@@ -186,6 +198,11 @@ need_v=0; v_reason=""
 if [ "$FORCE" = 1 ]; then need_v=1; v_reason="forced"
 elif [ ! -x "$PYTHON" ]; then need_v=1; v_reason="venv missing"
 elif [ ! -f "$DEPS_OK" ]; then need_v=1; v_reason="no .deps-ok sentinel (half-install?)"
+elif [ "$("$PYTHON" -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null)" != "$PY_PIN" ]; then
+    # Not covered by the deps fingerprint: that hashes pyproject + `pip freeze`,
+    # both of which are identical across interpreter minors. So a venv built on
+    # the old minor survives a .tool-versions bump untouched and ships.
+    need_v=1; v_reason="venv python is not $PY_PIN (.tool-versions moved)"
 elif [ "$(_deps_fingerprint)" != "$(cat "$DEPS_STAMP" 2>/dev/null || true)" ]; then need_v=1; v_reason="deps changed (pyproject or installed set)"
 fi
 
@@ -196,7 +213,7 @@ if [ "$need_v" = 1 ]; then
         rm -f "$DEPS_OK"                 # clear sentinel BEFORE mutating — a crash mid-install leaves no false-OK
         _say "Recreating sidecar venv at $SIDECAR_VENV"
         robust_rmrf "$SIDECAR_VENV"
-        python3.12 -m venv "$SIDECAR_VENV"
+        "$PY_PIN_BIN" -m venv "$SIDECAR_VENV"
         # Incremental (Xcode/dev) recreates reuse pip's local wheel cache — every
         # wheel is already on disk, so no network. --force (release) keeps
         # --no-cache-dir so the closure re-resolves against live PyPI and picks up

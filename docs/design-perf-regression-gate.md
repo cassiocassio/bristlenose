@@ -4,7 +4,7 @@
 
 ## Problem
 
-We ship PRs without knowing whether they made the app slower or bigger. Bundle size has a gate (305 KB gzip) but nothing catches DOM bloat, API latency regression, paint time regression, or export size growth. These are linear regressions — small datasets detect them fine.
+We ship PRs without knowing whether they made the app slower or bigger. Bundle size has a gate (220 kB gzip, first-load — see below) but nothing catches DOM bloat, API latency regression, paint time regression, or export size growth. These are linear regressions — small datasets detect them fine.
 
 ## Goal
 
@@ -62,7 +62,7 @@ Thresholds use a **doubling rule**: fail if a metric exceeds 2x baseline. This c
 
 | Metric | Tool | Baseline | Warn | Fail | Rationale |
 |--------|------|----------|------|------|-----------|
-| Bundle size (JS gzip) | `size-limit` | ~267 KB | — | > 305 KB | Already in CI — keep as-is |
+| Bundle size (JS gzip, first load) | `scripts/check-bundle-budget.py` | 204.6 KB | — | > 220 KB | Was `size-limit` at a claimed ~267 KB / 305 KB — neither number was ever enforced; the real one lived in `frontend/package.json`. See the section below |
 | DOM nodes (quotes page) | Playwright `evaluate` | 549 | > 800 | > 1,100 | 2x fail. Catches leaked modals, duplicated renders, wrapper bloat |
 | DOM nodes (transcript page) | Playwright `evaluate` | 374 | > 550 | > 750 | 2x fail. Catches per-segment wrapper regressions |
 | DOM nodes (dashboard) | Playwright `evaluate` | 334 | > 500 | > 670 | Fixed structure — any doubling is a bug |
@@ -205,51 +205,59 @@ Those are covered by the stress test and FOSSDA plans.
 2. **DOM count and export size are blocking.** API latency is warn-only (too noisy across CI runners)
 3. **Doubling rule for thresholds.** Fail at 2x baseline, warn at 1.5x. Simple, auditable, catches real regressions without false positives from normal feature work
 
-## The bundle budget excludes by CHUNK FILENAME, so a bundler upgrade moves it (measured 5 Sep 2026)
+## The bundle budget now measures first-load cost, not chunk filenames (5 Sep 2026)
 
-`frontend/package.json`'s `size-limit` entry is one glob plus **22 negations**,
-each naming a chunk (`!.../common-*.js`, `!.../settings-*.js`, …). The negations
-exist for a good reason — the lazy locale chunks are excluded, so adding a
-language is size-neutral on the web (`CLAUDE.md` § i18n). But a chunk filename is
-a bundler implementation detail, and **Rolldown rechunks between vite minors.**
+`size-limit` measured a **filename allow-list**: one glob over `assets/*.js` plus
+**22 negations**, each naming a chunk, so the lazy locale chunks stayed out of
+the number. The negations existed for a good reason — adding a language is meant
+to be size-neutral on the web (`CLAUDE.md` § i18n). But a chunk filename is a
+bundler implementation detail, and Rolldown rechunks between vite minors.
 
 `#143`'s reported +24 kB overage was traced to `vite 8.0.10 → 8.2.2` alone. Both
 builds measured on this Mac, same source, nothing else changed:
 
 | | 8.0.10 | 8.2.2 | Δ |
 |---|---:|---:|---:|
-| All emitted JS, gzipped | 944.9 kB | 938.5 kB | **−6.3 kB** |
-| Excluded by the negation list | 736.2 kB (204 chunks) | 705.9 kB (199 chunks) | −30.3 kB |
-| **Counted against the 220 kB budget** | **207.7 kB** | **231.9 kB** | **+24.1 kB** |
+| Counted by the old allow-list | 207.7 kB | **231.9 kB** | **+24.1 kB → red** |
+| All emitted JS, gzipped | 944.9 kB | 938.5 kB | −6.3 kB |
+| **Eagerly fetched by `index.html`** | **205.5 kB, 20 chunks** | **199.8 kB, 6 chunks** | **−5.7 kB, 14 fewer requests** |
 
-vite 8.2 merges 225 chunks into 211. Roughly 30 kB crossed from names the
-negation list matches into names it does not — the 21 kB `i18n-*.js` chunk is
-gone and a 52 kB `useRefetching-*.js` chunk (app code, not locale data) has
-appeared. **What actually ships got 6.3 kB smaller.** The gate reported a
-regression on a build that is strictly better.
+**The gate failed a build that is strictly better**, and it was wrong in *both*
+directions at once. `index.html` on 8.0.10 was eagerly loading `common-*`
+(12.4 kB), `desktop-*` (11.4 kB), `settings-*` (3.4 kB) and `enums-*` — locale
+chunks on the negation list, so a visitor paid for them and the budget did not.
+Then 8.2 merged 225 chunks into 211, roughly 30 kB crossed from negated names
+into counted ones, and the same list started over-counting instead.
 
-**So neither option in `#143` is the right one.** Moving the budget would ratify
-a mismeasurement — the bytes were always shipping, they were only named
-differently. Major-ignoring vite does nothing at all: `8.0.10 → 8.2.2` is a
-*minor*, so the existing `semver-major` ignore never touched it, and an ignore at
-the minor freezes vite entirely to hide a number that is wrong.
+Major-ignoring vite would not have helped either: `8.0.10 → 8.2.2` is a **minor**,
+which the `semver-major` ignore never touched.
 
-**The fix is to stop keying the exclusion on filenames.** Emit the locale chunks
-into their own directory (`output.chunkFileNames` → `assets/locales/[name]-[hash].js`)
-and the budget becomes one glob and one negation, robust to any future
-rechunking. Until that lands the budget number cannot be compared across a
-bundler upgrade, and `size-limit` will keep reporting build-tool churn as
-product regression.
+### The replacement
 
-Two things this does not settle, both recorded rather than guessed: whether the
-counted set is still the *right* set once locales are cleanly separable (it may
-want to be larger), and whether `#143` should be split — the eight non-vite
-members are budget-neutral either way, so splitting is free and correct
-regardless of what happens to vite.
+`scripts/check-bundle-budget.py`, run by `npm run size` and by CI's *Check bundle
+size* step. It parses `index.html` and sums the gzipped size of every chunk the
+entry document makes a visitor fetch before first paint — `<script src>` and
+`<link rel="modulepreload">`. Anything reached by a dynamic `import()` is out, by
+construction rather than by name, so the locale split keeps its property and no
+rename can move the number.
 
-**Stale nearby:** the threshold table above says the bundle baseline is ~267 KB
-failing over 305 KB. The real budget is 220 kB in `frontend/package.json`. One of
-those numbers is enforced and it is not the one in this doc.
+Budget **held at 220 kB across the change**, deliberately: only the definition
+moved, so the two are reviewable apart. Headroom is 15.4 kB on 8.0.10 and 20.8 kB
+on 8.2.2.
+
+It also refuses three ways of scoring well by being broken — an unbuilt tree, an
+`index.html` referencing no JS, and a reference to a chunk not on disk — each of
+which the old gate would have reported as 0 kB or as an improvement. And a chunk
+that stops being lazy now *raises* the number, loudly, which is the regression
+the allow-list could not see. Proof: `scripts/test-bundle-budget.py`, 16 cases,
+offline, paired so the ratchet counts it proven.
+
+`size-limit` and `@size-limit/file` are removed. Note `npm run size:why` never
+worked — `@size-limit/why` was never installed, so the flag was silently ignored;
+the per-chunk table is now the default output.
+
+**Still open:** whether 220 kB is the right ceiling for the new definition. It was
+chosen for an allow-list that was measuring something else, and it is 91–93% used.
 
 
 ## Resolved

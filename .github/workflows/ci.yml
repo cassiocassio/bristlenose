@@ -325,9 +325,17 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+      # Budgets what index.html makes a first-load visitor fetch, NOT a
+      # filename allow-list. The old size-limit config was one glob plus 22
+      # negations naming individual chunks, which Rolldown renames between vite
+      # minors: on 5 Sep 2026 it failed vite 8.2.2 by 24 kB while the build
+      # actually shipped 5.7 kB LESS and made 14 fewer requests. It was also
+      # excluding locale chunks that index.html was eagerly loading, so users
+      # paid for bytes the budget did not count. Wrong in both directions.
+      # Pure stdlib, so it needs no venv. Proof: scripts/test-bundle-budget.py.
       - name: Check bundle size
         working-directory: frontend
-        run: npx size-limit
+        run: npm run size
 
   e2e:
     needs: [test, frontend-lint-type-test]

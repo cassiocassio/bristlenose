@@ -11,41 +11,8 @@
     "test": "vitest run",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
-    "size": "size-limit",
-    "size:why": "size-limit --why"
+    "size": "python3 ../scripts/check-bundle-budget.py"
   },
-  "size-limit": [
-    {
-      "name": "Live SPA, English (gzipped)",
-      "path": [
-        "../bristlenose/server/static/assets/*.js",
-        "!../bristlenose/server/static/assets/visual-diff-*.js",
-        "!../bristlenose/server/static/assets/ResponsivePlayground-*.js",
-        "!../bristlenose/server/static/assets/GridSpecimen-*.js",
-        "!../bristlenose/server/static/assets/PlaygroundStore-*.js",
-        "!../bristlenose/server/static/assets/PlaygroundHUD-*.js",
-        "!../bristlenose/server/static/assets/devicePresets-*.js",
-        "!../bristlenose/server/static/assets/HelloIsland-*.js",
-        "!../bristlenose/server/static/assets/TranscriptPage-*.js",
-        "!../bristlenose/server/static/assets/Toolbar-*.js",
-        "!../bristlenose/server/static/assets/QuoteSections-*.js",
-        "!../bristlenose/server/static/assets/QuoteThemes-*.js",
-        "!../bristlenose/server/static/assets/CodebookPanel-*.js",
-        "!../bristlenose/server/static/assets/AnalysisPage-*.js",
-        "!../bristlenose/server/static/assets/common-*.js",
-        "!../bristlenose/server/static/assets/settings-*.js",
-        "!../bristlenose/server/static/assets/desktop-*.js",
-        "!../bristlenose/server/static/assets/enums-*.js",
-        "!../bristlenose/server/static/assets/cli-*.js",
-        "!../bristlenose/server/static/assets/doctor-*.js",
-        "!../bristlenose/server/static/assets/pipeline-*.js",
-        "!../bristlenose/server/static/assets/preflight-*.js",
-        "!../bristlenose/server/static/assets/server-*.js"
-      ],
-      "limit": "220 kB",
-      "gzip": true
-    }
-  ],
   "dependencies": {
     "i18next": "^26.0.8",
     "i18next-browser-languagedetector": "^8.2.1",
@@ -56,7 +23,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
-    "@size-limit/file": "^12.1.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -68,7 +34,6 @@
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^7.1.1",
     "jsdom": "^27.4.0",
-    "size-limit": "^12.1.0",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.59.1",
     "vite": "^8.0.10",

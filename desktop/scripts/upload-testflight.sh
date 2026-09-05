@@ -349,7 +349,7 @@ if [ "$ALTOOL_RC" -ne 0 ]; then
 
   Full log: $UPLOAD_LOG
   ${DELIVERY:+Delivery UUID $DELIVERY — quote it to Apple, and use it to re-query:
-    xcrun altool --build-status --delivery-id $DELIVERY --apiKey $KEY_ID --apiIssuer <issuer>
+    xcrun altool --build-status --delivery-id $DELIVERY --apiKey \$BRISTLENOSE_ASC_KEY_ID --apiIssuer \$BRISTLENOSE_ASC_ISSUER_ID
   }
   Still stuck? Transporter.app takes this same .pkg by drag, and has
   succeeded where altool misrouted (Apple Forums 812132). --use-old-altool

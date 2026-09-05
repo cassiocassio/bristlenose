@@ -70,7 +70,7 @@ def by_session(quotes: list[dict]) -> dict[str, list[dict]]:
 def compare(ref: list[dict], run: list[dict]) -> dict:
     """One reference pass against one re-extraction."""
     run_by = by_session(run)
-    single = union = 0
+    single = union = text_same = 0
     drifts: list[tuple[float, float]] = []
     sims: list[float] = []
     recovered_ids: set[int] = set()
@@ -91,14 +91,24 @@ def compare(ref: list[dict], run: list[dict]) -> dict:
             r0, r1 = span(q)
             c0, c1 = span(best_c)
             drifts.append((c0 - r0, c1 - r1))
-            sims.append(difflib.SequenceMatcher(
-                None, q.get("text", ""), best_c.get("text", "")).ratio())
+            sim = difflib.SequenceMatcher(
+                None, q.get("text", ""), best_c.get("text", "")).ratio()
+            sims.append(sim)
+            # The stricter reading, and the one a researcher experiences.
+            # Overlap is measured on the TIMELINE, and a model that anchors
+            # timecodes to segment boundaries scores a high overlap while
+            # returning materially different text -- on gemini-3.8-flash, 29 of
+            # 61 quotes were "recovered" at >=70% overlap with text similarity
+            # below 0.90. The star survives; the words under it moved.
+            if best >= THRESHOLD and sim >= 0.90:
+                text_same += 1
 
     n = len(ref) or 1
     return {
         "n_ref": len(ref), "n_run": len(run),
         "single_pct": 100 * single / n,
         "union_pct": 100 * union / n,
+        "text_pct": 100 * text_same / n,
         "median_start_drift": statistics.median([d[0] for d in drifts]) if drifts else None,
         "median_end_drift": statistics.median([d[1] for d in drifts]) if drifts else None,
         "median_similarity": statistics.median(sims) if sims else None,
@@ -113,18 +123,20 @@ def report(name: str, passes: list[list[dict]]) -> None:
         return
     ref, runs = passes[0], passes[1:]
     print(f"  reference pass: {len(ref)} quotes")
-    print(f"  {'pass':<6}{'quotes':>8}{'single':>9}{'union':>8}"
+    print(f"  {'pass':<6}{'quotes':>8}{'single':>9}{'union':>8}{'+text':>8}"
           f"{'Δstart':>9}{'Δend':>8}{'text sim':>10}")
-    singles, unions, counts = [], [], [len(ref)]
+    singles, unions, texts, counts = [], [], [], [len(ref)]
     ever: set[int] = set()
     for i, run in enumerate(runs, start=2):
         r = compare(ref, run)
         ever |= r["recovered"]
         singles.append(r["single_pct"])
         unions.append(r["union_pct"])
+        texts.append(r["text_pct"])
         counts.append(r["n_run"])
         ds, de = r["median_start_drift"], r["median_end_drift"]
         print(f"  {i:<6}{r['n_run']:>8}{r['single_pct']:>8.1f}%{r['union_pct']:>7.1f}%"
+              f"{r['text_pct']:>7.1f}%"
               f"{ds if ds is None else f'{ds:+.1f}s':>9}"
               f"{de if de is None else f'{de:+.1f}s':>8}"
               f"{r['median_similarity'] or 0:>10.2f}")
@@ -135,6 +147,9 @@ def report(name: str, passes: list[list[dict]]) -> None:
           f"{statistics.mean(singles):.1f}%  (worst {min(singles):.1f}%)")
     print(f"  union / split-credit >={THRESHOLD:.0%} : "
           f"{statistics.mean(unions):.1f}%  (worst {min(unions):.1f}%)")
+    print(f"  ...and text also >=0.90     : "
+          f"{statistics.mean(texts):.1f}%  (worst {min(texts):.1f}%) "
+          f"<- what the researcher reads")
     print(f"  quote count across passes   : {counts}  "
           f"(spread {max(counts) - min(counts)})")
     print(f"  fragile tail                : {len(fragile)}/{len(ref)} "

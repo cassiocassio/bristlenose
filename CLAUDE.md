@@ -301,6 +301,30 @@ than `--last 4d` (a whole-store scan takes minutes), and predicate on `process` 
 `subsystem`. Same family as the zsh word-splitting and nomatch gotchas above: a shell
 default that fails quietly.
 
+### `Path.resolve()` on a venv's `bin/python` gives you the BASE interpreter, not the venv
+
+A venv's `bin/python` is a symlink to the base interpreter; CPython finds the
+venv by looking for `pyvenv.cfg` beside the executable **as invoked**, so
+resolving the symlink first (`Path.resolve()`, `realpath`, `readlink -f`) and
+then running that path gives `sys.prefix == sys.base_prefix` and the base
+install's site-packages — on this Mac, Homebrew's, holding one package. The
+first run of the re-pointed inventory script did exactly that and wrote a
+one-row `THIRD-PARTY-BINARIES.md` with exit 0 (5 Sep 2026). Use
+`Path.absolute()` to keep the venv prefix — and know that this is necessary,
+not sufficient: a symlink *to* the venv's python from outside its `bin/`
+(`~/bin/sidecar-py -> .venv-sidecar/bin/python`) lands on the base interpreter
+again, measured. The guard that survives both is semantic, not path-shaped:
+refuse a target that does not carry the project's own distribution
+(`scripts/check-dep-drift.py`, `generate-third-party-binaries.py`). **Tell:** an
+inventory or `pip list` that is suspiciously short against an environment you
+know is full.
+
+Same family, one shell up: **`$PIPESTATUS` is bash; the Bash tool runs zsh,
+where it is `$pipestatus` (lowercase) — the uppercase name expands to empty**, so
+`cmd | tail -1; echo "rc=${PIPESTATUS[0]}"` prints `rc=` and reads as a
+tooling glitch rather than a shell difference. Prove an exit code without a
+pipe (`cmd >/dev/null 2>&1; echo $?`), or use zsh's spelling.
+
 ### `rg -rn` is NOT "recursive + line numbers" — `-r` is `--replace` and silently rewrites every match
 
 Muscle memory from `grep -rn` is wrong for ripgrep: **rg is recursive by default**, and `-r/--replace` **takes an argument**. So `rg -rn "pattern" path/` parses as `-r n` — replace every match with the literal string `n` — and prints doctored lines with no error, no warning, and exit 0.

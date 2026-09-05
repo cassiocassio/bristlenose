@@ -78,6 +78,16 @@ case "$(cat "$_be_root/out")" in *"board"*"http://127.0.0.1:"*"/?k=t"*) ok "spaw
 ( cd "$_be_root" && RELEASE_BOARD_PY="$_be_root/fake-board.py" board_ensure 1.2.3 >"$_be_root/out2" 2>&1 )
 eq "already serving → prints the same link, spawns nothing" "$(cat "$_be_root/out")" "$(cat "$_be_root/out2")"
 pkill -f "fake-board.py 1.2.3" 2>/dev/null; rm -rf "$_be_root"
+# the rehearsal: the real writers (ev_append, sink.sh, report.sh) driven through a whole
+# synthetic release against the live server, with --check asserting the final model —
+# guard 3 of the drift review (docs/design-release-board.md §6): the fold in two
+# languages, proven equal on a run that never happened
+head_ "rehearse-board.sh --check — the board reads back what the real writers wrote"
+if _rb_out="$(timeout 120 bash "$ROOT/scripts/rehearse-board.sh" --check --pace 0.05 --no-stall 2>&1)"; then
+    ok "rehearsal check passed: $(printf '%s\n' "$_rb_out" | grep 'check passed' | sed 's/^ *//')"
+else
+    bad "rehearsal check failed: $(printf '%s\n' "$_rb_out" | tail -6 | tr '\n' ' ')"
+fi
 # the driver's knowledge of the board is board_link + board_ensure, and nothing else
 eq "release.sh names the generator exactly once (board_ensure's default)" 1 "$(grep -c 'release-board\.py' "$ROOT/scripts/release.sh")"
 eq "…and only board_ensure invokes it" 1 "$(grep -c '"\$_gen" "\$_v" --serve' "$ROOT/scripts/release.sh")"

@@ -294,9 +294,10 @@ slip on its own. What differs from §1–§3 as written:
   stranded run is `0` (it drew).
 - **`docs/testing/inventory.md` moved** by the two suites, regenerated.
 
-Owed, and written down rather than done: the round-trip test that drives the
+Owed, and written down rather than done: ~~the round-trip test that drives the
 real `release.sh` under a sink and asserts the board's fold equals the
-driver's (guard 3 of the drift review); a redacted `bn-events.log` fixture
+driver's (guard 3 of the drift review)~~ — closed by the rehearsal (§8, 5 Sep
+2026); a redacted `bn-events.log` fixture
 after the first real feed (guard 5); the orphaned Python suites in no
 workflow — `test-release-board.py` and `test-sink.sh` joined `ci.yml`'s
 release-suites job on 5 Sep 2026, which leaves the two that were there before.
@@ -377,6 +378,24 @@ four `board_ensure` ones, that `release.sh` names the generator exactly once
 (that default), and that no build script names the server or the handshake —
 `build-all.sh` and `build-dmg.sh` are also run standalone, from Xcode and by
 hand, and their whole contract with observability stays the sink env var.
+
+**Rehearsal** — `scripts/rehearse-board.sh` runs a whole release at fake speed
+on the live board, with nothing synthetic about the writers: a throwaway root
+with its own `.release/`, a previous run to diff against, the real step table
+(`run_steps`, now exposed to `RELEASE_LIB=1` sourcers), the real `ev_append`
+writing the ledger, the real `sink.sh` writing the driver's windows, the real
+`report.sh` helpers writing a build lane's steps, checks, gates and art in
+plain mode with stdout captured to the step's log exactly as the driver does.
+The run has one warn and one duplicate preflight label, a result and an event
+kind the board has no rule for, a build-dmg failure whose log fills the Log
+pane and then a retry, a heartbeat stall long enough to turn the running
+station amber (the board reads `BN_HEARTBEAT_SECS` as the driver does; the
+rehearsal sets it to 5), CI rows, a verify with one channel missing and one
+unreachable, both clocks, and a completed run whose confounded log is
+computable and non-zero. `--check` asserts that final model from
+`/board.json` and is a case in `test-release-sh.sh` — the fold in two
+languages proven equal on a run that never happened, which was guard 3 of the
+drift review and had been owed since the first day.
 
 **Replay** — `--replay` writes `board-replay.html`: frame *i* is the real
 generator on the first *i* ledger lines and the sink lines stamped no later, in

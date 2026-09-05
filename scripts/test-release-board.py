@@ -902,7 +902,7 @@ class Heartbeat(unittest.TestCase):
         sh = (ROOT / "scripts" / "release.sh").read_text()
         m = re.search(r"BN_HEARTBEAT_SECS:-(\d+)", sh)
         self.assertIsNotNone(m, "release.sh no longer defaults BN_HEARTBEAT_SECS — the board's mirror has lost its source")
-        self.assertEqual(int(m.group(1)), rb.HEARTBEAT_CADENCE_S)
+        self.assertEqual(int(m.group(1)), rb.HEARTBEAT_CADENCE_DEFAULT_S)
 
     def test_last_line_is_scrubbed_and_cadence_carried(self):
         t = Tree()

@@ -65,8 +65,14 @@ TEMPLATE = ROOT / "scripts" / "release-board.template.html"
 DMG_VALIDITY_DAYS = 30
 # release.sh writes the heartbeat every BN_HEARTBEAT_SECS (default 300) and calls
 # a run stranded after three of them; the page pulses only inside that window.
-# Mirror of release.sh's default — pinned by a parity test, like DMG_VALIDITY_DAYS.
-HEARTBEAT_CADENCE_S = 300
+# The default mirrors release.sh's and is pinned by a parity test, like
+# DMG_VALIDITY_DAYS; the same env var overrides both, which is what lets the
+# rehearsal script run a whole release in a minute with a five-second heartbeat.
+HEARTBEAT_CADENCE_DEFAULT_S = 300
+try:
+    HEARTBEAT_CADENCE_S = max(1, int(os.environ.get("BN_HEARTBEAT_SECS", HEARTBEAT_CADENCE_DEFAULT_S)))
+except ValueError:
+    HEARTBEAT_CADENCE_S = HEARTBEAT_CADENCE_DEFAULT_S
 LOG_TAIL_BYTES = 65536
 
 VERSION_RE = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+[A-Za-z0-9.+-]*")

@@ -420,6 +420,31 @@ verdict_recover() {
     esac
 }
 
+# The step table is pure (placeholders, substituted by cmd_run) and is exposed to
+# `RELEASE_LIB=1` sourcers — scripts/rehearse-board.sh snapshots the real table.
+run_steps() {
+# RELEASE_STEPS_FILE is a testability seam, not a feature. scripts/test-release-e2e.sh
+# points it at a table of harmless commands so the REAL cmd_run loop — its event
+# appends, elapsed times, skip logic, probe branch, failure tail and resume — can
+# be driven end to end without performing a release. Same shape as BN_BIN in
+# check-doc-surfaces.sh. Unset in every real invocation.
+if [ -n "${RELEASE_STEPS_FILE:-}" ]; then cat "$RELEASE_STEPS_FILE"; return; fi
+cat <<'RUNTBL'
+preflight|preflight|gate|1m|||./scripts/check-release-ready.sh __V__
+bump|bump + commit|plain|1m|||__BUMP__
+push-main|push main|plain|1m|||git push origin main
+strict-ci|dispatch strict CI on main|plain|1m|||__DISPATCH__
+build-all|build the app|plain|11m|||desktop/scripts/build-all.sh
+build-dmg|build the dmg|plain|30m|||desktop/scripts/build-dmg.sh
+ci-green|GATE strict CI green|gate|38m|||__CIWAIT__
+testflight|upload to TestFlight|soft|6m||SOFT: spends a build number forever, and it reaches cohort testers|desktop/scripts/upload-testflight.sh
+dmg|publish the dmg|soft|13m||the public permalink swaps the moment this lands|desktop/scripts/upload-dmg.sh
+tag|tag + push|hard|2m||HARD: this PUBLISHES. __V__ can never be re-used on PyPI|__TAG__
+snap|snap edge|plain|10m|||gh workflow run __WF_SNAP__ --ref main
+snap-stable|snap stable|plain|10m|2||gh workflow run __WF_SNAP__ --ref v__V__
+RUNTBL
+}
+
 # board_link <version> — print the live board's url if one is serving this run.
 # The board is optional and the driver must not need it (design-release-board
 # §1): this reads one file the server wrote, checks its pid is alive, prints
@@ -528,28 +553,6 @@ usage() { sed -n '2,/^set -uo/p' "$0" | sed 's/^# \{0,1\}//;$d'; }
 # immediately before the step, because announcing it on a page where nothing
 # happens and withholding it where the act occurs is backwards.
 # ---------------------------------------------------------------------------
-run_steps() {
-# RELEASE_STEPS_FILE is a testability seam, not a feature. scripts/test-release-e2e.sh
-# points it at a table of harmless commands so the REAL cmd_run loop — its event
-# appends, elapsed times, skip logic, probe branch, failure tail and resume — can
-# be driven end to end without performing a release. Same shape as BN_BIN in
-# check-doc-surfaces.sh. Unset in every real invocation.
-if [ -n "${RELEASE_STEPS_FILE:-}" ]; then cat "$RELEASE_STEPS_FILE"; return; fi
-cat <<'RUNTBL'
-preflight|preflight|gate|1m|||./scripts/check-release-ready.sh __V__
-bump|bump + commit|plain|1m|||__BUMP__
-push-main|push main|plain|1m|||git push origin main
-strict-ci|dispatch strict CI on main|plain|1m|||__DISPATCH__
-build-all|build the app|plain|11m|||desktop/scripts/build-all.sh
-build-dmg|build the dmg|plain|30m|||desktop/scripts/build-dmg.sh
-ci-green|GATE strict CI green|gate|38m|||__CIWAIT__
-testflight|upload to TestFlight|soft|6m||SOFT: spends a build number forever, and it reaches cohort testers|desktop/scripts/upload-testflight.sh
-dmg|publish the dmg|soft|13m||the public permalink swaps the moment this lands|desktop/scripts/upload-dmg.sh
-tag|tag + push|hard|2m||HARD: this PUBLISHES. __V__ can never be re-used on PyPI|__TAG__
-snap|snap edge|plain|10m|||gh workflow run __WF_SNAP__ --ref main
-snap-stable|snap stable|plain|10m|2||gh workflow run __WF_SNAP__ --ref v__V__
-RUNTBL
-}
 
 cmd_plan() {
     V=""

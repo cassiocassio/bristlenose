@@ -1,14 +1,29 @@
 ---
 status: partial
-last-trued: 2026-09-04
-previous-trued: 2026-08-18
-trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
+last-trued: 2026-09-05
+previous-trued: 2026-09-04
+trued-against: HEAD@main on 2026-09-05 (5d478cdd)
 ---
 
-> **Truing status:** Partial — the original design (§Design Decisions, §CLI Commands) shipped and remains the canonical CLI/serve-mode credential path, with provider-list expansion (2→5). The Track C sandboxed-desktop deployment ships a different credential path — Swift reads Keychain, injects env vars; the *sidecar* never touches Keychain — in §"Desktop (sandboxed) credential path". **Since 4 Sep 2026 the two paths share one keyspace:** the app keeps a login-keychain copy of every CLI-read key and reconciles it, so a key set up in the CLI or the app is seen by both — §"One keyspace, two keychains" is the section to read first, and it supersedes any sentence elsewhere in this doc that assumes a single keychain. Inline Python source (§Module Structure) is the pre-ship plan; see `bristlenose/credentials.py` + `credentials_macos.py` + `providers.py` (`CREDENTIALS`) for current.
+> **Truing status:** Partial — the original design (§Design Decisions, §CLI Commands) shipped and remains the canonical CLI/serve-mode credential path, with provider-list expansion (2→5). The Track C sandboxed-desktop deployment ships a different credential path — Swift reads Keychain, injects env vars; the *sidecar* never touches Keychain — in §"Desktop (sandboxed) credential path". **Since 4 Sep 2026 the two paths share one keyspace:** the app keeps a login-keychain copy of every CLI-read key and reconciles it, so a key set up in the CLI or the app is seen by both — §"One keyspace, two keychains" is the section to read first, and it supersedes any sentence elsewhere in this doc that assumes a single keychain. One write direction is still unmeasured — whether the CLI's delete-then-add can replace an app-owned login item — and §"Reading the unmeasured direction" names the item that answers it and how the answer is read. Inline Python source (§Module Structure) is the pre-ship plan; see `bristlenose/credentials.py` + `credentials_macos.py` + `providers.py` (`CREDENTIALS`) for current.
 
 ## Changelog
 
+- _2026-09-05_ — trued up against the two commits since: the test host never
+  reaches the real keychain (`KeychainHelper.isUnderTestHost`; §Testability
+  carries a post-script, since its "tests use `InMemoryKeychain`" was the belief
+  the 4 Sep dialogs falsified), only the selected row may ask and not while
+  `measuring`; one reconciliation at a time is now a rule bullet; a refused
+  delete-before-set is logged at WARNING so the next `configure` records the
+  unmeasured direction, with §"Reading the unmeasured direction" naming the
+  app-owned item; Zoom added to the cloud sign-ins row (registered since 27 Aug,
+  parked flag); the `hasAnyAPIKey` caution widened to every registered name;
+  times in the cleanup prose given their zone. Anchors: "keychain: the test host
+  never reaches the real keychain, and only the row you look at may ask",
+  "keychain: a refused delete-before-set is logged, so the next configure
+  records the unmeasured direction", `credentials_macos.py` `set`,
+  `KeychainHelper.swift` `SharedKeychainItem.lock`, `LLMSettingsView.swift`
+  `init(measuring:)`.
 - _2026-09-04_ — **the CLI and the Mac app could not see each other's keys, and
   now can.** Measured with two items of the same name in Keychain Access — the
   app's in iCloud (data-protection keychain), the CLI's in login — and neither
@@ -88,8 +103,8 @@ below rather than as errors._
 |---|---|---|---|---|
 | LLM provider keys | `Bristlenose {Anthropic,OpenAI,Azure,Google Gemini} API Key` | **fixed** `bristlenose` | yes — **and a login-keychain copy** (§"One keyspace, two keychains") | Swift host → env; CLI Python directly, from the login copy |
 | Miro token | `Bristlenose Miro Access Token` | **fixed** `bristlenose` | yes — **and a login-keychain copy** | Swift host (`overlayMiroToken`, unconditional); the serve route via `get_credential()`, which is **store first, then env** — the opposite order from the settings pipeline in §5 |
-| Miro refresh token | `Bristlenose Miro_Refresh API Key` — the *fallback* name for an unregistered key | **fixed** `bristlenose` | **login only**, and only on a CLI Mac | The serve OAuth route alone (`routes/miro.py`). **Known gap (4 Sep 2026):** not in `CREDENTIALS`, not in `KeychainHelper.serviceNames`, so the app cannot read it and the contract test cannot see it. Registering it renames the item and the `.env` key for existing users, so it is recorded here rather than changed |
-| Cloud sign-ins | `Bristlenose {Microsoft Teams,Google Meet} Sign-In` | **derived** — SHA-256 of the lowercased address | yes | Swift only |
+| Miro refresh token | `Bristlenose Miro_Refresh API Key` — the *fallback* name for an unregistered key | **fixed** `bristlenose` | **login only**, and only on a CLI Mac | The serve OAuth route alone (`routes/miro.py`). **Known gap (4 Sep 2026):** not in `CREDENTIALS`, not in `KeychainHelper.serviceNames`, so the app cannot read it and the contract test cannot see it. Registering it renames the item and the `.env` key for existing users, so it is recorded here rather than changed (decided 5 Sep 2026). The write does go through `_store_token_verified`, so a refresh token that failed to land is at least a WARNING |
+| Cloud sign-ins | `Bristlenose {Microsoft Teams,Google Meet,Zoom} Sign-In` — Zoom registered since 27 Aug 2026 ahead of the parked `BristlenoseFlags.cloudImportZoom`, so an unregistered-key write can never be the reason a Zoom sign-in fails to persist | **derived** — SHA-256 of the lowercased address | yes | Swift only |
 | MCP bearer | `Bristlenose MCP Token` | **derived** — SHA-256 of the project path | **no** | Swift host → sidecar env |
 
 Three things about that table are load-bearing:
@@ -120,8 +135,9 @@ signing in again?" (`KeychainHelper.swift`, `serviceNames`; pinned by
 `CloudGrantKeychainRegistrationTests`).
 
 **Caution when reading `hasAnyAPIKey()`:** it iterates *every* entry in that map,
-so a Miro token — or a pre-migration cloud grant still at the legacy fixed key —
-answers yes. It is not an API-key-only question despite the name.
+so a Miro token, any of the three cloud sign-ins (Teams, Google Meet, Zoom) —
+or a pre-migration cloud grant still at the legacy fixed key — answers yes. It
+is not an API-key-only question despite the name.
 
 Keychain fields:
 - **Service:** as per the table above (what shows in Keychain Access)
@@ -258,6 +274,15 @@ See the comment block above `overlayAPIKeys` in `desktop/Bristlenose/Bristlenose
 
 `ServeManager` takes `any KeychainStore` as a protocol, with `InMemoryKeychain` as a test shim. Swift-side tests exercise the env-var injection path without touching the real keychain. See `desktop/Bristlenose/BristlenoseTests/` and `desktop/CLAUDE.md` §Testability refactors.
 
+> **Post-script, 5 Sep 2026.** The paragraph above was true of tests that
+> *inject* a store and false of tests that *render a view*: the test bundle
+> runs inside the real app, so a view's static call to `KeychainHelper` reached
+> the developer's login keychain — three ACL dialogs and one key written back on
+> 4 Sep. `KeychainHelper.isUnderTestHost` now swaps both raw keychains and the
+> reconciler's ledger for volatile stand-ins whenever the XCTest harness is the
+> host; see §"One keyspace, two keychains", the prompt-budget bullet. The
+> injection convention still holds; it just never reached statics.
+
 ## One keyspace, two keychains
 
 _Added 2026-09-04, from live provider testing._
@@ -336,6 +361,11 @@ The rule, in full on `SharedKeychainItem`'s doc comment:
   and `configure` has no `-v`, so WARNING is the level that reaches the
   terminal. Which item is app-owned, and how to read the answer back, is under
   §"Reading the unmeasured direction" below.
+- **One reconciliation at a time.** The ledger is read-compare-write, so two
+  concurrent reconciliations of the same item can each adopt the other's stale
+  copy; `SharedKeychainItem` takes one `NSLock` around every reconcile, write
+  and delete. Learned when three measuring views wrote and read back the Gemini
+  key mismatched three times in one second (4 Sep 2026).
 - **The prompt budget, and who may spend it.** The synced copy never prompts.
   Decrypting a login item another tool created raises macOS's *"Bristlenose
   wants to use your confidential information stored in … in your keychain"*
@@ -346,7 +376,9 @@ The rule, in full on `SharedKeychainItem`'s doc comment:
   `wouldPrompt`, the app's own copy serves, and nothing is recorded — so a spawn
   path, a launch-time model and `hasAnyAPIKey` never block on a dialog. In
   Settings ▸ LLM Provider only **the selected row's key field** reads with
-  `.allowed` (`loadAPIKey`, plus the read-back after a save); the eager status
+  `.allowed` (`loadAPIKey`, plus the read-back after a save) — and not even that
+row when the pane was built with `init(measuring:)`, the layout-measurement
+path, which reads `.quiet` (`LLMSettingsView.swift`, the `measuring` flag); the eager status
   board paints every row quietly from the app's own copies. So a CLI-written key
   is adopted for the provider you click, one dialog per provider, never as a
   cascade on opening the pane. That decrypt happens only when the login
@@ -453,7 +485,7 @@ the copy whose ACL names `/usr/bin/security` as a trusted app. Attributes read
 5 Sep 2026 (`security find-generic-password -a bristlenose -s "<service>"`,
 no `-w`, so no secret and no dialog):
 
-| item | `cdat` | `mdat` | owner |
+| item | `cdat` (UTC) | `mdat` (UTC) | owner |
 |---|---|---|---|
 | Anthropic | 4 Sep 21:16:40Z | 4 Sep 21:16:40Z | **app** — created and modified in the same second, by the app's delete-then-add |
 | OpenAI | 9 Jun | 4 Sep 21:28:13Z | CLI — the app's delete was refused and it updated in place |
@@ -473,8 +505,10 @@ twice:
    the item is then CLI-owned, so the app's next write is the measured
    `-25244` case again, not this one.
 
-Record the result in the table under §"One keyspace, two keychains" and
-strike this section's "unmeasured" from the bullet above.
+Record the result as a new row in the probe table at the top of §"One
+keyspace, two keychains" (the one whose last row is the app's `-25244`), and
+strike "unmeasured" from the replaced-or-updated bullet, the truing banner and
+this heading. Listed as owed in `TODO.md`'s 5 Sep keychain entry.
 
 ### Cleaning up a machine that already carries the split
 
@@ -487,7 +521,8 @@ new build to work — on first read it adopts the newer copy either way.
 
 **What the two test-host runs that evening actually did to that keychain**
 (read back from `security find-generic-password` attributes and securityd's
-log the next morning): the Anthropic login item was re-created at 22:16:40
+log the next morning; times here are BST, one hour ahead of the owner table
+above): the Anthropic login item was re-created at 22:16:40
 with the app's key (created and modified that second — the app's copy was
 newer than the 12 May item, whose ACL already trusted the Debug build); the
 OpenAI item was updated in place at 22:28:13 with the app's key (created 9 Jun,

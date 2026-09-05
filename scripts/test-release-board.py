@@ -859,6 +859,34 @@ class Server(unittest.TestCase):
         rb.remove_handshake(self.hs)   # not ours: left alone
         self.assertTrue(self.hs.exists())
 
+    def test_log_route_serves_a_tail_only_with_logs_and_only_known_steps(self):
+        (self.t.root / ".release" / "1.0.0" / "logs").mkdir(exist_ok=True)
+        (self.t.root / ".release" / "1.0.0" / "logs" / "bump.1.log").write_text("one\ntwo\n")
+        self.state.refresh(force=True)
+        self.assertEqual(self.get("/log/bump" + self.k)[0], 403)   # this server has no --with-logs
+        httpd, state, _ = rb.make_server(self.t.root, "1.0.0", 0, 0.1, with_logs=True)
+        port = httpd.server_address[1]
+        th = threading.Thread(target=httpd.serve_forever, kwargs={"poll_interval": 0.1}, daemon=True)
+        th.start()
+
+        def get(p):
+            c = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+            c.request("GET", p + "?k=" + state.token, headers={"Host": "127.0.0.1"})
+            r = c.getresponse()
+            body = r.read()
+            c.close()
+            return r.status, body
+        try:
+            st, body = get("/log/bump")
+            self.assertEqual(st, 200)
+            self.assertEqual(json.loads(body)["tail"], ["one", "two"])
+            for bad in ("/log/nope", "/log/..%2F..%2Fetc", "/log/bump;x"):
+                self.assertEqual(get(bad)[0], 404, bad)
+        finally:
+            state.stop()
+            httpd.shutdown()
+            httpd.server_close()
+
     def test_generator_failure_keeps_the_last_model_and_says_so(self):
         (self.t.root / ".release" / "1.0.0" / "events.jsonl").unlink()
         self.state.refresh(force=True)
@@ -928,7 +956,7 @@ class Hardening(unittest.TestCase):
                   extra={"logs/bump.1.log": big})
             tail = t.model(with_logs=True)["logs"]["bump"]["tail"]
             self.assertEqual(tail[-1], "line 199999")
-            self.assertEqual(len(tail), 12)
+            self.assertEqual(len(tail), rb.LOG_TAIL_LINES)
             self.assertLess(rb.LOG_TAIL_BYTES, 200000)
         finally:
             t.close()
@@ -984,6 +1012,66 @@ class Hardening(unittest.TestCase):
             m = t.model()
             self.assertNotIn("dmg", m["links"]["channels"])
             self.assertTrue(any("DMG_PERMALINK" in u["what"] for u in m["confounded"]["unknown"]))
+        finally:
+            t.close()
+
+
+class Logs(unittest.TestCase):
+    def test_index_focus_and_tails(self):
+        t = Tree()
+        try:
+            t.run(events="\n".join([ev("2026-09-05T10:00:00Z", "run", "started"), ev("2026-09-05T10:00:01Z", "preflight", "ok", "1s"),
+                                     ev("2026-09-05T10:00:02Z", "bump", "ok", "1s"), ev("2026-09-05T10:00:03Z", "build-all", "running", "attempt 1")]) + "\n",
+                  extra={"logs/preflight.1.log": "p\n", "logs/bump.1.log": "b\n", "logs/build-all.1.log": "".join(f"l{i}\n" for i in range(300)), "logs/junk.txt": "x", "logs/bad name.1.log": "x"})
+            m = t.model(with_logs=True)
+            self.assertEqual(set(m["log_index"]), {"preflight", "bump", "build-all"})
+            self.assertEqual(m["log_focus"], "build-all")            # the running step
+            self.assertEqual(len(m["logs"]["build-all"]["tail"]), 200)
+            self.assertEqual(m["logs"]["build-all"]["tail"][-1], "l299")
+            # nothing running: the newest failed, else the most recently written
+            t.run(events="\n".join([ev("2026-09-05T10:00:00Z", "run", "started"), ev("2026-09-05T10:00:01Z", "preflight", "ok", "1s"),
+                                     ev("2026-09-05T10:00:02Z", "bump", "fail", "exit 1")]) + "\n")
+            self.assertEqual(t.model()["log_focus"], "bump")
+            t.run(events="\n".join([ev("2026-09-05T10:00:00Z", "run", "started"), ev("2026-09-05T10:00:01Z", "preflight", "ok", "1s")]) + "\n")
+            os.utime(t.root / ".release" / "1.0.0" / "logs" / "bump.1.log", (time.time() + 5, time.time() + 5))
+            self.assertEqual(t.model()["log_focus"], "bump")
+        finally:
+            t.close()
+
+    def test_backfill_preflight_from_the_captured_log(self):
+        t = Tree()
+        try:
+            log = ("\n\x1b[1mRELEASE READY?\x1b[0m  1.0.0\n\n\x1b[1mTree\x1b[0m\n"
+                   "  \x1b[32m✓\x1b[0m branch                     main\n"
+                   "  \x1b[33m⚠\x1b[0m untracked                  1 file(s) — decide, don't ignore\n"
+                   "  \x1b[31m✗\x1b[0m a label of exactly 26 chr  evidence after one space\n"
+                   "  \x1b[32m✓\x1b[0m a label that is longer than twenty-six evidence\n"
+                   "  \x1b[32m✓\x1b[0m no evidence\n")
+            t.run(events="\n".join([ev("2026-09-05T10:00:00Z", "run", "started"), ev("2026-09-05T10:00:27Z", "preflight", "ok", "27s")]) + "\n",
+                  extra={"logs/preflight.1.log": log})
+            rows = rb.parse_preflight_log(log)
+            self.assertEqual(rows[0], ("branch", "ok", "main"))
+            self.assertEqual(rows[1], ("untracked", "warn", "1 file(s) — decide, don't ignore"))
+            self.assertEqual(rows[2], ("a label of exactly 26 chr", "bad", "evidence after one space"))
+            # a label past 26 columns leaves one space before its evidence — indistinguishable from
+            # a space inside the label, so the whole line is the label; the gate never prints one that long
+            self.assertEqual(rows[3], ("a label that is longer than twenty-six evidence", "ok", ""))
+            self.assertEqual(rows[4], ("no evidence", "ok", ""))
+            n, msg = rb.backfill_preflight(t.root / ".release" / "1.0.0", "1.0.0", dry_run=True)
+            self.assertEqual(n, 5)
+            self.assertIn("backfilled=logs/preflight.1.log", msg)
+            n, msg = rb.backfill_preflight(t.root / ".release" / "1.0.0", "1.0.0")
+            self.assertEqual(n, 5)
+            m = t.model()
+            self.assertEqual(m["preflight"]["state"], "data")
+            self.assertEqual(len(m["preflight"]["rows"]), 5)
+            self.assertEqual(m["preflight"]["counts"], {"ok": 3, "warn": 1, "bad": 1})
+            self.assertEqual(m["preflight"]["as_of"], "2026-09-05T10:00:27Z")       # the ledger's stamp for the step
+            self.assertEqual(m["preflight"]["backfilled"], "logs/preflight.1.log")
+            self.assertEqual(m["sink"]["unparsed"], 0)
+            n, msg = rb.backfill_preflight(t.root / ".release" / "1.0.0", "1.0.0")
+            self.assertEqual(n, 0)
+            self.assertIn("refused", msg)
         finally:
             t.close()
 

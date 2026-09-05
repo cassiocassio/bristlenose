@@ -125,6 +125,11 @@
   .ch .rows span:nth-child(odd){color:var(--mute)}
   .mono{font-family:var(--mono);font-size:10px}
   pre{margin:0;font:10px/1.35 var(--mono);white-space:pre;overflow:auto}
+  /* the log pane: the pre scrolls inside a fixed-height pane; the pane's own resize handle sets the height */
+  #pane-log{display:flex;flex-direction:column;min-height:160px;height:320px}
+  #pane-log pre.logtail{flex:1;min-height:0;overflow:auto;background:#fafaf8;border:1px solid var(--rule);border-radius:6px;padding:6px 8px;white-space:pre-wrap;overflow-wrap:anywhere}
+  #pane-log select{font:10.5px var(--font);max-width:260px}
+  #pane-log .follow{color:var(--now);font:10px var(--mono)}
   .ev{display:grid;grid-template-columns:150px 60px 1fr;gap:8px;font:10px/1.35 var(--mono)}
   .ev .ts{color:var(--mute)} .ev .src{color:var(--now)} .ev .src.ledger{color:var(--ink);font-weight:600} .ev span{overflow-wrap:anywhere;min-width:0}
   .strip{display:flex;gap:2px;align-items:flex-end;height:26px}
@@ -240,9 +245,9 @@
 
   // preflight
   var pf = data.preflight;
-  var pfP = panel("preflight","Pre-flight","check-release-ready.sh", pf.state==="data" ? frag(pf.rows.length+" rows · "+Object.keys(pf.counts).map(function(k){return pf.counts[k]+" "+k;}).join(" · ")+" · ", ageEl(pf.as_of)) : "");
+  var pfP = panel("preflight","Pre-flight","check-release-ready.sh", pf.state==="data" ? frag(pf.rows.length+" rows · "+Object.keys(pf.counts).map(function(k){return pf.counts[k]+" "+k;}).join(" · ")+" · ", ageEl(pf.as_of), pf.backfilled ? " · backfilled from "+pf.backfilled : "") : "");
   if (pf.state === "ran-no-sink") add(pfP, nodata("the driver ran preflight (attempt "+pf.attempt+", rc "+pf.rc+") but no row lines reached the sink — an older check-release-ready.sh, or BN_EVENT_SINK not exported"));
-  else if (pf.state !== "data") add(pfP, nodata("no preflight rows in the sink — run release.sh run (or check-release-ready.sh under a sink)"));
+  else if (pf.state !== "data") add(pfP, nodata("no preflight rows in the sink — the gate ran before the sink existed, or outside release.sh run"+(data.log_index && data.log_index.preflight ? ". The driver captured its output: "+data.log_index.preflight.path+" ("+data.log_index.preflight.size+" bytes) — pick it in the Log pane" : "")));
   else { var g = $("div","chips"); pf.rows.forEach(function(r){ add(g, chip(r.result, r.label, r.evidence)); }); add(pfP, g); }
   idle(pfP, pf.state === "no-data");
   add(left, pfP);
@@ -357,11 +362,26 @@
 
   // ── the stream column: the step log, then every event ──────────────────
   var logs = data.logs || {};
-  var logIds = Object.keys(logs);
-  var lP = panel("log","Log", logIds.length ? logIds.join(", ") : "no failed or running step", h.with_logs ? "tails embedded" : "paths only — tails need --with-logs");
-  idle(lP, !logIds.length);
-  if (!logIds.length) add(lP, nodata("the driver keeps one log per step attempt under logs/; this pane shows the failed or running one"));
-  logIds.forEach(function(sid){ var l = logs[sid]; add(lP, $("div","sub", sid+": "+l.path+" · "+l.attempts+" attempt(s) · "+l.size+" bytes")); if (l.tail){ var pre = $("pre"); pre.textContent = l.tail.join("\n"); add(lP, pre); } });
+  var index = data.log_index || {}, indexIds = Object.keys(index).sort(function(a, b){ return (index[b].mtime || "").localeCompare(index[a].mtime || ""); });
+  var running = (data.line.stations || []).filter(function(s){ return s.state === "running"; }).map(function(s){ return s.id; });
+  var want = (window.__logPick && index[window.__logPick]) ? window.__logPick : data.log_focus;
+  var lP = panel("log","Log", want ? (want+"."+(index[want] ? index[want].attempts : "?")+".log · "+(index[want] ? index[want].size : "?")+" bytes") : "no step has a log yet",
+                 indexIds.length ? (indexIds.length+" logs · "+(h.with_logs ? "tails" : "paths only — tails need --with-logs")) : "");
+  idle(lP, !indexIds.length);
+  if (indexIds.length) {
+    var pick = $("select"); pick.title = "which step's log";
+    indexIds.forEach(function(sid){ var o = $("option", null, sid+" · attempt "+index[sid].attempts+" · "+index[sid].size+" bytes"+(running.indexOf(sid) >= 0 ? " · running" : "")); o.value = sid; if (sid === want) o.selected = true; add(pick, o); });
+    var head = $("div","sub"); add(head, pick, running.indexOf(want) >= 0 ? $("span","follow"," following the running step") : null); add(lP, head);
+    var pre = $("pre","logtail"); pre.setAttribute("data-log", want || "");
+    var entry = want && logs[want];
+    if (entry && entry.tail) pre.textContent = entry.tail.join("\n");
+    else if (!h.with_logs) pre.textContent = (want ? index[want].path : "")+"\n\ntails are not embedded in this board — regenerate with --with-logs, or open the file";
+    else pre.textContent = "loading "+(want ? index[want].path : "")+"…";
+    add(lP, pre);
+    pick.addEventListener("change", function(){ window.__logPick = pick.value; if (typeof window.__showLog === "function") window.__showLog(pick.value); });
+  } else {
+    add(lP, nodata("the driver keeps one log per step attempt under logs/; none exists for this run yet"));
+  }
   add(stream, lP);
   var eP = panel("events","Events","ledger + sink, merged by (ts, source, line) · newest first", "last "+data.events.length+" of "+(data.events_total!=null?data.events_total:"?")+(data.sink.present ? (" · "+data.sink.events+" sink events"+(data.sink.unparsed?" · "+data.sink.unparsed+" UNPARSED":"")+(data.sink.partial?" · partial trailing line":"")) : " · no sink file"));
   var ev = $("div","ev");
@@ -456,13 +476,28 @@
     var slices = function(d){
       var m = {top: [d.version, d.phase, d.header, d.liveness && {lock: d.liveness.lock, alive: d.liveness.alive, pid: d.liveness.pid, hbs: d.liveness.heartbeat && d.liveness.heartbeat.state}, d.confounded.count, d.confounded.computable, d.live && d.live.error],
                line: d.line, "pane-activity": d.activity, "pane-preflight": d.preflight, "pane-ci": d.ci, "pane-ratchets": d.ratchets, "pane-tag": d.tag,
-               "pane-channels": d.channels, "pane-clocks": d.clocks, "pane-confounded": d.confounded, "pane-log": d.logs, "pane-events": [d.events, d.events_total, d.sink]};
+               "pane-channels": d.channels, "pane-clocks": d.clocks, "pane-confounded": d.confounded, "pane-log": [d.log_index, d.log_focus], "pane-events": [d.events, d.events_total, d.sink]};
       (d.build.lanes || []).forEach(function(l){ m["pane-build-"+l.id] = l; });
       return m;
     };
     var K = payload.live.token ? "?k="+encodeURIComponent(payload.live.token) : "";
     var unreachable = function(why){ var p = document.getElementById("live-pill"); if (!p) return; p.setAttribute("data-unreachable", "1"); p.classList.add("stale"); p.textContent = "live · unreachable — "+why; };
     var reachable = function(){ var p = document.getElementById("live-pill"); if (p) p.removeAttribute("data-unreachable"); };
+    // the log pane never swaps: its pre is updated in place so the reader's scroll survives, and it
+    // follows the bottom only while the reader is already there
+    var setLog = function(sid, lines){
+      var pre = document.querySelector("#pane-log pre.logtail"); if (!pre) return;
+      var atBottom = pre.scrollHeight - pre.scrollTop - pre.clientHeight < 24;
+      var text = lines.join("\n"); if (pre.textContent === text && pre.getAttribute("data-log") === sid) return;
+      pre.setAttribute("data-log", sid); pre.textContent = text;
+      if (atBottom) pre.scrollTop = pre.scrollHeight;
+    };
+    var fetchLog = function(sid){
+      if (typeof fetch !== "function" || !sid) return;
+      fetch("/log/"+encodeURIComponent(sid)+K, {cache: "no-store"}).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){ if (j && j.tail) setLog(sid, j.tail); else if (j === null) setLog(sid, ["(no tail — "+sid+" has no log the server can read)"]); }).catch(function(){});
+    };
+    window.__showLog = function(sid){ var e = latest && latest.logs && latest.logs[sid]; if (e && e.tail) setLog(sid, e.tail); else fetchLog(sid); };
+    if (payload.log_focus && !(payload.logs && payload.logs[payload.log_focus] && payload.logs[payload.log_focus].tail)) fetchLog(payload.log_focus);
     var patch = function(next){
       if (latest && latest.live && next.live && next.live.generation < latest.live.generation) return;  // an older pull landing after a newer one
       var sN = slices(next), sO = slices(latest), ids = Object.keys(sN);
@@ -479,6 +514,9 @@
         var o = document.getElementById(id), n = tmp.querySelector("#"+(window.CSS && CSS.escape ? CSS.escape(id) : id));
         if (o && n) { o.replaceWith(n); n.classList.add("changed"); }
       });
+      // the focused log's tail refreshes every pull whether or not the pane moved; the reader keeps their place
+      var sid = (window.__logPick && next.log_index && next.log_index[window.__logPick]) ? window.__logPick : next.log_focus;
+      if (sid) { var e = next.logs && next.logs[sid]; if (e && e.tail) setLog(sid, e.tail); else if (moved.indexOf("pane-log") >= 0) fetchLog(sid); }
       stamp();
       latest = next; tick();
     };

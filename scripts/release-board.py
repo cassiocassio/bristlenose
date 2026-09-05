@@ -47,6 +47,7 @@ import math
 import os
 import re
 import secrets
+import shlex
 import shutil
 import signal
 import sys
@@ -74,6 +75,7 @@ try:
 except ValueError:
     HEARTBEAT_CADENCE_S = HEARTBEAT_CADENCE_DEFAULT_S
 LOG_TAIL_BYTES = 65536
+LOG_TAIL_LINES = 200
 
 VERSION_RE = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+[A-Za-z0-9.+-]*")
 
@@ -413,7 +415,7 @@ def read_sink(run_dir: Path) -> dict:
     return out
 
 
-def tail_lines(path: Path, n: int = 12, span: int = LOG_TAIL_BYTES) -> list[str]:
+def tail_lines(path: Path, n: int = LOG_TAIL_LINES, span: int = LOG_TAIL_BYTES) -> list[str]:
     """The last n lines by seeking, never by reading the file: a `gh run watch`
     transcript grows to megabytes over a 38-minute gate and the live server
     re-reads a running step's log on every write (perf review, 5 Sep 2026)."""
@@ -428,6 +430,54 @@ def tail_lines(path: Path, n: int = 12, span: int = LOG_TAIL_BYTES) -> list[str]
         lines = lines[1:]  # the first line of a mid-file chunk is a fragment
     lines = ["".join(ch for ch in ln if ch >= " " and ch != "\x7f" and not ("\x80" <= ch <= "\x9f"))[:200] for ln in lines if ln.strip()]
     return lines[-n:]
+
+
+_STEP_ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,40}$")
+
+
+def log_index(run_dir: Path, root: Path = ROOT) -> dict:
+    """Every step that has a captured log: {step: {path, attempts, size, mtime}},
+    newest attempt per step. The Log pane's picker; the driver keeps one log per
+    step attempt under logs/ whether or not the sink ever saw the step."""
+    logdir = run_dir / "logs"
+    out: dict = {}
+    try:
+        names = sorted(os.listdir(logdir)) if logdir.exists() else []
+    except OSError:
+        return out
+    by_step: dict[str, list[Path]] = {}
+    for nm in names:
+        if not nm.endswith(".log"):
+            continue
+        stem = nm[:-4]
+        sid, _, att = stem.rpartition(".")
+        if not sid or not att.isdigit() or not _STEP_ID.match(sid):
+            continue
+        by_step.setdefault(sid, []).append(logdir / nm)
+    for sid, files in by_step.items():
+        files.sort(key=lambda q: int(q.stem.rpartition(".")[2]))
+        newest = files[-1]
+        try:
+            st = newest.stat()
+        except OSError:
+            continue
+        out[sid] = {"path": str(newest.relative_to(root)) if str(newest).startswith(str(root)) else f"{run_dir.name}/logs/{newest.name}",
+                    "attempts": len(files), "size": st.st_size, "mtime": dt.datetime.fromtimestamp(st.st_mtime, dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
+    return out
+
+
+def log_focus(stations: list[dict], index: dict) -> str | None:
+    """Which log the pane shows by default: the running step's, else the newest
+    failed, else the most recently written."""
+    running = [s["id"] for s in stations if s["state"] in ("running", "stranded", "corrupt") and s["id"] in index]
+    if running:
+        return running[-1]
+    failed = [s["id"] for s in stations if s["state"] == "fail" and s["id"] in index]
+    if failed:
+        return failed[-1]
+    if index:
+        return max(index, key=lambda k: index[k]["mtime"])
+    return None
 
 
 def read_logs(run_dir: Path, steps_needed: list[str], with_logs: bool, root: Path = ROOT) -> dict:
@@ -779,6 +829,65 @@ def ci_pane(grouped: dict, ci_sha: str | None, conf: dict | None = None) -> dict
             "jobs": job_rows, "matrix": matrix, "ci_sha": ci_sha}
 
 
+_GLYPH = {"✓": "ok", "⚠": "warn", "✗": "bad"}
+_PF_ROW = re.compile(r"^  ([✓⚠✗]) (.*)$")
+
+
+def parse_preflight_log(text: str) -> list[tuple[str, str, str]]:
+    """The gate's own printf, read back: `  <glyph> %-26s %s`. A label shorter
+    than 26 columns is followed by two or more spaces; one of 26 or more by
+    exactly one. → [(label, result, evidence)]."""
+    rows = []
+    for raw in text.replace("\r", "\n").split("\n"):
+        ln = _ANSI.sub("", raw)
+        m = _PF_ROW.match(ln)
+        if not m:
+            continue
+        rest = m.group(2)
+        parts = re.split(r"\s{2,}", rest, maxsplit=1)
+        if len(parts) == 2:
+            label, evidence = parts
+        elif len(rest) > 27 and rest[26] == " ":
+            label, evidence = rest[:26], rest[27:]
+        else:
+            label, evidence = rest.strip(), ""
+        rows.append((label.strip(), _GLYPH[m.group(1)], evidence.strip()))
+    return rows
+
+
+def backfill_preflight(run_dir: Path, version: str, dry_run: bool = False) -> tuple[int, str]:
+    """Write the preflight rows a pre-sink run never recorded, from the driver's
+    captured output. Provenance travels on every row (`backfilled=<log>`), the
+    timestamp is the ledger's own for the step, and a sink that already holds
+    preflight rows is refused — a backfill is a deliberate, one-time write, not
+    a derivation the board makes on read. → (rows written, message)."""
+    sink = run_dir / "bn-events.log"
+    if sink.is_file():
+        for no, kind, fields in bn_events.parse_stream(bn_events.read_sink_text(sink))[0]:
+            if kind == "row" and fields.get("src") == "preflight":
+                return 0, f"refused: the sink already holds preflight rows (line {no}); nothing to backfill"
+    index = log_index(run_dir, run_dir.parent.parent)
+    if "preflight" not in index:
+        return 0, "refused: no logs/preflight.*.log — the driver captured nothing for the gate"
+    log_path = run_dir / "logs" / Path(index["preflight"]["path"]).name
+    rows = parse_preflight_log(log_path.read_text(encoding="utf-8", errors="replace"))
+    if not rows:
+        return 0, f"refused: {log_path.name} holds no rows in the gate's format"
+    ts = None
+    ledger = read_ledger(run_dir)
+    for ev in ledger["events"]:
+        if ev.get("step") == "preflight" and ev.get("status") in ("ok", "fail"):
+            ts = ev.get("ts")
+    ts = ts or index["preflight"]["mtime"]
+    lines = [f"@bn row ts={ts} run={version} src=preflight label={shlex.quote(label)} result={res} evidence={shlex.quote(ev or '')} backfilled={shlex.quote('logs/' + log_path.name)}\n"
+             for label, res, ev in rows]
+    if dry_run:
+        return len(rows), "".join(lines)
+    with open(sink, "a", encoding="utf-8") as fh:
+        fh.write("".join(lines))
+    return len(rows), f"wrote {len(rows)} preflight rows to {sink.name} from {log_path.name}, stamped {ts}"
+
+
 def preflight_pane(grouped: dict) -> dict:
     batches = [b for b in grouped["preflight_batches"] if b]
     if not batches:
@@ -791,7 +900,8 @@ def preflight_pane(grouped: dict) -> dict:
     for r in latest:
         counts[r.get("result", "?")] = counts.get(r.get("result", "?"), 0) + 1
     ci_row = next((r for r in latest if r.get("label") == CI_VERDICT_ROW), None)
-    return {"state": "data", "rows": [{"label": r.get("label"), "result": r.get("result"), "evidence": r.get("evidence", "")} for r in latest],
+    backfilled = next((r.get("backfilled") for r in latest if r.get("backfilled")), None)
+    return {"state": "data", "backfilled": backfilled, "rows": [{"label": r.get("label"), "result": r.get("result"), "evidence": r.get("evidence", "")} for r in latest],
             "counts": counts, "batches": len(batches), "as_of": latest[-1].get("ts"),
             "ci_verdict": {"result": ci_row.get("result"), "evidence": ci_row.get("evidence", "")} if ci_row else None}
 
@@ -954,7 +1064,13 @@ def build_model(root: Path, version: str, with_logs: bool, narrate=lambda s: Non
     for c in channels["cards"]:
         c["url"] = links["channels"].get(c["name"])
     clocks = clocks_pane(grouped)
+    index = log_index(run_dir, root)
+    focus = log_focus(stations, index)
+    # tails travel for the failed/running steps and the focused one; every other log is a path
+    # in the index (live mode fetches it on demand from /log/<step>)
     needing_logs = [s["id"] for s in stations if s["state"] in ("fail", "running", "stranded", "corrupt")]
+    if focus and focus not in needing_logs:
+        needing_logs.append(focus)
     lane_logs = read_logs(run_dir, [ln for ln in lane_ids(steps) if ln not in needing_logs], False, root)
     logs = read_logs(run_dir, needing_logs, with_logs, root)
     steps_problems = list(steps_problems) + lane_logs.pop("_problems", []) + logs.pop("_problems", []) + links.get("withheld", [])
@@ -1001,6 +1117,8 @@ def build_model(root: Path, version: str, with_logs: bool, narrate=lambda s: Non
         "events_total": events_total(ledger, sink),
         "activity": act,
         "logs": logs,
+        "log_index": index,
+        "log_focus": focus,
         "sink": {"present": sink["present"], "events": len(sink["events"]), "unparsed": len(sink["unparsed"]),
                  "partial": sink["partial"], "as_of": sink["as_of"], "driver_runs": len(grouped["driver_runs"]),
                  "meta": {k: v for k, v in grouped["meta"].items() if k in ("title", "done_title", "bundle")}},
@@ -1338,6 +1456,20 @@ class BoardHandler(http.server.BaseHTTPRequestHandler):
             model, err = st.snapshot()
             body = json.dumps(model if model is not None else {"error": err}, ensure_ascii=True, allow_nan=False).encode("utf-8")
             self._send(200 if model is not None else 503, "application/json; charset=utf-8", body)
+        elif path.startswith("/log/"):
+            sid = path[5:]
+            with st.lock:
+                model = st.model
+            idx = (model or {}).get("log_index") or {}
+            if not _STEP_ID.match(sid) or sid not in idx:
+                self._send(404, "text/plain; charset=utf-8", b"")
+                return
+            if not st.with_logs:
+                self._send(403, "text/plain; charset=utf-8", b"tails need --with-logs")
+                return
+            entry = read_logs(st.run_dir, [sid], True, st.root).get(sid)
+            body = json.dumps({"step": sid, **(entry or {})}, ensure_ascii=True, allow_nan=False).encode("utf-8")
+            self._send(200 if entry else 404, "application/json; charset=utf-8", body)
         elif path == "/health":
             with st.lock:
                 body = json.dumps({"generation": st.generation, "version": st.version, "error": st.error, "changed_at": st.changed_at}).encode("utf-8")
@@ -1443,6 +1575,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--with-logs", action="store_true", help="also write board-with-logs.html carrying raw log tails — do not attach it to anything")
     ap.add_argument("--json", action="store_true", help="print board.json to stdout instead of writing files")
     ap.add_argument("--replay", action="store_true", help="write board-replay.html: the board at every ledger line, with back/forward controls (design tool — not a live view)")
+    ap.add_argument("--backfill-preflight", action="store_true", help="write the preflight rows a pre-sink run never recorded, from the driver's captured logs/preflight.N.log (refused if rows exist)")
+    ap.add_argument("--dry-run", action="store_true", help="with --backfill-preflight: print the rows, write nothing")
     ap.add_argument("--serve", action="store_true", help="serve the board live on loopback with a per-run token: the page patches itself as the run dir changes; add --with-logs for tails")
     ap.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"with --serve: port (default {DEFAULT_PORT}; 0 = a free one, but the browser's saved layout is keyed by origin)")
     ap.add_argument("--poll", type=float, default=1.0, help="with --serve: seconds between run-dir checks")
@@ -1464,6 +1598,13 @@ def main(argv: list[str] | None = None) -> int:
     if not (run_dir / "events.jsonl").is_file():
         sys.stderr.write(f"error: {run_dir} has no events.jsonl — not a run\n")
         return 1
+    if args.backfill_preflight:
+        n, msg = backfill_preflight(run_dir, version, args.dry_run)
+        sys.stderr.write(("  " if args.dry_run else "  ") + (msg if not args.dry_run else f"{n} rows would be written:\n"))
+        if args.dry_run:
+            sys.stdout.write(msg)
+        sys.stderr.write("\n" if not args.dry_run else "")
+        return 0 if n else 1
     if args.serve:
         if args.poll <= 0:
             ap.error("--poll must be > 0")

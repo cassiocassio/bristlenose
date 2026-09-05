@@ -40,8 +40,10 @@ const iso = (ms) => new Date(ms).toISOString().replace(/\.\d{3}Z$/, "Z");
 fs.writeFileSync(path.join(run, "events.jsonl"), [ev(iso(T0), "run", "started"), ev(iso(T0 + 1000), "preflight", "ok", "1s"), ev(iso(T0 + 2000), "bump", "ok", "1s"), ev(iso(T0 + 3000), "build-all", "running", "attempt 1")].join("\n") + "\n");
 fs.mkdirSync(path.join(run, ".lock")); fs.writeFileSync(path.join(run, ".lock", "pid"), String(process.pid));
 fs.writeFileSync(path.join(run, "heartbeat"), `${Math.floor((Date.now() - 20000) / 1000)}\tbuild-all\t60\tsigning\n`);
+fs.mkdirSync(path.join(run, "logs")); for (const f of ["preflight.1.log", "bump.1.log"]) fs.writeFileSync(path.join(run, "logs", f), "done\n");
+fs.writeFileSync(path.join(run, "logs", "build-all.1.log"), Array.from({ length: 30 }, (_, i) => `building line ${i}`).join("\n") + "\n");
 
-const model = (extraArgs) => JSON.parse(execFileSync(PY, [GEN, "1.0.0", "--json", "--root", work, ...(extraArgs || [])], { encoding: "utf8" }));
+const model = (extraArgs) => JSON.parse(execFileSync(PY, [GEN, "1.0.0", "--json", "--with-logs", "--root", work, ...(extraArgs || [])], { encoding: "utf8" }));
 const htmlFor = (m) => {
   // the generator's own inlining, via a tiny wrapper: keeps the escaping rule in one place
   const out = path.join(work, "out"); fs.mkdirSync(out, { recursive: true });
@@ -64,6 +66,10 @@ console.log("1 · a live page renders every pane, and the tick counts from stamp
   eq("no fault band", null, d.getElementById("fault"));
   for (const id of ["top", "line", "main", "pane-activity", "pane-preflight", "pane-build-build-all", "pane-ci", "pane-tag", "pane-channels", "pane-clocks", "pane-confounded", "pane-log", "pane-events", "gutter-tag", "gutter-stream", "live-pill"]) if (!d.getElementById(id)) bad("missing #" + id);
   ok("every pane, gutter and the live pill exist");
+  const sel = d.querySelector("#pane-log select"), pre = d.querySelector("#pane-log pre.logtail");
+  eq("the log pane offers every step that has a log", 3, sel ? sel.options.length : 0);
+  eq("…and focuses the running step", "build-all", sel ? sel.value : null);
+  eq("…whose tail is in the pre", true, !!pre && /building|line/.test(pre.textContent));
   const running = d.querySelector(".station.running");
   eq("the running station pulses while the heartbeat is fresh (20 s old, cadence 300)", true, running.classList.contains("fresh"));
   const since = running.querySelector("[data-since]");

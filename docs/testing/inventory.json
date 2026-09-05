@@ -8,7 +8,7 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 4463
+        "tests": 4481
       },
       {
         "basis": "test files",
@@ -201,6 +201,7 @@
     },
     "local_hooks": {
       "agent_hooks": [
+        "SessionStart:* -> install-git-guards.sh",
         "PreToolUse:Bash -> block-checkout.sh",
         "PreToolUse:Bash -> block-private-add.sh",
         "PreToolUse:Edit|Write|MultiEdit -> block-env-edits.sh",

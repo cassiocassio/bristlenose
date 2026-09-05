@@ -122,7 +122,7 @@ def test_a_repair_is_a_warning_never_silent(caplog):
     assert "ScreenClusteringResult" in caplog.text
 
 
-def test_an_unrepairable_payload_raises_the_ORIGINAL_error():
+def test_an_unrepairable_payload_raises_the_original_error():
     """Not the last repair attempt's error — the first one describes what we got."""
     payload = {"clusters": [{"screen_label": "x"}]}   # genuinely missing fields
     with pytest.raises(ValidationError) as got:
@@ -169,7 +169,7 @@ def test_repair_is_one_level_deep_only():
 # ---------------------------------------------------------------------------
 
 
-def test_strict_structured_output_paths_do_NOT_repair():
+def test_strict_structured_output_paths_do_not_repair():
     """OpenAI and Azure go through strict Structured Outputs, where the API
     guarantees the shape. A ValidationError there is a real break in that
     guarantee, and repairing it would hide exactly the regression we need to

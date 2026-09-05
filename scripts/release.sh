@@ -32,6 +32,10 @@
 #   release.sh verify [<X.Y.Z>] [--abandoned <X.Y.Z>]
 #                                     bare = the tree's version
 #   release.sh status
+#   release.sh board [<X.Y.Z>] [--stop|--restart]
+#                                     print the live board's link, starting a
+#                                     detached server if none serves that run;
+#                                     bare = the newest run. --stop ends it.
 #   release.sh abandon [<X.Y.Z>]      bare = the sole run under .release/
 #   release.sh retry [<X.Y.Z>] <step> likewise
 #   release.sh recover [<X.Y.Z>]      after a failed or missing release run
@@ -487,6 +491,36 @@ board_ensure() {
     done
     printf '  %sboard%s  not up after 3s — see .release/%s/board-server.log\n' "${D:-}" "${N:-}" "$_v"
     return 0
+}
+
+# board — the standalone verb for what `run --board` does inside a run. --stop
+# sends INT to the pid in the handshake (only if its port answers, so a recycled
+# pid is never signalled); --restart is stop then ensure. Never fails.
+cmd_board() {
+    local _v="" _mode=ensure _f _pid _port
+    case "${1-}" in ""|-*) _v="$(resolve_run)" ;; *) _v="$1"; shift ;; esac
+    case "${1-}" in --stop) _mode=stop ;; --restart) _mode=restart ;; "") ;; *) die "board: unknown option $1" ;; esac
+    if [ "$_mode" != ensure ]; then
+        _f=".release/$_v/board-server.json"
+        if [ -f "$_f" ]; then
+            _pid="$(jq -r '.pid // empty' "$_f" 2>/dev/null)"; _port="$(jq -r '.port // empty' "$_f" 2>/dev/null)"
+            case "$_pid$_port" in *[!0-9]*|"") ;; *)
+                if ( exec 3<>"/dev/tcp/127.0.0.1/$_port" ) 2>/dev/null && kill -0 "$_pid" 2>/dev/null; then
+                    # TERM, not INT: a job started with `&` by a non-interactive shell (board_ensure's
+                    # spawn) inherits SIGINT ignored, and a process that never reinstalls a handler
+                    # would shrug it off. The server handles both; TERM reaches everything.
+                    kill -TERM "$_pid" 2>/dev/null
+                    for _ in 1 2 3 4 5 6 7 8 9 10; do kill -0 "$_pid" 2>/dev/null || break; sleep 0.3; done
+                    if kill -0 "$_pid" 2>/dev/null; then printf '  %sboard%s  did not stop (pid %s)\n' "${D:-}" "${N:-}" "$_pid"
+                    else printf '  %sboard%s  stopped (pid %s)\n' "${D:-}" "${N:-}" "$_pid"; fi
+                fi ;;
+            esac
+        else
+            printf '  %sboard%s  nothing serving %s\n' "${D:-}" "${N:-}" "$_v"
+        fi
+        [ "$_mode" = restart ] || return 0
+    fi
+    board_ensure "$_v"
 }
 
 [ "${RELEASE_LIB:-0}" = "1" ] && return 0 2>/dev/null
@@ -1497,10 +1531,11 @@ case "${1-}" in
     plan)    shift; cmd_plan "$@" ;;
     verify)  shift; cmd_verify "$@" ;;
     status|"") cmd_status ;;
+    board)   shift; cmd_board "$@" ;;
     abandon) shift; cmd_abandon "$@" ;;
     run)     shift; cmd_run "$@" ;;
     retry)   shift; cmd_retry "$@" ;;
     recover) shift; cmd_recover "$@" ;;
     -h|--help|help) usage ;;
-    *)       die "unknown command: $1 (try: plan run verify status abandon retry recover)" ;;
+    *)       die "unknown command: $1 (try: plan run verify status board abandon retry recover)" ;;
 esac

@@ -77,6 +77,11 @@ case "$(cat "$_be_root/out")" in *"board"*"http://127.0.0.1:"*"/?k=t"*) ok "spaw
 [ -f "$_be_root/.release/1.2.3/board-server.log" ] && ok "server log lands in the run dir" || bad "no board-server.log"
 ( cd "$_be_root" && RELEASE_BOARD_PY="$_be_root/fake-board.py" board_ensure 1.2.3 >"$_be_root/out2" 2>&1 )
 eq "already serving → prints the same link, spawns nothing" "$(cat "$_be_root/out")" "$(cat "$_be_root/out2")"
+# board --stop: ends the fake (its port answers, its pid is alive), removes nothing it did not write
+( cd "$_be_root" && cmd_board 1.2.3 --stop >"$_be_root/out3" 2>&1 ); eq "board --stop → exit 0" 0 "$?"
+case "$(cat "$_be_root/out3")" in *stopped*) ok "board --stop reports the pid it stopped" ;; *) bad "board --stop said: $(cat "$_be_root/out3")" ;; esac
+sleep 0.5; pgrep -f "fake-board.py 1.2.3" >/dev/null && bad "fake server still running after --stop" || ok "the server is gone after --stop"
+( cd "$_be_root" && cmd_board 1.2.3 --stop >"$_be_root/out4" 2>&1 ); eq "board --stop with nothing serving → exit 0" 0 "$?"
 pkill -f "fake-board.py 1.2.3" 2>/dev/null; rm -rf "$_be_root"
 # the rehearsal: the real writers (ev_append, sink.sh, report.sh) driven through a whole
 # synthetic release against the live server, with --check asserting the final model —

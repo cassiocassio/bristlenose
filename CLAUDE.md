@@ -288,6 +288,15 @@ The Bash tool runs under zsh. When a glob matches nothing, zsh prints `zsh: no m
 
 **Same family, one line up the stack: an unquoted glob in a *flag argument* kills the whole call.** `grep -rn "x" dir --include=*.swift` fails with `zsh: no matches found: --include=*.swift` — zsh tries to expand `*.swift` against the *current directory* before grep ever sees it, so the flag only survives when a matching file happens to sit in `cwd`. It works from the repo root and fails from anywhere else, which reads as "grep is broken here". Bash passes the same string through untouched, so the idiom is muscle memory from everywhere else. **Quote it: `--include='*.swift'`.** Applies equally to `--exclude=`, `rsync --filter=`, `find -name`, and any tool taking a pattern as a flag value.
 
+### `/dev/tcp` is bash, not zsh — a port probe sourced into the Bash tool reads every port as closed
+
+`release.sh`'s `board_link` checks the board's port with `( exec 3<>/dev/tcp/127.0.0.1/$port )`.
+Sourced into the Bash tool — which is zsh — that redirection fails on every port, the
+function returns silently, and "the driver prints nothing" reads as a bug in the function
+(5 Sep 2026: a live, tokened server, a correct handshake, an empty result; under `bash -c`
+the same call printed the link). Same family as the `log` builtin below: a shell default
+that fails quietly. Prove a bash function under `bash -c`, not by sourcing it into the tool.
+
 ### `log show` never reaches the unified log — `log` is a zsh BUILTIN, so use `/usr/bin/log`
 
 zsh ships a builtin named `log` (it lists watched users), so `log show --predicate …`

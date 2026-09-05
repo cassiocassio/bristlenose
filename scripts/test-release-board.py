@@ -588,6 +588,14 @@ class Html(unittest.TestCase):
         panes = set(re.findall(r'panel\("([a-z-]+)"', tpl))
         self.assertTrue(set(click.values()) <= panes, set(click.values()) - panes)
 
+    def test_template_lays_out_three_columns_with_two_gutters_and_the_band(self):
+        tpl = TEMPLATE.read_text()
+        code = tpl.split("<script>", 1)[1]
+        for token in ('"gutter-"+(a === 0 ? "tag" : "stream")', 'panel("log"', 'panel("events"', 'band.id = "pane-activity"', "--c3"):
+            self.assertIn(token, code, token)
+        self.assertNotIn('panel("activity"', code, "activity is the band under the line, not a pane")
+        self.assertIn("var(--c1,1fr) 14px var(--c2,1fr) 14px var(--c3,640px)", tpl)
+
     def test_json_flag_prints_what_the_file_would_hold_and_out_dir_is_honoured(self):
         t = Tree()
         try:

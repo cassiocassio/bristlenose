@@ -22,7 +22,7 @@
     --ok:#2e9e5b;--bad:#d0342c;--warn:#d9930d;--soft:#d9d9d6;--now:#0a66ff;--skip:#b9b9b7;--hatch:repeating-linear-gradient(135deg,#f3f3f1 0 4px,#fff 4px 8px);
     --font:-apple-system,"SF Pro Text",Inter,system-ui,sans-serif;--mono:"SF Mono",ui-monospace,Menlo,monospace}
   html,body{margin:0;background:var(--bg);color:var(--ink);font:11.5px/1.3 var(--font)}
-  .screen{max-width:1728px;margin:0 auto;padding:8px;display:grid;grid-template-rows:auto auto 1fr auto;gap:8px}
+  .screen{margin:0;padding:8px;display:grid;grid-template-rows:auto auto auto 1fr auto;gap:8px}
   .top{display:flex;flex-wrap:wrap;gap:16px;align-items:center;background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:8px 14px}
   .top h1{margin:0;font-size:14px;font-weight:600}
   .top .v{font:600 15px var(--mono)}
@@ -47,9 +47,20 @@
   .station small{font:10px var(--mono);color:var(--mute)}
   .station.irrev-after{border-right:1px dashed var(--bad);padding-right:4px}
   /* main grid */
-  .main{display:grid;grid-template-columns:1fr 14px 1fr;gap:8px;min-height:0}
-  .col{display:grid;gap:8px;align-content:start}
+  /* three columns: before the tag · after the tag · the stream. The gutters set
+     the widths by drag (persisted); double-click a gutter to reset. */
+  .main{display:grid;grid-template-columns:var(--c1,1fr) 14px var(--c2,1fr) 14px var(--c3,640px);gap:8px;min-height:0}
+  .col{display:grid;gap:8px;align-content:start;min-width:0}
+  .gutter{cursor:col-resize;user-select:none;touch-action:none;border-radius:4px}
+  .gutter:hover,.gutter.dragging{background:#e9f0ff}
   .divider{writing-mode:vertical-rl;text-orientation:mixed;display:flex;align-items:center;justify-content:center;color:var(--bad);font:600 9px var(--font);letter-spacing:.14em;border-left:1px dashed var(--bad);opacity:.8}
+  .gutter.plain{border-left:1px solid var(--rule2);opacity:.7}
+  /* the activity band: one skinny full-width row under the line — events belong to the whole process */
+  .band{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:4px 14px;display:flex;align-items:center;gap:12px;min-height:30px}
+  .band h2{margin:0;font-size:10.5px;font-weight:600;letter-spacing:.07em;color:var(--mute);text-transform:uppercase;white-space:nowrap}
+  .band h2 b{color:var(--ink);font-weight:600;letter-spacing:0;text-transform:none;font-size:11.5px;margin-left:8px}
+  .band .r{font:10px var(--mono);color:var(--mute);white-space:nowrap}
+  .band .strip{flex:1;height:22px;gap:1px}
   .panel{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:8px 10px;resize:vertical;overflow:auto;min-height:44px;max-height:520px}
   .panel h2{margin:0 0 6px;font-size:10.5px;font-weight:600;letter-spacing:.07em;color:var(--mute);text-transform:uppercase;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
   .panel h2 b{color:var(--ink);font-weight:600;letter-spacing:0;text-transform:none;font-size:11.5px}
@@ -87,7 +98,6 @@
   .ch .rows{display:grid;grid-template-columns:auto 1fr;gap:1px 8px;font-size:10.5px}
   .ch .rows span:nth-child(odd){color:var(--mute)}
   .mono{font-family:var(--mono);font-size:10px}
-  .log{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   pre{margin:0;font:10px/1.35 var(--mono);white-space:pre;overflow:auto}
   .ev{display:grid;grid-template-columns:150px 60px 1fr;gap:8px;font:10px/1.35 var(--mono)}
   .ev .ts{color:var(--mute)} .ev .src{color:var(--now)} .ev .src.ledger{color:var(--ink);font-weight:600}
@@ -159,8 +169,18 @@
   add(lineP, track);
   add(screen, lineP);
 
+  // ── activity band ───────────────────────────────────────────────────────
+  var act = data.activity;
+  var band = $("div","band"); band.id = "pane-activity";
+  var bh = $("h2"); add(bh, $("span",null,"ACTIVITY"), $("b",null,"events per minute")); add(band, bh);
+  var strip = $("div","strip"); var maxC = Math.max.apply(null, act.minutes.concat([1]));
+  act.minutes.forEach(function(c){ var b = $("i"); b.style.height = Math.max(2, Math.round(20*c/maxC))+"px"; b.title = c+" events"; add(strip, b); });
+  add(band, act.minutes.length ? strip : $("span","nodata","no timestamped events"));
+  add(band, $("span","r", act.start ? ("from "+fmtT(act.start)+" · "+act.minutes.length+" min"+(act.truncated ? " of "+act.span_minutes+" — TRUNCATED, "+act.dropped+" events beyond the strip" : "")+(act.unparseable ? " · "+act.unparseable+" unparseable timestamps excluded" : "")) : (act.unparseable ? act.unparseable+" unparseable timestamps, nothing to draw" : "")));
+  add(screen, band);
+
   // ── main ────────────────────────────────────────────────────────────────
-  var main = $("div","main"), left = $("div","col"), right = $("div","col");
+  var main = $("div","main"), left = $("div","col"), right = $("div","col"), stream = $("div","col");
 
   // preflight
   var pf = data.preflight;
@@ -263,24 +283,38 @@
   if (conf.notes && conf.notes.length){ var nl = $("ul"); conf.notes.forEach(function(n){ add(nl, $("li","nodata",n)); }); add(xP, nl); }
   add(right, xP);
 
-  add(main, left, $("div","divider","IRREVERSIBLE — THE TAG PUSH"), right);
-  add(screen, main);
-
-  // ── bottom: events, activity, failed-step log ───────────────────────────
-  var bottom = $("div","log");
+  // ── the stream column: the step log, then every event ──────────────────
+  var logs = data.logs || {};
+  var logIds = Object.keys(logs);
+  var lP = panel("log","Log", logIds.length ? logIds.join(", ") : "no failed or running step", h.with_logs ? "tails embedded" : "paths only — tails need --with-logs");
+  if (!logIds.length) add(lP, nodata("the driver keeps one log per step attempt under logs/; this pane shows the failed or running one"));
+  logIds.forEach(function(sid){ var l = logs[sid]; add(lP, $("div","sub", sid+": "+l.path+" · "+l.attempts+" attempt(s) · "+l.size+" bytes")); if (l.tail){ var pre = $("pre"); pre.textContent = l.tail.join("\n"); add(lP, pre); } });
+  add(stream, lP);
   var eP = panel("events","Events","ledger + sink, merged by (ts, source, line)", "last "+data.events.length+" of "+(data.events_total!=null?data.events_total:"?")+(data.sink.present ? (" · "+data.sink.events+" sink events"+(data.sink.unparsed?" · "+data.sink.unparsed+" UNPARSED":"")+(data.sink.partial?" · partial trailing line":"")) : " · no sink file"));
   var ev = $("div","ev");
-  data.events.forEach(function(r){ add(ev, $("span","ts",fmtT(r.ts)), $("span","src "+(r.src==="ledger"?"ledger":""), r.src), $("span",null,r.text)); });
+  // a 40-hex sha is a third of the column: show 8, keep the whole line in the tooltip
+  data.events.forEach(function(r){ var short = String(r.text).replace(/\b([0-9a-f]{8})[0-9a-f]{32}\b/g, "$1…"); var cell = $("span",null,short); if (short !== r.text) cell.title = r.text; add(ev, $("span","ts",fmtT(r.ts)), $("span","src "+(r.src==="ledger"?"ledger":""), r.src), cell); });
   add(eP, data.events.length ? ev : nodata());
-  add(bottom, eP);
-  var aP = panel("activity","Activity","events per minute", data.activity.start ? ("from "+fmtT(data.activity.start)+" · "+data.activity.minutes.length+" min"+(data.activity.truncated ? " of "+data.activity.span_minutes+" — TRUNCATED, "+data.activity.dropped+" events beyond the strip" : "")+(data.activity.unparseable ? " · "+data.activity.unparseable+" unparseable timestamps excluded" : "")) : (data.activity.unparseable ? data.activity.unparseable+" unparseable timestamps, nothing to draw" : ""));
-  var strip = $("div","strip"); var maxC = Math.max.apply(null, data.activity.minutes.concat([1]));
-  data.activity.minutes.forEach(function(c){ var b = $("i"); b.style.height = Math.max(2, Math.round(24*c/maxC))+"px"; b.title = c+" events"; add(strip, b); });
-  add(aP, data.activity.minutes.length ? strip : nodata());
-  var logs = data.logs || {};
-  Object.keys(logs).forEach(function(sid){ var l = logs[sid]; add(aP, $("div","sub", sid+": log "+l.path+" · "+l.attempts+" attempt(s) · "+l.size+" bytes")); if (l.tail){ var pre = $("pre"); pre.textContent = l.tail.join("\n"); add(aP, pre); } });
-  add(bottom, aP);
-  add(screen, bottom);
+  add(stream, eP);
+
+  // ── gutters: drag to set the three widths; double-click resets ──────────
+  var COLS_KEY = "rb-cols", MIN = 360;
+  var applyCols = function(w){ main.style.setProperty("--c1", w[0]+"px"); main.style.setProperty("--c2", w[1]+"px"); main.style.setProperty("--c3", w[2]+"px"); };
+  var currentCols = function(){ return [left, right, stream].map(function(c){ return c.getBoundingClientRect().width; }); };
+  try { var saved = JSON.parse(localStorage.getItem(COLS_KEY) || "null"); if (saved && saved.length === 3 && saved.every(function(x){ return x >= MIN; })) applyCols(saved); } catch(e) {}
+  var gutter = function(cls, text, a, b){
+    var g = $("div", "gutter "+cls, text); g.id = "gutter-"+(a === 0 ? "tag" : "stream");
+    g.addEventListener("pointerdown", function(e){
+      var x0 = e.clientX, w = currentCols(); g.setPointerCapture(e.pointerId); g.classList.add("dragging");
+      var move = function(ev2){ var d = ev2.clientX - x0; var na = w[a] + d, nb = w[b] - d; if (na < MIN || nb < MIN) return; var nw = w.slice(); nw[a] = na; nw[b] = nb; applyCols(nw); };
+      var up = function(){ g.classList.remove("dragging"); g.removeEventListener("pointermove", move); g.removeEventListener("pointerup", up); try { localStorage.setItem(COLS_KEY, JSON.stringify(currentCols())); } catch(e2) {} };
+      g.addEventListener("pointermove", move); g.addEventListener("pointerup", up);
+    });
+    g.addEventListener("dblclick", function(){ ["--c1","--c2","--c3"].forEach(function(v){ main.style.removeProperty(v); }); try { localStorage.removeItem(COLS_KEY); } catch(e3) {} });
+    return g;
+  };
+  add(main, left, gutter("divider", "IRREVERSIBLE — THE TAG PUSH", 0, 1), right, gutter("plain", "", 1, 2), stream);
+  add(screen, main);
 
   var foot = $("footer");
   add(foot, $("span",null,"Read, never derived: every tile is a file the train wrote. No data is a third state."),

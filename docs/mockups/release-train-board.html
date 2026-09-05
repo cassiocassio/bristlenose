@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Release train — status board (loose mockup)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* Loose mockup — hand-rolled tokens. Sketch B of three: one fixed 16" screen (1728×1117 pt),
+     build on the left, release channels on the right, grid of grids, no scrolling. */
+  :root{
+    --bg:#f4f4f2; --panel:#fff; --ink:#1d1d1f; --mute:#8a8a8e; --rule:#e3e3e0; --rule2:#cfcfcc;
+    --ok:#2e9e5b; --bad:#d0342c; --warn:#d9930d; --soft:#d9d9d6; --now:#0a66ff; --skip:#b9b9b7;
+    --font:-apple-system,"SF Pro Text",Inter,system-ui,sans-serif; --mono:"SF Mono",ui-monospace,Menlo,monospace;
+  }
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:11.5px/1.3 var(--font)}
+  .screen{width:1728px;height:1117px;margin:0 auto;display:grid;grid-template-rows:44px 1fr 120px;gap:8px;padding:8px;box-sizing:border-box}
+  /* top bar */
+  .top{display:grid;grid-template-columns:auto auto 1fr auto auto;gap:22px;align-items:center;background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:0 14px}
+  .top h1{margin:0;font-size:14px;font-weight:600}
+  .top .v{font:600 15px var(--mono)}
+  .top .phase{display:flex;gap:6px}
+  .top .phase span{padding:3px 9px;border-radius:12px;border:1px solid var(--rule2);color:var(--mute);font-size:11px}
+  .top .phase span.done{background:#eaf6ee;border-color:#cfe9d8;color:var(--ok)}
+  .top .phase span.now{background:#e9f0ff;border-color:#bcd0ff;color:var(--now);font-weight:600}
+  .top .clock{font:600 13px var(--mono)}
+  .top .eta{color:var(--mute);font-size:11px}
+  /* main */
+  .main{display:grid;grid-template-columns:1fr 14px 1fr;gap:8px;min-height:0}
+  .col{display:grid;gap:8px;min-height:0}
+  .left{grid-template-rows:auto auto 1fr auto}
+  .right{grid-template-rows:auto 1fr auto}
+  .divider{display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--bad);font:600 9px var(--font);letter-spacing:.14em;writing-mode:vertical-rl;text-orientation:mixed;border-left:1px dashed var(--bad);opacity:.8}
+  .panel{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:8px 10px;min-height:0;overflow:hidden}
+  .panel h2{margin:0 0 6px;font-size:10.5px;font-weight:600;letter-spacing:.07em;color:var(--mute);text-transform:uppercase;display:flex;gap:8px;align-items:baseline}
+  .panel h2 b{color:var(--ink);font-weight:600;letter-spacing:0;text-transform:none;font-size:11.5px}
+  .panel h2 .r{margin-left:auto;font:10px var(--mono);color:var(--mute);letter-spacing:0;text-transform:none}
+  /* chips grid (preflight) */
+  .chips{display:grid;grid-template-columns:repeat(8,1fr);gap:3px 6px}
+  .chip{display:flex;align-items:center;gap:5px;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--soft)}
+  .ok .dot{background:var(--ok)} .bad .dot{background:var(--bad)} .warn .dot{background:var(--warn)} .now .dot{background:var(--now);box-shadow:0 0 0 3px #dbe7ff} .skip .dot{background:transparent;border:1px solid var(--skip)}
+  /* steps with elapsed bars */
+  .steps{display:grid;grid-template-columns:28px 1fr 160px 44px;gap:2px 8px;align-items:center;font-size:11px}
+  .steps .k{font:10px var(--mono);color:var(--mute)}
+  .steps .bar{height:6px;background:#ececea;border-radius:3px;position:relative;overflow:hidden}
+  .steps .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--ok);border-radius:3px}
+  .steps .bar i.est{background:repeating-linear-gradient(90deg,#c9d7ff 0 4px,#fff 4px 6px)}
+  .steps .bar i.bad{background:var(--bad)} .steps .bar i.now{background:var(--now)}
+  .steps .t{font:10px var(--mono);color:var(--mute);text-align:right}
+  .steps .name{display:flex;gap:6px;align-items:center}
+  .sub{display:inline-flex;gap:3px;margin-left:4px}
+  .sub b{width:14px;height:10px;border-radius:2px;background:var(--soft);font:8.5px/10px var(--mono);color:#fff;text-align:center;font-weight:600}
+  .sub b.ok{background:var(--ok)} .sub b.bad{background:var(--bad)} .sub b.now{background:var(--now)} .sub b.warn{background:var(--warn)}
+  /* CI matrix */
+  .matrix{display:grid;grid-template-columns:70px repeat(5,1fr);gap:3px;font-size:10.5px}
+  .matrix .h{color:var(--mute);font:10px var(--mono);text-align:center}
+  .matrix .rl{color:var(--mute);font:10px var(--mono)}
+  .cell{height:18px;border-radius:3px;background:var(--soft);display:flex;align-items:center;justify-content:center;font:600 10px var(--mono);color:#fff}
+  .cell.ok{background:var(--ok)} .cell.bad{background:var(--bad)} .cell.warn{background:var(--warn)} .cell.now{background:var(--now)} .cell.na{background:transparent;border:1px dashed var(--soft);color:var(--skip)}
+  .gates{display:grid;grid-template-columns:repeat(9,1fr);gap:3px;margin-top:6px}
+  .gate{border-radius:3px;padding:3px 4px;font:10px var(--font);border:1px solid var(--rule);display:flex;justify-content:space-between}
+  .gate.ok{border-color:#cfe9d8;background:#f2faf5} .gate.bad{border-color:#f1c9c6;background:#fff4f3} .gate.soft{border-style:dashed;color:var(--mute)}
+  .gate small{font-family:var(--mono);color:var(--mute)}
+  /* ratchets */
+  .ratchets{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+  .rat{font-size:10px;color:var(--mute)}
+  .rat b{display:block;font:600 11px var(--mono);color:var(--ink)}
+  .meter{height:5px;background:#ececea;border-radius:3px;margin-top:3px;position:relative}
+  .meter i{position:absolute;left:0;top:0;bottom:0;background:var(--ok);border-radius:3px}
+  .meter i.over{background:var(--bad)} .meter em{position:absolute;top:-3px;width:1px;height:11px;background:var(--ink)}
+  /* channels */
+  .channels{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:8px;min-height:0}
+  .ch{border:1px solid var(--rule);border-radius:7px;padding:7px 9px;display:grid;grid-template-rows:auto auto 1fr auto;gap:3px;min-height:0;position:relative}
+  .ch.done{border-color:#cfe9d8} .ch.now{border-color:#bcd0ff;box-shadow:0 0 0 2px #e9f0ff inset} .ch.bad{border-color:#f1c9c6} .ch.todo{opacity:.65}
+  .ch .n{display:flex;align-items:center;gap:7px;font-weight:600;font-size:12px}
+  .ch .n .dot{width:8px;height:8px}
+  .ch .n .idx{font:10px var(--mono);color:var(--mute);margin-left:auto}
+  .ch .trig{color:var(--mute);font-size:10.5px}
+  .ch .rows{display:grid;grid-template-columns:auto 1fr;gap:1px 8px;font-size:10.5px;align-content:start}
+  .ch .rows span:nth-child(odd){color:var(--mute)}
+  .ch .rows .mono{font-family:var(--mono);font-size:10px}
+  .ch .life{display:flex;align-items:center;gap:6px;font:10px var(--mono);color:var(--mute)}
+  .ch .life .meter{flex:1}
+  .probe{display:inline-flex;gap:3px}
+  .probe b{width:9px;height:9px;border-radius:2px;background:var(--soft)}
+  .probe b.ok{background:var(--ok)} .probe b.bad{background:var(--bad)} .probe b.pend{background:var(--warn)} .probe b.now{background:var(--now)}
+  /* bottom: log */
+  .log{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .log .panel{padding:6px 10px}
+  pre{margin:0;font:10px/1.35 var(--mono);color:var(--ink);white-space:pre;overflow:hidden}
+  pre .t{color:var(--mute)} pre .ok{color:var(--ok)} pre .bad{color:var(--bad)} pre .warn{color:var(--warn)} pre .now{color:var(--now)}
+  .strip{display:flex;gap:3px;align-items:flex-end;height:26px}
+  .strip i{flex:1;background:#dfe6ff;border-radius:2px 2px 0 0}
+</style>
+</head>
+<body>
+<div class="screen">
+  <div class="top">
+    <h1>Release train</h1>
+    <span class="v">v0.30.0</span>
+    <div class="phase"><span class="done">plan</span><span class="done">build</span><span class="now">upload</span><span>gate</span><span>tag</span><span>publish</span><span>verify</span></div>
+    <span class="clock">23:47 · +2h43</span>
+    <span class="eta">tag window opens 21:00 Fri (working day) · est. to ready 41m (Welford p50 · n=9)</span>
+  </div>
+
+  <div class="main">
+    <!-- LEFT: BUILD -->
+    <div class="col left">
+      <div class="panel">
+        <h2>Pre-flight <b>check-release-ready.sh</b> <span class="r">34 rows · 31 ok · 2 warn · 1 bad · 21:04</span></h2>
+        <div class="chips">
+          <div class="chip ok"><i class="dot"></i>branch</div><div class="chip ok"><i class="dot"></i>working tree</div><div class="chip ok"><i class="dot"></i>venv python</div><div class="chip ok"><i class="dot"></i>sidecar venv python</div>
+          <div class="chip ok"><i class="dot"></i>CI status</div><div class="chip ok"><i class="dot"></i>ci streak</div><div class="chip ok"><i class="dot"></i>release streak</div><div class="chip ok"><i class="dot"></i>publish gate</div>
+          <div class="chip ok"><i class="dot"></i>shippable diff</div><div class="chip ok"><i class="dot"></i>pre-bump consistency</div><div class="chip ok"><i class="dot"></i>CHANGELOG entry</div><div class="chip ok"><i class="dot"></i>CHANGELOG body</div>
+          <div class="chip ok"><i class="dot"></i>README changelog</div><div class="chip ok"><i class="dot"></i>man page .TH</div><div class="chip ok"><i class="dot"></i>pbxproj MARKETING</div><div class="chip ok"><i class="dot"></i>doc surfaces</div>
+          <div class="chip warn"><i class="dot"></i>dependency drift</div><div class="chip ok"><i class="dot"></i>dependency majors</div><div class="chip ok"><i class="dot"></i>providers live</div><div class="chip ok"><i class="dot"></i>ruff</div>
+          <div class="chip ok"><i class="dot"></i>Apple Distribution</div><div class="chip ok"><i class="dot"></i>Developer ID</div><div class="chip ok"><i class="dot"></i>installer cert</div><div class="chip ok"><i class="dot"></i>provisioning profile</div>
+          <div class="chip ok"><i class="dot"></i>ASC config</div><div class="chip ok"><i class="dot"></i>ASC private key</div><div class="chip ok"><i class="dot"></i>SIGN_IDENTITY</div><div class="chip ok"><i class="dot"></i>skip-worktree</div>
+          <div class="chip ok"><i class="dot"></i>copr token</div><div class="chip ok"><i class="dot"></i>copr auth</div><div class="chip ok"><i class="dot"></i>tap workflow</div><div class="chip bad"><i class="dot"></i>git tag</div>
+          <div class="chip warn"><i class="dot"></i>publish hold</div><div class="chip ok"><i class="dot"></i>.ship-local.conf</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Build <b>build-all.sh</b> <span class="r">step 6 of 9 · 1h52 elapsed · est. 14m left</span></h2>
+        <div class="steps">
+          <span class="k">1</span><span class="name">Pre-flight</span><div class="bar"><i style="width:4%"></i></div><span class="t">1m</span>
+          <span class="k">1c</span><span class="name">Swift unit suite</span><div class="bar"><i style="width:12%"></i></div><span class="t">6m</span>
+          <span class="k">2</span><span class="name">Sidecar <span class="sub"><b class="ok">F</b><b class="ok">V</b><b class="bad">P</b><b class="ok">P</b></span> <span style="color:var(--mute)">· fetch · build · sign · 224 Mach-O, no holes</span></span><div class="bar"><i style="width:38%"></i></div><span class="t">31m</span>
+          <span class="k">2a</span><span class="name">Bundle self-test</span><div class="bar"><i style="width:3%"></i></div><span class="t">2m</span>
+          <span class="k">2b</span><span class="name">Supply-chain inventory <span style="color:var(--warn)">· 116 rows · drift: last build</span></span><div class="bar"><i style="width:1%"></i></div><span class="t">0m</span>
+          <span class="k">2c</span><span class="name">App Store string scan</span><div class="bar"><i style="width:1%"></i></div><span class="t">0m</span>
+          <span class="k">2d</span><span class="name">Agent extension (.mcpb)</span><div class="bar"><i style="width:2%"></i></div><span class="t">1m</span>
+          <span class="k">5</span><span class="name">Xcode archive</span><div class="bar"><i style="width:34%"></i></div><span class="t">19m</span>
+          <span class="k">6</span><span class="name">Export → .pkg</span><div class="bar"><i class="now" style="width:10%"></i><i class="est" style="left:10%;width:6%"></i></div><span class="t">5m…</span>
+          <span class="k">7</span><span class="name" style="color:var(--mute)">Release-binary scan</span><div class="bar"><i class="est" style="width:3%"></i></div><span class="t">~2m</span>
+          <span class="k">8</span><span class="name" style="color:var(--mute)">Provisioning profile</span><div class="bar"><i class="est" style="width:1%"></i></div><span class="t">~0m</span>
+          <span class="k">9</span><span class="name" style="color:var(--mute)">Notarisation</span><div class="bar"><i class="est" style="width:24%"></i></div><span class="t">~13m</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Gate <b>ci.yml on main @ da82dc6b</b> <span class="r">strict-macos: dispatch · run 33 907 4xx · 14m</span></h2>
+        <div class="matrix">
+          <span class="rl"></span><span class="h">3.10</span><span class="h">3.11</span><span class="h">3.12</span><span class="h">3.13</span><span class="h">3.14</span>
+          <span class="rl">ubuntu</span><div class="cell ok">✓</div><div class="cell ok">✓</div><div class="cell ok">✓</div><div class="cell ok">✓</div><div class="cell ok">✓</div>
+          <span class="rl">macos</span><div class="cell na">–</div><div class="cell na">–</div><div class="cell ok">✓</div><div class="cell ok">✓</div><div class="cell now">…</div>
+          <span class="rl">windows</span><div class="cell na">–</div><div class="cell na">–</div><div class="cell ok">✓</div><div class="cell na">–</div><div class="cell na">–</div>
+          <span class="rl">strict mac</span><div class="cell na">–</div><div class="cell na">–</div><div class="cell now">…</div><div class="cell na">–</div><div class="cell na">–</div>
+        </div>
+        <div class="gates">
+          <div class="gate ok">ruff<small>0</small></div><div class="gate ok">inventory<small>4481</small></div><div class="gate ok">gate-policy</div><div class="gate ok">gate-proofs<small>14</small></div>
+          <div class="gate bad">ratchet<small>14&gt;13</small></div><div class="gate ok">manpage</div><div class="gate soft">mypy<small>149=149</small></div><div class="gate ok">frontend<small>207.7k</small></div><div class="gate ok">e2e<small>2 browsers</small></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Ratchets <b>docs/testing/ratchet.json</b> <span class="r">a number that may not rise</span></h2>
+        <div class="ratchets">
+          <div class="rat">mypy errors<b>149 / 149</b><div class="meter"><i style="width:100%"></i><em style="left:100%"></em></div></div>
+          <div class="rat">gates without proof<b>14 / 13</b><div class="meter"><i class="over" style="width:100%"></i><em style="left:93%"></em></div></div>
+          <div class="rat">pytest skip sites<b>23 / 23</b><div class="meter"><i style="width:100%"></i><em style="left:100%"></em></div></div>
+          <div class="rat">slow-marked<b>7 / 7</b><div class="meter"><i style="width:100%"></i><em style="left:100%"></em></div></div>
+          <div class="rat">e2e allowlist<b>4 / 4</b><div class="meter"><i style="width:100%"></i><em style="left:100%"></em></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider">IRREVERSIBLE — the tag push</div>
+
+    <!-- RIGHT: RELEASE -->
+    <div class="col right">
+      <div class="panel">
+        <h2>Tag <b>v0.30.0</b> <span class="r">not yet · waits on: strict mac · ratchet · TestFlight processed · 21:00 working-day window</span></h2>
+        <div class="chips" style="grid-template-columns:repeat(6,1fr)">
+          <div class="chip ok"><i class="dot"></i>tag == HEAD</div><div class="chip ok"><i class="dot"></i>not on PyPI</div><div class="chip now"><i class="dot"></i>strict CI verdict</div><div class="chip bad"><i class="dot"></i>ratchet</div><div class="chip warn"><i class="dot"></i>TF processed</div><div class="chip ok"><i class="dot"></i>bank holiday? no</div>
+        </div>
+      </div>
+
+      <div class="channels">
+        <div class="ch now"><div class="n"><i class="dot" style="background:var(--now)"></i>TestFlight<span class="idx">by hand · 1/9</span></div><div class="trig">upload-testflight.sh → altool --wait → ASC processing</div>
+          <div class="rows"><span>build</span><span class="mono">0.30.0 (3070)</span><span>state</span><span>uploaded 23:31 · <b style="color:var(--now)">PROCESSING</b> (typ. 12–40m)</span><span>probe</span><span class="probe"><b class="ok" title="altool --validate-app"></b><b class="ok" title="upload"></b><b class="now" title="build-status"></b><b title="betaGroups"></b></span></div>
+          <div class="life">90d from upload<div class="meter"><i style="width:100%"></i></div>90d</div></div>
+        <div class="ch todo"><div class="n"><i class="dot"></i>Developer-ID .dmg<span class="idx">by hand · 2/9</span></div><div class="trig">build-dmg.sh → check-dmg-shippable → upload-dmg.sh (atomic swap)</div>
+          <div class="rows"><span>current</span><span class="mono">0.29.1 · 18d left</span><span>next</span><span>after .pkg export · notarise separately</span><span>probe</span><span class="probe"><b></b><b></b><b></b></span></div>
+          <div class="life">30d from build<div class="meter"><i style="width:60%;background:var(--warn)"></i></div>18d</div></div>
+        <div class="ch todo"><div class="n"><i class="dot"></i>PyPI<span class="idx">tag · 3/9</span></div><div class="trig">release.yml: ci → build → publish (Trusted Publishing, attest)</div>
+          <div class="rows"><span>live</span><span class="mono">0.29.1</span><span>expect</span><span>+23–25m after tag · CDN-cached index, confirm on version URL</span><span>probe</span><span class="probe"><b></b><b></b><b></b></span></div>
+          <div class="life">permanent<div class="meter"><i style="width:100%"></i></div>∞</div></div>
+        <div class="ch todo"><div class="n"><i class="dot"></i>GitHub Release<span class="idx">tag · 4/9</span></div><div class="trig">same run · auto notes + sdist/wheel/SBOM assets</div>
+          <div class="rows"><span>live</span><span class="mono">v0.29.1</span><span>expect</span><span>with PyPI</span><span>probe</span><span class="probe"><b></b><b></b></span></div>
+          <div class="life">permanent<div class="meter"><i style="width:100%"></i></div>∞</div></div>
+        <div class="ch todo"><div class="n"><i class="dot"></i>Homebrew<span class="idx">tag · 5/9</span></div><div class="trig">repository-dispatch → homebrew-bristlenose update-formula</div>
+          <div class="rows"><span>live</span><span class="mono">0.29.1</span><span>expect</span><span>after PyPI · tap trust is per-invocation</span><span>probe</span><span class="probe"><b></b><b></b></span></div>
+          <div class="life">permanent<div class="meter"><i style="width:100%"></i></div>∞</div></div>
+        <div class="ch todo"><div class="n"><i class="dot"></i>Fedora Copr<span class="idx">tag · 6/9</span></div><div class="trig">trigger-copr, needs: verify-pypi · Source0 re-asks a 404 for 10m</div>
+          <div class="rows"><span>live</span><span class="mono">0.29.1 · f43 x86_64</span><span>expect</span><span>~35m · SRPM arch varies · repodata is the truth</span><span>probe</span><span class="probe"><b></b><b></b><b></b></span></div>
+          <div class="life">token 23 Feb 2027<div class="meter"><i style="width:47%"></i></div>171d</div></div>
+        <div class="ch todo"><div class="n"><i class="dot"></i>Snap<span class="idx">dispatch · 7/9</span></div><div class="trig">snap.yml --ref vX.Y.Z → latest/stable · canonical/action-publish (node24)</div>
+          <div class="rows"><span>edge</span><span class="mono">0.29.1+git.30483d1 r14</span><span>stable</span><span class="mono">0.29.1 r13</span><span>probe</span><span class="probe"><b></b><b></b></span></div>
+          <div class="life">amd64 only<div class="meter"><i style="width:100%"></i></div>—</div></div>
+        <div class="ch todo"><div class="n"><i class="dot"></i>Website<span class="idx">by hand · 8/9</span></div><div class="trig">build.py + rsync assets + deploy.sh (SSH agent)</div>
+          <div class="rows"><span>changelog</span><span>reads CHANGELOG.md live</span><span>.dmg link</span><span>0.29.1</span><span>probe</span><span class="probe"><b></b><b></b></span></div>
+          <div class="life">—<div class="meter"><i style="width:100%"></i></div></div></div>
+      </div>
+
+      <div class="panel">
+        <h2>Verify <b>release.sh verify</b> <span class="r">probes are tri-state: ok · pending · bad — never derived</span></h2>
+        <div class="chips" style="grid-template-columns:repeat(8,1fr)">
+          <div class="chip skip"><i class="dot"></i>PyPI</div><div class="chip skip"><i class="dot"></i>GitHub</div><div class="chip skip"><i class="dot"></i>Homebrew</div><div class="chip now"><i class="dot"></i>TestFlight</div><div class="chip skip"><i class="dot"></i>.dmg</div><div class="chip skip"><i class="dot"></i>Snap</div><div class="chip skip"><i class="dot"></i>Copr</div><div class="chip skip"><i class="dot"></i>Website</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM: event log + activity strip -->
+  <div class="log">
+    <div class="panel"><h2>Events <b>run dir · events.jsonl</b> <span class="r">append-only · tail</span></h2>
+<pre><span class="t">23:31:02</span> <span class="ok">ok  </span> upload-testflight  altool --upload-package --wait · 644 MB · 3m41
+<span class="t">23:31:09</span> <span class="now">…   </span> upload-testflight  --build-status 3070 → PROCESSING (probe 1/9, window 40m)
+<span class="t">23:33:40</span> <span class="ok">ok  </span> ci                 strict-macos dispatched on da82dc6b
+<span class="t">23:40:12</span> <span class="bad">bad </span> ci.ratchet         gates_without_proof 14 > 13 — check-providers-live has no proof
+<span class="t">23:45:55</span> <span class="warn">warn</span> build-all 2b       inventory describes the LAST sidecar build (pyproject newer than pyvenv.cfg)
+<span class="t">23:47:01</span> <span class="now">…   </span> build-all 6        export → .pkg (est 6m, Welford p50 n=9)</pre></div>
+    <div class="panel"><h2>Activity <b>per-minute events · last 3h</b> <span class="r">effort, not just state</span></h2>
+      <div class="strip" id="strip"></div>
+      <div style="display:flex;justify-content:space-between;font:10px var(--mono);color:var(--mute);margin-top:3px"><span>21:04</span><span>22:00</span><span>23:00</span><span>now</span></div>
+    </div>
+  </div>
+</div>
+<script>
+const s=document.getElementById('strip');for(let i=0;i<163;i++){const e=document.createElement('i');const v=Math.max(2,Math.round(4+18*Math.abs(Math.sin(i/9))*(i%23?1:2.2)));e.style.height=v+'px';if(i>150)e.style.background='#0a66ff';s.appendChild(e);}
+</script>
+</body>
+</html>

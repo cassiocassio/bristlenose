@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Release train — Marey chart (loose mockup)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* Loose mockup — hand-rolled tokens, not the design system. Sketch A of three. */
+  :root{
+    --bg:#fbfbfa; --ink:#1d1d1f; --mute:#8a8a8e; --rule:#e5e5e3; --rule2:#cfcfcc;
+    --ok:#2e9e5b; --bad:#d0342c; --warn:#d9930d; --soft:#b9b9b7; --now:#0a66ff; --past:#b9b9b7;
+    --font:-apple-system,"SF Pro Text",Inter,system-ui,sans-serif; --mono:"SF Mono",ui-monospace,Menlo,monospace;
+  }
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:12px/1.35 var(--font)}
+  .wrap{width:1700px;margin:0 auto;padding:18px 14px 40px}
+  header{display:flex;align-items:baseline;gap:18px;margin-bottom:8px}
+  header h1{font-size:15px;font-weight:600;margin:0;letter-spacing:-.01em}
+  header .v{font:600 15px var(--mono)}
+  header .meta{color:var(--mute);font-size:11px}
+  header .legend{margin-left:auto;display:flex;gap:14px;color:var(--mute);font-size:11px}
+  .legend i{display:inline-block;width:18px;height:0;border-top:2px solid;vertical-align:middle;margin-right:5px}
+  .legend .n i{border-color:var(--now)} .legend .p i{border-color:var(--past)} .legend .f i{border-color:var(--bad);border-top-style:dashed}
+  svg{display:block;background:#fff;border:1px solid var(--rule);border-radius:6px}
+  .lbl{font:11px var(--font);fill:var(--ink)}
+  .lbl.m{fill:var(--mute)} .lbl.b{font-weight:600}
+  .mono{font-family:var(--mono)}
+  .group{font:600 10.5px var(--font);letter-spacing:.06em;fill:var(--mute)}
+  .station{stroke:var(--rule);stroke-width:1}
+  .station.major{stroke:var(--rule2)}
+  .hour{stroke:var(--rule);stroke-width:1} .hour.day{stroke:var(--rule2)}
+  .run{fill:none;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round}
+  .run.past{stroke:var(--past)} .run.now{stroke:var(--now);stroke-width:2.2}
+  .run.fail{stroke:var(--bad);stroke-dasharray:4 3}
+  .node{stroke:#fff;stroke-width:1.2}
+  .node.ok{fill:var(--ok)} .node.bad{fill:var(--bad)} .node.warn{fill:var(--warn)} .node.todo{fill:#fff;stroke:var(--soft)} .node.doing{fill:var(--now)}
+  .irrev{stroke:var(--bad);stroke-width:1;stroke-dasharray:2 3;opacity:.7}
+  .nowline{stroke:var(--now);stroke-width:1;stroke-dasharray:3 3}
+  .dur{font:10px var(--mono);fill:var(--mute)}
+  .wait{fill:var(--warn);opacity:.12}
+  .clock{font:10px var(--mono);fill:var(--mute)}
+  .clock.b{fill:var(--ink)}
+  .bar{fill:#e9e9e7} .bar.f{fill:var(--ok)} .bar.f.w{fill:var(--warn)} .bar.f.r{fill:var(--bad)}
+  footer{color:var(--mute);font-size:11px;margin-top:8px;display:flex;gap:24px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Release train</h1>
+    <span class="v">v0.30.0</span>
+    <span class="meta">run <span class="mono">r-2026-09-12-2104</span> · started 21:04 · minor · Fri 12 Sep 2026 · Marey view — time runs down, one line per release, stations left→right</span>
+    <div class="legend"><span class="n"><i></i>this run</span><span class="p"><i></i>0.29.0 · 0.29.1</span><span class="f"><i></i>failed leg</span></div>
+  </header>
+  <svg id="chart" width="1672" height="980" viewBox="0 0 1672 980"></svg>
+  <footer>
+    <span>Slope = duration. Vertical = fast. A flat run across many stations is a healthy train.</span>
+    <span>Dashed red = irreversible line: nothing to its right can be taken back.</span>
+    <span>Right margin: channel lifespans (.dmg 30 days from build, TestFlight 90 from upload).</span>
+  </footer>
+</div>
+<script>
+// ---- stations: left = build, right = publish channels ---------------------
+const groups = [
+  {name:'PLAN', st:['plan','shippable diff','bump','changelog']},
+  {name:'BUILD (Mac)', st:['pre-flight','swift suite','sidecar F','sidecar V','sidecar P','self-test','inventory 2b','ASC strings','.mcpb','xcode archive','export .pkg','binary scan','profile','notarise']},
+  {name:'UPLOAD', st:['testflight','ASC processed','.dmg build','.dmg upload']},
+  {name:'GATE (CI on main)', st:['ruff','inventory','gate-policy','gate-proofs','ratchet','manpage','mypy·soft','matrix ×10','frontend','e2e','mac strict']},
+  {name:'IRREVERSIBLE', st:['tag push']},
+  {name:'PUBLISH (tag-driven)', st:['ci','build','publish PyPI','GitHub Release','tap dispatch','verify-pypi','Copr','attest']},
+  {name:'BY HAND', st:['snap dispatch','website rsync']},
+  {name:'VERIFY CHANNELS', st:['PyPI','GitHub','Homebrew','TestFlight','.dmg','Snap','Copr','Website']},
+];
+const stations = []; groups.forEach(g=>g.st.forEach(s=>stations.push({g:g.name,s})));
+const N = stations.length;
+const svg = document.getElementById('chart');
+const W = 1672, H = 980, L = 70, R = 140, T = 78, B = 30;
+const cw = (W-L-R)/N;
+const hours = 4.5; // vertical extent
+const ph = (H-T-B)/hours;
+const X = i => L + cw*(i+0.5);
+const Y = h => T + ph*h;
+const el = (n,a,txt)=>{const e=document.createElementNS('http://www.w3.org/2000/svg',n);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;svg.appendChild(e);return e;};
+// hour rules
+for(let h=0;h<=hours;h+=0.5){const y=Y(h);el('line',{x1:L,x2:W-R,y1:y,y2:y,class:'hour'+(h%1?'':' day')});
+  el('text',{x:L-8,y:y+3,class:'lbl m mono','text-anchor':'end'},(h%1?'':'+'+h+'h'));}
+// group bands + labels
+let gi=0; groups.forEach(g=>{const x0=L+cw*gi, x1=L+cw*(gi+g.st.length);
+  if(g.name==='IRREVERSIBLE'){el('rect',{x:x0,y:T-4,width:cw,height:H-T-B+4,fill:'#fff4f3'});}
+  el('text',{x:(x0+x1)/2,y:22,class:'group','text-anchor':'middle'},g.name);
+  el('line',{x1:x0,x2:x0,y1:T-46,y2:H-B,class:'station major'});
+  gi+=g.st.length;});
+el('line',{x1:W-R,x2:W-R,y1:T-46,y2:H-B,class:'station major'});
+// station rules + rotated labels
+stations.forEach((s,i)=>{const x=X(i);el('line',{x1:x,x2:x,y1:T-8,y2:H-B,class:'station'});
+  const t=el('text',{x:x,y:T-12,class:'lbl'+(s.s==='tag push'?' b':''),transform:`rotate(-52 ${x} ${T-12})`},s.s);});
+// irreversible line
+const iri = stations.findIndex(s=>s.s==='tag push');
+el('line',{x1:X(iri)+cw/2,x2:X(iri)+cw/2,y1:T-46,y2:H-B,class:'irrev'});
+// ---- runs: [stationIndex, hourOffset, status] -------------------------------
+// A run is a path through stations; hours accumulate. Waiting is a vertical segment.
+function mk(seq){let h=0;return seq.map(([s,dh,st])=>{h+=dh;return {i:stations.findIndex(x=>x.s===s),h,st};});}
+const past1 = mk([['plan',0,'ok'],['shippable diff',.02,'ok'],['bump',.05,'ok'],['changelog',.2,'ok'],
+ ['pre-flight',.03,'ok'],['swift suite',.1,'ok'],['sidecar F',.02,'ok'],['sidecar V',.12,'ok'],['sidecar P',.15,'ok'],['self-test',.03,'ok'],['inventory 2b',.01,'ok'],['ASC strings',.01,'ok'],['.mcpb',.02,'ok'],['xcode archive',.3,'ok'],['export .pkg',.08,'ok'],['binary scan',.02,'ok'],['profile',.01,'ok'],['notarise',.25,'ok'],
+ ['testflight',.15,'ok'],['ASC processed',.4,'warn'],['.dmg build',.2,'ok'],['.dmg upload',.05,'ok'],
+ ['ruff',.05,'ok'],['inventory',.0,'ok'],['gate-policy',.0,'ok'],['gate-proofs',.0,'ok'],['ratchet',.0,'ok'],['manpage',.0,'ok'],['mypy·soft',.01,'warn'],['matrix ×10',.2,'ok'],['frontend',.02,'ok'],['e2e',.15,'ok'],['mac strict',.3,'ok'],
+ ['tag push',.7,'ok'],
+ ['ci',.02,'ok'],['build',.35,'ok'],['publish PyPI',.05,'ok'],['GitHub Release',.02,'ok'],['tap dispatch',.03,'ok'],['verify-pypi',.08,'ok'],['Copr',.35,'ok'],['attest',.0,'ok'],
+ ['snap dispatch',.1,'ok'],['website rsync',.05,'ok'],
+ ['PyPI',.02,'ok'],['GitHub',.0,'ok'],['Homebrew',.1,'ok'],['TestFlight',.0,'ok'],['.dmg',.0,'ok'],['Snap',.2,'ok'],['Copr',.0,'ok'],['Website',.0,'ok']]);
+const past2 = past1.map((p,k)=>({...p,h:p.h*0.92+ (k>30?0.35:0)}));
+// current run: in progress at "mac strict", one failed-and-retried leg at sidecar P
+const now = mk([['plan',0.4,'ok'],['shippable diff',.02,'ok'],['bump',.04,'ok'],['changelog',.25,'ok'],
+ ['pre-flight',.02,'ok'],['swift suite',.11,'ok'],['sidecar F',.02,'ok'],['sidecar V',.2,'ok'],['sidecar P',.14,'bad'],['sidecar P',.16,'ok'],['self-test',.03,'ok'],['inventory 2b',.01,'warn'],['ASC strings',.01,'ok'],['.mcpb',.02,'ok'],['xcode archive',.31,'ok'],['export .pkg',.08,'ok'],['binary scan',.02,'ok'],['profile',.01,'ok'],['notarise',.22,'ok'],
+ ['testflight',.15,'ok'],['ASC processed',.3,'doing'],['.dmg build',.0,'todo'],['.dmg upload',.0,'todo'],
+ ['ruff',0,'ok'],['inventory',0,'ok'],['gate-policy',0,'ok'],['gate-proofs',0,'ok'],['ratchet',0,'bad'],['manpage',0,'ok'],['mypy·soft',0,'warn'],['matrix ×10',.18,'ok'],['frontend',.02,'ok'],['e2e',.14,'ok'],['mac strict',.1,'doing']]);
+const NOW_H = now[now.length-1].h;
+function draw(run, cls){
+  let d='';run.forEach((p,k)=>{d+=(k?'L':'M')+X(p.i)+' '+Y(p.h)+' ';});
+  el('path',{d,class:'run '+cls});
+}
+draw(past2,'past');draw(past1,'past');
+// waiting bands on current run (vertical legs > 0.25h)
+now.forEach((p,k)=>{if(k&&now[k-1].i===p.i&&p.h-now[k-1].h>0.25){el('rect',{x:X(p.i)-cw*.45,y:Y(now[k-1].h),width:cw*.9,height:Y(p.h)-Y(now[k-1].h),class:'wait'});}});
+// failed leg drawn dashed red
+for(let k=1;k<now.length;k++){ if(now[k].st==='bad'){el('line',{x1:X(now[k-1].i),y1:Y(now[k-1].h),x2:X(now[k].i),y2:Y(now[k].h),class:'run fail'});}}
+draw(now.filter(p=>p.st!=='todo'),'now');
+// todo tail: faint dotted continuation through remaining stations at NOW_H
+const lastI = now[now.length-1].i;
+el('line',{x1:X(lastI),x2:X(N-1),y1:Y(NOW_H),y2:Y(NOW_H),stroke:'#cfcfcc','stroke-dasharray':'1 4'});
+// nodes
+[past1,past2].forEach(r=>r.forEach(p=>el('circle',{cx:X(p.i),cy:Y(p.h),r:2.2,class:'node '+(p.st==='ok'?'ok':p.st),opacity:.55})));
+now.forEach(p=>{ if(p.st==='todo'){el('circle',{cx:X(p.i),cy:Y(NOW_H),r:3,class:'node todo'});} else el('circle',{cx:X(p.i),cy:Y(p.h),r:p.st==='doing'?4.5:3.2,class:'node '+p.st});});
+for(let i=lastI+1;i<N;i++) el('circle',{cx:X(i),cy:Y(NOW_H),r:2.4,class:'node todo'});
+// now line + label
+el('line',{x1:L,x2:W-R,y1:Y(NOW_H),y2:Y(NOW_H),class:'nowline'});
+el('text',{x:L+4,y:Y(NOW_H)-4,class:'lbl b mono',fill:'var(--now)'},'now 23:47 · +2h43 · waiting on mac strict (est. 6m, Welford p50)');
+// durations on a few legs of the current run
+[['xcode archive',.31],['notarise',.22],['sidecar P (retry)',.16],['matrix ×10',.18]].forEach(([n,d],k)=>{const idx=stations.findIndex(s=>n.startsWith(s.s));const p=now.find(q=>q.i===idx&&q.st!=='bad');if(p)el('text',{x:X(idx)+5,y:Y(p.h)-5,class:'dur'},Math.round(d*60)+'m');});
+// right margin: channel lifespans
+const cx0=W-R+12;
+el('text',{x:cx0,y:T-12,class:'group'},'LIFESPAN');
+[['.dmg 0.29.1','30d from build','18d left',18/30,'w'],['TestFlight 3067','90d from upload','82d left',82/90,''],['PyPI 0.29.1','permanent','—',1,''],['Copr 0.29.1','permanent','—',1,''],['Snap edge r14','until next','—',1,''],['token: Copr','expires 23 Feb 2027','171d',171/365,''],['cert: Apple Dist','expires 2027-05','—',.7,''],['.venv-sidecar','age 1d','fresh',1,'']].forEach((c,k)=>{const y=T+8+k*36;
+  el('text',{x:cx0,y:y,class:'clock b'},c[0]);el('text',{x:cx0,y:y+11,class:'clock'},c[1]);
+  el('rect',{x:cx0,y:y+15,width:108,height:5,class:'bar',rx:2});el('rect',{x:cx0,y:y+15,width:108*c[3],height:5,class:'bar f '+c[4],rx:2});
+  el('text',{x:cx0+112,y:y+20,class:'clock'},c[2]);});
+</script>
+</body>
+</html>

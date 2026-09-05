@@ -215,6 +215,14 @@ carries no date the evidence gave none — the state is still evidenced, the day
 |---|---|---|
 | `provider-status-glyph-vocabulary.html` | 3 Sep 2026 | PROPOSED 7 Jun 2026 · SUPERSEDED 7 Jun 2026 by `LLMProvider.swift` — explored three treatments for the provider dot; a fourth shipped (colour + an always-visible localised label). Six `ProviderStatus` cases ship, this names five. The a11y reasoning stands |
 
+## release-train
+
+| Mockup | Last edit | Lifecycle |
+|---|---|---|
+| `release-train-marey.html` | 5 Sep 2026 | PROPOSED 5 Sep 2026 — sketch A of three for the build-and-release "watching GUI": Marey/Ibry train chart, stations across (build → gates → tag → channels), time down, one polyline per release; effort is the slope. Options in `docs/design-release-train-dashboard.md` |
+| `release-train-board.html` | 5 Sep 2026 | PROPOSED 5 Sep 2026 — sketch B: one fixed 16" screen (1728×1117), build stack left, nine channel cards right, irreversible line between, event log + activity strip along the bottom. Grid of grids, no scrolling |
+| `release-train-scroll.html` | 5 Sep 2026 | PROPOSED 5 Sep 2026 — sketch C: long scrolling page, time down to scale (1 px = 6 s), swimlanes by architecture chunk, every bar anchored to the event line that emitted it; gaps are waiting |
+
 ## sessions
 
 | Mockup | Last edit | Lifecycle |

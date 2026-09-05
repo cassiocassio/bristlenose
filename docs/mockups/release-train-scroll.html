@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Release train — scrolling waterfall (loose mockup)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* Loose mockup — hand-rolled tokens. Sketch C of three: one long page, time runs DOWN and is
+     TRUE TO SCALE (1 px = 6 s), swimlanes run LEFT→RIGHT by architecture chunk, every bar is
+     anchored to the event line that produced it. Build fills top-left, publishing fills
+     bottom-right. Scroll = time travel. */
+  :root{
+    --bg:#fbfbfa; --ink:#1d1d1f; --mute:#8a8a8e; --rule:#e8e8e6; --rule2:#cfcfcc;
+    --ok:#2e9e5b; --bad:#d0342c; --warn:#d9930d; --soft:#dcdcd9; --now:#0a66ff;
+    --font:-apple-system,"SF Pro Text",Inter,system-ui,sans-serif; --mono:"SF Mono",ui-monospace,Menlo,monospace;
+  }
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:11.5px/1.3 var(--font)}
+  .page{width:1700px;margin:0 auto;padding:14px}
+  header{position:sticky;top:0;background:rgba(251,251,250,.92);backdrop-filter:blur(6px);z-index:5;border-bottom:1px solid var(--rule);padding:8px 0 6px;display:grid;grid-template-columns:110px repeat(9,1fr) 260px;gap:0 8px;align-items:end}
+  header .title{grid-column:1/-1;display:flex;gap:16px;align-items:baseline;margin-bottom:6px}
+  header h1{margin:0;font-size:14px;font-weight:600}
+  header .v{font:600 14px var(--mono)} header .m{color:var(--mute);font-size:11px}
+  .lane-h{font:600 10px var(--font);letter-spacing:.07em;text-transform:uppercase;color:var(--mute);border-left:1px solid var(--rule2);padding-left:6px;line-height:1.1}
+  .lane-h b{display:block;font:600 11px var(--font);letter-spacing:0;text-transform:none;color:var(--ink)}
+  .lane-h.irrev{color:var(--bad)}
+  .body{position:relative;display:grid;grid-template-columns:110px repeat(9,1fr) 260px;gap:0 8px}
+  .tcol{position:relative}
+  .tick{position:absolute;left:0;right:0;font:10px var(--mono);color:var(--mute);border-top:1px solid var(--rule);padding-top:1px}
+  .tick.h{border-top-color:var(--rule2);color:var(--ink)}
+  .lane{position:relative;border-left:1px solid var(--rule)}
+  .lane.irrev{background:#fff4f3}
+  .bar{position:absolute;left:4px;right:4px;border-radius:3px;background:#e9f6ee;border:1px solid #cfe9d8;padding:2px 5px;overflow:hidden;font-size:10.5px;box-sizing:border-box}
+  .bar b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar small{display:block;font:9.5px var(--mono);color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar.bad{background:#fff1f0;border-color:#f1c9c6} .bar.warn{background:#fff8e8;border-color:#f3dfa5}
+  .bar.now{background:#e9f0ff;border-color:#bcd0ff;border-bottom-style:dashed}
+  .bar.todo{background:transparent;border-style:dashed;border-color:var(--soft);color:var(--mute)}
+  .bar.wait{background:repeating-linear-gradient(135deg,#fff8e8 0 6px,#fff 6px 12px);border-color:#f3dfa5}
+  .bar.tiny{padding:0 5px;font-size:9.5px;line-height:14px} .bar.tiny b{display:inline;font-weight:600} .bar.tiny small{display:inline;margin-left:4px}
+  .ev{position:absolute;left:0;right:0;font:10px/1.25 var(--mono);color:var(--ink);padding-left:8px;border-top:1px dotted var(--rule2)}
+  .ev .t{color:var(--mute)} .ev.ok{color:var(--ok)} .ev.bad{color:var(--bad)} .ev.warn{color:var(--warn)} .ev.now{color:var(--now)}
+  .nowline{position:absolute;left:0;right:0;border-top:1.5px dashed var(--now);z-index:3}
+  .nowline span{position:absolute;left:0;top:-14px;font:600 10px var(--mono);color:var(--now);background:var(--bg);padding:0 4px}
+  .day{position:absolute;left:0;right:0;border-top:1px solid var(--ink);opacity:.35}
+  .cluster{position:absolute;left:2px;right:2px;display:grid;gap:2px;grid-template-columns:repeat(5,1fr)}
+  .cell{height:12px;border-radius:2px;background:var(--ok);font:600 8.5px/12px var(--mono);color:#fff;text-align:center}
+  .cell.bad{background:var(--bad)} .cell.now{background:var(--now)} .cell.na{background:transparent;border:1px dashed var(--soft)}
+  footer{color:var(--mute);font-size:11px;padding:14px 0 30px;display:flex;gap:24px}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="title"><h1>Release train</h1><span class="v">v0.30.0</span><span class="m">Fri 12 Sep 2026 · started 21:04 · time runs down, to scale (1 px = 6 s) · lanes = architecture chunks, build left, publish right · every bar is anchored to the event that emitted it</span></div>
+    <div class="lane-h" style="border:0;padding:0">time</div>
+    <div class="lane-h">plan<b>release.sh</b></div>
+    <div class="lane-h">python<b>pytest · ruff</b></div>
+    <div class="lane-h">sidecar<b>F · V · P</b></div>
+    <div class="lane-h">mac app<b>xcode · sign</b></div>
+    <div class="lane-h">ci (main)<b>gates · matrix</b></div>
+    <div class="lane-h irrev">tag<b>irreversible</b></div>
+    <div class="lane-h">pypi chain<b>release.yml</b></div>
+    <div class="lane-h">packagers<b>brew · copr · snap</b></div>
+    <div class="lane-h">apple<b>testflight · .dmg</b></div>
+    <div class="lane-h">events<b>run dir · events.jsonl</b></div>
+  </header>
+  <div class="body" id="body"></div>
+  <footer><span>Vertical gaps are waiting. A lane that is empty for an hour is an hour nobody spent — that is the effort view.</span><span>Scroll down = later. The page is as long as the release took; last time, 4h12.</span></footer>
+</div>
+<script>
+// ---- time scale --------------------------------------------------------
+const PX_PER_MIN = 10;               // 1 px = 6 s
+const T0 = 21*60+4;                  // 21:04
+const total = 4*60+30;               // 4h30 of page
+const body = document.getElementById('body');
+body.style.height = (total*PX_PER_MIN)+'px';
+const lanes = ['t','plan','py','sidecar','mac','ci','tag','pypi','pkg','apple','ev'];
+const els = {}; lanes.forEach(l=>{const d=document.createElement('div');d.className=(l==='t'?'tcol':'lane'+(l==='tag'?' irrev':''));d.style.height=(total*PX_PER_MIN)+'px';body.appendChild(d);els[l]=d;});
+const hhmm = m => String(Math.floor(((T0+m)%1440)/60)).padStart(2,'0')+':'+String((T0+m)%60).padStart(2,'0');
+for(let m=0;m<=total;m+=10){const t=document.createElement('div');t.className='tick'+(m%60?'':' h');t.style.top=(m*PX_PER_MIN)+'px';t.textContent=hhmm(m)+(m%60?'':'  +'+(m/60)+'h');els.t.appendChild(t);}
+function bar(lane, start, dur, cls, title, sub){const b=document.createElement('div');b.className='bar '+cls+(dur*PX_PER_MIN<26?' tiny':'');b.style.top=(start*PX_PER_MIN)+'px';b.style.height=Math.max(14,dur*PX_PER_MIN-2)+'px';b.innerHTML='<b>'+title+'</b><small>'+(sub||'')+'</small>';els[lane].appendChild(b);}
+function ev(m, cls, text){const e=document.createElement('div');e.className='ev '+cls;e.style.top=(m*PX_PER_MIN)+'px';e.innerHTML='<span class="t">'+hhmm(m)+'</span> '+text;els.ev.appendChild(e);}
+function matrix(lane,start,rows){const c=document.createElement('div');c.className='cluster';c.style.top=(start*PX_PER_MIN)+'px';rows.forEach(r=>r.forEach(s=>{const d=document.createElement('div');d.className='cell '+s;d.textContent=s==='na'?'':(s==='now'?'…':'✓');c.appendChild(d);}));els[lane].appendChild(c);}
+
+// ---- the run (shaped from the real step names; durations plausible) ----
+// PLAN
+bar('plan',0,3,'ok','release.sh plan 0.30.0','shippable diff ✓ · bump minor · 34 rows 31/2/1');
+ev(0,'ok','plan · shippable · v0.30.0 minor');
+bar('plan',3,14,'ok','changelog + readme + bump','bump-version.py · 3 files staged · commit');
+ev(17,'ok','bump · commit 3 files');
+// PYTHON
+bar('py',3,9,'ok','pytest tests/','4401 passed · 5 skipped · 22 xfailed · 7m56');
+bar('py',12,1,'ok','ruff check .','0');
+ev(12,'ok','pytest 4401 passed');
+// SIDECAR
+bar('sidecar',17,2,'ok','F frontend','npm run build · 207.7 kB gz');
+bar('sidecar',19,12,'ok','V venv','pyproject changed → recreate · pip resolve · 129 pkgs');
+bar('sidecar',31,15,'bad','P pyinstaller','source changed while building (128 s window) — stamp refused');
+ev(46,'bad','sidecar P · stamp refused · source moved');
+bar('sidecar',47,16,'ok','P pyinstaller (retry)','224 Mach-O · no holes · stamped');
+ev(63,'ok','sidecar P · stamped 41bbc0a9');
+bar('sidecar',63,2,'ok','2a self-test','all runtime data present');
+bar('sidecar',65,1,'warn','2b inventory','116 rows · describes LAST build');
+ev(66,'warn','2b · inventory describes the last sidecar build');
+bar('sidecar',66,1,'ok','2c ASC strings','');
+bar('sidecar',67,2,'ok','2d .mcpb','packed · v0.30.0');
+// MAC APP
+bar('mac',17,7,'ok','1c swift suite','1439 passed · 0 failed');
+bar('mac',69,19,'ok','5 xcode archive','Bristlenose.xcarchive · 3070');
+ev(88,'ok','archive · build 3070');
+bar('mac',88,6,'ok','6 export → .pkg','ExportOptions.plist · Apple Distribution');
+bar('mac',94,2,'ok','7 release-binary scan','4 executables carry entitlements');
+bar('mac',96,1,'ok','8 provisioning profile','');
+bar('mac',97,13,'ok','9 notarisation','stapled');
+ev(110,'ok','notarised · check-pkg-shippable 7/7');
+// APPLE upload
+bar('apple',110,4,'ok','upload-testflight','altool --validate-app 24 s · --upload-package 3m41 · 644 MB');
+ev(114,'ok','testflight · uploaded 3070');
+bar('apple',114,36,'wait','ASC processing','probe every 4m · window 40m · PROCESSING…');
+bar('apple',150,1,'ok','build-status','VALID · 90 days from 22:34');
+ev(150,'ok','testflight · 3070 VALID');
+bar('apple',152,12,'ok','build-dmg.sh','Developer ID · notarise · stapler validate ✓');
+bar('apple',164,3,'ok','upload-dmg.sh','stage → sha256 → chmod 644 → mv (atomic)');
+ev(167,'ok','.dmg · live on bristlenose.app · 30 d from build');
+// CI on main
+bar('ci',112,2,'ok','push main','da82dc6b');
+matrix('ci',115,[['ok','ok','ok','ok','ok'],['na','na','ok','ok','ok'],['na','na','ok','na','na']]);
+bar('ci',120,14,'ok','matrix ×10 · e2e · frontend','14m · perf 207.7k');
+bar('ci',134,1,'bad','ratchet','gates_without_proof 14 > 13');
+ev(135,'bad','ci · ratchet · check-providers-live has no proof');
+bar('ci',136,4,'ok','fix + push','proof added · 13 ≤ 13');
+bar('ci',140,30,'ok','strict-macos dispatch','macos-latest hard · 1439 swift · 30m');
+ev(170,'ok','ci · strict verdict green on 9b1e2c4f');
+// TAG — waits for the window
+bar('tag',170,66,'wait','waiting for 21:00 window','working day · not a bank holiday (gov.uk feed) · every verdict landed');
+ev(236,'now','tag · window open · pushing v0.30.0 (second push, never --tags)');
+bar('tag',236,1,'now','git push origin v0.30.0','IRREVERSIBLE');
+// PYPI chain
+bar('pypi',237,3,'todo','ci (reused)','');
+bar('pypi',240,12,'todo','build','sdist + wheel + twine check + SPA-in-wheel assert');
+bar('pypi',252,4,'todo','publish','Trusted Publishing · attest');
+bar('pypi',256,3,'todo','verify-pypi','version URL 200 · 2 files');
+bar('pypi',259,1,'todo','GitHub Release','notes + assets');
+// PACKAGERS
+bar('pkg',257,3,'todo','tap dispatch','homebrew-bristlenose update-formula');
+bar('pkg',259,10,'todo','Copr build','SRPM (arch varies) → x86_64 wheelhouse · 404 re-ask 10m');
+bar('pkg',262,8,'todo','snap --ref v0.30.0','stable · amd64 · canonical/action-publish');
+// events tail
+ev(200,'ok','pytest 4401 · ruff 0 · swift 1439 · sidecar fresh · pre-flight 34/34 after fix');
+// NOW
+const NOW=236.4;const n=document.createElement('div');n.className='nowline';n.style.top=(NOW*PX_PER_MIN)+'px';n.innerHTML='<span>now '+hhmm(Math.floor(NOW))+' · +3h56 · tag pushing</span>';body.appendChild(n);
+</script>
+</body>
+</html>

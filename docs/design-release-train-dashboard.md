@@ -1,5 +1,5 @@
 ---
-status: proposed — options, not a decision
+status: decided 5 Sep 2026 — sketch B (the board); build plan in docs/design-release-board.md
 date: 2026-09-05
 owner: maintainer
 sketches: docs/mockups/release-train-{marey,board,scroll}.html
@@ -13,7 +13,7 @@ channels — done, doing and to-do, activity and effort, success and failure,
 dense and elegant, ideally on one 16" MacBook Pro screen, time running down,
 build on the left and the release platforms on the right.*
 
-This document does three things and decides nothing: it says what the train
+**Decided 5 Sep 2026: the board (sketch B).** The maintainer's framing — the London Underground map, not the Ordnance Survey: connections and the logic of the journey, not distance; a linear time axis makes the picture less useful. The build plan is `docs/design-release-board.md`. This document remains the record of the options and the prior art; it did three things and, at the time, decided nothing: it says what the train
 already emits (so the dashboard is fed by facts, not by a second model of the
 train), it surveys the prior art for this kind of picture, and it puts three
 sketches side by side with the trade each one makes. The two research passes

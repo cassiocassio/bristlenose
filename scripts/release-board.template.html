@@ -63,7 +63,8 @@
   .band h2 b{color:var(--ink);font-weight:600;letter-spacing:0;text-transform:none;font-size:11.5px;margin-left:8px}
   .band .r{font:10px var(--mono);color:var(--mute);white-space:nowrap;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
   .band .strip{flex:1 1 0;min-width:0;height:22px;gap:0;overflow:hidden}
-  .band .strip i{flex:1 1 0;min-width:0;border-radius:0;border-right:1px solid #fff}
+  .band .strip i{flex:1 1 0;min-width:0;border-radius:0;border-right:1px solid #fff;box-sizing:border-box}
+  .band .strip.dense i{border-right:0}
   .panel{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:8px 10px;resize:vertical;overflow:auto;min-height:44px;max-height:520px}
   .panel h2{margin:0 0 6px;font-size:10.5px;font-weight:600;letter-spacing:.07em;color:var(--mute);text-transform:uppercase;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
   .panel h2 b{color:var(--ink);font-weight:600;letter-spacing:0;text-transform:none;font-size:11.5px}
@@ -135,8 +136,18 @@
 (function(){
   "use strict";
   var screenEl = document.getElementById("screen");
+  // The page opens from file:// with no console anyone reads. A renderer
+  // fault — first render or a live patch — must be a band on the page.
+  var fault = function(err){
+    var old = document.getElementById("fault"); if (old) old.remove();
+    var band = document.createElement("div"); band.id = "fault";
+    band.style.cssText = "margin:8px;padding:10px 14px;border:2px solid #d0342c;border-radius:8px;background:#fff1f0;color:#d0342c;font:12px/1.4 -apple-system,system-ui,sans-serif";
+    band.textContent = "The board failed to render: " + (err && err.message ? err.message : String(err)) + " — the data block is intact; regenerate with scripts/release-board.py and reload.";
+    screenEl.insertBefore(band, screenEl.firstChild);
+  };
   try {
   var payload = JSON.parse(document.getElementById("board-data").textContent);
+  if (payload.live && location.protocol !== "http:" && location.protocol !== "https:") delete payload.live;  // a saved copy is a snapshot
   // The renderer is a function of one model, called once for a board and once
   // per frame for a replay (and, later, once per update for a live view).
   // helpers: shared by render, the tick and the patch
@@ -194,7 +205,7 @@
     var st = $("div","station "+s.state+" "+s.kind);
     idle(st, s.state === "pending" || s.state === "later" || s.state === "not-in-this-run");
     if (s.id === "tag") st.classList.add("irrev-after");
-    var sm = $("small"); if (s.state === "running" && s.ts) { sm.setAttribute("data-since", s.ts); sm.textContent = "running · "+elapsed((Date.now()-Date.parse(s.ts))/1000)+(s.attempt>1 ? " · #"+s.attempt : ""); } else sm.textContent = s.state + (s.elapsed!=null ? " · "+elapsed(s.elapsed) : (s.est && s.state==="pending" ? " · est "+s.est : "")) + (s.attempt>1 ? " · #"+s.attempt : "");
+    var sm = $("small"); if (s.state === "running" && s.ts) { sm.setAttribute("data-since", s.ts); if (s.attempt>1) sm.setAttribute("data-attempt", s.attempt); sm.textContent = "running · "+elapsed(((data.now ? Date.parse(data.now) : Date.now())-Date.parse(s.ts))/1000)+(s.attempt>1 ? " · #"+s.attempt : ""); } else sm.textContent = s.state + (s.elapsed!=null ? " · "+elapsed(s.elapsed) : (s.est && s.state==="pending" ? " · est "+s.est : "")) + (s.attempt>1 ? " · #"+s.attempt : "");
     add(st, $("i"), $("b",null,s.id), sm);
     st.title = (s.label||s.id)+" — "+s.kind+(s.consequence?" — "+s.consequence:"");
     st.addEventListener("click", function(){ var target = (data.build.lane_ids||[]).indexOf(s.id) >= 0 ? "build-"+s.id : CLICK_MAP[s.id]; var el = target && document.getElementById("pane-"+target); if (el) el.scrollIntoView({behavior:"smooth", block:"center"}); });
@@ -207,7 +218,7 @@
   var act = data.activity;
   var band = $("div","band"); band.id = "pane-activity";
   var bh = $("h2"); add(bh, $("span",null,"ACTIVITY"), $("b",null, act.bin_minutes > 1 ? "events per "+act.bin_minutes+" min" : "events per minute")); add(band, bh);
-  var strip = $("div","strip"); var maxC = Math.max.apply(null, act.minutes.concat([1]));
+  var strip = $("div","strip"+(act.minutes.length > 200 ? " dense" : "")); var maxC = Math.max.apply(null, act.minutes.concat([1]));
   act.minutes.forEach(function(c){ var b = $("i"); b.style.height = Math.max(2, Math.round(20*c/maxC))+"px"; b.title = c+" events"; add(strip, b); });
   add(band, act.minutes.length ? strip : $("span","nodata","no timestamped events"));
   idle(band, !act.minutes.length);
@@ -235,7 +246,8 @@
     var why = lane.emits_known ? "it has emitted before — BN_REPORT=0, an unwritable sink, or a lost export"
             : lane.source_emits === true ? "the script reports steps today (bn_autowrap) — this run predates the sink (5 Sep 2026), or BN_EVENT_SINK was not exported"
             : lane.source_emits === false ? "this script does not report steps; nothing is missing"
-            : "whether this script reports steps could not be read from the tree";
+            : lane.source_emits === "unreadable" ? "the script exists in the tree but could not be read"
+            : "the step's command names no desktop/scripts/*.sh, so there is no script to ask";
     var head = {"not-run":"not run","skipped":"skipped by the driver","failed-no-window":"failed (ledger)","ran-no-sink":"ran (ledger: "+lane.ledger_state+") · nothing in the sink","running-no-sink":"running · nothing in the sink yet",
                 "data":(lane.steps.length+" steps · attempt "+lane.attempt+" · rc "+lane.rc+" · "+elapsed(lane.elapsed))}[lane.state] || lane.state;
     var body = {"failed-no-window":"the driver wrote no window for it, so nothing from inside it reached the sink","ran-no-sink":"no @bn lines from this script reached the sink: "+why,"running-no-sink":"no child lines yet"}[lane.state];
@@ -379,6 +391,7 @@
   add(screen, foot);
   };
 
+  var latest = null;
   if (payload.replay) {
     // ── replay scrubber: a design tool over real frames; never on the real board ──
     var frames = payload.replay, at = frames.length - 1;
@@ -392,6 +405,7 @@
     var show = function(i){
       at = Math.max(0, Math.min(frames.length - 1, i));
       var y = window.scrollY; render(frames[at].model); window.scrollTo(0, y);
+      latest = frames[at].model; if (typeof tick === "function") tick();
       lab.textContent = "frame "+at+" of "+frames[at].of+" · "+frames[at].caption;
       prev.disabled = at === 0; next.disabled = at === frames.length - 1;
       prev.style.opacity = prev.disabled ? .35 : 1; next.style.opacity = next.disabled ? .35 : 1;
@@ -406,20 +420,23 @@
   }
 
   // ── the tick: ages count, running elapsed counts, freshness expires ────────
-  var HB_STALE_S = 60, PANE_FRESH_S = 10, latest = payload.replay ? null : payload;
+  var PANE_FRESH_S = 10; if (!payload.replay) latest = payload;
+  // release.sh writes a heartbeat every cadence_s (300 by default) and calls a run stranded after three; the page agrees
+  var hbStaleS = function(lv){ var c = lv && lv.heartbeat && lv.heartbeat.cadence_s; return 3 * (c || 300); };
   var tick = function(){
     var now = Date.now();
     var els = document.querySelectorAll("[data-ts]");
     for (var i = 0; i < els.length; i++) { els[i].textContent = age(els[i].getAttribute("data-ts")); var pane = els[i].closest(".panel"); if (pane) pane.classList.toggle("fresh", (now - Date.parse(els[i].getAttribute("data-ts")))/1000 < PANE_FRESH_S); }
     var since = document.querySelectorAll("[data-since]");
-    for (var j = 0; j < since.length; j++) since[j].textContent = "running · "+elapsed((now - Date.parse(since[j].getAttribute("data-since")))/1000);
+    var clock = latest && latest.now ? Date.parse(latest.now) : now;   // a replay frame keeps its own clock
+    for (var j = 0; j < since.length; j++) since[j].textContent = "running · "+elapsed((clock - Date.parse(since[j].getAttribute("data-since")))/1000)+(since[j].getAttribute("data-attempt") ? " · #"+since[j].getAttribute("data-attempt") : "");
     var lv = latest && latest.liveness, fresh = false;
     if (lv && lv.replay) fresh = true;
-    else if (lv && lv.heartbeat && isFinite(lv.heartbeat.epoch)) fresh = (now/1000 - lv.heartbeat.epoch) < HB_STALE_S;
-    else if (lv && lv.alive) fresh = true;  // a pid exists and no heartbeat file: the driver predates heartbeats
+    else if (lv && lv.heartbeat && isFinite(lv.heartbeat.epoch)) fresh = (now/1000 - lv.heartbeat.epoch) < hbStaleS(lv);
+    else if (lv && lv.alive && latest.header && latest.header.newest_source) fresh = (now - Date.parse(latest.header.newest_source))/1000 < hbStaleS(lv);  // a pid exists (maybe recycled), no heartbeat: trust it only while something is being written
     var run = document.querySelectorAll(".station.running");
     for (var k = 0; k < run.length; k++) { run[k].classList.toggle("fresh", fresh); run[k].classList.toggle("stale", !fresh); }
-    var pill = document.getElementById("live-pill"); if (pill && latest && latest.live) pill.classList.toggle("stale", (now - Date.parse(latest.live.served_at))/1000 > 3 * (latest.live.poll_ms/1000) + 10);
+    var pill = document.getElementById("live-pill"); if (pill && latest && latest.live && !pill.getAttribute("data-unreachable")) pill.classList.toggle("stale", (now - Date.parse(latest.live.served_at))/1000 > 3 * (latest.live.poll_ms/1000) + 10);
   };
   tick(); setInterval(tick, 1000);
 
@@ -432,13 +449,18 @@
       (d.build.lanes || []).forEach(function(l){ m["pane-build-"+l.id] = l; });
       return m;
     };
+    var K = payload.live.token ? "?k="+encodeURIComponent(payload.live.token) : "";
+    var unreachable = function(why){ var p = document.getElementById("live-pill"); if (!p) return; p.setAttribute("data-unreachable", "1"); p.classList.add("stale"); p.textContent = "live · unreachable — "+why; };
+    var reachable = function(){ var p = document.getElementById("live-pill"); if (p) p.removeAttribute("data-unreachable"); };
     var patch = function(next){
+      if (latest && latest.live && next.live && next.live.generation < latest.live.generation) return;  // an older pull landing after a newer one
       var sN = slices(next), sO = slices(latest), ids = Object.keys(sN);
       var sameShape = ids.length === Object.keys(sO).length && ids.every(function(id){ return id in sO; });
       if (!sameShape) { render(next); latest = next; tick(); return; }
+      var moved = ids.filter(function(id){ return JSON.stringify(sN[id]) !== JSON.stringify(sO[id]); });
+      if (!moved.length) { latest = next; tick(); return; }   // nothing to draw: no detached render
       var tmp = document.createElement("div"); render(next, tmp);
-      ids.forEach(function(id){
-        if (JSON.stringify(sN[id]) === JSON.stringify(sO[id])) return;
+      moved.forEach(function(id){
         var o = document.getElementById(id), n = tmp.querySelector("#"+(window.CSS && CSS.escape ? CSS.escape(id) : id));
         if (o && n) { o.replaceWith(n); n.classList.add("changed"); }
       });
@@ -446,18 +468,21 @@
       var pill = document.getElementById("live-pill"); if (pill) { var pa = pill.querySelector("[data-ts]"); if (pa && next.live) pa.setAttribute("data-ts", next.live.served_at); }
       latest = next; tick();
     };
-    var pull = function(){ if (typeof fetch !== "function") return; fetch("/board.json", {cache: "no-store"}).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){ if (j && j.live) patch(j); }).catch(function(){}); };
+    var pull = function(){
+      if (typeof fetch !== "function") return;
+      var net = function(e){ var n = new Error("network — "+(e && e.message ? e.message : e)); n.network = true; throw n; };
+      fetch("/board.json"+K, {cache: "no-store"}).catch(net).then(function(r){
+        if (r.ok) return r.json().catch(net);
+        return r.text().then(function(t){ var h = new Error("HTTP "+r.status+(t ? " — "+t.slice(0, 160) : "")); h.network = true; throw h; });
+      }).then(function(j){ if (j && j.live) { reachable(); patch(j); } })
+        .catch(function(e){ if (e && e.network) unreachable(e.message); else fault(e); });   // a renderer fault is not a network fault
+    };
     var es = null;
-    try { if (typeof EventSource === "function") { es = new EventSource("/events"); es.onmessage = function(){ pull(); }; es.onerror = function(){ /* the browser reconnects; the safety poll covers the gap */ }; } } catch(e4) {}
+    try { if (typeof EventSource === "function") { es = new EventSource("/events"+K); es.onmessage = function(){ pull(); }; es.onerror = function(){ /* the browser reconnects; the safety poll covers the gap and marks unreachable */ }; } } catch(e4) {}
     setInterval(pull, Math.max(2000, (payload.live.poll_ms || 1000) * (es ? 10 : 2)));
   }
   } catch (err) {
-    // The page opens from file:// with no console anyone reads. A renderer
-    // fault must be a band on the page, not a blank one.
-    var band = document.createElement("div");
-    band.style.cssText = "margin:8px;padding:10px 14px;border:2px solid #d0342c;border-radius:8px;background:#fff1f0;color:#d0342c;font:12px/1.4 -apple-system,system-ui,sans-serif";
-    band.textContent = "The board failed to render: " + (err && err.message ? err.message : String(err)) + " — the data block is intact; regenerate with scripts/release-board.py and reload.";
-    screenEl.insertBefore(band, screenEl.firstChild);
+    fault(err);
     throw err;
   }
 })();

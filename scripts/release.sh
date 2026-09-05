@@ -22,7 +22,7 @@
 # inference is narrated):
 #   release.sh plan [<X.Y.Z>] [--bump minor|patch|major] [--tier 1|2]
 #                                     bare = next minor after the last tag
-#   release.sh run [<X.Y.Z>] [--bump minor|patch|major] [--yes]
+#   release.sh run [<X.Y.Z>] [--bump minor|patch|major] [--yes] [--board]
 #                                     version alone infers the bump; --bump
 #                                     alone infers the version; bare = next
 #                                     minor, and the confirm prompt is then
@@ -425,13 +425,42 @@ verdict_recover() {
 # §1): this reads one file the server wrote, checks its pid is alive, prints
 # one line, and is silent on every other outcome. Never starts, waits, or fails.
 board_link() {
-    local _f=".release/$1/board-server.json" _url _pid
+    local _f=".release/$1/board-server.json" _url _pid _port
     [ -f "$_f" ] || return 0
     _url="$(jq -r '.url // empty' "$_f" 2>/dev/null)" || return 0
     _pid="$(jq -r '.pid // empty' "$_f" 2>/dev/null)" || return 0
+    _port="$(jq -r '.port // empty' "$_f" 2>/dev/null)" || return 0
     case "$_pid" in ''|*[!0-9]*) return 0 ;; esac
+    case "$_port" in ''|*[!0-9]*) return 0 ;; esac
     kill -0 "$_pid" 2>/dev/null || return 0
-    case "$_url" in http://127.0.0.1:*/) printf '  %sboard%s  %s\n' "${B:-}" "${N:-}" "$_url" ;; esac
+    # a recycled pid is not the board: the port in the url must be the file's, and open
+    case "$_url" in "http://127.0.0.1:$_port/"*) ;; *) return 0 ;; esac
+    ( exec 3<>"/dev/tcp/127.0.0.1/$_port" ) 2>/dev/null || return 0
+    case "$_url" in *[![:print:]]*|*' '*) return 0 ;; esac
+    printf '  %sboard%s  %s\n' "${B:-}" "${N:-}" "$_url"
+    return 0
+}
+
+# board_ensure <version> — `run --board`: print the board's link, starting a
+# detached server first if none is serving this run. The server owns its own
+# life (idle exit, run-dir-gone exit); the driver spawns it, waits at most a
+# few seconds for its handshake, prints, and forgets it. It never fails the run:
+# a missing generator or python is one line of note, and the release proceeds.
+board_ensure() {
+    local _v="$1" _py _gen="${RELEASE_BOARD_PY:-$ROOT/scripts/release-board.py}" _i _out
+    _out="$(board_link "$_v")"; if [ -n "$_out" ]; then printf '%s\n' "$_out"; return 0; fi
+    _py="$ROOT/.venv/bin/python"; [ -x "$_py" ] || _py="$(command -v python3 || true)"
+    if [ -z "$_py" ] || [ ! -f "$_gen" ]; then
+        printf '  %sboard%s  not started — %s\n' "${D:-}" "${N:-}" "$([ -f "$_gen" ] && echo 'no python' || echo "no $_gen")"
+        return 0
+    fi
+    mkdir -p ".release/$_v" 2>/dev/null || return 0
+    ( nohup "$_py" "$_gen" "$_v" --serve --with-logs >".release/$_v/board-server.log" 2>&1 </dev/null & ) 2>/dev/null
+    for _i in 1 2 3 4 5 6; do
+        sleep 0.5
+        _out="$(board_link "$_v")"; if [ -n "$_out" ]; then printf '%s\n' "$_out"; return 0; fi
+    done
+    printf '  %sboard%s  not up after 3s — see .release/%s/board-server.log\n' "${D:-}" "${N:-}" "$_v"
     return 0
 }
 
@@ -850,11 +879,12 @@ cmd_recover() {
 cmd_run() {
     V=""
     case "${1-}" in ""|-*) : ;; *) V="$1"; shift ;; esac
-    BUMP=""; ASSUME_YES=0; SKIP=""; V_FULLY_INFERRED=0
+    BUMP=""; ASSUME_YES=0; SKIP=""; V_FULLY_INFERRED=0; WANT_BOARD=0
     while [ $# -gt 0 ]; do
         case "$1" in
             --bump) [ $# -ge 2 ] || die "--bump needs a value"; BUMP="$2"; shift 2 ;;
             --yes|-y) ASSUME_YES=1; shift ;;
+            --board) WANT_BOARD=1; shift ;;
             --skip) [ $# -ge 2 ] || die "--skip needs a step"; SKIP="${SKIP:-} $2"; shift 2 ;;
             *) die "unknown argument: $1" ;;
         esac
@@ -1236,7 +1266,7 @@ cmd_run() {
     { echo "# steps.tbl v1"; run_steps; } > "$RUNDIR/steps.tbl" || die "could not snapshot the step table"
     sink_line_or_die run status=start attempt="$_attempt" proto=1 \
         || die "cannot write the event sink at $BN_EVENT_SINK"
-    board_link "$V" || true
+    if [ "$WANT_BOARD" = 1 ]; then board_ensure "$V" || true; else board_link "$V" || true; fi
     write_context "$RUNDIR"
     # Idle sleep parks xcodebuild/notarytool/altool with no error — the
     # overnight run's quietest failure mode, and no env var converts machine

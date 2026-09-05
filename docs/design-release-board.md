@@ -319,17 +319,31 @@ writers knowing nothing above the files:
 | server — `release-board.py <v> --serve` | the generator, the run dir's mtimes | the writers |
 | page | `board.json` over loopback HTTP | everything else |
 
-**The server** is stdlib `ThreadingHTTPServer` on `127.0.0.1` (port 0 unless
-`--port`). A watcher thread stats the watched files every `--poll` seconds
-(`(name, mtime_ns, size)` — size too, since two writes can share an mtime tick)
-and rebuilds the with-logs model when anything moved; a generator failure keeps
-the last good model and puts the error on the page. `GET /` is the page with the
-model inlined, `/board.json` the model, `/events` an SSE tick per generation
-(`: ping` every 15 s), `/health` the generation. A `Host` header that is not
-loopback is a 400 — the DNS-rebinding case. `Cache-Control: no-store`, a CSP
-that allows only inline script and style and `connect-src 'self'`. It carries
-log tails because it is the view on your own screen; it never leaves the
-machine, and `board.html` on disk stays the clean one.
+**The server** is stdlib `ThreadingHTTPServer` on `127.0.0.1`, port 8151 by
+default (deterministic, because the browser keys the saved layout by origin).
+**Loopback is not a boundary between users or processes on one Mac**, so every
+request carries a per-run token minted at start and written only into the
+0600 handshake — the house pattern of serve mode's auth token and the scoped
+`/mcp` bearer (security review, 5 Sep 2026); no token or the wrong one is a
+404, as if nothing were there. A watcher thread stats the watched files every
+`--poll` seconds (`(name, mtime_ns, size)` — size too, since two writes can
+share an mtime tick) and rebuilds the model when anything moved, skipping a
+tick whose ledger does not end in a newline (a torn read would flash the run
+stranded). Log tails are an **opt-in** here as everywhere (`--with-logs`), and
+a tail is read by seeking the last 64 KB, never the file — a `gh run watch`
+transcript reaches megabytes over a 38-minute gate. The previous run is read
+once, at start; it cannot change while this one is live. A generator failure
+keeps the last good model and puts the scrubbed error on the page; a watcher
+failure does the same rather than serving a stale 200. `GET /` is the page
+with the model inlined, `/board.json` the model with `served_at` stamped at
+serve time (so staleness on the page means "no successful pull", not "nothing
+changed"), `/events` an SSE tick per generation (`: ping` every 15 s, at most
+16 streams), `/health` the generation. A `Host` header that is not loopback is
+a 400 — the DNS-rebinding case. `Cache-Control: no-store`, a CSP that allows
+only inline script and style, `connect-src 'self'`, `frame-ancestors 'none'`;
+a 30 s handler timeout. **The server owns its own life**: it exits after
+`--idle` seconds without a request (4 h) or a minute after the run dir loses
+its ledger, and removes its handshake on the way out.
 
 **The page** renders from one model, `render(data, root)`, and in live mode
 patches: SSE says changed, the page fetches `board.json`, renders into a
@@ -347,21 +361,35 @@ glisten. Widths of the three columns are fractions of the row, set by dragging
 the two gutters (the red IRREVERSIBLE band is the first) and kept in
 `localStorage`; dim means a pane's inputs have not been written yet.
 
-**The one seam into the driver.** The server writes
-`.release/<v>/board-server.json` — `{schema, url, port, pid, version, started}`,
-0600, removed on exit if the pid is its own. `release.sh`'s `board_link`
-prints one line, `board  http://127.0.0.1:<port>/`, when that file exists,
-its pid is alive and its url is loopback; on every other outcome it is silent.
-It never starts, waits on, or fails because of the server, and
-`test-release-sh.sh` pins that the driver never invokes the generator and no
-build script names the server or the handshake.
+**The seam into the driver, in two verbs.** The server writes
+`.release/<v>/board-server.json` — `{schema: 2, url, port, pid, token,
+version, started}`, 0600, removed on exit if the pid is its own. `board_link`
+prints one line, `board  http://127.0.0.1:<port>/?k=…`, when that file
+exists, its pid is alive, the url's port is the file's, and that port accepts a
+connection (a recycled pid is not the board); on every other outcome it is
+silent. `run --board` calls `board_ensure` instead: the same link if one is
+serving, else a **detached** server (`nohup … &`, its log in the run dir) and a
+wait of at most three seconds for its handshake — then it prints and forgets.
+The driver never waits on the server past that, never stops it, and never fails
+because of it: a missing generator or python is one line of note and the
+release proceeds. `test-release-sh.sh` pins the six `board_link` outcomes, the
+four `board_ensure` ones, that `release.sh` names the generator exactly once
+(that default), and that no build script names the server or the handshake —
+`build-all.sh` and `build-dmg.sh` are also run standalone, from Xcode and by
+hand, and their whole contract with observability stays the sink env var.
 
 **Replay** — `--replay` writes `board-replay.html`: frame *i* is the real
 generator on the first *i* ledger lines and the sink lines stamped no later, in
-a throwaway copy of the run dir; a fixed scrubber (buttons, arrow keys) steps
-through them. Liveness is the one thing a prefix cannot read, so a step a
-prefix leaves running is shown running and the frame says "liveness assumed".
-A design tool for the info design; the real board never renders the scrubber.
+a throwaway copy of the run dir (made inside `.release/`, so a crash leaves it
+somewhere private); a fixed scrubber (buttons, arrow keys) steps through them.
+The **last frame is the board**: the whole sink, late verifies included. Every
+other frame's caption counts the sink lines beyond its horizon, and an
+unparseable ledger line keeps the previous horizon rather than emptying the
+sink. Each frame carries its own clock (`now` = its last ledger stamp), so a
+running station's elapsed counts from the frame, not from today. Liveness is
+the one thing a prefix cannot read, so a step a prefix leaves running is shown
+running and the frame says "liveness assumed". A design tool for the info
+design; the real board never renders the scrubber.
 
 **Links.** Every public page is an anchor built in the generator from
 `project.conf` constants (`read_conf` expands its own `${VAR}`s) and validated
@@ -376,9 +404,22 @@ hex or a run id that is not digits gets plain text.
 reloading browser or a poller never reads a half file and a symlink at the
 destination is replaced, never followed.
 
-Proof: `Server` in `test-release-board.py` (loopback bind, page and model,
-generation bump and SSE tick on a ledger write, foreign Host refused, handshake
-0600 and removed, lost ledger keeps the last model); `board_link` cases in
-`test-release-sh.sh`; the served page rendered in jsdom with every pane, the
-live pill and no renderer error. Not mechanised: the in-place patch and the
-tick run only in a browser — the jsdom check is a scratch script, not a suite.
+Proof, three layers. `Server` in `test-release-board.py`: loopback bind, page
+and model, no token or a wrong one is a 404, a foreign Host a 400, log tails
+opt-in, `served_at` per pull, a torn ledger write not published, generation
+bump and SSE tick on a ledger write, handshake 0600 with the token and removed
+on SIGINT by the real `--serve` process, a lost ledger keeps the last model
+with a scrubbed error. `Heartbeat` pins the cadence against `release.sh`'s
+default (as the dmg clock is pinned against `AlphaBuild.swift`) and that the
+last log line is scrubbed. `board_link` and `board_ensure` cases in
+`test-release-sh.sh`. And **`scripts/test-release-board-dom.js`**, run in the
+frontend CI job where jsdom lives: the page's live half executed, not grepped
+— every pane renders, the running station pulses on a fresh heartbeat and goes
+stale past three cadences, a patch swaps only the pane whose slice moved and
+keeps the others' nodes, an older generation does not regress the page, a
+failed pull is an "unreachable" state on the pill with the server's reason, a
+renderer fault on live data reaches the band, and a replay frame keeps its own
+clock and assumed liveness. fetch and EventSource are stubbed (jsdom has
+neither), so the wire is proven by the Python suite and the page's reaction
+to a model by the node one; the two together cover what a single-language
+harness could not.

@@ -285,6 +285,16 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: Release board — the page's live half, in jsdom
+        # scripts/test-release-board-dom.js renders board.html and the replay
+        # in jsdom (a frontend devDependency) and drives the in-place patch, the
+        # tick and the fault band — the third of the board no Python test can
+        # reach. It runs here because this is the job with node_modules; it
+        # exits 3 and says SKIPPED when jsdom is absent, which must not be green.
+        run: |
+          python3 -m venv .venv && .venv/bin/pip install --quiet -e . >/dev/null 2>&1 || true
+          node scripts/test-release-board-dom.js
+
       - name: Frontend lint
         # Blocking gate. Cleared to zero errors on 30 Jun 2026 (jsx-a11y
         # plugin registered, react-compiler lints triaged). Errors fail CI;

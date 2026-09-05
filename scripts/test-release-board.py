@@ -24,6 +24,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -659,17 +660,13 @@ class Html(unittest.TestCase):
     def test_template_lays_out_three_columns_with_two_gutters_and_the_band(self):
         tpl = TEMPLATE.read_text()
         code = tpl.split("<script>", 1)[1]
-        for token in ('"gutter-"+(a === 0 ? "tag" : "stream")', 'panel("log"', 'panel("events"', 'band.id = "pane-activity"', "--c3"):
-            self.assertIn(token, code, token)
         self.assertNotIn('panel("activity"', code, "activity is the band under the line, not a pane")
         # dim = inputs not written yet; anything that happened stays full contrast
         self.assertIn(".panel.idle", tpl)
         self.assertIn('idle(pfP, pf.state === "no-data")', code)
         self.assertNotIn('idle(bp, lane.state !== "data")', code, "ran-no-sink and failed lanes must not be dimmed")
         self.assertIn("minmax(0,var(--c1,1fr)) 14px minmax(0,var(--c2,1fr)) 14px minmax(0,var(--c3,1.25fr))", tpl)
-        # live mode: one place patches, and only when a pane's slice moved
-        for token in ("var patch = function(next)", "JSON.stringify(sN[id]) === JSON.stringify(sO[id])", 'new EventSource("/events")', "HB_STALE_S", "data-since"):
-            self.assertIn(token, code, token)
+        # the live behaviour itself is pinned by scripts/test-release-board-dom.js (jsdom), not by strings here
         self.assertNotIn('+"px")', code, "column widths persist as fractions, never pixels — a saved layout must fit any window")
 
     def test_replay_is_the_real_generator_on_ledger_prefixes(self):
@@ -693,8 +690,10 @@ class Html(unittest.TestCase):
             self.assertTrue(frames[2]["model"]["liveness"]["replay"])
             self.assertEqual(st[3]["bump"], "ok")
             self.assertEqual(frames[2]["model"]["sink"]["events"], 0)  # the 10:00:02 line is after frame 2's 10:00:01
-            self.assertEqual(frames[3]["model"]["sink"]["events"], 1)  # …and within frame 3; the 11:00 line never lands
+            self.assertIn("2 sink line(s) beyond this frame", frames[2]["caption"])
+            self.assertEqual(frames[3]["model"]["sink"]["events"], 2)  # the last frame IS the board: the late 11:00 line included
             self.assertIn("bump ok", frames[3]["caption"])
+            self.assertEqual(frames[2]["model"]["now"], "2026-09-05T10:00:01Z")  # the frame's own clock
         finally:
             t.close()
 
@@ -765,7 +764,8 @@ class Server(unittest.TestCase):
         self.t.run(events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n" + ev("2026-09-05T10:00:01Z", "bump", "running", "attempt 1") + "\n")
         self.httpd, self.state, self.watcher = rb.make_server(self.t.root, "1.0.0", 0, 0.1)
         self.port = self.httpd.server_address[1]
-        self.hs = rb.write_handshake(self.t.root / ".release" / "1.0.0", self.port, "1.0.0")
+        self.k = "?k=" + self.state.token
+        self.hs = rb.write_handshake(self.t.root / ".release" / "1.0.0", self.port, "1.0.0", self.state.token)
         self.thread = threading.Thread(target=self.httpd.serve_forever, kwargs={"poll_interval": 0.1}, daemon=True)
         self.thread.start()
 
@@ -786,24 +786,52 @@ class Server(unittest.TestCase):
 
     def test_page_and_model_are_served_live_on_loopback(self):
         self.assertEqual(self.httpd.server_address[0], "127.0.0.1")
-        st, hd, body = self.get("/")
+        st, hd, body = self.get("/" + self.k)
         self.assertEqual(st, 200)
         self.assertIn(b'id="board-data"', body)
         self.assertRegex(body, rb'"live":\s*\{')
         self.assertEqual(hd["Cache-Control"], "no-store")
-        st, _, body = self.get("/board.json")
+        self.assertIn("frame-ancestors 'none'", hd["Content-Security-Policy"])
+        st, _, body = self.get("/board.json" + self.k)
         j = json.loads(body)
         self.assertEqual(j["live"]["generation"], 1)
-        self.assertTrue(j["header"]["with_logs"])
-        self.assertEqual(self.get("/nope")[0], 404)
+        self.assertFalse(j["header"]["with_logs"], "log tails are an opt-in in serve mode too")
+        self.assertEqual(self.get("/nope" + self.k)[0], 404)
+
+    def test_no_token_or_wrong_token_is_a_404(self):
+        self.assertEqual(self.get("/board.json")[0], 404)
+        self.assertEqual(self.get("/")[0], 404)
+        self.assertEqual(self.get("/board.json?k=" + "x" * 43)[0], 404)
+        self.assertEqual(self.get("/health")[0], 404)
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        c.request("GET", "/health", headers={"Host": "127.0.0.1", "Authorization": "Bearer " + self.state.token})
+        self.assertEqual(c.getresponse().status, 200)
+        c.close()
 
     def test_foreign_host_is_refused(self):
-        self.assertEqual(self.get("/board.json", host="evil.example")[0], 400)
-        self.assertEqual(self.get("/board.json", host="localhost")[0], 200)
+        self.assertEqual(self.get("/board.json" + self.k, host="evil.example")[0], 400)
+        self.assertEqual(self.get("/board.json" + self.k, host="localhost")[0], 200)
+
+    def test_served_at_is_stamped_per_pull_not_per_change(self):
+        a = json.loads(self.get("/board.json" + self.k)[2])["live"]
+        time.sleep(1.1)
+        b = json.loads(self.get("/board.json" + self.k)[2])["live"]
+        self.assertEqual(a["generation"], b["generation"])
+        self.assertEqual(a["changed_at"], b["changed_at"])
+        self.assertNotEqual(a["served_at"], b["served_at"], "a quiet server must not read as a dead one")
+
+    def test_with_logs_opt_in_serves_tails(self):
+        httpd, state, _ = rb.make_server(self.t.root, "1.0.0", 0, 0.1, with_logs=True)
+        try:
+            self.assertTrue(state.model["header"]["with_logs"])
+            self.assertTrue(state.model["live"]["with_logs"])
+        finally:
+            state.stop()
+            httpd.server_close()
 
     def test_a_write_to_the_run_dir_bumps_the_generation_and_ticks_sse(self):
         sock = socket.create_connection(("127.0.0.1", self.port), timeout=5)
-        sock.sendall(f"GET /events HTTP/1.1\r\nHost: 127.0.0.1:{self.port}\r\n\r\n".encode())
+        sock.sendall(f"GET /events{self.k} HTTP/1.1\r\nHost: 127.0.0.1:{self.port}\r\n\r\n".encode())
         first = b""
         while b"data: " not in first:
             first += sock.recv(4096)
@@ -816,14 +844,15 @@ class Server(unittest.TestCase):
             got += sock.recv(4096)
         sock.close()
         self.assertIn(b"data: 2", got)
-        j = json.loads(self.get("/board.json")[2])
+        j = json.loads(self.get("/board.json" + self.k)[2])
         self.assertEqual(j["live"]["generation"], 2)
         self.assertEqual(stations(j)["bump"], "ok")
 
     def test_handshake_is_private_and_removed_on_stop(self):
         self.assertEqual(oct(self.hs.stat().st_mode & 0o777), "0o600")
         h = json.loads(self.hs.read_text())
-        self.assertEqual((h["port"], h["pid"], h["url"]), (self.port, os.getpid(), f"http://127.0.0.1:{self.port}/"))
+        self.assertEqual((h["port"], h["pid"], h["url"]), (self.port, os.getpid(), f"http://127.0.0.1:{self.port}/?k={self.state.token}"))
+        self.assertEqual(h["token"], self.state.token)
         rb.remove_handshake(self.hs)
         self.assertFalse(self.hs.exists())
         self.hs.write_text(json.dumps({"pid": 999999}))
@@ -833,10 +862,130 @@ class Server(unittest.TestCase):
     def test_generator_failure_keeps_the_last_model_and_says_so(self):
         (self.t.root / ".release" / "1.0.0" / "events.jsonl").unlink()
         self.state.refresh(force=True)
-        j = json.loads(self.get("/board.json")[2])
+        j = json.loads(self.get("/board.json" + self.k)[2])
         self.assertEqual(stations(j)["bump"], "stranded")   # the last good model: running, no lock → stranded
         self.assertIsNotNone(j["live"]["error"])
         self.assertIn("lost its ledger", j["live"]["error"])
+        self.assertNotIn(str(self.t.root), j["live"]["error"], "an error string is scrubbed like everything else")
+
+    def test_a_torn_ledger_write_is_not_published(self):
+        with open(self.t.root / ".release" / "1.0.0" / "events.jsonl", "a") as fh:
+            fh.write('{"ts":"2026-09-05T10:00:09Z","step":"bump","status":"o')   # no newline: mid-write
+        self.assertFalse(self.state.refresh())
+        self.assertEqual(stations(json.loads(self.get("/board.json" + self.k)[2]))["bump"], "stranded")  # unchanged, not corrupt
+        with open(self.t.root / ".release" / "1.0.0" / "events.jsonl", "a") as fh:
+            fh.write('k","detail":"8s"}\n')
+        self.assertTrue(self.state.refresh())
+        self.assertEqual(stations(json.loads(self.get("/board.json" + self.k)[2]))["bump"], "ok")
+
+    def test_the_serve_command_removes_its_handshake_on_sigint(self):
+        run = self.t.root / ".release" / "1.0.0"
+        (run / "board-server.json").unlink(missing_ok=True)
+        p = subprocess.Popen([PY, str(GEN), "1.0.0", "--serve", "--root", str(self.t.root), "--port", "0", "--poll", "0.1"],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+        try:
+            deadline = time.time() + 10
+            while not (run / "board-server.json").exists() and time.time() < deadline:
+                time.sleep(0.05)
+            self.assertTrue((run / "board-server.json").exists(), "no handshake within 10 s")
+            p.send_signal(signal.SIGINT)
+            p.wait(timeout=10)
+            self.assertEqual(p.returncode, 0)
+            self.assertFalse((run / "board-server.json").exists(), "handshake left behind after SIGINT")
+        finally:
+            if p.poll() is None:
+                p.kill()
+
+
+class Heartbeat(unittest.TestCase):
+    def test_cadence_matches_release_sh_default(self):
+        sh = (ROOT / "scripts" / "release.sh").read_text()
+        m = re.search(r"BN_HEARTBEAT_SECS:-(\d+)", sh)
+        self.assertIsNotNone(m, "release.sh no longer defaults BN_HEARTBEAT_SECS — the board's mirror has lost its source")
+        self.assertEqual(int(m.group(1)), rb.HEARTBEAT_CADENCE_S)
+
+    def test_last_line_is_scrubbed_and_cadence_carried(self):
+        t = Tree()
+        try:
+            home = str(Path.home())
+            t.run(events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n",
+                  extra={"heartbeat": f"1893456000\tbuild-all\t12\tSigning with Developer ID Application: CANARY-NAME (ABCDE12345) at {home}/CANARY-DIR\n"})
+            hb = t.model()["liveness"]["heartbeat"]
+            self.assertEqual(hb["cadence_s"], rb.HEARTBEAT_CADENCE_S)
+            self.assertNotIn("CANARY-NAME", hb["last_line"])
+            self.assertNotIn(home, hb["last_line"])
+            self.assertIn("CANARY-DIR", hb["last_line"])
+        finally:
+            t.close()
+
+
+class Hardening(unittest.TestCase):
+    def test_tail_is_read_by_seeking_and_is_correct(self):
+        t = Tree()
+        try:
+            big = "".join(f"line {i}\n" for i in range(200000))   # ~2.3 MB
+            t.run(events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n" + ev("2026-09-05T10:00:01Z", "bump", "fail", "exit 1") + "\n",
+                  extra={"logs/bump.1.log": big})
+            tail = t.model(with_logs=True)["logs"]["bump"]["tail"]
+            self.assertEqual(tail[-1], "line 199999")
+            self.assertEqual(len(tail), 12)
+            self.assertLess(rb.LOG_TAIL_BYTES, 200000)
+        finally:
+            t.close()
+
+    def test_non_finite_elapsed_never_reaches_the_page(self):
+        t = Tree()
+        try:
+            sink = ("@bn step ts=2026-09-05T10:00:01Z run=1.0.0 id=build-all attempt=1 status=start\n"
+                    "@bn step ts=2026-09-05T10:00:02Z run=1.0.0 id=1 name=x status=start\n"
+                    "@bn step ts=2026-09-05T10:00:03Z run=1.0.0 id=1 status=ok elapsed=nan\n"
+                    "@bn step ts=2026-09-05T10:00:04Z run=1.0.0 id=build-all attempt=1 status=end rc=0 elapsed=3\n")
+            t.run(events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n", sink=sink)
+            m = t.model()
+            self.assertIsNone(m["build"]["lanes"][0]["steps"][0]["elapsed"])
+            json.loads(rb.inline_json(m))  # allow_nan=False would have raised on a NaN
+        finally:
+            t.close()
+
+    def test_scrub_with_root_home_leaves_strings_alone(self):
+        self.assertEqual(rb.scrub("a/b/c", "/"), "a/b/c")
+
+    def test_source_emits_has_four_answers(self):
+        t = Tree()
+        try:
+            (t.root / "desktop" / "scripts").mkdir(parents=True)
+            (t.root / "desktop" / "scripts" / "x.sh").write_text("bn_autowrap\n")
+            self.assertTrue(rb.source_emits(t.root, "desktop/scripts/x.sh"))
+            self.assertEqual(rb.source_emits(t.root, "xcodebuild archive"), "no-script")
+            self.assertEqual(rb.source_emits(t.root, "desktop/scripts/missing.sh"), "no-script")
+        finally:
+            t.close()
+
+    def test_unlistable_logs_dir_is_said(self):
+        if os.geteuid() == 0:
+            self.skipTest("root can list anything")
+        t = Tree()
+        try:
+            d = t.run(events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n" + ev("2026-09-05T10:00:01Z", "build-all", "ok", "1s") + "\n",
+                      extra={"logs/build-all.1.log": "x"})
+            os.chmod(d / "logs", 0)
+            try:
+                c = t.model()["confounded"]
+                self.assertTrue(any("logs/ could not be listed" in u["what"] for u in c["unknown"]), c["unknown"])
+            finally:
+                os.chmod(d / "logs", 0o700)
+        finally:
+            t.close()
+
+    def test_non_https_conf_link_is_withheld_and_said(self):
+        t = Tree()
+        try:
+            (t.root / "scripts" / "project.conf").write_text(CONF + 'DMG_PERMALINK="http://x.app/dmg/X.dmg"\n')
+            m = t.model()
+            self.assertNotIn("dmg", m["links"]["channels"])
+            self.assertTrue(any("DMG_PERMALINK" in u["what"] for u in m["confounded"]["unknown"]))
+        finally:
+            t.close()
 
 
 class RealRun(unittest.TestCase):

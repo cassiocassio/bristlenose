@@ -40,15 +40,47 @@ _bl_root="$(mktemp -d)"; mkdir -p "$_bl_root/.release/1.2.3"
 eq "no handshake → prints nothing" "" "$(cd "$_bl_root" && board_link 1.2.3)"
 printf '{"url":"http://127.0.0.1:4321/","pid":999999}' > "$_bl_root/.release/1.2.3/board-server.json"
 eq "dead pid → prints nothing" "" "$(cd "$_bl_root" && board_link 1.2.3)"
-printf '{"url":"http://127.0.0.1:4321/","pid":%s}' "$$" > "$_bl_root/.release/1.2.3/board-server.json"
-case "$(cd "$_bl_root" && board_link 1.2.3)" in *"http://127.0.0.1:4321/"*) ok "live pid → prints the url" ;; *) bad "live pid → url not printed" ;; esac
-printf '{"url":"http://evil.example/","pid":%s}' "$$" > "$_bl_root/.release/1.2.3/board-server.json"
+# a live pid alone is not enough (pids recycle): the url's port must be the file's, and open
+python3 -c 'import socket,sys,time; s=socket.socket(); s.bind(("127.0.0.1",0)); s.listen(64); open(sys.argv[1],"w").write(str(s.getsockname()[1])); time.sleep(20)' "$_bl_root/port" &
+_bl_lpid=$!
+for _i in 1 2 3 4 5 6 7 8 9 10; do [ -s "$_bl_root/port" ] && break; sleep 0.2; done
+_bl_port="$(cat "$_bl_root/port" 2>/dev/null)"
+if [ -n "$_bl_port" ]; then
+    printf '{"url":"http://127.0.0.1:%s/?k=abc","pid":%s,"port":%s}' "$_bl_port" "$$" "$_bl_port" > "$_bl_root/.release/1.2.3/board-server.json"
+    case "$(cd "$_bl_root" && board_link 1.2.3)" in *"http://127.0.0.1:$_bl_port/?k=abc"*) ok "live pid + open port → prints the url" ;; *) bad "live pid + open port → url not printed" ;; esac
+    printf '{"url":"http://127.0.0.1:%s/","pid":%s,"port":1}' "$_bl_port" "$$" > "$_bl_root/.release/1.2.3/board-server.json"
+    eq "url port ≠ file port → prints nothing" "" "$(cd "$_bl_root" && board_link 1.2.3)"
+else
+    ok "could not open a listener to test against (lsof/python3 absent) — skipped, not passed"
+fi
+kill "$_bl_lpid" 2>/dev/null
+printf '{"url":"http://127.0.0.1:1/","pid":%s,"port":1}' "$$" > "$_bl_root/.release/1.2.3/board-server.json"
+eq "live pid, closed port → prints nothing" "" "$(cd "$_bl_root" && board_link 1.2.3)"
+printf '{"url":"http://evil.example/","pid":%s,"port":4321}' "$$" > "$_bl_root/.release/1.2.3/board-server.json"
 eq "non-loopback url → prints nothing" "" "$(cd "$_bl_root" && board_link 1.2.3)"
 printf 'not json' > "$_bl_root/.release/1.2.3/board-server.json"
 ( cd "$_bl_root" && board_link 1.2.3 ); eq "unreadable handshake → exit 0" 0 "$?"
 rm -rf "$_bl_root"
-# and the driver has no other knowledge of the board: no script it runs names the generator
-eq "release.sh never invokes the generator or server" 0 "$(grep -c 'release-board\.py\|--serve' "$ROOT/scripts/release.sh")"
+# board_ensure — run --board: start a detached server if none serves; never fail the run
+head_ "board_ensure — spawn, wait briefly, print, forget; never a failure"
+_be_root="$(mktemp -d)"; mkdir -p "$_be_root/.release/1.2.3"
+( cd "$_be_root" && RELEASE_BOARD_PY="/nonexistent/release-board.py" board_ensure 1.2.3 >"$_be_root/out" 2>&1 ); eq "generator missing → exit 0" 0 "$?"
+case "$(cat "$_be_root/out")" in *"not started"*) ok "generator missing → says so, one line" ;; *) bad "generator missing → no note: $(cat "$_be_root/out")" ;; esac
+cat > "$_be_root/fake-board.py" <<'PYF'
+import json, os, socket, sys, time
+v = sys.argv[1]; s = socket.socket(); s.bind(("127.0.0.1", 0)); s.listen(64); port = s.getsockname()[1]
+open(f".release/{v}/board-server.json", "w").write(json.dumps({"url": f"http://127.0.0.1:{port}/?k=t", "port": port, "pid": os.getpid(), "token": "t"}))
+time.sleep(8)
+PYF
+( cd "$_be_root" && RELEASE_BOARD_PY="$_be_root/fake-board.py" board_ensure 1.2.3 >"$_be_root/out" 2>&1 ); eq "spawn path → exit 0" 0 "$?"
+case "$(cat "$_be_root/out")" in *"board"*"http://127.0.0.1:"*"/?k=t"*) ok "spawned server's url printed within the wait" ;; *) bad "spawned url not printed: $(cat "$_be_root/out")" ;; esac
+[ -f "$_be_root/.release/1.2.3/board-server.log" ] && ok "server log lands in the run dir" || bad "no board-server.log"
+( cd "$_be_root" && RELEASE_BOARD_PY="$_be_root/fake-board.py" board_ensure 1.2.3 >"$_be_root/out2" 2>&1 )
+eq "already serving → prints the same link, spawns nothing" "$(cat "$_be_root/out")" "$(cat "$_be_root/out2")"
+pkill -f "fake-board.py 1.2.3" 2>/dev/null; rm -rf "$_be_root"
+# the driver's knowledge of the board is board_link + board_ensure, and nothing else
+eq "release.sh names the generator exactly once (board_ensure's default)" 1 "$(grep -c 'release-board\.py' "$ROOT/scripts/release.sh")"
+eq "…and only board_ensure invokes it" 1 "$(grep -c '"\$_gen" "\$_v" --serve' "$ROOT/scripts/release.sh")"
 eq "build scripts never name the generator, server or handshake" 0 "$(grep -l 'release-board\.py\|board-server' "$ROOT"/desktop/scripts/*.sh 2>/dev/null | wc -l | tr -d ' ')"
 
 head_ "verdict_act — release / rebuild / nothing"

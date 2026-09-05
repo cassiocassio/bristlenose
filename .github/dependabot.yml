@@ -67,10 +67,23 @@ updates:
       # what the retired tokenizers rule used). The anthropic and mcp ceilings
       # were lifted 5 Sep 2026 and their `versions:` rules retired with them —
       # docs/dependency-premortem-log.md § Held register.
+      # pydantic is held on presidio's cap, NOT on ours -- `presidio-analyzer
+      # 2.2.364` requires `pydantic>=2.12.5,<3.0.0` and is the sole reverse-dep
+      # in either venv. That is the opposite of the anthropic/mcp ceilings
+      # lifted 5 Sep 2026, which were ours to remove. It belongs to the presidio
+      # cluster beside cryptography and numpy.
       - dependency-name: "pydantic"
         update-types: ["version-update:semver-major"]
-      - dependency-name: "fastapi"
-        update-types: ["version-update:semver-major"]
+      # fastapi's major-ignore RETIRED 2026-09-05. It had no cap anywhere --
+      # nothing in either venv requires fastapi except huggingface_hub extras we
+      # do not install -- and no fastapi 1.0 exists, so it never once suppressed
+      # a PR. Its recorded reason grouped it with pydantic on a basis neither of
+      # them had. This file's own policy is "only deps that empirically caused
+      # rework when auto-bumped", which is what the react / react-router /
+      # i18next allow-list below already applies; fastapi never has, because it
+      # never had a major. An ignore is also silent: it does not defer the 1.0
+      # PR, it means nobody is told 1.0 shipped. Hand-review it via /cassandra
+      # when it arrives. See docs/dependency-premortem-log.md § the asymmetry.
       # spaCy ecosystem cluster — HELD, not dead-pinned. Re-measured 3 Sep
       # 2026: spaCy 3.8.x pins thinc<8.4; thinc 9 is the spaCy-4 line and is
       # the resolver-red. weasel and confection GRADUATED the same day — spaCy

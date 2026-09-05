@@ -84,9 +84,32 @@ session). Two consequences: **the right fixture is the six real stage
 templates**, about 4¢ per model per pass, not one hand-written transcript; and
 grouping flipping between passes means **no single probe can promise a run**
 — the durable fix is a repair step where decode-time enforcement is not
-available (unwrap a field that arrives as a `str`/`dict` containing the
-expected container, then one retry on `ValidationError`). Root cause still not
-established.
+available. Root cause still not established.
+
+**Both are now done (5 Sep 2026).** The fixture is
+`scripts/live_check_fixture.py`, carrying all six calls through the pipeline's
+own `get_prompt_template`, fields, `wrap_untrusted` envelope and models. The
+repair is `_validate_repairing` in `client.py`, on the Anthropic and Gemini
+paths only.
+
+**Building it found a THIRD shape this section had not named**, and the first
+version of the repair could not touch it. Sonnet 5 returned
+`{"parameters": {"clusters": [...]}}` — the JSON-Schema keyword for a tool's
+argument object, leaking into the argument object itself. The repair iterates the
+response model's *own* declared fields, deliberately, so that it cannot become a
+make-it-parse pass; `parameters` is not one of them. The envelope case is now
+handled structurally (exactly one key, not a model field, inner keys within the
+model's), which also covers `arguments` / `input` / `properties`.
+
+**Measured after the fix, four passes:** sonnet-5 completes both stages every
+time. `s10:clusters` repaired on every pass, `s11:themes` on some — consistent
+with the flipping already recorded. The repair logs at WARNING, so a provider
+degrading its shape stays visible rather than being absorbed; a silent repair
+would have turned this finding into a thing nobody could ever notice again.
+
+**This does not re-open Sonnet 5 as a default.** The repair buys a run that
+would otherwise die at stage 10; it is not evidence the model's output is sound,
+and the root cause is still unknown.
 
 ### Mocks cannot see any of this, and signature checks see only some
 
@@ -180,10 +203,14 @@ old cell dirs moved aside, nothing deleted).
 that instruction, passes. The repair step above is the durable answer; a root
 cause is what would let Sonnet 5 back in without one.
 
-**The quote-stability corpus has not been run** on any moved default. Two
-defaults changed model family and lost their temperature pin. The design
-decision that removed the slider measured determinism *at* 0.1 on Sonnet; it
-did not measure a family swap. The corpus exists for exactly this.
+**The quote-stability corpus has been rebuilt and run** (5 Sep 2026,
+`experiments/quote-stability/`). It had to be rebuilt rather than re-run: the
+Jul harness was kept out of the public tree because its corpus was
+participants'. The replacement runs on FOSSDA, which is open-source and already
+transcribed, so a pass is one `extract_quotes` call per session and nothing
+else. Numbers in that directory's `FINDINGS.md`; the design decision that
+removed the temperature slider cites the Jul figures, so it is the doc to true
+if they have moved.
 
 **Azure is on legacy parameters and a 2024 API version.** It addresses a
 deployment, not a model, so no name-based gate can work. A GPT-5 deployment

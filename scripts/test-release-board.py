@@ -616,6 +616,32 @@ class Html(unittest.TestCase):
         self.assertIn("minmax(0,var(--c1,1fr)) 14px minmax(0,var(--c2,1fr)) 14px minmax(0,var(--c3,1.25fr))", tpl)
         self.assertNotIn('+"px")', code, "column widths persist as fractions, never pixels — a saved layout must fit any window")
 
+    def test_replay_is_the_real_generator_on_ledger_prefixes(self):
+        t = Tree()
+        try:
+            t.run(events="\n".join([ev("2026-09-05T10:00:00Z", "run", "started"),
+                                     ev("2026-09-05T10:00:01Z", "bump", "running", "attempt 1"),
+                                     ev("2026-09-05T10:00:05Z", "bump", "ok", "4s")]) + "\n",
+                  sink="@bn meta ts=2026-09-05T10:00:02Z run=1.0.0 title=x\n@bn meta ts=2026-09-05T11:00:00Z run=1.0.0 title=late\n")
+            out = t.root / "replay"
+            r = t.cli("1.0.0", "--replay", "--out", str(out))
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertFalse((out / "board.html").exists())
+            g = _ScriptGrabber()
+            g.feed((out / "board-replay.html").read_text())
+            frames = json.loads(g.data)["replay"]
+            self.assertEqual([f["i"] for f in frames], [0, 1, 2, 3])
+            st = [stations(f["model"]) for f in frames]
+            self.assertEqual(st[0]["bump"], "pending")
+            self.assertEqual(st[2]["bump"], "running")   # liveness assumed while a prefix leaves it running
+            self.assertTrue(frames[2]["model"]["liveness"]["replay"])
+            self.assertEqual(st[3]["bump"], "ok")
+            self.assertEqual(frames[2]["model"]["sink"]["events"], 0)  # the 10:00:02 line is after frame 2's 10:00:01
+            self.assertEqual(frames[3]["model"]["sink"]["events"], 1)  # …and within frame 3; the 11:00 line never lands
+            self.assertIn("bump ok", frames[3]["caption"])
+        finally:
+            t.close()
+
     def test_json_flag_prints_what_the_file_would_hold_and_out_dir_is_honoured(self):
         t = Tree()
         try:

@@ -42,7 +42,9 @@ import importlib.util
 import json
 import os
 import re
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -777,12 +779,12 @@ def previous_run(release_dir: Path, version: str, conf: dict) -> dict | None:
     return {"version": d.name, "steps": steps, "channels": chans or conf["CHANNELS"], "lanes_with_children": with_children}
 
 
-def build_model(root: Path, version: str, with_logs: bool, narrate=lambda s: None) -> dict:
+def build_model(root: Path, version: str, with_logs: bool, narrate=lambda s: None, liveness_override: dict | None = None) -> dict:
     release_dir = root / ".release"
     run_dir = release_dir / version
     steps, steps_source, steps_ver, steps_problems = read_steps(run_dir)
     ledger = read_ledger(run_dir)
-    liveness = read_liveness(run_dir)
+    liveness = liveness_override or read_liveness(run_dir)
     sink = read_sink(run_dir)
     conf = read_conf(root / "scripts" / "project.conf")
     stations, unknown_steps = fold_stations(steps, ledger, liveness, steps_source)
@@ -858,6 +860,58 @@ def inline_json(model: dict) -> str:
     return s.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
 
 
+_SINK_TS = re.compile(r"\bts=(\S+)")
+
+
+def replay_frames(root: Path, version: str) -> list[dict]:
+    """The board at every moment of a finished run: frame i is the real generator
+    run on the first i ledger lines (and the sink lines stamped no later than
+    the i-th), in a throwaway copy of the run dir. Liveness is the one thing a
+    replay cannot read — a step left running by a prefix is shown as running,
+    and the frame says so. There is no previous run in the copy, so the
+    confounded log's "changed" section is empty in every frame."""
+    run_dir = root / ".release" / version
+    ledger = [ln for ln in (run_dir / "events.jsonl").read_text(encoding="utf-8", errors="replace").split("\n") if ln.strip()]
+    sink_path = run_dir / "bn-events.log"
+    sink = bn_events.read_sink_text(sink_path).split("\n") if sink_path.is_file() else []
+    sink = [ln for ln in sink if ln.strip()]
+    frames = []
+    with tempfile.TemporaryDirectory(prefix="rb-replay-") as tmp:
+        troot = Path(tmp)
+        (troot / "scripts").mkdir()
+        (troot / "docs" / "testing").mkdir(parents=True)
+        for rel in ("scripts/project.conf", "docs/testing/ratchet.json"):
+            if (root / rel).is_file():
+                shutil.copy(root / rel, troot / rel)
+        trun = troot / ".release" / version
+        shutil.copytree(run_dir, trun, ignore=shutil.ignore_patterns("board*.html", "board*.json", ".lock"))
+        for i in range(len(ledger) + 1):
+            prefix = ledger[:i]
+            (trun / "events.jsonl").write_text("".join(ln + "\n" for ln in prefix), encoding="utf-8")
+            upto = None
+            if prefix:
+                try:
+                    upto = json.loads(prefix[-1]).get("ts")
+                except ValueError:
+                    upto = None
+            if sink:
+                keep = [ln for ln in sink if (m := _SINK_TS.search(ln)) and upto and m.group(1) <= upto]
+                (trun / "bn-events.log").write_text("".join(ln + "\n" for ln in keep), encoding="utf-8")
+            fold = read_ledger(trun)["fold"]
+            running = any(f.get("status") == "running" for f in fold.values())
+            live = {"lock": running and i < len(ledger), "pid": None, "alive": running and i < len(ledger), "heartbeat": None, "replay": True}
+            model = build_model(troot, version, False, liveness_override=live)
+            caption = "before the first event"
+            if prefix:
+                try:
+                    e = json.loads(prefix[-1])
+                    caption = f"{e.get('ts', '')}  {e.get('step', '?')} {e.get('status', '?')}  {e.get('detail', '')}".strip()
+                except ValueError:
+                    caption = "(unparseable ledger line)"
+            frames.append({"i": i, "of": len(ledger), "caption": caption, "model": model})
+    return frames
+
+
 def render_html(model: dict, template: Path) -> str:
     tpl = template.read_text(encoding="utf-8")
     if "__BOARD_JSON__" not in tpl:
@@ -888,6 +942,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", type=Path, help="directory for board.json + board.html (default: the run dir)")
     ap.add_argument("--with-logs", action="store_true", help="also write board-with-logs.html carrying raw log tails — do not attach it to anything")
     ap.add_argument("--json", action="store_true", help="print board.json to stdout instead of writing files")
+    ap.add_argument("--replay", action="store_true", help="write board-replay.html: the board at every ledger line, with back/forward controls (design tool — not a live view)")
     ap.add_argument("--root", type=Path, default=ROOT, help=argparse.SUPPRESS)
     args = ap.parse_args(argv)
     root = args.root.resolve()
@@ -905,6 +960,13 @@ def main(argv: list[str] | None = None) -> int:
     if not (run_dir / "events.jsonl").is_file():
         sys.stderr.write(f"error: {run_dir} has no events.jsonl — not a run\n")
         return 1
+    if args.replay:
+        out = (args.out or run_dir).resolve()
+        out.mkdir(parents=True, exist_ok=True)
+        frames = replay_frames(root, version)
+        write_private(out / "board-replay.html", render_html({"replay": frames, "version": version}, TEMPLATE))
+        sys.stderr.write(f"  wrote {out / 'board-replay.html'}  ·  {version}  ·  {len(frames)} frames\n")
+        return 0
     model = build_model(root, version, args.with_logs, narrate)
     if args.json:
         print(json.dumps(model, indent=2, ensure_ascii=True))

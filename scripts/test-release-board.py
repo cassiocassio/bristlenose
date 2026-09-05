@@ -387,6 +387,21 @@ class Merge(unittest.TestCase):
             t.close()
 
 
+class Activity(unittest.TestCase):
+    def test_long_span_bins_adaptively_and_drops_nothing(self):
+        t = Tree()
+        try:
+            evs = [ev("2026-09-01T00:00:00Z", "run", "started")] + [ev(f"2026-09-0{d}T12:00:00Z", "bump", "ok", "1s") for d in range(1, 6)]
+            t.run(events="\n".join(evs) + "\n")
+            a = t.model()["activity"]
+            self.assertLessEqual(len(a["minutes"]), 600)
+            self.assertEqual(sum(a["minutes"]), 6)
+            self.assertEqual(a["bin_minutes"], -(-a["span_minutes"] // 600))
+            self.assertGreater(a["bin_minutes"], 1)
+        finally:
+            t.close()
+
+
 class Ci(unittest.TestCase):
     def test_ci_lines_place_matrix_cells_and_flag_sha_mismatch(self):
         t = Tree()

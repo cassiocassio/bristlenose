@@ -673,20 +673,18 @@ def activity(ledger: dict, sink: dict) -> dict:
         except ValueError:
             bad += 1
     if not parsed:
-        return {"minutes": [], "start": None, "unparseable": bad, "truncated": False}
+        return {"minutes": [], "start": None, "unparseable": bad, "span_minutes": 0, "bin_minutes": 1}
     t0 = min(parsed).replace(second=0)
     full = int((max(parsed) - t0).total_seconds() // 60) + 1
-    span = min(full, 600)
-    counts = [0] * span
-    dropped = 0
+    # Bin adaptively: at most 600 bins across the whole span, so a five-day run
+    # is 600 bins of 12 minutes rather than its first 600 minutes (which the
+    # strip then reported as truncated, 5 Sep 2026). Nothing is dropped.
+    bin_minutes = max(1, -(-full // 600))
+    counts = [0] * (-(-full // bin_minutes))
     for t in parsed:
-        i = int((t - t0).total_seconds() // 60)
-        if 0 <= i < span:
-            counts[i] += 1
-        else:
-            dropped += 1
+        counts[int((t - t0).total_seconds() // 60) // bin_minutes] += 1
     return {"minutes": counts, "start": t0.strftime("%Y-%m-%dT%H:%M:%SZ"), "unparseable": bad,
-            "truncated": full > span, "span_minutes": full, "dropped": dropped}
+            "span_minutes": full, "bin_minutes": bin_minutes}
 
 
 def confounded(steps: list[dict], steps_source: str, stations: list[dict], unknown_steps: list[str], grouped: dict,

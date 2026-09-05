@@ -117,6 +117,10 @@
   .ch .n{display:flex;align-items:center;gap:7px;font-weight:600;font-size:12px}
   .ch .n .idx{font:10px var(--mono);color:var(--mute);margin-left:auto}
   .ch .rows{display:grid;grid-template-columns:auto 1fr;gap:1px 8px;font-size:10.5px}
+  .ch .rows span{min-width:0;overflow-wrap:anywhere}
+  /* the dot lives in the name row, not as the card's child — colour it from the card's state */
+  .ch.ok .n .dot{background:var(--ok)} .ch.bad .n .dot{background:var(--bad)} .ch.unreachable .n .dot{background:var(--warn)}
+  .ch.no-data .n .dot,.ch.skipped .n .dot{background:transparent;border-color:var(--skip)}
   .ch .rows span:nth-child(odd){color:var(--mute)}
   .mono{font-family:var(--mono);font-size:10px}
   pre{margin:0;font:10px/1.35 var(--mono);white-space:pre;overflow:auto}

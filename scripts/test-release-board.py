@@ -957,7 +957,7 @@ class Hardening(unittest.TestCase):
             (t.root / "desktop" / "scripts" / "x.sh").write_text("bn_autowrap\n")
             self.assertTrue(rb.source_emits(t.root, "desktop/scripts/x.sh"))
             self.assertEqual(rb.source_emits(t.root, "xcodebuild archive"), "no-script")
-            self.assertEqual(rb.source_emits(t.root, "desktop/scripts/missing.sh"), "no-script")
+            self.assertEqual(rb.source_emits(t.root, "desktop/scripts/missing.sh"), "absent")
         finally:
             t.close()
 

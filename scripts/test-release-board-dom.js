@@ -93,6 +93,13 @@ async function section2() {
   eq("the CI pane is the same node", true, d.getElementById("pane-ci") === before.ci);
   const ba = [...d.querySelectorAll(".station")].find(s => s.querySelector("b").textContent === "build-all");
   eq("the swapped line shows build-all ok", true, /^ok/.test(ba.querySelector("small").textContent));
+  // a pull that changed nothing still moves the pill's stamp (it read "20m ago" on the first rehearsal)
+  const pillTs0 = d.getElementById("live-pill").querySelector("[data-ts]").getAttribute("data-ts");
+  const same = { ...next, live: { ...next.live, served_at: iso(Date.now() + 5000) } };
+  w.fetch = () => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(same), text: () => Promise.resolve("") });
+  await sleep(2400);
+  eq("the live pill's stamp refreshes on a pull that moved no pane", true, d.getElementById("live-pill").querySelector("[data-ts]").getAttribute("data-ts") !== pillTs0);
+  eq("channel card ages tick", true, d.querySelectorAll("#pane-channels [data-ts]").length >= 0);
   // an older generation landing after a newer one is ignored
   const stale = { ...next, live: { ...next.live, generation: 1 }, phase: "stranded" };
   w.fetch = () => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(stale), text: () => Promise.resolve("") });

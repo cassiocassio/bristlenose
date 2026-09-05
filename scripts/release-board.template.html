@@ -111,7 +111,7 @@
   .gate small{font-family:var(--mono);color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ratchets{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
   .rat{font-size:10px;color:var(--mute)} .rat b{display:block;font:600 11px var(--mono);color:var(--ink)}
-  .channels{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .channels{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px}
   .ch{border:1px solid var(--rule);border-radius:7px;padding:7px 9px;display:grid;gap:3px}
   .ch.ok{border-color:#cfe9d8} .ch.bad{border-color:#f1c9c6} .ch.unreachable{border-color:#f3dfa5} .ch.no-data,.ch.skipped{opacity:.7;background:var(--hatch)}
   .ch .n{display:flex;align-items:center;gap:7px;font-weight:600;font-size:12px}
@@ -187,7 +187,7 @@
   if (data.live) add(top, frag(function(){ var p = $("span","pill live"); p.id = "live-pill"; add(p, frag("live · ", ageEl(data.live.served_at), data.live.error ? " · generator error: "+data.live.error : "")); return p; }()));
   var conf = data.confounded;
   add(top, $("span","pill "+(conf.computable ? (conf.count ? "warn" : "ok") : "hatch"), conf.computable ? ("confounded expectations: "+conf.count) : "confounded log: not computable"));
-  add(top, $("span","m", "snapshot generated "+fmtT(data.generated)+" · newest source "+fmtT(h.newest_source)+(h.with_logs ? " · CONTAINS RAW BUILD LOGS — do not attach to anything" : "")));
+  add(top, $("span","m", (data.live ? "model built " : "snapshot generated ")+fmtT(data.generated)+" · newest source "+fmtT(h.newest_source)+(h.with_logs ? " · CONTAINS RAW BUILD LOGS — do not attach to anything" : "")));
   add(screen, top);
 
   // Station → pane. Build lanes are mapped from data.build.lane_ids; these are
@@ -247,6 +247,7 @@
             : lane.source_emits === true ? "the script reports steps today (bn_autowrap) — this run predates the sink (5 Sep 2026), or BN_EVENT_SINK was not exported"
             : lane.source_emits === false ? "this script does not report steps; nothing is missing"
             : lane.source_emits === "unreadable" ? "the script exists in the tree but could not be read"
+            : lane.source_emits === "absent" ? "the script the step names is not in this tree (a copied run dir served from elsewhere?)"
             : "the step's command names no desktop/scripts/*.sh, so there is no script to ask";
     var head = {"not-run":"not run","skipped":"skipped by the driver","failed-no-window":"failed (ledger)","ran-no-sink":"ran (ledger: "+lane.ledger_state+") · nothing in the sink","running-no-sink":"running · nothing in the sink yet",
                 "data":(lane.steps.length+" steps · attempt "+lane.attempt+" · rc "+lane.rc+" · "+elapsed(lane.elapsed))}[lane.state] || lane.state;
@@ -315,7 +316,8 @@
   var cg = $("div","channels");
   chn.cards.forEach(function(c, i){
     var card = $("div","ch "+c.state); idle(card, c.state === "no-data"); var n = $("div","n"); add(n, $("i","dot"), link(c.name, c.url), $("span","idx",(i+1)+"/"+chn.cards.length)); add(card, n);
-    var rows = $("div","rows"); add(rows, $("span",null,"state"), $("span",null,c.state), $("span",null,"evidence"), $("span","mono",c.evidence||"—"), $("span",null,"as of"), $("span","mono",c.as_of ? fmtT(c.as_of)+" ("+age(c.as_of)+")" : "—")); add(card, rows);
+    var asof = $("span","mono"); if (c.as_of) add(asof, frag(fmtT(c.as_of)+" (", ageEl(c.as_of), ")")); else asof.textContent = "—";
+    var rows = $("div","rows"); add(rows, $("span",null,"state"), $("span",null,c.state), $("span",null,"evidence"), $("span","mono",c.evidence||"—"), $("span",null,"as of"), asof); add(card, rows);
     add(cg, card);
   });
   add(cP, cg);
@@ -352,10 +354,10 @@
   if (!logIds.length) add(lP, nodata("the driver keeps one log per step attempt under logs/; this pane shows the failed or running one"));
   logIds.forEach(function(sid){ var l = logs[sid]; add(lP, $("div","sub", sid+": "+l.path+" · "+l.attempts+" attempt(s) · "+l.size+" bytes")); if (l.tail){ var pre = $("pre"); pre.textContent = l.tail.join("\n"); add(lP, pre); } });
   add(stream, lP);
-  var eP = panel("events","Events","ledger + sink, merged by (ts, source, line)", "last "+data.events.length+" of "+(data.events_total!=null?data.events_total:"?")+(data.sink.present ? (" · "+data.sink.events+" sink events"+(data.sink.unparsed?" · "+data.sink.unparsed+" UNPARSED":"")+(data.sink.partial?" · partial trailing line":"")) : " · no sink file"));
+  var eP = panel("events","Events","ledger + sink, merged by (ts, source, line) · newest first", "last "+data.events.length+" of "+(data.events_total!=null?data.events_total:"?")+(data.sink.present ? (" · "+data.sink.events+" sink events"+(data.sink.unparsed?" · "+data.sink.unparsed+" UNPARSED":"")+(data.sink.partial?" · partial trailing line":"")) : " · no sink file"));
   var ev = $("div","ev");
   // a 40-hex sha is a third of the column: show 8, keep the whole line in the tooltip
-  data.events.forEach(function(r){ var short = String(r.text).replace(/\b([0-9a-f]{8})[0-9a-f]{32}\b/g, "$1…"); var cell = $("span",null,short); if (short !== r.text) cell.title = r.text; add(ev, $("span","ts",fmtT(r.ts)), $("span","src "+(r.src==="ledger"?"ledger":""), r.src), cell); });
+  data.events.slice().reverse().forEach(function(r){ var short = String(r.text).replace(/\b([0-9a-f]{8})[0-9a-f]{32}\b/g, "$1…"); var cell = $("span",null,short); if (short !== r.text) cell.title = r.text; add(ev, $("span","ts",fmtT(r.ts)), $("span","src "+(r.src==="ledger"?"ledger":""), r.src), cell); });
   add(eP, data.events.length ? ev : nodata());
   idle(eP, !data.events.length);
   add(stream, eP);
@@ -457,15 +459,18 @@
       var sN = slices(next), sO = slices(latest), ids = Object.keys(sN);
       var sameShape = ids.length === Object.keys(sO).length && ids.every(function(id){ return id in sO; });
       if (!sameShape) { render(next); latest = next; tick(); return; }
+      var stamp = function(){
+        var hbEl = document.querySelector("[data-hb] [data-ts]"); if (hbEl && next.liveness && next.liveness.heartbeat && isFinite(next.liveness.heartbeat.epoch)) hbEl.setAttribute("data-ts", new Date(next.liveness.heartbeat.epoch*1000).toISOString());
+        var pill = document.getElementById("live-pill"); if (pill) { var pa = pill.querySelector("[data-ts]"); if (pa && next.live) pa.setAttribute("data-ts", next.live.served_at); }
+      };
       var moved = ids.filter(function(id){ return JSON.stringify(sN[id]) !== JSON.stringify(sO[id]); });
-      if (!moved.length) { latest = next; tick(); return; }   // nothing to draw: no detached render
+      if (!moved.length) { stamp(); latest = next; tick(); return; }   // nothing to draw: no detached render, but the stamps still move
       var tmp = document.createElement("div"); render(next, tmp);
       moved.forEach(function(id){
         var o = document.getElementById(id), n = tmp.querySelector("#"+(window.CSS && CSS.escape ? CSS.escape(id) : id));
         if (o && n) { o.replaceWith(n); n.classList.add("changed"); }
       });
-      var hbEl = document.querySelector("[data-hb] [data-ts]"); if (hbEl && next.liveness && next.liveness.heartbeat && isFinite(next.liveness.heartbeat.epoch)) hbEl.setAttribute("data-ts", new Date(next.liveness.heartbeat.epoch*1000).toISOString());
-      var pill = document.getElementById("live-pill"); if (pill) { var pa = pill.querySelector("[data-ts]"); if (pa && next.live) pa.setAttribute("data-ts", next.live.served_at); }
+      stamp();
       latest = next; tick();
     };
     var pull = function(){

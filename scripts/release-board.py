@@ -618,7 +618,7 @@ def source_emits(root: Path, cmd: str) -> bool | str:
         return "no-script"
     p = root / m.group(1)
     if not p.is_file():
-        return "no-script"
+        return "absent"
     try:
         return "bn_autowrap" in p.read_text(encoding="utf-8", errors="replace")
     except OSError:

@@ -583,7 +583,8 @@ def build_pane(grouped: dict, ledger: dict, steps: list[dict], previous: dict | 
     for lane_id in lanes:
         ws = [w for w in windows if w["id"] == lane_id]
         ledger_state = fold.get(lane_id, {}).get("status")
-        common = {"source_emits": source_emits(root, cmds.get(lane_id, "")), "log": (logs or {}).get(lane_id)}
+        # a run without steps.tbl names no command; the lane is named after its script
+        common = {"source_emits": source_emits(root, cmds.get(lane_id) or f"desktop/scripts/{lane_id}.sh"), "log": (logs or {}).get(lane_id)}
         if not ws:
             if ledger_state in (None, "pending"):
                 state = "not-run"

@@ -16,7 +16,7 @@
 
 import os
 
-from PyInstaller.utils.hooks import collect_all, collect_submodules
+from PyInstaller.utils.hooks import collect_all, collect_submodules, copy_metadata
 
 PROJECT_ROOT = os.path.abspath(os.path.join(SPECPATH, ".."))
 
@@ -98,6 +98,12 @@ a = Analysis(
         *_MCP_DATAS,
         *_JSONSCHEMA_SPEC_DATAS,
         *_JSONSCHEMA_DATAS,
+        # starlette is pure Python, so PyInstaller bytecompiles it into the
+        # archive and leaves no dist-info in _internal/ — which meant the
+        # shipped 0.29.1 could not say which starlette it carried (ledger
+        # Entry 7, "the unknowns"). Its dist-info is 28 KB on disk (measured
+        # 5 Sep 2026, starlette-1.6.0.dist-info) and answers that.
+        *copy_metadata("starlette"),
         (
             os.path.join(PROJECT_ROOT, "bristlenose", "theme"),
             os.path.join("bristlenose", "theme"),

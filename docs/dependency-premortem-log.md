@@ -807,6 +807,22 @@ it was lockfile-only: exactly two entries moved, 7.14.2 → 7.18.3 (`6e627839`).
 The other twelve stay unmerged pending a bundle pass or a **deliberate** budget
 decision.
 
+_Bisected 5 Sep 2026 against #143, the group's second coming (13 updates,
+231.94 kB against 220)._ The overage is **not the runtime libraries and not
+the group**: it is **`vite` 8.0.10 → 8.2.2 alone**. Measured with everything
+else in the dev set updated (`@types/*`, testing-library, `@vitejs/plugin-react`
+6.1.1, `typescript-eslint`, `vitest`) — vite 8.0.10 builds **207.72 kB**, the
+baseline to the byte; vite 8.2.2 with plugin-react rolled back to 6.0.1 builds
+**231.86 kB**. Four of the runtime members (react, react-dom, i18next,
+react-i18next) were not even in the tree for that measurement, so they are
+exonerated by construction. Nothing landed: the lockfile was restored and the
+static build re-run to baseline. **What that leaves is a judgement, not a
+task:** either vite 8.2's output is legitimately +24 kB gzipped (a chunking or
+helper change worth a `size:why` read) and the budget moves with a reason
+written down, or vite is major-ignored at the minor — and the register's own
+rule says an ignore without a row is a tombstone. The PR should be split
+either way: the eight non-vite dev members are budget-neutral and merge clean.
+
 On the advisories, assessed rather than assumed: **none of the seven was
 reachable.** Six need framework/SSR/RSC mode and `router.tsx:58` is a
 client-side data router; the seventh needs an attacker-controlled navigation
@@ -921,7 +937,15 @@ longer than the one that reproduces it. "Sonnet class, current version" remains
 the rule; the current Sonnet cannot be honoured today, and the receipt sits in
 `providers.py` beside the value. Not yet done: the quote-stability corpus, and
 whether the stringifying is tied to the schema's `verbatim_excerpt`
-"copy-paste" instruction.
+"copy-paste" instruction. _Is there a clock on the fallback? Read 5 Sep 2026
+from Anthropic's model-deprecations page: `claude-sonnet-4-6` is **Active**,
+tentative retirement **not sooner than 17 Feb 2027**, with a stated 60-day
+notice before any retirement. ("Sunset list" in the anthropic row above is
+OUR `_ANTHROPIC_ACCEPTS_SAMPLING` set, not Anthropic's list.) So the retry is
+on merit, not deadline. The same page confirms the parameter side: the Python
+SDK v1.0+ removes `temperature`/`top_p`/`top_k` and 4.7+ models 400 on
+non-default values — the two facts the `extra_body` + sunset-list design
+already encodes._
 
 **Corrected 5 Sep 2026 (six-real-template run, other session).** The Sonnet 5
 failure is at **quote-clustering** (clusters as a `str`, 2/2) and

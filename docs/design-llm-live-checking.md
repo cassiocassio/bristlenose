@@ -111,6 +111,33 @@ would have turned this finding into a thing nobody could ever notice again.
 would otherwise die at stage 10; it is not evidence the model's output is sound,
 and the root cause is still unknown.
 
+### A fourth kind of drift: the shape is right and the values are wrong
+
+The three above are all shape or availability failures — the call is refused,
+the model is gone, or the object does not validate. `gpt-5.6-terra` shows a
+fourth kind that every one of those checks passes cleanly.
+
+Asked for `HH:MM:SS`, it returns `HH:MM:SS`. Structured Outputs guarantees the
+schema and the schema is met. The *values* are wrong: the transcript is rendered
+`MM:SS` while a session runs under an hour (`format_timecode` omits hours below
+1 h), and the model writes those values into the `HH:MM:SS` slot by appending
+`:00`. Every field shifts up one place, so `M*3600 + S*60 == 60 * (M*60 + S)` —
+exactly sixty times the truth, and always a whole number of minutes.
+
+Measured 5 Sep 2026 on FOSSDA s1/s4/s9/s10, four passes: **239 of 380 quotes,
+63%**, with `claude-sonnet-4-6` and `gemini-3.8-flash` at **zero** over the same
+transcripts. Model-specific, not prompt-specific. It is also inconsistent within
+one response — 37% of quotes in the same call are correct — so a blanket divide
+is the wrong fix and the guard has to be per-quote.
+`experiments/quote-stability/FINDINGS.md` § 3 has the raw wire strings.
+
+The thing to carry: **rung 3 would have passed this.** A structured `analyze()`
+against a fixture returns a valid `QuoteExtractionResult`, which is exactly what
+this is. Validation answers whether the object is well-formed; it never asks
+whether the object is *true*. The only check that catches this class is one that
+knows something about the input — here, that a quote cannot end after the
+recording does.
+
 ### Mocks cannot see any of this, and signature checks see only some
 
 Every provider test mocks the SDK's `create`. A mock accepts any keyword and
@@ -164,6 +191,7 @@ gone (Gemini 2.5).
 | `mcp` refusals keep their reason on 2.1 (base class, not a refactor) | `e6a161c3` | 73/73 on a scratch venv at 2.1.1 |
 | `scripts/check-providers-live.py` + release gate + quarterly item 8 | `b04ac9d2` | 7/7 baseline |
 | Keychain: a key saved in the app or the CLI is seen by both | `bcdc03b9` (other session) | read-back |
+| Quote timecodes range-checked per quote; the 60x signature divided, anything else out of range clamped, both at WARNING | `a7d455d2` | 9 tests, incl. the three raw wire strings from the live `s9` call |
 
 The live check is wired into `check-release-ready.sh` as a "providers live"
 row in the standard ok/warn/bad idiom, with a missing key reported as WARN

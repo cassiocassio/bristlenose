@@ -123,6 +123,15 @@ so a blanket ÷60 is the wrong fix; the guard has to be per-quote.
 Impact: every deep-linked timecode in a ChatGPT-analysed report, clip-export
 boundaries, and the position-overlap key section 1 depends on.
 
+**Guarded 7 Sep 2026** (`a7d455d2`). `s09_quote_extraction.py` range-checks each
+parsed timecode against the session's own duration: out of range, a whole number
+of minutes, and back in range once divided by 60 is repaired and logged
+`quote_timecode_repair`; out of range without that signature is clamped, not
+divided, and logged `quote_timecode_out_of_range`. Never silent. The blind spot
+the range check cannot cover — an affected timecode that lands *inside* a long
+session, because `format_timecode` is per-segment — is pinned as a test rather
+than left to be rediscovered.
+
 ## 4. `s3` extracted zero quotes, silently
 
 The largest session in the corpus (73,747 chars) produced **no quotes at all**

@@ -63,12 +63,14 @@ def main() -> int:
     sessions = set(args.sessions) if args.sessions else None
 
     if args.only in (None, "cached"):
-        print("\n\033[1mCACHED corpus (topic_boundaries.json, provenance unknown)\033[0m")
+        print("\n\033[1mCACHED corpus (topic_boundaries.json)\033[0m")
         audit(json.loads((CORPUS / "topic_boundaries.json").read_text()), dur, sessions)
 
     if OUT_S08.exists():
         for d in sorted(OUT_S08.iterdir()):
-            if not d.is_dir() or (args.only not in (None, "cached") and d.name != args.only):
+            if not d.is_dir() or args.only == "cached" or (
+                args.only is not None and d.name != args.only
+            ):
                 continue
             f = d / "boundaries.json"
             if f.exists():

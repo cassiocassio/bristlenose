@@ -183,8 +183,10 @@ same kind of prompt and parses the answer back with the same `parse_timecode`,
 and **unlike s09 it has no range guard** — so a mangled boundary is corrected
 nowhere and reported nowhere.
 
-**It is already in the cached corpus this harness has been feeding to every pass
-as `boundaries_text`:**
+**It was in the cached corpus this harness fed to every pass as
+`boundaries_text`** (repaired in place 11 Sep 2026 — see the end of this
+section; the table below is the pre-repair state, preserved because it is the
+evidence):
 
 | | boundaries | exact-minute | out of range | resolve under /60 |
 |---|---:|---:|---:|---:|
@@ -244,6 +246,27 @@ Replayed against the real cached corpus, the guard recovers **38 of 38** affecte
 boundaries, drops none, and leaves the 95 good ones untouched. s1's repaired
 values land at 1.0, 4.4, 7.7 and 10.9 min in a 39.6-min session — monotonic,
 sensibly spaced, and in the topical order the labels imply.
+
+**The corpus was then repaired in place** (`repair_cached_boundaries.py`, 11 Sep
+2026). Verified after: 133 boundaries before and after, **labels byte-identical**,
+38 timecodes changed, **zero non-timecode fields changed**, zero still out of
+range. The pre-repair file is pinned at
+`out/_pinned-inputs/fossda-opensource-topic_boundaries-preRepair.json`, so the 12
+committed quote-stability passes — measured with the *old* boundaries as prompt
+input — stay reproducible.
+
+**Repair, not re-run, and the distinction is the point.** A fresh s08 call returns
+NEW boundaries with NEW labels, and every cached quote's `topic_label` is an exact
+boundary label string — **106 of 106** — so re-running s08 alone would leave all
+284 quotes pointing at boundaries that no longer exist. "Re-run s08" and "fix the
+cached boundaries" are different operations.
+
+**The cached quotes did NOT need repairing.** Same model, same run, s09: 3 of 284
+out of range (1.1%) and none carrying the signature — s4 overshoots its last
+segment by 6s, s7 by 29s, s9 by 15s, which is ordinary imprecision. So
+`claude-sonnet-4` hit 28.6% on s08 and 0% on s09 in the same run. Whatever makes
+a model fall into this, it is not uniform across stages, and a stage measured
+clean says nothing about its neighbour.
 
 ## 4. `s3` extracted zero quotes, silently
 

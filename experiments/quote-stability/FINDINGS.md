@@ -227,12 +227,23 @@ The stray single exact-minute boundary in several clean arms is the ~1-in-60 bas
 rate the § 3 tell predicts, in range and correct — a sanity check that the audit
 is not over-flagging.
 
-**s08 still has no guard.** Its failure mode is quieter than s09's: an
-out-of-range boundary is dropped by `_boundaries_in_range`, so the topic context
-silently vanishes from the quote prompt and `_choose_split_time` falls back to
-mechanical halves. Nothing errors and nothing logs. Whether that should be a
-repair (as in s09) or fail-loud is an open decision — a boundary is *dropped*
-rather than *shown wrongly*, which is a different harm from a wrong deep link.
+**s08 is now guarded** (11 Sep 2026). The guard is shared —
+`bristlenose/stages/timecode_guard.py`, one implementation behind both stages —
+with per-stage log keys (`quote_*` / `boundary_*`) so a stage's lines stay
+greppable on their own.
+
+The stages diverge on ONE rule, deliberately. s09 **clamps** a value that is out
+of range without the 60x signature, because a quote timecode is *shown* and a
+bounded deep link beats one past the end of the media. s08 **drops** it: clamping
+a boundary would invent a topic transition at the session end and then push it
+back inside `_boundaries_in_range`, turning a boundary the downstream filter
+would have caught into one it cannot. s08's old behaviour was to lose these
+silently anyway; the guard makes the loss visible.
+
+Replayed against the real cached corpus, the guard recovers **38 of 38** affected
+boundaries, drops none, and leaves the 95 good ones untouched. s1's repaired
+values land at 1.0, 4.4, 7.7 and 10.9 min in a 39.6-min session — monotonic,
+sensibly spaced, and in the topical order the labels imply.
 
 ## 4. `s3` extracted zero quotes, silently
 

@@ -18,6 +18,7 @@ from bristlenose.models import (
     TransitionType,
 )
 from bristlenose.run_lifecycle import _build_cause
+from bristlenose.stages.timecode_guard import repair_timecode, timecode_ceiling
 from bristlenose.utils.timecodes import parse_timecode
 
 logger = logging.getLogger(__name__)
@@ -138,16 +139,33 @@ async def _segment_single(
     )
 
     # Convert LLM output to our domain models
+    ceiling = timecode_ceiling(transcript)
+    repairs = {"scaled": 0, "dropped": 0, "unparseable": 0}
     boundaries: list[TopicBoundary] = []
     for item in result.boundaries:
         try:
             timecode_seconds = parse_timecode(item.timecode)
         except ValueError:
             logger.warning(
-                "Could not parse timecode %r, skipping boundary",
-                item.timecode,
+                "boundary_timecode_unparseable | session=%s | raw=%s",
+                transcript.session_id, item.timecode,
             )
+            repairs["unparseable"] += 1
             continue
+
+        # See stages/timecode_guard.py. `drop` rather than s09's `clamp`: a
+        # clamped boundary would invent a topic transition at the session end and
+        # then PASS `_boundaries_in_range`, which is worse than losing it.
+        timecode_seconds, outcome = repair_timecode(
+            timecode_seconds, ceiling,
+            session_id=transcript.session_id,
+            field="timecode", raw=item.timecode,
+            kind="boundary", out_of_range="drop",
+        )
+        if outcome:
+            repairs[outcome] += 1
+            if outcome == "dropped":
+                continue
 
         try:
             transition_type = TransitionType(item.transition_type)
@@ -161,6 +179,16 @@ async def _segment_single(
                 transition_type=transition_type,
                 confidence=item.confidence,
             )
+        )
+
+    if any(repairs.values()):
+        # s09's sibling line. `boundaries` is the model's own output count — the
+        # population the rate is measured over, before any drop above.
+        logger.warning(
+            "boundary_timecodes_repaired | session=%s | boundaries=%d | scaled=%d | "
+            "dropped=%d | unparseable=%d",
+            transcript.session_id, len(result.boundaries),
+            repairs["scaled"], repairs["dropped"], repairs["unparseable"],
         )
 
     # Sort by timecode

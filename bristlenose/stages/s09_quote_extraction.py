@@ -26,6 +26,7 @@ from bristlenose.models import (
     TranscriptSegment,
 )
 from bristlenose.run_lifecycle import _build_cause
+from bristlenose.stages.timecode_guard import repair_timecode, timecode_ceiling
 from bristlenose.utils.text import apply_smart_quotes
 from bristlenose.utils.timecodes import format_timecode_prompt, parse_timecode
 
@@ -199,117 +200,6 @@ async def extract_quotes(
     return all_quotes, outcome
 
 
-# ---------------------------------------------------------------------------
-# Timecode range guard
-# ---------------------------------------------------------------------------
-#
-# `full_text()` USED TO render each segment as MM:SS while a session ran under
-# an hour (`format_timecode` omits hours below 1 h) while the schema asked the
-# model for HH:MM:SS. `gpt-5.6-terra` resolved that mismatch by appending `:00`,
-# shifting every field up one place: MM becomes HH, SS becomes MM. The
-# arithmetic is exact — `M*3600 + S*60 == 60 * (M*60 + S)` — so an affected
-# value is exactly 60x the truth AND is always a whole number of minutes.
-# `parse_timecode` was correct throughout; the model was wrong.
-#
-# THE SOURCE IS FIXED as of 11 Sep 2026: `full_text()` and the `boundaries_text`
-# beside it both render `format_timecode_prompt` (zero-padded HH:MM:SS), so
-# there is no longer a mismatch for a model to resolve. This guard is kept as
-# defence in depth — the fix removes the *reason* a model guesses the format,
-# not its *ability* to — and because it is the only thing that would tell us if
-# a future model got it wrong for some other reason. It should now fire on
-# nothing.
-#
-# Measured 5 Sep 2026 on FOSSDA s1/s4/s9/s10, four passes: 239 of 380 quotes
-# (63%) affected on `gpt-5.6-terra`, and ZERO on `claude-sonnet-4-6` and
-# `gemini-3.8-flash` over the same transcripts. It is also inconsistent WITHIN
-# one response (37% of quotes in the same call are correct), so a blanket divide
-# is the wrong fix and the guard has to be per-quote.
-#
-# That zero once read as "model-specific, not prompt-specific". It is NOT — the
-# same signature was later found in stage 8 from `claude-sonnet-4` (38 of 133
-# cached boundaries) and from `gemini-3.8-flash` on an unpadded prompt. Three
-# model families, so this is a prompt-format hazard and the padding below is a
-# fix rather than a vendor workaround.
-# `experiments/quote-stability/FINDINGS.md` §§ 3, 3b.
-#
-# The scaling repair fires only on the whole measured signature: out of range,
-# a whole number of minutes (the appended `:00`), and back in range once divided
-# by 60. An out-of-range value WITHOUT that signature is a different fault and
-# is not divided on spec — it is clamped into range, which bounds the deep link
-# and the clip-export boundary without inventing a position for the quote.
-#
-# A repair is a WARNING, never silent — same rule as `_validate_repairing` in
-# `llm/client.py`: the repair buys the researcher their run, and the log line is
-# what says the run needed buying.
-#
-# KNOWN BLIND SPOT: a range check cannot see an affected timecode that lands
-# INSIDE the session — a 60x error early in a long session stays in range. The
-# old per-segment rendering produced exactly that case (a session over an hour
-# rendered its first hour MM:SS and the rest H:MM:SS, two formats in one
-# prompt); padding removes it, since every segment now renders the same way.
-# The blind spot itself remains, because a model can still return an in-range
-# wrong value for reasons nothing here models. Closing it needs the quote's text
-# checked against the segment at its timecode, which this guard does not do.
-
-# Absolute allowance for a model naming an end a beat past the last segment.
-# Irrelevant to the 60x case, which overshoots by minutes or hours.
-_TIMECODE_GRACE_S = 2.0
-
-
-def _timecode_ceiling(transcript: PiiCleanTranscript) -> float | None:
-    """Latest time a quote from this transcript could legitimately carry.
-
-    ``None`` when the transcript has no usable time axis — no segments, or every
-    segment starting at 0.0 (a non-timecoded transcript, the same case
-    ``_resolve_segment_index`` refuses to match on). Range-checking those would
-    be measuring against a clock that isn't running.
-
-    A split chunk keeps the whole session's ``duration_seconds`` (``_split_transcript``
-    only replaces ``segments``), so this is the SESSION ceiling on both paths —
-    a quote from the right-hand chunk is legitimately at a high absolute time.
-    """
-    segments = transcript.segments
-    if not segments or all(s.start_time == 0.0 for s in segments):
-        return None
-    ceiling = max([transcript.duration_seconds, *(s.end_time for s in segments)])
-    return ceiling if ceiling > 0 else None
-
-
-def _repair_timecode(
-    value: float,
-    ceiling: float | None,
-    *,
-    session_id: str,
-    field: str,
-    raw: str,
-) -> tuple[float, str | None]:
-    """Range-check one parsed quote timecode against the session duration.
-
-    Returns ``(value, repair_kind)`` where ``repair_kind`` is ``None`` (in
-    range), ``"scaled"`` (the 60x signature, divided) or ``"clamped"`` (out of
-    range for some other reason, bounded into it).
-    """
-    if ceiling is None or value <= ceiling + _TIMECODE_GRACE_S:
-        return value, None
-
-    scaled = value / 60.0
-    if value % 60 == 0 and scaled <= ceiling + _TIMECODE_GRACE_S:
-        logger.warning(
-            "quote_timecode_repair | session=%s | field=%s | raw=%s | was=%.1f | "
-            "now=%.1f | ceiling=%.1f | signature=minutes-as-hours",
-            session_id, field, raw, value, scaled, ceiling,
-        )
-        return scaled, "scaled"
-
-    clamped = max(0.0, min(value, ceiling))
-    logger.warning(
-        "quote_timecode_out_of_range | session=%s | field=%s | raw=%s | was=%.1f | "
-        "clamped=%.1f | ceiling=%.1f",
-        session_id, field, raw, value, clamped, ceiling,
-    )
-    return clamped, "clamped"
-
-
 async def _extract_one_pass(
     transcript: PiiCleanTranscript,
     topic_map: SessionTopicMap | None,
@@ -355,7 +245,7 @@ async def _extract_one_pass(
     )
 
     # Convert LLM output to our domain models
-    ceiling = _timecode_ceiling(transcript)
+    ceiling = timecode_ceiling(transcript)
     repairs = {"scaled": 0, "clamped": 0, "unparseable": 0}
     quotes: list[ExtractedQuote] = []
     for item in result.quotes:
@@ -380,15 +270,17 @@ async def _extract_one_pass(
             repairs["unparseable"] += 1
             end_tc = start_tc
 
-        start_tc, start_repair = _repair_timecode(
+        start_tc, start_repair = repair_timecode(
             start_tc, ceiling,
             session_id=transcript.session_id,
             field="start", raw=item.start_timecode,
+            kind="quote", out_of_range="clamp",
         )
-        end_tc, end_repair = _repair_timecode(
+        end_tc, end_repair = repair_timecode(
             end_tc, ceiling,
             session_id=transcript.session_id,
             field="end", raw=item.end_timecode,
+            kind="quote", out_of_range="clamp",
         )
         for kind in (start_repair, end_repair):
             if kind:

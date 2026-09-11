@@ -24,11 +24,10 @@ from bristlenose.models import (
     SpeakerRole,
     TopicBoundary,
     TranscriptSegment,
-    format_timecode,
 )
 from bristlenose.run_lifecycle import _build_cause
 from bristlenose.utils.text import apply_smart_quotes
-from bristlenose.utils.timecodes import parse_timecode
+from bristlenose.utils.timecodes import format_timecode_prompt, parse_timecode
 
 logger = logging.getLogger(__name__)
 
@@ -204,13 +203,21 @@ async def extract_quotes(
 # Timecode range guard
 # ---------------------------------------------------------------------------
 #
-# `full_text()` renders each segment as MM:SS while a session runs under an hour
-# (`format_timecode` omits hours below 1 h). `gpt-5.6-terra` writes those values
-# back into an HH:MM:SS slot by appending `:00`, which shifts every field up one
-# place: MM becomes HH, SS becomes MM. The arithmetic is exact —
-# `M*3600 + S*60 == 60 * (M*60 + S)` — so an affected value is exactly 60x the
-# truth AND is always a whole number of minutes. `parse_timecode` is correct
-# here; the model is wrong.
+# `full_text()` USED TO render each segment as MM:SS while a session ran under
+# an hour (`format_timecode` omits hours below 1 h) while the schema asked the
+# model for HH:MM:SS. `gpt-5.6-terra` resolved that mismatch by appending `:00`,
+# shifting every field up one place: MM becomes HH, SS becomes MM. The
+# arithmetic is exact — `M*3600 + S*60 == 60 * (M*60 + S)` — so an affected
+# value is exactly 60x the truth AND is always a whole number of minutes.
+# `parse_timecode` was correct throughout; the model was wrong.
+#
+# THE SOURCE IS FIXED as of 11 Sep 2026: `full_text()` and the `boundaries_text`
+# beside it both render `format_timecode_prompt` (zero-padded HH:MM:SS), so
+# there is no longer a mismatch for a model to resolve. This guard is kept as
+# defence in depth — the fix removes the *reason* a model guesses the format,
+# not its *ability* to — and because it is the only thing that would tell us if
+# a future model got it wrong for some other reason. It should now fire on
+# nothing.
 #
 # Measured 5 Sep 2026 on FOSSDA s1/s4/s9/s10, four passes: 239 of 380 quotes
 # (63%) affected on `gpt-5.6-terra`, and ZERO on `claude-sonnet-4-6` and
@@ -230,11 +237,13 @@ async def extract_quotes(
 # what says the run needed buying.
 #
 # KNOWN BLIND SPOT: a range check cannot see an affected timecode that lands
-# INSIDE the session. `format_timecode` is per-segment, so a session over an
-# hour renders its first hour as MM:SS and the rest as H:MM:SS, and an early
-# quote in a long session can be 60x wrong and still be in range. Catching that
-# needs the quote's text checked against the segment at its timecode, which this
-# guard does not do.
+# INSIDE the session — a 60x error early in a long session stays in range. The
+# old per-segment rendering produced exactly that case (a session over an hour
+# rendered its first hour MM:SS and the rest H:MM:SS, two formats in one
+# prompt); padding removes it, since every segment now renders the same way.
+# The blind spot itself remains, because a model can still return an in-range
+# wrong value for reasons nothing here models. Closing it needs the quote's text
+# checked against the segment at its timecode, which this guard does not do.
 
 # Absolute allowance for a model naming an end a beat past the last segment.
 # Irrelevant to the 60x case, which overshoots by minutes or hours.
@@ -314,7 +323,9 @@ async def _extract_one_pass(
     relevant_boundaries = _boundaries_in_range(topic_map, transcript.segments)
     if relevant_boundaries:
         boundaries_text = "\n".join(
-            f"- [{format_timecode(b.timecode_seconds)}] "
+            # Padded to match the transcript in the same prompt — one timecode
+            # format per prompt, or the model has a mismatch to resolve again.
+            f"- [{format_timecode_prompt(b.timecode_seconds)}] "
             f"{b.topic_label} ({b.transition_type.value})"
             for b in relevant_boundaries
         )

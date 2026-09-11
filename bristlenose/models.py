@@ -13,6 +13,7 @@ from bristlenose.events import PipelineSummary
 # Re-exported so the many stages importing it from here keep working. There is
 # exactly one implementation, in utils.timecodes — see docs/design-shared-formats.md.
 from bristlenose.utils.timecodes import format_timecode as format_timecode
+from bristlenose.utils.timecodes import format_timecode_prompt
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -222,20 +223,35 @@ class FullTranscript(BaseModel):
     segments: list[TranscriptSegment]
 
     def full_text(self) -> str:
-        """Return the full transcript as timestamped text."""
+        """Return the full transcript as timestamped text, for LLM PROMPTS.
+
+        ``format_timecode_prompt``, NOT ``format_timecode``: the only two callers
+        are the s08 and s09 prompts, both of which ask the model for ``HH:MM:SS``
+        and parse its answer back with ``parse_timecode``. Rendering the
+        transcript in the same padded form is what stops a model resolving the
+        mismatch itself. See that function's docstring for the measurement.
+
+        This is NOT the on-disk transcript format — s07 writes that, still via
+        ``format_timecode``, and ``pipeline.py`` reads it back.
+        """
         lines: list[str] = []
         for seg in self.segments:
-            tc = format_timecode(seg.start_time)
+            tc = format_timecode_prompt(seg.start_time)
             role_tag = f" [{seg.speaker_role.value.upper()}]" if seg.speaker_role != SpeakerRole.UNKNOWN else ""
             lines.append(f"[{tc}]{role_tag} {seg.text}")
         return "\n\n".join(lines)
 
     def participant_text(self) -> str:
-        """Return only participant speech as timestamped text."""
+        """Return only participant speech as timestamped text, for LLM PROMPTS.
+
+        No callers as of 11 Sep 2026. Padded like ``full_text`` anyway, so a
+        future caller inherits the fix rather than the defect it was written to
+        remove.
+        """
         lines: list[str] = []
         for seg in self.segments:
             if seg.speaker_role == SpeakerRole.PARTICIPANT:
-                tc = format_timecode(seg.start_time)
+                tc = format_timecode_prompt(seg.start_time)
                 lines.append(f"[{tc}] {seg.text}")
         return "\n\n".join(lines)
 

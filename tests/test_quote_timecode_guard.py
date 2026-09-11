@@ -5,12 +5,17 @@ writes an `MM:SS` transcript value into an `HH:MM:SS` slot by appending `:00`,
 making the parsed value exactly 60x the truth for 63% of quotes (239 of 380
 across four passes). Claude and Gemini: zero, on the same transcripts.
 
+The SOURCE was fixed on 11 Sep 2026 — the prompt now renders zero-padded
+`HH:MM:SS`, so there is no mismatch left for a model to resolve. `TestPromptRendering`
+pins that; the guard tests below pin the defence in depth that stays behind it.
+
 These tests drive the real stage with a mocked LLM — no network, no keys.
 """
 
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock
 
@@ -21,9 +26,12 @@ from bristlenose.models import (
     PiiCleanTranscript,
     SessionTopicMap,
     SpeakerRole,
+    TopicBoundary,
     TranscriptSegment,
+    TransitionType,
 )
 from bristlenose.stages.s09_quote_extraction import extract_quotes
+from bristlenose.utils.timecodes import parse_timecode
 
 # Long enough to clear the default min_quote_words=5 filter.
 _TEXT = "I really enjoy this flow and would happily use it again tomorrow"
@@ -226,3 +234,82 @@ class TestKnownBlindSpot:
             _transcript(duration_seconds=2 * 3600), [_item("00:53:00", "02:07:00")]
         )
         assert quotes[0].start_timecode == 3180.0  # still 60x wrong
+
+
+class TestPromptRendering:
+    """The prompt the model reads must speak the format the schema asks for.
+
+    This is the source fix. If it regresses, the guard above starts firing again
+    and 63% of ChatGPT quote timecodes go wrong — so these assertions are the
+    thing standing between a tidy-up of the timecode helpers and the defect
+    coming back.
+    """
+
+    def test_every_line_is_zero_padded_hh_mm_ss(self) -> None:
+        t = _transcript(duration_seconds=23 * 60)
+        lines = [ln for ln in t.full_text().splitlines() if ln.strip()]
+
+        assert lines, "transcript rendered empty"
+        for line in lines:
+            tc = line.split("]")[0].lstrip("[")
+            assert re.fullmatch(r"\d{2}:\d{2}:\d{2}", tc), f"not padded: {line[:40]!r}"
+
+    def test_one_format_across_the_hour_boundary(self) -> None:
+        """The old rendering switched form mid-transcript at 1 h. This one does not."""
+        t = _transcript(duration_seconds=2 * 3600, n_segments=40)
+        widths = {len(ln.split("]")[0].lstrip("[")) for ln in t.full_text().splitlines() if ln.strip()}
+
+        assert widths == {8}, f"mixed timecode widths in one prompt: {widths}"
+
+    def test_rendering_round_trips_through_parse_timecode(self) -> None:
+        """What we render is what we parse back — the two halves of the contract."""
+        t = _transcript(duration_seconds=2 * 3600, n_segments=40)
+        rendered = [
+            parse_timecode(ln.split("]")[0].lstrip("["))
+            for ln in t.full_text().splitlines()
+            if ln.strip()
+        ]
+
+        assert rendered == [pytest.approx(s.start_time) for s in t.segments]
+
+    @pytest.mark.asyncio
+    async def test_topic_boundaries_match_the_transcript_in_the_same_prompt(self) -> None:
+        """A mixed-format prompt is the ambiguity we just removed.
+
+        The boundary list and the transcript sit in ONE prompt. If they disagree
+        on format, the model has a mismatch to resolve all over again.
+        """
+        captured: dict[str, str] = {}
+
+        async def analyze(system_prompt, user_prompt, response_model, **kw):
+            captured["user"] = user_prompt
+            return QuoteExtractionResult(quotes=[])
+
+        client = AsyncMock()
+        client.provider = "anthropic"
+        client.analyze = analyze
+
+        await extract_quotes(
+            [_transcript()],
+            [
+                SessionTopicMap(
+                    participant_id="p1",
+                    session_id="s9",
+                    boundaries=[
+                        TopicBoundary(
+                            timecode="00:05:30",
+                            timecode_seconds=330.0,
+                            topic_label="Onboarding",
+                            transition_type=TransitionType.TOPIC_SHIFT,
+                        )
+                    ],
+                )
+            ],
+            client,
+            concurrency=1,
+        )
+
+        # Every bracketed timecode in the prompt — transcript AND boundary list.
+        found = set(re.findall(r"\[(\d{1,2}:\d{2}(?::\d{2})?)\]", captured["user"]))
+        assert found, "no timecodes in the prompt"
+        assert all(re.fullmatch(r"\d{2}:\d{2}:\d{2}", tc) for tc in found), sorted(found)

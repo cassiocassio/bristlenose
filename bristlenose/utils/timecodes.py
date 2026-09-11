@@ -35,6 +35,32 @@ def format_timecode_ms(seconds: float) -> str:
     return f"{h:02d}:{m:02d}:{s:06.3f}"
 
 
+def format_timecode_prompt(seconds: float) -> str:
+    """Format seconds as zero-padded ``HH:MM:SS``, for LLM PROMPTS ONLY.
+
+    NOT a display format and NOT a sibling of ``format_timecode``. Never render
+    this to a user, never write it to disk, and never widen it into the
+    cross-language register in ``docs/design-shared-formats.md`` — ``timecode``
+    is Class R there (round-trip, parsed back off disk) and this is not.
+
+    Why it exists. ``format_timecode`` omits the hour below 1 h, so a transcript
+    of a sub-hour session rendered into a prompt reads ``[05:30]`` while the
+    schema asks the model for ``HH:MM:SS``. `gpt-5.6-terra` resolves that
+    mismatch by appending ``:00``, shifting every field up one place and making
+    the value exactly 60x the truth — 63% of quotes, measured 5 Sep 2026
+    (``experiments/quote-stability/FINDINGS.md`` § 3). Padding the hour removes
+    the ambiguity at its source: the transcript now speaks the format the schema
+    asks for, in every session, for every provider.
+
+    Padding also makes the rendering uniform WITHIN one transcript. The old form
+    was per-segment, so a session over an hour rendered its first hour as
+    ``MM:SS`` and the rest as ``H:MM:SS`` — two formats in one prompt, which is
+    the case the s09 range guard cannot detect.
+    """
+    total = max(0, int(seconds))
+    return f"{total // 3600:02d}:{(total % 3600) // 60:02d}:{total % 60:02d}"
+
+
 def format_duration_human(seconds: float) -> str:
     """Format seconds as a compact human-readable duration.
 

@@ -375,7 +375,7 @@ What that leaves owed, in rough order:
 2. **Two gates specified but not built** (spike §"How this gets caught"): (a) **preflight parity** — `preflight/api_key.py::_validate_anthropic` already makes a real one-token call with the real model but doesn't send the pipeline's optional params, which is exactly why preflight went green while the run died; ~3 lines to close. (b) **one autospec'd contract test** — `grep -rn autospec tests/` returns *nothing*, so no mock in the repo can see a signature change.
 3. **`output_config.effort` at a tuned default, unexposed.** Reachable on the pinned `anthropic 0.125.0` already (`output_config` is in the signature) — no pin lift needed to start. Wants a measured pass against the stability corpus before a stop is picked; do **not** ship it as a control.
 4. **`docs/platform-text-map.md` totals are drifted** — the header claims 22 sections / 638 keys; the table has 21 rows summing to 635. Pre-existing; I moved the total by my delta only rather than inventing a re-measurement. Wants one honest recount.
-5. **Aug 2026 quarterly dep review is overdue** (§Dependency maintenance below, unchecked). Natural to fold into item 1 — the wave *is* most of that review.
+5. ~~**Aug 2026 quarterly dep review is overdue** (§Dependency maintenance below, unchecked).~~ ✅ done 3–5 Sep 2026 — §Dependency maintenance has carried it checked since, with Entry 7 of `docs/dependency-premortem-log.md` as the record. This line went on calling it overdue and unchecked; found 11 Sep 2026 by `/end-session`'s maintenance step, which reads the section rather than this summary of it. Next is **Nov 2026**.
 
 
 ## Ideas (captured, not triaged)

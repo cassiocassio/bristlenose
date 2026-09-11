@@ -127,10 +127,54 @@ boundaries, and the position-overlap key section 1 depends on.
 parsed timecode against the session's own duration: out of range, a whole number
 of minutes, and back in range once divided by 60 is repaired and logged
 `quote_timecode_repair`; out of range without that signature is clamped, not
-divided, and logged `quote_timecode_out_of_range`. Never silent. The blind spot
-the range check cannot cover — an affected timecode that lands *inside* a long
-session, because `format_timecode` is per-segment — is pinned as a test rather
-than left to be rediscovered.
+divided, and logged `quote_timecode_out_of_range`. Never silent.
+
+**Fixed at source 11 Sep 2026, and re-measured.** The guard treats the symptom;
+the cause was that the prompt showed `MM:SS` while the schema asked for
+`HH:MM:SS`. `full_text()` and the `boundaries_text` beside it now render
+`format_timecode_prompt` — zero-padded `HH:MM:SS`, one format per prompt — so
+there is no mismatch left for a model to resolve. 12 fresh passes, same corpus,
+same four sessions (`--tag padded`):
+
+| model | out of range, before | after | median span, before | after |
+|---|---:|---:|---:|---:|
+| `gpt-5.6-terra` | **239/380 (62.9%)** | **0/361 (0.0%)** | 270–2100s | **48–55s** |
+| `claude-sonnet-4-6` | 0/494 | 0/499 | 42–45s | 40–45s |
+| `gemini-3.8-flash` | 0/259 | 0/260 | 46–59s | 50–51s |
+
+**The guard fired zero times across all 12 passes** — no `quote_timecode_repair`,
+no `quote_timecode_out_of_range`. That distinction is the whole measurement: the
+guard was active throughout, so a still-broken model would have been silently
+repaired and the saved quotes would have looked identical to a real fix. Only the
+absence of the log lines separates "fixed" from "repaired". Check them, not the
+JSON, if this is ever re-run.
+
+The median span is the stronger evidence than the out-of-range count. Avoiding
+the end of the recording could be luck; a span distribution collapsing from
+1380s to 54s, into the same band as the two models that were never affected, is
+the `HH:MM:SS` slot being filled correctly rather than merely plausibly.
+
+**Terra's stability numbers in section 1 were never valid** and are now replaced.
+Overlap is computed on the timeline, so a 60x timecode makes every overlap
+meaningless. The first trustworthy reading is 84.4% single / 95.6% union / 0.0%
+fragile — union clears the >=90% target the merge rule needs, where the old
+(meaningless) figure was 86.6%.
+
+**Claude's output shifted; Gemini's did not.** Scored against a *common*
+reference — baseline pass 1, so only the prompt differs — Claude's padded passes
+recover it at 77.7% single / 91.0% union, against 84.2% / 94.5% for the
+baseline's own passes. Gemini is unmoved (89.8% / 92.2% vs 90.7% / 92.3%).
+Padded Claude is no less self-consistent (88.5% / 96.1% internally, versus
+84.2% / 94.5% before), so this is a shift in *which* quotes it picks, not a loss
+of stability. Operationally that is a one-time migration cost: a project analysed
+before this change and re-analysed after it sees ~9% of pinned stars at risk
+rather than the usual ~5.5%.
+
+**Do not compare two runs via `analyse.py` alone.** It scores each run against
+its OWN pass 1, so two independent runs are measured against two different
+references. That artefact read as a 14.7-point Gemini regression on the first
+look; holding the reference fixed showed 0.9 points. A cross-run comparison has
+to pin the reference.
 
 ## 4. `s3` extracted zero quotes, silently
 

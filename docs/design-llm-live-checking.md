@@ -131,6 +131,14 @@ one response — 37% of quotes in the same call are correct — so a blanket div
 is the wrong fix and the guard has to be per-quote.
 `experiments/quote-stability/FINDINGS.md` § 3 has the raw wire strings.
 
+**Fixed at source 11 Sep 2026.** The prompt now renders zero-padded `HH:MM:SS`
+(`format_timecode_prompt`), so the transcript speaks the format the schema asks
+for and there is no mismatch left to resolve. Re-measured on the same corpus,
+12 passes: terra **62.9% -> 0.0%** out of range, median quote span 1380s -> 54s,
+and Claude and Gemini unchanged at 0. The s09 range guard stayed active and
+**fired zero times** — which is what separates "the model is now correct" from
+"the guard repaired it quietly"; the saved quotes look the same either way.
+
 The thing to carry: **rung 3 would have passed this.** A structured `analyze()`
 against a fixture returns a valid `QuoteExtractionResult`, which is exactly what
 this is. Validation answers whether the object is well-formed; it never asks
@@ -192,6 +200,7 @@ gone (Gemini 2.5).
 | `scripts/check-providers-live.py` + release gate + quarterly item 8 | `b04ac9d2` | 7/7 baseline |
 | Keychain: a key saved in the app or the CLI is seen by both | `bcdc03b9` (other session) | read-back |
 | Quote timecodes range-checked per quote; the 60x signature divided, anything else out of range clamped, both at WARNING | `a7d455d2` | 9 tests, incl. the three raw wire strings from the live `s9` call |
+| Prompt renders zero-padded `HH:MM:SS`, removing the format mismatch that caused it | `git log -S format_timecode_prompt` | 12 live passes: terra 62.9% -> 0.0%, guard fired 0 times; Claude/Gemini unchanged |
 
 The live check is wired into `check-release-ready.sh` as a "providers live"
 row in the standard ok/warn/bad idiom, with a missing key reported as WARN

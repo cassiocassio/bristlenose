@@ -126,7 +126,16 @@ exactly sixty times the truth, and always a whole number of minutes.
 
 Measured 5 Sep 2026 on FOSSDA s1/s4/s9/s10, four passes: **239 of 380 quotes,
 63%**, with `claude-sonnet-4-6` and `gemini-3.8-flash` at **zero** over the same
-transcripts. Model-specific, not prompt-specific. It is also inconsistent within
+transcripts.
+
+**That zero was read as "model-specific, not prompt-specific". It is not**, and
+the correction is the more useful finding. Stage 8 shares the exposure — same
+`full_text()`, same parse back — and its cached boundaries carry the same
+signature on **38 of 133**, written by `claude-sonnet-4`; `gemini-3.8-flash`
+reproduces it on an unpadded s08 prompt and loses it on a padded one, same
+sessions, one variable. Three model families. So it is a **prompt-format
+hazard**, not a vendor quirk, and a defect found on one model is worth testing
+on the others before it is filed against that model's name. It is also inconsistent within
 one response — 37% of quotes in the same call are correct — so a blanket divide
 is the wrong fix and the guard has to be per-quote.
 `experiments/quote-stability/FINDINGS.md` § 3 has the raw wire strings.

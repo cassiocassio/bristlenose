@@ -122,6 +122,7 @@ experiments/thematic-spike/**/__pycache__/
 # the harness and FINDINGS.md are the durable artefacts, the LLM output is
 # evidence for them and is re-derivable for a couple of dollars.
 experiments/quote-stability/out/
+experiments/quote-stability/out_s08/
 experiments/quote-stability/**/__pycache__/
 
 # Stray worktree dirs from spawned background sessions

@@ -221,10 +221,16 @@ async def extract_quotes(
 #
 # Measured 5 Sep 2026 on FOSSDA s1/s4/s9/s10, four passes: 239 of 380 quotes
 # (63%) affected on `gpt-5.6-terra`, and ZERO on `claude-sonnet-4-6` and
-# `gemini-3.8-flash` over the same transcripts — model-specific, not
-# prompt-specific. It is also inconsistent WITHIN one response (37% of quotes in
-# the same call are correct), so a blanket divide is the wrong fix and the guard
-# has to be per-quote. `experiments/quote-stability/FINDINGS.md` § 3.
+# `gemini-3.8-flash` over the same transcripts. It is also inconsistent WITHIN
+# one response (37% of quotes in the same call are correct), so a blanket divide
+# is the wrong fix and the guard has to be per-quote.
+#
+# That zero once read as "model-specific, not prompt-specific". It is NOT — the
+# same signature was later found in stage 8 from `claude-sonnet-4` (38 of 133
+# cached boundaries) and from `gemini-3.8-flash` on an unpadded prompt. Three
+# model families, so this is a prompt-format hazard and the padding below is a
+# fix rather than a vendor workaround.
+# `experiments/quote-stability/FINDINGS.md` §§ 3, 3b.
 #
 # The scaling repair fires only on the whole measured signature: out of range,
 # a whole number of minutes (the appended `:00`), and back in range once divided

@@ -176,6 +176,64 @@ references. That artefact read as a 14.7-point Gemini regression on the first
 look; holding the reference fixed showed 0.9 points. A cross-run comparison has
 to pin the reference.
 
+## 3b. The same defect is in stage 8, and it is NOT model-specific
+
+Measured 11 Sep 2026, after § 3's fix. s08 feeds the same `full_text()` into the
+same kind of prompt and parses the answer back with the same `parse_timecode`,
+and **unlike s09 it has no range guard** — so a mangled boundary is corrected
+nowhere and reported nowhere.
+
+**It is already in the cached corpus this harness has been feeding to every pass
+as `boundaries_text`:**
+
+| | boundaries | exact-minute | out of range | resolve under /60 |
+|---|---:|---:|---:|---:|
+| cached `topic_boundaries.json` | 133 | 41 | **38 (28.6%)** | **38 — all** |
+
+Bimodal by session: s1 9/10, s3 13/21, s6 7/8, s10 9/10 affected; s2, s4, s5, s8,
+s9 completely clean.
+
+**And the telemetry says which model wrote it: `claude-sonnet-4-20250514`**, all
+ten s08 calls, outcome `ok`, 30 Apr 2026
+(`.bristlenose/llm-calls.jsonl`, key `gen_ai.request.model` — note the file's
+keys are OpenTelemetry-style, so a grep for `model` finds nothing).
+
+**This retires § 3's "model-specific, not prompt-specific".** That inference came
+from one stage and three models. Three different model *families* have now been
+observed doing it: `claude-sonnet-4` (s08, 38/133), `gpt-5.6-terra` (s09,
+239/380), and `gemini-3.8-flash` (s08 unpadded, below). It is a **prompt-format
+hazard**, and the padding is a fix rather than a vendor workaround.
+
+**The controlled arm, and it is the cleanest evidence in this document.** One
+variable — the timecode rendering — 10 sessions, one pass per arm:
+
+| model / arm | boundaries | out of range |
+|---|---:|---:|
+| `gemini-3.8-flash` **unpadded** | 95 | **5 (5.3%)**, all in s8, all resolving under /60 |
+| `gemini-3.8-flash` **padded** | 100 | **0** |
+| `claude-sonnet-4-6` unpadded | 121 | 0 |
+| `claude-sonnet-4-6` padded | 131 | 0 |
+
+Same model, same sessions, same code but for the rendering: the defect appears
+and disappears with it.
+
+**Limits, stated rather than discovered later.** One pass per arm, not four. The
+defect is stochastic and bimodal per call, so `claude-sonnet-4-6`'s two clean
+arms are weak evidence of immunity — it may simply not have fired. `gpt-5.6-terra`
+is **unmeasured on s08**: the OpenAI credit was exhausted by the § 3 re-measure
+(`429 credit_balance_exhausted`), and the run is still owed.
+
+The stray single exact-minute boundary in several clean arms is the ~1-in-60 base
+rate the § 3 tell predicts, in range and correct — a sanity check that the audit
+is not over-flagging.
+
+**s08 still has no guard.** Its failure mode is quieter than s09's: an
+out-of-range boundary is dropped by `_boundaries_in_range`, so the topic context
+silently vanishes from the quote prompt and `_choose_split_time` falls back to
+mechanical halves. Nothing errors and nothing logs. Whether that should be a
+repair (as in s09) or fail-loud is an open decision — a boundary is *dropped*
+rather than *shown wrongly*, which is a different harm from a wrong deep link.
+
 ## 4. `s3` extracted zero quotes, silently
 
 The largest session in the corpus (73,747 chars) produced **no quotes at all**

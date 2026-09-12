@@ -131,6 +131,23 @@ final class BridgeHandler: ObservableObject {
     /// Whether the player is currently playing. Swaps Play/Pause label.
     @Published var playerPlaying = false
 
+    /// Bumped by Edit ▸ Find (⌘F) to ask the Quotes toolbar's search capsule to
+    /// expand and take keyboard focus.
+    ///
+    /// A counter, not a `Bool`: ⌘F must work twice in a row, and a flag set true
+    /// stays true, so the second press would publish nothing and change nothing.
+    ///
+    /// Native on both ends — it never crosses the bridge. ⌘F used to dispatch
+    /// `menuAction("find")`, which reached `focusSearchInput()` in the SPA, which
+    /// queried for `.search-input` — an element `Toolbar` never renders in
+    /// embedded mode. It resolved cleanly and did nothing, in every project, on
+    /// every lens, since it shipped. There was no log line, because the bridge
+    /// was working perfectly; the element simply wasn't there.
+    @Published private(set) var focusSearchRequests = 0
+
+    /// Ask the Quotes search capsule to expand and focus. See `focusSearchRequests`.
+    func requestSearchFocus() { focusSearchRequests += 1 }
+
     /// Whether the web layer has an undo action available.
     @Published var canUndo = false
 
@@ -325,7 +342,7 @@ final class BridgeHandler: ObservableObject {
             // Never silent: a missing outbound channel is the failure mode
             // that presents as "the control does nothing", and it hid a real
             // ownership bug for as long as it said nothing (1 Sep 2026).
-            Self.log.error("switchToTab(\(tab.rawValue, privacy: .public)) dropped — no webView registered")
+            Self.log.fault("switchToTab(\(tab.rawValue, privacy: .public)) dropped — no webView registered [docState=\(String(describing: self.documentState), privacy: .public)]")
             return
         }
         Task {
@@ -424,7 +441,7 @@ final class BridgeHandler: ObservableObject {
     /// this file; don't add a seventh).
     func navigateToSession(_ sessionID: String) {
         guard let webView else {
-            Self.log.error("navigateToSession dropped — no webView registered")
+            Self.log.fault("navigateToSession dropped — no webView registered [docState=\(String(describing: self.documentState), privacy: .public)]")
             return
         }
         webView.callAsyncJavaScript(
@@ -622,7 +639,7 @@ final class BridgeHandler: ObservableObject {
     /// Uses `callAsyncJavaScript` with structured arguments (security rule 3).
     func menuAction(_ action: String, payload: [String: Any]? = nil) {
         guard let webView else {
-            Self.log.error("menuAction(\(action, privacy: .public)) dropped — no webView registered")
+            Self.log.fault("menuAction(\(action, privacy: .public)) dropped — no webView registered [docState=\(String(describing: self.documentState), privacy: .public)]")
             return
         }
         let js: String

@@ -702,32 +702,68 @@ private struct FindMenuContent: View {
     var body: some View {
         Divider()
 
+        // Search exists on exactly one lens — the Quotes toolbar capsule. The
+        // other three carry `SearchComingSoonButton`, a deliberately disabled
+        // slot. So the whole family is lens-scoped, the shape the View menu
+        // already uses three times: "a live-but-inert menu item is worse than a
+        // dimmed one."
+        //
+        // `canDispatch` as well as the lens, because `currentPath` survives an
+        // in-place reload: after a run fails in place, `activeTab` can still say
+        // `.quotes` over a freshly-loaded status page with no SPA behind it.
         Button(i18n.t("desktop.menu.edit.find"), systemImage: "magnifyingglass") {
-            bridgeHandler.menuAction("find")
+            bridgeHandler.requestSearchFocus()
         }
         .keyboardShortcut("f", modifiers: .command)
+        .disabled(!canSearch)
 
         Button(i18n.t("desktop.menu.edit.findNext")) {
             let text = NSPasteboard(name: .find).string(forType: .string) ?? ""
             bridgeHandler.menuAction("findNext", payload: ["text": text])
         }
         .keyboardShortcut("g", modifiers: .command)
+        .disabled(!canSearch)
 
         Button(i18n.t("desktop.menu.edit.findPrevious")) {
             let text = NSPasteboard(name: .find).string(forType: .string) ?? ""
             bridgeHandler.menuAction("findPrevious", payload: ["text": text])
         }
         .keyboardShortcut("g", modifiers: [.command, .shift])
+        .disabled(!canSearch)
 
         Button(i18n.t("desktop.menu.edit.useSelectionForFind")) {
             bridgeHandler.menuAction("useSelectionForFind")
         }
         .keyboardShortcut("e", modifiers: .command)
+        .disabled(!canSearch)
 
-        Button(i18n.t("desktop.menu.edit.jumpToSelection")) {
-            bridgeHandler.menuAction("jumpToSelection")
-        }
-        .keyboardShortcut("j", modifiers: .command)
+        // Jump to Selection withdrawn 12 Sep 2026 — same treatment as `mergeCode`
+        // in the Codes menu, and for the same reason: it is not ungated, it is
+        // unimplemented. It dispatched `menuAction("jumpToSelection")`; the web
+        // side is an explicit `break` behind a comment claiming the native layer
+        // handles it, and no native handler exists — `jumpToSelection` appears
+        // only here and in 21 locale files. It could never have reached WKWebView
+        // as `centerSelectionInVisibleRect:` either: a SwiftUI `.keyboardShortcut`
+        // installs an NSMenu key equivalent, which is matched *before* the
+        // responder chain. So ⌘J has done nothing since it shipped.
+        //
+        // Not dimmed, because a `.disabled` that will never go live is a lie that
+        // reads as diligence. Withdrawn instead, with the question that blocks it:
+        // what does "jump to selection" mean in a quote grid? There is no design,
+        // only a shortcut borrowed from text editors.
+        //
+        // Restore is one line here plus a real handler; the 21 locale keys are
+        // deliberately left in place so it stays one line.
+        //
+        // Button(i18n.t("desktop.menu.edit.jumpToSelection")) {
+        //     bridgeHandler.menuAction("jumpToSelection")
+        // }
+        // .keyboardShortcut("j", modifiers: .command)
+    }
+
+    /// Search is Quotes-only and needs a live SPA. See the note above the family.
+    private var canSearch: Bool {
+        bridgeHandler.canDispatch && bridgeHandler.activeTab == .quotes
     }
 }
 

@@ -62,9 +62,10 @@ struct QuotesSearchToolbarControl: View {
                 Button { expanded = true } label: {
                     Label(i18n.t("desktop.toolbar.search"), systemImage: "magnifyingglass")
                 }
-                // Tooltip says "Search", not "Search (⌘F)" — Cmd+F isn't wired to
-                // expand the native field yet, so don't advertise a dead shortcut.
-                .help(i18n.t("desktop.toolbar.search"))
+                // ⌘F is wired now (12 Sep 2026), so the tooltip advertises it.
+                // Interpolated rather than given its own key — the symbol needs no
+                // translation, and the label already has one in all 21 locales.
+                .help("\(i18n.t("desktop.toolbar.search")) (⌘F)")
             }
         }
         // Surface store-originated query changes (Cmd+E, findNext, All Quotes
@@ -73,6 +74,15 @@ struct QuotesSearchToolbarControl: View {
         .onChange(of: bridgeHandler.quotesSearchQuery) { _, newValue in
             if !newValue.isEmpty { expanded = true }
             if newValue != text { text = newValue }
+        }
+        // Edit ▸ Find (⌘F). Both assignments are load-bearing: when collapsed,
+        // `expanded` renders the field and its `.task` takes focus; when already
+        // expanded, `.task` does not re-fire, so `focused` is the only thing that
+        // returns the caret to a field the user has clicked away from. Setting
+        // `focused` while collapsed is a harmless no-op — the field isn't there.
+        .onChange(of: bridgeHandler.focusSearchRequests) { _, _ in
+            expanded = true
+            focused = true
         }
     }
 

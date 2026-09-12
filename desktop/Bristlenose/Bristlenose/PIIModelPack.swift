@@ -29,6 +29,15 @@ enum PIIModelPack {
     /// the intended default — redaction is opt-in.
     static let enabledDefaultsKey = "piiEnabled"
 
+    /// UserDefaults key holding the path of the acquired pack's **inner**
+    /// versioned directory (`…/en_core_web_lg-<version>/`), written by
+    /// whichever acquirer fetched it. Both channels converge here — managed
+    /// Background Assets stores `url(for:).path` after
+    /// `ensureLocalAvailability`, the `.dmg` stores its unpack destination — so
+    /// the spawn-time handoff stays synchronous and asks one question of one
+    /// key. Absent or empty means no pack has arrived.
+    static let packDirectoryDefaultsKey = "piiModelPackDirectory"
+
     /// The two files spaCy needs, in the order **it** reads them.
     ///
     /// `load_model_from_path` calls `get_model_meta` (meta.json) before it
@@ -105,22 +114,28 @@ enum PIIModelPack {
     ) -> [String: String] {
         packEnvironment(
             enabled: defaults.bool(forKey: enabledDefaultsKey),
-            packDirectory: acquiredPackDirectory()
+            packDirectory: acquiredPackDirectory(defaults: defaults)
         )
     }
 
     /// Where an acquired pack sits, or `nil` if none has arrived.
     ///
-    /// **This is the seam the acquirers fill**, and the only part of PII
-    /// delivery still unwritten. Managed Background Assets hands back its own
-    /// URL rather than depositing at a path we choose, so this cannot be a
-    /// hardcoded container path for that channel — it must ask
-    /// `AssetPackManager`. The Developer-ID `.dmg` downloads to a location it
-    /// picks and can answer from disk.
+    /// Reads the path an acquirer stored under `packDirectoryDefaultsKey`.
+    /// Deliberately **not** liveness-checked here — `packEnvironment` applies
+    /// the `meta.json` + `config.cfg` rule, and one site owning that rule is
+    /// the point. A stored path whose directory has since gone (the system
+    /// reclaimed a Background Assets pack under storage pressure, which it may)
+    /// therefore yields the enabled flag alone, and stage 7 fails loudly with
+    /// `MISSING_DEP` rather than the run proceeding unredacted.
     ///
-    /// Returning `nil` is correct and safe today: redaction fails loudly
-    /// instead of running unredacted.
-    static func acquiredPackDirectory() -> URL? {
-        nil
+    /// **The acquirers that write this key are still unwritten** (Phase 4b).
+    /// Until one lands, nothing sets it and this returns `nil` on every
+    /// machine — which is the safe answer, for the reason above.
+    static func acquiredPackDirectory(
+        defaults: UserDefaults = .standard
+    ) -> URL? {
+        guard let path = defaults.string(forKey: packDirectoryDefaultsKey),
+              !path.isEmpty else { return nil }
+        return URL(fileURLWithPath: path)
     }
 }

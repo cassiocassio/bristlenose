@@ -1080,10 +1080,17 @@ UX for phases 3–4 is specced in `docs/mockups/mockup-privacy-settings.html` §
   only suite CI runs — a typo'd variable name is otherwise silent: the pack is
   acquired and never found, and Presidio falls back to `pip install` from
   GitHub.
-- **Phase 4b — the acquirer + Privacy tab. ⬜ THE REMAINING WORK.**
-  `acquiredPackDirectory()` returns `nil`, with a test asserting it so the seam
-  cannot be quietly believed to be filled. Everything downstream is built and
-  proven: set
+- **Phase 4b — the acquirers + Privacy tab. ⬜ THE REMAINING WORK.**
+  The storage seam under them is built: both acquirers converge on **one
+  UserDefaults key, `piiModelPackDirectory`**, holding the loadable inner
+  directory's path — managed Background Assets stores `url(for:).path` after
+  `ensureLocalAvailability`, the `.dmg` stores its unpack destination — so the
+  spawn-time handoff stays synchronous (the BA calls are `async throws`;
+  `childEnvironment` is not) and asks one question of one key. Liveness is
+  checked at handoff, not at storage, so a pack the system reclaims under
+  storage pressure yields the flag alone and the run fails loudly. Until an
+  acquirer writes the key, nothing does, and the answer is `nil` everywhere.
+  Everything downstream is built and proven: set
   `BRISTLENOSE_PII_MODEL_DIR` (that is the real variable — this bullet said
   `BRISTLENOSE_PII_LIB_DIR`, which exists nowhere) and stage 7, `doctor` and the
   Pipeline view all behave, measured identically to the package route with the

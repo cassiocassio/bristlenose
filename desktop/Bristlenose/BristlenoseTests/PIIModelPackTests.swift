@@ -91,16 +91,57 @@ struct PIIModelPackTests {
         )
     }
 
-    @Test("no acquirer exists yet, and that is recorded rather than assumed")
-    func acquirerIsStillUnwritten() {
-        #expect(
-            PIIModelPack.acquiredPackDirectory() == nil,
-            """
-            When an acquirer lands this expectation flips, and it should — it is \
-            here so the seam cannot be quietly believed to be filled. Managed \
-            Background Assets hands back its own URL, so this cannot become a \
-            hardcoded container path for that channel.
-            """
-        )
+    // MARK: - the storage seam both acquirers write into
+
+    private static func scratchDefaults() -> UserDefaults {
+        let suite = "pii-pack-tests-\(UUID().uuidString)"
+        let d = UserDefaults(suiteName: suite)!
+        d.removePersistentDomain(forName: suite)
+        return d
+    }
+
+    @Test("nothing stored means no pack, and the flag still travels")
+    func nothingStoredIsNoPack() {
+        let d = Self.scratchDefaults()
+        d.set(true, forKey: PIIModelPack.enabledDefaultsKey)
+
+        #expect(PIIModelPack.acquiredPackDirectory(defaults: d) == nil)
+        let env = PIIModelPack.currentEnvironment(defaults: d)
+        #expect(env["BRISTLENOSE_PII_ENABLED"] == "1")
+        #expect(env["BRISTLENOSE_PII_MODEL_DIR"] == nil)
+    }
+
+    @Test("a stored, loadable pack reaches the sidecar by path")
+    func storedLoadablePackIsHandedOver() throws {
+        let dir = try Self.makeDirectory(PIIModelPack.requiredFiles)
+        let d = Self.scratchDefaults()
+        d.set(true, forKey: PIIModelPack.enabledDefaultsKey)
+        d.set(dir.path, forKey: PIIModelPack.packDirectoryDefaultsKey)
+
+        let env = PIIModelPack.currentEnvironment(defaults: d)
+        #expect(env["BRISTLENOSE_PII_MODEL_DIR"] == dir.path)
+    }
+
+    @Test("a stored path whose pack has gone yields the flag alone — fail loudly, not silently")
+    func storedButReclaimedPackIsNotHandedOver() throws {
+        // The system may reclaim a Background Assets pack under storage
+        // pressure; the stored path then points at nothing. The run must
+        // fail with MISSING_DEP, not proceed unredacted.
+        let gone = try Self.makeDirectory(PIIModelPack.requiredFiles)
+        try FileManager.default.removeItem(at: gone)
+        let d = Self.scratchDefaults()
+        d.set(true, forKey: PIIModelPack.enabledDefaultsKey)
+        d.set(gone.path, forKey: PIIModelPack.packDirectoryDefaultsKey)
+
+        let env = PIIModelPack.currentEnvironment(defaults: d)
+        #expect(env["BRISTLENOSE_PII_ENABLED"] == "1")
+        #expect(env["BRISTLENOSE_PII_MODEL_DIR"] == nil)
+    }
+
+    @Test("an empty stored path is 'nothing stored', not a path to cwd")
+    func emptyStoredPathIsNil() {
+        let d = Self.scratchDefaults()
+        d.set("", forKey: PIIModelPack.packDirectoryDefaultsKey)
+        #expect(PIIModelPack.acquiredPackDirectory(defaults: d) == nil)
     }
 }

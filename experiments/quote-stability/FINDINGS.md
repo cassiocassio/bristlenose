@@ -219,34 +219,42 @@ variable — the timecode rendering — 10 sessions, one pass per arm:
 Same model, same sessions, same code but for the rendering: the defect appears
 and disappears with it.
 
-**terra measured on s08 (12 Sep 2026): CLEAN in both arms** — 0 of 170 unpadded,
-0 of 169 padded. The model that puts 63% of its s09 quote timecodes 60x out does
-not do it on s08 at all, on the same corpus, from the same unpadded `full_text()`.
+**terra on s08: 0, 0, 0, 11 across four unpadded passes** (12 Sep 2026) — 11 of
+683 boundaries, **1.6%**. The first pass read clean and was reported as such; it
+was sampling, not immunity. The eleven arrived together, in one session, in the
+fourth pass.
 
-That completes a grid with no simple story in it:
+The grid, with every cell's pass count stated because that is what the first
+reading got wrong:
 
 | unpadded | s08 | s09 |
 |---|---|---|
-| `gpt-5.6-terra` | **0%** (0/170) | **62.9%** (239/380) |
-| `gemini-3.8-flash` | **5.3%** (5/95) | 0% (0/259) |
-| `claude-sonnet-4` | **28.6%** (38/133) | 0% (0/284, same run) |
-| `claude-sonnet-4-6` | 0% (0/121) | 0% (0/494) |
+| `gpt-5.6-terra` | **1.6%** (11/683, 4 passes) | **62.9%** (239/380, 4 passes) |
+| `gemini-3.8-flash` | **5.3%** (5/95, 1 pass) | 0% (0/259, 4 passes) |
+| `claude-sonnet-4` | **28.6%** (38/133, 1 run) | 0% (0/284, same run) |
+| `claude-sonnet-4-6` | 0% (0/121, 1 pass) | 0% (0/494, 4 passes) |
 
-Every model that fails, fails on exactly one of the two stages, and no two agree
-on which. So the hazard is **neither a model property nor a stage property** — it
-is the mismatch between what the prompt shows and what the schema asks for, and
-which model trips on which prompt is not predictable from anything measured here.
-The practical consequence is the one already acted on: fix the rendering
-everywhere, and guard both stages, because measuring a (model, stage) cell clean
-tells you nothing about its neighbours.
+So the earlier reading — "every model that fails, fails on exactly one stage" —
+is **retired**. terra fails on both, at rates differing by a factor of forty. What
+survives is weaker and more useful: the hazard is the prompt/schema mismatch, the
+rate varies enormously by (model, stage) for reasons nothing here explains, and
+**a single clean pass is worth almost nothing**. Every zero in that table with a
+pass count of 1 should be read as "did not fire once".
 
-**Limits, stated rather than discovered later.** One pass per arm, not four, and
-the defect is stochastic and bimodal per call — so every **zero** in that table is
-weak evidence of immunity, terra's new s08 zero included. It may simply not have
-fired. The non-zeros are solid; the zeros are "did not fire in one pass". Only the
-gemini padded/unpadded pair is a controlled comparison, and it is the one the
-causal claim rests on. Strengthening any zero means more passes (`run_s08.py`
-needs a `--tag` to write more than one per arm, as `run.py` has).
+**Both models' failures landed in s8. That is not evidence about s8.** Nothing
+distinguishes it — 33.7 min, 300 segments, first timecode 1.2s, median gap 6.8s,
+all unremarkable against s1/s4/s7. Two independent one-in-ten picks coinciding is
+a 10% event. Recorded so the next reader does not spend a cycle on it, the way
+the boundary-echo hypothesis in § 3b's history already cost one.
+
+**This was the guard's first live firing, and it worked.** Pass 4's eleven
+boundaries were repaired in flight — `03:38:00` -> 218s, `31:54:00` -> 1914s in a
+33.7-minute session — and `boundary_timecodes_repaired | session=s8 |
+boundaries=12 | scaled=11` records it. It also demonstrates the masking effect
+concretely: **pass 4's file on disk audits CLEAN**, because the guard corrected
+it before it was written. Only the log knows. Any future audit of a
+post-11-Sep-2026 run must read the logs, not the JSON, or it will measure the
+guard instead of the model.
 
 The stray single exact-minute boundary in several clean arms is the ~1-in-60 base
 rate the § 3 tell predicts, in range and correct — a sanity check that the audit

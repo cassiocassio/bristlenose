@@ -83,6 +83,13 @@ async def main() -> int:
     ap.add_argument("--model", default="gpt-5.6-terra")
     ap.add_argument("--sessions", nargs="+", default=["s1", "s4", "s9", "s10"])
     ap.add_argument("--arm", choices=["padded", "unpadded", "both"], default="both")
+    ap.add_argument("--tag", default="",
+                    help="suffix the output directory, e.g. --tag p2 -> "
+                         "out_s08/<provider>_<model>__<arm>__p2/. An arm already on disk "
+                         "is skipped by design, so this is how you take a SECOND reading of "
+                         "the same (model, arm) — which is the only way to firm up a zero, "
+                         "the defect being stochastic: one clean pass means 'did not fire "
+                         "once', not 'cannot fire'.")
     args = ap.parse_args()
 
     transcripts = load_corpus(args.sessions)
@@ -92,7 +99,8 @@ async def main() -> int:
           f"{len(transcripts) * len(arms)} calls, {chars:,} transcript chars per arm")
 
     for arm in arms:
-        outdir = OUT / f"{args.provider}_{args.model}__{arm}"
+        outdir = OUT / (f"{args.provider}_{args.model}__{arm}"
+                        + (f"__{args.tag}" if args.tag else ""))
         outdir.mkdir(parents=True, exist_ok=True)
         target = outdir / "boundaries.json"
         if target.exists():

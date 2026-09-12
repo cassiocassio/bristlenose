@@ -142,6 +142,34 @@ def classify_file(path: Path) -> FileType | None:
     return None
 
 
+class MediaTimeMeta(BaseModel):
+    """Time metadata read from a media CONTAINER — the recorder wrote it, and it
+    survives copying and downloading, which the filesystem's birthtime does not.
+
+    Capture only (``docs/design-timezones.md`` § 5.1). Nothing derives a
+    session start from this yet; § 5.4's resolver will. Fields are optional
+    because coverage is partial by construction: recorder-written files carry
+    them, ffmpeg-transcoded ones do not.
+
+    ``creation_local`` is the one field that answers *what did the clock in
+    the room say, and in what zone* — an aware datetime carrying the file's own
+    offset (``com.apple.quicktime.creationdate``). ``creation_utc`` is the
+    same instant from ``creation_time``, whose ``Z`` was verified honest against
+    a BST-era file. ``author`` carries writer markers such as
+    ``ReplayKitRecording``; ``make``/``model``/``software``/``encoder`` are what
+    § 5.2's writer classifier will read.
+    """
+
+    creation_utc: datetime | None = None
+    creation_local: datetime | None = None
+    offset_minutes: int | None = None
+    make: str | None = None
+    model: str | None = None
+    software: str | None = None
+    encoder: str | None = None
+    author: str | None = None
+
+
 class InputFile(BaseModel):
     """A single input file discovered during ingestion."""
 
@@ -150,6 +178,8 @@ class InputFile(BaseModel):
     created_at: datetime
     size_bytes: int
     duration_seconds: float | None = None
+    # Container time metadata, captured at ingest and not yet acted on.
+    container_meta: MediaTimeMeta | None = None
     error: str | None = None
 
 

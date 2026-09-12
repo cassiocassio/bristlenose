@@ -11,6 +11,11 @@ reasoning a future auditor will repeat._
 Companion: `docs/design-shared-formats.md` (the cross-language register) and
 `tests/fixtures/shared-format-contract.json` (the pinned case table).
 
+**The timezone slice of this audit is split out into `docs/design-timezones.md`**
+— multi-zone studies, a researcher moving between sessions, and DST regimes that
+disagree on the date. Explicitly post-beta; that doc says why, and why the
+zone-capture half is worth doing early even so.
+
 ---
 
 ## 1. Three data types, and why they get confused

@@ -985,8 +985,25 @@ UX for phases 3–4 is specced in `docs/mockups/mockup-privacy-settings.html` §
   absent. Remaining from this phase: Re-run `check-bundle-manifest.sh` and
   `check-bundle-integrity.py`, and re-verify Privacy Manifest required-reason
   coverage against the *actual* bundle `.so`, not the dev venv.
-- **Phase 4 — the acquirer + Privacy tab. ⬜ THE REMAINING WORK, and the whole
-  of it.** Everything *downstream* of the handoff is built and proven: set
+- **Phase 4a — the Swift handoff. ✅ DONE 12 Sep 2026.** `PIIModelPack.swift`
+  turns app state into the sidecar's environment, merged in
+  `BristlenoseShared.childEnvironment` beside the SSL and ffmpeg blocks. The
+  asymmetry between its two variables settles Open Decision 1 below in favour of
+  failing cleanly: **`BRISTLENOSE_PII_ENABLED` travels even with no pack**
+  (withholding it means the researcher asked for redaction and quietly did not
+  get it — stage 7 abandons with `MISSING_DEP` instead), while
+  **`BRISTLENOSE_PII_MODEL_DIR` travels only when a loadable pack is present**,
+  liveness-checked against the same `meta.json` + `config.cfg` pair Python uses.
+  `env_prefix = "BRISTLENOSE_"` is what carries the flag to `pii_enabled`, and
+  that is asserted rather than assumed. Cross-language drift is gated from the
+  **Python** side (`tests/test_swift_python_contract.py`), because pytest is the
+  only suite CI runs — a typo'd variable name is otherwise silent: the pack is
+  acquired and never found, and Presidio falls back to `pip install` from
+  GitHub.
+- **Phase 4b — the acquirer + Privacy tab. ⬜ THE REMAINING WORK.**
+  `acquiredPackDirectory()` returns `nil`, with a test asserting it so the seam
+  cannot be quietly believed to be filled. Everything downstream is built and
+  proven: set
   `BRISTLENOSE_PII_MODEL_DIR` (that is the real variable — this bullet said
   `BRISTLENOSE_PII_LIB_DIR`, which exists nowhere) and stage 7, `doctor` and the
   Pipeline view all behave, measured identically to the package route with the

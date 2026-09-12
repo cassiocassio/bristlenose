@@ -169,6 +169,11 @@ enum BristlenoseShared {
         }
         for (key, value) in sslEnvironment(for: mode) { env[key] = value }
         for (key, value) in bundledBinaryEnvironment(for: mode) { env[key] = value }
+        // PII redaction. Yields nothing at all unless the researcher switched it
+        // on, and the model-directory half only once a pack has actually
+        // arrived — see PIIModelPack for why those two are deliberately not
+        // gated together.
+        for (key, value) in PIIModelPack.currentEnvironment() { env[key] = value }
         overlayAPIKeys(into: &env, using: store)
         overlayMiroToken(into: &env, using: store)
         // Cross-seam resolution ledger: describe the provider/model/key decision

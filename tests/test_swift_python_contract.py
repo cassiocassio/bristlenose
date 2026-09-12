@@ -167,3 +167,84 @@ class TestCredentialNamesContract:
                 f"nativeEnvNames[{key!r}] is {env_var!r}; CREDENTIALS says "
                 f"{CREDENTIALS[key].env_var!r}"
             )
+
+
+# ---------------------------------------------------------------------------
+# PII model pack — the Swift→Python handoff
+# ---------------------------------------------------------------------------
+
+_PII_PACK_SWIFT = (
+    Path(__file__).resolve().parent.parent
+    / "desktop" / "Bristlenose" / "Bristlenose" / "PIIModelPack.swift"
+)
+
+
+class TestPIIModelPackContract:
+    """`PIIModelPack.swift` hands the sidecar a model directory. Two constants
+    have to agree across the boundary, and both fail silently if they drift.
+
+    The Swift suite covers the behaviour, but it is **ungated by CI** — a Swift
+    regression can sit red on `main` indefinitely (see `desktop/CLAUDE.md`). So
+    the drift gate lives here, in the suite that actually runs on every push,
+    for the same reason the provider-default contract above does.
+    """
+
+    def test_the_env_var_name_matches_pythons(self) -> None:
+        """A typo means the pack is acquired and then never found.
+
+        Nothing raises: `resolve_spacy_model()` sees no override, returns the
+        package name, and Presidio's engine builder shells out to `pip install`
+        for a name it cannot resolve — a §2.5.2 violation inside a sandboxed App
+        Store binary, reached by a spelling mistake.
+        """
+        from bristlenose.stages.s07_pii_removal import PII_MODEL_DIR_ENV
+
+        assert _PII_PACK_SWIFT.exists(), f"{_PII_PACK_SWIFT} is gone"
+        text = _PII_PACK_SWIFT.read_text(encoding="utf-8")
+        assert f'"{PII_MODEL_DIR_ENV}"' in text, (
+            f"Swift does not set {PII_MODEL_DIR_ENV}; the acquired pack would "
+            f"never be found and redaction would silently fall back to the "
+            f"package name"
+        )
+
+    def test_the_enabled_flag_maps_to_the_settings_field(self) -> None:
+        """`env_prefix` is what makes the flag arrive — assert, don't assume."""
+        from bristlenose.config import BristlenoseSettings
+
+        text = _PII_PACK_SWIFT.read_text(encoding="utf-8")
+        assert '"BRISTLENOSE_PII_ENABLED"' in text
+
+        prefix = BristlenoseSettings.model_config["env_prefix"]
+        assert "BRISTLENOSE_PII_ENABLED" == f"{prefix}PII_ENABLED".upper()
+        assert "pii_enabled" in BristlenoseSettings.model_fields
+
+    def test_the_liveness_pair_matches_pythons(self) -> None:
+        """Both files, because spaCy reads meta.json *first*.
+
+        If Swift checked only `config.cfg` it would hand over a half-unpacked
+        directory that then dies inside spaCy with an opaque `E053`, which is
+        the failure Python's own check was written to replace. The two lists
+        must stay identical or the Swift side re-introduces it.
+        """
+        import re
+
+        text = _PII_PACK_SWIFT.read_text(encoding="utf-8")
+        match = re.search(r"requiredFiles\s*=\s*\[(.*?)\]", text, re.S)
+        assert match, "requiredFiles is gone from PIIModelPack.swift"
+        swift_files = re.findall(r'"([^"]+)"', match.group(1))
+
+        # Python's pair, read from the source of truth rather than retyped.
+        py_src = (
+            Path(__file__).resolve().parent.parent
+            / "bristlenose" / "stages" / "s07_pii_removal.py"
+        ).read_text(encoding="utf-8")
+        py_match = re.search(
+            r'for f in \((.*?)\)\)', py_src, re.S
+        )
+        assert py_match, "the liveness pair moved in s07_pii_removal.py"
+        py_files = re.findall(r'"([^"]+)"', py_match.group(1))
+
+        assert swift_files == py_files, (
+            f"Swift checks {swift_files}, Python checks {py_files} — a "
+            f"directory one side calls loadable and the other does not"
+        )

@@ -67,7 +67,6 @@
  *    `--bn-focus-ring` and the cursor takes a tighter inset edge. */
 .codebook-group.bn-selected {
     border-color: var(--bn-selection-border);
-    box-shadow: inset 0 0 0 1px var(--bn-selection-border);
 }
 
 /* macOS de-emphasises selection on an inactive window. `atoms/interactive.css`
@@ -77,7 +76,23 @@
  * selection surface in the app that stays bright on window blur. */
 .bn-window-inactive .codebook-group.bn-selected {
     border-color: var(--bn-selection-border-inactive);
-    box-shadow: inset 0 0 0 1px var(--bn-selection-border-inactive);
+}
+
+/* A field inside the card has keyboard focus, so the card's own cursor stands
+ * down. Focus in a text field is a *more precise* statement of where you are
+ * than a ring round the whole card, and the two together read as two boxes:
+ * concentric, same colour, ten pixels apart — which is not a thing macOS does.
+ * When you rename in Finder, the row does not compete with the field.
+ *
+ * `:focus-within` rather than a narrower editable-only selector because every
+ * focusable thing in this card (the ✕, the tag input, the three inline
+ * editors) makes the same argument: something inside has the keyboard, and it
+ * is drawing its own ring to say so.
+ *
+ * (0,3,0), and after the inactive rule so it wins that tie too — the card
+ * should stand down on an inactive window as well, not merely dim. */
+.codebook-group.bn-selected:focus-within {
+    border-color: transparent;
 }
 
 /* EditableText in `trigger="click"` mode applied an inline `cursor: text`; the
@@ -169,6 +184,23 @@
 .group-subtitle:hover {
     background: var(--bn-hover-bg-subtle);
 }
+/* Hug the content while editing, as the title does.
+ *
+ * The title renders through `EditableText as="span"` — inline, so its box
+ * grows with the text. The subtitle renders `as="p"`, which is right at rest
+ * (it is prose and it wraps) and wrong while editing: a block box takes the
+ * full card width, so a three-word subtitle gets a field four times its
+ * length. Fixed here rather than by changing the element, because `p` is the
+ * correct semantics for the resting state and only the editing box is wrong.
+ *
+ * The `min-width` is load-bearing: an empty subtitle edits an empty string,
+ * and an inline-block with no content collapses to nothing — a caret with no
+ * box, which is the state you are in every time you add a subtitle. */
+.group-subtitle[contenteditable="true"] {
+    display: inline-block;
+    min-width: 12ch;
+}
+
 .group-subtitle.placeholder {
     font-style: italic;
     opacity: 0.45;

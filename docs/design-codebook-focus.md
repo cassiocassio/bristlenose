@@ -165,6 +165,24 @@ too**, so adding a sibling code means clicking the card background first. It is
 the honest behaviour for a menu whose target the user cannot otherwise name, and
 it is the thing to revisit if the parent-context treatment ever gets drawn.
 
+**D-b-ter. A field with focus stands the card's cursor down — decided
+12 Sep 2026, from a screenshot.** The first build drew the card cursor as
+`border-color` *plus* an `inset 0 0 0 1px` ring — concentric, same colour, so
+they rendered as one ~2px slab. Put a text field inside it and you had two blue
+boxes ten pixels apart, which is not a thing macOS does: when you rename in
+Finder the row does not compete with the field. The rule taken is the simple
+one — **focus inside the card is a more precise statement of where you are than
+a ring around it**, so `.codebook-group.bn-selected:focus-within` drops the edge
+entirely. The self-doubling inset went with it; the cursor is one 1px edge.
+
+**Still open, and worth a look once the single-weight edge has been seen in
+use:** `.bn-selected` in `atoms/interactive.css` means `background` +
+`border-left-color` — a *left edge* — which is what quote cards get and what
+`.tag-row.bn-selected` here already gets. The card is the one place that
+overrides it with a full ring. Moving it to a left bar would put the codebook
+back on the house idiom, and would give the cursor a second, subdued weight,
+which is exactly what D-b-bis's *context* treatment needs.
+
 **D-b. Focus lands on a framework's group, but the mutations dim.** A cursor is
 useful for reading, and refusing focus there would mean one control with two
 click behaviours depending on provenance. Dim, never hide.

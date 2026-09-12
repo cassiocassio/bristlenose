@@ -4,6 +4,10 @@ _Audited 12 Sep 2026, across Python, TypeScript and Swift. Every claim below was
 measured by running the code, not read off it; where something is inferred it
 says so. **Diagnosis only — nothing here is fixed.**_
 
+_**Eleven findings stand. H6 was raised and withdrawn** — it is kept in place,
+because the reasoning that made a correct design look like a defect is the
+reasoning a future auditor will repeat._
+
 Companion: `docs/design-shared-formats.md` (the cross-language register) and
 `tests/fixtures/shared-format-contract.json` (the pinned case table).
 
@@ -51,6 +55,42 @@ corpus already contains a 99.7-minute session.
 London — **both sides of a DST boundary**. A session started at 14:23 BST is
 13:23 UTC. Which of those the researcher sees is currently surface-dependent
 (H9).
+
+### The elide-the-hour convention — a decided house rule, not an accident
+
+**An hour field is shown only when something in view actually reaches an hour.**
+This is deliberate, documented in two places, and it is the rule most of the
+findings below have to be read against.
+
+*Why.* Almost every interview is **booked** for an hour, and recording starts
+after the initial chit-chat, so a session booked 1h and overrunning to 1h04 in
+the room is commonly **52 minutes** on disk. The sub-hour case is not an edge —
+it is the overwhelming default. A human writing that timecode writes `17:32`,
+never `00:17:32`; the leading `00:` is a significant figure that is real to a
+computer and meaningless to a reader 99% of the time.
+
+*Where it is written down.*
+
+- `design-shared-formats.md` § "`timecode` — closed 22 Aug 2026": *"pad the
+  minute field, never the hour… padding the hour reserves a column for
+  `09:34:23` that no interview will ever occupy and makes the reader parse a
+  leading zero that is meaningless 99% of the time. It also matches how video
+  editors render elapsed position."*
+- `design-export-clips.md` § Filenames: *"Sessions under 1 hour: `{mm}m{ss}`…
+  If **any** session in the project exceeds 1 hour: all timecodes switch to
+  `{h}h{mm}m{ss}`"* — and it is in that doc's QA checklist (line 270).
+
+*The scope subtlety worth keeping.* Clip filenames elide per **export**, not per
+clip: if one session in the project passes an hour, every filename in that export
+gains the hour field. That is right for a Finder window sorted by name, where
+mixed widths would sort and scan badly — the question "does anything here reach
+an hour?" is asked of the set, not the item.
+
+*The one place the convention is deliberately suspended:* `format_timecode_prompt`
+pads always, because the LLM schema asks for `HH:MM:SS` and the mismatch between
+what the prompt showed and what the schema asked is what caused the 60x defect
+(§ `time` history in `FINDINGS.md` § 3). A prompt has no human reader, so the
+convention's rationale does not apply.
 
 **Display formats**, as decided and pinned:
 
@@ -180,18 +220,49 @@ error. Silent-wrong beats loud-wrong everywhere else in this codebase.
 | 36000 (10 h) | `600:00` | **ValueError** |
 
 The corpus's longest session is 99.7 minutes — **eighteen seconds** from the
-cliff. It is also a third rendering of a position, disagreeing with
-`format_timecode` everywhere above an hour. **No test references it.**
+cliff. **No test references it.**
 
-### H6 — `format_clip_timecode` discards the hour when `use_hours=False`
+Read against the elide-the-hour convention above, this is not merely a third
+rendering — it is the one implementation that follows **neither** rule. The
+convention has two halves: below an hour, omit the hour field; at or above one,
+show it. `fmt_timecode` does the first and then, instead of the second,
+**overflows the minute field past 60** — an hour renders `60:00`, three hours
+`180:00`, ten hours `600:00`. No human writes a timecode that way, which is the
+same standard the convention is derived from. And because the minute field is
+`\d{1,2}` in the parser, the overflow is precisely what makes the output
+unreadable at 100 minutes: the two faults are one fault.
 
-`clip_manifest.py:107` computes minutes as `(total % 3600) // 60`, so the hour is
-dropped rather than overflowed: `0s` and `3600s` both render `00m00`, i.e. a
-**clip filename collision**. Not live: `clips_export.py:371` derives
-`use_hours = max_duration >= 3600` for the whole export. The hazard is that the
-*default is the unsafe value* and the safety lives in one caller. Tests cover
-`use_hours=True` at 3600 but never `use_hours=False` at 3600 — the collision case
-is unpinned.
+So the fix is not "add hours to the Miro label" — it is that this is a fourth
+copy of a format the register closed to one per language in August.
+
+### H6 — WITHDRAWN: `format_clip_timecode`'s hour eliding is correct
+
+*Raised, then disproved on 12 Sep 2026. Kept because the reasoning that made it
+look like a defect is the reasoning a future auditor will repeat.*
+
+The claim was that `format_clip_timecode(use_hours=False)` discards the hour —
+`0s` and `3600s` both render `00m00` — and that the function is "only safe
+because one caller remembers" to pass the flag. Both halves were wrong.
+
+It is not a latent default. `clips_export.py:370` derives
+`max_duration = max(session_durations.values())` and sets
+`use_hours = max_duration >= 3600`. A clip's start is bounded by its own
+session's duration, which is ≤ `max_duration`. So when the flag is `False`, **no
+clip start can reach an hour**, and eliding a field that is provably zero is
+lossless. The collision is impossible by construction, not avoided by vigilance.
+
+And the behaviour is specified, not incidental — `design-export-clips.md` § 85-86
+states the per-export switch, with a QA step for it.
+
+**Residual, and it is narrow.** The bound rests on `duration_seconds` being
+accurate. A session with an unknown duration (`0`) whose quotes run past an hour
+would break it. Measured across the local corpus: **98 sessions, 4 with a zero
+time axis, none with a quote past an hour** — theoretical, unobserved. Worth
+knowing only if duration probing ever becomes less reliable.
+
+**What this corrects in the audit's method:** "the default argument is the unsafe
+value" is a code smell, not a finding. Whether it is a defect depends on what
+bounds the inputs, and that lived one file away in the caller.
 
 ### H7 — Four Python duration formatters, three formats, and the obvious home holds a dead one
 

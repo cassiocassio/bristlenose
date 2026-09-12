@@ -336,10 +336,28 @@ that shape what actually gets built:
   `skip → fail` for the nightly. Local dev stays convenient; nightly proves coverage.
 - **Provider-state taxonomy (F7 — resolves a rule contradiction).** "Non-Claude failure
   = signal, not regression" and "provider failure is fail-stop" pull opposite ways.
-  Reconciled: `unconfigured → SKIP(declared)` · `configured+failed → FAIL(expected,
-  non-blocking)` · `configured+empty-report → FAIL(blocking)` (the `attempted>0 &&
-  succeeded==0` case — the gemma4 class). The summary renders these three distinctly so
-  a rate-limited Gemini key doesn't read as a real breach.
+  Reconciled: `unconfigured → SKIP(declared)` · `configured+failed → FAIL(expected)` ·
+  `configured+empty-report → FAIL(blocking)` (the `attempted>0 && succeeded==0` case —
+  the gemma4 class). The summary renders these three distinctly so a rate-limited Gemini
+  key doesn't read as a real breach.
+
+  **Amended 12 Sep 2026: `FAIL(expected)` is no longer green.** It was, and that is how
+  the matrix printed `GREEN: all 4 cells green` on a night when the ChatGPT cell exited 2
+  on *every* invocation — a hard 400 before stage 1, from a preflight regression, not a
+  throttle. The distinction F7 draws is right and is kept in the outcome names and the
+  per-cell rendering; what it must not do is let the run claim success. A transient
+  failure now reddens the run and gets re-run, which is the right response to a transient
+  failure. Pinned by `test_a_configured_provider_that_failed_is_not_green`.
+
+- **Every cell gets an empty output directory (12 Sep 2026).** `bristlenose run` resumes:
+  handed a manifest whose stages are all COMPLETE it reloads the cached results,
+  re-renders, exits 0 and makes **zero LLM calls** — and every invariant then passes
+  against the previous report. The cells reused a fixed directory, so the Claude and
+  ChatGPT cloud cells reported PASS from **7 Jul to 4 Sep** off two-month-old manifests.
+  Nothing was red and nothing looked wrong: the cell prints `Resuming: all stages
+  complete`, which is correct behaviour by the thing under test. `prepare_cell_dir()`
+  wipes at the *start* of a cell, so the last run's artefacts stay inspectable until the
+  moment they would become a lie. Pinned by `test_prepare_cell_dir_wipes_a_previous_run`.
 - **Cloud column defined but not *run* in the free pass (Q1).** The motivating bug was
   local/Ollama env-var → model-resolution, so the **local + headless-desktop cells are
   the must** (free, no keys) and run now. The 4 cloud cells are wired and manifest-listed

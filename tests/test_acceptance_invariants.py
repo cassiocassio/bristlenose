@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts" / "acc
 from invariants import (  # noqa: E402
     STAGE_FAILED_MAX,
     CellOutcome,
+    CellResult,
     InvariantError,
     assert_absent_over_decoded,
     assert_no_abandoned_stage,
@@ -327,3 +328,59 @@ def test_transcripts_with_content_passes(tmp_path: Path) -> None:
     (raw / "s1.txt").write_text("Moderator: talk me through the checkout page.")
     assert_transcripts_present(tmp_path)
 
+
+
+# ---------------------------------------------------------------------------
+# The two ways the matrix reported GREEN while testing nothing (12 Sep 2026).
+# Both are meta-tests in this file's own sense: they prove the harness bites.
+# ---------------------------------------------------------------------------
+
+
+def test_a_configured_provider_that_failed_is_not_green() -> None:
+    """`FAIL_EXPECTED` counted as green until 12 Sep, which is how the matrix
+    printed `GREEN: all 4 cells green` on a night when ChatGPT exited 2 on
+    every invocation — a hard 400 before stage 1, not a throttle.
+
+    F7's distinction survives in the outcome names; it no longer reaches the
+    verdict."""
+    assert not CellResult("run:openai", CellOutcome.FAIL_EXPECTED, "exit 2").is_green
+    assert not CellResult("run:local", CellOutcome.FAIL_BLOCKING, "empty").is_green
+    assert not CellResult("run:x", CellOutcome.ERROR, "no result").is_green
+    # The two that legitimately are: a pass, and a declared absence.
+    assert CellResult("run:anthropic", CellOutcome.PASS, "").is_green
+    assert CellResult("run:azure", CellOutcome.SKIP, "no key").is_green
+
+
+def test_the_three_failure_outcomes_stay_distinguishable() -> None:
+    """Making them all non-green must not collapse them into one word — a
+    rate-limited key and an empty report call for different responses, which is
+    what F7 reconciled and what the summary still renders per cell."""
+    assert len({CellOutcome.FAIL_EXPECTED, CellOutcome.FAIL_BLOCKING, CellOutcome.ERROR}) == 3
+
+
+def test_prepare_cell_dir_wipes_a_previous_run(tmp_path: Path) -> None:
+    """A reused cell directory makes `bristlenose run` RESUME: it reloads the
+    cached manifest, re-renders, exits 0, makes zero LLM calls, and every
+    invariant passes against last time's report. The Claude and ChatGPT cells
+    did exactly that from 7 Jul to 4 Sep — two months of green on runs that
+    never happened."""
+    from run_matrix import prepare_cell_dir
+
+    stale = tmp_path / "run_openai"
+    (stale / ".bristlenose").mkdir(parents=True)
+    (stale / ".bristlenose" / "manifest.json").write_text('{"stages": "all COMPLETE"}')
+    (stale / "report.html").write_text("last week's report")
+
+    out = prepare_cell_dir(tmp_path, "run:openai")
+
+    assert out == stale
+    assert not out.exists(), "a stale manifest survived — the cell would resume off it"
+
+
+def test_prepare_cell_dir_is_fine_when_nothing_is_there(tmp_path: Path) -> None:
+    """First run of a cell, and the every-run case once the wipe works."""
+    from run_matrix import prepare_cell_dir
+
+    out = prepare_cell_dir(tmp_path, "run:google")
+    assert out == tmp_path / "run_google"
+    assert not out.exists()

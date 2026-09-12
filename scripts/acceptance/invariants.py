@@ -291,9 +291,25 @@ class CellResult:
 
     @property
     def is_green(self) -> bool:
-        # A declared skip and an expected non-Claude failure are both "green" for the
-        # grid's overall verdict; only blocking failures and undeclared errors are red.
-        return self.outcome in (CellOutcome.PASS, CellOutcome.SKIP, CellOutcome.FAIL_EXPECTED)
+        """Only a pass or a declared skip is green.
+
+        **`FAIL_EXPECTED` was green here until 12 Sep 2026, and that is how a
+        provider which could not start a single run reported GREEN.** F7's
+        reconciliation — a rate-limited Gemini must not read as a breach — is
+        real and is kept, but it belongs to how the cell is *rendered*, not to
+        whether the run may claim success. The outcomes stay three, distinct and
+        separately labelled; what changed is that a configured provider failing
+        no longer counts toward "all cells green".
+
+        The case that settled it: on 4 Sep the ChatGPT cell exited 2 on every
+        invocation — a hard 400 before stage 1, not a throttle — and the matrix
+        printed `GREEN: all 4 cells green` and exited 0. A weekly health check
+        whose whole job is to notice that cannot treat it as a signal to file.
+
+        A genuinely transient failure now reddens the run and is re-run, which
+        is the correct response to a transient failure.
+        """
+        return self.outcome in (CellOutcome.PASS, CellOutcome.SKIP)
 
 
 def classify_provider_outcome(

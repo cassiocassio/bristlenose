@@ -79,7 +79,7 @@ public API and no shipping app using one.
 | Capability | iCloud Drive | Google Drive / OneDrive | Basis |
 |---|---|---|---|
 | **Is this file dataless?** | `ubiquitousItemDownloadingStatus == .notDownloaded`; also the `SF_DATALESS` flag | the `SF_DATALESS` flag (`getattrlist` / `st_flags`) — `fileExists` says yes and lies | measured (storage doc); TN3150; shipped Python-side as `fs.is_dataless` + `fs.cloud_provider_for` |
-| **Ask for it** | `startDownloadingUbiquitousItem` — returns in 1–3 ms, file lands later | any read *is* the request: under this app's policy (ON, measured) the syscall blocks in `msleep` with no timeout until the provider delivers | measured, pass 1 |
+| **Ask for it** | `startDownloadingUbiquitousItem` — returns in 1–3 ms, file lands later | any read *is* the request: under this app's policy (ON, measured — and ON for every GUI-descended process, which every Bristlenose process is; a launchd agent measures OFF and gets `EDEADLK` instead, `desktop/CLAUDE.md`) the syscall blocks in `msleep` with no timeout until the provider delivers | measured, pass 1 |
 | **Is it downloading right now?** | `ubiquitousItemIsDownloading` — a Bool, per URL | **not found** | documented |
 | **How far along?** | `NSMetadataUbiquitousItemPercentDownloadedKey` via `NSMetadataQuery`, external-documents scope for a file outside our container — **unmeasured on 26.x FP-backed iCloud, from a sandboxed app** | **not found** | documented; Forums 690124 and Clement (2023) unanswered |
 | **Bytes landing on disk?** | `st_blocks` reads 0 until it reads 100% — the provider stages the download and swaps the file in atomically, for every store | same | measured, `fs.py` docstring (29 Jul 2026) |
@@ -175,16 +175,27 @@ included; the second path is mostly wired already.
   compose to "Waiting for {{provider}}…", anything else keeps the row's
   generic text. The rendered name is what `cloud_provider_for` returns —
   "iCloud Drive", not "iCloud".
-- **Localise** — one key, `chrome.cloudWait` with `{{provider}}`, in the 21
-  full locales (not `zh-Hant-HK`). Store names are proper nouns and are not
-  translated; check `glossary.csv` for the three before seeding.
+- **Localise** — the keys and copy are already specified in the 1 Aug mockup's
+  key table, plural-safety analysed: `cloudFetching` "Fetching from {{provider}} ·
+  {{done}} of {{total}}", `cloudFetchSlow` "Still fetching from {{provider}}" (a
+  stall tier after a threshold — the honest answer to "BN can't tell a healthy
+  fetch from a stalled one": it can't, but it can say how long it has been),
+  `cloudFetchFailed` "Couldn't fetch from {{provider}}". `cloudAtRest` was cut by
+  the mockup's own reasoning. **None is seeded in any locale and no subtitle
+  variant exists** (measured 12 Sep 2026). Seed those names in the 21 full
+  locales (not `zh-Hant-HK`); store names are proper nouns, not translated —
+  check `glossary.csv` for the three. This doc's "Waiting for iCloud…" is the
+  colloquial name; the spec's copy is "Fetching from".
 - **Pin** — one test per compose function (which variant wins; a store outside
   the three composes to the generic text); the §5 probe stays as a canary if
   it found anything.
-- **Draw first.** The row states below are the spec to scrutinise; an HTML
-  mockup in `docs/mockups/` (with its register entry — CI requires one) is
-  the first step of the pick-up, per the mockup-is-the-spec rule, not
-  something this doc substitutes for.
+- **The drawing exists — update it, don't redraw.** `docs/mockups/cloud-fetch-states.html`
+  (1 Aug 2026) draws every fetch state at native row geometry with the key
+  table above, and `docs/mockups/STATUS.md` marks it IMPLEMENTED — which is true
+  of the sidecar half (`ensure_materialised`, `cloud_provider_for`) and not of
+  the label. The row-state table below is the label subset of that spec; open
+  the mockup before building, per the mockup-is-the-spec rule. This surface has
+  now been re-derived from scratch four times; the mockup is the fixed point.
 
 | Row state | Subtitle | Right slot |
 |---|---|---|
@@ -205,6 +216,9 @@ included; the second path is mostly wired already.
   three-store scope.
 - `design-copy-error-surfacing.md` §8 — both research passes' evidence tables,
   including everything in §4 and §6 here.
+- `docs/mockups/cloud-fetch-states.html` (1 Aug 2026) and its `STATUS.md` row —
+  the visual spec and the key table; found on 12 Sep 2026, five weeks after it
+  was drawn and eight days after this doc was written without it.
 
 When the next session proposes "Fetching from Dropbox…", it is this doc's §2
 that answers.

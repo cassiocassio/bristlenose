@@ -354,8 +354,8 @@ and evicted them back with `evictUbiquitousItem` — net state unchanged.
 | Claim | Status | Source |
 |---|---|---|
 | macOS `EDEADLK` = 11; 35 = `EAGAIN` | ✓ SDK `errno.h` | — |
-| Sandboxed app runs materialisation policy **ON** (2) | ✓ measured in-process | `DatalessPolicyProbeTests` |
-| `brctl evict` / `download` gone on 26.4 | ✓ | — |
+| Sandboxed app runs materialisation policy **ON** (2) — as does every GUI-descended process (Terminal, the test host); a launchd agent with no `MaterializeDatalessFiles` key measures OFF (1) and gets `EDEADLK` instead of a hang, so a probe run by hand and one run under launchd disagree and neither lies | ✓ measured in-process; spawn-dependence measured the same evening | `DatalessPolicyProbeTests`; `desktop/CLAUDE.md` copyItem gotcha |
+| `brctl download` / `evict` **hidden, not gone** on 26.4.1 — a bare invocation prints a usage that omits them; given a path both work (`download` returns at once and the file lands ~12 s later; `evict` prints `evicted content of '…'`). Undocumented, so still nothing to build on | ✓ re-measured the same day (§7) | — |
 | Sidecar already has detect + bounded-materialise | ✓ `fs.py:108–200` | — |
 | Under OFF, `copyItem` → `NSCocoaErrorDomain 512` / POSIX 11 instantly | pass measured | probe sources in session scratchpad |
 | Under ON, `Data(contentsOf:)` blocks ~2 s and materialises (Dropbox) | pass measured | same |

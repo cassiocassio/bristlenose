@@ -1,12 +1,23 @@
 ---
 status: partial
-last-trued: 2026-08-18
-trued-against: HEAD@main on 2026-08-18 (04e7c72e)
+last-trued: 2026-09-12
+trued-against: HEAD@main (0af915a4) on 2026-09-12 (§3 brctl correction)
 ---
 
 # Project storage — policy
 
 ## Changelog
+
+- _2026-09-12_ — §3's `brctl` note corrected: `brctl download` / `brctl evict`
+  are **hidden, not gone** on macOS 26.4.1. A bare invocation prints a usage that
+  omits them; given a path both still work. The "no longer exists on 26.4" claim
+  recorded here on the morning of 4 Sep came from the bare run and was re-measured
+  the same day (`design-copy-error-surfacing.md` §5, which also corrects the §7
+  anchor this doc had been citing). Still undocumented, so still nothing to build
+  on — `startDownloadingUbiquitousItem` / `evictUbiquitousItem` remain the API.
+  Front-matter had gone on reading 18 Aug straight through that correction, which
+  is the drift this entry exists to stop: the sections were trued, the metadata
+  that tells a cold reader whether to trust them was not.
 
 - _2026-08-18_ — trued up: §3's provider-classifier finding was reported open
   and had been fixed structurally; flipped it, re-anchored (`ProjectIndex.swift:650`
@@ -79,7 +90,7 @@ Researched 28 Jul 2026. These are the facts that kill most of the attractive opt
 
 > **Read and copy do not differ — the caller's policy does.** The 19 Jun 2026 `copyItem` hang (`sample <pid>` → `libcopyfile → com.apple.CloudDocs`, no error, `Task.cancel()` inert) is the policy-**ON** behaviour, which every syscall in this app shares. The `EDEADLK` sentence above is policy-**OFF** behaviour, which this app never sees. An earlier note here on 4 Sep 2026 put the difference on the operation; that was wrong and is replaced by this one. `desktop/CLAUDE.md` §Gotchas has the hang; `design-copy-error-surfacing.md` §5 has the measured policy and the corrected picture.
 
-This contradicts the previous assumption (recorded in `design-desktop-project-status.md`) that "the CLI is right to do nothing about iCloud — macOS materialises the file on read." It usually does. It is not guaranteed. The same failure has already been hit locally in an unrelated `rsync` script, where the fix was `brctl download` pre-materialisation — a subcommand that is **hidden, not gone, on macOS 26.4.1** — run bare it prints a usage that omits it; given a path it works, and so does `brctl evict` (the 4 Sep 2026 morning's "no longer exists" was the bare run; re-measured the same day, `design-copy-error-surfacing.md` §7). Undocumented, so still nothing to build on; `startDownloadingUbiquitousItem` / `evictUbiquitousItem` are the API.
+This contradicts the previous assumption (recorded in `design-desktop-project-status.md`) that "the CLI is right to do nothing about iCloud — macOS materialises the file on read." It usually does. It is not guaranteed. The same failure has already been hit locally in an unrelated `rsync` script, where the fix was `brctl download` pre-materialisation — a subcommand that is **hidden, not gone, on macOS 26.4.1** — run bare it prints a usage that omits it; given a path it works, and so does `brctl evict` (the 4 Sep 2026 morning's "no longer exists" was the bare run; re-measured the same day, `design-copy-error-surfacing.md` §5). Undocumented, so still nothing to build on; `startDownloadingUbiquitousItem` / `evictUbiquitousItem` are the API.
 
 **Third-party apps cannot pin files.** Apple's Developer Relations, on the Files app's "Keep Downloaded":
 

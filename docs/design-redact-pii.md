@@ -764,10 +764,18 @@ UX for phases 3–4 is specced in `docs/mockups/mockup-privacy-settings.html` §
   default, so we fetched 12 MB and silently pulled 400. It is now `en_core_web_lg`
   and `_build_engines` binds the analyzer to it via `NlpEngineProvider`, so
   fetched == used. The `preflight.pii.downloading` string said "~12 MB" and now
-  states the real size. **Owed:** 15 non-en locales still carry the 12 MB claim,
-  and `doctor.py` / `doctor_fixes.py` still probe for and recommend `sm` at eight
-  sites — so `doctor` can call the stack healthy on a machine that will then
-  download 400 MB. The model name wants one shared constant.
+  states the real size. **The three items this bullet listed as owed are all
+  done, verified at HEAD 12 Sep 2026** — and the bullet went on claiming them,
+  which is the trap this repo already documents: an owed item is a claim about
+  the tree exactly as a resolved one is. Measured: **zero** locales still say
+  12 MB (all 21 carry the corrected string), **zero** occurrences of
+  `en_core_web_sm` remain in `doctor.py` or `doctor_fixes.py`, and the model
+  name does now have one shared constant — `SPACY_MODEL` plus
+  `resolve_spacy_model()`, which every consumer routes through. The only
+  surviving `en_core_web_sm` strings in the tree are `tests/test_package_install.py`,
+  where the name is an arbitrary argument proving `ensure_spacy_model` is
+  model-agnostic, and a past-tense comment in `s07_pii_removal.py` explaining
+  why the constant is public. Both are correct as they stand.
 - **Phase 1 — the BA spike.** A throwaway target with the App Group entitlement,
   **no extension**, one `scheduleDownload:` of a small self-hosted file. Does it
   transfer, or return `BAErrorCodeCallerConnectionNotAccepted` (55) /

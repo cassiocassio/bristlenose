@@ -179,6 +179,51 @@ def _ensure_spacy_model(
     # Re-load to confirm Presidio's later spacy.load() will succeed (finding 23).
     spacy.load(model)
 
+# Pattern-matched entities: high-precision by construction, so they take a
+# lower score floor than the statistical PERSON recogniser. See `_redact_text`.
+# DATE_TIME is deliberately NOT here — it is context-sensitive and firing on
+# every "last Tuesday" would be exactly the data destruction the LOCATION note
+# below describes.
+_STRUCTURED_ENTITY_FLOOR = 0.40
+_STRUCTURED_ENTITIES = frozenset({
+    "PHONE_NUMBER",
+    "EMAIL_ADDRESS",
+    "CREDIT_CARD",
+    "IBAN_CODE",
+    "IP_ADDRESS",
+    "UK_NHS",
+    "US_SSN",
+    "US_BANK_NUMBER",
+    "US_PASSPORT",
+    "US_DRIVER_LICENSE",
+})
+
+def analysis_floor(configured: float) -> float:
+    """The lowest bar any entity could want — what `analyze()` is handed.
+
+    Analysing at the floor and filtering afterwards keeps this to one Presidio
+    call while letting the two entity classes have different bars.
+    """
+    return min(configured, _STRUCTURED_ENTITY_FLOOR)
+
+
+def score_bar(entity_type: str, configured: float) -> float:
+    """The score *this* entity must reach to be redacted.
+
+    Public and pure so the policy is testable without loading a 425 MB model:
+    what it encodes is a privacy decision, and a decision nothing can assert
+    cheaply is one that drifts.
+
+    A structured entity's bar may only ever be *relaxed*, never raised — hence
+    `min()` inside `analysis_floor`. Setting `pii_score_threshold` below the
+    floor therefore lowers everything, so the knob keeps working in the
+    direction a reader expects rather than inverting below 0.4.
+    """
+    if entity_type in _STRUCTURED_ENTITIES:
+        return analysis_floor(configured)
+    return configured
+
+
 # Mapping from Presidio entity types to our redaction labels
 _ENTITY_MAP: dict[str, str] = {
     "PERSON": "[NAME]",
@@ -570,13 +615,34 @@ def _redact_text(
     assert isinstance(analyzer, AnalyzerEngine)
     assert isinstance(anonymizer, AnonymizerEngine)
 
-    # Analyse for PII entities
+    # Two bars, not one. `pii_score_threshold` (0.7) is the right bar for
+    # PERSON, where the detector is a statistical NER model and over-firing
+    # destroys research data. It is the wrong bar for the pattern-matched
+    # entities: Presidio's `PhoneRecognizer` scores a bare match **0.4** and
+    # only reaches 0.75 when a context word ("call", "mobile") happens to sit
+    # nearby, so at a flat 0.7 a participant who simply reads their number out
+    # is NOT redacted — measured on the planted-PII corpus, 2 of 8 planted
+    # phone numbers removed. That is a false negative in a privacy control,
+    # which is the failure direction that actually matters here.
+    #
+    # A pattern match is high-precision by construction — a string shaped like
+    # a phone number, an NHS number or an IBAN rarely is not one — so these get
+    # the lower floor while PERSON keeps the configured bar. `min()` rather
+    # than a constant so that lowering `pii_score_threshold` still lowers
+    # everything; the floor may only ever relax the bar, never raise it.
+    # Analyse at the lowest bar any entity could want, then apply the real bar
+    # per entity. One `analyze` call either way.
     results = analyzer.analyze(
         text=text,
         language="en",
         entities=_DEFAULT_ENTITIES,
-        score_threshold=settings.pii_score_threshold,
+        score_threshold=analysis_floor(settings.pii_score_threshold),
     )
+    results = [
+        r
+        for r in results
+        if r.score >= score_bar(r.entity_type, settings.pii_score_threshold)
+    ]
 
     if not results:
         return text, []

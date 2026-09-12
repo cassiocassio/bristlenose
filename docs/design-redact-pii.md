@@ -805,6 +805,71 @@ $0.05/GB ≈ $213/yr; Cloudflare R2 zero egress and 0.425 GB inside its 10 GB fr
 tier ≈ $0; GitHub Releases free, 2 GB per-file cap, which is what RawCull — the
 prior art §"Prior art" tells you to read first — uses.
 
+### Measured end to end on the shipped path — 12 Sep 2026
+
+Everything above tests components. This ran the **planted-PII hour corpus**
+through `remove_pii()` itself — the function `Pipeline.run` calls — scoring by
+**surface absence from the output text**, which is what a researcher actually
+sees. `experiments/pii_e2e_production_path.py`; 67 segments, 4.3 s, real
+`en_core_web_lg`.
+
+A note on the metric, because it changed a conclusion: an earlier harness
+scored by *span overlap* in the analyzer results and read PHONE as 4/8 where
+the end-to-end surface check read **2/8**. Overlap is the generous metric — a
+detection that partly covers a planted span still leaves the surface in the
+text. Score the output, not the detections.
+
+**It found a real defect, and not in the direction the parked work assumed.**
+Presidio's `PhoneRecognizer` scores a bare match **0.4** and only reaches ~0.75
+when a context word ("call", "mobile") sits nearby; `pii_score_threshold` is
+**0.7**. So a participant who simply reads their number out was **not
+redacted** — 2 of 8 planted numbers removed. That is a *false negative* in a
+privacy control. The false-positive tuning the user parked post-beta is a
+different axis, and the less urgent one: an over-redaction is visible in the
+transcript, a missed phone number is not.
+
+**Fix: two bars, not one.** Pattern-matched entities (`PHONE_NUMBER`,
+`EMAIL_ADDRESS`, `UK_NHS`, `CREDIT_CARD`, `IBAN_CODE`, `IP_ADDRESS`, the US
+identifiers) take a 0.40 floor; PERSON keeps the configured 0.7, because PERSON
+is the statistical recogniser and where over-firing destroys research data —
+the same reasoning as `_ENTITY_MAP`'s LOCATION exclusion. `DATE_TIME` is
+deliberately *not* relaxed: firing on "last Tuesday" is that same data
+destruction. The floor may only ever relax a bar (`min()`), so lowering
+`pii_score_threshold` still lowers everything rather than inverting below 0.4.
+
+| | before | after |
+|---|---|---|
+| PERSON | 31/33 | **31/33** (unchanged, by design) |
+| EMAIL | 4/6 | 4/6 |
+| PHONE | **2/8** | **7/8** |
+| ID | 3/5 | 3/5 |
+| **total targeted** | 40/52 | **45/52** |
+| false positives | 9/32 | **9/32** (unchanged) |
+
+Zero false-positive cost because PERSON's bar never moved — which is the whole
+argument for targeting rather than dropping the global threshold. A flat 0.4
+scored identically *on this corpus*, but only because no negative probe here
+scores between 0.4 and 0.7; it would not hold generally, and PERSON is exactly
+where it would fail.
+
+**Known gaps, unchanged and honest:**
+
+- **EMAIL spelled-out ×2** — "jane dot smith at example dot com". Not an email
+  pattern, so Presidio cannot see it, and transcripts of *spoken* interviews
+  are full of them. The most real of these gaps.
+- **PERSON ×2** — a bare first name and one Arabic name. Model limits.
+- **PHONE ×1** — an intl number libphonenumber rejects as invalid; Presidio
+  returns nothing at all for it, at any threshold.
+- **ID/dob ×2** — `DATE_TIME`, excluded above on purpose.
+- **False positives: 9 of 32, every one a product name that is also a person
+  name.** Exactly the prediction that motivated the post-beta per-project
+  allow-list, now measured rather than assumed.
+
+Pinned by `tests/test_pii_score_bar.py` — fast tests on the pure policy
+(`score_bar`, `analysis_floor`) so a privacy decision is assertable without the
+425 MB model, plus one `@pytest.mark.slow` end-to-end case whose sentence
+carries **no** context word. Both go red when the bar is collapsed back to one.
+
 ### Build order
 
 Phases 0–2 are independent of Background Assets and can land immediately; the

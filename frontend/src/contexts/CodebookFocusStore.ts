@@ -211,10 +211,19 @@ export function reconcileCodebookFocus(
   });
 }
 
-/** Test-only reset — module state outlives a test otherwise. */
+/**
+ * Test-only reset — module state outlives a test otherwise.
+ *
+ * **Deliberately does NOT rewind `seq`.** Rewinding it to 0 while mounted
+ * consumers still hold a high `lastSeq` makes every subsequent command fail
+ * the `seq <= lastSeq` guard — so the menu silently stops working until the
+ * counter climbs back, with no error and no log. That is the exact failure
+ * `useCodebookCommand`'s guard exists to prevent, reintroduced by the escape
+ * hatch meant to help test it. The counter is monotonic for the life of the
+ * module; nothing reads its absolute value.
+ */
 export function resetCodebookFocus(): void {
   state = { ...INITIAL };
-  seq = 0;
   listeners.forEach((l) => l());
 }
 

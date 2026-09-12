@@ -646,7 +646,26 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
         case "createCodeGroup":
           // The only direct call: `onCreateGroup` mints a group with a
           // generated name and opens nothing, so there is no editor to reach.
-          authoring.onCreateGroup();
+          //
+          // It is ALSO the only case that needs its own predicate rather than
+          // a focus check, and the only one where getting that wrong writes
+          // data. `createCodebookGroup(name, colourSet)` takes no codebook id
+          // — it always writes the project floor — so a native dim that is one
+          // frame stale would mint a real row in the floor while the
+          // researcher is looking at a framework page: nothing changes on
+          // screen, no toast, no log, and a stray auto-named group waiting for
+          // them when they navigate back. That is worse than the dead menu
+          // item this whole feature replaced.
+          //
+          // So restate the condition the page posts as `canCreateGroups`, and
+          // which `CodebookV2Page` renders its New Group placeholder under.
+          // `view` and `readOnly` are in this effect's dependency list for
+          // exactly this reason — without them the guard closes over a stale
+          // render and is right most of the time, which is the worst shape a
+          // guard can have.
+          if (view === "page" && page?.floor && !readOnly) {
+            authoring.onCreateGroup();
+          }
           break;
         case "createCode":
           if (focusedGroupId !== null) {
@@ -692,7 +711,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     };
     window.addEventListener("bn:menu-action", handler);
     return () => window.removeEventListener("bn:menu-action", handler);
-  }, [authoring, page, setView, onInstall, onAskUninstall]);
+  }, [authoring, page, setView, onInstall, onAskUninstall, view, readOnly]);
 
   return (
     // A FRAGMENT, not a wrapper div. `report.css` flushes the first zone title

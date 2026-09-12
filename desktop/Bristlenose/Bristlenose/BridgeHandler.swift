@@ -339,6 +339,14 @@ final class BridgeHandler: ObservableObject {
     func reloadWebView() -> Bool {
         Self.log.info("reloadWebView webView=\(self.webView != nil)")
         guard let webView else { return false }
+        // The document is about to be replaced, so anything the OLD document
+        // told us about its codebook page is now a claim about a page that no
+        // longer exists. This path deliberately does NOT call `reset()` (the
+        // route, the lens and the channel all survive a reload), which is why
+        // the codebook mirrors have to be cleared explicitly here: without it
+        // the whole Codes menu stays enabled across a reload that fires
+        // routinely whenever a run completes.
+        clearCodebookMirrors()
         webView.reloadFromOrigin()
         return true
     }
@@ -887,6 +895,30 @@ final class BridgeHandler: ObservableObject {
 
     /// Reset bridge state when switching projects. The new WKWebView will
     /// post a fresh `ready` message once the React SPA mounts.
+    /// Clear every mirror written by `codebook-focus` / `codebook-page`.
+    ///
+    /// Factored out rather than inlined because there are two callers and a
+    /// third temptation: `reset()` (project switch) and `reloadWebView()` (a
+    /// routine reload after a run completes, which does NOT call `reset()` —
+    /// `documentState` stays `.spa` and `currentPath` stays on the codebook
+    /// lens, so without this the whole Codes menu stays enabled over a
+    /// document being torn down).
+    ///
+    /// A list of eight literals is exactly the thing that goes stale when a
+    /// ninth mirror is added, so if this grows again it wants a test asserting
+    /// "every codebook mirror is false after reset" rather than eight more
+    /// lines here.
+    private func clearCodebookMirrors() {
+        codebookGroupFocused = false
+        codebookTagFocused = false
+        codebookGroupEditable = false
+        codebookGroupAcceptsTags = false
+        codebookPageOpen = false
+        codebookInstallable = false
+        codebookInstalled = false
+        codebookCanCreateGroups = false
+    }
+
     func reset() {
         Self.log.notice("bridge reset (selection change)")
         isReady = false
@@ -920,6 +952,17 @@ final class BridgeHandler: ObservableObject {
         leftPanelOpen = false
         rightPanelOpen = false
         inspectorOpen = false
+        // Same discipline, and it was missed when these shipped: all eight
+        // codebook mirrors survived a project switch, so the Codes menu could
+        // be enabled from the PREVIOUS project's cursor until the incoming
+        // lens mounted and posted nulls. `codebookInstalled` was the worst of
+        // them — it drives the Install ⇄ Uninstall verb, so the row could read
+        // "Uninstall Codebook" over a project with nothing installed.
+        //
+        // Fails OPEN rather than closed, which is the direction that matters:
+        // a dimmed row is recoverable by clicking, a lit row over stale state
+        // is the "looks alive, is dead" shape this file already documents.
+        clearCodebookMirrors()
         selectedProjectPath = ""
         selectedProjectRevealablePath = ""
         selectedFolderName = ""

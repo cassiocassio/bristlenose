@@ -343,18 +343,36 @@ describe.each(LENSES)("codebook authoring — $name", (lens) => {
     expect(screen.queryByLabelText("Delete group Uncategorised")).not.toBeInTheDocument();
   });
 
-  it("enters inline rename from the badge text", async () => {
-    // Not a dialog, not a pencil icon: the name is the affordance.
+  it("enters inline rename from the badge text, on the SECOND click", async () => {
+    // Not a dialog, not a pencil icon: the name is the affordance. But the
+    // first click places the focus cursor — clicking a chip used to focus it
+    // AND open its editor in one gesture, which made Codes ▸ Rename Code
+    // unreachable except by doing what it does, and put an unrequested text
+    // field in front of every Delete Code. Finder's model: focus, then act.
     await lens.floor();
+    await userEvent.click(screen.getByText("confusion"));
+    expect(document.querySelector(".tag-edit-inline")).toBeNull();
+
     await userEvent.click(screen.getByText("confusion"));
     const editing = document.querySelector(".tag-edit-inline");
     expect(editing).not.toBeNull();
     expect(editing).toHaveAttribute("contenteditable", "true");
   });
 
+  it("a first click on a chip focuses it without opening anything", async () => {
+    // The invariant the two-click rule exists for. Without it the cursor
+    // cannot be placed on a code without a side effect.
+    await lens.floor();
+    await userEvent.click(screen.getByText("confusion"));
+    expect(document.querySelector(".tag-edit-inline")).toBeNull();
+    expect(tagRow("confusion")).toHaveClass("bn-selected");
+  });
+
   it("renames a tag through PATCH", async () => {
     const calls = mockFetch();
     await lens.floor();
+    // Two clicks: focus, then rename. See the chip-focus test above.
+    await userEvent.click(screen.getByText("confusion"));
     await userEvent.click(screen.getByText("confusion"));
     const editing = document.querySelector(".tag-edit-inline") as HTMLElement;
     editing.textContent = "bewilderment";
@@ -434,6 +452,8 @@ describe.each(LENSES)("codebook authoring — $name", (lens) => {
     // name. Cancel would be a second way to say the only thing OK says.
     const calls = mockFetch();
     await lens.floor();
+    // Two clicks: the first focuses the card, the second opens the title.
+    await userEvent.click(screen.getByText("Delight"));
     await userEvent.click(screen.getByText("Delight"));
     const editing = document.querySelector('.group-title-text[contenteditable="true"]') as HTMLElement;
     expect(editing).not.toBeNull();
@@ -452,6 +472,7 @@ describe.each(LENSES)("codebook authoring — $name", (lens) => {
   it("renames a group to a free name through PATCH", async () => {
     const calls = mockFetch();
     await lens.floor();
+    await userEvent.click(screen.getByText("Delight"));
     await userEvent.click(screen.getByText("Delight"));
     const editing = document.querySelector('.group-title-text[contenteditable="true"]') as HTMLElement;
     editing.textContent = "Joy signals";

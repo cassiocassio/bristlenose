@@ -43,6 +43,54 @@
     /* Grid child — no break-inside or margin needed (grid gap handles spacing) */
 }
 
+/* The group focus cursor.
+ *
+ * Three constraints decided this rule, in order:
+ *
+ * 1. QUALIFIED WITH THE BASE CLASS. `.bn-selected` alone is (0,1,0) and ties
+ *    with `.codebook-group`'s own `border: 1px solid transparent` — and this
+ *    file is concatenated AFTER `atoms/interactive.css`, so the tie goes to
+ *    the transparent border and the cursor paints nothing. That is exactly
+ *    the trap `theme/CLAUDE.md` documents for `blockquote.quote-card`, and
+ *    the codebook shipped it on 12 Sep 2026 with no CSS at all.
+ *
+ * 2. BORDER, NOT BACKGROUND. `.bn-selected`'s `background` can never win
+ *    here: the card carries an inline `backgroundColor` from `getGroupBg`,
+ *    and inline beats any class. The wash is also the card's colour identity
+ *    and shouldn't be overwritten. So the cursor is an edge.
+ *
+ * 3. ORDERED BEFORE `.drag-over`, AND VISUALLY DISTINCT FROM IT. Both are
+ *    (0,2,0) in this file, so source order alone separates them: drag-over
+ *    comes later and wins on the one card you are dragging onto, which is
+ *    correct — during a drag the drop target is what matters. They must not
+ *    look alike either, or the affordance says nothing, so drag-over keeps
+ *    `--bn-focus-ring` and the cursor takes a tighter inset edge. */
+.codebook-group.bn-selected {
+    border-color: var(--bn-selection-border);
+    box-shadow: inset 0 0 0 1px var(--bn-selection-border);
+}
+
+/* macOS de-emphasises selection on an inactive window. `atoms/interactive.css`
+ * implements that for `.bn-selected` generally, but its rule only repaints
+ * `border-left-color` — which this one overrode with the `border-color`
+ * shorthand. Without this companion the codebook cursor would be the one
+ * selection surface in the app that stays bright on window blur. */
+.bn-window-inactive .codebook-group.bn-selected {
+    border-color: var(--bn-selection-border-inactive);
+    box-shadow: inset 0 0 0 1px var(--bn-selection-border-inactive);
+}
+
+/* EditableText in `trigger="click"` mode applied an inline `cursor: text`; the
+ * span that replaced it inherits `.group-title-text { cursor: default }` — the
+ * SAME class the read-only title renders — so an editable group title became
+ * indistinguishable from one you cannot edit, while its own sibling subtitle
+ * still showed an I-beam. Scoped to the focused card because that is exactly
+ * when clicking the title renames it, and to `--editable` so a framework
+ * card's title never claims to be typeable. */
+.codebook-group.bn-selected .group-title-text--editable {
+    cursor: text;
+}
+
 .codebook-group.drag-over {
     border-color: var(--bn-colour-accent);
     box-shadow: var(--bn-focus-ring);
@@ -188,6 +236,26 @@
 .tag-row.dragging {
     opacity: 0.4;
 }
+/* The code cursor.
+ *
+ * A SHAPE, not a tint. `.bn-selected`'s wash measures 1.01:1 against the
+ * group-tinted card it sits on (WCAG 1.4.11 wants 3:1), and `.tag-row`
+ * declares no border for its `border-left-color` to repaint — so on this one
+ * element the shared state class paints an indicator nobody can see. Both
+ * other `bn-selected` surfaces in the app (quote card, signal card) carry the
+ * state on a border; this row was the first without one.
+ *
+ * Ordered BEFORE `.merge-target` deliberately: both are (0,2,0) in this file,
+ * and a row that is both focused and a live merge target should show the
+ * merge target — that state is momentary and destructive, the cursor is not. */
+.tag-row.bn-selected {
+    box-shadow: inset 2px 0 0 var(--bn-selection-border);
+}
+
+.bn-window-inactive .tag-row.bn-selected {
+    box-shadow: inset 2px 0 0 var(--bn-selection-border-inactive);
+}
+
 .tag-row.merge-target {
     box-shadow: 0 0 0 2px var(--bn-colour-accent);
     background: color-mix(in srgb, var(--bn-colour-accent) 6%, transparent);

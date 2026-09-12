@@ -582,31 +582,20 @@ function AppShell() {
           break;
 
         // ── Codebook operations ─────────────────────────────────────────
-        case "browseCodebooks":
-          window.dispatchEvent(new CustomEvent("bn:codebook-browse"));
-          break;
-        case "importFramework": {
-          const templateId = (payload as { templateId?: string } | undefined)?.templateId;
-          window.dispatchEvent(
-            new CustomEvent("bn:codebook-browse", templateId ? { detail: { templateId } } : undefined),
-          );
-          break;
-        }
-        case "removeFramework": {
-          const frameworkId = (payload as { frameworkId?: string } | undefined)?.frameworkId;
-          if (frameworkId) {
-            window.dispatchEvent(
-              new CustomEvent("bn:codebook-remove", { detail: { frameworkId } }),
-            );
-          }
-          break;
-        }
-        case "createCodeGroup":
-          window.dispatchEvent(new CustomEvent("bn:codebook-create-group"));
-          break;
-        case "createCode":
-          window.dispatchEvent(new CustomEvent("bn:codebook-create-code"));
-          break;
+        // DELETED 12 Sep 2026. Five cases lived here dispatching
+        // `bn:codebook-browse` / `-create-group` / `-create-code` / `-remove`.
+        // Every one of those CustomEvents lost its listener when `baa1aa0e`
+        // deleted `CodebookPanel`, so they resolved cleanly into nothing —
+        // which is invisible, because a CustomEvent with no listener is not an
+        // error. `importFramework` and `removeFramework` additionally lost
+        // their PRODUCER when the Codes menu was rebuilt.
+        //
+        // The live handlers are in `islands/CodebookV2.tsx`, which owns the
+        // `authoring` closures they need. Leaving these here made
+        // `browseCodebooks`, `createCodeGroup` and `createCode` double-handled
+        // — harmless only because the second path was dead, and a loaded gun
+        // for whoever wires `bn:codebook-create-group` next and gets two
+        // groups per menu pick.
         case "openSpecimen":
           // Debug lens (Diagnostics menu, DEBUG harness) — the specimen page
           // has no native sidebar row, so the menu navigates the SPA directly.

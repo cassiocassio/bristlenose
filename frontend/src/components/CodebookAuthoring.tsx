@@ -201,7 +201,20 @@ export function TagRow({
             text={tag.name}
             variant="deletable"
             colour={getTagBg(colourSet, tag.colour_index)}
-            onClick={() => setIsEditing(true)}
+            // Focus first, act second — the Finder / Things idiom, and the
+            // reason a stray click on a filename does not drop you into an
+            // edit field. Before this, one click both focused the code AND
+            // opened its rename field, which had two costs: Codes ▸ Rename
+            // Code could not be reached without already having performed it,
+            // and every use of Delete Code began with an unrequested text
+            // field the researcher then had to dismiss.
+            //
+            // The collision was created here, not inherited: click-to-rename
+            // was unambiguous while the click meant one thing, and the focus
+            // cursor gave it a second job.
+            onClick={() => {
+              if (isFocused) setIsEditing(true);
+            }}
             onDelete={() => onRequestDelete(tag)}
           />
         )}
@@ -483,9 +496,20 @@ export function CodebookGroupColumn({
             ) : (
               // `trigger="external"` rather than `"click"`: the menu item must
               // open the SAME field the click opens, and EditableText's own
-              // click mode keeps its editing flag private. The onClick below
-              // reproduces the click behaviour exactly. TagRow already had
-              // this shape; this makes the pair consistent.
+              // click mode keeps its editing flag private.
+              //
+              // The span below does NOT reproduce click mode exactly, and an
+              // earlier comment here claimed it did. Two real differences:
+              // EditableText applied an inline `cursor: text` (restored in
+              // codebook-panel.css instead), and it placed the caret at the
+              // click point where this selects the whole name. The second is
+              // a behaviour change on a field a researcher may want to tweak
+              // rather than retype — accepted, because it matches the chip.
+              //
+              // Focus-then-rename, same as the chip: a first click focuses the
+              // card, a second on the title opens the field. Keeping single-
+              // click here while the chip took two would fork the two rename
+              // affordances on one card.
               isRenaming ? (
                 <EditableText
                   as="span"
@@ -502,8 +526,10 @@ export function CodebookGroupColumn({
               ) : (
                 // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
                 <span
-                  className="group-title-text"
-                  onClick={() => setIsRenaming(true)}
+                  className="group-title-text group-title-text--editable"
+                  onClick={() => {
+                    if (isFocused) setIsRenaming(true);
+                  }}
                 >
                   {group.name}
                 </span>

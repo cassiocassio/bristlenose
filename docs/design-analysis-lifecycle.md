@@ -1,8 +1,7 @@
 ---
 status: current
-last-trued: 2026-08-27
-trued-against: HEAD@main (2ac83f6d) on 2026-08-27 (the glyph rule + files popover)
-  sheet read against its own pixels, not only its call sites)
+last-trued: 2026-09-12
+trued-against: HEAD@main (42bf545f) on 2026-09-12 (per-session resume; outcome 3c)
 ---
 
 > **Trued 27 Aug 2026.** The affordance inventory below named *the sheet* as the
@@ -423,6 +422,7 @@ the one previously considered worst.
 | 2 | Refused **by name, with a reason** | ✅ — a stated refusal is a pass |
 | 3 | Silently dropped | ❌ the classic failure |
 | 3b | Dropped **while the summary reports success** | ❌❌ the same loss, plus a false alibi |
+| 3c | Stated honestly, then **laundered into a success by the next run** | ❌❌ the loss outlives the record of it |
 | 4 | **Took the whole batch down** | ❌❌ worse at scale |
 
 Outcome 4 matters because it inverts with n: one bad file among a hundred costs
@@ -436,6 +436,27 @@ the stage that lost them reporting a clean sweep. Anyone debugging it starts by
 trusting the summary, which is the one artefact actively lying. The tell is
 **a bucket whose `attempted` does not match the next bucket's**, and nothing in
 the schema requires them to agree.
+
+**3c was found on 11 Sep 2026, and 3b's tell provably cannot catch it.** Here the
+failure *is* stated by name with a reason on the run it happens — outcome 2, a
+pass. The loss is created one run later, by the previous run's *record*: a
+failed session written to the manifest as complete is dropped from the work list
+for good, and its cached count is then added to both `attempted` and `succeeded`
+(`pipeline.py:1722-1724`), so the next terminus reads a clean sweep. Every number
+is internally consistent, on both runs, and the downstream bucket agrees too —
+there is no mismatched pair for 3b's tell to find.
+
+What separates 3c from everything above it is that the loss is **permanent** and
+not attributable to the stage that suffers it. Every tell this doc owns is
+single-run and within-artefact; this one is only visible *across* two artefacts.
+The tell for 3c is therefore cross-record: **a session id in the manifest's
+completed set for a stage must not appear in any `failed` list in
+`pipeline-events.jsonl`.** Half-fixed by `6277eabe`; the stage-level cache still
+short-circuits past the honest record. Gate coverage: `docs/testing/gaps.md` G10.
+The invariant itself is owned by
+[design-pipeline-resilience.md](design-pipeline-resilience.md) §3, whose stated
+rule — *"the manifest is never a lie — it may be behind but never ahead"* — is
+what this violates at session granularity.
 
 ### 5.2 Fixed
 
@@ -458,8 +479,6 @@ the schema requires them to agree.
 | Fifteen silent recordings dropped under `succeeded=57` | **outcome 3b** | `NO_SPEECH` — stated, counted out of `succeeded`, excluded from the abandon check |
 | The same loss in **`transcribe`**, reported as `42/57` with `failed: 0` | **outcome 3** — honest count, no account | the sibling rollup mirrored: silent sessions stated, and kept out of the abandon predicate |
 | A failed **re-analysis** read as *never analysed* after relaunch | the failure recorded and never read | `parseManifest` consults the events log when the manifest is absent |
-| **Analyse** offered on a project with no recordings | false affordance | `canAnalyse` asks whether there is work to do |
-| The empty-state pane said "add files" to a project with files | the app contradicting itself on screen | the pane counts the same field the menu gates on |
 
 ### 5.3 Open
 
@@ -478,6 +497,20 @@ So the standing instruction is not "keep this list empty". It is **run the
 corpus through the `.app` after any pipeline change, not just the suite**, and
 expect this section to refill. A section that stays empty is still a section
 nobody is exercising.
+
+**It refilled again on 12 Sep 2026, and this time from neither route** — not the
+corpus, not the `.app`, but a cold read of a cached run from four months earlier.
+Two items, both measured, both owned by
+[design-pipeline-resilience.md](design-pipeline-resilience.md) § Still open:
+
+- **A partially-failed stage is cached as `COMPLETE`,** so the per-session resume
+  branch is unreachable and the failed session is never retried. Two-run probe:
+  run 2 called `extract_quotes` not at all. This is outcome **3c** above.
+- **A quote-extraction timeout never splits the session.** `_extract_with_split`
+  catches `TruncatedResponseError` only, so the machinery that exists to make an
+  over-large session tractable cannot be reached from the failure an over-large
+  session actually hits. FOSSDA s3: whole session exceeds the 600 s timeout and
+  yields nothing; split in two it yields **91 quotes** in 522 s + 293 s.
 
 ### 5.4 Edge cases
 

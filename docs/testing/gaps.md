@@ -357,6 +357,72 @@ status checks and let the local gates and `/end-session` carry it. Either is
 defensible; the present state is the one that is not, because it claims a
 guarantee it cannot deliver.
 
+### G10. Two records of the same run, and every gate reads only one — 🟡 **half-closed 11 Sep 2026**
+
+`mark_session_complete` writes the next run's work list; the terminus event
+writes the run's own account of itself. Nothing anywhere compares them. s09
+wrote a FAILED session as complete, and both records stayed individually
+well-formed: `quote_extraction -> s3: complete` in the manifest, `10 == 9 + 1`
+in the terminus. The one driving resume was the wrong one.
+
+**Evidence.** The cached FOSSDA run of 30 Apr 2026 — s3, a 94-minute interview,
+hit three consecutive 600 s API timeouts, recorded a `StageFailure`, and was
+marked complete in the same breath. `get_completed_session_ids` dropped it from
+the work list permanently; `_cached_q_count` then counted it into **both**
+`attempted` and `succeeded` (`pipeline.py:1722-1724`), so the next run's
+terminus read a clean 10/10 with `failed: []`. The interview contributed nothing
+to the report and no re-run would have retried it.
+
+**Four gates pass on it, and three structurally cannot fail.**
+
+- `assert_sessions_accounted` — the arithmetic is *honest* on both runs
+  (10 == 9 + 1, then 10 == 10 + 0). Not the "session in no bucket" shape it was
+  built for.
+- Cross-bucket continuity (`topics.attempted == transcripts.succeeded`) agrees
+  too: s08 held the rule, so only s09 lost the session, and the cached count
+  restores it to the bucket on the next run.
+- The whole-stage guards from `1e1ec118` — abandon on `succeeded == 0`, and
+  `mark_stage_complete` refusing empty content — both pass: one failed session
+  of a batch leaves the intermediate JSON non-empty and `succeeded != 0`.
+- `check-gate-proofs.py` never saw it. It discovers `check-*` scripts; this
+  invariant lives inside `pipeline.py`. Per G7: the model, not the gate.
+
+**The general form, and it is not G7's.** G7 is *the extractor is not looking at
+this fact*. This is *the fact is consistent inside every artefact anyone checks,
+and false only across two of them*. Every assertion we own is single-run and
+within-bucket. The manifest is cross-run state, and nothing compares it to the
+run record written beside it. The cheap check that would have caught it is one
+line of set arithmetic: **a session id in the manifest's completed set must not
+appear in any `failed` list in `pipeline-events.jsonl`.**
+
+**Half-closed by `6277eabe`**, and the other half is why this entry is 🟡 rather
+than ✅. The per-session *record* is honest now — one
+`_mark_sessions_complete_except_failed` (`pipeline.py:399`) that both stages
+call, rather than a second inline copy, because an uncommented inline copy is
+exactly how the s09 one went missing. But a partially-failed stage is still
+marked `COMPLETE` (`pipeline.py:1747`, unconditional after the `succeeded == 0`
+abandon check), so the next run's `_is_stage_verified` takes the full-cache
+branch and **never reads those records**. Measured 12 Sep on a two-run probe
+(3 sessions, 1 failing, non-empty output): run 2 called `extract_quotes` not at
+all. The record is true and unread.
+
+**What the researcher sees meanwhile.** `bristlenose status` puts a green tick
+on the stage — `✓ Quotes  8 quotes (2 sessions)` with `✓ Transcribe  3 sessions`
+two rows above it, the discrepancy in plain sight and unmarked — and a re-run
+returns `(cached)` instantly without retrying anything.
+
+**Gate owed, and it is the set-arithmetic line above** — not a broader
+invariant. `tests/test_manifest_failed_session_guard.py` pins the rule and both
+wirings and was watched red against the pre-fix tree, but its fixture returns
+`[]` quotes, so `mark_stage_complete` is refused by the empty-content guard and
+the stage-level short-circuit is outside what it covers. A non-empty fixture is
+the cheap widening.
+
+**Two sibling sites carry the un-fixed half**: `pipeline.py:969-972` (s05 —
+`s05_transcribe.py:198` writes `results[sid] = []` on failure, so the failed
+session is a key and gets marked; the helper applies directly) and `:1271-1276`
+(s05b — no `StageOutcome` to filter on without changing the stage's signature).
+
 ## Explicitly NOT gaps
 
 Recorded so they are not re-derived as problems by the next reader.

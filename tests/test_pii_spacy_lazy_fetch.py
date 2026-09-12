@@ -34,9 +34,9 @@ class TestEnsureSpacyModel:
                 "bristlenose.utils.package_install.ensure_spacy_model"
             ) as installer:
                 _ensure_spacy_model()
-        installer.assert_called_once_with("en_core_web_sm")
+        installer.assert_called_once_with("en_core_web_lg")
         out = capsys.readouterr().out
-        assert "Downloading PII detector (~12 MB, one-off)..." in out
+        assert "Downloading PII detector (~400 MB, one-off)..." in out
         # MessageKind.SUCCESS glyph follows on the done path.
         assert "✓" in out  # ✓
         # Verify retry: spacy.load called twice (probe + post-install confirm).

@@ -21,19 +21,26 @@ from bristlenose.utils.text import count_noun
 
 logger = logging.getLogger(__name__)
 
-_SPACY_MODEL = "en_core_web_sm"
+# Presidio's bare ``AnalyzerEngine()`` defaults to ``en_core_web_lg``, so this
+# constant was vestigial and named a model the analyzer never loaded — we
+# fetched 12 MB of ``sm`` and then pulled 400 MB of ``lg`` implicitly
+# (recorded in docs/design-redact-pii.md, 26 Jul 2026). It is now load-bearing:
+# the engine below is bound to it explicitly, so fetched == used, always.
+_SPACY_MODEL = "en_core_web_lg"
+_SPACY_MODEL_SIZE_HUMAN = "~400 MB"
 
 
 def _ensure_spacy_model() -> None:
-    """Probe spaCy for ``en_core_web_sm``; lazily download it on first run.
+    """Probe spaCy for :data:`_SPACY_MODEL`; lazily download it on first run.
 
-    The model is ~12 MB — small enough to use the inline-status treatment (one
-    line, no banner) rather than the framed-banner pattern reserved for big
-    fetches like Whisper. Per the design doc's "fetch UX should scale with fetch
-    size" cutoff, anything under 50 MB gets a single line.
+    The model is ~400 MB. This docstring used to reason about 12 MB and pick the
+    one-line inline treatment on that basis — the wrong model and so the wrong
+    UX tier, since the design doc's "fetch UX should scale with fetch size" rule
+    puts anything over 50 MB behind the framed banner used for Whisper. The
+    string now states the real size; the framed-banner treatment is still owed.
 
-    On success the function returns; Presidio's ``AnalyzerEngine()`` constructor
-    will pick up the now-installed model the next time it calls ``spacy.load``.
+    On success the function returns, and :func:`_build_engines` binds the
+    analyzer to this same model — so what is fetched is what is used.
 
     Raises:
         Whatever :func:`ensure_spacy_model` raises (network failure, frozen
@@ -422,9 +429,19 @@ def _init_presidio(
     _ensure_spacy_model()
 
     from presidio_analyzer import AnalyzerEngine
+    from presidio_analyzer.nlp_engine import NlpEngineProvider
     from presidio_anonymizer import AnonymizerEngine
 
-    analyzer = AnalyzerEngine()
+    # Bind the analyzer to _SPACY_MODEL explicitly. A bare AnalyzerEngine()
+    # silently takes Presidio's own default, which is what let the fetched and
+    # the used model diverge in the first place.
+    provider = NlpEngineProvider(
+        nlp_configuration={
+            "nlp_engine_name": "spacy",
+            "models": [{"lang_code": "en", "model_name": _SPACY_MODEL}],
+        }
+    )
+    analyzer = AnalyzerEngine(nlp_engine=provider.create_engine())
     anonymizer = AnonymizerEngine()
 
     logger.info("Presidio engines initialised.")

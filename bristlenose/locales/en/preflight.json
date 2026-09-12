@@ -37,7 +37,7 @@
     "local_model_not_pulled": "The requested local model isn't pulled. Run \u0060ollama pull <model>\u0060 to download it (check the model name in bristlenose.toml or --llm-model), then re-run. Underlying: {message}."
   },
   "pii": {
-    "downloading": "Downloading PII detector (~12 MB, one-off)..."
+    "downloading": "Downloading PII detector (~400 MB, one-off)..."
   },
   "closing": {
     "no_more_questions": "No more questions.{estimate_suffix} Ctrl+C anytime."

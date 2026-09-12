@@ -158,6 +158,52 @@ both**, multilingually, with nothing to bundle.
 > The delivery of the 425 MB model stays an open packaging question — see
 > §"Un-parking the Mac path".
 
+## Post-beta: a per-project allow-list the researcher builds by review
+
+**Decision 12 Sep 2026: Presidio configuration work is post-beta**, and when it
+comes the allow-list should be **per project or per folder, curated by the
+researcher**, not a global brand-name list we maintain.
+
+**Why per-project beats a shipped list.** The measured false positives were
+`Jenkins` · `Ada` · `Swift` · `Bash` · `Kotlin` · `Vala` · `Fedora` · `Grafana` —
+technical vocabulary, redacted identically by both spaCy models. A global list
+fixes those eight and then becomes a treadmill: every new product name is an
+entry we add, forever, against a vocabulary that moves faster than our release
+cadence. And the ambiguous entries carry a permanent cost we would be choosing on
+the researcher's behalf — allow-listing `Ada` means a participant referred to as
+"Ada", with no surname, stops being redacted in *every* study. A medical study and
+a developer-tools study want opposite answers, and only the researcher knows which
+they are running.
+
+**The shape.** Review what was redacted, toggle the wrong ones back, and the
+toggle adds that term to the project's allow-list for the next analysis. It is a
+review queue over redactions, not a settings form — the researcher is already the
+person who knows `Fedora` is an operating system.
+
+**Borrow, don't invent.** This is the accept/deny review idiom the codebook
+surface already ships (badge accept/deny, the AutoCode review queue). Same
+gesture, different queue. Do not design a new one.
+
+**Two things it must respect.**
+
+1. **The data source is a re-identification key.** `pii_summary.txt` already lists
+   every original value with timecodes, and lives in `.bristlenose/` precisely so
+   it is not shareable. A review UI is the affordance the security review predicted
+   would be proposed here, and its constraint stands: never render it into an
+   export, a feedback bundle, or anything a researcher can hand on. Revealing in
+   Finder (where the file's own CONFIDENTIAL header is visible) is safer than
+   rendering the values in-app.
+2. **Allow-listing is a privacy control operated in reverse.** Every entry is a
+   deliberate decision to stop redacting something. The list wants provenance —
+   what was added, when — for the same reason the redaction itself does.
+
+**What parking this means for beta, stated once.** The measured gaps ship as they
+are: six of eight phone numbers survive redaction, and technical vocabulary is
+over-redacted. The blast radius is small because PII is **off by default** and,
+until the delivery question is settled, **CLI-only** — so this affects opt-in CLI
+users, not the default path. That is what makes parking it reasonable rather than
+risky, and it is also why the delivery question and this one are independent.
+
 ### The rejected design, preserved (post-100days, was the forward direction)
 
 **Insight:** Presidio's entire value is NER (names/places). Structured PII —

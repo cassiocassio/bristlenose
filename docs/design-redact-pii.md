@@ -870,6 +870,41 @@ Pinned by `tests/test_pii_score_bar.py` — fast tests on the pure policy
 425 MB model, plus one `@pytest.mark.slow` end-to-end case whose sentence
 carries **no** context word. Both go red when the bar is collapsed back to one.
 
+### The path-delivered route is proven, not assumed — 12 Sep 2026
+
+The `.dmg` and TestFlight acquirers unpack a model **directory** and set
+`BRISTLENOSE_PII_MODEL_DIR`; `spacy download` never runs, so the importable
+package does not exist on those machines. Everything built so far proved only
+that `resolve_spacy_model()` *returns* the path. Nothing proved Presidio would
+load and behave from one — and the place to discover otherwise is not
+TestFlight.
+
+Staged a faithful stand-in: the model directory copied **outside**
+site-packages, `BRISTLENOSE_PII_MODEL_DIR` pointed at it, and the
+`en_core_web_lg` package made **unimportable** via a `sys.meta_path` blocker,
+because without that the installed package could be quietly doing the work.
+
+**Identical results.** 45/52 targeted, 9/32 false positives, 92 redactions,
+the same four misses, 4.2 s against 4.3 s. The delivery architecture's central
+assumption holds.
+
+Two things measured in passing:
+
+- **The pack is 425 MB and contains zero `.py` files.** The §2.5.2 argument —
+  that only *weights* are downloaded and the detection code ships inside the
+  reviewed binary — is now measured rather than asserted, which is the form it
+  needs to be in if a reviewer ever asks.
+- **`SPACY_MODEL_SIZE_HUMAN` and `preflight.pii.downloading` both say ~400 MB
+  against a measured 425.** Left alone: correcting `en` alone would fork it
+  from twenty translations of a string that already carries a `~`. Noted rather
+  than silently diverged.
+
+Pinned by a `@pytest.mark.slow` case in `tests/test_pii_spacy_lazy_fetch.py`.
+It bites hard: binding `_build_engines` to `SPACY_MODEL` instead of the
+resolved path — the obvious "simplification" — fails it with
+`ModuleNotFoundError`, which is exactly the TestFlight failure it exists to
+pre-empt.
+
 ### Build order
 
 Phases 0–2 are independent of Background Assets and can land immediately; the

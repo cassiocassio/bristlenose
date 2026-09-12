@@ -311,3 +311,78 @@ class TestDownloaderGetsTheTerminalToItself:
 
         status.stop.assert_called_once()
         status.start.assert_called_once()
+
+
+@pytest.mark.slow
+def test_a_path_delivered_model_redacts_with_no_package_installed(monkeypatch):
+    """The assumption the whole .dmg / TestFlight delivery rests on.
+
+    Those two acquirers unpack a model *directory* and set
+    `BRISTLENOSE_PII_MODEL_DIR`; `spacy download` never runs, so the importable
+    package does not exist on those machines. Everything else in the tree only
+    proves `resolve_spacy_model()` *returns* the path — nothing proved Presidio
+    would load and behave from one, and the place to discover otherwise is not
+    TestFlight.
+
+    Blocking the import is what makes this a real test rather than a
+    coincidence: without it the installed package could be doing the work.
+
+    Measured 12 Sep 2026 on the planted-PII corpus: the path route scored
+    identically to the package route — 45/52 targeted, 9/32 false positives,
+    92 redactions, same misses.
+    """
+    import importlib.util
+    from datetime import datetime, timezone
+
+    from bristlenose.config import BristlenoseSettings
+    from bristlenose.models import FullTranscript, TranscriptSegment
+    from bristlenose.stages.s07_pii_removal import remove_pii
+
+    spec = importlib.util.find_spec("en_core_web_lg")
+    if spec is None or not spec.submodule_search_locations:
+        pytest.skip("en_core_web_lg not installed")
+    pkg_dir = Path(list(spec.submodule_search_locations)[0])
+    model_dirs = [
+        d for d in pkg_dir.iterdir()
+        if d.is_dir() and (d / "meta.json").is_file() and (d / "config.cfg").is_file()
+    ]
+    assert model_dirs, f"no unpacked model directory under {pkg_dir}"
+
+    class _Blocker:
+        """Make the package unimportable — a .dmg machine has never seen it."""
+
+        def find_spec(self, name, path=None, target=None):
+            if name == "en_core_web_lg":
+                raise ModuleNotFoundError(name)
+            return None
+
+    blocker = _Blocker()
+    sys.meta_path.insert(0, blocker)
+    try:
+        monkeypatch.setenv(PII_MODEL_DIR_ENV, str(model_dirs[0]))
+        assert resolve_spacy_model() != SPACY_MODEL, "should resolve to a path"
+
+        transcript = FullTranscript(
+            session_id="s1",
+            participant_id="p1",
+            source_file="x.txt",
+            session_date=datetime.now(timezone.utc),
+            duration_seconds=30.0,
+            segments=[
+                TranscriptSegment(
+                    start_time=0.0,
+                    end_time=5.0,
+                    text="I spoke to Priya Raghunathan about the onboarding flow.",
+                    source="whisper",
+                    segment_index=0,
+                )
+            ],
+        )
+        clean, redactions = remove_pii(
+            [transcript], BristlenoseSettings(project_name="t", pii_enabled=True)
+        )
+    finally:
+        sys.meta_path.remove(blocker)
+
+    assert "Priya Raghunathan" not in clean[0].segments[0].text
+    assert redactions, "the path-delivered model detected nothing at all"

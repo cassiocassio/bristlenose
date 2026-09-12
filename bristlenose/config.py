@@ -180,13 +180,32 @@ class BristlenoseSettings(BaseSettings):
 
     # PII
     pii_enabled: bool = False
-    pii_llm_pass: bool = False  # Not yet implemented — see runtime warning below
-    pii_custom_names: list[str] = Field(default_factory=list)  # Not yet implemented
+    # Both unimplemented, and setting either REFUSES the run — `s07_pii_removal`
+    # raises rather than warning, because an unimplemented *privacy* control
+    # must not warn-and-continue into a report the researcher believes is
+    # redacted. (This comment said "see runtime warning below" until 12 Sep
+    # 2026; the warning became a refusal in August and the comment did not.)
+    pii_llm_pass: bool = False
+    pii_custom_names: list[str] = Field(default_factory=list)
+
     # Confidence threshold for Presidio PII detection (0.0–1.0).
     # Lower = catch more PII but more false positives (over-redaction).
     # 0.5 = aggressive (sensitive data, accept over-redaction)
     # 0.7 = balanced (default)
     # 0.9 = conservative (minimise false positives, risk missing some PII)
+    #
+    # **This is the bar for PERSON, not for everything.** Pattern-matched
+    # entities — phone, email, NHS, card, IBAN, IP, the US identifiers — take a
+    # 0.40 floor instead (`score_bar` in `s07_pii_removal.py`). Presidio scores
+    # a bare phone match 0.4, so at a flat 0.7 a participant reading their
+    # number aloud was not redacted: measured 2 of 8 on the planted corpus,
+    # 7 of 8 after. Raising this to 0.9 therefore does NOT make phones
+    # conservative — it cannot, since they cap around 0.75 even with context,
+    # so honouring it would disable them entirely. It makes PERSON
+    # conservative, which is where the false positives actually come from
+    # (measured: all 9 were product names that are also people's names).
+    # The floor may only ever relax a bar, so lowering this still lowers
+    # everything.
     # See: https://microsoft.github.io/presidio/analyzer/
     pii_score_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
 

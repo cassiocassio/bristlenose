@@ -32,6 +32,34 @@
   --bn-sentiment-satisfaction:#16a34a; --bn-sentiment-satisfaction-bg:light-dark(#f0fdf4,#0c2a17);
   --bn-sentiment-delight:#059669;      --bn-sentiment-delight-bg:light-dark(#ecfdf5,#082a1f);
   --bn-sentiment-confidence:#2563eb;   --bn-sentiment-confidence-bg:light-dark(#eff6ff,#12213f);
+  /* tag colour slots (theme/colors) */
+  --bn-ux-1-bg: light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-ux-2-bg: light-dark(oklch(94% 0.03 237), oklch(48% 0.11 237));
+  --bn-ux-3-bg: light-dark(oklch(94% 0.03 250), oklch(53% 0.12 250));
+  --bn-ux-4-bg: light-dark(oklch(94% 0.03 263), oklch(55% 0.10 263));
+  --bn-ux-5-bg: light-dark(oklch(94% 0.03 275), oklch(49% 0.11 275));
+  --bn-emo-1-bg: light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-emo-2-bg: light-dark(oklch(94% 0.03 352), oklch(48% 0.11 352));
+  --bn-emo-3-bg: light-dark(oklch(94% 0.03 4), oklch(53% 0.10 4));
+  --bn-emo-4-bg: light-dark(oklch(94% 0.03 16), oklch(49% 0.12 16));
+  --bn-emo-5-bg: light-dark(oklch(94% 0.03 28), oklch(55% 0.10 28));
+  --bn-emo-6-bg: light-dark(oklch(94% 0.03 40), oklch(51% 0.11 40));
+  --bn-task-1-bg: light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-task-2-bg: light-dark(oklch(94% 0.03 142), oklch(48% 0.09 142));
+  --bn-task-3-bg: light-dark(oklch(94% 0.03 155), oklch(53% 0.09 155));
+  --bn-task-4-bg: light-dark(oklch(94% 0.03 168), oklch(49% 0.10 168));
+  --bn-task-5-bg: light-dark(oklch(94% 0.03 180), oklch(51% 0.09 180));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 275), oklch(50% 0.11 275));
+  --bn-trust-2-bg: light-dark(oklch(94% 0.03 287), oklch(48% 0.10 287));
+  --bn-trust-3-bg: light-dark(oklch(94% 0.03 300), oklch(53% 0.10 300));
+  --bn-trust-4-bg: light-dark(oklch(94% 0.03 313), oklch(49% 0.11 313));
+  --bn-trust-5-bg: light-dark(oklch(94% 0.03 325), oklch(51% 0.10 325));
+  --bn-opp-1-bg: light-dark(oklch(94% 0.03 50), oklch(52% 0.11 50));
+  --bn-opp-2-bg: light-dark(oklch(94% 0.03 62), oklch(50% 0.10 62));
+  --bn-opp-3-bg: light-dark(oklch(94% 0.03 75), oklch(54% 0.12 75));
+  --bn-opp-4-bg: light-dark(oklch(94% 0.03 88), oklch(48% 0.10 88));
+  --bn-opp-5-bg: light-dark(oklch(94% 0.03 100), oklch(51% 0.11 100));
+
 }
 :root, [data-color-theme="default"] {
   --bn-colour-bg:            light-dark(#ffffff,#111111);
@@ -297,6 +325,28 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
 .section-head strong { color:var(--bn-colour-text); font-weight:490; }
 .section-head code { font-family:var(--bn-font-mono); font-size:.95em;
   background:var(--bn-colour-badge-bg); padding:.05rem .3rem; border-radius:3px; }
+.sig-empty { font-size:var(--bn-text-caption); font-style:italic; color:var(--bn-colour-muted);
+  padding:.2rem var(--bn-space-sm); }
+.treatlist { font-size:var(--bn-text-label); line-height:1.7; color:var(--bn-colour-muted);
+  padding-left:1.1rem; margin:.5rem 0; max-width:74ch; }
+.treatlist strong { color:var(--bn-colour-text); font-weight:490; }
+.grpkey { display:flex; gap:.9rem; flex-wrap:wrap; align-items:center; margin:.7rem 0 0;
+  font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); }
+.grpkey i { display:inline-block; width:22px; height:12px; border-radius:3px;
+  vertical-align:-2px; margin-right:.35rem; border:1px solid var(--bn-colour-border); }
+.grpkey .klbl { font-family:var(--bn-font-body); color:var(--bn-colour-muted); }
+
+/* ── Grouped by location: one row per place, every signal about it a target ── */
+.sig--loc { flex-direction:column; align-items:flex-start; gap:.16rem; padding-bottom:.4rem; }
+.sig--loc .sig-name { flex:none; width:100%; font-weight:var(--bn-weight-emphasis); }
+.sig--loc .sig-badges { flex-wrap:wrap; }
+.sig-sub { display:block; margin:.22rem 0 0; padding:.1rem .3rem .16rem; border-radius:var(--bn-radius-sm);
+  border-left:2px solid var(--bn-colour-border); text-decoration:none; color:inherit; }
+.sig-sub:hover { background:var(--bn-colour-hover); }
+.sig-sub:focus-visible { outline:2px solid var(--bn-colour-accent); outline-offset:1px; }
+.sig-sub-name { display:block; font-size:var(--bn-text-label); line-height:1.35; }
+.sig-sub .sig-badges { margin-top:.14rem; }
+.sig-loc-rule { height:1px; background:var(--bn-colour-border); margin:.35rem 0 .1rem; opacity:.7; }
 @media (prefers-reduced-motion: reduce) { .sig { transition:none; } }
 </style>
 </head>
@@ -383,6 +433,35 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
     </div>
 
     <div class="ctl">
+      <span class="lbl">Codebooks section <span style="text-transform:none;letter-spacing:0">(projects)</span></span>
+      <div class="row" id="treats">
+        <button class="pbtn on" data-treat="shipped">as shipped</button>
+        <button class="pbtn" data-treat="hide">hide Sentiment</button>
+        <button class="pbtn" data-treat="backfill">hide + backfill</button>
+        <button class="pbtn" data-treat="flat">one flat list</button>
+        <button class="pbtn" data-treat="loc">by location</button>
+        <button class="pbtn" data-treat="locn">by location · named</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      <span class="lbl">Sentiment volume <span style="text-transform:none;letter-spacing:0">(projects)</span></span>
+      <div class="row" id="vols">
+        <button class="pbtn on" data-vol="2">&ge;2 quotes · shipped</button>
+        <button class="pbtn" data-vol="1">&ge;1 quote · below the floor</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      <span class="lbl">Strength floor <span style="text-transform:none;letter-spacing:0">(one flat list)</span></span>
+      <div class="row">
+        <input type="range" id="floor" min="0" max="100" step="1" value="20">
+        <span class="wval"><b id="fv">0.20</b></span>
+      </div>
+      <span class="wnote" id="fnote"></span>
+    </div>
+
+    <div class="ctl">
       <span class="lbl">Click target <span style="text-transform:none;letter-spacing:0">(V6 / V7)</span></span>
       <div class="row">
         <span id="target" class="wnote">click a name or a badge in V6 / V7</span>
@@ -403,12 +482,50 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
        <code>AnalysisPage.tsx</code> does. Nothing is picked for effect: these are
        the strongest six of each, in order, with their real labels, their real
        elaborated names, and the codes actually present on their quotes.</p>
-    <p>The <strong>panel width</strong> and <strong>tags per row</strong> controls above
-       drive these panels too. The <strong>content</strong> buttons do not &mdash; each
-       panel carries its own project.</p>
+    <p><strong>Panel width</strong> and <strong>tags per row</strong> drive these panels
+       too; the <strong>content</strong> buttons do not &mdash; each panel carries its own
+       project. <strong>Codebooks section</strong> switches the treatment:</p>
+    <ul class="treatlist">
+      <li><strong>as shipped</strong> &mdash; both sections exactly as the lens renders
+        them today.</li>
+      <li><strong>hide Sentiment</strong> &mdash; cut to six first, <em>then</em> drop the
+        Sentiment-group rows. Nothing moves up, so the gap is what is actually lost.</li>
+      <li><strong>hide + backfill</strong> &mdash; drop them first, then cut to six, so the
+        freed slots refill from the same ranking the analysis already produced.</li>
+      <li><strong>one flat list</strong> &mdash; no headings at all. Every signal the
+        project produced, sentiment and codebook interleaved, strongest first, cut where
+        the <strong>strength floor</strong> says the list stops being worth reading.</li>
+      <li><strong>by location</strong> &mdash; one row per place, every signal about it a
+        chip you can click. Sentiment chips keep their hue; a codebook signal is named by
+        its group, tinted with that group's colour.</li>
+      <li><strong>by location &middot; named</strong> &mdash; same grouping, but each
+        codebook signal gets its own sub-row carrying its elaborated name, its pattern,
+        and its codes.</li>
+    </ul>
+    <p class="grpkey"><span class="klbl">Codebook group colours</span>
+      <span><i style="background:var(--bn-ux-2-bg)"></i>ux</span>
+      <span><i style="background:var(--bn-emo-2-bg)"></i>emo</span>
+      <span><i style="background:var(--bn-task-2-bg)"></i>task</span>
+      <span><i style="background:var(--bn-trust-2-bg)"></i>trust</span>
+      <span><i style="background:var(--bn-opp-2-bg)"></i>opp</span>
+      <span class="klbl">&mdash; each group cycles its own slots, so two codes in one
+        group are two tints of one hue. Hover a pill for its group.</span></p>
   </div>
 
   <div class="bench" id="projbench"></div>
+
+  <div class="divider"></div>
+  <div class="section-head">
+    <h2>The real test: one project, every treatment</h2>
+    <p>Five of the six projects above cannot tell these treatments apart, because they
+       have no codebook tags that are not sentiments &mdash; every treatment renders them
+       identically. <strong>project-ikea is the only real test.</strong> Four codebooks,
+       fourteen groups, 23 non-Sentiment signals, and one section carrying
+       <strong>ten signals at once</strong>. Same width, cap and floor controls; the
+       Codebooks-section buttons do not apply here &mdash; each panel pins its own.</p>
+  </div>
+
+  <div class="bench" id="realbench"></div>
 
   <div class="essay">
     <h2>Width cannot fix the single-line row</h2>
@@ -711,6 +828,290 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
       what the lens lists, not about how a row is laid out, and it changes what every
       variant here is being judged on.</p>
 
+    <h2>Why sentiment is in the Codebooks section at all</h2>
+    <p>It looks like a blend of two kinds of data. It isn't. <code>sentiment.yaml</code>
+      is a <em>codebook</em> like any other &mdash; &ldquo;Emotional &amp; Cognitive
+      Signals&rdquo;, one group, seven tags with definitions and
+      <code>apply_when</code> rules. At import,
+      <code>_auto_tag_from_sentiment_field</code> walks every quote and writes a
+      <code>QuoteTag</code> row for its <code>Quote.sentiment</code> value
+      (<code>importer.py</code>), so the codebook arrives pre-applied. From then on the
+      codebook analysis cannot tell it apart from a codebook you built by hand.</p>
+    <p><strong>So the sentiment tags are not an ingredient in the other codebook
+      signals.</strong> Codebook analysis is partitioned by framework
+      (<code>routes/analysis.py</code>), and sentiment is its own framework &mdash; it
+      gets its own matrix, its own <code>grand_total</code>, its own signals. Nothing
+      about &ldquo;Errors and recovery&rdquo; changes if sentiment is removed. Hiding it
+      is a display decision, and it moves no other number.</p>
+    <p><strong>What it does do is produce a one-column matrix</strong>, and that is where
+      the maths goes strange. <code>concentration_ratio</code> is
+      <code>(cell / row_total) &divide; (col_total / grand_total)</code>. With one column,
+      <code>col_total == grand_total</code>, and every contribution in a row lands in that
+      single cell &mdash; so both halves are 1 and the ratio is <strong>exactly 1.00, in
+      all 45 Sentiment-group cells measured</strong>. Not roughly: structurally. Those
+      rows are ranked by a three-factor score with one factor switched off, against rows
+      whose same factor runs from 0.59 to 13.33. And
+      <code>classify_flag</code> is handed the <em>group</em> name, which isn't in
+      <code>SENTIMENT_VALENCE</code>, so they can never carry a finding flag either
+      &mdash; while the identical cells in the Sentiment section above can.</p>
+    <p>That is the sentence that is hard to say to a researcher, and the reason it is hard
+      to say is that it isn't true of anything else in the lens: <em>these rows are the
+      same quotes as the section above, measured with a ruler that reads 1 every
+      time.</em></p>
+    <p><strong>The affordance already exists and Analysis is the one place that ignores
+      it.</strong> The codebook's own preamble tells the researcher to
+      &ldquo;hide this layer with the eye toggle as you develop your own meaningful
+      tags&rdquo;, and <code>TagSidebar</code> has that toggle. It writes
+      <code>hiddenTagGroups</code> into <code>SidebarStore</code>, the Quotes lens honours
+      it &mdash; and <code>AnalysisPage.tsx</code> never reads it. So this may not need a
+      new rule so much as one lens catching up with the rest.</p>
+
+    <h2>One flat list</h2>
+    <p>The fourth treatment drops the headings entirely: no Sentiment / Codebooks split,
+      no Section / Theme sub-heading, no six-per-section cut. Every signal the project
+      produced, sentiment rows paired by location as V9 pairs them, codebook rows as V9
+      pill rows, ranked strongest first and cut at a floor. Three things it shows.</p>
+    <p><strong>Composite becomes comparable once the Sentiment group is gone.</strong>
+      The degenerate one-column matrix was the whole problem. On the two projects with
+      real codebook data the remaining ranges genuinely overlap &mdash; ikea2 runs
+      0.92&ndash;1.85 on sentiment against 0.80&ndash;2.25 on codebooks; ikea 2.00 against
+      0.77&ndash;3.86. Interleaving those is defensible in a way that interleaving the
+      shipped three populations was not.</p>
+    <p><strong>An absolute floor is not portable between projects.</strong> At 0.40,
+      rockclimbing keeps 11 of 14 and ikea2 keeps 3 of 13 &mdash; not because one project
+      has three times the insight but because composite is not normalised across studies.
+      A floor expressed as a share of that project's strongest signal would behave; this
+      one is the instrument, not the proposal.</p>
+    <p><strong>Without the group heading, repeated locations read as duplicates.</strong>
+      project-ikea has one location carrying <strong>eight</strong> separate codebook
+      rows, and 12 of its 23 rows are un-elaborated &mdash; only the top of each partition
+      gets a signal name, so the rest draw the bare location. In the flat list that is
+      eight rows saying &ldquo;Beds &amp; Mattresses Category&rdquo;, told apart only by
+      their pills. The two-section layout hid this behind a heading; the flat list has to
+      answer it, either by elaborating every row or by pairing codebook rows on location
+      the way the sentiment half already pairs.</p>
+    <p>Worth saying plainly: on four of these six projects the flat list <em>is</em> the
+      sentiment list, because those projects have no codebook tags that aren't sentiments.
+      The flat list does not create insight that the study did not produce. What it does
+      is stop the lens from presenting one study's worth of findings as two.</p>
+
+    <h2>The codebook pills had no colour, and that was hiding V9's best argument</h2>
+    <p><strong>A bug first.</strong> Every panel above referenced
+      <code>--bn-ux-1-bg</code> and its siblings and this file never declared them, so
+      each codebook pill silently fell back to the plain grey badge background. All of
+      the V9 panels have been arguing for showing the codes while drawing them in the one
+      colour that says nothing about which codebook they came from. The 26 slot tokens
+      are now inlined verbatim from <code>theme/colors/palette-*.css</code>.</p>
+    <p><strong>And the mechanism is per-code, not per-group.</strong>
+      <code>getTagBg(colourSet, index)</code> resolves
+      <code>var(--bn-&lt;set&gt;-&lt;(index % slots)+1&gt;-bg)</code>, and
+      <code>_build_tag_colour_indices</code> assigns that index in tag-definition order
+      within each group. So two codes in one group are two <em>tints of one hue</em>, and
+      two groups are two hues. The panels now carry the real indices, read from each
+      project's database, not a single tint per group.</p>
+    <p><strong>It buys less than I first claimed, and the five-codebook project is what
+      showed that.</strong> An earlier version of this paragraph said the hue carries
+      &ldquo;which codebook group this row belongs to&rdquo;. It does not.
+      <code>colour_set</code> is a property of the group, and there are only six of them
+      for any number of groups. project-ikea has <strong>fourteen groups sharing six
+      colour sets</strong> across four codebooks: <code>ux</code> covers Discoverability,
+      Strategy, Behaviour, Real-world matching and Status visibility; <code>task</code>
+      covers Structure and Conceptual model; <code>emo</code> covers Feedback, Scope and
+      Needs and desires. On its busiest section, four chips would be the same blue and two
+      the same green. <strong>The hue is a family cue, not a label, and the group name
+      cannot leave the row on its strength.</strong></p>
+    <p>What the hue does buy is real but narrower: a code keeps the same tint everywhere,
+      so <code>did-it-work-ambiguity</code> is <code>trust-4</code> in every row it appears
+      in and is recognisable without being read; and two codes in one group read as
+      obviously related. That is worth having. It is not a replacement for saying which
+      group a row belongs to.</p></p>
+    <p><strong>One collision to know about.</strong>
+      <code>--bn-ux-5-bg</code> and <code>--bn-trust-1-bg</code> are both
+      <code>oklch(94% 0.03 275)</code> in light mode &mdash; the same hue angle, the same
+      colour. ikea2's flat list has <code>search-engine-fallback</code> (ux, slot 5) and
+      <code>error-message-illegible</code> (trust, slot 1) rendering identically. With
+      five groups on screen at once, the palette's wrap-around stops being theoretical.</p>
+
+    <h2>Should a codebook pill be clickable?</h2>
+    <p><strong>First, what is actually clickable today.</strong> Nothing, individually.
+      The shipped <code>SignalEntry</code> is one <code>&lt;a&gt;</code> wrapping the name
+      and the badge together &mdash; the whole row is one target. Per-badge links are a
+      <em>proposal</em>, invented here by V6 / V7 / V9's paired rows. So this is not an
+      existing asymmetry to extend; it is a new affordance, and the question is whether
+      its counterpart should exist at all.</p>
+    <p><strong>The answer falls out of the partition / relation distinction above.</strong>
+      A sentiment badge in a paired row <em>is a signal</em>: (location &times; sentiment)
+      is a real cell with its own card, and pairing folded several of those rows into one.
+      Each badge has to stay clickable or those signals become unreachable &mdash; the
+      link is <em>recovering</em> what the pairing took away. A codebook pill is not a
+      signal. The signal is (location &times; <em>group</em>); the pills describe what is
+      inside that one cell. There is no card at (location &times; tag) to go to.</p>
+    <p>So two rows that look identical mean opposite things: one row's pills are a
+      <em>list of destinations</em>, the other row's pills are a <em>description of one
+      destination</em>. In the two-section layout a heading warned you which you were
+      looking at. In the flat list nothing does.</p>
+    <p>Four ways out, and they are not equally good:</p>
+    <ul>
+      <li><strong>Leave them inert.</strong> Cheapest and worst in the flat list &mdash;
+        two identical controls, one live, one dead, with nothing to tell them apart.</li>
+      <li><strong>Filter the card's quotes by that code.</strong> Honest: &ldquo;show me
+        the quotes in this signal carrying this one&rdquo;. The destination already exists
+        &mdash; the card lists the quotes and each carries <code>tagNames</code> &mdash;
+        and it does not claim the pill is a signal. My pick for the click.</li>
+      <li><strong>Show the code's definition.</strong> The vocabulary is open and often
+        not the researcher's own; <code>did-it-work-ambiguity</code> earns a definition.
+        The codebook has one, with <code>apply_when</code> and <code>not_this</code>.
+        That is a <em>hover</em>, not a click &mdash; the pills now carry
+        <code>group &middot; code</code> as a title attribute as a first cut.</li>
+      <li><strong>Run the codebook analysis at tag level</strong>, columns = tags rather
+        than groups. Then each pill genuinely is a signal and the symmetry is real rather
+        than cosmetic. <code>detect_signals_generic</code> was built for exactly this
+        &mdash; its docstring offers &ldquo;codebook groups, individual tags, or any other
+        categorical dimension&rdquo;. Measured cost: across the three projects with
+        non-sentiment codebook data, 37 group-level signals become 61 tag-level cells, of
+        which <strong>22 clear the existing 2-quote floor</strong> (ikea 13, ikea2 9,
+        rockclimbing 0). It also moves concentration again &mdash; more columns means a
+        smaller expected value means a higher ratio &mdash; so it reopens the
+        comparability question the flat list had just closed.</li>
+    </ul>
+    <p><strong>Recommendation: filter on click, define on hover, and decide tag-level
+      analysis on its own merits</strong> &mdash; whether a signal at
+      (location &times; one code) is a thing a researcher wants, not whether it would make
+      the pills clickable. And whatever the answer, a live badge and an inert pill should
+      stop being the same control. That is a design-system question this bench cannot
+      settle by measuring, because both are currently <code>.badge</code>.</p>
+
+    <h2>Normalising two analyses into one ranking</h2>
+    <p>Interleaving needs the two scores to mean the same thing, and they half do.
+      <code>composite = conc &times; (n_eff / participants) &times; (intensity / 3)</code>.
+      The last two are matrix-independent: same quotes, same arithmetic, both 0&ndash;1.
+      Only <code>conc</code> carries the shape of the table it came from.</p>
+    <p><strong>The good news is that a lift ratio is already centred.</strong>
+      <code>conc</code> is observed &divide; expected, so its value under independence is
+      <strong>1.0 in any table of any width</strong>. Its centre needs no normalising.</p>
+    <p><strong>The bad news is the ceiling.</strong> The most a lift can reach is
+      <code>grand_total / col_total</code>, and that is pure table shape. Measured across
+      these six projects:</p>
+    <p style="font-family:var(--bn-font-mono);font-size:var(--bn-text-caption);line-height:1.9">
+      sentiment matrix &nbsp;&nbsp;&nbsp;&nbsp;7 columns &nbsp;&nbsp;ceiling 1.46 &ndash; <strong>53.33</strong> &nbsp;(median 3.40)<br>
+      codebook &middot; other &nbsp;&nbsp;&nbsp;3&ndash;10 columns &nbsp;ceiling 1.00 &ndash; 7.33 &nbsp;(median 3.00)<br>
+      codebook &middot; Sentiment &nbsp;1 column &nbsp;&nbsp;&nbsp;ceiling <strong>1.00 &ndash; 1.00</strong>
+    </p>
+    <p>So a lift of 2.5 is nearly the maximum in one table and unremarkable in another,
+      and the same number ranks two signals that are not equally surprising. The
+      53&times; tail is a rare sentiment in a small project &mdash; which is exactly the
+      row that will top a merged list for the wrong reason.</p>
+    <p><strong>What the flat list above actually does is nothing.</strong> It ranks on raw
+      <code>composite</code> with the Sentiment group removed, and gets away with it
+      because the two median ceilings land at 3.40 and 3.00. That is luck, not design, and
+      it is stated here rather than buried so the next person does not inherit it as a
+      decision.</p>
+    <p><strong>The statistic that fixes it is already in the tree and ranks nothing.</strong>
+      <code>adjusted_residual</code> in <code>metrics.py</code> is the standardised
+      residual &mdash; the textbook answer to comparing cells across differently-shaped
+      contingency tables, and currently used only to colour heatmap cells. Measured on
+      the same signals:</p>
+    <p style="font-family:var(--bn-font-mono);font-size:var(--bn-text-caption);line-height:1.9">
+      sentiment matrix &nbsp;&nbsp;&nbsp;&nbsp;z &minus;1.37 &hellip; 6.08 &nbsp;median <strong>1.47</strong> &nbsp;&nbsp;|z|&gt;2 on 12 of 36<br>
+      codebook &middot; other &nbsp;&nbsp;&nbsp;z &minus;0.74 &hellip; 2.48 &nbsp;median <strong>1.19</strong> &nbsp;&nbsp;|z|&gt;2 on 6 of 37<br>
+      codebook &middot; Sentiment &nbsp;z <strong>0.00 &hellip; 0.00</strong> &nbsp;&mdash; the same structural fact, said properly
+    </p>
+    <p>Medians 1.47 against 1.19, where the lift ceilings were 3.40 against 3.00 with a
+      53&times; tail. Much closer, and <code>|z| &gt; 2</code> means the same thing in
+      both. It also reprices the list honestly: 18 of 118 signals across six projects are
+      notable by that test.</p>
+    <p><strong>But it cannot simply be dropped into the composite, and the reason is a
+      product decision rather than a maths one.</strong> The composite <em>multiplies</em>,
+      and z goes negative &mdash; a negative residual means this place has notably
+      <em>fewer</em> of these than expected. Multiply that by breadth and intensity and a
+      strong absence sorts to the bottom of the list, when a strong absence is a finding:
+      nobody mentioned price on the checkout screen. So adopting z forces a choice &mdash;
+      rank on <code>|z|</code> and show direction, clamp at zero and discard depletion, or
+      keep two lists. Worth noticing that <code>classify_flag</code> already has this
+      vocabulary (Win, Problem, Niggle, Success, Surprising) and already gates nothing.</p>
+
+    <h2>Several signals about one place is the finding, not the duplication</h2>
+    <p>The flat list made a location's repeats look like noise &mdash; eight rows saying
+      &ldquo;Beds &amp; Mattresses Category&rdquo;. Read the other way round, that is the
+      most useful thing the analysis found: the checkout is empowering <em>and</em>
+      confusing; pricing reads expensive <em>and</em> fair, and separately shocks on a
+      change and delights on a discount. A navigation that flattens those into one row per
+      place loses the findings; one that lists them separately loses the place.</p>
+    <p>The last two treatments keep both: <strong>one entry per location, every signal
+      under it its own destination.</strong> This is not a new mechanism &mdash; it is
+      V7's pairing with the section boundary removed. V7 already does exactly this for the
+      sentiment half and stops there.</p>
+    <p>Measured on ikea: <strong>8 places, 18 destinations, 5 of the places carrying more
+      than one signal, 5 on the busiest.</strong> The busiest reads
+      <code>confusion</code> &middot; <code>Behaviour</code> &middot;
+      <code>Structure</code> &middot; <code>Conceptual model</code> &middot;
+      <code>Real-world matching</code> &mdash; one sentiment and four codebook groups
+      about the same category, each reachable. ikea2's Beds Category reads
+      <code>frustration</code> &middot; <code>delight</code> &middot;
+      <code>confusion</code> &middot; <code>Errors and recovery</code>, which is the
+      shape of the problem in one line.</p>
+    <p><strong>And it gives the codebook chip an honest click.</strong> The objection above
+      was that a codebook pill is not a signal &mdash; the signal is
+      (location &times; group), and a code is only a description of it. Group by location
+      and the chip <em>becomes</em> the group, which is exactly a signal, with a card to
+      land on. The tension dissolves: the thing that could not be clicked was a code; the
+      thing that can be is a group.</p>
+    <p><strong>The cost is the codes themselves.</strong> The compact variant spends its
+      badges on destinations, so V9's whole argument &mdash; show the codes actually
+      present &mdash; is gone. The named variant buys them back at a sub-row each, which
+      is the depth V9 was trying to avoid spending. Nothing here settles that; it is the
+      next thing to look at rather than reason about.</p>
+
+    <h2>What the five-codebook project settles</h2>
+    <p>Five of the six projects on the second bench cannot tell these treatments apart:
+      they have no codebook tags that are not sentiments, so every treatment draws them
+      the same. <strong>project-ikea is the only real test</strong> &mdash; four
+      codebooks, fourteen groups, 23 non-Sentiment signals, eight locations. The third
+      bench runs it through every treatment at once.</p>
+
+    <p><strong>The sentiment floor is a volume floor, and on a small study it empties the
+      sentiment half entirely.</strong> <code>MIN_QUOTES_PER_CELL = 2</code> in
+      <code>signals.py</code> asks for two quotes in a cell, not for a strong one.
+      project-ikea clears it <strong>once</strong>. Lower it to 1 and the same analysis
+      returns <strong>18 sentiment signals across 10 locations</strong> &mdash; real
+      cells, real composites, one quote each. That is the
+      <strong>sentiment volume</strong> control, and it is why this project looked like a
+      codebook-only study: not because its participants said nothing with feeling, but
+      because three participants rarely put two quotes in the same cell.</p>
+
+    <p><strong>And those rows break the ranking, which is the normalisation problem
+      arriving in person.</strong> At <code>&ge;1</code> the flat list is topped by
+      &ldquo;Duvets &amp; Bedding Category &middot; surprise&rdquo; and
+      &ldquo;App Prompt &amp; QR Code &middot; surprise&rdquo; &mdash; single quotes from
+      single participants, scoring <strong>1.19</strong> because a rare sentiment in a
+      small study has a lift ceiling of 5.33. Every codebook signal in the project is
+      below them; the best is 0.64. One person being surprised once outranks eight
+      codebook findings. That is the strongest case yet for the standardised residual, and
+      it is not visible on any project that has only the shipped floor's survivors.</p>
+
+    <p><strong>One section carries ten signals, from four codebooks.</strong> Beds &amp;
+      Mattresses Category holds <code>confusion</code> and <code>frustration</code> from
+      the sentiment matrix, plus Behaviour, Structure, Conceptual model, Real-world
+      matching, Status visibility, Feedback, Needs and desires and Discoverability &mdash;
+      ranked 0.67 down to 0.11. So yes: a section or theme routinely has several signal
+      cards from several codebooks, and each has to be its own target. It is also true
+      that the busiest place is busiest mostly with <em>weak</em> signals, which is what
+      makes the strength floor the instrument that matters rather than the row layout.</p>
+
+    <p><strong>Measured on this project, grouping by location is the denser
+      navigation by a wide margin:</strong></p>
+    <p style="font-family:var(--bn-font-mono);font-size:var(--bn-text-caption);line-height:1.9">
+      as shipped &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;12 rows &nbsp;&nbsp;<strong>12</strong> targets &nbsp;20 chips<br>
+      hide + backfill &nbsp;12 rows &nbsp;&nbsp;<strong>12</strong> targets &nbsp;19 chips<br>
+      one flat list &nbsp;&nbsp;&nbsp;27 rows &nbsp;&nbsp;<strong>28</strong> targets &nbsp;47 chips<br>
+      by location &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;12 rows &nbsp;&nbsp;<strong>43</strong> targets &nbsp;31 chips<br>
+      by location &middot; named 12 rows &nbsp;&nbsp;<strong>43</strong> targets &nbsp;43 chips
+    </p>
+    <p>Same twelve rows as the shipped layout, three and a half times the destinations.
+      The flat list needs more than twice the depth to reach two-thirds as many. That is
+      the pairing argument generalised: a location appears once, and everything known
+      about it hangs off that one entry.</p>
+
     <h2>Lifting a winner into the app</h2>
     <p>Each variant shares one markup contract, so the shipped component only has to grow
       a class:</p>
@@ -942,172 +1343,322 @@ const SETS = {
   },
 };
 
-/* ── Real projects, V9 only ──────────────────────────────────────────────
+/* ── Real projects, V9 ───────────────────────────────────────────────────
    Read from trial-runs/<project>/bristlenose-output/.bristlenose/bristlenose.db
    through the app's own code path — routes/analysis.py's get_sentiment_analysis
-   and get_codebook_analysis(elaborate=false), then sorted by composite_signal
-   and sliced to MAX_SIGNALS = 6 per section exactly as AnalysisPage.tsx does.
-   So these are the rows each project's sidebar actually renders, in order.
+   and get_codebook_analysis(elaborate=false). Rows are the FULL ranked lists by
+   composite_signal; the six-per-section cut (MAX_SIGNALS in AnalysisPage.tsx) is
+   applied at render time, so a treatment that removes rows can be seen
+   backfilling from the same ranking the app already computed.
 
-   LABELS ONLY: theme and section labels, elaborated signal names, codebook
-   group and tag names, sentiment names, participant counts. No quote text and
-   no participant identifiers — the corpus is not tracked and does not become
-   tracked by being measured.
+   tagIdx carries the REAL colour slot per tag — _build_tag_colour_indices()
+   assigns them in tag-definition order within each group, and the quote card
+   renders getTagBg(colourSet, index). Without it every pill in a group draws
+   the same tint, which is not what the shipped pill looks like.
 
-   Tag row: [name, group, pattern, colourSet, tagsPresent, location]
+   LABELS ONLY: theme and section labels, elaborated signal names, codebook group
+   and tag names, sentiment names, participant counts. No quote text and no
+   participant identifiers.
+
+   sent row: [location, sentiment, sourceType, composite]
+   tag  row: [name, group, pattern, colourSet, tagsPresent, location, sourceType,
+              composite, tagColourIndices]
    ──────────────────────────────────────────────────────────────────────── */
 const PROJECTS = [
   {
     id: "ikea", label: "ikea · 5 codebooks",
     participants: 3,
-    available: { sentiment: 1, tags: 29 },
-    groups: 6,
-    note: "Usability test, five codebooks installed. Six different group names across six rows — five real codebook groups plus Sentiment — so this is the one panel where V9's pills are open-vocabulary codes. The case it was drawn for.",
-    sentiment: {
-      Section: [
-        ["Beds & Mattresses Category", "confusion"],
-      ],
-    },
-    tags: {
-      Section: [
-        ["Scope Feature Mix", "Scope", "tension", "emo", ["feature requirement", "content requirement"], "Shopping Bag"],
-        ["Self-directed Error Recovery", "Behaviour", "tension", "ux", ["error recovery", "workaround"], "Beds & Mattresses Category"],
-        ["Visual Warmth Success", "Surface", "success", "opp", ["visual design", "sensory experience"], "Search & Sort Results"],
-        ["Navigation Structure Tension", "Structure", "tension", "task", ["interaction design", "information architecture", "navigation pattern"], "Beds & Mattresses Category"],
-        ["Checkout feedback clarity", "Feedback", "tension", "emo", ["system response", "ambiguous feedback"], "Shopping Bag"],
-        ["Bag Experience Tension", "Sentiment", "tension", "sentiment", ["satisfaction", "confusion", "frustration"], "Shopping Bag"],
-      ],
-    },
+    note: "Five codebooks installed. Hiding costs one row and backfills from 17 still waiting; merged, its list is mostly real codes in five group colours.",
+    sentWeak: [
+      ["Duvets & Bedding Category", "surprise", "section", 1.1852],
+      ["Search & Sort Results", "delight", "section", 1.1852],
+      ["App Prompt & QR Code", "surprise", "section", 1.1852],
+      ["Beds & Mattresses Category", "confusion", "section", 0.6667],
+      ["Top Navigation", "frustration", "section", 0.5926],
+      ["Checkout & Store Selection", "confusion", "section", 0.5926],
+      ["Homepage content and navigation experience", "delight", "theme", 0.4444],
+      ["Session wrap-up and data sufficiency", "surprise", "theme", 0.4444],
+      ["Shopping Bag", "frustration", "section", 0.3951],
+      ["Top Navigation", "satisfaction", "section", 0.2963],
+      ["Beds & Mattresses Category", "frustration", "section", 0.2963],
+      ["Product Detail", "confusion", "section", 0.2963],
+      ["Homepage content and navigation experience", "confusion", "theme", 0.2222],
+      ["Session wrap-up and data sufficiency", "satisfaction", "theme", 0.2222],
+      ["Search & Sort Results", "surprise", "section", 0.1975],
+      ["Search & Sort Results", "satisfaction", "section", 0.1975],
+      ["Shopping Bag", "confusion", "section", 0.1975],
+      ["Shopping Bag", "satisfaction", "section", 0.1975],
+    ],
+    sent: [
+      ["Beds & Mattresses Category", "confusion", "section", 0.6667],
+    ],
+    tags: [
+      ["Scope Feature Mix", "Scope", "tension", "emo", ["feature requirement", "content requirement"], "Shopping Bag", "section", 1.0476, [0, 1]],
+      ["Self-directed Error Recovery", "Behaviour", "tension", "ux", ["error recovery", "workaround"], "Beds & Mattresses Category", "section", 0.6429, [4, 0]],
+      ["Visual Warmth Success", "Surface", "success", "opp", ["visual design", "sensory experience"], "Search & Sort Results", "section", 0.6111, [0, 1]],
+      ["Navigation Structure Tension", "Structure", "tension", "task", ["interaction design", "information architecture", "navigation pattern"], "Beds & Mattresses Category", "section", 0.6111, [0, 1, 2]],
+      ["Checkout feedback clarity", "Feedback", "tension", "emo", ["system response", "ambiguous feedback"], "Shopping Bag", "section", 0.6, [0, 2]],
+      ["Bag Experience Tension", "Sentiment", "tension", "sentiment", ["satisfaction", "confusion", "frustration"], "Shopping Bag", "section", 0.5556, [4, 1, 0]],
+      ["Homepage content and navigation experience", "Aesthetics and minimalism", null, "emo", ["information overload", "focused design"], "Homepage content and navigation experience", "theme", 0.5, [0, 1]],
+      ["Browsing Goal Fluidity", "Motivation", "tension", "task", ["goal"], "Task orientation and shopping intent", "theme", 0.4444, [0]],
+      ["Task orientation and shopping intent", "Real-world matching", null, "ux", ["natural language"], "Task orientation and shopping intent", "theme", 0.4444, [0]],
+      ["Goal-driven Category Navigation", "Motivation", "success", "task", ["goal"], "Sofa Beds Category", "section", 0.4286, [0]],
+      ["Category Navigation Confusion", "Sentiment", "gap", "sentiment", ["confusion", "frustration"], "Beds & Mattresses Category", "section", 0.4167, [1, 0]],
+      ["Browsing Intent Clarity", "Strategy", "success", "ux", ["user need"], "Task orientation and shopping intent", "theme", 0.3704, [0]],
+      ["Store Selection Gap", "Structure", "gap", "task", ["information architecture", "task flow"], "Checkout & Store Selection", "section", 0.3667, [1, 3]],
+      ["Wrap-up Expectation Mismatch", "Sentiment", "tension", "sentiment", ["satisfaction", "surprise"], "Session wrap-up and data sufficiency", "theme", 0.3333, [4, 3]],
+      ["Intent-driven discoverability", "Discoverability", "tension", "ux", ["first-time use", "exploration"], "Task orientation and shopping intent", "theme", 0.3333, [3, 2]],
+      ["Search & Sort Results", "Feedback", null, "emo", ["system response"], "Search & Sort Results", "section", 0.3, [0]],
+      ["Duvets & Bedding Category", "Recognition over recall", null, "ux", ["visible options", "memory burden"], "Duvets & Bedding Category", "section", 0.2857, [0, 1]],
+      ["Duvets & Bedding Category", "Discoverability", null, "ux", ["exploration"], "Duvets & Bedding Category", "section", 0.25, [2]],
+      ["Beds & Mattresses Category", "Conceptual model", null, "task", ["system model", "user mental model"], "Beds & Mattresses Category", "section", 0.2143, [1, 0]],
+      ["Beds & Mattresses Category", "Real-world matching", null, "ux", ["logical ordering", "natural language"], "Beds & Mattresses Category", "section", 0.2143, [3, 0]],
+      ["Sort Filter Success", "Scope", "success", "emo", ["feature requirement"], "Search & Sort Results", "section", 0.1746, [0]],
+      ["Navigation Reliability Tension", "Sentiment", "tension", "sentiment", ["satisfaction", "frustration"], "Top Navigation", "section", 0.1667, [4, 0]],
+      ["Homepage Purpose Tension", "Sentiment", "tension", "sentiment", ["confusion", "delight"], "Homepage content and navigation experience", "theme", 0.1667, [1, 5]],
+      ["Beds & Mattresses Category", "Status visibility", null, "ux", ["opaque status"], "Beds & Mattresses Category", "section", 0.1607, [1]],
+      ["Shopping Bag", "Status visibility", null, "ux", ["clear status"], "Shopping Bag", "section", 0.15, [0]],
+      ["Search Results Delight", "Sentiment", "success", "sentiment", ["surprise", "satisfaction", "delight"], "Search & Sort Results", "section", 0.1481, [3, 4, 5]],
+      ["Beds & Mattresses Category", "Feedback", null, "emo", ["delayed feedback"], "Beds & Mattresses Category", "section", 0.1286, [1]],
+      ["Beds & Mattresses Category", "Needs and desires", null, "emo", ["unmet need", "expectation mismatch"], "Beds & Mattresses Category", "section", 0.1224, [0, 3]],
+      ["Beds & Mattresses Category", "Discoverability", null, "ux", ["hidden feature", "exploration"], "Beds & Mattresses Category", "section", 0.1071, [1, 2]],
+    ],
   },
   {
     id: "ikea2", label: "ikea2 · cli codebook",
     participants: 3,
-    available: { sentiment: 4, tags: 17 },
-    groups: 4,
-    note: "Same site, a Command-Line UX codebook plus a hand-made group. Four groups reach the list; three rows carry a single code, so the pill row is shorter than the name above it.",
-    sentiment: {
-      Section: [
-        ["Beds Category", "frustration"],
-        ["Beds Category", "delight"],
-        ["Beds Category", "confusion"],
-        ["Beds Category", "surprise"],
-      ],
-    },
-    tags: {
-      Section: [
-        ["Checkout default acceptance", "Mental model", "success", "ux", ["implicit-default-surprise"], "Checkout & Delivery"],
-        ["Category response ambiguity", "Errors and recovery", "gap", "trust", ["did-it-work-ambiguity"], "Beds Category"],
-        ["Checkout Sentiment Split", "Sentiment", "tension", "sentiment", ["satisfaction", "confusion", "confidence", "frustration"], "Checkout & Delivery"],
-        ["Navigation feedback gap", "Errors and recovery", "recovery", "trust", ["did-it-work-ambiguity"], "Top Navigation"],
-        ["Checkout error cluster", "Errors and recovery", "gap", "trust", ["error-message-illegible", "did-it-work-ambiguity", "destructive-action-protection"], "Checkout & Delivery"],
-      ],
-      Theme: [
-        ["Entry point friction", "Discoverability", "gap", "ux", ["search-engine-fallback", "starting-point-unclear", "readme-as-first-resort"], "Navigation & Homepage Orientation"],
-      ],
-    },
+    note: "A Command-Line UX codebook plus a hand-made group. One Sentiment row out, one real code row in from the 6 waiting.",
+    sentWeak: [
+      ["Duvets & Bedding", "surprise", "section", 1.0667],
+      ["Sofa Beds", "surprise", "section", 1.0667],
+      ["Uncategorised", "surprise", "theme", 0.6667],
+      ["Top Navigation", "frustration", "section", 0.4444],
+      ["Top Navigation", "confidence", "section", 0.4444],
+      ["Pillows & Bed Linen", "satisfaction", "section", 0.3333],
+      ["Checkout & Delivery", "frustration", "section", 0.3333],
+      ["Checkout & Delivery", "confidence", "section", 0.3333],
+      ["Beds Category", "frustration", "section", 0.3077],
+      ["Beds Category", "delight", "section", 0.3077],
+      ["Beds Category", "confusion", "section", 0.293],
+      ["Top Navigation", "satisfaction", "section", 0.2222],
+      ["Pillows & Bed Linen", "confusion", "section", 0.1905],
+      ["Checkout & Delivery", "confusion", "section", 0.1905],
+      ["Checkout & Delivery", "satisfaction", "section", 0.1667],
+      ["Navigation & Homepage Orientation", "frustration", "theme", 0.1667],
+      ["Navigation & Homepage Orientation", "confusion", "theme", 0.1667],
+      ["Beds Category", "surprise", "section", 0.1231],
+      ["Beds Category", "satisfaction", "section", 0.0513],
+    ],
+    sent: [
+      ["Beds Category", "frustration", "section", 0.3077],
+      ["Beds Category", "delight", "section", 0.3077],
+      ["Beds Category", "confusion", "section", 0.293],
+      ["Beds Category", "surprise", "section", 0.1231],
+    ],
+    tags: [
+      ["Entry point friction", "Discoverability", "gap", "ux", ["search-engine-fallback", "starting-point-unclear", "readme-as-first-resort"], "Navigation & Homepage Orientation", "theme", 0.5556, [4, 0, 3]],
+      ["Checkout default acceptance", "Mental model", "success", "ux", ["implicit-default-surprise"], "Checkout & Delivery", "section", 0.5, [3]],
+      ["Category response ambiguity", "Errors and recovery", "gap", "trust", ["did-it-work-ambiguity"], "Beds Category", "section", 0.4, [3]],
+      ["Checkout Sentiment Split", "Sentiment", "tension", "sentiment", ["satisfaction", "confusion", "confidence", "frustration"], "Checkout & Delivery", "section", 0.3333, [4, 1, 6, 0]],
+      ["Navigation feedback gap", "Errors and recovery", "recovery", "trust", ["did-it-work-ambiguity"], "Top Navigation", "section", 0.3333, [3]],
+      ["Checkout error cluster", "Errors and recovery", "gap", "trust", ["error-message-illegible", "did-it-work-ambiguity", "destructive-action-protection"], "Checkout & Delivery", "section", 0.2778, [0, 3, 4]],
+      ["Category hierarchy success", "Discoverability", "success", "ux", ["subcommand-hierarchy-confusion"], "Duvets & Bedding", "section", 0.25, [6]],
+      ["Category Browse Volatility", "Sentiment", "tension", "sentiment", ["confusion", "frustration", "surprise", "satisfaction", "delight"], "Beds Category", "section", 0.1905, [1, 0, 3, 4, 5]],
+      ["Default assumption mismatch", "Mental model", "gap", "ux", ["implicit-default-surprise"], "Beds Category", "section", 0.1556, [3]],
+      ["Navigation Recovery Arc", "Sentiment", "recovery", "sentiment", ["confidence", "surprise", "frustration", "satisfaction"], "Top Navigation", "section", 0.1481, [6, 3, 0, 4]],
+      ["Linen Wayfinding Gap", "Sentiment", "tension", "sentiment", ["satisfaction", "confusion"], "Pillows & Bed Linen", "section", 0.1111, [4, 1]],
+      ["Homepage Orientation Gap", "Sentiment", "gap", "sentiment", ["confusion", "frustration"], "Navigation & Homepage Orientation", "theme", 0.1111, [1, 0]],
+      ["Top Navigation", "Pleasure", null, "emo", ["two", "Booze"], "Top Navigation", "section", 0.1111, [0, 1]],
+      ["Top Navigation", "New group", null, "ux", ["Chocolate", "Cold"], "Top Navigation", "section", 0.1111, [1, 0]],
+      ["Top Navigation", "New group", null, "ux", ["Chocolate", "Cold"], "Top Navigation", "section", 0.1111, [1, 0]],
+      ["Top Navigation", "New group", null, "ux", ["Chocolate", "Cold"], "Top Navigation", "section", 0.1111, [1, 0]],
+      ["Beds Category", "Discoverability", null, "ux", ["subcommand-hierarchy-confusion"], "Beds Category", "section", 0.1111, [6]],
+    ],
   },
   {
     id: "rock", label: "rockclimbing · 8p",
     participants: 8,
-    available: { sentiment: 12, tags: 14 },
-    groups: 1,
-    note: "Oral-history interviews, theme-only. Every visible codebook row is the Sentiment group, so both sections describe the same twelve themes under two different names.",
-    sentiment: {
-      Theme: [
-        ["Entry Points into Climbing", "delight"],
-        ["Community, Belonging, and Social Bonds", "delight"],
-        ["Discipline Identity and Seasonal Rhythms", "satisfaction"],
-        ["Fear, Mental Blocks, and Psychological Growth", "confidence"],
-        ["Dream Destinations and Travel Aspirations", "delight"],
-        ["Safety, Risk Management, and Close Calls", "confidence"],
-      ],
-    },
-    tags: {
-      Theme: [
-        ["Fear-Confidence Tension", "Sentiment", "tension", "sentiment", ["doubt", "frustration", "confusion", "confidence"], "Fear, Mental Blocks, and Psychological Growth"],
-        ["Beginner Confidence Building", "Sentiment", "success", "sentiment", ["confidence", "delight"], "Advice and Reflections for Beginners"],
-        ["Gear Mastery Confidence", "Sentiment", "tension", "sentiment", ["satisfaction", "confidence"], "Gear, Equipment, and Kit Choices"],
-        ["Risk Confidence Tension", "Sentiment", "tension", "sentiment", ["frustration", "confidence"], "Safety, Risk Management, and Close Calls"],
-        ["Destination Delight", "Sentiment", "success", "sentiment", ["delight"], "Dream Destinations and Travel Aspirations"],
-        ["Achievement Emotional Range", "Sentiment", "success", "sentiment", ["satisfaction", "confidence", "delight"], "Milestone Achievements and Long-Term Goals"],
-      ],
-    },
+    note: "Twelve Sentiment rows and exactly two others — and both of those are “Beds Category”, stray IKEA sections left here by a test import. Backfilling refills the section with them, which is the honest answer: there is no codebook analysis to promote.",
+    sentWeak: [
+      ["Entry Points into Climbing", "delight", "theme", 2.9792],
+      ["Community, Belonging, and Social Bonds", "delight", "theme", 1.3101],
+      ["Discipline Identity and Seasonal Rhythms", "satisfaction", "theme", 1.2833],
+      ["Fear, Mental Blocks, and Psychological Growth", "confidence", "theme", 1.1458],
+      ["Dream Destinations and Travel Aspirations", "delight", "theme", 0.9625],
+      ["Fear, Mental Blocks, and Psychological Growth", "confusion", "theme", 0.9167],
+      ["Fear, Mental Blocks, and Psychological Growth", "doubt", "theme", 0.9167],
+      ["Safety, Risk Management, and Close Calls", "confidence", "theme", 0.6016],
+      ["Advice and Reflections for Beginners", "confidence", "theme", 0.6016],
+      ["Inclusion, Representation, and Gym Infrastructure", "frustration", "theme", 0.5833],
+      ["Uncategorised", "frustration", "theme", 0.5833],
+      ["Indoor vs Outdoor Climbing Experience", "delight", "theme", 0.5133],
+      ["Gear, Equipment, and Kit Choices", "confidence", "theme", 0.5013],
+      ["Injury Prevention and Recovery", "frustration", "theme", 0.4861],
+      ["Milestone Achievements and Long-Term Goals", "satisfaction", "theme", 0.3208],
+      ["Unrelated / Out-of-Scope Content", "satisfaction", "theme", 0.3208],
+      ["Tracking, Logging, and Digital Tools", "frustration", "theme", 0.2917],
+      ["Habit Formation and Lifestyle Integration", "delight", "theme", 0.2852],
+      ["The Physical–Mental Duality of Climbing", "confidence", "theme", 0.2674],
+      ["Training Structures and Progression Strategies", "confidence", "theme", 0.2674],
+      ["Safety, Risk Management, and Close Calls", "frustration", "theme", 0.2188],
+      ["Habit Formation and Lifestyle Integration", "satisfaction", "theme", 0.2139],
+      ["Footwork, Technique, and Movement Fundamentals", "delight", "theme", 0.2139],
+      ["Climbing's Broader Life Impact", "confidence", "theme", 0.2005],
+    ],
+    sent: [
+      ["Entry Points into Climbing", "delight", "theme", 2.9792],
+      ["Community, Belonging, and Social Bonds", "delight", "theme", 1.3101],
+      ["Discipline Identity and Seasonal Rhythms", "satisfaction", "theme", 1.2833],
+      ["Fear, Mental Blocks, and Psychological Growth", "confidence", "theme", 1.1458],
+      ["Dream Destinations and Travel Aspirations", "delight", "theme", 0.9625],
+      ["Safety, Risk Management, and Close Calls", "confidence", "theme", 0.6016],
+      ["Advice and Reflections for Beginners", "confidence", "theme", 0.6016],
+      ["Inclusion, Representation, and Gym Infrastructure", "frustration", "theme", 0.5833],
+      ["Indoor vs Outdoor Climbing Experience", "delight", "theme", 0.5133],
+      ["Gear, Equipment, and Kit Choices", "confidence", "theme", 0.5013],
+      ["Injury Prevention and Recovery", "frustration", "theme", 0.4861],
+      ["Habit Formation and Lifestyle Integration", "delight", "theme", 0.2852],
+    ],
+    tags: [
+      ["Fear-Confidence Tension", "Sentiment", "tension", "sentiment", ["doubt", "frustration", "confusion", "confidence"], "Fear, Mental Blocks, and Psychological Growth", "theme", 0.9167, [2, 0, 1, 6]],
+      ["Beginner Confidence Building", "Sentiment", "success", "sentiment", ["confidence", "delight"], "Advice and Reflections for Beginners", "theme", 0.5, [6, 5]],
+      ["Gear Mastery Confidence", "Sentiment", "tension", "sentiment", ["satisfaction", "confidence"], "Gear, Equipment, and Kit Choices", "theme", 0.4375, [4, 6]],
+      ["Risk Confidence Tension", "Sentiment", "tension", "sentiment", ["frustration", "confidence"], "Safety, Risk Management, and Close Calls", "theme", 0.375, [0, 6]],
+      ["Destination Delight", "Sentiment", "success", "sentiment", ["delight"], "Dream Destinations and Travel Aspirations", "theme", 0.375, [5]],
+      ["Achievement Emotional Range", "Sentiment", "success", "sentiment", ["satisfaction", "confidence", "delight"], "Milestone Achievements and Long-Term Goals", "theme", 0.3333, [4, 6, 5]],
+      ["Community Delight Strength", "Sentiment", "success", "sentiment", ["delight"], "Community, Belonging, and Social Bonds", "theme", 0.2778, [5]],
+      ["Outdoor Transition Tension", "Sentiment", "tension", "sentiment", ["delight", "frustration"], "Indoor vs Outdoor Climbing Experience", "theme", 0.25, [5, 0]],
+      ["Habit Integration Delight", "Sentiment", "tension", "sentiment", ["delight", "satisfaction"], "Habit Formation and Lifestyle Integration", "theme", 0.25, [5, 4]],
+      ["Entry Point Delight", "Sentiment", "success", "sentiment", ["delight"], "Entry Points into Climbing", "theme", 0.2083, [5]],
+      ["Discipline Identity and Seasonal Rhythms", "Sentiment", null, "sentiment", ["satisfaction"], "Discipline Identity and Seasonal Rhythms", "theme", 0.1667, [4]],
+      ["Training Structures and Progression Strategies", "Sentiment", null, "sentiment", ["confidence", "frustration"], "Training Structures and Progression Strategies", "theme", 0.1667, [6, 0]],
+      ["Beds Category", "Feedback", null, "emo", ["delayed feedback", "ambiguous feedback"], "Beds Category", "section", 0.0833, [1, 2]],
+      ["Beds Category", "Status visibility", null, "ux", ["progress indication", "opaque status"], "Beds Category", "section", 0.0625, [2, 1]],
+    ],
   },
   {
     id: "fossda", label: "fossda · 9p · 484 quotes",
     participants: 9,
-    available: { sentiment: 12, tags: 12 },
-    groups: 1,
-    note: "The one project with interview-length transcripts. Every visible codebook row carries 4–5 sentiments, so the cap binds on all six.",
-    sentiment: {
-      Theme: [
-        ["Open source philosophy and impact", "confidence"],
-        ["Future concerns and sustainability", "doubt"],
-        ["Diversity and inclusion challenges", "doubt"],
-        ["Legal and business aspects of open source", "confusion"],
-        ["Corporate career transitions and workplace dynamics", "frustration"],
-        ["Community building and mentorship", "delight"],
-      ],
-    },
-    tags: {
-      Theme: [
-        ["Open Source Conviction", "Sentiment", "success", "sentiment", ["confidence", "satisfaction", "delight", "surprise"], "Open source philosophy and impact"],
-        ["Creative Flow Tension", "Sentiment", "tension", "sentiment", ["satisfaction", "frustration", "delight", "surprise"], "Technical innovation and problem-solving"],
-        ["Mentorship Delight Gap", "Sentiment", "tension", "sentiment", ["delight", "satisfaction", "frustration", "confidence"], "Community building and mentorship"],
-        ["Leadership Satisfaction Arc", "Sentiment", "recovery", "sentiment", ["satisfaction", "delight", "confusion", "confidence", "frustration"], "Organizational involvement and leadership"],
-        ["Career Friction Recovery", "Sentiment", "recovery", "sentiment", ["satisfaction", "delight", "frustration", "confidence"], "Corporate career transitions and workplace dynamics"],
-        ["Project Creation Delight", "Sentiment", "tension", "sentiment", ["delight", "confidence", "frustration", "satisfaction", "surprise"], "Open source project creation and development"],
-      ],
-    },
+    note: "Interview-length transcripts and not one codebook tag that is not a sentiment. Nothing to backfill from; merged, it is the sentiment list alone.",
+    sentWeak: [
+      ["Open source philosophy and impact", "confidence", "theme", 1.5016],
+      ["Future concerns and sustainability", "doubt", "theme", 1.4815],
+      ["Diversity and inclusion challenges", "doubt", "theme", 1.2346],
+      ["Legal and business aspects of open source", "confusion", "theme", 0.7901],
+      ["Corporate career transitions and workplace dynamics", "frustration", "theme", 0.5638],
+      ["Community building and mentorship", "delight", "theme", 0.526],
+      ["Open source project creation and development", "confidence", "theme", 0.4757],
+      ["Open source project creation and development", "delight", "theme", 0.37],
+      ["Open source project creation and development", "surprise", "theme", 0.3435],
+      ["Personal growth and life reflections", "satisfaction", "theme", 0.3395],
+      ["Technical innovation and problem-solving", "satisfaction", "theme", 0.331],
+      ["Corporate career transitions and workplace dynamics", "delight", "theme", 0.3256],
+      ["Open source project creation and development", "satisfaction", "theme", 0.3015],
+      ["Academic and research environments", "delight", "theme", 0.2901],
+      ["Personal growth and life reflections", "confidence", "theme", 0.2805],
+      ["Organizational involvement and leadership", "satisfaction", "theme", 0.2648],
+      ["Debian Leadership", "surprise", "section", 0.2593],
+      ["BusyBox Development", "delight", "section", 0.2593],
+      ["Remote Collaboration", "confusion", "section", 0.2593],
+      ["Technical innovation and problem-solving", "surprise", "theme", 0.2469],
+      ["Early computing exposure and career origins", "satisfaction", "theme", 0.2101],
+      ["Legal and business aspects of open source", "surprise", "theme", 0.1975],
+      ["Organizational involvement and leadership", "confusion", "theme", 0.1975],
+      ["Corporate career transitions and workplace dynamics", "satisfaction", "theme", 0.1949],
+    ],
+    sent: [
+      ["Open source philosophy and impact", "confidence", "theme", 1.5016],
+      ["Future concerns and sustainability", "doubt", "theme", 1.4815],
+      ["Diversity and inclusion challenges", "doubt", "theme", 1.2346],
+      ["Legal and business aspects of open source", "confusion", "theme", 0.7901],
+      ["Corporate career transitions and workplace dynamics", "frustration", "theme", 0.5638],
+      ["Community building and mentorship", "delight", "theme", 0.526],
+      ["Open source project creation and development", "confidence", "theme", 0.4757],
+      ["Open source project creation and development", "delight", "theme", 0.37],
+      ["Open source project creation and development", "surprise", "theme", 0.3435],
+      ["Personal growth and life reflections", "satisfaction", "theme", 0.3395],
+      ["Technical innovation and problem-solving", "satisfaction", "theme", 0.331],
+      ["Corporate career transitions and workplace dynamics", "delight", "theme", 0.3256],
+    ],
+    tags: [
+      ["Open Source Conviction", "Sentiment", "success", "sentiment", ["confidence", "satisfaction", "delight", "surprise"], "Open source philosophy and impact", "theme", 0.6584, [6, 4, 5, 3]],
+      ["Creative Flow Tension", "Sentiment", "tension", "sentiment", ["satisfaction", "frustration", "delight", "surprise"], "Technical innovation and problem-solving", "theme", 0.4667, [4, 0, 5, 3]],
+      ["Mentorship Delight Gap", "Sentiment", "tension", "sentiment", ["delight", "satisfaction", "frustration", "confidence"], "Community building and mentorship", "theme", 0.3529, [5, 4, 0, 6]],
+      ["Leadership Satisfaction Arc", "Sentiment", "recovery", "sentiment", ["satisfaction", "delight", "confusion", "confidence", "frustration"], "Organizational involvement and leadership", "theme", 0.3056, [4, 5, 1, 6, 0]],
+      ["Career Friction Recovery", "Sentiment", "recovery", "sentiment", ["satisfaction", "delight", "frustration", "confidence"], "Corporate career transitions and workplace dynamics", "theme", 0.2686, [4, 5, 0, 6]],
+      ["Project Creation Delight", "Sentiment", "tension", "sentiment", ["delight", "confidence", "frustration", "satisfaction", "surprise"], "Open source project creation and development", "theme", 0.2487, [5, 6, 0, 4, 3]],
+      ["Reflective Life Confidence", "Sentiment", "success", "sentiment", ["satisfaction", "confidence", "delight"], "Personal growth and life reflections", "theme", 0.2469, [4, 6, 5]],
+      ["Inclusion Doubt Tension", "Sentiment", "tension", "sentiment", ["doubt", "satisfaction", "frustration", "surprise", "confidence", "delight"], "Diversity and inclusion challenges", "theme", 0.1643, [2, 4, 0, 3, 6, 5]],
+      ["Legal Frontier Recovery", "Sentiment", "recovery", "sentiment", ["delight", "satisfaction", "confusion", "frustration", "surprise", "confidence"], "Legal and business aspects of open source", "theme", 0.1515, [5, 4, 1, 0, 3, 6]],
+      ["Sustainability Doubt Signal", "Sentiment", "gap", "sentiment", ["doubt", "delight", "satisfaction"], "Future concerns and sustainability", "theme", 0.1389, [2, 5, 4]],
+      ["Academic and research environments", "Sentiment", null, "sentiment", ["delight", "satisfaction", "frustration"], "Academic and research environments", "theme", 0.1201, [5, 4, 0]],
+      ["Early computing exposure and career origins", "Sentiment", null, "sentiment", ["delight", "satisfaction", "frustration", "confidence"], "Early computing exposure and career origins", "theme", 0.1199, [5, 4, 0, 6]],
+    ],
   },
   {
     id: "uxf", label: "uxfriends · 1p",
     participants: 1,
-    available: { sentiment: 1, tags: 5 },
-    groups: 1,
-    note: "One participant. Five codebook rows exist in total, all Sentiment; neither section reaches the six-row cap.",
-    sentiment: {
-      Section: [
-        ["Product Detail Page", "satisfaction"],
-      ],
-    },
-    tags: {
-      Section: [
-        ["Checkout Clarity Gap", "Sentiment", "tension", "sentiment", ["satisfaction", "surprise", "confusion"], "Shopping Bag"],
-        ["Navigation Confidence Tension", "Sentiment", "tension", "sentiment", ["confusion", "confidence"], "IKEA.co.uk Homepage"],
-        ["Category Recovery", "Sentiment", "recovery", "sentiment", ["confusion", "satisfaction"], "Kitchenware Category"],
-        ["Browse Path Success", "Sentiment", "success", "sentiment", ["satisfaction"], "Product Detail Page"],
-      ],
-      Theme: [
-        ["Mixed Brand Sentiment", "Sentiment", "tension", "sentiment", ["satisfaction", "frustration", "confusion"], "Uncategorised observations"],
-      ],
-    },
+    note: "Five codebook rows, all Sentiment. Same outcome: that section was never a codebook analysis.",
+    sentWeak: [
+      ["Shopping Bag", "surprise", "section", 2.6667],
+      ["IKEA.co.uk Homepage", "confidence", "section", 2.0],
+      ["Delivery Selection", "confusion", "section", 2.0],
+      ["IKEA.com Homepage", "confusion", "section", 1.3333],
+      ["Add to Bag", "confusion", "section", 1.3333],
+      ["Product Detail Page", "satisfaction", "section", 1.0],
+      ["Shopping Bag", "confusion", "section", 0.6667],
+      ["Uncategorised observations", "confusion", "theme", 0.6667],
+      ["Uncategorised observations", "satisfaction", "theme", 0.6667],
+      ["Kitchenware Category", "satisfaction", "section", 0.5],
+      ["IKEA.co.uk Homepage", "confusion", "section", 0.3333],
+      ["Kitchenware Category", "confusion", "section", 0.3333],
+      ["Shopping Bag", "satisfaction", "section", 0.3333],
+      ["Uncategorised observations", "frustration", "theme", 0.3333],
+    ],
+    sent: [
+      ["Product Detail Page", "satisfaction", "section", 1.0],
+    ],
+    tags: [
+      ["Checkout Clarity Gap", "Sentiment", "tension", "sentiment", ["satisfaction", "surprise", "confusion"], "Shopping Bag", "section", 0.6667, [4, 3, 1]],
+      ["Mixed Brand Sentiment", "Sentiment", "tension", "sentiment", ["satisfaction", "frustration", "confusion"], "Uncategorised observations", "theme", 0.5556, [4, 0, 1]],
+      ["Navigation Confidence Tension", "Sentiment", "tension", "sentiment", ["confusion", "confidence"], "IKEA.co.uk Homepage", "section", 0.3333, [1, 6]],
+      ["Category Recovery", "Sentiment", "recovery", "sentiment", ["confusion", "satisfaction"], "Kitchenware Category", "section", 0.3333, [1, 4]],
+      ["Browse Path Success", "Sentiment", "success", "sentiment", ["satisfaction"], "Product Detail Page", "section", 0.3333, [4]],
+    ],
   },
   {
     id: "escuela", label: "escuela · 2p",
     participants: 2,
-    available: { sentiment: 6, tags: 5 },
-    groups: 1,
-    note: "Culinary-school interviews, theme-only. All six sentiment rows carry the same badge — frustration — so that column discriminates nothing.",
-    sentiment: {
-      Theme: [
-        ["Financial and Resource Challenges", "frustration"],
-        ["Suggestions for Systemic Improvements", "frustration"],
-        ["Social and Professional Dynamics", "frustration"],
-        ["Career Aspirations and Personal Goals", "frustration"],
-        ["Experience and Adaptation in Culinary Internships", "frustration"],
-        ["Curriculum and Educational Concerns", "frustration"],
-      ],
-    },
-    tags: {
-      Theme: [
-        ["Curriculum Tension", "Sentiment", "tension", "sentiment", ["frustration", "confidence", "surprise"], "Curriculum and Educational Concerns"],
-        ["Financial Strain", "Sentiment", "tension", "sentiment", ["doubt", "frustration"], "Financial and Resource Challenges"],
-        ["Systemic Frustration", "Sentiment", "gap", "sentiment", ["frustration"], "Suggestions for Systemic Improvements"],
-        ["Career Path Doubts", "Sentiment", "tension", "sentiment", ["doubt", "frustration"], "Career Aspirations and Personal Goals"],
-        ["Internship Culture Gap", "Sentiment", "tension", "sentiment", ["frustration", "doubt"], "Experience and Adaptation in Culinary Internships"],
-      ],
-    },
+    note: "All five codebook rows are Sentiment, and every one repeats a theme already listed above under its own badge.",
+    sentWeak: [
+      ["Curriculum and Educational Concerns", "surprise", "theme", 1.5833],
+      ["Curriculum and Educational Concerns", "confidence", "theme", 1.5833],
+      ["Financial and Resource Challenges", "frustration", "theme", 1.4615],
+      ["Suggestions for Systemic Improvements", "frustration", "theme", 1.4615],
+      ["Social and Professional Dynamics", "frustration", "theme", 0.6496],
+      ["Career Aspirations and Personal Goals", "doubt", "theme", 0.5278],
+      ["Experience and Adaptation in Culinary Internships", "doubt", "theme", 0.5278],
+      ["Social and Professional Dynamics", "doubt", "theme", 0.5278],
+      ["Career Aspirations and Personal Goals", "frustration", "theme", 0.406],
+      ["Experience and Adaptation in Culinary Internships", "frustration", "theme", 0.406],
+      ["Financial and Resource Challenges", "doubt", "theme", 0.3958],
+      ["Curriculum and Educational Concerns", "frustration", "theme", 0.3045],
+    ],
+    sent: [
+      ["Financial and Resource Challenges", "frustration", "theme", 1.4615],
+      ["Suggestions for Systemic Improvements", "frustration", "theme", 1.4615],
+      ["Social and Professional Dynamics", "frustration", "theme", 0.6496],
+      ["Career Aspirations and Personal Goals", "frustration", "theme", 0.406],
+      ["Experience and Adaptation in Culinary Internships", "frustration", "theme", 0.406],
+      ["Curriculum and Educational Concerns", "frustration", "theme", 0.3045],
+    ],
+    tags: [
+      ["Curriculum Tension", "Sentiment", "tension", "sentiment", ["frustration", "confidence", "surprise"], "Curriculum and Educational Concerns", "theme", 1.1667, [0, 6, 3]],
+      ["Financial Strain", "Sentiment", "tension", "sentiment", ["doubt", "frustration"], "Financial and Resource Challenges", "theme", 1.1667, [2, 0]],
+      ["Systemic Frustration", "Sentiment", "gap", "sentiment", ["frustration"], "Suggestions for Systemic Improvements", "theme", 1.0, [0]],
+      ["Career Path Doubts", "Sentiment", "tension", "sentiment", ["doubt", "frustration"], "Career Aspirations and Personal Goals", "theme", 0.3889, [2, 0]],
+      ["Internship Culture Gap", "Sentiment", "tension", "sentiment", ["frustration", "doubt"], "Experience and Adaptation in Culinary Internships", "theme", 0.3889, [0, 2]],
+    ],
   },
 ];
 
@@ -1138,9 +1689,26 @@ function corpusCoverage(nameEl){
   return { chars: fits, pct: Math.round(100 * n / CORPUS.length) };
 }
 
-/* Group tints, as the shipped tag pill uses them (theme/tokens.css). */
-const TINT = { ux:"var(--bn-ux-1-bg)", emo:"var(--bn-emo-1-bg)", task:"var(--bn-task-1-bg)",
-               trust:"var(--bn-trust-1-bg)", opp:"var(--bn-opp-1-bg)" };
+/* Tag colour slots, exactly as the shipped pill resolves them:
+   getTagBg(colourSet, index) -> var(--bn-<set>-<(index % slots)+1>-bg), with
+   the index assigned in tag-definition order within each group by
+   _build_tag_colour_indices(). So two codes in one group are two TINTS OF ONE
+   HUE, and two groups are two hues — which is the whole reason the group name
+   can leave the row without the row losing its group.
+   These were previously referenced but never declared in this file, so every
+   codebook pill fell back to the plain grey badge background. */
+const TAGBG = {
+  ux: ["var(--bn-ux-1-bg)", "var(--bn-ux-2-bg)", "var(--bn-ux-3-bg)", "var(--bn-ux-4-bg)", "var(--bn-ux-5-bg)"],
+  emo: ["var(--bn-emo-1-bg)", "var(--bn-emo-2-bg)", "var(--bn-emo-3-bg)", "var(--bn-emo-4-bg)", "var(--bn-emo-5-bg)", "var(--bn-emo-6-bg)"],
+  task: ["var(--bn-task-1-bg)", "var(--bn-task-2-bg)", "var(--bn-task-3-bg)", "var(--bn-task-4-bg)", "var(--bn-task-5-bg)"],
+  trust: ["var(--bn-trust-1-bg)", "var(--bn-trust-2-bg)", "var(--bn-trust-3-bg)", "var(--bn-trust-4-bg)", "var(--bn-trust-5-bg)"],
+  opp: ["var(--bn-opp-1-bg)", "var(--bn-opp-2-bg)", "var(--bn-opp-3-bg)", "var(--bn-opp-4-bg)", "var(--bn-opp-5-bg)"],
+};
+
+function tagBg(colourSet, index){
+  const slots = TAGBG[colourSet];
+  return slots ? slots[index % slots.length] : null;
+}
 
 const SENTIMENTS = ["frustration","confusion","doubt","surprise","satisfaction","delight","confidence"];
 const RAIL = {
@@ -1163,9 +1731,10 @@ const VARIANTS = [
   ["v9","V9 · tag badges","V7's geometry with the codes actually present, capped. Sentiment rows still pair; codebook rows drop the constant group name for open-vocabulary tags on their own line."],
 ];
 
-const state = { w:240, set:"plain", variantMark:false, brk:false, cap:3 };
+const state = { w:240, set:"plain", variantMark:false, brk:false, cap:3, treat:"shipped", floor:0.20, vol:2 };
 const bench = document.getElementById("bench");
 const projbench = document.getElementById("projbench");
+const realbench = document.getElementById("realbench");
 
 function esc(s){ return s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 function badgeClass(label){ return SENTIMENTS.includes(label) ? "badge badge-"+label : "badge"; }
@@ -1201,14 +1770,17 @@ function pairByLocation(rows){
  * Capped, because the largest real group holds 11 tags at up to 32 chars —
  * uncapped that is four wrapped lines under one name.
  */
-function tagRowHTML(name, tags, colourSet){
+function tagRowHTML(name, tags, colourSet, idx, group){
   const shown = (tags || []).slice(0, state.cap);
   const rest = (tags || []).length - shown.length;
-  const pills = shown.map(t => {
+  const pills = shown.map((t, i) => {
     const cls = badgeClass(t);                       // sentiment names keep their hue
-    const tint = cls === "badge" && TINT[colourSet]
-      ? ` style="background:${TINT[colourSet]}"` : "";
-    return `<span class="${cls}"${tint}>${esc(t)}</span>`;
+    // Real slot when the data carries one; position otherwise, which is what
+    // the older hand-built sets have. Never a single tint for the whole group.
+    const bg = cls === "badge" ? tagBg(colourSet, idx ? (idx[i] ?? i) : i) : null;
+    const tint = bg ? ` style="background:${bg}"` : "";
+    const ttl = group ? ` title="${esc(group)} \u00b7 ${esc(t)}"` : "";
+    return `<span class="${cls}"${tint}${ttl}>${esc(t)}</span>`;
   }).join("");
   // Shipped string form: analysis.more === "+{{count}} more".
   const more = rest > 0 ? `<span class="sig-more">+${rest} more</span>` : "";
@@ -1257,7 +1829,7 @@ function sectionHTML(v, heading, groups, kind){
     out += (v === "v4")                                ? groupHTML(v, rows)
          : (v === "v6" || v === "v7")                  ? pairedGroupHTML(v, rows)
          : (v === "v9" && kind === "sentiment")        ? pairedGroupHTML("v7", rows)
-         : (v === "v9")                                ? rows.map(([n,,,cs,tags]) => tagRowHTML(n, tags, cs)).join("")
+         : (v === "v9")                                ? rows.map(r => tagRowHTML(r[0], r[4], r[3], r[8], r[1])).join("")
          :                                               rows.map(([n,l,pat]) => rowHTML(v,n,l,pat,kind)).join("");
   }
   return out;
@@ -1282,6 +1854,7 @@ function render(){
     </div>`).join("");
   measure();
   renderProjects();
+  renderReal();
 }
 
 /**
@@ -1352,21 +1925,230 @@ function measure(){
     + `<span>${delta}</span>` + extra;
   });
   document.getElementById("wnote").textContent = SETS[state.set].note;
+  document.getElementById("fnote").textContent =
+    state.treat === "flat" ? "cut below this composite_signal" : "select \u201cone flat list\u201d to use";
 }
 
 /**
- * The second bench: V9 only, one panel per real project. Same renderer, same
- * width and cap state — so a change to V9 changes every project at once, and
- * the panels cannot drift away from the variant they are supposed to be.
+ * The sentiment rows in play.
+ *
+ * MIN_QUOTES_PER_CELL = 2 in signals.py is a VOLUME floor, not a strength one,
+ * and on a small study it is what empties the sentiment half: project-ikea
+ * surfaces exactly one sentiment signal at 2, and eighteen at 1. The n>=1 list
+ * is the same analysis with that floor lowered — real cells, real locations,
+ * real composites, all of them one quote from one participant. Nothing here is
+ * invented; it is measured below the bar the lens draws.
+ */
+function sentRows(p){ return (state.vol === 1 && p.sentWeak) ? p.sentWeak : p.sent; }
+
+/* The app's own per-section cut (MAX_SIGNALS in AnalysisPage.tsx), and the
+   group whose rows are a mirror of Quote.sentiment rather than a codebook. */
+const MAX_SIGNALS = 6;
+const SENTIMENT_GROUP = "Sentiment";
+
+/** Section rows first, then theme rows — the order AnalysisSidebar renders. */
+function bucketBySource(rows, i){
+  const sec = rows.filter(r => r[i] === "section");
+  const th  = rows.filter(r => r[i] !== "section");
+  const out = {};
+  if (sec.length) out.Section = sec;
+  if (th.length)  out.Theme   = th;
+  return out;
+}
+
+/**
+ * Apply the app's cap, then the treatment.
+ *
+ * The two hides differ in ORDER, and the difference is the whole point:
+ *   hide     — cut to six first, then drop Sentiment rows. What is lost.
+ *   backfill — drop Sentiment rows first, then cut to six. What could be there
+ *              instead, taken from the same ranking the app already computed.
+ */
+function projectRows(p, treat){
+  treat = treat || state.treat;
+  const sent = sentRows(p).slice(0, MAX_SIGNALS);
+  const shipped = p.tags.slice(0, MAX_SIGNALS);
+  const sentimentRows = shipped.filter(r => r[1] === SENTIMENT_GROUP).length;
+  let tags = shipped, gained = 0;
+  if (treat === "hide"){
+    tags = shipped.filter(r => r[1] !== SENTIMENT_GROUP);
+  } else if (treat === "backfill"){
+    tags = p.tags.filter(r => r[1] !== SENTIMENT_GROUP).slice(0, MAX_SIGNALS);
+    gained = Math.max(0, tags.length - (shipped.length - sentimentRows));
+  }
+  return { sent, tags, dropped: treat === "shipped" ? 0 : sentimentRows, gained };
+}
+
+/**
+ * One flat list: no Sentiment/Codebooks heading, no Section/Theme sub-heading,
+ * no six-per-section cut. Every signal the project produced, strongest first,
+ * cut where the composite drops below the floor.
+ *
+ * Sentiment rows still pair by location — a location appears once, at the rank
+ * of its strongest sentiment, carrying every sentiment it has. Codebook rows
+ * are V9 pill rows. The Sentiment GROUP is excluded throughout: its rows are a
+ * mirror of Quote.sentiment (importer.py's _auto_tag_from_sentiment_field), so
+ * in a merged list they would be the sentiment rows a second time — and their
+ * concentration is a structural 1.0, which is what made the two halves
+ * incomparable in the first place.
+ */
+function flatEntries(p){
+  const out = [];
+
+  // Pair the sentiment half by location, exactly as V9 does.
+  const paired = new Map();
+  sentRows(p).forEach(([loc, label, , comp], i) => {
+    if (!paired.has(loc)) paired.set(loc, { badges: [], first: i, comp: 0 });
+    const e = paired.get(loc);
+    e.badges.push({ label, index: i });
+    e.comp = Math.max(e.comp, comp);       // a location ranks at its strongest
+  });
+  for (const [name, e] of paired) out.push({ kind: "sent", name, entry: e, comp: e.comp });
+
+  for (const r of p.tags){
+    if (r[1] === SENTIMENT_GROUP) continue;
+    out.push({ kind: "tag", name: r[0], tags: r[4], colourSet: r[3], comp: r[7],
+                idx: r[8], group: r[1] });
+  }
+
+  out.sort((a, b) => b.comp - a.comp);
+  return out;
+}
+
+function flatHTML(p){
+  const kept = flatEntries(p).filter(e => e.comp >= state.floor);
+  if (!kept.length) return `<div class="sig-empty">nothing above the floor</div>`;
+  return kept.map(e => e.kind === "sent"
+    ? pairedHTML("v7", e.name, e.entry)
+    : tagRowHTML(e.name, e.tags, e.colourSet, e.idx, e.group)).join("");
+}
+
+/**
+ * Group every signal by the place it is about.
+ *
+ * The flat list exposed a real shape in the data: a location routinely carries
+ * SEVERAL signals — project-ikea has one section with eight codebook rows — and
+ * that is not duplication, it is the finding. Checkout can be empowering and
+ * confusing at once; pricing can read expensive and fair, and separately shock
+ * on a change and delight on a discount. What the navigation owes the reader is
+ * one entry per place and a way to reach each signal under it.
+ *
+ * This is V7's pairing generalised: it already does exactly this for the
+ * sentiment half, and stops at the section boundary.
+ */
+function locationEntries(p){
+  const byLoc = new Map();
+  const get = loc => {
+    if (!byLoc.has(loc)) byLoc.set(loc, { loc, sents: [], cbs: [], comp: 0 });
+    return byLoc.get(loc);
+  };
+  sentRows(p).forEach(([loc, label, , comp], i) => {
+    const e = get(loc);
+    e.sents.push({ label, comp, index: i });
+    e.comp = Math.max(e.comp, comp);
+  });
+  p.tags.forEach(r => {
+    if (r[1] === SENTIMENT_GROUP) return;          // a mirror of the sentiment half
+    const e = get(r[5]);
+    e.cbs.push({ name: r[0], group: r[1], pattern: r[2], colourSet: r[3],
+                 tags: r[4], idx: r[8], comp: r[7] });
+    e.comp = Math.max(e.comp, r[7]);
+  });
+  // Apply the floor to each SIGNAL, then drop places with nothing left.
+  const out = [];
+  for (const e of byLoc.values()){
+    const sents = e.sents.filter(x => x.comp >= state.floor);
+    const cbs = e.cbs.filter(x => x.comp >= state.floor);
+    if (sents.length || cbs.length)
+      out.push({ ...e, sents, cbs, comp: Math.max(...[...sents, ...cbs].map(x => x.comp)) });
+  }
+  return out.sort((a, b) => b.comp - a.comp);
+}
+
+/** A badge that is its own destination. */
+function hitBadge(cls, text, target, n, style){
+  return `<a class="sig-hit badge-hit" href="#" data-target="${esc(target)}" data-signal="${n}"`
+       + ` aria-label="${esc(target)}"><span class="${cls}"${style || ""}>${esc(text)}</span></a>`;
+}
+
+/**
+ * Compact: every signal about a place becomes one chip. Sentiment chips keep
+ * their hue; a codebook signal is named by its GROUP, tinted with that group's
+ * colour — which is informative here for the first time, because grouping by
+ * location is what makes the group name vary from chip to chip.
+ * The trade is explicit: destinations instead of codes.
+ */
+function locHTML(p, named){
+  const places = locationEntries(p);
+  if (!places.length) return `<div class="sig-empty">nothing above the floor</div>`;
+  return places.map((e, li) => {
+    const sent = e.sents.map(x =>
+      hitBadge(badgeClass(x.label), x.label, `${e.loc} \u00b7 ${x.label}`, x.index + 1)).join("");
+    let cb;
+    if (named){
+      cb = e.cbs.map((c, i) => {
+        const pat = c.pattern ? `<span class="pattern-label pattern-${c.pattern}">${esc(c.pattern)}</span>` : "";
+        const pills = c.tags.slice(0, state.cap).map((t, j) => {
+          const bg = tagBg(c.colourSet, c.idx ? (c.idx[j] ?? j) : j);
+          return `<span class="badge"${bg ? ` style="background:${bg}"` : ""} title="${esc(c.group)} \u00b7 ${esc(t)}">${esc(t)}</span>`;
+        }).join("");
+        const rest = c.tags.length - Math.min(c.tags.length, state.cap);
+        const more = rest > 0 ? `<span class="sig-more">+${rest} more</span>` : "";
+        // An un-elaborated signal has no name of its own — signalName || location
+        // means it draws the place it is already sitting under. Under a location
+        // heading the group name is the thing that distinguishes it.
+        const label = c.name === e.loc ? c.group : c.name;
+        return `<a class="sig-sub sig-hit" href="#" data-target="${esc(e.loc)} \u00b7 ${esc(c.group)}"`
+             + ` data-signal="${i + 1}"><span class="sig-sub-name">${esc(label)} ${pat}</span>`
+             + `<span class="sig-badges">${pills}${more}</span></a>`;
+      }).join("");
+    } else {
+      cb = e.cbs.map((c, i) => {
+        const bg = tagBg(c.colourSet, 1);
+        return hitBadge("badge", c.group, `${e.loc} \u00b7 ${c.group}`, i + 1,
+                        bg ? ` style="background:${bg}"` : "");
+      }).join("");
+    }
+    const rule = li ? `<div class="sig-loc-rule"></div>` : "";
+    return `${rule}<div class="sig sig--loc">`
+         + `<span class="sig-name"><a class="sig-hit name-hit" href="#" data-target="${esc(e.loc)}"`
+         + ` data-signal="1">${esc(e.loc)}</a></span>`
+         + (sent ? `<span class="sig-badges">${sent}</span>` : "")
+         + (named ? cb : (cb ? `<span class="sig-badges">${cb}</span>` : ""))
+         + `</div>`;
+  }).join("");
+}
+
+/**
+ * One panel's contents under a named treatment. Shared by both project benches
+ * so the per-project comparison and the per-treatment comparison can never
+ * disagree about what a treatment is.
+ */
+function panelBody(p, treat){
+  if (treat === "flat") return flatHTML(p);
+  if (treat === "loc")  return locHTML(p, false);
+  if (treat === "locn") return locHTML(p, true);
+  const { sent, tags } = projectRows(p, treat);
+  // AnalysisSidebar renders each block only when it has rows — an emptied
+  // Codebooks section loses its heading too, it does not sit there blank.
+  return (sent.length ? sectionHTML("v9", "Sentiment", bucketBySource(sent, 2), "sentiment") : "")
+       + (tags.length ? sectionHTML("v9", "Codebooks", bucketBySource(tags, 6), "tags")
+                      : `<div class="toc-heading">Codebooks</div><div class="sig-empty">no codebook signals</div>`);
+}
+
+/**
+ * The second bench: V9 only, one panel per real project. Same renderer and the
+ * same width/cap state as the variant bench, so V9 cannot drift from itself.
  */
 function renderProjects(){
-  projbench.innerHTML = PROJECTS.map(p => `
+  projbench.innerHTML = PROJECTS.map(p => {
+    const body = panelBody(p, state.treat);
+    return `
     <div class="cell" data-p="${p.id}">
       <div class="frame" style="width:${state.w}px">
         <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span class="cname">${p.label}</span></div>
         <div class="panel"><div class="panel-body${state.variantMark ? " mark-trunc" : ""}${state.brk ? " brk" : ""}">
-          ${sectionHTML("v9", "Sentiment", p.sentiment, "sentiment")}
-          ${sectionHTML("v9", "Codebooks", p.tags, "tags")}
+          ${body}
         </div></div>
       </div>
       <div class="commentary" style="width:${state.w}px">
@@ -1374,19 +2156,21 @@ function renderProjects(){
         <div class="metrics" data-metrics></div>
         <p class="verdict">${p.note}</p>
       </div>
-    </div>`).join("");
+    </div>`;
+  }).join("");
   measureProjects();
 }
 
 /**
- * Per-project measurements. Deliberately NOT the variant bench's set: there is
- * no baseline to compare a project against, so height-delta is meaningless
- * here. What matters instead is whether the two sections are saying the same
- * thing twice, and whether the cap is hiding anything.
+ * Per-project measurements. Deliberately not the variant bench's set: there is
+ * no baseline to compare a project against, so height-delta means nothing here.
+ * What matters is whether the two sections are saying the same thing twice, and
+ * what the treatment costs.
  */
 function measureProjects(){
   document.querySelectorAll("#projbench .cell").forEach(cell => {
     const p = PROJECTS.find(x => x.id === cell.dataset.p);
+    const { sent, tags, dropped, gained } = projectRows(p);
     let trunc = 0;
     cell.querySelectorAll(".sig").forEach(row => {
       const n = row.querySelector(".sig-name");
@@ -1397,26 +2181,115 @@ function measureProjects(){
     const rows = cell.querySelectorAll(".sig").length;
     const h = Math.round(cell.querySelector(".panel-body").getBoundingClientRect().height);
     const capped = cell.querySelectorAll(".sig-more").length;
+    const groups = new Set(tags.map(r => r[1])).size;
 
-    // A codebook row whose LOCATION already appears in the Sentiment section
-    // is the same cell described twice. V9 hides the repeat, because the row
-    // shows the elaborated signal name and the location is not drawn at all.
-    const sentLocs = new Set(Object.values(p.sentiment).flat().map(r => r[0]));
-    const tagRows = Object.values(p.tags).flat();
-    const repeats = tagRows.filter(r => sentLocs.has(r[5])).length;
+    // A codebook row whose LOCATION already has a row in Sentiment is the same
+    // cell described twice. V9 hides that, because the row draws the elaborated
+    // signal name and the location is never on screen — so this is computed
+    // from the data, not measured from the panel.
+    const sentLocs = new Set(sent.map(r => r[0]));
+    const repeats = tags.filter(r => sentLocs.has(r[5])).length;
 
-    const tCls = trunc === 0 ? "good" : "bad";
-    const cCls = capped === 0 ? "good" : "bad";
-    const gCls = p.groups > 1 ? "good" : "bad";
-    const rCls = repeats === 0 ? "good" : "bad";
+    if (state.treat === "loc" || state.treat === "locn"){
+      const places = locationEntries(p);
+      const dests = places.reduce((n, e) => n + e.sents.length + e.cbs.length, 0);
+      const multi = places.filter(e => e.sents.length + e.cbs.length > 1).length;
+      const most = places.reduce((n, e) => Math.max(n, e.sents.length + e.cbs.length), 0);
+      cell.querySelector("[data-metrics]").innerHTML =
+        `<span><b>${places.length}</b> places</span>`
+      + `<span><b>${h}</b>px tall</span>`
+      + `<span class="${trunc === 0 ? "good" : "bad"}"><b>${trunc}</b> truncated</span>`
+      + `<span title="signals reachable from this panel"><b>${dests}</b> destinations</span>`
+      + `<span title="places carrying more than one signal — the case the two-section layout could not show"><b>${multi}</b> multi-signal</span>`
+      + `<span title="most signals on any one place"><b>${most}</b> on the busiest</span>`;
+      return;
+    }
+    if (state.treat === "flat"){
+      const all = flatEntries(p);
+      const kept = all.filter(e => e.comp >= state.floor);
+      const nTag = kept.filter(e => e.kind === "tag").length;
+      cell.querySelector("[data-metrics]").innerHTML =
+        `<span><b>${rows}</b> rows</span>`
+      + `<span><b>${h}</b>px tall</span>`
+      + `<span class="${trunc === 0 ? "good" : "bad"}"><b>${trunc}</b> truncated</span>`
+      + `<span class="${capped === 0 ? "good" : "bad"}"><b>${capped}</b> capped</span>`
+      + `<span title="signals above the floor, of every signal this project produced">`
+      + `<b>${kept.length}</b> of <b>${all.length}</b> above floor</span>`
+      + `<span title="how the surviving list splits"><b>${kept.length - nTag}</b> sentiment / <b>${nTag}</b> codebook</span>`
+      + `<span title="strongest and weakest composite in the surviving list">`
+      + `${kept.length ? kept[0].comp.toFixed(2) + " … " + kept[kept.length-1].comp.toFixed(2) : "—"}</span>`;
+      return;
+    }
+    const m = [];
+    m.push(`<span><b>${rows}</b> rows</span>`);
+    m.push(`<span><b>${h}</b>px tall</span>`);
+    m.push(`<span class="${trunc === 0 ? "good" : "bad"}"><b>${trunc}</b> truncated</span>`);
+    m.push(`<span class="${capped === 0 ? "good" : "bad"}" title="rows where the cap hides at least one code"><b>${capped}</b> capped</span>`);
+    m.push(`<span class="${groups > 1 ? "good" : "bad"}" title="distinct codebook groups across the visible rows"><b>${groups}</b> group${groups === 1 ? "" : "s"}</span>`);
+    m.push(`<span class="${repeats === 0 ? "good" : "bad"}" title="codebook rows whose location already has a row in the Sentiment section"><b>${repeats}</b>/${tags.length} repeat a location</span>`);
+    if (state.treat !== "shipped"){
+      m.push(`<span class="good" title="Sentiment-group rows removed from the Codebooks section">&minus;<b>${dropped}</b> sentiment</span>`);
+      if (state.treat === "backfill"){
+        const spare = p.tags.filter(r => r[1] !== SENTIMENT_GROUP).length - tags.length;
+        m.push(`<span class="${gained ? "good" : "bad"}" title="real codebook rows pulled up into the freed slots">+<b>${gained}</b> backfilled</span>`);
+        m.push(`<span title="further non-Sentiment rows the analysis produced but the cap still excludes"><b>${spare}</b> still waiting</span>`);
+      }
+    }
+    cell.querySelector("[data-metrics]").innerHTML = m.join("");
+  });
+}
+
+/**
+ * The third bench: ONE project across every treatment.
+ *
+ * project-ikea is the only sample here that can tell the treatments apart. The
+ * other five have no codebook tags that are not sentiments, so every treatment
+ * renders them identically and they cannot discriminate. This one carries 23
+ * non-Sentiment signals from four codebooks across fourteen groups, and one
+ * section holding ten signals at once.
+ */
+const REAL_ID = "ikea";
+const REAL_TREATS = [
+  ["shipped",  "as shipped"],
+  ["backfill", "hide + backfill"],
+  ["flat",     "one flat list"],
+  ["loc",      "by location"],
+  ["locn",     "by location \u00b7 named"],
+];
+
+function renderReal(){
+  const p = PROJECTS.find(x => x.id === REAL_ID);
+  realbench.innerHTML = REAL_TREATS.map(([t, label]) => `
+    <div class="cell" data-real="${t}">
+      <div class="frame" style="width:${state.w}px">
+        <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span class="cname">${label}</span></div>
+        <div class="panel"><div class="panel-body${state.variantMark ? " mark-trunc" : ""}${state.brk ? " brk" : ""}">
+          ${panelBody(p, t)}
+        </div></div>
+      </div>
+      <div class="commentary" style="width:${state.w}px">
+        <span class="clabel">Commentary · measured</span>
+        <div class="metrics" data-metrics></div>
+      </div>
+    </div>`).join("");
+  document.querySelectorAll("#realbench .cell").forEach(cell => {
+    let trunc = 0;
+    cell.querySelectorAll(".sig").forEach(row => {
+      const n = row.querySelector(".sig-name");
+      const cut = isClipped(n, row);
+      n.classList.toggle("is-trunc", cut);
+      if (cut) trunc++;
+    });
+    const h = Math.round(cell.querySelector(".panel-body").getBoundingClientRect().height);
+    const rows = cell.querySelectorAll(".sig").length;
+    const dests = cell.querySelectorAll(".sig-hit").length || rows;
+    const codes = cell.querySelectorAll(".sig-badges .badge").length;
     cell.querySelector("[data-metrics]").innerHTML =
       `<span><b>${rows}</b> rows</span>`
     + `<span><b>${h}</b>px tall</span>`
-    + `<span class="${tCls}"><b>${trunc}</b> truncated</span>`
-    + `<span class="${cCls}" title="rows where the cap hides at least one code"><b>${capped}</b> capped</span>`
-    + `<span class="${gCls}" title="distinct codebook groups across the visible rows — what V8's badge would print"><b>${p.groups}</b> group${p.groups === 1 ? "" : "s"}</span>`
-    + `<span class="${rCls}" title="codebook rows whose location already has a row in the Sentiment section above"><b>${repeats}</b>/${tagRows.length} repeat a location</span>`
-    + `<span title="rows the analysis produced, before the six-per-section cut">of <b>${p.available.sentiment}</b>+<b>${p.available.tags}</b> available</span>`;
+    + `<span class="${trunc === 0 ? "good" : "bad"}"><b>${trunc}</b> truncated</span>`
+    + `<span title="things you can click through to a signal"><b>${dests}</b> targets</span>`
+    + `<span title="codebook codes visible on screen"><b>${codes}</b> chips</span>`;
   });
 }
 
@@ -1450,6 +2323,25 @@ document.getElementById("brk").addEventListener("click", e => {
   state.brk = e.target.classList.toggle("on");
   render();
 });
+const floorIn = document.getElementById("floor"), fv = document.getElementById("fv");
+floorIn.addEventListener("input", e => {
+  state.floor = +e.target.value / 100;
+  fv.textContent = state.floor.toFixed(2);
+  renderProjects();
+  renderReal();
+});
+document.querySelectorAll("[data-vol]").forEach(b => b.addEventListener("click", () => {
+  state.vol = +b.dataset.vol;
+  document.querySelectorAll("[data-vol]").forEach(x => x.classList.toggle("on", x === b));
+  renderProjects();
+  renderReal();
+}));
+document.querySelectorAll("[data-treat]").forEach(b => b.addEventListener("click", () => {
+  state.treat = b.dataset.treat;
+  document.querySelectorAll("[data-treat]").forEach(x => x.classList.toggle("on", x === b));
+  renderProjects();
+  renderReal();
+}));
 document.querySelectorAll("[data-cap]").forEach(b => b.addEventListener("click", () => {
   state.cap = +b.dataset.cap;
   document.querySelectorAll("[data-cap]").forEach(x => x.classList.toggle("on", x === b));
@@ -1465,8 +2357,12 @@ function onBenchClick(e){
   const kind = hit.classList.contains("name-hit") ? "name → first signal" : "badge → that signal";
   document.getElementById("target").textContent =
     `${kind}: ${hit.dataset.target} (signal #${hit.dataset.signal})`;
-  document.querySelectorAll(".sig--paired").forEach(r => r.classList.remove("active"));
-  hit.closest(".sig--paired").classList.add("active");
+  // Rows that can hold a highlight: paired sentiment rows (V6/V7/V9) and the
+  // location rows of the grouped treatments. A sub-row highlights its place.
+  const ROW = ".sig--paired, .sig--loc";
+  document.querySelectorAll(ROW).forEach(r => r.classList.remove("active"));
+  const row = hit.closest(ROW);
+  if (row) row.classList.add("active");
 }
 bench.addEventListener("click", onBenchClick);
 projbench.addEventListener("click", onBenchClick);

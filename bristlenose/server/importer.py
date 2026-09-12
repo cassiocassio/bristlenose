@@ -579,6 +579,30 @@ def _enrich_words_from_intermediate(
     karaoke highlighting is worth less than the anonymisation boundary.
     """
     if (output_dir / "transcripts-cooked").is_dir():
+        # Skipping is not enough on its own. `_import_transcript_segments`
+        # returns early for any session that already has segments, so a project
+        # imported *before* this guard existed keeps its words_json rows for
+        # ever — and the live /transcripts route and a non-anonymised export go
+        # on serving pre-redaction word text. Clear them here, where we have
+        # both the redaction signal and the session ids.
+        session_ids = [sess.id for sess in session_map.values()]
+        if session_ids:
+            cleared = (
+                db.query(TranscriptSegment)
+                .filter(
+                    TranscriptSegment.session_id.in_(session_ids),
+                    TranscriptSegment.words_json.isnot(None),
+                )
+                .update({"words_json": None}, synchronize_session=False)
+            )
+            if cleared:
+                db.commit()
+                logger.warning(
+                    "Cleared word timings on %d segment(s) of a PII-redacted "
+                    "project — they predate the redaction guard and carried "
+                    "un-redacted participant text.",
+                    cleared,
+                )
         logger.info(
             "Skipping word-timing backfill: project is PII-redacted "
             "(transcripts-cooked/ present); pre-redaction word text must not "

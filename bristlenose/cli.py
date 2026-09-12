@@ -1145,7 +1145,6 @@ def run(
         "output_dir": output_dir,
         "project_name": project_name,
         "skip_transcription": skip_transcription,
-        "pii_enabled": redact_pii,
         "no_fetch": no_fetch,
     }
     # Only pass these as overrides when explicitly set on the CLI — otherwise let
@@ -1155,6 +1154,18 @@ def run(
     # injects openai, the old `--llm` default "claude" beat it (cli-override),
     # and the model env var (gpt-4o) rode along → anthropic endpoint + gpt-4o
     # → 404. See docs/private/ikea-run-debug-log.md.
+    # --redact-pii / --retain-pii are two flags, both defaulting False, so
+    # "neither given" is no CLI opinion and must NOT override the environment.
+    # Passing `redact_pii` unconditionally made that False default beat
+    # BRISTLENOSE_PII_ENABLED — and the desktop injects env — so a requested
+    # redaction was silently dropped on the one command that can redact.
+    # Exactly the --llm trap described just below. It also finally gives
+    # --retain-pii something to do; it was validated above and never read.
+    if redact_pii:
+        settings_kwargs["pii_enabled"] = True
+    elif retain_pii:
+        settings_kwargs["pii_enabled"] = False
+
     if llm_provider is not None:
         settings_kwargs["llm_provider"] = llm_provider
     if whisper_backend is not None:

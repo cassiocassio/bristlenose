@@ -59,10 +59,16 @@ def resolve_spacy_model() -> str:
         return SPACY_MODEL
 
     path = Path(override).expanduser()
-    if not (path / "config.cfg").is_file():
+    # Both files, in spaCy's own order: `load_model_from_path` calls
+    # `get_model_meta` (meta.json) *before* reading config.cfg, so checking
+    # only config.cfg lets a directory through that then dies inside spaCy
+    # with an opaque `E053: Could not read meta.json` — the exact failure this
+    # message exists to replace.
+    if not all((path / f).is_file() for f in ("meta.json", "config.cfg")):
         raise ValueError(
             f"{PII_MODEL_DIR_ENV} is set to {path} but that is not a loadable "
-            "spaCy model directory (no config.cfg). Point it at the directory "
+            "spaCy model directory (needs meta.json and config.cfg). Point it at "
+            "the directory "
             "holding config.cfg — for en_core_web_lg that is the inner "
             "en_core_web_lg-<version>/ directory, which contains no Python at "
             "all and is what makes the downloaded pack pure data."

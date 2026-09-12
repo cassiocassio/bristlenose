@@ -651,9 +651,12 @@ def check_pii(settings: BristlenoseSettings) -> CheckResult:
     try:
         import spacy
 
-        from bristlenose.stages.s07_pii_removal import SPACY_MODEL
+        from bristlenose.stages.s07_pii_removal import (
+            SPACY_MODEL,
+            resolve_spacy_model,
+        )
 
-        spacy.load(SPACY_MODEL)
+        spacy.load(resolve_spacy_model())
     except ImportError:
         return CheckResult(
             status=CheckStatus.FAIL,
@@ -678,7 +681,7 @@ def check_pii(settings: BristlenoseSettings) -> CheckResult:
 
     spacy_model_version = ""
     try:
-        nlp = spacy.load(SPACY_MODEL)
+        nlp = spacy.load(resolve_spacy_model())
         spacy_model_version = nlp.meta.get("version", "")
     except Exception:
         pass
@@ -925,10 +928,13 @@ _COMMAND_CHECKS: dict[str, list[str]] = {
     ],
     "run_skip_tx": ["api_key", "network", "pii", "disk_space", "serve_deps"],
     "transcribe-only": ["ffmpeg", "backend", "whisper_model", "disk_space"],
-    # "pii" belongs here for the same reason it is in "run": if redaction is
-    # enabled the stack has to be present, and `analyze`'s own guard refuses
-    # the command outright — better to say so in preflight than mid-run.
-    "analyze": ["api_key", "network", "pii", "disk_space", "serve_deps"],
+    # NOT "pii": check_pii probes presidio + a loadable spaCy model, and
+    # `analyze` starts at stage 8 and touches neither. Adding it (12 Sep 2026)
+    # newly refused a legitimate `analyze <out>/transcripts-cooked` on any
+    # machine without the 400 MB model — redact on one Mac, analyse on
+    # another. The refusal preflight *should* surface is a directory
+    # predicate, not a dependency probe, and it lives in run_analysis_only.
+    "analyze": ["api_key", "network", "disk_space", "serve_deps"],
     "serve": ["serve_deps"],
     "render": [],  # no pre-flight needed
 }

@@ -66,7 +66,11 @@ def _fake_model_dir(tmp_path):
     """A directory shaped like a loadable spaCy model (config.cfg is the tell)."""
     d = tmp_path / "en_core_web_lg" / "en_core_web_lg-3.8.0"
     d.mkdir(parents=True)
-    (d / "config.cfg").write_text("[nlp]\nlang = \"en\"\n", encoding="utf-8")
+    # BOTH files: spaCy's load_model_from_path reads meta.json (via
+    # get_model_meta) before it reads config.cfg, so a fixture with only the
+    # latter is the degenerate case the resolver now rejects.
+    (d / "meta.json").write_text('{"lang": "en", "name": "core_web_lg"}', encoding="utf-8")
+    (d / "config.cfg").write_text('[nlp]\nlang = "en"\n', encoding="utf-8")
     return d
 
 
@@ -151,3 +155,23 @@ class TestEnsureSpacyModelWithASuppliedPath:
                 _ensure_spacy_model()
         installer.assert_not_called()
         fake_spacy.load.assert_called_once_with(str(d))
+
+
+class TestModelDirLivenessNeedsBothFiles:
+    """spaCy reads meta.json first, so config.cfg alone is not a loadable model."""
+
+    def test_config_only_is_rejected(self, tmp_path, monkeypatch):
+        d = tmp_path / "half-unpacked"
+        d.mkdir()
+        (d / "config.cfg").write_text("[nlp]\n", encoding="utf-8")
+        monkeypatch.setenv(PII_MODEL_DIR_ENV, str(d))
+        with pytest.raises(ValueError, match="not a loadable"):
+            resolve_spacy_model()
+
+    def test_meta_only_is_rejected(self, tmp_path, monkeypatch):
+        d = tmp_path / "half-unpacked"
+        d.mkdir()
+        (d / "meta.json").write_text("{}", encoding="utf-8")
+        monkeypatch.setenv(PII_MODEL_DIR_ENV, str(d))
+        with pytest.raises(ValueError, match="not a loadable"):
+            resolve_spacy_model()

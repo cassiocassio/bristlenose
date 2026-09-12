@@ -77,6 +77,7 @@ class _ExplodingIfTouched:
 
 class TestImporterRefusesToBackfillARedactedProject:
     def test_redacted_project_skips_the_backfill(self, tmp_path: Path) -> None:
+        """No session map, so there is nothing to remediate and nothing to fill."""
         intermediate = tmp_path / ".bristlenose" / "intermediate"
         intermediate.mkdir(parents=True)
         (intermediate / "session_segments.json").write_text(
@@ -88,8 +89,33 @@ class TestImporterRefusesToBackfillARedactedProject:
         )
         (tmp_path / "transcripts-cooked").mkdir()  # the redaction signal
 
-        # Would raise on any DB access; the guard must return before that.
+        # Would raise on any DB access; with no sessions the guard must return
+        # before touching it.
         _enrich_words_from_intermediate(_ExplodingIfTouched(), {}, tmp_path)  # type: ignore[arg-type]
+
+    def test_a_redacted_project_clears_word_rows_a_pre_fix_import_left(
+        self, tmp_path: Path
+    ) -> None:
+        """Skipping the backfill does not help a project imported before the guard.
+
+        `_import_transcript_segments` returns early for a session that already
+        has segments, so those rows persist for ever and the live transcript
+        route keeps serving pre-redaction word text.
+        """
+        from unittest.mock import MagicMock
+
+        (tmp_path / "transcripts-cooked").mkdir()
+        db = MagicMock()
+        db.query.return_value.filter.return_value.update.return_value = 7
+        sess = MagicMock()
+        sess.id = 42
+
+        _enrich_words_from_intermediate(db, {"s1": sess}, tmp_path)
+
+        update = db.query.return_value.filter.return_value.update
+        update.assert_called_once()
+        assert update.call_args.args[0] == {"words_json": None}
+        db.commit.assert_called_once()
 
     def test_an_unredacted_project_still_reaches_the_backfill(self, tmp_path: Path) -> None:
         """The guard must be keyed on redaction, not simply always-off."""
@@ -179,10 +205,25 @@ class TestAnalyzeRefusesToSilentlySkipRedaction:
         assert "cannot redact" not in str(exc.value)
 
 
-class TestAnalyzePreflightChecksPii:
-    def test_pii_is_in_the_analyze_command_checks(self) -> None:
+class TestAnalyzePreflightDoesNotProbeThePiiStack:
+    """`pii` was added to the analyze preflight on 12 Sep 2026 and reverted the
+    same day. `check_pii` probes presidio and a *loadable* spaCy model, and
+    `analyze` starts at stage 8 and touches neither — so it never surfaced the
+    wrong-directory refusal it was added for, and it newly refused a legitimate
+    `analyze <out>/transcripts-cooked` on any machine without the 400 MB model
+    (redact on one Mac, analyse on another). The refusal that belongs in
+    preflight is a directory predicate, not a dependency probe."""
+
+    def test_pii_is_deliberately_absent(self) -> None:
         from bristlenose.doctor import _COMMAND_CHECKS
 
-        assert "pii" in _COMMAND_CHECKS["analyze"], (
-            "analyze can refuse mid-run on redaction; preflight should say so first"
+        assert "pii" not in _COMMAND_CHECKS["analyze"], (
+            "check_pii probes a model `analyze` never loads — adding it refuses "
+            "runs that would have worked. See this class's docstring."
         )
+
+    def test_run_does_still_probe_it(self) -> None:
+        """The guard is specific to analyze — `run` genuinely needs the stack."""
+        from bristlenose.doctor import _COMMAND_CHECKS
+
+        assert "pii" in _COMMAND_CHECKS["run"]

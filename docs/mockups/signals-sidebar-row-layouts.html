@@ -288,6 +288,15 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
 .essay strong { color:var(--bn-colour-text); font-weight:490; }
 .essay code { font-family:var(--bn-font-mono); font-size:.95em; background:var(--bn-colour-badge-bg); padding:.05rem .3rem; border-radius:3px; }
 .essay ul { font-size:var(--bn-text-label); line-height:1.65; color:var(--bn-colour-muted); padding-left:1.1rem; }
+
+/* ── Second bench: one variant (V9), many real projects ─────────────── */
+.divider { border-top:1px solid var(--bn-colour-border); margin:3.4rem 0 var(--bn-space-lg); }
+.section-head { max-width:74ch; margin-bottom:var(--bn-space-lg); }
+.section-head h2 { font-size:clamp(1.25rem,3vw,1.6rem); font-weight:490; margin:0 0 .45rem; }
+.section-head p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); margin:.4rem 0; max-width:74ch; }
+.section-head strong { color:var(--bn-colour-text); font-weight:490; }
+.section-head code { font-family:var(--bn-font-mono); font-size:.95em;
+  background:var(--bn-colour-badge-bg); padding:.05rem .3rem; border-radius:3px; }
 @media (prefers-reduced-motion: reduce) { .sig { transition:none; } }
 </style>
 </head>
@@ -308,6 +317,12 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
     <p>We have more depth than width. These variants spend the depth differently.
        Every panel is the real design system — the V0 rules are copied verbatim from
        <code style="font-family:var(--bn-font-mono)">sidebar.css</code>.</p>
+    <p><strong>Two benches.</strong> The first holds ten variants against one content
+       set, switched by the buttons below. The second holds one variant &mdash; V9
+       &mdash; against six real projects at once, each panel showing what that
+       project's Analysis lens actually renders. The first asks which layout wins; the
+       second asks what the winner does to real sidebars, and answers with some things
+       the first bench cannot see.</p>
     <div class="key">
       <span><span class="swatch sw-art"></span><b>Artefact</b> — real pixels, product only</span>
       <span><span class="swatch sw-com"></span><b>Commentary</b> — measurements and argument, never ships</span>
@@ -376,6 +391,24 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
   </div>
 
   <div class="bench" id="bench"></div>
+
+  <div class="divider"></div>
+  <div class="section-head">
+    <h2>V9 on six real projects</h2>
+    <p>One variant, six sidebars. Each panel is what that project&rsquo;s Analysis lens
+       actually renders &mdash; read from its own database through the app&rsquo;s code path
+       (<code>get_sentiment_analysis</code> and
+       <code>get_codebook_analysis</code>), sorted by <code>composite_signal</code>
+       and cut to <code>MAX_SIGNALS = 6</code> per section exactly as
+       <code>AnalysisPage.tsx</code> does. Nothing is picked for effect: these are
+       the strongest six of each, in order, with their real labels, their real
+       elaborated names, and the codes actually present on their quotes.</p>
+    <p>The <strong>panel width</strong> and <strong>tags per row</strong> controls above
+       drive these panels too. The <strong>content</strong> buttons do not &mdash; each
+       panel carries its own project.</p>
+  </div>
+
+  <div class="bench" id="projbench"></div>
 
   <div class="essay">
     <h2>Width cannot fix the single-line row</h2>
@@ -603,6 +636,80 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
       bind: at 240px nothing truncates in any variant, so every one of these layouts is
       pure cost. The row is bimodal, and any layout chosen here is being chosen for the
       elaborated case while the plain case pays for it.</p>
+
+    <h2>What six real projects say about V9</h2>
+    <p>The second bench is not a stress test either. It is six screenshots: every
+      project here with enough analysis to fill a sidebar, rendered through the app's
+      own code path and cut by the same <code>MAX_SIGNALS = 6</code>. Six findings
+      came out of it, and not one of them is about width.</p>
+
+    <p><strong>The Codebooks section is mostly the Sentiment section again.</strong>
+      In four of the six &mdash; rockclimbing, fossda, uxfriends, escuela &mdash;
+      <em>every</em> visible codebook row is the <code>Sentiment</code> group, so what
+      V9 draws beneath those names is the same closed set of seven words the section
+      above already spent its badges on. Counting rows rather than projects:
+      <strong>15 of the 34 visible codebook rows name a location that already has its
+      own row in Sentiment</strong>. escuela is 5 of 5.</p>
+
+    <p><strong>And V9 is the variant that conceals it.</strong> A codebook row draws
+      <code>signalName || location</code>, so once elaboration has run the location is
+      not on screen at all: rockclimbing's &ldquo;Dream Destinations and Travel
+      Aspirations&rdquo; carrying <code>delight</code> in Sentiment, and its
+      &ldquo;Destination Delight&rdquo; carrying <code>delight</code> in Codebooks, are
+      the same cell four rows apart under two different names. The repeat count in each
+      commentary strip is computed from the data and <em>not</em> from the panel,
+      because the panel no longer contains it &mdash; which is the problem stated
+      exactly. Before elaboration the row shows the location and the duplication is
+      plain; elaboration is what hides it. That is a cost V8 does not have, since V8
+      keeps the location and changes only the badge.</p>
+
+    <p><strong>Pairing can collapse a whole section to one row.</strong> ikea2's four
+      sentiment signals are all <code>Beds Category</code> &mdash; frustration,
+      delight, confusion, surprise &mdash; so V9 renders them as a single row carrying
+      four badges. That is the pairing doing exactly what it promised, and it is also
+      the ranking objection made visible: a ranked list of four became one row sitting
+      at the rank of its strongest member, with nothing on screen to say so.</p>
+
+    <p><strong>The cap is a cliff, not a tax.</strong> Of those 34 rows, <strong>8
+      carry more than three codes &mdash; and 6 of the 8 are fossda</strong>, the only
+      project here with interview-length transcripts. Every other project shows every
+      code it has at a cap of three. So the evidence that the cap is cheap comes
+      entirely from the thin projects, and the one project with realistic data is the
+      one where it binds on every row. Move the cap control and watch: only one panel
+      changes.</p>
+
+    <p><strong>A constant badge column is not only a codebook problem.</strong>
+      escuela's six sentiment rows are <em>all</em> <code>frustration</code>. V8's
+      argument &mdash; that one distinct value is a caption printed once per row rather
+      than a column &mdash; lands on the sentiment half too, on a project where it
+      happens to be true. V9 keeps that badge, so V9 inherits it.</p>
+
+    <p><strong>One number above needs re-dating.</strong>
+      &ldquo;11 of 11 projects have exactly one substantive codebook group&rdquo; was
+      true of the corpus that measured it. Measured again on 12 Sep 2026 across the 25
+      project databases here that carry accepted tags, ten of which are the synthetic
+      stress-test set: of the fifteen real ones, <strong>eleven still carry exactly one
+      group, and four now carry two, three, six and nine</strong>. project-ikea prints
+      six different group names across its six visible rows, and ikea2 four. Those two
+      are also the only projects here whose V9 pills are open-vocabulary codes &mdash;
+      <code>information architecture</code>, <code>did-it-work-ambiguity</code>,
+      <code>readme-as-first-resort</code> &mdash; rather than sentiment words. So V8's
+      badge and V9's pills improve on exactly the same projects: the ones with more
+      than one codebook installed. That is a real argument for V9, and it is narrower
+      than &ldquo;V9 shows the codes&rdquo;: on eleven of fifteen projects there is
+      still one group, and the codes it shows are sentiments.</p>
+
+    <p><strong>What this does not settle, and it is bigger than the row.</strong> The
+      six panels raise a question no variant on either bench answers: whether the
+      <code>Sentiment</code> group belongs in the Codebooks section at all, when it has
+      already been rendered above under its own heading. Excluding it is not a
+      cosmetic edit &mdash; <strong>fossda, uxfriends and escuela would have no
+      Codebooks section left, and rockclimbing would drop from six rows to two</strong>
+      (its only non-Sentiment rows are <code>Feedback</code> and
+      <code>Status visibility</code>, both below the cut). project-ikea and ikea2 lose
+      nothing; they have 23 and 12 non-Sentiment rows waiting. That is a question about
+      what the lens lists, not about how a row is laid out, and it changes what every
+      variant here is being judged on.</p>
 
     <h2>Lifting a winner into the app</h2>
     <p>Each variant shares one markup contract, so the shipped component only has to grow
@@ -835,6 +942,175 @@ const SETS = {
   },
 };
 
+/* ── Real projects, V9 only ──────────────────────────────────────────────
+   Read from trial-runs/<project>/bristlenose-output/.bristlenose/bristlenose.db
+   through the app's own code path — routes/analysis.py's get_sentiment_analysis
+   and get_codebook_analysis(elaborate=false), then sorted by composite_signal
+   and sliced to MAX_SIGNALS = 6 per section exactly as AnalysisPage.tsx does.
+   So these are the rows each project's sidebar actually renders, in order.
+
+   LABELS ONLY: theme and section labels, elaborated signal names, codebook
+   group and tag names, sentiment names, participant counts. No quote text and
+   no participant identifiers — the corpus is not tracked and does not become
+   tracked by being measured.
+
+   Tag row: [name, group, pattern, colourSet, tagsPresent, location]
+   ──────────────────────────────────────────────────────────────────────── */
+const PROJECTS = [
+  {
+    id: "ikea", label: "ikea · 5 codebooks",
+    participants: 3,
+    available: { sentiment: 1, tags: 29 },
+    groups: 6,
+    note: "Usability test, five codebooks installed. Six different group names across six rows — five real codebook groups plus Sentiment — so this is the one panel where V9's pills are open-vocabulary codes. The case it was drawn for.",
+    sentiment: {
+      Section: [
+        ["Beds & Mattresses Category", "confusion"],
+      ],
+    },
+    tags: {
+      Section: [
+        ["Scope Feature Mix", "Scope", "tension", "emo", ["feature requirement", "content requirement"], "Shopping Bag"],
+        ["Self-directed Error Recovery", "Behaviour", "tension", "ux", ["error recovery", "workaround"], "Beds & Mattresses Category"],
+        ["Visual Warmth Success", "Surface", "success", "opp", ["visual design", "sensory experience"], "Search & Sort Results"],
+        ["Navigation Structure Tension", "Structure", "tension", "task", ["interaction design", "information architecture", "navigation pattern"], "Beds & Mattresses Category"],
+        ["Checkout feedback clarity", "Feedback", "tension", "emo", ["system response", "ambiguous feedback"], "Shopping Bag"],
+        ["Bag Experience Tension", "Sentiment", "tension", "sentiment", ["satisfaction", "confusion", "frustration"], "Shopping Bag"],
+      ],
+    },
+  },
+  {
+    id: "ikea2", label: "ikea2 · cli codebook",
+    participants: 3,
+    available: { sentiment: 4, tags: 17 },
+    groups: 4,
+    note: "Same site, a Command-Line UX codebook plus a hand-made group. Four groups reach the list; three rows carry a single code, so the pill row is shorter than the name above it.",
+    sentiment: {
+      Section: [
+        ["Beds Category", "frustration"],
+        ["Beds Category", "delight"],
+        ["Beds Category", "confusion"],
+        ["Beds Category", "surprise"],
+      ],
+    },
+    tags: {
+      Section: [
+        ["Checkout default acceptance", "Mental model", "success", "ux", ["implicit-default-surprise"], "Checkout & Delivery"],
+        ["Category response ambiguity", "Errors and recovery", "gap", "trust", ["did-it-work-ambiguity"], "Beds Category"],
+        ["Checkout Sentiment Split", "Sentiment", "tension", "sentiment", ["satisfaction", "confusion", "confidence", "frustration"], "Checkout & Delivery"],
+        ["Navigation feedback gap", "Errors and recovery", "recovery", "trust", ["did-it-work-ambiguity"], "Top Navigation"],
+        ["Checkout error cluster", "Errors and recovery", "gap", "trust", ["error-message-illegible", "did-it-work-ambiguity", "destructive-action-protection"], "Checkout & Delivery"],
+      ],
+      Theme: [
+        ["Entry point friction", "Discoverability", "gap", "ux", ["search-engine-fallback", "starting-point-unclear", "readme-as-first-resort"], "Navigation & Homepage Orientation"],
+      ],
+    },
+  },
+  {
+    id: "rock", label: "rockclimbing · 8p",
+    participants: 8,
+    available: { sentiment: 12, tags: 14 },
+    groups: 1,
+    note: "Oral-history interviews, theme-only. Every visible codebook row is the Sentiment group, so both sections describe the same twelve themes under two different names.",
+    sentiment: {
+      Theme: [
+        ["Entry Points into Climbing", "delight"],
+        ["Community, Belonging, and Social Bonds", "delight"],
+        ["Discipline Identity and Seasonal Rhythms", "satisfaction"],
+        ["Fear, Mental Blocks, and Psychological Growth", "confidence"],
+        ["Dream Destinations and Travel Aspirations", "delight"],
+        ["Safety, Risk Management, and Close Calls", "confidence"],
+      ],
+    },
+    tags: {
+      Theme: [
+        ["Fear-Confidence Tension", "Sentiment", "tension", "sentiment", ["doubt", "frustration", "confusion", "confidence"], "Fear, Mental Blocks, and Psychological Growth"],
+        ["Beginner Confidence Building", "Sentiment", "success", "sentiment", ["confidence", "delight"], "Advice and Reflections for Beginners"],
+        ["Gear Mastery Confidence", "Sentiment", "tension", "sentiment", ["satisfaction", "confidence"], "Gear, Equipment, and Kit Choices"],
+        ["Risk Confidence Tension", "Sentiment", "tension", "sentiment", ["frustration", "confidence"], "Safety, Risk Management, and Close Calls"],
+        ["Destination Delight", "Sentiment", "success", "sentiment", ["delight"], "Dream Destinations and Travel Aspirations"],
+        ["Achievement Emotional Range", "Sentiment", "success", "sentiment", ["satisfaction", "confidence", "delight"], "Milestone Achievements and Long-Term Goals"],
+      ],
+    },
+  },
+  {
+    id: "fossda", label: "fossda · 9p · 484 quotes",
+    participants: 9,
+    available: { sentiment: 12, tags: 12 },
+    groups: 1,
+    note: "The one project with interview-length transcripts. Every visible codebook row carries 4–5 sentiments, so the cap binds on all six.",
+    sentiment: {
+      Theme: [
+        ["Open source philosophy and impact", "confidence"],
+        ["Future concerns and sustainability", "doubt"],
+        ["Diversity and inclusion challenges", "doubt"],
+        ["Legal and business aspects of open source", "confusion"],
+        ["Corporate career transitions and workplace dynamics", "frustration"],
+        ["Community building and mentorship", "delight"],
+      ],
+    },
+    tags: {
+      Theme: [
+        ["Open Source Conviction", "Sentiment", "success", "sentiment", ["confidence", "satisfaction", "delight", "surprise"], "Open source philosophy and impact"],
+        ["Creative Flow Tension", "Sentiment", "tension", "sentiment", ["satisfaction", "frustration", "delight", "surprise"], "Technical innovation and problem-solving"],
+        ["Mentorship Delight Gap", "Sentiment", "tension", "sentiment", ["delight", "satisfaction", "frustration", "confidence"], "Community building and mentorship"],
+        ["Leadership Satisfaction Arc", "Sentiment", "recovery", "sentiment", ["satisfaction", "delight", "confusion", "confidence", "frustration"], "Organizational involvement and leadership"],
+        ["Career Friction Recovery", "Sentiment", "recovery", "sentiment", ["satisfaction", "delight", "frustration", "confidence"], "Corporate career transitions and workplace dynamics"],
+        ["Project Creation Delight", "Sentiment", "tension", "sentiment", ["delight", "confidence", "frustration", "satisfaction", "surprise"], "Open source project creation and development"],
+      ],
+    },
+  },
+  {
+    id: "uxf", label: "uxfriends · 1p",
+    participants: 1,
+    available: { sentiment: 1, tags: 5 },
+    groups: 1,
+    note: "One participant. Five codebook rows exist in total, all Sentiment; neither section reaches the six-row cap.",
+    sentiment: {
+      Section: [
+        ["Product Detail Page", "satisfaction"],
+      ],
+    },
+    tags: {
+      Section: [
+        ["Checkout Clarity Gap", "Sentiment", "tension", "sentiment", ["satisfaction", "surprise", "confusion"], "Shopping Bag"],
+        ["Navigation Confidence Tension", "Sentiment", "tension", "sentiment", ["confusion", "confidence"], "IKEA.co.uk Homepage"],
+        ["Category Recovery", "Sentiment", "recovery", "sentiment", ["confusion", "satisfaction"], "Kitchenware Category"],
+        ["Browse Path Success", "Sentiment", "success", "sentiment", ["satisfaction"], "Product Detail Page"],
+      ],
+      Theme: [
+        ["Mixed Brand Sentiment", "Sentiment", "tension", "sentiment", ["satisfaction", "frustration", "confusion"], "Uncategorised observations"],
+      ],
+    },
+  },
+  {
+    id: "escuela", label: "escuela · 2p",
+    participants: 2,
+    available: { sentiment: 6, tags: 5 },
+    groups: 1,
+    note: "Culinary-school interviews, theme-only. All six sentiment rows carry the same badge — frustration — so that column discriminates nothing.",
+    sentiment: {
+      Theme: [
+        ["Financial and Resource Challenges", "frustration"],
+        ["Suggestions for Systemic Improvements", "frustration"],
+        ["Social and Professional Dynamics", "frustration"],
+        ["Career Aspirations and Personal Goals", "frustration"],
+        ["Experience and Adaptation in Culinary Internships", "frustration"],
+        ["Curriculum and Educational Concerns", "frustration"],
+      ],
+    },
+    tags: {
+      Theme: [
+        ["Curriculum Tension", "Sentiment", "tension", "sentiment", ["frustration", "confidence", "surprise"], "Curriculum and Educational Concerns"],
+        ["Financial Strain", "Sentiment", "tension", "sentiment", ["doubt", "frustration"], "Financial and Resource Challenges"],
+        ["Systemic Frustration", "Sentiment", "gap", "sentiment", ["frustration"], "Suggestions for Systemic Improvements"],
+        ["Career Path Doubts", "Sentiment", "tension", "sentiment", ["doubt", "frustration"], "Career Aspirations and Personal Goals"],
+        ["Internship Culture Gap", "Sentiment", "tension", "sentiment", ["frustration", "doubt"], "Experience and Adaptation in Culinary Internships"],
+      ],
+    },
+  },
+];
+
 /* Character lengths of all 347 row labels in the local corpus — 27 project
    databases, screen_clusters.screen_label + theme_groups.theme_label +
    elaboration_caches.signal_name. LENGTHS ONLY: no label text is embedded here,
@@ -889,6 +1165,7 @@ const VARIANTS = [
 
 const state = { w:240, set:"plain", variantMark:false, brk:false, cap:3 };
 const bench = document.getElementById("bench");
+const projbench = document.getElementById("projbench");
 
 function esc(s){ return s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 function badgeClass(label){ return SENTIMENTS.includes(label) ? "badge badge-"+label : "badge"; }
@@ -1004,6 +1281,7 @@ function render(){
       </div>
     </div>`).join("");
   measure();
+  renderProjects();
 }
 
 /**
@@ -1030,7 +1308,7 @@ function isClipped(nameEl, rowEl){
 /** Measure each panel after layout: truncated names, and the height it costs. */
 function measure(){
   const heights = [];
-  document.querySelectorAll(".cell").forEach(cell => {
+  document.querySelectorAll("#bench .cell").forEach(cell => {
     let trunc = 0;
     cell.querySelectorAll(".sig").forEach(row => {
       const n = row.querySelector(".sig-name");
@@ -1044,7 +1322,7 @@ function measure(){
     cell.dataset.trunc = trunc;
   });
   const base = heights[0] || 0;
-  document.querySelectorAll(".cell").forEach(cell => {
+  document.querySelectorAll("#bench .cell").forEach(cell => {
     const t = +cell.dataset.trunc, h = +cell.dataset.h, d = h - base;
     const cls = t === 0 ? "good" : "bad";
     const delta = d === 0 ? "baseline" : (d > 0 ? "+"+d+"px" : d+"px");
@@ -1074,6 +1352,72 @@ function measure(){
     + `<span>${delta}</span>` + extra;
   });
   document.getElementById("wnote").textContent = SETS[state.set].note;
+}
+
+/**
+ * The second bench: V9 only, one panel per real project. Same renderer, same
+ * width and cap state — so a change to V9 changes every project at once, and
+ * the panels cannot drift away from the variant they are supposed to be.
+ */
+function renderProjects(){
+  projbench.innerHTML = PROJECTS.map(p => `
+    <div class="cell" data-p="${p.id}">
+      <div class="frame" style="width:${state.w}px">
+        <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span class="cname">${p.label}</span></div>
+        <div class="panel"><div class="panel-body${state.variantMark ? " mark-trunc" : ""}${state.brk ? " brk" : ""}">
+          ${sectionHTML("v9", "Sentiment", p.sentiment, "sentiment")}
+          ${sectionHTML("v9", "Codebooks", p.tags, "tags")}
+        </div></div>
+      </div>
+      <div class="commentary" style="width:${state.w}px">
+        <span class="clabel">Commentary · measured</span>
+        <div class="metrics" data-metrics></div>
+        <p class="verdict">${p.note}</p>
+      </div>
+    </div>`).join("");
+  measureProjects();
+}
+
+/**
+ * Per-project measurements. Deliberately NOT the variant bench's set: there is
+ * no baseline to compare a project against, so height-delta is meaningless
+ * here. What matters instead is whether the two sections are saying the same
+ * thing twice, and whether the cap is hiding anything.
+ */
+function measureProjects(){
+  document.querySelectorAll("#projbench .cell").forEach(cell => {
+    const p = PROJECTS.find(x => x.id === cell.dataset.p);
+    let trunc = 0;
+    cell.querySelectorAll(".sig").forEach(row => {
+      const n = row.querySelector(".sig-name");
+      const cut = isClipped(n, row);
+      n.classList.toggle("is-trunc", cut);
+      if (cut) trunc++;
+    });
+    const rows = cell.querySelectorAll(".sig").length;
+    const h = Math.round(cell.querySelector(".panel-body").getBoundingClientRect().height);
+    const capped = cell.querySelectorAll(".sig-more").length;
+
+    // A codebook row whose LOCATION already appears in the Sentiment section
+    // is the same cell described twice. V9 hides the repeat, because the row
+    // shows the elaborated signal name and the location is not drawn at all.
+    const sentLocs = new Set(Object.values(p.sentiment).flat().map(r => r[0]));
+    const tagRows = Object.values(p.tags).flat();
+    const repeats = tagRows.filter(r => sentLocs.has(r[5])).length;
+
+    const tCls = trunc === 0 ? "good" : "bad";
+    const cCls = capped === 0 ? "good" : "bad";
+    const gCls = p.groups > 1 ? "good" : "bad";
+    const rCls = repeats === 0 ? "good" : "bad";
+    cell.querySelector("[data-metrics]").innerHTML =
+      `<span><b>${rows}</b> rows</span>`
+    + `<span><b>${h}</b>px tall</span>`
+    + `<span class="${tCls}"><b>${trunc}</b> truncated</span>`
+    + `<span class="${cCls}" title="rows where the cap hides at least one code"><b>${capped}</b> capped</span>`
+    + `<span class="${gCls}" title="distinct codebook groups across the visible rows — what V8's badge would print"><b>${p.groups}</b> group${p.groups === 1 ? "" : "s"}</span>`
+    + `<span class="${rCls}" title="codebook rows whose location already has a row in the Sentiment section above"><b>${repeats}</b>/${tagRows.length} repeat a location</span>`
+    + `<span title="rows the analysis produced, before the six-per-section cut">of <b>${p.available.sentiment}</b>+<b>${p.available.tags}</b> available</span>`;
+  });
 }
 
 // ── controls ────────────────────────────────────────────────────────────
@@ -1114,7 +1458,7 @@ document.querySelectorAll("[data-cap]").forEach(b => b.addEventListener("click",
 
 // Two destinations from one entry: the name goes to the location's first
 // signal, a badge goes to that exact one. Delegated so it survives re-render.
-document.getElementById("bench").addEventListener("click", e => {
+function onBenchClick(e){
   const hit = e.target.closest(".sig-hit");
   if (!hit) return;
   e.preventDefault();
@@ -1123,7 +1467,9 @@ document.getElementById("bench").addEventListener("click", e => {
     `${kind}: ${hit.dataset.target} (signal #${hit.dataset.signal})`;
   document.querySelectorAll(".sig--paired").forEach(r => r.classList.remove("active"));
   hit.closest(".sig--paired").classList.add("active");
-});
+}
+bench.addEventListener("click", onBenchClick);
+projbench.addEventListener("click", onBenchClick);
 render();
 </script>
 </body>

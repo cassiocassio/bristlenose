@@ -204,6 +204,26 @@ else
     die "host app-sandbox" "MISSING — ITMS-90296 auto-reject"
 fi
 
+# The app group Background Assets needs to hand the PII model pack to the
+# sidecar. Its absence is a SILENT capability loss, which is why it is gated
+# here rather than trusted: the archive signs perfectly well without it and
+# nothing complains until a user flicks the redaction toggle on a shipped
+# build and the download has nowhere to land.
+#
+# The tree already proved it can go missing invisibly — the entitlement was
+# added while the file carried `skip-worktree`, so `git status` said clean and
+# a fresh clone would have built exactly that binary.
+# `tests/test_entitlements_split.py` gates the source; this gates the artefact.
+# Match the <key> element, not the bare name: these plists carry explanatory
+# comments that mention the entitlement by name, so a substring grep answers
+# "present" for a file that omits it. (Cost a wrong reading on 12 Sep 2026 —
+# the sibling `tests/test_entitlements_split.py` avoids it by using plistlib.)
+if grep -q '<key>com.apple.security.application-groups</key>' <<<"$ENTS"; then
+    ok "app group" "present (Background Assets can reach the sidecar)"
+else
+    die "app group" "MISSING — Background Assets has nowhere to put the PII model"
+fi
+
 CSFLAGS=$(codesign -dvvv "$OUTER" 2>&1 || true)
 if grep -qE 'flags=.*runtime' <<<"$CSFLAGS"; then
     ok "hardened runtime" "flags include runtime"

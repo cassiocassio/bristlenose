@@ -131,3 +131,64 @@ class TestTheEntitlementsAreActuallyCommitted:
             "Bristlenose.entitlements is skip-worktree again — edits to it will "
             "not commit and this suite will pass against a tree nobody else has."
         )
+
+
+_PKG_GATE = _DESKTOP / "scripts" / "check-pkg-shippable.sh"
+_DMG_GATE = _DESKTOP / "scripts" / "check-dmg-shippable.sh"
+
+# The <key> element, not the bare entitlement name. Both plists carry comments
+# that MENTION the entitlement by name, so a substring grep answers "present"
+# for the file that deliberately omits it — measured 12 Sep 2026 while adding
+# these very probes. The tests above dodge it by parsing with plistlib; a shell
+# gate cannot, so it must scope to the element.
+_APP_GROUP_KEY = f"<key>{_APP_GROUP}</key>"
+
+
+class TestTheArtefactGatesCheckTheSplitToo:
+    """The source split is gated above; this gates the built artefacts.
+
+    A `CODE_SIGN_ENTITLEMENTS` override is one line in one archive invocation.
+    If it is ever dropped or mistyped, the source files still differ, every test
+    above still passes, and the wrong entitlements reach a shipped image. Only a
+    gate reading the signed artefact catches that.
+    """
+
+    def test_pkg_gate_requires_the_app_group(self) -> None:
+        body = _PKG_GATE.read_text()
+        assert _APP_GROUP_KEY in body, (
+            "the MAS .pkg gate does not check for the app group — Background "
+            "Assets would fail at runtime on a build that signed cleanly"
+        )
+        assert 'die "app group"' in body, (
+            "the app-group check must DIE, not warn: a missing group is a "
+            "silent capability loss, which is exactly what a warning becomes"
+        )
+
+    def test_dmg_gate_refuses_the_app_group(self) -> None:
+        body = _DMG_GATE.read_text()
+        assert _APP_GROUP_KEY in body, (
+            "the Developer-ID .dmg gate does not read entitlements — until "
+            "12 Sep 2026 it read none at all, so a mistyped override had "
+            "nothing between it and a published image"
+        )
+        assert 'fail "app group"' in body, (
+            "an app group on Developer-ID must FAIL the gate — Apple will not "
+            "authorise one on that channel"
+        )
+
+    def test_neither_gate_matches_the_bare_entitlement_name(self) -> None:
+        """The substring trap, pinned so it cannot be loosened back.
+
+        `grep -q 'com.apple.security.application-groups'` matches the comment
+        in `BristlenoseDeveloperID.entitlements` that explains why the key is
+        absent — so the .dmg gate would report the group PRESENT on a correct
+        file and fail every clean build.
+        """
+        for gate in (_PKG_GATE, _DMG_GATE):
+            for line in gate.read_text().splitlines():
+                if "grep" not in line or _APP_GROUP not in line:
+                    continue
+                assert _APP_GROUP_KEY in line, (
+                    f"{gate.name} greps the bare entitlement name, which also "
+                    f"matches the explanatory comments: {line.strip()!r}"
+                )

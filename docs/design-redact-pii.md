@@ -558,14 +558,25 @@ Once the pack downloads for real, this has to reach the build and deploy scripts
 their probes, and the docs that describe them. Surveyed 12 Sep 2026 — and the
 second list is the useful half.
 
-**Needs new work — nothing checks these today.**
+**Three of the four are done — 12 Sep 2026.** One remains, and it is the one
+that cannot be built until the pack is hosted.
 
-| where | what to add | why |
+| where | what | state |
 |---|---|---|
-| `desktop/scripts/check-pkg-shippable.sh` | assert `com.apple.security.application-groups` is **present** on the MAS `.pkg` | the archive signs without it and BA then fails at runtime, which is a silent capability loss |
-| `desktop/scripts/check-dmg-shippable.sh` | assert the app group is **absent** on the Developer-ID `.app` | it currently reads no entitlements at all. Both channels share `Release`, so the split lives only in a `build-dmg.sh` override — one typo and the `.dmg` carries a group Apple will not authorise |
-| `scripts/check-release-ready.sh` | a `_resolve_row`-shaped row: the hosted pack is reachable **and** its SHA-256 matches the pin | self-hosted, so nothing else will notice a CDN that has gone stale or an artefact that was replaced |
-| `desktop/scripts/build-dmg.sh` | the `CODE_SIGN_ENTITLEMENTS` override, beside the five already at `:342-353` | see the App Group step above |
+| `desktop/scripts/check-pkg-shippable.sh` | `die`s unless the app group is **present** on the MAS `.pkg` | ✅ **done.** The archive signs without it and BA then fails at runtime — a silent capability loss, so it dies rather than warns |
+| `desktop/scripts/check-dmg-shippable.sh` | `fail`s if the app group is **present** on the Developer-ID `.app` | ✅ **done.** It read no entitlements at all before this; both channels share `Release`, so the split lived only in a `build-dmg.sh` override with nothing between a typo and a published image |
+| `desktop/scripts/build-dmg.sh` | the `CODE_SIGN_ENTITLEMENTS` override | ✅ **already done** when the split landed — `:353`. This row claimed otherwise for half a day |
+| `scripts/check-release-ready.sh` | a `_resolve_row`-shaped row: the hosted pack is reachable **and** its SHA-256 matches the pin | ⬜ **blocked** on the pack being hosted and the SHA pinned. Self-hosted, so nothing else will notice a stale CDN or a replaced artefact |
+
+**Both new probes scope to the `<key>` element, not the bare entitlement name** —
+and that is load-bearing, not fastidiousness. Each plist carries a comment
+*explaining* the split, and those comments contain the entitlement name, so
+`grep -q 'com.apple.security.application-groups'` reports the group **present**
+in the very file that omits it. Measured while writing the probes: the bare form
+would have failed every clean `.dmg` build. `tests/test_entitlements_split.py`
+now pins all three facts — each probe exists, each has the right severity
+(`die` / `fail`, never `warn`), and neither greps the bare name — with each
+assertion proved to bite by loosening the gate it guards.
 
 **Already generic — needs nothing, which is the design working.**
 
@@ -647,12 +658,26 @@ reddens the classifier test. The assertion with the most teeth is
 `segment_topics.call_count == 0` — a warn-and-continue would still leave a
 green-looking run.
 
-**Not done here:** `PipelineSummary` has no `pii` bucket (`ingest`,
-`transcripts`, `topics`, `quotes`, `themes`). Adding one is a wire-contract
-change — the Swift mirror `PipelineSummary.swift` plus a
+**No `pii` bucket on `PipelineSummary` — decided against, 12 Sep 2026.** The
+buckets are `ingest, transcripts, topics, quotes, themes` on both sides
+(verified at HEAD in `events.py` and `PipelineSummary.swift`); adding a sixth
+is a wire-contract change — the Swift mirror plus a
 `tests/fixtures/pipeline-summary-contract.json` version bump and a scenario
-that uses the field — and doing it half-way is the exact trap `CLAUDE.md`
-documents. Held as a separate decision.
+that *uses* the field, or the round-trip proves nothing about it.
+
+It does not earn that, because **stage 7 abandons on any failure**. There is
+therefore no partial redaction state for a bucket to describe: it could only
+ever be absent, or `attempted=N, succeeded=0` with a single failure — which is
+precisely what the `Cause` already carries in `stage="pii_removal"` plus its
+category. A field that restates another field is drift waiting to happen.
+
+**What would change the answer:** wanting to *surface* redaction on a
+successful run — "47 entities across 12 sessions" on the project row. That is a
+feature, not failure apparatus, and the settings mockup deliberately shows no
+per-run redaction reporting (state E is a plain setting); the researcher's
+record is `pii_summary.txt`. If that UI is ever wanted, the bucket is how to
+carry it, and it should be added then with the mirror and fixture in the same
+commit.
 
 ### Two defects the same seam exposed (12 Sep 2026)
 

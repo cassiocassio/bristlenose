@@ -183,6 +183,21 @@ else
         fi
     fi
 
+    # Entitlements. Both channels build `Release`, so the Developer-ID/MAS
+    # split lives ONLY in a `CODE_SIGN_ENTITLEMENTS` override inside
+    # `build-dmg.sh`'s archive invocation — one typo there and this image
+    # carries an app group Apple will not authorise outside the App Store.
+    # Until 12 Sep 2026 this gate read no entitlements at all, so the typo
+    # had nothing between it and a published image.
+    DMG_ENTS="$(codesign -d --entitlements :- "$INNER_APP" 2>/dev/null || echo "")"
+    if [ -z "$DMG_ENTS" ]; then
+        warn "entitlements" "could not be read — cannot check the channel split"
+    elif grep -q '<key>com.apple.security.application-groups</key>' <<<"$DMG_ENTS"; then
+        fail "app group" "PRESENT — that is the MAS entitlements file; Developer-ID must not carry it"
+    else
+        pass "app group" "absent, as Developer-ID requires"
+    fi
+
     # Alpha life remaining. Reported, not gated — a short-lived sampler is a
     # judgement call, not a defect. Signing timestamp is a proxy for the
     # code-signed GeneratedBuildInfo.buildDate the app actually enforces; the

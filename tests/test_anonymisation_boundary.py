@@ -1,0 +1,188 @@
+"""Guards on the anonymisation boundary — export embed, importer, and `analyze`.
+
+These pin a leak that every other gate missed: an *anonymised* export rendered
+``My name is [NAME].`` while its embedded JSON carried
+``"words":[{"t":"Jane",...}]``.  Redaction clears ``words`` at the point it
+redacts, but ``session_segments.json`` predates stage 7 and the serve importer
+backfilled from it — so the participant's name reached the DB, the transcript
+route, and the file a researcher emails to a client.
+
+Neither of these needs the frontend build, so unlike ``test_serve_export_api``
+they run in CI.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from bristlenose.server.importer import _enrich_words_from_intermediate
+from bristlenose.server.routes.export import _anonymise_data
+
+
+def _endpoints_with_word_timings() -> dict[str, Any]:
+    """An embed payload shaped like the real one, carrying word-level text."""
+    return {
+        "/people": {"p1": {"full_name": "Jane Doe", "short_name": "Jane", "role": "Nurse"}},
+        "/transcripts/s1": {
+            "speakers": [{"code": "p1", "name": "Jane Doe"}],
+            "segments": [
+                {
+                    "speaker_code": "p1",
+                    "text": "My name is [NAME].",
+                    "words": [
+                        {"text": "My", "start": 0.1, "end": 0.3},
+                        {"text": "Jane", "start": 0.9, "end": 1.2},
+                    ],
+                },
+                {"speaker_code": "m1", "text": "Thanks.", "words": None},
+            ],
+        },
+    }
+
+
+class TestAnonymisedExportDropsWordTimings:
+    def test_no_word_timings_survive(self) -> None:
+        endpoints = _endpoints_with_word_timings()
+        _anonymise_data(endpoints)
+        for seg in endpoints["/transcripts/s1"]["segments"]:
+            assert "words" not in seg, (
+                "word-level timings carry participant speech verbatim and must "
+                "not survive into an anonymised export"
+            )
+
+    def test_the_participant_name_is_absent_from_the_serialised_embed(self) -> None:
+        """The end-to-end shape of the leak: grep the JSON a client receives."""
+        endpoints = _endpoints_with_word_timings()
+        _anonymise_data(endpoints)
+        assert "Jane" not in json.dumps(endpoints)
+
+    def test_speaker_names_are_still_stripped(self) -> None:
+        """The pre-existing guarantee must not regress alongside the new one."""
+        endpoints = _endpoints_with_word_timings()
+        _anonymise_data(endpoints)
+        assert endpoints["/people"]["p1"]["full_name"] == ""
+        assert endpoints["/transcripts/s1"]["speakers"][0]["name"] == ""
+
+
+class _ExplodingIfTouched:
+    """Any attribute access fails the test — proves the guard returned early."""
+
+    def __getattr__(self, name: str) -> Any:
+        raise AssertionError(f"word backfill touched the database ({name})")
+
+
+class TestImporterRefusesToBackfillARedactedProject:
+    def test_redacted_project_skips_the_backfill(self, tmp_path: Path) -> None:
+        intermediate = tmp_path / ".bristlenose" / "intermediate"
+        intermediate.mkdir(parents=True)
+        (intermediate / "session_segments.json").write_text(
+            json.dumps(
+                {"s1": [{"segment_index": 0,
+                         "words": [{"text": "Jane", "start_time": 0.9, "end_time": 1.2}]}]}
+            ),
+            encoding="utf-8",
+        )
+        (tmp_path / "transcripts-cooked").mkdir()  # the redaction signal
+
+        # Would raise on any DB access; the guard must return before that.
+        _enrich_words_from_intermediate(_ExplodingIfTouched(), {}, tmp_path)  # type: ignore[arg-type]
+
+    def test_an_unredacted_project_still_reaches_the_backfill(self, tmp_path: Path) -> None:
+        """The guard must be keyed on redaction, not simply always-off."""
+        intermediate = tmp_path / ".bristlenose" / "intermediate"
+        intermediate.mkdir(parents=True)
+        (intermediate / "session_segments.json").write_text(
+            json.dumps(
+                {"s1": [{"segment_index": 0,
+                         "words": [{"text": "Jane", "start_time": 0.9, "end_time": 1.2}]}]}
+            ),
+            encoding="utf-8",
+        )
+        # No transcripts-cooked/ -> not redacted -> the function proceeds and
+        # consults session_map, which is empty, so it is a clean no-op.
+        with pytest.raises(AssertionError, match="touched the database"):
+            _enrich_words_from_intermediate(
+                _ExplodingIfTouched(), {"s1": _ExplodingIfTouched()}, tmp_path  # type: ignore[arg-type]
+            )
+
+
+class TestAnalyzeRefusesToSilentlySkipRedaction:
+    """`analyze` starts after stage 7, so it cannot redact — only honour or betray.
+
+    `pii_enabled` is reachable by env (``BRISTLENOSE_PII_ENABLED=1``), and before
+    the guard every transcript went to the language model unredacted with nothing
+    anywhere reporting that redaction had not run.
+    """
+
+    @staticmethod
+    def _settings(*, pii_enabled: bool) -> Any:
+        from unittest.mock import MagicMock
+
+        st = MagicMock()
+        st.project_name = "test-analyze-pii-guard"
+        st.llm_provider = "anthropic"
+        st.llm_model = "claude-sonnet-4-5-20250929"
+        st.anthropic_api_key = "sk-fake"
+        st.write_intermediate = True
+        st.llm_concurrency = 1
+        st.color_scheme = "default"
+        st.pii_enabled = pii_enabled
+        return st
+
+    @staticmethod
+    def _transcripts_at(path: Path) -> Path:
+        path.mkdir(parents=True)
+        (path / "s1.txt").write_text(
+            "# Transcript: s1\n# Source: s1.wav\n# Date: 2026-09-12\n"
+            "# Duration: 00:00:10\n\n[00:00] [m1] Hello.\n[00:05] [p1] Hi there.\n",
+            encoding="utf-8",
+        )
+        return path
+
+    def test_raw_transcripts_with_redaction_enabled_are_refused(self, tmp_path: Path) -> None:
+        import asyncio
+
+        from bristlenose.pipeline import Pipeline
+
+        tx = self._transcripts_at(tmp_path / "transcripts-raw")
+        pipeline = Pipeline(self._settings(pii_enabled=True))
+        with pytest.raises(ValueError, match="cannot redact"):
+            asyncio.run(pipeline.run_analysis_only(tx, tmp_path / "out"))
+
+    def test_the_cooked_directory_is_accepted(self, tmp_path: Path) -> None:
+        """Keyed on redaction actually having happened — not simply always-refuse."""
+        import asyncio
+
+        from bristlenose.pipeline import Pipeline
+
+        tx = self._transcripts_at(tmp_path / "transcripts-cooked")
+        pipeline = Pipeline(self._settings(pii_enabled=True))
+        # Proceeds past the guard and fails later on the fake key; what matters
+        # is that it is not the guard's refusal.
+        with pytest.raises(Exception) as exc:  # noqa: B017 - any later failure is fine
+            asyncio.run(pipeline.run_analysis_only(tx, tmp_path / "out"))
+        assert "cannot redact" not in str(exc.value)
+
+    def test_redaction_off_is_untouched(self, tmp_path: Path) -> None:
+        import asyncio
+
+        from bristlenose.pipeline import Pipeline
+
+        tx = self._transcripts_at(tmp_path / "transcripts-raw")
+        pipeline = Pipeline(self._settings(pii_enabled=False))
+        with pytest.raises(Exception) as exc:  # noqa: B017
+            asyncio.run(pipeline.run_analysis_only(tx, tmp_path / "out"))
+        assert "cannot redact" not in str(exc.value)
+
+
+class TestAnalyzePreflightChecksPii:
+    def test_pii_is_in_the_analyze_command_checks(self) -> None:
+        from bristlenose.doctor import _COMMAND_CHECKS
+
+        assert "pii" in _COMMAND_CHECKS["analyze"], (
+            "analyze can refuse mid-run on redaction; preflight should say so first"
+        )

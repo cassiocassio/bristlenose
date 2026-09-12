@@ -2241,6 +2241,27 @@ class Pipeline:
             console.print("[red]No transcript files found.[/red]")
             return self._empty_result(output_dir)
 
+        # `analyze` has no stage 7 — it starts at topic segmentation — so a
+        # requested redaction cannot be *performed* here, only honoured or
+        # betrayed. Betraying it is silent and total: every transcript goes to
+        # the LLM unredacted and nothing anywhere says redaction did not run.
+        # `pii_enabled` is reachable by env (`BRISTLENOSE_PII_ENABLED=1`), so
+        # this is a configuration away, not a code change away.
+        #
+        # Fail-stop, per the same rule that makes an unimplemented PII control
+        # refuse rather than warn (s07_pii_removal.py). The only safe input for
+        # a redacted analysis is stage 7's own output.
+        if self.settings.pii_enabled and transcripts_dir.name != "transcripts-cooked":
+            raise ValueError(
+                "PII redaction is enabled, but `analyze` cannot redact — it "
+                "starts after the redaction stage.\n\n"
+                f"The transcripts in {transcripts_dir.name}/ would be sent to "
+                "the language model exactly as they are.\n\n"
+                "Point `analyze` at the redacted transcripts "
+                "(<output>/transcripts-cooked/), or run the full pipeline, or "
+                "unset PII redaction to analyse the raw text deliberately."
+            )
+
         llm_client = LLMClient(self.settings)
         concurrency = self.settings.llm_concurrency
 

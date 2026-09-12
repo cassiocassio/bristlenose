@@ -157,6 +157,17 @@ def _anonymise_data(endpoints: dict[str, Any]) -> None:
         for spk in tx.get("speakers", []):
             if spk.get("code", "").startswith("p"):
                 spk["name"] = ""
+        # Word-level timings carry the participant's own speech verbatim, and
+        # reach the DB by a route that bypasses redaction entirely (the importer
+        # backfills them from the pre-redaction intermediate).  Belt-and-braces
+        # to the importer guard: an anonymised export drops them outright rather
+        # than trusting that nothing upstream leaked in.  Nothing renders them —
+        # the export has no video in v1 — so this costs the reader nothing, and
+        # it only fires when the user asked for anonymisation, leaving the v2
+        # media apparatus intact in an ordinary export.
+        for seg in tx.get("segments", []):
+            if isinstance(seg, dict):
+                seg.pop("words", None)
 
     # Source filenames can carry participant names ("jane-doe.mov") — a recording
     # name re-carries the identity we just stripped from the speaker fields, so an

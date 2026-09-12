@@ -566,7 +566,26 @@ def _enrich_words_from_intermediate(
     ``segment_index``.
 
     Compact JSON format: ``[{"t":"word","s":0.5,"e":0.8},...]``
+
+    **Refuses to run on a redacted project.**  Stage 7 clears ``words`` on every
+    segment it redacts (``s07_pii_removal.py`` — ``model_copy()`` is shallow, so
+    that clearing is deliberate and load-bearing).  But
+    ``session_segments.json`` is written by stages 3-5, *before* redaction, and
+    still holds the original word text.  Backfilling from it put the exact
+    participant names redaction had just removed back into the serve DB, from
+    where ``/transcripts/{session_id}`` served them into the HTML export — the
+    rendered text read ``My name is [NAME].`` while View Source read
+    ``"words":[{"t":"Jane",...}]``.  Dropping the timings is the right trade:
+    karaoke highlighting is worth less than the anonymisation boundary.
     """
+    if (output_dir / "transcripts-cooked").is_dir():
+        logger.info(
+            "Skipping word-timing backfill: project is PII-redacted "
+            "(transcripts-cooked/ present); pre-redaction word text must not "
+            "reach the database."
+        )
+        return
+
     ss_path = output_dir / ".bristlenose" / "intermediate" / "session_segments.json"
     if not ss_path.exists():
         return

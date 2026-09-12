@@ -923,7 +923,10 @@ _COMMAND_CHECKS: dict[str, list[str]] = {
     ],
     "run_skip_tx": ["api_key", "network", "pii", "disk_space", "serve_deps"],
     "transcribe-only": ["ffmpeg", "backend", "whisper_model", "disk_space"],
-    "analyze": ["api_key", "network", "disk_space", "serve_deps"],
+    # "pii" belongs here for the same reason it is in "run": if redaction is
+    # enabled the stack has to be present, and `analyze`'s own guard refuses
+    # the command outright — better to say so in preflight than mid-run.
+    "analyze": ["api_key", "network", "pii", "disk_space", "serve_deps"],
     "serve": ["serve_deps"],
     "render": [],  # no pre-flight needed
 }

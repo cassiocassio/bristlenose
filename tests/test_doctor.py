@@ -1164,18 +1164,22 @@ class TestRunPreflight:
 
         assert len(report.results) == 4
 
-    def test_analyze_checks_api_network_disk(self) -> None:
+    def test_analyze_checks_api_network_pii_disk(self) -> None:
+        """`pii` joined this list on 12 Sep 2026: `analyze` cannot redact, so it
+        refuses outright when redaction is enabled — preflight should say so
+        before the run rather than mid-run."""
         settings = _settings()
         with (
             patch("bristlenose.doctor.check_api_key") as m1,
             patch("bristlenose.doctor.check_network") as m2,
-            patch("bristlenose.doctor.check_disk_space") as m3,
+            patch("bristlenose.doctor.check_pii") as m3,
+            patch("bristlenose.doctor.check_disk_space") as m4,
         ):
-            for m in (m1, m2, m3):
+            for m in (m1, m2, m3, m4):
                 m.return_value = CheckResult(status=CheckStatus.OK, label="test")
             report = run_preflight(settings, "analyze")
 
-        assert len(report.results) == 3
+        assert len(report.results) == 4
 
     def test_run_skip_tx_omits_transcription_checks(self) -> None:
         settings = _settings()

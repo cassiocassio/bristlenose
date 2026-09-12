@@ -87,13 +87,7 @@
     },
     "codes": {
       "createCodeGroup": "Kod Grubu Oluştur",
-      "renameCodeGroup": "Kod Grubunu Yeniden Adlandır…",
-      "deleteCodeGroup": "Kod Grubunu Sil",
-      "showHideCodeGroup": "Kod Grubunu Göster/Gizle",
       "createCode": "Kod Oluştur",
-      "renameCode": "Kodu Yeniden Adlandır…",
-      "deleteCode": "Kodu Sil",
-      "mergeCodes": "Kodları Birleştir…",
       "browseCodebooks": "Kod Kitaplarına Göz At…",
       "importFramework": "Çerçeveyi İçe Aktar…",
       "removeFramework": "Çerçeveyi Kaldır"

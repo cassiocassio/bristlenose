@@ -87,13 +87,7 @@
     },
     "codes": {
       "createCodeGroup": "Maak codegroep",
-      "renameCodeGroup": "Wijzig naam codegroep…",
-      "deleteCodeGroup": "Verwijder codegroep",
-      "showHideCodeGroup": "Toon/verberg codegroep",
       "createCode": "Maak code",
-      "renameCode": "Wijzig naam code…",
-      "deleteCode": "Verwijder code",
-      "mergeCodes": "Voeg codes samen…",
       "browseCodebooks": "Blader door codeboeken…",
       "importFramework": "Importeer raamwerk…",
       "removeFramework": "Verwijder raamwerk"

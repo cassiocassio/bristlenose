@@ -87,13 +87,7 @@
     },
     "codes": {
       "createCodeGroup": "Vytvořit skupinu kódů",
-      "renameCodeGroup": "Přejmenovat skupinu kódů…",
-      "deleteCodeGroup": "Smazat skupinu kódů",
-      "showHideCodeGroup": "Zobrazit/skrýt skupinu kódů",
       "createCode": "Vytvořit kód",
-      "renameCode": "Přejmenovat kód…",
-      "deleteCode": "Smazat kód",
-      "mergeCodes": "Sloučit kódy…",
       "browseCodebooks": "Procházet knihy kódů…",
       "importFramework": "Importovat rámec…",
       "removeFramework": "Odebrat rámec"

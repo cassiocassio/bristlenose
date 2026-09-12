@@ -87,13 +87,7 @@
     },
     "codes": {
       "createCodeGroup": "Kode-Gruppe erstellen",
-      "renameCodeGroup": "Kode-Gruppe umbenennen…",
-      "deleteCodeGroup": "Kode-Gruppe löschen",
-      "showHideCodeGroup": "Kode-Gruppe ein-/ausblenden",
       "createCode": "Kode erstellen",
-      "renameCode": "Kode umbenennen…",
-      "deleteCode": "Kode löschen",
-      "mergeCodes": "Kodes zusammenführen…",
       "browseCodebooks": "Codebücher durchsuchen…",
       "importFramework": "Framework importieren…",
       "removeFramework": "Framework entfernen"

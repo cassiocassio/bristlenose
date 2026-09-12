@@ -23,7 +23,7 @@ last-trued-sections: [checkSystemHealth row (2026-07-28), retired-actions sectio
 
 ## Retired actions — do not re-wire
 
-_Added 2026-07-28; `find` and `jumpToSelection` added 2026-09-12._ The action
+_Added 2026-07-28; `find`, `jumpToSelection` and the six Codes commands added 2026-09-12._ The action
 names below appear in this catalogue's history but are **dispatched by nothing
 today**. (The preamble used to open "Eight action names"; the table has grown
 twice since and the number was wrong both times. It is the table that is
@@ -36,10 +36,11 @@ failure mode: a contributor finds the row, writes a `case` for it in
 |---|---|---|
 | `pageSetup`, `print` | **Now native, not bridge** | `PrintActions.pageSetup()` / `PrintActions.print(webView:window:)`. `window.print()` in a WKWebView can't raise the macOS print panel, so the bridge was never the right target. |
 | `checkSystemHealth` | **Now native** | Opens the Health window (`openWindow(id: "health")` → `DoctorReportView` → `GET /api/doctor`). |
-| `mergeCode` | **Withdrawn** | Commented out in `CodesMenuContent` — merging needs a source *and* target and the codebook has no multi-select. _(The "Codes menu" section below listed this as **Shipped (bridge)** until 12 Sep 2026 — the two tables contradicted each other for six weeks. Code agrees with this one.)_ |
+| `mergeCode` / `mergeCodes` | **Withdrawn 28 Jul 2026; deleted 12 Sep 2026** | Merging needs a source *and* a target and the codebook has no multi-select. Commented out in `CodesMenuContent` in July, removed outright with the other five Codes commands in September; locale keys pruned from all 21 full locales. _(The "Codes menu" section below listed this as **Shipped (bridge)** until 12 Sep 2026 — the two tables contradicted each other for six weeks. Code agrees with this one.)_ |
 | `find` | **Now native, not bridge** _(12 Sep 2026)_ | ⌘F never reaches the SPA. `requestSearchFocus()` bumps the published counter `BridgeHandler.focusSearchRequests`, which `QuotesSearchToolbarControl` observes to expand and focus. A counter, not a `Bool` — ⌘F must work twice in a row. The old `case "find"` is deleted; it had dispatched cleanly into `focusSearchInput()` and done nothing, in every project, on every lens, since it shipped. |
 | `findNext`, `findPrevious` | **Withdrawn** _(12 Sep 2026)_ | Unimplemented, not ungated — and the plumbing was never the problem. ⌘E writes the find pasteboard, ⌘G reads it back and dispatches with that text, and the handler sets the query that is already set: same filter, identical result. Search here **filters** the quote grid, so every visible card is already a match and nothing renders a `<mark>`; "next" presupposes a cursor stepping through occurrences in content that stays put, and a filter has neither. Stepping through results is list navigation (`j`, arrows). Restore **with transcript search**, where a document has real matches to step between. Commented out in `FindMenuContent`; 21 locale keys kept, `AppLayout.tsx` cases survive orphaned. |
 | `jumpToSelection` | **Withdrawn** _(12 Sep 2026)_ | Unimplemented, not ungated — the distinction this table exists to preserve. The `AppLayout.tsx` case is an explicit `break` behind a comment claiming the native layer handles it; no native handler ever existed. It could not have reached WKWebView as `centerSelectionInVisibleRect:` either — a SwiftUI `.keyboardShortcut` installs an NSMenu key equivalent, matched *before* the responder chain. Commented out in `FindMenuContent` rather than dimmed, because a `.disabled` that will never go live is a lie that reads as diligence. Blocking question: what does "jump to selection" mean in a quote grid? The 21 locale keys are kept so restore is one line. **The `AppLayout.tsx` case survives orphaned.** |
+| `renameCodeGroup`, `deleteCodeGroup`, `toggleCodeGroup` / `showHideCodeGroup`, `renameCode`, `deleteCode` | **Retired** _(12 Sep 2026)_ | **Not deferred — a category error**, and the reason to read this row before writing a `case`. They spent six weeks in a five-arm warn-stub (*"requires native focus context — not yet wired"*), which reads as *blocked on plumbing*; it was never plumbing. `docs/design-codebook-v2.md` pins selection as **single**, living **in the master list**, with the detail pane *"a pure function of it … no second place a thing can be 'current'"* (29 Aug) — and the master list selects a **codebook**, so a command naming one group or one tag has no target the model permits. Each is already direct manipulation on the lens: click a name to rename, a per-chip delete, drag to merge. Show/Hide was never a codebook command at all — **D7** puts the eye in `TagSidebar` / `TagGroupCard` on the **Quotes** lens and confirms hide *"was never a third axis here"*, which closes that doc's **G7**/**Q11** with a third answer the registers did not list. Swift, the `AppLayout.tsx` stub and the `desktop.menu.codes.*` keys in all 21 full locales are all gone — **no orphans left behind**, unlike the rows above. Restoring any of them means reopening the 29 Aug pin, not adding a handler. `createCodeGroup` and `createCode` stay: creation needs no target. |
 | `toggleDarkMode` | **Removed from the View menu** | Appearance is owned by Settings ▸ Appearance. **The frontend handler survives orphaned in `AppLayout.tsx` — nothing dispatches it.** |
 | `exportAnonymised` | **Retired** | Anonymise is a **checkbox on the export save panel** (`ExportAccessoryView`, attached as the NSSavePanel `accessoryView` in `WebView.swift`) — it re-points the download at `?anonymise=…`. A second menu item offering the same choice was redundant. Its `AppLayout.tsx` case is now orphaned; `desktop.menu.file.exportAnonymised` is orphaned across 20 locales. |
 | `filterByTag` | **Retired** | Superseded by the tag sidebar (View ▸ Show Tags). |
@@ -307,23 +308,31 @@ All in `HelpMenuContent` (`MenuCommands.swift`). Order top→bottom: Bristlenose
 | `removeFramework` | **Orphaned** _(12 Sep 2026)_ | Dispatches `bn:codebook-remove` — **nothing listens**. Currently `.disabled(!isCodeTab)`, so it is dimmed-and-dead off the lens and lit-and-dead on it. _(Read **Shipped (bridge)**.)_ |
 | `createCodeGroup` | **Orphaned** _(12 Sep 2026)_ | Dispatches `bn:codebook-create-group` — **nothing listens**. _(Read **Shipped (bridge)**.)_ |
 | `createCode` | **Orphaned** _(12 Sep 2026)_ | Dispatches `bn:codebook-create-code` — **nothing listens**. _(Read **Shipped (bridge)**.)_ |
-| `mergeCode` | **Withdrawn** | Commented out in `CodesMenuContent`; see the Retired-actions table. _(This row said **Shipped (bridge)** until 12 Sep 2026, contradicting that table since 28 Jul. The web half `mergeCodebookTags` still works — it is the menu item that is gone.)_ |
+| `mergeCode` | **Deleted** _(12 Sep 2026)_ | Withdrawn 28 Jul, removed from `CodesMenuContent` on 12 Sep with the other five Codes commands; see the Retired-actions table. _(This row said **Shipped (bridge)** until 12 Sep 2026, contradicting that table since 28 Jul. The web half `mergeCodebookTags` still works — it is the menu item that is gone.)_ |
 
 ### Quotes menu — `playPause` triple-dispatch note
 
 `playPause` appears in three menu-source paths: the Video menu, the **Quotes menu** (`MenuCommands.swift:530-533`), and `useKeyboardShortcuts.ts`. All three resolve to `sendCommand("playPause")` via `PlayerContext`.
 
-### Codebook operations — need native focus context (5 stubs)
+### Codebook operations — RETIRED 12 Sep 2026 (was "5 stubs, need native focus context")
 
-These actions need to know WHICH group/code is targeted. Currently stubbed as console warnings in AppLayout.tsx. Wire when the native sidebar tracks focused codebook items.
+**This section is kept as a correction, not a backlog.** The five commands are
+gone; so is their `AppLayout.tsx` warn-stub and every `desktop.menu.codes.*` key
+they owned. Full reasoning in **Retired actions** above.
 
-| Action | Blocked on |
-|--------|-----------|
-| `toggleCodeGroup` | No expand/collapse state in CodebookPanel — groups are always expanded |
-| `renameCodeGroup` | Native sidebar focus tracking (which group is selected) |
-| `deleteCodeGroup` | Native sidebar focus tracking |
-| `renameCode` | Native sidebar focus tracking (which code is selected) |
-| `deleteCode` | Native sidebar focus tracking |
+| Action | Was "blocked on" | Actually |
+|--------|------------------|----------|
+| `toggleCodeGroup` | No expand/collapse state in CodebookPanel | Wrong axis and wrong lens. **D7**: hide and enable are different axes; the eye lives in `TagSidebar` / `TagGroupCard` on **Quotes**, and hide *"was never a third axis here"*. Closes `design-codebook-v2.md`'s **G7**/**Q11** |
+| `renameCodeGroup` | Native sidebar focus tracking (which group is selected) | There is no such focus to track. Selection is **single** and lives in the **master list**, which selects a *codebook*; the detail pane is *"a pure function of it"*. Renaming is clicking the name |
+| `deleteCodeGroup` | Native sidebar focus tracking | As above; deletion is the group card's own control |
+| `renameCode` | Native sidebar focus tracking (which code is selected) | As above; renaming is clicking the chip |
+| `deleteCode` | Native sidebar focus tracking | As above; deletion is the per-chip × |
+
+The "blocked on" column is the thing to learn from: **it named a component that
+`baa1aa0e` had already deleted (`CodebookPanel`) and a focus model the design
+doc forbids.** A stub whose blocker is stated in terms of a surface that no
+longer exists will sit in a backlog indefinitely, because nobody can tell it
+apart from work that is merely not yet done.
 
 ### Edit operations — partially handled (2)
 

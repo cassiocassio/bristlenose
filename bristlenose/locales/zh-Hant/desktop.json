@@ -87,13 +87,7 @@
     },
     "codes": {
       "createCodeGroup": "建立編碼群組",
-      "renameCodeGroup": "重新命名編碼群組…",
-      "deleteCodeGroup": "刪除編碼群組",
-      "showHideCodeGroup": "顯示/隱藏編碼群組",
       "createCode": "建立編碼",
-      "renameCode": "重新命名編碼…",
-      "deleteCode": "刪除編碼",
-      "mergeCodes": "合併編碼…",
       "browseCodebooks": "瀏覽編碼簿…",
       "importFramework": "輸入框架…",
       "removeFramework": "移除框架"

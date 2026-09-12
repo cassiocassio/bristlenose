@@ -131,27 +131,47 @@ Items that look fully active (no dimming) but do nothing when clicked.
   multi-select — so drag-one-code-onto-another in `CodebookPanel` is the only way
   to express it, and a menu item can't say which two codes it means. Commented out
   in `MenuCommands.swift` with the restore note; the web half
-  (`mergeCodebookTags`) already works. Returns when codebook selection lands
-  (now on the planning board, QoL/Should).
+  (`mergeCodebookTags`) already works. ~~Returns when codebook selection lands
+  (now on the planning board, QoL/Should).~~ **Deleted outright 12 Sep 2026** —
+  codebook selection is not coming in the shape this assumed (see group B
+  below), so there was nothing left for the comment to wait for.
 
-## B. Warn-stub — `case` exists, logs "requires native focus context — not yet wired"
+## B. Warn-stub — CLOSED 12 Sep 2026 (retired, not wired)
 
-All in the **Codes** menu (`AppLayout.tsx`), gated on `isCodeTab`. Each needs a
-focused group/code context from the native sidebar that isn't built yet.
+- [x] **Codes ▸ Rename Code Group** (`renameCodeGroup`)
+- [x] **Codes ▸ Delete Code Group** (`deleteCodeGroup`)
+- [x] **Codes ▸ Show/Hide Code Group** (`toggleCodeGroup` / `showHideCodeGroup`)
+- [x] **Codes ▸ Rename Code** (`renameCode`)
+- [x] **Codes ▸ Delete Code** (`deleteCode`)
+- [x] **Codes ▸ Merge Codes** (`mergeCodes`) — withdrawn 28 Jul, deleted with the rest
 
-- [ ] **Codes ▸ Rename Code Group** (`renameCodeGroup`)
-- [ ] **Codes ▸ Delete Code Group** (`deleteCodeGroup`)
-- [ ] **Codes ▸ Show/Hide Code Group** (`toggleCodeGroup`)
-- [ ] **Codes ▸ Rename Code** (`renameCode`)
-- [ ] **Codes ▸ Delete Code** (`deleteCode`)
+**All six are gone** — from `MenuCommands.swift`, from the `AppLayout.tsx`
+warn-stub, and from the `desktop.menu.codes.*` keys in all 21 full locales.
+`createCodeGroup`, `createCode`, `browseCodebooks`, `importFramework` and
+`removeFramework` remain, and are wired.
 
-(For contrast, `createCodeGroup`, `createCode`, `browseCodebooks`,
-`importFramework`, `removeFramework` in the same menu **are** wired.)
+This group was open on the theory that it was blocked on a selection model.
+It was not: `docs/design-codebook-v2.md` had already settled both halves, and
+the settled answer is that these commands have no target to acquire.
 
-All five need a **selection model in the codebook lens** — there is no way to
-name the target group/code today. Tracked on the planning board as
-"Codebook lens — multi-select of codes and code groups" (QoL / Should,
-28 Jul 2026), which also gates restoring Merge Codes.
+- **Selection semantics are pinned** (29 Aug): selection is *single*, it lives
+  *in the master list*, and the detail pane is *"a pure function of it — no
+  independent state, no multi-select, no second place a thing can be
+  'current'"*. The master list selects a **codebook**; groups and tags live in
+  the detail pane. A menu command naming one group or one tag is asking for the
+  second current thing the pin forbids. Each is already a direct-manipulation
+  affordance on the lens — click a name to rename, a per-chip delete, drag to
+  merge.
+- **Show/Hide was never a codebook command.** **D7** — hide and enable are
+  different axes, on different lenses — puts the eye in `TagSidebar` /
+  `TagGroupCard` on the **Quotes** lens, and confirms hide *"was never a third
+  axis here"*.
+
+Recorded in that doc's *Deliberate removals* register; **G7** and **Q11** are
+closed there with a third answer the registers did not list — retire, rather
+than move-or-except. Restoring any of the six means reopening the 29 Aug pin,
+not adding a handler. The planning-board item that used to gate this
+("multi-select of codes and code groups") no longer has this group behind it.
 
 ## C. Disabled by design — `.disabled(true)`, future phases (not bugs)
 

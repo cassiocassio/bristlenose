@@ -87,13 +87,7 @@
     },
     "codes": {
       "createCodeGroup": "Criar Grupo de Códigos",
-      "renameCodeGroup": "Mudar o Nome do Grupo de Códigos…",
-      "deleteCodeGroup": "Eliminar Grupo de Códigos",
-      "showHideCodeGroup": "Mostrar/Ocultar Grupo de Códigos",
       "createCode": "Criar Código",
-      "renameCode": "Mudar o Nome do Código…",
-      "deleteCode": "Eliminar Código",
-      "mergeCodes": "Unir Códigos…",
       "browseCodebooks": "Navegar Livros de Códigos…",
       "importFramework": "Importar Framework…",
       "removeFramework": "Remover Framework"

@@ -87,13 +87,7 @@
     },
     "codes": {
       "createCodeGroup": "コードグループを作成",
-      "renameCodeGroup": "コードグループ名を変更…",
-      "deleteCodeGroup": "コードグループを削除",
-      "showHideCodeGroup": "コードグループを表示/非表示",
       "createCode": "コードを作成",
-      "renameCode": "コード名を変更…",
-      "deleteCode": "コードを削除",
-      "mergeCodes": "コードを統合…",
       "browseCodebooks": "コードブックを参照…",
       "importFramework": "フレームワークを読み込む…",
       "removeFramework": "フレームワークを削除"

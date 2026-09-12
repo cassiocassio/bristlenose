@@ -945,7 +945,7 @@ shipping surface.
 | **Q8** | **B6** — a framework-level *distinct* quote count. `summariseFramework` sums per-group distinct counts, so a quote tagged in two groups counts twice. D12's status line puts that number in front of the researcher | one query |
 | **Q9** | **B7** — the author's **fourth home**, `.codebook-author` in the Quotes tag sidebar. Any author treatment must reach it | one rule |
 | **Q10** | **G3** — the **Codebook lab** button is homeless. It lived in the `<project> tags` header action, which v2 does not have. It ships to the cohort behind a default-on flag | one placement |
-| **Q11** | **G7** — `showHideCodeGroup` sits in the desktop **Codes** menu while D7 puts hide on the **Quotes** lens | move it, or except it |
+| ~~**Q11**~~ | ~~**G7** — `showHideCodeGroup` sits in the desktop **Codes** menu while D7 puts hide on the **Quotes** lens~~ | **CLOSED 12 Sep 2026 — neither.** Retired. The Quotes lens already carries the eye; the Codes menu command had no target the selection pin permits |
 | **Q17** | **A failed autocode job cannot reach the Mac.** `routes/autocode.py` returns `error_message` over HTTP — enough for the SPA toast — but nothing under `bristlenose/server/` writes to the events log, which is what feeds the sidebar glyph and popover. **Not one field:** the events log is per pipeline *run* and autocode is a job, so whether it appends there or needs a second channel is a design call | design + plumbing |
 
 ### Navigation — sketched, not settled
@@ -1715,7 +1715,7 @@ removed; each is something v2 has simply not placed.**
 | **G4** | **`codebook.description`** — *"Drag tags between groups to reorganise. Click a tag or title to rename it. Drop a tag on another to merge."* | not placed | Instructional copy, and it is **floor-specific** — framework tags are not draggable. Probably belongs on the floor's page only, but it has not been said |
 | **G5** | **Cross-codebook drag.** All groups render together today, and `handleDropTag` has **no guard** against dropping a floor tag onto a framework column | impossible — one codebook at a time | Likely an improvement (it may even be an unnoticed bug today), but it is a capability **removed by side effect**, not by decision |
 | **G6** | **`autoCodeStartFailed`** toast — 409 already-running, 503 no key, 400 no quotes | — | Already flagged as the owed failed-install retry, but the toast is a concrete existing thing that needs a new trigger point |
-| **G7** | Desktop **`showHideCodeGroup`** sits in the **Codes** menu | D7 puts hide on the **Quotes** lens | A pre-existing inconsistency that D7 makes sharp. Either the menu item moves or D7 has an exception |
+| ~~**G7**~~ | ~~Desktop **`showHideCodeGroup`** sits in the **Codes** menu~~ | **nothing — the command is retired** | **CLOSED 12 Sep 2026, by a third answer this row did not list.** Moving it only relocates the same problem: after the 29 Aug selection pin a menu command naming one group has no target. D7 settles the rest — the eye lives in `TagSidebar`/`TagGroupCard` on the **Quotes** lens, and hide "was never a third axis here". Retired, not moved and not excepted. See *Deliberate removals* below |
 
 ### Deliberate removals — recorded, not forgotten
 
@@ -1727,6 +1727,12 @@ removed; each is something v2 has simply not placed.**
 | The **status dot** | **removed** | D3: promoted into the toggle it used to echo |
 | Sidebar **`builtIn` / `frameworks`** headings, and not-installed rows | **removed** | Rail is installed-only; grouping is provenance |
 | `comingSoon` | **unreachable today** (all nine ship `enabled: true`) | Browse page may keep the state; no user has seen it |
+| Desktop **Codes** menu: `renameCodeGroup`, `deleteCodeGroup`, `renameCode`, `deleteCode` | **retired 12 Sep 2026** | Not deferred — a category error inherited from v1. The 29 Aug pin makes selection **single**, living **in the master list**, with the detail pane "a pure function of it"; the master list selects a *codebook*, so a command naming one group or one tag has no target the model permits. Each is already a direct-manipulation affordance on the codebook page: click a name to rename, a per-chip delete, drag to merge |
+| Desktop **Codes** menu: `showHideCodeGroup` | **retired 12 Sep 2026** | Never a codebook command at all. **D7** — hide and enable are different axes, on different lenses — puts the eye in `TagSidebar`/`TagGroupCard` on **Quotes**, and confirms hide "was never a third axis here". This is what closes **G7**/**Q11** |
+| Desktop **Codes** menu: `mergeCodes` | **withdrawn 28 Jul 2026, removed 12 Sep 2026** | Merging is drag-and-drop; with no multi-select of codes there is nothing for a menu command to act on. Commented out in July, deleted with the other five |
+
+**Restoring any of the six means reopening the 29 Aug pin, not adding a
+handler.** `createCodeGroup` and `createCode` stay — creation needs no target.
 
 ### Mapped — same capability, new address
 

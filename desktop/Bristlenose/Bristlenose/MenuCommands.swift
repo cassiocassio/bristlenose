@@ -1246,60 +1246,38 @@ private struct CodesMenuContent: View {
     }
 
     var body: some View {
+        // SIX commands retired here on 12 Sep 2026 — rename/delete Code Group,
+        // Show/Hide Code Group, rename/delete Code, and Merge Codes (the last
+        // already withdrawn 28 Jul). They are not deferred; they are a category
+        // error inherited from v1, and `docs/design-codebook-v2.md` settles both
+        // halves:
+        //
+        //  • Selection semantics are PINNED (29 Aug): "selection is single, it
+        //    lives in the master list … no second place a thing can be 'current'".
+        //    The master list selects a *codebook*. Groups and tags live in the
+        //    detail pane, which is "a pure function of it" — so a menu command
+        //    naming one group or one tag has no target that the model permits.
+        //    Every one of these is already a direct-manipulation affordance in
+        //    the lens (click a name to rename, a per-chip delete, drag to merge).
+        //
+        //  • Show/Hide was never a codebook command at all. D7 — "hide and
+        //    enable are different axes, on different lenses" — puts the eye in
+        //    `TagSidebar`/`TagGroupCard` on the QUOTES lens, and confirms hide
+        //    "was never a third axis here". That closes the register's G7/Q11
+        //    ("move it, or except it") as a third answer: retire it.
+        //
+        // Restoring any of them means reopening the 29 Aug pin, not adding a
+        // handler. Create-group and Create-code stay: creation needs no target.
+
         Button(i18n.t("desktop.menu.codes.createCodeGroup"), systemImage: "folder.badge.plus") {
             bridgeHandler.menuAction("createCodeGroup")
         }
-
-        Button(i18n.t("desktop.menu.codes.renameCodeGroup"), systemImage: "pencil") {
-            bridgeHandler.menuAction("renameCodeGroup")
-        }
-        .disabled(!isCodeTab)
-
-        Button(i18n.t("desktop.menu.codes.deleteCodeGroup"), systemImage: "trash") {
-            bridgeHandler.menuAction("deleteCodeGroup")
-        }
-        .disabled(!isCodeTab)
-
-        Button(i18n.t("desktop.menu.codes.showHideCodeGroup"), systemImage: "eye") {
-            bridgeHandler.menuAction("toggleCodeGroup")
-        }
-        .disabled(!isCodeTab)
 
         Divider()
 
         Button(i18n.t("desktop.menu.codes.createCode"), systemImage: "tag") {
             bridgeHandler.menuAction("createCode")
         }
-
-        Button(i18n.t("desktop.menu.codes.renameCode"), systemImage: "pencil") {
-            bridgeHandler.menuAction("renameCode")
-        }
-        .disabled(!isCodeTab)
-
-        Button(i18n.t("desktop.menu.codes.deleteCode"), systemImage: "trash") {
-            bridgeHandler.menuAction("deleteCode")
-        }
-        .disabled(!isCodeTab)
-
-        // Merge Codes — withdrawn from the menu 28 Jul 2026, deliberately left
-        // in place rather than deleted.
-        //
-        // Merging needs a *source* and a *target*. The codebook lens has no
-        // multi-select, so the only way to express "merge A into B" is the
-        // existing drag-one-code-onto-another in `CodebookPanel` — a menu item
-        // simply cannot say which two codes it means. That's why `mergeCode` had
-        // no handler on either side of the bridge and clicked through to nothing.
-        //
-        // Restore this when codebook selection lands (tracked in the sprint
-        // planning notes). The web half already exists and works —
-        // `mergeCodebookTags` in `frontend/src/utils/api.ts`, driven by the
-        // panel's drag merge — so this becomes a one-line re-enable plus a
-        // `case "mergeCode"` that reads the selection.
-        //
-        // Button(i18n.t("desktop.menu.codes.mergeCodes"), systemImage: "arrow.triangle.merge") {
-        //     bridgeHandler.menuAction("mergeCode")
-        // }
-        // .disabled(!isCodeTab)
 
         Divider()
 

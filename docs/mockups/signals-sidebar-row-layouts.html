@@ -1159,6 +1159,47 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
       or five, this whole section is wrong and the volume-floor finding goes away with
       it</strong> &mdash; which is the point of writing the prediction down.</p>
 
+    <h2>The section above measures the wrong axis</h2>
+    <p>Everything on this page about thin data measured the <em>sentiment</em> matrix, and
+      sentiment is bounded at one value per quote by construction &mdash;
+      <code>Quote.sentiment</code> is a single dominant value or None. It can never be
+      dense. On ikea it runs <strong>0.61 sentiments per quote</strong>: two in five quotes
+      carry none at all. That is not a shortage of material, it is what a partition over a
+      closed set of seven looks like. Interviews are not all high emotion, and a study that
+      produced a fat sentiment matrix would be a strange study.</p>
+    <p><strong>Codebooks are a relation, and that is the whole point of them.</strong> A
+      quote carries as many codes as apply, from as many groups as are installed. Measured
+      on the same quotes:</p>
+    <p style="font-family:var(--bn-font-mono);font-size:var(--bn-text-caption);line-height:1.9">
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;quotes&nbsp;&nbsp;sentiments/quote&nbsp;&nbsp;codes/quote&nbsp;&nbsp;groups with data<br>
+      ikea &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;33&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0.61&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>3.73</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;23<br>
+      ikea2 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;38&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0.71&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1.21&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;9<br>
+      uxfriends &nbsp;&nbsp;&nbsp;&nbsp;28&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0.54&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1.25&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;12<br>
+      rockclimbing&nbsp;&nbsp;78&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0.82&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0.13&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3
+    </p>
+    <p>Sentiments per quote barely move &mdash; 0.54 to 0.82 &mdash; because that number is
+      a property of the extractor, not of the study. Codes per quote move by a factor of
+      <strong>29</strong>, and they move with exactly one thing: how many codebooks were
+      applied. <strong>So the lever on data volume is not more interviews, it is more
+      codebooks</strong> &mdash; and a domain expert's own codebook adds a whole dimension
+      of coverage to quotes that already exist. rockclimbing and fossda look sentiment-only
+      here because nobody applied a codebook to them, not because their material was thin.</p>
+    <p><strong>Which reprices the earlier calibration.</strong> The session-count analysis
+      above is still correct about the sentiment matrix and still predicts the same
+      numbers, but it was answering a question that does not decide much. The sentiment
+      half is <em>meant</em> to be sparse &mdash; the codebook's own preamble calls it a
+      layer to orient by and then hide. Whether the lens has enough to show is a question
+      about the codebook half, and that half is 6&times; denser on the one project here
+      where codebooks were actually used.</p>
+    <p><strong>One thing a reader should know about that density.</strong> ikea's 3.73
+      codes per quote is <strong>31 accepted tags and 112 pending proposals</strong>:
+      <code>_compute_group_analysis</code> includes pending <code>ProposedTag</code> rows
+      weighted by the model's confidence, so most of what the Codebooks section is ranking
+      today is AutoCode's unreviewed suggestions. That is the design working as intended
+      &mdash; propose, then let the researcher accept &mdash; but it means the signal
+      strengths in that half are partly confidence-weighted guesses, and they will move as
+      a researcher works through the queue.</p>
+
     <h2>Lifting a winner into the app</h2>
     <p>Each variant shares one markup contract, so the shipped component only has to grow
       a class:</p>

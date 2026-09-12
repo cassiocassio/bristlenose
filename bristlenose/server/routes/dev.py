@@ -31,6 +31,7 @@ from bristlenose.server.models import (
 from bristlenose.stages.s12_render.sentiment import _render_sentiment_sparkline
 from bristlenose.stages.s12_render.theme_assets import _jinja_env
 from bristlenose.utils.markdown import format_finder_date, format_finder_filename
+from bristlenose.utils.timecodes import format_duration_human
 
 router = APIRouter(prefix="/api/dev")
 
@@ -77,15 +78,12 @@ def _aggregate_sentiments(
 
 
 def _format_duration(seconds: float) -> str:
-    if seconds <= 0:
-        return "\u2014"
-    total = int(seconds)
-    h = total // 3600
-    m = (total % 3600) // 60
-    s = total % 60
-    if h > 0:
-        return f"{h}:{m:02d}:{s:02d}"
-    return f"{m:02d}:{s:02d}"
+    """Per-row cell: em-dash for an unknown (zero) duration, else the house
+    ``26m`` / ``1h 3m``. Until 12 Sep 2026 this rendered a *duration* in
+    timecode shape (``18:23:00``) — the exact conflation the shared-format
+    register records as fixed on the Sessions grid.
+    """
+    return "\u2014" if seconds <= 0 else format_duration_human(seconds)
 
 
 # ---------------------------------------------------------------------------

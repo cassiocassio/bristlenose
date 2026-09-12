@@ -130,10 +130,19 @@ def _dominant_cause(
 
 
 def _format_duration(seconds: float) -> str:
-    """Format seconds as '0.1s' or '3m 41s'."""
+    """CLI stage timing: '0.1s', '3m 41s', '1h 01m 01s'.
+
+    Sub-second precision matters here (a cached stage takes 0.1s), so this is
+    deliberately not ``format_duration_human``. It did overflow minutes past an
+    hour (``1103m 00s``) — a long transcription can cross one.
+    """
+    if seconds >= 3600:
+        h, rem = divmod(int(seconds), 3600)
+        m, sec = divmod(rem, 60)
+        return f"{h}h {m:02d}m {sec:02d}s"
     if seconds >= 60:
-        m, s = divmod(int(seconds), 60)
-        return f"{m}m {s:02d}s"
+        m, sec = divmod(int(seconds), 60)
+        return f"{m}m {sec:02d}s"
     return f"{seconds:.1f}s"
 
 
@@ -2827,7 +2836,7 @@ def load_transcripts_from_dir(
     from datetime import datetime, timezone
 
     from bristlenose.models import SpeakerRole
-    from bristlenose.utils.timecodes import parse_timecode
+    from bristlenose.utils.timecodes import parse_header_datetime, parse_timecode
 
     transcripts: list[PiiCleanTranscript] = []
 
@@ -2856,11 +2865,11 @@ def load_transcripts_from_dir(
                 source_file = line.split(":", 1)[1].strip()
                 continue
             if line.startswith("# Date:"):
-                try:
-                    date_str = line.split(":", 1)[1].strip()
-                    session_date = datetime.fromisoformat(date_str).replace(tzinfo=timezone.utc)
-                except ValueError:
-                    pass
+                # One reader shared with the server importer — converts an
+                # offset rather than overwriting it (H8, docs/time-defects.md).
+                parsed = parse_header_datetime(line.split(":", 1)[1])
+                if parsed is not None:
+                    session_date = parsed
                 continue
             if line.startswith("# Duration:"):
                 try:

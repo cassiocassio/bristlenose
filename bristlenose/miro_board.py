@@ -18,6 +18,7 @@ import re
 from dataclasses import dataclass, field
 
 from bristlenose.utils.text import count_noun
+from bristlenose.utils.timecodes import format_timecode
 
 # --- layout constants (board px) -------------------------------------------
 STICKY_W = 240.0
@@ -123,8 +124,13 @@ def _quote_sort_key(q: QuoteCard) -> tuple[int, float]:
 
 
 def fmt_timecode(seconds: float) -> str:
-    total = int(round(seconds))
-    return f"{total // 60}:{total % 60:02d}"
+    """The house timecode (``05:30`` / ``1:30:00``) on a sticky's attribution.
+
+    Was ``f"{total // 60}:{total % 60:02d}"`` — minutes never rolled into hours,
+    so an hour read ``60:00`` and, from 100 minutes, the output could not be
+    parsed back at all. The corpus's longest session is 99.7 minutes.
+    """
+    return format_timecode(seconds)
 
 
 def _quote_colour(q: QuoteCard, colour_by: str) -> str:

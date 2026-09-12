@@ -8,7 +8,7 @@
       "datum": "An elapsed span — how long a session ran. NOT a position in a recording (see `timecode`).",
       "canonical": "bristlenose/server/routes/dashboard.py::_format_duration_human",
       "implementations": {
-        "python": "bristlenose/server/routes/dashboard.py::_format_duration_human — feeds the duration_human and total_duration_human API fields",
+        "python": "bristlenose/utils/timecodes.py::format_duration_human — the canonical implementation (moved from server/routes/dashboard.py on 12 Sep 2026; that module's _format_duration_human now delegates). Feeds the duration_human and total_duration_human API fields and the static report dashboard total",
         "typescript": "frontend/src/utils/format.ts::formatDurationHuman — Sessions grid, Dashboard session table, Sessions sidebar",
         "swift": "desktop/Bristlenose/Bristlenose/DurationFormat.swift::DurationFormat.human — window subtitle, sessions popover, cloud import list"
       },
@@ -74,6 +74,10 @@
       },
       "cases": [
         [
+          -1,
+          "00:00"
+        ],
+        [
           0,
           "00:00"
         ],
@@ -114,6 +118,10 @@
           "59:59"
         ],
         [
+          3599.9,
+          "59:59"
+        ],
+        [
           3600,
           "1:00:00"
         ],
@@ -128,6 +136,22 @@
         [
           3930,
           "1:05:30"
+        ],
+        [
+          5999,
+          "1:39:59"
+        ],
+        [
+          6000,
+          "1:40:00"
+        ],
+        [
+          10800,
+          "3:00:00"
+        ],
+        [
+          35999,
+          "9:59:59"
         ],
         [
           36000,

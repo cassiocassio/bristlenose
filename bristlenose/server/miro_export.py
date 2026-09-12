@@ -30,6 +30,7 @@ from bristlenose.miro_board import (
 from bristlenose.miro_render_svg import render_html
 from bristlenose.server.export_core import extract_quotes_for_export
 from bristlenose.utils.safe_url import is_safe_url
+from bristlenose.utils.timecodes import parse_timecode
 
 logger = logging.getLogger(__name__)
 
@@ -37,15 +38,19 @@ MAX_QUOTE_CHARS = 300  # keep stickies readable (Miro hard cap is 6000)
 
 
 def _parse_timecode(s: str) -> float:
-    """'m:ss' or 'h:mm:ss' -> seconds."""
+    """'m:ss' or 'h:mm:ss' -> seconds, via the canonical parser.
+
+    The hand-rolled version returned 0.0 for *any* failure, including a VTT-style
+    fractional second, and accepted any number of colon-separated parts. A
+    string the canonical parser refuses still yields 0.0 — this is the Miro
+    import edge and a sticky without a position beats a lost sticky — but it is
+    logged now rather than absorbed.
+    """
     try:
-        parts = [int(p) for p in s.split(":")]
-    except (ValueError, AttributeError):
+        return parse_timecode(s)
+    except (ValueError, AttributeError, TypeError):
+        logger.warning("miro_import_timecode_unparseable | raw=%r", s)
         return 0.0
-    secs = 0
-    for p in parts:
-        secs = secs * 60 + p
-    return float(secs)
 
 
 def _clip_url(base: str, q) -> str | None:

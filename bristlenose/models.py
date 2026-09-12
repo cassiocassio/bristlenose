@@ -431,18 +431,3 @@ class PeopleFile(BaseModel):
 
 # Resolve forward reference: PipelineResult.people uses PeopleFile defined above.
 PipelineResult.model_rebuild()
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def parse_timecode(tc: str) -> float:
-    """Parse HH:MM:SS or MM:SS into seconds."""
-    parts = tc.strip().split(":")
-    if len(parts) == 3:
-        return int(parts[0]) * 3600 + int(parts[1]) * 60 + float(parts[2])
-    if len(parts) == 2:
-        return int(parts[0]) * 60 + float(parts[1])
-    raise ValueError(f"Cannot parse timecode: {tc!r}")

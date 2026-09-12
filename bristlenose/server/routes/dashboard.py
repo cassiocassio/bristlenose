@@ -21,6 +21,7 @@ from bristlenose.server.models import (
     TranscriptSegment,
 )
 from bristlenose.server.models import Session as SessionModel
+from bristlenose.utils.timecodes import format_duration_human
 
 router = APIRouter(prefix="/api")
 
@@ -170,25 +171,12 @@ def _quote_dom_id(quote: Quote) -> str:
 
 
 def _format_duration_human(seconds: float) -> str:
-    """Format seconds as a human-readable duration (e.g. '1h 23m', '4m').
-
-    **Canonical implementation of the `duration_human` shared render format.**
-    Mirrored by `DurationFormat.human` (Swift) and `formatDurationHuman`
-    (TypeScript); the agreed case table is `tests/fixtures/shared-format-contract.json`
-    and the register is `docs/design-shared-formats.md`. Change this and the
-    mirrors move with it, in the same commit.
-
-    Note this is an ELAPSED SPAN, not a position in a recording — positions use
-    `format_timecode` and render `MM:SS`. Conflating the two is what made the
-    Sessions grid read a duration as a time of day (fixed 22 Aug 2026).
+    """Delegates to the canonical ``format_duration_human`` in
+    ``utils/timecodes.py`` (moved there 12 Sep 2026 so the module named for
+    timecodes holds the one true shape; the register points at it). Kept as a
+    name because this module's fields and the contract test's registry use it.
     """
-    if seconds <= 0:
-        return "0m"
-    h = int(seconds // 3600)
-    m = int((seconds % 3600) // 60)
-    if h > 0:
-        return f"{h}h {m}m" if m > 0 else f"{h}h"
-    return f"{m}m" if m > 0 else "<1m"
+    return format_duration_human(seconds)
 
 
 def _speaker_sort_key(sp: SessionSpeaker) -> tuple[int, int]:

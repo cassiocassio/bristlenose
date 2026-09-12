@@ -219,11 +219,34 @@ variable — the timecode rendering — 10 sessions, one pass per arm:
 Same model, same sessions, same code but for the rendering: the defect appears
 and disappears with it.
 
-**Limits, stated rather than discovered later.** One pass per arm, not four. The
-defect is stochastic and bimodal per call, so `claude-sonnet-4-6`'s two clean
-arms are weak evidence of immunity — it may simply not have fired. `gpt-5.6-terra`
-is **unmeasured on s08**: the OpenAI credit was exhausted by the § 3 re-measure
-(`429 credit_balance_exhausted`), and the run is still owed.
+**terra measured on s08 (12 Sep 2026): CLEAN in both arms** — 0 of 170 unpadded,
+0 of 169 padded. The model that puts 63% of its s09 quote timecodes 60x out does
+not do it on s08 at all, on the same corpus, from the same unpadded `full_text()`.
+
+That completes a grid with no simple story in it:
+
+| unpadded | s08 | s09 |
+|---|---|---|
+| `gpt-5.6-terra` | **0%** (0/170) | **62.9%** (239/380) |
+| `gemini-3.8-flash` | **5.3%** (5/95) | 0% (0/259) |
+| `claude-sonnet-4` | **28.6%** (38/133) | 0% (0/284, same run) |
+| `claude-sonnet-4-6` | 0% (0/121) | 0% (0/494) |
+
+Every model that fails, fails on exactly one of the two stages, and no two agree
+on which. So the hazard is **neither a model property nor a stage property** — it
+is the mismatch between what the prompt shows and what the schema asks for, and
+which model trips on which prompt is not predictable from anything measured here.
+The practical consequence is the one already acted on: fix the rendering
+everywhere, and guard both stages, because measuring a (model, stage) cell clean
+tells you nothing about its neighbours.
+
+**Limits, stated rather than discovered later.** One pass per arm, not four, and
+the defect is stochastic and bimodal per call — so every **zero** in that table is
+weak evidence of immunity, terra's new s08 zero included. It may simply not have
+fired. The non-zeros are solid; the zeros are "did not fire in one pass". Only the
+gemini padded/unpadded pair is a controlled comparison, and it is the one the
+causal claim rests on. Strengthening any zero means more passes (`run_s08.py`
+needs a `--tag` to write more than one per arm, as `run.py` has).
 
 The stray single exact-minute boundary in several clean arms is the ~1-in-60 base
 rate the § 3 tell predicts, in range and correct — a sanity check that the audit

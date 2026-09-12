@@ -143,6 +143,28 @@ derived — it *is* unclaimed across all 15 Swift files that declare shortcuts a
 across `useKeyboardShortcuts.ts`, but free is not earned. Check availability
 after deciding a shortcut is warranted, never instead of deciding.
 
+**D-b-bis. A focused code dims the group commands — decided 12 Sep 2026, in
+review.** `focusCodebookTag` sets *both* ids, because a code's group is part of
+knowing where the code is. Swift derived `codebookGroupFocused = groupId != nil`,
+so focusing a chip lit **Delete Code Group** — while the card withholds its wash
+in exactly that state, on the reasoning that one cursor should not paint twice.
+The menu was therefore enabled over a group nothing on screen marked as the
+target. *One cursor, not two* held for the wash and not for the state, and the
+menu reads the state.
+
+Two fixes were on the table. **Taken:** gate the group-scoped rows on
+`groupFocused && !tagFocused`, so enablement follows what is visible. One Swift
+helper, no bridge change. **Not taken:** keep a *de-emphasised* wash on the
+parent card while a chip holds the cursor — the `NSOutlineView` idiom, where the
+parent row stays marked and the child is emphasised. That is the better UI and
+keeps New Code live, but it needs a second visual treatment that reads as
+*context* rather than *cursor*, which is a design decision rather than a gate.
+
+The accepted cost of the taken option: with a chip focused, **New Code dims
+too**, so adding a sibling code means clicking the card background first. It is
+the honest behaviour for a menu whose target the user cannot otherwise name, and
+it is the thing to revisit if the parent-context treatment ever gets drawn.
+
 **D-b. Focus lands on a framework's group, but the mutations dim.** A cursor is
 useful for reading, and refusing focus there would mean one control with two
 click behaviours depending on provenance. Dim, never hide.

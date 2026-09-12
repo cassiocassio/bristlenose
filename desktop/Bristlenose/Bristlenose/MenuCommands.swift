@@ -1250,9 +1250,30 @@ private struct CodesMenuContent: View {
         bridgeHandler.activeTab == .codebook && bridgeHandler.canDispatch
     }
 
-    /// A group carries the cursor. Focus, not selection — see
-    /// `docs/design-codebook-focus.md` and the note on `codebookGroupFocused`.
-    private var groupFocused: Bool { onLens && bridgeHandler.codebookGroupFocused }
+    /// A group carries the cursor, AND no code inside it does. Focus, not
+    /// selection — see `docs/design-codebook-focus.md`.
+    ///
+    /// The `!codebookTagFocused` half is load-bearing and was missing when this
+    /// shipped. `focusCodebookTag` sets BOTH ids (a code's group is part of
+    /// knowing where the code is), so `codebookGroupFocused` is true whenever a
+    /// chip is focused — while the card deliberately withholds its wash in
+    /// exactly that state, because one cursor should not paint twice. The two
+    /// together lit Delete Code Group over a group with nothing on screen
+    /// marking it as the target. "One cursor, not two" held for the wash and
+    /// not for the state, and the menu reads the state.
+    ///
+    /// So the menu's enablement now follows what is VISIBLE, which is the only
+    /// defensible rule for a command whose target the user cannot otherwise
+    /// name. The cost is real and accepted: with a chip focused, New Code dims
+    /// too, so adding a sibling code means clicking the card first. The
+    /// alternative — a de-emphasised wash on the parent card, the
+    /// `NSOutlineView` idiom — keeps all three live and is the better UI; it
+    /// needs a second treatment that reads as *context* rather than *cursor*,
+    /// which is a design decision rather than a gate, and is recorded as the
+    /// next step rather than taken here.
+    private var groupFocused: Bool {
+        onLens && bridgeHandler.codebookGroupFocused && !bridgeHandler.codebookTagFocused
+    }
     private var tagFocused: Bool { onLens && bridgeHandler.codebookTagFocused }
 
     var body: some View {

@@ -770,6 +770,41 @@ locales while the measured pack is 425 MB and the mockup says so. Correcting
 `en` alone would fork it from twenty translations for a string that already
 carries a `~`; left alone deliberately rather than overlooked.
 
+### Where the pack is hosted — DECIDED 12 Sep 2026
+
+**`bristlenose.app/models/…`, on the existing DreamHost shared plan**, extending
+the apparatus that already serves the `.dmg` rather than standing up anything
+new. `deploy.sh` gained `--filter='protect models/'` beside `protect dmg/`:
+same shape — too large for git, uploaded out-of-band by `scp`, never present
+locally, and wiped by `rsync --delete` without the rule.
+
+**The scale question, answered with the right denominator.** 425 MB × 10,000
+installs is 4.25 TB, which sounds alarming as a lump and is ~27 installs a day
+— **11.6 GB/day, ~354 GB/month** — spread over a year. That is unremarkable
+traffic for a product site, and 10,000 installs is a problem worth having.
+
+**The AUP is about purpose, not volume.** DreamHost's Unlimited Policy restricts
+sites whose *essential purpose* is to consume disk or bandwidth, naming file
+sharing, archive, mirroring and distribution sites. A product site serving its
+own installer and its own model is not one, which is the same basis on which the
+`.dmg` has been served all along. Bandwidth is unmetered, so there is no bill to
+run up; the exposure is a discretionary call at a scale where upgrading is easy.
+
+**What is genuinely sticky, and the cheap insurance.** The URL is pinned in
+`scripts/project.conf` and in Swift, so it ships inside released versions —
+moving the bytes later does **not** migrate installed copies. So pin a *stable*
+`bristlenose.app` path that can later 302 elsewhere, rather than one naming
+where the bytes happen to live today. The SHA-256 pin makes a redirect safe by
+construction: integrity is checked against the pin whatever origin serves it.
+**Unverified:** whether Background Assets follows a cross-origin redirect. Plain
+HTTPS on the `.dmg` route does; the BA route needs checking before the
+indirection is relied on for both channels.
+
+**Calibration if it ever must move**, at that same ~354 GB/month: DreamObjects
+$0.05/GB ≈ $213/yr; Cloudflare R2 zero egress and 0.425 GB inside its 10 GB free
+tier ≈ $0; GitHub Releases free, 2 GB per-file cap, which is what RawCull — the
+prior art §"Prior art" tells you to read first — uses.
+
 ### Build order
 
 Phases 0–2 are independent of Background Assets and can land immediately; the

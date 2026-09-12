@@ -1,9 +1,24 @@
+---
+status: current
+last-trued: 2026-09-12
+trued-against: HEAD@main on 2026-09-12
+---
+
 # Live checking of LLM providers — what we learned, what's done, what isn't
 
 _Written 5 Sep 2026, from the Aug-2026 dependency review and the live provider
-testing that followed it. Every claim below was measured with real keys on
-4 Sep 2026 unless it says otherwise. Companion: the pre-mortem ledger,
+testing that followed it. Companion: the pre-mortem ledger,
 `dependency-premortem-log.md`, Entry 7 § "Live evidence"._
+
+> **Read the dates, not the header.** The original provenance line said every
+> claim was measured on 4 Sep. That stopped being true almost immediately: the
+> body now carries measurements from **5, 7, 11 and 12 Sep**, added by four
+> separate patch commits, while the header went untouched — an unpatched header
+> over a repeatedly-patched body. Each claim below carries its own date; where
+> one does not, it is 4 Sep. The single most consequential re-measurement is
+> `gpt-5.6-terra`'s: the "misses the ≥90% union target" figure was **withdrawn**
+> on 12 Sep as an artefact, and `experiments/quote-stability/FINDINGS.md` is
+> canonical for every stability number.
 
 ## Why this document exists
 
@@ -200,7 +215,7 @@ gone (Gemini 2.5).
 | Claude temperature via `extra_body` — same wire, survives SDK 1.x | `09bb5e82` | live pass on `claude-sonnet-4-6` |
 | OpenAI/Azure: Structured Outputs (`json_schema`, strict) replacing JSON mode | `7fbec0c2` | live pass on `gpt-5.6-terra` and `gpt-4o` |
 | OpenAI parameter gate (`_OPENAI_LEGACY_PARAMS`, fails closed to modern) | `208b4b57` | live pass, both shapes |
-| ChatGPT default `gpt-4o` → `gpt-5.6-terra`; picker terra + luna | `208b4b57` | live pass through `analyze()` — **but it broke preflight**: `preflight/api_key.py` validated keys with `max_tokens=1`, which GPT-5-class rejects with a 400 the copy blamed on credit, so every ChatGPT run aborted at preflight for a night. Fixed the same night in a separate session (reads `_OPENAI_LEGACY_PARAMS`, sends `max_completion_tokens=256` — a cap of 1 cannot finish a token on a reasoning model). The live check could not see it: it calls `analyze()` directly and skips preflight. |
+| ChatGPT default `gpt-4o` → `gpt-5.6-terra`; picker terra + luna | `208b4b57` | live pass through `analyze()` — **but it broke preflight**: `preflight/api_key.py` validated keys with `max_tokens=1`, which GPT-5-class rejects with a 400 the copy blamed on credit, so every ChatGPT run aborted at preflight for a night. Fixed the same night in a separate session (reads `_OPENAI_LEGACY_PARAMS`, sends `max_completion_tokens=256` — a cap of 1 cannot finish a token on a reasoning model). The live check could not see it: it called `analyze()` directly and skipped preflight — **closed 12 Sep 2026**, it now runs preflight first with the model under test (see §"What is not done" item 2, and `scripts/check-providers-live.py`). |
 | Claude default declared once per language; `config.py` and `LLMSettingsView` derive it; parity test | `a9d8f443` | Swift suite green |
 | Sonnet 5 tried and **reverted** to 4.6, receipt beside the value | `c3a34866` | 5/5 live failures |
 | Gemini default → `gemini-3.8-flash`; picker flash + `3.5-flash-lite`; Pro dropped | `8efcf2dc` | live pass; 2.5 pair 404 |
@@ -240,13 +255,19 @@ abort, and `test-providers-live.py` proves the order, the bucket mapping and the
 model-under-test offline. The two request builders are checked together, not
 unified — unifying them is still owed, and would be the mechanical fix.
 
-**The acceptance matrix has been silently green since 7 July.**
-`scripts/acceptance/run_matrix.py` writes each cell to a fixed directory and
-never cleans it, so cloud cells *resumed* old manifests, made zero calls, and
-reported PASS; and `is_green` counts `FAIL_EXPECTED` as green, so a configured
-provider that cannot start a run still prints GREEN. Fresh directories plus
-"configured-and-failed = red" are the two fixes (found 5 Sep, other session;
-old cell dirs moved aside, nothing deleted).
+**~~The acceptance matrix has been silently green since 7 July.~~ Closed
+12 Sep 2026** — commit "acceptance matrix: a cell that reuses its directory
+tests nothing, and a failed provider is not green". Kept as the record because
+the shape is worth recognising again: `run_matrix.py` wrote each cell to a fixed
+directory and never cleaned it, so cloud cells *resumed* old manifests, made
+zero calls, and reported PASS against the previous run's report — while
+`is_green` counted `FAIL_EXPECTED` as green, so a configured provider that could
+not start a run at all still printed GREEN. Both fixed: `prepare_cell_dir()`
+wipes at the start of each cell, and only a pass or a declared skip is green
+(F7's three-way distinction survives in the outcome names). Proven by a cloud
+pass making 5/4/5 real calls with no resume, and pinned offline by
+`tests/test_acceptance_matrix_synthetic.py` — 7 scenarios against a fake
+`bristlenose`, mutation-verified.
 
 **Why Sonnet 5 double-encodes at clustering and grouping.** Unknown. The
 `verbatim_excerpt` hypothesis is weakened — extraction, the stage that carries

@@ -278,7 +278,9 @@ def assert_reid_keys_not_shareable(output_dir: Path) -> None:
 class CellOutcome(str, Enum):
     PASS = "PASS"
     SKIP = "SKIP"  # declared, counted — a prerequisite (key/model) was absent
-    FAIL_EXPECTED = "FAIL_EXPECTED"  # configured provider failed; signal, non-blocking
+    # Configured provider failed. Keeps its own name so a rate-limited key does not
+    # read as a breach (F7) — but it is NOT green: see `CellResult.is_green`.
+    FAIL_EXPECTED = "FAIL_EXPECTED"
     FAIL_BLOCKING = "FAIL_BLOCKING"  # empty report / shape breach / crash — the real bug
     ERROR = "ERROR"  # undeclared skip: a promised fixture/cell did not run at all
 
@@ -322,7 +324,7 @@ def classify_provider_outcome(
 
     - not configured                       -> SKIP (declared, counted)
     - configured, ran, empty report        -> FAIL_BLOCKING (the gemma4 class)
-    - configured, non-zero exit            -> FAIL_EXPECTED (signal, non-blocking)
+    - configured, non-zero exit            -> FAIL_EXPECTED (distinct name, still red)
     - configured, clean                    -> PASS
     """
     if not configured:

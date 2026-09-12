@@ -30,17 +30,20 @@ a gate needs a colour *and* either an expiry or a ratchet.
 
 ## Tier 1 — a defect can reach a user
 
-### G1. `build-dmg.sh` has no Swift gate
+### G1. ✅ `build-dmg.sh` has no Swift gate — CLOSED 3 Sep 2026
 
-The `.dmg` is a real shipping channel — Developer ID, notarised, direct
-download — and it is the one path neither `mac-build.yml` nor `build-all.sh`
-covers. A red Swift suite can reach a notarised download today.
+Closed by commit "G1 and G5: gate the last ungated channel, and take the free
+promotion". `desktop/scripts/build-dmg.sh:273` calls `test-swift.sh --quiet || die`,
+honouring `SKIP_SWIFT_TESTS`.
 
+**Re-measured 12 Sep 2026:** the evidence line below now returns the opposite of
+what it says — `3`, not `0`. Kept because a register entry whose own command
+contradicts it is the clearest possible statement of why these are re-measurable.
+
+_Original entry:_ The `.dmg` is a real shipping channel — Developer ID, notarised,
+direct download — and it was the one path neither `mac-build.yml` nor
+`build-all.sh` covered. A red Swift suite could reach a notarised download.
 **Evidence:** `grep -cE 'xcodebuild (test|build-for-testing)|test-swift' desktop/scripts/build-dmg.sh` → `0`.
-
-**Fix:** the same block as `build-all.sh` step 1c — call `test-swift.sh`, skip on
-ad-hoc, honour `SKIP_SWIFT_TESTS`. **Small.** It didn't land with the rest only
-because it wasn't in the ask.
 
 ### G2. The fake-success auditor produces a fake success
 
@@ -188,13 +191,14 @@ whose write path nobody had checked.
 
 ## Tier 3 — decisions already teed up, unmade
 
-### G5. `check-locales.py` is clean, and `--strict` is free
+### G5. ✅ `check-locales.py` is clean, and `--strict` is free — CLOSED 3 Sep 2026
 
-**Evidence:** `scripts/check-locales.py` → `✓ All locale checks passed`, exit 0.
+Taken, by the same commit as G1. `.github/workflows/i18n-check.yml:39` runs
+`python scripts/check-locales.py --strict`, with an inline comment dating it.
 
-A soft gate that is currently green is a free promotion — the exact inverse of
-G3. Root `CLAUDE.md` already says so and points at `docs/i18n-defects.md`
-Decision 2. It has been decidable since 21 Aug 2026 and undecided since.
+_Original entry:_ **Evidence:** `scripts/check-locales.py` → `✓ All locale checks
+passed`, exit 0. A soft gate that is currently green is a free promotion — the
+exact inverse of G3. It had been decidable since 21 Aug 2026 and undecided since.
 
 ### G6. Unverified findings in the release-system audit — ✅ **triaged 3 Sep 2026**
 
@@ -429,6 +433,54 @@ catch it — **a fixture's zero values can disable the path under test.**
 `s05_transcribe.py:198` writes `results[sid] = []` on failure, so the failed
 session is a key and gets marked; the helper applies directly) and `:1271-1276`
 (s05b — no `StageOutcome` to filter on without changing the stage's signature).
+
+### G11. A gate that ran, reported green, and exercised nothing — ✅ **closed 12 Sep 2026**
+
+The acceptance matrix's cloud cells reported PASS from **7 July to 4 September**
+while making zero LLM calls. Not a skip, not a crash, not a stubbed assertion: the
+cells ran, the invariants were applied, and every one of them genuinely held. They
+held against the *previous run's report*.
+
+**The distinguishing property, and why it is not G7 or G10.** G7 is *the extractor
+is not looking at this fact*. G10 is *the fact is consistent inside every artefact
+and false only across two*. This one is: **the artefact was real, well-formed, and
+satisfied every invariant — only its provenance was wrong.** No assertion could
+have caught it, because no assertion was false. Four gates and 45 tests were
+looking straight at a valid report and reading it correctly.
+
+**Mechanism.** `run_matrix.py` wrote each cell to a fixed directory and never
+cleaned it. `bristlenose run` *resumes*: handed a manifest whose stages are all
+COMPLETE it reloads the cached results, re-renders, exits 0 and calls no LLM. The
+cell prints `Resuming: all stages complete` — the thing under test behaving
+correctly. Compounding it, `is_green` counted `FAIL_EXPECTED` as green, so a
+provider that could not start a run *at all* still yielded
+`GREEN: all 4 cells green` and exit 0.
+
+**Evidence.** `.bristlenose/llm-calls.jsonl` in each cell directory, empty on runs
+that reported PASS. The tell was the absence of a file's contents, not the presence
+of a wrong value — which is why reading the summary could never surface it.
+
+**Closed** by commits "acceptance matrix: a cell that reuses its directory tests
+nothing, and a failed provider is not green" and "acceptance matrix: prove the
+runner goes RED, synthetically and for nothing". `prepare_cell_dir()` wipes at the
+start of every cell; only a pass or declared skip is green; and
+`tests/test_acceptance_matrix_synthetic.py` drives the real runner against a fake
+`bristlenose` for 7 scenarios, offline and free, mutation-verified (restore the old
+green rule → 3 red; delete the wipe → 2 red; restore both → 45 green). Verified
+live: a cloud pass now makes 5/4/5 real calls with no resume.
+
+**Residual, and it is the reason this stayed open two months.** *Nothing schedules
+`run_matrix.py`.* No cron, no launchd job, no CI workflow; it is absent from
+`inventory.md`, and `check-gate-proofs.py` cannot discover it (that script finds
+`check-*` scripts only — G8's stated limit). It is a gate by function that is
+invisible to every register in this document, so the window was detectable only by
+a human choosing to run it. Enrolling it would change G8's discovery convention;
+that call is open.
+
+**The generalisable tell:** a gate whose cost is "needs keys and spend" is a gate
+nobody exercises, and therefore a gate whose failure path has never been seen. Ask
+what it would cost to make it provable *without* the expensive dependency — here, a
+fake executable, two seconds, zero pence.
 
 ## Explicitly NOT gaps
 

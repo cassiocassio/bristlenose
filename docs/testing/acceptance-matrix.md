@@ -1,10 +1,20 @@
 # Design: Acceptance Matrix — overnight "real" conformance runs
 
-_Status: **partly built** (29 Jun 2026; trued 22 Aug 2026). The runner is
+_Status: **partly built** (29 Jun 2026; trued 12 Sep 2026). The runner is
 `scripts/acceptance/run_matrix.py` and seven cells are declared — see "Shipped so
 far" below for what actually exists versus what this doc still only proposes. The
 overnight `nightly.sh`, the desktop tier, and the media cell remain unbuilt. The
 model, invariants and execution gates below are the spec both halves answer to._
+
+> **Nothing schedules this runner, and that is the load-bearing gap.** There is no
+> cron, no launchd job, no CI workflow — `run_matrix.py` appears in no
+> `.github/workflows/`, no `*.plist`, and not in `docs/testing/inventory.md`. It
+> runs when a human types it. Read every "nightly" in this doc as *the design*,
+> not as a thing that happens. The cost was measured: the cloud cells reported
+> PASS from **7 Jul to 4 Sep** while making zero calls, and the only reason anyone
+> noticed is that someone ran it by hand. Both defects behind that are fixed
+> (§"Phase-1 build decisions", 12 Sep amendments); the absence of a schedule is
+> not.
 
 _Moved into `docs/testing/` and consolidated 7 Jul 2026. This is the **mechanical tier**
 of the testing set — start at [README.md](README.md) for the whole map. The surfaces this
@@ -114,7 +124,33 @@ So the matrix is not "every fixture × every provider." Three groups:
 The whole input funnel (video → audio → words) sits *upstream* of any provider;
 the cloud columns are purely downstream of it.
 
-### Shipped so far (22 Aug 2026)
+### What proves the runner (12 Sep 2026)
+
+The matrix proves the pipeline. Until 12 Sep nothing proved *the matrix*, and both
+defects that fixed on that date lived in exactly that hole: the runner was the one
+component with no test of its own, because exercising it appeared to need keys and
+spend. It does not.
+
+- **`tests/test_acceptance_matrix_synthetic.py`** — 7 scenarios driving the real
+  `_run_provider_cell` and `Matrix.verdict` against a **fake `bristlenose`**
+  executable that reproduces each shape: healthy, silently-resumed, failed-hard,
+  failed-late. Offline, free, ~2s, so CI reaches it where the cloud cells never
+  will. Every scenario asserts the fake was actually invoked — a runner that
+  quietly stopped shelling out would otherwise satisfy most of the assertions.
+- **Four unit tests** in `tests/test_acceptance_invariants.py` pinning `is_green`
+  and `prepare_cell_dir` directly, so neither layer carries the claim alone.
+- **Mutation-verified, not assumed**: restoring `FAIL_EXPECTED` to `is_green`
+  reddens 3 tests; deleting the wipe in `prepare_cell_dir` reddens 2; restoring
+  both gives 45 green. A harness nobody has watched fail is not a harness.
+
+**Precondition for any future cell author, and the reason the wipe exists:** a cell
+that reuses its output directory does not test the provider. `bristlenose run`
+*resumes* — handed a manifest whose stages are all COMPLETE it reloads the cached
+results, re-renders, exits 0, calls no LLM, and every shape invariant then passes
+against the previous run's report. Reach for a fixed path and you rebuild the 7 Jul
+defect. Use `prepare_cell_dir()`.
+
+### Shipped so far (22 Aug 2026, amended 12 Sep)
 
 `scripts/acceptance/run_matrix.py` carries two free cells and the five gated
 provider cells:

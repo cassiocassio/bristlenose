@@ -8,7 +8,7 @@ _Canonical index for how Bristlenose is tested. Start here. Consolidated 7 Jul 2
 |---|---|---|---|---|
 | **CI** (`tests/` pytest · `frontend` vitest · `BristlenoseTests` Swift) | mocked, hermetic | seconds, free | logic regressions | ✅ built — Swift joined 3 Sep 2026, having run nowhere automatic until then |
 | **Playwright** (`e2e/`) | real `serve`, fixture data, no LLM | ~1 min, free | SPA/DOM/render/link/network | ✅ built |
-| **Acceptance matrix** ([acceptance-matrix.md](acceptance-matrix.md)) | real binaries, real providers, real reports | mins–hrs, ¢ | cross-seam, packaging, provider, GUI-integration | ⬜ Phase 1 not built |
+| **Acceptance matrix** ([acceptance-matrix.md](acceptance-matrix.md)) | real binaries, real providers, real reports | mins–hrs, ¢ | cross-seam, packaging, provider, GUI-integration | 🟡 Phase 1 shipped, **nothing schedules it** |
 | **Human walk** (private QA doc) | a person operating the `.app` | hours | feel, native chrome, "nothing surprised you" | ongoing |
 
 The **defining split** (the whole reason this set exists): the top two tiers are *hermetic* — they never touch real binaries/providers, so they're fast and free but blind to a whole class of cross-seam bug (the gemma4 env-var bug that passed all three green nets — see acceptance-matrix "Why this exists"). The acceptance matrix is the mechanical tier that exercises the real seams; the human walk is the judgment tier. **Mechanical green de-risks the human walk, it does not replace it** — Playwright proves the SPA renders in a *browser*, never in the WKWebView `.app` where the blank-report-as-success class lives.

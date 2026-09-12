@@ -1,15 +1,23 @@
 ---
 status: partial
-last-trued: 2026-06-04
-trued-against: HEAD@pipeline-view-models (working tree — v2 uncommitted) on 2026-06-04
+last-trued: 2026-09-12
+previous-trued: 2026-06-04 (v1.9 → v2, against an uncommitted working tree)
+trued-against: HEAD@main on 2026-09-12
 ---
 
-> **Truing status:** Partial — trued v1.9 → v2 on 2026-06-04 against the
-> (uncommitted) v2 working tree. The catalogue, two-layer, schema, provenance,
-> Apple-FM, locale, and "did not ship" sections are now current. The
-> §"Why `recommended` is foundational, not dead weight" subsection is current. One rung remains
-> genuinely unshipped: the **`recommended`-marker rendering** (data + JSON +
-> tests ship it; no CLI/React badge yet). See changelog + inline notes.
+> **Truing status:** Partial — trued 2026-09-12 against `main`. Two rungs of v3
+> remain genuinely unshipped, not one: the **`recommended` marker** (data + JSON
+> + tests ship it; no CLI or React badge) and the **orphaned positive notes**
+> (`_why_text` returns `""` for `✓●`/`✓○`, so both Local structural notes and
+> both transcription notes render nowhere). The banner said "one rung" until
+> 2026-09-12 while §"The rung map" below listed two — the doc disagreed with
+> itself, in the summary rather than the body, which is the half a cold reader
+> reads.
+>
+> **Superseded front-matter, kept as the record:** this doc was previously
+> anchored to `HEAD@pipeline-view-models (working tree — v2 uncommitted)`. That
+> branch is long merged and the anchor named a working tree that was never a
+> commit, so it could not be checked against anything.
 
 ## Changelog
 
@@ -39,7 +47,7 @@ trued-against: HEAD@pipeline-view-models (working tree — v2 uncommitted) on 20
 - _2026-06-04_ — trued up v1.9 → v2: schema 3→4 + per-(provider, model) grain
   (`ModelOption` on `BackendOption.models`); `BackendAvailability` → `ModelAvailability`,
   `reason` → `reason_key` + new `action_key`; `llm_summary` deleted (per-stage
-  rendering); CLI/React glyph + 6-locale rendering shipped; dead sort-weight
+  rendering); CLI/React glyph + 6-locale rendering shipped (21 full locales as of Sep 2026); dead sort-weight
   section replaced with the declaration-order + collapse-when-uniform invariant;
   untested glyph `⚠` → `?`; provenance now editorial + community; `_migrate_schema`
   hook added (Rule-of-Three fired at schema v3→v4). `recommended`-marker rendering remains
@@ -50,7 +58,7 @@ trued-against: HEAD@pipeline-view-models (working tree — v2 uncommitted) on 20
 
 # Design: Pipeline view — read-only catalogue surface
 
-**Status (4 Jun 2026):** v1.5, v1.9, and v2 shipped. The Pipeline view is the **read-only catalogue surface** that tells a researcher, at a glance, which backends Bristlenose could use for each stage on the current host, which it actually picks by default, which it editorially endorses, and how good each one is for the job. It is **not** the resolver — choosing per-stage backends is still owned by the user via global `llm_provider` (LLM stages) + the host-aware resolver in `s05_transcribe._resolve_backend` (transcription). The CLI rendering, the React Settings surface, the quality glyphs, and the 6-locale fill all shipped in **v2**, now at per-(provider, model) grain. The next rung is **v3** — render the `recommended` marker (see §"Why `recommended` is foundational, not dead weight"); the `optimise_for` axis (cost / speed / privacy / determinism) is deferred to v6 (see the rung map below).
+**Status (12 Sep 2026, was 4 Jun):** v1.5, v1.9, and v2 shipped. The Pipeline view is the **read-only catalogue surface** that tells a researcher, at a glance, which backends Bristlenose could use for each stage on the current host, which it actually picks by default, which it editorially endorses, and how good each one is for the job. It is **not** the resolver — choosing per-stage backends is still owned by the user via global `llm_provider` (LLM stages) + the host-aware resolver in `s05_transcribe._resolve_backend` (transcription). The CLI rendering, the React Settings surface, the quality glyphs, and the locale fill all shipped in **v2**, now at per-(provider, model) grain. The next rung is **v3** — render the `recommended` marker (see §"Why `recommended` is foundational, not dead weight"); the `optimise_for` axis (cost / speed / privacy / determinism) is deferred to v6 (see the rung map below).
 
 **Related:** [design-stage-backends.md](design-stage-backends.md) (architectural principle — capability declaration + resolver), [design-pluggable-llm-routing.md](design-pluggable-llm-routing.md) (full routing roadmap, mostly still aspirational), [design-research-methodology.md](design-research-methodology.md) §Backend quality scale (canonical home for the 4-level scale + axes), [design-decisions.md](design-decisions.md) (the "why" for the scale + orthogonal axes), [design-i18n.md](design-i18n.md) (locale convention for `pipeline.<category>.<leaf>`).
 
@@ -85,7 +93,7 @@ This layer answers **"is it any good for THIS stage?"** and is what closes the v
 
 ### v2: per-(provider, model) grain
 
-v1.5 and v1.9 evaluated eligibility + quality per *backend* (provider family), and the five LLM stages shared one deduped summary card. v2 pushes the grain down to the individual **model**: `BackendOption` now holds `models: list[ModelOption]` (`catalogue.py:117`), eligibility + quality resolve per (stage, provider, model), and each stage carries a flat `alternatives` list of `ModelAvailability` rows (`render.py:58`) instead of the deleted `llm_summary` card. This is what lets the catalogue say "Claude offers Sonnet 4 (the default) *and* Opus 4 (also endorsed)" rather than collapsing the provider to one line.
+v1.5 and v1.9 evaluated eligibility + quality per *backend* (provider family), and the five LLM stages shared one deduped summary card. v2 pushes the grain down to the individual **model**: `BackendOption` now holds `models: list[ModelOption]` (`catalogue.py:117`), eligibility + quality resolve per (stage, provider, model), and each stage carries a flat `alternatives` list of `ModelAvailability` rows (`render.py:58`) instead of the deleted `llm_summary` card. This is what lets the catalogue say "Claude offers Sonnet 4.6 (the default) *and* Opus 5 (also endorsed) *and* Haiku 4.5 (offered, unrated)" rather than collapsing the provider to one line.
 
 Per-model grain is the axis the editorial layer needed — a provider isn't uniformly good: Local (Ollama) is `good` for the structural stages (speaker id, topic segmentation) but `marginal` for the three synthesis stages (`catalogue.py:491-494`), a distinction the old per-backend card couldn't express. New per-row fields: `model_id`; `provider_display` (the provider label carried on every row so consumers don't re-derive it); `publisher`; `action_key` (the fix hint); and `synthesised` (True for rows composed from settings rather than the catalogue — the Azure deployment, user-pulled Ollama models, dispatched-but-uncatalogued models; rendered distinctly).
 
@@ -133,6 +141,7 @@ v1.9 flagged only Claude `recommended=true` — the one cell with evidence.
 | Gemini | 3.8 Flash | ✓ | — untested | false | false |
 | Gemini | 3.5 Flash-Lite | ✓ | — untested | false | false |
 | Local | llama3.2:3b | ✓ | marginal | false | false |
+| Local | Gemma 4 E4B / 26B / 31B | ✓ (RAM permitting) | — untested | false | false |
 
 As more cohort data arrives — "Local on a 30B+ model now handles structural stages well" — we flip the relevant `recommended` flag without touching `default`. The view becomes more permissive over time; the singular default stays singular. **Caveat:** as of v2 `recommended` is carried in data + JSON + tests but renders no badge in any surface — see §"Why `recommended` is foundational, not dead weight".
 
@@ -163,6 +172,32 @@ Most cells ship `source="editorial"`; the Local (Ollama) rows ship `source="comm
 - `published_bench` — third-party benchmark (cite in note).
 - `internal_bench` — measured on a Bristlenose trial run (FOSSDA corpus or equivalent). The trajectory: as the eval harness in [design-pluggable-llm-routing.md](design-pluggable-llm-routing.md) §3 ships, ratings flip from `editorial` to `internal_bench` cell by cell.
 
+> **Measurements now exist, and every cell is still `editorial` — deliberately (12 Sep 2026).**
+> `experiments/quote-stability/FINDINGS.md` records 4–12 re-extraction passes per shipped
+> cloud model through the real stage on FOSSDA. It did **not** flip a single `source`, and
+> the reasoning is the durable part of this section:
+>
+> - **What was measured is one dimension of the judgement.** The harness measures *recovery
+>   stability* — whether a quote survives re-analysis on its position key. A rating answers
+>   "is this model any good for this stage", which also covers text stability, and text
+>   stability is poor on all three cloud models with the *corpus*, not the models, as the
+>   leading explanation. Flipping `source` would claim the whole rating is evidenced when a
+>   slice of it is.
+> - **Unsettled evidence is not evidence.** `gemini-3.8-flash` reads 80.4% union on the
+>   padded passes, which looks like a miss, and the findings say in terms not to act on it:
+>   scored against a common reference the model is unmoved, and it returns the fewest quotes
+>   so each is worth ~1.5% of the figure. ~8 more passes (about $0.63) would settle it.
+>   Gemini therefore stays unrated because the evidence is *unsettled*, which is a different
+>   reason from the class-judgement call recorded in the 5 Sep changelog entry above.
+> - **Read the padded table, never §1's unpadded one.** The unpadded rows are kept for
+>   provenance and, for `gpt-5.6-terra`, are measuring garbage — overlap is scored on a
+>   timeline and 63% of its timecodes were then 60× wrong. Reading them as current says terra
+>   misses the target and Gemini leads. Both are false; a review on 12 Sep proposed acting on
+>   exactly that and had to be withdrawn.
+>
+> So the gap this section names is narrower than it was, not closed: what is missing is not
+> *a* measurement but a measurement of the thing the rating claims.
+
 The `source` field is internal context — it ships in the JSON payload for debug / tooling but is **not rendered to users**. The honesty is for us: an audit later can tell which ratings have evidence behind them.
 
 ## Apple FM — the third state
@@ -189,6 +224,35 @@ See [design-i18n.md](design-i18n.md) §Per-namespace key convention for the full
 
 Schema bumps are **additive**. Schema 1 → 2 added `llm_summary` + per-stage `alternatives`. 2 → 3 added quality fields + `default` + `recommended` on every row. 3 → 4 split each backend into per-(provider, model) rows (`ModelAvailability` with `model_id` / `provider_display` / `publisher` / `synthesised` / `action_key`) and **removed** `llm_summary` — the one subtractive change, absorbed by `extra="ignore"` on old consumers. Older consumers (schema 1–3) ignore the new fields and keep working. The shape contract is pinned by `tests/fixtures/pipeline-view-contract.json` (four scenarios) and the round-trip tests in `tests/pipeline_view/test_schema_compat.py`.
 
+## What binds the catalogue to reality — and the one thing deliberately unbound
+
+Three mechanisms, and they are not the same kind of thing. The third is the one
+that will be "fixed" by mistake.
+
+1. **Cloud model ids are bound to what ships.** `tests/pipeline_view/test_models.py`
+   asserts every catalogued cloud id is one `bristlenose/providers.py` defaults to or
+   `LLMProvider.swift`'s picker offers, and that the flagged default is the registry's.
+   Added 5 Sep 2026 because this catalogue was a **fourth** place model ids are written
+   down, and on 4 Sep the other three moved while this one did not — leaving the view
+   offering `gemini-2.5-pro`, by then a 404 for new accounts, as Gemini's default.
+2. **The Ollama set mirrors the desktop picker's `OllamaCatalog`.** By convention, not
+   by test. See [design-gemma4-local-models.md](design-gemma4-local-models.md) for the
+   model set and the RAM floors that gate the three Gemma rows.
+3. **`tests/fixtures/pipeline-view-contract.json` is bound to nothing, on purpose.** It
+   holds ~115 `model_id` values of which ~95 name no catalogued model — retired ids,
+   plus deliberate fictions like `claude-opus-5-future` and `qwen2.5:14b`. That is
+   correct. The fixture pins the **JSON schema** across the Python/TypeScript boundary:
+   `test_schema_compat.py` re-serialises the fixture's own `catalogue` and compares it to
+   itself, never to `build_pipeline_view()`. Its ids are scenario data, and freezing them
+   is what makes it a contract rather than a snapshot.
+
+   **The hazard is the asymmetry.** Now that (1) exists, a reader who finds stale ids in
+   the fixture will reasonably infer the same sweep is owed there. It is not: truing the
+   fixture would couple a schema pin to the live catalogue, so every future model bump
+   would redden a test that has nothing to say about model bumps, and the pin would be
+   quietly retuned until it pinned nothing. **If the fixture's ids ever go stale in a way
+   that matters, the schema changed — bump `schema_version` and add a scenario.**
+
 ## Why catalogue before resolver
 
 The original Apr 2026 [design-stage-backends.md](design-stage-backends.md) §"Recommendation: don't build the resolver, build the evidence" advised against building the resolver before the evidence existed. v1.5 + v1.9 took a slightly different path: build the **read-only catalogue surface** that shows the user what a resolver would pick, with editorial signal about how good each cell is. Two benefits:
@@ -196,14 +260,14 @@ The original Apr 2026 [design-stage-backends.md](design-stage-backends.md) §"Re
 1. **Researchers stay in control.** v1.9 makes signal legible. It does not automate the choice. Per [methodology/consent-gradient.md](methodology/consent-gradient.md) §Level 1+, researchers are adults; we surface signal, they decide.
 2. **The catalogue IS the resolver's eventual input.** Whatever auto-pick logic the optimise_for rung (v6) introduces will read `quality_for()` + `recommended` + host facts. Building the surface first means the resolver, when it lands, doesn't have to invent its own knowledge base.
 
-The recommendation to "build the evidence" still stands — internal_bench provenance is the gap. v1.9 is the editorial scaffolding that catches the evidence as it arrives.
+The recommendation to "build the evidence" still stands — `internal_bench` provenance is the gap. v1.9 is the editorial scaffolding that catches the evidence as it arrives. **Narrowed, not closed, on 12 Sep 2026:** evidence now exists for recovery stability and still did not move a single cell. See §"Honesty about provenance: `source`" for why, before promoting anything.
 
 ## What shipped in v2
 
 The items v1.9 carried "to the next rung" mostly landed in v2:
 
 - **CLI / React rendering** of the quality glyphs (`✓●` / `✓○` / `✓⚠` / `✗` / `?`) and the inline quality notes — **shipped** (`cli.py:86-97,176`; React `QUALITY_GLYPH` + `whyText`).
-- **Locale-file fill** — **shipped** across all 6 locales (see §Locale convention).
+- **Locale-file fill** — **shipped** across all **21 full locales** (6 at v2; `zh-Hant-HK` carries only genuine HK overrides and inherits the rest by design). See §Locale convention.
 - **The summary-card-vs-per-stage decision for LLM-stage quality** — **resolved: per-stage rendering won**, reversing v1.5's LLM-stage dedup. `_build_llm_summary` was deleted (deletion pinned by `tests/pipeline_view/test_models.py::test_build_llm_summary_function_does_not_exist`), so the "Local looks `good` because the card templated off `speaker_identification`" trap is gone — each stage now shows its own per-model quality (Local `good` for structural stages, `marginal` for synthesis).
 - **The "available + untested" (`?`) rendering** for the apple_fm probe path — **shipped** at the render layer (`cli.py:170`). The Swift-side probe that will flip apple_fm to `available=True` is still pending (see [design-pluggable-llm-routing.md](design-pluggable-llm-routing.md) §2).
 

@@ -12,8 +12,10 @@ Design decisions from the 2026-07-07 review (docs/testing/acceptance-matrix.md
     matrix can no longer green while running nothing.
   * **BRISTLENOSE_ACCEPTANCE_REQUIRE_ALL=1** turns every declared SKIP into a FAIL —
     for the nightly, where "Azure wasn't configured" must not pass silently.
-  * **Provider taxonomy (F7):** unconfigured→SKIP, configured+failed→FAIL_EXPECTED
-    (non-blocking signal), configured+empty→FAIL_BLOCKING (the gemma4 class).
+  * **Provider taxonomy (F7):** unconfigured→SKIP, configured+failed→FAIL_EXPECTED,
+    configured+empty→FAIL_BLOCKING (the gemma4 class). The three keep distinct names
+    so a rate-limited key does not read as a breach; since 12 Sep 2026 only the first
+    is green — a configured provider that failed reddens the run (`is_green`).
   * **Governance (F2/F3):** artifacts land in a gitignored, chmod-700 acceptance-runs/
     dir with a per-dir `.gitignore '*'`; keys come from the environment only (never
     argv); all captured stderr is key-redacted; a post-run grep fails loud on any key.

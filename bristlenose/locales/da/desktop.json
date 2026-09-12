@@ -87,13 +87,7 @@
     },
     "codes": {
       "createCodeGroup": "Opret kodegruppe",
-      "renameCodeGroup": "Omdøb kodegruppe…",
-      "deleteCodeGroup": "Slet kodegruppe",
-      "showHideCodeGroup": "Vis/skjul kodegruppe",
       "createCode": "Opret kode",
-      "renameCode": "Omdøb kode…",
-      "deleteCode": "Slet kode",
-      "mergeCodes": "Flet koder…",
       "browseCodebooks": "Gennemse kodebøger…",
       "importFramework": "Importér framework…",
       "removeFramework": "Fjern framework"

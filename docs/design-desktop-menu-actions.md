@@ -2,7 +2,7 @@
 status: partial
 last-trued: 2026-07-25
 trued-against: working tree @main on 2026-07-25
-last-trued-sections: [checkSystemHealth row (2026-07-28), retired-actions section (2026-07-28)]
+last-trued-sections: [checkSystemHealth row (2026-07-28), retired-actions section (2026-07-28), find family + channel gate (2026-09-12, c9688b44), Codes menu section (2026-09-12)]
 ---
 
 > **Do not honour the "recently trued, skip" short-circuit on this doc.** The
@@ -23,8 +23,11 @@ last-trued-sections: [checkSystemHealth row (2026-07-28), retired-actions sectio
 
 ## Retired actions — do not re-wire
 
-_Added 2026-07-28._ Eight action names appear in this catalogue's history but are
-**dispatched by nothing today**. They are listed together because they share one
+_Added 2026-07-28; `find`, `jumpToSelection` and the six Codes commands added 2026-09-12._ The action
+names below appear in this catalogue's history but are **dispatched by nothing
+today**. (The preamble used to open "Eight action names"; the table has grown
+twice since and the number was wrong both times. It is the table that is
+authoritative, not a count in front of it.) They are listed together because they share one
 failure mode: a contributor finds the row, writes a `case` for it in
 `AppLayout.tsx`, and ships dead code. That is exactly how `checkSystemHealth` and
 `pageSetup`/`print` became silent no-ops in the first place.
@@ -33,17 +36,29 @@ failure mode: a contributor finds the row, writes a `case` for it in
 |---|---|---|
 | `pageSetup`, `print` | **Now native, not bridge** | `PrintActions.pageSetup()` / `PrintActions.print(webView:window:)`. `window.print()` in a WKWebView can't raise the macOS print panel, so the bridge was never the right target. |
 | `checkSystemHealth` | **Now native** | Opens the Health window (`openWindow(id: "health")` → `DoctorReportView` → `GET /api/doctor`). |
-| `mergeCode` | **Withdrawn** | Commented out in `CodesMenuContent` — merging needs a source *and* target and the codebook has no multi-select. |
+| `mergeCode` / `mergeCodes` | **Withdrawn 28 Jul 2026; deleted 12 Sep 2026** | Merging needs a source *and* a target and the codebook has no multi-select. Commented out in `CodesMenuContent` in July, removed outright with the other five Codes commands in September; locale keys pruned from all 21 full locales. _(The "Codes menu" section below listed this as **Shipped (bridge)** until 12 Sep 2026 — the two tables contradicted each other for six weeks. Code agrees with this one.)_ |
+| `find` | **Now native, not bridge** _(12 Sep 2026)_ | ⌘F never reaches the SPA. `requestSearchFocus()` bumps the published counter `BridgeHandler.focusSearchRequests`, which `QuotesSearchToolbarControl` observes to expand and focus. A counter, not a `Bool` — ⌘F must work twice in a row. The old `case "find"` is deleted; it had dispatched cleanly into `focusSearchInput()` and done nothing, in every project, on every lens, since it shipped. |
+| `findNext`, `findPrevious` | **Withdrawn** _(12 Sep 2026)_ | Unimplemented, not ungated — and the plumbing was never the problem. ⌘E writes the find pasteboard, ⌘G reads it back and dispatches with that text, and the handler sets the query that is already set: same filter, identical result. Search here **filters** the quote grid, so every visible card is already a match and nothing renders a `<mark>`; "next" presupposes a cursor stepping through occurrences in content that stays put, and a filter has neither. Stepping through results is list navigation (`j`, arrows). Restore **with transcript search**, where a document has real matches to step between. Commented out in `FindMenuContent`; 21 locale keys kept, `AppLayout.tsx` cases survive orphaned. |
+| `jumpToSelection` | **Withdrawn** _(12 Sep 2026)_ | Unimplemented, not ungated — the distinction this table exists to preserve. The `AppLayout.tsx` case is an explicit `break` behind a comment claiming the native layer handles it; no native handler ever existed. It could not have reached WKWebView as `centerSelectionInVisibleRect:` either — a SwiftUI `.keyboardShortcut` installs an NSMenu key equivalent, matched *before* the responder chain. Commented out in `FindMenuContent` rather than dimmed, because a `.disabled` that will never go live is a lie that reads as diligence. Blocking question: what does "jump to selection" mean in a quote grid? The 21 locale keys are kept so restore is one line. **The `AppLayout.tsx` case survives orphaned.** |
+| `renameCodeGroup`, `deleteCodeGroup`, `toggleCodeGroup` / `showHideCodeGroup`, `renameCode`, `deleteCode` | **Retired** _(12 Sep 2026)_ | **Not deferred — a category error**, and the reason to read this row before writing a `case`. They spent six weeks in a five-arm warn-stub (*"requires native focus context — not yet wired"*), which reads as *blocked on plumbing*; it was never plumbing. `docs/design-codebook-v2.md` pins selection as **single**, living **in the master list**, with the detail pane *"a pure function of it … no second place a thing can be 'current'"* (29 Aug) — and the master list selects a **codebook**, so a command naming one group or one tag has no target the model permits. Each is already direct manipulation on the lens: click a name to rename, a per-chip delete, drag to merge. Show/Hide was never a codebook command at all — **D7** puts the eye in `TagSidebar` / `TagGroupCard` on the **Quotes** lens and confirms hide *"was never a third axis here"*, which closes that doc's **G7**/**Q11** with a third answer the registers did not list. Swift, the `AppLayout.tsx` stub and the `desktop.menu.codes.*` keys in all 21 full locales are all gone — **no orphans left behind**, unlike the rows above. Restoring any of them means reopening the 29 Aug pin, not adding a handler. `createCodeGroup` and `createCode` stay: creation needs no target. |
 | `toggleDarkMode` | **Removed from the View menu** | Appearance is owned by Settings ▸ Appearance. **The frontend handler survives orphaned in `AppLayout.tsx` — nothing dispatches it.** |
 | `exportAnonymised` | **Retired** | Anonymise is a **checkbox on the export save panel** (`ExportAccessoryView`, attached as the NSSavePanel `accessoryView` in `WebView.swift`) — it re-points the download at `?anonymise=…`. A second menu item offering the same choice was redundant. Its `AppLayout.tsx` case is now orphaned; `desktop.menu.file.exportAnonymised` is orphaned across 20 locales. |
 | `filterByTag` | **Retired** | Superseded by the tag sidebar (View ▸ Show Tags). |
 | `exportQuotesCSV` | **Never existed** | No Swift dispatch, no frontend case. |
 | `showHelp`, `showKeyboardShortcuts`, `showReleaseNotes` | **Native** | Help menu opens browser docs directly; no bridge hop. |
 
-**One more unconsumed action — but not a broken feature.** `set-appearance` is
-pushed by `BridgeHandler.syncAppearance()` on every `ready` and has **zero**
-consumers (it routes via `menuAction`, so it needs a `case` in AppLayout's switch;
-there is none — unlike its sibling `syncAnalysisAnimation`, which uses the
+**One more unconsumed action — resolved 30 Jul 2026.** ~~`set-appearance` is
+pushed by `BridgeHandler.syncAppearance()` on every `ready`~~ — **the emitter was
+deleted on 30 Jul 2026** (`BridgeHandler.swift:517-518` records the removal), which
+is precisely what the recommendation at the end of this note asked for. Neither the
+action nor `syncAppearance()` exists today. The analysis below is kept because it
+is the reasoning that justified the deletion, and because the same question recurs
+every time someone proposes a second channel for a fact the platform already
+carries.
+
+_As it stood before the deletion:_ `set-appearance` had **zero** consumers (it
+routed via `menuAction`, so it needed a `case` in AppLayout's switch; there was
+none — unlike its sibling `syncAnalysisAnimation`, which uses the
 `window.__bristlenose.setX()` namespace pattern and does work).
 
 Unlike the rows above, **nothing is broken by this**: appearance reaches the report
@@ -56,8 +71,13 @@ already carries is how two surfaces drift. Wire it only if the SPA ever needs
 `data-theme` set explicitly (e.g. if "auto" must mean something other than "follow
 system").
 
+**That recommendation was carried out on 30 Jul 2026.** Nothing above describes
+live code; it is the argument, preserved.
+
 ## Changelog
 
+- _2026-09-12_ — **Codes menu corrected: five actions documented as Shipped have been dispatched into nothing since 0.29.0.** All five send a `bn:codebook-*` CustomEvent; an exhaustive grep of `frontend/src` finds no listener for any of them. `42d06638` put those listeners in v1's `CodebookPanel`; `baa1aa0e` deleted the panel and took them with it — `git describe --contains` → `v0.29.0~3`, three commits before the tag, so the menu has been inert on all nine channels since the release whose headline was the codebook lens. `browseCodebooks` named `CodebookPanel` as its consumer, i.e. the row cited its own missing listener. Old claims preserved inline per never-silently-delete. **Not dimmed, deliberately** — gating an unimplemented command is the lie the `jumpToSelection` row refuses; re-homing the listeners in the v2 navigator versus withdrawing the menu is an untaken product call. Nothing was ever red: a `CustomEvent` with no listener resolves normally, so the bridge succeeds and the Swift `catch` never fires. `last-trued` again NOT bumped — section-scoped, recorded in `last-trued-sections`.
+- _2026-09-12_ — **Trued against the Find sweep and the channel gate; front-matter deliberately NOT bumped.** New **Enablement** section — the doc modelled routing and never availability, while five items gated on `hasChannel` / `canDispatch` / `canSearch`, none of which appeared anywhere in it. `find` and `jumpToSelection` moved from the handled catalogue into **Retired actions** (⌘F is native end-to-end via `BridgeHandler.focusSearchRequests`; ⌘J withdrawn as unimplemented). Two self-contradictions closed: `mergeCode` read **Shipped (bridge)** in the Codes table while the Retired table read **Withdrawn** — the Retired table was right, and had been for six weeks; `hasPlayer`/`playerPlaying` were listed as stubs one section after the prose said they report live — the prose was right. `set-appearance` corrected in three places: the doc recommended deleting the emitter, the deletion happened **30 Jul 2026**, and the doc went on describing it in the present tense for six weeks. Section counts dropped rather than recounted (the AppLayout header claimed 27 over 28 rows / 30 names / 35 `case` arms, eleven of which the code does not have and seven of which this doc already called retired). **Known-stale, not fixed:** the `MenuCommands.swift:N` anchors — the 28 Jul banner asked for struct names and 0 of 5 spot-checked still resolve; new text here uses struct names, old rows do not. Anchors: `FindMenuContent`, `FileMenuContent`, `BridgeHandler.swift:135-149,262-285,517-518`, `AppLayout.tsx:409`, `Toolbar.tsx:63`; commit subjects `find: wire Cmd+F to the search that exists, dim it where none does` and `menus: gate bridge commands on a live channel, not on isReady`.
 - _2026-07-28_ — `checkSystemHealth` row corrected: it is no longer a bridge dispatch (that action was dead — no frontend consumer). Wired to open the native Health window (`DoctorReportView`) via `openWindow(id: "health")` from Diagnostics ▸ Check Health; the window fetches the new `GET /api/doctor` endpoint (`bristlenose/server/routes/doctor.py`, `doctor.run_local_checks`). See `docs/fix-the-menus.md` and `docs/design-diagnostics-menu.md`.
 - _2026-07-25_ — trued against the working-tree Welcome/sidebar change. **View menu:** `toggleSidebar` (static "Toggle Sidebar", responder-chain `NSSplitViewController.toggleSidebar`) became **`toggleProjectsSidebar`** — a dynamic **Hide/Show Projects** label routed through the NavigationSplitView `columnVisibility` binding via the `.toggleProjectsSidebar` notification (⌥⌘S unchanged). **Help menu:** gained **Welcome to Bristlenose** (7th item, no shortcut; posts `.showWelcome` → ContentView `selection = []`). Also corrected pre-existing drift in the Help table: items open **browser docs** (retired in-app Help modal), not a modal, and re-anchored the section from stale line numbers to the `HelpMenuContent` struct. Anchors are struct-named where possible (line numbers rot).
 - _2026-06-21_ — re-confirmed fresh: the `project-status-line` + `warm-sidecar-pool` work (19–21 Jun) did **not** touch menu actions / `BridgeHandler.menuAction` — the catalogue still matches `MenuCommands.swift`. One new row-level affordance landed: a "Cancel copy" item on the project **row context menu** (`ProjectRow.swift`, `onCancelCopy`) — a context-menu action, not a `menuAction()` bridge dispatch, so it sits outside this catalogue's scope (noted for completeness).
@@ -70,9 +90,72 @@ Reference for all menu actions wired through `BridgeHandler.menuAction()`. Worki
 
 > **Note (2026-04-23):** Project operations use **two wiring patterns** — actions affecting the native sidebar (project/folder CRUD, rename, move) post `Notification.Name` events that ContentView receives via `.onReceive`, while actions targeting the web layer (re-analyse, archive, codebook ops) dispatch through `bridgeHandler.menuAction()`. The catalogue below should be read with this distinction in mind. Detail in `desktop/CLAUDE.md` "Project menu actions use Notification.Name not bridge."
 
+## Enablement — what gates a menu item
+
+_Added 2026-09-12._ Until then this catalogue modelled *routing* and nothing
+about *availability*, while five shipped items across three menus gated on
+predicates it never named. The gap has a cost: the obvious signal to reach for is
+`isReady`, and reaching for it is what `b06f923a` had to undo.
+
+Three predicates, each answering a different question:
+
+| Predicate | Means | Use it for |
+|---|---|---|
+| `hasChannel` | A web view is registered. A published mirror of `webView`, driven by its `didSet`, so a menu gate can never disagree with the `guard let webView` it stands in for. | Commands that hand the web view to AppKit and never dispatch JS — **Print** is the only one today. A status page is a real document and prints. |
+| `canDispatch` | `hasChannel && documentState == .spa` — there is a channel *and* something on the far end that understands it. | Any command routed through `menuAction(...)`. **Export Report**, zoom. |
+| `canSearch` | `canDispatch && activeTab == .quotes` (`FindMenuContent`). | The Find family. Search exists on one lens; the other three carry `SearchComingSoonButton`. |
+
+**Why not `isReady`.** It is force-set true 2 s after *any* load, status page
+included, and goes false only in `reset()` (a selection change). So it reads true
+over a document with no `window.__bristlenose`, which is the failure it looks like
+it prevents. A sidecar dying mid-session leaves `isReady` true over a nil web view.
+
+**Why both halves of `canDispatch`.** They go false in different states.
+`documentState` describes the *document* and stays `.spa` across a channel
+teardown; `hasChannel` describes the *channel* and says nothing about what is
+loaded.
+
+**Why a lens gate needs `canDispatch` too.** `currentPath` survives an in-place
+reload, so `activeTab` can still say `.quotes` over a freshly-loaded status page
+with no SPA behind it.
+
+**The hole in the mirror, so nobody has to rediscover it.** `didSet` fires on
+*assignment* only. A weak reference zeroed by its referent deallocating runs no
+observer, so a web view released without `dismantleNSView` assigning nil would
+leave `hasChannel` reading true over a dead channel. The defined teardown does
+assign — that is what makes the mirror safe today, not a property of `weak`.
+Relatedly, `webView` is cleared by `WebView.dismantleNSView` under an identity
+guard and **not** by `reset()`: two owners with no defined order were wiping a
+registration a warm switch had just made.
+
+**House rule: menus dim, toolbars morph.** They agree on availability and differ
+only on presentation — so a menu item and its toolbar twin gate on the same
+predicate. Export Report was ungated here while its toolbar twin gated on lens
+availability; that split is what `b06f923a` closed.
+
+**A `.disabled` that will never go live is a lie that reads as diligence.** An
+item that is *unimplemented* rather than *ungated* is withdrawn — commented out
+with its blocking question and its restore path — not dimmed. `mergeCode` and
+`jumpToSelection` are the two precedents; both are in Retired actions above.
+
+**Not every menu command is a `menuAction`.** There are four routes, not one:
+the bridge (`menuAction`), a `Notification.Name` to `ContentView` (project ops),
+straight to AppKit (`PrintActions`), and — since 12 Sep 2026 — **native to
+native**, where the target is a native control and nothing crosses the bridge.
+⌘F is the first: `requestSearchFocus()` bumps a published counter that
+`QuotesSearchToolbarControl` observes. Reach for that route whenever the thing
+the command operates on is already in Swift; routing it through the SPA and back
+is how ⌘F came to spend its whole life dispatching cleanly into nothing.
+
 ## Action catalogue
 
-### Already handled — AppLayout (27 actions)
+### Already handled — AppLayout
+
+_Count dropped 12 Sep 2026._ It read "(27 actions)" against a table of 28 rows
+naming 30 actions, over 35 `case` arms, eleven of which the table names and the
+code does not — seven of those eleven already declared retired in the table
+above it. A count in prose is a count nothing recomputes; `grep -c 'case "'
+AppLayout.tsx` is the answer and it is always current.
 
 | Action | Handler |
 |--------|---------|
@@ -81,29 +164,24 @@ Reference for all menu actions wired through `BridgeHandler.menuAction()`. Worki
 | `hideAllSidebars` | `sidebarAnimations.hideAll()` — explicit, not a toggle (native owns the direction; see `AllSidebars`) |
 | `showAllSidebars` | `sidebarAnimations.showAll()` — restores the stashed arrangement |
 | `toggleInspectorPanel` | `toggleInspector()` |
-| `find` | Focus search input (expand + focus + select) |
-| `useSelectionForFind` | Selection → search query + find pasteboard write |
-| `findNext` | Find pasteboard text (from payload) → search query |
-| `findPrevious` | Find pasteboard text (from payload) → search query |
-| `jumpToSelection` | No-op (WKWebView native) |
-| `exportReport` | `setExportOpen(true)` |
-| `exportAnonymised` | Open ExportDialog with `initialAnonymise={true}` |
-| `exportQuotesCSV` | Build CSV from all quotes → blob download |
-| `copyAsCSV` | Copy focused/selected quotes as CSV to clipboard |
-| `allQuotes` | Reset search + tag filter + view mode to defaults |
-| `starredQuotesOnly` | `setViewMode("starred")` |
-| `filterByTag` | Click tag filter dropdown trigger button |
-| `showHelp` | Open help modal to "help" section |
-| `showKeyboardShortcuts` | Open help modal to "shortcuts" section |
-| `showReleaseNotes` | Open help modal to "about" section |
-| `sendFeedback` | `setFeedbackOpen(true)` |
-| `zoomIn` / `zoomOut` / `actualSize` | CSS `font-size` scaling (±10%, persisted to localStorage) |
-| `toggleDarkMode` | Toggle `data-theme` attribute between light/dark |
-| `browseCodebooks` | Dispatch `bn:codebook-browse` → CodebookPanel opens picker |
-| `importFramework` | Dispatch `bn:codebook-browse` with `{ templateId }` payload → CodebookPanel opens preview |
-| `removeFramework` | Dispatch `bn:codebook-remove` with `{ frameworkId }` → CodebookPanel shows confirm dialog |
-| `createCodeGroup` | Dispatch `bn:codebook-create-group` → CodebookPanel creates group |
-| `createCode` | Dispatch `bn:codebook-create-code` → CodebookPanel creates tag in first researcher group |
+| `useSelectionForFind` | Selection → search query + find pasteboard write. The capsule surfaces the term via the `quotes-filter` push; its `focusSearchInput()` call is inert in embedded mode and correct in the browser. |
+
+> **The Find family, corrected 12 Sep 2026.** `find`, `findNext`, `findPrevious`
+> and `jumpToSelection` are all in **Retired actions** now; `useSelectionForFind`
+> is the only row left here.
+>
+> It is gated natively on `canSearch = canDispatch && activeTab == .quotes`
+> (`FindMenuContent`) — search exists on one lens, and `canDispatch` as well as
+> the lens because `currentPath` survives an in-place reload, so `activeTab` can
+> still say `.quotes` over a freshly-loaded status page.
+>
+> Its `focusSearchInput()` call (`AppLayout.tsx:409`) queries `.search-input`, an
+> element `Toolbar` never renders in embedded mode (`Toolbar.tsx:63`). That is
+> dead in the app and **correct in the browser**, where the SPA's own SearchBox
+> is rendered — so it stays. The desktop path needs no focus of its own:
+> ⌘E's job is to load the term, and the capsule expands and mirrors it when the
+> SPA posts `quotes-filter` back (`BridgeHandler.swift:760`). macOS convention
+> agrees — Safari and TextEdit do not open the find bar on ⌘E.
 
 ### Already handled — useKeyboardShortcuts (24 actions)
 
@@ -198,32 +276,63 @@ All in `HelpMenuContent` (`MenuCommands.swift`). Order top→bottom: Bristlenose
 
 ### Codes menu (9)
 
-5 stubs that need native focus context are catalogued separately under "Codebook operations" below. Wired actions:
+5 stubs that need native focus context are catalogued separately under "Codebook operations" below.
+
+> **Corrected 12 Sep 2026 — the five "wired" actions are dispatched into nothing,
+> and have been since 0.29.0.** Every row below read **Shipped (bridge)**. All five
+> dispatch a `bn:codebook-*` CustomEvent and an exhaustive grep of `frontend/src`
+> finds **no listener for any of them** — only the dispatch sites. `42d06638`
+> ("wire codebook menu actions: **CodebookPanel listeners** for remove,
+> create-group, create-code") put those listeners in the v1 panel; `baa1aa0e`
+> ("codebook v2 becomes the codebook lens: **v1 deleted**") removed the panel and
+> took them with it. `git describe --contains baa1aa0e` → **`v0.29.0~3`** — three
+> commits before the tag, so the menu has been inert on all nine channels since
+> the release whose headline feature was the codebook lens.
+>
+> **Nothing was red at any point.** A `CustomEvent` with no listener resolves
+> normally, so the bridge succeeds, the Swift `catch` never fires, and the log
+> stays clean. This is the "deleting a UI surface orphans the thing that was its
+> only witness" gotcha in the root `CLAUDE.md`, one level out: it orphaned the
+> **listeners**, and the dispatcher went on dispatching.
+>
+> **They are deliberately NOT dimmed.** Gating a command with no implementation is
+> the lie the `jumpToSelection` row refuses. Re-homing the listeners in the v2
+> navigator, or withdrawing the menu with the `mergeCode` idiom, is a product call
+> and has not been taken. Measurements and the rejected options are in the
+> maintainer's private review log, kept outside the public tree.
 
 | Action | Status | Notes |
 |---|---|---|
-| `browseCodebooks` | **Shipped** (bridge → CodebookPanel) | Dispatches `bn:codebook-browse` |
-| `importFramework` | **Shipped** (bridge) | Dispatches `bn:codebook-browse` with `{ templateId }` |
-| `removeFramework` | **Shipped** (bridge) | Dispatches `bn:codebook-remove` |
-| `createCodeGroup` | **Shipped** (bridge) | Dispatches `bn:codebook-create-group` |
-| `createCode` | **Shipped** (bridge) | Dispatches `bn:codebook-create-code` |
-| `mergeCode` | **Shipped** (bridge) | Dispatched from Codes menu (`MenuCommands.swift:464-466`) |
+| `browseCodebooks` | **Orphaned** _(12 Sep 2026)_ | Dispatches `bn:codebook-browse` — **nothing listens**. _(Read **Shipped (bridge → CodebookPanel)** until 12 Sep 2026. `CodebookPanel` is the component `baa1aa0e` deleted, so the row named its own missing consumer.)_ |
+| `importFramework` | **Orphaned** _(12 Sep 2026)_ | Dispatches `bn:codebook-browse` with `{ templateId }` — **nothing listens**. _(Read **Shipped (bridge)**.)_ |
+| `removeFramework` | **Orphaned** _(12 Sep 2026)_ | Dispatches `bn:codebook-remove` — **nothing listens**. Currently `.disabled(!isCodeTab)`, so it is dimmed-and-dead off the lens and lit-and-dead on it. _(Read **Shipped (bridge)**.)_ |
+| `createCodeGroup` | **Orphaned** _(12 Sep 2026)_ | Dispatches `bn:codebook-create-group` — **nothing listens**. _(Read **Shipped (bridge)**.)_ |
+| `createCode` | **Orphaned** _(12 Sep 2026)_ | Dispatches `bn:codebook-create-code` — **nothing listens**. _(Read **Shipped (bridge)**.)_ |
+| `mergeCode` | **Deleted** _(12 Sep 2026)_ | Withdrawn 28 Jul, removed from `CodesMenuContent` on 12 Sep with the other five Codes commands; see the Retired-actions table. _(This row said **Shipped (bridge)** until 12 Sep 2026, contradicting that table since 28 Jul. The web half `mergeCodebookTags` still works — it is the menu item that is gone.)_ |
 
 ### Quotes menu — `playPause` triple-dispatch note
 
 `playPause` appears in three menu-source paths: the Video menu, the **Quotes menu** (`MenuCommands.swift:530-533`), and `useKeyboardShortcuts.ts`. All three resolve to `sendCommand("playPause")` via `PlayerContext`.
 
-### Codebook operations — need native focus context (5 stubs)
+### Codebook operations — RETIRED 12 Sep 2026 (was "5 stubs, need native focus context")
 
-These actions need to know WHICH group/code is targeted. Currently stubbed as console warnings in AppLayout.tsx. Wire when the native sidebar tracks focused codebook items.
+**This section is kept as a correction, not a backlog.** The five commands are
+gone; so is their `AppLayout.tsx` warn-stub and every `desktop.menu.codes.*` key
+they owned. Full reasoning in **Retired actions** above.
 
-| Action | Blocked on |
-|--------|-----------|
-| `toggleCodeGroup` | No expand/collapse state in CodebookPanel — groups are always expanded |
-| `renameCodeGroup` | Native sidebar focus tracking (which group is selected) |
-| `deleteCodeGroup` | Native sidebar focus tracking |
-| `renameCode` | Native sidebar focus tracking (which code is selected) |
-| `deleteCode` | Native sidebar focus tracking |
+| Action | Was "blocked on" | Actually |
+|--------|------------------|----------|
+| `toggleCodeGroup` | No expand/collapse state in CodebookPanel | Wrong axis and wrong lens. **D7**: hide and enable are different axes; the eye lives in `TagSidebar` / `TagGroupCard` on **Quotes**, and hide *"was never a third axis here"*. Closes `design-codebook-v2.md`'s **G7**/**Q11** |
+| `renameCodeGroup` | Native sidebar focus tracking (which group is selected) | There is no such focus to track. Selection is **single** and lives in the **master list**, which selects a *codebook*; the detail pane is *"a pure function of it"*. Renaming is clicking the name |
+| `deleteCodeGroup` | Native sidebar focus tracking | As above; deletion is the group card's own control |
+| `renameCode` | Native sidebar focus tracking (which code is selected) | As above; renaming is clicking the chip |
+| `deleteCode` | Native sidebar focus tracking | As above; deletion is the per-chip × |
+
+The "blocked on" column is the thing to learn from: **it named a component that
+`baa1aa0e` had already deleted (`CodebookPanel`) and a focus model the design
+doc forbids.** A stub whose blocker is stated in terms of a surface that no
+longer exists will sit in a backlog indefinitely, because nobody can tell it
+apart from work that is merely not yet done.
 
 ### Edit operations — partially handled (2)
 
@@ -235,7 +344,7 @@ These actions need to know WHICH group/code is targeted. Currently stubbed as co
 
 | Action | Notes |
 |--------|-------|
-| `set-appearance` | Sent by `BridgeHandler.syncAppearance()` on `ready`. Frontend applies theme |
+| ~~`set-appearance`~~ | **Removed 30 Jul 2026** — emitter deleted; appearance reaches the report by native inheritance, not over the bridge. See Retired actions. |
 
 ## Payload conventions
 
@@ -245,11 +354,11 @@ Actions that need **payloads** (the optional second argument to `menuAction`):
 
 | Action | Payload shape | Example |
 |--------|--------------|---------|
-| `set-appearance` | `{ value: "dark" \| "light" \| "auto" }` | Already wired |
+| ~~`set-appearance`~~ | — | **Removed 30 Jul 2026** — no longer sent. |
 | `exportAnonymised` | `{ anonymise: true }` | Proposed |
 | `importFramework` | `{ templateId: string }` | Wired — pre-selects template in picker |
 | `removeFramework` | `{ frameworkId: string }` | Wired — opens confirm dialog in CodebookPanel |
-| `findNext` / `findPrevious` | `{ text: string }` | Wired — reads from `NSPasteboard.find` |
+| ~~`findNext` / `findPrevious`~~ | ~~`{ text: string }`~~ | **Withdrawn 12 Sep 2026** — no longer dispatched. The payload shape is kept here for the transcript-search restore. |
 
 **Rule:** if the frontend already knows the target (focused quote, active tab), don't pass it in the payload. Payloads are for data the native side has that the web side doesn't.
 
@@ -261,10 +370,16 @@ Actions that need **payloads** (the optional second argument to `menuAction`):
 |----------|-----------|------------|
 | `canUndo` | `false` | Undo store ships (tracks quote edits, tag changes) |
 | `canRedo` | `false` | Same |
-| `hasPlayer` | `false` | PlayerContext reports popout window state to bridge |
-| `playerPlaying` | `false` | PlayerContext reports playback state to bridge |
 
-These control menu item dimming in Swift. Until wired, the Undo/Redo and Video menus will dim correctly (items disabled when stubs are `false`).
+`hasPlayer` and `playerPlaying` were listed here as stubs until 12 Sep 2026.
+They are **live** — `bridge.ts:295-298` reads them from
+`deps.getHasPlayer()` / `deps.getPlayerPlaying()`, which is what the Video-player
+paragraph above this section already said. The two statements contradicted each
+other; the paragraph was right.
+
+These control menu item dimming in Swift. Until wired, the **Undo/Redo** menu dims
+correctly (items disabled when the stubs are `false`). The Video menu is no longer
+part of that claim — it dims on live state.
 
 ## Recommended implementation order (remaining)
 

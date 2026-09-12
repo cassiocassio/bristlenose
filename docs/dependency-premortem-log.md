@@ -9,7 +9,7 @@ See `docs/design-dependency-premortem.md` for how this works and
 score one (Mode B `/cassandra --score`), or re-examine the holds below
 (Mode C `/cassandra --watch`).
 
-**Tally:** 4 prophecies scored — 4 hits, 0 misses, 0 false-alarms.
+**Tally:** 5 prophecies scored — 5 hits, 0 misses, 0 false-alarms, **2 mis-specified holds** (Entry 5's snapcore rows: the reading was right, the release-predicate named a dead fork and could never fire — the case that put a can-it-fire pre-step into `/cassandra --watch`).
 
 ## Held register
 
@@ -739,28 +739,135 @@ pinning register has **no cross-reference to this ledger's Held register**.
 One line — "see `docs/dependency-premortem-log.md` § Held register for
 gated holds" — stops the two registers drifting apart.
 
-### OUTCOME — open
+### OUTCOME — applied 2026-09-03/04
 
-Not yet applied. Nothing in this entry has landed.
+**The sweep landed, and it landed through Dependabot rather than by hand.**
 
-### SCORE — pending
+`97f1543b` (23 Aug) added the `github-actions` ecosystem **and** SHA-pinned
+every action at its *then-current* version — checkout `v4.4.0`,
+setup-python `v5.6.0`, setup-node `v4.4.0`, attest-sbom `v2.4.0`,
+upload-artifact `v4.6.2`, download-artifact `v4.3.0`. So recommendation (b)
+went **first**, inverting the order this entry advised, and the PRs it
+opened are what performed the sweep:
 
-No verdicts scored. Tally line stays at 4 scored until `/cassandra --score`
-runs against an applied sweep.
+| Landed | Commit | What |
+|---|---|---|
+| 3 Sep | `c48d00c0` | actions PR limit → 15 ("truncation is unsafe for a chain") |
+| 3 Sep | `4daad56b` | codeql v3→**v4** on one SHA across init/autobuild/analyze, **plus** setup-node→v7.0.0, download-artifact→v8.0.1, repository-dispatch→v4.0.1 |
+| 4 Sep | `9e1e015d` | setup-python 5.6.0→**7.0.0** (#137) |
+| 4 Sep | `1c9482c9` | upload-artifact 4.6.2→**7.0.1** (#140) |
+| 4 Sep | `3aa2ea06` | checkout 4.4.0→**7.0.1** (#141) |
+| 4 Sep | `6f499de8` | **migrated off attest-sbom** — "#138 wanted the version that deprecates it" |
+| 4 Sep | `30483d17` | snap repointed to `canonical/*` |
 
-Scoring notes for the future pass — the falsifiable claims, so this entry
-can be marked honestly rather than generously:
+**CI, 12 Sep 2026 (8 days on):** CI, CodeQL, Perf, Snap, Secret-scan and Mac
+Build all green on `main`. The one CI failure in the window (run
+`34690791713`) is the `ratchet` and `mypy` jobs — unrelated to any action;
+that run's log shows checkout and setup-python downloading and executing
+normally on their new SHAs.
 
-- If the sweep lands and **CI goes green with no node20 annotations**, the
-  ten greens are hits and the FORCE_-is-a-no-op reading is confirmed.
-- If **any** annotation survives the bump, the `HandlerFactory` reading is
-  wrong and this entry took a miss on Q1.
-- If `attest-sbom@v3` breaks the release attestation, that is a **miss** on
-  a green — and the lesson would be that transitive composite runtimes need
-  a build-level test, not just metadata reading.
-- If the Homebrew tap does **not** receive `update-formula` on the first
-  release after the `repository-dispatch` bump, that is a **miss** — and
-  the standing hazard (silent Homebrew breakage) will have bitten again.
+**The decisive observable, and it settles Q1 outright.** This entry's own
+falsifiable claim was: *if the sweep lands and CI goes green with no node20
+annotations, the greens are hits and the FORCE_-is-a-no-op reading is
+confirmed; if any annotation survives, Q1 took a miss.*
+
+Measured 12 Sep across three workflows —
+ci `34694795769`, codeql `34694795729`, snap `34694795721`:
+**zero occurrences of `Node.js 20 is deprecated`.**
+
+And `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` **is still set in all nine
+workflows** (it has in fact spread from seven to nine — `mockup-register.yml`
+and `ratchet-tighten.yml` now carry it, without the rationale comment).
+So the two halves separate cleanly:
+
+- the variable was set while the annotation fired → it never silenced it;
+- the annotation vanished on the bumps with the variable unchanged → the
+  bump is the only mechanism that removes it.
+
+That is exactly the `HandlerFactory` reading, confirmed by observation
+rather than by re-reading the source.
+
+### SCORE — 5th prophecy scored
+
+| Row | Score | Evidence |
+|---|---|---|
+| checkout v4→v7 | ✅ **hit** | `3aa2ea06` (#141); green 8 days |
+| setup-python v5→v7 | ✅ **hit** | `9e1e015d` (#137); green |
+| setup-node v4→v7 | ✅ **hit** | `4daad56b`; `ci.yml`'s explicit `cache: "npm"` untouched, no auto-cache surprise |
+| upload-artifact v4→v7 | ✅ **hit** | `1c9482c9` (#140); green |
+| download-artifact v4→v7 | ✅ **hit** | landed as v8 via `4daad56b`; exercised on the snap path, which downloads by `name:` |
+| download-artifact v7→v8 (SAFE half) | ✅ **hit** | no decompress or path regression |
+| download-artifact v7→v8 (⚠️ LATENT `digest-mismatch`) | ⬜ **untested — unfired** | predicted to fire "only on real corruption"; none has occurred. Absence of a flake is not proof, and must not decay into a hit |
+| codeql v3→v4 | ✅ **hit**, blast radius **incomplete** | `4daad56b`; CodeQL green. But see Lesson 2 |
+| attest-sbom v2→v3 — the composite-payload **correction** | ✅ **hit** | the briefing said "not node-related"; the payload *was* node20, and `6f499de8`'s existence confirms the surface was real |
+| attest-sbom v2→v3 — the **recommendation** | ⬜ **untested — superseded** | the tree did not take v3; it migrated to `actions/attest@v4.2.2`. Strictly better than the advice, but v3 was never exercised |
+| attest-sbom v2→**v4** "⚠️ do not take" | ✅ **hit** | Dependabot offered exactly v4 (#138); the commit subject — *"#138 wanted the version that deprecates it"* — is the receipt, and the response was the migration this entry said to schedule separately |
+| repository-dispatch v3→v4.0.1 | ⬜ **untested** | applied correctly (SHA **and** trailing comment moved together, as prescribed). **But no release has run since 31 Aug — before the bump.** The Homebrew-tap dispatch, which fails *silently*, is unexercised |
+| snapcore/action-build — HELD | ⚠️ **reading right, predicate mis-specified** | node20 + no newer tag: correct. The **hold** was not: `snapcore` is `fork: true`, `parent: canonical/action-build`, abandoned Sep 2024. The predicate named an upstream that could never publish. Repointed `30483d17`; revision 14 to edge |
+| snapcore/action-publish — HELD | ⚠️ **same** | same fork shape; same repoint |
+| pypa/gh-action-pypi-publish | ➖ **n/a — advice followed** | left on the moving tag, as advised; no bump attempted |
+| **Q1** — FORCE_ is a no-op, only a bump clears the annotation | ✅ **hit (decisive)** | zero annotations with the variable still set — see OUTCOME |
+| **Q2** — cosmetic; punycode is log noise | ✅ **hit** | 8 days green, no functional break |
+| **Q3** — 16 Sept node20 removal is a non-event here | ⬜ **untested** | **resolves in 4 days (16 Sep 2026)**. Do not score early |
+
+**Entry verdict: hit.** Every substantive verdict held, and Q1 was confirmed
+by the exact observable the entry nominated in advance. Two rows are
+untested by the evidence barrier, and two Held rows were mis-specified.
+
+### Lessons
+
+**1. A hold must be checked that its predicate CAN fire.** The two snapcore
+rows were not wrong about the runtime — they were waiting on a party that
+had not published anything since Sep 2024 and was not the upstream. A
+hold whose predicate cannot fire is a pin with better manners. This has
+already been promoted into `/cassandra --watch` Mode C as a standing
+pre-step, on the strength of **four such rows found in one week** (Entry 7,
+4 Sep: jsdom, thinc, tokenizers, snapcore). Recorded here as the case that
+generated it.
+
+**2. "A fan, not a chain" was right about caps and wrong about products.**
+This entry's cluster naming was correct that *no action's metadata
+constrains another's* — there is no resolver surface. It missed that a
+single vendor's **multi-action product** carries an *intra-product
+consistency requirement* enforced at runtime: `github/codeql-action`'s
+`init`, `autobuild` and `analyze` must run on **one** SHA. Dependabot's
+default 5-PR cap raised two of the three and withheld the third
+(`a97bedda`, `4daad56b`), so merging either alone would have stranded
+`analyze` on v3. **Proposed catalog addition** to
+`docs/design-dependency-premortem.md`: *a multi-action product is a chain
+inside a fan — enumerate an action's siblings before calling it independent,
+and check the PR cap can carry the whole set.*
+
+**3. The recommended ordering was wrong, harmlessly.** This entry said add
+the `github-actions` ecosystem *after* the sweep, to avoid ten PRs on a
+Monday. The tree did the opposite and got a better result: each bump
+arrived as its own reviewable PR with its own CI run, and #138 surfaced the
+attest-sbom deprecation as a live offer rather than a footnote. **Tune:
+when the systemic fix is a watcher, let the watcher do the sweep** — the
+"avoid N PRs" instinct optimises the wrong cost.
+
+**4. The evidence barrier earned its keep.** Two rows would have read as
+free hits on a generous pass — `attest-sbom@v3` (never taken) and
+`repository-dispatch@v4.0.1` (never exercised, on a path that fails
+silently). Both are `untested`. The tally is 5-for-5 *because* those two
+were withheld, not in spite of it.
+
+### Still open from this entry
+
+- **(d) `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` was never removed**, and has
+  spread 7 → 9 workflows (`mockup-register.yml:29`, `ratchet-tighten.yml:39`),
+  both carrying the bare variable with no comment; `ci.yml`'s original
+  rationale comment still cites a June 2026 switch three months past. The
+  case is now **stronger than when written**: the annotation is gone *while
+  the variable is set*, so it is measurably contributing nothing.
+- **The Homebrew-tap dispatch is unverified.** First release after 4 Sep
+  must confirm the tap receives `update-formula`. This is the standing
+  silent-failure hazard, and the bump has not yet met it.
+- **Q3 resolves 16 Sep 2026.** Score it then, not before.
+- `.github/workflows/homebrew-tap/update-formula.yml:22` still pins
+  checkout at `v4.4.0` (node20) — introduced by `97f1543b` itself. Actions
+  does not read subdirectories of `.github/workflows/`, so it never runs
+  here; it is a template for the tap repo, where it does.
 
 
 ---

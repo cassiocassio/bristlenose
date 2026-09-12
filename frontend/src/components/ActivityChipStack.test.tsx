@@ -271,6 +271,10 @@ describe("ActivityChipStack", () => {
 
     const link = screen.getByTestId("bn-activity-chip-action");
     expect(link).toHaveTextContent("Report");
+    // The link doubles as the dismissal, so it and the close button are exact
+    // complements: whichever is absent, the other is there. Pinned for the
+    // partial and zero-proposal branches below; this is the plain-completed one.
+    expect(screen.queryByTestId("bn-activity-chip-close")).not.toBeInTheDocument();
     fireEvent.click(link);
     expect(onAction).toHaveBeenCalledOnce();
   });
@@ -334,8 +338,8 @@ describe("ActivityChipStack", () => {
   // The engine gathers batches with `return_exceptions=True` and carries on, so
   // a job can report "completed" having tagged a subset. That shortfall used to
   // be dropped: `progressLabel` is only set while running, so the chip claimed
-  // an unqualified success. The correct behaviour existed in `AutoCodeToast` —
-  // which is not mounted — and therefore reached no researcher.
+  // an unqualified success. The correct behaviour existed in a duplicate toast
+  // component that nothing rendered, and therefore reached no researcher.
 
   it("warns instead of claiming success when a job tagged only a subset", async () => {
     mockGetStatus.mockResolvedValue(
@@ -352,6 +356,30 @@ describe("ActivityChipStack", () => {
 
     expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "partial");
     expect(screen.getByText(/Tagged 7 of 10 quotes/)).toBeInTheDocument();
+  });
+
+  it("a job that tagged everything is completed, not partial", async () => {
+    // The other side of the `processed < total` boundary. Without it a
+    // normaliser that called *every* completed job partial would satisfy the
+    // test above, and a run that went fine would reach the researcher as a
+    // warning about batches that never failed.
+    mockGetStatus.mockResolvedValue(
+      makeStatus({
+        status: "completed",
+        processed_quotes: 10,
+        total_quotes: 10,
+        completed_at: "2026-02-20T10:01:30Z",
+      }),
+    );
+
+    render(<ActivityChipStack jobs={[makeJob()]} onDismiss={vi.fn()} />);
+    await act(async () => {});
+
+    expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute(
+      "data-status",
+      "completed",
+    );
+    expect(screen.queryByText(/some batches failed/)).not.toBeInTheDocument();
   });
 
   it("keeps the action link on a partial chip — the proposals still need review", async () => {
@@ -494,5 +522,64 @@ describe("ActivityChipStack", () => {
     await act(async () => {});
 
     expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
+  // ── Failure messages ─────────────────────────────────────────────────────
+  // `error_message` is `str(exc)` from a bare `except` — raw SDK text, usually
+  // a stringified JSON body. `normaliseAutoCode` resolves `failure_kind`
+  // through `autocodeFailure()` at the API/UI boundary and never touches it.
+  // These three cases are the only coverage `autocodeFailure()` has anywhere;
+  // they used to live in `AutoCodeToast.test.tsx`, pinning a component nothing
+  // rendered, and moved here when that duplicate was deleted.
+
+  it("says why the job failed, from failure_kind", async () => {
+    mockGetStatus.mockResolvedValue(
+      makeStatus({
+        status: "failed",
+        failure_kind: "invalid_key",
+        // Raw SDK text, as `str(exc)` from a bare `except` actually produces.
+        error_message:
+          "Error code: 401 - {'type': 'error', 'error': {'type': " +
+          "'authentication_error', 'message': 'invalid x-api-key'}}",
+      }),
+    );
+
+    render(<ActivityChipStack jobs={[makeJob()]} onDismiss={vi.fn()} />);
+    await act(async () => {});
+
+    expect(screen.getByText(/Your API key was rejected/)).toBeInTheDocument();
+  });
+
+  it("never shows the raw exception text", async () => {
+    // The whole point: it used to be interpolated straight into the sentence,
+    // so a rate limit reached the researcher as a stringified JSON body.
+    mockGetStatus.mockResolvedValue(
+      makeStatus({
+        status: "failed",
+        failure_kind: "rate_limited",
+        error_message: "Error code: 429 - {'type': 'rate_limit_error'}",
+      }),
+    );
+
+    render(<ActivityChipStack jobs={[makeJob()]} onDismiss={vi.fn()} />);
+    await act(async () => {});
+
+    expect(screen.queryByText(/rate_limit_error/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/429/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Rate limited/)).toBeInTheDocument();
+  });
+
+  it("falls back to the generic sentence when unclassified", async () => {
+    // Every job that failed before `failure_kind` existed, and any the
+    // classifier declined to name.
+    mockGetStatus.mockResolvedValue(
+      makeStatus({ status: "failed", failure_kind: "", error_message: "boom" }),
+    );
+
+    render(<ActivityChipStack jobs={[makeJob()]} onDismiss={vi.fn()} />);
+    await act(async () => {});
+
+    expect(screen.getByText(/Tagging failed/)).toBeInTheDocument();
+    expect(screen.queryByText(/boom/)).not.toBeInTheDocument();
   });
 });

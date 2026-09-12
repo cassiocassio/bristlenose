@@ -39,7 +39,59 @@ Items that look fully active (no dimming) but do nothing when clicked.
   2026, see "In progress" above). Opens the native Health window; the dead
   bridge action is gone.
 - [x] **File ▸ Open in New Window** (`openInNewWindow`, ⇧⌘O) — ~~no web handler.~~ **Closed by retirement, 20 Aug 2026**, not by wiring one: the command had no referent distinct from `File ▸ New Window`. The capability lives on in three sidebar context-menu items, which act on a *clicked* row rather than the front window.
-  _Only remaining group-A item._
+## Closed 12 Sep 2026 (the Find sweep)
+
+- [x] **Edit ▸ Find Next / Find Previous** (⌘G, ⇧⌘G) — **withdrawn** 12 Sep 2026
+  (`find: withdraw Find Next and Find Previous — a filter has no next`), after QA
+  reported ⌘G doing nothing. The plumbing was intact: ⌘E writes the find
+  pasteboard, ⌘G reads it back and dispatches `findNext` with that text, and the
+  web handler calls `setSearchQuery(text)` — with the text already in the box.
+  Same query, same filter, identical result. **The reason is semantic, not
+  mechanical:** search on this surface *filters* the quote grid, so every visible
+  card is already a match and nothing renders a `<mark>`. "Find Next" presupposes
+  a cursor stepping through occurrences in content that stays put; a filter has
+  no cursor and nothing to step to. Moving through results is list navigation,
+  which `j` and the arrows already do. Gating them (as the ⌘F change did) would
+  have been the same lie ⌘J's note refuses. Restore **with transcript search**,
+  where a document genuinely has matches to step between; the 21 locale keys and
+  the orphaned `AppLayout.tsx` cases stay so it is a one-line re-enable.
+  _An earlier draft of this entry blamed an empty find pasteboard. That case is
+  real (nothing native writes it — the capsule dispatches `setSearchQuery`, not a
+  pasteboard write) but it is not the defect: ⌘G was equally meaningless when the
+  pasteboard was populated._
+
+- [x] **Edit ▸ Find** (⌘F) — **wired**, after doing nothing since it shipped
+  (see the correction at the foot of this doc for how the audit missed it).
+  Now native on both ends and never crosses the bridge:
+  `BridgeHandler.requestSearchFocus()` bumps the published counter
+  `focusSearchRequests`, which `QuotesSearchToolbarControl` observes to expand
+  and take focus. A counter, not a `Bool` — ⌘F must work twice in a row.
+  The whole Find family is now lens-scoped:
+  `canSearch = canDispatch && activeTab == .quotes`
+  (`MenuCommands.swift:765`), because search exists only on Quotes and the
+  other three lenses carry `SearchComingSoonButton`. `canDispatch` as well as
+  the lens, because `currentPath` survives an in-place reload — `activeTab` can
+  still say `.quotes` over a freshly-loaded status page.
+- [x] **Edit ▸ Jump to Selection** (`jumpToSelection`, ⌘J) — **withdrawn**
+  12 Sep 2026, not deleted and not dimmed. Same treatment as `mergeCode` below
+  and for the same reason: it is unimplemented, not ungated. The web side is an
+  explicit `break` behind a comment claiming the native layer handles it, and no
+  native handler exists. It could never have reached WKWebView as
+  `centerSelectionInVisibleRect:` either — a SwiftUI `.keyboardShortcut`
+  installs an NSMenu key equivalent, matched *before* the responder chain. So ⌘J
+  has done nothing since it shipped. Commented out at
+  `MenuCommands.swift:740-761` with the blocking question (what does "jump to
+  selection" mean in a quote grid?); the 21 locale keys are deliberately kept so
+  restore stays one line.
+- [x] **Menu gates moved off `isReady`** (`b06f923a`). `BridgeHandler` gained
+  `hasChannel` — a published mirror driven by `webView`'s `didSet`, so a menu
+  gate can never disagree with the `guard let webView` it stands in for — and
+  `canDispatch` (`hasChannel && documentState == .spa`). `isReady` was never the
+  right signal: it is force-set 2s after *any* load, status page included.
+  `webView` is now cleared by `WebView.dismantleNSView` under an identity guard
+  rather than by `reset()`, which had two owners with no defined order wiping a
+  live registration. File ▸ Export Report gained `.disabled(!canDispatch)`,
+  reaching parity with its toolbar twin.
 
 ## Closed 30 Jul 2026 (mechanical sweep)
 
@@ -67,34 +119,59 @@ Items that look fully active (no dimming) but do nothing when clicked.
   `NSPrintOperation` via `PrintActions.print(webView:window:)`; prints whichever
   lens is on screen, since the operation renders the web view's current document.
   The bridge was never the right target — `window.print()` inside a WKWebView
-  can't raise the macOS print panel. Gated on `bridgeHandler.isReady`. Print
+  can't raise the macOS print panel. ~~Gated on `bridgeHandler.isReady`.~~
+  **Gated on `bridgeHandler.hasChannel` since 12 Sep 2026** — `hasChannel`, not
+  `canDispatch`, because printing hands the web view to AppKit and never
+  dispatches JS, so the guard it stands in for is `PrintActions.print`'s own
+  `guard let webView`, not the presence of `window.__bristlenose`. A status page
+  is a real document and prints (`MenuCommands.swift:620-628`). Print
   *fidelity* is now a CSS concern (`@media print`), not a Swift one.
 - [x] **Codes ▸ Merge Codes** (`mergeCode`) — **withdrawn** 28 Jul 2026, not
   deleted. Merging needs a *source* and a *target*, and the codebook lens has no
   multi-select — so drag-one-code-onto-another in `CodebookPanel` is the only way
   to express it, and a menu item can't say which two codes it means. Commented out
   in `MenuCommands.swift` with the restore note; the web half
-  (`mergeCodebookTags`) already works. Returns when codebook selection lands
-  (now on the planning board, QoL/Should).
+  (`mergeCodebookTags`) already works. ~~Returns when codebook selection lands
+  (now on the planning board, QoL/Should).~~ **Deleted outright 12 Sep 2026** —
+  codebook selection is not coming in the shape this assumed (see group B
+  below), so there was nothing left for the comment to wait for.
 
-## B. Warn-stub — `case` exists, logs "requires native focus context — not yet wired"
+## B. Warn-stub — CLOSED 12 Sep 2026 (retired, not wired)
 
-All in the **Codes** menu (`AppLayout.tsx`), gated on `isCodeTab`. Each needs a
-focused group/code context from the native sidebar that isn't built yet.
+- [x] **Codes ▸ Rename Code Group** (`renameCodeGroup`)
+- [x] **Codes ▸ Delete Code Group** (`deleteCodeGroup`)
+- [x] **Codes ▸ Show/Hide Code Group** (`toggleCodeGroup` / `showHideCodeGroup`)
+- [x] **Codes ▸ Rename Code** (`renameCode`)
+- [x] **Codes ▸ Delete Code** (`deleteCode`)
+- [x] **Codes ▸ Merge Codes** (`mergeCodes`) — withdrawn 28 Jul, deleted with the rest
 
-- [ ] **Codes ▸ Rename Code Group** (`renameCodeGroup`)
-- [ ] **Codes ▸ Delete Code Group** (`deleteCodeGroup`)
-- [ ] **Codes ▸ Show/Hide Code Group** (`toggleCodeGroup`)
-- [ ] **Codes ▸ Rename Code** (`renameCode`)
-- [ ] **Codes ▸ Delete Code** (`deleteCode`)
+**All six are gone** — from `MenuCommands.swift`, from the `AppLayout.tsx`
+warn-stub, and from the `desktop.menu.codes.*` keys in all 21 full locales.
+`createCodeGroup`, `createCode`, `browseCodebooks`, `importFramework` and
+`removeFramework` remain, and are wired.
 
-(For contrast, `createCodeGroup`, `createCode`, `browseCodebooks`,
-`importFramework`, `removeFramework` in the same menu **are** wired.)
+This group was open on the theory that it was blocked on a selection model.
+It was not: `docs/design-codebook-v2.md` had already settled both halves, and
+the settled answer is that these commands have no target to acquire.
 
-All five need a **selection model in the codebook lens** — there is no way to
-name the target group/code today. Tracked on the planning board as
-"Codebook lens — multi-select of codes and code groups" (QoL / Should,
-28 Jul 2026), which also gates restoring Merge Codes.
+- **Selection semantics are pinned** (29 Aug): selection is *single*, it lives
+  *in the master list*, and the detail pane is *"a pure function of it — no
+  independent state, no multi-select, no second place a thing can be
+  'current'"*. The master list selects a **codebook**; groups and tags live in
+  the detail pane. A menu command naming one group or one tag is asking for the
+  second current thing the pin forbids. Each is already a direct-manipulation
+  affordance on the lens — click a name to rename, a per-chip delete, drag to
+  merge.
+- **Show/Hide was never a codebook command.** **D7** — hide and enable are
+  different axes, on different lenses — puts the eye in `TagSidebar` /
+  `TagGroupCard` on the **Quotes** lens, and confirms hide *"was never a third
+  axis here"*.
+
+Recorded in that doc's *Deliberate removals* register; **G7** and **Q11** are
+closed there with a third answer the registers did not list — retire, rather
+than move-or-except. Restoring any of the six means reopening the 29 Aug pin,
+not adding a handler. The planning-board item that used to gate this
+("multi-select of codes and code groups") no longer has this group behind it.
 
 ## C. Disabled by design — `.disabled(true)`, future phases (not bugs)
 
@@ -117,6 +194,21 @@ lands.
 
 ---
 
-**Everything else is wired:** all ~50 other web `menuAction` cases and all 15
-native notification actions (New Project/Folder, Rename, Move To, Locate, Stop,
-Miro, Welcome, AI & Privacy, etc.) resolve to a handler.
+**Everything else resolves to a handler:** all ~50 other web `menuAction` cases
+and all 15 native notification actions (New Project/Folder, Rename, Move To,
+Locate, Stop, Miro, Welcome, AI & Privacy, etc.) reach one.
+
+> **"Resolves to a handler" is not "works" — corrected 12 Sep 2026.** This line
+> read *everything else is wired* until ⌘F was found dead in every project, on
+> every lens, since it shipped. It dispatched `menuAction("find")`, the case
+> existed in `AppLayout.tsx`, the handler ran — and queried `.search-input`, an
+> element `Toolbar` never renders in embedded mode (`if (isEmbedded()) return
+> null`). It resolved cleanly and did nothing. There was no log line, because
+> the bridge was working perfectly; the failure was one layer below it.
+>
+> This audit's method — *does a `case` exist for the action?* — cannot see that
+> class. Every group-A entry above was found by asking whether a handler
+> exists; none of them would have caught ⌘F. Treat the counts here as a
+> statement about wiring, not about behaviour — and see the open Find Next /
+> Find Previous / Use Selection for Find entry in group A for three actions the
+> method still passes today.

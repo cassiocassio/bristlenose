@@ -87,13 +87,7 @@
     },
     "codes": {
       "createCodeGroup": "Luo koodiryhmä",
-      "renameCodeGroup": "Nimeä koodiryhmä uudelleen…",
-      "deleteCodeGroup": "Poista koodiryhmä",
-      "showHideCodeGroup": "Näytä tai kätke koodiryhmä",
       "createCode": "Luo koodi",
-      "renameCode": "Nimeä koodi uudelleen…",
-      "deleteCode": "Poista koodi",
-      "mergeCodes": "Yhdistä koodit…",
       "browseCodebooks": "Selaa koodikirjoja…",
       "importFramework": "Tuo viitekehys…",
       "removeFramework": "Poista viitekehys"

@@ -87,13 +87,7 @@
     },
     "codes": {
       "createCodeGroup": "코드 그룹 생성",
-      "renameCodeGroup": "코드 그룹 이름 변경…",
-      "deleteCodeGroup": "코드 그룹 삭제",
-      "showHideCodeGroup": "코드 그룹 표시/숨기기",
       "createCode": "코드 생성",
-      "renameCode": "코드 이름 변경…",
-      "deleteCode": "코드 삭제",
-      "mergeCodes": "코드 병합…",
       "browseCodebooks": "코드북 탐색…",
       "importFramework": "프레임워크 가져오기…",
       "removeFramework": "프레임워크 제거"

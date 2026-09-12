@@ -87,13 +87,7 @@
     },
     "codes": {
       "createCodeGroup": "Skapa kodgrupp",
-      "renameCodeGroup": "Byt namn på kodgrupp…",
-      "deleteCodeGroup": "Radera kodgrupp",
-      "showHideCodeGroup": "Visa/dölj kodgrupp",
       "createCode": "Skapa kod",
-      "renameCode": "Byt namn på kod…",
-      "deleteCode": "Radera kod",
-      "mergeCodes": "Slå ihop koder…",
       "browseCodebooks": "Bläddra bland kodböcker…",
       "importFramework": "Importera ramverk…",
       "removeFramework": "Ta bort ramverk"

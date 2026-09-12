@@ -87,13 +87,7 @@
     },
     "codes": {
       "createCodeGroup": "Créer un groupe de codes",
-      "renameCodeGroup": "Renommer le groupe de codes…",
-      "deleteCodeGroup": "Supprimer le groupe de codes",
-      "showHideCodeGroup": "Afficher/Masquer le groupe de codes",
       "createCode": "Créer un code",
-      "renameCode": "Renommer le code…",
-      "deleteCode": "Supprimer le code",
-      "mergeCodes": "Fusionner les codes…",
       "browseCodebooks": "Parcourir les grilles de codage…",
       "importFramework": "Importer un cadre d'analyse…",
       "removeFramework": "Retirer le cadre d'analyse"

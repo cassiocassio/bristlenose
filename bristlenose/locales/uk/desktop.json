@@ -87,13 +87,7 @@
     },
     "codes": {
       "createCodeGroup": "Створити групу кодів",
-      "renameCodeGroup": "Перейменувати групу кодів…",
-      "deleteCodeGroup": "Видалити групу кодів",
-      "showHideCodeGroup": "Показати або сховати групу кодів",
       "createCode": "Створити код",
-      "renameCode": "Перейменувати код…",
-      "deleteCode": "Видалити код",
-      "mergeCodes": "Об’єднати коди…",
       "browseCodebooks": "Переглянути кодові книги…",
       "importFramework": "Імпортувати фреймворк…",
       "removeFramework": "Прибрати фреймворк"

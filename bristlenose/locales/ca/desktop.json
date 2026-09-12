@@ -87,13 +87,7 @@
     },
     "codes": {
       "createCodeGroup": "Crea un grup de codis",
-      "renameCodeGroup": "Canvia el nom del grup de codis…",
-      "deleteCodeGroup": "Elimina el grup de codis",
-      "showHideCodeGroup": "Mostra/oculta el grup de codis",
       "createCode": "Crea un codi",
-      "renameCode": "Canvia el nom del codi…",
-      "deleteCode": "Elimina el codi",
-      "mergeCodes": "Fusiona els codis…",
       "browseCodebooks": "Explora els llibres de codis…",
       "importFramework": "Importa un marc…",
       "removeFramework": "Suprimeix el marc"

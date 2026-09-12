@@ -607,14 +607,6 @@ function AppShell() {
         case "createCode":
           window.dispatchEvent(new CustomEvent("bn:codebook-create-code"));
           break;
-        case "toggleCodeGroup":
-        case "renameCodeGroup":
-        case "deleteCodeGroup":
-        case "renameCode":
-        case "deleteCode":
-          // Needs focused group/code context from native sidebar (not yet built).
-          console.warn(`[bn:menu-action] "${action}" requires native focus context — not yet wired`);
-          break;
         case "openSpecimen":
           // Debug lens (Diagnostics menu, DEBUG harness) — the specimen page
           // has no native sidebar row, so the menu navigates the SPA directly.

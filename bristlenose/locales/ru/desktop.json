@@ -87,13 +87,7 @@
     },
     "codes": {
       "createCodeGroup": "Создать группу кодов",
-      "renameCodeGroup": "Переименовать группу кодов…",
-      "deleteCodeGroup": "Удалить группу кодов",
-      "showHideCodeGroup": "Показать/скрыть группу кодов",
       "createCode": "Создать код",
-      "renameCode": "Переименовать код…",
-      "deleteCode": "Удалить код",
-      "mergeCodes": "Объединить коды…",
       "browseCodebooks": "Обзор кодировщиков…",
       "importFramework": "Импортировать структуру…",
       "removeFramework": "Убрать структуру"

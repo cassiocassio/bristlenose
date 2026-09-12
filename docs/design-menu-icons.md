@@ -8,6 +8,8 @@ trued-against: HEAD@main on 2026-07-28
 
 ## Changelog
 
+- _2026-09-12_ — **Jump to Selection (⌘J) withdrawn**, so its row is struck: the command was unimplemented on both sides and is commented out in `FindMenuContent`, not dimmed. It stays named in the "no abstract-command forcing" rule above, which it still illustrates. Find (⌘F) keeps `magnifyingglass` and the Search-toolbar match — that pairing survived the 12 Sep rewiring, which changed how ⌘F dispatches, not what it looks like. Anchors: `FindMenuContent`; commit subject `find: wire Cmd+F to the search that exists, dim it where none does`.
+
 - _2026-07-28_ — created, then corrected the same day. The first draft **invented
   lens glyphs that contradicted `LensItem.all`**, which declares itself the single
   source of the lens→Tab→icon mapping. Rows corrected to the settled set; a
@@ -51,7 +53,8 @@ An item should carry an icon only if it clears **all** of:
   category/consequence (destructive = trash). If it's just "a picture of the
   words", skip it.
 - **No abstract-command forcing** — navigation/selection/meta commands
-  (Use Selection for Find, Jump to Selection, Actual Size, Toggle Selection)
+  (Use Selection for Find, Actual Size, Toggle Selection — and Jump to Selection,
+  withdrawn 12 Sep 2026 but still the cleanest example of the category)
   stay bare; their glyphs would be arbitrary.
 - **Toggles let the checkmark work** — a menu Toggle already shows a leading
   checkmark for "on". Don't stack a second leading glyph (Apple's own pattern).
@@ -112,10 +115,10 @@ item gets an icon.
 | Undo (⌘Z) | `arrow.uturn.backward` | universal | **1** |
 | Redo (⇧⌘Z) | `arrow.uturn.forward` | universal | **1** |
 | Find (⌘F) | `magnifyingglass` | **matches Search toolbar item** | **1** |
-| Find Next (⌘G) | — (alt `chevron.down`) | Apple leaves bare | 3 |
-| Find Previous (⇧⌘G) | — (alt `chevron.up`) | Apple leaves bare | 3 |
+| ~~Find Next (⌘G)~~ | — | **Withdrawn 12 Sep 2026** — a filter has no next; restore with transcript search. | — |
+| ~~Find Previous (⇧⌘G)~~ | — | **Withdrawn 12 Sep 2026** — same. | — |
 | Use Selection for Find (⌘E) | — | abstract; no honest glyph | never |
-| Jump to Selection (⌘J) | — (alt `scope`) | abstract | 3 |
+| ~~Jump to Selection (⌘J)~~ | — | **Withdrawn 12 Sep 2026** — unimplemented on both sides; commented out in `FindMenuContent`. No icon decision needed unless it returns. | — |
 
 ### View
 

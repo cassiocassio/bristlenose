@@ -717,19 +717,46 @@ private struct FindMenuContent: View {
         .keyboardShortcut("f", modifiers: .command)
         .disabled(!canSearch)
 
-        Button(i18n.t("desktop.menu.edit.findNext")) {
-            let text = NSPasteboard(name: .find).string(forType: .string) ?? ""
-            bridgeHandler.menuAction("findNext", payload: ["text": text])
-        }
-        .keyboardShortcut("g", modifiers: .command)
-        .disabled(!canSearch)
-
-        Button(i18n.t("desktop.menu.edit.findPrevious")) {
-            let text = NSPasteboard(name: .find).string(forType: .string) ?? ""
-            bridgeHandler.menuAction("findPrevious", payload: ["text": text])
-        }
-        .keyboardShortcut("g", modifiers: [.command, .shift])
-        .disabled(!canSearch)
+        // Find Next / Find Previous withdrawn 12 Sep 2026, after QA found ⌘G did
+        // nothing. It was never broken — it has no meaning on this surface.
+        //
+        // The chain is intact end to end: ⌘E writes the find pasteboard
+        // (`BridgeHandler` `find-pasteboard-write`), ⌘G reads it back and sends
+        // `findNext` with that text, and the web handler calls
+        // `setSearchQuery(text)` — with the text already in the box. Same query,
+        // same filter, identical result.
+        //
+        // Because search here FILTERS the quote grid: `searchQuery` feeds the
+        // filter in `QuoteSections`, and nothing renders a `<mark>`. Every
+        // visible card is already a match. "Find Next" presupposes a cursor
+        // stepping through occurrences in content that stays put — the document
+        // model — and a filter has no cursor and nothing to step to. Moving
+        // through the results is list navigation, which `j` and the arrows
+        // already do.
+        //
+        // So this was gated in the same change that gated ⌘F, and gating an
+        // unimplemented command is the lie the ⌘J note below refuses. Withdrawn
+        // for the same reason.
+        //
+        // Restore WITH transcript search, not before — a transcript is a real
+        // document, where stepping match to match is exactly right (see the
+        // planning notes kept outside the public tree). The 21 locale keys stay
+        // so this is a one-line re-enable; the `AppLayout.tsx` cases survive
+        // orphaned, like ⌘J's.
+        //
+        // Button(i18n.t("desktop.menu.edit.findNext")) {
+        //     let text = NSPasteboard(name: .find).string(forType: .string) ?? ""
+        //     bridgeHandler.menuAction("findNext", payload: ["text": text])
+        // }
+        // .keyboardShortcut("g", modifiers: .command)
+        // .disabled(!canSearch)
+        //
+        // Button(i18n.t("desktop.menu.edit.findPrevious")) {
+        //     let text = NSPasteboard(name: .find).string(forType: .string) ?? ""
+        //     bridgeHandler.menuAction("findPrevious", payload: ["text": text])
+        // }
+        // .keyboardShortcut("g", modifiers: [.command, .shift])
+        // .disabled(!canSearch)
 
         Button(i18n.t("desktop.menu.edit.useSelectionForFind")) {
             bridgeHandler.menuAction("useSelectionForFind")
@@ -1219,60 +1246,38 @@ private struct CodesMenuContent: View {
     }
 
     var body: some View {
+        // SIX commands retired here on 12 Sep 2026 — rename/delete Code Group,
+        // Show/Hide Code Group, rename/delete Code, and Merge Codes (the last
+        // already withdrawn 28 Jul). They are not deferred; they are a category
+        // error inherited from v1, and `docs/design-codebook-v2.md` settles both
+        // halves:
+        //
+        //  • Selection semantics are PINNED (29 Aug): "selection is single, it
+        //    lives in the master list … no second place a thing can be 'current'".
+        //    The master list selects a *codebook*. Groups and tags live in the
+        //    detail pane, which is "a pure function of it" — so a menu command
+        //    naming one group or one tag has no target that the model permits.
+        //    Every one of these is already a direct-manipulation affordance in
+        //    the lens (click a name to rename, a per-chip delete, drag to merge).
+        //
+        //  • Show/Hide was never a codebook command at all. D7 — "hide and
+        //    enable are different axes, on different lenses" — puts the eye in
+        //    `TagSidebar`/`TagGroupCard` on the QUOTES lens, and confirms hide
+        //    "was never a third axis here". That closes the register's G7/Q11
+        //    ("move it, or except it") as a third answer: retire it.
+        //
+        // Restoring any of them means reopening the 29 Aug pin, not adding a
+        // handler. Create-group and Create-code stay: creation needs no target.
+
         Button(i18n.t("desktop.menu.codes.createCodeGroup"), systemImage: "folder.badge.plus") {
             bridgeHandler.menuAction("createCodeGroup")
         }
-
-        Button(i18n.t("desktop.menu.codes.renameCodeGroup"), systemImage: "pencil") {
-            bridgeHandler.menuAction("renameCodeGroup")
-        }
-        .disabled(!isCodeTab)
-
-        Button(i18n.t("desktop.menu.codes.deleteCodeGroup"), systemImage: "trash") {
-            bridgeHandler.menuAction("deleteCodeGroup")
-        }
-        .disabled(!isCodeTab)
-
-        Button(i18n.t("desktop.menu.codes.showHideCodeGroup"), systemImage: "eye") {
-            bridgeHandler.menuAction("toggleCodeGroup")
-        }
-        .disabled(!isCodeTab)
 
         Divider()
 
         Button(i18n.t("desktop.menu.codes.createCode"), systemImage: "tag") {
             bridgeHandler.menuAction("createCode")
         }
-
-        Button(i18n.t("desktop.menu.codes.renameCode"), systemImage: "pencil") {
-            bridgeHandler.menuAction("renameCode")
-        }
-        .disabled(!isCodeTab)
-
-        Button(i18n.t("desktop.menu.codes.deleteCode"), systemImage: "trash") {
-            bridgeHandler.menuAction("deleteCode")
-        }
-        .disabled(!isCodeTab)
-
-        // Merge Codes — withdrawn from the menu 28 Jul 2026, deliberately left
-        // in place rather than deleted.
-        //
-        // Merging needs a *source* and a *target*. The codebook lens has no
-        // multi-select, so the only way to express "merge A into B" is the
-        // existing drag-one-code-onto-another in `CodebookPanel` — a menu item
-        // simply cannot say which two codes it means. That's why `mergeCode` had
-        // no handler on either side of the bridge and clicked through to nothing.
-        //
-        // Restore this when codebook selection lands (tracked in the sprint
-        // planning notes). The web half already exists and works —
-        // `mergeCodebookTags` in `frontend/src/utils/api.ts`, driven by the
-        // panel's drag merge — so this becomes a one-line re-enable plus a
-        // `case "mergeCode"` that reads the selection.
-        //
-        // Button(i18n.t("desktop.menu.codes.mergeCodes"), systemImage: "arrow.triangle.merge") {
-        //     bridgeHandler.menuAction("mergeCode")
-        // }
-        // .disabled(!isCodeTab)
 
         Divider()
 

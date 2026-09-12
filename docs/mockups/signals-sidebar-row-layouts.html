@@ -596,10 +596,17 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
       cap never binds at all, because fewer than six signals exist to cut.</p>
     <p><strong>And the binding constraint is participants, not quotes.</strong> Taking
       the one analysed project with real interview-length transcripts (20 sessions,
-      136k words, 9 participants, 484 quotes): 334 quotes carry a sentiment, landing in
-      58 populated cells at a median of 4 quotes each. <strong>38 cells clear the
-      “moderate” quote bar of ≥4. Only 10 clear its ≥3-participant bar, and exactly 1
-      clears “strong”'s ≥5.</strong> Quotes are not scarce; breadth of agreement is —
+      9 participants, 242 quotes): <strong>167 carry a sentiment, landing in 58 populated
+      cells at a median of 2 quotes each — 38 of the 58 clear
+      <code>MIN_QUOTES_PER_CELL</code>, 15 reach 4, and the median cell carries quotes
+      from exactly 1 participant.</strong> Only 10 clear a ≥3-participant bar and
+      exactly 1 clears “strong”'s ≥5. <em>(An earlier version of this paragraph
+      said 484 quotes, 334 sentimented, median 4. That database holds the project
+      <strong>twice</strong> — <code>project_id</code> 1 and 2, 242 identical quotes
+      each — so every per-cell count was doubled; “38 cells clear ≥4”
+      was really 38 cells clearing ≥2, which re-measuring reproduces exactly. The
+      argument survives and gets stronger, because the real numbers are half as
+      generous.)</em> Quotes are not scarce; breadth of agreement is —
       which is what <code>simpsons_neff</code> exists to measure, and it is the right
       thing to be scarce.</p>
     <p>That reprices the whole exercise. Scaled to a five-interview study, the same
@@ -1111,6 +1118,46 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
       The flat list needs more than twice the depth to reach two-thirds as many. That is
       the pairing argument generalised: a location appears once, and everything known
       about it hangs off that one entry.</p>
+
+    <h2>Does a bigger study fix the empty sentiment half?</h2>
+    <p>The obvious objection to the volume-floor finding is that these are trial projects.
+      A real study is five sessions of fifty minutes, not three of a few &mdash; so cells
+      would commonly hold four or five quotes and <code>MIN_QUOTES_PER_CELL = 2</code>
+      would never bind. Measured across every analysed project here, counting quotes that
+      carry <em>both</em> a sentiment and a location, which is what the sentiment matrix
+      actually consumes:</p>
+    <p style="font-family:var(--bn-font-mono);font-size:var(--bn-text-caption);line-height:1.9">
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sess&nbsp;&nbsp;quotes&nbsp;&nbsp;q/sess&nbsp;&nbsp;locs&nbsp;&nbsp;cells&nbsp;&nbsp;median&nbsp;&nbsp;mean&nbsp;&nbsp;&ge;2<br>
+      ikea &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;20&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;6.7&nbsp;&nbsp;&nbsp;&nbsp;10&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;18&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;1.1&nbsp;&nbsp;&nbsp;1/18<br>
+      ikea2 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;27&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;9.0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;8&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;19&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;1.4&nbsp;&nbsp;&nbsp;4/19<br>
+      rockclimbing&nbsp;&nbsp;8&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;81&nbsp;&nbsp;&nbsp;&nbsp;10.1&nbsp;&nbsp;&nbsp;&nbsp;23&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;45&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;1.8&nbsp;&nbsp;17/45<br>
+      fossda &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;20&nbsp;&nbsp;&nbsp;&nbsp;167&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;8.3&nbsp;&nbsp;&nbsp;&nbsp;17&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;58&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>2</strong>&nbsp;&nbsp;&nbsp;2.9&nbsp;&nbsp;38/58
+    </p>
+    <p><strong>Quotes per session barely moves, and it is nearly independent of session
+      length.</strong> 6.7 to 10.1 across projects whose sessions run from about three
+      minutes to about fifty. fossda's are roughly 50 minutes each and yield 8.3 sentimented
+      quotes; ikea's are minutes long and yield 6.7. A longer interview does not produce
+      proportionally more quotes &mdash; extraction picks the notable moments, and that
+      count is close to bounded per session.</p>
+    <p><strong>Occupancy does rise with study size, but sub-linearly</strong>, because
+      locations multiply alongside quotes: 3 sessions gives a mean of 1.1&ndash;1.4, 8
+      gives 1.8, 20 gives 2.9. Interpolating, <strong>a five-session study lands near a
+      mean of 1.5 and a median of 1</strong> &mdash; not four or five. Even at twenty
+      sessions and sixteen hours of material, the median populated cell holds two quotes,
+      and only 15 of 58 reach four.</p>
+    <p><strong>And the binding constraint is not quotes at all.</strong> Median
+      <em>distinct participants</em> per populated cell is <strong>1 in every project,
+      fossda included</strong>. A cell with four quotes is usually one person four times
+      &mdash; which is exactly what <code>simpsons_neff</code> measures and what
+      <code>confidence</code> gates on, and it is the right thing to be scarce.</p>
+    <p><strong>So the volume floor softens with scale rather than disappearing, and this
+      is a prediction to check rather than a conclusion to keep.</strong> Richer test data
+      is coming. When it lands, the numbers to re-measure are: mean quotes per populated
+      sentiment cell at five sessions (predicted ~1.5, median 1), the share of cells
+      clearing <code>MIN_QUOTES_PER_CELL</code> (predicted roughly a quarter), and median
+      participants per cell (predicted 1). <strong>If the real figure is a median of four
+      or five, this whole section is wrong and the volume-floor finding goes away with
+      it</strong> &mdash; which is the point of writing the prediction down.</p>
 
     <h2>Lifting a winner into the app</h2>
     <p>Each variant shares one markup contract, so the shipped component only has to grow

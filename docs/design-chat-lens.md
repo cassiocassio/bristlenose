@@ -15,6 +15,13 @@ _Design note; the §6 prototype is built to the §5a corrections (flag-gated lab
 
 ## Changelog
 
+- _12 Sep 2026_ — §6b: recorded the real surface (the ask bar inside the
+  quotes lens, filtering the lens to cited quotes so curation reuses
+  stars/tags/headings; mockup pair `352ed55e` compared, sidebar-lens shape
+  ruled out per §4) and the Mac sequencing (v1 HTML bar + native ⌘K trigger
+  over the existing bridge; v2 promote the strip to a native overlay — the
+  Safari-find-bar precedent; HIG idiom pass at promotion time). Gate
+  unchanged: the §6 lab must prove citations honest first.
 - _30 Jul 2026_ — §4: recorded where the lens lives — inside the report UX as mode 1(b) of the two-offerings frame (read it / ask it behind one link; the agent path is the MCP doc's offering 2). The lab page is scaffolding, not the surface. (Written from the MCP session during the two-offerings positioning conversation.)
 - _30 Jul 2026_ — **§6 prototype built, to the §5a corrections.**
   `bristlenose/server/grounding.py` (the §7 seam): corpus assembly in report
@@ -444,6 +451,44 @@ citations honest".** Render each cited quote inline beneath its claim rather tha
 behind a click, so a wrong citation is obvious instantly. The video deep-link
 (§2) is the second iteration, once the citations are trustworthy — the ids it
 needs are already in the response.
+
+## 6b. The real surface — the ask bar inside the quotes lens
+
+_Recorded 12 Sep 2026; shape settled 30 Jul 2026 alongside §4's placement
+decision. Gated on the §6 lab proving the citations honest on real projects —
+nothing here starts before that._
+
+**The winning form is an ask affordance inside the quotes lens, not a new
+destination.** A floating micro-query pill (bottom right) opens a
+Claude-Desktop-style bottom bar, non-modal over the live page. The answer
+renders its claims, and the lens itself filters to the cited quotes — so the
+researcher curates results with the apparatus the report already has (stars,
+tags, hide, section/theme headings): ask, then star or tag the best of what
+came back, and it is in the report or the clip reel with zero new machinery.
+That reuse is the whole argument. Two mockups carry the comparison
+(`352ed55e`): `docs/mockups/chat-lens-ask-in-quotes.html` (this shape) versus
+`docs/mockups/chat-lens-sidebar-lens.html` (a separate left-rail lens —
+cleaner to build, but it duplicates quote rendering and strands curated
+results a click away from the report, and it is the "separate destination"
+§4 rules out).
+
+**Native sequencing on the Mac (the bar floats over a WKWebView).** The
+precedent is Safari's ⌘F find bar: native input chrome floating over web
+content, driving results that render inside the page. Two steps, deliberately:
+
+- **v1 — HTML bar, native trigger.** The bar stays in the SPA (one
+  implementation for browser and app). The desktop adds an Ask menu item +
+  ⌘K in `MenuCommands` that sends a bridge message
+  (`design-wkwebview-messaging.md`) telling the SPA to open and focus the
+  bar — the shortcut that always fires regardless of webview focus, menu
+  discoverability included, no forked input UI.
+- **v2 — promote the strip to native, once the interaction stops moving.**
+  A SwiftUI overlay above the hosted webview: real focus ring, dictation,
+  materials, immune to page z-index and scroll. The bridge contract (ask
+  out, status/cost back) does not change shape when the sender goes native,
+  which is what makes the deferral a promotion rather than a rewrite. At
+  promotion time, take a HIG pass on the idiom — bottom bar vs find-bar
+  strip vs toolbar field — rather than assuming the web layout transfers.
 
 ## 7. Coordination with the MCP workstream (parallel sessions)
 

@@ -430,11 +430,7 @@ Store`. Do these **in order** — 2 fails without 1, and 3 fails without both.
 
 **1 · Register the App Group — and use the Team-ID prefix.**
 Developer portal → Certificates, Identifiers & Profiles → Identifiers → **App
-Groups** → new, identifier exactly:
-
-```
-Z56GZVA2QB.app.bristlenose
-```
+Groups** → new, identifier exactly `Z56GZVA2QB.app.bristlenose`.
 
 **Not** the iOS-style `group.` prefix. This is the whole escape hatch: macOS
 accepts an app group when *any one* of — Mac App Store distribution, a
@@ -468,12 +464,13 @@ and where Quinn's "no Developer-ID profile authorises an app group" could bite a
 archive time.
 
 Fix it in the same change, and it is one line: add a
-`BristlenoseDeveloperID.entitlements` (the current file, without the group) and
-one more override next to the five already there —
-
-```
-CODE_SIGN_ENTITLEMENTS="Bristlenose/BristlenoseDeveloperID.entitlements" \
-```
+`BristlenoseDeveloperID.entitlements` (the current file, without the group) and,
+next to the five overrides already at `build-dmg.sh:342-353`, one more setting —
+`CODE_SIGN_ENTITLEMENTS="Bristlenose/BristlenoseDeveloperID.entitlements"` with
+the usual trailing backslash. **Not deliberately fenced:** it is a build-setting
+line for the middle of an `xcodebuild` invocation, and a fenced block in this
+repo's tooling renders as a Run button — pasted into a shell the trailing
+backslash just hangs it at a continuation prompt.
 
 Do it *with* the group, not before: today the two files would be identical, and a
 no-op split is a change whose reason nobody can see in the diff.

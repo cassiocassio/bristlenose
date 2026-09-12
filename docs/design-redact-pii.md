@@ -479,7 +479,22 @@ no-op split is a change whose reason nobody can see in the diff.
 Because signing is `Manual` against a *named* profile, the existing one does not
 carry the new entitlement and the archive will refuse to sign with *"Provisioning
 profile … doesn't include the com.apple.security.application-groups entitlement."*
-Regenerate **Bristlenose Mac App Store**, download, double-click to install.
+Regenerate **Bristlenose Mac App Store**, download, and **verify before
+installing** — decode it with `security cms -D -i <file>` and confirm the
+`Entitlements` dict actually carries `com.apple.security.application-groups`.
+On 12 Sep 2026 the first regeneration came back **without it**: the generate page
+had shown *Enabled Capabilities: In-App Purchase* only, because the App-Group
+capability had been saved on the App ID moments earlier and had not propagated to
+the profile generator. Regenerating a second time is the fix; the tell is on the
+generate page before you ever download.
+
+**Do not double-click a distribution profile.** macOS System Settings accepts
+*development* profiles only and answers *"Only Development Provisioning Profiles
+can be installed in System Settings. Production Provisioning Profiles are
+imported within Xcode."* — an alarming-looking dialog for an entirely normal
+file. Copy it into Xcode's store instead:
+`~/Library/Developer/Xcode/UserData/Provisioning Profiles/`, or let Xcode fetch
+it via Settings ▸ Accounts ▸ Download Manual Profiles.
 This is the same class as the standing `associated-domains` guard — an entitlement
 that obliges a profile regeneration.
 

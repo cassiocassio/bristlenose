@@ -35,7 +35,7 @@ carries no date the evidence gave none — the state is still evidenced, the day
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
-| `cloud-fetch-states.html` | 1 Aug 2026 | IMPLEMENTED — “Every state, message and copy rule … **open it, it’s the visual spec**” — _except the three fetch states_ (`cloudFetching`, `cloudFetchSlow`, `cloudFetchFailed`): the sidecar half is built (`ensure_materialised`, `cloud_provider_for`), but no key is seeded, no subtitle variant exists and `on_wait` is unwired (measured 12 Sep 2026); `docs/design-cloud-wait-label.md` is the pick-up |
+| `cloud-fetch-states.html` | 12 Sep 2026 | IMPLEMENTED — “Every state, message and copy rule … **open it, it’s the visual spec**” — _except the three fetch states_ (`cloudFetching`, `cloudFetchSlow`, `cloudFetchFailed`): the sidecar half is built (`ensure_materialised`, `cloud_provider_for`), but no key is seeded, no subtitle variant exists `on_wait` is unwired and the `cloud_fetch` failure category has no producer (measured 12 Sep 2026); `docs/design-cloud-wait-label.md` is the pick-up |
 
 ## cloud-import
 

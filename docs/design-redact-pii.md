@@ -518,6 +518,44 @@ exactly the predicate Presidio's download guard uses.
 `pluginkit -mvvv -p com.apple.background-asset-downloader-extension` should list
 the extension; then a real download on a clean machine.
 
+#### Folding it into the release machine
+
+Once the pack downloads for real, this has to reach the build and deploy scripts,
+their probes, and the docs that describe them. Surveyed 12 Sep 2026 — and the
+second list is the useful half.
+
+**Needs new work — nothing checks these today.**
+
+| where | what to add | why |
+|---|---|---|
+| `desktop/scripts/check-pkg-shippable.sh` | assert `com.apple.security.application-groups` is **present** on the MAS `.pkg` | the archive signs without it and BA then fails at runtime, which is a silent capability loss |
+| `desktop/scripts/check-dmg-shippable.sh` | assert the app group is **absent** on the Developer-ID `.app` | it currently reads no entitlements at all. Both channels share `Release`, so the split lives only in a `build-dmg.sh` override — one typo and the `.dmg` carries a group Apple will not authorise |
+| `scripts/check-release-ready.sh` | a `_resolve_row`-shaped row: the hosted pack is reachable **and** its SHA-256 matches the pin | self-hosted, so nothing else will notice a CDN that has gone stale or an artefact that was replaced |
+| `desktop/scripts/build-dmg.sh` | the `CODE_SIGN_ENTITLEMENTS` override, beside the five already at `:342-353` | see the App Group step above |
+
+**Already generic — needs nothing, which is the design working.**
+
+- `check-pkg-shippable.sh`'s nested-executable loop asserts app-sandbox on *every*
+  Mach-O of type executable. The `.appex` simply becomes the fifth, and if it is
+  mis-entitled the existing gate says so. This is rejection class #1 from build
+  2068 and it is already covered.
+- `check-bundle-integrity.py` ran clean over the grown bundle — 287 Mach-Os, no
+  holes — with no change.
+- `check-sidecar-appstore-strings.py` was extended today and passes against the
+  built artefact.
+- `check-bundle-budget.py` is the **frontend JS** budget, not the sidecar. The
+  sidecar's 479 → 512 MB is outside it entirely; do not "fix" that.
+- `check-bundle-manifest.sh` is source→spec and stayed clean through the
+  un-exclude.
+
+**Docs to true at the same time.** `scripts/README.md` (the index of what to
+type), `desktop/scripts/REPORT-STYLE.md` Part 2 (probe rules and exit codes — a
+new probe must be tri-state, and *no data* is a third state, not a failure),
+`docs/design-release-machine.md`, `docs/release-channels.md` (the pack is a sixth
+artefact with its own staleness clock), and `docs/design-modularity.md`, whose PII
+row still describes the parked wheel-archive delivery and prices presidio at
+"~100 MB" against a measured 33.
+
 #### Known operational risks, carried not solved
 
 macOS is the rough edge: four live macOS-specific BA failures on Apple's forum tag

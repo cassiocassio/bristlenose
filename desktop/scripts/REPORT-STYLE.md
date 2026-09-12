@@ -246,6 +246,26 @@ Two corollaries the log paid for:
 - **"There's no endpoint for this" is usually false.** There is no row that
   says *read the workflow conclusion instead*; every channel has an HTTP
   endpoint behind whatever CLI normally reads it.
+- **"Not configured yet" is not "unreachable", and must not print like it.**
+  A probe that tried and failed is a fault; a probe with nothing to point at
+  yet is a fact about where the project is. Collapsing them gives a standing
+  warning on every unrelated release, which is how a row stops being read — the
+  same erosion `docs/testing/gaps.md` catalogues, arriving by politeness rather
+  than by `continue-on-error`. The `PII pack` row in `check-release-ready.sh`
+  is the worked example: `PII_PACK_URL` and `PII_PACK_SHA256` sit **empty** in
+  `scripts/project.conf` because the pack is not hosted yet, the row prints
+  **nothing** while they are, and it arms itself the moment the URL lands.
+  This is the same distinction `probe_done` draws one level up as exit `1`
+  (probed and absent) versus `2` (no probe exists from here) — so the
+  vocabulary already existed; it just had no shell-row spelling.
+
+  The trap on the other side is real too: a row that no-ops on empty config is
+  indistinguishable from a gate nobody wired, which this repo has shipped
+  before (`check-deployment-floors.sh`, five documents claiming a caller that
+  did not exist). Pin the arming path rather than the wording —
+  `tests/test_pii_pack_probe.py` extracts the block and runs it under bash with
+  a stubbed `curl`, so all four armed states plus the silent one are exercised
+  as logic, and asserts the config keys exist so the row *can* arm.
 
 ## Exit codes are a vocabulary, not a boolean
 

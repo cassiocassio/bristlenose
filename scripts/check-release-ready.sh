@@ -411,6 +411,34 @@ if [ -f "$CONF" ]; then
 else
     bad ".ship-local.conf" "absent — no channel credentials configured"
 fi
+
+# The PII model pack. Self-hosted, so nothing else in the chain would notice a
+# stale CDN or a replaced artefact — the CLI acquirer's `spacy download` is
+# PyPI's problem, but the .dmg and TestFlight acquirers fetch THIS url.
+#
+# Tri-state on purpose, per REPORT-STYLE.md Part 2: *no data* is a third state,
+# not a failure. Unset means the pack is not hosted yet, which is where this
+# genuinely is — printing a warning about it on every unrelated release is how
+# a gate teaches people to scroll past. It arms itself when the URL lands.
+if [ -n "${PII_PACK_URL:-}" ]; then
+    PACK_CODE=$(curl -sL -o /dev/null -w '%{http_code}' --max-time 30 \
+        "$PII_PACK_URL" 2>/dev/null || echo "000")
+    if [ "$PACK_CODE" != "200" ]; then
+        bad "PII pack" "unreachable (HTTP $PACK_CODE) — redaction cannot acquire its model"
+    elif [ -z "${PII_PACK_SHA256:-}" ]; then
+        # Reachable but unpinned is its own hazard, not a lesser version of
+        # reachable: without a pin a replaced artefact is undetectable, and
+        # this one is executed-adjacent data on the user's machine.
+        warn "PII pack" "reachable but PII_PACK_SHA256 is unset — a replaced artefact would be invisible"
+    else
+        PACK_SHA=$(curl -sL --max-time 300 "$PII_PACK_URL" 2>/dev/null | shasum -a 256 | cut -d" " -f1)
+        if [ "$PACK_SHA" = "$PII_PACK_SHA256" ]; then
+            ok "PII pack" "reachable, sha256 matches the pin"
+        else
+            bad "PII pack" "sha256 MISMATCH — pinned ${PII_PACK_SHA256:0:12}…, served ${PACK_SHA:0:12}…"
+        fi
+    fi
+fi
 fi
 
 # ---------------------------------------------------------------------------

@@ -33,6 +33,30 @@ but the sidecar.
 
 ---
 
+## The PII model pack is an artefact, not a channel — and its clock runs the other way
+
+`en_core_web_lg`, ~425 MB, self-hosted. It is deliberately **not** a row in the
+table above: no release ships it, and pushing a tag does not publish it. It is
+fetched *by* two of the channels — the `.dmg` over plain HTTPS, TestFlight/MAS
+through Background Assets — while the CLI gets its copy from PyPI via `spacy
+download` and never touches our host.
+
+That inverts the expiry model the two Mac rows describe. A `.dmg` is stale after
+30 days and a TestFlight build after 90, and in both cases the *artefact* dies
+while the world stands still. The pack has no expiry at all and the opposite
+obligation: **every shipped version that references it needs it to stay
+reachable and byte-identical, indefinitely.** Replacing it in place breaks
+installed copies; letting the host lapse breaks them just as thoroughly, and
+neither shows up in any channel's own verification.
+
+So it gets a preflight row of its own — `PII pack` in
+`scripts/check-release-ready.sh`, reading `PII_PACK_URL` and `PII_PACK_SHA256`
+from `scripts/project.conf`. Unreachable is `bad`; reachable but unpinned is
+`warn`, because without a pin a swapped artefact is undetectable; a sha
+mismatch is `bad`. Both keys are **empty until the pack is hosted**, and while
+they are the row prints nothing rather than nagging on every unrelated release.
+Exercised as shell, not grepped: `tests/test_pii_pack_probe.py`.
+
 ## One tag push does six things
 
 Pushing tag `v*` fires `release.yml`, which runs six jobs — `ci → build →

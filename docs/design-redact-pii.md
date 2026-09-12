@@ -566,9 +566,25 @@ that cannot be built until the pack is hosted.
 | `desktop/scripts/check-pkg-shippable.sh` | `die`s unless the app group is **present** on the MAS `.pkg` | ✅ **done.** The archive signs without it and BA then fails at runtime — a silent capability loss, so it dies rather than warns |
 | `desktop/scripts/check-dmg-shippable.sh` | `fail`s if the app group is **present** on the Developer-ID `.app` | ✅ **done.** It read no entitlements at all before this; both channels share `Release`, so the split lived only in a `build-dmg.sh` override with nothing between a typo and a published image |
 | `desktop/scripts/build-dmg.sh` | the `CODE_SIGN_ENTITLEMENTS` override | ✅ **already done** when the split landed — `:353`. This row claimed otherwise for half a day |
-| `scripts/check-release-ready.sh` | a `_resolve_row`-shaped row: the hosted pack is reachable **and** its SHA-256 matches the pin | ⬜ **blocked** on the pack being hosted and the SHA pinned. Self-hosted, so nothing else will notice a stale CDN or a replaced artefact |
+| `scripts/check-release-ready.sh` | the hosted pack is reachable **and** its SHA-256 matches the pin | ✅ **done**, and **not** blocked on hosting after all — see below |
 
-**Both new probes scope to the `<key>` element, not the bare entitlement name** —
+**The pack row is tri-state, which is what let it be built before the pack
+exists.** `REPORT-STYLE.md` Part 2 already says *no data* is a third state
+rather than a failure, so `PII_PACK_URL` / `PII_PACK_SHA256` live empty in
+`scripts/project.conf` and the row stays **silent** while they are — a standing
+warning on every unrelated release is precisely how a gate teaches people to
+scroll past it. It arms itself the moment the URL lands, and then reads:
+unreachable → `bad`; reachable but unpinned → `warn` (its own hazard, not a
+lesser reachable — without a pin a swapped artefact is undetectable); sha
+matches → `ok`; sha differs → `bad`.
+
+`tests/test_pii_pack_probe.py` **extracts the block out of the shell script and
+runs it under bash with a stubbed `curl`**, so all five states are exercised as
+logic rather than asserted as text — a grep would pass against a probe whose
+comparison had been inverted. Both mutations were tried: inverting the sha test
+reddens two cases, downgrading `unreachable` to a warning reddens one.
+
+**Both entitlement probes scope to the `<key>` element, not the bare entitlement name** —
 and that is load-bearing, not fastidiousness. Each plist carries a comment
 *explaining* the split, and those comments contain the entitlement name, so
 `grep -q 'com.apple.security.application-groups'` reports the group **present**

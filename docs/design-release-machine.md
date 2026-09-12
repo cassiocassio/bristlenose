@@ -208,6 +208,22 @@ release-log #8's class (*"I can't probe this" was itself an unchecked claim*)
 and the house rule from `design-release-system-audit.md` §3 covers it: **a check
 that could not run reports that it could not run.**
 
+**A6-bis · "not configured yet" is a fourth state, and it is silent.** Added
+12 Sep 2026 with the `PII pack` row, which watches a **self-hosted** artefact
+that no channel's own verification would notice going stale or being replaced.
+A probe that tried and failed is a fault (`warn`/`bad` above); a probe with
+nothing to point at yet is a fact about where the project is, and rendering it
+as either would put a standing warning on every unrelated release — gate
+erosion arriving by politeness rather than by `continue-on-error`. So the row
+prints nothing while `PII_PACK_URL` is empty in `scripts/project.conf`, and
+arms itself when the URL lands. This is `probe_done`'s exit `1` (probed and
+absent) versus `2` (no probe exists from here), one level down; the vocabulary
+existed, the shell-row spelling did not. Full statement and the countervailing
+trap — a silent row is indistinguishable from an unwired gate — in
+`desktop/scripts/REPORT-STYLE.md` Part 2, pinned by
+`tests/test_pii_pack_probe.py`, which runs the block under bash with a stubbed
+`curl` rather than grepping it.
+
 **A6 · probe for the abandoned version, not just the target.** 0.27.0's real
 website failure was the live changelog naming **0.26.0** — a version that no
 longer existed — while the download served 0.27.0. A presence-of-target probe

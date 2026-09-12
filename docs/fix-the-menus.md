@@ -39,7 +39,59 @@ Items that look fully active (no dimming) but do nothing when clicked.
   2026, see "In progress" above). Opens the native Health window; the dead
   bridge action is gone.
 - [x] **File ▸ Open in New Window** (`openInNewWindow`, ⇧⌘O) — ~~no web handler.~~ **Closed by retirement, 20 Aug 2026**, not by wiring one: the command had no referent distinct from `File ▸ New Window`. The capability lives on in three sidebar context-menu items, which act on a *clicked* row rather than the front window.
-  _Only remaining group-A item._
+## Closed 12 Sep 2026 (the Find sweep)
+
+- [x] **Edit ▸ Find Next / Find Previous** (⌘G, ⇧⌘G) — **withdrawn** 12 Sep 2026
+  (`find: withdraw Find Next and Find Previous — a filter has no next`), after QA
+  reported ⌘G doing nothing. The plumbing was intact: ⌘E writes the find
+  pasteboard, ⌘G reads it back and dispatches `findNext` with that text, and the
+  web handler calls `setSearchQuery(text)` — with the text already in the box.
+  Same query, same filter, identical result. **The reason is semantic, not
+  mechanical:** search on this surface *filters* the quote grid, so every visible
+  card is already a match and nothing renders a `<mark>`. "Find Next" presupposes
+  a cursor stepping through occurrences in content that stays put; a filter has
+  no cursor and nothing to step to. Moving through results is list navigation,
+  which `j` and the arrows already do. Gating them (as the ⌘F change did) would
+  have been the same lie ⌘J's note refuses. Restore **with transcript search**,
+  where a document genuinely has matches to step between; the 21 locale keys and
+  the orphaned `AppLayout.tsx` cases stay so it is a one-line re-enable.
+  _An earlier draft of this entry blamed an empty find pasteboard. That case is
+  real (nothing native writes it — the capsule dispatches `setSearchQuery`, not a
+  pasteboard write) but it is not the defect: ⌘G was equally meaningless when the
+  pasteboard was populated._
+
+- [x] **Edit ▸ Find** (⌘F) — **wired**, after doing nothing since it shipped
+  (see the correction at the foot of this doc for how the audit missed it).
+  Now native on both ends and never crosses the bridge:
+  `BridgeHandler.requestSearchFocus()` bumps the published counter
+  `focusSearchRequests`, which `QuotesSearchToolbarControl` observes to expand
+  and take focus. A counter, not a `Bool` — ⌘F must work twice in a row.
+  The whole Find family is now lens-scoped:
+  `canSearch = canDispatch && activeTab == .quotes`
+  (`MenuCommands.swift:765`), because search exists only on Quotes and the
+  other three lenses carry `SearchComingSoonButton`. `canDispatch` as well as
+  the lens, because `currentPath` survives an in-place reload — `activeTab` can
+  still say `.quotes` over a freshly-loaded status page.
+- [x] **Edit ▸ Jump to Selection** (`jumpToSelection`, ⌘J) — **withdrawn**
+  12 Sep 2026, not deleted and not dimmed. Same treatment as `mergeCode` below
+  and for the same reason: it is unimplemented, not ungated. The web side is an
+  explicit `break` behind a comment claiming the native layer handles it, and no
+  native handler exists. It could never have reached WKWebView as
+  `centerSelectionInVisibleRect:` either — a SwiftUI `.keyboardShortcut`
+  installs an NSMenu key equivalent, matched *before* the responder chain. So ⌘J
+  has done nothing since it shipped. Commented out at
+  `MenuCommands.swift:740-761` with the blocking question (what does "jump to
+  selection" mean in a quote grid?); the 21 locale keys are deliberately kept so
+  restore stays one line.
+- [x] **Menu gates moved off `isReady`** (`b06f923a`). `BridgeHandler` gained
+  `hasChannel` — a published mirror driven by `webView`'s `didSet`, so a menu
+  gate can never disagree with the `guard let webView` it stands in for — and
+  `canDispatch` (`hasChannel && documentState == .spa`). `isReady` was never the
+  right signal: it is force-set 2s after *any* load, status page included.
+  `webView` is now cleared by `WebView.dismantleNSView` under an identity guard
+  rather than by `reset()`, which had two owners with no defined order wiping a
+  live registration. File ▸ Export Report gained `.disabled(!canDispatch)`,
+  reaching parity with its toolbar twin.
 
 ## Closed 30 Jul 2026 (mechanical sweep)
 
@@ -67,7 +119,12 @@ Items that look fully active (no dimming) but do nothing when clicked.
   `NSPrintOperation` via `PrintActions.print(webView:window:)`; prints whichever
   lens is on screen, since the operation renders the web view's current document.
   The bridge was never the right target — `window.print()` inside a WKWebView
-  can't raise the macOS print panel. Gated on `bridgeHandler.isReady`. Print
+  can't raise the macOS print panel. ~~Gated on `bridgeHandler.isReady`.~~
+  **Gated on `bridgeHandler.hasChannel` since 12 Sep 2026** — `hasChannel`, not
+  `canDispatch`, because printing hands the web view to AppKit and never
+  dispatches JS, so the guard it stands in for is `PrintActions.print`'s own
+  `guard let webView`, not the presence of `window.__bristlenose`. A status page
+  is a real document and prints (`MenuCommands.swift:620-628`). Print
   *fidelity* is now a CSS concern (`@media print`), not a Swift one.
 - [x] **Codes ▸ Merge Codes** (`mergeCode`) — **withdrawn** 28 Jul 2026, not
   deleted. Merging needs a *source* and a *target*, and the codebook lens has no
@@ -117,6 +174,21 @@ lands.
 
 ---
 
-**Everything else is wired:** all ~50 other web `menuAction` cases and all 15
-native notification actions (New Project/Folder, Rename, Move To, Locate, Stop,
-Miro, Welcome, AI & Privacy, etc.) resolve to a handler.
+**Everything else resolves to a handler:** all ~50 other web `menuAction` cases
+and all 15 native notification actions (New Project/Folder, Rename, Move To,
+Locate, Stop, Miro, Welcome, AI & Privacy, etc.) reach one.
+
+> **"Resolves to a handler" is not "works" — corrected 12 Sep 2026.** This line
+> read *everything else is wired* until ⌘F was found dead in every project, on
+> every lens, since it shipped. It dispatched `menuAction("find")`, the case
+> existed in `AppLayout.tsx`, the handler ran — and queried `.search-input`, an
+> element `Toolbar` never renders in embedded mode (`if (isEmbedded()) return
+> null`). It resolved cleanly and did nothing. There was no log line, because
+> the bridge was working perfectly; the failure was one layer below it.
+>
+> This audit's method — *does a `case` exist for the action?* — cannot see that
+> class. Every group-A entry above was found by asking whether a handler
+> exists; none of them would have caught ⌘F. Treat the counts here as a
+> statement about wiring, not about behaviour — and see the open Find Next /
+> Find Previous / Use Selection for Find entry in group A for three actions the
+> method still passes today.

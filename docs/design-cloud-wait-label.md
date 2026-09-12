@@ -8,12 +8,22 @@ either — so that the fourth time starts here. Scope and policy below are
 **decided**; §5 is the one measurement still open; §7 is what a pick-up
 would build. Candidate for the maintainer's private planning board.
 
+**Read with the mockup — the spec is the drawing.** `docs/mockups/cloud-fetch-states.html`
+(1 Aug 2026, registered in `docs/mockups/STATUS.md`) is the spec for what the states *look
+like and say*: copy, keys, precedence, the row at native geometry, and the questions it
+decided (no at-rest cloud state; per-project, not per-file; "still fetching" at 3 minutes,
+then tune). This doc holds what a drawing can't: the scope decision, the policy, what the
+OS exposes per store, which half is built, and how a pick-up builds the rest. Where they
+would overlap, the mockup wins on words and this doc wins on when; neither repeats the
+other. "Waiting for iCloud…" is this doc's colloquial name for the surface; the copy is
+the mockup's.
+
 ## 1. What it is
 
 One line of text in the project row's subtitle slot, while a read is blocked
 on a cloud provider materialising a file:
 
-> Waiting for iCloud…  ·  Waiting for Google Drive…  ·  Waiting for OneDrive…
+> Fetching from iCloud Drive · 2 of 8  ·  Still fetching from OneDrive  ·  Couldn’t fetch from Google Drive
 
 It replaces the row's live text — "Copying 3 of 12…", "Transcribing 3 of 8…" —
 for as long as the read is blocked and gives the slot back when it returns. Nothing else: no pie, no per-file list,
@@ -150,7 +160,7 @@ included; the second path is mostly wired already.
   so the Python-only version passes every test and reaches no Mac (root
   `CLAUDE.md`, the third blind gate).
 - `RunProgressSubtitle.compose` gains `waitingOn: String?` beside `resuming:`
-  and leads with "Waiting for {{provider}}…" while it is non-nil — the same
+  and leads with "Fetching from {{provider}} · n of m" while it is non-nil — the same
   swap "Resuming…" makes in the indeterminate gap.
 - Clip and thumbnail sites: the wait is on-demand and short; a label there is
   optional, and clip export has its own progress.
@@ -178,9 +188,16 @@ included; the second path is mostly wired already.
 
 - **Gate the label, not the detection.** `is_dataless` / `cloud_provider_for`
   and their Swift twins run for every store; only the three named stores
-  compose to "Waiting for {{provider}}…", anything else keeps the row's
+  compose to "Fetching from {{provider}} · n of m", anything else keeps the row's
   generic text. The rendered name is what `cloud_provider_for` returns —
   "iCloud Drive", not "iCloud".
+- **The three states map to three channels.** `cloudFetching` — the waiting
+  emit on path (b), `InFlight.waitingOn` on path (a); `cloudFetchSlow` — the
+  same, past a 3-minute threshold (decided in the mockup's §F: ship at 3 min
+  and tune); `cloudFetchFailed` — the `cloud_fetch` failure category, already
+  wired for the run path; the copy path's failure is `CopyError.underlying`,
+  Tier 0's sentence. The mockup's other two decisions bind here too: no
+  at-rest cloud state, and per-project rather than per-file.
 - **Localise** — the keys and copy are already specified in the 1 Aug mockup's
   key table, plural-safety analysed: `cloudFetching` "Fetching from {{provider}} ·
   {{done}} of {{total}}", `cloudFetchSlow` "Still fetching from {{provider}}" (a
@@ -207,11 +224,13 @@ included; the second path is mostly wired already.
 |---|---|---|
 | Idle, analysed | *(none — Schema E: clean rows show no status line)* | — |
 | Copying, local disk | Copying 3 of 12… | copy ring |
-| Copying, blocked on a scoped store | **Waiting for OneDrive…** | copy ring (unchanged) |
+| Copying, blocked on a scoped store | **Fetching from OneDrive · 3 of 12** | copy ring (unchanged) |
 | Copying, blocked on any other store | Copying 3 of 12… | copy ring |
-| Analysing, blocked on a scoped store | **Waiting for iCloud Drive…** | run ring (unchanged) |
+| Analysing, blocked on a scoped store | **Fetching from iCloud Drive · 2 of 8** | run ring (unchanged) |
+| Either, blocked past the threshold (3 min, then tune — mockup §F) | **Still fetching from iCloud Drive** | ring (unchanged) |
+| Analysing, fetch failed | *(the `cloud_fetch` failure category, already on the wire — "Couldn’t fetch from iCloud Drive" in the diagnostic surface; the row returns to idle)* | — |
 | Analysing, blocked on any other store | Transcribing 3 of 8… | run ring |
-| Read timed out | *(row returns to idle; the failure is a sheet or alert with Foundation's sentence — Tier 0)* | — |
+| Copying, read timed out | *(row returns to idle; `CopyError.underlying` renders the sentence — Tier 0)* | — |
 
 ## 8. Where the earlier arguments live
 

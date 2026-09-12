@@ -180,6 +180,16 @@ toggle adds that term to the project's allow-list for the next analysis. It is a
 review queue over redactions, not a settings form — the researcher is already the
 person who knows `Fedora` is an operating system.
 
+**It front-loads, which changes what kind of feature it is.** The first one or two
+interviews of a study expose ~90% of the vocabulary that matters, and it is
+overwhelmingly **brand and product names that are also human names** — the
+measured false positives were exactly this shape (`Jenkins`, `Ada`, `Swift`,
+`Julia`), not arbitrary nouns. A statistical NER cannot separate those two senses
+and never will; the researcher separates them in seconds because they know which
+study they are in. So this is a **setup pass, not a chore**: heavy on interview
+one, near-silent by interview three. Design it as something that gets out of the
+way — the queue should visibly shorten — rather than a permanent review surface.
+
 **Borrow, don't invent.** This is the accept/deny review idiom the codebook
 surface already ships (badge accept/deny, the AutoCode review queue). Same
 gesture, different queue. Do not design a new one.

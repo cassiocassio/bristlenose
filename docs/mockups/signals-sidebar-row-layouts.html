@@ -453,6 +453,17 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
     </div>
 
     <div class="ctl">
+      <span class="lbl">Signal budget <span style="text-transform:none;letter-spacing:0">(flat / by location)</span></span>
+      <div class="row" id="budgets">
+        <button class="pbtn" data-budget="10">10</button>
+        <button class="pbtn on" data-budget="15">15</button>
+        <button class="pbtn" data-budget="25">25</button>
+        <button class="pbtn" data-budget="999">no cap</button>
+      </div>
+      <span class="wnote">the deliverable is 10&ndash;25 findings</span>
+    </div>
+
+    <div class="ctl">
       <span class="lbl">Strength floor <span style="text-transform:none;letter-spacing:0">(one flat list)</span></span>
       <div class="row">
         <input type="range" id="floor" min="0" max="100" step="1" value="20">
@@ -1200,6 +1211,62 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
       strengths in that half are partly confidence-weighted guesses, and they will move as
       a researcher works through the queue.</p>
 
+    <h2>More codebooks is not more coverage &mdash; and that is the stress test</h2>
+    <p>The section above said the lever on volume is more codebooks. Half right, and the
+      half that is wrong matters more. Measured on ikea's four UX codebooks, pairwise
+      overlap on the quotes they tag:</p>
+    <p style="font-family:var(--bn-font-mono);font-size:var(--bn-text-caption);line-height:1.9">
+      uxr &times; nielsen &nbsp;&nbsp;&nbsp;<strong>1.00</strong> &nbsp;&mdash; the same 33 quotes, exactly<br>
+      uxr &times; norman &nbsp;&nbsp;&nbsp;&nbsp;0.91<br>
+      nielsen &times; norman &nbsp;0.91<br>
+      uxr &times; garrett &nbsp;&nbsp;&nbsp;0.82<br>
+      norman &times; garrett &nbsp;0.78
+    </p>
+    <p><strong>25 of the 33 coded quotes carry codes from all four codebooks.</strong> So
+      codes per quote rises with each one installed &mdash; 3.73 here &mdash; while the set
+      of quotes covered does not move at all. A second UX codebook is not finding material
+      the first missed; it is <em>re-describing the same material in another vocabulary</em>.
+      Coverage saturates at one codebook; what grows is the number of ways each quote is
+      said.</p>
+    <p><strong>Which reprices the budget.</strong> ikea's 23 non-Sentiment signals span
+      <strong>eight locations</strong>. A list of 25 findings drawn from four overlapping
+      frameworks over 33 quotes is not 25 findings; it is closer to six or eight described
+      several times. Under one location the near-synonyms sit adjacent: Feedback (Norman)
+      beside Status visibility (Nielsen), Conceptual model (Norman) beside Real-world
+      matching (Nielsen). The two-section layout kept them apart by accident. Grouping by
+      location puts them side by side, which is honest and is also the hardest thing this
+      layout has to survive.</p>
+    <p><strong>So ikea is the stress test, not the target configuration.</strong> The
+      expected shape is one sentiment codebook, one or two UX expert codebooks, and later a
+      client- or project-specific one &mdash; custom codebooks are not a day-one offer. At
+      one or two UX codebooks a quote carries one or two descriptions, and the adjacency
+      problem is mild. Five is the upper bound the information design has to hold at, and
+      it is the right thing to draw against precisely because it is worse than what ships.</p>
+
+    <h2>One budget over one ranking</h2>
+    <p>The deliverable is 10&ndash;25 findings from five to twelve interviews. Against that,
+      <code>MAX_SIGNALS = 6</code> applied twice is the wrong shape: it caps the lens at
+      twelve and, more to the point, it <em>under-fills</em> whenever one side is thin,
+      which is most projects. Slots delivered against a 12-slot allowance, with the
+      Sentiment group excluded:</p>
+    <p style="font-family:var(--bn-font-mono);font-size:var(--bn-text-caption);line-height:1.9">
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sentiment&nbsp;&nbsp;codebook&nbsp;&nbsp;6+6&nbsp;&nbsp;one&nbsp;12&nbsp;&nbsp;wasted<br>
+      rockclimbing&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;12&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2&nbsp;&nbsp;&nbsp;&nbsp;8&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;12&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>4</strong><br>
+      ikea &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;23&nbsp;&nbsp;&nbsp;&nbsp;7&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;12&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>5</strong><br>
+      ikea2 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;12&nbsp;&nbsp;&nbsp;10&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;12&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2<br>
+      fossda &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;12&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;&nbsp;&nbsp;&nbsp;6&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;12&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>6</strong>
+    </p>
+    <p>Four of six projects leave slots empty, fossda half of them. The
+      <strong>signal budget</strong> control replaces the two caps with one number over one
+      ranking: floor first (is this worth showing), budget second (how many will anyone
+      read). Each commentary strip now says which one bound the list &mdash;
+      <code>budget</code>, <code>floor</code> or <code>supply</code> &mdash; because those
+      are three different problems and only the last one needs more data.</p>
+    <p>Note what the budget does <em>not</em> settle, and it is the thing the overlap
+      measurement just made urgent: filling 25 slots is easy, and filling them with 25
+      <em>distinct</em> findings is not. Nothing in the ranking knows that Feedback and
+      Status visibility are the same observation in two vocabularies.</p>
+
     <h2>Lifting a winner into the app</h2>
     <p>Each variant shares one markup contract, so the shipped component only has to grow
       a class:</p>
@@ -1819,7 +1886,7 @@ const VARIANTS = [
   ["v9","V9 · tag badges","V7's geometry with the codes actually present, capped. Sentiment rows still pair; codebook rows drop the constant group name for open-vocabulary tags on their own line."],
 ];
 
-const state = { w:240, set:"plain", variantMark:false, brk:false, cap:3, treat:"shipped", floor:0.20, vol:2 };
+const state = { w:240, set:"plain", variantMark:false, brk:false, cap:3, treat:"shipped", floor:0.20, vol:2, budget:15 };
 const bench = document.getElementById("bench");
 const projbench = document.getElementById("projbench");
 const realbench = document.getElementById("realbench");
@@ -2103,8 +2170,20 @@ function flatEntries(p){
   return out;
 }
 
+/**
+ * The deliverable is 10–25 findings from 5–12 interviews, so the cut is ONE
+ * budget over ONE ranking — not MAX_SIGNALS = 6 twice, which caps the lens at
+ * twelve and fixes the mix at half sentiment, half codebook whatever the study
+ * actually found. Floor first (is this worth showing at all), budget second
+ * (how many will anyone read). The commentary reports which one bound.
+ */
+function applyBudget(entries){
+  const above = entries.filter(e => e.comp >= state.floor);
+  return { shown: above.slice(0, state.budget), above: above.length, all: entries.length };
+}
+
 function flatHTML(p){
-  const kept = flatEntries(p).filter(e => e.comp >= state.floor);
+  const kept = applyBudget(flatEntries(p)).shown;
   if (!kept.length) return `<div class="sig-empty">nothing above the floor</div>`;
   return kept.map(e => e.kind === "sent"
     ? pairedHTML("v7", e.name, e.entry)
@@ -2143,10 +2222,19 @@ function locationEntries(p){
     e.comp = Math.max(e.comp, r[7]);
   });
   // Apply the floor to each SIGNAL, then drop places with nothing left.
+  // Spend the budget on SIGNALS and let the places fall out of them — a place
+  // is a container, not a finding, so capping places would spend the budget on
+  // the wrong thing.
+  const flat = [];
+  for (const e of byLoc.values()){
+    for (const x of e.sents) flat.push({ loc: e.loc, kind: "s", x, comp: x.comp });
+    for (const x of e.cbs)   flat.push({ loc: e.loc, kind: "c", x, comp: x.comp });
+  }
+  const keep = new Set(applyBudget(flat.sort((a, b) => b.comp - a.comp)).shown);
   const out = [];
   for (const e of byLoc.values()){
-    const sents = e.sents.filter(x => x.comp >= state.floor);
-    const cbs = e.cbs.filter(x => x.comp >= state.floor);
+    const sents = e.sents.filter(x => [...keep].some(k => k.x === x));
+    const cbs = e.cbs.filter(x => [...keep].some(k => k.x === x));
     if (sents.length || cbs.length)
       out.push({ ...e, sents, cbs, comp: Math.max(...[...sents, ...cbs].map(x => x.comp)) });
   }
@@ -2281,6 +2369,8 @@ function measureProjects(){
     if (state.treat === "loc" || state.treat === "locn"){
       const places = locationEntries(p);
       const dests = places.reduce((n, e) => n + e.sents.length + e.cbs.length, 0);
+      const supply = flatEntries(p).length + 0;
+      const bound = dests === state.budget ? "budget" : (dests < supply ? "floor" : "supply");
       const multi = places.filter(e => e.sents.length + e.cbs.length > 1).length;
       const most = places.reduce((n, e) => Math.max(n, e.sents.length + e.cbs.length), 0);
       cell.querySelector("[data-metrics]").innerHTML =
@@ -2289,13 +2379,16 @@ function measureProjects(){
       + `<span class="${trunc === 0 ? "good" : "bad"}"><b>${trunc}</b> truncated</span>`
       + `<span title="signals reachable from this panel"><b>${dests}</b> destinations</span>`
       + `<span title="places carrying more than one signal — the case the two-section layout could not show"><b>${multi}</b> multi-signal</span>`
-      + `<span title="most signals on any one place"><b>${most}</b> on the busiest</span>`;
+      + `<span title="most signals on any one place"><b>${most}</b> on the busiest</span>`
+      + `<span class="${bound === "supply" ? "bad" : "good"}" title="what decided the length of this list">bound by <b>${bound}</b></span>`;
       return;
     }
     if (state.treat === "flat"){
-      const all = flatEntries(p);
-      const kept = all.filter(e => e.comp >= state.floor);
+      const b = applyBudget(flatEntries(p));
+      const all = { length: b.all }, kept = b.shown;
       const nTag = kept.filter(e => e.kind === "tag").length;
+      const bound = kept.length === state.budget ? "budget"
+                  : b.above < b.all ? "floor" : "supply";
       cell.querySelector("[data-metrics]").innerHTML =
         `<span><b>${rows}</b> rows</span>`
       + `<span><b>${h}</b>px tall</span>`
@@ -2304,6 +2397,7 @@ function measureProjects(){
       + `<span title="signals above the floor, of every signal this project produced">`
       + `<b>${kept.length}</b> of <b>${all.length}</b> above floor</span>`
       + `<span title="how the surviving list splits"><b>${kept.length - nTag}</b> sentiment / <b>${nTag}</b> codebook</span>`
+      + `<span class="${bound === "supply" ? "bad" : "good"}" title="what decided the length of this list">bound by <b>${bound}</b></span>`
       + `<span title="strongest and weakest composite in the surviving list">`
       + `${kept.length ? kept[0].comp.toFixed(2) + " … " + kept[kept.length-1].comp.toFixed(2) : "—"}</span>`;
       return;
@@ -2418,6 +2512,12 @@ floorIn.addEventListener("input", e => {
   renderProjects();
   renderReal();
 });
+document.querySelectorAll("[data-budget]").forEach(b => b.addEventListener("click", () => {
+  state.budget = +b.dataset.budget;
+  document.querySelectorAll("[data-budget]").forEach(x => x.classList.toggle("on", x === b));
+  renderProjects();
+  renderReal();
+}));
 document.querySelectorAll("[data-vol]").forEach(b => b.addEventListener("click", () => {
   state.vol = +b.dataset.vol;
   document.querySelectorAll("[data-vol]").forEach(x => x.classList.toggle("on", x === b));

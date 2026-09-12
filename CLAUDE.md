@@ -267,7 +267,7 @@ a path the entitlements file says nothing forbids.
 macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat`, `readlink`, `tar`, and others. These differ from the GNU versions in subtle, bug-inducing ways:
 
 - **`sed`**: no `\b` word boundary, `-i` requires backup extension arg (`sed -i '' ...`), no `\x00` hex escapes. **Use `gsed`** (installed via `brew install gnu-sed`)
-- **`grep`**: BSD `-P` (PCRE) doesn't exist. Use `ggrep` or `rg` (ripgrep) for PCRE patterns
+- **`grep`**: BSD `-P` (PCRE) doesn't exist. Use `ggrep` or `rg` (ripgrep) for PCRE patterns. **`git grep -E` uses the same libc regex, so `\b` matches nothing there either — silently.** A context grep returning empty for a symbol a plain grep just found is this trap, not an absent symbol (12 Sep 2026)
 - **`date`**: BSD uses `-j -f` for parsing, GNU uses `-d`. Completely incompatible date arithmetic
 - **`readlink`**: BSD has no `-f` (canonicalize). Use `greadlink -f` or `realpath`
 - **`xargs`**: BSD `-r` (no-run-if-empty) doesn't exist — GNU behaviour is the default on BSD but the flag is missing

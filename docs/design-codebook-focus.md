@@ -120,8 +120,16 @@ installs an NSMenu key equivalent, matched **before** the responder chain — th
 same mechanism that forces Edit ▸ Undo to *hide* itself while editing rather
 than dim. A ⌫ on Delete Code would therefore steal the keystroke from the rename
 field this proposal explicitly wants live, and ⌘⌫ is already spent twice in
-Project. Recommendation: no shortcut on the six new/rename/delete rows;
-`⇧⌘L` on Browse Codebooks, which is free.
+Project.
+
+**Recommendation: no shortcuts at all in v1.** Every row in the menu is the twin
+of a control already on screen — a group title you click, a ✕ you click, a
+Browse Library button — and none is reached for often enough to earn a key. A
+menu item is the *discoverable* twin; it does not also have to be the fast one.
+An earlier draft gave Browse Codebooks `⇧⌘L`, which was invented rather than
+derived: it is genuinely unclaimed across all 15 Swift files that declare
+shortcuts and across `useKeyboardShortcuts.ts`, but being free is not a reason
+to spend it.
 
 **D-b. Focus lands on a framework's group, but the mutations dim.** A cursor is
 useful for reading, and refusing focus there would mean one control with two

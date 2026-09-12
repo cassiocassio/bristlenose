@@ -215,7 +215,7 @@ enablement changes.</p>
       <div class="mi"><span class="g"></span><span class="lbl">Rename Code</span></div>
       <div class="mi"><span class="g"></span><span class="lbl">Delete Code</span></div>
       <div class="msep"></div>
-      <div class="mi"><span class="g">📚</span><span class="lbl">Browse Codebooks</span><span class="kb">⇧⌘L</span></div>
+      <div class="mi"><span class="g">📚</span><span class="lbl">Browse Codebooks</span></div>
       <div class="mi off"><span class="g">⬇</span><span class="lbl">Install Codebook</span></div>
     </div>
   </div>
@@ -233,7 +233,7 @@ enablement changes.</p>
       <div class="mi off"><span class="g"></span><span class="lbl">Rename Code</span></div>
       <div class="mi off"><span class="g"></span><span class="lbl">Delete Code</span></div>
       <div class="msep"></div>
-      <div class="mi"><span class="g">📚</span><span class="lbl">Browse Codebooks</span><span class="kb">⇧⌘L</span></div>
+      <div class="mi"><span class="g">📚</span><span class="lbl">Browse Codebooks</span></div>
       <div class="mi off"><span class="g">⬇</span><span class="lbl">Install Codebook</span></div>
     </div>
   </div>
@@ -251,7 +251,7 @@ enablement changes.</p>
       <div class="mi off"><span class="g"></span><span class="lbl">Rename Code</span></div>
       <div class="mi off"><span class="g"></span><span class="lbl">Delete Code</span></div>
       <div class="msep"></div>
-      <div class="mi"><span class="g">📚</span><span class="lbl">Browse Codebooks</span><span class="kb">⇧⌘L</span></div>
+      <div class="mi"><span class="g">📚</span><span class="lbl">Browse Codebooks</span></div>
       <div class="mi"><span class="g">⊖</span><span class="lbl">Uninstall Codebook</span></div>
     </div>
   </div>
@@ -269,7 +269,7 @@ enablement changes.</p>
       <div class="mi off"><span class="g"></span><span class="lbl">Rename Code</span></div>
       <div class="mi off"><span class="g"></span><span class="lbl">Delete Code</span></div>
       <div class="msep"></div>
-      <div class="mi"><span class="g">📚</span><span class="lbl">Browse Codebooks</span><span class="kb">⇧⌘L</span></div>
+      <div class="mi"><span class="g">📚</span><span class="lbl">Browse Codebooks</span></div>
       <div class="mi off"><span class="g">⬇</span><span class="lbl">Install Codebook</span></div>
     </div>
   </div>
@@ -316,8 +316,11 @@ floor and Sentiment (D20). The menu mirrors that predicate rather than restating
 <code>.keyboardShortcut</code> installs an NSMenu key equivalent, which is matched
 <i>before</i> the responder chain — the same mechanism that forces Edit ▸ Undo to hide itself
 while editing. So a ⌫ on Delete Code would steal the keystroke from the rename field the
-proposal explicitly wants live. ⌘⌫ is already spent twice in Project. Recommendation: ship the
-six rename/delete/new rows with no shortcut, and only <code>⇧⌘L</code> on Browse.</li>
+proposal explicitly wants live. ⌘⌫ is already spent twice in Project. Recommendation: <b>no
+shortcuts at all in v1.</b> Every row here is the twin of a control already on
+screen — a group title you click, a ✕ you click, a Browse Library button — and
+none is reached for often enough to earn a key. A menu item is the discoverable
+twin; it does not also have to be the fast one.</li>
 <li><b>Focus on a framework’s group — allowed, but inert.</b> A cursor is still useful for
 reading, and refusing focus there means two click behaviours for one control. Let focus land,
 let the mutations dim. That is the “menus dim, toolbars morph” rule applied to a lens.</li>

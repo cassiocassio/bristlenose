@@ -344,6 +344,31 @@ The trap is that the output still looks like source code. Searching for `mlx|cud
 
 Same family as the two zsh gotchas above — shell tooling whose defaults differ from the obvious analogue and fail *quietly*. When a search result looks strange, re-run the search before believing it.
 
+### `git ls-files` is the wrong corpus for a "does this file exist?" audit — it cannot see gitignored files
+
+Reaching for `git ls-files` to enumerate the tree is natural and wrong for any
+existence check that spans ignored paths: it lists what is **tracked**, so every
+gitignored-but-present file reports as missing. Measured 12 Sep 2026 — a
+cross-reference audit over the docs tree reported five files absent that were
+sitting on disk, all of them in the gitignored maintainer-only notes tree. The
+output is convincing because the *other* absences in the same list were real.
+
+**Tell:** the "missing" set is suspiciously well-correlated with one directory,
+and that directory is in `.gitignore`. **Fix:** resolve against the filesystem
+(`Path.exists()`, `find`) and use `git ls-files` only when the question genuinely
+is "is this tracked?"
+
+**Sibling false positive from the same pass, and it fires on this very file:**
+prose *about* a retired file reads as a dead pointer to a naive
+`[text](path)` grep. The line above describing the retired single-page manual and
+naming its archive location is correct and must not be "fixed". Before reporting a
+broken link, read the sentence around it — a doc explaining that something *was*
+removed is doing its job.
+
+Same family as the `rg -rn` and zsh entries above: tooling that fails quietly and
+plausibly. An audit that produces a column of alarming findings deserves one
+disconfirming check before the findings are written down.
+
 ### `set -e` does NOT fire on a failing left operand of `&&` — so `cmd && ok "passed"` is a gate that cannot fail
 
 POSIX shells deliberately exempt any command whose status is *being tested* from `errexit`, and the left operand of `&&` is one. So this, which reads exactly like an assertion:

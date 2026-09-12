@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The Developer-ID (.dmg) entitlements. Identical to Bristlenose.entitlements
+	     except that it deliberately OMITS com.apple.security.application-groups.
+	     Both channels build the Release configuration, so without this split the
+	     .dmg would carry a group it cannot use and Apple will not authorise on
+	     Developer ID. It does not need one: the .dmg acquires the PII model by
+	     plain HTTPS, not Background Assets, because App Store rules do not apply
+	     to that channel. Selected by the CODE_SIGN_ENTITLEMENTS override in
+	     desktop/scripts/build-dmg.sh. -->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)app.bristlenose</string>
+	</array>
+</dict>
+</plist>

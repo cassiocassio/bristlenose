@@ -6,5 +6,16 @@
 	<array>
 		<string>$(AppIdentifierPrefix)app.bristlenose</string>
 	</array>
+	<!-- Background Assets deposits downloaded packs into the App Group
+	     container, so the host and the downloader extension must share one.
+	     App-wide rather than per-feature on purpose: BAAssetPackManager pools
+	     every pack into a single namespace, and Whisper's models are the next
+	     customer (docs/design-modularity.md), so a second group would mean a
+	     second portal entry and another profile regeneration for nothing.
+	     NOT on the Developer-ID build — see BristlenoseDeveloperID.entitlements. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.app.bristlenose</string>
+	</array>
 </dict>
 </plist>

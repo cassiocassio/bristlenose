@@ -350,6 +350,7 @@ xcodebuild \
     PROVISIONING_PROFILE_SPECIFIER="" \
     DEVELOPMENT_TEAM="$TEAM_ID" \
     SWIFT_ACTIVE_COMPILATION_CONDITIONS="\$(inherited) DEVELOPER_ID_BETA" \
+    CODE_SIGN_ENTITLEMENTS="Bristlenose/BristlenoseDeveloperID.entitlements" \
     -allowProvisioningUpdates \
     archive \
     > "$ARCHIVE_LOG" 2>&1 \

@@ -573,6 +573,29 @@ class QualityRating(BaseModel):
 # an opinion about yet. Unrated is the honest state, not a gap to fill: the
 # eval harness (design-stage-backends.md §Recommendation) flips cells to
 # `internal_bench` when it ships.
+#
+# **Measurements now exist, and they did NOT move these ratings** —
+# `experiments/quote-stability/FINDINGS.md` (5–11 Sep 2026), 4–12 re-extraction
+# passes per model through the real stage on FOSSDA. Claude 96.1% union / 88.5%
+# single / 1.6% fragile; terra 95.6% / 84.4% / 0.0% — both clear the >=90% union
+# target the merge rule rests on. Gemini reads 80.4% union on the padded passes,
+# but that figure is explicitly **not actionable**: against a common reference
+# Gemini is unmoved, it returns the fewest quotes so each is worth ~1.5%, and the
+# finding says so in terms. ~8 more passes (about $0.63) would settle it. So
+# Gemini stays unrated because the evidence is unsettled, not because it is
+# absent — the 5 Sep call, for a different reason.
+#
+# `source` stays `editorial` on every cell. What was measured is *recovery
+# stability*, one dimension; text stability is poor on all three and the corpus,
+# not the models, is the leading explanation there. Flipping to `internal_bench`
+# would claim the whole rating is evidenced when a slice of it is.
+#
+# **Read the PADDED table in that file, never §1's unpadded one.** The unpadded
+# rows are kept for provenance and, for terra, are measuring garbage — overlap is
+# scored on a timeline and 63% of its timecodes were then 60x wrong. Reading them
+# as current says terra misses the target and Gemini leads; both are false, and
+# the withdrawn claim had already reached a commit body once. It did so again on
+# 12 Sep, in a review that proposed downgrading terra on those very numbers.
 _LLM_QUALITY: dict[tuple[str, str, str], QualityRating] = {
     # ── speaker_identification — structural; most LLMs handle it well ──
     ("speaker_identification", "claude", "claude-sonnet-4-6"): QualityRating(

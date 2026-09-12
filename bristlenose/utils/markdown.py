@@ -490,7 +490,9 @@ def format_finder_date(dt: datetime, *, now: datetime | None = None) -> str:
     import datetime as _dtmod
 
     if now is None:
-        now = _dtmod.datetime.now().astimezone()
+        from bristlenose.utils.timecodes import local_now
+
+        now = local_now()  # the one render-clock seam; see timecodes.local_now
 
     time_part = f"{dt.hour:02d}:{dt.minute:02d}"
     dt_date = dt.date()

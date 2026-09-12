@@ -1,6 +1,18 @@
+---
+status: partial
+last-trued: 2026-09-12
+trued-against: HEAD@main on 2026-09-12
+---
+
+> **Truing status:** Partial — the backlog rows are kept current (trued 2026-09-12); the Feb-2026 audit narrative and its counts are retained as a dated record, not re-measured. See changelog.
+
+## Changelog
+
+- _2026-09-12_ — trued up: A2 marked partial (done as scoped; segment-loop residual named with its reason), A6 marked partial and re-anchored, X2 marked done, do-now list struck for shipped items, Strengths counts dated. Anchors: `bristlenose/models.py:14-16`, `server/importer.py:78-91`, `.github/dependabot.yml`, commit "time: tier 0 and tier 1 of the audit".
+
 # Improvement Opportunities
 
-A reflective audit of Bristlenose's architecture, design system, frontend, testing, and developer experience — conducted Feb 2026 against v0.10.3. Organised by area, each item tagged with effort and priority.
+A reflective audit of Bristlenose's architecture, design system, frontend, testing, and developer experience — conducted Feb 2026 against v0.10.3. **Every count in the Strengths blocks (tests, files, lines) is a Feb-2026 figure and has not been re-measured** — the doc is two genres, a dated audit and a live backlog, and only the backlog half is kept current. Organised by area, each item tagged with effort and priority.
 
 ## Architecture
 
@@ -15,11 +27,11 @@ A reflective audit of Bristlenose's architecture, design system, frontend, testi
 | # | Item | Why it matters | Effort | Priority |
 |---|------|---------------|--------|----------|
 | A1 | ~~**Break up `render_html.py`**~~ **DONE** — refactored into `bristlenose/stages/s12_render/` package (Mar 2026): `theme_assets.py`, `html_helpers.py`, `quote_format.py`, `sentiment.py`, `dashboard.py`, `transcript_pages.py`, `standalone_pages.py`, `report.py` | - | - |
-| A2 | **Consolidate timecode functions** | `format_timecode()` / `parse_timecode()` are identical in `models.py` and `utils/timecodes.py`. Remove from `models.py`, import from utils. | S | High |
+| A2 | **Consolidate timecode functions** — **PARTIAL (12 Sep 2026)** | Done as scoped: `models.parse_timecode` deleted (it had drifted from the canonical parser on 5 of 14 inputs and was the object the round-trip test had been pointed at), `format_timecode` a one-line re-export (`models.py:14-16`; pinned by `tests/test_time_tier0.py`). Residual A2 never named: `server/importer.py:68 _parse_timecode_to_seconds` stays live at the segment loop, deliberately — its regex admits `\d+` hours, wider than the canonical two digits, and narrowing it would silently drop a segment to position zero (`importer.py:78-91`). Register: `docs/design-shared-formats.md`; audit: `docs/time-defects.md`. Original: `format_timecode()` / `parse_timecode()` are identical in `models.py` and `utils/timecodes.py`. Remove from `models.py`, import from utils. | S | High |
 | A3 | **Centralise magic numbers** | `_MAX_SESSIONS_NO_CONFIRM = 16`, `_MAX_WARN_LEN = 74`, `_MAX_SLUG_LENGTH = 50` scattered across files. Move to a `constants.py` or fold into `BristlenoseSettings`. | S | Low |
 | A4 | **Standardise error handling** | No custom exception hierarchy — stages use `ValueError`, `RuntimeError`, bare `Exception` interchangeably. Some stages raise, others accumulate. Define `BristlenoseError` base + `LLMError`, `StageError`, `ConfigError`. | M | Medium |
 | A5 | **Make stage dependencies explicit** | Stage execution order is implicit (enforced only by call sequence in `pipeline.py`). A lightweight `requires` metadata on each stage function would make the DAG visible and enable future parallel scheduling. | M | Low |
-| A6 | **Shared transcript parser** | `pipeline.py:load_transcripts_from_dir()` and `server/importer.py:_parse_transcript_file()` implement similar logic. Extract to `utils/transcript_parser.py`. | S | Medium |
+| A6 | **Shared transcript parser** — **PARTIAL (12 Sep 2026)** | Header date and duration now share one reader on both paths (`parse_header_datetime` / `parse_timecode`: `pipeline.py:2904`, `importer.py:95-100`); the segment loop is still forked and `utils/transcript_parser.py` was never created. `_parse_transcript_file()` no longer exists — nearest are `_parse_transcript_headers` (`importer.py:387`) and `_import_transcript_segments` (`:508`). Original: `pipeline.py:load_transcripts_from_dir()` and `server/importer.py:_parse_transcript_file()` implement similar logic. Extract to `utils/transcript_parser.py`. | S | Medium |
 
 ## Design System & Frontend
 
@@ -90,7 +102,7 @@ A reflective audit of Bristlenose's architecture, design system, frontend, testi
 | # | Item | Why it matters | Effort | Priority |
 |---|------|---------------|--------|----------|
 | X1 | **Write `docs/howto-add-pipeline-stage.md`** | No guide for the most common extension point. Developers must reverse-engineer from existing stages. Include annotated template, manifest wiring checklist, decision tree (per-session? LLM? cacheable?). | S | Medium |
-| X2 | **Set up Dependabot** | No automated dependency update PRs. A `.github/dependabot.yml` takes 30 minutes and catches stale transitive deps. | XS | Low |
+| X2 | ~~**Set up Dependabot**~~ **DONE** (`.github/dependabot.yml`, 5 Sep 2026) | Original: No automated dependency update PRs. A `.github/dependabot.yml` takes 30 minutes and catches stale transitive deps. | XS | Low |
 | X3 | **Add Alembic for SQLite migrations** | No schema migration tooling. First schema change to the 22-table serve-mode DB will be high-risk without it. Ship before the change is needed, not during. | M | Medium |
 | X4 | **Add Storybook or equivalent** | 16 React primitives exist but aren't browsable in a catalogue. Aids visual QA and onboarding. | M | Low |
 
@@ -99,14 +111,14 @@ A reflective audit of Bristlenose's architecture, design system, frontend, testi
 **Do now** (< 1 day each, high impact):
 - T1: Python version matrix in CI
 - T2: Fix frontend lint errors
-- T3: Frontend lint + typecheck in CI
+- ~~T3: Frontend lint + typecheck in CI~~ (shipped)
 - O1: Tier 1 logging instrumentation
-- A2: Consolidate timecode functions
+- ~~A2: Consolidate timecode functions~~ (partial — see row; the residual is deliberate)
 
 **Do soon** (1–3 days each, meaningful improvement):
 - D1: Responsive quote grid
 - T5: Playwright E2E setup
-- A6: Shared transcript parser
+- A6: Shared transcript parser (partial — headers share one reader; segment loop does not)
 - X1: Pipeline stage howto guide
 
 **Do when relevant** (medium effort, unlock future work):

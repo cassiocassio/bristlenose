@@ -1,10 +1,22 @@
+---
+status: partial
+last-trued: 2026-09-12
+trued-against: HEAD@main on 2026-09-12
+---
+
+> **Truing status:** Partial — the findings and their outcomes are current (trued 2026-09-12, same day as the fixes); the pre-fix measurement tables in § 4 and the § 3b surface matrix are retained as the baseline the fixes are measured against. § 3c and Tier 2 items are correctly open. See changelog.
+
+## Changelog
+
+- _2026-09-12_ — trued up after the fixes landed: preamble no longer says nothing is fixed; finding count twelve; § 3a parse table shows the decided outcomes; § 3b duration cell and H7's table gain a post-fix line; H10/H12/§ 5 counts moved 15→21 and the zero fork stated as catalogued-but-unasserted; § 5's "untested" list reduced to `format_timecode_ms` and § 3c; new "Landed guard-rails" subsection; anchors re-pointed (`miro_board.py:129-133`, `pipeline.py:2904`, `dashboard.py:503`, `clips_export.py:370-371`); `_iso_lenient` named as the historical name of `parse_iso_lenient`; T0-6 marker and body reconciled. Anchors: commits "time: tier 0 and tier 1 of the audit", "time: review fixes — one probe, a parser that cannot crash a scan, and tests that can fail".
+
 # Time in Bristlenose — three data types, their ranges, and an end-to-end audit
 
 _Audited 12 Sep 2026, across Python, TypeScript and Swift. Every claim below was
 measured by running the code, not read off it; where something is inferred it
-says so. **Diagnosis only — nothing here is fixed.**_
+says so. **Diagnosed 12 Sep 2026; Tiers 0–1, § 5.1 and the review fixes landed the same day** (`git log -S parse_iso_lenient`) — each finding carries its outcome._
 
-_**Eleven findings stand. H6 was raised and withdrawn** — it is kept in place,
+_**Twelve findings stand (H1–H13 less H6). H6 was raised and withdrawn** — it is kept in place,
 because the reasoning that made a correct design look like a defect is the
 reasoning a future auditor will repeat._
 
@@ -72,7 +84,7 @@ must never render wrongly?* (up to a single hour digit) — and a future argumen
 to move either has to be about what a research session is, not about what a
 disk can hold.
 
-That matters because one live helper breaks at **100 minutes** (§ 4, H5) and the
+That mattered because one helper broke at **100 minutes** (§ 4, H5 — fixed 12 Sep) and the
 corpus already contains a 99.7-minute session.
 
 **Start time.** Any time of day, any date, and — because the maintainer is in
@@ -154,10 +166,10 @@ returns.
 | `05:30`, `1:30:00`, `01:30:00` | our own output | accept |
 | `00:01:23,456` | SRT | accept (83.456) |
 | `00:01:23.456` | VTT | accept (83.456) |
-| `1:2:3` | third-party, unpadded | **decide** — currently refused everywhere (§ H3) |
+| `1:2:3` | third-party, unpadded | refused, by measurement — 344 real files, zero in the wild; pinned (H3) |
 | `90:00` | minutes past 60 | accept (5400) — our own Miro output emits this |
-| `100:00:00` | ≥100 h | refuse or accept, but *consistently* (§ H2) |
-| `00:01:23 extra` | malformed line | **should refuse** — currently accepted (§ H4) |
+| `100:00:00` | ≥100 h | refused — the declared limit, pinned (H2) |
+| `00:01:23 extra` | malformed line | refused since `fullmatch` (H4, pinned) |
 | `""`, `"later on"` | junk | refuse loudly |
 
 ### 3b. Duration
@@ -228,7 +240,7 @@ follow the same rules, and is the join between Swift and the webview invisible?*
 | datum | filename | webview (SPA) | Swift native | CLI | markdown / static | API wire |
 |---|---|---|---|---|---|---|
 | **position** | `03m45` · `0h03m45` | `05:30` · `1:12:45` | — *(none; Mac positions go through the SPA)* | — | `05:30` · `1:12:45` | float seconds |
-| **duration** | — | `26m` · `1h 3m` · `—` at 0 | `26m` · `1h 3m` · `0m` at 0 | `3m 41s` · `0.1s` | *(dead helper: `26 min`)* | float + `duration_human` string |
+| **duration** | — | `26m` · `1h 3m` · `—` at 0 | `26m` · `1h 3m` · `0m` at 0 | `3m 41s` · `0.1s` | `26m` · `1h 3m` (one helper since T0-4) | float + `duration_human` string |
 | **start time** | — | `Today, 14:23` **(viewer-local)** | `Today, 14:23` **(viewer-local)** | — | `Today at 16:59` **(UTC)** | **naive** ISO, no offset |
 
 **Position — different notation, same rule.** Filenames use `03m45` rather than
@@ -285,7 +297,7 @@ comment. Two copies in one language is the condition the register closed
 
 _**Status, 12 Sep 2026 — Tier 0 and Tier 1 landed** (`git log -S parse_header_datetime`).
 Fixed: H1, H2 (declared), H3 (closed by measurement), H4, H5, H7, H8, H11, and
-H13 below. Still open: H9's DB-column half and H10/H12's remaining pins, which
+H13 below. Still open: H9's DB-column half, H10's pins (`finder_date`, zero cases) and H12's assertion (the zero fork is catalogued in `divergences`, but no test reads that array), which
 belong to Tier 2 (`design-timezones.md` § 5). H6 withdrawn._
 
 ### H1 — ✅ FIXED — Two `parse_timecode` implementations, and the tests guard the dead one
@@ -377,7 +389,7 @@ The claim was that `format_clip_timecode(use_hours=False)` discards the hour —
 `0s` and `3600s` both render `00m00` — and that the function is "only safe
 because one caller remembers" to pass the flag. Both halves were wrong.
 
-It is not a latent default. `clips_export.py:370` derives
+It is not a latent default. `clips_export.py:370-371` derives
 `max_duration = max(session_durations.values())` and sets
 `use_hours = max_duration >= 3600`. A clip's start is bounded by its own
 session's duration, which is ≤ `max_duration`. So when the flag is `False`, **no
@@ -411,14 +423,16 @@ a different file with the same basename. It has one live caller.*
 | `pipeline._format_duration` | `0.0s` | `30.0s` | `60m 00s` | `1103m 00s` |
 | `dev._format_duration` | `—` | `00:30` | `1:00:00` | `18:23:00` |
 
+_The table is the 12 Sep pre-fix measurement, kept as the baseline. Post-fix: `utils/timecodes.py:format_duration_human` is the one canonical implementation and renders the first row's column; `routes/dashboard.py` delegates to it; `dev.py` renders an em-dash at zero and the canonical shape otherwise; `pipeline._format_duration` rolls into hours (`1h 03m 41s`) and remains a deliberate sub-second exception._
+
 Three things here:
 
 1. The canonical implementation lives in a **route module**, while the module
    named `timecodes.py` holds a sibling with a different format. A new caller
    reaching for "the duration formatter" finds the wrong one first — and one
-   already did: `s12_render/dashboard.py:502` renders the static report's total
+   already did: `s12_render/dashboard.py:503` renders the static report's total
    session time as `18 h 23 min` where the SPA dashboard shows `18h 23m` for the
-   same number. A live fork between the two renders of one stat.
+   same number. A live fork between the two renders of one stat — closed 12 Sep (T0-4).
 2. That sibling renders a 30-second span as **`1 min`** — asserting a minute that
    did not elapse, where canonical says `<1m`.
 3. `dev._format_duration` renders a duration in **timecode shape**
@@ -437,7 +451,7 @@ hand-edited or third-party header. The live effect of the fix is on the
 importer's path into the database, where an offset-bearing header now lands as
 the correct instant._
 
-`pipeline.py:2861` reads the transcript `# Date:` header as:
+`pipeline.py` (then `:2861`; the read is at `:2904` now) read the transcript `# Date:` header as:
 
 ```python
 session_date = datetime.fromisoformat(date_str).replace(tzinfo=timezone.utc)
@@ -478,7 +492,7 @@ timezone and declares start times correct.
 ### H10 — `finder_date` has three implementations and **zero** pinned cases
 
 `shared-format-contract.json` lists Python, TypeScript and Swift implementations
-for `finder_date` and pins **no cases at all** (`timecode` has 15,
+for `finder_date` and pins **no cases at all** (`timecode` had 15, now 21;
 `duration_human` has 9). The register describes it as "aligned by pair, one
 deliberate fork" — that is an assertion nothing tests, and H9 is the fork it did
 not know about.
@@ -495,8 +509,9 @@ anyone writes a subtraction.
 
 TypeScript returns an em-dash for `seconds <= 0` (unknown); Python and Swift
 return `0m` (measured zero). This is **deliberate and documented** in
-`format.ts`. But `duration_human` has no zero case in the contract, so nothing
-stops a future edit collapsing the fork in either direction.
+`format.ts`. The zero case is now catalogued in the entry's `divergences` with both
+outputs — but no test reads `divergences` (zero grep hits in either contract test), so
+it is documented, not asserted, and nothing mechanical stops a future edit collapsing the fork.
 
 ### H13 — ✅ FIXED — TypeScript `formatTimecode` did not clamp a negative
 
@@ -511,16 +526,26 @@ A one-line clamp; the case stays in the fixture so it cannot come back.
 
 | format | pinned cases | ceiling | gap |
 |---|---|---|---|
-| `timecode` | 15 | 36000 s (10 h) | jumps from **3930 s straight to 36000 s** — nothing at the 3 h realistic max, nothing at either break (H2, H5) |
-| `duration_human` | 9 | 66180 s | **no zero case** (H12), no negative |
+| `timecode` | 21 (was 15) | 36000 s (10 h) | closed 12 Sep: `3599.9`, `5999`, `6000`, `10800`, `35999` and `-1` pinned (T0-7, H13) |
+| `duration_human` | 9 | 66180 s | zero catalogued in `divergences`, **unasserted** (H12); negative pinned in pytest |
 | `finder_date` | **0** | — | three implementations, nothing pinned (H10) |
 
-Untested entirely: `miro_board.fmt_timecode`, `utils.format_duration_human`,
-`format_timecode_ms`, `dev._format_duration`, `pipeline._format_duration`, and
-every timezone behaviour in § 3c.
+Untested entirely: `format_timecode_ms` (zero callers repo-wide — an H1-shaped dead sibling
+in the canonical module) and every timezone behaviour in § 3c. The others this list named
+on 12 Sep — `fmt_timecode`, `format_duration_human`, `dev._format_duration`,
+`pipeline._format_duration` — are now pinned in `tests/test_time_tier0.py`.
 
-Tested but pointed at the wrong object: `tests/test_models.py`'s
-`parse_timecode` round-trip (H1).
+Was pointed at the wrong object: `tests/test_models.py`'s `parse_timecode`
+round-trip (H1) — repointed to the canonical parser (`tests/test_models.py:8`).
+
+### Landed guard-rails (12 Sep 2026)
+
+Four mechanical guards now share one framing — *refuse or bound at the edge, log what was refused, never absorb*:
+
+- **Domain refusal** — `parse_timecode` `fullmatch`es and refuses `>99 h`, trailing text and unpadded fields (`utils/timecodes.py`; `TestParserRefusesTrailingText`, `TestUnpaddedIsRefused`, `test_domain_ceiling_is_declared_not_implicit`).
+- **A 256-char bound at the dict layer** on every container string (`utils/audio.py:_tags`) — deliberately not a Pydantic `max_length`, which *rejects* and would re-create the whole-scan abort the review found.
+- **The tag allowlist as a privacy boundary** — `time_meta_from_ffprobe` reads named keys only; GPS is never retained (`test_gps_is_excluded_by_the_allowlist`).
+- **Three-way probe degradation** — tool didn't run / ffprobe refused (with its stderr) / a tag didn't parse (duration kept, meta `None`), each with its own log line (`utils/audio.py:probe_media`, `TestProbeMediaWiring`).
 
 Worth noting what *is* solid: `timecode` and `duration_human` are genuinely
 aligned across the three languages within their pinned ranges, asserted from both
@@ -537,8 +562,8 @@ enrolled.
 - **The `.srt`/`.vtt` writers** (as opposed to readers).
 - **Swift's own date parsing** (`TeamsSource.parseISO`, `TeamsRecordingName.date`)
   beyond confirming it exists — cloud-import paths, separate surface.
-- **Whether any real third-party export emits unpadded seconds** (H3's live
-  exposure, as opposed to the parser's refusal, which is measured).
+- ~~Whether any real third-party export emits unpadded seconds~~ — measured later
+  the same day: 344 files, zero (H3).
 - **DST edge behaviour end-to-end.** § 3c lists the cases; nothing in the tree
   was run against them.
 
@@ -590,7 +615,7 @@ first** — it is what makes the rest of the tier verifiable.
   timestamp token, the fix is in *that* parser's regex, not here.
 
 **T0-3 ✅ · `miro_board.fmt_timecode` delegates to `format_timecode`.**
-- `bristlenose/miro_board.py:125-127`: body becomes `return format_timecode(seconds)`.
+- `bristlenose/miro_board.py:129-133`: body becomes `return format_timecode(seconds)`.
   Keep the name — `miro_export.py:27` imports it.
 - Proof: `fmt_timecode(6000) == "1:40:00"` and `parse_timecode(fmt_timecode(6000)) == 6000`.
   Red before (`"100:00"` → `ValueError`), green after.
@@ -630,8 +655,8 @@ first** — it is what makes the rest of the tier verifiable.
 
 **T0-6 ✅ · `pipeline._format_duration` overflows minutes** (`66180` → `1103m 00s`).
 CLI stage timing, realistically seconds-to-minutes; a long transcription can
-cross an hour. Fix is `divmod` into `h`/`m`/`s`. **Could** — note only, do
-when touching that code.
+cross an hour. Fix is `divmod` into `h`/`m`/`s`. Landed the same day
+(`pipeline.py:140-143`, `test_cli_stage_timer_rolls_into_hours`).
 
 **T0-7 ✅ (timecode cases + H13; `finder_date` pins deferred to Tier 2, see below) · Extend the contract fixture** (`tests/fixtures/shared-format-contract.json`).
 - `timecode.cases`, add: `[3599.9, "59:59"]` (truncation at the switch — must
@@ -666,7 +691,7 @@ when touching that code.
 ### Tier 1 — one measurement or one decision each
 
 **T1-1 ✅ · `# Date:` header reader converts instead of relabelling** (H8).
-- `pipeline.py:2861`: replace `.replace(tzinfo=timezone.utc)` with the exact
+- `pipeline.py` (`# Date:` read, now `:2904`): replace `.replace(tzinfo=timezone.utc)` with the exact
   logic `server/importer.py:83` already uses — relabel only when
   `dt.tzinfo is None`, otherwise `astimezone(timezone.utc)`. Better: extract that
   four-line function to `utils/timecodes.py` and call it from both readers, so
@@ -721,7 +746,7 @@ document said:
   grep test written to guard it would have *rejected* the correct fix. Now
   `local_now()` (aware and local) at all four sites, with a behavioural test.
 - **The "one reader" claim was one header short**: `# Duration:` still had two.
-- **The first `_iso_lenient` could abort a whole folder scan** on a five-
+- **The first version of `parse_iso_lenient` (then a private `_iso_lenient` in `audio.py`) could abort a whole folder scan** on a five-
   character offset — proven end to end with a crafted MOV. Three of the
   obvious fixes interacted destructively as proposed (a `max_length` validator
   rejects and would have re-created the abort; folding the probes under one

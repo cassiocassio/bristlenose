@@ -1,3 +1,15 @@
+---
+status: partial
+last-trued: 2026-09-12
+trued-against: HEAD@main on 2026-09-12
+---
+
+> **Truing status:** Partial by design — § 5.1 landed (trued 2026-09-12) and its "what landed" / § 5.1a blocks are current; § 5.2–5.8 are pending and read as the plan they are. § 1 and § 2 carry ✅ markers where a defect closed the same day. See changelog.
+
+## Changelog
+
+- _2026-09-12_ — trued up after § 5.1 landed: § 1 scoped to "persist"; T2/T5 marked fixed; § 2·5's "we read none of it" heading and body rewritten to "we read it since § 5.1"; § 5.1's plan bullets labelled as the plan with an accurate what-shipped (Pydantic model, tuple return, eight fields, one corpus test); (f) records the GPS allowlist as shipped code; new § 5.1a listing what the capture does not do; anchors re-pointed (`s01_ingest.py:467/470/393`, `pipeline.py:2904`); `timecode` count 15→21. Anchors: commits "ingest captures container time metadata", "time: review fixes — one probe…".
+
 # Timezones — what is broken, what is unknowable, and what an audit would have to cover
 
 _Written 12 Sep 2026, from the time audit (`docs/time-defects.md`). **Not a beta
@@ -26,7 +38,7 @@ depends on knowing a timezone.** That is why this can wait.
 
 ## 1. The single most important fact
 
-**The original timezone is not recoverable from anything we currently store.**
+**The original timezone is not recoverable from anything we currently persist.** _(Since 12 Sep 2026 the ingest capture — § 5.1 — holds the recorder's own offset in memory on `InputFile.container_meta`; the database column still drops it, so for every stored session the sentence stands.)_
 
 MEASURED: `session_date` is declared `Mapped[datetime | None] = mapped_column(default=None)`
 in `server/models.py:220` — no `DateTime(timezone=True)`. A UTC-aware
@@ -58,18 +70,18 @@ slice.
 **T1 — The offset is destroyed at the DB column.** MEASURED, § 1 above. The root
 cause; everything downstream is a faithful renderer of a lossy value.
 
-**T2 — `.replace(tzinfo=utc)` relabels instead of converting.** MEASURED.
-`pipeline.py:2861` reads the transcript `# Date:` header as
+**T2 — ✅ FIXED 12 Sep 2026 — `.replace(tzinfo=utc)` relabelled instead of converting.** MEASURED at the time.
+`pipeline.py` (then `:2861`; `:2904` now, via the shared `parse_header_datetime`) read the transcript `# Date:` header as
 `datetime.fromisoformat(s).replace(tzinfo=timezone.utc)`, which **overwrites** an
 offset rather than converting it: `14:23+01:00` is stored as `14:23 UTC` when the
 instant is `13:23 UTC`. `server/importer.py:83` reads the *same header* correctly
-(relabels only when naive). So the CLI resume path and the server import path can
-derive different instants from one file.
+(relabels only when naive). So the CLI resume path and the server import path could
+derive different instants from one file. One reader now.
 
 **T3 — The value is not the session's start time in the first place.** From
 `SessionsFinderDate.swift`'s own KNOWN-WRONG note, which outranks everything
 above: `session_date` is the source file's `st_birthtime`, taken raw —
-MEASURED, `s01_ingest.py:461` is `min(f.created_at for f in group_files)` and
+MEASURED, `s01_ingest.py:467` and `:470` are `min(f.created_at for f in group_files)` and
 **nothing anywhere subtracts the duration**. For a save-at-close writer that is
 the session's **end**, so the stored value is late by a whole duration.
 
@@ -80,14 +92,14 @@ note rules out is right for the commonest case.
 yields 00:00, which renders plausibly and is indistinguishable from a real
 midnight session.
 
-**T5 — Naive `now()` at four render sites.** `s12_render_output.py:81` and
+**T5 — ✅ FIXED 12 Sep 2026 (`local_now()`, aware and local, at all four) — Naive `now()` at four render sites.** `s12_render_output.py:81` and
 `:178`, `s12_render/report.py:164`, `utils/markdown.py:493`. Does not crash
 (MEASURED) because `format_finder_date` compares calendar dates rather than
 subtracting, but it is a latent `TypeError` the moment anyone writes a
 subtraction, and it is why markdown renders UTC.
 
 **T6 — `finder_date` has three implementations and zero pinned cases** in
-`tests/fixtures/shared-format-contract.json`, where `timecode` has 15 and
+`tests/fixtures/shared-format-contract.json`, where `timecode` had 15 (now 21) and
 `duration_human` has 9. Nothing mechanical would notice any of the above.
 
 ## 2·5. Where a real start time could come from — a signal hierarchy
@@ -100,7 +112,7 @@ than trusted.
 **1. The cloud API's meeting start.** Authoritative and zone-qualified. Already
 available on the Teams/Drive import paths. Nothing else competes with it.
 
-**2. Container metadata — the best local signal, and we read none of it.**
+**2. Container metadata — the best local signal, and since § 5.1 (12 Sep 2026) we read it.**
 MEASURED across the format-torture corpus (`trial-runs/folder-of-horrors`, 59
 files) plus real recordings on this machine. `utils/audio.py` already shells out
 to ffprobe for duration, so reading more tags costs nothing.
@@ -166,7 +178,10 @@ could be derived when no offset is present. **That is participant location data*
 and lands squarely in the consent-gradient governance
 (`docs/methodology/consent-gradient.md`) — reading it is a deliberate decision,
 not a free win, and it must not reach an export. Recorded here so the option is
-known and its cost is known with it.
+known and its cost is known with it. **Shipped as a code-level allowlist** (12 Sep
+2026): `time_meta_from_ffprobe` reads named keys only, the comment beside them
+calls it a privacy boundary, and `test_gps_is_excluded_by_the_allowlist` asserts
+ISO6709 is never retained.
 
 Also present: `com.apple.quicktime.make` / `.model` / `.software` (which would
 *identify the writer class* — the thing § 4 needs to know whether to subtract the
@@ -184,13 +199,15 @@ or OBS capture populates it. Both `.mkv`/`.webm` files in the corpus are
 ffmpeg-synthesised, so they carry nothing. The read path is proven; the
 write-side coverage in the wild is not. One real capture would answer it.
 
-**Bristlenose reads none of this today.** MEASURED: the only ffprobe call sites
-are `utils/audio.py`'s duration probe and a `stream=codec_type` query;
-`_get_creation_time` is pure `os.stat`.
+**Bristlenose reads this since 12 Sep 2026** (§ 5.1): `probe_media` requests
+`-show_entries format:stream_tags` in the one ffprobe call ingest makes
+(`utils/audio.py`). Before that — MEASURED on the day — the only ffprobe call
+sites were the duration probe and a `stream=codec_type` query;
+`_get_creation_time` was, and still is, pure `os.stat`.
 
 **3. The filename.** Zoom, Teams and macOS Screen Recording all write the start
 time into the name — and **Python already parses these patterns and then
-discards the timestamp**. `_normalise_stem` (`s01_ingest.py:~400`) strips the
+discards the timestamp**. `_normalise_stem` (`s01_ingest.py:393`) strips the
 date/time *in order to group* files into sessions (`_TEAMS_SUFFIX_RE`,
 `_ZOOM_CLOUD_TAIL_RE`, `_ZOOM_LOCAL_DIR_RE`, `_GMEET_TAIL_RE`). The best
 available local signal is recognised, used for matching, and thrown away.
@@ -340,6 +357,8 @@ order is strict because each step is what makes the next one measurable._
 
 ### 5.1 ✅ LANDED 12 Sep 2026 — Read the container (`git log -S MediaTimeMeta`)
 
+_(The plan as written on 11 Sep; what shipped is under **What landed** below.)_
+
 - `utils/audio.py` already runs `ffprobe` for duration. Extend that one call's
   `-show_entries` with `format_tags` and `stream_tags`, parse the JSON, and
   return a small dataclass beside the duration:
@@ -358,7 +377,13 @@ order is strict because each step is what makes the next one measurable._
   parsed UTC instant and, for `IMG_2544.MOV`, `offset_minutes == 60`.
 
 _**What landed:** `MediaTimeMeta` on `InputFile`, populated at ingest by
-`probe_media` (one ffprobe call for duration and tags); `time_meta_from_ffprobe` is pure and tested on the measured
+`probe_media` — one ffprobe call (`-show_entries format:stream_tags`) returning a
+`(duration, meta)` tuple, not a widened `probe_duration`; `MediaTimeMeta` is a
+Pydantic model, not a dataclass, with eight fields — `creation_utc`,
+`creation_local` (the offset-bearing local form), `offset_minutes`, `make`,
+`model`, `software`, `encoder`, `author`; the corpus proof is one skipif-gated
+test on `IMG_2544.MOV` (`offset_minutes == 60`) plus pure-parser tests over the
+measured tag dicts, not five corpus files; `time_meta_from_ffprobe` is pure and tested on the measured
 tag dictionaries. `bristlenose status` does not surface it yet — that is a CLI
 surface change with man-page and README obligations, held for when § 5.4 gives
 it something to say._
@@ -369,6 +394,16 @@ all 24 accepted containers. It is definitionally false for
 `com.apple.quicktime.creationdate`, which is the room's wall clock — a naive one
 is now logged and left unstamped rather than relabelled. For `creation_time` the
 assumption stands until a second writer family is measured (§ 5.8)._
+
+### 5.1a — What the capture does NOT do
+
+The preconditions § 5.4's resolver will read from this doc, in one place:
+
+- **Not persisted.** `container_meta` lives on `InputFile` in memory for the run; the database column (`server/models.py:220`) still drops the offset. § 5.3 is the schema step.
+- **Not surfaced.** `bristlenose status` shows nothing of it — a CLI surface with man-page and README obligations, held until § 5.4 gives it something to say.
+- **Not a zone.** What is captured is an *offset* (`offset_minutes`) when the container carries one; an IANA name is never derived from it (§ 5.3's rule).
+- **One writer's word on UTC.** "a naive `creation_time` means UTC" is verified on one macOS MOV and applied to 24 containers (§ 5.8 owes the second family); a naive `creationdate` is logged and left unstamped, never relabelled.
+- **`author` is held, not decided.** Bounded to 256 chars at the dict layer, in memory only, pending the keep/drop/redact decision (review Finding 5) that § 5.3 must settle before anything persists.
 
 _**Judgement calls left for the maintainer, in order — none is a mechanical
 step:** § 5.2's table has three owed measurements that need files not on this

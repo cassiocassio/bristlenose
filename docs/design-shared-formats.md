@@ -1,6 +1,18 @@
+---
+status: partial
+last-trued: 2026-09-12
+trued-against: HEAD@main on 2026-09-12
+---
+
+> **Truing status:** Current with targeted edits (trued 2026-09-12). The `timecode` entry records the one breach of "one implementation per language" and its closure; `duration_human` records the 12 Sep move of its canonical body; `finder_date` moves from declined to deferred; a new "Open holes against this register" block names what the register asserts but does not test. See changelog.
+
+## Changelog
+
+- _2026-09-12_ — trued up against the time audit: timecode entry gains the H5 breach-and-closure and a forward-ref to the prompt-only sibling; duration_human records the canonical move to `utils/timecodes.py` and the superseded `1 h 0 min` shape; the zero fork stated as catalogued-but-unasserted and by-datum; finder_date deferred to Tier 2 with H9/H10; new "Open holes" block; the lint-rule item cites H5. Anchors: `bristlenose/miro_board.py:129-133`, `utils/timecodes.py:68`, `tests/test_shared_format_contract.py:105-120`, `docs/time-defects.md` H5/H7/H9/H10/H12.
+
 # Shared formats across Python, TypeScript and Swift
 
-**Status:** live register · established 22 Aug 2026
+**Status:** live register · established 22 Aug 2026 · trued 12 Sep 2026 against the time audit (`docs/time-defects.md`)
 **Machine-readable companion:** [`tests/fixtures/shared-format-contract.json`](../tests/fixtures/shared-format-contract.json)
 **Enforced by:** [`tests/test_shared_format_contract.py`](../tests/test_shared_format_contract.py) · [`frontend/src/utils/sharedFormatContract.test.ts`](../frontend/src/utils/sharedFormatContract.test.ts)
 
@@ -113,6 +125,13 @@ source of truth.
 
 ### `duration_human` — aligned 22 Aug 2026
 
+**Moved 12 Sep 2026:** the canonical body now lives in
+`utils/timecodes.py:format_duration_human`; `server/routes/dashboard.py`
+delegates to it. Until then the helper *in the module named for timecodes* was a
+different shape (`1 h 0 min`, and `1 min` for a 30-second span) with one caller —
+the static report's total, which read `18 h 23 min` against the SPA's `18h 23m`
+for the same number. Closed with the move (H7 in `docs/time-defects.md`).
+
 `26m` / `1h 3m` / `1h` / `<1m`. Python feeds the `duration_human` and
 `total_duration_human` API fields; Swift renders the window subtitle, the
 sessions popover and the cloud-import list; TypeScript renders the Sessions
@@ -130,7 +149,11 @@ renders `0m` in Python and Swift and an em-dash in TypeScript. Python and Swift
 format aggregate totals, where a real zero is a real answer; the TypeScript
 sites format a per-row cell, where zero means *unknown* — 8% of the corpus — and
 `0m` would assert a measurement nobody made. Each side is right for its context,
-so the case is excluded from the pinned table rather than forced.
+so the case is excluded from the pinned table rather than forced — it is
+catalogued in the entry's `divergences` with both outputs, but **no test reads
+that array**, so nothing mechanical holds the fork in either direction (H12,
+open). And the fork is by *datum*, not by language: Python's `routes/dev.py`
+renders a per-row cell and shows the em-dash too.
 
 The `h` / `m` abbreviations are knowingly unlocalised on all three sides.
 Changing that is a separate decision with a 22-locale cost; see §6.
@@ -146,6 +169,13 @@ a different medium, deliberately a different separator.
 Not machine-pinned: all three take a clock and a locale, so a fixture would need
 injected time and Intl/CLDR-stable behaviour on three runtimes. The cost is real
 and the payoff is small, since the pair is already documented on both sides.
+
+**Deferred to Tier 2, not declined** (12 Sep 2026). The absolute-date branch
+can be pinned once the wire carries an offset (`docs/design-timezones.md` § 5.3),
+and it should be: the time audit found a fork this register did not know about —
+`session_date` reaches the wire naive, so all three surfaces render the
+viewer's-local reading of a UTC instant, off by the offset *together* (H9, H10
+in `docs/time-defects.md`). "Exact parity" here is an assertion zero cases test.
 
 **`SessionsFinderDate.swift`'s header is the exemplar contract docstring in this
 codebase.** Read it before writing any new mirror. It names its source with a
@@ -176,9 +206,18 @@ symposium tops out near 3h — so padding the hour reserves a column for
 `09:34:23` that no interview will ever occupy and makes the reader parse a
 leading zero that is meaningless 99% of the time. It also matches how video
 editors render elapsed position, which is the tool researchers use to trim clips
-from these same recordings.
+from these same recordings. _One sibling deliberately breaks this rule, for a
+reader that is not a person — see the prompt-only note below._
 
-Now one implementation per language: `bristlenose/utils/timecodes.py` (re-exported
+One implementation per language — **breached once and re-closed.**
+`miro_board.fmt_timecode` was a fourth Python copy from 22 Aug to 12 Sep 2026
+(`f"{total // 60}:{total % 60:02d}"` — minutes never rolled into hours, and from
+100 minutes its output could not be parsed back; the corpus's longest session is
+99.7). The enrolment gate did not see it: `test_no_second_python_timecode_impl`
+asserts identity across four import sites of seven, and `miro_board.py`,
+`s10_quote_clustering.py` and `s11_thematic_grouping.py` import directly. H5 in
+`docs/time-defects.md`; its lesson is that the fix was never "add hours to the
+Miro label" — it was a fourth copy of a format this register had closed. Now: `bristlenose/utils/timecodes.py` (re-exported
 from `models.py`, imported directly by `export_core.py` and `mcp_server.py`) and
 `frontend/src/utils/format.ts` (imported by the four components that each held a
 private copy).
@@ -294,6 +333,21 @@ tests and the source all use the same word.
    automatically. If they do not, mark it `divergent` and record the measured
    outputs.
 
+### Open holes against this register
+
+The register asserts more than it tests. Standing gaps, each with a home in
+`docs/time-defects.md`:
+
+- **H5 — the enrolment gate covers 4 of 7 Python import sites.** A copy that
+  imports `format_timecode` directly is invisible to it; `miro_board.py` was.
+- **H10 — `finder_date` has three implementations and zero pinned cases.**
+- **H12 — the zero-duration fork is catalogued, not asserted.**
+- **Unregistered renderers in the canonical module and beside it:**
+  `format_timecode_ms` (zero callers repo-wide — dead code),
+  `format_clip_timecode` (`server/clip_manifest.py:107`, hour-eliding bounded
+  by its caller and audited sound — `docs/design-export-clips.md`), and the
+  prompt-only `format_timecode_prompt` (deliberate, above).
+
 ### Closing a gap
 
 Promote the entry to `aligned`, register the implementation in `_python_impl`
@@ -336,6 +390,7 @@ Not proposed now; listed so the direction is on record.
 - A lint rule that fails a build when a `format*` function is defined outside
   its language's canonical module — which would have prevented all eight
   duplicate timecode helpers at the point they were written, and is probably the
-  highest-value item here.
+  highest-value item here — H5 is the incident it would have caught: a fourth
+  `timecode` copy in `miro_board.py`, live from 22 Aug to 12 Sep 2026.
 - Extending the register to cover CLI-only formats (`format_cost_estimate`,
   `format_resume_summary`) if any of them ever gains a second implementation.

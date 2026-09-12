@@ -1,3 +1,15 @@
+---
+status: partial
+last-trued: 2026-09-12
+trued-against: HEAD@main on 2026-09-12
+---
+
+> **Truing status:** Partial — the eliding rule, filename scheme and serve-mode flow are current (trued 2026-09-12); the container-preservation claim is superseded inline in three places; the CLI section is deferred and marked so. See changelog and inline banners.
+
+## Changelog
+
+- _2026-09-12_ — trued up: named `format_clip_timecode`/`use_hours` and recorded why per-export eliding is sound by construction plus its zero-duration residual (from the time audit's H6 withdrawal); marked the source-container-preservation claim superseded at three sites (fixed `.mp4`/`.m4a`); added `raw_start`/`is_audio_only` to `ClipSpec`; repointed the never-created `clip_extractor.py` to the three shipped modules; marked the CLI deferred inline. Anchors: `server/clip_manifest.py:107,139-140`, `routes/clips_export.py:119,370-371`, `clip_backend.py:47-50`, `docs/time-defects.md` H6.
+
 # Video Clip Extraction — Design Document
 
 Extract trimmed video clips of key quotes for stakeholder playback and slide decks.
@@ -87,6 +99,8 @@ Bad:   clip-q-p1-42.mp4
 
 The format is chosen per-export based on `max(duration_seconds)` across all sessions. This keeps lexical sort = chronological sort.
 
+Implemented as `format_clip_timecode(seconds, use_hours=…)` (`server/clip_manifest.py:107`) with `use_hours = max_duration >= 3600` derived once per export (`routes/clips_export.py:370-371`). **Why eliding is safe, not merely tidy:** a clip's start is bounded by its own session's duration, which is ≤ `max_duration`, so when the flag is `False` no clip start can reach an hour and the omitted field is provably zero — no collision is possible. **Residual:** that bound rests on `duration_seconds` being accurate; a session recorded with `duration_seconds == 0` whose quotes ran past an hour would break it (`clips_export.py:119` reads the field unguarded). Measured 12 Sep 2026: 4 of 98 local sessions carry a zero time axis, none with a quote past an hour.
+
 **Gist rules:**
 - First ~6 words of quote text
 - Lowercase
@@ -136,6 +150,8 @@ Reuse the persistent cross-tab toast from codebook application (AutoCodeToast pa
 
 ### CLI
 
+> **Deferred — not shipped.** `bristlenose export --clips` does not exist (`grep '"--clips"' bristlenose/cli.py` is empty). The status banner says so; this marker keeps the section from reading as live. Mockup retained.
+
 ```bash
 # Extract clips
 bristlenose export --clips interviews/
@@ -157,6 +173,8 @@ CLI shows Cargo-style progress:
 ```
 
 ### Audio-only sessions
+
+> **Superseded as implemented (v0.14.3) —** clips are written to a fixed container: `.mp4` for video, `.m4a` for audio (`clip_manifest.py:140`, `clip_backend.py:47-50` — stream-copy into `.mp4`). The source container is not preserved. Original text retained below.
 
 Extract as-is. FFmpeg stream copy preserves container format. If source is `.mp3`, clip is `.mp3`. Filename follows the same pattern. No video frame — audio-only playback.
 
@@ -184,6 +202,8 @@ class ClipSpec:
     source_path: Path       # absolute path to source media
     start: float            # seconds (with padding applied)
     end: float              # seconds (with padding applied)
+    raw_start: float        # original quote start — the FILENAME timecode uses this, unpadded, so it points at the quote, not the clip's first frame 3s earlier (clip_manifest.py:139)
+    is_audio_only: bool     # drives the output extension (.m4a vs .mp4)
     speaker_name: str       # display name (or "" if anonymised)
     quote_gist: str         # first ~6 words, lowercase, spaces
     is_starred: bool
@@ -208,10 +228,10 @@ Shared across all export features. Strips path separators, traversal sequences, 
 | 2.1 | Clip manifest builder: query starred quotes + `_pick_featured_quotes()` heroes, deduplicate, apply padding |
 | 2.2 | Adjacent clip merge: if two clips from same session are within 10s, merge into one |
 | 2.3 | Clip filename builder: `{code} {timecode} {speaker} {gist}.{ext}`, anonymisation, zero-padding |
-| 2.4 | FFmpeg wrapper: `ffmpeg -i {source} -ss {start} -to {end} -c copy {output}`. Skip missing media gracefully (warning, no error). Preserve source container format |
+| 2.4 | FFmpeg wrapper: `ffmpeg -i {source} -ss {start} -to {end} -c copy {output}`. Skip missing media gracefully (warning, no error). ~~Preserve source container format~~ (superseded: fixed `.mp4`/`.m4a` output — see Audio-only sessions) |
 | 2.5 | Async job runner: reuse AutoCode `asyncio.create_task()` pattern |
 | 2.7 | Toast progress UI: reuse AutoCodeToast pattern. "Extracting clips... (3 of 15)". "Reveal in Finder" on completion |
-| 2.8 | CLI: `bristlenose export --clips` with Cargo-style progress |
+| 2.8 | CLI: `bristlenose export --clips` with Cargo-style progress — **deferred, not shipped** |
 | 2.9 | Doctor check: verify FFmpeg on PATH when `--clips` is requested |
 | 2.10 | Tests: clip manifest, filename generation, merge logic, FFmpeg command construction (mock) |
 
@@ -219,7 +239,7 @@ Shared across all export features. Strips path separators, traversal sequences, 
 
 | File | Purpose |
 |------|---------|
-| `bristlenose/server/clip_extractor.py` | FFmpeg wrapper, adjacent merge, naming, `safe_filename()` |
+| ~~`bristlenose/server/clip_extractor.py`~~ shipped as three modules: `server/clip_manifest.py` (manifest, gist, naming, merge), `server/clip_backend.py` (FFmpeg), `server/routes/clips_export.py` (endpoints, job) | FFmpeg wrapper, adjacent merge, naming, `safe_filename()` |
 | `bristlenose/server/routes/clips_export.py` | Async clip extraction endpoints |
 | `frontend/src/components/ClipExportToast.tsx` | Progress toast (or reuse AutoCodeToast) |
 | `tests/test_clip_extractor.py` | Manifest, filenames, merge logic, FFmpeg mock |
@@ -244,7 +264,7 @@ Shared across all export features. Strips path separators, traversal sequences, 
 5. **New board per clip extraction, never modify existing clips.** Each extraction produces a fresh set.
 6. **Participant code, not session number, in clip filenames.** A clip is always one person speaking. The code groups clips per person in sort order.
 7. **Spaces, not hyphens.** The gist is lowercase, the capitalised speaker name provides the visual boundary.
-8. **Audio-only: extract as-is.** No special handling needed — FFmpeg stream copy works on audio containers.
+8. **Audio-only: extract as-is.** No special handling needed — FFmpeg stream copy works on audio containers. _(Superseded as implemented: audio clips are written as `.m4a`, not the source container — `clip_manifest.py:140`.)_
 9. **File menu, not Video menu.** Export is a file operation, not a playback operation.
 
 ---
@@ -268,7 +288,7 @@ Shared across all export features. Strips path separators, traversal sequences, 
 7. Test with audio-only session — verify clip extracted as audio file
 8. Test with missing media file — verify graceful skip with warning
 9. Test with project where sessions exceed 1 hour — verify `0h03m45` timecode format
-10. Test CLI: `bristlenose export --clips` — verify Cargo-style progress output
+10. ~~Test CLI: `bristlenose export --clips` — verify Cargo-style progress output~~ (CLI deferred)
 11. Test FFmpeg missing: verify `bristlenose doctor` reports it, clips disabled with explanation
 12. `pytest tests/` + `ruff check .`
 

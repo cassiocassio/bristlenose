@@ -1,4 +1,16 @@
 ---
+status: partial
+last-trued: 2026-09-12
+trued-against: HEAD@main on 2026-09-12
+---
+
+> **Truing status:** Current with targeted edits (trued 2026-09-12, two passes). The measured incident record in § "fourth kind" is kept as history; the What-is-done table carries every fix with its commit. See changelog.
+
+## Changelog
+
+- _2026-09-12 (second pass)_ — the four items the first pass left: § "fourth kind" body past-tensed (the prompt has padded since 11 Sep); "s09 range guard" → the shared s08+s09 guard; the prompt row cites `b89119b2` instead of a `git log -S` incantation; a row for `561c392a` (s08 guard, drop-not-clamp reason). The two closed items under "What is not done" stay where the first pass put them — visibly struck, kept as the record by that pass's choice.
+
+---
 status: current
 last-trued: 2026-09-12
 trued-against: HEAD@main on 2026-09-12
@@ -133,10 +145,10 @@ the model is gone, or the object does not validate. `gpt-5.6-terra` shows a
 fourth kind that every one of those checks passes cleanly.
 
 Asked for `HH:MM:SS`, it returns `HH:MM:SS`. Structured Outputs guarantees the
-schema and the schema is met. The *values* are wrong: the transcript is rendered
-`MM:SS` while a session runs under an hour (`format_timecode` omits hours below
-1 h), and the model writes those values into the `HH:MM:SS` slot by appending
-`:00`. Every field shifts up one place, so `M*3600 + S*60 == 60 * (M*60 + S)` —
+schema and the schema is met. The *values* were wrong: the transcript was rendered
+`MM:SS` while a session ran under an hour (`format_timecode` omits hours below
+1 h; the prompt has used `format_timecode_prompt` since 11 Sep — see below), and
+the model wrote those values into the `HH:MM:SS` slot by appending `:00`. Every field shifts up one place, so `M*3600 + S*60 == 60 * (M*60 + S)` —
 exactly sixty times the truth, and always a whole number of minutes.
 
 Measured 5 Sep 2026 on FOSSDA s1/s4/s9/s10, four passes: **239 of 380 quotes,
@@ -159,7 +171,8 @@ is the wrong fix and the guard has to be per-quote.
 (`format_timecode_prompt`), so the transcript speaks the format the schema asks
 for and there is no mismatch left to resolve. Re-measured on the same corpus,
 12 passes: terra **62.9% -> 0.0%** out of range, median quote span 1380s -> 54s,
-and Claude and Gemini unchanged at 0. The s09 range guard stayed active and
+and Claude and Gemini unchanged at 0. The range guard (shared by s08 and s09 since
+`561c392a`) stayed active and
 **fired zero times** — which is what separates "the model is now correct" from
 "the guard repaired it quietly"; the saved quotes look the same either way.
 
@@ -224,7 +237,8 @@ gone (Gemini 2.5).
 | `scripts/check-providers-live.py` + release gate + quarterly item 8 | `b04ac9d2` | 7/7 baseline |
 | Keychain: a key saved in the app or the CLI is seen by both | `bcdc03b9` (other session) | read-back |
 | Quote timecodes range-checked per quote; the 60x signature divided, anything else out of range clamped, both at WARNING | `a7d455d2` | 9 tests, incl. the three raw wire strings from the live `s9` call |
-| Prompt renders zero-padded `HH:MM:SS`, removing the format mismatch that caused it | `git log -S format_timecode_prompt` | 12 live passes: terra 62.9% -> 0.0%, guard fired 0 times; Claude/Gemini unchanged |
+| Prompt renders zero-padded `HH:MM:SS`, removing the format mismatch that caused it | `b89119b2` | 12 live passes: terra 62.9% -> 0.0%, guard fired 0 times; Claude/Gemini unchanged |
+| Stage 8 topic boundaries get the same guard — one implementation shared with s09 (`stages/timecode_guard.py`); a boundary out of range is **dropped**, not clamped, because a clamped boundary invents a topic edge at the session's end | `561c392a` | 9 tests; four terra s08 passes measured 0/0/0/11 signature hits, and the same signature in Claude s08 (28.6%) and unpadded Gemini (5.3%) — not model-specific |
 
 The live check is wired into `check-release-ready.sh` as a "providers live"
 row in the standard ok/warn/bad idiom, with a missing key reported as WARN

@@ -1,3 +1,15 @@
+---
+status: current
+last-trued: 2026-09-12
+trued-against: HEAD@main on 2026-09-12
+---
+
+> **Truing status:** Current with targeted edits (trued 2026-09-12). §Resolution gained the repair-pass precondition that now runs before segment matching; the timecode-trust claims are qualified by the measured 60× defect; two module paths corrected. Detection design and frontend contract verified unchanged. See changelog.
+
+## Changelog
+
+- _2026-09-12_ — trued up: Resolution names the s09 repair pass as a precondition; "Why both methods" and the source-class table qualified by the 60× timecode defect and its detector; `merge_transcript.py` → `s06_merge_transcript.py`, `render/standalone_pages.py` → `s12_render/standalone_pages.py`. Anchors: `bristlenose/stages/s09_quote_extraction.py:248-295`, `stages/timecode_guard.py`, `experiments/quote-stability/FINDINGS.md` § 3/3b.
+
 # Quote Sequences
 
 How Bristlenose detects and represents consecutive quotes from the same conversational flow.
@@ -30,7 +42,7 @@ Interview data arrives in three forms, each with different temporal metadata:
 
 | Class | Examples | Timecodes? | Sequence signal |
 |-------|----------|------------|-----------------|
-| **Timecoded audio/video** | Whisper transcription, VTT, SRT | Precise (sub-second) | Both timecode proximity and segment ordinal |
+| **Timecoded audio/video** | Whisper transcription, VTT, SRT | Precise (sub-second) — when the LLM's answer about the source is honest; see "Unreliable" below | Both timecode proximity and segment ordinal |
 | **Timecoded text** | Teams DOCX export | Coarse (minute-level) | Both, but timecodes less precise |
 | **Pure text** | Plain DOCX, pasted transcripts, researcher notes | None (all 0.0) | Segment ordinal only |
 
@@ -67,6 +79,8 @@ A gap of 1 means the quotes came from adjacent segments. A gap of 2 means one se
 
 The frontend should use timecodes when available (quote `start_timecode` > 0), falling back to segment ordinals when timecodes are absent or unreliable.
 
+**"Unreliable" is now load-bearing, and it is defined upstream.** Measured 5–12 Sep 2026: three model families have returned quote timecodes exactly 60× too large (`experiments/quote-stability/FINDINGS.md` § 3, § 3b; `docs/time-defects.md`). A scaled timecode is *positive*, so it passes every `> 0` guard here and in the frontend — gaps inflate 60× and sequences silently dissolve, a missed grouping with no error. The prompt mismatch that caused it is fixed and s09's repair pass catches the residue; the cross-validation this section calls high-confidence is exactly the detector that would have caught it, and it is still unshipped (see Open questions 1).
+
 ---
 
 ## Empirical threshold determination
@@ -102,7 +116,7 @@ A 0-based integer ordinal assigned to each transcript segment at the merge stage
 
 ### Assignment
 
-In `merge_transcript.py`, after segments are sorted by `start_time` and merged for same-speaker adjacency:
+In `s06_merge_transcript.py`, after segments are sorted by `start_time` and merged for same-speaker adjacency:
 
 ```python
 for i, seg in enumerate(merged):
@@ -113,7 +127,7 @@ This is the canonical assignment point. The merge stage produces the final segme
 
 ### Resolution (quote → segment)
 
-In `quote_extraction.py`, after the LLM returns quotes with timecodes, each quote is matched back to its source segment:
+In `s09_quote_extraction.py`, after the LLM returns quotes with timecodes, each quote is matched back to its source segment — **but not on the LLM's raw answer.** Since 12 Sep 2026 a repair pass runs first (`s09:248-293`, `stages/timecode_guard.py`): each timecode is range-checked against the session's duration and, where it carries the minutes-as-hours signature, divided by 60 or else clamped; a repair that inverts the pair collapses the end onto the start (`s09:288-292`). Resolution then runs on the repaired value. A cold reader tracing a wrong `segment_index` should look there before here.
 
 - For timecoded transcripts: find the segment whose time range contains the quote's `start_timecode`
 - For non-timecoded transcripts (all `start_time == 0.0`): return `-1` (timecode matching impossible; ordinal available through other paths)
@@ -125,7 +139,7 @@ TranscriptSegment.segment_index (assigned at merge)
     → ExtractedQuote.segment_index (resolved at extraction)
         → intermediate JSON (Pydantic serialization, automatic)
             → SignalQuote.segment_index (analysis computation)
-            → baked BRISTLENOSE_ANALYSIS JSON (render/standalone_pages.py)
+            → baked BRISTLENOSE_ANALYSIS JSON (`s12_render/standalone_pages.py`)
             → Quote ORM row (server importer)
                 → API responses (quotes, analysis, transcript endpoints)
                     → frontend TypeScript types

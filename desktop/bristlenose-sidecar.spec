@@ -245,9 +245,16 @@ a = Analysis(
         # Explicitly excluded per design-modularity.md.
         "ctranslate2",
         "faster_whisper",
-        "presidio_analyzer",
-        "presidio_anonymizer",
-        "spacy",
+        # presidio_analyzer / presidio_anonymizer / spacy are BUNDLED as of
+        # 12 Sep 2026 — the code ships inside the reviewed binary (~39 MB, 63
+        # native Mach-Os, all arm64 bundles rather than executables, so the
+        # nested-signing posture is untouched). Only the WEIGHTS are acquired
+        # at runtime, and they are pure data: en_core_web_lg is 425 MB with
+        # zero Mach-O objects. That code/data split is what keeps the download
+        # on the clean side of App Store §2.5.2 — see docs/design-redact-pii.md
+        # § "Delivery architecture". Do not re-exclude the code without
+        # re-reading that section; excluding it is what made the download a
+        # §2.5.2 violation in the parked design.
         "en_core_web_lg",
         # Orphan checkpoint-conversion tool inside mlx_whisper. Top-level
         # `import torch` pulls ~284 MB of torch into the bundle, but nothing
@@ -338,15 +345,20 @@ a = Analysis(
 # post-build gate re-verifies the assembled bundle and fails the build if the
 # literal survived (e.g. if PyInstaller internals shift and this patch stops
 # taking effect).
-def _strip_app_store_noncompliant_strings(analysis):
-    from PyInstaller.config import CONF
+def _strip_literals(analysis, module, replacements, *, required):
+    """Neuter App-Store-noncompliant literals in one frozen module.
 
-    needle = "itms-services"
-    replacement = "itmx-services"  # same length — byte offsets preserved
-    module = "urllib.parse"
+    ``replacements`` is a list of (needle, replacement) pairs, each same-length
+    so byte offsets are undisturbed. ``required=False`` lets a module be absent
+    without failing the build — spaCy is only in the bundle when PII ships, and
+    the spec must still work when it is excluded.
+    """
+    from PyInstaller.config import CONF
 
     code_cache = CONF["code_cache"].get(id(analysis.pure))
     if code_cache is None or module not in code_cache:
+        if not required:
+            return
         raise SystemExit(
             f"app-store-compliance spec patch: {module!r} not found in the "
             "PyInstaller code cache — PyInstaller internals changed. Update "
@@ -363,17 +375,43 @@ def _strip_app_store_noncompliant_strings(analysis):
 
     with open(src_path, encoding="utf-8") as fh:
         original = fh.read()
-    if needle not in original:
-        # Already compliant (e.g. a future --with-app-store-compliance CPython).
-        return
-    patched = original.replace(f"'{needle}'", f"'{replacement}'").replace(
-        f'"{needle}"', f'"{replacement}"'
-    )
-    if needle in patched:
-        raise SystemExit(
-            f"app-store-compliance spec patch: {needle!r} still present after "
-            "quoted replacement — an unquoted occurrence exists. Update the patch."
+    patched = original
+    for needle, replacement in replacements:
+        if needle not in patched:
+            continue  # already compliant, or this dependency moved the string
+        assert len(needle) == len(replacement), (needle, replacement)
+
+        # Whole-literal first: `itms-services` is its own quoted string in
+        # urllib.parse, and replacing only the quoted forms is the conservative
+        # move where it works.
+        patched = patched.replace(f"'{needle}'", f"'{replacement}'").replace(
+            f'"{needle}"', f'"{replacement}"'
         )
+
+        # Substring-of-a-longer-literal: spaCy's `spacy-models` sits inside a
+        # full URL, so the quoted forms never match. A bare replace is safe here
+        # and only here — a needle carrying a character that cannot appear in a
+        # Python identifier (`-`, `/`, `.`) cannot be part of a name, so the
+        # only things it can touch are string literals and comments, and
+        # rewriting either is inert. Refuse the bare replace otherwise rather
+        # than risk renaming code.
+        if needle in patched:
+            if needle.replace("_", "").isalnum():
+                raise SystemExit(
+                    f"app-store-compliance spec patch: {needle!r} in {module!r} "
+                    "is identifier-safe, so a bare substring replace could "
+                    "rename code. It survived quoted replacement — patch it "
+                    "explicitly."
+                )
+            patched = patched.replace(needle, replacement)
+
+        if needle in patched:
+            raise SystemExit(
+                f"app-store-compliance spec patch: {needle!r} still present in "
+                f"{module!r} after replacement. Update the patch."
+            )
+    if patched == original:
+        return
 
     # optimize=0 matches PyInstaller's PYMODULE typecode (plain `python -m
     # PyInstaller`, no -O). co_filename stays the real stdlib path so
@@ -381,7 +419,19 @@ def _strip_app_store_noncompliant_strings(analysis):
     code_cache[module] = compile(patched, src_path, "exec", optimize=0)
 
 
-_strip_app_store_noncompliant_strings(a)
+_strip_literals(
+    a, "urllib.parse", [("itms-services", "itmx-services")], required=True
+)
+# spaCy's own pip-install path. `import spacy` executes spacy/__init__.py's
+# `from .cli.info import info`, which loads spacy/cli and with it `download`,
+# whose target is spacy/about.py's GitHub release URL. Bristlenose never calls
+# it — the model is resolved by path (s07_pii_removal.resolve_spacy_model) — but
+# §2.5.2's static scan does not care whether code runs. One token kills both
+# URLs; `required=False` because spaCy is absent from the bundle when PII does
+# not ship.
+_strip_literals(
+    a, "spacy.about", [("spacy-models", "spacy-modelx")], required=False
+)
 
 pyz = PYZ(a.pure)
 

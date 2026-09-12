@@ -283,7 +283,12 @@ comment. Two copies in one language is the condition the register closed
 
 ## 4. Holes
 
-### H1 — Two `parse_timecode` implementations, and the tests guard the dead one
+_**Status, 12 Sep 2026 — Tier 0 and Tier 1 landed** (`git log -S parse_header_datetime`).
+Fixed: H1, H2 (declared), H3 (closed by measurement), H4, H5, H7, H8, H11, and
+H13 below. Still open: H9's DB-column half and H10/H12's remaining pins, which
+belong to Tier 2 (`design-timezones.md` § 5). H6 withdrawn._
+
+### H1 — ✅ FIXED — Two `parse_timecode` implementations, and the tests guard the dead one
 
 `bristlenose/utils/timecodes.py:84` (regex, canonical, used by every production
 call site) and `bristlenose/models.py:441` (split-on-colon, **zero production
@@ -302,30 +307,35 @@ the format→parse round-trip test — the one the register calls the guard for 
 Class-R format — exercises the implementation nothing ships. Changing the
 canonical parser would not redden it.
 
-### H2 — `format_timecode` output above 99 h cannot be parsed back
+### H2 — ✅ DECLARED — `format_timecode` output above 99 h cannot be parsed back
 
 `format_timecode(360000)` → `100:00:00`; the canonical parser's hour group is
 `\d{1,2}` and refuses it. Far outside the realistic range, so the *impact* is
 nil — the finding is that **format and parse have different domains and nothing
 declares either**.
 
-### H3 — Unpadded third-party timecodes are dropped silently
+### H3 — ✅ CLOSED BY MEASUREMENT — Unpadded third-party timecodes are dropped silently
 
 `1:2:3` is refused by the canonical parser, and the docx/subtitle regexes
 (`s04_parse_docx.py:22-46`) require `\d{2}` for minutes and seconds, so such a
 line never reaches the parser — it simply does not match and is skipped, with no
 error and no count. A short transcript is the only symptom. This is the same
 shape as the `\d{1,2}` hour incident already in CLAUDE.md, one field to the
-right. **Not verified: whether any real third-party export emits unpadded
-seconds.** Worth one pass over the format corpus before deciding.
+right.
 
-### H4 — The canonical parser accepts trailing garbage
+**Measured 12 Sep 2026:** 344 real transcript-like files on disk
+(`.txt/.md/.srt/.vtt/.docx`), **zero** unpadded timecodes. The seven regex hits
+were Stephanus citations in Plato texts (`Republic 3:4`). No export produces
+this shape, so refusal is the contract and is pinned
+(`TestUnpaddedIsRefused`).
+
+### H4 — ✅ FIXED — The canonical parser accepts trailing garbage
 
 `parse_timecode("00:01:23 extra")` → `83.0`. It uses `re.match`, not
 `re.fullmatch`, so a malformed line yields a plausible number instead of an
 error. Silent-wrong beats loud-wrong everywhere else in this codebase.
 
-### H5 — `miro_board.fmt_timecode` never rolls minutes into hours, and breaks at 100 minutes
+### H5 — ✅ FIXED — `miro_board.fmt_timecode` never rolls minutes into hours, and breaks at 100 minutes
 
 `bristlenose/miro_board.py:125` is `f"{total // 60}:{total % 60:02d}"`. Measured:
 
@@ -381,7 +391,7 @@ knowing only if duration probing ever becomes less reliable.
 value" is a code smell, not a finding. Whether it is a defect depends on what
 bounds the inputs, and that lived one file away in the caller.
 
-### H7 — Four Python duration formatters, three formats, and the obvious home holds the wrong one
+### H7 — ✅ FIXED — Four Python duration formatters, three formats, and the obvious home holds the wrong one
 
 *Corrected 12 Sep 2026: the first draft called `utils.format_duration_human`
 "dead, 0 callers". That was a grep artefact — the search excluded `dashboard.py`
@@ -412,7 +422,7 @@ Three things here:
 `pipeline._format_duration` is a legitimately different context (sub-second CLI
 stage timing), though its minutes also overflow (`1103m 00s`).
 
-### H8 — Start time is *relabelled*, not converted — and two readers of the same header disagree
+### H8 — ✅ FIXED — Start time is *relabelled*, not converted — and two readers of the same header disagree
 
 `pipeline.py:2861` reads the transcript `# Date:` header as:
 
@@ -460,7 +470,7 @@ for `finder_date` and pins **no cases at all** (`timecode` has 15,
 deliberate fork" — that is an assertion nothing tests, and H9 is the fork it did
 not know about.
 
-### H11 — Naive `datetime.now()` at four render sites
+### H11 — ✅ FIXED — Naive `datetime.now()` at four render sites
 
 `s12_render_output.py:81` and `:178`, `s12_render/report.py:164`,
 `utils/markdown.py:493`. Mixed with an aware `session_date`. It does **not**
@@ -474,6 +484,13 @@ TypeScript returns an em-dash for `seconds <= 0` (unknown); Python and Swift
 return `0m` (measured zero). This is **deliberate and documented** in
 `format.ts`. But `duration_human` has no zero case in the contract, so nothing
 stops a future edit collapsing the fork in either direction.
+
+### H13 — ✅ FIXED — TypeScript `formatTimecode` did not clamp a negative
+
+Found by the fixture, as designed: adding `[-1, "00:00"]` to the `timecode`
+contract made vitest red. Python clamps via `max(0, int(seconds))`;
+`format.ts` did not, and rendered `-1` as `"-1:-1"` and `-61` as `"-2:-1"`.
+A one-line clamp; the case stays in the fixture so it cannot come back.
 
 ---
 
@@ -527,7 +544,7 @@ the wrong code (H1).
 
 ### Tier 0 — independent, cheap, zone-free
 
-**T0-1 · Retire `models.parse_timecode`; repoint the round-trip test. Do this
+**T0-1 ✅ · Retire `models.parse_timecode`; repoint the round-trip test. Do this
 first** — it is what makes the rest of the tier verifiable.
 - `bristlenose/models.py:441-449`: delete. No production caller (H1); every
   stage imports from `utils.timecodes`.
@@ -543,7 +560,7 @@ first** — it is what makes the rest of the tier verifiable.
 - Risk: none in-tree. An out-of-tree script importing from `models` breaks
   loudly, which is the right way to break.
 
-**T0-2 · `parse_timecode` uses `fullmatch`.**
+**T0-2 ✅ · `parse_timecode` uses `fullmatch`.**
 - `bristlenose/utils/timecodes.py:84-105`: `.match` → `.fullmatch` on both
   patterns, after the existing `strip()`.
 - Every caller passes an isolated token, verified: s03 passes
@@ -559,7 +576,7 @@ first** — it is what makes the rest of the tier verifiable.
 - Risk: low. If a real transcript format turns out to carry trailing text on the
   timestamp token, the fix is in *that* parser's regex, not here.
 
-**T0-3 · `miro_board.fmt_timecode` delegates to `format_timecode`.**
+**T0-3 ✅ · `miro_board.fmt_timecode` delegates to `format_timecode`.**
 - `bristlenose/miro_board.py:125-127`: body becomes `return format_timecode(seconds)`.
   Keep the name — `miro_export.py:27` imports it.
 - Proof: `fmt_timecode(6000) == "1:40:00"` and `parse_timecode(fmt_timecode(6000)) == 6000`.
@@ -573,7 +590,7 @@ first** — it is what makes the rest of the tier verifiable.
   seconds. Replace with the canonical `parse_timecode` inside the existing
   `try` — same tier, same file, five lines.
 
-**T0-4 · One `format_duration_human`, in `utils/timecodes.py`, canonical.**
+**T0-4 ✅ · One `format_duration_human`, in `utils/timecodes.py`, canonical.**
 - Move the body of `server/routes/dashboard._format_duration_human` into
   `utils/timecodes.py:format_duration_human` (replacing the `"1 min"` variant).
   Make the route function a one-line delegate. `s12_render/dashboard.py:32`
@@ -592,18 +609,18 @@ first** — it is what makes the rest of the tier verifiable.
 - Risk: a test pinning the static dashboard HTML's `" min"` would be pinning
   the fork. Checked — none does. The static total changes freely.
 
-**T0-5 · `dev._format_duration` uses the canonical helper.**
+**T0-5 ✅ · `dev._format_duration` uses the canonical helper.**
 - `server/routes/dev.py:79-88`: `return "\u2014" if seconds <= 0 else format_duration_human(seconds)`.
   Em-dash stays — it is a per-row cell, the SPA convention.
 - Proof: `_format_duration(66180) == "18h 23m"` (today `"18:23:00"`).
 - Depends on T0-4 for the import. Dev-only surface; lowest stakes in the tier.
 
-**T0-6 · `pipeline._format_duration` overflows minutes** (`66180` → `1103m 00s`).
+**T0-6 ✅ · `pipeline._format_duration` overflows minutes** (`66180` → `1103m 00s`).
 CLI stage timing, realistically seconds-to-minutes; a long transcription can
 cross an hour. Fix is `divmod` into `h`/`m`/`s`. **Could** — note only, do
 when touching that code.
 
-**T0-7 · Extend the contract fixture** (`tests/fixtures/shared-format-contract.json`).
+**T0-7 ✅ (timecode cases + H13; `finder_date` pins deferred to Tier 2, see below) · Extend the contract fixture** (`tests/fixtures/shared-format-contract.json`).
 - `timecode.cases`, add: `[3599.9, "59:59"]` (truncation at the switch — must
   not round to `1:00:00`), `[5999, "1:39:59"]`, `[6000, "1:40:00"]`,
   `[10800, "3:00:00"]`, `[35999, "9:59:59"]`.
@@ -623,7 +640,7 @@ when touching that code.
   `Today at 16:59` separator in `divergences` (H10). Inputs must be **naive**
   strings to match today's wire (`design-timezones.md` § 1).
 
-**T0-8 · Round-trip property test** — `tests/test_timecode_roundtrip.py`.
+**T0-8 ✅ · Round-trip property test** — `tests/test_timecode_roundtrip.py`.
 - For `s in range(0, 360000, 7)`: `int(parse_timecode(format_timecode(s))) == s`,
   and the same for `format_timecode_prompt`. That is ~51k cases in well under a
   second and covers every field boundary. (`hypothesis` is not a dependency;
@@ -635,7 +652,7 @@ when touching that code.
 
 ### Tier 1 — one measurement or one decision each
 
-**T1-1 · `# Date:` header reader converts instead of relabelling** (H8).
+**T1-1 ✅ · `# Date:` header reader converts instead of relabelling** (H8).
 - `pipeline.py:2861`: replace `.replace(tzinfo=timezone.utc)` with the exact
   logic `server/importer.py:83` already uses — relabel only when
   `dt.tzinfo is None`, otherwise `astimezone(timezone.utc)`. Better: extract that
@@ -648,7 +665,7 @@ when touching that code.
   appears in legacy files written before the time-of-recording fix, which were
   UTC). State it in the docstring.
 
-**T1-2 · Unpadded third-party timecodes** (H3) — **measure before deciding.**
+**T1-2 ✅ · Unpadded third-party timecodes** (H3) — **measured: zero in 344 files; refusal pinned.**
 - One script over every `.docx`/`.srt`/`.vtt`/`.txt` transcript on disk
   (`trial-runs/`, the format corpus): count lines matching an unpadded field
   (`\b\d:\d\b` or `:\d\b` at end of token). Zero in the wild → declare
@@ -657,7 +674,7 @@ when touching that code.
   offending format named in the commit.
 - Do not widen speculatively: a looser regex matches more non-timecode text.
 
-**T1-3 · Naive `now()` at four render sites** (H11).
+**T1-3 ✅ · Naive `now()` at four render sites** (H11).
 - `s12_render_output.py:81,178`, `s12_render/report.py:164`,
   `utils/markdown.py:493`: `datetime.now()` → `datetime.now(timezone.utc)`.
   Removes the latent `TypeError` on any future subtraction against an aware
@@ -676,3 +693,12 @@ when touching that code.
 - `ProjectRow.formatBareDate`'s verbatim copy in `SidebarSubtitleText.swift` —
   a Swift-internal duplicate of a *different* datum (project activity). Fold
   into a Swift tidy-up, not this plan.
+
+### Deferred from T0-7, deliberately: `finder_date` pins
+
+The absolute-date branch could be pinned today, but the relative branch needs an
+injectable `now` that `formatFinderDate` (TS) lacks — an API change on a
+function three components call. And any case written now must use a **naive**
+input to match the current wire, which Tier 2 § 5.3 changes. Pinning twice is
+worse than pinning once after the wire settles. Recorded here so it is not
+mistaken for forgotten.

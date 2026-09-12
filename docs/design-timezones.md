@@ -338,7 +338,7 @@ _Tier 0 and Tier 1 — the zone-free fixes — are in `docs/time-defects.md` § 
 do not depend on anything here. This is the start-time and timezone work. The
 order is strict because each step is what makes the next one measurable._
 
-### 5.1 Read the container (the card already filed: §2 Broken · Should)
+### 5.1 ✅ LANDED 12 Sep 2026 — Read the container (`git log -S MediaTimeMeta`)
 
 - `utils/audio.py` already runs `ffprobe` for duration. Extend that one call's
   `-show_entries` with `format_tags` and `stream_tags`, parse the JSON, and
@@ -356,6 +356,20 @@ order is strict because each step is what makes the next one measurable._
 - Proof: a unit test over the five `folder-of-horrors` files whose manifest
   already carries `creation_time` (`harvest.py` captured it), asserting the
   parsed UTC instant and, for `IMG_2544.MOV`, `offset_minutes == 60`.
+
+_**What landed:** `MediaTimeMeta` on `InputFile`, populated at ingest by
+`probe_time_meta`; `time_meta_from_ffprobe` is pure and tested on the measured
+tag dictionaries. `bristlenose status` does not surface it yet — that is a CLI
+surface change with man-page and README obligations, held for when § 5.4 gives
+it something to say._
+
+_**Judgement calls left for the maintainer, in order — none is a mechanical
+step:** § 5.2's table has three owed measurements that need files not on this
+machine (iPhone start-vs-end, Zoom local transcode, a real OBS/browser
+capture); § 5.3 is a schema migration with a compatibility decision on
+`session_date`; § 5.4's tolerance and precedence are product calls the
+consent-delay sign test only informs; § 5.5 depends on § 5.3; § 5.6 is gated on
+§ 4, which is the one that decides whose time is "the" time._
 
 ### 5.2 Classify the writer
 

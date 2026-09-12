@@ -227,8 +227,45 @@ final class BridgeHandler: ObservableObject {
     @Published var hasSelectedProject: Bool = false
 
     /// Reference to the WKWebView for outbound calls (goBack, switchToTab).
-    /// Set by WebView.makeNSView, cleared on reset(). Weak to avoid retain cycles.
-    weak var webView: WKWebView?
+    /// Set by `WebView.makeNSView`; cleared by `WebView.dismantleNSView` under an
+    /// identity guard — **not** by `reset()`, which stopped clearing it because two
+    /// owners with no defined order wiped a live registration (see the note on
+    /// `reset()`). Weak to avoid retain cycles.
+    ///
+    /// The `didSet` is what keeps `hasChannel` honest: every write to this
+    /// reference, from either site, moves the published mirror with it. Nothing
+    /// has to remember.
+    ///
+    /// The hole, so nobody has to rediscover it: `didSet` fires on *assignment*
+    /// only. A weak reference zeroed by its referent deallocating runs no
+    /// observer, so a web view released without `dismantleNSView` assigning nil
+    /// would leave `hasChannel` reading true over a dead channel. That path is
+    /// the defined teardown and it does assign, which is what makes the mirror
+    /// safe today — not an invariant of `weak` itself.
+    weak var webView: WKWebView? {
+        didSet {
+            let live = webView != nil
+            if hasChannel != live { hasChannel = live }
+        }
+    }
+
+    /// Whether there is a live channel to dispatch over — a literal restatement of
+    /// the `guard let webView` that opens `menuAction` and `switchToTab`, so a menu
+    /// gate can never disagree with the guard it stands in for.
+    ///
+    /// Exists because `webView` is a plain `weak var` and cannot drive SwiftUI. Do
+    /// not write it directly; it is driven by `webView`'s `didSet`.
+    @Published private(set) var hasChannel = false
+
+    /// Whether a bridge-routed **menu command** can actually do something.
+    ///
+    /// Not `isReady`: that goes true on the status page and on a legacy bundle
+    /// (see its note), so gating capability on it leaves commands black and live
+    /// over a document with no `window.__bristlenose` — the failure it looks like
+    /// it prevents. Not `documentState` alone: that describes the *document*, and
+    /// stays `.spa` across a channel teardown. Both halves, because they answer
+    /// different questions and go false in different states.
+    var canDispatch: Bool { hasChannel && documentState == .spa }
 
     /// What the menu bar reads when **no project window is frontmost** — the
     /// Settings window, the Import window, or no window at all.

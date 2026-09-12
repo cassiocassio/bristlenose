@@ -260,7 +260,8 @@
         "topics": "正在尋找主題",
         "quotes": "正在尋找引述",
         "cluster": "正在分組歸納主軸",
-        "render": "正在建立報告"
+        "render": "正在建立報告",
+        "pii": "\u6b63\u5728\u79fb\u9664\u500b\u4eba\u8cc7\u6599"
       }
     },
     "folderNamePlaceholder": "檔案夾名稱",

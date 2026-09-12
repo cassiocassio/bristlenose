@@ -277,7 +277,8 @@
         "topics": "Rep\u00e9rage des sujets",
         "quotes": "Extraction des citations",
         "cluster": "Regroupement des th\u00e8mes",
-        "render": "Cr\u00e9ation du rapport"
+        "render": "Cr\u00e9ation du rapport",
+        "pii": "Suppression des informations personnelles"
       }
     },
     "folderNamePlaceholder": "Nom du dossier",

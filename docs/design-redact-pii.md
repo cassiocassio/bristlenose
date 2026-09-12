@@ -1037,6 +1037,44 @@ output, or the importer could refuse raw when `pii_enabled` is on.
 **8. Inert but worth knowing.** `BRISTLENOSE_PII_ENABLED` is now injected into
 *serve* spawns as well as `run`; nothing in `server/*.py` reads it. Harmless.
 
+### Stage 7 speaks to the sidebar and the estimator — 12 Sep 2026
+
+Asked directly — *does redaction send messages to the status line, and is its
+time in the estimate and the ring?* — the answer was **no** on both, and the
+Swift file said why in its own comment: the estimator "folds PII into its
+neighbours and never emits it as a progress stage". Reasonable while it ran for
+nobody; wrong the day it became a Mac feature. The sidebar showed the previous
+stage frozen through the model load and the redaction pass (on the CLI's first
+run, through a 425 MB download), and every warm prediction was short by PII's
+duration because the six-stage total never contained it.
+
+**The fix is pure reuse — no new mechanism.** Every stage talks through six
+channels; stage 7 already used the three CLI-facing ones (`status.update`,
+`_print_step`, the manifest) and lacked the two shared with the desktop. It now
+makes the *same two calls* every sibling makes — `_emit_stage_entry(STAGE_PII)`
+on entry, `_stage_actuals[STAGE_PII]` + `_emit_remaining` on exit — keyed on a
+new id in the vocabulary those calls already use: `timing.py STAGE_PII = "pii"`,
+in `ALL_STAGES` after `speakers` and in `_SESSION_STAGES` (it is per-transcript);
+Swift's `knownStages` mirror; the locale verb `chrome.pipeline.stage.pii` in all
+21 locales (en: *Redacting personal information*; the rest machine-seeded in
+each locale's own stage-verb register, pending native review).
+
+**It is a conditional stage, and that is the only subtlety.** `initial_estimate`
+takes `pii_enabled` on the `skip_transcription` precedent and skips it when off;
+`stage_completed` skips it too — without that, a disabled PII would be counted
+as *remaining* until the run ended and inflate every ETA. An old `timing.json`
+with no `pii` profile degrades gracefully: `_estimate_stage` returns `0, 0` for
+a stage without history and `has_history` is `any()`, so a warm estimator stays
+warm and simply learns PII's rate over its first four redacted runs.
+
+Pinned three ways: the pipeline-level test drives `Pipeline.run` to stage 7 with
+a succeeding redaction and asserts the sink saw `stage == "pii"` and the
+estimator was told it completed; `knownStages == ALL_STAGES` is now a
+**Python-side** cross-language test, because the Swift copy is ungated by CI and
+an id missing on the Swift side is exactly how this shipped invisible; and the
+timing suite covers order, session scaling, both conditional skips, and the
+old-profile case.
+
 ### Build order
 
 Phases 0–2 are independent of Background Assets and can land immediately; the

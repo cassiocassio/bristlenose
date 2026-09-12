@@ -277,7 +277,8 @@
         "topics": "Finder emner",
         "quotes": "Finder citater",
         "cluster": "Grupperer temaer",
-        "render": "Bygger rapport"
+        "render": "Bygger rapport",
+        "pii": "Fjerner personlige oplysninger"
       }
     },
     "folderNamePlaceholder": "Mappenavn",

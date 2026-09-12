@@ -277,7 +277,8 @@
         "topics": "Onderwerpen zoeken",
         "quotes": "Citaten zoeken",
         "cluster": "Thema's groeperen",
-        "render": "Rapport bouwen"
+        "render": "Rapport bouwen",
+        "pii": "Persoonsgegevens verwijderen"
       }
     },
     "folderNamePlaceholder": "Mapnaam",

@@ -277,7 +277,8 @@
         "topics": "Detectando temas",
         "quotes": "Buscando citas",
         "cluster": "Agrupando temas",
-        "render": "Generando informe"
+        "render": "Generando informe",
+        "pii": "Eliminando informaci\u00f3n personal"
       }
     },
     "folderNamePlaceholder": "Nombre de la carpeta",

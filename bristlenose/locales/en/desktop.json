@@ -280,7 +280,8 @@
         "topics": "Finding topics",
         "quotes": "Finding quotes",
         "cluster": "Grouping themes",
-        "render": "Building report"
+        "render": "Building report",
+        "pii": "Redacting personal information"
       }
     },
     "folderNamePlaceholder": "Folder name",

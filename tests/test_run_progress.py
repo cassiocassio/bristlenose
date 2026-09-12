@@ -39,6 +39,7 @@ from bristlenose.pipeline import Pipeline
 from bristlenose.run_lifecycle import RunHandle, _reconcile_stranded_run
 from bristlenose.timing import (
     STAGE_CLUSTER,
+    STAGE_PII,
     STAGE_QUOTES,
     STAGE_RENDER,
     STAGE_SPEAKERS,
@@ -187,12 +188,12 @@ def test_emit_stage_entry_emits_verb_vocabulary_not_manifest_names():
     pipeline = Pipeline(BristlenoseSettings())
     pipeline.set_progress_sink(lambda **fields: collected.append(fields))
 
-    for stage in (STAGE_SPEAKERS, STAGE_TOPICS, STAGE_QUOTES, STAGE_CLUSTER, STAGE_RENDER):
+    for stage in (STAGE_SPEAKERS, STAGE_PII, STAGE_TOPICS, STAGE_QUOTES, STAGE_CLUSTER, STAGE_RENDER):
         pipeline._emit_stage_entry(stage)
 
     emitted = {c.get("stage") for c in collected}
     # Set membership — not count, ordering, or "eta is None" (Bach: detail).
-    assert emitted == {"speakers", "topics", "quotes", "cluster", "render"}
+    assert emitted == {"speakers", "pii", "topics", "quotes", "cluster", "render"}
     # Negative: no manifest name reached the wire. render's manifest name IS
     # "render" (shared and correct), so it is excluded from the trap set.
     manifest_names = {

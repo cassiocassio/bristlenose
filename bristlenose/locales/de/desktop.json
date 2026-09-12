@@ -277,7 +277,8 @@
         "topics": "Themen werden erkannt",
         "quotes": "Zitate werden gesucht",
         "cluster": "Themen werden gruppiert",
-        "render": "Bericht wird erstellt"
+        "render": "Bericht wird erstellt",
+        "pii": "Personenbezogene Daten werden entfernt"
       }
     },
     "folderNamePlaceholder": "Ordnername",

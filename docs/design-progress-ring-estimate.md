@@ -38,7 +38,7 @@ Full chain:
 6. **Render**: `ProjectRowActivityIndicator` [`:47`](../desktop/Bristlenose/Bristlenose/ProjectRowActivityIndicator.swift) → `SidebarActivityRing` `strokeEnd` (the AppKit
    `NSOutlineView` sidebar is the shipped path).
 
-The six estimator stages (`timing.py` `ALL_STAGES`): `transcribe, speakers, topics, quotes, cluster,
+The estimator stages (`timing.py` `ALL_STAGES`) — six, plus `pii` between `speakers` and `topics` when redaction is on (12 Sep 2026; before that the ring froze through it): `transcribe, speakers, [pii], topics, quotes, cluster,
 render`. "Grouping themes" is the verb for `cluster` — which spans **both** s10 clustering and s11
 theming, run concurrently in one `asyncio.gather` ([`pipeline.py:1699`](../bristlenose/pipeline.py)).
 

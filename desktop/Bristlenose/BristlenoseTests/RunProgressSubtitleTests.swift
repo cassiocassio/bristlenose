@@ -162,7 +162,7 @@ import Testing
     /// that shipped the first cut: the manifest ids didn't match the wire ids).
     @Test func knownStagesMatchEstimatorVocabulary() {
         #expect(RunProgressSubtitle.knownStages
-            == ["transcribe", "speakers", "topics", "quotes", "cluster", "render"])
+            == ["transcribe", "speakers", "pii", "topics", "quotes", "cluster", "render"])
     }
 
     @Test func zeroTotalOmitsCount() {

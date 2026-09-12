@@ -277,7 +277,8 @@
         "topics": "Encontrando tópicos",
         "quotes": "Encontrando citações",
         "cluster": "Agrupando temas",
-        "render": "Criando relatório"
+        "render": "Criando relatório",
+        "pii": "Removendo informa\u00e7\u00f5es pessoais"
       }
     },
     "folderNamePlaceholder": "Nome da pasta",

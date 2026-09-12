@@ -260,7 +260,8 @@
         "topics": "\uc8fc\uc81c \ucc3e\ub294 \uc911",
         "quotes": "\uc778\uc6a9 \ucc3e\ub294 \uc911",
         "cluster": "\ud14c\ub9c8 \uadf8\ub8f9\ud654 \uc911",
-        "render": "\ubcf4\uace0\uc11c \uc791\uc131 \uc911"
+        "render": "\ubcf4\uace0\uc11c \uc791\uc131 \uc911",
+        "pii": "\uac1c\uc778\uc815\ubcf4 \uc0ad\uc81c \uc911"
       }
     },
     "folderNamePlaceholder": "\ud3f4\ub354 \uc774\ub984",

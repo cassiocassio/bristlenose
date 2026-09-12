@@ -25,18 +25,25 @@ logger = logging.getLogger(__name__)
 # Each maps to one rate metric in the timing profile.
 STAGE_TRANSCRIBE = "transcribe"
 STAGE_SPEAKERS = "speakers"
+# Conditional: present only when `pii_enabled`. Per-transcript like the LLM
+# stages, so it scales by session count. Until 12 Sep 2026 the estimator
+# "folded PII into its neighbours" — reasonable while it ran for nobody, and
+# wrong once it became a Mac feature: the ring froze through the model load
+# and the redaction pass, and every warm prediction was short by its duration.
+STAGE_PII = "pii"
 STAGE_TOPICS = "topics"
 STAGE_QUOTES = "quotes"
 STAGE_CLUSTER = "cluster"
 STAGE_RENDER = "render"
 
 # Stages driven by session count (1 LLM call per session).
-_SESSION_STAGES = (STAGE_SPEAKERS, STAGE_TOPICS, STAGE_QUOTES)
+_SESSION_STAGES = (STAGE_SPEAKERS, STAGE_PII, STAGE_TOPICS, STAGE_QUOTES)
 
 # All stages in pipeline order (used for remaining-time recalculation).
 ALL_STAGES = (
     STAGE_TRANSCRIBE,
     STAGE_SPEAKERS,
+    STAGE_PII,
     STAGE_TOPICS,
     STAGE_QUOTES,
     STAGE_CLUSTER,
@@ -222,6 +229,9 @@ class TimingEstimator:
         self.config_dir = config_dir
         self._data = load_timing_data(config_dir)
         self._profile = self._load_profile()
+        # Set by initial_estimate(); read by both loops below so a disabled PII
+        # stage is neither predicted nor counted as "remaining" for ever.
+        self._pii_enabled = False
         # Input sizes set by caller after ingest.
         self.audio_minutes: float = 0.0
         self.session_count: int = 0
@@ -276,10 +286,12 @@ class TimingEstimator:
         session_count: int,
         *,
         skip_transcription: bool = False,
+        pii_enabled: bool = False,
     ) -> Estimate | None:
         """Compute upfront estimate after ingest. Returns None if no history."""
         self.audio_minutes = audio_minutes
         self.session_count = session_count
+        self._pii_enabled = pii_enabled
 
         if not self.has_history():
             return None
@@ -290,6 +302,8 @@ class TimingEstimator:
 
         for stage in ALL_STAGES:
             if skip_transcription and stage == STAGE_TRANSCRIBE:
+                continue
+            if stage == STAGE_PII and not pii_enabled:
                 continue
             secs, sd = self._estimate_stage(stage)
             total += secs
@@ -323,6 +337,8 @@ class TimingEstimator:
         for s in ALL_STAGES:
             if s in self._completed:
                 continue
+            if s == STAGE_PII and not self._pii_enabled:
+                continue  # never runs this run — not "remaining", just absent
             secs, sd = self._estimate_stage(s)
             remaining_total += secs
             remaining_var += sd ** 2

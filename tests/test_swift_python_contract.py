@@ -248,3 +248,30 @@ class TestPIIModelPackContract:
             f"Swift checks {swift_files}, Python checks {py_files} — a "
             f"directory one side calls loadable and the other does not"
         )
+
+
+class TestProgressStageVocabularyContract:
+    """`RunProgressSubtitle.knownStages` is a hand-maintained mirror of
+    `timing.py ALL_STAGES`. An id on the Python side that Swift lacks is
+    silently dropped — the verb never renders and the sidebar shows the
+    previous stage frozen — which is exactly how redaction shipped invisible
+    until 12 Sep 2026. The Swift suite pins the literal set, but it is ungated
+    by CI; this is the copy that runs on every push.
+    """
+
+    def test_swift_known_stages_equal_python_all_stages(self) -> None:
+        import re
+
+        from bristlenose.timing import ALL_STAGES
+
+        swift = (
+            Path(__file__).resolve().parent.parent
+            / "desktop" / "Bristlenose" / "Bristlenose" / "RunProgressSubtitle.swift"
+        ).read_text(encoding="utf-8")
+        m = re.search(r"knownStages: Set<String> = \[(.*?)\]", swift, re.S)
+        assert m, "knownStages literal not found"
+        swift_set = set(re.findall(r'"([^"]+)"', m.group(1)))
+        assert swift_set == set(ALL_STAGES), (
+            f"Swift knows {sorted(swift_set)}, Python emits {sorted(ALL_STAGES)} — "
+            f"a stage in the difference renders no verb"
+        )

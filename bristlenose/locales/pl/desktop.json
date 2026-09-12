@@ -311,7 +311,8 @@
         "topics": "Wyszukiwanie tematów",
         "quotes": "Wyszukiwanie cytatów",
         "cluster": "Grupowanie motywów",
-        "render": "Tworzenie raportu"
+        "render": "Tworzenie raportu",
+        "pii": "Usuwanie danych osobowych"
       }
     },
     "folderNamePlaceholder": "Nazwa folderu",

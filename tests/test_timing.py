@@ -7,8 +7,10 @@ from pathlib import Path
 import pytest
 
 from bristlenose.timing import (
+    _SESSION_STAGES,
     ALL_STAGES,
     STAGE_CLUSTER,
+    STAGE_PII,
     STAGE_QUOTES,
     STAGE_RENDER,
     STAGE_SPEAKERS,
@@ -334,5 +336,72 @@ class TestTimingEstimator:
         est = TimingEstimator(key, tmp_path)
         result = est.initial_estimate(10.0, 5)
         assert result is not None
+        # PII is conditional and off by default: every OTHER stage is in the
+        # breakdown, and pii is deliberately not.
         for stage in ALL_STAGES:
-            assert stage in result.breakdown
+            if stage == STAGE_PII:
+                assert stage not in result.breakdown
+            else:
+                assert stage in result.breakdown
+
+
+class TestConditionalPIIStage:
+    """`pii` is in the vocabulary but runs only when redaction is on.
+
+    Until 12 Sep 2026 the estimator omitted it entirely — the ring froze
+    through redaction and every warm total was short by its duration. Adding a
+    conditional stage has one subtlety: it must be skipped in BOTH loops, or a
+    disabled PII is counted as *remaining* until the run ends.
+    """
+
+    @staticmethod
+    def _warm(tmp_path: Path, key: str, *, with_pii: bool) -> TimingEstimator:
+        _seed_profile(tmp_path, key)
+        est = TimingEstimator(key, tmp_path)
+        if with_pii:
+            # Seed pii's own rate the way a real run would, four times over.
+            for _ in range(4):
+                est.record_run({STAGE_PII: StageActual(elapsed=8.0, input_size=4.0)})
+        return est
+
+    def test_vocabulary_order_and_scaling(self) -> None:
+        assert ALL_STAGES.index(STAGE_PII) == ALL_STAGES.index(STAGE_SPEAKERS) + 1
+        assert STAGE_PII in _SESSION_STAGES, "per-transcript, so it scales by session count"
+
+    def test_off_by_default_is_not_predicted(self, tmp_path: Path) -> None:
+        est = self._warm(tmp_path, "hw", with_pii=True)
+        result = est.initial_estimate(10.0, 5)
+        assert result is not None and STAGE_PII not in result.breakdown
+
+    def test_on_is_predicted(self, tmp_path: Path) -> None:
+        est = self._warm(tmp_path, "hw", with_pii=True)
+        result = est.initial_estimate(10.0, 5, pii_enabled=True)
+        assert result is not None and STAGE_PII in result.breakdown
+        assert result.breakdown[STAGE_PII] > 0
+
+    def test_off_is_not_counted_as_remaining(self, tmp_path: Path) -> None:
+        """The second loop. Without this skip a disabled PII inflates every ETA."""
+        est = self._warm(tmp_path, "hw", with_pii=True)
+        est.initial_estimate(10.0, 5, pii_enabled=False)
+        remaining = est.stage_completed(STAGE_SPEAKERS, 5.0)
+        assert remaining is not None and STAGE_PII not in remaining.breakdown
+
+    def test_on_is_counted_as_remaining_until_done(self, tmp_path: Path) -> None:
+        est = self._warm(tmp_path, "hw", with_pii=True)
+        est.initial_estimate(10.0, 5, pii_enabled=True)
+        after_speakers = est.stage_completed(STAGE_SPEAKERS, 5.0)
+        assert after_speakers is not None and STAGE_PII in after_speakers.breakdown
+        after_pii = est.stage_completed(STAGE_PII, 8.0)
+        assert after_pii is not None and STAGE_PII not in after_pii.breakdown
+
+    def test_old_profile_without_pii_stays_warm(self, tmp_path: Path) -> None:
+        """A timing.json written before pii existed must not cold-start the estimator.
+
+        `_estimate_stage` returns (0, 0) for a stage with no history and
+        `has_history` is any(), so the estimate is simply missing pii's share
+        until four redacted runs have taught it — graceful, not None.
+        """
+        est = self._warm(tmp_path, "hw", with_pii=False)
+        result = est.initial_estimate(10.0, 5, pii_enabled=True)
+        assert result is not None
+        assert result.breakdown.get(STAGE_PII, 0.0) == 0.0

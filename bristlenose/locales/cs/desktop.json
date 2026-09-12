@@ -310,7 +310,8 @@
         "topics": "Hled\u00e1n\u00ed t\u00e9mat",
         "quotes": "Hled\u00e1n\u00ed citac\u00ed",
         "cluster": "Seskupov\u00e1n\u00ed t\u00e9mat",
-        "render": "Vytv\u00e1\u0159en\u00ed zpr\u00e1vy"
+        "render": "Vytv\u00e1\u0159en\u00ed zpr\u00e1vy",
+        "pii": "Odstra\u0148ov\u00e1n\u00ed osobn\u00edch \u00fadaj\u016f"
       }
     },
     "folderNamePlaceholder": "N\u00e1zev slo\u017eky",

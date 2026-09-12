@@ -160,7 +160,7 @@ detail-of-this-row segments)._
 > not plan: the ETA-weighted ring (`RunProgressMath`), the honesty rules (monotonic +
 > asymptote), the best-available ladder, and the two-render-sites claim (ring + subtitle text)
 > all ship. **One correction from the plan:** the `run_progress.stage` field carries
-> `timing.py ALL_STAGES` — the estimator's six *coarse* ids (`transcribe`, `speakers`,
+> `timing.py ALL_STAGES` — the estimator's *coarse* ids, six plus a conditional `pii` after `speakers` (`transcribe`, `speakers`, `pii`,
 > `topics`, `quotes`, `cluster`, `render`) — NOT the finer `manifest.py STAGE_ORDER` the plan
 > implied; `RunProgressSubtitle.knownStages` mirrors the six (a unit test pins them). The
 > within-stage **session fraction** ("N of M") is emitted per-file during transcription

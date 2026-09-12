@@ -745,6 +745,7 @@ class Pipeline:
             # ── Time estimate ────────────────────────────────────────
             from bristlenose.timing import (
                 STAGE_CLUSTER,
+                STAGE_PII,
                 STAGE_QUOTES,
                 STAGE_RENDER,
                 STAGE_SPEAKERS,
@@ -763,6 +764,7 @@ class Pipeline:
                 _est = self._estimator.initial_estimate(
                     total_audio_mins, len(sessions),
                     skip_transcription=self.settings.skip_transcription,
+                    pii_enabled=self.settings.pii_enabled,
                 )
                 if _est is not None:
                     self._emit(PipelineEvent(
@@ -1384,6 +1386,7 @@ class Pipeline:
             # ── Stage 7: PII removal ────────────────────────────────
             if self.settings.pii_enabled:
                 mark_stage_running(manifest, STAGE_PII_REMOVAL)
+                self._emit_stage_entry(STAGE_PII)
                 status.update("[dim]Removing PII...[/dim]")
                 t0 = time.perf_counter()
                 try:
@@ -1423,10 +1426,16 @@ class Pipeline:
                 write_cooked_transcripts(clean_transcripts, cooked_dir)
                 write_cooked_transcripts_md(clean_transcripts, cooked_dir)
                 write_pii_summary(pii_redactions, output_dir)
+                _pii_elapsed = time.perf_counter() - t0
                 _print_step(
-                    f"Redacted PII ({len(pii_redactions)} entities)",
-                    time.perf_counter() - t0,
+                    f"Redacted PII ({len(pii_redactions)} entities)", _pii_elapsed,
                 )
+                # Same two calls every sibling makes: the estimator learns this
+                # stage's rate, and the sidebar ETA/ring advance past it.
+                _stage_actuals[STAGE_PII] = StageActual(
+                    elapsed=_pii_elapsed, input_size=_n_sessions,
+                )
+                self._emit_remaining(STAGE_PII, _pii_elapsed)
                 mark_stage_complete(manifest, STAGE_PII_REMOVAL)
                 write_manifest(manifest, output_dir)
             else:

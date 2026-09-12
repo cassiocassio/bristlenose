@@ -277,7 +277,8 @@
         "topics": "Konular bulunuyor",
         "quotes": "Alıntılar bulunuyor",
         "cluster": "Temalar gruplanıyor",
-        "render": "Rapor oluşturuluyor"
+        "render": "Rapor oluşturuluyor",
+        "pii": "Ki\u015fisel bilgiler kald\u0131r\u0131l\u0131yor"
       }
     },
     "folderNamePlaceholder": "Klasör adı",

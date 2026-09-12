@@ -337,7 +337,7 @@ structured event stream and consumed by Swift:
 
 - **Channel:** `pipeline-events.jsonl` — append-only NDJSON (`bristlenose/events.py`):
   `run_started` / `run_progress` / `run_completed` / `run_failed`.
-- **Vocabulary:** a deliberately *coarse* 6-stage ladder — `transcribe → speakers → topics →
+- **Vocabulary:** a deliberately *coarse* ladder, six stages plus a conditional `pii` when redaction is on — `transcribe → speakers → (pii) → topics →
   quotes → cluster → render` (`bristlenose/timing.py` `ALL_STAGES`). **Not** the 12 manifest stages;
   ingest / extract-audio / merge / PII fold into neighbours.
 - **Prediction:** Welford per-stage estimator → ETA (`timing.py`), gated on ≥4 prior runs.

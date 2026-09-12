@@ -277,7 +277,8 @@
         "topics": "Etsitään aiheita",
         "quotes": "Etsitään sitaatteja",
         "cluster": "Ryhmitellään teemoja",
-        "render": "Rakennetaan raporttia"
+        "render": "Rakennetaan raporttia",
+        "pii": "Poistetaan henkil\u00f6tietoja"
       }
     },
     "folderNamePlaceholder": "Kansion nimi",

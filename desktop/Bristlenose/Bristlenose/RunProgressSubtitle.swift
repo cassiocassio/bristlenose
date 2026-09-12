@@ -19,14 +19,16 @@ enum RunProgressSubtitle {
     /// Stage ids carried by `run_progress.stage` — the Swift mirror of
     /// `timing.py ALL_STAGES`, the estimator's *coarse* progress vocabulary
     /// (NOT the finer `manifest.py STAGE_ORDER`: the estimator folds ingest /
-    /// extract-audio / merge / PII into its neighbours and never emits them as
-    /// a progress stage). Verified against real event logs — events say
+    /// extract-audio / merge into its neighbours and never emits them as a
+    /// progress stage; `pii` IS emitted, conditionally, since 12 Sep 2026 —
+    /// before that the ring froze through redaction). Verified against real
+    /// event logs — events say
     /// `speakers` / `topics`, not `identify_speakers` / `topic_segmentation`.
     /// The verb for each is localised via `desktop.chrome.pipeline.stage.<id>`.
     /// An id outside this set yields no verb: the guard stops an unexpected id
     /// from rendering as a raw key. Keep in sync with `timing.py ALL_STAGES`.
     static let knownStages: Set<String> = [
-        "transcribe", "speakers", "topics", "quotes", "cluster", "render",
+        "transcribe", "speakers", "pii", "topics", "quotes", "cluster", "render",
     ]
 
     /// Localisation key for a stage verb, or nil when the id is unknown/absent.

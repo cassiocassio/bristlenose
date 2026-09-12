@@ -810,3 +810,48 @@ def test_package_install_error_categorises_as_missing_dep() -> None:
         assert cause.category == CauseCategoryEnum.MISSING_DEP, (
             f"{type(exc).__name__} categorised as {cause.category}, not MISSING_DEP"
         )
+
+
+def test_pii_stage_reports_progress_like_its_siblings(tmp_path: Path) -> None:
+    """Stage 7 must speak to the sidebar and the estimator via the SAME two
+    calls every sibling makes — `_emit_stage_entry` and `_emit_remaining`.
+
+    Until 12 Sep 2026 it made neither: the sidebar showed the previous stage
+    frozen through the model load and the redaction pass, and the estimator
+    never learned PII's duration, so every warm ETA was short by it. This
+    drives the real `Pipeline.run` to stage 7 with a succeeding redaction, lets
+    stage 8 raise so the run stops there, and reads the progress sink.
+    """
+    from unittest.mock import ANY
+
+    from bristlenose.models import PiiCleanTranscript
+
+    (settings, input_dir, output_dir, sessions,
+     transcripts, fake_transcribe) = _pii_run_fixture(tmp_path)
+
+    estimator = MagicMock()
+    estimator.stage_completed.return_value = None  # cold — the entry emit still fires
+    pipeline = Pipeline(settings, estimator=estimator)
+    collected: list[dict[str, object]] = []
+    pipeline.set_progress_sink(lambda **fields: collected.append(fields))
+
+    def _redact_ok(ts, _settings, **_kw):
+        return [PiiCleanTranscript(**t.model_dump(), pii_entities_found=0) for t in ts], []
+
+    with (
+        patch("bristlenose.stages.s01_ingest.ingest", return_value=sessions),
+        patch("bristlenose.stages.s02_extract_audio.extract_audio_for_sessions",
+              new=_async_passthrough),
+        patch("bristlenose.stages.s05_transcribe.transcribe_sessions", new=fake_transcribe),
+        patch("bristlenose.stages.s06_merge_transcript.merge_transcripts",
+              return_value=transcripts),
+        patch("bristlenose.stages.s07_pii_removal.remove_pii", new=_redact_ok),
+        patch("bristlenose.stages.s08_topic_segmentation.segment_topics",
+              side_effect=RuntimeError("stop after stage 7")),
+    ):
+        with pytest.raises(RuntimeError, match="stop after stage 7"):
+            asyncio.run(pipeline.run(input_dir, output_dir))
+
+    stages = [c.get("stage") for c in collected]
+    assert "pii" in stages, f"stage 7 never announced itself: {stages}"
+    estimator.stage_completed.assert_any_call("pii", ANY)

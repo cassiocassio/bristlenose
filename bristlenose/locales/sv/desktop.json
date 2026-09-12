@@ -277,7 +277,8 @@
         "topics": "Hittar ämnen",
         "quotes": "Hittar citat",
         "cluster": "Grupperar teman",
-        "render": "Bygger rapport"
+        "render": "Bygger rapport",
+        "pii": "Tar bort personuppgifter"
       }
     },
     "folderNamePlaceholder": "Mappnamn",

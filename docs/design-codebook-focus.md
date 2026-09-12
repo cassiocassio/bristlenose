@@ -122,14 +122,26 @@ than dim. A ⌫ on Delete Code would therefore steal the keystroke from the rena
 field this proposal explicitly wants live, and ⌘⌫ is already spent twice in
 Project.
 
-**Recommendation: no shortcuts at all in v1.** Every row in the menu is the twin
-of a control already on screen — a group title you click, a ✕ you click, a
-Browse Library button — and none is reached for often enough to earn a key. A
-menu item is the *discoverable* twin; it does not also have to be the fast one.
-An earlier draft gave Browse Codebooks `⇧⌘L`, which was invented rather than
-derived: it is genuinely unclaimed across all 15 Swift files that declare
-shortcuts and across `useKeyboardShortcuts.ts`, but being free is not a reason
-to spend it.
+**Recommendation: no shortcuts at all in v1.** A shortcut is a *speed*
+affordance, so the test is demand for speed — not how important a command is
+(everything in a menu is important to someone) and not how advanced it is.
+Two things earn one:
+
+1. **Often, in the main workflow** — edit, delete, bring to front.
+2. **Spontaneously needed** — Settings, Print. Rare per session, wanted *now*,
+   from wherever you are.
+
+Nothing in this menu passes either. Every row is the twin of a control already
+on screen — a group title you click, a ✕ you click, a Browse Library button —
+and nobody is in a hurry to open the codebook library. A menu item is the
+*discoverable* twin; it does not also have to be the fast one.
+
+**And the size of the set is itself the design value:** a small set of
+high-value shortcuts stays learnable, so each addition taxes the whole set. An
+earlier draft gave Browse Codebooks `⇧⌘L`, which was invented rather than
+derived — it *is* unclaimed across all 15 Swift files that declare shortcuts and
+across `useKeyboardShortcuts.ts`, but free is not earned. Check availability
+after deciding a shortcut is warranted, never instead of deciding.
 
 **D-b. Focus lands on a framework's group, but the mutations dim.** A cursor is
 useful for reading, and refusing focus there would mean one control with two

@@ -1,8 +1,26 @@
 ---
 status: partial
-last-trued: 2026-06-21
-trued-against: HEAD@main on 2026-06-21
+last-trued: 2026-09-12
+trued-against: HEAD@main on 2026-09-12 (status block, Cloud section, Phase 0b banner; body otherwise as trued 21 Jun 2026)
 ---
+
+> **Truing status:** Partial — trued 12 Sep 2026: the status block, the Cloud section
+> (with its 4 Sep reconciliation note) and the Phase 0b banner are current; the rest of the
+> body stands as trued on 21 Jun 2026. See the changelog.
+
+## Changelog
+
+- _2026-09-12_ — trued up: front-matter re-stamped (the 4 Sep note had landed under a June
+  stamp); the pre-TestFlight "TestFlight scope = visual layer only" framing dated; "neither
+  has been implemented" narrowed to the label (the sidecar's detection shipped 29 Jul 2026,
+  `b9325004`); `percentDownloaded` clarified against the SDK headers (the URL resource key is
+  deprecated, the `NSMetadataItem` key is not); the Phase 0b banner gained the field-set
+  delta; the body's stale locale key corrected to what its own banner says. Anchors:
+  `events.py` `RunProgressEvent`, `EventLogReader.swift`, Foundation `NSURL.h` /
+  `NSMetadataAttributes.h`, `design-cloud-wait-label.md`.
+- _2026-09-04_ — Cloud section: reconciliation note (three commits), scope constraint,
+  pointer to `design-cloud-wait-label.md`.
+- _2026-06-21_ — trued up against Phase 0a/0b as shipped.
 
 # Per-project activity indicators (sidebar) — design
 
@@ -23,8 +41,10 @@ trued-against: HEAD@main on 2026-06-21
 > that called copy-on-row "post-TF" or listed `CopyProgressPill` in the toolbar are corrected.
 
 **Status:** Phase 0a shipped 15 Jun 2026 (`b3bbaab..518e6d3`); Phase 0b shipped (ring
-`010910a`, 17 Jun; progress-text tier 18 Jun); Phases 1–3 aspirational. TestFlight scope =
-the visual layer only.
+`010910a`, 17 Jun; progress-text tier 18 Jun); Phases 1–3 aspirational. "TestFlight scope =
+the visual layer only" was the pre-TestFlight framing; internal TestFlight has been live since
+14 Jul 2026 and Phase 0 is what it ships. The Cloud section carries a 4 Sep 2026 reconciliation
+note; `design-cloud-wait-label.md` now holds that question.
 
 Mockup: `docs/mockups/sidebar-activity-indicators.html` (animated timeline — small + large run on a
 sped-up clock). The mockup's determinate ring + ticking progress text now match shipped 0b.
@@ -83,7 +103,7 @@ the screen" both surfaces per-project state and declutters the toolbar.
 
 ## Scope
 
-**TestFlight = the visual layer only** (Phase 0): per-project progress visible in the sidebar; global
+**TestFlight = the visual layer only** (Phase 0; written before internal TestFlight went live on 14 Jul 2026 — it ships exactly this): per-project progress visible in the sidebar; global
 progress (e.g. model download) in the toolbar. No execution rearchitecture, no multi-window. The
 display is built **forward-compatible** so later phases need no UI rework.
 
@@ -213,6 +233,10 @@ text ticking over is itself a liveness signal. Same `PipelineProgress` + ETA fee
 > subtitle by `RunProgressSubtitle`. Deltas from the spec: the `stage` field uses the
 > estimator's six coarse ids (see the correction above), and the localised stage verb lives
 > Swift-side under `desktop.chrome.pipeline.stage.<id>` (not `desktop.pipeline.stage.<id>`).
+> Field-set delta, recorded 12 Sep 2026: the spec's `stage_index`, `stage_count` and
+> `eta_seconds`/`eta_stddev_seconds` did not ship; the shipped event carries `stage`,
+> `sessions_complete`/`sessions_total`, `sessions_new`/`sessions_cached`, `stage_fraction`,
+> `eta_remaining_seconds`, `predicted_total_seconds` and `elapsed_seconds` (`events.py`).
 
 Plumbing + render, not new measurement. The writer (`append_event`, O_APPEND+fsync) and reader
 (`EventLogReader`) exist; `timing.py`'s docstring already anticipates it ("a future visual UI can
@@ -237,7 +261,7 @@ consume the same data via the PipelineEvent callback").
    `✓`-stdout parse as a coarse fallback.
 7. Populate the new `PipelineProgress` fields; apply the honesty rules client-side (interpolate elapsed
    locally between events).
-8. i18n: localize stage id → verb Swift-side (`desktop.pipeline.stage.<id>`); English-first for TF.
+8. i18n: localize stage id → verb Swift-side (`desktop.chrome.pipeline.stage.<id>` — the banner above corrected this; the body read `desktop.pipeline.stage.<id>` until 12 Sep 2026); English-first for TF.
 
 ## Sidebar width + truncation
 
@@ -253,7 +277,10 @@ pass. Default ideal stays ~220–240, resizable + persisted; collapse = `Navigat
 
 Cloud-evicted is a `ProjectAvailability` concern, **not** an activity indicator. Only iCloud is
 introspectable, and only coarsely (`ubiquitousItemDownloadingStatusKey`); `percentDownloaded` is
-deprecated and third-party File Providers are opaque — no reliable progress to show. Shipped posture
+deprecated (the URL resource key `NSURLUbiquitousItemPercentDownloadedKey`, since 10.8, with
+Apple's own note to use `NSMetadataUbiquitousItemPercentDownloadedKey` on `NSMetadataItem`
+instead — which is *not* deprecated and is what `design-cloud-wait-label.md` §5 probes; SDK
+headers read 12 Sep 2026) and third-party File Providers are opaque — no reliable progress to show. Shipped posture
 (commits `e4037d5`, `b0ed701`): detect iCloud-eviction, render a static outline `icloud` glyph
 (status-only, no click), let macOS fetch transparently on open. Dropbox / Google Drive are not
 special-cased — that's the user's relationship with their cloud provider, not ours. A determinate
@@ -261,7 +288,8 @@ special-cased — that's the user's relationship with their cloud provider, not 
 indicator.** The activity-indicator work must not touch the cloud/availability path.
 
 > **Reconciliation note, 4 Sep 2026 — this section and `design-project-storage.md` §3
-> disagree, and neither has been implemented. Read both before proposing anything here.**
+> disagree; the *label* has not been implemented (the sidecar's detect-then-bounded-materialise
+> half shipped 29 Jul 2026, `b9325004`). Read both before proposing anything here.**
 >
 > The premise above — "only iCloud is introspectable… third-party File Providers are
 > opaque" — was **measured false on 29 Jul 2026**: `ubiquitousItemDownloadingStatus` and
@@ -275,7 +303,7 @@ indicator.** The activity-indicator work must not touch the cloud/availability p
 > slow"; a named one reads as "the network is slow", and each provider has a different
 > fix path.
 >
-> Neither position has shipped. The only live string is `desktop.availability.inCloud`
+> Neither position's label has shipped; the detection half did (29 Jul 2026, `b9325004`). The only live string is `desktop.availability.inCloud`
 > = "In iCloud", reached via `.inCloud` — which the storage doc shows is **unreachable
 > for evicted media** (the folder still exists, so availability resolves `.ready`) — and
 > which is hardcoded to iCloud although `detectLocation` already yields the provider

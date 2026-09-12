@@ -717,19 +717,46 @@ private struct FindMenuContent: View {
         .keyboardShortcut("f", modifiers: .command)
         .disabled(!canSearch)
 
-        Button(i18n.t("desktop.menu.edit.findNext")) {
-            let text = NSPasteboard(name: .find).string(forType: .string) ?? ""
-            bridgeHandler.menuAction("findNext", payload: ["text": text])
-        }
-        .keyboardShortcut("g", modifiers: .command)
-        .disabled(!canSearch)
-
-        Button(i18n.t("desktop.menu.edit.findPrevious")) {
-            let text = NSPasteboard(name: .find).string(forType: .string) ?? ""
-            bridgeHandler.menuAction("findPrevious", payload: ["text": text])
-        }
-        .keyboardShortcut("g", modifiers: [.command, .shift])
-        .disabled(!canSearch)
+        // Find Next / Find Previous withdrawn 12 Sep 2026, after QA found ⌘G did
+        // nothing. It was never broken — it has no meaning on this surface.
+        //
+        // The chain is intact end to end: ⌘E writes the find pasteboard
+        // (`BridgeHandler` `find-pasteboard-write`), ⌘G reads it back and sends
+        // `findNext` with that text, and the web handler calls
+        // `setSearchQuery(text)` — with the text already in the box. Same query,
+        // same filter, identical result.
+        //
+        // Because search here FILTERS the quote grid: `searchQuery` feeds the
+        // filter in `QuoteSections`, and nothing renders a `<mark>`. Every
+        // visible card is already a match. "Find Next" presupposes a cursor
+        // stepping through occurrences in content that stays put — the document
+        // model — and a filter has no cursor and nothing to step to. Moving
+        // through the results is list navigation, which `j` and the arrows
+        // already do.
+        //
+        // So this was gated in the same change that gated ⌘F, and gating an
+        // unimplemented command is the lie the ⌘J note below refuses. Withdrawn
+        // for the same reason.
+        //
+        // Restore WITH transcript search, not before — a transcript is a real
+        // document, where stepping match to match is exactly right (see the
+        // planning notes kept outside the public tree). The 21 locale keys stay
+        // so this is a one-line re-enable; the `AppLayout.tsx` cases survive
+        // orphaned, like ⌘J's.
+        //
+        // Button(i18n.t("desktop.menu.edit.findNext")) {
+        //     let text = NSPasteboard(name: .find).string(forType: .string) ?? ""
+        //     bridgeHandler.menuAction("findNext", payload: ["text": text])
+        // }
+        // .keyboardShortcut("g", modifiers: .command)
+        // .disabled(!canSearch)
+        //
+        // Button(i18n.t("desktop.menu.edit.findPrevious")) {
+        //     let text = NSPasteboard(name: .find).string(forType: .string) ?? ""
+        //     bridgeHandler.menuAction("findPrevious", payload: ["text": text])
+        // }
+        // .keyboardShortcut("g", modifiers: [.command, .shift])
+        // .disabled(!canSearch)
 
         Button(i18n.t("desktop.menu.edit.useSelectionForFind")) {
             bridgeHandler.menuAction("useSelectionForFind")

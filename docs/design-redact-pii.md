@@ -1,6 +1,14 @@
 # PII Redaction — exploration, decisions & forward plan
 
-> **Status: PARKED for a post-100days "roll our own PII" project — 26 Jul 2026.**
+> **Status: DELIVERY UN-PARKED 12 Sep 2026; ENGINE CHOICE STILL OPEN.**
+> The §2.5.2 blocker below was a blocker on shipping *code* through Background
+> Assets. Splitting code from data removes it — see §"Un-parking the Mac path
+> (12 Sep 2026)". What has *not* changed is the second, independent argument for
+> rolling our own: the Presidio stack is still more machinery than the job needs.
+> So there are now two live routes where this doc had one. The original parked
+> status is preserved verbatim below because its reasoning is still load-bearing.
+>
+> **Superseded status (26 Jul 2026):** PARKED for a post-100days "roll our own PII" project.
 > The CLI keeps its working Presidio-based redaction **as-is**. Bringing PII to
 > the **Mac desktop** is parked: the Background-Assets delivery hits an App Store
 > **§2.5.2** blocker, and the whole Presidio/spaCy stack turns out to be more
@@ -164,6 +172,145 @@ runs on their machine; (d) the "redact before anything leaves" promise is
 3. Determinism: regex owns structured PII (must be exact); the LLM only does
    names — so an occasional LLM miss never affects emails/phones.
 4. Cost/latency of an extra pass (or fold into an existing one).
+
+## Un-parking the Mac path (12 Sep 2026)
+
+**What changed.** Nothing about §2.5.2 — the rule, and this doc's reading of it,
+both stand. What changed is realising the delivery was mis-shaped: we costed
+"presidio + spaCy + weights, all of it, through Background Assets", which is
+downloading importable code and is correctly refused. **Split the payload and the
+blocker disappears**, because §2.5.2's clean side is *data*, which is exactly what
+Apple's own on-demand dictation and translation language packs are.
+
+### The split, measured (12 Sep 2026)
+
+| Payload | Size | Native Mach-O objects | Ships how |
+|---|---|---|---|
+| `en_core_web_lg` — the weights | **425 MB** | **0** (one `.py`, a thin `load()`) | On demand, Background Assets |
+| spaCy · thinc · blis · presidio (+ srsly, preshed, cymem, murmurhash) | ~46 MB on disk, ~39 MB est. post-freeze | **63** | **Bundled in the reviewed binary** |
+
+_The earlier "73" counted numpy's 19, which the bundle already carries — a marginal-vs-total mix-up. Re-measure post-freeze rather than carrying the estimate._
+
+The thing we want on demand is verifiably pure data; the thing that must be
+reviewed is small. That is the sanctioned shape rather than a workaround for it.
+
+### Why not roll our own download (asked, and answered against)
+
+> **Correction, 12 Sep 2026.** This section first argued that library validation
+> would refuse a self-downloaded `.so` and nothing would run. **That was wrong,
+> and wrong in an instructive way:** it read the *host's* entitlements and drew a
+> conclusion about the *sidecar*, which is the process that would actually
+> `dlopen` the code — and `desktop/bristlenose-sidecar.entitlements` has carried
+> `com.apple.security.cs.disable-library-validation` since 28 Apr 2026, for the
+> `Python.framework` nested-seal reason its own header records. There is no OS
+> backstop under a downloaded pack. Same family as the "ask the build system, name
+> the scheme" gotcha: naming the wrong target returns a real answer to the wrong
+> question.
+
+The conclusion survives, on four reasons that are actually true. Background Assets
+gives us resume across quit and reboot, background scheduling, storage accounting
+the system can reclaim under pressure, and a **declared, reviewable** delivery
+mechanism. Rolling our own gives a worse version of all four and one extra
+liability: with library validation disabled on the loading process, a compromised
+CDN can serve anything and nothing in the OS objects. **So the pack owes its own
+integrity check** — pin a SHA-256 in the app and verify before the first
+`spacy.load`, exactly as the security review already required for the CLI model
+wheel and as we do for FFmpeg. **Go native, and verify the bytes ourselves.**
+
+### Which BA API — and the floor that decides it
+
+| API | Floor | Verdict |
+|---|---|---|
+| `BAAssetPackManager.ensureLocalAvailabilityOfAssetPack:` | `macos(26)` (some methods 26.4) | Exactly this feature, written by Apple. **Off our floor.** |
+| `BADownloadManager` + `BAURLDownload` | **`macos(13.0)`** | What we build against. Self-hosted `NSURLRequest`, `essential:NO`. |
+
+Deployment floor is held at 15.0 (`project_deployment_floor_held`, 3 Sep 2026), so
+the managed API is unavailable. Revisit when the floor moves to 26 — it would
+delete most of this section's code.
+
+**No `BADownloaderExtension` appears to be required for our case**, on three
+header readings: `BAErrorCodeCallFromExtensionNotAllowed = 50` exists (some
+methods are app-only — the app is a first-class caller); `fetchCurrentDownloads`
+documents downloads "queued by your application or extension"; and
+`performWithExclusiveControl:` exists precisely so app and extension do not
+collide. The extension serves pre-launch and app-not-running downloads; ours is a
+user in Settings with the app in front of them. **`applicationGroupIdentifier` is
+a required init parameter**, so `com.apple.security.application-groups` plus a
+registered App Group is mandatory — an entitlement, not a nested Mach-O. On macOS
+the group string is Team-ID-prefixed (`<TeamID>.app.bristlenose`), not iOS's
+`group.` form. **Sequence the portal work before the spike, not during it:**
+signing is `Manual` with `PROVISIONING_PROFILE_SPECIFIER = Bristlenose Mac App
+Store`, so the App ID must gain the capability and that named profile must be
+regenerated or the archive will not sign — the identical hazard to the standing
+`associated-domains` rule. _(An earlier draft named a `BAAppGroupID` Info.plist
+key; it does not exist. The SDK's keys are `BAEssentialMaxInstallSize`,
+`BAHasManagedAssetPacks`, `BAManifestURL`, `BAMaxInstallSize`,
+`BAUsesAppleHosting`. Note `BAURLDownload` also takes `fileSize:` as a required
+parameter — an exact byte count to publish with the pack and keep in sync.)_
+
+> ⚠️ **This is the one unproven claim in the plan, and Phase 1 exists to prove it.**
+> The headers establish the API surface and the floors; they do not establish that
+> a BA-using app functions with *no extension target present*. Apple's templates
+> pair them. Prove it before scoping anything downstream of it.
+
+### Build order
+
+Phases 0–2 are independent of Background Assets and can land immediately; the
+UX for phases 3–4 is specced in `docs/mockups/mockup-privacy-settings.html` §1b.
+
+- **Phase 0 — reconcile the model. ✅ DONE 12 Sep 2026.** `_SPACY_MODEL` was
+  `en_core_web_sm` and vestigial: a bare `AnalyzerEngine()` took Presidio's
+  default, so we fetched 12 MB and silently pulled 400. It is now `en_core_web_lg`
+  and `_build_engines` binds the analyzer to it via `NlpEngineProvider`, so
+  fetched == used. The `preflight.pii.downloading` string said "~12 MB" and now
+  states the real size. **Owed:** 15 non-en locales still carry the 12 MB claim,
+  and `doctor.py` / `doctor_fixes.py` still probe for and recommend `sm` at eight
+  sites — so `doctor` can call the stack healthy on a machine that will then
+  download 400 MB. The model name wants one shared constant.
+- **Phase 1 — the BA spike.** A throwaway target with the App Group entitlement,
+  **no extension**, one `scheduleDownload:` of a small self-hosted file. Does it
+  transfer, or return `BAErrorCodeCallerConnectionNotAccepted` (55) /
+  `…ConnectionInvalid` (56)? Everything below is contingent on this. Half a day.
+- **Phase 2 — the failure apparatus.** *Verified still open 12 Sep.* Stage 7 has
+  **no try/except and no failure recording**, so a `remove_pii()` raise is an
+  unclassified crash that cannot reach the project-row status line;
+  `categorise_exception` handles neither `FrozenSidecarError` nor
+  `PackageInstallError`. Add both `isinstance` arms → `MISSING_DEP`, and wrap the
+  stage. **Semantics are already decided and are privacy-critical: fail-stop.**
+  If redaction was asked for and could not run, the run must abandon — never
+  analyse unredacted transcripts behind a warning. Keep `cause.message` to class
+  name + stage per the privacy contract; audit what Presidio raises before letting
+  any `str(exc)` through. This is the largest slice and the mockup is right that
+  it, not the toggle, is the real work.
+- **Phase 3 — bundle the code.** Drop `presidio_analyzer`, `presidio_anonymizer`,
+  `spacy` from `excludes` in `desktop/bristlenose-sidecar.spec`; keep
+  `en_core_web_lg` out. Re-run `check-bundle-manifest.sh` and
+  `check-bundle-integrity.py`, and re-verify Privacy Manifest required-reason
+  coverage against the *actual* bundle `.so`, not the dev venv.
+- **Phase 4 — BA delivery + Privacy tab.** `BAURLDownload` against a self-hosted
+  425 MB pack; `PrivacySettingsView` with the five states from the mockup;
+  `piiEnabled` UserDefaults + one `env["BRISTLENOSE_PII_ENABLED"]` line in
+  `BristlenoseShared.swift`; `BRISTLENOSE_PII_LIB_DIR`-style path handoff so
+  `spacy.load(<path>)` reads the pack without importing it as a package.
+- **Phase 5 — copy, i18n, docs.** ~8 new strings × 21 locales (English settles
+  first). App-Store-facing: Privacy Manifest (expected answer: **no
+  change** — the only required-reason symbol in the 63 new objects is blis's
+  `_mach_absolute_time`, already declared under `35F9.1`) and the App Review note
+  making the code/data split checkable. True `design-modularity.md`'s PII row, this
+  doc's Appendix A, and both mockups.
+
+### Open decisions, named rather than assumed
+
+1. **A run that starts before the download finishes** — wait, or fail cleanly with
+   the existing `MISSING_DEP` row? Failing is nearly free once Phase 2 lands;
+   waiting is kinder and matches "the appliance copes". Decide before the Swift.
+2. **Engine choice is still open.** This plan makes Presidio *deliverable*; it does
+   not make it *right*. Roll-our-own still deletes 425 MB, the native code, the
+   App Store question and the hardcoded `language="en"` — and is better on exactly
+   the non-Western names `lg` is bought for. A cheap hedge exists: bundle `sm`
+   (+15 MB) so the toggle works instantly at 15/15 on the must-catch set, with the
+   `lg` pack as an optional upgrade for the hard tail.
+
 
 ## Reviews (consolidated — so we don't re-run them)
 

@@ -138,6 +138,16 @@
   .toolbar button{font:inherit;padding:5px 12px;border-radius:7px;border:.5px solid var(--hair);background:var(--group);color:var(--ink);cursor:pointer;}
   .lede{max-width:920px;margin:0 auto 26px;color:var(--ink-2);font-size:13.5px;line-height:1.5;}
   .lede b{color:var(--ink);}
+
+  /* --- on-demand model download (added 12 Sep 2026) --- */
+  .dl{margin:10px 0 2px;padding:10px 12px;border:1px solid var(--hair);border-radius:7px;background:rgba(127,127,127,.05);}
+  .dl .line{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  .dl .what{font-size:12px;}
+  .dl .meta{font-size:11px;opacity:.6;font-variant-numeric:tabular-nums;margin-top:6px;}
+  .prog{height:5px;border-radius:3px;background:rgba(127,127,127,.22);overflow:hidden;margin-top:8px;}
+  .prog>i{display:block;height:100%;background:var(--sys-blue);border-radius:3px;}
+  .lnk{font-size:12px;color:var(--sys-blue);white-space:nowrap;}
+  .statelabel{font:600 10.5px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.06em;text-transform:uppercase;opacity:.45;margin:20px 0 6px;}
 </style>
 
 <div class="toolbar">
@@ -202,6 +212,104 @@
 </div>
 
 <!-- ══ 2. FAILURE — THE NORMAL MECHANISM ════════════════════ -->
+<h2 class="section">1b · Turning it on — the one-time model download</h2>
+<div class="lede">
+  The detection model is <b>425&nbsp;MB</b> and is <b>not</b> in the app bundle — it arrives on demand the
+  first time the toggle is switched on, as a non-essential <code>BAURLDownload</code> the app schedules
+  itself via <code>BADownloadManager</code> (macOS&nbsp;13+). The one-call
+  <code>BAAssetPackManager.ensureLocalAvailabilityOfAssetPack</code> would be a better fit but is
+  macOS&nbsp;26+, so it is off our 15.0 floor. Only <i>weights</i> download — the detection code ships
+  inside the reviewed binary, which is what keeps this on the clean side of App&nbsp;Store §2.5.2.
+  <b>The size is disclosed before the flick, not after it.</b>
+</div>
+
+<div class="statelabel">A · Off — the default, and the first thing every user sees</div>
+<div class="win"><div class="body"><div class="group">
+      <div class="row">
+        <div class="txt">
+          <div class="title">Redact personal information</div>
+          <div class="sub">Automatically remove names, emails, phone numbers, and other personal details from transcripts before they are analysed. Redaction is imperfect — do check your transcripts. Applies to the next analysis, onward.<br><b>Turning this on downloads a 425&nbsp;MB language model, once.</b> <a href="#">How redaction works&nbsp;→</a></div>
+        </div>
+        <div class="sw"><i></i></div>
+      </div>
+    </div></div></div>
+
+<div class="statelabel">B · Downloading — the switch stays on</div>
+<div class="win"><div class="body"><div class="group">
+      <div class="row">
+        <div class="txt">
+          <div class="title">Redact personal information</div>
+          <div class="sub">Redaction starts with your next analysis.</div>
+        </div>
+        <div class="sw on"><i></i></div>
+      </div><div class="dl">
+        <div class="line"><span class="what">Downloading language model…</span><span class="lnk">Cancel</span></div>
+        <div class="prog"><i style="width:43%"></i></div>
+        <div class="meta">182 of 425&nbsp;MB</div>
+      </div>
+    </div></div></div>
+<div class="note">
+  <b>Why the switch goes on immediately rather than after the download.</b> Per decision D2 redaction
+  <i>applies to the next analysis, onward</i> — so the switch states an intention about future runs, and the
+  download has until the next run to finish. A switch that snapped back, or sat disabled behind a spinner,
+  would be worse and would also be <i>wrong</i>: nothing about the setting is untrue while the bytes are still
+  arriving. The system owns the transfer — resume, background, storage accounting — so quitting the app
+  does not lose it.
+</div>
+
+<div class="statelabel">C · Paused — offline mid-download. Not an error, so not styled as one</div>
+<div class="win"><div class="body"><div class="group">
+      <div class="row">
+        <div class="txt">
+          <div class="title">Redact personal information</div>
+          <div class="sub">Redaction starts with your next analysis.</div>
+        </div>
+        <div class="sw on"><i></i></div>
+      </div><div class="dl">
+        <div class="line"><span class="what">Paused — waiting for a network connection.</span><span class="lnk">Cancel</span></div>
+        <div class="prog"><i style="width:43%;opacity:.45"></i></div>
+        <div class="meta">182 of 425&nbsp;MB</div>
+      </div>
+    </div></div></div>
+
+<div class="statelabel">D · Failed — the switch returns to off, because leaving it on would be a lie</div>
+<div class="win"><div class="body"><div class="group">
+      <div class="row">
+        <div class="txt">
+          <div class="title">Redact personal information</div>
+          <div class="sub">Automatically remove names, emails, phone numbers, and other personal details from transcripts before they are analysed. <a href="#">How redaction works&nbsp;→</a></div>
+        </div>
+        <div class="sw"><i></i></div>
+      </div><div class="dl" style="border-color:color-mix(in srgb,var(--sys-red) 45%,transparent)">
+        <div class="line"><span class="what">Couldn’t download the language model. Check your connection and try again.</span><span class="lnk">Try Again</span></div>
+      </div>
+    </div></div></div>
+
+<div class="statelabel">E · On and ready — a plain setting, no residue of the download</div>
+<div class="win"><div class="body"><div class="group">
+      <div class="row">
+        <div class="txt">
+          <div class="title">Redact personal information</div>
+          <div class="sub">Applies to the next analysis. Existing reports are unchanged.<br><span style="opacity:.6">The model stays on your Mac. macOS may reclaim the space if the disk runs low, and it will be fetched again next time it is needed.</span> <a href="#">How redaction works&nbsp;→</a></div>
+        </div>
+        <div class="sw on"><i></i></div>
+      </div>
+    </div></div></div>
+<div class="note">
+  <b>Turning it back off does not delete anything, and we offer no “remove model” button.</b> Purging is the
+  system’s call: Background Assets accounts the storage to the app and reclaims it under pressure — exactly
+  what a Mac user already expects from on-demand dictation and translation languages. Our own delete button
+  would duplicate a system affordance and invite the user to manage storage we do not own.
+</div>
+
+<div class="note">
+  <b>What a run does if it starts before the download finishes.</b> Open decision, and the only one this
+  screen does not settle. Two candidates: <i>wait</i> (the run blocks on the pack, showing the existing
+  progress subtitle) or <i>fail cleanly</i> (the normal <code>.failed</code> row with
+  <code>MISSING_DEP</code>, Retry). Failing is nearly free — §2 below already builds that path — but waiting
+  is kinder and matches “the appliance copes”. Decide before the Swift lands, not after.
+</div>
+
 <h2 class="section">2 · Failure surfaces the normal way — no new UI</h2>
 <div class="caption-row">Turning the toggle on is just a setting; re-analysing is the user's existing choice, made the existing way. If a run's redaction fails, it uses the standard <code style="font:inherit">.failed</code> project-row subtitle — nothing bespoke.</div>
 

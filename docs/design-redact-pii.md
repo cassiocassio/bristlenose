@@ -970,27 +970,39 @@ UX for phases 3–4 is specced in `docs/mockups/mockup-privacy-settings.html` §
   **no extension**, one `scheduleDownload:` of a small self-hosted file. Does it
   transfer, or return `BAErrorCodeCallerConnectionNotAccepted` (55) /
   `…ConnectionInvalid` (56)? Everything below is contingent on this. Half a day.
-- **Phase 2 — the failure apparatus.** *Verified still open 12 Sep.* Stage 7 has
-  **no try/except and no failure recording**, so a `remove_pii()` raise is an
-  unclassified crash that cannot reach the project-row status line;
-  `categorise_exception` handles neither `FrozenSidecarError` nor
-  `PackageInstallError`. Add both `isinstance` arms → `MISSING_DEP`, and wrap the
-  stage. **Semantics are already decided and are privacy-critical: fail-stop.**
-  If redaction was asked for and could not run, the run must abandon — never
-  analyse unredacted transcripts behind a warning. Keep `cause.message` to class
-  name + stage per the privacy contract; audit what Presidio raises before letting
-  any `str(exc)` through. This is the largest slice and the mockup is right that
-  it, not the toggle, is the real work.
-- **Phase 3 — bundle the code.** Drop `presidio_analyzer`, `presidio_anonymizer`,
-  `spacy` from `excludes` in `desktop/bristlenose-sidecar.spec`; keep
-  `en_core_web_lg` out. Re-run `check-bundle-manifest.sh` and
+- **Phase 2 — the failure apparatus. ✅ DONE 12 Sep 2026.** Stage 7 wraps
+  `remove_pii` and abandons on **any** failure (not `succeeded == 0` — a 9-of-10
+  predicate would let one unredacted transcript through), with a Cause built by
+  `_build_cause` so no `str(exc)` reaches `pipeline-events.jsonl`.
+  `categorise_exception` grew one `PackageInstallError` arm, which covers
+  `FrozenSidecarError` too. See §"Stage 7 failure is fail-stop". The plan was
+  right that this, not the toggle, was the real work.
+- **Phase 3 — bundle the code. ✅ DONE 12 Sep 2026.** `presidio_analyzer`,
+  `presidio_anonymizer` and `spacy` are out of `excludes` in
+  `desktop/bristlenose-sidecar.spec`; `en_core_web_lg` stays out. Verified on a
+  real artefact: 479 → 512 MB, 224 → 287 Mach-Os, integrity clean, the App Store
+  string gate clean, presidio importing from the frozen sidecar, model correctly
+  absent. Remaining from this phase: Re-run `check-bundle-manifest.sh` and
   `check-bundle-integrity.py`, and re-verify Privacy Manifest required-reason
   coverage against the *actual* bundle `.so`, not the dev venv.
-- **Phase 4 — BA delivery + Privacy tab.** `BAURLDownload` against a self-hosted
-  425 MB pack; `PrivacySettingsView` with the five states from the mockup;
-  `piiEnabled` UserDefaults + one `env["BRISTLENOSE_PII_ENABLED"]` line in
-  `BristlenoseShared.swift`; `BRISTLENOSE_PII_LIB_DIR`-style path handoff so
-  `spacy.load(<path>)` reads the pack without importing it as a package.
+- **Phase 4 — the acquirer + Privacy tab. ⬜ THE REMAINING WORK, and the whole
+  of it.** Everything *downstream* of the handoff is built and proven: set
+  `BRISTLENOSE_PII_MODEL_DIR` (that is the real variable — this bullet said
+  `BRISTLENOSE_PII_LIB_DIR`, which exists nowhere) and stage 7, `doctor` and the
+  Pipeline view all behave, measured identically to the package route with the
+  package made unimportable. **Nothing writes that variable and nothing fetches
+  the pack.** That is the gap, and it is Swift:
+    - the **managed** `AssetPackManager.ensureLocalAvailabilityOfAssetPack` plus
+      a `ManagedDownloaderExtension` — *not* `BAURLDownload`, which the macOS 26
+      gate deleted from the plan along with the hand-written extension;
+    - `PrivacySettingsView` with the mockup's six states (A–E plus F, the
+      below-26 disabled row);
+    - `piiEnabled` in UserDefaults → `env["BRISTLENOSE_PII_ENABLED"]` and the
+      resolved pack path → `env["BRISTLENOSE_PII_MODEL_DIR"]`, both in
+      `BristlenoseShared.swift`.
+  **Do not build the toggle before the acquirer.** Below macOS 26 it correctly
+  reads *"Requires macOS 26 Tahoe or later"*, which promises that upgrading
+  delivers the feature — a promise nothing can keep until this phase lands.
 - **Phase 5 — copy, i18n, docs.** ~8 new strings × 21 locales (English settles
   first). App-Store-facing: Privacy Manifest (expected answer: **no
   change** — the only required-reason symbol in the 63 new objects is blis's
@@ -1003,12 +1015,20 @@ UX for phases 3–4 is specced in `docs/mockups/mockup-privacy-settings.html` §
 1. **A run that starts before the download finishes** — wait, or fail cleanly with
    the existing `MISSING_DEP` row? Failing is nearly free once Phase 2 lands;
    waiting is kinder and matches "the appliance copes". Decide before the Swift.
-2. **Engine choice is still open.** This plan makes Presidio *deliverable*; it does
-   not make it *right*. Roll-our-own still deletes 425 MB, the native code, the
+2. ~~**Engine choice is still open.**~~ **CLOSED 12 Sep 2026 — Presidio.** The
+   user's call: *"I'd rather deal with this as a packaging challenge than a
+   start-again DIY problem."* See §"Roll our own PII — REJECTED". The original
+   argument is preserved there. Kept struck rather than deleted because it was
+   a live decision for six weeks and its reasoning is why the split exists:
+   roll-our-own would have deleted 425 MB, the native code, the
    App Store question and the hardcoded `language="en"` — and is better on exactly
-   the non-Western names `lg` is bought for. A cheap hedge exists: bundle `sm`
-   (+15 MB) so the toggle works instantly at 15/15 on the must-catch set, with the
-   `lg` pack as an optional upgrade for the hard tail.
+   the non-Western names `lg` is bought for. The `sm` hedge this bullet used to
+   propose (bundle the 15 MB model so the toggle works instantly, `lg` as an
+   optional upgrade) is **dead** — *"we need `lg` to offer the feature for real;
+   `sm` was only ever a test-the-plumbing job"*. The hour corpus measured the
+   difference: PERSON 23/33 on `sm` against 31/33 on `lg`, with `lg` winning on
+   exactly the nicknames, South-Asian and hyphenated names the hedge would have
+   shipped without.
 
 
 ## Reviews (consolidated — so we don't re-run them)
@@ -1030,9 +1050,24 @@ Four agents reviewed the (parked) Presidio-BA spec:
 - **App Store:** the §2.5.2 blocker above; bundle-code-not-download is the clean
   path; reserve BA for data-only model weights.
 
-## Appendix A — the parked Presidio + Background Assets Mac design
+## Appendix A — the RETIRED wheel-archive delivery
 
-Preserved so it can be rehydrated if the LLM route doesn't pan out.
+> **Historical twice over, and neither reason is the one this line used to
+> give.** It said *"preserved so it can be rehydrated if the LLM route doesn't
+> pan out"* — but the LLM route (roll-our-own) is **rejected**, so there is
+> nothing to fall back from; and the delivery described below was **retired by
+> measurement** on 12 Sep 2026, not parked. Shipping presidio + spaCy as
+> Python-packages-as-data, unpacked to Application Support with a `sys.path`
+> extension at sidecar startup, was designed for a ~100 MB dependency that
+> measured **33 MB** in the built sidecar. Bundling the code is simpler and
+> costs less than the startup hook it replaces; only the 425 MB *model* is
+> acquired, and a model is data.
+>
+> Kept because the §2.5.2 reasoning below is still the argument an App Store
+> reviewer would have to be answered with, and because `BRISTLENOSE_PII_LIB_DIR`
+> appears here — a variable that never existed in code, and which the build
+> order cited by mistake until today. The real one is
+> `BRISTLENOSE_PII_MODEL_DIR`.
 
 **Delivery (design-modularity.md §"PII removal"):** presidio+spaCy+model as a
 wheel-archive Apple-Hosted Background Assets pack, unpacked to Application

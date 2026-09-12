@@ -422,6 +422,68 @@ in, not one to route around.
 3. **Hosting the pack** and pinning its SHA-256 in Swift (self-hosted origin, no
    Apple signing of the payload — see the correction above about library validation).
 
+#### Runbook — the four steps only the maintainer can do
+
+Concrete values for this project: team **`Z56GZVA2QB`**, app **`app.bristlenose`**,
+`CODE_SIGN_STYLE = Manual`, `PROVISIONING_PROFILE_SPECIFIER = Bristlenose Mac App
+Store`. Do these **in order** — 2 fails without 1, and 3 fails without both.
+
+**1 · Register the App Group — and use the Team-ID prefix.**
+Developer portal → Certificates, Identifiers & Profiles → Identifiers → **App
+Groups** → new, identifier exactly:
+
+```
+Z56GZVA2QB.app.bristlenose
+```
+
+**Not** the iOS-style `group.` prefix. This is the whole escape hatch: macOS
+accepts an app group when *any one* of — Mac App Store distribution, a
+Team-ID-prefixed identifier, or a profile authorising it — holds, and Apple
+(Quinn, DTS) will not issue a Developer-ID profile authorising an app group. The
+Team-ID prefix needs no profile, so it is the route that works on every channel.
+Then Identifiers → `app.bristlenose` → enable the **App Groups** capability and
+select the group.
+
+**2 · Regenerate the Mac App Store provisioning profile.**
+Because signing is `Manual` against a *named* profile, the existing one does not
+carry the new entitlement and the archive will refuse to sign with *"Provisioning
+profile … doesn't include the com.apple.security.application-groups entitlement."*
+Regenerate **Bristlenose Mac App Store**, download, double-click to install.
+This is the same class as the standing `associated-domains` guard — an entitlement
+that obliges a profile regeneration.
+
+**3 · Add the extension target in Xcode.**
+File → New → Target → **Background Assets Downloader Extension**. Two things the
+template will not get right on its own:
+
+- **Bundle ID must be a child of the app's** — `app.bristlenose.BAExtension`. A
+  sibling identifier registers but is never matched to the app.
+- **Both** the app and the extension need App Sandbox *and* the app group. The
+  **sidecar must not** — `desktop/bristlenose-sidecar.entitlements` is the
+  `inherit` target, and host entitlements on it trip `_libsecinit_appsandbox`.
+  That rule is standing and this does not change it.
+
+With the managed API the body is one line (`struct …: ManagedDownloaderExtension {}`).
+Read `github.com/rsyncOSX/RawCull` first — macOS-only, self-hosted, ML models,
+TestFlight plus a Developer-ID DMG, i.e. our exact shape.
+
+**4 · Host the pack and pin its hash.**
+Publish the inner `en_core_web_lg-<version>/` directory — the loadable unit, which
+contains **no `.py` at all**, and shipping only it is what makes the payload
+literally zero-Python rather than merely zero-native-code. RawCull uses GitHub
+Releases; `bristlenose.app` is the alternative. Then **pin the SHA-256 in Swift and
+verify before unpack**, the same mechanism as `fetch-ffmpeg.sh`'s `FFMPEG_SHA256`.
+This is not optional dressing: the origin is ours, Apple signs nothing in the pack,
+and the sidecar carries `cs.disable-library-validation`, so there is no OS backstop.
+Unpack to a temp directory inside the container, atomic-rename into place, write a
+completion sentinel, and have the Python side refuse a pack directory with no
+sentinel — a half-unpacked pack still satisfies `Path(...).exists()`, which is
+exactly the predicate Presidio's download guard uses.
+
+**Verification, once 1–3 are done:** archive the MAS scheme and confirm it signs;
+`pluginkit -mvvv -p com.apple.background-asset-downloader-extension` should list
+the extension; then a real download on a clean machine.
+
 #### Known operational risks, carried not solved
 
 macOS is the rough edge: four live macOS-specific BA failures on Apple's forum tag

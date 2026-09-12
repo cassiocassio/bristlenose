@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-08-18 (sixth pass, `--topic accounts-pane-i18n` — §10's i18n bullet, reopened that morning and paid by the evening)
-trued-against: HEAD@main on 2026-08-18 (d0478b15)
+last-trued: 2026-09-12 (seventh pass — Zoom's build state, §6's one false line, the test inventory)
+trued-against: HEAD@main on 2026-09-12 (fbd8f4f3; the 4 Sep Zoom notes 96e6ee53, 43ab1859)
 ---
 
 > **Truing status:** Partial — trued **twice** on 15 Aug 2026, and the second
@@ -34,7 +34,9 @@ trued-against: HEAD@main on 2026-08-18 (d0478b15)
 > in practice — Meet has a live tenant and Zoom has no account at all — but the
 > reasoning behind that order is untouched and should be re-read, not re-derived,
 > when Zoom is picked back up. Pick-up brief:
-> `cloud-import-zoom-parked.md` in the maintainer's private handoffs.
+> `cloud-import-zoom-parked.md` in the maintainer's private handoffs. Scale, the
+> Pro-account reason and the October estimate are in the 4 Sep 2026 note under the
+> status line below.
 >
 > **Fifth pass, 18 Aug 2026 — the status block was the stalest thing in the
 > file.** Four passes had trued individual sections while the block a cold reader
@@ -50,9 +52,30 @@ trued-against: HEAD@main on 2026-08-18 (d0478b15)
 > has run end to end on Meet, and Teams has downloaded from Graph. The transfer
 > path is no longer the untested half; **third-party consent is**, and no amount
 > of local testing can reach it.
+>
+> **Seventh pass, 12 Sep 2026.** Zoom's build state — adapter built (~1,900 lines,
+> 647 lines of tests), flagged off, never run against a real account for want of a
+> Pro one — was written under the status line on 4 Sep; this pass found §6's sequencing
+> line still saying Zoom's review was "already in flight" and Google "only if asked"
+> (both false), §2 still demanding a `CFBundleURLTypes` entry the status block had
+> already retracted, and §9 counting seven Swift test files where nineteen exist.
+> All three corrected in place; the "What is not built" heading now says what its
+> bullets actually list.
 
 ## Changelog
 
+- _2026-09-12 (seventh pass)_ — trued up: §6 "Then Zoom (review already in flight…), then Google
+  (only if asked)" corrected (no registration, no review, no Pro account; Google no longer
+  conditional per §5); §2's `CFBundleURLTypes` line struck (retracted in the status block 18 Aug);
+  §9's test inventory 7 → 19 files; "What is not built" retitled; the 16 Aug parking block
+  points at the 4 Sep note. Anchors: commits "cloud-import: Zoom is built and flagged off, not
+  unbuilt", "cloud-import: name the real Zoom flag, and \"untested\" was wrong";
+  `BristlenoseFlags.swift` `cloudImportZoom`, `CloudPlatform.swift` `offered(zoomEnabled:)`.
+- _2026-09-04_ — Zoom's build state written under the status line (two commits, same day).
+- _2026-08-27_ — §3 loopback correction: a Zoom sign-in that survives the window closing
+  (commit "zoom: a sign-in that survives the window closing"); `cloud-zoom` Keychain service registered.
+- _2026-08-22_ — consent-gap pass: real for the website, wrong for the dialog (commit "cloud-import:
+  the consent gap was real for the website and wrong for the dialog").
 - _2026-08-18 (fifth pass — the summary, which four section passes had missed)_ —
   trued up: rewrote the **status block** and truing banner, which carried four
   false load-bearing claims (no Google OAuth client; no token persisted; no
@@ -501,13 +524,13 @@ trued-against: HEAD@main on 2026-08-18 (d0478b15)
 
 # Cloud import — capturing originals from Teams, Zoom and Meet
 
-**Status: designed 28 Jul 2026. Revised 14 Aug 2026 after a permissions/benchmark pass and a six-agent review. Revised again 15 Aug 2026, when Google, Zoom and Teams were researched and all three adapters were built. Status block corrected 18 Aug 2026 against measurement — it had drifted a full phase behind the code. Post-TF, not cohort-blocking.**
+**Status: designed 28 Jul 2026. Revised 14 Aug 2026 after a permissions/benchmark pass and a six-agent review. Revised again 15 Aug 2026, when Google, Zoom and Teams were researched and all three adapters were built. Status block corrected 18 Aug 2026; Zoom's build state added 4 Sep 2026; §6's sequencing line corrected 12 Sep 2026 against measurement — it had drifted a full phase behind the code. Post-TF, not cohort-blocking.**
 
 > **Zoom — built, flagged off, never run against a real account (4 Sep 2026).** The adapter — `ZoomOAuth.swift`, `ZoomRecordingModel.swift`, `ZoomSource.swift`, ~1,900 lines, with `ZoomGrantTests` + `ZoomImportTests` — sits behind `BristlenoseFlags.cloudImportZoom`, off by default; `CloudPlatform.offered(zoomEnabled:)` filters it out of the offered platforms. It has not run against a real account because cloud recording needs Zoom Pro or higher and there is no Pro account to test on; the maintainer's estimate is October. "Deferred: Zoom" below means *sequenced after Teams*, not unbuilt — don't propose building it, and don't flip the flag without a real-world pass.
 
 **What exists as of 15 Aug 2026.** All three platforms are live behind `File ▸ Import`, on one shared spine: `CloudImportSource` (the protocol), `CloudImportStore` (the state machine), `CloudImportWindow` (the surface), `CloudPlatform` (everything vendor-shaped the UI says), `CloudImportCoordinator` (which source the window holds), and `CloudDownloader` + `CloudDownloadVerification` (§6's "prove the bytes arrived", once, for all three). Per-platform adapters carry only what genuinely differs: the endpoints, the scope vocabulary, the error dialects, the OAuth ceremony, and each vendor's own way of failing quietly. A `FixtureCloudSource` drives every state from the Diagnostics menu without an account.
 
-**What is not built.** _Rewritten 18 Aug 2026 from measurement. This block
+**What is not built, registered or verified.** _Rewritten 18 Aug 2026 from measurement; retitled 12 Sep 2026 because the old heading bucketed Zoom's built adapter as unbuilt._ This block
 previously opened "and the first item means nothing works yet" and then listed
 four things that had shipped — see the changelog. The heading is kept short
 deliberately: a status block that editorialises about its own worst item is how
@@ -585,7 +608,7 @@ A *user-initiated* fetch is an OAuth **public client with PKCE**: `ASWebAuthenti
 
 Two Zoom token properties that are not Google's and must not be inherited by assumption. **Refresh tokens are single-use and rotate on every refresh**, with *no* documented grace window — an interrupted refresh (timeout after Zoom rotated, before we persisted) strands the user permanently, and re-authorising always shows the consent screen because public clients may not skip it (RFC 6819 §5.2.3.2). So the Keychain write must commit before the old token is discarded, and "reconnect" must be a graceful path rather than an error. And **Zoom appears to allow one live token per user per client ID**: authorising on a second Mac silently kills the first. A researcher with a laptop and a desktop cannot have both connected. That is a product constraint to state, not a bug to fix.
 
-**Prefer a custom scheme over a loopback listener.** Both work under the sandbox (`ENABLE_INCOMING_NETWORK_CONNECTIONS` is already set), but a loopback listener is reachable by any same-UID process during the auth window, whereas `ASWebAuthenticationSession(url:callbackURLScheme:)` routes the callback to the initiating session only. Needs a `CFBundleURLTypes` entry the target does not yet have. Leave `prefersEphemeralWebBrowserSession` at `false` so an already-signed-in researcher gets one-click consent instead of a full MFA round trip.
+**Prefer a custom scheme over a loopback listener.** Both work under the sandbox (`ENABLE_INCOMING_NETWORK_CONNECTIONS` is already set), but a loopback listener is reachable by any same-UID process during the auth window, whereas `ASWebAuthenticationSession(url:callbackURLScheme:)` routes the callback to the initiating session only. ~~Needs a `CFBundleURLTypes` entry the target does not yet have.~~ Not required — measured 18 Aug 2026; see the status block. Leave `prefersEphemeralWebBrowserSession` at `false` so an already-signed-in researcher gets one-click consent instead of a full MFA round trip.
 
 **What is and isn't a from-scratch build.** The Swift consent sheet is new — `ASWebAuthenticationSession` appears nowhere in the tree. The **PKCE machinery is not**: `bristlenose/miro_client.py` already has `generate_pkce`, `build_authorize_url`, `exchange_code_for_tokens` and `refresh_access_token`, with a live authorization-code + loopback flow wired in `routes/miro.py`. That is the reference implementation for the token dance even though this feature's ceremony is Swift-side. **The read-back rule survives; the "before copying" framing does not.** _Trued 15 Aug 2026._ Nothing copies `miro_client.py` — all three ceremonies are hand-rolled in Swift — so the three platforms did not inherit the bug. But the bug itself is **still live and still shipping**: `bristlenose/server/routes/miro.py` reports "Connected to Miro ✓" on the path where the credential-store write failed, and unlike the sibling paste route it has no in-session fallback, so the token is genuinely lost. It is now simply a defect we own, unrelated to this feature. The rule it teaches is the load-bearing part and applies to all three adapters the moment they gain Keychain persistence: **a connect flow verifies by read-back — store, read back, *then* report connected.**
 
@@ -782,7 +805,8 @@ So the order stands as **Teams → Zoom → Meet**, on unchanged reasoning — T
 
 - **v1** — _as designed: Teams only, `Files.Read` + `Calendars.Read`. **What shipped 15 Aug 2026 is v1 across all three platforms**, because the research that repriced Google and Zoom arrived before the Teams build did._ List the researcher's own recordings, join to a calendar window for the roster where the platform has one. **Multi-select with per-row outcome.** Download into a destination project. ⚠️ Still owed at v1: `(platform, remoteID, account)` provenance per imported session. ~~And the derived `stat`-based import state below — all three adapters currently hardcode `.notImported`.~~ _Corrected 18 Aug 2026: literally true of the adapters and misleading as written._ The derivation moved up into `CloudImportStore.rebuild()`, where it serves every platform at once, because already-held-ness is a fact about the destination folder rather than about any vendor. What **is** still owed is the Teams half of the measurement: the 2s duration tolerance has never been checked against a real Graph pair.
 - **v1.1** — within-file resume (Range requests), and attendee/`@domain`/description search (which needs the `Calendars.Read` upgrade).
-- **Then** Zoom (review already in flight per §5), then Google (only if asked).
+- **Then** Zoom — adapter built and flagged off; Marketplace registration and review not started,
+  and no Pro account to test on (status note, 4 Sep 2026) — then Google, no longer conditional (§5).
 
 **Three changes from the 28 Jul staircase**, all from the 14 Aug pass:
 
@@ -1134,7 +1158,7 @@ be used at all. This paragraph is verified and unchanged._
 
 **Testing.** _Rewritten 15 Aug 2026: this paragraph named the wrong language. It proposed `httpx.MockTransport` in `tests/`, but §7 put the whole feature in Swift, so the Python fake-transport plan never applied._
 
-What shipped: seven Swift test files — `CloudDownloadTests`, `GoogleMeetImportTests`, `ZoomImportTests`, `TeamsSourceTests`, `CloudImportModelTests`, `OAuthPKCETests`, `TeamsRecordingNameTests` — covering the pure-value layer, which is where the classification decisions live. Three of them caught real defects in the commits that introduced them, which is the argument for writing them at that layer.
+What shipped: nineteen Swift test files (counted 12 Sep 2026; seven when this was written) — `CloudDownloadTests`, `GoogleMeetImportTests`, `ZoomImportTests`, `ZoomGrantTests`, `TeamsSourceTests`, `TeamsSignInFailureTests`, `TeamsRecordingNameTests`, `CloudImportModelTests`, `CloudImportHandoffTests`, `CloudImportLocalMatchTests`, `CloudImportDestinationsTests`, `CloudImportOutlineTests`, `CloudImportScheduledColumnTests`, `CloudGrantStoreTests`, `CloudGrantKeychainRegistrationTests`, `CloudDisconnectTests`, `CloudAccountKeyTests`, `CloudTransportTests`, `OAuthPKCETests` — covering the pure-value layer, which is where the classification decisions live. Three of them caught real defects in the commits that introduced them, which is the argument for writing them at that layer.
 
 **The transport layer is now tested** (`CloudTransportTests.swift`, 15 Aug 2026). A `URLProtocol` stub answers from a queue and — the part that matters — **records the requests**, because the whole of `CloudTransferPolicy` is a claim about which headers survive a redirect, and that claim is unfalsifiable without seeing the second request. Eleven tests drive the real `CloudDownloader` and the real adapters over a fake network:
 

@@ -1,13 +1,23 @@
 ---
 status: partial
-last-trued: 2026-08-18
-trued-against: HEAD@main on 2026-08-18 (04e7c72e)
+last-trued: 2026-09-12
+trued-against: HEAD@main on 2026-09-12 (4f29f024)
 ---
 
 # Platform transcript ingestion — design doc
 
 ## Changelog
 
+- _2026-09-12_ — trued up: item 2d (Meet DOCX parser) struck as shipped 16 Aug
+  (`_try_parse_gmeet_format` in `s04_parse_docx.py`, specimen
+  `gmeet-notes-by-gemini-2026-08-15.json`); three rotted anchors refreshed —
+  `_GMEET_TAIL_RE` is defined at `s01_ingest.py:350` and used at `:422` (the 18 Aug
+  entry below cites `:169,204`, true then), and row 3b's gates are `pipeline.py:790,803`,
+  `s05_transcribe.py:131-136`, `s02_extract_audio.py:67`; the body's second currency
+  marker ("Updated: 2026-08-16") removed in favour of this front-matter. Anchors: commit
+  "platform-transcripts: write the Webex exclusion down".
+- _2026-09-04_ — Webex written out, as a blockquote under the market table: no parser,
+  fixture or Phase-3 row exists for it, by decision.
 - _2026-08-18_ — trued up: the Meet **matching strategy** was superseded in
   three separate places and contradicted the doc's own 1d correction 45 lines
   below it. All three struck and pointed at `_GMEET_TAIL_RE`
@@ -26,7 +36,6 @@ Meet's downloaded `.docx` holds "the same content" as the Doc. Every format clai
 should be read as a hypothesis until an observed specimen is pinned beside it in
 `tests/fixtures/platform-transcripts/`, tagged with tier, locale and capture date.
 **Created**: 2026-02-01
-**Updated**: 2026-08-16
 
 ## Problem
 
@@ -418,7 +427,7 @@ parseable — we just need to match them and skip Whisper.
 | 1b. Zoom folder-as-session | 1 | Detect Zoom local folder pattern, group contents | **Done** |
 | 1c. Zoom cloud ID matching | 1 | Extract meeting ID from cloud download filenames | **Done** |
 | 3a. Transcript source config | 3 | `transcript_source` in `bristlenose.toml` | |
-| 3b. Skip Whisper + audio extraction | 3 | Skip transcription + FFmpeg when platform transcript parsed | **Done** — double-gated at `pipeline.py:2026-2035` (skips `transcribe_sessions` if no session needs it) and `s05_transcribe.py:58-65` (early return inside the stage). Whisper model is never instantiated when all sessions have transcripts; no 1.5GB download. Audio extraction also skipped per `s02_extract_audio.py:62-67`. |
+| 3b. Skip Whisper + audio extraction | 3 | Skip transcription + FFmpeg when platform transcript parsed | **Done** — double-gated at `pipeline.py:790,803` (skips `transcribe_sessions` if no session needs it) and `s05_transcribe.py:131-136` (early return inside the stage). Whisper model is never instantiated when all sessions have transcripts; no 1.5GB download. Audio extraction also skipped per `s02_extract_audio.py:67`. |
 | 3c. Preserve platform names | 3 | Higher-confidence names from directory lookups | |
 | 3d. CLI flag | 3 | `--transcript-source` override | |
 | 5a. Meeting title from filename | 5 | Parse title from Teams/Zoom conventions | |
@@ -430,8 +439,8 @@ Covers the remaining ~5% of the market but includes some quick wins.
 
 | Item | Cluster | Scope |
 |------|---------|-------|
-| ~~1d. Google Meet title+date matching~~ **shipped** | 1 | ~~Strip parenthetical date + `- Transcript`~~ → `_GMEET_TAIL_RE` strips the whole dated tail (`s01_ingest.py:169`). _Third copy of the superseded rule, found 18 Aug by a mechanical grep rather than by reading — see §Matching strategy._ |
-| 2d. Google Meet DOCX parser | 2 | Different heuristic from Teams DOCX |
+| ~~1d. Google Meet title+date matching~~ **shipped** | 1 | ~~Strip parenthetical date + `- Transcript`~~ → `_GMEET_TAIL_RE` strips the whole dated tail (`s01_ingest.py:350`, used at `:422`). _Third copy of the superseded rule, found 18 Aug by a mechanical grep rather than by reading — see §Matching strategy._ |
+| ~~2d. Google Meet DOCX parser~~ **shipped 16 Aug 2026** | 2 | `_try_parse_gmeet_format` in `s04_parse_docx.py`; specimen `tests/fixtures/platform-transcripts/gmeet-notes-by-gemini-2026-08-15.json` |
 | 5c. Attendee list from Meet DOCX | 5 | Extract attendees to seed `people.yaml` |
 | 4d. Google Meet timestamp interpolation | 4 | Handle 5-minute granularity |
 | 5d. Zoom meeting ID preservation | 5 | Store in session metadata |

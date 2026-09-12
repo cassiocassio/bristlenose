@@ -505,6 +505,9 @@ The manifest carries a **stage** status and a **per-session** map, and the stage
 status is checked first. `_is_stage_verified` returns at `status == COMPLETE`
 and takes the full-cache read; `get_completed_session_ids` is never consulted.
 So a per-session record can be perfectly honest and still be **unread**.
+*(Fixed for s08/s09 on 12 Sep 2026 — `mark_stage_complete` now derives from its
+own session map. s05/s05b still mark failed sessions complete. The lesson below
+is the durable part.)*
 
 Measured 12 Sep 2026, and it cost a wrong claim to the user. `6277eabe` stopped
 s09 marking *failed* sessions complete — correct, tested, proved red against the

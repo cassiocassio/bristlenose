@@ -357,7 +357,7 @@ status checks and let the local gates and `/end-session` carry it. Either is
 defensible; the present state is the one that is not, because it claims a
 guarantee it cannot deliver.
 
-### G10. Two records of the same run, and every gate reads only one — 🟡 **half-closed 11 Sep 2026**
+### G10. Two records of the same run, and every gate reads only one — ✅ **closed 12 Sep 2026**
 
 `mark_session_complete` writes the next run's work list; the terminus event
 writes the run's own account of itself. Nothing anywhere compares them. s09
@@ -395,28 +395,35 @@ run record written beside it. The cheap check that would have caught it is one
 line of set arithmetic: **a session id in the manifest's completed set must not
 appear in any `failed` list in `pipeline-events.jsonl`.**
 
-**Half-closed by `6277eabe`**, and the other half is why this entry is 🟡 rather
-than ✅. The per-session *record* is honest now — one
-`_mark_sessions_complete_except_failed` (`pipeline.py:399`) that both stages
+**Closed in two commits.** `6277eabe` made the per-session record honest — one
+`_record_session_outcomes` (`pipeline.py:399`) that both stages
 call, rather than a second inline copy, because an uncommented inline copy is
-exactly how the s09 one went missing. But a partially-failed stage is still
-marked `COMPLETE` (`pipeline.py:1747`, unconditional after the `succeeded == 0`
-abandon check), so the next run's `_is_stage_verified` takes the full-cache
-branch and **never reads those records**. Measured 12 Sep on a two-run probe
-(3 sessions, 1 failing, non-empty output): run 2 called `extract_quotes` not at
-all. The record is true and unread.
+exactly how the s09 one went missing. That was **necessary and inert**: a
+partially-failed stage was still marked `COMPLETE`, so `_is_stage_verified` took
+the full-cache read and never consulted those records. The follow-up (12 Sep)
+records failures as `StageStatus.FAILED` rather than omitting them — absence
+derives to `COMPLETE` — and stops `mark_stage_complete` forcing `COMPLETE` over
+its own session map. Two-run probe: run 2 now re-extracts only the failed
+session.
 
-**What the researcher sees meanwhile.** `bristlenose status` puts a green tick
+**The lesson worth keeping is the day in between.** The first fix was correct,
+tested, proved red against the pre-fix tree, and reported as "the failed session
+is retried on the next run" — which was false, because nothing had ever run the
+loop twice. A guard test that stops at "the manifest says the right thing"
+cannot see a coarser record overriding it.
+
+**What the researcher saw in between.** `bristlenose status` puts a green tick
 on the stage — `✓ Quotes  8 quotes (2 sessions)` with `✓ Transcribe  3 sessions`
 two rows above it, the discrepancy in plain sight and unmarked — and a re-run
 returns `(cached)` instantly without retrying anything.
 
-**Gate owed, and it is the set-arithmetic line above** — not a broader
-invariant. `tests/test_manifest_failed_session_guard.py` pins the rule and both
-wirings and was watched red against the pre-fix tree, but its fixture returns
-`[]` quotes, so `mark_stage_complete` is refused by the empty-content guard and
-the stage-level short-circuit is outside what it covers. A non-empty fixture is
-the cheap widening.
+**The gate is `test_a_failed_session_is_retried_on_the_next_run`**, which runs
+the project twice and asserts run 2 attempts exactly the failed session. Watched
+red against **each half of the fix reverted independently**. Its fixture had to
+be widened from `[]` quotes to real ones first: the degenerate value made
+`mark_stage_complete` refuse on its own empty-content guard, so the stage never
+reached `COMPLETE` and the short-circuit was unreachable from the test meant to
+catch it — **a fixture's zero values can disable the path under test.**
 
 **Two sibling sites carry the un-fixed half**: `pipeline.py:969-972` (s05 —
 `s05_transcribe.py:198` writes `results[sid] = []` on failure, so the failed

@@ -503,9 +503,13 @@ corpus, not the `.app`, but a cold read of a cached run from four months earlier
 Two items, both measured, both owned by
 [design-pipeline-resilience.md](design-pipeline-resilience.md) § Still open:
 
-- **A partially-failed stage is cached as `COMPLETE`,** so the per-session resume
-  branch is unreachable and the failed session is never retried. Two-run probe:
-  run 2 called `extract_quotes` not at all. This is outcome **3c** above.
+- ~~**A partially-failed stage is cached as `COMPLETE`,** so the per-session
+  resume branch is unreachable and the failed session is never retried.~~
+  ✅ **closed 12 Sep 2026** — failures are now recorded as `StageStatus.FAILED`
+  rather than omitted, and `mark_stage_complete` derives its status from its own
+  session records. Run 2 re-extracts only the failed session. This was outcome
+  **3c** above, and it stayed open for a day *after* the fix that was reported as
+  closing it — the record was honest and unread. Still open for s05 / s05b.
 - **A quote-extraction timeout never splits the session.** `_extract_with_split`
   catches `TruncatedResponseError` only, so the machinery that exists to make an
   over-large session tractable cannot be reached from the failure an over-large

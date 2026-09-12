@@ -226,8 +226,23 @@ def mark_stage_complete(
         )
         return
     record = manifest.stages.get(stage, StageRecord())
-    record.status = StageStatus.COMPLETE
-    record.completed_at = _now_iso()
+    # A per-session stage may NOT claim COMPLETE over its own session records.
+    # `_is_stage_cached` gates on `status == COMPLETE` and short-circuits the
+    # whole per-session resume path, so a stage that lost a session and marked
+    # itself complete is cached whole and the lost session is never retried —
+    # which is exactly what happened between `6277eabe` and this change:
+    # excluding the failed session from `sessions` made the record honest and
+    # left it unread. Deriving instead means one failure of ten yields PARTIAL,
+    # `_is_stage_cached` says no, and the per-session branch runs.
+    #
+    # Non-per-session stages (`sessions is None`) keep the old behaviour
+    # unchanged — there is nothing to derive from.
+    derived = (
+        _derive_stage_status(record) if record.sessions else StageStatus.COMPLETE
+    )
+    record.status = derived
+    if derived == StageStatus.COMPLETE:
+        record.completed_at = _now_iso()
     if content_hash is not None:
         record.content_hash = content_hash
     if input_hashes is not None:
@@ -264,6 +279,42 @@ def mark_session_complete(
         provider=provider,
         model=model,
         content_hash=content_hash,
+    )
+    manifest.updated_at = _now_iso()
+
+
+def mark_session_failed(
+    manifest: PipelineManifest,
+    stage: str,
+    session_id: str,
+    provider: str | None = None,
+    model: str | None = None,
+) -> None:
+    """Record that one session of a per-session stage did NOT succeed.
+
+    The counterpart to ``mark_session_complete``, and the reason it exists:
+    **absence is not a state.** Omitting a failed session leaves a map that
+    reads `{COMPLETE, COMPLETE}` — indistinguishable from a stage where the
+    third session was never attempted — so ``_derive_stage_status`` returns
+    COMPLETE and the stage caches whole. Writing FAILED makes the same map
+    derive PARTIAL, which is what routes the next run down the per-session
+    branch so the session is retried.
+
+    ``get_completed_session_ids`` filters on ``status == COMPLETE``, so a
+    FAILED record is still correctly excluded from the cached set — recording
+    the failure costs nothing and buys the derivation.
+    """
+    record = manifest.stages.get(stage)
+    if record is None:
+        record = StageRecord(status=StageStatus.RUNNING, started_at=_now_iso())
+        manifest.stages[stage] = record
+    if record.sessions is None:
+        record.sessions = {}
+    record.sessions[session_id] = SessionRecord(
+        status=StageStatus.FAILED,
+        session_id=session_id,
+        provider=provider,
+        model=model,
     )
     manifest.updated_at = _now_iso()
 

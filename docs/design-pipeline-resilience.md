@@ -4,16 +4,17 @@ last-trued: 2026-09-12
 trued-against: HEAD@main (42bf545f) on 2026-09-12 (per-session resume, measured against a two-run probe)
 ---
 
-> **Truing status:** Current, with one **known spec-vs-as-built gap**: the
-> per-session forward-recovery promise in §5 has never held on the ordinary
-> path — half of it was fixed on 11 Sep 2026 (`6277eabe`) and the other half
-> is open and measured (see Still open (deferred)). Read that note before
-> treating §5, the manifest `sessions` example, or the `bristlenose status`
-> display examples as descriptions of shipped behaviour. Otherwise: Phase 1f / 4a-pre shipped on `port-v01-ingestion`; failure-taxonomy Phase A shipped via `pipeline-summary-events` (2026-05-07); A4 stage-cache-honesty shipped 2026-05-12 — extends abandon-check coverage to s08 and s10/s11 in both `run()` and `run_analysis_only()`, flips s10/s11 from soft to hard, adds the `topics` bucket to `PipelineSummary`, locks a privacy contract on `cause.message`, and refuses to record `mark_stage_complete` for empty intermediate content. Swift consumer side exists for run-state derivation (`desktop/Bristlenose/Bristlenose/EventLogReader.swift`); the Branch 2 `pipeline-diagnostic-pill` popover is design-only — see [design-pipeline-diagnostic-popover.md](design-pipeline-diagnostic-popover.md). Phase 3+ remain design-only.
+> **Truing status:** Current. The per-session forward-recovery promise in §5
+> had never held on the ordinary path; it does now for s08 and s09 as of
+> 12 Sep 2026, in two commits. It does **not** yet hold for s05 / s05b, and the
+> `bristlenose status` display examples still show output the code cannot
+> produce — read §5's note before treating either as shipped. Otherwise: Phase 1f / 4a-pre shipped on `port-v01-ingestion`; failure-taxonomy Phase A shipped via `pipeline-summary-events` (2026-05-07); A4 stage-cache-honesty shipped 2026-05-12 — extends abandon-check coverage to s08 and s10/s11 in both `run()` and `run_analysis_only()`, flips s10/s11 from soft to hard, adds the `topics` bucket to `PipelineSummary`, locks a privacy contract on `cause.message`, and refuses to record `mark_stage_complete` for empty intermediate content. Swift consumer side exists for run-state derivation (`desktop/Bristlenose/Bristlenose/EventLogReader.swift`); the Branch 2 `pipeline-diagnostic-pill` popover is design-only — see [design-pipeline-diagnostic-popover.md](design-pipeline-diagnostic-popover.md). Phase 3+ remain design-only.
 
 ## Changelog
 
-- _2026-09-12_ — **Truing pass (`--topic` per-session resume). The per-session saga has never worked on the ordinary path; half of why is now fixed.** `6277eabe` (11 Sep) closed the first half: s09's per-session marking looped **every** transcript handed to the stage, including those `StageOutcome.failed` named, while s08 — 175 lines earlier — had excluded them since May with the reasoning in a comment. Both now route through `_mark_sessions_complete_except_failed` (`pipeline.py:399`), and `tests/test_manifest_failed_session_guard.py` pins the rule and both wirings, watched red against the pre-fix tree. **Empirical anchor:** the cached FOSSDA run of 30 Apr 2026 recorded `quote_extraction -> s3: complete` for a 94-minute interview whose LLM call died of three consecutive 600 s API timeouts and produced zero quotes; `get_completed_session_ids` then dropped it from the work list for good while `_cached_q_count` counted it as a success, so the honest "9 of 10, one failed" rollup was overwritten by a clean sweep on the next run. Re-extracting that session split in two recovers **91 quotes** — it would have been the second-richest interview in the corpus.
+- _2026-09-12_ — **The per-session saga now works on the ordinary path, in two commits.** `6277eabe` made the record honest; the follow-up made it *read*.
+    - **The second half (12 Sep).** A partially-failed stage was still marked `COMPLETE`, so `_is_stage_verified` short-circuited to the full-cache read and the per-session records were never consulted — the fix was correct and inert. Two changes: `mark_session_failed` (`manifest.py`) **records** a failed session as `StageStatus.FAILED` instead of omitting it, because absence is indistinguishable from not-yet-attempted and `_derive_stage_status` therefore returned `COMPLETE` from `{COMPLETE, COMPLETE}`; and `mark_stage_complete` now derives its status from its own session records rather than forcing `COMPLETE`, so one failure of ten yields `PARTIAL`. Proven on a two-run probe — run 2 re-extracts **only** the failed session — and pinned by `test_a_failed_session_is_retried_on_the_next_run`, which was watched red against **each half reverted independently** (either alone is insufficient). The guard test's fixture was also widened from `[]` quotes to real ones: the degenerate value made `mark_stage_complete` refuse on its own empty-content guard, so the stage never reached `COMPLETE` and the short-circuit was unreachable from the test that existed to catch it.
+    - **The first half (11 Sep, `6277eabe`).** `6277eabe` (11 Sep) closed the first half: s09's per-session marking looped **every** transcript handed to the stage, including those `StageOutcome.failed` named, while s08 — 175 lines earlier — had excluded them since May with the reasoning in a comment. Both now route through `_record_session_outcomes` (`pipeline.py:399`), and `tests/test_manifest_failed_session_guard.py` pins the rule and both wirings, watched red against the pre-fix tree. **Empirical anchor:** the cached FOSSDA run of 30 Apr 2026 recorded `quote_extraction -> s3: complete` for a 94-minute interview whose LLM call died of three consecutive 600 s API timeouts and produced zero quotes; `get_completed_session_ids` then dropped it from the work list for good while `_cached_q_count` counted it as a success, so the honest "9 of 10, one failed" rollup was overwritten by a clean sweep on the next run. Re-extracting that session split in two recovers **91 quotes** — it would have been the second-richest interview in the corpus.
     - **Scope correction to the _2026-05-12_ entry below.** That entry reads as "cache poisoning: closed". `1e1ec118` closed the **whole-stage** case only (abandon-before-`mark_stage_complete`; the manifest refusing empty content). It could not close the per-session case and did not: when a *single* session of a batch fails, the intermediate JSON is non-empty and `succeeded == 0` is false, so both guards pass and the failed session is cached as done.
     - **Still open, and `6277eabe` does not close it.** A partially-failed stage is still marked `COMPLETE` (`pipeline.py:1747`, unconditional after the `succeeded == 0` abandon check), so the next run's `_is_stage_verified` takes the full-cache branch and never reads the per-session records. Measured two-run probe, 3 sessions with 1 failing and non-empty output: run 2 called `extract_quotes` **not at all**. The fix has two parts — record failures as `StageStatus.FAILED` rather than omitting them (absence is indistinguishable from not-yet-attempted, so `_derive_stage_status` cannot return `PARTIAL`), and have `mark_stage_complete` decline to override its own `PARTIAL` derivation, mirroring the empty-content refusal already in that function.
     - **Two sibling marking sites carry the same defect, unconverted.** `pipeline.py:969-972` (s05 transcribe) — `s05_transcribe.py:198` writes `results[sid] = []` on failure, so a failed session **is** a key in `_fresh_segments` and is marked complete, with `_fresh_transcript_outcome` in scope and unconsulted; the shared helper applies directly. `pipeline.py:1271-1276` (s05b identify-speakers) — `identify_speaker_roles_llm` returns `[]` on LLM failure and reports through an `errors` list rather than a `StageOutcome`, so there is no failed set to filter on without changing the stage's signature.
@@ -218,25 +219,20 @@ There's no "undo" for an LLM call — the tokens are spent. Forward recovery max
 > - **Closed 11 Sep 2026 (`6277eabe`).** s09 marked *failed* sessions complete,
 >   so they were dropped from the work list for good and then counted as
 >   successes. s08 had excluded them since May; s09 never did. Both now route
->   through `_mark_sessions_complete_except_failed`.
-> - **Still open.** A partially-failed stage is still marked **`COMPLETE`** —
->   the abandon guard fires only at `succeeded == 0`, and `mark_stage_complete`
->   runs unconditionally after it (`pipeline.py:1747`). On the next run
->   `_is_stage_verified` takes the full-cache branch and the per-session records
->   are never read. Measured on a two-run probe (3 sessions, 1 failing, non-empty
->   output): run 2 called `extract_quotes` **not at all** and reported
->   `attempted=8 succeeded=8 failed=[]`. So "only the 3 remaining sessions need
->   LLM calls" still does not happen on the ordinary path — only after a crash,
->   an input-hash change, or a content-hash mismatch, which are the cases that
->   leave the stage not-`COMPLETE`.
+>   through `_record_session_outcomes`.
+> - **Closed 12 Sep 2026.** A partially-failed stage used to be marked
+>   `COMPLETE` regardless, so `_is_stage_verified` took the full-cache branch on
+>   the next run and the per-session records were never read — the record was
+>   honest and *unread*. Two halves fixed it: failed sessions are now **recorded**
+>   as `StageStatus.FAILED` rather than omitted (absence is indistinguishable
+>   from "not yet attempted", so `_derive_stage_status` saw `{COMPLETE}` and
+>   `PARTIAL` was unreachable as a derived value), and `mark_stage_complete` now
+>   derives its status from its own session records instead of forcing
+>   `COMPLETE`. Two-run probe, 3 sessions with 1 failing: run 2 re-extracts
+>   **only** the failed session and reports `attempted=3 succeeded=2 failed=1`.
 >
-> The reason the per-session fix alone is not enough: a failed session is now
-> *absent* from `sessions`, and absence is indistinguishable from "not yet
-> attempted". `_derive_stage_status` (`manifest.py:271`) therefore sees
-> `{COMPLETE}` and returns `COMPLETE`, so `PARTIAL` is unreachable as a derived
-> value. Recording the failure explicitly (`StageStatus.FAILED`, which the schema
-> already allows and nothing writes) is what would make it derivable — see the
-> manifest example below, which has always shown that shape.
+> So the paragraph above now describes shipped behaviour for s08 and s09. It
+> does **not** yet for s05 / s05b — see the changelog.
 
 ### 6. Merge strategy: "humans always win"
 
@@ -569,7 +565,6 @@ Resolved in **round 2** (2026-04-25 afternoon, after the post-pivot review fan-o
 
 Still open (deferred):
 
-- **A partially-failed stage is still cached as `COMPLETE`, so the per-session resume branch is unreachable on the ordinary path** (measured 12 Sep 2026). `mark_stage_complete` runs unconditionally after the `succeeded == 0` abandon check (`pipeline.py:1747`), so one failed session out of ten still yields a `COMPLETE` stage with a content hash; the next run's `_is_stage_verified` short-circuits to the full-cache read and never consults `get_completed_session_ids`. Two-run probe, 3 sessions with 1 failing and non-empty output: run 2 called `extract_quotes` **not at all**, and reported `attempted=8 succeeded=8 failed=[]`. `6277eabe` made the per-session *record* honest; this is what still makes it unread. Fix has two halves — write `StageStatus.FAILED` for failed sessions instead of omitting them (absence reads as not-yet-attempted, so `_derive_stage_status` cannot return `PARTIAL`), and have `mark_stage_complete` decline to override its own `PARTIAL` derivation, mirroring the empty-content refusal already in that function. Sibling sites `pipeline.py:969-972` (s05) and `:1271-1276` (s05b) carry the un-fixed half of `6277eabe` too.
 - **A quote-extraction timeout never splits the session.** `_extract_with_split` (`s09_quote_extraction.py:399`) catches `TruncatedResponseError` only, so the smart-split machinery — which exists precisely to make an over-large session tractable — is unreachable from the failure mode that actually stops one. Measured on FOSSDA s3 (73,747 chars, 94 min) against `claude-sonnet-4-6`: the whole session exceeds the 600 s client timeout and fails (reproduced 7 Sep 2026; in the 30 Apr run it burned 3 × 600 s before the SDK gave up, and at today's `_CLOUD_MAX_RETRIES = 6` it would burn 7 × 600 s ≈ 70 min). Split in two it succeeds in **522 s + 293 s** and yields 91 quotes. Throughput measured at 9.10 s per 1k chars, which independently predicts 671 s for the whole session — i.e. the session is ~12% over a hard wall. The open judgement is the trigger condition: splitting on *any* timeout risks doubling spend on a transient network fault, where splitting only above a size threshold needs a threshold that is model- and load-dependent. Note the depth budget reasoning in `s09`'s header comment ("each timeout-bounded") was written for truncation, where a failed call returns fast; a timeout-driven split at depth 3 has a very different wall-clock worst case.
 - **Events log file rotation strategy.** Today: never rotate. Threshold to revisit: ~10 MB or ~10k events (Phase 4a's stage-level + human-edit events will push file sizes up). Document the rotation policy explicitly *before* it's needed so a future contributor doesn't add it ad hoc and break Phase 4d's history-replay contract. Default position when revisited: rotate to `pipeline-events.jsonl.1` at 10 MB; tail-reader checks both.
 - **`fsync` cadence under Phase 4a load.** Today: `fsync` per event. Fine for 4 run-level events. Phase 4a (stage-level + per-LLM-call events) on a 12-min run with 200+ events accrues 200ms-2s of fsync overhead on macOS APFS. When Phase 4a lands, decide: (a) only fsync on terminus events, (b) batch fsync at safe break points, (c) accept the cost. Default position: (b).

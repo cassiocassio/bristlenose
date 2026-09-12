@@ -53,6 +53,16 @@ So the design range is:
 |---|---|---|---|
 | position / duration | 0 – 3 h | **10 h** | > 24 h |
 
+**Why 3 h is a ceiling and not a guess.** It is the upper limit of human
+concentration in a research session, not a file-size observation. An interview
+is booked for an hour; a workshop runs to three at the outside; anything longer
+is people who need lunch, and what a recorder captures past that point is not
+research data. So the ceiling is a property of the *practice*, and it is the
+same fact `design-shared-formats.md` reached from the other end when it decided
+never to pad the hour: no interview will ever occupy the `09:34:23` column. A
+future argument to raise the ceiling has to be an argument about what a research
+session is, not about what a disk can hold.
+
 That matters because one live helper breaks at **100 minutes** (§ 4, H5) and the
 corpus already contains a 99.7-minute session.
 

@@ -330,22 +330,30 @@ knowing only if duration probing ever becomes less reliable.
 value" is a code smell, not a finding. Whether it is a defect depends on what
 bounds the inputs, and that lived one file away in the caller.
 
-### H7 — Four Python duration formatters, three formats, and the obvious home holds a dead one
+### H7 — Four Python duration formatters, three formats, and the obvious home holds the wrong one
+
+*Corrected 12 Sep 2026: the first draft called `utils.format_duration_human`
+"dead, 0 callers". That was a grep artefact — the search excluded `dashboard.py`
+to skip the route module and thereby also hid `stages/s12_render/dashboard.py`,
+a different file with the same basename. It has one live caller.*
 
 | implementation | 0 | 30 | 3600 | 66180 |
 |---|---|---|---|---|
 | `dashboard._format_duration_human` **(canonical)** | `0m` | `<1m` | `1h` | `18h 23m` |
-| `utils/timecodes.py:format_duration_human` **(0 callers)** | `0 min` | **`1 min`** | `1 h 0 min` | `18 h 23 min` |
+| `utils/timecodes.py:format_duration_human` **(1 caller: the static render)** | `0 min` | **`1 min`** | `1 h 0 min` | `18 h 23 min` |
 | `pipeline._format_duration` | `0.0s` | `30.0s` | `60m 00s` | `1103m 00s` |
 | `dev._format_duration` | `—` | `00:30` | `1:00:00` | `18:23:00` |
 
 Three things here:
 
 1. The canonical implementation lives in a **route module**, while the module
-   named `timecodes.py` holds a dead sibling with a different format. A new
-   caller reaching for "the duration formatter" finds the wrong one first.
-2. That dead sibling renders a 30-second span as **`1 min`** — asserting a minute
-   that did not elapse, where canonical says `<1m`.
+   named `timecodes.py` holds a sibling with a different format. A new caller
+   reaching for "the duration formatter" finds the wrong one first — and one
+   already did: `s12_render/dashboard.py:502` renders the static report's total
+   session time as `18 h 23 min` where the SPA dashboard shows `18h 23m` for the
+   same number. A live fork between the two renders of one stat.
+2. That sibling renders a 30-second span as **`1 min`** — asserting a minute that
+   did not elapse, where canonical says `<1m`.
 3. `dev._format_duration` renders a duration in **timecode shape**
    (`18:23:00`) — precisely the conflation the register records as fixed on
    22 Aug 2026. Dev-only surface, but it is the documented anti-pattern, live.
@@ -422,7 +430,7 @@ stops a future edit collapsing the fork in either direction.
 
 | format | pinned cases | ceiling | gap |
 |---|---|---|---|
-| `timecode` | 15 | **3930 s (65 min)** | nothing at the 3 h realistic max, nothing at either break (H2, H5) |
+| `timecode` | 15 | 36000 s (10 h) | jumps from **3930 s straight to 36000 s** — nothing at the 3 h realistic max, nothing at either break (H2, H5) |
 | `duration_human` | 9 | 66180 s | **no zero case** (H12), no negative |
 | `finder_date` | **0** | — | three implementations, nothing pinned (H10) |
 
@@ -452,3 +460,168 @@ enrolled.
   exposure, as opposed to the parser's refusal, which is measured).
 - **DST edge behaviour end-to-end.** § 3c lists the cases; nothing in the tree
   was run against them.
+
+---
+
+## 7. Plan — Tier 0 and Tier 1
+
+_The sequencing that matters: **Tier 0 needs no product decision and does not
+touch the start-time work.** It is worth doing regardless of anything decided in
+`design-timezones.md`. Tier 2 (start time, timezones) lives there, § 5._
+
+Every item states the file, the change, the **proof test** — written first and
+shown red — the behaviour that changes, and the risk. Effort is a guess; the
+proof step is not optional, because this area's existing tests are pointed at
+the wrong code (H1).
+
+### Tier 0 — independent, cheap, zone-free
+
+**T0-1 · Retire `models.parse_timecode`; repoint the round-trip test. Do this
+first** — it is what makes the rest of the tier verifiable.
+- `bristlenose/models.py:441-449`: delete. No production caller (H1); every
+  stage imports from `utils.timecodes`.
+- `tests/test_models.py:7`: import `parse_timecode` from
+  `bristlenose.utils.timecodes` (keep `format_timecode` from `models`, which
+  re-exports it).
+- Proof: after the change `from bristlenose.models import parse_timecode`
+  raises `ImportError`; `test_parse_timecode_round_trip_*` now exercise the
+  canonical parser and still pass (verified: every input they use round-trips
+  on it).
+- Add: `pytest.raises(ValueError)` for `parse_timecode("100:00:00")` — this
+  *declares* the domain ceiling (H2) instead of leaving it implicit.
+- Risk: none in-tree. An out-of-tree script importing from `models` breaks
+  loudly, which is the right way to break.
+
+**T0-2 · `parse_timecode` uses `fullmatch`.**
+- `bristlenose/utils/timecodes.py:84-105`: `.match` → `.fullmatch` on both
+  patterns, after the existing `strip()`.
+- Every caller passes an isolated token, verified: s03 passes
+  `caption.start`/`.end`; s04 passes regex groups; `pipeline.py:2867/2892` pass
+  a stripped header value / regex group; s08/s09 pass LLM fields and already
+  catch `ValueError` into the guard's `*_timecode_unparseable` log line.
+- Proof: `parse_timecode("00:01:23 extra")` returns `83.0` today → test
+  asserts it raises. Red before, green after.
+- Behaviour change: an LLM answer with trailing text goes from silently-`83`
+  to logged-unparseable-and-zeroed. That is the intent — the guard exists to say
+  so. The measured terra wire strings were clean `HH:MM:SS`, so expected rate is
+  ~0.
+- Risk: low. If a real transcript format turns out to carry trailing text on the
+  timestamp token, the fix is in *that* parser's regex, not here.
+
+**T0-3 · `miro_board.fmt_timecode` delegates to `format_timecode`.**
+- `bristlenose/miro_board.py:125-127`: body becomes `return format_timecode(seconds)`.
+  Keep the name — `miro_export.py:27` imports it.
+- Proof: `fmt_timecode(6000) == "1:40:00"` and `parse_timecode(fmt_timecode(6000)) == 6000`.
+  Red before (`"100:00"` → `ValueError`), green after.
+- Behaviour change on Miro boards: `90:00` → `1:30:00` above an hour; `5:30` →
+  `05:30` below (minute padding, the house rule). Cosmetic, and the second is
+  what every other surface already shows.
+- Risk: `miro_export._parse_timecode` must read the new shape — it does
+  (`h:mm:ss` and zero-padded `mm:ss` both parse; verified by reading it). While
+  there: that parser returns `0.0` on *any* failure including fractional
+  seconds. Replace with the canonical `parse_timecode` inside the existing
+  `try` — same tier, same file, five lines.
+
+**T0-4 · One `format_duration_human`, in `utils/timecodes.py`, canonical.**
+- Move the body of `server/routes/dashboard._format_duration_human` into
+  `utils/timecodes.py:format_duration_human` (replacing the `"1 min"` variant).
+  Make the route function a one-line delegate. `s12_render/dashboard.py:32`
+  needs no change — it already imports the utils name and now gets the canonical
+  shape.
+- Update the register's Python pointer (`design-shared-formats.md` table and
+  the fixture's `implementations.python`) to the utils path. The contract tests
+  keep passing: the route's output is unchanged.
+- Proof: `format_duration_human(30) == "<1m"` (today `"1 min"`),
+  `format_duration_human(3600) == "1h"` (today `"1 h 0 min"`). The fixture's nine
+  cases apply directly.
+- Behaviour change: the static report's total goes `18 h 23 min` → `18h 23m`,
+  matching the SPA. The sealed-byproduct rule says design changes go to the SPA
+  only; this *removes* a divergence rather than adding a design, and is the
+  smaller change. Flag it in the commit.
+- Risk: a test pinning the static dashboard HTML's `" min"` would be pinning
+  the fork. Checked — none does. The static total changes freely.
+
+**T0-5 · `dev._format_duration` uses the canonical helper.**
+- `server/routes/dev.py:79-88`: `return "\u2014" if seconds <= 0 else format_duration_human(seconds)`.
+  Em-dash stays — it is a per-row cell, the SPA convention.
+- Proof: `_format_duration(66180) == "18h 23m"` (today `"18:23:00"`).
+- Depends on T0-4 for the import. Dev-only surface; lowest stakes in the tier.
+
+**T0-6 · `pipeline._format_duration` overflows minutes** (`66180` → `1103m 00s`).
+CLI stage timing, realistically seconds-to-minutes; a long transcription can
+cross an hour. Fix is `divmod` into `h`/`m`/`s`. **Could** — note only, do
+when touching that code.
+
+**T0-7 · Extend the contract fixture** (`tests/fixtures/shared-format-contract.json`).
+- `timecode.cases`, add: `[3599.9, "59:59"]` (truncation at the switch — must
+  not round to `1:00:00`), `[5999, "1:39:59"]`, `[6000, "1:40:00"]`,
+  `[10800, "3:00:00"]`, `[35999, "9:59:59"]`.
+- `timecode.cases`, add `[-1, "00:00"]` — **and vitest will fail, measured.**
+  Python clamps (`max(0, int(seconds))`); TypeScript's `formatTimecode` does not:
+  `formatTimecode(-1)` → `"-1:-1"`, `formatTimecode(-61)` → `"-2:-1"`. A real,
+  currently-unpinned divergence (call it **H13**), and the fix is a one-line
+  clamp in `format.ts`. Add the case *before* the clamp so the red run is on
+  record.
+- `duration_human`: **do not** add `0` to `cases` — TS returns an em-dash there
+  on purpose. Add it to the entry's `divergences` with both expected outputs, so
+  the fork is pinned in the direction it was decided (H12).
+- `finder_date`: pin the **absolute-date branch only**, which is deterministic:
+  `"2026-02-10T09:12:00"` → `"10 Feb 2026, 09:12"` (TS and Swift). The relative
+  branch needs an injectable `now`, which TS lacks — add a `now` parameter to
+  `formatFinderDate` first, or leave that branch catalogued. Record Python's
+  `Today at 16:59` separator in `divergences` (H10). Inputs must be **naive**
+  strings to match today's wire (`design-timezones.md` § 1).
+
+**T0-8 · Round-trip property test** — `tests/test_timecode_roundtrip.py`.
+- For `s in range(0, 360000, 7)`: `int(parse_timecode(format_timecode(s))) == s`,
+  and the same for `format_timecode_prompt`. That is ~51k cases in well under a
+  second and covers every field boundary. (`hypothesis` is not a dependency;
+  a stride is enough.)
+- Assert `parse_timecode(format_timecode(360000))` raises — the declared limit
+  from T0-1, now pinned from the formatting side too.
+- This is the test that would have caught H1 and H2, and is the one H1
+  currently defeats.
+
+### Tier 1 — one measurement or one decision each
+
+**T1-1 · `# Date:` header reader converts instead of relabelling** (H8).
+- `pipeline.py:2861`: replace `.replace(tzinfo=timezone.utc)` with the exact
+  logic `server/importer.py:83` already uses — relabel only when
+  `dt.tzinfo is None`, otherwise `astimezone(timezone.utc)`. Better: extract that
+  four-line function to `utils/timecodes.py` and call it from both readers, so
+  the two paths cannot disagree again.
+- Proof: `"2026-05-09T14:23:00+01:00"` → `13:23 UTC`. Red before (`14:23`),
+  green after. Naive input unchanged.
+- The **decision** folded in: a naive header value means UTC, because that is
+  what the writer emits (aware `isoformat()` produces an offset; naive only
+  appears in legacy files written before the time-of-recording fix, which were
+  UTC). State it in the docstring.
+
+**T1-2 · Unpadded third-party timecodes** (H3) — **measure before deciding.**
+- One script over every `.docx`/`.srt`/`.vtt`/`.txt` transcript on disk
+  (`trial-runs/`, the format corpus): count lines matching an unpadded field
+  (`\b\d:\d\b` or `:\d\b` at end of token). Zero in the wild → declare
+  refusal the contract, add a test that pins it, close H3. Non-zero → widen the
+  s04 regexes and the parser's seconds group to `\d{1,2}`, with the
+  offending format named in the commit.
+- Do not widen speculatively: a looser regex matches more non-timecode text.
+
+**T1-3 · Naive `now()` at four render sites** (H11).
+- `s12_render_output.py:81,178`, `s12_render/report.py:164`,
+  `utils/markdown.py:493`: `datetime.now()` → `datetime.now(timezone.utc)`.
+  Removes the latent `TypeError` on any future subtraction against an aware
+  `session_date`. It does **not** change what is displayed — the display frame
+  is a Tier 2 decision (`design-timezones.md` § 4) and this must not pre-empt it.
+- Proof: a test that subtracts `format_finder_date`'s `now` default from an
+  aware datetime; raises today, does not after.
+
+### What Tier 0/1 leave alone, deliberately
+
+- `format_timecode_prompt` — correct, tested, and outside the register on
+  purpose.
+- `format_clip_timecode` — H6 withdrawn; sound by construction.
+- The Swift/webview start-time rendering — consistent with each other; the
+  defect is upstream (`design-timezones.md` § 1) and belongs to Tier 2.
+- `ProjectRow.formatBareDate`'s verbatim copy in `SidebarSubtitleText.swift` —
+  a Swift-internal duplicate of a *different* datum (project activity). Fold
+  into a Swift tidy-up, not this plan.

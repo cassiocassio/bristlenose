@@ -332,37 +332,143 @@ midnight.
 
 ---
 
-## 5. What an audit would actually have to do
+## 5. The plan — Tier 2, in strict order
 
-Roughly in order, and the first item is the one that gates the rest:
+_Tier 0 and Tier 1 — the zone-free fixes — are in `docs/time-defects.md` § 7 and
+do not depend on anything here. This is the start-time and timezone work. The
+order is strict because each step is what makes the next one measurable._
 
-1. **Decide what the datum is, and rank the signals** (§ 2b). `session_date` is
-   currently "some filesystem timestamp", not "the session's start". No timezone
-   work is meaningful until that is settled per source type — and the cheapest
-   win is stopping `_normalise_stem` from discarding a timestamp it has already
-   parsed.
-2. **Read the container before touching anything else.** `utils/audio.py`
-   already runs ffprobe for duration; adding `format_tags` to that call is a
-   one-line change and yields `com.apple.quicktime.creationdate` (local time +
-   offset), `creation_time` (UTC), and `make`/`model`/`software` (the writer
-   class § (f)). This is the highest-value, lowest-cost item on the list, and it
-   is independent of every product decision below.
-3. **Capture the zone at ingest**, alongside the instant — an IANA identifier
-   (`Europe/London`), not a bare offset, because an offset does not survive a
-   rule change and cannot answer "was this during DST". Where only an offset is
-   available (the Apple tag), store the offset and say so; where only UTC is
-   available, store UTC and mark the zone unknown rather than guessing.
-4. **Make the column `DateTime(timezone=True)`** and audit every writer for
-   `.replace(tzinfo=…)` (T2).
-5. **Decide the display frame** (§ 4) and apply it to all three surfaces at once
-   — they are currently consistent, which is an asset worth not losing.
-6. **Pin `finder_date` cases** in the shared-format contract, including the DST
-   dates in § 3c (T6).
-7. **Build a multi-zone corpus.** Nothing we own exercises any of this. The
-   format-torture corpus (`experiments/folder-of-horrors/`) is the natural place.
-8. **Decide what to say about historical projects**, which cannot be corrected.
+### 5.1 Read the container (the card already filed: §2 Broken · Should)
 
----
+- `utils/audio.py` already runs `ffprobe` for duration. Extend that one call's
+  `-show_entries` with `format_tags` and `stream_tags`, parse the JSON, and
+  return a small dataclass beside the duration:
+  `MediaTimeMeta(creation_utc, creation_local_with_offset, offset_minutes,
+  make, model, software, encoder)`. All fields optional.
+- Read `creation_time` (UTC) from the format tags, falling back to the first
+  stream's — the iPhone and ReplayKit files carry it on both, Matroska on the
+  format. Read `com.apple.quicktime.creationdate` for the offset-bearing local
+  form; parse the trailing `±HHMM` into `offset_minutes`.
+- Do not act on it yet. Persist it (5.3) and surface it in `bristlenose
+  status`. This step is pure capture and is **retroactively applicable** —
+  the metadata never leaves the file — so it can land alone, at any time, and
+  a backfill (5.5) reaches every existing project whose media is still on disk.
+- Proof: a unit test over the five `folder-of-horrors` files whose manifest
+  already carries `creation_time` (`harvest.py` captured it), asserting the
+  parsed UTC instant and, for `IMG_2544.MOV`, `offset_minutes == 60`.
+
+### 5.2 Classify the writer
+
+The single question that decides whether `birthtime − duration` applies is
+*does this writer create the file at the start or at the end?* — and the
+container answers it with `make`/`model`/`software`/`encoder`, which 5.1 now
+captures. Build a small table, each row **measured** before it is trusted:
+
+| writer (as identified) | file created at | measured? |
+|---|---|---|
+| macOS ReplayKit (`com.apple.quicktime.author = ReplayKitRecording`) | **end** | yes — birthtime = container time = end, +14 s / +32 s after subtracting duration |
+| iPhone camera (`make = Apple`, `model = iPhone …`) | ? | **owed** — one file, compare `creationdate` to a known start |
+| Zoom local transcode | end (expected) | **owed** |
+| Teams / Zoom cloud download | irrelevant — the cloud API start (5.4 rank 1) wins | — |
+| OBS / browser capture (`.mkv`/`.webm`) | start (expected — progressive) | **owed**, and whether it writes `DateUTC` at all |
+| ffmpeg-transcoded (`encoder = Lavf…`) | **unknown** — the tag is gone | measured: absent |
+| unrecognised | unknown | — |
+
+An unknown writer gets no subtraction and a `source = birthtime` label, never a
+guess. The table lives next to the code as data, not as a chain of `if`s, so a
+new writer is a row.
+
+### 5.3 Schema
+
+Add, and keep `session_date` untouched during migration so nothing reading it
+breaks:
+
+| column | type | meaning |
+|---|---|---|
+| `session_start_utc` | `DateTime(timezone=True)` | the resolved instant |
+| `session_start_offset_min` | `Integer`, nullable | the recording's local offset from UTC, when known |
+| `session_start_zone` | `String`, nullable | IANA identifier when known (cloud API, or a future capture at ingest); **never** derived from an offset |
+| `session_start_source` | `Enum` | `cloud_api` · `container_local` · `container_utc` · `filename_zoned` · `filename_unzoned` · `birthtime_minus_duration` · `birthtime` · `header` · `none` |
+| `session_start_conflict` | `Boolean` | two sources disagreed beyond tolerance (5.4) |
+
+`timezone=True` is what stops the DB boundary destroying the offset (§ 1). It
+is also the point at which T1-1's converted `# Date:` values start meaning what
+they say.
+
+### 5.4 The resolver — precedence, tolerance, and disagreement
+
+One function, one session in, one `(instant, offset, source, conflict)` out.
+Precedence, highest first:
+
+1. cloud API meeting start
+2. container `creationdate` (local + offset) — adjusted by `− duration` only when
+   5.2 says the writer creates at end
+3. container `creation_time` (UTC) — same adjustment rule
+4. filename timestamp, **zone-qualified** (`…UTC`, `GMT-5`) — Swift's
+   `TeamsRecordingName` already does this with the right refusal rule; port it,
+   do not re-derive it
+5. filename timestamp, **unqualified** — recorded as `filename_unzoned`, rendered
+   with a "local time, zone unknown" marker, never converted
+6. `birthtime − duration`, only for a 5.2 writer that creates at end
+7. `birthtime` — what ships today; for a 5.2 writer that creates at start
+8. transcript `# Date:` header (via T1-1's converter)
+9. none — and the UI says so (§ 4, absence-is-information)
+
+**Disagreement is a first-class output, not an error.** When two sources are
+both present and differ by more than a tolerance — start at **5 minutes**, which
+absorbs consent-delay and encode overhead but not the four-hour case measured
+on `System Audio 20220308 1316.mp4` — the higher-ranked one wins, both are
+logged at WARNING with their values, and `session_start_conflict` is set. The
+UI renders the winner with a marker. Never silently pick.
+
+The **consent-delay sign test** as a sanity assertion: where a cloud calendar
+start is available, a resolved start *earlier* than the booking is evidence the
+writer class was misjudged (recording starts a few minutes *into* the meeting,
+after "are you happy for me to start recording?"). Log it; do not auto-correct.
+
+### 5.5 Backfill
+
+`bristlenose backfill-start-times <project>` — re-probe every session's media
+on disk, run 5.4, write 5.3's columns, and print one line per session naming the
+source that won and any conflict. **Dry-run by default, `--apply` to write**,
+same shape as `experiments/quote-stability/repair_cached_boundaries.py`. Sessions
+whose media is gone get `source = none` and are listed, not skipped silently.
+
+### 5.6 Display — after, not before, the decision in § 4
+
+Until § 4 is decided, one rule that is defensible under every option: render the
+UTC instant in the **viewer's** zone (what the SPA and Swift already do, now
+with a *correct* instant), and add a marker whenever `session_start_offset_min`
+is known and differs from the viewer's — `14:23 (09:23 EDT)`, or an icon with
+the recording-local time on hover. The three surfaces move together (§ 3b: they
+are currently consistent, and that is an asset). Python's markdown adopts the
+same instant and converts to the same frame; its `Today at` separator is a
+catalogued divergence and stays.
+
+### 5.7 Tests
+
+- **Contract**: `finder_date` gains its first pinned cases (T0-7), with naive
+  inputs until 5.3 lands and aware inputs after.
+- **Resolver unit tests**: one per precedence rung; one per disagreement shape
+  (agree, disagree-within-tolerance, disagree-beyond, one-missing); the sign
+  test.
+- **Corpus acceptance**: `trial-runs/folder-of-horrors/manifest.csv` gains
+  `expected_start_utc`, `expected_offset_min`, `expected_source` for every row
+  with container metadata (five today) plus the two Screen Recordings whose
+  filenames give ground truth. A test runs 5.4 over the corpus and diffs.
+  This is the harness for the whole tier and the files already exist.
+- **DST cases** (§ 3c) as resolver inputs: the spring gap, the repeated hour,
+  the US/UK mismatch week, Lord Howe's 30-minute shift, Kathmandu's +5:45.
+  These are pure-function tests and need no media.
+
+### 5.8 Measurements still owed before 5.2's table is trusted
+
+- iPhone camera: start or end? One file with a known start.
+- Zoom local transcode: does it write `creation_time`, and at which end?
+- A real OBS/browser `.webm`: is `DateUTC` populated? (read path proven;
+  write side not.)
+- A second BST-era file from a different writer, to confirm the `Z` is honest
+  beyond Apple's own tools.
 
 ## 6. Why this is not a beta concern
 

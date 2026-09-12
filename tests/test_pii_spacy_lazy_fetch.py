@@ -386,3 +386,27 @@ def test_a_path_delivered_model_redacts_with_no_package_installed(monkeypatch):
 
     assert "Priya Raghunathan" not in clean[0].segments[0].text
     assert redactions, "the path-delivered model detected nothing at all"
+
+
+class TestTheFrozenSidecarNeverAnnouncesADownload:
+    """On the Mac nothing is downloaded — `ensure_spacy_model` refuses at once.
+
+    The banner used to print first, so a Mac user with redaction on and no
+    pack was told a 425 MB download was starting one call before
+    `FrozenSidecarError` said it never would. That line reaches the host's
+    diagnostic buffer, i.e. "Copy error details".
+    """
+
+    def test_no_banner_and_the_refusal_propagates(self, capsys):
+        from bristlenose.utils.package_install import FrozenSidecarError
+
+        fake_spacy = MagicMock()
+        fake_spacy.load.side_effect = OSError("not found")
+        status = MagicMock()
+        with patch.dict(sys.modules, {"spacy": fake_spacy}):
+            with patch("bristlenose.utils.package_install._is_frozen_sidecar", return_value=True):
+                with pytest.raises(FrozenSidecarError):
+                    _ensure_spacy_model(status=status)
+
+        assert "Downloading" not in capsys.readouterr().out
+        status.stop.assert_not_called()

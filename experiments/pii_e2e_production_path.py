@@ -14,6 +14,16 @@ LOCATION (Presidio fires on any named place and destroys research data — see
 items as misses would manufacture a failure out of a design decision, so they
 are reported separately as out-of-scope-by-design.
 
+**Read the false-positive number for what it is.** Every one of the corpus's
+32 negatives is a *word* — product names, month names, sentence starts — and
+none contains a digit. So this harness cannot show a false positive on any
+number-shaped entity (phone, NHS, card, IBAN, IP, the US identifiers), at any
+threshold. On 12 Sep 2026 an unchanged 9/32 was cited as proof that lowering
+those entities' bar was safe; the fixture was structurally incapable of
+disagreeing. A numeric-negative class (prices, dates, times, order numbers,
+version strings, postcodes, SKUs, extensions) belongs in `pii_corpus_hour.py`
+before that column means anything for structured entities.
+
 Needs `trial-runs/pii-hour-corpus/` (gitignored; build it with
 `pii_corpus_hour.py`). Planted PII is entirely synthetic; the FOSSDA base text
 names real public figures, so background hits are counted, never printed.

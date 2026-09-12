@@ -227,3 +227,92 @@ class TestAnalyzePreflightDoesNotProbeThePiiStack:
         from bristlenose.doctor import _COMMAND_CHECKS
 
         assert "pii" in _COMMAND_CHECKS["run"]
+
+
+class TestReanalysingWithRedactionReplacesTheText:
+    """The DB must not outlive the redaction it predates.
+
+    `_import_transcript_segments` skips any session that already has rows. So a
+    project analysed once WITHOUT redaction and then re-analysed WITH it landed
+    `transcripts-cooked/` and `pii_summary.txt`, `status` said redaction ran —
+    and the served report, the export and the MCP endpoint kept the original
+    text. The words_json remediation above patched the timing half of exactly
+    this hole and left the text half. Real SQLite, because the whole point is
+    what the rows say afterwards.
+    """
+
+    NAME = "Aoife Nic Dhonnchadha"
+
+    @staticmethod
+    def _db():
+        from bristlenose.server.db import create_session_factory, get_engine, init_db
+
+        engine = get_engine("sqlite://")
+        init_db(engine)
+        return create_session_factory(engine)()
+
+    @classmethod
+    def _session(cls, db):
+        from bristlenose.server.models import Project
+        from bristlenose.server.models import Session as SessionModel
+
+        project = Project(name="p", input_dir="/in", output_dir="/out")
+        db.add(project)
+        db.flush()
+        sess = SessionModel(project_id=project.id, session_id="s1", session_number=1)
+        db.add(sess)
+        db.flush()
+        return {"s1": sess}
+
+    @staticmethod
+    def _write(dirpath: Path, text: str) -> Path:
+        dirpath.mkdir(parents=True, exist_ok=True)
+        (dirpath / "s1.txt").write_text(
+            f"# Transcript: s1\n\n[00:02] [p1] {text}\n[00:10] [m1] And then?\n",
+            encoding="utf-8",
+        )
+        return dirpath
+
+    def test_cooked_replaces_rows_a_raw_import_left(self, tmp_path: Path) -> None:
+        from bristlenose.server.importer import _import_transcript_segments
+        from bristlenose.server.models import TranscriptSegment
+
+        db = self._db()
+        session_map = self._session(db)
+
+        _import_transcript_segments(
+            db, session_map, self._write(tmp_path / "transcripts-raw", f"I am {self.NAME}.")
+        )
+        db.commit()
+        assert self.NAME in db.query(TranscriptSegment).first().text  # the pre-state
+
+        _import_transcript_segments(
+            db, session_map, self._write(tmp_path / "transcripts-cooked", "I am [NAME].")
+        )
+        db.commit()
+
+        texts = [s.text for s in db.query(TranscriptSegment).all()]
+        assert all(self.NAME not in t for t in texts), (
+            f"the participant's name survived a redacted re-import: {texts!r}"
+        )
+        assert any("[NAME]" in t for t in texts)
+        assert len(texts) == 2, "replace, not append — the row count must not grow"
+
+    def test_raw_over_raw_still_skips(self, tmp_path: Path) -> None:
+        """The skip is a shortcut for the idempotent case; keep it there."""
+        from bristlenose.server.importer import _import_transcript_segments
+        from bristlenose.server.models import TranscriptSegment
+
+        db = self._db()
+        session_map = self._session(db)
+        raw = self._write(tmp_path / "transcripts-raw", "first import")
+        _import_transcript_segments(db, session_map, raw)
+        db.commit()
+        first_ids = sorted(s.id for s in db.query(TranscriptSegment).all())
+
+        self._write(tmp_path / "transcripts-raw", "second import, same session")
+        _import_transcript_segments(db, session_map, raw)
+        db.commit()
+
+        assert sorted(s.id for s in db.query(TranscriptSegment).all()) == first_ids
+        assert "first import" in db.query(TranscriptSegment).first().text

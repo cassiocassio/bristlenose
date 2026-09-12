@@ -421,8 +421,23 @@ fi
 # genuinely is — printing a warning about it on every unrelated release is how
 # a gate teaches people to scroll past. It arms itself when the URL lands.
 if [ -n "${PII_PACK_URL:-}" ]; then
-    PACK_CODE=$(curl -sL -o /dev/null -w '%{http_code}' --max-time 30 \
-        "$PII_PACK_URL" 2>/dev/null || echo "000")
+    # HEAD, never the body. The first version of this row pulled the whole
+    # 425 MB pack through `shasum` on every armed preflight — and `release.sh`
+    # runs preflight in both `plan` and `run`. Worse than the cost: under a
+    # `--max-time`, a slow connection yields a PARTIAL-file hash, which reads
+    # as MISMATCH, which is `bad`, which blocks the release as though the
+    # artefact had been tampered with. A network condition must not present
+    # as a supply-chain event.
+    #
+    # So the contract is a `.sha256` sidecar beside the pack (the Debian /
+    # GitHub Releases / Apple convention), and this row compares THAT to the
+    # pin. It is not the security boundary — whoever can swap the pack can swap
+    # the sidecar — it catches the operational failure: a re-uploaded pack and
+    # a pin nobody updated. Byte-level integrity is the CLIENT's job at
+    # acquisition time, against the pin compiled into the app.
+    PACK_HEAD=$(curl -sIL --max-time 30 "$PII_PACK_URL" 2>/dev/null || true)
+    PACK_CODE=$(printf '%s\n' "$PACK_HEAD" | awk 'toupper($1) ~ /^HTTP\// {c=$2} END {print c+0}')
+    PACK_LEN=$(printf '%s\n' "$PACK_HEAD" | awk 'tolower($1)=="content-length:" {l=$2} END {gsub(/\r/,"",l); print l+0}')
     if [ "$PACK_CODE" != "200" ]; then
         bad "PII pack" "unreachable (HTTP $PACK_CODE) — redaction cannot acquire its model"
     elif [ -z "${PII_PACK_SHA256:-}" ]; then
@@ -431,11 +446,20 @@ if [ -n "${PII_PACK_URL:-}" ]; then
         # this one is executed-adjacent data on the user's machine.
         warn "PII pack" "reachable but PII_PACK_SHA256 is unset — a replaced artefact would be invisible"
     else
-        PACK_SHA=$(curl -sL --max-time 300 "$PII_PACK_URL" 2>/dev/null | shasum -a 256 | cut -d" " -f1)
-        if [ "$PACK_SHA" = "$PII_PACK_SHA256" ]; then
-            ok "PII pack" "reachable, sha256 matches the pin"
+        # Require 64 hex chars. `curl -s` without `-f` prints a 404 page's HTML
+        # to stdout, and awk would hand back `<!DOCTYPE` as the "sha" — which
+        # then reads as MISMATCH (tampering) instead of "no sidecar" (an
+        # operator omission). Same class as the partial-hash bug above: a
+        # non-answer must never impersonate a wrong answer.
+        SERVED_SHA=$(curl -sL --max-time 30 "${PII_PACK_URL}.sha256" 2>/dev/null \
+            | awk 'NR==1 {print tolower($1)}' | grep -Ex '[0-9a-f]{64}' || true)
+        PIN_LC=$(printf '%s' "$PII_PACK_SHA256" | tr 'A-F' 'a-f')
+        if [ -z "$SERVED_SHA" ]; then
+            bad "PII pack" "no .sha256 sidecar beside the pack — cannot verify without pulling ${PACK_LEN} bytes"
+        elif [ "$SERVED_SHA" = "$PIN_LC" ]; then
+            ok "PII pack" "reachable (${PACK_LEN} bytes), .sha256 sidecar matches the pin"
         else
-            bad "PII pack" "sha256 MISMATCH — pinned ${PII_PACK_SHA256:0:12}…, served ${PACK_SHA:0:12}…"
+            bad "PII pack" "sha256 MISMATCH — pinned ${PIN_LC:0:12}…, served ${SERVED_SHA:0:12}…"
         fi
     fi
 fi

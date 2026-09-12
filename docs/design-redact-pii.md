@@ -856,11 +856,20 @@ destruction. The floor may only ever relax a bar (`min()`), so lowering
 | **total targeted** | 40/52 | **45/52** |
 | false positives | 9/32 | **9/32** (unchanged) |
 
-Zero false-positive cost because PERSON's bar never moved — which is the whole
-argument for targeting rather than dropping the global threshold. A flat 0.4
-scored identically *on this corpus*, but only because no negative probe here
-scores between 0.4 and 0.7; it would not hold generally, and PERSON is exactly
-where it would fail.
+**The "false positives unchanged" row above is true and proves nothing about
+this change** (found in the 12 Sep review). Every one of the corpus's 32
+negatives is a *word* — product names, month names, sentence starts — and
+**none contains a digit**. The bar was lowered only on number-shaped entities.
+So the fixture was structurally incapable of showing a phone, NHS or card false
+positive, and citing its unchanged count as evidence of safety was the
+degenerate-fixture trap `CLAUDE.md` names. The evidence that *can* speak: 16
+number-dense non-PII sentences (prices, dates, times, order numbers, version
+strings, postcodes, SKUs, extensions, an internal IP) — the floor adds **one**
+detection, `10.0.0.1` as `IP_ADDRESS`, which is a genuine IP. The weak sub-0.4
+patterns on the US recognisers stay below the floor unless a context word
+boosts them, and a boosted "account number" or "passport" match is PII anyway.
+So the structural argument held; the corpus never tested it. Sixteen sentences
+is a probe, not a corpus — a numeric-negative class belongs in the planted set.
 
 **Known gaps, unchanged and honest:**
 
@@ -943,6 +952,77 @@ learn "3.8.0".
 Pinned in `tests/test_doctor.py` — the detail names the variable, the fix key
 routes to the env-var fix, and the fix text does not say `spacy download`. All
 three redden when the arm is reverted to the old message.
+
+### Rigorous review — 12 Sep 2026, on switching model
+
+A second pass over everything the day built, asking the running system rather
+than the record. Findings in severity order; each names what was done about it.
+
+**1. Re-analysing with redaction on did not replace the served text — FIXED.**
+`_import_transcript_segments` skipped any session that already had rows. So:
+analyse without redaction → raw text imported → switch it on → re-analyse →
+`transcripts-cooked/` lands, `pii_summary.txt` lands, `status` says redaction
+ran — and the report, the export and the MCP endpoint keep the original words.
+The `words_json` remediation had patched exactly this hole for the timing data
+and left the text; its own comment says the skip is why. Pre-existing, but the
+day's work made the flow reachable and the chain was called "fully witnessed"
+on the strength of a `_find_transcripts_dir` precedence test that never asked
+what the rows said afterwards. Now: when the source is `transcripts-cooked/`
+and rows exist, they are deleted and reinserted (nothing holds a segment's id;
+`quotes` join on `(session_id, segment_index)`, which regenerates identically
+because cooked is a one-for-one copy of raw; a fresh row has
+`words_json = None`, as a redacted row must). Raw-over-raw keeps the skip. Real
+SQLite test, proved red against the skip.
+
+**2. The two-bar threshold's evidence was invalid; the change survives on
+better evidence.** See the corrected note under "Measured end to end" — zero
+of 32 negatives contain a digit. Re-measured on 16 number-dense sentences: +1
+detection, a genuine IP. Recorded rather than reverted.
+
+**3. The pack probe pulled 425 MB per preflight and mistook a slow network for
+tampering — FIXED.** `release.sh` runs preflight in `plan` *and* `run`; under
+`--max-time` a partial-file hash read as MISMATCH → `bad` → release blocked as
+a supply-chain event. Now HEAD + a `.sha256` sidecar beside the pack, never the
+body; a served value that is not 64 hex chars (a 404 page through `awk`) is
+"no sidecar", never "wrong sha". The stub trips on any body request. **The
+sidecar is not the security boundary** — whoever can swap the pack can swap it —
+it catches the operational failure (re-uploaded pack, un-updated pin). Byte
+integrity is the client's job at acquisition, against the compiled-in pin.
+**Operator contract: upload `<pack>` and `<pack>.sha256` together.**
+
+**4. The frozen sidecar announced a download it could not start — FIXED.** The
+framed banner printed one call before `FrozenSidecarError`, and that line
+reaches "Copy error details". Frozen now skips straight to the refusal.
+
+**5. Managed Background Assets — one alarm, retracted.** An early grep matched
+`public var` and missed `public func url(for path:) throws -> URL`
+(`AssetPackManager`, macOS 26 SDK line 103). The path-handoff architecture
+holds on the API. **Still unverified, and only a real download can verify it:**
+whether the `inherit`-sandboxed sidecar can read wherever that URL points.
+Named as the one runtime assumption under the TestFlight route.
+
+**6. Test-honesty audit of the day's own claims.** "Every new test proved to
+bite" was true of the mutations tried, which is a weaker statement than it
+read. `test_pii_score_bar.py`: 16 fast tests; one bit under the collapse-to-one-
+bar mutation; three further mutations (raise the floor, relax `DATE_TIME`,
+add an unmapped entity) redden 4, 1 and 1 — so the file is a property suite
+whose load-bearing members bite, not sixteen independent witnesses. The Swift
+handoff had not been mutation-tested at all; gating the flag on pack presence
+now reddens exactly `enabledWithoutPackStillFlags()`, which is the asymmetry
+the type exists for. The pack probe's silent-when-unset case is also proved.
+
+**7. Pre-existing edge, noted not fixed.** Stage 6 always writes
+`transcripts-raw/`. After a stage-7 abandon on a project's *first* run, raw
+exists and cooked does not; a serve started on that project imports raw. The
+SPA is gated on `run_completed` so the report does not show it, and
+`run_failed` triggers no re-import — but MCP and export read the DB. Not new
+(the fallback predates today), not a regression (an unwrapped raise reached the
+same state), and the files are already on the user's own disk unredacted. Worth
+a decision at the Privacy pane: a failed redaction run could delete its raw
+output, or the importer could refuse raw when `pii_enabled` is on.
+
+**8. Inert but worth knowing.** `BRISTLENOSE_PII_ENABLED` is now injected into
+*serve* spawns as well as `run`; nothing in `server/*.py` reads it. Harmless.
 
 ### Build order
 

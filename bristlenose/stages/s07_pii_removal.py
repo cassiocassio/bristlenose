@@ -115,7 +115,10 @@ def _ensure_spacy_model(
     """
     import spacy
 
-    from bristlenose.utils.package_install import ensure_spacy_model
+    from bristlenose.utils.package_install import (
+        _is_frozen_sidecar,
+        ensure_spacy_model,
+    )
 
     model = resolve_spacy_model()
 
@@ -136,6 +139,15 @@ def _ensure_spacy_model(
         from bristlenose.utils.package_install import PackageInstallError
 
         raise PackageInstallError(t("preflight.pii.aborted_no_fetch", model=model))
+
+    # Inside the desktop sidecar nothing will be downloaded: `ensure_spacy_model`
+    # refuses at once with `FrozenSidecarError`. Announcing a 425 MB download
+    # that never starts is worse than silence — and this line reaches the
+    # host's diagnostic buffer, so it would arrive in "Copy error details" as
+    # a claim about what the app was doing. Let the refusal speak for itself.
+    if _is_frozen_sidecar():
+        ensure_spacy_model(model)
+        return
 
     from bristlenose.ui_kinds import MessageKind, cli_prefix
 

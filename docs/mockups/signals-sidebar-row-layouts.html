@@ -111,9 +111,15 @@ body {
 .key .sw-com { background:repeating-linear-gradient(45deg,transparent,transparent 4px,var(--bn-colour-border) 4px,var(--bn-colour-border) 5px); }
 
 /* ── controls ─────────────────────────────────────────────────────────── */
-.controls { position:sticky; top:0; z-index:20; background:var(--bn-colour-bg);
-  border-bottom:1px solid var(--bn-colour-border); padding:.85rem 0 .9rem; margin-bottom:1.6rem;
-  display:flex; gap:1.6rem; flex-wrap:wrap; align-items:flex-end; }
+.layout { display:grid; grid-template-columns:minmax(0,1fr) 21rem; gap:2rem;
+  align-items:start; }
+@media (max-width:1100px){ .layout { grid-template-columns:minmax(0,1fr); } }
+.main { min-width:0; }
+.controls { position:sticky; top:1rem; z-index:20; background:var(--bn-colour-bg);
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg);
+  padding:1rem 1.1rem; display:flex; flex-direction:column; gap:1.1rem;
+  max-height:calc(100vh - 2rem); overflow-y:auto; }
+@media (max-width:1100px){ .controls { position:static; max-height:none; } }
 .ctl { display:flex; flex-direction:column; gap:.35rem; }
 .ctl .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; font-weight:490; }
 .ctl .row { display:flex; gap:.35rem; align-items:center; flex-wrap:wrap; }
@@ -347,6 +353,33 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
 .sig-sub-name { display:block; font-size:var(--bn-text-label); line-height:1.35; }
 .sig-sub .sig-badges { margin-top:.14rem; }
 .sig-loc-rule { height:1px; background:var(--bn-colour-border); margin:.35rem 0 .1rem; opacity:.7; }
+
+/* ── Navigation structures for one project ──────────────────────────────── */
+.nv { padding:.3rem var(--bn-space-sm) .38rem; border-radius:var(--bn-radius-md); }
+.nv + .nv { border-top:1px solid var(--bn-colour-border); }
+.nv-place { display:block; font-size:var(--bn-text-label); line-height:1.35;
+  font-weight:var(--bn-weight-emphasis); }
+.nv-meta { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  color:var(--bn-colour-muted); }
+.nv-chips { display:flex; flex-wrap:wrap; gap:3px; margin-top:.2rem; }
+.nv-line { display:block; padding:.1rem .28rem; margin-top:.16rem; text-decoration:none;
+  color:inherit; border-radius:var(--bn-radius-sm);
+  border-left:2px solid var(--rail,transparent); }
+.nv-line:hover { background:var(--bn-colour-hover); }
+.nv-name { font-size:var(--bn-text-label); line-height:1.3; }
+.nv-name.dim { color:var(--bn-colour-muted); }
+.nv-felt { display:flex; flex-wrap:wrap; gap:3px; align-items:center; margin-top:.22rem; }
+.nv-felt .nv-meta { margin-right:.1rem; }
+.nv-more { display:block; font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  color:var(--bn-colour-muted); padding:.14rem .28rem 0; }
+.nv-rank { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  color:var(--bn-colour-muted); min-width:1.7rem; display:inline-block; }
+.nv-row { display:flex; gap:.3rem; align-items:baseline; }
+.nv-row .nv-name { flex:1; min-width:0; }
+.mtr { display:inline-flex; gap:2px; flex-shrink:0; vertical-align:1px; }
+.mtr i { width:3px; height:8px; border-radius:1px; background:var(--bn-colour-border); display:block; }
+.mtr i.on { background:var(--bn-colour-accent); }
+.nv-count { float:right; font-weight:var(--bn-weight-normal); }
 @media (prefers-reduced-motion: reduce) { .sig { transition:none; } }
 </style>
 </head>
@@ -379,106 +412,8 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
     </div>
   </header>
 
-  <div class="controls">
-    <div class="ctl">
-      <span class="lbl">Panel width</span>
-      <div class="row">
-        <input type="range" id="w" min="200" max="480" step="4" value="240">
-        <span class="wval"><b id="wv">240</b>px</span>
-      </div>
-      <div class="row">
-        <button class="pbtn" data-w="200">200 min</button>
-        <button class="pbtn on" data-w="240">240 now</button>
-        <button class="pbtn" data-w="280">280 was</button>
-        <button class="pbtn" data-w="320">320</button>
-        <button class="pbtn" data-w="480">480 max</button>
-      </div>
-      <span class="wnote" id="wnote"></span>
-    </div>
-
-    <div class="ctl">
-      <span class="lbl">Content</span>
-      <div class="row" id="sets">
-        <button class="pbtn on" data-set="plain">ikea · plain</button>
-        <button class="pbtn" data-set="elab">ikea · elaborated</button>
-        <button class="pbtn" data-set="uxf">uxfriends · elaborated</button>
-        <button class="pbtn" data-set="rock">rockclimbing · shipped</button>
-        <button class="pbtn" data-set="rocktail">rockclimbing · long tail</button>
-        <button class="pbtn" data-set="themes">ikea · theme labels</button>
-        <button class="pbtn" data-set="stress90">stress · p90</button>
-        <button class="pbtn" data-set="stressmax">stress · max</button>
-        <button class="pbtn" data-set="torture">torture</button>
-      </div>
-    </div>
-
-    <div class="ctl">
-      <span class="lbl">Appearance</span>
-      <div class="row">
-        <button class="pbtn on" data-theme="default">default</button>
-        <button class="pbtn" data-theme="edo">edo</button>
-        <button class="pbtn" id="dark">dark</button>
-        <button class="pbtn" id="trunc">mark truncation</button>
-        <button class="pbtn" id="brk">break long words</button>
-      </div>
-    </div>
-
-    <div class="ctl">
-      <span class="lbl">Tags per row <span style="text-transform:none;letter-spacing:0">(V9)</span></span>
-      <div class="row" id="caps">
-        <button class="pbtn" data-cap="2">2</button>
-        <button class="pbtn on" data-cap="3">3</button>
-        <button class="pbtn" data-cap="5">5</button>
-        <button class="pbtn" data-cap="99">all</button>
-      </div>
-    </div>
-
-    <div class="ctl">
-      <span class="lbl">Codebooks section <span style="text-transform:none;letter-spacing:0">(projects)</span></span>
-      <div class="row" id="treats">
-        <button class="pbtn on" data-treat="shipped">as shipped</button>
-        <button class="pbtn" data-treat="hide">hide Sentiment</button>
-        <button class="pbtn" data-treat="backfill">hide + backfill</button>
-        <button class="pbtn" data-treat="flat">one flat list</button>
-        <button class="pbtn" data-treat="loc">by location</button>
-        <button class="pbtn" data-treat="locn">by location · named</button>
-      </div>
-    </div>
-
-    <div class="ctl">
-      <span class="lbl">Sentiment volume <span style="text-transform:none;letter-spacing:0">(projects)</span></span>
-      <div class="row" id="vols">
-        <button class="pbtn on" data-vol="2">&ge;2 quotes · shipped</button>
-        <button class="pbtn" data-vol="1">&ge;1 quote · below the floor</button>
-      </div>
-    </div>
-
-    <div class="ctl">
-      <span class="lbl">Signal budget <span style="text-transform:none;letter-spacing:0">(flat / by location)</span></span>
-      <div class="row" id="budgets">
-        <button class="pbtn" data-budget="10">10</button>
-        <button class="pbtn on" data-budget="15">15</button>
-        <button class="pbtn" data-budget="25">25</button>
-        <button class="pbtn" data-budget="999">no cap</button>
-      </div>
-      <span class="wnote">the deliverable is 10&ndash;25 findings</span>
-    </div>
-
-    <div class="ctl">
-      <span class="lbl">Strength floor <span style="text-transform:none;letter-spacing:0">(one flat list)</span></span>
-      <div class="row">
-        <input type="range" id="floor" min="0" max="100" step="1" value="20">
-        <span class="wval"><b id="fv">0.20</b></span>
-      </div>
-      <span class="wnote" id="fnote"></span>
-    </div>
-
-    <div class="ctl">
-      <span class="lbl">Click target <span style="text-transform:none;letter-spacing:0">(V6 / V7)</span></span>
-      <div class="row">
-        <span id="target" class="wnote">click a name or a badge in V6 / V7</span>
-      </div>
-    </div>
-  </div>
+  <div class="layout">
+  <div class="main">
 
   <div class="bench" id="bench"></div>
 
@@ -537,6 +472,30 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
   </div>
 
   <div class="bench" id="realbench"></div>
+
+  <div class="divider"></div>
+  <div class="section-head">
+    <h2>Three jobs, three navigations</h2>
+    <p>project-ikea, one fixed analysis &mdash; the same signals, order and strengths in
+       every panel. <strong>Only the structure changes.</strong> Each of these is drawn
+       for a different answer to &ldquo;what is the left-hand panel <em>for</em>&rdquo;,
+       because the three answers do not want the same thing: an index wants targets, a
+       summary wants sentences, and triage wants a comparison. Scrolling is free here, so
+       nothing is shortened to fit.</p>
+  </div>
+
+  <div class="bench" id="jobbench"></div>
+
+  <div class="divider"></div>
+  <div class="section-head">
+    <h2>How far down the nav carries you</h2>
+    <p>The same question held at one job &mdash; index &mdash; so the depth axis can be
+       read on its own. The tension is the busiest place: Beds &amp; Mattresses Category
+       carries ten signals, and what a structure does with that one entry is most of what
+       distinguishes these.</p>
+  </div>
+
+  <div class="bench" id="depthbench"></div>
 
   <div class="essay">
     <h2>Width cannot fix the single-line row</h2>
@@ -1291,6 +1250,109 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
       chosen layout still holds at the 200px drag minimum, which is where a user who
       wants their content back will put it.</p>
   </div>
+  </div>
+
+  <div class="controls">
+    <div class="ctl">
+      <span class="lbl">Panel width</span>
+      <div class="row">
+        <input type="range" id="w" min="200" max="480" step="4" value="240">
+        <span class="wval"><b id="wv">240</b>px</span>
+      </div>
+      <div class="row">
+        <button class="pbtn" data-w="200">200 min</button>
+        <button class="pbtn on" data-w="240">240 now</button>
+        <button class="pbtn" data-w="280">280 was</button>
+        <button class="pbtn" data-w="320">320</button>
+        <button class="pbtn" data-w="480">480 max</button>
+      </div>
+      <span class="wnote" id="wnote"></span>
+    </div>
+
+    <div class="ctl">
+      <span class="lbl">Content</span>
+      <div class="row" id="sets">
+        <button class="pbtn on" data-set="plain">ikea · plain</button>
+        <button class="pbtn" data-set="elab">ikea · elaborated</button>
+        <button class="pbtn" data-set="uxf">uxfriends · elaborated</button>
+        <button class="pbtn" data-set="rock">rockclimbing · shipped</button>
+        <button class="pbtn" data-set="rocktail">rockclimbing · long tail</button>
+        <button class="pbtn" data-set="themes">ikea · theme labels</button>
+        <button class="pbtn" data-set="stress90">stress · p90</button>
+        <button class="pbtn" data-set="stressmax">stress · max</button>
+        <button class="pbtn" data-set="torture">torture</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      <span class="lbl">Appearance</span>
+      <div class="row">
+        <button class="pbtn on" data-theme="default">default</button>
+        <button class="pbtn" data-theme="edo">edo</button>
+        <button class="pbtn" id="dark">dark</button>
+        <button class="pbtn" id="trunc">mark truncation</button>
+        <button class="pbtn" id="brk">break long words</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      <span class="lbl">Tags per row <span style="text-transform:none;letter-spacing:0">(V9)</span></span>
+      <div class="row" id="caps">
+        <button class="pbtn" data-cap="2">2</button>
+        <button class="pbtn on" data-cap="3">3</button>
+        <button class="pbtn" data-cap="5">5</button>
+        <button class="pbtn" data-cap="99">all</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      <span class="lbl">Codebooks section <span style="text-transform:none;letter-spacing:0">(projects)</span></span>
+      <div class="row" id="treats">
+        <button class="pbtn on" data-treat="shipped">as shipped</button>
+        <button class="pbtn" data-treat="hide">hide Sentiment</button>
+        <button class="pbtn" data-treat="backfill">hide + backfill</button>
+        <button class="pbtn" data-treat="flat">one flat list</button>
+        <button class="pbtn" data-treat="loc">by location</button>
+        <button class="pbtn" data-treat="locn">by location · named</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      <span class="lbl">Sentiment volume <span style="text-transform:none;letter-spacing:0">(projects)</span></span>
+      <div class="row" id="vols">
+        <button class="pbtn on" data-vol="2">&ge;2 quotes · shipped</button>
+        <button class="pbtn" data-vol="1">&ge;1 quote · below the floor</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      <span class="lbl">Signal budget <span style="text-transform:none;letter-spacing:0">(flat / by location)</span></span>
+      <div class="row" id="budgets">
+        <button class="pbtn" data-budget="10">10</button>
+        <button class="pbtn on" data-budget="15">15</button>
+        <button class="pbtn" data-budget="25">25</button>
+        <button class="pbtn" data-budget="999">no cap</button>
+      </div>
+      <span class="wnote">the deliverable is 10&ndash;25 findings</span>
+    </div>
+
+    <div class="ctl">
+      <span class="lbl">Strength floor <span style="text-transform:none;letter-spacing:0">(one flat list)</span></span>
+      <div class="row">
+        <input type="range" id="floor" min="0" max="100" step="1" value="20">
+        <span class="wval"><b id="fv">0.20</b></span>
+      </div>
+      <span class="wnote" id="fnote"></span>
+    </div>
+
+    <div class="ctl">
+      <span class="lbl">Click target <span style="text-transform:none;letter-spacing:0">(V6 / V7)</span></span>
+      <div class="row">
+        <span id="target" class="wnote">click a name or a badge in V6 / V7</span>
+      </div>
+    </div>
+  </div>
+  </div>
 </div>
 
 <script>
@@ -1890,6 +1952,8 @@ const state = { w:240, set:"plain", variantMark:false, brk:false, cap:3, treat:"
 const bench = document.getElementById("bench");
 const projbench = document.getElementById("projbench");
 const realbench = document.getElementById("realbench");
+const jobbench = document.getElementById("jobbench");
+const depthbench = document.getElementById("depthbench");
 
 function esc(s){ return s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 function badgeClass(label){ return SENTIMENTS.includes(label) ? "badge badge-"+label : "badge"; }
@@ -2010,6 +2074,7 @@ function render(){
   measure();
   renderProjects();
   renderReal();
+  renderNav();
 }
 
 /**
@@ -2472,6 +2537,246 @@ function renderReal(){
     + `<span class="${trunc === 0 ? "good" : "bad"}"><b>${trunc}</b> truncated</span>`
     + `<span title="things you can click through to a signal"><b>${dests}</b> targets</span>`
     + `<span title="codebook codes visible on screen"><b>${codes}</b> chips</span>`;
+  });
+}
+
+/* ── project-ikea, shaped for the navigation bench ───────────────────────
+   One entry per place, its signals beneath, strongest first. Real data:
+   sentiment at the >=1 volume so the interleaving is present, codebook signals
+   excluding the Sentiment group. Codebooks named by their author the way a
+   researcher says them.
+     place:     [label, kind, sentiments[], codebookSignals[]]
+     sentiment: [name, composite, quotes, participants, confidence]
+     codebook:  [name, group, book, colourSet, composite, tags, tagIdx,
+                 elaborated, pattern, quotes, participants, confidence]
+   ──────────────────────────────────────────────────────────────────────── */
+const IKEA_PARTICIPANTS = 3;
+const IKEA_PLACES = [
+  ["Duvets & Bedding Category", "section",
+   [["surprise", 1.185, 1, 1, "emerging"]],
+   [
+     ["Recognition over recall", "Recognition over recall", "Nielsen", "ux", 0.286, ["visible options", "memory burden"], [0, 1], false, null, 2, 1, "emerging"],
+     ["Discoverability", "Discoverability", "Norman", "ux", 0.25, ["exploration"], [2], false, null, 2, 1, "emerging"],
+   ]],
+  ["Search & Sort Results", "section",
+   [["delight", 1.185, 1, 1, "emerging"], ["surprise", 0.198, 1, 1, "emerging"], ["satisfaction", 0.198, 1, 1, "emerging"]],
+   [
+     ["Visual Warmth Success", "Surface", "Garrett", "opp", 0.611, ["visual design", "sensory experience"], [0, 1], true, "success", 2, 1, "emerging"],
+     ["Feedback", "Feedback", "Norman", "emo", 0.3, ["system response"], [0], false, null, 3, 1, "emerging"],
+     ["Sort Filter Success", "Scope", "Garrett", "emo", 0.175, ["feature requirement"], [0], true, "success", 2, 1, "emerging"],
+   ]],
+  ["App Prompt & QR Code", "section",
+   [["surprise", 1.185, 1, 1, "emerging"]],
+   [
+   ]],
+  ["Shopping Bag", "section",
+   [["frustration", 0.395, 1, 1, "emerging"], ["confusion", 0.198, 1, 1, "emerging"], ["satisfaction", 0.198, 1, 1, "emerging"]],
+   [
+     ["Scope Feature Mix", "Scope", "Garrett", "emo", 1.048, ["feature requirement", "content requirement"], [0, 1], true, "tension", 2, 2, "emerging"],
+     ["Checkout feedback clarity", "Feedback", "Norman", "emo", 0.6, ["system response", "ambiguous feedback"], [0, 2], true, "tension", 4, 2, "emerging"],
+     ["Status visibility", "Status visibility", "Nielsen", "ux", 0.15, ["clear status"], [0], false, null, 2, 1, "emerging"],
+   ]],
+  ["Beds & Mattresses Category", "section",
+   [["confusion", 0.667, 3, 2, "emerging"], ["frustration", 0.296, 1, 1, "emerging"]],
+   [
+     ["Self-directed Error Recovery", "Behaviour", "UXR", "ux", 0.643, ["error recovery", "workaround"], [4, 0], true, "tension", 2, 2, "emerging"],
+     ["Navigation Structure Tension", "Structure", "Garrett", "task", 0.611, ["interaction design", "information architecture", "navigation pattern"], [0, 1, 2], true, "tension", 4, 2, "emerging"],
+     ["Conceptual model", "Conceptual model", "Norman", "task", 0.214, ["system model", "user mental model"], [1, 0], false, null, 3, 1, "emerging"],
+     ["Real-world matching", "Real-world matching", "Nielsen", "ux", 0.214, ["logical ordering", "natural language"], [3, 0], false, null, 2, 1, "emerging"],
+     ["Status visibility", "Status visibility", "Nielsen", "ux", 0.161, ["opaque status"], [1], false, null, 2, 1, "emerging"],
+     ["Feedback", "Feedback", "Norman", "emo", 0.129, ["delayed feedback"], [1], false, null, 2, 1, "emerging"],
+     ["Needs and desires", "Needs and desires", "UXR", "emo", 0.122, ["unmet need", "expectation mismatch"], [0, 3], false, null, 2, 1, "emerging"],
+     ["Discoverability", "Discoverability", "Norman", "ux", 0.107, ["hidden feature", "exploration"], [1, 2], false, null, 2, 1, "emerging"],
+   ]],
+  ["Top Navigation", "section",
+   [["frustration", 0.593, 1, 1, "emerging"], ["satisfaction", 0.296, 1, 1, "emerging"]],
+   [
+   ]],
+  ["Checkout & Store Selection", "section",
+   [["confusion", 0.593, 1, 1, "emerging"]],
+   [
+     ["Store Selection Gap", "Structure", "Garrett", "task", 0.367, ["information architecture", "task flow"], [1, 3], true, "gap", 2, 1, "emerging"],
+   ]],
+  ["Homepage content and navigation experience", "theme",
+   [["delight", 0.444, 1, 1, "emerging"], ["confusion", 0.222, 1, 1, "emerging"]],
+   [
+     ["Aesthetics and minimalism", "Aesthetics and minimalism", "Nielsen", "emo", 0.5, ["information overload", "focused design"], [0, 1], false, null, 2, 1, "emerging"],
+   ]],
+  ["Session wrap-up and data sufficiency", "theme",
+   [["surprise", 0.444, 1, 1, "emerging"], ["satisfaction", 0.222, 1, 1, "emerging"]],
+   [
+   ]],
+  ["Task orientation and shopping intent", "theme",
+   [],
+   [
+     ["Browsing Goal Fluidity", "Motivation", "UXR", "task", 0.444, ["goal"], [0], true, "tension", 2, 2, "emerging"],
+     ["Real-world matching", "Real-world matching", "Nielsen", "ux", 0.444, ["natural language"], [0], false, null, 2, 2, "emerging"],
+     ["Browsing Intent Clarity", "Strategy", "Garrett", "ux", 0.37, ["user need"], [0], true, "success", 2, 2, "emerging"],
+     ["Intent-driven discoverability", "Discoverability", "Norman", "ux", 0.333, ["first-time use", "exploration"], [3, 2], true, "tension", 2, 2, "emerging"],
+   ]],
+  ["Sofa Beds Category", "section",
+   [],
+   [
+     ["Goal-driven Category Navigation", "Motivation", "UXR", "task", 0.429, ["goal"], [0], true, "success", 2, 1, "emerging"],
+   ]],
+  ["Product Detail", "section",
+   [["confusion", 0.296, 1, 1, "emerging"]],
+   [
+   ]],
+];
+
+/* ── Six navigations over one fixed analysis ─────────────────────────────
+   The signals, their order and their strengths never change. Only the
+   structure does. Three are optimised for a different job; three hold the job
+   fixed and vary how far down the panel carries you. Scrolling is free, so
+   nothing here is shortened to fit. */
+
+function mtr(v){
+  const n = Math.max(1, Math.min(4, Math.ceil(v / 0.32)));
+  return `<span class="mtr">${[1,2,3,4].map(i => `<i class="${i <= n ? "on" : ""}"></i>`).join("")}</span>`;
+}
+function tgt(html){ return `<a class="nv-t" data-t="signal" href="#">${html}</a>`; }
+function sChip(n){ return `<span class="${badgeClass(n)}">${esc(n)}</span>`; }
+function cChip(c){
+  const bg = tagBg(c[3], 1);
+  return `<span class="badge"${bg ? ` style="background:${bg}"` : ""}`
+       + ` title="${esc(c[2])} · ${esc(c[1])}">${esc(c[1])}</span>`;
+}
+function rail(c){ const bg = tagBg(c[3], 1); return bg ? ` style="--rail:${bg}"` : ""; }
+function pat(p){ return p ? ` <span class="pattern-label pattern-${p}">${esc(p)}</span>` : ""; }
+function nAll(p){ return p[2].length + p[3].length; }
+function best(p){ return Math.max(...p[2].map(x => x[1]), ...p[3].map(x => x[4]), 0); }
+
+/* A · INDEX — addresses and nothing else. Every signal is one chip, the place
+   is the only heading, and no number appears anywhere: a reader here is
+   looking for somewhere to click, not something to read. */
+function navIndex(){
+  return IKEA_PLACES.map(p => `<div class="nv">
+    <span class="nv-place">${esc(p[0])}</span>
+    <span class="nv-chips">${p[2].map(x => tgt(sChip(x[0]))).join("")}${p[3].map(c => tgt(cChip(c))).join("")}</span>
+  </div>`).join("");
+}
+
+/* B · SUMMARY — the panel should read. Elaborated names lead, because they are
+   the only text here written as a finding; signals with no name yet are shown
+   muted under their group, which is the honest way to say "we have something
+   here but no phrase for it". Sentiment collapses to one "felt" line — seven
+   known words do not need a row each when the job is reading. */
+function navSummary(){
+  return IKEA_PLACES.map(p => {
+    const named = p[3].filter(c => c[7]);
+    const bare = p[3].filter(c => !c[7]);
+    return `<div class="nv">
+      <span class="nv-place">${esc(p[0])}<span class="nv-count nv-meta">${p[1]}</span></span>
+      ${named.map(c => `<a class="nv-line nv-t" data-t="signal" href="#"${rail(c)}>`
+        + `<span class="nv-name">${esc(c[0])}</span>${pat(c[8])}</a>`).join("")}
+      ${bare.map(c => `<a class="nv-line nv-t" data-t="signal" href="#"${rail(c)}>`
+        + `<span class="nv-name dim">${esc(c[1])}</span> <span class="nv-meta">${esc(c[2])}</span></a>`).join("")}
+      ${p[2].length ? `<span class="nv-felt"><span class="nv-meta">felt</span>`
+        + `${p[2].map(x => tgt(sChip(x[0]))).join("")}</span>` : ""}
+    </div>`;
+  }).join("");
+}
+
+/* C · TRIAGE — one ranked list, because triage is a comparison and grouping by
+   place hides it. Rank is printed rather than implied by position, and every
+   row states its evidence: strength, how many quotes, how many people. On this
+   project that is a uncomfortable read, which is the point — almost everything
+   is one quote from one person. */
+function navTriage(){
+  const rows = [];
+  IKEA_PLACES.forEach(p => {
+    p[2].forEach(x => rows.push({ n: x[0], place: p[0], meta: "felt",
+      c: x[1], q: x[2], ppl: x[3], sent: true }));
+    p[3].forEach(c => rows.push({ n: c[0], place: p[0], meta: `${c[2]} · ${c[1]}`,
+      c: c[4], q: c[9], ppl: c[10], code: c }));
+  });
+  rows.sort((a, b) => b.c - a.c);
+  return rows.map((r, i) => `<div class="nv nv-t" data-t="signal">
+    <div class="nv-row"><span class="nv-rank">#${i + 1}</span>
+      <span class="nv-name">${r.sent ? sChip(r.n) : esc(r.n)}</span>${mtr(r.c)}</div>
+    <span class="nv-meta">${esc(r.place)} · ${esc(r.meta)}</span><br>
+    <span class="nv-meta">${r.q} quote${r.q === 1 ? "" : "s"} · ${r.ppl} of ${IKEA_PARTICIPANTS} people</span>
+  </div>`).join("");
+}
+
+/* D1 · every signal reachable — this is A, repeated here so the depth axis can
+   be read without switching benches. */
+/* D2 · place only — the nav is eight rows. What is under a place is a count
+   and a strength, and the card does the rest. */
+function navPlaceOnly(){
+  return IKEA_PLACES.map(p => `<div class="nv nv-t" data-t="place">
+    <span class="nv-place">${esc(p[0])}<span class="nv-count">${mtr(best(p))}</span></span>
+    <span class="nv-meta">${nAll(p)} signal${nAll(p) === 1 ? "" : "s"}`
+    + `${p[3].length ? " · " + [...new Set(p[3].map(c => c[2]))].join(", ") : ""}</span>
+  </div>`).join("");
+}
+/* D3 · top few, rest on expand — bounded per place however deep the data is. */
+function navTopFew(){
+  return IKEA_PLACES.map(p => {
+    const all = p[2].map(x => ({ chip: sChip(x[0]), c: x[1] }))
+      .concat(p[3].map(c => ({ chip: cChip(c), c: c[4] })))
+      .sort((a, b) => b.c - a.c);
+    const rest = all.length - Math.min(3, all.length);
+    return `<div class="nv">
+      <span class="nv-place">${esc(p[0])}</span>
+      <span class="nv-chips">${all.slice(0, 3).map(x => tgt(x.chip)).join("")}</span>
+      ${rest > 0 ? `<span class="nv-more">+${rest} more</span>` : ""}
+    </div>`;
+  }).join("");
+}
+
+const NAV_JOBS = [
+  ["A · index", navIndex, "Addresses only. Every signal is one chip and no number appears anywhere — a reader here wants somewhere to click, not something to read."],
+  ["B · summary", navSummary, "Elaborated names lead, because they are the only text written as a finding. Un-named signals sit muted under their group; sentiment collapses to one “felt” line."],
+  ["C · triage", navTriage, "One ranked list — grouping by place hides the comparison triage needs. Rank is printed, and every row states its evidence."],
+];
+const NAV_DEPTHS = [
+  ["D1 · every signal", navIndex, "Everything reachable from the sidebar. Longest, and the busiest place is several rows of chips that all look alike."],
+  ["D2 · place only", navPlaceOnly, "Eight rows. A count, a strength, and which codebooks had something to say. One extra click to reach any signal."],
+  ["D3 · top three", navTopFew, "Each place spends three chips and says how many it is holding back. Bounded per place however deep the data goes."],
+];
+
+function navPanel(title, html, note){
+  return `<div class="cell">
+    <div class="frame" style="width:${state.w}px">
+      <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span class="cname">${title}</span></div>
+      <div class="panel"><div class="panel-body${state.variantMark ? " mark-trunc" : ""}${state.brk ? " brk" : ""}">${html}</div></div>
+    </div>
+    <div class="commentary" style="width:${state.w}px">
+      <span class="clabel">Commentary · measured</span>
+      <div class="metrics" data-metrics></div>
+      <p class="verdict">${note}</p>
+    </div>
+  </div>`;
+}
+
+function renderNav(){
+  jobbench.innerHTML = NAV_JOBS.map(([t, f, n]) => navPanel(t, f(), n)).join("");
+  depthbench.innerHTML = NAV_DEPTHS.map(([t, f, n]) => navPanel(t, f(), n)).join("");
+  document.querySelectorAll("#jobbench .cell, #depthbench .cell").forEach(cell => {
+    const h = Math.round(cell.querySelector(".panel-body").getBoundingClientRect().height);
+    const entries = cell.querySelectorAll(".nv").length;
+    const sig = cell.querySelectorAll('[data-t="signal"]').length;
+    const plc = cell.querySelectorAll('[data-t="place"]').length;
+    const hidden = [...cell.querySelectorAll(".nv-more")]
+      .reduce((n, e) => n + (parseInt(e.textContent.replace(/\D/g, ""), 10) || 0), 0);
+    const tallest = Math.max(0, ...[...cell.querySelectorAll(".nv")]
+      .map(e => Math.round(e.getBoundingClientRect().height)));
+    let trunc = 0;
+    cell.querySelectorAll(".nv-place, .nv-name").forEach(n => {
+      const cut = n.scrollWidth > n.clientWidth + 1;
+      n.classList.toggle("is-trunc", cut); if (cut) trunc++;
+    });
+    cell.querySelector("[data-metrics]").innerHTML =
+      `<span><b>${entries}</b> entries</span>`
+    + `<span><b>${h}</b>px tall</span>`
+    + `<span class="${trunc === 0 ? "good" : "bad"}"><b>${trunc}</b> truncated</span>`
+    + `<span class="${sig ? "good" : "bad"}" title="signals you can reach in one click from the panel">`
+      + `<b>${sig}</b> signal${sig === 1 ? "" : "s"} in 1 click</span>`
+    + (plc ? `<span title="places you can open; their signals are one click further"><b>${plc}</b> places to open</span>` : "")
+    + `<span class="${hidden ? "bad" : "good"}" title="signals behind a +N more"><b>${hidden}</b> hidden</span>`
+    + `<span title="tallest single entry"><b>${tallest}</b>px busiest</span>`;
   });
 }
 

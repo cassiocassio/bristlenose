@@ -1,50 +1,60 @@
 # PII Redaction — exploration, decisions & forward plan
 
-> **Status: DELIVERY UN-PARKED 12 Sep 2026; ENGINE CHOICE STILL OPEN.**
-> The §2.5.2 blocker below was a blocker on shipping *code* through Background
-> Assets. Splitting code from data removes it — see §"Un-parking the Mac path
-> (12 Sep 2026)". What has *not* changed is the second, independent argument for
-> rolling our own: the Presidio stack is still more machinery than the job needs.
-> So there are now two live routes where this doc had one. The original parked
-> status is preserved verbatim below because its reasoning is still load-bearing.
+> **Status: SHIPPING PRESIDIO ON ALL THREE CHANNELS. Engine choice CLOSED,
+> Mac delivery UN-PARKED — both 12 Sep 2026.**
+> Two things changed on the same day and this header claimed neither for half a
+> day afterwards. **The engine is Presidio** — "roll our own" is REJECTED, see
+> that section. **The Mac path is un-parked** — §2.5.2 was a blocker on shipping
+> *code* through Background Assets, and splitting code from data removes it.
 >
-> **Superseded status (26 Jul 2026):** PARKED for a post-100days "roll our own PII" project.
-> The CLI keeps its working Presidio-based redaction **as-is**. Bringing PII to
-> the **Mac desktop** is parked: the Background-Assets delivery hits an App Store
-> **§2.5.2** blocker, and the whole Presidio/spaCy stack turns out to be more
-> machinery than the job needs. The forward direction is **regex + LLM-NER**
-> ("roll our own"), deferred to after the current 100days push.
+> The parked-era reasoning is preserved verbatim below because it is still
+> load-bearing: it is *why* the split is the right shape, and the §2.5.2
+> analysis is the argument a reviewer would have to be answered with.
+>
+> **Superseded status (26 Jul 2026), kept as history:** PARKED for a post-100days
+> "roll our own PII" project. The CLI keeps its working Presidio-based redaction
+> **as-is**. Bringing PII to the **Mac desktop** is parked: the Background-Assets
+> delivery hits an App Store **§2.5.2** blocker, and the whole Presidio/spaCy
+> stack turns out to be more machinery than the job needs. The forward direction
+> is **regex + LLM-NER** ("roll our own"), deferred to after the current push.
 >
 > This doc is the **rehydration brief** — everything learned, decided, tested,
 > and sketched, so the next person (probably future-me) can pick it up cold.
 
 ## TL;DR (the bow)
 
-- **CLI PII = kept, working, untouched.** Presidio + spaCy, off by default,
-  `--redact-pii`, `spacy download` on first use. No App Store constraints apply
-  to pip/brew/snap. **Do not churn it.**
-- **Mac PII = parked.** Presidio is excluded from the sidecar today, so PII is
-  simply unavailable on desktop. Delivering it via Background Assets is an App
-  Store **§2.5.2** rejection risk (downloading importable *code*); bundling it
-  means +560 MB (`lg`) or untested quality (`sm`).
-- **Forward = "roll our own PII"** (post-100days): **regex for structured PII**
-  (emails/phones/cards/IDs — no ML) **+ the LLM for names/context** via the
-  user's already-configured provider. Deletes the entire heavy stack *and* the
-  App Store problem, and is **better** on the cases that matter (non-Western
-  names, context identifiers), multilingually. The `pii_llm_pass` config field
-  ([config.py:176](../bristlenose/config.py), "Not yet implemented") is the
-  pre-existing stub for exactly this.
-- **UX sketches + evidence preserved:** two mockups + a runnable sm-vs-lg test
-  (see §Artifacts).
+- **One engine, three channels.** Presidio + spaCy `en_core_web_lg`, off by
+  default. The *code* (33 MB measured, not the ~100 MB this doc long claimed)
+  is bundled everywhere; only the **425 MB model** is acquired on demand, and
+  a model is data, which is what §2.5.2 turns on and what Background Assets is
+  for.
+- **One seam, three acquirers.** Every consumer resolves through
+  `resolve_spacy_model()` — CLI does `spacy download`, the `.dmg` fetches plain
+  HTTPS from `bristlenose.app/models/`, TestFlight/MAS uses managed Background
+  Assets. Proven, not assumed: the path route was run with the package made
+  unimportable and scored identically.
+- **Mac PII is gated at macOS 26**, where the managed BA API lives. Below it the
+  toggle renders visible and disabled. The app's own floor stays 15.0.
+- **"Roll our own PII" is REJECTED** — the user's call: *"I'd rather deal with
+  this as a packaging challenge than a start-again DIY problem."* The §2.5.2
+  argument that motivated it dissolved once code and data were separated.
+- **Measured, not asserted** (planted-PII hour corpus, through `remove_pii`
+  itself): 45/52 targeted PII removed, 9/32 near-miss probes over-redacted —
+  every one a product name that is also a person's name, which is what the
+  post-beta per-project allow-list is for. Known gaps are listed with the
+  measurement, the realest being **spelled-out emails** ("jane dot smith at…"),
+  which no pattern can see and spoken interviews are full of.
 - **Not a purchase driver.** Good researchers already clean up quotes for
-  deliverables every day — it's taken as part of the job by professionals.
-  Compliance departments like to pay for it, but it's not a differentiator. This
-  is *why* it parks comfortably: low priority, don't invest in a heavy stack.
+  deliverables — it's taken as part of the job. Compliance departments like to
+  pay for it; it is not a differentiator. That is why it stayed cheap: no heavy
+  bespoke stack, just careful delivery of an off-the-shelf one.
 
 ## Decisions that survive regardless of approach (locked)
 
-These held up across the whole exploration and four review agents; they're
-approach-independent and carry forward into "roll our own":
+These held up across the whole exploration and four review agents, and they are
+**engine-independent** — written when "roll our own" was the forward direction,
+and unchanged by its rejection. That is the point of the section: they constrain
+whatever detector sits underneath, so they would survive a future swap too.
 
 | # | Decision | Note |
 |---|---|---|

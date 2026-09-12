@@ -682,18 +682,54 @@ def check_pii(settings: BristlenoseSettings) -> CheckResult:
             fix_key="spacy_model_missing",
         )
     except OSError:
+        # Distinguish the two deliveries. A path-delivered model that passed the
+        # liveness check (meta.json + config.cfg both present) and *still* fails
+        # to load is a corrupt or truncated pack — an interrupted download, most
+        # likely. Saying "en_core_web_lg not found" there is technically true and
+        # useless: the user set a path, and the fix is to re-fetch that pack, not
+        # to install a package.
+        if model != SPACY_MODEL:
+            return CheckResult(
+                status=CheckStatus.FAIL,
+                label="PII redaction",
+                detail=f"model at {model} is present but unreadable — re-fetch it",
+                fix_key="pii_model_dir_invalid",
+            )
         return CheckResult(
             status=CheckStatus.FAIL,
             label="PII redaction",
             detail=f"spaCy model {SPACY_MODEL} not found",
             fix_key="spacy_model_missing",
         )
-    except Exception:
+    except Exception as exc:
+        # This arm used to assert "spaCy not compatible (Python 3.14+)" for
+        # *any* failure — a specific cause it had never checked. A corrupt or
+        # truncated pack raises `ValueError [E054]`, so a user on 3.12 with a
+        # half-downloaded model was told to worry about their Python version.
+        # Claim the incompatibility only when actually running that Python.
+        import re
+        import sys as _sys
+
+        if _sys.version_info >= (3, 14):
+            detail = "spaCy not compatible (Python 3.14+)"
+            fix = "spacy_model_missing"
+        else:
+            # The E-code, not `str(exc)`: it is the searchable part, and spaCy
+            # interpolates looked-up content into some messages (E064/E085) —
+            # the same reason stage 7's Cause is built from structured fields.
+            code = re.search(r"\[E\d+\]", str(exc))
+            marker = code.group(0) if code else type(exc).__name__
+            if model != SPACY_MODEL:
+                detail = f"model at {model} could not be loaded ({marker})"
+                fix = "pii_model_dir_invalid"
+            else:
+                detail = f"spaCy could not load {SPACY_MODEL} ({marker})"
+                fix = "spacy_model_missing"
         return CheckResult(
             status=CheckStatus.FAIL,
             label="PII redaction",
-            detail="spaCy not compatible (Python 3.14+)",
-            fix_key="spacy_model_missing",
+            detail=detail,
+            fix_key=fix,
         )
 
     # Reuse the model loaded above — this used to `spacy.load()` a second time,

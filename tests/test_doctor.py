@@ -1969,3 +1969,56 @@ class TestCheckPiiDiagnosesTheModelDirectory:
         assert text, "fix_key is registered nowhere — doctor would show nothing"
         assert "BRISTLENOSE_PII_MODEL_DIR" in text
         assert "spacy download" not in text
+
+    def test_a_corrupt_pack_is_not_blamed_on_the_python_version(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        """The bare `except Exception` asserted a cause it never checked.
+
+        A pack that passes the liveness check (both files present) but is
+        truncated or corrupt raises `ValueError [E054]` out of spaCy. That is
+        the likeliest real-world failure of an on-demand download, and every
+        user hitting it on Python 3.12 was told to worry about 3.14.
+        """
+        import sys
+
+        from bristlenose.stages.s07_pii_removal import PII_MODEL_DIR_ENV
+
+        d = tmp_path / "en_core_web_lg-3.8.0"
+        d.mkdir()
+        (d / "meta.json").write_text("{}")  # passes liveness, not a real model
+        (d / "config.cfg").write_text("[nlp]")
+        monkeypatch.setenv(PII_MODEL_DIR_ENV, str(d))
+
+        result = check_pii(_settings(pii_enabled=True))
+
+        assert result.status == CheckStatus.FAIL
+        if sys.version_info < (3, 14):
+            assert "3.14" not in result.detail, (
+                f"blamed the Python version on {sys.version_info[:2]}: {result.detail}"
+            )
+        assert str(d) in result.detail, "the path the user set is the useful part"
+        assert result.fix_key == "pii_model_dir_invalid"
+
+    def test_the_searchable_error_code_survives_but_not_the_whole_message(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        """`[E054]` is what a user can search for; `str(exc)` is not safe to dump.
+
+        spaCy interpolates looked-up content into some messages (E064/E085) —
+        the same reason stage 7 builds its `Cause` from structured fields rather
+        than the exception text.
+        """
+        from bristlenose.stages.s07_pii_removal import PII_MODEL_DIR_ENV
+
+        d = tmp_path / "en_core_web_lg-3.8.0"
+        d.mkdir()
+        (d / "meta.json").write_text("{}")
+        (d / "config.cfg").write_text("[nlp]")
+        monkeypatch.setenv(PII_MODEL_DIR_ENV, str(d))
+
+        detail = check_pii(_settings(pii_enabled=True)).detail
+        assert "[E054]" in detail
+        assert "meta.json" not in detail, (
+            "the whole spaCy message was interpolated — only the code should be"
+        )

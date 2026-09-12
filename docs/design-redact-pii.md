@@ -444,6 +444,40 @@ Team-ID prefix needs no profile, so it is the route that works on every channel.
 Then Identifiers → `app.bristlenose` → enable the **App Groups** capability and
 select the group.
 
+**We do not already have this — but we have its neighbour, which de-risks it.**
+`Bristlenose.entitlements` holds exactly one key today, and the shipping
+Developer-ID `.dmg` carries it signed and notarised:
+
+```
+keychain-access-groups → $(AppIdentifierPrefix)app.bristlenose → Z56GZVA2QB.app.bristlenose
+```
+
+Different entitlement, different portal capability — having it grants nothing —
+but it is the **same Team-ID-prefixed shape**, with the same `$(AppIdentifierPrefix)`
+expansion, already proven to sign on the Developer-ID channel. That is the
+reassurance the BA research could not give: a team-scoped entitlement does ship
+on this project's `.dmg` today.
+
+**One wrinkle it exposes.** There are only two build configurations, `Debug` and
+`Release`, and *both* channels build `Release` — the `.dmg` distinguishes itself
+with command-line overrides in `desktop/scripts/build-dmg.sh:342-353`
+(`CODE_SIGN_STYLE=Automatic`, an emptied `PROVISIONING_PROFILE_SPECIFIER`,
+`DEVELOPER_ID_BETA`). So they **share `Bristlenose.entitlements`**, and adding the
+app group puts it on the `.dmg` too — a build that does not use Background Assets
+and where Quinn's "no Developer-ID profile authorises an app group" could bite at
+archive time.
+
+Fix it in the same change, and it is one line: add a
+`BristlenoseDeveloperID.entitlements` (the current file, without the group) and
+one more override next to the five already there —
+
+```
+CODE_SIGN_ENTITLEMENTS="Bristlenose/BristlenoseDeveloperID.entitlements" \
+```
+
+Do it *with* the group, not before: today the two files would be identical, and a
+no-op split is a change whose reason nobody can see in the diff.
+
 **2 · Regenerate the Mac App Store provisioning profile.**
 Because signing is `Manual` against a *named* profile, the existing one does not
 carry the new entitlement and the archive will refuse to sign with *"Provisioning

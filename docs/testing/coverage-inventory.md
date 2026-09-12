@@ -48,7 +48,7 @@ regex had been mis-pairing recordings with their transcripts since Feb 2026
 written beside. A ❌ in this column is not "probably fine, untested"; on the one
 row that changed it, it was two bugs.
 
-**Mechanical coverage that exists:** seven Swift test files — `CloudDownloadTests`,
+**Mechanical coverage that exists:** nineteen Swift test files (counted 12 Sep 2026 — seven when this line was written: `ZoomGrantTests`, `TeamsSignInFailureTests`, `CloudImportHandoffTests`, `CloudImportLocalMatchTests`, `CloudImportDestinationsTests`, `CloudImportOutlineTests`, `CloudImportScheduledColumnTests`, `CloudGrantStoreTests`, `CloudGrantKeychainRegistrationTests`, `CloudDisconnectTests`, `CloudAccountKeyTests`, `CloudTransportTests` have landed since) — `CloudDownloadTests`,
 `GoogleMeetImportTests`, `ZoomImportTests`, `TeamsSourceTests`, `CloudImportModelTests`,
 `OAuthPKCETests`, `TeamsRecordingNameTests`. They cover the pure-value layer:
 response classification, file selection, date-window chunking, filename synthesis,

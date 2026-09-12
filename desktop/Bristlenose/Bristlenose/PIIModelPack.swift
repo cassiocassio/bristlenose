@@ -12,8 +12,11 @@ import Foundation
 /// acquire anything. The acquirers are per-channel and land separately:
 ///
 ///   - `.appStoreOrTestFlight` — managed Background Assets
-///     (`AssetPackManager.ensureLocalAvailabilityOfAssetPack`), macOS 26+,
-///     which is why Mac PII is gated at 26 rather than the app floor moving.
+///     (`AssetPackManager.shared.ensureLocalAvailability(of:)`, an actor at
+///     `@available(macOS 26, *)`), which is why Mac PII is gated at 26 rather
+///     than the app floor moving. That call is *renamed* at 26.4
+///     (`…(of:requireLatestVersion:)`); fork on `#available`, do not move the
+///     gate — the 26.4 mark is a deprecation, not a floor.
 ///   - `.developerID` — plain HTTPS from bristlenose.app/models/, SHA-256
 ///     pinned.
 ///   - the CLI is not this app's problem: `spacy download` installs an

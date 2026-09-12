@@ -412,6 +412,19 @@ v1, and it buys a great deal:
 - Revisit when the deployment floor moves (`project_deployment_floor_held`); the
   gate then simply disappears.
 
+**The gate is 26.0, and the 26.4 marks in the SDK are renames, not a floor
+(read from the macOS 26.5 SDK's swiftinterface, 12 Sep 2026).**
+`public actor AssetPackManager` is `@available(macOS 26, *)`; `assetPack(withID:)`,
+`url(for:)` and `shared` carry no narrower annotation. Two calls are
+*deprecated* at 26.4 in favour of renamed siblings —
+`ensureLocalAvailability(of:)` → `ensureLocalAvailability(of:requireLatestVersion:)`
+and `status(ofAssetPackWithID:)` → `status(relativeTo:)` — and deprecated is
+not removed. So the acquirer forks at 26.4 and calls the renamed form there,
+and the product gate stays where it was decided. This is the *progressive
+enhancement* row of `desktop/CLAUDE.md`'s "offered, not required" table; a
+26.4 warning in Xcode is an argument for `if #available`, never for moving a
+gate that costs users 26.0–26.3.
+
 **Open call, small:** whether the `.dmg` also gates at 26. Its plain-HTTPS acquirer
 has no OS floor, so it *could* serve 15.0+ — but gating both gives one string, one
 support story and one QA matrix, on a channel that is temporary and expiring
@@ -1090,6 +1103,23 @@ UX for phases 3–4 is specced in `docs/mockups/mockup-privacy-settings.html` §
   checked at handoff, not at storage, so a pack the system reclaims under
   storage pressure yields the flag alone and the run fails loudly. Until an
   acquirer writes the key, nothing does, and the answer is `nil` everywhere.
+  **The managed-route calls, verified against the SDK rather than remembered**
+  (`AssetPackManager` is an actor; every call is awaited on it):
+    1. `let pack = try await AssetPackManager.shared.assetPack(withID: id)`
+    2. `if #available(macOS 26.4, *) { try await manager.ensureLocalAvailability(of: pack, requireLatestVersion: false) } else { try await manager.ensureLocalAvailability(of: pack) }`
+    3. Present? `AssetPack.Status` is an `OptionSet` — `status.contains(.downloaded)`
+       (26.4: `status(relativeTo: pack)`; before: `status(ofAssetPackWithID:)`).
+    4. `let dir = try manager.url(for: FilePath("<model dir inside the pack>"))` —
+       **the argument is the pack's internal layout, a hosting decision not yet
+       made** (for `en_core_web_lg` the loadable directory is the inner
+       `en_core_web_lg-<version>/`, so the pack should carry it at a known
+       relative path).
+    5. `UserDefaults.standard.set(dir.path, forKey: PIIModelPack.packDirectoryDefaultsKey)`
+       — the handoff does the rest, liveness included.
+  The `.appex` adopts `ManagedDownloaderExtension` (which refines
+  `BADownloaderExtension`); RawCull's is one line. **The one runtime unknown**,
+  answerable only by a real download: whether the `inherit`-sandboxed sidecar
+  can read the directory `url(for:)` returns.
   Everything downstream is built and proven: set
   `BRISTLENOSE_PII_MODEL_DIR` (that is the real variable — this bullet said
   `BRISTLENOSE_PII_LIB_DIR`, which exists nowhere) and stage 7, `doctor` and the

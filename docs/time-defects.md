@@ -164,6 +164,67 @@ returns.
 
 ---
 
+## 3b. Conventions by surface — and the crossings between them
+
+The question this section answers: *do filenames, the webview and the Mac app
+follow the same rules, and is the join between Swift and the webview invisible?*
+
+| datum | filename | webview (SPA) | Swift native | CLI | markdown / static | API wire |
+|---|---|---|---|---|---|---|
+| **position** | `03m45` · `0h03m45` | `05:30` · `1:12:45` | — *(none; Mac positions go through the SPA)* | — | `05:30` · `1:12:45` | float seconds |
+| **duration** | — | `26m` · `1h 3m` · `—` at 0 | `26m` · `1h 3m` · `0m` at 0 | `3m 41s` · `0.1s` | *(dead helper: `26 min`)* | float + `duration_human` string |
+| **start time** | — | `Today, 14:23` **(viewer-local)** | `Today, 14:23` **(viewer-local)** | — | `Today at 16:59` **(UTC)** | **naive** ISO, no offset |
+
+**Position — different notation, same rule.** Filenames use `03m45` rather than
+`05:30` because a colon is hostile in a filename and sorts badly in a listing;
+letters keep the field order legible in a Finder window. Both spellings elide the
+hour by the same rule (§ 3a). This is a deliberate notation fork over a shared
+convention, not drift. The only time that reaches a filename at all is the clip
+timecode — no dates, no durations.
+
+**Duration — aligned, with one documented fork.** SPA and Swift render
+identically; they differ only at zero, where the SPA shows an em-dash (a per-row
+cell, where 0 means *unknown* — 8% of the corpus) and Swift shows `0m` (an
+aggregate subtitle, where 0 is a real total). That fork is written down in
+`format.ts` and is correct. The CLI's `3m 41s` is a different context
+(sub-second stage timing), not the same format.
+
+**Start time — the surfaces agree; the wire is where it goes wrong.**
+`SessionsFinderDate.swift` is an explicit, heavily-reasoned mirror of the
+TypeScript contract — same `en*→en_GB` mapping, same forced 24-hour clock, same
+`DateComponents`-based Today/Yesterday, same em-dash for absent. **The Swift ⇄
+webview join is genuinely invisible here, by construction and on purpose.**
+
+### The crossings, and what each loses
+
+| crossing | what happens | verdict |
+|---|---|---|
+| Python → **SQLite** | `session_date` is `Mapped[datetime]` with no `timezone=True`. Measured: stored `2026-05-09T13:23:00+00:00`, read back `2026-05-09T13:23:00`, `tzinfo=None`. | **the offset is destroyed here** |
+| SQLite → API | `sess.session_date.isoformat()` (`routes/sessions.py:205`) emits the naive string | faithful to what it was given |
+| API → TypeScript | `new Date("…13:23:00")` — no offset, so parsed as **local** | faithful; wrong input |
+| API → Swift | naive parsed as local, *deliberately*, to match JS | faithful; wrong input |
+| Python → markdown | no crossing — renders the aware value directly | the **only** surface showing UTC |
+
+So a 14:23 BST recording reads **13:23** in the SPA, **13:23** in the Mac
+popover, and **13:23** in the markdown. The three agree on the number and all
+three are an hour off the researcher's wall clock. The two surfaces the user
+would compare are consistent with each other; the information was gone one layer
+below both of them.
+
+That reframes the "different conventions in different places" worry: the
+**conventions** are in good order, deliberately mirrored and documented. The
+**data** loses its timezone at a DB column definition, and every faithful
+renderer downstream then renders the wrong instant faithfully.
+
+### One more Swift-internal duplicate
+
+`ProjectRow.formatBareDate` is a *fourth* rendering — a progressive-coarsening
+relative date ("Just now", "Today", then absolute) for **project last-activity**,
+which is a different datum from session start and reasonably has its own shape.
+It is duplicated verbatim in `SidebarSubtitleText.swift:193`, which says so in a
+comment. Two copies in one language is the condition the register closed
+`timecode` to avoid.
+
 ## 4. Holes
 
 ### H1 — Two `parse_timecode` implementations, and the tests guard the dead one
@@ -303,18 +364,29 @@ UTC** — a one-hour error for every BST recording.
 only when the value is naive. So the CLI resume path and the server import path
 can derive **different instants from one file**.
 
-### H9 — Start time renders in UTC in Python and viewer-local in TypeScript
+### H9 — REFRAMED: the timezone is destroyed at the DB column, not at a surface
 
-`utils/markdown.py:format_finder_date` formats the datetime in its own zone
-(UTC, since `session_date` is UTC-aware). `frontend/src/utils/format.ts:formatFinderDate`
-does `new Date(iso)` and `Intl.DateTimeFormat`, i.e. **viewer-local**. Measured:
-one instant, two hours — `07:30` from Python, `08:30` from the naive equivalent.
+*Raised as "Python renders UTC, TypeScript renders local"; that is true but it is
+the symptom, and naming it as a rendering fork points the fix at the wrong layer.*
 
-A session recorded at 14:23 BST therefore reads **13:23** in transcript markdown
-and the static render, and **14:23** in the SPA. For the "started at any time of
-day" question this is the headline defect: the researcher's own recording shows
-the wrong time of day on one of the two surfaces, and there is no indication
-which is which.
+`session_date` is declared `Mapped[datetime | None] = mapped_column(default=None)`
+— no `DateTime(timezone=True)`. Measured round-trip through SQLAlchemy + SQLite:
+an aware `13:23+00:00` goes in and a **naive** `13:23` comes out. The API then
+emits that naive string, and both JS and Swift parse a naive ISO string as local
+time.
+
+Consequence: a 14:23 BST recording renders **13:23 everywhere** — SPA, Mac
+popover and markdown all agree, and all three are off by the viewer's UTC offset.
+Python's markdown differs only in separator (`Today at 16:59` vs `Today, 16:59`),
+which `SessionsFinderDate.swift` already records as a cosmetic, accepted fork.
+
+**Upstream of all of it, and already tracked:** `SessionsFinderDate.swift`'s own
+KNOWN-WRONG note says the value being formatted is the source file's
+`st_birthtime` — file *creation* time, not session start. For a save-at-close
+writer that is the session's **end**; a transcript-only import fabricates
+midnight from a date-only header. So even with the timezone fixed, the datum is
+not reliably the session's start time. Worth reading before anyone "fixes" the
+timezone and declares start times correct.
 
 ### H10 — `finder_date` has three implementations and **zero** pinned cases
 

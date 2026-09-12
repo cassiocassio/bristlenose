@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import time
 from collections import Counter
 from pathlib import Path
@@ -28,6 +29,45 @@ logger = logging.getLogger(__name__)
 # the engine below is bound to it explicitly, so fetched == used, always.
 SPACY_MODEL = "en_core_web_lg"
 SPACY_MODEL_SIZE_HUMAN = "~400 MB"
+
+#: Points at the *loadable* model directory — the one holding ``config.cfg``.
+#: Set by the macOS host once the weights are on disk, whoever fetched them:
+#: Background Assets on TestFlight/App Store, a plain HTTPS download on the
+#: Developer-ID ``.dmg``. Mirrors ``BRISTLENOSE_WHISPER_MODEL_DIR``; the CLI
+#: leaves it unset and resolves by name.
+PII_MODEL_DIR_ENV = "BRISTLENOSE_PII_MODEL_DIR"
+
+
+def resolve_spacy_model() -> str:
+    """The model identifier both spaCy and Presidio must load — name or path.
+
+    **Why one function and not two literals.** Presidio's engine builder does
+    ``if not (spacy.util.is_package(name) or Path(name).exists()): spacy.cli.download(name)``
+    — so handing it a *name* it cannot resolve makes it shell out to
+    ``pip install`` from GitHub. Inside a sandboxed App Store binary that is a
+    §2.5.2 violation and an ugly failure; handing it an absolute **path** makes
+    ``Path(...).exists()`` true and the download branch unreachable. Every call
+    site therefore resolves through here, and there is exactly one of them.
+
+    Raises:
+        ValueError: when the override is set but does not name a loadable model
+            directory. Deliberately fail-loud rather than falling back to the
+            name — the fallback is the ``pip install`` above.
+    """
+    override = os.environ.get(PII_MODEL_DIR_ENV, "").strip()
+    if not override:
+        return SPACY_MODEL
+
+    path = Path(override).expanduser()
+    if not (path / "config.cfg").is_file():
+        raise ValueError(
+            f"{PII_MODEL_DIR_ENV} is set to {path} but that is not a loadable "
+            "spaCy model directory (no config.cfg). Point it at the directory "
+            "holding config.cfg — for en_core_web_lg that is the inner "
+            "en_core_web_lg-<version>/ directory, which contains no Python at "
+            "all and is what makes the downloaded pack pure data."
+        )
+    return str(path.absolute())
 # Public: doctor probes and recommends this same model. It lived in five
 # doctor sites and three doctor_fixes sites as the literal "en_core_web_sm"
 # while the pipeline loaded lg, so `doctor` could call the stack healthy on
@@ -55,8 +95,17 @@ def _ensure_spacy_model() -> None:
 
     from bristlenose.utils.package_install import ensure_spacy_model
 
+    model = resolve_spacy_model()
+
+    # A path means the host already placed the weights (BA, or the .dmg's own
+    # download). There is nothing to fetch and nothing to ask the network for —
+    # and on the frozen sidecar `ensure_spacy_model` would raise anyway.
+    if model != SPACY_MODEL:
+        spacy.load(model)
+        return
+
     try:
-        spacy.load(SPACY_MODEL)
+        spacy.load(model)
         return
     except OSError:
         pass
@@ -75,7 +124,7 @@ def _ensure_spacy_model() -> None:
     )
     t0 = time.perf_counter()
     try:
-        ensure_spacy_model(SPACY_MODEL)
+        ensure_spacy_model(model)
     except Exception:
         console.print(f" {cli_prefix(MessageKind.ERROR)}")
         raise
@@ -83,7 +132,7 @@ def _ensure_spacy_model() -> None:
     console.print(f" {cli_prefix(MessageKind.SUCCESS)} [{elapsed:.0f}s]")
 
     # Re-load to confirm Presidio's later spacy.load() will succeed (finding 23).
-    spacy.load(SPACY_MODEL)
+    spacy.load(model)
 
 # Mapping from Presidio entity types to our redaction labels
 _ENTITY_MAP: dict[str, str] = {
@@ -443,7 +492,7 @@ def _init_presidio(
     provider = NlpEngineProvider(
         nlp_configuration={
             "nlp_engine_name": "spacy",
-            "models": [{"lang_code": "en", "model_name": SPACY_MODEL}],
+            "models": [{"lang_code": "en", "model_name": resolve_spacy_model()}],
         }
     )
     analyzer = AnalyzerEngine(nlp_engine=provider.create_engine())

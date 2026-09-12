@@ -36,7 +36,27 @@ import sys
 from pathlib import Path
 
 # The App-Store-rejected literals. Keep in sync with the spec's strip patch.
-NEEDLES = ("itms-services",)
+#
+# `itms-services` is the CPython one (gh-120522): a Mac App Store app embedding
+# CPython was rejected for a never-executed constant in urllib/parse.py.
+#
+# The spacy-models URLs are the same disease in a second dependency, and they
+# arrive the moment spaCy enters the bundle. `import spacy` executes
+# `spacy/__init__.py:18`'s `from .cli.info import info`, which loads
+# `spacy/cli/__init__.py` and with it `download`, whose `_get_pip_install_cmd()`
+# shells out to `pip install` / `uv pip install` against
+# `spacy/about.py::__download_url__`. Nothing in Bristlenose calls it — the model
+# is resolved by path (s07_pii_removal.resolve_spacy_model) — but §2.5.2's static
+# scan does not care whether code runs.
+#
+# We gate the URL rather than "pip"/"install": those are assembled from separate
+# tokens and are far too common to match on. The URL is one distinctive constant
+# and it is the actual evidence of "downloads executable code".
+NEEDLES = (
+    "itms-services",
+    "spacy-models/releases/download",
+    "spacy-models/master/compatibility.json",
+)
 
 
 def _find_sidecar_exe(target: Path) -> Path | None:
@@ -159,9 +179,11 @@ def main(argv: list[str]) -> int:
     disk_hits = _scan_ondisk(bundle_root)
 
     if pyz_hits or disk_hits:
-        print("FAIL: App-Store-noncompliant URL-scheme literal found in the sidecar.", file=sys.stderr)
-        print("App Store Connect's static scan (§2.5.2) rejects binaries containing", file=sys.stderr)
-        print("'itms-services' even when the code never runs (CPython gh-120522).", file=sys.stderr)
+        print("FAIL: App-Store-noncompliant literal found in the sidecar.", file=sys.stderr)
+        print("App Store Connect's static scan (§2.5.2) rejects binaries that carry", file=sys.stderr)
+        print("these even when the code never runs — 'itms-services' is the CPython", file=sys.stderr)
+        print("precedent (gh-120522); the spacy-models URLs are spaCy's own", file=sys.stderr)
+        print("pip-install path, reachable from a bare `import spacy`.", file=sys.stderr)
         print("", file=sys.stderr)
         for mod, needle in pyz_hits:
             print(f"  PYZ frozen module: {mod}  ->  {needle!r}", file=sys.stderr)

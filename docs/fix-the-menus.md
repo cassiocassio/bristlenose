@@ -156,7 +156,26 @@ Items that look fully active (no dimming) but do nothing when clicked.
 **All six are gone** — from `MenuCommands.swift`, from the `AppLayout.tsx`
 warn-stub, and from the `desktop.menu.codes.*` keys in all 21 full locales.
 `createCodeGroup`, `createCode`, `browseCodebooks`, `importFramework` and
-`removeFramework` remain, and are wired.
+`removeFramework` remain.
+
+> **Corrected later on 12 Sep 2026 — those five are NOT wired.** This line read
+> "and are wired" for a few hours, which was the same claim
+> `design-desktop-menu-actions.md` had been making since 0.29.0 and which was
+> corrected there the same day. All five dispatch a `bn:codebook-*` CustomEvent
+> and **nothing in `frontend/src` listens for any of them** — grep returns only
+> the dispatch sites. `42d06638` put those listeners in v1's `CodebookPanel`;
+> `baa1aa0e` deleted the panel and took them with it (`git describe --contains`
+> → `v0.29.0~3`, three commits before the tag). So retiring the six warn-stubs
+> above left a menu in which **every remaining item is also inert** — the
+> difference is only that the stubs said so in the console and these five say
+> nothing at all, because a `CustomEvent` with no listener resolves normally.
+>
+> Full evidence and the untaken product call (re-home the listeners in the v2
+> navigator, or withdraw the menu) are in
+> [`design-desktop-menu-actions.md`](design-desktop-menu-actions.md) § Codes menu.
+> Kept as a worked example of the truing trap: **the same stale claim usually
+> lives in more than one file**, and correcting it in the canonical doc does not
+> reach the punch list that repeats it.
 
 This group was open on the theory that it was blocked on a selection model.
 It was not: `docs/design-codebook-v2.md` had already settled both halves, and

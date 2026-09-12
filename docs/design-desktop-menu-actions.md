@@ -2,7 +2,7 @@
 status: partial
 last-trued: 2026-07-25
 trued-against: working tree @main on 2026-07-25
-last-trued-sections: [checkSystemHealth row (2026-07-28), retired-actions section (2026-07-28)]
+last-trued-sections: [checkSystemHealth row (2026-07-28), retired-actions section (2026-07-28), find family + channel gate (2026-09-12, c9688b44), Codes menu section (2026-09-12)]
 ---
 
 > **Do not honour the "recently trued, skip" short-circuit on this doc.** The
@@ -75,6 +75,7 @@ live code; it is the argument, preserved.
 
 ## Changelog
 
+- _2026-09-12_ — **Codes menu corrected: five actions documented as Shipped have been dispatched into nothing since 0.29.0.** All five send a `bn:codebook-*` CustomEvent; an exhaustive grep of `frontend/src` finds no listener for any of them. `42d06638` put those listeners in v1's `CodebookPanel`; `baa1aa0e` deleted the panel and took them with it — `git describe --contains` → `v0.29.0~3`, three commits before the tag, so the menu has been inert on all nine channels since the release whose headline was the codebook lens. `browseCodebooks` named `CodebookPanel` as its consumer, i.e. the row cited its own missing listener. Old claims preserved inline per never-silently-delete. **Not dimmed, deliberately** — gating an unimplemented command is the lie the `jumpToSelection` row refuses; re-homing the listeners in the v2 navigator versus withdrawing the menu is an untaken product call. Nothing was ever red: a `CustomEvent` with no listener resolves normally, so the bridge succeeds and the Swift `catch` never fires. `last-trued` again NOT bumped — section-scoped, recorded in `last-trued-sections`.
 - _2026-09-12_ — **Trued against the Find sweep and the channel gate; front-matter deliberately NOT bumped.** New **Enablement** section — the doc modelled routing and never availability, while five items gated on `hasChannel` / `canDispatch` / `canSearch`, none of which appeared anywhere in it. `find` and `jumpToSelection` moved from the handled catalogue into **Retired actions** (⌘F is native end-to-end via `BridgeHandler.focusSearchRequests`; ⌘J withdrawn as unimplemented). Two self-contradictions closed: `mergeCode` read **Shipped (bridge)** in the Codes table while the Retired table read **Withdrawn** — the Retired table was right, and had been for six weeks; `hasPlayer`/`playerPlaying` were listed as stubs one section after the prose said they report live — the prose was right. `set-appearance` corrected in three places: the doc recommended deleting the emitter, the deletion happened **30 Jul 2026**, and the doc went on describing it in the present tense for six weeks. Section counts dropped rather than recounted (the AppLayout header claimed 27 over 28 rows / 30 names / 35 `case` arms, eleven of which the code does not have and seven of which this doc already called retired). **Known-stale, not fixed:** the `MenuCommands.swift:N` anchors — the 28 Jul banner asked for struct names and 0 of 5 spot-checked still resolve; new text here uses struct names, old rows do not. Anchors: `FindMenuContent`, `FileMenuContent`, `BridgeHandler.swift:135-149,262-285,517-518`, `AppLayout.tsx:409`, `Toolbar.tsx:63`; commit subjects `find: wire Cmd+F to the search that exists, dim it where none does` and `menus: gate bridge commands on a live channel, not on isReady`.
 - _2026-07-28_ — `checkSystemHealth` row corrected: it is no longer a bridge dispatch (that action was dead — no frontend consumer). Wired to open the native Health window (`DoctorReportView`) via `openWindow(id: "health")` from Diagnostics ▸ Check Health; the window fetches the new `GET /api/doctor` endpoint (`bristlenose/server/routes/doctor.py`, `doctor.run_local_checks`). See `docs/fix-the-menus.md` and `docs/design-diagnostics-menu.md`.
 - _2026-07-25_ — trued against the working-tree Welcome/sidebar change. **View menu:** `toggleSidebar` (static "Toggle Sidebar", responder-chain `NSSplitViewController.toggleSidebar`) became **`toggleProjectsSidebar`** — a dynamic **Hide/Show Projects** label routed through the NavigationSplitView `columnVisibility` binding via the `.toggleProjectsSidebar` notification (⌥⌘S unchanged). **Help menu:** gained **Welcome to Bristlenose** (7th item, no shortcut; posts `.showWelcome` → ContentView `selection = []`). Also corrected pre-existing drift in the Help table: items open **browser docs** (retired in-app Help modal), not a modal, and re-anchored the section from stale line numbers to the `HelpMenuContent` struct. Anchors are struct-named where possible (line numbers rot).
@@ -274,15 +275,38 @@ All in `HelpMenuContent` (`MenuCommands.swift`). Order top→bottom: Bristlenose
 
 ### Codes menu (9)
 
-5 stubs that need native focus context are catalogued separately under "Codebook operations" below. Wired actions:
+5 stubs that need native focus context are catalogued separately under "Codebook operations" below.
+
+> **Corrected 12 Sep 2026 — the five "wired" actions are dispatched into nothing,
+> and have been since 0.29.0.** Every row below read **Shipped (bridge)**. All five
+> dispatch a `bn:codebook-*` CustomEvent and an exhaustive grep of `frontend/src`
+> finds **no listener for any of them** — only the dispatch sites. `42d06638`
+> ("wire codebook menu actions: **CodebookPanel listeners** for remove,
+> create-group, create-code") put those listeners in the v1 panel; `baa1aa0e`
+> ("codebook v2 becomes the codebook lens: **v1 deleted**") removed the panel and
+> took them with it. `git describe --contains baa1aa0e` → **`v0.29.0~3`** — three
+> commits before the tag, so the menu has been inert on all nine channels since
+> the release whose headline feature was the codebook lens.
+>
+> **Nothing was red at any point.** A `CustomEvent` with no listener resolves
+> normally, so the bridge succeeds, the Swift `catch` never fires, and the log
+> stays clean. This is the "deleting a UI surface orphans the thing that was its
+> only witness" gotcha in the root `CLAUDE.md`, one level out: it orphaned the
+> **listeners**, and the dispatcher went on dispatching.
+>
+> **They are deliberately NOT dimmed.** Gating a command with no implementation is
+> the lie the `jumpToSelection` row refuses. Re-homing the listeners in the v2
+> navigator, or withdrawing the menu with the `mergeCode` idiom, is a product call
+> and has not been taken. Measurements and the rejected options are in the
+> maintainer's private review log, kept outside the public tree.
 
 | Action | Status | Notes |
 |---|---|---|
-| `browseCodebooks` | **Shipped** (bridge → CodebookPanel) | Dispatches `bn:codebook-browse` |
-| `importFramework` | **Shipped** (bridge) | Dispatches `bn:codebook-browse` with `{ templateId }` |
-| `removeFramework` | **Shipped** (bridge) | Dispatches `bn:codebook-remove` |
-| `createCodeGroup` | **Shipped** (bridge) | Dispatches `bn:codebook-create-group` |
-| `createCode` | **Shipped** (bridge) | Dispatches `bn:codebook-create-code` |
+| `browseCodebooks` | **Orphaned** _(12 Sep 2026)_ | Dispatches `bn:codebook-browse` — **nothing listens**. _(Read **Shipped (bridge → CodebookPanel)** until 12 Sep 2026. `CodebookPanel` is the component `baa1aa0e` deleted, so the row named its own missing consumer.)_ |
+| `importFramework` | **Orphaned** _(12 Sep 2026)_ | Dispatches `bn:codebook-browse` with `{ templateId }` — **nothing listens**. _(Read **Shipped (bridge)**.)_ |
+| `removeFramework` | **Orphaned** _(12 Sep 2026)_ | Dispatches `bn:codebook-remove` — **nothing listens**. Currently `.disabled(!isCodeTab)`, so it is dimmed-and-dead off the lens and lit-and-dead on it. _(Read **Shipped (bridge)**.)_ |
+| `createCodeGroup` | **Orphaned** _(12 Sep 2026)_ | Dispatches `bn:codebook-create-group` — **nothing listens**. _(Read **Shipped (bridge)**.)_ |
+| `createCode` | **Orphaned** _(12 Sep 2026)_ | Dispatches `bn:codebook-create-code` — **nothing listens**. _(Read **Shipped (bridge)**.)_ |
 | `mergeCode` | **Withdrawn** | Commented out in `CodesMenuContent`; see the Retired-actions table. _(This row said **Shipped (bridge)** until 12 Sep 2026, contradicting that table since 28 Jul. The web half `mergeCodebookTags` still works — it is the menu item that is gone.)_ |
 
 ### Quotes menu — `playPause` triple-dispatch note

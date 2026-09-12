@@ -37,6 +37,7 @@
     "local_model_not_pulled": "Den ønskede lokale model er ikke hentet. Kør `ollama pull <model>` for at downloade den (tjek modelnavnet i bristlenose.toml eller --llm-model), og kør igen. Underliggende: {message}."
   },
   "pii": {
+    "aborted_no_fetch": "spaCy-modellen {model} er ikke i cachen, og --no-fetch er angivet. K\u00f8r `bristlenose doctor --fetch` for at hente den p\u00e5 forh\u00e5nd, eller k\u00f8r igen uden --no-fetch.",
     "downloading": "Downloader detektor for personoplysninger (~400 MB, engangs)..."
   },
   "closing": {

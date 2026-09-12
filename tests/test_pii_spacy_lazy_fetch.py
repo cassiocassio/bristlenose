@@ -175,3 +175,76 @@ class TestModelDirLivenessNeedsBothFiles:
         monkeypatch.setenv(PII_MODEL_DIR_ENV, str(d))
         with pytest.raises(ValueError, match="not a loadable"):
             resolve_spacy_model()
+
+
+class TestNoFetchIsHonoured:
+    """`--no-fetch` means "do not reach the network".
+
+    A silent 425 MB download is the largest possible way to disobey that flag,
+    and until 12 Sep 2026 stage 7 did exactly that: `_ensure_spacy_model` took
+    no argument and `settings.no_fetch` never reached it. Whisper's preflight
+    has honoured the same flag since it was introduced, so this was the one
+    heavyweight fetch in the pipeline that ignored it.
+    """
+
+    def test_missing_model_under_no_fetch_refuses_instead_of_downloading(self):
+        fake_spacy = MagicMock()
+        fake_spacy.load.side_effect = OSError("not found")
+        with patch.dict(sys.modules, {"spacy": fake_spacy}):
+            with patch(
+                "bristlenose.utils.package_install.ensure_spacy_model"
+            ) as installer:
+                with pytest.raises(PackageInstallError) as exc_info:
+                    _ensure_spacy_model(allow_fetch=False)
+        installer.assert_not_called()
+        assert "--no-fetch" in str(exc_info.value)
+
+    def test_refusal_classifies_as_missing_dep(self):
+        """So the desktop gets a routable row, not `unknown`.
+
+        `PackageInstallError` is deliberate rather than a bespoke abort type:
+        stage 7's handler turns it into a clean abandon with a privacy-safe
+        Cause, and this is the arm that decides which row the project shows.
+        """
+        from bristlenose.events import CauseCategoryEnum
+        from bristlenose.run_lifecycle import categorise_exception
+
+        fake_spacy = MagicMock()
+        fake_spacy.load.side_effect = OSError("not found")
+        with patch.dict(sys.modules, {"spacy": fake_spacy}):
+            with patch("bristlenose.utils.package_install.ensure_spacy_model"):
+                with pytest.raises(PackageInstallError) as exc_info:
+                    _ensure_spacy_model(allow_fetch=False)
+
+        cause = categorise_exception(exc_info.value)
+        assert cause.category == CauseCategoryEnum.MISSING_DEP
+
+    def test_present_model_under_no_fetch_is_not_disturbed(self):
+        """`--no-fetch` forbids fetching, not using what is already there."""
+        fake_spacy = MagicMock()
+        fake_spacy.load.return_value = MagicMock()
+        with patch.dict(sys.modules, {"spacy": fake_spacy}):
+            with patch(
+                "bristlenose.utils.package_install.ensure_spacy_model"
+            ) as installer:
+                _ensure_spacy_model(allow_fetch=False)
+        installer.assert_not_called()
+
+    def test_stage_seven_threads_the_flag_from_settings(self):
+        """The wiring, not just the helper — the defect was the missing arg.
+
+        `_ensure_spacy_model` could refuse perfectly and still download 425 MB
+        if `_init_presidio` never passed `settings.no_fetch` through, which is
+        precisely the bug this closes.
+        """
+        from bristlenose.stages import s07_pii_removal
+
+        settings = MagicMock()
+        settings.no_fetch = True
+
+        with patch.object(s07_pii_removal, "_ensure_spacy_model") as ensure:
+            ensure.side_effect = PackageInstallError("refused")
+            with pytest.raises(PackageInstallError):
+                s07_pii_removal._init_presidio(settings)
+
+        ensure.assert_called_once_with(allow_fetch=False)

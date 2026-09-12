@@ -37,6 +37,7 @@
     "local_model_not_pulled": "Požadovaný místní model není stažen. Spusťte `ollama pull <model>` pro jeho stažení (zkontrolujte název modelu v bristlenose.toml nebo --llm-model) a spusťte znovu. Příčina: {message}."
   },
   "pii": {
+    "aborted_no_fetch": "Model spaCy {model} nen\u00ed v mezipam\u011bti a je nastaveno --no-fetch. Spus\u0165te `bristlenose doctor --fetch` pro jeho sta\u017een\u00ed p\u0159edem, nebo spus\u0165te znovu bez --no-fetch.",
     "downloading": "Stahování detektoru osobních údajů (~400 MB, jednorázově)..."
   },
   "closing": {

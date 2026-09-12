@@ -86,6 +86,10 @@
   .sw.on{background:var(--sys-green);}
   .sw i{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px #0003;transition:.15s;}
   .sw.on i{left:18px;}
+  /* Disabled control: the title and switch grey out, the REASON does not —
+     an unreadable explanation of why something is unavailable is worse than
+     no explanation. Apple's own pattern in System Settings. */
+  .row.dis .title, .row.dis .sw{opacity:.4;}
   @media (prefers-color-scheme: dark){.sw{background:#ffffff2b;}}
 
   .badge{display:inline-block;font-size:10px;font-weight:600;padding:1px 6px;border-radius:5px;
@@ -215,10 +219,11 @@
 <h2 class="section">1b · Turning it on — the one-time model download</h2>
 <div class="lede">
   The detection model is <b>425&nbsp;MB</b> and is <b>not</b> in the app bundle — it arrives on demand the
-  first time the toggle is switched on, as a non-essential <code>BAURLDownload</code> the app schedules
-  itself via <code>BADownloadManager</code> (macOS&nbsp;13+). The one-call
-  <code>BAAssetPackManager.ensureLocalAvailabilityOfAssetPack</code> would be a better fit but is
-  macOS&nbsp;26+, so it is off our 15.0 floor. Only <i>weights</i> download — the detection code ships
+  first time the toggle is switched on, via the <b>managed</b> Background Assets API —
+  <code>AssetPackManager.ensureLocalAvailabilityOfAssetPack</code> plus a
+  <code>ManagedDownloaderExtension</code> of a few lines. That API is macOS&nbsp;26+, which is why
+  <b>the feature is gated at macOS&nbsp;26</b> (state F) rather than the app's 15.0 floor being raised:
+  gating buys one code path instead of a 15.0 fallback beside a 26 fast path. Only <i>weights</i> download — the detection code ships
   inside the reviewed binary, which is what keeps this on the clean side of App&nbsp;Store §2.5.2.
   <b>The size is disclosed before the flick, not after it.</b>
 </div>
@@ -308,6 +313,30 @@
   progress subtitle) or <i>fail cleanly</i> (the normal <code>.failed</code> row with
   <code>MISSING_DEP</code>, Retry). Failing is nearly free — §2 below already builds that path — but waiting
   is kinder and matches “the appliance copes”. Decide before the Swift lands, not after.
+</div>
+
+
+<div class="statelabel">F · Below macOS 26 — visible and disabled, and honest about why</div>
+<div class="win"><div class="body"><div class="group">
+      <div class="row dis">
+        <div class="txt">
+          <div class="title">Redact personal information</div>
+          <div class="sub">Requires macOS&nbsp;26 Tahoe or later.</div>
+        </div>
+        <div class="sw"><i></i></div>
+      </div>
+    </div></div></div>
+<div class="note">
+  <b>Visible and disabled, not hidden.</b> A researcher who has read that Bristlenose can redact
+  needs to find out <i>why they cannot</i>, and a control that is simply absent answers nothing —
+  they conclude the feature was dropped, or that they are looking in the wrong place. The row states
+  the requirement in the position where the setting will appear once they upgrade.
+  <br><br>
+  <b>Why gate the feature rather than raise the floor.</b> The managed Background Assets API is
+  macOS&nbsp;26+, and it is the one whose downloader extension is a few lines rather than a
+  hand-written one. Raising the app's floor to 26 would cost every user on 15–15.x the whole product
+  to give some of them redaction; gating costs only the feature, only to them, and the gate deletes
+  itself when the floor moves.
 </div>
 
 <h2 class="section">2 · Failure surfaces the normal way — no new UI</h2>

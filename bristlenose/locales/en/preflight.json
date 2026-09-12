@@ -37,6 +37,7 @@
     "local_model_not_pulled": "The requested local model isn't pulled. Run \u0060ollama pull <model>\u0060 to download it (check the model name in bristlenose.toml or --llm-model), then re-run. Underlying: {message}."
   },
   "pii": {
+    "aborted_no_fetch": "The spaCy model {model} is not installed and --no-fetch is set. Run `bristlenose doctor --fetch` to fetch it ahead of time, or re-run without --no-fetch.",
     "downloading": "Downloading PII detector (~400 MB, one-off)..."
   },
   "closing": {

@@ -1386,9 +1386,39 @@ class Pipeline:
                 mark_stage_running(manifest, STAGE_PII_REMOVAL)
                 status.update("[dim]Removing PII...[/dim]")
                 t0 = time.perf_counter()
-                clean_transcripts, pii_redactions = remove_pii(
-                    transcripts, self.settings,
-                )
+                try:
+                    clean_transcripts, pii_redactions = remove_pii(
+                        transcripts, self.settings,
+                    )
+                except Exception as exc:
+                    # ABANDON, never continue — and note this differs on purpose
+                    # from every sibling stage. s08/s09/s10/s11 record a failure
+                    # and carry on, because a partial analysis is still worth
+                    # something. Redaction is not like that: the researcher
+                    # asked for it, and continuing would send unredacted
+                    # participant speech to the language model and into the
+                    # report. There is no partial success to preserve, so the
+                    # predicate is "any failure", not the usual
+                    # "every attempt failed".
+                    #
+                    # Until 12 Sep 2026 this block had no handler at all. That
+                    # was fail-stop by accident — the raise escaped to the run
+                    # terminus, so nothing analysed unredacted text — but it
+                    # arrived as an unclassified crash the project row could not
+                    # render, reading to the researcher as "the app broke"
+                    # rather than "your redaction did not run".
+                    #
+                    # `_build_cause`, NOT `categorise_exception`: the latter puts
+                    # `str(exc)` in `cause.message`, and spaCy raises E064/E085
+                    # with the *looked-up token* interpolated — a transcript word
+                    # — which would then be persisted to pipeline-events.jsonl, a
+                    # named re-identification surface.
+                    from bristlenose.run_lifecycle import _build_cause
+
+                    cause = _build_cause(exc, stage="pii_removal")
+                    raise PipelineAbandonedError(
+                        cause=cause, summary=self._summary
+                    ) from exc
                 cooked_dir = output_dir / "transcripts-cooked"
                 write_cooked_transcripts(clean_transcripts, cooked_dir)
                 write_cooked_transcripts_md(clean_transcripts, cooked_dir)

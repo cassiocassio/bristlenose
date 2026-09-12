@@ -37,6 +37,7 @@
     "local_model_not_pulled": "İstenen yerel model çekilmemiş. İndirmek için `ollama pull <model>` komutunu çalıştırın (model adını bristlenose.toml içinde ya da --llm-model ile denetleyin), ardından yeniden çalıştırın. Altta yatan neden: {message}."
   },
   "pii": {
+    "aborted_no_fetch": "spaCy modeli {model} \u00f6nbellekte yok ve --no-fetch ayarlanm\u0131\u015f. \u00d6nceden getirmek i\u00e7in `bristlenose doctor --fetch` komutunu \u00e7al\u0131\u015ft\u0131r\u0131n ya da --no-fetch olmadan yeniden \u00e7al\u0131\u015ft\u0131r\u0131n.",
     "downloading": "Kişisel bilgi algılayıcısı indiriliyor (~400 MB, tek seferlik)..."
   },
   "closing": {

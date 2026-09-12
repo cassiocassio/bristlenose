@@ -81,7 +81,7 @@ def resolve_spacy_model() -> str:
 # reconciled, could fail preflight on a machine that was actually correct.
 
 
-def _ensure_spacy_model() -> None:
+def _ensure_spacy_model(*, allow_fetch: bool = True) -> None:
     """Probe spaCy for :data:`SPACY_MODEL`; lazily download it on first run.
 
     The model is ~400 MB. This docstring used to reason about 12 MB and pick the
@@ -93,9 +93,19 @@ def _ensure_spacy_model() -> None:
     On success the function returns, and :func:`_build_engines` binds the
     analyzer to this same model — so what is fetched is what is used.
 
+    Args:
+        allow_fetch: ``False`` under ``--no-fetch``. The flag means "do not
+            reach the network", and a silent 425 MB download is the largest
+            possible way to disobey it. Refuse instead.
+
     Raises:
+        PackageInstallError: when the model is absent and ``allow_fetch`` is
+            ``False``. Deliberately this type rather than a bespoke one: it is
+            literally a refused install, ``categorise_exception`` already maps
+            it to ``MISSING_DEP``, and stage 7's handler in ``pipeline.py``
+            turns that into a clean abandon with a privacy-safe Cause.
         Whatever :func:`ensure_spacy_model` raises (network failure, frozen
-        sidecar). Caller surfaces the error.
+            sidecar). Caller surfaces the error.
     """
     import spacy
 
@@ -115,6 +125,11 @@ def _ensure_spacy_model() -> None:
         return
     except OSError:
         pass
+
+    if not allow_fetch:
+        from bristlenose.utils.package_install import PackageInstallError
+
+        raise PackageInstallError(t("preflight.pii.aborted_no_fetch", model=model))
 
     from bristlenose.ui_kinds import MessageKind, cli_prefix
 
@@ -486,7 +501,7 @@ def _init_presidio(
     Returns:
         (AnalyzerEngine, AnonymizerEngine) tuple.
     """
-    _ensure_spacy_model()
+    _ensure_spacy_model(allow_fetch=not settings.no_fetch)
 
     from presidio_analyzer import AnalyzerEngine
     from presidio_analyzer.nlp_engine import NlpEngineProvider

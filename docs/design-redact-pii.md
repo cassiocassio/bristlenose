@@ -315,6 +315,15 @@ wheel and as we do for FFmpeg. **Go native, and verify the bytes ourselves.**
 
 ### Which BA API — and the floor that decides it
 
+> **SUPERSEDED by "The macOS 26 gate (decided 12 Sep 2026)" below.** This
+> section concluded classic `BADownloadManager` on a held 15.0 floor. The gate
+> decision reverses it: the *feature* is gated at macOS 26 rather than the app's
+> floor being raised, which puts the **managed** API back in reach and deletes
+> the classic path — and with it the hand-written downloader extension that made
+> this section's costing expensive. Kept because the API comparison and the
+> header readings below are still the evidence the gate rests on.
+
+
 | API | Floor | Verdict |
 |---|---|---|
 | `BAAssetPackManager.ensureLocalAvailabilityOfAssetPack:` | `macos(26)` (some methods 26.4) | Exactly this feature, written by Apple. **Off our floor.** |
@@ -590,6 +599,97 @@ Zynga's shipping report adds an exclusive-control lock that can hang, a 6 MB
 extension memory ceiling, and scheduled downloads that silently never run. These
 are operational rather than architectural, and the plain-HTTPS `.dmg` path is
 unaffected by all of them.
+
+### Stage 7 failure is fail-stop, and the Cause is privacy-safe (12 Sep 2026)
+
+Route-independent — it holds whichever acquirer delivers the model — so it
+landed before the BA work rather than behind it.
+
+**The predicate is `any failure`, not `every attempt failed`.** Every sibling
+stage (s08–s11) records a failure and carries on, because a partial analysis is
+still worth something. Redaction is the exception: continuing would hand
+unredacted participant speech to the language model and into the report, so a
+9-of-10 success is a leak, not a partial success. `Pipeline.run`'s stage-7
+block now wraps `remove_pii` and raises `PipelineAbandonedError`.
+
+Before this, the block had **no handler at all**. That was fail-stop *by
+accident* — the raise escaped to the run terminus, so nothing ever analysed
+unredacted text — but it arrived as an unclassified crash the project row could
+not render. The researcher read "the app broke" rather than "your redaction did
+not run". What was missing was classification, not safety.
+
+**The Cause is built with `_build_cause`, never `categorise_exception` — and
+this is not a style preference.** `categorise_exception` puts `str(exc)`
+straight into `cause.message`; `_build_cause` calls it for the *category* and
+then composes the message from structured fields only. spaCy raises `E064` /
+`E085` from `vocab.pyx` with the **looked-up token interpolated** — a
+transcript word — and `cause.message` is persisted to `pipeline-events.jsonl`,
+which is a named re-identification key alongside `pii_summary.txt` and
+`llm-calls.jsonl`.
+
+This is measured, not theorised. Swapping the handler to the obvious
+`categorise_exception` makes
+`test_pii_abandon_cause_never_carries_the_exception_text` fail with:
+
+    AssertionError: participant token leaked into cause.message:
+    "[E064] Error evaluating vocab for 'Aoife-Nic-Dhonnchadha'"
+
+`categorise_exception` also grew a `PackageInstallError` arm → `MISSING_DEP`.
+`FrozenSidecarError` subclasses it, so one arm covers both the sidecar refusing
+to install and a CLI download that failed; both mean "the detector is missing",
+which the desktop can route to a useful row, and `unknown` it cannot.
+
+Three tests in `tests/test_pipeline_abandon.py`, each proved to bite by
+mutating the live code back and confirming precisely the expected red set:
+removing the wrap reddens the two pipeline tests; swapping in
+`categorise_exception` reddens the privacy test; removing the classifier arm
+reddens the classifier test. The assertion with the most teeth is
+`segment_topics.call_count == 0` — a warn-and-continue would still leave a
+green-looking run.
+
+**Not done here:** `PipelineSummary` has no `pii` bucket (`ingest`,
+`transcripts`, `topics`, `quotes`, `themes`). Adding one is a wire-contract
+change — the Swift mirror `PipelineSummary.swift` plus a
+`tests/fixtures/pipeline-summary-contract.json` version bump and a scenario
+that uses the field — and doing it half-way is the exact trap `CLAUDE.md`
+documents. Held as a separate decision.
+
+### Two defects the same seam exposed (12 Sep 2026)
+
+Both fall out of `resolve_spacy_model()` existing: once the model can arrive as
+a *directory* rather than a package, code that assumed the package form is
+wrong, and code that never asked permission to fetch 425 MB is worse.
+
+**1. The Pipeline view reported "model missing" on a working Mac.**
+`pipeline_view/catalogue.py` declares the model as
+`Requirement(kind="python_package", value="en_core_web_lg")`, and the probe in
+`host.py` answered it with `importlib.util.find_spec`. That is the right
+question for the CLI acquirer (`spacy download` installs an importable
+package) and the wrong one for the `.dmg` and TestFlight acquirers, which
+unpack a model *directory* and install no package at all. The view would have
+offered to install something already on disk. The probe now routes through
+`_spacy_model_present()`, which asks the same resolver stage 7 asks; a path
+override failing its liveness check (`meta.json` + `config.cfg`) reads as
+absent, because a model we cannot load is one that is not there.
+
+**2. `--no-fetch` did not reach stage 7.** `_ensure_spacy_model()` took no
+argument, so the flag never arrived and the stage downloaded 425 MB anyway —
+the largest possible way to disobey "do not reach the network", and the one
+heavyweight fetch in the pipeline that ignored a flag Whisper's preflight has
+honoured since it was introduced. It now refuses with a `PackageInstallError`.
+
+That type is deliberate rather than a bespoke abort class: a refused install is
+what it is, `categorise_exception` already maps it to `MISSING_DEP`, and stage
+7's handler turns it into a clean abandon with a privacy-safe Cause — so the
+fix above and this one compose without new machinery. Both halves are pinned
+separately (`tests/test_pii_spacy_lazy_fetch.py::TestNoFetchIsHonoured`),
+because the helper can refuse perfectly and still download if the caller never
+passes the flag, which is precisely what the defect was.
+
+The new string `preflight.pii.aborted_no_fetch` is in all 21 full locales,
+derived from each locale's own reviewed `whisper.aborted_no_fetch` — the
+remedy sentence is identical, so only the subject changed. Machine-derived,
+pending native review; `zh-Hant-HK` correctly absent (it inherits `zh-Hant`).
 
 ### Build order
 

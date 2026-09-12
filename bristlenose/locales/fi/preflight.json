@@ -37,6 +37,7 @@
     "local_model_not_pulled": "Pyydettyä paikallista mallia ei ole noudettu. Nouda se komennolla `ollama pull <model>` (tarkista mallin nimi bristlenose.toml-tiedostosta tai --llm-model-valitsimesta) ja aja uudelleen. Taustalla: {message}."
   },
   "pii": {
+    "aborted_no_fetch": "spaCy-mallia {model} ei ole v\u00e4limuistissa, ja --no-fetch on asetettu. Nouda se etuk\u00e4teen komennolla `bristlenose doctor --fetch`, tai aja uudelleen ilman --no-fetch-valitsinta.",
     "downloading": "Ladataan henkilötietojen tunnistinta (~400 Mt, kertaluontoinen)..."
   },
   "closing": {

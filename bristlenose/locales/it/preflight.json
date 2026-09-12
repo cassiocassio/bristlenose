@@ -37,6 +37,7 @@
     "local_model_not_pulled": "Il modello locale richiesto non è stato scaricato. Esegui `ollama pull <model>` per scaricarlo (controlla il nome del modello in bristlenose.toml o --llm-model), poi esegui di nuovo. Dettaglio: {message}."
   },
   "pii": {
+    "aborted_no_fetch": "Il modello spaCy {model} non \u00e8 nella cache e l'opzione --no-fetch \u00e8 attiva. Eseguire `bristlenose doctor --fetch` per scaricarlo in anticipo, oppure eseguire di nuovo senza --no-fetch.",
     "downloading": "Download del rilevatore di dati personali in corso (~400 MB, una sola volta)..."
   },
   "closing": {

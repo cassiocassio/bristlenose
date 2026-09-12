@@ -37,6 +37,7 @@
     "local_model_not_pulled": "Het gevraagde lokale model is niet opgehaald. Voer `ollama pull <model>` uit om het te downloaden (controleer de modelnaam in bristlenose.toml of --llm-model) en voer opnieuw uit. Onderliggend: {message}."
   },
   "pii": {
+    "aborted_no_fetch": "spaCy-model {model} staat niet in de cache en --no-fetch is ingesteld. Voer `bristlenose doctor --fetch` uit om het vooraf op te halen, of voer opnieuw uit zonder --no-fetch.",
     "downloading": "PII-detector wordt gedownload (~400 MB, eenmalig)..."
   },
   "closing": {

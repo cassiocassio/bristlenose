@@ -111,3 +111,61 @@ def test_host_module_does_not_import_telemetry() -> None:
     assert telemetry_modules_after == telemetry_modules_before or all(
         not m.startswith("bristlenose.pipeline") for m in telemetry_modules_after
     )
+
+
+class TestSpacyModelPresenceAcrossDeliveryShapes:
+    """The model ships in two shapes; the probe must recognise both.
+
+    The CLI acquirer runs `spacy download`, installing an importable package.
+    The `.dmg` and TestFlight acquirers unpack a model *directory* and point
+    `BRISTLENOSE_PII_MODEL_DIR` at it, installing no package at all. A probe
+    that only asks `find_spec` reports "model missing" on a Mac where
+    redaction works — and the Pipeline view then offers to install something
+    already sitting on disk.
+    """
+
+    @staticmethod
+    def _live_model_dir(tmp_path):
+        d = tmp_path / "en_core_web_lg"
+        d.mkdir()
+        (d / "meta.json").write_text("{}")
+        (d / "config.cfg").write_text("[nlp]")
+        return d
+
+    def test_path_delivered_model_reads_present_without_a_package(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        from bristlenose.pipeline_view.host import _spacy_model_present
+
+        # Simulate a machine where the package genuinely is not installed —
+        # the .dmg / TestFlight case. Without the override this must read
+        # absent, and with it present, on the same machine.
+        def _no_package(name, path=None, target=None):
+            if name == "en_core_web_lg":
+                raise ModuleNotFoundError(name)
+            return None
+
+        monkeypatch.setattr("importlib.util.find_spec", _no_package)
+
+        monkeypatch.delenv("BRISTLENOSE_PII_MODEL_DIR", raising=False)
+        assert _spacy_model_present() is False
+
+        monkeypatch.setenv(
+            "BRISTLENOSE_PII_MODEL_DIR", str(self._live_model_dir(tmp_path))
+        )
+        assert _spacy_model_present() is True
+
+    def test_incomplete_model_dir_reads_absent(self, tmp_path, monkeypatch) -> None:
+        """A model we cannot load is a model that is not there.
+
+        `resolve_spacy_model` requires both `meta.json` and `config.cfg`; a
+        half-unpacked directory (an interrupted download) must not read as a
+        working detector, or stage 7 fails at redaction time instead of the
+        Pipeline view saying so up front.
+        """
+        from bristlenose.pipeline_view.host import _spacy_model_present
+
+        d = self._live_model_dir(tmp_path)
+        (d / "meta.json").unlink()
+        monkeypatch.setenv("BRISTLENOSE_PII_MODEL_DIR", str(d))
+        assert _spacy_model_present() is False

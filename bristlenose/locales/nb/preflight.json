@@ -37,6 +37,7 @@
     "local_model_not_pulled": "Den forespurte lokale modellen er ikke hentet. Kjør `ollama pull <model>` for å laste den ned (sjekk modellnavnet i bristlenose.toml eller --llm-model), og kjør deretter på nytt. Underliggende: {message}."
   },
   "pii": {
+    "aborted_no_fetch": "spaCy-modellen {model} finnes ikke i hurtigbufferen, og --no-fetch er satt. Kj\u00f8r `bristlenose doctor --fetch` for \u00e5 hente den p\u00e5 forh\u00e5nd, eller kj\u00f8r p\u00e5 nytt uten --no-fetch.",
     "downloading": "Laster ned detektor for personopplysninger (~400 MB, engangs) …"
   },
   "closing": {

@@ -612,3 +612,201 @@ def test_run_analysis_only_abandons_at_s08_for_quota_failure(tmp_path: Path) -> 
     # No report on disk — abandon before render.
     report_html = output_dir / "bristlenose-test-quota-abandon-report.html"
     assert not report_html.exists()
+
+
+# ---------------------------------------------------------------------------
+# Stage 7 — PII redaction failure abandons the run
+# ---------------------------------------------------------------------------
+#
+# Stage 7 is the one stage whose failure predicate is "any failure", not
+# "every attempt failed". The others (s08–s11) record a failure and carry on,
+# because a partial analysis is still worth something. Redaction is not like
+# that: continuing sends unredacted participant speech to the language model
+# and into the report, so a 9-of-10 success is a leak, not a partial success.
+
+
+def _pii_run_fixture(tmp_path: Path):
+    """Build the settings + sessions + transcripts to reach stage 7.
+
+    Transcription must *succeed* here — unlike the bar repro above, whose
+    whole point is that it fails — so the run gets far enough for redaction
+    to be attempted at all.
+    """
+    from bristlenose.models import FullTranscript, TranscriptSegment
+
+    settings = MagicMock()
+    settings.project_name = "test-pii"
+    settings.llm_provider = "anthropic"
+    settings.llm_model = "claude-sonnet-4-5-20250929"
+    settings.skip_transcription = False
+    settings.write_intermediate = True
+    settings.llm_concurrency = 1
+    settings.whisper_backend = "mlx"
+    settings.whisper_model = "tiny"
+    settings.color_scheme = "default"
+    settings.pii_score_threshold = 0.5
+    settings.no_fetch = False
+    settings.pii_enabled = True
+
+    input_dir = tmp_path / "input"
+    input_dir.mkdir()
+    output_dir = tmp_path / "output"
+
+    video_path = input_dir / "vid1.mov"
+    video_path.write_bytes(b"fake-video")
+    audio_path = input_dir / "vid1.wav"
+    audio_path.write_bytes(b"fake-audio")
+    session = InputSession(
+        session_id="s1",
+        session_number=1,
+        participant_id="p1",
+        participant_number=1,
+        session_date=datetime.now(timezone.utc),
+        files=[InputFile(
+            path=video_path,
+            file_type=FileType.VIDEO,
+            created_at=datetime.now(timezone.utc),
+            size_bytes=10,
+            duration_seconds=60.0,
+        )],
+        audio_path=audio_path,
+    )
+
+    segments = [
+        TranscriptSegment(
+            start_time=0.0, end_time=5.0,
+            text="My name is Aoife and I bank with Barclays.",
+            speaker_label="Speaker A", source="whisper", segment_index=0,
+        ),
+    ]
+    transcripts = [
+        FullTranscript(
+            session_id="s1",
+            participant_id="p1",
+            source_file="vid1.mov",
+            session_date=datetime.now(timezone.utc),
+            duration_seconds=60.0,
+            segments=segments,
+        )
+    ]
+
+    def _fake_transcribe(needs, _settings, *, on_progress=None, on_segment=None):
+        return (
+            {s.session_id: list(segments) for s in needs},
+            StageOutcome(attempted=len(needs), succeeded=len(needs), failed=[]),
+        )
+
+    return settings, input_dir, output_dir, [session], transcripts, _fake_transcribe
+
+
+def _run_to_pii_failure(tmp_path: Path, pii_exc: Exception):
+    """Drive ``Pipeline.run`` to stage 7, where ``remove_pii`` raises.
+
+    Returns ``(exc_info, segment_topics_mock)`` so callers can assert both the
+    classification and — the assertion that actually matters — that no LLM
+    stage was ever reached.
+    """
+    (settings, input_dir, output_dir, sessions,
+     transcripts, fake_transcribe) = _pii_run_fixture(tmp_path)
+
+    pipeline = Pipeline(settings)
+    segment_topics = MagicMock(name="segment_topics")
+
+    def _boom(_transcripts, _settings):
+        raise pii_exc
+
+    with (
+        patch("bristlenose.stages.s01_ingest.ingest", return_value=sessions),
+        patch(
+            "bristlenose.stages.s02_extract_audio.extract_audio_for_sessions",
+            new=_async_passthrough,
+        ),
+        patch(
+            "bristlenose.stages.s05_transcribe.transcribe_sessions",
+            new=fake_transcribe,
+        ),
+        patch(
+            "bristlenose.stages.s06_merge_transcript.merge_transcripts",
+            return_value=transcripts,
+        ),
+        patch("bristlenose.stages.s07_pii_removal.remove_pii", new=_boom),
+        patch(
+            "bristlenose.stages.s08_topic_segmentation.segment_topics",
+            new=segment_topics,
+        ),
+    ):
+        with pytest.raises(PipelineAbandonedError) as exc_info:
+            asyncio.run(pipeline.run(input_dir, output_dir))
+
+    return exc_info, segment_topics, output_dir
+
+
+def test_pii_failure_abandons_before_any_llm_call(tmp_path: Path) -> None:
+    """Redaction fails → the run abandons, and stage 8 is never reached.
+
+    The second assertion is the one with teeth. A `warn and continue` here
+    would still leave a green-looking run, but every transcript handed to
+    s08 would carry the participant speech the researcher asked us to strip.
+    """
+    from bristlenose.utils.package_install import FrozenSidecarError
+
+    exc_info, segment_topics, output_dir = _run_to_pii_failure(
+        tmp_path,
+        FrozenSidecarError("cannot install en_core_web_lg from the sidecar"),
+    )
+
+    assert segment_topics.call_count == 0, (
+        "stage 8 ran after redaction failed — unredacted transcripts reached "
+        "the language model"
+    )
+    assert exc_info.value.cause.category == CauseCategoryEnum.MISSING_DEP, (
+        f"expected MISSING_DEP, got {exc_info.value.cause.category}"
+    )
+    assert exc_info.value.cause.stage == "pii_removal"
+    # No cooked transcripts — nothing downstream may read a half-redacted dir.
+    assert not (output_dir / "transcripts-cooked").exists()
+
+
+def test_pii_abandon_cause_never_carries_the_exception_text(tmp_path: Path) -> None:
+    """The Cause must not interpolate ``str(exc)`` — it can hold a transcript word.
+
+    spaCy raises E064/E085 from ``vocab.pyx`` with the *looked-up token*
+    interpolated, so the exception text can carry a participant's name. The
+    Cause is persisted to ``pipeline-events.jsonl``, which is a named
+    re-identification surface, so the handler must use ``_build_cause`` (which
+    composes from structured fields) and never ``categorise_exception`` (which
+    puts ``str(exc)`` straight into ``message``).
+    """
+    token = "Aoife-Nic-Dhonnchadha"
+    exc_info, _, _ = _run_to_pii_failure(
+        tmp_path, ValueError(f"[E064] Error evaluating vocab for '{token}'"),
+    )
+
+    cause = exc_info.value.cause
+    assert token not in cause.message, (
+        f"participant token leaked into cause.message: {cause.message!r}"
+    )
+    assert "E064" not in cause.message, (
+        f"raw spaCy exception text reached cause.message: {cause.message!r}"
+    )
+
+
+def test_package_install_error_categorises_as_missing_dep() -> None:
+    """The PII stack's own failures classify, rather than landing in `unknown`.
+
+    ``FrozenSidecarError`` subclasses ``PackageInstallError``, so one arm in
+    ``categorise_exception`` covers both the sidecar refusing to install and a
+    CLI download that failed. Both mean "the detector is missing", which the
+    desktop can route to a useful row; `unknown` it cannot.
+    """
+    from bristlenose.run_lifecycle import categorise_exception
+    from bristlenose.utils.package_install import (
+        FrozenSidecarError,
+        PackageInstallError,
+    )
+
+    for exc in (PackageInstallError("pip failed"), FrozenSidecarError("read-only")):
+        cause = categorise_exception(exc)
+        assert cause.category == CauseCategoryEnum.MISSING_DEP, (
+            f"{type(exc).__name__} categorised as {cause.category}, not MISSING_DEP"
+        )

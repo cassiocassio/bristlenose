@@ -389,6 +389,26 @@ def categorise_exception(exc: BaseException, *, provider: str | None = None) -> 
     if isinstance(exc, (ImportError, ModuleNotFoundError)):
         return Cause(category=CauseCategoryEnum.MISSING_DEP, message=msg)
 
+    # The PII stack's own "the model isn't here" failures. `FrozenSidecarError`
+    # subclasses `PackageInstallError`, so one arm catches both: the frozen
+    # sidecar refusing to install, and a CLI download that failed. Both mean the
+    # same thing to a reader — the detector is missing — and without this they
+    # land in `unknown`, which the desktop cannot route to a useful row. Local
+    # import to keep `package_install` off this module's load path, matching the
+    # `TruncatedResponseError` arm above.
+    #
+    # MISSING_DEP even when the underlying cause was the network, and that is
+    # deliberate — `network` exists in the enum and was considered. Three things
+    # raise this: a refusal under `--no-fetch`, the frozen sidecar declining to
+    # install, and a download that genuinely failed. `network` is wrong for the
+    # first two and merely imprecise for the third, whereas "the detector is not
+    # here" is true of all three and carries the same remedy — fetch it. Don't
+    # split this without a structured field on the exception to split it *on*.
+    from bristlenose.utils.package_install import PackageInstallError
+
+    if isinstance(exc, PackageInstallError):
+        return Cause(category=CauseCategoryEnum.MISSING_DEP, message=msg)
+
     # Missing binary — bare-name shellout failure. Filename without a path
     # separator means the caller passed a bare name and PATH resolution
     # failed (today's ffmpeg-under-sandbox bug). Slash-containing filenames

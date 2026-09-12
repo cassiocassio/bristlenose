@@ -37,6 +37,7 @@
     "local_model_not_pulled": "El model local sol·licitat no s'ha baixat. Executa `ollama pull <model>` per baixar-lo (comprova el nom del model a bristlenose.toml o --llm-model) i torna a executar-ho. Causa: {message}."
   },
   "pii": {
+    "aborted_no_fetch": "El model spaCy {model} no \u00e9s a la mem\u00f2ria cau i s'ha indicat --no-fetch. Executa `bristlenose doctor --fetch` per obtenir-lo per endavant, o torna a executar-ho sense --no-fetch.",
     "downloading": "S'està baixant el detector de dades personals (~400 MB, només un cop)..."
   },
   "closing": {

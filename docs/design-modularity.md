@@ -106,15 +106,39 @@ Backend selection at runtime (`BRISTLENOSE_WHISPER_BACKEND=auto`) picks whicheve
 
 ### PII removal (opt-in, heavy)
 
+**Canonical: [design-redact-pii.md](design-redact-pii.md) § "Delivery
+architecture — SETTLED 12 Sep 2026".** This section is the cross-channel
+summary; that doc owns the decision and the measurements.
+
 | Component | Size | Acquisition (Mac) | Acquisition (CLI) |
 |---|---|---|---|
-| `presidio-analyzer`, `presidio-anonymizer` | ~100 MB | **Background Assets — Non-Essential**, acquired when user enables PII | `pip install bristlenose[pii]` |
-| `spacy` code | ~50 MB | Same | Same |
-| `en_core_web_lg` spaCy model | ~400 MB | Same (or bundled inside the PII asset pack) | Installed via spaCy on CLI |
+| `presidio-analyzer`, `presidio-anonymizer` | **33 MB** (measured, bundle) | **Bundled** in the sidecar | base install |
+| `spacy` code | bundled | **Bundled** in the sidecar | base install |
+| `en_core_web_lg` spaCy model | ~425 MB | Acquired on demand — Background Assets on TestFlight/MAS, plain HTTPS on the `.dmg` | `spacy download` |
 
-**Migration needed:** today presidio + spaCy are in `dependencies` (base install). Move them to a new `[pii]` extra so CLI users opt in, and exclude them from the Mac sidecar PyInstaller spec by default.
+**The code is bundled; only the model is acquired.** Presidio and spaCy
+measured 33 MB in the built sidecar — not the ~100 MB this table used to
+claim, and not enough to be worth an acquisition mechanism. The 425 MB model
+is the only thing large enough to justify one, so it is the only thing
+deferred. `en_core_web_lg` stays excluded from the PyInstaller spec.
 
-Awkwardness: Background Assets natively targets data files, not Python packages. Mechanism for Mac: ship presidio + spaCy as a pre-built wheel-archive asset pack; unpack into a writable Application Support path; extend `sys.path` from the sidecar's startup. Complex but doable. For alpha (friends only), just bundle them unconditionally and accept the download size — defer the on-demand work to public beta.
+**One seam, three acquirers.** Every consumer resolves the model through
+`resolve_spacy_model()` (`stages/s07_pii_removal.py`), which returns either the
+package name or a directory path from `BRISTLENOSE_PII_MODEL_DIR`. Which
+acquirer fills that path is switched by the existing `DistributionChannel`
+enum. The `.dmg` deliberately does *not* use Background Assets, so the
+unproven Developer-ID BA question never has to be answered.
+
+**Superseded:** the wheel-archive asset pack — shipping presidio + spaCy as
+Python-packages-as-data, unpacked to Application Support with a `sys.path`
+extension at sidecar startup. It was designed for a 100 MB problem that
+measurement showed is a 33 MB non-problem. Bundling the code is simpler and
+costs less than the startup hook it replaces.
+
+**No `[pii]` extra.** Previously planned here; dropped. Redaction is a core
+capability of the product, the code is small, and an extra would mean a CLI
+user's `--redact-pii` failing on an import error rather than on a missing
+model with an actionable message.
 
 ### Media tools
 
@@ -209,7 +233,7 @@ Snap base install. FFmpeg via `snap install ffmpeg` or strict-confinement `slots
 
 ### pip (any platform)
 
-`pip install bristlenose` base + extras: `[serve]`, `[apple]` (Mac Apple Silicon), `[pii]`, `[dev]`, plus build-time-only extras `[release]` and `[desktop]` (Mac contributors building the `.app` sidecar). Users compose what they need. Whisper via `huggingface_hub` on first use.
+`pip install bristlenose` base + extras: `[serve]`, `[apple]` (Mac Apple Silicon), `[dev]`, plus build-time-only extras `[release]` and `[desktop]` (Mac contributors building the `.app` sidecar). Users compose what they need. Whisper via `huggingface_hub` on first use.
 
 ## Decision matrix: which mechanism for which component
 
@@ -223,7 +247,8 @@ Snap base install. FFmpeg via `snap install ffmpeg` or strict-confinement `slots
 | FFmpeg | Bundled (trimmed) | Bundled (trimmed) | Bottle dep | User install | Snap connection |
 | Whisper small.en | Bundled or Essential Background Asset | Essential Background Asset | `huggingface_hub` on first use | Same | Same |
 | Whisper medium / large-v3-turbo | Non-Essential Background Asset | Non-Essential Background Asset | Same | Same | Same |
-| presidio + spaCy + en_core_web_lg | Bundled for alpha; Non-Essential Background Asset for public beta | Non-Essential Background Asset | `[pii]` extra | `[pii]` extra | Same |
+| presidio + spaCy (code) | Bundled | Bundled | base install | base install | Same |
+| `en_core_web_lg` (425 MB model) | Background Assets (TestFlight/MAS); plain HTTPS (`.dmg`) | Background Assets | `spacy download` | `spacy download` | Same |
 | Ollama | Not bundled, HTTP-detected | Same | Same | Same | Same |
 | UI locales | Bundled | Bundled | Bundled | Bundled | Bundled |
 
@@ -234,7 +259,7 @@ Snap base install. FFmpeg via `snap install ffmpeg` or strict-confinement `slots
 1. **Single lookup function per resource.** `find_whisper_model()`, `bundled_binary_path("ffmpeg")`, `get_credential("anthropic")`. Platform branching lives inside these functions, not at call sites.
 2. **Env-var injection first.** If Swift can fetch / resolve / locate something and pass it via env var, let Swift do it. Python reads env. No Mac-specific Python code.
 3. **PyInstaller spec decides what's bundled.** Drop deps the desktop doesn't need from the `hiddenimports` list. Don't add a Mac-specific import-branch in Python.
-4. **Extras are the CLI equivalent of "optional bundle components".** Every feature that's Non-Essential on Mac should be an extra on CLI (`[pii]`, `[whisper-fat]` for larger models if we end up needing one, etc.).
+4. **Extras are the CLI equivalent of "optional bundle components".** Every feature that's Non-Essential on Mac should be an extra on CLI (`[whisper-fat]` for larger models if we end up needing one, etc.). **PII is the exception that proves the rule** — the Mac-side deferral is the 425 MB *model*, not the code, so there is nothing for a CLI extra to gate.
 5. **Prefer `huggingface_hub` cache paths on Linux/Windows, Background Assets on Mac.** The lookup function checks Application Support → HuggingFace cache → download in that order. CLI never touches Application Support (empty); Mac finds it there first.
 6. **No new Mac-only Python dependency without reviewing this doc first.** If you're tempted to add `pyobjc-framework-Security` or similar, first ask whether Swift can do the work and hand the result to Python.
 
@@ -249,7 +274,7 @@ Snap base install. FFmpeg via `snap install ffmpeg` or strict-confinement `slots
 - `[desktop]`: pyinstaller (added 29 Apr 2026 during C1 retest — Mac sidecar build tooling)
 
 Proposed:
-- Move `presidio-analyzer`, `presidio-anonymizer` out of base into new `[pii]` extra
+- ~~Move `presidio-analyzer`, `presidio-anonymizer` out of base into new `[pii]` extra~~ — **abandoned 12 Sep 2026**: 33 MB measured, not worth an extra. They stay in base.
 - Keep `faster-whisper` in base (cross-platform CLI default)
 - Exclude `faster-whisper` + `ctranslate2` from Mac sidecar PyInstaller spec via `excludes` rather than removing from base deps
 - Exclude `presidio-*` + `spacy` from Mac sidecar PyInstaller spec for alpha (bundle them), and for public beta move to Non-Essential Background Asset
@@ -259,16 +284,16 @@ Proposed:
 **Order of work:**
 1. (Track C C1) Write PyInstaller spec that includes only `[apple]`-style transcription, excludes presidio/spaCy — targeted bundle ≤ 200 MB before Whisper. **Reality check (C0, 18 Apr 2026):** the shipped spec landed at **644 MB**, not 200 MB — torch (288 MB), llvmlite (110 MB), onnxruntime (58 MB), and scipy (37 MB) came in as transitive pulls via `tiktoken`/`transformers`/`numba`/`librosa`. The gap is absorbed by the trickle-to-full-capability strategy below (Background Assets for Whisper models + future optional deps) rather than by build-time trimming. Revisit if TestFlight reports cite install size as friction; for alpha, the bundle ships as-is. See `design-desktop-python-runtime.md` §"Bundle-size findings" for the transitive-pull table.
 2. (Track C C1) Write `bristlenose-sidecar[pii]` asset pack for Background Assets — deferred to public beta.
-3. (separate pyproject refactor) Move presidio to `[pii]` extras. Update Homebrew formula to install without PII by default.
+3. ~~(separate pyproject refactor) Move presidio to `[pii]` extras. Update Homebrew formula to install without PII by default.~~ **Abandoned 12 Sep 2026** — see above.
 4. (post-100-days) Implement runtime `sys.path` extension for downloaded PII asset pack on Mac.
 
 ## Open questions
 
 - **Whisper base model choice.** `small.en` (English only, 461 MB) or `small` (multilingual, 480 MB)? For alpha friends, `small.en` is fine — they're English-speaking. For public beta with multi-language UI, default to `small` and offer `small.en` as a download for English-only users who want the ~5 % accuracy bump.
-- **PII asset-pack Python-packages-as-data problem.** Bundling presidio + spaCy as a wheel-archive Background Asset needs a startup hook that extracts and extends `sys.path`. Prototype before committing. Fallback: bundle presidio in `.app` for public beta too, accept the extra 600 MB. Decide during Track C C1.
+- ~~**PII asset-pack Python-packages-as-data problem.**~~ **Closed 12 Sep 2026 by measurement.** The wheel-archive asset pack and its `sys.path` startup hook were designed for a ~100 MB dependency that measured **33 MB** in the built sidecar. The code is now simply bundled; only the 425 MB `en_core_web_lg` model is acquired on demand, and a model is data, which is what Background Assets is actually for. See [design-redact-pii.md](design-redact-pii.md).
 - **Snap optional extras.** Snap strict confinement makes `pip install --user` awkward. Either add every optional component to the snap base (defeats the point) or design a confinement-compatible opt-in mechanism. Defer to post-100-days.
 - **App Store reviewer stance on Background Assets for PII ML models.** Apple may flag a 500 MB spaCy model as "non-public ML model of user-controlled inference." Worth a spike before committing the public-beta design.
-- **Homebrew `[pii]` flag mechanism.** Homebrew doesn't natively support feature flags — convention is separate formulae (`bristlenose` vs `bristlenose-pii`) or post-install `pip install bristlenose[pii]` into the brew-installed venv. Decide when the PII extras land.
+- ~~**Homebrew `[pii]` flag mechanism.**~~ **Moot 12 Sep 2026** — there is no `[pii]` extra to flag. A brew user gets the code with the formula and runs `spacy download` for the model.
 
 ## Acquisition strategy: trickle to full capability
 

@@ -37,6 +37,7 @@
     "local_model_not_pulled": "Le mod\u00e8le local demand\u00e9 n\u2019est pas t\u00e9l\u00e9charg\u00e9. Lancez `ollama pull <model>` pour le r\u00e9cup\u00e9rer (le nom du mod\u00e8le figure dans bristlenose.toml ou dans --llm-model), puis relancez. Cause : {message}."
   },
   "pii": {
+    "aborted_no_fetch": "Le mod\u00e8le spaCy {model} n\u2019est pas en cache et --no-fetch est activ\u00e9. Lancez `bristlenose doctor --fetch` pour le r\u00e9cup\u00e9rer \u00e0 l\u2019avance, ou relancez sans --no-fetch.",
     "downloading": "T\u00e9l\u00e9chargement du d\u00e9tecteur de donn\u00e9es personnelles (~400 Mo, une seule fois)\u2026"
   },
   "closing": {

@@ -37,6 +37,7 @@
     "local_model_not_pulled": "Żądany model lokalny nie został pobrany. Uruchom `ollama pull <model>`, aby go pobrać (sprawdź nazwę modelu w bristlenose.toml lub --llm-model), a następnie uruchom ponownie. Szczegóły: {message}."
   },
   "pii": {
+    "aborted_no_fetch": "Modelu spaCy {model} nie ma w pami\u0119ci podr\u0119cznej, a ustawiono --no-fetch. Uruchom `bristlenose doctor --fetch`, aby pobra\u0107 go z wyprzedzeniem, albo uruchom ponownie bez --no-fetch.",
     "downloading": "Pobieranie detektora danych osobowych (~400 MB, jednorazowo)..."
   },
   "closing": {

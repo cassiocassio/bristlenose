@@ -37,6 +37,7 @@
     "local_model_not_pulled": "O modelo local solicitado não foi baixado. Execute `ollama pull <model>` para baixá-lo (verifique o nome do modelo no bristlenose.toml ou --llm-model) e execute novamente. Subjacente: {message}."
   },
   "pii": {
+    "aborted_no_fetch": "O modelo spaCy {model} n\u00e3o est\u00e1 em cache e --no-fetch est\u00e1 definido. Execute `bristlenose doctor --fetch` para baix\u00e1-lo com anteced\u00eancia, ou execute novamente sem --no-fetch.",
     "downloading": "Baixando detector de PII (~400 MB, uma única vez)..."
   },
   "closing": {

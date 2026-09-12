@@ -37,6 +37,7 @@
     "local_model_not_pulled": "Das angeforderte lokale Modell ist nicht geladen. Holen Sie es mit `ollama pull <model>` (den Modellnamen finden Sie in bristlenose.toml oder unter --llm-model) und f\u00fchren Sie den Befehl erneut aus. Ursache: {message}."
   },
   "pii": {
+    "aborted_no_fetch": "Das spaCy-Modell {model} liegt nicht im Cache und --no-fetch ist gesetzt. Holen Sie es vorab mit `bristlenose doctor --fetch`, oder f\u00fchren Sie den Befehl ohne --no-fetch erneut aus.",
     "downloading": "PII-Erkennung wird geladen (~400 MB, einmalig)\u2026"
   },
   "closing": {

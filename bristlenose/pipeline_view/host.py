@@ -144,14 +144,50 @@ def _probe_installed_packages() -> dict[str, bool]:
     # Local import to avoid a top-level circular reference when host.py is
     # imported by catalogue consumers.
     from bristlenose.pipeline_view.catalogue import all_python_packages
+    from bristlenose.stages.s07_pii_removal import SPACY_MODEL
 
     result: dict[str, bool] = {}
     for pkg in all_python_packages():
+        if pkg == SPACY_MODEL:
+            result[pkg] = _spacy_model_present()
+            continue
         try:
             result[pkg] = importlib.util.find_spec(pkg) is not None
         except (ValueError, ModuleNotFoundError):
             result[pkg] = False
     return result
+
+
+def _spacy_model_present() -> bool:
+    """Is the spaCy model available — by EITHER of its two delivery shapes?
+
+    `find_spec` is the right probe for a pip-installed model and the wrong one
+    for a path-delivered one. The CLI acquirer runs `spacy download`, which
+    installs an importable package; the `.dmg` and TestFlight acquirers drop an
+    unpacked model *directory* and point `BRISTLENOSE_PII_MODEL_DIR` at it,
+    installing no package at all. Probing importability alone would report
+    "model missing" on a Mac where redaction works perfectly — the Pipeline
+    view would offer to install something already present.
+
+    So ask the same resolver stage 7 asks. A path override that fails its
+    liveness check (`meta.json` + `config.cfg`) raises, and a model we cannot
+    load is one that is not there, which is exactly the answer this returns.
+    """
+    from bristlenose.stages.s07_pii_removal import (
+        SPACY_MODEL,
+        resolve_spacy_model,
+    )
+
+    try:
+        resolved = resolve_spacy_model()
+    except ValueError:
+        return False
+    if resolved != SPACY_MODEL:
+        return True  # a live model directory — no package to find
+    try:
+        return importlib.util.find_spec(SPACY_MODEL) is not None
+    except (ValueError, ModuleNotFoundError):
+        return False
 
 
 def probe_host(settings: BristlenoseSettings) -> HostFacts:

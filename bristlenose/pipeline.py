@@ -42,6 +42,7 @@ from bristlenose.manifest import (
     get_completed_session_ids,
     load_manifest,
     mark_session_complete,
+    mark_session_failed,
     mark_stage_complete,
     mark_stage_running,
     write_manifest,
@@ -396,7 +397,7 @@ _BILLING_URLS: dict[str, str] = {
 }
 
 
-def _mark_sessions_complete_except_failed(
+def _record_session_outcomes(
     manifest: PipelineManifest,
     stage: str,
     session_ids: Iterable[str],
@@ -405,8 +406,13 @@ def _mark_sessions_complete_except_failed(
     provider: str | None = None,
     model: str | None = None,
 ) -> set[str]:
-    """Mark each session in ``session_ids`` complete, EXCEPT those the stage
-    recorded as failures. Returns the set that was skipped.
+    """Write one manifest record per session: COMPLETE, or FAILED for those the
+    stage's outcome named. Returns the set recorded as failed.
+
+    Named for what it writes, not for what it skips: it does not *omit* failed
+    sessions, it *records* them, and the difference is the whole fix — an
+    omitted session is indistinguishable from one never attempted, derives to
+    COMPLETE, and caches the stage whole. See ``mark_session_failed``.
 
     Per-session manifest marking is a claim that the session's work is done and
     cached; ``get_completed_session_ids`` reads it back on the next run and
@@ -433,6 +439,13 @@ def _mark_sessions_complete_except_failed(
     skipped: set[str] = set()
     for sid in session_ids:
         if sid in failed_sids:
+            # Recorded, not omitted. Absence reads as "never attempted", which
+            # derives to COMPLETE and caches the whole stage — see
+            # `mark_session_failed`. This is the half that makes the retry
+            # actually happen.
+            mark_session_failed(
+                manifest, stage, sid, provider=provider, model=model,
+            )
             skipped.add(sid)
             continue
         mark_session_complete(
@@ -1485,8 +1498,8 @@ class Pipeline:
                     # Record per-session completion only for sessions whose
                     # boundaries were actually produced — a skip-after-failure
                     # entry returns an empty SessionTopicMap that is NOT a
-                    # success. See _mark_sessions_complete_except_failed.
-                    _mark_sessions_complete_except_failed(
+                    # success. See _record_session_outcomes.
+                    _record_session_outcomes(
                         manifest, STAGE_TOPIC_SEGMENTATION,
                         [tm.session_id for tm in _fresh_topic_maps],
                         _seg_outcome,
@@ -1662,8 +1675,8 @@ class Pipeline:
                     # Record per-session completion only for sessions that
                     # actually produced quotes — same rule as s08 above, and
                     # the case that was missing it until 11 Sep 2026. See
-                    # _mark_sessions_complete_except_failed.
-                    _mark_sessions_complete_except_failed(
+                    # _record_session_outcomes.
+                    _record_session_outcomes(
                         manifest, STAGE_QUOTE_EXTRACTION,
                         [t.session_id for t in _remaining_transcripts_q],
                         _fresh_quote_outcome,

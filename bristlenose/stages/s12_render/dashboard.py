@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import logging
 import os
 from datetime import datetime
@@ -499,7 +500,7 @@ def _render_project_tab(
         if total_duration_s > 0:
             _w(f'<div class="bn-project-stat--pair-half" data-stat-link="sessions">'
                f'<span class="bn-project-stat-value">'
-               f'{format_duration_human(total_duration_s)}</span>'
+               f'{html.escape(format_duration_human(total_duration_s))}</span>'
                f'<span class="bn-project-stat-label">{_duration_label}</span></div>')
         if total_words > 0:
             _w(f'<div class="bn-project-stat--pair-half" data-stat-link="sessions">'

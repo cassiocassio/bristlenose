@@ -1,10 +1,16 @@
 ---
 status: partial
-last-trued: 2026-08-19
-trued-against: HEAD@main (9b919d8b) on 2026-08-19
+last-trued: 2026-09-12
+trued-against: HEAD@main (895fe8a6) on 2026-09-12
 ---
 
 # Away with Undo Debt
+
+> _Trued 2026-09-12_ — the **Reorder** row said the gesture was inert and therefore
+> carried no debt, citing two line anchors that had both moved. Drag-to-reorder
+> shipped in `bbda9a6a` (1 Aug 2026), so that row is live debt, and **Move project**
+> no longer under-specifies its inverse. See
+> [`design-desktop-sidebar-appkit.md`](design-desktop-sidebar-appkit.md) §3.3.
 
 _A running register of desktop actions that mutate state and **should** be undoable —
 and which of them already are. The goal, in one line: **nothing confirms, everything
@@ -114,10 +120,10 @@ Sidebar / `ProjectIndex` mutations (desktop chrome). Append as new ones surface.
 |---|---|---|---|---|
 | **Delete folder** | folder removed; contained projects orphaned to root (`folderId = nil`) | ❌ none (immediate) | the folder + each project's prior `folderId` | the trigger for this doc; non-destructive but silently scatters an organised folder |
 | **Remove project from sidebar** | project removed from sidebar (on-disk folder untouched) | ✅ **⌘Z, no time limit** | the project row | _Closed 19 Aug 2026 (`5598bd39`): toast deleted, 8s fuse deleted. A pending removal now survives until the next one supersedes it — one level of undo, which is what an undo stack does. The vanishing row gets `NSAnimationEffect.poof`, the idiom the drag-and-drop HIG names. Not on `NSUndoManager` — see the note above._ |
-| **Move project** (to folder / to root) | project `folderId` — and, once reorder lands, `position` | ❌ none | prior `folderId` **and** prior `position` | a move that lands at a chosen index changes both fields; today `moveProject` sets only `folderId` and leaves `position` at its old in-folder value, so the inverse is currently under-specified in the same way the forward action is |
+| **Move project** (to folder / to root) | project `folderId` **and** `position` | ❌ none | prior `folderId` **and** prior `position` in the source scope | `moveProject` routes through `ProjectIndex.apply(_:)` since `bbda9a6a`, so it renumbers both scopes — the forward action is now fully specified, and so is the inverse. It appends (Move-To names a destination, not a slot), so restoring means putting the project back at its recorded index, not at the end. |
 | **Rename** project / folder | `name` | ❌ field-local only (while the NSTextField edits) | prior name | the *committed* rename should ⌘Z, not just the edit-in-progress |
 | **Choose Icon** (set / clear) | project `icon` | ❌ none | prior icon | |
-| **Reorder** project / folder (drag) | `position` across the affected scope (root, or one folder's contents) | ❌ none — **and not yet reachable**: folders return `nil` from `pasteboardWriterForItem` (`ProjectSidebarOutline.swift:981`) and the resolved `toIndex` is computed then discarded (`DropRouting.swift:14`) | the prior `position` of **every** item in that scope — a reorder renumbers the whole sequence, so the inverse is a snapshot of the order, not one field | **A pre-condition on the reorder work, not existing debt.** Zero-debt today only because the gesture is inert; it becomes live debt the moment drag-reorder ships. Two invariants for whoever builds it: a multi-select drag is **one** undo step, not N; and the snapshot must cover the source scope as well as the target when a drag crosses a folder boundary. |
+| **Reorder** project / folder (drag) | `position` across the affected scope (root, or one folder's contents) | ❌ none — **live debt since `bbda9a6a`** (1 Aug 2026) | the prior `position` of **every** item in that scope — a reorder renumbers the whole sequence, so the inverse is a snapshot of the order, not one field | **Was** *"a pre-condition on the reorder work, not existing debt … zero-debt today only because the gesture is inert"* — the gesture shipped, so this is now ordinary debt and the largest unclaimed row here. Folders are draggable (`OutlineNode.dragItem`), `DropPlan.atIndex` is consumed by `ProjectIndex.apply(_:)`, and a drop renumbers every affected scope. The two invariants written for whoever builds the undo still stand, and the second is now load-bearing rather than anticipatory: a multi-select drag is **one** undo step, not N; and the snapshot must cover the source scope as well as the target, because a drag crossing a folder boundary renumbers both. |
 | **New Folder** | folder added | ❌ none | remove the folder | low-stakes (empty), included for completeness |
 
 ### Out of register (separate domains / genuinely tricky)

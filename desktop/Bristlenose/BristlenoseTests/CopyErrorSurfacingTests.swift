@@ -3,23 +3,25 @@ import Testing
 
 @testable import Bristlenose
 
-/// Probes for how `CopyMachinery.CopyError` reaches a researcher — written to
-/// MEASURE the two catch sites in `ContentView`, not to assert a design.
+/// `CopyMachinery.CopyError` conforms to `LocalizedError`, so the two catch
+/// sites in `ContentView` — the loose-files site, which reads
+/// `error.localizedDescription`, and the drop-onto-project site, which
+/// destructures `.underlying` — render the same sentence for the same failure.
+/// These tests pin that by construction: every case's `errorDescription` is a
+/// sentence and never Foundation's enum-index fallback, and `.underlying`
+/// carries the wrapped error's own words.
 ///
-/// The two sites diverge (`git blame`: site 1 was written whole in `0ac2136d`
-/// without the `.underlying` arm site 2 has):
-///
-///   site 1 (loose files → new project)   `catch { toast.show(error.localizedDescription) }`
-///   site 2 (drop onto existing project)  `catch .underlying(let msg) { toast.show(msg) }`
-///
-/// So the SAME error renders two different strings depending on which gesture
-/// the researcher used. These tests pin what each site shows today. The
-/// defect is recorded with `withKnownIssue`: when it is fixed, Swift Testing
-/// reports "known issue did not occur" and this file must be updated — which
-/// is the intended signal, not a nuisance. Diagnosis and the proposed fix:
-/// `docs/design-copy-error-surfacing.md`.
+/// History: until this landed the two sites diverged — `.underlying` carried a
+/// `String`, the enum was not `LocalizedError`, and site 1 rendered
+/// "The operation couldn’t be completed. (Bristlenose.CopyMachinery.CopyError
+/// error 1.)" for a permission failure the other gesture rendered in full.
+/// Measured and diagnosed in `docs/design-copy-error-surfacing.md`; the
+/// `withKnownIssue` probes that pinned the defect became these assertions.
 @MainActor
 struct CopyErrorSurfacingTests {
+
+    /// Foundation's fallback for an error type with no localized text.
+    private static let enumIndexFallback = "CopyError error"
 
     private func makeTempDir() -> URL {
         let url = FileManager.default.temporaryDirectory
@@ -28,58 +30,46 @@ struct CopyErrorSurfacingTests {
         return url
     }
 
-    /// Write a measured string somewhere a sandboxed test host can actually
-    /// write (NOT /tmp — see the App-Sandbox gotcha in root CLAUDE.md).
-    private func record(_ label: String, _ value: String) {
-        let f = FileManager.default.temporaryDirectory
-            .appendingPathComponent("copy-error-probe.txt")
-        let line = "\(label): \(value)\n"
-        if let h = try? FileHandle(forWritingTo: f) {
-            h.seekToEndOfFile(); h.write(line.data(using: .utf8)!); try? h.close()
-        } else {
-            try? line.write(to: f, atomically: true, encoding: .utf8)
-        }
-        print("PROBE \(line)", terminator: "")
+    private func permissionError(_ text: String) -> NSError {
+        NSError(domain: NSCocoaErrorDomain, code: NSFileWriteNoPermissionError,
+                userInfo: [NSLocalizedDescriptionKey: text])
     }
 
-    // MARK: - Site 1: the bare enum's localizedDescription
+    @Test("every case renders a sentence, never the enum-index fallback")
+    func everyCaseRendersASentence() {
+        let cases: [CopyMachinery.CopyError] = [
+            .insufficientDiskSpace(needed: 5_000_000_000, available: 1_000_000_000),
+            .noItemsAfterFiltering,
+            .alreadyInFlight,
+            .underlying(permissionError("You don’t have permission to save the file “P07.mp4”.")),
+        ]
+        for err in cases {
+            let shown = err.localizedDescription
+            #expect(!shown.isEmpty, "\(err) rendered nothing")
+            #expect(!shown.contains(Self.enumIndexFallback), "\(err) rendered the fallback: \(shown)")
+            // `localizedDescription` must resolve through the conformance, not around it.
+            #expect(err.errorDescription == shown)
+        }
+    }
 
-    @Test("site 1 exposure: .underlying's REASON is discarded by error.localizedDescription")
-    func site1DiscardsTheReason() {
+    @Test(".underlying carries the wrapped error’s own sentence, verbatim")
+    func underlyingCarriesTheReason() {
         let reason = "You don’t have permission to save the file “P07.mp4” in the folder “Interviews”."
-        let err = CopyMachinery.CopyError.underlying(reason)
-        let shown = err.localizedDescription
-        record("site1.underlying", shown)
-
-        // Sanity: it is a string, and it is not empty.
-        #expect(!shown.isEmpty)
-
-        // THE DEFECT. Site 1 has no `.underlying` arm, so this is what the
-        // toast shows. It should carry the reason. It does not.
-        withKnownIssue("site 1 renders Foundation's enum-index string, not the wrapped reason") {
-            #expect(shown.contains(reason))
-        }
+        let err = CopyMachinery.CopyError.underlying(permissionError(reason))
+        #expect(err.localizedDescription == reason)
     }
 
-    @Test("site 1 exposure: the 'already in flight' literal is also lost at site 1")
-    func site1LosesTheInFlightLiteral() {
-        // `copy()` throws this as `.underlying("Another copy is already in flight.")`
-        // — an unlocalised Swift literal (no locale key exists; grep confirms).
-        let err = CopyMachinery.CopyError.underlying("Another copy is already in flight.")
-        let shown = err.localizedDescription
-        record("site1.inFlight", shown)
-        withKnownIssue("even the hardcoded English is discarded at site 1") {
-            #expect(shown.contains("in flight"))
-        }
+    @Test("the in-flight guard is its own case with its own sentence")
+    func alreadyInFlightHasASentence() {
+        let shown = CopyMachinery.CopyError.alreadyInFlight.localizedDescription
+        #expect(shown.contains("in flight"))
+        #expect(!shown.contains(Self.enumIndexFallback))
     }
 
-    // MARK: - Site 2: what the wrapped Foundation message actually says
-
-    @Test("site 2 exposure: a real permission failure's wrapped message")
-    func site2WrappedMessageForPermissionFailure() async throws {
+    @Test("a real permission failure reads the same at both sites")
+    func permissionFailureReadsTheSameAtBothSites() async throws {
         let root = makeTempDir()
         defer {
-            // restore so cleanup can delete it
             try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: root.path)
             try? FileManager.default.removeItem(at: root)
         }
@@ -88,33 +78,33 @@ struct CopyErrorSurfacingTests {
         let src = srcDir.appendingPathComponent("P07.mp4")
         try Data("not really video".utf8).write(to: src)
 
-        // Make the destination unwritable. Running as a normal user this
-        // forces copyItem/createDirectory to fail with a permission error.
+        // An unwritable destination forces copyItem/createDirectory to fail
+        // with a permission error when running as a normal user.
         try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: root.path)
 
         let machinery = CopyMachinery()
-        var caught: String? = nil
+        var caught: CopyMachinery.CopyError? = nil
         do {
             _ = try await machinery.copy(
                 urls: [src], into: root,
                 projectID: UUID(), projectName: "Probe",
                 acceptedExtensions: ["mp4"]
             )
-        } catch CopyMachinery.CopyError.underlying(let msg) {
-            caught = msg
-        } catch {
-            caught = "UNEXPECTED \(type(of: error)): \(error.localizedDescription)"
+        } catch let err as CopyMachinery.CopyError {
+            caught = err
         }
 
-        let shown = try #require(caught)
-        record("site2.underlying", shown)
-
-        // Site 2 shows `msg` verbatim. Pin that it is Foundation's sentence,
-        // NOT the enum-index string site 1 produces.
-        #expect(!shown.contains("CopyError error"),
-                "site 2 must show the wrapped reason, got: \(shown)")
-        #expect(!shown.isEmpty)
-        // And that inFlight cleared — the defer in copy() must run on failure.
+        let err = try #require(caught)
+        guard case .underlying(let inner) = err else {
+            Issue.record("expected .underlying, got \(err)")
+            return
+        }
+        let site1 = err.localizedDescription      // the loose-files site reads this
+        let site2 = inner.localizedDescription    // the drop-onto-project site destructures this
+        #expect(site1 == site2)
+        #expect(!site1.isEmpty)
+        #expect(!site1.contains(Self.enumIndexFallback))
+        // inFlight cleared — the defer in copy() must run on failure.
         #expect(machinery.inFlight == nil)
     }
 }

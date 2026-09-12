@@ -10,7 +10,7 @@ Three behaviours that used to be one conflated guard:
 * **Resilience** — one unreadable directory must not end the walk, and one
   cloud placeholder must not trigger a download.
 
-No test here shells out: `probe_duration` is patched, so these run in CI where
+No test here shells out (the autouse `_no_probe` fixture covers the one probe ingest makes): `probe_duration` is patched, so these run in CI where
 there is no ffmpeg.
 """
 
@@ -33,7 +33,9 @@ from bristlenose.stages.s01_ingest import (
 
 @pytest.fixture(autouse=True)
 def _no_probe(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(s01_ingest, "probe_duration", lambda p: 12.0)
+    # The ONE probe ingest calls. Patching only `probe_duration` left the real
+    # ffprobe running for every media file in this module (found 12 Sep 2026).
+    monkeypatch.setattr(s01_ingest, "probe_media", lambda p: (12.0, None))
 
 
 def _touch(path: Path) -> Path:
@@ -188,7 +190,7 @@ class TestResilience:
         _touch(tmp_path / "evicted.mp4")
         monkeypatch.setattr(s01_ingest, "is_dataless", lambda p: True)
         monkeypatch.setattr(
-            s01_ingest, "probe_duration",
+            s01_ingest, "probe_media",
             lambda p: pytest.fail("probed a cloud placeholder — this downloads it"),
         )
 
@@ -196,3 +198,4 @@ class TestResilience:
 
         assert len(found) == 1
         assert found[0].duration_seconds is None, "unknown length, not a fabricated one"
+        assert found[0].container_meta is None

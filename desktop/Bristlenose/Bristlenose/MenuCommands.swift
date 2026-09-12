@@ -580,10 +580,19 @@ private struct FileMenuContent: View {
 
         Divider()
 
+        // Parity with the toolbar twin, which has always gated on availability
+        // (`ContentView.swift`, `lensAvailability.isAvailable`) while this one was
+        // ungated — same command, two surfaces, two answers. House rule is *menus
+        // dim, toolbars morph*: they agree on availability and differ only on
+        // presentation. Apple splits Export the same way — Preview's
+        // document-scoped `exportSelection:` is nil-target and dims; Mail's
+        // library-scoped `exportMailbox:` targets a controller and stays live.
+        // This one is document-scoped.
         Button(i18n.t("desktop.menu.file.exportReport"), systemImage: "square.and.arrow.up") {
             bridgeHandler.menuAction("exportReport")
         }
         .keyboardShortcut("e", modifiers: [.command, .shift])
+        .disabled(!bridgeHandler.canDispatch)
 
         // "Export Anonymised…" was removed here on 28 Jul 2026: anonymise is a
         // checkbox on the export save panel itself (`ExportAccessoryView`, attached
@@ -608,12 +617,20 @@ private struct FileMenuContent: View {
             PrintActions.print(webView: bridgeHandler.webView, window: PanelHost.window)
         }
         .keyboardShortcut("p", modifiers: .command)
-        // `isReady` is the only published signal that a web view has loaded
-        // (`webView` itself is a plain weak var, so it can't drive SwiftUI).
-        // It's an imperfect proxy — see the "isReady is NOT 'the report is
-        // showing'" gotcha in desktop/CLAUDE.md — but it correctly separates
-        // "nothing to print yet" from "something is on screen".
-        .disabled(!bridgeHandler.isReady)
+        // `hasChannel`, not `canDispatch`: printing hands the web view to
+        // AppKit and never dispatches JS, so the guard it stands in for is
+        // `PrintActions.print`'s own `guard let webView` — not the presence of
+        // `window.__bristlenose`. A status page is a real document and prints.
+        //
+        // It was `isReady` until the channel got a published mirror, on the
+        // reasoning that `webView` was a plain weak var and couldn't drive
+        // SwiftUI. That stopped being true in the same change that added
+        // `hasChannel`, and `isReady` is not a substitute: it goes false only in
+        // `reset()`, i.e. on a selection change, while `webView` is cleared at
+        // `dismantleNSView`. A sidecar that dies mid-session swaps the detail
+        // pane to the error card without touching the selection — so ⌘P stayed
+        // lit over a nil web view and returned at that guard, silently.
+        .disabled(!bridgeHandler.hasChannel)
     }
 
     /// Group 1 — the two commands that must work with **no project window
@@ -685,32 +702,68 @@ private struct FindMenuContent: View {
     var body: some View {
         Divider()
 
+        // Search exists on exactly one lens — the Quotes toolbar capsule. The
+        // other three carry `SearchComingSoonButton`, a deliberately disabled
+        // slot. So the whole family is lens-scoped, the shape the View menu
+        // already uses three times: "a live-but-inert menu item is worse than a
+        // dimmed one."
+        //
+        // `canDispatch` as well as the lens, because `currentPath` survives an
+        // in-place reload: after a run fails in place, `activeTab` can still say
+        // `.quotes` over a freshly-loaded status page with no SPA behind it.
         Button(i18n.t("desktop.menu.edit.find"), systemImage: "magnifyingglass") {
-            bridgeHandler.menuAction("find")
+            bridgeHandler.requestSearchFocus()
         }
         .keyboardShortcut("f", modifiers: .command)
+        .disabled(!canSearch)
 
         Button(i18n.t("desktop.menu.edit.findNext")) {
             let text = NSPasteboard(name: .find).string(forType: .string) ?? ""
             bridgeHandler.menuAction("findNext", payload: ["text": text])
         }
         .keyboardShortcut("g", modifiers: .command)
+        .disabled(!canSearch)
 
         Button(i18n.t("desktop.menu.edit.findPrevious")) {
             let text = NSPasteboard(name: .find).string(forType: .string) ?? ""
             bridgeHandler.menuAction("findPrevious", payload: ["text": text])
         }
         .keyboardShortcut("g", modifiers: [.command, .shift])
+        .disabled(!canSearch)
 
         Button(i18n.t("desktop.menu.edit.useSelectionForFind")) {
             bridgeHandler.menuAction("useSelectionForFind")
         }
         .keyboardShortcut("e", modifiers: .command)
+        .disabled(!canSearch)
 
-        Button(i18n.t("desktop.menu.edit.jumpToSelection")) {
-            bridgeHandler.menuAction("jumpToSelection")
-        }
-        .keyboardShortcut("j", modifiers: .command)
+        // Jump to Selection withdrawn 12 Sep 2026 — same treatment as `mergeCode`
+        // in the Codes menu, and for the same reason: it is not ungated, it is
+        // unimplemented. It dispatched `menuAction("jumpToSelection")`; the web
+        // side is an explicit `break` behind a comment claiming the native layer
+        // handles it, and no native handler exists — `jumpToSelection` appears
+        // only here and in 21 locale files. It could never have reached WKWebView
+        // as `centerSelectionInVisibleRect:` either: a SwiftUI `.keyboardShortcut`
+        // installs an NSMenu key equivalent, which is matched *before* the
+        // responder chain. So ⌘J has done nothing since it shipped.
+        //
+        // Not dimmed, because a `.disabled` that will never go live is a lie that
+        // reads as diligence. Withdrawn instead, with the question that blocks it:
+        // what does "jump to selection" mean in a quote grid? There is no design,
+        // only a shortcut borrowed from text editors.
+        //
+        // Restore is one line here plus a real handler; the 21 locale keys are
+        // deliberately left in place so it stays one line.
+        //
+        // Button(i18n.t("desktop.menu.edit.jumpToSelection")) {
+        //     bridgeHandler.menuAction("jumpToSelection")
+        // }
+        // .keyboardShortcut("j", modifiers: .command)
+    }
+
+    /// Search is Quotes-only and needs a live SPA. See the note above the family.
+    private var canSearch: Bool {
+        bridgeHandler.canDispatch && bridgeHandler.activeTab == .quotes
     }
 }
 
@@ -947,15 +1000,23 @@ private struct ViewMenuContent: View {
 
         Divider()
 
+        // `canDispatch`, not `isReady`: zoom is a capability, and `isReady` goes
+        // true on the status page where `applyZoom` does not exist. See its note
+        // on BridgeHandler. The clamp is deliberately NOT modelled here — the
+        // level lives in the SPA's localStorage and is never mirrored back, so no
+        // menu predicate can know it, and a further ⌘= at 200% is a bounded,
+        // reversible, self-evident nothing.
         Button(i18n.t("desktop.menu.view.zoomIn"), systemImage: "plus.magnifyingglass") {
             bridgeHandler.menuAction("zoomIn")
         }
         .keyboardShortcut("=", modifiers: .command)
+        .disabled(!bridgeHandler.canDispatch)
 
         Button(i18n.t("desktop.menu.view.zoomOut"), systemImage: "minus.magnifyingglass") {
             bridgeHandler.menuAction("zoomOut")
         }
         .keyboardShortcut("-", modifiers: .command)
+        .disabled(!bridgeHandler.canDispatch)
 
         // ⌘0 — the platform's reset-zoom binding, and semantically identical to
         // WKWebView's own. Taking it here resolves the collision this file
@@ -964,6 +1025,7 @@ private struct ViewMenuContent: View {
             bridgeHandler.menuAction("actualSize")
         }
         .keyboardShortcut("0", modifiers: .command)
+        .disabled(!bridgeHandler.canDispatch)
     }
 }
 

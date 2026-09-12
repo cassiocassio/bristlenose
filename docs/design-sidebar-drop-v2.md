@@ -6,7 +6,9 @@ last-updated: 2026-05-15
 
 > **Status:** Stub. Captures the V2-shaped problems deferred out of [`design-sidebar-drop-behaviour.md`](design-sidebar-drop-behaviour.md). Not designed in detail; surfaces the questions that V2 will have to answer, with rough tentative directions from the V1 design conversation.
 
-> **Separate known issue (18 Jun 2026), NOT V2 bulk-import scope:** dragging a *project* out of a folder to top level, or between folders, does not work by drag (the Move-To menu covers it). It's structural — the sidebar's per-container `.onMove` reorder islands don't release a drag across a folder boundary, and there's no internal-move drop target at root. This is distinct from "cross-project drag" below (moving *interviews* between projects). Full forensic inventory + fix: the **Sidebar Apocalypse** doc, [`private/handoffs/sidebar-apocalypse.md`](private/handoffs/sidebar-apocalypse.md) § FORENSIC. POST-TF, not a blocker.
+> **Resolved 1 Aug 2026 (`bbda9a6a`) — the paragraph below is kept as the record of what was broken, not as current state.** On the AppKit outline, dragging a project out of a folder, between folders, into a folder, and reordering within a scope all work, through one unified insertion model (`DropRouting` → `ProjectIndex.apply(_:)`). The `.onMove` island analysis described the SwiftUI `List` path, which is not the sidebar the app runs. See [`design-desktop-sidebar-appkit.md`](design-desktop-sidebar-appkit.md) §3.3.
+>
+> _Superseded (18 Jun 2026):_ ~~**Separate known issue, NOT V2 bulk-import scope:** dragging a *project* out of a folder to top level, or between folders, does not work by drag (the Move-To menu covers it). It's structural — the sidebar's per-container `.onMove` reorder islands don't release a drag across a folder boundary, and there's no internal-move drop target at root.~~ This is distinct from "cross-project drag" below (moving *interviews* between projects), which remains V2 scope.
 
 # Sidebar Drop Behaviour — V2
 

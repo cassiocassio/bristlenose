@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from datetime import datetime, timezone
+
+logger = logging.getLogger(__name__)
 
 # Pattern for SRT/VTT style timestamps: 00:01:23,456 or 00:01:23.456
 _SRT_PATTERN = re.compile(
@@ -12,7 +15,7 @@ _SRT_PATTERN = re.compile(
 
 # Pattern for simple HH:MM:SS or MM:SS
 _SIMPLE_PATTERN = re.compile(
-    r"(?:(\d{1,2}):)?(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?"
+    r"(?:(\d{1,2}):)?(\d{1,2}):(\d{2})(?:[.,](\d{1,3}))?"
 )
 
 
@@ -92,33 +95,69 @@ def format_duration_human(seconds: float) -> str:
     return f"{m}m" if m > 0 else "<1m"
 
 
+def local_now() -> datetime:
+    """The wall clock, AWARE and LOCAL — ``datetime.now().astimezone()``.
+
+    The render sites used to call naive ``datetime.now()``; the first fix made
+    them ``datetime.now(timezone.utc)``, which removed the latent TypeError
+    against an aware ``session_date`` but silently moved every "Generated:"
+    stamp and "Today at HH:MM" header to UTC — a London report generated at
+    14:23 read "13:23", a Sydney one carried yesterday's date. That was the § 4
+    display-frame decision, made by accident. This form keeps the wall clock
+    the user sees AND is aware. One seam, so a test can freeze it.
+    """
+    return datetime.now().astimezone()
+
+
+def parse_iso_lenient(value: str) -> datetime | None:
+    """``fromisoformat`` that also takes ``Z`` and a colon-less ``+0100`` — the
+    two shapes media containers and third-party tools actually emit. Python
+    3.10's parser accepts neither, and the floor is 3.10 until 1 Nov 2026.
+
+    Returns ``None`` for anything it cannot read, and **logs it** — a present
+    value that does not parse is information, not absence. The line names no
+    source, because this is called for container tags and transcript headers
+    alike. Never raises: the first cut indexed ``text[-6]`` on a five-character
+    match and one bad tag in one file aborted a whole folder scan.
+    """
+    text = value.strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    m = re.search(r"([+-])(\d{2})(\d{2})$", text)
+    if m and len(text) >= 6 and text[-6] != ":":
+        text = f"{text[:-5]}{m.group(1)}{m.group(2)}:{m.group(3)}"
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError:
+        logger.warning("time_value_unparseable | raw=%r", value[:64])
+        return None
+
+
 def parse_header_datetime(value: str) -> datetime | None:
     """Read a transcript ``# Date:`` header value as a UTC-aware datetime.
 
-    One reader for both the pipeline resume path and the server importer,
-    which until 12 Sep 2026 disagreed: the pipeline did
-    ``fromisoformat(s).replace(tzinfo=utc)``, which *overwrites* an offset
-    rather than converting it, so a ``+01:00`` (BST) header was stored an hour
-    late; the importer converted correctly. Same file, two instants.
+    One reader for both the pipeline resume path and the server importer. The
+    pipeline used to do ``fromisoformat(s).replace(tzinfo=utc)``, which
+    *overwrites* an offset rather than converting it, while the importer
+    converted correctly — two readers of one header, two possible instants.
+    That was a **reasoned hazard, not a measured incident**: every Bristlenose
+    writer emits an aware ``isoformat()`` (``+00:00``), so the overwrite could
+    only bite a hand-edited or third-party header. The live effect the fix has
+    today is on the importer's path into the database.
 
-    Accepts full ISO 8601 with or without an offset, and the legacy date-only
-    ``YYYY-MM-DD``. Returns ``None`` for anything else — callers keep their
-    own default rather than receive a guess.
+    Routes through ``parse_iso_lenient`` so ``Z`` and ``+0100`` read the same
+    here as in a container tag on every supported Python. Date-only
+    ``YYYY-MM-DD`` is accepted by ``fromisoformat`` on all of them.
 
-    **A naive value means UTC, by decision.** The writer emits an aware
-    ``isoformat()`` (which carries an offset), so a naive header only appears
-    in output written before the time-of-recording fix, and that output was
-    UTC. Relabelling it is correct; relabelling an *aware* value is the bug
-    this function exists to remove.
+    **A naive value means UTC, by decision** — it appears only in output
+    written before the time-of-recording fix, which was UTC. Returns ``None``
+    for anything unreadable; the caller keeps its own default, and logs.
     """
-    text = value.strip()
-    try:
-        dt = datetime.fromisoformat(text)
-    except ValueError:
-        try:
-            dt = datetime.strptime(text, "%Y-%m-%d")
-        except ValueError:
-            return None
+    dt = parse_iso_lenient(value)
+    if dt is None:
+        return None
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc)

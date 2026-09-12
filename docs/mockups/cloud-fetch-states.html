@@ -133,6 +133,10 @@ td.k { white-space:nowrap; font-size:11px; color:var(--color-text-tertiary); }
 <h1>Cloud fetch — states &amp; messaging</h1>
 <p class="lede">Every state a researcher sees when a project's media are cloud placeholders. Grounded in the 29 Jul 2026 reproduction (Dropbox, three 307–649 MB recordings) — see <code>docs/design-project-storage.md</code> §3.</p>
 
+<p class="note" style="padding:0 0 14px; line-height:1.6">
+  <b>Read with <code>docs/design-cloud-wait-label.md</code></b> (4–12 Sep 2026). This page is the spec for what the states <i>look like and say</i> — copy, keys, precedence, and the questions decided in §F. That doc holds what a drawing can’t: the scope decision (the label names <b>iCloud Drive, Google Drive and OneDrive</b> only — every other store keeps the generic row text, and detection stays unconditional), the policy (manage nothing; hydrate, bound, log), a per-store table of what a third-party app can actually know (a label, yes; a pie, no), and which half is built: the sidecar’s <code>ensure_materialised</code> + <code>cloud_provider_for</code> and the <code>cloud_fetch</code> failure category are wired; <code>cloudFetching</code> / <code>cloudFetchSlow</code> have no channel yet and no key is seeded (measured 12 Sep 2026).
+</p>
+
 <div class="warnbox">
   <b>The defect this replaces.</b> Today the fetch happens <i>inside</i> a 30-second ffprobe budget, so the researcher is told <span style="color:var(--color-text-danger)">“ffprobe timed out after 30s probing …”</span> — which reads as <b>“my video is broken”</b> when it means <b>“my file was still downloading.”</b> Opposite remedies. Every message below exists to keep those two apart.
 </div>
@@ -552,6 +556,7 @@ can’t-find → failed → <b>fetch-failed</b> → running → stopped/partial 
   <li><s><b>Threshold for “still fetching”.</b></s> <b>Decided — ship at 3 min and tune.</b> It's still a guess, and it still wants a real corpus on a domestic uplink; that's calibration after the fact, not a blocker.</li>
   <li><s><b>Per-file or per-project?</b></s> <b>Decided — per-project.</b> The Sessions list marking individual evicted interviews is out of scope, not deferred pending design.</li>
   <li><s><b>“Make available offline” in the copy</b> is Dropbox's wording; iCloud says “Download Now”, OneDrive “Always keep on this device”.</s> <b>Resolved</b> — the generic “make the file available offline in Finder” reads correctly for all three, so the only per-provider fork left is the provider's <i>name</i>, which <code>cloud_provider_for()</code> already returns.</li>
+  <li><s><b>Which stores get a named label?</b></s> <b>Decided 4 Sep 2026 — iCloud Drive, Google Drive, OneDrive only</b>, the stores that pair with the meeting platforms; every other store keeps the generic row text, and detection runs for all of them. <b>Measured 12 Sep 2026:</b> the fetch itself and the <code>cloud_fetch</code> failure are built; the fetching and still-fetching states have no channel and no seeded key. Scope, policy, reality and the pick-up: <code>docs/design-cloud-wait-label.md</code>.</li>
 </ul>
 
 <h2>G · Two copy rules this settled</h2>

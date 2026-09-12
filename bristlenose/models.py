@@ -155,9 +155,12 @@ class MediaTimeMeta(BaseModel):
     the room say, and in what zone* — an aware datetime carrying the file's own
     offset (``com.apple.quicktime.creationdate``). ``creation_utc`` is the
     same instant from ``creation_time``, whose ``Z`` was verified honest against
-    a BST-era file. ``author`` carries writer markers such as
-    ``ReplayKitRecording``; ``make``/``model``/``software``/``encoder`` are what
-    § 5.2's writer classifier will read.
+    a BST-era file. ``author`` is Apple's free-text authoring field: ReplayKit stamps
+    ``ReplayKitRecording`` there, but QuickTime Player and iMovie stamp the
+    Mac's owner — measured, it carried a real person's name. Keep, drop or
+    redact is a consent-gradient decision owed before § 5.3 persists it.
+    ``make``/``model``/``software``/``encoder`` are what § 5.2's writer
+    classifier will read; ``encoder`` is the muxer, never the stream codec.
     """
 
     creation_utc: datetime | None = None

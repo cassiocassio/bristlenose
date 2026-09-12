@@ -1813,15 +1813,10 @@ struct ContentView: View {
                         needed: needed, available: available
                     )
                 } catch {
-                    // KNOWN DEFECT — measured, not fixed here. This site has no
-                    // `.underlying(let msg)` arm (the drop-onto-project site below
-                    // does), so a `.underlying` error lands here and
-                    // `error.localizedDescription` on the bare enum renders
-                    //   "The operation couldn’t be completed. (Bristlenose.CopyMachinery.CopyError error 1.)"
-                    // — the wrapped reason discarded. The same permission failure
-                    // via the other gesture renders Foundation's full sentence.
-                    // Pinned by CopyErrorSurfacingTests (withKnownIssue); diagnosis
-                    // and the proposed fix in docs/design-copy-error-surfacing.md.
+                    // Every `CopyError` case renders through its `errorDescription`
+                    // (the type is `LocalizedError`), so this reads the same sentence
+                    // the drop-onto-project site destructures. Pinned by
+                    // CopyErrorSurfacingTests; history in design-copy-error-surfacing.md.
                     toast.show(error.localizedDescription)
                 }
             }
@@ -2025,9 +2020,9 @@ struct ContentView: View {
                 )
             } catch CopyMachinery.CopyError.noItemsAfterFiltering {
                 // Should not happen — we filtered above. Silent.
-            } catch CopyMachinery.CopyError.underlying(let msg) {
-                toast.show(msg)
             } catch {
+                // `.underlying` and every other case render through `errorDescription`
+                // — the same sentence the loose-files site above reads.
                 toast.show(error.localizedDescription)
             }
         }

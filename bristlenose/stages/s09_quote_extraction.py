@@ -255,7 +255,7 @@ async def _extract_one_pass(
             start_tc = parse_timecode(item.start_timecode)
         except ValueError:
             logger.warning(
-                "quote_timecode_unparseable | session=%s | field=start | raw=%s",
+                "quote_timecode_unparseable | session=%s | field=start | raw=%r",
                 transcript.session_id, item.start_timecode,
             )
             repairs["unparseable"] += 1
@@ -264,7 +264,7 @@ async def _extract_one_pass(
             end_tc = parse_timecode(item.end_timecode)
         except ValueError:
             logger.warning(
-                "quote_timecode_unparseable | session=%s | field=end | raw=%s",
+                "quote_timecode_unparseable | session=%s | field=end | raw=%r",
                 transcript.session_id, item.end_timecode,
             )
             repairs["unparseable"] += 1

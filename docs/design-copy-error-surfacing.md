@@ -17,6 +17,12 @@ one of them twice; they are kept in §7 so they are not re-derived.
 
 ## 1. The defect, precisely
 
+> **Fixed 12 Sep 2026.** `CopyError` is `LocalizedError` with `.underlying(Error)` and an
+> `.alreadyInFlight` case; both catch sites render one sentence, and the `withKnownIssue`
+> probes became positive assertions (`CopyErrorSurfacingTests`, four tests, green in the
+> 1,441-test suite). This section describes the defect as measured on 4 Sep. Tiers 1–2
+> are tracked in `TODO.md` § Ideas.
+
 The three review arms all said: *"`CopyError` doesn't conform to
 `LocalizedError`, so it surfaces as Foundation's placeholder string."* That is
 true and it is not the bug. The bug is narrower and worse: **the same error
@@ -235,7 +241,7 @@ The trial's "CopyError redesign" was one item. It is three, of very different
 weight, and only the first is a bug fix. The other two are design decisions the
 toast cull explicitly deferred, and they should be taken as such.
 
-### Tier 0 — the bug fix: put the text on the type (small; do this)
+### Tier 0 — the bug fix: put the text on the type — **landed 12 Sep 2026**
 
 Conform `CopyError` to `LocalizedError`, and carry the original `Error` in
 `.underlying` rather than a `String`:
@@ -286,11 +292,13 @@ and 2 because the idiom makes them the fix rather than hygiene around it; four
 sibling enums already conform (`CloudDownloadError`, `SidecarResolveError`,
 `ZoomOAuthError`, `MicrosoftOAuthError`), so this one was the outlier.
 
-**Proof:** the `withKnownIssue` probes in `CopyErrorSurfacingTests` flip to
-"known issue did not occur" the moment the conformance lands — that is the
-confirmation the enum path is gone. Then rewrite them as positive assertions
-on `errorDescription` per case; the type is unit-testable where the view code
-was not.
+**Proof, as it went:** the `withKnownIssue` probes were rewritten as positive
+assertions on `errorDescription` per case — every case renders a sentence and
+never the enum-index fallback; `.underlying` returns the wrapped error's words
+verbatim; a real permission failure reads identically through both sites'
+paths; `inFlight` clears on failure. The `.underlying(String)` literal for the
+in-flight guard became its own case, since a `String` no longer fits the
+payload. Site 2's redundant arm was deleted; site 1 changed only its comment.
 
 ### Tier 1 — hygiene (small, separable)
 
@@ -354,8 +362,8 @@ and evicted them back with `evictUbiquitousItem` — net state unchanged.
 | Claim | Status | Source |
 |---|---|---|
 | macOS `EDEADLK` = 11; 35 = `EAGAIN` | ✓ SDK `errno.h` | — |
-| Sandboxed app runs materialisation policy **ON** (2) | ✓ measured in-process | `DatalessPolicyProbeTests` |
-| `brctl evict` / `download` gone on 26.4 | ✓ | — |
+| Sandboxed app runs materialisation policy **ON** (2) — as does every GUI-descended process (Terminal, the test host); a launchd agent with no `MaterializeDatalessFiles` key measures OFF (1) and gets `EDEADLK` instead of a hang, so a probe run by hand and one run under launchd disagree and neither lies | ✓ measured in-process; spawn-dependence measured the same evening | `DatalessPolicyProbeTests`; `desktop/CLAUDE.md` copyItem gotcha |
+| `brctl download` / `evict` **hidden, not gone** on 26.4.1 — a bare invocation prints a usage that omits them; given a path both work (`download` returns at once and the file lands ~12 s later; `evict` prints `evicted content of '…'`). Undocumented, so still nothing to build on | ✓ re-measured the same day (§7) | — |
 | Sidecar already has detect + bounded-materialise | ✓ `fs.py:108–200` | — |
 | Under OFF, `copyItem` → `NSCocoaErrorDomain 512` / POSIX 11 instantly | pass measured | probe sources in session scratchpad |
 | Under ON, `Data(contentsOf:)` blocks ~2 s and materialises (Dropbox) | pass measured | same |

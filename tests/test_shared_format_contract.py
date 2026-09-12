@@ -42,9 +42,9 @@ def _formats() -> dict[str, Any]:
 # marked aligned without an entry here — see the enrolment test at the bottom.
 def _python_impl(name: str):
     if name == "duration_human":
-        from bristlenose.server.routes.dashboard import _format_duration_human
+        from bristlenose.utils.timecodes import format_duration_human
 
-        return _format_duration_human
+        return format_duration_human
     if name == "timecode":
         from bristlenose.utils.timecodes import format_timecode
 

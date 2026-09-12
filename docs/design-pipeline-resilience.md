@@ -1,13 +1,26 @@
 ---
 status: current
-last-trued: 2026-07-15
-trued-against: HEAD@main (a44823c0) + uncommitted out-of-credit work on 2026-07-15
+last-trued: 2026-09-12
+trued-against: HEAD@main (42bf545f) on 2026-09-12 (per-session resume, measured against a two-run probe)
 ---
 
-> **Truing status:** Current — Phase 1f / 4a-pre shipped on `port-v01-ingestion`; failure-taxonomy Phase A shipped via `pipeline-summary-events` (2026-05-07); A4 stage-cache-honesty shipped 2026-05-12 — extends abandon-check coverage to s08 and s10/s11 in both `run()` and `run_analysis_only()`, flips s10/s11 from soft to hard, adds the `topics` bucket to `PipelineSummary`, locks a privacy contract on `cause.message`, and refuses to record `mark_stage_complete` for empty intermediate content. Swift consumer side exists for run-state derivation (`desktop/Bristlenose/Bristlenose/EventLogReader.swift`); the Branch 2 `pipeline-diagnostic-pill` popover is design-only — see [design-pipeline-diagnostic-popover.md](design-pipeline-diagnostic-popover.md). Phase 3+ remain design-only.
+> **Truing status:** Current. The per-session forward-recovery promise in §5
+> had never held on the ordinary path; it does now for s08 and s09 as of
+> 12 Sep 2026, in two commits. It does **not** yet hold for s05 / s05b, and the
+> `bristlenose status` display examples still show output the code cannot
+> produce — read §5's note before treating either as shipped. Otherwise: Phase 1f / 4a-pre shipped on `port-v01-ingestion`; failure-taxonomy Phase A shipped via `pipeline-summary-events` (2026-05-07); A4 stage-cache-honesty shipped 2026-05-12 — extends abandon-check coverage to s08 and s10/s11 in both `run()` and `run_analysis_only()`, flips s10/s11 from soft to hard, adds the `topics` bucket to `PipelineSummary`, locks a privacy contract on `cause.message`, and refuses to record `mark_stage_complete` for empty intermediate content. Swift consumer side exists for run-state derivation (`desktop/Bristlenose/Bristlenose/EventLogReader.swift`); the Branch 2 `pipeline-diagnostic-pill` popover is design-only — see [design-pipeline-diagnostic-popover.md](design-pipeline-diagnostic-popover.md). Phase 3+ remain design-only.
 
 ## Changelog
 
+- _2026-09-12_ — **The per-session saga now works on the ordinary path, in two commits.** `6277eabe` made the record honest; the follow-up made it *read*.
+    - **The second half (12 Sep).** A partially-failed stage was still marked `COMPLETE`, so `_is_stage_verified` short-circuited to the full-cache read and the per-session records were never consulted — the fix was correct and inert. Two changes: `mark_session_failed` (`manifest.py`) **records** a failed session as `StageStatus.FAILED` instead of omitting it, because absence is indistinguishable from not-yet-attempted and `_derive_stage_status` therefore returned `COMPLETE` from `{COMPLETE, COMPLETE}`; and `mark_stage_complete` now derives its status from its own session records rather than forcing `COMPLETE`, so one failure of ten yields `PARTIAL`. Proven on a two-run probe — run 2 re-extracts **only** the failed session — and pinned by `test_a_failed_session_is_retried_on_the_next_run`, which was watched red against **each half reverted independently** (either alone is insufficient). The guard test's fixture was also widened from `[]` quotes to real ones: the degenerate value made `mark_stage_complete` refuse on its own empty-content guard, so the stage never reached `COMPLETE` and the short-circuit was unreachable from the test that existed to catch it.
+    - **The first half (11 Sep, `6277eabe`).** `6277eabe` (11 Sep) closed the first half: s09's per-session marking looped **every** transcript handed to the stage, including those `StageOutcome.failed` named, while s08 — 175 lines earlier — had excluded them since May with the reasoning in a comment. Both now route through `_record_session_outcomes` (`pipeline.py:399`), and `tests/test_manifest_failed_session_guard.py` pins the rule and both wirings, watched red against the pre-fix tree. **Empirical anchor:** the cached FOSSDA run of 30 Apr 2026 recorded `quote_extraction -> s3: complete` for a 94-minute interview whose LLM call died of three consecutive 600 s API timeouts and produced zero quotes; `get_completed_session_ids` then dropped it from the work list for good while `_cached_q_count` counted it as a success, so the honest "9 of 10, one failed" rollup was overwritten by a clean sweep on the next run. Re-extracting that session split in two recovers **91 quotes** — it would have been the second-richest interview in the corpus.
+    - **Scope correction to the _2026-05-12_ entry below.** That entry reads as "cache poisoning: closed". `1e1ec118` closed the **whole-stage** case only (abandon-before-`mark_stage_complete`; the manifest refusing empty content). It could not close the per-session case and did not: when a *single* session of a batch fails, the intermediate JSON is non-empty and `succeeded == 0` is false, so both guards pass and the failed session is cached as done.
+    - **Still open, and `6277eabe` does not close it.** A partially-failed stage is still marked `COMPLETE` (`pipeline.py:1747`, unconditional after the `succeeded == 0` abandon check), so the next run's `_is_stage_verified` takes the full-cache branch and never reads the per-session records. Measured two-run probe, 3 sessions with 1 failing and non-empty output: run 2 called `extract_quotes` **not at all**. The fix has two parts — record failures as `StageStatus.FAILED` rather than omitting them (absence is indistinguishable from not-yet-attempted, so `_derive_stage_status` cannot return `PARTIAL`), and have `mark_stage_complete` decline to override its own `PARTIAL` derivation, mirroring the empty-content refusal already in that function.
+    - **Two sibling marking sites carry the same defect, unconverted.** `pipeline.py:969-972` (s05 transcribe) — `s05_transcribe.py:198` writes `results[sid] = []` on failure, so a failed session **is** a key in `_fresh_segments` and is marked complete, with `_fresh_transcript_outcome` in scope and unconsulted; the shared helper applies directly. `pipeline.py:1271-1276` (s05b identify-speakers) — `identify_speaker_roles_llm` returns `[]` on LLM failure and reports through an `errors` list rather than a `StageOutcome`, so there is no failed set to filter on without changing the stage's signature.
+    - **Also still open:** `_extract_with_split` (`s09_quote_extraction.py:399`) catches only `TruncatedResponseError`, so an API timeout never splits — see Still open (deferred).
+    - **Not edited, and deliberately:** §3's write-ahead rule (*"the manifest is never a lie — it may be behind but never ahead"*) is exactly the invariant the code violated. The doc was right; the code was wrong. Same for §5's saga principle and the manifest example's `sessions` map — both are the target, now annotated as spec-vs-as-built rather than rewritten to match broken code.
+    - **Deferred:** the inline `file:line` anchor sweep. The _2026-07-09_ entry estimated 35–60 lines of drift; measured now at **4–405** lines across 11 anchors, with `applyScanResult` cited at two different line numbers in this same doc. Worth replacing with symbol anchors plus a `git log -S` incantation rather than re-chasing numbers that rot again. Also deferred: the Phase-2 status desync across four surfaces (`:79` vs the section headers vs the sequencing table).
 - _2026-07-15_ — **Truing pass (`--topic` failure-taxonomy). `OUT_OF_CREDIT` added; `QUOTA` narrowed to rate-limit.** Billing exhaustion is now its own non-retryable category — Anthropic serves it as a **400** + "credit balance is too low" (not the documented 402) and OpenAI as a **429** `insufficient_quota`, so status-code-alone conflated it with throttling. Azure/Gemini stay in `quota` because their wire genuinely doesn't isolate billing. **Cleared the 2026-07-09 deferral**: the cause table is now complete (14 rows) with retryability for every category, closing the "3 newer categories" debt (now 4). Also trued: the desktop verb dispatch (`Add funds → Retry` for `out_of_credit`), and the categoriser mechanism — `categorise_exception` is no longer regex-only; it delegates to the shared provider-aware classifier `bristlenose/llm/failure_classifier.py` when the provider is known, with regex only as the provider-less fallback. **Added a ⚠ two-mirror warning** to Cross-boundary naming: `PipelineSummary::CauseCategory` (the wire decoder) and `PipelineRunner::PipelineFailureCategory` drift independently, and this pass caught a live decode break before it shipped. Still deferred: the `PipelineSummary` incremental-fields subsection; stale inline `file:line` anchors.
 - _2026-07-09_ — **Truing pass (`--doc`).** Reconciled event-log / manifest claims against shipped code. Fixed: PID-file cleanup is `try/finally` (`_remove_pid_file`), not an `atexit` hook (the body contradicted this doc's own 2026-04-26 changelog); the `event` enum now names the shipped `run_progress` event (was described as future Phase-4a); cause-category count corrected 10 → 13 (`missing_input` / `missing_binary` / `output_truncated` shipped since); manifest zombie-field note corrected (the two `total_*_tokens` fields aren't declared on `PipelineManifest` at all). Also added a stage-cache path-invariance note (`hash_file_metadata` resolves paths) and refreshed a retired example model id. **Deferred to a future `--doc` pass** (recorded so they're not lost): full cause-table rows + retryability for the 3 newer categories; a `PipelineSummary` subsection for the incremental `new_sessions` / `reflow_scope` fields + `ReflowScopeEnum`; refresh of stale inline `file:line` anchors (drifted ~35–60 lines).
 - _2026-05-12_ — **`a4-stage-cache-honesty` branch — stage-cache honesty + privacy contract.** Closes the cache-poisoning bug from the 2026-05-09 first-run repro: failed analysis stages (s08/s09/s10+s11) used to stamp the manifest as COMPLETE with empty intermediate JSON, so the next run read `(cached)` and re-rendered an empty report. Transient failures became permanent empty deliverables.
@@ -197,6 +210,30 @@ There's no "undo" for an LLM call — the tokens are spent. Forward recovery max
 
 **Within a stage**, sagas apply at per-session granularity. Quote extraction processes sessions concurrently; if 7 of 10 succeed before credit exhaustion, save those 7 and mark 3 as pending. On resume, only the 3 remaining sessions need LLM calls.
 
+> **Spec vs as-built (12 Sep 2026).** The principle above is right and unchanged
+> — this note records that the code has never fully met it, so a reader does not
+> mistake the paragraph for a description of shipped behaviour.
+>
+> Two separate defects, one closed and one open:
+>
+> - **Closed 11 Sep 2026 (`6277eabe`).** s09 marked *failed* sessions complete,
+>   so they were dropped from the work list for good and then counted as
+>   successes. s08 had excluded them since May; s09 never did. Both now route
+>   through `_record_session_outcomes`.
+> - **Closed 12 Sep 2026.** A partially-failed stage used to be marked
+>   `COMPLETE` regardless, so `_is_stage_verified` took the full-cache branch on
+>   the next run and the per-session records were never read — the record was
+>   honest and *unread*. Two halves fixed it: failed sessions are now **recorded**
+>   as `StageStatus.FAILED` rather than omitted (absence is indistinguishable
+>   from "not yet attempted", so `_derive_stage_status` saw `{COMPLETE}` and
+>   `PARTIAL` was unreachable as a derived value), and `mark_stage_complete` now
+>   derives its status from its own session records instead of forcing
+>   `COMPLETE`. Two-run probe, 3 sessions with 1 failing: run 2 re-extracts
+>   **only** the failed session and reports `attempted=3 succeeded=2 failed=1`.
+>
+> So the paragraph above now describes shipped behaviour for s08 and s09. It
+> does **not** yet for s05 / s05b — see the changelog.
+
 ### 6. Merge strategy: "humans always win"
 
 **Core reference**: Shapiro et al. (2011), _"CRDTs"_; three-way merge (Git).
@@ -275,6 +312,20 @@ The merge rule: **if the pipeline didn't produce a quote in the new run, and the
 **Note (2026-04-25 design pivot).** Run-level outcome data (`kind`, `outcome`, `cause`, per-run cost) does **not** live on the manifest. It lives in a single append-only `pipeline-events.jsonl` event log alongside the manifest. The manifest keeps its existing job — per-stage progress for resume — and stays the single source of truth for *that*. The event log is the single source of truth for *run-level* outcome and history. Two files, two non-overlapping concerns. See "Run outcomes and intent" below for the lifecycle and "Phase 4a-pre" for the event log shape.
 
 The top-level `total_*` fields above (Phase 1a-declared but never implemented) are pre-existing zombie fields. Lifetime project cost is derived at read time from the event log (sum across `run_completed` events) and per-session records (Phase 1d). The zombie fields will be removed in a future cleanup; not load-bearing.
+
+> **The `sessions` map above is the spec, not a transcript of what the code
+> writes (measured 12 Sep 2026).** Three of its four shapes have never been
+> produced: `StageStatus.FAILED` is written nowhere in `bristlenose/`,
+> `SessionRecord` has no `error` field (`manifest.py:37-50`), and `"pending"` is
+> likewise never written per-session. `mark_session_complete` (`manifest.py:239`)
+> is the sole session writer and always writes `COMPLETE`; since `6277eabe` a
+> failed session is **absent** from the map rather than recorded as failed.
+>
+> Kept as written because the example is the target, and the gap it exposes is
+> load-bearing: with failures absent rather than recorded, `_derive_stage_status`
+> can never return `PARTIAL` — which is why the stage-level cache still
+> short-circuits a re-run past the failed session. See the spec-vs-as-built note
+> under §5 Saga pattern.
 
 ### The event log
 
@@ -412,7 +463,7 @@ Per-event field semantics:
 | `missing_input` | `failed` | no — supply the file | A required input file is missing |
 | `missing_binary` | `failed` | no — bundle/install the binary | Bare-name shellout failure (the ffmpeg-under-sandbox class) |
 | `disk` | `failed` | no — free space first | ENOSPC / write failure |
-| `output_truncated` | `failed` | no — switch model or pre-segment | Model output cap hit even after smart-splitting the session |
+| `output_truncated` | `failed` | no — switch model or pre-segment | Model output cap hit even after smart-splitting the session. **Splitting is reached from truncation only** — a timeout (`network` / `api_server`) does not trigger it, though it is the failure a large session actually hits; see Still open (deferred) |
 | `unknown` | `failed` | yes — try again | Catch-all. Used by stale-running recovery (no handler ran) and for anything the classifier doesn't recognise. |
 
 The "retryable" column is the rule the desktop and CLI both apply via `is_retryable(category) -> bool` (Python source, Swift mirrors). It's *not* an on-disk field. Other `cause` fields are best-effort — populated when known, null when not. The desktop reads `category` for verb dispatch (`Fix credentials → Retry` for `auth`, `Add funds → Retry` for `out_of_credit`, `Wait → Retry` for `quota`, etc.) and surfaces `message` + `code` + `provider` + `stage` + `signal_name` in the failure popover for forensics.
@@ -514,6 +565,7 @@ Resolved in **round 2** (2026-04-25 afternoon, after the post-pivot review fan-o
 
 Still open (deferred):
 
+- **A quote-extraction timeout never splits the session.** `_extract_with_split` (`s09_quote_extraction.py:399`) catches `TruncatedResponseError` only, so the smart-split machinery — which exists precisely to make an over-large session tractable — is unreachable from the failure mode that actually stops one. Measured on FOSSDA s3 (73,747 chars, 94 min) against `claude-sonnet-4-6`: the whole session exceeds the 600 s client timeout and fails (reproduced 7 Sep 2026; in the 30 Apr run it burned 3 × 600 s before the SDK gave up, and at today's `_CLOUD_MAX_RETRIES = 6` it would burn 7 × 600 s ≈ 70 min). Split in two it succeeds in **522 s + 293 s** and yields 91 quotes. Throughput measured at 9.10 s per 1k chars, which independently predicts 671 s for the whole session — i.e. the session is ~12% over a hard wall. The open judgement is the trigger condition: splitting on *any* timeout risks doubling spend on a transient network fault, where splitting only above a size threshold needs a threshold that is model- and load-dependent. Note the depth budget reasoning in `s09`'s header comment ("each timeout-bounded") was written for truncation, where a failed call returns fast; a timeout-driven split at depth 3 has a very different wall-clock worst case.
 - **Events log file rotation strategy.** Today: never rotate. Threshold to revisit: ~10 MB or ~10k events (Phase 4a's stage-level + human-edit events will push file sizes up). Document the rotation policy explicitly *before* it's needed so a future contributor doesn't add it ad hoc and break Phase 4d's history-replay contract. Default position when revisited: rotate to `pipeline-events.jsonl.1` at 10 MB; tail-reader checks both.
 - **`fsync` cadence under Phase 4a load.** Today: `fsync` per event. Fine for 4 run-level events. Phase 4a (stage-level + per-LLM-call events) on a 12-min run with 200+ events accrues 200ms-2s of fsync overhead on macOS APFS. When Phase 4a lands, decide: (a) only fsync on terminus events, (b) batch fsync at safe break points, (c) accept the cost. Default position: (b).
 - **Durability guarantee.** macOS `os.fsync()` is *not* `F_FULLFSYNC` — survives process crashes, not power loss. Documented contract: Phase 1f / 4a-pre survive process crashes only. Full power-loss durability is not promised. Revisit if a user reports an unrecoverable crash on a UPS-less laptop.

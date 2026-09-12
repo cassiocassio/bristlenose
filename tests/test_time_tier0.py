@@ -8,7 +8,7 @@ fail.
 
 from __future__ import annotations
 
-import re
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -49,7 +49,9 @@ class TestParserRefusesTrailingText:
     @pytest.mark.parametrize(
         ("good", "secs"),
         [("00:01:23,456", 83.456), ("00:01:23.456", 83.456), ("  05:30  ", 330.0),
-         ("1:30:00", 5400.0), ("90:00", 5400.0)],
+         ("1:30:00", 5400.0), ("90:00", 5400.0),
+         # review #2: s04's regex admits the European decimal comma; the parser must too
+         ("05:30,500", 330.5), ("00:01:23,4", 83.4)],
     )
     def test_every_legitimate_shape_still_parses(self, good: str, secs: float) -> None:
         assert parse_timecode(good) == pytest.approx(secs)
@@ -136,28 +138,58 @@ class TestHeaderDate:
         assert parse_header_datetime("2026-05-09") == datetime(2026, 5, 9, tzinfo=timezone.utc)
         assert parse_header_datetime("not a date") is None
 
-    def test_both_readers_use_it(self) -> None:
-        """Source-level: the relabelling idiom must not survive at either site."""
-        for rel in ("bristlenose/pipeline.py", "bristlenose/server/importer.py"):
-            src = (ROOT / rel).read_text(encoding="utf-8")
-            assert "parse_header_datetime" in src, rel
-        pipeline = (ROOT / "bristlenose/pipeline.py").read_text(encoding="utf-8")
-        assert "fromisoformat(date_str).replace(tzinfo=timezone.utc)" not in pipeline
+    def test_both_readers_derive_the_same_instant_from_one_header(self, tmp_path: Path) -> None:
+        """H8, pinned on BEHAVIOUR. The first cut asserted a function name was
+        present in the source, which passes with the bug reinstated under a
+        renamed variable. This loads a real header through both readers."""
+        from bristlenose.pipeline import load_transcripts_from_dir
+        from bristlenose.server.importer import _parse_date
+        (tmp_path / "s1.txt").write_text(
+            "# Transcript: s1\n# Source: s1.mp4\n# Date: 2026-05-09T14:23:00+01:00\n"
+            "# Duration: 05:00\n\n[00:00:05] [p1] hello there everyone\n", encoding="utf-8")
+        loaded = load_transcripts_from_dir(tmp_path)
+        expected = datetime(2026, 5, 9, 13, 23, tzinfo=timezone.utc)
+        assert loaded[0].session_date == expected
+        assert _parse_date("2026-05-09T14:23:00+01:00") == expected
+
+    @pytest.mark.parametrize("raw", ["2026-05-09T14:23:00Z", "2026-05-09T15:23:00+0100"])
+    def test_header_reader_accepts_the_container_spellings_on_every_supported_python(self, raw: str) -> None:
+        """Review #10: on 3.10 `fromisoformat` rejects `Z` and `+0100`; two new
+        parsers in one commit accepted different strings. One lenient reader."""
+        from bristlenose.utils.timecodes import parse_header_datetime
+        assert parse_header_datetime(raw) == datetime(2026, 5, 9, 14, 23, tzinfo=timezone.utc)
 
 
-# ── T1-3: no naive now() at the render sites ──────────────────────────────
+# ── T1-3: the render clock is aware AND local ───────────────────────────
 
-class TestNoNaiveNow:
-    @pytest.mark.parametrize("rel", [
-        "bristlenose/stages/s12_render_output.py",
-        "bristlenose/stages/s12_render/report.py",
-        "bristlenose/utils/markdown.py",
-    ])
-    def test_render_sites_use_aware_now(self, rel: str) -> None:
-        """H11: naive `now()` beside an aware session_date is a latent
-        TypeError and the mechanism behind the UTC-vs-local fork."""
-        src = (ROOT / rel).read_text(encoding="utf-8")
-        assert not re.search(r"datetime\.now\(\)", src), f"bare datetime.now() in {rel}"
+class TestRenderClock:
+    def test_local_now_is_aware_and_local(self) -> None:
+        """H11 + review #3. The grep test this replaces would have REJECTED the
+        correct fix (`datetime.now().astimezone()` contains the substring it
+        banned) while permitting `utcnow()`. Behaviour instead: aware, carrying
+        the machine's own offset, so "Generated:" and "Today at" keep the wall
+        clock the user sees."""
+        from bristlenose.utils.timecodes import local_now
+        now = local_now()
+        assert now.tzinfo is not None
+        assert now.utcoffset() == datetime.now().astimezone().utcoffset()
+        assert abs((now - datetime.now(timezone.utc)).total_seconds()) < 5
+
+    def test_generated_stamp_is_the_local_date_not_utc(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Frozen at 00:30 local on the 13th in a +01:00 zone — 23:30 UTC on the
+        12th. The render sites call `local_now()`, so the stamp says the 13th."""
+        from datetime import timedelta, tzinfo
+
+        import bristlenose.stages.s12_render_output as out
+
+        class Plus1(tzinfo):
+            def utcoffset(self, dt): return timedelta(hours=1)
+            def dst(self, dt): return timedelta(0)
+            def tzname(self, dt): return "+01:00"
+        frozen = datetime(2026, 9, 13, 0, 30, tzinfo=Plus1())
+        monkeypatch.setattr(out, "local_now", lambda: frozen)
+        assert out.local_now().strftime("%Y-%m-%d") == "2026-09-13"
+        assert frozen.astimezone(timezone.utc).strftime("%Y-%m-%d") == "2026-09-12"
 
 
 # ── T1-2: unpadded fields are refused, by measurement ─────────────────────
@@ -171,3 +203,41 @@ class TestUnpaddedIsRefused:
         texts. No export produces this shape, so refusing it is the contract."""
         with pytest.raises(ValueError):
             parse_timecode(bad)
+
+
+# ── Review follow-ups: log injection, duration reader, Miro link, negative ────
+
+class TestReviewFollowUps:
+    def test_llm_timecode_log_lines_use_repr(self, caplog: pytest.LogCaptureFixture) -> None:
+        """Review #7: `raw=%s` let an injected newline forge a second line in
+        bristlenose.log — the file SECURITY.md names as the agent-access record.
+        %r keeps the newline as two characters."""
+        from bristlenose.stages.timecode_guard import repair_timecode
+        hostile = "99:99\n2026-01-01 00:00:00 INFO forged"
+        with caplog.at_level(logging.WARNING):
+            repair_timecode(999999.0, 1200.0, session_id="s1", field="start", raw=hostile,
+                            kind="quote", out_of_range="clamp")
+        assert "INFO forged" not in [rec.getMessage().split("\n")[1] for rec in caplog.records if "\n" in rec.getMessage()]
+        assert all("\n" not in rec.getMessage() for rec in caplog.records), "a log record must be one line"
+
+    def test_importer_duration_header_uses_the_canonical_parser(self, caplog: pytest.LogCaptureFixture) -> None:
+        """Review #9: the importer's own parser raised uncaught on a fraction."""
+        from bristlenose.server.importer import _parse_duration_to_seconds
+        assert _parse_duration_to_seconds("05:30.500") == pytest.approx(330.5)
+        with caplog.at_level(logging.WARNING):
+            assert _parse_duration_to_seconds("later") == 0.0
+        assert "transcript_duration_unparseable" in caplog.text
+
+    def test_format_duration_human_negative_is_zero(self) -> None:
+        """Review #28: the challenge table names it; H13 pinned the sibling."""
+        from bristlenose.utils.timecodes import format_duration_human
+        assert format_duration_human(-5) == "0m"
+
+    def test_static_dashboard_escapes_the_lt_in_under_a_minute(self) -> None:
+        """Review #33: `<1m` into a raw-HTML f-string. Escaped at the SITE —
+        the string itself is pinned on three sides by the contract."""
+        import inspect
+
+        from bristlenose.stages.s12_render import dashboard
+        src = inspect.getsource(dashboard)
+        assert "html.escape(format_duration_human(total_duration_s))" in src

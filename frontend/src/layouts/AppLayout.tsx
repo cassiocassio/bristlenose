@@ -439,9 +439,6 @@ function AppShell() {
         case "toggleInspectorPanel":
           toggleInspector();
           break;
-        case "find":
-          focusSearchInput();
-          break;
         case "setSearchQuery": {
           // Native macOS search field → store (live as the user types). In
           // embedded mode the native field is the sole search input; the web
@@ -559,9 +556,11 @@ function AppShell() {
           setViewMode("starred");
           break;
         // showHelp / showKeyboardShortcuts / showAcknowledgements / showReleaseNotes
-        // / openBlog are handled natively now (the Help menu opens external docs
-        // directly) — no SPA case needed. The browser SPA reaches docs via the ?
-        // key / footer Help.
+        // / openBlog / find are handled natively now — the Help menu opens external
+        // docs directly, and ⌘F focuses the native search capsule. No SPA case
+        // needed. The browser SPA reaches docs via the ? key / footer Help, and has
+        // its own SearchBox (which is why `find` could never work here: `Toolbar`
+        // returns null in embedded mode, so `.search-input` is not in the document).
         case "sendFeedback":
           setFeedbackOpen(true);
           break;

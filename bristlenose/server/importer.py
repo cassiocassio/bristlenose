@@ -49,7 +49,7 @@ from bristlenose.server.models import (
     Session as SessionModel,
 )
 from bristlenose.utils.fs import is_os_metadata
-from bristlenose.utils.timecodes import parse_header_datetime
+from bristlenose.utils.timecodes import parse_header_datetime, parse_timecode
 
 logger = logging.getLogger(__name__)
 
@@ -76,9 +76,20 @@ def _parse_timecode_to_seconds(tc: str) -> float:
 
 
 def _parse_duration_to_seconds(dur: str) -> float:
-    """Parse a duration string like ``00:01:18`` or ``01:18`` into seconds."""
-    dur = dur.strip()
-    return _parse_timecode_to_seconds(dur)
+    r"""Parse the ``# Duration:`` header via the canonical parser.
+
+    The pipeline resume path reads the same header with ``parse_timecode`` and
+    fell back to ``0.0``; this path used ``_parse_timecode_to_seconds``, which
+    raised uncaught on a fractional second. One parser for this header now.
+    Deliberately NOT applied to the segment loop below: ``_SEGMENT_RE`` admits
+    ``\d+`` hours, wider than the canonical parser's two digits, and narrowing
+    it there would silently drop a segment to position zero.
+    """
+    try:
+        return parse_timecode(dur)
+    except ValueError:
+        logger.warning("transcript_duration_unparseable | raw=%r", dur.strip()[:64])
+        return 0.0
 
 
 def _parse_date(date_str: str) -> datetime | None:

@@ -357,6 +357,79 @@ status checks and let the local gates and `/end-session` carry it. Either is
 defensible; the present state is the one that is not, because it claims a
 guarantee it cannot deliver.
 
+### G10. Two records of the same run, and every gate reads only one — ✅ **closed 12 Sep 2026**
+
+`mark_session_complete` writes the next run's work list; the terminus event
+writes the run's own account of itself. Nothing anywhere compares them. s09
+wrote a FAILED session as complete, and both records stayed individually
+well-formed: `quote_extraction -> s3: complete` in the manifest, `10 == 9 + 1`
+in the terminus. The one driving resume was the wrong one.
+
+**Evidence.** The cached FOSSDA run of 30 Apr 2026 — s3, a 94-minute interview,
+hit three consecutive 600 s API timeouts, recorded a `StageFailure`, and was
+marked complete in the same breath. `get_completed_session_ids` dropped it from
+the work list permanently; `_cached_q_count` then counted it into **both**
+`attempted` and `succeeded` (`pipeline.py:1722-1724`), so the next run's
+terminus read a clean 10/10 with `failed: []`. The interview contributed nothing
+to the report and no re-run would have retried it.
+
+**Four gates pass on it, and three structurally cannot fail.**
+
+- `assert_sessions_accounted` — the arithmetic is *honest* on both runs
+  (10 == 9 + 1, then 10 == 10 + 0). Not the "session in no bucket" shape it was
+  built for.
+- Cross-bucket continuity (`topics.attempted == transcripts.succeeded`) agrees
+  too: s08 held the rule, so only s09 lost the session, and the cached count
+  restores it to the bucket on the next run.
+- The whole-stage guards from `1e1ec118` — abandon on `succeeded == 0`, and
+  `mark_stage_complete` refusing empty content — both pass: one failed session
+  of a batch leaves the intermediate JSON non-empty and `succeeded != 0`.
+- `check-gate-proofs.py` never saw it. It discovers `check-*` scripts; this
+  invariant lives inside `pipeline.py`. Per G7: the model, not the gate.
+
+**The general form, and it is not G7's.** G7 is *the extractor is not looking at
+this fact*. This is *the fact is consistent inside every artefact anyone checks,
+and false only across two of them*. Every assertion we own is single-run and
+within-bucket. The manifest is cross-run state, and nothing compares it to the
+run record written beside it. The cheap check that would have caught it is one
+line of set arithmetic: **a session id in the manifest's completed set must not
+appear in any `failed` list in `pipeline-events.jsonl`.**
+
+**Closed in two commits.** `6277eabe` made the per-session record honest — one
+`_record_session_outcomes` (`pipeline.py:399`) that both stages
+call, rather than a second inline copy, because an uncommented inline copy is
+exactly how the s09 one went missing. That was **necessary and inert**: a
+partially-failed stage was still marked `COMPLETE`, so `_is_stage_verified` took
+the full-cache read and never consulted those records. The follow-up (12 Sep)
+records failures as `StageStatus.FAILED` rather than omitting them — absence
+derives to `COMPLETE` — and stops `mark_stage_complete` forcing `COMPLETE` over
+its own session map. Two-run probe: run 2 now re-extracts only the failed
+session.
+
+**The lesson worth keeping is the day in between.** The first fix was correct,
+tested, proved red against the pre-fix tree, and reported as "the failed session
+is retried on the next run" — which was false, because nothing had ever run the
+loop twice. A guard test that stops at "the manifest says the right thing"
+cannot see a coarser record overriding it.
+
+**What the researcher saw in between.** `bristlenose status` puts a green tick
+on the stage — `✓ Quotes  8 quotes (2 sessions)` with `✓ Transcribe  3 sessions`
+two rows above it, the discrepancy in plain sight and unmarked — and a re-run
+returns `(cached)` instantly without retrying anything.
+
+**The gate is `test_a_failed_session_is_retried_on_the_next_run`**, which runs
+the project twice and asserts run 2 attempts exactly the failed session. Watched
+red against **each half of the fix reverted independently**. Its fixture had to
+be widened from `[]` quotes to real ones first: the degenerate value made
+`mark_stage_complete` refuse on its own empty-content guard, so the stage never
+reached `COMPLETE` and the short-circuit was unreachable from the test meant to
+catch it — **a fixture's zero values can disable the path under test.**
+
+**Two sibling sites carry the un-fixed half**: `pipeline.py:969-972` (s05 —
+`s05_transcribe.py:198` writes `results[sid] = []` on failure, so the failed
+session is a key and gets marked; the helper applies directly) and `:1271-1276`
+(s05b — no `StageOutcome` to filter on without changing the stage's signature).
+
 ## Explicitly NOT gaps
 
 Recorded so they are not re-derived as problems by the next reader.

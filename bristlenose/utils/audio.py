@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import logging
 import platform
-import re
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -14,6 +13,7 @@ from typing import Any
 from bristlenose.models import MediaTimeMeta
 from bristlenose.utils.bundled_binary import bundled_binary_path
 from bristlenose.utils.fs import CloudFetchTimeoutError, ensure_materialised
+from bristlenose.utils.timecodes import parse_iso_lenient
 
 logger = logging.getLogger(__name__)
 
@@ -79,140 +79,147 @@ def _looks_like_toolchain_failure(stderr: str) -> bool:
     return any(marker in text for marker in _TOOLCHAIN_FAILURE_MARKERS)
 
 
-def probe_duration(file_path: Path) -> float | None:
-    """Probe the duration of an audio or video file using ffprobe.
+_MAX_TAG_CHARS = 256   # device/writer identifiers; bounds retained memory per file
 
-    Returns duration in seconds, or None if probing fails.
+
+def _tags(block: dict[str, Any] | None) -> dict[str, str]:
+    """Lower-cased, string-coerced, length-bounded tag map for one ffprobe block.
+
+    Bounded HERE, at the dict layer, never with a Pydantic ``max_length``: a
+    validator *rejects*, and a rejection inside the probe would re-create the
+    whole-scan abort this file was reviewed for. A 200 KB tag becomes 256 chars
+    and the file keeps its other fields.
     """
-    ffprobe = bundled_binary_path("ffprobe") or "ffprobe"
-    try:
-        # Fetch first if this is a cloud placeholder. The 30s budget below is
-        # for a corrupt file, not a download — see ensure_materialised.
-        ensure_materialised(file_path)
-    except CloudFetchTimeoutError as exc:
-        logger.warning("Could not probe %s: %s", file_path, exc)
-        return None
-    try:
-        result = subprocess.run(
-            [
-                ffprobe,
-                "-v", "quiet",
-                "-print_format", "json",
-                "-show_format",
-                str(file_path),
-            ],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        if result.returncode != 0:
-            logger.warning("ffprobe failed for %s: %s", file_path, result.stderr)
-            return None
-        data = json.loads(result.stdout)
-        duration_str = data.get("format", {}).get("duration")
-        if duration_str:
-            return float(duration_str)
-    except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError) as exc:
-        logger.warning("Could not probe %s: %s", file_path, exc)
-    return None
-
-
-_TIME_TAG_KEYS = ("creation_time",)
-_LOCAL_TAG_KEYS = ("com.apple.quicktime.creationdate",)
-
-
-def _iso_lenient(value: str) -> datetime | None:
-    """``fromisoformat`` that also takes ``Z`` and a colon-less ``+0100`` — the
-    two shapes containers actually emit. Python 3.10's parser accepts neither."""
-    text = value.strip()
-    if text.endswith("Z"):
-        text = text[:-1] + "+00:00"
-    m = re.search(r"([+-])(\d{2})(\d{2})$", text)
-    if m and text[-6] != ":":
-        text = f"{text[:-5]}{m.group(1)}{m.group(2)}:{m.group(3)}"
-    try:
-        return datetime.fromisoformat(text)
-    except ValueError:
-        return None
+    return {k.lower(): str(v)[:_MAX_TAG_CHARS] for k, v in ((block or {}).get("tags") or {}).items()}
 
 
 def time_meta_from_ffprobe(data: dict[str, Any]) -> MediaTimeMeta | None:
-    """Build a ``MediaTimeMeta`` from ffprobe's JSON. Pure; testable without
+    """Build a ``MediaTimeMeta`` from ffprobe's JSON. Pure; tested without
     ffprobe. ``None`` when the container carries nothing at all.
 
-    Tag lookup is case-insensitive (Matroska writes ``ENCODER``). Format tags
-    win; the first stream's tags fill gaps — the iPhone and ReplayKit files
-    carry ``creation_time`` on both, some writers only on the stream.
+    Format tags and stream tags are kept APART. ``encoder`` is read from the
+    format block only — on MOV/MP4 the video stream carries the codec (``HEVC``)
+    under the same key Matroska uses for the muxer, and § 5.2's writer table
+    keys on the muxer. Time falls back to the first stream, because some
+    writers stamp only there.
+
+    The named ``.get()`` calls below are an ALLOWLIST and a privacy boundary:
+    the same dictionaries carry ``com.apple.quicktime.location.ISO6709`` (GPS)
+    on every iPhone recording, and it is deliberately not read. Widening this
+    to "all tags" is a consent-gradient decision, not a convenience.
     """
-    fmt = data.get("format") or {}
-    tags: dict[str, str] = {}
-    streams = data.get("streams") or []
-    for st in reversed(streams):                     # earlier streams override later
-        tags.update({k.lower(): str(v) for k, v in (st.get("tags") or {}).items()})
-    tags.update({k.lower(): str(v) for k, v in (fmt.get("tags") or {}).items()})
-    if not tags:
+    fmt = _tags(data.get("format"))
+    streams = [_tags(st) for st in (data.get("streams") or [])]
+    stream_first = streams[0] if streams else {}
+    if not fmt and not any(streams):
         return None
 
-    creation_utc = None
-    for key in _TIME_TAG_KEYS:
-        if key in tags:
-            dt = _iso_lenient(tags[key])
-            if dt is not None:
-                creation_utc = dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-            break
-    creation_local = None
-    offset_minutes = None
-    for key in _LOCAL_TAG_KEYS:
-        if key in tags:
-            dt = _iso_lenient(tags[key])
-            if dt is not None and dt.tzinfo is not None:
-                creation_local = dt
-                off = dt.utcoffset()
-                offset_minutes = int(off.total_seconds() // 60) if off is not None else None
-                if creation_utc is None:
-                    creation_utc = dt.astimezone(timezone.utc)
-            break
+    creation_utc: datetime | None = None
+    raw_utc = fmt.get("creation_time") or stream_first.get("creation_time")
+    if raw_utc:
+        dt = parse_iso_lenient(raw_utc)
+        if dt is not None:
+            creation_utc = dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+    creation_local: datetime | None = None
+    offset_minutes: int | None = None
+    raw_local = fmt.get("com.apple.quicktime.creationdate")
+    if raw_local:
+        dt = parse_iso_lenient(raw_local)
+        if dt is not None and dt.tzinfo is not None:
+            creation_local = dt
+            off = dt.utcoffset()
+            offset_minutes = int(off.total_seconds() // 60) if off is not None else None
+            if creation_utc is None:
+                creation_utc = dt.astimezone(timezone.utc)
+        elif dt is not None:
+            # A naive creationdate is the room's wall clock with the zone
+            # missing. Relabelling it UTC would manufacture a confident wrong
+            # instant that § 5.4 would trust. Say so and leave both unset.
+            logger.warning("time_value_naive | key=creationdate | zone unknown, not stamped | raw=%r", raw_local[:64])
 
     meta = MediaTimeMeta(
         creation_utc=creation_utc,
         creation_local=creation_local,
         offset_minutes=offset_minutes,
-        make=tags.get("com.apple.quicktime.make"),
-        model=tags.get("com.apple.quicktime.model"),
-        software=tags.get("com.apple.quicktime.software"),
-        encoder=tags.get("encoder"),
-        author=tags.get("com.apple.quicktime.author"),
+        make=fmt.get("com.apple.quicktime.make"),
+        model=fmt.get("com.apple.quicktime.model"),
+        software=fmt.get("com.apple.quicktime.software"),
+        encoder=fmt.get("encoder"),
+        author=fmt.get("com.apple.quicktime.author"),
     )
     if all(getattr(meta, f) is None for f in MediaTimeMeta.model_fields):
         return None
     return meta
 
 
-def probe_time_meta(file_path: Path) -> MediaTimeMeta | None:
-    """Read container time metadata with ffprobe. Sibling of ``probe_duration``,
-    deliberately a second call rather than a widened one so the existing
-    ``probe_duration`` mock seam in the ingest tests stays intact; both are
-    scan-time niceties and the cost is one more short shell-out per media file.
-    Never faults a cloud placeholder in — same rule as ``probe_duration``.
+def probe_media(file_path: Path) -> tuple[float | None, MediaTimeMeta | None]:
+    """One ffprobe call: the duration and the container's time metadata.
+
+    Was two calls (~30 ms each, spawn-bound — a 1.25 GB file costs the same as
+    16 MB) on the blocking pre-spinner ingest path, kept separate "to preserve
+    the mock seam"; the seam was three monkeypatch sites. One call now.
+
+    Materialises a cloud placeholder first (``ensure_materialised``), because
+    the blocking read is the trigger and a slow fetch must not be reported as
+    a broken file. The caller gates on ``is_dataless`` so a scan does not
+    download; that rule lives at the call site, not here.
+
+    Three degradations, three different messages, because they mean three
+    different things: the tool did not run → ``Could not probe``; ffprobe
+    refused the file → its own stderr; the file read fine but a tag did not
+    parse → the duration is KEPT and only the meta is ``None``. Folding the
+    last case under the first would have cost a file its duration for one bad
+    date tag.
     """
     ffprobe = bundled_binary_path("ffprobe") or "ffprobe"
     try:
         ensure_materialised(file_path)
     except CloudFetchTimeoutError as exc:
         logger.warning("Could not probe %s: %s", file_path, exc)
-        return None
+        return None, None
     try:
         result = subprocess.run(
-            [ffprobe, "-v", "quiet", "-print_format", "json",
-             "-show_entries", "format_tags:stream_tags", str(file_path)],
+            [ffprobe, "-v", "error", "-print_format", "json",
+             "-show_entries", "format:stream_tags", "--", str(file_path)],
             capture_output=True, text=True, timeout=30,
         )
-        if result.returncode != 0:
-            return None
-        return time_meta_from_ffprobe(json.loads(result.stdout))
-    except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError) as exc:
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as exc:
         logger.warning("Could not probe %s: %s", file_path, exc)
-        return None
+        return None, None
+    if result.returncode != 0:
+        logger.warning("ffprobe refused %s: %s", file_path, (result.stderr or "").strip()[:200])
+        return None, None
+    try:
+        data = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        logger.warning("Could not probe %s: %s", file_path, exc)
+        return None, None
+
+    duration: float | None = None
+    raw = (data.get("format") or {}).get("duration")
+    if raw:
+        try:
+            duration = float(raw)
+        except (TypeError, ValueError):
+            duration = None
+    try:
+        meta = time_meta_from_ffprobe(data)
+    except Exception as exc:  # a parser bug must never cost the scan, or the duration
+        logger.warning("container_tags_unparseable | file=%s | %s: %s", file_path.name, type(exc).__name__, exc)
+        meta = None
+    return duration, meta
+
+
+def probe_duration(file_path: Path) -> float | None:
+    """Duration in seconds, or None. Thin wrapper over ``probe_media`` — the
+    ingest path calls that directly; this stays for other callers and tests."""
+    return probe_media(file_path)[0]
+
+
+def probe_time_meta(file_path: Path) -> MediaTimeMeta | None:
+    """Container time metadata, or None. Thin wrapper over ``probe_media``."""
+    return probe_media(file_path)[1]
 
 
 def extract_audio_from_video(

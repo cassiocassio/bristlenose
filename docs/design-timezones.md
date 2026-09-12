@@ -358,10 +358,17 @@ order is strict because each step is what makes the next one measurable._
   parsed UTC instant and, for `IMG_2544.MOV`, `offset_minutes == 60`.
 
 _**What landed:** `MediaTimeMeta` on `InputFile`, populated at ingest by
-`probe_time_meta`; `time_meta_from_ffprobe` is pure and tested on the measured
+`probe_media` (one ffprobe call for duration and tags); `time_meta_from_ffprobe` is pure and tested on the measured
 tag dictionaries. `bristlenose status` does not surface it yet — that is a CLI
 surface change with man-page and README obligations, held for when § 5.4 gives
 it something to say._
+
+_**Scope limit, stated (review Finding 36):** the rule "a naive `creation_time`
+means UTC" was verified against **one** writer, a macOS MOV, and is applied to
+all 24 accepted containers. It is definitionally false for
+`com.apple.quicktime.creationdate`, which is the room's wall clock — a naive one
+is now logged and left unstamped rather than relabelled. For `creation_time` the
+assumption stands until a second writer family is measured (§ 5.8)._
 
 _**Judgement calls left for the maintainer, in order — none is a mechanical
 step:** § 5.2's table has three owed measurements that need files not on this
@@ -408,6 +415,13 @@ breaks:
 `timezone=True` is what stops the DB boundary destroying the offset (§ 1). It
 is also the point at which T1-1's converted `# Date:` values start meaning what
 they say.
+
+**Deliverable owed with this step, not after it:** a paragraph in `SECURITY.md`'s
+"what Bristlenose writes to your machine" inventory stating what is read from
+media containers, why (writer classification for start-time resolution), that
+location is deliberately excluded, and — once persisted — the retention and
+erasure answer. And the `author` keep/drop/redact decision (review Finding 5)
+must be made before the column exists.
 
 ### 5.4 The resolver — precedence, tolerance, and disagreement
 

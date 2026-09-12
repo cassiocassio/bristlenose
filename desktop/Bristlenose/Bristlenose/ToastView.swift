@@ -1,12 +1,22 @@
 import SwiftUI
 
-/// Shared bottom-of-window toast surface. Two consumers today:
-///   - `ToastStore` + `ToastOverlay` — informational toasts (3s auto-dismiss).
-///   - `UndoableRemovalStore` + `RemoveToast` — undoable removal toasts
-///     (8s window with an action button).
+/// Shared bottom-of-window toast surface. **One consumer today:**
+/// `ToastStore` + `ToastOverlay` — informational toasts (3s auto-dismiss),
+/// attached at `BristlenoseApp.swift` and driven from `ContentView` /
+/// `AlphaExpiryFlow`.
 ///
-/// Visual surface lives in `ToastSurface` so the two consumers stay
-/// pixel-aligned without ad-hoc copies.
+/// The second consumer is gone. `UndoableRemovalStore` + `RemoveToast` — the
+/// undoable removal toast with an 8s fuse — was **deleted** on 19 Aug 2026
+/// (`5598bd39`, "five toasts and a fuse removed"): removal-undo is now plain
+/// ⌘Z with no time limit, and the vanishing row gets `NSAnimationEffect.poof`
+/// (`ProjectSidebarOutline.swift`), the idiom the drag-and-drop HIG names.
+/// This comment went on naming that consumer for three weeks and was read as
+/// evidence the app still ships an undo toast — it does not.
+///
+/// So `ToastSurface`'s `action` / `tooltip` parameters have no live caller.
+/// They are kept, not pruned, because the surface is the shared one and a
+/// future toast with an action would want them — but do not infer from their
+/// existence that something uses them.
 
 @MainActor
 final class ToastStore: ObservableObject {

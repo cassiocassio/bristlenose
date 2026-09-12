@@ -40,11 +40,13 @@ MAX_QUOTE_CHARS = 300  # keep stickies readable (Miro hard cap is 6000)
 def _parse_timecode(s: str) -> float:
     """'m:ss' or 'h:mm:ss' -> seconds, via the canonical parser.
 
-    The hand-rolled version returned 0.0 for *any* failure, including a VTT-style
-    fractional second, and accepted any number of colon-separated parts. A
-    string the canonical parser refuses still yields 0.0 — this is the Miro
-    import edge and a sticky without a position beats a lost sticky — but it is
-    logged now rather than absorbed.
+    This is the EXPORT edge: ``q.timecode`` is Bristlenose's own
+    ``format_timecode`` output (``export_core.py``), not a string from a Miro
+    board. The hand-rolled version returned 0.0 for *any* failure and accepted
+    any number of colon-separated parts. A refusal — reachable only at the
+    declared >99 h limit — still yields 0.0 so the sticky is kept, but it is
+    logged, and ``_clip_url`` declines to build a link to a clip that cannot
+    exist at that position.
     """
     try:
         return parse_timecode(s)
@@ -64,7 +66,12 @@ def _clip_url(base: str, q) -> str | None:
         # Don't echo the user-supplied value into the log (log-injection guard).
         logger.warning("Ignoring clips_base for Miro links: not an http(s) URL")
         return None
-    fname = f"{q.session}-{q.participant_code}-{int(_parse_timecode(q.timecode))}.mp4"
+    start = _parse_timecode(q.timecode)
+    if start == 0.0 and q.timecode.strip() not in ("00:00", "0:00", "00:00:00"):
+        # The parser refused the timecode and fell back to 0.0 — a link to
+        # `…-0.mp4` would be a well-formed URL to a clip that does not exist.
+        return None
+    fname = f"{q.session}-{q.participant_code}-{int(start)}.mp4"
     return f"{base.rstrip('/')}/{fname}"
 
 

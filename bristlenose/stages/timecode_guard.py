@@ -113,7 +113,7 @@ def repair_timecode(
     scaled = value / 60.0
     if value % 60 == 0 and scaled <= ceiling + TIMECODE_GRACE_S:
         logger.warning(
-            "%s_timecode_repair | session=%s | field=%s | raw=%s | was=%.1f | "
+            "%s_timecode_repair | session=%s | field=%s | raw=%r | was=%.1f | "
             "now=%.1f | ceiling=%.1f | signature=minutes-as-hours",
             kind, session_id, field, raw, value, scaled, ceiling,
         )
@@ -121,7 +121,7 @@ def repair_timecode(
 
     if out_of_range == "drop":
         logger.warning(
-            "%s_timecode_out_of_range | session=%s | field=%s | raw=%s | was=%.1f | "
+            "%s_timecode_out_of_range | session=%s | field=%s | raw=%r | was=%.1f | "
             "ceiling=%.1f | action=dropped",
             kind, session_id, field, raw, value, ceiling,
         )
@@ -129,7 +129,7 @@ def repair_timecode(
 
     clamped = max(0.0, min(value, ceiling))
     logger.warning(
-        "%s_timecode_out_of_range | session=%s | field=%s | raw=%s | was=%.1f | "
+        "%s_timecode_out_of_range | session=%s | field=%s | raw=%r | was=%.1f | "
         "clamped=%.1f | ceiling=%.1f",
         kind, session_id, field, raw, value, clamped, ceiling,
     )

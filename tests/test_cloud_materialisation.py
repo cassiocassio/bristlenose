@@ -176,7 +176,7 @@ class TestReadSitesAreGuarded:
     The bug this whole feature exists to kill: the download happens *inside* a
     subprocess timeout, so a slow fetch is reported as a broken file. Two sites
     were already guarded (`probe_duration`, `has_audio_stream`); these are the
-    other three. What's pinned per site is the **degradation contract** — fatal,
+    other four. What's pinned per site is the **degradation contract** — fatal,
     cosmetic, or skippable — plus, crucially, that the subprocess is never
     reached, since reaching it is the defect.
     """
@@ -217,6 +217,23 @@ class TestReadSitesAreGuarded:
         assert "Dropbox" in str(exc.value)
         # The old failure mode, in one assertion.
         assert "ffmpeg" not in str(exc.value).lower()
+
+    def test_media_probe_degrades_to_none_pair(self, tmp_path: Path, monkeypatch, caplog) -> None:
+        """The scan-time probe (duration + container meta, one ffprobe). A
+        nicety — it must never download, never fail a run, and must say why.
+        `ran == []` is asserted because after the probe widened its except, a
+        bare AssertionError from the guard would be swallowed into "Could not
+        probe" and a None pair — the flag is the only signal that survives."""
+        import bristlenose.utils.audio as audio_mod
+        from bristlenose.utils.audio import probe_media
+
+        ran = self._explode(monkeypatch, audio_mod)
+        src = tmp_path / "interview.mov"
+        src.write_bytes(b"x")
+        with caplog.at_level("WARNING"):
+            assert probe_media(src) == (None, None)
+        assert "fetched" in caplog.text
+        assert ran == [], "ffprobe ran despite an unmaterialised source"
 
     def test_thumbnail_degrades_to_none(self, tmp_path: Path, monkeypatch, caplog) -> None:
         """A thumbnail is cosmetic — losing it must not fail a run. But it has to

@@ -17,48 +17,92 @@ This is the question the run was asked: two defaults changed model family and
 the Claude path lost its temperature pin, so do the recovery rates the merge
 rule rests on still describe what we ship?
 
-| | single ≥70% | union ≥70% | fragile tail | quote-count spread |
-|---|---:|---:|---:|---:|
-| Jul 2026 baseline (`claude-sonnet-4` @ 0.1) | 80.9–83.5% | 94.6% | ~9% | — |
-| **`claude-sonnet-4-6`** (shipped default, no temp pin) | **84.2%** | **94.5%** | **2.5%** | 119–129 |
-| `gemini-3.8-flash` | 90.7% | 92.3% | 0% | 61–72 |
-| `gpt-5.6-terra` | 77.3% | **86.6%** | 3.1% | 81–112 |
+**Read the PADDED column.** The unpadded runs were taken before §3's prompt-format
+fix, and on a metric measured along the **timeline** — so for `gpt-5.6-terra`,
+whose timecodes were 60× wrong in 63% of quotes, the unpadded figures are
+measuring garbage and mean nothing. They are kept only because §3 and §3b are
+built on that same data.
 
-**Answer: yes, on Claude, and closely.** `claude-sonnet-4-6` returns **94.5%**
-union recovery against the Jul figure of **94.6%**, single-match **84.2%**
-against 80.9–83.5%, and a fragile tail of **2.5%** against ~9% — every number at
-or better than the baseline, on a model that *cannot accept a temperature
-parameter at all*.
+| | single ≥70% | union ≥70% | fragile tail | quote counts |
+|---|---:|---:|---:|---|
+| Jul 2026 baseline (`claude-sonnet-4` @ 0.1) | 80.9–83.5% | 94.6% | ~9% | — |
+| **`claude-sonnet-4-6`** (shipped default, no temp pin) | **88.5%** | **96.1%** | **1.6%** | 115–128 |
+| `gpt-5.6-terra` | 84.4% | **95.6%** | 0.0% | 85–97 |
+| `gemini-3.8-flash` | 76.0% | **80.4%** ✗ | 5.9% | 60–68 |
+| _unpadded, for §3's provenance only_ | | | | |
+| `claude-sonnet-4-6` (unpadded) | 84.2% | 94.5% | 2.5% | 119–129 |
+| `gemini-3.8-flash` (unpadded) | 90.7% | 92.3% | 0% | 61–72 |
+| `gpt-5.6-terra` (unpadded) | 77.3% | 86.6% | 3.1% | 81–112 |
+
+**Answer: yes, on Claude, and comfortably.** `claude-sonnet-4-6` returns **96.1%**
+union recovery against the Jul figure of **94.6%**, single-match **88.5%** against
+80.9–83.5%, and a fragile tail of **1.6%** against ~9% — every number at or better
+than a baseline measured *with* a temperature pin, on a model that **cannot accept
+one at all**.
 
 **So losing the temperature pin cost nothing the pin was credited with**, which
 is the argument already recorded in `docs/design-decisions.md` § "Temperature is
 not a control we ship" — the stability comes from the position-overlap matcher
 and the union rule, not the sampler — now measured rather than reasoned.
 
-**Gemini clears the target too** (92.3% union). **ChatGPT does not** — see §2.
+**`gpt-5.6-terra` clears the target too**, at 95.6%.
 
-The ordering is worth noting: Gemini wins on *single* match (90.7%) and Claude on
-*union* (94.5%). Gemini rarely splits a quote, so its two numbers nearly
-coincide; Claude splits more and the union rule recovers it. That is the union
-rule doing exactly the job it was introduced for.
+### A claim withdrawn, and one opened
 
-## 1b. But text stability is far below the Jul figure — on ALL THREE models
+**WITHDRAWN: "`gpt-5.6-terra` misses the ≥90% union target."** That was §2 of this
+file, from the unpadded run: 86.6% mean, 82.5% worst. It was an artefact. The
+metric is timeline-based and 63% of that model's timecodes were 60× wrong, so the
+overlap it measured was not the overlap of the quotes. With the format mismatch
+fixed, terra clears the target at **95.6%** with a **zero** fragile tail. Recorded
+rather than deleted, because the original claim reached a session summary and a
+commit body before it was re-measured.
+
+**OPEN: `gemini-3.8-flash` now appears to MISS the target** — 80.4% union,
+77.9% worst, down from 92.3% unpadded. A 11.9-point drop in the direction the
+fix was not supposed to push anything. Three readings, none settled:
+
+- **noise** — four passes, one corpus; the per-pass spread is 77.9–83.8%, so the
+  mean is not resting on an outlier, but n is small;
+- **a real interaction** with zero-padded `HH:MM:SS`, which would mean the fix
+  traded one model's correctness for another's stability;
+- **a measurement boundary** — Gemini returns the fewest quotes (60–68 against
+  Claude's 115–128), so each quote is worth 1.5% and the denominator is thin.
+
+**§3's common-reference measurement points at the first reading.** Scored against
+a *shared* baseline — unpadded pass 1, so only the prompt differs — Gemini is
+**unmoved**: 89.8% single / 92.2% union, against 90.7% / 92.3% for the baseline's
+own passes. So Gemini's output did not change when the prompt did; what changed is
+how well its four padded passes agree with **each other**. Those are different
+quantities, and the second is the noisier one at this n.
+
+**Do not act on 80.4% without more passes.** ~8 more is about $0.60:
+`run.py --provider google --model gemini-3.8-flash --passes 12`. Until then the
+right statement is that Gemini's *self*-consistency reads lower on the padded
+passes while its *agreement with the pre-fix baseline* is intact — which is what
+sampling noise on a thin denominator looks like, and not yet what a regression
+looks like.
+
+## 1b. Text stability is far below the Jul figure — on ALL THREE models
+
+Padded runs:
 
 | | text also ≥0.90 | median text similarity |
 |---|---:|---:|
 | Jul 2026 baseline | — | **1.00** |
-| `claude-sonnet-4-6` | 51.1% | 0.85–0.96 |
-| `gemini-3.8-flash` | 30.6% | 0.78 |
-| `gpt-5.6-terra` | 16.2% | 0.27–0.45 |
+| `claude-sonnet-4-6` | 51.8% | 0.92–0.94 |
+| `gemini-3.8-flash` | 18.6% | 0.55–0.60 |
+| `gpt-5.6-terra` | 14.4% | 0.43–0.54 |
 
 Median timecode drift is **+0.0s at both ends for every model**, so the quotes
-land on the same spans and carry different words. On Gemini, of 166
-timecode-recovered pairs: 6.6% exactly identical, 30.1% below 0.50 similarity.
+land on the same spans and carry different words. The padding fix barely moved
+these numbers — Claude 51.1% → 51.8%, Gemini 30.6% → 18.6%, terra 16.2% → 14.4% —
+so text instability is **not** a symptom of the timecode defect. It is its own
+thing.
 
-**There is a model gradient — Claude 51.1%, Gemini 30.6%, ChatGPT 16.2% — but
+**There is a model gradient — Claude 51.8%, Gemini 18.6%, ChatGPT 14.4% — but
 the CORPUS is the leading explanation for the level, and it is not settled.**
 Claude is the control and the closest thing here to the Jul configuration, and
-even it sits at 51.1% against a baseline whose median similarity was 1.00. So
+even it sits near half against a baseline whose median similarity was 1.00. So
 "the moved defaults regressed" cannot be the explanation: the model that did not
 move shows it too. What differs is the material: the Jul run used a task-based
 e-commerce usability study, where a quote is one 5–15s utterance with essentially
@@ -78,10 +122,7 @@ that the Jul validation did not have to ask, because on that corpus it was 1.00.
 On long-form interviews it is not, and the merge rule has nothing to say about
 it.
 
-## 2. `gpt-5.6-terra` misses the ≥90% union target the merge rule is built on
-
-86.6% mean, **82.5% worst pass**. The ≥90% target is the one the union rule was
-introduced to clear. On the shipped ChatGPT default it does not clear it.
+## 2. _(withdrawn — see §1 "A claim withdrawn, and one opened")_
 
 ## 3. `gpt-5.6-terra` returns 63% of quote timecodes 60× too large — a shipped defect
 

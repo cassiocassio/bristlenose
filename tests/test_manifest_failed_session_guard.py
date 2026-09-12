@@ -46,7 +46,7 @@ from bristlenose.models import (
     SpeakerRole,
     TranscriptSegment,
 )
-from bristlenose.pipeline import Pipeline, _mark_sessions_complete_except_failed
+from bristlenose.pipeline import Pipeline, _record_session_outcomes
 
 
 def _failure(sid: str, stage: str) -> StageFailure:
@@ -66,7 +66,7 @@ def _failure(sid: str, stage: str) -> StageFailure:
 # ---------------------------------------------------------------------------
 
 
-class TestMarkSessionsCompleteExceptFailed:
+class TestRecordSessionOutcomes:
     """Unit-level: the shared rule both per-session LLM stages route through."""
 
     def _manifest(self):
@@ -81,7 +81,7 @@ class TestMarkSessionsCompleteExceptFailed:
             failed=[_failure("s2", "quote_extraction")],
         )
 
-        skipped = _mark_sessions_complete_except_failed(
+        skipped = _record_session_outcomes(
             m, STAGE_QUOTE_EXTRACTION, ["s1", "s2", "s3"], outcome,
         )
 
@@ -94,7 +94,7 @@ class TestMarkSessionsCompleteExceptFailed:
         m = self._manifest()
         outcome = StageOutcome(attempted=3, succeeded=3)
 
-        skipped = _mark_sessions_complete_except_failed(
+        skipped = _record_session_outcomes(
             m, STAGE_QUOTE_EXTRACTION, ["s1", "s2", "s3"], outcome,
         )
 
@@ -117,7 +117,7 @@ class TestMarkSessionsCompleteExceptFailed:
             ))],
         )
 
-        skipped = _mark_sessions_complete_except_failed(
+        skipped = _record_session_outcomes(
             m, STAGE_QUOTE_EXTRACTION, ["s1", "s2"], outcome,
         )
 
@@ -157,6 +157,29 @@ def _sessions(input_dir: Path, n: int) -> list[InputSession]:
     return out
 
 
+def _quote(sid: str, n: int):
+    """A real quote. NOT optional detail: a fake returning `[]` makes
+    `mark_stage_complete` refuse on its own empty-content guard, so the stage
+    never reaches COMPLETE and the stage-level cache short-circuit — the thing
+    these tests exist to pin — is unreachable. The degenerate fixture disables
+    the path under test."""
+    from bristlenose.models import (
+        EmotionalTone,
+        ExtractedQuote,
+        JourneyStage,
+        QuoteIntent,
+        QuoteType,
+    )
+    text = f"Quote {n} from {sid}, long enough to clear the word floor."
+    return ExtractedQuote(
+        session_id=sid, participant_id=sid.replace("s", "p"),
+        start_timecode=0.0, end_timecode=5.0, text=text, verbatim_excerpt=text,
+        topic_label="general", quote_type=QuoteType.GENERAL_CONTEXT,
+        researcher_context="", intent=QuoteIntent.NARRATION,
+        emotion=EmotionalTone.NEUTRAL, journey_stage=JourneyStage.OTHER,
+    )
+
+
 def _segment(i: int) -> TranscriptSegment:
     return TranscriptSegment(
         segment_index=0,
@@ -174,6 +197,8 @@ def _run_pipeline_with_one_failing_session(
     failing_stage: str,
     failing_sid: str = "s2",
     n: int = 3,
+    runs: int = 1,
+    extraction_calls: list[list[str]] | None = None,
 ) -> Path:
     """Drive the real ``Pipeline.run`` where exactly one session fails at
     ``failing_stage`` ('s08' or 's09'). Returns the output dir.
@@ -183,6 +208,9 @@ def _run_pipeline_with_one_failing_session(
     orchestrator's per-session manifest marking, not the LLM wiring.
     """
     from bristlenose.models import PiiCleanTranscript, SessionTopicMap
+
+    if extraction_calls is None:
+        extraction_calls = []
 
     settings = MagicMock()
     settings.project_name = "guard-test"
@@ -236,13 +264,17 @@ def _run_pipeline_with_one_failing_session(
 
     async def _fake_extract_quotes(transcripts, *_a, **_kw):
         assert all(isinstance(t, PiiCleanTranscript) for t in transcripts)
-        if failing_stage == "s09":
-            return [], StageOutcome(
-                attempted=len(transcripts), succeeded=len(transcripts) - 1,
-                failed=[_failure(failing_sid, "quote_extraction")],
-            )
-        return [], StageOutcome(
-            attempted=len(transcripts), succeeded=len(transcripts),
+        extraction_calls.append([t.session_id for t in transcripts])
+        quotes, failed = [], []
+        for t in transcripts:
+            if failing_stage == "s09" and t.session_id == failing_sid:
+                failed.append(_failure(t.session_id, "quote_extraction"))
+                continue
+            quotes.extend(_quote(t.session_id, n) for n in range(4))
+        return quotes, StageOutcome(
+            attempted=len(transcripts),
+            succeeded=len(transcripts) - len(failed),
+            failed=failed,
         )
 
     async def _fake_cluster(quotes, *_a, **_kw):
@@ -277,7 +309,8 @@ def _run_pipeline_with_one_failing_session(
         ),
         patch("bristlenose.llm.client.LLMClient", MagicMock()),
     ):
-        asyncio.run(pipeline.run(input_dir, output_dir))
+        for _ in range(runs):
+            asyncio.run(pipeline.run(input_dir, output_dir))
 
     assert sids  # sanity: the fixture built sessions at all
     return output_dir
@@ -322,3 +355,50 @@ def test_a_clean_run_still_caches_every_session(tmp_path: Path) -> None:
     assert manifest is not None
     for stage_key in (STAGE_TOPIC_SEGMENTATION, STAGE_QUOTE_EXTRACTION):
         assert get_completed_session_ids(manifest, stage_key) == {"s1", "s2", "s3"}
+
+
+# ---------------------------------------------------------------------------
+# The outcome the researcher actually cares about
+# ---------------------------------------------------------------------------
+
+
+def test_a_failed_session_is_retried_on_the_next_run(tmp_path: Path) -> None:
+    """Run the project twice, changing nothing. The failed session must be
+    re-attempted and the succeeded ones must not.
+
+    This is the assertion the first version of these tests did not make, and
+    the gap was invisible for a day: the per-session record was honest and
+    **unread**, because `mark_stage_complete` marked the whole stage COMPLETE
+    over it and `_is_stage_cached` short-circuits on that. A test that stops at
+    "the manifest says the right thing" cannot see it — only running the loop
+    twice can.
+    """
+    calls: list[list[str]] = []
+    output_dir = _run_pipeline_with_one_failing_session(
+        tmp_path, failing_stage="s09", runs=2, extraction_calls=calls,
+    )
+
+    assert len(calls) == 2, f"expected two extraction passes, got {calls!r}"
+    assert calls[0] == ["s1", "s2", "s3"], "run 1 should attempt everything"
+    assert calls[1] == ["s2"], (
+        f"run 2 must re-attempt ONLY the failed session, got {calls[1]!r} — "
+        "[] means the stage cached whole and the loss is permanent; "
+        "all three means the cache stopped working in the other direction"
+    )
+
+    # And the stage must not be claiming completeness over a failed session.
+    from bristlenose.manifest import StageStatus
+
+    manifest = load_manifest(output_dir)
+    assert manifest is not None
+    record = manifest.stages[STAGE_QUOTE_EXTRACTION]
+    assert record.status == StageStatus.PARTIAL, (
+        f"stage status is {record.status} — COMPLETE here is what makes the "
+        "per-session records unreadable"
+    )
+    assert record.sessions is not None
+    assert record.sessions["s2"].status == StageStatus.FAILED, (
+        "the failed session must be RECORDED, not omitted — absence is "
+        "indistinguishable from never-attempted and derives to COMPLETE"
+    )
+    assert get_completed_session_ids(manifest, STAGE_QUOTE_EXTRACTION) == {"s1", "s3"}

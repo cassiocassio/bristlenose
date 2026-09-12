@@ -1915,3 +1915,57 @@ class TestBundleAdminPanelGuard:
         with patch("builtins.__import__", side_effect=no_sqladmin):
             r = check_bundle_admin_panel()
         assert r.status == CheckStatus.FAIL
+
+
+class TestCheckPiiDiagnosesTheModelDirectory:
+    """A bad `BRISTLENOSE_PII_MODEL_DIR` must be named, not misattributed.
+
+    `resolve_spacy_model()` raises `ValueError` when the override does not name
+    a loadable model directory. That used to land in `check_pii`'s bare
+    `except Exception` arm and report **"spaCy not compatible (Python 3.14+)"**
+    — a wrong diagnosis from the one tool whose entire job is diagnosis, and
+    the message a `.dmg` or TestFlight user would get, since the path route is
+    the only route on those machines (`spacy download` never runs there).
+    """
+
+    @staticmethod
+    def _half_unpacked(tmp_path):
+        d = tmp_path / "en_core_web_lg-3.8.0"
+        d.mkdir()
+        (d / "config.cfg").write_text("[nlp]")  # meta.json missing
+        return d
+
+    def test_an_incomplete_pack_names_the_variable(self, tmp_path, monkeypatch) -> None:
+        from bristlenose.stages.s07_pii_removal import PII_MODEL_DIR_ENV
+
+        monkeypatch.setenv(PII_MODEL_DIR_ENV, str(self._half_unpacked(tmp_path)))
+        result = check_pii(_settings(pii_enabled=True))
+
+        assert result.status == CheckStatus.FAIL
+        assert PII_MODEL_DIR_ENV in result.detail
+        assert "meta.json" in result.detail
+        assert "Python 3.14" not in result.detail, (
+            "the incompatibility message is a misdiagnosis for a bad model dir"
+        )
+
+    def test_it_routes_to_the_env_var_fix_not_the_install_fix(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        """`spacy download` is the wrong remedy — nothing needs installing.
+
+        The model may well be present and merely pointed at from the wrong
+        level (the parent rather than the inner versioned directory).
+        """
+        from bristlenose.stages.s07_pii_removal import PII_MODEL_DIR_ENV
+
+        monkeypatch.setenv(PII_MODEL_DIR_ENV, str(self._half_unpacked(tmp_path)))
+        result = check_pii(_settings(pii_enabled=True))
+        assert result.fix_key == "pii_model_dir_invalid"
+
+    def test_the_fix_text_exists_and_does_not_tell_them_to_download(self) -> None:
+        from bristlenose.doctor_fixes import get_fix
+
+        text = get_fix("pii_model_dir_invalid", "pip")
+        assert text, "fix_key is registered nowhere — doctor would show nothing"
+        assert "BRISTLENOSE_PII_MODEL_DIR" in text
+        assert "spacy download" not in text

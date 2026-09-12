@@ -905,6 +905,35 @@ resolved path — the obvious "simplification" — fails it with
 `ModuleNotFoundError`, which is exactly the TestFlight failure it exists to
 pre-empt.
 
+### `doctor` was misdiagnosing a bad model directory — 12 Sep 2026
+
+Found by asking the third surface the same question the other two now answer.
+`resolve_spacy_model()` raises `ValueError` when `BRISTLENOSE_PII_MODEL_DIR`
+does not name a loadable model directory — a half-unpacked pack, or a path
+aimed one level too high. In `check_pii` that landed in the bare
+`except Exception` arm and came back as **"spaCy not compatible (Python
+3.14+)"**.
+
+Wrong in the worst possible place: `doctor` is the tool a confused user runs,
+and on a `.dmg` or TestFlight machine the path route is the **only** route —
+`spacy download` never runs there — so this is the message that whole class of
+user would get. The resolver's own text already names the variable, the path
+and the two files it wants; it was simply being thrown away.
+
+Now caught before the generic arm, with a dedicated `pii_model_dir_invalid`
+fix rather than the install-oriented `spacy_model_missing` one — recommending
+`spacy download` here would be actively misleading, since nothing needs
+installing and the model may well be present and merely pointed at from the
+wrong level.
+
+Fixed in the same pass: `check_pii` called `spacy.load()` **twice**, once to
+probe and once for the version string. On `lg` that is 425 MB read twice to
+learn "3.8.0".
+
+Pinned in `tests/test_doctor.py` — the detail names the variable, the fix key
+routes to the env-var fix, and the fix text does not say `spacy download`. All
+three redden when the arm is reverted to the old message.
+
 ### Build order
 
 Phases 0–2 are independent of Background Assets and can land immediately; the

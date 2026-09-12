@@ -278,6 +278,23 @@ def _fix_network_unreachable(_method: str) -> str:
     )
 
 
+def _fix_pii_model_dir_invalid(method: str) -> str:
+    """The override is set and wrong — a different problem from "not installed".
+
+    Same for every install method: nothing to install, one variable to correct.
+    Recommending `spacy download` here would be actively misleading, because
+    the model may well be present and merely pointed at from the wrong level.
+    """
+    return (
+        "BRISTLENOSE_PII_MODEL_DIR is set but does not name a loadable spaCy\n"
+        "model directory. It must point at the directory holding meta.json and\n"
+        "config.cfg — for en_core_web_lg that is the inner\n"
+        "en_core_web_lg-<version>/ directory, not its parent.\n\n"
+        "  ls \"$BRISTLENOSE_PII_MODEL_DIR\"      # expect meta.json + config.cfg\n\n"
+        "Unset it to fall back to the installed package."
+    )
+
+
 def _fix_spacy_model_missing(method: str) -> str:
     if method == "rpm":
         return (
@@ -544,6 +561,7 @@ _FIX_TABLE: dict[str, object] = {
     "api_key_invalid_azure": _fix_api_key_invalid_azure,
     "network_unreachable": _fix_network_unreachable,
     "spacy_model_missing": _fix_spacy_model_missing,
+    "pii_model_dir_invalid": _fix_pii_model_dir_invalid,
     "presidio_missing": _fix_presidio_missing,
     "mlx_not_installed": _fix_mlx_not_installed,
     "cuda_not_available": _fix_cuda_not_available,

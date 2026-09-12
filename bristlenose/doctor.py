@@ -656,7 +656,24 @@ def check_pii(settings: BristlenoseSettings) -> CheckResult:
             resolve_spacy_model,
         )
 
-        spacy.load(resolve_spacy_model())
+        model = resolve_spacy_model()
+    except ValueError as exc:
+        # The override names something that is not a loadable model directory.
+        # Caught BEFORE the bare `except Exception` below, which used to
+        # swallow this and report "spaCy not compatible (Python 3.14+)" — a
+        # wrong diagnosis in the one tool whose whole job is diagnosis, and the
+        # message a .dmg or TestFlight user would get, since the path route is
+        # the ONLY route on those machines. The resolver's own text names the
+        # variable, the path, and the two files it wants.
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label="PII redaction",
+            detail=str(exc).split(". ")[0],
+            fix_key="pii_model_dir_invalid",
+        )
+
+    try:
+        nlp = spacy.load(model)
     except ImportError:
         return CheckResult(
             status=CheckStatus.FAIL,
@@ -679,9 +696,10 @@ def check_pii(settings: BristlenoseSettings) -> CheckResult:
             fix_key="spacy_model_missing",
         )
 
+    # Reuse the model loaded above — this used to `spacy.load()` a second time,
+    # which on the lg model is 425 MB read twice for a version string.
     spacy_model_version = ""
     try:
-        nlp = spacy.load(resolve_spacy_model())
         spacy_model_version = nlp.meta.get("version", "")
     except Exception:
         pass

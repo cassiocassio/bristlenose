@@ -129,7 +129,36 @@ cases) — *but even `lg` misses 34 of the 54 hard items.* **No NER model closes
 this.** That's the crux: the place `lg` beats `sm` is the place an **LLM crushes
 both**, multilingually, with nothing to bundle.
 
-## The forward project: "Roll our own PII" (post-100days)
+## Roll our own PII — **REJECTED 12 Sep 2026**
+
+> **Decision: we are not building a PII engine. Presidio + spaCy + `en_core_web_lg`
+> is the engine, and the remaining problems are treated as packaging and
+> configuration.** The analysis below is kept because it is sound and because it
+> names the real weaknesses — but the conclusion it reaches is not the one taken.
+>
+> **What flipped it is that the weaknesses turned out to be configuration, not
+> limitations.** Every gap the hour-scale corpus measured sits inside Presidio's
+> own extension surface:
+>
+> | measured gap | what it actually is | cost |
+> |---|---|---|
+> | phones 2/8, both models | `PhoneRecognizer.SCORE = 0.4`, lifted to 0.75 only by an adjacent context word. `__init__` takes `context=`. Widening the list took the sample from **1/4 to 3/4**, measured. | 0 MB |
+> | `Fedora`/`Bash`/`Kotlin` → `[NAME]`, both models | `analyze(allow_list=[...], allow_list_match="exact")`. Suppressed **8/8** product names while `Ada Okonkwo` and `Marcus Swift` stayed caught — exact matching is on the whole span, so an allow-listed token inside a full name does not suppress the name. | 0 MB |
+> | employee ID · postcode · DOB, 0/n | No recogniser exists for them. `PatternRecognizer` is Presidio's own registration point. | 0 MB |
+> | hardcoded `language="en"` | Presidio takes a per-language NLP engine. | model-sized |
+>
+> So "the off-the-shelf detector is not good enough" was substantially "the
+> off-the-shelf detector is unconfigured". Tuning it is ordinary work against a
+> library we already ship; replacing it is a new detection engine for a privacy
+> control, needing its own validation and blocked on a methodology call.
+> **Don't reopen this without new evidence** — the eval rig
+> (`experiments/pii_corpus_hour.py` + `pii_measure_hour.py`, 68 planted spans and
+> 32 negative probes) is what new evidence would have to come from.
+>
+> The delivery of the 425 MB model stays an open packaging question — see
+> §"Un-parking the Mac path".
+
+### The rejected design, preserved (post-100days, was the forward direction)
 
 **Insight:** Presidio's entire value is NER (names/places). Structured PII —
 emails, phones, cards, IPs, NHS numbers, IBANs — is **regexes**, no ML. And NER

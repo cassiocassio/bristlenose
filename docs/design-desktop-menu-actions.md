@@ -184,7 +184,7 @@ These are either native-only (Finder, print) or depend on features not yet built
 
 ### Help menu (7)
 
-All in `HelpMenuContent` (`MenuCommands.swift`). Order top→bottom: Bristlenose Help · **Welcome to Bristlenose** · Keyboard Shortcuts · ─ · Release Notes · Send Feedback… · ─ · Bristlenose on Substack · Acknowledgements. Most items open **browser docs** via `NSWorkspace` (the in-app Help modal is retired — "Help opens browser docs"), so they work whether or not the SPA is mounted.
+All in `HelpMenuContent` (`MenuCommands.swift`). Order top→bottom: Bristlenose Help · **Welcome to Bristlenose** · Keyboard Shortcuts · ─ · Release Notes · Send Feedback… · ─ · Bristlenose Newsletter · Acknowledgements. Most items open **browser docs** via `NSWorkspace` (the in-app Help modal is retired — "Help opens browser docs"), so they work whether or not the SPA is mounted.
 
 | Action | Status | Notes |
 |---|---|---|
@@ -193,7 +193,7 @@ All in `HelpMenuContent` (`MenuCommands.swift`). Order top→bottom: Bristlenose
 | `keyboardShortcuts` | **Shipped** (native) | Opens `docs/keyboard-shortcuts.html` in the browser |
 | `releaseNotes` | **Shipped** (native) | Opens `docs/changelog.html` in the browser |
 | `sendFeedback` | **Shipped** | `bridgeHandler.openFeedback()` → native `FeedbackSheet` (live-serve or `.serverless`) |
-| `openBlog` | **Shipped** (bridge) | `bridgeHandler.menuAction("openBlog")` → Substack |
+| `openBlog` | **Shipped** (bridge) | `bridgeHandler.menuAction("openBlog")` → `blog.bristlenose.app` (a Substack publication). **Relabelled 2026-09-12** from "Bristlenose on Substack": the destination already carries a subscribe box, so the route from app to mailing list existed — but nothing in the app said what the reader *gets*, only which vendor hosts it. `menu.help.blog` is unchanged; only the 21 locale values moved. Deliberately **not** "Release Notes by Email" — `releaseNotes` above already owns that name and points at `docs/changelog.html`, so the two would have sat adjacent naming the same thing. **No ellipsis**, matching every sibling that opens a URL; `sendFeedback…` keeps its because it opens a sheet that wants input. **The app must never *capture* an address here.** Email collected for the developer's own marketing is ineligible for Apple's optional-disclosure exemption, so a signup field would force `NSPrivacyCollectedDataTypes` to declare Contact Info in both manifests — which are deliberately empty (`docs/design-desktop-python-runtime.md` §privacy manifests) — and cost the App Privacy label. A link is not collection; a field is. |
 | `showAcknowledgements` | **Shipped** (native) | Opens `ACKNOWLEDGEMENTS.md` on GitHub in the browser |
 
 ### Codes menu (9)

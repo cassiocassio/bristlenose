@@ -68,12 +68,13 @@ derive different instants from one file.
 
 **T3 — The value is not the session's start time in the first place.** From
 `SessionsFinderDate.swift`'s own KNOWN-WRONG note, which outranks everything
-above: `session_date` is the source file's `st_birthtime`. For a save-at-close
-writer (Zoom local transcode) that is the session's **end**, and the drift equals
-the duration. A progressively-written recording is created at start (≈0 drift). A
-cloud download has an arbitrary later birthtime. Linux has no birthtime and uses
-`st_mtime`. **`birthtime − duration` is not a general correction.** Fixing the
-timezone without fixing this produces a precisely-wrong instant.
+above: `session_date` is the source file's `st_birthtime`, taken raw —
+MEASURED, `s01_ingest.py:461` is `min(f.created_at for f in group_files)` and
+**nothing anywhere subtracts the duration**. For a save-at-close writer that is
+the session's **end**, so the stored value is late by a whole duration.
+
+See § 2b — this is more tractable than the note implies, and the correction the
+note rules out is right for the commonest case.
 
 **T4 — Transcript-only imports fabricate midnight.** A bare `YYYY-MM-DD` header
 yields 00:00, which renders plausibly and is indistinguishable from a real
@@ -88,6 +89,135 @@ subtraction, and it is why markdown renders UTC.
 **T6 — `finder_date` has three implementations and zero pinned cases** in
 `tests/fixtures/shared-format-contract.json`, where `timecode` has 15 and
 `duration_human` has 9. Nothing mechanical would notice any of the above.
+
+## 2·5. Where a real start time could come from — a signal hierarchy
+
+The KNOWN-WRONG note says `birthtime − duration` "is not a general correction",
+which is true and was read as "so there is nothing to do". There is quite a lot
+to do; the signals just have to be ranked and the weakest one labelled rather
+than trusted.
+
+**1. The cloud API's meeting start.** Authoritative and zone-qualified. Already
+available on the Teams/Drive import paths. Nothing else competes with it.
+
+**2. Container metadata — the best local signal, and we read none of it.**
+MEASURED across the format-torture corpus (`trial-runs/folder-of-horrors`, 59
+files) plus real recordings on this machine. `utils/audio.py` already shells out
+to ffprobe for duration, so reading more tags costs nothing.
+
+**(a) `com.apple.quicktime.creationdate` — the one field that answers the whole
+question.** An iPhone MOV carries *both*:
+
+```
+com.apple.quicktime.creationdate   2020-06-21T13:34:08+0100    <- local time WITH OFFSET
+creation_time                      2020-06-21T12:34:08Z        <- the same instant, UTC
+```
+
+The Apple tag is strictly more informative than anything else available: it gives
+the wall clock the participant and researcher actually saw **and** the zone they
+were in. That is the datum § 4 is asking about, written into the file by the
+recorder. `creation_time` alone can only ever reconstruct a UTC instant; it can
+never tell you it was 13:34 in the room.
+
+**(b) `creation_time` is genuinely UTC — verified, not assumed.** Devices
+mislabelling local time as `Z` is a common wart, so it was checked against a
+BST-era file: `small2.mov` carries `2026-07-21T07:56:11Z` with a local birthtime
+of `08:56:11` — exactly one hour apart, in July. The `Z` is honest.
+
+**(c) It survives everything the filesystem does not.** `CR_In0a.m4a` carries
+`2019-05-20T21:13:50Z` while its birthtime is `2026-04-06` — the container kept
+the true recording time across seven years and a copy. This is exactly the case
+(downloads, copies, the documented *download, rename, sometimes trim, then drop*
+workflow) where birthtime is worthless.
+
+**(d) Filename and container corroborate — or disagree by hours.** Two measured
+cases, and the contrast is the finding:
+
+| file | filename says | container says | verdict |
+|---|---|---|---|
+| `Meeting with Martin Storey-20260719_142007UTC-…mp4` | `20260719_142007UTC` | `2026-07-19T14:20:08Z` | **agree within 1s** — mutual corroboration |
+| `System Audio 20220308 1316.mp4` | `20220308 1316` | `2022-03-08T17:16:30Z` | **4 hours apart** |
+
+Nothing in either file says which is right. A resolver therefore needs a
+precedence rule *and* a way to report disagreement, not just a best-effort pick.
+
+**(e) Coverage is the catch.** Only **7 of 59** corpus files carry any
+time-ish tag. That base rate is biased — 18 of them are ffmpeg-synthesised
+(`encoder: Lavf…`), and ffmpeg drops the tag unless told to preserve it, which is
+also why the FOSSDA `.mp4`s carry nothing. The pattern that matters: **recorder-
+written files carry it, transcoded ones do not.** So this is a high-quality,
+partial signal — it must degrade to § 3 and § 4, never be assumed present.
+
+**(f) What else is in there, and one caution.** The same iPhone file carries
+`com.apple.quicktime.location.ISO6709` (`+51.5214-000.0933`), from which a zone
+could be derived when no offset is present. **That is participant location data**
+and lands squarely in the consent-gradient governance
+(`docs/methodology/consent-gradient.md`) — reading it is a deliberate decision,
+not a free win, and it must not reach an export. Recorded here so the option is
+known and its cost is known with it.
+
+Also present: `com.apple.quicktime.make` / `.model` / `.software` (which would
+*identify the writer class* — the thing § 4 needs to know whether to subtract the
+duration), and on `.dv`, an SMPTE `timecode` track (`00:00:00:00`) — a tape
+position, a fourth time concept distinct from all three in § 0.
+
+**(g) Matroska carries the same datum, and ffprobe normalises it.** MEASURED:
+an `.mkv` written with a `creation_time` comes back from ffprobe under **the same
+`creation_time` key** as MP4/MOV — Matroska's `DateUTC` element is surfaced
+identically. So one read path covers both container families; no per-format
+branching is needed.
+
+What that does *not* settle, and is still **UNMEASURED**: whether a real browser
+or OBS capture populates it. Both `.mkv`/`.webm` files in the corpus are
+ffmpeg-synthesised, so they carry nothing. The read path is proven; the
+write-side coverage in the wild is not. One real capture would answer it.
+
+**Bristlenose reads none of this today.** MEASURED: the only ffprobe call sites
+are `utils/audio.py`'s duration probe and a `stream=codec_type` query;
+`_get_creation_time` is pure `os.stat`.
+
+**3. The filename.** Zoom, Teams and macOS Screen Recording all write the start
+time into the name — and **Python already parses these patterns and then
+discards the timestamp**. `_normalise_stem` (`s01_ingest.py:~400`) strips the
+date/time *in order to group* files into sessions (`_TEAMS_SUFFIX_RE`,
+`_ZOOM_CLOUD_TAIL_RE`, `_ZOOM_LOCAL_DIR_RE`, `_GMEET_TAIL_RE`). The best
+available local signal is recognised, used for matching, and thrown away.
+
+Swift does the opposite and does it well: `TeamsRecordingName` keeps the parsed
+timestamp but sets `startedAtUTC = nil` unless the filename is **zone-qualified**
+— *"the digits are somebody's local wall clock and we do not know whose, so there
+is no honest Date to return"*. That is the discipline the whole area needs, and
+it already exists in the tree.
+
+**4. `birthtime − duration`, for save-at-close writers.** MEASURED against
+filename ground truth on real macOS Screen Recordings:
+
+| recording | duration | `birthtime − duration` vs the filename's start |
+|---|---:|---:|
+| `Screen Recording 2026-01-27 at 23.37.37` | 79 s | **+32 s** |
+| `Screen Recording 2026-01-28 at 00.13.56` | 266 s | **+14 s** |
+
+Both errors small and positive, consistent with finalise/encode overhead after
+the recording stops. So for this writer class the correction recovers the start
+to within about half a minute. Two files, one writer — indicative, not settled.
+
+It is wrong elsewhere, which is why it needs a writer classifier and not a blanket
+rule: a progressively-written file is created at *start* (subtracting makes it a
+whole duration early), and a download's birthtime is when it landed on this Mac.
+
+**5. Raw `birthtime`.** What ships today. Correct only for progressive writers.
+
+**A discriminator that does NOT work:** `mtime − birthtime` looks like it should
+separate save-at-close from progressive writers, and does not — MEASURED, the
+FOSSDA files are downloads (so the delta is download time) and one Screen
+Recording's `mtime` is *three months* after its birthtime because the file was
+touched later. `mtime` is too easily disturbed to carry any signal.
+
+**The domain check worth building in.** A researcher starts recording a few
+minutes *into* the session, after asking consent — so a derived start should land
+slightly **after** the calendar entry, never before. That sign test is a cheap
+sanity assertion wherever a calendar time is available, and a derived start
+*earlier* than the booking is evidence the writer class was misjudged.
 
 ### Prior art worth not re-deriving
 
@@ -194,22 +324,31 @@ midnight.
 
 Roughly in order, and the first item is the one that gates the rest:
 
-1. **Decide what the datum is.** T3 means `session_date` is currently "some
-   filesystem timestamp", not "the session's start". No timezone work is
-   meaningful until that is settled, per source type (local recording, cloud
-   download, transcript-only import).
-2. **Capture the zone at ingest**, alongside the instant — an IANA identifier
-   (`Europe/London`), not an offset, because an offset does not survive a rule
-   change and cannot answer "was this during DST".
-3. **Make the column `DateTime(timezone=True)`** and audit every writer for
+1. **Decide what the datum is, and rank the signals** (§ 2b). `session_date` is
+   currently "some filesystem timestamp", not "the session's start". No timezone
+   work is meaningful until that is settled per source type — and the cheapest
+   win is stopping `_normalise_stem` from discarding a timestamp it has already
+   parsed.
+2. **Read the container before touching anything else.** `utils/audio.py`
+   already runs ffprobe for duration; adding `format_tags` to that call is a
+   one-line change and yields `com.apple.quicktime.creationdate` (local time +
+   offset), `creation_time` (UTC), and `make`/`model`/`software` (the writer
+   class § (f)). This is the highest-value, lowest-cost item on the list, and it
+   is independent of every product decision below.
+3. **Capture the zone at ingest**, alongside the instant — an IANA identifier
+   (`Europe/London`), not a bare offset, because an offset does not survive a
+   rule change and cannot answer "was this during DST". Where only an offset is
+   available (the Apple tag), store the offset and say so; where only UTC is
+   available, store UTC and mark the zone unknown rather than guessing.
+4. **Make the column `DateTime(timezone=True)`** and audit every writer for
    `.replace(tzinfo=…)` (T2).
-4. **Decide the display frame** (§ 4) and apply it to all three surfaces at once
+5. **Decide the display frame** (§ 4) and apply it to all three surfaces at once
    — they are currently consistent, which is an asset worth not losing.
-5. **Pin `finder_date` cases** in the shared-format contract, including the DST
+6. **Pin `finder_date` cases** in the shared-format contract, including the DST
    dates in § 3c (T6).
-6. **Build a multi-zone corpus.** Nothing we own exercises any of this. The
+7. **Build a multi-zone corpus.** Nothing we own exercises any of this. The
    format-torture corpus (`experiments/folder-of-horrors/`) is the natural place.
-7. **Decide what to say about historical projects**, which cannot be corrected.
+8. **Decide what to say about historical projects**, which cannot be corrected.
 
 ---
 

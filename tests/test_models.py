@@ -4,8 +4,8 @@ from bristlenose.models import (
     ExtractedQuote,
     QuoteType,
     format_timecode,
-    parse_timecode,
 )
+from bristlenose.utils.timecodes import parse_timecode
 
 
 def test_format_timecode() -> None:

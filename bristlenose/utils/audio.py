@@ -5,9 +5,13 @@ from __future__ import annotations
 import json
 import logging
 import platform
+import re
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
+from bristlenose.models import MediaTimeMeta
 from bristlenose.utils.bundled_binary import bundled_binary_path
 from bristlenose.utils.fs import CloudFetchTimeoutError, ensure_materialised
 
@@ -111,6 +115,104 @@ def probe_duration(file_path: Path) -> float | None:
     except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError) as exc:
         logger.warning("Could not probe %s: %s", file_path, exc)
     return None
+
+
+_TIME_TAG_KEYS = ("creation_time",)
+_LOCAL_TAG_KEYS = ("com.apple.quicktime.creationdate",)
+
+
+def _iso_lenient(value: str) -> datetime | None:
+    """``fromisoformat`` that also takes ``Z`` and a colon-less ``+0100`` — the
+    two shapes containers actually emit. Python 3.10's parser accepts neither."""
+    text = value.strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    m = re.search(r"([+-])(\d{2})(\d{2})$", text)
+    if m and text[-6] != ":":
+        text = f"{text[:-5]}{m.group(1)}{m.group(2)}:{m.group(3)}"
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError:
+        return None
+
+
+def time_meta_from_ffprobe(data: dict[str, Any]) -> MediaTimeMeta | None:
+    """Build a ``MediaTimeMeta`` from ffprobe's JSON. Pure; testable without
+    ffprobe. ``None`` when the container carries nothing at all.
+
+    Tag lookup is case-insensitive (Matroska writes ``ENCODER``). Format tags
+    win; the first stream's tags fill gaps — the iPhone and ReplayKit files
+    carry ``creation_time`` on both, some writers only on the stream.
+    """
+    fmt = data.get("format") or {}
+    tags: dict[str, str] = {}
+    streams = data.get("streams") or []
+    for st in reversed(streams):                     # earlier streams override later
+        tags.update({k.lower(): str(v) for k, v in (st.get("tags") or {}).items()})
+    tags.update({k.lower(): str(v) for k, v in (fmt.get("tags") or {}).items()})
+    if not tags:
+        return None
+
+    creation_utc = None
+    for key in _TIME_TAG_KEYS:
+        if key in tags:
+            dt = _iso_lenient(tags[key])
+            if dt is not None:
+                creation_utc = dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+            break
+    creation_local = None
+    offset_minutes = None
+    for key in _LOCAL_TAG_KEYS:
+        if key in tags:
+            dt = _iso_lenient(tags[key])
+            if dt is not None and dt.tzinfo is not None:
+                creation_local = dt
+                off = dt.utcoffset()
+                offset_minutes = int(off.total_seconds() // 60) if off is not None else None
+                if creation_utc is None:
+                    creation_utc = dt.astimezone(timezone.utc)
+            break
+
+    meta = MediaTimeMeta(
+        creation_utc=creation_utc,
+        creation_local=creation_local,
+        offset_minutes=offset_minutes,
+        make=tags.get("com.apple.quicktime.make"),
+        model=tags.get("com.apple.quicktime.model"),
+        software=tags.get("com.apple.quicktime.software"),
+        encoder=tags.get("encoder"),
+        author=tags.get("com.apple.quicktime.author"),
+    )
+    if all(getattr(meta, f) is None for f in MediaTimeMeta.model_fields):
+        return None
+    return meta
+
+
+def probe_time_meta(file_path: Path) -> MediaTimeMeta | None:
+    """Read container time metadata with ffprobe. Sibling of ``probe_duration``,
+    deliberately a second call rather than a widened one so the existing
+    ``probe_duration`` mock seam in the ingest tests stays intact; both are
+    scan-time niceties and the cost is one more short shell-out per media file.
+    Never faults a cloud placeholder in — same rule as ``probe_duration``.
+    """
+    ffprobe = bundled_binary_path("ffprobe") or "ffprobe"
+    try:
+        ensure_materialised(file_path)
+    except CloudFetchTimeoutError as exc:
+        logger.warning("Could not probe %s: %s", file_path, exc)
+        return None
+    try:
+        result = subprocess.run(
+            [ffprobe, "-v", "quiet", "-print_format", "json",
+             "-show_entries", "format_tags:stream_tags", str(file_path)],
+            capture_output=True, text=True, timeout=30,
+        )
+        if result.returncode != 0:
+            return None
+        return time_meta_from_ffprobe(json.loads(result.stdout))
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError) as exc:
+        logger.warning("Could not probe %s: %s", file_path, exc)
+        return None
 
 
 def extract_audio_from_video(

@@ -131,6 +131,13 @@ async def main() -> int:
                     help="default is four mid-sized sessions, ~91k chars total")
     ap.add_argument("--passes", type=int, default=5)
     ap.add_argument("--plan", action="store_true", help="print the cost estimate, make no calls")
+    ap.add_argument("--tag", default="",
+                    help="suffix the output directory, e.g. --tag padded -> "
+                         "out/<provider>_<model>__padded/. Use when re-measuring the "
+                         "SAME model after a change: passes already on disk are skipped "
+                         "by design, so without a tag a re-run is a silent no-op and the "
+                         "baseline it should be compared against is the thing it "
+                         "overwrites nothing of.")
     args = ap.parse_args()
 
     transcripts, topic_maps = load_corpus(args.sessions)
@@ -138,7 +145,7 @@ async def main() -> int:
     if args.plan:
         return 0
 
-    outdir = OUT / f"{args.provider}_{args.model}"
+    outdir = OUT / (f"{args.provider}_{args.model}" + (f"__{args.tag}" if args.tag else ""))
     outdir.mkdir(parents=True, exist_ok=True)
     for n in range(1, args.passes + 1):
         target = outdir / f"pass_{n}.json"

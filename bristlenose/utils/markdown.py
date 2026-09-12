@@ -490,7 +490,7 @@ def format_finder_date(dt: datetime, *, now: datetime | None = None) -> str:
     import datetime as _dtmod
 
     if now is None:
-        now = _dtmod.datetime.now()
+        now = _dtmod.datetime.now(_dtmod.timezone.utc)
 
     time_part = f"{dt.hour:02d}:{dt.minute:02d}"
     dt_date = dt.date()

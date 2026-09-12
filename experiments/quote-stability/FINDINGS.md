@@ -123,6 +123,182 @@ so a blanket ÷60 is the wrong fix; the guard has to be per-quote.
 Impact: every deep-linked timecode in a ChatGPT-analysed report, clip-export
 boundaries, and the position-overlap key section 1 depends on.
 
+**Guarded 7 Sep 2026** (`a7d455d2`). `s09_quote_extraction.py` range-checks each
+parsed timecode against the session's own duration: out of range, a whole number
+of minutes, and back in range once divided by 60 is repaired and logged
+`quote_timecode_repair`; out of range without that signature is clamped, not
+divided, and logged `quote_timecode_out_of_range`. Never silent.
+
+**Fixed at source 11 Sep 2026, and re-measured.** The guard treats the symptom;
+the cause was that the prompt showed `MM:SS` while the schema asked for
+`HH:MM:SS`. `full_text()` and the `boundaries_text` beside it now render
+`format_timecode_prompt` — zero-padded `HH:MM:SS`, one format per prompt — so
+there is no mismatch left for a model to resolve. 12 fresh passes, same corpus,
+same four sessions (`--tag padded`):
+
+| model | out of range, before | after | median span, before | after |
+|---|---:|---:|---:|---:|
+| `gpt-5.6-terra` | **239/380 (62.9%)** | **0/361 (0.0%)** | 270–2100s | **48–55s** |
+| `claude-sonnet-4-6` | 0/494 | 0/499 | 42–45s | 40–45s |
+| `gemini-3.8-flash` | 0/259 | 0/260 | 46–59s | 50–51s |
+
+**The guard fired zero times across all 12 passes** — no `quote_timecode_repair`,
+no `quote_timecode_out_of_range`. That distinction is the whole measurement: the
+guard was active throughout, so a still-broken model would have been silently
+repaired and the saved quotes would have looked identical to a real fix. Only the
+absence of the log lines separates "fixed" from "repaired". Check them, not the
+JSON, if this is ever re-run.
+
+The median span is the stronger evidence than the out-of-range count. Avoiding
+the end of the recording could be luck; a span distribution collapsing from
+1380s to 54s, into the same band as the two models that were never affected, is
+the `HH:MM:SS` slot being filled correctly rather than merely plausibly.
+
+**Terra's stability numbers in section 1 were never valid** and are now replaced.
+Overlap is computed on the timeline, so a 60x timecode makes every overlap
+meaningless. The first trustworthy reading is 84.4% single / 95.6% union / 0.0%
+fragile — union clears the >=90% target the merge rule needs, where the old
+(meaningless) figure was 86.6%.
+
+**Claude's output shifted; Gemini's did not.** Scored against a *common*
+reference — baseline pass 1, so only the prompt differs — Claude's padded passes
+recover it at 77.7% single / 91.0% union, against 84.2% / 94.5% for the
+baseline's own passes. Gemini is unmoved (89.8% / 92.2% vs 90.7% / 92.3%).
+Padded Claude is no less self-consistent (88.5% / 96.1% internally, versus
+84.2% / 94.5% before), so this is a shift in *which* quotes it picks, not a loss
+of stability. Operationally that is a one-time migration cost: a project analysed
+before this change and re-analysed after it sees ~9% of pinned stars at risk
+rather than the usual ~5.5%.
+
+**Do not compare two runs via `analyse.py` alone.** It scores each run against
+its OWN pass 1, so two independent runs are measured against two different
+references. That artefact read as a 14.7-point Gemini regression on the first
+look; holding the reference fixed showed 0.9 points. A cross-run comparison has
+to pin the reference.
+
+## 3b. The same defect is in stage 8, and it is NOT model-specific
+
+Measured 11 Sep 2026, after § 3's fix. s08 feeds the same `full_text()` into the
+same kind of prompt and parses the answer back with the same `parse_timecode`,
+and **unlike s09 it has no range guard** — so a mangled boundary is corrected
+nowhere and reported nowhere.
+
+**It was in the cached corpus this harness fed to every pass as
+`boundaries_text`** (repaired in place 11 Sep 2026 — see the end of this
+section; the table below is the pre-repair state, preserved because it is the
+evidence):
+
+| | boundaries | exact-minute | out of range | resolve under /60 |
+|---|---:|---:|---:|---:|
+| cached `topic_boundaries.json` | 133 | 41 | **38 (28.6%)** | **38 — all** |
+
+Bimodal by session: s1 9/10, s3 13/21, s6 7/8, s10 9/10 affected; s2, s4, s5, s8,
+s9 completely clean.
+
+**And the telemetry says which model wrote it: `claude-sonnet-4-20250514`**, all
+ten s08 calls, outcome `ok`, 30 Apr 2026
+(`.bristlenose/llm-calls.jsonl`, key `gen_ai.request.model` — note the file's
+keys are OpenTelemetry-style, so a grep for `model` finds nothing).
+
+**This retires § 3's "model-specific, not prompt-specific".** That inference came
+from one stage and three models. Three different model *families* have now been
+observed doing it: `claude-sonnet-4` (s08, 38/133), `gpt-5.6-terra` (s09,
+239/380), and `gemini-3.8-flash` (s08 unpadded, below). It is a **prompt-format
+hazard**, and the padding is a fix rather than a vendor workaround.
+
+**The controlled arm, and it is the cleanest evidence in this document.** One
+variable — the timecode rendering — 10 sessions, one pass per arm:
+
+| model / arm | boundaries | out of range |
+|---|---:|---:|
+| `gemini-3.8-flash` **unpadded** | 95 | **5 (5.3%)**, all in s8, all resolving under /60 |
+| `gemini-3.8-flash` **padded** | 100 | **0** |
+| `claude-sonnet-4-6` unpadded | 121 | 0 |
+| `claude-sonnet-4-6` padded | 131 | 0 |
+
+Same model, same sessions, same code but for the rendering: the defect appears
+and disappears with it.
+
+**terra on s08: 0, 0, 0, 11 across four unpadded passes** (12 Sep 2026) — 11 of
+683 boundaries, **1.6%**. The first pass read clean and was reported as such; it
+was sampling, not immunity. The eleven arrived together, in one session, in the
+fourth pass.
+
+The grid, with every cell's pass count stated because that is what the first
+reading got wrong:
+
+| unpadded | s08 | s09 |
+|---|---|---|
+| `gpt-5.6-terra` | **1.6%** (11/683, 4 passes) | **62.9%** (239/380, 4 passes) |
+| `gemini-3.8-flash` | **5.3%** (5/95, 1 pass) | 0% (0/259, 4 passes) |
+| `claude-sonnet-4` | **28.6%** (38/133, 1 run) | 0% (0/284, same run) |
+| `claude-sonnet-4-6` | 0% (0/121, 1 pass) | 0% (0/494, 4 passes) |
+
+So the earlier reading — "every model that fails, fails on exactly one stage" —
+is **retired**. terra fails on both, at rates differing by a factor of forty. What
+survives is weaker and more useful: the hazard is the prompt/schema mismatch, the
+rate varies enormously by (model, stage) for reasons nothing here explains, and
+**a single clean pass is worth almost nothing**. Every zero in that table with a
+pass count of 1 should be read as "did not fire once".
+
+**Both models' failures landed in s8. That is not evidence about s8.** Nothing
+distinguishes it — 33.7 min, 300 segments, first timecode 1.2s, median gap 6.8s,
+all unremarkable against s1/s4/s7. Two independent one-in-ten picks coinciding is
+a 10% event. Recorded so the next reader does not spend a cycle on it, the way
+the boundary-echo hypothesis in § 3b's history already cost one.
+
+**This was the guard's first live firing, and it worked.** Pass 4's eleven
+boundaries were repaired in flight — `03:38:00` -> 218s, `31:54:00` -> 1914s in a
+33.7-minute session — and `boundary_timecodes_repaired | session=s8 |
+boundaries=12 | scaled=11` records it. It also demonstrates the masking effect
+concretely: **pass 4's file on disk audits CLEAN**, because the guard corrected
+it before it was written. Only the log knows. Any future audit of a
+post-11-Sep-2026 run must read the logs, not the JSON, or it will measure the
+guard instead of the model.
+
+The stray single exact-minute boundary in several clean arms is the ~1-in-60 base
+rate the § 3 tell predicts, in range and correct — a sanity check that the audit
+is not over-flagging.
+
+**s08 is now guarded** (11 Sep 2026). The guard is shared —
+`bristlenose/stages/timecode_guard.py`, one implementation behind both stages —
+with per-stage log keys (`quote_*` / `boundary_*`) so a stage's lines stay
+greppable on their own.
+
+The stages diverge on ONE rule, deliberately. s09 **clamps** a value that is out
+of range without the 60x signature, because a quote timecode is *shown* and a
+bounded deep link beats one past the end of the media. s08 **drops** it: clamping
+a boundary would invent a topic transition at the session end and then push it
+back inside `_boundaries_in_range`, turning a boundary the downstream filter
+would have caught into one it cannot. s08's old behaviour was to lose these
+silently anyway; the guard makes the loss visible.
+
+Replayed against the real cached corpus, the guard recovers **38 of 38** affected
+boundaries, drops none, and leaves the 95 good ones untouched. s1's repaired
+values land at 1.0, 4.4, 7.7 and 10.9 min in a 39.6-min session — monotonic,
+sensibly spaced, and in the topical order the labels imply.
+
+**The corpus was then repaired in place** (`repair_cached_boundaries.py`, 11 Sep
+2026). Verified after: 133 boundaries before and after, **labels byte-identical**,
+38 timecodes changed, **zero non-timecode fields changed**, zero still out of
+range. The pre-repair file is pinned at
+`out/_pinned-inputs/fossda-opensource-topic_boundaries-preRepair.json`, so the 12
+committed quote-stability passes — measured with the *old* boundaries as prompt
+input — stay reproducible.
+
+**Repair, not re-run, and the distinction is the point.** A fresh s08 call returns
+NEW boundaries with NEW labels, and every cached quote's `topic_label` is an exact
+boundary label string — **106 of 106** — so re-running s08 alone would leave all
+284 quotes pointing at boundaries that no longer exist. "Re-run s08" and "fix the
+cached boundaries" are different operations.
+
+**The cached quotes did NOT need repairing.** Same model, same run, s09: 3 of 284
+out of range (1.1%) and none carrying the signature — s4 overshoots its last
+segment by 6s, s7 by 29s, s9 by 15s, which is ordinary imprecision. So
+`claude-sonnet-4` hit 28.6% on s08 and 0% on s09 in the same run. Whatever makes
+a model fall into this, it is not uniform across stages, and a stage measured
+clean says nothing about its neighbour.
+
 ## 4. `s3` extracted zero quotes, silently
 
 The largest session in the corpus (73,747 chars) produced **no quotes at all**

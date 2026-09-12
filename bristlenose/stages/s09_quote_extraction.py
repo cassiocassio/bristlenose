@@ -24,11 +24,11 @@ from bristlenose.models import (
     SpeakerRole,
     TopicBoundary,
     TranscriptSegment,
-    format_timecode,
 )
 from bristlenose.run_lifecycle import _build_cause
+from bristlenose.stages.timecode_guard import repair_timecode, timecode_ceiling
 from bristlenose.utils.text import apply_smart_quotes
-from bristlenose.utils.timecodes import parse_timecode
+from bristlenose.utils.timecodes import format_timecode_prompt, parse_timecode
 
 logger = logging.getLogger(__name__)
 
@@ -219,7 +219,9 @@ async def _extract_one_pass(
     relevant_boundaries = _boundaries_in_range(topic_map, transcript.segments)
     if relevant_boundaries:
         boundaries_text = "\n".join(
-            f"- [{format_timecode(b.timecode_seconds)}] "
+            # Padded to match the transcript in the same prompt — one timecode
+            # format per prompt, or the model has a mismatch to resolve again.
+            f"- [{format_timecode_prompt(b.timecode_seconds)}] "
             f"{b.topic_label} ({b.transition_type.value})"
             for b in relevant_boundaries
         )
@@ -243,16 +245,50 @@ async def _extract_one_pass(
     )
 
     # Convert LLM output to our domain models
+    ceiling = timecode_ceiling(transcript)
+    repairs = {"scaled": 0, "clamped": 0, "unparseable": 0}
     quotes: list[ExtractedQuote] = []
     for item in result.quotes:
-        # Parse timecodes
+        # Parse timecodes, then range-check them against the session's own
+        # duration (see the timecode range guard above).
         try:
             start_tc = parse_timecode(item.start_timecode)
         except ValueError:
+            logger.warning(
+                "quote_timecode_unparseable | session=%s | field=start | raw=%s",
+                transcript.session_id, item.start_timecode,
+            )
+            repairs["unparseable"] += 1
             start_tc = 0.0
         try:
             end_tc = parse_timecode(item.end_timecode)
         except ValueError:
+            logger.warning(
+                "quote_timecode_unparseable | session=%s | field=end | raw=%s",
+                transcript.session_id, item.end_timecode,
+            )
+            repairs["unparseable"] += 1
+            end_tc = start_tc
+
+        start_tc, start_repair = repair_timecode(
+            start_tc, ceiling,
+            session_id=transcript.session_id,
+            field="start", raw=item.start_timecode,
+            kind="quote", out_of_range="clamp",
+        )
+        end_tc, end_repair = repair_timecode(
+            end_tc, ceiling,
+            session_id=transcript.session_id,
+            field="end", raw=item.end_timecode,
+            kind="quote", out_of_range="clamp",
+        )
+        for kind in (start_repair, end_repair):
+            if kind:
+                repairs[kind] += 1
+        if (start_repair or end_repair) and end_tc < start_tc:
+            # Repairing one end can invert the pair (a scaled start against a
+            # clamped end). Collapse rather than ship a negative span into clip
+            # export and the position-overlap key.
             end_tc = start_tc
 
         # Resolve segment ordinal (see design-quote-sequences.md)
@@ -319,6 +355,18 @@ async def _extract_one_pass(
                 emotion=emotion,
                 journey_stage=journey_stage,
             )
+        )
+
+    if any(repairs.values()):
+        # One line per pass, so 63%-of-quotes-repaired is legible at a glance
+        # rather than only as sixty individual warnings. `quotes` is the model's
+        # own output count — the population the repair rate is measured over,
+        # before the short-quote filter above drops any.
+        logger.warning(
+            "quote_timecodes_repaired | session=%s | quotes=%d | scaled=%d | "
+            "clamped=%d | unparseable=%d",
+            transcript.session_id, len(result.quotes),
+            repairs["scaled"], repairs["clamped"], repairs["unparseable"],
         )
 
     return quotes

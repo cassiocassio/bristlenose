@@ -49,9 +49,13 @@ export function formatFinderDate(isoDate: string | null, locale?: string): strin
  * Always returns a timecode — never an em-dash.
  */
 export function formatTimecode(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
+  // Clamp, matching Python's `max(0, int(seconds))`. Unclamped, a negative
+  // input rendered `-1:-1` — a divergence the shared contract's `-1` case
+  // now pins (H13, docs/time-defects.md).
+  const total = Math.max(0, Math.floor(seconds));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
   const mm = String(m).padStart(2, "0");
   const ss = String(s).padStart(2, "0");
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;

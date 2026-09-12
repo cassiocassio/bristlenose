@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -129,10 +130,19 @@ def _dominant_cause(
 
 
 def _format_duration(seconds: float) -> str:
-    """Format seconds as '0.1s' or '3m 41s'."""
+    """CLI stage timing: '0.1s', '3m 41s', '1h 01m 01s'.
+
+    Sub-second precision matters here (a cached stage takes 0.1s), so this is
+    deliberately not ``format_duration_human``. It did overflow minutes past an
+    hour (``1103m 00s``) — a long transcription can cross one.
+    """
+    if seconds >= 3600:
+        h, rem = divmod(int(seconds), 3600)
+        m, sec = divmod(rem, 60)
+        return f"{h}h {m:02d}m {sec:02d}s"
     if seconds >= 60:
-        m, s = divmod(int(seconds), 60)
-        return f"{m}m {s:02d}s"
+        m, sec = divmod(int(seconds), 60)
+        return f"{m}m {sec:02d}s"
     return f"{seconds:.1f}s"
 
 
@@ -384,6 +394,51 @@ _BILLING_URLS: dict[str, str] = {
     "openai": "https://platform.openai.com/settings/organization/billing",
     "azure": "https://portal.azure.com/#view/Microsoft_Azure_Billing",
 }
+
+
+def _mark_sessions_complete_except_failed(
+    manifest: PipelineManifest,
+    stage: str,
+    session_ids: Iterable[str],
+    outcome: StageOutcome,
+    *,
+    provider: str | None = None,
+    model: str | None = None,
+) -> set[str]:
+    """Mark each session in ``session_ids`` complete, EXCEPT those the stage
+    recorded as failures. Returns the set that was skipped.
+
+    Per-session manifest marking is a claim that the session's work is done and
+    cached; ``get_completed_session_ids`` reads it back on the next run and
+    drops those sessions from the work list. So marking a FAILED session is not
+    merely untidy — it is how a transient failure becomes a permanent one. The
+    session is never retried, and the per-session rollup goes on counting it as
+    a success, so the honest "N-1 of N, one failed" record is overwritten by a
+    clean sweep on the very next run and the loss stops being visible anywhere.
+
+    This exists as one function, rather than the rule inline at each call site,
+    because the rule was inline: s08 had it (with the reasoning in a comment)
+    and s09 did not, sixty lines apart, and nothing anywhere compared them. The
+    whole-stage guards from 1e1ec118 do not cover this — when a SINGLE session
+    of a batch fails, the intermediate JSON is non-empty and ``succeeded == 0``
+    is false, so both pass and the failed session is cached as done.
+
+    Measured on the FOSSDA run of 30 Apr 2026: s3's quote extraction timed out
+    (3 x 600s), recorded a StageFailure, and was written to the manifest as
+    ``quote_extraction -> s3: complete`` in the same breath.
+    """
+    failed_sids = {
+        f.session_id for f in outcome.failed if f.session_id is not None
+    }
+    skipped: set[str] = set()
+    for sid in session_ids:
+        if sid in failed_sids:
+            skipped.add(sid)
+            continue
+        mark_session_complete(
+            manifest, stage, sid, provider=provider, model=model,
+        )
+    return skipped
 
 
 def _short_reason(errors: list[str], provider: str = "") -> tuple[str, str]:
@@ -1428,23 +1483,16 @@ class Pipeline:
                             concurrency=concurrency, errors=_seg_errors,
                         )
                     # Record per-session completion only for sessions whose
-                    # boundaries were actually produced (skip-after-failure
-                    # entries return an empty SessionTopicMap that is NOT a
-                    # success, and per-session manifest marking must not
-                    # claim otherwise).
-                    _seg_failed_sids = {
-                        f.session_id for f in _seg_outcome.failed
-                        if f.session_id is not None
-                    }
-                    for tm in _fresh_topic_maps:
-                        if tm.session_id in _seg_failed_sids:
-                            continue
-                        mark_session_complete(
-                            manifest, STAGE_TOPIC_SEGMENTATION,
-                            tm.session_id,
-                            provider=self.settings.llm_provider,
-                            model=self.settings.llm_model,
-                        )
+                    # boundaries were actually produced — a skip-after-failure
+                    # entry returns an empty SessionTopicMap that is NOT a
+                    # success. See _mark_sessions_complete_except_failed.
+                    _mark_sessions_complete_except_failed(
+                        manifest, STAGE_TOPIC_SEGMENTATION,
+                        [tm.session_id for tm in _fresh_topic_maps],
+                        _seg_outcome,
+                        provider=self.settings.llm_provider,
+                        model=self.settings.llm_model,
+                    )
                 else:
                     _fresh_topic_maps = []
 
@@ -1611,15 +1659,17 @@ class Pipeline:
                             concurrency=concurrency,
                             errors=_quote_errors,
                         )
-                    # Record per-session completion — derive session_ids
-                    # from the transcripts that were processed.
-                    for t in _remaining_transcripts_q:
-                        mark_session_complete(
-                            manifest, STAGE_QUOTE_EXTRACTION,
-                            t.session_id,
-                            provider=self.settings.llm_provider,
-                            model=self.settings.llm_model,
-                        )
+                    # Record per-session completion only for sessions that
+                    # actually produced quotes — same rule as s08 above, and
+                    # the case that was missing it until 11 Sep 2026. See
+                    # _mark_sessions_complete_except_failed.
+                    _mark_sessions_complete_except_failed(
+                        manifest, STAGE_QUOTE_EXTRACTION,
+                        [t.session_id for t in _remaining_transcripts_q],
+                        _fresh_quote_outcome,
+                        provider=self.settings.llm_provider,
+                        model=self.settings.llm_model,
+                    )
                 else:
                     _fresh_quotes = []
 
@@ -2786,7 +2836,7 @@ def load_transcripts_from_dir(
     from datetime import datetime, timezone
 
     from bristlenose.models import SpeakerRole
-    from bristlenose.utils.timecodes import parse_timecode
+    from bristlenose.utils.timecodes import parse_header_datetime, parse_timecode
 
     transcripts: list[PiiCleanTranscript] = []
 
@@ -2815,11 +2865,11 @@ def load_transcripts_from_dir(
                 source_file = line.split(":", 1)[1].strip()
                 continue
             if line.startswith("# Date:"):
-                try:
-                    date_str = line.split(":", 1)[1].strip()
-                    session_date = datetime.fromisoformat(date_str).replace(tzinfo=timezone.utc)
-                except ValueError:
-                    pass
+                # One reader shared with the server importer — converts an
+                # offset rather than overwriting it (H8, docs/time-defects.md).
+                parsed = parse_header_datetime(line.split(":", 1)[1])
+                if parsed is not None:
+                    session_date = parsed
                 continue
             if line.startswith("# Duration:"):
                 try:

@@ -13,6 +13,7 @@ from bristlenose.events import PipelineSummary
 # Re-exported so the many stages importing it from here keep working. There is
 # exactly one implementation, in utils.timecodes — see docs/design-shared-formats.md.
 from bristlenose.utils.timecodes import format_timecode as format_timecode
+from bristlenose.utils.timecodes import format_timecode_prompt
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -141,6 +142,34 @@ def classify_file(path: Path) -> FileType | None:
     return None
 
 
+class MediaTimeMeta(BaseModel):
+    """Time metadata read from a media CONTAINER — the recorder wrote it, and it
+    survives copying and downloading, which the filesystem's birthtime does not.
+
+    Capture only (``docs/design-timezones.md`` § 5.1). Nothing derives a
+    session start from this yet; § 5.4's resolver will. Fields are optional
+    because coverage is partial by construction: recorder-written files carry
+    them, ffmpeg-transcoded ones do not.
+
+    ``creation_local`` is the one field that answers *what did the clock in
+    the room say, and in what zone* — an aware datetime carrying the file's own
+    offset (``com.apple.quicktime.creationdate``). ``creation_utc`` is the
+    same instant from ``creation_time``, whose ``Z`` was verified honest against
+    a BST-era file. ``author`` carries writer markers such as
+    ``ReplayKitRecording``; ``make``/``model``/``software``/``encoder`` are what
+    § 5.2's writer classifier will read.
+    """
+
+    creation_utc: datetime | None = None
+    creation_local: datetime | None = None
+    offset_minutes: int | None = None
+    make: str | None = None
+    model: str | None = None
+    software: str | None = None
+    encoder: str | None = None
+    author: str | None = None
+
+
 class InputFile(BaseModel):
     """A single input file discovered during ingestion."""
 
@@ -149,6 +178,8 @@ class InputFile(BaseModel):
     created_at: datetime
     size_bytes: int
     duration_seconds: float | None = None
+    # Container time metadata, captured at ingest and not yet acted on.
+    container_meta: MediaTimeMeta | None = None
     error: str | None = None
 
 
@@ -222,20 +253,35 @@ class FullTranscript(BaseModel):
     segments: list[TranscriptSegment]
 
     def full_text(self) -> str:
-        """Return the full transcript as timestamped text."""
+        """Return the full transcript as timestamped text, for LLM PROMPTS.
+
+        ``format_timecode_prompt``, NOT ``format_timecode``: the only two callers
+        are the s08 and s09 prompts, both of which ask the model for ``HH:MM:SS``
+        and parse its answer back with ``parse_timecode``. Rendering the
+        transcript in the same padded form is what stops a model resolving the
+        mismatch itself. See that function's docstring for the measurement.
+
+        This is NOT the on-disk transcript format — s07 writes that, still via
+        ``format_timecode``, and ``pipeline.py`` reads it back.
+        """
         lines: list[str] = []
         for seg in self.segments:
-            tc = format_timecode(seg.start_time)
+            tc = format_timecode_prompt(seg.start_time)
             role_tag = f" [{seg.speaker_role.value.upper()}]" if seg.speaker_role != SpeakerRole.UNKNOWN else ""
             lines.append(f"[{tc}]{role_tag} {seg.text}")
         return "\n\n".join(lines)
 
     def participant_text(self) -> str:
-        """Return only participant speech as timestamped text."""
+        """Return only participant speech as timestamped text, for LLM PROMPTS.
+
+        No callers as of 11 Sep 2026. Padded like ``full_text`` anyway, so a
+        future caller inherits the fix rather than the defect it was written to
+        remove.
+        """
         lines: list[str] = []
         for seg in self.segments:
             if seg.speaker_role == SpeakerRole.PARTICIPANT:
-                tc = format_timecode(seg.start_time)
+                tc = format_timecode_prompt(seg.start_time)
                 lines.append(f"[{tc}] {seg.text}")
         return "\n\n".join(lines)
 
@@ -415,18 +461,3 @@ class PeopleFile(BaseModel):
 
 # Resolve forward reference: PipelineResult.people uses PeopleFile defined above.
 PipelineResult.model_rebuild()
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def parse_timecode(tc: str) -> float:
-    """Parse HH:MM:SS or MM:SS into seconds."""
-    parts = tc.strip().split(":")
-    if len(parts) == 3:
-        return int(parts[0]) * 3600 + int(parts[1]) * 60 + float(parts[2])
-    if len(parts) == 2:
-        return int(parts[0]) * 60 + float(parts[1])
-    raise ValueError(f"Cannot parse timecode: {tc!r}")

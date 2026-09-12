@@ -86,7 +86,7 @@ not a new invention, which is most of why it is cheap.
 
 | Format | Datum | Python | TypeScript | Swift | Status |
 |---|---|---|---|---|---|
-| `duration_human` | elapsed span | `_format_duration_human` | `formatDurationHuman` | `DurationFormat.human` | **aligned**, pinned |
+| `duration_human` | elapsed span | `format_duration_human` (`utils/timecodes.py`) | `formatDurationHuman` | `DurationFormat.human` | **aligned**, pinned |
 | `finder_date` | Finder-style relative timestamp | `format_finder_date` | `formatFinderDate` | `SessionsFinderDate.format` | **aligned by pair**, one deliberate fork |
 | `timecode` | position in a recording | `format_timecode` | `formatTimecode` | — | **aligned**, pinned · also parsed |
 | `finder_filename` | middle-ellipsis truncation | `format_finder_filename` | `formatFinderFilename` | — | **aligned**, pinned |
@@ -197,6 +197,19 @@ screen and Class W on disk. Two things follow, and both are pinned in
    round-trip assertion in an existing test that caught it, not the check.
 2. That tolerance is permanent backward compatibility. Transcripts already on a
    researcher's disk carry the old `[01:00:00]` form and must keep loading.
+
+**A prompt-only sibling exists, deliberately outside this register.**
+`format_timecode_prompt` (11 Sep 2026) renders zero-padded `HH:MM:SS` and is
+called only by `full_text()` / `participant_text()` and s09's `boundaries_text`
+— the text handed to an LLM, never to a person and never to disk. It looks like
+a violation of the decision above ("pad the minute, never the hour") and is not:
+that decision is about what a *reader* parses, and this string has no reader.
+It exists because `format_timecode` omitting the hour left the prompt saying
+`05:30` while the schema asked for `HH:MM:SS`, and `gpt-5.6-terra` resolved the
+mismatch by appending `:00` — 63% of quote timecodes exactly 60x too large
+(`experiments/quote-stability/FINDINGS.md` § 3). **Do not fold the two together.**
+A tidy-up that routes the prompt back through `format_timecode` reinstates the
+defect, and nothing user-facing would look wrong.
 
 **The general lesson, and the reason this is recorded rather than quietly fixed:
 before changing a rendered format, check whether anything parses it back — and

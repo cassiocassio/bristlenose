@@ -49,6 +49,7 @@ from bristlenose.server.models import (
     Session as SessionModel,
 )
 from bristlenose.utils.fs import is_os_metadata
+from bristlenose.utils.timecodes import parse_header_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -81,23 +82,11 @@ def _parse_duration_to_seconds(dur: str) -> float:
 
 
 def _parse_date(date_str: str) -> datetime | None:
-    """Parse a transcript-header date into a datetime.
-
-    Accepts full ISO 8601 (``2026-05-09T14:23:00+00:00``) — the current
-    format — and the legacy date-only form (``2026-05-09``) from output dirs
-    written before the time-of-recording fix.
+    """Parse a transcript-header date. Delegates to the one shared reader
+    (``utils.timecodes.parse_header_datetime``) so this path and the pipeline
+    resume path cannot derive different instants from the same header again.
     """
-    date_str = date_str.strip()
-    try:
-        dt = datetime.fromisoformat(date_str)
-    except ValueError:
-        try:
-            dt = datetime.strptime(date_str, "%Y-%m-%d")
-        except ValueError:
-            return None
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt
+    return parse_header_datetime(date_str)
 
 
 # ---------------------------------------------------------------------------

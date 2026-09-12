@@ -474,6 +474,45 @@ reads from the events log) and is **not** a command — `bristlenose transcribe-
 exits with "No such command". The internal function is `run_transcription_only`,
 which makes all three names differ.
 
+### A coarse cache record silently overrides the fine one — so fixing per-session state can change nothing
+
+The manifest carries a **stage** status and a **per-session** map, and the stage
+status is checked first. `_is_stage_verified` returns at `status == COMPLETE`
+and takes the full-cache read; `get_completed_session_ids` is never consulted.
+So a per-session record can be perfectly honest and still be **unread**.
+
+Measured 12 Sep 2026, and it cost a wrong claim to the user. `6277eabe` stopped
+s09 marking *failed* sessions complete — correct, tested, proved red against the
+pre-fix tree — and was reported as "the failed session is retried on the next
+run". It is not. `mark_stage_complete` runs unconditionally after the
+`succeeded == 0` abandon check (`pipeline.py:1747`), so one failure out of ten
+still yields a `COMPLETE` stage. Two-run probe, 3 sessions with 1 failing and
+**non-empty** output: run 2 called `extract_quotes` not at all, and reported
+`attempted=8 succeeded=8 failed=[]`.
+
+**Two things generalise.**
+
+**(1) Absence is not a state.** The fix made the failed session *absent* from
+the session map, and absent is indistinguishable from *not yet attempted* —
+which is why `_derive_stage_status` (a tested helper that returns `PARTIAL` for
+exactly this case, and is used by `bristlenose status` but not by
+`mark_stage_complete`) sees `{COMPLETE}` and says `COMPLETE`. Record the failure
+(`StageStatus.FAILED` is in the schema and nothing writes it) rather than
+omitting it. Whenever you "fix" something by *not writing a record*, ask what
+reads the absence.
+
+**(2) A fixture that makes the guard you are testing unreachable.** The test
+added with that fix returns `[]` quotes, so `mark_stage_complete` is refused by
+its own empty-content guard and the stage never reaches `COMPLETE` — the suite
+passes and never exercises the short-circuit. **A fixture whose values are the
+degenerate case can disable the very code path under test.** The demo that
+caught it differed in one respect: four quotes per session instead of zero.
+
+**Tell:** two readers of the same record disagreeing, one of them ticked green.
+Here `bristlenose status` prints `✓ Quotes  8 quotes (2 sessions)` directly under
+`✓ Transcribe  3 sessions` — the loss visible in plain sight, unmarked, while the
+resume logic reads `COMPLETE` from the same file and skips the stage entirely.
+
 ### A backgrounded `pytest … | tail`'s reported exit code is `tail`'s, not pytest's
 
 Sibling to the two above, and the one most likely to produce a **confident false

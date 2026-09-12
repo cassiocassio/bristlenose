@@ -309,6 +309,12 @@ canonical parser would not redden it.
 
 ### H2 — ✅ DECLARED — `format_timecode` output above 99 h cannot be parsed back
 
+_Review Finding 38, answered: "declared" is honest and "closed" would not be.
+The formatter still emits a string its own parser refuses above 99 h; the
+`# Duration:` header reader turns that into a silent `0.0`. It is a residue of
+the H1/H2 class, pinned as a limit because nothing a research session produces
+reaches it (§ 2) — not because the asymmetry is gone._
+
 `format_timecode(360000)` → `100:00:00`; the canonical parser's hour group is
 `\d{1,2}` and refuses it. Far outside the realistic range, so the *impact* is
 nil — the finding is that **format and parse have different domains and nothing
@@ -423,6 +429,13 @@ Three things here:
 stage timing), though its minutes also overflow (`1103m 00s`).
 
 ### H8 — ✅ FIXED — Start time is *relabelled*, not converted — and two readers of the same header disagree
+
+_Correction from review (Finding 34): the "stored an hour late" harm was a
+**reasoned hazard, not a measured incident**. Every Bristlenose writer emits an
+aware `isoformat()` with `+00:00`, so the overwrite could only ever bite a
+hand-edited or third-party header. The live effect of the fix is on the
+importer's path into the database, where an offset-bearing header now lands as
+the correct instant._
 
 `pipeline.py:2861` reads the transcript `# Date:` header as:
 
@@ -693,6 +706,30 @@ when touching that code.
 - `ProjectRow.formatBareDate`'s verbatim copy in `SidebarSubtitleText.swift` —
   a Swift-internal duplicate of a *different* datum (project activity). Fold
   into a Swift tidy-up, not this plan.
+
+### Review pass, 12 Sep 2026 — what it changed
+
+Six agents plus a compose-check and a parsimony pass over Tiers 0–1 and § 5.1
+raised 39 findings (`docs/private/reviews/timezones.md`, gitignored). Thirty-
+three resolved the same day (`git log -S probe_media`), four parked with
+reasons, one superseded, one answered. The ones that changed what this
+document said:
+
+- **T1-3 was wrong as first landed.** `datetime.now(timezone.utc)` removed the
+  latent `TypeError` and silently moved every "Generated:" stamp and "Today at
+  HH:MM" header to UTC — the § 4 display-frame decision, made by accident. The
+  grep test written to guard it would have *rejected* the correct fix. Now
+  `local_now()` (aware and local) at all four sites, with a behavioural test.
+- **The "one reader" claim was one header short**: `# Duration:` still had two.
+- **The first `_iso_lenient` could abort a whole folder scan** on a five-
+  character offset — proven end to end with a crafted MOV. Three of the
+  obvious fixes interacted destructively as proposed (a `max_length` validator
+  rejects and would have re-created the abort; folding the probes under one
+  `except` would have cost a file its duration for one bad date tag; a naive
+  `creationdate` must never be relabelled UTC). The compose-check caught all
+  three before they landed.
+- **The tier's own tests could not fail on the defects they named** — four of
+  them asserted source *presence*. Replaced by behaviour.
 
 ### Deferred from T0-7, deliberately: `finder_date` pins
 

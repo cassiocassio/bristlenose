@@ -158,7 +158,7 @@ The exclusivity is enforced at three levels:
 
 ## Duplicate timecode helpers
 
-Both `models.py` and `utils/timecodes.py` define `format_timecode()` and `parse_timecode()`. They behave identically. Stage files import from one or the other — both are fine. The `utils/timecodes.py` version has a more sophisticated parser (SRT/VTT milliseconds support).
+- **`parse_timecode` and `format_timecode` live in `utils/timecodes.py` only.** `models.py` re-exports `format_timecode` for the stages that import it there; it no longer defines a second `parse_timecode` (deleted 12 Sep 2026 — it had zero production callers, disagreed with the canonical one on 5 of 14 inputs, and was the object the round-trip test had been pointed at). Import the parser from `bristlenose.utils.timecodes`.
 
 ## Transcript page / coverage link consistency
 

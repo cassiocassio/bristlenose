@@ -349,6 +349,89 @@ parameter — an exact byte count to publish with the pack and keep in sync.)_
 > a BA-using app functions with *no extension target present*. Apple's templates
 > pair them. Prove it before scoping anything downstream of it.
 
+### Delivery architecture — SETTLED 12 Sep 2026
+
+**One seam, three acquirers, no build fork.** The Python side never learns who
+fetched the bytes; it is handed a directory and calls `spacy.load(<dir>)`, which
+was verified to load from a path **without importing the package** — that is both
+the mechanism and the §2.5.2 argument. Precedent is `BRISTLENOSE_WHISPER_MODEL_DIR`.
+
+**Code ships bundled on every channel** — presidio, presidio-anonymizer, spaCy,
+thinc, blis (~39 MB, 63 native Mach-Os, all arm64 *bundles*, none of them
+executables, so the nested-signing posture that produced build 2068's rejections
+is untouched). Only the 425 MB of weights is acquired, and only that differs:
+
+| channel | acquirer | why this one |
+|---|---|---|
+| CLI — PyPI · Homebrew · Snap · Fedora | `spacy download` on first use | works today; no store rules exist on these channels |
+| `.dmg` — Developer ID | plain HTTPS → Application Support | **App Store guidelines do not apply to this channel.** §2.5.2 is an App Store rule; the payload is data, so library validation is moot |
+| TestFlight / App Store | **managed** Background Assets, self-hosted pack | §2.5.2 wants the platform mechanism, and self-hosting is explicitly supported |
+
+**The switch already exists.** `DistributionChannel.current` returns `.debug` /
+`.developerID` / `.appStoreOrTestFlight` off the `DEVELOPER_ID_BETA` compilation
+condition already wired for the alpha-expiry pill. So this is **one Swift protocol
+with two implementations behind an enum that ships today** — not a divergent build
+path, and not two spec configurations.
+
+**The consequence worth naming:** the one claim nobody could establish — whether a
+Developer-ID BA download completes for a real end user — **never has to be
+answered**, because the `.dmg` channel does not use Background Assets. We route
+around the unproven thing instead of betting on it.
+
+#### The macOS 26 gate (decided 12 Sep 2026)
+
+**Mac PII requires macOS 26.** Below it the Privacy toggle renders **visible and
+disabled**, labelled *"Requires macOS 26 Tahoe or later"*. Accepted tradeoff for
+v1, and it buys a great deal:
+
+- The **managed** API (`AssetPackManager.ensureLocalAvailabilityOfAssetPack`,
+  `ManagedDownloaderExtension`) is macOS 26+, and it is the one with the
+  near-zero-code extension — RawCull's is a single line, Blankie's is three. The
+  classic `BADownloadManager` + hand-written-extension path is **deleted from the
+  plan**, and with it most of what made the earlier costing expensive.
+- One code path on the Mac instead of a 15.0 fallback and a 26 fast path.
+- Revisit when the deployment floor moves (`project_deployment_floor_held`); the
+  gate then simply disappears.
+
+**Open call, small:** whether the `.dmg` also gates at 26. Its plain-HTTPS acquirer
+has no OS floor, so it *could* serve 15.0+ — but gating both gives one string, one
+support story and one QA matrix, on a channel that is temporary and expiring
+anyway. **Default: gate both.** Ungate the `.dmg` only if a tester on 15.x needs it.
+
+#### Prior art
+
+**RawCull** (`github.com/rsyncOSX/RawCull`) is the closest published analogue and
+should be read before writing any Swift: macOS-only, **self-hosted** managed BA,
+downloading ML models of 283 MB and 1.54 GB, GitHub Releases as the CDN, shipping
+TestFlight *and* a Developer-ID DMG. Its manifest is live. **Blankie**
+(`github.com/codybrom/Blankie`) is the Apple-hosted counterpart.
+
+Two Apple-side facts that reframe the risk: self-hosting is documented on Apple's
+own App Store "what's new" page, and **On-Demand Resources are deprecated in
+favour of Background Assets** from OS 27 — this is a framework Apple is investing
+in, not one to route around.
+
+#### What needs an outward act (not buildable in this repo)
+
+1. **Register an App Group, Team-ID-prefixed** (`<TeamID>.app.bristlenose`). The
+   Team-ID prefix is the escape hatch: it needs **no provisioning profile**, which
+   is what makes Developer ID irrelevant to the question. Signing is `Manual` with
+   a named MAS profile, so the profile must be regenerated or the archive will not
+   sign — the same hazard as the standing `associated-domains` rule.
+2. **A new extension target** in the Xcode project.
+3. **Hosting the pack** and pinning its SHA-256 in Swift (self-hosted origin, no
+   Apple signing of the payload — see the correction above about library validation).
+
+#### Known operational risks, carried not solved
+
+macOS is the rough edge: four live macOS-specific BA failures on Apple's forum tag
+(mock-server override ignored, a 26.6.1 TLS regression against Apple hosting, an
+App Review reviewer unable to fetch a pack, and an app-group fatal on the 27 seed).
+Zynga's shipping report adds an exclusive-control lock that can hang, a 6 MB
+extension memory ceiling, and scheduled downloads that silently never run. These
+are operational rather than architectural, and the plain-HTTPS `.dmg` path is
+unaffected by all of them.
+
 ### Build order
 
 Phases 0–2 are independent of Background Assets and can land immediately; the

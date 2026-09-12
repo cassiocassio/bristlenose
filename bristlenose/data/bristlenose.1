@@ -404,7 +404,8 @@ Overrides the current provider set with \fBbristlenose use\fR /
 Model name. Defaults to the selected provider's recommended model.
 .TP
 .B BRISTLENOSE_LLM_MAX_TOKENS
-Maximum response tokens. Default: \fB8192\fR.
+Maximum response tokens. Default: \fB64000\fR. Clamped down per model when
+the model's own output ceiling is lower.
 .TP
 .B BRISTLENOSE_LLM_TEMPERATURE
 Sampling temperature. Default: \fB0.1\fR.

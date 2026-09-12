@@ -194,6 +194,17 @@ way — the queue should visibly shorten — rather than a permanent review surf
 surface already ships (badge accept/deny, the AutoCode review queue). Same
 gesture, different queue. Do not design a new one.
 
+**Parked until Presidio runs reliably from the TF app (12 Sep 2026):** structured
+recognisers can also fire on numbers that are *not* identifiers. A participant
+count, a dosage, a version string or a reference number can shape-match
+`CREDIT_CARD` (Luhn) or `UK_NHS` (modulus-11) — both are checksum recognisers, so
+a coincidence passes the checksum and the number is destroyed in the transcript.
+Unmeasured; the hour corpus planted valid identifiers and did not probe innocent
+numbers that happen to validate. Falls to the same review-queue affordance as the
+name case, and the same 0-MB configuration surface. **Sequenced after delivery,
+deliberately** — there is no point tuning a detector that cannot yet reach the
+Mac.
+
 **Two things it must respect.**
 
 1. **The data source is a re-identification key.** `pii_summary.txt` already lists

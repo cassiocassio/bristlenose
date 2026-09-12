@@ -141,12 +141,24 @@ cases, and the contrast is the finding:
 Nothing in either file says which is right. A resolver therefore needs a
 precedence rule *and* a way to report disagreement, not just a best-effort pick.
 
-**(e) Coverage is the catch.** Only **7 of 59** corpus files carry any
-time-ish tag. That base rate is biased — 18 of them are ffmpeg-synthesised
-(`encoder: Lavf…`), and ffmpeg drops the tag unless told to preserve it, which is
-also why the FOSSDA `.mp4`s carry nothing. The pattern that matters: **recorder-
-written files carry it, transcoded ones do not.** So this is a high-quality,
-partial signal — it must degrade to § 3 and § 4, never be assumed present.
+**(e) Coverage: the raw count understates it badly.** Only **7 of 59** corpus
+files carry a time-ish tag, and that number is worth almost nothing as a base
+rate. 18 of the 59 are ffmpeg-synthesised (`encoder: Lavf…`) and ffmpeg drops
+the tag unless told to preserve it; the FOSSDA `.mp4`s are re-encoded downloads
+of third-party archival footage and lose it the same way.
+
+**Neither is the population that matters.** Researchers overwhelmingly create
+their own recordings, and every recorder-written file measured here carries the
+tag: macOS Screen Recording, an iPhone MOV (with the offset, § (a)), a Teams
+download, a QuickTime capture. The pattern is **recorder-written files carry it;
+transcoding strips it** — and transcoded third-party archive is the exception in
+a real study, not the norm.
+
+So the honest reading is the opposite of the raw count: **expect this signal to
+be present for the files a researcher actually records.** It still must degrade
+to § 3 and § 4 rather than be assumed — a shared/forwarded file may well have
+been through a transcoder — but it should be the primary path, not a lucky
+bonus.
 
 **(f) What else is in there, and one caution.** The same iPhone file carries
 `com.apple.quicktime.location.ISO6709` (`+51.5214-000.0933`), from which a zone

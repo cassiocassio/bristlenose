@@ -288,6 +288,26 @@
     box-shadow: inset 2px 0 0 var(--bn-selection-border-inactive);
 }
 
+/* Same stand-down as the card, and here it is the more visible fault. The row
+ * bar sits at the row's left edge — 4px of padding outside the chip — so while
+ * a chip is being renamed you get a 2px stub at the far left, detached from the
+ * field drawing its own ring. It reads as a leftover, not a cursor.
+ *
+ * The bar earns its keep in the RESTING state, though, and must not be removed
+ * outright: it is the only feedback for the two-click rule. Without it a first
+ * click on a chip appears to do nothing, which is the invisible-cursor defect
+ * this feature was built to remove.
+ *
+ * The better answer, recorded and not taken: the mockup marks a focused chip as
+ * a SOLID accent pill (`codes-menu-focus.html:80`) — marking the code itself
+ * rather than the row it happens to sit in. `Badge` applies its colour as an
+ * inline `backgroundColor`, so a class cannot beat it; doing that properly
+ * means `Badge` emitting a custom property instead, which touches every badge
+ * in the app. Worth doing, not worth doing casually. */
+.tag-row.bn-selected:focus-within {
+    box-shadow: none;
+}
+
 .tag-row.merge-target {
     box-shadow: 0 0 0 2px var(--bn-colour-accent);
     background: color-mix(in srgb, var(--bn-colour-accent) 6%, transparent);

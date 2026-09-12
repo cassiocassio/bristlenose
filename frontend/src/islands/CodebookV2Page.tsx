@@ -95,7 +95,11 @@ interface Props {
  * via `t(key, { count })`, so there is nothing here to carry forward.
  */
 
-const canInstall = (b: PageBook) => !b.floor && b.id !== "sentiment";
+// Exported so the native Codes menu mirrors this exact predicate. There are
+// already two `canInstall`s (the browse card's omits the floor check, because
+// the floor is never a browse card); a third, in the bridge, is how the menu
+// and the button start disagreeing about Sentiment.
+export const canInstall = (b: PageBook) => !b.floor && b.id !== "sentiment";
 
 /** A door onto nothing is worse than no door (**D26**). */
 /** Q14 — the door is hidden in an export, not disabled.

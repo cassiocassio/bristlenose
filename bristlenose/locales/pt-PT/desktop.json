@@ -88,9 +88,11 @@
     "codes": {
       "createCodeGroup": "Criar Grupo de Códigos",
       "createCode": "Criar Código",
-      "browseCodebooks": "Navegar Livros de Códigos…",
-      "importFramework": "Importar Framework…",
-      "removeFramework": "Remover Framework"
+      "renameCodeGroup": "Mudar o Nome do Grupo de C\u00f3digos\u2026",
+      "deleteCodeGroup": "Eliminar Grupo de C\u00f3digos",
+      "renameCode": "Mudar o Nome do C\u00f3digo\u2026",
+      "deleteCode": "Eliminar C\u00f3digo",
+      "browseCodebooks": "Navegar Livros de Códigos…"
     },
     "quotes": {
       "star": "Marcar com Estrela",

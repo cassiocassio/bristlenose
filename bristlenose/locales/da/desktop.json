@@ -88,9 +88,11 @@
     "codes": {
       "createCodeGroup": "Opret kodegruppe",
       "createCode": "Opret kode",
-      "browseCodebooks": "Gennemse kodebøger…",
-      "importFramework": "Importér framework…",
-      "removeFramework": "Fjern framework"
+      "renameCodeGroup": "Omd\u00f8b kodegruppe\u2026",
+      "deleteCodeGroup": "Slet kodegruppe",
+      "renameCode": "Omd\u00f8b kode\u2026",
+      "deleteCode": "Slet kode",
+      "browseCodebooks": "Gennemse kodebøger…"
     },
     "quotes": {
       "star": "Stjernemarkér",

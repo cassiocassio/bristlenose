@@ -88,9 +88,11 @@
     "codes": {
       "createCodeGroup": "코드 그룹 생성",
       "createCode": "코드 생성",
-      "browseCodebooks": "코드북 탐색…",
-      "importFramework": "프레임워크 가져오기…",
-      "removeFramework": "프레임워크 제거"
+      "renameCodeGroup": "\ucf54\ub4dc \uadf8\ub8f9 \uc774\ub984 \ubcc0\uacbd\u2026",
+      "deleteCodeGroup": "\ucf54\ub4dc \uadf8\ub8f9 \uc0ad\uc81c",
+      "renameCode": "\ucf54\ub4dc \uc774\ub984 \ubcc0\uacbd\u2026",
+      "deleteCode": "\ucf54\ub4dc \uc0ad\uc81c",
+      "browseCodebooks": "코드북 탐색…"
     },
     "quotes": {
       "star": "별표",

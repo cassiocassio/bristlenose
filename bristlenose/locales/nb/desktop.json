@@ -88,9 +88,11 @@
     "codes": {
       "createCodeGroup": "Opprett kodegruppe",
       "createCode": "Opprett kode",
-      "browseCodebooks": "Bla i kodebøker…",
-      "importFramework": "Importer rammeverk…",
-      "removeFramework": "Fjern rammeverk"
+      "renameCodeGroup": "Endre navn p\u00e5 kodegruppe\u2026",
+      "deleteCodeGroup": "Slett kodegruppe",
+      "renameCode": "Endre navn p\u00e5 kode\u2026",
+      "deleteCode": "Slett kode",
+      "browseCodebooks": "Bla i kodebøker…"
     },
     "quotes": {
       "star": "Stjernemerk",

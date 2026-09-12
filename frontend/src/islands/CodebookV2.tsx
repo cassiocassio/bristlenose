@@ -47,7 +47,15 @@ import {
   selectCodebookV2,
   useCodebookV2Store,
 } from "../contexts/CodebookV2Store";
-import { CodebookV2Page, type PageBook } from "./CodebookV2Page";
+import { CodebookV2Page, canInstall, type PageBook } from "./CodebookV2Page";
+import {
+  clearCodebookFocus,
+  getCodebookFocus,
+  reconcileCodebookFocus,
+  sendCodebookCommand,
+  useCodebookFocus,
+} from "../contexts/CodebookFocusStore";
+import { postCodebookFocus, postCodebookPage } from "../shims/bridge";
 // By path, not the barrel — the barrel rides in the always-loaded chunk, so
 // a feature only lazy routes reach must be imported directly (frontend/CLAUDE.md).
 import { SectionHeading } from "../components/SectionHeading";
@@ -541,7 +549,14 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     });
   }, [templates, books, states, codebook]);
 
-  const page: PageBook | null = current
+  // Memoised: both bridge effects below depend on it, and an object
+  // rebuilt every render posts `codebook-page` to native on every render.
+  // The Swift side equality-guards, so nothing rebuilt — it was pure
+  // message traffic, which is the kind of waste that is invisible until
+  // someone profiles the bridge.
+  const page: PageBook | null = useMemo(
+    () =>
+      current
     ? {
         ...current,
         installed: true,
@@ -565,7 +580,119 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
           quotes: 0,
           template: previewTemplate,
         }
-      : null;
+        : null,
+    [current, codebook, templates, previewTemplate, previewProv],
+  );
+
+  // ── Native Codes menu ───────────────────────────────────────────────────
+  //
+  // The menu is the discoverable twin of controls already on this page, so
+  // every action below routes through the SAME handler the on-screen control
+  // uses — a command for anything that opens an editor or a confirmation, a
+  // direct call only where the control itself does no asking.
+  // See `docs/design-codebook-focus.md`.
+
+  const focus = useCodebookFocus();
+
+  // A cursor cannot notice that its target was deleted, so reconcile it
+  // against what is actually rendered. Without this, deleting the focused
+  // group leaves the menu lit over nothing — the exact defect this feature
+  // replaced.
+  useEffect(() => {
+    const groupIds = new Set(currentGroups.map((g) => g.id));
+    const tagIds = new Set(currentGroups.flatMap((g) => g.tags.map((t) => t.id)));
+    reconcileCodebookFocus(groupIds, tagIds);
+  }, [currentGroups]);
+
+  // Leaving the page drops the cursor: focus belongs to the pane, and a stale
+  // id surviving a codebook switch would point into a codebook you left.
+  useEffect(() => {
+    clearCodebookFocus();
+  }, [selected, view]);
+
+  useEffect(() => {
+    postCodebookFocus(
+      focus.focusedGroupId,
+      focus.focusedTagId,
+      focus.focusedGroupEditable,
+      focus.focusedGroupAcceptsTags,
+    );
+  }, [
+    focus.focusedGroupId,
+    focus.focusedTagId,
+    focus.focusedGroupEditable,
+    focus.focusedGroupAcceptsTags,
+  ]);
+
+  useEffect(() => {
+    const onPage = view === "page" && page !== null;
+    postCodebookPage(
+      onPage,
+      onPage && !readOnly && canInstall(page),
+      onPage ? page.installed : false,
+      // `book.floor` — the same condition `CodebookV2Page` renders the New
+      // Group placeholder under. "Only the floor grows groups"; a framework's
+      // structure is its author's, so New Code Group must dim there rather
+      // than offer what the page does not.
+      onPage && page.floor && !readOnly,
+    );
+  }, [view, page, readOnly]);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { action } = (e as CustomEvent<{ action: string }>).detail ?? {};
+      const { focusedGroupId, focusedTagId } = getCodebookFocus();
+      switch (action) {
+        case "createCodeGroup":
+          // The only direct call: `onCreateGroup` mints a group with a
+          // generated name and opens nothing, so there is no editor to reach.
+          authoring.onCreateGroup();
+          break;
+        case "createCode":
+          if (focusedGroupId !== null) {
+            sendCodebookCommand({ kind: "addTag", groupId: focusedGroupId });
+          }
+          break;
+        case "renameCodeGroup":
+          if (focusedGroupId !== null) {
+            sendCodebookCommand({ kind: "renameGroup", groupId: focusedGroupId });
+          }
+          break;
+        case "deleteCodeGroup":
+          if (focusedGroupId !== null) {
+            sendCodebookCommand({ kind: "deleteGroup", groupId: focusedGroupId });
+          }
+          break;
+        case "renameCode":
+          if (focusedTagId !== null) {
+            sendCodebookCommand({ kind: "renameTag", tagId: focusedTagId });
+          }
+          break;
+        case "deleteCode":
+          if (focusedTagId !== null) {
+            sendCodebookCommand({ kind: "deleteTag", tagId: focusedTagId });
+          }
+          break;
+        case "browseCodebooks":
+          setView("browse");
+          break;
+        case "installCodebook":
+          if (page && canInstall(page) && !page.installed) {
+            onInstall(page.id, page.title);
+          }
+          break;
+        case "uninstallCodebook":
+          if (page && canInstall(page) && page.installed) {
+            onAskUninstall(page.id, page.title);
+          }
+          break;
+        default:
+          break;
+      }
+    };
+    window.addEventListener("bn:menu-action", handler);
+    return () => window.removeEventListener("bn:menu-action", handler);
+  }, [authoring, page, setView, onInstall, onAskUninstall]);
 
   return (
     // A FRAGMENT, not a wrapper div. `report.css` flushes the first zone title

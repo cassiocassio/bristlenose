@@ -88,9 +88,11 @@
     "codes": {
       "createCodeGroup": "Kode-Gruppe erstellen",
       "createCode": "Kode erstellen",
-      "browseCodebooks": "Codebücher durchsuchen…",
-      "importFramework": "Framework importieren…",
-      "removeFramework": "Framework entfernen"
+      "renameCodeGroup": "Kode-Gruppe umbenennen\u2026",
+      "deleteCodeGroup": "Kode-Gruppe l\u00f6schen",
+      "renameCode": "Kode umbenennen\u2026",
+      "deleteCode": "Kode l\u00f6schen",
+      "browseCodebooks": "Codebücher durchsuchen…"
     },
     "quotes": {
       "star": "Markieren",

@@ -1241,74 +1241,93 @@ private struct CodesMenuContent: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
 
-    private var isCodeTab: Bool {
-        bridgeHandler.activeTab == .codebook || bridgeHandler.activeTab == .quotes
+    // Every row routes through `menuAction`, and the listener lives in the
+    // `CodebookV2` island — which mounts on the codebook lens only. This used
+    // to read `.codebook || .quotes`, lighting the whole menu on a lens whose
+    // listener is not mounted; the commands were dead there regardless, so the
+    // dimming merely told the truth about it late.
+    private var onLens: Bool {
+        bridgeHandler.activeTab == .codebook && bridgeHandler.canDispatch
     }
 
-    var body: some View {
-        // SIX commands retired here on 12 Sep 2026 — rename/delete Code Group,
-        // Show/Hide Code Group, rename/delete Code, and Merge Codes (the last
-        // already withdrawn 28 Jul). They are not deferred; they are a category
-        // error inherited from v1, and `docs/design-codebook-v2.md` settles both
-        // halves:
-        //
-        //  • Selection semantics are PINNED (29 Aug): "selection is single, it
-        //    lives in the master list … no second place a thing can be 'current'".
-        //    The master list selects a *codebook*. Groups and tags live in the
-        //    detail pane, which is "a pure function of it" — so a menu command
-        //    naming one group or one tag has no target that the model permits.
-        //    Every one of these is already a direct-manipulation affordance in
-        //    the lens (click a name to rename, a per-chip delete, drag to merge).
-        //
-        //  • Show/Hide was never a codebook command at all. D7 — "hide and
-        //    enable are different axes, on different lenses" — puts the eye in
-        //    `TagSidebar`/`TagGroupCard` on the QUOTES lens, and confirms hide
-        //    "was never a third axis here". That closes the register's G7/Q11
-        //    ("move it, or except it") as a third answer: retire it.
-        //
-        // CORRECTED THE SAME DAY, before you act on the paragraph above: the
-        // first bullet is too strong. The 29 Aug pin governs SELECTION — which
-        // codebook the detail pane renders. A FOCUS cursor inside that pane is a
-        // different axis, and this app already ships one twice: `FocusContext`
-        // (whose own docstring separates "Focus (keyboard cursor)" from
-        // "Selection (multi-select)") and `AnalysisSignalStore.focusedKey`, the
-        // signal-card wash. So the honest statement is narrower — the codebook
-        // lens has no focus model YET. `docs/design-codebook-focus.md` proposes
-        // one, under which rename/delete Code Group and rename/delete Code all
-        // have a legitimate target and come back.
-        //
-        // The second bullet is unaffected: Show/Hide is a wrong-lens argument,
-        // not a selection one, so D7 and G7/Q11 stand. Merge likewise — focus
-        // yields one target and merge needs two.
-        //
-        // Create-group stays regardless: creation needs no target. Create-code
-        // is gated on focus too — `createCodebookTag(name, groupId)` requires a
-        // group and there is no uncategorised group to default into.
+    /// A group carries the cursor. Focus, not selection — see
+    /// `docs/design-codebook-focus.md` and the note on `codebookGroupFocused`.
+    private var groupFocused: Bool { onLens && bridgeHandler.codebookGroupFocused }
+    private var tagFocused: Bool { onLens && bridgeHandler.codebookTagFocused }
 
+    var body: some View {
+        // Creation needs no cursor, only a page that grows groups.
         Button(i18n.t("desktop.menu.codes.createCodeGroup"), systemImage: "folder.badge.plus") {
             bridgeHandler.menuAction("createCodeGroup")
         }
+        .disabled(!(onLens && bridgeHandler.codebookCanCreateGroups))
 
-        Divider()
-
+        // A code is created INSIDE a group, so this one does need the cursor —
+        // `createCodebookTag(name, groupId)` has no group to default to, which
+        // is why it could not be wired before focus existed.
         Button(i18n.t("desktop.menu.codes.createCode"), systemImage: "tag") {
             bridgeHandler.menuAction("createCode")
         }
+        .disabled(!(groupFocused && bridgeHandler.codebookGroupAcceptsTags))
+
+        Divider()
+
+        // No icons on these four, deliberately. The menu-icon audit already
+        // flags `pencil` ×4 and `trash` ×3 as the thinning candidates; the
+        // obvious glyphs here would take the bar to ×6 and ×5, on rows whose
+        // labels are unambiguous. `docs/design-menu-icons.md`.
+        Button(i18n.t("desktop.menu.codes.renameCodeGroup")) {
+            bridgeHandler.menuAction("renameCodeGroup")
+        }
+        .disabled(!(groupFocused && bridgeHandler.codebookGroupEditable))
+
+        Button(i18n.t("desktop.menu.codes.deleteCodeGroup")) {
+            bridgeHandler.menuAction("deleteCodeGroup")
+        }
+        .disabled(!(groupFocused && bridgeHandler.codebookGroupEditable))
+
+        Divider()
+
+        // Gated on tag focus ALONE, not on `codebookGroupEditable`. Only a
+        // `TagRow` can take tag focus, and a framework's tags do not render as
+        // one — while `Uncategorised` reports `editable: false` (its group
+        // cannot be renamed) and its codes are renameable. Reusing the group
+        // flag here would dim Rename Code over chips the card lets you click.
+        Button(i18n.t("desktop.menu.codes.renameCode")) {
+            bridgeHandler.menuAction("renameCode")
+        }
+        .disabled(!tagFocused)
+
+        Button(i18n.t("desktop.menu.codes.deleteCode")) {
+            bridgeHandler.menuAction("deleteCode")
+        }
+        .disabled(!tagFocused)
 
         Divider()
 
         Button(i18n.t("desktop.menu.codes.browseCodebooks"), systemImage: "books.vertical") {
             bridgeHandler.menuAction("browseCodebooks")
         }
+        .disabled(!onLens)
 
-        Button(i18n.t("desktop.menu.codes.importFramework"), systemImage: "square.and.arrow.down") {
-            bridgeHandler.menuAction("importFramework")
+        // ONE row whose verb swaps, not two rows and not a checkmark — the
+        // Turn On/Off Agent Access idiom (`design-mcp-extension.md` §3.6a). It
+        // mirrors the detail page's own button, including its predicate: the
+        // floor and Sentiment can be neither installed nor uninstalled (D20),
+        // which reaches here as `codebookInstallable` rather than being
+        // re-derived. Replaces `importFramework`/`removeFramework`, which named
+        // a concept ("framework") the lens stopped using.
+        if bridgeHandler.codebookInstalled {
+            Button(i18n.t("desktop.menu.codes.uninstallCodebook"), systemImage: "minus.circle") {
+                bridgeHandler.menuAction("uninstallCodebook")
+            }
+            .disabled(!(onLens && bridgeHandler.codebookInstallable))
+        } else {
+            Button(i18n.t("desktop.menu.codes.installCodebook"), systemImage: "square.and.arrow.down") {
+                bridgeHandler.menuAction("installCodebook")
+            }
+            .disabled(!(onLens && bridgeHandler.codebookInstallable))
         }
-
-        Button(i18n.t("desktop.menu.codes.removeFramework"), systemImage: "minus.circle") {
-            bridgeHandler.menuAction("removeFramework")
-        }
-        .disabled(!isCodeTab)
     }
 }
 

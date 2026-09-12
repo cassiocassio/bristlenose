@@ -88,9 +88,11 @@
     "codes": {
       "createCodeGroup": "Crea un grup de codis",
       "createCode": "Crea un codi",
-      "browseCodebooks": "Explora els llibres de codis…",
-      "importFramework": "Importa un marc…",
-      "removeFramework": "Suprimeix el marc"
+      "renameCodeGroup": "Canvia el nom del grup de codis\u2026",
+      "deleteCodeGroup": "Elimina el grup de codis",
+      "renameCode": "Canvia el nom del codi\u2026",
+      "deleteCode": "Elimina el codi",
+      "browseCodebooks": "Explora els llibres de codis…"
     },
     "quotes": {
       "star": "Destaca",

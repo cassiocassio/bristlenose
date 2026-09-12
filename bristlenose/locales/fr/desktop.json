@@ -88,9 +88,11 @@
     "codes": {
       "createCodeGroup": "Créer un groupe de codes",
       "createCode": "Créer un code",
-      "browseCodebooks": "Parcourir les grilles de codage…",
-      "importFramework": "Importer un cadre d'analyse…",
-      "removeFramework": "Retirer le cadre d'analyse"
+      "renameCodeGroup": "Renommer le groupe de codes\u2026",
+      "deleteCodeGroup": "Supprimer le groupe de codes",
+      "renameCode": "Renommer le code\u2026",
+      "deleteCode": "Supprimer le code",
+      "browseCodebooks": "Parcourir les grilles de codage…"
     },
     "quotes": {
       "star": "Favori",

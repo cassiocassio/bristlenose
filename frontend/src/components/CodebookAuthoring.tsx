@@ -32,7 +32,7 @@
  * The handler cluster that drives all of this is `hooks/useCodebookAuthoring`.
  */
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "./Badge";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -41,6 +41,13 @@ import { MicroBar } from "./MicroBar";
 import { TagInput } from "./TagInput";
 import { getBarColour, getGroupBg, getTagBg } from "../utils/colours";
 import { isExportMode } from "../utils/exportData";
+import {
+  focusCodebookGroup,
+  focusCodebookTag,
+  useCodebookCommand,
+  useCodebookFocus,
+  type GroupCapabilities,
+} from "../contexts/CodebookFocusStore";
 import type { TFunction } from "i18next";
 import type { CodebookGroupResponse, CodebookTagResponse } from "../utils/types";
 
@@ -49,6 +56,7 @@ interface TagRowProps {
   maxCount: number;
   colourSet: string;
   groupId: number;
+  groupCaps: GroupCapabilities;
   onRequestDelete: (tag: CodebookTagResponse) => void;
   onRenameTag: (tag: CodebookTagResponse, newName: string) => void;
   onDragStart: (tag: CodebookTagResponse, groupId: number) => void;
@@ -61,6 +69,7 @@ export function TagRow({
   maxCount,
   colourSet,
   groupId,
+  groupCaps,
   onRequestDelete,
   onRenameTag,
   onDragStart,
@@ -70,6 +79,36 @@ export function TagRow({
   const [isMergeTarget, setIsMergeTarget] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const dragOverCount = useRef(0);
+  const { focusedTagId } = useCodebookFocus();
+  const isFocused = focusedTagId === tag.id;
+
+  // Codes ▸ Rename Code is the twin of clicking the chip's name, so it opens
+  // the same field the click opens rather than duplicating the edit path.
+  useCodebookCommand(
+    "renameTag",
+    (c) => c.kind === "renameTag" && c.tagId === tag.id,
+    () => setIsEditing(true),
+  );
+  // Delete Code routes through `onRequestDelete`, NOT `onDeleteTag` — that is
+  // what decides whether this tag's removal needs confirming (it does, unless
+  // the tag is on no quotes and has no pending proposals).
+  useCodebookCommand(
+    "deleteTag",
+    (c) => c.kind === "deleteTag" && c.tagId === tag.id,
+    () => onRequestDelete(tag),
+  );
+
+  // Clicking anywhere on the row focuses the code. `stopPropagation` is
+  // load-bearing: the group card focuses itself on click, and
+  // `focusCodebookGroup` clears `focusedTagId` (one cursor, not two), so
+  // without this the bubble would immediately undo the focus just set.
+  const handleRowClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      focusCodebookTag(tag.id, groupId, groupCaps);
+    },
+    [tag.id, groupId, groupCaps],
+  );
 
   const handleDragStart = useCallback(
     (e: React.DragEvent) => {
@@ -127,12 +166,15 @@ export function TagRow({
   const classes = [
     "tag-row",
     isMergeTarget ? "merge-target" : null,
+    isFocused ? "bn-selected" : null,
   ].filter(Boolean).join(" ");
 
   return (
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
       className={classes}
       draggable={!isEditing}
+      onClick={handleRowClick}
       onDragStart={handleDragStart}
       onDragEnd={onDragEnd}
       onDragOver={handleDragOver}
@@ -288,6 +330,7 @@ export function CodebookGroupColumn({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [confirmingTag, setConfirmingTag] = useState<CodebookTagResponse | null>(null);
   const [isAddingTag, setIsAddingTag] = useState(false);
+  const [isRenaming, setIsRenaming] = useState(false);
   const tagInputKey = useRef(0);
   const dragOverCount = useRef(0);
 
@@ -370,11 +413,6 @@ export function CodebookGroupColumn({
     }
   }, [group, onDeleteGroup]);
 
-  const classes = [
-    "codebook-group",
-    isDragOver ? "drag-over" : null,
-  ].filter(Boolean).join(" ");
-
   const isDefault = group.is_default;
   const isFramework = group.framework_id != null;
   // An exported report is a read-only reference ("the taxonomy we coded
@@ -382,10 +420,56 @@ export function CodebookGroupColumn({
   // affordance (rename/delete/add-tag/drag) the same way built-in groups are.
   const isReadOnly = isDefault || isFramework || isExportMode();
 
+  // The two capabilities the menu dims on. They are NOT the same predicate —
+  // the add-tag row below gates on `!isFramework` while rename/delete gate on
+  // `isReadOnly`, so `Uncategorised` takes codes but cannot itself be renamed.
+  const caps: GroupCapabilities = useMemo(
+    () => ({ editable: !isReadOnly, acceptsTags: !isFramework && !isExportMode() }),
+    [isReadOnly, isFramework],
+  );
+
+  const { focusedGroupId, focusedTagId } = useCodebookFocus();
+  const isFocused = focusedGroupId === group.id;
+
+  // Codes ▸ Rename Code Group / New Code are twins of clicking the title and
+  // clicking "+ Add code" — so they open the same editors those clicks open.
+  useCodebookCommand(
+    "renameGroup",
+    (c) => c.kind === "renameGroup" && c.groupId === group.id,
+    () => setIsRenaming(true),
+  );
+  useCodebookCommand(
+    "addTag",
+    (c) => c.kind === "addTag" && c.groupId === group.id,
+    () => setIsAddingTag(true),
+  );
+  // Likewise Delete Code Group goes through the request handler, so a group
+  // with tags raises the same "these will move" confirmation the ✕ raises.
+  useCodebookCommand(
+    "deleteGroup",
+    (c) => c.kind === "deleteGroup" && c.groupId === group.id,
+    () => handleRequestDeleteGroup(),
+  );
+
+  const handleCardClick = useCallback(() => {
+    focusCodebookGroup(group.id, caps);
+  }, [group.id, caps]);
+
+  const classes = [
+    "codebook-group",
+    isDragOver ? "drag-over" : null,
+    // The card carries the wash only when the cursor is on the GROUP. With a
+    // code focused the chip wears it, and two washes would read as two
+    // cursors — which is the thing the whole model is careful not to have.
+    isFocused && focusedTagId === null ? "bn-selected" : null,
+  ].filter(Boolean).join(" ");
+
   return (
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
       className={classes}
       style={{ backgroundColor: getGroupBg(group.colour_set) }}
+      onClick={handleCardClick}
       onDragOver={handleDragOver}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
@@ -397,14 +481,33 @@ export function CodebookGroupColumn({
             {isReadOnly || isSentiment ? (
               <span className="group-title-text">{displayGroupName}</span>
             ) : (
-              <EditableText
-                as="span"
-                value={group.name}
-                trigger="click"
-                className="group-title-text"
-                onCommit={(text) => onUpdateGroup(group.id, { name: text })}
-                onCancel={() => {}}
-              />
+              // `trigger="external"` rather than `"click"`: the menu item must
+              // open the SAME field the click opens, and EditableText's own
+              // click mode keeps its editing flag private. The onClick below
+              // reproduces the click behaviour exactly. TagRow already had
+              // this shape; this makes the pair consistent.
+              isRenaming ? (
+                <EditableText
+                  as="span"
+                  value={group.name}
+                  isEditing={true}
+                  trigger="external"
+                  className="group-title-text"
+                  onCommit={(text) => {
+                    setIsRenaming(false);
+                    onUpdateGroup(group.id, { name: text });
+                  }}
+                  onCancel={() => setIsRenaming(false)}
+                />
+              ) : (
+                // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+                <span
+                  className="group-title-text"
+                  onClick={() => setIsRenaming(true)}
+                >
+                  {group.name}
+                </span>
+              )
             )}
           </div>
           {isReadOnly || isSentiment ? (
@@ -462,6 +565,7 @@ export function CodebookGroupColumn({
               maxCount={maxCount}
               colourSet={group.colour_set}
               groupId={group.id}
+              groupCaps={caps}
               onRequestDelete={handleRequestDeleteTag}
               onRenameTag={onRenameTag}
               onDragStart={onDragStart}

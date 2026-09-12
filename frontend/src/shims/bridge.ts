@@ -52,6 +52,20 @@ export type BridgeMessage =
       rightOpen: boolean;
       inspectorOpen: boolean;
     }
+  | {
+      type: "codebook-focus";
+      groupId: number | null;
+      tagId: number | null;
+      groupEditable: boolean;
+      groupAcceptsTags: boolean;
+    }
+  | {
+      type: "codebook-page";
+      open: boolean;
+      installable: boolean;
+      installed: boolean;
+      canCreateGroups: boolean;
+    }
   | { type: "store-miro-token"; token: string }
   | { type: "llm-failure"; kind: string; provider: string };
 
@@ -156,6 +170,53 @@ export function postExportCounts(total: number, selected: number, starred: numbe
  */
 export function postFocusChange(quoteId: string | null): void {
   postNativeMessage({ type: "focus-change", quoteId });
+}
+
+/**
+ * Push the codebook cursor so the native Codes menu can dim honestly.
+ *
+ * Focus is a different axis from selection — see `CodebookFocusStore` and
+ * `design-codebook-focus.md`. The two capability flags are NOT one predicate:
+ * a group can accept new codes while refusing to be renamed (`Uncategorised`
+ * is exactly that), so the menu needs both or it dims New Code over a card
+ * that offers it. No-ops outside WKWebView.
+ */
+export function postCodebookFocus(
+  groupId: number | null,
+  tagId: number | null,
+  groupEditable: boolean,
+  groupAcceptsTags: boolean,
+): void {
+  postNativeMessage({
+    type: "codebook-focus",
+    groupId,
+    tagId,
+    groupEditable,
+    groupAcceptsTags,
+  });
+}
+
+/**
+ * Push which codebook page is showing, so Install ⇄ Uninstall Codebook can
+ * mirror the page's own button — same verb swap as Turn On/Off Agent Access.
+ *
+ * `installable` is the page's own `canInstall` (not the floor, not Sentiment —
+ * D20), so the menu restates the page's predicate rather than deriving a
+ * second one. No-ops outside WKWebView.
+ */
+export function postCodebookPage(
+  open: boolean,
+  installable: boolean,
+  installed: boolean,
+  canCreateGroups: boolean,
+): void {
+  postNativeMessage({
+    type: "codebook-page",
+    open,
+    installable,
+    installed,
+    canCreateGroups,
+  });
 }
 
 /**

@@ -88,9 +88,11 @@
     "codes": {
       "createCodeGroup": "Kod Grubu Oluştur",
       "createCode": "Kod Oluştur",
-      "browseCodebooks": "Kod Kitaplarına Göz At…",
-      "importFramework": "Çerçeveyi İçe Aktar…",
-      "removeFramework": "Çerçeveyi Kaldır"
+      "renameCodeGroup": "Kod Grubunu Yeniden Adland\u0131r\u2026",
+      "deleteCodeGroup": "Kod Grubunu Sil",
+      "renameCode": "Kodu Yeniden Adland\u0131r\u2026",
+      "deleteCode": "Kodu Sil",
+      "browseCodebooks": "Kod Kitaplarına Göz At…"
     },
     "quotes": {
       "star": "Yıldızla",

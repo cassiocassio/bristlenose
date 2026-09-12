@@ -102,6 +102,34 @@ final class BridgeHandler: ObservableObject {
     /// menu items (Star, Hide, Add Tag, Reveal in Transcript).
     @Published var focusedQuoteId: String?
 
+    // ── Codebook cursor ─────────────────────────────────────────────────
+    //
+    // Focus is a different axis from selection. `design-codebook-v2.md` pins
+    // selection as single and living in the master list — which selects a
+    // *codebook* — and that pin is what made the Codes menu's per-group and
+    // per-tag commands look impossible. It is about selection; a cursor inside
+    // the detail pane is another axis, and the SPA already ships two of those
+    // (`FocusContext.focusedId`, `AnalysisSignalStore.focusedKey`).
+    // See `docs/design-codebook-focus.md`.
+    @Published var codebookGroupFocused = false
+    @Published var codebookTagFocused = false
+    /// Whether the focused group's own structure may be renamed or deleted.
+    @Published var codebookGroupEditable = false
+    /// Whether it accepts new codes. **Not the same flag** — `Uncategorised`
+    /// takes codes while refusing to be renamed, so one flag would dim New
+    /// Code over a card that offers it.
+    @Published var codebookGroupAcceptsTags = false
+    /// A codebook detail page is showing (as opposed to the library grid).
+    @Published var codebookPageOpen = false
+    /// The page's own `canInstall` — not the floor, not Sentiment (D20).
+    @Published var codebookInstallable = false
+    /// Drives the Install ⇄ Uninstall verb swap, mirroring the page's button.
+    @Published var codebookInstalled = false
+    /// Whether this page grows groups — the floor, and not an exported report.
+    /// Mirrors the condition `CodebookV2Page` renders its New Group placeholder
+    /// under, rather than re-deriving "is this the floor" natively.
+    @Published var codebookCanCreateGroups = false
+
     /// Number of currently selected quotes. Enables bulk actions
     /// (Clear Selection, Copy as CSV).
     @Published var selectedQuoteCount: Int = 0
@@ -781,6 +809,29 @@ final class BridgeHandler: ObservableObject {
             if left != leftPanelOpen { leftPanelOpen = left }
             if right != rightPanelOpen { rightPanelOpen = right }
             if inspector != inspectorOpen { inspectorOpen = inspector }
+
+        case "codebook-focus":
+            // Equality-guarded for the same reason as `panel-state`: clicking
+            // around inside one group re-posts unchanged capabilities, and an
+            // unchanged @Published assign rebuilds the Codes menu for nothing.
+            let groupId = body["groupId"] as? Int
+            let tagId = body["tagId"] as? Int
+            let editable = body["groupEditable"] as? Bool ?? false
+            let acceptsTags = body["groupAcceptsTags"] as? Bool ?? false
+            if (groupId != nil) != codebookGroupFocused { codebookGroupFocused = groupId != nil }
+            if (tagId != nil) != codebookTagFocused { codebookTagFocused = tagId != nil }
+            if editable != codebookGroupEditable { codebookGroupEditable = editable }
+            if acceptsTags != codebookGroupAcceptsTags { codebookGroupAcceptsTags = acceptsTags }
+
+        case "codebook-page":
+            let open = body["open"] as? Bool ?? false
+            let installable = body["installable"] as? Bool ?? false
+            let installed = body["installed"] as? Bool ?? false
+            if open != codebookPageOpen { codebookPageOpen = open }
+            if installable != codebookInstallable { codebookInstallable = installable }
+            if installed != codebookInstalled { codebookInstalled = installed }
+            let canCreate = body["canCreateGroups"] as? Bool ?? false
+            if canCreate != codebookCanCreateGroups { codebookCanCreateGroups = canCreate }
 
         case "project-action":
             if let action = body["action"] as? String {

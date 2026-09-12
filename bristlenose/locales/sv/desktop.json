@@ -88,9 +88,11 @@
     "codes": {
       "createCodeGroup": "Skapa kodgrupp",
       "createCode": "Skapa kod",
-      "browseCodebooks": "Bläddra bland kodböcker…",
-      "importFramework": "Importera ramverk…",
-      "removeFramework": "Ta bort ramverk"
+      "renameCodeGroup": "Byt namn p\u00e5 kodgrupp\u2026",
+      "deleteCodeGroup": "Radera kodgrupp",
+      "renameCode": "Byt namn p\u00e5 kod\u2026",
+      "deleteCode": "Radera kod",
+      "browseCodebooks": "Bläddra bland kodböcker…"
     },
     "quotes": {
       "star": "Stjärnmärk",

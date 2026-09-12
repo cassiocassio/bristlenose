@@ -88,9 +88,11 @@
     "codes": {
       "createCodeGroup": "Luo koodiryhmä",
       "createCode": "Luo koodi",
-      "browseCodebooks": "Selaa koodikirjoja…",
-      "importFramework": "Tuo viitekehys…",
-      "removeFramework": "Poista viitekehys"
+      "renameCodeGroup": "Nime\u00e4 koodiryhm\u00e4 uudelleen\u2026",
+      "deleteCodeGroup": "Poista koodiryhm\u00e4",
+      "renameCode": "Nime\u00e4 koodi uudelleen\u2026",
+      "deleteCode": "Poista koodi",
+      "browseCodebooks": "Selaa koodikirjoja…"
     },
     "quotes": {
       "star": "Merkitse tähdellä",

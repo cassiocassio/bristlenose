@@ -88,9 +88,11 @@
     "codes": {
       "createCodeGroup": "Maak codegroep",
       "createCode": "Maak code",
-      "browseCodebooks": "Blader door codeboeken…",
-      "importFramework": "Importeer raamwerk…",
-      "removeFramework": "Verwijder raamwerk"
+      "renameCodeGroup": "Wijzig naam codegroep\u2026",
+      "deleteCodeGroup": "Verwijder codegroep",
+      "renameCode": "Wijzig naam code\u2026",
+      "deleteCode": "Verwijder code",
+      "browseCodebooks": "Blader door codeboeken…"
     },
     "quotes": {
       "star": "Ster",

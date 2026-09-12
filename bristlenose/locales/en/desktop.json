@@ -88,9 +88,13 @@
     "codes": {
       "createCodeGroup": "Create Code Group",
       "createCode": "Create Code",
+      "renameCodeGroup": "Rename Code Group\u2026",
+      "deleteCodeGroup": "Delete Code Group",
+      "renameCode": "Rename Code\u2026",
+      "deleteCode": "Delete Code",
       "browseCodebooks": "Browse Codebooks…",
-      "importFramework": "Import Framework…",
-      "removeFramework": "Remove Framework"
+      "installCodebook": "Install Codebook",
+      "uninstallCodebook": "Uninstall Codebook"
     },
     "quotes": {
       "star": "Star",

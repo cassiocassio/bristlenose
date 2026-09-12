@@ -88,9 +88,11 @@
     "codes": {
       "createCodeGroup": "建立編碼群組",
       "createCode": "建立編碼",
-      "browseCodebooks": "瀏覽編碼簿…",
-      "importFramework": "輸入框架…",
-      "removeFramework": "移除框架"
+      "renameCodeGroup": "\u91cd\u65b0\u547d\u540d\u7de8\u78bc\u7fa4\u7d44\u2026",
+      "deleteCodeGroup": "\u522a\u9664\u7de8\u78bc\u7fa4\u7d44",
+      "renameCode": "\u91cd\u65b0\u547d\u540d\u7de8\u78bc\u2026",
+      "deleteCode": "\u522a\u9664\u7de8\u78bc",
+      "browseCodebooks": "瀏覽編碼簿…"
     },
     "quotes": {
       "star": "標星",

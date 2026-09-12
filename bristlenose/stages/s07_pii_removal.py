@@ -9,6 +9,7 @@ from collections import Counter
 from pathlib import Path
 
 from rich.console import Console
+from rich.status import Status
 
 from bristlenose.config import BristlenoseSettings
 from bristlenose.i18n import t
@@ -81,7 +82,9 @@ def resolve_spacy_model() -> str:
 # reconciled, could fail preflight on a machine that was actually correct.
 
 
-def _ensure_spacy_model(*, allow_fetch: bool = True) -> None:
+def _ensure_spacy_model(
+    *, allow_fetch: bool = True, status: Status | None = None
+) -> None:
     """Probe spaCy for :data:`SPACY_MODEL`; lazily download it on first run.
 
     The model is ~400 MB. This docstring used to reason about 12 MB and pick the
@@ -97,6 +100,9 @@ def _ensure_spacy_model(*, allow_fetch: bool = True) -> None:
         allow_fetch: ``False`` under ``--no-fetch``. The flag means "do not
             reach the network", and a silent 425 MB download is the largest
             possible way to disobey it. Refuse instead.
+        status: the run's Rich spinner, stopped for the duration of the
+            download so the downloader's own output is not fought over. See
+            the comment at the call site.
 
     Raises:
         PackageInstallError: when the model is absent and ``allow_fetch`` is
@@ -139,18 +145,36 @@ def _ensure_spacy_model(*, allow_fetch: bool = True) -> None:
     # the host wired up its pipes).
     console = Console(width=min(80, Console().width))
 
-    console.print(
-        "  " + t("preflight.pii.downloading"),
-        end="",
-    )
+    # Framed and stepped-aside rather than inline. Two reasons, and only the
+    # first is the house ">50 MB gets the framed banner" rule.
+    #
+    # The second is a real output defect. `ensure_spacy_model` runs
+    # `subprocess.run([... spacy download ...], check=True)` with **no
+    # capture**, so pip writes its 425 MB of progress straight to this stdout —
+    # while `Pipeline.run` holds a `console.status` spinner open across the
+    # whole run, repainting the same lines. With `end=""` our own line was the
+    # first casualty ("…one-off)...Collecting en-core-web-lg") and the ✓ was
+    # orphaned after pip's last line. Whisper hit this first and answered it the
+    # same way — `preflight/whisper.py`, "step aside, let HF Hub print
+    # natively".
+    console.print()
+    console.print("  " + t("preflight.pii.downloading"))
+    console.print()
+
+    if status is not None:
+        status.stop()
     t0 = time.perf_counter()
     try:
         ensure_spacy_model(model)
     except Exception:
-        console.print(f" {cli_prefix(MessageKind.ERROR)}")
+        console.print(f"  {cli_prefix(MessageKind.ERROR)} {model}")
         raise
+    finally:
+        if status is not None:
+            status.start()
     elapsed = time.perf_counter() - t0
-    console.print(f" {cli_prefix(MessageKind.SUCCESS)} [{elapsed:.0f}s]")
+    console.print(f"  {cli_prefix(MessageKind.SUCCESS)} {model} [{elapsed:.0f}s]")
+    console.print()
 
     # Re-load to confirm Presidio's later spacy.load() will succeed (finding 23).
     spacy.load(model)
@@ -228,6 +252,8 @@ class PiiRedaction:
 def remove_pii(
     transcripts: list[FullTranscript],
     settings: BristlenoseSettings,
+    *,
+    status: Status | None = None,
 ) -> tuple[list[PiiCleanTranscript], list[PiiRedaction]]:
     """Remove PII from transcripts using Presidio.
 
@@ -270,7 +296,7 @@ def remove_pii(
         )
 
     logger.info("Initialising Presidio (loads spaCy NLP model on first run)...")
-    analyzer, anonymizer = _init_presidio(settings)
+    analyzer, anonymizer = _init_presidio(settings, status=status)
 
     clean_transcripts: list[PiiCleanTranscript] = []
     all_redactions: list[PiiRedaction] = []
@@ -495,13 +521,15 @@ def write_pii_summary(
 
 def _init_presidio(
     settings: BristlenoseSettings,
+    *,
+    status: Status | None = None,
 ) -> tuple[object, object]:
     """Initialise Presidio analyzer and anonymizer.
 
     Returns:
         (AnalyzerEngine, AnonymizerEngine) tuple.
     """
-    _ensure_spacy_model(allow_fetch=not settings.no_fetch)
+    _ensure_spacy_model(allow_fetch=not settings.no_fetch, status=status)
 
     from presidio_analyzer import AnalyzerEngine
     from presidio_analyzer.nlp_engine import NlpEngineProvider

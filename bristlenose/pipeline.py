@@ -1388,7 +1388,7 @@ class Pipeline:
                 t0 = time.perf_counter()
                 try:
                     clean_transcripts, pii_redactions = remove_pii(
-                        transcripts, self.settings,
+                        transcripts, self.settings, status=status,
                     )
                 except Exception as exc:
                     # ABANDON, never continue — and note this differs on purpose

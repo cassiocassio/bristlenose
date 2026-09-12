@@ -691,6 +691,44 @@ derived from each locale's own reviewed `whisper.aborted_no_fetch` — the
 remedy sentence is identical, so only the subject changed. Machine-derived,
 pending native review; `zh-Hant-HK` correctly absent (it inherits `zh-Hant`).
 
+### The first-run fetch gets the terminal to itself (12 Sep 2026)
+
+The CLI acquirer's own UX, and the last thing `_ensure_spacy_model` still owed.
+Its docstring had flagged the framed-banner treatment as outstanding since the
+size was corrected from 12 MB to ~400 MB — the house rule puts anything over
+50 MB behind the framed banner Whisper uses. It turned out to be a correctness
+fix as well as a presentational one.
+
+`ensure_spacy_model` runs `subprocess.run([... spacy download ...],
+check=True)` with **no capture**, so pip writes 425 MB of progress straight to
+our stdout — while `Pipeline.run` holds a `console.status` spinner open across
+the whole run. The old call printed with `end=""`, so pip's first line landed
+on ours (`…one-off)...Collecting en-core-web-lg`) and the ✓ was orphaned after
+pip's last line. Whisper met this first and answered it by stopping the
+spinner for the duration — *"step aside, let HF Hub print natively"* — so
+stage 7 now does the same: framed banner, `status.stop()`, download,
+`status.start()` in a `finally` so one failed fetch does not leave the rest of
+the run spinner-less.
+
+`status` threads from `Pipeline.run` → `remove_pii` → `_init_presidio` →
+`_ensure_spacy_model` as a keyword-only argument defaulting to `None`, so every
+existing caller and test is unaffected. No new locale keys: the banner reuses
+`preflight.pii.downloading`, and the done line carries the model name, which is
+the register the terminal already uses for this model.
+
+**Not verified in a real terminal.** Rich's `Live` does not render to a
+non-TTY, so the spinner contention cannot be observed from a captured shell —
+the fix rests on Whisper's identical, deliberate handling and on reading the
+uncaptured `subprocess.run`. Three tests pin the mechanics (line terminated,
+spinner stopped *during* the download, restarted even on failure) and all three
+were proved to bite by restoring the `end=""` form. The thing still worth a
+human's eyes is one bare-terminal run of a genuine first fetch.
+
+**Unresolved, small:** `preflight.pii.downloading` says *~400 MB* in all 21
+locales while the measured pack is 425 MB and the mockup says so. Correcting
+`en` alone would fork it from twenty translations for a string that already
+carries a `~`; left alone deliberately rather than overlooked.
+
 ### Build order
 
 Phases 0–2 are independent of Background Assets and can land immediately; the

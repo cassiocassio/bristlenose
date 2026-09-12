@@ -712,7 +712,7 @@ def _run_to_pii_failure(tmp_path: Path, pii_exc: Exception):
     pipeline = Pipeline(settings)
     segment_topics = MagicMock(name="segment_topics")
 
-    def _boom(_transcripts, _settings):
+    def _boom(_transcripts, _settings, **_kw):
         raise pii_exc
 
     with (

@@ -30,7 +30,7 @@ class TestEnsureSpacyModel:
         # No "Downloading..." line should print on the silent path.
         assert "Downloading" not in capsys.readouterr().out
 
-    def test_fresh_install_prints_inline_status(self, capsys):
+    def test_fresh_install_prints_framed_banner(self, capsys):
         fake_spacy = MagicMock()
         # First load() raises OSError (model missing); second load() (the verify
         # retry after download) succeeds.
@@ -247,4 +247,67 @@ class TestNoFetchIsHonoured:
             with pytest.raises(PackageInstallError):
                 s07_pii_removal._init_presidio(settings)
 
-        ensure.assert_called_once_with(allow_fetch=False)
+        ensure.assert_called_once_with(allow_fetch=False, status=None)
+
+
+class TestDownloaderGetsTheTerminalToItself:
+    """The 425 MB download must not be written over.
+
+    `ensure_spacy_model` shells out with `subprocess.run(..., check=True)` and
+    **no capture**, so pip writes progress straight to our stdout — while
+    `Pipeline.run` holds a Rich `console.status` spinner open across the entire
+    run. Two things therefore have to be true: our own line must be terminated
+    (it used to be `end=""`, so pip's first line landed on it), and the spinner
+    must be stopped for the duration. Whisper's preflight already does both.
+    """
+
+    def test_our_line_is_terminated_before_the_downloader_writes(self, capsys):
+        fake_spacy = MagicMock()
+        fake_spacy.load.side_effect = [OSError("not found"), MagicMock()]
+        with patch.dict(sys.modules, {"spacy": fake_spacy}):
+            with patch("bristlenose.utils.package_install.ensure_spacy_model"):
+                _ensure_spacy_model()
+        out = capsys.readouterr().out
+        # The banner line ends; nothing may be appended to it.
+        assert "one-off)...\n" in out, (
+            f"downloading line was not terminated — pip's output will land on "
+            f"it: {out!r}"
+        )
+
+    def test_spinner_is_stopped_around_the_download_and_restarted(self):
+        stopped_during_download = []
+        status = MagicMock()
+
+        fake_spacy = MagicMock()
+        fake_spacy.load.side_effect = [OSError("not found"), MagicMock()]
+
+        def _record(_model):
+            stopped_during_download.append(status.stop.called)
+
+        with patch.dict(sys.modules, {"spacy": fake_spacy}):
+            with patch(
+                "bristlenose.utils.package_install.ensure_spacy_model", new=_record
+            ):
+                _ensure_spacy_model(status=status)
+
+        assert stopped_during_download == [True], (
+            "the spinner was still running while the downloader wrote to stdout"
+        )
+        status.start.assert_called_once()
+
+    def test_spinner_is_restarted_even_when_the_download_fails(self):
+        """Otherwise one failed fetch leaves the rest of the run with no spinner."""
+        status = MagicMock()
+        fake_spacy = MagicMock()
+        fake_spacy.load.side_effect = OSError("not found")
+
+        with patch.dict(sys.modules, {"spacy": fake_spacy}):
+            with patch(
+                "bristlenose.utils.package_install.ensure_spacy_model"
+            ) as installer:
+                installer.side_effect = PackageInstallError("network down")
+                with pytest.raises(PackageInstallError):
+                    _ensure_spacy_model(status=status)
+
+        status.stop.assert_called_once()
+        status.start.assert_called_once()

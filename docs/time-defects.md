@@ -49,19 +49,28 @@ min** (s5) and **94.3 min** (s3).
 
 So the design range is:
 
-| | realistic | design ceiling | absurd |
+| | typical max | supported | beyond |
 |---|---|---|---|
-| position / duration | 0 – 3 h | **10 h** | > 24 h |
+| position / duration | 0 – 3 h | **up to 9:59:59** (one hour digit) | exists, not commonly supported |
 
-**Why 3 h is a ceiling and not a guess.** It is the upper limit of human
-concentration in a research session, not a file-size observation. An interview
-is booked for an hour; a workshop runs to three at the outside; anything longer
-is people who need lunch, and what a recorder captures past that point is not
-research data. So the ceiling is a property of the *practice*, and it is the
-same fact `design-shared-formats.md` reached from the other end when it decided
-never to pad the hour: no interview will ever occupy the `09:34:23` column. A
-future argument to raise the ceiling has to be an argument about what a research
-session is, not about what a disk can hold.
+**Why those two numbers, and why they are different.** Three hours is the
+*typical* likely maximum from real practice — the upper limit of human
+concentration in a research session. An interview is booked for an hour; a
+workshop runs to three at the outside; past that a recorder is capturing people
+who need lunch, not research data.
+
+The *supported* boundary is a separate fact: **one hour digit gives 9:59:59,
+which is longer than a working day.** That is the natural edge of the
+unpadded-hour format `design-shared-formats.md` decided on, and it comfortably
+contains every session the practice produces. Research contexts with longer
+recordings exist; they are not something the product needs to commonly support,
+and the right behaviour past the edge is to fail loudly rather than render
+something plausible.
+
+So the two numbers answer two questions — *what will we see?* (3 h) and *what
+must never render wrongly?* (up to a single hour digit) — and a future argument
+to move either has to be about what a research session is, not about what a
+disk can hold.
 
 That matters because one live helper breaks at **100 minutes** (§ 4, H5) and the
 corpus already contains a 99.7-minute session.

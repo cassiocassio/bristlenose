@@ -136,7 +136,15 @@ Items that look fully active (no dimming) but do nothing when clicked.
   codebook selection is not coming in the shape this assumed (see group B
   below), so there was nothing left for the comment to wait for.
 
-## B. Warn-stub — CLOSED 12 Sep 2026 (retired, not wired)
+## B. Warn-stub — CLOSED 12 Sep 2026 (retired, not wired) — **reopened as a proposal the same day**
+
+> **Read this first.** Four of the six are under active reconsideration: the *no target*
+> argument below is too strong, because it answers a question about **selection** with
+> evidence about **focus**. `docs/design-codebook-focus.md` proposes a focus cursor for
+> code groups and codes — modelled on the signal-card focus already shipped on Analysis —
+> which gives every one of them a target. The code is still removed; nothing here is
+> stale as a description of the tree. `showHideCodeGroup` and `mergeCodes` stay retired
+> on separate arguments.
 
 - [x] **Codes ▸ Rename Code Group** (`renameCodeGroup`)
 - [x] **Codes ▸ Delete Code Group** (`deleteCodeGroup`)

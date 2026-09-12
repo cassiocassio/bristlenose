@@ -1,0 +1,346 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codes menu — focus on a code group</title>
+<style>
+:root{
+  --bg:#f2f2f7; --page:#fff; --ink:#1d1d1f; --dim:#6e6e73; --faint:#8e8e93;
+  --line:#d8d8dc; --hairline:#e6e6ea; --chrome:#f6f6f6;
+  --accent:#007aff; --grouphdr:#f0f0f3; --thead:#fafafb;
+  --seg:#e9e9eb; --card:#fbfbfd; --wash:rgba(0,122,255,.10); --washline:#007aff;
+  --menu:#fff; --menusel:#007aff; --red:#d70015;
+  --shadow:0 18px 50px rgba(0,0,0,.18), 0 2px 6px rgba(0,0,0,.10);
+  --menushadow:0 12px 34px rgba(0,0,0,.22), 0 1px 3px rgba(0,0,0,.14);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#161618; --page:#1e1e20; --ink:#f2f2f7; --dim:#a1a1a6; --faint:#78787d;
+    --line:#3a3a3d; --hairline:#2c2c2f; --chrome:#2a2a2c;
+    --accent:#0a84ff; --grouphdr:#28282b; --thead:#232325;
+    --seg:#3a3a3c; --card:#252527; --wash:rgba(10,132,255,.20); --washline:#0a84ff;
+    --menu:#2c2c2e; --menusel:#0a84ff; --red:#ff453a;
+    --shadow:0 18px 50px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4);
+    --menushadow:0 12px 34px rgba(0,0,0,.6), 0 1px 3px rgba(0,0,0,.5);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;padding:40px 24px 90px;
+  font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto}
+h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+h2{font-size:17px;font-weight:650;letter-spacing:-.01em;margin:52px 0 4px}
+h3{font-size:13.5px;font-weight:650;margin:26px 0 10px;color:var(--ink)}
+.sub{color:var(--dim);margin:0 0 8px;max-width:80ch}
+.meta{color:var(--faint);font-size:12px;margin:0 0 34px}
+.lede{color:var(--dim);margin:0 0 18px;max-width:84ch}
+.why{border-left:2px solid var(--accent);padding:2px 0 2px 12px;margin:20px 0 0;
+     color:var(--dim);font-size:12.5px;max-width:88ch}
+.why b{color:var(--ink);font-weight:600}
+.warn{border-left-color:#ff9500}
+.stop{border-left-color:var(--red)}
+code,.mono{font:11.5px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+code{background:var(--seg);padding:1px 5px;border-radius:4px}
+
+/* ── macOS menu ─────────────────────────────────────────────── */
+.menurow{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start;margin:18px 0 0}
+.menucol{flex:0 0 auto}
+.menucap{font-size:11.5px;color:var(--faint);margin:0 0 8px 4px;max-width:250px;line-height:1.35}
+.menucap b{color:var(--ink);font-weight:600;display:block;font-size:12px;margin-bottom:2px}
+.menu{width:250px;background:var(--menu);border-radius:7px;box-shadow:var(--menushadow);
+      border:.5px solid var(--line);padding:4px 0;overflow:hidden}
+.mi{display:flex;align-items:center;gap:8px;padding:3px 11px 3px 10px;font-size:13px;line-height:1.5}
+.mi .g{width:15px;text-align:center;font-size:12px;color:var(--dim);flex:0 0 15px}
+.mi .lbl{flex:1 1 auto;white-space:nowrap}
+.mi .kb{color:var(--faint);font-size:12px;flex:0 0 auto;letter-spacing:.5px}
+.mi.on{background:var(--menusel);color:#fff;border-radius:4px;margin:0 4px;padding:3px 7px 3px 6px}
+.mi.on .g,.mi.on .kb{color:rgba(255,255,255,.85)}
+.mi.off{color:var(--faint)}
+.mi.off .g{color:var(--faint);opacity:.55}
+.msep{height:1px;background:var(--hairline);margin:4px 10px}
+.mtitle{font-size:11px;color:var(--faint);padding:2px 11px 5px;text-transform:none}
+
+/* ── codebook page fragment ─────────────────────────────────── */
+.pane{background:var(--page);border:.5px solid var(--line);border-radius:10px;
+      padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.cols{display:flex;gap:12px;align-items:flex-start}
+.gcard{flex:1 1 0;background:var(--card);border:.5px solid var(--line);border-radius:8px;
+       padding:10px 10px 12px;min-width:0;position:relative}
+.gcard.focus{background:var(--wash);border-color:var(--washline);
+              box-shadow:0 0 0 1px var(--washline)}
+.ghdr{display:flex;align-items:center;gap:6px;margin-bottom:9px}
+.gname{font-size:12.5px;font-weight:650;flex:1 1 auto;min-width:0;
+       overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gname.editing{background:var(--page);border:1px solid var(--washline);border-radius:4px;
+               padding:1px 5px;margin:-2px -2px;outline:none}
+.gx{font-size:11px;color:var(--faint);flex:0 0 auto;cursor:default}
+.gcard.focus .gx{color:var(--dim)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{font-size:11.5px;background:var(--seg);border-radius:11px;padding:2px 9px;
+      white-space:nowrap;position:relative}
+.chip.focus{background:var(--washline);color:#fff}
+.chip.editing{background:var(--page);border:1px solid var(--washline);padding:1px 8px}
+.chip .x{margin-left:5px;opacity:.55;font-size:10px}
+.addrow{margin-top:8px;font-size:11.5px;color:var(--faint)}
+.caret{display:inline-block;width:1px;height:11px;background:var(--ink);
+       vertical-align:-1px;margin:0 0 0 1px;animation:bl 1.1s steps(2) infinite}
+@keyframes bl{0%,50%{opacity:1}51%,100%{opacity:0}}
+
+/* ── table ──────────────────────────────────────────────────── */
+table{border-collapse:collapse;width:100%;margin:14px 0 0;font-size:12.5px}
+th,td{text-align:left;padding:7px 10px;border-bottom:.5px solid var(--hairline);vertical-align:top}
+th{background:var(--thead);font-weight:650;font-size:11.5px;color:var(--dim);
+   border-bottom:.5px solid var(--line);white-space:nowrap}
+td.c{white-space:nowrap}
+.yes{color:#1a7f37;font-weight:650}
+.no{color:var(--faint)}
+@media (prefers-color-scheme:dark){.yes{color:#3fb950}}
+.tag{display:inline-block;font-size:10.5px;padding:1px 6px;border-radius:9px;
+     background:var(--seg);color:var(--dim);margin-left:5px;vertical-align:1px}
+ul{margin:8px 0 0;padding-left:19px;max-width:86ch}
+li{margin:5px 0;color:var(--dim)}
+li b,li strong{color:var(--ink);font-weight:600}
+</style>
+
+<div class="wrap">
+
+<h1>Codes menu — focus on a code group</h1>
+<p class="sub">A proposal. Introduces a focus cursor for code groups and codes on the codebook
+lens, mirroring the signal-card focus already shipped on Analysis — which is what gives every
+Codes command a target and makes the menu live again.</p>
+<p class="meta">12 Sep 2026 · proposal, not a decision · supersedes the 12 Sep retirement of four of six commands</p>
+
+<h2>1 — Focus is not selection</h2>
+<p class="lede">The retirement earlier today argued these commands had no target, citing the
+29 Aug pin: <i>“selection is single, it lives in the master list … no second place a thing can
+be ‘current’.”</i> That reasoning was too strong. The pin governs <b>selection</b> — which
+codebook the detail pane renders. A focus cursor <i>inside</i> that pane is a different axis,
+and the codebase already models the two separately in two places.</p>
+
+<div class="why"><b>Precedent 1 — <code>FocusContext</code>, the quote grid.</b> Its own
+docstring lists them as separate concerns: “Focus (keyboard cursor): at most one quote focused
+at a time” and “Selection (multi-select): zero or more quotes selected for bulk actions”. The
+Quotes lens has had both since the React migration, and nobody calls the focused quote a second
+selection.</div>
+
+<div class="why"><b>Precedent 2 — <code>AnalysisSignalStore.focusedKey</code>, the signal cards.</b>
+A module-level store holding one nullable key, read by the card (<code>bn-selected</code> →
+blue wash), the sidebar and the inspector. 40 lines. This proposal is that store again, with
+two keys instead of one.</div>
+
+<div class="why warn"><b>Doc obligation.</b> The pin’s wording — “no second place a thing can be
+‘current’” — is what invited the over-reading, twice now. If this proposal lands, the pin says
+<i>selection</i> is single and names focus as a separate axis, or a future session re-retires
+these commands on the same misreading.</div>
+
+<h2>2 — The focus ring</h2>
+<p class="lede">One click on a group card’s background focuses it. Same gesture as a signal
+card, same <code>bn-selected</code> wash, same clearing rules (click elsewhere, or Escape).
+Focus is a cursor, not a mode: every existing direct-manipulation affordance keeps working
+untouched.</p>
+
+<div class="pane">
+  <div class="cols">
+    <div class="gcard">
+      <div class="ghdr"><span class="gname">Onboarding</span><span class="gx">✕</span></div>
+      <div class="chips">
+        <span class="chip">first run</span><span class="chip">signup</span>
+        <span class="chip">empty state</span>
+      </div>
+      <div class="addrow">+ Add code</div>
+    </div>
+    <div class="gcard focus">
+      <div class="ghdr"><span class="gname">Trust &amp; safety</span><span class="gx">✕</span></div>
+      <div class="chips">
+        <span class="chip">privacy</span><span class="chip">consent</span>
+        <span class="chip">data sharing</span><span class="chip">audit</span>
+      </div>
+      <div class="addrow">+ Add code</div>
+    </div>
+    <div class="gcard">
+      <div class="ghdr"><span class="gname">Pricing</span><span class="gx">✕</span></div>
+      <div class="chips">
+        <span class="chip">too expensive</span><span class="chip">tiers</span>
+      </div>
+      <div class="addrow">+ Add code</div>
+    </div>
+  </div>
+</div>
+<p class="menucap" style="margin-top:9px;max-width:none"><b>Group focused</b>
+<code>focusedGroupId = 2</code> — Rename Code Group, Delete Code Group and New Code are now live.</p>
+
+<h3>Focus on a code, and the rename field</h3>
+<div class="pane">
+  <div class="cols">
+    <div class="gcard focus">
+      <div class="ghdr"><span class="gname">Trust &amp; safety</span><span class="gx">✕</span></div>
+      <div class="chips">
+        <span class="chip">privacy</span>
+        <span class="chip focus">consent <span class="x">✕</span></span>
+        <span class="chip">data sharing</span><span class="chip">audit</span>
+      </div>
+      <div class="addrow">+ Add code</div>
+    </div>
+    <div class="gcard focus">
+      <div class="ghdr"><span class="gname editing">Trust &amp; safety<span class="caret"></span></span><span class="gx">✕</span></div>
+      <div class="chips">
+        <span class="chip">privacy</span>
+        <span class="chip editing">consent<span class="caret"></span></span>
+        <span class="chip">data sharing</span><span class="chip">audit</span>
+      </div>
+      <div class="addrow">+ Add code</div>
+    </div>
+  </div>
+</div>
+<p class="menucap" style="margin-top:9px;max-width:none"><b>Left:</b> code focused —
+the chip carries the wash and reveals its ✕, exactly as hover does today.
+<b>Right:</b> rename in progress — the field is open on the group title and on the chip.
+Delete Code stays enabled here and does what the chip’s ✕ does; it must not be the ⌫ key (§5).</p>
+
+<h2>3 — The menu, in four contexts</h2>
+<p class="lede">Menus dim, never hide. Every row below is present in all four; only the
+enablement changes.</p>
+
+<div class="menurow">
+
+  <div class="menucol">
+    <p class="menucap"><b>Floor page, group focused</b>The everyday case. Everything the lens
+    can do, the menu can do.</p>
+    <div class="menu">
+      <div class="mi"><span class="g">🗂</span><span class="lbl">New Code Group</span></div>
+      <div class="mi"><span class="g">🏷</span><span class="lbl">New Code</span></div>
+      <div class="msep"></div>
+      <div class="mi"><span class="g"></span><span class="lbl">Rename Code Group</span></div>
+      <div class="mi"><span class="g"></span><span class="lbl">Delete Code Group</span></div>
+      <div class="msep"></div>
+      <div class="mi"><span class="g"></span><span class="lbl">Rename Code</span></div>
+      <div class="mi"><span class="g"></span><span class="lbl">Delete Code</span></div>
+      <div class="msep"></div>
+      <div class="mi"><span class="g">📚</span><span class="lbl">Browse Codebooks</span><span class="kb">⇧⌘L</span></div>
+      <div class="mi off"><span class="g">⬇</span><span class="lbl">Install Codebook</span></div>
+    </div>
+  </div>
+
+  <div class="menucol">
+    <p class="menucap"><b>Floor page, nothing focused</b>Creation needs no target, so New Code
+    Group survives. The four that name a thing dim.</p>
+    <div class="menu">
+      <div class="mi"><span class="g">🗂</span><span class="lbl">New Code Group</span></div>
+      <div class="mi off"><span class="g">🏷</span><span class="lbl">New Code</span></div>
+      <div class="msep"></div>
+      <div class="mi off"><span class="g"></span><span class="lbl">Rename Code Group</span></div>
+      <div class="mi off"><span class="g"></span><span class="lbl">Delete Code Group</span></div>
+      <div class="msep"></div>
+      <div class="mi off"><span class="g"></span><span class="lbl">Rename Code</span></div>
+      <div class="mi off"><span class="g"></span><span class="lbl">Delete Code</span></div>
+      <div class="msep"></div>
+      <div class="mi"><span class="g">📚</span><span class="lbl">Browse Codebooks</span><span class="kb">⇧⌘L</span></div>
+      <div class="mi off"><span class="g">⬇</span><span class="lbl">Install Codebook</span></div>
+    </div>
+  </div>
+
+  <div class="menucol">
+    <p class="menucap"><b>Framework detail page</b>A framework’s structure is read-only, so
+    every mutation dims. The last row swaps its verb to mirror the page button.</p>
+    <div class="menu">
+      <div class="mi off"><span class="g">🗂</span><span class="lbl">New Code Group</span></div>
+      <div class="mi off"><span class="g">🏷</span><span class="lbl">New Code</span></div>
+      <div class="msep"></div>
+      <div class="mi off"><span class="g"></span><span class="lbl">Rename Code Group</span></div>
+      <div class="mi off"><span class="g"></span><span class="lbl">Delete Code Group</span></div>
+      <div class="msep"></div>
+      <div class="mi off"><span class="g"></span><span class="lbl">Rename Code</span></div>
+      <div class="mi off"><span class="g"></span><span class="lbl">Delete Code</span></div>
+      <div class="msep"></div>
+      <div class="mi"><span class="g">📚</span><span class="lbl">Browse Codebooks</span><span class="kb">⇧⌘L</span></div>
+      <div class="mi"><span class="g">⊖</span><span class="lbl">Uninstall Codebook</span></div>
+    </div>
+  </div>
+
+  <div class="menucol">
+    <p class="menucap"><b>Library cards page</b>No codebook is open, so the menu cannot name
+    one. Install shows as the resting verb, dimmed.</p>
+    <div class="menu">
+      <div class="mi off"><span class="g">🗂</span><span class="lbl">New Code Group</span></div>
+      <div class="mi off"><span class="g">🏷</span><span class="lbl">New Code</span></div>
+      <div class="msep"></div>
+      <div class="mi off"><span class="g"></span><span class="lbl">Rename Code Group</span></div>
+      <div class="mi off"><span class="g"></span><span class="lbl">Delete Code Group</span></div>
+      <div class="msep"></div>
+      <div class="mi off"><span class="g"></span><span class="lbl">Rename Code</span></div>
+      <div class="mi off"><span class="g"></span><span class="lbl">Delete Code</span></div>
+      <div class="msep"></div>
+      <div class="mi"><span class="g">📚</span><span class="lbl">Browse Codebooks</span><span class="kb">⇧⌘L</span></div>
+      <div class="mi off"><span class="g">⬇</span><span class="lbl">Install Codebook</span></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="why"><b>Why the four rename/delete rows carry no icon.</b> The icon audit already
+flags <code>pencil</code> ×4 and <code>trash</code> ×3 as the thinning candidates. Giving these
+rows the obvious glyphs takes the app to pencil ×6 and trash ×5 — the menu bar’s two most
+repeated symbols, on rows whose labels are already unambiguous. Tier 2 said the payoff of an
+icon falls as its repeat count rises; this is that rule applied before the fact rather than
+after.</div>
+
+<h2>4 — Enablement</h2>
+<table>
+<tr><th>Menu item</th><th>Twin on the page</th><th>Target</th><th class="c">Enabled when</th></tr>
+<tr><td><b>New Code Group</b></td><td>the <i>New Group</i> button</td><td>none — creation</td>
+  <td class="c"><span class="yes">floor page open</span></td></tr>
+<tr><td><b>New Code</b></td><td>a group’s <i>+ Add code</i> row</td><td>focused group</td>
+  <td class="c"><span class="yes">floor + group focused</span></td></tr>
+<tr><td><b>Rename Code Group</b></td><td>click the group title</td><td>focused group</td>
+  <td class="c"><span class="yes">floor + group focused</span></td></tr>
+<tr><td><b>Delete Code Group</b></td><td>the ✕ top-right of the card</td><td>focused group</td>
+  <td class="c"><span class="yes">floor + group focused</span></td></tr>
+<tr><td><b>Rename Code</b></td><td>click the chip’s name</td><td>focused code</td>
+  <td class="c"><span class="yes">floor + code focused</span></td></tr>
+<tr><td><b>Delete Code</b></td><td>hover the chip, click ✕</td><td>focused code</td>
+  <td class="c"><span class="yes">floor + code focused</span><br><span class="no">incl. while renaming</span></td></tr>
+<tr><td><b>Browse Codebooks</b></td><td>the <i>Browse Library</i> button</td><td>none — navigation</td>
+  <td class="c"><span class="yes">always, on the lens</span></td></tr>
+<tr><td><b>Install / Uninstall Codebook</b></td><td>the page’s own Install ⇄ Uninstall button</td>
+  <td>the open codebook</td>
+  <td class="c"><span class="yes">detail page open</span><br><span class="no">not floor, not Sentiment</span></td></tr>
+</table>
+
+<div class="why"><b>The verb swaps, it does not gain a checkmark.</b> Same idiom as
+<i>Turn On / Turn Off Agent Access</i> in the sidebar (§3.6a). And the exclusions are not new
+rules — <code>canInstall</code> on both the browse card and the detail page already excludes the
+floor and Sentiment (D20). The menu mirrors that predicate rather than restating it.</div>
+
+<h2>5 — Three things the proposal has to decide</h2>
+<ul>
+<li><b>Delete Code must not take ⌫, and probably takes no shortcut at all.</b> A SwiftUI
+<code>.keyboardShortcut</code> installs an NSMenu key equivalent, which is matched
+<i>before</i> the responder chain — the same mechanism that forces Edit ▸ Undo to hide itself
+while editing. So a ⌫ on Delete Code would steal the keystroke from the rename field the
+proposal explicitly wants live. ⌘⌫ is already spent twice in Project. Recommendation: ship the
+six rename/delete/new rows with no shortcut, and only <code>⇧⌘L</code> on Browse.</li>
+<li><b>Focus on a framework’s group — allowed, but inert.</b> A cursor is still useful for
+reading, and refusing focus there means two click behaviours for one control. Let focus land,
+let the mutations dim. That is the “menus dim, toolbars morph” rule applied to a lens.</li>
+<li><b>Native has to be told.</b> Dimming needs <code>focusedGroupId</code>,
+<code>focusedTagId</code> and which page is open on the Swift side — a new bridge payload
+alongside <code>focusedQuoteId</code>. Per the house rule that is a two-file change plus the
+fixture, and it is most of the work: the web half is one 40-line store and three handlers.</li>
+</ul>
+
+<h2>6 — What stays retired</h2>
+<ul>
+<li><b>Show/Hide Code Group</b> — unchanged by this proposal. D7 puts the eye in
+<code>TagSidebar</code>/<code>TagGroupCard</code> on the <i>Quotes</i> lens and says hide “was
+never a third axis here”. That was never a selection argument, so focus does not revive it.
+<b>G7/Q11 stay closed.</b></li>
+<li><b>Merge Codes</b> — focus gives one target; merge needs a source <i>and</i> a destination.
+Drag-one-chip-onto-another remains the only gesture that can say which two. Returns with
+multi-select, if ever.</li>
+</ul>
+
+<div class="why stop"><b>Correction carried by this mockup.</b> Four of the six commands
+retired earlier today — Rename/Delete Code Group, Rename/Delete Code — were retired on the
+reasoning that no target could exist. Focus is that target, and it was already shipped twice
+elsewhere in the app. The retirement of the other two stands on separate arguments.</div>
+
+</div>

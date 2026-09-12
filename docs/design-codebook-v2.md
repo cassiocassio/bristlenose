@@ -1734,6 +1734,8 @@ removed; each is something v2 has simply not placed.**
 **Restoring any of the six means reopening the 29 Aug pin, not adding a
 handler.** `createCodeGroup` and `createCode` stay — creation needs no target.
 
+**Reasoning corrected 12 Sep 2026 (same day):** the *no target can exist* argument was too strong for the four rename/delete commands — the 29 Aug pin governs **selection**, and a **focus** cursor inside the detail pane is a separate axis the app already ships twice (`FocusContext.focusedId`, `AnalysisSignalStore.focusedKey`). See [`design-codebook-focus.md`](design-codebook-focus.md), proposed. `showHideCodeGroup` (D7) and `mergeCodes` (needs two targets) are untouched by that correction and stay retired.
+
 ### Mapped — same capability, new address
 
 | v1 | v2 |

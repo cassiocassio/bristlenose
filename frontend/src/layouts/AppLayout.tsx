@@ -559,13 +559,11 @@ function AppShell() {
           setViewMode("starred");
           break;
         // showHelp / showKeyboardShortcuts / showAcknowledgements / showReleaseNotes
-        // are handled natively now (the Help menu opens external docs directly) —
-        // no SPA case needed. The browser SPA reaches docs via the ? key / footer Help.
+        // / openBlog are handled natively now (the Help menu opens external docs
+        // directly) — no SPA case needed. The browser SPA reaches docs via the ?
+        // key / footer Help.
         case "sendFeedback":
           setFeedbackOpen(true);
-          break;
-        case "openBlog":
-          window.open("https://blog.bristlenose.app", "_blank");
           break;
         case "focusMode":
           // Report-wide view state — no FocusContext/QuotesContext closure

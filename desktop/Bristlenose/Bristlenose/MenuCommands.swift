@@ -1552,8 +1552,13 @@ private struct HelpMenuContent: View {
 
         Divider()
 
+        // Native, like every other URL-opening item in this menu. It was the
+        // last one still routed through the bridge, and `menuAction` opens with
+        // `guard let webView` — `webView` is a *weak* ref, so with no project
+        // selected the WebView is deallocated and the call was dropped to the
+        // log. On the Welcome screen the item did nothing at all.
         Button(i18n.t("desktop.menu.help.blog")) {
-            bridgeHandler.menuAction("openBlog")
+            Self.open("https://blog.bristlenose.app")
         }
 
         Button(i18n.t("desktop.menu.help.acknowledgements")) {

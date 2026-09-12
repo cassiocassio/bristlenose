@@ -193,7 +193,7 @@ All in `HelpMenuContent` (`MenuCommands.swift`). Order top→bottom: Bristlenose
 | `keyboardShortcuts` | **Shipped** (native) | Opens `docs/keyboard-shortcuts.html` in the browser |
 | `releaseNotes` | **Shipped** (native) | Opens `docs/changelog.html` in the browser |
 | `sendFeedback` | **Shipped** | `bridgeHandler.openFeedback()` → native `FeedbackSheet` (live-serve or `.serverless`) |
-| `openBlog` | **Shipped** (bridge) | `bridgeHandler.menuAction("openBlog")` → Substack |
+| `openBlog` | **Shipped** (native, 2026-09-12) | `Self.open("https://blog.bristlenose.app")`. **Was bridge-routed and silently dead on the Welcome screen** — `bridgeHandler.menuAction` opens with `guard let webView`, and `webView` is a **weak** ref (`BridgeHandler.swift:231`), so with no project selected the WebView is deallocated, the call is dropped to the log (`menuAction(openBlog) dropped — no webView registered`) and the menu item does nothing. It was the last URL-opening item in this menu still going through the bridge; the other four were migrated to `Self.open` earlier and the comment in `AppLayout.tsx` recording that migration had simply not been extended to this one. Going native also picks up the scheme guard in `Self.open` and drops a JS round-trip for something `NSWorkspace` does directly. The web-side `case "openBlog"` is deleted — the native menu was its only dispatcher. |
 | `showAcknowledgements` | **Shipped** (native) | Opens `ACKNOWLEDGEMENTS.md` on GitHub in the browser |
 
 ### Codes menu (9)

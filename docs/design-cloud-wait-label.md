@@ -1,3 +1,29 @@
+---
+status: pending
+last-trued: 2026-09-12
+trued-against: HEAD@main on 2026-09-12 (fs.py, events.py, EventLogReader.swift, CopyMachinery.swift at fbd8f4f3)
+---
+
+> **Pending / aspirational.** The surface this doc specifies is unbuilt; scope and policy are
+> decided; §4 and the built/not-built inventory were re-measured 12 Sep 2026 and corrected —
+> the first version of this doc, the same day, called the `cloud_fetch` failure "already
+> wired" (the category is declared and mirrored; nothing produces it). Check `TODO.md` and
+> the private planning board for status.
+
+## Changelog
+
+- _2026-09-12_ — trued up after the cluster review: the "failure half is already wired" claim
+  corrected in §7 (three places) and the row table — `cloud_fetch` has no producer, the five
+  `CloudFetchTimeoutError` handlers swallow or re-label and `run_lifecycle.py` has no cloud
+  branch; §3's "the desktop copy path mirrors it" re-tensed (it does not yet); §7's contract
+  bullet repointed at `EventLogReader.swift` and the *absence* of any parity coverage for
+  `run_progress`; path (a) no longer says "nothing exists" (`CopyError.underlying` landed
+  `fbd8f4f3`); the fifth, plural-bearing key added; `glossary.csv` measured empty for the
+  three stores; `cloudAtRest`'s cut marked in the mockup's own tables. Anchors: `events.py`
+  `CLOUD_FETCH`, `audio.py`/`video.py`/`clip_backend.py` timeout handlers, `run_lifecycle.py`
+  classifier, `tests/test_swift_contract_parity.py`.
+- _2026-09-04_ — written; revised 12 Sep to defer to the 1 Aug mockup as the spec.
+
 # "Waiting for iCloud…" — the cloud-wait label
 
 **Status: future enhancement, not scheduled.** Written 4 Sep 2026 to hold a
@@ -14,8 +40,9 @@ like and say*: copy, keys, precedence, the row at native geometry, and the quest
 decided (no at-rest cloud state; per-project, not per-file; "still fetching" at 3 minutes,
 then tune). This doc holds what a drawing can't: the scope decision, the policy, what the
 OS exposes per store, which half is built, and how a pick-up builds the rest. Where they
-would overlap, the mockup wins on words and this doc wins on when; neither repeats the
-other. "Waiting for iCloud…" is this doc's colloquial name for the surface; the copy is
+would overlap, the mockup wins on words and this doc wins on when; the mockup and this doc
+do not repeat each other (§4 does restate, for the reader, the per-store evidence that the
+surfacing doc's §8 holds). "Waiting for iCloud…" is this doc's colloquial name for the surface; the copy is
 the mockup's.
 
 ## 1. What it is
@@ -72,9 +99,9 @@ Same words, same scope, same policy on both.
   `project_storage_cloud_policy_decided`). Apple's abstraction is that the
   disk is a disk; we live in that idiom rather than fighting it.
 - **Hydrate on demand, bound it, log it.** The sidecar's `fs.py` already does
-  detect-then-bounded-materialise; the desktop copy path mirrors it
-  (`design-copy-error-surfacing.md` §6 Tier 2). The label is what the bounded
-  wait *says* while it waits.
+  detect-then-bounded-materialise; the desktop copy path does not yet, and should
+  mirror it (§7 path (a); the surfacing doc's §8 "Bearing on the fix" adds it to
+  its §6 Tier 2). The label is what the bounded wait *says* while it waits.
 - **Failure is a sentence, not a state.** A read that times out or is refused
   surfaces through `CopyError` → `LocalizedError` (surfacing doc Tier 0) —
   Foundation's words, or Finder's — never a permanent row state.
@@ -154,26 +181,38 @@ included; the second path is mostly wired already.
   (it is a re-identification surface), and the callback hands you the path,
   so the emitter drops it. A store family is a category, not an identifier.
 - That is an events-contract change, and a three-file one: `events.py`, the
-  Swift side that decodes `stage_fraction` for the ring today, and
-  `tests/fixtures/pipeline-summary-contract.json` with a scenario that *uses*
-  the field. The parity test compares only the intersection of the two sides,
-  so the Python-only version passes every test and reaches no Mac (root
-  `CLAUDE.md`, the third blind gate).
+  Swift mirror — `EventLogReader.swift`'s Event struct, which decodes
+  `stage_fraction` for the ring today (not `PipelineSummary.swift`) — and a
+  fixture scenario that *uses* the field. Worse than the intersection rule in
+  root `CLAUDE.md`: `tests/fixtures/pipeline-summary-contract.json` carries no
+  `run_progress` scenario at all, and `test_swift_contract_parity.py` registers
+  only `PipelineSummary`, `Cause`, `StageFailure` and `StageOutcome`, so this
+  event has **no** parity coverage — `sessions_new`, `sessions_cached` and
+  `elapsed_seconds` already exist Python-side and are absent from the Swift
+  struct (measured 12 Sep 2026). A Python-only field passes every test and
+  reaches no Mac.
 - `RunProgressSubtitle.compose` gains `waitingOn: String?` beside `resuming:`
   and leads with "Fetching from {{provider}} · n of m" while it is non-nil — the same
   swap "Resuming…" makes in the indeterminate gap.
 - Clip and thumbnail sites: the wait is on-demand and short; a label there is
   optional, and clip export has its own progress.
-- **The failure half is already wired.** A fetch that times out reaches the Mac
-  as the `cloud_fetch` failure category (`events.py`, mirrored in
-  `PipelineSummary.swift`), kept deliberately distinct from a probe failure
-  because the remedies are opposite — wait or check the provider, versus
-  re-export the recording. Only the *waiting* state has no channel; that is the
-  whole of what this path adds.
+- **The failure half is declared, not wired.** `cloud_fetch` exists as a
+  category — `events.py`, retryability-mapped, mirrored in `PipelineSummary.swift`,
+  pinned by a fixture scenario, kept deliberately distinct from a probe failure
+  because the remedies are opposite — and **nothing produces it**: all five
+  `CloudFetchTimeoutError` handlers swallow or re-label (`audio.py` ×3 →
+  warn-and-`None` or `AudioToolError(str(exc))`; `video.py` and `clip_backend.py`
+  → warn-and-`None`), and `run_lifecycle.py`'s classifier has no cloud branch,
+  so a 30-minute timeout reaches the Mac as `whisper` or `unknown`. Wiring the
+  producer — a `Cause` with `category=cloud_fetch` at those sites, and a cloud
+  branch in the classifier — is part of this path. (This doc said "already
+  wired" until 12 Sep 2026: the category's *name* was on the wire, its
+  *producer* was not.)
 
-**Path (a) — the drag-in copy. A day; nothing exists.**
+**Path (a) — the drag-in copy. A day; the error type exists, the detection does not.**
 
-- `CopyMachinery` has no dataless awareness. Give it the Swift twin of the
+- `CopyMachinery` has no dataless awareness (`CopyError.underlying(Error)`, the
+  throw target below, landed 12 Sep 2026 in `fbd8f4f3`). Give it the Swift twin of the
   three `fs.py` functions — same stems, house casing: `isDataless`
   (`SF_DATALESS` off `stat`), `cloudProvider(for:)` (the same path structure:
   `Mobile Documents` → iCloud Drive, `CloudStorage/<Provider>-…`), and a
@@ -194,8 +233,8 @@ included; the second path is mostly wired already.
 - **The three states map to three channels.** `cloudFetching` — the waiting
   emit on path (b), `InFlight.waitingOn` on path (a); `cloudFetchSlow` — the
   same, past a 3-minute threshold (decided in the mockup's §F: ship at 3 min
-  and tune); `cloudFetchFailed` — the `cloud_fetch` failure category, already
-  wired for the run path; the copy path's failure is `CopyError.underlying`,
+  and tune); `cloudFetchFailed` — the `cloud_fetch` failure category, declared
+  and mirrored but with no producer yet (above); the copy path's failure is `CopyError.underlying`,
   Tier 0's sentence. The mockup's other two decisions bind here too: no
   at-rest cloud state, and per-project rather than per-file.
 - **Localise** — the keys and copy are already specified in the 1 Aug mockup's
@@ -203,11 +242,14 @@ included; the second path is mostly wired already.
   {{done}} of {{total}}", `cloudFetchSlow` "Still fetching from {{provider}}" (a
   stall tier after a threshold — the honest answer to "BN can't tell a healthy
   fetch from a stalled one": it can't, but it can say how long it has been),
-  `cloudFetchFailed` "Couldn't fetch from {{provider}}". `cloudAtRest` was cut by
-  the mockup's own reasoning. **None is seeded in any locale and no subtitle
+  `cloudFetchFailed` "Couldn't fetch from {{provider}}", and the fifth,
+  `cloudFetchFailedBody_one/other` — the only plural-bearing key of the set (verb
+  agreement, not just the noun). `cloudAtRest` was cut in the mockup's §F; its
+  §C3 and §D rows are marked cut since 12 Sep 2026. **None is seeded in any locale and no subtitle
   variant exists** (measured 12 Sep 2026). Seed those names in the 21 full
   locales (not `zh-Hant-HK`); store names are proper nouns, not translated —
-  check `glossary.csv` for the three. This doc's "Waiting for iCloud…" is the
+  `glossary.csv` has no entry for any of the three (measured 12 Sep 2026); add
+  them when seeding. This doc's "Waiting for iCloud…" is the
   colloquial name; the spec's copy is "Fetching from".
 - **Pin** — one test per compose function (which variant wins; a store outside
   the three composes to the generic text); the §5 probe stays as a canary if
@@ -228,7 +270,7 @@ included; the second path is mostly wired already.
 | Copying, blocked on any other store | Copying 3 of 12… | copy ring |
 | Analysing, blocked on a scoped store | **Fetching from iCloud Drive · 2 of 8** | run ring (unchanged) |
 | Either, blocked past the threshold (3 min, then tune — mockup §F) | **Still fetching from iCloud Drive** | ring (unchanged) |
-| Analysing, fetch failed | *(the `cloud_fetch` failure category, already on the wire — "Couldn’t fetch from iCloud Drive" in the diagnostic surface; the row returns to idle)* | — |
+| Analysing, fetch failed | *(`cloud_fetch` — category declared and mirrored, producer not yet wired; once it is, "Couldn’t fetch from iCloud Drive" in the diagnostic surface, and the row returns to idle)* | — |
 | Analysing, blocked on any other store | Transcribing 3 of 8… | run ring |
 | Copying, read timed out | *(row returns to idle; `CopyError.underlying` renders the sentence — Tier 0)* | — |
 
@@ -241,7 +283,8 @@ included; the second path is mostly wired already.
   three-store scope.
 - `design-copy-error-surfacing.md` §8 — both research passes' evidence tables,
   including everything in §4 and §6 here.
-- `docs/mockups/cloud-fetch-states.html` (1 Aug 2026) and its `STATUS.md` row —
+- `docs/mockups/cloud-fetch-states.html` (drawn 1 Aug 2026; file last touched 12 Sep
+  2026 for the cross-reference) and its `STATUS.md` row —
   the visual spec and the key table; found on 12 Sep 2026, five weeks after it
   was drawn and eight days after this doc was written without it.
 

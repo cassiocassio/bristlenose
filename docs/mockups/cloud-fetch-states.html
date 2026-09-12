@@ -134,7 +134,7 @@ td.k { white-space:nowrap; font-size:11px; color:var(--color-text-tertiary); }
 <p class="lede">Every state a researcher sees when a project's media are cloud placeholders. Grounded in the 29 Jul 2026 reproduction (Dropbox, three 307–649 MB recordings) — see <code>docs/design-project-storage.md</code> §3.</p>
 
 <p class="note" style="padding:0 0 14px; line-height:1.6">
-  <b>Read with <code>docs/design-cloud-wait-label.md</code></b> (4–12 Sep 2026). This page is the spec for what the states <i>look like and say</i> — copy, keys, precedence, and the questions decided in §F. That doc holds what a drawing can’t: the scope decision (the label names <b>iCloud Drive, Google Drive and OneDrive</b> only — every other store keeps the generic row text, and detection stays unconditional), the policy (manage nothing; hydrate, bound, log), a per-store table of what a third-party app can actually know (a label, yes; a pie, no), and which half is built: the sidecar’s <code>ensure_materialised</code> + <code>cloud_provider_for</code> and the <code>cloud_fetch</code> failure category are wired; <code>cloudFetching</code> / <code>cloudFetchSlow</code> have no channel yet and no key is seeded (measured 12 Sep 2026).
+  <b>Read with <code>docs/design-cloud-wait-label.md</code></b> (4–12 Sep 2026). This page is the spec for what the states <i>look like and say</i> — copy, keys, precedence, and the questions decided in §F. That doc holds what a drawing can’t: the scope decision (the label names <b>iCloud Drive, Google Drive and OneDrive</b> only — every other store keeps the generic row text, and detection stays unconditional), the policy (manage nothing; hydrate, bound, log), a per-store table of what a third-party app can actually know (a label, yes; a pie, no), and which half is built: the sidecar’s <code>ensure_materialised</code> + <code>cloud_provider_for</code> are built; the <code>cloud_fetch</code> failure category is declared and mirrored but nothing produces it yet (the five timeout handlers swallow or re-label); <code>cloudFetching</code> / <code>cloudFetchSlow</code> have no channel and no key is seeded (measured 12 Sep 2026).
 </p>
 
 <div class="warnbox">
@@ -508,7 +508,7 @@ td.k { white-space:nowrap; font-size:11px; color:var(--color-text-tertiary); }
 <table>
 <thead><tr><th style="width:26%">Key</th><th style="width:38%">String</th><th>Plural?</th></tr></thead>
 <tbody>
-<tr><td class="k">cloudAtRest</td><td>{{count}} in {{provider}}</td><td>No noun — safe. Omit entirely at 0 rather than rendering “0 in Dropbox”.</td></tr>
+<tr><td class="k"><s>cloudAtRest</s></td><td><s>{{count}} in {{provider}}</s></td><td>No noun — safe. Omit entirely at 0 rather than rendering “0 in Dropbox”. — <b>Cut (§F): no at-rest cloud state.</b></td></tr>
 <tr><td class="k">cloudFetching</td><td>Fetching from {{provider}} · {{done}} of {{total}}</td><td>No noun — safe</td></tr>
 <tr><td class="k">cloudFetchSlow</td><td>Still fetching from {{provider}}</td><td>No count — safe</td></tr>
 <tr><td class="k">cloudFetchFailed</td><td>Couldn’t fetch from {{provider}}</td><td>No count — safe</td></tr>
@@ -533,7 +533,7 @@ td.k { white-space:nowrap; font-size:11px; color:var(--color-text-tertiary); }
 <table>
 <thead><tr><th style="width:22%">State</th><th style="width:34%">Row subtitle</th><th style="width:8%">Kind</th><th>Detail pane / notes</th></tr></thead>
 <tbody>
-<tr><td class="k">At rest, evicted</td><td>3 in Dropbox</td><td><span class="kind i">info</span></td><td>Appended to the normal subtitle. Cloud glyph trailing. Counts files → partial vs whole legible.</td></tr>
+<tr><td class="k"><s>At rest, evicted</s></td><td><s>3 in Dropbox</s></td><td><span class="kind i">info</span></td><td>Appended to the normal subtitle. Cloud glyph trailing. Counts files → partial vs whole legible. — <b>Cut (§F): no at-rest cloud state.</b></td></tr>
 <tr><td class="k">Fetching</td><td>Fetching from Dropbox · 1 of 3</td><td><span class="kind i">info</span></td><td>Indeterminate spinner. No ETA — none is derivable.</td></tr>
 <tr><td class="k">Fetch slow (~3 min)</td><td>Still fetching from Dropbox</td><td><span class="kind w">warning</span></td><td>Run continues. Only legitimate wall-clock number.</td></tr>
 <tr><td class="k">Fetch failed (30 min)</td><td>Couldn’t fetch from Dropbox</td><td><span class="kind e">error</span></td><td>Pane names the file: “The file is stored online only and didn’t download in 30 minutes.” + provider help link, shown as the bare domain. Try again · Show in Finder</td></tr>
@@ -556,7 +556,7 @@ can’t-find → failed → <b>fetch-failed</b> → running → stopped/partial 
   <li><s><b>Threshold for “still fetching”.</b></s> <b>Decided — ship at 3 min and tune.</b> It's still a guess, and it still wants a real corpus on a domestic uplink; that's calibration after the fact, not a blocker.</li>
   <li><s><b>Per-file or per-project?</b></s> <b>Decided — per-project.</b> The Sessions list marking individual evicted interviews is out of scope, not deferred pending design.</li>
   <li><s><b>“Make available offline” in the copy</b> is Dropbox's wording; iCloud says “Download Now”, OneDrive “Always keep on this device”.</s> <b>Resolved</b> — the generic “make the file available offline in Finder” reads correctly for all three, so the only per-provider fork left is the provider's <i>name</i>, which <code>cloud_provider_for()</code> already returns.</li>
-  <li><s><b>Which stores get a named label?</b></s> <b>Decided 4 Sep 2026 — iCloud Drive, Google Drive, OneDrive only</b>, the stores that pair with the meeting platforms; every other store keeps the generic row text, and detection runs for all of them. <b>Measured 12 Sep 2026:</b> the fetch itself and the <code>cloud_fetch</code> failure are built; the fetching and still-fetching states have no channel and no seeded key. Scope, policy, reality and the pick-up: <code>docs/design-cloud-wait-label.md</code>.</li>
+  <li><s><b>Which stores get a named label?</b></s> <b>Decided 4 Sep 2026 — iCloud Drive, Google Drive, OneDrive only</b>, the stores that pair with the meeting platforms; every other store keeps the generic row text, and detection runs for all of them. <b>Measured 12 Sep 2026:</b> the fetch itself is built; the <code>cloud_fetch</code> failure category is declared and mirrored but has no producer; the fetching and still-fetching states have no channel and no seeded key. Scope, policy, reality and the pick-up: <code>docs/design-cloud-wait-label.md</code>.</li>
 </ul>
 
 <h2>G · Two copy rules this settled</h2>

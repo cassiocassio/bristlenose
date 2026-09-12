@@ -1,8 +1,35 @@
+---
+status: partial
+last-trued: 2026-09-12
+trued-against: HEAD@main on 2026-09-12 (Pillar 3 only; Pillar 2 and the pinning register carry known drift — see the changelog)
+---
+
+> **Truing status:** Partial — Pillar 3 (macOS) trued 12 Sep 2026 and current; Pillar 2
+> (Python) and the pinning register were **not** trued this pass and carry known drift
+> (the CI matrix is 3.10–3.14 where the text says 3.10–3.13; 3.14 is called "watch
+> but defer" while Copr builds on it; the 3.10-floor row reads as open although the
+> floor move to 3.12 on 1 Nov 2026 is decided in `design-python-floor.md`). See the
+> changelog.
+
+## Changelog
+
+- _2026-09-12_ — trued up, Pillar 3 only: the retired pbxproj-comment action was still
+  listed under Open questions (struck there, pointing at the gate); the pillar table's
+  "current pbxproj" source of truth repointed at `check-deployment-floors.sh`; the
+  "pinned by" claim made true — the script had existed since 3 Sep with **no caller**,
+  and `build-all.sh` now runs it as step 1c; the WWDC-2026 action item marked as past and
+  unanswered. Anchors: `desktop/scripts/build-all.sh` step 1c,
+  `desktop/scripts/check-deployment-floors.sh`, `xcodebuild -showBuildSettings` (app 15.0,
+  tests 26.1, re-measured this pass).
+- _2026-09-03_ — Pillar 3 rewritten: floors measured via `xcodebuild`, the hold decided, the
+  variable table, Apple Intelligence reframed (commits of 3–4 Sep 2026).
+- _2026-05-04_ — last whole-doc review.
+
 # Platform and dependency policy
 
 *Single source of truth for how Bristlenose handles platform-major versions (Node, Python, macOS, Xcode), dependency updates, and the rituals that keep us off the "Adobe surprise" treadmill.*
 
-Last reviewed: 4 May 2026.
+Last reviewed: 4 May 2026 (whole doc); Pillar 3 trued 12 Sep 2026 — see the front-matter and changelog.
 
 ## Why this doc exists
 
@@ -30,7 +57,7 @@ It is also the policy layer that makes Dependabot useful instead of noisy. Depen
 |---|---|---|---|
 | **Node** | LTS cut (April + October) | Active LTS; skip 21/23/25 | This doc + `frontend/CLAUDE.md` "Node 24 LTS required" |
 | **Python** | Release (October) | `requires-python = ">=3.10"`; floor + ceiling tested | [`docs/design-ci.md`](design-ci.md) (matrix rationale at line 89; EOL note at line 236) |
-| **macOS** | WWDC (June) → GA (Sept) | Deployment target = current LTS-1 | [`docs/design-decisions.md`](design-decisions.md) §"Desktop app: SwiftUI + sidecar" (Sequoia/n-1 rationale at line 65); current `pbxproj` |
+| **macOS** | WWDC (June) → GA (Sept) | Deployment target = current LTS-1 | [`docs/design-decisions.md`](design-decisions.md) §"Desktop app: SwiftUI + sidecar" (Sequoia/n-1 rationale at line 65); `desktop/scripts/check-deployment-floors.sh` (never `project.pbxproj` — it carries several build configurations and a hand-parse returns the wrong one) |
 | **Xcode/Swift** | September (WWDC year + 3mo) | Latest stable; bump within 30 days of GA | This doc + [`docs/design-desktop-python-runtime.md`](design-desktop-python-runtime.md) (sidecar Python.framework constraint) |
 
 ### Pillar 1 — Node
@@ -64,7 +91,7 @@ Most of the thinking is already in [`docs/design-ci.md`](design-ci.md):
 
 ### Pillar 3 — macOS
 
-Current deployment target — **measured 3 Sep 2026 via `xcodebuild`, correcting a long-standing error in this line.** The app ships **15.0 (Sequoia)** on *all four* schemes (Bristlenose, Dev Sidecar, External Server, default), both configurations. The **26.1 belongs to `BristlenoseTests`**, not to "debug/feature schemes" and not to Apple Intelligence: it arrived incidentally in `cce34d2a` when the test target was created and Xcode defaulted it to the then-current SDK, and **no test uses a macOS 26 API**. There is no Foundation Models code in the app at all. Pinned by `desktop/scripts/check-deployment-floors.sh`. Rationale for the Sequoia floor: [`docs/design-decisions.md`](design-decisions.md) — Sequoia is n-1 by launch, avoids SwiftUI contortion for older APIs.
+Current deployment target — **measured 3 Sep 2026 via `xcodebuild`, correcting a long-standing error in this line.** The app ships **15.0 (Sequoia)** on *all four* schemes (Bristlenose, Dev Sidecar, External Server, default), both configurations. The **26.1 belongs to `BristlenoseTests`**, not to "debug/feature schemes" and not to Apple Intelligence: it arrived incidentally in `cce34d2a` when the test target was created and Xcode defaulted it to the then-current SDK, and **no test uses a macOS 26 API**. There is no Foundation Models code in the app at all. Pinned by `desktop/scripts/check-deployment-floors.sh`, which `build-all.sh` runs as step 1c on every real build (wired 12 Sep 2026 — until then the script existed and nothing invoked it). Rationale for the Sequoia floor: [`docs/design-decisions.md`](design-decisions.md) — Sequoia is n-1 by launch, avoids SwiftUI contortion for older APIs.
 
 The Tahoe-specific issues already encountered:
 
@@ -207,7 +234,7 @@ Calendar events, not vibes. Quarterly review absorbs the post-mortem.
 
 **Why external SSD over VirtualBuddy.** External-boot gives real hardware: Apple Intelligence / Foundation Models, Neural Engine perf, camera/sensor APIs all work — important for the Apple FM provider work in `design-pluggable-llm-routing.md`. Risk of a beta bricking the machine is low; if it crashes hard, restart on internal. (VirtualBuddy is a viable fallback for anyone without spare external storage — same compatibility table for sandbox / signing / WKWebView / AVFoundation, minus the Apple-Intelligence-specific gates.)
 
-WWDC 2026: ~5 weeks out at time of writing. Action item: install macOS 27 developer beta to the T7 within a week of the keynote; build the desktop app on it before public beta.
+_(As of 12 Sep 2026 both the keynote and the July public beta have passed; whether the T7 beta install and the new-SDK TestFlight build happened is unrecorded — review item 4 is unanswered.)_ WWDC 2026: ~5 weeks out at time of writing. Action item: install macOS 27 developer beta to the T7 within a week of the keynote; build the desktop app on it before public beta.
 
 ## Cross-references to existing thinking
 
@@ -229,4 +256,4 @@ This doc is the index. The detail lives elsewhere — don't duplicate.
 - **macOS Python `continue-on-error: true`** may need promoting to blocking once desktop integration tests land.
 - **ESLint stack — `groups` vs `ignore`?** Currently four separate ignores (eslint, eslint-plugin-react-hooks, typescript-eslint, typescript). Bumping them as a wave argues for a single `groups: lint-stack` block instead — one PR, dropped from the ignore list. Defer until the next coordinated bump exposes the friction in practice.
 - **WWDC ritual durability.** Currently a prose commitment with no calendar hook. Cost of "I forgot" is a year of accumulated breakage; a recurring auto-filed GitHub issue (June 1 each year) is the obvious mitigation. Add when the rest of the desktop machinery has settled.
-- **`pbxproj` dual-target comment.** The doc identifies the risk (line 72); the comment in the project file itself is a follow-up.
+- ~~**`pbxproj` dual-target comment.**~~ Closed 3 Sep 2026 — the comment cannot live in `project.pbxproj` (Xcode regenerates it); the risk is pinned by `check-deployment-floors.sh` instead (Pillar 3). Was still listed here on 12 Sep because the section pass that retired it never reached this list.

@@ -1266,8 +1266,24 @@ private struct CodesMenuContent: View {
         //    "was never a third axis here". That closes the register's G7/Q11
         //    ("move it, or except it") as a third answer: retire it.
         //
-        // Restoring any of them means reopening the 29 Aug pin, not adding a
-        // handler. Create-group and Create-code stay: creation needs no target.
+        // CORRECTED THE SAME DAY, before you act on the paragraph above: the
+        // first bullet is too strong. The 29 Aug pin governs SELECTION — which
+        // codebook the detail pane renders. A FOCUS cursor inside that pane is a
+        // different axis, and this app already ships one twice: `FocusContext`
+        // (whose own docstring separates "Focus (keyboard cursor)" from
+        // "Selection (multi-select)") and `AnalysisSignalStore.focusedKey`, the
+        // signal-card wash. So the honest statement is narrower — the codebook
+        // lens has no focus model YET. `docs/design-codebook-focus.md` proposes
+        // one, under which rename/delete Code Group and rename/delete Code all
+        // have a legitimate target and come back.
+        //
+        // The second bullet is unaffected: Show/Hide is a wrong-lens argument,
+        // not a selection one, so D7 and G7/Q11 stand. Merge likewise — focus
+        // yields one target and merge needs two.
+        //
+        // Create-group stays regardless: creation needs no target. Create-code
+        // is gated on focus too — `createCodebookTag(name, groupId)` requires a
+        // group and there is no uncategorised group to default into.
 
         Button(i18n.t("desktop.menu.codes.createCodeGroup"), systemImage: "folder.badge.plus") {
             bridgeHandler.menuAction("createCodeGroup")

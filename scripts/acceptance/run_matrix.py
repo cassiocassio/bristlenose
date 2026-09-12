@@ -172,7 +172,10 @@ class Matrix:
             return False, f"UNDECLARED SKIP (ERROR): {', '.join(missing)} produced no result"
         reds = [r for r in self.results if not r.is_green]
         if reds:
-            return False, f"{len(reds)} blocking failure(s): " + ", ".join(
+            # "failing", not "blocking": since 12 Sep a FAIL_EXPECTED reddens the
+            # run too, and calling a rate-limited key a blocking failure would
+            # undo the F7 distinction the outcome names still carry.
+            return False, f"{len(reds)} failing cell(s): " + ", ".join(
                 f"{r.cell_id}={r.outcome.value}" for r in reds
             )
         return True, f"all {len(self.results)} cells green"
@@ -288,8 +291,31 @@ def run(args: argparse.Namespace) -> int:
     return 0 if ok else 1
 
 
+def prepare_cell_dir(artifact_dir: Path, cell_id: str) -> Path:
+    """The cell's output directory, guaranteed empty.
+
+    **A cell that reuses its directory does not test the provider.** `bristlenose
+    run` resumes: given a manifest whose stages are all COMPLETE it reloads the
+    cached results, re-renders, exits 0, and makes **zero LLM calls** — and every
+    invariant then passes against last time's report. Measured 4 Sep 2026: the
+    Claude and ChatGPT cells had been reporting PASS since **7 July** off
+    manifests two months old, so the matrix was green on a provider that could
+    not start a run at all.
+
+    The failure is silent by construction — the cell prints `Resuming: all stages
+    complete`, which is `bristlenose` behaving correctly. Only the emptiness of
+    `.bristlenose/llm-calls.jsonl` gave it away.
+
+    Wiped at the start of the cell rather than the end, so the previous run's
+    artefacts survive for inspection until the moment they would become a lie.
+    """
+    out = artifact_dir / cell_id.replace(":", "_")
+    shutil.rmtree(out, ignore_errors=True)
+    return out
+
+
 def _run_provider_cell(cell: Cell, input_dir: Path, artifact_dir: Path) -> CellResult:
-    out = artifact_dir / cell.cell_id.replace(":", "_")
+    out = prepare_cell_dir(artifact_dir, cell.cell_id)
     exe = bristlenose_exe()
     # `run --no-serve`: full pipeline (a subtitle fixture skips Whisper), and `--no-serve`
     # so the cell exits instead of blocking on the auto-started dev server. Keys resolve
@@ -364,7 +390,10 @@ def _assert_silence_was_named(event: dict) -> None:
 
 def _run_transcribe_cell(artifact_dir: Path) -> CellResult:
     cell_id = TRANSCRIBE_CELL.cell_id
-    work = artifact_dir / cell_id.replace(":", "_")
+    # Same guarantee as the provider cells — `transcribe` resumes off a manifest
+    # too, so a reused directory would re-render last time's transcripts and
+    # assert against them. See `prepare_cell_dir`.
+    work = prepare_cell_dir(artifact_dir, cell_id)
     out = work / "output"
     try:
         input_dir = build_transcribe_fixture(work)

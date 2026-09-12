@@ -1,8 +1,34 @@
-# Copy-error surfacing — diagnosis
+---
+status: partial
+last-trued: 2026-09-12
+trued-against: HEAD@main on 2026-09-12 (fbd8f4f3 landed Tier 0; f54f9861)
+---
 
-**Status: diagnosis. No fix applied.** Probes pinned in
-`desktop/Bristlenose/BristlenoseTests/CopyErrorSurfacingTests.swift`; the defect
-is annotated at its site in `ContentView.swift`. Written 4 Sep 2026 after a
+> **Truing status:** Partial — trued 12 Sep 2026. §5, §6 (Tiers 1–2), §7 and §8 are
+> current; §1, §2 and §4 are the 4 Sep 2026 measurement of a defect closed by
+> `fbd8f4f3` and carry per-section banners saying so — read them as the record the
+> fix was judged against, not as the state of the tree. See the changelog and the
+> inline banners.
+
+## Changelog
+
+- _2026-09-12_ — trued up after Tier 0 landed: retitled; status line rewritten; §2 and §4
+  banners added (§1's existed); the flatten claim (§2), the `CopyMachinery` anchors (§2,
+  §5), the §8 "cannot distinguish" clause and the §8 `fs.py` range corrected; Tier 0's
+  body put in past tense with its locale debt stated; Tier 1 rewritten (three unkeyed
+  literals, not one; `.noItemsAfterFiltering` now spoken at site 1); the measured-record
+  pointer gained its public twin; §8 gained the back-reference to
+  `design-cloud-wait-label.md`. Anchors: commits "a failed drag-in copy now says why,
+  whichever gesture started it", "copy-error doc: the §8 brctl row pointed at §7";
+  `CopyMachinery.swift` `enum CopyError`, `ContentView.swift` both catch sites,
+  `CopyErrorSurfacingTests.swift`.
+- _2026-09-04_ — initial draft (diagnosis; the second research pass was appended the same day).
+
+# Copy-error surfacing — diagnosis, fix, and what remains
+
+**Status: Tier 0 fixed 12 Sep 2026 (`fbd8f4f3`); Tiers 1–2 open.** The defect below is
+the 4 Sep measurement; the probes in `CopyErrorSurfacingTests.swift` are now positive
+assertions, and the site comment in `ContentView.swift` describes the fix. Written 4 Sep 2026 after a
 three-arm review trial flagged "CopyError isn't `LocalizedError`" and the
 maintainer asked for the scenarios, the cause, the size, the test, the
 evidence, and a proof plan — before any change.
@@ -20,7 +46,7 @@ one of them twice; they are kept in §7 so they are not re-derived.
 > **Fixed 12 Sep 2026.** `CopyError` is `LocalizedError` with `.underlying(Error)` and an
 > `.alreadyInFlight` case; both catch sites render one sentence, and the `withKnownIssue`
 > probes became positive assertions (`CopyErrorSurfacingTests`, four tests, green in the
-> 1,441-test suite). This section describes the defect as measured on 4 Sep. Tiers 1–2
+> Swift suite). This section describes the defect as measured on 4 Sep. Tiers 1–2
 > are tracked in `TODO.md` § Ideas.
 
 The three review arms all said: *"`CopyError` doesn't conform to
@@ -63,6 +89,12 @@ because the prediction was wrong; do not rely on that number for anything.)
 
 ## 2. Every path through `copy()`, and what each site shows
 
+> **As measured 4 Sep 2026; closed by `fbd8f4f3`.** Every "shows" below is the 4 Sep
+> rendering and every "Thrown" cell the 4 Sep payload (`.underlying(String)`). Since
+> 12 Sep both sites render `errorDescription` — site 1's six "enum-index" cells now read
+> the same sentence as site 2's — and the in-flight literal is `.alreadyInFlight`. Kept
+> verbatim as the measurement the fix was judged against.
+
 **VERIFIED** from `CopyMachinery.swift` throw sites and both catch blocks.
 Rows marked ✓ are designed and correct; the divergence rows are the defect;
 the last row is not an error path at all.
@@ -79,12 +111,14 @@ the last row is not an error path at all.
 | A second drop while one copy runs | `.underlying("Another copy is already in flight.")` | **enum-index string** — **MEASURED** | the English literal, in all 21 locales | **divergence** + unlocalised |
 | Source is cloud-evicted (dataless) | **nothing — `copyItem` hangs** | — | — | **not a surfacing problem**; see §5 |
 
-Three of the divergence rows carry a second problem: the `.underlying(String)`
-wrapper flattens the error at `CopyMachinery.swift:123`
-(`error.localizedDescription`), so the domain and code are gone before either
-site sees it. The mid-copy ENOSPC row is the concrete cost — a dedicated,
-localised disk-space alert exists for exactly this failure and cannot be reached
-because the call site can no longer tell ENOSPC from anything else.
+Three of the divergence rows carried a second problem: until `fbd8f4f3` the
+`.underlying(String)` wrapper flattened the error (`error.localizedDescription`),
+so the domain and code were gone before either site saw it. `.underlying(Error)`
+now carries the error whole (the throw in `copy()`'s catch, `CopyMachinery.swift`),
+so the mid-copy ENOSPC row's cost is no longer that the call site *cannot* tell
+ENOSPC apart — it is that nothing yet does (Tier 2): the dedicated, localised
+disk-space alert exists for exactly this failure and is still not reached from
+`.underlying`.
 
 ## 3. Cause
 
@@ -111,6 +145,9 @@ message" flowchart says *"A new toast surface needs `ToastStore.show(_, kind:)`.
 `kind:` parameter. The doc describes an API that does not exist.
 
 ## 4. How we know it is real — and what we don't know
+
+> **As measured 4 Sep 2026.** The `withKnownIssue` tripwire described below fired as
+> intended when Tier 0 landed and was rewritten into four positive assertions (`fbd8f4f3`).
 
 **Known, measured:** the strings in §1, from a real permission failure driven
 through `copy()` under the sandboxed test host. The `withKnownIssue` wrapper
@@ -205,14 +242,16 @@ spawned sidecar. Consequences:
   read materialises exactly as an uncoordinated one does — it changes neither
   the blocking nor the cancellability. Coordination matters for OFF-policy
   callers and as a fence against the sync daemon; the storage doc's "the fix
-  is `NSFileCoordinator`" was written against the wrong policy state.
+  is `NSFileCoordinator`" was written against the wrong policy state (and has
+  since been struck there).
 - The non-blocking shape every shipping app converges on is: detect
   (`SF_DATALESS` via `st_flags`, or `ubiquitousItemDownloadingStatus` — both
   work cross-provider, files and folders) → `startDownloadingUbiquitousItem`
   (returns in 1–3 ms) → poll with a wall-clock bound → then copy. **The sidecar
   already does this**: `bristlenose/utils/fs.py` carries `SF_DATALESS`,
   `is_dataless()`, and `ensure_materialised()` with `MATERIALISE_TIMEOUT_SECONDS`.
-  The desktop copy path at `CopyMachinery.swift:107` does not, and should mirror
+  The desktop copy path (`CopyMachinery.copy()`, the blind `copyItem` in its
+  per-file loop) does not, and should mirror
   it rather than invent a third pattern.
 - `brctl download` / `brctl evict` are **hidden, not gone** on 26.4.1. The
   morning's claim that they "no longer exist" came from running them with *no
@@ -223,8 +262,10 @@ spawned sidecar. Consequences:
   `startDownloadingUbiquitousItem` / `evictUbiquitousItem` are the API. The
   measured record for the whole area — policy inheritance (launchd agents run
   **OFF**, GUI-spawned processes **ON**), the per-operation table, the openrsync
-  source path — lives in the backup tool's repo,
-  `~/Code/code-backup/docs/design-dataless-files.md`; correct that first, then this.
+  source path — lives in the backup tool's repo
+  (`~/Code/code-backup/docs/design-dataless-files.md`) and its public twin,
+  `github.com/cassiocassio/iCloud-wizzard-behind-the-curtain`; correct those first,
+  then this.
 
 **`.inCloud` is unreachable for evicted media, and that is documented.**
 `ProjectAvailability` short-circuits on `fileExists(atPath: path)` — the project
@@ -243,8 +284,8 @@ toast cull explicitly deferred, and they should be taken as such.
 
 ### Tier 0 — the bug fix: put the text on the type — **landed 12 Sep 2026**
 
-Conform `CopyError` to `LocalizedError`, and carry the original `Error` in
-`.underlying` rather than a `String`:
+`CopyError` conforms to `LocalizedError` and carries the original `Error` in
+`.underlying` rather than a `String` (`fbd8f4f3`):
 
 ```swift
 enum CopyError: LocalizedError {
@@ -262,9 +303,9 @@ enum CopyError: LocalizedError {
 That is the whole fix for §1. `localizedDescription` on a Swift error resolves
 through `errorDescription` once the type conforms (SE-0112 — the same bridging
 that renders an *un*-conformed enum as "The operation couldn't be completed.
-(CopyError error 1.)"), so site 1 stops showing the enum index **without its
-catch block changing**. Site 2's `.underlying(let msg)` arm becomes redundant
-and can go, or destructure the error when it wants the domain (Tier 2).
+(CopyError error 1.)"), so site 1 stopped showing the enum index **without its
+catch block changing**. Site 2's `.underlying(let msg)` arm was redundant and
+went; a site that wants the domain destructures the error (Tier 2).
 `CancellationError` is not a `CopyError` and stays silent at both sites — as
 `presentError` itself does with `NSUserCancelledError`, and as CotEditor does
 with `CancellationError`.
@@ -284,9 +325,11 @@ the text lives on the type, and for file operations both show Foundation's
 sentence verbatim. The tuple would have moved the text off the type and fixed
 the divergence by adding a third place for it to live.
 
-Touches: the enum (conformance, one payload type), site 2's one arm, and the
-tests. No locale change, no toast change, no delivery change — which surface
-shows the sentence is Tier 2's question and is not pre-empted here. The
+Touched: the enum (conformance, one payload type, one new case), site 2's one
+arm, and the tests. No toast change, no delivery change — which surface shows
+the sentence is Tier 2's question and is not pre-empted here. No locale *key*
+was added, so the three sentences on the type are English literals — Tier 1's
+debt grew from one string to three. The
 `LocalizedError` item and the `.underlying(Error)` item moved up from Tiers 1
 and 2 because the idiom makes them the fix rather than hygiene around it; four
 sibling enums already conform (`CloudDownloadError`, `SidecarResolveError`,
@@ -302,11 +345,16 @@ payload. Site 2's redundant arm was deleted; site 1 changed only its comment.
 
 ### Tier 1 — hygiene (small, separable)
 
-- Route `"Another copy is already in flight."` through a locale key — one key,
-  21 full locales (not `zh-Hant-HK`). It is the only user-facing string in the
-  file with no key.
-- Decide what `.noItemsAfterFiltering` means at site 1, where it is reachable
-  in principle and currently renders the enum index.
+- Route the three English literals on the type — `.insufficientDiskSpace`,
+  `.noItemsAfterFiltering`, `.alreadyInFlight` (`.underlying` inherits Foundation's
+  localised sentence) — through locale keys, 21 full locales (not `zh-Hant-HK`).
+  Before Tier 0 there was one unkeyed string; putting the text on the type made
+  it three.
+- Decide what `.noItemsAfterFiltering` means at site 1. It is reachable there —
+  site 1 passes unfiltered drops, site 2 pre-filters — and since Tier 0 it toasts
+  its sentence ("None of the dropped items is a file Bristlenose can import.")
+  where site 2 stays silent ("should not happen — we filtered above"). Both
+  silent or both spoken; pick.
 
 ### Tier 2 — the deferred design (real work; a decision first)
 
@@ -363,8 +411,8 @@ and evicted them back with `evictUbiquitousItem` — net state unchanged.
 |---|---|---|
 | macOS `EDEADLK` = 11; 35 = `EAGAIN` | ✓ SDK `errno.h` | — |
 | Sandboxed app runs materialisation policy **ON** (2) — as does every GUI-descended process (Terminal, the test host); a launchd agent with no `MaterializeDatalessFiles` key measures OFF (1) and gets `EDEADLK` instead of a hang, so a probe run by hand and one run under launchd disagree and neither lies | ✓ measured in-process; spawn-dependence measured the same evening | `DatalessPolicyProbeTests`; `desktop/CLAUDE.md` copyItem gotcha |
-| `brctl download` / `evict` **hidden, not gone** on 26.4.1 — a bare invocation prints a usage that omits them; given a path both work (`download` returns at once and the file lands ~12 s later; `evict` prints `evicted content of '…'`). Undocumented, so still nothing to build on | ✓ re-measured the same day (§7) | — |
-| Sidecar already has detect + bounded-materialise | ✓ `fs.py:108–200` | — |
+| `brctl download` / `evict` **hidden, not gone** on 26.4.1 — a bare invocation prints a usage that omits them; given a path both work (`download` returns at once and the file lands ~12 s later; `evict` prints `evicted content of '…'`). Undocumented, so still nothing to build on | ✓ re-measured the same day (§5) | — |
+| Sidecar already has detect + bounded-materialise | ✓ `fs.py:19–26, 108–208` | — |
 | Under OFF, `copyItem` → `NSCocoaErrorDomain 512` / POSIX 11 instantly | pass measured | probe sources in session scratchpad |
 | Under ON, `Data(contentsOf:)` blocks ~2 s and materialises (Dropbox) | pass measured | same |
 | Coordinated read materialises even under OFF, iCloud and Dropbox | pass measured | same |
@@ -389,8 +437,8 @@ copy path must detect-then-bounded-materialise before `copyItem`, mirroring
 `fs.py`, or the hang stays regardless of how errors are surfaced. And the
 26.3 access-loss bug is a new scenario for §2 — a copy that fails with a
 File Provider error mid-session because the sandbox extension vanished —
-which no catch site can distinguish today because `.underlying` flattens the
-domain.
+which no catch site distinguishes yet — since `fbd8f4f3` `.underlying` carries
+the domain, so the discrimination (Tier 2) is what remains unbuilt.
 
 ### Second pass, same day — presentation idiom and cloud-wait practice
 
@@ -426,8 +474,9 @@ the type, the mapping tuple withdrawn — that is what the idiom and both
 shipping apps do. (2) Delivery is an alert or a sheet on every precedent and
 the HIG says so; Tier 2's toast question now has evidence on one side and
 none on the other, and still goes to the mockup. (3) The cloud-wait finding
-bears on the open question recorded in
-`design-sidebar-activity-indicators.md` and on `design-project-storage.md`:
+bears on the open question recorded in `design-cloud-wait-label.md` (which
+superseded the argument between `design-sidebar-activity-indicators.md` and
+`design-project-storage.md`):
 shipping practice is *no label* — hydrate, bound it, log — which is the
 posture set on 4 Sep 2026. It does not settle whether Bristlenose says
 anything; it establishes that nobody else does.

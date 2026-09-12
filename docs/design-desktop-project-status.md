@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-08-27
-trued-against: HEAD@main (2ac83f6d) on 2026-08-27 (the glyph rule + files popover)
+last-trued: 2026-09-12
+trued-against: HEAD@main (64acf55d) on 2026-09-12 (the fetch-state rows; the inCloud cell)
 ---
 
 > **Trued 27 Aug 2026.** Three line anchors into `ProjectSubtitle.swift` had
@@ -16,6 +16,7 @@ trued-against: HEAD@main (2ac83f6d) on 2026-08-27 (the glyph rule + files popove
 
 ## Changelog
 
+- _2026-09-12_ — **Truing pass (session docs).** Two corrections, one set of owners. (1) The availability table's **iCloud-evicted → `inCloud`** cell is the *intended* state, not the measured one: with the folder present, availability resolves `.ready` and `.inCloud` is unreachable for evicted media (`design-project-storage.md` §3, measured 29 Jul 2026) — the cell now says so. (2) The fetch rows in the severity table gained their owners: severity and glyph are ruled **here**; copy and keys are the 1 Aug mockup (`docs/mockups/cloud-fetch-states.html`); scope (iCloud Drive / Google Drive / OneDrive only), policy and build state are `design-cloud-wait-label.md`. The 30-minute "never completed" row is confirmed against `MATERIALISE_TIMEOUT_SECONDS` in `bristlenose/utils/fs.py`. (3) Which half is built, so the rows don't read as shipped: the sidecar's bounded fetch is; the `cloud_fetch` failure category is declared and mirrored but has no producer; the fetching / still-fetching states have no channel (measured 12 Sep 2026 — the first version of this bullet, the same day, called the failure category built).
 - _2026-08-18_ — **Truing pass (`--topic cloud-import`).** Three corrections, one addition. (1) **The 29 Jul "two shipped branches are unreachable" finding has half-expired** — `lastPipelineRunAt` gained a write site on **30 Jul**, *one day after* it was written up (`ProjectIndex.recordPipelineRun`, `ProjectIndex.swift:586`, called from `ContentView.swift:591`; commit *"desktop: Connect Agent sheet + menu item, and /api/health advertises the mount"*). So `+N unanalysed` **does** render now, and the TRAP below is closed rather than pending. `.ready(date:)` is still never drawn — but by Schema E's design, not by accident, which is the opposite kind of fact. Left as the clearest example in this doc of why a dated counterfactual needs re-checking before it's cited. (2) **The precedence chain named 9–10 states against an enum that has 17** — completed, with the idle tier's real order read off `resolveIdle`. (3) **Schema E's "the collapse rule is exactly one state" is now two.** (4) **Cloud import added to §4's catalogue** — a per-project transfer whose window can be closed, carrying three rulings that were only in code comments. Also fixed §4's "File import / copy" row, stale since 19 Jun and self-flagged as unaddressed in the 15 Jul entry.
 - _2026-07-29_ — **Schema E: the clean row is silent** (new subsection below, after Precedence). A `.ready` row with no delta now renders **no subtitle at all** and collapses to a single line; only exceptions get a line. Supersedes the June "every row shows a date" deferral **on its merits** — the deferral's trigger (concurrent multi-project execution) has *not* fired. Three further corrections from the same walk. (1) **The "never composed" hard rule is now overridden for `.completedPartial`** — see the new subsection; the rule survives everywhere else. (2) **Two shipped branches are unreachable and were never noticed**: `lastPipelineRunAt` has no write site in any build, so `.ready(date:)` never rendered *and* `ProjectIndex.swift:892` gates the `+N unanalysed` delta on it, so that never rendered either. (3) **Cloud fetch/eviction is an extension of this model, not a separate feature** — new rulings folded into the kinds table; spec in `docs/mockups/cloud-fetch-states.html` + the cloud-fetch handoff.
 - _2026-07-15_ — **Truing pass (`--topic` failure-taxonomy).** Two corrections. (1) **§4: `.status` is a multi-pill shelf, not a single pill.** The 19 Jun "app-global only (the Ollama download)" wording read as *one* pill; three now mount (Ollama download, provider out-of-credit, alpha-expiry), each its own `ToolbarItem(placement: .status)` sharing the new `StatusPill` envelope. The axis is unchanged and still right — only the singular framing was stale. Ordering/contention between co-occurring pills is now an **open question** (only pairwise non-co-occurrence is encoded in code). (2) **§3: "Swift only renders it" is no longer strictly true** — an `out_of_credit` verdict now mutates app-global Swift state (sticky verdict → the pill), and the stderr fallback re-derives a provider-scoped credit/rate split when a crash leaves no structured cause. Also: `quota` narrowed to rate-limit, `out_of_credit` added (see [design-pipeline-resilience.md](design-pipeline-resilience.md)). **Not addressed** (pre-existing, flagged): §4's "File import / copy" catalogue row still says copy surfaces in a toolbar pill — stale since 19 Jun and contradicted by this doc's own §§ above; §9 Anchors omits the new pill/model files.
@@ -136,6 +137,13 @@ Worked rulings (the precedents):
 | partial completion | warning | something didn't go right |
 | drive unplugged / volume ejected | warning | project not usable |
 | analysed files missing from disk | warning | "beyond neutral" — files gone |
+
+The four fetch rows are ruled here for **severity**. Their copy and keys are the 1 Aug 2026 mockup
+(`docs/mockups/cloud-fetch-states.html` — "Fetching from {{provider}} · n of m", "Still fetching…",
+"Couldn’t fetch…"); their scope, policy and build state are `design-cloud-wait-label.md`. As of
+12 Sep 2026 only the sidecar's bounded fetch is built; the `cloud_fetch` failure category is
+declared and mirrored but nothing produces it, and "fetching" / "still fetching" have no channel. The 30-minute row matches
+`MATERIALISE_TIMEOUT_SECONDS` in `bristlenose/utils/fs.py`.
 
 ### The glyph rule — attention, not action (settled 27 Aug 2026)
 
@@ -448,7 +456,7 @@ Also deliberately *off* the row, different-surface: export (toolbar chip), AI-co
 
 | Condition | Reality | CLI experience | Desktop state |
 |---|---|---|---|
-| **iCloud-evicted** | dataless, same path | slow read → **succeeds** (online) | `inCloud` |
+| **iCloud-evicted** | dataless, same path | slow read → **succeeds** (online) | `inCloud` — *intended; measured unreachable for evicted media, since the folder exists and availability resolves `.ready` (storage doc §3, 29 Jul 2026)* |
 | **Volume ejected** | path genuinely gone | **`FileNotFoundError`** — hard fail | `cantFind(.unmountedVolume)` |
 
 One says *wait*; one says *cannot proceed*. Same glyph family, opposite severity — they must never

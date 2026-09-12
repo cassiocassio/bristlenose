@@ -301,7 +301,7 @@ _This section said both were app-level, with ContentView holding them via `@Envi
 
 **`panel-state` is how native sees the report's own panels** — `{leftOpen, rightOpen, inspectorOpen}`, posted from an effect in `AppLayout.tsx` whenever the SPA's `SidebarStore`/`InspectorStore` open flags change, and the only writer of `BridgeHandler.leftPanelOpen`/`rightPanelOpen`/`inspectorOpen`. Without it the View menu's panel rows can't swap Hide↔Show (the state is web-owned end to end, so there's nothing for Swift to derive). Consumed by `PanelToggle.labelKey` — see `SidebarVisibilityFocus.swift`.
 
-**Outbound** (native → web): `BridgeHandler` holds a `weak var webView: WKWebView?` (set in `WebView.makeNSView`). Five outbound methods:
+**Outbound** (native → web): `BridgeHandler` holds a `weak var webView: WKWebView?`. **It is written by the view alone** — registered in `WebView.makeNSView`, cleared in `WebView.dismantleNSView` under an identity guard, and deliberately **not** by `reset()`: two writers with no defined order wiped a live registration (see the two-writers gotcha). Its `didSet` drives the published `hasChannel`, which is what lets a menu gate restate the `guard let webView` it stands in for. Some of the outbound methods (the list below is illustrative, not a census — `grep '^    func ' BridgeHandler.swift`):
 - `goBack()` / `goForward()` — delegates to `webView?.goBack()` / `.goForward()`
 - `switchToTab(_ tab: Tab)` — calls `callAsyncJavaScript("window.switchToTab(tab)", ...)`
 - `menuAction(_ action: String, payload:)` — calls `callAsyncJavaScript("window.__bristlenose.menuAction(action, payload)", ...)`. Single dispatch point for all ~89 menu actions (security rule 3 — structured arguments, no string interpolation)
@@ -309,7 +309,9 @@ _This section said both were app-level, with ContentView holding them via `@Envi
 
 **`callAsyncJavaScript` has two overloads — choose by whether you read the result.** The async form is `(_:arguments:in:contentWorld:) async throws -> Any?` (second label `contentWorld:`); the completion-handler form is `(_:arguments:in:in:completionHandler:) -> Void` (both frame and world use `in:`). A `try await` call that **binds** the return value MUST use `contentWorld:` — writing `in: nil, in: .page` there silently resolves to the *completion* overload, whose `Void` result then won't bind (`conditional binding must have Optional type` — the TypeParity `__typeParityCollect` build break fixed in `991635c3`). Content world `.page` is required either way because `window.switchToTab` / `window.__bristlenose.menuAction` are installed by page-level JS, not a `WKUserScript`.
 
-**Known wrinkle (BridgeHandler):** `switchToTab` / `setLeftPanel` / `setLocale` / `menuAction` all write `try[?] await … in: nil, in: .page` — i.e. they `await`/`try` the *completion* overload. The JS still dispatches (fire-and-forget), but the `await`/`try` are no-ops and the `switchToTab` + `menuAction` `catch` blocks are **dead** (six `no 'async' operations occur within 'await'` + two `'catch' block is unreachable` warnings at build, on `BridgeHandler.swift:155/164/184/208/237/238`). Harmless today, but the inert error handling wants a dedicated fix — either make them real `contentWorld:` async calls (keep the `catch`) or drop the dead `try/await/catch`. Don't copy this pattern into new bridge calls.
+**Two spellings live in this file on purpose.** `switchToTab` and `menuAction` use the **real async overload** (`in: nil, contentWorld: .page`) and their `catch` blocks are live. Five `sync*`/`set*` pushers use `try? await … in: nil, in: .page`, where the `await`/`try` are inert because that spelling resolves to the *completion* overload; two more (`:447`, `:477`) call it plainly, which is the honest form. The rule that survives, stated at `BridgeHandler.swift:437`: **never write `try await … in: nil, in: .page`** — use `contentWorld:` if you want to catch, or drop the `try/await` if you don't.
+
+_Corrected 12 Sep 2026._ This paragraph used to say `switchToTab` / `setLeftPanel` / `setLocale` / `menuAction` all wrote the inert spelling and that two `catch` blocks were dead, citing `BridgeHandler.swift:155/164/184/208/237/238`. Every clause was false: the first and last moved to the real overload (`891823da`), **`setLeftPanel` does not exist**, the method is `syncLocale` not `setLocale`, and all six anchors point at unrelated `@Published` declarations. Measure the split with the two greps above rather than trusting a remembered count.
 
 **Report auto-reload after a run finishes — don't reach for `.id`.** When a run completes and the user *stays* on the project, the detail WebView is still on the serve's status page ("Nothing to see here, yet."). The serve re-imports the report on the `run_completed` terminus within ~1s and sets `last_run`, but the WebView never reloads itself. Three traps, all hit on the determinate-progress branch (`ContentView.scheduleReportReloadOnCompletion`):
 - **`.id(project.id)`-bump recreation does not reliably reload.** SwiftUI may *reuse* the `NSViewRepresentable` rather than recreate it, running `updateNSView` — whose `guard url != lastLoadedURL` short-circuits because the serve URL never changes. The bump silently no-ops. Reload directly via `bridgeHandler.reloadWebView()` (`reloadFromOrigin`, bypasses cache) instead.
@@ -370,7 +372,7 @@ Keyboard shortcuts: Cmd+1-5 (tabs) and Cmd+Opt+S (sidebar) live in the View menu
 **Responder chain rules:**
 - Do NOT touch `.pasteboard` — Cut/Copy/Paste handled by WKWebView responder chain
 - Undo/Redo hidden during `isEditing` to let Cmd+Z fall through to WKWebView
-- Cmd+F routes to web search bar (not native WKWebView find bar)
+- Cmd+F focuses the **native** Quotes search capsule and never crosses the bridge — `bridgeHandler.requestSearchFocus()` bumps a published counter `QuotesSearchToolbarControl` observes (12 Sep 2026; it previously dispatched `menuAction("find")` into a handler that queried an element embedded mode never renders, and so did nothing since it shipped). Lens-gated on `canSearch`. ⌘G/⇧⌘G were withdrawn in the same sweep — search here filters the grid, so there is no "next" to go to
 - Settings Cmd+, comes from the `Settings {}` scene automatically — no custom menu item
 
 **No bare-key menu shortcuts** — `s`, `h`, `[`, `]`, `m`, `?`, arrows work only in WKWebView focus. Menu items for these actions have no keyboard shortcut shown. Help menu points to `?` for the full shortcut reference.
@@ -894,20 +896,24 @@ See `docs/design-modularity.md` "External dev server" glossary entry for the imp
 Every menu action follows the same path:
 
 ```
-MenuCommands.swift                    → bridgeHandler.menuAction("find")
+MenuCommands.swift                    → bridgeHandler.menuAction("exportReport")
   ↓ callAsyncJavaScript
 bridge.ts                             → window.dispatchEvent(CustomEvent("bn:menu-action"))
   ↓ event listener
 AppLayout.tsx (or useKeyboardShortcuts) → React store call / DOM action
 ```
 
-**Swift side is complete** — all ~65 menu actions call `bridgeHandler.menuAction(...)`. Two frontend listeners handle them:
+**But not every menu command is a `menuAction` — there are four routes.** The bridge (above); a `Notification.Name` to `ContentView` (project ops); straight to AppKit (`PrintActions`); and **native to native**, where the target is a native control and nothing crosses the bridge. ⌘F is the first of those: `requestSearchFocus()` bumps a published counter the Quotes search capsule observes. Reach for it whenever the thing the command operates on already lives in Swift — routing through the SPA and back is how ⌘F spent its whole life dispatching cleanly into nothing.
+
+_The worked example above was `menuAction("find")` until 12 Sep 2026, which by then was the one action that had just been deleted from both ends._
+
+Most menu actions do take the bridge route. Two frontend listeners handle them:
 - **`AppLayout.tsx`** — panel toggles, find actions, and modal/export actions (things that need AppLayout state)
 - **`useKeyboardShortcuts.ts`** — quote/player actions (things that need FocusContext/QuotesContext closures)
 
 ### Adding a new handler
 
-1. **No Swift changes needed** — the menu item already dispatches via `bridgeHandler.menuAction("actionName")`
+1. **Usually no Swift changes needed** — most menu items already dispatch via `bridgeHandler.menuAction("actionName")`. The exception is a command whose target is a *native* control: that needs a `@Published` counter on `BridgeHandler` plus an `.onChange` in the control, and no bridge hop at all (see the four routes above)
 2. **Choose the right listener** — if the handler needs FocusContext/QuotesContext/PlayerContext, add it to `useKeyboardShortcuts.ts`'s `handleMenuAction` switch. Otherwise add it to `AppLayout.tsx`'s `bn:menu-action` handler
 3. **Delegate to existing logic** — most actions already have implementations in `useKeyboardShortcuts.ts` or React stores
 
@@ -916,7 +922,7 @@ AppLayout.tsx (or useKeyboardShortcuts) → React store call / DOM action
 See `docs/design-desktop-menu-actions.md` for the full catalogue (65+ actions across AppLayout, useKeyboardShortcuts, project ops, codebook stubs, edit ops), payload conventions, `getState()` stubs, and recommended implementation order.
 
 **Quick pointers:**
-- AppLayout (`bn:menu-action` handler) owns panel toggles, find actions, modals, exports, zoom, dark-mode toggle, codebook dispatches
+- AppLayout (`bn:menu-action` handler) owns panel toggles, modals, exports, zoom, dark-mode toggle, codebook dispatches. **Not the Find family any more** — ⌘F is native, ⌘G/⇧⌘G are withdrawn, and ⌘E's `focusSearchInput()` half is inert in embedded mode (correct in the browser, where the SPA renders its own SearchBox)
 - `useKeyboardShortcuts.ts` (`handleMenuAction` switch) owns quote/player actions that need FocusContext/QuotesContext/PlayerContext closures
 - Payloads only for data the native side has that the web side doesn't (e.g. `findNext` text from `NSPasteboard.find`)
 

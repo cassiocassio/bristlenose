@@ -154,6 +154,12 @@ included; the second path is mostly wired already.
   swap "Resuming…" makes in the indeterminate gap.
 - Clip and thumbnail sites: the wait is on-demand and short; a label there is
   optional, and clip export has its own progress.
+- **The failure half is already wired.** A fetch that times out reaches the Mac
+  as the `cloud_fetch` failure category (`events.py`, mirrored in
+  `PipelineSummary.swift`), kept deliberately distinct from a probe failure
+  because the remedies are opposite — wait or check the provider, versus
+  re-export the recording. Only the *waiting* state has no channel; that is the
+  whole of what this path adds.
 
 **Path (a) — the drag-in copy. A day; nothing exists.**
 

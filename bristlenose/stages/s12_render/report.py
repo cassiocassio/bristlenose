@@ -10,7 +10,6 @@ import json
 import logging
 import shutil
 import warnings
-from datetime import datetime, timezone
 from pathlib import Path
 
 from bristlenose.coverage import calculate_coverage
@@ -59,6 +58,7 @@ from bristlenose.stages.s12_render.transcript_pages import (
     render_transcript_pages,
 )
 from bristlenose.utils.markdown import format_finder_date
+from bristlenose.utils.timecodes import local_now
 
 logger = logging.getLogger(__name__)
 
@@ -161,7 +161,7 @@ def render_html(
     ))
 
     # --- Header ---
-    now = datetime.now(timezone.utc)
+    now = local_now()
     if people and people.participants:
         n_participants = sum(1 for k in people.participants if k.startswith("p"))
     else:

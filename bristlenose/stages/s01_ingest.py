@@ -16,7 +16,7 @@ from bristlenose.models import (
     classify_file,
 )
 from bristlenose.refusals import MESSAGES, UnusableReason
-from bristlenose.utils.audio import probe_duration, probe_time_meta
+from bristlenose.utils.audio import probe_media
 from bristlenose.utils.fs import is_bristlenose_artefact, is_dataless
 
 logger = logging.getLogger(__name__)
@@ -254,11 +254,11 @@ def _try_add_file(
     duration: float | None = None
     container_meta = None
     if file_type in (FileType.AUDIO, FileType.VIDEO) and not is_dataless(path):
-        duration = probe_duration(path)
-        # Capture only — the recorder's own timestamp, zone and writer identity
-        # (docs/design-timezones.md § 5.1). session_date is not derived from it
-        # yet; that is § 5.4's resolver, once the writer table is measured.
-        container_meta = probe_time_meta(path)
+        # One ffprobe: duration plus the container's own timestamp, zone and
+        # writer identity (docs/design-timezones.md § 5.1). The meta is capture
+        # only — session_date is not derived from it yet; that is § 5.4's
+        # resolver, once the writer table is measured.
+        duration, container_meta = probe_media(path)
 
     files.append(
         InputFile(

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
 from pathlib import Path
 
 from bristlenose.models import (
@@ -30,6 +29,7 @@ from bristlenose.utils.markdown import (
     format_participant_range,
     format_quote_block,
 )
+from bristlenose.utils.timecodes import local_now
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ def render_markdown(
     # Header
     lines.append(HEADING_1.format(title=project_name))
     lines.append("")
-    lines.append(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d')}")
+    lines.append(f"Generated: {local_now().strftime('%Y-%m-%d')}")
     if people and people.participants:
         _n_p = sum(1 for k in people.participants if k.startswith("p"))
     else:
@@ -175,7 +175,7 @@ def render_markdown(
     lines.append(HEADING_2.format(title="Appendix: Session summary"))
     lines.append("")
 
-    now = datetime.now(timezone.utc)
+    now = local_now()
     # Build session_id → sorted speaker codes from people entries.
     _session_codes: dict[str, list[str]] = {}
     if people and people.participants:

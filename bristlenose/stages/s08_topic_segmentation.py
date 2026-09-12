@@ -147,7 +147,7 @@ async def _segment_single(
             timecode_seconds = parse_timecode(item.timecode)
         except ValueError:
             logger.warning(
-                "boundary_timecode_unparseable | session=%s | raw=%s",
+                "boundary_timecode_unparseable | session=%s | raw=%r",
                 transcript.session_id, item.timecode,
             )
             repairs["unparseable"] += 1

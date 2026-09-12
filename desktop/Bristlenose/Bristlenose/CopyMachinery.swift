@@ -30,12 +30,36 @@ final class CopyMachinery: ObservableObject {
 
     enum Phase: Equatable { case copying, cancelling }
 
-    /// Domain errors. Carries enough state to render a localised alert
-    /// without forcing the call-site to format byte counts itself.
-    enum CopyError: Error {
+    /// Domain errors. `LocalizedError`, so every case renders a sentence
+    /// wherever it is caught: `error.localizedDescription` resolves through
+    /// `errorDescription` instead of Foundation's enum-index fallback
+    /// ("…CopyError error 1."), and both catch sites in ContentView read the
+    /// same words for the same failure. Pinned by CopyErrorSurfacingTests;
+    /// the divergence this closed is in docs/design-copy-error-surfacing.md.
+    enum CopyError: LocalizedError {
+        /// Still carries the counts so the disk-space alert can format them.
         case insufficientDiskSpace(needed: Int64, available: Int64)
         case noItemsAfterFiltering
-        case underlying(String)
+        case alreadyInFlight
+        /// The error a file operation threw, carried whole so a caller can
+        /// discriminate by domain and code. The sentence is the error's own.
+        case underlying(Error)
+
+        nonisolated var errorDescription: String? {
+            switch self {
+            case .insufficientDiskSpace(let needed, let available):
+                let f = ByteCountFormatter()
+                f.countStyle = .file
+                return "Not enough free space: needs \(f.string(fromByteCount: needed)), "
+                    + "\(f.string(fromByteCount: available)) available."
+            case .noItemsAfterFiltering:
+                return "None of the dropped items is a file Bristlenose can import."
+            case .alreadyInFlight:
+                return "Another copy is already in flight."
+            case .underlying(let error):
+                return error.localizedDescription
+            }
+        }
     }
 
     @Published private(set) var inFlight: InFlight?
@@ -61,7 +85,7 @@ final class CopyMachinery: ObservableObject {
         acceptedExtensions: Set<String>
     ) async throws -> [URL] {
         guard inFlight == nil else {
-            throw CopyError.underlying("Another copy is already in flight.")
+            throw CopyError.alreadyInFlight
         }
 
         // Planning + precheck — all on main; cheap.
@@ -120,7 +144,7 @@ final class CopyMachinery: ObservableObject {
                 throw CancellationError()
             } catch {
                 await CopyMachinery.rollback(written: written, logger: machineryLogger)
-                throw CopyError.underlying(error.localizedDescription)
+                throw CopyError.underlying(error)
             }
         }
         self.currentTask = task

@@ -37,7 +37,7 @@
     "local_model_not_pulled": "O modelo local solicitado não foi transferido. Execute `ollama pull <model>` para o transferir (verifique o nome do modelo no bristlenose.toml ou --llm-model) e execute novamente. Subjacente: {message}."
   },
   "pii": {
-    "downloading": "A transferir detetor de PII (~12 MB, uma única vez)..."
+    "downloading": "A transferir detetor de PII (~400 MB, uma única vez)..."
   },
   "closing": {
     "no_more_questions": "Sem mais perguntas.{estimate_suffix} Ctrl+C a qualquer momento."

@@ -37,7 +37,7 @@
     "local_model_not_pulled": "İstenen yerel model çekilmemiş. İndirmek için `ollama pull <model>` komutunu çalıştırın (model adını bristlenose.toml içinde ya da --llm-model ile denetleyin), ardından yeniden çalıştırın. Altta yatan neden: {message}."
   },
   "pii": {
-    "downloading": "Kişisel bilgi algılayıcısı indiriliyor (~12 MB, tek seferlik)..."
+    "downloading": "Kişisel bilgi algılayıcısı indiriliyor (~400 MB, tek seferlik)..."
   },
   "closing": {
     "no_more_questions": "Başka soru yok.{estimate_suffix} İstediğiniz zaman Ctrl+C."

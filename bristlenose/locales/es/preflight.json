@@ -37,7 +37,7 @@
     "local_model_not_pulled": "El modelo local solicitado no est\u00e1 descargado. Ejecuta `ollama pull <model>` para descargarlo (mira el nombre del modelo en bristlenose.toml o en --llm-model) y vuelve a ejecutar. Causa: {message}."
   },
   "pii": {
-    "downloading": "Descargando el detector de PII (~12 MB, una sola vez)\u2026"
+    "downloading": "Descargando el detector de PII (~400 MB, una sola vez)\u2026"
   },
   "closing": {
     "no_more_questions": "No hay m\u00e1s preguntas.{estimate_suffix} Ctrl+C en cualquier momento."

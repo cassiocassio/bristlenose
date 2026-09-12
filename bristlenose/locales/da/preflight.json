@@ -37,7 +37,7 @@
     "local_model_not_pulled": "Den ønskede lokale model er ikke hentet. Kør `ollama pull <model>` for at downloade den (tjek modelnavnet i bristlenose.toml eller --llm-model), og kør igen. Underliggende: {message}."
   },
   "pii": {
-    "downloading": "Downloader detektor for personoplysninger (~12 MB, engangs)..."
+    "downloading": "Downloader detektor for personoplysninger (~400 MB, engangs)..."
   },
   "closing": {
     "no_more_questions": "Ikke flere spørgsmål.{estimate_suffix} Ctrl+C når som helst."

@@ -37,7 +37,7 @@
     "local_model_not_pulled": "Požadovaný místní model není stažen. Spusťte `ollama pull <model>` pro jeho stažení (zkontrolujte název modelu v bristlenose.toml nebo --llm-model) a spusťte znovu. Příčina: {message}."
   },
   "pii": {
-    "downloading": "Stahování detektoru osobních údajů (~12 MB, jednorázově)..."
+    "downloading": "Stahování detektoru osobních údajů (~400 MB, jednorázově)..."
   },
   "closing": {
     "no_more_questions": "Žádné další otázky.{estimate_suffix} Ctrl+C kdykoli."

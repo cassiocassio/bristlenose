@@ -37,7 +37,7 @@
     "local_model_not_pulled": "Il modello locale richiesto non è stato scaricato. Esegui `ollama pull <model>` per scaricarlo (controlla il nome del modello in bristlenose.toml o --llm-model), poi esegui di nuovo. Dettaglio: {message}."
   },
   "pii": {
-    "downloading": "Download del rilevatore di dati personali in corso (~12 MB, una sola volta)..."
+    "downloading": "Download del rilevatore di dati personali in corso (~400 MB, una sola volta)..."
   },
   "closing": {
     "no_more_questions": "Nessun'altra domanda.{estimate_suffix} Ctrl+C in qualsiasi momento."

@@ -37,7 +37,7 @@
     "local_model_not_pulled": "Das angeforderte lokale Modell ist nicht geladen. Holen Sie es mit `ollama pull <model>` (den Modellnamen finden Sie in bristlenose.toml oder unter --llm-model) und f\u00fchren Sie den Befehl erneut aus. Ursache: {message}."
   },
   "pii": {
-    "downloading": "PII-Erkennung wird geladen (~12 MB, einmalig)\u2026"
+    "downloading": "PII-Erkennung wird geladen (~400 MB, einmalig)\u2026"
   },
   "closing": {
     "no_more_questions": "Keine weiteren Fragen.{estimate_suffix} Jederzeit mit Ctrl+C abbrechen."

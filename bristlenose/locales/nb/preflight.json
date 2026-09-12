@@ -37,7 +37,7 @@
     "local_model_not_pulled": "Den forespurte lokale modellen er ikke hentet. Kjør `ollama pull <model>` for å laste den ned (sjekk modellnavnet i bristlenose.toml eller --llm-model), og kjør deretter på nytt. Underliggende: {message}."
   },
   "pii": {
-    "downloading": "Laster ned detektor for personopplysninger (~12 MB, engangs) …"
+    "downloading": "Laster ned detektor for personopplysninger (~400 MB, engangs) …"
   },
   "closing": {
     "no_more_questions": "Ingen flere spørsmål.{estimate_suffix} Ctrl+C når som helst."

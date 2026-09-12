@@ -37,7 +37,7 @@
     "local_model_not_pulled": "Le mod\u00e8le local demand\u00e9 n\u2019est pas t\u00e9l\u00e9charg\u00e9. Lancez `ollama pull <model>` pour le r\u00e9cup\u00e9rer (le nom du mod\u00e8le figure dans bristlenose.toml ou dans --llm-model), puis relancez. Cause : {message}."
   },
   "pii": {
-    "downloading": "T\u00e9l\u00e9chargement du d\u00e9tecteur de donn\u00e9es personnelles (~12 Mo, une seule fois)\u2026"
+    "downloading": "T\u00e9l\u00e9chargement du d\u00e9tecteur de donn\u00e9es personnelles (~400 Mo, une seule fois)\u2026"
   },
   "closing": {
     "no_more_questions": "Plus de questions.{estimate_suffix} Ctrl+C \u00e0 tout moment."

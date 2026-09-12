@@ -37,7 +37,7 @@
     "local_model_not_pulled": "Het gevraagde lokale model is niet opgehaald. Voer `ollama pull <model>` uit om het te downloaden (controleer de modelnaam in bristlenose.toml of --llm-model) en voer opnieuw uit. Onderliggend: {message}."
   },
   "pii": {
-    "downloading": "PII-detector wordt gedownload (~12 MB, eenmalig)..."
+    "downloading": "PII-detector wordt gedownload (~400 MB, eenmalig)..."
   },
   "closing": {
     "no_more_questions": "Geen vragen meer.{estimate_suffix} Ctrl+C wanneer je wilt."

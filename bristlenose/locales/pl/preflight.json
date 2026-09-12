@@ -37,7 +37,7 @@
     "local_model_not_pulled": "Żądany model lokalny nie został pobrany. Uruchom `ollama pull <model>`, aby go pobrać (sprawdź nazwę modelu w bristlenose.toml lub --llm-model), a następnie uruchom ponownie. Szczegóły: {message}."
   },
   "pii": {
-    "downloading": "Pobieranie detektora danych osobowych (~12 MB, jednorazowo)..."
+    "downloading": "Pobieranie detektora danych osobowych (~400 MB, jednorazowo)..."
   },
   "closing": {
     "no_more_questions": "Brak dalszych pytań.{estimate_suffix} Ctrl+C w dowolnej chwili."

@@ -37,7 +37,7 @@
     "local_model_not_pulled": "El model local sol·licitat no s'ha baixat. Executa `ollama pull <model>` per baixar-lo (comprova el nom del model a bristlenose.toml o --llm-model) i torna a executar-ho. Causa: {message}."
   },
   "pii": {
-    "downloading": "S'està baixant el detector de dades personals (~12 MB, només un cop)..."
+    "downloading": "S'està baixant el detector de dades personals (~400 MB, només un cop)..."
   },
   "closing": {
     "no_more_questions": "No hi ha més preguntes.{estimate_suffix} Ctrl+C quan vulguis."

@@ -37,7 +37,7 @@
     "local_model_not_pulled": "Den begärda lokala modellen är inte hämtad. Kör `ollama pull <model>` för att ladda ner den (kontrollera modellnamnet i bristlenose.toml eller --llm-model) och kör sedan igen. Underliggande: {message}."
   },
   "pii": {
-    "downloading": "Laddar ner PII-detektor (~12 MB, engångs)..."
+    "downloading": "Laddar ner PII-detektor (~400 MB, engångs)..."
   },
   "closing": {
     "no_more_questions": "Inga fler frågor.{estimate_suffix} Ctrl+C när som helst."

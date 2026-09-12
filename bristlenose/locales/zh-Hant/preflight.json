@@ -37,7 +37,7 @@
     "local_model_not_pulled": "所要求的本機模型尚未下載。請執行 `ollama pull <model>` 下載（請在 bristlenose.toml 或 --llm-model 中確認模型名稱）後重新執行。底層錯誤：{message}。"
   },
   "pii": {
-    "downloading": "正在下載個人識別資訊偵測器（約 12 MB，僅一次）…"
+    "downloading": "正在下載個人識別資訊偵測器（約 400 MB，僅一次）…"
   },
   "closing": {
     "no_more_questions": "沒有其他問題了。{estimate_suffix} 可隨時按 Ctrl+C。"

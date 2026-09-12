@@ -651,7 +651,9 @@ def check_pii(settings: BristlenoseSettings) -> CheckResult:
     try:
         import spacy
 
-        spacy.load("en_core_web_sm")
+        from bristlenose.stages.s07_pii_removal import SPACY_MODEL
+
+        spacy.load(SPACY_MODEL)
     except ImportError:
         return CheckResult(
             status=CheckStatus.FAIL,
@@ -663,7 +665,7 @@ def check_pii(settings: BristlenoseSettings) -> CheckResult:
         return CheckResult(
             status=CheckStatus.FAIL,
             label="PII redaction",
-            detail="spaCy model en_core_web_sm not found",
+            detail=f"spaCy model {SPACY_MODEL} not found",
             fix_key="spacy_model_missing",
         )
     except Exception:
@@ -676,7 +678,7 @@ def check_pii(settings: BristlenoseSettings) -> CheckResult:
 
     spacy_model_version = ""
     try:
-        nlp = spacy.load("en_core_web_sm")
+        nlp = spacy.load(SPACY_MODEL)
         spacy_model_version = nlp.meta.get("version", "")
     except Exception:
         pass
@@ -687,9 +689,9 @@ def check_pii(settings: BristlenoseSettings) -> CheckResult:
     else:
         parts.append("presidio")
     if spacy_model_version:
-        parts.append(f"spaCy en_core_web_sm {spacy_model_version}")
+        parts.append(f"spaCy {SPACY_MODEL} {spacy_model_version}")
     else:
-        parts.append("spaCy en_core_web_sm")
+        parts.append(f"spaCy {SPACY_MODEL}")
 
     return CheckResult(
         status=CheckStatus.OK,

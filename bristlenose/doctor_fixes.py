@@ -282,7 +282,7 @@ def _fix_spacy_model_missing(method: str) -> str:
     if method == "rpm":
         return (
             "spaCy model not found — this is a bug in the RPM package, which\n"
-            "bundles en_core_web_sm.\n"
+            "bundles en_core_web_lg.\n"
             "  sudo dnf reinstall bristlenose\n"
             "If it persists: github.com/cassiocassio/bristlenose/issues"
         )
@@ -296,12 +296,12 @@ def _fix_spacy_model_missing(method: str) -> str:
         return (
             "PII redaction needs a spaCy language model.\n\n"
             "  $(brew --prefix bristlenose)/libexec/bin/python "
-            "-m spacy download en_core_web_sm\n\n"
+            "-m spacy download en_core_web_lg\n\n"
             "Or ignore this if you don't need PII redaction."
         )
     return (
         "PII redaction needs a spaCy language model.\n\n"
-        "  python3 -m spacy download en_core_web_sm\n\n"
+        "  python3 -m spacy download en_core_web_lg\n\n"
         "Or ignore this if you don't need PII redaction."
     )
 

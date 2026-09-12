@@ -1527,11 +1527,11 @@ class TestGetFixGrid:
     def test_spacy_model_missing_brew(self) -> None:
         fix = get_fix("spacy_model_missing", "brew")
         assert "brew --prefix" in fix
-        assert "spacy download en_core_web_sm" in fix
+        assert "spacy download en_core_web_lg" in fix
 
     def test_spacy_model_missing_pip(self) -> None:
         fix = get_fix("spacy_model_missing", "pip")
-        assert "python3 -m spacy download en_core_web_sm" in fix
+        assert "python3 -m spacy download en_core_web_lg" in fix
         assert "brew" not in fix
 
     # -- presidio_missing: same for all methods --

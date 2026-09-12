@@ -26,12 +26,17 @@ logger = logging.getLogger(__name__)
 # fetched 12 MB of ``sm`` and then pulled 400 MB of ``lg`` implicitly
 # (recorded in docs/design-redact-pii.md, 26 Jul 2026). It is now load-bearing:
 # the engine below is bound to it explicitly, so fetched == used, always.
-_SPACY_MODEL = "en_core_web_lg"
-_SPACY_MODEL_SIZE_HUMAN = "~400 MB"
+SPACY_MODEL = "en_core_web_lg"
+SPACY_MODEL_SIZE_HUMAN = "~400 MB"
+# Public: doctor probes and recommends this same model. It lived in five
+# doctor sites and three doctor_fixes sites as the literal "en_core_web_sm"
+# while the pipeline loaded lg, so `doctor` could call the stack healthy on
+# a machine that would then pull 400 MB mid-run — and, after the model was
+# reconciled, could fail preflight on a machine that was actually correct.
 
 
 def _ensure_spacy_model() -> None:
-    """Probe spaCy for :data:`_SPACY_MODEL`; lazily download it on first run.
+    """Probe spaCy for :data:`SPACY_MODEL`; lazily download it on first run.
 
     The model is ~400 MB. This docstring used to reason about 12 MB and pick the
     one-line inline treatment on that basis — the wrong model and so the wrong
@@ -51,7 +56,7 @@ def _ensure_spacy_model() -> None:
     from bristlenose.utils.package_install import ensure_spacy_model
 
     try:
-        spacy.load(_SPACY_MODEL)
+        spacy.load(SPACY_MODEL)
         return
     except OSError:
         pass
@@ -70,7 +75,7 @@ def _ensure_spacy_model() -> None:
     )
     t0 = time.perf_counter()
     try:
-        ensure_spacy_model(_SPACY_MODEL)
+        ensure_spacy_model(SPACY_MODEL)
     except Exception:
         console.print(f" {cli_prefix(MessageKind.ERROR)}")
         raise
@@ -78,7 +83,7 @@ def _ensure_spacy_model() -> None:
     console.print(f" {cli_prefix(MessageKind.SUCCESS)} [{elapsed:.0f}s]")
 
     # Re-load to confirm Presidio's later spacy.load() will succeed (finding 23).
-    spacy.load(_SPACY_MODEL)
+    spacy.load(SPACY_MODEL)
 
 # Mapping from Presidio entity types to our redaction labels
 _ENTITY_MAP: dict[str, str] = {
@@ -432,13 +437,13 @@ def _init_presidio(
     from presidio_analyzer.nlp_engine import NlpEngineProvider
     from presidio_anonymizer import AnonymizerEngine
 
-    # Bind the analyzer to _SPACY_MODEL explicitly. A bare AnalyzerEngine()
+    # Bind the analyzer to SPACY_MODEL explicitly. A bare AnalyzerEngine()
     # silently takes Presidio's own default, which is what let the fetched and
     # the used model diverge in the first place.
     provider = NlpEngineProvider(
         nlp_configuration={
             "nlp_engine_name": "spacy",
-            "models": [{"lang_code": "en", "model_name": _SPACY_MODEL}],
+            "models": [{"lang_code": "en", "model_name": SPACY_MODEL}],
         }
     )
     analyzer = AnalyzerEngine(nlp_engine=provider.create_engine())

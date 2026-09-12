@@ -440,6 +440,19 @@ Team-ID prefix needs no profile, so it is the route that works on every channel.
 Then Identifiers → `app.bristlenose` → enable the **App Groups** capability and
 select the group.
 
+> ⚠️ **One capability per Save, and read it back from a fresh page load.**
+> Learned the hard way, 12 Sep 2026. The capabilities page submits the *whole*
+> form, so a second Save can silently drop what the first one set: App Groups was
+> enabled and confirmed showing **(1)**, then a separate Save that only unticked
+> Associated Domains reverted it — with no error, and the page still reading as
+> though it had worked. Everything downstream then failed confusingly: the
+> regenerated profile carried no app group, and the generate page's *Enabled
+> Capabilities* quietly listed only In-App Purchase.
+>
+> So: change one capability, Save, **reload**, and confirm it stuck. The
+> post-save UI is not evidence — the same rule as `CredentialStore.set()`
+> returning cleanly, which this codebase already learned once.
+
 **We do not already have this — but we have its neighbour, which de-risks it.**
 `Bristlenose.entitlements` holds exactly one key today, and the shipping
 Developer-ID `.dmg` carries it signed and notarised:

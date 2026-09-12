@@ -280,32 +280,41 @@
  * Ordered BEFORE `.merge-target` deliberately: both are (0,2,0) in this file,
  * and a row that is both focused and a live merge target should show the
  * merge target — that state is momentary and destructive, the cursor is not. */
-.tag-row.bn-selected {
-    box-shadow: inset 2px 0 0 var(--bn-selection-border);
+/* The code cursor marks the CHIP, not the row it sits in.
+ *
+ * It was a 2px bar at the row's left edge — 4px of padding away from the chip,
+ * so it read as a leftover rather than a cursor, and it stayed visible after a
+ * rename committed (focus correctly survives the edit) where it looked like
+ * something had failed to clear.
+ *
+ * An `outline` is what makes this possible at all, and it is why the "solid
+ * accent pill" the mockup asks for was previously recorded as blocked: `Badge`
+ * applies its codebook tint as an inline `backgroundColor`, which no class can
+ * beat — the same trap that made the card's wash invisible — but an outline
+ * does not compete with a background at all. And this is not a new treatment:
+ * the tag-suggest dropdown already marks its keyboard target exactly this way
+ * (`molecules/tag-input.css:81`, "Active pill: stronger contrast to indicate
+ * keyboard selection"). One idiom, two places.
+ *
+ * `.bn-selected`'s own wash still lands on the row and is left alone: it
+ * measures ~1.01:1 against the card, so it is imperceptible rather than wrong,
+ * and removing it would mean fighting the atom for no visible gain. */
+.tag-row.bn-selected .badge {
+    outline: 2px solid var(--bn-selection-border);
+    outline-offset: 1px;
 }
 
-.bn-window-inactive .tag-row.bn-selected {
-    box-shadow: inset 2px 0 0 var(--bn-selection-border-inactive);
+.bn-window-inactive .tag-row.bn-selected .badge {
+    outline-color: var(--bn-selection-border-inactive);
 }
 
-/* Same stand-down as the card, and here it is the more visible fault. The row
- * bar sits at the row's left edge — 4px of padding outside the chip — so while
- * a chip is being renamed you get a 2px stub at the far left, detached from the
- * field drawing its own ring. It reads as a leftover, not a cursor.
- *
- * The bar earns its keep in the RESTING state, though, and must not be removed
- * outright: it is the only feedback for the two-click rule. Without it a first
- * click on a chip appears to do nothing, which is the invisible-cursor defect
- * this feature was built to remove.
- *
- * The better answer, recorded and not taken: the mockup marks a focused chip as
- * a SOLID accent pill (`codes-menu-focus.html:80`) — marking the code itself
- * rather than the row it happens to sit in. `Badge` applies its colour as an
- * inline `backgroundColor`, so a class cannot beat it; doing that properly
- * means `Badge` emitting a custom property instead, which touches every badge
- * in the app. Worth doing, not worth doing casually. */
-.tag-row.bn-selected:focus-within {
-    box-shadow: none;
+/* While a field inside the row has focus, the chip's outline stands down —
+ * the field draws its own keyline and two rings on one object is the fault
+ * this card has now been through three times. Note `.tag-edit-inline` also
+ * carries `.badge`, so without this the editing field would wear the cursor
+ * outline as well as its own border. */
+.tag-row.bn-selected:focus-within .badge {
+    outline: none;
 }
 
 .tag-row.merge-target {
@@ -333,12 +342,25 @@
 }
 
 /* Inline tag rename — matches badge dimensions */
+/* Re-editing an existing code should look like typing a new one.
+ *
+ * It did not. This element carries `.badge` for its metrics, so it inherited
+ * `--bn-colour-badge-bg` — a grey panel — and its ring was `--bn-focus-ring`,
+ * which is `0 0 0 2px rgba(0, 122, 255, 0.12)`: twelve per cent alpha, so
+ * "obscured" was the token doing exactly what it says rather than a rendering
+ * accident. Against a tinted card it reads as nothing.
+ *
+ * A field being edited is a field: page background, one solid accent keyline.
+ * `outline: none` stays — the keyline IS the focus indication, and a browser
+ * outline on top of it would be the double ring again. */
 .tag-edit-inline {
     font-family: var(--bn-font-mono);
     outline: none;
     border-radius: var(--bn-radius-sm);
-    box-shadow: var(--bn-focus-ring);
     min-width: 3em;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-accent);
+    box-shadow: none;
 }
 
 /* Micro histogram bar + count */

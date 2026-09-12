@@ -174,6 +174,105 @@ check("a VACUOUS result is a failure, not a pass",
       lambda: not any(st.substantive(_Empty()) for st in fx.STAGES),
       "validating is not answering — an empty list is how a stage ships an empty report")
 
+print("\n\033[1mpreflight — the second request builder runs FIRST, through its own code\033[0m")
+import types  # noqa: E402
+
+from bristlenose.preflight.api_key import ValidationResult  # noqa: E402
+
+THE_4SEP_MESSAGE = ("Unsupported parameter: 'max_tokens' is not supported with this model. "
+                    "Use 'max_completion_tokens' instead.")
+
+
+class _FakeStage:
+    key = "s00:fake"
+    model = object
+
+    @staticmethod
+    def prompts():
+        return ("system", "user")
+
+    @staticmethod
+    def substantive(_result):
+        return True
+
+
+class _ClientNotReached:
+    """If preflight said no, no client is built and analyze() never runs."""
+
+    def __init__(self, _settings):
+        raise AssertionError("LLMClient was built before preflight said yes")
+
+    async def analyze(self, **_kw):
+        raise AssertionError("analyze() ran first")
+
+
+class _ClientOk:
+    def __init__(self, _settings):
+        pass
+
+    async def analyze(self, **_kw):
+        return object()
+
+
+def _settings(**kw):
+    return types.SimpleNamespace(llm_provider=kw["llm_provider"], llm_model=kw["llm_model"],
+                                 openai_api_key="not-a-real-key")
+
+
+def probe(validator, client):
+    """Drive the REAL check() offline: settings, the validator and the client are stubbed."""
+    saved = (cpl.load_settings, cpl.preflight._validate_openai, cpl.LLMClient, dict(cpl.BY_KEY))
+    cpl.load_settings, cpl.preflight._validate_openai, cpl.LLMClient = _settings, validator, client
+    cpl.BY_KEY["s00:fake"] = _FakeStage
+    try:
+        return asyncio.run(cpl.check("openai", "gpt-5.6-terra", ("s00:fake",)))
+    finally:
+        cpl.load_settings, cpl.preflight._validate_openai, cpl.LLMClient = saved[:3]
+        cpl.BY_KEY.clear()
+        cpl.BY_KEY.update(saved[3])
+
+
+v, d = probe(lambda key, model: ValidationResult(ok=False, error_class="model_unavailable",
+                                                 raw_message=THE_4SEP_MESSAGE), _ClientNotReached)
+check("the 4 Sep preflight-only break is red, and analyze() is never reached",
+      lambda: v == "FAIL" and "preflight" in d and "max_completion_tokens" in d, d)
+check("...classified as ii.exists, preflight's own bucket mapped onto the questions",
+      lambda: d.startswith("ii.exists"), d)
+v, d = probe(lambda key, model: ValidationResult(ok=True), _ClientOk)
+check("preflight ok -> the stage runs -> PASS names both",
+      lambda: v == "PASS" and "preflight+fake" in d, d)
+v, d = probe(lambda key, model: ValidationResult(ok=False, error_class="invalid_key",
+                                                 raw_message="Incorrect API key provided"),
+             _ClientNotReached)
+check("a dead key is i.alive, from preflight, before any stage call",
+      lambda: v == "FAIL" and d.startswith("i.alive"), d)
+v, d = probe(lambda key, model: ValidationResult(
+    ok=False, error_class=None,
+    raw_message="models/gemini-2.5-pro is not found for API version v1beta"), _ClientNotReached)
+check("an unbucketed preflight error falls through to classify()",
+      lambda: v == "FAIL" and d.startswith("ii.exists"), d)
+seen: dict[str, str] = {}
+
+
+def _spy(key, model):
+    seen.update(key=key, model=model)
+    return ValidationResult(ok=True)
+
+
+probe(_spy, _ClientOk)
+check("preflight is asked with the MODEL UNDER TEST, not a fixed cheap one",
+      lambda: seen.get("model") == "gpt-5.6-terra", str(seen))
+check("...and with the key the client will use", lambda: seen.get("key") == "not-a-real-key")
+_saved_key_for = cpl.preflight._api_key_for
+cpl.preflight._api_key_for = lambda _s: ("", "")
+try:
+    v, d = probe(lambda key, model: (_ for _ in ()).throw(AssertionError("validator ran with no key")),
+                 _ClientNotReached)
+finally:
+    cpl.preflight._api_key_for = _saved_key_for
+check("no key -> a FAIL that says so; no validator call, no client",
+      lambda: v == "FAIL" and "no key" in d and "AssertionError" not in d, d)
+
 print("\n\033[1mmain — the exit codes, which are what a caller reads\033[0m")
 swift(REAL_SWIFT)
 code, out = run([], {})

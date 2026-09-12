@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Live check of every shipped (provider, model): alive, exists, right shape.
 
-Three questions, one real call each, through the actual ``LLMClient.analyze()``:
+Three questions, asked twice per model: first by preflight's own one-token call --
+the request ``bristlenose run`` makes before anything else -- then by a real stage
+call through the actual ``LLMClient.analyze()``:
 
   i.   alive   — the key is accepted at all
   ii.  exists  — the model id still resolves (vendors soft-retire without notice:
@@ -28,10 +30,14 @@ Exit 2 = could not enumerate (a parse or key-presence problem, not a model one).
 Not a CI gate — CI has no keys. Run it before a release, or on a cadence.
 
 TWO KNOWN BLIND SPOTS (5 Sep 2026):
-  - This calls ``LLMClient.analyze()`` directly and SKIPS ``preflight/api_key.py``,
-    which has its own request builder. The night the ChatGPT default moved,
-    preflight sent ``max_tokens=1`` to a GPT-5-class model and every run aborted
-    there with a 400 — and this script said 7/7. Exercise preflight too.
+  - CLOSED 12 Sep 2026. This used to call ``LLMClient.analyze()`` directly and
+    SKIP ``preflight/api_key.py``, which has its own request builder. The night
+    the ChatGPT default moved, preflight sent ``max_tokens=1`` to a GPT-5-class
+    model and every run aborted there with a 400 -- and this script said 7/7.
+    ``run_preflight`` now asks preflight's own ``_validate_<provider>`` first,
+    with the same key and the model under test, before the client is built;
+    ``test-providers-live.py`` proves the order offline. The two request
+    builders are checked together, not unified -- that is still owed.
   - CLOSED 5 Sep 2026. The hand-written USER prompt is gone; every call now uses
     a real stage template from ``bristlenose/llm/prompts/`` via
     ``get_prompt_template``, the real ``wrap_untrusted`` envelope and the real
@@ -61,8 +67,9 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from live_check_fixture import BY_KEY, STAGES  # noqa: E402
 
-from bristlenose.config import load_settings  # noqa: E402
+from bristlenose.config import BristlenoseSettings, load_settings  # noqa: E402
 from bristlenose.llm.client import LLMClient  # noqa: E402
+from bristlenose.preflight import api_key as preflight  # noqa: E402
 from bristlenose.providers import PROVIDERS  # noqa: E402
 
 SWIFT = ROOT / "desktop/Bristlenose/Bristlenose/LLMProvider.swift"
@@ -115,17 +122,61 @@ def classify(exc: Exception) -> str:
     return "iii.shape"
 
 
+# Preflight's own buckets, mapped onto the three questions. Anything outside the
+# map (network, an unbucketed status) falls through to classify() on the raw text,
+# whose default arm is the one that fails loudest.
+_PREFLIGHT_QUESTION = {
+    "invalid_key": "i.alive",
+    "billing_empty": "i.alive",
+    "rate_limit": "i.alive",
+    "model_unavailable": "ii.exists",
+}
+
+
+async def run_preflight(
+    provider: str, model: str, settings: BristlenoseSettings
+) -> tuple[str, str, int]:
+    """Ask preflight's own request builder first.
+
+    This is the call ``bristlenose run`` makes before any stage, and the one that
+    broke alone on 4 Sep 2026 while ``analyze()`` passed. Same key, same model,
+    same ``_validate_<provider>`` function the CLI resolves -- looked up by name at
+    call time for the reason the CLI does it that way (a patched name must win).
+    Returns (verdict, detail, elapsed_ms); a FAIL detail carries ``preflight`` in
+    the stage slot so the column contract below holds.
+    """
+    api_key, _source = preflight._api_key_for(settings)
+    if not api_key:
+        return ("FAIL",
+                f"{'i.alive':<10} preflight no key configured for {provider} (keychain / env / .env)",
+                0)
+    validator = getattr(preflight, f"_validate_{provider}")
+    t0 = time.perf_counter()
+    result = await asyncio.to_thread(validator, api_key, model)
+    ms = int((time.perf_counter() - t0) * 1000)
+    if result.ok:
+        return "PASS", "", ms
+    raw = re.sub(r"\s+", " ", result.raw_message)[:120]
+    question = _PREFLIGHT_QUESTION.get(result.error_class or "") or classify(
+        Exception(result.raw_message)
+    )
+    return "FAIL", f"{question:<10} preflight {result.error_class or 'unclassified'}: {raw}", ms
+
+
 async def check(provider: str, model: str, stage_keys: tuple[str, ...] = ()) -> tuple[str, str]:
-    """Run the chosen stages against one (provider, model). First failure wins.
+    """Preflight first, then the chosen stages, against one (provider, model).
+    First failure wins.
 
     Column contract, relied on by check-release-ready.sh's awk: provider, model,
     verdict, question. Anything about WHICH stage goes after those four.
     """
     settings = load_settings(llm_provider=provider, llm_model=model)
+    verdict, detail, total_ms = await run_preflight(provider, model, settings)
+    if verdict == "FAIL":
+        return verdict, detail
+    notes: list[str] = ["preflight"]
     client = LLMClient(settings)
     stages = [BY_KEY[k] for k in (stage_keys or DEFAULT_STAGES)]
-    total_ms = 0
-    notes: list[str] = []
     for stage in stages:
         system_prompt, user_prompt = stage.prompts()
         t0 = time.perf_counter()
@@ -135,7 +186,7 @@ async def check(provider: str, model: str, stage_keys: tuple[str, ...] = ()) -> 
                 user_prompt=user_prompt,
                 response_model=stage.model,
             )
-        except Exception as exc:  # noqa: BLE001 — the point is to report it
+        except Exception as exc:  # noqa: BLE001 -- the point is to report it
             detail = re.sub(r"\s+", " ", str(exc))[:120]
             return "FAIL", f"{classify(exc):<10} {stage.key} {type(exc).__name__}: {detail}"
         total_ms += int((time.perf_counter() - t0) * 1000)
@@ -177,7 +228,8 @@ async def main() -> int:
         return 2
 
     print(f"stages: {', '.join(stage_keys)}  "
-          f"({len(plan)} model(s) x {len(stage_keys)} = {len(plan) * len(stage_keys)} live calls)")
+          f"({len(plan)} model(s) x (preflight + {len(stage_keys)}) = "
+          f"{len(plan) * (len(stage_keys) + 1)} live calls)")
     print(f"{'provider':<10} {'model':<26} {'result':<6} question   detail")
     print("-" * 96)
     failures = 0

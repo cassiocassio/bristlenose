@@ -230,11 +230,15 @@ fraction of £1 for a reassuring green light is fine if it's the only way to
 confirm a call would succeed* — a handful of probes a day, a handful of cents
 a year.
 
-**The live check skips preflight.** `check-providers-live.py` calls
-`analyze()`; `bristlenose run` goes through `preflight/api_key.py` first, which
-has its own request builder — and that is where the ChatGPT regression lived.
-The check should exercise preflight too, or preflight should stop building
-requests of its own.
+**The live check runs preflight first — closed 12 Sep 2026.** It used to call
+`analyze()` only; `bristlenose run` goes through `preflight/api_key.py` first,
+which has its own request builder — and that is where the ChatGPT regression
+lived. `check-providers-live.py` now asks the same `_validate_<provider>`
+function the CLI resolves, with the same key and the model under test, before
+the client is built; a preflight failure fails the model where a run would
+abort, and `test-providers-live.py` proves the order, the bucket mapping and the
+model-under-test offline. The two request builders are checked together, not
+unified — unifying them is still owed, and would be the mechanical fix.
 
 **The acceptance matrix has been silently green since 7 July.**
 `scripts/acceptance/run_matrix.py` writes each cell to a fixed directory and

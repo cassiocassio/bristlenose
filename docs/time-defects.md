@@ -175,16 +175,48 @@ returns.
 
 ### 3c. Start time
 
+**The requirement first, because the table below is a list of instances and
+must not be read as the list.** A start time can be in **any zone**, under
+**any daylight-saving convention**, including a convention that **changes after
+the recording was made** — governments do this (Mexico abolished DST in 2022,
+Egypt reinstated it in 2023, Kazakhstan collapsed to one zone in 2024). So the
+property correct code has, and the property each case tests for, is:
+
+> The code depends on the **rule table** (`tzdata` / IANA names), never on a
+> remembered offset. A stored `+01:00` says what the clock did once; a stored
+> `Europe/London` says what it will do under whatever rules apply when the
+> value is next read. An offset cannot be converted back to a zone, so any
+> path that keeps only the offset has already lost the answer.
+
+Which means the deepest test in this set is not a date at all: **does the
+result survive a `tzdata` update?** If a value's rendering depends on which
+version of the rule table was installed when it was *stored*, the design is
+wrong regardless of how many of the rows below pass.
+
+The rows are UK-heavy because that is the maintainer's practice and the
+corpus; each is an instance of the requirement, not its boundary.
+
 | input | why |
 |---|---|
-| `2026-05-09T14:23:00+01:00` | **BST** — the common London case; must stay 13:23 UTC |
+| `2026-05-09T14:23:00+01:00` | BST — the common London case; must stay 13:23 UTC |
 | `2026-05-09T14:23:00Z` | explicit UTC |
 | `2026-05-09T14:23:00` | naive — must decide *and document* whether this means local or UTC |
 | `2026-05-09` | legacy date-only |
-| `2026-03-29T01:30:00+00:00` | **inside the UK DST spring-forward gap** |
-| `2026-10-25T01:30:00+01:00` / `+00:00` | **the repeated hour** — same wall time, two instants |
+| `2026-03-29T01:30:00+00:00` | inside the UK DST spring-forward gap — this wall time does not exist |
+| `2026-10-25T01:30:00+01:00` / `+00:00` | the repeated hour — same wall time, two instants |
 | midnight / 23:59 | day-boundary rollover for "Today"/"Yesterday" |
-| a time zone away from the viewer's | a session recorded abroad, reviewed at home |
+| a zone away from the viewer's | a session recorded abroad, reviewed at home |
+| `Asia/Kathmandu` (+5:45), `Pacific/Chatham` (+12:45) | non-whole-hour offsets — catches every `hours = offset // 60` assumption |
+| `Pacific/Kiritimati` (+14) against `Pacific/Pago_Pago` (−11) | 25 hours apart — two different calendar dates are "today" at once, so "Today" needs a zone to mean anything |
+| `Asia/Tokyo`, `Asia/Kolkata` | no DST at all — a rule that fires "in summer" must not fire here |
+| `Australia/Lord_Howe` | a **30-minute** DST shift |
+| `America/Mexico_City`, a 2021 recording | a zone whose DST rule was **abolished after the recording** — the stored instant must not move when the rules do |
+| a future rule change, unknown today | the case the joke is about, and the one the IANA-name design handles for free: the rule arrives in `tzdata`, the stored name resolves under it, nothing is re-computed by us |
+
+The scenario set for multi-zone studies and a researcher who moves between
+sessions is in `design-timezones.md` § 3; the schema rule that follows from all
+of this — store the IANA name, never derive it from an offset — is § 5.3
+there.
 
 ---
 

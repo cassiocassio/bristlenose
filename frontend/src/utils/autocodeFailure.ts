@@ -7,8 +7,8 @@
  * kinds.
  *
  * Why not show `error_message`: it is `str(exc)` from a bare `except` — raw SDK
- * text, often a stringified JSON body. Both the activity chip and the AutoCode
- * toast interpolated it straight into a sentence, so a rate limit read as
+ * text, often a stringified JSON body. The activity chip used to interpolate it
+ * straight into a sentence, so a rate limit read as
  * `Tagging failed: Error code: 429 - {'type': 'error', ...}`.
  *
  * Kinds follow the rule in `docs/design-pipeline-diagnostic-popover.md`:

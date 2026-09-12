@@ -25,7 +25,9 @@ export interface NormalisedJobStatus {
    * that threw and carries on, so `processed < total` is a real outcome the
    * API reports as `"completed"`. It is a distinct status rather than a flag
    * on `"completed"` because a flag is what the render site forgets: this
-   * shortfall was already fixed once, in `AutoCodeToast`, which is not mounted.
+   * shortfall was fixed once before, in a duplicate toast component that
+   * nothing rendered, so the fix reached no researcher. That duplicate is now
+   * deleted — `git log --diff-filter=D -- '*AutoCodeToast*'`.
    */
   status: "running" | "completed" | "partial" | "failed" | "cancelled";
   progressLabel: string | null;
@@ -133,8 +135,9 @@ export function normaliseAutoCode(status: AutoCodeJobStatus): NormalisedJobStatu
     progressLabel,
     durationLabel,
     // Resolved here, not at the render site — same boundary rule as
-    // `errorMessage` below. Reuses the string the (unmounted) toast already
-    // had translated into all 21 locales rather than minting a new key.
+    // `errorMessage` below. The `autocode.toast.*` key name outlives the toast
+    // it was written for: reusing a string already translated into all 21
+    // locales beat minting a new one for the same sentence.
     partialMessage: short
       ? i18n.t("autocode.toast.donePartial", {
           processed: status.processed_quotes,

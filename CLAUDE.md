@@ -455,6 +455,22 @@ remaining callers are tests is usually a contract that has quietly lost its
 guard. Generalises to any replacement endpoint (PUT-as-replace, `set`-shaped
 config writes) where a partial body is silently valid.
 
+**That tell has a blind spot, and it is the one that fired on the sibling
+deletion.** It asks whether the *helper* still has production callers — so a
+helper that is alive and well passes it, and the audit stops. But coverage can
+be orphaned in the other direction: `utils/autocodeFailure.ts` had a live caller
+(`normaliseAutoCode`) and **no test file of its own**, so its only three
+assertions anywhere in the repo sat inside `AutoCodeToast.test.tsx` — the test
+file of a component nothing rendered. Deleting that component would have taken
+the entire guard on "never interpolate the raw `str(exc)` into a researcher's
+sentence" with it, silently, with every suite green (12 Sep 2026). **So run both
+greps before deleting a component: `grep -rn '<helper>' src/ | grep -v test`
+for orphaned callers, and `ls <helper>.test.*` for the helper's own coverage.**
+A file the doomed tests import but do not name in their `describe` is exactly
+what nobody thinks to check. And **prove the ported assertions bite** — mutate
+the live code back to the pre-fix behaviour and watch precisely the new tests go
+red; a port that passes on arrival has demonstrated nothing.
+
 ### Verifying only through a pipe hides the entire TTY code path
 
 `foo | tail`, `foo | grep`, `foo > file` all make stdout a non-tty, and any well-behaved CLI *changes behaviour* accordingly: Rich/`clig.dev`-style renderers skip animation, spinners and live regions don't start, colour drops. So a bug that only exists in the animated path is **invisible to every piped run** and instantly visible to the human who runs it bare.

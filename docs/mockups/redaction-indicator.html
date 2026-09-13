@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Redaction indicator — where the flag goes · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css + colors/palette-*.css). Palette swap via
+   data-color-theme; dark via light-dark() + color-scheme.
+   Reviews the open decision in docs/design-redact-pii.md § "Turning redaction
+   off — decided 13 Sep 2026" → the remaining bullet on a user-visible flag.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  --bn-emo-1-bg:   light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-task-1-bg:  light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-ux-1-bg:    light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 300), oklch(50% 0.12 300));
+  --bn-opp-1-bg:   light-dark(oklch(94% 0.03 75),  oklch(50% 0.10 75));
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap { max-width:980px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); max-width:70ch; margin:.4rem 0; }
+.controls { display:flex; gap:.4rem; align-items:center; margin-bottom:var(--bn-space-lg); flex-wrap:wrap; }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+
+/* ── the zone key: what ships vs why ──────────────────────────────────── */
+.key { display:flex; gap:1.5rem; flex-wrap:wrap; align-items:center; padding:.7rem .9rem;
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md);
+  margin-bottom:var(--bn-space-xl); font-size:var(--bn-text-label); }
+.key-item { display:flex; gap:.5rem; align-items:center; color:var(--bn-colour-muted); }
+.key-swatch { width:26px; height:18px; border-radius:var(--bn-radius-sm); flex-shrink:0; }
+.key-swatch.artefact { border:1px solid var(--bn-colour-border-hover); background:var(--bn-colour-bg); }
+.key-swatch.comment { border:1px solid var(--bn-colour-border);
+  background:repeating-linear-gradient(135deg, transparent, transparent 3px,
+    light-dark(rgba(0,0,0,.05), rgba(255,255,255,.06)) 3px,
+    light-dark(rgba(0,0,0,.05), rgba(255,255,255,.06)) 6px); }
+
+.route { margin:3rem 0; }
+.route-head h2 { font-size:var(--bn-text-title); font-weight:490; margin:0 0 .2rem; }
+.route-head .sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0 0 1.2rem; max-width:74ch; }
+.stage-label { font-size:var(--bn-text-caption); font-weight:490; color:var(--bn-colour-accent);
+  text-transform:uppercase; letter-spacing:.05em; margin:1.4rem 0 .5rem; font-family:var(--bn-font-mono); }
+
+/* ── artefact frame (chrome is NOT product; contents are) ─────────────── */
+.frame { border:1px solid var(--bn-colour-border-hover); border-radius:var(--bn-radius-lg);
+  overflow:hidden; background:var(--bn-colour-bg); box-shadow:0 2px 10px var(--bn-colour-shadow); }
+.frame + .frame { margin-top:1rem; }
+.frame-chrome { display:flex; align-items:center; gap:.5rem; padding:.4rem .7rem;
+  background:var(--bn-colour-quote-bg); border-bottom:1px solid var(--bn-colour-border); }
+.frame-dots { display:flex; gap:5px; }
+.frame-dots i { width:9px; height:9px; border-radius:50%; background:var(--bn-off-track); display:block; }
+.frame-cap { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted);
+  text-transform:uppercase; letter-spacing:.06em; }
+.frame-body { padding:1.35rem; }
+
+/* ── commentary zone: deliberately not-the-product ────────────────────── */
+.commentary { margin-top:1.1rem; padding:.9rem 1.1rem; border-left:3px solid var(--bn-colour-border-hover);
+  background:repeating-linear-gradient(135deg, transparent, transparent 4px,
+    light-dark(rgba(0,0,0,.028), rgba(255,255,255,.035)) 4px,
+    light-dark(rgba(0,0,0,.028), rgba(255,255,255,.035)) 8px);
+  border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; }
+.commentary .c-lbl { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  text-transform:uppercase; letter-spacing:.09em; color:var(--bn-colour-muted); display:block; margin-bottom:.4rem; }
+.commentary p { margin:.45rem 0; font-size:var(--bn-text-label); color:var(--bn-colour-muted); max-width:78ch; }
+.commentary p strong { color:var(--bn-colour-text); font-weight:490; }
+.commentary code { font-family:var(--bn-font-mono); font-size:.9em; }
+
+/* ── shared atoms (real) ──────────────────────────────────────────────── */
+.badge { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+  padding:var(--bn-space-xs) .45rem; border-radius:var(--bn-radius-sm);
+  background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); white-space:nowrap; }
+
+/* ── report header (the artefact that travels) ────────────────────────── */
+.rpt-head { display:flex; align-items:baseline; gap:.6rem; flex-wrap:wrap; }
+.rpt-title { font-size:var(--bn-text-title); font-weight:490; }
+.rpt-meta { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin-top:.25rem; }
+.rpt-rule { height:1px; background:var(--bn-colour-border); margin:1rem 0 1.1rem; }
+.rpt-tabs { display:flex; gap:1.2rem; font-size:var(--bn-text-label); color:var(--bn-colour-muted); }
+.rpt-tabs .on { color:var(--bn-colour-text); font-weight:490; border-bottom:2px solid var(--bn-colour-accent); padding-bottom:.3rem; }
+.quote-card { background:var(--bn-colour-quote-bg); border:1px solid var(--bn-colour-border);
+  border-radius:var(--bn-radius-md); padding:.8rem .95rem; margin-top:1.1rem; }
+.quote-card p { margin:0 0 .5rem; font-size:var(--bn-text-body); }
+.quote-card .attrib { font-size:var(--bn-text-label); color:var(--bn-colour-muted); }
+
+/* ── export dialog (real structure) ───────────────────────────────────── */
+.dlg { max-width:470px; }
+.dlg-title { font-size:var(--bn-text-heading); font-weight:490; }
+.dlg-sub { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin:.35rem 0 1.1rem; }
+.dlg-row { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:.9rem; }
+.dlg-row > span { font-size:var(--bn-text-label); }
+.dlg-sel { font:inherit; font-size:var(--bn-text-label); padding:.25rem .5rem; border-radius:var(--bn-radius-sm);
+  border:1px solid var(--bn-colour-border); background:var(--bn-colour-bg); color:var(--bn-colour-text); }
+.dlg-check { display:flex; gap:.55rem; align-items:flex-start; margin-bottom:1.1rem; }
+.dlg-check input { margin-top:.22rem; accent-color:var(--bn-colour-accent); }
+.dlg-check .t { font-size:var(--bn-text-label); }
+.dlg-check .hint { display:block; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-top:.2rem; line-height:1.45; }
+.dlg-state { display:flex; gap:.55rem; align-items:flex-start; padding:.65rem .8rem; margin-bottom:1.1rem;
+  background:var(--bn-colour-quote-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); }
+.dlg-state .t { font-size:var(--bn-text-label); }
+.dlg-state .hint { display:block; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-top:.2rem; line-height:1.45; }
+.dlg-acts { display:flex; justify-content:flex-end; gap:.5rem; }
+.btn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.35rem .9rem;
+  border-radius:var(--bn-radius-md); border:1px solid var(--bn-colour-border);
+  background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.btn.primary { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+
+.hazard { border-left-color:light-dark(#c2410c,#fb923c); }
+.hazard .c-lbl { color:light-dark(#c2410c,#fb923c); }
+
+.foot { margin-top:4rem; padding-top:1.2rem; border-top:1px solid var(--bn-colour-border);
+  font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+@media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="masthead">
+  <div class="eyebrow">Bristlenose · mockup · 13 Sep 2026</div>
+  <h1>Redaction indicator — where the flag goes</h1>
+  <p>There is no user-visible sign anywhere that a project was PII-redacted — verified
+     13 Sep 2026 across the SPA, the report, the export, the static renderer and the Mac.
+     <code>ProjectInfoResponse</code> carries <code>project_name</code>,
+     <code>session_count</code>, <code>participant_count</code> and nothing else.</p>
+  <p>Three routes below. The question underneath them is <em>who the flag is for</em> —
+     the researcher confirming their setting took effect, or the colleague opening a
+     report and needing to know names were stripped.</p>
+</div>
+
+<div class="controls">
+  <span class="lbl">Palette</span>
+  <button class="pbtn on" onclick="setPal('default',this)">Default</button>
+  <button class="pbtn" onclick="setPal('edo',this)">Edo</button>
+  <span class="lbl" style="margin-left:1rem">Theme</span>
+  <button class="pbtn on" onclick="setTheme('light',this)">Light</button>
+  <button class="pbtn" onclick="setTheme('dark',this)">Dark</button>
+</div>
+
+<div class="key">
+  <span class="key-item"><span class="key-swatch artefact"></span> Artefact — real pixels, what ships</span>
+  <span class="key-item"><span class="key-swatch comment"></span> Commentary — reasoning, not the product</span>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<section class="route">
+  <div class="route-head">
+    <h2>Route A — a badge in the report header</h2>
+    <p class="sub">One neutral badge beside the project name. It rides in
+       <code>/info</code>, which titles the codebook navigator and is baked into the
+       offline export — so the same field lights the live report and the file a client
+       opens. Silent when the project was not redacted.</p>
+  </div>
+
+  <div class="stage-label">A1 · redacted project</div>
+  <div class="frame">
+    <div class="frame-chrome"><span class="frame-dots"><i></i><i></i><i></i></span>
+      <span class="frame-cap">report header · redacted</span></div>
+    <div class="frame-body">
+      <div class="rpt-head">
+        <span class="rpt-title">Acme onboarding study</span>
+        <span class="badge">Redacted</span>
+      </div>
+      <div class="rpt-meta">6 sessions · 5 participants</div>
+      <div class="rpt-rule"></div>
+      <div class="rpt-tabs"><span class="on">Findings</span><span>Sessions</span><span>Themes</span><span>Codebook</span></div>
+      <div class="quote-card">
+        <p>“I called [PHONE] twice and nobody picked up, so I emailed [EMAIL] instead.”</p>
+        <div class="attrib">p3 · 00:14:22</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage-label">A2 · same report, not redacted</div>
+  <div class="frame">
+    <div class="frame-chrome"><span class="frame-dots"><i></i><i></i><i></i></span>
+      <span class="frame-cap">report header · not redacted</span></div>
+    <div class="frame-body">
+      <div class="rpt-head">
+        <span class="rpt-title">Acme onboarding study</span>
+      </div>
+      <div class="rpt-meta">6 sessions · 5 participants</div>
+      <div class="rpt-rule"></div>
+      <div class="rpt-tabs"><span class="on">Findings</span><span>Sessions</span><span>Themes</span><span>Codebook</span></div>
+      <div class="quote-card">
+        <p>“I called 020 7946 0912 twice and nobody picked up, so I emailed sam@acme.test instead.”</p>
+        <div class="attrib">p3 · 00:14:22</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="commentary">
+    <span class="c-lbl">Commentary</span>
+    <p><strong>Grey, not green.</strong> Content owns colour here. Green reads as
+       “passed a check”, and redaction is a processing state, not a success — a report
+       without the badge is not a failed report. The house <code>.badge</code> atom,
+       mono, neutral, is what the design system already has for this.</p>
+    <p><strong>Nothing when off is the right asymmetry for the report.</strong> A
+       “Not redacted” badge on every report is both noise and faintly alarming to a
+       client who never asked the question. Absence is information.</p>
+    <p><strong>The cost:</strong> the researcher only learns their setting took effect
+       <em>after</em> a full analysis — and flipping the toggle costs a full LLM
+       re-run ($0.67–$6.70 depending on size and model), because <code>pii_enabled</code>
+       is in topic segmentation’s cache key. This route tells you late.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<section class="route">
+  <div class="route-head">
+    <h2>Route B — state it in the export dialog</h2>
+    <p class="sub">Nothing in the report. Instead the fact is stated at the moment it
+       matters most: handing the artefact over. Stated <em>both</em> ways here, because
+       at this moment silence is the worst answer.</p>
+  </div>
+
+  <div class="stage-label">B1 · exporting a redacted analysis</div>
+  <div class="frame">
+    <div class="frame-chrome"><span class="frame-dots"><i></i><i></i><i></i></span>
+      <span class="frame-cap">export dialog · redacted</span></div>
+    <div class="frame-body dlg">
+      <div class="dlg-title">Export HTML</div>
+      <p class="dlg-sub">Creates a standalone report that anyone can open in a browser.
+         Recipients can view and search but cannot edit.</p>
+      <div class="dlg-row"><span>Language</span>
+        <select class="dlg-sel"><option>English</option></select></div>
+      <div class="dlg-state">
+        <span class="badge">Redacted</span>
+        <span class="t">Personal details were removed before analysis
+          <small class="hint">Phone numbers, emails and detected names are already
+            replaced in the transcripts and quotes this export contains.</small></span>
+      </div>
+      <label class="dlg-check">
+        <input type="checkbox">
+        <span class="t">Remove participant names from labels
+          <small class="hint">Strips participant names from metadata, filenames, and
+            speaker labels, leaving codes (p1, p2). Moderators and observers keep their
+            names. Names spoken inside quotes are NOT removed.</small></span>
+      </label>
+      <div class="dlg-acts"><button class="btn">Cancel</button><button class="btn primary">Export</button></div>
+    </div>
+  </div>
+
+  <div class="stage-label">B2 · exporting an un-redacted analysis</div>
+  <div class="frame">
+    <div class="frame-chrome"><span class="frame-dots"><i></i><i></i><i></i></span>
+      <span class="frame-cap">export dialog · not redacted</span></div>
+    <div class="frame-body dlg">
+      <div class="dlg-title">Export HTML</div>
+      <p class="dlg-sub">Creates a standalone report that anyone can open in a browser.
+         Recipients can view and search but cannot edit.</p>
+      <div class="dlg-row"><span>Language</span>
+        <select class="dlg-sel"><option>English</option></select></div>
+      <div class="dlg-state">
+        <span class="badge">Not redacted</span>
+        <span class="t">This export contains the original transcript text
+          <small class="hint">Personal details spoken in the sessions are included as
+            recorded. Redaction runs before analysis — it cannot be applied here.</small></span>
+      </div>
+      <label class="dlg-check">
+        <input type="checkbox">
+        <span class="t">Remove participant names from labels
+          <small class="hint">Strips participant names from metadata, filenames, and
+            speaker labels, leaving codes (p1, p2). Moderators and observers keep their
+            names. Names spoken inside quotes are NOT removed.</small></span>
+      </label>
+      <div class="dlg-acts"><button class="btn">Cancel</button><button class="btn primary">Export</button></div>
+    </div>
+  </div>
+
+  <div class="commentary hazard">
+    <span class="c-lbl">Commentary · hazard</span>
+    <p><strong>This dialog now holds two privacy affordances that sound identical and
+       are not.</strong> “Remove participant names from labels” is an <em>export-time
+       choice</em> the researcher makes now, about speaker labels. “Personal details were
+       removed before analysis” is a <em>pipeline-time fact</em> about the transcript
+       text, decided runs ago and unchangeable here. Put them adjacent and undifferentiated
+       and they will be read as one setting with a broken checkbox.</p>
+    <p><strong>What separates them in the pixels above:</strong> the fact is a stated
+       panel with no control; the choice is a checkbox. One is inert, one is operable, and
+       the shapes say so before the words are read. The existing hint string already does
+       the hardest disambiguating work — <em>“Names spoken inside quotes are NOT
+       removed”</em> — which is precisely what redaction <em>does</em> do.</p>
+    <p><strong>The “Not redacted” wording needs your ear.</strong> It states a fact
+       neutrally, but on the way to a client it can read as an accusation. The alternative
+       is to drop B2 and say nothing when off — at the cost of the one moment where the
+       researcher would most want to be told.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<section class="route">
+  <div class="route-head">
+    <h2>Route C — both, asymmetrically</h2>
+    <p class="sub">Badge in the report only when redacted; the export dialog states it
+       either way. Same single <code>/info</code> field feeds both.</p>
+  </div>
+
+  <div class="stage-label">C · the pair, as a researcher meets them</div>
+  <div class="frame">
+    <div class="frame-chrome"><span class="frame-dots"><i></i><i></i><i></i></span>
+      <span class="frame-cap">report · redacted</span></div>
+    <div class="frame-body">
+      <div class="rpt-head">
+        <span class="rpt-title">Acme onboarding study</span>
+        <span class="badge">Redacted</span>
+      </div>
+      <div class="rpt-meta">6 sessions · 5 participants</div>
+    </div>
+  </div>
+  <div class="frame">
+    <div class="frame-chrome"><span class="frame-dots"><i></i><i></i><i></i></span>
+      <span class="frame-cap">then: export · redacted</span></div>
+    <div class="frame-body dlg">
+      <div class="dlg-state" style="margin-bottom:0">
+        <span class="badge">Redacted</span>
+        <span class="t">Personal details were removed before analysis
+          <small class="hint">Phone numbers, emails and detected names are already
+            replaced in the transcripts and quotes this export contains.</small></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="commentary">
+    <span class="c-lbl">Commentary</span>
+    <p><strong>The asymmetry is the argument.</strong> The report is read by people who
+       did not choose the setting, so it should carry a positive fact and stay quiet
+       otherwise. The export dialog is met only by the researcher, at the one moment the
+       negative case is worth stating — so there, silence is the failure.</p>
+    <p><strong>One field, two surfaces.</strong> Both read the same
+       <code>/info</code> value, so they cannot disagree. The signal is already computed
+       during import (<code>transcripts-cooked/</code> presence) and — since 13 Sep — is
+       trustworthy, because a run that does not redact now clears that directory instead
+       of leaving a stale one behind.</p>
+    <p><strong>Still open, and it is a wording call, not an engineering one:</strong>
+       “Redacted” is short and slightly opaque — redacted <em>of what?</em> Alternatives
+       that fit the badge: “PII removed”, “Names removed”, “Personal details removed”.
+       The last is plainest and the least jargon, but it is wide for a header badge.</p>
+  </div>
+</section>
+
+<div class="foot">
+  Tokens inlined verbatim from <code>bristlenose/theme/tokens.css</code> +
+  <code>colors/palette-*.css</code>. Components reused: <code>.badge</code> (the house
+  atom), the shipped export-dialog structure and its real
+  <code>export.anonymise</code>/<code>anonymiseHint</code> strings. The only new element
+  proposed is the stated-fact panel in the export dialog — flagged as new rather than
+  invented quietly. Decision recorded in <code>docs/design-redact-pii.md</code>.
+</div>
+
+</div>
+<script>
+// Each control is its own group; only that group's buttons de-highlight.
+const PALETTE = ['Default', 'Edo'];
+const THEME = ['Light', 'Dark'];
+
+function select(el, group) {
+  document.querySelectorAll('.controls .pbtn').forEach(b => {
+    if (group.includes(b.textContent.trim())) b.classList.remove('on');
+  });
+  el.classList.add('on');
+}
+function setPal(p, el) {
+  document.documentElement.setAttribute('data-color-theme', p);
+  select(el, PALETTE);
+}
+function setTheme(t, el) {
+  // Forces light-dark() to resolve one way regardless of the OS setting.
+  document.documentElement.style.colorScheme = t;
+  select(el, THEME);
+}
+</script>
+</body>
+</html>

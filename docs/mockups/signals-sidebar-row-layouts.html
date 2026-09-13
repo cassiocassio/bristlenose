@@ -487,6 +487,31 @@ a.ci-code:focus-visible { outline:2px solid var(--bn-colour-accent); outline-off
 @keyframes bn-jump { from { box-shadow:0 0 0 3px var(--bn-colour-accent); }
                      to   { box-shadow:0 0 0 3px transparent; } }
 .jump-flash { animation:bn-jump 1.2s ease-out; border-radius:var(--bn-radius-lg); }
+
+/* ── Decision trail ─────────────────────────────────────────────────────── */
+.st { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  padding:.05rem .3rem; border-radius:var(--bn-radius-sm); white-space:nowrap; }
+.st-chosen     { background:light-dark(#dcfce7,#14532d); color:light-dark(#166534,#86efac); }
+.st-abandoned  { background:var(--bn-colour-badge-bg); color:var(--bn-colour-muted);
+  text-decoration:line-through; }
+.st-current    { background:light-dark(#fef3c7,#451a03); color:light-dark(#92400e,#fcd34d); }
+.st-open       { background:light-dark(#e0f2fe,#0c4a6e); color:light-dark(#075985,#7dd3fc); }
+.st-explored   { background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); }
+.chrome .st { margin-left:auto; }
+.cell.is-abandoned .frame { opacity:.55; }
+.cell.is-chosen .frame { box-shadow:0 0 0 2px light-dark(#16a34a,#4ade80); }
+.dec { border-left:3px solid var(--bn-colour-border); padding:0 0 0 var(--bn-space-md);
+  margin:0 0 var(--bn-space-lg); max-width:74ch; }
+.dec.settled { border-left-color:light-dark(#16a34a,#4ade80); }
+.dec.open { border-left-color:var(--bn-colour-accent); }
+.dec h3 { font-size:var(--bn-text-label); font-weight:var(--bn-weight-emphasis);
+  margin:0 0 .25rem; color:var(--bn-colour-text); }
+.dec p { font-size:var(--bn-text-label); line-height:1.6; color:var(--bn-colour-muted);
+  margin:.3rem 0; }
+.dec .row { display:flex; gap:.35rem; flex-wrap:wrap; align-items:center; margin:.3rem 0; }
+.dec .lab { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em;
+  min-width:5.5rem; }
 .pbtn b { font-family:var(--bn-font-mono); font-weight:700; }
 @media (prefers-reduced-motion: reduce) { .sig { transition:none; } }
 </style>
@@ -536,6 +561,18 @@ a.ci-code:focus-visible { outline:2px solid var(--bn-colour-accent); outline-off
        treatment is a mode rather than a panel sitting there waiting to be scrolled to.</p>
   </div>
   <div class="codeindex" id="codeindex"></div>
+
+  <div class="section-head">
+    <h2>Decision trail</h2>
+    <p>What was chosen, what was abandoned, and the evidence that moved each one.
+       Panels on this page carry their status in the title bar &mdash;
+       <span class="st st-chosen">chosen</span> panels take a green edge,
+       <span class="st st-abandoned">abandoned</span> ones fade,
+       <span class="st st-current">current</span> means what the product does today, which
+       is not the same as chosen. Every code below is a link to the panel it names.</p>
+  </div>
+  <div id="trail"></div>
+
 
   <div class="bench" id="bench"></div>
 
@@ -2158,6 +2195,7 @@ const codeindex = document.getElementById("codeindex");
 const ubench = document.getElementById("ubench");
 const cardbench = document.getElementById("cardbench");
 const sbench = document.getElementById("sbench");
+const trail = document.getElementById("trail");
 
 function esc(s){ return s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 function badgeClass(label){ return SENTIMENTS.includes(label) ? "badge badge-"+label : "badge"; }
@@ -2283,6 +2321,7 @@ function render(){
   renderCards();
   renderS();
   renderCodeIndex();
+  renderTrail();
 }
 
 /**
@@ -3474,6 +3513,126 @@ function renderS(){
     + `<span class="${isShipped && mute ? "bad" : "good"}" title="places where the tag-level sentiment analysis contributes no card at all">`
       + `<b>${isShipped ? mute : 0}</b> matrix adds nothing</span>`;
   });
+}
+
+/* ── The decision trail ───────────────────────────────────────────────────
+   Every design on this page has a status, and every status has a reason. The
+   point of a playground is that abandoning something is cheap — but only if
+   what was abandoned, and why, survives the abandoning. Chosen panels get a
+   green edge, abandoned ones fade; the log below says what each decision was
+   and what evidence moved it.
+
+   "current" means what the product does TODAY, which is not the same as chosen. */
+const STATUS = {
+  V0:["current","the shipped row — the baseline everything else is measured against"],
+  V1:["explored",""], V2:["explored",""], V3:["explored",""], V4:["abandoned","adds a heading and buys nothing where the badge value does not vary"],
+  V5:["abandoned","forces a wrap wherever the badge does not fit, which on long names is most rows"],
+  V6:["explored",""], V7:["explored","the pairing T5/T6/T6b generalise"],
+  V8:["explored","right that the badge should mean something; superseded by naming the row"],
+  V9:["explored","codes on their own line; superseded by T6b, which drops them"],
+  T1:["current","two sections, sentiment and codebooks"],
+  T2:["explored",""], T3:["explored",""],
+  T4:["abandoned","useful slice, not the organising principle — offered in the view menu"],
+  T5:["abandoned","a group name alone does not navigate: \u201cStructure is everywhere \u2014 what about it?\u201d"],
+  T6:["abandoned","pattern chip and code pills are too much for a sidebar"],
+  T6b:["chosen","the name situates, the group qualifies"],
+  J1:["explored",""], J2:["explored",""],
+  J3:["abandoned","triage drops place as the organising unit, which the holistic argument rules out"],
+  D1:["explored",""], D2:["explored",""], D3:["explored",""],
+  U1:["explored","the strongest-signal slice, kept as a view-menu option"],
+  U2:["explored","the by-codebook slice, kept as a view-menu option"],
+  U3:["chosen","sections & themes \u2014 the default view"],
+  C1:["current","sentiment card with no name, no elaboration, no pattern"],
+  C2:["current","codebook card \u2014 the shape the others should take"],
+  C3:["chosen","sentiment card normalised onto C2's shape"],
+  C4:["chosen","the location link restored"],
+  S1:["current","sentiment analysed at tag level beside codebooks at group level"],
+  S2:["chosen","a card is (location \u00d7 tag group), always"],
+};
+
+const DECISIONS = [
+  ["settled", "What organises the navigation?",
+   ["U3","T6b"], ["T4","T5","J3"],
+   "Location \u2014 sections and themes \u2014 at the top level, places ordered by their strongest signal, strongest-first within a place. Strongest-signal and by-codebook are useful slices and stay in the view menu, but they are not the organising principle.",
+   "The job is holistic: all the work to fix Shopping Bag belongs in one place, so the researcher can consider the fixes together. Measured: grouping by location gives 12 rows and 43 targets on P1 against 12 and 12 as shipped."],
+  ["settled", "What is a card?",
+   ["S2"], ["S1","S3"],
+   "A card is a location \u00d7 a tag group, and it surfaces that group's tags. Sentiment is a group like any other; confusion and frustration are tags inside the Sentiment card, not cards of their own.",
+   "Across P1's five busiest places the tag-level sentiment analysis adds exactly one card, and it is a duplicate with no written summary of something the Sentiment card already says. On three of the five it adds nothing at all. A card per tag is something no codebook gets \u2014 which is what retired the earlier S3."],
+  ["settled", "What does a nav row show?",
+   ["T6b"], ["T5","T6","V9"],
+   "The elaborated name, with the group as a trailing tinted chip. No pattern, no code pills.",
+   "A group name alone does not navigate. The codes are largely a restatement of the name written from them \u2014 7 of 11 elaborated names on P1 reuse a word from their own tags. The pills belong on the card, where there is room to read them."],
+  ["settled", "What does the card's top right show?",
+   [], [],
+   "One chip carrying the group and the normalised score \u2014 Feedback 0.75 \u2014 sized as the hero of the card, and acting as the control that expands the working. The pattern chip goes; the four-metric block is minimised by default and reflows the text around it when opened.",
+   "Measured on P1's 24 signals: Agree. takes 3 distinct values and Intensity 4, both clustered at the bottom of their scales. Two of the four metrics are captions, not columns, and Signal is close to collinear with Conc. One number is enough for most readers; the rest is for whoever wants to audit it."],
+  ["settled", "How does the card's text ask to be read?",
+   [], [],
+   "Location in natural case at label size and emphasis weight, tight against the headline. A gap, the claim sentence in darker ink, a gap, the rest in a tint. Two complete sentences, no em dash at the join.",
+   "Punctuation is an instruction: an em dash says keep going, a full stop offers a stopping point. Measured on P1's 19 elaborations, 19 of 19 continuations carry an em dash and 0 of 19 are more than one sentence \u2014 the prompt asked for exactly that. Volume and meaning were never the problem; the missing stopping point was. Typography uses .analysis-codebook-heading's existing trio, nothing new."],
+  ["open", "How is signal normalised so it compares across codebooks and sentiment?",
+   [], [],
+   "Unsettled, and everything ordered by strength depends on it \u2014 including the claim a location-ranked nav makes by existing. The target is a single score a researcher never has to reason about, sleep-score shaped.",
+   "composite = conc \u00d7 breadth \u00d7 intensity, and only conc carries the shape of the table it came from. Its ceiling is grand_total / col_total: the sentiment matrix runs 1.46\u201353.33, codebooks 1.00\u20137.33. adjusted_residual is already in metrics.py, ranks nothing, and behaves far better (medians 1.47 against 1.19) \u2014 but it goes negative, and a strong absence is a finding."],
+  ["open", "How far down the ranking does elaboration run?",
+   [], [],
+   "Unsettled, and it costs more than any naming decision on this page.",
+   "9 of the 27 cards on P1's five busiest places have no name at all \u2014 six on Beds & Mattresses alone \u2014 because only the top N signals are elaborated. Those rows are exactly the bare group chips T6b exists to remove. Naming per cell would have fixed 7 rows; elaborating further down fixes 9, and needs no prompt change."],
+  ["open", "Does the main content follow the navigation?",
+   [], [],
+   "Proposed: location-sectioned cards matching the nav, with the existing two-grid layout kept as the second choice in the view menu. Not drawn yet.",
+   "The lens renders two flat grids today, #signal-cards-sentiment and #signal-cards-tags, split by kind rather than place. A location-grouped nav would be a different SHAPE from the cards, not just a different order, and would stop being an index of the page."],
+];
+
+function renderTrail(){
+  // Stamp each panel with its status.
+  const put = (sel, code) => document.querySelectorAll(sel).forEach(cell => {
+    const st = STATUS[code];
+    if (!st) return;
+    const chrome = cell.querySelector(".chrome");
+    if (chrome && !chrome.querySelector(".st"))
+      chrome.insertAdjacentHTML("beforeend", `<span class="st st-${st[0]}" title="${esc(st[1])}">${st[0]}</span>`);
+    cell.classList.toggle("is-chosen", st[0] === "chosen");
+    cell.classList.toggle("is-abandoned", st[0] === "abandoned");
+  });
+  VARIANTS.forEach(v => put(`#bench .cell[data-v="${v[0]}"]`, v[1].split(" \u00b7 ")[0]));
+  ["U1","U2","U3"].forEach(c => put(`#ubench .cell[data-u="${c}"]`, c));
+  ["C1","C2","C3","C4"].forEach(c => put(`#cardbench .cell[data-c="${c}"]`, c));
+  ["S1","S2"].forEach(c => put(`#sbench .cell[data-s="${c}"]`, c));
+  document.querySelectorAll("#realbench .cell").forEach(cell => {
+    const code = (cell.querySelector(".cname b") || {}).textContent;
+    const st = STATUS[code];
+    if (!st || cell.querySelector(".st")) return;
+    cell.querySelector(".chrome").insertAdjacentHTML("beforeend",
+      `<span class="st st-${st[0]}" title="${esc(st[1])}">${st[0]}</span>`);
+    cell.classList.toggle("is-chosen", st[0] === "chosen");
+    cell.classList.toggle("is-abandoned", st[0] === "abandoned");
+  });
+
+  trail.innerHTML = DECISIONS.map(([kind, title, chosen, dropped, what, why]) => `
+    <div class="dec ${kind}">
+      <h3>${esc(title)} <span class="st st-${kind === "settled" ? "chosen" : "open"}">${kind === "settled" ? "settled" : "open"}</span></h3>
+      <p>${esc(what)}</p>
+      ${chosen.length || dropped.length ? `<div class="row"><span class="lab">chosen</span>${
+        chosen.map(c => `<a class="ci-code st st-chosen" href="#" data-jump="${esc(codeJump(c))}">${esc(c)}</a>`).join("") || "<span class='lab'>\u2014</span>"}</div>
+      <div class="row"><span class="lab">abandoned</span>${
+        dropped.map(c => `<a class="ci-code st st-abandoned" href="#" data-jump="${esc(codeJump(c))}">${esc(c)}</a>`).join("") || "<span class='lab'>\u2014</span>"}</div>` : ""}
+      <p><strong>Why.</strong> ${esc(why)}</p>
+    </div>`).join("");
+}
+
+/** Where a code's panel lives, for the trail's own links. */
+function codeJump(c){
+  if (/^V\d$/.test(c)) return "v:" + c.toLowerCase();
+  if (/^T/.test(c)) return "treat:" + ({T1:"shipped",T2:"hide",T3:"backfill",T4:"flat",
+                                        T5:"loc",T6:"locn","T6b":"locq"}[c] || "shipped");
+  if (/^U/.test(c)) return "u:" + c;
+  if (/^C/.test(c)) return "card:" + c;
+  if (/^S/.test(c)) return "sec:sbench:" + c;
+  if (/^J/.test(c)) return "cellidx:jobbench:" + (+c[1] - 1);
+  if (/^D/.test(c)) return "cellidx:depthbench:" + (+c[1] - 1);
+  return "v:v0";
 }
 
 function renderCodeIndex(){

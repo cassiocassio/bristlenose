@@ -367,9 +367,10 @@ button.signal-card-toggle {
 
 /* ── Signal card badge styles ──────────────────────────────── */
 
-.signal-group-badge {
-    font-weight: var(--bn-weight-emphasis);
-}
+/* .signal-group-badge — removed 13 Sep 2026. The group name is the hero
+   chip's own label now, and no caller remains in frontend/src or in the
+   frozen vanilla renderer. A rule that can never match is worse than no
+   rule — it reads as live styling while styling nothing. */
 
 .signal-quote-tag {
     margin-left: 0.4rem;
@@ -625,10 +626,9 @@ button.signal-card-toggle {
     }
 }
 
-/* Retired with the badge stack it spaced — the hero is the only thing in this
-   corner now, and the metrics sit under it when opened. Kept as a note rather
-   than a rule so a stale reference is a miss, not a silent no-op.
-   .signal-card-badges — removed 13 Sep 2026 */
+/* .signal-card-badges — removed 13 Sep 2026, with its narrow-viewport
+   override. The hero is the only thing in this corner now, and the metrics sit
+   under it when opened. */
 
 /* Pattern badge — coloured allcaps label.
    Opacity 0.9 knocks text back 10% — heavy weight + allcaps reads
@@ -708,8 +708,5 @@ button.signal-card-toggle {
         align-self: stretch;
     }
 
-    .signal-card-badges {
-        margin-bottom: var(--bn-space-sm);
-    }
 }
 

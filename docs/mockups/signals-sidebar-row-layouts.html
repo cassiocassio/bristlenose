@@ -494,6 +494,25 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
   background:var(--bn-colour-badge-bg); padding:.05rem .3rem; border-radius:3px; }
 .gaps.defer { list-style:none; padding-left:0; }
 
+/* Section W: the main content. .analysis-codebook-heading is COPIED VERBATIM
+   from theme/organisms/analysis.css — this panel invents no heading style, and
+   the point is that the one the product already has fits without changing. */
+.analysis-codebook-heading { font-size:var(--bn-text-label);
+  font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-text);
+  margin:var(--bn-space-lg) 0 var(--bn-space-sm); padding-bottom:var(--bn-space-xs);
+  border-bottom:1px solid var(--bn-colour-border); }
+.analysis-codebook-heading:first-child { margin-top:0; }
+.w-h1 { font-size:var(--bn-text-heading); font-weight:var(--bn-weight-emphasis);
+  margin:var(--bn-space-lg) 0 var(--bn-space-sm); }
+.w-h1:first-child { margin-top:0; }
+.w-grid { display:grid; gap:var(--bn-space-sm); }
+.w-card { padding:var(--bn-space-md); }
+.w-head { font-size:var(--bn-text-body); line-height:1.3;
+  font-weight:var(--bn-weight-emphasis); }
+.w-head a { color:inherit; text-decoration:none; }
+.w-head a:hover { color:var(--bn-colour-accent); text-decoration:underline;
+  text-underline-offset:2px; }
+
 /* Section R: a card that brings no new quote is drawn struck through, so the
    bench shows what the rule removes rather than just the shorter list. The
    strike is on the NAME only — a fade over the row would have dimmed the tag
@@ -646,26 +665,26 @@ a.ci-code:focus-visible { outline:2px solid var(--bn-colour-accent); outline-off
   <div class="divider"></div>
   <div class="section-head">
     <h2>Gaps in the spec</h2>
-    <p>What a build would have to guess at. Scanned 13 Sep 2026 against the shipped
-       code, not against this page &mdash; several of these are places where the
-       mockup and the product quietly disagree and nobody has chosen.</p>
+    <p>What a build would have had to guess at. Scanned 13 Sep 2026 against the shipped
+       code rather than against this page, which is where it earned its keep &mdash;
+       several were places where the mockup and the product quietly disagreed and nobody
+       had chosen. <strong>All of them are now closed</strong>: six became decisions in
+       the trail above, and the two below turned out not to be questions.</p>
   </div>
   <ol class="gaps">
-    <li><b>What replaces <code>MAX_SIGNALS = 6</code>?</b> It slices the whole list,
-      so today the sidebar and the cards are drawn from one cut and cannot disagree.
-      A location-organised nav with no project-wide cap breaks that coupling, and
-      nothing says what the new bound is or who owns it.</li>
-    <li><b>Does de-duplication apply to the main content as well as the navigation?</b>
-      Presumably yes, but it is unstated &mdash; and if the two disagree the nav grows
-      rows that land nowhere.</li>
-    <li><b>Where do the two heatmaps go</b> once the cards are location-sectioned?
-      They are currently the page&rsquo;s second half and they are organised by the
-      axis the new order abandons.</li>
-    <li><b>Is the view menu shipping, and does it do anything?</b> It is drawn as a
-      static <code>.u-menu</code> div in section U. Sections &amp; themes is the
-      default; strongest-signal and by-codebook are slices.</li>
-    <li><b>Empty state.</b> <code>AnalysisSidebar</code> returns <code>null</code> when
-      a project has no signals, and nothing says what the lens itself shows.</li>
+    <li><b>Where do the two heatmaps go? &mdash; nowhere, they never moved.</b> They are
+      sources for <code>InspectorPanel</code>, a sibling of <code>.analysis-center</code>,
+      so they are not in the cards column at all and the refactor does not touch them.
+      Cells go on calling <code>handleCellClick</code> and scrolling to cards. Their own
+      defects are real and deferred, below.</li>
+    <li><b>Empty state &mdash; not a design question.</b> <code>AnalysisPage</code> already
+      has a <code>!hasSentiment &amp;&amp; !hasTags</code> branch rendering
+      <code>analysis.noData</code>, and <code>AnalysisSidebar</code> returning
+      <code>null</code> under the same condition is right: the page is already saying there
+      is nothing, so the sidebar should not say it twice. And zero tags from N quotes from
+      real transcripts means something upstream failed &mdash; that is a pipeline problem
+      wearing a lens costume, not a state to design for. There is no partial case, because
+      locations are derived <em>from</em> cards.</li>
   </ol>
 
   <div class="divider"></div>
@@ -674,6 +693,11 @@ a.ci-code:focus-visible { outline:2px solid var(--bn-colour-accent); outline-off
     <p>Not gaps &mdash; choices to stop here, with somewhere to come back to.</p>
   </div>
   <ol class="gaps defer">
+    <li><b>The view menu.</b> Hidden today \u2014 an idea not fully realised. Strongest
+      signal and by-codebook stay drawn as U1 and U2 and stay in the code; sections and
+      themes is the only order that ships. Shipping the menu on day one is how &ldquo;one
+      better lens&rdquo; quietly becomes a menu of equals, and the existing order is meant
+      to be insurance rather than a co-equal choice.</li>
     <li><b>Normalising signal strength.</b> Handed to a session of its own,
       <code>docs/design-signal-strength.md</code>. Until it lands, ordering is
       directionally right and the number is not comparable, and the Sentiment card
@@ -841,6 +865,31 @@ a.ci-code:focus-visible { outline:2px solid var(--bn-colour-accent); outline-off
   </div>
 
   <div class="bench" id="rbench"></div>
+
+  <div class="divider"></div>
+  <div class="section-head">
+    <h2>W &middot; the main content, in the navigation&rsquo;s order</h2>
+    <p>The lens draws two flat grids today &mdash; <code>#signal-cards-sentiment</code>
+       then <code>#signal-cards-tags</code> &mdash; split by <em>kind</em>, each under its
+       own <code>SectionHeading</code>. The navigation is about to be organised by
+       <em>place</em>, so the sidebar would stop being an index of the page beneath it:
+       same cards, different shape.</p>
+    <p><strong>W2 is one run of locations in the navigation&rsquo;s own order</strong>,
+       each under a heading, cards ranked within. Nothing else moves. The heading is
+       <code>.analysis-codebook-heading</code>, which already exists and already carries
+       exactly this weight of statement; no new heading style is invented. The card is
+       untouched &mdash; it is drawn compact here because its interior was settled in
+       section N and repeating it would only make this panel taller.
+       <strong>The heatmaps do not move</strong>: they are sources for
+       <code>InspectorPanel</code>, a sibling of <code>.analysis-center</code>, so they
+       are not in this column at all and their cells go on scrolling to cards.</p>
+    <p>Real, from the ikea project at <code>MIN_QUOTES_PER_CELL = 2</code>, after
+       de-duplication: <strong>19 cards over 10 locations</strong>, against the 12 the
+       shipped <code>MAX_SIGNALS = 6</code> allows. Sections and themes interleave
+       unlabelled &mdash; the themes are at positions 4, 5 and 8.</p>
+  </div>
+
+  <div class="bench" id="wbench"></div>
 
   <div class="divider"></div>
   <div class="section-head">
@@ -2403,6 +2452,7 @@ const sbench = document.getElementById("sbench");
 const trail = document.getElementById("trail");
 const nbench = document.getElementById("nbench");
 const rbench = document.getElementById("rbench");
+const wbench = document.getElementById("wbench");
 
 function esc(s){ return s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 function badgeClass(label){ return SENTIMENTS.includes(label) ? "badge badge-"+label : "badge"; }
@@ -2529,6 +2579,7 @@ function render(){
   renderS();
   renderN();
   renderR();
+  renderW();
   renderCodeIndex();
   renderTrail();
 }
@@ -3555,7 +3606,7 @@ function jumpToCode(jump){
   else if (kind === "card")    el = document.querySelector(`#cardbench .cell[data-c="${a}"]`);
   else if (kind === "u")       el = document.querySelector(`#ubench .cell[data-u="${a}"]`);
   else if (kind === "cellidx") el = document.querySelectorAll(`#${a} .cell`)[+b];
-  else if (kind === "sec")     el = document.querySelector(`#${a} .cell[data-s="${b}"], #${a} .cell[data-n="${b}"], #${a} .cell[data-r="${b}"]`);
+  else if (kind === "sec")     el = document.querySelector(`#${a} .cell[data-s="${b}"], #${a} .cell[data-n="${b}"], #${a} .cell[data-r="${b}"], #${a} .cell[data-w2="${b}"]`);
   else if (kind === "treat"){
     const btn = document.querySelector(`[data-treat="${a}"]`);
     if (btn && !btn.classList.contains("on")) btn.click();   // re-renders the bench
@@ -3795,6 +3846,8 @@ const STATUS = {
   R2:["chosen","one card per set of quotes \u2014 the strongest reading is the only one shown"],
   R3:["abandoned","unguarded, the rule deletes the Sentiment card wherever codebooks cover its quotes"],
   R4:["chosen","the Sentiment card is exempt from being hidden"],
+  W1:["current","two flat grids split by kind, six cards each"],
+  W2:["chosen","one run of locations, in the navigation\u2019s order"],
 };
 
 const DECISIONS = [
@@ -3818,6 +3871,14 @@ const DECISIONS = [
    [], [],
    "Location in natural case at label size and emphasis weight, tight against the headline. A gap, the claim sentence in darker ink, a gap, the rest in a tint. Two complete sentences, no em dash at the join.",
    "Punctuation is an instruction: an em dash says keep going, a full stop offers a stopping point. Measured on P1's 19 elaborations, 19 of 19 continuations carry an em dash and 0 of 19 are more than one sentence \u2014 the prompt asked for exactly that. Volume and meaning were never the problem; the missing stopping point was. Typography uses .analysis-codebook-heading's existing trio, nothing new."],
+  ["settled", "Is the navigation one-to-one with the main content?",
+   ["W2"], ["W1"],
+   "Yes, and it is an invariant rather than a coincidence: every link goes somewhere, and no signal card is unlinked. De-duplication therefore runs once, over the merged list, and both surfaces read its output.",
+   "The two kinds of signal live in two endpoints and only meet in AnalysisPage, which already merges them and already feeds the sidebar through setAnalysisSignals \u2014 so one memo at the merge point makes disagreement structurally impossible instead of merely unlikely. Today the invariant holds by accident: MAX_SIGNALS slices one list that both surfaces read. Drop the cap without stating the invariant and it breaks silently \u2014 scrollToCard looks up a ref that is not there and does nothing at all."],
+  ["settled", "What caps how many cards a project shows?",
+   [], [],
+   "Nothing, for now \u2014 de-duplication is the bound. MAX_SIGNALS stops being a display rule and stays only as a safety valve at a number nothing real reaches, so a pathological project cannot render thousands of cards. Watch it on real data.",
+   "MAX_SIGNALS = 6 slices each of the two lists, so 12 cards per project \u2014 and the nav and the cards are drawn from that same slice, which is the only reason they cannot disagree today. De-duplication already did the capping: the busiest project in the trial corpus lands at 20 cards over 19 locations, P1 at 19 over 10, fossda at 14 over 14. Against 12. And cards scale with LOCATIONS, not with study length, because quotes per session is near-constant at 6.7\u201310.1 \u2014 so a longer study does not multiply cards, a more finely sectioned one does."],
   ["settled", "Do sections and themes stay separated above the locations?",
    [], [],
    "No. One run of locations, ranked by strongest signal, sections and themes interleaved and unlabelled. The shipped nav's two Section / Theme sub-headings go.",
@@ -3956,6 +4017,119 @@ function renderR(){
   }).join("");
 }
 
+/* ── Section W: the main content in the navigation's order ───────────────
+   Real, from trial-runs/project-ikea through routes/analysis.py, de-duplicated
+   with the Sentiment card exempt. Locations are ordered by their strongest
+   signal; cards are ordered within a location.
+
+   place: [location, sourceType, cards]
+   card:  [elaboratedName|null, group, codebook, colourSet|null, composite, quotes]
+   ──────────────────────────────────────────────────────────────────────── */
+const W_PLACES = [
+  ["Shopping Bag", "section", [
+    ["Scope Feature Mix", "Scope", "garrett", "emo", 1.05, 2],
+    ["Checkout feedback clarity", "Feedback", "norman", "emo", 0.60, 4],
+    ["Bag Experience Tension", "Sentiment", "sentiment", null, 0.56, 3],
+  ]],
+  ["Beds & Mattresses Category", "section", [
+    ["Self-directed Error Recovery", "Behaviour", "uxr", "ux", 0.64, 2],
+    ["Navigation Structure Tension", "Structure", "garrett", "task", 0.61, 4],
+    ["Category Navigation Confusion", "Sentiment", "sentiment", null, 0.42, 4],
+    [null, "Conceptual model", "norman", "task", 0.21, 3],
+  ]],
+  ["Search & Sort Results", "section", [
+    ["Visual Warmth Success", "Surface", "garrett", "opp", 0.61, 2],
+    [null, "Feedback", "norman", "emo", 0.30, 3],
+    ["Sort Filter Success", "Scope", "garrett", "emo", 0.17, 2],
+    ["Search Results Delight", "Sentiment", "sentiment", null, 0.15, 3],
+  ]],
+  ["Homepage content and navigation experience", "theme", [
+    ["Homepage Content Tension", "Aesthetics and minimalism", "nielsen", "emo", 0.50, 2],
+    ["Homepage Purpose Tension", "Sentiment", "sentiment", null, 0.17, 2],
+  ]],
+  ["Task orientation and shopping intent", "theme", [
+    ["Browsing Goal Fluidity", "Motivation", "uxr", "task", 0.44, 2],
+  ]],
+  ["Sofa Beds Category", "section", [
+    ["Goal-driven Category Navigation", "Motivation", "uxr", "task", 0.43, 2],
+  ]],
+  ["Checkout & Store Selection", "section", [
+    ["Store Selection Gap", "Structure", "garrett", "task", 0.37, 2],
+  ]],
+  ["Session wrap-up and data sufficiency", "theme", [
+    ["Wrap-up Expectation Mismatch", "Sentiment", "sentiment", null, 0.33, 2],
+  ]],
+  ["Duvets & Bedding Category", "section", [
+    [null, "Recognition over recall", "nielsen", "ux", 0.29, 2],
+  ]],
+  ["Top Navigation", "section", [
+    ["Navigation Reliability Tension", "Sentiment", "sentiment", null, 0.17, 2],
+  ]],
+];
+
+/** A card, compact. Its interior is settled in section N; this panel is about
+ *  order and headings, so repeating the full card would only add height. */
+function wCard(c, showLoc, loc){
+  const [name, grp, cb, cs, comp] = c;
+  const chipCls = cb === "sentiment" ? "badge badge-confusion" : "badge grp";
+  const bg = cb === "sentiment" ? null : tagBg(cs, 1);
+  const chip = `<span class="n-hero ${chipCls}"${bg ? ` style="background:${bg}"` : ""}>`
+             + `<span class="n-hlabel">${esc(grp)}</span>`
+             + `<span class="n-hnum">${comp.toFixed(2)}</span>`
+             + `<span class="n-hcar" aria-hidden="true">\u25be</span></span>`;
+  // A nameless card is headed by its place, which is the shipped behaviour and
+  // the only card kind whose location has ever been a link.
+  const head = name
+    ? `<span class="n-loc"><a href="#">${esc(loc)}</a></span><div class="w-head">${esc(name)}</div>`
+    : `<span class="n-loc">${esc(showLoc ? "Section" : "Section")}</span>`
+      + `<div class="w-head"><a href="#">${esc(loc)}</a></div>`;
+  return `<div class="card w-card"><div class="card-top">`
+       + `<div class="card-ident">${head}</div>`
+       + `<div class="card-right">${chip}</div></div></div>`;
+}
+
+function wHTML(grouped){
+  if (!grouped){
+    // The shipped shape: two grids split by kind, each under its own heading.
+    const sent = [], tags = [];
+    W_PLACES.forEach(([loc, st, cards]) => cards.forEach(c =>
+      (c[2] === "sentiment" ? sent : tags).push([c, loc])));
+    const cut = a => a.sort((x, y) => y[0][4] - x[0][4]).slice(0, 6);
+    const grid = a => `<div class="w-grid">${a.map(([c, loc]) =>
+      wCard(c, true, loc)).join("")}</div>`;
+    return `<div class="w-h1">Sentiment signals</div>${grid(cut(sent))}`
+         + `<div class="w-h1">Tag signals</div>${grid(cut(tags))}`;
+  }
+  return W_PLACES.map(([loc, st, cards]) =>
+    `<div class="analysis-codebook-heading">${esc(loc)}</div>`
+    + `<div class="w-grid">${cards.map(c => wCard(c, false, loc)).join("")}</div>`).join("");
+}
+
+const W_PANELS = [
+  ["W1", "two grids, split by kind", false,
+   "What ships. Twelve cards, six per kind, ordered by strength across the whole project \u2014 so Shopping Bag appears in both halves and nowhere as itself. Every card repeats its location because nothing above it says where it is."],
+  ["W2", "one run of locations", true,
+   "The navigation's own order, nineteen cards over ten locations. Everything about a place is together, which is the holistic argument the navigation already won. The heading says the location once, so the cards beneath it stop repeating it \u2014 and a nameless card, which is headed by its place, gains the most."],
+];
+
+function renderW(){
+  wbench.innerHTML = W_PANELS.map(([code, label, grouped, note]) => `
+    <div class="cell" data-w2="${code}" style="width:620px">
+      <div class="frame" style="width:620px">
+        <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span class="cname"><b>${code}</b>\u00b7<b>P1</b> ${esc(label)}</span></div>
+        <div class="panel" style="border-right:0"><div class="panel-body">${wHTML(grouped)}</div></div>
+      </div>
+      <div class="commentary" style="width:620px">
+        <span class="clabel">Commentary \u00b7 measured</span>
+        <div class="metrics">
+          <span><b>${grouped ? W_PLACES.reduce((n, p) => n + p[2].length, 0) : 12}</b> cards</span>
+          <span><b>${grouped ? W_PLACES.length : 2}</b> headings</span>
+        </div>
+        <p class="verdict">${note}</p>
+      </div>
+    </div>`).join("");
+}
+
 function renderTrail(){
   // Stamp each panel with its status.
   const put = (sel, code) => document.querySelectorAll(sel).forEach(cell => {
@@ -3972,6 +4146,7 @@ function renderTrail(){
   ["C1","C2","C3","C4"].forEach(c => put(`#cardbench .cell[data-c="${c}"]`, c));
   ["S1","S2"].forEach(c => put(`#sbench .cell[data-s="${c}"]`, c));
   ["R1","R2","R3","R4"].forEach(c => put(`#rbench .cell[data-r="${c}"]`, c));
+  ["W1","W2"].forEach(c => put(`#wbench .cell[data-w2="${c}"]`, c));
   document.querySelectorAll("#realbench .cell").forEach(cell => {
     const code = (cell.querySelector(".cname b") || {}).textContent;
     const st = STATUS[code];
@@ -4169,6 +4344,8 @@ function renderCodeIndex(){
       U_VIEWS.map(v => [v[0], v[1], "u:" + v[0]])],
     ["R1\u2013R4 \u00b7 de-duplication",
       R_PANELS.map(r => [r[0], r[1], "sec:rbench:" + r[0]])],
+    ["W1\u2013W2 \u00b7 main content order",
+      W_PANELS.map(w => [w[0], w[1], "sec:wbench:" + w[0]])],
     ["D1\u2013D3 \u00b7 navigation depth",
       NAV_DEPTHS.map((d, i) => [half(d[0])[0], half(d[0])[1], "cellidx:depthbench:" + i])],
   ];

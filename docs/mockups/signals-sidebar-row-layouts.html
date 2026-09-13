@@ -353,6 +353,36 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
 .sig-sub-name { display:block; font-size:var(--bn-text-label); line-height:1.35; }
 .sig-sub .sig-badges { margin-top:.14rem; }
 .sig-sub-name .badge.grp { vertical-align:1px; margin-left:.15rem; }
+
+/* ── Section U: a view menu, and one hit area per signal card ───────────── */
+.u-menu { display:flex; align-items:center; gap:.3rem; margin:0 0 .5rem;
+  padding:.22rem .4rem .22rem .5rem; border:1px solid var(--bn-colour-border);
+  border-radius:var(--bn-radius-md); background:var(--bn-colour-bg);
+  font-size:var(--bn-text-label); line-height:1.3; cursor:default;
+  box-shadow:0 1px 0 light-dark(rgba(0,0,0,.04),rgba(0,0,0,.3)); }
+.u-menu .u-mlabel { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis;
+  white-space:nowrap; }
+.u-menu .u-chev { flex-shrink:0; width:11px; height:16px; display:grid; place-items:center;
+  border-radius:2px; background:var(--bn-colour-accent); color:#fff;
+  font-size:7px; line-height:1; }
+.u-place { font-size:var(--bn-text-caption); font-weight:var(--bn-weight-emphasis);
+  color:var(--bn-colour-text); padding:0 var(--bn-space-sm); margin:.5rem 0 .1rem; }
+.u-place:first-child { margin-top:0; }
+.u-book { display:flex; align-items:center; gap:.35rem; margin:.55rem 0 .12rem;
+  padding:0 var(--bn-space-sm); }
+.u-book:first-child { margin-top:0; }
+.u-book .u-bname { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  text-transform:uppercase; letter-spacing:.05em; color:var(--bn-colour-muted); }
+.u-book .rule { flex:1; height:1px; background:var(--bn-colour-border); }
+.u-row { display:block; padding:.16rem var(--bn-space-sm) .2rem; border-radius:var(--bn-radius-md);
+  text-decoration:none; color:inherit; }
+.u-row:hover { background:var(--bn-colour-hover); }
+.u-row.active { background:var(--bn-nav-selection-bg); }
+.u-row:focus-visible { outline:2px solid var(--bn-colour-accent); outline-offset:-1px; }
+.u-name { display:block; font-size:var(--bn-text-label); line-height:1.35; }
+.u-name .badge { vertical-align:1px; margin-left:.15rem; }
+.u-meta { display:block; font-size:var(--bn-text-micro); color:var(--bn-colour-muted);
+  line-height:1.4; }
 .sig-loc-rule { height:1px; background:var(--bn-colour-border); margin:.35rem 0 .1rem; opacity:.7; }
 
 /* ── Navigation structures for one project ──────────────────────────────── */
@@ -526,6 +556,25 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
   </div>
 
   <div class="bench" id="depthbench"></div>
+
+  <div class="divider"></div>
+  <div class="section-head">
+    <h2>U &middot; a view menu, and one hit area per signal card</h2>
+    <p>Under <strong>Beds &amp; Mattresses Category</strong> alone, P1 holds
+       <strong>eleven distinct signal cards</strong> &mdash; two from the sentiment
+       matrix and nine from the codebook matrix, from four different frameworks. Every
+       one of them is a place the sidebar should be able to send you. T5, T6 and T6b do
+       emit a link per signal, but the enclosing place inherits the row hover, so the
+       whole block lights up and the individual targets are invisible. <strong>Here
+       nothing but a signal is a link</strong> &mdash; a place or a codebook is a
+       heading, not a control &mdash; and the commentary asserts it: links total should
+       equal signal cards.</p>
+    <p>The menu at the top of each panel is the organising principle itself, which is the
+       thing being tried. Sentiment appears in <strong>U2</strong> under its own codebook
+       heading, because it is one. All three follow the strength floor and signal budget.</p>
+  </div>
+
+  <div class="bench" id="ubench"></div>
 
   <div class="essay">
     <h2>Width cannot fix the single-line row</h2>
@@ -1986,6 +2035,7 @@ const realbench = document.getElementById("realbench");
 const jobbench = document.getElementById("jobbench");
 const depthbench = document.getElementById("depthbench");
 const codeindex = document.getElementById("codeindex");
+const ubench = document.getElementById("ubench");
 
 function esc(s){ return s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 function badgeClass(label){ return SENTIMENTS.includes(label) ? "badge badge-"+label : "badge"; }
@@ -2107,6 +2157,7 @@ function render(){
   renderProjects();
   renderReal();
   renderNav();
+  renderU();
   renderCodeIndex();
 }
 
@@ -2833,6 +2884,125 @@ function navPanel(title, html, note){
  * of designs typed out by hand is a list that goes stale the first time one is
  * added.
  */
+/* ── Section U ────────────────────────────────────────────────────────────
+   The next set: a view menu at the top, and ONE HIT AREA PER SIGNAL CARD.
+   Under "Beds & Mattresses Category" P1 holds eleven distinct cards — two from
+   the sentiment matrix and nine from the codebook matrix — so the panel owes a
+   separate target for each. T5/T6/T6b already emit one link per signal, but
+   they inherit `.sig:hover` on the enclosing place, so the whole block lights
+   up and the individual targets are invisible. Here nothing but a signal is a
+   link: a place or a codebook is a heading, not a control.
+
+   The menu is the organising principle, which is the thing being tried:
+     U1  by strongest signal   flat, descending
+     U2  by codebook           grouped by the framework that produced it
+     U3  by sections & themes  grouped by place
+   Sentiment appears in U2 as a codebook like any other, because it is one. */
+
+const U_VIEWS = [
+  ["U1", "Strongest signal"],
+  ["U2", "Codebook"],
+  ["U3", "Sections & themes"],
+];
+
+/** Every signal in P1 as one flat, addressable list. */
+function uSignals(){
+  const out = [];
+  IKEA_PLACES.forEach(([loc, kind, sents, codes]) => {
+    sents.forEach(x => out.push({ loc, kind, book: "Emotional & Cognitive Signals",
+      group: "Sentiment", name: null, sent: x[0], comp: x[1] }));
+    codes.forEach(c => out.push({ loc, kind, book: c[2], group: c[1],
+      name: c[7] ? c[0] : null, colourSet: c[3], comp: c[4] }));
+  });
+  return out.sort((a, b) => b.comp - a.comp)
+            .filter(x => x.comp >= state.floor)
+            .slice(0, state.budget);
+}
+
+/**
+ * One row = one signal card. The name answers "what", the chip answers "which
+ * vocabulary", and the meta line answers "where" — dropped when a heading
+ * above has already said it.
+ */
+function uRow(x, showPlace){
+  const chip = x.sent
+    ? `<span class="${badgeClass(x.sent)}">${esc(x.sent)}</span>`
+    : (() => { const bg = tagBg(x.colourSet, 1);
+        return `<span class="badge grp"${bg ? ` style="background:${bg}"` : ""}>${esc(x.group)}</span>`; })();
+  // A signal with no elaborated name has no sentence of its own, so the place
+  // becomes the label and the chip qualifies it.
+  const lead = x.name ? `${esc(x.name)} ${chip}`
+             : (showPlace ? `${esc(x.loc)} ${chip}` : chip);
+  const meta = showPlace && x.name ? `<span class="u-meta">${esc(x.loc)}</span>` : "";
+  return `<a class="u-row" href="#" data-utarget="${esc(x.loc)} \u00b7 ${esc(x.sent || x.group)}">`
+       + `<span class="u-name">${lead}</span>${meta}</a>`;
+}
+
+function uMenu(label){
+  return `<div class="u-menu"><span class="u-mlabel">${esc(label)}</span>`
+       + `<span class="u-chev">\u25be</span></div>`;
+}
+
+function uHTML(view){
+  const rows = uSignals();
+  const label = (U_VIEWS.find(v => v[0] === view) || [])[1] || "";
+  if (!rows.length) return uMenu(label) + `<div class="sig-empty">nothing above the floor</div>`;
+  if (view === "U1") return uMenu(label) + rows.map(x => uRow(x, true)).join("");
+
+  const key = view === "U2" ? (x => x.book) : (x => x.loc);
+  const order = [];
+  const bucket = new Map();
+  for (const x of rows){
+    const k = key(x);
+    if (!bucket.has(k)){ bucket.set(k, []); order.push(k); }
+    bucket.get(k).push(x);
+  }
+  return uMenu(label) + order.map(k => {
+    const head = view === "U2"
+      ? `<div class="u-book"><span class="u-bname">${esc(k)}</span><span class="rule"></span></div>`
+      : `<div class="u-place">${esc(k)}</div>`;
+    // In U2 a row still needs its place; in U3 the heading has already said it.
+    return head + bucket.get(k).map(x => uRow(x, view === "U2")).join("");
+  }).join("");
+}
+
+function renderU(){
+  ubench.innerHTML = U_VIEWS.map(([code, label]) => {
+    const rows = uSignals();
+    const n = view => rows.length;
+    return `<div class="cell" data-u="${code}">
+      <div class="frame" style="width:${state.w}px">
+        <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span class="cname"><b>${code}</b>\u00b7<b>P1</b> ${esc(label.toLowerCase())}</span></div>
+        <div class="panel"><div class="panel-body${state.variantMark ? " mark-trunc" : ""}${state.brk ? " brk" : ""}">
+          ${uHTML(code)}
+        </div></div>
+      </div>
+      <div class="commentary" style="width:${state.w}px">
+        <span class="clabel">Commentary · measured</span>
+        <div class="metrics" data-metrics></div>
+      </div>
+    </div>`;
+  }).join("");
+  document.querySelectorAll("#ubench .cell").forEach(cell => {
+    const h = Math.round(cell.querySelector(".panel-body").getBoundingClientRect().height);
+    const targets = cell.querySelectorAll(".u-row").length;
+    const links = cell.querySelectorAll("a").length;
+    const heads = cell.querySelectorAll(".u-place, .u-book").length;
+    let trunc = 0;
+    cell.querySelectorAll(".u-name").forEach(n => {
+      const cut = n.scrollWidth > n.clientWidth + 1;
+      n.classList.toggle("is-trunc", cut); if (cut) trunc++;
+    });
+    cell.querySelector("[data-metrics]").innerHTML =
+      `<span><b>${targets}</b> signal cards</span>`
+    + `<span><b>${h}</b>px tall</span>`
+    + `<span class="${trunc === 0 ? "good" : "bad"}"><b>${trunc}</b> truncated</span>`
+    + `<span class="${links === targets ? "good" : "bad"}" title="every link is a signal and nothing else is">`
+      + `<b>${links}</b> links total</span>`
+    + `<span><b>${heads}</b> headings</span>`;
+  });
+}
+
 function renderCodeIndex(){
   const groups = [
     ["V0\u2013V9 \u00b7 row layouts", VARIANTS.map(v => [v[1].split(" \u00b7 ")[0], v[1].split(" \u00b7 ")[1]])],
@@ -2842,6 +3012,8 @@ function renderCodeIndex(){
       PROJECTS.map((p, i) => ["P" + (i + 1), p.label])],
     ["J1\u2013J3 \u00b7 navigation jobs",
       NAV_JOBS.map(j => [j[0].split(" \u00b7 ")[0], j[0].split(" \u00b7 ")[1]])],
+    ["U1\u2013U3 \u00b7 view menu + per-signal targets",
+      U_VIEWS.map(v => [v[0], v[1]])],
     ["D1\u2013D3 \u00b7 navigation depth",
       NAV_DEPTHS.map(d => [d[0].split(" \u00b7 ")[0], d[0].split(" \u00b7 ")[1]])],
   ];
@@ -2945,6 +3117,14 @@ document.querySelectorAll("[data-cap]").forEach(b => b.addEventListener("click",
 // Two destinations from one entry: the name goes to the location's first
 // signal, a badge goes to that exact one. Delegated so it survives re-render.
 function onBenchClick(e){
+  const u = e.target.closest(".u-row");
+  if (u){
+    e.preventDefault();
+    document.getElementById("target").textContent = `signal card: ${u.dataset.utarget}`;
+    document.querySelectorAll(".u-row").forEach(r => r.classList.remove("active"));
+    u.classList.add("active");
+    return;
+  }
   const hit = e.target.closest(".sig-hit");
   if (!hit) return;
   e.preventDefault();
@@ -2960,6 +3140,7 @@ function onBenchClick(e){
 }
 bench.addEventListener("click", onBenchClick);
 projbench.addEventListener("click", onBenchClick);
+ubench.addEventListener("click", onBenchClick);
 render();
 </script>
 </body>

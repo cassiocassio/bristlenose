@@ -857,6 +857,50 @@ def test_pii_stage_reports_progress_like_its_siblings(tmp_path: Path) -> None:
     estimator.stage_completed.assert_any_call("pii", ANY)
 
 
+def test_a_run_without_redaction_clears_the_previous_run_s_cooked_copy(
+    tmp_path: Path,
+) -> None:
+    """Stage 7's OFF branch must actually reach the cleanup.
+
+    The unit contract lives in `test_anonymisation_boundary.py`; this proves
+    `Pipeline.run` invokes it, which is the half a helper test cannot show. It
+    drives the real run with redaction off, having planted a cooked directory
+    and a pii_summary.txt from an imagined earlier redacted run, and lets
+    stage 8 raise so the run stops just after the branch.
+    """
+    (settings, input_dir, output_dir, sessions,
+     transcripts, fake_transcribe) = _pii_run_fixture(tmp_path)
+    settings.pii_enabled = False
+
+    cooked = output_dir / "transcripts-cooked"
+    cooked.mkdir(parents=True)
+    (cooked / "s1.txt").write_text("[p1] redacted, from the earlier run\n")
+    (output_dir / ".bristlenose").mkdir(parents=True, exist_ok=True)
+    summary = output_dir / ".bristlenose" / "pii_summary.txt"
+    summary.write_text("Jane Smith -> [NAME] at 00:02\n")
+
+    pipeline = Pipeline(settings)
+    with (
+        patch("bristlenose.stages.s01_ingest.ingest", return_value=sessions),
+        patch("bristlenose.stages.s02_extract_audio.extract_audio_for_sessions",
+              new=_async_passthrough),
+        patch("bristlenose.stages.s05_transcribe.transcribe_sessions", new=fake_transcribe),
+        patch("bristlenose.stages.s06_merge_transcript.merge_transcripts",
+              return_value=transcripts),
+        patch("bristlenose.stages.s08_topic_segmentation.segment_topics",
+              side_effect=RuntimeError("stop after stage 7")),
+    ):
+        with pytest.raises(RuntimeError, match="stop after stage 7"):
+            asyncio.run(pipeline.run(input_dir, output_dir))
+
+    assert not cooked.exists(), (
+        "the cooked copy survived a run that did not redact — serve and render "
+        "will build the report from it"
+    )
+    assert not summary.exists()
+    assert (output_dir / "transcripts-raw").is_dir(), "the originals must stay"
+
+
 def test_pii_stage_reports_how_far_through_the_transcripts_it_is(
     tmp_path: Path,
 ) -> None:

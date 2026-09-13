@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import shutil
 from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -344,6 +345,59 @@ def _is_speaker_stage_verified(
 def _print_hash_mismatch(stage: str, path: Path) -> None:
     """Log a warning when a cached file fails hash verification."""
     _print_warn(f"{stage}: {path.name} changed on disk — re-running stage")
+
+
+def _discard_stale_redaction(output_dir: Path) -> None:
+    """Remove a previous run's redaction output when this run is not redacting.
+
+    Called from the ``pii_enabled is False`` branch of stage 7, immediately
+    after stage 6 has rewritten ``transcripts-raw/`` — so anything in
+    ``transcripts-cooked/`` is by definition out of date with the transcripts
+    beside it, whatever happens later in this run.
+
+    **Why deleting is the fix and not merely tidying.** Three readers infer
+    "is this project redacted?" from "does ``transcripts-cooked/`` exist?":
+    ``server/importer._find_transcripts_dir``, ``run_render_only``'s coverage
+    loader, and the importer's word-timing guard. That inference is sound only
+    while the directory cannot outlive the setting. It could, and two of the
+    three then failed *unsafe* — the report was built from the earlier run's
+    redacted text and any session added since was absent from it, with no
+    warning (measured 13 Sep 2026). Clearing here restores the invariant those
+    readers already assume, which is cheaper and less fragile than teaching
+    each of them to consult the manifest.
+
+    ``pii_summary.txt`` goes too. It lists every original PII value with its
+    timecode, so once the redacted transcripts it describes are gone it audits
+    nothing and is only a concentrated re-identification key (CLAUDE.md names
+    it as one) left behind in the project.
+
+    ``transcripts-raw/`` is never touched. Redaction is an onward-flow
+    convenience, not on-disk infosec (decision D4, docs/design-redact-pii.md) —
+    the researcher was in the room, and the originals stay.
+    """
+    targets = [
+        output_dir / "transcripts-cooked",
+        output_dir / "cooked_transcripts",  # pre-v2 layout; same readers accept it
+        output_dir / ".bristlenose" / "pii_summary.txt",
+    ]
+    for target in targets:
+        if not target.exists():
+            continue
+        try:
+            if target.is_dir():
+                shutil.rmtree(target)
+            else:
+                target.unlink()
+        except OSError as exc:
+            # Never fail the run over cleanup — but say what the consequence is
+            # rather than shrugging, because the surviving directory is exactly
+            # what makes the three readers above wrong.
+            _print_warn(
+                f"could not remove stale {target.name} ({type(exc).__name__}) — "
+                "the report may be built from the previous run's redacted text",
+            )
+        else:
+            logger.info("Removed stale redaction output: %s", target.name)
 
 
 def _load_cached_json(path: Path) -> Any | None:
@@ -1468,6 +1522,34 @@ class Pipeline:
                 mark_stage_complete(manifest, STAGE_PII_REMOVAL)
                 write_manifest(manifest, output_dir)
             else:
+                # Redaction is off, so any transcripts-cooked/ on disk is from
+                # an earlier run — and stage 6 has just rewritten
+                # transcripts-raw/ a few lines above, so those cooked files are
+                # already stale against it. Clear them.
+                #
+                # This is not tidiness. THREE readers infer "is this project
+                # redacted?" from "does transcripts-cooked/ exist?" — the serve
+                # importer's `_find_transcripts_dir`, `run_render_only`'s
+                # coverage loader, and the word-timing guard in the importer.
+                # Leaving a stale directory made two of them build the report
+                # from the OLD redacted text with any newly-added session
+                # silently absent (measured 13 Sep 2026: 2 cooked files read, 3
+                # raw files current). Deleting it here makes their inference
+                # *true* rather than teaching each of them to ask the manifest.
+                #
+                # pii_summary.txt goes with it: it lists every original PII
+                # value with timecodes, so once the redacted transcripts it
+                # describes are gone it audits nothing and is simply a
+                # concentrated re-identification key left in the project.
+                #
+                # No confirmation, on the house rule that a confirm is for a
+                # real loss: the action that regenerates these is switching
+                # redaction back on and re-analysing, which is exactly what
+                # someone who wanted them would do. transcripts-raw/ is
+                # untouched either way (D4 — redaction protects the onward
+                # artefact, not the disk).
+                _discard_stale_redaction(output_dir)
+
                 # Pass through without PII removal
                 clean_transcripts = [
                     PiiCleanTranscript(

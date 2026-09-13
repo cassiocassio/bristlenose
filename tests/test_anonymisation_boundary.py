@@ -229,6 +229,117 @@ class TestAnalyzePreflightDoesNotProbeThePiiStack:
         assert "pii" in _COMMAND_CHECKS["run"]
 
 
+class TestTurningRedactionOffClearsTheRedactedCopy:
+    """The mirror of the class below: redaction state outliving the setting.
+
+    Three readers infer "is this project redacted?" from "does
+    ``transcripts-cooked/`` exist?" — the serve importer's
+    ``_find_transcripts_dir``, ``run_render_only``'s coverage loader, and the
+    importer's word-timing guard. Sound only while that directory cannot
+    outlive the setting; it could. Measured 13 Sep 2026: a project redacted
+    over 2 sessions, then re-run un-redacted with a 3rd added, served the
+    **earlier run's redacted text with session 3 absent** — and said nothing.
+
+    Rather than teach three readers to consult the manifest, stage 7 clears the
+    directory when it does not redact, which makes the inference they already
+    make true. ``transcripts-raw/`` is never touched (D4).
+    """
+
+    @staticmethod
+    def _project(tmp_path: Path, *, cooked: list[str], raw: list[str]) -> Path:
+        out = tmp_path / "bristlenose-output"
+        (out / ".bristlenose").mkdir(parents=True)
+        for name, sids in (("transcripts-cooked", cooked), ("transcripts-raw", raw)):
+            d = out / name
+            d.mkdir()
+            for sid in sids:
+                (d / f"{sid}.txt").write_text(f"[p1] {name} {sid}\n", encoding="utf-8")
+        (out / ".bristlenose" / "pii_summary.txt").write_text(
+            "Jane Smith -> [NAME] at 00:02\n", encoding="utf-8",
+        )
+        return out
+
+    def test_clears_the_cooked_copy_and_the_reidentification_key(
+        self, tmp_path: Path
+    ) -> None:
+        from bristlenose.pipeline import _discard_stale_redaction
+
+        out = self._project(tmp_path, cooked=["s1", "s2"], raw=["s1", "s2", "s3"])
+        _discard_stale_redaction(out)
+
+        assert not (out / "transcripts-cooked").exists()
+        assert not (out / ".bristlenose" / "pii_summary.txt").exists(), (
+            "pii_summary.txt lists every original PII value with timecodes; "
+            "once the transcripts it describes are gone it audits nothing and "
+            "is only a re-identification key left in the project"
+        )
+
+    def test_never_touches_the_originals(self, tmp_path: Path) -> None:
+        """D4: redaction protects the onward artefact, not the disk."""
+        from bristlenose.pipeline import _discard_stale_redaction
+
+        out = self._project(tmp_path, cooked=["s1", "s2"], raw=["s1", "s2", "s3"])
+        _discard_stale_redaction(out)
+
+        raw = out / "transcripts-raw"
+        assert sorted(p.name for p in raw.glob("*.txt")) == ["s1.txt", "s2.txt", "s3.txt"]
+
+    def test_the_serve_importer_then_reads_the_current_transcripts(
+        self, tmp_path: Path
+    ) -> None:
+        """The outcome that matters, not the rule that produces it.
+
+        Before: the importer picked transcripts-cooked/ and read 2 stale files
+        while 3 current ones sat beside it. This asserts the reader's answer,
+        so it keeps biting if the cleanup ever moves or is reimplemented.
+        """
+        from bristlenose.pipeline import _discard_stale_redaction
+        from bristlenose.server.importer import _find_transcripts_dir
+
+        out = self._project(tmp_path, cooked=["s1", "s2"], raw=["s1", "s2", "s3"])
+        assert _find_transcripts_dir(out.parent, out).name == "transcripts-cooked"
+
+        _discard_stale_redaction(out)
+
+        chosen = _find_transcripts_dir(out.parent, out)
+        assert chosen.name == "transcripts-raw"
+        assert sorted(p.name for p in chosen.glob("*.txt")) == [
+            "s1.txt", "s2.txt", "s3.txt",
+        ], "session 3 must not be missing from the report"
+
+    def test_is_a_no_op_on_a_project_that_was_never_redacted(
+        self, tmp_path: Path
+    ) -> None:
+        """The overwhelmingly common path — redaction is off by default."""
+        from bristlenose.pipeline import _discard_stale_redaction
+
+        out = tmp_path / "bristlenose-output"
+        (out / "transcripts-raw").mkdir(parents=True)
+        (out / "transcripts-raw" / "s1.txt").write_text("[p1] hi\n", encoding="utf-8")
+
+        _discard_stale_redaction(out)  # must not raise
+
+        assert (out / "transcripts-raw" / "s1.txt").exists()
+
+    def test_a_failed_removal_warns_and_does_not_kill_the_run(
+        self, tmp_path: Path, capsys
+    ) -> None:
+        """Cleanup must never fail a run — but must not shrug either.
+
+        The surviving directory is exactly what makes the three readers wrong,
+        so the warning names that consequence rather than reporting an errno.
+        """
+        from unittest.mock import patch
+
+        from bristlenose.pipeline import _discard_stale_redaction
+
+        out = self._project(tmp_path, cooked=["s1"], raw=["s1"])
+        with patch("bristlenose.pipeline.shutil.rmtree", side_effect=OSError("nope")):
+            _discard_stale_redaction(out)  # must not raise
+
+        assert "previous run's redacted text" in capsys.readouterr().out
+
+
 class TestReanalysingWithRedactionReplacesTheText:
     """The DB must not outlive the redaction it predates.
 

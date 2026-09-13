@@ -67,11 +67,15 @@ private enum WelcomeContent {
               illustration: .agentChat, primaryDestination: .mcpAgentsSettings),
         .init(title: "Ingest", text: "Drop a folder of recordings or transcripts — Bristlenose transcribes, analyses and reports back.", linkLabel: "Import options →", href: docs + "first-analysis.html", illustration: .ingest),
         // WITHHELD from the desktop pool (2 Aug 2026) — this slot taught a tool the .app cannot run.
-        // Presidio + spaCy are in the sidecar spec's `excludes=[]` (desktop/bristlenose-sidecar.spec),
-        // `pii_enabled` defaults false and is only settable by the CLI's `--redact-pii`, and no desktop
-        // control exists — so the capability is absent from the bundle AND unreachable from the UI.
-        // (The Tip cell already skips /docs/redact-pii.html for being CLI-only; this contradicted it.)
-        // Kept verbatim as the reference copy: restore this line when PII redaction ships on the Mac.
+        // Still withheld, but for ONE of the original two reasons: as of 12 Sep 2026 presidio and
+        // spaCy are BUNDLED, not excluded (bristlenose-sidecar.spec's `excludes=[]` says so in its
+        // own comment), so the capability is no longer absent from the binary. What is still true is
+        // that it is unreachable from the UI: `piiEnabled` is read by PIIModelPack and handed to the
+        // sidecar by BristlenoseShared.childEnvironment, but NOTHING WRITES IT — there is no Privacy
+        // control — so it is false on every Mac and redaction remains CLI-only (`--redact-pii`).
+        // (The Tip cell likewise skips /docs/redact-pii.html for being CLI-only.)
+        // Restore this line when a control ships. Verify with `grep -rn 'piiEnabled' Bristlenose/`:
+        // a second, WRITING call site is the signal — this comment cannot tell you, it only rots.
         // .init(title: "Redact PII", text: "Remove personal details automatically, before analysis.", linkLabel: "Strip names and more →", href: docs + "redact-pii.html"),
     ]
 

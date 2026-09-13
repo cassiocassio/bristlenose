@@ -1161,6 +1161,72 @@ imports.
   Additive, but it is a wire-contract change (Swift mirror + fixture + a scenario
   that uses the field), and the redaction *count* per session is weakly
   identifying — attempted/succeeded session counts are the safe subset.
+### Turning redaction off — decided 13 Sep 2026
+
+**The question looked like "should `status` report redaction" and was not.**
+Chasing why that was hard turned up a correctness bug: **three readers infer
+"is this project redacted?" from "does `transcripts-cooked/` exist?"** —
+`server/importer._find_transcripts_dir`, `run_render_only`'s coverage loader,
+and the importer's word-timing guard. Sound only while the directory cannot
+outlive the setting. It could.
+
+Measured, not reasoned: a project redacted over 2 sessions, re-run un-redacted
+with a 3rd added, and `_find_transcripts_dir` returns `transcripts-cooked` —
+2 stale files, session 3 absent, no warning. So `serve` and `render` build the
+report from the **earlier run's redacted text with a session missing**. (The
+word-timing guard fails *safe* — it withholds timings. Only the two
+transcript-source readers fail unsafe.)
+
+**Decision: clear the redacted copy when a run does not redact.** The user's
+call, and it is the cheaper engineering as well as the better product: it makes
+the inference those three readers already make **true**, rather than teaching
+each of them to consult the manifest. Stage 7's OFF branch calls
+`_discard_stale_redaction`, which removes `transcripts-cooked/`, the pre-v2
+`cooked_transcripts/`, and `.bristlenose/pii_summary.txt`.
+
+The reasoning, in the user's own frame: *"if you flip the toggle to redacted
+and re-analyse you want the data redacted, and if you flip it back you want the
+full text."* Redaction is an ethics-and-convenience workflow feature, not
+security — you were the person the participant told it to, on a recording, on
+your own laptop. So the redacted copy is a **deliverable**, and a stale
+deliverable is worth less than no deliverable.
+
+Three consequences worth having written down:
+
+- **`pii_summary.txt` goes with it.** It lists every original PII value with
+  timecodes. Once the transcripts it describes are gone it audits nothing and is
+  only a concentrated re-identification key sitting in the project.
+- **`transcripts-raw/` is never touched** — written at stage 6, before the
+  redaction branch, unconditionally. D4 holds: the originals stay.
+- **No confirmation dialog**, on the house rule that a confirm is for a real
+  loss. The action that regenerates the cooked copy is switching redaction back
+  on and re-analysing, which is precisely what someone who wanted it would do.
+  The files were *already* invalidated a few lines earlier when stage 6 rewrote
+  `transcripts-raw/`, so what is being deleted is not a valid artefact.
+
+**The price of flipping the toggle is the LLM, not the redaction.**
+`pii_enabled` is in topic segmentation's cache key (`pipeline.py`), so a flip
+invalidates topics and cascades to quotes and themes — a **full re-analysis**:
+~$0.67 (Sonnet) / ~$1.68 (Opus) for five sessions, ~$2.68 / ~$6.70 for twenty,
+on the legacy forecast constant. Correct, since the model genuinely reads
+different text, but it is a paid action in **both** directions and nothing warns
+before it. (The cascade is stricter than strictly necessary — topic *boundaries*
+barely move under redaction — but unpicking that is real work for a small win.)
+
+**Measured the same day: there is NO user-visible "this was redacted" flag**
+anywhere — not the SPA, the report, the export, the static renderer, or the Mac.
+`ProjectInfoResponse` carries `project_name`/`session_count`/`participant_count`
+only, and `Project` has no redaction column (`mcp_anonymise` is the *agent*
+toggle, a different feature). Open — see below.
+
+**And the Mac has no Privacy control yet.** The plumbing is live —
+`BristlenoseShared.childEnvironment` merges `PIIModelPack.currentEnvironment()`
+into the sidecar env — but **nothing writes the `piiEnabled` default**, so it is
+`false` on every Mac and redaction is CLI-only (`--redact-pii`). Which means
+this fix lands *before* the toggle ships rather than after. (A sweep on 13 Sep
+reported PIIModelPack as referenced only from tests; that was wrong — check
+`BristlenoseShared.swift` before repeating it.)
+
 - **`bristlenose status` never mentions PII.** `_STAGE_DISPLAY` defines
   "PII removal" and `_DISPLAY_STAGES` throws it away, so the one command that
   answers "what state is this project in" cannot answer it for the privacy

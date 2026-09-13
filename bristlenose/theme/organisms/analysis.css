@@ -567,12 +567,68 @@ button.signal-card-toggle {
 }
 
 /* Badge row: group name + pattern type */
-.signal-card-badges {
-    display: flex;
-    gap: 0.35rem;
-    align-items: center;
-    margin-bottom: var(--bn-space-lg);
+/* ── The hero chip ────────────────────────────────────────────────────────
+   The card's one number, and the control that opens the working. It sits on
+   `.badge` for the tint and the mono face, and adds the size, the disclosure
+   affordance and the button reset — most readers need one number, and the four
+   metrics behind it are for whoever wants to audit it. */
+.signal-card-hero {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--bn-space-sm);
+    /* Bigger than the chips it sits among, because it is the hero of this
+       corner and they are not clickable. */
+    font-size: var(--bn-text-body);
+    line-height: var(--bn-text-body-lh);
+    padding: var(--bn-space-sm) var(--bn-space-md);
+    border: 1px solid transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
 }
+
+.signal-card-hero:hover {
+    border-color: var(--bn-colour-border-hover);
+}
+
+.signal-card-hero:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+}
+
+.signal-card-hero-score {
+    font-weight: var(--bn-weight-emphasis);
+}
+
+/* Always drawn, just quiet: a control has to read as a control BEFORE the
+   pointer arrives, and this chip is otherwise indistinguishable from the
+   tinted chips on the same card that do nothing when clicked. */
+.signal-card-hero-caret {
+    font-size: var(--bn-text-micro);
+    opacity: 0.4;
+    transition: transform var(--bn-transition-fast), opacity var(--bn-transition-fast);
+}
+
+.signal-card-hero:hover .signal-card-hero-caret,
+.signal-card-hero:focus-visible .signal-card-hero-caret {
+    opacity: 0.85;
+}
+
+.signal-card-hero[aria-expanded="true"] .signal-card-hero-caret {
+    transform: rotate(180deg);
+    opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .signal-card-hero-caret {
+        transition: none;
+    }
+}
+
+/* Retired with the badge stack it spaced — the hero is the only thing in this
+   corner now, and the metrics sit under it when opened. Kept as a note rather
+   than a rule so a stale reference is a miss, not a silent no-op.
+   .signal-card-badges — removed 13 Sep 2026 */
 
 /* Pattern badge — coloured allcaps label.
    Opacity 0.9 knocks text back 10% — heavy weight + allcaps reads

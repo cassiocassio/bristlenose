@@ -80,6 +80,79 @@ const SAFETY_CAP = 60;
 // ── Types ──────────────────────────────────────────────────────────────
 // UnifiedSignal and UnifiedQuote are imported from utils/types.ts
 
+/**
+ * The card's hero: the group or sentiment, the score, and the control that
+ * opens the working.
+ *
+ * One chip, because most readers need one number. Measured across a trial
+ * project's 24 signals, Agreement takes 3 distinct values and Intensity 4, both
+ * clustered at the bottom of their scales, while Signal is close to collinear
+ * with Concentration — two of the four metrics are captions, not columns. The
+ * rest is for whoever wants to audit it, so it is behind this.
+ *
+ * A real <button>: keyboard reachable, `aria-expanded` carrying the disclosure
+ * semantics, and a focus ring matching the nav rows and the location link. The
+ * caret is always drawn, just quiet — a control has to read as a control BEFORE
+ * the pointer arrives, and the chip is otherwise indistinguishable from the
+ * tinted chips on the same card that are not clickable.
+ *
+ * No new i18n key: the button's own text ("Feedback 0.60") is its accessible
+ * name and `aria-expanded` says what pressing it does, which is the standard
+ * disclosure pattern. i18n is parked, and a tooltip is not worth 21 locales.
+ */
+function SignalHero({
+  signal,
+  isSentiment,
+  expanded,
+  onToggle,
+}: {
+  signal: UnifiedSignal;
+  isSentiment: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const { t } = useTranslation("enums");
+  const label = isSentiment
+    ? t(`sentiment.${signal.columnLabel}`, { defaultValue: signal.columnLabel })
+    : signal.columnLabel;
+  const classes = [
+    "badge",
+    "signal-card-hero",
+    isSentiment ? `badge-${signal.columnLabel}` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const style =
+    !isSentiment && signal.colourSet
+      ? { backgroundColor: getGroupBg(signal.colourSet) }
+      : undefined;
+
+  return (
+    <button
+      type="button"
+      className={classes}
+      style={style}
+      aria-expanded={expanded}
+      data-testid="bn-signal-hero"
+      onClick={(e) => {
+        // The whole card is role="button" and focuses on click. Without this
+        // the chip fires both — you open the working AND re-point the
+        // inspector, which is not what pressing a disclosure should do.
+        e.stopPropagation();
+        onToggle();
+      }}
+    >
+      <span className="signal-card-hero-label">{label}</span>
+      <span className="signal-card-hero-score">
+        {signal.compositeSignal.toFixed(2)}
+      </span>
+      <span className="signal-card-hero-caret" aria-hidden="true">
+        {"\u25be"}
+      </span>
+    </button>
+  );
+}
+
 function adaptSentimentSignals(data: SentimentAnalysisData): UnifiedSignal[] {
   return data.signals.map((s: SentimentSignal) => ({
     key: `${s.sourceType}|${s.location}|${s.sentiment}`,
@@ -414,6 +487,10 @@ function SignalCard({
   }, [expanded]);
 
   const toggleExpand = useCallback(() => setExpanded((prev) => !prev), []);
+  /** The metrics block, minimised by default. Independent of `expanded`,
+   *  which owns the hidden QUOTES — two disclosures, two states. */
+  const [workingOpen, setWorkingOpen] = useState(false);
+  const toggleWorking = useCallback(() => setWorkingOpen((prev) => !prev), []);
 
   return (
     <div
@@ -471,41 +548,30 @@ function SignalCard({
                   {signal.location}
                 </a>
               </div>
-              {isSentiment ? (
-                <Badge text={signal.columnLabel} variant="ai" sentiment={signal.columnLabel} />
-              ) : (
-                <Badge
-                  text={signal.columnLabel}
-                  variant="readonly"
-                  colour={signal.colourSet ? getGroupBg(signal.colourSet) : undefined}
-                  className="signal-group-badge"
-                />
-              )}
             </>
           )}
         </div>
-        {signal.signalName ? (
-          <div className="signal-card-right">
-            <div className="signal-card-badges">
-              {!isSentiment && (
-                <Badge
-                  text={signal.columnLabel}
-                  variant="readonly"
-                  colour={signal.colourSet ? getGroupBg(signal.colourSet) : undefined}
-                  className="signal-group-badge"
-                />
-              )}
-              {/* The pattern chip is withdrawn, NOT the pattern. Every
-                  elaborated card is still classified success / gap / tension /
-                  recovery against its tag's own definition, and it is still
-                  written to `elaboration_caches` — `signal.pattern` arrives on
-                  the wire and nothing regenerates when a better treatment
-                  lands. What failed was the presentation: an all-caps coloured
-                  chip that shouts, reads as a category label rather than a
-                  judgement, and competes with the score for this corner.
-                  Deferred deliberately; see docs/design-decisions.md. */}
-            </div>
-            <div className="signal-card-metrics">
+        {/* One right column for both card kinds. The sentiment card used to
+            carry a bare metrics block and the codebook card a badge stack above
+            one; they are the same card now, and the only thing that differs is
+            whether the hero names a sentiment or a tag group.
+
+            The pattern chip is withdrawn, NOT the pattern: every elaborated
+            card is still classified success / gap / tension / recovery against
+            its tag's own definition and still written to `elaboration_caches`,
+            so `signal.pattern` arrives on the wire and nothing regenerates when
+            a better treatment lands. What failed was the presentation — an
+            all-caps chip that shouts, reads as a category label rather than a
+            judgement, and competed with the score for this exact corner. */}
+        <div className="signal-card-right">
+          <SignalHero
+            signal={signal}
+            isSentiment={isSentiment}
+            expanded={workingOpen}
+            onToggle={toggleWorking}
+          />
+          {workingOpen && (
+            <div className="signal-card-metrics" data-testid="bn-signal-working">
               <span className="metric-label" title={t("analysis.signalTitle")}>{t("analysis.signalLabel")}</span>
               <span className="metric-value">{signal.compositeSignal.toFixed(2)}</span>
               <span className="metric-viz">
@@ -536,35 +602,8 @@ function SignalCard({
                 viz={{ type: "dots", value: signal.meanIntensity }}
               />
             </div>
-          </div>
-        ) : (
-          <div className="signal-card-metrics">
-            <Metric
-              label={t("analysis.signalLabel")}
-              title={t("analysis.signalTitle")}
-              displayValue={signal.compositeSignal.toFixed(2)}
-              viz={{ type: "none" }}
-            />
-            <Metric
-              label={t("analysis.concLabel")}
-              title={t("analysis.concTitle")}
-              displayValue={`${signal.concentration.toFixed(1)}×`}
-              viz={{ type: "bar", percentage: concPct }}
-            />
-            <Metric
-              label={t("analysis.agreeLabel")}
-              title={t("analysis.agreeTitle")}
-              displayValue={signal.nEff.toFixed(1)}
-              viz={{ type: "bar", percentage: agreePct }}
-            />
-            <Metric
-              label={t("analysis.intensityLabel")}
-              title={t("analysis.intensityTitle")}
-              displayValue={signal.meanIntensity.toFixed(1)}
-              viz={{ type: "dots", value: signal.meanIntensity }}
-            />
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <div className="signal-card-quotes">

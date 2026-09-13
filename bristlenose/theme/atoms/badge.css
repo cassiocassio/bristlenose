@@ -1,9 +1,14 @@
 /* Atom: badge — base badge, sentiment variants, AI and user variants */
 
+/* The weight is DECLARED. It never was, so every chip in the product rendered
+   at the user agent's 400 — a value in nobody's ladder. `light` is the rung the
+   system reserves for subordinate text, and that is what a chip is: the row's
+   words carry the finding, the chip says which vocabulary they came from. */
 .badge {
     display: inline-block;
     font-family: var(--bn-font-mono);
     font-size: var(--bn-text-badge);
+    font-weight: var(--bn-weight-light);
     padding: var(--bn-space-xs) 0.45rem;
     border-radius: var(--bn-radius-sm);
     background: var(--bn-colour-badge-bg);

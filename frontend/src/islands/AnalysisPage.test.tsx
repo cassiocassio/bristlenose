@@ -375,7 +375,7 @@ describe("AnalysisPage", () => {
     expect(screen.queryByTestId("bn-source-banner")).toBeNull();
   });
 
-  it("renders metrics for each signal card", async () => {
+  it("shows the score on the hero chip and hides the working behind it", async () => {
     mockFetchCodebookAnalysis(mockCbData);
     render(<AnalysisPage projectId="1" />);
 
@@ -383,8 +383,49 @@ describe("AnalysisPage", () => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
     });
 
-    expect(screen.getByText("0.46")).toBeTruthy(); // composite signal
+    // One number, on the chip. Measured across a trial project's 24 signals,
+    // Agreement takes 3 distinct values and Intensity 4 — captions, not
+    // columns — so the rest is for whoever wants to audit it.
+    expect(screen.getAllByTestId("bn-signal-hero")[0].textContent).toContain("0.46");
+    expect(screen.queryByText("2.5×")).toBeNull();
+    expect(screen.queryAllByTestId("bn-signal-working")).toHaveLength(0);
+  });
+
+  it("the hero chip opens and closes the working", async () => {
+    mockFetchCodebookAnalysis(mockCbData);
+    render(<AnalysisPage projectId="1" />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
+    });
+
+    const hero = screen.getAllByTestId("bn-signal-hero")[0];
+    expect(hero.getAttribute("aria-expanded")).toBe("false");
+
+    fireEvent.click(hero);
+    expect(hero.getAttribute("aria-expanded")).toBe("true");
     expect(screen.getByText("2.5×")).toBeTruthy();   // concentration
+
+    fireEvent.click(hero);
+    expect(hero.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByText("2.5×")).toBeNull();
+  });
+
+  it("opening the working does not also focus the card", async () => {
+    // The card is role="button" and focuses on click, so the chip must stop
+    // the event — pressing a disclosure should not re-point the inspector.
+    resetAnalysisSignalStore();
+    mockFetchCodebookAnalysis(mockCbData);
+    render(<AnalysisPage projectId="1" />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
+    });
+
+    const card = screen.getAllByTestId("bn-signal-card")[0];
+    expect(card.classList.contains("bn-selected")).toBe(false);
+    fireEvent.click(screen.getAllByTestId("bn-signal-hero")[0]);
+    expect(card.classList.contains("bn-selected")).toBe(false);
   });
 
   it("shows participant grid with presence indicators", async () => {
@@ -454,7 +495,11 @@ describe("AnalysisPage", () => {
     expect(screen.getAllByText("Latency").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders group heading badge with colour", async () => {
+  it("the hero carries the group name and its colour", async () => {
+    // The group badge used to sit in the card's identity column (nameless
+    // card) or in a badge stack above the metrics (elaborated card). It is the
+    // hero's own label now — the two card kinds are the same card, and the
+    // only thing that differs is whether the hero names a sentiment or a group.
     mockFetchCodebookAnalysis(mockCbData);
     render(<AnalysisPage projectId="1" />);
 
@@ -462,8 +507,12 @@ describe("AnalysisPage", () => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
     });
 
-    const groupBadges = document.querySelectorAll(".signal-group-badge");
-    expect(groupBadges.length).toBe(2);
+    expect(document.querySelectorAll(".signal-group-badge").length).toBe(0);
+    const heroes = screen.getAllByTestId("bn-signal-hero");
+    expect(heroes.length).toBe(2);
+    const tagHero = heroes.find((h) => h.textContent?.includes("Pain points"));
+    expect(tagHero).toBeTruthy();
+    expect(tagHero!.getAttribute("style")).toContain("background-color");
   });
 
   it("heatmap has rotated column headers for tag mode", async () => {

@@ -307,7 +307,7 @@ Moderators and observers stay in the roles line below the header. Their turns ar
 
 ### One chip carries the group and the score
 
-**A card's top right is a single chip naming the tag group or sentiment and carrying the score, and that chip is the control that opens the working.** The four-metric block is minimised by default and the text reflows around it when opened. Measured across a trial project's 24 signals, Agreement takes 3 distinct values and Intensity 4, both clustered at the bottom of their scales, while Signal is close to collinear with Concentration — two of the four metrics are captions, not columns. One number is enough for most readers; the rest is for whoever wants to audit it. (13 Sep 2026; `docs/mockups/signals-sidebar-row-layouts.html` §C, §N.)
+**A card's top right is a single chip naming the tag group or sentiment and carrying the score, and that chip is the control that opens the working.** The four-metric block is minimised by default; the text goes on flowing beside it, because the card's top was already two columns. Both card kinds share that one right column — the elaborated card's badge stack and the nameless card's bare metrics block are the same thing now. Measured across a trial project's 24 signals, Agreement takes 3 distinct values and Intensity 4, both clustered at the bottom of their scales, while Signal is close to collinear with Concentration — two of the four metrics are captions, not columns. One number is enough for most readers; the rest is for whoever wants to audit it. (13 Sep 2026; `docs/mockups/signals-sidebar-row-layouts.html` §C, §N.)
 
 ---
 

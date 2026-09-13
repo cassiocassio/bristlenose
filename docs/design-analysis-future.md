@@ -20,13 +20,15 @@ Twelve decisions, each drawn as a panel before any code moved. Codes refer to
 benches in the mockup named above. The first seven are the card and the
 navigation; the rest settled while building.
 
-**Built on 13 Sep 2026.** `utils/signalDedup.ts` holds the rule and the
-grouping; `AnalysisPage` merges the two signal sources, de-duplicates once, and
-renders one run of locations; `AnalysisSidebar` groups the same list the same
-way; `AnalysisSignalStore` holds one list instead of two. What is NOT built is
-section N's hero chip — the group-and-score chip acting as the control that
-expands the metrics. It is drawn and decided, and it is a rebuild of
-`.signal-card-right` and its two variants, so it waits for its own pass.
+**Built on 13 Sep 2026, all of it.** `utils/signalDedup.ts` holds the rule and
+the grouping; `AnalysisPage` merges the two signal sources, de-duplicates once,
+and renders one run of locations; `AnalysisSidebar` groups the same list through
+the same helper; `AnalysisSignalStore` holds one list instead of two. The card's
+top right is one hero chip — `SignalHero` in `AnalysisPage.tsx`, a real
+`<button>` with `aria-expanded` — carrying the group-or-sentiment and the score,
+with the four metrics behind it and minimised by default. Both card kinds share
+that one right column; the badge stack and the always-open metrics block are
+gone, and `.signal-card-badges` with them.
 
 | | decision | panel |
 |---|---|---|

@@ -485,6 +485,14 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
 .n-hero[aria-expanded="true"] .n-hcar { transform:rotate(180deg); opacity:.85; }
 @media (prefers-reduced-motion: reduce) { .n-hero .n-hcar { transition:none; } }
 
+.gaps { max-width:74ch; font-size:var(--bn-text-label); line-height:1.6;
+  color:var(--bn-colour-muted); padding-left:1.4rem; margin:0 0 var(--bn-space-lg); }
+.gaps li { margin:.5rem 0; }
+.gaps b { color:var(--bn-colour-text); font-weight:var(--bn-weight-emphasis); }
+.gaps code { font-family:var(--bn-font-mono); font-size:.95em;
+  background:var(--bn-colour-badge-bg); padding:.05rem .3rem; border-radius:3px; }
+.gaps.defer { list-style:none; padding-left:0; }
+
 /* Section R: a card that brings no new quote is drawn struck through, so the
    bench shows what the rule removes rather than just the shorter list. The
    strike is on the NAME only — a fade over the row would have dimmed the tag
@@ -633,6 +641,77 @@ a.ci-code:focus-visible { outline:2px solid var(--bn-colour-accent); outline-off
        is not the same as chosen. Every code below is a link to the panel it names.</p>
   </div>
   <div id="trail"></div>
+
+  <div class="divider"></div>
+  <div class="section-head">
+    <h2>Gaps in the spec</h2>
+    <p>What a build would have to guess at. Scanned 13 Sep 2026 against the shipped
+       code, not against this page &mdash; several of these are places where the
+       mockup and the product quietly disagree and nobody has chosen.</p>
+  </div>
+  <ol class="gaps">
+    <li><b>Does a nav row wrap, or truncate?</b> This page was built to answer that
+      &mdash; V0 ellipses, V1 wraps &mdash; and T6b answers what a row <em>shows</em>
+      without answering how it <em>fits</em>. Shipped today:
+      <code>.signal-entry-name</code> is <code>white-space:nowrap</code> +
+      <code>text-overflow:ellipsis</code>, the one variant that discards words. This
+      mockup wraps. Measured: an elaborated name runs 23 characters at the median and
+      a theme label 51 at its longest, and T6b puts a group chip on the same line.
+      At sidebar width most rows will not fit.</li>
+    <li><b>Is there still a Section / Theme split above the locations?</b> The shipped
+      sidebar groups entries under two sub-headings from <code>sourceType</code>. The
+      new navigation groups by location, and a location is already one or the other.
+      Two headings over a location list, or one flat run?</li>
+    <li><b>What replaces <code>MAX_SIGNALS = 6</code>?</b> It slices the whole list,
+      so today the sidebar and the cards are drawn from one cut and cannot disagree.
+      A location-organised nav with no project-wide cap breaks that coupling, and
+      nothing says what the new bound is or who owns it.</li>
+    <li><b>Does de-duplication apply to the main content as well as the navigation?</b>
+      Presumably yes, but it is unstated &mdash; and if the two disagree the nav grows
+      rows that land nowhere.</li>
+    <li><b>A hidden card leaves a hot heatmap cell pointing at nothing.</b> Already
+      true today, independently of any of this: <code>signalKeys</code> is built from
+      the <em>uncapped</em> lists while <code>cardRefs</code> only holds rendered
+      cards, so a cell outside the top six draws <code>.has-card</code>, accepts a
+      click, and silently does nothing. De-duplication adds a second class of the same
+      defect. Whatever hides a card has to un-hot its cell.</li>
+    <li><b>Where do the two heatmaps go</b> once the cards are location-sectioned?
+      They are currently the page&rsquo;s second half and they are organised by the
+      axis the new order abandons.</li>
+    <li><b>Is the view menu shipping, and does it do anything?</b> It is drawn as a
+      static <code>.u-menu</code> div in section U. Sections &amp; themes is the
+      default; strongest-signal and by-codebook are slices.</li>
+    <li><b>Empty state.</b> <code>AnalysisSidebar</code> returns <code>null</code> when
+      a project has no signals, and nothing says what the lens itself shows.</li>
+  </ol>
+
+  <div class="divider"></div>
+  <div class="section-head">
+    <h2>Deferred by decision</h2>
+    <p>Not gaps &mdash; choices to stop here, with somewhere to come back to.</p>
+  </div>
+  <ol class="gaps defer">
+    <li><b>Normalising signal strength.</b> Handed to a session of its own,
+      <code>docs/design-signal-strength.md</code>. Until it lands, ordering is
+      directionally right and the number is not comparable, and the Sentiment card
+      keeps its exemption from de-duplication.</li>
+    <li><b>A signal&rsquo;s valence.</b> <code>success</code> / <code>gap</code> /
+      <code>tension</code> / <code>recovery</code> keep being computed and stored; none
+      of it reaches the screen. The all-caps chip was the failure, not the
+      classification. A second, undisplayed vocabulary
+      (<code>classify_flag</code>&rsquo;s Win/Problem/Niggle/Success/Surprising) should
+      be settled in the same pass.</li>
+    <li><b>Elaboration coverage.</b> 18 of 76 surviving cards have no name, and 14 of
+      60 locations have none at all. Shipping with bare chips by decision. The fix is
+      cheap after de-duplication &mdash; 18 elaborations across seven projects &mdash;
+      but it needs a prompt for thin evidence, not a bigger number.</li>
+    <li><b>Floors and thresholds.</b> <code>MIN_QUOTES_PER_CELL = 2</code> is a volume
+      floor and two quotes is barely a signal from a five-participant study. Settled by
+      checking real interview data against outputs, not from this page.</li>
+    <li><b>Quote-level deep links.</b> A card&rsquo;s location now links to that
+      place&rsquo;s anchor in the Quotes lens, on both card kinds. Linking an individual
+      quote is still open.</li>
+  </ol>
 
   <div class="divider"></div>
   <div class="section-head">

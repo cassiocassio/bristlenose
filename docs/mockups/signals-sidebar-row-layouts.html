@@ -669,24 +669,29 @@ a.ci-code:focus-visible { outline:2px solid var(--bn-colour-accent); outline-off
 
   <div class="divider"></div>
   <div class="section-head">
-    <h2>S &middot; one name, several cells</h2>
-    <p>Sentiment rows now carry a summary, and it is a real one &mdash; the elaborated
-       name already sitting on the Sentiment-group codebook row for that place. But it is
-       keyed by <strong>location</strong>, while the rows it labels are <strong>cells</strong>,
-       one per sentiment value. <strong>Six of P1&rsquo;s places carry two or three
-       sentiment cells</strong>, so one sentence has to cover all of them.</p>
-    <p>S1 is what that looks like. S2 and S3 are the two ways out, and they trade against
-       each other: S2 needs nothing written but stops the cells being separately
-       addressable; S3 keeps every cell a target but needs elaboration keyed on
-       location &times; sentiment, which the model does not produce today.</p>
-    <p><strong>All three show both kinds together</strong>, because the problem only looks
-       the way it really looks with the mixture on screen &mdash; sentiment chips beside
-       codebook group chips from four different frameworks. Beds &amp; Mattresses Category
-       runs eight codebook signals against two sentiment cells. Note what S2 does there:
-       only the sentiment half folds, because only the sentiment half shares a name.</p>
-    <p class="wnote">S3&rsquo;s names are the only invented text in this file, written in
-       the prompt&rsquo;s house style so the row geometry is honest. Everything else here
-       is read from the project.</p>
+    <h2>S &middot; one rule for what a card is</h2>
+    <p><strong>A card is a location &times; a tag group, and it surfaces that group&rsquo;s
+       tags.</strong> Structure carries <code>interaction design</code>,
+       <code>information architecture</code>, <code>navigation pattern</code>. Under that
+       rule sentiment is a group like any other, and <code>confusion</code> and
+       <code>frustration</code> are tags inside the Sentiment card &mdash; not cards of
+       their own.</p>
+    <p>Today the lens breaks the rule in exactly one place: <strong>sentiment is also
+       analysed at tag level</strong>, so every sentiment value competes for a card. That
+       is the whole asymmetry between the two card kinds, and on this project it earns
+       nothing. Where a sentiment value clears the two-quote floor, the place states its
+       sentiment <strong>twice</strong> &mdash; once as a bare value with no summary, once
+       inside the Sentiment card. Where no single value clears it, the tag-level analysis
+       contributes <strong>no card at all</strong>: on three of these five places,
+       including Shopping Bag and Search &amp; Sort Results, every sentiment value falls
+       below the floor on its own while the group clears it comfortably on three and four
+       quotes.</p>
+    <p>So across five places the tag-level analysis adds exactly one card, and that card
+       is a duplicate of something the Sentiment card already says &mdash; and says
+       better, because the group card has a written summary and the bare value does not.</p>
+    <p class="wnote">Read at <code>MIN_QUOTES_PER_CELL = 2</code>, the shipped floor, so
+       every card here is one the product would really draw. Nothing on this bench is
+       invented.</p>
   </div>
 
   <div class="bench" id="sbench"></div>
@@ -3312,118 +3317,122 @@ document.addEventListener("click", e => {
   jumpToCode(link.dataset.jump);
 });
 
-/* ── Section S: one name, several cells ───────────────────────────────────
-   The summary a sentiment row shows is keyed by LOCATION — it lives on the
-   Sentiment-GROUP codebook row — while the rows it labels are cells, one per
-   sentiment value. Six of P1's places carry two or three sentiment cells, so
-   one name has to cover all of them. S1 is what that looks like; S2 and S3 are
-   the two ways out.
+/* -- Section S: one rule for what a card is -----------------------------
+   A card is (location x TAG GROUP), and it surfaces that group's tags present
+   on the location's quotes. Read at the SHIPPED floor, MIN_QUOTES_PER_CELL = 2,
+   so every card here is one the product would really draw.
 
-   S3's names are the ONLY invented text in this file. They are what a per-cell
-   elaboration would have to produce, written in the prompt's house style (2–4
-   words, the group's vocabulary) so the row geometry is honest. Marked
-   throughout; nothing else here is synthetic. */
+   Field 2 is the sentiment MATRIX's tag-level cards -- one per sentiment value
+   -- which is what ships today alongside the group cards, and is the asymmetry
+   this section exists to show. Field 3 is the group cards, INCLUDING the
+   Sentiment group, because under the rule it is a group like any other.
 
-const S_PLACES = ["Shopping Bag", "Search & Sort Results", "Beds & Mattresses Category",
-                  "Top Navigation", "Homepage content and navigation experience"];
+     group card:  [elaboratedName|null, group, book, colourSet, composite,
+                   tagsPresent, quotes]
+     matrix card: [sentiment, composite]
+   ---------------------------------------------------------------------- */
+const S_CARDS = [
+  ["Shopping Bag",
+   [],
+   [
+     ["Scope Feature Mix", "Scope", "Garrett", "emo", 1.048, ["feature requirement", "content requirement"], 2],
+     ["Checkout feedback clarity", "Feedback", "Norman", "emo", 0.6, ["system response", "ambiguous feedback"], 4],
+     ["Bag Experience Tension", "Sentiment", "Sentiment", "sentiment", 0.556, ["satisfaction", "confusion", "frustration"], 3],
+     [null, "Status visibility", "Nielsen", "ux", 0.15, ["clear status"], 2],
+   ]],
+  ["Beds & Mattresses Category",
+   [["confusion", 0.667]],
+   [
+     ["Self-directed Error Recovery", "Behaviour", "UXR", "ux", 0.643, ["error recovery", "workaround"], 2],
+     ["Navigation Structure Tension", "Structure", "Garrett", "task", 0.611, ["interaction design", "information architecture", "navigation pattern"], 4],
+     ["Category Navigation Confusion", "Sentiment", "Sentiment", "sentiment", 0.417, ["confusion", "frustration"], 4],
+     [null, "Conceptual model", "Norman", "task", 0.214, ["system model", "user mental model"], 3],
+     [null, "Real-world matching", "Nielsen", "ux", 0.214, ["logical ordering", "natural language"], 2],
+     [null, "Status visibility", "Nielsen", "ux", 0.161, ["opaque status"], 2],
+     [null, "Feedback", "Norman", "emo", 0.129, ["delayed feedback"], 2],
+     [null, "Needs and desires", "UXR", "emo", 0.122, ["unmet need", "expectation mismatch"], 2],
+     [null, "Discoverability", "Norman", "ux", 0.107, ["hidden feature", "exploration"], 2],
+   ]],
+  ["Search & Sort Results",
+   [],
+   [
+     ["Visual Warmth Success", "Surface", "Garrett", "opp", 0.611, ["visual design", "sensory experience"], 2],
+     [null, "Feedback", "Norman", "emo", 0.3, ["system response"], 3],
+     ["Sort Filter Success", "Scope", "Garrett", "emo", 0.175, ["feature requirement"], 2],
+     ["Search Results Delight", "Sentiment", "Sentiment", "sentiment", 0.148, ["surprise", "satisfaction", "delight"], 3],
+   ]],
+  ["Homepage content and navigation experience",
+   [],
+   [
+     ["Homepage Content Tension", "Aesthetics and minimalism", "Nielsen", "emo", 0.5, ["information overload", "focused design"], 2],
+     ["Homepage Purpose Tension", "Sentiment", "Sentiment", "sentiment", 0.167, ["confusion", "delight"], 2],
+   ]],
+  ["Task orientation and shopping intent",
+   [],
+   [
+     ["Browsing Goal Fluidity", "Motivation", "UXR", "task", 0.444, ["goal"], 2],
+     ["Task Language Clarity", "Real-world matching", "Nielsen", "ux", 0.444, ["natural language"], 2],
+     ["Browsing Intent Clarity", "Strategy", "Garrett", "ux", 0.37, ["user need"], 2],
+     ["Intent-driven discoverability", "Discoverability", "Norman", "ux", 0.333, ["first-time use", "exploration"], 2],
+   ]],
+];
 
-/* What a per-cell elaboration would have to write. INVENTED. */
-const S_PERCELL = {
-  "Shopping Bag|frustration": "Bag Removal Friction",
-  "Shopping Bag|confusion": "Bag Naming Confusion",
-  "Shopping Bag|satisfaction": "Bag Total Clarity",
-  "Search & Sort Results|delight": "Filter Discovery Delight",
-  "Search & Sort Results|surprise": "Sort Order Surprise",
-  "Search & Sort Results|satisfaction": "Result Relevance Fit",
-  "Beds & Mattresses Category|confusion": "Size Terminology Mismatch",
-  "Beds & Mattresses Category|frustration": "Category Response Lag",
-  "Top Navigation|frustration": "Navigation Click Lag",
-  "Top Navigation|satisfaction": "Category Findability",
-  "Homepage content and navigation experience|delight": "Homepage Visual Warmth",
-  "Homepage content and navigation experience|confusion": "Homepage Purpose Doubt",
-};
+/* One rule: a card is (location x tag group), and it surfaces that group's
+   tags. Sentiment is a group like any other — `confusion` and `frustration`
+   are tags inside the Sentiment card exactly as `interaction design` and
+   `navigation pattern` are tags inside Structure.
 
-/**
- * Every signal on a place, both kinds, strongest first.
- *
- * The point of this bench is the MIXTURE — a place carries sentiment cells and
- * codebook cells side by side, and the summary problem only looks the way it
- * really looks when both are on screen. Beds & Mattresses runs eight codebook
- * signals from four frameworks against two sentiment cells.
- */
-function sRows(){
-  return IKEA_PLACES
-    .filter(p => S_PLACES.includes(p[0]))
-    .map(p => {
-      const summary = (SENT_SUMMARY[p[0]] || [])[0] || null;
-      const entries = p[2].map(x => ({ kind: "sent", sent: x[0], comp: x[1], summary }))
-        .concat(p[3].map(c => ({ kind: "code", group: c[1], book: c[2], colourSet: c[3],
-                                 comp: c[4], name: c[7] ? c[0] : null })))
-        .sort((x, y) => y.comp - x.comp);
-      return { loc: p[0], summary, entries,
-               sents: entries.filter(e => e.kind === "sent"),
-               codes: entries.filter(e => e.kind === "code") };
-    })
-    .filter(e => e.entries.length > 1);
-}
+   What ships today breaks the rule in one place: sentiment is ALSO analysed at
+   TAG level, so each sentiment value competes for a card of its own. That is
+   the whole asymmetry between the two card kinds, and it costs twice —
+   duplication where a value clears the floor, and silence where none does. */
+
 function sChip(name){ return `<span class="${badgeClass(name)}">${esc(name)}</span>`; }
-function sGroupChip(e){
-  const bg = tagBg(e.colourSet, 1);
+function sGroupChip(g, colourSet, book){
+  const bg = tagBg(colourSet, 1);
   return `<span class="badge"${bg ? ` style="background:${bg}"` : ""}`
-       + ` title="${esc(e.book)} \u00b7 ${esc(e.group)}">${esc(e.group)}</span>`;
+       + ` title="${esc(book)} \u00b7 ${esc(g)}">${esc(g)}</span>`;
 }
-function sRow(label, chip){
+function sCard(label, chip, tags, colourSet){
+  const pills = (tags || []).length
+    ? `<span class="nv-chips">${tags.map((t, i) => {
+        const cls = badgeClass(t);
+        const bg = cls === "badge" ? tagBg(colourSet, i) : null;
+        return `<span class="${cls}"${bg ? ` style="background:${bg}"` : ""}>${esc(t)}</span>`;
+      }).join("")}</span>` : "";
   return `<a class="u-row" href="#"><span class="u-name">`
-       + `${label ? esc(label) + " " : ""}${chip}</span></a>`;
+       + `${label ? esc(label) + " " : ""}${chip}</span>${pills}</a>`;
 }
-/** A codebook row is the same in all three — only the sentiment half changes. */
-function sCodeRow(e){ return sRow(e.name, sGroupChip(e)); }
 
-/* S1 — one name, repeated. Today: the place's single summary prints against
-   every sentiment cell, beside codebook rows that each have their own. */
-function sRepeated(){
-  return sRows().map(e => `<div class="nv">
-    <span class="nv-place">${esc(e.loc)}</span>
-    ${e.entries.map(x => x.kind === "sent"
-      ? sRow(x.summary, sChip(x.sent))
-      : sCodeRow(x)).join("")}
-  </div>`).join("");
-}
-/* S2 — one name, one row. The sentiment cells fold into a single row carrying
-   every sentiment present, exactly as a codebook row carries its codes. The
-   codebook rows are untouched, which is the tell: only one half collapses. */
-function sPaired(){
-  return sRows().map(e => {
-    const top = Math.max(...e.entries.map(x => x.comp));
-    const sentFirst = e.sents.length && Math.max(...e.sents.map(x => x.comp)) === top;
-    const folded = e.sents.length
-      ? `<a class="u-row" href="#"><span class="u-name">${esc(e.summary || e.loc)}</span>`
-        + `<span class="nv-chips">${e.sents.map(x => sChip(x.sent)).join("")}</span></a>`
-      : "";
-    const codes = e.codes.map(sCodeRow).join("");
-    return `<div class="nv"><span class="nv-place">${esc(e.loc)}</span>`
-         + (sentFirst ? folded + codes : codes + folded) + `</div>`;
+/* S1 — as shipped. The sentiment matrix's tag-level cards sit alongside the
+   group cards, and the Sentiment GROUP card is among the latter, so a place
+   whose sentiment clears the floor says it twice. A place whose sentiment does
+   not clear it at any single value says it once, quietly, in the wrong list. */
+function sShipped(){
+  return S_CARDS.map(([loc, matrix, groups]) => {
+    const rows = matrix.map(m => ({ sort: m[1],
+        html: sCard(null, sChip(m[0]), null, null) }))
+      .concat(groups.map(g => ({ sort: g[4],
+        html: sCard(g[0], sGroupChip(g[1], g[3], g[2]), g[5], g[3]) })))
+      .sort((x, y) => y.sort - x.sort);
+    return `<div class="nv"><span class="nv-place">${esc(loc)}</span>`
+         + rows.map(r => r.html).join("") + `</div>`;
   }).join("");
 }
-/* S3 — a name per cell. Every row, both kinds, carries its own sentence and
-   stays its own target. The sentiment names are invented; the codebook names
-   are the project's real ones. */
-function sPerCell(){
-  return sRows().map(e => `<div class="nv">
-    <span class="nv-place">${esc(e.loc)}</span>
-    ${e.entries.map(x => x.kind === "sent"
-      ? sRow(S_PERCELL[`${e.loc}|${x.sent}`] || null, sChip(x.sent))
-      : sCodeRow(x)).join("")}
-  </div>`).join("");
+/* S2 — one rule. Group cards only. Sentiment is one of them, carrying its
+   values as tags; nothing else changes. */
+function sOneRule(){
+  return S_CARDS.map(([loc, , groups]) =>
+    `<div class="nv"><span class="nv-place">${esc(loc)}</span>`
+    + groups.map(g => sCard(g[0], sGroupChip(g[1], g[3], g[2]), g[5], g[3])).join("")
+    + `</div>`).join("");
 }
 
 const S_VARIANTS = [
-  ["S1", "one name, repeated", sRepeated,
-   "Today. The place has one summary and several sentiment cells, so the same sentence is printed two or three times with a different chip each. Reads as a bug even though every row is a real, separate signal card."],
-  ["S2", "one name, one row", sPaired,
-   "The consequence of treating sentiment as a codebook: the signal is the location \u00d7 the Sentiment group, and the sentiment values are the codes present in it \u2014 V9's geometry exactly. Needs nothing written. Costs the separate targets: the cells stop being individually addressable."],
-  ["S3", "a name per cell", sPerCell,
-   "What the rows want. Every cell gets its own sentence and stays its own target. Needs elaboration keyed on location \u00d7 sentiment, which the model does not produce today \u2014 these names are invented to show the geometry."],
+  ["S1", "as shipped", sShipped,
+   "Sentiment analysed at TAG level beside codebooks analysed at GROUP level. Where a sentiment value clears the 2-quote floor the place says it twice \u2014 once as a bare value, once inside the Sentiment card. Where none does, the values vanish from the matrix entirely."],
+  ["S2", "one rule", sOneRule,
+   "A card is (location \u00d7 tag group), always. Sentiment is a group carrying its values as tags, exactly as Structure carries interaction design and navigation pattern. Nothing is invented and nothing is lost \u2014 the 1-quote values that could never be cards return as evidence inside one that can."],
 ];
 
 function renderS(){
@@ -3442,29 +3451,28 @@ function renderS(){
   document.querySelectorAll("#sbench .cell").forEach(cell => {
     const h = Math.round(cell.querySelector(".panel-body").getBoundingClientRect().height);
     const rows = cell.querySelectorAll(".u-row").length;
-    const names = [...cell.querySelectorAll(".u-name")].map(n => {
-      const c = n.querySelector(".badge");
-      return n.textContent.replace(c ? c.textContent : "", "").trim();
-    }).filter(Boolean);
-    const repeats = names.length - new Set(names).size;
-    const rows2 = sRows();
-    const cells = rows2.reduce((n, e) => n + e.entries.length, 0);
-    const nSent = rows2.reduce((n, e) => n + e.sents.length, 0);
     const unnamed = [...cell.querySelectorAll(".u-name")].filter(n => {
       const c = n.querySelector(".badge");
       return !n.textContent.replace(c ? c.textContent : "", "").trim();
     }).length;
+    // A place that says its sentiment twice: a bare value card AND the group.
+    const dbl = S_CARDS.filter(([, m, g]) =>
+      m.length && g.some(x => x[1] === "Sentiment")).length;
+    // NOT "sentiment lost" — the Sentiment GROUP card is present either way.
+    // What is true is that the tag-level analysis contributes no card at all on
+    // these places, so everything it adds anywhere is either a duplicate or
+    // nothing.
+    const mute = S_CARDS.filter(([, m, g]) =>
+      !m.length && g.some(x => x[1] === "Sentiment")).length;
+    const isShipped = cell.dataset.s === "S1";
     cell.querySelector("[data-metrics]").innerHTML =
-      `<span><b>${rows}</b> rows</span>`
+      `<span><b>${rows}</b> cards</span>`
     + `<span><b>${h}</b>px tall</span>`
-    + `<span title="sentiment cards these rows stand for"><b>${cells}</b> cards</span>`
-    + `<span class="${rows === cells ? "good" : "bad"}" title="cards you can reach in one click">`
-      + `<b>${rows}</b> reachable</span>`
-    + `<span class="${repeats ? "bad" : "good"}" title="the same sentence printed more than once">`
-      + `<b>${repeats}</b> repeated</span>`
-    + `<span class="${unnamed ? "bad" : "good"}" title="rows showing a bare chip and no sentence">`
-      + `<b>${unnamed}</b> unnamed</span>`
-    + `<span title="of which are sentiment cells"><b>${nSent}</b> sentiment</span>`;
+    + `<span class="${unnamed ? "bad" : "good"}" title="cards showing a bare chip and no sentence"><b>${unnamed}</b> unnamed</span>`
+    + `<span class="${isShipped && dbl ? "bad" : "good"}" title="places stating their sentiment twice">`
+      + `<b>${isShipped ? dbl : 0}</b> said twice</span>`
+    + `<span class="${isShipped && mute ? "bad" : "good"}" title="places where the tag-level sentiment analysis contributes no card at all">`
+      + `<b>${isShipped ? mute : 0}</b> matrix adds nothing</span>`;
   });
 }
 

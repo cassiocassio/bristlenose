@@ -597,6 +597,15 @@ a.ci-code:focus-visible { outline:2px solid var(--bn-colour-accent); outline-off
 
   <div class="divider"></div>
   <div class="section-head">
+    <h2>Latest iterations</h2>
+    <p>The designs still under consideration, lifted to the top of the page:
+       <strong>N</strong>, the latest drawing, and the three benches that carry a
+       <span class="st st-chosen">chosen</span> panel &mdash; <strong>U</strong> the
+       navigation, <strong>C</strong> the two card kinds, <strong>S</strong> what a card
+       is. Everything below them is the discussion that produced them, unchanged and in
+       the order it happened.</p>
+  </div>
+  <div class="section-head">
     <h2>N &middot; the latest thinking, drawn</h2>
     <p>Everything the trail marks <span class="st st-chosen">chosen</span>, applied at
        once: the navigation by location with T6b rows, and both card kinds in both
@@ -620,6 +629,89 @@ a.ci-code:focus-visible { outline:2px solid var(--bn-colour-accent); outline-off
   <div class="bench" id="nbench"></div>
 
 
+  <div class="divider"></div>
+  <div class="section-head">
+    <h2>U &middot; a view menu, and one hit area per signal card</h2>
+    <p>Under <strong>Beds &amp; Mattresses Category</strong> alone, P1 holds
+       <strong>eleven distinct signal cards</strong> &mdash; two from the sentiment
+       matrix and nine from the codebook matrix, from four different frameworks. Every
+       one of them is a place the sidebar should be able to send you. T5, T6 and T6b do
+       emit a link per signal, but the enclosing place inherits the row hover, so the
+       whole block lights up and the individual targets are invisible. <strong>Here
+       nothing but a signal is a link</strong> &mdash; a place or a codebook is a
+       heading, not a control &mdash; and the commentary asserts it: links total should
+       equal signal cards.</p>
+    <p>The menu at the top of each panel is the organising principle itself, which is the
+       thing being tried. Sentiment appears in <strong>U2</strong> under its own codebook
+       heading, because it is one. All three follow the strength floor and signal budget.</p>
+  </div>
+
+  <div class="bench" id="ubench"></div>
+
+  <div class="divider"></div>
+  <div class="section-head">
+    <h2>C &middot; normalising the two card kinds</h2>
+    <p>The main content area draws two different cards for what is structurally the same
+       thing. A <strong>codebook</strong> signal has an elaborated name, so the name is
+       the heading, the location drops to the eyebrow and the badges move to the top
+       right. A <strong>sentiment</strong> signal has no name, so the location <em>is</em>
+       the heading and the badge sits under it. Side by side they share almost no
+       structure.</p>
+    <p><strong>The summary a sentiment card needs already exists.</strong>
+       &ldquo;Category Navigation Confusion&rdquo;, and a written elaboration to go with
+       it, is sitting on the <em>Sentiment-group codebook row</em> for that same location
+       &mdash; generated because sentiment is a codebook and gets elaborated like one. The
+       sentiment <em>matrix</em> cell, which is what the card actually renders, has none.
+       So the two halves of this session&rsquo;s argument turn out to be a single move:
+       stop drawing the Sentiment-group row as its own card, and fold its name onto the
+       sentiment card that has none.</p>
+    <p class="wnote">Metrics, timecodes, participant ids, intensities and tags are the
+       real P1 values. <strong>Quote text is synthetic</strong>, written to the measured
+       character length of each real quote &mdash; this file is tracked and participant
+       speech is not, and length is what the layout is judged on.</p>
+  </div>
+
+  <div class="bench" id="cardbench"></div>
+
+  <div class="divider"></div>
+  <div class="section-head">
+    <h2>S &middot; one rule for what a card is</h2>
+    <p><strong>A card is a location &times; a tag group, and it surfaces that group&rsquo;s
+       tags.</strong> Structure carries <code>interaction design</code>,
+       <code>information architecture</code>, <code>navigation pattern</code>. Under that
+       rule sentiment is a group like any other, and <code>confusion</code> and
+       <code>frustration</code> are tags inside the Sentiment card &mdash; not cards of
+       their own.</p>
+    <p>Today the lens breaks the rule in exactly one place: <strong>sentiment is also
+       analysed at tag level</strong>, so every sentiment value competes for a card. That
+       is the whole asymmetry between the two card kinds, and on this project it earns
+       nothing. Where a sentiment value clears the two-quote floor, the place states its
+       sentiment <strong>twice</strong> &mdash; once as a bare value with no summary, once
+       inside the Sentiment card. Where no single value clears it, the tag-level analysis
+       contributes <strong>no card at all</strong>: on three of these five places,
+       including Shopping Bag and Search &amp; Sort Results, every sentiment value falls
+       below the floor on its own while the group clears it comfortably on three and four
+       quotes.</p>
+    <p>So across five places the tag-level analysis adds exactly one card, and that card
+       is a duplicate of something the Sentiment card already says &mdash; and says
+       better, because the group card has a written summary and the bare value does not.</p>
+    <p class="wnote">Read at <code>MIN_QUOTES_PER_CELL = 2</code>, the shipped floor, so
+       every card here is one the product would really draw. Nothing on this bench is
+       invented.</p>
+  </div>
+
+  <div class="bench" id="sbench"></div>
+
+  <div class="divider"></div>
+  <div class="section-head">
+    <h2>Archive of discussion</h2>
+    <p>The working, in its original sequence: the ten row layouts against the width
+       slider, V9 on six real projects, the treatment comparison on one project, the
+       whole-navigation and depth benches, and the measurement essays. Nothing here is
+       discarded &mdash; a <span class="st st-current">current</span> panel is what the
+       product draws today, and the <span class="st st-abandoned">abandoned</span> ones
+       are kept so that a settled question is not reopened by accident.</p>
+  </div>
   <div class="bench" id="bench"></div>
 
   <div class="divider"></div>
@@ -705,79 +797,6 @@ a.ci-code:focus-visible { outline:2px solid var(--bn-colour-accent); outline-off
   </div>
 
   <div class="bench" id="depthbench"></div>
-
-  <div class="divider"></div>
-  <div class="section-head">
-    <h2>U &middot; a view menu, and one hit area per signal card</h2>
-    <p>Under <strong>Beds &amp; Mattresses Category</strong> alone, P1 holds
-       <strong>eleven distinct signal cards</strong> &mdash; two from the sentiment
-       matrix and nine from the codebook matrix, from four different frameworks. Every
-       one of them is a place the sidebar should be able to send you. T5, T6 and T6b do
-       emit a link per signal, but the enclosing place inherits the row hover, so the
-       whole block lights up and the individual targets are invisible. <strong>Here
-       nothing but a signal is a link</strong> &mdash; a place or a codebook is a
-       heading, not a control &mdash; and the commentary asserts it: links total should
-       equal signal cards.</p>
-    <p>The menu at the top of each panel is the organising principle itself, which is the
-       thing being tried. Sentiment appears in <strong>U2</strong> under its own codebook
-       heading, because it is one. All three follow the strength floor and signal budget.</p>
-  </div>
-
-  <div class="bench" id="ubench"></div>
-
-  <div class="divider"></div>
-  <div class="section-head">
-    <h2>C &middot; normalising the two card kinds</h2>
-    <p>The main content area draws two different cards for what is structurally the same
-       thing. A <strong>codebook</strong> signal has an elaborated name, so the name is
-       the heading, the location drops to the eyebrow and the badges move to the top
-       right. A <strong>sentiment</strong> signal has no name, so the location <em>is</em>
-       the heading and the badge sits under it. Side by side they share almost no
-       structure.</p>
-    <p><strong>The summary a sentiment card needs already exists.</strong>
-       &ldquo;Category Navigation Confusion&rdquo;, and a written elaboration to go with
-       it, is sitting on the <em>Sentiment-group codebook row</em> for that same location
-       &mdash; generated because sentiment is a codebook and gets elaborated like one. The
-       sentiment <em>matrix</em> cell, which is what the card actually renders, has none.
-       So the two halves of this session&rsquo;s argument turn out to be a single move:
-       stop drawing the Sentiment-group row as its own card, and fold its name onto the
-       sentiment card that has none.</p>
-    <p class="wnote">Metrics, timecodes, participant ids, intensities and tags are the
-       real P1 values. <strong>Quote text is synthetic</strong>, written to the measured
-       character length of each real quote &mdash; this file is tracked and participant
-       speech is not, and length is what the layout is judged on.</p>
-  </div>
-
-  <div class="bench" id="cardbench"></div>
-
-  <div class="divider"></div>
-  <div class="section-head">
-    <h2>S &middot; one rule for what a card is</h2>
-    <p><strong>A card is a location &times; a tag group, and it surfaces that group&rsquo;s
-       tags.</strong> Structure carries <code>interaction design</code>,
-       <code>information architecture</code>, <code>navigation pattern</code>. Under that
-       rule sentiment is a group like any other, and <code>confusion</code> and
-       <code>frustration</code> are tags inside the Sentiment card &mdash; not cards of
-       their own.</p>
-    <p>Today the lens breaks the rule in exactly one place: <strong>sentiment is also
-       analysed at tag level</strong>, so every sentiment value competes for a card. That
-       is the whole asymmetry between the two card kinds, and on this project it earns
-       nothing. Where a sentiment value clears the two-quote floor, the place states its
-       sentiment <strong>twice</strong> &mdash; once as a bare value with no summary, once
-       inside the Sentiment card. Where no single value clears it, the tag-level analysis
-       contributes <strong>no card at all</strong>: on three of these five places,
-       including Shopping Bag and Search &amp; Sort Results, every sentiment value falls
-       below the floor on its own while the group clears it comfortably on three and four
-       quotes.</p>
-    <p>So across five places the tag-level analysis adds exactly one card, and that card
-       is a duplicate of something the Sentiment card already says &mdash; and says
-       better, because the group card has a written summary and the bare value does not.</p>
-    <p class="wnote">Read at <code>MIN_QUOTES_PER_CELL = 2</code>, the shipped floor, so
-       every card here is one the product would really draw. Nothing on this bench is
-       invented.</p>
-  </div>
-
-  <div class="bench" id="sbench"></div>
 
   <div class="essay">
     <h2>Width cannot fix the single-line row</h2>

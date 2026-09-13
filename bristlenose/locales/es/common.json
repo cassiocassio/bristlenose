@@ -157,7 +157,9 @@
     "session_one": "{{count}} sesión",
     "session_other": "{{count}} sesiones",
     "participant_one": "{{count}} participante",
-    "participant_other": "{{count}} participantes"
+    "participant_other": "{{count}} participantes",
+    "piiRedacted": "Informaci\u00f3n de identificaci\u00f3n personal",
+    "piiRedactedAction": "suprimida"
   },
   "footer": {
     "builtWith": "Hecho con Bristlenose",

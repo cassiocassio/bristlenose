@@ -157,7 +157,9 @@
     "session_one": "{{count}} entretien",
     "session_other": "{{count}} entretiens",
     "participant_one": "{{count}} participant",
-    "participant_other": "{{count}} participants"
+    "participant_other": "{{count}} participants",
+    "piiRedacted": "Informations personnelles identifiables",
+    "piiRedactedAction": "caviard\u00e9es"
   },
   "footer": {
     "builtWith": "Créé avec Bristlenose",

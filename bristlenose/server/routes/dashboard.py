@@ -145,6 +145,20 @@ class ProjectInfoResponse(BaseModel):
     project_name: str
     session_count: int
     participant_count: int
+    #: Did the run that produced this output redact PII before analysing?
+    #: The report header states it when true and says nothing when false —
+    #: a "not redacted" line on every report is noise, and faintly alarming
+    #: to a client who never asked the question.
+    #:
+    #: This endpoint is one of the payloads baked into the offline HTML
+    #: export, so the same field serves the live report and the file a
+    #: researcher hands over. Defaults False so a project whose row predates
+    #: the column reads as un-redacted and the header simply stays quiet.
+    #:
+    #: NOT the export "Anonymise" checkbox, which strips participant display
+    #: names at export time by choice. This is a fact about the transcript
+    #: text, decided by a pipeline run.
+    pii_redacted: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -667,6 +681,7 @@ def get_project_info(
             project_name=project.name,
             session_count=session_count,
             participant_count=participant_codes,
+            pii_redacted=bool(project.pii_redacted),
         )
     finally:
         db.close()

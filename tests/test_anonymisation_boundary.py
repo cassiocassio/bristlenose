@@ -229,6 +229,109 @@ class TestAnalyzePreflightDoesNotProbeThePiiStack:
         assert "pii" in _COMMAND_CHECKS["run"]
 
 
+class TestTheReportSaysWhenItWasRedacted:
+    """`Project.pii_redacted` — the one field the header reads.
+
+    There was no user-visible sign anywhere that a project had been redacted
+    (verified 13 Sep 2026 across the SPA, report, export, static renderer and
+    the Mac). This is that field. It rides on `/info`, which is one of the
+    payloads baked into the offline HTML export, so the same value serves the
+    live report and the file a researcher hands over.
+
+    It must FOLLOW the setting, not latch: the whole reason it can be trusted
+    is that a run which does not redact clears `transcripts-cooked/`, so the
+    signal can no longer outlive the setting.
+    """
+
+    @staticmethod
+    def _project_dir(tmp_path: Path, *, redacted: bool) -> Path:
+        out = tmp_path / "bristlenose-output"
+        (out / ".bristlenose" / "intermediate").mkdir(parents=True, exist_ok=True)
+        raw = out / "transcripts-raw"
+        raw.mkdir(exist_ok=True)
+        (raw / "s1.txt").write_text(
+            "# Transcript: s1\n\n[00:02] [p1] Hello there.\n", encoding="utf-8",
+        )
+        cooked = out / "transcripts-cooked"
+        if redacted:
+            cooked.mkdir(exist_ok=True)
+            (cooked / "s1.txt").write_text(
+                "# Transcript: s1\n\n[00:02] [p1] Hello there.\n", encoding="utf-8",
+            )
+        elif cooked.exists():
+            import shutil
+
+            shutil.rmtree(cooked)
+        return tmp_path
+
+    @staticmethod
+    def _import(project_dir: Path):
+        from bristlenose.server.db import create_session_factory, get_engine, init_db
+        from bristlenose.server.importer import import_project
+
+        engine = get_engine("sqlite://")
+        init_db(engine)
+        db = create_session_factory(engine)()
+        return db, import_project(db, project_dir)
+
+    def test_true_for_a_redacted_project(self, tmp_path: Path) -> None:
+        _, project = self._import(self._project_dir(tmp_path, redacted=True))
+        assert project.pii_redacted is True
+
+    def test_false_when_nothing_was_redacted(self, tmp_path: Path) -> None:
+        """The default, and the overwhelmingly common case — redaction is opt-in.
+
+        False must mean the header says *nothing*, not that it claims the
+        negative: a "not redacted" line on every report is noise, and faintly
+        alarming to a client who never asked the question.
+        """
+        _, project = self._import(self._project_dir(tmp_path, redacted=False))
+        assert project.pii_redacted is False
+
+    def test_it_follows_the_setting_rather_than_latching(
+        self, tmp_path: Path
+    ) -> None:
+        """Redact, then re-run without — the row must come back to False.
+
+        A latching flag would leave the report claiming redaction over text
+        that is no longer redacted, which is the false privacy claim this
+        whole change exists to avoid.
+        """
+        from bristlenose.server.importer import import_project
+
+        proj = self._project_dir(tmp_path, redacted=True)
+        db, project = self._import(proj)
+        assert project.pii_redacted is True
+
+        self._project_dir(tmp_path, redacted=False)   # stage 7 cleared cooked/
+        project = import_project(db, proj)
+
+        assert project.pii_redacted is False, (
+            "the report would go on claiming redaction over un-redacted text"
+        )
+
+
+class TestInfoEndpointCarriesTheRedactionFlag:
+    """`/info` is the carrier, and it is embedded in the offline export."""
+
+    def test_info_reports_the_flag(self) -> None:
+        from fastapi.testclient import TestClient  # noqa: F401  (via AuthTestClient)
+
+        from bristlenose.server.app import create_app
+        from tests.conftest import AuthTestClient
+
+        fixture = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
+        client = AuthTestClient(create_app(project_dir=fixture, dev=True, db_url="sqlite://"))
+
+        data = client.get("/api/projects/1/info").json()
+        assert "pii_redacted" in data, (
+            "the header has no way to know; the flag never reaches the export embed"
+        )
+        # The smoke fixture has no transcripts-cooked/, so this is the honest
+        # negative — and the header renders nothing for it.
+        assert data["pii_redacted"] is False
+
+
 class TestTurningRedactionOffGivesTheParticipantsWordsBack:
     """The mirror of `TestReanalysingWithRedactionReplacesTheText`.
 

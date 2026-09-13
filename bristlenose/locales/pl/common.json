@@ -45,7 +45,9 @@
     "participant_one": "{{count}} uczestnik",
     "participant_few": "{{count}} uczestników",
     "participant_many": "{{count}} uczestników",
-    "participant_other": "{{count}} uczestników"
+    "participant_other": "{{count}} uczestników",
+    "piiRedacted": "Dane osobowe",
+    "piiRedactedAction": "usuni\u0119te"
   },
   "titlebar": {
     "quotes_one": "{{count}} cytat",

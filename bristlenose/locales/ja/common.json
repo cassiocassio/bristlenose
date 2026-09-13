@@ -41,7 +41,9 @@
     "session_one": "{{count}} セッション",
     "session_other": "{{count}} セッション",
     "participant_one": "{{count}} 名の参加者",
-    "participant_other": "{{count}} 名の参加者"
+    "participant_other": "{{count}} 名の参加者",
+    "piiRedacted": "\u500b\u4eba\u8b58\u5225\u60c5\u5831",
+    "piiRedactedAction": "\u79d8\u533f\u5316\u6e08\u307f"
   },
   "titlebar": {
     "quotes_other": "{{count}}\u00a0\u767a\u8a00",

@@ -16,6 +16,21 @@ interface ProjectInfo {
   project_name: string;
   session_count: number;
   participant_count: number;
+  /**
+   * Did the pipeline run that produced this report redact PII before
+   * analysing? Stated in the header when true, silent when false — a
+   * "not redacted" line on every report is noise, and faintly alarming to a
+   * client who never asked the question.
+   *
+   * Distinct from the export "Anonymise" checkbox, which the researcher
+   * chooses at export time and which strips participant display names.
+   * Redaction is deliberately absent from the export surfaces so the two are
+   * never read as one setting (13 Sep 2026 decision).
+   *
+   * Optional so an export embed or a server predating the field decodes
+   * cleanly and the header simply says nothing.
+   */
+  pii_redacted?: boolean;
 }
 
 export function Header() {
@@ -63,6 +78,19 @@ export function Header() {
             <span className="header-meta">
               {t("header.session", { count: info.session_count })},{" "}
               {t("header.participant", { count: info.participant_count })}
+              {info.pii_redacted && (
+                <>
+                  {", "}
+                  {t("header.piiRedacted")}{" "}
+                  <a
+                    href="https://bristlenose.app/docs/redact-pii.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {t("header.piiRedactedAction")}
+                  </a>
+                </>
+              )}
             </span>
           )}
         </div>

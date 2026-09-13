@@ -361,6 +361,18 @@ def import_project(db: Session, project_dir: Path) -> Project:
     # --- Clean up stale data from previous pipeline runs -----------------
     _cleanup_stale_data(db, project, session_ids, now)
 
+    # --- Record whether this output was redacted -------------------------
+    # Re-read every import, not written once: the researcher can turn
+    # redaction on or off between runs and the row must follow. The signal is
+    # `transcripts-cooked/` presence, which is only trustworthy because a run
+    # that does NOT redact now clears it (`pipeline._discard_stale_redaction`,
+    # 13 Sep 2026) — before that it outlived the setting.
+    #
+    # Deliberately NOT `_find_transcripts_dir(...)  == cooked`: that helper
+    # falls back through four candidates, so it would answer "cooked" for
+    # reasons other than redaction having run. Ask the one question directly.
+    project.pii_redacted = (output_dir / "transcripts-cooked").is_dir()
+
     # --- Mark project as imported ----------------------------------------
     project.imported_at = now
     db.commit()

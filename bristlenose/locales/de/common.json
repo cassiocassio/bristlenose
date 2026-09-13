@@ -157,7 +157,9 @@
     "session_one": "{{count}} Interview",
     "session_other": "{{count}} Interviews",
     "participant_one": "{{count}} Teilnehmer",
-    "participant_other": "{{count}} Teilnehmer"
+    "participant_other": "{{count}} Teilnehmer",
+    "piiRedacted": "Personenbezogene Daten",
+    "piiRedactedAction": "geschw\u00e4rzt"
   },
   "footer": {
     "builtWith": "Erstellt mit Bristlenose",

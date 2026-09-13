@@ -41,7 +41,9 @@
     "session_one": "{{count}} oturum",
     "session_other": "{{count}} oturum",
     "participant_one": "{{count}} katılımcı",
-    "participant_other": "{{count}} katılımcı"
+    "participant_other": "{{count}} katılımcı",
+    "piiRedacted": "Ki\u015fisel veriler",
+    "piiRedactedAction": "kald\u0131r\u0131ld\u0131"
   },
   "titlebar": {
     "quotes_one": "{{count}} Alıntı",

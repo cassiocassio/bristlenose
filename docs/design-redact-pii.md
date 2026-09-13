@@ -1259,6 +1259,54 @@ this fix lands *before* the toggle ships rather than after. (A sweep on 13 Sep
 reported PIIModelPack as referenced only from tests; that was wrong — check
 `BristlenoseShared.swift` before repeating it.)
 
+### The flag — decided and built, 13 Sep 2026
+
+**One line in the report header, and nothing anywhere else.** It reads
+*"Personally Identifiable Information redacted"*, with **redacted** linking to
+`bristlenose.app/docs/redact-pii.html`. Stated only when true; when false, and
+when the field is absent entirely (an older export embed), the header says
+nothing at all. A "not redacted" line on every report is noise, and faintly
+alarming to a client who never asked the question.
+
+**Redaction is deliberately absent from the export surfaces.** The user's call
+and the better one: *"they just have anonymisation — don't mix up the 2."* An
+earlier draft put the fact in the Export dialog beside the Anonymise checkbox
+and tried to *manage* the collision by shape — an inert stated panel against an
+operable control. Not creating the collision beats managing it. The two sound
+alike and are not: Anonymise is an export-time **choice** about participant
+display names; redaction is a pipeline-time **fact** about transcript text,
+decided runs ago and unchangeable there. The existing hint already draws
+anonymisation's line on its own terms — *"Names spoken inside quotes are NOT
+removed"* — which is exactly what redaction **does** do.
+
+**The terms stay technical, on the user's judgement:** *"PII is an industry
+understood term by researchers and redaction is a technical term too — I tend
+to think our users will get it."* An earlier draft of mine worried "redacted"
+was opaque and proposed plainer wording; that was my uncertainty, not the
+researchers'. Recorded because the reflex to plain-language a term of art is
+worth resisting for this audience ([[feedback_dont_patronise_skilled_readers]]).
+
+**Mechanism.** `Project.pii_redacted` (migration `010`), set at import from
+`transcripts-cooked/` presence — trustworthy only because a run that does not
+redact now clears that directory. Re-read every import, never latched: a
+latching flag would leave the report claiming redaction over text that is no
+longer redacted, which is the false privacy claim this all exists to avoid.
+Served on `ProjectInfoResponse`, which is one of the payloads baked into the
+offline HTML export, so a single field serves the live report and the file a
+client opens. Rendered in `Header.tsx`'s metadata line beside the session and
+participant counts — prose, not a `.badge`, since the wording is a sentence and
+that atom is for tags.
+
+**Translation hazard worth knowing.** "Redacted" is a false friend across the
+Romance languages: Spanish *redactado*, Portuguese *redigido* and Italian
+*redatto* all mean **written/drafted** — the opposite. The seeds use each
+language's own removal verb (es *suprimida*, pt *removidas*, it *oscurate*),
+and the established terms of art elsewhere (de *geschwärzt*, fr *caviardées*).
+Machine-seeded, **pending native review**, and this is the key to look at first.
+
+Mockup, including the rejected export placement kept with its reason:
+`docs/mockups/redaction-indicator.html`.
+
 - **`bristlenose status` never mentions PII.** `_STAGE_DISPLAY` defines
   "PII removal" and `_DISPLAY_STAGES` throws it away, so the one command that
   answers "what state is this project in" cannot answer it for the privacy

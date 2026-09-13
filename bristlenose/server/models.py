@@ -185,6 +185,20 @@ class Project(Base):
     # True = codes only. Read at tool-call time, so flipping it takes
     # effect on the agent's next call without a serve restart.
     mcp_anonymise: Mapped[bool] = mapped_column(default=False)
+    # Did the run that produced this output redact PII? Recorded at import from
+    # the presence of `transcripts-cooked/`, which is trustworthy since 13 Sep
+    # 2026: a run that does NOT redact clears that directory, so it can no
+    # longer outlive the setting (`pipeline._discard_stale_redaction`).
+    #
+    # Stored rather than probed per request so there is ONE reader of that
+    # signal at import time instead of a fourth one on every /info call — and
+    # so the value survives into the offline export, which has no filesystem.
+    #
+    # NOT the same thing as `mcp_anonymise` or the export Anonymise checkbox.
+    # Those strip participant *display names* at read/export time, by choice,
+    # now. This records that personal detail was removed from the transcript
+    # *text* before analysis, by a pipeline run, and cannot be changed here.
+    pii_redacted: Mapped[bool] = mapped_column(default=False)
 
     sessions: Mapped[list[Session]] = relationship(back_populates="project")
     quotes: Mapped[list[Quote]] = relationship(back_populates="project")

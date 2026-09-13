@@ -41,7 +41,9 @@
     "session_one": "{{count}} istunto",
     "session_other": "{{count}} istuntoa",
     "participant_one": "{{count}} osallistuja",
-    "participant_other": "{{count}} osallistujaa"
+    "participant_other": "{{count}} osallistujaa",
+    "piiRedacted": "Henkil\u00f6tiedot",
+    "piiRedactedAction": "poistettu"
   },
   "titlebar": {
     "quotes_one": "{{count}} sitaatti",

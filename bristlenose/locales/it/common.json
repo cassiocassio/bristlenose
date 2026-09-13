@@ -41,7 +41,9 @@
     "session_one": "{{count}} sessione",
     "session_other": "{{count}} sessioni",
     "participant_one": "{{count}} partecipante",
-    "participant_other": "{{count}} partecipanti"
+    "participant_other": "{{count}} partecipanti",
+    "piiRedacted": "Informazioni personali identificabili",
+    "piiRedactedAction": "oscurate"
   },
   "titlebar": {
     "quotes_one": "{{count}} citazione",

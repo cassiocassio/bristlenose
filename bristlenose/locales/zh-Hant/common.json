@@ -39,7 +39,9 @@
     "logoAlt": "Bristlenose 標誌",
     "researchReport": "研究報告",
     "session_other": "{{count}} 個場次",
-    "participant_other": "{{count}} 位參與者"
+    "participant_other": "{{count}} 位參與者",
+    "piiRedacted": "\u500b\u4eba\u8b58\u5225\u8cc7\u8a0a",
+    "piiRedactedAction": "\u5df2\u906e\u853d"
   },
   "titlebar": {
     "quotes_other": "{{count}} 則引述",

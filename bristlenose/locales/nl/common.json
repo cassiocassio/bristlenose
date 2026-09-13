@@ -41,7 +41,9 @@
     "session_one": "{{count}} sessie",
     "session_other": "{{count}} sessies",
     "participant_one": "{{count}} deelnemer",
-    "participant_other": "{{count}} deelnemers"
+    "participant_other": "{{count}} deelnemers",
+    "piiRedacted": "Persoonlijk identificeerbare informatie",
+    "piiRedactedAction": "verwijderd"
   },
   "titlebar": {
     "quotes_one": "{{count}} citaat",

@@ -45,7 +45,9 @@
     "participant_one": "{{count}} účastník",
     "participant_few": "{{count}} účastníci",
     "participant_many": "{{count}} účastníka",
-    "participant_other": "{{count}} účastníků"
+    "participant_other": "{{count}} účastníků",
+    "piiRedacted": "Osobn\u00ed \u00fadaje",
+    "piiRedactedAction": "odstran\u011bny"
   },
   "titlebar": {
     "quotes_one": "{{count}} Citát",

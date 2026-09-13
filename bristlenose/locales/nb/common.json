@@ -41,7 +41,9 @@
     "session_one": "{{count}} økt",
     "session_other": "{{count}} økter",
     "participant_one": "{{count}} deltaker",
-    "participant_other": "{{count}} deltakere"
+    "participant_other": "{{count}} deltakere",
+    "piiRedacted": "Personopplysninger",
+    "piiRedactedAction": "fjernet"
   },
   "titlebar": {
     "quotes_one": "{{count}} sitat",

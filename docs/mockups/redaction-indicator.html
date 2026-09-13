@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Redaction indicator — where the flag goes · Bristlenose mockups</title>
+<title>Redaction indicator — the decided design · Bristlenose mockups</title>
 <style>
 /* ============================================================================
    REAL Bristlenose tokens, inlined verbatim from the shipped design system
@@ -136,28 +136,6 @@ body {
 .quote-card p { margin:0 0 .5rem; font-size:var(--bn-text-body); }
 .quote-card .attrib { font-size:var(--bn-text-label); color:var(--bn-colour-muted); }
 
-/* ── export dialog (real structure) ───────────────────────────────────── */
-.dlg { max-width:470px; }
-.dlg-title { font-size:var(--bn-text-heading); font-weight:490; }
-.dlg-sub { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin:.35rem 0 1.1rem; }
-.dlg-row { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:.9rem; }
-.dlg-row > span { font-size:var(--bn-text-label); }
-.dlg-sel { font:inherit; font-size:var(--bn-text-label); padding:.25rem .5rem; border-radius:var(--bn-radius-sm);
-  border:1px solid var(--bn-colour-border); background:var(--bn-colour-bg); color:var(--bn-colour-text); }
-.dlg-check { display:flex; gap:.55rem; align-items:flex-start; margin-bottom:1.1rem; }
-.dlg-check input { margin-top:.22rem; accent-color:var(--bn-colour-accent); }
-.dlg-check .t { font-size:var(--bn-text-label); }
-.dlg-check .hint { display:block; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-top:.2rem; line-height:1.45; }
-.dlg-state { display:flex; gap:.55rem; align-items:flex-start; padding:.65rem .8rem; margin-bottom:1.1rem;
-  background:var(--bn-colour-quote-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); }
-.dlg-state .t { font-size:var(--bn-text-label); }
-.dlg-state .hint { display:block; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-top:.2rem; line-height:1.45; }
-.dlg-acts { display:flex; justify-content:flex-end; gap:.5rem; }
-.btn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.35rem .9rem;
-  border-radius:var(--bn-radius-md); border:1px solid var(--bn-colour-border);
-  background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
-.btn.primary { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
-
 .hazard { border-left-color:light-dark(#c2410c,#fb923c); }
 .hazard .c-lbl { color:light-dark(#c2410c,#fb923c); }
 
@@ -171,14 +149,16 @@ body {
 
 <div class="masthead">
   <div class="eyebrow">Bristlenose · mockup · 13 Sep 2026</div>
-  <h1>Redaction indicator — where the flag goes</h1>
-  <p>There is no user-visible sign anywhere that a project was PII-redacted — verified
+  <h1>Redaction indicator — the decided design</h1>
+  <p>There was no user-visible sign anywhere that a project was PII-redacted — verified
      13 Sep 2026 across the SPA, the report, the export, the static renderer and the Mac.
-     <code>ProjectInfoResponse</code> carries <code>project_name</code>,
+     <code>ProjectInfoResponse</code> carried <code>project_name</code>,
      <code>session_count</code>, <code>participant_count</code> and nothing else.</p>
-  <p>Three routes below. The question underneath them is <em>who the flag is for</em> —
-     the researcher confirming their setting took effect, or the colleague opening a
-     report and needing to know names were stripped.</p>
+  <p><strong>Decided and built the same day.</strong> One line in the report header,
+     stated only when true, with “redacted” linking to the docs — and deliberately
+     <em>nothing</em> in the export surfaces, which have anonymisation and only
+     anonymisation. This page is now the record of that, not a menu: the rejected
+     placement is kept below with its reason.</p>
 </div>
 
 <div class="controls">
@@ -195,26 +175,26 @@ body {
   <span class="key-item"><span class="key-swatch comment"></span> Commentary — reasoning, not the product</span>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════════ -->
 <section class="route">
   <div class="route-head">
-    <h2>Route A — a badge in the report header</h2>
-    <p class="sub">One neutral badge beside the project name. It rides in
-       <code>/info</code>, which titles the codebook navigator and is baked into the
-       offline export — so the same field lights the live report and the file a client
-       opens. Silent when the project was not redacted.</p>
+    <h2>Decided — a line in the report header</h2>
+    <p class="sub">Settled 13 Sep 2026. The fact is stated in the report header and
+       <strong>nowhere else</strong>. “redacted” links to the docs page, which carries the
+       detail so the header does not have to. It rides on <code>/info</code>, one of the
+       payloads baked into the offline export, so the same field serves the live report
+       and the file a client opens.</p>
   </div>
 
-  <div class="stage-label">A1 · redacted project</div>
+  <div class="stage-label">redacted project</div>
   <div class="frame">
     <div class="frame-chrome"><span class="frame-dots"><i></i><i></i><i></i></span>
       <span class="frame-cap">report header · redacted</span></div>
     <div class="frame-body">
       <div class="rpt-head">
         <span class="rpt-title">Acme onboarding study</span>
-        <span class="badge">Redacted</span>
       </div>
-      <div class="rpt-meta">6 sessions · 5 participants</div>
+      <div class="rpt-meta">6 sessions, 5 participants, Personally Identifiable
+        Information <a href="#" onclick="return false">redacted</a></div>
       <div class="rpt-rule"></div>
       <div class="rpt-tabs"><span class="on">Findings</span><span>Sessions</span><span>Themes</span><span>Codebook</span></div>
       <div class="quote-card">
@@ -224,7 +204,7 @@ body {
     </div>
   </div>
 
-  <div class="stage-label">A2 · same report, not redacted</div>
+  <div class="stage-label">same report, not redacted — the header says nothing</div>
   <div class="frame">
     <div class="frame-chrome"><span class="frame-dots"><i></i><i></i><i></i></span>
       <span class="frame-cap">report header · not redacted</span></div>
@@ -232,7 +212,7 @@ body {
       <div class="rpt-head">
         <span class="rpt-title">Acme onboarding study</span>
       </div>
-      <div class="rpt-meta">6 sessions · 5 participants</div>
+      <div class="rpt-meta">6 sessions, 5 participants</div>
       <div class="rpt-rule"></div>
       <div class="rpt-tabs"><span class="on">Findings</span><span>Sessions</span><span>Themes</span><span>Codebook</span></div>
       <div class="quote-card">
@@ -244,151 +224,45 @@ body {
 
   <div class="commentary">
     <span class="c-lbl">Commentary</span>
-    <p><strong>Grey, not green.</strong> Content owns colour here. Green reads as
-       “passed a check”, and redaction is a processing state, not a success — a report
-       without the badge is not a failed report. The house <code>.badge</code> atom,
-       mono, neutral, is what the design system already has for this.</p>
-    <p><strong>Nothing when off is the right asymmetry for the report.</strong> A
-       “Not redacted” badge on every report is both noise and faintly alarming to a
-       client who never asked the question. Absence is information.</p>
-    <p><strong>The cost:</strong> the researcher only learns their setting took effect
-       <em>after</em> a full analysis — and flipping the toggle costs a full LLM
-       re-run ($0.67–$6.70 depending on size and model), because <code>pii_enabled</code>
-       is in topic segmentation’s cache key. This route tells you late.</p>
+    <p><strong>Silence, not a negative.</strong> A “Not redacted” line on every report
+       is noise, and faintly alarming to a client who never asked the question. The
+       header renders nothing when the flag is false — and nothing, too, when the field
+       is absent entirely, so an older export embed degrades to silence rather than to a
+       claim.</p>
+    <p><strong>The terms stay technical on purpose.</strong> An earlier draft worried
+       “redacted” was opaque — <em>redacted of what?</em> — and proposed plainer wording.
+       Overruled, correctly: PII and redaction are industry-standard for researchers,
+       and that was my uncertainty rather than theirs. The docs link carries anyone who
+       does want the detail.</p>
+    <p><strong>Prose, not a badge.</strong> The wording is a sentence, so it sits in the
+       header’s metadata line beside the session and participant counts, where facts
+       about the report already live — rather than becoming a <code>.badge</code>, which
+       is the atom for tags.</p>
   </div>
 </section>
 
 <!-- ══════════════════════════════════════════════════════════════════ -->
 <section class="route">
   <div class="route-head">
-    <h2>Route B — state it in the export dialog</h2>
-    <p class="sub">Nothing in the report. Instead the fact is stated at the moment it
-       matters most: handing the artefact over. Stated <em>both</em> ways here, because
-       at this moment silence is the worst answer.</p>
-  </div>
-
-  <div class="stage-label">B1 · exporting a redacted analysis</div>
-  <div class="frame">
-    <div class="frame-chrome"><span class="frame-dots"><i></i><i></i><i></i></span>
-      <span class="frame-cap">export dialog · redacted</span></div>
-    <div class="frame-body dlg">
-      <div class="dlg-title">Export HTML</div>
-      <p class="dlg-sub">Creates a standalone report that anyone can open in a browser.
-         Recipients can view and search but cannot edit.</p>
-      <div class="dlg-row"><span>Language</span>
-        <select class="dlg-sel"><option>English</option></select></div>
-      <div class="dlg-state">
-        <span class="badge">Redacted</span>
-        <span class="t">Personal details were removed before analysis
-          <small class="hint">Phone numbers, emails and detected names are already
-            replaced in the transcripts and quotes this export contains.</small></span>
-      </div>
-      <label class="dlg-check">
-        <input type="checkbox">
-        <span class="t">Remove participant names from labels
-          <small class="hint">Strips participant names from metadata, filenames, and
-            speaker labels, leaving codes (p1, p2). Moderators and observers keep their
-            names. Names spoken inside quotes are NOT removed.</small></span>
-      </label>
-      <div class="dlg-acts"><button class="btn">Cancel</button><button class="btn primary">Export</button></div>
-    </div>
-  </div>
-
-  <div class="stage-label">B2 · exporting an un-redacted analysis</div>
-  <div class="frame">
-    <div class="frame-chrome"><span class="frame-dots"><i></i><i></i><i></i></span>
-      <span class="frame-cap">export dialog · not redacted</span></div>
-    <div class="frame-body dlg">
-      <div class="dlg-title">Export HTML</div>
-      <p class="dlg-sub">Creates a standalone report that anyone can open in a browser.
-         Recipients can view and search but cannot edit.</p>
-      <div class="dlg-row"><span>Language</span>
-        <select class="dlg-sel"><option>English</option></select></div>
-      <div class="dlg-state">
-        <span class="badge">Not redacted</span>
-        <span class="t">This export contains the original transcript text
-          <small class="hint">Personal details spoken in the sessions are included as
-            recorded. Redaction runs before analysis — it cannot be applied here.</small></span>
-      </div>
-      <label class="dlg-check">
-        <input type="checkbox">
-        <span class="t">Remove participant names from labels
-          <small class="hint">Strips participant names from metadata, filenames, and
-            speaker labels, leaving codes (p1, p2). Moderators and observers keep their
-            names. Names spoken inside quotes are NOT removed.</small></span>
-      </label>
-      <div class="dlg-acts"><button class="btn">Cancel</button><button class="btn primary">Export</button></div>
-    </div>
+    <h2>Considered and rejected — anything in the export surfaces</h2>
+    <p class="sub">An earlier draft of this mockup put the fact in the Export dialog too,
+       distinguished from the Anonymise checkbox by shape. Rejected. Kept here as the
+       reference copy, because the reason outlives the sketch.</p>
   </div>
 
   <div class="commentary hazard">
-    <span class="c-lbl">Commentary · hazard</span>
-    <p><strong>This dialog now holds two privacy affordances that sound identical and
-       are not.</strong> “Remove participant names from labels” is an <em>export-time
-       choice</em> the researcher makes now, about speaker labels. “Personal details were
-       removed before analysis” is a <em>pipeline-time fact</em> about the transcript
-       text, decided runs ago and unchangeable here. Put them adjacent and undifferentiated
-       and they will be read as one setting with a broken checkbox.</p>
-    <p><strong>What separates them in the pixels above:</strong> the fact is a stated
-       panel with no control; the choice is a checkbox. One is inert, one is operable, and
-       the shapes say so before the words are read. The existing hint string already does
-       the hardest disambiguating work — <em>“Names spoken inside quotes are NOT
-       removed”</em> — which is precisely what redaction <em>does</em> do.</p>
-    <p><strong>The “Not redacted” wording needs your ear.</strong> It states a fact
-       neutrally, but on the way to a client it can read as an accusation. The alternative
-       is to drop B2 and say nothing when off — at the cost of the one moment where the
-       researcher would most want to be told.</p>
-  </div>
-</section>
-
-<!-- ══════════════════════════════════════════════════════════════════ -->
-<section class="route">
-  <div class="route-head">
-    <h2>Route C — both, asymmetrically</h2>
-    <p class="sub">Badge in the report only when redacted; the export dialog states it
-       either way. Same single <code>/info</code> field feeds both.</p>
-  </div>
-
-  <div class="stage-label">C · the pair, as a researcher meets them</div>
-  <div class="frame">
-    <div class="frame-chrome"><span class="frame-dots"><i></i><i></i><i></i></span>
-      <span class="frame-cap">report · redacted</span></div>
-    <div class="frame-body">
-      <div class="rpt-head">
-        <span class="rpt-title">Acme onboarding study</span>
-        <span class="badge">Redacted</span>
-      </div>
-      <div class="rpt-meta">6 sessions · 5 participants</div>
-    </div>
-  </div>
-  <div class="frame">
-    <div class="frame-chrome"><span class="frame-dots"><i></i><i></i><i></i></span>
-      <span class="frame-cap">then: export · redacted</span></div>
-    <div class="frame-body dlg">
-      <div class="dlg-state" style="margin-bottom:0">
-        <span class="badge">Redacted</span>
-        <span class="t">Personal details were removed before analysis
-          <small class="hint">Phone numbers, emails and detected names are already
-            replaced in the transcripts and quotes this export contains.</small></span>
-      </div>
-    </div>
-  </div>
-
-  <div class="commentary">
-    <span class="c-lbl">Commentary</span>
-    <p><strong>The asymmetry is the argument.</strong> The report is read by people who
-       did not choose the setting, so it should carry a positive fact and stay quiet
-       otherwise. The export dialog is met only by the researcher, at the one moment the
-       negative case is worth stating — so there, silence is the failure.</p>
-    <p><strong>One field, two surfaces.</strong> Both read the same
-       <code>/info</code> value, so they cannot disagree. The signal is already computed
-       during import (<code>transcripts-cooked/</code> presence) and — since 13 Sep — is
-       trustworthy, because a run that does not redact now clears that directory instead
-       of leaving a stale one behind.</p>
-    <p><strong>Still open, and it is a wording call, not an engineering one:</strong>
-       “Redacted” is short and slightly opaque — redacted <em>of what?</em> Alternatives
-       that fit the badge: “PII removed”, “Names removed”, “Personal details removed”.
-       The last is plainest and the least jargon, but it is wide for a header badge.</p>
+    <span class="c-lbl">Commentary · why not</span>
+    <p><strong>The export surfaces have anonymisation, and only anonymisation.</strong>
+       “Remove participant names from labels” is an export-time <em>choice</em> about
+       speaker labels. Redaction is a pipeline-time <em>fact</em> about transcript text,
+       decided runs ago and unchangeable there. Put them in one dialog and they read as
+       one setting with a broken checkbox.</p>
+    <p>The draft tried to <em>manage</em> that collision — an inert stated panel beside
+       an operable checkbox, so the shapes disambiguate before the words are read. The
+       better answer is not to create it: keep redaction out of the export surfaces
+       entirely. The existing hint already draws the line for anonymisation on its own
+       terms — <em>“Names spoken inside quotes are NOT removed”</em> — which is exactly
+       what redaction <em>does</em> do, and exactly why the two must not share a frame.</p>
   </div>
 </section>
 
@@ -396,9 +270,10 @@ body {
   Tokens inlined verbatim from <code>bristlenose/theme/tokens.css</code> +
   <code>colors/palette-*.css</code>. Components reused: <code>.badge</code> (the house
   atom), the shipped export-dialog structure and its real
-  <code>export.anonymise</code>/<code>anonymiseHint</code> strings. The only new element
-  proposed is the stated-fact panel in the export dialog — flagged as new rather than
-  invented quietly. Decision recorded in <code>docs/design-redact-pii.md</code>.
+  the report header's existing metadata line. No new component: the wording is a
+  sentence, so it joins the session and participant counts where facts about the report
+  already live, rather than becoming a <code>.badge</code> — that atom is for tags.
+  Decision and reasoning recorded in <code>docs/design-redact-pii.md</code>.
 </div>
 
 </div>

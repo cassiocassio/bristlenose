@@ -41,7 +41,9 @@
     "session_one": "{{count}} session",
     "session_other": "{{count}} sessioner",
     "participant_one": "{{count}} deltagare",
-    "participant_other": "{{count}} deltagare"
+    "participant_other": "{{count}} deltagare",
+    "piiRedacted": "Personuppgifter",
+    "piiRedactedAction": "borttagna"
   },
   "titlebar": {
     "quotes_one": "{{count}} citat",

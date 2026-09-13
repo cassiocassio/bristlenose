@@ -6,12 +6,50 @@ idempotent init_db, and script location resolution.
 
 from __future__ import annotations
 
+import pathlib
+
 import pytest
 from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
 from bristlenose.server.db import Base, create_session_factory, get_engine, init_db, run_migrations
 from bristlenose.server.models import Person, Project
+
+
+def _migration_head() -> str:
+    """The head revision, read from the migration scripts themselves.
+
+    This was three hardcoded ``"009"`` literals plus a comment asking whoever
+    added a migration to update them — the same disease the repo documents
+    elsewhere as "a number that lives in four documents is wrong in three of
+    them". Adding revision 010 duly reddened all three at once (13 Sep 2026),
+    which is a gate firing on bookkeeping rather than on a defect.
+
+    Head is *defined* as the revision no other script names as its
+    ``down_revision``, so this handles gaps and renumbering rather than
+    assuming the highest number wins.
+    """
+    import re
+
+    versions = (
+        pathlib.Path(__file__).parent.parent
+        / "bristlenose" / "server" / "alembic" / "versions"
+    )
+    revs, parents = set(), set()
+    for f in versions.glob("[0-9]*.py"):
+        text_ = f.read_text(encoding="utf-8")
+        rev = re.search(r'^revision\s*=\s*"([^"]+)"', text_, re.M)
+        down = re.search(r'^down_revision\s*=\s*"([^"]+)"', text_, re.M)
+        if rev:
+            revs.add(rev.group(1))
+        if down:
+            parents.add(down.group(1))
+    heads = revs - parents
+    assert len(heads) == 1, f"expected exactly one migration head, found {sorted(heads)}"
+    return heads.pop()
+
+
+MIGRATION_HEAD = _migration_head()
 
 
 @pytest.fixture()
@@ -38,9 +76,7 @@ class TestFreshDatabase:
         with engine.connect() as conn:
             row = conn.execute(text("SELECT version_num FROM alembic_version")).fetchone()
         assert row is not None
-        # Head is currently 009 (autocode failure kind). Update when new
-        # migrations land.
-        assert row[0] == "009"
+        assert row[0] == MIGRATION_HEAD
 
     def test_all_user_tables_exist(self, engine):
         insp = inspect(engine)
@@ -84,7 +120,7 @@ class TestPreAlembicUpgrade:
         with pre_alembic_engine.connect() as conn:
             row = conn.execute(text("SELECT version_num FROM alembic_version")).fetchone()
         assert row is not None
-        assert row[0] == "009"
+        assert row[0] == MIGRATION_HEAD
 
     def test_data_preserved(self, pre_alembic_engine):
         """Existing rows survive the migration stamp."""
@@ -152,7 +188,7 @@ class TestPreAlembicUpgrade:
         assert "tag_prompt_decisions" in insp.get_table_names()
         with eng.connect() as conn:
             row = conn.execute(text("SELECT version_num FROM alembic_version")).fetchone()
-        assert row[0] == "009"
+        assert row[0] == MIGRATION_HEAD
 
 
 # ---------------------------------------------------------------------------

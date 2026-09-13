@@ -45,7 +45,9 @@
     "participant_one": "{{count}} участник",
     "participant_few": "{{count}} участника",
     "participant_many": "{{count}} участников",
-    "participant_other": "{{count}} участников"
+    "participant_other": "{{count}} участников",
+    "piiRedacted": "\u041f\u0435\u0440\u0441\u043e\u043d\u0430\u043b\u044c\u043d\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435",
+    "piiRedactedAction": "\u0443\u0434\u0430\u043b\u0435\u043d\u044b"
   },
   "titlebar": {
     "quotes_one": "{{count}} цитата",

@@ -143,7 +143,9 @@
     "logoAlt": "Bristlenose 로고",
     "researchReport": "연구 보고서",
     "session_other": "{{count}}개 세션",
-    "participant_other": "{{count}}명 참가자"
+    "participant_other": "{{count}}명 참가자",
+    "piiRedacted": "\uac1c\uc778 \uc2dd\ubcc4 \uc815\ubcf4",
+    "piiRedactedAction": "\uc0ad\uc81c\ub428"
   },
   "footer": {
     "builtWith": "Bristlenose로 제작됨",

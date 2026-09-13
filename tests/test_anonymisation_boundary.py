@@ -229,6 +229,123 @@ class TestAnalyzePreflightDoesNotProbeThePiiStack:
         assert "pii" in _COMMAND_CHECKS["run"]
 
 
+class TestTurningRedactionOffGivesTheParticipantsWordsBack:
+    """The mirror of `TestReanalysingWithRedactionReplacesTheText`.
+
+    That one fixed raw-rows-then-redact (12 Sep). Its mirror stayed open, and
+    the one-directional test could not see it: the skip asked *which directory
+    am I reading*, when the question is *which vintage is already in the DB* —
+    which no column records.
+
+    Turning redaction off and re-analysing: stage 7 clears
+    `transcripts-cooked/`, so the importer correctly reads raw — then skipped,
+    and kept the redacted rows. Quotes came back un-redacted (they re-import
+    from `extracted_quotes.json`, regenerated because `pii_enabled` is in the
+    topic stage's input hashes); transcript pages did not. One project, two
+    vintages. Real SQLite, because the whole point is what the rows say.
+    """
+
+    REAL = "My name is Martin and I live in London."
+    COOKED = "My name is [NAME] and I live in [LOCATION]."
+
+    @staticmethod
+    def _db():
+        from bristlenose.server.db import create_session_factory, get_engine, init_db
+
+        engine = get_engine("sqlite://")
+        init_db(engine)
+        return create_session_factory(engine)()
+
+    @staticmethod
+    def _session(db):
+        from bristlenose.server.models import Project
+        from bristlenose.server.models import Session as SessionModel
+
+        project = Project(name="p", input_dir="/in", output_dir="/out")
+        db.add(project)
+        db.flush()
+        sess = SessionModel(project_id=project.id, session_id="s1", session_number=1)
+        db.add(sess)
+        db.flush()
+        return {"s1": sess}
+
+    @classmethod
+    def _write(cls, dirpath: Path, text: str) -> Path:
+        dirpath.mkdir(parents=True, exist_ok=True)
+        (dirpath / "s1.txt").write_text(
+            f"# Transcript: s1\n\n[00:02] [p1] {text}\n", encoding="utf-8",
+        )
+        return dirpath
+
+    def _texts(self, db, session_map):
+        from bristlenose.server.models import TranscriptSegment
+
+        return [
+            r.text for r in db.query(TranscriptSegment)
+            .filter_by(session_id=session_map["s1"].id)
+            .order_by(TranscriptSegment.segment_index)
+        ]
+
+    def test_the_db_does_not_keep_redacted_rows_after_redaction_is_turned_off(
+        self, tmp_path: Path
+    ) -> None:
+        from bristlenose.server.importer import _import_transcript_segments
+
+        db = self._db()
+        session_map = self._session(db)
+
+        # Run 1, redacted: rows come from transcripts-cooked/.
+        cooked = self._write(tmp_path / "transcripts-cooked", self.COOKED)
+        _import_transcript_segments(db, session_map, cooked)
+        db.commit()
+        assert self._texts(db, session_map) == [self.COOKED]
+
+        # Run 2, redaction off: stage 7 has cleared cooked, so the importer
+        # reads raw. The rows must follow.
+        raw = self._write(tmp_path / "transcripts-raw", self.REAL)
+        _import_transcript_segments(db, session_map, raw)
+        db.commit()
+
+        assert self._texts(db, session_map) == [self.REAL], (
+            "the DB kept the redacted text after redaction was turned off — "
+            "quotes re-import un-redacted while transcript pages still read "
+            "[NAME], so one project serves two vintages"
+        )
+
+    def test_the_other_direction_still_holds(self, tmp_path: Path) -> None:
+        """Raw first, then redacted — the 12 Sep fix must not regress."""
+        from bristlenose.server.importer import _import_transcript_segments
+
+        db = self._db()
+        session_map = self._session(db)
+
+        raw = self._write(tmp_path / "transcripts-raw", self.REAL)
+        _import_transcript_segments(db, session_map, raw)
+        db.commit()
+
+        cooked = self._write(tmp_path / "transcripts-cooked", self.COOKED)
+        _import_transcript_segments(db, session_map, cooked)
+        db.commit()
+
+        assert self._texts(db, session_map) == [self.COOKED]
+
+    def test_reimporting_the_same_directory_is_idempotent(
+        self, tmp_path: Path
+    ) -> None:
+        """Replacing unconditionally must not duplicate rows on a plain re-serve."""
+        from bristlenose.server.importer import _import_transcript_segments
+
+        db = self._db()
+        session_map = self._session(db)
+        raw = self._write(tmp_path / "transcripts-raw", self.REAL)
+
+        for _ in range(3):
+            _import_transcript_segments(db, session_map, raw)
+            db.commit()
+
+        assert self._texts(db, session_map) == [self.REAL]
+
+
 class TestTurningRedactionOffClearsTheRedactedCopy:
     """The mirror of the class below: redaction state outliving the setting.
 
@@ -409,8 +526,21 @@ class TestReanalysingWithRedactionReplacesTheText:
         assert any("[NAME]" in t for t in texts)
         assert len(texts) == 2, "replace, not append — the row count must not grow"
 
-    def test_raw_over_raw_still_skips(self, tmp_path: Path) -> None:
-        """The skip is a shortcut for the idempotent case; keep it there."""
+    def test_raw_over_raw_takes_the_newer_text(self, tmp_path: Path) -> None:
+        """A re-import picks up a changed transcript, and does not duplicate rows.
+
+        This test used to be `test_raw_over_raw_still_skips` and asserted the
+        opposite — that the FIRST import's text survives a second one carrying
+        different text. Its docstring called that "a shortcut for the idempotent
+        case", but its own fixture writes *different* text on the second pass,
+        so what it pinned was staleness, not idempotence: a re-transcribed or
+        hand-corrected session never reached the DB. It also asserted stable row
+        **ids**, which is not a contract — no FK targets `transcript_segments`
+        and quotes locate a segment by `(session_id, segment_index)`.
+
+        Rewritten rather than deleted (13 Sep 2026): the idempotence half is
+        real and still worth a guard, so it is asserted below on row count.
+        """
         from bristlenose.server.importer import _import_transcript_segments
         from bristlenose.server.models import TranscriptSegment
 
@@ -419,11 +549,15 @@ class TestReanalysingWithRedactionReplacesTheText:
         raw = self._write(tmp_path / "transcripts-raw", "first import")
         _import_transcript_segments(db, session_map, raw)
         db.commit()
-        first_ids = sorted(s.id for s in db.query(TranscriptSegment).all())
+        first_count = db.query(TranscriptSegment).count()
 
         self._write(tmp_path / "transcripts-raw", "second import, same session")
         _import_transcript_segments(db, session_map, raw)
         db.commit()
 
-        assert sorted(s.id for s in db.query(TranscriptSegment).all()) == first_ids
-        assert "first import" in db.query(TranscriptSegment).first().text
+        rows = db.query(TranscriptSegment).all()
+        assert len(rows) == first_count, "replace, not append"
+        assert any("second import" in r.text for r in rows), (
+            "the file on disk must win — otherwise a corrected transcript "
+            "never reaches the served report"
+        )

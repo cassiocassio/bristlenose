@@ -1213,6 +1213,38 @@ different text, but it is a paid action in **both** directions and nothing warns
 before it. (The cascade is stricter than strictly necessary — topic *boundaries*
 barely move under redaction — but unpicking that is real work for a small win.)
 
+**And the same defect had a second half, one layer down.** Clearing the
+directory makes the importer *read* raw — and `_import_transcript_segments`
+then **skipped**, because its guard replaced existing rows only when the source
+was `transcripts-cooked/`. The 12 Sep fix closed raw→cooked and left its mirror
+open. So a served project kept its **redacted** transcript rows for ever, while
+quotes re-imported un-redacted from `extracted_quotes.json` (regenerated,
+because `pii_enabled` is in the topic stage's input hashes). One project, two
+vintages: quotes carrying real names beside transcript pages reading `[NAME]`.
+
+Found by a second session working independently, which is the interesting part:
+it reproduced the disk-level bug and reached the identical fix, and its framing
+of the consequence — *"splits the report into two vintages"* — is what exposed
+the DB half that the disk fix does not reach.
+
+**Root cause worth carrying past this bug:** the guard asked *which directory am
+I reading* when the question is *which vintage is already in the DB*, and no
+column records that. A one-directional test cannot answer a two-directional
+question. It now replaces unconditionally — the skip's own comment conceded it
+was "only a shortcut". Safe because no FK targets `transcript_segments`
+(verified), quotes join on `(session_id, segment_index)` which the insert
+regenerates, and `_enrich_words_from_intermediate` runs immediately after, so a
+raw row gets its word timings back. That also closes the second-order effect for
+free: with the directory gone the word-timing guard no longer fires, so karaoke
+highlighting returns on a project that is no longer redacted.
+
+**A test was pinning the defect.** `test_raw_over_raw_still_skips` called itself
+"a shortcut for the idempotent case" while its fixture wrote *different* text on
+the second import and asserted the *first* survived — i.e. a re-transcribed or
+hand-corrected session never reaching the DB. It also asserted stable row ids,
+which is not a contract. Rewritten, not deleted: newer text wins, row count
+unchanged.
+
 **Measured the same day: there is NO user-visible "this was redacted" flag**
 anywhere — not the SPA, the report, the export, the static renderer, or the Mac.
 `ProjectInfoResponse` carries `project_name`/`session_count`/`participant_count`

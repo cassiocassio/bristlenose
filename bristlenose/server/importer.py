@@ -522,36 +522,47 @@ def _import_transcript_segments(
         if not sess:
             continue
 
-        # Skip if segments already imported — UNLESS the source is the redacted
-        # copy, in which case the rows on disk must win over the rows in the
-        # DB. Without this branch, a project analysed once without redaction
-        # and then re-analysed with it on kept its ORIGINAL text for ever:
-        # `transcripts-cooked/` landed, `pii_summary.txt` landed, `status`
-        # said redaction ran, and the served report, the export and the MCP
-        # endpoint all went on carrying the unredacted words. The words_json
-        # remediation in `_enrich_words_from_intermediate` had patched exactly
-        # this hole for the timing data and left the text (found 12 Sep 2026).
+        # The file on disk always wins over the rows in the DB.
+        #
+        # This used to replace only when the source was `transcripts-cooked/`,
+        # and skip otherwise — "a raw re-import over raw is idempotent and the
+        # skip is only a shortcut". True of raw-over-raw. False of
+        # raw-over-COOKED, which the one-directional test could not tell apart,
+        # because nothing on the row records which vintage produced it.
+        #
+        # So the 12 Sep fix closed one direction and left its mirror open
+        # (found 13 Sep 2026, independently, by a second session). Turning
+        # redaction OFF and re-analysing: stage 7 clears `transcripts-cooked/`
+        # so the importer correctly reads raw — and then hit `continue` and
+        # kept the REDACTED rows for ever. The researcher asked for their
+        # participants' words back, the quotes came back (they re-import from
+        # `extracted_quotes.json`, which stage 9 had regenerated because
+        # `pii_enabled` sits in the topic stage's input hashes) and the
+        # transcript pages did not. One project, two vintages: quotes carrying
+        # real names beside transcript pages reading `[NAME]`.
+        #
+        # Replacing unconditionally is the honest form. It costs a re-parse and
+        # a reinsert per import, which the skip used to save; correctness in
+        # both directions is worth more than that, and no cheaper test exists
+        # while the row carries no provenance.
         #
         # Delete-and-reinsert rather than update-in-place: nothing holds a
         # segment's id (no FK points at this table; `quotes` join on
         # `(session_id, segment_index)`, which the insert below regenerates
-        # identically because cooked is a one-for-one copy of raw),
-        # and a reinserted row arrives with `words_json = None`, which is what
-        # a redacted row must have. The raw case keeps the skip — a raw
-        # re-import over raw is idempotent and the skip is only a shortcut.
+        # identically because cooked is a one-for-one copy of raw), and a
+        # reinserted row arrives with `words_json = None` — which is required
+        # for a redacted row, and refilled for a raw one by
+        # `_enrich_words_from_intermediate`, which runs immediately after this.
         existing_count = (
             db.query(TranscriptSegment).filter_by(session_id=sess.id).count()
         )
         if existing_count > 0:
-            if transcripts_dir.name != "transcripts-cooked":
-                continue
             db.query(TranscriptSegment).filter_by(session_id=sess.id).delete(
                 synchronize_session=False
             )
-            logger.warning(
-                "Replacing %d transcript segment(s) for %s with the redacted "
-                "copy — the DB held pre-redaction text",
-                existing_count, sid,
+            logger.info(
+                "Replacing %d transcript segment(s) for %s from %s/",
+                existing_count, sid, transcripts_dir.name,
             )
 
         content = txt_file.read_text(encoding="utf-8")

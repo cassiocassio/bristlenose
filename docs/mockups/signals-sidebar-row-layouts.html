@@ -2992,6 +2992,22 @@ function navPanel(title, html, note){
      U3  by sections & themes  grouped by place
    Sentiment appears in U2 as a codebook like any other, because it is one. */
 
+/* The summary a sentiment row shows.
+   Real, and already in the data: these are the elaborated names on the
+   Sentiment-GROUP codebook row for each place — sentiment is a codebook and
+   gets elaborated like one. Keyed by LOCATION, not by location x sentiment,
+   which is the whole difficulty: a place with three sentiment cells has one
+   name between them. Four places have a sentiment signal and no name at all,
+   because only the top N signals are elaborated. */
+const SENT_SUMMARY = {
+  "Beds & Mattresses Category": ["Category Navigation Confusion", "gap"],
+  "Homepage content and navigation experience": ["Homepage Purpose Tension", "tension"],
+  "Search & Sort Results": ["Search Results Delight", "success"],
+  "Session wrap-up and data sufficiency": ["Wrap-up Expectation Mismatch", "tension"],
+  "Shopping Bag": ["Bag Experience Tension", "tension"],
+  "Top Navigation": ["Navigation Reliability Tension", "tension"]
+};
+
 const U_VIEWS = [
   ["U1", "Strongest signal"],
   ["U2", "Codebook"],
@@ -3024,7 +3040,11 @@ function uRow(x, showPlace){
         return `<span class="badge grp"${bg ? ` style="background:${bg}"` : ""}>${esc(x.group)}</span>`; })();
   // A signal with no elaborated name has no sentence of its own, so the place
   // becomes the label and the chip qualifies it.
-  const lead = x.name ? `${esc(x.name)} ${chip}`
+  // Every row is a codebook row now; only the chip's vocabulary differs —
+  // a sentiment value, or a tag group. A sentiment row therefore wants a
+  // summary exactly as a codebook row does, and borrows its place's.
+  const name = x.name || (x.sent ? (SENT_SUMMARY[x.loc] || [])[0] : null);
+  const lead = name ? `${esc(name)} ${chip}`
              : (showPlace ? `${esc(x.loc)} ${chip}` : chip);
   const meta = showPlace && x.name ? `<span class="u-meta">${esc(x.loc)}</span>` : "";
   return `<a class="u-row" href="#" data-utarget="${esc(x.loc)} \u00b7 ${esc(x.sent || x.group)}">`
@@ -3356,18 +3376,21 @@ floorIn.addEventListener("input", e => {
   fv.textContent = state.floor.toFixed(2);
   renderProjects();
   renderReal();
+  renderU();
 });
 document.querySelectorAll("[data-budget]").forEach(b => b.addEventListener("click", () => {
   state.budget = +b.dataset.budget;
   document.querySelectorAll("[data-budget]").forEach(x => x.classList.toggle("on", x === b));
   renderProjects();
   renderReal();
+  renderU();
 }));
 document.querySelectorAll("[data-vol]").forEach(b => b.addEventListener("click", () => {
   state.vol = +b.dataset.vol;
   document.querySelectorAll("[data-vol]").forEach(x => x.classList.toggle("on", x === b));
   renderProjects();
   renderReal();
+  renderU();
 }));
 document.querySelectorAll("[data-treat]").forEach(b => b.addEventListener("click", () => {
   state.treat = b.dataset.treat;

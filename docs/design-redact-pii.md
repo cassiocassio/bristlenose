@@ -1136,19 +1136,26 @@ imports.
 
 **Still open, and each needs a decision rather than a patch:**
 
-- **Stage 7 has no resume.** Every re-run re-loads spaCy and re-runs Presidio
-  over every segment, then rewrites `transcripts-cooked/`. `manifest.py` justifies
-  this as "Stages 1–7 always re-run (fast, no intermediate JSON)" — no longer true
-  of stage 7, as the estimator's own decision to give it a session-scaled metric
-  concedes. `mark_stage_complete(STAGE_PII_REMOVAL)` passes no `content_hash`,
-  `input_hashes` or `output_path`, so `_is_stage_verified` has nothing to verify.
-  The cache key must include the PII config, not just the upstream hash — s08
-  already models exactly this by hashing `pii_enabled`. Interacts with fail-stop:
-  *resumable across runs* is not the same claim as *partial within a run*, and
-  only the first is wanted. **The real blocker is upstream**, and it is work
-  rather than a judgement call: stage 7's input is stage 6's merged transcripts,
-  and stage 6 is itself uncached and produces no content hash for stage 7 to key
-  on. That has to exist first.
+- ~~**Stage 7 has no resume.**~~ **PRICED AND CLOSED, 13 Sep 2026 — do not
+  reopen without a new measurement.** It was listed as a real gap on a survey's
+  ranking, and the ranking was *unpriced*. Measured: redacting a 9,000-word
+  (≈60 min) transcript takes **3.3 s** on ordinary interview prose and **4.5 s**
+  on the planted-PII corpus — which is deliberately far denser in entities than
+  real speech, so that is an upper bound, not a typical case. Presidio engine
+  init is **2.5 s**. A re-run therefore costs about **25 s for a five-session
+  study and 95 s for twenty**, against transcription in minutes and the LLM
+  stages in minutes *and money*. Caching is for that company; redaction is not
+  in it. `manifest.py`'s "Stages 1–7 always re-run (**fast**, no intermediate
+  JSON)" is right on the half that decides this, and stale only on the
+  parenthetical — `transcripts-cooked/` **is** durable output. Reproduce by
+  timing `remove_pii` over `tests/fixtures/pii_horror_transcript.txt` scaled to
+  ~9k words. (If it is ever reopened: `mark_stage_complete(STAGE_PII_REMOVAL)`
+  passes no `content_hash`, `input_hashes` or `output_path`, so
+  `_is_stage_verified` would have nothing to verify; s08 models the
+  config-in-the-key part by hashing `pii_enabled`; stage 6 is uncached and emits
+  no hash for stage 7 to key on, so that would have to exist first; and
+  *resumable across runs* is not *partial within a run* — only the first would
+  ever be wanted, fail-stop owns the second.)
 - **No `PipelineSummary.pii` bucket**, so the terminus carries no PII duration or
   counts, and an abandon ships a summary silent about the stage that failed.
   Additive, but it is a wire-contract change (Swift mirror + fixture + a scenario

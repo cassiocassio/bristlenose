@@ -1102,13 +1102,35 @@ otherwise transcribe's own 1.0 has already pinned a cold ring.
 
 **Three things this exposed, all pre-existing.**
 
-**1. `speakers` / `topics` / `quotes` still show a stale count.** They are
-per-session stages that emit no pair, so they inherit whatever came last — now
-PII's finished "N of N". The Swift comment asserted both that transcribe was the
-only emitter *and* that those three carried a live fraction; the two cannot both
-be true and the second was the wrong one. Corrected in place, and recorded there
-as a gap rather than a decision: the fix is for them to emit, not for
-`nonSessionStages` to suppress. **Not done here** — three stages, no PII content.
+**1. `speakers` / `topics` / `quotes` showed a stale count** — per-session
+stages emitting no pair, inheriting whatever came last, which after this change
+was PII's finished "N of N". The Swift comment asserted both that transcribe was
+the only emitter *and* that those three carried a live fraction; the two cannot
+both be true and the second was the wrong one.
+
+**Closed later the same day**, on the user's call, after being parked as
+out-of-scope. All three now emit through `Pipeline._on_session_progress`, a
+builder for the callback the three share — `transcribe` and `pii` stay inline
+because each carries something of its own (a within-file heartbeat; a different
+noun). Two things about the number are worth carrying:
+
+- **It counts completions, not position.** All three gather behind the
+  `llm_concurrency` semaphore, so sessions finish out of order and "3 of 8"
+  means *three are done*, never *now on the third*. Correct for an "N of M"
+  display, which never names a session — but do not build a "now processing X"
+  on it. (An earlier reading of mine had `speakers` down as sequential: the
+  plain `for sid in _remaining_si_sids` is the *heuristic* pass; the LLM
+  refinement below it is a gather. Grepping the first loop and stopping is the
+  mistake to avoid.)
+- **The denominator is the remaining work, not the study.** These stages skip
+  cached sessions, so a resumed run reports the size of what is actually being
+  done, with `sessions_cached` carrying the rest — the same convention
+  transcription already uses. Reporting the study would read "0 of 8" with six
+  already finished.
+
+Counting happens in a `finally`, so a session whose LLM call failed still
+advances the number: it is done being *attempted*, and a counter that stalls on
+the one that failed is worse than none.
 
 **2. The run inspector reads the wrong vocabulary, and its test pinned the
 mistake.** `run_progress.stage` carries `timing.py ALL_STAGES` (`speakers`,

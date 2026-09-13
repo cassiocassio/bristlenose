@@ -857,6 +857,93 @@ def test_pii_stage_reports_progress_like_its_siblings(tmp_path: Path) -> None:
     estimator.stage_completed.assert_any_call("pii", ANY)
 
 
+def test_the_llm_stages_report_how_many_sessions_they_have_finished(
+    tmp_path: Path,
+) -> None:
+    """s05b / s08 / s09 each emit their own live per-session pair.
+
+    Until 13 Sep 2026 only `transcribe` did. `RunProgressMath.apply` overwrites
+    the pair only on an event that carries one, so these three inherited
+    whatever came last — after `pii` landed, its finished "N of N" — and the
+    Mac row read as complete for the whole of topic segmentation and quote
+    extraction.
+
+    All three run `llm_concurrency` sessions at once behind a semaphore, so the
+    number counts COMPLETIONS and never identifies a session. Asserted as a set
+    per stage: the order sessions finish in is genuinely not determined, and a
+    test that pinned a sequence would be pinning the scheduler.
+    """
+    from bristlenose.models import SessionTopicMap
+
+    (settings, input_dir, output_dir, sessions,
+     transcripts, fake_transcribe) = _pii_run_fixture(tmp_path)
+    settings.pii_enabled = False
+    settings.min_quote_words = 5
+
+    pipeline = Pipeline(settings)
+    collected: list[dict[str, object]] = []
+    pipeline.set_progress_sink(lambda **fields: collected.append(fields))
+
+    async def _fake_speakers(_segments, _client, **_kw):
+        return []
+
+    async def _fake_topics(ts, _client, **kw):
+        cb = kw.get("on_progress")
+        maps = []
+        for i, t in enumerate(ts, start=1):
+            maps.append(SessionTopicMap(
+                session_id=t.session_id, participant_id=t.participant_id,
+                boundaries=[],
+            ))
+            if cb:
+                cb(i, len(ts))
+        return maps, StageOutcome(attempted=len(ts), succeeded=len(ts))
+
+    async def _fake_quotes(ts, _maps, _client, **kw):
+        cb = kw.get("on_progress")
+        for i, _t in enumerate(ts, start=1):
+            if cb:
+                cb(i, len(ts))
+        raise RuntimeError("stop after stage 9")
+
+    with (
+        patch("bristlenose.stages.s01_ingest.ingest", return_value=sessions),
+        patch("bristlenose.stages.s02_extract_audio.extract_audio_for_sessions",
+              new=_async_passthrough),
+        patch("bristlenose.stages.s05_transcribe.transcribe_sessions", new=fake_transcribe),
+        patch("bristlenose.stages.s05b_identify_speakers.identify_speaker_roles_llm",
+              new=_fake_speakers),
+        patch("bristlenose.stages.s06_merge_transcript.merge_transcripts",
+              return_value=transcripts),
+        patch("bristlenose.stages.s08_topic_segmentation.segment_topics",
+              new=_fake_topics),
+        patch("bristlenose.stages.s09_quote_extraction.extract_quotes",
+              new=_fake_quotes),
+    ):
+        with pytest.raises(RuntimeError, match="stop after stage 9"):
+            asyncio.run(pipeline.run(input_dir, output_dir))
+
+    n = len(transcripts)
+    for stage in ("speakers", "topics", "quotes"):
+        counted = [
+            c for c in collected
+            if c.get("stage") == stage and c.get("sessions_total") is not None
+        ]
+        assert counted, (
+            f"{stage} emitted no per-session pair — it keeps the previous "
+            f"stage's stale count. Saw: {sorted({str(c.get('stage')) for c in collected})}"
+        )
+        assert {c["sessions_complete"] for c in counted} == set(range(1, n + 1)), (
+            f"{stage} must report every completion exactly once"
+        )
+        assert all(c["sessions_total"] == n for c in counted)
+        # The denominator is the REMAINING work, and `cached` carries the rest —
+        # a resumed run must not read "0 of 8" with six already done.
+        assert all(c["sessions_new"] == n for c in counted)
+        assert all(c["sessions_cached"] == 0 for c in counted)
+        assert max(c["stage_fraction"] for c in counted) == 1.0
+
+
 def test_a_run_without_redaction_clears_the_previous_run_s_cooked_copy(
     tmp_path: Path,
 ) -> None:

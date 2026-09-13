@@ -75,6 +75,129 @@ def _make_segments(pid: str) -> list[TranscriptSegment]:
 # Stage 8: topic segmentation concurrency
 # ---------------------------------------------------------------------------
 
+class TestPerSessionProgressUnderConcurrency:
+    """The stages report how many sessions they have FINISHED.
+
+    Until 13 Sep 2026 only `transcribe` emitted a live per-session pair, so
+    s05b/s08/s09 inherited whatever came last and the Mac row showed a
+    completed-looking "N of N" while they worked.
+
+    Belongs here rather than beside the pipeline test, because the property
+    worth pinning is exactly what this file is about: these stages gather
+    behind a semaphore, so the callback fires out of session order and the
+    number means COMPLETIONS. A test asserting a sequence would be pinning the
+    scheduler, so this asserts the set and the monotonic climb.
+    """
+
+    @staticmethod
+    def _client():
+        async def mock_analyze(system_prompt, user_prompt, response_model, **kw):
+            from bristlenose.llm.structured import TopicSegmentationResult
+            await asyncio.sleep(0.01)
+            return TopicSegmentationResult(boundaries=[])
+
+        client = AsyncMock()
+        client.provider = "anthropic"
+        client.analyze = mock_analyze
+        return client
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("concurrency", [1, 3])
+    async def test_topics_counts_every_session_exactly_once(
+        self, concurrency: int
+    ) -> None:
+        from bristlenose.stages.s08_topic_segmentation import segment_topics
+
+        seen: list[tuple[int, int]] = []
+        transcripts = [_make_transcript(f"p{i}") for i in range(1, 7)]
+
+        await segment_topics(
+            transcripts, self._client(), concurrency=concurrency,
+            on_progress=lambda done, total: seen.append((done, total)),
+        )
+
+        assert [d for d, _ in seen] == list(range(1, 7)), (
+            "completions must climb monotonically 1..N, whatever order the "
+            "sessions themselves finish in"
+        )
+        assert {t for _, t in seen} == {6}
+
+    @pytest.mark.asyncio
+    async def test_topics_still_counts_a_session_that_failed(self) -> None:
+        """A stalled counter is worse than none.
+
+        The session is done being *attempted* whether or not the call
+        succeeded, so the count advances in a `finally`.
+        """
+        from bristlenose.stages.s08_topic_segmentation import segment_topics
+
+        calls = {"n": 0}
+
+        async def flaky(system_prompt, user_prompt, response_model, **kw):
+            from bristlenose.llm.structured import TopicSegmentationResult
+            calls["n"] += 1
+            if calls["n"] == 2:
+                raise RuntimeError("provider hiccup")
+            return TopicSegmentationResult(boundaries=[])
+
+        client = AsyncMock()
+        client.provider = "anthropic"
+        client.analyze = flaky
+
+        seen: list[int] = []
+        transcripts = [_make_transcript(f"p{i}") for i in range(1, 5)]
+        await segment_topics(
+            transcripts, client, concurrency=1,
+            on_progress=lambda done, _total: seen.append(done),
+        )
+
+        assert seen == [1, 2, 3, 4], "the failed session must still be counted"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("concurrency", [1, 3])
+    async def test_quotes_counts_every_session_exactly_once(
+        self, concurrency: int
+    ) -> None:
+        from bristlenose.stages.s09_quote_extraction import extract_quotes
+
+        async def mock_analyze(system_prompt, user_prompt, response_model, **kw):
+            from bristlenose.llm.structured import QuoteExtractionResult
+            await asyncio.sleep(0.01)
+            return QuoteExtractionResult(quotes=[])
+
+        client = AsyncMock()
+        client.provider = "anthropic"
+        client.analyze = mock_analyze
+
+        seen: list[int] = []
+        transcripts = [_make_transcript(f"p{i}") for i in range(1, 7)]
+        maps = [
+            SessionTopicMap(
+                session_id=t.session_id, participant_id=t.participant_id,
+                boundaries=[],
+            )
+            for t in transcripts
+        ]
+
+        await extract_quotes(
+            transcripts, maps, client, concurrency=concurrency,
+            on_progress=lambda done, _total: seen.append(done),
+        )
+
+        assert seen == list(range(1, 7))
+
+    @pytest.mark.asyncio
+    async def test_no_callback_is_the_default(self) -> None:
+        """`analyze` passes none, and every pre-existing caller passes none."""
+        from bristlenose.stages.s08_topic_segmentation import segment_topics
+
+        maps, _ = await segment_topics(
+            [_make_transcript("p1")], self._client(), concurrency=1,
+        )
+        assert len(maps) == 1
+
+
+
 class TestTopicSegmentationConcurrency:
     """Verify segment_topics runs concurrently with concurrency > 1."""
 

@@ -46,18 +46,21 @@ enum RunProgressSubtitle {
     /// "Building report" reads as "theme-grouping is 4 of 5 done" when it isn't.
     /// Keyed off the stage id, so no Python sentinel is needed.
     ///
-    /// **Which stages emit a live pair, measured 13 Sep 2026:** `transcribe`
-    /// (`pipeline.py` `_on_transcribe_progress` and the within-file heartbeat)
-    /// and `pii` (`_on_pii_progress`) — those two only. This comment previously
-    /// said `transcribe` alone, and in the same breath claimed the
-    /// `_SESSION_STAGES` trio carried one too; both halves cannot be right and
-    /// the second was the wrong one.
+    /// **Every per-session stage now emits its own live pair** (13 Sep 2026):
+    /// `transcribe`, `pii`, `speakers`, `topics`, `quotes`. Earlier that day
+    /// only `transcribe` did, and this comment said so while claiming in the
+    /// same breath that the `_SESSION_STAGES` trio carried one too — both
+    /// halves could not be right, and the second was the wrong one. That gap
+    /// is closed, so nothing in this set is inherited any more.
     ///
-    /// **So `speakers` / `topics` / `quotes` are a known gap, not a decision.**
-    /// They are per-session stages that emit no pair, so they inherit the count
-    /// from whichever stage last emitted — after `pii`, its finished "N of N".
-    /// They are absent from this set because suppressing them is the wrong fix:
-    /// they should emit their own live pair, the way the two above now do.
+    /// **What the number means differs by stage, and it is worth knowing.**
+    /// `transcribe` iterates sequentially, so "3 of 8" is both *three done*
+    /// and *now on the third*. `speakers`, `topics` and `quotes` gather behind
+    /// a `llm_concurrency` semaphore, so sessions finish out of order and the
+    /// number is *completions only* — it never identifies a session. Fine for
+    /// this display, which never names one; do not build a "now processing X"
+    /// on top of it. And the denominator is the **remaining** work on a
+    /// resumed run, with `sessions_cached` carrying the rest.
     static let nonSessionStages: Set<String> = ["cluster", "render"]
 
     /// Localised "~N min left" / "<1 min left", or nil when there's no usable

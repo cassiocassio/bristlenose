@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable
 from typing import Literal
 
 from bristlenose.events import StageFailure, StageOutcome
@@ -101,6 +102,8 @@ async def extract_quotes(
     min_quote_words: int = 5,
     concurrency: int = 1,
     errors: list[str] | None = None,
+    *,
+    on_progress: Callable[[int, int], None] | None = None,
 ) -> tuple[list[ExtractedQuote], StageOutcome]:
     """Extract verbatim quotes from all transcripts.
 
@@ -111,6 +114,11 @@ async def extract_quotes(
         min_quote_words: Minimum word count for a quote to be included.
         concurrency: Max concurrent LLM calls (default 1 = sequential).
         errors: Optional list to append error messages to (legacy short-form).
+        on_progress: Optional ``callback(completed, total)`` fired as each
+            session finishes — the same shape ``transcribe_sessions`` and
+            ``remove_pii`` use. **Completions, not position:** this stage runs
+            ``concurrency`` sessions at once and they finish out of order, so
+            ``completed`` counts how many are done and never identifies which.
 
     Returns:
         Tuple of (quotes, outcome). ``outcome`` records per-session
@@ -192,7 +200,21 @@ async def extract_quotes(
                     stop.set()
                 return []
 
-    results = await asyncio.gather(*(_process(t) for t in transcripts))
+    _completed = 0
+
+    async def _process_counted(
+        transcript: PiiCleanTranscript,
+    ) -> list[ExtractedQuote]:
+        # `finally`, so the count advances on a handled failure too.
+        nonlocal _completed
+        try:
+            return await _process(transcript)
+        finally:
+            _completed += 1
+            if on_progress is not None:
+                on_progress(_completed, len(transcripts))
+
+    results = await asyncio.gather(*(_process_counted(t) for t in transcripts))
     # Flatten per-participant quote lists into a single list
     all_quotes: list[ExtractedQuote] = []
     for quotes in results:

@@ -6,7 +6,7 @@ import asyncio
 import json
 import logging
 import shutil
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -684,6 +684,53 @@ class Pipeline:
         fields.setdefault("elapsed_seconds", self._elapsed_seconds())
         self._progress_sink(**fields)  # type: ignore[operator]
 
+    def _on_session_progress(
+        self, stage: str, status: Any, label: str, *, remaining: int, cached: int = 0
+    ) -> Callable[[int, int], None]:
+        """Build the per-session progress callback three stages share.
+
+        Identical in shape to `_on_transcribe_progress` and `_on_pii_progress`
+        — `callback(completed, total)` fired as each session finishes — but
+        those two are written inline because each also carries something of its
+        own (a within-file heartbeat; a different noun). These three differ
+        only in verb, so a builder beats three copies.
+
+        **`completed` counts completions, not position.** s05b, s08 and s09 all
+        run `llm_concurrency` sessions at once behind a semaphore and gather
+        them, so sessions finish out of order and "3 of 8" means *three are
+        done*, never *now on the third*. That is what the "N of M" display
+        needs — it never names a session — but it is a weaker claim than
+        transcription's, where the loop really is sequential.
+
+        **`remaining` is the work this run is doing, not the whole study.**
+        These stages skip cached sessions, so a resumed run passes the size of
+        what is actually being processed; `cached` carries the rest for any
+        surface that wants it. Reporting the study would read "0 of 8" while six
+        were already finished. Same convention as transcription's
+        `sessions_new`/`sessions_cached`.
+
+        The callback's own `total` is what the *stage* counted, and equals
+        `remaining` at every call site today. Both are emitted rather than one:
+        if they ever disagree, the stage and the orchestrator disagree about how
+        much work there is, and that is worth being able to see.
+        """
+
+        def _cb(completed: int, total: int) -> None:
+            status.update(
+                f"[dim]{label}..."
+                f" ({completed}/{count_noun(total, 'session')})[/dim]"
+            )
+            self._emit_progress(
+                stage=stage,
+                sessions_complete=completed,
+                sessions_total=total,
+                sessions_new=remaining,
+                sessions_cached=cached,
+                stage_fraction=(completed / total if total else None),
+            )
+
+        return _cb
+
     def _emit_stage_entry(self, stage: str) -> None:
         """Emit an estimator-independent "entering stage X" progress event.
 
@@ -1331,9 +1378,30 @@ class Pipeline:
                                 )
                             return sid, infos
 
+                    _si_done = 0
+                    _si_progress = self._on_session_progress(
+                        STAGE_SPEAKERS, status, "Identifying speakers",
+                        remaining=len(_remaining_si_sids),
+                        cached=len(_cached_si_sids),
+                    )
+
+                    async def _identify_counted(
+                        sid: str, segments: list[TranscriptSegment],
+                    ) -> tuple[str, list[SpeakerInfo]]:
+                        # `finally`, so a handled failure still advances the
+                        # count — the session is done being attempted either
+                        # way, and a counter that stalls on the one that failed
+                        # is worse than none.
+                        nonlocal _si_done
+                        try:
+                            return await _identify(sid, segments)
+                        finally:
+                            _si_done += 1
+                            _si_progress(_si_done, len(_remaining_si_sids))
+
                     with _llm_telemetry.stage("s05b_identify_speakers"):
                         _results_5b = await asyncio.gather(*(
-                            _identify(sid, session_segments[sid])
+                            _identify_counted(sid, session_segments[sid])
                             for sid in _remaining_si_sids
                     ))
                     for sid, infos in _results_5b:
@@ -1644,6 +1712,11 @@ class Pipeline:
                         _fresh_topic_maps, _seg_outcome = await segment_topics(
                             _remaining_transcripts, llm_client,
                             concurrency=concurrency, errors=_seg_errors,
+                            on_progress=self._on_session_progress(
+                                STAGE_TOPICS, status, "Segmenting topics",
+                                remaining=len(_remaining_transcripts),
+                                cached=_cached_topic_count,
+                            ),
                         )
                     # Record per-session completion only for sessions whose
                     # boundaries were actually produced — a skip-after-failure
@@ -1821,6 +1894,11 @@ class Pipeline:
                             min_quote_words=self.settings.min_quote_words,
                             concurrency=concurrency,
                             errors=_quote_errors,
+                            on_progress=self._on_session_progress(
+                                STAGE_QUOTES, status, "Extracting quotes",
+                                remaining=len(_remaining_transcripts_q),
+                                cached=len(_cached_quote_sids),
+                            ),
                         )
                     # Record per-session completion only for sessions that
                     # actually produced quotes — same rule as s08 above, and

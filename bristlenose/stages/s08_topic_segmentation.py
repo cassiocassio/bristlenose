@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable
 
 from bristlenose.events import StageFailure, StageOutcome
 from bristlenose.llm import telemetry
@@ -32,6 +33,8 @@ async def segment_topics(
     llm_client: LLMClient,
     concurrency: int = 1,
     errors: list[str] | None = None,
+    *,
+    on_progress: Callable[[int, int], None] | None = None,
 ) -> tuple[list[SessionTopicMap], StageOutcome]:
     """Identify topic/screen transitions in each transcript.
 
@@ -40,6 +43,14 @@ async def segment_topics(
         llm_client: LLM client for analysis.
         concurrency: Max concurrent LLM calls (default 1 = sequential).
         errors: Optional list to append error messages to (legacy short-form).
+        on_progress: Optional ``callback(completed, total)`` fired as each
+            session finishes — the same shape ``transcribe_sessions`` and
+            ``remove_pii`` use, so the caller's handler is their sibling rather
+            than a third convention. **Completions, not position:** this stage
+            runs ``concurrency`` sessions at once and they finish out of order,
+            so ``completed`` counts how many are done and never identifies
+            which. That is what an "N of M" display needs; it is not a
+            "now on session N".
 
     Returns:
         Tuple of (topic_maps, outcome). ``outcome`` records per-session
@@ -118,7 +129,23 @@ async def segment_topics(
                     stop.set()
                 return empty
 
-    results = list(await asyncio.gather(*(_process(t) for t in transcripts)))
+    _completed = 0
+
+    async def _process_counted(transcript: PiiCleanTranscript) -> SessionTopicMap:
+        # `finally`, so the count advances on a handled failure too — the
+        # session is done being attempted either way, and a count that stalls
+        # on the one that failed is worse than no count.
+        nonlocal _completed
+        try:
+            return await _process(transcript)
+        finally:
+            _completed += 1
+            if on_progress is not None:
+                on_progress(_completed, len(transcripts))
+
+    results = list(
+        await asyncio.gather(*(_process_counted(t) for t in transcripts))
+    )
     return results, outcome
 
 

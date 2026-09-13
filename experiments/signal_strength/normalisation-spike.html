@@ -1,0 +1,148 @@
+<title>Signal strength — normalisation spike</title>
+<style>
+:root{--bg:#fbfbfa;--fg:#1a1a18;--mut:#6b6b66;--line:#e2e2dd;--s:#b45309;--c:#1d4ed8;
+      --card:#fff;--hi:#fef3c7}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
+  --bg:#16161a;--fg:#e8e8e4;--mut:#9a9a94;--line:#2e2e34;--s:#fbbf24;--c:#93c5fd;
+  --card:#1d1d22;--hi:#3a3020}}
+:root[data-theme=dark]{--bg:#16161a;--fg:#e8e8e4;--mut:#9a9a94;--line:#2e2e34;
+  --s:#fbbf24;--c:#93c5fd;--card:#1d1d22;--hi:#3a3020}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 ui-sans-serif,-apple-system,
+  "Segoe UI",sans-serif;margin:0;padding:32px 24px;max-width:1080px;margin-inline:auto}
+h1{font-size:22px;margin:0 0 4px} h2{font-size:16px;margin:34px 0 6px;
+  padding-bottom:5px;border-bottom:1px solid var(--line)}
+p{color:var(--mut);max-width:66ch} code{font:12px ui-monospace,monospace}
+.wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;
+  background:var(--card);margin:12px 0}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:5px 9px;text-align:right;white-space:nowrap}
+th{font-weight:600;color:var(--mut);font-size:11px;text-transform:uppercase;
+  letter-spacing:.04em;border-bottom:1px solid var(--line)}
+td.l,th.l{text-align:left}
+tr+tr td{border-top:1px solid var(--line)}
+.k{display:inline-block;width:15px;height:15px;line-height:15px;text-align:center;
+  border-radius:3px;font-size:10px;font-weight:700;margin-right:6px;color:#fff}
+.ks{background:var(--s)} .kc{background:var(--c)}
+.mut{color:var(--mut)} .num{font-variant-numeric:tabular-nums}
+.b{font-weight:600} mark{background:var(--hi);color:inherit;padding:0 3px;border-radius:3px}
+</style>
+<h1>Signal strength — normalisation spike</h1>
+<p>One ordering, five presentations. Every scheme is a monotone per-study transform of the same score, so the <em>sequence is identical in all of them</em> — only what the number claims changes. <span class='k ks'>S</span> a sentiment value, <span class='k kc'>C</span> a codebook group. Nothing here is wired into the product.</p>
+<h2>Attainable range by study size</h2>
+<p>The strongest and the weakest measurable card a study of N users can produce, for each kind of label. Two things to read: the two kinds' bands <strong>converge from N=5</strong>, and the ceiling <strong>falls as the study grows</strong> — because a location holds a near-constant number of quotes however many sessions you run, so it can never involve every participant.</p>
+<div class=wrap><table><tr><th>N users</th><th>quotes</th><th>per location</th><th class=l>sentiment value</th><th class=l>codebook group</th><th>band overlap</th></tr>
+<tr><td class=num>3</td><td class=num>24</td><td class=num>4</td><td class='l num'>46.2 … 75.6</td><td class='l num'>44.5 … 92.9</td><td class=num><mark>61%</mark></td></tr>
+<tr><td class=num>5</td><td class=num>40</td><td class=num>3</td><td class='l num'>36.6 … 72.0</td><td class='l num'>34.9 … 71.9</td><td class=num><mark>95%</mark></td></tr>
+<tr><td class=num>6</td><td class=num>48</td><td class=num>3</td><td class='l num'>33.2 … 65.7</td><td class='l num'>31.9 … 65.7</td><td class=num><mark>96%</mark></td></tr>
+<tr><td class=num>8</td><td class=num>64</td><td class=num>3</td><td class='l num'>28.9 … 56.9</td><td class='l num'>27.8 … 56.9</td><td class=num><mark>96%</mark></td></tr>
+<tr><td class=num>12</td><td class=num>96</td><td class=num>3</td><td class='l num'>23.5 … 46.4</td><td class='l num'>22.6 … 46.4</td><td class=num><mark>96%</mark></td></tr>
+<tr><td class=num>20</td><td class=num>160</td><td class=num>3</td><td class='l num'>18.1 … 36.0</td><td class='l num'>17.4 … 36.0</td><td class=num><mark>96%</mark></td></tr>
+</table></div>
+<h2>IKEA with uxfriends#1</h2>
+<p>1 participants · 1 cards (1 sentiment, 0 codebook) · this study's ceiling 96</p>
+<div class=wrap><table><tr><th>#</th><th class=l>label</th><th class=l>location</th><th>Signal<br><span class=mut>today</span></th><th>Strength</th><th>Attain</th><th>of best</th><th>pctile</th><th class=l>band</th></tr>
+<tr><td class=num>1</td><td class=l><span class='k ks'>S</span>satisfaction</td><td class='l mut'>Product Detail Page</td><td class=num>1.00</td><td class='num b'>88</td><td class=num>92%</td><td class=num>100%</td><td class=num>100%</td><td class=l>Strong</td></tr>
+</table></div>
+<h2>Ikea dick#1</h2>
+<p>1 participants · 2 cards (2 sentiment, 0 codebook) · this study's ceiling 94</p>
+<div class=wrap><table><tr><th>#</th><th class=l>label</th><th class=l>location</th><th>Signal<br><span class=mut>today</span></th><th>Strength</th><th>Attain</th><th>of best</th><th>pctile</th><th class=l>band</th></tr>
+<tr><td class=num>1</td><td class=l><span class='k ks'>S</span>confusion</td><td class='l mut'>Cart</td><td class=num>1.04</td><td class='num b'>87</td><td class=num>93%</td><td class=num>100%</td><td class=num>100%</td><td class=l>Strong</td></tr>
+<tr><td class=num>2</td><td class=l><span class='k ks'>S</span>satisfaction</td><td class='l mut'>Uncategorised observations</td><td class=num>0.67</td><td class='num b'>81</td><td class=num>87%</td><td class=num>94%</td><td class=num>50%</td><td class=l>Strong</td></tr>
+</table></div>
+<h2>Ikea tom#1</h2>
+<p>1 participants · 2 cards (2 sentiment, 0 codebook) · this study's ceiling 73</p>
+<div class=wrap><table><tr><th>#</th><th class=l>label</th><th class=l>location</th><th>Signal<br><span class=mut>today</span></th><th>Strength</th><th>Attain</th><th>of best</th><th>pctile</th><th class=l>band</th></tr>
+<tr><td class=num>1</td><td class=l><span class='k ks'>S</span>confusion</td><td class='l mut'>Checkout Process</td><td class=num>0.89</td><td class='num b'>71</td><td class=num>98%</td><td class=num>100%</td><td class=num>100%</td><td class=l>Strong</td></tr>
+<tr><td class=num>2</td><td class=l><span class='k ks'>S</span>satisfaction</td><td class='l mut'>Uncategorised observations</td><td class=num>0.67</td><td class='num b'>71</td><td class=num>97%</td><td class=num>99%</td><td class=num>50%</td><td class=l>Strong</td></tr>
+</table></div>
+<h2>Rockclimbing#1</h2>
+<p>8 participants · 17 cards (15 sentiment, 2 codebook) · this study's ceiling 87</p>
+<div class=wrap><table><tr><th>#</th><th class=l>label</th><th class=l>location</th><th>Signal<br><span class=mut>today</span></th><th>Strength</th><th>Attain</th><th>of best</th><th>pctile</th><th class=l>band</th></tr>
+<tr><td class=num>1</td><td class=l><span class='k ks'>S</span>delight</td><td class='l mut'>Dream Destinations and Travel Aspi</td><td class=num>1.07</td><td class='num b'>56</td><td class=num>64%</td><td class=num>100%</td><td class=num>100%</td><td class=l>Clear</td></tr>
+<tr><td class=num>2</td><td class=l><span class='k ks'>S</span>confidence</td><td class='l mut'>Safety, Risk Management, and Close</td><td class=num>0.62</td><td class='num b'>55</td><td class=num>63%</td><td class=num>98%</td><td class=num>94%</td><td class=l>Clear</td></tr>
+<tr><td class=num>3</td><td class=l><span class='k ks'>S</span>confidence</td><td class='l mut'>Advice and Reflections for Beginne</td><td class=num>0.62</td><td class='num b'>55</td><td class=num>63%</td><td class=num>98%</td><td class=num>88%</td><td class=l>Clear</td></tr>
+<tr><td class=num>4</td><td class=l><span class='k ks'>S</span>satisfaction</td><td class='l mut'>Discipline Identity and Seasonal R</td><td class=num>1.25</td><td class='num b'>54</td><td class=num>62%</td><td class=num>97%</td><td class=num>82%</td><td class=l>Clear</td></tr>
+<tr><td class=num>5</td><td class=l><span class='k ks'>S</span>confidence</td><td class='l mut'>Gear, Equipment, and Kit Choices</td><td class=num>0.52</td><td class='num b'>53</td><td class=num>61%</td><td class=num>96%</td><td class=num>76%</td><td class=l>Clear</td></tr>
+<tr><td class=num>6</td><td class=l><span class='k ks'>S</span>delight</td><td class='l mut'>Community, Belonging, and Social B</td><td class=num>0.79</td><td class='num b'>45</td><td class=num>52%</td><td class=num>81%</td><td class=num>71%</td><td class=l>Clear</td></tr>
+<tr><td class=num>7</td><td class=l><span class='k ks'>S</span>delight</td><td class='l mut'>Entry Points into Climbing</td><td class=num>0.60</td><td class='num b'>43</td><td class=num>50%</td><td class=num>78%</td><td class=num>65%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>8</td><td class=l><span class='k ks'>S</span>delight</td><td class='l mut'>Habit Formation and Lifestyle Inte</td><td class=num>0.32</td><td class='num b'>43</td><td class=num>49%</td><td class=num>76%</td><td class=num>59%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>9</td><td class=l><span class='k ks'>S</span>confidence</td><td class='l mut'>Fear, Mental Blocks, and Psycholog</td><td class=num>0.28</td><td class='num b'>42</td><td class=num>48%</td><td class=num>75%</td><td class=num>53%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>10</td><td class=l><span class='k ks'>S</span>delight</td><td class='l mut'>Indoor vs Outdoor Climbing Experie</td><td class=num>0.40</td><td class='num b'>42</td><td class=num>48%</td><td class=num>75%</td><td class=num>47%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>11</td><td class=l><span class='k ks'>S</span>confidence</td><td class='l mut'>Training Structures and Progressio</td><td class=num>0.28</td><td class='num b'>42</td><td class=num>48%</td><td class=num>75%</td><td class=num>41%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>12</td><td class=l><span class='k ks'>S</span>frustration</td><td class='l mut'>Inclusion, Representation, and Gym</td><td class=num>0.45</td><td class='num b'>32</td><td class=num>36%</td><td class=num>57%</td><td class=num>35%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>13</td><td class=l><span class='k ks'>S</span>frustration</td><td class='l mut'>Injury Prevention and Recovery</td><td class=num>0.38</td><td class='num b'>32</td><td class=num>36%</td><td class=num>57%</td><td class=num>29%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>14</td><td class=l><span class='k ks'>S</span>confidence</td><td class='l mut'>Climbing&#x27;s Broader Life Impact</td><td class=num>0.28</td><td class='num b'>31</td><td class=num>35%</td><td class=num>56%</td><td class=num>24%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>15</td><td class=l><span class='k ks'>S</span>delight</td><td class='l mut'>Footwork, Technique, and Movement </td><td class=num>0.24</td><td class='num b'>31</td><td class=num>35%</td><td class=num>55%</td><td class=num>18%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>16</td><td class=l><span class='k kc'>C</span>Feedback</td><td class='l mut'>Beds Category</td><td class=num>0.08</td><td class='num b'>29</td><td class=num>33%</td><td class=num>51%</td><td class=num>12%</td><td class=l>Emerging</td></tr>
+</table></div>
+<h2>foo#1</h2>
+<p>5 participants · 9 cards (9 sentiment, 0 codebook) · this study's ceiling 95</p>
+<div class=wrap><table><tr><th>#</th><th class=l>label</th><th class=l>location</th><th>Signal<br><span class=mut>today</span></th><th>Strength</th><th>Attain</th><th>of best</th><th>pctile</th><th class=l>band</th></tr>
+<tr><td class=num>1</td><td class=l><span class='k ks'>S</span>confusion</td><td class='l mut'>Delivery Options</td><td class=num>0.59</td><td class='num b'>50</td><td class=num>52%</td><td class=num>100%</td><td class=num>100%</td><td class=l>Clear</td></tr>
+<tr><td class=num>2</td><td class=l><span class='k ks'>S</span>confusion</td><td class='l mut'>Beds Category</td><td class=num>0.19</td><td class='num b'>42</td><td class=num>44%</td><td class=num>84%</td><td class=num>89%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>3</td><td class=l><span class='k ks'>S</span>satisfaction</td><td class='l mut'>Professional Growth Through Open S</td><td class=num>0.42</td><td class='num b'>40</td><td class=num>42%</td><td class=num>81%</td><td class=num>78%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>4</td><td class=l><span class='k ks'>S</span>confidence</td><td class='l mut'>ASF&#x27;s Role in the Open Source Ecos</td><td class=num>0.42</td><td class='num b'>39</td><td class=num>42%</td><td class=num>79%</td><td class=num>67%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>5</td><td class=l><span class='k ks'>S</span>confidence</td><td class='l mut'>Mentorship &amp; Sponsorship in Open S</td><td class=num>0.21</td><td class='num b'>39</td><td class=num>41%</td><td class=num>79%</td><td class=num>56%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>6</td><td class=l><span class='k ks'>S</span>delight</td><td class='l mut'>Open Source Journey &amp; Motivation</td><td class=num>0.28</td><td class='num b'>38</td><td class=num>40%</td><td class=num>77%</td><td class=num>44%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>7</td><td class=l><span class='k ks'>S</span>satisfaction</td><td class='l mut'>Mentorship &amp; Sponsorship in Open S</td><td class=num>0.14</td><td class='num b'>36</td><td class=num>38%</td><td class=num>73%</td><td class=num>33%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>8</td><td class=l><span class='k ks'>S</span>satisfaction</td><td class='l mut'>Open Source Journey &amp; Motivation</td><td class=num>0.14</td><td class='num b'>34</td><td class=num>35%</td><td class=num>67%</td><td class=num>22%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>9</td><td class=l><span class='k ks'>S</span>confidence</td><td class='l mut'>Open Source Journey &amp; Motivation</td><td class=num>0.14</td><td class='num b'>33</td><td class=num>35%</td><td class=num>67%</td><td class=num>11%</td><td class=l>Emerging</td></tr>
+</table></div>
+<h2>fossda-opensource#1</h2>
+<p>9 participants · 38 cards (38 sentiment, 0 codebook) · this study's ceiling 92</p>
+<div class=wrap><table><tr><th>#</th><th class=l>label</th><th class=l>location</th><th>Signal<br><span class=mut>today</span></th><th>Strength</th><th>Attain</th><th>of best</th><th>pctile</th><th class=l>band</th></tr>
+<tr><td class=num>1</td><td class=l><span class='k ks'>S</span>confidence</td><td class='l mut'>Open source philosophy and impact</td><td class=num>1.50</td><td class='num b'>59</td><td class=num>63%</td><td class=num>100%</td><td class=num>100%</td><td class=l>Clear</td></tr>
+<tr><td class=num>2</td><td class=l><span class='k ks'>S</span>delight</td><td class='l mut'>Community building and mentorship</td><td class=num>0.53</td><td class='num b'>47</td><td class=num>51%</td><td class=num>81%</td><td class=num>97%</td><td class=l>Clear</td></tr>
+<tr><td class=num>3</td><td class=l><span class='k ks'>S</span>frustration</td><td class='l mut'>Corporate career transitions and w</td><td class=num>0.56</td><td class='num b'>45</td><td class=num>49%</td><td class=num>77%</td><td class=num>95%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>4</td><td class=l><span class='k ks'>S</span>delight</td><td class='l mut'>Open source project creation and d</td><td class=num>0.37</td><td class='num b'>44</td><td class=num>48%</td><td class=num>76%</td><td class=num>92%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>5</td><td class=l><span class='k ks'>S</span>confidence</td><td class='l mut'>Open source project creation and d</td><td class=num>0.48</td><td class='num b'>41</td><td class=num>44%</td><td class=num>70%</td><td class=num>89%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>6</td><td class=l><span class='k ks'>S</span>surprise</td><td class='l mut'>Open source project creation and d</td><td class=num>0.34</td><td class='num b'>41</td><td class=num>44%</td><td class=num>70%</td><td class=num>87%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>7</td><td class=l><span class='k ks'>S</span>doubt</td><td class='l mut'>Diversity and inclusion challenges</td><td class=num>1.23</td><td class='num b'>39</td><td class=num>43%</td><td class=num>67%</td><td class=num>84%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>8</td><td class=l><span class='k ks'>S</span>satisfaction</td><td class='l mut'>Corporate career transitions and w</td><td class=num>0.19</td><td class='num b'>38</td><td class=num>41%</td><td class=num>65%</td><td class=num>82%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>9</td><td class=l><span class='k ks'>S</span>satisfaction</td><td class='l mut'>Open source project creation and d</td><td class=num>0.30</td><td class='num b'>38</td><td class=num>41%</td><td class=num>65%</td><td class=num>79%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>10</td><td class=l><span class='k ks'>S</span>delight</td><td class='l mut'>Open source philosophy and impact</td><td class=num>0.19</td><td class='num b'>38</td><td class=num>41%</td><td class=num>64%</td><td class=num>76%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>11</td><td class=l><span class='k ks'>S</span>satisfaction</td><td class='l mut'>Personal growth and life reflectio</td><td class=num>0.34</td><td class='num b'>38</td><td class=num>41%</td><td class=num>64%</td><td class=num>74%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>12</td><td class=l><span class='k ks'>S</span>satisfaction</td><td class='l mut'>Technical innovation and problem-s</td><td class=num>0.33</td><td class='num b'>35</td><td class=num>38%</td><td class=num>60%</td><td class=num>71%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>13</td><td class=l><span class='k ks'>S</span>delight</td><td class='l mut'>Academic and research environments</td><td class=num>0.29</td><td class='num b'>35</td><td class=num>38%</td><td class=num>60%</td><td class=num>68%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>14</td><td class=l><span class='k ks'>S</span>satisfaction</td><td class='l mut'>Organizational involvement and lea</td><td class=num>0.26</td><td class='num b'>35</td><td class=num>38%</td><td class=num>60%</td><td class=num>66%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>15</td><td class=l><span class='k ks'>S</span>confidence</td><td class='l mut'>Personal growth and life reflectio</td><td class=num>0.28</td><td class='num b'>35</td><td class=num>38%</td><td class=num>59%</td><td class=num>63%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>16</td><td class=l><span class='k ks'>S</span>delight</td><td class='l mut'>Technical innovation and problem-s</td><td class=num>0.19</td><td class='num b'>34</td><td class=num>37%</td><td class=num>58%</td><td class=num>61%</td><td class=l>Emerging</td></tr>
+</table></div>
+<h2>project-ikea#1</h2>
+<p>3 participants · 24 cards (1 sentiment, 23 codebook) · this study's ceiling 96</p>
+<div class=wrap><table><tr><th>#</th><th class=l>label</th><th class=l>location</th><th>Signal<br><span class=mut>today</span></th><th>Strength</th><th>Attain</th><th>of best</th><th>pctile</th><th class=l>band</th></tr>
+<tr><td class=num>1</td><td class=l><span class='k kc'>C</span>Discoverability</td><td class='l mut'>Task orientation and shopping inte</td><td class=num>0.33</td><td class='num b'>73</td><td class=num>76%</td><td class=num>100%</td><td class=num>100%</td><td class=l>Strong</td></tr>
+<tr><td class=num>2</td><td class=l><span class='k kc'>C</span>Strategy</td><td class='l mut'>Task orientation and shopping inte</td><td class=num>0.37</td><td class='num b'>71</td><td class=num>74%</td><td class=num>98%</td><td class=num>96%</td><td class=l>Clear</td></tr>
+<tr><td class=num>3</td><td class=l><span class='k kc'>C</span>Motivation</td><td class='l mut'>Task orientation and shopping inte</td><td class=num>0.44</td><td class='num b'>71</td><td class=num>74%</td><td class=num>98%</td><td class=num>92%</td><td class=l>Clear</td></tr>
+<tr><td class=num>4</td><td class=l><span class='k kc'>C</span>Behaviour</td><td class='l mut'>Beds &amp; Mattresses Category</td><td class=num>0.64</td><td class='num b'>70</td><td class=num>73%</td><td class=num>97%</td><td class=num>88%</td><td class=l>Clear</td></tr>
+<tr><td class=num>5</td><td class=l><span class='k kc'>C</span>Structure</td><td class='l mut'>Beds &amp; Mattresses Category</td><td class=num>0.61</td><td class='num b'>70</td><td class=num>73%</td><td class=num>96%</td><td class=num>83%</td><td class=l>Clear</td></tr>
+<tr><td class=num>6</td><td class=l><span class='k kc'>C</span>Real-world matching</td><td class='l mut'>Task orientation and shopping inte</td><td class=num>0.44</td><td class='num b'>69</td><td class=num>72%</td><td class=num>95%</td><td class=num>79%</td><td class=l>Clear</td></tr>
+<tr><td class=num>7</td><td class=l><span class='k kc'>C</span>Scope</td><td class='l mut'>Shopping Bag</td><td class=num>1.05</td><td class='num b'>67</td><td class=num>70%</td><td class=num>92%</td><td class=num>75%</td><td class=l>Clear</td></tr>
+<tr><td class=num>8</td><td class=l><span class='k ks'>S</span>confusion</td><td class='l mut'>Beds &amp; Mattresses Category</td><td class=num>0.67</td><td class='num b'>66</td><td class=num>69%</td><td class=num>91%</td><td class=num>71%</td><td class=l>Clear</td></tr>
+<tr><td class=num>9</td><td class=l><span class='k kc'>C</span>Feedback</td><td class='l mut'>Shopping Bag</td><td class=num>0.60</td><td class='num b'>65</td><td class=num>68%</td><td class=num>89%</td><td class=num>67%</td><td class=l>Clear</td></tr>
+<tr><td class=num>10</td><td class=l><span class='k kc'>C</span>Surface</td><td class='l mut'>Search &amp; Sort Results</td><td class=num>0.61</td><td class='num b'>52</td><td class=num>54%</td><td class=num>72%</td><td class=num>62%</td><td class=l>Clear</td></tr>
+<tr><td class=num>11</td><td class=l><span class='k kc'>C</span>Motivation</td><td class='l mut'>Sofa Beds Category</td><td class=num>0.43</td><td class='num b'>51</td><td class=num>54%</td><td class=num>71%</td><td class=num>58%</td><td class=l>Clear</td></tr>
+<tr><td class=num>12</td><td class=l><span class='k kc'>C</span>Aesthetics and minimalism</td><td class='l mut'>Homepage content and navigation ex</td><td class=num>0.50</td><td class='num b'>51</td><td class=num>54%</td><td class=num>71%</td><td class=num>54%</td><td class=l>Clear</td></tr>
+<tr><td class=num>13</td><td class=l><span class='k kc'>C</span>Structure</td><td class='l mut'>Checkout &amp; Store Selection</td><td class=num>0.37</td><td class='num b'>51</td><td class=num>54%</td><td class=num>71%</td><td class=num>50%</td><td class=l>Clear</td></tr>
+<tr><td class=num>14</td><td class=l><span class='k kc'>C</span>Feedback</td><td class='l mut'>Search &amp; Sort Results</td><td class=num>0.30</td><td class='num b'>51</td><td class=num>53%</td><td class=num>69%</td><td class=num>46%</td><td class=l>Clear</td></tr>
+<tr><td class=num>15</td><td class=l><span class='k kc'>C</span>Recognition over recall</td><td class='l mut'>Duvets &amp; Bedding Category</td><td class=num>0.29</td><td class='num b'>50</td><td class=num>53%</td><td class=num>69%</td><td class=num>42%</td><td class=l>Clear</td></tr>
+<tr><td class=num>16</td><td class=l><span class='k kc'>C</span>Discoverability</td><td class='l mut'>Duvets &amp; Bedding Category</td><td class=num>0.25</td><td class='num b'>50</td><td class=num>52%</td><td class=num>68%</td><td class=num>38%</td><td class=l>Clear</td></tr>
+</table></div>
+<h2>project-ikea2#1</h2>
+<p>3 participants · 14 cards (4 sentiment, 10 codebook) · this study's ceiling 96</p>
+<div class=wrap><table><tr><th>#</th><th class=l>label</th><th class=l>location</th><th>Signal<br><span class=mut>today</span></th><th>Strength</th><th>Attain</th><th>of best</th><th>pctile</th><th class=l>band</th></tr>
+<tr><td class=num>1</td><td class=l><span class='k kc'>C</span>Discoverability</td><td class='l mut'>Navigation &amp; Homepage Orientation</td><td class=num>0.56</td><td class='num b'>69</td><td class=num>72%</td><td class=num>100%</td><td class=num>100%</td><td class=l>Clear</td></tr>
+<tr><td class=num>2</td><td class=l><span class='k kc'>C</span>Mental model</td><td class='l mut'>Checkout &amp; Delivery</td><td class=num>0.50</td><td class='num b'>64</td><td class=num>67%</td><td class=num>93%</td><td class=num>93%</td><td class=l>Clear</td></tr>
+<tr><td class=num>3</td><td class=l><span class='k ks'>S</span>confusion</td><td class='l mut'>Beds Category</td><td class=num>0.29</td><td class='num b'>61</td><td class=num>64%</td><td class=num>89%</td><td class=num>86%</td><td class=l>Clear</td></tr>
+<tr><td class=num>4</td><td class=l><span class='k ks'>S</span>frustration</td><td class='l mut'>Beds Category</td><td class=num>0.31</td><td class='num b'>60</td><td class=num>62%</td><td class=num>87%</td><td class=num>79%</td><td class=l>Clear</td></tr>
+<tr><td class=num>5</td><td class=l><span class='k kc'>C</span>Pleasure</td><td class='l mut'>Top Navigation</td><td class=num>0.11</td><td class='num b'>52</td><td class=num>54%</td><td class=num>76%</td><td class=num>71%</td><td class=l>Clear</td></tr>
+<tr><td class=num>6</td><td class=l><span class='k kc'>C</span>New group</td><td class='l mut'>Top Navigation</td><td class=num>0.11</td><td class='num b'>52</td><td class=num>54%</td><td class=num>76%</td><td class=num>64%</td><td class=l>Clear</td></tr>
+<tr><td class=num>7</td><td class=l><span class='k kc'>C</span>Discoverability</td><td class='l mut'>Duvets &amp; Bedding</td><td class=num>0.25</td><td class='num b'>51</td><td class=num>53%</td><td class=num>74%</td><td class=num>57%</td><td class=l>Clear</td></tr>
+<tr><td class=num>8</td><td class=l><span class='k ks'>S</span>delight</td><td class='l mut'>Beds Category</td><td class=num>0.31</td><td class='num b'>50</td><td class=num>52%</td><td class=num>73%</td><td class=num>50%</td><td class=l>Clear</td></tr>
+<tr><td class=num>9</td><td class=l><span class='k kc'>C</span>Errors and recovery</td><td class='l mut'>Top Navigation</td><td class=num>0.33</td><td class='num b'>49</td><td class=num>51%</td><td class=num>72%</td><td class=num>43%</td><td class=l>Clear</td></tr>
+<tr><td class=num>10</td><td class=l><span class='k kc'>C</span>Errors and recovery</td><td class='l mut'>Checkout &amp; Delivery</td><td class=num>0.28</td><td class='num b'>49</td><td class=num>51%</td><td class=num>71%</td><td class=num>36%</td><td class=l>Clear</td></tr>
+<tr><td class=num>11</td><td class=l><span class='k kc'>C</span>Mental model</td><td class='l mut'>Beds Category</td><td class=num>0.16</td><td class='num b'>47</td><td class=num>49%</td><td class=num>69%</td><td class=num>29%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>12</td><td class=l><span class='k ks'>S</span>surprise</td><td class='l mut'>Beds Category</td><td class=num>0.12</td><td class='num b'>46</td><td class=num>48%</td><td class=num>66%</td><td class=num>21%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>13</td><td class=l><span class='k kc'>C</span>Errors and recovery</td><td class='l mut'>Beds Category</td><td class=num>0.40</td><td class='num b'>45</td><td class=num>47%</td><td class=num>65%</td><td class=num>14%</td><td class=l>Emerging</td></tr>
+<tr><td class=num>14</td><td class=l><span class='k kc'>C</span>Discoverability</td><td class='l mut'>Beds Category</td><td class=num>0.11</td><td class='num b'>41</td><td class=num>43%</td><td class=num>60%</td><td class=num>7%</td><td class=l>Emerging</td></tr>
+</table></div>

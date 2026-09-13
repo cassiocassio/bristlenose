@@ -480,6 +480,13 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
 .ci-code { font-family:var(--bn-font-mono); font-weight:700; min-width:2.4rem;
   color:var(--bn-colour-accent); }
 .ci-what { color:var(--bn-colour-muted); min-width:0; }
+a.ci-code { cursor:pointer; text-decoration:none; border-radius:var(--bn-radius-sm); }
+a.ci-code:hover { background:var(--bn-colour-hover); }
+a.ci-code:focus-visible { outline:2px solid var(--bn-colour-accent); outline-offset:1px; }
+.ci-row:hover .ci-what { color:var(--bn-colour-text); }
+@keyframes bn-jump { from { box-shadow:0 0 0 3px var(--bn-colour-accent); }
+                     to   { box-shadow:0 0 0 3px transparent; } }
+.jump-flash { animation:bn-jump 1.2s ease-out; border-radius:var(--bn-radius-lg); }
 .pbtn b { font-family:var(--bn-font-mono); font-weight:700; }
 @media (prefers-reduced-motion: reduce) { .sig { transition:none; } }
 </style>
@@ -523,7 +530,10 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
        treatment of the Codebooks section, <strong>J</strong> and <strong>D</strong> a
        whole navigation; <strong>P</strong> codes are data, not design. A project panel
        is stamped <code>T4&middot;P1</code> &mdash; treatment and project &mdash; so a
-       screenshot of one says what it is on its own.</p>
+       screenshot of one says what it is on its own. <strong>Every code below is a
+       link</strong>: it scrolls to the panel it names and flashes it. A
+       <strong>T</strong> code switches the Codebooks-section control first, because a
+       treatment is a mode rather than a panel sitting there waiting to be scrolled to.</p>
   </div>
   <div class="codeindex" id="codeindex"></div>
 
@@ -3219,25 +3229,64 @@ function renderCards(){
     </div>`).join("");
 }
 
+/**
+ * Jump from an index code to the thing it names.
+ *
+ * Most codes address a panel that is always on the page. A T code does not — a
+ * treatment is a MODE, so the only honest jump is to switch the control to it
+ * and scroll to the bench it governs, which is what someone following the code
+ * actually wants to see.
+ */
+function jumpToCode(jump){
+  const [kind, a, b] = jump.split(":");
+  let el = null;
+  if (kind === "v")            el = document.querySelector(`#bench .cell[data-v="${a}"]`);
+  else if (kind === "proj")    el = document.querySelector(`#projbench .cell[data-p="${a}"]`);
+  else if (kind === "card")    el = document.querySelector(`#cardbench .cell[data-c="${a}"]`);
+  else if (kind === "u")       el = document.querySelector(`#ubench .cell[data-u="${a}"]`);
+  else if (kind === "cellidx") el = document.querySelectorAll(`#${a} .cell`)[+b];
+  else if (kind === "treat"){
+    const btn = document.querySelector(`[data-treat="${a}"]`);
+    if (btn && !btn.classList.contains("on")) btn.click();   // re-renders the bench
+    el = document.querySelector(`#projbench .cell[data-p="ikea"]`);
+  }
+  if (!el) return false;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  el.classList.remove("jump-flash");
+  void el.offsetWidth;                                        // restart the animation
+  el.classList.add("jump-flash");
+  return true;
+}
+
+document.addEventListener("click", e => {
+  const link = e.target.closest("a.ci-code");
+  if (!link) return;
+  e.preventDefault();
+  jumpToCode(link.dataset.jump);
+});
+
 function renderCodeIndex(){
+  const half = str => str.split(" \u00b7 ");
   const groups = [
-    ["V0\u2013V9 \u00b7 row layouts", VARIANTS.map(v => [v[1].split(" \u00b7 ")[0], v[1].split(" \u00b7 ")[1]])],
+    ["V0\u2013V9 \u00b7 row layouts",
+      VARIANTS.map(v => [half(v[1])[0], half(v[1])[1], "v:" + v[0]])],
     ["T1\u2013T6 \u00b7 codebooks-section treatments",
-      Object.keys(TREAT_CODE).map(k => [TREAT_CODE[k], TREAT_NAME[k]])],
+      Object.keys(TREAT_CODE).map(k => [TREAT_CODE[k], TREAT_NAME[k], "treat:" + k])],
     ["P1\u2013P6 \u00b7 projects (data, not design)",
-      PROJECTS.map((p, i) => ["P" + (i + 1), p.label])],
+      PROJECTS.map((p, i) => ["P" + (i + 1), p.label, "proj:" + p.id])],
     ["J1\u2013J3 \u00b7 navigation jobs",
-      NAV_JOBS.map(j => [j[0].split(" \u00b7 ")[0], j[0].split(" \u00b7 ")[1]])],
+      NAV_JOBS.map((j, i) => [half(j[0])[0], half(j[0])[1], "cellidx:jobbench:" + i])],
     ["C1\u2013C4 \u00b7 signal cards (main content)",
-      CARDS.map(c => [c[0], c[1]])],
+      CARDS.map(c => [c[0], c[1], "card:" + c[0]])],
     ["U1\u2013U3 \u00b7 view menu + per-signal targets",
-      U_VIEWS.map(v => [v[0], v[1]])],
+      U_VIEWS.map(v => [v[0], v[1], "u:" + v[0]])],
     ["D1\u2013D3 \u00b7 navigation depth",
-      NAV_DEPTHS.map(d => [d[0].split(" \u00b7 ")[0], d[0].split(" \u00b7 ")[1]])],
+      NAV_DEPTHS.map((d, i) => [half(d[0])[0], half(d[0])[1], "cellidx:depthbench:" + i])],
   ];
   codeindex.innerHTML = groups.map(([head, rows]) => `<div class="ci-group">
     <div class="ci-head">${esc(head)}</div>
-    ${rows.map(([c, w]) => `<div class="ci-row"><span class="ci-code">${esc(c)}</span>`
+    ${rows.map(([c, w, jump]) => `<div class="ci-row">`
+      + `<a class="ci-code" href="#" data-jump="${esc(jump)}" title="go to ${esc(w || c)}">${esc(c)}</a>`
       + `<span class="ci-what">${esc(w || "")}</span></div>`).join("")}
   </div>`).join("");
 }

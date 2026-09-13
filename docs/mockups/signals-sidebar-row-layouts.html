@@ -433,6 +433,11 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
   margin-top:var(--bn-space-md); }
 .card-link { font-size:var(--bn-text-label); color:var(--bn-colour-accent);
   text-decoration:none; }
+/* It is already accent-coloured, so hover has no colour left to say anything
+   with — it underlines, which is what a text link does everywhere else. */
+.card-link:hover { text-decoration:underline; text-underline-offset:2px; }
+.card-link:focus-visible { outline:2px solid var(--bn-colour-accent);
+  outline-offset:2px; border-radius:var(--bn-radius-sm); }
 .card-pids { display:flex; gap:.25rem; align-items:center;
   font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted); }
 .card-pids b { font-weight:var(--bn-weight-normal); margin-right:.25rem; }
@@ -444,7 +449,13 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
 .n-loc { display:block; font-size:var(--bn-text-label); line-height:1.35;
   font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-text); }
 .n-loc a { color:inherit; text-decoration:none; }
-.n-loc a:hover { color:var(--bn-colour-accent); }
+/* Hover changed colour and nothing else, which says nothing to a keyboard and
+   little to an eye that does not separate these two hues. Underline carries the
+   affordance; the ring is the same one every other control on the page uses. */
+.n-loc a:hover { color:var(--bn-colour-accent); text-decoration:underline;
+  text-underline-offset:2px; }
+.n-loc a:focus-visible { outline:2px solid var(--bn-colour-accent);
+  outline-offset:2px; border-radius:var(--bn-radius-sm); }
 .n-head { font-size:var(--bn-text-heading); line-height:1.3;
   font-weight:var(--bn-weight-emphasis); }
 .n-lead { font-size:var(--bn-text-label); line-height:1.55;

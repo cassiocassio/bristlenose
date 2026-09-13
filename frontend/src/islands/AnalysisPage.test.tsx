@@ -293,6 +293,27 @@ describe("AnalysisPage", () => {
     expect(document.querySelectorAll(".signal-cards").length).toBe(headings.length);
   });
 
+  // The flush-to-datum contract, cheap. e2e/tests/lens-datum.spec.ts is the
+  // real gate, but it needs a server; this catches the enrolment breaking at
+  // the moment someone edits the render. The refactor that grouped cards by
+  // location removed the lens's only .section-heading and took the datum with
+  // it — no unit test could see the CSS selector stop matching, so this asserts
+  // the shape the selector needs instead.
+  it("keeps the lens enrolled in the flush-to-datum system", async () => {
+    mockFetchCodebookAnalysis(mockCbData);
+    render(<AnalysisPage projectId="1" />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0);
+    });
+
+    const pane = document.querySelector(".analysis-center");
+    expect(pane).toBeTruthy();
+    // `.analysis-center > .section-heading:first-of-type { margin-top: 0 }`
+    expect(pane!.querySelector(":scope > .section-heading")).toBeTruthy();
+    expect(pane!.firstElementChild!.classList.contains("section-heading")).toBe(true);
+  });
+
   it("the sidebar list and the rendered cards are the same set", async () => {
     // The 1:1 invariant: every nav row lands on a card, and no card is
     // unreachable. It used to hold by ACCIDENT — MAX_SIGNALS sliced one list

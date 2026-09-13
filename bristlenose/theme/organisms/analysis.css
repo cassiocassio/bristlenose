@@ -383,6 +383,13 @@ button.signal-card-toggle {
     margin-bottom: var(--bn-space-xl);
 }
 
+/* The first one follows the lens's zone title, which already carries the
+   space beneath it — a second lead-in on top of that opens a gap no other
+   lens has. */
+.analysis-center > .analysis-codebook-heading:first-of-type {
+    margin-top: 0;
+}
+
 .analysis-codebook-heading {
     font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);

@@ -1281,6 +1281,16 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
              lens already had for exactly this weight of statement; no new
              heading style was invented for this. The heatmaps do not live in
              this column at all: they are InspectorPanel's, rendered below. */}
+        {/* The lens's zone title, and its FLUSH-TO-DATUM enrolment.
+            `.analysis-center > .section-heading:first-of-type { margin-top: 0 }`
+            in templates/report.css is how every lens starts at the same height;
+            a lens that renders no .section-heading as the first child of its
+            pane falls silently out of the system and opens 40px low. The old
+            first heading was "Sentiment signals" — a SECTION title standing in
+            for a LENS title, which is why removing it took the datum with it.
+            e2e/tests/lens-datum.spec.ts is the gate, and no unit test can see a
+            CSS selector failing to match. */}
+        <SectionHeading>{t("analysis.heading")}</SectionHeading>
         {sourceBreakdown && <SourceBanner breakdown={sourceBreakdown} />}
         {places.map(({ location, cards }) => (
           <Fragment key={location}>

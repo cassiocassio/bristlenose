@@ -667,6 +667,25 @@ a.ci-code:focus-visible { outline:2px solid var(--bn-colour-accent); outline-off
 
   <div class="bench" id="cardbench"></div>
 
+  <div class="divider"></div>
+  <div class="section-head">
+    <h2>S &middot; one name, several cells</h2>
+    <p>Sentiment rows now carry a summary, and it is a real one &mdash; the elaborated
+       name already sitting on the Sentiment-group codebook row for that place. But it is
+       keyed by <strong>location</strong>, while the rows it labels are <strong>cells</strong>,
+       one per sentiment value. <strong>Six of P1&rsquo;s places carry two or three
+       sentiment cells</strong>, so one sentence has to cover all of them.</p>
+    <p>S1 is what that looks like. S2 and S3 are the two ways out, and they trade against
+       each other: S2 needs nothing written but stops the cells being separately
+       addressable; S3 keeps every cell a target but needs elaboration keyed on
+       location &times; sentiment, which the model does not produce today.</p>
+    <p class="wnote">S3&rsquo;s names are the only invented text in this file, written in
+       the prompt&rsquo;s house style so the row geometry is honest. Everything else here
+       is read from the project.</p>
+  </div>
+
+  <div class="bench" id="sbench"></div>
+
   <div class="essay">
     <h2>Width cannot fix the single-line row</h2>
     <p>Each V0 panel prints how many characters fit on one line at the current width,
@@ -2128,6 +2147,7 @@ const depthbench = document.getElementById("depthbench");
 const codeindex = document.getElementById("codeindex");
 const ubench = document.getElementById("ubench");
 const cardbench = document.getElementById("cardbench");
+const sbench = document.getElementById("sbench");
 
 function esc(s){ return s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 function badgeClass(label){ return SENTIMENTS.includes(label) ? "badge badge-"+label : "badge"; }
@@ -2251,6 +2271,7 @@ function render(){
   renderNav();
   renderU();
   renderCards();
+  renderS();
   renderCodeIndex();
 }
 
@@ -3265,6 +3286,7 @@ function jumpToCode(jump){
   else if (kind === "card")    el = document.querySelector(`#cardbench .cell[data-c="${a}"]`);
   else if (kind === "u")       el = document.querySelector(`#ubench .cell[data-u="${a}"]`);
   else if (kind === "cellidx") el = document.querySelectorAll(`#${a} .cell`)[+b];
+  else if (kind === "sec")     el = document.querySelector(`#${a} .cell[data-s="${b}"]`);
   else if (kind === "treat"){
     const btn = document.querySelector(`[data-treat="${a}"]`);
     if (btn && !btn.classList.contains("on")) btn.click();   // re-renders the bench
@@ -3285,6 +3307,119 @@ document.addEventListener("click", e => {
   jumpToCode(link.dataset.jump);
 });
 
+/* ── Section S: one name, several cells ───────────────────────────────────
+   The summary a sentiment row shows is keyed by LOCATION — it lives on the
+   Sentiment-GROUP codebook row — while the rows it labels are cells, one per
+   sentiment value. Six of P1's places carry two or three sentiment cells, so
+   one name has to cover all of them. S1 is what that looks like; S2 and S3 are
+   the two ways out.
+
+   S3's names are the ONLY invented text in this file. They are what a per-cell
+   elaboration would have to produce, written in the prompt's house style (2–4
+   words, the group's vocabulary) so the row geometry is honest. Marked
+   throughout; nothing else here is synthetic. */
+
+const S_PLACES = ["Shopping Bag", "Search & Sort Results", "Beds & Mattresses Category",
+                  "Top Navigation", "Homepage content and navigation experience"];
+
+/* What a per-cell elaboration would have to write. INVENTED. */
+const S_PERCELL = {
+  "Shopping Bag|frustration": "Bag Removal Friction",
+  "Shopping Bag|confusion": "Bag Naming Confusion",
+  "Shopping Bag|satisfaction": "Bag Total Clarity",
+  "Search & Sort Results|delight": "Filter Discovery Delight",
+  "Search & Sort Results|surprise": "Sort Order Surprise",
+  "Search & Sort Results|satisfaction": "Result Relevance Fit",
+  "Beds & Mattresses Category|confusion": "Size Terminology Mismatch",
+  "Beds & Mattresses Category|frustration": "Category Response Lag",
+  "Top Navigation|frustration": "Navigation Click Lag",
+  "Top Navigation|satisfaction": "Category Findability",
+  "Homepage content and navigation experience|delight": "Homepage Visual Warmth",
+  "Homepage content and navigation experience|confusion": "Homepage Purpose Doubt",
+};
+
+function sRows(){
+  return IKEA_PLACES
+    .filter(p => S_PLACES.includes(p[0]) && p[2].length > 1)
+    .map(p => ({ loc: p[0], sents: p[2].map(x => x[0]),
+                 summary: (SENT_SUMMARY[p[0]] || [])[0] || null }));
+}
+function sChip(name){ return `<span class="${badgeClass(name)}">${esc(name)}</span>`; }
+
+/* S1 — one name, repeated. Today's behaviour: the place's single summary is
+   printed against every sentiment cell it covers. */
+function sRepeated(){
+  return sRows().map(e => `<div class="nv">
+    <span class="nv-place">${esc(e.loc)}</span>
+    ${e.sents.map(x => `<a class="u-row" href="#"><span class="u-name">`
+      + `${e.summary ? esc(e.summary) + " " : ""}${sChip(x)}</span></a>`).join("")}
+  </div>`).join("");
+}
+/* S2 — one name, one row. The consequence of "sentiment is a codebook": the
+   signal is (location x the Sentiment group) and the sentiment values are the
+   codes present in it, exactly as V9 treats a codebook row. No new writing. */
+function sPaired(){
+  return sRows().map(e => `<div class="nv">
+    <span class="nv-place">${esc(e.loc)}</span>
+    <a class="u-row" href="#"><span class="u-name">${e.summary ? esc(e.summary) : esc(e.loc)}</span>
+      <span class="nv-chips">${e.sents.map(sChip).join("")}</span></a>
+  </div>`).join("");
+}
+/* S3 — a name per cell. What the rows want, and the only version that needs
+   the model to write something it does not write today. */
+function sPerCell(){
+  return sRows().map(e => `<div class="nv">
+    <span class="nv-place">${esc(e.loc)}</span>
+    ${e.sents.map(x => {
+      const n = S_PERCELL[`${e.loc}|${x}`];
+      return `<a class="u-row" href="#"><span class="u-name">`
+           + `${n ? esc(n) + " " : ""}${sChip(x)}</span></a>`;
+    }).join("")}
+  </div>`).join("");
+}
+
+const S_VARIANTS = [
+  ["S1", "one name, repeated", sRepeated,
+   "Today. The place has one summary and several sentiment cells, so the same sentence is printed two or three times with a different chip each. Reads as a bug even though every row is a real, separate signal card."],
+  ["S2", "one name, one row", sPaired,
+   "The consequence of treating sentiment as a codebook: the signal is the location \u00d7 the Sentiment group, and the sentiment values are the codes present in it \u2014 V9's geometry exactly. Needs nothing written. Costs the separate targets: the cells stop being individually addressable."],
+  ["S3", "a name per cell", sPerCell,
+   "What the rows want. Every cell gets its own sentence and stays its own target. Needs elaboration keyed on location \u00d7 sentiment, which the model does not produce today \u2014 these names are invented to show the geometry."],
+];
+
+function renderS(){
+  sbench.innerHTML = S_VARIANTS.map(([code, label, build, note]) => `
+    <div class="cell" data-s="${code}">
+      <div class="frame" style="width:${state.w}px">
+        <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span class="cname"><b>${code}</b>\u00b7<b>P1</b> ${esc(label)}</span></div>
+        <div class="panel"><div class="panel-body${state.brk ? " brk" : ""}">${build()}</div></div>
+      </div>
+      <div class="commentary" style="width:${state.w}px">
+        <span class="clabel">Commentary · measured</span>
+        <div class="metrics" data-metrics></div>
+        <p class="verdict">${note}</p>
+      </div>
+    </div>`).join("");
+  document.querySelectorAll("#sbench .cell").forEach(cell => {
+    const h = Math.round(cell.querySelector(".panel-body").getBoundingClientRect().height);
+    const rows = cell.querySelectorAll(".u-row").length;
+    const names = [...cell.querySelectorAll(".u-name")].map(n => {
+      const c = n.querySelector(".badge");
+      return n.textContent.replace(c ? c.textContent : "", "").trim();
+    }).filter(Boolean);
+    const repeats = names.length - new Set(names).size;
+    const cells = sRows().reduce((n, e) => n + e.sents.length, 0);
+    cell.querySelector("[data-metrics]").innerHTML =
+      `<span><b>${rows}</b> rows</span>`
+    + `<span><b>${h}</b>px tall</span>`
+    + `<span title="sentiment cards these rows stand for"><b>${cells}</b> cards</span>`
+    + `<span class="${rows === cells ? "good" : "bad"}" title="cards you can reach in one click">`
+      + `<b>${rows}</b> reachable</span>`
+    + `<span class="${repeats ? "bad" : "good"}" title="the same sentence printed more than once">`
+      + `<b>${repeats}</b> repeated</span>`;
+  });
+}
+
 function renderCodeIndex(){
   const half = str => str.split(" \u00b7 ");
   const groups = [
@@ -3296,6 +3431,8 @@ function renderCodeIndex(){
       PROJECTS.map((p, i) => ["P" + (i + 1), p.label, "proj:" + p.id])],
     ["J1\u2013J3 \u00b7 navigation jobs",
       NAV_JOBS.map((j, i) => [half(j[0])[0], half(j[0])[1], "cellidx:jobbench:" + i])],
+    ["S1\u2013S3 \u00b7 one name, several cells",
+      S_VARIANTS.map(v => [v[0], v[1], "sec:sbench:" + v[0]])],
     ["C1\u2013C4 \u00b7 signal cards (main content)",
       CARDS.map(c => [c[0], c[1], "card:" + c[0]])],
     ["U1\u2013U3 \u00b7 view menu + per-signal targets",

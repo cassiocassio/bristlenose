@@ -651,23 +651,6 @@ a.ci-code:focus-visible { outline:2px solid var(--bn-colour-accent); outline-off
        mockup and the product quietly disagree and nobody has chosen.</p>
   </div>
   <ol class="gaps">
-    <li><b>Does a nav row wrap, or truncate?</b> This page was built to answer that
-      &mdash; V0 ellipses, V1 wraps &mdash; and T6b settled what a row <em>shows</em>
-      without settling how it <em>fits</em>. <b>The mockup wraps, by CSS default
-      rather than by argument:</b> <code>.u-name</code> is a plain block with no
-      <code>white-space</code> rule, and nothing in the trail ever chose it. Shipped
-      does the opposite &mdash; <code>.signal-entry-name</code> carries
-      <code>flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis;
-      white-space:nowrap</code>, which is the textbook-correct flex ellipsis, so the
-      mechanism is not broken. <b>The outcome is.</b> Measured over the 58 named rows
-      that survive de-duplication: name alone runs 23 characters at the median and 31
-      at its longest, and with the group chip beside it the row runs
-      <b>34 at the median, 42 at p90, 50 at its longest</b>. Against a one-line budget
-      of 28 characters, <b>90% of rows truncate</b>; at 32, 62%; at 36, 29%; at 40,
-      10%. The chip is <code>flex-shrink:0</code>, so what a reader gets is
-      &ldquo;Goal-driven Category Naviga&hellip; <code>Motivation</code>&rdquo;. An
-      ellipsis that fires on nine rows in ten is not an affordance, it is a
-      haircut.</li>
     <li><b>Is there still a Section / Theme split above the locations?</b> The shipped
       sidebar groups entries under two sub-headings from <code>sourceType</code>. The
       new navigation groups by location, and a location is already one or the other.
@@ -3788,7 +3771,8 @@ function renderS(){
    "current" means what the product does TODAY, which is not the same as chosen. */
 const STATUS = {
   V0:["current","the shipped row — the baseline everything else is measured against"],
-  V1:["explored",""], V2:["explored",""], V3:["explored",""], V4:["abandoned","adds a heading and buys nothing where the badge value does not vary"],
+  V1:["explored","right about FITTING \u2014 T6b takes its wrap and drops the pinned badge"],
+  V2:["explored",""], V3:["explored",""], V4:["abandoned","adds a heading and buys nothing where the badge value does not vary"],
   V5:["abandoned","forces a wrap wherever the badge does not fit, which on long names is most rows"],
   V6:["explored",""], V7:["explored","the pairing T5/T6/T6b generalise"],
   V8:["explored","right that the badge should mean something; superseded by naming the row"],
@@ -3838,6 +3822,10 @@ const DECISIONS = [
    [], [],
    "Location in natural case at label size and emphasis weight, tight against the headline. A gap, the claim sentence in darker ink, a gap, the rest in a tint. Two complete sentences, no em dash at the join.",
    "Punctuation is an instruction: an em dash says keep going, a full stop offers a stopping point. Measured on P1's 19 elaborations, 19 of 19 continuations carry an em dash and 0 of 19 are more than one sentence \u2014 the prompt asked for exactly that. Volume and meaning were never the problem; the missing stopping point was. Typography uses .analysis-codebook-heading's existing trio, nothing new."],
+  ["settled", "Does a nav row wrap, or truncate?",
+   ["V1"], ["V0"],
+   "It wraps. A row never loses a word; a long one takes two lines.",
+   "This page was built to ask that and T6b settled what a row SHOWS without settling how it FITS \u2014 the mockup had been wrapping by CSS default, unargued, and the bench's own metric could not report it. Measured over the 58 named rows that survive de-duplication: a name runs 23 characters at the median and 31 at its longest, and with the group chip beside it the row runs 34 at the median, 42 at p90 and 50 at its longest. Against a 28-character line, 90% of rows truncate; at 32, 62%; at 36, 29%. The shipped ellipsis is textbook-correct CSS and the mechanism is not broken \u2014 the outcome is. The chip is flex-shrink:0, so a reader gets \u201cGoal-driven Category Naviga\u2026 Motivation\u201d: the words cut, the label kept. An ellipsis firing on nine rows in ten is a haircut, not an affordance. The cost is height, and de-duplication has already paid it \u2014 P1 goes from 29 rows to 19, and 85% of locations carry a single row."],
   ["settled", "What does a row with no elaborated name show?",
    [], [],
    "The group chip alone. No fallback to the location, no placeholder, no special treatment \u2014 the row is clickable, it lands on a real card, and the card says the rest.",

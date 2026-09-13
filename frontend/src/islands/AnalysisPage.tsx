@@ -12,7 +12,7 @@
  * the vanilla JS analysis.js so all styling carries over.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge, Metric, PersonBadge, SectionHeading } from "../components";
 import { InspectorPanel, DimensionToggle, type InspectorSource } from "../components/InspectorPanel";
@@ -28,6 +28,11 @@ import {
 } from "../contexts/AnalysisSignalStore";
 import { useIsDarkAppearance } from "../hooks/useIsDarkAppearance";
 import { apiGet, getCodebookAnalysis } from "../utils/api";
+import {
+  dedupeSignals,
+  groupSignalsByLocation,
+  isFromSentimentLens,
+} from "../utils/signalDedup";
 import { reportHref } from "../utils/reportHref";
 import { getBarColour, getGroupBg, getTagBg } from "../utils/colours";
 import { formatTimecode } from "../utils/format";
@@ -57,7 +62,20 @@ declare global {
 // ── Constants ─────────────────────────────────────────────────────────
 
 /** Maximum signal cards shown per type (sentiment / tags). */
-const MAX_SIGNALS = 6;
+/**
+ * A safety valve, not a display rule.
+ *
+ * This used to be 6, sliced off each of two lists — twelve cards a project, and
+ * the sidebar and the cards drew from that same slice, which was the only
+ * reason they could not disagree. De-duplication does the capping now: the
+ * busiest project in the trial corpus lands at 20 cards over 19 locations
+ * against the 12 this allowed, and cards scale with LOCATIONS rather than study
+ * length, because quotes per session is near-constant. The number below exists
+ * so a pathological project cannot render thousands of cards; nothing real
+ * reaches it. Applied before grouping, so it can never leave a location heading
+ * with half its cards.
+ */
+const SAFETY_CAP = 60;
 
 // ── Types ──────────────────────────────────────────────────────────────
 // UnifiedSignal and UnifiedQuote are imported from utils/types.ts
@@ -477,14 +495,15 @@ function SignalCard({
                   className="signal-group-badge"
                 />
               )}
-              {signal.pattern && (
-                <span
-                  className={`pattern-label pattern-${signal.pattern}`}
-                  data-testid="pattern-badge"
-                >
-                  {signal.pattern.toUpperCase()}
-                </span>
-              )}
+              {/* The pattern chip is withdrawn, NOT the pattern. Every
+                  elaborated card is still classified success / gap / tension /
+                  recovery against its tag's own definition, and it is still
+                  written to `elaboration_caches` — `signal.pattern` arrives on
+                  the wire and nothing regenerates when a better treatment
+                  lands. What failed was the presentation: an all-caps coloured
+                  chip that shouts, reads as a category label rather than a
+                  judgement, and competes with the score for this corner.
+                  Deferred deliberately; see docs/design-decisions.md. */}
             </div>
             <div className="signal-card-metrics">
               <span className="metric-label" title={t("analysis.signalTitle")}>{t("analysis.signalLabel")}</span>
@@ -934,9 +953,54 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
     return adaptCodebookSignals(cbData);
   }, [cbData]);
 
-  // Capped to strongest N for card display
-  const sentimentSignals = useMemo(() => allSentimentSignals.slice(0, MAX_SIGNALS), [allSentimentSignals]);
-  const tagSignals = useMemo(() => allTagSignals.slice(0, MAX_SIGNALS), [allTagSignals]);
+  /**
+   * One list, de-duplicated, ranked.
+   *
+   * A card is a (location × tag group), and sentiment is a group like any
+   * other — so the Sentiment card comes from the CODEBOOK path, which carries
+   * the sentiment framework as a one-group codebook. The /analysis/sentiment
+   * lens draws one card per (location × sentiment VALUE) instead, which is the
+   * shape that decision retired: confusion and frustration are tags inside the
+   * Sentiment card, not cards of their own.
+   *
+   * Measured across the trial corpus: every project yields Sentiment-group
+   * cards from the codebook path, so the sentiment lens's own signals are kept
+   * only as a fallback for a project whose codebook path has none. Its
+   * MATRICES are untouched either way — they feed the heatmaps.
+   */
+  const signals = useMemo(() => {
+    const hasSentimentGroup = allTagSignals.some((s) => s.columnLabel === "Sentiment");
+    const merged = hasSentimentGroup
+      ? allTagSignals
+      : [...allTagSignals, ...allSentimentSignals];
+    return dedupeSignals(
+      [...merged].sort((a, b) => b.compositeSignal - a.compositeSignal),
+    ).slice(0, SAFETY_CAP);
+  }, [allTagSignals, allSentimentSignals]);
+
+  /** Every card's score, for the SparkBars comparison inside a card. It
+   *  compares against the whole project rather than against the location,
+   *  which is the more informative reading and is what shipped. */
+  const siblingComposites = useMemo(
+    () => signals.map((s) => s.compositeSignal),
+    [signals],
+  );
+
+  /** Each card's position in that comparison, without an indexOf per card. */
+  const siblingIndex = useMemo(
+    () => new Map(signals.map((s, i) => [s.key, i])),
+    [signals],
+  );
+
+  /**
+   * Locations, ordered by their strongest signal; cards ordered within.
+   *
+   * Grouped through the SAME helper the sidebar uses, deliberately — that is
+   * what makes the navigation one-to-one with the main content by
+   * construction. Re-implementing the grouping here would make the two agree
+   * only for as long as nobody edited one of them.
+   */
+  const places = useMemo(() => groupSignalsByLocation(signals), [signals]);
 
   // Sentiment data (flat, single matrix)
   const sentimentColumns = useMemo<string[]>(
@@ -984,11 +1048,16 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
     return total.total > 0 ? total : null;
   }, [cbData]);
 
-  // Combined signal keys from both types (all signals, not just displayed cards)
-  const signalKeys = useMemo(
-    () => new Set([...allSentimentSignals, ...allTagSignals].map((s) => s.key)),
-    [allSentimentSignals, allTagSignals],
-  );
+  /**
+   * Which heatmap cells are hot.
+   *
+   * Built from the RENDERED list, not from every signal the analysis computed.
+   * A cell whose card is not on the page has nothing to scroll to:
+   * `scrollToCard` looks up a ref that is not in `cardRefs` and silently does
+   * nothing. That was already true for every cell outside the old six-card cap;
+   * de-duplication would have added a second class of it.
+   */
+  const signalKeys = useMemo(() => new Set(signals.map((s) => s.key)), [signals]);
 
   // Signal lookup map for tooltip (key → signal)
   const signalMap = useMemo(() => {
@@ -1011,10 +1080,12 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
   // Focused signal key — shared via AnalysisSignalStore (sidebar reads it)
   const { focusedKey: focusedSignalKey } = useAnalysisSignalStore();
 
-  // Populate the store so the sidebar can render signal entries
+  // Populate the store so the sidebar can render signal entries — the same
+  // de-duplicated list the cards below are drawn from, which is what makes the
+  // navigation one-to-one with the main content.
   useEffect(() => {
-    setAnalysisSignals(sentimentSignals, tagSignals);
-  }, [sentimentSignals, tagSignals]);
+    setAnalysisSignals(signals);
+  }, [signals]);
 
   const scrollToCard = useCallback((key: string) => {
     const el = cardRefs.current.get(key);
@@ -1053,8 +1124,7 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
       const key = (e as CustomEvent<{ key: string }>).detail.key;
       scrollToCard(key);
       // Also sync inspector via handleCardFocus logic
-      const allSignals = [...sentimentSignals, ...tagSignals];
-      const signal = allSignals.find((s) => s.key === key);
+      const signal = signals.find((s) => s.key === key);
       if (signal) {
         let sourceKey: string;
         if (signal.codebookName === "" || signal.codebookName === "Sentiment") {
@@ -1070,7 +1140,7 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
     };
     window.addEventListener("bn:signal-focus", handler);
     return () => window.removeEventListener("bn:signal-focus", handler);
-  }, [scrollToCard, sentimentSignals, tagSignals, cbData]);
+  }, [scrollToCard, signals, cbData]);
 
   void activeDimension; // used indirectly by DimensionToggle components in sources
 
@@ -1202,21 +1272,29 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
     <div className="analysis-layout" data-testid="bn-analysis-page">
       {/* ── Center pane: signal cards ───────────────────────── */}
       <div className="analysis-center">
-        {/* ── Sentiment signal cards ─────────────────────────── */}
-        {hasSentiment && sentimentSignals.length > 0 && (
-          <>
-            <SectionHeading>{t("analysis.sentimentSignals")}</SectionHeading>
-            <p className="section-desc">
-              {t("analysis.sentimentDesc")}
-            </p>
-            <div className="signal-cards" id="signal-cards-sentiment">
-              {sentimentSignals.map((s) => (
+        {/* ── Signal cards, in the navigation's order ────────────
+             One run of locations, ranked by their strongest signal, cards
+             ranked within. It used to be two flat grids split by KIND, so a
+             place appeared in both halves and nowhere as itself, and every
+             card repeated its location because nothing above it said where it
+             was. The heading is `.analysis-codebook-heading` — the class the
+             lens already had for exactly this weight of statement; no new
+             heading style was invented for this. The heatmaps do not live in
+             this column at all: they are InspectorPanel's, rendered below. */}
+        {sourceBreakdown && <SourceBanner breakdown={sourceBreakdown} />}
+        {places.map(({ location, cards }) => (
+          <Fragment key={location}>
+            <div className="analysis-codebook-heading">{location}</div>
+            <div className="signal-cards">
+              {cards.map((s) => (
                 <SignalCard
                   key={s.key}
                   signal={s}
-                  allPids={sentimentPids}
-                  isSentiment={true}
+                  allPids={isFromSentimentLens(s) ? sentimentPids : tagAllPids}
+                  isSentiment={isFromSentimentLens(s)}
                   isFocused={focusedSignalKey === s.key}
+                  siblingSignals={siblingComposites}
+                  signalIndex={siblingIndex.get(s.key)}
                   cardRef={(el: HTMLDivElement | null) => {
                     if (el) cardRefs.current.set(s.key, el);
                     else cardRefs.current.delete(s.key);
@@ -1225,37 +1303,8 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
                 />
               ))}
             </div>
-          </>
-        )}
-
-        {/* ── Tag signal cards ───────────────────────────────── */}
-        {hasTags && tagSignals.length > 0 && (
-          <>
-            {sourceBreakdown && <SourceBanner breakdown={sourceBreakdown} />}
-            <SectionHeading>{t("analysis.tagSignals")}</SectionHeading>
-            <p className="section-desc">
-              {t("analysis.tagDesc")}
-            </p>
-            <div className="signal-cards" id="signal-cards-tags">
-              {tagSignals.map((s, idx) => (
-                <SignalCard
-                  key={s.key}
-                  signal={s}
-                  allPids={tagAllPids}
-                  isSentiment={false}
-                  isFocused={focusedSignalKey === s.key}
-                  siblingSignals={tagSignals.map((t) => t.compositeSignal)}
-                  signalIndex={idx}
-                  cardRef={(el: HTMLDivElement | null) => {
-                    if (el) cardRefs.current.set(s.key, el);
-                    else cardRefs.current.delete(s.key);
-                  }}
-                  onFocus={handleCardFocus}
-                />
-              ))}
-            </div>
-          </>
-        )}
+          </Fragment>
+        ))}
       </div>
 
       {/* ── Inspector panel: heatmaps ──────────────────────── */}

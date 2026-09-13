@@ -271,7 +271,7 @@ describe("AnalysisPage", () => {
     expect(screen.getAllByText("Pain points").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("shows separate headings for sentiment and tag signals", async () => {
+  it("groups cards by location instead of by kind", async () => {
     (window as unknown as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
     mockFetchCodebookAnalysis(mockCbData);
     render(<AnalysisPage projectId="1" />);
@@ -280,8 +280,51 @@ describe("AnalysisPage", () => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(3);
     });
 
-    expect(screen.getByText("Sentiment signals")).toBeTruthy();
-    expect(screen.getByText("Tag signals")).toBeTruthy();
+    // The two kind-split headings are gone. A place appeared in both halves
+    // and nowhere as itself; it is a heading of its own now.
+    expect(screen.queryByText("Sentiment signals")).toBeNull();
+    expect(screen.queryByText("Tag signals")).toBeNull();
+
+    const headings = [...document.querySelectorAll(".analysis-codebook-heading")]
+      .map((n) => n.textContent);
+    expect(headings.length).toBeGreaterThan(0);
+    expect(headings).toContain("Checkout");
+    // Every card sits under one of those headings.
+    expect(document.querySelectorAll(".signal-cards").length).toBe(headings.length);
+  });
+
+  it("the sidebar list and the rendered cards are the same set", async () => {
+    // The 1:1 invariant: every nav row lands on a card, and no card is
+    // unreachable. It used to hold by ACCIDENT — MAX_SIGNALS sliced one list
+    // that both surfaces read. De-duplication runs once, over the merged list,
+    // and both read its output, so they cannot drift apart.
+    (window as unknown as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
+    mockFetchCodebookAnalysis(mockCbData);
+    render(<AnalysisPage projectId="1" />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0);
+    });
+
+    const { renderHook } = await import("@testing-library/react");
+    const { useAnalysisSignalStore } = await import("../contexts/AnalysisSignalStore");
+    const { result } = renderHook(() => useAnalysisSignalStore());
+    expect(result.current.signals.length)
+      .toBe(screen.getAllByTestId("bn-signal-card").length);
+  });
+
+  it("no longer renders the pattern chip, though the pattern still arrives", async () => {
+    const named: CodebookAnalysisListResponse = JSON.parse(JSON.stringify(mockCbData));
+    named.codebooks[0].signals[0].signal_name = "Checkout Latency Tension";
+    named.codebooks[0].signals[0].pattern = "tension";
+    mockFetchCodebookAnalysis(named);
+    render(<AnalysisPage projectId="1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Checkout Latency Tension")).toBeTruthy();
+    });
+    expect(screen.queryByTestId("pattern-badge")).toBeNull();
+    expect(screen.queryByText("TENSION")).toBeNull();
   });
 
   it("expands signal card quotes on toggle click", async () => {

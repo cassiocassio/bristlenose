@@ -53,8 +53,10 @@
     font-size: var(--bn-text-badge);
     line-height: var(--bn-text-badge-lh);
     font-weight: var(--bn-weight-normal);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    /* Natural case, as the data has it. Uppercase made "Shopping Bag" look
+       like a category rather than a place, which is not how the Quotes lens
+       renders the same string — and the two lenses name the same things. */
+    letter-spacing: 0.02em;
     color: var(--bn-colour-muted);
     margin-bottom: 0.1rem;
 }

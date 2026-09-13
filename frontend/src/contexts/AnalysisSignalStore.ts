@@ -1,7 +1,7 @@
 /**
  * AnalysisSignalStore — module-level store for analysis sidebar signal list.
  *
- * Populated by AnalysisPage after computing capped signals. Read by
+ * Populated by AnalysisPage after de-duplication. Read by
  * AnalysisSidebar for navigation. Also owns `focusedKey` so card focus
  * state is shared between the sidebar, signal cards, and inspector panel.
  *
@@ -16,16 +16,22 @@ import type { UnifiedSignal } from "../utils/types";
 // ── Types ────────────────────────────────────────────────────────────────
 
 export interface AnalysisSignalState {
-  sentimentSignals: UnifiedSignal[];
-  tagSignals: UnifiedSignal[];
+  /**
+   * One de-duplicated list, strongest first.
+   *
+   * This was two lists split by kind, because the lens drew two grids split by
+   * kind. It draws one run of locations now, and a card is a (location × tag
+   * group) with sentiment as a group like any other — so there is one list, and
+   * the sidebar and the cards column read it through the same grouping.
+   */
+  signals: UnifiedSignal[];
   focusedKey: string | null;
 }
 
 // ── Module-level store ──────────────────────────────────────────────────
 
 const INITIAL: AnalysisSignalState = {
-  sentimentSignals: [],
-  tagSignals: [],
+  signals: [],
   focusedKey: null,
 };
 
@@ -50,16 +56,11 @@ function setState(updater: (prev: AnalysisSignalState) => AnalysisSignalState): 
 
 // ── Actions ─────────────────────────────────────────────────────────────
 
-/** Populate the store with capped signals from AnalysisPage. */
-export function setAnalysisSignals(
-  sentimentSignals: UnifiedSignal[],
-  tagSignals: UnifiedSignal[],
-): void {
+/** Populate the store with the de-duplicated signal list from AnalysisPage. */
+export function setAnalysisSignals(signals: UnifiedSignal[]): void {
   setState((prev) => {
-    if (prev.sentimentSignals === sentimentSignals && prev.tagSignals === tagSignals) {
-      return prev;
-    }
-    return { ...prev, sentimentSignals, tagSignals };
+    if (prev.signals === signals) return prev;
+    return { ...prev, signals };
   });
 }
 

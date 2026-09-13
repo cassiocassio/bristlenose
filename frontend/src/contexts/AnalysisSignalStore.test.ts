@@ -3,10 +3,12 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
+import { renderHook } from "@testing-library/react";
 import {
   setAnalysisSignals,
   setFocusedSignalKey,
   resetAnalysisSignalStore,
+  useAnalysisSignalStore,
 } from "./AnalysisSignalStore";
 import type { UnifiedSignal } from "../utils/types";
 
@@ -33,35 +35,60 @@ function makeSignal(overrides: Partial<UnifiedSignal> = {}): UnifiedSignal {
   };
 }
 
-// Pure unit tests for store actions — rendering is tested in AnalysisSidebar.test.tsx
+// The store holds ONE de-duplicated list now — it held two, split by kind,
+// because the lens drew two grids split by kind. Rendering is tested in
+// AnalysisSidebar.test.tsx; these assert the store's own contract.
 
 describe("AnalysisSignalStore", () => {
   beforeEach(() => {
     resetAnalysisSignalStore();
   });
 
-  it("setAnalysisSignals and setFocusedSignalKey do not throw", () => {
-    const s1 = makeSignal({ key: "a" });
-    const s2 = makeSignal({ key: "b" });
-    expect(() => setAnalysisSignals([s1], [s2])).not.toThrow();
-    expect(() => setFocusedSignalKey("a")).not.toThrow();
-    expect(() => setFocusedSignalKey(null)).not.toThrow();
+  function read() {
+    const { result } = renderHook(() => useAnalysisSignalStore());
+    return result.current;
+  }
+
+  it("holds the list it is given, and the focused key", () => {
+    const a = makeSignal({ key: "a" });
+    const b = makeSignal({ key: "b" });
+    setAnalysisSignals([a, b]);
+    setFocusedSignalKey("a");
+    expect(read().signals.map((s) => s.key)).toEqual(["a", "b"]);
+    expect(read().focusedKey).toBe("a");
   });
 
-  it("resetAnalysisSignalStore clears state", () => {
-    const s1 = makeSignal({ key: "a" });
-    setAnalysisSignals([s1], []);
+  it("resetAnalysisSignalStore clears both the list and the focus", () => {
+    setAnalysisSignals([makeSignal({ key: "a" })]);
     setFocusedSignalKey("a");
     resetAnalysisSignalStore();
-    // After reset, a new subscriber should see empty arrays
-    // We verify indirectly — the component test covers this more thoroughly
-    expect(() => resetAnalysisSignalStore()).not.toThrow();
+    expect(read().signals).toEqual([]);
+    expect(read().focusedKey).toBeNull();
   });
 
-  it("repeated identical calls are no-ops (referential equality)", () => {
-    const s1 = makeSignal({ key: "x" });
-    setAnalysisSignals([s1], []);
-    // Setting the same reference again should not throw
-    expect(() => setAnalysisSignals([s1], [])).not.toThrow();
+  // useSyncExternalStore compares snapshots by reference and will loop
+  // forever on a store that returns a fresh object for an unchanged write —
+  // so "the same reference in, the same state object out" is the contract,
+  // not a nicety.
+  it("re-setting the same list reference leaves the state object untouched", () => {
+    const list = [makeSignal({ key: "x" })];
+    setAnalysisSignals(list);
+    const before = read();
+    setAnalysisSignals(list);
+    expect(read()).toBe(before);
+  });
+
+  it("setting an equal-but-different list DOES replace the state", () => {
+    setAnalysisSignals([makeSignal({ key: "x" })]);
+    const before = read();
+    setAnalysisSignals([makeSignal({ key: "x" })]);
+    expect(read()).not.toBe(before);
+  });
+
+  it("re-setting the same focused key leaves the state object untouched", () => {
+    setFocusedSignalKey("a");
+    const before = read();
+    setFocusedSignalKey("a");
+    expect(read()).toBe(before);
   });
 });

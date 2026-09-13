@@ -14,10 +14,19 @@ This document captures ideas for the analysis page beyond Phase 3. **The first s
 
 ---
 
-## Settled — 13 Sep 2026
+## Settled — 13 Sep 2026, and SHIPPED
 
-Seven decisions, each drawn as a panel before any code moved. Codes refer to
-benches in the mockup named above.
+Twelve decisions, each drawn as a panel before any code moved. Codes refer to
+benches in the mockup named above. The first seven are the card and the
+navigation; the rest settled while building.
+
+**Built on 13 Sep 2026.** `utils/signalDedup.ts` holds the rule and the
+grouping; `AnalysisPage` merges the two signal sources, de-duplicates once, and
+renders one run of locations; `AnalysisSidebar` groups the same list the same
+way; `AnalysisSignalStore` holds one list instead of two. What is NOT built is
+section N's hero chip — the group-and-score chip acting as the control that
+expands the metrics. It is drawn and decided, and it is a rebuild of
+`.signal-card-right` and its two variants, so it waits for its own pass.
 
 | | decision | panel |
 |---|---|---|
@@ -28,6 +37,11 @@ benches in the mockup named above.
 | 5 | **Card text**: location in natural case, two complete sentences with air between claim and evidence. | N |
 | 6 | **One card per set of quotes** — walk a location strongest-first, keep a card only if it brings a quote no kept card carries, ties break on quote count. | R2 |
 | 7 | **The Sentiment card is exempt from being hidden** — an interim guard while the metric is unfixed. | R4 |
+| 8 | **Nav rows wrap, never truncate.** Measured: 90% of rows truncate against a 28-character line. | V1 |
+| 9 | **A nameless row is its group chip alone** — no location fallback, no placeholder. | T6b |
+| 10 | **Sections and themes interleave, unlabelled.** The Quotes lens still owns the demarcation. | U3 |
+| 11 | **The main content follows the navigation** — one run of locations under `.analysis-codebook-heading`. | W2 |
+| 12 | **Nothing caps the card count.** De-duplication is the bound; `SAFETY_CAP` exists so nothing pathological renders. | — |
 
 **Still open, and the first one blocks ordering:**
 
@@ -55,18 +69,27 @@ shipped floor the trial corpus gives 106 cards over 74 locations; at 3, 56 over
 
 ---
 
-## Current state (Phases 1–3 complete)
+## Current state
 
-The analysis page is a standalone `analysis.html` opened from the toolbar. It shows:
+_Trued 13 Sep 2026. The Phases 1–3 description this replaced was written for the
+standalone `analysis.html`, which the React lens superseded._
 
-- **Signal cards** ranked by composite signal strength (concentration × agreement × intensity)
-- **Section × Sentiment heatmap** — adjusted standardised residuals, clickable cells scroll to matching card
-- **Theme × Sentiment heatmap** — same view for cross-cutting themes
-- **Quote expansion** — each card shows top quote, expandable to show all
+The Analysis lens is a React tab. It shows:
+
+- **Signal cards grouped by location**, locations ranked by their strongest
+  signal, cards ranked within — the same order and the same list the sidebar
+  navigates. A card is a (location × tag group); sentiment is a group like any
+  other, so `confusion` and `frustration` are tags inside the Sentiment card
+- **De-duplicated**: where several cards point at the same quotes only the
+  strongest is shown, and the Sentiment card is never hidden
+- **Heatmaps in `InspectorPanel`**, a sibling of the cards column — not in it.
+  Cells whose card is on the page are clickable and scroll to it
+- **Quote expansion** — each card shows its top quote, expandable to all
 - **Dark mode responsive** — OKLCH heatmap colours recalculate on theme toggle
-- **97 tests** across 4 files cover metrics, matrix building, signal detection, serialization, and HTML rendering
 
-No filters, no sort controls, no interactivity beyond expansion and cell-click. This is intentional — explore the experience first.
+No filters and no sort controls. The view menu — strongest signal, by codebook,
+sections and themes — is designed and deliberately not shipped: one better lens
+rather than a menu of equals.
 
 > **The Section × Sentiment + Theme × Sentiment dual heatmap is the user-facing surface of the two-axis quotes-page model** validated in `experiments/thematic-spike/FINDINGS.md` (*"Two-axis quotes page"*). Sections answer "what's happening on this surface my team owns?"; themes answer "what's the cross-cutting concern that demultiplexes across teams?". Both needed; neither subsumes the other. The signal-cards architecture is the *deductive* (codebook-driven, action-oriented) complement to s11's *inductive* (Braun & Clarke, orientation-focused) themes — see FINDINGS *"Two methodological traditions, one product"*.
 
@@ -231,7 +254,7 @@ _Status: needed once any interactive controls exist._
 
 1. ~~Does the composite signal formula feel right on real data?~~ **Answered, 13 Sep 2026: no.** Its leading factor is a lift whose ceiling is table shape, and the sentiment framework has one column, so its concentration is structurally 1.00 in every sentiment cell of every project — mute exactly where it matters. Owned by `docs/design-signal-strength.md`.
 2. Is 12 the right default for top_n? Should it be configurable? *(Partial answer from `experiments/thematic-spike/FINDINGS.md`: 9–12 is a multi-constraint optimum where psychology, screen scannability, and 1-hour-meeting attention budget converge. But the count is a navigation bound, not a quality bound — data overrules. Configurable would be the principled choice.)*
-3. Do researchers actually look at the heatmap, or just the signal cards?
+3. Do researchers actually look at the heatmap, or just the signal cards? _(Unanswered, and the heatmaps are deliberately untouched by the 13 Sep refactor. One known defect, accepted: a cell can be drawn `.has-card` and do nothing — fixed for the cards now rendered, since `signalKeys` is built from the rendered list, but the heatmaps' own improvements are a later release.)_
 4. Would a "surprising findings" section (high residual but low composite) catch things the ranked list misses? *(Partial answer from FINDINGS: substantial single-participant clusters — one participant, ≥3 coherent quotes — are often deviant-case insights worth surfacing as first-class output, not folded into "Uncategorised". This is one shape "surprising findings" could take.)*
 5. ~~Should signal cards link back to specific quotes in the report, not just the section heading?~~ **Partly answered, 13 Sep 2026:** a card's location is now a link to that place's anchor in the Quotes lens, on both the elaborated and the nameless card. Quote-level deep links are still open.
 6. Is the current card expansion (show/hide quotes) enough, or do researchers want quote-level actions (star, annotate, copy)? *(FINDINGS *"Display quote vs evidence quote"* distinguishes one slide-ready quote per cluster from the surrounding evidence — relevant if quote-level actions get added.)*

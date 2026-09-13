@@ -82,9 +82,7 @@ export function LensSubtitleSync(): null {
       }).length;
       subtitle = quotesSubtitle(visible, store.viewMode === "starred");
     } else if (tab === "analysis") {
-      subtitle = signalsSubtitle(
-        signals.sentimentSignals.length + signals.tagSignals.length,
-      );
+      subtitle = signalsSubtitle(signals.signals.length);
     } else if ((tab === "codebook" || tab === "codebookV2") && codebook) {
       const { codebooks, tags } = codebookCounts(codebook);
       subtitle = codebookSubtitle(codebooks, tags);

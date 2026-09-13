@@ -975,7 +975,10 @@ body.dragging * {
 
 .signal-entry {
     display: flex;
-    align-items: baseline;
+    /* baseline alignment pins the chip to the name's FIRST line, which is
+       right while a name is one line and wrong the moment it wraps — the chip
+       would float beside the opening words with the rest hanging under it. */
+    align-items: flex-start;
     gap: var(--bn-space-xs);
     padding: 0.2rem var(--bn-space-sm);
     border-radius: var(--bn-radius-md);
@@ -1009,9 +1012,15 @@ body.dragging * {
     font-weight: var(--bn-weight-normal);
     flex: 1;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    /* Rows WRAP. Ten variants were built to ask whether a row should lose
+       words or gain a line. Measured over the 58 named rows that survive
+       de-duplication, a row runs 34 characters at the median once its group
+       chip is beside it, 42 at p90 and 50 at its longest — so against a
+       28-character line 90% of them truncated. The ellipsis mechanism was
+       never broken; the outcome was. The chip is flex-shrink:0, so what a
+       reader got was the words cut and the label kept. The cost is height,
+       and de-duplication has already paid it. */
+    overflow-wrap: anywhere;
 }
 
 .signal-entry .badge {

@@ -1,37 +1,36 @@
 /**
  * AnalysisSidebar — signal-entry navigation for the Analysis tab left sidebar.
  *
- * Lists rendered signal cards grouped by type (Sentiment → Section/Theme,
- * Codebooks → Section/Theme). Clicking an entry focuses the signal card
- * and syncs the inspector panel.
+ * One run of locations, ranked by their strongest signal, cards ranked within.
+ * Clicking an entry focuses the signal card and syncs the inspector panel.
+ *
+ * It used to group by KIND — Sentiment then Codebooks, each split again into
+ * Section and Theme, four sub-headings. Location organises it now, because the
+ * researcher's job is holistic: everything needed to fix Shopping Bag belongs
+ * in one place, so the fixes can be considered together. Sections and themes
+ * interleave unlabelled; the words carry it, and the Quotes lens still owns the
+ * demarcation for anyone whose mental model runs on that split.
+ *
+ * The list comes from AnalysisSignalStore, which AnalysisPage fills with the
+ * de-duplicated cards it renders — so the navigation is one-to-one with the
+ * main content: every row lands on a card, and no card is unreachable.
  *
  * @module AnalysisSidebar
  */
 
-import { useCallback } from "react";
-import { useTranslation } from "react-i18next";
+import { Fragment, useCallback } from "react";
 import {
   useAnalysisSignalStore,
   setFocusedSignalKey,
 } from "../contexts/AnalysisSignalStore";
 import { getGroupBg } from "../utils/colours";
+import { groupSignalsByLocation } from "../utils/signalDedup";
 import type { UnifiedSignal } from "../utils/types";
-
-// ── Helpers ──────────────────────────────────────────────────────────
-
-/** Render signal entries for a specific sourceType within a signal list. */
-function signalsBySourceType(
-  signals: UnifiedSignal[],
-  sourceType: "section" | "theme",
-): UnifiedSignal[] {
-  return signals.filter((s) => s.sourceType === sourceType);
-}
 
 // ── Component ────────────────────────────────────────────────────────
 
 export function AnalysisSidebar() {
-  const { t } = useTranslation();
-  const { sentimentSignals, tagSignals, focusedKey } = useAnalysisSignalStore();
+  const { signals, focusedKey } = useAnalysisSignalStore();
 
   const handleClick = useCallback((key: string) => {
     setFocusedSignalKey(key);
@@ -40,79 +39,24 @@ export function AnalysisSidebar() {
     );
   }, []);
 
-  const hasSentiment = sentimentSignals.length > 0;
-  const hasTags = tagSignals.length > 0;
-
-  if (!hasSentiment && !hasTags) return null;
+  if (signals.length === 0) return null;
 
   return (
     <div className="toc-sidebar-body">
-      {hasSentiment && (
-        <>
-          <div className="toc-heading">{t("analysis.sentiment")}</div>
-          <SignalGroup
-            signals={sentimentSignals}
-            sourceType="section"
-            focusedKey={focusedKey}
-            onClick={handleClick}
-          />
-          <SignalGroup
-            signals={sentimentSignals}
-            sourceType="theme"
-            focusedKey={focusedKey}
-            onClick={handleClick}
-          />
-        </>
-      )}
-      {hasTags && (
-        <>
-          <div className="toc-heading">{t("analysis.codebookTags")}</div>
-          <SignalGroup
-            signals={tagSignals}
-            sourceType="section"
-            focusedKey={focusedKey}
-            onClick={handleClick}
-          />
-          <SignalGroup
-            signals={tagSignals}
-            sourceType="theme"
-            focusedKey={focusedKey}
-            onClick={handleClick}
-          />
-        </>
-      )}
-    </div>
-  );
-}
-
-// ── Sub-components ───────────────────────────────────────────────────
-
-interface SignalGroupProps {
-  signals: UnifiedSignal[];
-  sourceType: "section" | "theme";
-  focusedKey: string | null;
-  onClick: (key: string) => void;
-}
-
-function SignalGroup({ signals, sourceType, focusedKey, onClick }: SignalGroupProps) {
-  const { t } = useTranslation();
-  const filtered = signalsBySourceType(signals, sourceType);
-  if (filtered.length === 0) return null;
-
-  return (
-    <>
-      <div className="toc-sub-heading">
-        {t(sourceType === "section" ? "analysis.section" : "analysis.theme")}
-      </div>
-      {filtered.map((s) => (
-        <SignalEntry
-          key={s.key}
-          signal={s}
-          active={focusedKey === s.key}
-          onClick={onClick}
-        />
+      {groupSignalsByLocation(signals).map(({ location, cards }) => (
+        <Fragment key={location}>
+          <div className="toc-sub-heading">{location}</div>
+          {cards.map((s) => (
+            <SignalEntry
+              key={s.key}
+              signal={s}
+              active={focusedKey === s.key}
+              onClick={handleClick}
+            />
+          ))}
+        </Fragment>
       ))}
-    </>
+    </div>
   );
 }
 
@@ -129,6 +73,14 @@ function SignalEntry({ signal, active, onClick }: SignalEntryProps) {
   const badgeClass = signal.colourSet
     ? "badge"
     : `badge badge-${signal.columnLabel}`;
+
+  // A card with no elaborated name shows its group chip and nothing else. It
+  // used to fall back to the location, which the heading above has already
+  // said. Measured after de-duplication over 60 locations: 38 carry a single
+  // named row and 13 a single bare chip, so the bare case is 22% and reads as
+  // what it is — a place with one group under it. The row is still clickable
+  // and still lands on a real card; the card says the rest.
+  const name = signal.signalName || null;
 
   return (
     // Link-styled action; keyboard-accessible via role/tabIndex/onKeyDown.
@@ -148,9 +100,11 @@ function SignalEntry({ signal, active, onClick }: SignalEntryProps) {
         }
       }}
     >
-      <span className="signal-entry-name" title={signal.signalName || signal.location}>
-        {signal.signalName || signal.location}
-      </span>
+      {name && (
+        <span className="signal-entry-name" title={name}>
+          {name}
+        </span>
+      )}
       <span className={badgeClass} style={badgeStyle}>
         {signal.columnLabel}
       </span>

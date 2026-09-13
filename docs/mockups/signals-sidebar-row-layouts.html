@@ -380,6 +380,20 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
 .mtr i { width:3px; height:8px; border-radius:1px; background:var(--bn-colour-border); display:block; }
 .mtr i.on { background:var(--bn-colour-accent); }
 .nv-count { float:right; font-weight:var(--bn-weight-normal); }
+
+/* ── Index codes ────────────────────────────────────────────────────────── */
+.chrome .cname b { font-weight:700; color:var(--bn-colour-text); letter-spacing:.02em; }
+.codeindex { display:grid; grid-template-columns:repeat(auto-fill,minmax(15rem,1fr));
+  gap:.4rem 1.6rem; margin-bottom:var(--bn-space-lg); }
+.ci-group { break-inside:avoid; }
+.ci-head { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  text-transform:uppercase; letter-spacing:.06em; color:var(--bn-colour-muted);
+  margin:.5rem 0 .25rem; }
+.ci-row { display:flex; gap:.5rem; font-size:var(--bn-text-label); line-height:1.5; }
+.ci-code { font-family:var(--bn-font-mono); font-weight:700; min-width:2.4rem;
+  color:var(--bn-colour-accent); }
+.ci-what { color:var(--bn-colour-muted); min-width:0; }
+.pbtn b { font-family:var(--bn-font-mono); font-weight:700; }
 @media (prefers-reduced-motion: reduce) { .sig { transition:none; } }
 </style>
 </head>
@@ -414,6 +428,17 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
 
   <div class="layout">
   <div class="main">
+
+  <div class="section-head">
+    <h2>Index of designs</h2>
+    <p>Every panel on this page carries a code, so any of them can be named without
+       being described. <strong>V</strong> is a row layout, <strong>T</strong> a
+       treatment of the Codebooks section, <strong>J</strong> and <strong>D</strong> a
+       whole navigation; <strong>P</strong> codes are data, not design. A project panel
+       is stamped <code>T4&middot;P1</code> &mdash; treatment and project &mdash; so a
+       screenshot of one says what it is on its own.</p>
+  </div>
+  <div class="codeindex" id="codeindex"></div>
 
   <div class="bench" id="bench"></div>
 
@@ -492,7 +517,11 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
     <p>The same question held at one job &mdash; index &mdash; so the depth axis can be
        read on its own. The tension is the busiest place: Beds &amp; Mattresses Category
        carries ten signals, and what a structure does with that one entry is most of what
-       distinguishes these.</p>
+       distinguishes these. <strong>D1 is J1</strong> &mdash; the same renderer, repeated
+       so the axis reads without scrolling back.</p>
+    <p class="wnote">Both nav benches are <strong>P1</strong> at the &ge;1 sentiment
+       volume, baked in. They do not follow the sentiment-volume or Codebooks-section
+       controls; the panel width, cap and appearance controls still apply.</p>
   </div>
 
   <div class="bench" id="depthbench"></div>
@@ -1308,12 +1337,12 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
     <div class="ctl">
       <span class="lbl">Codebooks section <span style="text-transform:none;letter-spacing:0">(projects)</span></span>
       <div class="row" id="treats">
-        <button class="pbtn on" data-treat="shipped">as shipped</button>
-        <button class="pbtn" data-treat="hide">hide Sentiment</button>
-        <button class="pbtn" data-treat="backfill">hide + backfill</button>
-        <button class="pbtn" data-treat="flat">one flat list</button>
-        <button class="pbtn" data-treat="loc">by location</button>
-        <button class="pbtn" data-treat="locn">by location · named</button>
+        <button class="pbtn on" data-treat="shipped"><b>T1</b> as shipped</button>
+        <button class="pbtn" data-treat="hide"><b>T2</b> hide Sentiment</button>
+        <button class="pbtn" data-treat="backfill"><b>T3</b> hide + backfill</button>
+        <button class="pbtn" data-treat="flat"><b>T4</b> one flat list</button>
+        <button class="pbtn" data-treat="loc"><b>T5</b> by location</button>
+        <button class="pbtn" data-treat="locn"><b>T6</b> by location · named</button>
       </div>
     </div>
 
@@ -1954,6 +1983,7 @@ const projbench = document.getElementById("projbench");
 const realbench = document.getElementById("realbench");
 const jobbench = document.getElementById("jobbench");
 const depthbench = document.getElementById("depthbench");
+const codeindex = document.getElementById("codeindex");
 
 function esc(s){ return s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 function badgeClass(label){ return SENTIMENTS.includes(label) ? "badge badge-"+label : "badge"; }
@@ -2075,6 +2105,7 @@ function render(){
   renderProjects();
   renderReal();
   renderNav();
+  renderCodeIndex();
 }
 
 /**
@@ -2160,6 +2191,21 @@ function measure(){
  * invented; it is measured below the bar the lens draws.
  */
 function sentRows(p){ return (state.vol === 1 && p.sentWeak) ? p.sentWeak : p.sent; }
+
+/* ── Index codes ─────────────────────────────────────────────────────────
+   Every design on this page has one, so any of them can be named without
+   describing it:
+     V0–V9  row layouts (first bench)
+     T1–T6  Codebooks-section treatments (project bench, and the ikea bench)
+     P1–P6  the six projects — data, not design
+     J1–J3  navigation jobs
+     D1–D3  navigation depths
+   A project panel is stamped with both its treatment and its project, so a
+   screenshot of one says what it is without its caption. */
+const TREAT_CODE = { shipped:"T1", hide:"T2", backfill:"T3", flat:"T4", loc:"T5", locn:"T6" };
+const TREAT_NAME = { shipped:"as shipped", hide:"hide Sentiment", backfill:"hide + backfill",
+                     flat:"one flat list", loc:"by location", locn:"by location \u00b7 named" };
+function projCode(id){ return "P" + (PROJECTS.findIndex(p => p.id === id) + 1); }
 
 /* The app's own per-section cut (MAX_SIGNALS in AnalysisPage.tsx), and the
    group whose rows are a mirror of Quote.sentiment rather than a codebook. */
@@ -2387,7 +2433,7 @@ function renderProjects(){
     return `
     <div class="cell" data-p="${p.id}">
       <div class="frame" style="width:${state.w}px">
-        <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span class="cname">${p.label}</span></div>
+        <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span class="cname"><b>${TREAT_CODE[state.treat]}</b>\u00b7<b>${projCode(p.id)}</b> ${p.label}</span></div>
         <div class="panel"><div class="panel-body${state.variantMark ? " mark-trunc" : ""}${state.brk ? " brk" : ""}">
           ${body}
         </div></div>
@@ -2496,13 +2542,12 @@ function measureProjects(){
  * section holding ten signals at once.
  */
 const REAL_ID = "ikea";
-const REAL_TREATS = [
-  ["shipped",  "as shipped"],
-  ["backfill", "hide + backfill"],
-  ["flat",     "one flat list"],
-  ["loc",      "by location"],
-  ["locn",     "by location \u00b7 named"],
-];
+const REAL_ID_CODE = "P1";        // ikea is first in PROJECTS; asserted below
+const REAL_TREATS = ["shipped", "backfill", "flat", "loc", "locn"].map(
+  k => [k, `${TREAT_CODE[k]}\u00b7${REAL_ID_CODE} ${TREAT_NAME[k]}`]);
+
+if (projCode(REAL_ID) !== REAL_ID_CODE)
+  console.warn(`REAL_ID_CODE is ${REAL_ID_CODE} but ${REAL_ID} is ${projCode(REAL_ID)}`);
 
 function renderReal(){
   const p = PROJECTS.find(x => x.id === REAL_ID);
@@ -2727,12 +2772,12 @@ function navTopFew(){
 }
 
 const NAV_JOBS = [
-  ["A · index", navIndex, "Addresses only. Every signal is one chip and no number appears anywhere — a reader here wants somewhere to click, not something to read."],
-  ["B · summary", navSummary, "Elaborated names lead, because they are the only text written as a finding. Un-named signals sit muted under their group; sentiment collapses to one “felt” line."],
-  ["C · triage", navTriage, "One ranked list — grouping by place hides the comparison triage needs. Rank is printed, and every row states its evidence."],
+  ["J1 · index", navIndex, "Addresses only. Every signal is one chip and no number appears anywhere — a reader here wants somewhere to click, not something to read."],
+  ["J2 · summary", navSummary, "Elaborated names lead, because they are the only text written as a finding. Un-named signals sit muted under their group; sentiment collapses to one “felt” line."],
+  ["J3 · triage", navTriage, "One ranked list — grouping by place hides the comparison triage needs. Rank is printed, and every row states its evidence."],
 ];
 const NAV_DEPTHS = [
-  ["D1 · every signal", navIndex, "Everything reachable from the sidebar. Longest, and the busiest place is several rows of chips that all look alike."],
+  ["D1 · every signal", navIndex, "J1 again, repeated here so the depth axis reads without switching benches \u2014 same renderer, same panel. Everything reachable from the sidebar; the busiest place is several rows of chips that all look alike."],
   ["D2 · place only", navPlaceOnly, "Eight rows. A count, a strength, and which codebooks had something to say. One extra click to reach any signal."],
   ["D3 · top three", navTopFew, "Each place spends three chips and says how many it is holding back. Bounded per place however deep the data goes."],
 ];
@@ -2749,6 +2794,30 @@ function navPanel(title, html, note){
       <p class="verdict">${note}</p>
     </div>
   </div>`;
+}
+
+/**
+ * The index of codes, built from the same tables that label the panels — a list
+ * of designs typed out by hand is a list that goes stale the first time one is
+ * added.
+ */
+function renderCodeIndex(){
+  const groups = [
+    ["V0\u2013V9 \u00b7 row layouts", VARIANTS.map(v => [v[1].split(" \u00b7 ")[0], v[1].split(" \u00b7 ")[1]])],
+    ["T1\u2013T6 \u00b7 codebooks-section treatments",
+      Object.keys(TREAT_CODE).map(k => [TREAT_CODE[k], TREAT_NAME[k]])],
+    ["P1\u2013P6 \u00b7 projects (data, not design)",
+      PROJECTS.map((p, i) => ["P" + (i + 1), p.label])],
+    ["J1\u2013J3 \u00b7 navigation jobs",
+      NAV_JOBS.map(j => [j[0].split(" \u00b7 ")[0], j[0].split(" \u00b7 ")[1]])],
+    ["D1\u2013D3 \u00b7 navigation depth",
+      NAV_DEPTHS.map(d => [d[0].split(" \u00b7 ")[0], d[0].split(" \u00b7 ")[1]])],
+  ];
+  codeindex.innerHTML = groups.map(([head, rows]) => `<div class="ci-group">
+    <div class="ci-head">${esc(head)}</div>
+    ${rows.map(([c, w]) => `<div class="ci-row"><span class="ci-code">${esc(c)}</span>`
+      + `<span class="ci-what">${esc(w || "")}</span></div>`).join("")}
+  </div>`).join("");
 }
 
 function renderNav(){

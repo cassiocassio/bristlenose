@@ -76,6 +76,12 @@
     color: var(--bn-colour-accent);
 }
 
+.signal-card-location-link:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+    border-radius: var(--bn-radius-sm);
+}
+
 /* Metrics grid (label | value | viz) */
 .signal-card-metrics {
     flex-shrink: 0;

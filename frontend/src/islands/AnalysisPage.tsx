@@ -363,6 +363,10 @@ function SignalCard({
   const handleLocationClick = (e: React.MouseEvent) => {
     if (e.metaKey || e.ctrlKey || e.shiftKey) return;
     e.preventDefault();
+    // The whole card is role="button" and focuses on click. Without this the
+    // link fires BOTH — you land in the quotes lens and the analysis lens has
+    // silently re-focused this card and re-pointed the inspector behind you.
+    e.stopPropagation();
     window.switchToTab?.("quotes");
     window.scrollToAnchor?.(`${anchorPrefix}${slug}`);
   };
@@ -413,7 +417,15 @@ function SignalCard({
         <div className="signal-card-identity">
           {signal.signalName ? (
             <>
-              <span className="signal-card-source">{signal.location}</span>
+              <span className="signal-card-source">
+                <a
+                  href={locationHref}
+                  className="signal-card-location-link"
+                  onClick={handleLocationClick}
+                >
+                  {signal.location}
+                </a>
+              </span>
               <div className="signal-card-location">{signal.signalName}</div>
               {/* `bn-lead-para` carries the treatment; `renderLead` only decides
                   where the break falls. No `autoSplit` — the model writes the

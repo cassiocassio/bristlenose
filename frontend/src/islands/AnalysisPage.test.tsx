@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { AnalysisPage } from "./AnalysisPage";
 import type { CodebookAnalysisListResponse, SentimentAnalysisData } from "../utils/types";
+import { resetAnalysisSignalStore } from "../contexts/AnalysisSignalStore";
 
 // ---------------------------------------------------------------------------
 // Mock data — per-codebook shape
@@ -644,6 +645,68 @@ describe("AnalysisPage", () => {
     // Plain click — should intercept
     fireEvent.click(locationLink);
     expect(window.switchToTab).toHaveBeenCalledWith("quotes");
+  });
+
+  // An ELABORATED card renders a different header from a nameless one: the
+  // headline is the signal's own name and the location moves to the source
+  // line above it. That branch had no location link at all, so the card that
+  // tells the researcher most was the one that could not hand them the quotes
+  // — and no fixture in this file carried a signal_name, which is why nothing
+  // caught it.
+  it("an elaborated signal card's location is a link to the quotes lens", async () => {
+    const named: CodebookAnalysisListResponse = JSON.parse(JSON.stringify(mockCbData));
+    named.codebooks[0].signals[0].signal_name = "Checkout Latency Tension";
+    named.codebooks[0].signals[0].pattern = "tension";
+    named.codebooks[0].signals[0].elaboration =
+      "Participants stalled at payment. || Two of three waited long enough to comment on it.";
+    mockFetchCodebookAnalysis(named);
+    (window as unknown as Record<string, unknown>).switchToTab = vi.fn();
+    (window as unknown as Record<string, unknown>).scrollToAnchor = vi.fn();
+    render(<AnalysisPage projectId="1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Checkout Latency Tension")).toBeTruthy();
+    });
+
+    const card = screen
+      .getAllByTestId("bn-signal-card")
+      .find((c) => c.textContent?.includes("Checkout Latency Tension")) as HTMLElement;
+    const link = card.querySelector("a.signal-card-location-link") as HTMLElement;
+    expect(link).toBeTruthy();
+    expect(link.textContent).toBe("Checkout");
+
+    fireEvent.click(link);
+    expect(window.switchToTab).toHaveBeenCalledWith("quotes");
+    expect(window.scrollToAnchor).toHaveBeenCalledWith("section-checkout");
+  });
+
+  // The card is itself role="button" and focuses on click, so a link inside it
+  // must stop the event: otherwise following the location to the quotes lens
+  // also re-focuses the card and re-points the inspector behind your back.
+  it("clicking a card's location does not also focus the card", async () => {
+    resetAnalysisSignalStore();   // module singleton — an earlier test's focus leaks in
+    const named: CodebookAnalysisListResponse = JSON.parse(JSON.stringify(mockCbData));
+    named.codebooks[0].signals[0].signal_name = "Checkout Latency Tension";
+    mockFetchCodebookAnalysis(named);
+    (window as unknown as Record<string, unknown>).switchToTab = vi.fn();
+    (window as unknown as Record<string, unknown>).scrollToAnchor = vi.fn();
+    render(<AnalysisPage projectId="1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Checkout Latency Tension")).toBeTruthy();
+    });
+
+    const card = screen
+      .getAllByTestId("bn-signal-card")
+      .find((c) => c.textContent?.includes("Checkout Latency Tension")) as HTMLElement;
+    expect(card.classList.contains("bn-selected")).toBe(false);
+
+    fireEvent.click(card.querySelector("a.signal-card-location-link") as HTMLElement);
+
+    await waitFor(() => {
+      expect(window.switchToTab).toHaveBeenCalledWith("quotes");
+    });
+    expect(card.classList.contains("bn-selected")).toBe(false);
   });
 
   it("heatmap cells with count=1 get data-count attribute", async () => {

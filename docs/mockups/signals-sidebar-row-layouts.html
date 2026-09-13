@@ -3665,19 +3665,25 @@ function renderTrail(){
       ${chosen.length || dropped.length ? `<div class="row"><span class="lab">chosen</span>${
         chosen.map(c => `<a class="ci-code st st-chosen" href="#" data-jump="${esc(codeJump(c))}">${esc(c)}</a>`).join("") || "<span class='lab'>\u2014</span>"}</div>
       <div class="row"><span class="lab">abandoned</span>${
-        dropped.map(c => `<a class="ci-code st st-abandoned" href="#" data-jump="${esc(codeJump(c))}">${esc(c)}</a>`).join("") || "<span class='lab'>\u2014</span>"}</div>` : ""}
+        dropped.map(c => {
+          const j = codeJump(c);
+          return j
+            ? `<a class="ci-code st st-abandoned" href="#" data-jump="${esc(j)}">${esc(c)}</a>`
+            : `<span class="st st-abandoned" title="abandoned and removed from the page">${esc(c)}</span>`;
+        }).join("") || "<span class='lab'>\u2014</span>"}</div>` : ""}
       <p><strong>Why.</strong> ${esc(why)}</p>
     </div>`).join("");
 }
 
-/** Where a code's panel lives, for the trail's own links. */
+/** Where a code's panel lives, or null when the design was removed. */
 function codeJump(c){
   if (/^V\d$/.test(c)) return "v:" + c.toLowerCase();
   if (/^T/.test(c)) return "treat:" + ({T1:"shipped",T2:"hide",T3:"backfill",T4:"flat",
                                         T5:"loc",T6:"locn","T6b":"locq"}[c] || "shipped");
   if (/^U/.test(c)) return "u:" + c;
   if (/^C/.test(c)) return "card:" + c;
-  if (/^S/.test(c)) return "sec:sbench:" + c;
+  // Only the panels that still exist. A code with no panel is named, not linked.
+  if (/^S/.test(c)) return ["S1","S2"].includes(c) ? "sec:sbench:" + c : null;
   if (/^J/.test(c)) return "cellidx:jobbench:" + (+c[1] - 1);
   if (/^D/.test(c)) return "cellidx:depthbench:" + (+c[1] - 1);
   return "v:v0";

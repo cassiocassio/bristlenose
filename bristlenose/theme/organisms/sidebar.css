@@ -962,24 +962,33 @@ body.dragging * {
 
 /* ── Signal sidebar entries (Analysis tab) ─────────────────────────── */
 
+/* The location heading. It carried uppercase and letterspacing while it named
+   a KIND — "Section", "Theme" — which is a category and reads like one. It
+   names a PLACE now, and the same argument that took uppercase off the card's
+   location applies here verbatim: all-caps makes "Shopping Bag" look like a
+   category, and that is not how the Quotes lens renders the same string. The
+   two lenses name the same things. It also takes the full text colour rather
+   than muted, because it is the thing the rows below it belong to. */
 .toc-sub-heading {
     font-size: var(--bn-text-caption);
     line-height: var(--bn-text-caption-lh);
     font-weight: var(--bn-weight-emphasis);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--bn-colour-muted);
+    color: var(--bn-colour-text);
     padding: 0 var(--bn-space-sm);
     margin-top: var(--bn-space-sm);
 }
 
+/* The row is a BLOCK, and the chip flows inline after the words.
+   It was a flex row with the name at flex:1 and the chip at flex-shrink:0 —
+   V0's pinned badge, which the chosen row layout explicitly drops. Pinning
+   cost two things at once. A long chip ("Aesthetics and minimalism") squeezed
+   the name column to roughly one word wide and the wrap then broke mid-word:
+   "Homepa / ge / Content / Tension". And a row with no elaborated name had
+   nothing to push its chip rightward, so the chip column jumped between the
+   left and right edges down the list. Inline, every chip simply follows its
+   own words, and a nameless row's chip sits where its row starts. */
 .signal-entry {
-    display: flex;
-    /* baseline alignment pins the chip to the name's FIRST line, which is
-       right while a name is one line and wrong the moment it wraps — the chip
-       would float beside the opening words with the rest hanging under it. */
-    align-items: flex-start;
-    gap: var(--bn-space-xs);
+    display: block;
     padding: 0.2rem var(--bn-space-sm);
     border-radius: var(--bn-radius-md);
     cursor: pointer;
@@ -1010,20 +1019,23 @@ body.dragging * {
     font-size: var(--bn-text-label);
     line-height: var(--bn-text-label-lh);
     font-weight: var(--bn-weight-normal);
-    flex: 1;
-    min-width: 0;
     /* Rows WRAP. Ten variants were built to ask whether a row should lose
        words or gain a line. Measured over the 58 named rows that survive
        de-duplication, a row runs 34 characters at the median once its group
        chip is beside it, 42 at p90 and 50 at its longest — so against a
        28-character line 90% of them truncated. The ellipsis mechanism was
-       never broken; the outcome was. The chip is flex-shrink:0, so what a
-       reader got was the words cut and the label kept. The cost is height,
-       and de-duplication has already paid it. */
-    overflow-wrap: anywhere;
+       never broken; the outcome was. The cost is height, and de-duplication
+       has already paid it.
+
+       `break-word`, not `anywhere`: anywhere breaks a word whenever breaking
+       helps the line fit, which is how a squeezed column produced "Homepa /
+       ge". break-word only breaks a word that cannot fit on a line of its
+       own — the case it is actually for. */
+    overflow-wrap: break-word;
 }
 
 .signal-entry .badge {
-    flex-shrink: 0;
+    vertical-align: 1px;
+    margin-left: 0.2rem;
     font-size: var(--bn-text-micro);
 }

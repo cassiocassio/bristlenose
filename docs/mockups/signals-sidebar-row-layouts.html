@@ -352,6 +352,7 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
 .sig-sub:focus-visible { outline:2px solid var(--bn-colour-accent); outline-offset:1px; }
 .sig-sub-name { display:block; font-size:var(--bn-text-label); line-height:1.35; }
 .sig-sub .sig-badges { margin-top:.14rem; }
+.sig-sub-name .badge.grp { vertical-align:1px; margin-left:.15rem; }
 .sig-loc-rule { height:1px; background:var(--bn-colour-border); margin:.35rem 0 .1rem; opacity:.7; }
 
 /* ── Navigation structures for one project ──────────────────────────────── */
@@ -1343,6 +1344,7 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
         <button class="pbtn" data-treat="flat"><b>T4</b> one flat list</button>
         <button class="pbtn" data-treat="loc"><b>T5</b> by location</button>
         <button class="pbtn" data-treat="locn"><b>T6</b> by location · named</button>
+        <button class="pbtn" data-treat="locq"><b>T6b</b> by location · name + group</button>
       </div>
     </div>
 
@@ -2202,9 +2204,10 @@ function sentRows(p){ return (state.vol === 1 && p.sentWeak) ? p.sentWeak : p.se
      D1–D3  navigation depths
    A project panel is stamped with both its treatment and its project, so a
    screenshot of one says what it is without its caption. */
-const TREAT_CODE = { shipped:"T1", hide:"T2", backfill:"T3", flat:"T4", loc:"T5", locn:"T6" };
+const TREAT_CODE = { shipped:"T1", hide:"T2", backfill:"T3", flat:"T4", loc:"T5", locn:"T6", locq:"T6b" };
 const TREAT_NAME = { shipped:"as shipped", hide:"hide Sentiment", backfill:"hide + backfill",
-                     flat:"one flat list", loc:"by location", locn:"by location \u00b7 named" };
+                     flat:"one flat list", loc:"by location", locn:"by location \u00b7 named",
+                     locq:"by location \u00b7 name + group" };
 function projCode(id){ return "P" + (PROJECTS.findIndex(p => p.id === id) + 1); }
 
 /* The app's own per-section cut (MAX_SIGNALS in AnalysisPage.tsx), and the
@@ -2365,14 +2368,42 @@ function hitBadge(cls, text, target, n, style){
  * location is what makes the group name vary from chip to chip.
  * The trade is explicit: destinations instead of codes.
  */
-function locHTML(p, named){
+/**
+ * Three ways to say what is under a place.
+ *
+ *   "chips"  T5  — one chip per signal, labelled by its GROUP.
+ *   "named"  T6  — a sub-row per signal: name, pattern, and the codes present.
+ *   "quiet"  T6b — a sub-row per signal: the name, and the group as a trailing
+ *                  chip. No pattern, no codes.
+ *
+ * T6b exists because a group name alone does not navigate. "confusion" is a tag
+ * and stands on its own; "Structure" is a CATEGORY of tag, and a researcher
+ * reading it says "structure is everywhere — what about it?". The elaborated
+ * name answers that, and the group chip situates it. The codes are largely
+ * redundant with the name that was written from them — "Self-directed Error
+ * Recovery" over "error recovery, workaround" — so the sidebar drops them and
+ * the signal card keeps them.
+ */
+function locHTML(p, mode){
+  const named = mode === "named";
+  const quiet = mode === "quiet";
   const places = locationEntries(p);
   if (!places.length) return `<div class="sig-empty">nothing above the floor</div>`;
   return places.map((e, li) => {
     const sent = e.sents.map(x =>
       hitBadge(badgeClass(x.label), x.label, `${e.loc} \u00b7 ${x.label}`, x.index + 1)).join("");
     let cb;
-    if (named){
+    if (quiet){
+      cb = e.cbs.map((c, i) => {
+        const bg = tagBg(c.colourSet, 1);
+        const chip = `<span class="badge grp"${bg ? ` style="background:${bg}"` : ""}>${esc(c.group)}</span>`;
+        // An un-elaborated signal's "name" is the place it already sits under,
+        // so there is no sentence to show — the group chip is the whole row.
+        const body = c.name === e.loc ? chip : `${esc(c.name)} ${chip}`;
+        return `<a class="sig-sub sig-hit" href="#" data-target="${esc(e.loc)} \u00b7 ${esc(c.group)}"`
+             + ` data-signal="${i + 1}"><span class="sig-sub-name">${body}</span></a>`;
+      }).join("");
+    } else if (named){
       cb = e.cbs.map((c, i) => {
         const pat = c.pattern ? `<span class="pattern-label pattern-${c.pattern}">${esc(c.pattern)}</span>` : "";
         const pills = c.tags.slice(0, state.cap).map((t, j) => {
@@ -2401,7 +2432,7 @@ function locHTML(p, named){
          + `<span class="sig-name"><a class="sig-hit name-hit" href="#" data-target="${esc(e.loc)}"`
          + ` data-signal="1">${esc(e.loc)}</a></span>`
          + (sent ? `<span class="sig-badges">${sent}</span>` : "")
-         + (named ? cb : (cb ? `<span class="sig-badges">${cb}</span>` : ""))
+         + ((named || quiet) ? cb : (cb ? `<span class="sig-badges">${cb}</span>` : ""))
          + `</div>`;
   }).join("");
 }
@@ -2413,8 +2444,9 @@ function locHTML(p, named){
  */
 function panelBody(p, treat){
   if (treat === "flat") return flatHTML(p);
-  if (treat === "loc")  return locHTML(p, false);
-  if (treat === "locn") return locHTML(p, true);
+  if (treat === "loc")  return locHTML(p, "chips");
+  if (treat === "locn") return locHTML(p, "named");
+  if (treat === "locq") return locHTML(p, "quiet");
   const { sent, tags } = projectRows(p, treat);
   // AnalysisSidebar renders each block only when it has rows — an emptied
   // Codebooks section loses its heading too, it does not sit there blank.
@@ -2477,7 +2509,7 @@ function measureProjects(){
     const sentLocs = new Set(sent.map(r => r[0]));
     const repeats = tags.filter(r => sentLocs.has(r[5])).length;
 
-    if (state.treat === "loc" || state.treat === "locn"){
+    if (state.treat === "loc" || state.treat === "locn" || state.treat === "locq"){
       const places = locationEntries(p);
       const dests = places.reduce((n, e) => n + e.sents.length + e.cbs.length, 0);
       const supply = flatEntries(p).length + 0;
@@ -2543,7 +2575,7 @@ function measureProjects(){
  */
 const REAL_ID = "ikea";
 const REAL_ID_CODE = "P1";        // ikea is first in PROJECTS; asserted below
-const REAL_TREATS = ["shipped", "backfill", "flat", "loc", "locn"].map(
+const REAL_TREATS = ["shipped", "backfill", "flat", "loc", "locn", "locq"].map(
   k => [k, `${TREAT_CODE[k]}\u00b7${REAL_ID_CODE} ${TREAT_NAME[k]}`]);
 
 if (projCode(REAL_ID) !== REAL_ID_CODE)

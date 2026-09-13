@@ -451,9 +451,30 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
   color:var(--bn-colour-text); margin-top:var(--bn-space-lg); }
 .n-rest { font-size:var(--bn-text-label); line-height:1.55;
   color:var(--bn-colour-muted); margin-top:var(--bn-space-lg); }
+/* The hero chip is the control that opens the working, so it is a real
+   <button>: keyboard reachable, aria-expanded, and a focus ring that matches
+   the one every nav row already uses. The caret is always drawn, just quiet —
+   a control has to read as a control BEFORE the pointer arrives, and the chip
+   is otherwise indistinguishable from the tinted chips that are not clickable. */
 .n-hero { display:inline-flex; align-items:baseline; gap:.5rem; cursor:pointer;
-  padding:.3rem .6rem; border-radius:var(--bn-radius-md); border:1px solid transparent; }
+  padding:.3rem .6rem; border-radius:var(--bn-radius-md); border:1px solid transparent;
+  font:inherit; color:inherit; text-align:left; }
 .n-hero:hover { border-color:var(--bn-colour-border-hover); }
+.n-hero:focus-visible { outline:2px solid var(--bn-colour-accent); outline-offset:1px; }
+.n-hero .n-hcar { font-size:var(--bn-text-micro); opacity:.4; margin-left:.05rem;
+  transition:transform .12s ease, opacity .12s ease; }
+.n-hero:hover .n-hcar, .n-hero:focus-visible .n-hcar { opacity:.85; }
+.n-hero[aria-expanded="true"] { border-color:var(--bn-colour-border-hover); }
+.n-hero[aria-expanded="true"] .n-hcar { transform:rotate(180deg); opacity:.85; }
+@media (prefers-reduced-motion: reduce) { .n-hero .n-hcar { transition:none; } }
+
+/* Section R: a card that brings no new quote is drawn struck and faded, so the
+   bench shows what the rule removes rather than just the shorter list. */
+.u-row.drop { opacity:.36; }
+.u-row.drop .u-name { text-decoration:line-through; text-decoration-thickness:1px; }
+.r-why { display:block; font-size:var(--bn-text-micro); color:var(--bn-colour-muted);
+  padding:0 var(--bn-space-sm) .2rem 1rem; }
+.r-q { font-family:var(--bn-font-mono); }
 .n-hero .n-hlabel { font-family:var(--bn-font-mono); font-size:var(--bn-text-body); }
 .n-hero .n-hnum { font-family:var(--bn-font-mono); font-size:var(--bn-text-body);
   font-weight:var(--bn-weight-starred); }
@@ -701,6 +722,38 @@ a.ci-code:focus-visible { outline:2px solid var(--bn-colour-accent); outline-off
   </div>
 
   <div class="bench" id="sbench"></div>
+
+  <div class="divider"></div>
+  <div class="section-head">
+    <h2>R &middot; one card per set of quotes</h2>
+    <p>Once a card is a <em>location &times; tag group</em>, a place with five codebooks
+       installed draws the same quotes several times over. Under
+       <strong>Beds &amp; Mattresses Category</strong> the app computes
+       <strong>nine cards from seven quotes by two participants</strong>; six of the nine
+       sit exactly on the two-quote floor, and two of them
+       &mdash; <code>Status visibility</code> and <code>Feedback</code> &mdash; are the
+       <em>same two quotes</em>, named once in Nielsen&rsquo;s vocabulary and once in
+       Norman&rsquo;s.</p>
+    <p><strong>The rule.</strong> Walk a location&rsquo;s cards strongest first and keep a
+       card only if it brings a quote none of the kept cards already carries. Ties break on
+       quote count, so the card covering more wins. Attention is the expensive thing: asking
+       a researcher to read the same two quotes five times under five headings spends it for
+       nothing, and the answer they reach the fifth time is the one they reached the first.
+       You would not duplicate a sticky across five clusters on a whiteboard &mdash; you put
+       it in the strongest group under the strongest interpretation.</p>
+    <p><strong>Measured across nine real projects</strong> &mdash; 74 locations, 106 cards:
+       the rule hides <strong>21</strong>, and costs <strong>no evidence at all</strong>,
+       because every quote keeps a card pointing at it. It is entirely a multi-codebook
+       effect: every single-codebook project in the corpus already draws exactly one card
+       per location and loses nothing.</p>
+    <p><strong>R3 is why the Sentiment card is exempt.</strong> Sentiment is a one-group
+       framework, so its concentration is structurally 1.00 and its composite is handicapped
+       against every codebook card. Run the rule unguarded and the Sentiment card is deleted
+       in 5 of the 74 locations &mdash; in Shopping Bag it is the second-strongest card
+       present. The exemption is a guard, not a fix; the fix is normalisation, which is open.</p>
+  </div>
+
+  <div class="bench" id="rbench"></div>
 
   <div class="divider"></div>
   <div class="section-head">
@@ -2262,6 +2315,7 @@ const cardbench = document.getElementById("cardbench");
 const sbench = document.getElementById("sbench");
 const trail = document.getElementById("trail");
 const nbench = document.getElementById("nbench");
+const rbench = document.getElementById("rbench");
 
 function esc(s){ return s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 function badgeClass(label){ return SENTIMENTS.includes(label) ? "badge badge-"+label : "badge"; }
@@ -2387,6 +2441,7 @@ function render(){
   renderCards();
   renderS();
   renderN();
+  renderR();
   renderCodeIndex();
   renderTrail();
 }
@@ -3402,7 +3457,7 @@ function jumpToCode(jump){
   else if (kind === "card")    el = document.querySelector(`#cardbench .cell[data-c="${a}"]`);
   else if (kind === "u")       el = document.querySelector(`#ubench .cell[data-u="${a}"]`);
   else if (kind === "cellidx") el = document.querySelectorAll(`#${a} .cell`)[+b];
-  else if (kind === "sec")     el = document.querySelector(`#${a} .cell[data-s="${b}"], #${a} .cell[data-n="${b}"]`);
+  else if (kind === "sec")     el = document.querySelector(`#${a} .cell[data-s="${b}"], #${a} .cell[data-n="${b}"], #${a} .cell[data-r="${b}"]`);
   else if (kind === "treat"){
     const btn = document.querySelector(`[data-treat="${a}"]`);
     if (btn && !btn.classList.contains("on")) btn.click();   // re-renders the bench
@@ -3421,6 +3476,28 @@ document.addEventListener("click", e => {
   if (!link) return;
   e.preventDefault();
   jumpToCode(link.dataset.jump);
+});
+
+/* The hero chip toggles the working.
+ *
+ * Delegated from the document so it covers every card on the page and survives
+ * a re-render — the benches replace their innerHTML on every width, floor and
+ * theme change, which would strip a listener bound to the button itself.
+ *
+ * The charts stay in the DOM and are hidden with the `hidden` attribute rather
+ * than rebuilt, so the open/closed state is one attribute on two elements and
+ * the text reflows around the chart exactly as it does in the card today. */
+document.addEventListener("click", e => {
+  const hero = e.target.closest(".n-hero");
+  if (!hero) return;
+  e.preventDefault();
+  const card = hero.closest(".card");
+  const charts = card && card.querySelector(".n-charts");
+  if (!charts) return;
+  const open = charts.hidden;                     // about to become open
+  charts.hidden = !open;
+  hero.setAttribute("aria-expanded", open ? "true" : "false");
+  hero.title = (open ? "hide" : "show") + " how the number was reached";
 });
 
 /* -- Section S: one rule for what a card is -----------------------------
@@ -3615,6 +3692,10 @@ const STATUS = {
   C4:["chosen","the location link restored"],
   S1:["current","sentiment analysed at tag level beside codebooks at group level"],
   S2:["chosen","a card is (location \u00d7 tag group), always"],
+  R1:["current","every cell above the floor becomes a card, however many times the same quotes recur"],
+  R2:["chosen","one card per set of quotes \u2014 the strongest reading is the only one shown"],
+  R3:["abandoned","unguarded, the rule deletes the Sentiment card wherever codebooks cover its quotes"],
+  R4:["chosen","the Sentiment card is exempt from being hidden"],
 };
 
 const DECISIONS = [
@@ -3640,17 +3721,125 @@ const DECISIONS = [
    "Punctuation is an instruction: an em dash says keep going, a full stop offers a stopping point. Measured on P1's 19 elaborations, 19 of 19 continuations carry an em dash and 0 of 19 are more than one sentence \u2014 the prompt asked for exactly that. Volume and meaning were never the problem; the missing stopping point was. Typography uses .analysis-codebook-heading's existing trio, nothing new."],
   ["open", "How is signal normalised so it compares across codebooks and sentiment?",
    [], [],
-   "Unsettled, and everything ordered by strength depends on it \u2014 including the claim a location-ranked nav makes by existing. The target is a single score a researcher never has to reason about, sleep-score shaped.",
-   "composite = conc \u00d7 breadth \u00d7 intensity, and only conc carries the shape of the table it came from. Its ceiling is grand_total / col_total: the sentiment matrix runs 1.46\u201353.33, codebooks 1.00\u20137.33. adjusted_residual is already in metrics.py, ranks nothing, and behaves far better (medians 1.47 against 1.19) \u2014 but it goes negative, and a strong absence is a finding."],
+   "Unsettled, and everything ordered by strength depends on it \u2014 including the claim a location-ranked nav makes by existing. The target is a single score a researcher never has to reason about, sleep-score shaped. HANDED OFF 13 Sep 2026 to a session of its own: it is a maths problem with a semantics problem underneath it \u2014 are three participants this frustrated about a section the same strength as three participants carrying different tags from one Feedback group about the same or another place? This page is the information design of what we have now, and does not answer that.",
+   "composite = conc \u00d7 breadth \u00d7 intensity, and only conc carries the shape of the table it came from. Its ceiling is grand_total / col_total: the sentiment matrix runs 1.46\u201353.33, codebooks 1.00\u20137.33. adjusted_residual is already in metrics.py, ranks nothing, and behaves far better (medians 1.47 against 1.19) \u2014 but it goes negative, and a strong absence is a finding. R3 on this page is the cost of leaving it open: a one-column framework scores 1.00 by construction, so de-duplication deletes the Sentiment card in 5 of 74 locations until the exemption guards it."],
   ["open", "How far down the ranking does elaboration run?",
    [], [],
    "Unsettled, and it costs more than any naming decision on this page.",
    "9 of the 27 cards on P1's five busiest places have no name at all \u2014 six on Beds & Mattresses alone \u2014 because only the top N signals are elaborated. Those rows are exactly the bare group chips T6b exists to remove. Naming per cell would have fixed 7 rows; elaborating further down fixes 9, and needs no prompt change."],
+  ["settled", "What happens when several cards point at the same quotes?",
+   ["R2","R4"], ["R1","R3"],
+   "Walk a location's cards strongest first and keep one only if it brings a quote no kept card already carries; ties break on quote count. The Sentiment card has a standing exemption and is never hidden.",
+   "Attention is the expensive thing. A researcher asked to read the same two quotes under five headings spends it five times for one answer \u2014 and the answer they reach the fifth time is the one they reached the first. On a whiteboard you do not duplicate a sticky across five clusters; you put it in the strongest group under the strongest interpretation. Measured over 9 projects, 74 locations and 106 cards: the rule hides 21 and costs no evidence at all, since every quote keeps a card pointing at it. It is purely a multi-codebook effect \u2014 every single-codebook project in the corpus already draws exactly one card per location. The exemption exists because Sentiment is a one-group framework whose concentration is structurally 1.00, which handicaps it against every codebook card: unguarded, the rule deletes the Sentiment card in 5 of the 74 locations, including one where it is the second-strongest card present."],
   ["open", "Does the main content follow the navigation?",
    [], [],
    "Proposed: location-sectioned cards matching the nav, with the existing two-grid layout kept as the second choice in the view menu. Not drawn yet.",
    "The lens renders two flat grids today, #signal-cards-sentiment and #signal-cards-tags, split by kind rather than place. A location-grouped nav would be a different SHAPE from the cards, not just a different order, and would stop being an index of the page."],
 ];
+
+/* ── Section R: de-duplication ───────────────────────────────────
+   Real, from trial-runs/project-ikea through routes/analysis.py — the same path
+   every other P1 bench on this page uses, at MIN_QUOTES_PER_CELL = 2.
+
+   The last field is the set of quotes under the card, written as ORDINALS over
+   that location's own quotes (1…n, ordered by participant then timecode). They
+   are positions in a list, not identifiers, and carry no quote text — but they
+   are the real sets, so the overlap the rule acts on is the measured overlap.
+
+   row: [group, elaboratedName|null, codebook, colourSet|null, composite, quotes]
+   ───────────────────────────────────────────────────────────── */
+const R_PLACES = {
+  "Beds & Mattresses Category": [
+    ["Behaviour", "Self-directed Error Recovery", "uxr", "ux", 0.643, [2,6]],
+    ["Structure", "Navigation Structure Tension", "garrett", "task", 0.611, [1,2,3,6]],
+    ["Sentiment", "Category Navigation Confusion", "sentiment", null, 0.417, [1,2,3,7]],
+    ["Conceptual model", null, "norman", "task", 0.214, [4,5,7]],
+    ["Real-world matching", null, "nielsen", "ux", 0.214, [3,4]],
+    ["Status visibility", null, "nielsen", "ux", 0.161, [1,2]],
+    ["Feedback", null, "norman", "emo", 0.129, [1,2]],
+    ["Needs and desires", null, "uxr", "emo", 0.122, [3,7]],
+    ["Discoverability", null, "norman", "ux", 0.107, [3,6]],
+  ],
+  "Shopping Bag": [
+    ["Scope", "Scope Feature Mix", "garrett", "emo", 1.048, [1,3]],
+    ["Feedback", "Checkout feedback clarity", "norman", "emo", 0.600, [1,2,4,5]],
+    ["Sentiment", "Bag Experience Tension", "sentiment", null, 0.556, [1,3,5]],
+    ["Status visibility", null, "nielsen", "ux", 0.150, [2,4]],
+  ],
+};
+
+/**
+ * Keep a card only if it brings a quote no stronger kept card already carries.
+ *
+ * Ties break on quote count, then group name — without that the two 0.214 cards
+ * under Beds & Mattresses swap places and the location keeps five cards instead
+ * of four, which is a silent difference nobody would ever look for.
+ */
+function rApply(rows, { rule, exempt }){
+  const cover = new Set();
+  return rows.slice()
+    .sort((a, b) => (b[4] - a[4]) || (b[5].length - a[5].length) || a[0].localeCompare(b[0]))
+    .map(r => {
+      const already = r[5].filter(q => cover.has(q));
+      const protectedRow = exempt && r[2] === "sentiment";
+      const drop = rule && !protectedRow && already.length === r[5].length;
+      if (!drop) r[5].forEach(q => cover.add(q));
+      return { r, drop, protectedRow, already };
+    });
+}
+
+function rHTML(loc, opts){
+  const marked = rApply(R_PLACES[loc], opts);
+  const rows = marked.map(({ r, drop, protectedRow, already }) => {
+    const [grp, name, cb, cs, comp, qs] = r;
+    const chip = cb === "sentiment"
+      ? `<span class="badge badge-confusion">${esc(grp)}</span>`
+      : (() => { const bg = tagBg(cs, 1);
+          return `<span class="badge grp"${bg ? ` style="background:${bg}"` : ""}>${esc(grp)}</span>`; })();
+    const lead = name ? `${esc(name)} ${chip}` : `${esc(loc)} ${chip}`;
+    const qtxt = `<span class="r-q">q${qs.join(" q")}</span>`;
+    const why = drop
+      ? `<span class="r-why">${qtxt} — already on the page</span>`
+      : (protectedRow && already.length === qs.length
+          ? `<span class="r-why">${qtxt} — kept: the Sentiment card is exempt</span>`
+          : `<span class="r-why">${qtxt}</span>`);
+    return `<a class="u-row${drop ? " drop" : ""}" href="#">`
+         + `<span class="u-name">${lead}</span></a>${why}`;
+  }).join("");
+  return `<div class="u-place">${esc(loc)}</div>${rows}`;
+}
+
+const R_PANELS = [
+  ["R1", "every card the app computes", "Beds & Mattresses Category", { rule:false, exempt:false },
+   "Nine cards over seven quotes from two participants. Six sit exactly on the two-quote floor, and three have concentration below 1.0 — the group is rarer here than across the study."],
+  ["R2", "one card per set of quotes", "Beds & Mattresses Category", { rule:true, exempt:true },
+   "Nine to four. Nothing goes dark: every one of the seven quotes still has a card pointing at it, said once instead of five times."],
+  ["R3", "the rule with no exemption", "Shopping Bag", { rule:true, exempt:false },
+   "Scope and Feedback between them cover all three of the Sentiment card's quotes, so it is deleted — and it was the second-strongest card here. Its concentration reads 1.00 because a one-group framework has a one-column matrix, not because the finding is weak."],
+  ["R4", "the Sentiment card exempt", "Shopping Bag", { rule:true, exempt:true },
+   "The same rule with the one standing exemption. Status visibility still goes; Sentiment stays. Interim guard until the two kinds of signal are measured the same way."],
+];
+
+function renderR(){
+  rbench.innerHTML = R_PANELS.map(([code, label, loc, opts, note]) => {
+    const marked = rApply(R_PLACES[loc], opts);
+    const kept = marked.filter(m => !m.drop).length;
+    return `<div class="cell" data-r="${code}">
+      <div class="frame" style="width:${state.w}px">
+        <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span class="cname"><b>${code}</b>\u00b7<b>P1</b> ${esc(label)}</span></div>
+        <div class="panel"><div class="panel-body">${rHTML(loc, opts)}</div></div>
+      </div>
+      <div class="commentary" style="width:${state.w}px">
+        <span class="clabel">Commentary \u00b7 measured</span>
+        <div class="metrics">
+          <span><b>${marked.length}</b> \u2192 <b>${kept}</b> cards</span>
+          <span class="good"><b>${new Set([].concat(...marked.map(m => m.r[5]))).size}</b> quotes, all still reachable</span>
+        </div>
+        <p class="verdict">${note}</p>
+      </div>
+    </div>`;
+  }).join("");
+}
 
 function renderTrail(){
   // Stamp each panel with its status.
@@ -3667,6 +3856,7 @@ function renderTrail(){
   ["U1","U2","U3"].forEach(c => put(`#ubench .cell[data-u="${c}"]`, c));
   ["C1","C2","C3","C4"].forEach(c => put(`#cardbench .cell[data-c="${c}"]`, c));
   ["S1","S2"].forEach(c => put(`#sbench .cell[data-s="${c}"]`, c));
+  ["R1","R2","R3","R4"].forEach(c => put(`#rbench .cell[data-r="${c}"]`, c));
   document.querySelectorAll("#realbench .cell").forEach(cell => {
     const code = (cell.querySelector(".cname b") || {}).textContent;
     const st = STATUS[code];
@@ -3753,16 +3943,19 @@ const N_CODE = {
   pids: ["p2","p3"], allPids: ["p1","p2","p3"],
 };
 
-function nChip(d, big){
+function nChip(d, big, expanded){
   const cls = d.chipKind === "sentiment" ? badgeClass(d.chipLabel) : "badge";
   const bg = d.chipKind === "group" ? tagBg(d.colourSet, 1) : null;
   const style = bg ? ` style="background:${bg}"` : "";
   if (!big) return `<span class="${cls}"${style}>${esc(d.chipLabel)}</span>`;
   // The hero: the group or sentiment, the score, and the control that opens
   // the working. One chip, because most readers need one number.
-  return `<span class="n-hero ${cls}"${style} title="click to show how the number was reached">`
+  return `<button type="button" class="n-hero ${cls}"${style}`
+       + ` aria-expanded="${expanded ? "true" : "false"}"`
+       + ` title="${expanded ? "hide" : "show"} how the number was reached">`
        + `<span class="n-hlabel">${esc(d.chipLabel)}</span>`
-       + `<span class="n-hnum">${esc(d.signal)}</span></span>`;
+       + `<span class="n-hnum">${esc(d.signal)}</span>`
+       + `<span class="n-hcar" aria-hidden="true">\u25be</span></button>`;
 }
 function nCharts(d){
   const bar = p => `<span class="card-bar"><i style="width:${p}%"></i></span>`;
@@ -3792,8 +3985,8 @@ function nCard(d, expanded){
     <div class="card-top"><div class="card-ident">
       <span class="n-loc"><a href="#">${esc(d.loc)}</a></span>
       <div class="n-head">${esc(d.name)}</div>
-    </div><div class="card-right">${nChip(d, true)}</div></div>
-    <div class="n-body">${text}${expanded ? `<div class="n-charts">${nCharts(d)}</div>` : ""}</div>
+    </div><div class="card-right">${nChip(d, true, expanded)}</div></div>
+    <div class="n-body">${text}<div class="n-charts"${expanded ? "" : " hidden"}>${nCharts(d)}</div></div>
     ${nQuotes(d)}
     <div class="card-foot"><a class="card-link" href="#">Hide</a>
       <span class="card-pids"><b>${d.pids.length}/${d.allPids.length}</b>${
@@ -3859,6 +4052,8 @@ function renderCodeIndex(){
       CARDS.map(c => [c[0], c[1], "card:" + c[0]])],
     ["U1\u2013U3 \u00b7 view menu + per-signal targets",
       U_VIEWS.map(v => [v[0], v[1], "u:" + v[0]])],
+    ["R1\u2013R4 \u00b7 de-duplication",
+      R_PANELS.map(r => [r[0], r[1], "sec:rbench:" + r[0]])],
     ["D1\u2013D3 \u00b7 navigation depth",
       NAV_DEPTHS.map((d, i) => [half(d[0])[0], half(d[0])[1], "cellidx:depthbench:" + i])],
   ];

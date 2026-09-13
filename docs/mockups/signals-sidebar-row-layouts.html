@@ -439,6 +439,28 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
 .card-pid { padding:.08rem .3rem; border-radius:var(--bn-radius-sm);
   background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); }
 .card-pid.off { opacity:.32; }
+
+/* ── Section N: the synthesis ───────────────────────────────────────────── */
+.n-loc { display:block; font-size:var(--bn-text-label); line-height:1.35;
+  font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-text); }
+.n-loc a { color:inherit; text-decoration:none; }
+.n-loc a:hover { color:var(--bn-colour-accent); }
+.n-head { font-size:var(--bn-text-heading); line-height:1.3;
+  font-weight:var(--bn-weight-emphasis); }
+.n-lead { font-size:var(--bn-text-label); line-height:1.55;
+  color:var(--bn-colour-text); margin-top:var(--bn-space-lg); }
+.n-rest { font-size:var(--bn-text-label); line-height:1.55;
+  color:var(--bn-colour-muted); margin-top:var(--bn-space-lg); }
+.n-hero { display:inline-flex; align-items:baseline; gap:.5rem; cursor:pointer;
+  padding:.3rem .6rem; border-radius:var(--bn-radius-md); border:1px solid transparent; }
+.n-hero:hover { border-color:var(--bn-colour-border-hover); }
+.n-hero .n-hlabel { font-family:var(--bn-font-mono); font-size:var(--bn-text-body); }
+.n-hero .n-hnum { font-family:var(--bn-font-mono); font-size:var(--bn-text-body);
+  font-weight:var(--bn-weight-starred); }
+.n-body { display:flex; gap:var(--bn-space-lg); align-items:flex-start; }
+.n-text { flex:1; min-width:0; }
+.n-charts { flex-shrink:0; }
+.n-tags { display:flex; flex-wrap:wrap; gap:3px; margin-top:var(--bn-space-md); }
 .sig-loc-rule { height:1px; background:var(--bn-colour-border); margin:.35rem 0 .1rem; opacity:.7; }
 
 /* ── Navigation structures for one project ──────────────────────────────── */
@@ -572,6 +594,30 @@ a.ci-code:focus-visible { outline:2px solid var(--bn-colour-accent); outline-off
        is not the same as chosen. Every code below is a link to the panel it names.</p>
   </div>
   <div id="trail"></div>
+
+  <div class="divider"></div>
+  <div class="section-head">
+    <h2>N &middot; the latest thinking, drawn</h2>
+    <p>Everything the trail marks <span class="st st-chosen">chosen</span>, applied at
+       once: the navigation by location with T6b rows, and both card kinds in both
+       states. <strong>The two cards are the same design</strong> &mdash; the only
+       difference is whether the chip names a sentiment or a tag group, which is what
+       &ldquo;a card is a location &times; a tag group&rdquo; buys.</p>
+    <p>Real throughout: locations, group names, tags present, timecodes, participant ids,
+       intensities, and every metric, read at <code>MIN_QUOTES_PER_CELL = 2</code>.
+       <strong>Not real, and said here rather than buried:</strong> quote text is
+       synthetic at each real quote&rsquo;s measured length, and the two elaborations are
+       rewritten into the two-sentence grammar &mdash; the stored ones are still single
+       em-dash-joined sentences, so this is what the prompt change would produce, not what
+       it has produced.</p>
+    <p><strong>Look at N3 beside N5.</strong> The sentiment card&rsquo;s Conc. reads
+       1.0&times; and the codebook card&rsquo;s 2.2&times;, and the first is a structural
+       constant &mdash; a one-group framework has a one-column matrix, so concentration
+       cannot say anything there. The two numbers in the hero chips are not yet measured
+       the same way, which is the open normalisation question showing up in the drawing.</p>
+  </div>
+
+  <div class="bench" id="nbench"></div>
 
 
   <div class="bench" id="bench"></div>
@@ -2196,6 +2242,7 @@ const ubench = document.getElementById("ubench");
 const cardbench = document.getElementById("cardbench");
 const sbench = document.getElementById("sbench");
 const trail = document.getElementById("trail");
+const nbench = document.getElementById("nbench");
 
 function esc(s){ return s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 function badgeClass(label){ return SENTIMENTS.includes(label) ? "badge badge-"+label : "badge"; }
@@ -2320,6 +2367,7 @@ function render(){
   renderU();
   renderCards();
   renderS();
+  renderN();
   renderCodeIndex();
   renderTrail();
 }
@@ -3335,7 +3383,7 @@ function jumpToCode(jump){
   else if (kind === "card")    el = document.querySelector(`#cardbench .cell[data-c="${a}"]`);
   else if (kind === "u")       el = document.querySelector(`#ubench .cell[data-u="${a}"]`);
   else if (kind === "cellidx") el = document.querySelectorAll(`#${a} .cell`)[+b];
-  else if (kind === "sec")     el = document.querySelector(`#${a} .cell[data-s="${b}"]`);
+  else if (kind === "sec")     el = document.querySelector(`#${a} .cell[data-s="${b}"], #${a} .cell[data-n="${b}"]`);
   else if (kind === "treat"){
     const btn = document.querySelector(`[data-treat="${a}"]`);
     if (btn && !btn.classList.contains("on")) btn.click();   // re-renders the bench
@@ -3635,6 +3683,138 @@ function codeJump(c){
   return "v:v0";
 }
 
+/* ── Section N: the latest thinking, drawn ────────────────────────────────
+   One coherent set rather than variants: the navigation, and the two card kinds
+   in both states. Everything the trail marks "chosen" applied at once.
+
+   Real: locations, group names, tags present, quote timecodes, participant ids,
+   intensities, and every metric (composite / conc / n_eff / intensity), read at
+   MIN_QUOTES_PER_CELL = 2.
+   Not real, and marked here rather than buried: the quote TEXT is synthetic at
+   each real quote's measured character length, and the elaborations are rewritten
+   into the two-sentence grammar the prompt change asks for — the stored ones are
+   still single em-dash-joined sentences. */
+
+const N_SENT = {
+  loc: "Beds & Mattresses Category", name: "Category Navigation Confusion",
+  chipLabel: "confusion", chipKind: "sentiment", colourSet: "sentiment",
+  signal: "0.42", conc: "1.0\u00d7", concPct: 20, agree: "3.0", agreePct: 100,
+  intensity: "1.2", dots: 1,
+  lead: "The Beds & Mattresses category consistently leaves participants disoriented.",
+  rest: "One couldn't find king-size options. Another questioned why the cart is called a bag, and a third suspected a technical fault when the page slowed.",
+  tags: ["confusion", "frustration"],
+  quotes: [
+    ["00:39","p1",1,"I honestly can't tell which of these is the king size \u2014 the label and the picture disagree.","confusion"],
+    ["00:57","p1",2,"I have been round this three times now and I still cannot get to the size I actually wanted.","frustration"],
+    ["00:45","p2",1,"Why is it called a bag and not a basket? Every other site calls it a basket, so I keep looking in the wrong corner of the page for it.","confusion"],
+    ["02:02","p2",1,"It has gone very slow all of a sudden. I can't tell if that is my connection or whether the site has actually stopped responding to my clicks.","confusion"],
+  ],
+  pids: ["p1","p2"], allPids: ["p1","p2","p3"],
+};
+const N_CODE = {
+  loc: "Shopping Bag", name: "Checkout feedback clarity",
+  chipLabel: "Feedback", chipKind: "group", colourSet: "emo",
+  signal: "0.60", conc: "2.2\u00d7", concPct: 44, agree: "2.0", agreePct: 67,
+  intensity: "1.2", dots: 1,
+  lead: "The shopping bag communicates most state changes clearly and promptly.",
+  rest: "Participants readily read basket totals, delivery options and stock notifications. But one critical system message left a participant unsure what action was required, and they disengaged.",
+  tags: ["system response", "ambiguous feedback"],
+  quotes: [
+    ["03:36","p2",1,"Right, that has taken the item out of the bag and it says I can save it for later instead.","system response"],
+    ["02:41","p3",1,"Basket total is there, and the guest option.","system response"],
+    ["03:02","p3",1,"Express delivery it is, and it will tell me when the out-of-stock one comes back.","system response"],
+    ["03:13","p3",2,"Something was removed and now it wants me to confirm I have read the policy. I am not sure what it actually wants from me here, so I think I am done.","ambiguous feedback"],
+  ],
+  pids: ["p2","p3"], allPids: ["p1","p2","p3"],
+};
+
+function nChip(d, big){
+  const cls = d.chipKind === "sentiment" ? badgeClass(d.chipLabel) : "badge";
+  const bg = d.chipKind === "group" ? tagBg(d.colourSet, 1) : null;
+  const style = bg ? ` style="background:${bg}"` : "";
+  if (!big) return `<span class="${cls}"${style}>${esc(d.chipLabel)}</span>`;
+  // The hero: the group or sentiment, the score, and the control that opens
+  // the working. One chip, because most readers need one number.
+  return `<span class="n-hero ${cls}"${style} title="click to show how the number was reached">`
+       + `<span class="n-hlabel">${esc(d.chipLabel)}</span>`
+       + `<span class="n-hnum">${esc(d.signal)}</span></span>`;
+}
+function nCharts(d){
+  const bar = p => `<span class="card-bar"><i style="width:${p}%"></i></span>`;
+  const dots = n => `<span class="card-dots">${[0,1,2].map(i =>
+    `<i class="${i < n ? "on" : (i === n ? "half" : "")}"></i>`).join("")}</span>`;
+  return `<div class="card-metrics">
+    <span class="card-mlabel">Conc.</span><span class="card-mval">${d.conc}</span>${bar(d.concPct)}
+    <span class="card-mlabel">Agree.</span><span class="card-mval">${d.agree}</span>${bar(d.agreePct)}
+    <span class="card-mlabel">Intensity</span><span class="card-mval">${d.intensity}</span>${dots(d.dots)}
+  </div>`;
+}
+function nQuotes(d){
+  return `<div class="card-quotes">${d.quotes.map(q => {
+    const cls = badgeClass(q[4]);
+    const bg = cls === "badge" ? tagBg(d.colourSet, d.tags.indexOf(q[4])) : null;
+    return `<div class="cq"><span class="cq-tc">[${q[0]}]</span>`
+         + `<span class="cq-body">${esc(q[3])} <span class="badge">${esc(q[1])}</span>`
+         + `<span class="${cls}"${bg ? ` style="background:${bg}"` : ""}>${esc(q[4])}</span></span>`
+         + `<span class="card-dots">${[0,1,2].map(i =>
+             `<i class="${i < q[2] ? "on" : ""}"></i>`).join("")}</span></div>`;
+  }).join("")}</div>`;
+}
+function nCard(d, expanded){
+  const text = `<div class="n-text"><p class="n-lead">${esc(d.lead)}</p>`
+             + `<p class="n-rest">${esc(d.rest)}</p></div>`;
+  return `<div class="card sel">
+    <div class="card-top"><div class="card-ident">
+      <span class="n-loc"><a href="#">${esc(d.loc)}</a></span>
+      <div class="n-head">${esc(d.name)}</div>
+    </div><div class="card-right">${nChip(d, true)}</div></div>
+    <div class="n-body">${text}${expanded ? `<div class="n-charts">${nCharts(d)}</div>` : ""}</div>
+    ${nQuotes(d)}
+    <div class="card-foot"><a class="card-link" href="#">Hide</a>
+      <span class="card-pids"><b>${d.pids.length}/${d.allPids.length}</b>${
+        d.allPids.map(p => `<span class="card-pid${d.pids.includes(p) ? "" : " off"}">${p}</span>`).join("")}</span></div>
+  </div>`;
+}
+/* The navigation: by location, T6b rows, sentiment a group among the rest. */
+function nNav(){
+  return S_CARDS.map(([loc, , groups]) => `<div class="nv">
+    <span class="nv-place">${esc(loc)}</span>
+    ${groups.map(g => {
+      const bg = tagBg(g[3], 1);
+      const chip = `<span class="badge grp"${bg ? ` style="background:${bg}"` : ""}>${esc(g[1])}</span>`;
+      return `<a class="u-row" href="#"><span class="u-name">`
+           + `${g[0] ? esc(g[0]) + " " : ""}${chip}</span></a>`;
+    }).join("")}
+  </div>`).join("");
+}
+
+const N_PANELS = [
+  ["N1", "navigation", 260, nNav,
+   "By location, T6b rows, and the Sentiment group sitting among the codebooks rather than in a section of its own. Nine of P1's places; the rows with no sentence are the elaboration cut, not the layout."],
+  ["N2", "sentiment card \u00b7 minimised", 620, () => nCard(N_SENT, false),
+   "The Sentiment group card. Its chip carries the strongest sentiment present and the score; confusion and frustration are tags inside it, shown on the quotes."],
+  ["N3", "sentiment card \u00b7 expanded", 620, () => nCard(N_SENT, true),
+   "The same card with the working shown. Note Conc. reads 1.0\u00d7 \u2014 structurally, not coincidentally: a one-group framework has a one-column matrix, so concentration cannot say anything. That is the open normalisation question, visible."],
+  ["N4", "codebook card \u00b7 minimised", 620, () => nCard(N_CODE, false),
+   "The same shape, the same chip, a different vocabulary. Nothing distinguishes the two card kinds but which tag group they name."],
+  ["N5", "codebook card \u00b7 expanded", 620, () => nCard(N_CODE, true),
+   "Conc. 2.2\u00d7 here, against the sentiment card's 1.0\u00d7 \u2014 the two numbers in the hero chips are not measured the same way yet."],
+];
+
+function renderN(){
+  nbench.innerHTML = N_PANELS.map(([code, label, w, build, note]) => `
+    <div class="cell" data-n="${code}" style="width:${w}px">
+      <div class="frame" style="width:${w}px">
+        <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span class="cname"><b>${code}</b>\u00b7<b>P1</b> ${esc(label)}</span></div>
+        <div class="panel" style="border-right:0"><div class="panel-body">${build()}</div></div>
+      </div>
+      <div class="commentary" style="width:${w}px">
+        <span class="clabel">Commentary</span>
+        <p class="verdict">${note}</p>
+      </div>
+    </div>`).join("");
+}
+
 function renderCodeIndex(){
   const half = str => str.split(" \u00b7 ");
   const groups = [
@@ -3646,6 +3826,8 @@ function renderCodeIndex(){
       PROJECTS.map((p, i) => ["P" + (i + 1), p.label, "proj:" + p.id])],
     ["J1\u2013J3 \u00b7 navigation jobs",
       NAV_JOBS.map((j, i) => [half(j[0])[0], half(j[0])[1], "cellidx:jobbench:" + i])],
+    ["N1\u2013N5 \u00b7 the latest thinking",
+      N_PANELS.map(p => [p[0], p[1], "sec:nbench:" + p[0]])],
     ["S1\u2013S3 \u00b7 one name, several cells",
       S_VARIANTS.map(v => [v[0], v[1], "sec:sbench:" + v[0]])],
     ["C1\u2013C4 \u00b7 signal cards (main content)",

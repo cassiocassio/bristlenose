@@ -679,6 +679,11 @@ a.ci-code:focus-visible { outline:2px solid var(--bn-colour-accent); outline-off
        each other: S2 needs nothing written but stops the cells being separately
        addressable; S3 keeps every cell a target but needs elaboration keyed on
        location &times; sentiment, which the model does not produce today.</p>
+    <p><strong>All three show both kinds together</strong>, because the problem only looks
+       the way it really looks with the mixture on screen &mdash; sentiment chips beside
+       codebook group chips from four different frameworks. Beds &amp; Mattresses Category
+       runs eight codebook signals against two sentiment cells. Note what S2 does there:
+       only the sentiment half folds, because only the sentiment half shares a name.</p>
     <p class="wnote">S3&rsquo;s names are the only invented text in this file, written in
        the prompt&rsquo;s house style so the row geometry is honest. Everything else here
        is read from the project.</p>
@@ -3338,43 +3343,77 @@ const S_PERCELL = {
   "Homepage content and navigation experience|confusion": "Homepage Purpose Doubt",
 };
 
+/**
+ * Every signal on a place, both kinds, strongest first.
+ *
+ * The point of this bench is the MIXTURE — a place carries sentiment cells and
+ * codebook cells side by side, and the summary problem only looks the way it
+ * really looks when both are on screen. Beds & Mattresses runs eight codebook
+ * signals from four frameworks against two sentiment cells.
+ */
 function sRows(){
   return IKEA_PLACES
-    .filter(p => S_PLACES.includes(p[0]) && p[2].length > 1)
-    .map(p => ({ loc: p[0], sents: p[2].map(x => x[0]),
-                 summary: (SENT_SUMMARY[p[0]] || [])[0] || null }));
+    .filter(p => S_PLACES.includes(p[0]))
+    .map(p => {
+      const summary = (SENT_SUMMARY[p[0]] || [])[0] || null;
+      const entries = p[2].map(x => ({ kind: "sent", sent: x[0], comp: x[1], summary }))
+        .concat(p[3].map(c => ({ kind: "code", group: c[1], book: c[2], colourSet: c[3],
+                                 comp: c[4], name: c[7] ? c[0] : null })))
+        .sort((x, y) => y.comp - x.comp);
+      return { loc: p[0], summary, entries,
+               sents: entries.filter(e => e.kind === "sent"),
+               codes: entries.filter(e => e.kind === "code") };
+    })
+    .filter(e => e.entries.length > 1);
 }
 function sChip(name){ return `<span class="${badgeClass(name)}">${esc(name)}</span>`; }
+function sGroupChip(e){
+  const bg = tagBg(e.colourSet, 1);
+  return `<span class="badge"${bg ? ` style="background:${bg}"` : ""}`
+       + ` title="${esc(e.book)} \u00b7 ${esc(e.group)}">${esc(e.group)}</span>`;
+}
+function sRow(label, chip){
+  return `<a class="u-row" href="#"><span class="u-name">`
+       + `${label ? esc(label) + " " : ""}${chip}</span></a>`;
+}
+/** A codebook row is the same in all three — only the sentiment half changes. */
+function sCodeRow(e){ return sRow(e.name, sGroupChip(e)); }
 
-/* S1 — one name, repeated. Today's behaviour: the place's single summary is
-   printed against every sentiment cell it covers. */
+/* S1 — one name, repeated. Today: the place's single summary prints against
+   every sentiment cell, beside codebook rows that each have their own. */
 function sRepeated(){
   return sRows().map(e => `<div class="nv">
     <span class="nv-place">${esc(e.loc)}</span>
-    ${e.sents.map(x => `<a class="u-row" href="#"><span class="u-name">`
-      + `${e.summary ? esc(e.summary) + " " : ""}${sChip(x)}</span></a>`).join("")}
+    ${e.entries.map(x => x.kind === "sent"
+      ? sRow(x.summary, sChip(x.sent))
+      : sCodeRow(x)).join("")}
   </div>`).join("");
 }
-/* S2 — one name, one row. The consequence of "sentiment is a codebook": the
-   signal is (location x the Sentiment group) and the sentiment values are the
-   codes present in it, exactly as V9 treats a codebook row. No new writing. */
+/* S2 — one name, one row. The sentiment cells fold into a single row carrying
+   every sentiment present, exactly as a codebook row carries its codes. The
+   codebook rows are untouched, which is the tell: only one half collapses. */
 function sPaired(){
-  return sRows().map(e => `<div class="nv">
-    <span class="nv-place">${esc(e.loc)}</span>
-    <a class="u-row" href="#"><span class="u-name">${e.summary ? esc(e.summary) : esc(e.loc)}</span>
-      <span class="nv-chips">${e.sents.map(sChip).join("")}</span></a>
-  </div>`).join("");
+  return sRows().map(e => {
+    const top = Math.max(...e.entries.map(x => x.comp));
+    const sentFirst = e.sents.length && Math.max(...e.sents.map(x => x.comp)) === top;
+    const folded = e.sents.length
+      ? `<a class="u-row" href="#"><span class="u-name">${esc(e.summary || e.loc)}</span>`
+        + `<span class="nv-chips">${e.sents.map(x => sChip(x.sent)).join("")}</span></a>`
+      : "";
+    const codes = e.codes.map(sCodeRow).join("");
+    return `<div class="nv"><span class="nv-place">${esc(e.loc)}</span>`
+         + (sentFirst ? folded + codes : codes + folded) + `</div>`;
+  }).join("");
 }
-/* S3 — a name per cell. What the rows want, and the only version that needs
-   the model to write something it does not write today. */
+/* S3 — a name per cell. Every row, both kinds, carries its own sentence and
+   stays its own target. The sentiment names are invented; the codebook names
+   are the project's real ones. */
 function sPerCell(){
   return sRows().map(e => `<div class="nv">
     <span class="nv-place">${esc(e.loc)}</span>
-    ${e.sents.map(x => {
-      const n = S_PERCELL[`${e.loc}|${x}`];
-      return `<a class="u-row" href="#"><span class="u-name">`
-           + `${n ? esc(n) + " " : ""}${sChip(x)}</span></a>`;
-    }).join("")}
+    ${e.entries.map(x => x.kind === "sent"
+      ? sRow(S_PERCELL[`${e.loc}|${x.sent}`] || null, sChip(x.sent))
+      : sCodeRow(x)).join("")}
   </div>`).join("");
 }
 
@@ -3408,7 +3447,13 @@ function renderS(){
       return n.textContent.replace(c ? c.textContent : "", "").trim();
     }).filter(Boolean);
     const repeats = names.length - new Set(names).size;
-    const cells = sRows().reduce((n, e) => n + e.sents.length, 0);
+    const rows2 = sRows();
+    const cells = rows2.reduce((n, e) => n + e.entries.length, 0);
+    const nSent = rows2.reduce((n, e) => n + e.sents.length, 0);
+    const unnamed = [...cell.querySelectorAll(".u-name")].filter(n => {
+      const c = n.querySelector(".badge");
+      return !n.textContent.replace(c ? c.textContent : "", "").trim();
+    }).length;
     cell.querySelector("[data-metrics]").innerHTML =
       `<span><b>${rows}</b> rows</span>`
     + `<span><b>${h}</b>px tall</span>`
@@ -3416,7 +3461,10 @@ function renderS(){
     + `<span class="${rows === cells ? "good" : "bad"}" title="cards you can reach in one click">`
       + `<b>${rows}</b> reachable</span>`
     + `<span class="${repeats ? "bad" : "good"}" title="the same sentence printed more than once">`
-      + `<b>${repeats}</b> repeated</span>`;
+      + `<b>${repeats}</b> repeated</span>`
+    + `<span class="${unnamed ? "bad" : "good"}" title="rows showing a bare chip and no sentence">`
+      + `<b>${unnamed}</b> unnamed</span>`
+    + `<span title="of which are sentiment cells"><b>${nSent}</b> sentiment</span>`;
   });
 }
 

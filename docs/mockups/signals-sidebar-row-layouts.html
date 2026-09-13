@@ -383,6 +383,62 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
 .u-name .badge { vertical-align:1px; margin-left:.15rem; }
 .u-meta { display:block; font-size:var(--bn-text-micro); color:var(--bn-colour-muted);
   line-height:1.4; }
+
+/* ── Section C: signal cards in the main content area ───────────────────── */
+.card { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg);
+  padding:var(--bn-space-lg); background:var(--bn-colour-bg); }
+.card.sel { background:var(--bn-selection-bg); border-color:var(--bn-colour-accent); }
+.card-top { display:flex; justify-content:space-between; align-items:flex-start;
+  gap:var(--bn-space-lg); margin-bottom:var(--bn-space-sm); }
+.card-ident { flex:1; min-width:0; }
+.card-src { display:block; font-size:var(--bn-text-badge); line-height:1.4;
+  text-transform:uppercase; letter-spacing:.04em; color:var(--bn-colour-muted);
+  margin-bottom:.1rem; }
+.card-src a { color:inherit; text-decoration:none; }
+.card-src a:hover { color:var(--bn-colour-accent); }
+.card-loc { font-size:var(--bn-text-heading); line-height:1.3;
+  font-weight:var(--bn-weight-emphasis); margin-bottom:var(--bn-space-sm); }
+.card-loc a { color:inherit; text-decoration:none; }
+.card-loc a:hover { color:var(--bn-colour-accent); }
+.card-elab { font-size:var(--bn-text-label); line-height:1.55;
+  color:var(--bn-colour-muted); }
+.card-elab b { color:var(--bn-colour-text); font-weight:var(--bn-weight-emphasis); }
+.card-right { flex-shrink:0; display:flex; flex-direction:column; align-items:flex-end;
+  gap:.5rem; }
+.card-badges { display:flex; gap:.3rem; flex-wrap:wrap; justify-content:flex-end; }
+.card-metrics { display:grid; grid-template-columns:auto auto 1fr; gap:.25rem .6rem;
+  align-items:center; }
+.card-mlabel { font-size:var(--bn-text-label); color:var(--bn-colour-muted);
+  text-align:right; }
+.card-mval { font-family:var(--bn-font-mono); font-size:var(--bn-text-body);
+  text-align:right; }
+.card-bar { width:130px; height:5px; border-radius:2px; background:var(--bn-colour-border); }
+.card-bar i { display:block; height:5px; border-radius:2px; background:var(--bn-colour-muted); }
+.card-spark { display:flex; gap:2px; align-items:flex-end; height:22px; }
+.card-spark i { width:9px; border-radius:1px; background:var(--bn-colour-border); }
+.card-spark i.me { background:var(--bn-colour-muted); }
+.card-dots { display:flex; gap:4px; }
+.card-dots i { width:9px; height:9px; border-radius:50%; border:1px solid var(--bn-colour-border-hover); }
+.card-dots i.on { background:var(--bn-colour-muted); border-color:var(--bn-colour-muted); }
+.card-dots i.half { background:linear-gradient(90deg,var(--bn-colour-muted) 50%,transparent 50%); }
+.card-quotes { background:var(--bn-colour-bg); border-radius:var(--bn-radius-md);
+  padding:var(--bn-space-md); margin-top:var(--bn-space-sm); }
+.card.sel .card-quotes { background:var(--bn-colour-bg); }
+.cq { display:flex; gap:.5rem; align-items:flex-start; padding:.3rem 0; }
+.cq-tc { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption);
+  color:var(--bn-colour-accent); flex-shrink:0; }
+.cq-body { flex:1; min-width:0; font-size:var(--bn-text-label); line-height:1.5; }
+.cq-body .badge { vertical-align:1px; margin-left:.25rem; }
+.card-foot { display:flex; justify-content:space-between; align-items:center;
+  margin-top:var(--bn-space-md); }
+.card-link { font-size:var(--bn-text-label); color:var(--bn-colour-accent);
+  text-decoration:none; }
+.card-pids { display:flex; gap:.25rem; align-items:center;
+  font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted); }
+.card-pids b { font-weight:var(--bn-weight-normal); margin-right:.25rem; }
+.card-pid { padding:.08rem .3rem; border-radius:var(--bn-radius-sm);
+  background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); }
+.card-pid.off { opacity:.32; }
 .sig-loc-rule { height:1px; background:var(--bn-colour-border); margin:.35rem 0 .1rem; opacity:.7; }
 
 /* ── Navigation structures for one project ──────────────────────────────── */
@@ -575,6 +631,31 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
   </div>
 
   <div class="bench" id="ubench"></div>
+
+  <div class="divider"></div>
+  <div class="section-head">
+    <h2>C &middot; normalising the two card kinds</h2>
+    <p>The main content area draws two different cards for what is structurally the same
+       thing. A <strong>codebook</strong> signal has an elaborated name, so the name is
+       the heading, the location drops to the eyebrow and the badges move to the top
+       right. A <strong>sentiment</strong> signal has no name, so the location <em>is</em>
+       the heading and the badge sits under it. Side by side they share almost no
+       structure.</p>
+    <p><strong>The summary a sentiment card needs already exists.</strong>
+       &ldquo;Category Navigation Confusion&rdquo;, and a written elaboration to go with
+       it, is sitting on the <em>Sentiment-group codebook row</em> for that same location
+       &mdash; generated because sentiment is a codebook and gets elaborated like one. The
+       sentiment <em>matrix</em> cell, which is what the card actually renders, has none.
+       So the two halves of this session&rsquo;s argument turn out to be a single move:
+       stop drawing the Sentiment-group row as its own card, and fold its name onto the
+       sentiment card that has none.</p>
+    <p class="wnote">Metrics, timecodes, participant ids, intensities and tags are the
+       real P1 values. <strong>Quote text is synthetic</strong>, written to the measured
+       character length of each real quote &mdash; this file is tracked and participant
+       speech is not, and length is what the layout is judged on.</p>
+  </div>
+
+  <div class="bench" id="cardbench"></div>
 
   <div class="essay">
     <h2>Width cannot fix the single-line row</h2>
@@ -2036,6 +2117,7 @@ const jobbench = document.getElementById("jobbench");
 const depthbench = document.getElementById("depthbench");
 const codeindex = document.getElementById("codeindex");
 const ubench = document.getElementById("ubench");
+const cardbench = document.getElementById("cardbench");
 
 function esc(s){ return s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 function badgeClass(label){ return SENTIMENTS.includes(label) ? "badge badge-"+label : "badge"; }
@@ -2158,6 +2240,7 @@ function render(){
   renderReal();
   renderNav();
   renderU();
+  renderCards();
   renderCodeIndex();
 }
 
@@ -3003,6 +3086,139 @@ function renderU(){
   });
 }
 
+/* ── Section C: the two card kinds, and normalising them ──────────────────
+   Both cards are real P1 signals, with their real metrics, timecodes,
+   participant ids, intensities and tags — read through routes/analysis.py.
+   QUOTE TEXT IS SYNTHETIC, written to the measured character length of each
+   real quote (101/172/173 and 134/55/108/153), because this file is tracked
+   and participant speech is not. Length is what the layout is judged on.
+
+   The finding this section exists to show: the summary a sentiment card needs
+   ALREADY EXISTS. "Category Navigation Confusion" and its elaboration are
+   sitting on the Sentiment-GROUP codebook row for that same location —
+   produced because sentiment is a codebook and gets elaborated like one. The
+   sentiment MATRIX cell, which is what the card renders, has no name. So the
+   two halves of this session's argument are one move: stop drawing the
+   Sentiment-group row as its own card, and fold its name onto the sentiment
+   card that has none. */
+
+const C_SENT = {
+  loc: "Beds & Mattresses Category", src: "SECTION", sentiment: "confusion",
+  name: "Category Navigation Confusion", pattern: "gap",
+  lead: "The Beds & Mattresses category consistently leaves participants disoriented",
+  rest: " — one couldn't find king-size options, another questioned why the cart is called a \u2018bag,\u2019 and a third suspected a technical fault when the page slowed, none reaching confident understanding of the interface state.",
+  m: { signal: "0.67", conc: "2.0\u00d7", concPct: 38, agree: "3.0", agreePct: 100, intensity: "1.0", dots: 1 },
+  quotes: [
+    ["00:39", "p1", 1, "I honestly can't tell which of these is the king size — the label and the picture seem to disagree."],
+    ["00:45", "p2", 1, "Why is it called a bag and not a basket? Every other site I use calls it a basket, so I keep looking in the wrong corner of the page for it."],
+    ["02:02", "p2", 1, "It has gone very slow all of a sudden. I can't tell if that is my connection or whether the site has actually stopped responding to what I clicked on."],
+  ],
+  pids: ["p1", "p2"], allPids: ["p1", "p2", "p3"],
+};
+const C_CODE = {
+  loc: "Shopping Bag", src: "SHOPPING BAG", group: "Feedback", colourSet: "emo",
+  name: "Checkout feedback clarity", pattern: "tension",
+  lead: "The shopping bag communicates most state changes clearly and promptly",
+  rest: " — participants readily read basket totals, delivery options, and stock notifications — but at least one critical system message (item removal with a privacy-policy acknowledgement prompt) left a participant uncertain about what action was required, prompting disengagement.",
+  m: { signal: "0.60", conc: "2.2\u00d7", concPct: 42, agree: "2.0", agreePct: 67, intensity: "1.2", dots: 1 },
+  quotes: [
+    ["03:36", "p2", 1, "Right, that has taken the item out of the bag and it says I can save it for later instead.", "system response"],
+    ["02:41", "p3", 1, "Basket total is there, and the guest option.", "system response"],
+    ["03:02", "p3", 1, "Express delivery it is, and it will tell me when the out-of-stock one comes back.", "system response"],
+    ["03:13", "p3", 2, "Something was removed and now it wants me to confirm I have read the policy. I am not sure what it actually wants from me here, so I think I am done.", "ambiguous feedback"],
+  ],
+  pids: ["p2", "p3"], allPids: ["p1", "p2", "p3"],
+};
+
+function cMetrics(m){
+  const bar = p => `<span class="card-bar"><i style="width:${p}%"></i></span>`;
+  const spark = `<span class="card-spark">${
+    [22,14,14,14,14,14,14].map((h,i) => `<i class="${i === 0 ? "me" : ""}" style="height:${h}px"></i>`).join("")}</span>`;
+  const dots = n => `<span class="card-dots">${
+    [0,1,2].map(i => `<i class="${i < n ? "on" : (i === n ? "half" : "")}"></i>`).join("")}</span>`;
+  return `<div class="card-metrics">
+    <span class="card-mlabel">Signal</span><span class="card-mval">${m.signal}</span>${spark}
+    <span class="card-mlabel">Conc.</span><span class="card-mval">${m.conc}</span>${bar(m.concPct)}
+    <span class="card-mlabel">Agree.</span><span class="card-mval">${m.agree}</span>${bar(m.agreePct)}
+    <span class="card-mlabel">Intensity</span><span class="card-mval">${m.intensity}</span>${dots(m.dots)}
+  </div>`;
+}
+function cQuotes(qs){
+  return `<div class="card-quotes">${qs.map(q => {
+    const tag = q[4];
+    const bg = tag ? tagBg("emo", tag === "system response" ? 0 : 2) : null;
+    const pill = `<span class="badge">${esc(q[1])}</span>`
+      + (tag ? `<span class="badge"${bg ? ` style="background:${bg}"` : ""}>${esc(tag)}</span>` : "");
+    return `<div class="cq"><span class="cq-tc">[${q[0]}]</span>`
+         + `<span class="cq-body">${esc(q[3])} ${pill}</span>`
+         + `<span class="card-dots">${[0,1,2].map(i => `<i class="${i < q[2] ? "on" : ""}"></i>`).join("")}</span></div>`;
+  }).join("")}</div>`;
+}
+function cFoot(d){
+  return `<div class="card-foot"><a class="card-link" href="#">Hide</a>
+    <span class="card-pids"><b>${d.pids.length}/${d.allPids.length}</b>${
+      d.allPids.map(p => `<span class="card-pid${d.pids.includes(p) ? "" : " off"}">${p}</span>`).join("")}</span></div>`;
+}
+function cBadge(d){
+  if (d.sentiment) return `<span class="badge badge-${d.sentiment}">${esc(d.sentiment)}</span>`;
+  const bg = tagBg(d.colourSet, 1);
+  return `<span class="badge"${bg ? ` style="background:${bg}"` : ""}>${esc(d.group)}</span>`;
+}
+function cPattern(d){
+  return d.pattern ? `<span class="pattern-label pattern-${d.pattern}">${esc(d.pattern)}</span>` : "";
+}
+
+/* As shipped: a sentiment card has no name, so the LOCATION is its heading and
+   the badge sits in the identity column. A codebook card has a name, so the
+   location is demoted to the eyebrow — and stops being a link, which is the
+   inconsistency C4 repairs. */
+function cardShippedSentiment(d){
+  return `<div class="card sel"><div class="card-top"><div class="card-ident">
+      <span class="card-src">${esc(d.src)}</span>
+      <div class="card-loc"><a href="#">${esc(d.loc)}</a></div>
+      ${cBadge(d)}
+    </div><div class="card-right">${cMetrics(d.m)}</div></div>
+    ${cQuotes(d.quotes)}${cFoot(d)}</div>`;
+}
+function cardNamed(d, { linkLocation = false } = {}){
+  const loc = d.loc.toUpperCase();
+  const src = linkLocation ? `<a href="#">${esc(loc)}</a>` : esc(loc);
+  return `<div class="card sel"><div class="card-top"><div class="card-ident">
+      <span class="card-src">${src}</span>
+      <div class="card-loc">${esc(d.name)}</div>
+      <div class="card-elab"><b>${esc(d.lead)}</b>${esc(d.rest)}</div>
+    </div><div class="card-right">
+      <div class="card-badges">${cBadge(d)}${cPattern(d)}</div>
+      ${cMetrics(d.m)}
+    </div></div>
+    ${cQuotes(d.quotes)}${cFoot(d)}</div>`;
+}
+
+const CARDS = [
+  ["C1", "sentiment \u00b7 as shipped", () => cardShippedSentiment(C_SENT),
+   "No name, no elaboration, no pattern. The location is the heading and the badge sits under it, so this card and the one beside it share almost no structure."],
+  ["C2", "codebook \u00b7 as shipped", () => cardNamed(C_CODE),
+   "Name as heading, location demoted to the eyebrow, badges top-right with the metrics. The shape everything else should take."],
+  ["C3", "sentiment \u00b7 normalised", () => cardNamed(C_SENT, { linkLocation: true }),
+   "C2's shape, using the name and elaboration that already exist \u2014 they are sitting on the Sentiment-group codebook row for this same location. Nothing new had to be generated."],
+  ["C4", "codebook \u00b7 normalised", () => cardNamed(C_CODE, { linkLocation: true }),
+   "C2 with the location link restored. Today a card loses its link to its own location the moment it earns a name, which is backwards."],
+];
+
+function renderCards(){
+  cardbench.innerHTML = CARDS.map(([code, label, build, note]) => `
+    <div class="cell" data-c="${code}" style="width:460px">
+      <div class="frame" style="width:460px">
+        <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span class="cname"><b>${code}</b>\u00b7<b>P1</b> ${esc(label)}</span></div>
+        <div class="panel" style="border-right:0"><div class="panel-body">${build()}</div></div>
+      </div>
+      <div class="commentary" style="width:460px">
+        <span class="clabel">Commentary</span>
+        <p class="verdict">${note}</p>
+      </div>
+    </div>`).join("");
+}
+
 function renderCodeIndex(){
   const groups = [
     ["V0\u2013V9 \u00b7 row layouts", VARIANTS.map(v => [v[1].split(" \u00b7 ")[0], v[1].split(" \u00b7 ")[1]])],
@@ -3012,6 +3228,8 @@ function renderCodeIndex(){
       PROJECTS.map((p, i) => ["P" + (i + 1), p.label])],
     ["J1\u2013J3 \u00b7 navigation jobs",
       NAV_JOBS.map(j => [j[0].split(" \u00b7 ")[0], j[0].split(" \u00b7 ")[1]])],
+    ["C1\u2013C4 \u00b7 signal cards (main content)",
+      CARDS.map(c => [c[0], c[1]])],
     ["U1\u2013U3 \u00b7 view menu + per-signal targets",
       U_VIEWS.map(v => [v[0], v[1]])],
     ["D1\u2013D3 \u00b7 navigation depth",

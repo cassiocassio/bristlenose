@@ -277,6 +277,22 @@ _See also: `docs/design-codebook-autocomplete.md`_
 
 Moderators and observers stay in the roles line below the header. Their turns are already visually receded, so "who is m1?" is a weaker question, and the header's width is contested by the journey chain, which scrolls horizontally and absorbs whatever the badges don't take. (29 Jul 2026; `TranscriptPage.tsx`.)
 
+### A signal card is a location and a tag group
+
+**Every card answers "what is going on with this tag group, in this place?" — and sentiment is a tag group like any other.** Individual sentiment values (confusion, frustration) are tags *inside* the Sentiment card, not cards of their own. The alternative — sentiment analysed at tag level beside codebooks at group level — is what shipped, and across the five busiest places in a five-codebook trial project it added exactly one card: a duplicate, with no written summary, of something the Sentiment card already said. A card per tag is also something no codebook gets, so the asymmetry had no defence. (13 Sep 2026; `docs/mockups/signals-sidebar-row-layouts.html` §S.)
+
+### Location organises the analysis navigation
+
+**Sections and themes are the top level; places rank by their strongest signal, cards rank within a place.** Strongest-signal-first and by-codebook are useful slices and stay as view-menu options, but neither is the organising principle. The researcher's job is holistic — everything needed to fix Shopping Bag belongs in one place, so the fixes can be considered together. Measured on a five-codebook trial project, grouping by location gives 12 rows and 43 navigable targets against 12 and 12 as shipped. (13 Sep 2026; `docs/mockups/signals-sidebar-row-layouts.html` §U, §T.)
+
+### One card per set of quotes
+
+**Where several cards point at the same quotes, only the strongest is shown — and the Sentiment card is never hidden.** Attention is the expensive thing: a researcher asked to read the same two quotes under five headings spends it five times for one answer, and the answer they reach the fifth time is the one they reached the first. On a whiteboard you do not duplicate a sticky across five clusters; you put it in the strongest group under the strongest interpretation. Measured over nine trial projects, 74 locations and 106 cards, the rule hides 21 and costs **no evidence at all**, because every quote keeps a card pointing at it — and it is purely a multi-codebook effect, since every single-codebook project already draws exactly one card per location. The Sentiment exemption is an interim guard, not the design: a one-group framework's concentration is structurally 1.00, which handicaps it against every codebook card, and unguarded the rule deletes the Sentiment card in 5 of the 74 locations. (13 Sep 2026; `docs/mockups/signals-sidebar-row-layouts.html` §R; the metric itself is `docs/design-signal-strength.md`.)
+
+### One chip carries the group and the score
+
+**A card's top right is a single chip naming the tag group or sentiment and carrying the score, and that chip is the control that opens the working.** The four-metric block is minimised by default and the text reflows around it when opened. Measured across a trial project's 24 signals, Agreement takes 3 distinct values and Intensity 4, both clustered at the bottom of their scales, while Signal is close to collinear with Concentration — two of the four metrics are captions, not columns. One number is enough for most readers; the rest is for whoever wants to audit it. (13 Sep 2026; `docs/mockups/signals-sidebar-row-layouts.html` §C, §N.)
+
 ---
 
 ## Data and privacy

@@ -1,8 +1,57 @@
 # Analysis Page — Future Phases
 
-_Last updated: 10 Feb 2026_
+_Last updated: 13 Sep 2026_
 
 This document captures ideas for the analysis page beyond Phase 3. **The first step is to use what we have on real studies before adding interactivity** — the current signal cards + heatmaps need to prove their value in practice before we layer on controls.
+
+> **That first step happened, and it settled things this document predates.** A
+> redesign pass on 13 Sep 2026 worked the lens against nine real trial projects
+> and settled seven questions; see *Settled — 13 Sep 2026* immediately below.
+> Where this document and that section disagree, the section wins. The panels,
+> the measurements and the abandoned options live in
+> `docs/mockups/signals-sidebar-row-layouts.html`, which carries its own decision trail — read that before re-deriving
+> anything here.
+
+---
+
+## Settled — 13 Sep 2026
+
+Seven decisions, each drawn as a panel before any code moved. Codes refer to
+benches in the mockup named above.
+
+| | decision | panel |
+|---|---|---|
+| 1 | **A card is a location × a tag group**, and it surfaces that group's tags. Sentiment is a group like any other. | S2 |
+| 2 | **Location organises the navigation** — sections and themes, places ranked by strongest signal. | U3 |
+| 3 | **A nav row is the elaborated name plus the group as a trailing tinted chip.** No pattern chip, no code pills. | T6b |
+| 4 | **The card's top right is one hero chip** carrying group-or-sentiment and score, acting as the control that expands the metrics. | C3, C4, N |
+| 5 | **Card text**: location in natural case, two complete sentences with air between claim and evidence. | N |
+| 6 | **One card per set of quotes** — walk a location strongest-first, keep a card only if it brings a quote no kept card carries, ties break on quote count. | R2 |
+| 7 | **The Sentiment card is exempt from being hidden** — an interim guard while the metric is unfixed. | R4 |
+
+**Still open, and the first one blocks ordering:**
+
+1. **Normalising signal strength** so one number compares across codebooks and
+   sentiment. Handed to a session of its own — `docs/design-signal-strength.md`.
+   It is a maths problem with a semantics problem underneath: *are three
+   participants this frustrated about a section the same strength as three
+   participants carrying different tags from one Feedback group about the same
+   or another place?*
+2. **How far down the ranking elaboration runs.** `DEFAULT_TOP_N = 10` in
+   `server/elaboration.py`, applied across all codebooks at once, so a location
+   with nine cards can only have a handful named. Measured after
+   de-duplication: 18 of 76 cards across the trial corpus have no elaborated
+   name. A cost decision — every miss is an LLM call.
+3. **Does the main content follow the navigation?** Proposed — location-sectioned
+   cards matching the nav's sequence, reusing `.analysis-codebook-heading` and
+   inventing no new heading styles, with today's two flat grids kept as the
+   second choice in the view menu. Not drawn yet.
+
+**Thresholds and floors are deliberately not settled here.** `MIN_QUOTES_PER_CELL
+= 2` is a volume floor, and whether it is the right one is answered by checking
+real interview data against outputs, not by this document. For the record, at the
+shipped floor the trial corpus gives 106 cards over 74 locations; at 3, 56 over
+47; at 4, 30 over 26.
 
 ---
 
@@ -38,6 +87,13 @@ The answers will determine which Phase 4 features actually matter.
 ---
 
 ## Two-pane vision
+
+_Superseded in part, 13 Sep 2026: **the heatmaps are not the navigation.**
+Location is — sections and themes, ranked by strongest signal (decision 2
+above). The grid-as-selector idea below survives as a filtering affordance and
+is worth building on its own merits; the claim that it becomes the primary
+navigation does not. The rest of this section is kept for the interaction
+patterns it works out._
 
 The analysis page should evolve into a **two-pane layout**:
 
@@ -110,7 +166,7 @@ This needs its own grid design — it's not just another copy of the sentiment m
 - **Rows**: user-defined tag groups (from codebook)
 - **Columns**: individual tags within each group
 - **Cells**: quote counts, but the relationship is different — a quote can have multiple user tags, so the contingency table assumptions (independence, expected frequencies) don't hold the same way
-- **Signal detection**: may need different metrics — concentration ratio assumes exclusive categories, but user tags overlap
+- **Signal detection**: may need different metrics — concentration ratio assumes exclusive categories, but user tags overlap _(this is the normalisation question; `docs/design-signal-strength.md` owns it)_
 
 ### Open design questions
 
@@ -173,9 +229,9 @@ _Status: needed once any interactive controls exist._
 
 ## Open questions
 
-1. Does the composite signal formula feel right on real data? Or does it over-weight concentration vs agreement?
+1. ~~Does the composite signal formula feel right on real data?~~ **Answered, 13 Sep 2026: no.** Its leading factor is a lift whose ceiling is table shape, and the sentiment framework has one column, so its concentration is structurally 1.00 in every sentiment cell of every project — mute exactly where it matters. Owned by `docs/design-signal-strength.md`.
 2. Is 12 the right default for top_n? Should it be configurable? *(Partial answer from `experiments/thematic-spike/FINDINGS.md`: 9–12 is a multi-constraint optimum where psychology, screen scannability, and 1-hour-meeting attention budget converge. But the count is a navigation bound, not a quality bound — data overrules. Configurable would be the principled choice.)*
 3. Do researchers actually look at the heatmap, or just the signal cards?
 4. Would a "surprising findings" section (high residual but low composite) catch things the ranked list misses? *(Partial answer from FINDINGS: substantial single-participant clusters — one participant, ≥3 coherent quotes — are often deviant-case insights worth surfacing as first-class output, not folded into "Uncategorised". This is one shape "surprising findings" could take.)*
-5. Should signal cards link back to specific quotes in the report, not just the section heading?
+5. ~~Should signal cards link back to specific quotes in the report, not just the section heading?~~ **Partly answered, 13 Sep 2026:** a card's location is now a link to that place's anchor in the Quotes lens, on both the elaborated and the nameless card. Quote-level deep links are still open.
 6. Is the current card expansion (show/hide quotes) enough, or do researchers want quote-level actions (star, annotate, copy)? *(FINDINGS *"Display quote vs evidence quote"* distinguishes one slide-ready quote per cluster from the surrounding evidence — relevant if quote-level actions get added.)*

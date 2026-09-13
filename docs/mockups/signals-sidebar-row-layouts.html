@@ -693,6 +693,21 @@ a.ci-code:focus-visible { outline:2px solid var(--bn-colour-accent); outline-off
     <p>Not gaps &mdash; choices to stop here, with somewhere to come back to.</p>
   </div>
   <ol class="gaps defer">
+    <li><b>Where signal cards are built, and what the assistant sees.</b> The lens
+      builds them in the browser \u2014 two endpoints merged in
+      <code>AnalysisPage</code>, with de-duplication at the merge point, because that is
+      the only place both kinds exist together. Tactical and it ships. But there is a
+      <em>second</em> answer to what the signal cards are:
+      <code>load_signals</code> in <code>server/grounding.py</code> serves both the MCP
+      <code>get_signals</code> tool and the chat lens, and by design it computes over the
+      <em>curated</em> corpus &mdash; hidden quotes out, edits substituted, and unreviewed
+      AutoCode proposals contributing nothing. The principle is right. The size of the gap
+      had never been measured: on P1 the lens draws 29 cards across eight codebook groups
+      and <code>load_signals</code> returns <b>6, every one of them Sentiment</b>, because
+      112 of 143 tag assignments are proposals nobody has reviewed. An agent asking what
+      the signals are is told about sentiment and nothing else, confidently, while the
+      researcher looks at eight groups. Deferred with the server-side question, on the
+      board.</li>
     <li><b>The view menu.</b> Hidden today \u2014 an idea not fully realised. Strongest
       signal and by-codebook stay drawn as U1 and U2 and stay in the code; sections and
       themes is the only order that ships. Shipping the menu on day one is how &ldquo;one

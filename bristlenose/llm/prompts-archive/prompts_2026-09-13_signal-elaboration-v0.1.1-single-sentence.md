@@ -1,6 +1,6 @@
 ---
 id: signal-elaboration
-version: 0.2.0
+version: 0.1.1
 ---
 # Signal Elaboration
 
@@ -39,41 +39,24 @@ Examples:
 - Discoverability + all positive (exploration tags) → "Filter discoverability"
 
 ### Step 5 — Elaboration
+Exactly one sentence with a || delimiter separating two parts:
 
-Two parts separated by a `||` delimiter. **Both parts are complete sentences** —
-each ends in a full stop, and the part after `||` begins with a capital letter.
+- **Before ||**: the bold assertion — a self-contained clause stating what was found. This must make sense on its own. End at the first natural syntactic break: an em dash, a comma before a dependent clause, or an opening parenthetical. Aim for roughly the first third of the sentence.
+- **After ||**: the regular continuation — evidence, specifics, examples, or qualifying detail that supports the assertion.
 
-- **Before `||`**: the claim. One sentence stating what was found. It must read
-  on its own, because the card renders it alone, in darker ink, above the rest.
-- **After `||`**: the evidence. The specifics that support the claim. The card
-  renders this beneath the claim, in a tint, after a blank line.
+The split point is syntactic, not character-counted. If the entire sentence is a single clause with no natural break, restructure it to create one.
 
-`||` marks a paragraph break, not a syntactic pause. Write two separate
-sentences — do not write one sentence and cut it in half.
-
-**Punctuation is an instruction to the reader, so choose it deliberately.** An
-em dash says *keep going, this is not finished*; a full stop says *you may stop
-here*. The card gives the reader two chunks so they can decide where to spend
-their effort: the claim always, the evidence if they want it. Joining those
-chunks with an em dash takes that choice away.
-
-So: end the claim with a full stop, and do not chain the evidence together with
-em dashes either. Length is not the constraint — say what needs saying. Give the
-reader somewhere to stop while you say it.
-
-Examples of good elaborations:
-- Product listing filters and sort options are easy to find and use. || Participants narrowed results by price, material, size and style without guidance, and none asked how the sort order worked.
-- The top navigation makes product categories easy to find. || Editorial content competes with the shopping entry point. Some first-time visitors scanned past it before finding the category they wanted.
-- The category navigation structure hides specific product attributes. || Bed sizes were one example. Participants explored several paths before reaching their target, and two abandoned the attempt.
-- The homepage fails to acknowledge clicks immediately. || One participant clicked repeatedly before the navigation responded. They were left unsure whether the interface was working at all.
+Examples of good || placement:
+- Product listing filters and sort options are easy to find and use || — participants confidently narrow results by price, material, size, and style without guidance.
+- The top navigation makes product categories easy to find, but editorial content competes with the shopping entry point, || forcing some first-time visitors to scan past it.
+- The category navigation structure hides specific product attributes || (like bed sizes) and forces participants to explore multiple paths before reaching their target.
+- The homepage fails to acknowledge clicks immediately || — the participant had to click multiple times before the navigation responded, creating uncertainty about whether the interface was working.
 
 Rules:
 - Signal name MUST be 2–4 words
 - Signal name MUST use the group's analytical vocabulary
-- The `||` delimiter MUST appear exactly once per elaboration
-- Each part MUST be one or more complete sentences ending in a full stop
-- The part after `||` MUST begin with a capital letter
-- Do NOT use an em dash to join clauses, in either part
+- Elaboration MUST be exactly one sentence
+- The || delimiter MUST appear exactly once per elaboration
 - Pattern MUST be one of: success, gap, tension, recovery
 - Do not invent findings not supported by the quotes
 - Use language suitable for handoff to stakeholders who have not seen the raw quotes

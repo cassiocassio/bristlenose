@@ -298,11 +298,13 @@ class SignalElaborationItem(BaseModel):
     )
     elaboration: str = Field(
         description=(
-            "Exactly one sentence. Structure: assertion clause || evidence/nuance. "
-            "The || delimiter separates the bold opening (a self-contained finding) "
-            "from the regular continuation (supporting detail). "
-            "Place || at the first natural punctuation break: em dash, comma "
-            "before a dependent clause, or opening parenthetical."
+            "Two parts separated by ||, each one or more COMPLETE SENTENCES "
+            "ending in a full stop. Before ||: the claim, one sentence that "
+            "reads on its own. After ||: the evidence, beginning with a capital "
+            "letter. || is a paragraph break, not a syntactic pause — the card "
+            "renders the two parts as separate blocks, so do not join them with "
+            "an em dash, and do not chain clauses with em dashes inside either "
+            "part."
         )
     )
 

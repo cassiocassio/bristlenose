@@ -475,20 +475,20 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
 .n-hero .n-hcar { font-size:var(--bn-text-micro); opacity:.4; margin-left:.05rem;
   transition:transform .12s ease, opacity .12s ease; }
 .n-hero:hover .n-hcar, .n-hero:focus-visible .n-hcar { opacity:.85; }
-.n-hero[aria-expanded="true"] { border-color:var(--bn-colour-border-hover); }
 .n-hero[aria-expanded="true"] .n-hcar { transform:rotate(180deg); opacity:.85; }
 @media (prefers-reduced-motion: reduce) { .n-hero .n-hcar { transition:none; } }
 
-/* Section R: a card that brings no new quote is drawn struck and faded, so the
-   bench shows what the rule removes rather than just the shorter list. */
-.u-row.drop { opacity:.36; }
+/* Section R: a card that brings no new quote is drawn struck through, so the
+   bench shows what the rule removes rather than just the shorter list. The
+   strike is on the NAME only — a fade over the row would have dimmed the tag
+   chip with it, and the tag system's colours are not this bench's to borrow. */
 .u-row.drop .u-name { text-decoration:line-through; text-decoration-thickness:1px; }
 .r-why { display:block; font-size:var(--bn-text-micro); color:var(--bn-colour-muted);
   padding:0 var(--bn-space-sm) .2rem 1rem; }
 .r-q { font-family:var(--bn-font-mono); }
 .n-hero .n-hlabel { font-family:var(--bn-font-mono); font-size:var(--bn-text-body); }
 .n-hero .n-hnum { font-family:var(--bn-font-mono); font-size:var(--bn-text-body);
-  font-weight:var(--bn-weight-starred); }
+  font-weight:var(--bn-weight-emphasis); }
 .n-body { display:flex; gap:var(--bn-space-lg); align-items:flex-start; }
 .n-text { flex:1; min-width:0; }
 .n-charts { flex-shrink:0; }

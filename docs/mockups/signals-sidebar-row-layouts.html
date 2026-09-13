@@ -308,6 +308,7 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
 .brk .sig-name { overflow-wrap:anywhere; }
 
 /* overflow marker — dev aid, toggled on */
+.mark-trunc .u-name.is-wrap,
 .mark-trunc .sig-name.is-trunc { background:light-dark(rgba(220,38,38,.10),rgba(220,38,38,.22));
   box-shadow:inset -2px 0 0 var(--bn-sentiment-confusion); }
 
@@ -651,13 +652,22 @@ a.ci-code:focus-visible { outline:2px solid var(--bn-colour-accent); outline-off
   </div>
   <ol class="gaps">
     <li><b>Does a nav row wrap, or truncate?</b> This page was built to answer that
-      &mdash; V0 ellipses, V1 wraps &mdash; and T6b answers what a row <em>shows</em>
-      without answering how it <em>fits</em>. Shipped today:
-      <code>.signal-entry-name</code> is <code>white-space:nowrap</code> +
-      <code>text-overflow:ellipsis</code>, the one variant that discards words. This
-      mockup wraps. Measured: an elaborated name runs 23 characters at the median and
-      a theme label 51 at its longest, and T6b puts a group chip on the same line.
-      At sidebar width most rows will not fit.</li>
+      &mdash; V0 ellipses, V1 wraps &mdash; and T6b settled what a row <em>shows</em>
+      without settling how it <em>fits</em>. <b>The mockup wraps, by CSS default
+      rather than by argument:</b> <code>.u-name</code> is a plain block with no
+      <code>white-space</code> rule, and nothing in the trail ever chose it. Shipped
+      does the opposite &mdash; <code>.signal-entry-name</code> carries
+      <code>flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis;
+      white-space:nowrap</code>, which is the textbook-correct flex ellipsis, so the
+      mechanism is not broken. <b>The outcome is.</b> Measured over the 58 named rows
+      that survive de-duplication: name alone runs 23 characters at the median and 31
+      at its longest, and with the group chip beside it the row runs
+      <b>34 at the median, 42 at p90, 50 at its longest</b>. Against a one-line budget
+      of 28 characters, <b>90% of rows truncate</b>; at 32, 62%; at 36, 29%; at 40,
+      10%. The chip is <code>flex-shrink:0</code>, so what a reader gets is
+      &ldquo;Goal-driven Category Naviga&hellip; <code>Motivation</code>&rdquo;. An
+      ellipsis that fires on nine rows in ten is not an affordance, it is a
+      haircut.</li>
     <li><b>Is there still a Section / Theme split above the locations?</b> The shipped
       sidebar groups entries under two sub-headings from <code>sourceType</code>. The
       new navigation groups by location, and a location is already one or the other.
@@ -669,12 +679,6 @@ a.ci-code:focus-visible { outline:2px solid var(--bn-colour-accent); outline-off
     <li><b>Does de-duplication apply to the main content as well as the navigation?</b>
       Presumably yes, but it is unstated &mdash; and if the two disagree the nav grows
       rows that land nowhere.</li>
-    <li><b>A hidden card leaves a hot heatmap cell pointing at nothing.</b> Already
-      true today, independently of any of this: <code>signalKeys</code> is built from
-      the <em>uncapped</em> lists while <code>cardRefs</code> only holds rendered
-      cards, so a cell outside the top six draws <code>.has-card</code>, accepts a
-      click, and silently does nothing. De-duplication adds a second class of the same
-      defect. Whatever hides a card has to un-hot its cell.</li>
     <li><b>Where do the two heatmaps go</b> once the cards are location-sectioned?
       They are currently the page&rsquo;s second half and they are organised by the
       axis the new order abandons.</li>
@@ -708,6 +712,13 @@ a.ci-code:focus-visible { outline:2px solid var(--bn-colour-accent); outline-off
     <li><b>Floors and thresholds.</b> <code>MIN_QUOTES_PER_CELL = 2</code> is a volume
       floor and two quotes is barely a signal from a five-participant study. Settled by
       checking real interview data against outputs, not from this page.</li>
+    <li><b>The heatmaps.</b> Good enough for now, improved in a later release by
+      decision. Known and accepted: a cell can be drawn <code>.has-card</code>, accept
+      a click and silently do nothing, because <code>signalKeys</code> is built from
+      the <em>uncapped</em> signal lists while <code>cardRefs</code> only ever holds
+      rendered cards &mdash; so every cell outside the top six is already a dead
+      click. De-duplication adds a second class of the same thing. Whatever hides a
+      card should eventually un-hot its cell.</li>
     <li><b>Quote-level deep links.</b> A card&rsquo;s location now links to that
       place&rsquo;s anchor in the Quotes lens, on both card kinds. Linking an individual
       quote is still open.</li>
@@ -3390,15 +3401,26 @@ function renderU(){
     const targets = cell.querySelectorAll(".u-row").length;
     const links = cell.querySelectorAll("a").length;
     const heads = cell.querySelectorAll(".u-place, .u-book").length;
-    let trunc = 0;
+    // A WRAPPING box can never satisfy scrollWidth > clientWidth, so the
+    // overflow test this used to run reported "0 truncated" in green on every
+    // panel since the bench was built — the same way an inline box lies about
+    // V5, which this page already documents one section down. .u-name wraps,
+    // so the honest measure is how many LINES a row takes, not whether it
+    // overflowed. Nothing is lost when a row wraps; the list just gets taller.
+    let wrapped = 0, maxLines = 1;
     cell.querySelectorAll(".u-name").forEach(n => {
-      const cut = n.scrollWidth > n.clientWidth + 1;
-      n.classList.toggle("is-trunc", cut); if (cut) trunc++;
+      const lh = parseFloat(getComputedStyle(n).lineHeight) || 1;
+      const lines = Math.max(1, Math.round(n.scrollHeight / lh));
+      n.classList.toggle("is-wrap", lines > 1);
+      if (lines > 1) wrapped++;
+      if (lines > maxLines) maxLines = lines;
     });
     cell.querySelector("[data-metrics]").innerHTML =
       `<span><b>${targets}</b> signal cards</span>`
     + `<span><b>${h}</b>px tall</span>`
-    + `<span class="${trunc === 0 ? "good" : "bad"}"><b>${trunc}</b> truncated</span>`
+    + `<span class="${wrapped === 0 ? "good" : ""}" title="rows taking more than one line \u2014 nothing is lost, the list gets taller">`
+      + `<b>${wrapped}</b>/${targets} wrap`
+      + (maxLines > 1 ? `, longest ${maxLines} lines` : "") + `</span>`
     + `<span class="${links === targets ? "good" : "bad"}" title="every link is a signal and nothing else is">`
       + `<b>${links}</b> links total</span>`
     + `<span><b>${heads}</b> headings</span>`;

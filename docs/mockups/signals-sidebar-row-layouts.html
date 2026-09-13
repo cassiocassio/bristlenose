@@ -19,7 +19,8 @@
   --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
   --bn-text-label:.8125rem; --bn-text-label-lh:1.45; --bn-text-body:.9375rem;
   --bn-text-heading:1.125rem; --bn-text-title:1.375rem; --bn-text-display:1.75rem;
-  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-starred:520; --bn-weight-strong:700;
+  --bn-weight-light:370; --bn-weight-normal:420; --bn-weight-emphasis:490;
+  --bn-weight-starred:520; --bn-weight-strong:700;
   --bn-transition-fast:.15s ease;
   --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
   --bn-space-lg:1.5rem; --bn-space-xl:2rem;
@@ -160,7 +161,13 @@ input[type=range] { width:230px; accent-color:var(--bn-colour-accent); }
 .toc-sub-heading { font-size:var(--bn-text-caption); line-height:1.35; font-weight:var(--bn-weight-emphasis);
   text-transform:uppercase; letter-spacing:.04em; color:var(--bn-colour-muted);
   padding:0 var(--bn-space-sm); margin-top:var(--bn-space-sm); }
+/* The weight is DECLARED here. It never has been — not in this mockup and not
+   in theme/atoms/badge.css — so every chip in the product renders at the user
+   agent's 400, a value in nobody's ladder. `light` is the rung the system
+   reserves for subordinate text, which is what a tag chip is: the row's words
+   carry the finding, the chip only says which vocabulary they came from. */
 .badge { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+  font-weight:var(--bn-weight-light);
   padding:var(--bn-space-xs) .45rem; border-radius:var(--bn-radius-sm);
   background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); white-space:nowrap; }
 .badge-frustration { background:var(--bn-sentiment-frustration-bg); color:var(--bn-sentiment-frustration); }

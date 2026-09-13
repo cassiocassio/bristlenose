@@ -651,10 +651,6 @@ a.ci-code:focus-visible { outline:2px solid var(--bn-colour-accent); outline-off
        mockup and the product quietly disagree and nobody has chosen.</p>
   </div>
   <ol class="gaps">
-    <li><b>Is there still a Section / Theme split above the locations?</b> The shipped
-      sidebar groups entries under two sub-headings from <code>sourceType</code>. The
-      new navigation groups by location, and a location is already one or the other.
-      Two headings over a location list, or one flat run?</li>
     <li><b>What replaces <code>MAX_SIGNALS = 6</code>?</b> It slices the whole list,
       so today the sidebar and the cards are drawn from one cut and cannot disagree.
       A location-organised nav with no project-wide cap breaks that coupling, and
@@ -3822,6 +3818,10 @@ const DECISIONS = [
    [], [],
    "Location in natural case at label size and emphasis weight, tight against the headline. A gap, the claim sentence in darker ink, a gap, the rest in a tint. Two complete sentences, no em dash at the join.",
    "Punctuation is an instruction: an em dash says keep going, a full stop offers a stopping point. Measured on P1's 19 elaborations, 19 of 19 continuations carry an em dash and 0 of 19 are more than one sentence \u2014 the prompt asked for exactly that. Volume and meaning were never the problem; the missing stopping point was. Typography uses .analysis-codebook-heading's existing trio, nothing new."],
+  ["settled", "Do sections and themes stay separated above the locations?",
+   [], [],
+   "No. One run of locations, ranked by strongest signal, sections and themes interleaved and unlabelled. The shipped nav's two Section / Theme sub-headings go.",
+   "The words carry it \u2014 a researcher reads \u201cShopping Bag\u201d and \u201cHomepage content and navigation experience\u201d and knows which is which without being told. The demarcation still exists, sharply, in the Quotes lens, which is the namespace that owns it; anyone whose mental model runs on that split still has it there. The Analysis lens is offering something else, and it cross-links back rather than restating \u2014 a card's location links to section-<slug> or theme-<slug>, so the anchor is already namespace-aware and carries the reader to the right half. Measured on P1: ranked purely by strength the three themes land at positions 4, 5 and 8 among seven sections, so a split would override the ordering principle to say something the labels already say."],
   ["settled", "Does a nav row wrap, or truncate?",
    ["V1"], ["V0"],
    "It wraps. A row never loses a word; a long one takes two lines.",

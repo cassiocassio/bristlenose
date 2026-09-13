@@ -175,6 +175,87 @@ class TestPiiConfig:
         assert redactions == []
 
 
+class TestPerTranscriptProgress:
+    """Stage 7 reports how far through the transcripts it is.
+
+    The stage is a per-transcript loop that can run for minutes, and until
+    13 Sep 2026 it emitted nothing between "Removing PII..." and the ✓ line —
+    so both the terminal spinner and the Mac project row sat on a bare verb
+    for the whole pass. Worse on the Mac: `RunProgressMath.apply` only
+    overwrites the session pair on an event that carries it, so the row went
+    on showing **transcription's** finished "8 of 8" beside "Redacting
+    personal information" and read as complete.
+
+    The contract is deliberately the one `transcribe_sessions` already
+    defines — `callback(current, total)`, fired *after* each unit, `current`
+    1-based — so the pipeline's handler is a sibling of
+    `_on_transcribe_progress` rather than a second convention.
+    """
+
+    @staticmethod
+    def _transcript(session_id: str) -> object:
+        from datetime import datetime
+
+        from bristlenose.models import FullTranscript, TranscriptSegment
+
+        return FullTranscript(
+            session_id=session_id,
+            participant_id="p1",
+            source_file=f"{session_id}.mp4",
+            session_date=datetime(2025, 1, 1),
+            duration_seconds=60.0,
+            segments=[
+                TranscriptSegment(
+                    start_time=0.0, end_time=1.0, text="hello", words=[],
+                )
+            ],
+        )
+
+    def _run(self, n: int) -> list[tuple[int, int]]:
+        from bristlenose.stages.s07_pii_removal import remove_pii
+
+        transcripts = [self._transcript(f"s{i}") for i in range(1, n + 1)]
+        settings = BristlenoseSettings(pii_enabled=True)
+        seen: list[tuple[int, int]] = []
+
+        with patch("bristlenose.stages.s07_pii_removal._init_presidio") as mock_init, \
+                patch("bristlenose.stages.s07_pii_removal._redact_text") as mock_redact:
+            mock_init.return_value = (MagicMock(), MagicMock())
+            mock_redact.return_value = ("[REDACTED]", [])
+            remove_pii(
+                transcripts, settings,
+                on_progress=lambda current, total: seen.append((current, total)),
+            )
+        return seen
+
+    def test_fires_once_per_transcript_counting_completions(self) -> None:
+        """Three transcripts → (1,3), (2,3), (3,3).
+
+        1-based and after-the-unit, matching `transcribe_sessions`. A 0-based
+        or before-the-unit callback would render "0 of 3" at the end of the
+        last transcript, which reads as no progress at all.
+        """
+        assert self._run(3) == [(1, 3), (2, 3), (3, 3)]
+
+    def test_no_callback_is_the_default_and_does_not_raise(self) -> None:
+        """`remove_pii` is called without it by `analyze`-shaped callers and
+        by every existing test — the parameter must stay optional."""
+        from bristlenose.stages.s07_pii_removal import remove_pii
+
+        with patch("bristlenose.stages.s07_pii_removal._init_presidio") as mock_init, \
+                patch("bristlenose.stages.s07_pii_removal._redact_text") as mock_redact:
+            mock_init.return_value = (MagicMock(), MagicMock())
+            mock_redact.return_value = ("[REDACTED]", [])
+            clean, _ = remove_pii([self._transcript("s1")], BristlenoseSettings(
+                pii_enabled=True,
+            ))
+        assert len(clean) == 1
+
+    def test_empty_input_never_fires(self) -> None:
+        """No transcripts, no progress — and specifically not a "0 of 0"."""
+        assert self._run(0) == []
+
+
 class TestPiiSummaryLocation:
     """Tests for pii_summary.txt placement in .bristlenose/ directory."""
 

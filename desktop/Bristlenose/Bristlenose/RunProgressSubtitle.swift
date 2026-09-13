@@ -38,16 +38,26 @@ enum RunProgressSubtitle {
     }
 
     /// Stages that are a single cross-session call and carry no per-session
-    /// fraction: theming/cluster (s10/s11) and render (s12). Only `transcribe`
-    /// emits `sessions_complete`/`sessions_total`; `RunProgressMath.apply` then
-    /// carries that pair forward untouched (it only overwrites on an event that
-    /// *has* it), so by these stages the "N of M" is the STALE transcribe file
-    /// count. Trailing it after "Grouping themes"/"Building report" reads as
-    /// "theme-grouping is 4 of 5 done" when it isn't — suppress the fraction
-    /// here (the verb + ETA still compose). Keyed off the stage id so no Python
-    /// sentinel is needed. The per-session stages that *do* carry a live
-    /// fraction (`transcribe` and the `_SESSION_STAGES` speakers/topics/quotes)
-    /// are deliberately absent.
+    /// fraction: theming/cluster (s10/s11) and render (s12).
+    ///
+    /// **Why suppression is needed at all.** `RunProgressMath.apply` overwrites
+    /// the session pair only on an event that *carries* it, so whatever the last
+    /// emitting stage said persists. Trailing that after "Grouping themes" /
+    /// "Building report" reads as "theme-grouping is 4 of 5 done" when it isn't.
+    /// Keyed off the stage id, so no Python sentinel is needed.
+    ///
+    /// **Which stages emit a live pair, measured 13 Sep 2026:** `transcribe`
+    /// (`pipeline.py` `_on_transcribe_progress` and the within-file heartbeat)
+    /// and `pii` (`_on_pii_progress`) — those two only. This comment previously
+    /// said `transcribe` alone, and in the same breath claimed the
+    /// `_SESSION_STAGES` trio carried one too; both halves cannot be right and
+    /// the second was the wrong one.
+    ///
+    /// **So `speakers` / `topics` / `quotes` are a known gap, not a decision.**
+    /// They are per-session stages that emit no pair, so they inherit the count
+    /// from whichever stage last emitted — after `pii`, its finished "N of N".
+    /// They are absent from this set because suppressing them is the wrong fix:
+    /// they should emit their own live pair, the way the two above now do.
     static let nonSessionStages: Set<String> = ["cluster", "render"]
 
     /// Localised "~N min left" / "<1 min left", or nil when there's no usable

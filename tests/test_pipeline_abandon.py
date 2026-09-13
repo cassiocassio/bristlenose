@@ -855,3 +855,65 @@ def test_pii_stage_reports_progress_like_its_siblings(tmp_path: Path) -> None:
     stages = [c.get("stage") for c in collected]
     assert "pii" in stages, f"stage 7 never announced itself: {stages}"
     estimator.stage_completed.assert_any_call("pii", ANY)
+
+
+def test_pii_stage_reports_how_far_through_the_transcripts_it_is(
+    tmp_path: Path,
+) -> None:
+    """The per-transcript "N of M" reaches the progress sink under stage "pii".
+
+    `_emit_stage_entry` alone advances the *verb* and leaves the count where
+    the last stage left it — and `RunProgressMath.apply` only overwrites the
+    session pair on an event that carries it, so the Mac row would show
+    transcription's finished "8 of 8" beside "Redacting personal information"
+    and read as already complete. Redaction is a per-transcript loop that can
+    run for minutes, so the pair has to be re-stated as it goes.
+
+    Drives the real `Pipeline.run`; the redaction stand-in invokes the
+    `on_progress` the pipeline handed it, exactly as `remove_pii` does.
+    """
+    from bristlenose.models import PiiCleanTranscript
+
+    (settings, input_dir, output_dir, sessions,
+     transcripts, fake_transcribe) = _pii_run_fixture(tmp_path)
+
+    pipeline = Pipeline(settings)
+    collected: list[dict[str, object]] = []
+    pipeline.set_progress_sink(lambda **fields: collected.append(fields))
+
+    def _redact_reporting(ts, _settings, *, on_progress=None, **_kw):
+        clean = []
+        for t in ts:
+            clean.append(PiiCleanTranscript(**t.model_dump(), pii_entities_found=0))
+            if on_progress is not None:
+                on_progress(len(clean), len(ts))
+        return clean, []
+
+    with (
+        patch("bristlenose.stages.s01_ingest.ingest", return_value=sessions),
+        patch("bristlenose.stages.s02_extract_audio.extract_audio_for_sessions",
+              new=_async_passthrough),
+        patch("bristlenose.stages.s05_transcribe.transcribe_sessions", new=fake_transcribe),
+        patch("bristlenose.stages.s06_merge_transcript.merge_transcripts",
+              return_value=transcripts),
+        patch("bristlenose.stages.s07_pii_removal.remove_pii", new=_redact_reporting),
+        patch("bristlenose.stages.s08_topic_segmentation.segment_topics",
+              side_effect=RuntimeError("stop after stage 7")),
+    ):
+        with pytest.raises(RuntimeError, match="stop after stage 7"):
+            asyncio.run(pipeline.run(input_dir, output_dir))
+
+    counted = [
+        c for c in collected
+        if c.get("stage") == "pii" and c.get("sessions_total") is not None
+    ]
+    assert counted, (
+        "stage 7 emitted no per-transcript count — the row keeps the previous "
+        f"stage's stale pair. Saw: {[c.get('stage') for c in collected]}"
+    )
+    total = len(transcripts)
+    assert [c["sessions_complete"] for c in counted] == list(range(1, total + 1))
+    assert all(c["sessions_total"] == total for c in counted)
+    # stage_fraction is the ring's own 0..1 for this stage; the last one must
+    # reach 1.0 or the ring stalls short of the stage boundary.
+    assert counted[-1]["stage_fraction"] == 1.0

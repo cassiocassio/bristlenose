@@ -1389,9 +1389,37 @@ class Pipeline:
                 self._emit_stage_entry(STAGE_PII)
                 status.update("[dim]Removing PII...[/dim]")
                 t0 = time.perf_counter()
+
+                # The same per-unit progress shape transcription uses, and for
+                # the same reason: redaction is a per-transcript loop that can
+                # run for minutes, so without it both surfaces sit frozen on
+                # the bare verb. On the Mac it was worse than frozen —
+                # `RunProgressMath.apply` overwrites the session pair only on an
+                # event that carries one, so the row showed transcription's
+                # finished "8 of 8" beside "Redacting personal information" and
+                # read as already complete.
+                #
+                # `count_noun` rather than the sibling's hand-rolled
+                # `"file" if total == 1 else "files"`: it already carries the
+                # number, so f"{current}/{count_noun(total, 'transcript')}"
+                # composes to the identical "2/8 transcripts" shape while
+                # honouring the house plural rule. Don't "fix" it back.
+                def _on_pii_progress(current: int, total: int) -> None:
+                    status.update(
+                        f"[dim]Removing PII..."
+                        f" ({current}/{count_noun(total, 'transcript')})[/dim]"
+                    )
+                    self._emit_progress(
+                        stage=STAGE_PII,
+                        sessions_complete=current,
+                        sessions_total=total,
+                        stage_fraction=(current / total if total else None),
+                    )
+
                 try:
                     clean_transcripts, pii_redactions = remove_pii(
                         transcripts, self.settings, status=status,
+                        on_progress=_on_pii_progress,
                     )
                 except Exception as exc:
                     # ABANDON, never continue — and note this differs on purpose
@@ -1428,7 +1456,8 @@ class Pipeline:
                 write_pii_summary(pii_redactions, output_dir)
                 _pii_elapsed = time.perf_counter() - t0
                 _print_step(
-                    f"Redacted PII ({len(pii_redactions)} entities)", _pii_elapsed,
+                    f"Redacted PII ({count_noun(len(pii_redactions), 'entity')})",
+                    _pii_elapsed,
                 )
                 # Same two calls every sibling makes: the estimator learns this
                 # stage's rate, and the sidebar ETA/ring advance past it.

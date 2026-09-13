@@ -6,6 +6,7 @@ import logging
 import os
 import time
 from collections import Counter
+from collections.abc import Callable
 from pathlib import Path
 
 from rich.console import Console
@@ -311,12 +312,20 @@ def remove_pii(
     settings: BristlenoseSettings,
     *,
     status: Status | None = None,
+    on_progress: Callable[[int, int], None] | None = None,
 ) -> tuple[list[PiiCleanTranscript], list[PiiRedaction]]:
     """Remove PII from transcripts using Presidio.
 
     Args:
         transcripts: Raw transcripts with PII.
         settings: Application settings.
+        status: The run's spinner, so the model-fetch banner can step aside.
+        on_progress: Optional ``callback(current, total)`` fired after each
+            transcript is redacted — the same shape and the same after-the-unit
+            timing as ``transcribe_sessions``' own ``on_progress``, so the
+            caller's handler is the sibling of ``_on_transcribe_progress``
+            rather than a second convention. ``current`` is 1-based and counts
+            transcripts *finished*, which is what "3 of 8" means to a reader.
 
     Returns:
         Tuple of (cleaned transcripts, all redactions across all sessions).
@@ -391,6 +400,9 @@ def remove_pii(
             transcript.session_id,
             total_entities,
         )
+
+        if on_progress is not None:
+            on_progress(len(clean_transcripts), len(transcripts))
 
     return clean_transcripts, all_redactions
 

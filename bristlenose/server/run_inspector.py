@@ -56,8 +56,43 @@ _STAGE_ORDER = {sid: i for i, (sid, _, _) in enumerate(STAGE_LABELS)}
 _STAGE_LABEL = {sid: lbl for sid, lbl, _ in STAGE_LABELS}
 _STAGE_LLM = {sid: llm for sid, _, llm in STAGE_LABELS}
 
-# Stable colour per LLM-bearing telemetry stage (telemetry uses its own stage
-# vocabulary — topics/quotes/cluster/etc — keyed off the contextmanager name).
+# The pipeline speaks TWO stage vocabularies and this module reads the wrong
+# one. `run_progress.stage` carries the *estimator's* coarse names from
+# `timing.py ALL_STAGES` — "speakers", "topics", "quotes", "cluster", "pii" —
+# while everything above is keyed on `manifest.py STAGE_ORDER`. They coincide
+# on exactly two ids, `transcribe` and `render`, which is why this went unseen:
+# those two rendered correctly and the rest fell through to the defaults —
+# `.title()` for the label, `order=99`, and **is_llm False for all three LLM
+# stages**, so the gantt lost its LLM colouring on precisely the bars worth
+# colouring. `pii` is the one that made it visible, rendering as "Pii" from the
+# day stage 7 started emitting progress (12 Sep 2026).
+#
+# The unit test could not catch it: its fixture fed `stage: "quote_extraction"`,
+# a value no pipeline has ever emitted, so it asserted `status == "llm"` against
+# the manifest vocabulary and passed. A fixture written in the wrong vocabulary
+# proves the wrong thing.
+#
+# Translate at the boundary rather than aliasing ids into `STAGE_LABELS`: one
+# bridge, and downstream (`_TIMING_METRIC_STAGE`, which maps the same coarse
+# names to manifest ids) then indexes a dict that is finally keyed to match.
+_PROGRESS_STAGE_TO_MANIFEST = {
+    "transcribe": "transcribe",
+    "speakers": "identify_speakers",
+    "pii": "pii_removal",
+    "topics": "topic_segmentation",
+    "quotes": "quote_extraction",
+    "cluster": "cluster_and_group",
+    "render": "render",
+}
+
+# Stable colour per LLM-bearing telemetry stage. Telemetry is the **third**
+# stage vocabulary in play here, and neither of the other two: the key is the
+# `_llm_telemetry.stage(...)` contextmanager's own argument, which is the module
+# name — `s08_topic_segmentation`, `s10_quote_clustering`. (This comment said
+# "topics/quotes/cluster", which is the estimator's vocabulary and not what
+# telemetry writes; corrected 13 Sep 2026 alongside the estimator/manifest
+# crossing above.) Nothing joins telemetry to the gantt, so no bridge is needed —
+# but do not assume one of these three maps onto another without checking.
 _STAGE_COLOURS = ["#b07cff", "#5fa0ff", "#2bb6c4", "#ffb454", "#46c98b", "#ff8db0"]
 
 
@@ -301,9 +336,12 @@ def reconstruct_stages(events: list[dict[str, Any]]) -> tuple[list[dict[str, Any
         if not boundaries or boundaries[-1][0] != stage:
             boundaries.append((stage, el))
     stages: list[dict[str, Any]] = []
-    for i, (stage, start) in enumerate(boundaries):
+    for i, (progress_stage, start) in enumerate(boundaries):
         end = boundaries[i + 1][1] if i + 1 < len(boundaries) else end_elapsed
         dur = max(end - start, 0.0)
+        # Coarse progress name -> manifest id. Unknown ids pass through
+        # unchanged so a future stage still renders, just without a label.
+        stage = _PROGRESS_STAGE_TO_MANIFEST.get(progress_stage, progress_stage)
         stages.append(
             {
                 "id": stage,
@@ -368,14 +406,13 @@ def event_stream(events: list[dict[str, Any]], limit: int = 12) -> list[dict[str
 # ---------------------------------------------------------------------------
 
 # timing.json metric name -> the manifest stage id it corresponds to.
-_TIMING_METRIC_STAGE = {
-    "transcribe": "transcribe",
-    "speakers": "identify_speakers",
-    "topics": "topic_segmentation",
-    "quotes": "quote_extraction",
-    "cluster": "cluster_and_group",
-    "render": "render",
-}
+# The timing profile's metric names ARE the coarse progress names — `timing.py`
+# writes one metric per `ALL_STAGES` entry — so this is the same translation as
+# above, and keeping a second copy is how the two drift. It already had: it was
+# missing `pii`, which `TimingEstimator.record_run` has persisted since stage 7
+# joined `_stage_actuals`, so the μ±σ-vs-actual table silently dropped a row it
+# had the data for.
+_TIMING_METRIC_STAGE = _PROGRESS_STAGE_TO_MANIFEST
 
 
 def load_timing(config_dir: Path) -> dict[str, Any]:

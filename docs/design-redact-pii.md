@@ -1075,6 +1075,96 @@ an id missing on the Swift side is exactly how this shipped invisible; and the
 timing suite covers order, session scaling, both conditional skips, and the
 old-profile case.
 
+### The per-transcript count, and two crossed vocabularies — 13 Sep 2026
+
+Yesterday's fix advanced the *verb* and left the *count* alone, and that turns
+out to be worse than it sounds. `RunProgressMath.apply` overwrites the session
+pair **only on an event that carries one** (`if let sessionsComplete { … }`), so
+the pair persists from whichever stage last emitted it. Measured: only
+`transcribe` ever did. So the Mac row rendered transcription's finished
+**"8 of 8"** beside *"Redacting personal information"* — a stage that had just
+started, reading as already complete.
+
+`remove_pii` now takes an `on_progress` callback and fires it after each
+transcript. Deliberately the shape `transcribe_sessions` already defines —
+`callback(current, total)`, after the unit, `current` 1-based — so the
+pipeline's handler is a sibling of `_on_transcribe_progress`, not a second
+convention. It updates the CLI spinner and emits `sessions_complete` /
+`sessions_total` / `stage_fraction` under `stage="pii"`. The spinner reads
+`Removing PII... (2/8 transcripts)`, composed as
+`f"{current}/{count_noun(total, 'transcript')}"` — the sibling hand-rolls
+`"file" if total == 1 else "files"`, and `count_noun` already carries the
+number, so this gets the identical shape while honouring the house plural rule.
+
+`stage_fraction` earns its place only on a cold estimator, where it is the
+ring's fallback — and specifically when transcription was skipped, since
+otherwise transcribe's own 1.0 has already pinned a cold ring.
+
+**Three things this exposed, all pre-existing.**
+
+**1. `speakers` / `topics` / `quotes` still show a stale count.** They are
+per-session stages that emit no pair, so they inherit whatever came last — now
+PII's finished "N of N". The Swift comment asserted both that transcribe was the
+only emitter *and* that those three carried a live fraction; the two cannot both
+be true and the second was the wrong one. Corrected in place, and recorded there
+as a gap rather than a decision: the fix is for them to emit, not for
+`nonSessionStages` to suppress. **Not done here** — three stages, no PII content.
+
+**2. The run inspector reads the wrong vocabulary, and its test pinned the
+mistake.** `run_progress.stage` carries `timing.py ALL_STAGES` (`speakers`,
+`topics`, `quotes`, `cluster`, `pii`) while the inspector's labels, order and
+LLM colouring are keyed on `manifest.py STAGE_ORDER`. It is a **dev-only**
+surface — `serve --dev`, or the DEBUG desktop build's Run Inspector window — so
+nothing here reached a release, which is the right size for the finding. The two coincide on
+`transcribe` and `render` alone, so five of seven fell through to `.title()`,
+`order=99` and **`is_llm=False` — losing the LLM colouring on all three LLM
+bars**. `pii` is what made it visible, rendering as **"Pii"** from the moment
+stage 7 started emitting. The unit test could not catch it: its fixture fed
+`stage: "quote_extraction"`, a value no pipeline has ever written, so it asserted
+`status == "llm"` against the manifest vocabulary and passed green.
+
+Fixed by translating once at the boundary in `reconstruct_stages`, which also
+repairs `_TIMING_METRIC_STAGE` downstream — that map was a second copy of the
+same translation and had already drifted, missing `pii` while
+`TimingEstimator.record_run` persisted the metric, so the μ±σ-vs-actual table
+dropped a row whose data it held. It is now an alias of the one map, and two new
+tests drive every `ALL_STAGES` id through and fail on any that lands unlabelled.
+
+**3. `Redacted PII (1 entities)`.** The completion line hardcoded the plural
+against the house `count_noun` rule, which the stage's own module already
+imports.
+
+**Still open, and each needs a decision rather than a patch:**
+
+- **Stage 7 has no resume.** Every re-run re-loads spaCy and re-runs Presidio
+  over every segment, then rewrites `transcripts-cooked/`. `manifest.py` justifies
+  this as "Stages 1–7 always re-run (fast, no intermediate JSON)" — no longer true
+  of stage 7, as the estimator's own decision to give it a session-scaled metric
+  concedes. `mark_stage_complete(STAGE_PII_REMOVAL)` passes no `content_hash`,
+  `input_hashes` or `output_path`, so `_is_stage_verified` has nothing to verify.
+  The cache key must include the PII config, not just the upstream hash — s08
+  already models exactly this by hashing `pii_enabled`. Interacts with fail-stop:
+  *resumable across runs* is not the same claim as *partial within a run*, and
+  only the first is wanted. **The real blocker is upstream**, and it is work
+  rather than a judgement call: stage 7's input is stage 6's merged transcripts,
+  and stage 6 is itself uncached and produces no content hash for stage 7 to key
+  on. That has to exist first.
+- **No `PipelineSummary.pii` bucket**, so the terminus carries no PII duration or
+  counts, and an abandon ships a summary silent about the stage that failed.
+  Additive, but it is a wire-contract change (Swift mirror + fixture + a scenario
+  that uses the field), and the redaction *count* per session is weakly
+  identifying — attempted/succeeded session counts are the safe subset.
+- **`bristlenose status` never mentions PII.** `_STAGE_DISPLAY` defines
+  "PII removal" and `_DISPLAY_STAGES` throws it away, so the one command that
+  answers "what state is this project in" cannot answer it for the privacy
+  control. **Not a one-line fix, and the trap is worth writing down:** a missing
+  record renders `PENDING`, which would be wrong on every default run; and a
+  project redacted once and re-run without redaction keeps a stale `COMPLETE`
+  record while its `transcripts-cooked/` is stale and the analysis used raw text.
+  Printing "✓ PII removal" there is a **false privacy claim**, which is worse
+  than the current silence. Needs the last run's `pii_enabled`, which today is
+  legible only from s08's stored `input_hashes`.
+
 ### Build order
 
 Phases 0–2 are independent of Background Assets and can land immediately; the

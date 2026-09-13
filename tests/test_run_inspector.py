@@ -120,11 +120,19 @@ def test_calibration_only_pairs_with_both_values():
 # --- events / gantt --------------------------------------------------------
 
 def test_reconstruct_stages_from_progress_stream():
+    """Timings and boundaries, driven by the vocabulary the pipeline emits.
+
+    The events say `quotes`, NOT `quote_extraction`. This fixture said the
+    latter until 13 Sep 2026 — a value no pipeline has ever written — so the
+    `status == "llm"` assertion below was answered by the manifest vocabulary
+    the labels happen to be keyed on, and the translation it now proves did not
+    exist. A fixture in the wrong vocabulary proves the wrong thing.
+    """
     events = [
         {"kind": "progress", "stage": "transcribe", "elapsed_seconds": 0.0, "stage_fraction": 0.0},
         {"kind": "progress", "stage": "transcribe", "elapsed_seconds": 5.0, "stage_fraction": 0.9},
-        {"kind": "progress", "stage": "quote_extraction", "elapsed_seconds": 10.0, "stage_fraction": 0.1},
-        {"kind": "progress", "stage": "quote_extraction", "elapsed_seconds": 16.0, "stage_fraction": 0.9},
+        {"kind": "progress", "stage": "quotes", "elapsed_seconds": 10.0, "stage_fraction": 0.1},
+        {"kind": "progress", "stage": "quotes", "elapsed_seconds": 16.0, "stage_fraction": 0.9},
     ]
     stages, total = ri.reconstruct_stages(events)
     assert total == 16.0
@@ -133,6 +141,72 @@ def test_reconstruct_stages_from_progress_stream():
     assert stages[0]["status"] == "ran"
     assert stages[1]["status"] == "llm"      # quote_extraction is an LLM stage
     assert stages[1]["dur"] == 6.0           # 10 → run end (16)
+
+
+def test_every_progress_stage_resolves_to_a_labelled_manifest_stage():
+    """No stage may fall through to `.title()`, `order=99` and `is_llm=False`.
+
+    `run_progress.stage` carries `timing.py ALL_STAGES`; the gantt's labels,
+    order and LLM colouring are keyed on `manifest.py STAGE_ORDER`. The two
+    coincide on `transcribe` and `render` alone, so the fall-through was
+    invisible on those and wrong on the other five — including all three LLM
+    stages, which lost their colour, and `pii`, which rendered as "Pii".
+
+    Driven from `ALL_STAGES` itself, so a new estimator stage fails here rather
+    than shipping unlabelled.
+    """
+    from bristlenose.timing import ALL_STAGES
+
+    events = [
+        {"kind": "progress", "stage": stage, "elapsed_seconds": float(i)}
+        for i, stage in enumerate(ALL_STAGES)
+    ]
+    stages, _ = ri.reconstruct_stages(events)
+
+    assert len(stages) == len(ALL_STAGES)
+    for progress_id, built in zip(ALL_STAGES, stages, strict=True):
+        assert built["id"] in ri._STAGE_LABEL, (
+            f"progress stage {progress_id!r} became {built['id']!r}, which is "
+            "not a manifest stage — it will render as a .title()d guess"
+        )
+        assert built["name"] == ri._STAGE_LABEL[built["id"]]
+        assert built["order"] != 99, f"{progress_id!r} sorts to the end"
+
+    by_progress_id = dict(zip(ALL_STAGES, stages, strict=True))
+    assert by_progress_id["pii"]["name"] == "PII removal"  # was "Pii"
+    for llm_stage in ("topics", "quotes", "cluster"):
+        assert by_progress_id[llm_stage]["status"] == "llm", (
+            f"{llm_stage} lost its LLM colouring to the vocabulary mismatch"
+        )
+
+
+def test_timing_compare_reads_the_same_ids_the_gantt_writes():
+    """The μ±σ table indexes `stage_actuals`, which the gantt keys by manifest
+    id — so the metric map must translate, and must cover every metric.
+
+    `pii` was missing from it while `TimingEstimator.record_run` persisted the
+    metric, so that row was dropped with the data present.
+    """
+    from bristlenose.timing import ALL_STAGES
+
+    for metric in ALL_STAGES:
+        assert metric in ri._TIMING_METRIC_STAGE, f"no actual can match {metric!r}"
+        assert ri._TIMING_METRIC_STAGE[metric] in ri._STAGE_LABEL
+
+    events = [
+        {"kind": "progress", "stage": "pii", "elapsed_seconds": 0.0},
+        {"kind": "progress", "stage": "topics", "elapsed_seconds": 8.0},
+    ]
+    stages, _ = ri.reconstruct_stages(events)
+    stage_actuals = {s["id"]: s["dur"] for s in stages}
+    rows = ri.timing_compare(
+        {"profiles": {"h": {"pii": {"n": 5, "mean": 1.0, "m2": 0.0}}}},
+        stage_actuals,
+    )
+    assert [r["name"] for r in rows] == ["PII removal"], (
+        "the pii row was dropped — metric map and gantt ids disagree"
+    )
+    assert rows[0]["act"] == 8.0  # 0 → topics start
 
 
 def test_reconstruct_stages_empty_when_no_progress():

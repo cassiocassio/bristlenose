@@ -524,6 +524,37 @@ reads from the events log) and is **not** a command — `bristlenose transcribe-
 exits with "No such command". The internal function is `run_transcription_only`,
 which makes all three names differ.
 
+### The pipeline speaks THREE stage vocabularies, and two of them overlap on exactly two ids
+
+A "stage id" is not one thing. `manifest.py STAGE_ORDER` has ten
+(`identify_speakers`, `topic_segmentation`, `quote_extraction`,
+`cluster_and_group`, `pii_removal`); `timing.py ALL_STAGES` has seven coarse
+ones and is what **`run_progress.stage` actually carries** (`speakers`,
+`topics`, `quotes`, `cluster`, `pii`); and `_llm_telemetry.stage(...)` uses a
+third — the module name (`s08_topic_segmentation`).
+
+The first two **coincide on `transcribe` and `render`**, which is what makes
+crossing them survive review: the two you spot-check are right and the other
+five fall through to a default. In the run inspector (13 Sep 2026 — a dev-only
+surface, `serve --dev` or the DEBUG desktop build, so no release shipped it) that
+default was `.title()` for the label, `order=99`, and `is_llm=False` — so the
+gantt lost LLM colouring on all three LLM bars, and `pii` rendered as **"Pii"**.
+Downstream, `_TIMING_METRIC_STAGE` translated coarse→manifest and then indexed a
+dict keyed by *coarse* ids, so four of six μ±σ rows were silently dropped.
+
+**The unit test could not catch it, because the fixture was written in the wrong
+vocabulary** — it fed `stage: "quote_extraction"`, a value no pipeline has ever
+emitted, and so asserted `status == "llm"` against the manifest names the labels
+happen to use. Green throughout. Same family as the degenerate-fixture trap
+above: *a fixture that does not speak the producer's language tests the reader
+against itself.*
+
+**Rule:** when consuming `run_progress`, translate at the boundary, once, and
+drive the test from `ALL_STAGES` itself rather than a hand-written list — a new
+estimator stage then fails loudly instead of shipping unlabelled. **Tell:** a
+stage rendering as a `.title()`d guess (`"Pii"`, `"Cluster"`), or a per-stage
+table that is mysteriously missing rows whose data you know exists.
+
 ### A coarse cache record silently overrides the fine one — so fixing per-session state can change nothing
 
 The manifest carries a **stage** status and a **per-session** map, and the stage

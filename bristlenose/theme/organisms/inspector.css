@@ -4,9 +4,27 @@
    analysis layout is active — keeps the collapsed inspector handle
    visible at the bottom of the viewport without scrolling.
    .layout normally has min-height: 100vh (can grow); here we cap it. */
+/* The viewport MINUS everything `body` pads with.
+   `body` carries `padding: var(--bn-space-xl) var(--bn-space-lg)`, so a child
+   sized at a bare 100vh makes the document exactly 64px taller than the
+   viewport — and the page grows a scrollbar that scrolls 64px and nothing
+   else. On a lens that scrolls for real (Quotes) it hides inside a genuine
+   5000px of overflow; on a lens capped to the viewport it is the whole of the
+   page's scroll range, and on Analysis it appears immediately beside
+   .analysis-center's legitimate bar, which is how one phantom reads as two
+   scrollbars. Measured 14 Sep 2026: docScrollHeight - docClientHeight was 64
+   on /analysis/ and /sessions/ alike.
+
+   `--bn-toolbar-inset` is subtracted too, and it is the half a browser cannot
+   show you. In embedded mode report.css pads the top by
+   `calc(var(--bn-toolbar-inset, 0px) + var(--bn-space-xl))`, so the WebView
+   carries an extra inset that Playwright never sees — subtract 64 alone and
+   the fix measures perfect in a browser while the app keeps a phantom bar
+   exactly as tall as the toolbar. The fallback is 0px, which is what makes one
+   expression right on both surfaces. */
 .layout:has(.analysis-layout) {
-    height: 100vh;
-    height: 100dvh;
+    height: calc(100vh - var(--bn-toolbar-inset, 0px) - 2 * var(--bn-space-xl));
+    height: calc(100dvh - var(--bn-toolbar-inset, 0px) - 2 * var(--bn-space-xl));
     overflow: hidden;
     grid-template-rows: 1fr;
 }

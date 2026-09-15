@@ -336,6 +336,77 @@ class TestRenderPage:
         monkeypatch.setenv("BRISTLENOSE_TYPOGRAPHY", "inter")
         assert 'data-typography="inter"' in _html_root_attrs()
 
+    def _spa_head(self, tmp_path: Path) -> str:
+        """Build the served head from the REAL ``frontend/index.html``.
+
+        Deliberately not a hand-written fixture: the thing under test is what
+        ships, so a fourth external ``<link>`` added to the real file has to
+        face the assertions below rather than sail past a stand-in that never
+        heard of it.
+        """
+        from bristlenose.server.app import _build_spa_html
+
+        source = Path(__file__).parent.parent / "frontend" / "index.html"
+        static_dir = tmp_path / "static"
+        static_dir.mkdir(exist_ok=True)
+        (static_dir / "index.html").write_text(
+            source.read_text(encoding="utf-8"), encoding="utf-8"
+        )
+        with patch("bristlenose.server.app._STATIC_DIR", static_dir):
+            html = _build_spa_html(tmp_path, auth_token="t")
+        return html[: html.index("</head>")]
+
+    def test_desktop_head_waits_for_no_webfont(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The app is set in SF Pro, so it must not *wait* for Inter.
+
+        ``tokens-desktop.css`` already switches ``--bn-font-body`` to
+        ``-apple-system`` on ``[data-platform="desktop"]:not([data-typography=
+        "inter"])`` — the ``<link>`` has to follow the same switch, because it is
+        render-blocking. Until it settles the module bundle cannot execute, so
+        React never mounts and never posts ``ready``, which is the desktop app's
+        gate for uncovering the pane. Measured 14 Sep 2026: a degraded route to
+        fonts.googleapis.com held one such request for 71.7s and the app showed
+        its boot surface for all of it, for a face it then discarded.
+
+        The broad assertion is the durable one: no external subresource at all.
+        Every Mac that can run the app has SF Pro, so first paint in the app
+        owes the network nothing beyond the loopback sidecar.
+        """
+        monkeypatch.setenv("BRISTLENOSE_PLATFORM", "desktop")
+        monkeypatch.delenv("BRISTLENOSE_TYPOGRAPHY", raising=False)
+        head = self._spa_head(tmp_path)
+
+        assert "fonts.googleapis.com" not in head
+        assert "fonts.gstatic.com" not in head
+        assert 'href="https://' not in head, (
+            "desktop first paint must not depend on any external host"
+        )
+        # The strip is surgical — the rest of the head survives it.
+        assert "bristlenose-theme.css" in head
+        assert "__BRISTLENOSE_AUTH_TOKEN__" in head
+
+    def test_web_and_opted_in_desktop_still_get_inter(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The strip is desktop-default only — it is not a font-mechanism change.
+
+        Web/CLI is set in Inter and keeps the CDN link; a desktop user who opts
+        back to Inter (Appearance ▸ Typography → ``BRISTLENOSE_TYPOGRAPHY=inter``)
+        needs the download and still gets it. That env var is read at sidecar
+        spawn, so the attribute and the link are decided together — there is no
+        runtime state where ``data-typography="inter"`` is set and the font is
+        absent.
+        """
+        monkeypatch.delenv("BRISTLENOSE_PLATFORM", raising=False)
+        monkeypatch.delenv("BRISTLENOSE_TYPOGRAPHY", raising=False)
+        assert "fonts.googleapis.com" in self._spa_head(tmp_path)
+
+        monkeypatch.setenv("BRISTLENOSE_PLATFORM", "desktop")
+        monkeypatch.setenv("BRISTLENOSE_TYPOGRAPHY", "inter")
+        assert "fonts.googleapis.com" in self._spa_head(tmp_path)
+
     def test_html_root_attrs_palette_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from bristlenose.server.app import _html_root_attrs
 

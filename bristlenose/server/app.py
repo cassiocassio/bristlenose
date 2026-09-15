@@ -7,6 +7,7 @@ import json
 import logging
 import mimetypes
 import os
+import re
 import secrets
 import traceback
 from collections.abc import Awaitable, Callable
@@ -489,6 +490,41 @@ def _print_dev_urls() -> None:
     )
 
 
+# The Google-Fonts <link> tags in the Vite-built index.html. Matched on the
+# HOST, not on the exact tag text: a Vite reformat or a family change must not
+# silently stop matching and quietly restore the stall this strip exists to
+# prevent (same trap as the stale export-CSS selectors).
+_FONT_CDN_LINK_RE = re.compile(
+    r"[ \t]*<link[^>]*\bfonts\.g(?:oogleapis|static)\.com[^>]*>\n?"
+)
+
+
+def _wants_inter_webfont() -> bool:
+    """Whether the served HTML should pull Inter from the Google Fonts CDN.
+
+    The web/CLI SPA is set in Inter; the macOS app is set in SF Pro, which ships
+    on every Mac that can run the app. ``tokens-desktop.css`` already makes that
+    switch on ``[data-platform="desktop"]:not([data-typography="inter"])`` — this
+    makes the ``<link>`` follow it, because the link is *render-blocking*: until
+    it settles, the module bundle cannot execute, React never mounts, and the SPA
+    never posts ``ready`` — which is the desktop app's gate for uncovering the
+    pane.
+
+    Measured 14 Sep 2026: a degraded route to fonts.googleapis.com held that one
+    request for 71.7s, and the app sat on its boot surface for all of it —
+    waiting on a face it was going to discard. The download was never wanted on
+    desktop; nothing about the typography decision changes here.
+
+    A desktop user who opts back into Inter (``BRISTLENOSE_TYPOGRAPHY=inter``)
+    does need it, and still gets it. The env var is read at sidecar spawn, so
+    changing the setting re-renders this HTML — there is no runtime case where
+    the attribute says Inter and the link is absent.
+    """
+    platform = os.environ.get("BRISTLENOSE_PLATFORM", "")
+    typography = os.environ.get("BRISTLENOSE_TYPOGRAPHY", "")
+    return platform != "desktop" or typography == "inter"
+
+
 def _html_root_attrs() -> str:
     """Build extra attributes for the <html> element.
 
@@ -534,12 +570,15 @@ def _build_spa_html(
     - When *dev* is True, injects ``window.__BRISTLENOSE_DEV__ = true`` so the
       responsive playground loads (without requiring the Vite dev server)
     """
-    import re
-
     index_path = _STATIC_DIR / "index.html"
     html = index_path.read_text(encoding="utf-8")
     # Rewrite bundle asset paths: /assets/ → /static/assets/
     html = re.sub(r'((?:src|href)=")/assets/', r'\1/static/assets/', html)
+    # SF Pro on desktop — see _wants_inter_webfont. Strip before anything else
+    # rewrites the head: this is the one render-blocking external request the
+    # page makes, and on desktop it buys nothing.
+    if not _wants_inter_webfont():
+        html = _FONT_CDN_LINK_RE.sub("", html)
     # Inject platform/theme attributes on <html>
     extra = _html_root_attrs()
     if extra:
@@ -601,11 +640,14 @@ def _build_dev_html(output_dir: Path, *, auth_token: str = "") -> str:
         '<meta charset="UTF-8" />\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1.0" />\n'
         '<meta name="color-scheme" content="light dark" />\n'
-        '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
-        '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
-        '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700'
-        '&display=swap" rel="stylesheet">\n'
-        '<link rel="stylesheet" href="/report/assets/bristlenose-theme.css">\n'
+        + (
+            '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
+            '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
+            '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700'
+            '&display=swap" rel="stylesheet">\n'
+            if _wants_inter_webfont() else ""
+        )
+        + '<link rel="stylesheet" href="/report/assets/bristlenose-theme.css">\n'
         "<title>Bristlenose</title>\n"
         "</head>\n"
         "<body>\n"

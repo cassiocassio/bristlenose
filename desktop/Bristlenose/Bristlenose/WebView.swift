@@ -215,6 +215,11 @@ struct WebView: NSViewRepresentable {
         @MainActor var webView: WKWebView?
         @MainActor var lastLoadedURL: URL?
 
+        /// Wall-clock ceiling on the boot surface, armed at navigation START.
+        /// Cancelled and re-armed by each new main-frame navigation, so at most
+        /// one is live and it always belongs to the document on screen.
+        @MainActor private var uncoverCeiling: Task<Void, Never>?
+
         /// KVO observations for back/forward button enable state.
         /// Stored strongly — auto-invalidated on Coordinator dealloc when the
         /// WebView is recreated via `.id(project.id)` on project switch.
@@ -372,6 +377,42 @@ struct WebView: NSViewRepresentable {
                 guard let self, webView === self.webView else { return }
                 log.notice("main-frame navigation started (url: \(webView.url?.path ?? "nil", privacy: .public)) → documentState .loading")
                 self.bridgeHandler.documentState = .loading
+                self.armUncoverCeiling()
+            }
+        }
+
+        /// How long the boot surface may cover the pane, measured from
+        /// navigation start. A healthy report load posts `ready` in about a
+        /// second; the `didFinish` net below adds 2s on top of a load that has
+        /// already *completed*. Eight seconds is far beyond the first and far
+        /// short of the point where a person concludes the app is broken.
+        private static let uncoverCeilingSeconds: Double = 8
+
+        /// Bound the boot surface by the clock, not by the load.
+        ///
+        /// `didFinish`'s 2-second net answers "the document loaded but never
+        /// identified itself". It cannot answer "the document never finished
+        /// loading", because it is downstream of the very thing that stalled —
+        /// so a single slow subresource held the pane covered with no ceiling
+        /// at all. Measured 14 Sep 2026: one render-blocking stylesheet took
+        /// 71.7s, `didFinish` fired 30ms after it, and the app showed its boot
+        /// surface for the whole 72 seconds. (That particular subresource is
+        /// gone from the desktop head now — see `_wants_inter_webfont` in
+        /// `server/app.py` — which is the fix; this is the backstop for the
+        /// next one, whatever it turns out to be.)
+        ///
+        /// Fabricates `isReady` only, never `documentState` (D2): this answers
+        /// "may I stop covering the pane?", and a document that never said what
+        /// it is keeps the lens affordances pessimistic. Warns rather than
+        /// prints — a wedge here is otherwise invisible, and `log stream` is
+        /// where the last one was found.
+        @MainActor private func armUncoverCeiling() {
+            uncoverCeiling?.cancel()
+            uncoverCeiling = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(Coordinator.uncoverCeilingSeconds))
+                guard !Task.isCancelled, let self, !self.bridgeHandler.isReady else { return }
+                log.warning("boot surface hit its \(Coordinator.uncoverCeilingSeconds, privacy: .public)s ceiling — load never finished; uncovering anyway (documentState stays \(String(describing: self.bridgeHandler.documentState), privacy: .public))")
+                self.bridgeHandler.isReady = true
             }
         }
 

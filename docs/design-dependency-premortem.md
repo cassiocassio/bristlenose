@@ -201,13 +201,13 @@ Most breakage is *cluster* breakage. The agent starts from this map
 
 | Cluster | Members | The trap |
 |---------|---------|----------|
-| **spaCy ecosystem** | spacy, thinc, weasel, confection, srsly, preshed, cymem, murmurhash, blis, wasabi | spaCy 3.8 pins `thinc<8.4`, `weasel<0.5`; the 1.x/9.x generation is spaCy-4-era. Any lone thinc/weasel/confection bump is a guaranteed resolver-red. Drags the **Presidio PII path**. |
-| **numpy ABI** | numpy, numba, llvmlite (+ scipy, ctranslate2, mlx) | numba pins a tight `numpy<2.X` cap and lags new numpy. numpy-first is the classic *silent* break — numba throws at import. Move atomically. |
+| **spaCy ecosystem** | spacy, thinc, weasel, confection, srsly, preshed, cymem, murmurhash, blis, wasabi | spaCy 3.8.16 pins `thinc<8.4.0,>=8.3.12` and **`weasel<2.0.0,>=1.0.0`** — *not* the `weasel<0.5` this row carried until 20 Sep 2026; weasel 1.0.0 is installed in both venvs and the ledger graduated that row on 5 Sep. Any lone thinc/confection bump is still a guaranteed resolver-red. Drags the **Presidio PII path**. |
+| **numpy ABI** | numpy, numba, llvmlite (+ scipy, ctranslate2, mlx) | **The binding cap is no longer numba.** Measured 20 Sep 2026 in `.venv-sidecar` (the venv the bundle is built from, per the two-venv rule): `numba 0.67.0` floats to `numpy<2.6`, while **`presidio-analyzer 2.2.364` pins `numpy<2.5.0`** and is therefore the ceiling. `.venv` disagrees — numba 0.66.0 there caps at `<2.5` — so ask the sidecar venv, not this one. numpy-first is still the classic *silent* break: numba throws at import. Move atomically. |
 | **LLM SDKs** | anthropic, openai, google-genai | Scary major gaps, but breaks usually live in *unused beta surfaces*. Verify against `bristlenose/llm/client.py`'s actual calls before crying doom. |
-| **FastAPI / starlette** | fastapi, starlette | FastAPI's metadata caps starlette; bumping starlette alone is a resolver-non-event until FastAPI floats the cap. |
-| **HF transformer stack** | torch, transformers, tokenizers, huggingface_hub | tokenizers↔transformers mismatch is the classic ImportError. Move the set together. |
+| **FastAPI / starlette** | fastapi, starlette | **No longer true — there is no cap.** `fastapi 0.141.1` requires `starlette>=0.46.0`, open-ended (measured 20 Sep 2026); the cap went at 0.136.3 and the ledger graduated this row on **9 Jun 2026**. Kept as a cluster because the two still move together in practice, but a lone starlette bump is now an ordinary bump, not a resolver non-event. |
+| **HF transformer stack** | torch, tokenizers, huggingface_hub | ~~tokenizers↔transformers mismatch~~ — **`transformers` is not a dependency of this project.** Installed in neither venv, absent from `pyproject.toml` and `bristlenose-sidecar.spec`, and nothing under `bristlenose/` imports it (measured 20 Sep 2026; the ledger said so on 3 Sep). The remaining three do move together. Do not reason about a transformers/tokenizers pairing here — there is no transformers to pair with. |
 | **Node-gated frontend/e2e** | vite, vitest, jsdom, eslint family, typescript / lighthouse, @playwright/test | Move with the **Node major** (`.tool-versions`). A tool whose `engines` outruns CI's Node is a red install (or a silent warning if `engine-strict` is unset). Confirm CI Node from `.tool-versions`, not a register line that may be stale. |
-| **Python-ceiling (PII)** | presidio-analyzer, presidio-anonymizer, spacy, thinc | The only cluster that caps the interpreter from *above*: presidio's `requires-python <3.15` sets the ceiling, while the floor is set by compiled wheels (numba, llvmlite, ctranslate2, mlx). A Python bump is a cluster move in both directions; `scripts/check-python-band.py` measures the band. |
+| **Python-ceiling (PII)** | presidio-analyzer, presidio-anonymizer, spacy, thinc | The only cluster that caps the interpreter from *above*: presidio's `requires-python <3.15` sets the ceiling, while the floor is set by compiled wheels (numba, llvmlite, ctranslate2, mlx). A Python bump is a cluster move in both directions; `scripts/check-python-band.py` measures the band. **Members corrected 20 Sep 2026** — this row listed `presidio-analyzer, presidio-anonymizer, spacy, thinc`, which omits the three packages whose caps the Held register actually attributes to presidio: **`cryptography`, `numpy` and `pydantic`**. The cluster existed to carry those caps and did not name them. |
 | **Sibling-action chains** | github/codeql-action (init, autobuild, analyze); canonical/action-build + action-publish | Actions cut from one repo must share one SHA — Dependabot fans them into separate PRs, and a chain-within-a-fan merged piecemeal runs two versions in one job. Dereference annotated tags (`git rev-parse <tag>^{}`) or the pin is the tag object, not the commit. |
 | **npm peer caps** | eslint, @eslint/js, typescript-eslint, eslint-plugin-jsx-a11y, eslint-plugin-react-hooks | Plugin `peerDependencies` cap the eslint major; bumping eslint alone is a resolver non-event or a peer warning nobody reads until every plugin floats. Move the set together, and put the laggards on the Dependabot ignore list with a predicate, not a silence. |
 
@@ -345,7 +345,9 @@ bandwidth-shaped interface to it.
 
 - `.claude/agents/cassandra.md` — the agent (method + coupling map).
 - `.claude/skills/cassandra/SKILL.md` — the skill (calling mechanism +
-  ledger ownership, Mode A prophesy / Mode B score).
+  ledger ownership, Mode A prophesy / Mode B score / **Mode C watch** — the
+  third mode is the one this doc leans on at §the-Held-register, and it was
+  missing from this pointer).
 - `docs/dependency-premortem-log.md` — the ledger (prophecies + outcomes).
 - `docs/design-platform-policy.md` — the pinning register and
   tooling-sprint cadence that triggers a pre-mortem.

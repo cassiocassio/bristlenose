@@ -386,6 +386,46 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.30.0** — _21 Sep 2026_
+
+The Analysis lens is called Signals, its cards were redrawn, and PII redaction finally works end to end on the command line.
+
+**New**
+
+- **The Analysis lens is now Signals.** The name was doing two jobs and neither well: analysis is what *you* do — reading, tagging, revising — and what the pipeline does when you press Analyse. Signals is the thing Bristlenose computes: the concentration scores, the cards, the lens that shows them. Calling one lens "Analysis" implied the other four weren't, which is untrue — tagging in Quotes is analysis. Everything that names the lens now says Signals, in all 21 languages. Old links keep working: `/report/analysis/` redirects, and bookmarks and already-exported reports still open.
+- **Signal cards, redrawn.** A card now names its location once, in the heading, and opens with four quotes rather than one. The chip says what the feeling *is* — "Frustration", "Mixed sentiments" — instead of naming the framework it came from, which told you nothing. Findings arrive a chunk at a time over cards already on screen, so a long elaboration no longer holds the whole list back.
+- **PII redaction works end to end — on the command line.** `--redact-pii` bundles the detection engine, fetches its model on first use with the terminal to itself, and the report records when the transcripts were redacted. A phone number read aloud is now caught; it wasn't before. Turning redaction off clears the redacted copy rather than leaving a stale one for three different readers to disagree over. **This is the CLI only** — the Mac app can't reach it yet.
+- **A focus cursor in Codebooks, and a Codes menu to drive it.** Move between codes from the keyboard, with one focus ring at a time and an edit field that looks like one.
+- **⌘F searches.** It was bound to nothing on lenses that have a search box, and dims on the ones that don't.
+- **One keychain.** A provider key saved in the app is now seen by the CLI, and the other way round. They had been writing same-named items to different keychains and neither read the other's.
+
+**Improved**
+
+- **The Signals lens has one navigation, one card list, and one order.** The left panel and the main content used to disagree about what came first.
+- **The report keeps its reading measure when the window narrows.** Panels give way in a deliberate order — the Mac sidebar first — instead of squeezing the text.
+- **Provider defaults are current again.** ChatGPT moves off a May-2024 model, Gemini's two picker models are retired for new users (the default was already broken), and Claude's default returns to the model that passes our tool schema on real transcripts. ChatGPT requests now use structured outputs, so the response shape is guaranteed rather than asked for.
+- **Doctor stops blaming your Python version for a corrupt model pack.**
+- **Better words in more places.** The codebook is `kod kitabı` in Turkish — the term MAXQDA's own Turkish UI uses — and stops reading as a person rather than a book in Russian and Ukrainian. The Codes menu no longer says "Install Codebook" in twenty languages that never wanted it.
+- **Settings ▸ AI sizes to the provider you picked** instead of holding a fixed height for the tallest one.
+
+**Fixed**
+
+- **Quote deep links could point at the wrong moment.** Some models write timecodes with minutes where hours belong, so a quote at 3:36 was recorded as 3 hours 36 minutes and its link landed nowhere. Every quote's timecode is now range-checked against its own session. If you have deep links that went somewhere odd, re-analysing will correct them.
+- **A lens could go dead after switching projects.** Clicking Quotes or Signals did nothing at all until the window was reopened.
+- **A session that failed was never retried.** It was recorded as complete, so the next run skipped it — your interview stayed missing from the report with nothing saying why. It is now retried.
+- **An AutoCode run that coded nothing claimed it had.** A job whose every batch failed is now a failed job, and one that produced no codes no longer stamps the watermark that stops it running again.
+- **A redacted project leaked participant names into the export.**
+- **The Agree. figure claimed more voices than there were people.**
+- **The window menu collapsed a moment after opening**, because every update rewrote the whole menu bar.
+- **The app waited on a webfont it then threw away**, delaying the first window.
+- **A drag-in copy that failed now says why**, whichever gesture started it.
+- **The Signals lens had a second scrollbar** — the page was scrolling its own padding.
+
+**Removed**
+
+- **The temperature slider in Settings ▸ AI.** Several models reject the parameter outright; the rest are tuned for this work already.
+- **Six Codes menu commands that never had a target**, and Find Next / Find Previous — a filter has no "next".
+
 **0.29.1** — _31 Aug 2026_
 
 Switching one codebook off switched the others back on — and three more surfaces reported more than they had actually done.

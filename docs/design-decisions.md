@@ -633,3 +633,21 @@ _See also: `docs/mockups/sidebar-seam-window-edge.html` (status banner),
 `bristlenose/theme/CLAUDE.md` § Cross-seam alignment, TODO.md § Ideas (the
 two CSS defects, both closed 20 Sep 2026)._
 
+## The window is the only thing that moves the projects column
+
+Decided 20 Sep 2026 (`5bdabf8d`). Native owns one fact, the window width, and
+one decision, the projects column: it collapses on window shrink when the
+report would fall below the width its open panels need, and comes back on
+growth — the Mail behaviour, done explicitly rather than by declaring a
+column minimum (which `NSSplitView` honours by overflowing the window; see
+`desktop/CLAUDE.md` § Gotchas). A panel opening, a lens change and the column
+toggling are **not** triggers: the web copes with the width it is given, closing
+Contents, then Tags, then the minimap, with the panel just opened exempt so a
+press never opens nothing. If even that leaves the centre under its floor, the
+centre squeezes visibly rather than refusing invisibly.
+
+Overlay (rail hover-peek) is a browser idiom and stays browser-only; it was
+considered for the Mac and rejected as not sitting with a native sidebar. The
+timecode does not reflow above the quote text at narrow widths: the transcript
+margin's version of that is tolerated, not wanted more of. Spec and
+measurements: `docs/design-sidebar-playground.md` § Fit to width.

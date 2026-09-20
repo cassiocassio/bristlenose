@@ -92,9 +92,9 @@
       "deleteCodeGroup": "Kod Grubunu Sil",
       "renameCode": "Kodu Yeniden Adland\u0131r\u2026",
       "deleteCode": "Kodu Sil",
-      "browseCodebooks": "Kod Defterlerine Göz At…",
-      "installCodebook": "Kod Defterini Y\u00fckle",
-      "uninstallCodebook": "Kod Defteri Y\u00fcklemesini Kald\u0131r"
+      "browseCodebooks": "Kod Kitaplarına Göz At…",
+      "installCodebook": "Kod Kitab\u0131n\u0131 Y\u00fckle",
+      "uninstallCodebook": "Kod Kitab\u0131 Y\u00fcklemesini Kald\u0131r"
     },
     "quotes": {
       "star": "Yıldızla",

@@ -207,3 +207,73 @@ class TestSignalFlagField:
             flag="Problem",
         )
         assert s.flag == "Problem"
+
+
+class TestTheFlagOnThePathThatRenders:
+    """`_serialize_signal` re-classifies, and its denominator is the STUDY's.
+
+    Every other test in this file calls `classify_flag` directly, so the one
+    call site a researcher's browser actually reaches was unasserted. It was
+    also wrong: it passed the card's own participant count, and `n_eff` is
+    bounded above by that same number, so `breadth` sat near 1 on every card
+    and `FLAG_BREADTH` could never bind. The broad/narrow split — the whole
+    reason the vocabulary has six words rather than two — was collapsed.
+    """
+
+    @staticmethod
+    def _signal(**over):
+        from bristlenose.analysis.models import Signal, SignalQuote
+
+        base = dict(
+            location="Shopping bag", source_type="section", sentiment="Sentiment",
+            count=3, participants=["p1", "p2", "p3"],
+            n_eff=2.5, mean_intensity=2.5, concentration=1.0,
+            composite_signal=0.05, confidence="moderate",
+            quotes=[
+                SignalQuote(text="t", participant_id=f"p{i}", session_id="s1",
+                            start_seconds=0.0, intensity=3, tag_names=["satisfaction"])
+                for i in (1, 2, 3)
+            ],
+        )
+        base.update(over)
+        return Signal(**base)
+
+    def test_breadth_is_measured_against_the_study_not_the_card(self) -> None:
+        """Three of twenty is narrow. Three of three is not a measurement.
+
+        n_eff 2.5 over the card's own 3 participants is 0.83 — above
+        FLAG_BREADTH — so the old code called this a Win. Against the study's
+        20 it is 0.125, which is what "how much of the room said this" means.
+        """
+        from bristlenose.server.routes.analysis import _serialize_signal
+
+        out = _serialize_signal(self._signal(), {}, 20)
+
+        assert out.label_kind == "value", "fixture must reach the classify branch"
+        assert out.flag == "Success", (
+            f"breadth was measured against the card, not the study: {out.flag}"
+        )
+
+    def test_the_same_card_in_a_small_study_is_a_win(self) -> None:
+        """The flag is a claim about the room, so the room has to be able to change it."""
+        from bristlenose.server.routes.analysis import _serialize_signal
+
+        assert _serialize_signal(self._signal(), {}, 4).flag == "Win"
+
+    def test_a_negative_card_narrow_in_the_study_is_a_niggle_not_a_problem(self) -> None:
+        """The same collapse on the other valence, where it matters more.
+
+        "Problem" tells a researcher the room has one. At intensity 2.5 with
+        the card's own denominator every negative card cleared FLAG_INTENSITY
+        and FLAG_BREADTH together, so Niggle was unreachable here.
+        """
+        from bristlenose.analysis.models import SignalQuote
+        from bristlenose.server.routes.analysis import _serialize_signal
+
+        s = self._signal(quotes=[
+            SignalQuote(text="t", participant_id=f"p{i}", session_id="s1",
+                        start_seconds=0.0, intensity=3, tag_names=["frustration"])
+            for i in (1, 2, 3)
+        ])
+        assert _serialize_signal(s, {}, 20).flag == "Niggle"
+        assert _serialize_signal(s, {}, 4).flag == "Problem"

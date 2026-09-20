@@ -234,6 +234,7 @@ def _is_sentiment_group(group_name: str) -> bool:
 def _serialize_signal(
     s: object,
     group_colour_sets: dict[str, str],
+    total_participants: int,
 ) -> TagSignal:
     """Convert a Signal dataclass to the response model."""
     from bristlenose.analysis.models import Signal
@@ -253,9 +254,20 @@ def _serialize_signal(
             # for every rendered card since the group card replaced the value
             # cards. Give it the subset the label names and it works again.
             if resolved.kind == "value":
+                # `total_participants` is the STUDY's count, not the card's.
+                # Passing `len(s.participants)` made breadth `n_eff / its own
+                # participants`, which is <= 1 by construction and sits near it
+                # whenever contributions are even — so FLAG_BREADTH (0.30)
+                # could not bind, every positive card above FLAG_MIN_SIGNAL
+                # read "Win" rather than sometimes "Success", and every
+                # negative one at intensity >= 2.0 read "Problem" rather than
+                # "Niggle". The broad/narrow split is the whole point of the
+                # vocabulary, and it was collapsed on the only path that
+                # renders. The pipeline's own call sites always passed the
+                # study count (signals.py:111, generic_signals.py:121).
                 flag = classify_flag(
                     resolved.text, s.composite_signal, s.n_eff,
-                    len(s.participants) or 1, s.mean_intensity,
+                    total_participants, s.mean_intensity,
                 )
 
     return TagSignal(
@@ -879,7 +891,7 @@ def get_tag_analysis(
             signal_pids.update(s.participants)  # type: ignore[attr-defined]
 
         return TagAnalysisResponse(
-            signals=[_serialize_signal(s, colour_sets) for s in signals],
+            signals=[_serialize_signal(s, colour_sets, shared.total_participants) for s in signals],
             section_matrix=_serialize_matrix(section_matrix),
             theme_matrix=_serialize_matrix(theme_matrix),
             total_participants=shared.total_participants,
@@ -956,7 +968,7 @@ async def get_codebook_analysis(
                 codebook_id=codebook_id,
                 codebook_name=codebook_name,
                 colour_set=codebook_colour,
-                signals=[_serialize_signal(s, colour_sets) for s in signals],
+                signals=[_serialize_signal(s, colour_sets, shared.total_participants) for s in signals],
                 section_matrix=_serialize_matrix(section_matrix),
                 theme_matrix=_serialize_matrix(theme_matrix),
                 columns=col_labels,

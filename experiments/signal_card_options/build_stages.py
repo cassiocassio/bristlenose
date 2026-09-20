@@ -148,7 +148,7 @@ def run(key, blurb):
                f'{len({q["id"] for c in cards for q in c["quotes"]})} distinct quotes. {blurb}</p>'
                f'<div class="mk-three">')
     for stage,title,note in [
-        ("shipped","SHIPPED","eyebrow on every card · one quote · grid · elaboration trapped left"),
+        ("shipped","GENERATION 3","eyebrow on every card · one quote · grid · elaboration trapped left — shipped 13–20 Sep 2026, superseded"),
         ("t1","TIER 1","chip C · no eyebrow · fused · 4 quotes · float · claim + evidence"),
         ("t2","TIER 2","+ marginal-value rule · editorial quotes · sentiment label")]:
         show = order if stage!="t2" else kept
@@ -200,8 +200,8 @@ page=f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 @media (max-width:1100px) {{ .mk-three {{ grid-template-columns:1fr; }} }}
 </style><style>{RIBBON_CSS}</style></head><body><div class="mk-page">{ribbon("stages")}
 <header class="mk-head"><h1>Signal card &mdash; what the build buys</h1>
-<p>The same real location rendered three ways. <b>SHIPPED</b> is what HEAD renders today,
-verified against the code. <b>TIER 1</b> is <code>design-signal-card.md</code> &sect;9 tier 1 &mdash;
+<p>The same real location rendered three ways. <b>GENERATION 3</b> is what shipped for seven days and was
+superseded on 20 Sep 2026. <b>TIER 1</b> is <code>design-signal-card.md</code> &sect;9 tier 1 &mdash;
 frontend only, no open questions. <b>TIER 2</b> adds the marginal-value rule, editorial quote
 selection and the sentiment label.</p></header>{''.join(OUT)}
 <footer class="mk-foot">Real data. Junk codebooks and <code>Uncategorised</code> excluded.</footer>

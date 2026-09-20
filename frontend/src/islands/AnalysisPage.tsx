@@ -635,7 +635,18 @@ function SignalCard({
               {signal.alternates.map((alt, i) => (
                 <Fragment key={alt.label}>
                   {i > 0 ? ", " : ""}
-                  <span className="signal-card-alternate">{alt.signalName || alt.label}</span>
+                  {/* The folded reading's own claim sits in the title. It is
+                      the thing that made that card worth keeping, and storing
+                      it while never showing it would make it exactly the kind
+                      of carried-but-unread field this change removed three of.
+                      A title rather than prose: the card's own finding is what
+                      is being read, and this is available, not shouting. */}
+                  <span
+                    className="signal-card-alternate"
+                    title={alt.elaboration?.replace("||", "\u2014").trim() || undefined}
+                  >
+                    {alt.signalName || alt.label}
+                  </span>
                 </Fragment>
               ))}
             </div>

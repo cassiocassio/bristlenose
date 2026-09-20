@@ -1057,4 +1057,34 @@ describe("AnalysisPage", () => {
     expect(marked[0].textContent).toContain("e");
   });
 
+
+  it("a folded reading carries its own claim, not just its name", async () => {
+    // Storing a field and never reading it is what this change removed three
+    // of. The folded card's claim is the thing that made it worth keeping.
+    const dup: CodebookAnalysisListResponse = JSON.parse(JSON.stringify(mockCbData));
+    const a = dup.codebooks[0].signals[0];
+    // A twin: same location, same evidence, different vocabulary. It folds.
+    const b = JSON.parse(JSON.stringify(a));
+    b.group_name = "Conceptual model";
+    b.composite_signal = a.composite_signal / 2;   // so it is the one that folds
+    b.signal_name = "Checkout Latency";
+    b.elaboration = "Payment stalls. || Two of three waited long enough to say so.";
+    dup.codebooks[0].signals.push(b);
+    dup.codebooks[0].columns.push("Conceptual model");
+    mockFetchCodebookAnalysis(dup);
+    render(<AnalysisPage projectId="1" />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0);
+    });
+
+    const alt = document.querySelector(".signal-card-alternate") as HTMLElement;
+    expect(alt).toBeTruthy();
+    expect(alt.textContent).toBe("Checkout Latency");
+    // The claim it was kept for, reachable — and without the raw `||`, which
+    // is an authoring marker and not something a reader should ever see.
+    expect(alt.getAttribute("title")).toContain("Payment stalls.");
+    expect(alt.getAttribute("title")).not.toContain("||");
+  });
+
 });

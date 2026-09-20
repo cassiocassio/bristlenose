@@ -10,6 +10,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
 import { formatTimecode } from "../utils/format";
+import { featureFlags } from "../utils/featureFlags";
 import {
   getAutoCodeProposals,
   acceptAllProposals,
@@ -237,11 +238,13 @@ function SessionRows({ sessionId, items, removing, onDeny }: SessionRowsProps) {
           </td>
           <td className="report-tag">
             <span
-              className="badge has-tooltip"
+              className={featureFlags.proposalRationaleTooltip ? "badge has-tooltip" : "badge"}
               style={{ backgroundColor: getTagBg(p.colour_set, p.colour_index) }}
             >
               {p.tag_name}
-              <span className="tooltip">{p.rationale}</span>
+              {featureFlags.proposalRationaleTooltip && (
+                <span className="tooltip">{p.rationale}</span>
+              )}
             </span>
           </td>
           <td className="report-deny">

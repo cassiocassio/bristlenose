@@ -10,6 +10,7 @@ import { useState, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import type { ProposedTagResponse } from "../utils/types";
 import { getTagBg } from "../utils/colours";
+import { featureFlags } from "../utils/featureFlags";
 import { reportHref } from "../utils/reportHref";
 import { formatTimecode } from "../utils/format";
 
@@ -137,11 +138,13 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
           </td>
           <td className="report-tag">
             <span
-              className="badge has-tooltip"
+              className={featureFlags.proposalRationaleTooltip ? "badge has-tooltip" : "badge"}
               style={{ backgroundColor: getTagBg(p.colour_set, p.colour_index) }}
             >
               {p.tag_name}
-              <span className="tooltip">{p.rationale}</span>
+              {featureFlags.proposalRationaleTooltip && (
+                <span className="tooltip">{p.rationale}</span>
+              )}
             </span>
           </td>
           <td className="threshold-confidence">

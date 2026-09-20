@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Badge } from "./Badge";
+import { featureFlags, resetFeatureFlags } from "../utils/featureFlags";
 
 describe("Badge", () => {
   it("renders text for readonly variant", () => {
@@ -111,21 +112,45 @@ describe("Badge", () => {
     expect(onAccept).toHaveBeenCalledOnce();
   });
 
-  it("proposed: shows rationale tooltip", () => {
-    render(
-      <Badge
-        text="Frustration"
-        variant="proposed"
-        rationale="Speaker expressed dissatisfaction"
-        data-testid="p"
-      />,
-    );
-    expect(screen.getByText("Speaker expressed dissatisfaction")).toBeInTheDocument();
+  // The rationale tooltip is parked behind `proposalRationaleTooltip`
+  // (see utils/featureFlags.ts). The first block specifies the parked
+  // behaviour with the flag forced on; the second asserts what ships.
+  describe("rationale tooltip (flag on)", () => {
+    beforeEach(() => { featureFlags.proposalRationaleTooltip = true; });
+    afterEach(resetFeatureFlags);
+
+    it("proposed: shows rationale tooltip", () => {
+      render(
+        <Badge
+          text="Frustration"
+          variant="proposed"
+          rationale="Speaker expressed dissatisfaction"
+          data-testid="p"
+        />,
+      );
+      expect(screen.getByText("Speaker expressed dissatisfaction")).toBeInTheDocument();
+    });
+
+    it("proposed: has tooltip class for hover", () => {
+      render(<Badge text="Frustration" variant="proposed" data-testid="p" />);
+      expect(screen.getByTestId("p")).toHaveClass("has-tooltip");
+    });
   });
 
-  it("proposed: has tooltip class for hover", () => {
-    render(<Badge text="Frustration" variant="proposed" data-testid="p" />);
-    expect(screen.getByTestId("p")).toHaveClass("has-tooltip");
+  describe("rationale tooltip (shipped: parked)", () => {
+    it("proposed: renders no tooltip and no hover class", () => {
+      render(
+        <Badge
+          text="Frustration"
+          variant="proposed"
+          rationale="Speaker expressed dissatisfaction"
+          data-testid="p"
+        />,
+      );
+      expect(screen.queryByText("Speaker expressed dissatisfaction")).toBeNull();
+      expect(screen.getByTestId("p")).not.toHaveClass("has-tooltip");
+      expect(screen.getByTestId("p")).toHaveClass("badge-proposed");
+    });
   });
 
   // ── Keyboard shortcuts (A to accept, D to deny while hovered) ──────

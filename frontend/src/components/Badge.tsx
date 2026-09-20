@@ -1,6 +1,7 @@
 import { useRef, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { isExportMode } from "../utils/exportData";
+import { featureFlags } from "../utils/featureFlags";
 
 interface BadgeProps {
   text: string;
@@ -121,7 +122,9 @@ function ProposedBadge({
           &#x2713;
         </span>
       </span>}
-      {rationale && <span className="tooltip">{rationale}</span>}
+      {featureFlags.proposalRationaleTooltip && rationale && (
+        <span className="tooltip">{rationale}</span>
+      )}
     </span>
   );
 }
@@ -149,7 +152,8 @@ export function Badge({
     "badge",
     variant === "ai" ? "badge-ai"
       : variant === "user" || variant === "deletable" ? "badge-user"
-      : variant === "proposed" ? "badge-proposed has-tooltip"
+      // The rationale tooltip is parked — see utils/featureFlags.ts.
+      : variant === "proposed" ? (featureFlags.proposalRationaleTooltip ? "badge-proposed has-tooltip" : "badge-proposed")
       : null,
     sentiment ? `badge-${sentiment}` : null,
     className,

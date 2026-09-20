@@ -50,12 +50,33 @@ export interface FeatureFlags {
    * tested — only the client affordance is withheld.
    */
   moderatorQuestionPill: boolean;
+
+  /**
+   * Hover tooltip on a proposed (AutoCode) tag badge that floats in with the
+   * LLM's one-sentence rationale for the proposal — on the quote card, in
+   * the proposal-zone list and in the AutoCode report table.
+   *
+   * Parked 20 Sep 2026 — two problems, one of them not a UI problem. The
+   * tooltip animates up from below the badge and lands over the next row
+   * (the `+` add-tag control and the neighbouring card), so it reads as
+   * interruption rather than help; and the rationale text it reveals is the
+   * model's raw justification, which is often a restatement of the tag
+   * rather than an explanation a researcher would act on. Both have to be
+   * fixed before this flips: the presentation (placement, delay, motion)
+   * and the explanation itself (what the prompt asks for). Design doc:
+   * `docs/design-autocode.md` § Parked.
+   *
+   * The `rationale` field stays on the wire, in the store and in the export
+   * embed — only the hover reveal is withheld.
+   */
+  proposalRationaleTooltip: boolean;
 }
 
 /** The shipped state. Change these to flip a feature back on. */
 const DEFAULTS: FeatureFlags = {
   quoteContextExpansion: false,
   moderatorQuestionPill: false,
+  proposalRationaleTooltip: false,
 };
 
 export const featureFlags: FeatureFlags = { ...DEFAULTS };

@@ -1,5 +1,6 @@
 import { render, screen, within, act, fireEvent } from "@testing-library/react";
 import { AutoCodeReportModal } from "./AutoCodeReportModal";
+import { featureFlags, resetFeatureFlags } from "../utils/featureFlags";
 import type { ProposedTagResponse } from "../utils/types";
 
 // Mock the API module.
@@ -269,7 +270,36 @@ describe("AutoCodeReportModal", () => {
     expect(within(row).getByText("Frustration")).toBeInTheDocument();
   });
 
-  it("shows rationale tooltip on tag badge hover", async () => {
+  // Parked behind `proposalRationaleTooltip` (see utils/featureFlags.ts):
+  // the first test forces the flag on, the second asserts what ships.
+  it("shows rationale tooltip on tag badge hover (flag on)", async () => {
+    featureFlags.proposalRationaleTooltip = true;
+    try {
+      mockGetProposals.mockResolvedValue({
+        proposals: [makeProposal({ rationale: "Speaker clearly frustrated" })],
+        total: 1,
+      });
+
+      render(
+        <AutoCodeReportModal
+          open={true}
+          frameworkId="garrett"
+          frameworkTitle="Garrett"
+          onClose={vi.fn()}
+          onAcceptAll={vi.fn()}
+          onTagTentatively={vi.fn()}
+        />,
+      );
+
+      await act(async () => {});
+
+      expect(screen.getByText("Speaker clearly frustrated")).toBeInTheDocument();
+    } finally {
+      resetFeatureFlags();
+    }
+  });
+
+  it("does not render the rationale tooltip when the flag is off (shipped)", async () => {
     mockGetProposals.mockResolvedValue({
       proposals: [makeProposal({ rationale: "Speaker clearly frustrated" })],
       total: 1,
@@ -288,7 +318,8 @@ describe("AutoCodeReportModal", () => {
 
     await act(async () => {});
 
-    expect(screen.getByText("Speaker clearly frustrated")).toBeInTheDocument();
+    expect(screen.queryByText("Speaker clearly frustrated")).toBeNull();
+    expect(document.querySelector(".has-tooltip")).toBeNull();
   });
 
   it("formats timecodes correctly", async () => {

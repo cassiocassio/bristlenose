@@ -12,6 +12,9 @@ trued-against: HEAD@main on 2026-09-20 (835cde98)
 
 ## Changelog
 
+- _2026-09-20_ — the rationale hover tooltip on proposed badges is **parked**
+  behind `featureFlags.proposalRationaleTooltip` (see § Parked). The
+  `rationale` field is unchanged on the wire.
 - _2026-09-20_ — trued up: corrected endpoint count 7 → 8 (the cancel route was
   never listed) and test count 96 → 148; rewrote the entry point (install *is*
   apply, not a separator button) and the review step (`ThresholdReviewModal`
@@ -75,6 +78,25 @@ proposals with confidence + rationale).
 | POST | `/projects/{id}/autocode/proposals/{id}/deny` | Deny → keeps for telemetry |
 | POST | `/projects/{id}/autocode/{framework_id}/accept-all` | Bulk accept above threshold |
 | POST | `/projects/{id}/autocode/{framework_id}/deny-all` | Bulk deny pending |
+
+## Parked
+
+- **Rationale hover tooltip — parked behind a feature flag, 20 Sep 2026.**
+  Hovering a proposed badge floated in the LLM's rationale from below the
+  badge (`.has-tooltip .tooltip`, `theme/molecules/autocode-report.css`), on
+  the quote card (`Badge.tsx`, proposed variant), in `ProposalZoneList.tsx`
+  and in the `AutoCodeReportModal.tsx` table. Withheld via
+  `featureFlags.proposalRationaleTooltip` in
+  `frontend/src/utils/featureFlags.ts`; the tests force the flag on to keep
+  the behaviour specified and assert the shipped state separately. Two
+  things have to be fixed before it flips, and only one is presentation:
+  (1) the tooltip lands over the row below — the `+` add-tag control and the
+  next card — and the slide-in motion reads as interruption; (2) the
+  rationale text is the model's raw justification and frequently restates
+  the tag ("this is a task-framing statement…") instead of saying what in
+  the quote earned it. (2) is a prompt change in
+  `bristlenose/llm/prompts/`, not a CSS one. Tracked in the 100-day
+  inventory under § 3 Embarrassing / Should.
 
 ## Gotchas
 

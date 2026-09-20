@@ -29,7 +29,16 @@ about what they mean or whether any are interchangeable.
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import Any
+
+#: A quote in either of the two shapes `_sentiments_of` documents: a mapping,
+#: from the JSON path, or a model object, from the Python one. Deliberately
+#: `Any` rather than a union with a Protocol — every field is read with a
+#: default because both shapes have optional members, so a Protocol declaring
+#: them would claim more than this module needs or the callers provide.
+Quote = Any
 
 #: The seven, and their direction. `surprise` is NEUTRAL — it is neither good
 #: nor bad, and a card carrying only praise and one surprised remark is a
@@ -83,7 +92,7 @@ class Label:
     why: str
 
 
-def _sentiments_of(q) -> list[str]:
+def _sentiments_of(q: Quote) -> list[str]:
     """The sentiment values a quote carries.
 
     **Two shapes, and the one that renders is the second.** A quote from the
@@ -105,15 +114,15 @@ def _sentiments_of(q) -> list[str]:
     return [t for t in tags if t in VALENCE]
 
 
-def _weights(quotes) -> tuple[Counter, Counter, float]:
+def _weights(quotes: Iterable[Quote]) -> tuple[Counter[str], Counter[str], float]:
     """Count x intensity, by value and by direction.
 
     Intensity is the whole point: a weak dissenting voice must not weigh the
     same as a forceful one, and "amount of feeling" is what the judgements
     turned out to be deciding on.
     """
-    by_value: Counter = Counter()
-    by_valence: Counter = Counter()
+    by_value: Counter[str] = Counter()
+    by_valence: Counter[str] = Counter()
     for q in quotes:
         w = (q.get("intensity") if isinstance(q, dict) else getattr(q, "intensity", None)) or 1
         for v in _sentiments_of(q):
@@ -122,7 +131,7 @@ def _weights(quotes) -> tuple[Counter, Counter, float]:
     return by_value, by_valence, sum(by_value.values())
 
 
-def sentiment_label(quotes) -> Label | None:
+def sentiment_label(quotes: Iterable[Quote]) -> Label | None:
     """The chip label for a location's sentiment quotes, or None if it has none.
 
     Three rungs, and the shape the judgements took: **name the leading feeling

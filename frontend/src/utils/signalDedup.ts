@@ -78,6 +78,42 @@ export function isFromSentimentLens(s: UnifiedSignal): boolean {
  * section and a theme), so per-location and global de-duplication are the same
  * thing; grouping by location is for the ordering, not for correctness.
  */
+/**
+ * How much two cards at one location are the same evidence.
+ *
+ * Pairwise, not union-based. The shipped rule walked a location strongest-first
+ * and dropped any card whose quotes were all covered by the cards already
+ * kept — which MEASURED over the corpus hid 14 cards, and **11 of the 19 hidden
+ * on the as-shipped label set matched no single kept card at all**: they were
+ * killed by the *union* of several others. One was sharing a quarter of its
+ * quotes with its nearest neighbour. A finding that spans several other
+ * findings is arguably the most interesting one at that location, not the
+ * least.
+ */
+function jaccard(a: UnifiedSignal, b: UnifiedSignal): number {
+  const A = new Set(a.quotes.map(quoteKey));
+  const B = new Set(b.quotes.map(quoteKey));
+  if (!A.size || !B.size) return 0;
+  let shared = 0;
+  for (const k of A) if (B.has(k)) shared += 1;
+  return shared / (A.size + B.size - shared);
+}
+
+/**
+ * Share of quotes two cards must have in common before one folds into the
+ * other.
+ *
+ * The spike read **0.8** off a genuinely empty band at 0.7–0.9 in the corpus —
+ * card pairs are either near-disjoint or literally identical, with almost
+ * nothing between — and in the abstract that is the better-evidenced number.
+ *
+ * It is 0.6 because **both pairs raised in review sat at 0.67**, under that
+ * cut, and would have stayed as two cards saying the same thing. Measured, 0.6
+ * folds 13 cards where 0.8 folds 7. Nothing is lost either way: the loser
+ * becomes an alternate reading on the card that beat it.
+ */
+const FOLD_THRESHOLD = 0.6;
+
 export function dedupeSignals(signals: UnifiedSignal[]): UnifiedSignal[] {
   const byLocation = new Map<string, UnifiedSignal[]>();
   for (const s of signals) {
@@ -86,7 +122,7 @@ export function dedupeSignals(signals: UnifiedSignal[]): UnifiedSignal[] {
     else byLocation.set(s.location, [s]);
   }
 
-  const kept = new Set<UnifiedSignal>();
+  const kept: UnifiedSignal[] = [];
   for (const bucket of byLocation.values()) {
     const covered = new Set<string>();
     const ranked = [...bucket].sort(
@@ -97,15 +133,50 @@ export function dedupeSignals(signals: UnifiedSignal[]): UnifiedSignal[] {
     );
     for (const s of ranked) {
       const keys = s.quotes.map(quoteKey);
-      const redundant = keys.length > 0 && keys.every((k) => covered.has(k));
-      if (redundant && !isSentimentSignal(s)) continue;
-      kept.add(s);
+
+      // TWO tests, and a card failing either folds.
+      //
+      // The near-twin test is pairwise: it catches a card citing essentially
+      // the same evidence as one already kept. The novel-quote test is
+      // union-based: it catches a card bringing nothing at all that is not
+      // already on screen, even when no single kept card resembles it.
+      //
+      // They are not interchangeable. Pairwise alone keeps a card whose quotes
+      // are split across two stronger ones — nothing new either way. Union
+      // alone deletes a card sharing a quarter of its quotes with its nearest
+      // neighbour, which MEASURED was 11 of the 19 the shipped rule hid.
+      const twin = kept.find(
+        (k) => k.location === s.location && jaccard(k, s) >= FOLD_THRESHOLD,
+      );
+      const bringsNothing = keys.length > 0 && keys.every((k) => covered.has(k));
+
+      if (twin || bringsNothing) {
+        // FOLDED, not deleted — the distinction the whole rule turns on. The
+        // losing card is usually the same finding in another codebook's
+        // language, and that reading exists nowhere else, so it rides along on
+        // the card that beat it. Nothing can be lost, which is why the
+        // Sentiment card no longer needs a standing exemption: MEASURED, in 9
+        // of 9 locations where one sat beside codebook cards they covered
+        // 100% of its quotes, so it could survive only by ranking first.
+        const winner = twin ?? kept.find((k) => k.location === s.location);
+        if (winner) {
+          (winner.alternates ??= []).push({
+            label: s.label ?? s.columnLabel,
+            codebookName: s.codebookName,
+            signalName: s.signalName ?? null,
+            elaboration: s.elaboration ?? null,
+          });
+          continue;
+        }
+      }
+      kept.push(s);
       for (const k of keys) covered.add(k);
     }
   }
 
   // Preserve the caller's order — the ranking is theirs to decide, not ours.
-  return signals.filter((s) => kept.has(s));
+  const keptSet = new Set(kept);
+  return signals.filter((s) => keptSet.has(s));
 }
 
 export interface SignalPlace {

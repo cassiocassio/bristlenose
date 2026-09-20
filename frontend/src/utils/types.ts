@@ -592,6 +592,15 @@ export interface UnifiedSignal {
   labelKind?: "value" | "valence" | "mixed" | "group";
   /** Win / Problem / Niggle / Success / Surprising, for the chip's prefix. */
   flag?: string | null;
+  /** Cards folded into this one — the same evidence read through another
+   *  codebook's vocabulary. Nothing is deleted; the losing reading rides
+   *  along rather than disappearing. */
+  alternates?: {
+    label: string;
+    codebookName: string;
+    signalName: string | null;
+    elaboration: string | null;
+  }[];
 }
 
 export interface UnifiedQuote {

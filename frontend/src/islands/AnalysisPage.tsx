@@ -37,6 +37,7 @@ import { reportHref } from "../utils/reportHref";
 import { getBarColour, getGroupBg, getTagBg } from "../utils/colours";
 import { formatTimecode } from "../utils/format";
 import { detectSequences, type SequenceMeta } from "../utils/sequences";
+import { selectQuotes } from "../utils/quoteSelection";
 import { renderLead } from "../utils/leadSentence";
 import type {
   AnalysisMatrix,
@@ -480,16 +481,28 @@ function SignalCard({
     ? Math.min(100, (signal.nEff / allPids.length) * 100)
     : 0;
 
-  const sequenceMetas = useMemo(
-    () => detectSequences(signal.quotes),
-    [signal.quotes],
-  );
+
 
   // Four open, not one. Measured over the corpus: the median card carries 4
   // quotes and the longest 56, so the cap is the tail's problem and the
   // "show all" control is the exception — 24% of merged cards exceed it.
-  const visibleQuotes = signal.quotes.slice(0, VISIBLE_QUOTES);
-  const hiddenQuotes = signal.quotes.slice(VISIBLE_QUOTES);
+  //
+  // WHICH four is editorial, not chronological: the strongest that carry the
+  // finding, plus one slot held for the voice that argues with it. Selection
+  // and ordering are separable — the chosen quotes come back in
+  // `(participant, time)` order, so the sequence treatment is untouched.
+  const { shown: visibleQuotes, dissenting } = useMemo(
+    () => selectQuotes(signal, VISIBLE_QUOTES),
+    [signal],
+  );
+  const shownIds = new Set(visibleQuotes);
+  const hiddenQuotes = signal.quotes.filter((q) => !shownIds.has(q));
+
+  // Sequences are a property of what is DRAWN, not of the whole set: two
+  // quotes 10s apart are only a run if both are on screen. Computed over the
+  // visible list and the hidden list separately for that reason.
+  const sequenceMetas = useMemo(() => detectSequences(visibleQuotes), [visibleQuotes]);
+  const hiddenMetas = useMemo(() => detectSequences(hiddenQuotes), [hiddenQuotes]);
 
   // Fix: useEffect ensures expanded class is applied before maxHeight is set,
   // so both opacity and maxHeight transitions work together.
@@ -592,12 +605,35 @@ function SignalCard({
               {renderLead(signal.elaboration)}
             </div>
           )}
+          {/* Readings folded into this card. They cite essentially the same
+              quotes, usually the same finding in another codebook's language —
+              so spending a whole card's chrome on each spends the reader's
+              attention twice for one answer. They are NOT deleted: the
+              vocabulary survives here, and a researcher can see this place was
+              also read that way. */}
+          {signal.alternates?.length ? (
+            <div className="signal-card-alternates" data-testid="bn-signal-alternates">
+              {t("analysis.alsoReadAs")}{" "}
+              {signal.alternates.map((alt, i) => (
+                <Fragment key={alt.label}>
+                  {i > 0 ? ", " : ""}
+                  <span className="signal-card-alternate">{alt.signalName || alt.label}</span>
+                </Fragment>
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
 
       <div className="signal-card-quotes">
         {visibleQuotes.map((q, i) => (
-          <QuoteBlock key={i} quote={q} isSentiment={isSentiment} sequenceMeta={sequenceMetas[i]} />
+          <QuoteBlock
+            key={i}
+            quote={q}
+            isSentiment={isSentiment}
+            sequenceMeta={sequenceMetas[i]}
+            isDissenting={q === dissenting}
+          />
         ))}
         <div
           className="signal-card-expansion"
@@ -609,7 +645,7 @@ function SignalCard({
               key={i + 1}
               quote={q}
               isSentiment={isSentiment}
-              sequenceMeta={sequenceMetas[i + visibleQuotes.length]}
+              sequenceMeta={hiddenMetas[i]}
             />
           ))}
         </div>
@@ -644,10 +680,14 @@ function QuoteBlock({
   quote,
   isSentiment,
   sequenceMeta,
+  isDissenting,
 }: {
   quote: UnifiedQuote;
   isSentiment: boolean;
   sequenceMeta?: SequenceMeta;
+  /** Took the slot reserved for a voice that argues with the finding. Marked
+   *  so a reader can see the card is not only agreeing with itself. */
+  isDissenting?: boolean;
 }) {
   const { t } = useTranslation();
   const tc = formatTimecode(quote.startSeconds);
@@ -656,9 +696,12 @@ function QuoteBlock({
   const seqPos = sequenceMeta?.position ?? "solo";
   const isContinuation = seqPos === "middle" || seqPos === "last";
   const seqClass = seqPos !== "solo" ? ` seq-${seqPos}` : "";
+  const cls = [seqClass.trim(), isDissenting ? "bn-dissenting" : ""]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <blockquote className={seqClass ? seqClass.trimStart() : undefined}>
+    <blockquote className={cls || undefined} data-dissenting={isDissenting || undefined}>
       <div className="quote-row">
         <a className="timecode" href={tcHref}>
           <span className="timecode-bracket">[</span>

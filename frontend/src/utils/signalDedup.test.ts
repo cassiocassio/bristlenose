@@ -65,14 +65,27 @@ describe("dedupeSignals", () => {
     expect(labels(dedupeSignals([big, smallSubset]))).toEqual(["Zebra"]);
   });
 
-  it("never hides the Sentiment card", () => {
+  it("folds the Sentiment card rather than exempting it, and keeps its reading", () => {
+    // The standing exemption is GONE, and nothing is lost by that. It existed
+    // because a coverage rule deleted the Sentiment card: MEASURED, in 9 of 9
+    // locations where one sat beside codebook cards they covered 100% of its
+    // quotes, so it contributed a unique quote exactly zero times and could
+    // survive only by ranking first — a coin flip no metric change loads.
+    //
+    // Folding removes the need for the special case: the card leaves the run,
+    // its reading rides along on the card that beat it, and the researcher can
+    // still see that this place was read as sentiment too.
     const a = sig("Scope", 1.0, [q("p1", 10), q("p3", 30)]);
     const b = sig("Feedback", 0.6, [q("p1", 10), q("p2", 20), q("p3", 30)]);
     const sent = sig("Sentiment", 0.55, [q("p1", 10), q("p2", 20), q("p3", 30)], {
       codebookName: "Sentiment", colourSet: "",
     });
-    // Its three quotes are all covered by Scope + Feedback. It stays anyway.
-    expect(labels(dedupeSignals([a, b, sent]))).toContain("Sentiment");
+
+    const out = dedupeSignals([a, b, sent]);
+    expect(labels(out)).not.toContain("Sentiment");
+
+    const carried = out.flatMap((s) => s.alternates ?? []);
+    expect(carried.map((x) => x.label)).toContain("Sentiment");
   });
 
   it("de-duplicates each location independently", () => {

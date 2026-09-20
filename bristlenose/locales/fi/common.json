@@ -446,6 +446,7 @@
     }
   },
   "analysis": {
+    "alsoReadAs": "My\u00f6s luettuna",
     "labelPositive": "My\u00f6nteinen",
     "labelNegative": "Kielteinen",
     "labelMixed": "Ristiriitaiset tunteet",

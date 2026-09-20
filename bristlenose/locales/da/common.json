@@ -446,6 +446,7 @@
     }
   },
   "analysis": {
+    "alsoReadAs": "Ogs\u00e5 l\u00e6st som",
     "labelPositive": "Positiv",
     "labelNegative": "Negativ",
     "labelMixed": "Blandede f\u00f8lelser",

@@ -446,6 +446,7 @@
     }
   },
   "analysis": {
+    "alsoReadAs": "\u015e\u00f6yle de okundu",
     "labelPositive": "Olumlu",
     "labelNegative": "Olumsuz",
     "labelMixed": "Kar\u0131\u015f\u0131k duygular",

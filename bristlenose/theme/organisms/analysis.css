@@ -791,3 +791,29 @@ button.signal-card-toggle {
     font-weight: var(--bn-weight-emphasis);
     opacity: 0.78;
 }
+
+/* The quote that took the slot reserved for a dissenting voice.
+   Marked so a reader can see the card is not only agreeing with itself — "a
+   very strong one in five, said clearly and with feeling, has earned the right
+   to be seen". A rule on the leading edge rather than a tint or a badge: it is
+   a provenance mark, not a status, and the quote's own words should carry the
+   weight. */
+.signal-card-quotes blockquote.bn-dissenting {
+    box-shadow: inset 2px 0 0 var(--bn-colour-border-hover);
+}
+
+/* Readings folded into this card — the same evidence in another codebook's
+   vocabulary. Quiet by design: the card's own finding is what is being read,
+   and this says only that the place was read another way too. It is here
+   rather than nowhere because the fold rule deletes nothing, and a reading
+   that exists in no other card would otherwise be lost silently. */
+.signal-card-alternates {
+    font-size: var(--bn-text-badge);
+    line-height: var(--bn-text-badge-lh);
+    color: var(--bn-colour-muted);
+    margin-top: var(--bn-space-sm);
+}
+
+.signal-card-alternate {
+    font-weight: var(--bn-weight-emphasis);
+}

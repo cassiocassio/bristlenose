@@ -446,6 +446,7 @@
     }
   },
   "analysis": {
+    "alsoReadAs": "Tambi\u00e9n interpretado como",
     "labelPositive": "Positivo",
     "labelNegative": "Negativo",
     "labelMixed": "Sentimientos mixtos",

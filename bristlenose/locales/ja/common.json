@@ -441,6 +441,7 @@
     }
   },
   "analysis": {
+    "alsoReadAs": "\u5225\u306e\u8aad\u307f\u65b9",
     "labelPositive": "\u80af\u5b9a\u7684",
     "labelNegative": "\u5426\u5b9a\u7684",
     "labelMixed": "\u8907\u5408\u7684\u306a\u611f\u60c5",

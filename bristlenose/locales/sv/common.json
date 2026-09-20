@@ -446,6 +446,7 @@
     }
   },
   "analysis": {
+    "alsoReadAs": "L\u00e4ses ocks\u00e5 som",
     "labelPositive": "Positiv",
     "labelNegative": "Negativ",
     "labelMixed": "Blandade k\u00e4nslor",

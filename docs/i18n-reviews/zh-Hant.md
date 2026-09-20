@@ -4,12 +4,12 @@ Bristlenose turns a folder of user-interview recordings into a browsable report 
 
 ## Where I'd really value your steer
 
-### Code / Codebook (編碼 / 編碼簿)  ·  clear-cut, just confirm
-- **What we use now:** the app everywhere says 編碼 (code) and 編碼簿 (codebook).
-- **Also in play:** our own internal records still list 代碼 / 代碼簿 — that's a bookkeeping mismatch on our side, not a proposed change.
-- **The nuance:** 編碼 is the coding-*activity* sense TW thematic-analysis writing uses (Braun & Clarke 編碼); 代碼 reads as a static ID / code-number (國家代碼).
-- **My hunch:** keep 編碼 / 編碼簿 — it's what the product ships and what the literature uses; I'll just fix our records to match.
-- **You:** Does 編碼簿 read cleanly as "the set of codes a researcher builds", with 編碼 unambiguously the coding sense, not an ID?
+### Code / Codebook (編碼 / 編碼簿 vs 代碼 / 代碼簿)  ·  genuine toss-up — measured 20 Sep 2026
+- **What we use now:** the app everywhere says 編碼 (code) and 編碼簿 (codebook), and keeps 代碼 for identifiers (參與者代碼 p1, p2; exit codes).
+- **Also in play:** the tools say otherwise. MAXQDA's own Traditional-Chinese guide uses 代碼 for a code-as-noun — 96 times, e.g. 「代碼系統或代碼樹是指以等級方式排列的代碼和子代碼的整體」 — and 編碼 only for the activity; NVivo's official Chinese tutorial does the same (預先創建代碼, 整理代碼); a 2021 台灣教育研究期刊 paper writes NVivo 代碼簿. On the other side, 國家教育研究院 renders codebook as 編碼簿, Academia Sinica's SRDA uses 過錄編碼簿 (the survey-statistics register), and some Taiwanese practitioner writing uses 編碼 for both senses.
+- **The nuance:** 編碼 is unambiguously the coding-*activity* everywhere; the question is only the *noun*. 代碼 is what a researcher who learned on MAXQDA or NVivo has read on screen; 編碼 is what the academic vocabularies write. My earlier note that 代碼 "reads as an ID" was wrong for QDA prose — MAXQDA zh-TW uses it for codes throughout.
+- **My hunch:** none — this one is yours. Keeping 編碼/編碼簿 costs nothing today; switching to 代碼/代碼簿 would change ~50 strings to match the tools.
+- **You:** On a codebook lens, which pair do you expect — 代碼/代碼簿 (the MAXQDA/NVivo register) or 編碼/編碼簿 (the NAER/SRDA register)? And does 代碼簿 read as "the set of codes a researcher builds", or as a lookup table?
 
 ### Session (場次)  ·  clear-cut, just confirm
 - **What we use now:** 場次 for one recorded interview sitting (the app uses it throughout the report).

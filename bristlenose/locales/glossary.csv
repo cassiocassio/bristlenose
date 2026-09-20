@@ -281,7 +281,7 @@ Edit,編輯,zh-Hant,Apple HIG
 Add,加入,zh-Hant,Apple HIG
 Remove,移除,zh-Hant,Apple HIG
 Quit,結束,zh-Hant,Apple HIG
-Codebook,編碼簿,zh-Hant,Was 代碼簿 — corrected 20 Sep 2026 to match the 29 live strings that already ship 編碼簿. 代碼簿 occurs zero times in the zh-Hant tree. The glossary was the outlier not the product. The Library row below already says 編碼簿庫 so the two rows contradicted each other.
+Codebook,編碼簿,zh-Hant,Was 代碼簿; changed 20 Sep 2026 to 編碼簿 because the body shipped 編碼簿 x29 and 代碼簿 x0 and the Library row below already said 編碼簿庫. Prior art measured the same day is a register fork not an error: MAXQDA zh-TW and zh-CN and NVivo zh-CN all use 代碼 for a code-as-noun and 編碼 only for the activity (MAXQDA zh-TW Getting Started 代碼 x96) so the tool register is 代碼/代碼簿 and a 2021 台灣教育研究期刊 paper writes NVivo 代碼簿; the academic-statistical register is 編碼簿 (NAER x2 entries; Academia Sinica SRDA 過錄編碼簿). The body follows the second. PENDING native review - Taiwan-native decides; see docs/i18n-reviews/zh-Hant.md
 Quotes,引述,zh-Hant,QDA term — countable
 Sessions,工作階段,zh-Hant,QDA term
 Signals,訊號,zh-Hant,QDA term
@@ -324,7 +324,7 @@ Hide,Скрыть,ru,Apple HIG
 Accept,Принять,ru,Apple HIG
 Apply,Применить,ru,Apple HIG
 Reset,Сбросить,ru,Apple HIG
-Codebook,Кодировочная книга,ru,Was Книга кодов — corrected 20 Sep 2026 to match the 21 live strings that already ship Кодировочная книга. Книга кодов occurs zero times in the ru tree. The glossary was the outlier not the product.
+Codebook,Кодировочная книга,ru,Was Книга кодов (alt Кодировочная схема); changed 20 Sep 2026 to Кодировочная книга because the body shipped it x30 and Книга кодов x0. Prior art measured the same day: MAXQDA ru UI says Система кодов / Кодовое дерево and its Codebook report label was not found in any Russian document; Russian survey methodology says кодировочная книга (variable-dictionary sense); the qualitative literature (HSE; Strauss and Corbin tr.) says кодировочная схема and avoids a book noun; кодовая книга / книга кодов carry the telecom and cryptography senses (patents; Singh's The Code Book). Body form kept; схема is the literature's alternative. PENDING native review
 Quotes,Цитаты,ru,QDA term — countable: цитата
 Sessions,Сессии,ru,QDA term
 Signals,Сигналы,ru,product term
@@ -345,7 +345,7 @@ Hide,Сховати,uk,Apple HIG; alt Приховати
 Accept,Прийняти,uk,Apple HIG
 Apply,Застосувати,uk,Apple HIG
 Reset,Скинути,uk,Apple HIG
-Codebook,Кодова книга,uk,Was Книга кодів — corrected 20 Sep 2026 to match the 23 live strings that already ship Кодова книга. Книга кодів occurs zero times in the uk tree. The glossary was the outlier not the product.
+Codebook,Кодова книга,uk,Was Книга кодів (alt Схема кодування); changed 20 Sep 2026 to Кодова книга because the body shipped it x30 and Книга кодів x0. Both forms are attested - uk.wikipedia titles the article Книга кодів and opens Кодова книга - and no QDA tool ships a Ukrainian UI; no qualitative-literature usage was found either way. Body form kept. PENDING native review
 Quotes,Цитати,uk,QDA term — countable: цитата
 Sessions,Сесії,uk,QDA term
 Signals,Сигнали,uk,product term
@@ -429,7 +429,7 @@ Hide,Gizle,tr,Apple HIG
 Accept,Kabul Et,tr,Apple HIG
 Apply,Uygula,tr,Apple HIG
 Reset,Sıfırla,tr,Apple HIG
-Codebook,Kod defteri,tr,QDA convention; alt kod kitabı
+Codebook,Kod defteri,tr,QDA convention; alt kod kitabı. PENDING native review - prior art measured 20 Sep 2026 points to the alt: MAXQDA's Turkish UI names its Codebook report Kod kitabı (Raporlar › Akıllı Yayıncı · Kod kitabı; listed verbatim in two university training decks) and its official Turkish webinar is titled Kod Kitabı Geliştirme; dergipark returns qualitative-methods papers for kod kitabı and Ottoman cryptography for kod defteri; Elektronik Kod Defteri is the ECB cipher mode. The body ships kod defteri x26 on this row's word; a sweep to kod kitabı is proposed not applied
 Quotes,Alıntılar,tr,QDA term — countable: alıntı
 Sessions,Oturumlar,tr,QDA term
 Signals,Sinyaller,tr,product term

@@ -98,13 +98,29 @@ Beyond the 5 terms, the research proposes normalizing other drift. All change-pr
   - _Sources:_ TW transcription/qualitative-analysis writing uses both 發言者 and 說話者; 發言者 is the meeting-minutes/formal register, 說話者 the linguistics/everyday register
 - **Codebook → `編碼簿`** (high) — now: 編碼簿 (in all files) — but glossary.csv still anchors 代碼簿
   - _Q:_ The product everywhere uses 編碼簿 (coding-book, from 編碼 = the coding activity) but our glossary still lists 代碼簿 (code-number book). 編碼 is what TW thematic-analysis writing uses for coding. We propose fixing the glossary to 編碼簿 to match shipped usage and TW research convention — does 編碼簿 read correctly to you as 'the book of codes a researcher builds', and is 編碼 unambiguously the coding-process sense (not 代碼 = an ID/codenumber)?
-  - _Sources:_ TW qualitative-analysis literature uses 編碼 for the coding activity (Braun & Clarke 六步法; NVivo/MAXQDA zh-TW reseller materials describe 編碼 workflows)
+  - _Sources:_ TW qualitative-analysis literature uses 編碼 for the coding activity (Braun & Clarke 六步法; NVivo/MAXQDA zh-TW reseller materials describe 編碼 workflows) **Measured 20 Sep 2026 — the tool half of this was wrong:** MAXQDA zh-TW's Getting Started uses 代碼 ×96 for a code-as-noun and 編碼 ×69 for the activity; MAXQDA zh-CN and NVivo's official zh-CN tutorial do the same (代码 ×13 / ×9). The tools' register is 代碼/代碼簿, and a 2021 台灣教育研究期刊 paper writes NVivo 代碼簿 ×5. 編碼簿 is the NAER (two entries) and Academia Sinica SRDA register. A register fork, not a stale row — the glossary now says 編碼簿 with the fork recorded in its note, pending native ✓.
 - **Codes → `編碼`** (high) — now: 編碼 (in all files) — but glossary.csv still anchors 代碼
   - _Q:_ Same fix as Codebook: product uses 編碼 for a qualitative 'code', glossary says 代碼. Confirm 編碼 (not 代碼) is the right noun for 'a code a researcher applies to a quote' — we believe 代碼 would wrongly read as an ID/codenumber.
-  - _Sources:_ Same as Codebook: TW thematic-analysis uses 編碼 for the code/coding sense; 代碼 means a static identifier/codenumber (e.g. 國家代碼 country code)
+  - _Sources:_ Same as Codebook: TW thematic-analysis uses 編碼 for the code/coding sense; 代碼 means a static identifier/codenumber (e.g. 國家代碼 country code) **Measured 20 Sep 2026: contradicted by the tools** — MAXQDA zh-TW/zh-CN and NVivo zh-CN all use 代碼/代码 as the noun for a qualitative code (see Codebook above). 代碼 *also* means an identifier, and the body uses it that way (參與者代碼), but it is not only that. Severity stays high; the direction is now open.
 - **Session → `場次`** (high) — now: 場次 (web, dominant) — but glossary anchors 工作階段, and 工作階段 leaks into 2 desktop/settings strings
   - _Q:_ For the unit of one recorded interview/sitting, the web report says 場次 but two desktop/settings strings say 工作階段. 工作階段 is the computing term for a login/software session and sounds wrong for an interview. We propose normalizing to 場次 everywhere and fixing the glossary. Does 場次 read correctly as 'one interview session' to you, and is keeping 訪談 separate for 'Interview' the right call?
   - _Sources:_ TW research writing treats an interview sitting as a 場/場次 ('一場訪談', '訪談場次'); 工作階段 is the IT term for a software/login session (Apple/MS zh-TW)
+
+### ru / uk / tr — the codebook noun in the machine-seeded wave (measured 20 Sep 2026)
+
+These locales had no section here — the 30 Jun audit covered the ten reviewed locales — and have no native brief. Item 20 of `i18n-defects.md` found the glossary and the shipped files naming *codebook* differently; the pass below is the first time the term was checked against the field for any of them. Method as for the rest of this doc: the QDA tools' localised UIs first (MAXQDA 24 ships Russian, Turkish and Traditional Chinese; NVivo ships Simplified Chinese only; none ships Ukrainian), then the literature.
+
+- **tr: Codebook → `kod kitabı`** (high, CHANGE from glossary `Kod defteri`) — now: kod defteri ×26 in files; glossary `Kod defteri; alt kod kitabı`
+  - _Q:_ Bristlenose says *kod defteri* everywhere; MAXQDA's Turkish UI calls the same thing *Kod kitabı*. Which do you read on screen and in theses — and does *kod defteri* carry the cipher sense (Elektronik Kod Defteri) for you?
+  - _Sources:_ MAXQDA Turkish Reports menu `Raporlar › Akıllı Yayıncı · Kod kitabı · Özetler` (Gazi Üniversitesi MAXQDA eğitimi 2024 deck; Sivas Cumhuriyet Üniversitesi seminar announcement "Raporlar (Akıllı Yayıncı ve Kod Kitabı)"); MAXQDA's official Turkish webinar "MAXQDA Programında Kod Kitabı Geliştirme"; dergipark: *kod kitabı* → qualitative-methods papers (Pamukkale SBE; EKU "kod kitabı ya da çerçeve"), *kod defteri* → Ottoman cryptography and accounting; NK Araştırma workshop "Kod Kitabının Oluşturulması"; bab.la *kod kitabı / kod çizelgesi*. MAXQDA's four official Turkish PDFs say only *Kod Sistemi* and never reach the codebook noun.
+- **ru: Codebook → `кодировочная книга`** (medium, anchor-current with a flagged alternative) — now: кодировочная книга ×30; glossary changed 20 Sep from `Книга кодов` (alt `Кодировочная схема`)
+  - _Q:_ *Кодировочная книга* is the survey-methods term (a questionnaire's variable dictionary); qualitative-methods writing says *кодировочная схема* or just *коды*, and avoids a book noun. For a lens that holds a *framework* of codes for tagging quotes, which reads right — книга, схема, or the loanword кодбук?
+  - _Sources:_ MAXQDA ru Getting Started 2020: *Система кодов*, *Кодовое дерево* (its Codebook report's Russian label was not found in any Russian document); lektsii.org survey-methods notes "Кодировочная книга (codebook) — книга, содержащая инструкции по кодированию и … информацию о переменных"; HSE qualitative-methods deck (Полухина, 2023): *коды*, *темы*, no book noun; Strauss & Corbin-derived guidance: "разработать кодировочную схему — систему категорий"; *кодовая книга* / *книга кодов* carry the telecom (patents) and cryptography (Singh, «Книга кодов») senses; Russian UX-research writing (fabuza, vc.ru, UsabilityLab): *кодирование*, *коды*, *темы*, no codebook noun.
+- **uk: Codebook → `кодова книга`** (low, anchor-current) — now: кодова книга ×30; glossary changed 20 Sep from `Книга кодів` (alt `Схема кодування`)
+  - _Q:_ Both *кодова книга* and *книга кодів* are attested; no QDA tool ships Ukrainian and we found no qualitative-methods usage either way. Which would you write on a lens heading?
+  - _Sources:_ uk.wikipedia titles the article *Книга кодів* and opens "Кодова книга — тип документа, який використовується для збору і зберігання кодів", with a social-sciences section in the survey-variables sense; Ukrainian sociology methods texts use *кодифікатор* for the survey answer-code list; no MAXQDA/NVivo/ATLAS.ti Ukrainian UI.
+
+**What "the body wins" did and did not settle.** For ru, uk and zh-Hant the glossary row and the disagreeing body form landed in the *same* seeding commit (`671d48c6`, `c5df6193`), so neither was a human decision; making the glossary match the body (20 Sep 2026) removed a contradiction and settled nothing about correctness. Turkish was the one locale consistent from birth — and the one where the field disagrees with both sides.
 
 ---
 
@@ -280,7 +296,7 @@ _zh-Hant is internally cleaner than most locales — Quote (引述), Tag (標籤
 
 ## Recommended sequence
 
-1. **Safe now, no reviewer needed:** fix the zh-Hant stale glossary (3 rows → shipped usage) and the ja `編集`→`削除` error.
+1. **Safe now, no reviewer needed:** fix the zh-Hant stale glossary (3 rows → shipped usage) and the ja `編集`→`削除` error. *(The zh-Hant Codebook row was changed 20 Sep 2026 — but the prior-art pass the same day found MAXQDA and NVivo on the other side of it, so "no reviewer needed" was overstated: the row now records the fork and stays pending native ✓. See the zh-Hant Codebook/Codes entries above.)*
 
 2. **Anchor-current rows (46 cells):** low-risk — current text already matches the researched standard. Confirm in a quick native pass per language, then write to `glossary.csv`. These prevent *future* drift on the un-anchored terms.
 

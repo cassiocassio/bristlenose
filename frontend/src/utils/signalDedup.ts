@@ -33,22 +33,24 @@ function quoteKey(q: { sessionId: string; startSeconds: number; pid: string }): 
   return `${q.sessionId}|${q.startSeconds}|${q.pid}`;
 }
 
-/**
- * Is this the Sentiment card?
+/*
+ * `isSentimentSignal` lived here until 20 Sep 2026 and is deliberately gone.
  *
- * It carries a standing exemption from being hidden. Sentiment is a one-group
- * framework, so its concentration is structurally 1.00 — the leading factor of
- * the composite is mute for it, which handicaps it against every codebook card.
- * Unguarded, the rule deletes the Sentiment card in 5 of 74 locations, once
- * where it was the second-strongest card present. This is an interim guard, not
- * the design: the fix is normalising the score (docs/design-signal-strength.md).
+ * It gave the Sentiment card a standing exemption from being hidden, because a
+ * one-group framework has concentration structurally 1.00 and was handicapped
+ * against every codebook card — unguarded, the old rule deleted it in 5 of 74
+ * locations. The fold rule below removed the need: nothing is deleted, so there
+ * is nothing to be exempt from.
+ *
+ * It is recorded rather than silently dropped because the function outlived its
+ * caller by four days while its comment went on asserting the exemption was
+ * live, and the only thing still importing it was its own test — the exact tell
+ * CLAUDE.md files under "an exported function whose only remaining callers are
+ * tests is usually a contract that has quietly lost its guard".
+ *
+ * `isFromSentimentLens` below is a different question (which ROUTE served this
+ * card) and is alive: AnalysisPage.tsx reads it for `allPids` and `isSentiment`.
  */
-export function isSentimentSignal(s: UnifiedSignal): boolean {
-  // Two ways it can arrive: as the sentiment framework's one group (the
-  // codebook path, group name "Sentiment"), or from the /analysis/sentiment
-  // lens, which sets no codebook name at all. Both are exempt.
-  return s.columnLabel === "Sentiment" || s.codebookName === "";
-}
 
 /**
  * Did this card come from the /analysis/sentiment lens rather than a codebook?

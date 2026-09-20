@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dedupeSignals, isSentimentSignal, isFromSentimentLens } from "./signalDedup";
+import { dedupeSignals, isFromSentimentLens } from "./signalDedup";
 import type { UnifiedSignal, UnifiedQuote } from "./types";
 
 function q(pid: string, at: number): UnifiedQuote {
@@ -125,12 +125,6 @@ describe("isFromSentimentLens", () => {
   it("is true for a card from the sentiment lens, which names no codebook", () => {
     expect(isFromSentimentLens({ ...base, columnLabel: "frustration", codebookName: "" }))
       .toBe(true);
-  });
-
-  it("exempts both kinds from de-duplication all the same", () => {
-    expect(isSentimentSignal({ ...base, codebookName: "Emotional & Cognitive Signals" })).toBe(true);
-    expect(isSentimentSignal({ ...base, columnLabel: "frustration", codebookName: "" })).toBe(true);
-    expect(isSentimentSignal({ ...base, columnLabel: "Structure", codebookName: "Garrett" })).toBe(false);
   });
 });
 

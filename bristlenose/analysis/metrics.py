@@ -45,8 +45,18 @@ def classify_flag(
 ) -> str | None:
     """Classify a sentiment-based signal into a finding flag.
 
-    Returns one of "Win", "Problem", "Pattern", "Niggle", "Success",
-    "Surprising", or None if the signal is too weak to flag.
+    Returns one of "Win", "Problem", "Niggle", "Success", "Surprising", or
+    None if the signal is too weak to flag.
+
+    **"Pattern" is documented in the design and unreachable here.** It was in
+    this list until 20 Sep 2026, when the truing pass measured that no branch
+    below can return it — the only occurrence of the string in this module was
+    the docstring advertising it. `docs/design-finding-weight.md` predicted
+    exactly that ("Pattern won't fire") when the scheme was written, and
+    `docs/design-signal-card.md` §7.5 named the docstring as the surviving
+    claim. Removed rather than implemented, because nothing has yet needed a
+    sixth word and inventing a branch to satisfy a comment is the wrong
+    direction of fit.
 
     Only meaningful for sentiment-based signals where *sentiment* is one of the
     seven canonical sentiment names.  For codebook-group signals, returns None.

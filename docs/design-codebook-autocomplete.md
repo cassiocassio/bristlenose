@@ -1,3 +1,34 @@
+---
+status: partial
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20 (835cde98)
+---
+
+> **Truing status:** Partial — Parts 1–4 are dated desk research (9 Mar 2026) and
+> are legitimately frozen: prior-art surveys do not rot, and they are not truing
+> targets. Part 5's seven decisions were re-verified and **all hold**. The drift is
+> in Part 6's roadmap, where the defect is *absence of a mark*: Stages 3 and 4 carry
+> none and so read as wholly outstanding, when the true remainder is about one and a
+> half sub-items. Trued 2026-09-20.
+
+## Changelog
+
+- _2026-09-20_ — trued up: marked Stages 3 and 4 with what actually shipped —
+  3a (solo) and 3c (assign) are done, 4 is done but for one sub-item; recorded that
+  **3b is half-built and that the split is the finding** (the filter semantics and
+  the persisted flag exist, but no row renders and `tags.noTags` has no call site,
+  so a researcher still cannot filter to "only untagged"); replaced three
+  unresolvable commit hashes with one that resolves; fixed an internal contradiction
+  where Part 6 still specified double-`t` that Part 5's own Decision 3 replaced with
+  `r`; corrected the comparison-matrix row claiming tag definitions live "only in
+  the codebook". Verified-still-missing, so nobody re-derives them: no trigger
+  character, no detail pane, no fuzzy matching, no recently-used ranking. Anchors:
+  `frontend/src/contexts/SidebarStore.ts:448-478`,
+  `frontend/src/components/TagSidebar.tsx:481,495,500-535`,
+  `frontend/src/utils/filter.ts:15,74,86`, `bristlenose/locales/en/common.json:144,151`,
+  `frontend/src/contexts/FocusContext.tsx:192,424-436`.
+- _2026-03-10_ — initial desk research + decisions + roadmap.
+
 # IDE-Inspired Codebook Autocomplete — Design Research
 
 _Desk research: 9 Mar 2026. Prior art survey for the inline tag-application experience._
@@ -751,7 +782,9 @@ However, **three new sidebar interaction patterns** enable bulk tagging and filt
 
 **Decision:** The success blink animation currently used for accepting proposed (tentative) badges should play on **every** tag assignment action:
 - `[+]` → type → Enter/Tab (existing TagInput flow)
-- Double-`t` quick-repeat
+- `r` quick-repeat _(this list said double-`t`; Decision 3 above replaced it, and
+  the shipped key is `r` — commit "replace double-t with r key for quick-repeat
+  tag". Part 6 was not swept when that decision changed.)_
 - Sidebar click-to-assign (6c)
 - Future: drag-and-drop (6d)
 
@@ -765,7 +798,10 @@ _Multi-stage implementation plan. Each stage is independently shippable._
 
 ### Stage 1: Structured autocomplete with group headers ✅
 
-_Completed 10 Mar 2026 — commits `fbba431`, `c27351a`, `9e21266`._
+_Completed 10 Mar 2026 — commit "grouped autocomplete in TagInput with codebook
+colours and section headers" (`c6a202c2`). The three short hashes originally cited
+here no longer resolve; recovered via
+`git log -S"groupedVocabulary" -- frontend/src/components/TagInput.tsx`._
 
 **What:** Upgrade TagInput from flat vocabulary to grouped suggestions with section headers, tag colours, and proper selection highlighting.
 
@@ -820,7 +856,25 @@ _Completed 10 Mar 2026._
 
 **Actual effort:** Half session
 
-### Stage 3: Sidebar tag interactions (filter + assign)
+### Stage 3: Sidebar tag interactions (filter + assign) — mostly ✅
+
+> **As-built 20 Sep 2026: 3a and 3c shipped; 3b is half-built, and the half that is
+> missing is the visible one.**
+>
+> - **3a (solo) ✅** — `SidebarStore.ts:448-478` (`enterSoloMode` / `exitSoloMode`,
+>   with `savedTagFilter` doing exactly the specced restore-previous-state),
+>   `TagRow.tsx:127-137`.
+> - **3b (filter to untagged) ⚠️ half-built** — the filter semantics and the
+>   persisted flag both exist (`frontend/src/utils/filter.ts:15,74,86`;
+>   `SidebarStore.ts:468,479`), but **no row renders it**. `noTagsUnchecked` is
+>   written only by Select-all / Clear (`TagSidebar.tsx:481,495`), and the strings
+>   `tags.noTags` / `tags.noTagsLabel` (`locales/en/common.json:144,151`) have no
+>   call site in `frontend/src`. Net effect: the machinery is there and a
+>   researcher still cannot filter to "only untagged". This is the one genuinely
+>   outstanding item in Stage 3.
+> - **3c (click badge to assign) ✅** — `TagSidebar.tsx:500-535`, commit "sidebar tag
+>   click-to-assign: select quotes then click tag badge to apply". Fully documented
+>   at `docs/design-sidebar-tag-assign.md`.
 
 **What:** Three new click behaviours in the Tag Sidebar.
 
@@ -851,7 +905,17 @@ _Completed 10 Mar 2026._
 
 **Estimated effort:** Large (1–2 sessions)
 
-### Stage 4: Success animation unification
+### Stage 4: Success animation unification — ✅ but for one sub-item
+
+> **As-built 20 Sep 2026.** The unification shipped: one `flashTag` registry
+> (`FocusContext.tsx:192,424-436`) drives TagInput commits, `r` quick-apply
+> (`useKeyboardShortcuts.ts:218`) and sidebar assign (`TagSidebar.tsx:518`).
+>
+> **Unmet:** the sub-item below specifying that the flash "fires after successful
+> API response (not optimistically)". It fires optimistically — `addTag` is
+> fire-and-forget (`QuotesContext.tsx:303-319`). Whether that is worth changing is
+> open; it is recorded in `docs/design-sidebar-tag-assign.md` too, so the two docs
+> now agree.
 
 **What:** Ensure the badge-accept-flash animation plays consistently on all tag assignment paths.
 
@@ -889,10 +953,17 @@ _Completed 10 Mar 2026._
 | **Inline creation** | Yes (type + Enter) | Yes | Yes | Yes (`+` in dialog) | Yes |
 | **"Create X" label** | No | Yes | Unknown | No | Unknown |
 | **AI-suggested tags** | AutoCode → tentative badges | Magic Highlights (auto-apply) | Auto-apply during transcription | AI Coding (v24+) | AI coding suggestions (v15+) |
-| **Tag definitions visible** | No (only in codebook) | On tag board | On hover | Comment field | Node description |
+| **Tag definitions visible** | No (see note) | On tag board | On hover | Comment field | Node description |
 | **Multi-select** | No (Tab-reopen for rapid entry) | Yes (multi-tag per highlight) | Unknown | One code per dialog invocation | One node per action |
 | **Keyboard shortcut** | `t` (add tag), `r` (repeat) | Tab on selection menu | `#` in live notes | `Ctrl+J` / `Ctrl+L` / `Ctrl+Shift+V` | None documented |
 | **Provenance distinction** | Group colours only | Group colours | Purple (template) vs pink (project) | Code comments | Node tree position |
+
+> _Note (20 Sep 2026): "No" is right about the picker — `TagInput` shows no
+> definitions. The parenthetical "only in the codebook" was wrong, though: manual
+> tags have no definition anywhere (`tag_definitions` is id / group / name,
+> `bristlenose/server/models.py:84`). Definitions for a researcher's own vocabulary
+> live on `TagPrompt` and surface in the codebook **builder**, not the codebook
+> grid — see `docs/design-dynamic-codebook-builder.md`._
 
 ---
 

@@ -1,3 +1,35 @@
+---
+status: partial
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20 (835cde98)
+---
+
+> **Truing status:** Partial — the five-layer strategy and the practitioner-
+> vocabulary argument hold and were re-verified against the shipped YAML
+> (trued 2026-09-20). Three things drifted: §"Future: tag display modes" **shipped**
+> and is banner-marked as such, the §"Related files" inventory had fallen behind the
+> directory, and one lapsed process is now recorded as lapsed.
+>
+> _Note for a cold reader: the "Methodological frame" banner below is dated 30 Apr
+> 2026 and is still true, but it was the doc's only dated element and lent the rest
+> of the body a currency it did not have. Nothing under it was touched between Feb
+> and this pass._
+
+## Changelog
+
+- _2026-09-20_ — trued up: marked §"Future: tag display modes" shipped (the eye
+  toggle) and recorded that reality is a **three-way** split — hide / disable /
+  filter — where the doc anticipated two; corrected the §Related files list from 5
+  codebook YAMLs to the 9 that ship, and added the two docs that now own this
+  territory; recorded that the template-archive process ran once and lapsed;
+  qualified the "fork and share a codebook" claim, which has no code path; noted
+  that the three-field tag model is true of framework YAML only, and named
+  `TagPrompt` as the researcher-side analogue. Anchors:
+  `frontend/src/utils/tagVisibility.ts`, `frontend/src/components/EyeToggle.tsx`,
+  `bristlenose/server/routes/data.py:1030`, `bristlenose/server/models.py:84`,
+  `bristlenose/server/codebook/`.
+- _2026-04-30_ — methodological frame added (thematic-analysis spike).
+
 # Codebook Ecosystem — Strategy & Vision
 
 _Feb 2026. Captures the design thinking behind the UXR codebook v2 rewrite and the broader codebook layering vision._
@@ -70,6 +102,17 @@ Works for fishkeeping, fintech, healthcare, rock climbing. These are universal p
 
 Every tag has three fields that the LLM uses for auto-tagging:
 
+> **True of framework YAML; not of a researcher's own tags.** `tag_definitions`
+> carries `id`, `codebook_group_id` and `name` — and nothing else
+> (`bristlenose/server/models.py:84`), because a researcher *types* a tag rather
+> than authoring one. The three-field analogue for researcher-built vocabulary is a
+> separate table, `TagPrompt`, whose definition / apply_when / not_this are
+> *learned* from the quotes they coded by hand rather than written up front
+> (`docs/design-dynamic-codebook-builder.md`). This is why signal elaboration skips
+> custom codebooks — there is no definition to interpret against
+> (`bristlenose/server/routes/analysis.py:1136`).
+
+
 - **definition** — what this concept means (1–2 sentences)
 - **apply_when** — what kind of participant utterance fits, with example phrases
 - **not_this** — what adjacent tags this could be confused with, and how to disambiguate
@@ -91,6 +134,15 @@ Bristlenose's advantage: the definitions are in plain YAML, version-controlled, 
 1. Read exactly why AutoCode tagged a quote a certain way
 2. Fork the codebook, tweak definitions, immediately get different results
 3. Share their refined codebook with colleagues (email a .yaml file)
+
+> **2 and 3 have no code path (20 Sep 2026).** `_load_template` reads only the
+> packaged directory (`bristlenose/server/codebook/__init__.py:179-183`), and
+> `POST /codebook/import-template` (`routes/codebook.py:694`) imports a *bundled*
+> template into a project — it does not accept a user-supplied file. Both are true
+> of the repository, where anyone can edit a YAML; neither is true of the product.
+> "No shareable codebook artefact" is a long-standing open divergence — see
+> `docs/archive/design-codebook.md` §"Key divergences", where it is the first of
+> five.
 4. Contribute back improved definitions to an open ecosystem
 
 Being open about definitions is both the ethical position (AGPL) and the competitive moat (network effects from shared definitions). Dovetail and Marvin are not going to open-source their tagging prompts. Bristlenose can build an ecosystem around shared, community-refined tag definitions that closed-source tools cannot replicate.
@@ -125,6 +177,25 @@ Before any codebook template change, copy the current version to the archive. Th
 
 _Not implemented. Design direction for v2 of tag filtering._
 
+> **Shipped (20 Sep 2026) — and as three operations, not two.** Operation 1 below
+> is the **eye toggle**: `frontend/src/components/EyeToggle.tsx`,
+> `frontend/src/utils/tagVisibility.ts`, `hiddenTagGroups` in
+> `SidebarStore.ts:65` (persisted to SQLite), consumed at `QuoteGroup.tsx:177-181`.
+> Operation 2, the quote filter, also ships.
+>
+> What the doc did not anticipate is a **third**, which sits between them:
+> **disable**, per *framework*, via the switch in the codebook lens. Off means off —
+> it stops the codebook being maintained and suppresses its tags in autocomplete,
+> where hide only stops them being drawn. And the granularities differ: hide is per
+> **group**, disable is per **framework**. The write is a full replacement
+> (`bristlenose/server/routes/data.py:1030`); absence means enabled.
+> `docs/design-codebook-state-model.md` §5 is canonical for all three — this doc
+> predates it and does not cross-reference it.
+>
+> One detail below is wrong rather than merely superseded: display toggles do **not**
+> live "in the codebook panel — a visibility icon per codebook". That panel was
+> deleted in 0.29.0, and the shipped toggle is per group.
+
 ### Two distinct operations
 
 1. **Show/hide tag display** — toggle the _visibility_ of tags from a whole codebook, like guides in Figma or "show invisibles" in a text editor. The tags are still applied to quotes; you're just choosing whether to see them. One-click per codebook.
@@ -151,12 +222,16 @@ The small participant badges (`.p-box` in `.participant-grid`) on signal cards a
 
 ## Related files
 
-- `bristlenose/server/codebook/uxr.yaml` — the default UXR codebook (v2)
-- `bristlenose/server/codebook/norman.yaml` — Don Norman framework codebook
-- `bristlenose/server/codebook/garrett.yaml` — Jesse James Garrett framework codebook
-- `bristlenose/server/codebook/nielsen.yaml` — Jakob Nielsen 10 Usability Heuristics codebook
-- `bristlenose/server/codebook/yablonski.yaml` — Jon Yablonski Laws of UX codebook (cognitive psychology lens)
-- `bristlenose/server/codebook/archive/` — versioned codebook archive
+- `bristlenose/server/codebook/` — **nine** codebook YAMLs ship: `uxr` (the default,
+  v2), `norman`, `garrett`, `nielsen`, `yablonski`, plus `morville`, `plato`,
+  `cli-ux` and `sentiment`, which this list had missed. Deliberately not re-listed
+  with per-file descriptions: `ls bristlenose/server/codebook/*.yaml` is the answer
+  that cannot go stale
+- `bristlenose/server/codebook/archive/` — versioned codebook archive. **The process
+  described at §"Versioning" lapsed:** the directory holds exactly one snapshot
+  (`uxr_2026-02-21_v1-original-39-tags.yaml`), and `uxr.yaml` changed on 10 Mar 2026
+  (39 → 31 tags) without one. Treat the convention as aspirational, not as a record
+  of what happened
 - `bristlenose/server/codebook/__init__.py` — YAML loader and dataclass definitions
 - `bristlenose/server/autocode.py` — AutoCode engine (uses discrimination prompts)
 - `docs/codebook futures/bristlenose-codebook-strategy-and-design.md` — original codebook strategy
@@ -164,3 +239,8 @@ The small participant badges (`.p-box` in `.participant-grid`) on signal cards a
 - `docs/design-nielsen-codebook.md` — Nielsen adaptation analysis (expert evaluation → quote coding)
 - `docs/design-research-methodology.md` — analytical decisions behind current codes
 - `docs/design-analysis-future.md` — analysis page vision (grid layering, two-pane design)
+- `docs/design-codebook-state-model.md` — **canonical** for install / enable /
+  disable / hide semantics, which this doc predates
+- `docs/design-codebook-v2.md` — the shipped lens
+- `docs/design-codebook-kuniavsky.md` — a layer-2 reference codebook that points
+  here; this list did not point back

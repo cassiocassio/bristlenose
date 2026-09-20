@@ -495,8 +495,12 @@ function SignalCard({
       {/* The hero is emitted FIRST so the float catches the headline and the
           elaboration both — a float only affects content that follows it. The
           visual order is unchanged (it sits top-right); only the source order
-          moved. `order` on the flex parent restores the reading order for a
-          screen reader, which is why `.signal-card-identity` carries it. */}
+          moved.
+
+          The cost is real and not fixed: a screen reader now announces the
+          chip before the finding's name. `order` would NOT fix it — it moves
+          the visual rendering only, which is the classic accessibility trap.
+          See design-signal-card.md §7. */}
       <div className="signal-card-top">
         <div className="signal-card-right">
           <SignalHero

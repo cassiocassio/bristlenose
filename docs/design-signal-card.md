@@ -312,7 +312,18 @@ something quiet and sharp. Tracked as a Value/Could item.
    (`analysis.py:95`, `:389`) and is rendered nowhere.** Its documented value
    `Pattern` is **unreachable** — an exhaustive sweep returns only
    `Win / Problem / Niggle / Success / Surprising`.
-6. **`.signal-rank`** in `theme/organisms/analysis.css` has zero consumers
+6. **The floated hero costs reading order, and it is not fixed.** The float
+   requires the chip to be emitted before the headline — a float only affects
+   what follows it — so a screen reader announces *"Frustration 0.42, button"*
+   before the finding's name. **`order` does not fix this**: it reorders the
+   visual rendering only, and relying on it for reading order is a well-known
+   accessibility trap. The alternatives both cost something real: a DOM order
+   a float cannot use, or absolutely positioning the chip, which loses the
+   wrap the float exists for. Shipped with the cost rather than a comment
+   claiming it was solved — the first draft of this change carried exactly
+   that comment in two places.
+
+7. **`.signal-rank`** in `theme/organisms/analysis.css` has zero consumers
    anywhere in the tree.
 
 ---

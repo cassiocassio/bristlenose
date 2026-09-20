@@ -71,17 +71,11 @@
    beside a column of text.
 
    A float only affects content that FOLLOWS it, so `.signal-card-right` is
-   emitted first in the markup. `order` puts the reading order back for a
-   screen reader: the headline is announced before the chip, as it reads. */
+   emitted first in the markup — which costs reading order. See the note on
+   `.signal-card-identity` below. */
 .signal-card-top {
     display: block;
     margin-bottom: var(--bn-space-sm);
-}
-
-.signal-card-identity {
-    /* Emitted second so the float catches it; announced first because that is
-       the reading order. display:contents keeps the float working. */
-    display: contents;
 }
 
 .signal-card-right {
@@ -89,15 +83,27 @@
     margin: 0 0 var(--bn-space-sm) var(--bn-space-lg);
 }
 
-.signal-card-quotes {
-    clear: both;
-}
+/* A plain block. It is emitted AFTER the floated hero so the float catches it:
+   a block box beside a float does not move aside, but its line boxes shorten,
+   which is the wrap. `flex: 1; min-width: 0` lived here for the old flex row
+   and does nothing now.
 
+   THE COST, stated because it is real and unfixed: the hero is emitted first,
+   so a screen reader announces "Frustration 0.42, button" before the finding's
+   name. `order` does NOT fix this — it reorders the visual rendering only, and
+   is a well-known accessibility trap for exactly this reason. Fixing it needs
+   either a DOM order a float cannot use, or the chip absolutely positioned,
+   which loses the wrap. Recorded in design-signal-card.md rather than papered
+   over. */
 .signal-card-identity {
-    flex: 1;
     min-width: 0;
 }
 
+/* VANILLA-RENDERER ONLY as of 20 Sep 2026. The React lens stopped emitting
+   this when the eyebrow was removed — the location is the heading now — but
+   theme/js/analysis.js:173 still writes it, so the rule is live on the static
+   byproduct and is not dead code. Grep frontend/src alone and it looks
+   deletable; it isn't. */
 .signal-card-source {
     display: block;
     font-size: var(--bn-text-badge);
@@ -192,6 +198,8 @@
 
 /* Quote list inside signal card */
 .signal-card-quotes {
+    /* Below the float, not beside it. */
+    clear: both;
     background: var(--bn-colour-quote-bg);
     border-radius: var(--bn-radius-md);
     margin: var(--bn-space-md) 0;
@@ -629,21 +637,23 @@ button.signal-card-toggle {
    affordance and the button reset — most readers need one number, and the four
    metrics behind it are for whoever wants to audit it. */
 .signal-card-hero {
-    /* Two steps down the ladder. The chip confirms direction and gives a
-       sortable number; the headline and the claim carry the finding, so it is
-       a scan aid rather than the thing being read. --bn-space-sm between label
-       and score because at xs they collided ("Mixed sentiments0.30"). */
-    font-size: var(--bn-text-label);
-    padding: var(--bn-space-xs) var(--bn-space-sm);
-    gap: var(--bn-space-sm);
     display: inline-flex;
     align-items: baseline;
+
+    /* TWO STEPS DOWN the ladder, 20 Sep 2026. It was --bn-text-body with
+       --bn-space-sm/md padding, on the reasoning that it is "the hero of this
+       corner". That was true when the card had no headline worth reading —
+       every card has one now, and the chip's job is to confirm direction and
+       give a sortable number while the headline and the claim carry the
+       finding. A scan aid, not the thing being read.
+
+       --bn-space-sm between label and score: at xs they collided outright
+       ("Mixed sentiments0.30"). */
+    font-size: var(--bn-text-label);
+    line-height: var(--bn-text-label-lh);
+    padding: var(--bn-space-xs) var(--bn-space-sm);
     gap: var(--bn-space-sm);
-    /* Bigger than the chips it sits among, because it is the hero of this
-       corner and they are not clickable. */
-    font-size: var(--bn-text-body);
-    line-height: var(--bn-text-body-lh);
-    padding: var(--bn-space-sm) var(--bn-space-md);
+
     border: 1px solid transparent;
     color: inherit;
     text-align: left;

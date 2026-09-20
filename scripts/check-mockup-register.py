@@ -69,6 +69,26 @@ def _tracked_mockups() -> set[str]:
     return {Path(line).name for line in out.splitlines() if line.strip()}
 
 
+def _ignored_mockups(names: set[str]) -> set[str]:
+    """Which of these names `.gitignore` deliberately excludes.
+
+    `git check-ignore --no-index` answers for a path that does not exist, which
+    is the whole point: in CI an ignored mockup is never checked out, so
+    "is it on disk" cannot distinguish *deliberately absent* from *deleted*.
+    """
+    if not names:
+        return set()
+    rel = [f"docs/mockups/{n}" for n in sorted(names)]
+    try:
+        out = subprocess.run(
+            ["git", "check-ignore", "--no-index", *rel],
+            cwd=ROOT, capture_output=True, text=True,
+        ).stdout
+    except OSError:
+        return set()
+    return {Path(line).name for line in out.splitlines() if line.strip()}
+
+
 def main() -> int:
     if not REGISTER.exists():
         print(f"error: register not found at {REGISTER.relative_to(ROOT)}")
@@ -87,7 +107,6 @@ def main() -> int:
     # where the files are simply not checked out. Asking git makes it the same
     # question everywhere.
     tracked = _tracked_mockups()
-    ignored = {p.name for p in MOCKUPS.glob("*.html")} - tracked
     on_disk = tracked
 
     registered: dict[str, str] = {}
@@ -102,7 +121,12 @@ def main() -> int:
         registered[name] = lifecycle
 
     missing = sorted(on_disk - registered.keys())
-    # A row for a deliberately-ignored mockup is not an orphan.
+    # A row for a deliberately-ignored mockup is not an orphan. Asked as "is
+    # this name ignored BY RULE", not "is it here" — the first pass at this
+    # compared against the local filesystem, which is exactly the machine
+    # dependence the change was removing: in CI those files are never checked
+    # out, so the set was empty and all seven rows failed again.
+    ignored = _ignored_mockups(registered.keys() - on_disk)
     orphans = sorted(registered.keys() - on_disk - ignored)
     silent = sorted(
         n for n, tl in registered.items()

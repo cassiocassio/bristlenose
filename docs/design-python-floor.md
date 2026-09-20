@@ -15,7 +15,28 @@ edit, no PR touched.*
 > arrived** — 3.10 reaches EOL 31 Oct 2026 and the floor moves on **1 Nov**, six
 > weeks out. Nothing here has rotted; do not read this as a historical record.
 > The predicate is a calendar date fixed by python.org, so this hold cannot rot
-> — but it can be *missed*.
+> — but it can be *missed*, and as of today **nothing but this file will raise
+> it.**
+>
+> **The two register rows this document proposed were never added.** §"Held
+> register row" (below) and the 3.15 / presidio-ceiling row were both written as
+> text to paste into `docs/dependency-premortem-log.md`'s Held register, and
+> neither landed — verified 20 Sep 2026: that register carries 24 rows and none
+> of them is the Python floor. The consequence is specific. `/cassandra
+> --watch` (Mode C) re-evaluates **held predicates in that register** against
+> fresh metadata; a predicate that is not a row is not re-evaluated. So the one
+> hold this document calls unrottable is also the one hold with **no mechanical
+> reminder at all** — 42 days before the date it turns on, its only carrier is
+> a design doc somebody has to think to open.
+>
+> The numpy row does mention the floor, but as *numpy's* release predicate
+> ("presidio-analyzer floats its numpy cap **and** the Python floor question is
+> settled"), which fires on numpy's condition and not on 1 Nov. That is the
+> trap in miniature: the floor appears in the register as somebody else's
+> precondition and nowhere as its own obligation.
+>
+> This is recorded, not fixed — writing a register row is doing the work, not
+> truing the doc. The paste-ready text is already below.
 
 Companion artifact (same content, with the constraint diagrams):
 <https://claude.ai/code/artifact/10ea51c6-dc84-4134-94fb-ae70d84eca39>

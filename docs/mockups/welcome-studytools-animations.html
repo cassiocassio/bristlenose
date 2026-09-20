@@ -726,7 +726,7 @@ const TOOLS = [
 const STATUS = {
   "":         ["✓ shipped",     "var(--faint)"],
   "todo":     ["◀ to design",   "var(--bn-colour-accent)"],
-  "withheld": ["— withheld: the .app can’t run it (Presidio excluded, CLI-only flag)", "var(--faint)"],
+  "withheld": ["— withheld: the .app can’t reach it (no Privacy control, CLI-only flag)", "var(--faint)"],
 };
 const rm = document.getElementById("roadmap");
 TOOLS.forEach(([n,d,s],i)=>{ const li=document.createElement("li");

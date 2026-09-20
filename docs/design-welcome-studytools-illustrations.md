@@ -1,7 +1,8 @@
 ---
 status: current
-last-trued: 2026-08-02
-trued-against: HEAD on 2026-08-02
+last-trued: 2026-09-20
+previous-trued: 2026-08-02
+trued-against: HEAD@main on 2026-09-20 — the withholding reason only (presidio is bundled since 12 Sep); illustration status carries its 2026-08-02 verdict
 ---
 
 # Welcome screen — study-tools cell illustrations
@@ -22,9 +23,12 @@ trued-against: HEAD on 2026-08-02
 > option for any of them. Resizing a screenshot is cheap, and an *allusion* to
 > the tool is more interesting than a photograph of it — plus it's responsive.
 > (2) **Redact PII is withheld from the desktop pool**, not merely unillustrated:
-> Presidio + spaCy are in the sidecar spec's `excludes=[]`, `pii_enabled` is
-> CLI-only, and no desktop control exists — so the slot was teaching a tool the
-> `.app` cannot run. Commented out verbatim in `studyTools` as the reference copy;
+> `pii_enabled` is CLI-only and no desktop control exists — so the slot was
+> teaching a tool the `.app` cannot *reach*. (This bullet also said Presidio and
+> spaCy sit in the sidecar spec's `excludes=[]`. **That stopped being true on
+> 12 Sep 2026** — they are bundled; only the `en_core_web_lg` weights are
+> excluded. The withholding stands on the remaining half: nothing writes
+> `piiEnabled`. Corrected 20 Sep 2026.) Commented out verbatim in `studyTools` as the reference copy;
 > restore it when the capability ships on the Mac (tracked in the maintainer's
 > private planning notes, §2 Broken ▸ Should).
 

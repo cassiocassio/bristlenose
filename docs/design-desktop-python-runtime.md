@@ -1,7 +1,7 @@
 ---
 status: current
-last-trued: 2026-09-04
-previous-trued: 2026-06-21
+last-trued: 2026-09-20
+previous-trued: 2026-09-04
 trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
 ---
 
@@ -13,6 +13,7 @@ _Written 18 Apr 2026 as Track C C0 spike output; updated through C3 (21 Apr 2026
 
 ## Changelog
 
+- _2026-09-20_ — corrected the §shipped-state bullet that listed presidio / spaCy among the sidecar's PyInstaller excludes. They have been bundled since 12 Sep 2026 (commit "bundle presidio and spaCy; the weights still download"); only `en_core_web_lg` is excluded, as data. Anchors: `desktop/bristlenose-sidecar.spec:248-258`.
 - _2026-09-04_ — trued for the two-keychain change (`--topic keychain`): §Credential flow step 2 writes **both** the data-protection keychain and a login-keychain copy the CLI reads, both read back; the resource-resolution bullet says so; the sidecar still needs no keychain entitlement but is no longer the only consumer. Two "deferred" claims about credential-bearing scripts were false: the Developer ID `.dmg` has been a live channel since August (`build-dmg.sh`, notarised, stapled) and TestFlight uploads authenticate with the App Store Connect API key, not an app-specific password — both marked with dated post-scripts, bodies kept. `fetch-ffmpeg.sh` downloads from `ffmpeg.martin-riedl.de`, not evermeet.cx. Two commits on 3 Sep had edited the body without a changelog line; recorded here.
 - _2026-06-21_ — trued against `main` (warm-sidecar-pool merge `78b2d40`): added a "Warm-sidecar pool (Phase A2)" lifecycle addendum to the SidecarMode contract (park-on-switch + synchronous re-point; spawn / port / credential mechanics unchanged and still accurate). Cross-refs `design-desktop-switch-performance.md` rather than duplicating the perf model. Anchors: `ServeManager.swift`, `ParkedSidecar.swift`.
 - _2026-04-28_ — see the "Trued 28 Apr 2026" banner above (Track C C0–C3 spike + App-Store distribution flow; entitlement-table empirical result).
@@ -31,7 +32,7 @@ It is **not** the implementation plan — per-checkpoint work was tracked in `do
 
 ## Status (C2–C3 + post-C3 hardening, 28 Apr 2026)
 
-- ✅ Trimmed PyInstaller spec at `desktop/bristlenose-sidecar.spec` (MLX-only; ctranslate2 / faster-whisper / presidio / spaCy excluded).
+- ✅ Trimmed PyInstaller spec at `desktop/bristlenose-sidecar.spec` (MLX-only; ctranslate2 / faster-whisper excluded). **Corrected 20 Sep 2026:** this bullet also listed presidio / spaCy as excluded, which was true when written and stopped being true on 12 Sep 2026 — they are **bundled** (`bristlenose-sidecar.spec:248`, which warns against re-excluding them). Only the ~425 MB `en_core_web_lg` weights are excluded and fetched at runtime; that code/data split is what keeps the download clear of App Store §2.5.2. See [design-redact-pii.md](design-redact-pii.md).
 - ✅ Sidecar builds, real-identity codesigns with Hardened Runtime, serves HTTP on localhost under `bristlenose serve`.
 - ✅ **Minimum entitlement set empirically confirmed:** one key only (`cs.disable-library-validation`). Empty-entitlements retest ran 28 Apr 2026 — RED. PyInstaller's bundled `Python.framework/Versions/3.12/Python` carries an internal `_CodeSignature/` seal distinct from the per-binary signatures applied by `sign-sidecar.sh`. AMFI reads the framework's nested seal at dlopen, not the per-binary resign — so unified-identity signing across individual Mach-Os does not reach the framework's identifier. DLV stays. Path forward (parked): treat Python.framework as a unit with `codesign --force` on the directory itself, properly resealing the internal `_CodeSignature`. The empirical comment block in [`desktop/bristlenose-sidecar.entitlements`](../desktop/bristlenose-sidecar.entitlements) is the canonical record (commit `8cfd2ee`).
 - ✅ **Sidecar resolution** refactored to pure `SidecarMode.resolve(…)` (C1).

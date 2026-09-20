@@ -1,7 +1,7 @@
 ---
 status: parked
-last-trued: 2026-08-05
-trued-against: HEAD@main on 2026-08-05
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20 (835cde98)
 ---
 
 # Design: Moderator Question Pill
@@ -12,6 +12,24 @@ trued-against: HEAD@main on 2026-08-05
 > is `false`, so no pill, no hover zone and no question row render. Everything
 > below still describes real code — read it as the spec for a revisit, not as
 > a description of what a researcher sees today. See § Why it's parked.
+>
+> _Park re-verified 20 Sep 2026 by reading each line it names, not by taking the
+> mark on trust: the flag is `false` at `featureFlags.ts:58`, and all three gates
+> hold (`QuoteCard.tsx:215`, `:633`, `QuoteGroup.tsx:263`)._
+
+## Changelog
+
+- _2026-09-20_ — confirmed still parked, and the park verified gate by gate rather
+  than from the banner. Three corrections, all in the apparatus: the pill has **two**
+  runtime states, not the three §Visual design claims — iteration 12 removed the
+  third, leaving `.moderator-pill-active` as a dead CSS rule; locale count 20 → 21
+  (coverage was already complete); and the `QuoteCard.test.tsx` count of 20 named
+  nothing measurable, so it is now scoped per describe. Anchors:
+  `frontend/src/islands/QuoteCard.tsx:704`,
+  `bristlenose/theme/atoms/moderator-question.css:53`,
+  `frontend/src/utils/featureFlags.ts:58`.
+- _2026-08-05_ — parked behind the flag (commit "park the moderator pill and quote
+  context expansion behind flags").
 
 ## What it does
 
@@ -29,7 +47,7 @@ Reveals the preceding moderator question/statement before a participant quote in
 
 ## Visual design
 
-- **Pill** (`.moderator-pill`): mono font, 0.65rem, badge-bg colour, subtle shadow. Positioned absolutely inside `.quote-body` at `top: calc(-1.1rem - 1px); left: 0` — floats 1rem above the first word of the quote text (not the timecode). Float-down entrance animation: `translateY(-8px) → translateY(0)` + opacity fade. Three states: hidden (default), `.visible` (hovering), `.moderator-pill-active` (question pinned open, accent tint)
+- **Pill** (`.moderator-pill`): mono font, 0.65rem, badge-bg colour, subtle shadow. Positioned absolutely inside `.quote-body` at `top: calc(-1.1rem - 1px); left: 0` — floats 1rem above the first word of the quote text (not the timecode). Float-down entrance animation: `translateY(-8px) → translateY(0)` + opacity fade. Three states as designed: hidden (default), `.visible` (hovering), `.moderator-pill-active` (question pinned open, accent tint). **Two as built (20 Sep 2026):** iteration 12 below removed the pill from the DOM entirely when the question is open, so `QuoteCard.tsx:704` applies only `` `moderator-pill${isPillVisible ? " visible" : ""}` ``. `.moderator-pill-active` survives as a **dead rule** in `bristlenose/theme/atoms/moderator-question.css:53` with nothing applying it — the same stale-selector shape `tests/test_export_css_selectors.py` exists to catch, one file outside its corpus
 - **Moderator question row** (`.moderator-question-row`): sits above the participant's `.quote-row` at `<blockquote>` level. Uses the same `display: flex` layout as `.quote-row` with a **hidden timecode spacer** (`visibility: hidden`, same text as the real timecode) — this gives identical left alignment regardless of timecode length. `margin-bottom: 0` (no gap between moderator row and quote row)
 - **Moderator question block** (`.moderator-question`): `display: block; flex: 1; min-width: 0` — fills the flex column. Block layout means the badge sits inline at the start of the first line, and long text wraps to the **left margin** (not indented past the badge). Muted colour, 0.85rem
 - **Question text** (`.moderator-question-text`): italic. Badge is non-italic
@@ -96,7 +114,7 @@ Reveals the preceding moderator question/statement before a participant quote in
 | File | Count | Coverage |
 |------|-------|----------|
 | `tests/test_moderator_question_api.py` | 9 tests | 404s, happy path, response shape, non-adjacent moderator, edge cases |
-| `frontend/src/islands/QuoteCard.test.tsx` | 20 tests | Pill rendering, visibility, active class, click handlers, question block, more… button, first-sentence splitting, hover zone, context hiding, dismiss button, quote-body alignment |
+| `frontend/src/islands/QuoteCard.test.tsx` | 16 in the moderator-question describe (`:117-244`) + 6 in the parked-features describe (`:404-515`); 47 `it()` in the file overall | Pill rendering, visibility, active class, click handlers, question block, more… button, first-sentence splitting, hover zone, context hiding, dismiss button, quote-body alignment |
 
 ### Mockup
 | File | Purpose |
@@ -167,8 +185,9 @@ Only the client affordance is withheld. Still shipping, still tested:
   `moderator-question` embed key in the offline export (`routes/export.py`)
 - `bristlenose/theme/atoms/moderator-question.css` — no element carries the
   classes today, so it renders nothing
-- `quotes.showModeratorQuestion` / `quotes.dismissModeratorQuestion` in all 20
-  locales
+- `quotes.showModeratorQuestion` / `quotes.dismissModeratorQuestion` in all 21 full
+  locales (`zh-Hant-HK` correctly absent — it inherits `zh-Hant`). Coverage is
+  complete; only the count had drifted
 - `tests/test_moderator_question_api.py` (9 tests) and the QuoteCard tests,
   which flip the flag on so the parked behaviour stays specified
 

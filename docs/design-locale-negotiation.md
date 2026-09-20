@@ -1,4 +1,57 @@
+---
+status: partial
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20
+---
+
 # Locale negotiation — desktop vs web
+
+**Status (20 Sep 2026): the decision below was REVERSED in shipped code, and no doc
+recorded it.** The original text is preserved unedited — it is the only written statement
+of the position — but do not read it as describing the app.
+
+> ### ⚠️ What actually shipped, measured at HEAD
+>
+> | The decision said | What ships |
+> |---|---|
+> | "**No in-app language picker** in Settings → Appearance" | A `Picker` listing every supported language by autonym — `desktop/Bristlenose/Bristlenose/AppearanceSettingsView.swift:63` |
+> | "Set `UIPrefersShowingLanguageSettings = YES` in `Info.plist`" | **Never set.** Zero hits across every `.plist`, `.swift` and `.pbxproj` in the repo |
+> | "`I18n.swift` reads `Bundle.preferredLocalizations(from:forPreferences:)`" | **Nothing in `desktop/` reads the OS language preference at all** — zero hits for `preferredLocalizations`, `AppleLanguages` or `Locale.preferredLanguages` |
+> | "Settings → Appearance includes a hint paragraph pointing to System Settings" | Never written. `settings.language.description` (`locales/en/settings.json`) says only that report content is not translated |
+>
+> ### 🔴 The live consequence — this doc named the bug, and the bug is what shipped
+>
+> The doc argues against an in-app picker partly because of a race it says we had already
+> hit: *"We had this bug — System Settings → Apps → Bristlenose → Korean was being
+> silently ignored because we read our private `language` key, not `AppleLanguages`."*
+>
+> **That is the current code path.** Four production sites read the private key and fall
+> back to a hardcoded `"en"`:
+>
+> - `I18n.swift:55` — `UserDefaults.standard.string(forKey: "language") ?? "en"`
+> - `BristlenoseShared.swift:256`
+> - `BridgeHandler.swift:596`
+> - `AppearanceSettingsView.swift:14` — `@AppStorage("language") … = "en"`
+>
+> **No production code seeds that key from the system locale** — the only writes to it
+> anywhere are in `BristlenoseTests/ServeManagerEnvTests.swift:235,241`.
+>
+> So on a fresh install on a Korean Mac the key is absent, resolves to `"en"`, and the app
+> **boots English** — directly contradicting this doc's "Do nothing → follow system.
+> Korean Mac boots Korean." The user must find the in-app picker to get their own language.
+>
+> ### What is NOT known
+>
+> **Why the reversal happened is not recorded anywhere in the tree.** It may well be a
+> sound call — the doc itself assembles strong evidence that the System Settings control is
+> hard to find, and Slack/Zoom/Firefox/VS Code all ship pickers. What is missing is the
+> decision, not the justification. Someone with the context should write it down; until
+> then the English-on-a-Korean-Mac behaviour above is a defect either way, because
+> **neither** design intends it.
+
+---
+
+_Original decision text, 5 May 2026, unedited below._
 
 **Status:** approved 5 May 2026, pending implementation in branch `locale-system-delegation` (sibling to `i18n-text-sweep` which handles the unrelated mechanical translation gaps).
 

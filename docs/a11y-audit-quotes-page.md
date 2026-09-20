@@ -1,6 +1,53 @@
+---
+status: partial
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20
+---
+
 # WCAG 2.1 AA Accessibility Audit — Quotes Page
 
-_18 Mar 2026 — code-based audit_
+> **Trued 20 Sep 2026 — 7 of 17 findings are STILL OPEN, including one Critical.**
+> This doc was classified `D` (archive) by the corpus triage and that was **wrong**:
+> it was re-measured finding-by-finding against `HEAD` and half of it is still live.
+> It stays in `docs/`. The line anchors below are from Mar 2026 and have drifted —
+> **trust the status table, not the line numbers.**
+
+## Status at 20 Sep 2026 — measured, not estimated
+
+| # | Sev | Status | Evidence at HEAD |
+|---|---|---|---|
+| 1 | Critical | ✅ fixed | `islands/QuoteCard.tsx` + `components/Badge.tsx` carry **0** `<span onClick>`; 5 and 1 `<button>` respectively |
+| **2** | **Critical** | 🔴 **OPEN** | `components/TagInput.tsx` (12.5 KB) carries `aria-hidden="true"` ×2 **and nothing else** — zero `role="combobox"`, `aria-expanded`, `role="listbox"` |
+| 3 | Major | ✅ fixed | `components/NavBar.tsx` — **0** `role="tablist"` |
+| 4 | Major | ⚪ moot | `components/HelpModal.tsx` deleted 2026-07-10 (`3f49d170`, "retire the SPA help modal"); the surface shipped as `islands/AboutPanel.tsx` |
+| 5 | Major | 🟠 **partly open** | `SearchBox.tsx` ✅ (2 `aria-label`), `TagSidebar.tsx` ✅ (1) — **`TagInput.tsx` still 0**. `TagFilterDropdown.tsx` **no longer exists**, so that row is moot |
+| 6 | Major | ✅ fixed | `components/ViewSwitcher.tsx:79` `tabIndex={0}`, `:83` `onKeyDown` |
+| **7** | **Major** | 🔴 **OPEN** | `theme/colors/palette-default.css:62-63` still `--bn-colour-icon-idle: #c9ccd1` / `--bn-colour-starred: #999`; `:150-151` dark still `#595959`. **Unchanged since the audit** |
+| **8** | **Major** | 🔴 **OPEN** | `islands/Toolbar.tsx` — **0** `role="status"`, **0** `aria-live` |
+| 9 | Major | ⚪ moot | `components/Counter.tsx` deleted |
+| 10 | Major | ✅ fixed | `<main>` present in `layouts/AppLayout.tsx` |
+| **11** | Minor | 🔴 **OPEN** | `components/TocSidebar.tsx:140` — `<a>` are direct children of `<nav>`, separated by `<div class="toc-heading">`. No `<ul>`/`<li>` |
+| 12 | Minor | ✅ fixed | `components/ModalNav.tsx` — **0** `role="navigation"` |
+| **13** | Minor | 🟠 **partly open** | `QuoteCard.tsx` ✅, `Toolbar.tsx` ✅ — **`NavBar.tsx` 2 `<svg>` / 0 `aria-hidden`**, **`SearchBox.tsx` 2 `<svg>` / 0 `aria-hidden`** |
+| 14 | Minor | ✅ fixed | 13 files under `bristlenose/theme/` carry `prefers-reduced-motion` |
+| **15** | Minor | 🔴 **OPEN** | `utils/announce.ts` + `components/AnnounceRegion.tsx` exist and are wired for star / hide / tag (`contexts/QuotesContext.tsx:256,270,317,331`) — but **no call site announces a search or filter result count** |
+| 16 | Minor | 🔵 decided | Not a gap. `theme/molecules/quote-actions.css:7-12` reasons it out explicitly: the card carries **font-weight + a bar** as second, non-colour cues and the glyph is deliberately "the mark". `aria-pressed` was already correct |
+| 17 | Minor | ✅ fixed | `components/SettingsModal.tsx` — **0** `<code onClick>` |
+
+**Open: 7** (1 Critical, 3 Major, 3 Minor) · fixed 7 · moot 2 · decided 1.
+
+### Revised fix order (supersedes the one at the foot of this doc)
+
+1. **#2 + #5** — `TagInput.tsx` combobox pattern **and** its `aria-label`; they are one edit.
+2. **#7** — three token values in `palette-default.css`; CSS-only, no JS.
+3. **#8** — `role="status"` on the Toolbar toast container; `AnnounceRegion.tsx` already exists to copy.
+4. **#15** — one `announce()` call on the filter path; the utility is already wired elsewhere.
+5. **#13** — `aria-hidden="true"` on the 4 decorative SVGs in `NavBar.tsx` / `SearchBox.tsx`.
+6. **#11** — wrap `TocSidebar` links in `<ul>`/`<li>`.
+
+---
+
+_Original audit below, unedited. 18 Mar 2026 — code-based audit._
 
 ## Context
 

@@ -1,4 +1,19 @@
+---
+status: partial
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20
+---
+
 # LLM call telemetry & self-correcting cost estimates
+
+## Changelog
+
+- _2026-09-20_ — added the as-built section on the three contextvars, after
+  signal elaboration was found to have bound one of them and recorded nothing
+  since it shipped. The body above it is still the original July proposal and
+  is **not** trued: the cost-forecast and shoal work it describes is a plan,
+  not a record. Anchors: `bristlenose/llm/telemetry.py` `serve_run_context`,
+  `bristlenose/server/elaboration.py`; commit `801fb083`.
 
 **Status:** Draft (Apr 2026)
 **Owner:** Martin
@@ -678,6 +693,45 @@ These are all post-hoc queries against the JSONL. No live aggregation.
 - No automatic upload, no phone-home.
 - The forecast lookup reads only from the local user's history. We do not pool across users.
 - If we later want anonymous opt-in telemetry to improve the bundled defaults, that's a separate design (alpha-telemetry Phase 2+, see `docs/private/road-to-app-store.md` §13b).
+
+## As built: three contextvars, and the way a surface goes missing
+
+_Measured 20 Sep 2026._
+
+`record_call` writes nothing unless **all three** of `_run_dir`, `_run_id` and
+`_stage_id` are bound. Each missing one is the same silent return with a DEBUG
+line, so from outside they are indistinguishable — and indistinguishable from
+telemetry being switched off.
+
+**This cost a whole surface.** Signal elaboration bound
+`telemetry.stage("serve_signal_elaboration")` and nothing else. Every call it
+ever made was dropped. It went unnoticed for as long as the feature existed,
+and was found only by going to the log for elaboration latency and reading 260
+rows across 11 projects with none of that stage among them.
+
+**The shape worth remembering: a convincingly partial wiring is worse than an
+absent one.** `with telemetry.stage(...)` reads as "telemetry is handled here"
+and is *true* — it does bind a contextvar. An obviously missing call gets
+added the first time someone looks; a call that looks complete does not.
+
+**Serve mode is where this bites, structurally.** A pipeline run binds the
+context in `run_lifecycle` and every stage inherits it. A request does not
+inherit anything, so each serve-time LLM caller must bind its own. There are
+two:
+
+| caller | binds | notes |
+|---|---|---|
+| `server/autocode.py` | inline | predates the helper, works, not churned |
+| `server/elaboration.py` | `telemetry.serve_run_context(...)` | 20 Sep 2026 |
+
+A third should use `serve_run_context(project_dir, run_id)` rather than a
+third copy. It takes the project root *or* the output dir — callers hold one
+or the other, and guessing wrong writes the file where nobody looks, which is
+the same outcome as not writing it.
+
+Pinned by `tests/test_elaboration_telemetry.py`, which asserts the file rather
+than the contextvars: a bound contextvar pointing somewhere nothing writes
+would satisfy a weaker test and still record nothing.
 
 ## Known pitfalls (lifted from postmortems)
 

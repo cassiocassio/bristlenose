@@ -1,9 +1,52 @@
 ---
-status: decided 5 Sep 2026 — sketch B (the board); build plan in docs/design-release-board.md
+status: archived-reference
+last-trued: 2026-09-20
+trued-against: the shipped board (scripts/release-board.py, sink.sh, bn-events.log) — §1/§4/§5 obsolete, §2/§3 the surviving record
+superseded-by: [docs/design-release-board.md]
 date: 2026-09-05
 owner: maintainer
 sketches: docs/mockups/release-train-{marey,board,scroll}.html
 ---
+
+> # Superseded — archived 20 Sep 2026
+>
+> **This is the pre-decision options survey. The as-built is
+> [`docs/design-release-board.md`](design-release-board.md).** Kept as
+> `archived-reference` rather than `archived-historical` for one reason: **§2
+> (prior art) and §3 (the three sketches and the trade each makes) are the only
+> record anywhere of *why* the board won** over the Marey chart and the scroll,
+> and that reasoning survives in no other file.
+>
+> Evidence for the supersession, rather than assumption: the board doc's
+> front-matter names this file (`decides: … § 3 → sketch B`); this file's own
+> banner already pointed at the board doc as the build plan; and **every shipped
+> artefact carries the board doc's names and none carries this one's** —
+> `scripts/release-board.py`, `release-board.template.html`,
+> `.release/<v>/board.html`, `.release/<v>/bn-events.log`,
+> `desktop/scripts/sink.sh`.
+>
+> **§1, §4 and §5 are factually obsolete and must not be read as current.** The
+> whole argument of §1 is an inventory of facts the train emitted and discarded;
+> the sink, shipped hours later, records all of them. Specifically:
+>
+> | §1 claim | True since 5 Sep 2026 |
+> |---|---|
+> | "three orchestrators and they do not share a run id" | they do — `release.sh:558,1302` export `BN_RUN_ID`, and `sink.sh:41,60` stamp `run=` on every line |
+> | build-all / build-dmg structured output is "**stdout only**" (bolded, twice) | teed to the sink; `report.sh::_bn_emit`, plus `sink_line` in `build-dmg.sh` and `upload-testflight.sh` |
+> | per-step `elapsed=` is "measured, emitted… and then **discarded**" | kept in `.release/<v>/bn-events.log` |
+> | "no record of when gate `d2` last ran" | `@bn gate` lines are sinked |
+> | "nothing stores the eight verdicts" | `verify-channels.sh` sinks every row plus a `verify status=done rollup=` |
+> | of the expiry clocks: "**None** is written anywhere a process could read" | both are — `upload-testflight.sh:405`, `build-dmg.sh:518` |
+> | "**The highest-leverage single change is not a GUI.** It is a `BN_EVENT_SINK` tee… (about four lines)" | shipped as `desktop/scripts/sink.sh` — two functions, ~60 lines, six production consumers |
+>
+> **§4 "Open questions — the user's, not mine" reads as five live decisions
+> awaiting the maintainer. All five were answered the same day:** (1) sink
+> first — done; (2) the house shape, Chrome-trace/Perfetto dropped; (3) both —
+> a written `board.html` *and* served, via `--serve`; (4) sketch B built;
+> (5) the clocks are written. **§5 "What was not done — No code"** was true for
+> about three hours; four commits of code landed that evening.
+>
+> The body below is preserved unedited from 5 Sep 2026.
 
 # A watching GUI for the release train — options and prior art
 

@@ -109,7 +109,7 @@ final class BridgeHandler: ObservableObject {
     // *codebook* — and that pin is what made the Codes menu's per-group and
     // per-tag commands look impossible. It is about selection; a cursor inside
     // the detail pane is another axis, and the SPA already ships two of those
-    // (`FocusContext.focusedId`, `AnalysisSignalStore.focusedKey`).
+    // (`FocusContext.focusedId`, `SignalStore.focusedKey`).
     // See `docs/design-codebook-focus.md`.
     @Published var codebookGroupFocused = false
     @Published var codebookTagFocused = false

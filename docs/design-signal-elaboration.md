@@ -1,4 +1,33 @@
+---
+status: partial
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20
+---
+
 # Signal Elaboration
+
+## Changelog
+
+- _2026-09-20_ — trued up. The header had been patched three times over a
+  February body, which is the failure mode this doc is now the worked example
+  of: a banner saying "the top-ten cap is gone" sat thirty lines above a Scope
+  section still specifying "Top N cards only". Six single-claim corrections —
+  Scope (every card, budget-guarded, now streamed), Caching (keyed on quote
+  TEXTS and tag NAMES plus the prompt SHA, not ids), the prompt constraint list
+  (two-part output, `||`, earned words; "exactly one sentence" is 0.2.0), the
+  problem statement's card drawing, Pattern type (settled by WITHDRAWING the
+  badge, not by choosing a control), and a Backlog listing five shipped items
+  as outstanding. Anchors: `bristlenose/server/elaboration.py`,
+  `bristlenose/server/routes/analysis.py`,
+  `bristlenose/llm/prompts/signal-elaboration.md`; commits `08b4bb93`,
+  `797079e6`, `54fdc615`, `6fc82d28`.
+
+**Status is `partial`, deliberately.** Step 4, Step 5 and the worked examples
+below are kept as the **pre-0.3.0 record** — they teach an instruction the
+shipped prompt now forbids (one sentence, em-dash joins, group-name words), and
+each already carries a dated truing note above it saying so. They are preserved
+rather than rewritten because the delta is the point: the examples are what the
+rewrite was reacting to. Read the notes, not the bodies.
 
 How Bristlenose generates interpretive names and one-sentence summaries for framework signal cards.
 
@@ -21,6 +50,10 @@ The analysis page detects signal concentration — it finds cells where a codebo
 > **Homepage**
 > Discoverability
 > Signal 0.32 | Conc. 1.3× | Agree. 3.0 | Intensity 1.0
+>
+> _(The four metrics moved behind the hero chip on 13 Sep 2026 — one number,
+> and a control that opens the working. The problem below is unchanged; only
+> this drawing of it is out of date.)_
 
 A researcher looking at this knows that something about Discoverability is concentrated on the Homepage. They don't know *what about Discoverability*. To find out, they have to read the quotes, recall what the codebook group means, and synthesise the finding themselves. This is exactly the interpretive work the tool should do for them.
 
@@ -37,7 +70,7 @@ This tells the researcher what the signal *is*. They can hand that sentence to a
 
 **Framework cards only.** Sentiment signal cards (frustration, delight, etc.) are self-explanatory — the tag name *is* the interpretation. Framework cards (Norman, Garrett, UXR codebook) need elaboration because their group names are analytical categories, not plain language.
 
-**Top N cards only.** Generate elaborations for the 6–12 strongest framework signals. Don't pre-compute for every cell in the matrix — most are weak or empty. If a user drills into a weaker card later, generate on demand.
+**Every framework card, streamed.** ~~Top N cards only — the 6–12 strongest.~~ Superseded twice. First the count became a payload budget (`ELABORATION_BUDGET_CHARS`), because quote length varies far more than card count does: one real project carries 16.5 KB of evidence on 5 cards and another 4.8 KB on 29, so ten cards can be a bigger ask than thirty. Then the *waiting* was removed rather than the work: `GET /analysis/elaborations` walks a codebook's signals strongest-first in chunks of `ELABORATION_CHUNK` and emits each finding as it lands, so a headline appears on a card already on screen. Custom codebooks are still skipped, for the reason in `design-signal-card.md` §7.7. (20 Sep 2026.)
 
 ---
 
@@ -221,7 +254,7 @@ Flow:
 
 ### Caching
 
-Cache elaborations in SQLite keyed by a hash of (group_id, section, quote_ids, tag_ids). Invalidate when quotes are added/removed or tags change. This avoids redundant LLM calls on page refresh while staying fresh when the underlying data changes.
+Cached in SQLite under two values, and neither is what this line used to claim. `compute_signal_key(source_type, location, group_name)` identifies the card; `compute_content_hash(quote_texts, tag_names)` decides whether the cached answer is still good — **quote *texts* and tag *names*, not ids**, plus the prompt's SHA since 20 Sep 2026. The SHA is the load-bearing part: without it a prompt rewrite invalidated nothing and reached none of the cached elaborations, so the instruction changed and the output did not.
 
 ### Prompt template
 
@@ -229,7 +262,9 @@ The prompt is the algorithm above, almost verbatim. Key constraints in the promp
 
 - Signal name MUST be 2–4 words
 - Signal name MUST use the group's vocabulary (provide group name + subtitle)
-- Elaboration MUST be exactly one sentence
+- Each part MUST be one or more complete sentences ending in a full stop (~~exactly one sentence~~ — changed in 0.3.0)
+- The two parts MUST be separated by `||`, and neither may be joined with an em dash
+- The name MUST use words earned from the evidence: no word may be the group name or the pattern word
 - Pattern MUST be one of: success, gap, tension, recovery
 - Valence assessment MUST reference the tag definition, not just the quote text
 - Do not invent findings not supported by the quotes
@@ -263,7 +298,7 @@ It's worth preserving as a standalone data point because:
 3. **It maps to stakeholder language** — "we found 3 gaps and 2 tensions in the checkout flow" is a sentence a product manager understands
 4. **It's colour-codeable** — green/red/amber/blue is a universal vocabulary
 
-Where and how to expose the pattern type in the UI is an open question. Options include: a small coloured badge on the card, a filter control, a summary line ("3 gaps, 2 tensions, 2 strengths"), or a grouping mechanism. The mockup uses a badge next to the signal name. We'll iterate after seeing it on real data.
+~~Where and how to expose the pattern type in the UI is an open question.~~ **Settled 13 Sep 2026, and not by adding a control.** The badge was built, seen on real data, and *withdrawn* — a second chip beside the hero competed with it for the same glance. `pattern` stays on the wire and now has a job that is not decorative: it decides which quotes a codebook card counts as supporting its finding (`frontend/src/utils/quoteSelection.ts`). So the classification survived and its display did not, which is why nothing has to be regenerated if a better treatment is found.
 
 ---
 
@@ -324,14 +359,10 @@ These 7 elaborations were generated by running the algorithm manually on the IKE
 
 ## Backlog
 
-- **Prompt template file** — write the actual prompt as a Markdown file in `bristlenose/llm/prompts/signal-elaboration.md`, following the existing prompt convention
-- **API endpoint** — `GET /api/projects/{id}/analysis/codebooks/elaborations` or extend the existing codebook endpoint with an `?elaborate=true` query parameter
-- **Caching layer** — SQLite table for cached elaborations with content hash invalidation
-- **Batch generation** — batch multiple cards into a single LLM call to reduce latency (structured output, one JSON object per card)
+**Shipped, kept so the list is not read as outstanding work:** ~~prompt template file~~ (`bristlenose/llm/prompts/signal-elaboration.md`, version 0.3.0) · ~~API endpoint~~ (both, as it turned out: `?elaborate=true` for one answer, and `GET /analysis/elaborations` streaming) · ~~caching layer~~ (`uq_elaboration_project_signal`) · ~~batch generation~~ — **and then partly un-batched**: one call per codebook got every finding at the cost of the first one, so it is now one call per chunk of `ELABORATION_CHUNK`.
 - **Pattern filtering** — UI control to filter signal cards by pattern type
 - **Sentiment card elaboration** — evaluate whether sentiment cards benefit from elaboration (hypothesis: they don't, but test with real data)
 - **An output meaning "no finding here"** — Step 3 forces a pattern from `{success, gap, tension, recovery}` and Step 5 forces a claim, so a card whose evidence does not cohere gets a *manufactured* finding. Worked example 20 Sep 2026: a `system response` card whose three quotes were checked against the tag definition — *"the system communicates the result of a user action clearly and immediately"* — had **two of three not meeting it at all** (image quality; a login greeting). The algorithm would still have produced a confident sentence. This matters more once every card is elaborated rather than ten per project, and a card that cannot honestly be elaborated is probably not a card — a better filter than any score threshold, because it tests whether the evidence supports a reading rather than a proxy for it.
-- **Elaborate every card, not the top ten** — `_elaborate_top_signals` pools every non-custom codebook's signals project-wide, sorts by composite and takes `DEFAULT_TOP_N = 10`; **every card from a custom codebook is skipped unconditionally at any score**. Cards below the line print their *location* as the headline, which differentiates nothing. Cost is low: one batched call cached on a content hash, and project-ikea's 29 cards carry 4,791 characters of evidence. The cap probably wants to be a budget on payload rather than a count.
 - **Editable elaborations** — let the researcher edit the generated signal name and elaboration (same inline-edit pattern as quote text)
 - **Export integration** — include signal names and elaborations in the exported report
 - **Multi-codebook** — when multiple codebooks are active, generate elaborations using the relevant codebook's definitions (already partitioned by the existing API)

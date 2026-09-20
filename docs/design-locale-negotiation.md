@@ -40,14 +40,29 @@ of the position — but do not read it as describing the app.
 > **boots English** — directly contradicting this doc's "Do nothing → follow system.
 > Korean Mac boots Korean." The user must find the in-app picker to get their own language.
 >
-> ### What is NOT known
+> ### It is already tracked, and the fix is already decided
 >
-> **Why the reversal happened is not recorded anywhere in the tree.** It may well be a
-> sound call — the doc itself assembles strong evidence that the System Settings control is
-> hard to find, and Slack/Zoom/Firefox/VS Code all ship pickers. What is missing is the
-> decision, not the justification. Someone with the context should write it down; until
-> then the English-on-a-Korean-Mac behaviour above is a defect either way, because
-> **neither** design intends it.
+> **Correction to this banner's first draft, which claimed the reversal was recorded
+> nowhere. It is.** The maintainer's private planning notes carry it as a Beta item,
+> naming the same evidence independently — `I18n.swift:55`, the `?? "en"`, and the
+> observation that this re-introduces the very race this doc documents as already fixed —
+> plus a decided fix (**Option A, 2 Jul 2026**: seed from
+> `Bundle.preferredLocalizations(from:)`, read/write `AppleLanguages`, drop the private key
+> with a one-shot migration, keep `UIPrefersShowingLanguageSettings` for discoverability)
+> and a full implementation brief.
+>
+> So the shipped picker is **not** an undocumented reversal — it is a known defect with a
+> planned repair. What this doc got wrong is narrower: it says "approved, pending
+> implementation" for a delegation design that was never implemented, while a picker was
+> built instead.
+>
+> _The first draft searched `docs/` and the CLAUDE.md files and concluded "recorded
+> nowhere". The record was in the gitignored maintainer-only notes — outside the corpus
+> that was scanned. Scope of a search is not scope of the world._
+>
+> **Do not archive this doc yet.** The planned fix re-trues it: once the OS-canonical
+> picker lands, the delegation design below becomes half-true again rather than wholly
+> superseded, and the private notes' own breadcrumb says to re-true it *after* the fix.
 
 ---
 

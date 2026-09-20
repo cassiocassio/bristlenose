@@ -15,8 +15,8 @@ import type {
   ModeratorQuestionResponse,
   ProposalsListResponse,
   RemoveFrameworkInfo,
-  CodebookAnalysisListResponse,
-  TagAnalysisResponse,
+  CodebookSignalsListResponse,
+  TagSignalsResponse,
   TemplateListResponse,
   TranscriptPageResponse,
   MiroStatusResponse,
@@ -457,16 +457,16 @@ export function denyAllProposals(
 // Tag-based analysis helpers
 // ---------------------------------------------------------------------------
 
-export function getTagAnalysis(groups?: string): Promise<TagAnalysisResponse> {
+export function getTagSignals(groups?: string): Promise<TagSignalsResponse> {
   const qs = groups ? `?groups=${groups}` : "";
-  return apiGet<TagAnalysisResponse>(`/signals/tags${qs}`);
+  return apiGet<TagSignalsResponse>(`/signals/tags${qs}`);
 }
 
-export function getCodebookAnalysis(
+export function getCodebookSignals(
   elaborate?: boolean,
-): Promise<CodebookAnalysisListResponse> {
+): Promise<CodebookSignalsListResponse> {
   const qs = elaborate ? "?elaborate=true" : "";
-  return apiGet<CodebookAnalysisListResponse>(`/signals/codebooks${qs}`);
+  return apiGet<CodebookSignalsListResponse>(`/signals/codebooks${qs}`);
 }
 
 export interface StreamedElaboration {

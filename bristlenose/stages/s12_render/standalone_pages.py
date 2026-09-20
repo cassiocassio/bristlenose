@@ -121,7 +121,7 @@ def _serialize_matrix(matrix: object) -> dict[str, Any]:
 
 
 def _serialize_analysis(analysis: object) -> str:
-    """Serialize AnalysisResult for JS injection."""
+    """Serialize SignalsResult for JS injection."""
     # Collect all participant IDs across all signals
     all_pids: set[str] = set()
     for s in analysis.signals:  # type: ignore[attr-defined]

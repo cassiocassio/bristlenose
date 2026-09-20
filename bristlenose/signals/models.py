@@ -66,7 +66,7 @@ class Signal:
 
 
 @dataclass
-class AnalysisResult:
+class SignalsResult:
     """Complete analysis computation results, passed to the renderer."""
 
     section_matrix: Matrix

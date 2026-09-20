@@ -445,7 +445,7 @@
       "citDemszky2020": "58 000 kommenttia merkittynä 27 tunneluokkaan — suurin hienojakoinen tunneaineisto NLP:lle."
     }
   },
-  "analysis": {
+  "signals": {
     "alsoReadAs": "My\u00f6s luettuna",
     "labelPositive": "My\u00f6nteinen",
     "labelNegative": "Kielteinen",
@@ -454,7 +454,7 @@
     "loadingData": "Ladataan analyysitietoja…",
     "noData": "Analyysitietoja ei ole saatavilla. Suorita analyysi tai lisää koodikirjatunnisteita tuottaaksesi analyysin.",
     "tagError": "Tunnisteanalyysin virhe: {{error}}",
-    "signals": "Signaalit",
+    "title": "Signaalit",
     "sentiment": "Tunnesävy",
     "sentimentSubtitle": "Tekoälyn havaitsemat tunnereaktiot",
     "codebookTags": "Koodikirjat",

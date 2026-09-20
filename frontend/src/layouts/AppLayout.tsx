@@ -20,7 +20,7 @@ import { SessionsSidebar } from "../components/SessionsSidebar";
 // By path, not through the `components` barrel — the barrel rides in the
 // always-loaded chunk, and this is only reachable from one route.
 import { CodebookV2Sidebar } from "../components/CodebookV2Sidebar";
-import { AnalysisSidebar } from "../components/AnalysisSidebar";
+import { SignalsSidebar } from "../components/SignalsSidebar";
 import { ExportDialog } from "../components/ExportDialog";
 import { MiroExportPanel } from "../components/MiroExportPanel";
 import { ActivityChipStack, normaliseAutoCode } from "../components/ActivityChipStack";
@@ -219,12 +219,12 @@ function AppShell() {
   const _isCodebookSlash = useMatch("/report/codebook/");
   // `useMatch` is exact, so these do NOT also match `/report/codebook` — the
   // prefix trap that bit `Tab.from(path:)` on the Swift side does not arise.
-  const _isAnalysis = useMatch("/report/signals");
-  const _isAnalysisSlash = useMatch("/report/signals/");
+  const _isSignals = useMatch("/report/signals");
+  const _isSignalsSlash = useMatch("/report/signals/");
   const isQuotes = _isQuotes || _isQuotesSlash;
   const isSessions = _isSessions || _isSessionsSlash;
   const isCodebook = _isCodebook || _isCodebookSlash;
-  const isAnalysis = _isAnalysis || _isAnalysisSlash;
+  const isSignals = _isSignals || _isSignalsSlash;
   const isSessionsRoute = !!(isSessions || isTranscript);
   // Embedded (macOS) removes the Sessions lens's left panel — the native
   // session-switcher popover replaces it (design-sessions-popover-navigation.md).
@@ -234,7 +234,7 @@ function AppShell() {
   // undefined would render the *Quotes* contents panel on the Sessions lens.
   const embeddedSessionsPanelRemoved = isEmbedded() && isSessionsRoute;
   const showSidebar = !!(
-    (isQuotes || isSessionsRoute || isCodebook || isAnalysis) &&
+    (isQuotes || isSessionsRoute || isCodebook || isSignals) &&
     !embeddedSessionsPanelRemoved
   );
   const toggleExport = useCallback(() => setExportOpen((prev) => !prev), []);
@@ -726,13 +726,13 @@ function AppShell() {
         // The embedded gate repeats here (belt to showSidebar's braces) so
         // SessionsSidebar never MOUNTS on the embedded Sessions lens — its
         // useEffect fetch would otherwise still fire behind an inactive layout.
-        isSessionsRoute && !embeddedSessionsPanelRemoved ? <SessionsSidebar /> : isCodebook ? <CodebookV2Sidebar /> : isAnalysis ? <AnalysisSidebar /> : undefined
+        isSessionsRoute && !embeddedSessionsPanelRemoved ? <SessionsSidebar /> : isCodebook ? <CodebookV2Sidebar /> : isSignals ? <SignalsSidebar /> : undefined
       }
       leftPanelTitle={
         // Codebooks dropped its title 14 Aug 2026, alongside Quotes' "Contents"
         // (SidebarLayout renders the header only when a title is passed). To
         // restore, put the branch back: isCodebook ? i18n.t("codebook.heading") :
-        isSessionsRoute && !embeddedSessionsPanelRemoved ? i18n.t("nav.sessions") : isAnalysis ? i18n.t("analysis.signals") : undefined
+        isSessionsRoute && !embeddedSessionsPanelRemoved ? i18n.t("nav.sessions") : isSignals ? i18n.t("signals.title") : undefined
       }
       showRightSidebar={!!isQuotes}
     >

@@ -426,7 +426,7 @@
       "citDemszky2020": "以 27 個情緒類別標記的 58,000 則留言——NLP 領域最大的細緻情緒資料集。"
     }
   },
-  "analysis": {
+  "signals": {
     "alsoReadAs": "\u4ea6\u53ef\u8b80\u4f5c",
     "labelPositive": "\u6b63\u9762",
     "labelNegative": "\u8ca0\u9762",
@@ -435,7 +435,7 @@
     "loadingData": "正在載入分析資料…",
     "noData": "沒有可用的分析資料。請執行管線或套用編碼簿標籤以產生分析。",
     "tagError": "標籤分析錯誤：{{error}}",
-    "signals": "訊號",
+    "title": "訊號",
     "sentiment": "情緒",
     "sentimentSubtitle": "AI 偵測的情緒反應",
     "codebookTags": "\u7de8\u78bc\u7c3f",

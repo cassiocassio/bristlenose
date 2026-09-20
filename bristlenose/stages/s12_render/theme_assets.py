@@ -88,7 +88,7 @@ _THEME_FILES: list[str] = [
     "organisms/sidebar.css",
     "organisms/minimap.css",
     "organisms/sidebar-tags.css",
-    "organisms/analysis.css",
+    "organisms/signals.css",
     "organisms/inspector.css",
     "organisms/settings.css",
     "organisms/modal-nav.css",

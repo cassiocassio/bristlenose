@@ -15,7 +15,7 @@ import { SessionsTab } from "./pages/SessionsTab";
 import { TranscriptTab } from "./pages/TranscriptTab";
 import { QuotesTab } from "./pages/QuotesTab";
 import { CodebookV2Tab } from "./pages/CodebookV2Tab";
-import { AnalysisTab } from "./pages/AnalysisTab";
+import { SignalsTab } from "./pages/SignalsTab";
 import { SpecimenTab } from "./pages/SpecimenTab";
 import { isExportMode } from "./utils/exportData";
 
@@ -42,7 +42,7 @@ export const routes = [
       // dev-gated and never reachable by a researcher, so nothing in the wild
       // holds that URL.
       { path: "codebook", element: <CodebookV2Tab /> },
-      { path: "signals", element: <AnalysisTab /> },
+      { path: "signals", element: <SignalsTab /> },
       // Renamed 20 Sep 2026. Bookmarks and already-exported reports still
       // point at the old path, so it redirects rather than 404s.
       { path: "analysis", element: <Navigate to="/report/signals/" replace /> },

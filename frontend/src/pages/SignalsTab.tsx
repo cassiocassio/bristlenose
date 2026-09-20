@@ -3,11 +3,11 @@ import { useProjectId } from "../hooks/useProjectId";
 
 // Lazy-loaded so the island code-splits into its own chunk (kept out of the
 // main bundle). The AppLayout Outlet provides the Suspense boundary.
-const AnalysisPage = lazy(() =>
-  import("../islands/AnalysisPage").then((m) => ({ default: m.AnalysisPage })),
+const SignalsPage = lazy(() =>
+  import("../islands/SignalsPage").then((m) => ({ default: m.SignalsPage })),
 );
 
-export function AnalysisTab() {
+export function SignalsTab() {
   const projectId = useProjectId();
-  return <AnalysisPage projectId={projectId} />;
+  return <SignalsPage projectId={projectId} />;
 }

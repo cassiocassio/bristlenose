@@ -11,7 +11,7 @@ from bristlenose.signals.metrics import (
     mean_intensity,
     simpsons_neff,
 )
-from bristlenose.signals.models import AnalysisResult, Matrix, Signal, SignalQuote
+from bristlenose.signals.models import Matrix, Signal, SignalQuote, SignalsResult
 
 DEFAULT_TOP_N = 12
 MIN_QUOTES_PER_CELL = 2
@@ -25,7 +25,7 @@ def detect_signals(
     total_participants: int,
     *,
     top_n: int = DEFAULT_TOP_N,
-) -> AnalysisResult:
+) -> SignalsResult:
     """Run full signal detection and return results ready for rendering.
 
     Merges section and theme signals, sorts by composite signal descending,
@@ -48,7 +48,7 @@ def detect_signals(
     all_signals.sort(key=lambda s: s.composite_signal, reverse=True)
     all_signals = all_signals[:top_n]
 
-    return AnalysisResult(
+    return SignalsResult(
         section_matrix=section_matrix,
         theme_matrix=theme_matrix,
         signals=all_signals,

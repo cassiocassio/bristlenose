@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { AnalysisPage } from "./AnalysisPage";
-import type { CodebookAnalysisListResponse, SentimentAnalysisData } from "../utils/types";
-import { resetAnalysisSignalStore } from "../contexts/AnalysisSignalStore";
+import { SignalsPage } from "./SignalsPage";
+import type { CodebookSignalsListResponse, SentimentSignalsData } from "../utils/types";
+import { resetSignalStore } from "../contexts/SignalStore";
 
 // ---------------------------------------------------------------------------
 // Mock data — per-codebook shape
 // ---------------------------------------------------------------------------
 
-const mockCbData: CodebookAnalysisListResponse = {
+const mockCbData: CodebookSignalsListResponse = {
   codebooks: [
     {
       codebook_id: "uxr",
@@ -159,7 +159,7 @@ const mockCbData: CodebookAnalysisListResponse = {
   trade_off_note: "Quotes tagged with codes from multiple groups...",
 };
 
-const mockSentimentData: SentimentAnalysisData = {
+const mockSentimentData: SentimentSignalsData = {
   signals: [
     {
       location: "Checkout",
@@ -196,7 +196,7 @@ const mockSentimentData: SentimentAnalysisData = {
   participantIds: ["p1", "p2"],
 };
 
-const emptyCbData: CodebookAnalysisListResponse = {
+const emptyCbData: CodebookSignalsListResponse = {
   codebooks: [],
   total_participants: 0,
   trade_off_note: "",
@@ -221,7 +221,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function mockFetchCodebookAnalysis(data: CodebookAnalysisListResponse) {
+function mockFetchCodebookSignals(data: CodebookSignalsListResponse) {
   fetchMock.mockResolvedValue({
     ok: true,
     json: () => Promise.resolve(data),
@@ -232,10 +232,10 @@ function mockFetchCodebookAnalysis(data: CodebookAnalysisListResponse) {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("AnalysisPage", () => {
+describe("SignalsPage", () => {
   it("renders tag signal cards when API returns data", async () => {
-    mockFetchCodebookAnalysis(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
@@ -246,8 +246,8 @@ describe("AnalysisPage", () => {
   });
 
   it("shows source breakdown banner for pending tags", async () => {
-    mockFetchCodebookAnalysis(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getByTestId("bn-source-banner")).toBeTruthy();
@@ -258,8 +258,8 @@ describe("AnalysisPage", () => {
   });
 
   it("renders heatmap table", async () => {
-    mockFetchCodebookAnalysis(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-heatmap").length).toBeGreaterThan(0);
@@ -267,8 +267,8 @@ describe("AnalysisPage", () => {
   });
 
   it("shows no-data message when API returns empty", async () => {
-    mockFetchCodebookAnalysis(emptyCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(emptyCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getByText(/no signals yet/i)).toBeTruthy();
@@ -277,8 +277,8 @@ describe("AnalysisPage", () => {
 
   it("shows sentiment signals when baked data exists", async () => {
     (window as unknown as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
-    mockFetchCodebookAnalysis(emptyCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(emptyCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(1);
@@ -288,8 +288,8 @@ describe("AnalysisPage", () => {
 
   it("shows both sentiment and tag cards when both data exist", async () => {
     (window as unknown as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
-    mockFetchCodebookAnalysis(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       // 1 sentiment + 2 tag = 3 cards total
@@ -303,8 +303,8 @@ describe("AnalysisPage", () => {
 
   it("groups cards by location instead of by kind", async () => {
     (window as unknown as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
-    mockFetchCodebookAnalysis(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(3);
@@ -315,7 +315,7 @@ describe("AnalysisPage", () => {
     expect(screen.queryByText("Sentiment signals")).toBeNull();
     expect(screen.queryByText("Tag signals")).toBeNull();
 
-    const headings = [...document.querySelectorAll(".analysis-codebook-heading")]
+    const headings = [...document.querySelectorAll(".signals-codebook-heading")]
       .map((n) => n.textContent);
     expect(headings.length).toBeGreaterThan(0);
     expect(headings).toContain("Checkout");
@@ -330,16 +330,16 @@ describe("AnalysisPage", () => {
   // it — no unit test could see the CSS selector stop matching, so this asserts
   // the shape the selector needs instead.
   it("keeps the lens enrolled in the flush-to-datum system", async () => {
-    mockFetchCodebookAnalysis(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0);
     });
 
-    const pane = document.querySelector(".analysis-center");
+    const pane = document.querySelector(".signals-center");
     expect(pane).toBeTruthy();
-    // `.analysis-center > .section-heading:first-of-type { margin-top: 0 }`
+    // `.signals-center > .section-heading:first-of-type { margin-top: 0 }`
     expect(pane!.querySelector(":scope > .section-heading")).toBeTruthy();
     expect(pane!.firstElementChild!.classList.contains("section-heading")).toBe(true);
   });
@@ -350,26 +350,26 @@ describe("AnalysisPage", () => {
     // that both surfaces read. De-duplication runs once, over the merged list,
     // and both read its output, so they cannot drift apart.
     (window as unknown as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
-    mockFetchCodebookAnalysis(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0);
     });
 
     const { renderHook } = await import("@testing-library/react");
-    const { useAnalysisSignalStore } = await import("../contexts/AnalysisSignalStore");
-    const { result } = renderHook(() => useAnalysisSignalStore());
+    const { useSignalStore } = await import("../contexts/SignalStore");
+    const { result } = renderHook(() => useSignalStore());
     expect(result.current.signals.length)
       .toBe(screen.getAllByTestId("bn-signal-card").length);
   });
 
   it("no longer renders the pattern chip, though the pattern still arrives", async () => {
-    const named: CodebookAnalysisListResponse = JSON.parse(JSON.stringify(mockCbData));
+    const named: CodebookSignalsListResponse = JSON.parse(JSON.stringify(mockCbData));
     named.codebooks[0].signals[0].signal_name = "Checkout Latency Tension";
     named.codebooks[0].signals[0].pattern = "tension";
-    mockFetchCodebookAnalysis(named);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(named);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getByText("Checkout Latency Tension")).toBeTruthy();
@@ -379,8 +379,8 @@ describe("AnalysisPage", () => {
   });
 
   it("expands signal card quotes on toggle click", async () => {
-    mockFetchCodebookAnalysis(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
@@ -395,8 +395,8 @@ describe("AnalysisPage", () => {
 
   it("does not show source banner when only sentiment data", async () => {
     (window as unknown as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
-    mockFetchCodebookAnalysis(emptyCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(emptyCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(1);
@@ -406,8 +406,8 @@ describe("AnalysisPage", () => {
   });
 
   it("shows the score on the hero chip and hides the working behind it", async () => {
-    mockFetchCodebookAnalysis(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
@@ -422,8 +422,8 @@ describe("AnalysisPage", () => {
   });
 
   it("the hero chip opens and closes the working", async () => {
-    mockFetchCodebookAnalysis(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
@@ -444,9 +444,9 @@ describe("AnalysisPage", () => {
   it("opening the working does not also focus the card", async () => {
     // The card is role="button" and focuses on click, so the chip must stop
     // the event — pressing a disclosure should not re-point the inspector.
-    resetAnalysisSignalStore();
-    mockFetchCodebookAnalysis(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    resetSignalStore();
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
@@ -459,8 +459,8 @@ describe("AnalysisPage", () => {
   });
 
   it("shows participant grid with presence indicators", async () => {
-    mockFetchCodebookAnalysis(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
@@ -473,8 +473,8 @@ describe("AnalysisPage", () => {
   // --- Per-codebook features ---
 
   it("renders per-codebook tabs in inspector panel", async () => {
-    mockFetchCodebookAnalysis(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
@@ -488,8 +488,8 @@ describe("AnalysisPage", () => {
   });
 
   it("signals are interleaved across codebooks by composite score", async () => {
-    mockFetchCodebookAnalysis(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
@@ -501,8 +501,8 @@ describe("AnalysisPage", () => {
   });
 
   it("renders PersonBadge in quote blocks", async () => {
-    mockFetchCodebookAnalysis(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
@@ -513,8 +513,8 @@ describe("AnalysisPage", () => {
   });
 
   it("renders per-quote tag badges", async () => {
-    mockFetchCodebookAnalysis(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
@@ -530,8 +530,8 @@ describe("AnalysisPage", () => {
     // card) or in a badge stack above the metrics (elaborated card). It is the
     // hero's own label now — the two card kinds are the same card, and the
     // only thing that differs is whether the hero names a sentiment or a group.
-    mockFetchCodebookAnalysis(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
@@ -546,8 +546,8 @@ describe("AnalysisPage", () => {
   });
 
   it("heatmap has rotated column headers for tag mode", async () => {
-    mockFetchCodebookAnalysis(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-heatmap").length).toBeGreaterThan(0);
@@ -561,8 +561,8 @@ describe("AnalysisPage", () => {
   });
 
   it("expansion toggle reveals hidden quotes", async () => {
-    mockFetchCodebookAnalysis(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
@@ -583,7 +583,7 @@ describe("AnalysisPage", () => {
 
   it("suppresses PersonBadge on continuation quotes in a sequence", async () => {
     // Build mock data with 3 quotes from same pid/session within threshold
-    const seqCbData: CodebookAnalysisListResponse = {
+    const seqCbData: CodebookSignalsListResponse = {
       codebooks: [{
         codebook_id: "seq-test",
         codebook_name: "Sequence Test",
@@ -616,8 +616,8 @@ describe("AnalysisPage", () => {
       total_participants: 1,
       trade_off_note: "",
     };
-    mockFetchCodebookAnalysis(seqCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(seqCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(1);
@@ -636,7 +636,7 @@ describe("AnalysisPage", () => {
   });
 
   it("applies seq-first/middle/last classes to sequence blockquotes", async () => {
-    const seqCbData: CodebookAnalysisListResponse = {
+    const seqCbData: CodebookSignalsListResponse = {
       codebooks: [{
         codebook_id: "seq-test",
         codebook_name: "Sequence Test",
@@ -669,8 +669,8 @@ describe("AnalysisPage", () => {
       total_participants: 1,
       trade_off_note: "",
     };
-    mockFetchCodebookAnalysis(seqCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(seqCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(1);
@@ -685,8 +685,8 @@ describe("AnalysisPage", () => {
 
   it("does not apply seq-* classes to solo quotes", async () => {
     // Use existing mockCbData — quotes from different pids, won't form sequences
-    mockFetchCodebookAnalysis(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
@@ -703,7 +703,7 @@ describe("AnalysisPage", () => {
   });
 
   it("does not form sequences from zero-timecode quotes", async () => {
-    const zeroCbData: CodebookAnalysisListResponse = {
+    const zeroCbData: CodebookSignalsListResponse = {
       codebooks: [{
         codebook_id: "zero-test",
         codebook_name: "Zero TC Test",
@@ -735,8 +735,8 @@ describe("AnalysisPage", () => {
       total_participants: 1,
       trade_off_note: "",
     };
-    mockFetchCodebookAnalysis(zeroCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(zeroCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(1);
@@ -752,16 +752,16 @@ describe("AnalysisPage", () => {
   });
 
   it("Cmd+click on a location heading does not call switchToTab", async () => {
-    mockFetchCodebookAnalysis(mockCbData);
+    mockFetchCodebookSignals(mockCbData);
     (window as unknown as Record<string, unknown>).switchToTab = vi.fn();
-    render(<AnalysisPage projectId="1" />);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
     });
 
     const link = document
-      .querySelector(".analysis-codebook-heading a.signal-card-location-link") as HTMLElement;
+      .querySelector(".signals-codebook-heading a.signal-card-location-link") as HTMLElement;
     expect(link).toBeTruthy();
 
     // Cmd+click (Mac) — should NOT intercept
@@ -784,17 +784,17 @@ describe("AnalysisPage", () => {
   // — and no fixture in this file carried a signal_name, which is why nothing
   // caught it.
   it("a location's heading is the link to the quotes lens, and the card carries none", async () => {
-    mockFetchCodebookAnalysis(mockCbData);
+    mockFetchCodebookSignals(mockCbData);
     (window as unknown as Record<string, unknown>).switchToTab = vi.fn();
     (window as unknown as Record<string, unknown>).scrollToAnchor = vi.fn();
-    render(<AnalysisPage projectId="1" />);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0);
     });
 
     // The link lives on the heading, once per location — not once per card.
-    const heading = document.querySelector(".analysis-codebook-heading") as HTMLElement;
+    const heading = document.querySelector(".signals-codebook-heading") as HTMLElement;
     const link = heading.querySelector("a.signal-card-location-link") as HTMLElement;
     expect(link).toBeTruthy();
     expect(link.textContent).toBe("Checkout");
@@ -819,18 +819,18 @@ describe("AnalysisPage", () => {
     // silently re-focused the card behind you. The link now lives on the
     // heading, outside every card, so the hazard is structural rather than
     // guarded. This asserts the structure that makes it impossible.
-    resetAnalysisSignalStore();   // module singleton — an earlier test's focus leaks in
-    mockFetchCodebookAnalysis(mockCbData);
+    resetSignalStore();   // module singleton — an earlier test's focus leaks in
+    mockFetchCodebookSignals(mockCbData);
     (window as unknown as Record<string, unknown>).switchToTab = vi.fn();
     (window as unknown as Record<string, unknown>).scrollToAnchor = vi.fn();
-    render(<AnalysisPage projectId="1" />);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
     });
 
     const link = document
-      .querySelector(".analysis-codebook-heading a.signal-card-location-link") as HTMLElement;
+      .querySelector(".signals-codebook-heading a.signal-card-location-link") as HTMLElement;
     for (const card of screen.getAllByTestId("bn-signal-card")) {
       expect(card.contains(link)).toBe(false);
     }
@@ -845,8 +845,8 @@ describe("AnalysisPage", () => {
   });
 
   it("heatmap cells with count=1 get data-count attribute", async () => {
-    mockFetchCodebookAnalysis(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-heatmap").length).toBeGreaterThan(0);
@@ -868,7 +868,7 @@ describe("AnalysisPage", () => {
   describe("heatmap dark mode", () => {
     // A 2×2 matrix. The shared fixtures above are single-column, which makes
     // every adjusted residual zero, so not one of their cells gets a colour.
-    const contrastCbData: CodebookAnalysisListResponse = {
+    const contrastCbData: CodebookSignalsListResponse = {
       codebooks: [
         {
           codebook_id: "uxr",
@@ -951,8 +951,8 @@ describe("AnalysisPage", () => {
 
     /** Render, then read the OKLCH lightness off the first coloured cell. */
     async function renderAndReadLightness(): Promise<number> {
-      mockFetchCodebookAnalysis(contrastCbData);
-      render(<AnalysisPage projectId="1" />);
+      mockFetchCodebookSignals(contrastCbData);
+      render(<SignalsPage projectId="1" />);
       await waitFor(() => {
         expect(screen.getAllByTestId("bn-heatmap").length).toBeGreaterThan(0);
       });
@@ -995,14 +995,14 @@ describe("AnalysisPage", () => {
     // string that is definitionally not a finding. The first build of this
     // change fell back to it when no name had been generated — and because the
     // lens fetches twice, that was EVERY card for the first few seconds.
-    mockFetchCodebookAnalysis(mockCbData);   // no elaborations in this fixture
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(mockCbData);   // no elaborations in this fixture
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0);
     });
 
-    const heading = document.querySelector(".analysis-codebook-heading") as HTMLElement;
+    const heading = document.querySelector(".signals-codebook-heading") as HTMLElement;
     const location = heading.textContent?.trim();
     expect(location).toBeTruthy();
 
@@ -1016,8 +1016,8 @@ describe("AnalysisPage", () => {
   });
 
   it("shows a skeleton while elaborations are in flight, not a fallback string", async () => {
-    mockFetchCodebookAnalysis(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0);
     });
@@ -1033,7 +1033,7 @@ describe("AnalysisPage", () => {
     // The slot is the whole reason a card is not simply agreeing with itself.
     // If it is spent and nothing says so, the reader cannot tell the card
     // carries a voice that argues with it.
-    const many: CodebookAnalysisListResponse = JSON.parse(JSON.stringify(mockCbData));
+    const many: CodebookSignalsListResponse = JSON.parse(JSON.stringify(mockCbData));
     const sig = many.codebooks[0].signals[0];
     sig.group_name = "Sentiment";
     sig.label = "frustration";
@@ -1045,8 +1045,8 @@ describe("AnalysisPage", () => {
       { text: "d", participant_id: "p2", session_id: "s1", start_seconds: 180, intensity: 1, tag_names: ["frustration"], segment_index: 3 },
       { text: "e", participant_id: "p3", session_id: "s1", start_seconds: 240, intensity: 3, tag_names: ["delight"], segment_index: 4 },
     ];
-    mockFetchCodebookAnalysis(many);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(many);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0);
@@ -1061,7 +1061,7 @@ describe("AnalysisPage", () => {
   it("a folded reading carries its own claim, not just its name", async () => {
     // Storing a field and never reading it is what this change removed three
     // of. The folded card's claim is the thing that made it worth keeping.
-    const dup: CodebookAnalysisListResponse = JSON.parse(JSON.stringify(mockCbData));
+    const dup: CodebookSignalsListResponse = JSON.parse(JSON.stringify(mockCbData));
     const a = dup.codebooks[0].signals[0];
     // A twin: same location, same evidence, different vocabulary. It folds.
     const b = JSON.parse(JSON.stringify(a));
@@ -1071,8 +1071,8 @@ describe("AnalysisPage", () => {
     b.elaboration = "Payment stalls. || Two of three waited long enough to say so.";
     dup.codebooks[0].signals.push(b);
     dup.codebooks[0].columns.push("Conceptual model");
-    mockFetchCodebookAnalysis(dup);
-    render(<AnalysisPage projectId="1" />);
+    mockFetchCodebookSignals(dup);
+    render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
       expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0);
@@ -1097,7 +1097,7 @@ describe("the headline while a finding is still being written", () => {
    *  both fetches immediately, so the pending state existed in production and
    *  in no test — which is how it shipped as a motionless grey block.
    */
-  function mockStream(data: CodebookAnalysisListResponse) {
+  function mockStream(data: CodebookSignalsListResponse) {
     const queue: string[] = [];
     let notify: (() => void) | null = null;
     let ended = false;
@@ -1134,7 +1134,7 @@ describe("the headline while a finding is still being written", () => {
 
   it("draws a placeholder, and says it is busy, while the finding is coming", async () => {
     mockStream(mockCbData);
-    const { container } = render(<AnalysisPage projectId="1" />);
+    const { container } = render(<SignalsPage projectId="1" />);
 
     await waitFor(() => expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0));
 
@@ -1146,7 +1146,7 @@ describe("the headline while a finding is still being written", () => {
     /** The whole point of streaming. If this passes only after `close()`, the
      *  events are being buffered and nothing has been gained. */
     const stream = mockStream(mockCbData);
-    render(<AnalysisPage projectId="1" />);
+    render(<SignalsPage projectId="1" />);
     await waitFor(() => expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0));
 
     stream.push(frame("section|Checkout|Pain points", "Checkout stalls on payment"));
@@ -1163,7 +1163,7 @@ describe("the headline while a finding is still being written", () => {
      *  terminator its placeholder would sit there for ever — which is the
      *  defect the streaming exists to end, not to reintroduce. */
     const stream = mockStream(mockCbData);
-    const { container } = render(<AnalysisPage projectId="1" />);
+    const { container } = render(<SignalsPage projectId="1" />);
     await waitFor(() => expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0));
 
     stream.close();

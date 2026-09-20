@@ -12,7 +12,7 @@
    moved it was 64px, measured 14 Sep 2026.) On a lens that scrolls for real (Quotes) it hides inside a genuine
    5000px of overflow; on a lens capped to the viewport it is the whole of the
    page's scroll range, and on Analysis it appears immediately beside
-   .analysis-center's legitimate bar, which is how one phantom reads as two
+   .signals-center's legitimate bar, which is how one phantom reads as two
    scrollbars.
 
    `--bn-toolbar-inset` is subtracted too, and it is the half a browser cannot
@@ -22,7 +22,7 @@
    the fix measures perfect in a browser while the app keeps a phantom bar
    exactly as tall as the toolbar. The fallback is 0px, which is what makes one
    expression right on both surfaces. */
-.layout:has(.analysis-layout) {
+.layout:has(.signals-layout) {
     height: calc(100vh - var(--bn-toolbar-inset, 0px) - var(--bn-space-xl));
     height: calc(100dvh - var(--bn-toolbar-inset, 0px) - var(--bn-space-xl));
     overflow: hidden;
@@ -31,28 +31,28 @@
 
 /* Height-fitted lens: the bottom pad `.center` carries elsewhere (sidebar.css)
    would only push the inspector handle up off the window bottom here. */
-.layout > .center:has(.analysis-layout) {
+.layout > .center:has(.signals-layout) {
     overflow: hidden;
     padding-bottom: 0;
 }
 
 /* The <main> landmark wraps the routed content (sidebar.css: transparent flex
    pass-through with no flex:1). On the analysis lens that breaks the height
-   chain: .center is capped to 100vh + overflow:hidden and .analysis-center is
+   chain: .center is capped to 100vh + overflow:hidden and .signals-center is
    meant to scroll internally, but a content-height .bn-main overflows the cap
    and the bottom is clipped with NO scrollbar to reach it. Give the wrapper
-   flex:1 + min-height:0 so .analysis-layout resolves against "space left after
+   flex:1 + min-height:0 so .signals-layout resolves against "space left after
    Header + NavBar", not its own content height — restoring internal scroll. */
-.bn-main:has(.analysis-layout) {
+.bn-main:has(.signals-layout) {
     flex: 1;
     min-height: 0;
 }
 
 /* Vertical flexbox wrapper for analysis page.
-   .analysis-center scrolls signal cards.
+   .signals-center scrolls signal cards.
    .inspector-panel sits below as a fixed-height pane.
    flex: 1 fills whatever space remains after Header + NavBar. */
-.analysis-layout {
+.signals-layout {
     display: flex;
     flex-direction: column;
     flex: 1;
@@ -60,7 +60,7 @@
     overflow: hidden;
 }
 
-.analysis-center {
+.signals-center {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
@@ -68,7 +68,7 @@
        edge like every other lens — was `padding: var(--bn-space-lg)`, a 24px
        gutter DOUBLED inside .center's own 32px (cards at x=80 not x=56). The
        bleed idiom (neg-margin to give the drop shadow room) can't be used here:
-       the parent .analysis-layout is `overflow: hidden`, which clips it. So the
+       the parent .signals-layout is `overflow: hidden`, which clips it. So the
        signal-card shadow clips ~8px at the scroll-box edge — accepted until the
        structural fix (scroll pane owns the single gutter) in
        docs/design-lens-template.md § Analysis.
@@ -83,9 +83,9 @@
 /* When the analysis layout is active, hide the report footer — the inspector
    panel owns the bottom of the viewport and the footer would eat scroll space
    inside the 100vh-capped column. The footer is a sibling of <main.bn-main>
-   (not of .analysis-layout, which is *inside* main), so the combinator must
-   reach up to .center — `.analysis-layout ~ .report-footer` never matched. */
-.center:has(.analysis-layout) > .report-footer {
+   (not of .signals-layout, which is *inside* main), so the combinator must
+   reach up to .center — `.signals-layout ~ .report-footer` never matched. */
+.center:has(.signals-layout) > .report-footer {
     display: none;
 }
 

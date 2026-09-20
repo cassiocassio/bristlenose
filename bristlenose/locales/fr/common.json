@@ -445,7 +445,7 @@
       "citDemszky2020": "58 000 commentaires annotés avec 27 catégories d’émotions — le plus grand corpus d’émotions fines pour le TAL."
     }
   },
-  "analysis": {
+  "signals": {
     "alsoReadAs": "\u00c9galement lu comme",
     "labelPositive": "Positif",
     "labelNegative": "N\u00e9gatif",
@@ -454,7 +454,7 @@
     "loadingData": "Chargement des données d'analyse…",
     "noData": "Aucune donnée d'analyse disponible. Exécutez le pipeline ou appliquez des étiquettes de la grille de codage pour générer l'analyse.",
     "tagError": "Erreur d'analyse des étiquettes : {{error}}",
-    "signals": "Signaux",
+    "title": "Signaux",
     "sentiment": "Sentiment",
     "sentimentSubtitle": "Réponses émotionnelles détectées par IA",
     "codebookTags": "Grilles de codage",

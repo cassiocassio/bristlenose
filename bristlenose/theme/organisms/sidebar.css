@@ -24,7 +24,7 @@
     /* Minus everything body pads with — the top only, since 20 Sep 2026
        (report.css: body's bottom pad moved onto `.center` below so the sticky
        panels, which live in this row, can reach the window bottom). See the
-       note on `.layout:has(.analysis-layout)` in inspector.css. A bare 100vh
+       note on `.layout:has(.signals-layout)` in inspector.css. A bare 100vh
        here puts every lens over the viewport by the padding, which is a
        scrollbar that scrolls the padding and nothing else.
 

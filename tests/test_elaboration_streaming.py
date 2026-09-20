@@ -23,7 +23,7 @@ import pytest
 
 from bristlenose.server.routes.signals import (
     ELABORATION_CHUNK,
-    CodebookAnalysisOut,
+    CodebookSignalsOut,
     MatrixOut,
     TagSignal,
     _elaborate_signals,
@@ -60,8 +60,8 @@ _EMPTY_MATRIX = MatrixOut(
 )
 
 
-def _codebook(n_signals: int) -> CodebookAnalysisOut:
-    return CodebookAnalysisOut(
+def _codebook(n_signals: int) -> CodebookSignalsOut:
+    return CodebookSignalsOut(
         codebook_id="uxr", codebook_name="UX", colour_set="ux",
         signals=[_sig(i) for i in range(n_signals)],
         section_matrix=_EMPTY_MATRIX, theme_matrix=_EMPTY_MATRIX, columns=[],

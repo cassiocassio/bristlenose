@@ -445,7 +445,7 @@
       "citDemszky2020": "58.000 kommentarer mærket med 27 følelseskategorier — det største finkornede følelsesdatasæt til NLP."
     }
   },
-  "analysis": {
+  "signals": {
     "alsoReadAs": "Ogs\u00e5 l\u00e6st som",
     "labelPositive": "Positiv",
     "labelNegative": "Negativ",
@@ -454,7 +454,7 @@
     "loadingData": "Indlæser analysedata…",
     "noData": "Ingen analysedata tilgængelige. Kør pipelinen, eller anvend kodebogstags for at generere en analyse.",
     "tagError": "Fejl i tag-analyse: {{error}}",
-    "signals": "Signaler",
+    "title": "Signaler",
     "sentiment": "Stemning",
     "sentimentSubtitle": "AI-detekterede følelsesmæssige reaktioner",
     "codebookTags": "Kodeb\u00f8ger",

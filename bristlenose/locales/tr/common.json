@@ -445,7 +445,7 @@
       "citDemszky2020": "27 duygu kategorisiyle etiketlenmiş 58.000 yorum — NLP için en büyük ince taneli duygu veri kümesi."
     }
   },
-  "analysis": {
+  "signals": {
     "alsoReadAs": "\u015e\u00f6yle de okundu",
     "labelPositive": "Olumlu",
     "labelNegative": "Olumsuz",
@@ -454,7 +454,7 @@
     "loadingData": "Analiz verileri yükleniyor…",
     "noData": "Kullanılabilir analiz verisi yok. Analiz oluşturmak için işlem hattını çalıştırın veya kod kitabı etiketleri uygulayın.",
     "tagError": "Etiket analizi hatası: {{error}}",
-    "signals": "Sinyaller",
+    "title": "Sinyaller",
     "sentiment": "Duygu durumu",
     "sentimentSubtitle": "YZ tarafından algılanan duygusal tepkiler",
     "codebookTags": "Kod kitaplar\u0131",

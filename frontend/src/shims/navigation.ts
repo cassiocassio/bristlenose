@@ -4,7 +4,7 @@
  *
  * This maintains backward compatibility for:
  * - Vanilla JS modules not yet migrated (focus.js, player.js, etc.)
- * - Dashboard and AnalysisPage module-level wrapper functions
+ * - Dashboard and SignalsPage module-level wrapper functions
  * - Any external callers (including native macOS callAsyncJavaScript)
  *
  * The shim functions are installed once on window but always read navigate/

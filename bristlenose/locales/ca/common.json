@@ -445,7 +445,7 @@
       "citDemszky2020": "58.000 comentaris etiquetats amb 27 categories d'emoció: el conjunt de dades d'emocions de gra fi més gran per al processament del llenguatge natural."
     }
   },
-  "analysis": {
+  "signals": {
     "alsoReadAs": "Tamb\u00e9 interpretat com a",
     "labelPositive": "Positiu",
     "labelNegative": "Negatiu",
@@ -454,7 +454,7 @@
     "loadingData": "S'estan carregant les dades de l'anàlisi…",
     "noData": "No hi ha dades d'anàlisi disponibles. Executa el processament o aplica etiquetes del llibre de codis per generar-ne.",
     "tagError": "Error d'anàlisi d'etiquetes: {{error}}",
-    "signals": "Senyals",
+    "title": "Senyals",
     "sentiment": "Sentiment",
     "sentimentSubtitle": "Respostes emocionals detectades per IA",
     "codebookTags": "Llibres de codis",

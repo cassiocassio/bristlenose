@@ -326,6 +326,10 @@ button.signal-card-toggle {
 
 /* ── Heatmap ──────────────────────────────────────────────── */
 
+/* `.analysis-heatmap` keeps its name deliberately: the frozen vanilla
+   renderer emits it (theme/js/analysis.js:314) and that file takes
+   data-integrity fixes only. The static byproduct keeps the analysis
+   vocabulary throughout — see docs/design-signals-rename.md §6.3. */
 .analysis-heatmap {
     width: 100%;
     border-collapse: collapse;
@@ -451,14 +455,14 @@ button.signal-card-toggle {
 
 /* ── Per-codebook section heading ─────────────────────────── */
 
-.analysis-codebook-section {
+.signals-codebook-section {
     margin-bottom: var(--bn-space-xl);
 }
 
 /* The first one follows the lens's zone title, which already carries the
    space beneath it — a second lead-in on top of that opens a gap no other
    lens has. */
-.analysis-center > .analysis-codebook-heading:first-of-type {
+.signals-center > .signals-codebook-heading:first-of-type {
     margin-top: 0;
 }
 
@@ -467,7 +471,7 @@ button.signal-card-toggle {
    rather than a smaller one. The sidebar stays at --bn-text-caption because
    that is navigation; this is content. No bottom rule: the Quotes lens has
    none, and the fused stack below already draws its own edge. */
-.analysis-codebook-heading {
+.signals-codebook-heading {
     font-size: var(--bn-text-heading);
     line-height: var(--bn-text-heading-lh);
     font-weight: var(--bn-weight-emphasis);
@@ -476,7 +480,7 @@ button.signal-card-toggle {
     margin: var(--bn-space-lg) 0 var(--bn-space-sm);
 }
 
-.analysis-heatmap-label {
+.signals-heatmap-label {
     font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-muted);

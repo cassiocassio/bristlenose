@@ -1,13 +1,13 @@
 /**
- * AnalysisSignalStore — module-level store for analysis sidebar signal list.
+ * SignalStore — module-level store for analysis sidebar signal list.
  *
- * Populated by AnalysisPage after de-duplication. Read by
- * AnalysisSidebar for navigation. Also owns `focusedKey` so card focus
+ * Populated by SignalsPage after de-duplication. Read by
+ * SignalsSidebar for navigation. Also owns `focusedKey` so card focus
  * state is shared between the sidebar, signal cards, and inspector panel.
  *
  * No localStorage — signals re-fetch on mount.
  *
- * @module AnalysisSignalStore
+ * @module SignalStore
  */
 
 import { useSyncExternalStore } from "react";
@@ -15,7 +15,7 @@ import type { UnifiedSignal } from "../utils/types";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
-export interface AnalysisSignalState {
+export interface SignalStoreState {
   /**
    * One de-duplicated list, strongest first.
    *
@@ -30,15 +30,15 @@ export interface AnalysisSignalState {
 
 // ── Module-level store ──────────────────────────────────────────────────
 
-const INITIAL: AnalysisSignalState = {
+const INITIAL: SignalStoreState = {
   signals: [],
   focusedKey: null,
 };
 
-let state: AnalysisSignalState = { ...INITIAL };
+let state: SignalStoreState = { ...INITIAL };
 const listeners = new Set<() => void>();
 
-function getSnapshot(): AnalysisSignalState {
+function getSnapshot(): SignalStoreState {
   return state;
 }
 
@@ -49,15 +49,15 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
-function setState(updater: (prev: AnalysisSignalState) => AnalysisSignalState): void {
+function setState(updater: (prev: SignalStoreState) => SignalStoreState): void {
   state = updater(state);
   listeners.forEach((l) => l());
 }
 
 // ── Actions ─────────────────────────────────────────────────────────────
 
-/** Populate the store with the de-duplicated signal list from AnalysisPage. */
-export function setAnalysisSignals(signals: UnifiedSignal[]): void {
+/** Populate the store with the de-duplicated signal list from SignalsPage. */
+export function setSignals(signals: UnifiedSignal[]): void {
   setState((prev) => {
     if (prev.signals === signals) return prev;
     return { ...prev, signals };
@@ -73,7 +73,7 @@ export function setFocusedSignalKey(key: string | null): void {
 }
 
 /** Reset to defaults. Used for test isolation. */
-export function resetAnalysisSignalStore(): void {
+export function resetSignalStore(): void {
   state = { ...INITIAL };
   listeners.forEach((l) => l());
 }
@@ -81,6 +81,6 @@ export function resetAnalysisSignalStore(): void {
 // ── React hook ──────────────────────────────────────────────────────────
 
 /** Subscribe to the analysis signal store. Re-renders on any mutation. */
-export function useAnalysisSignalStore(): AnalysisSignalState {
+export function useSignalStore(): SignalStoreState {
   return useSyncExternalStore(subscribe, getSnapshot);
 }

@@ -541,7 +541,7 @@ def _compute_analysis(
 ) -> object | None:
     """Compute analysis data if quotes have sentiments.
 
-    Returns an AnalysisResult or None if no sentiment data is available.
+    Returns an SignalsResult or None if no sentiment data is available.
     Pure computation — no LLM calls.
     """
     if not screen_clusters and not theme_groups:

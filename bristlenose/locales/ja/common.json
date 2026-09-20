@@ -440,7 +440,7 @@
       "citDemszky2020": "27 の感情カテゴリでラベル付けされた 58,000 件のコメント — NLP 用としては最大の細粒度感情データセット。"
     }
   },
-  "analysis": {
+  "signals": {
     "alsoReadAs": "\u5225\u306e\u8aad\u307f\u65b9",
     "labelPositive": "\u80af\u5b9a\u7684",
     "labelNegative": "\u5426\u5b9a\u7684",
@@ -449,7 +449,7 @@
     "loadingData": "分析データを読み込み中…",
     "noData": "分析データはありません。パイプラインを実行するか、コードブックタグを適用して分析を生成してください。",
     "tagError": "タグ分析エラー: {{error}}",
-    "signals": "シグナル",
+    "title": "シグナル",
     "sentiment": "感情",
     "sentimentSubtitle": "AI が検出した感情的な反応",
     "codebookTags": "\u30b3\u30fc\u30c9\u30d6\u30c3\u30af",

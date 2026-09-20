@@ -133,7 +133,7 @@ def simpsons_neff(participant_counts: Sequence[int]) -> float:
     participant") on fewer people than that, and one pushing the breadth factor
     of ``composite_signal`` above 1.0 — a term that is supposed to be a share.
     The ``Math.min(100, ...)`` clamp on the card's bar (``agreePct`` in
-    ``AnalysisPage.tsx``) exists because the overflow was noticed there and
+    ``SignalsPage.tsx``) exists because the overflow was noticed there and
     papered over rather than fixed here.
     """
     n = sum(participant_counts)

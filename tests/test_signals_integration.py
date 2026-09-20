@@ -25,7 +25,7 @@ from bristlenose.models import (
 from bristlenose.pipeline import _compute_analysis
 from bristlenose.signals.detect import detect_signals
 from bristlenose.signals.matrix import build_section_matrix, build_theme_matrix
-from bristlenose.signals.models import AnalysisResult, Matrix, MatrixCell, Signal
+from bristlenose.signals.models import Matrix, MatrixCell, Signal, SignalsResult
 from bristlenose.stages.s12_render import render_html
 from bristlenose.stages.s12_render.standalone_pages import _serialize_analysis, _serialize_matrix
 
@@ -144,7 +144,7 @@ class TestComputeAnalysis:
         assert result is None
 
     def test_returns_analysis_with_sentiments(self) -> None:
-        """Quotes with sentiments → AnalysisResult."""
+        """Quotes with sentiments → SignalsResult."""
         clusters, themes, all_quotes, sessions = _realistic_data()
         result = _compute_analysis(clusters, themes, all_quotes, sessions)
         assert result is not None
@@ -493,7 +493,7 @@ class TestSerializeAnalysis:
     def _make_analysis(
         self,
         n_participants: int = 6,
-    ) -> AnalysisResult:
+    ) -> SignalsResult:
         clusters, themes, all_quotes, sessions = _realistic_data(n_participants)
         result = _compute_analysis(clusters, themes, all_quotes, sessions)
         assert result is not None
@@ -609,7 +609,7 @@ class TestSerializeAnalysis:
         assert data["participantIds"] == []
 
     def test_total_participants_preserved(self) -> None:
-        """totalParticipants in JSON matches the AnalysisResult."""
+        """totalParticipants in JSON matches the SignalsResult."""
         analysis = self._make_analysis(n_participants=8)
         data = json.loads(_serialize_analysis(analysis))
         assert data["totalParticipants"] == 8

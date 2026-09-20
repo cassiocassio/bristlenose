@@ -426,7 +426,7 @@
       "citDemszky2020": "27개 감정 카테고리로 레이블된 58,000개 댓글 — NLP를 위한 최대 규모의 세분화된 감정 데이터셋."
     }
   },
-  "analysis": {
+  "signals": {
     "alsoReadAs": "\ub2e4\ub978 \ud574\uc11d",
     "labelPositive": "\uae0d\uc815\uc801",
     "labelNegative": "\ubd80\uc815\uc801",
@@ -435,7 +435,7 @@
     "loadingData": "분석 데이터 로드 중…",
     "noData": "분석 데이터가 없습니다. 파이프라인을 실행하거나 코드북 태그를 적용하여 분석을 생성하세요.",
     "tagError": "태그 분석 오류: {{error}}",
-    "signals": "시그널",
+    "title": "시그널",
     "sentiment": "감정",
     "sentimentSubtitle": "AI가 감지한 감정 반응",
     "codebookTags": "\ucf54\ub4dc\ubd81",

@@ -445,7 +445,7 @@
       "citDemszky2020": "58.000 commenti etichettati con 27 categorie di emozioni — il più ampio set di dati emotivi a grana fine per l'NLP."
     }
   },
-  "analysis": {
+  "signals": {
     "alsoReadAs": "Letto anche come",
     "labelPositive": "Positivo",
     "labelNegative": "Negativo",
@@ -454,7 +454,7 @@
     "loadingData": "Caricamento dei dati di analisi…",
     "noData": "Nessun dato di analisi disponibile. Esegui la pipeline o applica i tag del libro dei codici per generare l'analisi.",
     "tagError": "Errore nell'analisi dei tag: {{error}}",
-    "signals": "Segnali",
+    "title": "Segnali",
     "sentiment": "Sentiment",
     "sentimentSubtitle": "Risposte emotive rilevate dall'IA",
     "codebookTags": "Libri dei codici",

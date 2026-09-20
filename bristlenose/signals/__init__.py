@@ -3,10 +3,10 @@
 from bristlenose.signals.detect import detect_signals
 from bristlenose.signals.generic_detect import QuoteRecord, detect_signals_generic
 from bristlenose.signals.generic_matrix import QuoteContribution, build_matrix_from_contributions
-from bristlenose.signals.models import AnalysisResult
+from bristlenose.signals.models import SignalsResult
 
 __all__ = [
-    "AnalysisResult",
+    "SignalsResult",
     "QuoteContribution",
     "QuoteRecord",
     "build_matrix_from_contributions",

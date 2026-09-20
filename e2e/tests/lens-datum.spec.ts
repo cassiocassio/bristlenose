@@ -4,7 +4,7 @@
  * The contract is one rule in bristlenose/theme/templates/report.css:
  *
  *   .center > main > section:first-of-type > .section-heading,
- *   .analysis-center > .section-heading:first-of-type { margin-top: 0 }
+ *   .signals-center > .section-heading:first-of-type { margin-top: 0 }
  *
  * A lens enrols by rendering its zone title as the direct child of a <section>
  * that is the direct child of <main> (Analysis uses the scroll-pane variant).
@@ -94,7 +94,7 @@ for (const lens of TITLED_LENSES) {
         // Reported on failure so the diagnosis is in the message rather than a
         // debugging session: which selector was meant to reach this heading.
         enrolledViaMain: h.matches('.center > main > section:first-of-type > .section-heading'),
-        enrolledViaPane: h.matches('.analysis-center > .section-heading:first-of-type'),
+        enrolledViaPane: h.matches('.signals-center > .section-heading:first-of-type'),
         parent: `${h.parentElement?.tagName.toLowerCase()}.${String(h.parentElement?.className ?? '').split(' ')[0]}`,
       };
     });

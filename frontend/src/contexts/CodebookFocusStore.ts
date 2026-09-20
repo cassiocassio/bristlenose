@@ -1,7 +1,7 @@
 /**
  * CodebookFocusStore — the focus cursor for the codebook detail pane.
  *
- * Modelled on `AnalysisSignalStore`: a module-level store over
+ * Modelled on `SignalStore`: a module-level store over
  * `useSyncExternalStore`, holding one nullable id per focusable kind. Read by
  * the group card and the tag chip (for the `bn-selected` wash) and by
  * `AppLayout` (to tell the native menu what to dim).
@@ -10,7 +10,7 @@
  * living in the master list, which selects a *codebook*; the detail pane is a
  * pure function of it. That pin is about selection and does not forbid a cursor
  * inside the pane — the app already ships two (`FocusContext.focusedId` for
- * quotes, `AnalysisSignalStore.focusedKey` for signal cards), and
+ * quotes, `SignalStore.focusedKey` for signal cards), and
  * `FocusContext`'s own docstring separates the axes in its first three lines.
  * See `design-codebook-focus.md`.
  *

@@ -445,7 +445,7 @@
       "citDemszky2020": "58.000 opmerkingen gelabeld met 27 emotiecategorieën — de grootste fijnmazige emotiedataset voor NLP."
     }
   },
-  "analysis": {
+  "signals": {
     "alsoReadAs": "Ook gelezen als",
     "labelPositive": "Positief",
     "labelNegative": "Negatief",
@@ -454,7 +454,7 @@
     "loadingData": "Analysegegevens laden…",
     "noData": "Geen analysegegevens beschikbaar. Voer de pijplijn uit of pas codeboektags toe om analyse te genereren.",
     "tagError": "Fout in taganalyse: {{error}}",
-    "signals": "Signalen",
+    "title": "Signalen",
     "sentiment": "Sentiment",
     "sentimentSubtitle": "Door AI gedetecteerde emotionele reacties",
     "codebookTags": "Codeboeken",

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 
-import { useAnalysisSignalStore } from "../contexts/AnalysisSignalStore";
+import { useSignalStore } from "../contexts/SignalStore";
 import { useQuotesStore } from "../contexts/QuotesContext";
 import { postLensSubtitle, postQuotesFilter } from "../shims/bridge";
 import { getCodebook } from "../utils/api";
@@ -46,7 +46,7 @@ export function LensSubtitleSync(): null {
   const { pathname } = useLocation();
   const tab = tabFromPath(pathname);
   const store = useQuotesStore();
-  const signals = useAnalysisSignalStore();
+  const signals = useSignalStore();
   const [codebook, setCodebook] = useState<CodebookResponse | null>(null);
 
   // Codebook is fetched, not a reactive store — load on mount and refetch when

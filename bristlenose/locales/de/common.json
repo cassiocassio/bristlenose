@@ -445,7 +445,7 @@
       "citDemszky2020": "58.000 Kommentare mit 27 Emotionskategorien annotiert — der größte feingranulare Emotionsdatensatz für NLP."
     }
   },
-  "analysis": {
+  "signals": {
     "alsoReadAs": "Auch gelesen als",
     "labelPositive": "Positiv",
     "labelNegative": "Negativ",
@@ -454,7 +454,7 @@
     "loadingData": "Analysedaten werden geladen…",
     "noData": "Keine Analysedaten verfügbar. Führen Sie die Pipeline aus oder wenden Sie Codebuch-Tags an, um die Analyse zu generieren.",
     "tagError": "Tag-Analysefehler: {{error}}",
-    "signals": "Signale",
+    "title": "Signale",
     "sentiment": "Stimmung",
     "sentimentSubtitle": "KI-erkannte emotionale Reaktionen",
     "codebookTags": "Codeb\u00fccher",

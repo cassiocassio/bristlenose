@@ -1,15 +1,15 @@
 /**
- * Tests for AnalysisSignalStore — module-level store for analysis sidebar.
+ * Tests for SignalStore — module-level store for analysis sidebar.
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 import {
-  setAnalysisSignals,
+  setSignals,
   setFocusedSignalKey,
-  resetAnalysisSignalStore,
-  useAnalysisSignalStore,
-} from "./AnalysisSignalStore";
+  resetSignalStore,
+  useSignalStore,
+} from "./SignalStore";
 import type { UnifiedSignal } from "../utils/types";
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -35,31 +35,31 @@ function makeSignal(overrides: Partial<UnifiedSignal> = {}): UnifiedSignal {
 
 // The store holds ONE de-duplicated list now — it held two, split by kind,
 // because the lens drew two grids split by kind. Rendering is tested in
-// AnalysisSidebar.test.tsx; these assert the store's own contract.
+// SignalsSidebar.test.tsx; these assert the store's own contract.
 
-describe("AnalysisSignalStore", () => {
+describe("SignalStore", () => {
   beforeEach(() => {
-    resetAnalysisSignalStore();
+    resetSignalStore();
   });
 
   function read() {
-    const { result } = renderHook(() => useAnalysisSignalStore());
+    const { result } = renderHook(() => useSignalStore());
     return result.current;
   }
 
   it("holds the list it is given, and the focused key", () => {
     const a = makeSignal({ key: "a" });
     const b = makeSignal({ key: "b" });
-    setAnalysisSignals([a, b]);
+    setSignals([a, b]);
     setFocusedSignalKey("a");
     expect(read().signals.map((s) => s.key)).toEqual(["a", "b"]);
     expect(read().focusedKey).toBe("a");
   });
 
-  it("resetAnalysisSignalStore clears both the list and the focus", () => {
-    setAnalysisSignals([makeSignal({ key: "a" })]);
+  it("resetSignalStore clears both the list and the focus", () => {
+    setSignals([makeSignal({ key: "a" })]);
     setFocusedSignalKey("a");
-    resetAnalysisSignalStore();
+    resetSignalStore();
     expect(read().signals).toEqual([]);
     expect(read().focusedKey).toBeNull();
   });
@@ -70,16 +70,16 @@ describe("AnalysisSignalStore", () => {
   // not a nicety.
   it("re-setting the same list reference leaves the state object untouched", () => {
     const list = [makeSignal({ key: "x" })];
-    setAnalysisSignals(list);
+    setSignals(list);
     const before = read();
-    setAnalysisSignals(list);
+    setSignals(list);
     expect(read()).toBe(before);
   });
 
   it("setting an equal-but-different list DOES replace the state", () => {
-    setAnalysisSignals([makeSignal({ key: "x" })]);
+    setSignals([makeSignal({ key: "x" })]);
     const before = read();
-    setAnalysisSignals([makeSignal({ key: "x" })]);
+    setSignals([makeSignal({ key: "x" })]);
     expect(read()).not.toBe(before);
   });
 

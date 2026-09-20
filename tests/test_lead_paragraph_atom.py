@@ -30,7 +30,7 @@ ATOM = "atoms/lead-paragraph.css"
 # that class. Add a row when a new surface adopts the construct.
 CONSUMERS = [
     (".pg-desc", "organisms/codebook-v2.css"),
-    (".signal-elaboration", "organisms/analysis.css"),
+    (".signal-elaboration", "organisms/signals.css"),
 ]
 
 

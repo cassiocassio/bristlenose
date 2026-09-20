@@ -104,7 +104,7 @@ h2 {
    Browser: flush at the body top-pad. The app's absolute datum is re-scoped
    with the toolbar-inset fix (Phase B); this rule is surface-agnostic. */
 .center > main > section:first-of-type > .section-heading,
-.analysis-center > .section-heading:first-of-type {
+.signals-center > .section-heading:first-of-type {
     margin-top: 0;
 }
 

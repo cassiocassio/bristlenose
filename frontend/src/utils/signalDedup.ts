@@ -60,7 +60,7 @@ function quoteKey(q: { sessionId: string; startSeconds: number; pid: string }): 
  * tests is usually a contract that has quietly lost its guard".
  *
  * `isFromSentimentLens` below is a different question (which ROUTE served this
- * card) and is alive: AnalysisPage.tsx reads it for `allPids` and `isSentiment`.
+ * card) and is alive: SignalsPage.tsx reads it for `allPids` and `isSentiment`.
  */
 
 /**

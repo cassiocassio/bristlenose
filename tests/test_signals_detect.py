@@ -140,7 +140,7 @@ class TestDetectSignals:
         assert result.signals == []
 
     def test_result_metadata(self) -> None:
-        """AnalysisResult carries correct metadata."""
+        """SignalsResult carries correct metadata."""
         quotes = [_quote(Sentiment.FRUSTRATION, "p1"), _quote(Sentiment.FRUSTRATION, "p2")]
         clusters = [_cluster("Checkout", 1, quotes)]
         sm = build_section_matrix(clusters)

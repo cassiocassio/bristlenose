@@ -144,7 +144,7 @@ class SourceBreakdown(BaseModel):
     total: int
 
 
-class TagAnalysisResponse(BaseModel):
+class TagSignalsResponse(BaseModel):
     """Full tag-based analysis result (flat, all groups merged)."""
 
     signals: list[TagSignal]
@@ -157,7 +157,7 @@ class TagAnalysisResponse(BaseModel):
     trade_off_note: str
 
 
-class CodebookAnalysisOut(BaseModel):
+class CodebookSignalsOut(BaseModel):
     """Analysis result for one codebook (framework or user-created)."""
 
     codebook_id: str
@@ -172,10 +172,10 @@ class CodebookAnalysisOut(BaseModel):
     tag_colour_indices: dict[str, int]
 
 
-class CodebookAnalysisListResponse(BaseModel):
+class CodebookSignalsListResponse(BaseModel):
     """All per-codebook analyses for a project."""
 
-    codebooks: list[CodebookAnalysisOut]
+    codebooks: list[CodebookSignalsOut]
     total_participants: int
     trade_off_note: str
 
@@ -448,8 +448,8 @@ class _SentimentSignalOut(_CamelModel):
     quotes: list[_SentimentSignalQuoteOut]
 
 
-class SentimentAnalysisResponse(_CamelModel):
-    """Full sentiment-based analysis result (matches SentimentAnalysisData TS type)."""
+class SentimentSignalsResponse(_CamelModel):
+    """Full sentiment-based analysis result (matches SentimentSignalsData TS type)."""
 
     signals: list[_SentimentSignalOut]
     section_matrix: _SentimentMatrixOut
@@ -509,13 +509,13 @@ def _serialize_sentiment_signal(s: object) -> _SentimentSignalOut:
 
 @router.get(
     "/projects/{project_id}/signals/sentiment",
-    response_model=SentimentAnalysisResponse,
+    response_model=SentimentSignalsResponse,
 )
 def get_sentiment_analysis(
     project_id: int,
     request: Request,
     top_n: int = Query(default=12, ge=1, le=100),
-) -> SentimentAnalysisResponse:
+) -> SentimentSignalsResponse:
     """Compute sentiment-based signal analysis for a project.
 
     Returns the same data shape as ``window.BRISTLENOSE_ANALYSIS`` in the
@@ -646,7 +646,7 @@ def get_sentiment_analysis(
         for s in result.signals:
             all_pids.update(s.participants)
 
-        return SentimentAnalysisResponse(
+        return SentimentSignalsResponse(
             signals=[_serialize_sentiment_signal(s) for s in result.signals],
             section_matrix=_serialize_sentiment_matrix(result.section_matrix),
             theme_matrix=_serialize_sentiment_matrix(result.theme_matrix),
@@ -658,12 +658,12 @@ def get_sentiment_analysis(
         db.close()
 
 
-def _empty_sentiment_response() -> SentimentAnalysisResponse:
+def _empty_sentiment_response() -> SentimentSignalsResponse:
     """Return an empty sentiment analysis result."""
     empty = _SentimentMatrixOut(
         cells={}, row_totals={}, col_totals={}, grand_total=0, row_labels=[],
     )
-    return SentimentAnalysisResponse(
+    return SentimentSignalsResponse(
         signals=[],
         section_matrix=empty,
         theme_matrix=empty,
@@ -864,7 +864,7 @@ def _compute_group_analysis(
 
 @router.get(
     "/projects/{project_id}/signals/tags",
-    response_model=TagAnalysisResponse,
+    response_model=TagSignalsResponse,
 )
 def get_tag_analysis(
     project_id: int,
@@ -873,7 +873,7 @@ def get_tag_analysis(
         default=None, description="Comma-separated group IDs to include",
     ),
     top_n: int = Query(default=12, ge=1, le=100),
-) -> TagAnalysisResponse:
+) -> TagSignalsResponse:
     """Compute tag-based signal analysis for a project (flat, all groups merged).
 
     Backward-compatible endpoint — merges all codebook groups into one analysis.
@@ -899,7 +899,7 @@ def get_tag_analysis(
         for s in signals:
             signal_pids.update(s.participants)  # type: ignore[attr-defined]
 
-        return TagAnalysisResponse(
+        return TagSignalsResponse(
             signals=[_serialize_signal(s, colour_sets, shared.total_participants) for s in signals],
             section_matrix=_serialize_matrix(section_matrix),
             theme_matrix=_serialize_matrix(theme_matrix),
@@ -990,14 +990,14 @@ async def stream_elaborations(
 
 @router.get(
     "/projects/{project_id}/signals/codebooks",
-    response_model=CodebookAnalysisListResponse,
+    response_model=CodebookSignalsListResponse,
 )
 async def get_codebook_analysis(
     project_id: int,
     request: Request,
     top_n: int = Query(default=12, ge=1, le=100),
     elaborate: bool = Query(default=False),
-) -> CodebookAnalysisListResponse:
+) -> CodebookSignalsListResponse:
     """Compute per-codebook signal analysis for a project.
 
     Groups are partitioned by framework — each framework becomes a separate
@@ -1009,13 +1009,13 @@ async def get_codebook_analysis(
         _check_project(db, project_id)
         active_groups = _resolve_active_groups(db, project_id, groups=None)
         if not active_groups:
-            return CodebookAnalysisListResponse(
+            return CodebookSignalsListResponse(
                 codebooks=[], total_participants=0, trade_off_note=_TRADE_OFF_NOTE,
             )
 
         shared = _load_shared_data(db, project_id)
         if shared is None:
-            return CodebookAnalysisListResponse(
+            return CodebookSignalsListResponse(
                 codebooks=[], total_participants=0, trade_off_note=_TRADE_OFF_NOTE,
             )
 
@@ -1025,7 +1025,7 @@ async def get_codebook_analysis(
             key = g.framework_id or "custom"
             partitions[key].append(g)
 
-        codebooks: list[CodebookAnalysisOut] = []
+        codebooks: list[CodebookSignalsOut] = []
         for codebook_id, cb_groups in partitions.items():
             result = _compute_group_analysis(cb_groups, shared, db, top_n)
             if result is None:
@@ -1048,7 +1048,7 @@ async def get_codebook_analysis(
             # Build tag_colour_indices: tag_name -> slot index within its group
             tag_colour_indices = _build_tag_colour_indices(cb_groups, db)
 
-            codebooks.append(CodebookAnalysisOut(
+            codebooks.append(CodebookSignalsOut(
                 codebook_id=codebook_id,
                 codebook_name=codebook_name,
                 colour_set=codebook_colour,
@@ -1071,7 +1071,7 @@ async def get_codebook_analysis(
             ):
                 pass
 
-        return CodebookAnalysisListResponse(
+        return CodebookSignalsListResponse(
             codebooks=codebooks,
             total_participants=shared.total_participants,
             trade_off_note=_TRADE_OFF_NOTE,
@@ -1163,9 +1163,9 @@ def _build_tag_colour_indices(
     return indices
 
 
-def _empty_tag_response() -> TagAnalysisResponse:
+def _empty_tag_response() -> TagSignalsResponse:
     """Return an empty flat analysis result."""
-    return TagAnalysisResponse(
+    return TagSignalsResponse(
         signals=[],
         section_matrix=_EMPTY_MATRIX,
         theme_matrix=_EMPTY_MATRIX,
@@ -1185,7 +1185,7 @@ ELABORATION_CHUNK = 6
 
 
 async def _elaborate_signals(
-    codebooks: list[CodebookAnalysisOut],
+    codebooks: list[CodebookSignalsOut],
     db: Session,
     project_id: int,
     chunk_size: int = ELABORATION_CHUNK,

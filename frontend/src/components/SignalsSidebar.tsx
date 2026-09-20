@@ -1,5 +1,5 @@
 /**
- * AnalysisSidebar — signal-entry navigation for the Analysis tab left sidebar.
+ * SignalsSidebar — signal-entry navigation for the Analysis tab left sidebar.
  *
  * One run of locations, ranked by their strongest signal, cards ranked within.
  * Clicking an entry focuses the signal card and syncs the inspector panel.
@@ -11,26 +11,26 @@
  * interleave unlabelled; the words carry it, and the Quotes lens still owns the
  * demarcation for anyone whose mental model runs on that split.
  *
- * The list comes from AnalysisSignalStore, which AnalysisPage fills with the
+ * The list comes from SignalStore, which SignalsPage fills with the
  * de-duplicated cards it renders — so the navigation is one-to-one with the
  * main content: every row lands on a card, and no card is unreachable.
  *
- * @module AnalysisSidebar
+ * @module SignalsSidebar
  */
 
 import { Fragment, useCallback } from "react";
 import {
-  useAnalysisSignalStore,
+  useSignalStore,
   setFocusedSignalKey,
-} from "../contexts/AnalysisSignalStore";
+} from "../contexts/SignalStore";
 import { getGroupBg } from "../utils/colours";
 import { groupSignalsByLocation } from "../utils/signalDedup";
 import type { UnifiedSignal } from "../utils/types";
 
 // ── Component ────────────────────────────────────────────────────────
 
-export function AnalysisSidebar() {
-  const { signals, focusedKey } = useAnalysisSignalStore();
+export function SignalsSidebar() {
+  const { signals, focusedKey } = useSignalStore();
 
   const handleClick = useCallback((key: string) => {
     setFocusedSignalKey(key);

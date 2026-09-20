@@ -419,15 +419,15 @@ export interface TagSignal {
   elaboration?: string | null;
 }
 
-export interface AnalysisMatrixCell {
+export interface SignalMatrixCell {
   count: number;
   weighted_count: number;
   participants: Record<string, number>;
   intensities: number[];
 }
 
-export interface AnalysisMatrix {
-  cells: Record<string, AnalysisMatrixCell>;
+export interface SignalMatrix {
+  cells: Record<string, SignalMatrixCell>;
   row_totals: Record<string, number>;
   col_totals: Record<string, number>;
   grand_total: number;
@@ -440,10 +440,10 @@ export interface SourceBreakdown {
   total: number;
 }
 
-export interface TagAnalysisResponse {
+export interface TagSignalsResponse {
   signals: TagSignal[];
-  section_matrix: AnalysisMatrix;
-  theme_matrix: AnalysisMatrix;
+  section_matrix: SignalMatrix;
+  theme_matrix: SignalMatrix;
   total_participants: number;
   columns: string[];
   participant_ids: string[];
@@ -455,21 +455,21 @@ export interface TagAnalysisResponse {
 // Per-codebook analysis API
 // ---------------------------------------------------------------------------
 
-export interface CodebookAnalysis {
+export interface CodebookSignals {
   codebook_id: string;
   codebook_name: string;
   colour_set: string;
   signals: TagSignal[];
-  section_matrix: AnalysisMatrix;
-  theme_matrix: AnalysisMatrix;
+  section_matrix: SignalMatrix;
+  theme_matrix: SignalMatrix;
   columns: string[];
   participant_ids: string[];
   source_breakdown: SourceBreakdown;
   tag_colour_indices: Record<string, number>;
 }
 
-export interface CodebookAnalysisListResponse {
-  codebooks: CodebookAnalysis[];
+export interface CodebookSignalsListResponse {
+  codebooks: CodebookSignals[];
   total_participants: number;
   trade_off_note: string;
 }
@@ -513,7 +513,7 @@ export interface SentimentMatrix {
   rowLabels: string[];
 }
 
-export interface SentimentAnalysisData {
+export interface SentimentSignalsData {
   signals: SentimentSignal[];
   sectionMatrix: SentimentMatrix;
   themeMatrix: SentimentMatrix;
@@ -567,7 +567,7 @@ export interface SessionsListResponse {
 }
 
 // ---------------------------------------------------------------------------
-// Analysis — unified signal types (shared by AnalysisPage + AnalysisSidebar)
+// Analysis — unified signal types (shared by SignalsPage + SignalsSidebar)
 // ---------------------------------------------------------------------------
 
 /** Unified signal shape for rendering — adapts both sentiment and tag signals. */

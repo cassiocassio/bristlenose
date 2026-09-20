@@ -445,7 +445,7 @@
       "citDemszky2020": "58.000 comentários rotulados com 27 categorias de emoção — o maior conjunto de dados de emoção de granularidade fina para PLN."
     }
   },
-  "analysis": {
+  "signals": {
     "alsoReadAs": "Tamb\u00e9m lido como",
     "labelPositive": "Positivo",
     "labelNegative": "Negativo",
@@ -454,7 +454,7 @@
     "loadingData": "A carregar dados de análise…",
     "noData": "Nenhum dado de análise disponível. Execute o pipeline ou aplique etiquetas do livro de códigos para gerar a análise.",
     "tagError": "Erro na análise de etiquetas: {{error}}",
-    "signals": "Sinais",
+    "title": "Sinais",
     "sentiment": "Sentimento",
     "sentimentSubtitle": "Respostas emocionais detetadas por IA",
     "codebookTags": "Livros de c\u00f3digos",

@@ -445,7 +445,7 @@
       "citDemszky2020": "58 000 kommentarer märkta med 27 känslokategorier — det största finkorniga känslodatasetet för NLP."
     }
   },
-  "analysis": {
+  "signals": {
     "alsoReadAs": "L\u00e4ses ocks\u00e5 som",
     "labelPositive": "Positiv",
     "labelNegative": "Negativ",
@@ -454,7 +454,7 @@
     "loadingData": "Läser in analysdata…",
     "noData": "Ingen analysdata tillgänglig. Kör pipelinen eller tillämpa kodbokstaggar för att generera analys.",
     "tagError": "Fel vid tagganalys: {{error}}",
-    "signals": "Signaler",
+    "title": "Signaler",
     "sentiment": "Sentiment",
     "sentimentSubtitle": "AI-detekterade känslomässiga reaktioner",
     "codebookTags": "Kodb\u00f6cker",

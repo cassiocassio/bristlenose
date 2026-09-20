@@ -45,7 +45,7 @@ if (!appRoot) {
     import("./islands/Toolbar"),
     import("./islands/QuoteSections"),
     import("./islands/QuoteThemes"),
-    import("./islands/AnalysisPage"),
+    import("./islands/SignalsPage"),
     import("./islands/TranscriptPage"),
     import("./islands/SettingsPanel"),
     import("./islands/AboutPanel"),
@@ -56,7 +56,7 @@ if (!appRoot) {
     { Toolbar },
     { QuoteSections },
     { QuoteThemes },
-    { AnalysisPage },
+    { SignalsPage },
     { TranscriptPage },
     { SettingsPanel },
     { AboutPanel },
@@ -98,7 +98,7 @@ if (!appRoot) {
     const analysisRoot = document.getElementById("bn-analysis-root");
     if (analysisRoot) {
       const projectId = analysisRoot.getAttribute("data-project-id") || "1";
-      createRoot(analysisRoot).render(<AnalysisPage projectId={projectId} />);
+      createRoot(analysisRoot).render(<SignalsPage projectId={projectId} />);
     }
 
     const transcriptRoot = document.getElementById("bn-transcript-page-root");

@@ -445,7 +445,7 @@
       "citDemszky2020": "58,000 comments labelled with 27 emotion categories — the largest fine-grained emotion dataset for NLP."
     }
   },
-  "analysis": {
+  "signals": {
     "alsoReadAs": "Also read as",
     "labelPositive": "Positive",
     "labelNegative": "Negative",
@@ -454,7 +454,7 @@
     "loadingData": "Loading signals…",
     "noData": "No signals yet. Run the pipeline or apply codebook tags to generate them.",
     "tagError": "Tag signal error: {{error}}",
-    "signals": "Signals",
+    "title": "Signals",
     "sentiment": "Sentiment",
     "sentimentSubtitle": "AI-detected emotional responses",
     "codebookTags": "Codebooks",

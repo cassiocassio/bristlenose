@@ -486,7 +486,7 @@
       "citDemszky2020": "58 000 komentarzy oznaczonych 27 kategoriami emocji — największy drobnoziarnisty zbiór danych o emocjach dla NLP."
     }
   },
-  "analysis": {
+  "signals": {
     "alsoReadAs": "Odczytane tak\u017ce jako",
     "labelPositive": "Pozytywne",
     "labelNegative": "Negatywne",
@@ -495,7 +495,7 @@
     "loadingData": "Wczytywanie danych analizy…",
     "noData": "Brak dostępnych danych analizy. Uruchom potok lub zastosuj tagi z księgi kodów, aby wygenerować analizę.",
     "tagError": "Błąd analizy tagów: {{error}}",
-    "signals": "Sygnały",
+    "title": "Sygnały",
     "sentiment": "Sentyment",
     "sentimentSubtitle": "Reakcje emocjonalne wykryte przez AI",
     "codebookTags": "Ksi\u0119gi kod\u00f3w",

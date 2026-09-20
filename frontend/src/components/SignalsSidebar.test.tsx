@@ -1,15 +1,15 @@
 /**
- * Tests for AnalysisSidebar — signal-entry navigation for the Analysis tab.
+ * Tests for SignalsSidebar — signal-entry navigation for the Analysis tab.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { AnalysisSidebar } from "./AnalysisSidebar";
+import { SignalsSidebar } from "./SignalsSidebar";
 import {
-  setAnalysisSignals,
+  setSignals,
   setFocusedSignalKey,
-  resetAnalysisSignalStore,
-} from "../contexts/AnalysisSignalStore";
+  resetSignalStore,
+} from "../contexts/SignalStore";
 import type { UnifiedSignal } from "../utils/types";
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -35,19 +35,19 @@ function makeSignal(overrides: Partial<UnifiedSignal> = {}): UnifiedSignal {
 // ── Setup ────────────────────────────────────────────────────────────
 
 beforeEach(() => {
-  resetAnalysisSignalStore();
+  resetSignalStore();
 });
 
 // ── Tests ────────────────────────────────────────────────────────────
 
-describe("AnalysisSidebar", () => {
+describe("SignalsSidebar", () => {
   it("renders nothing when the store has no signals", () => {
-    const { container } = render(<AnalysisSidebar />);
+    const { container } = render(<SignalsSidebar />);
     expect(container.firstChild).toBeNull();
   });
 
   it("groups rows under their location, not under Section / Theme", () => {
-    setAnalysisSignals([
+    setSignals([
       makeSignal({ key: "section|Bag|Scope", location: "Bag", columnLabel: "Scope",
                    colourSet: "emo", codebookName: "Garrett", compositeSignal: 1.0,
                    signalName: "Scope Feature Mix" }),
@@ -55,7 +55,7 @@ describe("AnalysisSidebar", () => {
                    columnLabel: "Sentiment", compositeSignal: 0.3,
                    signalName: "Wrap-up Expectation Mismatch" }),
     ]);
-    render(<AnalysisSidebar />);
+    render(<SignalsSidebar />);
 
     expect(screen.getByText("Bag")).toBeInTheDocument();
     expect(screen.getByText("Wrap-up")).toBeInTheDocument();
@@ -68,7 +68,7 @@ describe("AnalysisSidebar", () => {
   });
 
   it("orders locations by their strongest signal, and cards within", () => {
-    setAnalysisSignals([
+    setSignals([
       makeSignal({ key: "section|Weak|A", location: "Weak", columnLabel: "A",
                    compositeSignal: 0.1, signalName: "Weak one" }),
       makeSignal({ key: "section|Strong|B", location: "Strong", columnLabel: "B",
@@ -76,7 +76,7 @@ describe("AnalysisSidebar", () => {
       makeSignal({ key: "section|Strong|C", location: "Strong", columnLabel: "C",
                    compositeSignal: 0.4, signalName: "Strong two" }),
     ]);
-    render(<AnalysisSidebar />);
+    render(<SignalsSidebar />);
 
     const text = [...document.querySelectorAll(".toc-sub-heading, .signal-entry-name")]
       .map((n) => n.textContent);
@@ -84,12 +84,12 @@ describe("AnalysisSidebar", () => {
   });
 
   it("shows the elaborated name, and its group as a trailing chip", () => {
-    setAnalysisSignals([
+    setSignals([
       makeSignal({ key: "section|Homepage|Structure", location: "Homepage",
                    columnLabel: "Structure", colourSet: "task", codebookName: "Garrett",
                    signalName: "Navigation Structure Tension" }),
     ]);
-    render(<AnalysisSidebar />);
+    render(<SignalsSidebar />);
 
     expect(screen.getByText("Navigation Structure Tension")).toBeInTheDocument();
     expect(screen.getByText("Structure")).toBeInTheDocument();
@@ -99,12 +99,12 @@ describe("AnalysisSidebar", () => {
     // It used to fall back to the location, which the heading above already
     // says. Measured after de-duplication: 22% of locations carry exactly one
     // bare-chip row, and it reads as what it is.
-    setAnalysisSignals([
+    setSignals([
       makeSignal({ key: "section|Homepage|Feedback", location: "Homepage",
                    columnLabel: "Feedback", colourSet: "emo", codebookName: "Norman",
                    signalName: null }),
     ]);
-    render(<AnalysisSidebar />);
+    render(<SignalsSidebar />);
 
     expect(document.querySelector(".signal-entry-name")).toBeNull();
     expect(screen.getByText("Feedback")).toBeInTheDocument();
@@ -113,12 +113,12 @@ describe("AnalysisSidebar", () => {
   });
 
   it("applies the active class to the focused signal only", () => {
-    setAnalysisSignals([
+    setSignals([
       makeSignal({ key: "a", columnLabel: "A", signalName: "One" }),
       makeSignal({ key: "b", columnLabel: "B", signalName: "Two" }),
     ]);
     setFocusedSignalKey("a");
-    render(<AnalysisSidebar />);
+    render(<SignalsSidebar />);
 
     const rows = [...document.querySelectorAll(".signal-entry")];
     expect(rows[0].classList.contains("active")).toBe(true);
@@ -130,11 +130,11 @@ describe("AnalysisSidebar", () => {
   it("dispatches bn:signal-focus carrying the clicked key", () => {
     const handler = vi.fn();
     window.addEventListener("bn:signal-focus", handler);
-    setAnalysisSignals([
+    setSignals([
       makeSignal({ key: "section|Homepage|Structure", columnLabel: "Structure",
                    signalName: "Navigation Structure Tension" }),
     ]);
-    render(<AnalysisSidebar />);
+    render(<SignalsSidebar />);
 
     fireEvent.click(screen.getByText("Navigation Structure Tension"));
     expect(handler).toHaveBeenCalledTimes(1);

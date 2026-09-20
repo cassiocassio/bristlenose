@@ -35,18 +35,18 @@ export function DimensionToggle({ hasBoth }: { hasBoth: boolean }) {
   const { t } = useTranslation();
 
   if (!hasBoth) {
-    return <>{activeDimension === "section" ? t("analysis.section") : t("analysis.theme")}</>;
+    return <>{activeDimension === "section" ? t("signals.section") : t("signals.theme")}</>;
   }
 
   return (
-    <span className="dimension-toggle" role="radiogroup" aria-label={t("analysis.dimension")}>
+    <span className="dimension-toggle" role="radiogroup" aria-label={t("signals.dimension")}>
       <button
         className={`dimension-btn${activeDimension === "section" ? " active" : ""}`}
         role="radio"
         aria-checked={activeDimension === "section"}
         onClick={() => setInspectorDimension("section")}
       >
-        {t("analysis.section")}
+        {t("signals.section")}
       </button>
       <button
         className={`dimension-btn${activeDimension === "theme" ? " active" : ""}`}
@@ -54,7 +54,7 @@ export function DimensionToggle({ hasBoth }: { hasBoth: boolean }) {
         aria-checked={activeDimension === "theme"}
         onClick={() => setInspectorDimension("theme")}
       >
-        {t("analysis.theme")}
+        {t("signals.theme")}
       </button>
     </span>
   );
@@ -255,8 +255,8 @@ export function InspectorPanel({ sources, shimmerTrigger }: InspectorPanelProps)
         <button
           className="inspector-icon-btn"
           onClick={handleIconClick}
-          title={open ? t("analysis.heatmapOpen") : t("analysis.heatmapClosed")}
-          aria-label={open ? t("analysis.heatmapCloseLabel") : t("analysis.heatmapOpenLabel")}
+          title={open ? t("signals.heatmapOpen") : t("signals.heatmapClosed")}
+          aria-label={open ? t("signals.heatmapCloseLabel") : t("signals.heatmapOpenLabel")}
           data-testid="inspector-toggle"
         >
           {open ? <CloseIcon /> : <GridIcon />}
@@ -267,7 +267,7 @@ export function InspectorPanel({ sources, shimmerTrigger }: InspectorPanelProps)
           className="inspector-handle-title"
           data-testid="inspector-title"
         >
-          {t("analysis.heatmap")}
+          {t("signals.heatmap")}
         </span>
 
         {/* Drag-resize grip; pointer-driven separator, keyboard-resizable via tabIndex/onKeyDown. */}
@@ -287,7 +287,7 @@ export function InspectorPanel({ sources, shimmerTrigger }: InspectorPanelProps)
       </div>
 
       {/* Source tabs */}
-      <div className="inspector-tabs" role="tablist" aria-label={t("analysis.heatmapSources")}>
+      <div className="inspector-tabs" role="tablist" aria-label={t("signals.heatmapSources")}>
         {sources.map((s) => (
           <button
             key={s.key}

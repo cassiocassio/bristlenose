@@ -350,10 +350,10 @@ export function CodebookGroupColumn({
   // Translate built-in group labels (sentiment + uncategorised)
   const isSentiment = group.colour_set === "sentiment";
   const isUncategorised = group.name === "Uncategorised";
-  const displayGroupName = isSentiment ? t("analysis.sentiment")
+  const displayGroupName = isSentiment ? t("signals.sentiment")
     : isUncategorised ? t("codebook.uncategorised")
     : group.name;
-  const displayGroupSubtitle = isSentiment ? t("analysis.sentimentSubtitle")
+  const displayGroupSubtitle = isSentiment ? t("signals.sentimentSubtitle")
     : isUncategorised ? t("codebook.uncategorisedSubtitle")
     : group.subtitle;
 

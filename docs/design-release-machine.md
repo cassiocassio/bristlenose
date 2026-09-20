@@ -182,9 +182,18 @@ rather than training anyone to ignore it.
 
 And it must **stop `run`, not just warn in `plan`.** The first draft made it a
 warning on a screen offering `Run anyway` — under which 0.27.0's build failure 1
-survives this design entirely. Override is `--allow-stale-gates`, recorded, so
+survives this design entirely. Override was specified as `--allow-stale-gates`,
+recorded, so
 the next release log can count how often it was used. *A bypass nobody counts is
 a bypass that becomes the default.*
+
+> **Superseded by §18 as built — there is no such flag.** _Verified 20 Sep 2026:_
+> `cmd_run` accepts `--bump`, `--yes`, `--board` and `--skip` only
+> (`release.sh:920-928`). A5 shipped by *running* the five source-only gates in
+> ~2s during the preflight rather than by reasoning about their freshness — so
+> there is no staleness to override and no bypass to count. The reasoning above
+> is kept because the *"stop `run`, not just warn in `plan`"* half of it is
+> exactly what shipped.
 
 **A6 · every probe is tri-state, and the pattern is in-house.**
 `check-release-ready.sh:204-215` and `:337-372` are exemplary and
@@ -262,13 +271,25 @@ Five findings, one of them proven by execution. **A0 is not optional and is not
    statuses, exit codes, elapsed times, attempt counts, held intervals, channel
    verdicts. Never: `art` values, `log=` paths, `$HOME`-rooted paths, anything
    from `.ship-local.conf`.
-5. **Out of band, and worth acting on separately: `pre-commit` is not
-   installed.** `.git/hooks/` holds only `commit-msg`; `pre-commit` is on neither
-   `PATH` nor `.venv/bin`. So `.pre-commit-config.yaml`'s **gitleaks** hook and
-   its `tracked-vs-gitignore` sibling have never run here, while `SECURITY.md:233`
-   states *"gitleaks pre-commit hook locally"* as a control. Either run
-   `pre-commit install` or correct the claim — a security doc asserting an
-   uninstalled control is worse than one that doesn't.
+5. **✅ CLOSED — `pre-commit` is installed.** _Verified 20 Sep 2026._
+   `.git/hooks/pre-commit` is pre-commit-generated (`# ID: 138fd403…`),
+   `.venv/bin/pre-commit` exists, and `.pre-commit-config.yaml`'s **gitleaks**
+   hook and its `tracked-vs-gitignore` sibling both run — as the commits from
+   this very truing pass show in their output. A `SessionStart` hook
+   (`.claude/hooks/install-git-guards.sh`) installs it per clone, which is what
+   makes it true on a fresh one too. `SECURITY.md`'s claim is now honest, and
+   its anchor has moved to `:243`.
+
+   > The original finding read: *"`pre-commit` is not installed. `.git/hooks/`
+   > holds only `commit-msg`… So gitleaks and its `tracked-vs-gitignore` sibling
+   > have never run here, while `SECURITY.md:233` states 'gitleaks pre-commit
+   > hook locally' as a control. Either run `pre-commit install` or correct the
+   > claim — a security doc asserting an uninstalled control is worse than one
+   > that doesn't."* It was right, and it was acted on. Preserved because the
+   > standard it sets is the doc's best line, and because **§18 recorded the fix
+   > while §6 and §16 C6 kept the finding** — so the file asserted an
+   > uninstalled control and its own installation at once, which is the failure
+   > mode this bullet is about, one level up.
 
 ## 7 · Tier B — the event log, and why it waits
 
@@ -424,7 +445,7 @@ committed. The `.p8` lives outside the repo entirely.
 Tier A changes nothing a human types except adding `verify-channels.sh`.
 
 Tier B's subcommands are `plan · run · retry · recover · status · verify ·
-abandon` — **seven, and each earns its place** (`recover` and `abandon` landed
+abandon` — plus `board` since 5 Sep 2026: **eight, and each earns its place** (`recover` and `abandon` landed
 after this was written as five). `verify` is not `status --channels` because they are
 different cost classes: one folds a local file instantly, the other makes seven
 network probes.
@@ -466,7 +487,7 @@ alongside the raw `git push --delete` recipe.
 | | Option | Verdict |
 |---|---|---|
 | **A** | Status quo | Rejected — but less decisively than the first draft claimed. Two of three headline failures were reading failures, which Tier A fixes without new machinery |
-| **B** | GoReleaser / JReleaser | Rejected. Covers Homebrew, Snap, GitHub Release, notarization, SBOM — but assumes it owns the conveyor. An Xcode archive, `notarytool`, an rsync behind an SSH agent, a spent build number and a browser approval are not plugin-shaped. Three of seven channels adopted, four hand-driven, **and the order then lives in two places** |
+| **B** | GoReleaser / JReleaser | Rejected. Covers Homebrew, Snap, GitHub Release, notarization, SBOM — but assumes it owns the conveyor. An Xcode archive, `notarytool`, an rsync behind an SSH agent, a spent build number and a browser approval are not plugin-shaped. Three of eight channels adopted, five hand-driven, **and the order then lives in two places** |
 | **C** | Temporal / durable execution | Theoretically exact, rejected on proportion: a server and workers under a process that runs twice a month on one laptop |
 | **D** | Makefile | Rejected. Targets model dependencies, not irreversibility order, and timestamps are the state file D1 refuses |
 | **E** | Python driver | Rejected narrowly — every step, gate and probe is already shell or `curl` |
@@ -592,14 +613,19 @@ reaches that machine or the artefacts it signs.
 
 Say this first, because it changes which chains are worth an attacker's time.
 
-- **No self-hosted runners.** All nine workflows are `ubuntu-latest` /
-  `macos-latest` / `macos-15`. This closes the worst class outright — a fork PR
-  cannot reach hardware.
+- **No self-hosted runners.** All **eleven** workflows are `ubuntu-latest` /
+  `macos-latest` / `macos-15` / `macos-26`. This closes the worst class outright
+  — a fork PR cannot reach hardware. _(Was "all nine" and three runner labels;
+  `mockup-register.yml` and `ratchet-tighten.yml` have since joined, and the Mac
+  cells moved on. Re-measured 20 Sep 2026.)_
 - **Secret-bearing jobs are unreachable from a fork PR.** `snap.yml`'s publish
   job gates on `github.event_name == 'workflow_dispatch'`;
   `install-test.yml`'s key-bearing `full-run` gates on `schedule ||
   workflow_dispatch`. Both carry the reasoning inline.
-- **`contents: read` at top level on 8 of 9 workflows**, with per-job escalation.
+- **`contents: read` at top level on 11 of 11 workflows**, with per-job
+  escalation. _(Was "8 of 9"; the gap named below has been closed — every
+  workflow now carries a column-0 `permissions:` block. Re-measured 20 Sep
+  2026.)_
 - **Trusted Publishing** — no long-lived PyPI token exists to steal. PEP 740
   provenance and SBOM attestations are already generated.
 - **Third-party actions that touch secrets are SHA-pinned** —
@@ -670,21 +696,44 @@ and is not covered.
 ### C3 — Mutable action tags inside the privileged jobs.
 
 The pinning discipline is real but partial: third parties that touch secrets are
-pinned; **`actions/*` are not.** Three jobs matter:
+> ## ✅ CLOSED — all four claims in this subsection are false at HEAD
+>
+> _Verified 20 Sep 2026._ **Do not act on this section.** Every `actions/*` in
+> `release.yml` is SHA-pinned with a version comment (10 of 10; zero `@v` tags),
+> the tap's `update-formula.yml:22` is `actions/checkout@11d5960a… # v4.4.0`, and
+> **`codeql.yml` carries a top-level `permissions:` block** — as do all eleven
+> workflows. The pinning landed in `97f1543b` *"pin every action to a SHA; make
+> the tap verify provenance"* (23 Aug 2026).
+>
+> The reason this matters more than an ordinary stale paragraph: it sat in a
+> **priority-2 row described as "cheap to close" and "should be done before
+> Tier A"**, so the next reader's rational move was to go and do it. This repo
+> has three recorded instances of a session re-deriving shipped work; a doc that
+> ranks finished work as urgent is how the fourth happens.
 
-| Job | Permission | Unpinned action |
-|---|---|---|
-| `release.yml` `publish` | `id-token: write` (PyPI OIDC) | `actions/download-artifact@v4` |
-| `release.yml` `github-release` | `contents: write` | `actions/checkout@v4` |
-| tap `update-formula` | `contents: write` on the tap | `actions/checkout@v4` |
+The original finding is preserved below as the reasoning record.
 
-**The approval hold does not mitigate this.** It gates when the job *starts*; a
-compromised action then runs *after* approval, holding the OIDC token. The
-attacker's whole objective is to be inside that job at the moment the human
-approves — and the human approves on schedule, every release.
+> pinned; **`actions/*` are not.** Three jobs matter:
+>
+> | Job | Permission | Unpinned action |
+> |---|---|---|
+> | `release.yml` `publish` | `id-token: write` (PyPI OIDC) | `actions/download-artifact@v4` |
+> | `release.yml` `github-release` | `contents: write` | `actions/checkout@v4` |
+> | tap `update-formula` | `contents: write` on the tap | `actions/checkout@v4` |
+>
+> **The approval hold does not mitigate this.** It gates when the job *starts*; a
+> compromised action then runs *after* approval, holding the OIDC token. The
+> attacker's whole objective is to be inside that job at the moment the human
+> approves — and the human approves on schedule, every release.
+>
+> `codeql.yml` additionally has **no top-level `permissions:` block**, so it
+> inherits the repository default rather than `contents: read`.
 
-`codeql.yml` additionally has **no top-level `permissions:` block**, so it
-inherits the repository default rather than `contents: read`.
+**And the threat model's second sentence has expired too:** there is no approval
+to be inside the job for. The hold went 23 Aug 2026 (the same day as the pins),
+so "the human approves on schedule, every release" describes nothing that now
+happens. What replaced it is the job graph, asserted by `check-release-ready.sh`'s
+`publish gate` row.
 
 **Mitigations.** SHA-pin `actions/*` in those three jobs at minimum, with the
 same inline-comment discipline the existing pins carry. Keep the
@@ -707,11 +756,26 @@ signs nothing.
 notarisation, no Gatekeeper, no App Sandbox. It is a `pip install` in a trench
 coat.
 
-**Mitigation.** The provenance already exists and is not being checked — PEP 740
-attestations are generated by the publish step. Have the tap workflow verify the
-attestation (`gh attestation verify`, or PyPI's `/integrity` endpoint) before
-writing the formula, and fail closed. This converts the tap from "trusts PyPI"
-to "trusts a signature chained to this repository."
+**Mitigation — ✅ SHIPPED 23 Aug 2026, `97f1543b`.** _Verified 20 Sep 2026; do
+not re-implement._ `update-formula.yml:94` is a *Verify PyPI provenance (PEP
+740)* step that queries
+`https://pypi.org/integrity/bristlenose/<version>/<file>/provenance`, retries
+five times because provenance can lag the file by seconds after publish, and
+**fails CLOSED** at `:115-119` — with the reasoning inline that *"an unreachable
+endpoint is not an absent attestation"* — then rejects an empty bundle at
+`:137`. Driven by `scripts/test-tap-provenance.py`. The tap now trusts a
+signature chained to this repository rather than PyPI's own hash.
+
+> The paragraph this replaces read: *"The provenance already exists and is not
+> being checked… Have the tap workflow verify the attestation… and fail
+> closed."* Preserved because the reasoning is the reason the shipped step has
+> the shape it does — and because it is the C-cluster's clearest case of a
+> mitigation described in the imperative long after it landed.
+
+**One caveat that is still live:** `test-tap-provenance.py` runs in **no
+workflow**. The verification is real and gated; its *proof* is hand-run only.
+Same shape as `test-bundle-budget.py` — see `scripts/README.md` § The gates that
+govern the gates.
 
 ### C5 — The website: the phishing surface, and `CHANGELOG.md` as an injection path.
 
@@ -759,14 +823,20 @@ entirely on a control the user cannot see.
 
 Already covered in §6 and folded in: `.release/` unignored (A0),
 `upload-dmg.sh`'s host+path on stdout, 0600 + `O_NOFOLLOW`, the allowlist on
-what reaches the public release log, and the un-installed `pre-commit` hook that
-`SECURITY.md:233` claims. Two additions from this review:
+what reaches the public release log. _(This sentence also named "the
+un-installed `pre-commit` hook that `SECURITY.md:233` claims" — false at HEAD:
+`.git/hooks/pre-commit` is pre-commit-generated, `.venv/bin/pre-commit` is
+installed, and `.pre-commit-config.yaml` carries `gitleaks` plus
+`check-tracked-vs-gitignore`. A `SessionStart` hook installs it per clone. The
+anchor had also moved to `SECURITY.md:243`. §18 recorded the fix; §6 and this
+section were never amended, so the doc argued with itself for a month.)_ Two additions from this review:
 
 - **The fold never interpolates log content into a shell command**, and the
   driver never `eval`s. C2's rule, applied to the artefact this design adds.
-- **`--allow-stale-gates` and any future bypass records an event.** A bypass
-  nobody counts becomes the default, and a bypass an attacker can induce
-  silently is worse.
+- **Any future bypass records an event.** A bypass nobody counts becomes the
+  default, and a bypass an attacker can induce silently is worse. _(Stated here
+  as `--allow-stale-gates`; that flag was never built — see §5 A5. The rule
+  stands for whatever bypass arrives first.)_
 
 ### Priority
 
@@ -774,7 +844,7 @@ what reaches the public release log, and the un-installed `pre-commit` hook that
 |---|---|---|---|---|
 | 1 | **C1** dependency floor | signing Mac | low — one PyPI package | hash-pinned build env |
 | 2 | **C3** mutable action tags | PyPI OIDC, repo, tap | low if a tag is ever repointed | SHA-pin three jobs |
-| 3 | **C4** tap trusts PyPI's own hash | every `brew` user | free, follows C1/C3 | verify PEP 740 attestation |
+| ~~3~~ | ~~**C4** tap trusts PyPI's own hash~~ | — | — | ✅ **shipped 23 Aug 2026** — `update-formula.yml:94-137`, fails closed |
 | 4 | **C2** injection into the agent | signing Mac | moderate — needs a merged PR or a dep | never build commands from content |
 | 5 | **C5** changelog → HTML | vendor-trusted domain | moderate | confirm the renderer escapes |
 
@@ -801,9 +871,26 @@ misread.*
 | PyPI immutability · tag vs HEAD | § Not already released (tag→HEAD closed by audit §3.1) |
 | Certs, profile expiry, ASC config, `.ship-local.conf` | § Mac channels |
 | CI evidence for HEAD | § CI |
-| `publish hold` still exists | § CI |
+| `publish hold` — **polarity now inverted**: the row reports `ok` on **zero** reviewers and warns when one exists, because a restored hold would break the tag-last ordering `run` encodes (hold removed 23 Aug 2026) | § Publish gate |
 | `skip-worktree` divergence | added 22 Aug, found a second defect on first run |
 | Every `check-*` precondition | inside the irreversible act it guards |
+
+### Release-time liveness and credential probes — added after this design, no home until now
+
+Three preflight rows shipped after this document was written. They share a
+framing it has no section for: **each asks a question about the world outside the
+repo at the moment of release**, which is precisely the class this design argues
+should be probed rather than remembered. Recorded here 20 Sep 2026.
+
+| Row(s) | Asks | Where |
+|---|---|---|
+| `copr auth` · `copr token` | Is the Fedora Copr credential present and unexpired? **Copr went live 28 Aug 2026** (fedora-43-x86_64, serving 0.29.0) and appears nowhere else in this document — it is the eighth channel, `trigger-copr` in `release.yml` is `needs: verify-pypi` rather than `publish` because the build fetches Source0 from the PyPI CDN, and the token **expires 23 Feb 2027** | `check-release-ready.sh:791-833` |
+| `providers live` | For every **shipped** (provider, model): is the key alive, does the model still exist, does our request shape validate? Three real paid calls, pence per run. One run on 4 Sep 2026 found the freshly-moved Claude default double-encoding its tool input and both Gemini picker models soft-retired — a status the vendor's own deprecations page did not carry, so no doc could have caught it | `check-release-ready.sh:897-903` → `scripts/check-providers-live.py` |
+| `advisory workflows` · `<wf> streak` | Has a deliberately non-blocking workflow been red for `ADVISORY_STREAK_MAX=3` runs on `main`? **This closes §1's incident #7** ("Perf red for four runs, nobody knew") — the one symptom §1 classes as genuinely unrecorded rather than misread | `check-release-ready.sh:839-874`, `WF_ADVISORY` in `project.conf:91` |
+
+The last row is worth noting against §1's own table: of the three symptoms it
+triaged, two were *reading* failures and one was a recording failure. The
+recording failure is the one that needed a new mechanism, and it got one.
 
 ### Moving into a script — the gaps this review found
 
@@ -812,7 +899,7 @@ misread.*
 | **A8** | *"Check nothing-to-ship first, because it is cheap and it is common"* + the exact `git diff --stat -- bristlenose/ frontend/` | Phase 1's cheapest test has **zero** coverage. It decides whether a release should happen at all, and it is a one-line diff. Prose at 11pm is the wrong place for it |
 | **A9** | *"`SIGN_IDENTITY` is not optional. Unset it defaults to `-` and six gates go off, no warning, and you find out 35 minutes later at the upload"* | Measured true: `build-all.sh:37` defaults to `-`, and `:110`'s `if [ "$SIGN_IDENTITY" != "-" ]` skips the identity, profile and notary checks. **`build-dmg.sh` already refuses ad-hoc outright** — so this is sibling inconsistency, not a hard problem |
 | **A10** | *"New CLI surface must reach `README.md`, `man/bristlenose.1` and the website's `docs-src/cli.md`"*, plus the roff-normalisation gotcha | The *judgement* (does this flag need documenting?) stays. The *parity* (a flag in `--help` absent from three surfaces) is a diff. The gotcha — `sed 's/\\-/-/g'` then strip `\fB` escapes, or every flag reads as missing — is a script detail, and cost a cycle on 31 Jul |
-| **A6** | The seven-channel probe table · the two Snap probes · the expiry clocks · *"I can't probe this is itself a claim"* | Already A6. That last one is encoded by the table being exhaustive rather than by a reminder |
+| **A6** | The eight-channel probe table · the two Snap probes · the expiry clocks · *"I can't probe this is itself a claim"* | Already A6. That last one is encoded by the table being exhaustive rather than by a reminder |
 | **A2** | *"Capture the delivery UUID when `upload-testflight.sh` prints it — the one probe you cannot reconstruct later"* | A remembered value in a doc that preaches probe-don't-remember. `art` closes it |
 | Tier B | Order · bump-commit-tag as one unit · tag **after** the commit · verify `tag == HEAD` · two pushes never `--tags` | The driver's `case`. Until Tier B, these stay prose — which is the honest cost of deferring it |
 | Tier B | Consequence printed at the irreversible line (DUX rule 4) | Needs the driver |
@@ -1004,10 +1091,20 @@ them from the run, where the act occurs.
 is that abandoning a tag must treat the website deploy as part of the decision;
 that is now printed with the recipe rather than remembered.
 
-**Exit codes are a vocabulary**: `0` ready · `1` not ready · `2` usage · `75`
-`EX_TEMPFAIL` for held. Held is not an error — a release waiting on a person is
-behaving correctly — but it must be distinguishable from `0`, or
-`release.sh … && deploy-website` fires on a release that has published nothing.
+**Exit codes are a vocabulary**: `0` ready · `1` not ready · `2` usage ·
+**`3` cannot safely proceed on an irreversible step** · `75` `EX_TEMPFAIL`.
+`75` must be distinguishable from `0`, or `release.sh … && deploy-website`
+fires on a release that has published nothing.
+
+> _Corrected 20 Sep 2026._ This listed **four** codes and glossed `75` as
+> *"held — a release waiting on a person"*. There are **five**, and `75` no
+> longer means held: with the approval gone nothing waits on a person, and the
+> code now means *every act is done, verification is pending* — the ~40 minutes
+> in which PyPI, the GitHub Release, Homebrew and Snap are legitimately absent
+> (`release.sh:48-53`, `:1491`, `:1504`). `3` was missing entirely, and it is the
+> one that guards an act that cannot be un-performed (`:1375`, `:1388`, `:1412`,
+> `:1418`). §7 of this same document already gave the correct five-code list —
+> so the doc held two answers, and this was the one a reader met last.
 
 ### The step table's structural invariants are pinned
 

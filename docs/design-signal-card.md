@@ -453,10 +453,32 @@ at build time rather than discovered.
 
 | | change | note |
 |---|---|---|
-| H | admission rule: keep `dedupeSignals`' novel-quote test, add pairwise Jaccard clustering, **fold rather than delete** | spike §7. Threshold ~0.6, not its 0.8 — see §4 |
-| I | editorial quote selection, then sort `(pid, time)` | §6. **Gap: the rule selects quotes supporting the *sentiment* label, and a codebook card has none.** Needs an equivalent — support the `pattern`, or fall back to intensity |
+| H | admission rule: keep `dedupeSignals`' novel-quote test, add pairwise Jaccard clustering, **fold rather than delete** | spike §7. **DECIDED: 0.6**, not its 0.8 — see below |
+| I | editorial quote selection, then sort `(pid, time)` | §6. **DECIDED: a codebook card supports its `pattern`.** See below |
 | J | sentiment chip label + vocabulary | `label_rule.py` is written and validated; port it server-side so the label is on the wire. **Three new i18n keys** — see below |
 | K | flag as a chip prefix — **one chip, not two** | degrades cleanly; see below |
+
+**Item I — a codebook card's quotes support its `pattern`.** Decided 20 Sep
+2026. `pattern` (success / gap / tension / recovery) is already generated per
+card, and Step 2 already classifies each quote as satisfying or violating its
+tag — so the supporting set is the quotes matching the card's pattern, and the
+reserved slot goes to the strongest quote that does not. No new model output,
+and the rule reads the same on both card kinds: *most of the quotes carry the
+finding, one is held for the voice that argues with it.*
+
+**Item H — the fold threshold is 0.6.** Decided 20 Sep 2026, against the
+spike's 0.8. Its 0.8 is read off a genuinely empty band at 0.7–0.9 and is the
+better-evidenced number in the abstract — but **both real pairs raised in
+review sat at 0.67**, under that cut, and would have stayed as separate cards
+saying the same thing. Measured on the corpus, 0.6 folds 13 cards where 0.8
+folds 7. Nothing is deleted either way: the losing card survives as a named
+alternate reading (spike §7).
+
+**§8.2 — elaborate after the filter.** Decided 20 Sep 2026. The filter tests
+quote sets, not prose, so it runs first: **93 titles rather than 119**, and the
+26 cut cards never have one written or read. The cost is that the ranking
+cannot use the title, only the score — accepted, because the score is what
+orders the cards today and §8.4 keeps it.
 
 **J needs three new locale keys, and nothing will tell you if you forget.**
 The seven sentiment values already have entries in `enums.json`. `Positive`,

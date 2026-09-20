@@ -1,12 +1,18 @@
 ---
 status: current
-last-trued: 2026-08-14
-trued-against: the shipped uploader (upload-testflight.sh + check-pkg-shippable.sh, two live uploads: 0.25.1/2450, 0.25.3/2472)
+last-trued: 2026-09-20
+trued-against: the altool contract re-verified line by line; --probe / BN_PROBE_WINDOW_S / the sink recorded; shipping build 0.29.0 (3067)
 ---
 
 # Scripted TestFlight upload — the gate, then one command
 
-> **Truing status:** As-built record (trued 2026-08-14). Everything this doc
+> **Truing status:** As-built record (trued 2026-09-20; previously 2026-08-14).
+> **The observed `altool` contract in this doc was re-verified line by line on
+> 20 Sep 2026 and is exactly what the scripts still do — do not re-derive it.**
+> Three surfaces that shipped after the 14 Aug pass are recorded in §Shipped
+> since, below. Line anchors throughout the body have rotted by 100–200 lines as
+> the scripts grew; treat them as approximate and search the quoted string
+> instead. Everything this doc
 > planned as Phase 1/2/3 shipped — `check-pkg-shippable.sh`,
 > `upload-testflight.sh`, `test-check-pkg-shippable.sh` — and has uploaded two
 > real builds. The plan text is preserved; §As-built delta below records the
@@ -519,3 +525,34 @@ fail", "stop paying Apple twice".
   "Ship a TestFlight build" job, same commit
 - [design-desktop-build-orchestration.md](design-desktop-build-orchestration.md) — how the
   `.pkg` gets built
+
+## Shipped since this doc was written — recorded 20 Sep 2026
+
+Three surfaces post-date the 14 Aug pass and appeared nowhere in the body.
+
+**`--probe <version>`** (`upload-testflight.sh:92-109`). Asks App Store Connect,
+via the API key, whether a build of that version exists: `0` delivered · `1`
+absent · `3` the probe failed. It is the TestFlight **channel probe** —
+`release.sh:283-298` calls it, and `project.conf` lists `testflight` under
+`CHANNELS_UNPROBEABLE` no longer being true of the uploader itself. This is what
+lets a resumed run answer *"has this build already gone out?"* rather than
+trusting its own ledger about an act that cannot be un-performed.
+
+**`BN_PROBE_WINDOW_S`** (`:176-180`), and it exists because of a near-miss worth
+keeping. During the 0.29.0 release the probe asked ASC seconds after a
+successful upload, got an empty list because the build index had not yet
+propagated, and **offered to re-upload a build number that is spent forever**.
+Only Apple's own `DUPLICATE` refusal stopped it — which is luck, not a gate. So
+when the answer *would* be "absent", the probe keeps looking for
+`BN_PROBE_WINDOW_S` seconds before saying so. **A single negative read is not
+proof of absence** when the thing you are about to do is irreversible; that is
+the same distinction `probe_done`'s `3`-is-not-`1` encodes one level up
+(`desktop/scripts/REPORT-STYLE.md` § exit codes).
+
+**The sink** (`:66-68`, `:405`). The uploader sources `sink.sh` — with a no-op
+fallback, so it runs unchanged outside a release — and emits
+`sink_line clock name=testflight build= expires= confirmed=`. The expiry is read
+from Apple's own `EXPIRATION-DATE` rather than computed, which is why the
+90-day clock in `docs/release-channels.md` is authoritative rather than a
+reconstruction. That line is what puts the TestFlight clock on the release
+board (`docs/design-release-board.md` §1.1).

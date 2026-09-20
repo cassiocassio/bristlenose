@@ -564,3 +564,50 @@ Two more surfaced that no plan could have listed:
   side effect of a rename. No gate reports this: `check-locales.py` compares key
   presence, not value freshness.
 - **The `analysis-heatmap` class** — see row 4 above.
+
+## 11. Verified in the app — 21 Sep 2026
+
+The mechanical gates were green from Phase 1 onward (pytest 4698, Swift 1463,
+vitest 1792, e2e 44, ruff, `check-locales.py`, `tsc`). None of them can see what
+the pane *says*, so the bundled `.app` was built at two commits and compared.
+
+| Surface | pre-rename (`8ae8c534`) | post (`02381817`) |
+|---|---|---|
+| Sidebar lens rail | Analysis | **Signals** |
+| Page heading | Analysis | **Signals** |
+| Left panel header | Signals | Signals |
+| Window subtitle | 13 Signals | 13 Signals |
+
+**The pre-rename screenshot is the argument for the whole change.** That build
+says *Signals* in its own left panel header and in its own window subtitle,
+while the rail and the heading beside them say *Analysis* — three surfaces of
+one lens, disagreeing with each other, in a shipped build.
+
+**The doubling flagged in §5 is a non-issue, and only looking could show that.**
+Phase 1 warned that the window subtitle and the page heading would both read
+"Signals" where they had read "Signals" and "Analysis". In the app they do not
+collide: the subtitle carries a count ("13 Signals") and the heading does not,
+so they read as a count and a title rather than as the same word twice. No
+change needed. Recorded because the concern was legitimate and the resolution
+is evidence, not reasoning.
+
+Both builds are DEBUG, `sandbox=on`, `sidecar=bundled`, so the sidecar is the
+real bundled one rather than a dev server — the SPA, the locale files and the
+route all came through the shipped path.
+
+## 12. Not done here — release
+
+The rename is on `main` and in **no released build**. Every channel is still
+0.29.1; `main` is 488 commits past that tag, of which this work is six.
+
+- **The website commit (`12981ac`) stays local until the release.** It documents
+  a lens called Signals; publishing it before a build exists that says so would
+  tell a reader that ⌘5 opens Signals while their app says Analysis. Nothing
+  auto-deploys — no workflows in that repo, `deploy.sh` is the only path — so
+  the ordering is enforced by there being no trigger.
+- **The changelog entry is release-time work and is not written.** `release.sh`
+  *commits* `CHANGELOG.md` during its bump step but does not compose it, and
+  there is no Unreleased section to add to. The entry will cover 488 commits,
+  not six.
+- **Bump kind: minor.** Settled in §6.2 — the rename earns no version of its
+  own and rides with whatever else the minor carries.

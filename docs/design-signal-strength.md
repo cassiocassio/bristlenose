@@ -19,10 +19,13 @@ reading on, because it changes which half of the note is still owed:
   measurement that *"Agreement takes 3 distinct values and Intensity 4 … two of
   the four are captions, not columns"* (`54fdc615`) — which predates this note
   and is §2's premise rather than its finding.
-- **Not adopted.** `bristlenose/analysis/metrics.py` is unchanged —
-  `concentration_ratio`, `simpsons_neff`, `composite_signal` and
-  `adjusted_residual`, exactly as §2 describes them. Nothing in `bristlenose/`
-  computes a hypergeometric or a Hill number.
+- **Not adopted.** `bristlenose/analysis/metrics.py` still carries
+  `concentration_ratio`, `composite_signal` and `adjusted_residual` exactly as
+  §2 describes them, and nothing in `bristlenose/` computes a hypergeometric.
+- **One piece taken on its own, 20 Sep 2026.** `simpsons_neff` is now the
+  inverse Simpson index — see §2d, which is the only part of §2 that no longer
+  describes HEAD. It needed nothing else from the proposal, and it was a
+  user-visible wrong number rather than a ranking preference.
 
 **The gap that leaves, stated plainly: the lens now leads with a single hero
 number, and that number is `compositeSignal`** — the one §2e shows has no
@@ -156,7 +159,22 @@ wherever a column carries the whole matrix. MEASURED: `z = 0.00` in all 69
 one-column cards. It states the same structural fact more honestly than `1.00`
 does, and it still ranks nothing. **Swapping lift for z is not the fix.**
 
-### 2d. `simpsons_neff` overstates breadth, on shipped cards, visibly
+### 2d. `simpsons_neff` overstates breadth — **FIXED 20 Sep 2026**
+
+> **This one is no longer a proposal.** It needed nothing else from the note,
+> so it was taken on its own: `simpsons_neff` is now the inverse Simpson index
+> `1 / Σ pᵢ²`, bounded by the people who actually spoke. MEASURED across the
+> corpus, `n_eff > people who spoke` went **14 → 0** and breadth-over-1.00 went
+> **1 → 0**; 29 of 103 cards (28%) saw their **Agree.** figure change, always
+> downward, the largest 10.00 → 3.57. Card order is substantially preserved
+> (Spearman +0.88 … +1.00 per project; the top card moves in 2 of 7). Seven
+> sentiment cards move `Win` → `Success`, which is the same correction showing
+> up in `classify_flag`'s breadth bar. The locale strings did not need to
+> change — `1 / Σ pᵢ²` *is* a Simpson's diversity measure, so
+> `analysis.agreeTitle` and `help.signals.agreementDesc` became more true
+> rather than less. The paragraphs below describe the defect as it stood.
+
+#### The defect, as it stood
 
 It is the *unbiased population estimator* `N(N−1)/Σnᵢ(nᵢ−1)` — it estimates the
 diversity of the population the quotes were drawn from, and is **not bounded by

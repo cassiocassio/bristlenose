@@ -101,24 +101,35 @@ def concentration_ratio(
 
 
 def simpsons_neff(participant_counts: Sequence[int]) -> float:
-    """Effective number of voices (Simpson's diversity index).
+    """Effective number of voices — the inverse Simpson index, 1 / Σ pᵢ².
 
     Measures how evenly quotes are distributed across participants.
-    9 quotes from 9 people → N_eff ≈ 9 (broad agreement).
+    9 quotes from 9 people → N_eff = 9 (broad agreement).
     9 quotes from 1 person → N_eff = 1 (one person's rant).
 
-    Uses the unbiased form: N*(N-1) / Σ ni*(ni-1).
+    **Bounded above by the number of people who actually spoke**, which is what
+    the card claims: the figure is rendered as "Agree. N" under the tooltip
+    "effective number of voices", and a number of voices cannot exceed the
+    voices there were.
+
+    This used to be the *unbiased* form, ``N*(N-1) / Σ nᵢ*(nᵢ-1)`` — an
+    estimator of the diversity of the population the quotes were drawn from,
+    which is a different question and is not bounded by the sample's richness.
+    It agreed with the two cases named above and diverged everywhere between
+    them: ``[2,1,1,1]`` — four people — read **10.00**, and on an
+    eight-participant study that is more effective voices than the study had
+    participants.  Measured 13 Sep 2026 across the trial corpus, 14 of 103
+    shipped cards overstated, 7 of them reading breadth 1.00 ("every
+    participant") on fewer people than that, and one pushing the breadth factor
+    of ``composite_signal`` above 1.0 — a term that is supposed to be a share.
+    The ``Math.min(100, ...)`` clamp on the card's bar (``agreePct`` in
+    ``AnalysisPage.tsx``) exists because the overflow was noticed there and
+    papered over rather than fixed here.
     """
-    n = 0
-    sum_ni_ni_minus_1 = 0
-    for ni in participant_counts:
-        n += ni
-        sum_ni_ni_minus_1 += ni * (ni - 1)
-    if n <= 1:
-        return float(n)
-    if sum_ni_ni_minus_1 == 0:
-        return float(n)  # perfect diversity — every quote from a different person
-    return (n * (n - 1)) / sum_ni_ni_minus_1
+    n = sum(participant_counts)
+    if n <= 0:
+        return 0.0
+    return (n * n) / sum(ni * ni for ni in participant_counts)
 
 
 def mean_intensity(intensities: Sequence[int]) -> float:

@@ -68,15 +68,18 @@ class TestSimpsonsNeff:
         assert simpsons_neff([9]) == pytest.approx(1.0)
 
     def test_two_equal(self) -> None:
-        """Two participants with equal counts → N_eff ≈ 2.25 (unbiased form)."""
-        # N=10, Σni(ni-1) = 20+20 = 40, N*(N-1)/40 = 90/40 = 2.25
-        assert simpsons_neff([5, 5]) == pytest.approx(2.25)
+        """Two participants with equal counts → exactly 2 voices."""
+        # 1/Σp² = N²/Σnᵢ² = 100/(25+25) = 2.0
+        # Pinned 2.25 until 20 Sep 2026, under the unbiased form — more
+        # effective voices than the two people who spoke.
+        assert simpsons_neff([5, 5]) == pytest.approx(2.0)
 
     def test_skewed(self) -> None:
         """One dominant participant — N_eff should be low."""
         # 7 from p1, 1 from p2, 1 from p3 — total 9
-        # N*(N-1) = 72, Σni(ni-1) = 42+0+0 = 42 → 72/42 ≈ 1.714
-        assert simpsons_neff([7, 1, 1]) == pytest.approx(72 / 42)
+        # N²/Σnᵢ² = 81/(49+1+1) = 81/51 ≈ 1.588 — still three people, but the
+        # dominant one carries most of the weight.  Was 72/42 ≈ 1.714.
+        assert simpsons_neff([7, 1, 1]) == pytest.approx(81 / 51)
 
     def test_empty(self) -> None:
         """Empty list → 0."""
@@ -88,8 +91,11 @@ class TestSimpsonsNeff:
 
     def test_three_unequal(self) -> None:
         """3 participants: [4, 3, 2] — total 9."""
-        # N*(N-1) = 72, Σni(ni-1) = 12+6+2 = 20 → 72/20 = 3.6
-        assert simpsons_neff([4, 3, 2]) == pytest.approx(3.6)
+        # N²/Σnᵢ² = 81/(16+9+4) = 81/29 ≈ 2.793
+        # Pinned 3.6 until 20 Sep 2026 — three people, 3.6 voices.  The two
+        # cases the docstring names ([1]*9 and [9]) never moved; the old form
+        # and this one agree at the extremes and diverge everywhere between.
+        assert simpsons_neff([4, 3, 2]) == pytest.approx(81 / 29)
 
 
 # ---------------------------------------------------------------------------
@@ -190,3 +196,26 @@ class TestAdjustedResidual:
     def test_col_equals_grand(self) -> None:
         """When col_total == grand_total, denom factor (1 - col/grand) = 0 → 0."""
         assert adjusted_residual(10, 20, 100, 100) == 0.0
+
+
+class TestSimpsonsNeffIsBoundedByRichness:
+    """``n_eff`` is rendered to the researcher as "Agree. N" under the tooltip
+    "effective number of voices".  A number of voices cannot exceed the number
+    of people who spoke — the outcome, not the formula, is what is pinned here.
+    """
+
+    @pytest.mark.parametrize(
+        "counts",
+        [[2, 1, 1, 1], [5, 5], [4, 3, 2], [2, 2], [2, 1], [3, 2, 2, 1], [2, 1, 1]],
+    )
+    def test_never_exceeds_participants_who_spoke(self, counts: list[int]) -> None:
+        assert simpsons_neff(counts) <= len(counts) + 1e-9
+
+    def test_the_card_that_shipped_this_wrong(self) -> None:
+        """Rockclimbing, four people, an eight-participant study.
+
+        The card read "Agree. 10.0" — more effective voices than the study had
+        participants — so the bar beside it saturated and ``agreePct``'s
+        ``Math.min(100, ...)`` clamp hid it.
+        """
+        assert simpsons_neff([2, 1, 1, 1]) <= 4.0

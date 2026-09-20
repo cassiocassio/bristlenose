@@ -1,4 +1,32 @@
+---
+status: partial
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20
+---
+
 # The Hello World Study — An End-to-End Architecture Walkthrough
+
+## Changelog
+
+- _2026-09-20_ — trued up: nine stale prose counts corrected against the code
+  that owns them (JS modules 23→26 in two places, SQLite tables 24→29 in two,
+  CSS files 42→67 in two and 65→67 in the Part 15 table, React components
+  60/16→61/18, and a hardcoded `llm_model` literal that is a registry lookup).
+  A self-contradiction removed: Part 8 described `_transform_report_html()`
+  running at request time while Part 8.4 said 115 lines later that it no longer
+  exists. The CLI command list went from seven commands to the real eleven.
+  Part 11 bannered as the island-era record — it describes a lens retired on
+  13 Sep. Anchors: `theme_assets.py` `_JS_FILES` / `_THEME_FILES`,
+  `server/models.py`, `config.py:139`; commits `aacf3e88`, `e43d8701`,
+  `54fdc615`, `96323e58`, `9e9af6fd`.
+- _2026-08-19_ — Part 15's table corrected. **Its banner claimed the numbers
+  were fixed; that was true of the table and of nothing else**, which is how
+  four copies of the JS count survived the pass that fixed the fifth.
+
+**Status is `partial`.** Parts 1–5 and 7 read accurately. Part 11 is bannered
+as history. The banner's own open item — the LLM prompt texts in Parts 3–4 and
+the SQL in §8.2 — is still not re-verified, and §8.2 is now additionally known
+to omit five tables.
 
 > **What this document is:** A trace of one tiny study through every layer of Bristlenose — from raw interview recordings all the way to a clickable quote in your browser and back again when you tag it. Every Python function, every LLM prompt, every database row, every React component, every CSS token.
 >
@@ -52,7 +80,7 @@ This single command triggers a 12-stage pipeline, 4 LLM calls, a SQLite import, 
 
 **What happens:** Bristlenose figures out you want to run the full pipeline.
 
-**Why:** The CLI supports multiple commands (`run`, `serve`, `analyze`, `transcribe`, `status`, `doctor`, `configure`). But the most common thing people do is point it at a folder. So if the first argument is a directory that exists, `run` is injected automatically.
+**Why:** The CLI supports multiple commands — as of 20 Sep 2026 `analyze`, `codebooks`, `configure`, `doctor`, `pipeline`, `run`, `serve`, `status`, `transcribe`, `use` (read the live list from `bristlenose --help`, not from here). But the most common thing people do is point it at a folder. So if the first argument is a directory that exists, `run` is injected automatically.
 
 ```python
 # bristlenose/cli.py — auto-inject 'run' if first arg is a directory
@@ -80,7 +108,7 @@ The key settings for our study:
 # bristlenose/config.py (simplified)
 class BristlenoseSettings(BaseModel):
     llm_provider: str = "anthropic"          # Which LLM to use
-    llm_model: str = "claude-sonnet-4-20250514"
+    llm_model: str = PROVIDERS["anthropic"].default_model
     anthropic_api_key: str = ""              # From .env or ANTHROPIC_API_KEY
     llm_concurrency: int = 3                 # Max parallel LLM calls
     llm_max_tokens: int = 64000              # Output token ceiling
@@ -959,7 +987,7 @@ for theme in theme_groups:
 # 6. Data injection (JavaScript globals)
 parts.append(f"<script>var BRISTLENOSE_VIDEO_MAP = {json.dumps(video_map)};</script>")
 
-# 7. Concatenated JS (23 modules in dependency order)
+# 7. Concatenated JS (26 modules in dependency order)
 parts.append(f"<script>{_get_report_js()}</script>")
 
 # 8. Write to disk
@@ -1014,7 +1042,7 @@ Alice's Python quote becomes:
 
 ### 6.3 CSS: The Design Token System
 
-**What happens:** 42 CSS files are concatenated in atomic-design order into a single stylesheet.
+**What happens:** 67 CSS files are concatenated in atomic-design order into a single stylesheet.
 
 **Why:** Design tokens ensure visual consistency. Change `--bn-sentiment-delight` in one place, and every delight badge across every page updates. The atomic hierarchy (tokens → atoms → molecules → organisms → templates) means styles compose predictably.
 
@@ -1073,7 +1101,7 @@ _THEME_FILES = [
 ]
 ```
 
-### 6.4 JavaScript: 23 Modules in Dependency Order
+### 6.4 JavaScript: 26 Modules in Dependency Order
 
 **What happens:** Vanilla JavaScript modules provide all interactivity in the static HTML report.
 
@@ -1150,7 +1178,7 @@ hello-world-study/
     ├── people.yaml                                      # Editable participant registry
     │
     ├── assets/
-    │   ├── bristlenose-theme.css                        # 42 concatenated CSS files
+    │   ├── bristlenose-theme.css                        # 67 concatenated CSS files
     │   ├── bristlenose-logo.png
     │   ├── bristlenose-logo-dark.png
     │   └── bristlenose-player.html                      # Popout video player
@@ -1222,7 +1250,7 @@ def create_app(
 
     # 1. Create SQLite database
     engine = get_engine(db_url)     # SQLite with WAL mode, foreign keys enforced
-    init_db(engine)                 # Create 24 tables if they don't exist
+    init_db(engine)                 # Create 29 tables if they don't exist
 
     # 2. Import pipeline data
     _import_on_startup(app, project_dir)  # JSON → SQLite (idempotent)
@@ -1241,15 +1269,17 @@ def create_app(
     app.mount("/media", StaticFiles(directory=project_dir))     # Video/audio files
     app.mount("/report", StaticFiles(directory=output_dir))     # HTML report
 
-    # 5. Inject React mount points into HTML
-    # (happens at request time via _transform_report_html())
+    # 5. Mount the SPA
+    # (_transform_report_html() was deleted — see Part 8.4. The regex
+    #  transform this line described is gone; `_mount_prod_report` serves
+    #  the React bundle and fails loud if it is missing.)
 
     return app
 ```
 
 ### 8.2 SQLite: The Domain Schema
 
-**What happens:** Pipeline JSON data is imported into a 24-table SQLite database.
+**What happens:** Pipeline JSON data is imported into a 29-table SQLite database.
 
 **Why:** The static HTML report stores researcher state (stars, tags, edits) in localStorage — which is browser-specific and ephemeral. SQLite provides a persistent, queryable store that survives browser clears, works across devices (via the server), and enables features like the codebook panel and AutoCode that need relational queries.
 
@@ -1862,6 +1892,27 @@ For our Hello World study, AutoCode might propose:
 
 ## Part 11: The Analysis Page — Signal Detection
 
+> **Superseded 13–20 Sep 2026; kept as the island-era record.** This part
+> describes the lens as a matrix of sections × sentiments rendered as two flat
+> grids, with heatmaps in the cards column and `<SignalCard>` taking six props
+> keyed on `location + sentiment`. All of that was retired. A card is now a
+> **(location × tag group)** cell — sentiment being one group among codebooks —
+> cards group under location headings with sections and themes interleaved,
+> heatmaps moved to a sibling `InspectorPanel`, and the component takes a single
+> `UnifiedSignal`. Nothing below mentions de-duplication, folding, elaboration,
+> the hero chip or the sentiment-label rule, because none existed when it was
+> written.
+>
+> The current drawing is [`design-signal-card.md`](design-signal-card.md); the
+> navigation and grouping decisions are in
+> [`design-decisions.md`](design-decisions.md). Anchors: `aacf3e88`, `e43d8701`,
+> `54fdc615`, `96323e58`, `9e9af6fd`.
+>
+> Left in place rather than rewritten: the pipeline half of this part — how
+> signals are *computed* — is still broadly accurate, and the island-era
+> component shapes are the before-picture for a migration this document exists
+> to explain.
+
 ### 11.1 What Signals Are
 
 **Plain language:** A signal is a statistically notable pattern — like "frustration is unusually concentrated in the checkout section." The analysis page surfaces these automatically so researchers don't have to manually count quotes.
@@ -2149,6 +2200,19 @@ Click ★ ─── React state update ──────────►  { isSt
 
 For our Hello World study (2 sessions, ~2 minutes total):
 
+> **Every number below is read from code, not remembered.** On 20 Sep 2026
+> eight counts in this document were stale: JS modules said 23 against 26 in
+> two places, tables said 24 against 29 in two, CSS said 42 in two places and
+> 65 here against 67, and components said 60/16 against 61/18. The 19 Aug
+> banner at the top claims the numbers were corrected — true of *this table*
+> and of nothing else in the file, which is how four copies of the JS count
+> survived a pass that fixed the fifth. A count in prose is a count nothing
+> recomputes. Recompute:
+>
+> ```bash
+> cd /Users/cassio/Code/bristlenose && .venv/bin/python -c "from bristlenose.stages.s12_render.theme_assets import _JS_FILES, _THEME_FILES; print('js', len(_JS_FILES), 'css', len(_THEME_FILES))"; grep -c '__tablename__' bristlenose/server/models.py
+> ```
+
 | Metric | Value |
 |--------|-------|
 | **Input files** | 3 (2 .mp4, 1 .vtt) |
@@ -2163,9 +2227,9 @@ For our Hello World study (2 sessions, ~2 minutes total):
 | **Themes** | ~1 |
 | **SQLite tables** | 29 |
 | **SQLite rows** | ~50 |
-| **CSS files concatenated** | 65 (`_THEME_FILES`) |
+| **CSS files concatenated** | 67 (`_THEME_FILES`) |
 | **JS modules loaded** | 26 report, 6 transcript (`_JS_FILES` / `_TRANSCRIPT_JS_FILES`) — **static render only**; the SPA loads one bundle |
-| **React components available** | 60 in `components/`, 16 in `islands/` |
+| **React components available** | 61 in `components/`, 18 in `islands/` |
 | **Total pipeline time** | ~13 seconds |
 
 For a real 10-session study (~30 min each), multiply tokens by ~50×, cost by ~50×, and time by ~5× (LLM calls dominate, and they're concurrent).

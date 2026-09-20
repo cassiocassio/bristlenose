@@ -562,6 +562,12 @@ struct ContentView: View {
                 // and forcing `titleVisibility = .hidden` was what suppressed
                 // the native subtitle.
                 .navigationTitle(windowTitle)
+                // The report's reading-measure floor, reported by the SPA.
+                // See `DetailFloor` for why native applies rather than derives.
+                .modifier(DetailFloorModifier(
+                    webMinWidth: bridgeHandler.detailMinWidth,
+                    showingReport: detailPaneKind == .report
+                ))
                 // Subtitle composition lives in `WindowSubtitle.swift` — it has
                 // to observe `liveData` itself to tick during a run, and its
                 // precedence rules are testable decisions, not view code.

@@ -51,6 +51,8 @@ export type BridgeMessage =
       leftOpen: boolean;
       rightOpen: boolean;
       inspectorOpen: boolean;
+      /** Width the wished arrangement needs — see SidebarStore `wantedWidth`. */
+      minWidth: number;
     }
   | {
       type: "codebook-focus";
@@ -299,8 +301,9 @@ export function postPanelState(
   leftOpen: boolean,
   rightOpen: boolean,
   inspectorOpen: boolean,
+  minWidth: number,
 ): void {
-  postNativeMessage({ type: "panel-state", leftOpen, rightOpen, inspectorOpen });
+  postNativeMessage({ type: "panel-state", leftOpen, rightOpen, inspectorOpen, minWidth });
 }
 
 /**

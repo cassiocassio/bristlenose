@@ -27,7 +27,15 @@ import {
   setTagsWidth,
   enterSoloMode,
   exitSoloMode,
+  fitPanels,
+  requiredWidth,
+  setLayoutContext,
+  panelFit,
+  wantedWidth,
+  CONTENT_FLOOR_PX,
+  MINIMAP_WIDTH_PX,
 } from "./SidebarStore";
+
 import { renderHook, act, waitFor } from "@testing-library/react";
 
 // Mock the API module so fire-and-forget PUTs don't hit the network.
@@ -617,3 +625,154 @@ describe("solo mode", () => {
     expect(result.current.savedTagFilter).toBeNull();
   });
 });
+
+// ── Fit to width ──────────────────────────────────────────────────────────
+
+// CONTENT_FLOOR_PX / MINIMAP_WIDTH_PX are pinned to the CSS tokens they name by
+// tests/test_sidebar_floor_tokens.py — from pytest, because this side has no
+// node types for a file read and Vite refuses a `?raw` import from outside
+// frontend/ (the same reason safeUrl.test.ts imports its fixture).
+
+describe("fitPanels — closes left, then tags, then minimap", () => {
+  const wish = {
+    tocWanted: true,
+    tagsWanted: true,
+    tocWidth: 240,
+    tagsWidth: 280,
+    rightColumn: true,
+  };
+  // floor 368 + 240 + 280 + 80
+  const all = CONTENT_FLOOR_PX + 240 + 280 + MINIMAP_WIDTH_PX;
+
+  it("shows everything when it fits", () => {
+    expect(fitPanels({ ...wish, available: all })).toEqual({
+      tocOpen: true,
+      tagsOpen: true,
+      minimapVisible: true,
+    });
+  });
+
+  it("drops the left panel first", () => {
+    expect(fitPanels({ ...wish, available: all - 1 })).toEqual({
+      tocOpen: false,
+      tagsOpen: true,
+      minimapVisible: true,
+    });
+  });
+
+  it("then the tag sidebar", () => {
+    expect(fitPanels({ ...wish, available: all - 240 - 1 })).toEqual({
+      tocOpen: false,
+      tagsOpen: false,
+      minimapVisible: true,
+    });
+  });
+
+  it("then the minimap, and never the centre", () => {
+    expect(fitPanels({ ...wish, available: CONTENT_FLOOR_PX })).toEqual({
+      tocOpen: false,
+      tagsOpen: false,
+      minimapVisible: false,
+    });
+    // Below the floor there is nothing left to close: the fit is the same.
+    expect(fitPanels({ ...wish, available: 100 }).minimapVisible).toBe(false);
+  });
+
+  it("closes only what is needed — a left panel alone survives where both would not", () => {
+    const one = fitPanels({ ...wish, tagsWanted: false, available: CONTENT_FLOOR_PX + 240 + MINIMAP_WIDTH_PX });
+    expect(one.tocOpen).toBe(true);
+  });
+
+  it("a lens without the right column counts neither tags nor minimap", () => {
+    // tagsOpen is a persisted wish that outlives the Quotes lens.
+    const fit = fitPanels({ ...wish, rightColumn: false, available: CONTENT_FLOOR_PX + 240 });
+    expect(fit).toEqual({ tocOpen: true, tagsOpen: false, minimapVisible: false });
+  });
+
+  it("an unmeasured width (Infinity) closes nothing", () => {
+    expect(fitPanels({ ...wish, available: Infinity }).tocOpen).toBe(true);
+  });
+});
+
+describe("requiredWidth — the wish, not the fit", () => {
+  it("is floor + wanted panels + minimap regardless of available", () => {
+    const input = { tocWanted: true, tagsWanted: true, tocWidth: 240, tagsWidth: 280, rightColumn: true, available: 100 };
+    expect(requiredWidth(input)).toBe(CONTENT_FLOOR_PX + 240 + 280 + MINIMAP_WIDTH_PX);
+    expect(requiredWidth({ ...input, tocWanted: false })).toBe(CONTENT_FLOOR_PX + 280 + MINIMAP_WIDTH_PX);
+    expect(requiredWidth({ ...input, rightColumn: false })).toBe(CONTENT_FLOOR_PX + 240);
+  });
+});
+
+describe("store fit — toggles act on what is showing", () => {
+  const both = CONTENT_FLOOR_PX + 240 + 280 + MINIMAP_WIDTH_PX;
+
+  it("a narrow window auto-closes the left panel without touching the wish", () => {
+    act(() => {
+      openTocPush();
+      openTags();
+      setLayoutContext(both - 1, true);
+    });
+    expect(panelFit().tocOpen).toBe(false);
+    expect(useSidebarStoreSnapshot().tocMode).toBe("push");
+    expect(wantedWidth()).toBe(both);
+    // Widening brings it back with nothing to remember.
+    act(() => setLayoutContext(both, true));
+    expect(panelFit().tocOpen).toBe(true);
+  });
+
+  it("`[` on an auto-closed left panel OPENS it, closing the tag wish that took the room", () => {
+    act(() => {
+      openTocPush();
+      openTags();
+      setLayoutContext(both - 1, true);
+    });
+    expect(panelFit().tocOpen).toBe(false);
+    act(() => toggleToc());
+    expect(panelFit().tocOpen).toBe(true);
+    expect(useSidebarStoreSnapshot().tagsOpen).toBe(false);
+    expect(localStorage.getItem("bn-tags-open")).toBe("false");
+  });
+
+  it("opening the left panel where both fit leaves the tag wish alone", () => {
+    act(() => {
+      openTags();
+      setLayoutContext(both, true);
+      openTocPush();
+    });
+    expect(useSidebarStoreSnapshot().tagsOpen).toBe(true);
+    expect(panelFit()).toEqual({ tocOpen: true, tagsOpen: true, minimapVisible: true });
+  });
+
+  it("opening tags where both do not fit shows tags and auto-closes the left panel", () => {
+    act(() => {
+      openTocPush();
+      setLayoutContext(both - 1, true);
+      toggleTags();
+    });
+    expect(panelFit()).toEqual({ tocOpen: false, tagsOpen: true, minimapVisible: true });
+    expect(useSidebarStoreSnapshot().tocMode).toBe("push");
+  });
+
+  it("`]` on a showing tag sidebar closes it even when the left panel is auto-closed", () => {
+    act(() => {
+      openTocPush();
+      openTags();
+      setLayoutContext(both - 1, true);
+      toggleTags();
+    });
+    expect(useSidebarStoreSnapshot().tagsOpen).toBe(false);
+    expect(panelFit().tocOpen).toBe(true);
+  });
+
+  it("setLayoutContext is equality-guarded", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    const before = result.current;
+    act(() => setLayoutContext(Infinity, false));
+    expect(result.current).toBe(before);
+  });
+});
+
+function useSidebarStoreSnapshot() {
+  const { result } = renderHook(() => useSidebarStore());
+  return result.current;
+}

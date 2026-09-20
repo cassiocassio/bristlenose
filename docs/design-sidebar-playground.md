@@ -66,6 +66,69 @@ In overlay mode, column 2 stays at `0` — the TOC sidebar uses `position: fixed
 | `--bn-quote-max-width` | `23rem` | Card reading measure (~5 words/line) |
 | `--bn-grid-gap` | `1.25rem` | Gap between grid columns |
 
+### Fit to width (20 Sep 2026)
+
+The centre column is `1fr` with `min-width: 0`, so with both panels open in a
+narrow window it went to nothing: one word per line, then glyphs clipped
+mid-letter (measured in the Mac app at ~900 pt with the projects sidebar open —
+sidebar 220 + Contents 240 + minimap 80 + Tags 280 leaves ~80 px). Nothing
+enforced the floor the design already had, `--bn-quote-max-width`.
+
+Now the panels are a **wish** and the grid shows the wish **fitted** to the
+width it has. `SidebarStore.fitPanels` closes, in this order, until the centre
+keeps `CONTENT_FLOOR_PX`:
+
+1. the left panel (Contents / Codes / Signals),
+2. the tag sidebar,
+3. the minimap (`.layout.minimap-hidden`, in `minimap.css` — one token, every
+   grid variant, the way `.embedded` zeroes the rails).
+
+The fit is *derived* from the wish (`tocMode`, `tagsOpen`, the widths) and the
+measured `availableWidth`, never written over it — so widening the window
+brings each panel back in reverse order with nothing to remember, and a
+reload restores what the researcher asked for, not what a briefly narrow
+window allowed. `SidebarLayout` reports the width with a `ResizeObserver`
+(rails subtracted; `Infinity` under jsdom, where nothing is ever auto-closed)
+and passes `showRightSidebar` into the fit itself, because `tagsOpen` is a
+persisted wish that outlives the Quotes lens.
+
+**Toggles act on what is showing.** A panel the fit has auto-closed reads as
+closed everywhere the researcher can see, so `[` and the View menu row must
+open it — and if the tag sidebar is what took the room, the tag *wish* is
+closed and persisted rather than leaving a press that opens nothing. The
+reverse needs no such step: opening tags auto-closes the left panel by order,
+so the panel just opened is the one that shows. On a lens without the right
+column `]` edits the wish directly (otherwise it could only ever set it).
+
+**The Mac's own sidebar gives first.** `panel-state` now carries `minWidth` =
+floor + *wished* panels + minimap (`wantedWidth`), and `DetailFloor.swift`
+declares it on the detail column with `navigationSplitViewColumnWidth(min:)`,
+which is what makes `NavigationSplitView` collapse the projects sidebar on
+window shrink — the Mail behaviour, driven by the same AppKit mechanism
+(`NSSplitViewItem.canCollapseFromWindowResize`). It is the wish, not the fit,
+because a figure that fell as panels auto-closed would pop the sidebar back
+into the space the cascade had just made. Only the report pane declares it,
+and `0` (SPA not yet mounted) declares nothing.
+
+Overlay is not part of this. It is a browser-only idiom (rail hover-peek),
+unreachable in the app since the rails went, and was considered and rejected
+as the Mac answer: it does not sit with the native sidebar.
+
+**Window minimum.** The window floor is `.frame(minWidth: 700)` on
+`ContentView` under `.windowResizability(.contentMinSize)`. It stays at 700:
+with the sidebar collapsed and the cascade run, Quotes needs 448 (floor +
+minimap) and fits. **Unverified as of 20 Sep 2026:** whether the SwiftUI
+bridge also feeds the declared detail minimum into the window's minimum. If
+it does, a Quotes window with both panels open stops shrinking at ~970 pt
+instead of cascading; a standalone probe could not be made to open a window
+outside Xcode, so the check is a hand one — drag the window narrower with
+both panels open and watch which of the two happens. The fallback is
+explicit: collapse `columnVisibility` from the measured detail width instead
+of declaring a minimum.
+
+Floors are one constant for every lens for now; Codebook, Sessions and the
+dashboard have not been measured for their own.
+
 ---
 
 ## TOC overlay behaviour

@@ -232,6 +232,14 @@ final class BridgeHandler: ObservableObject {
     /// menu rows can't drift apart in how honest they are.
     @Published var inspectorOpen = false
 
+    /// The width the report's centre column needs to stay readable with the
+    /// panels the researcher has open: content floor + open panel widths +
+    /// minimap, computed web-side because only `SidebarStore` knows the
+    /// dragged widths. Rides `panel-state` so it can't drift from the booleans.
+    /// Declared on the detail column so the split view collapses the projects
+    /// sidebar on window shrink the way Mail does. 0 = not yet reported.
+    @Published var detailMinWidth: CGFloat = 0
+
     /// The filesystem path of the currently selected project.
     /// Set by ContentView on project selection. Used by Project menu actions
     /// (Show in Finder) and disable guards.
@@ -817,6 +825,8 @@ final class BridgeHandler: ObservableObject {
             if left != leftPanelOpen { leftPanelOpen = left }
             if right != rightPanelOpen { rightPanelOpen = right }
             if inspector != inspectorOpen { inspectorOpen = inspector }
+            let minWidth = CGFloat(body["minWidth"] as? Double ?? 0)
+            if minWidth != detailMinWidth { detailMinWidth = minWidth }
 
         case "codebook-focus":
             // Equality-guarded for the same reason as `panel-state`: clicking
@@ -952,6 +962,7 @@ final class BridgeHandler: ObservableObject {
         leftPanelOpen = false
         rightPanelOpen = false
         inspectorOpen = false
+        detailMinWidth = 0
         // Same discipline, and it was missed when these shipped: all eight
         // codebook mirrors survived a project switch, so the Codes menu could
         // be enabled from the PREVIOUS project's cursor until the incoming

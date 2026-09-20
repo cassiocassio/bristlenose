@@ -80,7 +80,12 @@ let mockState: {
   hiddenTagGroups: new Set<string>(),
 };
 
-vi.mock("../contexts/SidebarStore", () => ({
+vi.mock("../contexts/SidebarStore", async (importOriginal) => ({
+  // The fit is real: these tests set widths and open flags and expect the
+  // grid classes that follow, and an unmeasured width (no availableWidth on
+  // mockState) fits everything — see "an unmeasured width closes nothing".
+  fitPanels: (await importOriginal<typeof import("../contexts/SidebarStore")>()).fitPanels,
+  setLayoutContext: vi.fn(),
   useSidebarStore: () => mockState,
   toggleTags: (...args: unknown[]) => mockToggleTags(...args),
   openTocPush: (...args: unknown[]) => mockOpenTocPush(...args),

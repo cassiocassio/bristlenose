@@ -33,6 +33,8 @@ import {
   openTocPush,
   closeToc,
   closeTags,
+  fitPanels,
+  setLayoutContext,
 } from "../contexts/SidebarStore";
 import { usePlaygroundStore } from "../contexts/PlaygroundStore";
 import { TocSidebar } from "./TocSidebar";
@@ -132,7 +134,22 @@ interface SidebarLayoutProps {
 
 export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSidebar = true, children }: SidebarLayoutProps) {
   const { t } = useTranslation();
-  const { tocMode, tagsOpen, tocWidth, tagsWidth } = useSidebarStore();
+  const sidebar = useSidebarStore();
+  const { tocMode, tocWidth, tagsWidth } = sidebar;
+  // The store holds the WISH; the grid shows the wish fitted to the width it
+  // has (SidebarStore "Fit to width"). `showRightSidebar` is passed rather
+  // than read back from the store so a lens without the right column never
+  // counts a tag sidebar the persisted flag still wishes for.
+  const fit = fitPanels({
+    tocWanted: tocMode === "push",
+    tagsWanted: sidebar.tagsOpen,
+    tocWidth,
+    tagsWidth,
+    rightColumn: showRightSidebar,
+    available: sidebar.availableWidth ?? Infinity,
+  });
+  const tocPush = fit.tocOpen;
+  const tagsOpen = fit.tagsOpen;
   const pg = usePlaygroundStore();
   // Desktop embedded mode (macOS WKWebView): the sidebars are toggled from
   // the native toolbar + keyboard, so the web icon rails and close-× are
@@ -150,8 +167,25 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
   // Guard against overlapping close animations.
   const closingRef = useRef(false);
 
+  // Report the width the panels and centre share, so the store can fit the
+  // wish to it. Rails are subtracted (they are chrome outside the fit;
+  // `.embedded` zeroes them). ResizeObserver is absent under jsdom, in which
+  // case the width stays `Infinity` and nothing is ever auto-closed there.
+  useEffect(() => {
+    const el = layoutRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const report = () => {
+      const rail = parseFloat(getComputedStyle(el).getPropertyValue("--bn-rail-width")) || 0;
+      setLayoutContext(el.clientWidth - 2 * rail, showRightSidebar);
+    };
+    report();
+    const ro = new ResizeObserver(report);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [showRightSidebar, active]);
+
   // Track previous open state for focus management.
-  const tocOpen = tocMode !== "closed";
+  const tocOpen = tocMode === "overlay" || tocPush;
   const prevTocOpen = useRef(tocOpen);
   const prevTagsOpen = useRef(tagsOpen);
 
@@ -335,7 +369,8 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
   const classes = ["layout"];
   if (embedded) classes.push("embedded");
   if (!showRightSidebar) classes.push("layout-no-right");
-  if (tocMode === "push") classes.push("toc-open");
+  if (tocPush) classes.push("toc-open");
+  if (showRightSidebar && !fit.minimapVisible) classes.push("minimap-hidden");
   if (tocMode === "overlay") {
     classes.push("toc-overlay");
     if (pg.overlayStyle === "ios") classes.push("overlay-ios");
@@ -343,7 +378,7 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
   if (tagsOpen) classes.push("tags-open");
 
   const style: Record<string, string> = {};
-  if (tocMode === "push" || tocMode === "overlay") {
+  if (tocPush || tocMode === "overlay") {
     style["--toc-width"] = `${tocWidth}px`;
   }
   if (tagsOpen) style["--tags-width"] = `${tagsWidth}px`;
@@ -419,7 +454,7 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
         <div className="toc-sidebar-body">
           {leftPanel ?? <TocSidebar onOverlayClose={closeTocOverlayAnimated} />}
         </div>
-        {(tocMode === "push" || tocMode === "overlay") && (
+        {(tocPush || tocMode === "overlay") && (
           // Drag-resize handle; pointer-driven separator, keyboard-resizable via tabIndex/onKeyDown.
           // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
           <div

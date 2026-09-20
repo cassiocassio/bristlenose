@@ -42,6 +42,18 @@ const DEFAULT_TAGS_WIDTH = 280;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;
 
+/**
+ * The centre column's reading-measure floor: one quote card at
+ * `--bn-quote-max-width` (23rem × 16). Pinned to the token by
+ * tests/test_sidebar_floor_tokens.py, which reads both files — change both or
+ * the test says so. One floor for every lens for now; Codebook, Sessions and the dashboard
+ * have not been measured for their own, and until they are, the quote card is
+ * the strictest known reader.
+ */
+export const CONTENT_FLOOR_PX = 368;
+/** `--bn-minimap-width` (5rem × 16). Same pin. */
+export const MINIMAP_WIDTH_PX = 80;
+
 const LS_TOC_OPEN = "bn-toc-open";
 const LS_TAGS_OPEN = "bn-tags-open";
 const LS_TOC_WIDTH = "bn-toc-width";
@@ -74,6 +86,18 @@ export interface SidebarState {
   soloTag: string | null;
   /** Snapshot of tagFilter from before entering solo mode. */
   savedTagFilter: TagFilterState | null;
+  /**
+   * Width the layout has for panels + centre, reported by SidebarLayout's
+   * ResizeObserver (rails already subtracted). `Infinity` until measured, so
+   * nothing is ever auto-closed by a width nobody has read. Ephemeral.
+   */
+  availableWidth: number;
+  /**
+   * Whether the current lens renders the right column (tag sidebar + minimap).
+   * Only Quotes does. Set by SidebarLayout; `tagsOpen` is a persisted wish that
+   * outlives the lens, so the fit must not count a column that isn't there.
+   */
+  rightColumn: boolean;
 }
 
 // ── localStorage helpers ──────────────────────────────────────────────────
@@ -130,6 +154,8 @@ function loadState(): SidebarState {
     disabledFrameworks: new Set(),
     soloTag: null,
     savedTagFilter: null,
+    availableWidth: Infinity,
+    rightColumn: false,
   };
 }
 
@@ -181,20 +207,133 @@ function setState(updater: (prev: SidebarState) => SidebarState): void {
   listeners.forEach((l) => l());
 }
 
+// ── Fit to width ──────────────────────────────────────────────────────────
+//
+// The panels are wishes (persisted); what the layout shows is the wish fitted
+// to the width it has. When the centre column would drop below
+// CONTENT_FLOOR_PX the cascade closes, in this order, the left panel, then the
+// tag sidebar, then the minimap — and because the fit is derived from the wish
+// rather than written over it, widening the window brings each back in the
+// reverse order with nothing to remember. The Mac's own sidebar gives first:
+// the native column collapses when the window can no longer hold
+// `requiredWidth` beside it (see DetailFloor.swift), which is why that figure
+// is the wish, never the fit — a figure that fell as panels auto-closed would
+// pop the sidebar back into the space the cascade just made.
+//
+// Overlay never counts: it floats above the centre and takes no column.
+
+export interface PanelFitInput {
+  tocWanted: boolean;
+  tagsWanted: boolean;
+  tocWidth: number;
+  tagsWidth: number;
+  /** The lens renders the right column (tag sidebar + minimap). */
+  rightColumn: boolean;
+  available: number;
+}
+
+export interface PanelFit {
+  tocOpen: boolean;
+  tagsOpen: boolean;
+  minimapVisible: boolean;
+}
+
+/** Width the wished arrangement needs: floor + wanted panels + minimap. */
+export function requiredWidth(input: PanelFitInput): number {
+  return (
+    CONTENT_FLOOR_PX +
+    (input.tocWanted ? input.tocWidth : 0) +
+    (input.rightColumn && input.tagsWanted ? input.tagsWidth : 0) +
+    (input.rightColumn ? MINIMAP_WIDTH_PX : 0)
+  );
+}
+
+/** The wish fitted to the width: close left, then tags, then minimap, until the centre keeps its floor. */
+export function fitPanels(input: PanelFitInput): PanelFit {
+  const fit: PanelFit = {
+    tocOpen: input.tocWanted,
+    tagsOpen: input.rightColumn && input.tagsWanted,
+    minimapVisible: input.rightColumn,
+  };
+  const need = () =>
+    CONTENT_FLOOR_PX +
+    (fit.tocOpen ? input.tocWidth : 0) +
+    (fit.tagsOpen ? input.tagsWidth : 0) +
+    (fit.minimapVisible ? MINIMAP_WIDTH_PX : 0);
+  if (need() > input.available && fit.tocOpen) fit.tocOpen = false;
+  if (need() > input.available && fit.tagsOpen) fit.tagsOpen = false;
+  if (need() > input.available && fit.minimapVisible) fit.minimapVisible = false;
+  return fit;
+}
+
+function fitInput(s: SidebarState, overrides: Partial<PanelFitInput> = {}): PanelFitInput {
+  return {
+    tocWanted: s.tocMode === "push",
+    tagsWanted: s.tagsOpen,
+    tocWidth: s.tocWidth,
+    tagsWidth: s.tagsWidth,
+    rightColumn: s.rightColumn,
+    available: s.availableWidth,
+    ...overrides,
+  };
+}
+
+/** What the layout shows now. */
+export function panelFit(s: SidebarState = state): PanelFit {
+  return fitPanels(fitInput(s));
+}
+
+/** What the wished arrangement needs — the figure native declares on the detail column. */
+export function wantedWidth(s: SidebarState = state): number {
+  return requiredWidth(fitInput(s));
+}
+
+/** Report the layout's width and whether the lens has a right column. Equality-guarded: fires on every resize frame. */
+export function setLayoutContext(availableWidth: number, rightColumn: boolean): void {
+  if (state.availableWidth === availableWidth && state.rightColumn === rightColumn) return;
+  setState((prev) => ({ ...prev, availableWidth, rightColumn }));
+}
+
+/**
+ * Open the left panel so that it SHOWS. If the fit would auto-close it again —
+ * the tag sidebar is taking the room — the tag wish is closed instead, and
+ * persisted: the researcher asked for this panel, and a press that opens
+ * nothing is the dead click the whole cascade exists to avoid. The reverse
+ * (opening tags) needs no such step: the cascade closes the left panel first
+ * by order, so the panel just opened is the one that shows.
+ */
+function openTocPushFitted(prev: SidebarState): SidebarState {
+  const next = { ...prev, tocMode: "push" as TocMode };
+  writeBool(LS_TOC_OPEN, true);
+  if (!fitPanels(fitInput(next)).tocOpen && next.tagsOpen) {
+    writeBool(LS_TAGS_OPEN, false);
+    next.tagsOpen = false;
+  }
+  return next;
+}
+
 // ── Actions ───────────────────────────────────────────────────────────────
 
 /** Toggle TOC between closed and push (keyboard shortcut `[`). Skips overlay. */
 export function toggleToc(): void {
   setState((prev) => {
-    const tocMode: TocMode = prev.tocMode === "closed" ? "push" : "closed";
-    writeBool(LS_TOC_OPEN, tocMode === "push");
-    return { ...prev, tocMode };
+    // Toggle what is SHOWING, not the wish: a panel the fit has auto-closed
+    // reads as closed everywhere the researcher can see, so `[` must open it.
+    if (panelFit(prev).tocOpen) {
+      writeBool(LS_TOC_OPEN, false);
+      return { ...prev, tocMode: "closed" };
+    }
+    return openTocPushFitted(prev);
   });
 }
 
 export function toggleTags(): void {
   setState((prev) => {
-    const tagsOpen = !prev.tagsOpen;
+    // Same rule as `toggleToc`, with one carve-out: on a lens without the
+    // right column nothing is showing either way, and `]` there edits the
+    // wish — otherwise it could only ever set it, never clear it.
+    const showing = prev.rightColumn ? panelFit(prev).tagsOpen : prev.tagsOpen;
+    const tagsOpen = !showing;
     writeBool(LS_TAGS_OPEN, tagsOpen);
     return { ...prev, tagsOpen };
   });
@@ -261,10 +400,7 @@ export function openTocOverlay(): void {
 
 /** Open TOC in push mode (click the list icon). Persisted. */
 export function openTocPush(): void {
-  setState((prev) => {
-    writeBool(LS_TOC_OPEN, true);
-    return { ...prev, tocMode: "push" };
-  });
+  setState(openTocPushFitted);
 }
 
 /** Close TOC from any mode. Persists closed state. */
@@ -490,6 +626,8 @@ export function resetSidebarStore(): void {
     disabledFrameworks: new Set(),
     soloTag: null,
     savedTagFilter: null,
+    availableWidth: Infinity,
+    rightColumn: false,
   };
   frameworkStatesHydrated = false;
   frameworkEditGeneration = 0;

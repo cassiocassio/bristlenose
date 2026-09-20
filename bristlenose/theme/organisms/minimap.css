@@ -94,3 +94,12 @@
 @media (max-width: 600px) {
     .minimap-slot { display: none; }
 }
+
+/* ── Fit to width (SidebarLayout): the minimap is the last thing the cascade drops ──
+   SidebarStore.fitPanels closes the left panel, then the tag sidebar, then
+   the minimap, so the centre keeps its reading measure. The first two are
+   the ordinary toc-open / tags-open classes going away; this one zeroes the
+   minimap track the same way `.layout.embedded` in sidebar.css zeroes the rails — one token, every
+   grid variant. */
+.layout.minimap-hidden { --bn-minimap-width: 0px; }
+.layout.minimap-hidden .minimap-slot { display: none; }

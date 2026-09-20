@@ -57,7 +57,7 @@ import {
 } from "../utils/exportActions";
 import type { NormalisedJobStatus } from "../components/ActivityChipStack";
 import { toggleInspector, useInspectorStore } from "../contexts/InspectorStore";
-import { useSidebarStore } from "../contexts/SidebarStore";
+import { panelFit, useSidebarStore, wantedWidth } from "../contexts/SidebarStore";
 import {
   setSearchQuery,
   setViewMode,
@@ -308,7 +308,15 @@ function AppShell() {
   // while the tag sidebar is open). Keyed on the three booleans, not the store
   // objects: a width drag, a tag-eye toggle, or a solo-tag entry mutates
   // SidebarStore without changing what the menu says.
-  const { tocMode, tagsOpen } = useSidebarStore();
+  const sidebar = useSidebarStore();
+  const { tocMode } = sidebar;
+  // The mirror carries what is SHOWING (the wish fitted to the width — a
+  // panel the cascade has auto-closed must read "Show …", or the row is a dead
+  // click), plus the width the WISH needs, which native declares on the
+  // detail column so the projects sidebar collapses before the panels do.
+  const fit = panelFit(sidebar);
+  const tagsOpen = fit.tagsOpen;
+  const minWidth = wantedWidth(sidebar);
   const { open: inspectorOpen } = useInspectorStore();
   // "overlay" is the transient hover-peek, and it can't occur embedded (the
   // rails that trigger it are hidden) — but it is open when it does, so treat
@@ -316,11 +324,11 @@ function AppShell() {
   // On the embedded Sessions lens there IS no left panel (native popover
   // instead), so the store flag must not reach `panel-state` — otherwise the
   // View menu confidently offers "Hide Sessions" for a panel not on screen.
-  const leftPanelOpen = tocMode !== "closed" && !embeddedSessionsPanelRemoved;
+  const leftPanelOpen = (tocMode === "overlay" || fit.tocOpen) && !embeddedSessionsPanelRemoved;
   useEffect(() => {
     if (!embedded) return;
-    postPanelState(leftPanelOpen, tagsOpen, inspectorOpen);
-  }, [embedded, leftPanelOpen, tagsOpen, inspectorOpen]);
+    postPanelState(leftPanelOpen, tagsOpen, inspectorOpen, minWidth);
+  }, [embedded, leftPanelOpen, tagsOpen, inspectorOpen, minWidth]);
 
   useEffect(() => {
     const exportData = getExportData();

@@ -290,6 +290,11 @@ p.lede { margin: 0 0 var(--bn-space-md); color: var(--bn-colour-muted); font-siz
 <div class="wrap">
 
 <h1 class="page">Left-sidebar seam — window edge &amp; titlebar</h1>
+<p class="standfirst"><b>Status, 20 Sep 2026:</b> the 24px flank ("today" below) shipped fixed in <code>5851bbb6</code>,
+the bottom gap in <code>1c563b29</code>, the scroll slip in <code>d7710610</code>. The "today" figures are the
+pre-fix state. The surface behind the detail pane was measured on macOS 27 as pure <code>#ffffff</code> — neither
+of the two greys the <em>behind detail pane</em> toggle offers — so A's contrast rows are wrong for 27 (A ≡ D there,
+and OS-dependent). Decision: the panel keeps its tint as is; matching the native sidebar material is not attempted.</p>
 <p class="standfirst">Three ways the Codebook navigator's background could meet the window's left edge and the
 titlebar. Studies option <b>A</b> (transparent), <b>B</b> (opaque tint bleeding up through a transparent titlebar),
 and <b>D</b> (stop joining). Real tokens; the macOS materials are labelled approximations.</p>

@@ -8,6 +8,8 @@ trued-against: HEAD@main on 2026-09-20
 
 ## Changelog
 
+- _2026-09-20_ — added "The content-nav tint stays; the native sidebar material
+  is not a target".
 - _2026-09-20_ — trued up: the `Local-first` guiding principle reframed —
   it claimed "no telemetry" and "nothing leaves your machine", which was
   never true of the recommended path and which root `CLAUDE.md` forbids in
@@ -602,3 +604,32 @@ documentation for a still-working env var makes it undocumented, not removed.
 
 _See also: `bristlenose/llm/client.py` (`_ANTHROPIC_ACCEPTS_SAMPLING`),
 `tests/test_llm_sampling_params.py`, `docs/dependency-premortem-log.md` Entry 6._
+
+## The content-nav tint stays; the native sidebar material is not a target
+
+Decided 20 Sep 2026, in the app, after the white gutter beside the content-nav
+panel was removed (`5851bbb6`). The panel keeps `--bn-colour-inspector-bg` as it
+is. We do not try to make it match the macOS sidebar beside it, by colour or by
+painting the material natively behind the transparent webview.
+
+Reason: the native sidebar is a material, not a colour — it blends the wallpaper
+behind the window and changes with active state, accessibility settings and
+each release (Sequoia flat, Tahoe inset plateau, 27 edge-anchored with
+refraction), so any token value is right for one wallpaper on one release.
+Painting the real material under the panel is possible (one bridge message, a
+few dozen lines of Swift) but two sidebar-material columns side by side is not
+an Apple idiom, and on Tahoe it would be the same material in the wrong shape.
+Apple's own three-column apps — Mail's message list, Notes' note list, Finder's
+column view — give the second column a content-level surface with a divider,
+not sidebar material. What made ours look wrong was never the colour difference
+but the white strip that turned a deliberate boundary into a failed join.
+
+Revisit trigger: the navigator moving into the split view as a native content
+column (the sidebar→AppKit direction), at which point Apple styles it per release
+and the question dissolves. Until then, a second column that is visibly a
+different surface, joined by an honest keyline, is the platform grain.
+
+_See also: `docs/mockups/sidebar-seam-window-edge.html` (status banner),
+`bristlenose/theme/CLAUDE.md` § Cross-seam alignment, TODO.md § Ideas (the
+two CSS defects, both closed 20 Sep 2026)._
+

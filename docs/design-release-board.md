@@ -24,6 +24,12 @@ It also found the feed could be silently empty in four measured ways; all four
 are closed in the feed commit. And it deleted live mode: the one person who
 will ever watch this can type `while sleep 5; do …; done` and press ⌘R.
 
+> _Reversed later the same day — see §8._ `--serve` shipped in `bce36c78`: a
+> loopback server behind a per-run token, patching pane by pane. The reasoning
+> above is preserved because it is why the **snapshot is still the default** and
+> why the server is opt-in (`release.sh run --board`), self-exiting and
+> loopback-only rather than a dashboard anyone maintains.
+
 Two halves, in order: **the feed** (make the train write down what it already
 knows) and **the board** (draw it). The feed is worth having with no board.
 
@@ -51,7 +57,7 @@ knows) and **the board** (draw it). The feed is worth having with no board.
 
 ## 1 · The feed
 
-### 1.1 `desktop/scripts/sink.sh` — one helper, five consumers
+### 1.1 `desktop/scripts/sink.sh` — one helper, six production consumers
 
 ```bash
 # sink_line <kind> k=v …  — append "@bn <kind> ts=<UTC> run=<id> k=v…" to
@@ -61,9 +67,23 @@ knows) and **the board** (draw it). The feed is worth having with no board.
 
 - **Normalise before quoting** (the measured defect): each value has control
   bytes stripped (`tr -d '\000-\037'` after CR/LF/TAB → space) and is cut to
-  200 bytes, then `printf '%q'`. That keeps `shlex` able to read every line,
-  keeps every line under `PIPE_BUF` so concurrent appenders cannot interleave,
-  and keeps a value from forging a second `@bn` line.
+  200 bytes, then `printf '%q'`. That keeps `shlex` able to read every line, and
+  keeps a value from forging a second `@bn` line.
+
+- **It does NOT make a line atomic, and the sink says so at its own contract
+  block.** `sink.sh:26-31`: *"bash's printf to a file is stdio-buffered at 1 KB,
+  and `%q` can expand a non-ASCII value fourfold, so two writers (a `status`
+  during a `run`) can splice a long line — the parser then counts it as unparsed
+  rather than reading half of it."* The 200-byte cap is about forgery, not
+  interleaving. _(This bullet claimed the cap "keeps every line under `PIPE_BUF`
+  so concurrent appenders cannot interleave". Corrected 20 Sep 2026 — a reader
+  would have designed against a guarantee the implementation disclaims, and the
+  mitigation that does exist is the parser counting what it cannot read.)_
+
+- **`LC_ALL=C` is load-bearing, not noise.** `sink.sh:32-36`: under a UTF-8
+  locale BSD `tr`/`cut` abort on the first invalid byte, the assignment fails,
+  and a `set -e` caller — every build script — would **die inside the sink**.
+  Recorded at the point of the choice so nobody drops it while tidying.
 - `ts` is `date -u +%Y-%m-%dT%H:%M:%SZ`, written by `sink_line` itself, so a
   child cannot write local time into the merge.
 - `run` is `$BN_RUN_ID`, or `standalone-<epoch>` when a sink is set by hand.
@@ -182,7 +202,13 @@ disagree on one file.
 and newest source. Estimates are the step table's `est` column, labelled
 *table* (Welford deferred — review-log Finding 22). VERSION is validated
 (`\d+\.\d+\.\d+[\w.+-]*`) and resolved under `ROOT/.release`. Exit `0` when a
-board was written, `1` when the run dir or `steps.tbl` is missing, `2` usage.
+board was written, `1` when the run dir or **`events.jsonl`** is missing, `2`
+usage. **A missing `steps.tbl` is not an error** — the board falls back to
+ledger order, says so, and exits `0` (`release-board.py:1592-1600`; pinned by
+`test-release-board.py::test_no_steps_tbl_falls_back_to_ledger_order_and_says_so`).
+That matters because every run on disk today — 0.28.0, 0.29.0, 0.29.1 — predates
+`steps.tbl` and would otherwise be undrawable. _(§7 corrected this in prose and
+left §2 and §2.1 standing; trued here 20 Sep 2026.)_
 
 Output: `board.json` and `board.html` (the template with the JSON inlined,
 `ensure_ascii` then `< > &` escaped) into `.release/<v>/`, mode 0600.
@@ -192,7 +218,8 @@ Output: `board.json` and `board.html` (the template with the JSON inlined,
 Synthetic run dirs under a temp `.release/`: fold (stranded vs running via a
 dead pid; `corrupt` from a fragment; `skipped`; `later`; `unknown`;
 `not-in-this-run`); no data is not green (an empty run dir with `steps.tbl`
-renders every tile no-data, exit 0; without `steps.tbl` exit 1); build
+renders every tile no-data, exit 0; without `steps.tbl`, ledger-order fallback
+and still exit 0); build
 "ran, sink received nothing" vs "not run"; channels from `CHANNELS`
 (`unreachable` never green; partial verify never rolled up); clocks (empty
 expires → no-data; dmg expiry parity with `AlphaBuild.swift`); merge order on
@@ -234,9 +261,12 @@ One file, no framework, no CDN, opens from `file://`. Hand-rolled tokens (§0.6)
   or hatched, never filled.
 - Effort without a time axis: elapsed as a proportion of the run's longest
   step; the table estimate as a hatched extension; the events-per-minute strip.
-- The header says *snapshot, generated HH:MM*; there is no live mode.
-  Watching: `while sleep 5; do .venv/bin/python scripts/release-board.py; done`
-  and ⌘R.
+- The header says *snapshot, generated HH:MM*. **Superseded the same day by
+  §8's `--serve`:** the served page patches itself pane by pane as the run dir
+  changes, running stations pulse only while the heartbeat is fresh, and the
+  header carries a live pill. The snapshot remains the default — `release.sh
+  run --board` starts a server, plain generation does not — so both are true,
+  but "there is no live mode" is not.
 
 ## 4 · Sequence and proof
 
@@ -251,8 +281,13 @@ One file, no framework, no CDN, opens from `file://`. Hand-rolled tokens (§0.6)
 ## 5 · Out of scope, by decision
 
 History overlay and Welford estimates (review-log Finding 22); probing from
-the board; any server (`--serve`, SSE, FastAPI, SwiftUI); the T-7 expiry
-warning (a future preflight row, not the board); the bn-accurate design
+the board; ~~any server (`--serve`, SSE, FastAPI, SwiftUI)~~ — **the server
+shipped the same day this list was written; see §8** (`--serve`, loopback
+`127.0.0.1:8151`, per-run token in the 0600 handshake, self-exiting after four
+idle hours, `release-board.py:1503,1580`). The rest of the clause still holds:
+no SSE, no FastAPI, no SwiftUI — it is `http.server` and a `: ping` comment
+stream. The T-7 expiry warning (a future preflight row, not the board); the
+bn-accurate design
 system; any change to what a step does. The orphaned Python suites
 (`test-dep-drift.py`, `test-tap-provenance.py` run in no workflow) are a
 separate item.
@@ -260,7 +295,7 @@ separate item.
 ## 6 · Risks the review named, and where each is answered
 
 bash 3.2 safety → grep assertion in `test-sink.sh`. The `release.yml` reader →
-deleted. Poll cost → no live mode. Untrusted tail → never inlined by default.
+deleted. Poll cost → snapshot by default, `--serve` opt-in (§8). Untrusted tail → never inlined by default.
 Two-ledger merge → `sink_line` owns the clock; sort key; conductor wins.
 **Can the tee hurt the train?** A full disk mid-`build-dmg`: the child's write
 is swallowed and the driver's boundary write dies loud, which is the right
@@ -362,7 +397,7 @@ glisten. Widths of the three columns are fractions of the row, set by dragging
 the two gutters (the red IRREVERSIBLE band is the first) and kept in
 `localStorage`; dim means a pane's inputs have not been written yet.
 
-**The seam into the driver, in two verbs.** The server writes
+**The seam into the driver, in two internal functions.** The server writes
 `.release/<v>/board-server.json` — `{schema: 2, url, port, pid, token,
 version, started}`, 0600, removed on exit if the pid is its own. `board_link`
 prints one line, `board  http://127.0.0.1:<port>/?k=…`, when that file
@@ -373,7 +408,21 @@ serving, else a **detached** server (`nohup … &`, its log in the run dir) and 
 wait of at most three seconds for its handshake — then it prints and forgets.
 The driver never waits on the server past that, never stops it, and never fails
 because of it: a missing generator or python is one line of note and the
-release proceeds. `test-release-sh.sh` pins the six `board_link` outcomes, the
+release proceeds.
+
+**What a person actually types — six shipped surfaces, recorded 20 Sep 2026.**
+`board_link` and `board_ensure` are internal; none of the below appeared
+anywhere in this document, and §2's usage line still showed
+`[VERSION] [--out DIR] [--with-logs]`.
+
+| Surface | What it does |
+|---|---|
+| `release.sh run --board` | starts a detached server if none is serving, prints the link. Without the flag, `run` prints a link only if it finds one — the release never needs the board |
+| `release.sh board [<X.Y.Z>]` | the standalone verb (`cmd_board`, `release.sh:499`) — the eighth verb, absent from §19's list of seven in the sibling doc |
+| `release.sh board --stop` / `--restart` | TERM not INT, deliberately (`release.sh:509`); pinned by `test-release-sh.sh:81-84` |
+| `release-board.py --json` | the board's model without the page (`:1576`) |
+| `release-board.py --backfill-preflight` | **changes §2's preflight-pane contract.** §2 says "no rows → no-data"; this *writes* rows a pre-sink run never recorded, from the driver's captured logs (`:1578`). `--dry-run` (`:1579`) reports what it would write |
+| `release-board.py --replay` | a scrubber over the real generator at every ledger line | `test-release-sh.sh` pins the six `board_link` outcomes, the
 four `board_ensure` ones, that `release.sh` names the generator exactly once
 (that default), and that no build script names the server or the handshake —
 `build-all.sh` and `build-dmg.sh` are also run standalone, from Xcode and by

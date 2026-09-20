@@ -31,10 +31,21 @@ body {
    BridgeHandler.syncToolbarInset pushes the titlebar+toolbar delta as
    `--bn-toolbar-inset` on <html> at `ready`. Add it to the existing top pad
    so first-of-content is fully out from under the frost. The `, 0px` fallback
-   keeps non-embedded (browser/serve) surfaces on the current spacing. */
+   keeps non-embedded (browser/serve) surfaces on the current spacing.
+
+   The horizontal padding goes to 0 here, not just the top. Until 20 Sep 2026
+   this override replaced padding-top ONLY, so the 24px `--bn-space-lg` flank
+   survived into the app — and because the body is transparent it showed the
+   WINDOW surface through it: a strip between the native sidebar and the
+   content-nav panel (and again past the tag sidebar) that read as a failed
+   join. Measured on macOS 27 as pure #ffffff beside a #f9f9f9 panel. The
+   panels must be flush with the split divider and the window edge; the prose
+   keeps its distance via `.center` padding (sidebar.css § "Desktop embedded"). */
 html[data-embedded="true"] body {
     background: transparent;
     padding-top: calc(var(--bn-toolbar-inset, 0px) + var(--bn-space-xl));
+    padding-left: 0;
+    padding-right: 0;
 }
 
 article {

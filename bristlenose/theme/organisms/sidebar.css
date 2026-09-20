@@ -128,6 +128,24 @@
     padding-right: var(--bn-gutter-left);
 }
 
+/* Embedded body pads 0 horizontally (report.css: the 24px flank showed the
+   window surface through the transparent body as a white gutter beside the
+   panels). The panels are now flush with the split divider / window edge; the
+   prose gets those 24px back wherever NO panel stands between it and an edge,
+   so every current text position is preserved and only the strip is gone. */
+.layout.embedded:not(.toc-open) > .center {
+    padding-left: calc(var(--bn-gutter-left) + var(--bn-space-lg));
+}
+
+.layout.embedded.layout-no-right > .center,
+.layout.embedded.layout-inert > .center {
+    padding-right: calc(var(--bn-gutter-left) + var(--bn-space-lg));
+}
+
+.layout.embedded:not(.tags-open) > .minimap-slot {
+    padding-right: calc(var(--bn-space-md) + var(--bn-space-lg));
+}
+
 /* Animated slide — added before state change, removed on transitionend */
 .layout.animating {
     transition: grid-template-columns 75ms ease;

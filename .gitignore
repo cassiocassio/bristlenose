@@ -187,3 +187,18 @@ experiments/antenna-blink/antenna-blink
 
 # Written by the snap workflow to stamp a drifted edge build (see snapcraft.yaml)
 .snap-version-suffix
+
+# Harvested participant speech — the repo is public and these carry verbatim
+# quotes from trial studies. The build scripts beside them are tracked, so any
+# mockup here rebuilds from trial-runs/ for whoever holds the source projects.
+# See experiments/signal_valence/README.md.
+experiments/*/cards.json
+experiments/*/theme.css
+docs/mockups/signal-card-options.html
+docs/mockups/signal-card-v2.html
+docs/mockups/signal-card-design-a.html
+docs/mockups/signal-card-build-stages.html
+docs/mockups/sentiment-calibration.html
+docs/mockups/signal-card-valence.html
+docs/mockups/signal-card-valence-wall.html
+docs/mockups/signal-card-playground.html

@@ -250,6 +250,13 @@ carries no date the evidence gave none — the state is still evidenced, the day
 | `signal-card-expanded.html` | 23 Feb 2026 | PROPOSED 23 Feb 2026 · IMPLEMENTED — signal cards ship on the Analysis lens |
 | `signal-elaboration.html` | 23 Feb 2026 | PROPOSED 23 Feb 2026 · IMPLEMENTED — `server/elaboration.py` ships |
 | `signals-sidebar-row-layouts.html` | 31 Aug 2026 | SANDPIT — row-layout options for signals in the sidebar |
+| `signal-card-playground.html` | 12 Sep 2026 | SANDPIT — signal-card variants ahead of the 13 Sep lens overhaul; its outcomes shipped in `aacf3e88` / `54fdc615` |
+| `signal-card-valence.html` | 13 Sep 2026 | PROPOSED 13 Sep 2026 · **PARKED** — eleven candidate valence treatments over 34 real elaborated cards. Not rejected: the 20 Sep session deferred valence until the card's own problems were fixed, and `signal.pattern` still arrives on the wire so nothing has to be regenerated. `experiments/signal_valence/` rebuilds it |
+| `signal-card-valence-wall.html` | 13 Sep 2026 | SANDPIT — the density wall for the above; an instrument, not a design |
+| `signal-card-options.html` | 19 Sep 2026 | PROPOSED 19 Sep 2026 · **SUPERSEDED** 20 Sep 2026 by `signal-card-design-a.html` — the options menu: 10 sections, 29 labelled alternatives over real data. Every decision in `design-signal-card.md` §2 was taken from it, so it is the *record of what was rejected* and worth keeping for that alone |
+| `signal-card-v2.html` | 19 Sep 2026 | PROPOSED 19 Sep 2026 · **SUPERSEDED** 20 Sep 2026 by `signal-card-design-a.html` — first pass at applying the decisions. Built a hybrid that was neither a fused stack nor a merged card: internal dividers inside the card padding, sections with no anatomy of their own, and a headline borrowed from the strongest facet and printed twice. The failure is the entry's value — it is why design B needs a location-level elaboration unit before it can exist |
+| `signal-card-design-a.html` | 20 Sep 2026 | PROPOSED 20 Sep 2026 — **the current truth for the card.** Whole cards, fused by their own borders so the seam runs edge to edge; the marginal-value rule drawn with every cut card shown dimmed and its reason. Spec for `design-signal-card.md` §3 |
+| `sentiment-calibration.html` | 20 Sep 2026 | SANDPIT — 27 real cards with the chip blanked, for judging the sentiment label by eye. The instrument behind `label_rule.py`; its 27 judgements are the entire evidence base for §5, and `design-signal-card.md` §5a records that they were made in the wrong volume regime |
 
 ## type
 

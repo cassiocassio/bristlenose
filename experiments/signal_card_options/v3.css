@@ -1,0 +1,58 @@
+/* Design A. Real tokens only. */
+
+/* W1 — the hero floats to the card's right padding edge and the title AND
+   elaboration wrap around and under it. Requires the hero first in source
+   order, since a float only affects what follows it. */
+.mk-v3 .signal-card-top { display: block; }
+.mk-v3 .signal-card-right {
+    float: right;
+    margin: 0 0 var(--bn-space-sm) var(--bn-space-lg);
+}
+.mk-v3 .signal-card-quotes { clear: both; }
+
+/* Decision 1 = C, plus the gap the chip was missing: label and score were
+   colliding ("Mixed sentiments0.30"). --bn-space-sm, not xs. */
+.mk-page .signal-card-hero.mk-h-c {
+    font-size: var(--bn-text-label);
+    padding: var(--bn-space-xs) var(--bn-space-sm);
+    gap: var(--bn-space-sm);          /* label and score were colliding at xs */
+}
+.mk-chip-flag { font-weight: var(--bn-weight-emphasis); opacity: .78; }
+
+/* F1 — the seam is a card's own border, so it runs the full width. Nothing
+   is a rule inside a card. */
+.mk-fused-v3 { gap: 0; grid-template-columns: 1fr; }
+.mk-fused-v3 .signal-card { border-radius: 0; }
+.mk-fused-v3 .signal-card:first-child {
+    border-top-left-radius: var(--bn-radius-lg);
+    border-top-right-radius: var(--bn-radius-lg);
+}
+.mk-fused-v3 .signal-card:last-child {
+    border-bottom-left-radius: var(--bn-radius-lg);
+    border-bottom-right-radius: var(--bn-radius-lg);
+}
+.mk-fused-v3 .signal-card:not(:first-child) { border-top: none; }
+.mk-fused-v3 .signal-card:hover { box-shadow: none; background: var(--bn-colour-hover); }
+
+/* H-c — the location heading takes the Quotes lens's own token. */
+.mk-page .analysis-codebook-heading {
+    font-size: var(--bn-text-heading);
+    line-height: var(--bn-text-heading-lh);
+    max-width: var(--bn-max-width);
+    margin: var(--bn-space-lg) 0 var(--bn-space-sm);
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+/* Cards the rule cut — mockup chrome, not a proposed surface. */
+.mk-cutblock { margin-top: var(--bn-space-lg); }
+.mk-cutlabel {
+    font-family: var(--bn-font-mono); font-size: var(--bn-text-badge);
+    color: var(--bn-colour-muted); text-transform: uppercase;
+    letter-spacing: 0.06em; margin-bottom: var(--bn-space-xs);
+}
+.mk-dim { opacity: .5; }
+.mk-reject {
+    font-family: var(--bn-font-mono); font-size: var(--bn-text-badge);
+    color: var(--bn-colour-muted); margin-bottom: var(--bn-space-sm);
+}

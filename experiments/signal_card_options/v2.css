@@ -1,0 +1,93 @@
+/* v2 — the decided treatments. Real tokens only; no invented values. */
+
+/* ── decision 5 = W1 ──────────────────────────────────────────────────────
+   The hero floats into the card's top-right corner and the title AND the
+   elaboration flow around and under it. This needs the hero FIRST in source
+   order — a float only affects content that follows it — so `.signal-card-right`
+   is emitted before `.signal-card-identity`, which is the reverse of today. */
+.mk-v2 .signal-card-top { display: block; }
+.mk-v2 .signal-card-right {
+    float: right;
+    margin: 0 0 var(--bn-space-sm) var(--bn-space-lg);
+}
+.mk-v2 .signal-card-identity { display: block; }
+.mk-v2 .signal-card-quotes { clear: both; }
+
+/* ── decision 1 = C ─────────────────────────────────────────────────────── */
+.signal-card-hero.mk-h-c {
+    font-size: var(--bn-text-label);
+    padding: var(--bn-space-xs) var(--bn-space-sm);
+    gap: var(--bn-space-xs);
+}
+
+/* ── decision 7 = G4 — the flag reads as a prefix, not a second chip ────── */
+.mk-chip-flag {
+    font-weight: var(--bn-weight-emphasis);
+    opacity: .78;
+    margin-right: .15em;
+}
+
+/* ── §2/§3 X1 — F1's seam, moved inside the card ────────────────────────── */
+.mk-facets .signal-card-quotes { padding: 0; background: none; }
+.mk-facet { padding: var(--bn-space-sm) 0; }
+.mk-facet + .mk-facet { border-top: 1px solid var(--bn-colour-border); }
+.mk-facet-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--bn-space-sm);
+    margin-bottom: var(--bn-space-xs);
+}
+.mk-facet-head .signal-card-hero { pointer-events: none; }
+.mk-facet-name {
+    font-size: var(--bn-text-label);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-text);
+}
+
+/* ── decision 2 — the heading, both candidates ──────────────────────────
+   H-a is shipped (--bn-text-label). H-b matches the navigator's
+   `.toc-sub-heading` exactly: caption size, its line-height, same weight
+   and colour. They already agree on everything but size. */
+.mk-head-b .analysis-codebook-heading {
+    font-size: var(--bn-text-caption);
+    line-height: var(--bn-text-caption-lh);
+}
+
+/* H-c — the Quotes lens treatment of the same object.
+   `.bn-group-header > h3` inherits report.css's base h3: --bn-text-heading
+   (1.125rem) at --bn-weight-emphasis, no bottom rule, and the 52rem
+   reading cap from the `h1, h2, h3, .description` group. The analysis
+   lens's location heading LINKS to this one — same location, one
+   navigating to the other — so matching it is the coherence argument. */
+.mk-head-c .analysis-codebook-heading {
+    font-size: var(--bn-text-heading);
+    line-height: var(--bn-text-heading-lh);
+    max-width: var(--bn-max-width);
+    margin: var(--bn-space-lg) 0 var(--bn-space-sm);
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+/* ── DECIDED: the location heading takes the Quotes lens's own token ──────
+   One object, one treatment, across the two lenses that both name it — and
+   the analysis heading links to the Quotes one, so they are now visually the
+   same thing in both places. Applied as the base; the two rejected
+   candidates below are scoped overrides kept only for the record. */
+.mk-page .analysis-codebook-heading {
+    font-size: var(--bn-text-heading);
+    line-height: var(--bn-text-heading-lh);
+    max-width: var(--bn-max-width);
+    margin: var(--bn-space-lg) 0 var(--bn-space-sm);
+    padding-bottom: 0;
+    border-bottom: none;
+}
+.mk-page .mk-head-a .analysis-codebook-heading {   /* rejected — shipped */
+    font-size: var(--bn-text-label); line-height: normal;
+    padding-bottom: var(--bn-space-xs);
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+.mk-page .mk-head-b .analysis-codebook-heading {   /* rejected — navigator */
+    font-size: var(--bn-text-caption); line-height: var(--bn-text-caption-lh);
+    padding-bottom: var(--bn-space-xs);
+    border-bottom: 1px solid var(--bn-colour-border);
+}

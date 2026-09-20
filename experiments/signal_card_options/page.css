@@ -1,0 +1,97 @@
+/* Mockup chrome + the lettered variants.
+   This file is the ONLY new CSS on the page. Everything else is
+   signal-card-options.theme.css, baked from bristlenose/theme.
+   Nothing here is proposed as-is — each .mk-* rule implements one
+   labelled option so it can be looked at and rejected. */
+
+.mk-page { max-width: 1180px; margin: 0 auto; padding: var(--bn-space-xl); }
+.mk-head h1 { margin: 0 0 var(--bn-space-sm); }
+.mk-head p { color: var(--bn-colour-muted); max-width: 62ch; line-height: 1.5; }
+.mk-nav { margin: var(--bn-space-lg) 0; display: flex; gap: var(--bn-space-xs); }
+.mk-nav a { display: inline-grid; place-items: center; width: 2rem; height: 2rem;
+  border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-sm);
+  text-decoration: none; font-family: var(--bn-font-mono); font-size: var(--bn-text-label); }
+.mk-nav a:hover { background: var(--bn-colour-hover); }
+
+.mk-sec { margin: var(--bn-space-xl) 0; padding-top: var(--bn-space-lg);
+  border-top: 2px solid var(--bn-colour-border); }
+.mk-sec h2 { margin: 0 0 var(--bn-space-xs); font-size: var(--bn-text-heading); }
+.mk-why { color: var(--bn-colour-muted); max-width: 72ch; line-height: 1.55;
+  font-size: var(--bn-text-label); margin: 0 0 var(--bn-space-lg); }
+
+.mk-opt { margin: 0 0 var(--bn-space-xl); }
+.mk-optlabel { font-family: var(--bn-font-mono); font-size: var(--bn-text-label);
+  color: var(--bn-colour-muted); margin-bottom: var(--bn-space-sm);
+  padding-bottom: var(--bn-space-xs); border-bottom: 1px dashed var(--bn-colour-border); }
+.mk-optlabel b { display: inline-grid; place-items: center; min-width: 2.2rem; padding: 0 .3rem;
+  height: 1.5rem; margin-right: .5rem; background: var(--bn-colour-text);
+  color: var(--bn-colour-bg); border-radius: var(--bn-radius-sm); }
+.mk-narrow { max-width: 640px; }
+
+/* ── §1 hero chip ladder — the only thing that varies is size ── */
+.signal-card-hero.mk-h-b { font-size: var(--bn-text-label); }
+.signal-card-hero.mk-h-c { font-size: var(--bn-text-label);
+  padding: var(--bn-space-xs) var(--bn-space-sm); gap: var(--bn-space-xs); }
+.signal-card-hero.mk-h-d { font-size: var(--bn-text-badge);
+  padding: 2px var(--bn-space-xs); gap: 4px; }
+.signal-card-hero.mk-h-d .signal-card-hero-label { opacity: .72; }
+.signal-card-hero.mk-h-e { font-size: var(--bn-text-badge); padding: 1px 6px; gap: 4px;
+  background: transparent !important; border: 1px solid var(--bn-colour-border); }
+.signal-card-hero.mk-h-e .signal-card-hero-caret { opacity: 0; }
+.signal-card-hero.mk-h-e:hover .signal-card-hero-caret { opacity: .6; }
+
+/* ── §3 fusion — radius from sibling position, hairline seam ── */
+.mk-fused { gap: 0; grid-template-columns: 1fr; }
+.mk-fused .signal-card { border-radius: 0; }
+.mk-fused .signal-card:first-child {
+  border-top-left-radius: var(--bn-radius-lg); border-top-right-radius: var(--bn-radius-lg); }
+.mk-fused .signal-card:last-child {
+  border-bottom-left-radius: var(--bn-radius-lg); border-bottom-right-radius: var(--bn-radius-lg); }
+.mk-fused .signal-card:not(:first-child) { border-top: none; }
+.mk-fused .signal-card:hover { box-shadow: none; background: var(--bn-colour-hover); }
+
+/* ── §5 elaboration wrap ── */
+.mk-wrap-float .signal-card-top { display: block; }
+.mk-wrap-float .signal-card-right { float: right; margin: 0 0 var(--bn-space-sm) var(--bn-space-lg); }
+.mk-wrap-float .signal-card-quotes { clear: both; }
+.mk-wrap-below .signal-card-identity .signal-elaboration { display: none; }
+.mk-wrap-below .signal-card::after { content: ""; display: block; clear: both; }
+
+/* ── §7 the flag chip ── */
+.mk-flag { display: block; margin-top: var(--bn-space-xs); text-align: center;
+  font-family: var(--bn-font-mono); font-size: var(--bn-text-badge);
+  padding: 2px var(--bn-space-xs); border-radius: var(--bn-radius-sm); }
+.mk-flag-problem { background: light-dark(#fee2e2, #450a0a); color: light-dark(#991b1b, #fca5a5); }
+.mk-flag-win     { background: light-dark(#dcfce7, #14532d); color: light-dark(#166534, #86efac); }
+.mk-flag-niggle  { background: light-dark(#fef3c7, #451a03); color: light-dark(#92400e, #fcd34d); }
+
+/* ── §6 the scoring table ── */
+.mk-tbl { border-collapse: collapse; width: 100%; font-size: var(--bn-text-label); }
+.mk-tbl th { text-align: left; padding: var(--bn-space-xs) var(--bn-space-sm);
+  border-bottom: 2px solid var(--bn-colour-border); color: var(--bn-colour-muted);
+  font-weight: var(--bn-weight-emphasis); }
+.mk-tbl td { padding: var(--bn-space-xs) var(--bn-space-sm);
+  border-bottom: 1px solid var(--bn-colour-border); vertical-align: top; }
+.mk-tbl .mk-lead { color: var(--bn-colour-muted); max-width: 46ch; }
+.mk-bad  td:nth-child(2) { color: light-dark(#991b1b, #fca5a5); }
+.mk-good td:nth-child(2) { color: light-dark(#166534, #86efac); }
+
+.mk-foot { margin-top: var(--bn-space-xl); padding-top: var(--bn-space-lg);
+  border-top: 1px solid var(--bn-colour-border); color: var(--bn-colour-muted);
+  font-size: var(--bn-text-label); }
+
+/* ── the claim / evidence break ──────────────────────────────────────────
+   NOT an option — the decision is already in signal-elaboration.md
+   ("`||` marks a paragraph break, not a syntactic pause… the card renders
+   this beneath the claim, in a tint, after a blank line"). The shipped
+   renderer emits `<strong>lead</strong> rest` with a single space, so the
+   blank line the prompt promises has never existed. This is what it says. */
+.signal-elaboration.bn-lead-claim { color: var(--bn-lead-colour);
+  font-weight: var(--bn-lead-weight); margin: 0; }
+.signal-elaboration.bn-lead-rest  { color: var(--bn-lead-rest-colour);
+  font-weight: var(--bn-lead-rest-weight); margin: var(--bn-space-sm) 0 0; }
+
+.mk-flag-confidence, .mk-flag-success { background: light-dark(#dcfce7, #14532d);
+  color: light-dark(#166534, #86efac); }
+.mk-flag-surprising { background: light-dark(#e0f2fe, #0c4a6e); color: light-dark(#075985, #7dd3fc); }
+.mk-ok td:nth-child(2) { color: light-dark(#92400e, #fcd34d); }

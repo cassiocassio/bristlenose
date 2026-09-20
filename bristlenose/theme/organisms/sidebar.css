@@ -228,6 +228,15 @@
     overflow-x: hidden;
     background: var(--bn-colour-inspector-bg);
     border-right: 1px solid var(--bn-colour-border);
+    /* Flex column, like .tag-sidebar. Without it the `.toc-sidebar-body
+       { flex: 1; overflow-y: auto }` inside is inert: the body sizes to its
+       content, never overflows itself, and this OUTER box scrolls instead —
+       carrying the header, the toolbar bleed below and the shared first-row
+       datum with it, so the panel lined up with the content only at
+       scroll-top (found 2 Sep 2026, fixed 20 Sep). With the column, the body
+       is the one scroller under a header that never moves. */
+    display: flex;
+    flex-direction: column;
     visibility: hidden;
     opacity: 0;
     /* Toolbar bleed (mirrors .tag-sidebar). This column sits in the body's

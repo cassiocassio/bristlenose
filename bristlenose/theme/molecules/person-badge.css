@@ -112,12 +112,11 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
     background: var(--bn-colour-quote-bg);
 }
 
-.bn-speaker-editable-name[contenteditable] {
-    outline: 1px solid var(--bn-colour-accent);
-    outline-offset: 1px;
-    background: var(--bn-colour-quote-bg);
-    cursor: text;
-}
+/* The editing state lives in `molecules/editable-text.css`, which names this
+   class alongside `.editable-text` — one rule for "a name, title or
+   description on neutral ground", so the speakers grid and the quotes lens
+   cannot drift apart. Only the metrics above and the committed italic below
+   are local to the speaker name. */
 
 .bn-speaker-editable-name.edited {
     font-style: italic;

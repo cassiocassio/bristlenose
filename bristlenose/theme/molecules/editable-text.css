@@ -1,7 +1,38 @@
 /* Molecule: editable-text — shared editing and committed states for
    inline contenteditable fields (quotes, headings, names) */
 
-/* ── Editing state ──────────────────────────────────────────────────────── */
+/* ── Editing state ──────────────────────────────────────────────────────────
+ *
+ * THREE edit idioms ship, and they differ for a reason rather than by drift:
+ *
+ *   1. CROP (`.crop-editable`, below) — yellow `--bn-colour-editing-bg`. Not
+ *      "edit this text" but "move this boundary": it reads as one signal with
+ *      the bracket handles, and it is now the only surface on which the
+ *      yellow means anything at all.
+ *
+ *   2. A CODE ON A TINTED CARD (`.tag-input-box` in atoms/input.css,
+ *      `.tag-edit-inline` in organisms/codebook-panel.css) — page background,
+ *      1px accent edge. The ground is already coloured, so the field blanks to
+ *      neutral in order to read as a field.
+ *
+ *   3. A NAME, TITLE OR DESCRIPTION ON NEUTRAL GROUND — this rule. The ground
+ *      is already page white, so the field TINTS instead.
+ *
+ * Same 1px accent edge either way; the fill inverts because the ground does.
+ *
+ * `outline`, not `border`: these are spans inside running prose, and a border
+ * would add 2px and reflow the line. `outline` is drawn outside the box and
+ * costs no layout — the same reason the codebook chip's cursor is an outline.
+ *
+ * The `[contenteditable="true"]` half is what makes this fire in the SPA AT
+ * ALL. `EditableText` never adds a class for the editing state; `.editing` is
+ * written by the frozen vanilla renderer alone (`theme/js/editing.js`,
+ * `names.js`). So for as long as this rule keyed on `.editing`, a researcher
+ * editing a theme heading in the app got the browser's own focus ring and
+ * nothing else — a styled state that had never once been seen on the surface
+ * it was written for. Key on the attribute: it IS the state, it needs no
+ * co-operation from the component, and it cannot fall out of sync.
+ */
 
 .quote-card.editing .edit-pencil {
     color: var(--bn-colour-accent);
@@ -12,31 +43,33 @@
     cursor: text;
 }
 
-.editable-text.editing {
-    background: var(--bn-colour-editing-bg);
-    outline: 1px solid var(--bn-colour-editing-border);
-    border-radius: var(--bn-radius-sm);
-    padding: var(--bn-space-xs) 0.3rem;
+.editable-text[contenteditable="true"],
+.editable-text.editing,
+.bn-speaker-editable-name[contenteditable="true"] {
+    outline: 1px solid var(--bn-field-edit-edge);
+    outline-offset: var(--bn-field-edit-offset);
+    background: var(--bn-field-edit-fill-on-page);
+    border-radius: var(--bn-field-edit-radius);
     cursor: text;
 }
 
-.name-cell.editing .name-text,
-.role-cell.editing .role-text {
-    background: var(--bn-colour-editing-bg);
-    outline: 1px solid var(--bn-colour-editing-border);
-    border-radius: var(--bn-radius-sm);
-    padding: 0.1rem 0.3rem;
+/* The box exists at rest so entering it moves no text — padding out, margin
+   back, net zero, the idiom `.group-title-text` already uses. Without it the
+   tint hugs the glyphs and the heading jumps by a few pixels on every edit. */
+.editable-text {
+    padding: 1px 3px;
+    margin: -1px -3px;
 }
 
 /* ── Committed state (dashed underline indicates edit was made) ─────────── */
 
+/* Deliberately NOT shared with the speaker name, which marks the same fact in
+   italic (`person-badge.css`), or with the codebook, which marks it not at all
+   — a codebook name was never the model's to override, so there is nothing to
+   say "you changed this" about. One editing signal, three committed ones, on
+   purpose. */
 .editable-text.edited {
     border-bottom: 1px dashed var(--bn-colour-muted);
-}
-
-.name-text.edited,
-.role-text.edited {
-    border-bottom: 1px dashed var(--bn-colour-accent);
 }
 
 /* ── Crop bracket handles ──────────────────────────────────────────────── */

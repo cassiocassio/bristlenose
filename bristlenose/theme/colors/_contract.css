@@ -31,8 +31,17 @@ Required tokens:
 --bn-colour-badge-text          Badge/chip text
 --bn-colour-user-tag-bg         User tag badge background
 --bn-colour-user-tag-text       User tag badge text
---bn-colour-editing-bg          Inline editing mode highlight
---bn-colour-editing-border      Inline editing mode border
+--bn-colour-editing-bg          QUOTE CROP ONLY — the yellow that pairs with the bracket handles.
+                                NOT the general inline-edit highlight, despite the name: that is the
+                                --bn-field-edit-* set in tokens.css, which reads the ground the field
+                                sits on. Renaming this to --bn-colour-crop-bg is the honest fix and
+                                is not taken here, because the rename touches the one surface that was
+                                deliberately custom. Read the block in tokens.css before using it.
+--bn-colour-editing-border      UNUSED since the inline-edit set landed. Its only two consumers were
+                                the heading editor (now on --bn-field-edit-edge) and a rule for
+                                .name-cell / .role-cell, classes no code in this repo emits. Kept so
+                                every palette still satisfies the contract; a palette author should
+                                not spend judgement on it.
 --bn-crop-handle-colour         Crop bracket handle colour
 --bn-crop-handle-hover          Crop bracket handle hover colour
 --bn-colour-active-bg           Active/selected item background

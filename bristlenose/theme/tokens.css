@@ -1,7 +1,10 @@
 /* Design tokens — the single source of truth for all visual decisions.
 
-   This file contains STRUCTURAL tokens (layout, spacing, radii, transitions)
-   and ANALYTICAL tokens (sentiment colours, codebook tag colours, heatmap).
+   This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
+   ANALYTICAL tokens (sentiment colours, codebook tag colours, heatmap), and
+   SEMANTIC ALIASES that name a decision rather than a value (the inline
+   edit-field set below). An alias points at a palette token, so it costs no
+   per-palette maintenance and cannot drift from the palette it borrows from.
 
    TYPOGRAPHY tokens are in tokens-typography.css (web) / tokens-desktop.css (macOS).
    COLOUR PALETTE tokens are in colors/palette-default.css and colors/palette-edo.css.
@@ -191,6 +194,40 @@
     --bn-radius-md: 6px;
     --bn-radius-lg: 8px;
     --bn-radius-pill: 999px;
+
+    /* ── Inline edit fields — READ THIS BEFORE STYLING A NEW ONE ──────────
+     *
+     * An inline edit field is a piece of text the researcher can click into
+     * and retype: a theme heading, a session name, a code group's title, a
+     * code. There are exactly TWO treatments and the choice is mechanical,
+     * decided by the GROUND the field sits on, not by which lens you are in:
+     *
+     *   field on page background  →  --bn-field-edit-fill-on-page  (tints up)
+     *   field on a tinted surface →  --bn-field-edit-fill-on-tint  (blanks to
+     *                                                               neutral)
+     *
+     * Both carry --bn-field-edit-edge at 1px. The fill inverts because the
+     * ground does; the edge never changes, so the signal is one signal.
+     * Border or outline is yours to pick — outline for a span in running
+     * prose (it costs no layout and will not reflow the line), border for
+     * something that already has a box. That is a mechanism, not a meaning.
+     *
+     * DO NOT invent a third fill. Two surfaces got one each before these
+     * tokens existed (a quote-bg tint, a page-bg blank) and two more got
+     * nothing at all, which is how "is this field live?" came to have four
+     * answers on one screen.
+     *
+     * THE ONE EXEMPTION is quote cropping — `.crop-editable` and the bracket
+     * handles in molecules/editable-text.css. That is not "edit this text",
+     * it is "move this boundary", it was designed as a single signal with the
+     * burnt-amber brackets, and it keeps --bn-colour-editing-bg. Do not
+     * reach for that yellow for anything else, and do not restyle crop to
+     * match these: a different verb is allowed a different look. */
+    --bn-field-edit-edge: var(--bn-colour-accent);
+    --bn-field-edit-fill-on-page: var(--bn-colour-quote-bg);
+    --bn-field-edit-fill-on-tint: var(--bn-colour-bg);
+    --bn-field-edit-radius: var(--bn-radius-sm);
+    --bn-field-edit-offset: 1px;
 
     /* Section-divider keyline — the colour of the h2 / .section-heading /
        .framework-section-header bottom rules and the header <hr>. Aliases

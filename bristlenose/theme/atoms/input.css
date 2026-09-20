@@ -6,9 +6,11 @@
     font-family: var(--bn-font-mono);
     font-size: var(--bn-text-badge);
     padding: var(--bn-space-xs) 0.4rem;
-    border: 1px solid var(--bn-colour-accent);
-    border-radius: var(--bn-radius-sm);
-    background: var(--bn-colour-bg);
+    /* The tinted-ground field, in border form — this chip already has a box,
+       so it needs no outline. See the inline-edit block in tokens.css. */
+    border: 1px solid var(--bn-field-edit-edge);
+    border-radius: var(--bn-field-edit-radius);
+    background: var(--bn-field-edit-fill-on-tint);
     min-width: 3rem;
 }
 

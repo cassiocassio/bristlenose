@@ -201,6 +201,29 @@
     min-width: 12ch;
 }
 
+/* The card's own two fields, in the card's own idiom.
+ *
+ * `editable-text.css` carries the house rule for a name or title being edited
+ * and tints the field, because out there the ground is page white. Here the
+ * ground is a group-tinted card, so a tint on a tint reads as nothing — the
+ * same wall the code cursor hit at 1.01:1. These blank to page background
+ * instead, which is exactly what `.tag-input-box` and `.tag-edit-inline` do
+ * three inches below: one card, one idiom, whether you are naming the group or
+ * naming a code inside it.
+ *
+ * `outline` rather than the chips' `border` because both of these are prose
+ * spans in a header that has to hold its line; the edge colour is the signal
+ * and the mechanism is free to differ. `.codebook-group.bn-selected
+ * :focus-within` stands the CARD's edge down as this one lights, so there is
+ * one accent edge on screen and it is around the thing taking the keystrokes. */
+.group-title-text[contenteditable="true"],
+.group-subtitle[contenteditable="true"] {
+    outline: 1px solid var(--bn-field-edit-edge);
+    outline-offset: var(--bn-field-edit-offset);
+    background: var(--bn-field-edit-fill-on-tint);
+    border-radius: var(--bn-field-edit-radius);
+}
+
 .group-subtitle.placeholder {
     font-style: italic;
     opacity: 0.45;
@@ -358,8 +381,8 @@
     outline: none;
     border-radius: var(--bn-radius-sm);
     min-width: 3em;
-    background: var(--bn-colour-bg);
-    border: 1px solid var(--bn-colour-accent);
+    background: var(--bn-field-edit-fill-on-tint);
+    border: 1px solid var(--bn-field-edit-edge);
     box-shadow: none;
 }
 

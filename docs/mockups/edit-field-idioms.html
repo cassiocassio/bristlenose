@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inline edit fields — one rule, two treatments, one exemption</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap" rel="stylesheet">
+<style>
+/* ─────────────────────────────────────────────────────────────────────────
+   Real Bristlenose tokens, copied verbatim from bristlenose/theme/tokens.css
+   and colors/palette-default.css. Do not retune them here — if a value looks
+   wrong, it is wrong in the theme, and this page is doing its job.
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+    color-scheme: light dark;
+
+    --bn-colour-bg:            light-dark(#ffffff, #111111);
+    --bn-colour-text:          light-dark(#1a1a1a, #e5e7eb);
+    --bn-colour-muted:         light-dark(#6b7280, #9ca3af);
+    --bn-colour-border:        light-dark(#e5e7eb, #2d2d2d);
+    --bn-colour-accent:        light-dark(#007aff, #0a84ff);
+    --bn-colour-quote-bg:      light-dark(#f9fafb, #1a1a1a);
+    --bn-colour-badge-bg:      light-dark(#f3f4f6, #252525);
+    --bn-colour-badge-text:    light-dark(#374151, #d1d5db);
+    --bn-colour-editing-bg:    light-dark(#fffbe6, #2a2614);
+    --bn-colour-editing-border:light-dark(#e5e0c0, #4a4528);
+    --bn-crop-handle-colour:   light-dark(#c4850a, #f0b830);
+    --bn-colour-inspector-bg:  light-dark(#f9f9fa, #1c1c1e);
+    --bn-colour-positive:      light-dark(#16a34a, #22c55e);
+    --bn-colour-warning:       light-dark(#f59e0b, #fbbf24);
+    --bn-focus-ring:           light-dark(0 0 0 2px rgba(0,122,255,0.12), 0 0 0 2px rgba(10,132,255,0.2));
+    --bn-hover-bg:             light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.06));
+    --bn-group-ux:             light-dark(oklch(97% 0.015 250), oklch(22% 0.025 250));
+    --bn-group-emo:            light-dark(oklch(97% 0.015 10),  oklch(22% 0.025 10));
+
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-space-xs: 0.2rem;
+    --bn-space-sm: 0.4rem;
+    --bn-weight-normal: 420;
+    --bn-weight-emphasis: 490;
+    --bn-weight-strong: 700;
+    --bn-text-micro: 9.6px;
+    --bn-text-badge: 11.5px;
+    --bn-text-caption: 12px;
+    --bn-text-label: 13px;
+    --bn-text-body: 15px;
+    --bn-text-heading: 18px;
+    --bn-text-title: 22px;
+    --bn-font-body: "Inter", system-ui, -apple-system, sans-serif;
+    --bn-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+    /* THE NEW SET — the thing this page exists to argue for. */
+    --bn-field-edit-edge:         var(--bn-colour-accent);
+    --bn-field-edit-fill-on-page: var(--bn-colour-quote-bg);
+    --bn-field-edit-fill-on-tint: var(--bn-colour-bg);
+    --bn-field-edit-radius:       var(--bn-radius-sm);
+    --bn-field-edit-offset:       1px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    padding: 2rem 1rem 6rem;
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-label);
+    line-height: 1.45;
+}
+
+.wrap { max-width: 1400px; margin: 0 auto; }
+
+h1 {
+    font-size: var(--bn-text-title);
+    font-weight: var(--bn-weight-emphasis);
+    margin: 0 0 0.4rem;
+}
+
+.standfirst {
+    font-size: var(--bn-text-body);
+    line-height: 1.5;
+    color: var(--bn-colour-muted);
+    max-width: 62ch;
+    margin: 0 0 2rem;
+}
+.standfirst strong { color: var(--bn-colour-text); font-weight: var(--bn-weight-emphasis); }
+
+/* ── The rule, stated once at the top ─────────────────────────────────── */
+
+.rule {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+    margin: 0 0 2.5rem;
+}
+.rule-card {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: 1rem 1.1rem;
+    background: var(--bn-colour-quote-bg);
+}
+.rule-card h3 {
+    margin: 0 0 0.5rem;
+    font-size: var(--bn-text-label);
+    font-weight: var(--bn-weight-emphasis);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--bn-colour-muted);
+}
+.rule-card p { margin: 0 0 0.6rem; }
+.rule-card p:last-child { margin-bottom: 0; }
+.rule-card code { font-size: var(--bn-text-caption); }
+.rule-card--exempt { border-color: var(--bn-crop-handle-colour); }
+
+/* ── The four-column grid ─────────────────────────────────────────────── */
+
+.grid {
+    display: grid;
+    grid-template-columns: 13rem 1fr 1fr 20rem;
+    gap: 0;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    overflow: hidden;
+}
+
+.grid > .head {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--bn-colour-inspector-bg);
+    border-bottom: 1px solid var(--bn-colour-border);
+    padding: 0.7rem 1rem;
+    font-size: var(--bn-text-caption);
+    font-weight: var(--bn-weight-emphasis);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bn-colour-muted);
+}
+
+.grid > .cell {
+    padding: 1.1rem 1rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+    border-right: 1px solid var(--bn-colour-border);
+    min-width: 0;
+}
+.grid > .cell:nth-child(4n) { border-right: none; }
+.grid > .row-last { border-bottom: none; }
+
+.scenario-name { font-weight: var(--bn-weight-emphasis); margin: 0 0 0.35rem; }
+.scenario-meta { margin: 0; font-size: var(--bn-text-caption); color: var(--bn-colour-muted); }
+.scenario-meta b { font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-text); }
+
+.status {
+    display: inline-block;
+    margin-top: 0.5rem;
+    font-size: var(--bn-text-micro);
+    font-weight: var(--bn-weight-emphasis);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 6px;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+}
+.status--changed { background: color-mix(in oklch, var(--bn-colour-accent) 16%, transparent); color: var(--bn-colour-accent); }
+.status--same    { background: color-mix(in oklch, var(--bn-colour-positive) 16%, transparent); color: var(--bn-colour-positive); }
+.status--exempt  { background: color-mix(in oklch, var(--bn-crop-handle-colour) 20%, transparent); color: var(--bn-crop-handle-colour); }
+
+pre {
+    margin: 0.75rem 0 0;
+    padding: 0.6rem 0.7rem;
+    background: var(--bn-colour-quote-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-micro);
+    line-height: 1.55;
+    overflow-x: auto;
+    white-space: pre;
+    color: var(--bn-colour-text);
+}
+pre .tok { color: var(--bn-colour-accent); }
+pre .gone { color: var(--bn-colour-muted); text-decoration: line-through; }
+code {
+    font-family: var(--bn-font-mono);
+    font-size: 0.92em;
+    background: var(--bn-colour-badge-bg);
+    padding: 1px 4px;
+    border-radius: var(--bn-radius-sm);
+}
+.rationale { margin: 0; font-size: var(--bn-text-caption); line-height: 1.55; }
+.rationale + .rationale { margin-top: 0.6rem; }
+
+/* ── Specimen furniture ───────────────────────────────────────────────── */
+
+.stage {
+    padding: 0.9rem;
+    border-radius: var(--bn-radius-sm);
+    border: 1px dashed var(--bn-colour-border);
+}
+.stage--page { background: var(--bn-colour-bg); }
+.stage--card { background: var(--bn-group-ux); }
+.stage--quote { background: var(--bn-colour-quote-bg); }
+.stage-label {
+    display: block;
+    font-size: var(--bn-text-micro);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--bn-colour-muted);
+    margin-bottom: 0.55rem;
+}
+
+.spec-heading { font-size: var(--bn-text-heading); font-weight: var(--bn-weight-emphasis); margin: 0; }
+.spec-desc { font-size: var(--bn-text-label); color: var(--bn-colour-muted); margin: 0; }
+.spec-group-title { font-size: var(--bn-text-label); font-weight: var(--bn-weight-emphasis); }
+.spec-group-sub { font-size: var(--bn-text-caption); color: var(--bn-colour-muted); }
+.spec-quote { font-size: var(--bn-text-body); line-height: 1.5; margin: 0; }
+
+.badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-badge);
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+}
+.pbadge {
+    display: inline-flex;
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-badge);
+    padding: var(--bn-space-xs) 0.4rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    margin-right: 0.35rem;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   BEFORE — what ships today, reproduced literally.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Nothing at all: the browser's own ring on a contenteditable. The SPA never
+   added a class for the editing state, so `.editable-text.editing` — the rule
+   that was supposed to paint this — could never match. */
+.b-ua { outline: auto 1px Highlight; outline: auto 1px -webkit-focus-ring-color; }
+
+/* Session speaker name — person-badge.css, the only one that was right. */
+.b-speaker {
+    outline: 1px solid var(--bn-colour-accent);
+    outline-offset: 1px;
+    background: var(--bn-colour-quote-bg);
+    border-radius: var(--bn-radius-sm);
+    padding: var(--bn-space-xs) 0.2rem;
+}
+
+/* A new code — atoms/input.css, the shape you blessed by eye. */
+.b-chip {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-badge);
+    padding: var(--bn-space-xs) 0.4rem;
+    border: 1px solid var(--bn-colour-accent);
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-bg);
+    min-width: 3rem;
+}
+
+/* Renaming a code, as it was two weeks ago: `.badge` metrics dragged in the
+   grey badge fill, and the ring was --bn-focus-ring at 12% alpha. */
+.b-rename-old {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-badge);
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    box-shadow: var(--bn-focus-ring);
+}
+
+/* Static byproduct only — the yellow that the reference doc calls the house
+   editing state, applied by theme/js and by nothing the app runs. */
+.b-yellow {
+    background: var(--bn-colour-editing-bg);
+    outline: 1px solid var(--bn-colour-editing-border);
+    border-radius: var(--bn-radius-sm);
+    padding: var(--bn-space-xs) 0.3rem;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   AFTER — the two treatments, driven entirely by the new tokens.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.a-on-page {
+    outline: 1px solid var(--bn-field-edit-edge);
+    outline-offset: var(--bn-field-edit-offset);
+    background: var(--bn-field-edit-fill-on-page);
+    border-radius: var(--bn-field-edit-radius);
+    padding: 1px 3px;
+    margin: -1px -3px;
+}
+.a-on-tint {
+    outline: 1px solid var(--bn-field-edit-edge);
+    outline-offset: var(--bn-field-edit-offset);
+    background: var(--bn-field-edit-fill-on-tint);
+    border-radius: var(--bn-field-edit-radius);
+    padding: 1px 3px;
+}
+/* Same treatment, border form — for something that already owns a box. */
+.a-on-tint-boxed {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-badge);
+    padding: var(--bn-space-xs) 0.4rem;
+    border: 1px solid var(--bn-field-edit-edge);
+    border-radius: var(--bn-field-edit-radius);
+    background: var(--bn-field-edit-fill-on-tint);
+    min-width: 3rem;
+}
+
+/* The exemption, unchanged in both columns. */
+.x-crop {
+    background: var(--bn-colour-editing-bg);
+    padding: var(--bn-space-xs) 0;
+    border-radius: var(--bn-radius-sm);
+}
+.x-bracket {
+    font-size: 1.15em;
+    font-weight: var(--bn-weight-strong);
+    color: var(--bn-crop-handle-colour);
+}
+
+.caret {
+    display: inline-block;
+    width: 1px;
+    height: 1em;
+    background: var(--bn-colour-text);
+    vertical-align: text-bottom;
+    animation: blink 1.06s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .caret { animation-duration: 0s; opacity: 1; } }
+
+footer.note {
+    margin-top: 2.5rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--bn-colour-border);
+    font-size: var(--bn-text-caption);
+    color: var(--bn-colour-muted);
+    max-width: 78ch;
+}
+footer.note p { margin: 0 0 0.7rem; }
+
+@media (max-width: 1100px) {
+    .grid { grid-template-columns: 1fr; }
+    .grid > .head:not(:first-child) { display: none; }
+    .grid > .head:first-child { grid-column: 1; }
+    .grid > .cell { border-right: none; }
+    .grid > .cell:nth-child(4n+2)::before { content: "Today"; }
+    .grid > .cell:nth-child(4n+3)::before { content: "Proposed"; }
+    .grid > .cell:nth-child(4n)::before { content: "Treatment and why"; }
+    .grid > .cell::before {
+        display: block;
+        font-size: var(--bn-text-micro);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--bn-colour-muted);
+        margin-bottom: 0.5rem;
+    }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Inline edit fields</h1>
+<p class="standfirst">
+Four different answers to “is this field live?” ship on one screen today, and two
+surfaces answer it with nothing at all. The fix is not a fourth invention — it is
+<strong>one signal whose fill inverts with the ground it sits on</strong>, plus one
+named exemption. Columns two and three are live CSS, not screenshots: what you see
+is what the declarations beneath them do.
+</p>
+
+<div class="rule">
+  <div class="rule-card">
+    <h3>Treatment A — field on page background</h3>
+    <p>The ground is already white, so the field <b>tints up</b> to be seen.</p>
+    <p><code>--bn-field-edit-fill-on-page</code><br><code>--bn-field-edit-edge</code> at 1px</p>
+  </div>
+  <div class="rule-card">
+    <h3>Treatment B — field on a tinted surface</h3>
+    <p>The ground is already coloured, so the field <b>blanks to neutral</b> to be seen.</p>
+    <p><code>--bn-field-edit-fill-on-tint</code><br><code>--bn-field-edit-edge</code> at 1px</p>
+  </div>
+  <div class="rule-card rule-card--exempt">
+    <h3>Exempt — quote crop and trim</h3>
+    <p>Not “edit this text” but <b>“move this boundary”</b>. Custom by design, one
+       signal with the burnt-amber brackets. Keeps <code>--bn-colour-editing-bg</code>.
+       Do not restyle it to match, and do not borrow its yellow.</p>
+  </div>
+</div>
+
+<div class="grid">
+
+  <div class="head">Scenario</div>
+  <div class="head">Today</div>
+  <div class="head">Proposed</div>
+  <div class="head">Treatment and why</div>
+
+  <!-- 1 ─ theme heading ─────────────────────────────────────────────── -->
+  <div class="cell">
+    <p class="scenario-name">Theme heading</p>
+    <p class="scenario-meta">Quotes lens · ground <b>page</b></p>
+    <span class="status status--changed">changed</span>
+  </div>
+  <div class="cell">
+    <div class="stage stage--page"><span class="stage-label">page background</span>
+      <p class="spec-heading"><span class="b-ua">Onboarding friction</span><span class="caret"></span></p>
+    </div>
+<pre>.editable-text<span class="gone">.editing</span> {
+  background: --bn-colour-editing-bg;
+  outline:    --bn-colour-editing-border;
+}
+<span class="gone">/* never matches: React adds no
+   .editing class — only theme/js
+   does, in the static byproduct */</span></pre>
+  </div>
+  <div class="cell">
+    <div class="stage stage--page"><span class="stage-label">page background</span>
+      <p class="spec-heading"><span class="a-on-page">Onboarding friction</span><span class="caret"></span></p>
+    </div>
+  </div>
+  <div class="cell">
+<pre>.editable-text[<span class="tok">contenteditable</span>="true"] {
+  outline: 1px solid <span class="tok">--bn-field-edit-edge</span>;
+  outline-offset:    <span class="tok">--bn-field-edit-offset</span>;
+  background:        <span class="tok">--bn-field-edit-fill-on-page</span>;
+  border-radius:     <span class="tok">--bn-field-edit-radius</span>;
+}</pre>
+    <p class="rationale">Keys on the <b>attribute</b>, not a class, so it needs no
+    co-operation from the component and cannot fall out of sync again. Resting
+    padding plus equal negative margin means entering the field moves no text.</p>
+  </div>
+
+  <!-- 2 ─ theme description ─────────────────────────────────────────── -->
+  <div class="cell">
+    <p class="scenario-name">Theme description</p>
+    <p class="scenario-meta">Quotes lens · ground <b>page</b></p>
+    <span class="status status--changed">changed</span>
+  </div>
+  <div class="cell">
+    <div class="stage stage--page"><span class="stage-label">page background</span>
+      <p class="spec-desc"><span class="b-ua">Where people stall in the first run</span><span class="caret"></span></p>
+    </div>
+  </div>
+  <div class="cell">
+    <div class="stage stage--page"><span class="stage-label">page background</span>
+      <p class="spec-desc"><span class="a-on-page">Where people stall in the first run</span><span class="caret"></span></p>
+    </div>
+  </div>
+  <div class="cell">
+    <p class="rationale">Same rule, same class, no second selector. The heading and its
+    description were always siblings in the markup; they are now siblings in the CSS too.</p>
+  </div>
+
+  <!-- 3 ─ speaker name ──────────────────────────────────────────────── -->
+  <div class="cell">
+    <p class="scenario-name">Participant name</p>
+    <p class="scenario-meta">Sessions lens · ground <b>page</b></p>
+    <span class="status status--same">unchanged — now tokenised</span>
+  </div>
+  <div class="cell">
+    <div class="stage stage--page"><span class="stage-label">page background</span>
+      <span class="pbadge">p3</span><span class="b-speaker">Sarah Chen</span><span class="caret"></span>
+    </div>
+<pre>.bn-speaker-editable-name[contenteditable] {
+  outline: 1px solid --bn-colour-accent;
+  outline-offset: 1px;
+  background: --bn-colour-quote-bg;
+}</pre>
+  </div>
+  <div class="cell">
+    <div class="stage stage--page"><span class="stage-label">page background</span>
+      <span class="pbadge">p3</span><span class="a-on-page">Sarah Chen</span><span class="caret"></span>
+    </div>
+  </div>
+  <div class="cell">
+    <p class="rationale">Pixel-identical. This one was already right, which is what made
+    it the model — the tokens were reverse-engineered from it rather than invented.
+    Its declarations are deleted from <code>person-badge.css</code> and the class now
+    joins the shared selector, so there is one rule, not two that happen to agree.</p>
+  </div>
+
+  <!-- 4 ─ code group title ──────────────────────────────────────────── -->
+  <div class="cell">
+    <p class="scenario-name">Code group title</p>
+    <p class="scenario-meta">Codes lens · ground <b>tinted card</b></p>
+    <span class="status status--changed">changed</span>
+  </div>
+  <div class="cell">
+    <div class="stage stage--card"><span class="stage-label">group-tinted card</span>
+      <div class="spec-group-title"><span class="b-ua">Navigation</span><span class="caret"></span></div>
+      <div class="spec-group-sub">how people move around</div>
+    </div>
+  </div>
+  <div class="cell">
+    <div class="stage stage--card"><span class="stage-label">group-tinted card</span>
+      <div class="spec-group-title"><span class="a-on-tint">Navigation</span><span class="caret"></span></div>
+      <div class="spec-group-sub">how people move around</div>
+    </div>
+  </div>
+  <div class="cell">
+<pre>.group-title-text[<span class="tok">contenteditable</span>="true"] {
+  outline: 1px solid <span class="tok">--bn-field-edit-edge</span>;
+  outline-offset:    <span class="tok">--bn-field-edit-offset</span>;
+  background:        <span class="tok">--bn-field-edit-fill-on-tint</span>;
+  border-radius:     <span class="tok">--bn-field-edit-radius</span>;
+}</pre>
+    <p class="rationale">A tint on a tint reads as nothing — the same 1.01:1 wall the code
+    cursor hit. Blanking to page background is what the code chips three inches below
+    already do: <b>one card, one idiom</b>, whether you are naming the group or naming a
+    code inside it.</p>
+    <p class="rationale">The card's own selection edge stands down via
+    <code>:focus-within</code> as this one lights, so exactly one accent edge is on screen
+    and it is around the thing taking the keystrokes.</p>
+  </div>
+
+  <!-- 5 ─ code group subtitle ───────────────────────────────────────── -->
+  <div class="cell">
+    <p class="scenario-name">Code group subtitle</p>
+    <p class="scenario-meta">Codes lens · ground <b>tinted card</b></p>
+    <span class="status status--changed">changed</span>
+  </div>
+  <div class="cell">
+    <div class="stage stage--card"><span class="stage-label">group-tinted card</span>
+      <div class="spec-group-title">Navigation</div>
+      <div class="spec-group-sub"><span class="b-ua">how people move around</span><span class="caret"></span></div>
+    </div>
+  </div>
+  <div class="cell">
+    <div class="stage stage--card"><span class="stage-label">group-tinted card</span>
+      <div class="spec-group-title">Navigation</div>
+      <div class="spec-group-sub"><span class="a-on-tint" style="display:inline-block;min-width:12ch">how people move around</span><span class="caret"></span></div>
+    </div>
+  </div>
+  <div class="cell">
+    <p class="rationale">Shares the selector with the title. Keeps its existing
+    <code>display:inline-block</code> and <code>min-width:12ch</code> — the fix that stopped a
+    three-word subtitle getting a field four times its length, and that keeps an empty
+    one from collapsing to a caret with no box.</p>
+  </div>
+
+  <!-- 6 ─ new code ──────────────────────────────────────────────────── -->
+  <div class="cell">
+    <p class="scenario-name">New code</p>
+    <p class="scenario-meta">Codes lens · ground <b>tinted card</b></p>
+    <span class="status status--same">unchanged — now tokenised</span>
+  </div>
+  <div class="cell">
+    <div class="stage stage--card"><span class="stage-label">group-tinted card</span>
+      <span class="badge">wayfinding</span>
+      <span class="b-chip">back-b<span class="caret"></span></span>
+    </div>
+<pre>.tag-input-box {
+  border: 1px solid --bn-colour-accent;
+  background: --bn-colour-bg;
+}</pre>
+  </div>
+  <div class="cell">
+    <div class="stage stage--card"><span class="stage-label">group-tinted card</span>
+      <span class="badge">wayfinding</span>
+      <span class="a-on-tint-boxed">back-b<span class="caret"></span></span>
+    </div>
+  </div>
+  <div class="cell">
+    <p class="rationale">Pixel-identical, and the second model the tokens were read off.
+    <b>Border rather than outline</b> because this chip already owns a box — that is a
+    layout mechanism, not a second meaning, and the set deliberately leaves the choice
+    open. Outline is for a span in running prose, where a border would reflow the line.</p>
+  </div>
+
+  <!-- 7 ─ rename code ───────────────────────────────────────────────── -->
+  <div class="cell">
+    <p class="scenario-name">Rename a code</p>
+    <p class="scenario-meta">Codes lens · ground <b>tinted card</b></p>
+    <span class="status status--same">already aligned</span>
+  </div>
+  <div class="cell">
+    <div class="stage stage--card"><span class="stage-label">as it was two weeks ago</span>
+      <span class="b-rename-old">wayfinding<span class="caret"></span></span>
+    </div>
+<pre>.tag-edit-inline {
+  /* .badge metrics dragged in the
+     grey fill; the ring was
+     --bn-focus-ring at 12% alpha */
+  box-shadow: --bn-focus-ring;
+}</pre>
+  </div>
+  <div class="cell">
+    <div class="stage stage--card"><span class="stage-label">group-tinted card</span>
+      <span class="a-on-tint-boxed">wayfinding<span class="caret"></span></span>
+    </div>
+  </div>
+  <div class="cell">
+    <p class="rationale">This one you already fixed by eye — “whatever you're doing for the
+    brand new tag on first edit feels right”. All that changes now is that it reads the
+    tokens instead of repeating their values, so re-editing and first-typing cannot drift
+    apart again.</p>
+    <p class="rationale">Worth keeping as the cautionary specimen: twelve per cent alpha on
+    a tinted card is a ring that technically exists and cannot be seen.</p>
+  </div>
+
+  <!-- 8 ─ crop ──────────────────────────────────────────────────────── -->
+  <div class="cell">
+    <p class="scenario-name">Crop / trim a quote</p>
+    <p class="scenario-meta">Quotes lens · ground <b>quote card</b></p>
+    <span class="status status--exempt">exempt — do not touch</span>
+  </div>
+  <div class="cell">
+    <div class="stage stage--quote"><span class="stage-label">quote card</span>
+      <p class="spec-quote"><span class="x-bracket">[</span><span class="x-crop">it just kept spinning and I had no idea if it had worked</span><span class="caret"></span><span class="x-bracket">]</span></p>
+    </div>
+  </div>
+  <div class="cell">
+    <div class="stage stage--quote"><span class="stage-label">quote card — identical</span>
+      <p class="spec-quote"><span class="x-bracket">[</span><span class="x-crop">it just kept spinning and I had no idea if it had worked</span><span class="caret"></span><span class="x-bracket">]</span></p>
+    </div>
+  </div>
+  <div class="cell">
+    <p class="rationale">Untouched, deliberately. The verb is different — you are moving a
+    boundary, not retyping a string — and the yellow was designed to read as a single
+    signal with the brackets. <b>A different verb is allowed a different look.</b></p>
+    <p class="rationale">What changes is only the name's honesty:
+    <code>--bn-colour-editing-bg</code> now means crop and nothing else, and the colour
+    contract says so. Renaming it to <code>--bn-colour-crop-bg</code> is the honest finish
+    and is <b>not</b> taken here, because the rename touches the one surface that was
+    deliberately custom.</p>
+  </div>
+
+  <!-- 9 ─ search input ──────────────────────────────────────────────── -->
+  <div class="cell row-last">
+    <p class="scenario-name">Search, filters, settings</p>
+    <p class="scenario-meta">Everywhere · ground <b>page</b></p>
+    <span class="status status--exempt">not in the set</span>
+  </div>
+  <div class="cell row-last">
+    <div class="stage stage--page"><span class="stage-label">page background</span>
+      <input type="search" placeholder="Search quotes" style="font-family:var(--bn-font-body);font-size:var(--bn-text-label);padding:0.3rem 0.5rem;border:1px solid var(--bn-colour-accent);border-radius:var(--bn-radius-md);background:var(--bn-colour-bg);color:var(--bn-colour-text);outline:none;width:12rem">
+    </div>
+  </div>
+  <div class="cell row-last">
+    <div class="stage stage--page"><span class="stage-label">page background — identical</span>
+      <input type="search" placeholder="Search quotes" style="font-family:var(--bn-font-body);font-size:var(--bn-text-label);padding:0.3rem 0.5rem;border:1px solid var(--bn-colour-accent);border-radius:var(--bn-radius-md);background:var(--bn-colour-bg);color:var(--bn-colour-text);outline:none;width:12rem">
+    </div>
+  </div>
+  <div class="cell row-last">
+    <p class="rationale">A different animal, and the distinction is worth stating so nobody
+    “aligns” these next. A real <code>&lt;input&gt;</code> <b>has a box at rest</b>: it is
+    visibly a field before you touch it, so focus only needs to promote the resting border
+    to accent. An inline edit has no box at rest — it is prose until you click it — so
+    focus has to <b>conjure</b> the field, which is why it needs a fill as well as an edge.</p>
+    <p class="rationale">Rule of thumb: if the reader can see it is a field before
+    interacting, use the resting-border pattern. If they cannot, use the
+    <code>--bn-field-edit-*</code> set.</p>
+  </div>
+
+</div>
+
+<footer class="note">
+  <p><b>What this replaces.</b> Before: five treatments for one state — yellow (static
+  byproduct only), accent outline plus tint (speaker names), accent border plus page
+  background (codes), a 12%-alpha ring on grey (code rename, since fixed), and nothing
+  at all (theme headings, theme descriptions, code group titles, code group subtitles).
+  After: two, chosen by the ground, plus one named exemption.</p>
+  <p><b>Where the decision lives.</b> <code>bristlenose/theme/tokens.css</code>, the
+  inline-edit block — it carries the rule, the two tokens and the exemption in one
+  comment, so the next person styling a field reads the answer where they look up the
+  radius. The colour contract records that <code>--bn-colour-editing-bg</code> is
+  crop-only and that <code>--bn-colour-editing-border</code> now has no consumers.</p>
+  <p><b>Still open, deliberately.</b> Renaming the crop token; deleting the orphaned
+  <code>--bn-colour-editing-border</code> from both palettes; and
+  <code>molecules/name-edit.css</code>, which is dead apart from <code>.unnamed</code> —
+  its <code>.name-cell</code> / <code>.name-text</code> / <code>.name-pencil</code> classes
+  are emitted by nothing in the repo, and <code>theme/js/names.js</code> still ships
+  querying for them.</p>
+</footer>
+
+</div>
+</body>
+</html>

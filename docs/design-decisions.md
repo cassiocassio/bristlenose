@@ -1,4 +1,36 @@
+---
+status: partial
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20
+---
+
 # Design Decisions
+
+## Changelog
+
+- _2026-09-20_ — trued up: the `Local-first` guiding principle reframed —
+  it claimed "no telemetry" and "nothing leaves your machine", which was
+  never true of the recommended path and which root `CLAUDE.md` forbids in
+  terms; six entries inherited from it. Two entries marked superseded with
+  their bodies kept (`Export as DOM snapshot` — it is a dedicated
+  single-file Vite build, not a snapshot; `One card per set of quotes` — the
+  rule now folds at pairwise Jaccard 0.6 rather than hiding). Five decisions
+  taken 19–20 Sep added, which had been taken, shipped and left unrecorded.
+  Anchors: `frontend/vite.export.config.ts:43`, `routes/export.py`
+  `_build_export_html`, `frontend/src/utils/signalDedup.ts:115`,
+  `bristlenose/analysis/sentiment_label.py`; commits `54b80a65`, `96323e58`,
+  `08b4bb93`, `9e9af6fd`, `66d18bc7`.
+- _2026-09-13_ — eight signals entries added (`79571352`), describing what
+  `docs/design-signal-card.md` now calls generation 3.
+
+**Status is `partial`, not `current`.** The signals entries at
+[A signal card is a location and a tag group](#a-signal-card-is-a-location-and-a-tag-group)
+onward describe generation 3 of the card, which `docs/design-signal-card.md`
+records as superseded by generation 4 on 20 Sep. They remain *true at HEAD* —
+a card is still a location × tag group, location still organises the
+navigation, sections and themes still interleave — so they are not marked
+superseded. They are simply one generation behind the doc that owns the
+subject, and a reader should go there for the current drawing.
 
 Why Bristlenose works the way it does. Each entry captures a choice where alternatives existed and a non-obvious path was taken, with enough rationale to understand the reasoning.
 
@@ -16,11 +48,17 @@ Not every choice is a design decision. Conventions (code style, import patterns,
 
 Five values that recur across many individual decisions. Each one shaped multiple entries below.
 
-### Local-first
+### The researcher owns the artefact
 
-**No Bristlenose server, no accounts, no telemetry.** Audio never leaves your machine. LLM analysis sends transcript text to your configured provider — and if you use Ollama, nothing leaves your machine at all. The user owns their data and their infrastructure. This is a tool for their laptop, not a SaaS product.
+**No Bristlenose service and no accounts: the pipeline runs on the researcher's own machine and the report is a file they keep.** The analysis itself is an outbound call to a cloud LLM — Claude, ChatGPT, Azure OpenAI or Gemini — and that is the normal, recommended, everyday path. Ollama is a supported minority option, slower and wanting a capable machine, never the proud default. What is owned is the *outcome*: a browsable report the researcher edits, shares, and keeps, with no seat to renew and nothing to lose access to.
 
-This shapes: [LLM provider selection](#llm-provider-selection), [Credential storage](#credential-storage), [PII redaction](#pii-redaction), [Serve mode stack](#serve-mode-stack), [Export as DOM snapshot](#export-as-dom-snapshot), [Output inside input folder](#output-inside-input-folder).
+Being precise about what moves, because the old framing was not: audio and video stay put — transcription is local. Transcript **text** goes to the configured provider, which is the whole analysis. `llm-calls.jsonl` is written beside the output and never sent anywhere, which also makes it a re-identification key and is why it lives in `.bristlenose/` rather than the shareable root.
+
+None of this relaxes participant-data governance. PII redaction, re-identification keys and retention are craft obligations that survive the reframing intact — see [`docs/methodology/consent-gradient.md`](methodology/consent-gradient.md).
+
+This shapes: [LLM provider selection](#llm-provider-selection), [Credential storage](#credential-storage), [PII redaction](#pii-redaction), [Serve mode stack](#serve-mode-stack), [Export as a dedicated single-file build](#export-as-dom-snapshot), [Output inside input folder](#output-inside-input-folder).
+
+> **Reframed 20 Sep 2026.** This principle read **"Local-first — No Bristlenose server, no accounts, no telemetry. Audio never leaves your machine … if you use Ollama, nothing leaves your machine at all."** It was not a decision that changed; it was a pitch that was never true of the recommended path, and root `CLAUDE.md` now forbids it in terms. The identical claim was struck from the repo's walkthrough on 19 Aug (`54b80a65`) and survived here for a month **as a guiding principle six entries inherit from** — which is the cost of putting a slogan where a decision goes. Kept visible rather than deleted: anyone wondering why the marketing voice changed is owed the before.
 
 ### Dignity without distortion
 
@@ -86,6 +124,8 @@ The local provider (Ollama) is the zero-friction fallback — it runs on the use
 _See also: `bristlenose/llm/CLAUDE.md`, `docs/design-llm-call-telemetry.md`, `docs/archive/design-llm-providers.md` (historical roadmap)_
 
 ### Export as DOM snapshot
+
+> **Superseded 20 Sep 2026 — the mechanism named in the heading was never built.** Export is a **dedicated single-file Vite build** (`frontend/vite.export.config.ts`, `inlineDynamicImports: true`) assembled by `_build_export_html` in `bristlenose/server/routes/export.py`; there is no `outerHTML` anywhere in it. A blob/data-URL module bootstrap does not work from an opaque `file://` origin, which is why snapshotting could not have worked. **The reasoning below still holds and is the reason the build exists** — the served app is canonical, the static renderer is not the export engine — so only the how is wrong. Full spec: [`docs/design-export-html.md`](design-export-html.md), not the `design-export-sharing.md` linked below.
 
 **Export is a DOM snapshot from the served React app, not a second render path.** The served app is the canonical experience — it has all the user's edits, stars, tags, and curated state. The static renderer (`bristlenose/stages/s12_render/`) is a legacy offline fallback, not the export engine. Exporting by snapshotting the served DOM means the export always matches what the user sees, with embedded state as JSON and inlined CSS for standalone viewing.
 
@@ -287,6 +327,8 @@ Moderators and observers stay in the roles line below the header. Their turns ar
 
 ### One card per set of quotes
 
+> **Superseded 20 Sep 2026 by the fold rule** (`96323e58`; `frontend/src/utils/signalDedup.ts`). Three things changed. The loser is **folded, not hidden** — it surfaces as an `alternates` entry on the kept card, which is the distinction the whole rule turns on. The test is **pairwise quote-set Jaccard at `FOLD_THRESHOLD = 0.6`**, or a union-coverage test, whichever fires. And the Sentiment exemption is gone by construction rather than by guard. The measurement below was also the argument against itself: the union-subset walk hid 14 cards and **11 of the 19 it hid matched no single kept card at all**, so "costs no evidence" was true of the quotes and false of the readings. The entry stays because its *premise* — attention is the expensive thing — is why the replacement exists.
+
 **Where several cards point at the same quotes, only the strongest is shown — and the Sentiment card is never hidden.** Attention is the expensive thing: a researcher asked to read the same two quotes under five headings spends it five times for one answer, and the answer they reach the fifth time is the one they reached the first. On a whiteboard you do not duplicate a sticky across five clusters; you put it in the strongest group under the strongest interpretation. Measured over nine trial projects, 74 locations and 106 cards, the rule hides 21 and costs **no evidence at all**, because every quote keeps a card pointing at it — and it is purely a multi-codebook effect, since every single-codebook project already draws exactly one card per location. The Sentiment exemption is an interim guard, not the design: a one-group framework's concentration is structurally 1.00, which handicaps it against every codebook card, and unguarded the rule deletes the Sentiment card in 5 of the 74 locations. (13 Sep 2026; `docs/mockups/signals-sidebar-row-layouts.html` §R; the metric itself is `docs/design-signal-strength.md`.)
 
 ### Sections and themes interleave in the analysis navigation
@@ -310,6 +352,26 @@ Moderators and observers stay in the roles line below the header. Their turns ar
 **A card's top right is a single chip naming the tag group or sentiment and carrying the score, and that chip is the control that opens the working.** The four-metric block is minimised by default; the text goes on flowing beside it, because the card's top was already two columns. Both card kinds share that one right column — the elaborated card's badge stack and the nameless card's bare metrics block are the same thing now. Measured across a trial project's 24 signals, Agreement takes 3 distinct values and Intensity 4, both clustered at the bottom of their scales, while Signal is close to collinear with Concentration — two of the four metrics are captions, not columns. One number is enough for most readers; the rest is for whoever wants to audit it. (13 Sep 2026; `docs/mockups/signals-sidebar-row-layouts.html` §C, §N.)
 
 ---
+
+### The chip never says "Sentiment"
+
+**A sentiment card's chip names one of the seven values, or `Positive` / `Negative` / `Mixed sentiments`, and nothing else.** "Sentiment" is the framework's own name, and naming the framework tells a researcher nothing they did not already know — they can see they are reading sentiment. What they need is *which* one, or, when no single one is honest, which direction. Every other tag group names itself perfectly well, so this is a sentiment-only resolution rather than a general rule. The label rule was fitted to 27 judgements a researcher made on real cards with the chip blanked, and every constant in it carries a MEASURED / STATED / GUESS marker so a guess cannot be promoted to a fact by being used for a while. (20 Sep 2026; `bristlenose/analysis/sentiment_label.py`, `docs/design-signal-card.md` §5; `9e9af6fd`.)
+
+### The headline is a finding or it is absent
+
+**A card shows its elaborated finding, a skeleton while one is loading, or no headline at all — never its location.** Falling back to the location looked harmless and was not: the lens fetches twice, so for three to five seconds on first paint *every* card displayed the name of the place it already sat under, which reads as a page of repeated headings rather than as loading. A card with nothing to say should say nothing; the location is already the heading above it. (20 Sep 2026; `frontend/src/islands/AnalysisPage.tsx`; `08b4bb93`.)
+
+### Quote selection is editorial, not top-N
+
+**A card shows the strongest quotes that carry its finding, plus one slot held for the dissenting voice, marked as dissent.** Ordering by `(participant, start_seconds)` is a filing order, not an argument: it let a card lead with a quote that supported nothing it claimed, and it buried disagreement below the fold where a researcher would never meet it. Measured over 20 corpus cards, cards showing no supporting quote went 3 → 0 and cards showing dissent went 13 → 16. The held slot is the point — an editor who only quotes agreement is not summarising, they are campaigning. (20 Sep 2026; `frontend/src/utils/quoteSelection.ts`; `96323e58`.)
+
+### Near-duplicate cards fold, they do not disappear
+
+**When two cards rest on substantially the same quotes, the weaker folds into the stronger as a named alternate rather than being deleted.** The two readings are rarely the same reading — they are the same evidence seen through two codebooks — so deleting one destroys an interpretation while claiming only to remove a repeat. Measured: of 19 cards the earlier delete-rule removed, **11 matched no single kept card at all**. Folding keeps the researcher's attention cost down without deciding on their behalf which lens was right. (20 Sep 2026; `frontend/src/utils/signalDedup.ts`; `96323e58`. Supersedes [One card per set of quotes](#one-card-per-set-of-quotes).)
+
+### The score stays a score, with its cost accepted
+
+**The chip shows the composite signal as it is, not as a percentage of what was attainable.** The known cost is real and was chosen rather than overlooked: the attainable ceiling falls as a study grows — 92.9 at three participants against 36.0 at twenty — so a properly-sized study reads as a weaker one than a thin study does. Attainment was the portable alternative and would have fixed exactly that. It was declined because a number a researcher can compare across their own projects is worth more than one that is internally fair and externally meaningless, and because rescaling invites reading the chip as a grade. (20 Sep 2026; `docs/design-signal-card.md` §4; `66d18bc7`.)
 
 ## Data and privacy
 

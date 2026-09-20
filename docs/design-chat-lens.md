@@ -100,9 +100,12 @@ citation *is* the review affordance).
 - **It reaches the researchers the glue position misses.** The MCP doc admits its
   funnel honestly: needs an assistant, needs a setup step. This surface has no
   funnel — it is a lens in the report they already have open.
-- **Ollama makes it genuinely local-first.** A conversational analysis surface
-  where nothing leaves the machine is something no MCP path can offer, and it is
-  on-brand in a way the MCP story is not.
+- **On Ollama, nothing leaves the machine.** A conversational analysis surface
+  that runs entirely on the researcher's own hardware is something no MCP path
+  can offer. Stated as a capability, not a brand: Ollama is the supported
+  minority option, the cloud call is the recommended path, and "local-first" is
+  a pitch this project has decided against — see `docs/design-decisions.md`
+  § The researcher owns the artefact.
 - **Context assembly is ours.** The server picks the right objects — codebook,
   signals, starred quotes, section structure — deterministically, rather than
   hoping a remote model calls the right tools in the right order.

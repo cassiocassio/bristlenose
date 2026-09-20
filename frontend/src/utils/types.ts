@@ -570,13 +570,11 @@ export interface UnifiedSignal {
   columnLabel: string; // sentiment name or group name
   colourSet: string; // codebook group colour_set (empty for sentiment)
   codebookName: string; // display name of the codebook
-  count: number;
   participants: string[];
   nEff: number;
   meanIntensity: number;
   concentration: number;
   compositeSignal: number;
-  confidence: "strong" | "moderate" | "emerging";
   quotes: UnifiedQuote[];
   signalName?: string | null;
   pattern?: string | null;
@@ -592,7 +590,6 @@ export interface UnifiedQuote {
   tagNames: string[];
   colourSet: string;
   tagColourIndices: Record<string, number>;
-  segmentIndex: number;
 }
 
 // ---------------------------------------------------------------------------

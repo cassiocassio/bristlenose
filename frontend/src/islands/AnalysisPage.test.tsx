@@ -46,6 +46,36 @@ const mockCbData: CodebookAnalysisListResponse = {
               tag_names: ["Latency"],
               segment_index: 20,
             },
+            // Five quotes so four are visible and one is hidden — the toggle
+            // has nothing to reveal below the cap, and two tests here are
+            // about the toggle.
+            {
+              text: "It spun for a long time",
+              participant_id: "p3",
+              session_id: "s2",
+              start_seconds: 300.0,
+              intensity: 2,
+              tag_names: ["Latency"],
+              segment_index: 30,
+            },
+            {
+              text: "I nearly gave up waiting",
+              participant_id: "p4",
+              session_id: "s2",
+              start_seconds: 400.0,
+              intensity: 3,
+              tag_names: ["Latency"],
+              segment_index: 40,
+            },
+            {
+              text: "Eventually it came back",
+              participant_id: "p5",
+              session_id: "s3",
+              start_seconds: 500.0,
+              intensity: 1,
+              tag_names: ["Latency"],
+              segment_index: 50,
+            },
           ],
         },
       ],
@@ -356,9 +386,9 @@ describe("AnalysisPage", () => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
     });
 
-    // First card (Checkout/Pain points) has 2 quotes — 1 visible, 1 hidden
+    // First card (Checkout/Pain points) has 5 quotes — 4 visible, 1 hidden
     const toggle = screen.getAllByTestId("bn-signal-toggle")[0];
-    expect(toggle.textContent).toContain("Show all 2 quotes");
+    expect(toggle.textContent).toContain("Show all 5 quotes");
     fireEvent.click(toggle);
     expect(toggle.textContent).toContain("Hide");
   });
@@ -594,9 +624,6 @@ describe("AnalysisPage", () => {
     });
 
     // Expand to see all quotes
-    const toggle = screen.getByTestId("bn-signal-toggle");
-    fireEvent.click(toggle);
-
     const card = screen.getAllByTestId("bn-signal-card")[0];
     const blockquotes = card.querySelectorAll("blockquote");
     expect(blockquotes.length).toBe(3);
@@ -649,9 +676,6 @@ describe("AnalysisPage", () => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(1);
     });
 
-    const toggle = screen.getByTestId("bn-signal-toggle");
-    fireEvent.click(toggle);
-
     const card = screen.getAllByTestId("bn-signal-card")[0];
     const blockquotes = card.querySelectorAll("blockquote");
     expect(blockquotes[0].classList.contains("seq-first")).toBe(true);
@@ -669,9 +693,6 @@ describe("AnalysisPage", () => {
     });
 
     // Expand first card to see both quotes
-    const toggle = screen.getAllByTestId("bn-signal-toggle")[0];
-    fireEvent.click(toggle);
-
     const card = screen.getAllByTestId("bn-signal-card")[0];
     const blockquotes = card.querySelectorAll("blockquote");
     for (const bq of blockquotes) {
@@ -721,9 +742,6 @@ describe("AnalysisPage", () => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(1);
     });
 
-    const toggle = screen.getByTestId("bn-signal-toggle");
-    fireEvent.click(toggle);
-
     const card = screen.getAllByTestId("bn-signal-card")[0];
     const blockquotes = card.querySelectorAll("blockquote");
     // Both should be solo — PersonBadge on both
@@ -733,7 +751,7 @@ describe("AnalysisPage", () => {
     }
   });
 
-  it("Cmd+click on signal card location link does not call switchToTab", async () => {
+  it("Cmd+click on a location heading does not call switchToTab", async () => {
     mockFetchCodebookAnalysis(mockCbData);
     (window as unknown as Record<string, unknown>).switchToTab = vi.fn();
     render(<AnalysisPage projectId="1" />);
@@ -742,21 +760,20 @@ describe("AnalysisPage", () => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
     });
 
-    // Find the location link (section name in the signal card header)
-    const card = screen.getAllByTestId("bn-signal-card")[0];
-    const locationLink = card.querySelector("a.signal-card-location-link") as HTMLElement;
-    expect(locationLink).toBeTruthy();
+    const link = document
+      .querySelector(".analysis-codebook-heading a.signal-card-location-link") as HTMLElement;
+    expect(link).toBeTruthy();
 
     // Cmd+click (Mac) — should NOT intercept
-    fireEvent.click(locationLink, { metaKey: true });
+    fireEvent.click(link, { metaKey: true });
     expect(window.switchToTab).not.toHaveBeenCalled();
 
     // Ctrl+click (Win/Linux) — should NOT intercept
-    fireEvent.click(locationLink, { ctrlKey: true });
+    fireEvent.click(link, { ctrlKey: true });
     expect(window.switchToTab).not.toHaveBeenCalled();
 
     // Plain click — should intercept
-    fireEvent.click(locationLink);
+    fireEvent.click(link);
     expect(window.switchToTab).toHaveBeenCalledWith("quotes");
   });
 
@@ -766,27 +783,26 @@ describe("AnalysisPage", () => {
   // tells the researcher most was the one that could not hand them the quotes
   // — and no fixture in this file carried a signal_name, which is why nothing
   // caught it.
-  it("an elaborated signal card's location is a link to the quotes lens", async () => {
-    const named: CodebookAnalysisListResponse = JSON.parse(JSON.stringify(mockCbData));
-    named.codebooks[0].signals[0].signal_name = "Checkout Latency Tension";
-    named.codebooks[0].signals[0].pattern = "tension";
-    named.codebooks[0].signals[0].elaboration =
-      "Participants stalled at payment. || Two of three waited long enough to comment on it.";
-    mockFetchCodebookAnalysis(named);
+  it("a location's heading is the link to the quotes lens, and the card carries none", async () => {
+    mockFetchCodebookAnalysis(mockCbData);
     (window as unknown as Record<string, unknown>).switchToTab = vi.fn();
     (window as unknown as Record<string, unknown>).scrollToAnchor = vi.fn();
     render(<AnalysisPage projectId="1" />);
 
     await waitFor(() => {
-      expect(screen.getByText("Checkout Latency Tension")).toBeTruthy();
+      expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0);
     });
 
-    const card = screen
-      .getAllByTestId("bn-signal-card")
-      .find((c) => c.textContent?.includes("Checkout Latency Tension")) as HTMLElement;
-    const link = card.querySelector("a.signal-card-location-link") as HTMLElement;
+    // The link lives on the heading, once per location — not once per card.
+    const heading = document.querySelector(".analysis-codebook-heading") as HTMLElement;
+    const link = heading.querySelector("a.signal-card-location-link") as HTMLElement;
     expect(link).toBeTruthy();
     expect(link.textContent).toBe("Checkout");
+
+    // And no card repeats it. The location is stated once, above the run.
+    for (const card of screen.getAllByTestId("bn-signal-card")) {
+      expect(card.querySelector("a.signal-card-location-link")).toBeNull();
+    }
 
     fireEvent.click(link);
     expect(window.switchToTab).toHaveBeenCalledWith("quotes");
@@ -796,30 +812,36 @@ describe("AnalysisPage", () => {
   // The card is itself role="button" and focuses on click, so a link inside it
   // must stop the event: otherwise following the location to the quotes lens
   // also re-focuses the card and re-points the inspector behind your back.
-  it("clicking a card's location does not also focus the card", async () => {
+  it("the location link is outside every card, so following it cannot focus one", async () => {
+    // This replaces a test that pinned a stopPropagation on the card's own
+    // location link: the whole card is role="button", so clicking the link
+    // fired BOTH — you landed in the quotes lens and the analysis lens had
+    // silently re-focused the card behind you. The link now lives on the
+    // heading, outside every card, so the hazard is structural rather than
+    // guarded. This asserts the structure that makes it impossible.
     resetAnalysisSignalStore();   // module singleton — an earlier test's focus leaks in
-    const named: CodebookAnalysisListResponse = JSON.parse(JSON.stringify(mockCbData));
-    named.codebooks[0].signals[0].signal_name = "Checkout Latency Tension";
-    mockFetchCodebookAnalysis(named);
+    mockFetchCodebookAnalysis(mockCbData);
     (window as unknown as Record<string, unknown>).switchToTab = vi.fn();
     (window as unknown as Record<string, unknown>).scrollToAnchor = vi.fn();
     render(<AnalysisPage projectId="1" />);
 
     await waitFor(() => {
-      expect(screen.getByText("Checkout Latency Tension")).toBeTruthy();
+      expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
     });
 
-    const card = screen
-      .getAllByTestId("bn-signal-card")
-      .find((c) => c.textContent?.includes("Checkout Latency Tension")) as HTMLElement;
-    expect(card.classList.contains("bn-selected")).toBe(false);
+    const link = document
+      .querySelector(".analysis-codebook-heading a.signal-card-location-link") as HTMLElement;
+    for (const card of screen.getAllByTestId("bn-signal-card")) {
+      expect(card.contains(link)).toBe(false);
+    }
 
-    fireEvent.click(card.querySelector("a.signal-card-location-link") as HTMLElement);
-
+    fireEvent.click(link);
     await waitFor(() => {
       expect(window.switchToTab).toHaveBeenCalledWith("quotes");
     });
-    expect(card.classList.contains("bn-selected")).toBe(false);
+    for (const card of screen.getAllByTestId("bn-signal-card")) {
+      expect(card.classList.contains("bn-selected")).toBe(false);
+    }
   });
 
   it("heatmap cells with count=1 get data-count attribute", async () => {

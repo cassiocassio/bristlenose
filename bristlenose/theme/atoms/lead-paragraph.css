@@ -76,3 +76,21 @@
     color: var(--bn-lead-colour);
     font-weight: var(--bn-lead-weight);
 }
+
+/* TWO PARAGRAPHS, added 20 Sep 2026. `signal-elaboration.md` has specified
+   since v0.2.0 that `||` is "a paragraph break, not a syntactic pause" and
+   that the evidence renders "after a blank line". The splitter emitted
+   `<strong>lead</strong> rest` — one paragraph, joined by a single space — so
+   the blank line the prompt promises had never existed and the model was
+   writing against a layout it was not given.
+
+   The claim keeps its <strong> for the semantics; the weight is still reset to
+   the token by the rule above, so nothing looks bolder. The tint still comes
+   from the paragraph, which `.bn-lead-rest` inherits. */
+.bn-lead-para .bn-lead-claim {
+    margin: 0;
+}
+
+.bn-lead-para .bn-lead-rest {
+    margin: var(--bn-space-sm) 0 0;
+}

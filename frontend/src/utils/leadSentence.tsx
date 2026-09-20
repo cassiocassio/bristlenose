@@ -88,15 +88,38 @@ export function splitLead(text: string, opts: { autoSplit?: boolean } = {}): Lea
   const marked = text.indexOf(MARKER);
   if (marked !== -1) {
     return {
-      lead: text.slice(0, marked).trimEnd(),
-      rest: text.slice(marked + MARKER.length).trimStart(),
+      lead: tidyLead(text.slice(0, marked)),
+      rest: tidyRest(text.slice(marked + MARKER.length)),
     };
   }
   if (!opts.autoSplit) return { lead: text, rest: "" };
 
   const end = firstSentenceEnd(text);
   if (end === -1) return { lead: text, rest: "" };
-  return { lead: text.slice(0, end).trimEnd(), rest: text.slice(end).trimStart() };
+  return { lead: tidyLead(text.slice(0, end)), rest: tidyRest(text.slice(end)) };
+}
+
+/**
+ * The halves, cleaned of a joiner the break makes redundant.
+ *
+ * `signal-elaboration.md` has specified since v0.2.0 that `||` is a paragraph
+ * break and that the two halves are complete sentences — but the renderer has
+ * always joined them with a single space, so the cached corpus was written
+ * against a run-on. Some entries join with an em dash instead of `||`, and
+ * some carry BOTH: a `||` followed by a dash. An em dash means *keep going,
+ * this is not finished*, which is the opposite of what a paragraph break says,
+ * so it is stripped either way rather than left to contradict the layout.
+ *
+ * Content is never touched beyond that: no truncation, no rewriting.
+ */
+function tidyLead(s: string): string {
+  const t = s.trim().replace(/[\u2014\u2013-]+$/, "").trim();
+  return t && !/[.!?\u2026]$/.test(t) ? `${t}.` : t;
+}
+
+function tidyRest(s: string): string {
+  const t = s.trim().replace(/^[\u2014\u2013-]+/, "").trim();
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : t;
 }
 
 /**
@@ -115,9 +138,15 @@ export function splitLead(text: string, opts: { autoSplit?: boolean } = {}): Lea
 export function renderLead(text: string, opts: { autoSplit?: boolean } = {}): React.ReactNode {
   const { lead, rest } = splitLead(text, opts);
   if (!rest) return lead;
+  // Two paragraphs, which is what the prompt has always promised the model:
+  // "the card renders this beneath the claim, in a tint, after a blank line".
+  // The claim keeps <strong> because the split is semantic as well as visual;
+  // the atom resets its weight to the token, so what it MEANS and what it
+  // LOOKS LIKE stay separate knobs.
   return (
     <>
-      <strong>{lead}</strong> {rest}
+      <p className="bn-lead-claim"><strong>{lead}</strong></p>
+      <p className="bn-lead-rest">{rest}</p>
     </>
   );
 }

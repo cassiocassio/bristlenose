@@ -22,13 +22,11 @@ function makeSignal(overrides: Partial<UnifiedSignal> = {}): UnifiedSignal {
     columnLabel: "frustration",
     colourSet: "",
     codebookName: "",
-    count: 3,
     participants: ["p1", "p2"],
     nEff: 2,
     meanIntensity: 0.7,
     concentration: 0.5,
     compositeSignal: 3.2,
-    confidence: "strong",
     quotes: [],
     ...overrides,
   };

@@ -5,7 +5,7 @@ import type { UnifiedSignal, UnifiedQuote } from "./types";
 function q(pid: string, at: number): UnifiedQuote {
   return {
     text: "…", pid, sessionId: "s1", startSeconds: at, intensity: 2,
-    tagNames: [], colourSet: "", tagColourIndices: {}, segmentIndex: -1,
+    tagNames: [], colourSet: "", tagColourIndices: {},
   };
 }
 
@@ -22,10 +22,9 @@ function sig(
     columnLabel,
     colourSet: "ux",
     codebookName: "UX Research",
-    count: quotes.length,
     participants: [...new Set(quotes.map((x) => x.pid))],
     nEff: 1, meanIntensity: 2, concentration: 1.5,
-    compositeSignal, confidence: "emerging", quotes,
+    compositeSignal, quotes,
     ...extra,
   };
 }

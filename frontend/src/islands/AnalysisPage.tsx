@@ -77,6 +77,9 @@ declare global {
  */
 const SAFETY_CAP = 60;
 
+/** Quotes a card shows at rest. The rest are one click away and never dropped. */
+const VISIBLE_QUOTES = 4;
+
 // ── Types ──────────────────────────────────────────────────────────────
 // UnifiedSignal and UnifiedQuote are imported from utils/types.ts
 
@@ -161,13 +164,11 @@ function adaptSentimentSignals(data: SentimentAnalysisData): UnifiedSignal[] {
     columnLabel: s.sentiment,
     colourSet: "",
     codebookName: "",
-    count: s.count,
     participants: s.participants,
     nEff: s.nEff,
     meanIntensity: s.meanIntensity,
     concentration: s.concentration,
     compositeSignal: s.compositeSignal,
-    confidence: s.confidence,
     quotes: s.quotes.map((q) => ({
       text: q.text,
       pid: q.pid,
@@ -177,7 +178,6 @@ function adaptSentimentSignals(data: SentimentAnalysisData): UnifiedSignal[] {
       tagNames: [],
       colourSet: "",
       tagColourIndices: {},
-      segmentIndex: q.segmentIndex ?? -1,
     })),
   }));
 }
@@ -193,13 +193,11 @@ function adaptCodebookSignals(data: CodebookAnalysisListResponse): UnifiedSignal
         columnLabel: s.group_name,
         colourSet: s.colour_set || cb.colour_set,
         codebookName: cb.codebook_name,
-        count: s.count,
         participants: s.participants,
         nEff: s.n_eff,
         meanIntensity: s.mean_intensity,
         concentration: s.concentration,
         compositeSignal: s.composite_signal,
-        confidence: s.confidence,
         quotes: s.quotes.map((q: TagSignalQuote) => ({
           text: q.text,
           pid: q.participant_id,
@@ -209,7 +207,6 @@ function adaptCodebookSignals(data: CodebookAnalysisListResponse): UnifiedSignal
           tagNames: q.tag_names || [],
           colourSet: s.colour_set || cb.colour_set,
           tagColourIndices: cb.tag_colour_indices || {},
-          segmentIndex: q.segment_index ?? -1,
         })),
         signalName: s.signal_name ?? null,
         pattern: s.pattern ?? null,
@@ -446,22 +443,6 @@ function SignalCard({
       ? getGroupBg(signal.colourSet)
       : "var(--bn-colour-accent)";
 
-  const anchorPrefix = signal.sourceType === "section" ? "section-" : "theme-";
-  // Must match QuoteSections/QuoteThemes anchor format: lowercase, spaces → hyphens only.
-  const slug = signal.location.toLowerCase().replace(/ /g, "-");
-  const locationHref = `#${anchorPrefix}${slug}`;
-
-  const handleLocationClick = (e: React.MouseEvent) => {
-    if (e.metaKey || e.ctrlKey || e.shiftKey) return;
-    e.preventDefault();
-    // The whole card is role="button" and focuses on click. Without this the
-    // link fires BOTH — you land in the quotes lens and the analysis lens has
-    // silently re-focused this card and re-pointed the inspector behind you.
-    e.stopPropagation();
-    window.switchToTab?.("quotes");
-    window.scrollToAnchor?.(`${anchorPrefix}${slug}`);
-  };
-
   const concPct = Math.min(100, Math.max(0, (signal.concentration / 5) * 100));
   const agreePct = signal.nEff > 0 && allPids.length > 0
     ? Math.min(100, (signal.nEff / allPids.length) * 100)
@@ -472,8 +453,11 @@ function SignalCard({
     [signal.quotes],
   );
 
-  const visibleQuotes = signal.quotes.slice(0, 1);
-  const hiddenQuotes = signal.quotes.slice(1);
+  // Four open, not one. Measured over the corpus: the median card carries 4
+  // quotes and the longest 56, so the cap is the tail's problem and the
+  // "show all" control is the exception — 24% of merged cards exceed it.
+  const visibleQuotes = signal.quotes.slice(0, VISIBLE_QUOTES);
+  const hiddenQuotes = signal.quotes.slice(VISIBLE_QUOTES);
 
   // Fix: useEffect ensures expanded class is applied before maxHeight is set,
   // so both opacity and maxHeight transitions work together.
@@ -508,61 +492,12 @@ function SignalCard({
         }
       }}
     >
+      {/* The hero is emitted FIRST so the float catches the headline and the
+          elaboration both — a float only affects content that follows it. The
+          visual order is unchanged (it sits top-right); only the source order
+          moved. `order` on the flex parent restores the reading order for a
+          screen reader, which is why `.signal-card-identity` carries it. */}
       <div className="signal-card-top">
-        <div className="signal-card-identity">
-          {signal.signalName ? (
-            <>
-              <span className="signal-card-source">
-                <a
-                  href={locationHref}
-                  className="signal-card-location-link"
-                  onClick={handleLocationClick}
-                >
-                  {signal.location}
-                </a>
-              </span>
-              <div className="signal-card-location">{signal.signalName}</div>
-              {/* `bn-lead-para` carries the treatment; `renderLead` only decides
-                  where the break falls. No `autoSplit` — the model writes the
-                  `||`, and an author's marker beats any heuristic. */}
-              {signal.elaboration && (
-                <div
-                  className="signal-elaboration bn-lead-para"
-                  data-testid="signal-elaboration"
-                >
-                  {renderLead(signal.elaboration)}
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <span className="signal-card-source">
-                {signal.sourceType === "section" ? t("analysis.section") : t("analysis.theme")}
-              </span>
-              <div className="signal-card-location">
-                <a
-                  href={locationHref}
-                  className="signal-card-location-link"
-                  onClick={handleLocationClick}
-                >
-                  {signal.location}
-                </a>
-              </div>
-            </>
-          )}
-        </div>
-        {/* One right column for both card kinds. The sentiment card used to
-            carry a bare metrics block and the codebook card a badge stack above
-            one; they are the same card now, and the only thing that differs is
-            whether the hero names a sentiment or a tag group.
-
-            The pattern chip is withdrawn, NOT the pattern: every elaborated
-            card is still classified success / gap / tension / recovery against
-            its tag's own definition and still written to `elaboration_caches`,
-            so `signal.pattern` arrives on the wire and nothing regenerates when
-            a better treatment lands. What failed was the presentation — an
-            all-caps chip that shouts, reads as a category label rather than a
-            judgement, and competed with the score for this exact corner. */}
         <div className="signal-card-right">
           <SignalHero
             signal={signal}
@@ -601,6 +536,24 @@ function SignalCard({
                 displayValue={signal.meanIntensity.toFixed(1)}
                 viz={{ type: "dots", value: signal.meanIntensity }}
               />
+            </div>
+          )}
+        </div>
+        {/* No eyebrow on either branch. The location is the heading above this
+            run of cards and is stated once there — printing it again on every
+            card said the same thing three times in one viewport. The bare
+            branch used to print the literal word "Section", which reads as a
+            type label but only ever meant "no name was generated". */}
+        <div className="signal-card-identity">
+          <div className="signal-card-location">
+            {signal.signalName || signal.location}
+          </div>
+          {signal.elaboration && (
+            <div
+              className="signal-elaboration bn-lead-para"
+              data-testid="signal-elaboration"
+            >
+              {renderLead(signal.elaboration)}
             </div>
           )}
         </div>
@@ -933,6 +886,45 @@ function adaptSentimentMatrix(m: {
 }
 
 // ── Main Component ─────────────────────────────────────────────────────
+
+/**
+ * A location's heading, and the lens's only link to the Quotes lens.
+ *
+ * The link used to sit on every card under this heading, which meant the same
+ * destination repeated once per card and the location printed three times in a
+ * viewport. One heading, one link.
+ *
+ * The anchor is namespaced because a section and a theme can share a name:
+ * `section-<slug>` and `theme-<slug>` are different places. Slug format must
+ * match QuoteSections / QuoteThemes exactly — lowercase, spaces to hyphens,
+ * nothing else.
+ */
+function LocationHeading({
+  location,
+  sourceType,
+}: {
+  location: string;
+  sourceType: "section" | "theme";
+}) {
+  const prefix = sourceType === "section" ? "section-" : "theme-";
+  const anchor = `${prefix}${location.toLowerCase().replace(/ /g, "-")}`;
+  return (
+    <div className="analysis-codebook-heading">
+      <a
+        href={`#${anchor}`}
+        className="signal-card-location-link"
+        onClick={(e) => {
+          if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+          e.preventDefault();
+          window.switchToTab?.("quotes");
+          window.scrollToAnchor?.(anchor);
+        }}
+      >
+        {location}
+      </a>
+    </div>
+  );
+}
 
 interface AnalysisPageProps {
   projectId: string;
@@ -1333,7 +1325,7 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
         {sourceBreakdown && <SourceBanner breakdown={sourceBreakdown} />}
         {places.map(({ location, cards }) => (
           <Fragment key={location}>
-            <div className="analysis-codebook-heading">{location}</div>
+            <LocationHeading location={location} sourceType={cards[0].sourceType} />
             <div className="signal-cards">
               {cards.map((s) => (
                 <SignalCard

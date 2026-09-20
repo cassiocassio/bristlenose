@@ -1,13 +1,39 @@
 /* ── Analysis page — signal cards + heatmap ─────────────────── */
 
-/* Signal card list — responsive grid.
-   Cards fill available width; a second column appears when the container
-   is wide enough (~900px+ in the center column). Shares the quote grid's
-   card rhythm (--bn-grid-gap, 20px) so cards space identically across lenses. */
+/* Signal card list — ONE column, fused.
+   The cards at a location read as one object: the seam between them is a
+   card's own top border, so it runs the full width rather than stopping
+   inside the padding. A rule inside a card would say these are sections of
+   one thing; a border between cards says they are separate findings in one
+   place, which is what they are.
+
+   It was a responsive auto-fill grid. Two columns cannot fuse — CSS has no
+   selector that knows which column a card landed in, because the count is
+   decided at layout time — and the measure was poor for the prose anyway:
+   the median elaboration runs 292 characters and the longest 529, which a
+   26rem column sets badly. */
 .signal-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 26rem), 1fr));
-    gap: var(--bn-grid-gap);
+    grid-template-columns: 1fr;
+    gap: 0;
+}
+
+/* Radius comes from position in the run. An only child is BOTH :first-child
+   and :last-child, so it keeps all four corners with no rule of its own —
+   which matters, because a location with one card is the common case. */
+.signal-card:first-child {
+    border-top-left-radius: var(--bn-radius-lg);
+    border-top-right-radius: var(--bn-radius-lg);
+}
+
+.signal-card:last-child {
+    border-bottom-left-radius: var(--bn-radius-lg);
+    border-bottom-right-radius: var(--bn-radius-lg);
+}
+
+/* One hairline, not two abutting borders. */
+.signal-card:not(:first-child) {
+    border-top: none;
 }
 
 .signal-card {
@@ -16,15 +42,17 @@
        near-square on a 425px card and made the child .signal-card-quotes box
        (md) rounder than its parent (inverted nesting). lg outer / md inner is
        the correct decreasing nest. See docs/design-lens-template.md § Radii. */
-    border-radius: var(--bn-radius-lg);
+    border-radius: 0;
     padding: var(--bn-space-lg);
     background: var(--bn-colour-bg);
     transition: box-shadow var(--bn-transition-fast);
     position: relative;
 }
 
+/* A shadow is a detached-object affordance. On a fused card it draws into the
+   seam and reads as a rendering fault, so hover is a tint. */
 .signal-card:hover {
-    box-shadow: 0 2px 8px var(--bn-colour-shadow);
+    background: var(--bn-colour-hover);
 }
 
 /* Selected signal card — same blue wash as quote cards (.bn-selected)
@@ -34,13 +62,35 @@
     border-color: var(--bn-selection-border);
 }
 
-/* Two-column top: identity left, metrics right */
+/* The hero floats into the card's top-right corner and the headline AND the
+   elaboration flow around and under it.
+
+   It was a flex row with the elaboration inside the left child, which meant
+   the elaboration could not reach the space beneath the chip — the gutter was
+   unreachable by construction, and a long finding left a column of white
+   beside a column of text.
+
+   A float only affects content that FOLLOWS it, so `.signal-card-right` is
+   emitted first in the markup. `order` puts the reading order back for a
+   screen reader: the headline is announced before the chip, as it reads. */
 .signal-card-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: var(--bn-space-lg);
+    display: block;
     margin-bottom: var(--bn-space-sm);
+}
+
+.signal-card-identity {
+    /* Emitted second so the float catches it; announced first because that is
+       the reading order. display:contents keeps the float working. */
+    display: contents;
+}
+
+.signal-card-right {
+    float: right;
+    margin: 0 0 var(--bn-space-sm) var(--bn-space-lg);
+}
+
+.signal-card-quotes {
+    clear: both;
 }
 
 .signal-card-identity {
@@ -391,13 +441,18 @@ button.signal-card-toggle {
     margin-top: 0;
 }
 
+/* The location, named once. It is the same object the Quotes lens names with
+   an <h3>, and this heading LINKS to that one — so it takes the same token
+   rather than a smaller one. The sidebar stays at --bn-text-caption because
+   that is navigation; this is content. No bottom rule: the Quotes lens has
+   none, and the fused stack below already draws its own edge. */
 .analysis-codebook-heading {
-    font-size: var(--bn-text-label);
+    font-size: var(--bn-text-heading);
+    line-height: var(--bn-text-heading-lh);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-text);
+    max-width: var(--bn-max-width);
     margin: var(--bn-space-lg) 0 var(--bn-space-sm);
-    padding-bottom: var(--bn-space-xs);
-    border-bottom: 1px solid var(--bn-colour-border);
 }
 
 .analysis-heatmap-label {
@@ -574,6 +629,13 @@ button.signal-card-toggle {
    affordance and the button reset — most readers need one number, and the four
    metrics behind it are for whoever wants to audit it. */
 .signal-card-hero {
+    /* Two steps down the ladder. The chip confirms direction and gives a
+       sortable number; the headline and the claim carry the finding, so it is
+       a scan aid rather than the thing being read. --bn-space-sm between label
+       and score because at xs they collided ("Mixed sentiments0.30"). */
+    font-size: var(--bn-text-label);
+    padding: var(--bn-space-xs) var(--bn-space-sm);
+    gap: var(--bn-space-sm);
     display: inline-flex;
     align-items: baseline;
     gap: var(--bn-space-sm);
@@ -650,14 +712,8 @@ button.signal-card-toggle {
 .pattern-gap      { background: light-dark(#fee2e2, #450a0a); color: light-dark(#991b1b, #fca5a5); }
 .pattern-recovery { background: light-dark(#e0f2fe, #0c4a6e); color: light-dark(#075985, #7dd3fc); }
 
-/* Signal rank counter: "#2" */
-.signal-rank {
-    font-family: var(--bn-font-mono);
-    font-size: var(--bn-text-heading);
-    font-weight: var(--bn-weight-emphasis);
-    color: var(--bn-colour-muted);
-    line-height: var(--bn-text-heading-lh);
-}
+/* .signal-rank — removed 20 Sep 2026. No consumer anywhere in the tree:
+   not the React lens, not the frozen vanilla renderer, not a template. */
 
 /* Mini sparkbar chart — inline in the Signal metric row.
    Width matches conc-bar-track (96px). Bar count = signal card count.

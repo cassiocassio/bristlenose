@@ -247,9 +247,11 @@ export function CodebookV2Page({
             // `autoSplit`: codebook descriptions are hand-written YAML and carry
             // no `||`. Waiting for all nine to be re-authored would mean shipping
             // no treatment at all in the meantime.
-            <p className="pg-desc bn-lead-para">
+            // A <div>, not a <p>: renderLead emits two paragraphs now, and a
+            // <p> cannot contain one — the browser closes the outer silently.
+            <div className="pg-desc bn-lead-para">
               {renderLead(tpl.description, { autoSplit: true })}
-            </p>
+            </div>
           )}
         </div>
 

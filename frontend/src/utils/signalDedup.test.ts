@@ -133,3 +133,23 @@ describe("isFromSentimentLens", () => {
     expect(isSentimentSignal({ ...base, columnLabel: "Structure", codebookName: "Garrett" })).toBe(false);
   });
 });
+
+describe("the rule is pure", () => {
+  it("does not mutate the cards it was handed", () => {
+    // It attached alternates by pushing onto the winner. That works the first
+    // time and keeps working: `useMemo` is a hint, not a guarantee, and React
+    // 18 invokes it twice in StrictMode — so a second pass over the same
+    // objects appended every alternate again, and a card slowly grew a list of
+    // duplicate readings with nothing to say why.
+    const a = sig("Scope", 1.0, [q("p1", 10), q("p2", 20)]);
+    const b = sig("Feedback", 0.5, [q("p1", 10), q("p2", 20)]);
+    const input = [a, b];
+
+    const once = dedupeSignals(input);
+    expect(once[0].alternates).toHaveLength(1);
+    expect(a.alternates).toBeUndefined();   // the caller's object is untouched
+
+    const twice = dedupeSignals(input);
+    expect(twice[0].alternates).toHaveLength(1);
+  });
+});

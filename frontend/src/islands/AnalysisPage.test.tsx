@@ -1028,4 +1028,33 @@ describe("AnalysisPage", () => {
     }
   });
 
+
+  it("marks the quote that took the reserved dissenting slot", async () => {
+    // The slot is the whole reason a card is not simply agreeing with itself.
+    // If it is spent and nothing says so, the reader cannot tell the card
+    // carries a voice that argues with it.
+    const many: CodebookAnalysisListResponse = JSON.parse(JSON.stringify(mockCbData));
+    const sig = many.codebooks[0].signals[0];
+    sig.group_name = "Sentiment";
+    sig.label = "frustration";
+    sig.label_kind = "value";
+    sig.quotes = [
+      { text: "a", participant_id: "p1", session_id: "s1", start_seconds: 10, intensity: 3, tag_names: ["frustration"], segment_index: 0 },
+      { text: "b", participant_id: "p1", session_id: "s1", start_seconds: 60, intensity: 3, tag_names: ["frustration"], segment_index: 1 },
+      { text: "c", participant_id: "p2", session_id: "s1", start_seconds: 120, intensity: 3, tag_names: ["frustration"], segment_index: 2 },
+      { text: "d", participant_id: "p2", session_id: "s1", start_seconds: 180, intensity: 1, tag_names: ["frustration"], segment_index: 3 },
+      { text: "e", participant_id: "p3", session_id: "s1", start_seconds: 240, intensity: 3, tag_names: ["delight"], segment_index: 4 },
+    ];
+    mockFetchCodebookAnalysis(many);
+    render(<AnalysisPage projectId="1" />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0);
+    });
+
+    const marked = document.querySelectorAll("blockquote.bn-dissenting");
+    expect(marked).toHaveLength(1);
+    expect(marked[0].textContent).toContain("e");
+  });
+
 });

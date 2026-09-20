@@ -122,7 +122,14 @@ export function dedupeSignals(signals: UnifiedSignal[]): UnifiedSignal[] {
     else byLocation.set(s.location, [s]);
   }
 
+  // Folded readings are collected SEPARATELY and attached to copies at the
+  // end. Pushing onto the caller's objects would work once and then keep
+  // working — `useMemo` is a hint, not a guarantee, and React 18 invokes it
+  // twice in StrictMode, so a second pass over the same objects would append
+  // every alternate again. A pure function cannot have that bug.
   const kept: UnifiedSignal[] = [];
+  const folded = new Map<UnifiedSignal, NonNullable<UnifiedSignal["alternates"]>>();
+
   for (const bucket of byLocation.values()) {
     const covered = new Set<string>();
     const ranked = [...bucket].sort(
@@ -160,12 +167,14 @@ export function dedupeSignals(signals: UnifiedSignal[]): UnifiedSignal[] {
         // 100% of its quotes, so it could survive only by ranking first.
         const winner = twin ?? kept.find((k) => k.location === s.location);
         if (winner) {
-          (winner.alternates ??= []).push({
+          const list = folded.get(winner) ?? [];
+          list.push({
             label: s.label ?? s.columnLabel,
             codebookName: s.codebookName,
             signalName: s.signalName ?? null,
             elaboration: s.elaboration ?? null,
           });
+          folded.set(winner, list);
           continue;
         }
       }
@@ -176,7 +185,9 @@ export function dedupeSignals(signals: UnifiedSignal[]): UnifiedSignal[] {
 
   // Preserve the caller's order — the ranking is theirs to decide, not ours.
   const keptSet = new Set(kept);
-  return signals.filter((s) => keptSet.has(s));
+  return signals
+    .filter((s) => keptSet.has(s))
+    .map((s) => (folded.has(s) ? { ...s, alternates: folded.get(s) } : s));
 }
 
 export interface SignalPlace {

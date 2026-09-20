@@ -347,10 +347,25 @@ something quiet and sharp. Tracked as a Value/Could item.
    finding. A card that cannot honestly be elaborated is probably not a card —
    a better filter than any score threshold, because it tests whether the
    evidence supports a reading rather than a proxy for it.
-4. **Does the score stay visible?** It may become instrumentation — a
-   development affordance for judging the cut-off and the ranking — in which
-   case it need never be portable across studies, and `serve --dev` is the
-   precedent.
+4. **Does the score stay visible?** **DECIDED 20 Sep 2026 — yes, as it is.**
+   The chip reads `Frustration 0.42`; the raw composite stays in the product.
+
+   *What that accepts.* §4 of the spike measured that the attainable ceiling
+   **falls as a study grows** — the strongest card a 20-person study can
+   produce scores 36.0, where a 3-person study reaches 92.9 — because quotes
+   per session is near constant, so locations stay small while participants
+   multiply. A researcher who ran a proper twenty-person study therefore sees
+   nothing above 36 and could reasonably read that as a weak study. Two
+   alternatives were rejected: showing **attainment** instead (portable, flat
+   to within 1% across N=6–12, but a new quantity to explain while the spike is
+   open) and making the number **dev-only** (kept the chip to one word, lost
+   the ability to eyeball whether the ranking agrees with you).
+
+   *So the number is for the reader and for you at once*, and the ordering job
+   — *"this deserves your attention before that"* — is what it is good at.
+   It orders correctly within one study and needs nothing; it is comparison
+   **across** studies that it cannot support, and nothing in the UI invites
+   that today.
 
 ### 5c. Chip casing — noted, not blocking
 

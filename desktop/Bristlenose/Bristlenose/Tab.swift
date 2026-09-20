@@ -16,7 +16,7 @@ enum Tab: String, CaseIterable, Identifiable {
         case .sessions:  "Sessions"
         case .quotes:    "Quotes"
         case .codebook:  "Codebooks"
-        case .analysis:  "Analysis"
+        case .analysis:  "Signals"
         }
     }
 

@@ -54,7 +54,7 @@ const LENSES = [
   { path: '/report/sessions/', label: 'Sessions' },
   { path: '/report/quotes/', label: 'Quotes' },
   { path: '/report/codebook/', label: 'Codebook' },
-  { path: '/report/analysis/', label: 'Analysis' },
+  { path: '/report/analysis/', label: 'Signals' },
 ];
 
 // ── Guard 1: right server, right project (stale-:8150 trap) ────────────────

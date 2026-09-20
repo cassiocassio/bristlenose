@@ -89,7 +89,7 @@ describe("Router", () => {
 
   it("/report/analysis/ activates Analysis tab", () => {
     renderRoute("/report/analysis/");
-    const tab = screen.getByRole("link", { name: "Analysis" });
+    const tab = screen.getByRole("link", { name: "Signals" });
     expect(tab.className).toContain("active");
   });
 

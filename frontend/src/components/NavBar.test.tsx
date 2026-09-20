@@ -40,7 +40,7 @@ describe("NavBar", () => {
     expect(screen.getByText("Sessions")).toBeInTheDocument();
     expect(screen.getByText("Quotes")).toBeInTheDocument();
     expect(screen.getByText("Codebooks")).toBeInTheDocument();
-    expect(screen.getByText("Analysis")).toBeInTheDocument();
+    expect(screen.getByText("Signals")).toBeInTheDocument();
     // Settings and Help are buttons (open modals), not tabs/links
     expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Help" })).toBeInTheDocument();
@@ -93,7 +93,7 @@ describe("NavBar", () => {
     // Label pluralised 14 Aug 2026; the route deliberately did NOT follow —
     // it's baked into exported reports, deep links and the native bridge.
     expect(screen.getByText("Codebooks").closest("a")).toHaveAttribute("href", "/report/codebook/");
-    expect(screen.getByText("Analysis").closest("a")).toHaveAttribute("href", "/report/analysis/");
+    expect(screen.getByText("Signals").closest("a")).toHaveAttribute("href", "/report/analysis/");
   });
 
   it("Settings and Help have aria-label", () => {

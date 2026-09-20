@@ -271,7 +271,7 @@ describe("AnalysisPage", () => {
     render(<AnalysisPage projectId="1" />);
 
     await waitFor(() => {
-      expect(screen.getByText(/no analysis data available/i)).toBeTruthy();
+      expect(screen.getByText(/no signals yet/i)).toBeTruthy();
     }, { timeout: 3000 });
   });
 

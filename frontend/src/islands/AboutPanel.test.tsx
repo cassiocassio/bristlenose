@@ -125,8 +125,8 @@ describe("AboutPanel", () => {
       expect(screen.getByText("Dashboard")).toBeInTheDocument();
       expect(screen.getByText("Quotes")).toBeInTheDocument();
       expect(screen.getByText("Sessions")).toBeInTheDocument();
-      // "Analysis" appears both as a sidebar button label fragment and as an h3
-      expect(screen.getByRole("heading", { name: "Analysis" })).toBeInTheDocument();
+      // "Signals" appears both as a sidebar button label fragment and as an h3
+      expect(screen.getByRole("heading", { name: "Signals" })).toBeInTheDocument();
       expect(screen.getByText("Export")).toBeInTheDocument();
     });
 

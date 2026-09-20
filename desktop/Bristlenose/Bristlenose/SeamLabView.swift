@@ -131,7 +131,7 @@ struct SeamLabView: View {
         NavigationSplitView(columnVisibility: $sidebarVisible) {
             List {
                 Section {
-                    ForEach(["Project", "Sessions", "Quotes", "Codebooks", "Analysis"], id: \.self) { row in
+                    ForEach(["Project", "Sessions", "Quotes", "Codebooks", "Signals"], id: \.self) { row in
                         Label(row, systemImage: "square.dashed")
                     }
                 }

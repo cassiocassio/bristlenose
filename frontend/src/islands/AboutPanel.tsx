@@ -91,7 +91,7 @@ function AboutSection({ version }: { version: string | null }) {
         open the video in a popout player.
       </p>
 
-      <h3>Analysis</h3>
+      <h3>Signals</h3>
       <p>
         Signal concentration grids &mdash; which themes appear in which
         sessions, and how strongly. Helps identify patterns that cut across

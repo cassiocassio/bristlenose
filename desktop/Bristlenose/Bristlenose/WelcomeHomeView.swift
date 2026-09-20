@@ -135,7 +135,7 @@ private enum WelcomeContent {
         .init(title: nil, text: "Bristlenose reads interviews as sessions and quotes.",
               more: "Sessions, participants, quotes, sections and themes — that's the whole model.",
               linkLabel: "How it works →", href: docs + "how-it-works.html"),
-        .init(title: nil, text: "The **Analysis** tab shows where sentiment concentrates.",
+        .init(title: nil, text: "The **Signals** tab shows where sentiment concentrates.",
               more: "A signal marks a theme running hotter or cooler than you'd expect.",
               linkLabel: "Signals →", href: docs + "signals.html"),
         .init(title: nil, text: "Tag with a ready-made UX research framework.",

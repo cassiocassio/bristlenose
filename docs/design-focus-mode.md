@@ -10,6 +10,8 @@ trued-against: 43ed8fd4@main on 2026-08-05 — the cursor-ring promotion, keylin
 
 **Sandpit: [`docs/mockups/focus-mode-lab.html`](mockups/focus-mode-lab.html)** — real quote-card markup over a baked copy of the shipped theme, all four palette × appearance cells side by side, with the rejected cursor cues still switchable. This produced the starred-border and keyboard-cursor reversals below. Re-bake its `.theme.css` from `load_default_css()` after any theme change or it silently shows the previous design.
 
+**Proposed extension, 21 Sep 2026 — the Signals lens.** Focus is entered only on Quotes, but the class lives on `<html>` and leaks onto Signals as an undesigned half-state. [`design-focus-mode-signals.md`](design-focus-mode-signals.md) applies the two axes below to the signal card and ungates `z` and the View-menu item there; mockup `docs/mockups/signals-focus-mode.html`. Not built.
+
 > **Two known gaps in the lab, as of 5 Aug.** Its prose still frames the cursor cue as Focus-scoped, which stopped being true when the ring moved app-wide; and it has no starred-bar comparison cell, so the taming below can't be judged there. Turning Focus *off* in the HUD does exercise the ordinary-reading ring correctly — that part works.
 
 Superseded mockup: [`docs/mockups/nightfall-focus.html`](mockups/nightfall-focus.html) — hand-rolled with its own hex values under the working title "Nightfall", so it shows *pre-decision* treatments and can't be used to judge contrast. Kept as history; don't read it as the design.

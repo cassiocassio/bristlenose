@@ -4,8 +4,11 @@
 /* --- tokens.css --- */
 /* Design tokens — the single source of truth for all visual decisions.
 
-   This file contains STRUCTURAL tokens (layout, spacing, radii, transitions)
-   and ANALYTICAL tokens (sentiment colours, codebook tag colours, heatmap).
+   This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
+   ANALYTICAL tokens (sentiment colours, codebook tag colours, heatmap), and
+   SEMANTIC ALIASES that name a decision rather than a value (the inline
+   edit-field set below). An alias points at a palette token, so it costs no
+   per-palette maintenance and cannot drift from the palette it borrows from.
 
    TYPOGRAPHY tokens are in tokens-typography.css (web) / tokens-desktop.css (macOS).
    COLOUR PALETTE tokens are in colors/palette-default.css and colors/palette-edo.css.
@@ -195,6 +198,43 @@
     --bn-radius-md: 6px;
     --bn-radius-lg: 8px;
     --bn-radius-pill: 999px;
+
+    /* ── Inline edit fields — READ THIS BEFORE STYLING A NEW ONE ──────────
+     *
+     * An inline edit field is a piece of text the researcher can click into
+     * and retype: a theme heading, a session name, a code group's title, a
+     * code. There are exactly TWO treatments and the choice is mechanical,
+     * decided by the GROUND the field sits on, not by which lens you are in:
+     *
+     *   field on page background  →  --bn-field-edit-fill-on-page  (tints up)
+     *   field on a tinted surface →  --bn-field-edit-fill-on-tint  (blanks to
+     *                                                               neutral)
+     *
+     * Both carry --bn-field-edit-edge at 1px. The fill inverts because the
+     * ground does; the edge never changes, so the signal is one signal.
+     * Border or outline is yours to pick — outline for a span in running
+     * prose (it costs no layout and will not reflow the line), border for
+     * something that already has a box. That is a mechanism, not a meaning.
+     *
+     * DO NOT invent a third fill. Two surfaces got one each before these
+     * tokens existed (a quote-bg tint, a page-bg blank) and two more got
+     * nothing at all, which is how "is this field live?" came to have four
+     * answers on one screen.
+     *
+     * THE ONE EXEMPTION is quote cropping — `.crop-editable` and the bracket
+     * handles in molecules/editable-text.css. That is not "edit this text",
+     * it is "move this boundary", it was designed as a single signal with the
+     * burnt-amber brackets, and it keeps --bn-colour-crop-bg. Do not reach
+     * for that yellow for anything else, and do not restyle crop to match
+     * these: a different verb is allowed a different look. The token was
+     * called --bn-colour-editing-bg until 20 Sep 2026; it was renamed
+     * because a token named for a state it must not be used in is how the
+     * four-answers-on-one-screen problem started. */
+    --bn-field-edit-edge: var(--bn-colour-accent);
+    --bn-field-edit-fill-on-page: var(--bn-colour-quote-bg);
+    --bn-field-edit-fill-on-tint: var(--bn-colour-bg);
+    --bn-field-edit-radius: var(--bn-radius-sm);
+    --bn-field-edit-offset: 1px;
 
     /* Section-divider keyline — the colour of the h2 / .section-heading /
        .framework-section-header bottom rules and the header <hr>. Aliases
@@ -502,8 +542,7 @@
     --bn-colour-badge-text: #374151;
     --bn-colour-user-tag-bg: #f3f4f6;
     --bn-colour-user-tag-text: #4b5563;
-    --bn-colour-editing-bg: #fffbe6;
-    --bn-colour-editing-border: #e5e0c0;
+    --bn-colour-crop-bg: #fffbe6;
     --bn-crop-handle-colour: #c4850a;
     --bn-crop-handle-hover: #a06d08;
     --bn-colour-active-bg: #f0fdf4;
@@ -511,6 +550,10 @@
 
     /* Destructive action */
     --bn-colour-negative: #dc2626;
+
+    /* Success and caution — the other two semantic kinds */
+    --bn-colour-positive: #16a34a;
+    --bn-colour-warning: #f59e0b;
 
     /* Playback-sync glow */
     --bn-glow-colour: rgba(0, 122, 255, 0.06);
@@ -586,8 +629,7 @@
         --bn-colour-badge-text:       light-dark(#374151, #d1d5db);
         --bn-colour-user-tag-bg:      light-dark(#f3f4f6, #252525);
         --bn-colour-user-tag-text:    light-dark(#4b5563, #d1d5db);
-        --bn-colour-editing-bg:       light-dark(#fffbe6, #2a2614);
-        --bn-colour-editing-border:   light-dark(#e5e0c0, #4a4528);
+        --bn-colour-crop-bg:          light-dark(#fffbe6, #2a2614);
         --bn-crop-handle-colour:      light-dark(#c4850a, #f0b830);
         --bn-crop-handle-hover:       light-dark(#a06d08, #f5cc60);
         --bn-colour-active-bg:        light-dark(#f0fdf4, #0f2918);
@@ -617,6 +659,10 @@
 
         /* Destructive action */
         --bn-colour-negative:         light-dark(#dc2626, #ef4444);
+
+        /* Success and caution */
+        --bn-colour-positive:         light-dark(#16a34a, #22c55e);
+        --bn-colour-warning:          light-dark(#f59e0b, #fbbf24);
 
         /* Interactive elements */
         --bn-colour-border-hover:     light-dark(#d1d5db, #4b5563);
@@ -684,8 +730,7 @@
     --bn-colour-badge-text: #2d3654;            /* Court Indigo */
     --bn-colour-user-tag-bg: #e8dfc9;
     --bn-colour-user-tag-text: #3d4a5c;
-    --bn-colour-editing-bg: #f5ecd0;            /* Gold Ochre tint */
-    --bn-colour-editing-border: #c4a96a;        /* Gold Ochre */
+    --bn-colour-crop-bg: #f5ecd0;               /* Gold Ochre tint */
     --bn-crop-handle-colour: #b5432a;           /* Vermillion */
     --bn-crop-handle-hover: #8b3a3a;            /* Bengara Red */
     --bn-colour-active-bg: #e8f0e4;             /* Pine Green tint */
@@ -693,6 +738,11 @@
 
     /* Destructive action — vermillion */
     --bn-colour-negative: #b5432a;
+
+    /* Success — Pine Green (matsuba-iro), the hue active-bg already tints toward.
+       Caution — Gold Ochre, deepened for legibility on paper. */
+    --bn-colour-positive: #4a6b4a;
+    --bn-colour-warning: #a8842c;
 
     /* Playback-sync glow — Prussian Blue based */
     --bn-glow-colour: rgba(15, 92, 158, 0.08);
@@ -764,8 +814,7 @@
         --bn-colour-badge-text:       light-dark(#2d3654, #c4b898);
         --bn-colour-user-tag-bg:      light-dark(#e8dfc9, #2d2820);
         --bn-colour-user-tag-text:    light-dark(#3d4a5c, #c4b898);
-        --bn-colour-editing-bg:       light-dark(#f5ecd0, #2d2614);
-        --bn-colour-editing-border:   light-dark(#c4a96a, #4a3d1e);
+        --bn-colour-crop-bg:          light-dark(#f5ecd0, #2d2614);
         --bn-crop-handle-colour:      light-dark(#b5432a, #e06a4a);
         --bn-crop-handle-hover:       light-dark(#8b3a3a, #e88a6a);
         --bn-colour-active-bg:        light-dark(#e8f0e4, #1a2818);
@@ -796,6 +845,10 @@
         /* Destructive action — vermillion */
         --bn-colour-negative:         light-dark(#b5432a, #e06a4a);
 
+        /* Success — Pine Green; caution — Gold Ochre */
+        --bn-colour-positive:         light-dark(#4a6b4a, #7fa87f);
+        --bn-colour-warning:          light-dark(#a8842c, #c4a96a);
+
         /* Interactive elements */
         --bn-colour-border-hover:     light-dark(#b8ad91, #4a4030);
         --bn-colour-icon-idle:        light-dark(#b8ad91, #4a4030);
@@ -823,10 +876,15 @@
 /* --- atoms/badge.css --- */
 /* Atom: badge — base badge, sentiment variants, AI and user variants */
 
+/* The weight is DECLARED. It never was, so every chip in the product rendered
+   at the user agent's 400 — a value in nobody's ladder. `light` is the rung the
+   system reserves for subordinate text, and that is what a chip is: the row's
+   words carry the finding, the chip says which vocabulary they came from. */
 .badge {
     display: inline-block;
     font-family: var(--bn-font-mono);
     font-size: var(--bn-text-badge);
+    font-weight: var(--bn-weight-light);
     padding: var(--bn-space-xs) 0.45rem;
     border-radius: var(--bn-radius-sm);
     background: var(--bn-colour-badge-bg);
@@ -880,7 +938,7 @@
     justify-content: center;
     padding: 0;
     background: var(--bn-colour-bg);
-    color: var(--bn-colour-danger, #dc2626);
+    color: var(--bn-colour-negative);
     border-radius: 50%;
     font-size: var(--bn-text-micro);
     font-weight: var(--bn-weight-strong);
@@ -934,7 +992,7 @@ body.hide-ai-tags .badge-ai { display: none; }
     background: var(--bn-colour-bg);
     border: none;
     border-radius: 50%;
-    color: var(--bn-colour-danger, #dc2626);
+    color: var(--bn-colour-negative);
     font-size: var(--bn-text-micro);
     font-weight: var(--bn-weight-strong);
     line-height: 1;
@@ -1031,11 +1089,11 @@ body.hide-ai-tags .badge-ai { display: none; }
 }
 
 .badge-action-deny {
-    color: var(--bn-colour-danger, #dc2626);
+    color: var(--bn-colour-negative);
 }
 
 .badge-action-accept {
-    color: var(--bn-colour-success, #16a34a);
+    color: var(--bn-colour-positive);
     border-left: 1px solid var(--bn-colour-border);
 }
 
@@ -1335,9 +1393,11 @@ body.hide-ai-tags .badge-ai { display: none; }
     font-family: var(--bn-font-mono);
     font-size: var(--bn-text-badge);
     padding: var(--bn-space-xs) 0.4rem;
-    border: 1px solid var(--bn-colour-accent);
-    border-radius: var(--bn-radius-sm);
-    background: var(--bn-colour-bg);
+    /* The tinted-ground field, in border form — this chip already has a box,
+       so it needs no outline. See the inline-edit block in tokens.css. */
+    border: 1px solid var(--bn-field-edit-edge);
+    border-radius: var(--bn-field-edit-radius);
+    background: var(--bn-field-edit-fill-on-tint);
     min-width: 3rem;
 }
 
@@ -1416,6 +1476,34 @@ body.hide-ai-tags .badge-ai { display: none; }
     opacity: 1;
     transform: translateY(0);
 }
+
+/* ── Kinded toast ─────────────────────────────────────────────────────────
+   The five-kind glyph vocabulary (bristlenose/ui_kinds.py, mirrored in
+   frontend/src/utils/messageKind.ts). Optional: a bare confirmation like
+   "Copied" carries no state and gets no glyph.
+
+   Colours are the semantic palette tokens, not literals. Before 30 Aug 2026
+   the sibling .autocode-toast reached for --bn-colour-success and
+   --bn-colour-danger, which were defined nowhere — so its tick and cross
+   rendered in the toast's ordinary text colour. See tests/test_theme_token_
+   resolution.py, which now fails on any no-fallback use of an undefined token. */
+.clipboard-toast.has-kind {
+    display: flex;
+    align-items: baseline;
+    gap: 0.45rem;
+}
+
+.toast-glyph {
+    font-weight: var(--bn-weight-strong);
+    flex-shrink: 0;
+}
+
+.toast-glyph--success { color: var(--bn-colour-positive); }
+.toast-glyph--error   { color: var(--bn-colour-negative); }
+.toast-glyph--warning { color: var(--bn-colour-warning); }
+.toast-glyph--info    { color: var(--bn-colour-accent); }
+/* SKIPPED demotes rather than colours — matches CLI_COLOUR's "dim". */
+.toast-glyph--skipped { color: var(--bn-colour-muted); }
 
 /* --- atoms/timecode.css --- */
 /* Atom: timecode — clickable and plain timecode links */
@@ -2163,15 +2251,40 @@ blockquote.quote-card.bn-focused.bn-selected {
     margin-top: var(--bn-space-lg);
 }
 
+/* THE BASE CARRIES A BACKGROUND. It did not, and every variant did — so a bare
+   `.bn-btn` fell through to the user agent's own `buttonface`, painting a grey
+   that is the BROWSER's and not ours. It reads as drab and slightly dead
+   because it is unstyled, not because it is understated, and it drifts with
+   whatever WebKit does next. Seven call sites were shipping it: both modals'
+   default action, the codebook picker button, and the Install/Uninstall toggle
+   on every card in both codebook lenses — where a destructive action and a
+   constructive one were equally unstyled.
+
+   The neutral bordered button is the right default for an element that already
+   declares a border: it is what `.bn-btn-secondary` and `.bn-btn-cancel` both
+   describe, so the base now simply IS that, and those two restate it rather
+   than adding to it. Left in place — collapsing three names into one is a
+   separate call, and a redundant class is harmless where an unstyled base was
+   not.
+
+   A variant still wins on source order, so `primary` and `danger` are
+   unaffected. */
 .bn-btn {
     font-family: inherit;
     font-size: var(--bn-text-label);
     padding: 0.4rem 1rem;
     border-radius: var(--bn-radius-md);
     border: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
     cursor: pointer;
     transition: background var(--bn-transition-fast), color var(--bn-transition-fast);
 }
+
+.bn-btn:hover {
+    background: var(--bn-colour-quote-bg);
+}
+
 
 .bn-btn-cancel {
     background: var(--bn-colour-bg);
@@ -2190,6 +2303,10 @@ blockquote.quote-card.bn-focused.bn-selected {
 
 .bn-btn-danger:hover {
     opacity: 0.85;
+    /* Restated: the base `.bn-btn:hover` is (0,2,0) and beats
+       `.bn-btn-danger` (0,1,0), so without this the fill washes out to
+       the neutral tint on hover. */
+    background: var(--bn-sentiment-frustration);
 }
 
 .bn-btn-primary {
@@ -2200,6 +2317,10 @@ blockquote.quote-card.bn-focused.bn-selected {
 
 .bn-btn-primary:hover {
     opacity: 0.85;
+    /* Restated: the base `.bn-btn:hover` is (0,2,0) and beats
+       `.bn-btn-primary` (0,1,0), so without this the fill washes out to
+       the neutral tint on hover. */
+    background: var(--bn-colour-accent);
 }
 
 .bn-btn-secondary {
@@ -2221,6 +2342,23 @@ blockquote.quote-card.bn-focused.bn-selected {
     margin: 0 0 var(--bn-space-lg) 0;
     font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
+}
+
+/* Export language line — the governing control sits trailing on its own line,
+   so the researcher reads "Language  [Deutsch]" rather than meeting a question.
+   Same token scale as the checkbox below it; they are siblings in the dialog. */
+.bn-export-locale {
+    display: flex;
+    gap: var(--bn-space-sm);
+    align-items: center;
+    justify-content: space-between;
+    font-size: var(--bn-text-label);
+    margin: var(--bn-space-md) 0;
+}
+
+.bn-export-locale .bn-locale-select {
+    flex: 0 1 auto;
+    min-width: 12ch;
 }
 
 /* Export checkbox layout */
@@ -2491,12 +2629,21 @@ blockquote.quote-card.bn-focused.bn-selected {
 }
 
 .chip-check {
-    color: var(--bn-colour-success);
+    color: var(--bn-colour-positive);
     font-weight: var(--bn-weight-strong);
 }
 
 .chip-error {
-    color: var(--bn-colour-danger);
+    color: var(--bn-colour-negative);
+    font-weight: var(--bn-weight-strong);
+}
+
+/* Partial completion. --bn-colour-warning is defined in both palettes
+   (palette-default.css:38, palette-edo.css:55), unlike the --bn-colour-success
+   / --bn-colour-danger the autocode toast reaches for, which are defined
+   nowhere. Don't copy those two here. */
+.chip-warning {
+    color: var(--bn-colour-warning);
     font-weight: var(--bn-weight-strong);
 }
 
@@ -2663,6 +2810,203 @@ blockquote.quote-card.bn-focused.bn-selected {
     border-radius: var(--bn-radius-sm);
 }
 
+/* --- atoms/section-heading.css --- */
+/* Atom: section-heading — the zone title on a lens page.
+ *
+ * One h1 per top-level content zone, named for the zone, never the lens
+ * (docs/design-lens-template.md § "The h1 scheme"). Four lenses use it:
+ * Quotes ("Sections" / "Themes"), Analysis ("Sentiment signals" / "Tag
+ * signals"), Codebook ("Codebook"), Sessions ("Sessions").
+ *
+ * WHY THIS IS AN ATOM, not a rule in templates/report.css where it lived
+ * until 6 Aug 2026: a class you have to remember to type will eventually be
+ * forgotten. Codebook's h1 carried no `.section-heading` at all — in all
+ * three of its render states — so it rendered with correct type (inherited)
+ * and NO horizontal rule, and nothing caught it. Quotes and Analysis were
+ * right only because they copied each other. Use the `<SectionHeading>`
+ * component (frontend/src/components/SectionHeading.tsx) rather than typing
+ * the class, so a zone title cannot be rendered without its rule.
+ *
+ * Provides the full-pane 1px keyline + padding itself rather than leaning on
+ * the base h2 rule, so an h1 (which has no border of its own) still gets the
+ * divider.
+ *
+ * Font size/weight are deliberately NOT set here — they inherit from the
+ * element (h1 → display/strong), keeping the *semantic* level and the
+ * *graphic* size as separate knobs. Tune size via the h1 rule / specimen lens.
+ *
+ * The 2.5rem top gives between-zone separation. Flushing the FIRST zone title
+ * to the page datum is page-layout geometry, not the atom's business, so that
+ * rule stays in templates/report.css — an atom should not know where on a
+ * page it sits.
+ *
+ * THE ATOM IS THE ROW, NOT THE TEXT (20 Aug 2026). It renders as a wrapper
+ * carrying the keyline, with the <h1> and an optional action inside. Before
+ * this, the class sat on the <h1> itself, and Codebook — the only lens with a
+ * zone-level action — wrapped that h1 in its own flex column to get a button
+ * beside it. Two defects followed from that one wrapper:
+ *
+ *   1. The rule stopped short of the pane by the button's width. `max-width:
+ *      none` makes the box as wide as its CONTAINING BLOCK, and the containing
+ *      block had become the flex column, not the pane.
+ *   2. The datum rule in templates/report.css
+ *      (`.center > main > section:first-of-type > .section-heading`) no longer
+ *      matched — the heading was a grandchild — so the first zone title on
+ *      Codebook sat 40px below the datum every other lens flushes to.
+ *
+ * Both are structural: any construction that leaves a column around the
+ * heading reproduces them. Making the atom itself the row removes the reason
+ * to wrap. The action is a SIBLING of the h1, not a child, so the heading
+ * still announces as just its own text.
+ *
+ * `align-items: flex-end` is a rule-relative alignment, deliberately: the
+ * action's bottom edge lands on the same line as the title text's, so both sit
+ * one `padding-bottom` (6.4px) above the keyline and the row reads as having
+ * a single bottom gutter. It also keeps the row's height equal to the h1's
+ * line box (28px x 1.45 = 40.6px, against a 33.65px button), so A ROW WITH AN
+ * ACTION IS EXACTLY AS TALL AS A ROW WITHOUT ONE — the keyline lands at the
+ * same y on every lens, which is the whole point of a shared atom. Do not
+ * switch to `baseline`: it pushes the button below the h1's line box, grows
+ * the row, and drifts Codebook's rule off every other lens's.
+ */
+
+.section-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    /* Title text can never crash into the action, at any width or locale. */
+    gap: var(--bn-space-lg);
+    max-width: none;
+    margin: 2.5rem 0 1rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--bn-colour-keyline);
+}
+
+/* The inner heading carries the type and nothing else — no margin of its own
+   (the base h1 rule sets one), no reading-width cap (the `h1, h2, h3,
+   .description` group in templates/report.css would otherwise re-apply it),
+   and no rule (the wrapper owns that). `min-width: 0` lets a long title wrap
+   inside its flex item rather than push the action off the right edge. */
+.section-heading > :is(h1, h2) {
+    margin: 0;
+    max-width: none;
+    min-width: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+/* The action slot. Deliberately the same construction as
+   `.framework-section-actions` (organisms/codebook-panel.css) one scale down —
+   flex row, centred, `--bn-space-sm` between siblings, never shrinks — so the
+   three title-left / action-right rows a lens can stack (zone title, framework
+   header, group header) are one pattern at three sizes rather than three
+   patterns. The atom owns the space between title and action via `gap`, so
+   this slot carries no margins of its own. */
+.section-heading-action {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    flex-shrink: 0;
+}
+
+/* --- atoms/lead-paragraph.css --- */
+/* Atom: lead paragraph — a description whose first sentence carries the claim.
+   ==========================================================================
+
+   One paragraph, two ranks: a leading sentence in normal ink, the sentences
+   after it in a tint. Nothing is truncated — the whole text stays for anyone
+   who reads it, and a skimmer gets the claim without having to decide to skip
+   anything. It is the answer to a description being "good but too long": the
+   length was never the problem, the missing rank was.
+
+   THE TREATMENT IS COLOUR, NOT WEIGHT — variant A, chosen 31 Aug 2026 from
+   `docs/mockups/lead-sentence-playground.html`, which renders eight
+   combinations of weight and tint against this exact text and pairs them with
+   the navigator's second line. Go back there before changing any value here;
+   it is the cheapest way to see a proposal beside the seven alternatives, in
+   both palettes and both appearances, without touching the app.
+
+   Two reasons colour won. First, weight is already spent: `emphasis` marks
+   headings and labels, `starred` marks starred quotes, `strong` marks
+   destructive verbs and page titles — a fourth weight-based meaning inside a
+   paragraph competes with all three. Second, and the reason it is visible at a
+   glance rather than on inspection: a bolded run inside body prose reads as
+   emphasis-in-a-sentence ("this word matters"), where a tint reads as rank
+   ("this part is subordinate"). The playground's variant B is the weight
+   version and shows the difference plainly.
+
+   The weight tokens below therefore resolve to the SAME value. They exist so
+   the decision stays reversible in one place, not because the two are expected
+   to differ.
+
+   THE TINT HAS EXACTLY ONE CANDIDATE. `--bn-colour-muted` is the only
+   non-primary text colour clearing 4.5:1 in both schemes (4.83:1 light,
+   7.44:1 dark). `--bn-colour-icon-idle` is 1.6:1 and `--bn-colour-starred` is
+   2.8:1 — both unusable for prose. So "a tint" can only mean muted, and a
+   lighter step would need a new token in every palette's colour contract.
+
+   Consumers: `.pg-desc` (codebook v2 framework description) and
+   `.signal-elaboration` (analysis signal cards). The signal cards reached this
+   idea first and reached it the other way — same colour, heavier lead via
+   `--bn-weight-starred` — and were converted here so the two cannot say the
+   same thing differently.
+
+   Splitter: `frontend/src/utils/leadSentence.tsx`. `||` where the author
+   marked the break, first sentence boundary where they did not. */
+
+:root {
+    /* The claim. Normal ink, normal weight: it is not shouting, the rest is
+       receding. */
+    --bn-lead-colour: var(--bn-colour-text);
+    --bn-lead-weight: var(--bn-weight-normal);
+
+    /* Everything after it. The tint is the entire mechanism. */
+    --bn-lead-rest-colour: var(--bn-colour-muted);
+    --bn-lead-rest-weight: var(--bn-weight-normal);
+}
+
+/* The paragraph sets the RECEDED treatment and the lead overrides it. That
+   order matters: the remainder is a bare text node — the splitter emits
+   `<strong>lead</strong> rest` so the rest inherits — and cannot carry a class
+   of its own without wrapping every description in another element.
+
+   Consequence for consumers: a rule setting `color` on the paragraph itself
+   defeats this atom. Atoms are concatenated BEFORE organisms, so an organism's
+   `.pg-desc { color: … }` wins the tie on source order and the tint silently
+   never appears. Both consumers had exactly that declaration; both had it
+   removed. */
+.bn-lead-para {
+    color: var(--bn-lead-rest-colour);
+    font-weight: var(--bn-lead-rest-weight);
+}
+
+/* `<strong>` because the split is semantic as well as visual — the lead IS the
+   claim, and a screen reader announcing it as strong is correct. The visual
+   weight is then explicitly reset to the token, so what the element MEANS and
+   what it LOOKS LIKE stay separate knobs. */
+.bn-lead-para strong {
+    color: var(--bn-lead-colour);
+    font-weight: var(--bn-lead-weight);
+}
+
+/* TWO PARAGRAPHS, added 20 Sep 2026. `signal-elaboration.md` has specified
+   since v0.2.0 that `||` is "a paragraph break, not a syntactic pause" and
+   that the evidence renders "after a blank line". The splitter emitted
+   `<strong>lead</strong> rest` — one paragraph, joined by a single space — so
+   the blank line the prompt promises had never existed and the model was
+   writing against a layout it was not given.
+
+   The claim keeps its <strong> for the semantics; the weight is still reset to
+   the token by the rule above, so nothing looks bolder. The tint still comes
+   from the paragraph, which `.bn-lead-rest` inherits. */
+.bn-lead-para .bn-lead-claim {
+    margin: 0;
+}
+
+.bn-lead-para .bn-lead-rest {
+    margin: var(--bn-space-sm) 0 0;
+}
+
 /* --- atoms/moderator-question.css --- */
 /* Atom: moderator-question — hover-triggered pill and expanded moderator utterance */
 
@@ -2758,7 +3102,7 @@ blockquote.quote-card.bn-focused.bn-selected {
     background: var(--bn-colour-bg);
     border: none;
     border-radius: 50%;
-    color: var(--bn-colour-danger, #dc2626);
+    color: var(--bn-colour-negative);
     font-size: var(--bn-text-micro);
     font-weight: var(--bn-weight-strong);
     line-height: 1;
@@ -3009,12 +3353,11 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
     background: var(--bn-colour-quote-bg);
 }
 
-.bn-speaker-editable-name[contenteditable] {
-    outline: 1px solid var(--bn-colour-accent);
-    outline-offset: 1px;
-    background: var(--bn-colour-quote-bg);
-    cursor: text;
-}
+/* The editing state lives in `molecules/editable-text.css`, which names this
+   class alongside `.editable-text` — one rule for "a name, title or
+   description on neutral ground", so the speakers grid and the quotes lens
+   cannot drift apart. Only the metrics above and the committed italic below
+   are local to the speaker name. */
 
 .bn-speaker-editable-name.edited {
     font-style: italic;
@@ -3024,6 +3367,17 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
    (PowerPoint-title convention) to read as editable, not as a real name. */
 .bn-speaker-editable-name.unnamed {
     font-weight: var(--bn-weight-normal);
+    font-style: italic;
+    color: var(--bn-colour-muted);
+}
+
+/* Same placeholder on the narrow-width rung, where the short form is shown
+   instead. Rehomed from `molecules/name-edit.css` when that file was deleted
+   on 20 Sep 2026: it was a bare `.unnamed` in the global sheet, and the two
+   classes above and below are its only consumers. Deliberately NOT merged
+   into one selector — the full name also drops to normal weight, the short
+   one never carried emphasis to drop. */
+.bn-speaker-name-short.unnamed {
     font-style: italic;
     color: var(--bn-colour-muted);
 }
@@ -3073,7 +3427,38 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
 /* Molecule: editable-text — shared editing and committed states for
    inline contenteditable fields (quotes, headings, names) */
 
-/* ── Editing state ──────────────────────────────────────────────────────── */
+/* ── Editing state ──────────────────────────────────────────────────────────
+ *
+ * THREE edit idioms ship, and they differ for a reason rather than by drift:
+ *
+ *   1. CROP (`.crop-editable`, below) — yellow `--bn-colour-crop-bg`. Not
+ *      "edit this text" but "move this boundary": it reads as one signal with
+ *      the bracket handles, and it is now the only surface on which the
+ *      yellow means anything at all.
+ *
+ *   2. A CODE ON A TINTED CARD (`.tag-input-box` in atoms/input.css,
+ *      `.tag-edit-inline` in organisms/codebook-panel.css) — page background,
+ *      1px accent edge. The ground is already coloured, so the field blanks to
+ *      neutral in order to read as a field.
+ *
+ *   3. A NAME, TITLE OR DESCRIPTION ON NEUTRAL GROUND — this rule. The ground
+ *      is already page white, so the field TINTS instead.
+ *
+ * Same 1px accent edge either way; the fill inverts because the ground does.
+ *
+ * `outline`, not `border`: these are spans inside running prose, and a border
+ * would add 2px and reflow the line. `outline` is drawn outside the box and
+ * costs no layout — the same reason the codebook chip's cursor is an outline.
+ *
+ * The `[contenteditable="true"]` half is what makes this fire in the SPA AT
+ * ALL. `EditableText` never adds a class for the editing state; `.editing` is
+ * written by the frozen vanilla renderer alone (`theme/js/editing.js`,
+ * `names.js`). So for as long as this rule keyed on `.editing`, a researcher
+ * editing a theme heading in the app got the browser's own focus ring and
+ * nothing else — a styled state that had never once been seen on the surface
+ * it was written for. Key on the attribute: it IS the state, it needs no
+ * co-operation from the component, and it cannot fall out of sync.
+ */
 
 .quote-card.editing .edit-pencil {
     color: var(--bn-colour-accent);
@@ -3084,31 +3469,33 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
     cursor: text;
 }
 
-.editable-text.editing {
-    background: var(--bn-colour-editing-bg);
-    outline: 1px solid var(--bn-colour-editing-border);
-    border-radius: var(--bn-radius-sm);
-    padding: var(--bn-space-xs) 0.3rem;
+.editable-text[contenteditable="true"],
+.editable-text.editing,
+.bn-speaker-editable-name[contenteditable="true"] {
+    outline: 1px solid var(--bn-field-edit-edge);
+    outline-offset: var(--bn-field-edit-offset);
+    background: var(--bn-field-edit-fill-on-page);
+    border-radius: var(--bn-field-edit-radius);
     cursor: text;
 }
 
-.name-cell.editing .name-text,
-.role-cell.editing .role-text {
-    background: var(--bn-colour-editing-bg);
-    outline: 1px solid var(--bn-colour-editing-border);
-    border-radius: var(--bn-radius-sm);
-    padding: 0.1rem 0.3rem;
+/* The box exists at rest so entering it moves no text — padding out, margin
+   back, net zero, the idiom `.group-title-text` already uses. Without it the
+   tint hugs the glyphs and the heading jumps by a few pixels on every edit. */
+.editable-text {
+    padding: 1px 3px;
+    margin: -1px -3px;
 }
 
 /* ── Committed state (dashed underline indicates edit was made) ─────────── */
 
+/* Deliberately NOT shared with the speaker name, which marks the same fact in
+   italic (`person-badge.css`), or with the codebook, which marks it not at all
+   — a codebook name was never the model's to override, so there is nothing to
+   say "you changed this" about. One editing signal, three committed ones, on
+   purpose. */
 .editable-text.edited {
     border-bottom: 1px dashed var(--bn-colour-muted);
-}
-
-.name-text.edited,
-.role-text.edited {
-    border-bottom: 1px dashed var(--bn-colour-accent);
 }
 
 /* ── Crop bracket handles ──────────────────────────────────────────────── */
@@ -3159,7 +3546,7 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
 /* ── Crop editable span (hybrid mode contenteditable) ──────────────────── */
 
 .crop-editable {
-    background: var(--bn-colour-editing-bg);
+    background: var(--bn-colour-crop-bg);
     padding: var(--bn-space-xs) 0;
     border-radius: var(--bn-radius-sm);
     outline: none;
@@ -3175,7 +3562,7 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
 /* Included region wrapper: continuous yellow background covers words
    AND inter-word spaces — prevents white gaps between word spans */
 .crop-included-region {
-    background: var(--bn-colour-editing-bg);
+    background: var(--bn-colour-crop-bg);
     border-radius: 2px;
     padding: 1px 0;
 }
@@ -3444,51 +3831,6 @@ blockquote:hover .undo-btn.visible {
 .bn-sparkline-bar {
     width: 5px;
     border-radius: 1px 1px 0 0;
-}
-
-/* --- molecules/name-edit.css --- */
-/* Molecule: name-edit — inline name/role editing in participant table */
-
-.name-cell,
-.role-cell {
-    position: relative;
-    padding-right: 2rem;
-}
-
-.name-pencil {
-    position: absolute;
-    top: 50%;
-    right: 0.4rem;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    font-size: var(--bn-text-label);
-    color: var(--bn-colour-icon-idle);
-    cursor: pointer;
-    padding: var(--bn-space-xs);
-    line-height: 1;
-    opacity: 0;
-    transition: opacity var(--bn-transition-fast), color var(--bn-transition-fast);
-}
-
-tr:hover .name-pencil,
-.name-pencil:focus {
-    opacity: 1;
-}
-
-.name-pencil:hover {
-    color: var(--bn-colour-accent);
-}
-
-/* (editing/edited rules moved to molecules/editable-text.css) */
-
-.unnamed {
-    color: var(--bn-colour-muted);
-    font-style: italic;
-}
-
-@media print {
-    .name-pencil { display: none; }
 }
 
 /* --- molecules/search.css --- */
@@ -4220,7 +4562,7 @@ tr:hover .name-pencil,
 }
 
 .report-deny-btn:hover {
-    color: var(--bn-colour-danger);
+    color: var(--bn-colour-negative);
     background: rgba(220, 38, 38, 0.06);
 }
 
@@ -4304,8 +4646,8 @@ tr:hover .name-pencil,
     transition: background-color 0.1s ease;
 }
 
-.threshold-histogram-bar--green  { background-color: var(--bn-colour-success, #22c55e); }
-.threshold-histogram-bar--amber  { background-color: var(--bn-colour-warning, #f59e0b); }
+.threshold-histogram-bar--green  { background-color: var(--bn-colour-positive); }
+.threshold-histogram-bar--amber  { background-color: var(--bn-colour-warning); }
 .threshold-histogram-bar--grey   { background-color: var(--bn-colour-muted, #9ca3af); opacity: 0.5; }
 
 /* Unit-square mode — tag-coloured squares */
@@ -4354,8 +4696,8 @@ tr:hover .name-pencil,
 }
 
 .threshold-slider-segment--grey   { background-color: var(--bn-colour-muted, #9ca3af); opacity: 0.3; }
-.threshold-slider-segment--amber  { background-color: var(--bn-colour-warning, #f59e0b); opacity: 0.5; }
-.threshold-slider-segment--green  { background-color: var(--bn-colour-success, #22c55e); opacity: 0.5; }
+.threshold-slider-segment--amber  { background-color: var(--bn-colour-warning); opacity: 0.5; }
+.threshold-slider-segment--green  { background-color: var(--bn-colour-positive); opacity: 0.5; }
 
 .threshold-slider-thumb {
     position: absolute;
@@ -4431,8 +4773,8 @@ tr:hover .name-pencil,
 }
 
 .threshold-zone-counter--accept {
-    border-color: var(--bn-colour-success, #22c55e);
-    color: var(--bn-colour-success, #22c55e);
+    border-color: var(--bn-colour-positive);
+    color: var(--bn-colour-positive);
 }
 
 .threshold-zone-counter-count {
@@ -4519,7 +4861,7 @@ tr:hover .name-pencil,
 }
 
 .threshold-action-accept {
-    color: var(--bn-colour-success, #22c55e);
+    color: var(--bn-colour-positive);
 }
 
 .threshold-action-accept:hover {
@@ -4531,7 +4873,7 @@ tr:hover .name-pencil,
 }
 
 .threshold-action-deny:hover {
-    color: var(--bn-colour-danger, #dc2626);
+    color: var(--bn-colour-negative);
     background: rgba(220, 38, 38, 0.06);
 }
 
@@ -4975,6 +5317,310 @@ blockquote .speaker-link:hover {
         flex-wrap: wrap;
         gap: var(--bn-space-md);
     }
+}
+
+/* --- organisms/sessions-grid.css --- */
+/* Organism: sessions-grid — the Sessions lens row grid.
+ *
+ * Replaces the raw <table> at table-layout:auto that the Sessions lens used
+ * until Aug 2026. That table had no responsive strategy: every column was
+ * nowrap or fixed except Start, so all shrink pressure landed there and the
+ * journey path collapsed to one word per line (the `min-width: 12rem` on
+ * .bn-session-meta was a stopgap, never a column system). Measured, it
+ * overflowed the page by 195px at 616px of content width.
+ *
+ * Design explored in docs/mockups/sessions-grid-playground.html (variants
+ * A/B/C, commits 004cd6a9 + 83d4c25a). This is variant C.
+ *
+ * ── Column order, held at EVERY width ──────────────────────────────────
+ *   ID · thumbnail · speakers · start+journey · sentiment · duration · file
+ * Nothing rearranges as a breakpoint is crossed. What changes is only what
+ * is *given up*, so the eye never has to re-find a column.
+ *
+ * ── SUBGRID is load-bearing ────────────────────────────────────────────
+ * One parent grid owns the tracks; each row is `grid-template-columns:
+ * subgrid`. The obvious build — each row its own grid — does not work: a
+ * content-sized track then resolves per row, so row 3's speakers column is a
+ * different width from row 1's and the table stops lining up. Only fixed
+ * lengths would align, and fixed lengths mean truncated names or dead space.
+ * Subgrid gives both: rows stay real boxes (so :hover works) while tracks are
+ * shared and content-sized across every row, exactly as a table's are.
+ *
+ * max-content tracks size around each cell's own padding, which is why no
+ * track here carries a hand-added allowance for it.
+ *
+ * ── The shrink pair ────────────────────────────────────────────────────
+ * Below the switch, speakers and start+journey become proportional fr tracks
+ * (1 : 1.5) so they give up width TOGETHER rather than Start absorbing every
+ * squeeze. `minmax(0, …)` on both is load-bearing — an fr track's default
+ * minimum is auto, which refuses to shrink below content and would reinstate
+ * exactly the rigidity being removed. Duration+file joins the pair below
+ * 900, which also drops its 9rem floor (a fixed minimum on a column is what
+ * forces a row to overflow once everything else has given up all it can).
+ *
+ * ── The degradation ladder ─────────────────────────────────────────────
+ * The code badge is the stable identity anchor: it never drops to its own
+ * line, and names are never broken mid-word. What degrades is the name's
+ * DETAIL, in this order as width falls:
+ *     surname (→ short name)  →  user journey  →  names entirely (badges)
+ * Note the journey — a whole column of content — is spent BEFORE identity
+ * legibility. Decided 6 Aug 2026.
+ *
+ * ── These thresholds are DELIBERATELY off the shared scale ─────────────
+ * The seven values below (1285 / 968 / 900 / 750 / 700 / 560 / 480) are not
+ * drawn from `--bn-breakpoint-*` and should not be moved onto it. Decided
+ * 6 Aug 2026 (Martin): that scale exists to serve card-flow surfaces — the
+ * quote grid, signal cards, code groups — which reflow by column count. This
+ * is a seven-column data grid with a shrink pair and a degradation ladder;
+ * every value here was measured against where its own content actually
+ * breaks. Snapping them to a scale built for card reflow would trade a
+ * working design for a tidier-looking one.
+ *
+ * The same applies to the track geometry (`minmax(11rem, 1fr)`,
+ * `minmax(9rem, 15rem)`) and the 1 : 1.5 shrink ratio — bespoke to this grid,
+ * not candidates for global tokens.
+ *
+ * So: if you are here on a tokenisation sweep, this file is the exception,
+ * and that is on purpose. Tune the numbers by eye in
+ * docs/mockups/sessions-grid-playground.html; don't generalise them.
+ *
+ * Thresholds are CONTAINER inline size, i.e. usable content width, not
+ * viewport width. In the browser with the sidebar closed, content =
+ * window − 184 (48 body padding + 72 rails + 64 centre padding).
+ */
+
+/* The container. Thresholds below are measured against this box. */
+.bn-session-table {
+    container-type: inline-size;
+    container-name: bn-sessions;
+}
+
+.bn-sessions-grid {
+    display: grid;
+    font-size: var(--bn-text-label);
+    /* Widest: duration and interviews are separate columns. */
+    grid-template-columns:
+        max-content          /* id                                     */
+        max-content          /* thumbnail (.bn-video-thumb is 96x54)   */
+        max-content          /* speakers — sized to the longest name   */
+        minmax(11rem, 1fr)   /* start + user journey                   */
+        max-content          /* sentiment — sized by header, not bars  */
+        max-content          /* duration                               */
+        minmax(9rem, 15rem); /* interviews (filename)                  */
+}
+
+.bn-sessions-row {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    align-items: start;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+
+.bn-sessions-row:last-child { border-bottom: none; }
+
+.bn-sessions-row[data-session] {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.bn-sessions-row[data-session]:hover { background: var(--bn-colour-hover); }
+
+/* Mirrors the old td: 0.5rem var(--bn-space-md), top-aligned.
+   min-width: 0 is load-bearing — without it an fr track cannot shrink below
+   its content and the row overflows instead of wrapping. */
+.bn-sessions-cell {
+    padding: 0.5rem var(--bn-space-md);
+    min-width: 0;
+}
+
+/* Mirrors the old th: heavier, 0.6rem block padding, 2px rule. */
+.bn-sessions-head { border-bottom-width: 2px; }
+
+.bn-sessions-head .bn-sessions-cell {
+    padding-block: 0.6rem;
+    font-weight: var(--bn-weight-emphasis);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+}
+
+/* Stacked double-header. Structure-agnostic: display:block rather than
+   relying on the flex column, so the same spans stack anywhere. The second
+   line takes the colour of the thing it labels — muted for "User journey"
+   (matching the muted chain), accent for "Interviews" (matching the file
+   link) — so the header reads as a legend for its cell. */
+.bn-sessions-h1,
+.bn-sessions-h2 { display: block; }
+
+.bn-sessions-h2 {
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+}
+
+/* Scoped to direct children so journey labels (nested inside
+   .bn-session-journey) keep their own `all: unset` colour rules. */
+.bn-cell-id > a { color: var(--bn-colour-accent); text-decoration: none; }
+.bn-cell-id > a:hover { text-decoration: underline; }
+
+/* Duration keeps its shipped right alignment while it is its own column. */
+.bn-cell-duration { text-align: right; }
+
+/* Name variants. Both are rendered; CSS picks one, so the ladder needs no
+   JS width measurement. Redundant DOM is the price of a pure-CSS ladder,
+   and it is a few dozen bytes per row. */
+.bn-speaker-name-short { display: none; }
+
+/* ── Below the switch: the C grid ──────────────────────────────────────
+   Duration and interviews merge into one column, stacked, and the shrink
+   pair takes over. This is the ONLY structural change across the whole
+   range — everything below is subtraction. */
+@container bn-sessions (max-width: 1285px) {
+    .bn-sessions-grid {
+        grid-template-columns:
+            max-content            /* id                    */
+            max-content            /* thumbnail             */
+            minmax(0, 1fr)         /* speakers  — pair      */
+            minmax(0, 1.5fr)       /* start     — pair      */
+            max-content            /* sentiment             */
+            minmax(9rem, 15rem);   /* duration + interviews */
+    }
+
+    /* Two rows so duration can sit above the filename in one column. */
+    .bn-sessions-row { grid-template-rows: auto auto; }
+
+    .bn-cell-id,
+    .bn-cell-thumb,
+    .bn-cell-speakers,
+    .bn-cell-start,
+    .bn-cell-sentiment { grid-row: 1 / span 2; }
+
+    .bn-cell-duration {
+        grid-column: 6;
+        grid-row: 1;
+        padding-bottom: 0;
+    }
+
+    /* Left-aligned now it sits above the filename rather than being its own
+       column — right alignment only earned its keep as a column.
+       Specificity 0-2-0 is deliberate: .bn-session-duration carries
+       `text-align: right` from templates/report.css, which concatenates AFTER
+       organisms, so a bare .bn-cell-duration ties on specificity and LOSES on
+       source order. Measured shipping right-aligned before this was raised. */
+    .bn-sessions-row .bn-cell-duration { text-align: left; }
+
+    .bn-cell-file {
+        grid-column: 6;
+        grid-row: 2;
+        padding-top: 0.15rem;
+    }
+
+    .bn-cell-file > a { overflow-wrap: anywhere; }
+
+    /* The speakers column is now a shrink-pair member, so it must be able to
+       give up width — which means names wrap rather than holding the track
+       open. flex-start keeps the code badge on the name's first line instead
+       of centred against a two-line name.
+
+       Specificity 0-2-0 on the cell for the SAME reason `.bn-cell-duration`
+       carries it below, and this is the rule that proves the trap is worth
+       documenting twice: the cell also carries `.bn-session-speakers`, which
+       sets `white-space: nowrap` in templates/report.css — concatenated ~5000
+       lines AFTER organisms, so a bare `.bn-cell-speakers` ties at 0-1-0 and
+       loses on source order. Names therefore never wrapped, the track shrank
+       to its `minmax(0, …)` floor anyway, and the un-wrappable content spilled
+       rightwards across Start and Sentiment. That is the header-text overlap
+       reported on 17 Aug 2026 — and it means rung 1 of the ladder had never
+       actually worked since it shipped on 6 Aug.
+
+       Fixing it here rather than in report.css on purpose: that nowrap is
+       still correct for the `<table>` the sealed static render uses, which
+       shares the class. */
+    .bn-sessions-row .bn-cell-speakers,
+    .bn-cell-speakers .bn-session-speaker-entry { white-space: normal; }
+    .bn-cell-speakers .bn-session-speaker-entry { align-items: flex-start; }
+
+    /* A wrapped name must be flush left on EVERY line, first included.
+       .bn-speaker-editable-name carries `padding: … 0.2rem` and is an inline
+       box, so its left padding paints only at the start of its first line
+       fragment — leaving line 1 indented ~3.2px and wrapped lines flush.
+       (Same inline-box behaviour journey-label.css documents for wrapping
+       journey chains.) inline-block applies the padding to the box, so all
+       lines share one left edge while the hover chip still shrink-wraps. */
+    .bn-cell-speakers .bn-speaker-editable-name { display: inline-block; }
+}
+
+/* Sentiment: the cheapest column on the row (~87px) and the one that makes
+   the grid scannable for triage, so it outlives the layout switch. */
+@container bn-sessions (max-width: 968px) {
+    .bn-sessions-grid {
+        grid-template-columns:
+            max-content max-content minmax(0, 1fr) minmax(0, 1.5fr)
+            minmax(9rem, 15rem);
+    }
+    /* 0-2-0 to clear `.bn-sessions-head .bn-sessions-cell { display: flex }`
+       above, which is also 0-2-0 but earlier in source. A bare
+       `.bn-cell-sentiment` is 0-1-0 and loses outright — and it loses ONLY in
+       the header, so the column vanished from every body row while its title
+       stayed, kept a track the grid no longer had, and the explicitly-placed
+       Duration/Interviews cell landed on top of it. That is the header text
+       reported overlapping on 17 Aug 2026 ("Senatidmoent" = Sentiment over
+       Duration). Same trap as `.bn-sessions-h2` below, which was already
+       raised for exactly this reason. */
+    .bn-sessions-row .bn-cell-sentiment { display: none; }
+    .bn-cell-duration,
+    .bn-cell-file { grid-column: 5; }
+}
+
+/* Duration+interviews joins the shrink pair, and loses its 9rem floor. */
+@container bn-sessions (max-width: 900px) {
+    .bn-sessions-grid {
+        grid-template-columns:
+            max-content max-content minmax(0, 1fr) minmax(0, 1.5fr)
+            minmax(0, 1fr);
+    }
+}
+
+/* Ladder rung 1 — surnames go; fall back to the short name. */
+@container bn-sessions (max-width: 750px) {
+    /* Specificity 0-2-0 to beat the .bn-cell-speakers .bn-speaker-editable-name
+       inline-block rule above (also 0-2-0, but earlier in source). A bare
+       .bn-speaker-name-full is 0-1-0 and loses, which shows BOTH names at
+       once rather than swapping them — measured before this was raised. */
+    .bn-cell-speakers .bn-speaker-name-full { display: none; }
+    .bn-cell-speakers .bn-speaker-name-short { display: inline-block; }
+}
+
+/* Thumbnail goes. */
+@container bn-sessions (max-width: 700px) {
+    .bn-sessions-grid {
+        grid-template-columns:
+            max-content minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr);
+    }
+    /* 0-2-0 for the same reason as sentiment above — otherwise the header
+       keeps an (empty) thumbnail track that no body row has, and everything
+       to its right sits one column off. */
+    .bn-sessions-row .bn-cell-thumb { display: none; }
+    .bn-cell-duration,
+    .bn-cell-file { grid-column: 4; }
+}
+
+/* Ladder rung 2 — the user journey goes, leaving the start time alone. The
+   header stops being a stack too: a "User journey" label over a column that
+   no longer has one is a promise the row does not keep. */
+@container bn-sessions (max-width: 560px) {
+    .bn-cell-start .bn-session-journey { display: none; }
+    .bn-sessions-head .bn-cell-start .bn-sessions-h2 { display: none; }
+}
+
+/* Ladder rung 3 — names go entirely. Badges only; the pencil goes with them
+   since there is no longer a name to edit. */
+@container bn-sessions (max-width: 480px) {
+    .bn-cell-speakers .bn-speaker-editable-name,
+    .bn-cell-speakers .bn-speaker-name-full,
+    .bn-cell-speakers .bn-speaker-name-short,
+    .bn-cell-speakers .bn-name-pencil { display: none; }
 }
 
 /* --- organisms/sentiment-chart.css --- */
@@ -5458,6 +6104,14 @@ blockquote .speaker-link:hover {
     background-color: var(--bn-colour-hover);
 }
 
+/* SPECIAL CASE — do NOT normalise this to a leading token.
+   The dashboard's featured quotes are the front door of the report, and the
+   1.55 is a deliberate hand-tune: chrome-sized text (13px) in a narrow card,
+   led looser than anything around it because the reader is meant to stop here.
+   It is rhetorical rather than metric — it cannot be derived from size or
+   measure, which is exactly why it resists a token. In the Mac app it sits
+   ~26% above the 1.231 chrome baseline; that gap is the point, not drift.
+   See docs/design-native-typography-grid.md § Leading. */
 .bn-featured-quote .quote-text {
     font-size: var(--bn-text-label);
     line-height: 1.55;
@@ -5625,6 +6279,69 @@ blockquote .speaker-link:hover {
     /* Grid child — no break-inside or margin needed (grid gap handles spacing) */
 }
 
+/* The group focus cursor.
+ *
+ * Three constraints decided this rule, in order:
+ *
+ * 1. QUALIFIED WITH THE BASE CLASS. `.bn-selected` alone is (0,1,0) and ties
+ *    with `.codebook-group`'s own `border: 1px solid transparent` — and this
+ *    file is concatenated AFTER `atoms/interactive.css`, so the tie goes to
+ *    the transparent border and the cursor paints nothing. That is exactly
+ *    the trap `theme/CLAUDE.md` documents for `blockquote.quote-card`, and
+ *    the codebook shipped it on 12 Sep 2026 with no CSS at all.
+ *
+ * 2. BORDER, NOT BACKGROUND. `.bn-selected`'s `background` can never win
+ *    here: the card carries an inline `backgroundColor` from `getGroupBg`,
+ *    and inline beats any class. The wash is also the card's colour identity
+ *    and shouldn't be overwritten. So the cursor is an edge.
+ *
+ * 3. ORDERED BEFORE `.drag-over`, AND VISUALLY DISTINCT FROM IT. Both are
+ *    (0,2,0) in this file, so source order alone separates them: drag-over
+ *    comes later and wins on the one card you are dragging onto, which is
+ *    correct — during a drag the drop target is what matters. They must not
+ *    look alike either, or the affordance says nothing, so drag-over keeps
+ *    `--bn-focus-ring` and the cursor takes a tighter inset edge. */
+.codebook-group.bn-selected {
+    border-color: var(--bn-selection-border);
+}
+
+/* macOS de-emphasises selection on an inactive window. `atoms/interactive.css`
+ * implements that for `.bn-selected` generally, but its rule only repaints
+ * `border-left-color` — which this one overrode with the `border-color`
+ * shorthand. Without this companion the codebook cursor would be the one
+ * selection surface in the app that stays bright on window blur. */
+.bn-window-inactive .codebook-group.bn-selected {
+    border-color: var(--bn-selection-border-inactive);
+}
+
+/* A field inside the card has keyboard focus, so the card's own cursor stands
+ * down. Focus in a text field is a *more precise* statement of where you are
+ * than a ring round the whole card, and the two together read as two boxes:
+ * concentric, same colour, ten pixels apart — which is not a thing macOS does.
+ * When you rename in Finder, the row does not compete with the field.
+ *
+ * `:focus-within` rather than a narrower editable-only selector because every
+ * focusable thing in this card (the ✕, the tag input, the three inline
+ * editors) makes the same argument: something inside has the keyboard, and it
+ * is drawing its own ring to say so.
+ *
+ * (0,3,0), and after the inactive rule so it wins that tie too — the card
+ * should stand down on an inactive window as well, not merely dim. */
+.codebook-group.bn-selected:focus-within {
+    border-color: transparent;
+}
+
+/* EditableText in `trigger="click"` mode applied an inline `cursor: text`; the
+ * span that replaced it inherits `.group-title-text { cursor: default }` — the
+ * SAME class the read-only title renders — so an editable group title became
+ * indistinguishable from one you cannot edit, while its own sibling subtitle
+ * still showed an I-beam. Scoped to the focused card because that is exactly
+ * when clicking the title renames it, and to `--editable` so a framework
+ * card's title never claims to be typeable. */
+.codebook-group.bn-selected .group-title-text--editable {
+    cursor: text;
+}
+
 .codebook-group.drag-over {
     border-color: var(--bn-colour-accent);
     box-shadow: var(--bn-focus-ring);
@@ -5703,6 +6420,46 @@ blockquote .speaker-link:hover {
 .group-subtitle:hover {
     background: var(--bn-hover-bg-subtle);
 }
+/* Hug the content while editing, as the title does.
+ *
+ * The title renders through `EditableText as="span"` — inline, so its box
+ * grows with the text. The subtitle renders `as="p"`, which is right at rest
+ * (it is prose and it wraps) and wrong while editing: a block box takes the
+ * full card width, so a three-word subtitle gets a field four times its
+ * length. Fixed here rather than by changing the element, because `p` is the
+ * correct semantics for the resting state and only the editing box is wrong.
+ *
+ * The `min-width` is load-bearing: an empty subtitle edits an empty string,
+ * and an inline-block with no content collapses to nothing — a caret with no
+ * box, which is the state you are in every time you add a subtitle. */
+.group-subtitle[contenteditable="true"] {
+    display: inline-block;
+    min-width: 12ch;
+}
+
+/* The card's own two fields, in the card's own idiom.
+ *
+ * `editable-text.css` carries the house rule for a name or title being edited
+ * and tints the field, because out there the ground is page white. Here the
+ * ground is a group-tinted card, so a tint on a tint reads as nothing — the
+ * same wall the code cursor hit at 1.01:1. These blank to page background
+ * instead, which is exactly what `.tag-input-box` and `.tag-edit-inline` do
+ * three inches below: one card, one idiom, whether you are naming the group or
+ * naming a code inside it.
+ *
+ * `outline` rather than the chips' `border` because both of these are prose
+ * spans in a header that has to hold its line; the edge colour is the signal
+ * and the mechanism is free to differ. `.codebook-group.bn-selected
+ * :focus-within` stands the CARD's edge down as this one lights, so there is
+ * one accent edge on screen and it is around the thing taking the keystrokes. */
+.group-title-text[contenteditable="true"],
+.group-subtitle[contenteditable="true"] {
+    outline: 1px solid var(--bn-field-edit-edge);
+    outline-offset: var(--bn-field-edit-offset);
+    background: var(--bn-field-edit-fill-on-tint);
+    border-radius: var(--bn-field-edit-radius);
+}
+
 .group-subtitle.placeholder {
     font-style: italic;
     opacity: 0.45;
@@ -5770,6 +6527,55 @@ blockquote .speaker-link:hover {
 .tag-row.dragging {
     opacity: 0.4;
 }
+/* The code cursor.
+ *
+ * A SHAPE, not a tint. `.bn-selected`'s wash measures 1.01:1 against the
+ * group-tinted card it sits on (WCAG 1.4.11 wants 3:1), and `.tag-row`
+ * declares no border for its `border-left-color` to repaint — so on this one
+ * element the shared state class paints an indicator nobody can see. Both
+ * other `bn-selected` surfaces in the app (quote card, signal card) carry the
+ * state on a border; this row was the first without one.
+ *
+ * Ordered BEFORE `.merge-target` deliberately: both are (0,2,0) in this file,
+ * and a row that is both focused and a live merge target should show the
+ * merge target — that state is momentary and destructive, the cursor is not. */
+/* The code cursor marks the CHIP, not the row it sits in.
+ *
+ * It was a 2px bar at the row's left edge — 4px of padding away from the chip,
+ * so it read as a leftover rather than a cursor, and it stayed visible after a
+ * rename committed (focus correctly survives the edit) where it looked like
+ * something had failed to clear.
+ *
+ * An `outline` is what makes this possible at all, and it is why the "solid
+ * accent pill" the mockup asks for was previously recorded as blocked: `Badge`
+ * applies its codebook tint as an inline `backgroundColor`, which no class can
+ * beat — the same trap that made the card's wash invisible — but an outline
+ * does not compete with a background at all. And this is not a new treatment:
+ * the tag-suggest dropdown already marks its keyboard target exactly this way
+ * (`molecules/tag-input.css:81`, "Active pill: stronger contrast to indicate
+ * keyboard selection"). One idiom, two places.
+ *
+ * `.bn-selected`'s own wash still lands on the row and is left alone: it
+ * measures ~1.01:1 against the card, so it is imperceptible rather than wrong,
+ * and removing it would mean fighting the atom for no visible gain. */
+.tag-row.bn-selected .badge {
+    outline: 2px solid var(--bn-selection-border);
+    outline-offset: 1px;
+}
+
+.bn-window-inactive .tag-row.bn-selected .badge {
+    outline-color: var(--bn-selection-border-inactive);
+}
+
+/* While a field inside the row has focus, the chip's outline stands down —
+ * the field draws its own keyline and two rings on one object is the fault
+ * this card has now been through three times. Note `.tag-edit-inline` also
+ * carries `.badge`, so without this the editing field would wear the cursor
+ * outline as well as its own border. */
+.tag-row.bn-selected:focus-within .badge {
+    outline: none;
+}
+
 .tag-row.merge-target {
     box-shadow: 0 0 0 2px var(--bn-colour-accent);
     background: color-mix(in srgb, var(--bn-colour-accent) 6%, transparent);
@@ -5795,12 +6601,25 @@ blockquote .speaker-link:hover {
 }
 
 /* Inline tag rename — matches badge dimensions */
+/* Re-editing an existing code should look like typing a new one.
+ *
+ * It did not. This element carries `.badge` for its metrics, so it inherited
+ * `--bn-colour-badge-bg` — a grey panel — and its ring was `--bn-focus-ring`,
+ * which is `0 0 0 2px rgba(0, 122, 255, 0.12)`: twelve per cent alpha, so
+ * "obscured" was the token doing exactly what it says rather than a rendering
+ * accident. Against a tinted card it reads as nothing.
+ *
+ * A field being edited is a field: page background, one solid accent keyline.
+ * `outline: none` stays — the keyline IS the focus indication, and a browser
+ * outline on top of it would be the double ring again. */
 .tag-edit-inline {
     font-family: var(--bn-font-mono);
     outline: none;
     border-radius: var(--bn-radius-sm);
-    box-shadow: var(--bn-focus-ring);
     min-width: 3em;
+    background: var(--bn-field-edit-fill-on-tint);
+    border: 1px solid var(--bn-field-edit-edge);
+    box-shadow: none;
 }
 
 /* Micro histogram bar + count */
@@ -6059,13 +6878,14 @@ blockquote .speaker-link:hover {
 }
 
 /* ── Codebook header ─────────────────────────────────────────────────── */
-
-.codebook-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: var(--bn-space-sm);
-}
+/* `.codebook-header` was removed 20 Aug 2026. It was a flex column wrapped
+   around the zone title so the Library button could sit beside it, and it cost
+   two defects: it broke the datum rule in templates/report.css (the heading
+   became a grandchild, so the selector stopped matching and the title sat 40px
+   low) and it truncated the keyline to the column's width instead of the
+   pane's. Both are now the atom's business — `<SectionHeading action={…}>`,
+   atoms/section-heading.css. Don't reintroduce a per-lens header wrapper: the
+   whole point of the atom is that every lens's title row is the same box. */
 
 /* ── Framework section header (title + author + border-bottom) ────── */
 /* Mirrors .codebook-modal-header / .preview-header pattern:
@@ -6390,22 +7210,6 @@ blockquote .speaker-link:hover {
     font-style: italic;
 }
 
-/* Create new codebook card */
-.picker-card-create {
-    border: 1px dashed var(--bn-colour-border);
-    background: transparent;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 140px;
-    gap: var(--bn-space-sm);
-}
-.picker-card-create:hover {
-    border-color: var(--bn-colour-muted);
-    background: var(--bn-hover-bg-subtle);
-}
-
 /* Per-tile Install ↔ Uninstall toggle. Fixed min-width + centred text so the
    button footprint doesn't shift when the label swaps state. Both neutral —
    Uninstall is reversible; it only warms to danger on hover. */
@@ -6521,7 +7325,14 @@ blockquote .speaker-link:hover {
     font-size: var(--bn-text-caption);
     color: var(--bn-colour-muted);
     margin-bottom: var(--bn-space-md);
-    line-height: 1.5;
+    /* PROSE at a chrome size — a 90-word bio, not a footnote — so it takes the
+       prose ratio rather than caption's. It was the literal 1.5, and a literal
+       cannot fork: on the Mac's SF Pro ladder that left it 20% looser than the
+       chrome around it (1.5 against a 1.25 caption baseline), which is why the
+       bio column reads airy and overlong there. The token keeps web identical
+       at 1.5 and brings the app to 1.4, in line with every other prose block.
+       Shared with the v1 browse modal, deliberately — same text, same job. */
+    line-height: var(--bn-text-body-lh);
 }
 .preview-author-links {
     display: flex;
@@ -6536,6 +7347,493 @@ blockquote .speaker-link:hover {
 .preview-author-links a:hover {
     text-decoration: underline;
 }
+
+/* --- organisms/codebook-v2.css --- */
+/* ── Codebook v2 — the rail ────────────────────────────────────────────────
+   Phase 2 of docs/design-codebook-v2-plan.md. Runs beside the shipped
+   codebook-panel.css rather than replacing it (D29), so nothing here may
+   redefine a class that file owns.
+
+   Everything is tokens. The one value that is not a token is the switch's
+   26x15, which is measured rather than chosen — see docs/mockups/
+   codebook-v2-rail.html and -parity.html for the measurements. */
+
+/* One knock-back opacity, shared by the rail, the page and the browse card.
+   NOT a new value: the theme has seven disabled declarations carrying five
+   different opacities and no token, and 0.5 is the plurality AND the base
+   atom's (.bn-btn:disabled). D27a. */
+:root { --bn-opacity-off: 0.5; }
+
+/* ── The codebook navigator, in the standard left sidebar ─────────────────
+   v2's navigation was a `<nav class="v2-rail">` inside the lens's own content
+   column, restating padding, radius, hover and selection from scratch. It now
+   uses `.toc-heading` and `.toc-link` from sidebar.css, exactly as the shipped
+   CodebookSidebar does, so section headings, row metrics, hover underline and
+   the selected treatment are inherited rather than re-declared.
+
+   THE SELECTED ROW. The rail used `--bn-colour-active-bg` — `#f0fdf4`, the
+   palette's *success* background — which rendered the current codebook mint
+   green. `.toc-link.active` uses `--bn-nav-selection-bg`, a neutral grey, with
+   the accent colour and emphasis weight. Selection is not success.
+
+   What remains here is only what a two-line row with a trailing control needs
+   and the base `.toc-link` does not provide. */
+
+.v2-nav-row {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    min-width: 0;
+}
+
+/* The title/provenance stack. `.toc-link` is `display: block` with a single
+   line; this row carries two, so the text column owns its own flow and the
+   switch stays vertically centred against the pair. */
+.v2-nav-text {
+    display: flex;
+    flex-direction: column;
+    /* 1px, matching `.session-entry-speakers` — the shipped two-line row. The
+       stack had no gap at all, so line-height was doing the entire job of
+       separating a title from its subtitle. */
+    gap: 1px;
+    min-width: 0;
+    flex: 1;
+}
+
+/* `.codebook-toc-label` (from sidebar.css) supplies the title's size and
+   truncation — the same span the shipped navigator uses. */
+
+/* Provenance. A person keeps D19's weight because the name is the point —
+   Jakob Nielsen is better known than his heuristics. A system fact ("On by
+   default") must not borrow it: dressing a configuration state as a cultural
+   figure is a category error the eye catches immediately. D23. */
+.v2-nav-provenance {
+    /* THE SUBTITLE STOP, not the glyph stop. This was `--bn-text-micro`
+       (9.6px web / 10px desktop) — two stops below the row title, and a size
+       the navigator otherwise uses for exactly two things, neither of them
+       words: a thumbnail placeholder glyph and a badge. An author's name is
+       prose and needs a prose size.
+
+       `--bn-text-badge` (11.5 / 11) is where the sidebar already puts a
+       subtitle: `.tag-sidebar-subtitle` sits at this stop directly beneath a
+       `.tag-sidebar-header .sidebar-title` at `--bn-text-label` — the same
+       title-over-subtitle relationship this row has. Sessions' second line
+       (`.session-entry-date`) is a stop higher at `--bn-text-caption`, and
+       deliberately so: a date and a duration are *metadata*, machine facts
+       about the row. An attribution is a subtitle, which is prose about the
+       thing above it. Different jobs, different stops.
+
+       On desktop this lands on macOS body over subheadline (13 / 11), which
+       is a real Apple pairing — and the 2px step separates the two ranks more
+       legibly than caption's 1px would. */
+    font-size: var(--bn-text-badge);
+    line-height: var(--bn-text-badge-lh);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Switched off. One knock-back value, shared with the codebook page and the
+   browse card — they were three declarations with three different opacities
+   before D27a. `.codebook-disabled` is the shipped navigator's own modifier,
+   so the muted treatment matches v1 row for row. */
+.v2-nav-row.codebook-disabled .codebook-toc-label,
+.v2-nav-row.codebook-disabled .v2-nav-provenance { color: var(--bn-colour-muted); }
+
+/* Undecided-proposal count (D10). Inboard of the switch so the switch keeps the
+   trailing edge (D16) and the badge never displaces it. */
+.v2-nav-pending {
+    flex-shrink: 0;
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-micro);
+    color: var(--bn-colour-badge-text);
+    background: var(--bn-colour-badge-bg);
+    border-radius: var(--bn-radius-pill);
+    padding: 0.05rem 0.35rem;
+    font-variant-numeric: tabular-nums;
+}
+
+/* The hover underline belongs to the TITLE, not to the whole row. `.toc-link:hover`
+   (sidebar.css) decorates the anchor, and an ancestor's text-decoration is *painted
+   through* its descendants: `text-decoration: none` on the count removes nothing, and
+   neither does making it an atomic inline, because a flex item is blockified rather
+   than inline. Both were measured before this rule was written — the count kept its
+   underline in each. The only fix is to stop decorating the anchor and decorate the
+   label instead, which spares the count and the provenance line alike.
+   Scoped to `.v2-nav-row` so the Quotes TOC and the v1 codebook sidebar are untouched.
+   `text-underline-offset` still inherits from the anchor, so the offset is unchanged. */
+.toc-link.v2-nav-row:hover {
+    text-decoration: none;
+}
+
+.toc-link.v2-nav-row:hover .codebook-toc-label {
+    text-decoration: underline;
+    text-decoration-color: var(--bn-colour-accent);
+}
+
+/* The fallback switch, at the size settled during the prototype. The platform
+   control (Safari 17.4+ `<input type="checkbox" switch>`) is preferred and
+   needs none of this — it brings its own spring, focus ring, Increase Contrast
+   and Reduce Motion. D15. */
+/* THE PLATFORM SWITCH IS SIZED HERE, NOT LEFT TO ITS INTRINSIC DEFAULT.
+   `<input type="checkbox" switch>` brings its own geometry, and WebKit's
+   default is a full-size control — roughly the 38x22 NSSwitch, on a row whose
+   whole point is that the switch rides *beside* two lines of text without
+   dominating them. So the two code paths shipped at different sizes: the
+   fallback carried the settled 26x15 and the native one carried nothing but
+   `flex-shrink`, which meant the surface a Mac user actually sees (embedded
+   WebKit takes this branch; only the CLI SPA falls back) was the one that had
+   never been sized. It read as too big because it was.
+
+   26x15 is the size settled in `docs/mockups/codebook-v2-parity.html`, which
+   paired both controls at it side by side and measured that the platform
+   switch scales cleanly by CSS width/height. The ratio is the full-size
+   track's, kept exactly: 38/22 = 1.727, 26/15 = 1.733.
+
+   Nothing else is declared. The platform owns the knob, the spring curve, the
+   focus ring, Increase Contrast and Reduce Motion — that is the entire reason
+   for preferring this control, and restyling any of it would forfeit it. */
+.v2-nav-row .enable {
+    flex-shrink: 0;
+    width: 26px;
+    height: 15px;
+}
+
+.v2-nav-row .sw.mini {
+    position: relative;
+    flex-shrink: 0;
+    width: 26px;
+    height: 15px;
+    border-radius: 7.5px;
+    background: var(--bn-colour-accent);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast);
+}
+
+.v2-nav-row .sw.mini::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 13px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: #fff;
+    transition: left var(--bn-transition-fast);
+}
+
+.v2-nav-row .sw.mini.offstate { background: var(--bn-colour-border-hover); }
+.v2-nav-row .sw.mini.offstate::after { left: 2px; }
+
+.v2-nav-row .sw.mini:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .v2-nav-row .sw.mini,
+    .v2-nav-row .sw.mini::after { transition: none; }
+}
+
+/* ── Codebook v2 — the page ────────────────────────────────────────────────
+   Phase 3. The group and tag rendering emits the SHIPPED unscoped classes
+   (.codebook-group, .tag-row, .tag-bar-area, .badge) and adds nothing here, so
+   the histogram alignment this repo has already paid for is inherited. What
+   follows is only the page head, which has no shipped equivalent. */
+
+.pg-head {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--bn-space-lg);
+    margin-bottom: var(--bn-space-lg);
+}
+
+/* Two columns. The description's right edge meets the graphic's left, and the
+   action trails below the graphic — the alignment the layout is built on. */
+.pg-headmain { flex: 1; min-width: 0; }
+
+.pg-side {
+    /* A fixed-width GUTTER, not a fixed box (D13). The width is the contract;
+       what fills it is deferred per codebook. */
+    flex: 0 0 240px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--bn-space-md);
+}
+
+/* The author card fills the gutter's full width. `.pg-side` is
+   `align-items: flex-end`, which is right for the Uninstall button (a control
+   hugging the trailing edge) and wrong for a card, which would otherwise
+   shrink to its text. The card brings its own background, radius and padding
+   from `.preview-author` — the shipped treatment from the codebook picker —
+   and takes only its width from here. */
+.pg-side .preview-author { align-self: stretch; }
+
+/* The author's links STACK in the gutter. `.preview-author-links` is
+   `flex-wrap: wrap` with a `--bn-space-lg` gap, which is right in the browse
+   modal — that card is wide enough to hold three links on one row. At 240px
+   only two fit, so the third wraps and the group reads as accidentally
+   arranged rather than deliberately laid out: the eye sees a ragged two-then-
+   one shape and looks for a meaning that isn't there. A column is
+   deterministic at any count. The gap comes down with it — 1.5rem is
+   inter-column air, and far too much between stacked lines. */
+.pg-side .preview-author-links {
+    flex-direction: column;
+    gap: var(--bn-space-sm);
+}
+
+/* PARKED with its element (see CodebookV2Page): the placeholder reserved the
+   gutter for a jacket / initials / headshot that has not been designed. Kept
+   so restoring it stays the one-line uncomment the call site promises. */
+.pg-graphic {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    border-radius: var(--bn-radius-md);
+    background: var(--bn-colour-quote-bg);
+}
+
+/* The title and its action share a row: text left, control hard right, both
+   aligned to the TOP so a two-line title does not drag the button down with
+   it. The action was in `.pg-side` below the author card — the one control
+   that decides whether this codebook is in the project sitting after the
+   author's biography. */
+.pg-titlerow {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--bn-space-md);
+}
+
+.pg-titletext { min-width: 0; }
+
+/* `flex-shrink: 0` because the label is the affordance — "Uninstall" wrapping
+   to two lines, or ellipsing, is worse than a narrower title. */
+.pg-titleaction { flex-shrink: 0; }
+
+.pg-title {
+    font-size: var(--bn-text-title);
+    font-weight: var(--bn-weight-strong);
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+}
+
+/* Provenance. A person keeps D19's weight; a system fact does not borrow it. */
+.pg-author {
+    font-size: var(--bn-text-label);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-text);
+    margin-top: 0.15rem;
+}
+
+.pg-author.prov-system {
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+}
+
+.pg-desc {
+    font-size: var(--bn-text-body);
+    /* Raise the LEADING with the size. Without this the rule takes body's size
+       and keeps `body`'s ratio, which is the chrome one — and the leading tokens
+       are unitless, so what inherits is the ratio, not the pixel value. In the
+       Mac app that meant 15px prose at 1.231 (Apple's 13/16 chrome metric): the
+       only body-size prose in the app not on 21px, and 12% tighter per line than
+       the quote body it sits beside. On web the gap is smaller (1.45 vs 1.5) but
+       the same mistake. A token rather than a number so it forks per platform —
+       1.5 on web, 1.4 on the SF Pro ladder. */
+    line-height: var(--bn-text-body-lh);
+    margin: var(--bn-space-md) 0 0;
+    max-width: 62ch;
+}
+
+.pg-stat { font-size: var(--bn-text-label); color: var(--bn-colour-muted); margin-top: var(--bn-space-md); }
+
+/* The Review door: the verb is the button, the counts sit on its baseline. */
+.pg-review-row {
+    margin-top: var(--bn-space-md);
+    display: flex;
+    align-items: baseline;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+}
+
+.pg-review-meta { font-size: var(--bn-text-label); color: var(--bn-colour-text); }
+.pg-review-meta .undec { color: var(--bn-colour-muted); }
+
+/* D26 — a codebook that defines no tags says so, plainly. */
+.pg-empty {
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-muted);
+    padding: 1.5rem 0;
+}
+
+.v2-groups {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--bn-space-md);
+}
+
+/* Switched off. ONE knock-back value shared with the rail — before D27a these
+   were three declarations with three different opacities plus a dead fourth.
+   Named -off, not -disabled: a disabled control cannot be used, whereas a
+   switched-off codebook stays fully interactive. */
+.pageoff .pg-title,
+.pageoff .pg-author,
+.pageoff .pg-stat,
+.pageoff .pg-desc,
+.pageoff .group-title { color: var(--bn-colour-muted); }
+
+.pageoff .v2-groups,
+.pageoff .pg-graphic { opacity: var(--bn-opacity-off); }
+
+/* The uninstall control is EXEMPT. A disabled codebook is still uninstallable,
+   and a blanket knock-back removes precisely the one control that must stay
+   reachable. */
+.pageoff .pg-actions { opacity: 1; }
+
+/* The lens: rail beside content. The rail is permanent (S1) — one codebook
+   always has focus, and the long scrolling page of every codebook is gone. */
+/* One column. This was `240px 1fr` — the 240px being the in-lens rail's
+   track. Navigation now lives in the standard left sidebar, which is a column
+   of SidebarLayout's own 6-column grid, so the lens gets the full content
+   width and narrows when the panel opens, as every other lens does. */
+.v2-layout { min-width: 0; }
+
+.v2-main { min-width: 0; }
+
+/* ── The size axis — PROVISIONAL, and deliberately not in the atom ─────────
+   `.bn-btn` (theme/atoms/modal.css) carries four COLOUR variants and no size
+   variant, because every existing call site is a dialog action row where one
+   size is correct. Codebook v2 is the first surface wanting two: a zone-title
+   destination that should be findable without shouting, and a Review verb that
+   must stay subordinate to Install.
+
+   These live HERE rather than in modal.css on purpose. The size axis is listed
+   as *Indicative* in the fidelity map — it is a declared gap, filed rather than
+   granted — and promoting it to the shipped atom is a design-system decision
+   nobody has taken. Scoped to v2, the QA comparison renders truthfully without
+   that decision being made by accident.
+
+   Purely dimensional: no colour, no new token. If v2 ships, these move up. */
+.v2-layout .bn-btn-sm,
+.v2-nav .bn-btn-sm,
+.section-heading .bn-btn-sm { font-size: var(--bn-text-caption); padding: 0.25rem 0.7rem; }
+
+/* `.v2-nav` is the sidebar navigator, which is NOT inside `.v2-layout` — it is
+   mounted by AppLayout in the left panel, a sibling of the lens. It carries
+   Browse Library, and that button has to be the same small secondary as the
+   page's Review button rather than a sidebar dialect of one.
+
+   The gap above it is `--bn-space-lg`: the button is not another row in the
+   list, it is what you do when the list has not got what you want, and at row
+   spacing it reads as a fourth section heading's worth of list. Left inset
+   matches `.toc-link`'s text edge so it hangs off the same margin as the rows. */
+.v2-nav .bn-btn-sm { margin: var(--bn-space-lg) var(--bn-space-sm) 0; }
+
+.v2-layout .bn-btn-lg,
+.section-heading .bn-btn-lg { font-size: var(--bn-text-body); padding: 0.5rem 1.15rem; }
+
+/* ── Codebook v2 — the browse grid ────────────────────────────────────────
+   Phase 4. The cards are the SHIPPED .picker-card* classes; only the grid, the
+   footrow and the version chip are new, because the shipped picker laid its
+   cards out differently. */
+
+
+.v2-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--bn-space-md);
+}
+
+.v2-card-grid .picker-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.v2-card-grid .picker-card:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
+}
+
+/* Version renders only when present (D12) — no dash, no placeholder — so this
+   never styles an empty span. */
+.picker-card-version {
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-badge);
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+}
+
+/* A system fact does not borrow the author's weight (D23). */
+.picker-card-author.prov-system {
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+}
+
+/* Status and the one action, on one row. `margin-top: auto` pins it to the
+   bottom so a short description does not float the button up the card and
+   leave the grid ragged. */
+.picker-card-footrow {
+    margin-top: auto;
+    padding-top: var(--bn-space-md);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--bn-space-sm);
+}
+
+.picker-card-status {
+    font-size: var(--bn-text-caption);
+    color: var(--bn-colour-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Switched off — the SAME knock-back as the rail and the page, on one token.
+   Deliberately NOT the shipped `.picker-card.disabled`, which also sets
+   pointer-events:none: a switched-off codebook stays fully interactive. */
+.v2-card-grid .picker-card.off2 .picker-card-title,
+.v2-card-grid .picker-card.off2 .picker-card-author,
+.v2-card-grid .picker-card.off2 .picker-card-desc,
+.v2-card-grid .picker-card.off2 .picker-card-status { color: var(--bn-colour-muted); }
+
+.v2-card-grid .picker-card.off2 { opacity: var(--bn-opacity-off); }
+
+/* The uninstall control is EXEMPT, on the card exactly as on the page: a
+   blanket knock-back removes precisely the one control that must stay
+   reachable on a disabled codebook (D27). */
+.v2-card-grid .picker-card.off2 .picker-card-toggle { opacity: 1; }
+
+/* ── Codebook v2 — the uninstall confirmation ─────────────────────────────
+   Phase 5. Reuses the shipped .bn-modal-overlay / .bn-modal shell; only the
+   body needs rules, because the sheet's whole job is a short measured list. */
+
+.v2-uninstall-sheet { max-width: 28rem; }
+
+.v2-uninstall-title {
+    font-size: var(--bn-text-heading);
+    font-weight: var(--bn-weight-strong);
+    margin: 0 0 var(--bn-space-md);
+}
+
+.v2-uninstall-lead {
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-muted);
+    margin: 0 0 var(--bn-space-sm);
+}
+
+/* Counted losses, one per line. A researcher weighs a list; they cannot weigh
+   "this cannot be undone". */
+.v2-uninstall-losses {
+    margin: 0 0 var(--bn-space-md);
+    padding-left: 1.1rem;
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-text);
+}
+
+.v2-uninstall-losses li { margin-bottom: 0.15rem; }
 
 /* --- organisms/sidebar.css --- */
 /* Dual-sidebar layout — 6-column grid for serve-mode Quotes tab.
@@ -6561,7 +7859,20 @@ blockquote .speaker-link:hover {
         var(--bn-minimap-width)                       /* 4: minimap     */
         0px                                           /* 5: tag sidebar */
         var(--bn-rail-width);                         /* 6: tag rail    */
-    min-height: 100vh;
+    /* Minus everything body pads with — the top only, since 20 Sep 2026
+       (report.css: body's bottom pad moved onto `.center` below so the sticky
+       panels, which live in this row, can reach the window bottom). See the
+       note on `.layout:has(.signals-layout)` in inspector.css. A bare 100vh
+       here puts every lens over the viewport by the padding, which is a
+       scrollbar that scrolls the padding and nothing else.
+
+       CURRENTLY MASKED on every lens but Analysis, and measured so: `.toc-rail`
+       and `.toc-sidebar` are STICKY at `height: 100vh`, sticky is in flow, so
+       they stretch the grid row to the full viewport height regardless of what
+       this floor says. /sessions/ and /codebook/ still measure 64px over. This
+       rule is right and inert; the rails are the remaining cause and changing
+       them is whole-app geometry, not a scrollbar fix. */
+    min-height: calc(100vh - var(--bn-toolbar-inset, 0px) - var(--bn-space-xl));
 }
 
 /* TOC sidebar push-open: hide rail (0), show sidebar, keep center */
@@ -6657,6 +7968,24 @@ blockquote .speaker-link:hover {
     padding-right: var(--bn-gutter-left);
 }
 
+/* Embedded body pads 0 horizontally (report.css: the 24px flank showed the
+   window surface through the transparent body as a white gutter beside the
+   panels). The panels are now flush with the split divider / window edge; the
+   prose gets those 24px back wherever NO panel stands between it and an edge,
+   so every current text position is preserved and only the strip is gone. */
+.layout.embedded:not(.toc-open) > .center {
+    padding-left: calc(var(--bn-gutter-left) + var(--bn-space-lg));
+}
+
+.layout.embedded.layout-no-right > .center,
+.layout.embedded.layout-inert > .center {
+    padding-right: calc(var(--bn-gutter-left) + var(--bn-space-lg));
+}
+
+.layout.embedded:not(.tags-open) > .minimap-slot {
+    padding-right: calc(var(--bn-space-md) + var(--bn-space-lg));
+}
+
 /* Animated slide — added before state change, removed on transitionend */
 .layout.animating {
     transition: grid-template-columns 75ms ease;
@@ -6735,8 +8064,17 @@ blockquote .speaker-link:hover {
     height: 100vh;
     overflow-y: auto;
     overflow-x: hidden;
-    background: var(--bn-colour-bg);
+    background: var(--bn-colour-inspector-bg);
     border-right: 1px solid var(--bn-colour-border);
+    /* Flex column, like .tag-sidebar. Without it the `.toc-sidebar-body
+       { flex: 1; overflow-y: auto }` inside is inert: the body sizes to its
+       content, never overflows itself, and this OUTER box scrolls instead —
+       carrying the header, the toolbar bleed below and the shared first-row
+       datum with it, so the panel lined up with the content only at
+       scroll-top (found 2 Sep 2026, fixed 20 Sep). With the column, the body
+       is the one scroller under a header that never moves. */
+    display: flex;
+    flex-direction: column;
     visibility: hidden;
     opacity: 0;
     /* Toolbar bleed (mirrors .tag-sidebar). This column sits in the body's
@@ -7042,6 +8380,9 @@ blockquote .speaker-link:hover {
     flex-direction: column;
     padding-left: var(--bn-gutter-left);
     padding-right: var(--bn-gutter-right);
+    /* The page's bottom breathing room, moved here from body (report.css) so
+       it is inside the grid row the sticky panels span. */
+    padding-bottom: var(--bn-space-xl);
 }
 
 /* Main landmark — transparent flex-column pass-through so the routed content
@@ -7499,28 +8840,36 @@ body.dragging * {
     object-fit: cover;
     border-radius: var(--bn-radius-sm);
 }
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
 
 /* ── Signal sidebar entries (Analysis tab) ─────────────────────────── */
 
+/* The location heading. It carried uppercase and letterspacing while it named
+   a KIND — "Section", "Theme" — which is a category and reads like one. It
+   names a PLACE now, and the same argument that took uppercase off the card's
+   location applies here verbatim: all-caps makes "Shopping Bag" look like a
+   category, and that is not how the Quotes lens renders the same string. The
+   two lenses name the same things. It also takes the full text colour rather
+   than muted, because it is the thing the rows below it belong to. */
 .toc-sub-heading {
     font-size: var(--bn-text-caption);
     line-height: var(--bn-text-caption-lh);
     font-weight: var(--bn-weight-emphasis);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--bn-colour-muted);
+    color: var(--bn-colour-text);
     padding: 0 var(--bn-space-sm);
     margin-top: var(--bn-space-sm);
 }
 
+/* The row is a BLOCK, and the chip flows inline after the words.
+   It was a flex row with the name at flex:1 and the chip at flex-shrink:0 —
+   V0's pinned badge, which the chosen row layout explicitly drops. Pinning
+   cost two things at once. A long chip ("Aesthetics and minimalism") squeezed
+   the name column to roughly one word wide and the wrap then broke mid-word:
+   "Homepa / ge / Content / Tension". And a row with no elaborated name had
+   nothing to push its chip rightward, so the chip column jumped between the
+   left and right edges down the list. Inline, every chip simply follows its
+   own words, and a nameless row's chip sits where its row starts. */
 .signal-entry {
-    display: flex;
-    align-items: baseline;
-    gap: var(--bn-space-xs);
+    display: block;
     padding: 0.2rem var(--bn-space-sm);
     border-radius: var(--bn-radius-md);
     cursor: pointer;
@@ -7551,15 +8900,24 @@ body.dragging * {
     font-size: var(--bn-text-label);
     line-height: var(--bn-text-label-lh);
     font-weight: var(--bn-weight-normal);
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    /* Rows WRAP. Ten variants were built to ask whether a row should lose
+       words or gain a line. Measured over the 58 named rows that survive
+       de-duplication, a row runs 34 characters at the median once its group
+       chip is beside it, 42 at p90 and 50 at its longest — so against a
+       28-character line 90% of them truncated. The ellipsis mechanism was
+       never broken; the outcome was. The cost is height, and de-duplication
+       has already paid it.
+
+       `break-word`, not `anywhere`: anywhere breaks a word whenever breaking
+       helps the line fit, which is how a squeezed column produced "Homepa /
+       ge". break-word only breaks a word that cannot fit on a line of its
+       own — the case it is actually for. */
+    overflow-wrap: break-word;
 }
 
 .signal-entry .badge {
-    flex-shrink: 0;
+    vertical-align: 1px;
+    margin-left: 0.2rem;
     font-size: var(--bn-text-micro);
 }
 
@@ -7660,6 +9018,15 @@ body.dragging * {
 @media (max-width: 600px) {
     .minimap-slot { display: none; }
 }
+
+/* ── Fit to width (SidebarLayout): the minimap is the last thing the cascade drops ──
+   SidebarStore.fitPanels closes the left panel, then the tag sidebar, then
+   the minimap, so the centre keeps its reading measure. The first two are
+   the ordinary toc-open / tags-open classes going away; this one zeroes the
+   minimap track the same way `.layout.embedded` in sidebar.css zeroes the rails — one token, every
+   grid variant. */
+.layout.minimap-hidden { --bn-minimap-width: 0px; }
+.layout.minimap-hidden .minimap-slot { display: none; }
 
 /* --- organisms/sidebar-tags.css --- */
 /* Tag sidebar content — codebook tree, eye toggles, tag rows, micro-bars.
@@ -8049,17 +9416,43 @@ body.dragging * {
     background: var(--bn-colour-hover);
 }
 
-/* --- organisms/analysis.css --- */
+/* --- organisms/signals.css --- */
 /* ── Analysis page — signal cards + heatmap ─────────────────── */
 
-/* Signal card list — responsive grid.
-   Cards fill available width; a second column appears when the container
-   is wide enough (~900px+ in the center column). Shares the quote grid's
-   card rhythm (--bn-grid-gap, 20px) so cards space identically across lenses. */
+/* Signal card list — ONE column, fused.
+   The cards at a location read as one object: the seam between them is a
+   card's own top border, so it runs the full width rather than stopping
+   inside the padding. A rule inside a card would say these are sections of
+   one thing; a border between cards says they are separate findings in one
+   place, which is what they are.
+
+   It was a responsive auto-fill grid. Two columns cannot fuse — CSS has no
+   selector that knows which column a card landed in, because the count is
+   decided at layout time — and the measure was poor for the prose anyway:
+   the median elaboration runs 292 characters and the longest 529, which a
+   26rem column sets badly. */
 .signal-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 26rem), 1fr));
-    gap: var(--bn-grid-gap);
+    grid-template-columns: 1fr;
+    gap: 0;
+}
+
+/* Radius comes from position in the run. An only child is BOTH :first-child
+   and :last-child, so it keeps all four corners with no rule of its own —
+   which matters, because a location with one card is the common case. */
+.signal-card:first-child {
+    border-top-left-radius: var(--bn-radius-lg);
+    border-top-right-radius: var(--bn-radius-lg);
+}
+
+.signal-card:last-child {
+    border-bottom-left-radius: var(--bn-radius-lg);
+    border-bottom-right-radius: var(--bn-radius-lg);
+}
+
+/* One hairline, not two abutting borders. */
+.signal-card:not(:first-child) {
+    border-top: none;
 }
 
 .signal-card {
@@ -8068,15 +9461,17 @@ body.dragging * {
        near-square on a 425px card and made the child .signal-card-quotes box
        (md) rounder than its parent (inverted nesting). lg outer / md inner is
        the correct decreasing nest. See docs/design-lens-template.md § Radii. */
-    border-radius: var(--bn-radius-lg);
+    border-radius: 0;
     padding: var(--bn-space-lg);
     background: var(--bn-colour-bg);
     transition: box-shadow var(--bn-transition-fast);
     position: relative;
 }
 
+/* A shadow is a detached-object affordance. On a fused card it draws into the
+   seam and reads as a rendering fault, so hover is a tint. */
 .signal-card:hover {
-    box-shadow: 0 2px 8px var(--bn-colour-shadow);
+    background: var(--bn-colour-hover);
 }
 
 /* Selected signal card — same blue wash as quote cards (.bn-selected)
@@ -8086,27 +9481,57 @@ body.dragging * {
     border-color: var(--bn-selection-border);
 }
 
-/* Two-column top: identity left, metrics right */
+/* The hero floats into the card's top-right corner and the headline AND the
+   elaboration flow around and under it.
+
+   It was a flex row with the elaboration inside the left child, which meant
+   the elaboration could not reach the space beneath the chip — the gutter was
+   unreachable by construction, and a long finding left a column of white
+   beside a column of text.
+
+   A float only affects content that FOLLOWS it, so `.signal-card-right` is
+   emitted first in the markup — which costs reading order. See the note on
+   `.signal-card-identity` below. */
 .signal-card-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: var(--bn-space-lg);
+    display: block;
     margin-bottom: var(--bn-space-sm);
 }
 
+.signal-card-right {
+    float: right;
+    margin: 0 0 var(--bn-space-sm) var(--bn-space-lg);
+}
+
+/* A plain block. It is emitted AFTER the floated hero so the float catches it:
+   a block box beside a float does not move aside, but its line boxes shorten,
+   which is the wrap. `flex: 1; min-width: 0` lived here for the old flex row
+   and does nothing now.
+
+   THE COST, stated because it is real and unfixed: the hero is emitted first,
+   so a screen reader announces "Frustration 0.42, button" before the finding's
+   name. `order` does NOT fix this — it reorders the visual rendering only, and
+   is a well-known accessibility trap for exactly this reason. Fixing it needs
+   either a DOM order a float cannot use, or the chip absolutely positioned,
+   which loses the wrap. Recorded in design-signal-card.md rather than papered
+   over. */
 .signal-card-identity {
-    flex: 1;
     min-width: 0;
 }
 
+/* VANILLA-RENDERER ONLY as of 20 Sep 2026. The React lens stopped emitting
+   this when the eyebrow was removed — the location is the heading now — but
+   theme/js/analysis.js:173 still writes it, so the rule is live on the static
+   byproduct and is not dead code. Grep frontend/src alone and it looks
+   deletable; it isn't. */
 .signal-card-source {
     display: block;
     font-size: var(--bn-text-badge);
     line-height: var(--bn-text-badge-lh);
     font-weight: var(--bn-weight-normal);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    /* Natural case, as the data has it. Uppercase made "Shopping Bag" look
+       like a category rather than a place, which is not how the Quotes lens
+       renders the same string — and the two lenses name the same things. */
+    letter-spacing: 0.02em;
     color: var(--bn-colour-muted);
     margin-bottom: 0.1rem;
 }
@@ -8126,6 +9551,12 @@ body.dragging * {
 
 .signal-card-location-link:hover {
     color: var(--bn-colour-accent);
+}
+
+.signal-card-location-link:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+    border-radius: var(--bn-radius-sm);
 }
 
 /* Metrics grid (label | value | viz) */
@@ -8186,6 +9617,8 @@ body.dragging * {
 
 /* Quote list inside signal card */
 .signal-card-quotes {
+    /* Below the float, not beside it. */
+    clear: both;
     background: var(--bn-colour-quote-bg);
     border-radius: var(--bn-radius-md);
     margin: var(--bn-space-md) 0;
@@ -8257,9 +9690,22 @@ body.dragging * {
     white-space: nowrap;
 }
 
+/* A participant who contributed a quote to this card.
+   THE ACCENT IS A BACKGROUND TOKEN. `--card-accent` is set from
+   `getGroupBg()`, and the `--bn-group-*` family is oklch 97% lightness — a
+   tint to sit behind things. It was also being used as the TEXT colour here,
+   which put 97%-lightness type on a white card: contrast near 1:1, and the
+   present participants read as blank space. Reported 20 Sep 2026 as "white on
+   white", and visible in the shipped app.
+
+   The accent stays as the background, which is what it is for. The text takes
+   the normal ink: the tint carries the identity, the weight carries the
+   state, and neither has to be legible in a colour that was never chosen to
+   be read. (`--bn-bar-*` at 65–70% is the mark colour of that family, but it
+   is specified for bars — 3:1 — not for badge-sized text, which wants 4.5:1.) */
 .participant-grid .p-box.p-present {
-    background: color-mix(in srgb, var(--card-accent, var(--bn-colour-muted)) 12%, var(--bn-colour-bg));
-    color: var(--card-accent, var(--bn-colour-muted));
+    background: color-mix(in srgb, var(--card-accent, var(--bn-colour-muted)) 30%, var(--bn-colour-bg));
+    color: var(--bn-colour-text);
     opacity: 1;
 }
 
@@ -8299,6 +9745,10 @@ button.signal-card-toggle {
 
 /* ── Heatmap ──────────────────────────────────────────────── */
 
+/* `.analysis-heatmap` keeps its name deliberately: the frozen vanilla
+   renderer emits it (theme/js/analysis.js:314) and that file takes
+   data-integrity fixes only. The static byproduct keeps the analysis
+   vocabulary throughout — see docs/design-signals-rename.md §6.3. */
 .analysis-heatmap {
     width: 100%;
     border-collapse: collapse;
@@ -8411,9 +9861,10 @@ button.signal-card-toggle {
 
 /* ── Signal card badge styles ──────────────────────────────── */
 
-.signal-group-badge {
-    font-weight: var(--bn-weight-emphasis);
-}
+/* .signal-group-badge — removed 13 Sep 2026. The group name is the hero
+   chip's own label now, and no caller remains in frontend/src or in the
+   frozen vanilla renderer. A rule that can never match is worse than no
+   rule — it reads as live styling while styling nothing. */
 
 .signal-quote-tag {
     margin-left: 0.4rem;
@@ -8423,20 +9874,32 @@ button.signal-card-toggle {
 
 /* ── Per-codebook section heading ─────────────────────────── */
 
-.analysis-codebook-section {
+.signals-codebook-section {
     margin-bottom: var(--bn-space-xl);
 }
 
-.analysis-codebook-heading {
-    font-size: var(--bn-text-label);
-    font-weight: var(--bn-weight-emphasis);
-    color: var(--bn-colour-text);
-    margin: var(--bn-space-lg) 0 var(--bn-space-sm);
-    padding-bottom: var(--bn-space-xs);
-    border-bottom: 1px solid var(--bn-colour-border);
+/* The first one follows the lens's zone title, which already carries the
+   space beneath it — a second lead-in on top of that opens a gap no other
+   lens has. */
+.signals-center > .signals-codebook-heading:first-of-type {
+    margin-top: 0;
 }
 
-.analysis-heatmap-label {
+/* The location, named once. It is the same object the Quotes lens names with
+   an <h3>, and this heading LINKS to that one — so it takes the same token
+   rather than a smaller one. The sidebar stays at --bn-text-caption because
+   that is navigation; this is content. No bottom rule: the Quotes lens has
+   none, and the fused stack below already draws its own edge. */
+.signals-codebook-heading {
+    font-size: var(--bn-text-heading);
+    line-height: var(--bn-text-heading-lh);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-text);
+    max-width: var(--bn-max-width);
+    margin: var(--bn-space-lg) 0 var(--bn-space-sm);
+}
+
+.signals-heatmap-label {
     font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-muted);
@@ -8604,12 +10067,76 @@ button.signal-card-toggle {
 }
 
 /* Badge row: group name + pattern type */
-.signal-card-badges {
-    display: flex;
-    gap: 0.35rem;
-    align-items: center;
-    margin-bottom: var(--bn-space-lg);
+/* ── The hero chip ────────────────────────────────────────────────────────
+   The card's one number, and the control that opens the working. It sits on
+   `.badge` for the tint and the mono face, and adds the size, the disclosure
+   affordance and the button reset — most readers need one number, and the four
+   metrics behind it are for whoever wants to audit it. */
+.signal-card-hero {
+    display: inline-flex;
+    align-items: baseline;
+
+    /* TWO STEPS DOWN the ladder, 20 Sep 2026. It was --bn-text-body with
+       --bn-space-sm/md padding, on the reasoning that it is "the hero of this
+       corner". That was true when the card had no headline worth reading —
+       every card has one now, and the chip's job is to confirm direction and
+       give a sortable number while the headline and the claim carry the
+       finding. A scan aid, not the thing being read.
+
+       --bn-space-sm between label and score: at xs they collided outright
+       ("Mixed sentiments0.30"). */
+    font-size: var(--bn-text-label);
+    line-height: var(--bn-text-label-lh);
+    padding: var(--bn-space-xs) var(--bn-space-sm);
+    gap: var(--bn-space-sm);
+
+    border: 1px solid transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
 }
+
+.signal-card-hero:hover {
+    border-color: var(--bn-colour-border-hover);
+}
+
+.signal-card-hero:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+}
+
+.signal-card-hero-score {
+    font-weight: var(--bn-weight-emphasis);
+}
+
+/* Always drawn, just quiet: a control has to read as a control BEFORE the
+   pointer arrives, and this chip is otherwise indistinguishable from the
+   tinted chips on the same card that do nothing when clicked. */
+.signal-card-hero-caret {
+    font-size: var(--bn-text-micro);
+    opacity: 0.4;
+    transition: transform var(--bn-transition-fast), opacity var(--bn-transition-fast);
+}
+
+.signal-card-hero:hover .signal-card-hero-caret,
+.signal-card-hero:focus-visible .signal-card-hero-caret {
+    opacity: 0.85;
+}
+
+.signal-card-hero[aria-expanded="true"] .signal-card-hero-caret {
+    transform: rotate(180deg);
+    opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .signal-card-hero-caret {
+        transition: none;
+    }
+}
+
+/* .signal-card-badges — removed 13 Sep 2026, with its narrow-viewport
+   override. The hero is the only thing in this corner now, and the metrics sit
+   under it when opened. */
 
 /* Pattern badge — coloured allcaps label.
    Opacity 0.9 knocks text back 10% — heavy weight + allcaps reads
@@ -8631,14 +10158,8 @@ button.signal-card-toggle {
 .pattern-gap      { background: light-dark(#fee2e2, #450a0a); color: light-dark(#991b1b, #fca5a5); }
 .pattern-recovery { background: light-dark(#e0f2fe, #0c4a6e); color: light-dark(#075985, #7dd3fc); }
 
-/* Signal rank counter: "#2" */
-.signal-rank {
-    font-family: var(--bn-font-mono);
-    font-size: var(--bn-text-heading);
-    font-weight: var(--bn-weight-emphasis);
-    color: var(--bn-colour-muted);
-    line-height: var(--bn-text-heading-lh);
-}
+/* .signal-rank — removed 20 Sep 2026. No consumer anywhere in the tree:
+   not the React lens, not the frozen vanilla renderer, not a template. */
 
 /* Mini sparkbar chart — inline in the Signal metric row.
    Width matches conc-bar-track (96px). Bar count = signal card count.
@@ -8657,19 +10178,19 @@ button.signal-card-toggle {
     min-height: 2px;
 }
 
-/* Signal elaboration — one-sentence finding below the signal name.
-   <strong> wraps the core assertion (first clause), ending at the
-   first natural break. Regular weight for evidence/nuance after. */
+/* Signal elaboration — the finding below the signal name.
+   Ranked by `atoms/lead-paragraph.css`: the core assertion in normal ink, the
+   evidence and nuance after it in a tint. This card originated the idea and
+   originated it the other way — same colour throughout, heavier lead via
+   `--bn-weight-starred` — and was converted on 31 Aug 2026 so it and the
+   codebook description cannot say the same thing differently. The atom owns
+   colour and weight; do not restore either here, because an organism rule
+   wins the tie on source order and would silently defeat it. Alternatives are
+   live in `docs/mockups/lead-sentence-playground.html`. */
 .signal-elaboration {
     font-size: var(--bn-text-label);
-    color: var(--bn-colour-text);
     line-height: var(--bn-text-label-lh);
     margin-bottom: var(--bn-space-sm);
-    font-weight: var(--bn-weight-normal);
-}
-
-.signal-elaboration strong {
-    font-weight: var(--bn-weight-starred);
 }
 
 /* ── Responsive: narrow viewport — stack card top vertically ── */
@@ -8689,8 +10210,87 @@ button.signal-card-toggle {
         align-self: stretch;
     }
 
-    .signal-card-badges {
-        margin-bottom: var(--bn-space-sm);
+}
+
+
+/* The flag, as a prefix INSIDE the hero chip — never a second chip. A second
+   one was rejected on 20 Sep 2026: "two chips is too complex visually, adds
+   confusion — the eye will jump to a single patch of colour." The chip's job
+   is to be the one thing the eye lands on in that corner, and splitting it
+   into two competing patches destroys that. It is the same failure the
+   `pattern` chip had on 13 Sep, which "competed with the score for this exact
+   corner".
+
+   Weight rather than colour: colour here would make a second patch by another
+   route. */
+.signal-card-hero-flag {
+    font-weight: var(--bn-weight-emphasis);
+    opacity: 0.78;
+}
+
+/* The quote that took the slot reserved for a dissenting voice.
+   Marked so a reader can see the card is not only agreeing with itself — "a
+   very strong one in five, said clearly and with feeling, has earned the right
+   to be seen". A rule on the leading edge rather than a tint or a badge: it is
+   a provenance mark, not a status, and the quote's own words should carry the
+   weight. */
+.signal-card-quotes blockquote.bn-dissenting {
+    box-shadow: inset 2px 0 0 var(--bn-colour-border-hover);
+}
+
+/* Readings folded into this card — the same evidence in another codebook's
+   vocabulary. Quiet by design: the card's own finding is what is being read,
+   and this says only that the place was read another way too. It is here
+   rather than nowhere because the fold rule deletes nothing, and a reading
+   that exists in no other card would otherwise be lost silently. */
+.signal-card-alternates {
+    font-size: var(--bn-text-badge);
+    line-height: var(--bn-text-badge-lh);
+    color: var(--bn-colour-muted);
+    margin-top: var(--bn-space-sm);
+}
+
+.signal-card-alternate {
+    font-weight: var(--bn-weight-emphasis);
+}
+
+/* Waiting for a finding. The lens fetches twice — once for the cards, then
+   again for their elaborations — so this is the state of every card until the
+   second fetch lands. A skeleton rather than a fallback string: the only
+   fallback available was the location, which is the heading directly above
+   and is the one thing a headline must never be. Sized like the headline so
+   the card does not grow one under the reader when it arrives.
+
+   IT MUST MOVE, and until 20 Sep 2026 it did not. Reported from a screenshot as
+   "invisible titles": a motionless grey block is indistinguishable from a
+   heading that failed to render, and the reader has no way to tell which they
+   are looking at. It also lasts far longer than "a few seconds" whenever the
+   cache is cold — `_elaborate_top_signals` generates INLINE in that request, and
+   the same commit that added this skeleton also put the prompt's SHA in the
+   cache key (invalidating every stored elaboration) and replaced the top-ten cap
+   with a payload budget (so every card needs a call, not ten). Three reasonable
+   changes that between them made a silent block the whole first-load experience.
+
+   Gates match atoms/shimmer.css exactly, because this is the same signal —
+   indeterminate work with no ETA — in the one shape the shimmer cannot take,
+   since that atom clips its gradient to TEXT and this element has none. Both
+   gates must pass or it degrades to the static block, which is the old
+   behaviour and is still correct for someone who asked for no motion. */
+.signal-card-location-pending {
+    height: var(--bn-text-heading);
+    width: 42%;
+    min-width: 8rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-hover);
+}
+
+@keyframes bn-pending-breathe {
+    50% { opacity: 0.45; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    :root:not([data-analysis-animation="off"]) .signal-card-location-pending {
+        animation: bn-pending-breathe 1.6s ease-in-out infinite;
     }
 }
 
@@ -8701,34 +10301,55 @@ button.signal-card-toggle {
    analysis layout is active — keeps the collapsed inspector handle
    visible at the bottom of the viewport without scrolling.
    .layout normally has min-height: 100vh (can grow); here we cap it. */
-.layout:has(.analysis-layout) {
-    height: 100vh;
-    height: 100dvh;
+/* The viewport MINUS everything `body` pads with.
+   `body` carries `padding: var(--bn-space-xl) var(--bn-space-lg) 0` (bottom 0
+   since 20 Sep 2026 — see report.css), so a child sized at a bare 100vh makes
+   the document taller than the viewport by the top pad — and the page grows a
+   scrollbar that scrolls the padding and nothing else. (Before the bottom pad
+   moved it was 64px, measured 14 Sep 2026.) On a lens that scrolls for real (Quotes) it hides inside a genuine
+   5000px of overflow; on a lens capped to the viewport it is the whole of the
+   page's scroll range, and on Analysis it appears immediately beside
+   .signals-center's legitimate bar, which is how one phantom reads as two
+   scrollbars.
+
+   `--bn-toolbar-inset` is subtracted too, and it is the half a browser cannot
+   show you. In embedded mode report.css pads the top by
+   `calc(var(--bn-toolbar-inset, 0px) + var(--bn-space-xl))`, so the WebView
+   carries an extra inset that Playwright never sees — subtract 64 alone and
+   the fix measures perfect in a browser while the app keeps a phantom bar
+   exactly as tall as the toolbar. The fallback is 0px, which is what makes one
+   expression right on both surfaces. */
+.layout:has(.signals-layout) {
+    height: calc(100vh - var(--bn-toolbar-inset, 0px) - var(--bn-space-xl));
+    height: calc(100dvh - var(--bn-toolbar-inset, 0px) - var(--bn-space-xl));
     overflow: hidden;
     grid-template-rows: 1fr;
 }
 
-.layout > .center:has(.analysis-layout) {
+/* Height-fitted lens: the bottom pad `.center` carries elsewhere (sidebar.css)
+   would only push the inspector handle up off the window bottom here. */
+.layout > .center:has(.signals-layout) {
     overflow: hidden;
+    padding-bottom: 0;
 }
 
 /* The <main> landmark wraps the routed content (sidebar.css: transparent flex
    pass-through with no flex:1). On the analysis lens that breaks the height
-   chain: .center is capped to 100vh + overflow:hidden and .analysis-center is
+   chain: .center is capped to 100vh + overflow:hidden and .signals-center is
    meant to scroll internally, but a content-height .bn-main overflows the cap
    and the bottom is clipped with NO scrollbar to reach it. Give the wrapper
-   flex:1 + min-height:0 so .analysis-layout resolves against "space left after
+   flex:1 + min-height:0 so .signals-layout resolves against "space left after
    Header + NavBar", not its own content height — restoring internal scroll. */
-.bn-main:has(.analysis-layout) {
+.bn-main:has(.signals-layout) {
     flex: 1;
     min-height: 0;
 }
 
 /* Vertical flexbox wrapper for analysis page.
-   .analysis-center scrolls signal cards.
+   .signals-center scrolls signal cards.
    .inspector-panel sits below as a fixed-height pane.
    flex: 1 fills whatever space remains after Header + NavBar. */
-.analysis-layout {
+.signals-layout {
     display: flex;
     flex-direction: column;
     flex: 1;
@@ -8736,7 +10357,7 @@ button.signal-card-toggle {
     overflow: hidden;
 }
 
-.analysis-center {
+.signals-center {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
@@ -8744,7 +10365,7 @@ button.signal-card-toggle {
        edge like every other lens — was `padding: var(--bn-space-lg)`, a 24px
        gutter DOUBLED inside .center's own 32px (cards at x=80 not x=56). The
        bleed idiom (neg-margin to give the drop shadow room) can't be used here:
-       the parent .analysis-layout is `overflow: hidden`, which clips it. So the
+       the parent .signals-layout is `overflow: hidden`, which clips it. So the
        signal-card shadow clips ~8px at the scroll-box edge — accepted until the
        structural fix (scroll pane owns the single gutter) in
        docs/design-lens-template.md § Analysis.
@@ -8759,9 +10380,9 @@ button.signal-card-toggle {
 /* When the analysis layout is active, hide the report footer — the inspector
    panel owns the bottom of the viewport and the footer would eat scroll space
    inside the 100vh-capped column. The footer is a sibling of <main.bn-main>
-   (not of .analysis-layout, which is *inside* main), so the combinator must
-   reach up to .center — `.analysis-layout ~ .report-footer` never matched. */
-.center:has(.analysis-layout) > .report-footer {
+   (not of .signals-layout, which is *inside* main), so the combinator must
+   reach up to .center — `.signals-layout ~ .report-footer` never matched. */
+.center:has(.signals-layout) > .report-footer {
     display: none;
 }
 
@@ -9685,7 +11306,15 @@ body {
     color: var(--bn-colour-text);
     background: var(--bn-colour-bg);
     margin: 0;
-    padding: var(--bn-space-xl) var(--bn-space-lg);
+    /* No bottom padding on body (20 Sep 2026). The sidebars are sticky INSIDE
+       the .layout grid, so anything body pads below the grid is ground a panel
+       can never cover: scrolled to the end, the panel stopped one padding short
+       of the window bottom and the (transparent, embedded) body showed the
+       window surface there — a white bar under the pale panel on macOS 27. The
+       bottom breathing room now lives on `.layout > .center` (sidebar.css) for
+       the SPA and on `article` below for the static render, both of which sit
+       inside the row the panels span. */
+    padding: var(--bn-space-xl) var(--bn-space-lg) 0;
 }
 
 /* Translucent chrome (spike): when the SPA runs inside the macOS WKWebView
@@ -9698,16 +11327,27 @@ body {
    BridgeHandler.syncToolbarInset pushes the titlebar+toolbar delta as
    `--bn-toolbar-inset` on <html> at `ready`. Add it to the existing top pad
    so first-of-content is fully out from under the frost. The `, 0px` fallback
-   keeps non-embedded (browser/serve) surfaces on the current spacing. */
+   keeps non-embedded (browser/serve) surfaces on the current spacing.
+
+   The horizontal padding goes to 0 here, not just the top. Until 20 Sep 2026
+   this override replaced padding-top ONLY, so the 24px `--bn-space-lg` flank
+   survived into the app — and because the body is transparent it showed the
+   WINDOW surface through it: a strip between the native sidebar and the
+   content-nav panel (and again past the tag sidebar) that read as a failed
+   join. Measured on macOS 27 as pure #ffffff beside a #f9f9f9 panel. The
+   panels must be flush with the split divider and the window edge; the prose
+   keeps its distance via `.center` padding (sidebar.css § "Desktop embedded"). */
 html[data-embedded="true"] body {
     background: transparent;
     padding-top: calc(var(--bn-toolbar-inset, 0px) + var(--bn-space-xl));
+    padding-left: 0;
+    padding-right: 0;
 }
 
 article {
     max-width: none;
     margin: 0 auto;
-    padding: 0 var(--bn-space-lg);
+    padding: 0 var(--bn-space-lg) var(--bn-space-xl);
 }
 
 /* Single-column elements keep the reading-width cap on wide screens.
@@ -9741,23 +11381,10 @@ h2 {
     border-bottom: 1px solid var(--bn-colour-keyline);
 }
 
-/* Zone-title treatment — self-contained so it works on ANY element (the lens
-   zone titles are now <h1>: "Sections"/"Themes", "Sentiment signals"/"Tag
-   signals"; a lens may carry two, one per top-level content zone — see
-   docs/design-lens-template.md § Headings). Provides the full-pane 1px keyline
-   + padding itself rather than leaning on the base h2 rule, so an h1.section-
-   heading (which has no border of its own) still gets the divider. Font
-   size/weight are deliberately NOT set here — they inherit from the element
-   (h1 → display/strong), keeping the *semantic* level (h1) and the *graphic*
-   size as separate knobs (tune size via the h1 rule / specimen lens). The
-   2.5rem top gives between-zone separation; the first zone-title on a lens is
-   flushed to the datum below. */
-.section-heading {
-    max-width: none;
-    margin: 2.5rem 0 1rem;
-    padding-bottom: 0.4rem;
-    border-bottom: 1px solid var(--bn-colour-keyline);
-}
+/* The .section-heading ATOM moved to atoms/section-heading.css (6 Aug 2026).
+   Only its page-layout rule stays here: an atom should not know where on a
+   page it sits. */
+
 
 /* First zone-title on a lens sits flush at the content datum (no top gap).
    Quotes: the first <section> in <main> ("Sections", before "Themes").
@@ -9765,7 +11392,7 @@ h2 {
    Browser: flush at the body top-pad. The app's absolute datum is re-scoped
    with the toolbar-inset fix (Phase B); this rule is surface-agnostic. */
 .center > main > section:first-of-type > .section-heading,
-.analysis-center > .section-heading:first-of-type {
+.signals-center > .section-heading:first-of-type {
     margin-top: 0;
 }
 
@@ -9836,7 +11463,7 @@ h3 {
 }
 
 .bn-about-citation a {
-    color: var(--bn-colour-link);
+    color: var(--bn-colour-accent);
     text-decoration: none;
 }
 
@@ -10480,6 +12107,16 @@ td a:hover {
     }
 }
 
+/* SPECIAL CASE — do NOT normalise this to a leading token.
+   The 1.7 here is STRUCTURAL, not typographic. This row is a baseline-aligned
+   grid (`align-items: baseline`), and the 1.7 sets the rhythm the timecode and
+   speaker-badge columns align to; `.segment-body` inside deliberately resets to
+   the prose token for the text itself. Pull this onto --bn-text-*-lh and the
+   timecode stops sitting on the first line of its segment.
+   It is also the largest leading in the theme, which makes it the most obvious
+   target for a normalising sweep — hence this comment. Any change here wants
+   the transcript page open beside it.
+   See docs/design-native-typography-grid.md § Leading. */
 .transcript-segment {
     display: grid;
     grid-template-columns: subgrid;
@@ -10600,10 +12237,14 @@ td a:hover {
   display: none !important;
 }
 
-/* --- Badge delete/accept/deny buttons (keep badges, hide controls) --- */
+/* --- Badge delete/accept/deny buttons (keep badges, hide controls) ---
+   The accept/deny compartments live inside .badge-action-pill and are named
+   .badge-action-accept / .badge-action-deny (the pill replaced the old inline
+   ✓/✗ — see docs/design-badge-action-pill.md). This rule named the pre-pill
+   .badge-accept / .badge-deny for a while and so matched nothing; hide the
+   container, which covers both compartments however they are named inside. */
 .bn-export-mode .badge-delete,
-.bn-export-mode .badge-accept,
-.bn-export-mode .badge-deny {
+.bn-export-mode .badge-action-pill {
   display: none !important;
 }
 
@@ -10620,21 +12261,31 @@ td a:hover {
   cursor: default !important;
 }
 
-/* --- Tag input ("+ tag" links in codebook and quotes) --- */
-.bn-export-mode .bn-tag-input,
-.bn-export-mode .codebook-add-tag {
+/* --- Tag input ("+ tag" links in codebook and quotes) ---
+   .tag-input-wrap is the container TagInput renders (input + ghost layer +
+   sizer); hiding it covers the whole widget however its innards are named.
+   .tag-add-row is the codebook group's "+ tag" row — it is NOT gated by
+   isReadOnly in CodebookPanel, so this rule is the only thing hiding it. */
+.bn-export-mode .tag-input-wrap,
+.bn-export-mode .tag-add-row {
   display: none !important;
 }
 
-/* --- Hidden-quote counter (unhide controls) --- */
-.bn-export-mode .bn-counter {
+/* --- Hidden-quote counter (unhide controls) ---
+   Counter renders .bn-hidden-badge, not .bn-counter (that name survives only as
+   a data-testid).  Hide the badge and the whole dropdown goes with it. */
+.bn-export-mode .bn-hidden-badge {
   display: none !important;
 }
 
-/* --- Codebook mutation controls --- */
+/* --- Codebook mutation controls ---
+   `.codebook-picker-btn` (the browse-header button) and `.autocode-btn` were
+   removed on 31 Aug 2026 with the v1 codebook lens. Their replacements are
+   gated in JSX by `isExportMode()` rather than hidden by CSS — which is the
+   mechanism this file's own failure message prefers, since a JSX gate cannot
+   go stale the way a selector can. The two remaining rules still match live
+   controls in the shipped lens. */
 .bn-export-mode .new-group-placeholder,
-.bn-export-mode .codebook-picker-btn,
-.bn-export-mode .autocode-btn,
 .bn-export-mode .framework-remove-btn {
   display: none !important;
 }
@@ -10645,10 +12296,23 @@ td a:hover {
   -webkit-user-drag: none;
 }
 
-/* --- Export button itself (hidden when viewing an export) --- */
-.bn-export-mode .bn-export-btn {
+/* --- Language picker ---
+   The export carries only the chosen language and its fallback chain (since
+   23 Aug 2026), so a picker offering 22 would offer 21 that resolve to English.
+   Gated in JSX too — SettingsModal and SettingsPanel both check isExportMode()
+   — this is the defence-in-depth half. */
+.bn-export-mode .bn-locale-group {
   display: none !important;
 }
+
+/* --- Export button itself ---
+   No rule needed: ExportDropdown returns null under isExportMode(), so the
+   toolbar control never reaches the DOM.  The rule that used to sit here named
+   .bn-export-btn, a class the SPA has never rendered; removed 15 Aug 2026.
+
+   Every class above is pinned by tests/test_export_css_selectors.py — rename a
+   control in frontend/src and that gate fails rather than this file quietly
+   ceasing to hide it. */
 
 /* --- templates/status-page.css --- */
 /* Template: server-rendered status page.

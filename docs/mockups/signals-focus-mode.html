@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en" data-variant="strict">
+<head>
+<meta charset="utf-8" />
+<title>Focus Mode on the Signals lens — what recedes</title>
+
+<!--
+  PROPOSED 21 Sep 2026 — Focus Mode extended to the Signals lens.
+  Spec: docs/design-focus-mode-signals.md
+
+  The stylesheet beside this file is the REAL shipped theme, generated verbatim:
+
+      .venv/bin/python -c "from bristlenose.stages.s12_render.theme_assets \
+        import load_default_css; open('docs/mockups/focus-mode-lab.theme.css','w') \
+        .write(load_default_css())"
+
+  It is shared with focus-mode-lab.html; re-run that line after any theme change
+  or both mockups silently show the previous design.
+
+  The signal-card markup below uses the shipped classes exactly as
+  frontend/src/islands/SignalsPage.tsx emits them (.signal-card, .signal-card-top,
+  .signal-card-right, .badge.signal-card-hero, .signal-card-identity,
+  .signal-card-location, .signal-elaboration.bn-lead-para, .signal-card-alternates,
+  .signal-card-quotes > blockquote > .quote-row, .signal-card-footer,
+  .participant-grid) and the shipped state classes (.bn-selected, .expanded,
+  .seq-*, .bn-dissenting). What renders in the LEFT column is what the app
+  renders today.
+
+  The ONLY new CSS in this file is the proposal layer at the bottom of the
+  <style> block, gated on [data-variant] on <html>. It has not shipped. The
+  quotes are synthetic — no participant speech from a real study.
+-->
+
+<link rel="stylesheet" href="focus-mode-lab.theme.css" />
+
+<style>
+/* ═══════════════════════════════════════════════════════════════════════
+   LAB CHROME — the harness. Not product. Never copy this into the theme.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+body {
+    margin: 0;
+    font-family: var(--bn-font-body);
+    background: #6e6e73;
+    color: #f5f5f7;
+    color-scheme: dark;
+}
+
+.lab-hud {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    align-items: flex-start;
+    padding: 0.9rem 1.25rem;
+    background: #1d1d1f;
+    border-bottom: 1px solid #3a3a3c;
+}
+
+.lab-hud h1 {
+    margin: 0 1rem 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    align-self: center;
+}
+
+.lab-group { display: flex; flex-direction: column; gap: 0.35rem; }
+
+.lab-group > span {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #8e8e93;
+}
+
+.lab-group div { display: flex; gap: 0.25rem; }
+
+.lab-hud button {
+    font: inherit;
+    font-size: 12px;
+    padding: 0.3rem 0.65rem;
+    border-radius: 6px;
+    border: 1px solid #48484a;
+    background: #2c2c2e;
+    color: #f5f5f7;
+    cursor: pointer;
+}
+
+.lab-hud button:hover { border-color: #6e6e73; }
+.lab-hud button[aria-pressed="true"] { background: #0a84ff; border-color: #0a84ff; }
+
+.lab-key {
+    display: flex;
+    gap: 1.5rem;
+    padding: 0.6rem 1.25rem;
+    font-size: 12px;
+    color: #d1d1d6;
+    background: #2c2c2e;
+}
+
+.lab-key b { color: #fff; font-weight: 600; }
+
+.lab-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    padding: 1.25rem;
+}
+
+.lab-cell-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #d1d1d6;
+    margin: 0 0 0.4rem 0.2rem;
+}
+
+/* The frame: a screenshot-shaped window. The product is INSIDE .lab-stage. */
+.lab-stage {
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    border-radius: 10px;
+    padding: var(--bn-space-lg);
+    overflow: hidden;
+}
+
+/* The lens's own container; the real one is .signals-center inside .layout. */
+.lab-stage .signals-center { max-width: 42rem; }
+
+/* Commentary — deliberately not-the-product. */
+.lab-commentary {
+    margin: 0 1.25rem 2rem;
+    padding: 1rem 1.25rem 1rem 1.5rem;
+    border-left: 3px solid #ff9f0a;
+    background: repeating-linear-gradient(
+        -45deg, #3a3a3c 0 6px, #333335 6px 12px);
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #e5e5ea;
+    max-width: 62rem;
+}
+
+.lab-commentary h2 {
+    margin: 0 0 0.6rem;
+    font-family: var(--bn-font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #ff9f0a;
+}
+
+.lab-commentary h3 { font-size: 13px; margin: 1.2rem 0 0.3rem; }
+.lab-commentary table { border-collapse: collapse; margin: 0.5rem 0; width: 100%; }
+.lab-commentary th, .lab-commentary td {
+    text-align: left; vertical-align: top;
+    padding: 0.3rem 0.6rem 0.3rem 0; border-bottom: 1px solid #48484a;
+}
+.lab-commentary th { color: #8e8e93; font-weight: 500; font-size: 11px; }
+.lab-commentary code { font-family: var(--bn-font-mono); font-size: 11.5px; color: #fff; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PROPOSAL LAYER — the candidate rules for templates/focus-mode.css.
+   Gated on [data-variant] so the two readings can be flicked between.
+   NONE of this has shipped.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Transitions (always live, so the exit is symmetric) ───────────────── */
+
+.bn-focus-ready .signal-card {
+    transition: background var(--bn-focus-dur) var(--bn-focus-ease),
+                border-color var(--bn-focus-dur) var(--bn-focus-ease);
+}
+
+.bn-focus-ready .signal-card-quotes {
+    transition: background var(--bn-focus-dur) var(--bn-focus-ease);
+}
+
+.bn-focus-ready .signals-codebook-heading,
+.bn-focus-ready .signal-card-location,
+.bn-focus-ready .signal-elaboration,
+.bn-focus-ready .signal-card-hero,
+.bn-focus-ready .signal-card-alternates,
+.bn-focus-ready .signal-card-footer,
+.bn-focus-ready .signal-card-quotes .signal-quote-tag,
+.bn-focus-ready .signal-card-quotes .intensity-dots {
+    transition: opacity var(--bn-focus-dur) var(--bn-focus-ease);
+}
+
+/* ── Card dissolve ─────────────────────────────────────────────────────── */
+
+/* Same guard as the quote card, same reason: `.signal-card.bn-selected` is
+   the inspector-pointed card and expresses itself through `background`. */
+.bn-focus-mode .signal-card:not(.bn-selected) {
+    background: transparent;
+    border-color: color-mix(in srgb, var(--bn-colour-border) 40%, transparent);
+}
+
+/* The quote box inside the card is a second container; it dissolves too, so
+   the quotes sit on the page rather than on a slab within a ghost. */
+.bn-focus-mode .signal-card:not(.bn-selected) .signal-card-quotes {
+    background: transparent;
+}
+
+/* ── Wayfinding dims less ─────────────────────────────────────────────── */
+
+/* The location heading is the Signals twin of .bn-group-header. */
+.bn-focus-mode .signals-codebook-heading {
+    opacity: var(--bn-focus-heading-opacity);
+}
+
+/* STRICT (recommended): the finding is the machine's reading of the quotes,
+   the same object a theme heading + description is on the Quotes lens, and it
+   takes the same treatment — wayfinding at 0.4, not noise at 0.14 and not lit. */
+[data-variant="strict"] .bn-focus-mode .signal-card-location,
+[data-variant="strict"] .bn-focus-mode .signal-elaboration {
+    opacity: var(--bn-focus-heading-opacity);
+}
+
+/* FINDINGS-LIT (alternative): headline + claim stay at full presence; only the
+   card's numbers and chrome go. Shown so the difference can be judged by eye. */
+[data-variant="findings"] .bn-focus-mode .signal-card-location,
+[data-variant="findings"] .bn-focus-mode .signal-elaboration {
+    opacity: 1;
+}
+
+/* ── Chrome recedes ────────────────────────────────────────────────────── */
+
+.bn-focus-mode .signal-card-hero,
+.bn-focus-mode .signal-card-alternates,
+.bn-focus-mode .signal-card-footer,
+.bn-focus-mode .signal-card-quotes .signal-quote-tag,
+.bn-focus-mode .signal-card-quotes .intensity-dots {
+    opacity: var(--bn-focus-ghost-opacity);
+}
+
+/* (0,3,1) on purpose: `.signal-card-quotes blockquote.seq-middle .timecode`
+   holds continuation timecodes at 0.6 from organisms/signals.css at the same
+   specificity, so the shipped (0,2,1) ghost rule LOSES to it — in the
+   half-state that exists today, a run's first timecode ghosts to 0.14 while
+   its continuations stay at 0.6, which is the inverse of the sequence
+   treatment. Equal specificity, later file: this one wins. */
+.bn-focus-mode .signal-card-quotes blockquote .timecode {
+    opacity: var(--bn-focus-ghost-opacity);
+}
+
+/* Resting decorative chrome leaves hit-testing. The tag chips on a signal
+   quote are readonly (no action), the dots are a title-only glyph. The hero
+   chip and the footer toggle are CONTROLS and keep their pointer-events —
+   they recede at rest and return on engagement, never disabled. */
+.bn-focus-mode .signal-card-quotes .signal-quote-tag,
+.bn-focus-mode .signal-card-quotes .intensity-dots {
+    pointer-events: none;
+}
+
+/* ── Axis 2: engaged chrome returns to full presence ───────────────────── */
+
+.bn-focus-mode .signal-card:hover .signal-card-hero,
+.bn-focus-mode .signal-card:focus-within .signal-card-hero,
+.bn-focus-mode .signal-card-hero[aria-expanded="true"],
+.bn-focus-mode .signal-card:hover .signal-card-alternates,
+.bn-focus-mode .signal-card:focus-within .signal-card-alternates,
+.bn-focus-mode .signal-card:hover .signal-card-footer,
+.bn-focus-mode .signal-card:focus-within .signal-card-footer,
+.bn-focus-mode .signal-card:hover .signal-quote-tag,
+.bn-focus-mode .signal-card:focus-within .signal-quote-tag,
+.bn-focus-mode .signal-card:hover .intensity-dots,
+.bn-focus-mode .signal-card:focus-within .intensity-dots,
+.bn-focus-mode .signal-card:hover .signal-card-quotes blockquote .timecode,
+.bn-focus-mode .signal-card:focus-within .signal-card-quotes blockquote .timecode,
+.bn-focus-mode .signal-card:hover .signal-card-location,
+.bn-focus-mode .signal-card:focus-within .signal-card-location,
+.bn-focus-mode .signal-card:hover .signal-elaboration,
+.bn-focus-mode .signal-card:focus-within .signal-elaboration,
+.bn-focus-mode .signals-codebook-heading:hover,
+.bn-focus-mode .signals-codebook-heading:focus-within {
+    opacity: 1;
+}
+
+.bn-focus-mode .signal-card:hover .signal-quote-tag,
+.bn-focus-mode .signal-card:focus-within .signal-quote-tag,
+.bn-focus-mode .signal-card:hover .intensity-dots,
+.bn-focus-mode .signal-card:focus-within .intensity-dots {
+    pointer-events: auto;
+}
+
+/* The continuation timecodes keep their sequence dimming when the card is
+   engaged — hover restores the ordinary reading, and 0.6 IS the ordinary
+   reading for a continuation. */
+.bn-focus-mode .signal-card:hover .signal-card-quotes blockquote.seq-middle .timecode,
+.bn-focus-mode .signal-card:hover .signal-card-quotes blockquote.seq-last .timecode,
+.bn-focus-mode .signal-card:focus-within .signal-card-quotes blockquote.seq-middle .timecode,
+.bn-focus-mode .signal-card:focus-within .signal-card-quotes blockquote.seq-last .timecode {
+    opacity: 0.6;
+}
+
+/* ── Lab-only: the "hover" stage simulates a hovered card ──────────────── */
+/* Copies the axis-2 block above with .lab-hovered in place of :hover, so the
+   engaged state can be seen without a pointer. Not product. */
+.bn-focus-mode .signal-card.lab-hovered .signal-card-hero,
+.bn-focus-mode .signal-card.lab-hovered .signal-card-alternates,
+.bn-focus-mode .signal-card.lab-hovered .signal-card-footer,
+.bn-focus-mode .signal-card.lab-hovered .signal-quote-tag,
+.bn-focus-mode .signal-card.lab-hovered .intensity-dots,
+.bn-focus-mode .signal-card.lab-hovered .signal-card-quotes blockquote .timecode,
+.bn-focus-mode .signal-card.lab-hovered .signal-card-location,
+.bn-focus-mode .signal-card.lab-hovered .signal-elaboration {
+    opacity: 1;
+}
+.bn-focus-mode .signal-card.lab-hovered:not(.bn-selected) {
+    background: var(--bn-colour-hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bn-focus-ready .signal-card,
+    .bn-focus-ready .signal-card-quotes,
+    .bn-focus-ready .signals-codebook-heading,
+    .bn-focus-ready .signal-card-location,
+    .bn-focus-ready .signal-elaboration,
+    .bn-focus-ready .signal-card-hero,
+    .bn-focus-ready .signal-card-alternates,
+    .bn-focus-ready .signal-card-footer,
+    .bn-focus-ready .signal-card-quotes .signal-quote-tag,
+    .bn-focus-ready .signal-card-quotes .intensity-dots {
+        transition-duration: 0s;
+    }
+}
+</style>
+</head>
+<body>
+
+<div class="lab-hud">
+    <h1>Focus Mode · Signals lens</h1>
+
+    <div class="lab-group">
+        <span>Right column</span>
+        <div>
+            <button data-act="focus" data-val="on" aria-pressed="true">Focus on</button>
+            <button data-act="focus" data-val="off" aria-pressed="false">Focus off (diff check)</button>
+        </div>
+    </div>
+
+    <div class="lab-group">
+        <span>The finding (headline + claim)</span>
+        <div>
+            <button data-act="variant" data-val="strict" aria-pressed="true">A · wayfinding at 0.4 (proposed)</button>
+            <button data-act="variant" data-val="findings" aria-pressed="false">B · stays lit</button>
+        </div>
+    </div>
+
+    <div class="lab-group">
+        <span>Appearance</span>
+        <div>
+            <button data-act="scheme" data-val="light" aria-pressed="true">light</button>
+            <button data-act="scheme" data-val="dark" aria-pressed="false">dark</button>
+        </div>
+    </div>
+
+    <div class="lab-group">
+        <span>Palette</span>
+        <div>
+            <button data-act="palette" data-val="default" aria-pressed="true">default</button>
+            <button data-act="palette" data-val="edo" aria-pressed="false">edo</button>
+        </div>
+    </div>
+</div>
+
+<div class="lab-key">
+    <span><b>Left</b> — the lens as it ships today, Focus off.</span>
+    <span><b>Right</b> — the same pixels with the proposed rules applied. Card 2 is simulated as hovered; card 3 is the inspector-pointed card; card 4 has its working open.</span>
+    <span><b>Below</b> — commentary. Not product.</span>
+    <span>Keys: <b>z</b> toggles · <b>1/2</b> variant · <b>d</b> appearance</span>
+</div>
+
+<div class="lab-grid">
+    <div class="lab-cell">
+        <div class="lab-cell-label">today · focus off</div>
+        <div class="lab-stage bn-focus-ready" data-color-theme="default" style="color-scheme: light">
+            <div class="stage-content"></div>
+        </div>
+    </div>
+    <div class="lab-cell">
+        <div class="lab-cell-label">proposed · focus on</div>
+        <div class="lab-stage bn-focus-ready bn-focus-mode" data-color-theme="default" style="color-scheme: light">
+            <div class="stage-content"></div>
+        </div>
+    </div>
+</div>
+
+<template id="stage-tpl">
+<div class="signals-center">
+    <div class="section-heading"><h1>Signals</h1></div>
+    <p class="description" style="font-size: var(--bn-text-label); margin-bottom: var(--bn-space-md);">
+        Based on 212 tags (188 accepted + 24 pending). Pending tags are weighted at half.
+    </p>
+
+    <!-- Location 1: two fused cards — a sentiment card and a codebook card -->
+    <div class="signals-codebook-heading">
+        <a href="#" class="signal-card-location-link">Booking a repeat prescription</a>
+    </div>
+    <div class="signal-cards">
+
+        <!-- Card 1: sentiment, at rest -->
+        <div class="signal-card" style="--card-accent: var(--bn-sentiment-frustration)" role="button" tabindex="0">
+            <div class="signal-card-top">
+                <div class="signal-card-right">
+                    <button type="button" class="badge signal-card-hero badge-frustration" aria-expanded="false">
+                        <span class="signal-card-hero-flag">Problem:</span>
+                        <span class="signal-card-hero-label">Frustration</span>
+                        <span class="signal-card-hero-score">0.42</span>
+                        <span class="signal-card-hero-caret" aria-hidden="true">&#x25BE;</span>
+                    </button>
+                </div>
+                <div class="signal-card-identity">
+                    <div class="signal-card-location">The reorder button hides behind two taps</div>
+                    <div class="signal-elaboration bn-lead-para">
+                        <p class="bn-lead-claim"><strong>Four of six participants gave up before reaching the reorder control.</strong></p>
+                        <p class="bn-lead-rest">Each expected it on the medication list itself; three opened the wrong item first, and two abandoned to phone the surgery instead.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="signal-card-quotes">
+                <blockquote>
+                    <div class="quote-row">
+                        <a class="timecode" href="#"><span class="timecode-bracket">[</span>04:12<span class="timecode-bracket">]</span></a>
+                        <span class="quote-body">
+                            <span class="quote-text">I'm looking for reorder and it's just… not here. Where would it be? I've tapped the pill twice now.</span>
+                            <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p2</span></span></span></span>
+                        </span>
+                        <span class="intensity-dots" title="Intensity 3 of 3"><svg class="intensity-dots-svg" width="46" height="12" viewBox="0 0 46 12"><circle cx="7" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7"/><circle cx="23" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7"/><circle cx="39" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7"/></svg></span>
+                    </div>
+                </blockquote>
+                <blockquote class="seq-last">
+                    <div class="quote-row">
+                        <a class="timecode" href="#"><span class="timecode-bracket">[</span>04:31<span class="timecode-bracket">]</span></a>
+                        <span class="quote-body">
+                            <span class="quote-text">Oh. It's under the three dots. I would never have found that on my own, honestly.</span>
+                        </span>
+                        <span class="intensity-dots" title="Intensity 2 of 3"><svg class="intensity-dots-svg" width="46" height="12" viewBox="0 0 46 12"><circle cx="7" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7"/><circle cx="23" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7"/><circle cx="39" cy="6" r="5" fill="none" stroke="var(--dot-colour, var(--bn-colour-muted))" stroke-width="1.2" opacity="0.35"/></svg></span>
+                    </div>
+                </blockquote>
+                <blockquote>
+                    <div class="quote-row">
+                        <a class="timecode" href="#"><span class="timecode-bracket">[</span>11:05<span class="timecode-bracket">]</span></a>
+                        <span class="quote-body">
+                            <span class="quote-text">I'd just ring them. It's quicker than working out where they've put it this time.</span>
+                            <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p5</span></span></span></span>
+                        </span>
+                        <span class="intensity-dots" title="Intensity 2 of 3"><svg class="intensity-dots-svg" width="46" height="12" viewBox="0 0 46 12"><circle cx="7" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7"/><circle cx="23" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7"/><circle cx="39" cy="6" r="5" fill="none" stroke="var(--dot-colour, var(--bn-colour-muted))" stroke-width="1.2" opacity="0.35"/></svg></span>
+                    </div>
+                </blockquote>
+                <blockquote class="bn-dissenting" data-dissenting="true">
+                    <div class="quote-row">
+                        <a class="timecode" href="#"><span class="timecode-bracket">[</span>06:48<span class="timecode-bracket">]</span></a>
+                        <span class="quote-body">
+                            <span class="quote-text">Found it straight away, it's where the old app had it. Maybe I'm just used to it.</span>
+                            <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p1</span></span></span></span>
+                        </span>
+                        <span class="intensity-dots" title="Intensity 1 of 3"><svg class="intensity-dots-svg" width="46" height="12" viewBox="0 0 46 12"><circle cx="7" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7"/><circle cx="23" cy="6" r="5" fill="none" stroke="var(--dot-colour, var(--bn-colour-muted))" stroke-width="1.2" opacity="0.35"/><circle cx="39" cy="6" r="5" fill="none" stroke="var(--dot-colour, var(--bn-colour-muted))" stroke-width="1.2" opacity="0.35"/></svg></span>
+                    </div>
+                </blockquote>
+                <div class="signal-card-expansion" style="max-height: 0"></div>
+            </div>
+            <div class="signal-card-footer">
+                <button type="button" class="signal-card-link signal-card-toggle">Show all 7 quotes</button>
+                <span class="participant-grid">
+                    <span class="participant-count">4/6</span>
+                    <span class="p-box p-present">p1</span><span class="p-box p-present">p2</span><span class="p-box">p3</span><span class="p-box">p4</span><span class="p-box p-present">p5</span><span class="p-box p-present">p6</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Card 2: codebook group, simulated HOVERED (axis 2) -->
+        <div class="signal-card lab-hovered" style="--card-accent: var(--bn-group-task)" role="button" tabindex="0">
+            <div class="signal-card-top">
+                <div class="signal-card-right">
+                    <button type="button" class="badge signal-card-hero" style="background-color: var(--bn-group-task)" aria-expanded="false">
+                        <span class="signal-card-hero-label">Task flow</span>
+                        <span class="signal-card-hero-score">0.31</span>
+                        <span class="signal-card-hero-caret" aria-hidden="true">&#x25BE;</span>
+                    </button>
+                </div>
+                <div class="signal-card-identity">
+                    <div class="signal-card-location">Confirmation arrives before the request is sent</div>
+                    <div class="signal-elaboration bn-lead-para">
+                        <p class="bn-lead-claim"><strong>The success toast fires on tap, not on submission, so three participants left believing an order was placed when it had queued.</strong></p>
+                        <p class="bn-lead-rest">Two only discovered the difference when the pharmacy had nothing for them.</p>
+                    </div>
+                    <div class="signal-card-alternates">Also read as <span class="signal-card-alternate">Feedback timing masks failure</span></div>
+                </div>
+            </div>
+            <div class="signal-card-quotes">
+                <blockquote>
+                    <div class="quote-row">
+                        <a class="timecode" href="#"><span class="timecode-bracket">[</span>09:20<span class="timecode-bracket">]</span></a>
+                        <span class="quote-body">
+                            <span class="quote-text">It said "requested", so I assumed that was that. Then nothing turned up for a week.</span>
+                            <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p3</span></span></span></span>
+                            <span class="badge signal-quote-tag" style="background-color: var(--bn-task-2-bg)">confirmation</span>
+                            <span class="badge signal-quote-tag" style="background-color: var(--bn-task-4-bg)">feedback</span>
+                        </span>
+                        <span class="intensity-dots" title="Intensity 3 of 3"><svg class="intensity-dots-svg" width="46" height="12" viewBox="0 0 46 12"><circle cx="7" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7"/><circle cx="23" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7"/><circle cx="39" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7"/></svg></span>
+                    </div>
+                </blockquote>
+                <blockquote>
+                    <div class="quote-row">
+                        <a class="timecode" href="#"><span class="timecode-bracket">[</span>14:02<span class="timecode-bracket">]</span></a>
+                        <span class="quote-body">
+                            <span class="quote-text">The tick came up immediately. Too immediately, now that you say it.</span>
+                            <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p6</span></span></span></span>
+                            <span class="badge signal-quote-tag" style="background-color: var(--bn-task-4-bg)">feedback</span>
+                        </span>
+                        <span class="intensity-dots" title="Intensity 2 of 3"><svg class="intensity-dots-svg" width="46" height="12" viewBox="0 0 46 12"><circle cx="7" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7"/><circle cx="23" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7"/><circle cx="39" cy="6" r="5" fill="none" stroke="var(--dot-colour, var(--bn-colour-muted))" stroke-width="1.2" opacity="0.35"/></svg></span>
+                    </div>
+                </blockquote>
+                <div class="signal-card-expansion" style="max-height: 0"></div>
+            </div>
+            <div class="signal-card-footer">
+                <button type="button" class="signal-card-link signal-card-toggle">Show all 5 quotes</button>
+                <span class="participant-grid">
+                    <span class="participant-count">3/6</span>
+                    <span class="p-box">p1</span><span class="p-box">p2</span><span class="p-box p-present">p3</span><span class="p-box p-present">p4</span><span class="p-box">p5</span><span class="p-box p-present">p6</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Location 2: the inspector-pointed card (.bn-selected) -->
+    <div class="signals-codebook-heading">
+        <a href="#" class="signal-card-location-link">Signing in with NHS login</a>
+    </div>
+    <div class="signal-cards">
+        <div class="signal-card bn-selected" style="--card-accent: var(--bn-sentiment-confusion)" role="button" tabindex="0">
+            <div class="signal-card-top">
+                <div class="signal-card-right">
+                    <button type="button" class="badge signal-card-hero badge-confusion" aria-expanded="false">
+                        <span class="signal-card-hero-label">Confusion</span>
+                        <span class="signal-card-hero-score">0.27</span>
+                        <span class="signal-card-hero-caret" aria-hidden="true">&#x25BE;</span>
+                    </button>
+                </div>
+                <div class="signal-card-identity">
+                    <div class="signal-card-location">Two logins that look like one</div>
+                    <div class="signal-elaboration bn-lead-para">
+                        <p class="bn-lead-claim"><strong>Participants could not tell the surgery account from the NHS login and entered the wrong password for the right service.</strong></p>
+                        <p class="bn-lead-rest">Both screens are white with a blue button; the only difference is a logo one participant called "the same logo".</p>
+                    </div>
+                </div>
+            </div>
+            <div class="signal-card-quotes">
+                <blockquote>
+                    <div class="quote-row">
+                        <a class="timecode" href="#"><span class="timecode-bracket">[</span>01:44<span class="timecode-bracket">]</span></a>
+                        <span class="quote-body">
+                            <span class="quote-text">Is this the NHS one or the surgery one? They've both got the… it's the same logo, isn't it?</span>
+                            <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p4</span></span></span></span>
+                        </span>
+                        <span class="intensity-dots" title="Intensity 2 of 3"><svg class="intensity-dots-svg" width="46" height="12" viewBox="0 0 46 12"><circle cx="7" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7"/><circle cx="23" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7"/><circle cx="39" cy="6" r="5" fill="none" stroke="var(--dot-colour, var(--bn-colour-muted))" stroke-width="1.2" opacity="0.35"/></svg></span>
+                    </div>
+                </blockquote>
+                <blockquote>
+                    <div class="quote-row">
+                        <a class="timecode" href="#"><span class="timecode-bracket">[</span>02:10<span class="timecode-bracket">]</span></a>
+                        <span class="quote-body">
+                            <span class="quote-text">Wrong password. Again. I know it's right, it's the other one I'm putting in.</span>
+                            <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p2</span></span></span></span>
+                        </span>
+                        <span class="intensity-dots" title="Intensity 3 of 3"><svg class="intensity-dots-svg" width="46" height="12" viewBox="0 0 46 12"><circle cx="7" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7"/><circle cx="23" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7"/><circle cx="39" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7"/></svg></span>
+                    </div>
+                </blockquote>
+                <div class="signal-card-expansion" style="max-height: 0"></div>
+            </div>
+            <div class="signal-card-footer">
+                <span class="signal-card-link" style="visibility: hidden">1 quote</span>
+                <span class="participant-grid">
+                    <span class="participant-count">2/6</span>
+                    <span class="p-box">p1</span><span class="p-box p-present">p2</span><span class="p-box">p3</span><span class="p-box p-present">p4</span><span class="p-box">p5</span><span class="p-box">p6</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Location 3: the working open (hero aria-expanded=true → engaged) -->
+    <div class="signals-codebook-heading">
+        <a href="#" class="signal-card-location-link">Viewing test results</a>
+    </div>
+    <div class="signal-cards">
+        <div class="signal-card" style="--card-accent: var(--bn-group-emo)" role="button" tabindex="0">
+            <div class="signal-card-top">
+                <div class="signal-card-right">
+                    <button type="button" class="badge signal-card-hero" style="background-color: var(--bn-group-emo)" aria-expanded="true">
+                        <span class="signal-card-hero-label">Emotion</span>
+                        <span class="signal-card-hero-score">0.55</span>
+                        <span class="signal-card-hero-caret" aria-hidden="true">&#x25BE;</span>
+                    </button>
+                    <div class="signal-card-metrics">
+                        <span class="metric-label">Signal</span><span class="metric-value">0.55</span><span class="metric-viz"></span>
+                        <span class="metric-label">Conc.</span><span class="metric-value">2.1×</span><span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width: 42%"></span></span></span>
+                        <span class="metric-label">Agree</span><span class="metric-value">3.8</span><span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" style="width: 63%"></span></span></span>
+                        <span class="metric-label">Intensity</span><span class="metric-value">2.3</span><span class="metric-viz"><svg class="intensity-dots-svg" width="46" height="12" viewBox="0 0 46 12"><circle cx="7" cy="6" r="5" fill="var(--bn-colour-muted)" opacity="0.7"/><circle cx="23" cy="6" r="5" fill="var(--bn-colour-muted)" opacity="0.7"/><circle cx="39" cy="6" r="5" fill="none" stroke="var(--bn-colour-muted)" stroke-width="1.2" opacity="0.35"/></svg></span>
+                    </div>
+                </div>
+                <div class="signal-card-identity">
+                    <div class="signal-card-location">A number with no sentence under it</div>
+                    <div class="signal-elaboration bn-lead-para">
+                        <p class="bn-lead-claim"><strong>Results arrive as a bare value and a reference range, and every participant read an out-of-range figure as bad news before anyone had said so.</strong></p>
+                        <p class="bn-lead-rest">Two rang the surgery the same afternoon; the third waited a week for a GP note that said it was expected.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="signal-card-quotes">
+                <blockquote>
+                    <div class="quote-row">
+                        <a class="timecode" href="#"><span class="timecode-bracket">[</span>18:36<span class="timecode-bracket">]</span></a>
+                        <span class="quote-body">
+                            <span class="quote-text">It's red. Red means something. Nobody's told me what, so I'm just sat here with a red number.</span>
+                            <span class="speaker"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p6</span></span></span></span>
+                            <span class="badge signal-quote-tag" style="background-color: var(--bn-emo-3-bg)">anxiety</span>
+                        </span>
+                        <span class="intensity-dots" title="Intensity 3 of 3"><svg class="intensity-dots-svg" width="46" height="12" viewBox="0 0 46 12"><circle cx="7" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7"/><circle cx="23" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7"/><circle cx="39" cy="6" r="5" fill="var(--dot-colour, var(--bn-colour-muted))" opacity="0.7"/></svg></span>
+                    </div>
+                </blockquote>
+                <div class="signal-card-expansion" style="max-height: 0"></div>
+            </div>
+            <div class="signal-card-footer">
+                <button type="button" class="signal-card-link signal-card-toggle">Show all 4 quotes</button>
+                <span class="participant-grid">
+                    <span class="participant-count">3/6</span>
+                    <span class="p-box p-present">p1</span><span class="p-box">p2</span><span class="p-box p-present">p3</span><span class="p-box">p4</span><span class="p-box">p5</span><span class="p-box p-present">p6</span>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+</template>
+
+<div class="lab-commentary">
+    <h2>Commentary</h2>
+
+    <p><b>The rule is the shipped one, applied to a new card.</b> Axis 1: keep the
+    source's marks and the researcher's own; recede the machine's annotations.
+    Axis 2: anything acted <em>through</em> stays live and returns to full
+    presence while engaged. Nothing here invents a third axis — every row below
+    is one of those two applied to a part of the signal card.</p>
+
+    <table>
+        <tr><th>Part of the card</th><th>Treatment</th><th>Why</th></tr>
+        <tr><td>Quote text, speaker code</td><td><b>Lit</b></td><td>The participant's words and whose they are — axis 1's "source's marks".</td></tr>
+        <tr><td>Location heading</td><td>0.4</td><td>The Signals twin of <code>.bn-group-header</code>, which already takes 0.4 as wayfinding.</td></tr>
+        <tr><td>Headline + claim (elaboration)</td><td>0.4 — <b>variant A, proposed</b></td><td>The machine's reading of the quotes: the same object a theme title + description is on the Quotes lens, and those take 0.4. Legible enough to know which finding you are under; not competing with the evidence. Variant B keeps them lit for comparison.</td></tr>
+        <tr><td>Hero chip (group + score)</td><td>0.14, returns on hover / focus / while its working is open</td><td>A number about the quotes, not the quotes. It is a control, so it keeps <code>pointer-events</code> and comes back the moment you reach for it — receded, never disabled.</td></tr>
+        <tr><td>Metrics (the working)</td><td>Untouched</td><td>Only visible when the researcher opened it — that is engagement, and engaged chrome is at full presence by axis 2. Opening it also lights the chip.</td></tr>
+        <tr><td>Tag chips on quotes, intensity dots, timecodes</td><td>0.14, <code>pointer-events: none</code> at rest</td><td>Machine annotation at rest. Same treatment the Quotes lens gives its badges and timecodes.</td></tr>
+        <tr><td>"Also read as"</td><td>0.14</td><td>A cross-reference to a folded reading — annotation about annotation.</td></tr>
+        <tr><td>Footer: "Show all N quotes", participant grid</td><td>0.14, returns on hover / focus</td><td>The toggle is the lean-in action — hover the card and it is there. The grid is a count.</td></tr>
+        <tr><td>Card border, card background, quote box</td><td>Dissolve: border to 40%, backgrounds transparent</td><td>The same formula as <code>blockquote.quote-card</code>. The fused seam survives as a faint line.</td></tr>
+        <tr><td>Selected card (inspector-pointed)</td><td><b>Untouched</b></td><td>Guarded with <code>:not(.bn-selected)</code>, exactly as the quote-card dissolve is. Drop the guard and the blue wash silently vanishes.</td></tr>
+        <tr><td>Dissent hairline</td><td>Untouched</td><td>A 2px inset rule at border-hover colour — already at the floor, and it says "this voice argues", which is about the evidence, not about the card.</td></tr>
+        <tr><td>Nav sidebar, heatmap inspector, page title</td><td><b>Untouched</b></td><td>Focus's standing non-goal: not the sidebars. <code>[</code> / <code>m</code> close them in one key.</td></tr>
+    </table>
+
+    <h3>What exists today, measured from the CSS</h3>
+    <p>Focus can only be entered on the Quotes lens (the <code>z</code> key is
+    route-gated, the View-menu item is dimmed off Quotes, the moon button is
+    only mounted on <code>QuotesTab</code>). But the class sits on
+    <code>&lt;html&gt;</code> and the store is route-independent, so a reader
+    who enters Focus on Quotes and clicks through to Signals arrives in a
+    <b>half-state</b>: the source banner drops to 0.4 and every timecode to
+    0.14 through selectors written for quote cards — <em>except</em> the
+    continuation timecodes in a sequence, which the organism holds at 0.6 at
+    equal specificity and which therefore end up <b>brighter</b> than the run's
+    first timecode. Nothing else recedes. That is the state this proposal
+    replaces; the left column deliberately does not draw it because it is not
+    a design.</p>
+
+    <h3>Not drawn here</h3>
+    <p>The nav column and the heatmap inspector, because they do not change.
+    The pending skeleton (a card awaiting its finding) — it breathes at
+    0.45–1 already and would sit at 0.4 under variant A; worth one look in the
+    app. Edo and dark are one HUD click each; the transform names no colour,
+    so they should hold without per-palette rules, as the Quotes rules do.</p>
+</div>
+
+<script>
+const tpl = document.getElementById("stage-tpl");
+for (const slot of document.querySelectorAll(".stage-content")) {
+    slot.replaceWith(tpl.content.cloneNode(true));
+}
+
+const root = document.documentElement;
+const stages = [...document.querySelectorAll(".lab-stage")];
+const right = stages[1];
+
+function press(act, val) {
+    for (const b of document.querySelectorAll(`[data-act="${act}"]`)) {
+        b.setAttribute("aria-pressed", String(b.dataset.val === val));
+    }
+}
+
+const apply = {
+    focus: (v) => right.classList.toggle("bn-focus-mode", v === "on"),
+    variant: (v) => root.setAttribute("data-variant", v),
+    scheme: (v) => stages.forEach((s) => { s.style.colorScheme = v; }),
+    palette: (v) => stages.forEach((s) => s.setAttribute("data-color-theme", v)),
+};
+
+document.querySelector(".lab-hud").addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-act]");
+    if (!btn) return;
+    const { act, val } = btn.dataset;
+    apply[act](val);
+    press(act, val);
+});
+
+addEventListener("keydown", (e) => {
+    const k = e.key.toLowerCase();
+    if (k === "z") {
+        const on = !right.classList.contains("bn-focus-mode");
+        apply.focus(on ? "on" : "off"); press("focus", on ? "on" : "off");
+    }
+    if (k === "1") { apply.variant("strict"); press("variant", "strict"); }
+    if (k === "2") { apply.variant("findings"); press("variant", "findings"); }
+    if (k === "d") {
+        const next = stages[0].style.colorScheme === "dark" ? "light" : "dark";
+        apply.scheme(next); press("scheme", next);
+    }
+});
+</script>
+
+</body>
+</html>

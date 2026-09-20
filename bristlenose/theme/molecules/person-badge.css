@@ -130,6 +130,17 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
     color: var(--bn-colour-muted);
 }
 
+/* Same placeholder on the narrow-width rung, where the short form is shown
+   instead. Rehomed from `molecules/name-edit.css` when that file was deleted
+   on 20 Sep 2026: it was a bare `.unnamed` in the global sheet, and the two
+   classes above and below are its only consumers. Deliberately NOT merged
+   into one selector — the full name also drops to normal weight, the short
+   one never carried emphasis to drop. */
+.bn-speaker-name-short.unnamed {
+    font-style: italic;
+    color: var(--bn-colour-muted);
+}
+
 .bn-name-pencil {
     all: unset;
     cursor: pointer;

@@ -23,7 +23,7 @@ Token files at theme root. Structural + analytical tokens in `tokens.css`; typog
 - `--bn-colour-quote-bg` — quote-card surface
 - `--bn-colour-badge-bg`, `--bn-colour-badge-text` — neutral badge surface
 - `--bn-colour-user-tag-bg`, `--bn-colour-user-tag-text` — user-tag fallback
-- `--bn-colour-editing-bg`, `--bn-colour-editing-border` — inline-edit state
+- `--bn-colour-crop-bg` — quote crop/trim fill (crop only; inline edit fields take the `--bn-field-edit-*` set)
 - `--bn-colour-highlight`, `--bn-colour-cited-bg` — citation/anchor highlight (cited bg currently transparent; see `CLAUDE.md`)
 - `--bn-colour-starred` — starred-quote accent
 - `--bn-colour-negative` — negative/danger (note: `--bn-colour-danger` is referenced in CSS with a hardcoded `#dc2626` fallback but is not defined; see `theme/CLAUDE.md` gotchas)

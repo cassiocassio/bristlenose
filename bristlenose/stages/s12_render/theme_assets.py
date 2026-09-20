@@ -65,7 +65,6 @@ _THEME_FILES: list[str] = [
     "molecules/quote-actions.css",
     "molecules/tag-input.css",
     "molecules/sparkline.css",
-    "molecules/name-edit.css",
     "molecules/search.css",
     "molecules/tag-filter.css",
     "molecules/hidden-quotes.css",

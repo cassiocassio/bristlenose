@@ -24,8 +24,7 @@
     --bn-colour-quote-bg:      light-dark(#f9fafb, #1a1a1a);
     --bn-colour-badge-bg:      light-dark(#f3f4f6, #252525);
     --bn-colour-badge-text:    light-dark(#374151, #d1d5db);
-    --bn-colour-editing-bg:    light-dark(#fffbe6, #2a2614);
-    --bn-colour-editing-border:light-dark(#e5e0c0, #4a4528);
+    --bn-colour-crop-bg:       light-dark(#fffbe6, #2a2614);
     --bn-crop-handle-colour:   light-dark(#c4850a, #f0b830);
     --bn-colour-inspector-bg:  light-dark(#f9f9fa, #1c1c1e);
     --bn-colour-positive:      light-dark(#16a34a, #22c55e);
@@ -283,15 +282,6 @@ code {
     box-shadow: var(--bn-focus-ring);
 }
 
-/* Static byproduct only — the yellow that the reference doc calls the house
-   editing state, applied by theme/js and by nothing the app runs. */
-.b-yellow {
-    background: var(--bn-colour-editing-bg);
-    outline: 1px solid var(--bn-colour-editing-border);
-    border-radius: var(--bn-radius-sm);
-    padding: var(--bn-space-xs) 0.3rem;
-}
-
 /* ─────────────────────────────────────────────────────────────────────────
    AFTER — the two treatments, driven entirely by the new tokens.
    ───────────────────────────────────────────────────────────────────────── */
@@ -325,7 +315,7 @@ code {
 
 /* The exemption, unchanged in both columns. */
 .x-crop {
-    background: var(--bn-colour-editing-bg);
+    background: var(--bn-colour-crop-bg);
     padding: var(--bn-space-xs) 0;
     border-radius: var(--bn-radius-sm);
 }
@@ -361,8 +351,8 @@ footer.note p { margin: 0 0 0.7rem; }
     .grid > .head:not(:first-child) { display: none; }
     .grid > .head:first-child { grid-column: 1; }
     .grid > .cell { border-right: none; }
-    .grid > .cell:nth-child(4n+2)::before { content: "Today"; }
-    .grid > .cell:nth-child(4n+3)::before { content: "Proposed"; }
+    .grid > .cell:nth-child(4n+2)::before { content: "Before"; }
+    .grid > .cell:nth-child(4n+3)::before { content: "After"; }
     .grid > .cell:nth-child(4n)::before { content: "Treatment and why"; }
     .grid > .cell::before {
         display: block;
@@ -401,16 +391,17 @@ is what the declarations beneath them do.
   <div class="rule-card rule-card--exempt">
     <h3>Exempt — quote crop and trim</h3>
     <p>Not “edit this text” but <b>“move this boundary”</b>. Custom by design, one
-       signal with the burnt-amber brackets. Keeps <code>--bn-colour-editing-bg</code>.
-       Do not restyle it to match, and do not borrow its yellow.</p>
+       signal with the burnt-amber brackets. Keeps its yellow, now honestly named
+       <code>--bn-colour-crop-bg</code>. Do not restyle it to match, and do not
+       borrow that yellow.</p>
   </div>
 </div>
 
 <div class="grid">
 
   <div class="head">Scenario</div>
-  <div class="head">Today</div>
-  <div class="head">Proposed</div>
+  <div class="head">Before</div>
+  <div class="head">After — shipped 20 Sep 2026</div>
   <div class="head">Treatment and why</div>
 
   <!-- 1 ─ theme heading ─────────────────────────────────────────────── -->
@@ -636,11 +627,10 @@ is what the declarations beneath them do.
     <p class="rationale">Untouched, deliberately. The verb is different — you are moving a
     boundary, not retyping a string — and the yellow was designed to read as a single
     signal with the brackets. <b>A different verb is allowed a different look.</b></p>
-    <p class="rationale">What changes is only the name's honesty:
-    <code>--bn-colour-editing-bg</code> now means crop and nothing else, and the colour
-    contract says so. Renaming it to <code>--bn-colour-crop-bg</code> is the honest finish
-    and is <b>not</b> taken here, because the rename touches the one surface that was
-    deliberately custom.</p>
+    <p class="rationale">Not one declaration changed. What changed is the name:
+    <code>--bn-colour-editing-bg</code> is now <code>--bn-colour-crop-bg</code>, because a
+    token named for a state it must <i>not</i> be used in is how three other surfaces
+    came to borrow it in the first place. Same hex, same rules, same pixels.</p>
   </div>
 
   <!-- 9 ─ search input ──────────────────────────────────────────────── -->
@@ -681,14 +671,25 @@ is what the declarations beneath them do.
   <p><b>Where the decision lives.</b> <code>bristlenose/theme/tokens.css</code>, the
   inline-edit block — it carries the rule, the two tokens and the exemption in one
   comment, so the next person styling a field reads the answer where they look up the
-  radius. The colour contract records that <code>--bn-colour-editing-bg</code> is
-  crop-only and that <code>--bn-colour-editing-border</code> now has no consumers.</p>
-  <p><b>Still open, deliberately.</b> Renaming the crop token; deleting the orphaned
-  <code>--bn-colour-editing-border</code> from both palettes; and
-  <code>molecules/name-edit.css</code>, which is dead apart from <code>.unnamed</code> —
-  its <code>.name-cell</code> / <code>.name-text</code> / <code>.name-pencil</code> classes
-  are emitted by nothing in the repo, and <code>theme/js/names.js</code> still ships
-  querying for them.</p>
+  radius.</p>
+  <p><b>Swept at the same time.</b> The crop token is renamed
+  <code>--bn-colour-crop-bg</code> everywhere it is declared, used or <i>taught</i> —
+  including the <code>ux-critique</code> agent, which was instructing reviewers to
+  demand the old one, and <code>edo-theme-studio.html</code>, which generates palette
+  CSS and would have emitted a dead name. <code>--bn-colour-editing-border</code> is
+  gone from both palettes and the contract; it had no consumers left.
+  <code>molecules/name-edit.css</code> is deleted and dropped from
+  <code>_THEME_FILES</code> — its <code>.name-cell</code> / <code>.name-text</code> /
+  <code>.name-pencil</code> classes were emitted by nothing in the repo, and its one
+  live rule (<code>.unnamed</code>) moved to <code>person-badge.css</code>, scoped to
+  the two classes that actually use it.</p>
+  <p><b>Left alone on purpose.</b> The frozen <code>*.theme.css</code> snapshots beside
+  this file are self-contained historical copies taken for other mockups; renaming
+  inside them would edit the past to no benefit. And <code>theme/js/names.js</code>
+  still ships in <code>_JS_FILES</code> querying <code>.name-text</code> and
+  <code>.name-pencil</code> — selectors nothing emits, so the module is inert. It is
+  frozen vanilla (data-integrity fixes only) and its removal is a separate call, with
+  a load-order assertion in <code>tests/test_hidden_quotes.py</code> to update.</p>
 </footer>
 
 </div>

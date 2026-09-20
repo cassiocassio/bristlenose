@@ -5,7 +5,7 @@
  *
  * THREE edit idioms ship, and they differ for a reason rather than by drift:
  *
- *   1. CROP (`.crop-editable`, below) — yellow `--bn-colour-editing-bg`. Not
+ *   1. CROP (`.crop-editable`, below) — yellow `--bn-colour-crop-bg`. Not
  *      "edit this text" but "move this boundary": it reads as one signal with
  *      the bracket handles, and it is now the only surface on which the
  *      yellow means anything at all.
@@ -120,7 +120,7 @@
 /* ── Crop editable span (hybrid mode contenteditable) ──────────────────── */
 
 .crop-editable {
-    background: var(--bn-colour-editing-bg);
+    background: var(--bn-colour-crop-bg);
     padding: var(--bn-space-xs) 0;
     border-radius: var(--bn-radius-sm);
     outline: none;
@@ -136,7 +136,7 @@
 /* Included region wrapper: continuous yellow background covers words
    AND inter-word spaces — prevents white gaps between word spans */
 .crop-included-region {
-    background: var(--bn-colour-editing-bg);
+    background: var(--bn-colour-crop-bg);
     border-radius: 2px;
     padding: 1px 0;
 }

@@ -56,7 +56,7 @@ On/off icon buttons extracted from `button.css` and `hidden-quotes.css` (Round 2
 
 ## editable-text.css (molecule)
 
-Shared editing and committed states for inline contenteditable fields. Extracted from `quote-actions.css` and `name-edit.css` (Round 2 CSS refactoring). Groups all editing visual patterns together — including the crop bracket handles for trim editing.
+Shared editing and committed states for inline contenteditable fields. Extracted from `quote-actions.css` and the since-deleted `name-edit.css` (Round 2 CSS refactoring). Groups all editing visual patterns together — including the crop bracket handles for trim editing.
 
 - **Editing state** — the house inline-edit field, driven entirely by the `--bn-field-edit-*` set. **Read the inline-edit block in `tokens.css` before styling a new one**: there are two treatments and the choice is mechanical, decided by the ground the field sits on. On page background it tints up (`--bn-field-edit-fill-on-page`); on a tinted surface it blanks to neutral (`--bn-field-edit-fill-on-tint`). Both carry `--bn-field-edit-edge` at 1px. Applied here to `.editable-text[contenteditable="true"]` and `.bn-speaker-editable-name[contenteditable="true"]`; the tinted-ground half lives on `.group-title-text` / `.group-subtitle` (`organisms/codebook-panel.css`) and `.tag-input-box` (`atoms/input.css`)
 - **Keyed on the attribute, not a class** — `.editable-text.editing` is retained in the same selector for the frozen vanilla renderer, which is the *only* thing that writes `.editing` (`theme/js/editing.js`, `names.js`). `EditableText` never has. A rule keyed on `.editing` alone therefore could not fire in the SPA at all, which is how theme headings shipped with no editing treatment. Don't reintroduce a class for this state
@@ -116,12 +116,6 @@ Shared base styles for overlay modal dialogs, used by help-overlay, feedback, an
 Feedback modal content styles, extends `.bn-modal` from `modal.css`. `.feedback-modal` (max-width), `.feedback-sentiments` (flex row of emoji buttons), `.feedback-sentiment` (column layout, border highlight on `.selected`), `.feedback-label` (above textarea), `.feedback-textarea` (accent border on focus), `.feedback-actions` (Cancel + Send buttons), `.feedback-btn-send:disabled` (dimmed).
 
 Footer link visibility: `.feedback-links` is hidden by default. Legacy static path enables it via `body.feedback-enabled .feedback-links`; React serve/export path enables it via `.feedback-links.feedback-links-visible`.
-
-## name-edit.css (molecule)
-
-Styles for participant name inline editing layout. Researchers need to assign real names to anonymised participant codes (p1, p2) — this editing UI appears in the participant table. (Editing/edited state rules moved to `molecules/editable-text.css` in Round 2.)
-
-`.name-cell` / `.role-cell` positioning (relative, padding-right for pencil), `.name-pencil` (absolute, opacity 0 → 1 on row hover, accent on hover), `.unnamed` muted italic placeholder. Print-hidden.
 
 ## coverage.css (organism)
 

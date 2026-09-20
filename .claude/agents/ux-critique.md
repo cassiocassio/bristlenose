@@ -101,8 +101,13 @@ Flag violations of these rules:
   labels use native `title` attribute
 - **Toolbar buttons**: must use dual-class pattern (`.toolbar-btn` + component
   class). SVG icons use `.toolbar-icon-svg`, chevrons use `.toolbar-arrow`
-- **Editable text**: must use `.editable-text` molecule with yellow editing bg
-  (`--bn-colour-editing-bg`) + outline (`--bn-colour-editing-border`)
+- **Editable text**: the `--bn-field-edit-*` set, never a hand-rolled fill.
+  Two treatments, chosen by the GROUND the field sits on — on page background
+  it tints up (`--bn-field-edit-fill-on-page`), on a tinted card it blanks to
+  neutral (`--bn-field-edit-fill-on-tint`); both carry `--bn-field-edit-edge`
+  at 1px. A third fill is a finding. The yellow `--bn-colour-crop-bg` is quote
+  crop ONLY and borrowing it is also a finding. See the block in `tokens.css`
+  and `docs/mockups/edit-field-idioms.html`
 - **Person badges**: use `PersonBadge` component / `.bn-person-badge` molecule,
   not ad-hoc speaker code rendering
 - **Toggles**: star, hide, visibility toggles use the `Toggle` component /

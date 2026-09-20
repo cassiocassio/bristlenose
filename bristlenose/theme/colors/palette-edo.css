@@ -39,8 +39,7 @@
     --bn-colour-badge-text: #2d3654;            /* Court Indigo */
     --bn-colour-user-tag-bg: #e8dfc9;
     --bn-colour-user-tag-text: #3d4a5c;
-    --bn-colour-editing-bg: #f5ecd0;            /* Gold Ochre tint */
-    --bn-colour-editing-border: #c4a96a;        /* Gold Ochre */
+    --bn-colour-crop-bg: #f5ecd0;               /* Gold Ochre tint */
     --bn-crop-handle-colour: #b5432a;           /* Vermillion */
     --bn-crop-handle-hover: #8b3a3a;            /* Bengara Red */
     --bn-colour-active-bg: #e8f0e4;             /* Pine Green tint */
@@ -124,8 +123,7 @@
         --bn-colour-badge-text:       light-dark(#2d3654, #c4b898);
         --bn-colour-user-tag-bg:      light-dark(#e8dfc9, #2d2820);
         --bn-colour-user-tag-text:    light-dark(#3d4a5c, #c4b898);
-        --bn-colour-editing-bg:       light-dark(#f5ecd0, #2d2614);
-        --bn-colour-editing-border:   light-dark(#c4a96a, #4a3d1e);
+        --bn-colour-crop-bg:          light-dark(#f5ecd0, #2d2614);
         --bn-crop-handle-colour:      light-dark(#b5432a, #e06a4a);
         --bn-crop-handle-hover:       light-dark(#8b3a3a, #e88a6a);
         --bn-colour-active-bg:        light-dark(#e8f0e4, #1a2818);

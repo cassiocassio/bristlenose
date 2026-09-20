@@ -220,9 +220,12 @@
      * THE ONE EXEMPTION is quote cropping — `.crop-editable` and the bracket
      * handles in molecules/editable-text.css. That is not "edit this text",
      * it is "move this boundary", it was designed as a single signal with the
-     * burnt-amber brackets, and it keeps --bn-colour-editing-bg. Do not
-     * reach for that yellow for anything else, and do not restyle crop to
-     * match these: a different verb is allowed a different look. */
+     * burnt-amber brackets, and it keeps --bn-colour-crop-bg. Do not reach
+     * for that yellow for anything else, and do not restyle crop to match
+     * these: a different verb is allowed a different look. The token was
+     * called --bn-colour-editing-bg until 20 Sep 2026; it was renamed
+     * because a token named for a state it must not be used in is how the
+     * four-answers-on-one-screen problem started. */
     --bn-field-edit-edge: var(--bn-colour-accent);
     --bn-field-edit-fill-on-page: var(--bn-colour-quote-bg);
     --bn-field-edit-fill-on-tint: var(--bn-colour-bg);

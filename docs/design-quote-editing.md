@@ -44,7 +44,7 @@ A single click on the quote text enters edit mode. All of the following happen s
 
 | What | Detail |
 |------|--------|
-| **Yellow background** | Appears immediately on the entire quote text (`--bn-colour-editing-bg`). This is the first visual signal that the quote is now editable. |
+| **Yellow background** | Appears immediately on the entire quote text (`--bn-colour-crop-bg`). This is the first visual signal that the quote is now editable. |
 | **Gold bracket handles** | `[` and `]` appear at the start and end of text. They are **hidden for 250ms**, then fade in over 150ms (`bracket-delayed` → `bracket-visible` CSS class swap). The delay lets the yellow background register first, establishing context before the interactive handles arrive. |
 | **Blinking caret** | The system text cursor appears at the click position (not select-all). Uses `caretRangeFromPoint` / `caretPositionFromPoint` to place the caret exactly where the user clicked. |
 | **No select-all** | The old `range.selectNodeContents()` behaviour is gone. Clicking places the caret; the user can then type, arrow-key navigate, or select text normally. |
@@ -92,7 +92,7 @@ Each bracket (`[` and `]`) is a drag handle. The interaction:
 
 | Region | Background | Text colour | Decoration | Purpose |
 |--------|------------|-------------|------------|---------|
-| **Included** (between handles) | Yellow (`--bn-colour-editing-bg`) | Normal | None | "This text will be kept" |
+| **Included** (between handles) | Yellow (`--bn-colour-crop-bg`) | Normal | None | "This text will be kept" |
 | **Excluded** (outside handles) | None (transparent) | Grey (`--bn-colour-muted`) | Strikethrough | "This text will be removed" |
 
 The included words are wrapped in a `<span class="crop-included-region">` with a continuous yellow background. Individual word spans inside it do not carry their own background — this prevents white gaps between words where bare text-node spaces have no background.
@@ -294,8 +294,7 @@ The user can cycle between modes 2 and 3 any number of times. Crop boundaries ar
 
 | Token | Value (light) | Purpose |
 |-------|---------------|---------|
-| `--bn-colour-editing-bg` | `#fffbe6` | Yellow background for editable/included text |
-| `--bn-colour-editing-border` | `#e5e0c0` | Not currently used by crop (reserved) |
+| `--bn-colour-crop-bg` | `#fffbe6` | Yellow background for included text. Named `--bn-colour-editing-bg` until 20 Sep 2026 — crop is the *only* consumer, and a token named for editing invited three other surfaces to borrow it. Inline edit fields use the `--bn-field-edit-*` set in `tokens.css` instead. |
 | `--bn-colour-muted` | `#6b7280` | Grey for excluded text, ellipsis, status bar |
 | `--bn-crop-handle-colour` | `#c9a63c` | Gold bracket colour |
 | `--bn-crop-handle-hover` | `#a68529` | Darker gold on bracket hover |

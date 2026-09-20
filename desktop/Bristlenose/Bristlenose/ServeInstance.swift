@@ -63,10 +63,15 @@ final class ServeInstance: ObservableObject {
     /// counter went back to 0: adopt the new baseline silently, because
     /// animating there would claim an agent asked something when nothing did.
     func noteAgentCallCount(_ fresh: Int) -> Bool {
-        defer { agentCallCount = fresh }
-        guard fresh > agentCallCount else { return false }
-        lastAgentCallAt = Date()
-        return true
+        // Write only on change. A `@Published` setter publishes on every
+        // assignment, moved or not, and this runs every 1.5 s
+        // (`ServeManager.agentPulseInterval`). The unconditional write reached
+        // the menu bar through `ServeManager` and collapsed an open Window
+        // menu to its short form within a pulse of opening (20 Sep 2026).
+        let increased = fresh > agentCallCount
+        if fresh != agentCallCount { agentCallCount = fresh }
+        if increased { lastAgentCallAt = Date() }
+        return increased
     }
 
     /// Bearer token for localhost API access control, parsed from stdout and

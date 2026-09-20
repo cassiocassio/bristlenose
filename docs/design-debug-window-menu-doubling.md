@@ -1,3 +1,19 @@
+---
+status: current
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20
+---
+
+## Changelog
+
+- _2026-09-20_ — trued up: §5's summary of the `View`-inside-`Commands` rule
+  extended with the cost found the same day (a publish while a menu is open
+  rewrites the menu bar; the 1.5 s agent pulse made the Window menu collapse).
+  Anchors: `desktop/CLAUDE.md` § Menu bar, `MenuCommands.swift` header comment,
+  `ServeInstance.noteAgentCallCount`. Body otherwise verified against
+  `BristlenoseApp.swift` (`.commandsRemoved()` on every auxiliary `Window` scene).
+- _2026-07-19_ — initial draft.
+
 # Menu-structure audit — debug windows doubled into the Window menu
 
 _19 Jul 2026 · desktop macOS shell · analysis + proposed fix + doc reconciliation_
@@ -169,7 +185,11 @@ writing the rule) closes it before it ships.
   · Project · Codes · Quotes · Video · Window · Help_.
 - `MenuCommands.swift` doc-comment + `desktop/CLAUDE.md` "Menu bar" — the
   `View`-inside-`Commands` pattern (`@ObservedObject` unreliable directly in
-  `Commands.body`); dim-never-hide contextual items; responder-chain rules (don't
+  `Commands.body` — and, found 20 Sep 2026, expensive: it still subscribes to
+  the whole object, so every publish rewrites the menu bar and an open Window
+  menu collapses to its short form; `desktop/CLAUDE.md` § Menu bar carries the
+  rule, and `MenuCommands` now holds every store as a plain `let`); dim-never-hide
+  contextual items; responder-chain rules (don't
   touch `.pasteboard`; Undo/Redo hidden during `isEditing`); no bare-key shortcuts.
 - `CLAUDE.md` gotcha — `CommandsBuilder` caps at **10** top-level elements
   (why the four custom menus are grouped into `CustomMenus`).

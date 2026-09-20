@@ -10,6 +10,14 @@ import SwiftUI
 /// that owns `@ObservedObject var bridgeHandler`. Views inside `CommandMenu` /
 /// `CommandGroup` follow normal SwiftUI view lifecycle and observe correctly.
 ///
+/// The stores are plain `let`s on this struct, never `@ObservedObject`. The
+/// wrapper does not reliably re-render a `Commands` body, but it does
+/// subscribe to the whole object, and every publish then rewrites the entire
+/// menu bar. An open Window menu loses the items AppKit appends at open time
+/// (the tiling group, Move to <display>, the tab items) until it is next
+/// opened. With the 1.5 s agent pulse publishing on every tick that was a
+/// visible collapse under a second after opening (20 Sep 2026).
+///
 /// All actions dispatch through `bridgeHandler.menuAction(_:payload:)` which
 /// calls `callAsyncJavaScript` with structured arguments (security rule 3).
 ///
@@ -19,18 +27,18 @@ import SwiftUI
 /// `CommandMenu` titles stay in English — SwiftUI resolves `LocalizedStringKey`
 /// from `.lproj` bundles, not runtime JSON. Matches ATLAS.ti/MAXQDA precedent.
 struct MenuCommands: Commands {
-    @ObservedObject var serveManager: ServeManager
-    @ObservedObject var projectIndex: ProjectIndex
-    @ObservedObject var removalStore: UndoableRemovalStore
-    @ObservedObject var i18n: I18n
+    let serveManager: ServeManager
+    let projectIndex: ProjectIndex
+    let removalStore: UndoableRemovalStore
+    let i18n: I18n
     /// Used only by the Diagnostics menu's DEBUG harness section (Ollama
     /// setup-pill state forcing).
-    @ObservedObject var ollamaDownload: OllamaDownloadModel
+    let ollamaDownload: OllamaDownloadModel
     /// Read by File ▸ Import so a running batch can dim the other
     /// platforms. One store globally (§9), so switching platform
     /// mid-transfer would otherwise abandon it — see
     /// `CloudImportCoordinator.openLive`.
-    @ObservedObject var cloudImport: CloudImportCoordinator
+    let cloudImport: CloudImportCoordinator
     /// Gates the Diagnostics menu's presence. `@AppStorage` is a
     /// DynamicProperty, so flipping the toggle in Appearance settings should
     /// re-evaluate menu presence live; if a macOS release regresses that, the

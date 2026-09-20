@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import Testing
 @testable import Bristlenose
@@ -26,6 +27,23 @@ struct AgentPulseTests {
         let first = instance.lastAgentCallAt
         #expect(instance.noteAgentCallCount(4) == false)
         #expect(instance.lastAgentCallAt == first)   // not refreshed
+    }
+
+    /// The pulse calls this every 1.5 s, and a `@Published` write publishes
+    /// whether or not the value moved. That publish reached the menu bar
+    /// (`ServeManager` forwards it; `MenuCommands` used to observe it) and
+    /// collapsed an open Window menu to its short form within a pulse of
+    /// opening. An unchanged reading must be silent.
+    @MainActor @Test func anUnchangedCountDoesNotPublish() {
+        let instance = ServeInstance()
+        _ = instance.noteAgentCallCount(4)
+        var notifications = 0
+        let sink = instance.objectWillChange.sink { _ in notifications += 1 }
+        defer { sink.cancel() }
+        _ = instance.noteAgentCallCount(4)
+        #expect(notifications == 0)
+        _ = instance.noteAgentCallCount(5)                // a real change still publishes
+        #expect(notifications > 0)
     }
 
     /// The one that matters: a restarted sidecar's counter goes back to 0.

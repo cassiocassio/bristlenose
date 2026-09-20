@@ -365,6 +365,33 @@ naming its archive location is correct and must not be "fixed". Before reporting
 broken link, read the sentence around it — a doc explaining that something *was*
 removed is doing its job.
 
+**The same blind spot, inverted — and this one produces a confident "nobody wrote
+this down".** Searching `docs/` plus the CLAUDE.md files and concluding a decision is
+unrecorded misses the gitignored maintainer-only notes, which is exactly where
+planning decisions live. On 20 Sep 2026 a truing pass added a banner to
+`design-locale-negotiation.md` stating the shipped language picker was an
+undocumented reversal and "someone with the context should write it down" — while
+the private notes already carried it as a Beta item, with the same evidence derived
+independently (`I18n.swift:55`, the `?? "en"`), a decided fix (Option A, 2 Jul 2026)
+and an implementation brief. The banner shipped, asking for work already planned.
+**Before writing "this is recorded nowhere", say where you looked** — and if the
+sentence is about a *decision* rather than code, the private notes are the first
+place to look, not the last. Scope of a search is not scope of the world.
+
+**And a path that does not resolve is not evidence the thing is gone — it may have
+moved, which flips the verdict.** Testing a doc-named path with `Path.exists()`
+cannot tell a deleted component from a relocated one, and the difference decides
+whether a doc has a stale reference (fix the path) or describes a dead surface
+(archive it). Measured in the same pass: of 51 doc-named paths that failed
+`exists()`, **five had merely moved** — `components/QuoteCard.tsx` →
+`islands/QuoteCard.tsx`, `layouts/SidebarLayout.tsx` → `components/SidebarLayout.tsx`,
+`theme/css/tokens.css` → `theme/tokens.css`, `theme/css/organisms/transcript.css` →
+`theme/templates/transcript.css`, `e2e/perf-gate.spec.ts` → `e2e/tests/perf-gate.spec.ts`
+— and two of the wrong verdicts were handed to subagents before being caught. **Ask
+for the basename across the tree** (`git ls-files | grep -i "/<Name>\."`), and only
+call something deleted when the basename is absent everywhere. **Tell:** a "deleted"
+component that the app self-evidently still renders.
+
 Same family as the `rg -rn` and zsh entries above: tooling that fails quietly and
 plausibly. An audit that produces a column of alarming findings deserves one
 disconfirming check before the findings are written down.

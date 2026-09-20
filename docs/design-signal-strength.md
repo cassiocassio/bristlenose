@@ -1,11 +1,46 @@
 # Signal strength — one attention order over sentiment and codebook alike
 
-_Last updated: 13 Sep 2026_
+_Written 13 Sep 2026. Status re-checked 20 Sep 2026 — see the block below._
 
-**Status: SPIKE. Maths experiments only. No product code has moved, and nothing
-here is decided.** The decision waits on richer data and a side-by-side look at
-what the new maths does to the UX. This note is the working: what breaks, what
-to try instead, and what each option costs.
+**Status: SPIKE, still unbuilt. Maths experiments only; no product code has
+moved, and nothing here is decided.** The decision waits on richer data and a
+side-by-side look at what the new maths does to the UX. This note is the
+working: what breaks, what to try instead, and what each option costs.
+
+### Re-checked 20 Sep 2026 — the UX moved, the maths did not
+
+A week and 32 commits on, the lens has been rebuilt around this spike's
+*conclusions* while the metric underneath it is untouched. Worth knowing before
+reading on, because it changes which half of the note is still owed:
+
+- **Adopted.** The card is one shape rather than two; the chip names the group
+  or the sentiment rather than the framework (`9e9af6fd` — the §1 unit change,
+  landed in the UI); the four metrics are demoted behind one press, on the
+  measurement that *"Agreement takes 3 distinct values and Intensity 4 … two of
+  the four are captions, not columns"* (`54fdc615`) — which predates this note
+  and is §2's premise rather than its finding.
+- **Not adopted.** `bristlenose/analysis/metrics.py` is unchanged —
+  `concentration_ratio`, `simpsons_neff`, `composite_signal` and
+  `adjusted_residual`, exactly as §2 describes them. Nothing in `bristlenose/`
+  computes a hypergeometric or a Hill number.
+
+**The gap that leaves, stated plainly: the lens now leads with a single hero
+number, and that number is `compositeSignal`** — the one §2e shows has no
+ceiling and reaches 1.05, §2d shows is built on a breadth factor that reports
+10.00 voices in an eight-person study, and §4 shows runs *backwards* as a study
+grows. Presenting it as *the* number raises the cost of every defect in §2,
+because a figure a researcher reads once and trusts is doing more work than a
+figure sitting fourth in a metrics block. That is an argument for §5's
+recommendation (rank on strength, show attainment), not against the UX change.
+
+**Re-measured at HEAD**, the harness still reconciles against the app path
+(**105 cells compared, 0 mismatched**) and every headline holds: 69
+sentiment-framework cards still read concentration exactly 1.00,
+`adjusted_residual` still reads 0.00 on all of them, `n_eff` still overstates on
+14 cards with the same worst case, and the composite still tops out at 1.05. One
+figure drifted — **104 cards at `k ≥ 2` became 103**, and the flat count 73
+became 74 — because a trial project's data changed, not because anything here
+was wrong. The §2 tables below are the 13 Sep numbers and are left as written.
 
 There is no truth to be had here. A signal score is not a measurement of
 anything real — it is an ordering device whose only job is *"this deserves your

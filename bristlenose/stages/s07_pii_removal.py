@@ -332,9 +332,13 @@ def remove_pii(
     """
     # Refuse configured-but-unimplemented fields rather than warning past them.
     #
-    # Both stay deliberately unimplemented (D7, docs/design-redact-pii.md —
-    # `pii_llm_pass` is the reserved stub for the planned regex + LLM-NER
-    # approach, so it graduates rather than gets built against Presidio). The
+    # Both stay deliberately unimplemented (D7, docs/design-redact-pii.md).
+    # `pii_llm_pass` was the reserved stub for a regex + LLM-NER engine that
+    # would have replaced Presidio; that approach was REJECTED on 12 Sep 2026
+    # ("I'd rather deal with this as a packaging challenge than a start-again
+    # DIY problem"), so the field is a stub with nothing left to graduate into.
+    # `pii_custom_names` is a different question and still live: the per-project
+    # allow-list is post-beta, see the same doc. The
     # defect was never that they do nothing; it was that they did nothing
     # *quietly*. A `warnings.warn` is shown once per location and is trivially
     # lost in a long run, so a researcher who listed the names they most wanted
@@ -357,8 +361,7 @@ def remove_pii(
             "PII redaction was asked for settings it cannot honour:\n  - "
             + "\n  - ".join(unimplemented)
             + "\n\nUnset them to run with Presidio-only redaction, which is what "
-            "the CLI ships today. They are reserved for the planned regex + LLM "
-            "approach — see docs/design-redact-pii.md."
+            "the CLI ships today — see docs/design-redact-pii.md."
         )
 
     logger.info("Initialising Presidio (loads spaCy NLP model on first run)...")

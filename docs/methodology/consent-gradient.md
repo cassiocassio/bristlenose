@@ -1,3 +1,34 @@
+---
+status: pending
+last-trued: 2026-09-20
+trued-against: HEAD@main 835cde98 — s07_pii_removal.py as the shipped scrubbing pass; test_pii_audit.py slow-marked and deselected by pyproject addopts; no telemetry submission path in the tree
+---
+
+> **Truing status:** Pending / aspirational, confirmed 2026-09-20. The gradient
+> describes governance for feedback telemetry that **has not been built** — no
+> submission path exists in the tree — and CLAUDE.md treats `docs/methodology/`
+> as authoritative, so spec-ahead-of-code here is intended, not drift. Two
+> corrections were applied: the Level 2 bullet argued from a "local-first
+> posture" Bristlenose does not claim, and stated as fact that scrubber
+> regression tests run in CI, which they do not. A dated pointer to the
+> scrubbing pass that *has* since shipped was added under Level 2. Everything
+> else is unedited — including requirements the code does not yet meet, which
+> is the doc doing its job.
+
+## Changelog
+
+- _2026-09-20_ — trued up: reworded the Level 2 transfer argument off the
+  forbidden local-first framing (CLAUDE.md: the analysis *is* an outbound cloud
+  LLM call) while keeping the on-device telemetry requirement intact; marked
+  the CI scrubber-regression claim as a requirement and recorded that
+  `tests/test_pii_audit.py` is `@pytest.mark.slow` and deselected by
+  `pyproject.toml:199`; added the first pointer from this doc to
+  `docs/design-redact-pii.md`, noting the shipped pass is CLI-only and unwired
+  to telemetry. Anchors: `bristlenose/stages/s07_pii_removal.py:223`;
+  `tests/test_pii_audit.py:362`; `pyproject.toml:199`;
+  `tests/fixtures/pii_horror_transcript.txt`.
+- _2026-05-30_ — last substantive edit before this pass (no changelog kept).
+
 # Consent gradient for feedback telemetry
 
 *A data-governance note for Bristlenose. Pre-beta draft. Companion to `tag-rejections-are-great.md`.*
@@ -44,7 +75,10 @@ Adds a reason-from-fixed-list to each decision event. Choices like "wrong scope,
 Adds open-ended reason text. Researcher can write whatever they want.
 
 - **Sensitivity:** medium. Free text from researchers can accidentally contain participant quotes, client names, or identifying context ("rejected because P7 was clearly talking about the Acme dashboard, not our product").
-- **Required infrastructure:** a PII/entity scrubbing pass at submission time that runs **entirely on the researcher's device** (Presidio + spaCy, optionally a local Ollama model). No hosted LLM API is permitted at this level — routing researcher free-text through OpenAI/Anthropic/Azure would be a restricted international transfer of un-scrubbed content and would collapse the local-first posture at the exact point the gradient is designed to protect. Model hashes pinned; scrubber-regression tests run in CI against a `pii_horror_transcript.txt` fixture.
+- **Implementation, as of 20 Sep 2026:** the scrubbing pass this level requires now exists and is measured — `docs/design-redact-pii.md` (Presidio + spaCy `en_core_web_lg`, `bristlenose/stages/s07_pii_removal.py`, `pii_score_threshold` 0.7 for PERSON with a 0.40 floor for pattern-matched entities). It is **pipeline-side and CLI-only**, opt-in via `--redact-pii`, and **not wired to telemetry submission** — so it satisfies the detector half of this requirement and none of the submission half. Its false-negative and false-positive rates are measured there rather than assumed here, which is what the Unlocks clause below asks for.
+- **Required infrastructure:** a PII/entity scrubbing pass at submission time that runs **entirely on the researcher's device** (Presidio + spaCy, optionally a local Ollama model). No hosted LLM API is permitted at this level — routing researcher free-text through a hosted model would be a restricted international transfer of un-scrubbed content, and would put researcher free-text on exactly the path this level exists to keep it off. (Stated that way deliberately: Bristlenose is **not** pitched as local-first — the analysis stage is itself an outbound cloud LLM call by design. The on-device requirement here is specific to *telemetry submission*, and it is what makes this level askable at all.) Model hashes pinned; scrubber-regression tests running in CI against a `pii_horror_transcript.txt` fixture.
+
+  > **Status of that last requirement, 20 Sep 2026 — it is a requirement, not a description.** The fixture exists (`tests/fixtures/pii_horror_transcript.txt`) and the regression tests exist (`tests/test_pii_audit.py`), but they are `@pytest.mark.slow` and `pyproject.toml`'s `addopts = -m "not slow"` deselects them, so **they do not run in CI today**. The fast policy tests that *do* run (`tests/test_pii_score_bar.py`) assert the thresholds, not the corpus. Closing this gap is a precondition of Level 2, not evidence for it.
 - **Consent:** opt-in, per study, with a preview of what's actually sent after scrubbing. For the first N submissions in each study the researcher actively types/selects a confirmation rather than clicking a default-primary button — "previewed and confirmed" must not be clickthrough-able while the UX is bedding in.
 - **Utility:** richer reason corpus than Level 1's fixed list, captures judgements the taxonomy doesn't yet have categories for. Also feeds back into taxonomy evolution.
 - **Unlocks:** once the PII scrubbing pass has been prototyped and tested on real UXR transcripts and false-positive/false-negative rates are empirically understood; and once a published DPIA covers this level.

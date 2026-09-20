@@ -1,11 +1,64 @@
+---
+status: partial
+last-trued: 2026-09-20
+trued-against: HEAD@main 835cde98 on 2026-09-20 — s07_pii_removal.py's score_bar/resolve_spacy_model seam, PIIModelPack.swift as handoff-only, empty PII_PACK_URL in project.conf, group.app.bristlenose in Bristlenose.entitlements, presidio bundled in bristlenose-sidecar.spec
+---
+
+> **Truing status:** Partial — trued 2026-09-20. The engineering sections
+> (§"Stage 7 failure is fail-stop" onward: the fail-stop Cause, the first-run
+> fetch, the score_bar measurement, the path-delivered proof, the `doctor`
+> misdiagnosis, the sidebar/estimator wiring) are **verbatim-accurate against
+> code**. The **status banner, TL;DR, runbook and Reviews list had drifted** and
+> were corrected in place. The doc's central overclaim — that PII ships on all
+> three channels — is fixed at the top: **redaction is CLI-only today.**
+> Parked-era and superseded-era reasoning is preserved and now labelled as
+> history at each site. See changelog below.
+
+## Changelog
+
+- _2026-09-20_ — trued up: corrected the status banner (claimed three live
+  channels; one is live, two are code-complete and unreachable) and four TL;DR
+  bullets (acquirers that do not exist, a Privacy toggle that exists in no
+  state, 9/32 cited without the degenerate-fixture caveat the body already
+  carries, presidio "excluded" when it is bundled). Marked the runbook's
+  steps 1–2 superseded — the App Group shipped as `group.app.bristlenose` five
+  hours *before* the runbook forbidding that prefix was written. Flipped the
+  inverted phone claim ("six of eight survive" → one of eight, post-floor),
+  the dead `_SPACY_MODEL="sm"` vestigial claim, the "three of the four" prose
+  its own table contradicted, and the un-pinned pack URL described as pinned.
+  Struck the closed items in §Reviews and Open Decision 1, keeping the text
+  and naming what is still open (F6, the SHA-pin, the importer fail-loud).
+  Anchors: `s07_pii_removal.py:32,136,223,610-616`; `scripts/project.conf:117-118`;
+  `Bristlenose.entitlements:18`; `PIIModelPack.swift:11-12`;
+  `WelcomeHomeView.swift:73-78`; `bristlenose-sidecar.spec:248`;
+  `pipeline.py:350,1571,2482`; `server/importer.py:108-131`; commits
+  "the app group, and the entitlements split that keeps it off the .dmg",
+  "a phone number read aloud was not being redacted",
+  "one model name, in one place — doctor and the pipeline had disagreed",
+  "bundle presidio and spaCy; the weights still download".
+- _2026-09-13_ — body maintained continuously through the build-out (34 touches
+  since 1 Sep); no front-matter or changelog kept before this pass.
+
 # PII Redaction — exploration, decisions & forward plan
 
-> **Status: SHIPPING PRESIDIO ON ALL THREE CHANNELS. Engine choice CLOSED,
-> Mac delivery UN-PARKED — both 12 Sep 2026.**
-> Two things changed on the same day and this header claimed neither for half a
-> day afterwards. **The engine is Presidio** — "roll our own" is REJECTED, see
-> that section. **The Mac path is un-parked** — §2.5.2 was a blocker on shipping
-> *code* through Background Assets, and splitting code from data removes it.
+> **Status (20 Sep 2026): ONE channel live, two code-complete and not
+> reachable.** Engine choice CLOSED, Mac delivery UN-PARKED — both 12 Sep 2026.
+> **The engine is Presidio** — "roll our own" is REJECTED, see that section.
+> **The Mac path is un-parked** — §2.5.2 was a blocker on shipping *code*
+> through Background Assets, and splitting code from data removes it.
+>
+> **This header said "SHIPPING PRESIDIO ON ALL THREE CHANNELS" until 20 Sep,
+> and the body has never agreed with it.** Precisely, today: the **CLI** channel
+> is live and measured (`--redact-pii`, `spacy download`). The **Mac** channels
+> are built but unreachable — `PIIModelPack.swift` is the handoff half and says
+> so itself (*"it deliberately does not acquire anything"*), **no acquirer
+> exists** on either Mac channel, **nothing writes `piiEnabled`** so there is no
+> Privacy control on any Mac, and the pack is **not hosted**
+> (`PII_PACK_URL=""`, `scripts/project.conf:117`). Redaction is **CLI-only**.
+> Two of the three outward acts under §"What needs an outward act" remain.
+>
+> Everything below the next paragraph that is dated 26 Jul 2026 is **history,
+> not status** — including the PARKED verdict, which is reversed.
 >
 > The parked-era reasoning is preserved verbatim below because it is still
 > load-bearing: it is *why* the split is the right shape, and the §2.5.2
@@ -28,22 +81,32 @@
   is bundled everywhere; only the **425 MB model** is acquired on demand, and
   a model is data, which is what §2.5.2 turns on and what Background Assets is
   for.
-- **One seam, three acquirers.** Every consumer resolves through
-  `resolve_spacy_model()` — CLI does `spacy download`, the `.dmg` fetches plain
-  HTTPS from `bristlenose.app/models/`, TestFlight/MAS uses managed Background
-  Assets. Proven, not assumed: the path route was run with the package made
-  unimportable and scored identically.
-- **Mac PII is gated at macOS 26**, where the managed BA API lives. Below it the
-  toggle renders visible and disabled. The app's own floor stays 15.0.
+- **One seam, three acquirers — one of which exists.** Every consumer resolves
+  through `resolve_spacy_model()`, and the *seam* is real and proven: the path
+  route was run with the package made unimportable and scored identically.
+  **Only the CLI acquirer is built** (`spacy download`). The `.dmg` plain-HTTPS
+  fetch and the TestFlight/MAS managed-Background-Assets fetch are **designed,
+  not written** — no call site, no pinned URL, no pinned SHA
+  (`PIIModelPack.swift:11-12`; `scripts/project.conf:117-118`).
+- **Mac PII is gated at macOS 26**, where the managed BA API lives; the app's
+  own floor stays 15.0 (`check-deployment-floors.sh:39`). The gate is a
+  *decision*, not a shipped control: **there is no Privacy toggle on any Mac, in
+  any state.** Settings has six tabs and none is Privacy; `piiEnabled` is read
+  by `PIIModelPack` and written by nothing (`WelcomeHomeView.swift:73-78`).
 - **"Roll our own PII" is REJECTED** — the user's call: *"I'd rather deal with
   this as a packaging challenge than a start-again DIY problem."* The §2.5.2
   argument that motivated it dissolved once code and data were separated.
 - **Measured, not asserted** (planted-PII hour corpus, through `remove_pii`
-  itself): 45/52 targeted PII removed, 9/32 near-miss probes over-redacted —
-  every one a product name that is also a person's name, which is what the
-  post-beta per-project allow-list is for. Known gaps are listed with the
-  measurement, the realest being **spelled-out emails** ("jane dot smith at…"),
-  which no pattern can see and spoken interviews are full of.
+  itself): 45/52 targeted PII removed. The corpus's **9/32 over-redactions are
+  all PERSON** — product names that are also surnames, which is what the
+  post-beta per-project allow-list is for. **Do not read 9/32 as evidence the
+  0.40 pattern floor is safe:** all 32 negatives are digit-free words, so the
+  fixture cannot show a phone, NHS or card false positive at any threshold. The
+  evidence that can speak is 16 number-dense non-PII sentences, where the floor
+  adds exactly one detection — a genuine IP. Full working under §"Measured end
+  to end on the shipped path". Known gaps sit with the measurement, the realest
+  being **spelled-out emails** ("jane dot smith at…"), which no pattern can see
+  and spoken interviews are full of.
 - **Not a purchase driver.** Good researchers already clean up quotes for
   deliverables — it's taken as part of the job. Compliance departments like to
   pay for it; it is not a differentiator. That is why it stayed cheap: no heavy
@@ -73,8 +136,12 @@ The exploration walked from "add a toggle" to "reconsider the whole stack":
 1. **The failure/reporting apparatus mostly already works** for PII via the
    central `categorise_exception` + `RunFailedEvent` catch-all — only two
    `isinstance` lines were genuinely missing (F2/F3 → `MISSING_DEP`).
-2. **Mac delivery was the hard part**, not the toggle. Presidio is excluded from
-   the sidecar; delivering it is where the cost and blockers live.
+2. **Mac delivery was the hard part**, not the toggle — and delivering it is
+   still where the cost and blockers live. (The premise this line rested on is
+   gone: presidio and spaCy were **excluded** from the sidecar when it was
+   written and have been **bundled** since 12 Sep 2026 — only the weights are
+   acquired. `bristlenose-sidecar.spec:248`, commit "bundle presidio and spaCy;
+   the weights still download".)
 3. **App Store §2.5.2 kills the on-demand-download route** (below).
 4. **The sm-vs-lg test** (below) showed Presidio's *only* advantage from its
    heavy model lands on the exact cases an LLM handles trivially — which
@@ -119,9 +186,17 @@ whole NER stack to do NER badly.
 ## Evidence: sm vs lg (the test we ran)
 
 Ran the planted-PII horror fixture through Presidio with each model
-(`experiments/pii_sm_vs_lg.py`). Also confirmed **the code today actually runs
-`lg`** — `AnalyzerEngine()` uses Presidio's default; the `_SPACY_MODEL="sm"`
-constant is vestigial and never configures the analyzer.
+(`experiments/pii_sm_vs_lg.py`).
+
+> **Both halves of this paragraph's original claim are now false, and that is
+> the point of the fix.** It read: *"the code today actually runs `lg` —
+> `AnalyzerEngine()` uses Presidio's default; the `_SPACY_MODEL="sm"` constant
+> is vestigial and never configures the analyzer."* Since 12 Sep 2026
+> (*"one model name, in one place — doctor and the pipeline had disagreed"*)
+> the constant is `SPACY_MODEL = "en_core_web_lg"` and the analyzer is bound to
+> it **explicitly** through `NlpEngineProvider`, so fetched == used by
+> construction rather than by luck of a default
+> (`s07_pii_removal.py:32`, `:610-619`).
 
 | Set | `en_core_web_sm` | `en_core_web_lg` |
 |---|---|---|
@@ -152,7 +227,7 @@ both**, multilingually, with nothing to bundle.
 >
 > | measured gap | what it actually is | cost |
 > |---|---|---|
-> | phones 2/8, both models | `PhoneRecognizer.SCORE = 0.4`, lifted to 0.75 only by an adjacent context word. `__init__` takes `context=`. Widening the list took the sample from **1/4 to 3/4**, measured. | 0 MB |
+> | ~~phones 2/8, both models~~ **FIXED 12 Sep 2026 — now 7/8** | `PhoneRecognizer.SCORE = 0.4`, lifted to 0.75 only by an adjacent context word. Closed not by widening `context=` but by giving pattern-matched entities their own 0.40 bar — `score_bar()`, `s07_pii_removal.py:223`. See §"Measured end to end on the shipped path". | 0 MB |
 > | `Fedora`/`Bash`/`Kotlin` → `[NAME]`, both models | `analyze(allow_list=[...], allow_list_match="exact")`. Suppressed **8/8** product names while `Ada Okonkwo` and `Marcus Swift` stayed caught — exact matching is on the whole span, so an allow-listed token inside a full name does not suppress the name. | 0 MB |
 > | employee ID · postcode · DOB, 0/n | No recogniser exists for them. `PatternRecognizer` is Presidio's own registration point. | 0 MB |
 > | hardcoded `language="en"` | Presidio takes a per-language NLP engine. | model-sized |
@@ -229,8 +304,11 @@ Mac.
    what was added, when — for the same reason the redaction itself does.
 
 **What parking this means for beta, stated once.** The measured gaps ship as they
-are: six of eight phone numbers survive redaction, and technical vocabulary is
-over-redacted. The blast radius is small because PII is **off by default** and,
+are — **except the phone gap, which was not parked but fixed.** This line read
+*"six of eight phone numbers survive redaction"* until 20 Sep 2026; that was
+written before the 0.40 pattern floor landed on 12 Sep and inverted by it. One
+of eight now survives (7/8 removed). What does still ship as-is is the
+over-redaction of technical vocabulary. The blast radius is small because PII is **off by default** and,
 until the delivery question is settled, **CLI-only** — so this affects opt-in CLI
 users, not the default path. That is what makes parking it reasonable rather than
 risky, and it is also why the delivery question and this one are independent.
@@ -445,11 +523,18 @@ in, not one to route around.
 
 #### What needs an outward act (not buildable in this repo)
 
-1. **Register an App Group, Team-ID-prefixed** (`<TeamID>.app.bristlenose`). The
-   Team-ID prefix is the escape hatch: it needs **no provisioning profile**, which
-   is what makes Developer ID irrelevant to the question. Signing is `Manual` with
-   a named MAS profile, so the profile must be regenerated or the archive will not
-   sign — the same hazard as the standing `associated-domains` rule.
+1. ~~**Register an App Group, Team-ID-prefixed** (`<TeamID>.app.bristlenose`).~~
+   **DONE 12 Sep 2026 — and NOT in this shape.** What shipped is
+   **`group.app.bristlenose`**, the iOS-style `group.` prefix that the runbook
+   below still tells you to avoid: `Bristlenose.entitlements:18`, pinned at
+   `tests/test_entitlements_split.py:43,113`, commit *"the app group, and the
+   entitlements split that keeps it off the .dmg"*. The Team-ID-prefix
+   reasoning is preserved below because it is good reasoning; it is **not**
+   what was done, and its conclusion — that Developer ID is therefore
+   irrelevant — is contradicted by the `BristlenoseDeveloperID.entitlements`
+   split that the group turned out to require. Profile regeneration remains
+   real: signing is `Manual` with a named MAS profile, so the profile must be
+   regenerated or the archive will not sign.
 2. **A new extension target** in the Xcode project.
 3. **Hosting the pack** and pinning its SHA-256 in Swift (self-hosted origin, no
    Apple signing of the payload — see the correction above about library validation).
@@ -460,7 +545,18 @@ Concrete values for this project: team **`Z56GZVA2QB`**, app **`app.bristlenose`
 `CODE_SIGN_STYLE = Manual`, `PROVISIONING_PROFILE_SPECIFIER = Bristlenose Mac App
 Store`. Do these **in order** — 2 fails without 1, and 3 fails without both.
 
-**1 · Register the App Group — and use the Team-ID prefix.**
+> **Steps 1 and 2 were already done when this runbook was written, and step 1
+> shipped as the opposite identifier.** Commit *"the app group, and the
+> entitlements split that keeps it off the .dmg"* landed at 17:06 on 12 Sep;
+> this runbook was written at 22:30 the same day and did not know. The shipped
+> group is **`group.app.bristlenose`** (`Bristlenose.entitlements:18`). Read
+> steps 1–2 as a record of reasoning and of the portal's behaviour, **not as
+> instructions** — following them would register a second, unused identifier.
+> Step 3 (a `BADownloaderExtension` target) is genuinely outstanding: the
+> pbxproj holds two native targets, neither an `.appex`.
+
+**1 · Register the App Group — and use the Team-ID prefix.** *(As written
+12 Sep; superseded the same day — see the banner above.)*
 Developer portal → Certificates, Identifiers & Profiles → Identifiers → **App
 Groups** → new, identifier exactly `Z56GZVA2QB.app.bristlenose`.
 
@@ -486,8 +582,13 @@ select the group.
 > returning cleanly, which this codebase already learned once.
 
 **We do not already have this — but we have its neighbour, which de-risks it.**
-`Bristlenose.entitlements` holds exactly one key today, and the shipping
-Developer-ID `.dmg` carries it signed and notarised:
+*(Both halves out of date: the app group shipped later the same day, so
+`Bristlenose.entitlements` holds* **two** *keys —* `keychain-access-groups`
+*and* `com.apple.security.application-groups` *— and the `.dmg` is kept clear of
+the second by a dedicated entitlements file. The neighbour argument below is
+what made the group look safe to attempt, and is kept for that.)*
+The shipping Developer-ID `.dmg` carries `keychain-access-groups` signed and
+notarised:
 
 ```
 keychain-access-groups → $(AppIdentifierPrefix)app.bristlenose → Z56GZVA2QB.app.bristlenose
@@ -581,8 +682,10 @@ Once the pack downloads for real, this has to reach the build and deploy scripts
 their probes, and the docs that describe them. Surveyed 12 Sep 2026 — and the
 second list is the useful half.
 
-**Three of the four are done — 12 Sep 2026.** One remains, and it is the one
-that cannot be built until the pack is hosted.
+**All four are done — 12 Sep 2026.** This line said *"three of the four"* until
+20 Sep, which its own table below already contradicted: row 4 flipped to ✅ when
+the probe turned out to be buildable ahead of the pack, and the prose was not
+re-read. Nothing here is blocked on hosting.
 
 | where | what | state |
 |---|---|---|
@@ -813,8 +916,11 @@ own installer and its own model is not one, which is the same basis on which the
 `.dmg` has been served all along. Bandwidth is unmetered, so there is no bill to
 run up; the exposure is a discretionary call at a scale where upgrading is easy.
 
-**What is genuinely sticky, and the cheap insurance.** The URL is pinned in
-`scripts/project.conf` and in Swift, so it ships inside released versions —
+**What is genuinely sticky, and the cheap insurance.** The URL is *to be* pinned
+in `scripts/project.conf` and in Swift — as of 20 Sep 2026 it is pinned in
+neither (`PII_PACK_URL=""`, `PII_PACK_SHA256=""` at `scripts/project.conf:117-118`;
+no URL or SHA constant in `PIIModelPack.swift`). Once pinned it ships inside
+released versions, so —
 moving the bytes later does **not** migrate installed copies. So pin a *stable*
 `bristlenose.app` path that can later 302 elsewhere, rather than one naming
 where the bytes happen to live today. The SHA-256 pin makes a redirect safe by
@@ -1449,9 +1555,12 @@ UX for phases 3–4 is specced in `docs/mockups/mockup-privacy-settings.html` §
 
 ### Open decisions, named rather than assumed
 
-1. **A run that starts before the download finishes** — wait, or fail cleanly with
-   the existing `MISSING_DEP` row? Failing is nearly free once Phase 2 lands;
-   waiting is kinder and matches "the appliance copes". Decide before the Swift.
+1. ~~**A run that starts before the download finishes** — wait, or fail cleanly
+   with the existing `MISSING_DEP` row?~~ **CLOSED 12 Sep 2026 — fail cleanly.**
+   Decided by the Swift rather than before it: `BRISTLENOSE_PII_ENABLED` travels
+   even with no pack, so stage 7 abandons with `MISSING_DEP` instead of quietly
+   not redacting. See Phase 4a above, which settles this and says so; this entry
+   went on asking the question until 20 Sep.
 2. ~~**Engine choice is still open.**~~ **CLOSED 12 Sep 2026 — Presidio.** The
    user's call: *"I'd rather deal with this as a packaging challenge than a
    start-again DIY problem."* See §"Roll our own PII — REJECTED". The original
@@ -1474,16 +1583,26 @@ Four agents reviewed the (parked) Presidio-BA spec:
 - **Parsimony:** land-as-specified; Phase 0 is the ship-today slice; fixed a
   `find_whisper_model()` reference that doesn't exist (real precedent:
   `BRISTLENOSE_WHISPER_MODEL_DIR` at [s05_transcribe.py:411](../bristlenose/stages/s05_transcribe.py)).
-- **Correctness:** mechanism verified; F5's `str(exc)` can reach the hidden
+- **Correctness:** mechanism verified; ~~F5's `str(exc)` can reach the hidden
   events log (audit what Presidio raises, else wrap stage 7 for a structured
-  `Cause` per A4 invariant 3); non-`OSError` spaCy load = an unlisted F6; stale
-  `transcripts-cooked/` on toggle-off.
+  `Cause` per A4 invariant 3)~~ **CLOSED 12 Sep** — `pipeline.py:1571`
+  `_build_cause(exc, stage="pii_removal")`, commit *"stage 7 abandons on any
+  failure, with a cause that carries no transcript"*; **non-`OSError` spaCy load
+  = an unlisted F6 — STILL OPEN**, `s07_pii_removal.py:136` catches `OSError`
+  alone; ~~stale `transcripts-cooked/` on toggle-off~~ **CLOSED 13 Sep** —
+  `_discard_stale_redaction`, `pipeline.py:350`, commit *"turning redaction off
+  clears the redacted copy, so three readers stop lying"*.
 - **Security:** *safe to ship* with fixes. Flagged un-redacted `transcripts-raw/`
   in the output root — **reframed by D4** (not a leak in this threat model; raw
   stays). D6 caveat keyed on the wrong variable (see D6). Supply-chain: enforce
-  user-only ownership before extending `sys.path`; SHA-pin the CLI model wheel
-  like FFmpeg. Importer should **fail loud** when redaction was requested but no
-  cooked transcripts exist (the real integrity question).
+  user-only ownership before extending `sys.path` — **moot**, the `sys.path`
+  extension was retired with the wheel-archive delivery (Appendix A); **SHA-pin
+  the CLI model wheel like FFmpeg — still open**. Importer should **fail loud**
+  when redaction was requested but no cooked transcripts exist (the real
+  integrity question) — **still open**: `_find_transcripts_dir`
+  (`server/importer.py:108-131`) falls through its four candidates silently.
+  The `analyze` command has its own fail-stop guard (`pipeline.py:2482`), which
+  is a different path and does not close this.
 - **App Store:** the §2.5.2 blocker above; bundle-code-not-download is the clean
   path; reserve BA for data-only model weights.
 

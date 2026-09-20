@@ -27,6 +27,31 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+> ## ⚠️ The log stopped after one entry — measured 20 Sep 2026
+>
+> The header above says *one entry per release*. There is **one entry, for
+> 0.27.0**. Three releases have shipped since — **0.28.0, 0.29.0 and 0.29.1, all
+> on 31 Aug 2026** — and none is logged; this file has not been touched since
+> 23 Aug. Applying the header's own judgement rule ("run for the next few
+> releases and then be judged on whether it earned its keep"): **the window
+> passed unjudged.** One entry written, three releases unlogged, and none of the
+> three questions this log exists to answer is answerable from a single run.
+>
+> **That silence had a cost in a sibling doc, and it is the reason this note is
+> here rather than in a backlog.** `docs/release-premortem.md` closed with *"the
+> next release log entry should either move 12 to ✅ or say why it stayed"* —
+> making this file the only follow-up mechanism for its one open incident. The
+> gate for incident 12 shipped; no entry recorded it; and the premortem carried
+> "it is not built" against a built gate for four weeks, in three places, while
+> its own Score block said otherwise.
+>
+> Nothing here is retro-written: entries are written at the time or not at all,
+> and inventing three is worse than lacking them. The decision owed is whether
+> the log resumes at the next release or is retired deliberately — either is
+> honest; drifting is what is not.
+
+---
+
 ## 0.27.0 — 22 Aug 2026 · Tier 1
 
 **Channels:** TestFlight · `.dmg` · PyPI · GitHub Release · Homebrew · Snap edge

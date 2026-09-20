@@ -11,6 +11,29 @@ score one (Mode B `/cassandra --score`), or re-examine the holds below
 
 **Tally:** 5 prophecies scored — 5 hits, 0 misses, 0 false-alarms, **2 mis-specified holds** (Entry 5's snapcore rows: the reading was right, the release-predicate named a dead fork and could never fire — the case that put a can-it-fire pre-step into `/cassandra --watch`).
 
+> **The tally's denominator is not reconstructible from the entries below —
+> measured 20 Sep 2026.** Of five entries, exactly **one** carries a closed
+> score block (Entry 5, `SCORE — 5th prophecy scored`). Entries 1 and 2 are
+> `OUTCOME — partial (open)` / `SCORE — partial`; Entry 6 is `OUTCOME — open` /
+> `SCORE — pending`; and **Entry 7 — the largest, the 3 Sep quarterly — has no
+> `OUTCOME` or `SCORE` block at all**, where the schema requires an
+> `OUTCOME: open` stub at write time. "5 prophecies scored" counts *individual
+> prophecies across entries*, which is defensible, but it is not what a reader
+> checks it against, and nothing in the file says which reading is meant.
+>
+> **Entry 6's outcome is already known and recorded 900 lines above it:** the
+> Held register carries `anthropic` as **graduated 2026-09-05**, with 1.4.0
+> installed, 4399 tests passed, and three models PASS via
+> `check-providers-live.py`. Only the score block is unclosed.
+>
+> **And the ordinals are 1, 2, 5, 6, 7.** Entries 3 and 4 never existed —
+> `git log -S'## Entry 3'` returns nothing — so this is not a renumber, which
+> the rule above forbids, but two unexplained gaps in a sequence whose header
+> promises contiguity. Recorded rather than closed: this file is append-only in
+> practice (verified across 24 commits — every deletion is a placeholder being
+> filled, a tally line, or a Held-register row being graduated per the schema),
+> and back-filling an ordinal would be the one edit the rule actually prohibits.
+
 ## Held register
 
 The standing watch list. Each row is a **`(reason, release-predicate)`**

@@ -8,6 +8,7 @@
 """
 import collections, glob, html, json, pathlib, sys, yaml
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from ribbon import ribbon, CSS as RIBBON_CSS
 from label_rule import sentiment_label, VALENCE as VAL
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -197,7 +198,7 @@ page=f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
   margin:0 0 var(--bn-space-sm) var(--bn-space-lg); }}
 .mk-t1 .signal-card-quotes, .mk-t2 .signal-card-quotes {{ clear:both; }}
 @media (max-width:1100px) {{ .mk-three {{ grid-template-columns:1fr; }} }}
-</style></head><body><div class="mk-page">
+</style><style>{RIBBON_CSS}</style></head><body><div class="mk-page">{ribbon("stages")}
 <header class="mk-head"><h1>Signal card &mdash; what the build buys</h1>
 <p>The same real location rendered three ways. <b>SHIPPED</b> is what HEAD renders today,
 verified against the code. <b>TIER 1</b> is <code>design-signal-card.md</code> &sect;9 tier 1 &mdash;

@@ -9,6 +9,9 @@ from trial-runs/. CSS is baked from bristlenose/theme by harvest-time sibling
 each block is an option with a label, for choosing between.
 """
 import html, json, pathlib
+import sys as _sys, pathlib as _pl
+_sys.path.insert(0, str(_pl.Path(__file__).resolve().parent))
+from ribbon import ribbon, CSS as RIBBON_CSS
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 HERE = pathlib.Path(__file__).resolve().parent
@@ -445,7 +448,7 @@ page = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <title>Signal card options</title>
 <style>{(HERE / "theme.css").read_text()}</style>
 <style>{(HERE / "page.css").read_text()}</style>
-</head><body><div class="mk-page">
+<style>{RIBBON_CSS}</style></head><body><div class="mk-page">{ribbon("options")}
 <header class="mk-head"><h1>Signal card &mdash; options</h1>
 <p>Every quote, elaboration, signal name, tag and count on this page is real, harvested from
 <code>trial-runs/</code>. CSS is baked from <code>bristlenose/theme</code>; only the mockup

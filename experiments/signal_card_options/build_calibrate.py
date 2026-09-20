@@ -8,6 +8,9 @@ end. The chip is blank on purpose — judging should come from the evidence,
 not from the arithmetic, so the working sits BELOW the card.
 """
 import collections, html, json, pathlib
+import sys as _sys, pathlib as _pl
+_sys.path.insert(0, str(_pl.Path(__file__).resolve().parent))
+from ribbon import ribbon, CSS as RIBBON_CSS
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 HERE = pathlib.Path(__file__).resolve().parent
@@ -130,7 +133,7 @@ page = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
   margin-right:.5rem; font-family: var(--bn-font-mono); }}
 .cal-nav a {{ margin-right:.45rem; font-family: var(--bn-font-mono);
   font-size: var(--bn-text-label); }}
-</style></head><body><div class="mk-page">
+</style><style>{RIBBON_CSS}</style></head><body><div class="mk-page">{ribbon("calibration")}
 <header class="mk-head"><h1>Sentiment label &mdash; calibration</h1>
 <p>{len(picked)} real cards, sampled across the weighted-dominance range, dense where the
 threshold decision actually lives. <b>The chip is blank on purpose</b> &mdash; judge from the

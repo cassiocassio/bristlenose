@@ -13,6 +13,9 @@ Decisions carried: 1=C chip · 2=V1 + H-c heading · 3=F1 fused · 4=Q2 cap 4
 ("Mixed sentiments") · chip flush right at every level.
 """
 import collections, glob, html, json, pathlib, yaml
+import sys as _sys, pathlib as _pl
+_sys.path.insert(0, str(_pl.Path(__file__).resolve().parent))
+from ribbon import ribbon, CSS as RIBBON_CSS
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 HERE = pathlib.Path(__file__).resolve().parent
@@ -279,7 +282,7 @@ nav = "".join(f'<a href="#s{i}">{i}</a>' for i in range(1, 6))
 page = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Signal card — design A</title>
 <style>{(HERE/'theme.css').read_text()}</style><style>{(HERE/'page.css').read_text()}</style>
-<style>{(HERE/'v3.css').read_text()}</style></head><body><div class="mk-page">
+<style>{(HERE/'v3.css').read_text()}</style><style>{RIBBON_CSS}</style></head><body><div class="mk-page">{ribbon("design-a")}
 <header class="mk-head"><h1>Signal card &mdash; design A</h1>
 <p>A true fused stack: whole cards, each a complete signal, joined by a seam that runs edge to
 edge. Which cards survive is the marginal-value rule. Real data throughout; junk codebooks from

@@ -7,6 +7,9 @@ Decisions carried in: 1=C, 2=V1, 3=F1, 4=Q2, 5=W1, 6=earned-words,
 Real data throughout; CSS baked from bristlenose/theme.
 """
 import collections, html, json, pathlib
+import sys as _sys, pathlib as _pl
+_sys.path.insert(0, str(_pl.Path(__file__).resolve().parent))
+from ribbon import ribbon, CSS as RIBBON_CSS
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 HERE = pathlib.Path(__file__).resolve().parent
@@ -308,7 +311,7 @@ nav = "".join(f'<a href="#s{i}">{i}</a>' for i in range(1, 8))
 page = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Signal card v2</title>
 <style>{(HERE/'theme.css').read_text()}</style><style>{(HERE/'page.css').read_text()}</style>
-<style>{(HERE/'v2.css').read_text()}</style></head><body><div class="mk-page">
+<style>{(HERE/'v2.css').read_text()}</style><style>{RIBBON_CSS}</style></head><body><div class="mk-page">{ribbon("v2")}
 <header class="mk-head"><h1>Signal card &mdash; v2, decisions applied</h1>
 <p><b>Carried in:</b> 1=C chip &middot; 2=V1 no eyebrow &middot; 3=F1 fused &middot;
 4=Q2 capped at {CAP} &middot; 5=W1 floated hero &middot; 6=earned-words headline &middot;

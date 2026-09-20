@@ -8,6 +8,7 @@ go through en/enums.json, so they read `Frustration`, not the raw value.
 """
 import collections, glob, html, json, pathlib, sys, yaml
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from ribbon import ribbon, CSS as RIBBON_CSS
 from label_rule import sentiment_label, VALENCE as VAL, MIN_WEIGHT
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -329,7 +330,7 @@ page=f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 .mk-legacy strong {{ color:var(--bn-lead-colour); font-weight:var(--bn-lead-weight); }}
 blockquote.mk-dissent {{ box-shadow:inset 3px 0 0 var(--bn-colour-accent); padding-left:var(--bn-space-sm); }}
 @media (max-width:1180px) {{ .mk-pair {{ grid-template-columns:1fr; }} }}
-</style></head><body><div class="mk-page">
+</style><style>{RIBBON_CSS}</style></head><body><div class="mk-page">{ribbon("rules")}
 <header class="mk-head"><h1>Signal card &mdash; the rules, firing</h1>
 <p>Every rule stated formally, a real card where it fires, and the counterfactual beside it.
 Frequencies are over the corpus. Chip labels go through <code>en/enums.json</code>, so they read

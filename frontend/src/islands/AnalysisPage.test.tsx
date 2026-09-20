@@ -1090,29 +1090,51 @@ describe("AnalysisPage", () => {
 });
 
 describe("the headline while a finding is still being written", () => {
-  /** The elaboration fetch resolves only when you call `release()`.
+  /** Drive the SSE stream by hand.
    *
-   *  The suite's normal helper resolves both fetches immediately, so the
-   *  pending state existed in production and in no test — which is how it
-   *  shipped as a motionless grey block that a screenshot read as a broken
-   *  heading. It is not a brief state either: `_elaborate_top_signals`
-   *  generates inline in that request, and on a cold cache every card needs
-   *  an LLM call.
+   *  The cards fetch answers at once; the elaboration stream stays open until
+   *  `push`/`close` are called. Before streaming, the suite's helper resolved
+   *  both fetches immediately, so the pending state existed in production and
+   *  in no test — which is how it shipped as a motionless grey block.
    */
-  function mockElaborationHangs(data: CodebookAnalysisListResponse) {
-    let release!: (d: CodebookAnalysisListResponse) => void;
-    const pending = new Promise<CodebookAnalysisListResponse>((r) => { release = r; });
+  function mockStream(data: CodebookAnalysisListResponse) {
+    const queue: string[] = [];
+    let notify: (() => void) | null = null;
+    let ended = false;
+
+    const reader = {
+      read: async (): Promise<{ done: boolean; value?: Uint8Array }> => {
+        for (;;) {
+          if (queue.length) {
+            return { done: false, value: new TextEncoder().encode(queue.shift()!) };
+          }
+          if (ended) return { done: true };
+          await new Promise<void>((r) => { notify = r; });
+        }
+      },
+    };
+
     fetchMock.mockImplementation((url: string) =>
-      String(url).includes("elaborate=true")
-        ? pending.then((d) => ({ ok: true, json: () => Promise.resolve(d) }))
+      String(url).includes("/analysis/elaborations")
+        ? Promise.resolve({ ok: true, body: { getReader: () => reader } })
         : Promise.resolve({ ok: true, json: () => Promise.resolve(data) }),
     );
-    return { release: () => release(data) };
+
+    const wake = () => { const n = notify; notify = null; n?.(); };
+    return {
+      push: (frame: string) => { queue.push(frame); wake(); },
+      close: () => { ended = true; wake(); },
+    };
   }
 
+  const frame = (key: string, name: string) =>
+    `event: elaboration\ndata: ${JSON.stringify({
+      key, signal_name: name, pattern: "gap", elaboration: "Because. || And so.",
+    })}\n\n`;
+
   it("draws a placeholder, and says it is busy, while the finding is coming", async () => {
-    mockElaborationHangs(mockCbData);
-    const { container } = render(<AnalysisPage />);
+    mockStream(mockCbData);
+    const { container } = render(<AnalysisPage projectId="1" />);
 
     await waitFor(() => expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0));
 
@@ -1120,15 +1142,31 @@ describe("the headline while a finding is still being written", () => {
     expect(screen.getAllByTestId("bn-signal-card")[0]).toHaveAttribute("aria-busy", "true");
   });
 
-  it("removes the placeholder once the answer is in, even when the answer is nothing", async () => {
-    /** The branch that matters: a card the LLM had no finding for. It must end
-     *  with NO headline — not a permanent placeholder, and not its location,
-     *  which is the heading directly above it. */
-    const { release } = mockElaborationHangs(mockCbData);
-    const { container } = render(<AnalysisPage />);
+  it("a card takes its headline the moment ITS finding lands, not when the stream ends", async () => {
+    /** The whole point of streaming. If this passes only after `close()`, the
+     *  events are being buffered and nothing has been gained. */
+    const stream = mockStream(mockCbData);
+    render(<AnalysisPage projectId="1" />);
     await waitFor(() => expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0));
 
-    release();
+    stream.push(frame("section|Checkout|Pain points", "Checkout stalls on payment"));
+
+    await waitFor(() =>
+      expect(screen.getByText("Checkout stalls on payment")).toBeInTheDocument(),
+    );
+    // Still streaming — other cards must still be waiting, not resolved early.
+    expect(document.querySelector(".signal-card-location-pending")).not.toBeNull();
+  });
+
+  it("retires every placeholder when the stream ends, even for cards it never named", async () => {
+    /** A card the model declined to name sends no event. Without the
+     *  terminator its placeholder would sit there for ever — which is the
+     *  defect the streaming exists to end, not to reintroduce. */
+    const stream = mockStream(mockCbData);
+    const { container } = render(<AnalysisPage projectId="1" />);
+    await waitFor(() => expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0));
+
+    stream.close();
 
     await waitFor(() =>
       expect(container.querySelector(".signal-card-location-pending")).toBeNull(),

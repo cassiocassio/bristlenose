@@ -469,6 +469,76 @@ export function getCodebookAnalysis(
   return apiGet<CodebookAnalysisListResponse>(`/analysis/codebooks${qs}`);
 }
 
+export interface StreamedElaboration {
+  key: string;
+  signal_name: string;
+  pattern: string;
+  elaboration: string;
+}
+
+/**
+ * Findings, read as the server writes them.
+ *
+ * **Deliberately `fetch` and not `EventSource`.** Every call here carries a
+ * bearer token and `EventSource` cannot set request headers — there is no
+ * option, only a longer route to discovering it. So the frames are parsed
+ * here: `event: <name>\ndata: <json>\n\n`, split on the blank line.
+ *
+ * Resolves when the stream ends. `onItem` fires per finding; the caller stops
+ * showing placeholders when this resolves, NOT when the last item arrives —
+ * a card the model declined to name sends nothing, and without a terminator
+ * its placeholder would sit there for ever, which is the defect the streaming
+ * exists to end.
+ *
+ * Export mode resolves immediately without a request: an exported report has
+ * no server, and its findings are already in the embedded payload.
+ */
+export async function streamElaborations(
+  onItem: (e: StreamedElaboration) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  if (isExportMode()) return;
+
+  const resp = await fetch(`${apiBase()}/analysis/elaborations`, {
+    headers: authHeaders({ Accept: "text/event-stream" }),
+    signal,
+  });
+  if (!resp.ok || !resp.body) throw await httpError("GET", "/analysis/elaborations", resp);
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+
+    let cut: number;
+    // A frame is only complete at the blank line. Reading a partial one and
+    // JSON.parsing it is the classic streaming bug: it works on every payload
+    // small enough to arrive in one chunk, which is every payload in a test.
+    while ((cut = buf.indexOf("\n\n")) !== -1) {
+      const frame = buf.slice(0, cut);
+      buf = buf.slice(cut + 2);
+
+      let name = "message";
+      let data = "";
+      for (const line of frame.split("\n")) {
+        if (line.startsWith("event:")) name = line.slice(6).trim();
+        else if (line.startsWith("data:")) data += line.slice(5).trim();
+      }
+      if (name === "elaboration" && data) {
+        try {
+          onItem(JSON.parse(data) as StreamedElaboration);
+        } catch {
+          // One malformed frame must not abandon the rest of the stream.
+        }
+      }
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Clip export
 // ---------------------------------------------------------------------------

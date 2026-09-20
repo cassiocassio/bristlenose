@@ -72,6 +72,12 @@ EMBED_PATH_TEMPLATES: frozenset[str] = frozenset(
 SERVER_ONLY_PATH_TEMPLATES: frozenset[str] = frozenset(
     {
         "/projects/{project_id}/analysis/tags",  # no SPA callers; server-compute
+        # Progressive delivery of findings while the lens is open. An exported
+        # report has no server to stream from, and does not need one: the
+        # findings this endpoint writes are already baked into the embedded
+        # /analysis/codebooks payload by the time an export is taken. The SPA
+        # skips opening it under isExportMode().
+        "/projects/{project_id}/analysis/elaborations",
         "/projects/{project_id}/autocode/{framework_id}/proposals",
         "/projects/{project_id}/autocode/{framework_id}/status",
         "/projects/{project_id}/codebook/remove-framework/{framework_id}/impact",

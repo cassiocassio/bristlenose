@@ -28,15 +28,22 @@ Tag sources and weighting:
 
 from __future__ import annotations
 
+import logging
 from collections import defaultdict
+from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from bristlenose.analysis.generic_matrix import QuoteContribution, build_matrix_from_contributions
 from bristlenose.analysis.generic_signals import QuoteRecord, detect_signals_generic
 from bristlenose.analysis.metrics import classify_flag
+
+if TYPE_CHECKING:
+    from bristlenose.server.elaboration import ElaborationResult
 from bristlenose.analysis.sentiment_label import sentiment_label
 from bristlenose.server.models import (
     UNCATEGORISED_GROUP_NAME,
@@ -904,6 +911,78 @@ def get_tag_analysis(
         db.close()
 
 
+@router.get("/projects/{project_id}/analysis/elaborations")
+async def stream_elaborations(
+    project_id: int,
+    request: Request,
+    top_n: int = Query(default=12, ge=1, le=100),
+) -> StreamingResponse:
+    """Findings, sent as each one is written, instead of all at the end.
+
+    The lens draws its cards from `/analysis/codebooks` immediately and then
+    opens this, so a headline appears on a card that is already on screen
+    rather than the whole page waiting behind a skeleton. On a warm cache every
+    event arrives at once and the reader sees nothing happen, which is correct.
+
+    **The client must read this with `fetch`, not `EventSource`.** Every API
+    call here carries a bearer token and `EventSource` cannot set headers —
+    which is the kind of thing that is discovered after the endpoint is built,
+    so it is recorded before it.
+
+    Deliberately NOT embedded in the export: an exported report is a file with
+    no server, and its findings are already written into the payload. Listed in
+    `SERVER_ONLY_PATH_TEMPLATES`; `tests/test_serve_export_coverage.py` fails
+    the build if a new project GET is classified as neither.
+    """
+    import json as _json
+
+    async def _events() -> AsyncIterator[str]:
+        db = _get_db(request)
+        try:
+            base = await get_codebook_analysis(
+                project_id, request, top_n=top_n, elaborate=False,
+            )
+            if not base.codebooks:
+                yield "event: done\ndata: {}\n\n"
+                return
+
+            sent = 0
+            async for key, elab in _elaborate_signals(base.codebooks, db, project_id):
+                sent += 1
+                payload = _json.dumps({
+                    "key": key,
+                    "signal_name": elab.signal_name,
+                    "pattern": elab.pattern,
+                    "elaboration": elab.elaboration,
+                })
+                yield f"event: elaboration\ndata: {payload}\n\n"
+
+            # `done` is not a courtesy. A card with no finding is
+            # indistinguishable from one whose finding has not arrived yet, so
+            # without a terminator the reader keeps a placeholder for ever on
+            # every card the model declined to name — which is exactly the
+            # motionless-grey-bar defect this endpoint exists to end.
+            yield f"event: done\ndata: {_json.dumps({'count': sent})}\n\n"
+        except Exception:  # noqa: BLE001 - the stream must terminate, always
+            logging.getLogger(__name__).exception("elaboration stream failed")
+            # Same reasoning as `done`: a client left hanging shows placeholders
+            # for ever. It is told the stream ended badly and stops waiting.
+            yield "event: error\ndata: {}\n\n"
+        finally:
+            db.close()
+
+    return StreamingResponse(
+        _events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            # nginx and friends buffer a stream into one response, which turns
+            # progressive delivery back into the wait it replaced.
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 @router.get(
     "/projects/{project_id}/analysis/codebooks",
     response_model=CodebookAnalysisListResponse,
@@ -979,7 +1058,10 @@ async def get_codebook_analysis(
 
         # Generate elaborations for top N framework signals
         if elaborate and codebooks:
-            await _elaborate_top_signals(codebooks, db, project_id)
+            # Drain the generator: this endpoint answers once, with
+            # everything. The streaming sibling forwards the same yields.
+            async for _key, _elab in _elaborate_signals(codebooks, db, project_id):
+                pass
 
         return CodebookAnalysisListResponse(
             codebooks=codebooks,
@@ -1087,15 +1169,30 @@ def _empty_tag_response() -> TagAnalysisResponse:
     )
 
 
-async def _elaborate_top_signals(
+#: How many cards one LLM call writes findings for. GUESS — no measurement
+#: sets this yet. Smaller lands the first headline sooner and loses less to a
+#: refusal; larger repeats the prompt preamble less often. Six is chosen so a
+#: typical location's worth of cards arrives together.
+ELABORATION_CHUNK = 6
+
+
+async def _elaborate_signals(
     codebooks: list[CodebookAnalysisOut],
     db: Session,
     project_id: int,
-) -> None:
-    """Generate elaborations for every framework signal across codebooks.
+    chunk_size: int = ELABORATION_CHUNK,
+) -> AsyncIterator[tuple[str, ElaborationResult]]:
+    """Write findings for every framework signal, yielding each as it lands.
+
+    One code path, two consumers: the blocking endpoint drains it, and the
+    streaming one forwards it. They must not diverge — the whole reason the
+    skeleton shipped motionless for a day is that the pending state existed on
+    a path nothing exercised.
 
     Modifies ``TagSignal`` objects in place — sets ``signal_name``,
-    ``pattern``, and ``elaboration`` fields.
+    ``pattern``, and ``elaboration`` fields — AND yields ``(signal_key,
+    result)`` so a caller that has already sent those cards to the client can
+    send the finding after them.
 
     **It used to be the top ten, pooled project-wide.** A card below that line
     printed its *location* as its headline, which differentiates nothing and is
@@ -1179,20 +1276,37 @@ async def _elaborate_top_signals(
         budget -= cost
         top_signals.append((sig, cb_id))
 
-    # Group by codebook_id
+    # Group by codebook_id, then walk each codebook in CHUNKS.
+    #
+    # It was one call per codebook. That is the cheapest way to get every
+    # finding and the worst way to get the FIRST one: the reader waited on the
+    # whole set, behind a skeleton, for the length of a batched serve-time LLM
+    # call — `serve_autocode`, the closest measured analogue, runs a median
+    # 25.8s and a max of 54.3s. Chunking trades a little prompt overhead for a
+    # headline that lands in a fraction of that, and it bounds the blast radius
+    # of a refusal to one chunk instead of a codebook.
+    #
+    # Cards are independent, so this costs nothing in quality: the prompt's
+    # only cross-cutting instruction ("across all evidence") is about the
+    # quotes WITHIN a card, and the schema is "one elaboration per input
+    # signal, in order". Verified before chunking, because if the model needed
+    # to see the whole set to differentiate names, this would quietly degrade
+    # them.
     by_codebook: dict[str, list[TagSignal]] = {}
     for sig, cb_id in top_signals:
         by_codebook.setdefault(cb_id, []).append(sig)
 
-    # Generate elaborations per codebook
     for cb_id, sigs in by_codebook.items():
-        elaborations = await generate_elaborations(
-            sigs, cb_id, settings, db, project_id,
-        )
-        for sig in sigs:
-            key = compute_signal_key(sig.source_type, sig.location, sig.group_name)
-            elab = elaborations.get(key)
-            if elab:
-                sig.signal_name = elab.signal_name
-                sig.pattern = elab.pattern
-                sig.elaboration = elab.elaboration
+        for i in range(0, len(sigs), chunk_size):
+            chunk = sigs[i:i + chunk_size]
+            elaborations = await generate_elaborations(
+                chunk, cb_id, settings, db, project_id,
+            )
+            for sig in chunk:
+                key = compute_signal_key(sig.source_type, sig.location, sig.group_name)
+                elab = elaborations.get(key)
+                if elab:
+                    sig.signal_name = elab.signal_name
+                    sig.pattern = elab.pattern
+                    sig.elaboration = elab.elaboration
+                    yield key, elab

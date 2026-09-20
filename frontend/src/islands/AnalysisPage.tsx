@@ -27,7 +27,7 @@ import {
   setFocusedSignalKey,
 } from "../contexts/AnalysisSignalStore";
 import { useIsDarkAppearance } from "../hooks/useIsDarkAppearance";
-import { apiGet, getCodebookAnalysis } from "../utils/api";
+import { apiGet, getCodebookAnalysis, streamElaborations } from "../utils/api";
 import {
   dedupeSignals,
   groupSignalsByLocation,
@@ -1076,14 +1076,45 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
       .catch((err: Error) => { setTagError(err.message); setTagLoaded(true); });
   }, [projectId]);
 
-  // Progressive enhancement: fetch with elaboration (may take 3-5s first time)
+  // Findings stream in, card by card, over the cards already on screen.
+  //
+  // It was a second whole-payload fetch with ?elaborate=true, which generated
+  // every card's finding inline before answering. That is the cheapest way to
+  // get them all and the worst way to get the first: the reader sat behind a
+  // placeholder for the length of a batched serve-time LLM call — the closest
+  // measured analogue in the telemetry runs a median 25.8s.
+  //
+  // `elaborationsIn` now means "the stream ended", not "the fetch settled". It
+  // is still what retires the placeholder, and it still has to exist: a card
+  // the model declined to name sends no event, so without a terminator its
+  // placeholder would sit there for ever.
   const [elaborationsIn, setElaborationsIn] = useState(false);
   useEffect(() => {
     if (!tagLoaded) return;
-    getCodebookAnalysis(true)
-      .then((data) => { setCbData(data); })
-      .catch(() => {})          // elaboration failure is non-fatal
-      .finally(() => setElaborationsIn(true));
+    const ac = new AbortController();
+    streamElaborations((e) => {
+      setCbData((prev) => {
+        if (!prev) return prev;
+        // Patch in place by key, which is byte-identical to the server's
+        // compute_signal_key. New objects for the codebook and signal that
+        // changed only — React needs a new reference to repaint, and cloning
+        // the whole payload per event would rebuild every card N times.
+        let hit = false;
+        const codebooks = prev.codebooks.map((cb) => {
+          const signals = cb.signals.map((sig) => {
+            if (`${sig.source_type}|${sig.location}|${sig.group_name}` !== e.key) return sig;
+            hit = true;
+            return { ...sig, signal_name: e.signal_name, pattern: e.pattern,
+                     elaboration: e.elaboration };
+          });
+          return hit ? { ...cb, signals } : cb;
+        });
+        return hit ? { ...prev, codebooks } : prev;
+      });
+    }, ac.signal)
+      .catch(() => {})          // a failed stream is non-fatal: cards stay nameless
+      .finally(() => { if (!ac.signal.aborted) setElaborationsIn(true); });
+    return () => ac.abort();
   }, [projectId, tagLoaded]);
 
   const hasSentiment = sentimentData !== null && sentimentData.signals.length > 0;

@@ -125,6 +125,40 @@ def reset_run_context(tokens: tuple[object, object]) -> None:
 
 
 @contextmanager
+def serve_run_context(project_dir: Path | None, run_id: str) -> Iterator[None]:
+    """Bind the run context for a SERVE-time LLM call, then restore it.
+
+    Serve mode has no pipeline run to inherit from, so anything that calls an
+    LLM from a request has to bind its own — and if it does not, `record_call`
+    finds no `_run_dir`, logs at DEBUG and returns. **A whole surface's spend
+    then goes unrecorded with no error anywhere**, which is how signal
+    elaboration ran for a week logging nothing: it bound `stage(...)`, which is
+    the visible half, and never the run context, which is the half that decides
+    whether the row has anywhere to go.
+
+    `project_dir` may be the project root or the output dir; both are accepted
+    because callers have one or the other and guessing wrong writes the file
+    somewhere nobody looks. A `None` is not an error — it means the app was not
+    started with a project — and yields without binding, which restores the old
+    silent-skip for that case alone.
+
+    NB `server/autocode.py` still inlines this; it predates the helper and works.
+    A third serve-time LLM caller should use this rather than a third copy.
+    """
+    if project_dir is None:
+        yield
+        return
+    output_dir = project_dir / "bristlenose-output"
+    if not output_dir.is_dir():
+        output_dir = project_dir
+    tokens = set_run_context(run_id, output_dir / ".bristlenose")
+    try:
+        yield
+    finally:
+        reset_run_context(tokens)
+
+
+@contextmanager
 def stage(name: str) -> Iterator[None]:
     """Bind ``_stage_id`` for the duration of the block."""
     token = _stage_id.set(name)

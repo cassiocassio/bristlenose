@@ -78,7 +78,7 @@ def fake_llm(monkeypatch):
 
     calls: list[int] = []
 
-    async def _gen(signals, codebook_id, settings, db, project_id):
+    async def _gen(signals, codebook_id, settings, db, project_id, project_dir=None):
         calls.append(len(signals))
         return {
             compute_signal_key(s.source_type, s.location, s.group_name):
@@ -128,7 +128,7 @@ class TestItArrivesInPieces:
 
         seen: list[int] = []
 
-        async def _gen(signals, codebook_id, settings, db, project_id):
+        async def _gen(signals, codebook_id, settings, db, project_id, project_dir=None):
             seen.append(len(signals))
             if len(seen) == 1:
                 return {}          # what generate_elaborations returns on failure

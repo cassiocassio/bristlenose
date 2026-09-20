@@ -22,6 +22,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from sqlalchemy.orm import Session as SASession
 
     from bristlenose.config import BristlenoseSettings
@@ -64,6 +66,13 @@ class ElaborationResult:
 # ---------------------------------------------------------------------------
 # Key / hash helpers
 # ---------------------------------------------------------------------------
+
+
+def _utcstamp() -> str:
+    """The run-id timestamp, in autocode's shape so the two read alike."""
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
 
 def compute_signal_key(source_type: str, location: str, group_name: str) -> str:
@@ -303,6 +312,7 @@ async def generate_elaborations(
     settings: BristlenoseSettings,
     db: SASession,
     project_id: int,
+    project_dir: Path | None = None,
 ) -> dict[str, ElaborationResult]:
     """Generate elaborations for signal cards, with caching.
 
@@ -373,7 +383,16 @@ async def generate_elaborations(
         user_prompt = prompt_tmpl.user.format(signals_text=wrap_untrusted("signals", signals_text))
 
         client = LLMClient(settings)
-        with telemetry.stage("serve_signal_elaboration"):
+        # Both halves are needed and only one was here. `stage(...)` LABELS the
+        # row; `serve_run_context(...)` decides whether there is a file to write
+        # it to. Without the second, `record_call` finds no `_run_dir`, logs at
+        # DEBUG and returns — so every elaboration call this project ever made
+        # is absent from llm-calls.jsonl, with nothing anywhere saying so. Found
+        # by looking for the spend and finding 260 rows, none of them these.
+        run_id = f"elaboration-{project_id}-{codebook_id}-{_utcstamp()}"
+        with telemetry.serve_run_context(project_dir, run_id), telemetry.stage(
+            "serve_signal_elaboration"
+        ):
             result = await client.analyze(
                 system_prompt=prompt_tmpl.system,
                 user_prompt=user_prompt,

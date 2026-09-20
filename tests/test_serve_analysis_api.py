@@ -645,7 +645,7 @@ class TestGetCodebookAnalysis:
 
         from bristlenose.server.elaboration import ElaborationResult, compute_signal_key
 
-        async def mock_generate(signals, codebook_id, settings, db, project_id):
+        async def mock_generate(signals, codebook_id, settings, db, project_id, project_dir=None):
             results = {}
             for sig in signals:
                 key = compute_signal_key(

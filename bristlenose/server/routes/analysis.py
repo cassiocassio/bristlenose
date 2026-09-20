@@ -31,6 +31,7 @@ from __future__ import annotations
 import logging
 from collections import defaultdict
 from collections.abc import AsyncIterator
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -947,7 +948,10 @@ async def stream_elaborations(
                 return
 
             sent = 0
-            async for key, elab in _elaborate_signals(base.codebooks, db, project_id):
+            async for key, elab in _elaborate_signals(
+                base.codebooks, db, project_id,
+                project_dir=getattr(request.app.state, "project_dir", None),
+            ):
                 sent += 1
                 payload = _json.dumps({
                     "key": key,
@@ -1060,7 +1064,10 @@ async def get_codebook_analysis(
         if elaborate and codebooks:
             # Drain the generator: this endpoint answers once, with
             # everything. The streaming sibling forwards the same yields.
-            async for _key, _elab in _elaborate_signals(codebooks, db, project_id):
+            async for _key, _elab in _elaborate_signals(
+                codebooks, db, project_id,
+                project_dir=getattr(request.app.state, "project_dir", None),
+            ):
                 pass
 
         return CodebookAnalysisListResponse(
@@ -1181,6 +1188,7 @@ async def _elaborate_signals(
     db: Session,
     project_id: int,
     chunk_size: int = ELABORATION_CHUNK,
+    project_dir: Path | None = None,
 ) -> AsyncIterator[tuple[str, ElaborationResult]]:
     """Write findings for every framework signal, yielding each as it lands.
 
@@ -1300,7 +1308,7 @@ async def _elaborate_signals(
         for i in range(0, len(sigs), chunk_size):
             chunk = sigs[i:i + chunk_size]
             elaborations = await generate_elaborations(
-                chunk, cb_id, settings, db, project_id,
+                chunk, cb_id, settings, db, project_id, project_dir,
             )
             for sig in chunk:
                 key = compute_signal_key(sig.source_type, sig.location, sig.group_name)

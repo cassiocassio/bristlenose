@@ -7,12 +7,27 @@ defined in [README.md](README.md#lifecycle).
 to point at. `SUPERSEDED` and `ABANDONED` entries say *why* in a clause; that clause
 is what stops the same idea being proposed again.
 
-**All 150 are classified** as of 4 Sep 2026 — 85 IMPLEMENTED · 29 SANDPIT ·
-18 SUPERSEDED · 12 PROPOSED · 5 PARKED · 1 ABANDONED. A new mockup should be added
-here when it lands, or it becomes the next backlog.
+**All 164 are classified** as of 20 Sep 2026 — 87 IMPLEMENTED · 34 SANDPIT ·
+20 SUPERSEDED · 14 PROPOSED · 6 PARKED · 1 ABANDONED · 2 *unreviewed*. A new mockup
+should be added here when it lands, or it becomes the next backlog. Recount rather
+than adjust — a tally in prose is a tally nothing recomputes:
 
-Dates come from `git log`; regenerate rather than hand-edit them. Where a timeline
-carries no date the evidence gave none — the state is still evidenced, the day is not.
+```bash
+cd /Users/cassio/Code/bristlenose && .venv/bin/python scripts/check-mockup-register.py
+```
+
+The corpus is **tracked mockups plus any gitignored one present on disk** — nine
+carry verbatim participant speech and so cannot be committed to a public repo, but
+they have a lifecycle worth recording and the gate requires a row for each. A file
+that is untracked and not ignored is work in flight and is deliberately exempt.
+Note the gate can only check that second class on a machine that holds them: CI
+never checks out an ignored file.
+
+Dates come from `git log` **for the tracked majority**; regenerate rather than
+hand-edit those. The nine gitignored mockups have no git history to read, so their
+dates are necessarily hand-written — the instruction and the corpus disagree for
+exactly those rows. Where a timeline carries no date the evidence gave none — the
+state is still evidenced, the day is not.
 
 ## analysis
 
@@ -259,6 +274,8 @@ carries no date the evidence gave none — the state is still evidenced, the day
 | `signal-card-v2.html` | 19 Sep 2026 | PROPOSED 19 Sep 2026 · **SUPERSEDED** 20 Sep 2026 by `signal-card-design-a.html` — first pass at applying the decisions. Built a hybrid that was neither a fused stack nor a merged card: internal dividers inside the card padding, sections with no anatomy of their own, and a headline borrowed from the strongest facet and printed twice. The failure is the entry's value — it is why design B needs a location-level elaboration unit before it can exist |
 | `signal-card-design-a.html` | 20 Sep 2026 | PROPOSED 20 Sep 2026 · **IMPLEMENTED** 20 Sep 2026 — built in `451a43ca`/`9e9af6fd`/`96323e58`/`08b4bb93`. Still the visual truth for the card: Whole cards, fused by their own borders so the seam runs edge to edge; the marginal-value rule drawn with every cut card shown dimmed and its reason. Spec for `design-signal-card.md` §3 |
 | `sentiment-calibration.html` | 20 Sep 2026 | SANDPIT — 27 real cards with the chip blanked, for judging the sentiment label by eye. The instrument behind `label_rule.py`; its 27 judgements are the entire evidence base for §5, and `design-signal-card.md` §5a records that they were made in the wrong volume regime |
+| `signal-card-rules.html` | 20 Sep 2026 | SANDPIT — the review artefact for generation 4: every rule in `design-signal-card.md` shown firing on real cards, so a decision can be judged by its consequence rather than its description. `design-signal-card.md` §0 points at it as **the** thing to open. Built by `experiments/signal_card_options/build_rules.py`; gitignored because the cards carry verbatim participant speech, which is why it needs a row here rather than a commit |
+| `signal-card-build-stages.html` | 20 Sep 2026 | SANDPIT — the same corpus drawn once per build tier, so the effect of each tier is visible as a diff rather than asserted. Its first column claimed SHIPPED about generation 3 until `075d7684` corrected it — a mockup that describes the tree can go stale exactly like a doc. Built by `experiments/signal_card_options/build_stages.py`; gitignored for participant speech |
 
 ## type
 

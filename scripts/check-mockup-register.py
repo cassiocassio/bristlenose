@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Every mockup carries a lifecycle entry, and every entry names a real file.
 
-`docs/mockups/` holds 150 standalone HTML mockups. Without a marker there is no
+`docs/mockups/` holds ~165 standalone HTML mockups. Without a marker there is no
 way to tell a design of record from one describing a flow that was replaced,
 except by reading the code — which defeats having them, and is how a rejected
 idea gets proposed again a year later by whoever found the picture. The register
@@ -107,7 +107,27 @@ def main() -> int:
     # where the files are simply not checked out. Asking git makes it the same
     # question everywhere.
     tracked = _tracked_mockups()
-    on_disk = tracked
+    present = {q.name for q in MOCKUPS.glob("*.html")}
+
+    # Corpus = tracked, PLUS any gitignored mockup that is actually here.
+    #
+    # The first version of this fix used `tracked` alone. That closed the orphan
+    # direction and opened a blind spot in the other one: an ignored file was
+    # never *required* to have a row, so the gate printed "all 155 registered"
+    # with 166 on disk and four unrowed — one of them the artefact
+    # design-signal-card.md calls the review artefact. A gate that cannot see a
+    # whole class of file is worse than no gate, because it reports success.
+    #
+    # A gitignored mockup is deliberate, not accidental: the quote-bearing ones
+    # cannot go in a public repo but still have a lifecycle, which is exactly why
+    # STATUS.md carries rows for them. An untracked-and-NOT-ignored file is work
+    # in flight — someone's WIP this minute — and failing on it would make the
+    # gate everyone's problem the moment anyone drafts a mockup.
+    #
+    # Known limit, and it is unavoidable: CI never checks out an ignored file, so
+    # `present - tracked` is empty there and CI cannot catch a missing row for
+    # one. That direction is only checkable on a machine that holds them.
+    on_disk = tracked | _ignored_mockups(present - tracked)
 
     registered: dict[str, str] = {}
     duplicates: list[str] = []

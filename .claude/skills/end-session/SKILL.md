@@ -277,7 +277,7 @@ Steady-state silent-closure rate may be lower outside high-merge windows. After 
 
 Tighten / loosen the regex and keyword filter accordingly. Update `audit_version` in the sentinel JSON when the matcher changes materially so `/close-branch` can detect "sentinel from old audit_version" and re-prompt.
 
-7. **`CHANGELOG.md`** — if a version was bumped, add an entry. Format: `**X.Y.Z** — _D Mon YYYY_`. If no version bump, skip.
+7. **`CHANGELOG.md`** — if a version was bumped, add an entry. Format: `**X.Y.Z** — _D Mon YYYY_`, a one-sentence summary, then bullets grouped under bold `**New**` / `**Improved**` / `**Fixed**` / `**Removed**` (non-empty groups only, that order; a patch has no `**New**`). The header carries the verb — bullets keep the bold-led user-experience phrasing, never open with "Fixed"/"Added". If no version bump, skip.
 
 8. **`README.md`** — if a version was bumped, update the changelog section. If a user-visible feature shipped, add it to the feature list if appropriate. Don't touch README for internal-only changes.
 

@@ -95,14 +95,14 @@ Sessions).
 The 84px base = `--bn-toolbar-inset` (52) + `--bn-space-xl` (32) from the
 embedded body rule (`templates/report.css`). The −76 on Quotes is the
 cross-seam first-baseline rule (`organisms/sidebar.css`); the +64 on Analysis
-is `.analysis-center` padding (24) + `section-heading` margin (40).
+is `.signals-center` padding (24) + `section-heading` margin (40).
 
 ### Horizontal: content edges (1440 viewport)
 
 Canonical edge: x = 56 (24 body + 32 `.center`), right edge 1384. Project,
 Sessions, Codebook, Quotes all sit on it (Quotes' narrower right edge is the
 minimap column — by design). **Analysis sits at 80/1360** — indented 24px on
-both sides by `.analysis-center { padding: var(--bn-space-lg) }`
+both sides by `.signals-center { padding: var(--bn-space-lg) }`
 (`organisms/inspector.css`), inside the already-padded `.center`.
 
 ### Corner radii
@@ -112,7 +112,7 @@ dashboard panes, featured quotes, coverage box, codebook groups all `lg`;
 badges/speaker codes `sm`; buttons `md`; quote cards deliberately asymmetric
 (`0 6 6 0` — square keyline edge, `organisms/blockquote.css`). Two defects,
 both in Analysis: `.signal-card` at `sm` (badge-tier corners on the largest
-cards in the app, `organisms/analysis.css:15`) with its inner quotes box at
+cards in the app, `organisms/signals.css:15`) with its inner quotes box at
 `md` — **inverted nesting** (child rounder than parent). Two micro-nits:
 `framework-toggle` hand-rolled 11px and `badge-action-pill` 8px — both
 half-height pills that should say `--bn-radius-pill`.
@@ -206,7 +206,7 @@ template work.
 | Sessions | SessionsSidebar | – | – | – | body |
 | Quotes | TocSidebar | ✓ | ✓ | – | body |
 | Codebook | CodebookSidebar | – | – | – | body |
-| Analysis | AnalysisSidebar | – | – | ✓ | **pane** |
+| Analysis | SignalsSidebar | – | – | ✓ | **pane** |
 
 The `scroll: pane` variant becomes a SidebarLayout feature: the template
 renders the scroll container and applies the shared gutter tokens to it.
@@ -255,7 +255,7 @@ tunable independently of its *level*. Currently 28/700 (display/strong,
 inherited); tune on the specimen lens if two-per-page reads too heavy.
 
 First zone-title on a lens flushes to the datum (`margin-top: 0` via
-`section:first-of-type` / `.analysis-center > :first-of-type`); subsequent ones
+`section:first-of-type` / `.signals-center > :first-of-type`); subsequent ones
 keep 2.5rem separation. **App caveat:** the old `[data-embedded]` datum lift in
 `sidebar.css` still targets `> h2` and is now dead (h2→h1) — Phase B (the
 toolbar-inset re-scope) owns rewriting it; the absolute top position in the app
@@ -377,7 +377,7 @@ shrinks to match in the same pass.)
    — and the two outliers are legitimate. Quotes carries a web `div.toolbar` above
    its first `<section>` (native chrome in the app, so absent there); Analysis
    renders an intro `<p class="description">` above its heading inside the padded
-   `.analysis-center`. Asserting equal tops would encode that incidental chrome and
+   `.signals-center`. Asserting equal tops would encode that incidental chrome and
    go red on a legitimate change. `margin-top` is the contract; first-ink `y` is a
    consequence of it plus whatever the lens legitimately puts above the title.
 
@@ -388,11 +388,11 @@ shrinks to match in the same pass.)
    atom being the only box that carries the rule.
 
    **Latent trap introduced by the same change, recorded not fixed:** the Analysis
-   selector is `.analysis-center > .section-heading:first-of-type`, and
+   selector is `.signals-center > .section-heading:first-of-type`, and
    `:first-of-type` is resolved by **tag**, not class. `.section-heading` is now a
    `<div>`, so that selector means "the first `div` child, if it carries the class".
    It matches today only because Analysis's preceding sibling is a `<p>`. Add any
-   `<div>` above the heading in `.analysis-center` and Analysis silently drops off
+   `<div>` above the heading in `.signals-center` and Analysis silently drops off
    the datum exactly as Codebook did. `lens-datum.spec.ts` covers Analysis, so it
    would go red — which is the reason to leave the selector alone rather than
    invent a third one.

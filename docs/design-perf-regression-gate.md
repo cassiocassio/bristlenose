@@ -51,7 +51,7 @@ Measured on macOS, Chromium, `_BRISTLENOSE_AUTH_TOKEN=test-token`, Playwright `e
 | Sessions (`/report/sessions/`) | 304 | — | 1 session row |
 | Quotes (`/report/quotes/`) | 549 | ~30/card | 4 cards + ~420 chrome (nav, sidebar, toolbar) |
 | Codebook (`/report/codebook/`) | 342 | — | |
-| Analysis (`/report/analysis/`) | 359 | — | |
+| Analysis (`/report/signals/`) | 359 | — | |
 | Settings (`/report/settings/`) | 334 | — | |
 | About (`/report/about/`) | 334 | — | |
 | Transcript (`/report/sessions/s1`) | 374 | — | 1 session, ~20 segments |
@@ -66,9 +66,9 @@ All pages are in the 300–550 range for this tiny fixture. The quotes page is h
 | `/quotes` | 6ms | |
 | `/transcripts/s1` | 5ms | |
 | `/codebook` | 5ms | |
-| `/analysis/sentiment` | 5ms | |
-| `/analysis/tags` | 4ms | |
-| `/analysis/codebooks` | 3ms | |
+| `/signals/sentiment` | 5ms | |
+| `/signals/tags` | 4ms | |
+| `/signals/codebooks` | 3ms | |
 | `/sessions` | 5ms | |
 | `/people` | 3ms | |
 | `/health` | 1ms | |

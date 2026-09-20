@@ -176,7 +176,7 @@ A horizontal proportional bar.
 - **Behaviours:** none — render-only
 - **Variations by context:** bare mode (codebook tag frequency — no track background), tracked mode (analysis concentration — shows background track)
 - **Current surfaces:** codebook panel tag frequency bars, analysis signal card concentration/breadth bars (via Metric)
-- **CSS reuse:** bare mode uses `.tag-micro-bar` from `organisms/codebook-panel.css`, tracked mode uses `.conc-bar-track`/`.conc-bar-fill` from `organisms/analysis.css`
+- **CSS reuse:** bare mode uses `.tag-micro-bar` from `organisms/codebook-panel.css`, tracked mode uses `.conc-bar-track`/`.conc-bar-fill` from `organisms/signals.css`
 
 ### 16. ConfirmDialog
 
@@ -314,13 +314,13 @@ The primitive-first approach means Milestone 2 produces more than a quote card �
 | `organisms/blockquote.css` | (composition: QuoteCard) | N/A — composition, not primitive | Round 2 |
 | `molecules/sparkline.css` (extracted from `templates/report.css`) | Sparkline | 1:1 | Done (Round 3) |
 | `templates/report.css` (journey section) | JourneyChain | 1:1 (`.bn-session-journey` + added `.bn-journey-sep`, `.bn-journey-label`) | Done (Round 4) |
-| `organisms/analysis.css` | Metric | 1:1 (reuses existing `.metric-*`, `.conc-bar-*`, `.intensity-dots-svg`) | Done (Round 4) |
+| `organisms/signals.css` | Metric | 1:1 (reuses existing `.metric-*`, `.conc-bar-*`, `.intensity-dots-svg`) | Done (Round 4) |
 | `atoms/thumbnail.css` (extracted from `templates/report.css`) | Thumbnail | 1:1 | Done (Round 4) |
 | `molecules/transcript-annotations.css` | Annotation | 1:1 (reuses `.margin-annotation`, `.margin-label`, `.margin-tags`) | Done (Round 4) |
 | `atoms/modal.css` | Modal | 1:1 | Infrastructure (build when needed) |
 | `atoms/toast.css` | Toast | 1:1 | Infrastructure (build when needed) |
 | `organisms/codebook-panel.css` (`.tag-micro-bar`) | MicroBar (bare mode) | reuse | Done (M5) |
-| `organisms/analysis.css` (`.conc-bar-*`) | MicroBar (tracked mode) | reuse | Done (M5) |
+| `organisms/signals.css` (`.conc-bar-*`) | MicroBar (tracked mode) | reuse | Done (M5) |
 | `organisms/codebook-panel.css` (`.confirm-dialog`) | ConfirmDialog | 1:1 | Done (M5) |
 
 ---
@@ -345,7 +345,7 @@ The primitive-first approach means Milestone 2 produces more than a quote card �
 - TagInput CSS was already 1:1 aligned (`atoms/input.css` + `molecules/tag-input.css`)
 
 ### Round 4 (done)
-- Metric: reuses existing `.metric-label`, `.metric-value`, `.metric-viz`, `.conc-bar-*`, `.intensity-dots-svg` classes from `organisms/analysis.css` — no extraction needed (CSS already 1:1)
+- Metric: reuses existing `.metric-label`, `.metric-value`, `.metric-viz`, `.conc-bar-*`, `.intensity-dots-svg` classes from `organisms/signals.css` — no extraction needed (CSS already 1:1)
 - JourneyChain: reuses existing `.bn-session-journey` class — added `.bn-journey-sep` and `.bn-journey-label` spans for future styling hooks. Wired into SessionsTable (replaces inline join)
 - Counter: reuses existing `molecules/hidden-quotes.css` classes (`.bn-hidden-badge`, `.bn-hidden-toggle`, `.bn-hidden-dropdown`). Expandable badge with preview dropdown and unhide actions
 - Thumbnail: extracted `.bn-video-thumb` and `.bn-play-icon` from `templates/report.css` into `atoms/thumbnail.css`. Wired into SessionsTable (replaces inline markup)

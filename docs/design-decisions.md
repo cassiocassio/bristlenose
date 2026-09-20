@@ -20,7 +20,7 @@ trued-against: HEAD@main on 2026-09-20
   taken 19–20 Sep added, which had been taken, shipped and left unrecorded.
   Anchors: `frontend/vite.export.config.ts:43`, `routes/export.py`
   `_build_export_html`, `frontend/src/utils/signalDedup.ts:115`,
-  `bristlenose/analysis/sentiment_label.py`; commits `54b80a65`, `96323e58`,
+  `bristlenose/signals/sentiment_label.py`; commits `54b80a65`, `96323e58`,
   `08b4bb93`, `9e9af6fd`, `66d18bc7`.
 - _2026-09-13_ — eight signals entries added (`79571352`), describing what
   `docs/design-signal-card.md` now calls generation 3.
@@ -335,7 +335,7 @@ Moderators and observers stay in the roles line below the header. Their turns ar
 
 ### Sections and themes interleave in the analysis navigation
 
-**One run of locations ranked by strongest signal — no Section / Theme sub-headings, and no visual distinction between the two.** The words carry it: a researcher reads "Shopping Bag" against "Homepage content and navigation experience" and knows which is which. The demarcation still exists sharply in the Quotes lens, which is the namespace that owns it, and a signal card's location links straight back into the right half — `anchorPrefix` already resolves to `section-<slug>` or `theme-<slug>`. The Analysis lens offers something different and cross-links rather than restating. Measured on the five-codebook trial project, ranked by strength the three themes land at positions 4, 5 and 8 among seven sections, so splitting would override the ordering principle to say what the labels already say. (13 Sep 2026; supersedes the shipped `SignalGroup` sub-headings.)
+**One run of locations ranked by strongest signal — no Section / Theme sub-headings, and no visual distinction between the two.** The words carry it: a researcher reads "Shopping Bag" against "Homepage content and navigation experience" and knows which is which. The demarcation still exists sharply in the Quotes lens, which is the namespace that owns it, and a signal card's location links straight back into the right half — `anchorPrefix` already resolves to `section-<slug>` or `theme-<slug>`. The Signals lens offers something different and cross-links rather than restating. Measured on the five-codebook trial project, ranked by strength the three themes land at positions 4, 5 and 8 among seven sections, so splitting would override the ordering principle to say what the labels already say. (13 Sep 2026; supersedes the shipped `SignalGroup` sub-headings.)
 
 ### Navigation rows wrap, they never truncate
 
@@ -357,11 +357,11 @@ Moderators and observers stay in the roles line below the header. Their turns ar
 
 ### The chip never says "Sentiment"
 
-**A sentiment card's chip names one of the seven values, or `Positive` / `Negative` / `Mixed sentiments`, and nothing else.** "Sentiment" is the framework's own name, and naming the framework tells a researcher nothing they did not already know — they can see they are reading sentiment. What they need is *which* one, or, when no single one is honest, which direction. Every other tag group names itself perfectly well, so this is a sentiment-only resolution rather than a general rule. The label rule was fitted to 27 judgements a researcher made on real cards with the chip blanked, and every constant in it carries a MEASURED / STATED / GUESS marker so a guess cannot be promoted to a fact by being used for a while. (20 Sep 2026; `bristlenose/analysis/sentiment_label.py`, `docs/design-signal-card.md` §5; `9e9af6fd`.)
+**A sentiment card's chip names one of the seven values, or `Positive` / `Negative` / `Mixed sentiments`, and nothing else.** "Sentiment" is the framework's own name, and naming the framework tells a researcher nothing they did not already know — they can see they are reading sentiment. What they need is *which* one, or, when no single one is honest, which direction. Every other tag group names itself perfectly well, so this is a sentiment-only resolution rather than a general rule. The label rule was fitted to 27 judgements a researcher made on real cards with the chip blanked, and every constant in it carries a MEASURED / STATED / GUESS marker so a guess cannot be promoted to a fact by being used for a while. (20 Sep 2026; `bristlenose/signals/sentiment_label.py`, `docs/design-signal-card.md` §5; `9e9af6fd`.)
 
 ### The headline is a finding or it is absent
 
-**A card shows its elaborated finding, a skeleton while one is loading, or no headline at all — never its location.** Falling back to the location looked harmless and was not: the lens fetches twice, so for three to five seconds on first paint *every* card displayed the name of the place it already sat under, which reads as a page of repeated headings rather than as loading. A card with nothing to say should say nothing; the location is already the heading above it. (20 Sep 2026; `frontend/src/islands/AnalysisPage.tsx`; `08b4bb93`.)
+**A card shows its elaborated finding, a skeleton while one is loading, or no headline at all — never its location.** Falling back to the location looked harmless and was not: the lens fetches twice, so for three to five seconds on first paint *every* card displayed the name of the place it already sat under, which reads as a page of repeated headings rather than as loading. A card with nothing to say should say nothing; the location is already the heading above it. (20 Sep 2026; `frontend/src/islands/SignalsPage.tsx`; `08b4bb93`.)
 
 ### Quote selection is editorial, not top-N
 

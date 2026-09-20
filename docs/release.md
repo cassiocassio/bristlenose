@@ -78,6 +78,10 @@ standard flow:
 ```bash
 # 1. Write the CHANGELOG.md + README.md changelog entries FIRST
 #    Format: **X.Y.Z** — _D Mon YYYY_   (e.g. **0.21.0** — _16 Jul 2026_)
+#    Body: summary sentence, then bullets grouped under bold **New** /
+#    **Improved** / **Fixed** / **Removed** (non-empty groups only, that order).
+#    A patch has no **New** group. The header carries the verb; bullets keep
+#    the bold-led user-experience phrasing — never "Fixed …" / "Added …".
 
 # 2. Bump (writes __init__.py + man page + pbxproj, stages them; no commit, no tag)
 ./scripts/bump-version.py minor        # or: patch / major / an explicit x.y.z

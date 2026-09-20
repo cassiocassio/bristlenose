@@ -21,7 +21,7 @@ the total-page dashboard mock. Companions: [data-density.md](data-density.md) ·
 
 A **dashboard-scale reduction of the analysis-lens heatmap**: which participants said what,
 where, and how they felt — **glanceable, orienting, clickable through to the quotes.** It is
-**not** a second analysis lens. Orientation is the job; the lens is the deep read. Lineage:
+**not** a second Signals lens. Orientation is the job; the lens is the deep read. Lineage:
 [`dashboard-10-ideas.html`](../mockups/dashboard-10-ideas.html) §5b already recorded the verdict
 — *"the dashboard slot goes to 05's axes, at 5b's scale"* — and this is that, built on real tokens.
 
@@ -30,13 +30,13 @@ where, and how they felt — **glanceable, orienting, clickable through to the q
 Every number is already in shipped structures. **No new pipeline pass, no LLM, no new maths.**
 
 - A `MatrixCell` already carries `participants: dict[pid→count]` and `intensities` — the participant
-  axis is inside every cell ([analysis/models.py](../../bristlenose/analysis/models.py)).
+  axis is inside every cell ([analysis/models.py](../../bristlenose/signals/models.py)).
 - `build_matrix_from_contributions(...)` is already dimension-agnostic
-  ([analysis/generic_matrix.py](../../bristlenose/analysis/generic_matrix.py)) — feed it
+  ([analysis/generic_matrix.py](../../bristlenose/signals/generic_matrix.py)) — feed it
   `rows=sections/themes, cols=participants` and it's a re-parameterisation.
 - `AnalysisResult` already ships **both** `section_matrix` and `theme_matrix`.
 - Residual = the **shipped** `adjustedResidual()` / `heatCellStyle()`
-  ([islands/AnalysisPage.tsx:146](../../frontend/src/islands/AnalysisPage.tsx)), ported verbatim
+  ([islands/SignalsPage.tsx:146](../../frontend/src/islands/SignalsPage.tsx)), ported verbatim
   into the mockup JS.
 
 ## The encoding (settled)
@@ -68,7 +68,7 @@ only p1 reached it) paints **saturated green.** The collision is **structural, n
 also **almost monochrome green** (every *present* cell is over-represented), so red/green can't even
 carry good/bad. Full evidence in `dashboard-heatmap-encoding-collision.html`.
 
-**Decision:** sentiment on hue; residual demoted to the dot; the click-through to the analysis lens
+**Decision:** sentiment on hue; residual demoted to the dot; the click-through to the Signals lens
 is a **deliberate, signposted** change of colour-language, not a pretend-continuity.
 
 ## Why residual on the dot, not count
@@ -92,7 +92,7 @@ signal.
 - **Tooltip** = the sentiment as its **real `.badge` chip** + `N quote(s) · residual X.XX`. No
   `p · section` header (the highlight already says that), no quote line for now (the data is retained
   in the mockup — re-adding is one line).
-- **Click** — **signal cells jump to their card** (analysis lens); **every other cell lands in the
+- **Click** — **signal cells jump to their card** (Signals lens); **every other cell lands in the
   section/theme quotes, in context of its siblings.** Universal and predictable, and it dissolves the
   "which of N quotes?" problem (you land among all of them). Reuses `TimecodeLink` for the transcript
   and the lens for the signal card — no new navigation plumbing.
@@ -108,7 +108,7 @@ Everything is real tokens / atoms — nothing bespoke:
 | Participant column headers | `.bn-person-badge > .bn-speaker-badge--split > .bn-speaker-badge-code` — [molecules/person-badge.css](../../bristlenose/theme/molecules/person-badge.css) |
 | Signal keyline | `--bn-selection-border` (from `.signal-card.bn-selected`) |
 | Hover highlight (row + badge) | `--bn-selection-bg` + `--bn-selection-border` |
-| Residual maths | `adjustedResidual()` — [AnalysisPage.tsx](../../frontend/src/islands/AnalysisPage.tsx) |
+| Residual maths | `adjustedResidual()` — [SignalsPage.tsx](../../frontend/src/islands/SignalsPage.tsx) |
 | Radius / spacing / mono | `--bn-radius-sm`, `--bn-space-*`, `--bn-font-mono` |
 
 ## Deliberately NOT imported

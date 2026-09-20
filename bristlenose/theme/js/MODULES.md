@@ -245,7 +245,7 @@ Application appearance toggle. Lets users switch between system/light/dark theme
 
 ## analysis.js
 
-Analysis rendering: signal cards, heatmaps, and interactive features. Renders analysis content from `BRISTLENOSE_ANALYSIS` JSON data both in the report's Analysis tab and on standalone `analysis.html`.
+Analysis rendering: signal cards, heatmaps, and interactive features. Renders analysis content from `BRISTLENOSE_ANALYSIS` JSON data both in the report's Signals lens and on standalone `analysis.html`.
 
 - **Data source**: `BRISTLENOSE_ANALYSIS` global — JSON object injected by `render/report.py` containing `signals`, `sectionMatrix`, `themeMatrix`, `totalParticipants`, `sentiments`, `participantIds`, `reportFilename`
 - **`initAnalysis()`** — if `#signal-cards` container and `BRISTLENOSE_ANALYSIS` data exist, renders signal cards + heatmaps; otherwise returns early
@@ -255,12 +255,12 @@ Analysis rendering: signal cards, heatmaps, and interactive features. Renders an
 - **`heatCellColour(heat, hue, chroma, isDark)`** — OKLCH colour ramp: lightness interpolated between `lMin` and `lMax` based on normalised heat value
 - **`intensityDotsSvg(intensity, size, colour)`** — renders 1–5 filled/empty dots as inline SVG
 - **Dark mode**: `MutationObserver` on `<html>` attribute changes re-renders heatmaps when theme toggles (OKLCH lightness direction inverts). Uses `THEME_ATTR = "data-" + "theme"` constant to avoid literal string in embedded HTML (dark mode tests assert absence)
-- **Dependencies**: none (self-contained). Loaded on both report page (`_JS_FILES`, for inline Analysis tab) and standalone analysis page (`_ANALYSIS_JS_FILES`)
-- **CSS**: `organisms/analysis.css` (signal cards, heatmap table, confidence badges, expansion animation)
+- **Dependencies**: none (self-contained). Loaded on both report page (`_JS_FILES`, for inline Signals lens) and standalone analysis page (`_ANALYSIS_JS_FILES`)
+- **CSS**: `organisms/signals.css` (signal cards, heatmap table, confidence badges, expansion animation)
 
 ## Analysis page
 
-Standalone HTML page (`analysis.html`) at the output root. Rendered by `_render_analysis_page()` in `render/standalone_pages.py`. Same content also renders inline in the report's Analysis tab. Features:
+Standalone HTML page (`analysis.html`) at the output root. Rendered by `_render_analysis_page()` in `render/standalone_pages.py`. Same content also renders inline in the report's Signals lens. Features:
 
 - **Layout**: signal cards list + two heatmap tables (Section×Sentiment, Theme×Sentiment)
 - **JS files**: `_ANALYSIS_JS_FILES` = `storage.js` + `analysis.js`. Boot calls `initAnalysis()` which detects `#signal-cards` element and renders content

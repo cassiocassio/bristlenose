@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analysis → Signals — every UX surface</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css + colors/palette-*.css). Palette swap via
+   data-color-theme; dark via light-dark() + color-scheme.
+   Reviews docs/design-signals-rename.md — UX surfaces only.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  --bn-emo-1-bg:   light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-task-1-bg:  light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-ux-1-bg:    light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 300), oklch(50% 0.12 300));
+  --bn-opp-1-bg:   light-dark(oklch(94% 0.03 75),  oklch(50% 0.10 75));
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap { max-width:960px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); max-width:70ch; margin:.4rem 0; }
+.rule-box { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:.9rem 1.1rem; margin:1.1rem 0 0; background:var(--bn-colour-quote-bg); }
+.rule-box p { margin:.25rem 0; font-size:var(--bn-text-label); color:var(--bn-colour-text); }
+.rule-box .q { color:var(--bn-colour-muted); font-style:italic; }
+.controls { display:flex; gap:.4rem; align-items:center; margin:var(--bn-space-lg) 0 var(--bn-space-xl); flex-wrap:wrap; }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+
+/* ── the highlighter ──────────────────────────────────────────────────── */
+.hl {
+  background:#ffe94d; color:#1a1a1a;
+  padding:.05em .28em; margin:0 -.06em; border-radius:2px;
+  box-decoration-break:clone; -webkit-box-decoration-break:clone;
+  font-weight:490;
+}
+.hl-off .hl { background:transparent; color:inherit; font-weight:inherit; padding:0; margin:0; }
+
+/* ── zones ────────────────────────────────────────────────────────────── */
+.key { display:flex; gap:1.5rem; flex-wrap:wrap; margin:1.1rem 0 0; font-size:var(--bn-text-label); }
+.key-item { display:flex; align-items:center; gap:.5rem; color:var(--bn-colour-muted); }
+.swatch { width:22px; height:14px; border-radius:3px; display:inline-block; flex:none; }
+.swatch.art { background:var(--bn-colour-bg); border:1.5px solid var(--bn-colour-border-hover); }
+.swatch.com { background:repeating-linear-gradient(135deg, var(--bn-colour-hover) 0 6px, transparent 6px 8px); border:1px dashed var(--bn-colour-border-hover); }
+.swatch.hlk { background:#ffe94d; border:1px solid #d9c220; }
+
+.bench { margin:3rem 0 0; }
+.bench-head h2 { font-size:var(--bn-text-title); font-weight:490; margin:0 0 .2rem; }
+.bench-head .sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0 0 1.2rem; max-width:74ch; }
+.stage-label { font-size:var(--bn-text-caption); font-weight:490; color:var(--bn-colour-accent); text-transform:uppercase; letter-spacing:.05em; margin:1.5rem 0 .5rem; font-family:var(--bn-font-mono); }
+
+.frame { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); overflow:hidden; background:var(--bn-colour-bg); }
+.frame-bar { display:flex; align-items:center; gap:.5rem; padding:.45rem .75rem; border-bottom:1px solid var(--bn-colour-border); background:var(--bn-colour-quote-bg); }
+.frame-bar .tl { display:flex; gap:5px; }
+.frame-bar .tl i { width:9px; height:9px; border-radius:50%; background:var(--bn-colour-border-hover); display:block; }
+.frame-bar .ver { font-size:var(--bn-text-micro); font-family:var(--bn-font-mono); text-transform:uppercase; letter-spacing:.08em; color:var(--bn-colour-muted); margin-left:auto; }
+.frame-bar .ver.new { color:var(--bn-colour-accent); }
+.frame-body { padding:1rem; }
+.frame-body.tight { padding:0; }
+
+.commentary { margin-top:1rem; border-left:3px solid var(--bn-colour-border-hover); background:repeating-linear-gradient(135deg, color-mix(in srgb, var(--bn-colour-hover) 55%, transparent) 0 7px, transparent 7px 10px); padding:.8rem 1rem; border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; }
+.commentary .clabel { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); letter-spacing:.1em; text-transform:uppercase; color:var(--bn-colour-muted); margin-bottom:.4rem; }
+.commentary p { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); line-height:1.6; margin:.35rem 0; max-width:80ch; }
+.commentary b { color:var(--bn-colour-text); font-weight:490; }
+.commentary code { font-family:var(--bn-font-mono); font-size:.92em; background:var(--bn-colour-badge-bg); padding:.05em .3em; border-radius:2px; color:var(--bn-colour-badge-text); }
+
+/* ── web SPA chrome ───────────────────────────────────────────────────── */
+.urlbar { display:flex; align-items:center; gap:.5rem; padding:.4rem .75rem; background:var(--bn-colour-quote-bg); border-bottom:1px solid var(--bn-colour-border); }
+.urlbar .u { flex:1; font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); padding:.22rem .7rem; color:var(--bn-colour-muted); }
+.bn-tabs { display:flex; gap:.15rem; padding:.5rem .75rem 0; border-bottom:1px solid var(--bn-colour-border); background:var(--bn-colour-bg); }
+.bn-tab { font-size:var(--bn-text-label); font-weight:420; padding:.42rem .8rem; border-bottom:2px solid transparent; color:var(--bn-colour-muted); white-space:nowrap; }
+.bn-tab.active { color:var(--bn-colour-text); font-weight:490; border-bottom-color:var(--bn-colour-accent); }
+.lens-body { padding:1.1rem 1.25rem 1.4rem; }
+.section-heading { font-size:var(--bn-text-heading); font-weight:490; margin:0 0 .35rem; }
+.section-desc { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin:0 0 1rem; max-width:72ch; }
+.state-line { font-size:var(--bn-text-label); color:var(--bn-colour-muted); padding:.6rem 0; }
+.state-line.dim { opacity:.5; }
+
+/* signal card sketch (context only — not under review here) */
+.sig-card { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); padding:.7rem .85rem; margin-bottom:.5rem; background:var(--bn-colour-bg); }
+.sig-card h4 { font-size:var(--bn-text-label); font-weight:490; margin:0 0 .25rem; }
+.sig-card p { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin:0; }
+.badge { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); border-radius:var(--bn-radius-sm); padding:.1rem .4rem; display:inline-block; }
+
+/* settings config reference */
+.cfg-chips { display:flex; gap:.35rem; flex-wrap:wrap; margin-bottom:.9rem; }
+.cfg-chip { font-size:var(--bn-text-caption); padding:.22rem .6rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); color:var(--bn-colour-muted); }
+.cfg-chip.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+.cfg-row { display:grid; grid-template-columns:1fr auto; gap:.6rem; padding:.42rem 0; border-bottom:1px solid var(--bn-colour-border); font-size:var(--bn-text-label); }
+.cfg-row:last-child { border-bottom:none; }
+.cfg-row .v { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+
+/* ── macOS chrome ─────────────────────────────────────────────────────── */
+.mac { display:grid; grid-template-columns:186px 1fr; min-height:232px; }
+.mac-side { background:var(--bn-colour-quote-bg); border-right:1px solid var(--bn-colour-border); padding:.6rem 0; }
+.mac-side .grp { font-size:var(--bn-text-micro); text-transform:uppercase; letter-spacing:.07em; color:var(--bn-colour-muted); padding:.4rem .85rem .25rem; font-weight:490; }
+.sb-row { display:flex; align-items:center; gap:.5rem; padding:.3rem .85rem; font-size:var(--bn-text-label); color:var(--bn-colour-text); }
+.sb-row .ic { width:15px; text-align:center; color:var(--bn-colour-muted); flex:none; font-size:.85em; }
+.sb-row.sel { background:var(--bn-colour-accent); color:#fff; border-radius:var(--bn-radius-md); margin:0 .35rem; padding-left:.5rem; }
+.sb-row.sel .ic { color:#fff; }
+.sb-row .meta { margin-left:auto; font-size:var(--bn-text-micro); color:var(--bn-colour-muted); }
+.mac-main { padding:0; }
+.mac-title { display:flex; align-items:center; gap:.6rem; padding:.5rem .85rem; border-bottom:1px solid var(--bn-colour-border); }
+.mac-title .t { font-size:var(--bn-text-label); font-weight:490; }
+.mac-title .st { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.seg { display:inline-flex; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); overflow:hidden; background:var(--bn-colour-quote-bg); }
+.seg span { font-size:var(--bn-text-caption); padding:.24rem .58rem; color:var(--bn-colour-muted); border-right:1px solid var(--bn-colour-border); white-space:nowrap; }
+.seg span:last-child { border-right:none; }
+.seg span.on { background:var(--bn-colour-bg); color:var(--bn-colour-text); font-weight:490; }
+.mac-toolbar { display:flex; align-items:center; gap:.5rem; padding:.45rem .85rem; border-bottom:1px solid var(--bn-colour-border); }
+.tbtn { font-size:var(--bn-text-caption); padding:.24rem .55rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); color:var(--bn-colour-muted); }
+
+/* menu */
+.menu { width:240px; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); background:var(--bn-colour-bg); box-shadow:0 6px 20px var(--bn-colour-shadow); padding:.28rem 0; }
+.menu .mi { display:flex; align-items:center; gap:.5rem; padding:.24rem .8rem; font-size:var(--bn-text-label); }
+.menu .mi .k { margin-left:auto; color:var(--bn-colour-muted); font-size:var(--bn-text-caption); }
+.menu .mi.dis { color:var(--bn-colour-muted); opacity:.55; }
+.menu .sep { height:1px; background:var(--bn-colour-border); margin:.28rem 0; }
+
+/* welcome cell */
+.wcell { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:.9rem 1rem; max-width:340px; background:var(--bn-colour-bg); }
+.wcell .tx { font-size:var(--bn-text-label); margin:0 0 .4rem; }
+.wcell .mo { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin:0 0 .6rem; }
+.wcell .lk { font-size:var(--bn-text-caption); color:var(--bn-colour-accent); font-weight:490; }
+
+/* stays-block */
+.stays { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); overflow:hidden; }
+.stays-head { padding:.5rem .85rem; background:var(--bn-colour-quote-bg); border-bottom:1px solid var(--bn-colour-border); font-size:var(--bn-text-caption); font-family:var(--bn-font-mono); text-transform:uppercase; letter-spacing:.06em; color:var(--bn-colour-muted); }
+.stays-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(236px,1fr)); }
+.stay { padding:.7rem .85rem; border-right:1px solid var(--bn-colour-border); border-bottom:1px solid var(--bn-colour-border); }
+.stay .s { font-size:var(--bn-text-label); }
+.stay .w { font-size:var(--bn-text-micro); color:var(--bn-colour-muted); font-family:var(--bn-font-mono); margin-top:.25rem; }
+
+/* prose before/after */
+.pa { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+.pa .col { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); padding:.75rem .85rem; }
+.pa .col .h { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase; letter-spacing:.08em; color:var(--bn-colour-muted); margin-bottom:.4rem; }
+.pa .col.old { background:var(--bn-colour-quote-bg); }
+.pa .col p { margin:0; font-size:var(--bn-text-label); }
+.pa .col.old p { color:var(--bn-colour-muted); }
+.kv { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted); margin:.55rem 0 .3rem; }
+
+@media (max-width:760px) {
+  .pa, .artefacts { grid-template-columns:1fr; }
+  .mac { grid-template-columns:1fr; }
+  .mac-side { border-right:none; border-bottom:1px solid var(--bn-colour-border); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <div class="eyebrow">Naming review · 20 Sep 2026 · not implemented</div>
+  <h1>Analysis → Signals: every UX surface</h1>
+  <p>Each artefact below is drawn in the shipped design system and shows the surface <b>as it will read after the change</b>. Highlighter marks the exact new wording. Docs and code identifiers are out of scope here — this sheet is the user-visible set only.</p>
+
+  <div class="rule-box">
+    <p><b>Signals</b> is a feature: the Signals lens, the signal cards it makes, and the signal strength it reports.</p>
+    <p><b>Analysis</b> is two things and keeps the word for both — <b>(a)</b> the pipeline running on data, the run the researcher commands, and <b>(b)</b> the human act of interpreting the results of that run.</p>
+    <p class="q">Test for any string: does it name the signal feature, or does it name a run or an interpretation? Feature → Signals. Run or interpretation → Analysis.</p>
+  </div>
+
+  <div class="key">
+    <span class="key-item"><span class="swatch art"></span> artefact — real pixels, what ships</span>
+    <span class="key-item"><span class="swatch com"></span> commentary — not the product</span>
+    <span class="key-item"><span class="swatch hlk"></span> new wording</span>
+  </div>
+</header>
+
+<div class="controls">
+  <span class="lbl">Palette</span>
+  <button class="pbtn on" data-theme="default">Default</button>
+  <button class="pbtn" data-theme="edo">Edo</button>
+  <span class="lbl" style="margin-left:1rem">Highlighter</span>
+  <button class="pbtn on" id="hl-on">On</button>
+  <button class="pbtn" id="hl-off">Off — read it as shipped</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<section class="bench">
+  <div class="bench-head">
+    <h2>1 · Web report — the SPA</h2>
+    <p class="sub">Five changed surfaces. The nav rail and the lens title are the two a researcher sees every session; the rest are states and secondary chrome.</p>
+  </div>
+
+  <div class="stage-label">Nav rail, lens title, and the URL</div>
+  <div class="frame">
+    <div class="frame-bar"><span class="tl"><i></i><i></i><i></i></span><span class="ver new">after</span></div>
+    <div class="urlbar"><span class="u">localhost:8150<span class="hl">/report/signals/</span></span></div>
+    <div class="bn-tabs">
+      <span class="bn-tab">Project</span>
+      <span class="bn-tab">Sessions</span>
+      <span class="bn-tab">Quotes</span>
+      <span class="bn-tab">Codebooks</span>
+      <span class="bn-tab active"><span class="hl">Signals</span></span>
+    </div>
+    <div class="lens-body">
+      <h3 class="section-heading"><span class="hl">Signals</span></h3>
+      <p class="section-desc">Patterns ranked by signal strength — concentration, participant breadth, and intensity combined.</p>
+      <div class="sig-card">
+        <h4>Checkout friction concentrates in onboarding</h4>
+        <p><span class="badge">frustration</span> &nbsp;5 participants · conc. 2.4×</p>
+      </div>
+      <div class="sig-card">
+        <h4>Pricing raises doubt across three sections</h4>
+        <p><span class="badge">doubt</span> &nbsp;4 participants · conc. 1.9×</p>
+      </div>
+    </div>
+  </div>
+  <div class="commentary">
+    <div class="clabel">Commentary</div>
+    <p><b>The lens title is load-bearing.</b> <code>analysis.heading</code> is the flush-to-datum first heading — the element the layout system aligns the pane to. Its three call sites are the loading, empty and loaded <i>branches</i> of one page, not three sections, so one value change covers all three.</p>
+    <p><b>The URL change is Phase 2, not Phase 1.</b> Shown together here because a researcher experiences them as one change. <code>/report/analysis/</code> redirects, so bookmarks survive.</p>
+  </div>
+
+  <div class="stage-label">Loading and empty states</div>
+  <div class="frame">
+    <div class="frame-bar"><span class="tl"><i></i><i></i><i></i></span><span class="ver new">after</span></div>
+    <div class="frame-body">
+      <h3 class="section-heading"><span class="hl">Signals</span></h3>
+      <p class="state-line dim"><span class="hl">Loading signals…</span></p>
+      <div style="height:1px;background:var(--bn-colour-border);margin:.9rem 0"></div>
+      <h3 class="section-heading"><span class="hl">Signals</span></h3>
+      <p class="state-line"><span class="hl">No signals yet. Run the pipeline or apply codebook tags to generate them.</span></p>
+      <div style="height:1px;background:var(--bn-colour-border);margin:.9rem 0"></div>
+      <p class="state-line"><span class="hl">Tag signal error:</span> request timed out</p>
+    </div>
+  </div>
+
+  <div class="pa" style="margin-top:1rem">
+    <div class="col old">
+      <div class="h">before — analysis.noData</div>
+      <p>No analysis data available. Run the pipeline or apply codebook tags to generate analysis.</p>
+    </div>
+    <div class="col">
+      <div class="h">after</div>
+      <p><span class="hl">No signals yet. Run the pipeline or apply codebook tags to generate them.</span></p>
+    </div>
+  </div>
+  <div class="commentary">
+    <div class="clabel">Commentary</div>
+    <p><b>These three are rewrites, not swaps</b> — the only strings on this sheet where the new wording is a judgement rather than a substitution. "No analysis data available … to generate analysis" said <i>analysis</i> twice for one idea; the replacement drops the repetition rather than carrying it over as "signals … signals".</p>
+    <p><b><code>analysis.tagError</code> is the weakest of the three.</b> "Tag signal error: {{error}}" is accurate and terse. A fuller rewrite — "Couldn't compute tag signals: {{error}}" — reads better but changes the string's shape; flagged rather than assumed.</p>
+  </div>
+
+  <div class="stage-label">Settings ▸ Configuration reference</div>
+  <div class="frame">
+    <div class="frame-bar"><span class="tl"><i></i><i></i><i></i></span><span class="ver new">after</span></div>
+    <div class="frame-body">
+      <div class="cfg-chips">
+        <span class="cfg-chip">AI provider</span>
+        <span class="cfg-chip">Transcription</span>
+        <span class="cfg-chip">Privacy</span>
+        <span class="cfg-chip">Quotes</span>
+        <span class="cfg-chip on"><span class="hl">Signals</span></span>
+      </div>
+      <div class="cfg-row"><span>Top N signals</span><span class="v">DEFAULT_TOP_N · 12</span></div>
+      <div class="cfg-row"><span>Min quotes per cell</span><span class="v">MIN_QUOTES_PER_CELL · 2</span></div>
+      <div class="cfg-row"><span>Strong: concentration &gt;</span><span class="v">hardcoded · 2</span></div>
+    </div>
+  </div>
+  <div class="commentary">
+    <div class="clabel">Commentary</div>
+    <p>The settings <i>inside</i> this category already say "signals" — <b>Top N signals</b>, <b>Top N for elaboration</b>. Only the category label lags. No environment variable changes; there are no <code>ANALYSIS_*</code> vars.</p>
+    <p><b>This category exists twice in the code</b> — <code>SettingsPanel.tsx</code> and <code>SettingsModal.tsx</code> each carry a copy. Both render, so both change or half the panel disagrees.</p>
+  </div>
+
+  <div class="stage-label">About ▸ what each lens does</div>
+  <div class="frame">
+    <div class="frame-bar"><span class="tl"><i></i><i></i><i></i></span><span class="ver new">after</span></div>
+    <div class="frame-body">
+      <h3 class="section-heading" style="font-size:var(--bn-text-label)">Sessions</h3>
+      <p class="section-desc" style="margin-bottom:.9rem">List of interview sessions with duration, participant, and thumbnail. Click through to the full transcript with timecodes.</p>
+      <h3 class="section-heading" style="font-size:var(--bn-text-label)"><span class="hl">Signals</span></h3>
+      <p class="section-desc" style="margin-bottom:0">Signal concentration grids — which themes appear in which sessions, and how strongly. Helps identify patterns that cut across participants.</p>
+    </div>
+  </div>
+  <div class="commentary">
+    <div class="clabel">Commentary</div>
+    <p>This heading is a <b>hardcoded <code>&lt;h3&gt;</code></b>, not a locale key — so no locale gate can see it, in either direction. Its body paragraph already says "Signal concentration grids", so the heading was the only word out of step.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<section class="bench">
+  <div class="bench-head">
+    <h2>2 · macOS app</h2>
+    <p class="sub">Two changed surfaces. Most of the Mac chrome already says Signals — the toolbar, the View menu and the window title shipped that way. Only the lens rail and the picker lag, plus one welcome cell.</p>
+  </div>
+
+  <div class="stage-label">Lens rail and lens picker</div>
+  <div class="frame">
+    <div class="frame-bar"><span class="tl"><i></i><i></i><i></i></span><span class="ver new">after</span></div>
+    <div class="frame-body tight">
+      <div class="mac">
+        <div class="mac-side">
+          <div class="grp">Projects</div>
+          <div class="sb-row"><span class="ic">▸</span> Acme onboarding <span class="meta">12</span></div>
+          <div class="grp" style="margin-top:.4rem">Lenses</div>
+          <div class="sb-row"><span class="ic">◎</span> Project</div>
+          <div class="sb-row"><span class="ic">◍</span> Sessions</div>
+          <div class="sb-row"><span class="ic">❝</span> Quotes</div>
+          <div class="sb-row"><span class="ic">⬚</span> Codebooks</div>
+          <div class="sb-row sel"><span class="ic">▦</span> <span class="hl">Signals</span></div>
+        </div>
+        <div>
+          <div class="mac-title">
+            <span class="t">Acme onboarding</span>
+            <span class="st">— 12 Signals</span>
+          </div>
+          <div class="mac-toolbar">
+            <span class="seg">
+              <span>Project</span><span>Sessions</span><span>Quotes</span><span>Codebooks</span><span class="on"><span class="hl">Signals</span></span>
+            </span>
+            <span class="tbtn" style="margin-left:auto">Show Signals</span>
+          </div>
+          <div class="lens-body">
+            <h3 class="section-heading"><span class="hl">Signals</span></h3>
+            <div class="sig-card"><h4>Checkout friction concentrates in onboarding</h4><p><span class="badge">frustration</span> &nbsp;5 participants</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="commentary">
+    <div class="clabel">Commentary</div>
+    <p><b>The window title and the toolbar button already read Signals</b> — "12 Signals" and "Show Signals (⌘⌥L)" shipped that way. Highlighting only the three that change makes the current inconsistency visible: today this exact window says <i>Analysis</i> in the rail and the picker while saying <i>Signals</i> twice in the same chrome.</p>
+    <p><b>New doubling to check in the app.</b> After the change the window subtitle and the page heading both read "Signals". Before, they read "Signals" and "Analysis". No test can see this — it wants one look in the real app.</p>
+  </div>
+
+  <div class="stage-label">View menu — already correct, shown for the boundary</div>
+  <div class="frame">
+    <div class="frame-bar"><span class="tl"><i></i><i></i><i></i></span><span class="ver">unchanged</span></div>
+    <div class="frame-body" style="display:flex;gap:1.2rem;flex-wrap:wrap">
+      <div class="menu">
+        <div class="mi">Project <span class="k">⌘1</span></div>
+        <div class="mi">Sessions <span class="k">⌘2</span></div>
+        <div class="mi">Quotes <span class="k">⌘3</span></div>
+        <div class="mi">Codebooks <span class="k">⌘4</span></div>
+        <div class="mi"><span class="hl">Signals</span> <span class="k">⌘5</span></div>
+        <div class="sep"></div>
+        <div class="mi">Hide Signals <span class="k">⌘⌥L</span></div>
+      </div>
+      <div class="menu">
+        <div class="mi">Analyse</div>
+        <div class="mi">Re-analyse…</div>
+        <div class="mi dis">Stop Analysis <span class="k">⌘.</span></div>
+        <div class="sep"></div>
+        <div class="mi">Reveal in Finder <span class="k">⇧⌘R</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="commentary">
+    <div class="clabel">Commentary</div>
+    <p><b>This pair is the whole argument in two menus.</b> View ▸ names the lenses; Project ▸ names the run. Only the ⌘5 item changes — "Hide Signals" already shipped. Project ▸ keeps every word: Analyse, Re-analyse…, Stop Analysis are what the researcher commands, not what Bristlenose computes.</p>
+    <p>The ⌘5 label resolves through <code>Tab.localizedLabel</code>, which builds its key from the enum's raw value — so the label and the route move in the same commit or the Mac silently falls back to English.</p>
+  </div>
+
+  <div class="stage-label">Welcome screen — the drift caught mid-act</div>
+  <div class="pa">
+    <div class="col old">
+      <div class="h">before</div>
+      <div class="wcell" style="border:none;padding:0;max-width:none">
+        <p class="tx">The <b>Analysis</b> tab shows where sentiment concentrates.</p>
+        <p class="mo">A signal marks a theme running hotter or cooler than you'd expect.</p>
+        <p class="lk">Signals →</p>
+      </div>
+    </div>
+    <div class="col">
+      <div class="h">after</div>
+      <div class="wcell" style="border:none;padding:0;max-width:none">
+        <p class="tx">The <span class="hl"><b>Signals</b></span> tab shows where sentiment concentrates.</p>
+        <p class="mo">A signal marks a theme running hotter or cooler than you'd expect.</p>
+        <p class="lk">Signals →</p>
+      </div>
+    </div>
+  </div>
+  <div class="commentary">
+    <div class="clabel">Commentary</div>
+    <p>One cell, one word. Its own link label already says <b>Signals →</b> and points at <code>signals.html</code> — the body was the last thing disagreeing with its own button.</p>
+    <p><b>Observed, not changed:</b> this cell says "tab" where the rest of the app says "lens". Left alone deliberately — it is a separate inconsistency and folding it in would widen the rename past what was asked.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<section class="bench">
+  <div class="bench-head">
+    <h2>3 · Staying "Analysis" — confirm the boundary</h2>
+    <p class="sub">No highlighter here: none of these change. Split by sense, so the boundary can be checked twice — once against the run, once against the interpretation. If any of these reads wrong sitting next to a lens called Signals, the rule needs adjusting before implementation, not after.</p>
+  </div>
+
+  <div class="stays" style="margin-bottom:1.1rem">
+    <div class="stays-head">Sense (a) — the pipeline running on data</div>
+    <div class="stays-grid">
+      <div class="stay"><div class="s">Analyse</div><div class="w">Project menu · button</div></div>
+      <div class="stay"><div class="s">Re-analyse…</div><div class="w">Project menu · context menu</div></div>
+      <div class="stay"><div class="s">Stop Analysis &nbsp;⌘.</div><div class="w">Project menu</div></div>
+      <div class="stay"><div class="s">Analysing…</div><div class="w">sidebar row · status</div></div>
+      <div class="stay"><div class="s">Analysed 2 hours ago</div><div class="w">sidebar row · status</div></div>
+      <div class="stay"><div class="s">+3 unanalysed</div><div class="w">sidebar subtitle</div></div>
+      <div class="stay"><div class="s">3 files to analyse</div><div class="w">new-files sheet</div></div>
+      <div class="stay"><div class="s">Analysis updated</div><div class="w">screen-reader announce · on run completion</div></div>
+      <div class="stay"><div class="s">Analysis in progress</div><div class="w">sleep assertion reason</div></div>
+      <div class="stay"><div class="s">AI-Powered Analysis</div><div class="w">consent sheet title</div></div>
+      <div class="stay"><div class="s">Analysis finished but found no quotes</div><div class="w">empty state</div></div>
+      <div class="stay"><div class="s">Drop a folder of interviews to start analysis</div><div class="w">empty state</div></div>
+    </div>
+  </div>
+
+  <div class="stays">
+    <div class="stays-head">Sense (b) — the human act of interpreting the results</div>
+    <div class="stays-grid">
+      <div class="stay"><div class="s">Tagging is analysis — turn quotes into themes.</div><div class="w">welcome screen · shipped</div></div>
+      <div class="stay"><div class="s">…read and work with your Bristlenose analysis</div><div class="w">Help ▸ guide intro</div></div>
+      <div class="stay"><div class="s">Rich — 11 columns for sorting and analysis</div><div class="w">export menu hint</div></div>
+      <div class="stay"><div class="s">that revision <i>is</i> the analysis</div><div class="w">website · tag-for-meaning</div></div>
+      <div class="stay"><div class="s">analysis.html</div><div class="w">output folder · the artefact you interpret</div></div>
+    </div>
+  </div>
+  <div class="commentary">
+    <div class="clabel">Commentary</div>
+    <p><b>Sense (b) is why the rename is worth doing, and the welcome screen already proves it.</b> <code>WelcomeHomeView.swift:131</code> says "Tagging is analysis — turn quotes into themes." Seven lines later, <code>:138</code> names a <i>different</i> lens "Analysis". The same file, in the same scroll, asserts that analysis happens in the Quotes lens and then gives the word to a lens that is not it. That is the contradiction in miniature.</p>
+    <p><b><code>analysis.html</code> earns its place by content, not by exemption.</b> The page carries three sibling blocks — Key findings, Section × Sentiment, Theme × Sentiment. Two of the three are heatmaps, so <code>signals.html</code> would name a third of the page. It is also squarely a sense-(b) artefact: the thing you open in order to interpret.</p>
+    <p><b>The lens is the opposite case</b> and survives the same objection: its heatmaps are the inspector, reached by drilling into a card and labelled "Heatmap sources". Evidence behind a signal, not a peer section.</p>
+    <p><b>Resolved:</b> "Analysis updated" was flagged as worth a second look. It fires from <code>LastRunStore</code> on run completion, so it is sense (a) outright — a run finishing, not a lens being named.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<section class="bench">
+  <div class="bench-head">
+    <h2>4 · The complete change set</h2>
+    <p class="sub">Eleven user-visible strings plus one route. Everything else in the rename is code identifiers, locale keys and documents — invisible here by design.</p>
+  </div>
+
+  <div class="frame">
+    <div class="frame-bar"><span class="tl"><i></i><i></i><i></i></span><span class="ver new">after</span></div>
+    <div class="frame-body">
+      <div class="kv">common.json</div>
+      <div class="cfg-row"><span>nav.analysis</span><span class="v">Analysis → <span class="hl">Signals</span></span></div>
+      <div class="cfg-row"><span>analysis.heading</span><span class="v">Analysis → <span class="hl">Signals</span></span></div>
+      <div class="cfg-row"><span>analysis.loadingData</span><span class="v">→ <span class="hl">Loading signals…</span></span></div>
+      <div class="cfg-row"><span>analysis.noData</span><span class="v">→ <span class="hl">No signals yet…</span></span></div>
+      <div class="cfg-row"><span>analysis.tagError</span><span class="v">→ <span class="hl">Tag signal error: {{error}}</span></span></div>
+      <div class="cfg-row"><span>help.guide.signalsBody</span><span class="v">"the analysis page" → <span class="hl">"the Signals lens"</span></span></div>
+      <div class="cfg-row"><span>help.signals.intro</span><span class="v">"the analysis page" → <span class="hl">"the Signals lens"</span></span></div>
+      <div class="kv">settings.json</div>
+      <div class="cfg-row"><span>configReference.categories.analysis</span><span class="v">Analysis → <span class="hl">Signals</span></span></div>
+      <div class="kv">hardcoded — no locale key</div>
+      <div class="cfg-row"><span>AboutPanel.tsx &lt;h3&gt;</span><span class="v">Analysis → <span class="hl">Signals</span></span></div>
+      <div class="cfg-row"><span>WelcomeHomeView.swift cell</span><span class="v">**Analysis** → <span class="hl">**Signals**</span></span></div>
+      <div class="cfg-row"><span>Tab.swift English fallback</span><span class="v">Analysis → <span class="hl">Signals</span></span></div>
+      <div class="kv">route — Phase 2</div>
+      <div class="cfg-row"><span>React Router · Tab.route</span><span class="v">/report/analysis/ → <span class="hl">/report/signals/</span></span></div>
+    </div>
+  </div>
+  <div class="commentary">
+    <div class="clabel">Commentary</div>
+    <p><b>Eight of the eleven are one-word swaps</b> into a word all 21 locales already carry, reviewed, under <code>toolbar.signals</code> — Senyals, Signály, Signale, Señales, Signaux, Segnali, シグナル, 시그널, Сигналы, 訊號. Lift, don't translate.</p>
+    <p><b>Three are rewrites</b> — <code>loadingData</code>, <code>noData</code>, <code>tagError</code> — and those need a translation pass in each locale rather than a lift. They are the only new translation work in the whole rename.</p>
+  </div>
+</section>
+
+</div>
+
+<script>
+document.querySelectorAll('.pbtn[data-theme]').forEach(function (b) {
+  b.addEventListener('click', function () {
+    document.querySelectorAll('.pbtn[data-theme]').forEach(function (x) { x.classList.remove('on'); });
+    b.classList.add('on');
+    document.documentElement.setAttribute('data-color-theme', b.dataset.theme);
+  });
+});
+var on = document.getElementById('hl-on'), off = document.getElementById('hl-off');
+on.addEventListener('click', function () {
+  document.body.classList.remove('hl-off'); on.classList.add('on'); off.classList.remove('on');
+});
+off.addEventListener('click', function () {
+  document.body.classList.add('hl-off'); off.classList.add('on'); on.classList.remove('on');
+});
+</script>
+</body>
+</html>

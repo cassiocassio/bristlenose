@@ -295,7 +295,7 @@ counts; "most" wording is gated on a minimum share; experiential territories
 | Need | Reuse | Where |
 |---|---|---|
 | Quote cards, badges, hidden/star, inline heading + text editing | `QuoteCard`, `QuoteGroup`, `EditableText` | `frontend/src/islands/`, `molecules/editable-text.css` |
-| Argument-run visual | `quote-sequences` `seq-*` left-rule treatment (generalise out of `.signal-card-quotes`) | `organisms/analysis.css` |
+| Argument-run visual | `quote-sequences` `seq-*` left-rule treatment (generalise out of `.signal-card-quotes`) | `organisms/signals.css` |
 | Off-screen render skip | `content-visibility: auto` per card | `organisms/blockquote.css` |
 | Progressive-disclosure idiom (the scaffold) | `.coverage-details` `<details>` pattern | `organisms/coverage.css` |
 | Embedded-JSON XSS-safe serialisation | centralised escaped `endpoints` embed | `server/routes/export.py` |

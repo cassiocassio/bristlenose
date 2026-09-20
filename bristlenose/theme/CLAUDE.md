@@ -179,7 +179,7 @@ All custom content tooltips use a consistent pattern: **soft surface, 300ms hove
 ### Two implementations
 
 1. **CSS-only** (`.has-tooltip .tooltip` in `molecules/autocode-report.css`) — used for rationale tooltips on proposed badges and in the AutoCode report modal. Uses `transition-delay` for the 300ms hover delay.
-2. **JS-controlled** (`CellTooltip` in `frontend/src/islands/AnalysisPage.tsx`) — used for analysis heatmap cell tooltips. Uses `setTimeout(300)` in `handleCellEnter` for the delay, CSS `@keyframes cell-tooltip-in` for the animation.
+2. **JS-controlled** (`CellTooltip` in `frontend/src/islands/SignalsPage.tsx`) — used for analysis heatmap cell tooltips. Uses `setTimeout(300)` in `handleCellEnter` for the delay, CSS `@keyframes cell-tooltip-in` for the animation.
 
 ### When to use custom tooltips vs native `title`
 

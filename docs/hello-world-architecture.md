@@ -908,7 +908,7 @@ else:
 # bristlenose/pipeline.py
 analysis = _compute_analysis(screen_clusters, theme_groups, all_quotes, n_participants)
 
-# bristlenose/analysis/metrics.py
+# bristlenose/signals/metrics.py
 def concentration_ratio(cell_count, row_total, col_total, grand_total):
     """How overrepresented is this sentiment in this section?
 
@@ -1441,7 +1441,7 @@ if (sectionsRoot) {
 | `#bn-quote-sections-root` | QuoteSections | Screen-specific findings (quote cards) |
 | `#bn-quote-themes-root` | QuoteThemes | Cross-cutting themes (quote cards) |
 | `#bn-codebook-root` | CodebookPanel | Tag taxonomy, group management, AutoCode |
-| `#bn-analysis-root` | AnalysisPage | Signal cards, heatmaps |
+| `#bn-analysis-root` | SignalsPage | Signal cards, heatmaps |
 | `#bn-transcript-page-root` | TranscriptPage | Per-session transcript with annotations |
 
 ### 8.5 The API Layer
@@ -1950,11 +1950,11 @@ analysis_json = _serialize_analysis(analysis)
 parts.append(f"<script>window.BRISTLENOSE_ANALYSIS = {analysis_json};</script>")
 ```
 
-**React side — AnalysisPage island:**
+**React side — SignalsPage island:**
 
 ```typescript
-// frontend/src/islands/AnalysisPage.tsx
-export function AnalysisPage({ projectId }: { projectId: string }) {
+// frontend/src/islands/SignalsPage.tsx
+export function SignalsPage({ projectId }: { projectId: string }) {
     // Sentiment data from baked window global (fast, no API call)
     const sentimentData = (window as any).BRISTLENOSE_ANALYSIS;
 
@@ -1986,7 +1986,7 @@ export function AnalysisPage({ projectId }: { projectId: string }) {
 **Heatmap colouring uses OKLCH** — a perceptually uniform colour space:
 
 ```css
-/* bristlenose/theme/organisms/analysis.css */
+/* bristlenose/theme/organisms/signals.css */
 .bn-analysis-cell {
     /* Computed in JS based on concentration ratio */
     background-color: oklch(

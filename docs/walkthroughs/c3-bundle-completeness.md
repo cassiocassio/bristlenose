@@ -250,7 +250,7 @@ So serve mode depends on **data-extraction utilities** that live in `s12_render`
 - Possibly served by serve mode at `/report/sessions/<id>/...html` deep-link URLs
 - The React `TranscriptTab` exists per memory notes — but does it fully replace the file-on-disk pages including deep links? Needs verification.
 
-**Tests** — 7 files reference `s12_render` directly: `test_dark_mode`, `test_navigation`, `test_analysis_integration`, `test_search_filter`, `test_doctor`, `test_hidden_quotes`, `test_status`. They'd need porting.
+**Tests** — 7 files reference `s12_render` directly: `test_dark_mode`, `test_navigation`, `test_signals_integration`, `test_search_filter`, `test_doctor`, `test_hidden_quotes`, `test_status`. They'd need porting.
 
 ### Phased deletion sequence
 

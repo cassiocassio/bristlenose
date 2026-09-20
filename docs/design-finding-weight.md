@@ -8,7 +8,7 @@ Design exploration. Not an implementation plan.
 
 ## Problem
 
-The Analysis tab shows **signal strength** (concentration x agreement x intensity) but not **signal direction**. A researcher looking at the top-ranked signal cards can't immediately see whether a strong signal is a success to protect or a problem to fix.
+The Signals lens shows **signal strength** (concentration x agreement x intensity) but not **signal direction**. A researcher looking at the top-ranked signal cards can't immediately see whether a strong signal is a success to protect or a problem to fix.
 
 Research debriefs typically need to distinguish:
 
@@ -26,7 +26,7 @@ Separately: successes are genuine findings, not just absence of problems. A clus
 
 ## What we already have
 
-Each `Signal` dataclass (`bristlenose/analysis/models.py`) contains:
+Each `Signal` dataclass (`bristlenose/signals/models.py`) contains:
 
 - **`sentiment`** — which of the 7 sentiment categories this signal is about (e.g. "frustration", "delight")
 - **`count`** — how many quotes
@@ -213,4 +213,4 @@ These need a **dev-only HUD with threshold sliders** — drag and watch flags re
 1. Does the flag assignment feel right on real study data? Do the thresholds need tuning?
 2. Are six flags the right set, or do some collapse in practice?
 3. Is "Surprising" useful as a distinct flag, or does it just mean "look at this"?
-4. Where should the HUD live — alongside the existing playground, or its own dev-mode panel on the Analysis tab?
+4. Where should the HUD live — alongside the existing playground, or its own dev-mode panel on the Signals lens?

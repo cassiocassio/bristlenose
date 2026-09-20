@@ -81,7 +81,7 @@ All available in `PersonComputed` / `PersonEditable` / `SpeakerInfo`:
 
 ### Top signals from Analysis
 
-All computed in `bristlenose/analysis/`, only shown on the Analysis tab:
+All computed in `bristlenose/signals/`, only shown on the Signals lens:
 
 - **Top signals** — composite signal strength, concentration ratio, confidence level (strong/moderate/emerging)
 - **N_eff (agreement breadth)** — Simpson's effective number of voices per signal

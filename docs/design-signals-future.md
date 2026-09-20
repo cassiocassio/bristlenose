@@ -21,10 +21,10 @@ benches in the mockup named above. The first seven are the card and the
 navigation; the rest settled while building.
 
 **Built on 13 Sep 2026, all of it.** `utils/signalDedup.ts` holds the rule and
-the grouping; `AnalysisPage` merges the two signal sources, de-duplicates once,
-and renders one run of locations; `AnalysisSidebar` groups the same list through
-the same helper; `AnalysisSignalStore` holds one list instead of two. The card's
-top right is one hero chip — `SignalHero` in `AnalysisPage.tsx`, a real
+the grouping; `SignalsPage` merges the two signal sources, de-duplicates once,
+and renders one run of locations; `SignalsSidebar` groups the same list through
+the same helper; `SignalStore` holds one list instead of two. The card's
+top right is one hero chip — `SignalHero` in `SignalsPage.tsx`, a real
 `<button>` with `aria-expanded` — carrying the group-or-sentiment and the score,
 with the four metrics behind it and minimised by default. Both card kinds share
 that one right column; the badge stack and the always-open metrics block are
@@ -42,7 +42,7 @@ gone, and `.signal-card-badges` with them.
 | 8 | **Nav rows wrap, never truncate.** Measured: 90% of rows truncate against a 28-character line. | V1 |
 | 9 | **A nameless row is its group chip alone** — no location fallback, no placeholder. | T6b |
 | 10 | **Sections and themes interleave, unlabelled.** The Quotes lens still owns the demarcation. | U3 |
-| 11 | **The main content follows the navigation** — one run of locations under `.analysis-codebook-heading`. | W2 |
+| 11 | **The main content follows the navigation** — one run of locations under `.signals-codebook-heading`. | W2 |
 | 12 | **Nothing caps the card count.** De-duplication is the bound; `SAFETY_CAP` exists so nothing pathological renders. | — |
 
 **Still open, and the first one blocks ordering:**
@@ -59,7 +59,7 @@ gone, and `.signal-card-badges` with them.
    de-duplication: 18 of 76 cards across the trial corpus have no elaborated
    name. A cost decision — every miss is an LLM call.
 3. **Does the main content follow the navigation?** Proposed — location-sectioned
-   cards matching the nav's sequence, reusing `.analysis-codebook-heading` and
+   cards matching the nav's sequence, reusing `.signals-codebook-heading` and
    inventing no new heading styles, with today's two flat grids kept as the
    second choice in the view menu. Not drawn yet.
 
@@ -76,7 +76,7 @@ shipped floor the trial corpus gives 106 cards over 74 locations; at 3, 56 over
 _Trued 13 Sep 2026. The Phases 1–3 description this replaced was written for the
 standalone `analysis.html`, which the React lens superseded._
 
-The Analysis lens is a React tab. It shows:
+The Signals lens is a React tab. It shows:
 
 - **Signal cards grouped by location**, locations ranked by their strongest
   signal, cards ranked within — the same order and the same list the sidebar

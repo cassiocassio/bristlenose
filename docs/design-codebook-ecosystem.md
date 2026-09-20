@@ -110,7 +110,7 @@ Every tag has three fields that the LLM uses for auto-tagging:
 > *learned* from the quotes they coded by hand rather than written up front
 > (`docs/design-dynamic-codebook-builder.md`). This is why signal elaboration skips
 > custom codebooks — there is no definition to interpret against
-> (`bristlenose/server/routes/analysis.py:1136`).
+> (`bristlenose/server/routes/signals.py:1136`).
 
 
 - **definition** — what this concept means (1–2 sentences)
@@ -238,7 +238,7 @@ The small participant badges (`.p-box` in `.participant-grid`) on signal cards a
 - `docs/codebook futures/bristlenose-codebook-prompts-garrett-norman.md` — Garrett/Norman prompt design
 - `docs/design-nielsen-codebook.md` — Nielsen adaptation analysis (expert evaluation → quote coding)
 - `docs/design-research-methodology.md` — analytical decisions behind current codes
-- `docs/design-analysis-future.md` — analysis page vision (grid layering, two-pane design)
+- `docs/design-signals-future.md` — analysis page vision (grid layering, two-pane design)
 - `docs/design-codebook-state-model.md` — **canonical** for install / enable /
   disable / hide semantics, which this doc predates
 - `docs/design-codebook-v2.md` — the shipped lens

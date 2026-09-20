@@ -171,7 +171,7 @@ prefers "same widget adapts" over "two widgets swapped."
   concentration math), NOT a second dashboard matrix — while `dashboard-autolayout.html` brick 5
   welds friction + co-occurrence into one dashboard brick (1:2 split). Resolve before designing:
   is brick 5 a welded pair, or is co-occurrence the sole dashboard tenant and friction lives in
-  the analysis lens? Flagged to Martin.
+  the Signals lens? Flagged to Martin.
 - ladder: _(tbd — pending the above)_
 
 ### 1 · Study at a glance (numbers + saturation)

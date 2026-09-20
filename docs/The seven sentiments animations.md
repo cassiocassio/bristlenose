@@ -3,7 +3,7 @@ The seven sentiments animations should animate from the left hand side like a fa
 
 Acutal sentiments and chips great
 
-2. signals - go back to the real analysis lens and find a real signal card with the mini histogram, the range of metrics, and their tooltips that expain the metrics - this is too simplified 
+2. signals - go back to the real Signals lens and find a real signal card with the mini histogram, the range of metrics, and their tooltips that expain the metrics - this is too simplified 
 
 get rid of the progress bar - but the trainboard flip is enough
 

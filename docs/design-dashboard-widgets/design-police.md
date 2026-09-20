@@ -113,7 +113,7 @@ Empty = the goal (everything mapped to existing atoms)._
 **Observation — pre-existing un-tokenised colours in the shipped system (not our delta):**
 - **Signal `confidence-*` badge is `hidden from UI, preserved for future`** (its own CSS
   comment) — so it is NOT part of the signal card and must not appear in the widget.
-- **Signal `pattern-*` label IS shown** and hardcodes hex directly in `organisms/analysis.css`
+- **Signal `pattern-*` label IS shown** and hardcodes hex directly in `organisms/signals.css`
   (e.g. `pattern-gap` `light-dark(#fee2e2,#450a0a)`) rather than reading tokens — palette-blind,
   so it can't get an Edo-specific treatment today. Replicated verbatim in the gallery. Candidate
   future tokenisation — *not* blocking this effort.

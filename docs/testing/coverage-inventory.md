@@ -162,8 +162,8 @@ Search (`/`, debounced, count label) · view switcher (All / ★Starred) · Sect
 ### Codebook — `CodebookPanel.tsx`
 Sidebar (Your tags / Built-in / Frameworks) · Browse-codebooks modal · tag inline-rename · add tag/group · delete tag/group (confirm) · drag-to-merge (confirm) · remove framework (impact confirm) · Run AutoCode (status modal + cancel) · threshold review (Accept All / Review / Cancel) · frequency bars + tentative counts · `[`/`]`.
 
-### Analysis — `AnalysisPage.tsx`
-signal cards — one interleaved list, not two capped ones (`SAFETY_CAP = 60` in `AnalysisPage.tsx`; the per-section `≤6` was removed 13 Sep 2026, and the busiest trial project renders 20) · card select → inspector · quote-in-card → Quotes lens · inspector panel (`m`, drag-resize, Esc) · dimension toggle · heatmap · per-card fields (count/nEff/mean intensity/concentration/participants/hero excerpts).
+### Analysis — `SignalsPage.tsx`
+signal cards — one interleaved list, not two capped ones (`SAFETY_CAP = 60` in `SignalsPage.tsx`; the per-section `≤6` was removed 13 Sep 2026, and the busiest trial project renders 20) · card select → inspector · quote-in-card → Quotes lens · inspector panel (`m`, drag-resize, Esc) · dimension toggle · heatmap · per-card fields (count/nEff/mean intensity/concentration/participants/hero excerpts).
 
 ### Cross-cutting
 Activity chips (`ActivityChipStack.tsx`, AutoCode/clips progress + cancel) · modals (Help · Settings · Feedback · Export · Miro · Codebook-browse · confirm dialogs · AutoCode) all Esc-close · context-sensitive sidebars per lens.

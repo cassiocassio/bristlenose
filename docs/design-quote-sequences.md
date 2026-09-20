@@ -106,7 +106,7 @@ Threshold   Pairs within   % of pairs
 
 The distribution plateaus at 15–20s (both 77.1%) — a natural break between "same conversational flow" and "returned to topic later." Most sub-5s gaps are 0.0s (coarse VTT timecodes where adjacent segments share the same second).
 
-**Default threshold: 17.5s** (`SEQUENCE_GAP_SECONDS` in `bristlenose/analysis/models.py`). Splits the 15–20s plateau. May need adjustment for depth interviews (longer pauses) or rapid usability tests (tighter gaps). Eventually configurable per-project.
+**Default threshold: 17.5s** (`SEQUENCE_GAP_SECONDS` in `bristlenose/signals/models.py`). Splits the 15–20s plateau. May need adjustment for depth interviews (longer pauses) or rapid usability tests (tighter gaps). Eventually configurable per-project.
 
 ---
 
@@ -155,7 +155,7 @@ Default value is `-1` throughout (Pydantic defaults, SQLite column defaults, Typ
 
 ## Visual treatment (implemented)
 
-The React analysis page island (`AnalysisPage.tsx`) detects and renders quote sequences within signal cards. The detection runs entirely in the frontend — it's a view concern, not a data concern.
+The React analysis page island (`SignalsPage.tsx`) detects and renders quote sequences within signal cards. The detection runs entirely in the frontend — it's a view concern, not a data concern.
 
 ### Detection algorithm
 
@@ -186,15 +186,15 @@ Design decisions:
 
 ### CSS
 
-Sequence rules live in `bristlenose/theme/organisms/analysis.css` — organism-level contextual overrides scoped to `.signal-card-quotes blockquote.seq-*`. No changes to atoms, molecules, or tokens.
+Sequence rules live in `bristlenose/theme/organisms/signals.css` — organism-level contextual overrides scoped to `.signal-card-quotes blockquote.seq-*`. No changes to atoms, molecules, or tokens.
 
 ### Files
 
 - `frontend/src/utils/sequences.ts` — detection utility + types
 - `frontend/src/utils/sequences.test.ts` — 12 unit tests
-- `frontend/src/islands/AnalysisPage.tsx` — `SignalCard` computes metas, `QuoteBlock` consumes them
-- `frontend/src/islands/AnalysisPage.test.tsx` — 4 rendering tests
-- `bristlenose/theme/organisms/analysis.css` — `seq-first` / `seq-middle` / `seq-last` rules
+- `frontend/src/islands/SignalsPage.tsx` — `SignalCard` computes metas, `QuoteBlock` consumes them
+- `frontend/src/islands/SignalsPage.test.tsx` — 4 rendering tests
+- `bristlenose/theme/organisms/signals.css` — `seq-first` / `seq-middle` / `seq-last` rules
 
 ---
 
@@ -215,6 +215,6 @@ Sequence rules live in `bristlenose/theme/organisms/analysis.css` — organism-l
 ## Related
 
 - `docs/design-research-methodology.md` — analytical decisions, quote extraction rationale
-- `docs/design-analysis-future.md` — analysis page roadmap
-- `bristlenose/analysis/` — signal concentration computation
+- `docs/design-signals-future.md` — analysis page roadmap
+- `bristlenose/signals/` — signal concentration computation
 - `bristlenose/stages/s09_quote_extraction.py` — where quotes are born from transcript segments

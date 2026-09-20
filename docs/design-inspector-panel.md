@@ -47,7 +47,7 @@ Current design. Major changes from feedback:
 | Close panel | Click × icon, or `m` key | Collapses to 28px bar |
 | Snap close | Drag below 80px | Collapses |
 | Resize | Drag grab handle | Sets manual height (overrides auto-height) |
-| Toggle | `m` keyboard shortcut | Route-guarded to `/report/analysis`, `isEditing()` guard |
+| Toggle | `m` keyboard shortcut | Route-guarded to `/report/signals`, `isEditing()` guard |
 
 ### Auto-height
 
@@ -65,7 +65,7 @@ This is the core value — the heatmap gives spatial context to the signal cards
 
 The heatmap columns contain single-digit numbers but their headers (sentiment names, codebook tag names) are much wider than the data. All column headers use `-30deg` rotation (CSS already exists in `analysis.css` at `.heatmap-col-label`).
 
-**Regression to fix**: the React `Heatmap` component in `AnalysisPage.tsx` has an `isSentiment` guard that skips the rotation class for sentiment columns. This needs removing — all columns get rotation.
+**Regression to fix**: the React `Heatmap` component in `SignalsPage.tsx` has an `isSentiment` guard that skips the rotation class for sentiment columns. This needs removing — all columns get rotation.
 
 **Alignment fix**: rotated labels need a `margin-left` offset (roughly half cell width, ~28px) so the text visually anchors over the centre of its column, not the left edge. Tune visually at implementation time.
 
@@ -97,8 +97,8 @@ See `/Users/cassio/.claude/plans/vectorized-zooming-puddle.md` for the full impl
 | `frontend/src/hooks/useVerticalDragResize.ts` | **New** — vertical drag hook (useDragResize pattern) |
 | `frontend/src/components/InspectorPanel.tsx` | **New** — panel component |
 | `bristlenose/theme/organisms/inspector.css` | **New** — all panel styles |
-| `frontend/src/islands/AnalysisPage.tsx` | Extract heatmaps into panel, card focus → panel sync, fix sentiment rotation |
-| `bristlenose/theme/organisms/analysis.css` | Column header offset fix, `.analysis-layout`/`.analysis-center` |
+| `frontend/src/islands/SignalsPage.tsx` | Extract heatmaps into panel, card focus → panel sync, fix sentiment rotation |
+| `bristlenose/theme/organisms/signals.css` | Column header offset fix, `.signals-layout`/`.signals-center` |
 | `frontend/src/hooks/useKeyboardShortcuts.ts` | Add `m` shortcut |
 | `bristlenose/stages/s12_render/theme_assets.py` | Register inspector.css |
 
@@ -120,15 +120,15 @@ Start by recording the task with `/new-feature inspector-panel` (trunk — work 
 
 2. **useVerticalDragResize** (`frontend/src/hooks/useVerticalDragResize.ts`) — pointer-event state machine adapted from `useDragResize.ts` but vertical. Key difference: 3px movement threshold distinguishes click (open to auto-height) from drag (open and resize). `pointerup` is the event trigger for click-to-open, not `pointerdown`. Snap-close at 80px. Write tests alongside.
 
-3. **inspector.css** (`bristlenose/theme/organisms/inspector.css`) — `.analysis-layout` vertical flexbox, `.analysis-center` scrolling card area, `.inspector-panel` with `var(--inspector-height)`, collapsed state, grab handle, tabs, shimmer keyframe animation. Register in `_THEME_FILES` in `bristlenose/stages/s12_render/theme_assets.py`.
+3. **inspector.css** (`bristlenose/theme/organisms/inspector.css`) — `.signals-layout` vertical flexbox, `.signals-center` scrolling card area, `.inspector-panel` with `var(--inspector-height)`, collapsed state, grab handle, tabs, shimmer keyframe animation. Register in `_THEME_FILES` in `bristlenose/stages/s12_render/theme_assets.py`.
 
 4. **InspectorPanel** (`frontend/src/components/InspectorPanel.tsx`) — the panel component. Collapsed: 28px bar with grid icon (4-square SVG) + "Heatmap" label. Open: grid icon becomes × close, grab handle along top edge, source tabs, scrollable body. Section/Theme toggle lives inside the heatmap table's top-left `<th>` cell (not in the tab bar). Auto-height on first open: measure content `scrollHeight`, clamp to `[150px, 0.7 × vh]`. Once user drags, their height overrides auto-height via `hasManualHeight`. Shimmer teaching: when card focused + panel collapsed, animate "Heatmap" label (sessionStorage counter, max 3 times). Write tests alongside.
 
-5. **Refactor AnalysisPage.tsx** — extract all heatmap rendering into InspectorPanel sources. Build sources array from existing sentiment + codebook data. Wrap page in `.analysis-layout` > `.analysis-center` + `<InspectorPanel>`. Card focus → auto-switch panel's `activeSource` and `activeDimension` to match (call `setInspectorSourceAndDimension()`). Cell click keeps existing behaviour (scroll to card + glow). Update existing tests.
+5. **Refactor SignalsPage.tsx** — extract all heatmap rendering into InspectorPanel sources. Build sources array from existing sentiment + codebook data. Wrap page in `.signals-layout` > `.signals-center` + `<InspectorPanel>`. Card focus → auto-switch panel's `activeSource` and `activeDimension` to match (call `setInspectorSourceAndDimension()`). Cell click keeps existing behaviour (scroll to card + glow). Update existing tests.
 
-6. **Fix the sentiment column rotation regression** — in `AnalysisPage.tsx`, the `isSentiment` guard on line ~749 skips the `heatmap-col-header` class for sentiment columns. Remove that guard — all column headers should get the rotation. Also in `analysis.css`, add `margin-left` (~28px, half cell width) to `.heatmap-col-label` so rotated labels visually anchor over the centre of their column. Tune the exact offset visually.
+6. **Fix the sentiment column rotation regression** — in `SignalsPage.tsx`, the `isSentiment` guard on line ~749 skips the `heatmap-col-header` class for sentiment columns. Remove that guard — all column headers should get the rotation. Also in `analysis.css`, add `margin-left` (~28px, half cell width) to `.heatmap-col-label` so rotated labels visually anchor over the centre of their column. Tune the exact offset visually.
 
-7. **Keyboard shortcut** — add `m` to `useKeyboardShortcuts.ts`, route-guarded to `/report/analysis`, with `isEditing()` guard. Add to HelpModal. Update keyboard shortcut tests.
+7. **Keyboard shortcut** — add `m` to `useKeyboardShortcuts.ts`, route-guarded to `/report/signals`, with `isEditing()` guard. Add to HelpModal. Update keyboard shortcut tests.
 
 8. **Sticky thead** for tall matrices — column headers stick when scrolling the inspector body.
 
@@ -141,4 +141,4 @@ Start by recording the task with `/new-feature inspector-panel` (trunk — work 
 - Card focus auto-switches panel source/dimension to match
 - ARIA: `role="separator"` on grab handle, `role="tablist"/"tab"` on source tabs, `role="radiogroup"` on dimension toggle
 
-**Verification:** `cd frontend && npm test`, `cd frontend && npm run build` (tsc), `.venv/bin/python -m pytest tests/`, `.venv/bin/ruff check .`. Then tell me to QA in browser with `.venv/bin/bristlenose serve --dev trial-runs/project-ikea` → `/report/analysis/`.
+**Verification:** `cd frontend && npm test`, `cd frontend && npm run build` (tsc), `.venv/bin/python -m pytest tests/`, `.venv/bin/ruff check .`. Then tell me to QA in browser with `.venv/bin/bristlenose serve --dev trial-runs/project-ikea` → `/report/signals/`.

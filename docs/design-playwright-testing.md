@@ -148,7 +148,7 @@ test('codebook page loads groups', async ({ page }) => {
 });
 
 test('analysis page has signal cards', async ({ page }) => {
-  await page.goto('http://127.0.0.1:8150/report/analysis/');
+  await page.goto('http://127.0.0.1:8150/report/signals/');
   await expect(page.getByText('Signal')).toBeVisible();
 });
 

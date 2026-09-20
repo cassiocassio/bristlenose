@@ -359,7 +359,7 @@ Mostly already modelled. Grounded in `bristlenose/server/models.py`:
 | Tags | `TagDefinition`, `QuoteTag`, `CodebookGroup` | |
 | Frameworks | `ProjectFrameworkState`, codebook templates (garrett, norman, uxr, plato) | |
 | Code boundaries | `TagPrompt` (`definition`/`apply_when`/`not_this`) | instance-scoped, content-hash versioned |
-| Signals | **not stored** — computed in `bristlenose/analysis/` | concentration × agreement × intensity |
+| Signals | **not stored** — computed in `bristlenose/signals/` | concentration × agreement × intensity |
 | Transcript | `TranscriptSegment`, `TopicBoundary` | |
 
 Two additions not on the original list, both high value:
@@ -385,7 +385,7 @@ Without these the assistant will get the arithmetic wrong:
 - **Tag-analysis double-counting** — a quote tagged from multiple groups counts
   in each group column, inflating `grand_total`. Signal strengths are comparable
   *within* one analysis only. Already stated as `_TRADE_OFF_NOTE` in
-  `bristlenose/server/routes/analysis.py`; restate it to the model.
+  `bristlenose/server/routes/signals.py`; restate it to the model.
 - **Person rows are not deduped across projects, and must not be correlated** —
   two "Jim Smith" rows in two studies is correct, and joining them is not a
   deferred feature but a *methodological error*. See §3a. This one has to be an

@@ -127,7 +127,7 @@ The analysis page is the most impactful — signal concentration completely chan
 
 ### Impact on analysis
 
-The analysis module (`bristlenose/analysis/`) computes metrics from grouped quotes. With session filtering:
+The analysis module (`bristlenose/signals/`) computes metrics from grouped quotes. With session filtering:
 
 - **Signal cards**: A signal that was "strong" across 5 sessions might become "moderate" across 3. Or a buried signal might surface when noisy sessions are removed.
 - **Heatmap**: The sentiment-by-section matrix changes shape (fewer rows or different cell values).

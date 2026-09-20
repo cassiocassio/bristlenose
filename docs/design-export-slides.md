@@ -29,7 +29,7 @@ The researcher's workflow: **curate first, export second.** Star quotes → tag-
 ### Where it appears
 
 - Quote cards on Quotes tab
-- Signal cards on Analysis tab
+- Signal cards on Signals lens
 
 ### CSS (using Bristlenose tokens)
 

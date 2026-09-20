@@ -20,7 +20,7 @@ trued-against: HEAD@main on 2026-09-20
   scope overstated (fields left the adapters, not the wire). Live test counts
   removed rather than updated: they were false within hours of being written.
   Anchors: `frontend/src/utils/signalDedup.ts` `FOLD_THRESHOLD`,
-  `bristlenose/server/routes/analysis.py`, `bristlenose/analysis/metrics.py`;
+  `bristlenose/server/routes/signals.py`, `bristlenose/signals/metrics.py`;
   commits `9e9af6fd`, `96323e58`, `08b4bb93`, `075d7684`.
 
 _Last updated: 20 Sep 2026_
@@ -98,8 +98,8 @@ in §9 records the dependencies that forced it. One item did not land: L, which
 
 ## 1. What a card is
 
-One React component renders every card in the analysis lens: `SignalCard` in
-`frontend/src/islands/AnalysisPage.tsx`. It is not a library component — not
+One React component renders every card in the Signals lens: `SignalCard` in
+`frontend/src/islands/SignalsPage.tsx`. It is not a library component — not
 exported, not in `components/index.ts`, no test file of its own, sharing a
 1,466-line file with the lens, the heatmap and the tooltip (`wc -l`, 20 Sep — it grows; do not trust this number, read it). What look like
 different kinds of card are data variants of that one function.
@@ -368,7 +368,7 @@ Two remain open, and both say why.
    treatment lands. It now also drives which quotes a codebook card counts as
    supporting its finding (§6), so it is read rather than merely carried.
 5. ✓ FIXED — **`classify_flag` was computed for every sentiment signal, reached the API
-   and was rendered nowhere.** Anchors move; find it with `grep -n 'flag' bristlenose/server/routes/analysis.py`
+   and was rendered nowhere.** Anchors move; find it with `grep -n 'flag' bristlenose/server/routes/signals.py`
    rather than by line. Its documented value `Pattern` is **unreachable** — an
    exhaustive sweep returns only `Win / Problem / Niggle / Success / Surprising`.
    The docstring advertising `Pattern` outlived this finding by a day and was
@@ -404,7 +404,7 @@ Two remain open, and both say why.
    carrying definitions**, which is a codebook-authoring change rather than an
    analysis one.
 
-8. ✓ FIXED — **`.signal-rank`** in `theme/organisms/analysis.css` has zero consumers
+8. ✓ FIXED — **`.signal-rank`** in `theme/organisms/signals.css` has zero consumers
    anywhere in the tree.
 
 ---
@@ -512,7 +512,7 @@ navigation is one-to-one with the main content by construction rather than by
 accident."* Dropping a location is the property working, not a case to handle.
 
 **Nothing is hidden by it.** Every quote stays in the Quotes lens under its own
-location, carrying its tags. The analysis lens is the findings view; a place
+location, carrying its tags. The Signals lens is the findings view; a place
 that produced no finding has no row in it.
 
 ---
@@ -535,12 +535,12 @@ Seven changes, no data model, no LLM, no new endpoint. They can land together.
 | | change | where |
 |---|---|---|
 | A ✓ | chip to `--bn-text-label`, tighter padding, `--bn-space-sm` gap | `analysis.css` |
-| B ✓ | drop the eyebrow on both branches; heading takes `--bn-text-heading`, no rule; **move the Quotes-lens deep link from the card to the heading** | `AnalysisPage.tsx`, `analysis.css` |
+| B ✓ | drop the eyebrow on both branches; heading takes `--bn-text-heading`, no rule; **move the Quotes-lens deep link from the card to the heading** | `SignalsPage.tsx`, `analysis.css` |
 | C ✓ | fused stack — `:first-child`/`:last-child` radius, `border-top: none` on the rest, drop the grid, drop the hover shadow for a background tint | `analysis.css` |
-| D ✓ | `visibleQuotes` cap 1 → 4; toggle label follows | `AnalysisPage.tsx` |
-| E ✓ | float the hero; emit `.signal-card-right` **before** `.signal-card-identity` | `AnalysisPage.tsx`, `analysis.css` |
+| D ✓ | `visibleQuotes` cap 1 → 4; toggle label follows | `SignalsPage.tsx` |
+| E ✓ | float the hero; emit `.signal-card-right` **before** `.signal-card-identity` | `SignalsPage.tsx`, `analysis.css` |
 | F ✓ | `renderLead` emits two paragraphs; **strip a leading em dash** from the remainder — the cached corpus predates the rule and some entries carry `\|\|` *and* a dash | `leadSentence.tsx`, `lead-paragraph.css` |
-| G ✓ | delete `.signal-rank`; drop `confidence`, `count`, `segmentIndex` from the adapters | `analysis.css`, `AnalysisPage.tsx` |
+| G ✓ | delete `.signal-rank`; drop `confidence`, `count`, `segmentIndex` from the adapters | `analysis.css`, `SignalsPage.tsx` |
 
 **B and E both touch reading order.** E puts the chip before the headline for a
 screen reader; the fix is `order` on a flex parent or an ARIA reorder, decided
@@ -610,7 +610,7 @@ its frustration quotes. That also makes J a prerequisite for K.
 
 *History, since "is this new?" is the natural question.* `classify_flag` was
 written 19 Mar 2026 (`2a822d11`) and **has never been rendered by either
-renderer** — zero commits touch `flag` in `AnalysisPage.tsx` or the frozen
+renderer** — zero commits touch `flag` in `SignalsPage.tsx` or the frozen
 vanilla `analysis.js`. The codebook call site passing `col` has been inert from
 the day it was written. What changed is *reachability*: until 13 Sep 2026 the
 rendered cards came from the sentiment-**value** path (`signals.py:111` passes a

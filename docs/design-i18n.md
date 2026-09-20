@@ -1234,7 +1234,7 @@ Lessons from wiring ~200 hardcoded strings across ~35 React components to i18nex
 
 ### What we got wrong
 
-1. **Incomplete string audit upfront** — missed SettingsModal (separate component from SettingsPanel), CodebookSidebar headings, AnalysisSidebar headings, SidebarLayout "Contents" title, "Browse codebooks" button. Each required a QA cycle to discover. A `grep -r '"[A-Z][a-z]' --include='*.tsx' frontend/src/` upfront would have caught them
+1. **Incomplete string audit upfront** — missed SettingsModal (separate component from SettingsPanel), CodebookSidebar headings, SignalsSidebar headings, SidebarLayout "Contents" title, "Browse codebooks" button. Each required a QA cycle to discover. A `grep -r '"[A-Z][a-z]' --include='*.tsx' frontend/src/` upfront would have caught them
 
 2. **`useMemo([t])` doesn't work** — the `t` function reference doesn't change on locale switch. Arrays built with `useMemo(() => [...], [t])` go stale. Fix: `[t, i18n.language]` as dependency, or skip `useMemo` for small arrays
 

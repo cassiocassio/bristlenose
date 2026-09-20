@@ -102,12 +102,12 @@ The structural hinge — everything before it is self-contained, everything afte
   - Hash-to-pathname redirect (`frontend/src/utils/hashRedirect.ts`) — old `#quotes` bookmarks → `/report/quotes/`
   - `initGlobalNav()` no-op guard when `#bn-app-root` exists (same pattern as toolbar)
   - `main.tsx` dual mode: SPA (`RouterProvider`) when `#bn-app-root` exists, legacy island mode (dynamic `import()`) as fallback
-- **Routes:** `/report/` (project), `/report/sessions/` (grid), `/report/sessions/:sessionId` (transcript), `/report/quotes/`, `/report/codebook/`, `/report/analysis/`, `/report/settings/`, `/report/about/`
+- **Routes:** `/report/` (project), `/report/sessions/` (grid), `/report/sessions/:sessionId` (transcript), `/report/quotes/`, `/report/codebook/`, `/report/signals/`, `/report/settings/`, `/report/about/`
 - **Key simplification:** Pathname-based routing frees hash fragments for scroll targets. `#t-123` (timecodes), `#section-name` (deep links) all just work as fragments on the correct route. The `#quotes` vs `#t-123` conflict disappears
 - **Link format change:** `sessions/transcript_s1.html#t-123` → `/report/sessions/s1#t-123` (clean session ID, matches API pattern)
 - **Files:** 15 new files, 14 modified files (36 total in commit). Detailed plan at `.claude/plans/generic-scribbling-feigenbaum.md`
 - **Test:** 45 new Vitest tests (635 total). NavBar, router, hash redirect, scroll hook, navigate hook, navigation shims
-- **Post-QA fixes:** AnalysisPage slug generation aligned with QuoteSections/QuoteThemes (was stripping special chars, now only replaces spaces — matching anchor IDs). Scroll retry window increased from 2s to 5s for cross-tab navigation where destination page needs to mount + fetch data
+- **Post-QA fixes:** SignalsPage slug generation aligned with QuoteSections/QuoteThemes (was stripping special chars, now only replaces spaces — matching anchor IDs). Scroll retry window increased from 2s to 5s for cross-tab navigation where destination page needs to mount + fetch data
 
 ### Step 6: Player integration _(medium)_ ✓ DONE
 
@@ -138,7 +138,7 @@ At this point, every vanilla JS module has been replaced by a React equivalent. 
 The serve path stopped reading the static HTML file. Instead, it serves the Vite-built SPA directly.
 
 - **Replaces:** `_transform_report_html()`, `_transform_transcript_html()`, all `_REACT_*_MOUNT` constants, `_replace_baked_js()`, the marker-based substitution pattern
-- **What was built:** React `<Header>` (logo, project name, subtitle from `/api/health`), `<Footer>` (version, `?` for Help link triggering `onToggleHelp`), `<HelpModal>` (keyboard shortcuts overlay using `createPortal`, `bn-overlay` + `bn-modal` CSS classes). `AppShell` inner component owns help modal state and wires `useKeyboardShortcuts`. Route extraction: `app.py` refactored from monolith to route modules (`routes/analysis.py`, `routes/dashboard.py`, `routes/sessions.py`, `routes/transcript.py`). Dev serve function generates SPA HTML directly (no baked HTML reading). Prod serve reads `frontend/dist/index.html`. `_strip_vanilla_js()` removes module code from IIFE while keeping `window.*` globals for React
+- **What was built:** React `<Header>` (logo, project name, subtitle from `/api/health`), `<Footer>` (version, `?` for Help link triggering `onToggleHelp`), `<HelpModal>` (keyboard shortcuts overlay using `createPortal`, `bn-overlay` + `bn-modal` CSS classes). `AppShell` inner component owns help modal state and wires `useKeyboardShortcuts`. Route extraction: `app.py` refactored from monolith to route modules (`routes/signals.py`, `routes/dashboard.py`, `routes/sessions.py`, `routes/transcript.py`). Dev serve function generates SPA HTML directly (no baked HTML reading). Prod serve reads `frontend/dist/index.html`. `_strip_vanilla_js()` removes module code from IIFE while keeping `window.*` globals for React
 - **What stays:** `render/report.py` continues producing static HTML as a sealed byproduct of stage 12 (post-A3, 12 May 2026 — `bristlenose render` CLI command removed; the file still gets written but its path is never surfaced). CSS in `bristlenose/theme/` is shared. The regex surgery in `app.py` is deleted — no more link escape bugs, ever
 - **Test (historical):** `bristlenose serve` serves a complete React SPA. Stage 12 still produces a working static byproduct on disk. All tabs, navigation, interactions work
 

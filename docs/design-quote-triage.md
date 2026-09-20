@@ -77,7 +77,7 @@ What that means for the design:
 - **Don't hide the long tail.** It carries evidence weight. Find-by-attribute (tags, search, topic clustering) is what makes the long tail valuable — the researcher can later assemble "all 23 quotes about checkout" on demand. That's the digital superpower over Sharpie-and-stickies.
 - **Do make topic clustering fast and visible.** Tags, search, the Analysis page's signal-concentration metrics — these reveal evidence weight *after* the reading, not before, and they're what give the long tail its return-on-keeping.
 
-The Analysis page (`bristlenose/analysis/`) and tag-based filtering aren't anti-volume tools — they're the affordances that make volume into evidence.
+The Analysis page (`bristlenose/signals/`) and tag-based filtering aren't anti-volume tools — they're the affordances that make volume into evidence.
 
 ## 5. Close, not hide — and where closed things go
 

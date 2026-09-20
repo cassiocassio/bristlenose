@@ -31,7 +31,7 @@ the app already ships exactly such a cursor in two places:
 | | Where | State | Read by |
 |---|---|---|---|
 | **Quotes** | `frontend/src/contexts/FocusContext.tsx` | `focusedId` + a separate `selectedIds` | `QuoteCard`, the bridge's `focusedQuoteId` |
-| **Analysis** | `frontend/src/contexts/AnalysisSignalStore.ts` | `focusedKey` | signal card (`bn-selected`), sidebar, inspector |
+| **Analysis** | `frontend/src/contexts/SignalStore.ts` | `focusedKey` | signal card (`bn-selected`), sidebar, inspector |
 
 `FocusContext`'s own docstring draws the distinction in its first three lines —
 *"Focus (keyboard cursor): at most one quote focused at a time"* against
@@ -54,7 +54,7 @@ yet.** That is a gap, not a prohibition.
 ## 2 — The proposal
 
 Add a focus cursor to the codebook detail pane, modelled on
-`AnalysisSignalStore` — a module-level store over `useSyncExternalStore`,
+`SignalStore` — a module-level store over `useSyncExternalStore`,
 holding two nullable ids:
 
 ```ts

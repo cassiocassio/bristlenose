@@ -18,7 +18,7 @@ trued-against: HEAD@main on 2026-09-20
   problem statement's card drawing, Pattern type (settled by WITHDRAWING the
   badge, not by choosing a control), and a Backlog listing five shipped items
   as outstanding. Anchors: `bristlenose/server/elaboration.py`,
-  `bristlenose/server/routes/analysis.py`,
+  `bristlenose/server/routes/signals.py`,
   `bristlenose/llm/prompts/signal-elaboration.md`; commits `08b4bb93`,
   `797079e6`, `54fdc615`, `6fc82d28`.
 
@@ -154,7 +154,7 @@ The pattern type is a first-class data field, not just a label. It tells the res
 > Why the length cap stays: the headline is a **triage device** — the shortest
 > version of the finding that lets a researcher decide whether the rest is worth
 > reading — and `signal_name` doubles as the navigator row label
-> (`AnalysisSidebar.tsx`, `SignalEntry`), where a sentence will not fit. The
+> (`SignalsSidebar.tsx`, `SignalEntry`), where a sentence will not fit. The
 > claim sentence below it is what differentiates; the headline gets them there.
 > See `docs/design-signal-card.md` §2.
 
@@ -204,7 +204,7 @@ Examples from real data:
 > The model writes a literal `||` into the elaboration
 > (`bristlenose/llm/prompts/signal-elaboration.md`) and the renderer splits on
 > it — `frontend/src/utils/leadSentence.tsx`, consumed by
-> `AnalysisPage.tsx`. Signal cards pass **no `autoSplit`**, deliberately: an
+> `SignalsPage.tsx`. Signal cards pass **no `autoSplit`**, deliberately: an
 > author's marker beats any heuristic, and an unmarked elaboration stays one
 > rank rather than acquiring a break nobody authored. (The codebook-description
 > surface shares the splitter and *does* pass `autoSplit`, because its prose is
@@ -411,9 +411,9 @@ overhead.
 
 - **Mockup**: `docs/mockups/signal-elaboration.html` — full visual with algorithm traces on real IKEA data
 - **Codebook definitions**: `bristlenose/server/codebook/norman.yaml`, `garrett.yaml`, `plato.yaml`, `uxr.yaml`
-- **Signal detection**: `bristlenose/analysis/signals.py`, `bristlenose/analysis/generic_signals.py`
+- **Signal detection**: `bristlenose/signals/detect.py`, `bristlenose/signals/generic_detect.py`
 - **The card itself**: `docs/design-signal-card.md` — anatomy, the chip label rule, quote selection
 - **The score**: `docs/design-signal-strength.md` — open spike
-- **Analysis API**: `bristlenose/server/routes/analysis.py`
-- **Analysis future**: `docs/design-analysis-future.md`
+- **Analysis API**: `bristlenose/server/routes/signals.py`
+- **Analysis future**: `docs/design-signals-future.md`
 - **Research methodology**: `docs/design-research-methodology.md`

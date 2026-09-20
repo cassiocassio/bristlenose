@@ -161,8 +161,8 @@ state is still evidenced, the day is not.
 | `lead-sentence-playground.html` | 31 Aug 2026 | SANDPIT — lead-sentence instrument |
 | `llm-availability-exposure.html` | 3 Sep 2026 | PROPOSED 3 Sep 2026 — the tier argument for exposing LLM availability. Superseded in substance by `codebook-llm-state-matrix.html` §6, which settles that the control never changes; kept for the reasoning and the surface inventory |
 | `measure-aware-leading.html` | 15 Mar 2026 | PROPOSED 15 Mar 2026 — line-height varying with column width (Bringhurst §2.1.2). **Not built**: the `--bn-text-*-lh` tokens are still fixed per size |
-| `mini-heatmaps-dashboard.html` | 19 Mar 2026 | PROPOSED 19 Mar 2026 — **not built on the Dashboard**. Heatmaps ship on the Analysis lens instead; no decision recorded either way, so this is an idea that went elsewhere rather than one that was refused |
-| `mockup-analysis.html` | 10 Feb 2026 | PROPOSED 10 Feb 2026 · IMPLEMENTED — the Analysis lens ships |
+| `mini-heatmaps-dashboard.html` | 19 Mar 2026 | PROPOSED 19 Mar 2026 — **not built on the Dashboard**. Heatmaps ship on the Signals lens instead; no decision recorded either way, so this is an idea that went elsewhere rather than one that was refused |
+| `mockup-analysis.html` | 10 Feb 2026 | PROPOSED 10 Feb 2026 · IMPLEMENTED — the Signals lens ships |
 | `mockup-autocode-lifecycle.html` | 3 Sep 2026 | PROPOSED 19 Feb 2026 · SUPERSEDED 29 Aug 2026 by `codebook-v2-autocode-button.html` — a nine-step storyboard of the v1 flow, where importing a codebook and coding with it were separate acts; 0.29.0 made Install *be* apply |
 | `mockup-checkbox-options.html` | 28 Feb 2026 | SANDPIT — checkbox style options, side by side |
 | `mockup-codebook-badges.html` | 7 Feb 2026 | PROPOSED 7 Feb 2026 · IMPLEMENTED — v5 “final decisions”; `Badge.tsx` ships |
@@ -183,7 +183,7 @@ state is still evidenced, the day is not.
 | `mockup-pii-wiring-spec.html` | 26 Jul 2026 | IMPLEMENTED — the Privacy tab + failure surface wiring; PII removal is stage 7 and the Settings pane ships. (Two *config* keys named in `config.py` remain unimplemented — `pii_llm_pass`, `pii_custom_names` — and now fail loudly rather than warn) |
 | `mockup-privacy-settings.html` | 26 Jul 2026 | IMPLEMENTED — the privacy Settings pane ships |
 | `mockup-proposed-badge-actions.html` | 22 Feb 2026 | PROPOSED 22 Feb 2026 · IMPLEMENTED — the badge action pill ships; see `docs/design-badge-action-pill.md` |
-| `mockup-signal-cards.html` | 26 Jul 2026 | SANDPIT — signal card variants; signal cards ship on the Analysis lens |
+| `mockup-signal-cards.html` | 26 Jul 2026 | SANDPIT — signal card variants; signal cards ship on the Signals lens |
 | `mockup-tag-count-zero-suppression.html` | 2 Jul 2026 | SANDPIT — “**sandbox to reproduce the decisions**”, real theme CSS over real project data; the CSS trap it documents is in CLAUDE.md |
 | `mockup-tag-placement.html` | 7 Feb 2026 | SANDPIT — tag placement comparison |
 | `mockup-toolbar.html` | 7 Feb 2026 | PROPOSED 7 Feb 2026 · IMPLEMENTED — the Toolbar island ships |
@@ -264,7 +264,7 @@ state is still evidenced, the day is not.
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
-| `signal-card-expanded.html` | 23 Feb 2026 | PROPOSED 23 Feb 2026 · IMPLEMENTED — signal cards ship on the Analysis lens |
+| `signal-card-expanded.html` | 23 Feb 2026 | PROPOSED 23 Feb 2026 · IMPLEMENTED — signal cards ship on the Signals lens |
 | `signal-elaboration.html` | 23 Feb 2026 | PROPOSED 23 Feb 2026 · IMPLEMENTED — `server/elaboration.py` ships |
 | `signals-sidebar-row-layouts.html` | 31 Aug 2026 | SANDPIT — row-layout options for signals in the sidebar |
 | `signal-card-playground.html` | 12 Sep 2026 | SANDPIT — signal-card variants ahead of the 13 Sep lens overhaul; its outcomes shipped in `aacf3e88` / `54fdc615` |

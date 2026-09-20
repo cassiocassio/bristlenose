@@ -2,10 +2,10 @@
 
 _Last updated: 20 Sep 2026_
 
-**Status: PLANNED, NOT STARTED.** No rename code has moved. Counts were
-measured against HEAD on 20 Sep 2026, early afternoon — §4 was re-trued that
-evening after generation 4 of the signal card shipped between the two; the
-other sections' counts have not been re-measured since.
+**Status: IMPLEMENTED 20 Sep 2026** — Phases 1–5 landed in five commits
+(`2aba263b`, `c93d9c92`, `94e23670`, `a7e2a153`, and this one). Every count
+below was measured *before* the work and is kept as the record the plan was
+made against; where the tree disagreed once work started, §10 says so.
 
 ---
 
@@ -526,3 +526,41 @@ Four assumptions were checked and **held**: no locale defines
 `print.css` name no `analysis`/`signal` class; and all four named gate scripts
 exist. One incidental find: `#bn-analysis-root` (`main.tsx:98`) is emitted by
 nothing and is probably dead.
+
+## 10. What the plan got wrong — measured during implementation
+
+The plan was written against HEAD on the afternoon of 20 Sep 2026 and executed
+that evening. Five of its claims did not survive contact.
+
+| # | The plan said | What was true |
+|---|---|---|
+| 1 | Phase 2 needs a **new** parity test for the `Tab.rawValue` ↔ `TAB_ROUTES` wire contract | `tests/test_tab_route_parity.py` already existed and does exactly that. Mutation-tested during Phase 2 — reverting the shim alone fails with *"Tab case(s) with no TAB_ROUTES entry: ['signals']"* |
+| 2 | `routes/analysis.py` has **three** routes | Four. Gen-4 added `/elaborations` after the plan was measured, and the module docstring still said "Three endpoints" |
+| 3 | `analysis.*` is a **43-key** namespace, `heading` first | 47 keys by the time work started; gen-4 inserted `alsoReadAs`, `labelPositive`, `labelNegative`, `labelMixed` **ahead of** `heading`, which broke the first anchor written against the old shape |
+| 4 | Seven CSS classes move | Six. `.analysis-heatmap` is emitted by the **frozen** `theme/js/analysis.js`, so renaming it needs a freeze exception. It keeps its name, and `organisms/signals.css` now carries a comment saying why |
+| 5 | `bristlenose/analysis/` holds 7 modules | 8 — `sentiment_label.py` arrived with gen-4 |
+
+Two more surfaced that no plan could have listed:
+
+- **`tests/test_lead_paragraph_atom.py` hardcodes the stylesheet filename**, so
+  `organisms/analysis.css` → `signals.css` had to reach into a test about a
+  different atom. Caught by the suite, not by reading.
+- **Import order is not rename-neutral.** `signals` sorts differently from
+  `analysis`, so ruff's I001 fired 16 times in Phase 3 and twice more in Phase 4.
+  Auto-fixable, but it means a package rename is never purely mechanical.
+
+### Left undone, deliberately
+
+- **`main.tsx`'s island-mount block appears wholly dead.** Four roots —
+  `bn-analysis-root`, `bn-quote-themes-root`, `bn-transcript-page-root`,
+  `bn-dashboard-root` — and **zero** source sites emit any of them. The review
+  flagged the analysis one as probably dead; measuring the siblings showed the
+  whole block is pre-SPA legacy. Deleting only the renamed one would have been
+  inconsistent, and deleting all four is a different change. Left intact.
+- **Three prose strings are English-only.** `signals.loadingData`,
+  `signals.noData` and `signals.tagError` were rewrites rather than swaps, so
+  the other 20 locales keep their current wording until a translation pass.
+  i18n is parked, and unreviewed translation is a deliberate act rather than a
+  side effect of a rename. No gate reports this: `check-locales.py` compares key
+  presence, not value freshness.
+- **The `analysis-heatmap` class** — see row 4 above.

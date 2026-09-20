@@ -423,8 +423,8 @@ Three fixed horizontal bands plus a left rail. Everything below the toolbar scro
 - `bristlenose/theme/organisms/sidebar.css` — 5-column grid CSS
 - `frontend/src/components/TocSidebar.tsx` — current left sidebar content (Quotes TOC)
 - `frontend/src/components/TagSidebar.tsx` — current right sidebar content (tag filter)
-- `frontend/src/islands/AnalysisPage.tsx` — heatmap grid with badge headers
-- `bristlenose/theme/organisms/analysis.css` — heatmap CSS (rotated headers pattern exists for tag grids)
+- `frontend/src/islands/SignalsPage.tsx` — heatmap grid with badge headers
+- `bristlenose/theme/organisms/signals.css` — heatmap CSS (rotated headers pattern exists for tag grids)
 - `bristlenose/theme/atoms/badge.css` — badge styling
 - `bristlenose/theme/tokens.css` — `--bn-max-width`, sidebar width tokens
 

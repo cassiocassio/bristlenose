@@ -29,6 +29,7 @@ The pipeline runs on the user's own machine; the analysis itself is a **cloud LL
 - **Provider naming**: user-facing text says "Claude", "ChatGPT", and "Azure OpenAI" (product names), not "Anthropic" and "OpenAI" (company names). Researchers know the products, not the companies. Internal code uses `"anthropic"` / `"openai"` / `"azure"` as config values — that's fine, only human-readable strings need product names
 - **CLI plurals**: any count-bearing CLI string uses `count_noun(n, "singular")` from `bristlenose/utils/text.py` — wraps `inflect.engine().plural_noun()`, so irregulars (`child`→`children`, `person`→`people`, `boundary`→`boundaries`) and compound nouns (`"topic boundary"`→`"topic boundaries"`) work automatically. Don't hand-roll `f"{n} thing{'s' if n != 1 else ''}"` or add a sibling helper next to `count_noun`. Pass `plural=` explicitly only when inflect's default disagrees (rare). CLI is English-only in alpha; the React SPA + desktop use i18next CLDR plurals via `t(key, count=n)` — different surface, different mechanism, don't conflate. The Python-side `t()` under `bristlenose/locales/preflight.json` doesn't support CLDR plurals yet; when/if CLI gets localised post-alpha, `count_noun` grows a CLDR-aware path
 - **Changelog version/date format**: `**X.Y.Z** — _D Mon YYYY_` (e.g. `**0.8.1** — _7 Feb 2026_`). Bold version, em dash, italic date. No hyphens in dates, no leading zero on day. Used in both `CHANGELOG.md` and the changelog section of `README.md`
+- **Changelog entry structure (from 0.30.0 on; nothing retrospective)**: the one-sentence summary line stays first, then the bullets are grouped under bold sub-headers `**New**`, `**Improved**`, `**Fixed**`, and `**Removed**` when something was taken away — in that order, only the non-empty ones, each ordered by importance within. A patch release has no `**New**` section; a `**New**` section means the bump is a minor. The header carries the verb, so a bullet never opens with "Added"/"Fixed": it keeps the house bold-led phrasing of the change as the user experiences it (`**Only one codebook could be off at a time.**` under Fixed, not "Fixed only one codebook…"). Tone of voice is unchanged — user impact, never effort; see the release-notes rule in `docs/design-bn-release-skill.md`. Bold lines rather than `###` because the version heading is itself a bold line and the website renders the file as plain Markdown; the release-ready gate's body count only terminates on `**<digit>`, so a bold word is safe there
 - **The React SPA is the product; the Jinja2 static renderer (`bristlenose/stages/s12_render/`) is a deprecated sealed byproduct.** Rules: (1) New features and design changes go to the React SPA only. (2) Offline sharing = open in serve mode → **Export HTML** toolbar button (embeds the React bundle + JSON; never calls `s12_render/`). (3) **Serve mode never falls back to static render** — if the SPA is missing from the bundle, `_mount_prod_report` returns a fail-loud 500, not the static HTML (that fallback masked BUG-3). (4) CSS in `bristlenose/theme/` is shared with the static render incidentally; design intent lives in `frontend/`. (5) Vanilla JS in `bristlenose/theme/js/` is frozen — data-integrity fixes only. Future direction (repurpose `--static` as a markdown deliverable): `docs/design-cli-improvements.md` §Future direction.
 
 ## Architecture
@@ -51,7 +52,7 @@ LLM providers: Claude, ChatGPT, Azure OpenAI, Gemini, Local (Ollama). See `brist
 
 Quote exclusivity: **every quote appears in exactly one report section.** See `bristlenose/stages/CLAUDE.md`.
 
-Analysis page: `bristlenose/analysis/` — signal concentration metrics, pure math. Uses plain dataclasses (not Pydantic). Cell keys use `"label|sentiment"` format. See `docs/design-analysis-future.md`.
+Analysis page: `bristlenose/signals/` — signal concentration metrics, pure math. Uses plain dataclasses (not Pydantic). Cell keys use `"label|sentiment"` format. See `docs/design-signals-future.md`.
 
 LLM prompts: Markdown files in `bristlenose/llm/prompts/`. Archive old versions to `bristlenose/llm/prompts-archive/`. See `bristlenose/llm/CLAUDE.md`.
 
@@ -761,7 +762,7 @@ it was reported to the user as fact and was **false at HEAD**.
 
 The measured claim was *"`classify_flag` fires on 0 of 103 cards"*. True of
 `classify_flag` called with a group name, which is what the harness does. Not
-true of the product: `_serialize_signal` (`server/routes/analysis.py`) resolves
+true of the product: `_serialize_signal` (`server/routes/signals.py`) resolves
 a Sentiment-group card to a sentiment **value** via `sentiment_label(s.quotes)`
 and re-calls `classify_flag` with it, which had landed three hours earlier
 (`9e9af6fd`, refined by `3c8aa63d`). Measured through the real serialiser:
@@ -915,7 +916,7 @@ request never reaches.
 **Analysis / research methodology:**
 - `docs/design-research-methodology.md` — read before changing prompts or analysis logic
 - `docs/academic-sources.html` — theoretical foundations
-- `docs/design-analysis-future.md`, `docs/design-quote-sequences.md`, `docs/design-dashboard-stats.md`, `docs/design-signal-elaboration.md`
+- `docs/design-signals-future.md`, `docs/design-quote-sequences.md`, `docs/design-dashboard-stats.md`, `docs/design-signal-elaboration.md`
 
 **i18n:** `docs/design-i18n.md` — terminology table, implementation gotchas
 

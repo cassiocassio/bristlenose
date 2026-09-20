@@ -341,7 +341,7 @@ A restrained single-hue sheen travelling across **text** to signal *indeterminat
 | `bn-thinking-shimmer` | `atoms/shimmer.css` | Continuous | 2.7s infinite (18 Jul — replaced `chip-spin`) |
 | `bracket-fade-in` | `molecules/editable-text.css` | Reveal | 0.15s |
 | `mod-q-reveal` | `atoms/moderator-question.css` | Reveal | 0.2s — keyframe ships; its trigger is feature-flagged off (5 Aug 2026). Retained deliberately, not dead |
-| `cell-tooltip-in` | `organisms/analysis.css` | Appear | 0.12s |
+| `cell-tooltip-in` | `organisms/signals.css` | Appear | 0.12s |
 | `anchor-fade` | `templates/transcript.css` | Acknowledge | 5s |
 | `content-settle` | `organisms/sidebar.css` | Inertia | 65ms (iOS variant only) |
 

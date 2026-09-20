@@ -205,7 +205,7 @@ otherwise promote six hand-rolls into the library.
 - One `EmptyState` / `LoadingState` / `ErrorState` atom family (or one atom with a variant
   — decide during the work; Rule of Three is already satisfied at six).
 - Retires the `<p style={{opacity: 0.5, padding: "1rem"}}>` pattern in Dashboard,
-  SessionsTable, QuoteSections, QuoteThemes and AnalysisPage, *and* the styleless
+  SessionsTable, QuoteSections, QuoteThemes and SignalsPage, *and* the styleless
   `.bn-loading`/`.bn-error` in TranscriptPage.
 - Depends on Phase 1's `danger` token — the error variant currently renders a hex fallback.
 

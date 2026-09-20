@@ -86,7 +86,7 @@ an LLM provider.
 - **LLM providers** (Claude, ChatGPT, Azure OpenAI, Gemini, local Ollama) →
   [`bristlenose/llm/CLAUDE.md`](../bristlenose/llm/CLAUDE.md)
 - **Analysis math** (signal concentration, pure computation, no LLM) →
-  [design-analysis-future.md](design-analysis-future.md)
+  [design-signals-future.md](design-signals-future.md)
 
 ### 2. Serve mode: the FastAPI + SQLite backend
 

@@ -19,7 +19,7 @@ reading on, because it changes which half of the note is still owed:
   measurement that *"Agreement takes 3 distinct values and Intensity 4 … two of
   the four are captions, not columns"* (`54fdc615`) — which predates this note
   and is §2's premise rather than its finding.
-- **Not adopted.** `bristlenose/analysis/metrics.py` still carries
+- **Not adopted.** `bristlenose/signals/metrics.py` still carries
   `concentration_ratio`, `composite_signal` and `adjusted_residual` exactly as
   §2 describes them, and nothing in `bristlenose/` computes a hypergeometric.
 - **One piece taken on its own, 20 Sep 2026.** `simpsons_neff` is now the
@@ -148,7 +148,7 @@ compared across frameworks.
 
 The textbook answer to comparing cells across differently-shaped tables, and
 the tree holds **three identical copies**: `metrics.adjusted_residual` (Python,
-called by nothing but its own tests), `adjustedResidual` in `AnalysisPage.tsx`
+called by nothing but its own tests), `adjustedResidual` in `SignalsPage.tsx`
 (which does colour the heatmap, via `heatCellStyle`), and a third in the frozen
 vanilla `theme/js/analysis.js`. VERIFIED 13 Sep 2026: all three agree line for
 line — no drift today, and no entry in `docs/design-shared-formats.md` to
@@ -187,7 +187,7 @@ composite calls a 0–1 share is not a share. Worst case, Rockclimbing: four
 people speak, counts `[2,1,1,1]`, and `n_eff` = **10.00** in an **eight**-person
 study.
 
-This is user-visible. `AnalysisPage.tsx` renders `signal.nEff.toFixed(1)` as
+This is user-visible. `SignalsPage.tsx` renders `signal.nEff.toFixed(1)` as
 the card's **Agree.** figure under `analysis.agreeTitle` — *"effective number of
 voices"*. The bar beside it is `agreePct`, written
 `Math.min(100, (signal.nEff / allPids.length) * 100)` — **the clamp is already
@@ -710,8 +710,8 @@ all derivable from what `_load_shared_data` already holds in `quote_section` /
 **One analysis replaces two.** `signals.py` and `generic_signals.py` compute
 the same thing over different label sets; under this proposal there is one
 label set, so one of them goes. That is a simplification, but it is also the
-largest structural change here and it touches `/analysis/sentiment`,
-`/analysis/tags` and `/analysis/codebooks`.
+largest structural change here and it touches `/signals/sentiment`,
+`/signals/tags` and `/signals/codebooks`.
 
 **Every number on the card changes.** `Conc. 1.3×`, `Agree. 3.0`, `Signal 0.32`
 are all user-facing, carried by `en/common.json` — `analysis.concLabel` /
@@ -857,7 +857,7 @@ sentiment-value matrix, in one sequence, with no per-matrix adjustment anywhere.
 2. **A researcher disagreeing with a specific pair.** The claim is a definition
    of "deserves attention first" (§1). The test is not a statistic, it is
    whether the order matches what a working researcher would pick up — which
-   `docs/design-analysis-future.md` has been asking for since Feb 2026.
+   `docs/design-signals-future.md` has been asking for since Feb 2026.
 3. **The depletion half reading as noise.** If *"this place is unusually flat"*
    is not a finding, clamp `surprise` at 0.5 from below and drop the absence
    half — one line, costs §9's capability and nothing else. The cheapest thing

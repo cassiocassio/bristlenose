@@ -18,7 +18,7 @@ Same HTML, same CSS, same React component — different wiring underneath. The n
 | Panel | User-facing name | Location | Shortcut | Notes |
 |-------|-----------------|----------|----------|-------|
 | Right panel (native, tags) | **Tag Inspector** | SwiftUI `.inspector()` | `Cmd+Opt+I` | Rename to just "Inspector" when more tabs land |
-| Bottom panel (web, Analysis tab) | **Heatmap** | Web content, unchanged | None (toolbar only) | `Cmd+Opt+D` is system-reserved (Dock) |
+| Bottom panel (web, Signals lens) | **Heatmap** | Web content, unchanged | None (toolbar only) | `Cmd+Opt+D` is system-reserved (Dock) |
 | Left web panel (sections/themes) | **Navigator** | Web content | existing | Xcode precedent. Per-tab content: Contents / Codes / Signals |
 | Left native panel (projects) | **Projects Sidebar** | `NavigationSplitView` | `Cmd+Opt+S` | System-provided toggle |
 

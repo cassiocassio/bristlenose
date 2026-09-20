@@ -128,7 +128,7 @@ item gets an icon.
 | Sessions tab (⌘2) | `person.2` | from `LensItem.all` | 2 |
 | Quotes tab (⌘3) | `text.quote` | from `LensItem.all` | 2 |
 | Codebook tab (⌘4) | `tag` | from `LensItem.all` | 2 |
-| Analysis tab (⌘5) | `square.grid.3x3` | from `LensItem.all` | 2 |
+| Signals lens (⌘5) | `square.grid.3x3` | from `LensItem.all` | 2 |
 | Move Focus to Projects (⌘0) | — | abstract focus move | never |
 | Hide/Show Projects (⌥⌘S) | `sidebar.left` | Finder/Mail sidebar toggle | 2 |
 | Show Contents/Sessions/… (⌥⌘L) | `list.bullet` | **matches the toolbar's own left-panel button** | 2 |

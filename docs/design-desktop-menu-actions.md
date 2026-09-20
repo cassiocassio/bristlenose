@@ -258,7 +258,7 @@ These are either native-only (Finder, print) or depend on features not yet built
 |---|---|---|---|
 | `toggleProjectsSidebar` | ⌥⌘S | **Shipped** (columnVisibility binding) | Dynamic **Hide Projects / Show Projects** label (flips on `bridgeHandler.sidebarVisible`). Posts `.toggleProjectsSidebar` → `ContentView` flips the NavigationSplitView `columnVisibility` binding — the same source of truth the auto toolbar sidebar button drives. Renamed 2026-07-25 from `toggleSidebar`/"Toggle Sidebar"; retired the `NSSplitViewController.toggleSidebar` responder-chain call (it left no reliable SwiftUI state for the dynamic label). Distinct from `toggleLeftPanel` (web sidebar). |
 | Tab switch (Cmd+1…Cmd+5) | ⌘1–⌘5 | **Shipped** (bridge) | `bridgeHandler.switchToTab(tab)` — separate code path from `menuAction` (`MenuCommands.swift:235-243`) |
-| `toggleInspectorPanel` (heatmap) | — | **Shipped** (bridge, tab-gated) | Disabled outside Analysis tab (`MenuCommands.swift:267-270`) |
+| `toggleInspectorPanel` (heatmap) | — | **Shipped** (bridge, tab-gated) | Disabled outside Signals lens (`MenuCommands.swift:267-270`) |
 | `hideAllSidebars` / `showAllSidebars` | ⌥⌘\ | **Shipped** (binding + bridge) | Dynamic **Hide All Sidebars / Show All Sidebars** label. The umbrella over the projects column *and* the two web panels — the only View item that drives both layers in one press, so it moves the `columnVisibility` binding itself **and** dispatches to the web. Direction is decided natively (`AllSidebars.anyShowing`) from the column plus the `panel-state` mirror, then sent as an explicit command; a web-side toggle would invert whenever the two layers disagreed. Web keeps bare `\` / `⌘.` / `§` for its own two panels. |
 
 ### Help menu (7)

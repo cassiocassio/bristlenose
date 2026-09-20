@@ -730,6 +730,29 @@ a.ci-code:focus-visible { outline:2px solid var(--bn-colour-accent); outline-off
     <li><b>Floors and thresholds.</b> <code>MIN_QUOTES_PER_CELL = 2</code> is a volume
       floor and two quotes is barely a signal from a five-participant study. Settled by
       checking real interview data against outputs, not from this page.</li>
+    <li><b>Masonry for the signal cards &mdash; PARKED 20 Sep 2026, and the plan
+      with it.</b> The Quotes lens tessellates its cards with native CSS masonry:
+      <code>display: grid-lanes</code> behind <code>@supports</code>, no JS and no
+      fallback code, engines without it keeping the rectangular grid
+      (<code>organisms/responsive-grid.css</code>; <code>.codebook-grid</code> is the
+      second adopter, and puts its section headers inside the grid at
+      <code>grid-column: 1 / -1</code> so lanes reset per section). A plan to bring it
+      to <code>.signal-cards</code> was written on 14 Sep and is <b>superseded rather
+      than deferred</b> &mdash; do not pick it up as written. It assumed a
+      multi-column grid: <code>repeat(auto-fill, minmax(min(100%, 26rem), 1fr))</code>
+      with <code>--bn-grid-gap</code>, measured at 1&ndash;4 columns and card heights
+      from 230 to 1442px. That is gone. <code>.signal-cards</code> is now
+      <code>grid-template-columns: 1fr; gap: 0</code> &mdash; a single joined run whose
+      card corners come from position in the run, because a location with one card is
+      the common case. Masonry against one column with no gap has nothing to pack.
+      <b>It was already the hard one under the old shape</b>, which is worth carrying
+      forward: the location grouping fragments the list into a grid per place, 85% of
+      them holding a single card, so lanes had almost nothing to work with; and
+      Chromium reports <code>CSS.supports(&#39;display&#39;,&#39;grid-lanes&#39;)</code>
+      false, so Playwright can only ever verify the fallback and the masonry itself is
+      checkable in WebKit alone. If the tessellated look is ever wanted here, start from
+      the run-with-seams the cards have now and ask whether it should be a grid at all
+      &mdash; not from this plan.</li>
     <li><b>The heatmaps.</b> Good enough for now, improved in a later release by
       decision. Known and accepted: a cell can be drawn <code>.has-card</code>, accept
       a click and silently do nothing, because <code>signalKeys</code> is built from

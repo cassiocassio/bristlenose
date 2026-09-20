@@ -91,10 +91,11 @@ proposals with confidence + rationale).
   the behaviour specified and assert the shipped state separately. Two
   things have to be fixed before it flips, and only one is presentation:
   (1) the tooltip lands over the row below — the `+` add-tag control and the
-  next card — and the slide-in motion reads as interruption; (2) the
-  rationale text is the model's raw justification and frequently restates
-  the tag ("this is a task-framing statement…") instead of saying what in
-  the quote earned it. (2) is a prompt change in
+  next card — is clipped by the card's stacking context (a z-index problem,
+  not a placement one), and the slide-in motion reads as interruption; (2)
+  the rationale text is the model's raw justification: too long, and
+  frequently a restatement of the tag ("this is a task-framing statement…")
+  instead of saying what in the quote earned it. (2) is a prompt change in
   `bristlenose/llm/prompts/`, not a CSS one. Tracked in the 100-day
   inventory under § 3 Embarrassing / Should.
 

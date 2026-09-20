@@ -58,11 +58,12 @@ export interface FeatureFlags {
    *
    * Parked 20 Sep 2026 — two problems, one of them not a UI problem. The
    * tooltip animates up from below the badge and lands over the next row
-   * (the `+` add-tag control and the neighbouring card), so it reads as
-   * interruption rather than help; and the rationale text it reveals is the
-   * model's raw justification, which is often a restatement of the tag
-   * rather than an explanation a researcher would act on. Both have to be
-   * fixed before this flips: the presentation (placement, delay, motion)
+   * (the `+` add-tag control and the neighbouring card) and is clipped by
+   * the card's stacking context, so it reads as interruption rather than
+   * help; and the rationale text it reveals is the model's raw
+   * justification — verbose, and often a restatement of the tag rather
+   * than an explanation a researcher would act on. Both have to be fixed
+   * before this flips: the presentation (placement, z-index, delay, motion)
    * and the explanation itself (what the prompt asks for). Design doc:
    * `docs/design-autocode.md` § Parked.
    *

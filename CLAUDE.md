@@ -793,6 +793,9 @@ fully-qualified path, never by first match on the name.**
 
 **Sibling CLAUDE.md files:** `frontend/`, `bristlenose/theme/`, `bristlenose/stages/`, `bristlenose/llm/`, `bristlenose/server/`, `desktop/`
 
+**Cross-cutting:**
+- `docs/design-feature-flags.md` — **read before gating anything.** Five mechanisms across three codebases, chosen by the question the gate answers: parked-feature flags (SPA only, `featureFlags.ts`), Swift compile-time conditions (`#if DEBUG`, `DistributionChannel`), runtime host detection (`_BRISTLENOSE_*`, `isEmbedded()`/`isExportMode()`), debug seeds (`BRISTLENOSE_DEBUG_*`), and the user diagnostics preference. Python and Swift have no parked-feature flag yet; the doc gives the shape to copy
+
 **Frontend / UI:**
 - `bristlenose/theme/js/MODULES.md`, `bristlenose/theme/CSS-REFERENCE.md` — JS + CSS component reference
 - `docs/design-sidebar-playground.md` — 6-column grid, overlay, drag-resize, minimap, dev playground

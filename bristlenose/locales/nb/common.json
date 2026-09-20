@@ -446,6 +446,9 @@
     }
   },
   "analysis": {
+    "labelPositive": "Positiv",
+    "labelNegative": "Negativ",
+    "labelMixed": "Blandede f\u00f8lelser",
     "heading": "Analyse",
     "loadingData": "Laster inn analysedata …",
     "noData": "Ingen analysedata tilgjengelig. Kjør pipelinen eller bruk kodebok-tagger for å generere analyse.",

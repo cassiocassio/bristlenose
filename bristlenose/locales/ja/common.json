@@ -441,6 +441,9 @@
     }
   },
   "analysis": {
+    "labelPositive": "\u80af\u5b9a\u7684",
+    "labelNegative": "\u5426\u5b9a\u7684",
+    "labelMixed": "\u8907\u5408\u7684\u306a\u611f\u60c5",
     "heading": "分析",
     "loadingData": "分析データを読み込み中…",
     "noData": "分析データはありません。パイプラインを実行するか、コードブックタグを適用して分析を生成してください。",

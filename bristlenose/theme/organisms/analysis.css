@@ -776,3 +776,18 @@ button.signal-card-toggle {
 
 }
 
+
+/* The flag, as a prefix INSIDE the hero chip — never a second chip. A second
+   one was rejected on 20 Sep 2026: "two chips is too complex visually, adds
+   confusion — the eye will jump to a single patch of colour." The chip's job
+   is to be the one thing the eye lands on in that corner, and splitting it
+   into two competing patches destroys that. It is the same failure the
+   `pattern` chip had on 13 Sep, which "competed with the score for this exact
+   corner".
+
+   Weight rather than colour: colour here would make a second patch by another
+   route. */
+.signal-card-hero-flag {
+    font-weight: var(--bn-weight-emphasis);
+    opacity: 0.78;
+}

@@ -446,6 +446,9 @@
     }
   },
   "analysis": {
+    "labelPositive": "Olumlu",
+    "labelNegative": "Olumsuz",
+    "labelMixed": "Kar\u0131\u015f\u0131k duygular",
     "heading": "Analiz",
     "loadingData": "Analiz verileri yükleniyor…",
     "noData": "Kullanılabilir analiz verisi yok. Analiz oluşturmak için işlem hattını çalıştırın veya kod defteri etiketleri uygulayın.",

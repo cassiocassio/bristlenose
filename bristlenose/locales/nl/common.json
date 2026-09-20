@@ -446,6 +446,9 @@
     }
   },
   "analysis": {
+    "labelPositive": "Positief",
+    "labelNegative": "Negatief",
+    "labelMixed": "Gemengde gevoelens",
     "heading": "Analyse",
     "loadingData": "Analysegegevens laden…",
     "noData": "Geen analysegegevens beschikbaar. Voer de pijplijn uit of pas codeboektags toe om analyse te genereren.",

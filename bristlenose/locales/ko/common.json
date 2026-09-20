@@ -427,6 +427,9 @@
     }
   },
   "analysis": {
+    "labelPositive": "\uae0d\uc815\uc801",
+    "labelNegative": "\ubd80\uc815\uc801",
+    "labelMixed": "\ubcf5\ud569\uc801 \uac10\uc815",
     "heading": "분석",
     "loadingData": "분석 데이터 로드 중…",
     "noData": "분석 데이터가 없습니다. 파이프라인을 실행하거나 코드북 태그를 적용하여 분석을 생성하세요.",

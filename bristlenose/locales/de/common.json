@@ -446,6 +446,9 @@
     }
   },
   "analysis": {
+    "labelPositive": "Positiv",
+    "labelNegative": "Negativ",
+    "labelMixed": "Gemischte Stimmung",
     "heading": "Analyse",
     "loadingData": "Analysedaten werden geladen…",
     "noData": "Keine Analysedaten verfügbar. Führen Sie die Pipeline aus oder wenden Sie Codebuch-Tags an, um die Analyse zu generieren.",

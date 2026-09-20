@@ -446,6 +446,9 @@
     }
   },
   "analysis": {
+    "labelPositive": "Positive",
+    "labelNegative": "Negative",
+    "labelMixed": "Mixed sentiments",
     "heading": "Analysis",
     "loadingData": "Loading analysis data…",
     "noData": "No analysis data available. Run the pipeline or apply codebook tags to generate analysis.",

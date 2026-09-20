@@ -446,6 +446,9 @@
     }
   },
   "analysis": {
+    "labelPositive": "Positiv",
+    "labelNegative": "Negativ",
+    "labelMixed": "Blandade k\u00e4nslor",
     "heading": "Analys",
     "loadingData": "Läser in analysdata…",
     "noData": "Ingen analysdata tillgänglig. Kör pipelinen eller tillämpa kodbokstaggar för att generera analys.",

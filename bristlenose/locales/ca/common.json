@@ -446,6 +446,9 @@
     }
   },
   "analysis": {
+    "labelPositive": "Positiu",
+    "labelNegative": "Negatiu",
+    "labelMixed": "Sentiments mixtos",
     "heading": "Anàlisi",
     "loadingData": "S'estan carregant les dades de l'anàlisi…",
     "noData": "No hi ha dades d'anàlisi disponibles. Executa el processament o aplica etiquetes del llibre de codis per generar-ne.",

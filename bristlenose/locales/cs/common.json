@@ -479,6 +479,9 @@
     }
   },
   "analysis": {
+    "labelPositive": "Pozitivn\u00ed",
+    "labelNegative": "Negativn\u00ed",
+    "labelMixed": "Sm\u00ed\u0161en\u00e9 pocity",
     "heading": "Analýza",
     "loadingData": "Načítání dat analýzy…",
     "noData": "Nejsou k dispozici žádná data analýzy. Spusťte zpracování nebo použijte štítky z knihy kódů, abyste analýzu vygenerovali.",

@@ -487,6 +487,9 @@
     }
   },
   "analysis": {
+    "labelPositive": "Pozytywne",
+    "labelNegative": "Negatywne",
+    "labelMixed": "Mieszane odczucia",
     "heading": "Analiza",
     "loadingData": "Wczytywanie danych analizy…",
     "noData": "Brak dostępnych danych analizy. Uruchom potok lub zastosuj tagi z księgi kodów, aby wygenerować analizę.",

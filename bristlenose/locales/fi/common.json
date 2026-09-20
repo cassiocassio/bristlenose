@@ -446,6 +446,9 @@
     }
   },
   "analysis": {
+    "labelPositive": "My\u00f6nteinen",
+    "labelNegative": "Kielteinen",
+    "labelMixed": "Ristiriitaiset tunteet",
     "heading": "Analyysi",
     "loadingData": "Ladataan analyysitietoja…",
     "noData": "Analyysitietoja ei ole saatavilla. Suorita analyysi tai lisää koodikirjatunnisteita tuottaaksesi analyysin.",

@@ -397,6 +397,14 @@ export interface TagSignal {
   location: string;
   source_type: "section" | "theme";
   group_name: string;
+  /** What the chip says — resolved server-side. For a sentiment card this is a
+   *  feeling, a direction, or "Mixed sentiments"; never the group's own name.
+   *  Optional because a cached response may predate it. */
+  label?: string;
+  label_kind?: "value" | "valence" | "mixed" | "group";
+  /** Win / Problem / Niggle / Success / Surprising, or null. Computed over the
+   *  subset `label` names, so it is populated only when label_kind is "value". */
+  flag?: string | null;
   colour_set: string;
   count: number;
   participants: string[];
@@ -579,6 +587,11 @@ export interface UnifiedSignal {
   signalName?: string | null;
   pattern?: string | null;
   elaboration?: string | null;
+  /** The chip's words, resolved server-side. Falls back to `columnLabel`. */
+  label?: string;
+  labelKind?: "value" | "valence" | "mixed" | "group";
+  /** Win / Problem / Niggle / Success / Surprising, for the chip's prefix. */
+  flag?: string | null;
 }
 
 export interface UnifiedQuote {

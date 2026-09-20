@@ -36,6 +36,8 @@ from sqlalchemy.orm import Session
 
 from bristlenose.analysis.generic_matrix import QuoteContribution, build_matrix_from_contributions
 from bristlenose.analysis.generic_signals import QuoteRecord, detect_signals_generic
+from bristlenose.analysis.metrics import classify_flag
+from bristlenose.analysis.sentiment_label import sentiment_label
 from bristlenose.server.models import (
     UNCATEGORISED_GROUP_NAME,
     ClusterQuote,
@@ -93,6 +95,12 @@ class TagSignal(BaseModel):
     composite_signal: float
     confidence: str
     flag: str | None = None
+    #: What the chip says. For a sentiment card this is a feeling, a direction,
+    #: or "Mixed sentiments" — never the group's own name, which tells a
+    #: researcher nothing. For a codebook card it is the group name, which
+    #: does. `label_kind` is "value" | "valence" | "mixed" | "group".
+    label: str = ""
+    label_kind: str = "group"
     quotes: list[TagSignalQuote]
     # Elaboration fields (populated when elaborate=True)
     signal_name: str | None = None
@@ -215,6 +223,14 @@ _EMPTY_MATRIX = MatrixOut(
 )
 
 
+#: The sentiment framework's group, whatever a codebook chooses to call it.
+#: Matched on the group name because that is what reaches this function; the
+#: framework's *display* name is "Emotional & Cognitive Signals" and never
+#: appears here.
+def _is_sentiment_group(group_name: str) -> bool:
+    return group_name == "Sentiment"
+
+
 def _serialize_signal(
     s: object,
     group_colour_sets: dict[str, str],
@@ -223,6 +239,25 @@ def _serialize_signal(
     from bristlenose.analysis.models import Signal
 
     assert isinstance(s, Signal)
+
+    # The chip's own words. The sentiment framework's group is literally named
+    # "Sentiment", which is the framework talking rather than the finding — so
+    # a sentiment card resolves to what its quotes actually say. Every other
+    # group names itself perfectly well.
+    label, label_kind, flag = s.sentiment, "group", s.flag
+    if _is_sentiment_group(s.sentiment):
+        resolved = sentiment_label(s.quotes)
+        if resolved is not None:
+            label, label_kind = resolved.text, resolved.kind
+            # classify_flag keys on a sentiment VALUE, so it has returned None
+            # for every rendered card since the group card replaced the value
+            # cards. Give it the subset the label names and it works again.
+            if resolved.kind == "value":
+                flag = classify_flag(
+                    resolved.text, s.composite_signal, s.n_eff,
+                    len(s.participants) or 1, s.mean_intensity,
+                )
+
     return TagSignal(
         location=s.location,
         source_type=s.source_type,
@@ -235,7 +270,9 @@ def _serialize_signal(
         concentration=round(s.concentration, 2),
         composite_signal=round(s.composite_signal, 4),
         confidence=s.confidence,
-        flag=s.flag,
+        flag=flag,
+        label=label,
+        label_kind=label_kind,
         quotes=[
             TagSignalQuote(
                 text=q.text,

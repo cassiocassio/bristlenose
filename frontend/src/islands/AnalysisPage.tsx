@@ -115,13 +115,36 @@ function SignalHero({
   onToggle: () => void;
 }) {
   const { t } = useTranslation("enums");
-  const label = isSentiment
-    ? t(`sentiment.${signal.columnLabel}`, { defaultValue: signal.columnLabel })
-    : signal.columnLabel;
+  const { t: tc } = useTranslation();
+
+  // The label is resolved server-side and arrives on the wire — a feeling, a
+  // direction, or "Mixed sentiments". `columnLabel` is the fallback for a
+  // response that predates it, and for the sentiment lens's own value cards.
+  const raw = signal.label || signal.columnLabel;
+
+  // A sentiment VALUE is translated and title-cased by `enums`. The two
+  // summary labels and the hedge are NOT members of that map — they are this
+  // design's own strings and carry their own keys in `common`.
+  //
+  // The old gate was `isSentiment`, which is true only on the fallback lens.
+  // The rendered card never took that path, so it never reached the
+  // translation at all and showed the raw group name, "Sentiment".
+  const isValue = signal.labelKind === "value" || isSentiment;
+  const SUMMARY: Record<string, string> = {
+    Positive: "analysis.labelPositive",
+    Negative: "analysis.labelNegative",
+    "Mixed sentiments": "analysis.labelMixed",
+  };
+  const label = isValue
+    ? t(`sentiment.${raw}`, { defaultValue: raw })
+    : SUMMARY[raw]
+      ? tc(SUMMARY[raw], { defaultValue: raw })
+      : raw;
+
   const classes = [
     "badge",
     "signal-card-hero",
-    isSentiment ? `badge-${signal.columnLabel}` : null,
+    isValue ? `badge-${raw}` : null,
   ]
     .filter(Boolean)
     .join(" ");
@@ -145,6 +168,12 @@ function SignalHero({
         onToggle();
       }}
     >
+      {/* One chip, one background. A second chip was rejected: "too complex
+          visually, adds confusion — the eye will jump to a single patch of
+          colour". A null flag renders nothing at all, no gap, no placeholder. */}
+      {signal.flag && (
+        <span className="signal-card-hero-flag">{signal.flag}:</span>
+      )}
       <span className="signal-card-hero-label">{label}</span>
       <span className="signal-card-hero-score">
         {signal.compositeSignal.toFixed(2)}
@@ -191,6 +220,9 @@ function adaptCodebookSignals(data: CodebookAnalysisListResponse): UnifiedSignal
         location: s.location,
         sourceType: s.source_type,
         columnLabel: s.group_name,
+        label: s.label,
+        labelKind: s.label_kind,
+        flag: s.flag,
         colourSet: s.colour_set || cb.colour_set,
         codebookName: cb.codebook_name,
         participants: s.participants,

@@ -446,6 +446,9 @@
     }
   },
   "analysis": {
+    "labelPositive": "Positivo",
+    "labelNegative": "Negativo",
+    "labelMixed": "Sentimenti contrastanti",
     "heading": "Analisi",
     "loadingData": "Caricamento dei dati di analisi…",
     "noData": "Nessun dato di analisi disponibile. Esegui la pipeline o applica i tag del libro dei codici per generare l'analisi.",

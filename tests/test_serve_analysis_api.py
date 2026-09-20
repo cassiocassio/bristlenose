@@ -198,8 +198,28 @@ class TestGetTagAnalysis:
                 "participants", "n_eff", "mean_intensity", "concentration",
                 "composite_signal", "confidence", "flag", "quotes",
                 "signal_name", "pattern", "elaboration",
+                "label", "label_kind",
             }
             assert expected_keys == set(sig.keys())
+
+    def test_a_sentiment_card_never_carries_the_framework_name(
+        self, tagged_client: TestClient,
+    ) -> None:
+        """The invariant the whole label rule exists to serve.
+
+        "Sentiment" is the framework talking, not the finding: a researcher
+        reading the analysis lens already knows they are reading sentiment.
+        The chip resolves to a feeling, a direction, or "Mixed sentiments".
+        """
+        data = tagged_client.get("/api/projects/1/analysis/tags").json()
+        for sig in data["signals"]:
+            if sig["group_name"] != "Sentiment":
+                # Every other group names itself perfectly well.
+                assert sig["label"] == sig["group_name"]
+                assert sig["label_kind"] == "group"
+                continue
+            assert sig["label"] != "Sentiment"
+            assert sig["label_kind"] in {"value", "valence", "mixed"}
 
     def test_matrix_has_expected_shape(self, tagged_client: TestClient) -> None:
         data = tagged_client.get("/api/projects/1/analysis/tags").json()

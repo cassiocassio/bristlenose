@@ -446,6 +446,9 @@
     }
   },
   "analysis": {
+    "labelPositive": "Positif",
+    "labelNegative": "N\u00e9gatif",
+    "labelMixed": "Sentiments mitig\u00e9s",
     "heading": "Analyse",
     "loadingData": "Chargement des données d'analyse…",
     "noData": "Aucune donnée d'analyse disponible. Exécutez le pipeline ou appliquez des étiquettes de la grille de codage pour générer l'analyse.",

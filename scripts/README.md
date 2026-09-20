@@ -43,9 +43,9 @@ given.
 
 | | |
 |---|---|
-| [`release.sh`](release.sh) | The conductor's page, executable. `plan · run · verify · status · abandon · retry · recover`, all with inferred defaults (above). **The tag is the release** — `run` puts it last, after the soft uploads, takes its strict verdict from a `workflow_dispatch` of CI on `main`, and refuses to tag any HEAD the recorded verdict does not name. |
+| [`release.sh`](release.sh) | The conductor's page, executable. `plan · run · verify · status · board · abandon · retry · recover` — **eight** verbs, all with inferred defaults (above); `board [<v>] [--stop\|--restart]` manages the live board server. **The tag is the release** — `run` puts it last among the *irreversible* steps, after the soft uploads (`snap` and `snap-stable` still execute after it, being re-runnable), takes its strict verdict from a `workflow_dispatch` of CI on `main`, and refuses to tag any HEAD the recorded verdict does not name. |
 | [`check-release-ready.sh`](check-release-ready.sh) | Preflight. The mechanical half of the release skill: a precondition inside a script is structurally unskippable, one in a skill is an instruction a model can misread. `run` calls it as step 1; run it alone any time. |
-| [`verify-channels.sh`](verify-channels.sh) | Is a version live on all seven channels? No version = the tree's. Iterates `CHANNELS` from `project.conf`, one tri-state probe each — including TestFlight, asked directly via `upload-testflight.sh --probe` when the ASC key is present. |
+| [`verify-channels.sh`](verify-channels.sh) | Is a version live on all eight channels? No version = the tree's. Iterates `CHANNELS` from `project.conf`, one tri-state probe each — including TestFlight, asked directly via `upload-testflight.sh --probe` when the ASC key is present. |
 | [`project.conf`](project.conf) | Every project-specific literal — name, repo, tap, site, version file, derived URLs, workflow names, the channel set, and the self-hosted PII model pack's URL + SHA-256 pin (both empty until it is hosted; the preflight row stays silent while they are). Sourced by the three above. Change identity here, never in a script. |
 | [`release-board.py`](release-board.py) | **Watching it.** Draws `.release/<v>/board.html` — the Tube map of a release: the line of stations from the run's own `steps.tbl`, the ledger folded with `release.sh`'s rules, the sink's build steps / checks / gates / preflight rows / channel verdicts / clocks / CI, liveness from the lock's pid. No network, no time axis, no data is a third state, and a **confounded-expectations log** counts everything the feed said that the board has no rule for. `--serve` runs it live on loopback behind a per-run token (in the 0600 handshake) — the page patches pane by pane as the run dir changes, running stations pulse only while the heartbeat is fresh, and the server exits itself after four idle hours. `release.sh run --board` starts one detached if none is serving and prints the link; without the flag it prints the link only if it finds one (it never needs the board). `--replay` writes a scrubber over the real generator at every ledger line. [`rehearse-board.sh`](rehearse-board.sh) runs a whole synthetic release against the live board with the real writers — the thing to run before a release to see every pane fill, and `--check` is a case in the driver suite. `--with-logs` writes a separately named file that carries raw log tails and says not to attach it; the live view carries them too, and never leaves the machine. Design: `docs/design-release-board.md` §8. |
 | [`bump-version.py`](bump-version.py) | Writes and **stages** the version files. Deliberately does not commit and does not tag — the tag belongs on a commit that does not exist yet. |
@@ -64,6 +64,19 @@ CI. Each has a suite below that proves it fires.
 | [`git-hooks/pre-push`](git-hooks/pre-push) | Refuses to push any ref whose **tree** carries a path the current `.gitignore` marks private — the pre-scrub branch or tag that `check-tracked-vs-gitignore.sh` cannot see, because that one reads the index. A native git hook reading **every** ref, deliberately not a pre-commit stage (whose handler returns on the first). Install: one symlink, see its header. |
 | [`check-locales.py`](check-locales.py) | Locale completeness and placeholder parity, honouring the runtime fallback chain and CLDR plural suffixes. Warnings by default; `--strict` to gate. |
 
+### The gates that govern the gates
+
+Three cells of `ci.yml`'s `gates` matrix police the *other* gates rather than
+the code. They were absent from this index until 20 Sep 2026 — which is the
+whole argument for listing them, since **they are the ones that had been red
+since 13 Sep** and nothing pointed a reader at them.
+
+| | |
+|---|---|
+| [`check-gate-policy.py`](check-gate-policy.py) | Every `continue-on-error` in a workflow must carry a declared disposition in [`../docs/testing/soft-gates.json`](../docs/testing/soft-gates.json) — `ratchet` (a number that may not rise), `expires` (a date by which someone decides again), or `conditional` (soft here, hard where it matters). Exists because `design-ci.md` once wrote *"informational initially — promote to blocking once stable"*, the promotion never came, and the Swift suite went unrun for three months. `ci.yml:63`. |
+| [`check-gate-proofs.py`](check-gate-proofs.py) | Sorts every `check-*` into proven / declared / unproven and feeds the `gates_without_proof` ratchet. **Read its own limit before trusting a green:** the automated bucket is derived from a *filename convention* — `paired_test()` matches `test-<stem>` existing on disk and never asks whether anything runs it. `scripts/test-bundle-budget.py` is counted proven and is invoked by no workflow; `ci.yml:351` names it in a **comment**. `ci.yml:65`, with `--stale 180`. |
+| [`check-ratchet.py`](check-ratchet.py) | The numbers that may not rise, in [`../docs/testing/ratchet.json`](../docs/testing/ratchet.json): `mypy_errors` (149), `gates_without_proof` (13), `pytest_skip_sites` (25), `pytest_slow_marked` (9), `e2e_allowlist_entries` (4). `--tighten` only ever *lowers* a ceiling; raising one is a deliberate edit in a commit that says why. `mypy_errors` is authored by CI, not by a dev box — `gh workflow run ratchet-tighten.yml`, because a fresh install resolves a different mypy. `ci.yml:67`. |
+
 ## Prove the gates
 
 > A gate that reports 0 problems on a clean tree is either correct or blind, and
@@ -77,10 +90,19 @@ for t in scripts/test-*.sh; do
   [ "$t" = scripts/test-lib.sh ] && continue      # the harness, not a suite
   bash "$t" || break
 done
-.venv/bin/python scripts/test-dep-drift.py
-.venv/bin/python scripts/test-tap-provenance.py
-.venv/bin/python scripts/test-release-board.py
+for t in scripts/test-*.py; do .venv/bin/python "$t" || break; done
+node scripts/test-release-board-dom.js
 ```
+
+> _Corrected 20 Sep 2026._ This block named three Python suites by hand —
+> `test-dep-drift`, `test-tap-provenance`, `test-release-board` — and so ran
+> **three of six**, silently skipping `test-bundle-budget.py`,
+> `test-check-ratchet.py` and `test-providers-live.py`, plus the node suite
+> entirely. All six are offline and keyless: each proves its *gate* can go red
+> using synthetic input, so `test-providers-live.py` needs no vendor keys even
+> though the gate it exercises does. **A fenced block in this repo is a Run
+> button**, and one that runs half the suites while reading as the complete set
+> is the same defect the section above it is about. The glob cannot drift.
 
 > **The inventory scripts read `.venv-sidecar`, not the interpreter that runs
 > them.** Since 5 Sep 2026 `check-dep-drift.py` and

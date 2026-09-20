@@ -234,8 +234,22 @@ shared shape; don't re-derive it per channel.
 
 `release.sh`'s `probe_done` carries the same distinction one level further, as
 exit status: `0` done · `1` probed and absent · **`2` no probe exists from
-here**. Collapsing 1 and 2 meant a resume could re-perform an irreversible act
-because "I didn't look" read as "it isn't there".
+here** · **`3` the probe FAILED**. Collapsing 1 and 2 meant a resume could
+re-perform an irreversible act because "I didn't look" read as "it isn't
+there".
+
+**`3` is not `1`**, and the script says so at its own definition
+(`release.sh:272-278`): *"'I could not look' and 'I looked and it is not there'
+lead to opposite actions on a step that cannot be un-performed."* `cmd_run`
+branches on it separately, with different copy and a different recommended
+action (`release.sh:1400-1412`).
+
+> _Corrected 20 Sep 2026._ This paragraph documented three states and the
+> See-also below called `2` "the third state". The omitted fourth is the one
+> that makes the paragraph's own argument most sharply — a failed probe is
+> exactly the "I didn't look" case, one step worse than "no probe exists",
+> because it looks like an answer. In the doc that is the chain's exit-code
+> authority.
 
 Two corollaries the log paid for:
 
@@ -267,6 +281,29 @@ Two corollaries the log paid for:
   a stubbed `curl`, so all four armed states plus the silent one are exercised
   as logic, and asserts the config keys exist so the row *can* arm.
 
+## The sink extends the protocol — 11 live kinds, not 6
+
+The schema block above is `report.sh`'s own set, and `report.sh` emits **seven**
+(`meta` · `step` · `check` · `bar` · `gate` · `art` · `done`) — `meta` is in the
+adoption recipe as `bn_meta` and was missing from the schema.
+
+The release chain then emits **four more** through `sink_line`, and they never
+pass through `report.sh` at all:
+
+| kind | Producer | Carries |
+|---|---|---|
+| `row` | `check-release-ready.sh:88-90`, `verify-channels.sh:242` | one preflight or channel row: `src=` `label=` `result=` `evidence=` |
+| `verify` | `verify-channels.sh:385,474` | `status=start\|done`, plus `rollup=` `channels=` `ok=` on done |
+| `ci` | `release.sh:715-746` | `workflow=` `sha=` `run_id=` `job=` `result=` |
+| `clock` | `build-dmg.sh:518`, `upload-testflight.sh:405` | the two expiry clocks — `name=dmg\|testflight`, `built=`/`expires=` |
+
+**Why this drifted silently:** `bn_events.py::parse_event` takes the kind as
+`toks[0]` and the rest as fields (`:86`), so it parses *any* kind without
+modification. Adding one needs no parser change and therefore trips nothing —
+the schema block is the only place that would have noticed, and nothing checks
+it against the producers. A reader adopting the protocol from the block above
+gets a correct subset and no hint that it is one.
+
 ## Exit codes are a vocabulary, not a boolean
 
 A caller chains on these, so each number has to mean one thing:
@@ -276,7 +313,7 @@ A caller chains on these, so each number has to mean one thing:
 | `0` | ready / verified / complete |
 | `1` | not ready, a step failed, or a channel is not on this version |
 | `2` | usage error, or another run holds the lock |
-| `3` | stranded — started, outcome unrecorded, never auto-advanced |
+| `3` | **cannot safely proceed on an irreversible step.** Four sites, one meaning: stranded (started, outcome unrecorded, `release.sh:1388`); a recorded `ok` whose probe *disagrees* (`:1375`); a probe that could not run (`:1412`); an irreversible step `--skip`ped on an earlier run (`:1418`) |
 | `75` | `EX_TEMPFAIL` — every act is done, verification is pending |
 
 `75` is the one worth copying. `release.sh run` is a launcher, not a foreground
@@ -358,8 +395,20 @@ than the rule.
   first match, the upstream `curl`/`printf` dies with `141`, and `pipefail`
   hands you the 141. Use a herestring: `grep -qE -- "$pat" <<<"$body"`.
 - **`cmd && ok "passed"` is a gate that cannot fail.** POSIX exempts the left
-  operand of `&&` from `errexit`. An assertion is `cmd || die "…"`, never
-  `cmd && ok`.
+  operand of `&&` from `errexit`, so a two-arm `cmd && ok` prints nothing on
+  failure and falls through. An assertion needs a failure arm: `cmd || die "…"`,
+  or the three-arm `cmd && ok "…" || bad "…"` a row-reporting gate uses.
+
+  > _Clarified 20 Sep 2026._ This read *"never `cmd && ok`"*, absolutely — while
+  > `check-release-ready.sh`, the reference implementation this doc points at,
+  > uses the three-arm form **14 times** and the bare two-arm form **zero**
+  > (measured after joining line-continuations; the naive grep reports the
+  > three-arm sites as two-arm because `|| bad` sits on the next line). The
+  > three-arm form is not the defect: it reports. The rule as written made the
+  > doc's own exemplar read as a violation at 14 sites, which is past the point
+  > where a reader concludes the doc is wrong rather than the code. **If the
+  > house position is that a preflight row should also be `|| die`-shaped, that
+  > is a change to 14 call sites and a decision, not a doc fix.**
 - **Background the step so traps fire.** Bash defers a trap until the current
   *foreground* command returns, so SIGTERM during a 30-minute build does
   nothing. Run it with `&`, `wait "$pid"`, and have the handler `pkill -TERM -P`
@@ -444,7 +493,7 @@ Part 2's sources, in the order you'd read them:
 - [`scripts/project.conf`](../../scripts/project.conf) — the constants, with the
   reasoning for each inline.
 - [`scripts/release.sh`](../../scripts/release.sh) — exit-code vocabulary, the
-  pure/impure split, the step table, `probe_done`'s third state.
+  pure/impure split, the step table, `probe_done`'s **four** states.
 - [`scripts/verify-channels.sh`](../../scripts/verify-channels.sh) — the
   tri-state probe rule and `_token_present`'s boundary matching.
 - [`scripts/test-lib.sh`](../../scripts/test-lib.sh) — the harness, `meta_check`,

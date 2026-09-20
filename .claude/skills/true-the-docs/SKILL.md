@@ -332,6 +332,23 @@ new section authoritative.
   and catches what re-reading won't.
 - **"Same subject" two docs.** Not duplication — one is canonical, one
   is cross-cutting. Cross-reference, don't mirror.
+- **A section heading is a version stamp, and "Future:" is the loudest one.**
+  Distinct from both patched-but-aspirational (header vs body) and the
+  summary-never-reached trap below (top vs sections): here the *section's own
+  heading* is the stale claim. `## Future: tag display modes` / `_Not
+  implemented._` over a feature that ships; `**Goal:** Replace the flat triage
+  table…` for work five months live. Highest-yield grep in the skill, because the
+  phrasing is formulaic and the failure is total — a cold reader takes the heading
+  at face value and never reads down. Measured 20 Sep 2026 on the codebook cluster:
+  **six of twelve docs**, while the brief for that pass had predicted the opposite
+  failure (wholesale obsolescence, Archetype D), which showed up in only two.
+  **Grep every doc for `Future`, `Not implemented`, `Proposed`, `Goal:`,
+  `Stretch goal`, `Next steps` and check each hit against the tree before
+  classifying.** A doc can be Archetype C purely on this — body accurate, headings
+  lying. Fix by marking the section shipped *in place* and keeping the proposal
+  beneath it: the reasoning is usually why the shipped thing has the shape it does,
+  and the as-built often differs from the proposal in ways worth recording (that
+  pass found an entry point that shipped gated on something else entirely).
 - **Patched-but-aspirational bodies.** A doc with a recent status
   banner at the top but a body that still describes the old or
   proposed approach. Surface-trued, substance-stale. The cheap test

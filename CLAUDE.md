@@ -507,6 +507,30 @@ what nobody thinks to check. And **prove the ported assertions bite** — mutate
 the live code back to the pre-fix behaviour and watch precisely the new tests go
 red; a port that passes on arrival has demonstrated nothing.
 
+**The sibling that is not a deletion: inverting a DEFAULT.** A test whose name and
+docstring are phrased in terms of the default is often pinning something else
+underneath, and flipping the default looks like it obsoletes the test when it
+does not. `test_lab_mounts_without_dev` read as "the lab is on by default" and was
+really pinning *the mount is gated on the flag and **not** on `--dev`* — the reason
+the desktop sidecar can serve it. Flipping `experimental_codebook_lab` to
+default-off (20 Sep 2026) would have deleted that contract along with the default
+had the test simply been inverted in place; it survives as
+`test_lab_mounts_without_dev_when_enabled`, asserting the same non-dev mount with
+the flag opted in. **Before changing a default, read each failing test for the
+contract it states rather than the value it happens to use, and re-home that
+contract in the same commit.**
+
+Two more things a default-flip drags behind it, both cheap to check and expensive
+to miss. **(1) Every other test that exercised the feature now exercises its
+absence** — nine further tests in that class would have become nine silent 404
+assertions, still green, testing nothing; an autouse fixture opting the class in
+is the fix, and the survey (`grep -rn '<route>' tests/`) is what finds them before
+the flip rather than after. **(2) The escape hatch inverts** — the env var that
+turned this off now turns it on, so every comment describing the old direction is
+actively misleading. An inverted switch documented the old way is worse than an
+undocumented one. Grep the flag name repo-wide and fix the prose in the same
+commit.
+
 ### Verifying only through a pipe hides the entire TTY code path
 
 `foo | tail`, `foo | grep`, `foo > file` all make stdout a non-tty, and any well-behaved CLI *changes behaviour* accordingly: Rich/`clig.dev`-style renderers skip animation, spinners and live regions don't start, colour drops. So a bug that only exists in the animated path is **invisible to every piped run** and instantly visible to the human who runs it bare.

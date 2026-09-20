@@ -14,9 +14,10 @@ trued-against: perf.yml (post-merge on main, hard); e2e/tests/perf-gate.spec.ts;
 wider context.
 
 > **It is deliberately NOT a pre-merge gate, and that is a reversal of this
-> doc's original design.** Until 4 Sep 2026 it was a `perf-gate` job inside
+> doc's original design.** Until **20 May 2026** it was a `perf-gate` job inside
 > `ci.yml` running on every push, exactly as §Goal and §CI-integration below
-> still describe. Runner noise and transient network failures were producing
+> still describe — so that description had been wrong for **four months** under
+> a status line that read *"live and blocking"*. Runner noise and transient network failures were producing
 > false positives that *silently stalled release-pipeline workflows*, so
 > `628a3705` moved it post-merge: the regression signal is kept, and PRs and
 > releases are no longer gated on it. `ci.yml:512` carries the forwarding
@@ -121,7 +122,15 @@ Re-measure and update thresholds when:
 | `e2e/perf-results.json` | Latest run snapshot (gitignored, overwritten each run) |
 | `e2e/.perf-history.jsonl` | Append-only run history (gitignored, local-only) |
 
-The perf-gate runs inside the existing E2E suite — no separate job, no orchestrator script, no separate port. Server identity guard (first test, serial mode) catches stale servers on 8150 before wrong metrics are recorded.
+The perf-gate runs in its **own workflow** (`perf.yml`), against its own server
+on the smoke fixture. Server identity guard (first test, serial mode) catches
+stale servers on 8150 before wrong metrics are recorded.
+
+> _Superseded 20 May 2026._ This read *"runs inside the existing E2E suite — no
+> separate job, no orchestrator script, no separate port"*, which contradicted
+> the §CI-integration paragraph four lines below it (*"a dedicated `perf-gate`
+> job"*) even before the move made both false. Two adjacent sentences
+> disagreeing is the tell that neither was being re-read.
 
 ### CI integration
 
@@ -134,11 +143,12 @@ job ceiling. The job sets `BN_RUN_PERF_GATE=1` and
 `_BRISTLENOSE_AUTH_TOKEN=test-token` (smoke fixture has no real data, so the
 token isn't a secret).
 
-> _Superseded 4 Sep 2026._ This paragraph read: *"A dedicated `perf-gate` job in
-> `.github/workflows/ci.yml` runs perf-gate against the smoke fixture on every
-> push. Chromium-only, `needs: [test, frontend-lint-type-test]`."* That was true
-> until `628a3705`. The `needs:` chain went with the move — nothing gates on it
-> and it gates nothing.
+> _Superseded 20 May 2026 (recorded here 20 Sep)._ This paragraph read: *"A
+> dedicated `perf-gate` job in `.github/workflows/ci.yml` runs perf-gate against
+> the smoke fixture on every push. Chromium-only, `needs: [test,
+> frontend-lint-type-test]`."* True until `628a3705`. The `needs:` chain went
+> with the move — `perf.yml` is a separate workflow, so nothing gates on it and
+> it gates nothing.
 
 By default `npx playwright test` skips perf-gate — `testIgnore` in `e2e/playwright.config.ts` filters it out unless `BN_RUN_PERF_GATE=1`. That keeps the regular `e2e` job's coverage scoped to smoke specs.
 

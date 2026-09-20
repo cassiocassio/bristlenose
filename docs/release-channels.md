@@ -1,6 +1,6 @@
 ---
 status: current
-last-trued: 2026-09-03
+last-trued: 2026-09-20
 trued-against: project.conf's eight CHANNELS incl. Copr; release.yml's seven jobs with trigger-copr needs verify-pypi; snap.yml building on every push and stamping a version suffix
 ---
 
@@ -57,22 +57,29 @@ mismatch is `bad`. Both keys are **empty until the pack is hosted**, and while
 they are the row prints nothing rather than nagging on every unrelated release.
 Exercised as shell, not grepped: `tests/test_pii_pack_probe.py`.
 
-## One tag push does six things
+## One tag push does seven things
 
-Pushing tag `v*` fires `release.yml`, which runs six jobs — `ci → build →
-publish`, then `github-release`, `verify-pypi` and `notify-homebrew` as
-**parallel siblings** off `publish`, one of which gates another — `trigger-copr` is `needs: verify-pypi`, never `publish`, because Source0 is fetched from PyPI during the Copr build and would otherwise race the CDN — and
-runs to completion: CI with strict macOS, then publish. The required-reviewer
-hold that used to park it was removed 23 Aug 2026 — `check-release-ready.sh`'s
-`publish gate` row now asserts the `publish → build → ci(strict)` chain instead,
-and fails if it breaks. There is no separate "make a GitHub release" step — it's job four.
+Pushing tag `v*` fires `release.yml`, which runs **seven** jobs. The spine is
+`ci → build → publish`; `github-release`, `verify-pypi` and `notify-homebrew`
+then hang off `publish` as **parallel siblings**, none of which gates another.
+**`trigger-copr` is the exception** — it is `needs: verify-pypi`, never
+`publish`, because Source0 is fetched from PyPI during the Copr build and would
+otherwise race the CDN. The required-reviewer hold that used to park the spine
+was removed 23 Aug 2026; `check-release-ready.sh`'s `publish gate` row now
+asserts the `publish → build → ci(strict)` chain instead, and fails if it
+breaks. There is no separate "make a GitHub release" step — it is job four.
 
 ```
 ci → build (sdist, wheel, SBOMs, attestation) → publish (PyPI)
-   → github-release (gh release create --generate-notes)
-   → verify-pypi
-   → notify-homebrew (repository_dispatch → cassiocassio/homebrew-bristlenose)
+   ├→ github-release   (gh release create --generate-notes)
+   ├→ verify-pypi ──────→ trigger-copr   (Copr; needs verify-pypi, NOT publish)
+   └→ notify-homebrew  (repository_dispatch → cassiocassio/homebrew-bristlenose)
 ```
+
+> _Trued 20 Sep 2026._ The heading and lede said **six**, and the diagram had no
+> `trigger-copr` row at all — while this doc's own front-matter said seven and
+> the prose named the job. The one job whose ordering is load-bearing was the
+> one missing from the picture a reader scans. `release.yml:230`.
 
 So **PyPI, the GitHub Release, and Homebrew are one action, not three.** Homebrew
 is downstream of PyPI: the tap workflow polls `pypi.org` for the new version

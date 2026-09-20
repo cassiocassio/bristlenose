@@ -47,7 +47,7 @@ trued-against: the pypi hold REMOVED (check-release-ready.sh's inverted `publish
 - _2026-07-16_ — trued up: bump-version.py flow, two mandatory gates, Desktop
   channels pointer.
 
-**Scope: PyPI · Homebrew · Snap (the CLI channels).** The desktop app ships
+**Scope: PyPI · Homebrew · Snap · Fedora Copr (the CLI channels).** The desktop app ships
 through separate channels — Developer-ID `.dmg` and App Store / TestFlight —
 each with its own signing and build script. See **[Desktop channels](#desktop-channels)**
 at the end.
@@ -178,7 +178,7 @@ once a version has published to PyPI, immutability forces a bump instead.)
 
 ## What happens after you push a tag
 
-The release pipeline spans **three repos/workflows** and runs multiple jobs:
+The release pipeline spans **three repos/workflows** and runs **seven** jobs:
 
 ```
 bristlenose repo (release.yml) — triggered by v* tag
@@ -193,6 +193,9 @@ bristlenose repo (release.yml) — triggered by v* tag
 │   none of them gates another:
 ├─ github-release → creates GitHub Release with auto-generated notes
 ├─ verify-pypi  → server-side poll; a stalled publish goes RED, not silent
+│     └─ trigger-copr → Fedora Copr rebuild. `needs: verify-pypi`, NOT
+│                       `publish` — the Copr build fetches Source0 from PyPI,
+│                       so publishing is not enough; the CDN has to be serving
 └─ notify-homebrew → sends repository_dispatch to tap repo
                         │
                         ▼
@@ -232,7 +235,8 @@ Both publish jobs fail loudly if `SNAPCRAFT_STORE_CREDENTIALS` is missing
 | `HOMEBREW_TAP_TOKEN` secret | `bristlenose` repo → Settings → Secrets → Actions |
 | `SNAPCRAFT_STORE_CREDENTIALS` secret | `bristlenose` repo → Settings → Secrets → Actions |
 | PyPI trusted publisher | pypi.org → bristlenose project → Publishing settings |
-| PyPI `pypi` environment | `bristlenose` repo → Settings → Environments |
+| PyPI `pypi` environment | `bristlenose` repo → Settings → Environments (no required reviewer — see above) |
+| Fedora Copr project | copr.fedorainfracloud.org → `cassiocassio/bristlenose` (fedora-43-x86_64) |
 
 ## Secrets
 
@@ -242,6 +246,7 @@ Both publish jobs fail loudly if `SNAPCRAFT_STORE_CREDENTIALS` is missing
 | `SNAPCRAFT_STORE_CREDENTIALS` | bristlenose repo → Actions secrets | Snap Store login credentials for publishing to edge/stable channels. Generated with `snapcraft export-login --snaps=bristlenose --channels=edge,beta,candidate,stable` | Rotate periodically; expires based on Ubuntu One session |
 | PyPI OIDC | pypi.org trusted publisher | `release.yml` `publish` job uses `id-token: write` — no token stored anywhere | N/A (keyless) |
 | `GITHUB_TOKEN` | automatic per workflow run | `github-release` job uses it to create GitHub Releases | Automatic |
+| `COPR_LOGIN` / `COPR_TOKEN` | bristlenose repo → Actions secrets | `trigger-copr` authenticates to Fedora Copr to fire the rebuild (`release.yml:234-235`) | **Expires 23 Feb 2027** — a hard date; the answer at the alert is RENEW |
 
 ## CI gates
 
@@ -250,7 +255,21 @@ Both publish jobs fail loudly if `SNAPCRAFT_STORE_CREDENTIALS` is missing
   **blocking** too (`ci.yml`'s `strict-macos` input, passed `true` by
   `release.yml`; informational on daily pushes). A release green certifies both
   platforms; a push green certifies Linux.
-- **mypy**: informational (continue-on-error due to third-party SDK type issues)
+- **mypy**: soft — and *soft with a disposition*, not soft indefinitely. Its
+  `continue-on-error` is registered in `docs/testing/soft-gates.json` as a
+  **ratchet** on `mypy_errors`: the count may not rise. The ceiling is
+  **149** (`docs/testing/ratchet.json`), set from CI, and only
+  `gh workflow run ratchet-tighten.yml` may lower it — a local run reports but
+  cannot. "Third-party SDK type issues" was never the reason it is soft; the
+  reason is that the count is a project rather than a commit, so it is held
+  instead of waived.
+
+The `gates` job is a **7-cell matrix**, not three: `ruff`, `inventory`,
+`gate-policy`, `gate-proofs`, `ratchet`, `manpage`, `mypy` (`ci.yml:52-77`),
+alongside the `supply-chain`, `release-suites`, `frontend-lint-type-test` and
+`package` jobs. Three of those cells — `gate-policy`, `gate-proofs` and
+`ratchet` — are the gates that govern the other gates, and they are the ones
+that went red from 13 to 20 Sep 2026 without appearing in any doc's gate list.
 
 ## Homebrew tap automation
 
@@ -376,7 +395,7 @@ release doesn't imply a desktop build, or vice versa):
   **[design-desktop-build-orchestration.md](design-desktop-build-orchestration.md)**
   and `desktop/CLAUDE.md`.
 
-**All five channels on one page: [release-channels.md](release-channels.md)** —
+**All eight channels on one page: [release-channels.md](release-channels.md)** —
 which script or trigger reaches which destination, what a tag push actually
 fires, and the expiry clocks. Written 8 Aug 2026; this doc remains the detailed
 CLI process.

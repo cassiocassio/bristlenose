@@ -271,9 +271,22 @@
     white-space: nowrap;
 }
 
+/* A participant who contributed a quote to this card.
+   THE ACCENT IS A BACKGROUND TOKEN. `--card-accent` is set from
+   `getGroupBg()`, and the `--bn-group-*` family is oklch 97% lightness — a
+   tint to sit behind things. It was also being used as the TEXT colour here,
+   which put 97%-lightness type on a white card: contrast near 1:1, and the
+   present participants read as blank space. Reported 20 Sep 2026 as "white on
+   white", and visible in the shipped app.
+
+   The accent stays as the background, which is what it is for. The text takes
+   the normal ink: the tint carries the identity, the weight carries the
+   state, and neither has to be legible in a colour that was never chosen to
+   be read. (`--bn-bar-*` at 65–70% is the mark colour of that family, but it
+   is specified for bars — 3:1 — not for badge-sized text, which wants 4.5:1.) */
 .participant-grid .p-box.p-present {
-    background: color-mix(in srgb, var(--card-accent, var(--bn-colour-muted)) 12%, var(--bn-colour-bg));
-    color: var(--card-accent, var(--bn-colour-muted));
+    background: color-mix(in srgb, var(--card-accent, var(--bn-colour-muted)) 30%, var(--bn-colour-bg));
+    color: var(--bn-colour-text);
     opacity: 1;
 }
 
@@ -816,4 +829,18 @@ button.signal-card-toggle {
 
 .signal-card-alternate {
     font-weight: var(--bn-weight-emphasis);
+}
+
+/* Waiting for a finding. The lens fetches twice — once for the cards, then
+   again for their elaborations — so this is the state of every card for the
+   first few seconds. A skeleton rather than a fallback string: the only
+   fallback available was the location, which is the heading directly above
+   and is the one thing a headline must never be. Sized like the headline so
+   the card does not grow one under the reader when it arrives. */
+.signal-card-location-pending {
+    height: var(--bn-text-heading);
+    width: 42%;
+    min-width: 8rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-hover);
 }

@@ -989,4 +989,43 @@ describe("AnalysisPage", () => {
       expect(await renderAndReadLightness()).toBeLessThan(BAND_EDGE);
     });
   });
+
+  it("NEVER puts the location in a card's headline", async () => {
+    // The location is the heading directly above the run, and it is the one
+    // string that is definitionally not a finding. The first build of this
+    // change fell back to it when no name had been generated — and because the
+    // lens fetches twice, that was EVERY card for the first few seconds.
+    mockFetchCodebookAnalysis(mockCbData);   // no elaborations in this fixture
+    render(<AnalysisPage projectId="1" />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0);
+    });
+
+    const heading = document.querySelector(".analysis-codebook-heading") as HTMLElement;
+    const location = heading.textContent?.trim();
+    expect(location).toBeTruthy();
+
+    for (const card of screen.getAllByTestId("bn-signal-card")) {
+      const headline = card.querySelector(".signal-card-location");
+      // Either absent, or a skeleton, or a real finding — never the location.
+      if (headline) {
+        expect(headline.textContent?.trim()).not.toBe(location);
+      }
+    }
+  });
+
+  it("shows a skeleton while elaborations are in flight, not a fallback string", async () => {
+    mockFetchCodebookAnalysis(mockCbData);
+    render(<AnalysisPage projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0);
+    });
+    // Whatever occupies the headline slot before a finding arrives carries no
+    // text at all — there is nothing true to put there yet.
+    for (const el of document.querySelectorAll(".signal-card-location-pending")) {
+      expect(el.textContent).toBe("");
+    }
+  });
+
 });

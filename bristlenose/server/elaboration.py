@@ -30,8 +30,18 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-#: Default number of top signals to elaborate.
-DEFAULT_TOP_N = 10
+#: A safety valve on the prompt's payload, not a display rule.
+#:
+#: It replaced ``DEFAULT_TOP_N = 10``, which capped by COUNT — the wrong shape,
+#: because quote length varies far more than card count does. MEASURED across
+#: the trial corpus: one project carries 16.5 KB of evidence on five cards
+#: while another carries 4.8 KB on twenty-nine, so ten cards can be a bigger
+#: ask than thirty.
+#:
+#: 60 KB is roughly 15,000 tokens of evidence. The busiest real project in the
+#: corpus uses 4,791 characters, so nothing real reaches this; it exists so a
+#: pathological project cannot send a prompt that fails.
+ELABORATION_BUDGET_CHARS = 60_000
 
 #: Valid pattern types.
 VALID_PATTERNS = frozenset({"success", "gap", "tension", "recovery"})
@@ -65,11 +75,34 @@ def compute_signal_key(source_type: str, location: str, group_name: str) -> str:
 
 
 def compute_content_hash(quote_texts: list[str], tag_names: list[str]) -> str:
-    """Compute a SHA-256 hash of the signal's content for cache invalidation.
+    """A SHA-256 over everything that decides what the elaboration should say.
 
-    Changes when quotes are added/removed or tags change.
+    Changes when quotes are added or removed, when tags change — **and when the
+    prompt changes**, which it did not until 20 Sep 2026.
+
+    THE PROMPT IS PART OF THE CONTENT. Without it, rewriting an instruction
+    invalidates nothing: every cached elaboration keeps the words it was given
+    under the old one, forever, and the change applies only to cards generated
+    afterwards. That is silent — no error, no stale marker, just two
+    generations of prose sitting beside each other on the same page. It was
+    found while planning exactly such a rewrite (Step 4, the headline rule),
+    which would have applied to none of the 54 existing cards.
+
+    The prompt's SHA rather than its declared `version`: a version is a number
+    someone has to remember to change, and a rule nobody is obliged to check is
+    indistinguishable from no rule. The cost is that a typo fix in the prompt
+    regenerates the cache — one batched call, taken deliberately.
     """
-    content = "\n".join(sorted(quote_texts)) + "\n---\n" + "\n".join(sorted(tag_names))
+    from bristlenose.llm.prompts import get_prompt_template
+
+    prompt_sha = get_prompt_template("signal-elaboration").sha
+    content = (
+        "\n".join(sorted(quote_texts))
+        + "\n---\n"
+        + "\n".join(sorted(tag_names))
+        + "\n---prompt---\n"
+        + str(prompt_sha)
+    )
     return hashlib.sha256(content.encode()).hexdigest()
 
 

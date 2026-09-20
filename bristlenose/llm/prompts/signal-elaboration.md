@@ -1,6 +1,6 @@
 ---
 id: signal-elaboration
-version: 0.2.0
+version: 0.3.0
 ---
 # Signal Elaboration
 
@@ -28,15 +28,40 @@ Classify the overall pattern across all evidence:
 - **recovery** — negative followed by positive sequence
 
 ### Step 4 — Signal name
-2–4 words. Combine the pattern type with specificity drawn from the quote content. Use the group's analytical vocabulary, not raw quote words.
 
-Examples:
-- Feedback + all positive → "Feedback strength"
-- Discoverability + mixed → "Discoverability tension"
-- Discoverability + all negative → "Discoverability gap"
-- Conceptual model + all negative (model mismatch) → "Expectation mismatch"
-- Feedback + negative then positive → "Response delay"
-- Discoverability + all positive (exploration tags) → "Filter discoverability"
+2–4 words, and **every word earned from the evidence**.
+
+**The rule: no word may be the group name or the pattern word.** Both are
+already on the card — the group is the chip beside this headline, and the
+pattern is carried separately — so a headline spending its words on either
+tells the reader nothing they cannot already see. The headline's job is
+triage: the shortest version of the finding that lets a researcher decide
+whether the rest is worth reading.
+
+This replaces "use the group's analytical vocabulary", which mandated exactly
+the words that carry no triage value. Scored against that instruction's own
+examples, three of six spent their entire budget restating the chip:
+
+| headline | earned | |
+|---|---|---|
+| ~~Feedback strength~~ | 0 of 2 | group + pattern; says nothing the chip doesn't |
+| ~~Discoverability tension~~ | 0 of 2 | same |
+| ~~Discoverability gap~~ | 0 of 2 | same |
+| Filter discoverability | 1 of 2 | "Filter" is earned |
+| Response delay | 2 of 2 | the group is *Feedback* |
+| Expectation mismatch | 2 of 2 | the group is *Conceptual model* |
+
+Draw the words from what the participants did and said — the object they were
+using, the thing that went wrong, the moment it happened. Use the group's
+concepts to *decide what matters*; do not spend the headline saying them.
+
+Examples, with the group named so the rule is visible:
+- Feedback, all positive, about a confirmation that arrived late → "Delayed reassurance"
+- Discoverability, mixed, about filters → "Filters found, sort missed"
+- Discoverability, all negative, bed sizes hidden behind paths → "Sizes buried in paths"
+- Conceptual model, all negative → "Expectation mismatch"
+- Feedback, negative then positive → "Response delay"
+- Recognition over recall, one tag satisfied and one violated → "Visible, then remembered"
 
 ### Step 5 — Elaboration
 
@@ -69,7 +94,7 @@ Examples of good elaborations:
 
 Rules:
 - Signal name MUST be 2–4 words
-- Signal name MUST use the group's analytical vocabulary
+- Signal name MUST NOT contain the group name or the pattern word
 - The `||` delimiter MUST appear exactly once per elaboration
 - Each part MUST be one or more complete sentences ending in a full stop
 - The part after `||` MUST begin with a capital letter

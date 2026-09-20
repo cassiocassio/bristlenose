@@ -455,11 +455,15 @@ function SignalCard({
   cardRef,
   siblingSignals,
   signalIndex,
+  elaborationsIn,
   onFocus,
 }: {
   signal: UnifiedSignal;
   allPids: string[];
   isSentiment: boolean;
+  /** Has the elaborated fetch come back? Distinguishes "no finding yet" from
+   *  "no finding at all", which want different treatments. */
+  elaborationsIn?: boolean;
   isFocused?: boolean;
   cardRef?: (el: HTMLDivElement | null) => void;
   siblingSignals?: number[];
@@ -594,9 +598,23 @@ function SignalCard({
             branch used to print the literal word "Section", which reads as a
             type label but only ever meant "no name was generated". */}
         <div className="signal-card-identity">
-          <div className="signal-card-location">
-            {signal.signalName || signal.location}
-          </div>
+          {/* THE HEADLINE IS A FINDING, OR IT IS NOT THERE.
+              It fell back to the location, which is the one string that is
+              definitionally not a finding — and the location is the heading
+              directly above, so every card repeated it. Worse, the lens
+              fetches twice (once without elaboration, then with), so on first
+              paint NO card had a name and every one of them said its location
+              for three to five seconds.
+
+              Pending: a skeleton, which says nothing false and does not make
+              the card grow a headline under the reader a moment later.
+              Returned and still absent: nothing. A card that cannot carry a
+              finding should not pretend to. */}
+          {signal.signalName ? (
+            <div className="signal-card-location">{signal.signalName}</div>
+          ) : !elaborationsIn ? (
+            <div className="signal-card-location signal-card-location-pending" aria-hidden="true" />
+          ) : null}
           {signal.elaboration && (
             <div
               className="signal-elaboration bn-lead-para"
@@ -1042,11 +1060,13 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
   }, [projectId]);
 
   // Progressive enhancement: fetch with elaboration (may take 3-5s first time)
+  const [elaborationsIn, setElaborationsIn] = useState(false);
   useEffect(() => {
     if (!tagLoaded) return;
     getCodebookAnalysis(true)
       .then((data) => { setCbData(data); })
-      .catch(() => {}); // elaboration failure is non-fatal
+      .catch(() => {})          // elaboration failure is non-fatal
+      .finally(() => setElaborationsIn(true));
   }, [projectId, tagLoaded]);
 
   const hasSentiment = sentimentData !== null && sentimentData.signals.length > 0;
@@ -1413,6 +1433,7 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
                   allPids={isFromSentimentLens(s) ? sentimentPids : tagAllPids}
                   isSentiment={isFromSentimentLens(s)}
                   isFocused={focusedSignalKey === s.key}
+                  elaborationsIn={elaborationsIn}
                   siblingSignals={siblingComposites}
                   signalIndex={siblingIndex.get(s.key)}
                   cardRef={(el: HTMLDivElement | null) => {

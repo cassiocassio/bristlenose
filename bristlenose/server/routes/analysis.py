@@ -1080,16 +1080,33 @@ async def _elaborate_top_signals(
     db: Session,
     project_id: int,
 ) -> None:
-    """Generate elaborations for the top N framework signals across codebooks.
+    """Generate elaborations for every framework signal across codebooks.
 
     Modifies ``TagSignal`` objects in place — sets ``signal_name``,
     ``pattern``, and ``elaboration`` fields.
+
+    **It used to be the top ten, pooled project-wide.** A card below that line
+    printed its *location* as its headline, which differentiates nothing and is
+    the thing the reader is meant to triage on — and the cut was global, so it
+    sliced through locations arbitrarily: one card at a location could assert
+    something while three beside it just presented quotes, for a reason nobody
+    could see and that had nothing to do with that location.
+
+    Lifting it is cheap. It is one batched call cached on a content hash, and
+    MEASURED the busiest real project carries 29 cards on 4,791 characters of
+    evidence — about 1,200 tokens. ``ELABORATION_BUDGET_CHARS`` is a guard
+    against a pathological project, not a display rule; nothing real reaches
+    it.
+
+    Custom codebooks are still skipped, which is a separate and unexamined
+    decision: a researcher who writes their own codebook gets cards that can
+    never carry a finding, at any score.
     """
     import logging
 
     from bristlenose.config import load_settings
     from bristlenose.server.elaboration import (
-        DEFAULT_TOP_N,
+        ELABORATION_BUDGET_CHARS,
         compute_signal_key,
         generate_elaborations,
     )
@@ -1113,9 +1130,26 @@ async def _elaborate_top_signals(
     if not all_framework:
         return
 
-    # Sort by composite_signal descending, take top N
+    # Strongest first, so a budget cut (if one is ever reached) takes the
+    # cards a researcher would look at last.
     all_framework.sort(key=lambda x: x[0].composite_signal, reverse=True)
-    top_signals = all_framework[:DEFAULT_TOP_N]
+
+    # Every card, up to a payload guard. A count was the wrong shape: quote
+    # length varies far more than card count does — MEASURED, one project
+    # carries 16.5 KB of evidence on 5 cards while another carries 4.8 KB on
+    # 29 — so ten cards can be a bigger ask than thirty.
+    top_signals: list[tuple[TagSignal, str]] = []
+    budget = ELABORATION_BUDGET_CHARS
+    for sig, cb_id in all_framework:
+        cost = sum(len(q.text) for q in sig.quotes)
+        if top_signals and budget - cost < 0:
+            logger.info(
+                "elaboration budget reached: %d of %d signals",
+                len(top_signals), len(all_framework),
+            )
+            break
+        budget -= cost
+        top_signals.append((sig, cb_id))
 
     # Group by codebook_id
     by_codebook: dict[str, list[TagSignal]] = {}

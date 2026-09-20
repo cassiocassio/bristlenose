@@ -196,7 +196,9 @@ Simple contenteditable on individual segment text. Click to edit, type correctio
 
 **Data model**: `TranscriptSegmentEdit` table (session_id, segment_index, edited_text, edited_at). Original text preserved in `TranscriptSegment.text`.
 
-**UX**: Click segment text to enter edit mode. Yellow background (same as quote editing — consistent "you're editing" signal). Type freely. Enter/blur commits. Escape cancels. Small undo icon on edited segments.
+**UX**: Click segment text to enter edit mode. Type freely. Enter/blur commits. Escape cancels. Small undo icon on edited segments.
+
+> **Treatment, corrected 2026-09-20.** This said "yellow background (same as quote editing)". Do not build that. The yellow (`--bn-colour-crop-bg`, named `--bn-colour-editing-bg` until that date) belongs to quote *cropping* only — it pairs with the bracket handles and signals "move this boundary", not "retype this string". A segment edit is an ordinary inline edit field and takes the `--bn-field-edit-*` set: segment text sits on page background, so the field tints up (`--bn-field-edit-fill-on-page`) with a 1px `--bn-field-edit-edge`. The rule and its one exemption are documented in `bristlenose/theme/tokens.css`; `docs/mockups/edit-field-idioms.html` renders every case. Borrowing the crop yellow for a text edit is precisely the drift the rename was done to stop.
 
 **Timing**: Word-level timestamps (`words_json`) are not updated. Playback cursor position degrades for edited segments but remains correct for surrounding segments. This matches Dovetail's approach (accept drift, it's fine for research).
 

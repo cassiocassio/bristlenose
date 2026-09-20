@@ -242,8 +242,8 @@ All molecule files live in `bristlenose/theme/molecules/`. Sixteen files.
 ### Editable text — `molecules/editable-text.css`
 - `.editable-text` — generic inline editor
 
-### Name edit — `molecules/name-edit.css`
-- `.name-cell`, `.name-text`, `.name-pencil`, `.role-cell`, `.role-text`, `.unnamed` — speaker-name edit row
+### Name edit
+- Deleted 20 Sep 2026 with `molecules/name-edit.css`. Its `.name-cell` / `.name-text` / `.name-pencil` / `.role-cell` / `.role-text` classes were emitted by nothing in the repo — the React sessions grid replaced the surface with `.bn-name-pencil` + `.bn-speaker-editable-name`. The one live rule, `.unnamed`, moved to `molecules/person-badge.css` scoped to its two real consumers.
 
 ### Hidden quotes — `molecules/hidden-quotes.css`
 - `.bn-hidden-badge`, `.bn-hidden-chevron`, `.bn-hidden-dropdown`, `.bn-hidden-header`, `.bn-hidden-item`, `.bn-hidden-preview`, `.bn-hidden-toggle`, `.bn-unhide-all`

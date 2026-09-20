@@ -56,6 +56,10 @@ grep -l "\.toolbar-btn-toggle" bristlenose/theme/atoms/toggle.css  # should hit
 grep -c "\.toolbar-btn-toggle" bristlenose/theme/atoms/button.css   # should be 0 (comments mention it, but no rules)
 
 # Editing states should be in editable-text.css, NOT in quote-actions or name-edit
+# NOTE 2026-09-20: the four name-edit.css lines below now error rather than print
+# 0 (file deleted), and "editing-bg" is gone — the token was renamed
+# --bn-colour-crop-bg and the inline-edit state moved to the --bn-field-edit-*
+# set. Historical script, kept as the Round 2 record; don't re-run these four.
 grep -l "editing-bg" bristlenose/theme/molecules/editable-text.css    # should hit
 grep -c "editing-bg" bristlenose/theme/molecules/quote-actions.css     # should be 0
 grep -c "editing-bg" bristlenose/theme/molecules/name-edit.css         # should be 0

@@ -1,8 +1,29 @@
 ---
 status: current
-last-trued: 2026-07-26
-trued-against: HEAD@main on 2026-07-26
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20
 ---
+
+> **Truing status:** Current with targeted edits (trued 2026-09-20).
+> §"Name editing in HTML report" carries a section banner — the feature it
+> describes is inert in the static byproduct. §"Editable section/theme
+> headings" was corrected: it named the wrong CSS file and the retired
+> treatment. Rest of the body is verbatim-accurate.
+
+## Changelog
+
+- _2026-09-20_ — trued up: banner on §"Name editing in HTML report" (its four
+  entry points are all unreachable — `names.js` binds `.name-text` /
+  `.role-text` / `.name-pencil`, which nothing emits, and there is no
+  participants-table template); corrected §"Editable section/theme headings"
+  CSS pointer from `molecules/quote-actions.css` to `molecules/editable-text.css`
+  and replaced the retired yellow treatment with the `--bn-field-edit-*` set.
+  Anchors: `bristlenose/theme/js/names.js:92,103,123`,
+  `bristlenose/theme/templates/toolbar.html:14`,
+  `bristlenose/theme/molecules/editable-text.css`, commit subjects "an edit
+  field now takes its fill from the ground it sits on", "the yellow is called
+  crop, because that is the only thing it may be".
+- _2026-07-26_ — trued up: transcript margin annotations reworked. See below.
 
 # HTML Report — Design and Implementation Notes
 
@@ -57,6 +78,20 @@ Within each session, speakers are assigned **speaker codes** that distinguish mo
 
 ### Name editing in HTML report
 
+> **Inert as of 2026-09-20 — retained as the record of a surface that was
+> replaced without anyone writing the handover down.** Every entry point below
+> is unreachable in the shipped static report: `names.js` binds through
+> `.name-text`, `.role-text` and `.name-pencil` (`js/names.js:92,103,123,296`),
+> no template emits any of them, and there is no participants-table template
+> to emit them from. `initNames()` still runs (`js/main.js:54`) and binds
+> nothing; `#export-names` (`templates/toolbar.html:14`) ships
+> `style="display:none"` and is revealed only once edits exist, which they
+> cannot. The live surface is the React sessions grid —
+> `.bn-name-pencil` + `.bn-speaker-editable-name`
+> (`frontend/src/islands/SessionsTable.tsx:456,498`), styled by
+> `molecules/person-badge.css`. `molecules/name-edit.css` was deleted on
+> 2026-09-20; `js/names.js` is frozen vanilla and stays, unreferenced.
+
 Participant names and roles are editable inline in the HTML report.
 
 - **Pencil icon**: `.name-pencil` button in Name and Role table cells, visible on row hover. Same contenteditable lifecycle as quote editing (Enter/Escape/click-outside)
@@ -77,7 +112,7 @@ Section titles, section descriptions, theme titles, and theme descriptions are e
 - **Bidirectional sync**: Editing a title in the ToC updates the heading, and vice versa. Uses `_syncSiblings()` — all `.editable-text` spans sharing the same `data-edit-key` are kept in sync
 - **Storage**: Reuses the same `bristlenose-edits` localStorage store as quote edits. Keys: `section-{slug}:title`, `section-{slug}:desc`, `theme-{slug}:title`, `theme-{slug}:desc`
 - **JS**: `initInlineEditing()` in `editing.js`, called from `main.js` boot sequence after `initEditing()`. Separate `activeInlineEdit` tracker from `activeEdit` (quote editing)
-- **CSS**: `.edit-pencil-inline` in `atoms/button.css` (static inline positioning); `.editable-text.editing` and `.editable-text.edited` in `molecules/quote-actions.css`
+- **CSS**: `.edit-pencil-inline` in `atoms/button.css` (static inline positioning); `.editable-text.editing` and `.editable-text.edited` in `molecules/editable-text.css` (not `quote-actions.css` — they moved in the Round 2 refactor). The editing state is the house inline-edit field driven by the `--bn-field-edit-*` set in `tokens.css`, **not** the yellow: on page background the field tints up, on a tinted surface it blanks to neutral, both carrying a 1px accent edge. The SPA half of the same rule keys on `[contenteditable="true"]` rather than `.editing`, because `EditableText` never writes that class — only this vanilla renderer does
 - **Tests**: `tests/test_editable_headings.py` — 19 tests covering markup, data attributes, CSS, JS bootstrap, ToC editability, and sentiment exclusion
 
 ## Report header and toolbar

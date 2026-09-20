@@ -45,7 +45,7 @@ These are signed under our Apple Distribution identity (Team ID
 | `OpenSSL` | 3.6.3 | Linked into `_ssl` and `_hashlib` |
 | `SQLite` | 3.53.3 | Linked into `_sqlite3` |
 | `zlib` | 1.2.12 | Linked into `zlib` |
-| `expat` | 2.7.3 | Linked into `pyexpat` |
+| `expat` | 2.7.4 | Linked into `pyexpat` |
 <!-- END AUTO: framework-libs -->
 
 ## Python wheels (auto-generated)
@@ -99,7 +99,7 @@ procurement; under-listing would be a compliance risk.
 | `annotated-doc` | 0.0.5 | MIT | <https://github.com/fastapi/annotated-doc> |
 | `annotated-types` | 0.8.0 | MIT | <https://github.com/annotated-types/annotated-types> |
 | `anthropic` | 1.4.0 | MIT License | <https://github.com/anthropics/anthropic-sdk-python> |
-| `anyio` | 4.15.0 | MIT | <https://anyio.readthedocs.io/en/stable/versionhistory.html> |
+| `anyio` | 4.15.1 | MIT | <https://anyio.readthedocs.io/en/stable/versionhistory.html> |
 | `attrs` | 26.1.0 | MIT | <https://www.attrs.org/en/stable/changelog.html> |
 | `av` | 18.1.0 | BSD-3-Clause | <https://pyav.basswood.io> |
 | `blis` | 1.3.3 | BSD License | <https://github.com/explosion/cython-blis> |
@@ -188,7 +188,7 @@ procurement; under-listing would be a compliance risk.
 | `sqladmin` | 0.31.1 | BSD-3-Clause | <https://github.com/smithyhq/sqladmin> |
 | `SQLAlchemy` | 2.0.52 | MIT | <https://www.sqlalchemy.org> |
 | `srsly` | 2.5.3 | MIT License | <https://github.com/explosion/srsly> |
-| `sse-starlette` | 3.4.10 | BSD-3-Clause | <https://github.com/sysid/sse-starlette> |
+| `sse-starlette` | 3.4.11 | BSD-3-Clause | <https://github.com/sysid/sse-starlette> |
 | `starlette` | 1.6.0 | BSD-3-Clause | <https://github.com/Kludex/starlette> |
 | `sympy` | 1.14.0 | BSD License | <https://sympy.org> |
 | `tenacity` | 9.1.4 | Apache Software License | <https://github.com/jd/tenacity> |

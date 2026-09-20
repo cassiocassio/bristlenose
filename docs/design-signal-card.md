@@ -1,11 +1,37 @@
+---
+status: current
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20
+---
+
 # The signal card — anatomy, labelling and quote selection
+
+## Changelog
+
+- _2026-09-20_ — trued up, same day it was written, by an audit against the
+  tree rather than against itself. Thirteen present-tense claims that the doc's
+  own §9 already contradicted: a "what is being built now" plan under a BUILT
+  banner, §4 calling a test "not implemented" that had shipped at 0.6, §5 and
+  §5c describing fixed defects in the present, §9's K note calling a shipped
+  item "not implementable today". "Tiers 1–3 are done" was refuted two lines
+  later by its own table, where L reads DEFERRED. M's ✓ sat beside a
+  prerequisite it shipped without — now stated, because a tick next to an
+  unmet precondition is how a known cost becomes an invisible one. §7.4's
+  scope overstated (fields left the adapters, not the wire). Live test counts
+  removed rather than updated: they were false within hours of being written.
+  Anchors: `frontend/src/utils/signalDedup.ts` `FOLD_THRESHOLD`,
+  `bristlenose/server/routes/analysis.py`, `bristlenose/analysis/metrics.py`;
+  commits `9e9af6fd`, `96323e58`, `08b4bb93`, `075d7684`.
 
 _Last updated: 20 Sep 2026_
 
 **Status: BUILT 20 Sep 2026.** Tiers 1, 2 and 3 of §9 are implemented and
 committed (`451a43ca`, `9e9af6fd`, `96323e58`, `08b4bb93`, plus two review
-passes `30d54e20` and `59116fb6`). Frontend 1769 tests passing, Python 4668,
-ruff and locales clean.
+passes `30d54e20` and `59116fb6`, and `075d7684` after). Suites, ruff and
+locales were green at each. **The counts that used to sit here are gone on
+purpose** — "1769 frontend, 4668 Python" was false within hours and said
+nothing a reader could act on. Run them if you need them; they are not a
+property of this design.
 
 **What is NOT verified: how it looks.** The preview tools do not work for this
 stack, so every claim here is tests-green rather than eyes-on. The fused seam,
@@ -63,9 +89,10 @@ eleven candidate treatments for showing a signal's valence. Generation 4
 deferred it rather than rejecting it — `signal.pattern` still arrives on the
 wire, so nothing has to be regenerated when it is picked up.
 
-**What is being built now:** §9 tier 1 — the seven frontend changes that carry
-no open questions. Everything else waits on the dependencies in §9's order
-block.
+**What was built, and in what order:** §9's tiers, tier 1 first — the seven
+frontend changes carrying no open questions — then 2, then 3. The order block
+in §9 records the dependencies that forced it. One item did not land: L, which
+§9 marks DEFERRED.
 
 ---
 
@@ -74,7 +101,7 @@ block.
 One React component renders every card in the analysis lens: `SignalCard` in
 `frontend/src/islands/AnalysisPage.tsx`. It is not a library component — not
 exported, not in `components/index.ts`, no test file of its own, sharing a
-1,363-line file with the lens, the heatmap and the tooltip. What look like
+1,466-line file with the lens, the heatmap and the tooltip (`wc -l`, 20 Sep — it grows; do not trust this number, read it). What look like
 different kinds of card are data variants of that one function.
 
 A card is a **(location × tag group)** cell. Quotes join it when *any* of their
@@ -148,13 +175,21 @@ already exist.
 ## 4. The marginal-value rule
 
 Strongest first; a later card is admitted only if it brings a quote no kept
-card has shown. MEASURED: **119 cards in, 93 kept, 26 cut.**
+card has shown. MEASURED **19 Sep 2026, against the union-coverage rule that
+was then shipped: 119 cards in, 93 kept, 26 cut.** Two later measurements of the
+same *idea* disagree with it and with each other — `signalDedup.ts`'s header
+(74 locations, 106 cards, 21 folded) and `design-signal-strength.md` §7 (52
+locations, 107 cards, 14) — because all three measured different corpora under
+different rules. None is wrong; the number is only meaningful with its date and
+its rule, which is why all three now carry both.
 
-Two further tests were named and are **not implemented**:
+Two further tests were named. **The first shipped on 20 Sep at 0.6**
+(`frontend/src/utils/signalDedup.ts` `FOLD_THRESHOLD`); the second did not:
 
-- **independent facets** — the spike's pairwise quote-set Jaccard. Its §7 reads
-  a threshold of 0.8 off an empty band at 0.7–0.9, but *both* real pairs raised
-  in review sat at **0.67**, under the cut. Likely wants ~0.6, or the quote-set
+- **independent facets** — the spike's pairwise quote-set Jaccard. **SHIPPED at
+  0.6.** Its §7 read a threshold of 0.8 off an empty band at 0.7–0.9, but
+  *both* real pairs raised in review sat at **0.67**, under the cut — which is
+  why 0.6 was taken instead, or the quote-set
   test is not the whole test: Jaccard measures evidence overlap, and the
   question is meaning overlap. Two cards can share evidence and say genuinely
   different things (`system response` is a mechanism tag, `visual design` a
@@ -168,7 +203,8 @@ Two further tests were named and are **not implemented**:
 
 **The goal, before the mechanism: the chip must never say `Sentiment`.**
 
-Today it does, on every sentiment card in the lens. `Sentiment` is the
+It did, on every sentiment card in the lens, until item J landed on 20 Sep
+(`9e9af6fd`). `Sentiment` is the
 *framework's* name, and naming the framework tells a researcher nothing — they
 know they are reading sentiment. What they need is *which* sentiment, or, when
 no single one is honest, which direction. So the chip resolves to one of:
@@ -323,16 +359,25 @@ Two remain open, and both say why.
    cap is not buying anything on a realistic study.
 4. ✓ PARTLY — **Fields on the wire, rendered nowhere.** `signal.pattern` (deliberately —
    the chip was withdrawn 13 Sep; MEASURED 45 tension / 24 success / 16 gap /
-   7 recovery across 92 elaborations), `signal.confidence`,
-   `signal.count` and `quote.segmentIndex` are **removed** — only test fixtures
-   referenced them. `signal.pattern` stays on the wire deliberately: the chip
+   7 recovery across 92 elaborations in the 19 Sep options corpus — not the 54 cached in a project, which §9 N counts), `signal.confidence`,
+   `signal.count` and `quote.segmentIndex` are **removed from the frontend
+   adapters** — only test fixtures referenced them there. They still ship on the
+   Python wire (`analysis.py` `count=`, `confidence=`, `segment_index=`), which
+   is what §9 G says and what this line originally did not. `signal.pattern` stays on the wire deliberately: the chip
    was withdrawn, not the classification, so nothing regenerates when a better
    treatment lands. It now also drives which quotes a codebook card counts as
    supporting its finding (§6), so it is read rather than merely carried.
 5. ✓ FIXED — **`classify_flag` was computed for every sentiment signal, reached the API
-   (`analysis.py:95`, `:389`) and is rendered nowhere.** Its documented value
-   `Pattern` is **unreachable** — an exhaustive sweep returns only
-   `Win / Problem / Niggle / Success / Surprising`.
+   and was rendered nowhere.** Anchors move; find it with `grep -n 'flag' bristlenose/server/routes/analysis.py`
+   rather than by line. Its documented value `Pattern` is **unreachable** — an
+   exhaustive sweep returns only `Win / Problem / Niggle / Success / Surprising`.
+   The docstring advertising `Pattern` outlived this finding by a day and was
+   removed 20 Sep; `docs/design-finding-weight.md` had predicted it would never
+   fire when the scheme was written. **A second defect in the same call was
+   found by the truing pass and fixed:** the API re-classify passed the card's
+   own participant count as the breadth denominator, so `FLAG_BREADTH` could
+   not bind and the broad/narrow split was collapsed on the only path that
+   renders.
 6. ⚠ OPEN — **The floated hero costs reading order.** The float
    requires the chip to be emitted before the headline — a float only affects
    what follows it — so a screen reader announces *"Frustration 0.42, button"*
@@ -434,8 +479,9 @@ spending more on it: user tags and user tag groups are free text and can be
 whatever the researcher types. A rule that holds only for the shipped
 frameworks is a house style, not an invariant.
 
-*One real defect in the same area, and note what the fix actually is.* The
-`enums` translation in `SignalHero` is gated on `isSentiment` —
+*One real defect in the same area — **fixed 20 Sep by item J** (`9e9af6fd`);
+kept because what the fix turned out to be is the point.* The
+`enums` translation in `SignalHero` **was** gated on `isSentiment` —
 `isFromSentimentLens`, the fallback path — so the card that actually renders
 never reaches it and falls through to the raw `columnLabel`, which is the
 string `Sentiment`. **The fix is not to ungate the translation.** Item J
@@ -477,9 +523,10 @@ that produced no finding has no row in it.
 order, and because the two review passes are where the interesting failures
 are. What each tier actually cost is at the end.
 
-Tiers 1–3 are done. What remains is §8.1 (deferred, needs real study data),
-the escape hatch and the clarity signal (both on the board), and §7.7 —
-custom codebooks, which needs tags to carry definitions.
+Tiers 1 and 2 are done; **tier 3 is three of four** — L is DEFERRED in the
+table below, waiting on a study in the right volume regime. What else remains:
+§8.1 (the same deferral), the escape hatch and the clarity signal (both on the
+board), and §7.7 — custom codebooks, which needs tags to carry definitions.
 
 ### Tier 1 — no open questions, frontend only
 
@@ -550,7 +597,8 @@ one background**, the flag a `<span>` before the label. **That means a null flag
 renders `frustration 0.42` with no gap and no placeholder, so K never blocks
 anything; it lights up when J lands.
 
-**It is not implementable *today*, and the reason is seven days old.**
+**It was not implementable when this was written, and the reason was seven
+days old. It shipped the same day, once J landed.**
 `classify_flag` is passed the *column* label; for the sentiment framework that
 is the literal string `"Sentiment"`, which is not in `SENTIMENT_VALENCE`, so it
 returns `None` —
@@ -577,7 +625,7 @@ about deleting a UI surface orphaning a wire contract.
 | | change | blocked on |
 |---|---|---|
 | L | `MIN_WEIGHT` | **DEFERRED 20 Sep 2026** — waiting on a study in the right volume regime, not more fixtures. §8.1 has the trigger and the risk |
-| M ✓ | elaborate every card, not ten | needs the escape hatch: the prompt able to return *no finding* |
+| M ✓ | elaborate every card, not ten | **shipped without its stated prerequisite.** The cell read "needs the escape hatch: the prompt able to return *no finding*" — M landed anyway, so every card now gets a finding whether or not it has one. That is the trade §8.3 describes, and the escape hatch is still open (board). Recorded rather than smoothed: a ✓ beside an unmet prerequisite is how a known cost becomes an invisible one |
 | N ✓ | Step 4 earned-words rewrite | **needs M's cache fix first** |
 | O ✓ | score visible, or dev-only instrument | §8.4 |
 
@@ -611,9 +659,9 @@ is the failure modes, because **not one of the five review findings was red.**
 
 | | |
 |---|---|
-| commits | 6 (4 build, 2 review) |
-| frontend tests | 1751 → **1769** |
-| Python tests | 4643 → **4668** |
+| commits | 7 (5 build, 2 review) — `075d7684` landed after this table was written |
+| frontend tests | 1751 → 1769 *(at the time; run them for today's)* |
+| Python tests | 4643 → 4668 *(at the time; run them for today's)* |
 | new test files | 3 (`quoteSelection`, `sentiment_label`, `elaboration_budget`) |
 | locale keys added | 4 × 21 locales |
 

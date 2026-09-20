@@ -13,12 +13,23 @@
  * whiteboard you do not duplicate a sticky across five clusters; you put it in
  * the strongest group under the strongest interpretation.
  *
- * Measured over nine trial projects, 74 locations and 106 cards: the rule hides
- * 21 and costs NO evidence, because every quote keeps a card pointing at it.
- * It is purely a multi-codebook effect — every single-codebook project in the
- * corpus already draws exactly one card per location.
+ * HISTORY, because this comment described the wrong rule for four days.
  *
- * Decision trail: docs/mockups/signals-sidebar-row-layouts.html §R.
+ * The rule shipped on 13 Sep DELETED: measured over nine trial projects, 74
+ * locations and 106 cards, it hid 21 and was said to cost no evidence, since
+ * every quote kept a card pointing at it. That last part was true of the
+ * QUOTES and false of the READINGS — 11 of the 19 cards it hid matched no
+ * single kept card at all, so it was destroying interpretations while claiming
+ * to remove repeats.
+ *
+ * Since 20 Sep the loser FOLDS instead: it is attached to the winner as an
+ * alternate and stays reachable. Two tests fire it — pairwise quote-set
+ * Jaccard at FOLD_THRESHOLD, or union coverage — and the Sentiment exemption
+ * that the delete rule needed is gone by construction, because nothing is
+ * deleted to be exempt from.
+ *
+ * Decision trail: docs/mockups/signals-sidebar-row-layouts.html §R;
+ * docs/design-decisions.md § Near-duplicate cards fold, they do not disappear.
  */
 import type { UnifiedSignal } from "./types";
 

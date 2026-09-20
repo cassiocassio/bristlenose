@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
 """Generate docs/mockups/signal-card-valence.html from the real trial corpus."""
-import json, html, os, collections
+import json, html, os, collections, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# the house ribbon, so the page says what it is when you open it (711c6a6e).
+# One shared source for every signal-card mockup — do not fork it here.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                "..", "signal_card_options"))
+from ribbon import CSS as RIBBON_CSS, ribbon
+from words import FRAMES, GLYPHS
 
-SP = os.path.dirname(os.path.abspath(__file__))  # run from the repo root
+SP = os.path.dirname(os.path.abspath(__file__))
 CARDS = json.load(open(os.path.join(SP, "cards.json")))
 OUT = "docs/mockups/signal-card-valence.html"
 E = lambda s: html.escape(str(s or ""))
@@ -63,6 +70,32 @@ def t_stack(c):
             f'{seg(p,"pos")}{seg(o,"neu")}{seg(n,"neg")}</span>'
             f'<span class="v-share-num">{p}/{tot}</span>')
 
+BALLS = ["\u25CB", "\u25D4", "\u25D1", "\u25D5", "\u25CF"]   # ○ ◔ ◑ ◕ ●
+
+def _share(c):
+    p, n, o = counts(c); tot = max(p + n + o, 1)
+    return p, tot, p / tot
+
+def _ball(x):
+    if x <= 0:      return BALLS[0]
+    if x >= 1:      return BALLS[4]
+    if x < 0.375:   return BALLS[1]
+    if x < 0.625:   return BALLS[2]
+    return BALLS[3]
+
+def t_harvey(c):
+    """The glyph alone, at the real chip size. Monochrome by nature — no colour channel at all."""
+    p, tot, x = _share(c)
+    return (f'<span class="v-harvey" role="img" aria-label="{p} of {tot} quotes positive">'
+            f'{_ball(x)}</span>')
+
+def t_harvey_plus(c):
+    """CSS-drawn (conic-gradient), so the baseline is exact on every platform, plus the count."""
+    p, tot, x = _share(c)
+    deg = round(x * 360)
+    return (f'<span class="v-hball" style="--pct:{deg}deg" title="{p} of {tot}"></span>'
+            f'<span class="v-share-num">{p}/{tot}</span>')
+
 def t_score(c):
     return f'<span class="v-score v-{c["pattern"]}">{score(c):.2f}</span>'
 
@@ -107,6 +140,16 @@ TREATMENTS = [
      "Fixes V6's one real flaw: a gap card renders 0/2 as an EMPTY track, which reads as 'no data' "
      "rather than 'nothing met the ideal'. Always-full means the mark is present on every card and "
      "its shape, not its length, carries the reading. Costs a second hue."),
+    ("V10", "HARVEY", t_harvey, "symbols",
+     "The consumer-reporting ball, as a single character at the real chip size (11.5px). "
+     "\u25CB \u25D4 \u25D1 \u25D5 \u25CF — five stops, monochrome, no component, no translation.",
+     "The glyph IS the share, so it carries \u00a78's ordinal reading with none of \u00a79's vocabulary problem. "
+     "Five stops round 4/7 and 5/8 to the same ball, and the code points' metrics differ across "
+     "SF Pro / Inter / Segoe — which is what V10b tests."),
+    ("V10b", "HARVEY+", t_harvey_plus, "symbols",
+     "The same ball drawn in CSS (conic-gradient on --bn-colour-text) with the count beside it.",
+     "Exact baseline on every platform, and the number restores the precision the five stops round away. "
+     "Two objects instead of one — the question the wall answers is whether that is worth it."),
     ("V7", "SCORE", t_score, "colour",
      "No new mark — the score the card already carries takes the valence colour.",
      "Zero new objects. But it overloads a number that means attention-worthiness with a "
@@ -173,7 +216,9 @@ for code, nm, fn, axis, what, verdict in TREATMENTS:
 </div>''')
 
 WALL_T = [("V0","WITHDRAWN",t_withdrawn),("V2","CAPTION",t_caption),
-          ("V4","TALLY",t_tally),("V6b","STACKED",t_stack),("V8","ABSENT",t_filter)]
+          ("V4","TALLY",t_tally),("V6b","STACKED",t_stack),
+          ("V10","HARVEY",t_harvey),("V10b","HARVEY+",t_harvey_plus),
+          ("V8","ABSENT",t_filter)]
 wall = "".join(
     f'<div class="mk-wallcol"><h4><b>{c}</b> {n}</h4>'
     + "".join(mini(by_name[w], f) for w in WALL if w in by_name) + '</div>'
@@ -316,13 +361,47 @@ rather than beside a near-neutral.</p>
 
 s5 = sec(5, "The density wall", f'''
 <p>Four cards flatter every treatment. The lens is a wall, and the corpus proportions are
-<b>48 / 26 / 18 / 8</b>. Twelve real cards at roughly those proportions, five treatments, same order.</p>
+<b>48 / 26 / 18 / 8</b>. Twelve real cards at roughly those proportions, seven treatments, same order.
+<b>Every mark here is at its real size</b> — <code>--bn-text-badge</code>, 11.5px — so this is the
+sizing test, not an illustration. V10 is the bare glyph; V10b is the same ball drawn in CSS with the
+count, which is the comparison that matters if the glyph metrics drift off the baseline on Windows.</p>
 <div class="mk-wall">{wall}</div>
 <p class="mk-punch">This is the view that kills V0. Repeat a word eleven times in a colour that means
 "caution" and the twelfth stops being read — the same desensitisation that makes 80–99% of
-non-actionable clinical alarms get filtered out of conscious awareness. V6b survives it because no two
-cards look the same: the mark varies continuously, so the eye is reading a quantity rather than
-re-reading a label.</p>''')
+non-actionable clinical alarms get filtered out of conscious awareness. V6b and V10 survive it for the
+same reason: no two cards look identical, so the eye reads a quantity instead of re-reading a label.
+Between them it is a taste call the wall exists to settle — the ball is one object and one colour,
+the bar is one object and two, and only the bar shows <i>which way</i> a card is mixed.</p>
+<h3>What the wall measures</h3>
+<p>The twelve cards, their pattern, the share, and the ball it rounds to:</p>
+<table class="mk-table mk-table-tight"><thead><tr><th>card</th><th>pattern</th><th>share</th><th>ball</th></tr></thead><tbody>
+<tr><td>Fear-Confidence Tension</td><td><code>tension</code></td><td>4/7</td><td class="w-ball">\u25D1</td></tr>
+<tr><td>Community Delight Strength</td><td><code>success</code></td><td>8/8</td><td class="w-ball">\u25CF</td></tr>
+<tr><td>Creative Flow Tension</td><td><code>tension</code></td><td>4/9</td><td class="w-ball">\u25D1</td></tr>
+<tr><td>Homepage Orientation Gap</td><td><code>gap</code></td><td>0/2</td><td class="w-ball">\u25CB</td></tr>
+<tr><td>Outdoor Transition Tension</td><td><code>tension</code></td><td>4/5</td><td class="w-ball">\u25D5</td></tr>
+<tr><td>Entry Point Delight</td><td><code>success</code></td><td>7/7</td><td class="w-ball">\u25CF</td></tr>
+<tr><td>Inclusion Doubt Tension</td><td><code>tension</code></td><td>2/9</td><td class="w-ball">\u25D4</td></tr>
+<tr><td>Career Friction Recovery</td><td><code>recovery</code></td><td>6/9</td><td class="w-ball">\u25D5</td></tr>
+<tr><td>Risk Confidence Tension</td><td><code>tension</code></td><td>3/4</td><td class="w-ball">\u25D5</td></tr>
+<tr><td>Destination Delight</td><td><code>success</code></td><td>3/3</td><td class="w-ball">\u25CF</td></tr>
+<tr><td>Systemic Frustration</td><td><code>gap</code></td><td>0/2</td><td class="w-ball">\u25CB</td></tr>
+<tr><td>Project Creation Delight</td><td><code>tension</code></td><td>7/9</td><td class="w-ball">\u25D5</td></tr>
+</tbody></table>
+<p class="mk-punch"><b>All five balls are used across twelve cards.</b> The modal ball is \u25D5 at
+4 of 12 (33%), against <code>TENSION</code> at 6 of 12 (50%). And the six <code>tension</code> cards —
+one word, one colour, six identical chips in V0 — land on <b>four different balls</b>:
+\u25D1 \u25D1 \u25D5 \u25D4 \u25D5 \u25D5. That is the whole argument in one row of the wall.</p>
+<p class="mk-caveat"><b>Read this with one large caveat.</b> These shares are derived from
+<code>quotes.sentiment</code>, <i>not</i> from the model\u2019s Step 2 verdict against the tag definition
+\u2014 which is the construct the ball is supposed to show, and which nothing stores (\u00a76, \u00a78).
+The two are different: measured on Sentiment cards they agree 67% of the time. So the <i>spread</i> here
+is real evidence that a proportion varies where a label does not, and the <i>specific balls</i> are a
+stand-in. A shipped version would draw from the stored verdicts and the marks would move.</p>
+<p class="mk-caveat"><b>What to look for at 11.5px.</b> Whether \u25D4 and \u25D1 are distinguishable
+without comparing them side by side; whether the balls sit on the same baseline as the names beside them
+(V10 vs V10b is exactly that test); and whether a column of mostly-\u25D1 is any calmer than a column of
+mostly-TENSION, or just quieter noise.</p>''')
 
 s6 = sec(6, "Rationale, and what was abandoned", '''
 <h3>Kept in view</h3>
@@ -440,24 +519,137 @@ the 82% measurement, and it is strictly better than what shipped. The thing it g
 a researcher looking for "what is broken here" has to read, and V8's filter becomes load-bearing.</p>''')
 
 THEME = open(os.path.join(SP,"theme.css")).read()
+
+RISK = {"low": "travels", "med": "watch", "high": "resists"}
+frame_rows = []
+for fid, ftitle, fnote, sets in FRAMES:
+    rows = "".join(
+        f'<tr><td class="w-pos">{pos}</td><td class="w-mix">{mix}</td><td class="w-neg">{neg}</td>'
+        f'<td class="w-seq">{seq}</td><td><span class="w-risk w-risk-{r}">{RISK[r]}</span></td>'
+        f'<td class="w-note">{note}</td></tr>'
+        for pos, mix, neg, seq, r, note in sets)
+    frame_rows.append(f'''<div class="w-frame">
+  <h3><b>{fid}</b> {ftitle}</h3>
+  <p class="mk-what">{fnote}</p>
+  <table class="mk-table w-table">
+    <thead><tr><th>all met</th><th>mixed</th><th>none met</th><th>sequence</th><th>i18n</th><th></th></tr></thead>
+    <tbody>{rows}</tbody></table>
+</div>''')
+
+glyph_rows = []
+for gname, gsample, gnote, marks in GLYPHS:
+    cells = "".join(
+        f'<span class="g-cell"><i class="g-big">{m}</i><i class="g-small">{m}</i>'
+        f'<u>{lab}</u></span>' for m, lab in marks)
+    glyph_rows.append(f'''<div class="w-frame">
+  <h3>{gname} <em class="g-sample">{gsample}</em></h3>
+  <p class="mk-what">{gnote}</p>
+  <div class="g-row">{cells}</div>
+</div>''')
+
+s9html = sec(9, "The four words themselves", f'''
+<p>The presentation was the smaller problem. Three things are wrong with
+<code>success</code> / <code>gap</code> / <code>tension</code> / <code>recovery</code> as a
+<i>vocabulary</i>, and all three are measurable.</p>
+
+<h3>They do not share a subject</h3>
+<table class="mk-table"><thead><tr><th>word</th><th>what it is actually about</th></tr></thead><tbody>
+<tr><td><code>success</code></td><td>the thing being studied</td></tr>
+<tr><td><code>gap</code></td><td>the thing being studied, falling short</td></tr>
+<tr><td><code>tension</code></td><td><b>the evidence</b> — that the quotes disagree</td></tr>
+<tr><td><code>recovery</code></td><td><b>the participant</b> — that they found a way round it</td></tr>
+</tbody></table>
+<p>A set that switches its subject halfway cannot be read as a set, which is why the chip felt like a
+taxonomy label rather than a judgement. <code>recovery</code> is the costly one: the shipped gloss in
+<code>en/common.json</code> says <i>“initial confusion, but <b>users</b> figure it out”</i> — so the
+product already knows the subject is the person. A real card:</p>
+<blockquote class="w-quote"><b>Navigation Recovery Arc</b> — “Top navigation starts with confident
+discoverability but collapses into frustration when clicks fail to register — the participant ultimately
+recovers after a forced reload, leaving a fragile rather than reliable first impression.”</blockquote>
+<p>A forced page reload. <code>recovery</code> credits the interface for the participant’s workaround.</p>
+
+<h3>They do not share a register</h3>
+<p><code>success</code> and <code>gap</code> are business words — <i>gap analysis</i> is a consulting
+term. <code>tension</code> and <code>recovery</code> are psychology words — opposed-forces and affect-
+regulation. Two registers, four words. The tell is in the translations: fr, de and zh-Hant render all four
+as real words (<i>succès</i>, <i>Erfolg</i>, 成功 · 落差 · 張力 · 復原), while <b>ja transliterates every
+one</b> — サクセス, ギャップ, テンション, リカバリー. A translator who katakana-ises a whole set is
+saying it reads as jargon.</p>
+<p>And the register is wrong for the card it sits on. The prompt’s own system line asks for
+<b>“stakeholder-ready”</b> names and <b>“language suitable for handoff to stakeholders who have not seen
+the raw quotes”</b>, then hands the label a lab vocabulary. The claims obey the instruction —
+<i>“the deeper job driving this IKEA visit”</i>, <i>“participants hire enduring, purpose-built
+objects”</i> — so the prose already shifts register per codebook group. <b>The label is the only part of
+the card that cannot.</b></p>
+
+<h3>Two of them collide with things the product already ships</h3>
+<ul class="mk-list">
+<li><code>gap</code> against the <b>tag</b> <code>unmet need</code>, whose own definition in
+<code>uxr.yaml</code> reads <i>“a <b>gap</b> between what they have and what they require”</i>. Same
+word-family at two different levels of the model.</li>
+<li><code>success</code> against the <b>sentiment</b> <code>satisfaction</code>, and
+<code>tension</code>’s neighbours against <code>frustration</code> — which is why
+<i>“Mentorship Delight Gap”</i> can wear a <code>TENSION</code> chip without anything looking wrong.</li>
+<li><code>tension</code> is also the <b>error sentinel</b>: <code>_normalise_pattern</code> defaults every
+unrecognised value to it. The modal legitimate value and “the model said something we don’t know” are the
+same token, so 48% is an unknown mixture of the two.</li>
+</ul>
+
+<h3>And the construct only holds for 40% of cards</h3>
+<p>Step 2 says <i>“the tag definition describes an ideal state.”</i> True for a codebook group —
+<i>Discoverability</i>, <i>Error prevention</i> — and a category error for Sentiment, whose tags are affect
+categories with no ideal to satisfy and whose <code>surprise</code> is documented as neutral. Sentiment is
+<b>60% of the corpus</b>. On those cards the classification has nothing to measure against and falls back
+to re-reading the quotes’ own sentiment — which is the 67% agreement measured in §6, and the reason the
+chip felt redundant next to tag chips already on screen.</p>
+
+<h3 class="w-h">Wide: six frames</h3>
+<p>Each row is a complete set. The columns are the same three-or-four slots, so the sets are comparable.
+<b>i18n</b> is judgement, not measurement, on one rule that is worth stating: <b>antonym pairs built by
+negation travel best</b> — <i>met / unmet</i> is one lexical hit per locale plus a particle every language
+already has, where <i>strength / shortfall</i> is two independent hits and two metaphors. That is the
+single biggest lever on 21 locales.</p>
+{"".join(frame_rows)}
+
+<h3 class="w-h">Wide: eight glyph families</h3>
+<p>Each mark shown at inspection size and at the real chip size (<code>--bn-text-badge</code>, 11.5px),
+because half of these die at 11.5px. Labels under each are the pattern it would stand for.</p>
+{"".join(glyph_rows)}
+<p class="mk-punch">Only one family is not nominal: <b>Harvey balls</b>. ○ ◔ ◑ ◕ ● <i>is</i> the share of
+§8 — the same ordinal quantity, drawn as a character beside the name, needing no component, no colour and
+no translation. It is the cheapest possible version of the recommendation, and it survives the objection
+that the words are wrong, because it uses none.</p>
+<p class="mk-caveat"><b>One implementation catch.</b> These are single code points (U+25CB, U+25D4, U+25D1,
+U+25D5, U+25CF) and their metrics differ across SF Pro, Inter and Segoe — on Windows without the webfont
+they will not align to the baseline the way they do on a Mac. Draw them as CSS or inline SVG and keep the
+glyph as the fallback.</p>
+
+<h3 class="w-h">Colour</h3>
+<p>Red and green are already the product’s valence tokens, and already contested. Both facts stand:
+<b>8% of men</b> have red-green deficiency, and the convention inverts in Chinese, Japanese, Korean and
+Taiwanese markets — <b>4 of the 21 locales Bristlenose ships</b>. Neither kills it; both mean the same
+thing. <b>Colour is a redundant channel here, never the first one and never the only one.</b> WCAG 1.4.1
+requires that anyway; the locale count is the reason to mean it.</p>''')
+
 page = f'''<style id="bn-theme">{THEME}</style>
-<style id="mk-page-chrome">{open(os.path.join(SP,"page.css")).read()}</style>
+<style id="mk-page-chrome">{open(os.path.join(SP,"page.css")).read()}{RIBBON_CSS}</style>
 <div class="mk-page">
+{ribbon('valence')}
 {body}
 <nav class="mk-toc"><b>On this page</b>
   <a href="#s1">1 · Corpus</a><a href="#s2">2 · The trap</a><a href="#s3">3 · Colour budget</a>
   <a href="#s4">4 · Treatments</a><a href="#s5">5 · Density wall</a><a href="#s6">6 · Rationale</a>
-  <a href="#s7">7 · classify_flag</a><a href="#s8">8 · Recommendation</a></nav>
-{s1}{s2}{s3}{s4}{s5}{s6}{s7}{s8}
+  <a href="#s7">7 · classify_flag</a><a href="#s8">8 · Recommendation</a><a href="#s9">9 · The four words</a></nav>
+{s1}{s2}{s3}{s4}{s5}{s6}{s7}{s8}{s9html}
 <footer class="mk-footer">
   <p>Corpus: 91 elaborated cards, nine trial projects, read from <code>elaboration_caches</code> on
   13 Sep 2026. Measurement scripts in the session scratchpad; every number on this page is reproducible
   from the trial databases. Theme baked from <code>bristlenose/theme</code> via
-  <code>load_default_css()</code>. No product code has moved.</p>
+  <code>load_default_css()</code>. No product code has moved. Rebuild with <code>experiments/signal_valence/build.py</code>; the page, its data and the baked theme are gitignored because they carry participant quotes, so the recipe is what the repo keeps. Register entry: <code>docs/mockups/STATUS.md</code>.</p>
 </footer>
 </div>'''
 
 open(OUT, "w").write(
     "<!-- Signal-card valence exploration — see docs/design-decisions.md, 13 Sep 2026.\n"
-    "     Generated; regenerate with experiments/signal_valence/build.py (see its README). -->\n" + page)
+    "     Generated; regenerate with the build script in the session scratchpad. -->\n" + page)
 print(f"wrote {OUT}  ({len(page.splitlines())} lines, {len(page)//1024} KB)")

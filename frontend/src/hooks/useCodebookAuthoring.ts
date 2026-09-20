@@ -2,9 +2,11 @@
  * The codebook's authoring handlers — one cluster, two lenses.
  *
  * Lifted verbatim from `islands/CodebookPanel.tsx` on 30 Aug 2026 alongside the
- * components in `components/CodebookAuthoring.tsx`. Seven API calls and the
- * drag bookkeeping, in one place, so that `CodebookPanel` and `CodebookV2` are
- * the *same* implementation rather than two that agree today.
+ * components in `components/CodebookAuthoring.tsx`. Seven API calls and the drag
+ * bookkeeping, in one place, so that the two lenses then live were the *same*
+ * implementation rather than two that agree today. `CodebookPanel` was deleted
+ * in 0.29.0, so `CodebookV2` is now the sole caller — the extraction outlived
+ * its original reason and is kept because the cluster is worth naming.
  *
  * The contract is deliberately thin: the caller owns the data and says how to
  * re-read it (`onChanged`), and passes the groups it already has so a new group

@@ -147,7 +147,8 @@ describe("QuoteSections", () => {
     // Switch to returning quotes with tags for the next fetch.
     mockQuotesApi(MOCK_QUOTES_WITH_TAGS);
 
-    // Simulate the event that CodebookPanel dispatches after bulk apply.
+    // Simulate the event the codebook lens dispatches after bulk apply
+    // (`CodebookV2.tsx`; `AppLayout` dispatches the same one).
     act(() => {
       document.dispatchEvent(new CustomEvent("bn:tags-changed"));
     });

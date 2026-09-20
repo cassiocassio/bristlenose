@@ -309,7 +309,7 @@ export function TagSidebar() {
 
   // Hydrate framework enable/disable state so disabled frameworks' badges are
   // hidden on quote cards even if the Codebook tab was never opened this session.
-  // Guarded in the store — a no-op if CodebookPanel already hydrated it.
+  // Guarded in the store — a no-op if another consumer already hydrated it.
   useEffect(() => {
     hydrateFrameworkStates();
   }, []);

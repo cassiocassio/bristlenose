@@ -347,7 +347,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
 
   // The activity chip dispatches this when the researcher clicks View Report,
   // and it dispatches IN PLACE when they are already on a codebook lens — so
-  // v2 has to answer it, exactly as CodebookPanel does, or the chip's action
+  // v2 has to answer it, exactly as CodebookPanel did, or the chip's action
   // would silently do nothing here.
   useEffect(() => {
     const handler = (e: Event) => {

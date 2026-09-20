@@ -3,7 +3,7 @@
  *
  * The dot echoes the framework enable/disable **switch** (blue on / grey off),
  * not a network-style traffic light: a codebook is binary on/off, and the
- * control beside it in CodebookPanel is the standard macOS switch. So:
+ * control beside it in the codebook lens is the standard macOS switch. So:
  *
  *   on        → imported & enabled   → blue dot  (--bn-colour-accent)
  *   off       → imported & disabled  → grey dot  (--bn-colour-border-hover)

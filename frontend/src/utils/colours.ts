@@ -1,8 +1,11 @@
 /**
  * Shared colour helpers — mirror COLOUR_SETS from codebook.js.
  *
- * Extracted so QuoteCard, AutoCodeReportModal, and CodebookPanel
- * can all resolve codebook colours without duplication.
+ * Extracted so every surface that renders a codebook colour resolves it from
+ * one place. Deliberately not a consumer list: the previous one named three
+ * files, one of which (`CodebookPanel`) was deleted in 0.29.0 while the comment
+ * went on claiming it. `grep -rn "utils/colours" frontend/src` is the answer
+ * that cannot go stale.
  */
 
 export const COLOUR_SETS: Record<

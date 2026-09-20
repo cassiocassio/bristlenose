@@ -54,6 +54,7 @@ carries no date the evidence gave none — the state is still evidenced, the day
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
+| `codes-menu-focus.html` | 13 Sep 2026 | *unreviewed* — added by `a4c51086`; cited as the mockup by `docs/design-codebook-focus.md`, whose § on shipping says focus "can ship click-only, exactly as signal cards did". Whether it did has not been checked. |
 | `codebook-audit.html` | 17 Feb 2026 | PROPOSED 17 Feb 2026 · IMPLEMENTED — the vanilla-JS→React migration audit; that migration is complete, so this is a historical record, not a plan |
 | `codebook-disable-old-vs-new.html` | 26 Jul 2026 | IMPLEMENTED — the switch-off treatment ships |
 | `codebook-header-library-button.html` | 21 Aug 2026 | IMPLEMENTED — the Browse Library button ships in the header |
@@ -199,6 +200,7 @@ carries no date the evidence gave none — the state is still evidenced, the day
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
+| `redaction-indicator.html` | 13 Sep 2026 | *unreviewed* — added by `a4c51086` ("the report says when it was redacted"); called "the decided design" by `docs/design-redact-pii.md:1330`. `piiRedactedAction` exists in the locales, so something shipped; whether it is this has not been checked. |
 | `people-lens-scopes.html` | 27 Aug 2026 | IMPLEMENTED — the people lens ships |
 | `people-provenance-paths.html` | 19 Aug 2026 | SANDPIT — provenance-path diagrams for the people lens |
 

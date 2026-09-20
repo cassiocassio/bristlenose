@@ -35,6 +35,7 @@ Exit 1: a mockup is missing, a row is an orphan, or a row names no state.
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -51,12 +52,43 @@ STATES = ("PROPOSED", "IMPLEMENTED", "SUPERSEDED", "ABANDONED", "PARKED", "SANDP
 ROW = re.compile(r"^\|\s*`([^`]+\.html)`\s*\|([^|]*)\|(.*)\|\s*$")
 
 
+def _tracked_mockups() -> set[str]:
+    """Mockup filenames git knows about.
+
+    Falls back to the filesystem outside a checkout (a release tarball, say),
+    where `git` is not available and every file present is by definition part
+    of what shipped.
+    """
+    try:
+        out = subprocess.run(
+            ["git", "ls-files", "--", "docs/mockups/*.html"],
+            cwd=ROOT, capture_output=True, text=True, check=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return {p.name for p in MOCKUPS.glob("*.html")}
+    return {Path(line).name for line in out.splitlines() if line.strip()}
+
+
 def main() -> int:
     if not REGISTER.exists():
         print(f"error: register not found at {REGISTER.relative_to(ROOT)}")
         return 1
 
-    on_disk = {p.name for p in MOCKUPS.glob("*.html")}
+    # What the REPOSITORY holds, not what this working copy happens to have.
+    #
+    # A mockup carrying verbatim participant speech is gitignored rather than
+    # committed — the repo is public, and `experiments/signal_valence/README.md`
+    # says of its harvest "do not copy it anywhere shareable". Those mockups
+    # still have a lifecycle worth recording, and STATUS.md is where it goes,
+    # so a row naming one is correct and must not read as an orphan.
+    #
+    # Globbing the filesystem made the answer depend on who was asking: seven
+    # such rows validated on the machine that built them and failed in CI,
+    # where the files are simply not checked out. Asking git makes it the same
+    # question everywhere.
+    tracked = _tracked_mockups()
+    ignored = {p.name for p in MOCKUPS.glob("*.html")} - tracked
+    on_disk = tracked
 
     registered: dict[str, str] = {}
     duplicates: list[str] = []
@@ -70,7 +102,8 @@ def main() -> int:
         registered[name] = lifecycle
 
     missing = sorted(on_disk - registered.keys())
-    orphans = sorted(registered.keys() - on_disk)
+    # A row for a deliberately-ignored mockup is not an orphan.
+    orphans = sorted(registered.keys() - on_disk - ignored)
     silent = sorted(
         n for n, tl in registered.items()
         if "unreviewed" not in tl and not any(s in tl for s in STATES)

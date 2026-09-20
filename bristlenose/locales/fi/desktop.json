@@ -92,7 +92,9 @@
       "deleteCodeGroup": "Poista koodiryhm\u00e4",
       "renameCode": "Nime\u00e4 koodi uudelleen\u2026",
       "deleteCode": "Poista koodi",
-      "browseCodebooks": "Selaa koodikirjoja…"
+      "browseCodebooks": "Selaa koodikirjoja…",
+      "installCodebook": "Asenna koodikirja",
+      "uninstallCodebook": "Poista koodikirja"
     },
     "quotes": {
       "star": "Merkitse tähdellä",

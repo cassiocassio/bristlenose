@@ -92,7 +92,9 @@
       "deleteCodeGroup": "Slet kodegruppe",
       "renameCode": "Omd\u00f8b kode\u2026",
       "deleteCode": "Slet kode",
-      "browseCodebooks": "Gennemse kodebøger…"
+      "browseCodebooks": "Gennemse kodebøger…",
+      "installCodebook": "Installer kodebog",
+      "uninstallCodebook": "Fjern kodebog"
     },
     "quotes": {
       "star": "Stjernemarkér",

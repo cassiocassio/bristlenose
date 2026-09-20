@@ -92,7 +92,9 @@
       "deleteCodeGroup": "Verwijder codegroep",
       "renameCode": "Wijzig naam code\u2026",
       "deleteCode": "Verwijder code",
-      "browseCodebooks": "Blader door codeboeken…"
+      "browseCodebooks": "Blader door codeboeken…",
+      "installCodebook": "Installeer codeboek",
+      "uninstallCodebook": "Verwijder codeboek"
     },
     "quotes": {
       "star": "Ster",

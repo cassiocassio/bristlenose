@@ -92,7 +92,9 @@
       "deleteCodeGroup": "Supprimer le groupe de codes",
       "renameCode": "Renommer le code\u2026",
       "deleteCode": "Supprimer le code",
-      "browseCodebooks": "Parcourir les grilles de codage…"
+      "browseCodebooks": "Parcourir les grilles de codage…",
+      "installCodebook": "Installer la grille de codage",
+      "uninstallCodebook": "D\u00e9sinstaller la grille de codage"
     },
     "quotes": {
       "star": "Favori",

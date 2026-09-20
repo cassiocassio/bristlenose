@@ -92,7 +92,9 @@
       "deleteCodeGroup": "Radera kodgrupp",
       "renameCode": "Byt namn p\u00e5 kod\u2026",
       "deleteCode": "Radera kod",
-      "browseCodebooks": "Bläddra bland kodböcker…"
+      "browseCodebooks": "Bläddra bland kodböcker…",
+      "installCodebook": "Installera kodbok",
+      "uninstallCodebook": "Avinstallera kodbok"
     },
     "quotes": {
       "star": "Stjärnmärk",

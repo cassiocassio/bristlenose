@@ -92,7 +92,9 @@
       "deleteCodeGroup": "\u522a\u9664\u7de8\u78bc\u7fa4\u7d44",
       "renameCode": "\u91cd\u65b0\u547d\u540d\u7de8\u78bc\u2026",
       "deleteCode": "\u522a\u9664\u7de8\u78bc",
-      "browseCodebooks": "瀏覽編碼簿…"
+      "browseCodebooks": "瀏覽編碼簿…",
+      "installCodebook": "\u5b89\u88dd\u7de8\u78bc\u7c3f",
+      "uninstallCodebook": "\u89e3\u9664\u5b89\u88dd\u7de8\u78bc\u7c3f"
     },
     "quotes": {
       "star": "標星",

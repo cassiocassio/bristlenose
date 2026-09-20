@@ -92,7 +92,9 @@
       "deleteCodeGroup": "\u30b3\u30fc\u30c9\u30b0\u30eb\u30fc\u30d7\u3092\u524a\u9664",
       "renameCode": "\u30b3\u30fc\u30c9\u540d\u3092\u5909\u66f4\u2026",
       "deleteCode": "\u30b3\u30fc\u30c9\u3092\u524a\u9664",
-      "browseCodebooks": "コードブックを参照…"
+      "browseCodebooks": "コードブックを参照…",
+      "installCodebook": "\u30b3\u30fc\u30c9\u30d6\u30c3\u30af\u3092\u30a4\u30f3\u30b9\u30c8\u30fc\u30eb",
+      "uninstallCodebook": "\u30b3\u30fc\u30c9\u30d6\u30c3\u30af\u3092\u30a2\u30f3\u30a4\u30f3\u30b9\u30c8\u30fc\u30eb"
     },
     "quotes": {
       "star": "スターを付ける",

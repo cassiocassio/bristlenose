@@ -92,7 +92,9 @@
       "deleteCodeGroup": "Eliminar Grupo de C\u00f3digos",
       "renameCode": "Mudar o Nome do C\u00f3digo\u2026",
       "deleteCode": "Eliminar C\u00f3digo",
-      "browseCodebooks": "Navegar Livros de Códigos…"
+      "browseCodebooks": "Navegar Livros de Códigos…",
+      "installCodebook": "Instalar Livro de C\u00f3digos",
+      "uninstallCodebook": "Desinstalar Livro de C\u00f3digos"
     },
     "quotes": {
       "star": "Marcar com Estrela",

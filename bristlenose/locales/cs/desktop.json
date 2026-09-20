@@ -92,7 +92,9 @@
       "deleteCodeGroup": "Smazat skupinu k\u00f3d\u016f",
       "renameCode": "P\u0159ejmenovat k\u00f3d\u2026",
       "deleteCode": "Smazat k\u00f3d",
-      "browseCodebooks": "Procházet knihy kódů…"
+      "browseCodebooks": "Procházet knihy kódů…",
+      "installCodebook": "Nainstalovat knihu k\u00f3d\u016f",
+      "uninstallCodebook": "Odinstalovat knihu k\u00f3d\u016f"
     },
     "quotes": {
       "star": "Označit hvězdičkou",

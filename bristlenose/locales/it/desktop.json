@@ -92,7 +92,9 @@
       "deleteCodeGroup": "Elimina il gruppo di codici",
       "renameCode": "Rinomina il codice\u2026",
       "deleteCode": "Elimina il codice",
-      "browseCodebooks": "Sfoglia i libri dei codici…"
+      "browseCodebooks": "Sfoglia i libri dei codici…",
+      "installCodebook": "Installa il libro dei codici",
+      "uninstallCodebook": "Disinstalla il libro dei codici"
     },
     "quotes": {
       "star": "Stella",

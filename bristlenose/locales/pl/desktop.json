@@ -92,7 +92,9 @@
       "deleteCodeGroup": "Usu\u0144 grup\u0119 kod\u00f3w",
       "renameCode": "Zmie\u0144 nazw\u0119 kodu\u2026",
       "deleteCode": "Usu\u0144 kod",
-      "browseCodebooks": "Przeglądaj księgi kodów…"
+      "browseCodebooks": "Przeglądaj księgi kodów…",
+      "installCodebook": "Zainstaluj ksi\u0119g\u0119 kod\u00f3w",
+      "uninstallCodebook": "Odinstaluj ksi\u0119g\u0119 kod\u00f3w"
     },
     "quotes": {
       "star": "Dodaj gwiazdkę",

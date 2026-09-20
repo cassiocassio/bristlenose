@@ -92,7 +92,9 @@
       "deleteCodeGroup": "Elimina el grup de codis",
       "renameCode": "Canvia el nom del codi\u2026",
       "deleteCode": "Elimina el codi",
-      "browseCodebooks": "Explora els llibres de codis…"
+      "browseCodebooks": "Explora els llibres de codis…",
+      "installCodebook": "Instal\u00b7la el llibre de codis",
+      "uninstallCodebook": "Desinstal\u00b7la el llibre de codis"
     },
     "quotes": {
       "star": "Destaca",

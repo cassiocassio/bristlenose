@@ -92,7 +92,9 @@
       "deleteCodeGroup": "Slett kodegruppe",
       "renameCode": "Endre navn p\u00e5 kode\u2026",
       "deleteCode": "Slett kode",
-      "browseCodebooks": "Bla i kodebøker…"
+      "browseCodebooks": "Bla i kodebøker…",
+      "installCodebook": "Installer kodebok",
+      "uninstallCodebook": "Avinstaller kodebok"
     },
     "quotes": {
       "star": "Stjernemerk",

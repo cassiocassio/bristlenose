@@ -1,3 +1,28 @@
+---
+status: pending
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20 (835cde98)
+---
+
+> **Pending / aspirational.** Phase 1 is still unbuilt — there is no deck / fan /
+> stack component in `frontend/src` or `bristlenose/theme`, and 72 days have passed
+> with no movement. The premises were re-checked on 2026-09-20 and hold. The
+> §"Draft launch copy" guard below (**not for `CHANGELOG.md` until Phase 1's code
+> lands**) is still in force.
+
+## Changelog
+
+- _2026-09-20_ — confirmed still aspirational; premises re-verified and intact.
+  Re-anchored two `models.py` line refs that had moved; recorded that the shipped
+  framework set has grown 4 → 9 since the N=42 collision run, so five books were
+  never tested; noted that the §"threshold UI is a removal candidate" line was
+  overtaken by a user decision on 30 Aug (the review modal stays) while the
+  underlying principle survives; flagged that `scratchpad/overlap_experiment.py`
+  is absent from the tree, making §5's numbers unreproducible. Anchors:
+  `bristlenose/server/models.py:496-509`, `:100-134`,
+  `bristlenose/server/autocode.py:17,149`, `docs/design-codebook-v2.md` Q15.
+- _2026-07-10_ — draft launch copy for phase 1.
+
 # Tag overload — visual overlap of same-meaning tags
 
 **Status (7 Jul 2026): exploration + one shipped decision. Not a committed roadmap item.**
@@ -15,7 +40,7 @@ A tag is a **highlighter** — a visual marker of useful meaning on a quote. A h
 So this is a **signal / cognitive-load problem, not a data-integrity problem.** The goal is quiet and high signal-per-token, not a clean database. And the simplest, most defensible case — two tags with *identical text* on one quote — is pure disrespect for the reader's time: you're making them read the same word twice.
 
 **Data model (facts, from code):**
-- `QuoteTag` join carries `source ∈ {human, autocode, pipeline}` — provenance already exists (`server/models.py:462–476`); unique constraint `(quote_id, tag_definition_id)` stops the *same* definition landing twice, but same *text* in two groups = two `TagDefinition` rows = two badges.
+- `QuoteTag` join carries `source ∈ {human, autocode, pipeline}` — provenance already exists (`server/models.py:496–509`); unique constraint `(quote_id, tag_definition_id)` stops the *same* definition landing twice, but same *text* in two groups = two `TagDefinition` rows = two badges.
 - `TagDefinition` is instance-scoped, resolved by lowercased name *within* a group. Framework codes carry rich definitions (`TemplateTag{name, definition, apply_when, not_this}`, `server/codebook/__init__.py`); cultivated codes get a synthesized `TagPrompt` (`server/models.py:100–135`).
 - Sentiment is the always-on codebook (applied from the pipeline `Quote.sentiment` field on import), so it's the code most others collide with.
 - **No semantic comparison of codes exists anywhere.** Only fuzzy logic is `difflib.get_close_matches(0.9)` in `autocode.py` — name *resolution*, not dedup.
@@ -37,7 +62,7 @@ So this is a **signal / cognitive-load problem, not a data-integrity problem.** 
 1. **Manual/human beats auto** on identical text (a human deliberately made it).
 2. Otherwise, **codebook precedence = sidebar order** — the `CodebookGroup.sort_order` that's already persisted today; drag a codebook above another to set which of its tags wins the face slot.
 
-**Honest scope note:** the *shipped* frameworks use deliberately distinct vocabularies, so exact-text collisions don't arise between them. Phase 1's immediate bite is on **manual tags that duplicate an existing label** (a researcher types `frustration`, already a sentiment code) and **user-authored frameworks** that reuse words. Small blast radius today — but cheap, safe, and the correct foundation for later phases.
+**Honest scope note:** the *shipped* frameworks use deliberately distinct vocabularies, so exact-text collisions don't arise between them. _(20 Sep 2026: the set has since grown from four to nine — cli-ux, plato, morville, yablonski and sentiment joined after §5's N=42 run, and none of the five has been tested for exact-text collision. The claim holds for the four that were measured; treat it as untested for the rest.)_ Phase 1's immediate bite is on **manual tags that duplicate an existing label** (a researcher types `frustration`, already a sentiment code) and **user-authored frameworks** that reuse words. Small blast radius today — but cheap, safe, and the correct foundation for later phases.
 
 **Interaction & motion — foveal stability (applies to the deck now and any later fan):**
 The eye is already fixated on the deck; any reflow/repaint/reorder throws content out of the fovea and forces a re-saccade (the felt "jump"). So: **nothing the eye is locked onto may move; everything animates around a fixed point.**
@@ -67,7 +92,7 @@ The eye is already fixated on the deck; any reflow/repaint/reorder throws conten
 ## 3. Principles we nailed down (cross-cutting)
 
 - **Presentation, never destruction.** No merge in this line of work. Manual-code merge already exists separately (drag-and-drop in the codebook); we don't touch it, and we **never merge across frameworks** — combining frameworks (Nielsen + Norman) yields overlap *and* difference, and the difference is signal. The layering is a live derived view; visibility-toggle gives full reversibility for free. (The QDA tools' merge model — NVivo/ATLAS.ti, §8 — is prior art we deliberately don't follow; their confirmation/audit ceremony guards *destructive* merges, which we don't have.)
-- **No threshold/config UI. Tune defaults instead.** A slider is a *symptom of an untuned system*; the human response is "errm, complicated, I'll just hit OK and worry later," so it transfers unease, not control. The existing autotag confidence-histogram (`ConfidenceHistogram.tsx` / `ThresholdReviewModal`) is a candidate for *removal*, not a template. Ship invisible tuned constants; a knob is a last resort.
+- **No threshold/config UI. Tune defaults instead.** A slider is a *symptom of an untuned system*; the human response is "errm, complicated, I'll just hit OK and worry later," so it transfers unease, not control. The existing autotag confidence-histogram (`ConfidenceHistogram.tsx` / `ThresholdReviewModal`) is a candidate for *removal*, not a template. Ship invisible tuned constants; a knob is a last resort. _(20 Sep 2026: the principle stands, but the named removal candidate is no longer one — Q15 in `docs/design-codebook-v2.md` was closed by the user on 30 Aug 2026, "the threshold review stays a modal", and the v2 lens carried it over deliberately: `frontend/src/islands/CodebookV2.tsx:833`, with the Review door a headline affordance at `CodebookV2Page.tsx:229-235`. Read this bullet as an argument against *new* knobs, not as a live proposal to delete that one.)_
 - **Do the hard work to make it easy for the user.** The easy escape-hatch (a `Human/AI/Both` provenance filter — cheap, `source` already exists) treats the *symptom*; the hard layering work removes the *cause*. The filter is a deferred fallback, not the headline.
 - **Overlap decides grouping; text decides labelling; provenance decides the survivor.** (Relevant from Phase 2 on.)
 
@@ -94,7 +119,7 @@ The central lesson, arrived at four times over: **the number you'd naively measu
 
 ## 5. The data — calibration run 1 (7 Jul, N=42, real autocode)
 
-Drove autocode headless (read-only, wrote nothing) over project-ikea (42 quotes) with nielsen + norman + uxr + garrett, 1 tag/quote/framework → 189 nonzero cross-framework overlap pairs. Script: `scratchpad/overlap_experiment.py`.
+Drove autocode headless (read-only, wrote nothing) over project-ikea (42 quotes) with nielsen + norman + uxr + garrett, 1 tag/quote/framework → 189 nonzero cross-framework overlap pairs. Script: `scratchpad/overlap_experiment.py` — **absent from the tree as of 20 Sep 2026**, so these numbers are not reproducible as written and the §"optional probe" below is not actionable until it is rewritten.
 
 **Jaccard distribution (cross-framework code pairs, ∩≥1, |set|≥2):**
 

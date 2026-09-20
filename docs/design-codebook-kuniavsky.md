@@ -1,3 +1,28 @@
+---
+status: pending
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20 (835cde98)
+---
+
+> **Pending / aspirational.** A reference compilation for a codebook that was
+> never built. Nothing in the tree implements it: there is no
+> `bristlenose/server/codebook/kuniavsky.yaml`, and `grep -ri kuniavsky` over the
+> code returns nothing. Last confirmed aspirational 2026-09-20. Read it as a
+> sourcebook, not as a description of a shipped framework.
+
+## Changelog
+
+- _2026-09-20_ — confirmed still aspirational; added front-matter and this banner,
+  which the doc had never carried. Nothing has implemented it in the six months
+  since drafting, while nine other frameworks shipped — the ship/don't-ship
+  question at §"Next steps" is therefore **decided by default and unrecorded**,
+  which is the one thing worth a human minute here. Two notes added below: the
+  code-id casing in the tables does not match the shipped YAML convention, and the
+  overlap with live UXR tags is now enumerable. Anchors:
+  `bristlenose/server/codebook/` (9 YAMLs, none of them this one),
+  `bristlenose/server/codebook/uxr.yaml`.
+- _2026-03-10_ — initial draft.
+
 # Codebook: Observing the User Experience (Kuniavsky)
 
 _Mar 2026. Reference codebook derived from public sources about "Observing the User Experience: A Practitioner's Guide to User Research" (2nd ed., 2012) by Elizabeth Goodman, Mike Kuniavsky, and Andrea Moed. To be refined against the actual book text._
@@ -169,6 +194,22 @@ Question types: **behavioral** (what they do), **attitudinal** (what they think/
 | **This codebook** | Practitioner analysis workflow | Unique — the only one structured around the research process itself |
 
 ## TODO
+
+> **Two notes added 20 Sep 2026, both bearing on "if this ever ships".**
+>
+> **1. The code ids below do not match the shipped YAML convention.** This doc
+> hyphenates (`unmet-need`, `mental-model`, `device-channel`, `time-pressure`).
+> Every shipped framework uses space-separated lowercase — `unmet need`,
+> `mental model`, `device/channel`, `time pressure`
+> (`bristlenose/server/codebook/uxr.yaml`). Re-casing the whole table is a
+> build-time cost that is cheaper to know about now.
+>
+> **2. The overlap flagged "High" in the relationship table is enumerable.**
+> At least eight of the codes here already ship as live UXR tags — `unmet need`,
+> `workaround`, `trigger`, `mental model`, `device/channel`, `time pressure`,
+> `trust`, `abandonment` — plus `satisfied` / `dissatisfied` against
+> `sentiment.yaml`. Whatever this becomes, it is substantially a re-cut of
+> vocabulary the product already has, not new ground.
 
 - [ ] Cross-reference against the actual Ch. 15 text (we own the book)
 - [ ] Check 3rd edition (2024) Ch. 9 for updated analysis guidance

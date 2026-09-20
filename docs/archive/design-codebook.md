@@ -1,3 +1,61 @@
+---
+status: archived-reference
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20 (835cde98)
+superseded-by:
+  - docs/design-codebook-v2.md
+  - docs/design-codebook-state-model.md
+  - docs/design-autocode.md
+  - docs/design-dynamic-codebook-builder.md
+---
+
+> **Archived — do not treat body as current.**
+
+## What changed since this doc was written
+
+This was a February 2026 plan for a codebook held in `localStorage` and written
+out as a `codebook.yaml` beside `people.yaml`, with future phases for injecting
+codebook context into the s09–s11 prompts. Almost none of it shipped in that
+shape. The codebook is persisted to **SQLite through the serve API**
+(`bristlenose/server/routes/codebook.py`, `models.py:57-98`); there is no
+`bristlenose/codebook.py` and no `codebook.yaml` output. The YAML that exists is
+nine bundled **framework templates** (`bristlenose/server/codebook/*.yaml`)
+imported into a project. Codebook-driven analysis arrived as **AutoCode** — a
+deductive pass over extracted quotes — rather than as prompt seeding of the
+inductive s11 stage, which is the split the doc's own 30 Apr 2026 banner (§Phase 5)
+correctly predicted. Phases 6a and 6b shipped as the learned `TagPrompt` /
+`TagPromptDecision` pair rather than as "Suggest codes / Review codebook". The
+lens itself was rebuilt twice over: to a React island in Feb, then to the v2
+navigator in 0.29.0 (31 Aug 2026), which deleted `CodebookPanel.tsx`.
+
+Two of its recommendations did ship, in changed form worth noting: the
+`--codebook` CLI flag exists (`bristlenose/cli.py:1025-1029`) but takes a framework
+**slug**, not a YAML path, and drives AutoCode; and codebook templates, listed here
+at §Scope as "premature; need more users first", are the nine that ship today.
+
+## Current authoritative docs
+
+- [design-codebook-v2.md](design-codebook-v2.md) — the shipped lens: presentation,
+  layout, flow
+- [design-codebook-state-model.md](design-codebook-state-model.md) — the formal
+  state spec; install/enable/disable semantics and the catch-up delta
+- [design-autocode.md](design-autocode.md) — what Phase 5's "codebook context
+  injection" actually became
+- [design-dynamic-codebook-builder.md](design-dynamic-codebook-builder.md) — what
+  Phases 6a/6b became: prompts learned from hand-coded quotes
+
+## Retention note
+
+Retained as design-rationale reference. §"Key divergences from the shipped
+implementation" is the clearest surviving statement of what the codebook was *for*
+before the framework-template model existed, and four of its five divergences are
+still open at HEAD — no shareable codebook artefact, no tag split, sentiment still
+a hardcoded enum (`bristlenose/models.py:50`), no hierarchical trees. The 30 Apr
+banner under §Phase 5 is also worth keeping: it called the deductive/inductive
+split correctly, months before AutoCode settled it.
+
+---
+
 # Design: Codebook — Future Phases
 
 **Status:** Phases 1–3 shipped (v0.8.1). This document covers what comes next.

@@ -1,7 +1,10 @@
 ---
 status: archived-reference
-last-trued: 2026-08-21
-trued-against: HEAD@main on 2026-08-21 (ae05b1c0)
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20 (835cde98)
+superseded-by:
+  - docs/design-codebook-v2.md
+  - docs/design-codebook-state-model.md
 ---
 
 # Codebook React Island — Design Decisions
@@ -33,10 +36,29 @@ trued-against: HEAD@main on 2026-08-21 (ae05b1c0)
 > Codebook→**Codebooks** relabel. For the current lens see
 > `docs/design-codebook-library.md`.
 >
-> **Archive move deferred, deliberately:** nine files reference this path,
-> including root `CLAUDE.md`. Moving it to `docs/archive/` needs the pointer
+> **Archive move deferred, deliberately (21 Aug 2026):** nine files reference this
+> path, including root `CLAUDE.md`. Moving it to `docs/archive/` needs the pointer
 > sweep that only `/true-the-docs --claude-pointers` does, so the banner lands
 > here and the move waits rather than stranding nine references.
+>
+> **Post-script, 20 Sep 2026 — moved.** That blocker has cleared: the pointer sweep
+> is now a scheduled lane (`--claude-pointers`, held until every archive move
+> lands), so the references are recorded for it rather than stranded. Twelve files
+> reference this path now, not nine — a count in prose being, as ever, a count
+> nothing recomputes. Two further things happened after the 21 Aug banner was
+> written and are *not* reflected in the body below:
+>
+> - **The v1 lens was deleted**, ten days later, in "codebook v2 becomes the
+>   codebook lens: v1 deleted, the icon back, and the i18n graduated" (0.29.0,
+>   31 Aug 2026). `CodebookPanel.tsx` and `CodebookSidebar.tsx` are gone. The
+>   decisions re-blessed at the top of this banner are all **still true** — but the
+>   file they were verified in no longer exists. Their rationale now lives in
+>   `frontend/src/components/CodebookAuthoring.tsx` and
+>   `frontend/src/hooks/useCodebookAuthoring.ts`.
+> - **The forward pointer above is two hops stale.** `design-codebook-library.md`
+>   is itself superseded (its front-matter says so). For the current lens read
+>   [design-codebook-v2.md](../design-codebook-v2.md) and
+>   [design-codebook-state-model.md](../design-codebook-state-model.md).
 
 _Audit completed 17 Feb 2026. Decisions agreed before planning session._
 

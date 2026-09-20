@@ -1,3 +1,29 @@
+---
+status: current
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20 (835cde98)
+---
+
+> **Truing status:** Current with targeted edits (trued 2026-09-20). The
+> §"Tag structure (as shipped)" table was verified field-by-field against
+> `nielsen.yaml` — 10 groups, 10 subtitles, 36 tag names, 10 colour sets, all
+> matching — and is verbatim-accurate. Five apparatus errors around it were
+> corrected. See changelog.
+
+## Changelog
+
+- _2026-09-20_ — trued up: tag count 35 → 36 (the doc's own table already summed
+  to 36); replaced two citations of a UXR `guidance` tag that does not exist with
+  the real `Learning` tags (`self-taught`, `learning curve`); re-anchored
+  `quote-extraction.md:31` → `:37`; marked the `academic-sources.html` citation
+  TODO resolved (three Nielsen entries are present); corrected the framework-YAML
+  list from 4 to the 9 that ship; softened the i18n pointer, which named a
+  decision that does not mention Nielsen. §"Moderator context enhancement" left
+  untouched — verified still legitimately unimplemented. Anchors:
+  `bristlenose/server/codebook/nielsen.yaml`, `bristlenose/server/codebook/uxr.yaml`,
+  `docs/academic-sources.html:189`, `bristlenose/server/autocode.py:109`.
+- _2026-03-19_ — initial draft.
+
 # Nielsen's 10 Usability Heuristics — Codebook Design
 
 _Mar 2026. Evaluates whether Nielsen's heuristics transfer from expert evaluation to participant quote-coding, and proposes a codebook structure for Bristlenose._
@@ -20,7 +46,7 @@ Being honest about this distinction is a differentiator. No other tool has attem
 
 In moderated sessions, the moderator's questions often surface evidence that participants wouldn't volunteer. "Why did you look there?" → "Because on the other page it was there" reveals a consistency expectation. "If you did this every day, how would you want it to work?" reveals an efficiency concern.
 
-Bristlenose already captures moderator context. The quote extraction prompt (`bristlenose/llm/prompts/quote-extraction.md:31`) attaches a `researcher_context` prefix when a quote is unintelligible without the moderator's framing:
+Bristlenose already captures moderator context. The quote extraction prompt (`bristlenose/llm/prompts/quote-extraction.md:37`) attaches a `researcher_context` prefix when a quote is unintelligible without the moderator's framing:
 
 > In moderated sessions, if a quote is unintelligible without knowing the researcher's question, add a brief context prefix. Example: `researcher_context = "When asked about the settings page"`
 
@@ -179,7 +205,7 @@ Example participant utterances:
 - "The tooltip was really helpful"
 
 **Overlap:**
-- UXR codebook → Learning (guidance). Moderate overlap.
+- UXR codebook → Learning (`self-taught`, `learning curve`). Moderate overlap.
 - Morville → Findable (search effectiveness). Low overlap — finding help is a specific case.
 
 **Prompt strategy:** `apply_when` should cover both explicit help-seeking and implicit signals ("I had to figure it out myself"). `not_this` should distinguish from general confusion (which is ease of use) and from missing labels (which is H2 Match).
@@ -269,7 +295,7 @@ H4 (Consistency) uses a narrowed scope — explicit comparison language required
 
 ## Tag structure (as shipped)
 
-10 groups, 3–4 tags each. 35 tags total. Full discrimination prompts in `bristlenose/server/codebook/nielsen.yaml`.
+10 groups, 3–4 tags each. 36 tags total. Full discrimination prompts in `bristlenose/server/codebook/nielsen.yaml`.
 
 | # | Group | Subtitle | Tags | Colour |
 |---|-------|----------|------|--------|
@@ -333,7 +359,7 @@ Notes:
 | H6 Recognition | Norman → Slips vs Mistakes (memory lapse) | Design responsibility framing (minimise need to remember) |
 | H8 Aesthetic/minimal | Morville → Desirable (aesthetic quality) | Information economy (not visual craft) |
 | H9 Error recovery | Norman → Feedback (ambiguous feedback) | Error message quality specifically (clarity + recovery guidance) |
-| H10 Help | UXR → Learning (guidance) | Help-seeking behaviour at point of need |
+| H10 Help | UXR → Learning (`self-taught`, `learning curve`) | Help-seeking behaviour at point of need |
 | H7 Flexibility | Morville → Usable (efficiency) | Shortcut desire, repetitive task, customisation — participant-voiced efficiency wants |
 
 **Is overlap a problem?** No. Framework codebooks are complementary lenses, not competing taxonomies. The same quote tagged by both Norman (ambiguous feedback) and Nielsen (cryptic error) produces richer analysis than either alone. The frameworks ask different *questions* about the same evidence — Norman asks "what design principle was violated?", Nielsen asks "which usability heuristic was involved?" Researchers stack codebooks precisely for these multiple angles.
@@ -350,15 +376,21 @@ Safe to proceed. Nielsen/NN Group explicitly permits use: "You may use these heu
 
 ## Related files
 
-- `bristlenose/server/codebook/` — existing framework YAMLs (garrett, morville, norman, uxr)
+- `bristlenose/server/codebook/` — the nine shipped framework YAMLs (cli-ux, garrett,
+  morville, nielsen, norman, plato, sentiment, uxr, yablonski). Count deliberately
+  not restated elsewhere: `ls bristlenose/server/codebook/*.yaml` is the answer that
+  cannot go stale
 - `bristlenose/server/codebook/__init__.py` — YAML loader and dataclass definitions
 - `bristlenose/server/autocode.py` — AutoCode engine (discrimination prompt consumer)
 - `bristlenose/llm/prompts/quote-extraction.md` — `researcher_context` prefix (line 31)
 - `docs/design-codebook-ecosystem.md` — codebook layering strategy
 - `docs/design-codebook-island.md` — codebook UI design
 - `docs/private/codebook-frameworks-legal.md` — legal analysis
-- `docs/design-i18n.md` — translation decision (Nielsen stays English)
-- `docs/academic-sources.html` — citation to be added
+- `docs/design-i18n.md` — third-party codebooks stay in the author's language
+  (future work). Note the list there names Norman, Morville and Garrett, not
+  Nielsen: the decision covers this codebook by class, but is not stated for it
+- `docs/academic-sources.html` — citations added (`:189` CHI '94, `:197` _Usability
+  Engineering_, `:205` Nielsen & Molich 1990)
 
 ## References
 

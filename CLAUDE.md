@@ -700,6 +700,34 @@ reports success, and joins the silent-no-op family above. **Select the block by
 *content* — the one that actually carries the key, asserted unique — or by
 fully-qualified path, never by first match on the name.**
 
+### A reconstruction harness guarantees exactly as far as the function it cross-checks
+
+`experiments/signal_strength/measure.py` re-derives the shipped composite from
+raw cells and asserts it against `_compute_group_analysis` cell by cell — "105
+cells compared, 0 mismatched", and that assertion held across 32 commits and a
+week, which is what it was built for. It is also why a claim measured through
+it was reported to the user as fact and was **false at HEAD**.
+
+The measured claim was *"`classify_flag` fires on 0 of 103 cards"*. True of
+`classify_flag` called with a group name, which is what the harness does. Not
+true of the product: `_serialize_signal` (`server/routes/analysis.py`) resolves
+a Sentiment-group card to a sentiment **value** via `sentiment_label(s.quotes)`
+and re-calls `classify_flag` with it, which had landed three hours earlier
+(`9e9af6fd`, refined by `3c8aa63d`). Measured through the real serialiser:
+**39 of 105 cards flagged**, five of six words firing. The code comment at that
+site states the pre-fix position verbatim, so the file being measured said so.
+
+The trap is structural, not careless: `_serialize_signal` is **downstream of
+the assertion**, so nothing the harness checks could have caught it. A
+cross-check licenses claims about the function it names and nothing past it.
+
+**Rule: before reporting a harness measurement as a fact about shipped
+behaviour, name the last function the assertion covers and confirm the quantity
+is computed at or before it.** If it is computed later — in a serialiser, an
+adapter, a React selector — measure through that instead, however much slower.
+**Tell:** a number about what the user sees, derived from a module the user's
+request never reaches.
+
 ### Other gotchas
 
 - **A regex import-inserter lands INSIDE a parenthesised import block, and the result looks fine.** A scripted edit that adds `from x import y` "after the last top-level `from … import` line" matched `from bristlenose.… import (` and inserted the new line between the parentheses — in `server/importer.py` and `s12_render_output.py` on 12 Sep 2026. Every line is still a plausible import; the file fails at import time with a `SyntaxError` a screen away from the edit. Anchor on the closing `)` of a multi-line import (or use `ast` to find the last import's end line), and **import the module after a scripted edit before believing it** — `python -c "import bristlenose.server.importer"` is the whole check.

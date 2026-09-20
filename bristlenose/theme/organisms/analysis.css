@@ -832,15 +832,41 @@ button.signal-card-toggle {
 }
 
 /* Waiting for a finding. The lens fetches twice — once for the cards, then
-   again for their elaborations — so this is the state of every card for the
-   first few seconds. A skeleton rather than a fallback string: the only
+   again for their elaborations — so this is the state of every card until the
+   second fetch lands. A skeleton rather than a fallback string: the only
    fallback available was the location, which is the heading directly above
    and is the one thing a headline must never be. Sized like the headline so
-   the card does not grow one under the reader when it arrives. */
+   the card does not grow one under the reader when it arrives.
+
+   IT MUST MOVE, and until 20 Sep 2026 it did not. Reported from a screenshot as
+   "invisible titles": a motionless grey block is indistinguishable from a
+   heading that failed to render, and the reader has no way to tell which they
+   are looking at. It also lasts far longer than "a few seconds" whenever the
+   cache is cold — `_elaborate_top_signals` generates INLINE in that request, and
+   the same commit that added this skeleton also put the prompt's SHA in the
+   cache key (invalidating every stored elaboration) and replaced the top-ten cap
+   with a payload budget (so every card needs a call, not ten). Three reasonable
+   changes that between them made a silent block the whole first-load experience.
+
+   Gates match atoms/shimmer.css exactly, because this is the same signal —
+   indeterminate work with no ETA — in the one shape the shimmer cannot take,
+   since that atom clips its gradient to TEXT and this element has none. Both
+   gates must pass or it degrades to the static block, which is the old
+   behaviour and is still correct for someone who asked for no motion. */
 .signal-card-location-pending {
     height: var(--bn-text-heading);
     width: 42%;
     min-width: 8rem;
     border-radius: var(--bn-radius-sm);
     background: var(--bn-colour-hover);
+}
+
+@keyframes bn-pending-breathe {
+    50% { opacity: 0.45; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    :root:not([data-analysis-animation="off"]) .signal-card-location-pending {
+        animation: bn-pending-breathe 1.6s ease-in-out infinite;
+    }
 }

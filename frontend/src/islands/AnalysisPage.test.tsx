@@ -1088,3 +1088,51 @@ describe("AnalysisPage", () => {
   });
 
 });
+
+describe("the headline while a finding is still being written", () => {
+  /** The elaboration fetch resolves only when you call `release()`.
+   *
+   *  The suite's normal helper resolves both fetches immediately, so the
+   *  pending state existed in production and in no test — which is how it
+   *  shipped as a motionless grey block that a screenshot read as a broken
+   *  heading. It is not a brief state either: `_elaborate_top_signals`
+   *  generates inline in that request, and on a cold cache every card needs
+   *  an LLM call.
+   */
+  function mockElaborationHangs(data: CodebookAnalysisListResponse) {
+    let release!: (d: CodebookAnalysisListResponse) => void;
+    const pending = new Promise<CodebookAnalysisListResponse>((r) => { release = r; });
+    fetchMock.mockImplementation((url: string) =>
+      String(url).includes("elaborate=true")
+        ? pending.then((d) => ({ ok: true, json: () => Promise.resolve(d) }))
+        : Promise.resolve({ ok: true, json: () => Promise.resolve(data) }),
+    );
+    return { release: () => release(data) };
+  }
+
+  it("draws a placeholder, and says it is busy, while the finding is coming", async () => {
+    mockElaborationHangs(mockCbData);
+    const { container } = render(<AnalysisPage />);
+
+    await waitFor(() => expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0));
+
+    expect(container.querySelector(".signal-card-location-pending")).not.toBeNull();
+    expect(screen.getAllByTestId("bn-signal-card")[0]).toHaveAttribute("aria-busy", "true");
+  });
+
+  it("removes the placeholder once the answer is in, even when the answer is nothing", async () => {
+    /** The branch that matters: a card the LLM had no finding for. It must end
+     *  with NO headline — not a permanent placeholder, and not its location,
+     *  which is the heading directly above it. */
+    const { release } = mockElaborationHangs(mockCbData);
+    const { container } = render(<AnalysisPage />);
+    await waitFor(() => expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0));
+
+    release();
+
+    await waitFor(() =>
+      expect(container.querySelector(".signal-card-location-pending")).toBeNull(),
+    );
+    expect(screen.getAllByTestId("bn-signal-card")[0]).not.toHaveAttribute("aria-busy");
+  });
+});

@@ -533,6 +533,12 @@ function SignalCard({
       ref={cardRef ?? undefined}
       role="button"
       tabIndex={0}
+      // The pending headline block is decorative and correctly aria-hidden,
+      // which left a screen-reader user with NO signal that a finding was
+      // still coming — a sighted reader at least had a grey bar. Marked on the
+      // card rather than announced per bar: role="status" on forty skeletons
+      // would read forty announcements, which is not an improvement.
+      aria-busy={!signal.signalName && !elaborationsIn ? true : undefined}
       onClick={() => onFocus?.(signal)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {

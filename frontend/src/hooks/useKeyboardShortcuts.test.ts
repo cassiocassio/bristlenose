@@ -787,7 +787,7 @@ describe("useKeyboardShortcuts", () => {
     }
 
     it("m is handled on analysis page", () => {
-      const { unmount } = renderWithProviders(undefined, "/report/analysis/");
+      const { unmount } = renderWithProviders(undefined, "/report/signals/");
 
       const handled = dispatchKey("m");
       expect(handled).toBe(true);
@@ -842,7 +842,7 @@ describe("useKeyboardShortcuts", () => {
     it("z is not handled off the quotes lens", () => {
       // The native View-menu twin dims off this lens. If the key still fired,
       // the menu would claim the feature is unavailable while it was running.
-      const { unmount } = renderWithProviders(undefined, "/report/analysis/");
+      const { unmount } = renderWithProviders(undefined, "/report/signals/");
 
       expect(dispatchKey("z")).toBe(false);
       expect(isFocusMode()).toBe(false);
@@ -933,7 +933,7 @@ describe("useKeyboardShortcuts", () => {
     });
 
     it("⌘A is left to the browser on non-quotes pages", () => {
-      const { getCtx, unmount } = renderWithProviders(undefined, "/report/analysis/");
+      const { getCtx, unmount } = renderWithProviders(undefined, "/report/signals/");
       act(() => {
         getCtx().registerVisibleQuoteIds("test", ["q-1", "q-2"]);
       });
@@ -1028,7 +1028,7 @@ describe("useKeyboardShortcuts", () => {
       const listener = (e: Event) => menuEvents.push(e as CustomEvent);
       window.addEventListener("bn:menu-action", listener);
 
-      const { getCtx, unmount } = renderWithProviders(undefined, "/report/analysis/");
+      const { getCtx, unmount } = renderWithProviders(undefined, "/report/signals/");
       act(() => {
         getCtx().registerVisibleQuoteIds("test", ["q-1"]);
         getCtx().toggleSelection("q-1");
@@ -1075,7 +1075,7 @@ describe("useKeyboardShortcuts", () => {
       ["]", "/report/quotes/"],
       ["\\", "/report/quotes/"],
       ["§", "/report/quotes/"],
-      ["m", "/report/analysis"],
+      ["m", "/report/signals"],
       ["/", "/report/quotes/"],
       ["j", "/report/quotes/"],
       ["k", "/report/quotes/"],

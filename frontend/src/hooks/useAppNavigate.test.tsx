@@ -26,7 +26,7 @@ function renderWithRouter(initialEntry = "/report/") {
           { path: "sessions/:sessionId", element: <div /> },
           { path: "quotes", element: <div /> },
           { path: "codebook", element: <div /> },
-          { path: "analysis", element: <div /> },
+          { path: "signals", element: <div /> },
           { path: "settings", element: <div /> },
           { path: "about", element: <div /> },
         ],
@@ -89,7 +89,7 @@ describe("useAppNavigate", () => {
       sessions: "/report/sessions/",
       quotes: "/report/quotes/",
       codebook: "/report/codebook/",
-      analysis: "/report/analysis/",
+      signals: "/report/signals/",
       settings: "/report/settings/",
       about: "/report/about/",
     };

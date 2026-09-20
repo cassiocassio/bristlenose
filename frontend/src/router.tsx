@@ -42,7 +42,10 @@ export const routes = [
       // dev-gated and never reachable by a researcher, so nothing in the wild
       // holds that URL.
       { path: "codebook", element: <CodebookV2Tab /> },
-      { path: "analysis", element: <AnalysisTab /> },
+      { path: "signals", element: <AnalysisTab /> },
+      // Renamed 20 Sep 2026. Bookmarks and already-exported reports still
+      // point at the old path, so it redirects rather than 404s.
+      { path: "analysis", element: <Navigate to="/report/signals/" replace /> },
       // Debug lens — test content on a visible grid (dev-gated NavBar link;
       // desktop entry via Diagnostics menu). Route always registered: the
       // page is benign specimen content and lazy-loads only when visited.

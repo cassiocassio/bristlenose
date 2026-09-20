@@ -31,7 +31,7 @@ struct LensAnchorTests {
     func lensesWithoutPositions() {
         // Decided 16 Aug 2026. Passing an anchor anyway — a stale one from
         // another lens — must still land at the top rather than be honoured.
-        #expect(LensAnchor.action(lens: .analysis, anchor: "theme-billing") == .top)
+        #expect(LensAnchor.action(lens: .signals, anchor: "theme-billing") == .top)
         #expect(LensAnchor.action(lens: .project, anchor: "theme-billing") == .top)
     }
 
@@ -49,7 +49,7 @@ struct LensAnchorTests {
         #expect(LensAnchor.remembersPosition(.quotes))
         #expect(LensAnchor.remembersPosition(.codebook))
         #expect(LensAnchor.remembersPosition(.sessions))
-        #expect(!LensAnchor.remembersPosition(.analysis))
+        #expect(!LensAnchor.remembersPosition(.signals))
         #expect(!LensAnchor.remembersPosition(.project))
         #expect(!LensAnchor.remembersPosition(nil))
     }

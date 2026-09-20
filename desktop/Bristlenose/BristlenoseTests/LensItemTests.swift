@@ -13,7 +13,7 @@ import Testing
     /// became the only Codebook lens on 31 Aug 2026.
     @Test func all_hasOneRowPerTab_inSidebarOrder() {
         #expect(LensItem.all.map(\.tab) == [
-            .project, .sessions, .quotes, .codebook, .analysis,
+            .project, .sessions, .quotes, .codebook, .signals,
         ])
     }
 
@@ -48,7 +48,7 @@ import Testing
         #expect(icons[.sessions] == "person.2")
         #expect(icons[.quotes] == "text.quote")
         #expect(icons[.codebook] == "tag")
-        #expect(icons[.analysis] == "square.grid.3x3")
+        #expect(icons[.signals] == "square.grid.3x3")
     }
 
     @Test func ids_areUnique() {

@@ -824,7 +824,7 @@ private struct ViewMenuContent: View {
         switch bridgeHandler.activeTab {
         case .quotes:   return "Contents"
         case .codebook: return "Codes"
-        case .analysis: return "Signals"
+        case .signals: return "Signals"
         default:        return nil
         }
     }
@@ -861,7 +861,7 @@ private struct ViewMenuContent: View {
     }
 
     private var hasHeatmapPanel: Bool {
-        bridgeHandler.activeTab == .analysis
+        bridgeHandler.activeTab == .signals
     }
 
     var body: some View {

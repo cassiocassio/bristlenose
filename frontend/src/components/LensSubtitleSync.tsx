@@ -27,7 +27,7 @@ export function tabFromPath(pathname: string): string {
   // and any future sibling route sharing a prefix must be tested first.
   //
   if (pathname.startsWith("/report/codebook")) return "codebook";
-  if (pathname.startsWith("/report/analysis")) return "analysis";
+  if (pathname.startsWith("/report/signals")) return "signals";
   if (pathname.startsWith("/report/sessions")) return "sessions";
   return "project";
 }
@@ -81,7 +81,7 @@ export function LensSubtitleSync(): null {
         tags: store.tags,
       }).length;
       subtitle = quotesSubtitle(visible, store.viewMode === "starred");
-    } else if (tab === "analysis") {
+    } else if (tab === "signals") {
       subtitle = signalsSubtitle(signals.signals.length);
     } else if ((tab === "codebook" || tab === "codebookV2") && codebook) {
       const { codebooks, tags } = codebookCounts(codebook);

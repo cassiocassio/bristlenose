@@ -13,7 +13,10 @@ const TAB_ROUTES: Record<string, string> = {
   sessions: "/report/sessions/",
   quotes: "/report/quotes/",
   codebook: "/report/codebook/",
-  analysis: "/report/analysis/",
+  signals: "/report/signals/",
+  // Legacy — the lens was renamed on 20 Sep 2026 and #analysis is in
+  // bookmarks and in older exported reports.
+  analysis: "/report/signals/",
   settings: "/report/settings/",
   about: "/report/about/",
 };

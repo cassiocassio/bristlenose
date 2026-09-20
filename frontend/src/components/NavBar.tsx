@@ -23,7 +23,7 @@ const TAB_ROUTES = [
   { to: "/report/sessions/", key: "nav.sessions" },
   { to: "/report/quotes/", key: "nav.quotes" },
   { to: "/report/codebook/", key: "nav.codebook" },
-  { to: "/report/analysis/", key: "nav.analysis" },
+  { to: "/report/signals/", key: "nav.signals" },
 ] as const;
 
 /** Dev mode — same signal AppLayout uses for the responsive playground. */

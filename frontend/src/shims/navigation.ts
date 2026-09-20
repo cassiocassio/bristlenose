@@ -27,7 +27,7 @@ const TAB_ROUTES: Record<string, string> = {
   // was stated in Tab.swift's doc comment for months with nothing enforcing
   // it, and the day it was broken the lens just went quietly to /report/.
   codebookV2: "/report/codebook-v2/",
-  analysis: "/report/analysis/",
+  signals: "/report/signals/",
   settings: "/report/settings/",
   about: "/report/about/",
 };

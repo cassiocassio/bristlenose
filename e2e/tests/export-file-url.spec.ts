@@ -42,7 +42,7 @@ const EXPORT_ROUTES: Array<{ label: string; hash: string }> = [
   { label: "sessions", hash: "#/report/sessions" },
   { label: "quotes", hash: "#/report/quotes" },
   { label: "codebook", hash: "#/report/codebook" },
-  { label: "analysis", hash: "#/report/analysis" },
+  { label: "signals", hash: "#/report/signals" },
 ];
 
 async function waitForMount(page: Page): Promise<void> {

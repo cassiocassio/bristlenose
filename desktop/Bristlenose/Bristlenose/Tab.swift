@@ -5,7 +5,7 @@ import Foundation
 /// Raw values match the keys expected by `window.switchToTab(tab)` in
 /// `frontend/src/shims/navigation.ts`.
 enum Tab: String, CaseIterable, Identifiable {
-    case project, sessions, quotes, codebook, analysis
+    case project, sessions, quotes, codebook, signals
 
     var id: String { rawValue }
 
@@ -16,7 +16,7 @@ enum Tab: String, CaseIterable, Identifiable {
         case .sessions:  "Sessions"
         case .quotes:    "Quotes"
         case .codebook:  "Codebooks"
-        case .analysis:  "Signals"
+        case .signals:   "Signals"
         }
     }
 
@@ -49,7 +49,7 @@ enum Tab: String, CaseIterable, Identifiable {
         case .sessions:  "/report/sessions/"
         case .quotes:    "/report/quotes/"
         case .codebook:  "/report/codebook/"
-        case .analysis:  "/report/analysis/"
+        case .signals:   "/report/signals/"
         }
     }
 
@@ -64,7 +64,7 @@ enum Tab: String, CaseIterable, Identifiable {
     /// three-way disagreement waiting to happen.
     var hasLeftPanel: Bool {
         switch self {
-        case .quotes, .codebook, .analysis: true
+        case .quotes, .codebook, .signals: true
         case .project, .sessions: false
         }
     }
@@ -75,7 +75,10 @@ enum Tab: String, CaseIterable, Identifiable {
     /// correctly maps to `.sessions`. The project tab uses exact match
     /// to avoid swallowing all `/report/...` paths.
     static func from(path: String) -> Tab? {
-        if path.hasPrefix("/report/analysis") { return .analysis }
+        if path.hasPrefix("/report/signals")  { return .signals }
+        // The lens was renamed on 20 Sep 2026; a bookmarked or embedded
+        // old path still has to land somewhere real.
+        if path.hasPrefix("/report/analysis") { return .signals }
         // The v2 route is gone (v2 became the only Codebook lens, 31 Aug 2026),
         // and with it the longest-prefix hazard this arm guarded:
         // "/report/codebook-v2" had "/report/codebook" as a prefix, so the

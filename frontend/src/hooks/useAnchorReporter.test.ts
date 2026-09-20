@@ -115,9 +115,9 @@ describe("useAnchorReporter", () => {
     // rather than stay quiet — otherwise the Quotes anchor the reader left
     // behind would still be on disk, and would be restored against Analysis.
     renderHeadings([{ id: "theme-billing", top: -50 }]);
-    renderHook(() => useAnchorReporter("/report/analysis/", true));
+    renderHook(() => useAnchorReporter("/report/signals/", true));
 
-    expect(posted).toHaveBeenCalledWith("analysis", null);
+    expect(posted).toHaveBeenCalledWith("signals", null);
   });
 
   it("doesn't repeat a position that hasn't changed", () => {
@@ -155,7 +155,7 @@ describe("useAnchorReporter", () => {
     scrollAndSettle();
     expect(posted).toHaveBeenLastCalledWith("quotes", "theme-billing");
 
-    rerender({ path: "/report/analysis/" });
-    expect(posted).toHaveBeenLastCalledWith("analysis", null);
+    rerender({ path: "/report/signals/" });
+    expect(posted).toHaveBeenLastCalledWith("signals", null);
   });
 });

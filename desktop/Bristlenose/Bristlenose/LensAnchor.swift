@@ -55,7 +55,7 @@ enum LensAnchor {
         // Decided 16 Aug 2026: these restore to the top. Neither has a stable
         // structural position worth remembering, and inventing one would be a
         // guess the reader cannot predict.
-        case .analysis, .project: return .top
+        case .signals, .project: return .top
         }
     }
 
@@ -64,7 +64,7 @@ enum LensAnchor {
     static func remembersPosition(_ lens: Tab?) -> Bool {
         switch lens {
         case .quotes, .codebook, .sessions: return true
-        case .analysis, .project, nil:      return false
+        case .signals, .project, nil:      return false
         }
     }
 }

@@ -36,7 +36,7 @@ struct LensItem: Identifiable {
             LensItem(tab: .quotes,   systemImage: "text.quote"),
             LensItem(tab: .codebook, systemImage: "tag"),
         ]
-        lenses.append(LensItem(tab: .analysis, systemImage: "square.grid.3x3"))
+        lenses.append(LensItem(tab: .signals, systemImage: "square.grid.3x3"))
         return lenses
     }()
 

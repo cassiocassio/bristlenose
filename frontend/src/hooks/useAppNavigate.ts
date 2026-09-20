@@ -14,7 +14,7 @@ const TAB_PATHS: Record<string, string> = {
   sessions: "/report/sessions/",
   quotes: "/report/quotes/",
   codebook: "/report/codebook/",
-  analysis: "/report/analysis/",
+  signals: "/report/signals/",
   settings: "/report/settings/",
   about: "/report/about/",
 };

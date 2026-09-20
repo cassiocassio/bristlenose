@@ -32,7 +32,7 @@ struct TabTests {
     }
 
     @Test func fromPath_analysis() {
-        #expect(Tab.from(path: "/report/analysis/") == .analysis)
+        #expect(Tab.from(path: "/report/signals/") == .signals)
     }
 
     @Test func fromPath_unknown_returnsNil() {
@@ -63,7 +63,7 @@ struct TabTests {
     /// keep now they agree.
     @Test func allCases_areTheKnownRoster() {
         #expect(Tab.allCases == [
-            .project, .sessions, .quotes, .codebook, .analysis,
+            .project, .sessions, .quotes, .codebook, .signals,
         ])
     }
 
@@ -97,7 +97,7 @@ struct TabTests {
         #expect(Tab.sessions.rawValue == "sessions")
         #expect(Tab.quotes.rawValue == "quotes")
         #expect(Tab.codebook.rawValue == "codebook")
-        #expect(Tab.analysis.rawValue == "analysis")
+        #expect(Tab.signals.rawValue == "signals")
     }
 }
 
@@ -114,7 +114,7 @@ struct TabTests {
     @Test func theThreeLensesWithANavigatorHaveOne() {
         #expect(Tab.quotes.hasLeftPanel)
         #expect(Tab.codebook.hasLeftPanel)
-        #expect(Tab.analysis.hasLeftPanel)
+        #expect(Tab.signals.hasLeftPanel)
     }
 
     @Test func theTwoWithoutOneDoNot() {

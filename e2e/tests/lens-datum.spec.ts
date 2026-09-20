@@ -52,7 +52,7 @@ const TITLED_LENSES = [
   { name: 'sessions', route: '/report/sessions/' },
   { name: 'quotes', route: '/report/quotes/' },
   { name: 'codebook', route: '/report/codebook/' },
-  { name: 'analysis', route: '/report/analysis/' },
+  { name: 'signals', route: '/report/signals/' },
 ];
 
 function authToken(): string {

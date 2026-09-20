@@ -219,8 +219,8 @@ function AppShell() {
   const _isCodebookSlash = useMatch("/report/codebook/");
   // `useMatch` is exact, so these do NOT also match `/report/codebook` — the
   // prefix trap that bit `Tab.from(path:)` on the Swift side does not arise.
-  const _isAnalysis = useMatch("/report/analysis");
-  const _isAnalysisSlash = useMatch("/report/analysis/");
+  const _isAnalysis = useMatch("/report/signals");
+  const _isAnalysisSlash = useMatch("/report/signals/");
   const isQuotes = _isQuotes || _isQuotesSlash;
   const isSessions = _isSessions || _isSessionsSlash;
   const isCodebook = _isCodebook || _isCodebookSlash;
@@ -366,7 +366,7 @@ function AppShell() {
         if (path.startsWith("/report/quotes")) return "quotes";
         if (path.startsWith("/report/sessions")) return "sessions";
         if (path.startsWith("/report/codebook")) return "codebook";
-        if (path.startsWith("/report/analysis")) return "analysis";
+        if (path.startsWith("/report/signals")) return "signals";
         return "project";
       },
       getFocusedQuoteId: () => focusedIdBridgeRef.current,
@@ -407,7 +407,7 @@ function AppShell() {
     // in all 21 locales for a screen-reader string on an experimental surface.
     // Revisit if v2 replaces v1 under its own name.
     else if (path.startsWith("/report/codebook")) key = "nav.codebook";
-    else if (path.startsWith("/report/analysis")) key = "nav.analysis";
+    else if (path.startsWith("/report/signals")) key = "nav.signals";
     announce(i18n.t("announce.navigatedTo", { label: i18n.t(key) }));
   }, [location.pathname]);
 

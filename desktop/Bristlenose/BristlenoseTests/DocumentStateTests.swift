@@ -102,8 +102,8 @@ struct BridgeHandlerLensIntentTests {
     @Test func lastClickWins() {
         let bridge = litLoadingBridge()
         bridge.activateLens(.quotes)
-        bridge.activateLens(.analysis)
-        #expect(bridge.pendingLensIntent == .analysis)
+        bridge.activateLens(.signals)
+        #expect(bridge.pendingLensIntent == .signals)
     }
 
     @Test func queueDoesNotConsultTheMirror() {

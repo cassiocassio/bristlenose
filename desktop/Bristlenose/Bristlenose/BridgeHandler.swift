@@ -192,7 +192,7 @@ final class BridgeHandler: ObservableObject {
     /// report-derived lenses (Sessions/Project come from the local DB read).
     @Published var lensSubtitle: String = ""
 
-    /// Which lens `lensSubtitle` is for ("quotes"/"codebook"/"analysis"),
+    /// Which lens `lensSubtitle` is for ("quotes"/"codebook"/"signals"),
     /// matched against `activeTab` so a tab switch never momentarily shows the
     /// previous lens's count.
     @Published var lensSubtitleTab: String?

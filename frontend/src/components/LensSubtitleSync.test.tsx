@@ -34,7 +34,7 @@ describe("tabFromPath — longest prefix first", () => {
 
   it("resolves the other lenses unchanged", () => {
     expect(tabFromPath("/report/quotes")).toBe("quotes");
-    expect(tabFromPath("/report/analysis")).toBe("analysis");
+    expect(tabFromPath("/report/signals")).toBe("signals");
     expect(tabFromPath("/report/sessions")).toBe("sessions");
   });
 });

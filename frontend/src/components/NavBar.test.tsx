@@ -18,7 +18,7 @@ function renderNavBar(initialEntry = "/report/") {
           { path: "sessions", element: <div>sessions</div> },
           { path: "quotes", element: <div>quotes</div> },
           { path: "codebook", element: <div>codebook</div> },
-          { path: "analysis", element: <div>analysis</div> },
+          { path: "signals", element: <div>signals</div> },
           { path: "settings", element: <div>settings</div> },
           { path: "about", element: <div>about</div> },
         ],
@@ -93,7 +93,7 @@ describe("NavBar", () => {
     // Label pluralised 14 Aug 2026; the route deliberately did NOT follow —
     // it's baked into exported reports, deep links and the native bridge.
     expect(screen.getByText("Codebooks").closest("a")).toHaveAttribute("href", "/report/codebook/");
-    expect(screen.getByText("Signals").closest("a")).toHaveAttribute("href", "/report/analysis/");
+    expect(screen.getByText("Signals").closest("a")).toHaveAttribute("href", "/report/signals/");
   });
 
   it("Settings and Help have aria-label", () => {

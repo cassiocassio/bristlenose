@@ -451,7 +451,7 @@ struct ContentView: View {
     /// `unanalysed`.
     private var countSubtitle: String {
         switch bridgeHandler.activeTab {
-        case .quotes?, .codebook?, .analysis?:
+        case .quotes?, .codebook?, .signals?:
             // Honour the bridged subtitle only when it's for the lens we're on,
             // so a tab switch never momentarily shows the previous lens's count.
             guard bridgeHandler.lensSubtitleTab == bridgeHandler.activeTab?.rawValue else {
@@ -2158,7 +2158,7 @@ struct ContentView: View {
         // the wrong string is how the sidebar acquired five unlocalised
         // labels once already.
         case .codebook: return i18n.t("desktop.toolbar.codes")
-        case .analysis: return i18n.t("desktop.toolbar.signals")
+        case .signals: return i18n.t("desktop.toolbar.signals")
         default:        return i18n.t("desktop.toolbar.contents")
         }
     }
@@ -2168,7 +2168,7 @@ struct ContentView: View {
         switch bridgeHandler.activeTab {
         case .quotes:   return i18n.t("desktop.toolbar.showContents")
         case .codebook: return i18n.t("desktop.toolbar.showCodes")
-        case .analysis: return i18n.t("desktop.toolbar.showSignals")
+        case .signals: return i18n.t("desktop.toolbar.showSignals")
         default:        return i18n.t("desktop.toolbar.showContents")
         }
     }
@@ -2336,7 +2336,7 @@ struct ContentView: View {
             }
 
             // Contextual — Analysis tab: heatmap inspector toggle
-            if bridgeHandler.activeTab == .analysis {
+            if bridgeHandler.activeTab == .signals {
                 ToolbarItem(placement: .primaryAction) {
                     Button { bridgeHandler.menuAction("toggleInspectorPanel") } label: {
                         Label(i18n.t("desktop.toolbar.heatmap"), systemImage: "square.grid.2x2")
@@ -2355,7 +2355,7 @@ struct ContentView: View {
                 switch bridgeHandler.activeTab {
                 case .quotes:
                     QuotesSearchToolbarControl(bridgeHandler: bridgeHandler, i18n: i18n)
-                case .sessions, .codebook, .analysis:
+                case .sessions, .codebook, .signals:
                     SearchComingSoonButton(i18n: i18n)
                 default:
                     EmptyView()

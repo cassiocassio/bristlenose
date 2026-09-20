@@ -483,7 +483,7 @@ export function useKeyboardShortcuts({
           // `pathMatches` is exact-or-trailing-slash, so codebook-v2 needs its
           // own arm — the v2 lens has the same left panel and the same key.
           pathMatches(loc, "/report/codebook-v2") ||
-          pathMatches(loc, "/report/analysis") ||
+          pathMatches(loc, "/report/signals") ||
           (onSessions && !isEmbedded())
         ) {
           e.preventDefault();
@@ -519,7 +519,7 @@ export function useKeyboardShortcuts({
 
       // m — toggle heatmap inspector panel (analysis tab only)
       if (key === "m" && bare) {
-        if (pathMatches(locationRef.current.pathname, "/report/analysis")) {
+        if (pathMatches(locationRef.current.pathname, "/report/signals")) {
           e.preventDefault();
           toggleInspector();
           return;

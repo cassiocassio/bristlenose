@@ -17,7 +17,7 @@ export const STATIC_ROUTES = [
   '/report/sessions/',
   '/report/quotes/',
   '/report/codebook/',
-  '/report/analysis/',
+  '/report/signals/',
   '/report/settings/',
   '/report/about/',
 ];

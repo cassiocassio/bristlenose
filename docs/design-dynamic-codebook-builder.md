@@ -1,12 +1,38 @@
 ---
 status: partial
-last-trued: 2026-06-27
-trued-against: HEAD@claude/dynamic-codebook-builder-67r2fa on 2026-06-27
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20 (835cde98)
 ---
 
-> **Status: Partial (trued 2026-06-27)** — the backend engine + API + the flag-gated codebook-lab are shipped; the production Build-panel React UI is **not yet built** (only the lab entry point + "<project> tags" header). See "Lab graduation gates".
+> **Status: Partial (trued 2026-09-20)** — the backend engine + API are shipped and
+> verbatim-current; the production Build-panel React UI is **still not built**. Two
+> things changed under this doc since the June pass and neither is in the body
+> below: **the lab's entry point is gone** (the "Codebook lab" button went with the
+> v1 lens, so `/codebook-lab` is now reachable only by typing the URL), and **a
+> graduation gate has been breached** — see §"Lab graduation gates", which now
+> carries the detail and an open question for a human.
+>
+> _The previous front-matter read `trued-against:
+> HEAD@claude/dynamic-codebook-builder-67r2fa` — a branch that no longer exists, so
+> that evidence trail was unreproducible. A `last-trued`-driven sweep would have
+> read this doc as recently verified against nothing._
 
 ## Changelog
+
+- _2026-09-20_ — trued up: re-pointed front-matter at `main` (the cited branch is
+  deleted); recorded that `codebook.codebookLab` now has **zero call sites** while
+  21 locale files still carry the string, so the lab entry point described
+  throughout is gone; corrected "all 7 locales" → 21; flagged the breached
+  public-release gate. Every backend claim (§Data model, §Engine, §API, §Testing)
+  was re-verified field-by-field and is **unchanged** — `TagPrompt` and
+  `TagPromptDecision` match `models.py:100-162` exactly, all five `/builder`
+  endpoints match `routes/codebook_builder.py:203,231,272,314,380`, and
+  `MIN_EXAMPLES_FOR_SYNTHESIS = 3` holds. Added a note that `TagPrompt` is now read
+  by the MCP surface (`bristlenose/server/mcp_server.py:726`), which postdates the
+  June privacy discussion. Anchors: `bristlenose/config.py:222`,
+  `bristlenose/server/app.py:247`, `tests/test_codebook_builder.py:585-597`,
+  commit "codebook v2 becomes the codebook lens: v1 deleted, the icon back, and
+  the i18n graduated".
 
 - _2026-06-27_ — trued up: verified data-model / engine / API / testing sections current against the branch code; marked "Frontend — staged" as not-yet-built (only the lab button + project-tags header shipped); confirmed the lab is now flag-gated (`experimental_codebook_lab`, default-on) with a Codebook-tab entry point. Anchors: `frontend/src/islands/CodebookPanel.tsx:976`, `bristlenose/server/routes/dev.py` `codebook_lab_tags`, commits "ship behind … flag", "add entry point", "apply /usual-suspects review fixes".
 - _25 Jun 2026 (cloud)_ — initial draft (backend engine + API + lab sandbox).
@@ -34,6 +60,11 @@ on by default, reaches the TestFlight cohort); product UX deferred to Figma. Jun
 > (`/codebook-lab`) is live — now behind the default-on `experimental_codebook_lab`
 > flag (ships in plain `serve` + the desktop sidecar for cohort testing, not just
 > `--dev`), reached from a "Codebook lab" button in the Codebook tab. It writes nothing.
+>
+> _20 Sep 2026: that button no longer exists. `codebook.codebookLab` has zero call
+> sites in `frontend/`, `bristlenose/` or `desktop/` — it went with the v1 lens —
+> while all 21 locales still carry the string as an orphan key. `/codebook-lab` is
+> reachable only by typing the URL._
 
 ## The idea
 
@@ -137,6 +168,15 @@ the concept, reusable across projects.
 discipline: the version can never drift from the wording it labels, and a
 decision records the exact version it was made against.
 
+> **The prompt text now leaves the app (added 20 Sep 2026).** `TagPrompt` is read
+> by the MCP surface — `_tool_get_framework`, `bristlenose/server/mcp_server.py:726`
+> — so a bearer-scoped external agent can retrieve the cultivated
+> definition / apply_when / not_this for a tag. This postdates the privacy
+> discussion below and is worth reading alongside it. The **reasons** in
+> `TagPromptDecision` are *not* exposed by that path; only the prompt is. That
+> distinction is the one the methodology cares about, so the posture holds — but it
+> now holds by a narrower margin than when it was written.
+
 ### `TagPromptDecision` — each accept/reject, with its reason
 
 Project-scoped via `quote_id`.
@@ -206,9 +246,15 @@ the rest of the data API uses, resolved via `routes/data.py` helpers.
 
 ## Frontend — staged
 
-> **Not yet built (2026-06-27).** This is the *intended* design, not shipped code.
-> The only React surface that exists today is the lab entry point — a "Codebook lab"
-> button + "<project> tags" header on the Codebook tab (`CodebookPanel.tsx`). The
+> **Not yet built (re-confirmed 2026-09-20).** This is the *intended* design, not
+> shipped code — verified: zero frontend references to `/builder`, `apply_when`,
+> `not_this` or `TagPrompt`.
+>
+> The June note said "the only React surface that exists today is the lab entry
+> point — a 'Codebook lab' button + '&lt;project&gt; tags' header on the Codebook tab
+> (`CodebookPanel.tsx`)". **That is now less than it was:** `CodebookPanel.tsx` was
+> deleted in 0.29.0 and took the button with it. Only the header survives, at
+> `frontend/src/components/TagSidebar.tsx:330` and `CodebookV2Sidebar.tsx:234`. The
 > per-tag Build panel below is unbuilt; see "Lab graduation gates".
 
 Backend-first, exactly as AutoCode shipped. The React surface is a per-tag
@@ -227,7 +273,8 @@ Backend-first, exactly as AutoCode shipped. The React surface is a per-tag
    declaring the boundary trustworthy.
 
 Design rules carried from the codebook island: contextual confirmation (not
-centred modals), `data-testid` from day one, i18n keys in all 7 locales. The
+centred modals), `data-testid` from day one, i18n keys in every locale (21 full
+locales as of Sep 2026, not the 7 of June; `zh-Hant-HK` inherits). The
 reject-reason field deliberately costs a little effort — per the methodology, we
 don't want frictionless judgements.
 
@@ -270,6 +317,30 @@ real feature, roughly in order:
 - **Retire or polish the throwaway page** — it currently ships English-only
   inline CSS. Until it's on `theme/` + i18n (or replaced by the React UI), flip
   the flag default → `False` before any *public* (non-cohort) release.
+
+  > **This gate is breached, and it needs a decision rather than a doc edit
+  > (20 Sep 2026).** `experimental_codebook_lab: bool = True`
+  > (`bristlenose/config.py:222`), and the router mounts on a plain non-dev
+  > `serve` whenever the flag is on (`bristlenose/server/app.py:247`). 0.29.0 and
+  > 0.29.1 shipped to PyPI, Homebrew, Snap and Fedora Copr on 31 Aug 2026 — public,
+  > non-cohort channels — with the flag on and the page still English-only inline
+  > CSS (`build_codebook_lab_html`, `routes/dev.py`).
+  >
+  > **The gate cannot be quietly honoured, because a test asserts the breach.**
+  > `tests/test_codebook_builder.py:585-597` (`test_lab_mounts_without_dev`)
+  > asserts `/codebook-lab` returns 200 with `dev=False`, and its docstring gives
+  > the reason: the desktop sidecar and plain `serve` both run non-dev, so
+  > TestFlight needs exactly this. Flipping the default turns that test red by
+  > design. So the real question is not "was the flag forgotten?" but **"does
+  > 'public release' still mean what it meant in June, now that the same binary
+  > goes to both the cohort and PyPI?"** — the doc's framing predates there being
+  > any non-cohort channel at all.
+  >
+  > Scope, so the risk is not overstated: the page is served outside `/api` with
+  > no auth, but the API endpoints behind it are auth-scoped, and `serve` is a
+  > localhost server. The exposure is an unpolished English-only surface on a
+  > researcher's own machine, not a data path. Recorded, not changed — flipping a
+  > shipped flag is a product call.
 - **i18n glossary pass on the seed translations** — the non-en `codebookLab` /
   `projectTagsHeading` values are reasonable seeds (fr/cs aligned to the
   glossary's canonical "codebook" term; es kept as a defensible shortening) but

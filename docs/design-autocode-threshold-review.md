@@ -1,3 +1,35 @@
+---
+status: partial
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20 (835cde98)
+---
+
+> **Truing status:** Partial — **this shipped.** The design half (§UX design,
+> §Histogram, §Zones, §Backend) is an accurate as-built description of live code
+> and needs no reading-down. The *build-plan* half — §Component architecture,
+> §Always-visible entry point, §Implementation sequence, §Verification,
+> §Files to modify — is written in the future tense for finished work and names
+> two files that no longer exist. Those sections carry inline banners; read them
+> as a record of how it was built, not as work outstanding. Trued 2026-09-20.
+
+## Changelog
+
+- _2026-09-20_ — trued up: marked the doc shipped, which it had never said. A cold
+  reader hit §Context describing the modal as unbuilt and a **Goal:** for something
+  five months live, and would reasonably have triaged the whole doc as pending.
+  Banner-marked the build-plan sections; corrected `CodebookPanel.tsx` and
+  `AutoCodeToast.tsx` (both deleted) to the live call sites; corrected the
+  `AutoCodeReportModal` "deprecated, kept on disk" row, which understates it — the
+  component has no production caller at all but is still barrel-exported with 12
+  live tests; recorded that §"Always-visible entry point" shipped with *different*
+  gating than proposed; recorded the durable side-effect of Apply thresholds that
+  the doc never mentioned. Anchors: `frontend/src/islands/CodebookV2.tsx:68,837`,
+  `frontend/src/pages/CodebookV2Page.tsx:115-117,229-235`,
+  `bristlenose/server/routes/autocode.py:566-568,648-650`,
+  `frontend/src/components/index.ts:4`, commit "codebook v2 becomes the codebook
+  lens: v1 deleted, the icon back, and the i18n graduated".
+- _2026-04-30_ — initial draft.
+
 # AutoCode Threshold Review Dialog — Design Document
 
 ## Context
@@ -9,6 +41,13 @@ The Plato stress test (280 philosophical quotes tagged with a 26-tag scholarly c
 The current `AutoCodeReportModal` shows a flat triage table of all proposals above a hardcoded 0.5 confidence threshold. The researcher can accept all or deny individual rows. There's no way to see the confidence distribution, set thresholds, or distinguish strong matches from weak ones.
 
 **Goal:** Replace the flat triage table with a confidence-aware review dialog that lets the researcher set two thresholds (accept above / exclude below), see the distribution, and review proposals in three zones.
+
+> **Shipped — the two paragraphs above are the pre-build statement of the problem,
+> kept for context.** `ThresholdReviewModal` is live and is what the Review door
+> opens (`frontend/src/islands/CodebookV2.tsx:68,837`). `AutoCodeReportModal` is no
+> longer the current anything: nothing in production renders it. The decision to
+> keep this review a *modal* rather than fold it into the lens was ratified
+> separately — `docs/design-codebook-v2.md` Q15, closed by the user 30 Aug 2026.
 
 ## UX design
 
@@ -136,6 +175,14 @@ Moving sliders recomputes zone assignments client-side. No API calls until Apply
 
 Proposals between the thresholds remain pending (tentative).
 
+> **It also has a durable side-effect this section never mentioned.** Both bulk
+> calls persist the cutoff onto the job — `job.applied_upper_threshold`
+> (`bristlenose/server/routes/autocode.py:566-568`) and
+> `job.applied_lower_threshold` (`:648-650`), alongside `prompt_version`. Those
+> stored values feed the catch-up re-apply, so "Apply thresholds" is not a
+> one-shot triage action: it sets the boundary that later quotes are judged against
+> when the framework re-codes. See `docs/design-codebook-state-model.md` §8.
+
 ## API changes
 
 ### Backend: add `max_confidence` to BulkActionRequest
@@ -172,11 +219,14 @@ No new endpoints needed. The frontend fetches all proposals with `min_confidence
 
 ### Modified components
 
-| Component | Change |
-|-----------|--------|
-| `CodebookPanel.tsx` | Swap `AutoCodeReportModal` for `ThresholdReviewModal`. Keep proposed count badge as re-entry point |
-| `AutoCodeToast.tsx` | `onOpenReport` now opens `ThresholdReviewModal` |
-| `AutoCodeReportModal.tsx` | Deprecated — kept on disk, no longer imported |
+> **As-built, 20 Sep 2026 — two of these three files are gone.** The table below is
+> the plan as written; the right-hand column is where each change actually landed.
+
+| Component (as planned) | Change | Where it landed |
+|-----------|--------|---|
+| `CodebookPanel.tsx` | Swap `AutoCodeReportModal` for `ThresholdReviewModal`. Keep proposed count badge as re-entry point | **File deleted** in 0.29.0. The swap lives at `frontend/src/islands/CodebookV2.tsx:68,837`; re-entry is the Review door, not a count badge |
+| `AutoCodeToast.tsx` | `onOpenReport` now opens `ThresholdReviewModal` | **File deleted** ("autocode: delete the unmounted toast, port the coverage nothing else had"). Progress is the activity chip stack — `addJob("autocode:" + id)`, `CodebookV2.tsx:409` |
+| `AutoCodeReportModal.tsx` | Deprecated — kept on disk, no longer imported | Understated: it has **no production caller at all**, but is still exported from `frontend/src/components/index.ts:4` and carries 12 live tests. Before deleting it, check what those tests are the sole witness to — CLAUDE.md's orphaned-coverage rule |
 
 ### CSS
 
@@ -192,7 +242,8 @@ No new endpoints needed. The frontend fetches all proposals with `min_confidence
 - `.threshold-zone-list` — collapsible section with chevron toggle
 - `.threshold-confidence` — monospace confidence score in table rows
 
-Register in `_THEME_FILES` list in `render/theme_assets.py`.
+Register in `_THEME_FILES` list in `bristlenose/stages/s12_render/theme_assets.py`
+(done — `:75`). The §Files to modify table had this path right; this line did not.
 
 ## Re-entry flow
 
@@ -205,6 +256,19 @@ The dialog can be re-opened any time from the proposed count badge on the ✦ Au
 - If zero pending: disabled state, "All proposals reviewed"
 
 ### Always-visible entry point
+
+> **Shipped, with different gating than proposed (as-built 20 Sep 2026).** The
+> affordance is a **Review door** on the codebook tile, gated at
+> `frontend/src/pages/CodebookV2Page.tsx:115-117` on
+> `!readOnly && !b.floor && b.id !== "sentiment" && b.installed && tagCount > 0` —
+> note it keys on the codebook being *installed and non-empty*, not on
+> `proposedCount > 0` **nor** on `acStatus === "completed"`, so neither branch
+> proposed below is what decides it. The treatment is a `bn-btn-secondary` labelled
+> `codebook.reviewProposals` beside a reach sentence (`:229-235`), not a count badge
+> or a `✓ done` badge. `CodebookPanel.tsx:906` is a dead anchor — the file is gone —
+> and the CSS landed as `.pg-review-row` / `.pg-review-meta` in the v2 lens
+> stylesheet, not in `codebook-panel.css`. The section below is the original
+> proposal, kept because its *reasoning* about re-entry is why the door exists.
 
 The proposed count badge currently renders only when `proposedCount > 0` (`CodebookPanel.tsx:906`). This means once the researcher accepts/denies all proposals — or bulk-applies thresholds — the entry point vanishes. But revisiting threshold boundaries is natural: the researcher forms an idea from the histogram and the dense list, then spends time with the actual quotes, then wants to come back and adjust.
 
@@ -241,6 +305,11 @@ This requires the frontend to know whether autocode has been run for a framework
 3. **Should excluded proposals show rationale?** The LLM's rationale for a 0.10 confidence match is often "this quote has no philosophical content" — which is useful feedback that the system is working correctly. Keep the rationale tooltip on all rows regardless of zone.
 
 ## Implementation sequence
+
+> **Done — this section and the two after it (§Verification, §Files to modify) are
+> future-tense instructions for completed work.** Every "Create" row exists on disk.
+> Kept as the build record; not a to-do list. Two rows have moved since: the two
+> deleted files noted at §Component architecture, and the CSS path at §CSS.
 
 1. **Backend** (~30 lines): Add `max_confidence` to `BulkActionRequest`, update `deny_all_proposals` filter logic
 2. **Frontend types + API** (~15 lines): Update `denyAllProposals` helper signature

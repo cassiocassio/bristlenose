@@ -35,13 +35,13 @@ at §Scope as "premature; need more users first", are the nine that ship today.
 
 ## Current authoritative docs
 
-- [design-codebook-v2.md](design-codebook-v2.md) — the shipped lens: presentation,
+- [design-codebook-v2.md](../design-codebook-v2.md) — the shipped lens: presentation,
   layout, flow
-- [design-codebook-state-model.md](design-codebook-state-model.md) — the formal
+- [design-codebook-state-model.md](../design-codebook-state-model.md) — the formal
   state spec; install/enable/disable semantics and the catch-up delta
-- [design-autocode.md](design-autocode.md) — what Phase 5's "codebook context
+- [design-autocode.md](../design-autocode.md) — what Phase 5's "codebook context
   injection" actually became
-- [design-dynamic-codebook-builder.md](design-dynamic-codebook-builder.md) — what
+- [design-dynamic-codebook-builder.md](../design-dynamic-codebook-builder.md) — what
   Phases 6a/6b became: prompts learned from hand-coded quotes
 
 ## Retention note

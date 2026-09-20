@@ -1935,6 +1935,55 @@ class TestCheckPiiDiagnosesTheModelDirectory:
         (d / "config.cfg").write_text("[nlp]")  # meta.json missing
         return d
 
+    @staticmethod
+    def _corrupt_pack(tmp_path):
+        """Both liveness files present, neither of them a real model.
+
+        What an interrupted download leaves behind, and the premise of the
+        three tests below.
+        """
+        d = tmp_path / "en_core_web_lg-3.8.0"
+        d.mkdir()
+        (d / "meta.json").write_text("{}")
+        (d / "config.cfg").write_text("[nlp]")
+        return d
+
+    # spaCy's real answer to `_corrupt_pack`, measured on this repo's 3.12 venv
+    # (spaCy 3.8) on 20 Sep 2026:
+    #
+    #     spacy.load(<dir with an empty meta.json>)
+    #     ValueError: [E054] No valid 'lang' setting found in model meta.json.
+    #
+    # Pinned rather than provoked, because on Python 3.14 spaCy cannot load
+    # ANYTHING — its pydantic v1 dependency raises first — so `check_pii` never
+    # reaches the branch these tests are about and answers "spaCy not compatible
+    # (Python 3.14+)", which is correct there and fails an assertion written for
+    # 3.12. That is precisely how these two tests reddened the 3.14 matrix cell
+    # from 13 Sep. The subject here is doctor's CLASSIFICATION of a load
+    # failure, which is pure branching; spaCy's own behaviour is the premise,
+    # and a premise belongs in a fixture. Re-measure with the snippet above if
+    # spaCy's wording moves.
+    _E054 = "[E054] No valid 'lang' setting found in model meta.json."
+
+    @staticmethod
+    def _load_fails(monkeypatch, exc, python=(3, 12, 0)):
+        """Make the load failure and the interpreter version INPUTS.
+
+        `check_pii` does `import sys as _sys` inside the function body, so the
+        stdlib module object is what it reads at call time — patch there, not
+        on the doctor module. Same house rule as `patch("platform.system")`
+        elsewhere in this file.
+        """
+        import sys
+
+        import spacy
+
+        def _raise(*_args, **_kwargs):
+            raise exc
+
+        monkeypatch.setattr(spacy, "load", _raise)
+        monkeypatch.setattr(sys, "version_info", python)
+
     def test_an_incomplete_pack_names_the_variable(self, tmp_path, monkeypatch) -> None:
         from bristlenose.stages.s07_pii_removal import PII_MODEL_DIR_ENV
 
@@ -1980,25 +2029,43 @@ class TestCheckPiiDiagnosesTheModelDirectory:
         the likeliest real-world failure of an on-demand download, and every
         user hitting it on Python 3.12 was told to worry about 3.14.
         """
-        import sys
-
         from bristlenose.stages.s07_pii_removal import PII_MODEL_DIR_ENV
 
-        d = tmp_path / "en_core_web_lg-3.8.0"
-        d.mkdir()
-        (d / "meta.json").write_text("{}")  # passes liveness, not a real model
-        (d / "config.cfg").write_text("[nlp]")
+        d = self._corrupt_pack(tmp_path)
         monkeypatch.setenv(PII_MODEL_DIR_ENV, str(d))
+        self._load_fails(monkeypatch, ValueError(self._E054))
 
         result = check_pii(_settings(pii_enabled=True))
 
         assert result.status == CheckStatus.FAIL
-        if sys.version_info < (3, 14):
-            assert "3.14" not in result.detail, (
-                f"blamed the Python version on {sys.version_info[:2]}: {result.detail}"
-            )
+        assert "3.14" not in result.detail, (
+            f"blamed the Python version on 3.12: {result.detail}"
+        )
         assert str(d) in result.detail, "the path the user set is the useful part"
         assert result.fix_key == "pii_model_dir_invalid"
+
+    def test_on_314_the_incompatibility_is_what_it_says(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        """The other arm of the same branch, which nothing asserted.
+
+        The first version of the test above silenced its own claim on 3.14
+        with an `if sys.version_info < (3, 14)` guard, so the incompatibility
+        message — the thing a real 3.14 user sees — was proved by nothing. A
+        guard that skips an assertion is coverage given up quietly.
+        """
+        from bristlenose.stages.s07_pii_removal import PII_MODEL_DIR_ENV
+
+        monkeypatch.setenv(PII_MODEL_DIR_ENV, str(self._corrupt_pack(tmp_path)))
+        self._load_fails(monkeypatch, ValueError(self._E054), python=(3, 14, 0))
+
+        result = check_pii(_settings(pii_enabled=True))
+
+        assert result.status == CheckStatus.FAIL
+        assert "3.14" in result.detail
+        assert "[E054]" not in result.detail, (
+            "on 3.14 the pack is not the story — spaCy cannot load anything"
+        )
 
     def test_the_searchable_error_code_survives_but_not_the_whole_message(
         self, tmp_path, monkeypatch
@@ -2011,14 +2078,12 @@ class TestCheckPiiDiagnosesTheModelDirectory:
         """
         from bristlenose.stages.s07_pii_removal import PII_MODEL_DIR_ENV
 
-        d = tmp_path / "en_core_web_lg-3.8.0"
-        d.mkdir()
-        (d / "meta.json").write_text("{}")
-        (d / "config.cfg").write_text("[nlp]")
-        monkeypatch.setenv(PII_MODEL_DIR_ENV, str(d))
+        monkeypatch.setenv(PII_MODEL_DIR_ENV, str(self._corrupt_pack(tmp_path)))
+        self._load_fails(monkeypatch, ValueError(self._E054))
 
         detail = check_pii(_settings(pii_enabled=True)).detail
         assert "[E054]" in detail
         assert "meta.json" not in detail, (
             "the whole spaCy message was interpolated — only the code should be"
         )
+

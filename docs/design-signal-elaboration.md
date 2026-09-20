@@ -4,6 +4,14 @@ How Bristlenose generates interpretive names and one-sentence summaries for fram
 
 _Last updated: 20 Sep 2026_
 
+> **Prompt 0.3.0, and the cache can finally see it.** Step 4 was rewritten
+> (earned words) and Step 5's paragraph break is now actually rendered. Both
+> land on existing cards because `compute_content_hash` includes the prompt's
+> SHA as of 20 Sep 2026 — until then a prompt rewrite invalidated nothing and
+> would have reached none of the 54 cached elaborations. The top-ten cap is
+> also gone: every card is elaborated, guarded by a payload budget rather than
+> a count. See `docs/design-signal-card.md` §9.
+
 ---
 
 ## The problem

@@ -1119,7 +1119,23 @@ async def _elaborate_top_signals(
         logger.exception("Failed to load settings for elaboration")
         return
 
-    # Collect all framework signals (skip custom codebooks)
+    # Custom codebooks are skipped, and the reason is load-bearing rather than
+    # an oversight: **a custom tag is a name and nothing else.** The
+    # `tag_definitions` table carries `id`, `codebook_group_id` and `name` —
+    # there is no definition column, because a researcher types a tag rather
+    # than authoring one. Definitions come from the framework YAML, and
+    # `get_template("custom")` finds no file.
+    #
+    # Step 2 of the prompt requires one: "interpret it through its tag's
+    # definition... You must reference the tag definition, not just the quote
+    # text." With no definition there is nothing to interpret against, so
+    # lifting the skip would not produce findings for custom codebooks — it
+    # would produce confident sentences with nothing behind them, which is the
+    # defect already on the board.
+    #
+    # Giving custom codebooks a real elaboration therefore needs tags to carry
+    # definitions first. That is a codebook-authoring change, not an analysis
+    # one. Recorded in docs/design-signal-card.md §7.
     all_framework: list[tuple[TagSignal, str]] = []
     for cb in codebooks:
         if cb.codebook_id == "custom":

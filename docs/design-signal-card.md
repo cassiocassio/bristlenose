@@ -2,9 +2,20 @@
 
 _Last updated: 20 Sep 2026_
 
-**Status: DECIDED IN MOCKUP, NOT IMPLEMENTED.** Every choice below was made
-against real data rendered in the shipped design system. No product code has
-moved. The mockups are `docs/mockups/signal-card-options.html` (the options),
+**Status: BUILT 20 Sep 2026.** Tiers 1, 2 and 3 of §9 are implemented and
+committed (`451a43ca`, `9e9af6fd`, `96323e58`, `08b4bb93`, plus two review
+passes `30d54e20` and `59116fb6`). Frontend 1769 tests passing, Python 4668,
+ruff and locales clean.
+
+**What is NOT verified: how it looks.** The preview tools do not work for this
+stack, so every claim here is tests-green rather than eyes-on. The fused seam,
+the float wrap, the headline skeleton and the dissent mark want a human pass —
+`bristlenose serve --dev`. Two of the five defects found in review were
+invisible to every test and one of them was reported by the user from a
+screenshot.
+
+Every choice below was made against real data rendered in the shipped design
+system. The mockups are `docs/mockups/signal-card-options.html` (the options),
 `signal-card-v2.html` (the first pass, superseded), `signal-card-design-a.html`
 (the chosen shape) and `sentiment-calibration.html` (the labelling study). The
 harness is `experiments/signal_card_options/`.
@@ -23,12 +34,11 @@ score. This doc owns the card.
 |---|---|---|---|
 | **1** | 23 Feb 2026 | the original card and its elaboration — `signal-card-expanded.html`, `signal-elaboration.html` | superseded by 2 |
 | **2** | 26 Jul – 31 Aug 2026 | `mockup-signal-cards.html`; then the lead-paragraph atom, which moved the elaboration's two ranks from weight to colour (`a2ee11ad`) | superseded by 3 |
-| **3** | **12–13 Sep 2026** | the overhaul: one navigation and one card list in one order (`aacf3e88`), the hero chip as a disclosure control (`54fdc615`), de-duplication, sections and themes interleaving unlabelled. Drawn in `signal-card-playground.html` and `signals-sidebar-row-layouts.html` | ⬅ **SHIPS TODAY** |
-| **4** | **19–20 Sep 2026** | design A — whole cards fused into a stack, the location owned by the heading, four quotes open, the sentiment label rule, editorial quote selection. Drawn in `signal-card-design-a.html` | ⬅ **CURRENT DESIGN, NOT BUILT** |
+| **3** | 12–13 Sep 2026 | the overhaul: one navigation and one card list in one order (`aacf3e88`), the hero chip as a disclosure control (`54fdc615`), de-duplication, sections and themes interleaving unlabelled. Drawn in `signal-card-playground.html` and `signals-sidebar-row-layouts.html` | superseded by 4 |
+| **4** | **19–20 Sep 2026** | design A — whole cards fused into a stack, the location owned by the heading, four quotes open, the sentiment label rule, editorial quote selection. Drawn in `signal-card-design-a.html` | ⬅ **SHIPS NOW** |
 
-**So: what you see in the app is generation 3. What this document specifies is
-generation 4. Nothing in §2 has been implemented** — verified against HEAD on
-20 Sep 2026.
+**Generation 4 is what the app now draws.** Generation 3 shipped for seven
+days, 13–20 Sep 2026.
 
 ### Generation 4's own lineage
 
@@ -284,35 +294,46 @@ something quiet and sharp. Tracked as a Value/Could item.
 
 ---
 
-## 7. Defects found, not yet fixed
+## 7. Defects found
 
-1. **The elaboration gutter.** `.signal-card-top` is a flex row and the
+**Six of the eight below are fixed** (`451a43ca`, `08b4bb93`, `59116fb6`), and
+they are kept rather than deleted because the interesting part is not the fix
+but that **nothing was red for any of them**. Two of the eight were found only
+by a human looking at a screenshot.
+
+Two remain open, and both say why.
+
+1. ✓ FIXED — **The elaboration gutter.** `.signal-card-top` is a flex row and the
    elaboration sits in `.signal-card-identity`, its left child — so it *cannot*
    reach the space under the hero. Unreachable by construction. Decision 5 fixes
    it, and needs the hero emitted first for the float to catch the text, which
    puts the chip before the title in reading order.
-2. **The claim/evidence break has never been rendered.** The prompt says
+2. ✓ FIXED — **The claim/evidence break had never been rendered.** The prompt says
    *"`||` marks a paragraph break, not a syntactic pause"* and *"the card
    renders this beneath the claim, in a tint, after a blank line"*. `renderLead`
    emits `<strong>{lead}</strong> {rest}` — a single space. The decision was
    made, written into the prompt, and never implemented; cached elaborations
    still carry em dashes from an earlier prompt, some with `||` *and* a dash.
-3. **Elaboration is gated by a project-wide top-10.**
+3. ✓ FIXED — **Elaboration was gated by a project-wide top-10.**
    `_elaborate_top_signals` pools every non-custom codebook's signals, sorts by
    composite and takes `DEFAULT_TOP_N = 10`. So the cut slices through locations
    arbitrarily, and **every card from a custom codebook is skipped
    unconditionally, at any score**. It is one batched call cached on a content
    hash — project-ikea's 29 cards carry 4,791 characters of evidence — so the
    cap is not buying anything on a realistic study.
-4. **Fields on the wire, rendered nowhere.** `signal.pattern` (deliberately —
+4. ✓ PARTLY — **Fields on the wire, rendered nowhere.** `signal.pattern` (deliberately —
    the chip was withdrawn 13 Sep; MEASURED 45 tension / 24 success / 16 gap /
-   7 recovery across 92 elaborations), plus `signal.confidence`,
-   `signal.count` and `quote.segmentIndex`, none of which have a stated reason.
-5. **`classify_flag` is computed for every sentiment signal, reaches the API
+   7 recovery across 92 elaborations), `signal.confidence`,
+   `signal.count` and `quote.segmentIndex` are **removed** — only test fixtures
+   referenced them. `signal.pattern` stays on the wire deliberately: the chip
+   was withdrawn, not the classification, so nothing regenerates when a better
+   treatment lands. It now also drives which quotes a codebook card counts as
+   supporting its finding (§6), so it is read rather than merely carried.
+5. ✓ FIXED — **`classify_flag` was computed for every sentiment signal, reached the API
    (`analysis.py:95`, `:389`) and is rendered nowhere.** Its documented value
    `Pattern` is **unreachable** — an exhaustive sweep returns only
    `Win / Problem / Niggle / Success / Surprising`.
-6. **The floated hero costs reading order, and it is not fixed.** The float
+6. ⚠ OPEN — **The floated hero costs reading order.** The float
    requires the chip to be emitted before the headline — a float only affects
    what follows it — so a screen reader announces *"Frustration 0.42, button"*
    before the finding's name. **`order` does not fix this**: it reorders the
@@ -323,7 +344,22 @@ something quiet and sharp. Tracked as a Value/Could item.
    claiming it was solved — the first draft of this change carried exactly
    that comment in two places.
 
-7. **`.signal-rank`** in `theme/organisms/analysis.css` has zero consumers
+7. ⚠ OPEN — **A custom codebook's cards can never carry a finding — and the cause is
+   not the skip.** `_elaborate_top_signals` passes over `codebook_id ==
+   "custom"`, which reads like an oversight and is not: **a custom tag is a
+   name and nothing else.** `tag_definitions` carries `id`,
+   `codebook_group_id` and `name`, with no definition column, because a
+   researcher types a tag rather than authoring one. Definitions live in the
+   framework YAML and `get_template("custom")` finds no file.
+
+   Step 2 requires one — *"You must reference the tag definition, not just the
+   quote text"* — so lifting the skip would not give custom codebooks findings;
+   it would give them confident sentences with nothing behind them, which is
+   the defect already tracked on the board. **Fixing it properly means tags
+   carrying definitions**, which is a codebook-authoring change rather than an
+   analysis one.
+
+8. ✓ FIXED — **`.signal-rank`** in `theme/organisms/analysis.css` has zero consumers
    anywhere in the tree.
 
 ---
@@ -437,10 +473,13 @@ that produced no finding has no row in it.
 
 ## 9. Build plan
 
-Verified against HEAD on 20 Sep 2026: **none of §2 is implemented.**
-`visibleQuotes = signal.quotes.slice(0, 1)`, `.signal-card-source` renders on
-both branches, `.signal-cards` is still `repeat(auto-fill, …)`,
-`renderLead` still emits a single space, `DEFAULT_TOP_N` is still 10.
+**BUILT 20 Sep 2026.** Kept as the record of what was decided and in what
+order, and because the two review passes are where the interesting failures
+are. What each tier actually cost is at the end.
+
+Tiers 1–3 are done. What remains is §8.1 (deferred, needs real study data),
+the escape hatch and the clarity signal (both on the board), and §7.7 —
+custom codebooks, which needs tags to carry definitions.
 
 ### Tier 1 — no open questions, frontend only
 
@@ -448,13 +487,13 @@ Seven changes, no data model, no LLM, no new endpoint. They can land together.
 
 | | change | where |
 |---|---|---|
-| A | chip to `--bn-text-label`, tighter padding, `--bn-space-sm` gap | `analysis.css` |
-| B | drop the eyebrow on both branches; heading takes `--bn-text-heading`, no rule; **move the Quotes-lens deep link from the card to the heading** | `AnalysisPage.tsx`, `analysis.css` |
-| C | fused stack — `:first-child`/`:last-child` radius, `border-top: none` on the rest, drop the grid, drop the hover shadow for a background tint | `analysis.css` |
-| D | `visibleQuotes` cap 1 → 4; toggle label follows | `AnalysisPage.tsx` |
-| E | float the hero; emit `.signal-card-right` **before** `.signal-card-identity` | `AnalysisPage.tsx`, `analysis.css` |
-| F | `renderLead` emits two paragraphs; **strip a leading em dash** from the remainder — the cached corpus predates the rule and some entries carry `\|\|` *and* a dash | `leadSentence.tsx`, `lead-paragraph.css` |
-| G | delete `.signal-rank`; drop `confidence`, `count`, `segmentIndex` from the adapters | `analysis.css`, `AnalysisPage.tsx` |
+| A ✓ | chip to `--bn-text-label`, tighter padding, `--bn-space-sm` gap | `analysis.css` |
+| B ✓ | drop the eyebrow on both branches; heading takes `--bn-text-heading`, no rule; **move the Quotes-lens deep link from the card to the heading** | `AnalysisPage.tsx`, `analysis.css` |
+| C ✓ | fused stack — `:first-child`/`:last-child` radius, `border-top: none` on the rest, drop the grid, drop the hover shadow for a background tint | `analysis.css` |
+| D ✓ | `visibleQuotes` cap 1 → 4; toggle label follows | `AnalysisPage.tsx` |
+| E ✓ | float the hero; emit `.signal-card-right` **before** `.signal-card-identity` | `AnalysisPage.tsx`, `analysis.css` |
+| F ✓ | `renderLead` emits two paragraphs; **strip a leading em dash** from the remainder — the cached corpus predates the rule and some entries carry `\|\|` *and* a dash | `leadSentence.tsx`, `lead-paragraph.css` |
+| G ✓ | delete `.signal-rank`; drop `confidence`, `count`, `segmentIndex` from the adapters | `analysis.css`, `AnalysisPage.tsx` |
 
 **B and E both touch reading order.** E puts the chip before the headline for a
 screen reader; the fix is `order` on a flex parent or an ARIA reorder, decided
@@ -464,10 +503,10 @@ at build time rather than discovered.
 
 | | change | note |
 |---|---|---|
-| H | admission rule: keep `dedupeSignals`' novel-quote test, add pairwise Jaccard clustering, **fold rather than delete** | spike §7. **DECIDED: 0.6**, not its 0.8 — see below |
-| I | editorial quote selection, then sort `(pid, time)` | §6. **DECIDED: a codebook card supports its `pattern`.** See below |
-| J | sentiment chip label + vocabulary | `label_rule.py` is written and validated; port it server-side so the label is on the wire. **Three new i18n keys** — see below |
-| K | flag as a chip prefix — **one chip, not two** | degrades cleanly; see below |
+| H ✓ | admission rule: keep `dedupeSignals`' novel-quote test, add pairwise Jaccard clustering, **fold rather than delete** | spike §7. **DECIDED: 0.6**, not its 0.8 — see below |
+| I ✓ | editorial quote selection, then sort `(pid, time)` | §6. **DECIDED: a codebook card supports its `pattern`.** See below |
+| J ✓ | sentiment chip label + vocabulary | `label_rule.py` is written and validated; port it server-side so the label is on the wire. **Three new i18n keys** — see below |
+| K ✓ | flag as a chip prefix — **one chip, not two** | degrades cleanly; see below |
 
 **Item I — a codebook card's quotes support its `pattern`.** Decided 20 Sep
 2026. `pattern` (success / gap / tension / recovery) is already generated per
@@ -538,9 +577,9 @@ about deleting a UI surface orphaning a wire contract.
 | | change | blocked on |
 |---|---|---|
 | L | `MIN_WEIGHT` | **DEFERRED 20 Sep 2026** — waiting on a study in the right volume regime, not more fixtures. §8.1 has the trigger and the risk |
-| M | elaborate every card, not ten | needs the escape hatch: the prompt able to return *no finding* |
-| N | Step 4 earned-words rewrite | **needs M's cache fix first** |
-| O | score visible, or dev-only instrument | §8.4 |
+| M ✓ | elaborate every card, not ten | needs the escape hatch: the prompt able to return *no finding* |
+| N ✓ | Step 4 earned-words rewrite | **needs M's cache fix first** |
+| O ✓ | score visible, or dev-only instrument | §8.4 |
 
 **N has a hard prerequisite that is easy to miss.** `compute_content_hash`
 hashes quote texts and tag names **and nothing else** — not the prompt version.
@@ -562,3 +601,62 @@ escape hatch design  →  M
 ```
 
 Tier 1 is the whole visual change and depends on nothing.
+
+---
+
+## 10. What it cost, and what nearly shipped
+
+Built 20 Sep 2026 in six commits. The numbers are small; the interesting part
+is the failure modes, because **not one of the five review findings was red.**
+
+| | |
+|---|---|
+| commits | 6 (4 build, 2 review) |
+| frontend tests | 1751 → **1769** |
+| Python tests | 4643 → **4668** |
+| new test files | 3 (`quoteSelection`, `sentiment_label`, `elaboration_budget`) |
+| locale keys added | 4 × 21 locales |
+
+### Five defects, none of them red
+
+**The chip never got smaller.** Decision A was applied by *prepending*
+`font-size`, `padding` and `gap` to a rule that already declared all three
+further down. Later declarations win, so the change did nothing and the chip
+stayed at the exact size the decision existed to reduce. A sweep of the file
+for duplicate declarations is now part of reviewing a CSS change.
+
+**Two comments claimed an accessibility fix that was never written.** Both the
+CSS and the JSX said `order` restored the reading order the float had cost.
+There are zero `order` declarations, and `order` would not have helped — it
+moves the visual rendering only, which is the classic trap. This is the
+"comment that argues against its own code" gotcha, written into new work twice
+in one change.
+
+**The participant grid was white on white.** `--card-accent` comes from
+`getGroupBg()`, and `--bn-group-*` is oklch 97% lightness — a tint to sit
+*behind* things. It was also the text colour for a participant who contributed
+a quote: 97%-lightness type on a white card, contrast near 1:1. **Reported by
+the user from a screenshot.** No test could see it and none was added that
+could; the check that would have is a contrast assertion, which this codebase
+does not have.
+
+**The fold rule mutated its inputs.** It attached a folded reading by pushing
+onto the winner. That works the first time and keeps working — `useMemo` is a
+hint, not a guarantee, and React 18 invokes it twice in StrictMode — so a
+second pass over the same objects appends every alternate again.
+
+**And the label rule was verified against a fixture that invented its own
+data.** `sentiment_label` agreed with the validated experiment on all 87 real
+cards while being unable to read a single one through the path the lens uses:
+`SignalQuote` has no `sentiment` field, and on the codebook path the framework's
+TAGS are the seven values. The harvest had added a `sentiment` key of its own.
+**Only the API test caught it**, because its wire contract asserts the field
+set with `==` and so noticed two additions as well as the failure.
+
+### The one durable lesson
+
+Four of the five were found by *reading the change back*, not by running it.
+The fifth was found by a human looking at the screen. A green suite said
+nothing useful at any point in this build: it was green before the chip change
+did nothing, green while two comments described a fix that did not exist, and
+green with unreadable text on every card.

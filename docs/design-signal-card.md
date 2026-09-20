@@ -156,6 +156,22 @@ Two further tests were named and are **not implemented**:
 
 ## 5. The sentiment chip label
 
+**The goal, before the mechanism: the chip must never say `Sentiment`.**
+
+Today it does, on every sentiment card in the lens. `Sentiment` is the
+*framework's* name, and naming the framework tells a researcher nothing — they
+know they are reading sentiment. What they need is *which* sentiment, or, when
+no single one is honest, which direction. So the chip resolves to one of:
+
+```
+Frustration · Confusion · Doubt · Surprise · Satisfaction · Delight · Confidence
+Positive · Negative
+Mixed sentiments
+```
+
+and to nothing else. **`Sentiment` is not in that set and cannot be produced.**
+
+The rule below decides which of the ten, from the quotes on the card.
 Formalised in `experiments/signal_card_options/label_rule.py`, fitted to 27
 human judgements on real cards (`sentiment-calibration.html`).
 
@@ -356,12 +372,16 @@ spending more on it: user tags and user tag groups are free text and can be
 whatever the researcher types. A rule that holds only for the shipped
 frameworks is a house style, not an invariant.
 
-*One real defect in the same area, which IS worth fixing at build time:* the
+*One real defect in the same area, and note what the fix actually is.* The
 `enums` translation in `SignalHero` is gated on `isSentiment` —
-`isFromSentimentLens`, the fallback path — so **the card that actually renders
-never reaches it** and falls through to the raw `columnLabel`, showing the
-untranslated string `Sentiment`. The capitalisation machinery exists; the
-rendered card cannot get to it. Folded into tier 2 item J.
+`isFromSentimentLens`, the fallback path — so the card that actually renders
+never reaches it and falls through to the raw `columnLabel`, which is the
+string `Sentiment`. **The fix is not to ungate the translation.** Item J
+replaces the label outright, so `Sentiment` stops being something the chip can
+say at all (§5's opening). The translation still matters afterwards, but only
+for the value case — `frustration` → `Frustration` — because `Positive`,
+`Negative` and `Mixed sentiments` are not members of the `enums` map and need
+their own keys.
 
 *Known inaccuracy in the mockups:* every card drawn on 19–20 Sep renders the raw
 lowercase value in the chip, because the build script bypasses i18n. The chip
@@ -401,8 +421,17 @@ at build time rather than discovered.
 |---|---|---|
 | H | admission rule: keep `dedupeSignals`' novel-quote test, add pairwise Jaccard clustering, **fold rather than delete** | spike §7. Threshold ~0.6, not its 0.8 — see §4 |
 | I | editorial quote selection, then sort `(pid, time)` | §6. **Gap: the rule selects quotes supporting the *sentiment* label, and a codebook card has none.** Needs an equivalent — support the `pattern`, or fall back to intensity |
-| J | sentiment chip label + vocabulary | `label_rule.py` is written and validated; port it server-side so the label is on the wire |
+| J | sentiment chip label + vocabulary | `label_rule.py` is written and validated; port it server-side so the label is on the wire. **Three new i18n keys** — see below |
 | K | flag as a chip prefix — **one chip, not two** | degrades cleanly; see below |
+
+**J needs three new locale keys, and nothing will tell you if you forget.**
+The seven sentiment values already have entries in `enums.json`. `Positive`,
+`Negative` and `Mixed sentiments` do not — they are strings this design
+invents. They need keys in **all 21 full locales** (`zh-Hant-HK` inherits, per
+CLAUDE.md), and `scripts/check-locales.py` **cannot catch the omission**: it
+flattens `en/<ns>.json` and diffs each locale against it, so a key English does
+not carry is invisible by construction. The gate is the diff at the point the
+strings land; after that nothing asks again.
 
 **K is a prefix inside the existing chip, not a second chip.** G1 stacked a
 separate chip under the hero and was rejected 20 Sep 2026: *"two chips is too

@@ -15,6 +15,50 @@ score. This doc owns the card.
 
 ---
 
+## 0. Which version is which
+
+**The card has had four generations. Two of them ship; two do not.**
+
+| Gen | When | What it was | State |
+|---|---|---|---|
+| **1** | 23 Feb 2026 | the original card and its elaboration — `signal-card-expanded.html`, `signal-elaboration.html` | superseded by 2 |
+| **2** | 26 Jul – 31 Aug 2026 | `mockup-signal-cards.html`; then the lead-paragraph atom, which moved the elaboration's two ranks from weight to colour (`a2ee11ad`) | superseded by 3 |
+| **3** | **12–13 Sep 2026** | the overhaul: one navigation and one card list in one order (`aacf3e88`), the hero chip as a disclosure control (`54fdc615`), de-duplication, sections and themes interleaving unlabelled. Drawn in `signal-card-playground.html` and `signals-sidebar-row-layouts.html` | ⬅ **SHIPS TODAY** |
+| **4** | **19–20 Sep 2026** | design A — whole cards fused into a stack, the location owned by the heading, four quotes open, the sentiment label rule, editorial quote selection. Drawn in `signal-card-design-a.html` | ⬅ **CURRENT DESIGN, NOT BUILT** |
+
+**So: what you see in the app is generation 3. What this document specifies is
+generation 4. Nothing in §2 has been implemented** — verified against HEAD on
+20 Sep 2026.
+
+### Generation 4's own lineage
+
+The four mockups of 19–20 Sep are a sequence, not alternatives. Opening the
+wrong one is the easy mistake:
+
+```
+signal-card-options.html      19 Sep   the menu — 29 labelled alternatives     SUPERSEDED
+        ↓  nine decisions taken from it
+signal-card-v2.html           19 Sep   first pass; built a hybrid that was     SUPERSEDED
+                                       neither a fused stack nor a merged card
+        ↓  the hybrid rejected, design A chosen
+signal-card-design-a.html     20 Sep   the shape                               ⬅ CURRENT
+        ↓  read alongside, not instead
+signal-card-rules.html        20 Sep   each rule firing, with counterfactuals  ⬅ THE REVIEW ARTEFACT
+signal-card-build-stages.html 20 Sep   shipped → tier 1 → tier 2
+sentiment-calibration.html    19 Sep   the instrument behind the label rule
+```
+
+**One side branch, not superseded:** `signal-card-valence.html` (13 Sep) holds
+eleven candidate treatments for showing a signal's valence. Generation 4
+deferred it rather than rejecting it — `signal.pattern` still arrives on the
+wire, so nothing has to be regenerated when it is picked up.
+
+**What is being built now:** §9 tier 1 — the seven frontend changes that carry
+no open questions. Everything else waits on the dependencies in §9's order
+block.
+
+---
+
 ## 1. What a card is
 
 One React component renders every card in the analysis lens: `SignalCard` in
@@ -259,9 +303,26 @@ something quiet and sharp. Tracked as a Value/Could item.
 
 ## 8. Open questions
 
-1. **Does a genuinely split, high-volume card say `Mixed sentiments`?** §5a.
-   Three real cards bear on it and the rule currently names a feeling on all
-   three.
+1. **Does a genuinely split, high-volume card say `Mixed sentiments`?**
+   **DEFERRED 20 Sep 2026 — waiting on more real study data.** §5a has the
+   measurement: the corpus holds exactly **three** cards that are both
+   high-volume and genuinely split (weights 130, 40 and 30 at 55/45, 56/44 and
+   60/40), all of them fossda's, and the rule names a feeling on all three.
+   Three cases cannot settle it either way.
+
+   *What answers it:* the same method that produced the first 27 judgements —
+   cards with the chip blanked, judged by eye — run on a study in the **right
+   volume regime**. `build_calibrate.py` does this; point it at the new corpus.
+
+   *The trigger:* the next real multi-participant study of any size. Not more
+   fixtures — §5a is the record of what calibrating on those produced.
+
+   *What happens meanwhile:* `MIN_WEIGHT` stays a **GUESS** in
+   `label_rule.py`, and on real data it is never binding — so the shipped
+   behaviour is "name the leading feeling", and `Mixed sentiments` effectively
+   does not appear. **That is the risk of deferring:** a guess that never fires
+   looks like a settled decision, and nobody has cause to revisit it. The
+   provenance marker in the source is what stops that, so leave it there.
 2. **Elaborate before or after the filter?** The filter tests quote sets, not
    prose, so it can run first — but "write titles for everything" then means 93
    titles, not 119.
@@ -380,7 +441,7 @@ about deleting a UI surface orphaning a wire contract.
 
 | | change | blocked on |
 |---|---|---|
-| L | `MIN_WEIGHT` | re-calibrate on fossda's 17 sentiment cards — the 27 judgements were made in the fixture regime (§5a) |
+| L | `MIN_WEIGHT` | **DEFERRED 20 Sep 2026** — waiting on a study in the right volume regime, not more fixtures. §8.1 has the trigger and the risk |
 | M | elaborate every card, not ten | needs the escape hatch: the prompt able to return *no finding* |
 | N | Step 4 earned-words rewrite | **needs M's cache fix first** |
 | O | score visible, or dev-only instrument | §8.4 |

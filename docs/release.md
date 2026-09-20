@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-08-14
-trued-against: the publish-hold release rebuild (pypi environment hold live, strict-macos wired, bump-version no longer tags)
+last-trued: 2026-09-20
+trued-against: the pypi hold REMOVED (check-release-ready.sh's inverted `publish hold` row); release.sh's eight verbs; the evening rule as WORKING DAY
 ---
 
 # Release Process
@@ -23,6 +23,15 @@ trued-against: the publish-hold release rebuild (pypi environment hold live, str
 
 ## Changelog
 
+- _2026-09-20_ — trued against the executable chain. §Two mandatory gates:
+  "Post-**APPROVAL** PyPI verification" retitled and rewritten — it still told
+  a reader that a run was "parked at the hold by design" and that the fix was
+  the Approve button, four weeks after the hold was removed; the old text is
+  preserved inline as history. §Evening timing lost a contradictory second
+  weekend clause that dropped bank holidays. Front-matter still said *"pypi
+  environment hold live"*, contradicting the banner directly beneath it.
+  Verified against `check-release-ready.sh:528-586` (the `publish gate` and
+  inverted `publish hold` rows) and `release.sh:1530-1540` (eight verbs).
 - _2026-08-14_ — trued up: rewrote §Post-push verification (the poll now starts
   at the **approval**, not the tag push — the old timeout remedy was tag surgery
   on a merely-unapproved release); redrew the §What-happens-after diagram (hold
@@ -48,7 +57,7 @@ at the end.
 The version lives in **one place only**: `bristlenose/__init__.py`.
 
 ```python
-__version__ = "0.4.0"
+__version__ = "0.29.1"   # illustrative — read the file for the live value
 ```
 
 `pyproject.toml` uses `dynamic = ["version"]` with `[tool.hatch.version] path = "bristlenose/__init__.py"`, so hatchling reads it from there. Do **not** add a `version` key to `[project]`.
@@ -126,18 +135,28 @@ its CI is still running, deleting it (`git push --delete origin vX.Y.Z && git ta
 - **Evening timing (working days):** the act that *lands* the release is the
   **tag push** — that is what waits for **21:00 London** on working days (avoids
   version churn during client hours). Weekends and **UK bank holidays: any
-  time**; check the official feed rather than deriving the date. Pushing `main` publishes nothing and can
-  happen any time; it buys CI signal, which is the point of doing it early.
-  Weekends: any time. This used to say "publish approval"; the approval is gone
-  and the wait moved to the tag.
-- **Post-APPROVAL PyPI verification (mandatory):** an approved publish job is
-  **not** a release reaching PyPI — the pipeline has silently stalled before
-  (v0.15.5→.9, ~6 days, unnoticed). The clock starts at the **approval**, not
-  the tag push: until you approve, the run is *parked at the hold by design*,
-  and a poll started at tag-push time will "time out" on a release that is
-  merely unapproved. **Do not reach for tag surgery on an unapproved run** —
-  check the run page first; if `publish` shows "waiting for review", the fix
-  is the Approve button, not the tag. After approving, verify:
+  time**; check the official feed rather than deriving the date — a bank
+  holiday is a Monday to `date +%u` and not a working day to anyone else.
+  Pushing `main` publishes nothing and can happen any time; it buys CI signal,
+  which is the point of doing it early. This used to say "publish approval";
+  the approval is gone and the wait moved to the tag.
+- **Post-tag PyPI verification (mandatory):** a green publish job is **not** a
+  release reaching PyPI — the pipeline has silently stalled before (v0.15.5→.9,
+  ~6 days, unnoticed). **The clock starts at the tag push**, because nothing
+  parks any more: `publish` runs as soon as `build` and `ci` are green. Budget
+  ~25 minutes (recent releases: 23–26 min); 0.23.0 took ~2 hours across three
+  attempts, so budget generously when the release touches the test suite.
+
+  > _Until 23 Aug 2026 this bullet was titled "Post-**APPROVAL**" and said the
+  > clock started at the approval — that until you approved, the run was
+  > "parked at the hold by design", so a poll started at tag-push time would
+  > time out on a release that was merely unapproved, and the fix was the
+  > Approve button rather than the tag. **There is no Approve button.** The
+  > advice is kept here because its shape still holds: diagnose the run before
+  > reaching for tag surgery. Only the diagnosis moved — what you are now
+  > looking for is a workflow that never fired, not one waiting on a human._
+
+  Verify:
 
   ```sh
   curl -s -o /dev/null -w '%{http_code}\n' https://pypi.org/pypi/bristlenose/X.Y.Z/json

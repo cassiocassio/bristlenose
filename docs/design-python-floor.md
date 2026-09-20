@@ -1,7 +1,21 @@
+---
+status: pending
+last-trued: 2026-09-20
+trued-against: pyproject.toml requires-python ">=3.10" (unchanged, as decided); .tool-versions python 3.12
+---
+
 # The Python 3.10 floor — evidence and decision
 
 *Grounded 3 September 2026. Read-only pass: nothing bumped, no `pyproject.toml`
 edit, no PR touched.*
+
+> **Still pending, confirmed 20 Sep 2026.** The decision below is live and the
+> tree matches it: `pyproject.toml:10` is `requires-python = ">=3.10"`, held on
+> purpose, and `.tool-versions` is `python 3.12`. **The action date has not
+> arrived** — 3.10 reaches EOL 31 Oct 2026 and the floor moves on **1 Nov**, six
+> weeks out. Nothing here has rotted; do not read this as a historical record.
+> The predicate is a calendar date fixed by python.org, so this hold cannot rot
+> — but it can be *missed*.
 
 Companion artifact (same content, with the constraint diagrams):
 <https://claude.ai/code/artifact/10ea51c6-dc84-4134-94fb-ae70d84eca39>

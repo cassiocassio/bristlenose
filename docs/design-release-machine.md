@@ -1,7 +1,7 @@
 ---
 status: current
-last-trued: 2026-09-03
-trued-against: release.sh's seven verbs incl. run/retry/recover; the RELEASE_STEPS_FILE credential seam; the pypi hold removed 23 Aug
+last-trued: 2026-09-20
+trued-against: release.sh's eight verbs incl. board/run/retry/recover; the RELEASE_STEPS_FILE credential seam; the pypi hold removed 23 Aug
 ---
 
 # The release machine — architecture
@@ -975,8 +975,11 @@ that it does not. Now: skip on an ad-hoc build, **fail on a real identity**.
 
 ## 19 · Tier B, read-only — shipped 23 Aug 2026
 
-`scripts/release.sh` — **seven verbs**: `plan` · `run` · `retry` · `recover` ·
-`status` · `verify` · `abandon`.
+`scripts/release.sh` — **eight verbs**: `plan` · `run` · `retry` · `recover` ·
+`status` · `verify` · `abandon` · `board`. Read them from the dispatch table at
+`scripts/release.sh:1530-1540` rather than from this sentence — a count in prose
+is a count nothing recomputes, which is how this line said *seven* for a
+fortnight after `board` shipped on 5 Sep 2026.
 
 > **Corrected 3 Sep 2026.** This paragraph said *"**No `run`,** and that is the
 > decision rather than an omission"*, and that `run` refuses and points at

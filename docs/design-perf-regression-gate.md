@@ -1,6 +1,32 @@
+---
+status: current
+last-trued: 2026-09-20
+trued-against: perf.yml (post-merge on main, hard); e2e/tests/perf-gate.spec.ts; check-bundle-budget.py via ci.yml's `npm run size`
+---
+
 # Design: CI Performance Regression Gate
 
-**Status (17 Apr 2026):** Shipped as a dedicated `perf-gate` job in `.github/workflows/ci.yml`. All thresholds below are live and blocking. See [`design-performance-monitoring.md`](design-performance-monitoring.md) for the wider context.
+**Status (20 Sep 2026):** Shipped and live. The gate is
+[`e2e/tests/perf-gate.spec.ts`](../e2e/tests/perf-gate.spec.ts), run by
+**`.github/workflows/perf.yml`** — **post-merge on `main` only, and hard**
+(no `continue-on-error`). All thresholds below are live. See
+[`design-performance-monitoring.md`](design-performance-monitoring.md) for the
+wider context.
+
+> **It is deliberately NOT a pre-merge gate, and that is a reversal of this
+> doc's original design.** Until 4 Sep 2026 it was a `perf-gate` job inside
+> `ci.yml` running on every push, exactly as §Goal and §CI-integration below
+> still describe. Runner noise and transient network failures were producing
+> false positives that *silently stalled release-pipeline workflows*, so
+> `628a3705` moved it post-merge: the regression signal is kept, and PRs and
+> releases are no longer gated on it. `ci.yml:512` carries the forwarding
+> comment; the rationale is at `perf.yml:3-8`.
+>
+> The consequence a cold reader needs: **your PR is not checked for perf
+> regressions.** A regression lands on `main` and is caught on the next
+> post-merge run — which is why a sustained red here is now watched by
+> `check-release-ready.sh`'s `advisory workflows` row (`WF_ADVISORY` in
+> `project.conf:91`), and why `docs/release-premortem.md` incident 12 exists.
 
 ## Problem
 
@@ -8,7 +34,7 @@ We ship PRs without knowing whether they made the app slower or bigger. Bundle s
 
 ## Goal
 
-A CI job that runs on every PR, fails on regressions, passes in under 60 seconds. Uses the existing smoke-test fixture (1 session, 4 quotes). No LLM calls, no video, no large datasets.
+A CI job that runs on every PR, fails on regressions, passes in under 60 seconds. _(As-built: post-merge on `main`, not per-PR — see the status note above.)_ Uses the existing smoke-test fixture (1 session, 4 quotes). No LLM calls, no video, no large datasets.
 
 ## Measured baselines (smoke-test fixture, Apr 2026)
 
@@ -99,7 +125,20 @@ The perf-gate runs inside the existing E2E suite — no separate job, no orchest
 
 ### CI integration
 
-A dedicated `perf-gate` job in `.github/workflows/ci.yml` runs perf-gate against the smoke fixture on every push. Chromium-only, `needs: [test, frontend-lint-type-test]`. The job sets `BN_RUN_PERF_GATE=1` and `_BRISTLENOSE_AUTH_TOKEN=test-token` (smoke fixture has no real data, so the token isn't a secret).
+A dedicated `perf-gate` job in **`.github/workflows/perf.yml`** runs perf-gate
+against the smoke fixture **on push to `main` only** (`perf.yml:9-11`) —
+post-merge, not pre-merge. Chromium-only
+(`npx playwright test tests/perf-gate.spec.ts --project=chromium`,
+`perf.yml:81`), `timeout-minutes: 25` to fail fast rather than sit on the 6h
+job ceiling. The job sets `BN_RUN_PERF_GATE=1` and
+`_BRISTLENOSE_AUTH_TOKEN=test-token` (smoke fixture has no real data, so the
+token isn't a secret).
+
+> _Superseded 4 Sep 2026._ This paragraph read: *"A dedicated `perf-gate` job in
+> `.github/workflows/ci.yml` runs perf-gate against the smoke fixture on every
+> push. Chromium-only, `needs: [test, frontend-lint-type-test]`."* That was true
+> until `628a3705`. The `needs:` chain went with the move — nothing gates on it
+> and it gates nothing.
 
 By default `npx playwright test` skips perf-gate — `testIgnore` in `e2e/playwright.config.ts` filters it out unless `BN_RUN_PERF_GATE=1`. That keeps the regular `e2e` job's coverage scoped to smoke specs.
 
@@ -169,16 +208,29 @@ Thresholds use a doubling rule: fail at 2x baseline, warn at 1.5x. Calibrated fr
 
 ### Export size measurement
 
-The shell script calls the export endpoint to produce the HTML file, then measures it:
+The spec fetches the export endpoint in-process and measures the body
+(`e2e/tests/perf-gate.spec.ts:190-226`):
 
-```bash
-curl -s -H "Authorization: Bearer $AUTH_TOKEN" \
-  "http://127.0.0.1:${PORT}/api/projects/1/export" \
-  -o /tmp/bristlenose-export.html
-EXPORT_SIZE=$(wc -c < /tmp/bristlenose-export.html)
+```ts
+const res = await fetch(`${url}/api/projects/1/export`, { headers: authHeaders() });
+expect(ok, `export returned ${status} — auth token missing?`).toBe(true);
+// …then: warn > EXPORT_SIZE_WARN (2.5 MB), fail > EXPORT_SIZE_FAIL (3.2 MB)
 ```
 
-This tests the real serve-mode export path (the same code that runs when a user clicks "Download HTML"). The Playwright spec asserts on the size after the shell script captures it, or the shell script itself exits non-zero if the threshold is exceeded.
+This tests the real serve-mode export path (the same code that runs when a user
+clicks "Download HTML").
+
+Two details of the assertion are load-bearing, and both are the house
+silent-failure defence rather than decoration: it asserts `res.ok` **inside**
+the fetch, because a dropped auth token otherwise returns a ~50-byte error body
+in 1 ms and registers as excellent latency at an excellent size; and it carries
+an implausibly-small **floor** as well as a ceiling, so a broken export cannot
+pass the gate by being empty.
+
+> _Superseded._ This section described a `curl` + `wc -c` shell script capturing
+> the file to `/tmp` for the spec to assert on afterwards. No such script was
+> ever written — the measurement is in the spec, and there is nothing for a
+> shell script to exit non-zero about.
 
 ### Auth handling
 
@@ -195,9 +247,17 @@ Those are covered by the stress test and FOSSDA plans.
 
 ## Verification
 
-1. `./scripts/perf-gate.sh` exits 0 on current main
+1. `cd e2e && BN_RUN_PERF_GATE=1 _BRISTLENOSE_AUTH_TOKEN=test-token npx playwright test tests/perf-gate.spec.ts --project=chromium`
+   exits 0 on current `main`
 2. Intentionally inflate DOM (add 10,000 divs in a test branch) → gate fails
-3. CI job passes on a clean PR
+3. The `Perf` workflow is green on `main` after the merge
+
+> _Corrected 20 Sep 2026._ Step 1 read **`./scripts/perf-gate.sh` exits 0 on
+> current main**. That script has never existed in this repo — the gate ships as
+> a Playwright spec. Step 3 read *"CI job passes on a clean PR"*, which it
+> cannot: the gate does not run pre-merge. A cold reader verifying this design
+> would have run a missing script and then waited for a PR check that never
+> appears.
 
 ## Decisions
 

@@ -28,7 +28,7 @@ invisible.
 | **9** | **0.27.0 build 3 — `skip-worktree` entitlements invisible** | Both entitlements files marked `S`; `git status` and the preflight both reported a clean tree | ✅ The `skip-worktree` row compares content hashes rather than asking `git diff`, which goes through the same index-trusting mechanism |
 | **10** | **0.27.0 #1 — three failed builds read as successes** | Five background runs reported exit 0; three had printed `✗ Build failed` | ✅ `run` redirects, never pipes, and reads `$?` directly. Pinned by an assertion that the eval line carries no pipe |
 | **11** | **0.27.0 #6 — "I approved it" vs `pending_deployments`** | Ticking the environment is not pressing **Approve and deploy** | ✅ Moot: the approval is gone. The gate is `publish → build → ci(strict)`, asserted by parsing both workflows |
-| **12** | **0.27.0 #7 — perf red for four runs, nobody knew** | Non-blocking by design, so nothing surfaced it | ✗ **Not caught.** No row watches non-blocking workflow conclusions. The fix is a `gh run list --workflow=perf.yml` row; it is not built |
+| **12** | **0.27.0 #7 — perf red for four runs, nobody knew** | Non-blocking by design, so nothing surfaced it | ✅ The `advisory workflows` block reads `WF_ADVISORY` (`perf.yml codeql.yml`) and goes **bad** at `ADVISORY_STREAK_MAX=3` consecutive reds on `main` — one failure is noise, three is a signal. `check-release-ready.sh:839-874`, constants in `project.conf:91-92` |
 | **13** | **0.27.0 #9 — a self-imposed `timeout` killed a working upload** | Interrupted at ~1%; `upload-dmg.sh`'s staging design absorbed it | ✅ Now better than survivable: a signal kills the step **and its descendants**, the step is left `running`, and the next `run` reports it stranded rather than re-running it |
 | **14** | **0.27.0 #2 — `rsync --progress` read as frozen** | Carriage returns made `tail` show the start of one enormous line | ✅ Fixed at source (`--progress` is TTY-gated) **and** in the driver (the failure tail goes through `tr '\r' '\n'`) |
 | **15** | **0.23.0 — ~2 hours across three attempts** | Test-suite changes, repeated failures | ⚠️ Resume makes attempt N+1 cheap — completed steps skip. The underlying flakiness is untouched |
@@ -44,24 +44,38 @@ invisible.
 
 ## Score
 
-**16 caught mechanically · 4 surfaced but not stopped · 1 still invisible.**
+**17 caught mechanically · 4 surfaced but not stopped · 0 still invisible.**
 
 _Updated 23 Aug 2026: incidents 3 and 12 were the two invisible ones. Both are
 now closed — 12 by the advisory-streak row, 3 by `release.sh recover`. What
 remains at ✗ is nothing; the four ⚠️ are genuine partials, not deferrals._
 
-The two that are genuinely invisible are worth naming rather than rounding up:
+> **Trued 20 Sep 2026.** The tally above read *"16 · 4 · 1 still invisible"* —
+> contradicting, in the adjacent paragraph, its own note that nothing remains
+> at ✗. That patch was made on 23 Aug and reached the Score block alone; the
+> hit-list row, this section's heading, and §What-this-exercise-changed each
+> kept the pre-23-Aug verdict for four weeks. **The stale claim lived in four
+> places and the correction reached one.** Both are now named below as closed.
 
-### ✗ 12 — a non-blocking workflow that has been red for weeks
+The two that *were* invisible are worth naming rather than rounding up, because
+what closed them is the reusable part:
+
+### ✅ 12 — a non-blocking workflow that has been red for weeks
 
 `perf.yml` is deliberately non-blocking (post-merge only, so runner noise cannot
 stall a release). That is the right call and it means **nothing surfaces a
 sustained red**. It went unnoticed for four consecutive runs, including on the
 abandoned 0.26.0 tag.
 
-The gap is one preflight row: `gh run list --workflow=perf.yml --limit 5` and
-warn on a run of failures. It is not built, and it should be — the shape
-generalises to any advisory check the project adds later.
+The gap was one preflight row: `gh run list --workflow=perf.yml --limit 5` and
+warn on a run of failures. **It is built** — `check-release-ready.sh:839-874`,
+iterating `WF_ADVISORY` from `project.conf:91` so the shape generalises to any
+advisory check the project adds later, exactly as this paragraph predicted.
+`codeql.yml` is already the second member.
+
+The threshold is the design, and the script says so: *"One failure is noise.
+Three in a row is a signal — a row that fires on every flake gets ignored,
+which is how the advisory workflow became invisible in the first place."*
 
 ### ✅ 3 — closed, and the third case is the one that gets forgotten
 
@@ -123,6 +137,19 @@ it can be inspected.
 Nothing in the code — every mitigation above was already built. What it produced
 is the honest denominator: **two of twenty-one incidents would still happen
 tonight, and one of them (12) is a row someone could add in an hour.**
+
+> **20 Sep 2026 — 12 is closed, and the denominator moves to one of
+> twenty-one.** The row took about an hour, as predicted. Recording the delta
+> rather than re-pointing the sentence above, per this doc's own convention for
+> incident 22: the "two of twenty-one" reasoning is dated to 23 Aug and stays
+> legible as of that date.
+>
+> The more useful finding is about *this file*. The sentence below asked the
+> next release log entry to "either move 12 to ✅ or say why it stayed". The
+> Score block was duly updated on 23 Aug — and the hit-list row, the section
+> heading and this paragraph were not, so for four weeks the document answered
+> its own question in one place and contradicted the answer in three others. A
+> scorecard with more than one scoreboard keeps the stale one.
 
 The pre-mortem's own risk is that it becomes a scorecard. It is dated, and the
 next release log entry should either move 12 to ✅ or say why it stayed.

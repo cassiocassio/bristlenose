@@ -307,7 +307,9 @@ bandwidth-shaped interface to it.
   public `docs/` so contributors can see the calibration accrue. Risk:
   a future entry accreting strategic context (pinning *strategy*, vendor
   reasoning) that shouldn't be public. This is mechanically mitigated —
-  the repo's `leak-scan.sh` PreToolUse hook blocks Writes to public docs
+  the machine-local `leak-scan.sh` PreToolUse hook (it lives under the
+  maintainer's Claude config, not in this repo — a fresh clone has no such
+  guard) blocks Writes to public docs
   containing private patterns — so the guard is automatic, not vigilance.
   It stays pure engineering history (versions, pins, outcomes); if that
   ever stops being true, the hook fires before it lands.

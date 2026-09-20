@@ -464,6 +464,17 @@ class TestDecisions:
 
 
 class TestCodebookLab:
+    @pytest.fixture(autouse=True)
+    def _enable_lab(self, monkeypatch):
+        """The lab is default-OFF since 20 Sep 2026, so these tests opt in.
+
+        Without this the whole class 404s: the mount is gated on
+        `experimental_codebook_lab` alone and `dev=True` does not bring it back.
+        The two tests that assert the *default* override this fixture by clearing
+        the variable themselves — see `test_lab_absent_by_default`.
+        """
+        monkeypatch.setenv("BRISTLENOSE_EXPERIMENTAL_CODEBOOK_LAB", "1")
+
     def _dev_client(self) -> TestClient:
         app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
         return AuthTestClient(app)
@@ -581,11 +592,47 @@ class TestCodebookLab:
         assert "zzz-sentinel-sentiment" not in by_name
         assert "zzz-sentinel-framework" not in by_name
 
-    def test_lab_mounts_without_dev(self) -> None:
-        """The lab ships in production serve (dev=False), gated on the flag.
+    def test_lab_absent_by_default(self, monkeypatch) -> None:
+        """The gate itself: no flag, no lab — on a plain production `serve`.
 
-        The desktop sidecar and plain `serve` run non-dev; the flag defaults on,
-        so the page + API must be reachable without --dev (the TestFlight path).
+        This is the assertion that was inverted on 20 Sep 2026. It used to say the
+        lab mounts by default, which is what let an English-only inline-CSS page
+        reach PyPI, Homebrew, Snap and Copr in 0.29.0 and 0.29.1 — precisely what
+        the graduation gate in docs/design-dynamic-codebook-builder.md forbade.
+
+        Clears the class fixture's opt-in so the *default* is what is measured.
+        """
+        from fastapi.testclient import TestClient as RawClient
+
+        monkeypatch.delenv("BRISTLENOSE_EXPERIMENTAL_CODEBOOK_LAB", raising=False)
+        app = create_app(project_dir=_FIXTURE_DIR, dev=False, db_url="sqlite://")
+        assert RawClient(app).get("/codebook-lab").status_code == 404
+        assert AuthTestClient(app).get("/api/dev/codebook-lab/tags").status_code == 404
+
+    def test_lab_absent_by_default_even_in_dev(self, monkeypatch) -> None:
+        """--dev does not bring the lab back; the gate is the flag alone.
+
+        Worth pinning separately: the obvious assumption is that an experiment
+        surface is dev-gated, and this one never was (`routes/dev.py` says so).
+        A future change that quietly re-gates on `dev` would reopen the breach
+        for anyone running `serve --dev`, and nothing else would notice.
+        """
+        from fastapi.testclient import TestClient as RawClient
+
+        monkeypatch.delenv("BRISTLENOSE_EXPERIMENTAL_CODEBOOK_LAB", raising=False)
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        assert RawClient(app).get("/codebook-lab").status_code == 404
+
+    def test_lab_mounts_without_dev_when_enabled(self) -> None:
+        """Opted in, the lab still reaches a non-dev serve — the sidecar path.
+
+        Kept deliberately when the default flipped. This is the contract the old
+        `test_lab_mounts_without_dev` existed to pin: the mount is gated on the
+        flag and NOT on --dev, so the desktop sidecar and plain `serve` can both
+        serve it. Only the default changed; losing this assertion with it would
+        have orphaned the wire contract (CLAUDE.md, "Deleting a UI surface can
+        orphan the test that was pinning a WIRE CONTRACT"). The class fixture
+        supplies the opt-in.
         """
         from fastapi.testclient import TestClient as RawClient
 
@@ -596,8 +643,8 @@ class TestCodebookLab:
         # API endpoints ride codebook_lab_router — mounted in non-dev too.
         assert AuthTestClient(app).get("/api/dev/codebook-lab/tags").status_code == 200
 
-    def test_lab_disabled_by_flag(self, monkeypatch) -> None:
-        """Escape hatch: BRISTLENOSE_EXPERIMENTAL_CODEBOOK_LAB=0 removes it entirely."""
+    def test_lab_disabled_by_explicit_zero(self, monkeypatch) -> None:
+        """An explicit =0 still removes it, overriding any ambient opt-in."""
         from fastapi.testclient import TestClient as RawClient
 
         monkeypatch.setenv("BRISTLENOSE_EXPERIMENTAL_CODEBOOK_LAB", "0")

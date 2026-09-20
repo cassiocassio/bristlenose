@@ -8,9 +8,9 @@ trued-against: HEAD@main on 2026-09-20 (835cde98)
 > verbatim-current; the production Build-panel React UI is **still not built**. Two
 > things changed under this doc since the June pass and neither is in the body
 > below: **the lab's entry point is gone** (the "Codebook lab" button went with the
-> v1 lens, so `/codebook-lab` is now reachable only by typing the URL), and **a
-> graduation gate has been breached** — see §"Lab graduation gates", which now
-> carries the detail and an open question for a human.
+> v1 lens, so `/codebook-lab` is now reachable only by typing the URL), and **the
+> lab is now off by default** — the graduation gate was found breached on public
+> channels and was honoured the same day. See §"Lab graduation gates".
 >
 > _The previous front-matter read `trued-against:
 > HEAD@claude/dynamic-codebook-builder-67r2fa` — a branch that no longer exists, so
@@ -19,6 +19,14 @@ trued-against: HEAD@main on 2026-09-20 (835cde98)
 
 ## Changelog
 
+- _2026-09-20_ — **flipped `experimental_codebook_lab` to default-`False`**,
+  honouring the graduation gate this doc had carried unmet through two public
+  releases. The env var inverted (`=1` now opts in); `--dev` does not re-enable it.
+  The old `test_lab_mounts_without_dev` kept its contract under a new name rather
+  than being deleted with the default, and two new tests pin the gate, both proved
+  red against the pre-flip value. Anchors: `bristlenose/config.py`,
+  `bristlenose/server/app.py`, `bristlenose/server/routes/dev.py`,
+  `tests/test_codebook_builder.py`.
 - _2026-09-20_ — trued up: re-pointed front-matter at `main` (the cited branch is
   deleted); recorded that `codebook.codebookLab` now has **zero call sites** while
   21 locale files still carry the string, so the lab entry point described
@@ -33,14 +41,14 @@ trued-against: HEAD@main on 2026-09-20 (835cde98)
   `bristlenose/server/app.py:247`, `tests/test_codebook_builder.py:585-597`,
   commit "codebook v2 becomes the codebook lens: v1 deleted, the icon back, and
   the i18n graduated".
-
 - _2026-06-27_ — trued up: verified data-model / engine / API / testing sections current against the branch code; marked "Frontend — staged" as not-yet-built (only the lab button + project-tags header shipped); confirmed the lab is now flag-gated (`experimental_codebook_lab`, default-on) with a Codebook-tab entry point. Anchors: `frontend/src/islands/CodebookPanel.tsx:976`, `bristlenose/server/routes/dev.py` `codebook_lab_tags`, commits "ship behind … flag", "add entry point", "apply /usual-suspects review fixes".
 - _25 Jun 2026 (cloud)_ — initial draft (backend engine + API + lab sandbox).
 
 # Dynamic codebook builder — cultivating a tag into a code
 
-_Design note. Backend foundation + an ugly experiment sandbox shipped (flag-gated,
-on by default, reaches the TestFlight cohort); product UX deferred to Figma. June 2026._
+_Design note. Backend foundation + an ugly experiment sandbox shipped (flag-gated;
+default-on for the TestFlight cohort, **default-off since 20 Sep 2026** — see
+§"Lab graduation gates"); product UX deferred to Figma. June 2026._
 
 > **Direction (revised after the product conversation).** The near-term surface
 > is deliberately small and **manual**: surface a tag's `definition` /
@@ -57,11 +65,12 @@ on by default, reaches the TestFlight cohort); product UX deferred to Figma. Jun
 > ratchet* (`docs/methodology/tag-rejections-are-great.md`), kept out of the
 > near-term surface. The richer `TagPrompt`/`TagPromptDecision` persistence and
 > `/builder` endpoints exist as a staged layer; only the experiment sandbox
-> (`/codebook-lab`) is live — now behind the default-on `experimental_codebook_lab`
-> flag (ships in plain `serve` + the desktop sidecar for cohort testing, not just
-> `--dev`), reached from a "Codebook lab" button in the Codebook tab. It writes nothing.
+> (`/codebook-lab`) is live — behind the `experimental_codebook_lab` flag (gated on
+> the flag alone, not on `--dev`), reached from a "Codebook lab" button in the
+> Codebook tab. It writes nothing.
 >
-> _20 Sep 2026: that button no longer exists. `codebook.codebookLab` has zero call
+> _20 Sep 2026: the flag is now **default-off** (`=1` opts in), and that button no
+> longer exists. `codebook.codebookLab` has zero call
 > sites in `frontend/`, `bristlenose/` or `desktop/` — it went with the v1 lens —
 > while all 21 locales still carry the string as an orphan key. `/codebook-lab` is
 > reachable only by typing the URL._
@@ -308,8 +317,10 @@ existing-DB-without-the-tables upgrade path in `tests/test_migrations.py`.
 
 ## Lab graduation gates
 
-`/codebook-lab` ships to the cohort as a *flagged experiment*
-(`experimental_codebook_lab`, default-on). To graduate it from experiment to a
+`/codebook-lab` is a *flagged experiment* (`experimental_codebook_lab`), **off by
+default since 20 Sep 2026** — opt in with `BRISTLENOSE_EXPERIMENTAL_CODEBOOK_LAB=1`,
+including in `--dev`. It was default-on for the TestFlight cohort until the second
+gate below was found unmet on public channels. To graduate it from experiment to a
 real feature, roughly in order:
 
 - **Build the production Build-panel React UI** (see "Frontend — staged" above)
@@ -318,29 +329,38 @@ real feature, roughly in order:
   inline CSS. Until it's on `theme/` + i18n (or replaced by the React UI), flip
   the flag default → `False` before any *public* (non-cohort) release.
 
-  > **This gate is breached, and it needs a decision rather than a doc edit
-  > (20 Sep 2026).** `experimental_codebook_lab: bool = True`
-  > (`bristlenose/config.py:222`), and the router mounts on a plain non-dev
-  > `serve` whenever the flag is on (`bristlenose/server/app.py:247`). 0.29.0 and
-  > 0.29.1 shipped to PyPI, Homebrew, Snap and Fedora Copr on 31 Aug 2026 — public,
-  > non-cohort channels — with the flag on and the page still English-only inline
-  > CSS (`build_codebook_lab_html`, `routes/dev.py`).
+  > **✅ DONE — 20 Sep 2026. `experimental_codebook_lab` is now default-`False`**
+  > (`bristlenose/config.py`). Opt in with
+  > `BRISTLENOSE_EXPERIMENTAL_CODEBOOK_LAB=1`; **note the switch inverted** — the
+  > env var used to turn the lab off and now turns it on.
   >
-  > **The gate cannot be quietly honoured, because a test asserts the breach.**
-  > `tests/test_codebook_builder.py:585-597` (`test_lab_mounts_without_dev`)
-  > asserts `/codebook-lab` returns 200 with `dev=False`, and its docstring gives
-  > the reason: the desktop sidecar and plain `serve` both run non-dev, so
-  > TestFlight needs exactly this. Flipping the default turns that test red by
-  > design. So the real question is not "was the flag forgotten?" but **"does
-  > 'public release' still mean what it meant in June, now that the same binary
-  > goes to both the cohort and PyPI?"** — the doc's framing predates there being
-  > any non-cohort channel at all.
+  > _Why it needed doing:_ the flag had been default-on through 0.29.0 and 0.29.1,
+  > which shipped to PyPI, Homebrew, Snap and Fedora Copr on 31 Aug 2026 — public,
+  > non-cohort channels — with the page still English-only inline CSS. That is
+  > exactly what this gate existed to prevent, and nothing caught it for three
+  > weeks.
   >
-  > Scope, so the risk is not overstated: the page is served outside `/api` with
-  > no auth, but the API endpoints behind it are auth-scoped, and `serve` is a
-  > localhost server. The exposure is an unpolished English-only surface on a
-  > researcher's own machine, not a data path. Recorded, not changed — flipping a
-  > shipped flag is a product call.
+  > _What it cost to honour:_ a test asserted the old behaviour by design.
+  > `test_lab_mounts_without_dev` pinned "200 on `dev=False`" because the desktop
+  > sidecar runs non-dev and the TestFlight cohort needed the lab there. **That
+  > contract was kept, not deleted** — it survives as
+  > `test_lab_mounts_without_dev_when_enabled`, which asserts the same non-dev
+  > mount with the flag opted in. Losing it with the default would have orphaned
+  > the wire contract it was the only witness to. Two new tests pin the gate
+  > itself: `test_lab_absent_by_default` and
+  > `test_lab_absent_by_default_even_in_dev`. Both were proved to bite — reverting
+  > the flag to `True` turns them red with `assert 200 == 404`.
+  >
+  > _Consequence to know about:_ gating is on the flag alone and **not** on
+  > `--dev`, which was the original design (`routes/dev.py` says so). So
+  > `serve --dev` no longer serves the lab either; a developer who wants it sets
+  > the env var. Flipping back to default-on is the *last* step of graduation,
+  > after the page is on `theme/` + i18n or the React Build panel replaces it.
+  >
+  > Scope, so the past risk is not overstated: the page was unauthenticated but
+  > its API endpoints are auth-scoped and `serve` is a localhost server. The
+  > exposure was an unpolished English-only surface on the researcher's own
+  > machine, not a data path.
 - **i18n glossary pass on the seed translations** — the non-en `codebookLab` /
   `projectTagsHeading` values are reasonable seeds (fr/cs aligned to the
   glossary's canonical "codebook" term; es kept as a defensible shortening) but

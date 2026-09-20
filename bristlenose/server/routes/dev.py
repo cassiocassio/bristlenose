@@ -515,8 +515,10 @@ def dev_telemetry_delete() -> dict[str, object]:
 #
 # Mounted on its OWN router (same /api/dev prefix as the dev router, so the
 # page's fetch URLs and the tests don't churn) and gated in app.py on the
-# `experimental_codebook_lab` flag — NOT on --dev — so it ships in the bundled
-# desktop sidecar and plain `serve` for cohort testing.
+# `experimental_codebook_lab` flag — NOT on --dev. That flag went default-OFF on
+# 20 Sep 2026 (graduation gate: English-only inline CSS was reaching public
+# channels), so this router is absent unless
+# BRISTLENOSE_EXPERIMENTAL_CODEBOOK_LAB=1 — in `--dev` too.
 codebook_lab_router = APIRouter(prefix="/api/dev")
 
 

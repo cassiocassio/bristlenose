@@ -233,9 +233,12 @@ def create_app(
     app.include_router(pipeline_router)
 
     # Codebook lab — the dynamic-codebook-builder experiment. Gated on a feature
-    # flag (default ON) rather than --dev, so it ships in the bundled desktop
-    # sidecar and plain `serve` for cohort testing; disable with
-    # BRISTLENOSE_EXPERIMENTAL_CODEBOOK_LAB=0. The page is served outside /api so
+    # flag (default OFF since 20 Sep 2026) rather than --dev; enable with
+    # BRISTLENOSE_EXPERIMENTAL_CODEBOOK_LAB=1. Default-off honours the graduation
+    # gate in docs/design-dynamic-codebook-builder.md — the page is English-only
+    # inline CSS and had been reaching public channels. Because the gate is the
+    # flag alone, --dev does not bring it back: set the env var. The page is
+    # served outside /api so
     # a plain browser nav isn't blocked by the bearer-token middleware; it embeds
     # the token for its own fetches. The lab endpoints ride codebook_lab_router
     # (same /api/dev prefix), so only those dev-prefixed paths exist in prod.

@@ -214,12 +214,22 @@ class BristlenoseSettings(BaseSettings):
     # None = no preference; user picks in the report UI.
     codebook: str | None = None
 
-    # Codebook lab — the dynamic-codebook-builder experiment surface. On by
-    # default so it ships in the desktop sidecar + plain `serve` for cohort
-    # testing; set BRISTLENOSE_EXPERIMENTAL_CODEBOOK_LAB=0 to disable (escape
-    # hatch to turn off post-TestFlight if it causes trouble). Stays an
-    # "experiment" until validated with real data by real researchers.
-    experimental_codebook_lab: bool = True
+    # Codebook lab — the dynamic-codebook-builder experiment surface. OFF by
+    # default since 20 Sep 2026, honouring the graduation gate in
+    # docs/design-dynamic-codebook-builder.md: the page ships English-only inline
+    # CSS, which was tolerable for a TestFlight cohort and is not for a public
+    # release. It had been default-on through 0.29.0 and 0.29.1 on PyPI,
+    # Homebrew, Snap and Copr, which is the breach the gate existed to prevent.
+    #
+    # Opt in with BRISTLENOSE_EXPERIMENTAL_CODEBOOK_LAB=1. Note the switch has
+    # inverted: the env var used to turn this OFF and now turns it ON. Gating is
+    # still on the flag alone and NOT on --dev, so a developer wanting the lab
+    # sets the env var too.
+    #
+    # Flip back to True only when the page is on theme/ + i18n, or the production
+    # Build-panel React UI replaces it. Stays an "experiment" until validated
+    # with real data by real researchers.
+    experimental_codebook_lab: bool = False
 
     # Chat lens lab — the cited-question-box experiment (docs/design-chat-lens.md
     # §6). Same shipping shape as the codebook lab: on by default, escape hatch

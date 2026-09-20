@@ -281,7 +281,7 @@ Edit,編輯,zh-Hant,Apple HIG
 Add,加入,zh-Hant,Apple HIG
 Remove,移除,zh-Hant,Apple HIG
 Quit,結束,zh-Hant,Apple HIG
-Codebook,代碼簿,zh-Hant,QDA convention
+Codebook,編碼簿,zh-Hant,Was 代碼簿 — corrected 20 Sep 2026 to match the 29 live strings that already ship 編碼簿. 代碼簿 occurs zero times in the zh-Hant tree. The glossary was the outlier not the product. The Library row below already says 編碼簿庫 so the two rows contradicted each other.
 Quotes,引述,zh-Hant,QDA term — countable
 Sessions,工作階段,zh-Hant,QDA term
 Signals,訊號,zh-Hant,QDA term
@@ -324,7 +324,7 @@ Hide,Скрыть,ru,Apple HIG
 Accept,Принять,ru,Apple HIG
 Apply,Применить,ru,Apple HIG
 Reset,Сбросить,ru,Apple HIG
-Codebook,Книга кодов,ru,QDA convention; alt Кодировочная схема
+Codebook,Кодировочная книга,ru,Was Книга кодов — corrected 20 Sep 2026 to match the 21 live strings that already ship Кодировочная книга. Книга кодов occurs zero times in the ru tree. The glossary was the outlier not the product.
 Quotes,Цитаты,ru,QDA term — countable: цитата
 Sessions,Сессии,ru,QDA term
 Signals,Сигналы,ru,product term
@@ -345,7 +345,7 @@ Hide,Сховати,uk,Apple HIG; alt Приховати
 Accept,Прийняти,uk,Apple HIG
 Apply,Застосувати,uk,Apple HIG
 Reset,Скинути,uk,Apple HIG
-Codebook,Книга кодів,uk,QDA convention; alt Схема кодування
+Codebook,Кодова книга,uk,Was Книга кодів — corrected 20 Sep 2026 to match the 23 live strings that already ship Кодова книга. Книга кодів occurs zero times in the uk tree. The glossary was the outlier not the product.
 Quotes,Цитати,uk,QDA term — countable: цитата
 Sessions,Сесії,uk,QDA term
 Signals,Сигнали,uk,product term

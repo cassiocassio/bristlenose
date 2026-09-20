@@ -155,7 +155,7 @@ The load-bearing terms. Blank = no glossary row yet (anchor these to prevent dri
 
 | Term | cs | de | es | fr | it | ja | ko | pt-BR | pt-PT | zh-Hant |
 |------|----|----|----|----|----|----|----|-------|-------|---------|
-| Codebook | Kniha kódů | Codebuch | Libro de códigos | Grille de codage | Libro dei codici | コードブック | 코드북 | Livro de códigos | Livro de códigos | 代碼簿 |
+| Codebook | Kniha kódů | Codebuch | Libro de códigos | Grille de codage | Libro dei codici | コードブック | 코드북 | Livro de códigos | Livro de códigos | 編碼簿 |
 | Codes | Kódy | Kodes | Códigos | Codes | Codici | コード | 코드 | Códigos | Códigos | 代碼 |
 | Quotes | Citáty | Zitate | Citas | Verbatim | Citazioni | 発言 | 인용문 | Citações | Citações | 引述 |
 | Sessions | Sezení | Interviews | Sesiones | Entretiens | Sessioni | セッション | 세션 | Sessões | Sessões | 工作階段 |

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from bristlenose.analysis.metrics import (
+from bristlenose.signals.metrics import (
     FLAG_INTENSITY,
     FLAG_MIN_SIGNAL,
     FLAG_SMALL_SIGNAL,
@@ -174,7 +174,7 @@ class TestSignalFlagField:
     """Signal dataclass has the flag field with correct default."""
 
     def test_default_is_none(self) -> None:
-        from bristlenose.analysis.models import Signal
+        from bristlenose.signals.models import Signal
 
         s = Signal(
             location="Dashboard",
@@ -191,7 +191,7 @@ class TestSignalFlagField:
         assert s.flag is None
 
     def test_flag_can_be_set(self) -> None:
-        from bristlenose.analysis.models import Signal
+        from bristlenose.signals.models import Signal
 
         s = Signal(
             location="Dashboard",
@@ -222,7 +222,7 @@ class TestTheFlagOnThePathThatRenders:
 
     @staticmethod
     def _signal(**over):
-        from bristlenose.analysis.models import Signal, SignalQuote
+        from bristlenose.signals.models import Signal, SignalQuote
 
         base = dict(
             location="Shopping bag", source_type="section", sentiment="Sentiment",
@@ -245,7 +245,7 @@ class TestTheFlagOnThePathThatRenders:
         FLAG_BREADTH — so the old code called this a Win. Against the study's
         20 it is 0.125, which is what "how much of the room said this" means.
         """
-        from bristlenose.server.routes.analysis import _serialize_signal
+        from bristlenose.server.routes.signals import _serialize_signal
 
         out = _serialize_signal(self._signal(), {}, 20)
 
@@ -256,7 +256,7 @@ class TestTheFlagOnThePathThatRenders:
 
     def test_the_same_card_in_a_small_study_is_a_win(self) -> None:
         """The flag is a claim about the room, so the room has to be able to change it."""
-        from bristlenose.server.routes.analysis import _serialize_signal
+        from bristlenose.server.routes.signals import _serialize_signal
 
         assert _serialize_signal(self._signal(), {}, 4).flag == "Win"
 
@@ -267,8 +267,8 @@ class TestTheFlagOnThePathThatRenders:
         the card's own denominator every negative card cleared FLAG_INTENSITY
         and FLAG_BREADTH together, so Niggle was unreachable here.
         """
-        from bristlenose.analysis.models import SignalQuote
-        from bristlenose.server.routes.analysis import _serialize_signal
+        from bristlenose.server.routes.signals import _serialize_signal
+        from bristlenose.signals.models import SignalQuote
 
         s = self._signal(quotes=[
             SignalQuote(text="t", participant_id=f"p{i}", session_id="s1",

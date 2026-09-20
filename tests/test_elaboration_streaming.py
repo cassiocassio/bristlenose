@@ -21,7 +21,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from bristlenose.server.routes.analysis import (
+from bristlenose.server.routes.signals import (
     ELABORATION_CHUNK,
     CodebookAnalysisOut,
     MatrixOut,

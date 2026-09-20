@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from bristlenose.analysis.models import Matrix, MatrixCell
 from bristlenose.models import ExtractedQuote, ScreenCluster, Sentiment, ThemeGroup
+from bristlenose.signals.models import Matrix, MatrixCell
 
 SENTIMENTS = [s.value for s in Sentiment]
 

@@ -1,4 +1,4 @@
-"""Data structures for analysis page computation.
+"""Data structures for signals computation.
 
 These are plain dataclasses (not Pydantic) — they're ephemeral, computed from
 existing pipeline data, and never persisted to intermediate JSON.

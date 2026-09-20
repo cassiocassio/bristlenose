@@ -1,10 +1,10 @@
-"""Tests for bristlenose.analysis.metrics — pure math functions."""
+"""Tests for bristlenose.signals.metrics — pure math functions."""
 
 from __future__ import annotations
 
 import pytest
 
-from bristlenose.analysis.metrics import (
+from bristlenose.signals.metrics import (
     adjusted_residual,
     composite_signal,
     concentration_ratio,

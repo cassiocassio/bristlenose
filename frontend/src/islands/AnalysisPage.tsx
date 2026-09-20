@@ -3,7 +3,7 @@
  *
  * Shows signal concentration cards and heatmaps for both:
  * - **Sentiment signals** (baked into HTML as `window.BRISTLENOSE_ANALYSIS`)
- * - **Tag signals** (fetched per-codebook from `/api/projects/{id}/analysis/codebooks`)
+ * - **Tag signals** (fetched per-codebook from `/api/projects/{id}/signals/codebooks`)
  *
  * Both views render simultaneously — sentiment cards first (typically stronger
  * signals), then tag cards, then heatmaps for each.
@@ -1062,7 +1062,7 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
   useEffect(() => {
     // Already have baked data from window global — skip API fetch
     if (window.BRISTLENOSE_ANALYSIS) return;
-    apiGet<SentimentAnalysisData>("/analysis/sentiment")
+    apiGet<SentimentAnalysisData>("/signals/sentiment")
       .then((data) => {
         if (data.signals.length > 0) setSentimentData(data);
       })
@@ -1136,7 +1136,7 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
    *
    * A card is a (location × tag group), and sentiment is a group like any
    * other — so the Sentiment card comes from the CODEBOOK path, which carries
-   * the sentiment framework as a one-group codebook. The /analysis/sentiment
+   * the sentiment framework as a one-group codebook. The /signals/sentiment
    * lens draws one card per (location × sentiment VALUE) instead, which is the
    * shape that decision retired: confusion and frustration are tags inside the
    * Sentiment card, not cards of their own.

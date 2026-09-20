@@ -41,8 +41,8 @@ const MOCK_EXPORT = {
     "/codebook": { groups: [], ungrouped: [], all_tag_names: [] },
     "/people": { p1: { full_name: "Alice", short_name: "A", role: "Manager" } },
     "/video-map": null,
-    "/analysis/sentiment": { signals: [], totalParticipants: 3 },
-    "/analysis/codebooks": { codebooks: [], total_participants: 3, trade_off_note: "" },
+    "/signals/sentiment": { signals: [], totalParticipants: 3 },
+    "/signals/codebooks": { codebooks: [], total_participants: 3, trade_off_note: "" },
     "/framework-states": { garrett: false },
     "/hidden-tag-groups": ["Ungrouped"],
     "/transcripts/s1": { session_id: "s1", segments: [] },
@@ -181,24 +181,24 @@ describe("exportData", () => {
         expect(resolveFromExport("/video-map")).toBeNull();
       });
 
-      it("resolves /analysis/sentiment", () => {
+      it("resolves /signals/sentiment", () => {
         setup();
-        expect(resolveFromExport("/analysis/sentiment")).toEqual(
-          MOCK_EXPORT.endpoints["/analysis/sentiment"],
+        expect(resolveFromExport("/signals/sentiment")).toEqual(
+          MOCK_EXPORT.endpoints["/signals/sentiment"],
         );
       });
 
-      it("resolves /analysis/codebooks", () => {
+      it("resolves /signals/codebooks", () => {
         setup();
-        expect(resolveFromExport("/analysis/codebooks")).toEqual(
-          MOCK_EXPORT.endpoints["/analysis/codebooks"],
+        expect(resolveFromExport("/signals/codebooks")).toEqual(
+          MOCK_EXPORT.endpoints["/signals/codebooks"],
         );
       });
 
-      it("resolves /analysis/codebooks with query string", () => {
+      it("resolves /signals/codebooks with query string", () => {
         setup();
-        expect(resolveFromExport("/analysis/codebooks?elaborate=true")).toEqual(
-          MOCK_EXPORT.endpoints["/analysis/codebooks"],
+        expect(resolveFromExport("/signals/codebooks?elaborate=true")).toEqual(
+          MOCK_EXPORT.endpoints["/signals/codebooks"],
         );
       });
 

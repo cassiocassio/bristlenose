@@ -1,17 +1,17 @@
-"""Detect notable patterns (signals) from analysis matrices."""
+"""Detect notable patterns (signals) from contingency matrices."""
 
 from __future__ import annotations
 
-from bristlenose.analysis.matrix import SENTIMENTS
-from bristlenose.analysis.metrics import (
+from bristlenose.models import ExtractedQuote, ScreenCluster, ThemeGroup
+from bristlenose.signals.matrix import SENTIMENTS
+from bristlenose.signals.metrics import (
     classify_flag,
     composite_signal,
     concentration_ratio,
     mean_intensity,
     simpsons_neff,
 )
-from bristlenose.analysis.models import AnalysisResult, Matrix, Signal, SignalQuote
-from bristlenose.models import ExtractedQuote, ScreenCluster, ThemeGroup
+from bristlenose.signals.models import AnalysisResult, Matrix, Signal, SignalQuote
 
 DEFAULT_TOP_N = 12
 MIN_QUOTES_PER_CELL = 2

@@ -549,8 +549,8 @@ def _compute_analysis(
     if not any(q.sentiment is not None for q in all_quotes):
         return None
 
-    from bristlenose.analysis.matrix import build_section_matrix, build_theme_matrix
-    from bristlenose.analysis.signals import detect_signals
+    from bristlenose.signals.detect import detect_signals
+    from bristlenose.signals.matrix import build_section_matrix, build_theme_matrix
 
     section_matrix = build_section_matrix(screen_clusters)
     theme_matrix = build_theme_matrix(theme_groups)

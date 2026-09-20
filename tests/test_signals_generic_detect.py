@@ -1,13 +1,13 @@
-"""Tests for bristlenose.analysis.generic_signals — generic signal detection."""
+"""Tests for bristlenose.signals.generic_detect — generic signal detection."""
 
 from __future__ import annotations
 
-from bristlenose.analysis.generic_matrix import QuoteContribution, build_matrix_from_contributions
-from bristlenose.analysis.generic_signals import (
+from bristlenose.signals.generic_detect import (
     DEFAULT_TOP_N,
     QuoteRecord,
     detect_signals_generic,
 )
+from bristlenose.signals.generic_matrix import QuoteContribution, build_matrix_from_contributions
 
 
 def _contrib(

@@ -68,7 +68,7 @@ export function isExportMode(): boolean {
  * corresponding embedded blob.  Returns `undefined` when not in export mode or
  * when the path is not embedded; returns the value (which may be `null`) when
  * the path IS embedded.  The query string is ignored — embedded keys are
- * query-less (e.g. "/analysis/codebooks?elaborate=true" → "/analysis/codebooks").
+ * query-less (e.g. "/signals/codebooks?elaborate=true" → "/signals/codebooks").
  */
 export function resolveFromExport<T>(path: string): T | undefined {
   const data = getExportData();

@@ -1,6 +1,6 @@
 """Detect signals from matrices with arbitrary column labels.
 
-The pipeline-specific ``signals.py`` is hardwired to the ``SENTIMENTS`` list.
+The pipeline-specific ``detect.py`` is hardwired to the ``SENTIMENTS`` list.
 This module provides the same signal detection logic parameterised on
 *col_labels*, so serve-mode can detect signals for codebook groups, individual
 tags, or any other categorical dimension.
@@ -10,14 +10,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bristlenose.analysis.metrics import (
+from bristlenose.signals.metrics import (
     classify_flag,
     composite_signal,
     concentration_ratio,
     mean_intensity,
     simpsons_neff,
 )
-from bristlenose.analysis.models import Matrix, Signal, SignalQuote
+from bristlenose.signals.models import Matrix, Signal, SignalQuote
 
 DEFAULT_TOP_N = 12
 MIN_QUOTES_PER_CELL = 2

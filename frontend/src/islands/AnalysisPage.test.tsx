@@ -1115,7 +1115,7 @@ describe("the headline while a finding is still being written", () => {
     };
 
     fetchMock.mockImplementation((url: string) =>
-      String(url).includes("/analysis/elaborations")
+      String(url).includes("/signals/elaborations")
         ? Promise.resolve({ ok: true, body: { getReader: () => reader } })
         : Promise.resolve({ ok: true, json: () => Promise.resolve(data) }),
     );

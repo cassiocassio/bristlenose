@@ -1,4 +1,4 @@
-"""Low-level statistical functions for the analysis page.
+"""Low-level statistical functions behind a signal.
 
 Ported from the JS implementations in docs/mockups/mockup-analysis.html.
 These are pure arithmetic — no I/O, no LLM calls, no Pydantic models.

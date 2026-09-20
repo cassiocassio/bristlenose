@@ -1,10 +1,10 @@
-"""Tests for bristlenose.analysis.generic_matrix — generic matrix building."""
+"""Tests for bristlenose.signals.generic_matrix — generic matrix building."""
 
 from __future__ import annotations
 
 import pytest
 
-from bristlenose.analysis.generic_matrix import QuoteContribution, build_matrix_from_contributions
+from bristlenose.signals.generic_matrix import QuoteContribution, build_matrix_from_contributions
 
 
 def _contrib(

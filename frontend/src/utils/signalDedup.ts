@@ -64,7 +64,7 @@ function quoteKey(q: { sessionId: string; startSeconds: number; pid: string }): 
  */
 
 /**
- * Did this card come from the /analysis/sentiment lens rather than a codebook?
+ * Did this card come from the /signals/sentiment lens rather than a codebook?
  *
  * Only that kind carries a sentiment VALUE in `columnLabel` — "frustration",
  * "delight" — which is what the card's sentiment styling and participant

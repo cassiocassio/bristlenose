@@ -52,7 +52,7 @@ look up. Both validate by **corpus membership**, which is deliberately
 stricter than DB presence: a hidden or truncated-out quote is not citable.
 
 **`load_signals(db, project_id, lens, curated=True)` is the REPORT VIEW and
-diverges from `routes/analysis.py` on purpose** — hidden quotes excluded,
+diverges from `routes/signals.py` on purpose** — hidden quotes excluded,
 researcher edits applied, removed sentiment badges honoured, unreviewed
 `ProposedTag` rows excluded (accepted `QuoteTag` rows are the only tag
 truth), `Uncategorised` filtered like the route does. The analysis routes

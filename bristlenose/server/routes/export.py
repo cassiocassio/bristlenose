@@ -54,8 +54,8 @@ EMBED_PATH_TEMPLATES: frozenset[str] = frozenset(
         "/projects/{project_id}/codebook",
         "/projects/{project_id}/people",
         "/projects/{project_id}/video-map",
-        "/projects/{project_id}/analysis/sentiment",
-        "/projects/{project_id}/analysis/codebooks",
+        "/projects/{project_id}/signals/sentiment",
+        "/projects/{project_id}/signals/codebooks",
         "/projects/{project_id}/framework-states",
         "/projects/{project_id}/hidden-tag-groups",
         "/projects/{project_id}/transcripts/{session_id}",
@@ -71,13 +71,13 @@ EMBED_PATH_TEMPLATES: frozenset[str] = frozenset(
 # GET read that is in NEITHER set fails the gate.
 SERVER_ONLY_PATH_TEMPLATES: frozenset[str] = frozenset(
     {
-        "/projects/{project_id}/analysis/tags",  # no SPA callers; server-compute
+        "/projects/{project_id}/signals/tags",  # no SPA callers; server-compute
         # Progressive delivery of findings while the lens is open. An exported
         # report has no server to stream from, and does not need one: the
         # findings this endpoint writes are already baked into the embedded
-        # /analysis/codebooks payload by the time an export is taken. The SPA
+        # /signals/codebooks payload by the time an export is taken. The SPA
         # skips opening it under isExportMode().
-        "/projects/{project_id}/analysis/elaborations",
+        "/projects/{project_id}/signals/elaborations",
         "/projects/{project_id}/autocode/{framework_id}/proposals",
         "/projects/{project_id}/autocode/{framework_id}/status",
         "/projects/{project_id}/codebook/remove-framework/{framework_id}/impact",
@@ -381,12 +381,6 @@ def export_report(
     a downloadable HTML file.
     """
     from bristlenose.server.models import Quote
-    from bristlenose.server.routes.analysis import (
-        get_codebook_analysis as _get_codebook_analysis_handler,
-    )
-    from bristlenose.server.routes.analysis import (
-        get_sentiment_analysis as _get_sentiment_analysis_handler,
-    )
     from bristlenose.server.routes.codebook import get_codebook as _get_codebook_handler
     from bristlenose.server.routes.dashboard import (
         get_dashboard as _get_dashboard_handler,
@@ -407,6 +401,12 @@ def export_report(
     )
     from bristlenose.server.routes.quotes import get_quotes as _get_quotes_handler
     from bristlenose.server.routes.sessions import get_sessions as _get_sessions_handler
+    from bristlenose.server.routes.signals import (
+        get_codebook_analysis as _get_codebook_analysis_handler,
+    )
+    from bristlenose.server.routes.signals import (
+        get_sentiment_analysis as _get_sentiment_analysis_handler,
+    )
     from bristlenose.server.routes.transcript import (
         get_transcript as _get_transcript_handler,
     )
@@ -492,8 +492,8 @@ def export_report(
         "/codebook": jsonable_encoder(codebook),
         "/people": jsonable_encoder(people),
         "/video-map": None,
-        "/analysis/sentiment": jsonable_encoder(sentiment),
-        "/analysis/codebooks": jsonable_encoder(codebook_analysis),
+        "/signals/sentiment": jsonable_encoder(sentiment),
+        "/signals/codebooks": jsonable_encoder(codebook_analysis),
         "/framework-states": jsonable_encoder(framework_states),
         "/hidden-tag-groups": jsonable_encoder(hidden_tag_groups),
     }

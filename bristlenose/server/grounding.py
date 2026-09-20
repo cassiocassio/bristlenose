@@ -458,7 +458,7 @@ SIGNAL_LENSES: tuple[str, ...] = ("sentiment", "tags")
 class SignalsResult:
     """Signals computed over the curated corpus, plus their context."""
 
-    signals: list[Any]  # list[bristlenose.analysis.models.Signal]
+    signals: list[Any]  # list[bristlenose.signals.models.Signal]
     total_participants: int
     group_colour_sets: dict[str, str]  # tags lens only; empty for sentiment
 
@@ -471,23 +471,16 @@ def load_signals(
 ) -> SignalsResult:
     """Signal detection over the CURATED corpus — the researcher's report view.
 
-    Deliberately diverges from the analysis routes (which compute over the
+    Deliberately diverges from the signals routes (which compute over the
     raw engine view): hidden quotes are excluded, researcher-edited text
     replaces pipeline text, and unreviewed AutoCode proposals contribute
     nothing (accepted tags — ``QuoteTag`` rows — are the only tag truth).
-    The computation itself is the shipped ``bristlenose/analysis`` maths,
+    The computation itself is the shipped ``bristlenose/signals`` maths,
     not a parallel implementation.
     """
     from dataclasses import dataclass as _dc
     from dataclasses import field as _field
 
-    from bristlenose.analysis.generic_matrix import (
-        QuoteContribution,
-        build_matrix_from_contributions,
-    )
-    from bristlenose.analysis.generic_signals import QuoteRecord, detect_signals_generic
-    from bristlenose.analysis.matrix import build_section_matrix, build_theme_matrix
-    from bristlenose.analysis.signals import detect_signals
     from bristlenose.models import Sentiment
     from bristlenose.server.models import (
         ClusterQuote,
@@ -503,6 +496,13 @@ def load_signals(
         ThemeGroup,
         ThemeQuote,
     )
+    from bristlenose.signals.detect import detect_signals
+    from bristlenose.signals.generic_detect import QuoteRecord, detect_signals_generic
+    from bristlenose.signals.generic_matrix import (
+        QuoteContribution,
+        build_matrix_from_contributions,
+    )
+    from bristlenose.signals.matrix import build_section_matrix, build_theme_matrix
 
     if lens not in SIGNAL_LENSES:
         msg = f"unknown lens {lens!r} — valid lenses: {list(SIGNAL_LENSES)}"

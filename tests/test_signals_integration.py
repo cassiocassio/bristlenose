@@ -12,9 +12,6 @@ from pathlib import Path
 
 import pytest
 
-from bristlenose.analysis.matrix import build_section_matrix, build_theme_matrix
-from bristlenose.analysis.models import AnalysisResult, Matrix, MatrixCell, Signal
-from bristlenose.analysis.signals import detect_signals
 from bristlenose.models import (
     ExtractedQuote,
     FileType,
@@ -26,6 +23,9 @@ from bristlenose.models import (
     ThemeGroup,
 )
 from bristlenose.pipeline import _compute_analysis
+from bristlenose.signals.detect import detect_signals
+from bristlenose.signals.matrix import build_section_matrix, build_theme_matrix
+from bristlenose.signals.models import AnalysisResult, Matrix, MatrixCell, Signal
 from bristlenose.stages.s12_render import render_html
 from bristlenose.stages.s12_render.standalone_pages import _serialize_analysis, _serialize_matrix
 

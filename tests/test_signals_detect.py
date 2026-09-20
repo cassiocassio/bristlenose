@@ -1,10 +1,10 @@
-"""Tests for bristlenose.analysis.signals — signal detection from matrices."""
+"""Tests for bristlenose.signals.detect — signal detection from matrices."""
 
 from __future__ import annotations
 
-from bristlenose.analysis.matrix import build_section_matrix, build_theme_matrix
-from bristlenose.analysis.signals import detect_signals
 from bristlenose.models import ExtractedQuote, QuoteType, ScreenCluster, Sentiment, ThemeGroup
+from bristlenose.signals.detect import detect_signals
+from bristlenose.signals.matrix import build_section_matrix, build_theme_matrix
 
 
 def _quote(

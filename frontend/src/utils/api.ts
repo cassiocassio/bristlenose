@@ -459,14 +459,14 @@ export function denyAllProposals(
 
 export function getTagAnalysis(groups?: string): Promise<TagAnalysisResponse> {
   const qs = groups ? `?groups=${groups}` : "";
-  return apiGet<TagAnalysisResponse>(`/analysis/tags${qs}`);
+  return apiGet<TagAnalysisResponse>(`/signals/tags${qs}`);
 }
 
 export function getCodebookAnalysis(
   elaborate?: boolean,
 ): Promise<CodebookAnalysisListResponse> {
   const qs = elaborate ? "?elaborate=true" : "";
-  return apiGet<CodebookAnalysisListResponse>(`/analysis/codebooks${qs}`);
+  return apiGet<CodebookAnalysisListResponse>(`/signals/codebooks${qs}`);
 }
 
 export interface StreamedElaboration {
@@ -499,11 +499,11 @@ export async function streamElaborations(
 ): Promise<void> {
   if (isExportMode()) return;
 
-  const resp = await fetch(`${apiBase()}/analysis/elaborations`, {
+  const resp = await fetch(`${apiBase()}/signals/elaborations`, {
     headers: authHeaders({ Accept: "text/event-stream" }),
     signal,
   });
-  if (!resp.ok || !resp.body) throw await httpError("GET", "/analysis/elaborations", resp);
+  if (!resp.ok || !resp.body) throw await httpError("GET", "/signals/elaborations", resp);
 
   const reader = resp.body.getReader();
   const decoder = new TextDecoder();

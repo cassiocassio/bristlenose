@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
     from bristlenose.config import BristlenoseSettings
     from bristlenose.server.codebook import CodebookTemplate
-    from bristlenose.server.routes.analysis import TagSignal
+    from bristlenose.server.routes.signals import TagSignal
 
 logger = logging.getLogger(__name__)
 

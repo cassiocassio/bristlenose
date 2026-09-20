@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from bristlenose.analysis.sentiment_label import (
+from bristlenose.signals.sentiment_label import (
     MIN_WEIGHT,
     MIXED,
     NEGATIVE,
@@ -149,7 +149,7 @@ class TestTheShapeThatActuallyRenders:
         assert label.text == "frustration"
 
     def test_a_dataclass_quote_with_no_sentiment_attribute_still_works(self) -> None:
-        from bristlenose.analysis.models import SignalQuote
+        from bristlenose.signals.models import SignalQuote
 
         quotes = [
             SignalQuote("a", "p1", "s1", 0.0, 3, ["confusion"]),

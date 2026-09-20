@@ -190,8 +190,8 @@ class TestExportData:
 
     def test_has_analysis(self, client: TestClient) -> None:
         data = self._extract_export_data(client.get("/api/projects/1/export").text)
-        assert "/analysis/sentiment" in data["endpoints"]
-        assert "/analysis/codebooks" in data["endpoints"]
+        assert "/signals/sentiment" in data["endpoints"]
+        assert "/signals/codebooks" in data["endpoints"]
 
     def test_has_view_state_endpoints(self, client: TestClient) -> None:
         """The two previously-drifted view-state reads are now embedded."""
@@ -233,7 +233,7 @@ class TestExportData:
         over HTTP — the React frontend expects camelCase.
         """
         data = self._extract_export_data(client.get("/api/projects/1/export").text)
-        sentiment = data["endpoints"]["/analysis/sentiment"]
+        sentiment = data["endpoints"]["/signals/sentiment"]
         if sentiment is not None:
             # Top-level keys should be camelCase
             assert "sectionMatrix" in sentiment

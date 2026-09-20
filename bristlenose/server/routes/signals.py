@@ -1,11 +1,12 @@
-"""Analysis API endpoints — sentiment and tag-based signal concentration analysis.
+"""Signals API endpoints — sentiment and tag-based signal concentration.
 
-Three endpoints:
+Four endpoints:
 
-- ``GET /analysis/sentiment`` — sentiment-based signal analysis (same data as
+- ``GET /signals/sentiment`` — sentiment-based signal analysis (same data as
   ``window.BRISTLENOSE_ANALYSIS`` in the static render path)
-- ``GET /analysis/tags`` — flat analysis across all active groups (backward compat)
-- ``GET /analysis/codebooks`` — per-codebook analysis (groups partitioned by framework)
+- ``GET /signals/tags`` — flat analysis across all active groups (backward compat)
+- ``GET /signals/codebooks`` — per-codebook analysis (groups partitioned by framework)
+- ``GET /signals/elaborations`` — cached LLM elaborations, streamed
 
 Tag-based endpoints compute the same concentration / agreement / intensity
 maths as the pipeline's sentiment analysis, but using codebook groups as
@@ -39,13 +40,12 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from bristlenose.analysis.generic_matrix import QuoteContribution, build_matrix_from_contributions
-from bristlenose.analysis.generic_signals import QuoteRecord, detect_signals_generic
-from bristlenose.analysis.metrics import classify_flag
+from bristlenose.signals.generic_detect import QuoteRecord, detect_signals_generic
+from bristlenose.signals.generic_matrix import QuoteContribution, build_matrix_from_contributions
+from bristlenose.signals.metrics import classify_flag
 
 if TYPE_CHECKING:
     from bristlenose.server.elaboration import ElaborationResult
-from bristlenose.analysis.sentiment_label import sentiment_label
 from bristlenose.server.models import (
     UNCATEGORISED_GROUP_NAME,
     ClusterQuote,
@@ -60,6 +60,7 @@ from bristlenose.server.models import (
     ThemeGroup,
     ThemeQuote,
 )
+from bristlenose.signals.sentiment_label import sentiment_label
 
 router = APIRouter(prefix="/api")
 
@@ -204,7 +205,7 @@ def _natural_sort_pids(pids: set[str]) -> list[str]:
 
 def _serialize_matrix(matrix: object) -> MatrixOut:
     """Convert a Matrix dataclass to the response model."""
-    from bristlenose.analysis.models import Matrix
+    from bristlenose.signals.models import Matrix
 
     assert isinstance(matrix, Matrix)
     cells_out: dict[str, MatrixCellOut] = {}
@@ -245,7 +246,7 @@ def _serialize_signal(
     total_participants: int,
 ) -> TagSignal:
     """Convert a Signal dataclass to the response model."""
-    from bristlenose.analysis.models import Signal
+    from bristlenose.signals.models import Signal
 
     assert isinstance(s, Signal)
 
@@ -460,7 +461,7 @@ class SentimentAnalysisResponse(_CamelModel):
 
 def _serialize_sentiment_matrix(matrix: object) -> _SentimentMatrixOut:
     """Convert a Matrix dataclass to the camelCase response model."""
-    from bristlenose.analysis.models import Matrix
+    from bristlenose.signals.models import Matrix
 
     assert isinstance(matrix, Matrix)
     cells_out: dict[str, _SentimentMatrixCellOut] = {}
@@ -477,7 +478,7 @@ def _serialize_sentiment_matrix(matrix: object) -> _SentimentMatrixOut:
 
 def _serialize_sentiment_signal(s: object) -> _SentimentSignalOut:
     """Convert a Signal dataclass to the camelCase response model."""
-    from bristlenose.analysis.models import Signal
+    from bristlenose.signals.models import Signal
 
     assert isinstance(s, Signal)
     return _SentimentSignalOut(
@@ -507,7 +508,7 @@ def _serialize_sentiment_signal(s: object) -> _SentimentSignalOut:
 
 
 @router.get(
-    "/projects/{project_id}/analysis/sentiment",
+    "/projects/{project_id}/signals/sentiment",
     response_model=SentimentAnalysisResponse,
 )
 def get_sentiment_analysis(
@@ -523,9 +524,9 @@ def get_sentiment_analysis(
     """
     from dataclasses import dataclass, field
 
-    from bristlenose.analysis.matrix import build_section_matrix, build_theme_matrix
-    from bristlenose.analysis.signals import detect_signals
     from bristlenose.models import Sentiment
+    from bristlenose.signals.detect import detect_signals
+    from bristlenose.signals.matrix import build_section_matrix, build_theme_matrix
 
     db = _get_db(request)
     try:
@@ -862,7 +863,7 @@ def _compute_group_analysis(
 
 
 @router.get(
-    "/projects/{project_id}/analysis/tags",
+    "/projects/{project_id}/signals/tags",
     response_model=TagAnalysisResponse,
 )
 def get_tag_analysis(
@@ -912,7 +913,7 @@ def get_tag_analysis(
         db.close()
 
 
-@router.get("/projects/{project_id}/analysis/elaborations")
+@router.get("/projects/{project_id}/signals/elaborations")
 async def stream_elaborations(
     project_id: int,
     request: Request,
@@ -920,7 +921,7 @@ async def stream_elaborations(
 ) -> StreamingResponse:
     """Findings, sent as each one is written, instead of all at the end.
 
-    The lens draws its cards from `/analysis/codebooks` immediately and then
+    The lens draws its cards from `/signals/codebooks` immediately and then
     opens this, so a headline appears on a card that is already on screen
     rather than the whole page waiting behind a skeleton. On a warm cache every
     event arrives at once and the reader sees nothing happen, which is correct.
@@ -988,7 +989,7 @@ async def stream_elaborations(
 
 
 @router.get(
-    "/projects/{project_id}/analysis/codebooks",
+    "/projects/{project_id}/signals/codebooks",
     response_model=CodebookAnalysisListResponse,
 )
 async def get_codebook_analysis(

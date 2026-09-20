@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bristlenose.analysis.models import Matrix, MatrixCell
+from bristlenose.signals.models import Matrix, MatrixCell
 
 
 @dataclass

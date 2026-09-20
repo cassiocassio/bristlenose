@@ -299,7 +299,7 @@ class TestSignals:
             and s["quote_count"] == 2
             for s in after["signals"]
         )
-        route = AuthTestClient(app_fx).get("/api/projects/1/analysis/sentiment").json()
+        route = AuthTestClient(app_fx).get("/api/projects/1/signals/sentiment").json()
         assert any(
             s["location"] == "Dashboard" and s["sentiment"] == "frustration"
             and s["count"] == 2

@@ -138,18 +138,18 @@ def tagged_client() -> TestClient:
 
 
 # ---------------------------------------------------------------------------
-# GET /api/projects/{project_id}/analysis/tags
+# GET /api/projects/{project_id}/signals/tags
 # ---------------------------------------------------------------------------
 
 
 class TestGetTagAnalysis:
 
     def test_returns_200(self, tagged_client: TestClient) -> None:
-        resp = tagged_client.get("/api/projects/1/analysis/tags")
+        resp = tagged_client.get("/api/projects/1/signals/tags")
         assert resp.status_code == 200
 
     def test_response_shape(self, tagged_client: TestClient) -> None:
-        data = tagged_client.get("/api/projects/1/analysis/tags").json()
+        data = tagged_client.get("/api/projects/1/signals/tags").json()
         assert set(data.keys()) == {
             "signals", "section_matrix", "theme_matrix",
             "total_participants", "columns", "participant_ids",
@@ -166,7 +166,7 @@ class TestGetTagAnalysis:
 
     def test_only_sentiment_tags_when_no_user_tags(self, client: TestClient) -> None:
         """Without user-applied tags, only auto-imported sentiment signals appear."""
-        data = client.get("/api/projects/1/analysis/tags").json()
+        data = client.get("/api/projects/1/signals/tags").json()
         # Sentiment auto-import creates signals from pipeline sentiment field
         for sig in data["signals"]:
             assert sig["colour_set"] == "sentiment", (
@@ -174,23 +174,23 @@ class TestGetTagAnalysis:
             )
 
     def test_columns_are_group_names(self, tagged_client: TestClient) -> None:
-        data = tagged_client.get("/api/projects/1/analysis/tags").json()
+        data = tagged_client.get("/api/projects/1/signals/tags").json()
         assert "Friction" in data["columns"]
         assert "Mental Models" in data["columns"]
 
     def test_uncategorised_excluded_by_default(self, tagged_client: TestClient) -> None:
-        data = tagged_client.get("/api/projects/1/analysis/tags").json()
+        data = tagged_client.get("/api/projects/1/signals/tags").json()
         assert UNCATEGORISED_GROUP_NAME not in data["columns"]
 
     def test_signals_have_group_name(self, tagged_client: TestClient) -> None:
-        data = tagged_client.get("/api/projects/1/analysis/tags").json()
+        data = tagged_client.get("/api/projects/1/signals/tags").json()
         if data["signals"]:
             sig = data["signals"][0]
             assert "group_name" in sig
             assert sig["group_name"] in data["columns"]
 
     def test_signal_has_expected_fields(self, tagged_client: TestClient) -> None:
-        data = tagged_client.get("/api/projects/1/analysis/tags").json()
+        data = tagged_client.get("/api/projects/1/signals/tags").json()
         if data["signals"]:
             sig = data["signals"][0]
             expected_keys = {
@@ -211,7 +211,7 @@ class TestGetTagAnalysis:
         reading the analysis lens already knows they are reading sentiment.
         The chip resolves to a feeling, a direction, or "Mixed sentiments".
         """
-        data = tagged_client.get("/api/projects/1/analysis/tags").json()
+        data = tagged_client.get("/api/projects/1/signals/tags").json()
         for sig in data["signals"]:
             if sig["group_name"] != "Sentiment":
                 # Every other group names itself perfectly well.
@@ -222,7 +222,7 @@ class TestGetTagAnalysis:
             assert sig["label_kind"] in {"value", "valence", "mixed"}
 
     def test_matrix_has_expected_shape(self, tagged_client: TestClient) -> None:
-        data = tagged_client.get("/api/projects/1/analysis/tags").json()
+        data = tagged_client.get("/api/projects/1/signals/tags").json()
         sm = data["section_matrix"]
         assert set(sm.keys()) == {"cells", "row_totals", "col_totals", "grand_total", "row_labels"}
         assert isinstance(sm["cells"], dict)
@@ -233,17 +233,17 @@ class TestGetTagAnalysis:
             assert "weighted_count" in cell
 
     def test_project_not_found(self, client: TestClient) -> None:
-        resp = client.get("/api/projects/999/analysis/tags")
+        resp = client.get("/api/projects/999/signals/tags")
         assert resp.status_code == 404
 
     def test_top_n_limits_signals(self, tagged_client: TestClient) -> None:
-        data = tagged_client.get("/api/projects/1/analysis/tags?top_n=1").json()
+        data = tagged_client.get("/api/projects/1/signals/tags?top_n=1").json()
         assert len(data["signals"]) <= 1
 
     def test_group_filter(self, tagged_client: TestClient) -> None:
         """Filtering by specific group IDs restricts columns."""
         # First get all columns to find group IDs
-        data_all = tagged_client.get("/api/projects/1/analysis/tags").json()
+        data_all = tagged_client.get("/api/projects/1/signals/tags").json()
         if not data_all["columns"]:
             pytest.skip("No columns available")
 
@@ -253,29 +253,29 @@ class TestGetTagAnalysis:
             friction = db.query(CodebookGroup).filter_by(name="Friction").first()
             assert friction is not None
             data_filtered = tagged_client.get(
-                f"/api/projects/1/analysis/tags?groups={friction.id}"
+                f"/api/projects/1/signals/tags?groups={friction.id}"
             ).json()
             assert data_filtered["columns"] == ["Friction"]
         finally:
             db.close()
 
     def test_invalid_groups_param(self, tagged_client: TestClient) -> None:
-        resp = tagged_client.get("/api/projects/1/analysis/tags?groups=abc")
+        resp = tagged_client.get("/api/projects/1/signals/tags?groups=abc")
         assert resp.status_code == 400
 
     def test_trade_off_note_present(self, tagged_client: TestClient) -> None:
-        data = tagged_client.get("/api/projects/1/analysis/tags").json()
+        data = tagged_client.get("/api/projects/1/signals/tags").json()
         assert "grand_total" in data["trade_off_note"].lower()
 
     def test_signals_sorted_by_composite_desc(self, tagged_client: TestClient) -> None:
-        data = tagged_client.get("/api/projects/1/analysis/tags").json()
+        data = tagged_client.get("/api/projects/1/signals/tags").json()
         signals = data["signals"]
         if len(signals) >= 2:
             for i in range(len(signals) - 1):
                 assert signals[i]["composite_signal"] >= signals[i + 1]["composite_signal"]
 
     def test_participant_ids_naturally_sorted(self, tagged_client: TestClient) -> None:
-        data = tagged_client.get("/api/projects/1/analysis/tags").json()
+        data = tagged_client.get("/api/projects/1/signals/tags").json()
         pids = data["participant_ids"]
         if len(pids) >= 2:
             # p1 should come before p2, p2 before p10
@@ -284,7 +284,7 @@ class TestGetTagAnalysis:
 
     def test_source_breakdown_accepted_only(self, tagged_client: TestClient) -> None:
         """When only accepted tags exist, pending count should be 0."""
-        data = tagged_client.get("/api/projects/1/analysis/tags").json()
+        data = tagged_client.get("/api/projects/1/signals/tags").json()
         sb = data["source_breakdown"]
         assert sb["accepted"] > 0
         assert sb["pending"] == 0
@@ -384,14 +384,14 @@ class TestProposedTagWeighting:
 
     def test_pending_tags_included(self, proposed_client: TestClient) -> None:
         """Pending proposed tags should appear in the analysis."""
-        data = proposed_client.get("/api/projects/1/analysis/tags").json()
+        data = proposed_client.get("/api/projects/1/signals/tags").json()
         sb = data["source_breakdown"]
         assert sb["pending"] > 0
         assert sb["accepted"] > 0
 
     def test_denied_tags_excluded(self, proposed_client: TestClient) -> None:
         """Denied proposed tags should not contribute to analysis."""
-        data = proposed_client.get("/api/projects/1/analysis/tags").json()
+        data = proposed_client.get("/api/projects/1/signals/tags").json()
         sb = data["source_breakdown"]
         # We created 1 denied tag — total should be accepted + pending only
         assert sb["total"] == sb["accepted"] + sb["pending"]
@@ -400,7 +400,7 @@ class TestProposedTagWeighting:
         self, proposed_client: TestClient,
     ) -> None:
         """A quote with both QuoteTag and pending ProposedTag should count once."""
-        data = proposed_client.get("/api/projects/1/analysis/tags").json()
+        data = proposed_client.get("/api/projects/1/signals/tags").json()
         sb = data["source_breakdown"]
         # 2 manually accepted (Pain points / frustration)
         # + 4 auto-imported sentiment tags (from smoke-test quotes with sentiment)
@@ -412,7 +412,7 @@ class TestProposedTagWeighting:
 
     def test_weighted_count_in_cells(self, proposed_client: TestClient) -> None:
         """Cells should have weighted_count reflecting confidence weighting."""
-        data = proposed_client.get("/api/projects/1/analysis/tags").json()
+        data = proposed_client.get("/api/projects/1/signals/tags").json()
         sm = data["section_matrix"]
         if sm["cells"]:
             # At least one cell should have weighted_count < count
@@ -425,14 +425,14 @@ class TestProposedTagWeighting:
             assert has_fractional, "Expected at least one cell with weighted < unweighted"
 
     def test_source_breakdown_shape(self, proposed_client: TestClient) -> None:
-        data = proposed_client.get("/api/projects/1/analysis/tags").json()
+        data = proposed_client.get("/api/projects/1/signals/tags").json()
         sb = data["source_breakdown"]
         assert set(sb.keys()) == {"accepted", "pending", "total"}
         assert all(isinstance(v, int) for v in sb.values())
 
 
 # ---------------------------------------------------------------------------
-# GET /api/projects/{project_id}/analysis/codebooks
+# GET /api/projects/{project_id}/signals/codebooks
 # ---------------------------------------------------------------------------
 
 
@@ -527,11 +527,11 @@ def multi_cb_client() -> TestClient:
 class TestGetCodebookAnalysis:
 
     def test_returns_200(self, multi_cb_client: TestClient) -> None:
-        resp = multi_cb_client.get("/api/projects/1/analysis/codebooks")
+        resp = multi_cb_client.get("/api/projects/1/signals/codebooks")
         assert resp.status_code == 200
 
     def test_response_shape(self, multi_cb_client: TestClient) -> None:
-        data = multi_cb_client.get("/api/projects/1/analysis/codebooks").json()
+        data = multi_cb_client.get("/api/projects/1/signals/codebooks").json()
         assert set(data.keys()) == {"codebooks", "total_participants", "trade_off_note"}
         assert isinstance(data["codebooks"], list)
         assert isinstance(data["total_participants"], int)
@@ -540,7 +540,7 @@ class TestGetCodebookAnalysis:
         self, multi_cb_client: TestClient,
     ) -> None:
         """Groups with different framework_id should appear as separate codebooks."""
-        data = multi_cb_client.get("/api/projects/1/analysis/codebooks").json()
+        data = multi_cb_client.get("/api/projects/1/signals/codebooks").json()
         cb_ids = [cb["codebook_id"] for cb in data["codebooks"]]
         # Should have norman, uxr, and custom
         assert "norman" in cb_ids
@@ -551,7 +551,7 @@ class TestGetCodebookAnalysis:
         self, multi_cb_client: TestClient,
     ) -> None:
         """Columns should be scoped to that codebook's groups."""
-        data = multi_cb_client.get("/api/projects/1/analysis/codebooks").json()
+        data = multi_cb_client.get("/api/projects/1/signals/codebooks").json()
         for cb in data["codebooks"]:
             if cb["codebook_id"] == "norman":
                 assert "Discoverability" in cb["columns"]
@@ -564,14 +564,14 @@ class TestGetCodebookAnalysis:
                 assert "My tags" in cb["columns"]
 
     def test_codebook_has_colour_set(self, multi_cb_client: TestClient) -> None:
-        data = multi_cb_client.get("/api/projects/1/analysis/codebooks").json()
+        data = multi_cb_client.get("/api/projects/1/signals/codebooks").json()
         for cb in data["codebooks"]:
             assert "colour_set" in cb
             assert isinstance(cb["colour_set"], str)
             assert len(cb["colour_set"]) > 0
 
     def test_codebook_has_name(self, multi_cb_client: TestClient) -> None:
-        data = multi_cb_client.get("/api/projects/1/analysis/codebooks").json()
+        data = multi_cb_client.get("/api/projects/1/signals/codebooks").json()
         for cb in data["codebooks"]:
             assert "codebook_name" in cb
             assert isinstance(cb["codebook_name"], str)
@@ -580,7 +580,7 @@ class TestGetCodebookAnalysis:
             assert custom_cbs[0]["codebook_name"] == "Custom"
 
     def test_each_codebook_has_matrices(self, multi_cb_client: TestClient) -> None:
-        data = multi_cb_client.get("/api/projects/1/analysis/codebooks").json()
+        data = multi_cb_client.get("/api/projects/1/signals/codebooks").json()
         for cb in data["codebooks"]:
             assert "section_matrix" in cb
             assert "theme_matrix" in cb
@@ -590,7 +590,7 @@ class TestGetCodebookAnalysis:
             }
 
     def test_tag_colour_indices_present(self, multi_cb_client: TestClient) -> None:
-        data = multi_cb_client.get("/api/projects/1/analysis/codebooks").json()
+        data = multi_cb_client.get("/api/projects/1/signals/codebooks").json()
         for cb in data["codebooks"]:
             assert "tag_colour_indices" in cb
             tci = cb["tag_colour_indices"]
@@ -604,7 +604,7 @@ class TestGetCodebookAnalysis:
         self, multi_cb_client: TestClient,
     ) -> None:
         """Each quote in a signal should include the specific tag names."""
-        data = multi_cb_client.get("/api/projects/1/analysis/codebooks").json()
+        data = multi_cb_client.get("/api/projects/1/signals/codebooks").json()
         found_tag_names = False
         for cb in data["codebooks"]:
             for sig in cb["signals"]:
@@ -616,21 +616,21 @@ class TestGetCodebookAnalysis:
 
     def test_only_sentiment_codebook_when_no_user_tags(self, client: TestClient) -> None:
         """Without user-applied tags, only the auto-imported sentiment codebook appears."""
-        data = client.get("/api/projects/1/analysis/codebooks").json()
+        data = client.get("/api/projects/1/signals/codebooks").json()
         for cb in data["codebooks"]:
             assert cb["codebook_id"] == "sentiment", (
                 f"Expected only sentiment codebook, got {cb['codebook_id']!r}"
             )
 
     def test_project_not_found(self, client: TestClient) -> None:
-        resp = client.get("/api/projects/999/analysis/codebooks")
+        resp = client.get("/api/projects/999/signals/codebooks")
         assert resp.status_code == 404
 
     def test_elaborate_false_returns_null_fields(
         self, multi_cb_client: TestClient,
     ) -> None:
         """Without elaborate=true, elaboration fields should be null."""
-        data = multi_cb_client.get("/api/projects/1/analysis/codebooks").json()
+        data = multi_cb_client.get("/api/projects/1/signals/codebooks").json()
         for cb in data["codebooks"]:
             for sig in cb["signals"]:
                 assert sig["signal_name"] is None
@@ -663,7 +663,7 @@ class TestGetCodebookAnalysis:
             new=mock_generate,
         ):
             data = multi_cb_client.get(
-                "/api/projects/1/analysis/codebooks?elaborate=true",
+                "/api/projects/1/signals/codebooks?elaborate=true",
             ).json()
 
         found_elaborated = False

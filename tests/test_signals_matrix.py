@@ -1,9 +1,9 @@
-"""Tests for bristlenose.analysis.matrix — matrix building from grouped quotes."""
+"""Tests for bristlenose.signals.matrix — matrix building from grouped quotes."""
 
 from __future__ import annotations
 
-from bristlenose.analysis.matrix import SENTIMENTS, build_section_matrix, build_theme_matrix
 from bristlenose.models import ExtractedQuote, QuoteType, ScreenCluster, Sentiment, ThemeGroup
+from bristlenose.signals.matrix import SENTIMENTS, build_section_matrix, build_theme_matrix
 
 
 def _quote(

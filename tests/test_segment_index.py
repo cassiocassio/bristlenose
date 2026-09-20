@@ -224,8 +224,8 @@ class TestSignalThreading:
 
     def test_detect_signals_carries_segment_index(self) -> None:
         """segment_index flows through detect_signals into SignalQuote."""
-        from bristlenose.analysis.matrix import build_section_matrix, build_theme_matrix
-        from bristlenose.analysis.signals import detect_signals
+        from bristlenose.signals.detect import detect_signals
+        from bristlenose.signals.matrix import build_section_matrix, build_theme_matrix
 
         quotes = [
             ExtractedQuote(

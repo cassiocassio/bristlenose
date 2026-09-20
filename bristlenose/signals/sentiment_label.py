@@ -96,7 +96,7 @@ def _sentiments_of(q: Quote) -> list[str]:
     """The sentiment values a quote carries.
 
     **Two shapes, and the one that renders is the second.** A quote from the
-    `/analysis/sentiment` lens carries a single `sentiment`. A quote on the
+    `/signals/sentiment` lens carries a single `sentiment`. A quote on the
     CODEBOOK path — which is what the analysis lens actually draws — carries no
     such field at all: the sentiment framework's *tags* ARE the seven values,
     so they arrive in `tag_names`.

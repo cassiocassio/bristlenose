@@ -25,7 +25,6 @@ from starlette.responses import PlainTextResponse, Response
 from bristlenose.server.db import create_session_factory, db_url_for_project, get_engine, init_db
 from bristlenose.server.middleware import AUTH_COOKIE_NAME, BearerTokenMiddleware
 from bristlenose.server.refusal import RefusalError, refusal_handler
-from bristlenose.server.routes.analysis import router as analysis_router
 from bristlenose.server.routes.autocode import router as autocode_router
 from bristlenose.server.routes.clips_export import router as clips_export_router
 from bristlenose.server.routes.codebook import router as codebook_router
@@ -43,6 +42,7 @@ from bristlenose.server.routes.quotes import router as quotes_router
 from bristlenose.server.routes.quotes_export import router as quotes_export_router
 from bristlenose.server.routes.runs import router as runs_router
 from bristlenose.server.routes.sessions import router as sessions_router
+from bristlenose.server.routes.signals import router as analysis_router
 from bristlenose.server.routes.transcript import router as transcript_router
 from bristlenose.server.status_page import detect_status, render_page
 

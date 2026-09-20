@@ -18,25 +18,33 @@ edit, no PR touched.*
 > — but it can be *missed*, and as of today **nothing but this file will raise
 > it.**
 >
-> **The two register rows this document proposed were never added.** §"Held
-> register row" (below) and the 3.15 / presidio-ceiling row were both written as
-> text to paste into `docs/dependency-premortem-log.md`'s Held register, and
-> neither landed — verified 20 Sep 2026: that register carries 24 rows and none
-> of them is the Python floor. The consequence is specific. `/cassandra
-> --watch` (Mode C) re-evaluates **held predicates in that register** against
-> fresh metadata; a predicate that is not a row is not re-evaluated. So the one
-> hold this document calls unrottable is also the one hold with **no mechanical
-> reminder at all** — 42 days before the date it turns on, its only carrier is
-> a design doc somebody has to think to open.
+> **✅ The floor now has a Held-register row — added 20 Sep 2026.** It had sat
+> paste-ready in §"For the Held register" (below) since 3 Sep and was never
+> pasted, so for 17 days the one hold this document calls *unrottable* was also
+> the one hold with **no mechanical reminder at all**. `/cassandra --watch`
+> (Mode C) re-evaluates held predicates **in that register**; a predicate that
+> is not a row is never re-evaluated. The row is now
+> `docs/dependency-premortem-log.md` § Held register, `Last watched 2026-09-20`,
+> status `held`.
+>
+> Three of its claims were re-measured before pasting rather than carried
+> forward, and one changed: the CI matrix is confirmed **10 cells dropping to
+> 6** (`ci.yml:174-175`); **no installed direct dependency requires >3.10** (36
+> declared); and the *"the Snap is still edge-only"* reason was **sharpened** —
+> `snap.yml`'s `publish-stable` is wired and reachable by hand
+> (`gh workflow run snap.yml --ref vX.Y.Z`), but it sits behind `release.sh`'s
+> tier-2 `snap-stable` step and `cmd_run` skips every tiered step by
+> construction, so it is the *default release* that publishes edge only, not
+> the mechanism that is missing.
+>
+> **The 3.15 / presidio-ceiling row is still not there** — §"register drift #5"
+> below calls it *"the nearest real ceiling on the entire project, in neither
+> register"*, and that remains true. Separate obligation, unpaid.
 >
 > The numpy row does mention the floor, but as *numpy's* release predicate
 > ("presidio-analyzer floats its numpy cap **and** the Python floor question is
-> settled"), which fires on numpy's condition and not on 1 Nov. That is the
-> trap in miniature: the floor appears in the register as somebody else's
-> precondition and nowhere as its own obligation.
->
-> This is recorded, not fixed — writing a register row is doing the work, not
-> truing the doc. The paste-ready text is already below.
+> settled"), which fires on numpy's condition and not on 1 Nov — so it was
+> never the reminder this needed.
 
 Companion artifact (same content, with the constraint diagrams):
 <https://claude.ai/code/artifact/10ea51c6-dc84-4134-94fb-ae70d84eca39>
@@ -115,6 +123,11 @@ the floor bump into a world where `snap install bristlenose --edge` is still the
 only Linux answer.** Not a gate on the floor, a sequencing note.
 
 ### For the Held register (`docs/dependency-premortem-log.md`)
+
+> **✅ Landed 20 Sep 2026.** The row below is the 3 Sep draft, kept as the
+> record of what was proposed. **The row as actually pasted differs** — the
+> Snap reason is sharpened and three figures were re-measured; read the
+> register, not this table, for the live obligation.
 
 | Held bump | Cluster | Reason (blocks now) | Release-predicate (lifts it) | Last watched | Status |
 |---|---|---|---|---|---|

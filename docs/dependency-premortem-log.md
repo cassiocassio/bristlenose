@@ -69,6 +69,24 @@ tombstone; fix it by adding the row.
 | **vite** (major) | frontend build · vite → vitest, @vitejs/plugin-react | 8.0.10 installed, 8.2.2 latest — **same major, so this ignore is not what is holding 8.2.2**; that is the bundle budget in `#143`. The ignore covers a vite 9 that does not exist. Its real coupling is downward: vitest and `@vitejs/plugin-react` both peer on vite's major | vite ships 9 → take it **with** vitest and `@vitejs/plugin-react`. Separately, `#143` asks whether the *minor* should carry a budget move — see § the asymmetry | 2026-09-05 | held — covers a major that does not exist |
 | **lighthouse** 13 | e2e perf gate | **The predicate is already met and the row says so.** Lighthouse 13 declares `engines: node >=22.19`, satisfied by the pinned Node; and no e2e spec asserts on a Lighthouse audit id (`grep -rn 'audits\[' e2e/tests/` clean, re-run 2026-09-05). Entry 1 flagged the reason as stale in June and it is staler now. What remains is not a version wait but an unaudited surface: the bundled-Chromium channel, and a perf-baseline re-pin | Run `/cassandra` on a Lighthouse 13 PR — which is what `dependabot.yml` already tells the next person to do. **This row exists to stop the ignore reading as a constraint when it is a to-do** | 2026-09-05 | held — predicate met, awaiting a deliberate audit |
 | **@playwright/test** (major) | e2e runner | **Playwright has never shipped a 2.0** — latest is 1.63.0, `next` is 1.64.0-alpha — so a `semver-major` ignore has never once fired and cannot until they change their versioning. The recorded reason (majors rotate the bundled Chromium/WebKit channel) is real but describes what Playwright does in **minors**: 1.59.1 → 1.60.0 was taken deliberately in June precisely because a minor stalled the CDN. So the guard is pointed at the wrong number | Playwright ships 2.0. Until then the ignore is a placeholder; the actual risk lives in the minor group, which is ungated by design | 2026-09-05 | held — cannot fire under 1.x |
+| **Python floor** `>=3.10` → `>=3.12` | platform | Ubuntu 22.04 LTS ships `python3` = **3.10.6** and is in standard security maintenance to **May 2027**; raising the floor refuses `pip install bristlenose` there, and the Snap that would catch those users is **edge by default** — `snap.yml`'s `publish-stable` is wired (`if: startsWith(github.ref,'refs/tags/v')`, reached by `gh workflow run snap.yml --ref vX.Y.Z`) but sits behind `release.sh`'s **tier-2** `snap-stable` step, and `cmd_run` skips every tiered step by construction (`release.sh:1317` — *"run is Tier 1; a Tier 2 promotion is a different act, not a longer run"*), so a normal release publishes edge only. The floor meanwhile costs nothing measurable: **36 declared direct dependencies, none of whose installed versions requires >3.10** (re-measured 2026-09-20), no OSV advisory differs between the 3.10 and 3.12 closures, and six transitive packages sit 1–2 minors back | **CPython 3.10 reaches EOL 31 Oct 2026.** On **1 Nov** set `requires-python = ">=3.12"`, `[tool.ruff] target-version = "py312"`, `[tool.mypy] python_version = "3.12"`, drop the 3.10 and 3.11 CI cells (**10 → 6**: the matrix is `["3.10","3.11","3.12","3.13","3.14"] × [ubuntu, macos]`, `ci.yml:174-175`), and promote the Snap off edge in the same change. **No upstream event required — the predicate is a calendar date fixed by python.org, so this hold cannot rot.** It can still be *missed*: `--watch` is what raises it, which is the whole reason this row exists | 2026-09-20 | held |
+
+> **The Python-floor row was added 20 Sep 2026, 17 days after the review that
+> decided it.** It had been sitting paste-ready in
+> `docs/design-python-floor.md` §"For the Held register" since 3 Sep and was
+> never pasted — so the one hold that *cannot rot*, because its predicate is a
+> calendar date, was also the only hold with **no mechanical reminder at all**,
+> 42 days before it fires. `--watch` re-evaluates rows in this table; a
+> predicate that is not a row is never re-evaluated. The floor did appear here,
+> but only as **numpy's** release-predicate (*"…and the Python floor question
+> is settled"*), which fires on numpy's condition and not on 1 Nov.
+>
+> Re-measured before pasting rather than copied forward: the CI matrix is 10
+> cells and drops to 6; no installed direct dependency requires >3.10; and the
+> "edge-only" reason was **sharpened, not carried** — the stable path is wired
+> and reachable by hand, it is the *default* release that publishes edge only.
+> The 3.15 / presidio-ceiling row that the same doc proposes is **still not
+> here** and is a separate obligation.
 
 <!-- Watch grounding: deps.dev GetRequirements for the upstream caps
      (spacy→thinc, fastapi→starlette), GetVersion for publishedAt/scorecard,

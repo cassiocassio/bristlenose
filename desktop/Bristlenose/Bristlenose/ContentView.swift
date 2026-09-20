@@ -217,6 +217,15 @@ struct ContentView: View {
     /// Used to gate sidebar-specific toolbar items — if the user has hidden
     /// the project list, don't compensate by moving project controls to the toolbar.
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    /// Auto-collapse of the projects column when the report would otherwise
+    /// drop below its reading measure (`SidebarAutoCollapse`). `splitWidth`
+    /// and `detailWidth` are measured; `lastSidebarWidth` is the column's
+    /// width the last time it showed; `sidebarAutoCollapsed` marks a collapse
+    /// as ours, so a column the researcher hid is never given back unasked.
+    @State private var splitWidth: CGFloat = 0
+    @State private var detailWidth: CGFloat = 0
+    @State private var lastSidebarWidth: CGFloat = 220
+    @State private var sidebarAutoCollapsed = false
     @State private var showingAIConsent = false
     @State private var aiConsentReviewMode = false
     @State private var showingMiroSheet = false
@@ -544,6 +553,28 @@ struct ContentView: View {
     /// chain type-checks within the Swift compiler's per-expression budget — the
     /// merged chain tripped "unable to type-check this expression in reasonable
     /// time". Pure refactor; no behaviour change.
+    private func applySidebarAutoCollapse() {
+        let action = SidebarAutoCollapse.decide(
+            windowWidth: splitWidth,
+            sidebarWidth: lastSidebarWidth,
+            minWidth: DetailFloor.resolve(
+                webMinWidth: bridgeHandler.detailMinWidth,
+                showingReport: detailPaneKind == .report
+            ),
+            sidebarVisible: SidebarToggle.isVisible(columnVisibility),
+            autoCollapsed: sidebarAutoCollapsed
+        )
+        switch action {
+        case .collapse:
+            sidebarAutoCollapsed = true
+            withAnimation { columnVisibility = .detailOnly }
+        case .expand:
+            withAnimation { columnVisibility = .all }
+        case .none:
+            break
+        }
+    }
+
     private var splitViewCore: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             sidebar
@@ -562,12 +593,18 @@ struct ContentView: View {
                 // and forcing `titleVisibility = .hidden` was what suppressed
                 // the native subtitle.
                 .navigationTitle(windowTitle)
-                // The report's reading-measure floor, reported by the SPA.
-                // See `DetailFloor` for why native applies rather than derives.
-                .modifier(DetailFloorModifier(
-                    webMinWidth: bridgeHandler.detailMinWidth,
-                    showingReport: detailPaneKind == .report
-                ))
+                // Width the detail actually has. With the projects column
+                // showing this yields its width (window − detail), which is
+                // what the auto-collapse decision uses for the expand test —
+                // see `SidebarAutoCollapse`. Not updated while the column is
+                // hidden, so the value survives a collapse for the way back.
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
+                    detailWidth = width
+                    if SidebarToggle.isVisible(columnVisibility), splitWidth > 0 {
+                        let sidebar = splitWidth - width
+                        if sidebar > 0 { lastSidebarWidth = sidebar }
+                    }
+                }
                 // Subtitle composition lives in `WindowSubtitle.swift` — it has
                 // to observe `liveData` itself to tick during a run, and its
                 // precedence rules are testable decisions, not view code.
@@ -582,6 +619,22 @@ struct ContentView: View {
                 ))
         }
         .background(SidebarDeselectMonitor { selection = [] })
+        // The Mail behaviour, explicit: shrink the window and the projects
+        // column gives way before the report does; widen it and the column
+        // comes back. The WINDOW is the only trigger — not a panel opening,
+        // not a lens change, not the column toggling — so the two sides never
+        // react to each other's toggles: native owns the column, the web copes
+        // with the width it is given. A column the researcher shows in a
+        // narrow window therefore stays shown until the next resize, as in
+        // Mail. Why not a declared detail minimum: see `DetailFloor`.
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
+            splitWidth = width
+            applySidebarAutoCollapse()
+        }
+        .onChange(of: columnVisibility) { _, now in
+            // Shown again — by us or by the researcher — is no longer ours.
+            if SidebarToggle.isVisible(now) { sidebarAutoCollapsed = false }
+        }
         .overlay(alignment: .bottomTrailing) {
             // Compact build-info diagnostic — Debug only by default; Release
             // exposure gated on a custom build flag so internal/ad-hoc archives

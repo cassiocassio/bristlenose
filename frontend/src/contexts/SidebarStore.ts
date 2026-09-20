@@ -62,6 +62,7 @@ const LS_TAGS_WIDTH = "bn-tags-width";
 // ── Types ────────────────────────────────────────────────────────────────
 
 export type TocMode = "closed" | "overlay" | "push";
+export type OpenedPanel = "toc" | "tags";
 
 // ── State shape ───────────────────────────────────────────────────────────
 
@@ -98,6 +99,12 @@ export interface SidebarState {
    * outlives the lens, so the fit must not count a column that isn't there.
    */
   rightColumn: boolean;
+  /**
+   * The panel the researcher opened most recently, exempt from the cascade
+   * until it is closed or the other is opened: what you just opened, you get,
+   * and the rest gives way in order. Ephemeral — a reload has no "just".
+   */
+  lastOpened: OpenedPanel | null;
 }
 
 // ── localStorage helpers ──────────────────────────────────────────────────
@@ -156,6 +163,7 @@ function loadState(): SidebarState {
     savedTagFilter: null,
     availableWidth: Infinity,
     rightColumn: false,
+    lastOpened: null,
   };
 }
 
@@ -214,11 +222,19 @@ function setState(updater: (prev: SidebarState) => SidebarState): void {
 // CONTENT_FLOOR_PX the cascade closes, in this order, the left panel, then the
 // tag sidebar, then the minimap — and because the fit is derived from the wish
 // rather than written over it, widening the window brings each back in the
-// reverse order with nothing to remember. The Mac's own sidebar gives first:
-// the native column collapses when the window can no longer hold
-// `requiredWidth` beside it (see DetailFloor.swift), which is why that figure
-// is the wish, never the fit — a figure that fell as panels auto-closed would
-// pop the sidebar back into the space the cascade just made.
+// reverse order with nothing to remember.
+//
+// The panel the researcher opened most recently is exempt: what you just
+// opened, you get, and the rest gives way in order. Without that, opening the
+// tag sidebar in a window that cannot hold both would close the tag sidebar
+// itself — a press that opens nothing. If even the exempt panel alone leaves
+// the centre under the floor, the centre squeezes: visible, self-explanatory,
+// and the researcher's own doing, where a refusal would be invisible.
+//
+// The web copes with the width it is GIVEN. It never asks native for more:
+// the Mac's projects column collapses on window resize only (the Mail
+// behaviour, `SidebarAutoCollapse` in DetailFloor.swift), against the width
+// the wish needs — which is why `requiredWidth` is the wish, never the fit.
 //
 // Overlay never counts: it floats above the centre and takes no column.
 
@@ -230,6 +246,8 @@ export interface PanelFitInput {
   /** The lens renders the right column (tag sidebar + minimap). */
   rightColumn: boolean;
   available: number;
+  /** The panel opened most recently, which the cascade never closes. */
+  exempt?: OpenedPanel | null;
 }
 
 export interface PanelFit {
@@ -260,8 +278,8 @@ export function fitPanels(input: PanelFitInput): PanelFit {
     (fit.tocOpen ? input.tocWidth : 0) +
     (fit.tagsOpen ? input.tagsWidth : 0) +
     (fit.minimapVisible ? MINIMAP_WIDTH_PX : 0);
-  if (need() > input.available && fit.tocOpen) fit.tocOpen = false;
-  if (need() > input.available && fit.tagsOpen) fit.tagsOpen = false;
+  if (need() > input.available && fit.tocOpen && input.exempt !== "toc") fit.tocOpen = false;
+  if (need() > input.available && fit.tagsOpen && input.exempt !== "tags") fit.tagsOpen = false;
   if (need() > input.available && fit.minimapVisible) fit.minimapVisible = false;
   return fit;
 }
@@ -274,6 +292,7 @@ function fitInput(s: SidebarState, overrides: Partial<PanelFitInput> = {}): Pane
     tagsWidth: s.tagsWidth,
     rightColumn: s.rightColumn,
     available: s.availableWidth,
+    exempt: s.lastOpened,
     ...overrides,
   };
 }
@@ -294,22 +313,21 @@ export function setLayoutContext(availableWidth: number, rightColumn: boolean): 
   setState((prev) => ({ ...prev, availableWidth, rightColumn }));
 }
 
-/**
- * Open the left panel so that it SHOWS. If the fit would auto-close it again —
- * the tag sidebar is taking the room — the tag wish is closed instead, and
- * persisted: the researcher asked for this panel, and a press that opens
- * nothing is the dead click the whole cascade exists to avoid. The reverse
- * (opening tags) needs no such step: the cascade closes the left panel first
- * by order, so the panel just opened is the one that shows.
- */
-function openTocPushFitted(prev: SidebarState): SidebarState {
-  const next = { ...prev, tocMode: "push" as TocMode };
+/** Open the left panel in push mode and make it the exempt panel. */
+function openTocPushExempt(prev: SidebarState): SidebarState {
   writeBool(LS_TOC_OPEN, true);
-  if (!fitPanels(fitInput(next)).tocOpen && next.tagsOpen) {
-    writeBool(LS_TAGS_OPEN, false);
-    next.tagsOpen = false;
-  }
-  return next;
+  return { ...prev, tocMode: "push", lastOpened: "toc" };
+}
+
+/** Open the tag sidebar and make it the exempt panel. */
+function openTagsExempt(prev: SidebarState): SidebarState {
+  writeBool(LS_TAGS_OPEN, true);
+  return { ...prev, tagsOpen: true, lastOpened: "tags" };
+}
+
+/** A closed panel is no longer "just opened". */
+function dropExempt(prev: SidebarState, panel: OpenedPanel): OpenedPanel | null {
+  return prev.lastOpened === panel ? null : prev.lastOpened;
 }
 
 // ── Actions ───────────────────────────────────────────────────────────────
@@ -321,9 +339,9 @@ export function toggleToc(): void {
     // reads as closed everywhere the researcher can see, so `[` must open it.
     if (panelFit(prev).tocOpen) {
       writeBool(LS_TOC_OPEN, false);
-      return { ...prev, tocMode: "closed" };
+      return { ...prev, tocMode: "closed", lastOpened: dropExempt(prev, "toc") };
     }
-    return openTocPushFitted(prev);
+    return openTocPushExempt(prev);
   });
 }
 
@@ -333,9 +351,11 @@ export function toggleTags(): void {
     // right column nothing is showing either way, and `]` there edits the
     // wish — otherwise it could only ever set it, never clear it.
     const showing = prev.rightColumn ? panelFit(prev).tagsOpen : prev.tagsOpen;
-    const tagsOpen = !showing;
-    writeBool(LS_TAGS_OPEN, tagsOpen);
-    return { ...prev, tagsOpen };
+    if (showing) {
+      writeBool(LS_TAGS_OPEN, false);
+      return { ...prev, tagsOpen: false, lastOpened: dropExempt(prev, "tags") };
+    }
+    return openTagsExempt(prev);
   });
 }
 
@@ -362,7 +382,7 @@ export function hideAllSidebars(): void {
   setState((prev) => {
     writeBool(LS_TOC_OPEN, false);
     writeBool(LS_TAGS_OPEN, false);
-    return { ...prev, tocMode: "closed", tagsOpen: false };
+    return { ...prev, tocMode: "closed", tagsOpen: false, lastOpened: null };
   });
 }
 
@@ -381,7 +401,8 @@ export function showAllSidebars(): void {
   setState((prev) => {
     writeBool(LS_TOC_OPEN, tocMode === "push");
     writeBool(LS_TAGS_OPEN, tagsOpen);
-    return { ...prev, tocMode, tagsOpen };
+    // Neither is "just opened": both are wished, and the plain order applies.
+    return { ...prev, tocMode, tagsOpen, lastOpened: null };
   });
 }
 
@@ -400,29 +421,28 @@ export function openTocOverlay(): void {
 
 /** Open TOC in push mode (click the list icon). Persisted. */
 export function openTocPush(): void {
-  setState(openTocPushFitted);
+  setState(openTocPushExempt);
 }
 
 /** Close TOC from any mode. Persists closed state. */
 export function closeToc(): void {
   setState((prev) => {
     writeBool(LS_TOC_OPEN, false);
-    return { ...prev, tocMode: "closed" };
+    return { ...prev, tocMode: "closed", lastOpened: dropExempt(prev, "toc") };
   });
 }
 
 export function closeTags(): void {
   setState((prev) => {
     writeBool(LS_TAGS_OPEN, false);
-    return { ...prev, tagsOpen: false };
+    return { ...prev, tagsOpen: false, lastOpened: dropExempt(prev, "tags") };
   });
 }
 
 export function openTags(): void {
   setState((prev) => {
-    if (prev.tagsOpen) return prev;
-    writeBool(LS_TAGS_OPEN, true);
-    return { ...prev, tagsOpen: true };
+    if (prev.tagsOpen && prev.lastOpened === "tags") return prev;
+    return openTagsExempt(prev);
   });
 }
 
@@ -628,6 +648,7 @@ export function resetSidebarStore(): void {
     savedTagFilter: null,
     availableWidth: Infinity,
     rightColumn: false,
+    lastOpened: null,
   };
   frameworkStatesHydrated = false;
   frameworkEditGeneration = 0;

@@ -703,6 +703,38 @@ describe("requiredWidth — the wish, not the fit", () => {
   });
 });
 
+describe("fitPanels — the panel just opened is exempt", () => {
+  const wish = { tocWanted: true, tagsWanted: true, tocWidth: 240, tagsWidth: 280, rightColumn: true };
+  const both = CONTENT_FLOOR_PX + 240 + 280 + MINIMAP_WIDTH_PX;
+
+  it("tags just opened: the left panel gives way, tags stays", () => {
+    expect(fitPanels({ ...wish, available: both - 1, exempt: "tags" })).toEqual({
+      tocOpen: false,
+      tagsOpen: true,
+      minimapVisible: true,
+    });
+  });
+
+  it("left panel just opened: tags gives way, then the minimap, the left panel stays", () => {
+    // 680 holds floor + toc (608) but not + minimap (688): tags AND minimap go.
+    expect(fitPanels({ ...wish, available: 680, exempt: "toc" })).toEqual({
+      tocOpen: true,
+      tagsOpen: false,
+      minimapVisible: false,
+    });
+  });
+
+  it("the exempt panel is never closed, even when the centre must squeeze", () => {
+    // 480 cannot hold floor + tags (648): the centre squeezes rather than the
+    // press opening nothing.
+    expect(fitPanels({ ...wish, available: 480, exempt: "tags" })).toEqual({
+      tocOpen: false,
+      tagsOpen: true,
+      minimapVisible: false,
+    });
+  });
+});
+
 describe("store fit — toggles act on what is showing", () => {
   const both = CONTENT_FLOOR_PX + 240 + 280 + MINIMAP_WIDTH_PX;
 
@@ -712,15 +744,16 @@ describe("store fit — toggles act on what is showing", () => {
       openTags();
       setLayoutContext(both - 1, true);
     });
-    expect(panelFit().tocOpen).toBe(false);
-    expect(useSidebarStoreSnapshot().tocMode).toBe("push");
+    // tags was opened last, so it is exempt and the left panel gives way.
+    expect(panelFit()).toEqual({ tocOpen: false, tagsOpen: true, minimapVisible: true });
+    expect(snapshot().tocMode).toBe("push");
     expect(wantedWidth()).toBe(both);
     // Widening brings it back with nothing to remember.
     act(() => setLayoutContext(both, true));
     expect(panelFit().tocOpen).toBe(true);
   });
 
-  it("`[` on an auto-closed left panel OPENS it, closing the tag wish that took the room", () => {
+  it("`[` on an auto-closed left panel OPENS it — the tag sidebar gives way, its wish untouched", () => {
     act(() => {
       openTocPush();
       openTags();
@@ -728,40 +761,61 @@ describe("store fit — toggles act on what is showing", () => {
     });
     expect(panelFit().tocOpen).toBe(false);
     act(() => toggleToc());
-    expect(panelFit().tocOpen).toBe(true);
-    expect(useSidebarStoreSnapshot().tagsOpen).toBe(false);
-    expect(localStorage.getItem("bn-tags-open")).toBe("false");
-  });
-
-  it("opening the left panel where both fit leaves the tag wish alone", () => {
-    act(() => {
-      openTags();
-      setLayoutContext(both, true);
-      openTocPush();
-    });
-    expect(useSidebarStoreSnapshot().tagsOpen).toBe(true);
+    expect(panelFit()).toEqual({ tocOpen: true, tagsOpen: false, minimapVisible: true });
+    expect(snapshot().tagsOpen).toBe(true);
+    expect(localStorage.getItem("bn-tags-open")).toBe("true");
+    // …and widening shows both again.
+    act(() => setLayoutContext(both, true));
     expect(panelFit()).toEqual({ tocOpen: true, tagsOpen: true, minimapVisible: true });
   });
 
-  it("opening tags where both do not fit shows tags and auto-closes the left panel", () => {
+  it("`]` on an auto-closed tag sidebar OPENS it — the left panel gives way", () => {
     act(() => {
+      openTags();
       openTocPush();
       setLayoutContext(both - 1, true);
-      toggleTags();
     });
+    expect(panelFit()).toEqual({ tocOpen: true, tagsOpen: false, minimapVisible: true });
+    act(() => toggleTags());
     expect(panelFit()).toEqual({ tocOpen: false, tagsOpen: true, minimapVisible: true });
-    expect(useSidebarStoreSnapshot().tocMode).toBe("push");
+    expect(snapshot().tocMode).toBe("push");
   });
 
-  it("`]` on a showing tag sidebar closes it even when the left panel is auto-closed", () => {
+  it("closing the exempt panel ends its exemption", () => {
+    act(() => {
+      openTocPush();
+      openTags();
+      closeTags();
+      openTags();
+      closeTags();
+      setLayoutContext(both - 1, true);
+    });
+    expect(snapshot().lastOpened).toBeNull();
+    // Only the left panel is wished; it fits.
+    expect(panelFit()).toEqual({ tocOpen: true, tagsOpen: false, minimapVisible: true });
+  });
+
+  it("`]` on a showing tag sidebar closes it, and the left panel returns", () => {
     act(() => {
       openTocPush();
       openTags();
       setLayoutContext(both - 1, true);
       toggleTags();
     });
-    expect(useSidebarStoreSnapshot().tagsOpen).toBe(false);
+    expect(snapshot().tagsOpen).toBe(false);
     expect(panelFit().tocOpen).toBe(true);
+  });
+
+  it("show all sidebars clears the exemption — plain order applies", () => {
+    act(() => {
+      openTocPush();
+      openTags();
+      hideAllSidebars();
+      showAllSidebars();
+      setLayoutContext(both - 1, true);
+    });
+    expect(snapshot().lastOpened).toBeNull();
+    expect(panelFit()).toEqual({ tocOpen: false, tagsOpen: true, minimapVisible: true });
   });
 
   it("setLayoutContext is equality-guarded", () => {
@@ -772,7 +826,7 @@ describe("store fit — toggles act on what is showing", () => {
   });
 });
 
-function useSidebarStoreSnapshot() {
+function snapshot() {
   const { result } = renderHook(() => useSidebarStore());
   return result.current;
 }

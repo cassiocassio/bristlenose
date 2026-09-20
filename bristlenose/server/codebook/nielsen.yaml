@@ -23,13 +23,13 @@ author_bio: >
   refined in the 1994 CHI paper.
 
 author_links:
-  - label: nngroup.com — 10 Usability Heuristics
+  - label: 10 Usability Heuristics
     url: https://www.nngroup.com/articles/ten-usability-heuristics/
-  - label: Original 1994 CHI paper (DOI)
+  - label: 1994 CHI paper (DOI)
     url: https://doi.org/10.1145/191666.191729
-  - label: Amazon US — Usability Engineering
+  - label: Usability Engineering (US)
     url: https://www.amazon.com/dp/0125184069
-  - label: Amazon UK — Usability Engineering
+  - label: Usability Engineering (UK)
     url: https://www.amazon.co.uk/dp/0125184069
 
 preamble: >

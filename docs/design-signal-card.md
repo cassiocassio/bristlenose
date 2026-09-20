@@ -388,6 +388,25 @@ lowercase value in the chip, because the build script bypasses i18n. The chip
 should read `Frustration`, not `frustration`. Cosmetic, corrected on the next
 rebuild.
 
+### 8a. A location with no cards does not appear
+
+**Decided 20 Sep 2026.** If every card at a location is cut — by the
+marginal-value rule, or because none could honestly be elaborated — the
+location's heading does not render. *If we have nothing to show, don't show
+it.*
+
+**This costs nothing to implement, because the invariant already holds.** Both
+the cards column and the navigator group through `groupSignalsByLocation`, and
+that helper builds its buckets from the signals it is handed — a location with
+no signals produces no bucket, so it disappears from both surfaces at once.
+That is the one-to-one property `aacf3e88` established deliberately: *"the
+navigation is one-to-one with the main content by construction rather than by
+accident."* Dropping a location is the property working, not a case to handle.
+
+**Nothing is hidden by it.** Every quote stays in the Quotes lens under its own
+location, carrying its tags. The analysis lens is the findings view; a place
+that produced no finding has no row in it.
+
 ---
 
 ## 9. Build plan

@@ -5,15 +5,15 @@
    visible at the bottom of the viewport without scrolling.
    .layout normally has min-height: 100vh (can grow); here we cap it. */
 /* The viewport MINUS everything `body` pads with.
-   `body` carries `padding: var(--bn-space-xl) var(--bn-space-lg)`, so a child
-   sized at a bare 100vh makes the document exactly 64px taller than the
-   viewport — and the page grows a scrollbar that scrolls 64px and nothing
-   else. On a lens that scrolls for real (Quotes) it hides inside a genuine
+   `body` carries `padding: var(--bn-space-xl) var(--bn-space-lg) 0` (bottom 0
+   since 20 Sep 2026 — see report.css), so a child sized at a bare 100vh makes
+   the document taller than the viewport by the top pad — and the page grows a
+   scrollbar that scrolls the padding and nothing else. (Before the bottom pad
+   moved it was 64px, measured 14 Sep 2026.) On a lens that scrolls for real (Quotes) it hides inside a genuine
    5000px of overflow; on a lens capped to the viewport it is the whole of the
    page's scroll range, and on Analysis it appears immediately beside
    .analysis-center's legitimate bar, which is how one phantom reads as two
-   scrollbars. Measured 14 Sep 2026: docScrollHeight - docClientHeight was 64
-   on /analysis/ and /sessions/ alike.
+   scrollbars.
 
    `--bn-toolbar-inset` is subtracted too, and it is the half a browser cannot
    show you. In embedded mode report.css pads the top by
@@ -23,14 +23,17 @@
    exactly as tall as the toolbar. The fallback is 0px, which is what makes one
    expression right on both surfaces. */
 .layout:has(.analysis-layout) {
-    height: calc(100vh - var(--bn-toolbar-inset, 0px) - 2 * var(--bn-space-xl));
-    height: calc(100dvh - var(--bn-toolbar-inset, 0px) - 2 * var(--bn-space-xl));
+    height: calc(100vh - var(--bn-toolbar-inset, 0px) - var(--bn-space-xl));
+    height: calc(100dvh - var(--bn-toolbar-inset, 0px) - var(--bn-space-xl));
     overflow: hidden;
     grid-template-rows: 1fr;
 }
 
+/* Height-fitted lens: the bottom pad `.center` carries elsewhere (sidebar.css)
+   would only push the inspector handle up off the window bottom here. */
 .layout > .center:has(.analysis-layout) {
     overflow: hidden;
+    padding-bottom: 0;
 }
 
 /* The <main> landmark wraps the routed content (sidebar.css: transparent flex

@@ -21,10 +21,12 @@
         var(--bn-minimap-width)                       /* 4: minimap     */
         0px                                           /* 5: tag sidebar */
         var(--bn-rail-width);                         /* 6: tag rail    */
-    /* Minus everything body pads with — see the note on
-       `.layout:has(.analysis-layout)` in inspector.css. A bare 100vh here puts
-       every lens over the viewport by the padding, which is a scrollbar that
-       scrolls the padding and nothing else.
+    /* Minus everything body pads with — the top only, since 20 Sep 2026
+       (report.css: body's bottom pad moved onto `.center` below so the sticky
+       panels, which live in this row, can reach the window bottom). See the
+       note on `.layout:has(.analysis-layout)` in inspector.css. A bare 100vh
+       here puts every lens over the viewport by the padding, which is a
+       scrollbar that scrolls the padding and nothing else.
 
        CURRENTLY MASKED on every lens but Analysis, and measured so: `.toc-rail`
        and `.toc-sidebar` are STICKY at `height: 100vh`, sticky is in flow, so
@@ -32,7 +34,7 @@
        this floor says. /sessions/ and /codebook/ still measure 64px over. This
        rule is right and inert; the rails are the remaining cause and changing
        them is whole-app geometry, not a scrollbar fix. */
-    min-height: calc(100vh - var(--bn-toolbar-inset, 0px) - 2 * var(--bn-space-xl));
+    min-height: calc(100vh - var(--bn-toolbar-inset, 0px) - var(--bn-space-xl));
 }
 
 /* TOC sidebar push-open: hide rail (0), show sidebar, keep center */
@@ -531,6 +533,9 @@
     flex-direction: column;
     padding-left: var(--bn-gutter-left);
     padding-right: var(--bn-gutter-right);
+    /* The page's bottom breathing room, moved here from body (report.css) so
+       it is inside the grid row the sticky panels span. */
+    padding-bottom: var(--bn-space-xl);
 }
 
 /* Main landmark — transparent flex-column pass-through so the routed content

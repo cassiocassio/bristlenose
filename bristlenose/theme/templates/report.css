@@ -18,7 +18,15 @@ body {
     color: var(--bn-colour-text);
     background: var(--bn-colour-bg);
     margin: 0;
-    padding: var(--bn-space-xl) var(--bn-space-lg);
+    /* No bottom padding on body (20 Sep 2026). The sidebars are sticky INSIDE
+       the .layout grid, so anything body pads below the grid is ground a panel
+       can never cover: scrolled to the end, the panel stopped one padding short
+       of the window bottom and the (transparent, embedded) body showed the
+       window surface there — a white bar under the pale panel on macOS 27. The
+       bottom breathing room now lives on `.layout > .center` (sidebar.css) for
+       the SPA and on `article` below for the static render, both of which sit
+       inside the row the panels span. */
+    padding: var(--bn-space-xl) var(--bn-space-lg) 0;
 }
 
 /* Translucent chrome (spike): when the SPA runs inside the macOS WKWebView
@@ -51,7 +59,7 @@ html[data-embedded="true"] body {
 article {
     max-width: none;
     margin: 0 auto;
-    padding: 0 var(--bn-space-lg);
+    padding: 0 var(--bn-space-lg) var(--bn-space-xl);
 }
 
 /* Single-column elements keep the reading-width cap on wide screens.

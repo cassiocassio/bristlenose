@@ -302,10 +302,10 @@ and <code>recovery</code> has nowhere to sit.</p>
 <h3>But <code>recovery</code> is not a second dimension. It is a sort key.</h3>
 <p>Step 3 defines <code>recovery</code> as "negative followed by positive <b>sequence</b>". Follow what
 the model is actually given:</p>
-<pre class="mk-code">bristlenose/analysis/signals.py:96
+<pre class="mk-code">bristlenose/signals/detect.py:96
     raw_quotes_sorted = sorted(raw_quotes, key=lambda q: (q.participant_id, q.start_timecode))
 
-bristlenose/analysis/generic_signals.py:104
+bristlenose/signals/generic_detect.py:104
     raw_quotes_sorted = sorted(raw_quotes, key=lambda q: (q.participant_id, q.start_seconds))
 
 bristlenose/server/elaboration.py:129
@@ -443,12 +443,12 @@ labels has no order.</li>
 </ul>''')
 
 s7 = sec(7, "The second vocabulary: <code>classify_flag</code>", '''
-<p><code>classify_flag</code> in <code>bristlenose/analysis/metrics.py</code> returns
+<p><code>classify_flag</code> in <code>bristlenose/signals/metrics.py</code> returns
 <b>Win / Problem / Niggle / Success / Surprising</b>. Traced end to end:</p>
 <ul class="mk-list">
 <li>Called at <code>signals.py:111</code> and <code>generic_signals.py:121</code>; lands on
 <code>Signal.flag</code>.</li>
-<li>Serialised onto the API at <code>server/routes/analysis.py:238</code> and <code>:437</code>.</li>
+<li>Serialised onto the API at <code>server/routes/signals.py:238</code> and <code>:437</code>.</li>
 <li>Read by <b>nothing</b> — no React component, no Swift type, no static renderer. It crosses the wire
 and is dropped.</li>
 <li>Its docstring promises a sixth value, <code>"Pattern"</code>, that no branch returns.</li>

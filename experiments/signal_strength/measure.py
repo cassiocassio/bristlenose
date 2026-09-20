@@ -34,13 +34,13 @@ from summary import summarise  # noqa: E402
 from sqlalchemy import create_engine  # noqa: E402
 from sqlalchemy.orm import sessionmaker  # noqa: E402
 
-from bristlenose.analysis.metrics import (  # noqa: E402
+from bristlenose.signals.metrics import (  # noqa: E402
     composite_signal, concentration_ratio, mean_intensity, simpsons_neff,
 )
 from bristlenose.server.models import (  # noqa: E402
     Project, ProposedTag, QuoteTag, TagDefinition,
 )
-from bristlenose.server.routes.analysis import (  # noqa: E402
+from bristlenose.server.routes.signals import (  # noqa: E402
     _compute_group_analysis, _load_shared_data, _resolve_active_groups,
 )
 

@@ -9,7 +9,7 @@ from collections import defaultdict
 
 from metric import voices
 
-from bristlenose.analysis.metrics import adjusted_residual
+from bristlenose.signals.metrics import adjusted_residual
 
 
 def _matrix_totals(corpus: list[dict]):

@@ -1,8 +1,18 @@
 ---
 status: partial
-last-trued: 2026-08-21
-trued-against: HEAD@main 19797094 on 2026-08-21
+last-trued: 2026-09-20
+trued-against: HEAD@main 6d247016 on 2026-09-20
 ---
+
+> **Trued 20 Sep 2026 — one line re-verified, no body edit needed.**
+> `6d247016` changed the metric this doc names in §"What the dashboard
+> currently shows" ("N_eff (agreement breadth) — Simpson's effective number of
+> voices per signal") from the unbiased population estimator to the inverse
+> Simpson index `1 / Σ pᵢ²`. **The line stayed true and got truer**: the
+> reciprocal form is a Simpson's diversity measure, and it is now bounded by
+> the voices there were. Recorded here with the form named so the next sweep
+> does not re-derive it. Everything else in this doc is as its Feb 2026 banner
+> declares.
 
 > **Truing status:** Partial — this is a Feb 2026 inventory of what the dashboard
 > does *not* show, and it has not been re-verified item by item. The 2026-08-21

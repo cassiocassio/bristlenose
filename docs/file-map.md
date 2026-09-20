@@ -23,9 +23,12 @@ Post-pipeline statistical analysis — matrix building and signal detection. Pur
 | File | Role |
 |------|------|
 | `models.py` | Data models: `MatrixCell`, `Matrix`, `SignalQuote`, `Signal`, `AnalysisResult` (plain dataclasses, not Pydantic) |
-| `metrics.py` | 5 pure math functions: `concentration_ratio`, `simpsons_neff`, `mean_intensity`, `composite_signal`, `adjusted_residual` |
+| `metrics.py` | 6 pure math functions: `concentration_ratio`, `simpsons_neff` (inverse Simpson index since 20 Sep 2026), `mean_intensity`, `composite_signal`, `adjusted_residual`, `classify_flag` — plus `SENTIMENT_VALENCE` and the `FLAG_*` thresholds |
 | `matrix.py` | Build section×sentiment and theme×sentiment contingency matrices from grouped quotes |
 | `signals.py` | Detect notable cells, classify confidence (strong/moderate/emerging), attach quotes |
+| `generic_matrix.py` | The same matrix build over flat `QuoteContribution` tuples, so serve-mode can use any column dimension without importing pipeline models |
+| `generic_signals.py` | `signals.py` parameterised on arbitrary column labels — the path serve-mode uses for codebook groups |
+| `sentiment_label.py` | What the sentiment chip says — resolves to one of the seven values, or `Positive` / `Negative` / `Mixed sentiments`, and never to "Sentiment" (the framework's name tells a researcher nothing). Constants carry provenance markers; see `docs/design-signal-card.md` §5 |
 
 ## Pipeline stages (`bristlenose/stages/`)
 
@@ -98,7 +101,7 @@ All 12 stages of the pipeline, from ingest to render.
 | `tests/test_text_utils.py` | Smart quotes, disfluency removal, text cleanup (11 tests) |
 | `tests/test_name_extraction.py` | Name extraction, auto-populate, short name heuristic, SpeakerRoleItem compat (26 tests) |
 | `tests/test_transcript_annotations.py` | Transcript quote annotations: highlight marking, quote map, segment classes, citation marks, JS bootstrap (26 tests) |
-| `tests/test_analysis_metrics.py` | Analysis math: concentration ratio, Simpson's Neff, mean intensity, composite signal, adjusted residual (32 tests) |
+| `tests/test_analysis_metrics.py` | Analysis math: concentration ratio, Simpson's Neff, mean intensity, composite signal, adjusted residual (40 tests) |
 | `tests/test_analysis_matrix.py` | Analysis matrix builder: empty/single/multi clusters, sentiment filtering, participant counting (12 tests) |
 | `tests/test_analysis_signals.py` | Signal detection: thresholds, sorting, top-n limiting, confidence classification, quote ordering (11 tests) |
 | `tests/test_status.py` | Project status: manifest reading, stage detail, file validation, resume summary (14 tests) |

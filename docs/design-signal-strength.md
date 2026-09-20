@@ -269,9 +269,13 @@ voices = min(1, n_eff / P)
 ```
 
 Bounded above by the number of people who actually spoke — which is what the
-card's **Agree.** label has always claimed and `simpsons_neff` has never
-delivered. `[2,1,1,1]` reads **3.57**, not 10.00. `[2,1]` reads **1.80**, not
-3.00.
+card's **Agree.** label always claimed. `[2,1,1,1]` reads **3.57**, not 10.00;
+`[2,1]` reads **1.80**, not 3.00.
+
+**This factor already ships** (20 Sep 2026, §2d). The Hill number of order 2
+*is* the inverse Simpson index, so `metrics.simpsons_neff` now computes exactly
+this. Of the three factors, `voices` is landed and `surprise` and `heat` are
+not — which is why §8's cost is smaller than it was written.
 
 ### surprise — is this more than the study would produce anyway
 
@@ -691,9 +695,10 @@ Two changes retire it without a special case:
 ## 8. What it costs
 
 **Arithmetic.** One new function (hypergeometric mid-p, ~10 lines,
-`math.lgamma`, no dependency), two corrected ones (`simpsons_neff` → Hill
-number; `mean_intensity/3` → own-baseline heat), and different arguments at the
-call site. `adjusted_residual` is untouched in all three of its homes — a
+`math.lgamma`, no dependency), one corrected one (`mean_intensity/3` →
+own-baseline heat), and different arguments at the call site. The second
+correction this originally listed — `simpsons_neff` → the Hill number — **is
+done** (§2d), so `voices` needs no further work. `adjusted_residual` is untouched in all three of its homes — a
 heatmap cell is a cell of the framework's own matrix, which is the question the
 contingency residual answers.
 

@@ -49,11 +49,19 @@ The analysis page detects signal concentration — it finds cells where a codebo
 
 > **Homepage**
 > Discoverability
-> Signal 0.32 | Conc. 1.3× | Agree. 3.0 | Intensity 1.0
+> Signal 0.20 | Conc. 1.3× | Agree. 1.8 | Intensity 1.0
 >
-> _(The four metrics moved behind the hero chip on 13 Sep 2026 — one number,
-> and a control that opens the working. The problem below is unchanged; only
-> this drawing of it is out of date.)_
+> _(Two things are out of date about this drawing, not one. The four metrics
+> moved behind the hero chip on 13 Sep 2026 — one number, and a control that
+> opens the working. And the **values** changed on 20 Sep (`6d247016`): this
+> read `Signal 0.32 | Agree. 3.0`, which was arithmetically impossible on its
+> face — it is worked example 4 below, Homepage × Discoverability, and only
+> **two** participants speak in it (P2 and P3), so three effective voices could
+> not happen. `simpsons_neff` was the unbiased population estimator and
+> returned 3.00 for `[1,2]`; it is now the inverse Simpson index and returns
+> **1.80**, with the composite falling to 0.195 accordingly. The old pair is
+> the pre-fix baseline, kept here because it is what the shipped card showed
+> for seven months. The problem the section describes is unchanged.)_
 
 A researcher looking at this knows that something about Discoverability is concentrated on the Homepage. They don't know *what about Discoverability*. To find out, they have to read the quotes, recall what the codebook group means, and synthesise the finding themselves. This is exactly the interpretive work the tool should do for them.
 

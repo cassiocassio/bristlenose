@@ -195,6 +195,19 @@ Norman at #5,251 in Japan is a genuinely popular book still actively selling 10+
 
 ## String audit — full scope
 
+> **Superseded as a to-do list, 20 Sep 2026 — kept as the pre-i18n baseline.**
+> This section is a snapshot of the audit taken *before* i18n landed, and it is
+> preserved because the grouping and the priority tiers still record how the
+> vocabulary was reasoned about. **It is no longer a list of work outstanding.**
+> Measured against `bristlenose/locales/en/`: **1,503 keys across 9 namespaces**,
+> not 34, and every string in the Tier 1 *Analysis* line below now ships —
+> `analysis.signalLabel` / `concLabel` / `agreeLabel` / `intensityLabel` and
+> their four `*Title` siblings live in the `analysis` block (47 keys) across all
+> 22 locale directories. Read this section for the reasoning; read
+> `en/common.json` for what exists. (The "34 keys" figure was already
+> self-flagged in this doc's 2026-08-21 changelog entry and deliberately left
+> unrewritten; this banner states the consequence the entry did not.)
+
 **Already in i18n (34 keys):** nav tabs, basic buttons (Save/Cancel/Export/Close), sentiment enum names, speaker roles, settings panel labels, footer.
 
 **Hardcoded (~180+ strings) — not yet in i18n.** Grouped by priority:

@@ -86,6 +86,16 @@ Four dimensions, all derivable from existing data:
 
 **Consistency** — do participants agree? Already partially captured as `Signal.n_eff` (effective participant count). A signal with high n_eff relative to total participants means broad agreement.
 
+> **This sentence only became true on 20 Sep 2026 (`6d247016`), and it is worth
+> knowing why before you reason about `breadth = n_eff / total_participants`
+> below.** `simpsons_neff` was the *unbiased population estimator*, which is not
+> bounded by the number of people who actually spoke — `[2,1,1,1]`, four
+> people, returned 10.00. So "high n_eff relative to total participants" could
+> mean a ratio above 1.0, and measurably did on 1 of 103 shipped cards; that is
+> the reason for the `Math.min(100, …)` clamp on the card's agreement bar. It
+> is now the inverse Simpson index, so **breadth is a share by construction**.
+> Do not re-derive the clamp.
+
 **Valence clarity** — is this clearly positive, clearly negative, or mixed? Currently NOT computed, but derivable:
 
 - Signal card sentiment is one of the 7 categories, each with known valence (see table above)

@@ -1,4 +1,25 @@
+---
+status: archived-historical
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20
+superseded-by: [ARCHITECTURE.md, design-ci.md]
+---
+
 # Architecture & Infrastructure Improvements
+
+> **Archived 20 Sep 2026 — historical interest only; do not consult as a spec.**
+>
+> A 14 Mar 2026 list of *suggested* improvements. Measured at HEAD, its headline items have
+all shipped: the CI Python matrix is `["3.10","3.11","3.12","3.13","3.14"]`
+(`.github/workflows/ci.yml:174`), and multi-project, event sourcing, the Snap channel and
+the e2e layer all landed independently.
+>
+> A suggestion list that has been overtaken is history, not a plan. Current architecture:
+> `ARCHITECTURE.md`; current CI: `design-ci.md`.
+
+---
+
+_Original document below, unedited._
 
 _14 Mar 2026_
 

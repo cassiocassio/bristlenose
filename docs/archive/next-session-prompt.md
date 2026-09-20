@@ -1,4 +1,25 @@
+---
+status: archived-historical
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20
+superseded-by: [BRANCHES.md]
+---
+
 # Next Session Prompt — Serve Branch
+
+> **Archived 20 Sep 2026 — historical interest only; do not consult as a spec.**
+>
+> A copy-paste session brief addressed to the `bristlenose_branch serve` **worktree**, which
+no longer exists. The React migration it hands off (Steps 1-10) is complete, and its
+pointer to `docs/CHANGELOG-serve.md` now resolves into this same archive.
+>
+> The project's working model has since moved to **solo trunk on `main`** — a branch is a
+> free pointer, a worktree costs an env — so a per-branch handoff prompt has no place to
+> live. Current workflow: `.claude/skills/WORKFLOW.md`; live worktrees: `docs/BRANCHES.md`.
+
+---
+
+_Original document below, unedited._
 
 Copy-paste this into a new Claude session in the `bristlenose_branch serve` worktree.
 

@@ -1,4 +1,26 @@
+---
+status: archived-historical
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20
+---
+
 # Design: Breathing Logotype
+
+> **Archived 20 Sep 2026 — historical interest only; do not consult as a spec.**
+>
+> An implementation plan explicitly scoped as *"Step 9 of the React migration"* and targeted
+at the `react-router` worktree. That migration is complete and the worktree is gone, so the
+plan has no branch to land on.
+>
+> **None of its three named code paths has ever existed**: `BreathingLogotype.tsx`,
+> `useBreathingColour.ts` and `ReportHeader.tsx` all return zero hits against
+> `git ls-files`. The feature was never built, and `docs/mockups/STATUS.md` already records
+> the mockup as PROPOSED / not built — which remains the live record of the idea, should
+> anyone want to revive it.
+
+---
+
+_Original document below, unedited._
 
 **Status:** Mockup complete, implementation deferred
 **Mockup:** `docs/mockups/mockup-header-redesign.html`

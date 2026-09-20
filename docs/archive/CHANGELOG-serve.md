@@ -1,4 +1,26 @@
+---
+status: archived-historical
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20
+superseded-by: [CHANGELOG.md]
+---
+
 # Changelog — Serve Branch
+
+> **Archived 20 Sep 2026 — historical interest only; do not consult as a spec.**
+>
+> Development log for the `bristlenose serve` **feature branch**, which merged and was deleted
+long ago. Its Milestone 5 body describes `frontend/src/islands/CodebookPanel.tsx` — the v1
+codebook lens, deleted in 0.29.0 (`baa1aa0e`, "codebook v2 becomes the codebook lens: v1
+deleted") — and `bristlenose/stages/render_html.py`, which no longer exists.
+>
+> Kept for the architectural reasoning behind the serve-mode milestones, which is not
+> recorded anywhere else. **Version history now lives in `CHANGELOG.md`**, deliberately in
+> one place: a version history in two places is a version history wrong in one.
+
+---
+
+_Original document below, unedited._
 
 Development log for the `bristlenose serve` feature branch. Tracks milestones, architectural decisions, and the reasoning behind them. This branch runs in parallel with `main` and won't merge until the served version is production-ready.
 

@@ -1,4 +1,26 @@
+---
+status: archived-historical
+last-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-20
+superseded-by: [design-windows-port.md]
+---
+
 # Windows CI — Design and Compatibility Plan
+
+> **Archived 20 Sep 2026 — historical interest only; do not consult as a spec.**
+>
+> A 10 Mar 2026 compatibility plan whose premise — *"add Windows to CI now, for hygiene,
+ahead of a port"* — was **reversed in June 2026** when the Windows port was parked by
+decision. There is no `windows-latest` job in any file under `.github/workflows/`, and
+that is intentional rather than an omission.
+>
+> `design-windows-port.md` is the canonical Windows doc: it carries the parking decision
+> and the distribution channel, and absorbs this doc's Phase-1 compatibility audit.
+> The still-true platform debts were separately captured in `windows-tech-debt.md`.
+
+---
+
+_Original document below, unedited._
 
 _10 Mar 2026_
 

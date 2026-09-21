@@ -1011,14 +1011,32 @@ body.dragging * {
    location applies here verbatim: all-caps makes "Shopping Bag" look like a
    category, and that is not how the Quotes lens renders the same string. The
    two lenses name the same things. It also takes the full text colour rather
-   than muted, because it is the thing the rows below it belong to. */
+   than muted, because it is the thing the rows below it belong to.
+
+   IT KEEPS THE LEFT EDGE; THE ROWS UNDER IT INDENT (see .signal-entry). The
+   centre column already draws this distinction and draws it with SPACE, not
+   type: the location heading sits flush on the content edge and the card's own
+   --bn-space-lg padding puts the headline 25px further in (24px + the card's
+   1px border). This panel had both on an identical x, so the one rank that is
+   a container and the one that is its contents started at the same place.
+
+   --bn-space-md rather than --bn-space-sm for the air: at 5.6px the gap before
+   a new location was the same gap as between two rows inside one, so the
+   blocks did not close. */
 .toc-sub-heading {
     font-size: var(--bn-text-caption);
     line-height: var(--bn-text-caption-lh);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-text);
     padding: 0 var(--bn-space-sm);
-    margin-top: var(--bn-space-sm);
+    margin-top: var(--bn-space-md);
+}
+
+/* The first heading takes no air. Every lens starts its content at the same
+   height, and a margin here would drop this panel below that datum — the same
+   reason .toc-heading:first-child exists above. */
+.toc-sidebar-body > .toc-sub-heading:first-child {
+    margin-top: 0;
 }
 
 /* The row is a BLOCK, and the chip flows inline after the words.
@@ -1029,10 +1047,28 @@ body.dragging * {
    "Homepa / ge / Content / Tension". And a row with no elaborated name had
    nothing to push its chip rightward, so the chip column jumped between the
    left and right edges down the list. Inline, every chip simply follows its
-   own words, and a nameless row's chip sits where its row starts. */
+   own words, and a nameless row's chip sits where its row starts.
+
+   THE INDENT IS ON padding-left, NOT margin-left, and that is the whole point
+   of it. This element's background IS the hover and selection capsule, so
+   padding moves the TEXT in while the capsule's left edge stays on the
+   heading's line — Finder and Mail both do exactly this, selection spanning
+   the row with the content indented inside it. A margin would drag the capsule
+   in with the text and the column would lose its left edge.
+
+   --bn-space-md (12px), not the 14pt the Mac app's own sidebar indents by
+   (ProjectSidebarOutline.swift:378, outlineView.indentationPerLevel = 14, and
+   CloudImportOutlineView repeats it). Two pixels does not buy a sixth spacing
+   token; the ladder is 2.4 / 5.6 / 12 / 24 / 32 and has no step between sm and
+   md to reach for. Measured over the nine locations and thirteen rows of a
+   real project at the shipped 280px: eight or nine rows still fit on one line
+   against ten before, and the panel grows about a tenth — most of that the
+   air, not the indent. --bn-space-lg was tried and costs five of the thirteen.
+   Both live in docs/mockups/signals-sidebar-indent.html, which measures
+   itself. */
 .signal-entry {
     display: block;
-    padding: 0.2rem var(--bn-space-sm);
+    padding: 0.2rem var(--bn-space-sm) 0.2rem calc(var(--bn-space-sm) + var(--bn-space-md));
     border-radius: var(--bn-radius-md);
     cursor: pointer;
     transition: background var(--bn-transition-fast);

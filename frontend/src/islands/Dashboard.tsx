@@ -227,7 +227,7 @@ function StatsRow({ stats }: { stats: StatsResponse }) {
                 ? {
                     value: stats.ai_tags_count,
                     label: t("dashboard.aiTag", { count: stats.ai_tags_count }),
-                    target: "analysis:section-x-sentiment",
+                    target: "signals:section-x-sentiment",
                   }
                 : null
             }

@@ -203,3 +203,47 @@ describe("Dashboard CoverageBox", () => {
     expect(container.querySelector(".bn-coverage-box")).toBeNull();
   });
 });
+
+describe("Dashboard stat-card destinations", () => {
+  // The rename to Signals moved the TAB_ROUTES key and left this caller behind:
+  // `target: "analysis:..."` looked up a tab the map no longer had, took the
+  // `?? "/report/"` fallback, and landed the researcher back on the dashboard
+  // they clicked from. No test asserted where a stat card GOES, so 0.30.0
+  // shipped it. Assert the destination, not the string.
+  it("every stat card reaches the lens its target names", async () => {
+    mockFetch(baseDashboard);
+    const { container } = render(<Dashboard projectId="1" />);
+    await screen.findByText("Transcript coverage");
+
+    const links = container.querySelectorAll<HTMLAnchorElement>("a[data-stat-link]");
+    expect(links.length).toBeGreaterThan(0);
+
+    for (const link of links) {
+      const target = link.dataset.statLink ?? "";
+      const [tab] = target.split(":");
+      const href = link.getAttribute("href") ?? "";
+      if (tab === "project") {
+        expect(href).toMatch(/^\/report\/(#|$)/);
+        continue;
+      }
+      // An unknown tab silently resolves to the project dashboard. A card that
+      // names a lens must not land there.
+      expect(
+        /^\/report\/(#|$)/.test(href),
+        `stat card "${target}" resolves to "${href}" — the dashboard it was clicked from`,
+      ).toBe(false);
+      expect(href).toContain(`/report/${tab}/`);
+    }
+  });
+
+  it("the AI-tags card opens the Signals lens", async () => {
+    mockFetch(baseDashboard);
+    const { container } = render(<Dashboard projectId="1" />);
+    await screen.findByText("Transcript coverage");
+    const card = container.querySelector<HTMLAnchorElement>(
+      'a[data-stat-link^="signals:"]',
+    );
+    expect(card).toBeTruthy();
+    expect(card!.getAttribute("href")).toBe("/report/signals/#section-x-sentiment");
+  });
+});

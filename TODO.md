@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 20 Sep 2026. _This file is a capture inbox + session context, not a changelog — `git log` + `CHANGELOG.md` are the unabridged record._
+Last updated: 21 Sep 2026. _This file is a capture inbox + session context, not a changelog — `git log` + `CHANGELOG.md` are the unabridged record._
 
 **⏳ PENDING, needs a nudge whenever `main` moves — PR #143 (frontend deps) is verified green and cannot land on its own.** All six required checks pass on it; **mypy is NOT a required check**, so its red is irrelevant (declared ratchet soft gate, red on `main` too). The blocker is `strict: True` branch protection plus a busy `main`: **GitHub's auto-merge does not update a branch**, so every push to `main` flips the PR to `BEHIND` and auto-merge silently declines to fire — armed, looking in-progress, structurally stuck. `main` took eight commits in half an hour today, so this will recur.
 

@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import OSLog
 
 /// Keeps the four Bristlenose menu-bar titles in the app's language.
 ///
@@ -41,12 +42,24 @@ final class MenuBarTitles {
     /// is *found*, since SwiftUI gives us no identifier to match on. Seeded at
     /// launch from the same `i18n.t` calls SwiftUI used, so the two agree.
     private var onScreen: [String: String] = [:]
+
+    /// The menu item itself, once found. Matching is the fragile part, so it is
+    /// done as few times as possible: once at bind, and again only if a lookup
+    /// later comes back empty.
+    private var items: [String: NSMenuItem] = [:]
+
+    /// The menu immediately after ours, and the only one guaranteed to read the
+    /// same in every locale.
+    private static let anchorTitle = "Diagnostics"
     private var observation: AnyCancellable?
+
+    private static let log = Logger(subsystem: "app.bristlenose", category: "menubar")
 
     /// Call once at launch, after `i18n` is configured.
     func bind(to i18n: I18n) {
         guard observation == nil else { return }
         onScreen = Dictionary(uniqueKeysWithValues: Self.keys.map { ($0, i18n.t($0)) })
+        locate()
         observation = i18n.$locale
             .dropFirst()   // `@Published` replays on subscribe
             .removeDuplicates()
@@ -60,19 +73,65 @@ final class MenuBarTitles {
             }
     }
 
-    private func sync(with i18n: I18n) {
+    /// Locate the four menus, anchored on a title that never moves.
+    ///
+    /// **Not by matching our own titles.** The first version did, comparing
+    /// `NSMenuItem.title` alone, found nothing and renamed nothing — silently —
+    /// leaving a Polish menu bar in a Spanish app (screenshot, 21 Sep 2026). A
+    /// menu-bar item carries its displayed text on the `NSMenu`, so an item
+    /// wrapping a submenu can hold an empty `title`, and any match on a
+    /// *translated* string is circular besides: it fails exactly when the
+    /// language is the thing that changed.
+    ///
+    /// The anchor is `Diagnostics` — **ours, and English by decision** (
+    /// App-Store-hidden chrome, `docs/design-i18n.md` §"Which surfaces are
+    /// targets"), so it reads the same in all 22 locales. `MenuCommands`
+    /// declares our four immediately before it, in `Self.keys` order, so the
+    /// four items preceding it are exactly ours. Title matching stays as a
+    /// fallback for the case where that layout changes.
+    private func locate() {
         guard let mainMenu = NSApp.mainMenu else { return }
+        guard Self.keys.contains(where: { items[$0] == nil }) else { return }
+
+        let anchor = mainMenu.items.firstIndex {
+            $0.title == Self.anchorTitle || $0.submenu?.title == Self.anchorTitle
+        }
+        if let anchor, anchor >= Self.keys.count {
+            for (offset, key) in Self.keys.enumerated() {
+                items[key] = mainMenu.items[anchor - Self.keys.count + offset]
+            }
+        } else {
+            for key in Self.keys where items[key] == nil {
+                guard let wanted = onScreen[key] else { continue }
+                items[key] = mainMenu.items.first {
+                    $0.title == wanted || $0.submenu?.title == wanted
+                }
+            }
+        }
+
+        let missing = Self.keys.filter { items[$0] == nil }
+        if !missing.isEmpty {
+            // Loud rather than silent: a miss means the menu bar stops following
+            // the language and nothing else in the app will say so.
+            Self.log.warning("""
+                menu titles not located: \(missing.joined(separator: ", "), privacy: .public);                 anchor \(Self.anchorTitle, privacy: .public) at \(anchor.map(String.init) ?? "nil", privacy: .public);                 main menu: \(mainMenu.items.map { "\($0.title)|\($0.submenu?.title ?? "-")" }.joined(separator: ", "), privacy: .public)
+                """)
+        }
+    }
+
+    private func sync(with i18n: I18n) {
+        locate()   // no-op for anything already held; retries anything that missed
         for key in Self.keys {
             let fresh = i18n.t(key)
-            guard let current = onScreen[key] else {
+            guard let current = onScreen[key], current != fresh else {
                 onScreen[key] = fresh
                 continue
             }
-            if current == fresh { continue }
-            // Not found means SwiftUI rebuilt the menu after all, or something
-            // renamed it. Leave `onScreen` alone so the next change hunts for
-            // the title that IS there rather than one that never was.
-            guard let item = mainMenu.items.first(where: { $0.title == current }) else { continue }
+            guard let item = items[key] else {
+                // Leave `onScreen` alone so the next attempt still hunts for the
+                // title that IS on screen rather than one that never was.
+                continue
+            }
             item.title = fresh
             item.submenu?.title = fresh
             onScreen[key] = fresh

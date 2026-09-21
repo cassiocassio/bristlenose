@@ -412,7 +412,7 @@
         },
         "tag": {
           "title": "Etiquetar",
-          "text": "Selecciona una o varias citas y pulsa `t` para etiquetarlas con un código de tu libro.",
+          "text": "Selecciona una o varias citas y pulsa `t` para etiquetarlas con un código de tu libro de códigos.",
           "link": "Etiquetado manual"
         },
         "starHide": {

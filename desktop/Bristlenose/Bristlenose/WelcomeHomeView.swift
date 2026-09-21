@@ -80,7 +80,16 @@ private func cta(_ label: String) -> String {
     label.hasSuffix("\u{2026}") ? label : label + " \u{2192}"
 }
 
-@MainActor private func resolve(_ item: SlotItem, _ i18n: I18n) -> ResolvedSlot {
+/// Resolve a slot. `fallbackLink` is the label for a pool whose slots carry no
+/// `link` of their own — the science cell has always read "Learn more →" and the
+/// configured-AI cell "More →", and neither has per-slot labels yet
+/// (design-welcome-screen.md §Cell 3 wants descriptive ones; that is new copy in
+/// 21 languages, tracked separately). It is a parameter rather than one global
+/// default because a single default silently demotes one of the two pools —
+/// which is exactly what happened when this shipped: every science slot quietly
+/// went from "Learn more →" to "More →" in all 21 locales.
+@MainActor private func resolve(_ item: SlotItem, _ i18n: I18n,
+                                fallbackLink: String = "learnMore") -> ResolvedSlot {
     guard let key = item.key else {
         return ResolvedSlot(title: nil, text: "", more: nil, linkLabel: "", linkLabel2: nil)
     }
@@ -89,12 +98,8 @@ private func cta(_ label: String) -> String {
         title: i18n.optional(base + ".title"),
         text: i18n.optional(base + ".text") ?? "",
         more: i18n.optional(base + ".more"),
-        // A slot with no `link` of its own falls back to the shared word — the
-        // configured-AI pool has always read "More →" and has no per-slot label
-        // yet (design-welcome-screen.md §Cell 3 wants descriptive ones; that is
-        // new copy in 21 languages, tracked separately). Without the fallback
-        // these three render a bare arrow.
-        linkLabel: i18n.optional(base + ".link") ?? i18n.t("desktop.welcome.home.more"),
+        linkLabel: i18n.optional(base + ".link")
+            ?? i18n.t("desktop.welcome.home." + fallbackLink),
         linkLabel2: i18n.optional(base + ".link2")
     )
 }
@@ -334,7 +339,7 @@ struct WelcomeHomeView: View {
     }
 
     private func slotBody(_ item: SlotItem) -> some View {
-        let slot = resolve(item, i18n)
+        let slot = resolve(item, i18n, fallbackLink: "more")
         return VStack(alignment: .leading, spacing: 3) {
             if let title = slot.title {
                 Text(title).font(.title3).fontWeight(.semibold)
@@ -486,6 +491,20 @@ private func welcomeKeyText(_ s: String, dark: Bool) -> Text {
     return out
 }
 
+/// Join a tip's two sentences.
+///
+/// A fullwidth stop (`。！？．`) carries about half an em of built-in trailing
+/// space, so Japanese and Chinese do not put a space after it — an interpolated
+/// `"\(a) \(b)"` leaves a visible gap those scripts never write. The test is the
+/// PUNCTUATION, not the script: Korean is head-final too but ends a sentence
+/// with an ASCII period and does space normally, so a script check would get it
+/// wrong in the other direction.
+private func joinSentences(_ head: String, _ tail: String) -> String {
+    let fullwidthStops: Set<Character> = ["\u{3002}", "\u{FF01}", "\u{FF1F}", "\u{FF0E}"]
+    guard let last = head.last, fullwidthStops.contains(last) else { return head + " " + tail }
+    return head + tail
+}
+
 // MARK: - Slot rotator (manual content carousel, in place)
 //
 // Content cross-fades in the SAME frame (no card slide, so no edge-peek problem).
@@ -600,7 +619,7 @@ private struct SlotRotator: View {
                 // sentence ONLY when a larger cell can display all of it un-truncated.
                 // ViewThatFits picks the first (richest) candidate that fits vertically.
                 ViewThatFits(in: .vertical) {
-                    tipBody("\(slot.text) \(more)")
+                    tipBody(joinSentences(slot.text, more))
                     tipBody(slot.text)
                 }
             } else if !slot.text.isEmpty {

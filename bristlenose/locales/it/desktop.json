@@ -418,7 +418,7 @@
         "starHide": {
           "title": "Stella e nascondi",
           "text": "`s` assegna la stella alle citazioni che contano, `h` nasconde il resto.",
-          "link": "Abbreviazioni"
+          "link": "Scorciatoie"
         },
         "clips": {
           "title": "Clip video",
@@ -570,7 +570,7 @@
         "keyboardShortcuts": {
           "text": "Premi `s` per la stella, `h` per nascondere — poi filtra ciò che conta.",
           "more": "C'è un tasto per quasi tutto, nell'app e nel report nel browser.",
-          "link": "Abbreviazioni"
+          "link": "Scorciatoie"
         },
         "supportedFiles": {
           "text": "Trascina **.srt**, **.vtt** o **.docx** e salta la trascrizione.",

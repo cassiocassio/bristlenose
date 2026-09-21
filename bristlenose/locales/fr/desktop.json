@@ -401,7 +401,7 @@
       "tools": {
         "autocode": {
           "title": "AutoCode",
-          "text": "AutoCode propose une étiquette par verbatim — vous acceptez ou refusez.",
+          "text": "AutoCode propose des étiquettes sur chaque verbatim — vous acceptez ou refusez.",
           "link": "Étiquetage assisté"
         },
         "codebooks": {
@@ -565,7 +565,7 @@
         "configuration": {
           "text": "Chaque réglage a une valeur par défaut sensée, modifiable.",
           "more": "Une page de référence les liste toutes, avec le rôle de chacune.",
-          "link": "Réglages"
+          "link": "Configuration"
         },
         "keyboardShortcuts": {
           "text": "Touche `s` pour le favori, `h` pour masquer — puis filtrez l’essentiel.",

@@ -47,8 +47,44 @@ SLOT_LEAVES = {"title", "text", "more", "link", "link2"}
 WITHHELD_PREFIXES = {"tools.redactPii"}
 
 
+def _strip_comments(src: str) -> str:
+    """Drop `//` line comments, leaving string literals alone.
+
+    Load-bearing twice over. A naive strip eats the `//` in
+    `"https://bristlenose.app/docs/"` and silently shortens the corpus. And
+    without any strip the scanner reads COMMENTED-OUT call sites as live, which
+    is how `WITHHELD_PREFIXES` was dead on arrival: the withheld PII slot matched
+    its own commented `.init(key:)` line, so the allow-list never fired and any
+    slot someone commented out was quietly exempt from the stranded-key check.
+    """
+    out: list[str] = []
+    in_str = esc = False
+    i = 0
+    while i < len(src):
+        c = src[i]
+        if in_str:
+            out.append(c)
+            if esc:
+                esc = False
+            elif c == "\\":
+                esc = True
+            elif c == '"':
+                in_str = False
+        elif c == '"':
+            in_str = True
+            out.append(c)
+        elif src[i : i + 2] == "//":
+            while i < len(src) and src[i] != "\n":
+                i += 1
+            continue
+        else:
+            out.append(c)
+        i += 1
+    return "".join(out)
+
+
 def _source() -> str:
-    return "\n".join(p.read_text(encoding="utf-8") for p in SWIFT)
+    return _strip_comments("\n".join(p.read_text(encoding="utf-8") for p in SWIFT))
 
 
 def _en_leaves() -> set[str]:
@@ -66,36 +102,70 @@ def _en_leaves() -> set[str]:
     return out
 
 
-def _requested() -> set[str]:
-    """Every `welcome.home` leaf the Swift can ask for at runtime."""
+def _exact() -> set[str]:
+    """Leaves the Swift asks for BY NAME — every one of which must exist.
+
+    Two kinds, both whole keys rather than a slot's optional leaf: a literal
+    `i18n.t("desktop.welcome.home.…")`, and a slug interpolated onto a dynamic
+    prefix (`"…books." + b.line`). A miss here renders the dotted path on the
+    pane, so there is nothing to be tolerant about.
+    """
     src = _source()
-    asked = {m.group(1) for m in re.finditer(rf'"{re.escape(PREFIX)}([\w.]+)"', src)}
-
-    # Slot keys: `resolve` turns each into up to five leaf lookups.
-    for slot in re.findall(r'\.init\(key: "([\w.]+)"', src):
-        asked |= {f"{slot}.{leaf}" for leaf in SLOT_LEAVES}
-
-    # Dynamic prefixes: `"…books." + b.line`, `"…ingestRows." + r.surtitle`.
+    exact = {
+        m.group(1)
+        for m in re.finditer(rf'"{re.escape(PREFIX)}([\w.]+)"', src)
+        if not m.group(1).endswith(".")  # the dynamic prefixes themselves
+    }
+    # `resolve`'s pool fallback is named at the call site, not written literally.
+    exact |= set(re.findall(r'fallbackLink: "(\w+)"', src))
+    exact |= set(re.findall(r'fallbackLink: String = "(\w+)"', src))
     for prefix, field in (("books", "line"), ("ingestRows", "surtitle")):
         if f'"{PREFIX}{prefix}." +' not in src:
             continue
-        asked |= {f"{prefix}.{slug}" for slug in re.findall(rf'{field}: "(\w+)"', src)}
-    return asked
+        exact |= {f"{prefix}.{slug}" for slug in re.findall(rf'{field}: "(\w+)"', src)}
+    return exact
 
 
-def test_every_key_the_pane_asks_for_exists_in_english() -> None:
-    missing = sorted(k for k in _requested() if k not in _en_leaves())
-    # Optional leaves are absent on purpose (a tip has no title), so only a
-    # whole slot going missing is a defect: every requested slot must yield
-    # at least `text`, and every literal key must resolve.
-    # `text` alone is the load-bearing leaf: title, more, link and link2 are
-    # each legitimately absent on some slot, so only a missing `text` means the
-    # call site is asking for a slot English does not have. (A typo'd key loses
-    # the whole namespace, so every leaf goes at once — but keying the check to
-    # the one leaf that must exist is the honest statement of the invariant.)
-    slots = {k.rsplit(".", 1)[0] for k in missing}
-    dead = sorted(s for s in slots if f"{s}.text" in missing)
+def _slots() -> set[str]:
+    """Slot keys from the pools. Each yields up to five leaves, all optional
+    except `text`, which is the one every slot must carry."""
+    return set(re.findall(r'\.init\(key: "([\w.]+)"', _source()))
+
+
+def _requested() -> set[str]:
+    """Every `welcome.home` leaf the Swift can ask for at runtime."""
+    return _exact() | {f"{slot}.{leaf}" for slot in _slots() for leaf in SLOT_LEAVES}
+
+
+def test_every_named_key_exists_in_english() -> None:
+    """A literal key or a dynamic slug with no English entry renders its path."""
+    leaves = _en_leaves()
+    missing = sorted(k for k in _exact() if k not in leaves)
+    assert not missing, f"named keys English does not carry: {missing}"
+
+
+def test_every_slot_carries_at_least_its_text() -> None:
+    """`text` is the one leaf every slot must have; title, more, link and link2
+    are each legitimately absent on some slot, so this is the honest statement
+    of the invariant rather than a count."""
+    leaves = _en_leaves()
+    dead = sorted(s for s in _slots() if f"{s}.text" not in leaves)
     assert not dead, f"call sites ask for slots English does not carry: {dead}"
+
+
+def test_the_in_app_cta_keeps_its_ellipsis_in_every_locale() -> None:
+    """`cta(_:)` infers intent from punctuation: a label ending in `…` opens
+    something HERE and takes no arrow. The Connect-an-agent link opens Settings,
+    so a translator who writes `...`, drops the ellipsis, or doubles it gets an
+    arrow on an in-app control — silently, in one locale, which nothing else
+    looks at."""
+    for locale in sorted(p.name for p in (REPO / "bristlenose/locales").iterdir() if p.is_dir()):
+        data = json.loads((REPO / f"bristlenose/locales/{locale}/desktop.json").read_text(encoding="utf-8"))
+        label = data.get("welcome", {}).get("home", {}).get("tools", {}).get("agent", {}).get("link")
+        if label is None:
+            continue  # zh-Hant-HK inherits; absence is correct there
+        assert label.endswith("\u2026"), f"{locale}: agent link must end in … — {label!r}"
+        assert not label.endswith("\u2026\u2026"), f"{locale}: doubled ellipsis — {label!r}"
 
 
 def test_no_english_string_is_stranded_without_a_call_site() -> None:

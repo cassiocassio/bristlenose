@@ -263,6 +263,11 @@ struct PipelineSummaryTests {
         // regression a user-visible-but-not-asserted bug hides.
         let i18n = I18n()
         i18n.configure(localesDirectory: Self.productionLocalesURL)
+        // Pin the locale: `configure` reads the developer's stored app language
+        // from UserDefaults, so without this the assertion below is against
+        // whatever language the app was last left in — these went red the moment
+        // someone QA'd the Welcome pane in German.
+        i18n.setLocale("en")
         let rendered = ProjectDiagnosticPopover.localisedOverflowText(
             message: "... and 1 more failure truncated", i18n: i18n
         )
@@ -281,6 +286,7 @@ struct PipelineSummaryTests {
         // count=N (N > 1) dispatches to `overflow_other`.
         let i18n = I18n()
         i18n.configure(localesDirectory: Self.productionLocalesURL)
+        i18n.setLocale("en")
         let rendered = ProjectDiagnosticPopover.localisedOverflowText(
             message: "... and 4 more failures truncated", i18n: i18n
         )
@@ -295,6 +301,7 @@ struct PipelineSummaryTests {
         // locale key as a literal.
         let i18n = I18n()
         i18n.configure(localesDirectory: Self.productionLocalesURL)
+        i18n.setLocale("en")
         let rendered = ProjectDiagnosticPopover.localisedOverflowText(
             message: "no count here", i18n: i18n
         )

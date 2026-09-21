@@ -437,8 +437,8 @@
       "tools": {
         "autocode": {
           "title": "AutoCode",
-          "text": "AutoCode proponuje tagi do każdego cytatu — akceptujesz lub odrzucasz.",
-          "link": "AI pomaga tagować"
+          "text": "AutoCode proponuje etykiety do każdego cytatu — akceptujesz lub odrzucasz.",
+          "link": "AI pomaga etykietować"
         },
         "codebooks": {
           "title": "Księgi kodów",
@@ -447,9 +447,9 @@
           "link2": "Ramy badawcze"
         },
         "tag": {
-          "title": "Tagowanie",
-          "text": "Zaznacz jeden lub więcej cytatów i naciśnij `t`, aby otagować je kodem z księgi kodów.",
-          "link": "Tagowanie ręczne"
+          "title": "Etykietowanie",
+          "text": "Zaznacz jeden lub więcej cytatów i naciśnij `t`, aby oznaczyć je etykietą z kodem z księgi kodów.",
+          "link": "Ręczne etykietowanie"
         },
         "starHide": {
           "title": "Gwiazdka i ukrywanie",
@@ -554,14 +554,14 @@
           "link": "Połącz agenta"
         },
         "useCodebooks": {
-          "text": "Niech **AutoCode** zaproponuje tagi do każdego cytatu.",
-          "more": "Taguj ręcznie lub zacznij od księgi kodów i akceptuj sugestie modelu.",
+          "text": "Niech **AutoCode** zaproponuje etykiety do każdego cytatu.",
+          "more": "Etykietuj ręcznie lub zacznij od księgi kodów i akceptuj sugestie modelu.",
           "link": "Księgi kodów"
         },
         "tagForMeaning": {
-          "text": "Tagowanie to już analiza — zamień cytaty w tematy.",
+          "text": "Etykietowanie to już analiza — zamień cytaty w tematy.",
           "more": "Zgrupuj kilka cytatów pod jednym kodem, a wnioski zaczną się wyłaniać.",
-          "link": "Tagowanie znaczeń"
+          "link": "Etykietowanie znaczeń"
         },
         "howItWorks": {
           "text": "Bristlenose czyta wywiady jako sesje i cytaty.",
@@ -574,7 +574,7 @@
           "link": "Sygnały"
         },
         "frameworks": {
-          "text": "Taguj według gotowych ram badawczych UX.",
+          "text": "Etykietuj według gotowych ram badawczych UX.",
           "more": "Każde ramy wnoszą własną perspektywę — Norman, Nielsen i inne.",
           "link": "Ramy"
         },

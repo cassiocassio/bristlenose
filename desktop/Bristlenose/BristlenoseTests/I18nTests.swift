@@ -32,30 +32,39 @@ struct I18nTests {
     @MainActor @Test func t_simpleKey_returnsTranslation() {
         let i18n = I18n()
         i18n.configure(localesDirectory: Self.fixturesURL)
+        // Pin the locale: `configure` reads the developer's stored app language
+        // from UserDefaults, so without this the assertion below is against
+        // whatever language the app was last left in — these went red the moment
+        // someone QA'd the Welcome pane in German.
+        i18n.setLocale("en")
         #expect(i18n.t("common.nav.project") == "Project")
     }
 
     @MainActor @Test func t_nestedKey_returnsTranslation() {
         let i18n = I18n()
         i18n.configure(localesDirectory: Self.fixturesURL)
+        i18n.setLocale("en")
         #expect(i18n.t("desktop.menu.file.print") == "Print…")
     }
 
     @MainActor @Test func t_missingKey_returnsRawKey() {
         let i18n = I18n()
         i18n.configure(localesDirectory: Self.fixturesURL)
+        i18n.setLocale("en")
         #expect(i18n.t("common.nonexistent.key") == "common.nonexistent.key")
     }
 
     @MainActor @Test func t_missingNamespace_returnsRawKey() {
         let i18n = I18n()
         i18n.configure(localesDirectory: Self.fixturesURL)
+        i18n.setLocale("en")
         #expect(i18n.t("bogus.some.key") == "bogus.some.key")
     }
 
     @MainActor @Test func t_noDotsInKey_returnsRawKey() {
         let i18n = I18n()
         i18n.configure(localesDirectory: Self.fixturesURL)
+        i18n.setLocale("en")
         #expect(i18n.t("nodots") == "nodots")
     }
 

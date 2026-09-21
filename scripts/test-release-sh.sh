@@ -392,6 +392,46 @@ case "$_out" in *"interrupted and its outcome is unrecorded"*) ok "the stranded 
 [ "$(git rev-parse HEAD)" = "$_h0" ] && ok "HEAD unchanged" || bad "HEAD MOVED during a test"
 [ "$(git tag -l | wc -l | tr -d ' ')" = "$_t0" ] && ok "no tag created" || bad "A TAG WAS CREATED during a test"
 
+head_ "run — resume re-dispatches strict CI when HEAD moved past ci-sha"
+# Incident 27 (0.30.0): a fix landed mid-run, the run resumed with strict-ci
+# recorded ok, and nothing before the tag compares HEAD to the verdict's sha —
+# ci-green finds its run BY ci-sha, and verdict_tag_provenance runs only in
+# TAG_CMD. The uploads would have shipped an unvalidated HEAD; the tag would
+# have refused afterwards. The guard fires at the strict-ci step instead.
+_rd2="$ROOT/.release/9.9.8"; rm -rf "$_rd2"; mkdir -p "$_rd2/logs"
+cat > "$_rd2/events.jsonl" <<'LOG'
+{"ts":"2026-09-21T10:00:00Z","run":"9.9.8","step":"preflight","status":"ok","detail":"52s"}
+{"ts":"2026-09-21T10:02:00Z","run":"9.9.8","step":"bump","status":"ok","detail":"4s"}
+{"ts":"2026-09-21T10:03:00Z","run":"9.9.8","step":"push-main","status":"ok","detail":"11s"}
+{"ts":"2026-09-21T10:04:00Z","run":"9.9.8","step":"strict-ci","status":"ok","detail":"2s"}
+{"ts":"2026-09-21T10:05:00Z","run":"9.9.8","step":"build-all","status":"running","detail":"attempt 1"}
+LOG
+# A recorded verdict about a commit that is not HEAD.
+printf '%s\n' "0000000000000000000000000000000000000000" > "$_rd2/ci-sha"
+_out=$(echo "9.9.8" | RELEASE_STEPS_FILE="$_SYNTH_TBL" bash "$ROOT/scripts/release.sh" run 9.9.8 --bump patch 2>&1)
+_rc=$?
+case "$_out" in *"re-dispatching"*) ok "a moved HEAD is noticed at strict-ci, not at the tag" ;;
+                *) bad "resume skipped strict-ci although HEAD moved past ci-sha" ;; esac
+grep -q '"step":"strict-ci","status":"pending","detail":"HEAD moved past ci-sha"' "$_rd2/events.jsonl" \
+    && ok "strict-ci reset to pending in the log" || bad "no pending event written for strict-ci"
+# The synthetic strict-ci command is `true`, so it re-runs harmlessly; the
+# stranded build-all then stops the run exactly as before.
+eq "the stranded step still exits 3 afterwards" 3 "$_rc"
+[ "$(git rev-parse HEAD)" = "$_h0" ] && ok "HEAD unchanged" || bad "HEAD MOVED during a test"
+# Control: the verdict names HEAD, so the guard must stay silent and the step
+# must be skipped as before — otherwise every resume would re-dispatch.
+rm -rf "$_rd2"; mkdir -p "$_rd2/logs"
+cat > "$_rd2/events.jsonl" <<'LOG'
+{"ts":"2026-09-21T10:04:00Z","run":"9.9.8","step":"strict-ci","status":"ok","detail":"2s"}
+{"ts":"2026-09-21T10:05:00Z","run":"9.9.8","step":"build-all","status":"running","detail":"attempt 1"}
+LOG
+git rev-parse HEAD > "$_rd2/ci-sha"
+_out=$(echo "9.9.8" | RELEASE_STEPS_FILE="$_SYNTH_TBL" bash "$ROOT/scripts/release.sh" run 9.9.8 --bump patch 2>&1)
+case "$_out" in *"re-dispatching"*) bad "guard fired although ci-sha names HEAD" ;;
+                *"skipped (done)"*) ok "ci-sha == HEAD: strict-ci skipped, no re-dispatch" ;;
+                *) bad "control run produced neither outcome" ;; esac
+rm -rf "$_rd2"
+
 head_ "fold — the last status wins, and absence is pending"
 V=9.9.9; EVENTS="$_rd/events.jsonl"
 eq "terminus overrides an earlier running" ok      "$(fold_status preflight)"

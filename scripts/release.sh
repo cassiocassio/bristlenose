@@ -675,7 +675,7 @@ EOF
     fi
     printf '%s  measured from docs/release-log.md 0.27.0, not estimated%s\n\n' "$D" "$N"
 
-    printf '  %brelease.sh run %s --bump minor|patch%b   %bexecutes this, resumably%b\n' "$B" "$V" "$N" "$D" "$N"
+    printf '  %brelease.sh run %s --bump minor|patch [--yes]%b   %bexecutes this, resumably%b\n' "$B" "$V" "$N" "$D" "$N"
     printf '  %b/bn-release%b                             %bdrafts the prose first%b\n\n' "$B" "$N" "$D" "$N"
     printf '  %bThe tag is the release.%b Everything above it is abandonable; nothing\n' "$Y" "$N"
     printf '  below it can be taken back.\n\n'
@@ -1326,6 +1326,22 @@ cmd_run() {
             ev_append "$id" skipped "--skip"; continue ;;
         esac
         prev="$(fold_status "$id")"
+        # A recorded strict verdict is ABOUT a commit. If HEAD has moved since
+        # (a fix landed mid-run and the run resumed), the verdict no longer
+        # names what build-dmg will archive and what TestFlight and the .dmg
+        # would ship — and nothing before the tag checks that: ci-green finds
+        # its run by ci-sha, and verdict_tag_provenance runs only in TAG_CMD.
+        # So the uploads would go out on an unvalidated HEAD and the tag would
+        # refuse afterwards (0.30.0, incident 27 — avoided twice by hand).
+        # Re-dispatch here instead: DISPATCH_CMD rewrites ci-sha and ci-green
+        # then waits for a verdict about THIS commit.
+        if [ "$id" = strict-ci ] && [ "$prev" = ok ] && [ -f "$CI_SHA_FILE" ] \
+           && [ "$(git rev-parse HEAD 2>/dev/null)" != "$(cat "$CI_SHA_FILE" 2>/dev/null)" ]; then
+            printf '  %b!%b %-26s %bverdict is for %.8s but HEAD is %.8s — re-dispatching%b\n' \
+                "$Y" "$N" "$label" "$D" "$(cat "$CI_SHA_FILE")" "$(git rev-parse HEAD)" "$N"
+            ev_append strict-ci pending "HEAD moved past ci-sha"
+            prev=pending
+        fi
         if [ "$prev" = "ok" ]; then
             case "$kind" in
                 soft|hard)
@@ -1468,7 +1484,7 @@ cmd_run() {
             printf '\n  %blog%b %s\n' "$D" "$N" "$LOG"
             # SKIP_FLAGS, or the printed resume silently drops the skips and the
             # next invocation re-performs what they were protecting.
-            printf '  %bfix, then%b release.sh run %s --bump %s%s   %b(resumes here)%b\n\n' \
+            printf '  %bfix, then%b release.sh run %s --bump %s%s [--yes]   %b(resumes here)%b\n\n' \
                 "$B" "$N" "$V" "$BUMP" "$SKIP_FLAGS" "$D" "$N"
             exit 1
         fi
@@ -1483,7 +1499,7 @@ EOF
             "$R" "$N" "$(printf '%s' "$_missing" | tr '\n' ' ')"
         printf '    No event exists for them — the table was consumed, not completed.\n'
         printf '    This is a driver defect, not a step failure; the acts above DID happen.\n'
-        printf '    Resume: %brelease.sh run %s --bump %s%s%b\n\n' "$B" "$V" "$BUMP" "$SKIP_FLAGS" "$N"
+        printf '    Resume: %brelease.sh run %s --bump %s%s [--yes]%b\n\n' "$B" "$V" "$BUMP" "$SKIP_FLAGS" "$N"
         exit 1
     fi
 
@@ -1524,7 +1540,7 @@ cmd_retry() {
     [ -f "$EVENTS" ] || die "no run log at $EVENTS"
     printf '{"ts":"%s","run":"%s","step":"%s","status":"pending","detail":"reset by retry"}\n' \
         "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$V" "$STEP" >> "$EVENTS"
-    printf '\n  %b%s reset to pending.%b  release.sh run %s --bump <kind>\n\n' "$B" "$STEP" "$N" "$V"
+    printf '\n  %b%s reset to pending.%b  release.sh run %s --bump <kind> [--yes]\n\n' "$B" "$STEP" "$N" "$V"
 }
 
 case "${1-}" in

@@ -84,6 +84,50 @@ class TestTheBuildActuallySelectsIt:
             "the override drifted out of the archive invocation and is now inert"
         )
 
+    def test_the_invocation_is_not_truncated(self) -> None:
+        """Run the block with a stub and read the arguments that arrive.
+
+        Asserting a flag is *in the file* cannot tell you it reaches the
+        command. A ``#`` comment between two backslash-continued lines ends the
+        command there: everything below it is parsed as new commands, and
+        ``bash -n`` passes because the result is valid, merely truncated. That
+        happened while fixing the relative-path bug above — xcodebuild ran with
+        no entitlements override and no ``archive`` verb, printed BUILD
+        SUCCEEDED, and the next line failed as
+        ``-allowProvisioningUpdates: command not found``.
+
+        The dangerous version of that truncation is the quiet one: cut after
+        ``archive`` instead of before it and the archive is produced with the
+        project's own MAS entitlements — app group and all — on the Developer-ID
+        channel Apple will not authorise it for. No error, wrong artefact.
+        """
+        import re
+        import subprocess
+
+        src = _BUILD_DMG.read_text(encoding="utf-8").splitlines()
+        i = next(n for n, ln in enumerate(src) if ln.strip() == "xcodebuild \\")
+        j = next(n for n in range(i, len(src)) if 'xcodebuild archive failed' in src[n])
+        block = "\n".join(src[i:j + 1])
+        block = block.replace('> "$ARCHIVE_LOG" 2>&1 \\\n', "")
+        block = re.sub(r'\|\| \{ echo "xcodebuild archive failed.*', "", block, flags=re.S)
+        script = (
+            'xcodebuild() { printf "%s\\n" "$@"; }\n'
+            "PROJECT_DIR=/PD; ARCHIVE_PATH=/AP; TEAM_ID=TID; ARCHIVE_LOG=/dev/null\n"
+            + block
+        )
+        out = subprocess.run(
+            ["bash", "-c", script], capture_output=True, text=True, timeout=30
+        ).stdout.splitlines()
+
+        assert "archive" in out, (
+            "the `archive` verb never reaches xcodebuild — the invocation is "
+            f"truncated. Arguments that arrived: {out}"
+        )
+        ent = [a for a in out if a.startswith("CODE_SIGN_ENTITLEMENTS=")]
+        assert len(ent) == 1, f"entitlements override did not arrive: {out}"
+        assert ent[0].endswith("BristlenoseDeveloperID.entitlements"), ent[0]
+        assert "-allowProvisioningUpdates" in out, out
+
     def test_the_override_path_is_absolute(self) -> None:
         """A relative path here cannot resolve, and not for the app target.
 

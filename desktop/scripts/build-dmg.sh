@@ -338,6 +338,19 @@ fi
 ok "archiving from $(git -C "$ROOT" rev-parse --short HEAD) · tree $BUILD_TREE"
 
 rm -rf "$ARCHIVE_PATH" "$EXPORT_DIR"
+# CODE_SIGN_ENTITLEMENTS below is ABSOLUTE, deliberately, and the comment
+# saying so lives HERE rather than inside the invocation: a `#` line between
+# two backslash-continued lines ends the command at that point, so xcodebuild
+# ran with no override and no `archive` verb, reported BUILD SUCCEEDED, and
+# the next line was parsed as a command ("-allowProvisioningUpdates: command
+# not found"). `bash -n` passes it — it is valid, just truncated.
+#
+# Why absolute: a command-line build setting applies to EVERY target, and
+# Xcode resolves a relative CODE_SIGN_ENTITLEMENTS against each target's own
+# $(SRCROOT). The Settings package's SRCROOT is its checkout under
+# DerivedData/SourcePackages, where "Bristlenose/..." does not exist, so the
+# archive died on Settings_Settings — never on the app target the override
+# was written for.
 export BRISTLENOSE_SKIP_SIDECAR_ENSURE=1
 xcodebuild \
     -project "$PROJECT_DIR/Bristlenose.xcodeproj" \
@@ -350,14 +363,6 @@ xcodebuild \
     PROVISIONING_PROFILE_SPECIFIER="" \
     DEVELOPMENT_TEAM="$TEAM_ID" \
     SWIFT_ACTIVE_COMPILATION_CONDITIONS="\$(inherited) DEVELOPER_ID_BETA" \
-    # ABSOLUTE, deliberately. A command-line build setting applies to EVERY
-    # target in the build, including the Settings Swift package, and Xcode
-    # resolves a relative CODE_SIGN_ENTITLEMENTS against each target's own
-    # $(SRCROOT). The package's SRCROOT is its checkout under
-    # DerivedData/SourcePackages, where "Bristlenose/..." does not exist, so
-    # the archive died with "could not be opened" on Settings_Settings —
-    # never on the app target the override was written for. An absolute path
-    # resolves identically from every SRCROOT.
     CODE_SIGN_ENTITLEMENTS="$PROJECT_DIR/Bristlenose/BristlenoseDeveloperID.entitlements" \
     -allowProvisioningUpdates \
     archive \

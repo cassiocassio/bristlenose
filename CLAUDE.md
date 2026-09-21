@@ -1163,7 +1163,7 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 
 **Internal TestFlight since 14 Jul 2026** — shipping build **0.30.0 (3578)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
 
-**0.30.0 shipped 21 Sep 2026, overnight and unattended — verified 7 of 9 channels at 06:58 BST with Snap edge and Copr in flight.** The
+**0.30.0 shipped 21 Sep 2026, overnight and unattended — verified 9 of 9 channels by 07:08 BST.** The
 Signals release: the Analysis lens is Signals on every surface (labels, route,
 package, API, CSS, symbols, locale namespace, website), generation-4 signal
 cards, CLI-only PII redaction end to end, the Codebooks focus cursor, ⌘F, one

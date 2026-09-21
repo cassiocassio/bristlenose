@@ -55,9 +55,9 @@ or the averages will slowly describe how fast the maintainer answers questions.
 ## 0.30.0 — 21 Sep 2026 · Tier 1
 
 **Channels:** PyPI · GitHub Release · Homebrew · TestFlight (build 3578) ·
-`.dmg` · website · Snap edge · Copr. **7 of 9 verified at 06:58 BST, fifteen minutes after the tag.** Snap edge had
-published (workflow green; the store channel-map lags) and Copr was building
-`0.30.0-1` (build 11009213). Neither is a failure; both are re-verified below. The website deploy ran
+`.dmg` · website · Snap edge · Copr. **All nine verified by 07:08 BST, twenty-five minutes after the tag** — 7 of 9
+at 06:58 with Snap edge published but not yet in the store map and Copr still
+building `0.30.0-1` (build 11009213, succeeded 07:07); 9 of 9 on the re-run. The website deploy ran
 unattended (`deploy.sh --yes`, BatchMode SSH) once PyPI answered 200 on the
 version-specific endpoint — twelve minutes after the tag.
 
@@ -193,10 +193,9 @@ of those cycles were the cost of landing fixes mid-run — see #6.
   06:57 BST, same night, unattended.** `deploy.sh --yes` over BatchMode SSH;
   its own verify all 200, sensitive paths 404/403; live changelog's first
   header is 0.30.0 and the three renamed pages say Signals.
-- **Re-verify Snap edge and Copr.** Both were in flight at 06:58; `release.sh
-  verify 0.30.0` is the record. If Copr's build fails, see
-  `docs/design-fedora-packaging.md` §7 — the wheelhouse arch pin is the usual
-  suspect.
+- ~~**Re-verify Snap edge and Copr.**~~ ✅ **done 07:08 BST** — Copr build
+  11009213 succeeded at 07:07 on an x86_64 wheelhouse (the arch pin held);
+  Snap store map reads 0.30.0. `release.sh verify 0.30.0` → 9 of 9.
 - 0.28.0, 0.29.0 and 0.29.1 remain unlogged here; this entry does not owe
   them.
 

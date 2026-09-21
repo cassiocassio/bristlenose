@@ -60,8 +60,15 @@ final class I18n: ObservableObject {
         // Always load English as fallback.
         englishStrings = Self.loadAllNamespaces(locale: "en", from: localesDirectory)
 
-        // Load the user's preferred locale.
-        let saved = UserDefaults.standard.string(forKey: "language") ?? "en"
+        // Load the user's preferred locale. The picker's own key wins when it
+        // is set, so an existing install keeps the language it was last given.
+        // With no key — a fresh install — ask the OS rather than assuming
+        // English: now that the app declares its localisations, Apple's BCP 47
+        // matcher can answer from the user's own language preferences, which is
+        // what `docs/design-locale-negotiation.md` decided and nothing had
+        // implemented.
+        let saved = UserDefaults.standard.string(forKey: "language")
+            ?? Self.systemPreferredLocale()
         let safe = Self.sanitized(saved)
         locale = safe
 
@@ -73,6 +80,17 @@ final class I18n: ObservableObject {
         baseStrings = Self.fallbackBase[safe].map {
             Self.loadAllNamespaces(locale: $0, from: localesDirectory)
         } ?? [:]
+    }
+
+    /// The best of our supported locales for this user's language preferences,
+    /// or `en`. Reads `AppleLanguages` through Apple's matcher rather than
+    /// parsing it, so script and region subtags (`zh-Hant`, `zh-Hant-HK`,
+    /// `pt-BR`) resolve the way the rest of macOS resolves them.
+    static func systemPreferredLocale() -> String {
+        let best = Bundle.preferredLocalizations(
+            from: Array(supportedLocales), forPreferences: nil
+        ).first
+        return best.map(sanitized) ?? "en"
     }
 
     /// Change the active locale. Reloads JSON from disk.

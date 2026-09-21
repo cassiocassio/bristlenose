@@ -1,0 +1,10 @@
+/* Declares this app as localised for cs.
+
+   The app's UI strings come from bristlenose/locales/*.json at runtime, not
+   from .strings tables — this file exists so macOS knows the localisation is
+   available at all. Declaring it is what makes AppKit render ITS OWN menus
+   (File, Edit, View, Window, Help and every standard item inside them) in
+   Apple's reviewed wording rather than English.
+
+   CFBundleName / CFBundleDisplayName are deliberately absent: Bristlenose is
+   a product name and does not translate. */

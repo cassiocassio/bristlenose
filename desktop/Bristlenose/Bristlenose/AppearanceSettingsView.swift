@@ -157,6 +157,22 @@ struct AppearanceSettingsView: View {
         }
         .onChange(of: language) { _, newValue in
             i18n.setLocale(newValue)
+            // **Tell AppKit too.** Our own chrome switches live off `setLocale`,
+            // but File / Edit / View / Window / Help and every standard item
+            // inside them (Minimize, Zoom, Bring All to Front, Cut/Copy/Paste,
+            // Enter Full Screen) belong to AppKit, which picks a language from
+            // `AppleLanguages` in the app's own domain and only at launch.
+            //
+            // Writing it here is what makes those menus render in Apple's own
+            // reviewed wording instead of English — the `.lproj` resources
+            // added 21 Sep 2026 declare the app as localised, and this names
+            // which one to use. Also what System Settings ▸ Apps ▸ Bristlenose
+            // ▸ Language writes, so the two controls agree.
+            //
+            // Takes effect at next launch, deliberately: AppKit builds the menu
+            // bar once per process, and this app can be mid-analysis, so it
+            // does not get to relaunch itself behind the researcher's back.
+            UserDefaults.standard.set([newValue], forKey: "AppleLanguages")
             // VoiceOver language for web content is set via the bridge
             // (syncLocale → HTML lang attribute). Native SwiftUI elements
             // inherit the system language — no per-window override needed.

@@ -70,6 +70,51 @@ _Original decision text, 5 May 2026, unedited below._
 
 **Status:** approved 5 May 2026, pending implementation in branch `locale-system-delegation` (sibling to `i18n-text-sweep` which handles the unrelated mechanical translation gaps).
 
+## Status — partly implemented, 21 Sep 2026
+
+The decision below ("delegate to System Settings, no in-app picker") was never
+implemented, and this doc's own correction banner above records that. What
+shipped instead was an in-app picker writing a private `language` key, and
+nothing reading the OS preference at all.
+
+**What landed on 21 Sep 2026, and why it is a middle path rather than the
+decision as written:**
+
+- **The app declares its localisations.** 22 `.lproj` directories with an
+  `InfoPlist.strings` apiece; Xcode picked them up into `knownRegions` on its
+  own. Verified in the built bundle. This is the load-bearing half: without it
+  macOS treats the app as English-only whatever `AppleLanguages` says.
+- **The picker writes `AppleLanguages`** in the app's own domain, alongside the
+  private key. That is the same key System Settings ▸ Apps ▸ Bristlenose ▸
+  Language writes, so the two controls agree rather than compete.
+- **`I18n.configure` falls back to `Bundle.preferredLocalizations`** when the
+  private key is unset — so a *fresh* install honours the user's own language
+  preferences, which is the part of the decision below that was always right.
+  An existing install keeps its key, so nobody's language changes under them.
+
+**The picker was kept, against the decision below.** It ships, it is registration
+site 9 for a new language (`docs/adding-a-language.md` Step 8), and removing a
+working control to satisfy a doc is the wrong order. The decision's substance —
+the OS is the source of truth — is honoured by writing `AppleLanguages` rather
+than by deleting the UI.
+
+**What this buys, and it is the reason to do it at all:** File, Edit, View,
+Window and Help are AppKit's menus, not ours, and so is every standard item
+inside them — Minimize, Zoom, Bring All to Front, Cut/Copy/Paste, Enter Full
+Screen. They rendered English in every locale because the app declared no
+localisations. They now come back in **Apple's own reviewed wording**, which is
+the `Choose`-button / TCC-prompt principle one level up: look it up, do not
+translate it. The glossary already carried hand-written `Window,ウインドウ,ja`
+and `Help,ヘルプ,ja` rows — evidence someone once reached for the wrong route.
+
+**Takes effect at next launch, deliberately.** AppKit builds the menu bar once
+per process. The app can be mid-analysis, so it does not relaunch itself; our own
+chrome still switches live. Telling the researcher that in the UI is the one
+piece still owed — it needs a new key in 21 locales and a decision about what to
+do when a run is in flight.
+
+---
+
 ## Two deployments, two answers
 
 Bristlenose ships in two surfaces with different platform conventions for "what language should the UI be in":

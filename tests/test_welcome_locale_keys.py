@@ -252,3 +252,67 @@ def test_every_illustration_webview_keys_its_id_on_locale() -> None:
         "error, nothing red, and it self-corrects only when the user toggles "
         "dark mode:\n  " + "\n  ".join(unkeyed)
     )
+
+
+#: Webview builders that take no `strings:` **by decision**, with the reason.
+#: Everything else must take one — an illustration whose words are literals in
+#: the builder cannot follow the language picker, and nothing else would say so.
+_DELIBERATELY_WORDLESS = {
+    "agentChat": "FOREIGN — it depicts Claude Code's CLI, which ships English "
+                 "only. A translated 'Thinking…' would draw software that does "
+                 "not exist.",
+    "miro": "FOREIGN — the sticky's count comes from `count_noun`, which is "
+            "English permanently (docs/design-i18n.md). A translated board is "
+            "one Bristlenose has never produced. NB the English board is itself "
+            "arguably a gap; if that is fixed, this entry goes with it.",
+}
+
+#: Builders whose words are still English literals awaiting the content pass.
+#: They are THEIRS — participant quotes, an authored codebook, a disfluency
+#: token array — and per the rules those are written per locale rather than
+#: swept, so they are blocked on a coverage decision rather than on effort.
+_AWAITING_CONTENT = {"quote", "manualTags", "tag", "starHide"}
+
+
+def test_every_illustration_builder_is_classified() -> None:
+    """A builder either takes its words from the caller, or says why it does not.
+
+    The rules in `docs/design-i18n.md` §"Examples, mockups and illustrations"
+    turn on *classifying* each fragment — ours, theirs, a framework's, another
+    product's. This is the mechanical half: a new illustration cannot quietly
+    hardcode English, because it will be in neither set and this fails.
+
+    It is deliberately not "every builder takes strings". Two of them correctly
+    take none, and a gate that demanded otherwise would be pressure to translate
+    a depiction of somebody else's English-only software.
+    """
+    body = (REPO / "desktop/Bristlenose/Bristlenose/WelcomeIllustrations.swift").read_text(
+        encoding="utf-8"
+    )
+    builders = dict(
+        re.findall(r"static func (\w+)\(dark: Bool[^)]*?(strings: \[String: String\])?\)", body)
+    )
+    assert len(builders) >= 9, f"only found {len(builders)} builders — did the shape change?"
+
+    takes_strings = {n for n, s in builders.items() if s}
+    without = set(builders) - takes_strings
+
+    unclassified = sorted(without - set(_DELIBERATELY_WORDLESS) - _AWAITING_CONTENT)
+    assert not unclassified, (
+        f"{unclassified} hardcode their words with no stated reason. Either take "
+        f"a `strings:` table from the caller, or add the builder to "
+        f"_DELIBERATELY_WORDLESS with the class that makes English correct."
+    )
+
+    # The other direction: a builder that gained a table should leave the
+    # blocked set, so the set cannot rot into a list of things already done.
+    done_but_listed = sorted(takes_strings & _AWAITING_CONTENT)
+    assert not done_but_listed, (
+        f"{done_but_listed} now take a strings table — remove them from "
+        f"_AWAITING_CONTENT so it keeps meaning 'still to do'."
+    )
+    wordless_but_listed = sorted(takes_strings & set(_DELIBERATELY_WORDLESS))
+    assert not wordless_but_listed, (
+        f"{wordless_but_listed} are marked English-by-decision but now take "
+        f"words. Read the reason in _DELIBERATELY_WORDLESS before deleting it."
+    )

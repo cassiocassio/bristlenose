@@ -892,7 +892,8 @@ enum AttendeeLine {
     ///   `i18n.plural("desktop.cloudImport.attendeeCount", count:)`. Passed in
     ///   for the same reason `subtitle` takes `unscheduledLabel`: this stays a
     ///   pure function and the vocabulary belongs to the caller. It used to be
-    ///   `CloudCount.noun(attendees.count, "attendee")`, which hand-rolled the
+    ///   `CloudCount.noun(attendees.count, "attendee")` — a type **deleted on
+    ///   21 Sep 2026** once this was its last caller — which hand-rolled the
     ///   English plural as `singular + "s"` and could never have produced the
     ///   four Czech, Polish, Russian and Ukrainian forms the locale files have
     ///   carried all along (`docs/i18n-defects.md` row 27). Rendered eagerly by

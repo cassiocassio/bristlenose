@@ -690,7 +690,7 @@ final class ZoomSource: CloudImportSource {
             // the verdict is still in the log. Restore the detail when those
             // six keys land — that is the next cluster, not a someday.
             return .failed(
-                reason: .downloadFailed,
+                reason: error.fetchFailure,
                 isRetryable: {
                     if case .rejected(let verdict) = error { return verdict.isRetryable }
                     return false

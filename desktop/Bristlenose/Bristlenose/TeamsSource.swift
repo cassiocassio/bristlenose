@@ -788,7 +788,7 @@ final class TeamsSource: CloudImportSource {
             // Same deliberate loss as ZoomSource's download catch — the
             // verdict sentences have no keys yet, and a translated generic row
             // beats an English specific one. See the comment there.
-                reason: .downloadFailed,
+                reason: error.fetchFailure,
                 isRetryable: {
                     if case .rejected(let verdict) = error { return verdict.isRetryable }
                     return false

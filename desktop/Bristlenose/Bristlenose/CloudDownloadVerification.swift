@@ -173,6 +173,31 @@ enum DownloadVerdict: Equatable {
         }
     }
 
+    /// The same verdict as a case the row can localise.
+    ///
+    /// `rowMessage` above stays, and stays English, because it feeds
+    /// `CloudDownloadError.errorDescription` — a `LocalizedError` description
+    /// that reaches logs and bug reports, where English is the point (a run
+    /// analysed in German must not read as German forever). This is the display
+    /// path: the adapters have no `I18n`, so the discriminator travels and
+    /// `CloudImportOutlineView` resolves it.
+    ///
+    /// Split added 21 Sep 2026. Before it, the three adapter download catches
+    /// interpolated `errorDescription` straight into the row, so the specific
+    /// verdict was the only thing a researcher could act on and it was English
+    /// in all 21 locales.
+    var fetchFailure: CloudFetchFailure? {
+        switch self {
+        case .usable:       return nil
+        case .notMedia:     return .notMedia
+        case .badStatus:    return .badStatus
+        case .shortRead:    return .shortRead
+        case .sizeMismatch: return .sizeMismatch
+        case .hashMismatch: return .hashMismatch
+        case .wrongFormat:  return .wrongFormat
+        }
+    }
+
     /// Whether re-trying could plausibly help. A truncation is worth another
     /// go; an error page means something upstream said no and will say no
     /// again.

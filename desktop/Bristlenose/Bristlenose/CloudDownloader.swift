@@ -95,6 +95,23 @@ enum CloudDownloadError: LocalizedError {
             return "Stopped."
         }
     }
+
+    /// The row's version: a case, not a sentence. `errorDescription` above is
+    /// the log's version and stays English on purpose.
+    ///
+    /// The byte figures do not survive the trip — `CloudFetchFailure` is a plain
+    /// enum so its key derives from `rawValue`, and "Not enough disk space." is
+    /// the actionable half anyway. The numbers remain in `errorDescription`,
+    /// which is what the log records.
+    var fetchFailure: CloudFetchFailure {
+        switch self {
+        case .rejected(let verdict):  return verdict.fetchFailure ?? .downloadFailed
+        case .insufficientSpace:      return .notEnoughSpace
+        // Every caller tests `.cancelled` before asking, because a stop is not
+        // a failure and must not draw a red row.
+        case .cancelled:              return .downloadFailed
+        }
+    }
 }
 
 /// Performs a verified download.

@@ -79,6 +79,12 @@ enum FetchOutcome: Equatable {
 enum CloudFetchFailure: String, CaseIterable, Equatable, Sendable {
     case noRecordingFile, noAccessYet, unusableIdentifier, downloadFailed
     case noDownloadableFile, signedOut, noDownloadLink, accessNotGranted
+    // The download-verification verdicts. `CloudDownloadVerification` decides
+    // which; its own doc comment is the reason they are worth carrying at all —
+    // "the Status column is read by someone deciding what to do next, and
+    // 'HTTP 403' is not a decision".
+    case notMedia, badStatus, shortRead, sizeMismatch, hashMismatch, wrongFormat
+    case notEnoughSpace
 
     var localeKey: String {
         "desktop.cloudImport.error" + rawValue.prefix(1).uppercased() + rawValue.dropFirst()

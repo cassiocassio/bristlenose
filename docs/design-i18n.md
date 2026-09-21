@@ -88,16 +88,29 @@ terms that will still be true next year.
 | **Browser SPA** — serve mode and the exported report | **21 full locales** | The researcher's deliverable |
 | **macOS app UI** | **21 full locales** | The researcher's workspace |
 | Forensic / wire records — `Cause.message`, the events log, the Copy-details plaintext | **English** | A run analysed while the UI was German must not read as German forever, and a pasted bug report must read the same whatever the reporter's language |
+| Decorative, opt-in visual affordances — the project icon picker's 100 symbol labels | **English** | The label describes a *visual* choice to someone not making one. A VoiceOver user already has the project **name**, which is the identity; the icon is decoration layered on top, the picker is opt-in, and nobody chooses a glyph from a 10×10 grid by ear. Localising it would be narration, not access |
 | Data — transcripts, quotes, prompts, codebook YAML | **Untranslated** | Methodology — see the rest of this section |
 
 **The authoring failure this table exists to prevent is a sentence filed as data.**
 Every gap the 21 Sep 2026 Swift audit found was a `String` property on a type that
 models a *thing* rather than a *screen* — `signInTitle` on a platform,
 `errorDescription` on an error, `rowMessage` on a verdict, `humanSummary` on a
-category, `label` on an icon. The tell is sitting in `CloudPlatform.swift`:
+category. The tell is sitting in `CloudPlatform.swift`:
 `windowTitle(_ i18n: I18n)` takes an `I18n` and explains in a comment which part of
 itself does not move; `signInTitle`, three lines below, is hardcoded English. Same
 file, same type. The pattern was there and the next member did not reach for it.
+
+**The tell is a heuristic, and the icon picker is where it fires and the answer is
+still English.** `IconPickerPopover.palette` is exactly the shape above — 100
+`(symbol, label)` tuples, a `String` on data, feeding `.accessibilityLabel` and
+`.help`. It reads as a hundred-string gap and is not one, because the question the
+table asks is *what job does this surface do for the person reading it*, and the
+answer here is none: the icon adds nothing a VoiceOver user does not already have
+from the project name. **Do not read this as "accessibility labels need no
+translation"** — an `accessibilityLabel` is the only text on most icon-only
+controls, and where the control does a *job* (Stop, Export, Turn On Agent Access)
+it is a first-class target. The exemption is narrow: an optional affordance whose
+whole content is a visual distinction the reader is not making.
 
 **Option rejected: translate prompts into target languages.** Would require maintaining N copies of every prompt for diminishing returns. Codebook concepts often originate in English — translating them adds a lossy step.
 

@@ -87,10 +87,29 @@ final class SettingsWindow {
     /// have the same shape and were missed.
     private var builtController: SettingsWindowController?
 
-    /// Where to put the user back after a locale rebuild. Nil when the window
-    /// was opened with `show()` rather than a deep link — the package restores
-    /// its own last-used tab in that case, which is where they are.
+    /// Where to put the user back after a locale rebuild, when the live window
+    /// cannot be asked (it is already closed). Deep links set it; the picker
+    /// path reads the toolbar instead — see `activePane`.
     private var lastShownPane: PkgSettings.PaneIdentifier?
+
+    /// The pane the user is actually looking at.
+    ///
+    /// `SettingsTabViewController.activeTab` is `private`, but the package
+    /// builds its toolbar with **the pane identifiers as item identifiers** —
+    /// `PaneIdentifier(fromToolbarItemIdentifier:)` is public precisely for this
+    /// round-trip — so the selected toolbar item is the active pane.
+    ///
+    /// Needed because a locale rebuild that guesses lands the user somewhere
+    /// they did not ask to be: `lastShownPane` is only ever set by a deep link,
+    /// so the everyday path (open Settings, change language) left it nil and the
+    /// `show()` fallback restored the package's initial tab — **General** —
+    /// yanking the user off Appearance the instant they used the picker that
+    /// lives there. Reported from a screenshot, 21 Sep 2026.
+    private var activePane: PkgSettings.PaneIdentifier? {
+        guard let identifier = builtController?.window?.toolbar?.selectedItemIdentifier
+        else { return lastShownPane }
+        return PkgSettings.PaneIdentifier(fromToolbarItemIdentifier: identifier)
+    }
 
     /// Live once the controller exists; `I18n.locale` is `@Published` and
     /// `AppearanceSettingsView` drives it through `setLocale`.
@@ -128,13 +147,16 @@ final class SettingsWindow {
     private func rebuildForLocaleChange() {
         guard let existing = builtController else { return }
         let wasVisible = existing.window?.isVisible ?? false
+        // Read the live toolbar BEFORE closing — afterwards there is nothing
+        // left to ask, and the fallback is a guess.
+        let pane = activePane
         existing.window?.close()
         builtController = nil
         localeObservation = nil
         guard wasVisible else { return }
         // Reopening is what re-resolves the titles. A closed window needs
         // nothing — the next `show()` builds fresh.
-        if let pane = lastShownPane { show(pane: pane) } else { show() }
+        if let pane { show(pane: pane) } else { show() }
     }
 
     private func makeController() -> SettingsWindowController {

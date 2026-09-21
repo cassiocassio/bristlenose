@@ -168,6 +168,10 @@ struct BristlenoseApp: App {
                     // The AppKit Settings window is built lazily on first open;
                     // hand it the app's i18n so its SwiftUI panes can translate.
                     SettingsWindow.shared.i18n = i18n
+                    // SwiftUI installs CommandMenu titles once, so the menu bar
+                    // cannot follow a language change on its own — see
+                    // MenuBarTitles.
+                    MenuBarTitles.shared.bind(to: i18n)
                     // Dock-icon click with no project window open — see
                     // `AppDelegate.applicationShouldHandleReopen`.
                     appDelegate.openProjectWindow = { openWindow(id: "main") }

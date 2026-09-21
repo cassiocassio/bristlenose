@@ -25,6 +25,10 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parent.parent
+# The one hand-maintained seam in this file. A `desktop.welcome.home.*` call
+# site outside these two files makes the stranded-key test nuisance-fail rather
+# than miss silently — loud and self-correcting, which is the right direction
+# for a list nothing recomputes.
 SWIFT = [
     REPO / "desktop/Bristlenose/Bristlenose/WelcomeHomeView.swift",
     REPO / "desktop/Bristlenose/Bristlenose/WelcomeIllustrations.swift",
@@ -84,8 +88,13 @@ def test_every_key_the_pane_asks_for_exists_in_english() -> None:
     # Optional leaves are absent on purpose (a tip has no title), so only a
     # whole slot going missing is a defect: every requested slot must yield
     # at least `text`, and every literal key must resolve.
+    # `text` alone is the load-bearing leaf: title, more, link and link2 are
+    # each legitimately absent on some slot, so only a missing `text` means the
+    # call site is asking for a slot English does not have. (A typo'd key loses
+    # the whole namespace, so every leaf goes at once — but keying the check to
+    # the one leaf that must exist is the honest statement of the invariant.)
     slots = {k.rsplit(".", 1)[0] for k in missing}
-    dead = sorted(s for s in slots if f"{s}.text" in missing and f"{s}.link" in missing)
+    dead = sorted(s for s in slots if f"{s}.text" in missing)
     assert not dead, f"call sites ask for slots English does not carry: {dead}"
 
 

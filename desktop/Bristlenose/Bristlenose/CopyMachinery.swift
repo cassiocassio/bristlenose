@@ -60,6 +60,31 @@ final class CopyMachinery: ObservableObject {
                 return error.localizedDescription
             }
         }
+
+        /// The row's version: a key, not a sentence.
+        ///
+        /// `errorDescription` above stays English because `LocalizedError`
+        /// descriptions reach logs and bug reports, and because
+        /// `CopyErrorSurfacingTests` pins the contract that every case renders
+        /// *a sentence* rather than an enum-index fallback — a contract about
+        /// the diagnostic path, which this does not touch.
+        ///
+        /// `nil` for `.underlying`: that one carries a system error whose
+        /// `localizedDescription` macOS has already localised. Translating it
+        /// again would be replacing Apple's wording with ours.
+        ///
+        /// `insufficientDiskSpace` reuses `chrome.copyDiskSpaceTitle`, which
+        /// already exists in 21 locales for the alert on the same condition —
+        /// the house rule is to look for an already-translated twin before
+        /// writing anything new.
+        nonisolated var localeKey: String? {
+            switch self {
+            case .insufficientDiskSpace: return "desktop.chrome.copyDiskSpaceTitle"
+            case .noItemsAfterFiltering: return "desktop.chrome.copyNoImportableItems"
+            case .alreadyInFlight:       return "desktop.chrome.copyAlreadyInFlight"
+            case .underlying:            return nil
+            }
+        }
     }
 
     @Published private(set) var inFlight: InFlight?

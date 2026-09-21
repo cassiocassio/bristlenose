@@ -247,6 +247,8 @@
     "copyingPill": "S'està copiant a %@",
     "copyCancelling": "S'està cancel·lant…",
     "copyDiskSpaceTitle": "No hi ha prou espai al disc",
+    "copyNoImportableItems": "Cap dels elements deixats anar no \u00e9s un fitxer que Bristlenose pugui importar.",
+    "copyAlreadyInFlight": "Ja hi ha una altra c\u00f2pia en curs.",
     "copyDiskSpaceMessage": "Aquesta còpia necessita %@ lliures, però al volum de destinació només n'hi ha %@ de disponibles.",
     "filesPopover": {
       "unanalysedTitle": "Fitxers sense analitzar",

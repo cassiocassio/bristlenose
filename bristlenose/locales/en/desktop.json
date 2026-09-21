@@ -248,6 +248,8 @@
     "copyingPill": "Copying to %@",
     "copyCancelling": "Cancelling\u2026",
     "copyDiskSpaceTitle": "Not enough disk space",
+    "copyNoImportableItems": "None of the dropped items is a file Bristlenose can import.",
+    "copyAlreadyInFlight": "Another copy is already in flight.",
     "copyDiskSpaceMessage": "This copy needs %@ free, but only %@ is available on the destination volume.",
     "filesPopover": {
       "unanalysedTitle": "Unanalysed files",

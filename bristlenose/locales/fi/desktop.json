@@ -247,6 +247,8 @@
     "copyingPill": "Kopioidaan kohteeseen %@",
     "copyCancelling": "Peruutetaan…",
     "copyDiskSpaceTitle": "Levytila ei riitä",
+    "copyNoImportableItems": "Mik\u00e4\u00e4n pudotetuista kohteista ei ole tiedosto, jonka Bristlenose voi tuoda.",
+    "copyAlreadyInFlight": "Toinen kopiointi on jo k\u00e4ynniss\u00e4.",
     "copyDiskSpaceMessage": "Tämä kopiointi tarvitsee %@ vapaata, mutta kohdetaltiolla on käytettävissä vain %@.",
     "filesPopover": {
       "unanalysedTitle": "Analysoimattomat tiedostot",

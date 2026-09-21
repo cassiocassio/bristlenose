@@ -1876,10 +1876,24 @@ struct ContentView: View {
                     // (the type is `LocalizedError`), so this reads the same sentence
                     // the drop-onto-project site destructures. Pinned by
                     // CopyErrorSurfacingTests; history in design-copy-error-surfacing.md.
-                    toast.show(error.localizedDescription)
+                    toast.show(Self.copyToastText(error, i18n))
                 }
             }
         }
+    }
+
+    /// What a failed copy says in the toast.
+    ///
+    /// `CopyError` carries a key for the cases we author and `nil` for
+    /// `.underlying`, whose system error macOS has already localised. Both drop
+    /// sites go through here so they cannot drift apart —
+    /// `CopyErrorSurfacingTests.permissionFailureReadsTheSameAtBothSites` pins
+    /// that they agree, and it pinned it when both read `localizedDescription`.
+    static func copyToastText(_ error: Error, _ i18n: I18n) -> String {
+        if let key = (error as? CopyMachinery.CopyError)?.localeKey {
+            return i18n.t(key)
+        }
+        return error.localizedDescription
     }
 
     /// Handle files/folders dropped onto an existing project row.
@@ -2082,7 +2096,7 @@ struct ContentView: View {
             } catch {
                 // `.underlying` and every other case render through `errorDescription`
                 // — the same sentence the loose-files site above reads.
-                toast.show(error.localizedDescription)
+                toast.show(Self.copyToastText(error, i18n))
             }
         }
     }

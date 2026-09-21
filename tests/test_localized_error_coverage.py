@@ -32,6 +32,14 @@ _APP = _ROOT / "desktop" / "Bristlenose" / "Bristlenose"
 # Conformers whose user-facing text reaches the UI through a discriminator the
 # view resolves. English may still appear in `errorDescription` for the log.
 LOCALISED: dict[str, str] = {
+    "CopyError": (
+        "errorDescription stays English for the log and for `.underlying`, whose "
+        "system error macOS has already localised — translating that again would "
+        "replace Apple's wording with ours. `localeKey` carries the three cases "
+        "we author; both drop sites resolve it through ContentView.copyToastText. "
+        "insufficientDiskSpace reuses chrome.copyDiskSpaceTitle, which already "
+        "existed in 21 locales for the alert on the same condition. 21 Sep 2026."
+    ),
     "CloudDownloadError": (
         "errorDescription stays English for the log (LocalizedError reaches bug "
         "reports, where a run analysed in German must not read as German "
@@ -61,13 +69,12 @@ ENGLISH_PENDING: dict[str, str] = {
     "ZoomOAuthError": "~10 sign-in sentences → cloud-import window via CloudImportStore:413.",
     "MicrosoftOAuthError": "~9 sentences, incl. the two longest on the surface (admin approval, Conditional Access).",
     "GoogleOAuthError": "~6 sentences → same window, same path.",
-    "CopyError": "3 drag-and-drop refusals → main-window toast (ContentView:1879/2085).",
     "APIError": "2 distinct sentences → Miro sheet (MiroSheet:137/182), which already has a localised fallback beside them.",
 }
 
 # The ratchet. Lower it when an entry moves; raising it needs a commit that says
 # why, per docs/testing/soft-gates.json's policy.
-MAX_ENGLISH_PENDING = 5
+MAX_ENGLISH_PENDING = 4
 
 
 def _conformers() -> dict[str, Path]:

@@ -280,6 +280,8 @@
     "copyingPill": "Kopírování do %@",
     "copyCancelling": "Rušení…",
     "copyDiskSpaceTitle": "Nedostatek místa na disku",
+    "copyNoImportableItems": "\u017d\u00e1dn\u00e1 z p\u0159eta\u017een\u00fdch polo\u017eek nen\u00ed soubor, kter\u00fd by Bristlenose mohl importovat.",
+    "copyAlreadyInFlight": "U\u017e prob\u00edh\u00e1 jin\u00e9 kop\u00edrov\u00e1n\u00ed.",
     "copyDiskSpaceMessage": "Tato kopie potřebuje %@ volného místa, ale na cílovém svazku je k dispozici pouze %@.",
     "filesPopover": {
       "unanalysedTitle": "Neanalyzovan\u00e9 soubory",

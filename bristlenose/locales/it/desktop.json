@@ -247,6 +247,8 @@
     "copyingPill": "Copia in %@",
     "copyCancelling": "Annullamento…",
     "copyDiskSpaceTitle": "Spazio su disco insufficiente",
+    "copyNoImportableItems": "Nessuno degli elementi trascinati \u00e8 un file che Bristlenose pu\u00f2 importare.",
+    "copyAlreadyInFlight": "\u00c8 gi\u00e0 in corso un\u2019altra copia.",
     "copyDiskSpaceMessage": "Questa copia richiede %@ liberi, ma sul volume di destinazione sono disponibili solo %@.",
     "filesPopover": {
       "unanalysedTitle": "File non analizzati",

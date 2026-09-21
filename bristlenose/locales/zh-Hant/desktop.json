@@ -230,6 +230,8 @@
     "copyingPill": "正在拷貝到 %@",
     "copyCancelling": "正在取消…",
     "copyDiskSpaceTitle": "磁碟空間不足",
+    "copyNoImportableItems": "\u62d6\u653e\u7684\u9805\u76ee\u4e2d\u6c92\u6709 Bristlenose \u53ef\u4ee5\u532f\u5165\u7684\u6a94\u6848\u3002",
+    "copyAlreadyInFlight": "\u5df2\u6709\u53e6\u4e00\u9805\u62f7\u8c9d\u6b63\u5728\u9032\u884c\u3002",
     "copyDiskSpaceMessage": "此拷貝需要 %@ 可用空間，但目標儲存裝置上只有 %@ 可用。",
     "filesPopover": {
       "unanalysedTitle": "\u672a\u5206\u6790\u7684\u6a94\u6848",

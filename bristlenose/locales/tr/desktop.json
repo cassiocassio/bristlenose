@@ -247,6 +247,8 @@
     "copyingPill": "%@ konumuna kopyalanıyor",
     "copyCancelling": "İptal ediliyor…",
     "copyDiskSpaceTitle": "Yeterli disk alanı yok",
+    "copyNoImportableItems": "B\u0131rak\u0131lan \u00f6\u011felerin hi\u00e7biri Bristlenose'un i\u00e7e aktarabilece\u011fi bir dosya de\u011fil.",
+    "copyAlreadyInFlight": "Zaten ba\u015fka bir kopyalama s\u00fcr\u00fcyor.",
     "copyDiskSpaceMessage": "Bu kopyalama %@ boş alan gerektiriyor, ancak hedef birimde yalnızca %@ kullanılabilir.",
     "filesPopover": {
       "unanalysedTitle": "\u00c7\u00f6z\u00fcmlenmemi\u015f dosyalar",

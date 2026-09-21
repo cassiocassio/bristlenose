@@ -247,6 +247,8 @@
     "copyingPill": "Kopiëren naar %@",
     "copyCancelling": "Annuleren…",
     "copyDiskSpaceTitle": "Onvoldoende schijfruimte",
+    "copyNoImportableItems": "Geen van de neergezette items is een bestand dat Bristlenose kan importeren.",
+    "copyAlreadyInFlight": "Er is al een andere kopieerbewerking bezig.",
     "copyDiskSpaceMessage": "Deze kopie heeft %@ vrij nodig, maar er is slechts %@ beschikbaar op het doelvolume.",
     "filesPopover": {
       "unanalysedTitle": "Niet-geanalyseerde bestanden",

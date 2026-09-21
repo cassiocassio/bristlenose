@@ -247,6 +247,8 @@
     "copyingPill": "Kopierar till %@",
     "copyCancelling": "Avbryter…",
     "copyDiskSpaceTitle": "Inte tillräckligt med diskutrymme",
+    "copyNoImportableItems": "Inget av de sl\u00e4ppta objekten \u00e4r en fil som Bristlenose kan importera.",
+    "copyAlreadyInFlight": "En annan kopiering p\u00e5g\u00e5r redan.",
     "copyDiskSpaceMessage": "Den här kopieringen behöver %@ ledigt, men bara %@ är tillgängligt på målvolymen.",
     "filesPopover": {
       "unanalysedTitle": "Oanalyserade filer",

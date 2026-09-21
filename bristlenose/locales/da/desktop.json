@@ -247,6 +247,8 @@
     "copyingPill": "Kopierer til %@",
     "copyCancelling": "Annullerer…",
     "copyDiskSpaceTitle": "Ikke nok diskplads",
+    "copyNoImportableItems": "Ingen af de sluppede emner er en fil, som Bristlenose kan importere.",
+    "copyAlreadyInFlight": "Der er allerede en anden kopiering i gang.",
     "copyDiskSpaceMessage": "Denne kopiering kræver %@ ledig plads, men der er kun %@ tilgængelig på destinationsdisken.",
     "filesPopover": {
       "unanalysedTitle": "Ikke-analyserede arkiver",

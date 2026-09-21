@@ -281,6 +281,8 @@
     "copyingPill": "Kopiowanie do %@",
     "copyCancelling": "Anulowanie…",
     "copyDiskSpaceTitle": "Za mało miejsca na dysku",
+    "copyNoImportableItems": "\u017baden z upuszczonych element\u00f3w nie jest plikiem, kt\u00f3ry Bristlenose mo\u017ce zaimportowa\u0107.",
+    "copyAlreadyInFlight": "Inne kopiowanie jest ju\u017c w toku.",
     "copyDiskSpaceMessage": "To kopiowanie wymaga %@ wolnego miejsca, ale na woluminie docelowym dostępne jest tylko %@.",
     "filesPopover": {
       "unanalysedTitle": "Nieprzeanalizowane pliki",

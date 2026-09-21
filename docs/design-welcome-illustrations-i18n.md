@@ -72,9 +72,31 @@ menu row (title from `desktop.menu.quotes.extractClips`, subtitle from
 
 ## Open questions for the pass
 
-1. **Book covers** — published translations exist for Norman in most of these
-   languages. Does a cover show the local edition's title, or the English one?
-   Author names stay either way.
+1. **Book covers — DECIDED, and the research already exists.** A cover shows the
+   local edition's title **only where that edition exists**; otherwise it keeps
+   the English title. A translated title for a book with no translation is a
+   false claim the reader can act on — they go looking for it and find nothing —
+   and reverting to English is cheap. So this is a per-book × per-language
+   matrix, not one switch.
+
+   `docs/design-i18n.md` § "Third-party codebooks" already did this work
+   (Amazon sales-rank data, Mar 2026) and settles two of the four shelf books:
+
+   | shelf book | what the research says |
+   |---|---|
+   | **Norman**, *The Design of Everyday Things* | translated into 20+ languages; the one title with genuine international traction (#5,251 in Japan, 155 ratings). Its codebook is the one the existing decision says to translate |
+   | **Nielsen**, *Usability Engineering* | **no French translation exists**; #532,405 in Japan on 4 ratings. The existing decision is that Nielsen stays English |
+   | **Braun & Clarke**, *Thematic Analysis* | not covered — check per language before assuming |
+   | **Lazarus**, *Emotion & Adaptation* | not covered — check per language before assuming |
+
+   Two constraints that fall out. The **covers are images of the English
+   editions** (typographic placeholders today), so a translated title drawn over
+   an English cover is incoherent — title and artwork move together or not at
+   all. And **author names never change**, in any language.
+
+   Note this is only the *title*. The caption beneath it is our own prose about
+   the book, and it is already translated in all 21 locales — that was never
+   the question.
 2. **The MCP terminal transcript** (`Thinking…`, `⎿ Found 6 quotes`,
    `bristlenose · search_quotes`) — Claude Code prints these in English. A
    faithful screenshot argues for leaving them; a teaching surface argues for

@@ -187,6 +187,15 @@ Norman at #5,251 in Japan is a genuinely popular book still actively selling 10+
 
 **Decision:** Translate Norman's codebook when we do third-party i18n. Garrett, Morville, and Nielsen stay English — their audience learned these frameworks in English.
 
+**This research has a second consumer (21 Sep 2026): the Welcome pane's book
+shelf**, which draws Norman, Nielsen, Braun & Clarke and Lazarus by title. The
+same finding decides it — a cover shows the local edition's title only where
+that edition exists, and reverts to English otherwise, because a translated
+title for an untranslated book sends the reader looking for something that is
+not there. Braun & Clarke and Lazarus are **not** covered by the table above
+and need the same check before anyone assumes. See
+`docs/design-welcome-illustrations-i18n.md`.
+
 ### Strategy for Norman translation (future)
 
 - Japanese: use established katakana transliterations (アフォーダンス, シグニファイア, マッピング) — the community already uses these

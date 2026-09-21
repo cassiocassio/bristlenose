@@ -1688,6 +1688,20 @@ codebooks, not two — `uxr` is at 2.0. And the built-ins are **not** bio-less: 
 had assumed sentiment, uxr and cli-ux carried no author material because they
 have no byline. They all have bios.
 
+**Bio length is a layout decision, and two bios were outside the band.** Measured
+21 Sep 2026 across the same nine YAMLs. The author column is a 240px gutter on the
+page (`.pg-side`, D13) and a 260px card in browse, so at roughly four words to the
+line a bio's word count *is* the card's height. Garrett is 37 words and Norman 45;
+Nielsen was 77 and Yablonski 99 — about twice the height, for the two codebooks
+whose links already carry the detail. Trimmed to 50 and 51: what went was a PhD, a
+subtitle, and a six-name researcher list, each of them one click away in
+`author_links`, while the provenance a researcher is actually choosing on stayed
+(Molich 1990 → the 1994 CHI paper; that Yablonski curated the laws rather than
+discovering them). **Morville is 72 and still outside the band.** The pre-trim long
+forms are kept verbatim in `docs/mockups/codebook-v2-prototype.html` —
+deliberately, and noted as such in the file, because that is the copy to lift for
+marketing or the website, where the column is not 240px.
+
 **And the tag row is not a badge.** The shipped *preview* renders tags as bare
 badges; an **installed** codebook renders `.tag-row` — name left, micro-bar and
 count right, the bar split when tentative proposals exist. Rendering badges in

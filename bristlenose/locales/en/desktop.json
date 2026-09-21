@@ -389,6 +389,243 @@
       "processDetail": "Transcribe, find quotes, cluster themes.",
       "exportTitle": "Browse & export",
       "exportDetail": "Read findings, export HTML or CSV."
+    },
+    "home": {
+      "tags": {
+        "studyTools": "Study tools",
+        "science": "Scientific background",
+        "tip": "Tip",
+        "ai": "AI",
+        "_divergent_studyTools": "en:c3cc6c — five locales (es, pt-BR, pt-PT, pl, uk) drop the qualifier and ship the bare noun for Tools. The chip is an 11-character cell at a fixed semantic size, and the full phrase runs to twice the English in those languages; the cell beneath already says what the tools are for. Deliberate — do not 'restore' the qualifier."
+      },
+      "learnMore": "Learn more",
+      "more": "More",
+      "rotatorPosition": "{{n}} of {{total}}",
+      "tools": {
+        "autocode": {
+          "title": "AutoCode",
+          "text": "Let AutoCode propose tags across every quote — you Accept or Deny.",
+          "link": "AI helps tag"
+        },
+        "codebooks": {
+          "title": "Codebooks",
+          "text": "Build a codebook, or start from a ready-made framework.",
+          "link": "Code by hand",
+          "link2": "Research frameworks"
+        },
+        "tag": {
+          "title": "Tag",
+          "text": "Select one or more quotes, and press `t` to tag them with a code from your codebook.",
+          "link": "Manual tagging"
+        },
+        "starHide": {
+          "title": "Star & hide",
+          "text": "Press `s` to keep the quotes that matter, `h` to hide the rest.",
+          "link": "Keyboard shortcuts"
+        },
+        "clips": {
+          "title": "Video clips",
+          "text": "Turn selected quotes into video clips.",
+          "link": "Export options"
+        },
+        "miro": {
+          "title": "Send to Miro",
+          "text": "Send quotes to a Miro board.",
+          "link": "Connect to Miro"
+        },
+        "agent": {
+          "title": "Connect an AI agent",
+          "text": "Chat to your data from Claude Code, Claude Desktop, or any MCP agent.",
+          "link": "Connect an agent…",
+          "link2": "Learn more"
+        },
+        "ingest": {
+          "title": "Ingest",
+          "text": "Drop a folder of recordings or transcripts — Bristlenose transcribes, analyses and reports back.",
+          "link": "Import options"
+        },
+        "redactPii": {
+          "_comment": "WITHHELD from the pool in code (CLI-only feature). Translated so it is ready when the Privacy control ships.",
+          "title": "Redact PII",
+          "text": "Remove personal details automatically, before analysis.",
+          "link": "Strip names and more"
+        }
+      },
+      "science": {
+        "emergentThemes": {
+          "title": "Emergent themes",
+          "text": "Themes emerge from participants’ own words, not a fixed taxonomy (Braun & Clarke, 2006)."
+        },
+        "sentiments": {
+          "title": "Seven sentiments",
+          "text": "Seven sentiments, grounded in appraisal theory (Scherer) and core affect (Russell)."
+        },
+        "signals": {
+          "title": "Signals",
+          "text": "A signal is a score that combines the strength of participants’ opinions or feelings, their level of focus on an area or theme, and a measure of their agreement."
+        },
+        "dignity": {
+          "title": "Dignity without distortion",
+          "text": "Quotes are tidied but never twisted; the participant’s voice is honoured."
+        }
+      },
+      "books": {
+        "norman": "The book that made human-centred design a discipline — blame the design, not the user.",
+        "nielsen": "Ten usability heuristics that still anchor how the field spots friction.",
+        "braunClarke": "The practical guide to reflexive thematic analysis — themes from participants’ own words.",
+        "lazarus": "Appraisal theory — emotion as how we weigh what happens to us."
+      },
+      "tips": {
+        "firstAnalysis": {
+          "text": "From a folder of recordings to a readable report in minutes.",
+          "more": "It walks a single run end to end, so you see what each step does.",
+          "link": "First analysis"
+        },
+        "setUpClaude": {
+          "text": "Connect an AI provider to run the analysis.",
+          "more": "Claude is the recommended default; ChatGPT, Gemini and Azure work too.",
+          "link": "Set up Claude"
+        },
+        "setUpOllama": {
+          "text": "No API key? Run **Ollama** locally — free, no account, nothing uploaded.",
+          "more": "The whole analysis runs on your own machine, with no cloud and no key.",
+          "link": "Set up Ollama"
+        },
+        "runAnalysis": {
+          "text": "Click any transcript timecode to play from that moment.",
+          "more": "The transcript scrolls in step with the video, so you never lose your place.",
+          "link": "Run an analysis"
+        },
+        "exportQuotes": {
+          "text": "Send your quotes to a spreadsheet in one step.",
+          "more": "Copy them to the clipboard, or download as CSV or Excel.",
+          "link": "Export quotes"
+        },
+        "videoClips": {
+          "text": "Turn your best quotes into shareable video clips.",
+          "more": "Bristlenose cuts a short clip for each starred or featured quote.",
+          "link": "Video clips"
+        },
+        "shareReport": {
+          "text": "Share one self-contained HTML file — no install needed.",
+          "more": "Anyone can open it in a browser; anonymise names and places first if you like.",
+          "link": "Share a report"
+        },
+        "sendToMiro": {
+          "text": "Send quotes straight to a **Miro** board.",
+          "more": "They land as sticky notes, ready to cluster and affinity-map (experimental).",
+          "link": "Send to Miro"
+        },
+        "connectAgent": {
+          "text": "Ask questions about a project from **Claude Desktop**, or any MCP agent.",
+          "more": "Turn on agent access, install the extension once, and ask in your own words.",
+          "link": "Connect an agent"
+        },
+        "useCodebooks": {
+          "text": "Let **AutoCode** propose tags across every quote.",
+          "more": "Tag by hand, or start from a codebook and accept the model's suggestions.",
+          "link": "Codebooks"
+        },
+        "tagForMeaning": {
+          "text": "Tagging is analysis — turn quotes into themes.",
+          "more": "Group a set of quotes under a code and the findings start to surface.",
+          "link": "Tag for meaning"
+        },
+        "howItWorks": {
+          "text": "Bristlenose reads interviews as sessions and quotes.",
+          "more": "Sessions, participants, quotes, sections and themes — that's the whole model.",
+          "link": "How it works"
+        },
+        "signals": {
+          "text": "The **Signals** tab shows where sentiment concentrates.",
+          "more": "A signal marks a theme running hotter or cooler than you'd expect.",
+          "link": "Signals"
+        },
+        "frameworks": {
+          "text": "Tag with a ready-made UX research framework.",
+          "more": "Each framework — Norman, Nielsen and more — brings its own lens.",
+          "link": "Frameworks"
+        },
+        "researchFoundations": {
+          "text": "The method rests on published, peer-reviewed research.",
+          "more": "The sentiment taxonomy, the analysis and the codebooks all cite their sources.",
+          "link": "Research foundations"
+        },
+        "thePipeline": {
+          "text": "Every analysis runs the same twelve stages.",
+          "more": "Caching means a re-run only redoes what actually changed, keeping the cost down.",
+          "link": "The pipeline"
+        },
+        "cloudOrLocal": {
+          "text": "Choose what the AI sees: cloud or local.",
+          "more": "Cloud models are faster and sharper; local ones never leave your Mac.",
+          "link": "Cloud or local"
+        },
+        "privacy": {
+          "text": "See exactly what the AI sees, and what never leaves your Mac.",
+          "more": "Recordings and files stay local; only transcript text goes to your provider.",
+          "link": "Privacy"
+        },
+        "configuration": {
+          "text": "Every setting has a sensible default you can change.",
+          "more": "One reference page lists them all, with what each one does.",
+          "link": "Configuration"
+        },
+        "keyboardShortcuts": {
+          "text": "Press `s` to star, `h` to hide — then filter to what matters.",
+          "more": "There's a key for nearly everything, in the app and the browser report.",
+          "link": "Keyboard shortcuts"
+        },
+        "supportedFiles": {
+          "text": "Drop **.srt**, **.vtt** or **.docx** and skip transcription.",
+          "more": "Bristlenose reads the text you already have and goes straight to analysis.",
+          "link": "Supported files"
+        },
+        "matchingFiles": {
+          "text": "Name **p1.srt** next to **p1.mp4** to merge them.",
+          "more": "Matching names pair each transcript with its audio or video automatically.",
+          "link": "Matching files"
+        },
+        "outputFiles": {
+          "text": "Everything Bristlenose makes lands in one folder.",
+          "more": "The report, transcripts and data sit beside your recordings — yours to keep.",
+          "link": "Output files"
+        },
+        "appearance": {
+          "text": "Make it yours: light, dark, palette and type.",
+          "more": "Switch the colour palette and typography to taste in Settings.",
+          "link": "Appearance"
+        },
+        "languages": {
+          "text": "Not in English? Switch the interface language.",
+          "more": "Bristlenose ships in more than twenty languages — set yours in Settings.",
+          "link": "Languages"
+        }
+      },
+      "aiConfigured": {
+        "localModels": {
+          "title": "About local models",
+          "text": "Ollama runs entirely on your Mac — no account, nothing uploaded."
+        },
+        "switchAnytime": {
+          "title": "Switch anytime",
+          "text": "Change provider or model whenever you like, in Settings."
+        },
+        "localOrCloud": {
+          "title": "Local or cloud",
+          "text": "Local models are free; cloud models are faster and sharper."
+        }
+      },
+      "ingestRows": {
+        "video": "Video — MP4 · MOV · MKV · WebM · AVI · M4V",
+        "audio": "Audio — WAV · MP3 · M4A · FLAC · OGG · AAC · WMA",
+        "captions": "Captions — VTT · SRT, matched to their video by name",
+        "transcripts": "Transcripts — Word exports from Zoom, Teams or Meet",
+        "folders": "Folders — one session’s files together, any mix"
+      },
+      "clipsIllustration": {
+        "subtitle": "Trimmed clip per quote"
+      }
     }
   },
   "toolbar": {

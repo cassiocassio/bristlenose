@@ -387,6 +387,241 @@
       "processDetail": "Transcriu, cerca cites, agrupa temes.",
       "exportTitle": "Explora i exporta",
       "exportDetail": "Llegeix els resultats, exporta HTML o CSV."
+    },
+    "home": {
+      "tags": {
+        "studyTools": "Eines d'estudi",
+        "science": "Fonaments científics",
+        "tip": "Consell",
+        "ai": "IA"
+      },
+      "learnMore": "Més informació",
+      "more": "Més",
+      "rotatorPosition": "{{n}} de {{total}}",
+      "tools": {
+        "autocode": {
+          "title": "AutoCode",
+          "text": "Deixa que AutoCode proposi etiquetes a cada cita — tu acceptes o denegues.",
+          "link": "Etiquetatge amb IA"
+        },
+        "codebooks": {
+          "title": "Llibres de codis",
+          "text": "Crea un llibre de codis o parteix d'un marc de treball ja fet.",
+          "link": "Codifica a mà",
+          "link2": "Marcs de recerca"
+        },
+        "tag": {
+          "title": "Etiqueta",
+          "text": "Selecciona una o més cites i prem `t` per etiquetar-les amb un codi del teu llibre de codis.",
+          "link": "Etiquetatge manual"
+        },
+        "starHide": {
+          "title": "Destaca i oculta",
+          "text": "Prem `s` per destacar les cites que importen, `h` per ocultar la resta.",
+          "link": "Dreceres de teclat"
+        },
+        "clips": {
+          "title": "Clips de vídeo",
+          "text": "Fes clips de vídeo amb les cites triades.",
+          "link": "Opcions d'exportació"
+        },
+        "miro": {
+          "title": "Envia a Miro",
+          "text": "Envia cites a un tauler de Miro.",
+          "link": "Connecta amb Miro"
+        },
+        "agent": {
+          "title": "Connecta un agent d'IA",
+          "text": "Conversa amb les dades des de Claude Code, Claude Desktop o qualsevol agent MCP.",
+          "link": "Connecta un agent…",
+          "link2": "Més informació"
+        },
+        "ingest": {
+          "title": "Ingesta",
+          "text": "Arrossega una carpeta d'enregistraments o transcripcions — el Bristlenose transcriu, analitza i en fa l'informe.",
+          "link": "Opcions d'importació"
+        },
+        "redactPii": {
+          "title": "Ocultació de dades",
+          "text": "Suprimeix automàticament les dades personals abans de l'anàlisi.",
+          "link": "Elimina noms i més"
+        }
+      },
+      "science": {
+        "emergentThemes": {
+          "title": "Temes emergents",
+          "text": "Els temes emergeixen de les paraules dels participants, no d'una taxonomia fixa (Braun & Clarke, 2006)."
+        },
+        "sentiments": {
+          "title": "Set sentiments",
+          "text": "Set sentiments, fonamentats en la teoria de l'avaluació (Scherer) i l'afecte nuclear (Russell)."
+        },
+        "signals": {
+          "title": "Senyals",
+          "text": "Un senyal és una puntuació que combina la força de les opinions o els sentiments dels participants, el seu grau d'atenció en una àrea o un tema, i una mesura del seu acord."
+        },
+        "dignity": {
+          "title": "Dignitat sense distorsió",
+          "text": "Les cites es poleixen, mai es tergiversen; la veu del participant es respecta."
+        }
+      },
+      "books": {
+        "norman": "El llibre fundacional del disseny centrat en les persones — la culpa és del disseny, no de l'usuari.",
+        "nielsen": "Deu heurístiques d'usabilitat que encara guien com el camp detecta les friccions.",
+        "braunClarke": "La guia pràctica de l'anàlisi temàtica reflexiva — temes a partir de les paraules dels participants.",
+        "lazarus": "La teoria de l'avaluació cognitiva — l'emoció jutja el que ens passa."
+      },
+      "tips": {
+        "firstAnalysis": {
+          "text": "D'una carpeta d'enregistraments a un informe llegible en pocs minuts.",
+          "more": "La guia segueix una anàlisi de cap a cap i mostra què fa cada pas.",
+          "link": "Primera anàlisi"
+        },
+        "setUpClaude": {
+          "text": "Connecta un proveïdor d'IA per executar l'anàlisi.",
+          "more": "Claude és l'opció recomanada; ChatGPT, Gemini i Azure també funcionen.",
+          "link": "Configura Claude"
+        },
+        "setUpOllama": {
+          "text": "Sense clau API? Executa **Ollama** en local — gratuït, sense compte, no es puja res.",
+          "more": "Tota l'anàlisi s'executa al teu ordinador, sense núvol ni clau.",
+          "link": "Configura Ollama"
+        },
+        "runAnalysis": {
+          "text": "Clica qualsevol marca de temps per reproduir des d'aquell punt.",
+          "more": "La transcripció avança al ritme del vídeo: mai no perds el fil.",
+          "link": "Executa una anàlisi"
+        },
+        "exportQuotes": {
+          "text": "Envia les cites a un full de càlcul en un sol pas.",
+          "more": "Copia-les al porta-retalls o baixa-les en CSV o Excel.",
+          "link": "Exporta les cites"
+        },
+        "videoClips": {
+          "text": "Fes clips de vídeo per compartir amb les millors cites.",
+          "more": "El Bristlenose talla un clip curt per a cada cita destacada o rellevant.",
+          "link": "Clips de vídeo"
+        },
+        "shareReport": {
+          "text": "Comparteix un sol fitxer HTML autònom — sense instal·lar res.",
+          "more": "Qualsevol el pot obrir en un navegador; si vols, anonimitza abans noms i llocs.",
+          "link": "Comparteix l'informe"
+        },
+        "sendToMiro": {
+          "text": "Envia les cites a un tauler de **Miro**.",
+          "more": "Hi arriben com a notes adhesives, a punt per agrupar en mapes d'afinitat (experimental).",
+          "link": "Envia a Miro"
+        },
+        "connectAgent": {
+          "text": "Fes preguntes sobre un projecte des de **Claude Desktop** o qualsevol agent MCP.",
+          "more": "Activa l'accés dels agents, instal·la l'extensió un cop i pregunta amb les teves paraules.",
+          "link": "Connecta un agent"
+        },
+        "useCodebooks": {
+          "text": "Deixa que **AutoCode** proposi etiquetes a cada cita.",
+          "more": "Etiqueta a mà, o parteix d'un llibre de codis i accepta els suggeriments del model.",
+          "link": "Llibres de codis"
+        },
+        "tagForMeaning": {
+          "text": "Etiquetar és analitzar — de les cites als temes.",
+          "more": "Agrupa un conjunt de cites sota un codi i les troballes comencen a aflorar.",
+          "link": "Etiqueta el sentit"
+        },
+        "howItWorks": {
+          "text": "El Bristlenose llegeix les entrevistes com a sessions i cites.",
+          "more": "Sessions, participants, cites, seccions i temes — aquest és tot el model.",
+          "link": "Com funciona"
+        },
+        "signals": {
+          "text": "La pestanya **Senyals** mostra on es concentra el sentiment.",
+          "more": "Un senyal marca un tema més calent o més fred del que esperaries.",
+          "link": "Senyals"
+        },
+        "frameworks": {
+          "text": "Etiqueta amb un marc de recerca UX ja fet.",
+          "more": "Cada marc — Norman, Nielsen i més — aporta la seva pròpia mirada.",
+          "link": "Marcs de treball"
+        },
+        "researchFoundations": {
+          "text": "El mètode es basa en recerca publicada i revisada per experts.",
+          "more": "La taxonomia de sentiments, l'anàlisi i els llibres de codis citen les seves fonts.",
+          "link": "Fonaments científics"
+        },
+        "thePipeline": {
+          "text": "Cada anàlisi passa per les mateixes dotze etapes.",
+          "more": "Amb la memòria cau, repetir l'anàlisi només refà el que ha canviat i estalvia costos.",
+          "link": "El processament"
+        },
+        "cloudOrLocal": {
+          "text": "Tria què veu la IA: al núvol o en local.",
+          "more": "Els models al núvol són més ràpids i precisos; els locals no surten mai del Mac.",
+          "link": "Núvol o local"
+        },
+        "privacy": {
+          "text": "Mira exactament què veu la IA i què no surt mai del teu Mac.",
+          "more": "Enregistraments i fitxers es queden al Mac; només el text transcrit va al proveïdor.",
+          "link": "Privadesa"
+        },
+        "configuration": {
+          "text": "Cada opció té un valor per defecte raonable que pots canviar.",
+          "more": "Una pàgina de referència les llista totes, amb què fa cadascuna.",
+          "link": "Configuració"
+        },
+        "keyboardShortcuts": {
+          "text": "Prem `s` per destacar, `h` per ocultar — després filtra el que importa.",
+          "more": "Hi ha una tecla per a gairebé tot, a l'app i a l'informe del navegador.",
+          "link": "Dreceres de teclat"
+        },
+        "supportedFiles": {
+          "text": "Arrossega **.srt**, **.vtt** o **.docx** i salta la transcripció.",
+          "more": "El Bristlenose llegeix el text que ja tens i passa directament a l'anàlisi.",
+          "link": "Fitxers admesos"
+        },
+        "matchingFiles": {
+          "text": "Posa **p1.srt** al costat de **p1.mp4** per unir-los.",
+          "more": "Els noms coincidents aparellen cada transcripció amb el seu àudio o vídeo.",
+          "link": "Fitxers aparellats"
+        },
+        "outputFiles": {
+          "text": "Tot el que fa el Bristlenose va a parar a una carpeta.",
+          "more": "Informe, transcripcions i dades queden al costat dels enregistraments — són teus.",
+          "link": "Fitxers de sortida"
+        },
+        "appearance": {
+          "text": "Fes-lo teu: clar, fosc, paleta i tipografia.",
+          "more": "Canvia la paleta de colors i la tipografia al teu gust a Configuració.",
+          "link": "Aspecte"
+        },
+        "languages": {
+          "text": "No en anglès? Canvia l'idioma de la interfície.",
+          "more": "El Bristlenose és en més de vint idiomes — tria el teu a Configuració.",
+          "link": "Idiomes"
+        }
+      },
+      "aiConfigured": {
+        "localModels": {
+          "title": "Models locals",
+          "text": "Ollama s'executa del tot al teu Mac — sense compte, no es puja res."
+        },
+        "switchAnytime": {
+          "title": "Canvia quan vulguis",
+          "text": "Canvia de proveïdor o de model quan vulguis, a Configuració."
+        },
+        "localOrCloud": {
+          "title": "Local o núvol",
+          "text": "Els models locals són gratuïts; els del núvol, més ràpids i precisos."
+        }
+      },
+      "ingestRows": {
+        "video": "Vídeo — MP4 · MOV · MKV · WebM · AVI · M4V",
+        "audio": "Àudio — WAV · MP3 · M4A · FLAC · OGG · AAC · WMA",
+        "captions": "Subtítols — VTT · SRT, aparellats amb el vídeo pel nom",
+        "transcripts": "Transcripcions — exportacions Word de Zoom, Teams o Meet",
+        "folders": "Carpetes — els fitxers d'una sessió junts, de tot tipus"
+      },
+      "clipsIllustration": {
+        "subtitle": "Un clip retallat per cita"
+      }
     }
   },
   "toolbar": {

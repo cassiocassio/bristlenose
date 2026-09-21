@@ -7,7 +7,25 @@
     }
   },
   "welcome": {
-    "subtitle": "將一個裝有訪談的檔案夾變成可分享的報告 — 全在你的手提電腦上，不上傳任何內容。"
+    "subtitle": "將一個裝有訪談的檔案夾變成可分享的報告 — 全在你的手提電腦上，不上傳任何內容。",
+    "home": {
+      "tips": {
+        "setUpOllama": {
+          "text": "沒有 API 金鑰？在本機執行 **Ollama**：免費、免帳戶、不上傳。"
+        },
+        "researchFoundations": {
+          "text": "方法立基於已發表的同行評審研究。"
+        },
+        "privacy": {
+          "link": "私隱"
+        }
+      },
+      "aiConfigured": {
+        "localModels": {
+          "text": "Ollama 完全在你的 Mac 上執行：免帳戶，不上傳。"
+        }
+      }
+    }
   },
   "help": {
     "contributing": {

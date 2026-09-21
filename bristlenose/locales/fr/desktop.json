@@ -387,6 +387,241 @@
       "processDetail": "Transcription, extraction de citations, regroupement.",
       "exportTitle": "Parcourez et exportez",
       "exportDetail": "Lisez les conclusions, exportez en HTML ou CSV."
+    },
+    "home": {
+      "tags": {
+        "studyTools": "Outils d’étude",
+        "science": "Fondements scientifiques",
+        "tip": "Astuce",
+        "ai": "IA"
+      },
+      "learnMore": "En savoir plus",
+      "more": "Plus",
+      "rotatorPosition": "{{n}} sur {{total}}",
+      "tools": {
+        "autocode": {
+          "title": "AutoCode",
+          "text": "AutoCode propose une étiquette par verbatim — vous acceptez ou refusez.",
+          "link": "Étiquetage assisté"
+        },
+        "codebooks": {
+          "title": "Grilles de codage",
+          "text": "Créez une grille de codage, ou partez d’un cadre existant.",
+          "link": "Coder à la main",
+          "link2": "Cadres de recherche"
+        },
+        "tag": {
+          "title": "Étiqueter",
+          "text": "Sélectionnez un ou plusieurs verbatim, puis `t` pour leur donner un code de la grille de codage.",
+          "link": "Étiquetage manuel"
+        },
+        "starHide": {
+          "title": "Favoris et masquage",
+          "text": "Appuyez sur `s` pour garder les verbatim clés, `h` pour masquer le reste.",
+          "link": "Raccourcis clavier"
+        },
+        "clips": {
+          "title": "Clips vidéo",
+          "text": "Exportez les verbatim choisis en clips vidéo.",
+          "link": "Options d’export"
+        },
+        "miro": {
+          "title": "Envoyer vers Miro",
+          "text": "Envoyez des verbatim vers Miro.",
+          "link": "Connexion à Miro"
+        },
+        "agent": {
+          "title": "Connecter un agent IA",
+          "text": "Dialoguez avec vos données depuis Claude Code, Claude Desktop ou tout agent MCP.",
+          "link": "Connecter un agent…",
+          "link2": "En savoir plus"
+        },
+        "ingest": {
+          "title": "Importation",
+          "text": "Déposez un dossier d’enregistrements ou de transcriptions — Bristlenose transcrit, analyse et vous rend un rapport.",
+          "link": "Options d’import"
+        },
+        "redactPii": {
+          "title": "Caviardage",
+          "text": "Caviardage automatique des données personnelles avant l’analyse.",
+          "link": "Retirer noms et plus"
+        }
+      },
+      "science": {
+        "emergentThemes": {
+          "title": "Thèmes émergents",
+          "text": "Les thèmes émergent des mots des participants, non d’une taxonomie figée (Braun & Clarke, 2006)."
+        },
+        "sentiments": {
+          "title": "Sept sentiments",
+          "text": "Sept sentiments, fondés sur la théorie de l’évaluation (Scherer) et l’affect central (Russell)."
+        },
+        "signals": {
+          "title": "Signaux",
+          "text": "Un signal est un score qui combine la force des opinions ou des ressentis des participants, leur degré d’attention à un sujet ou un thème, et une mesure de leur accord."
+        },
+        "dignity": {
+          "title": "Dignité sans distorsion",
+          "text": "Les verbatim sont nettoyés, jamais déformés ; la voix du participant est respectée."
+        }
+      },
+      "books": {
+        "norman": "Le livre fondateur de la conception centrée sur l’humain — la faute au design, pas à l’utilisateur.",
+        "nielsen": "Dix heuristiques d’utilisabilité qui guident encore la détection des frictions.",
+        "braunClarke": "Le guide pratique de l’analyse thématique réflexive — des thèmes issus des mots des participants.",
+        "lazarus": "La théorie de l’évaluation — l’émotion juge ce qui nous arrive."
+      },
+      "tips": {
+        "firstAnalysis": {
+          "text": "D’un dossier d’enregistrements à un rapport lisible en quelques minutes.",
+          "more": "Ce guide suit une analyse de bout en bout et montre ce que fait chaque étape.",
+          "link": "Première analyse"
+        },
+        "setUpClaude": {
+          "text": "Reliez un fournisseur d’IA pour lancer l’analyse.",
+          "more": "Claude est le choix recommandé ; ChatGPT, Gemini et Azure fonctionnent aussi.",
+          "link": "Configurer Claude"
+        },
+        "setUpOllama": {
+          "text": "Sans clé API ? **Ollama** tourne en local — gratuit, sans compte, rien d’envoyé.",
+          "more": "Toute l’analyse s’exécute sur votre Mac, sans cloud ni clé.",
+          "link": "Configurer Ollama"
+        },
+        "runAnalysis": {
+          "text": "Cliquez un horodatage de la transcription pour lire depuis là.",
+          "more": "La transcription défile avec la vidéo : vous ne perdez jamais le fil.",
+          "link": "Lancer une analyse"
+        },
+        "exportQuotes": {
+          "text": "Envoyez vos verbatim vers un tableur en une étape.",
+          "more": "Copiez-les dans le presse-papiers ou exportez-les en CSV ou Excel.",
+          "link": "Export des verbatim"
+        },
+        "videoClips": {
+          "text": "Faites de vos meilleurs verbatim des clips à partager.",
+          "more": "Bristlenose découpe un clip court par verbatim favori ou mis en avant.",
+          "link": "Clips vidéo"
+        },
+        "shareReport": {
+          "text": "Partagez un seul fichier HTML autonome — sans rien installer.",
+          "more": "Il s’ouvre dans n’importe quel navigateur ; anonymisez noms et lieux au préalable si besoin.",
+          "link": "Partager un rapport"
+        },
+        "sendToMiro": {
+          "text": "Envoyez vos verbatim sur un tableau **Miro**.",
+          "more": "Ils arrivent en pense-bêtes, prêts à regrouper en carte d’affinités (expérimental).",
+          "link": "Envoyer vers Miro"
+        },
+        "connectAgent": {
+          "text": "Interrogez un projet depuis **Claude Desktop** ou tout agent MCP.",
+          "more": "Activez l’accès agent, installez l’extension une fois, et demandez avec vos mots.",
+          "link": "Connecter un agent"
+        },
+        "useCodebooks": {
+          "text": "**AutoCode** propose des étiquettes pour chaque verbatim.",
+          "more": "Étiquetez à la main, ou partez d’une grille de codage et acceptez ce que l’IA propose.",
+          "link": "Grilles de codage"
+        },
+        "tagForMeaning": {
+          "text": "Étiqueter, c’est analyser — des verbatim aux thèmes.",
+          "more": "Regroupez des verbatim sous un code et les conclusions commencent à émerger.",
+          "link": "Étiqueter le sens"
+        },
+        "howItWorks": {
+          "text": "Bristlenose lit vos données en entretiens et verbatim.",
+          "more": "Entretiens, participants, verbatim, sections et thèmes — c’est tout le modèle.",
+          "link": "Fonctionnement"
+        },
+        "signals": {
+          "text": "L’onglet **Signaux** montre où le sentiment se concentre.",
+          "more": "Un signal marque un thème plus chaud ou plus froid qu’attendu.",
+          "link": "Signaux"
+        },
+        "frameworks": {
+          "text": "Étiquetez avec un cadre de recherche UX existant.",
+          "more": "Chaque cadre — Norman, Nielsen et d’autres — apporte son propre regard.",
+          "link": "Cadres"
+        },
+        "researchFoundations": {
+          "text": "La méthode repose sur des travaux publiés, relus par les pairs.",
+          "more": "Taxonomie des sentiments, analyse et grilles de codage citent toutes leurs sources.",
+          "link": "Bases scientifiques"
+        },
+        "thePipeline": {
+          "text": "Chaque analyse suit les mêmes douze étapes.",
+          "more": "Grâce au cache, une relance ne refait que ce qui a changé, ce qui limite le coût.",
+          "link": "Le pipeline"
+        },
+        "cloudOrLocal": {
+          "text": "Choisissez ce que voit l’IA : cloud ou local.",
+          "more": "Le cloud est plus rapide et plus fin ; le local ne quitte jamais votre Mac.",
+          "link": "Cloud ou local"
+        },
+        "privacy": {
+          "text": "Voyez ce que voit l’IA, et ce qui ne quitte jamais votre Mac.",
+          "more": "Enregistrements et fichiers restent ici ; seul le texte transcrit va au fournisseur.",
+          "link": "Confidentialité"
+        },
+        "configuration": {
+          "text": "Chaque réglage a une valeur par défaut sensée, modifiable.",
+          "more": "Une page de référence les liste toutes, avec le rôle de chacune.",
+          "link": "Réglages"
+        },
+        "keyboardShortcuts": {
+          "text": "Touche `s` pour le favori, `h` pour masquer — puis filtrez l’essentiel.",
+          "more": "Il y a une touche pour presque tout, dans l’app comme dans le rapport web.",
+          "link": "Raccourcis clavier"
+        },
+        "supportedFiles": {
+          "text": "Déposez **.srt**, **.vtt** ou **.docx** et sautez la transcription.",
+          "more": "Bristlenose lit le texte que vous avez déjà et passe directement à l’analyse.",
+          "link": "Formats acceptés"
+        },
+        "matchingFiles": {
+          "text": "Nommez **p1.srt** à côté de **p1.mp4** pour les associer.",
+          "more": "Des noms identiques associent chaque transcription à son audio ou sa vidéo.",
+          "link": "Fichiers associés"
+        },
+        "outputFiles": {
+          "text": "Tout ce que produit Bristlenose tient dans un dossier.",
+          "more": "Rapport, transcriptions et données restent à côté de vos enregistrements — ils sont à vous.",
+          "link": "Fichiers produits"
+        },
+        "appearance": {
+          "text": "À votre goût : clair, sombre, palette et police.",
+          "more": "Changez la palette de couleurs et la typographie dans Réglages.",
+          "link": "Apparence"
+        },
+        "languages": {
+          "text": "Pas en anglais ? Changez la langue de l’interface.",
+          "more": "Bristlenose existe en plus de vingt langues — choisissez la vôtre dans Réglages.",
+          "link": "Langues"
+        }
+      },
+      "aiConfigured": {
+        "localModels": {
+          "title": "Modèles locaux",
+          "text": "Ollama tourne entièrement sur votre Mac — sans compte, rien d’envoyé."
+        },
+        "switchAnytime": {
+          "title": "Changez librement",
+          "text": "Changez de fournisseur ou de modèle à tout moment, dans Réglages."
+        },
+        "localOrCloud": {
+          "title": "Local ou cloud",
+          "text": "Les modèles locaux sont gratuits ; le cloud, plus rapide et précis."
+        }
+      },
+      "ingestRows": {
+        "video": "Vidéo — MP4 · MOV · MKV · WebM · AVI · M4V",
+        "audio": "Audio — WAV · MP3 · M4A · FLAC · OGG · AAC · WMA",
+        "captions": "Sous-titres — VTT · SRT, associés à leur vidéo par le nom",
+        "transcripts": "Transcriptions — exports Word de Zoom, Teams ou Meet",
+        "folders": "Dossiers — les fichiers d’un entretien, tous formats"
+      },
+      "clipsIllustration": {
+        "subtitle": "Clip découpé par verbatim"
+      }
     }
   },
   "toolbar": {

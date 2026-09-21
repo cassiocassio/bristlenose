@@ -387,6 +387,241 @@
       "processDetail": "Döküm yap, alıntı bul, temaları grupla.",
       "exportTitle": "Göz atın ve dışa aktarın",
       "exportDetail": "Bulguları okuyun, HTML ya da CSV olarak dışa aktarın."
+    },
+    "home": {
+      "tags": {
+        "studyTools": "\u00c7al\u0131\u015fma ara\u00e7lar\u0131",
+        "science": "Bilimsel arka plan",
+        "tip": "\u0130pucu",
+        "ai": "Yapay zek\u00e2"
+      },
+      "learnMore": "Daha fazla bilgi",
+      "more": "Daha fazla",
+      "rotatorPosition": "{{n}} / {{total}}",
+      "tools": {
+        "autocode": {
+          "title": "AutoCode",
+          "text": "AutoCode her al\u0131nt\u0131 i\u00e7in etiket \u00f6nersin \u2014 siz kabul edin ya da reddedin.",
+          "link": "Yapay zek\u00e2 etiketler"
+        },
+        "codebooks": {
+          "title": "Kod kitaplar\u0131",
+          "text": "Bir kod kitab\u0131 olu\u015fturun ya da haz\u0131r bir \u00e7er\u00e7eveyle ba\u015flay\u0131n.",
+          "link": "Elle kodlama",
+          "link2": "Ara\u015ft\u0131rma \u00e7er\u00e7eveleri"
+        },
+        "tag": {
+          "title": "Etiketle",
+          "text": "Bir ya da daha fazla al\u0131nt\u0131 se\u00e7in, kod kitab\u0131n\u0131zdan bir kodla etiketlemek i\u00e7in `t` tu\u015funa bas\u0131n.",
+          "link": "Elle etiketleme"
+        },
+        "starHide": {
+          "title": "Y\u0131ld\u0131zla ve gizle",
+          "text": "\u00d6nemli al\u0131nt\u0131lar\u0131 tutmak i\u00e7in `s`, gerisini gizlemek i\u00e7in `h` tu\u015funa bas\u0131n.",
+          "link": "Klavye k\u0131sayollar\u0131"
+        },
+        "clips": {
+          "title": "Video klipler",
+          "text": "Se\u00e7ili al\u0131nt\u0131lar\u0131 video klibe d\u00f6n\u00fc\u015ft\u00fcr\u00fcn.",
+          "link": "D\u0131\u015fa aktarma yollar\u0131"
+        },
+        "miro": {
+          "title": "Miro'ya g\u00f6nder",
+          "text": "Miro panosuna al\u0131nt\u0131 g\u00f6nderin.",
+          "link": "Miro'ya ba\u011flan"
+        },
+        "agent": {
+          "title": "Yapay zek\u00e2 ajan\u0131 ba\u011fla",
+          "text": "Claude Code, Claude Desktop ya da bir MCP ajan\u0131ndan verilerinizle konu\u015fun.",
+          "link": "Ajan ba\u011fla\u2026",
+          "link2": "Daha fazla bilgi"
+        },
+        "ingest": {
+          "title": "\u0130\u00e7e aktarma",
+          "text": "Kay\u0131tlardan ya da d\u00f6k\u00fcmlerden olu\u015fan bir klas\u00f6r\u00fc b\u0131rak\u0131n \u2014 Bristlenose d\u00f6k\u00fcm\u00fc \u00e7\u0131kar\u0131r, analiz eder ve rapor sunar.",
+          "link": "\u0130\u00e7e aktarma yollar\u0131"
+        },
+        "redactPii": {
+          "title": "Ki\u015fisel veriyi sil",
+          "text": "Analizden \u00f6nce ki\u015fisel bilgileri otomatik olarak kald\u0131r\u0131n.",
+          "link": "Adlar\u0131 ve dahas\u0131n\u0131 sil"
+        }
+      },
+      "science": {
+        "emergentThemes": {
+          "title": "Ortaya \u00e7\u0131kan temalar",
+          "text": "Temalar sabit bir s\u0131n\u0131fland\u0131rmadan de\u011fil, kat\u0131l\u0131mc\u0131lar\u0131n kendi s\u00f6zlerinden do\u011far (Braun & Clarke, 2006)."
+        },
+        "sentiments": {
+          "title": "Yedi duygu durumu",
+          "text": "De\u011ferlendirme kuram\u0131na (Scherer) ve \u00e7ekirdek duygulan\u0131ma (Russell) dayanan yedi duygu durumu."
+        },
+        "signals": {
+          "title": "Sinyaller",
+          "text": "Sinyal, kat\u0131l\u0131mc\u0131lar\u0131n g\u00f6r\u00fc\u015f ya da duygular\u0131n\u0131n g\u00fcc\u00fcn\u00fc, bir alana ya da temaya ne kadar odakland\u0131klar\u0131n\u0131 ve ne \u00f6l\u00e7\u00fcde hemfikir olduklar\u0131n\u0131 tek bir puanda birle\u015ftirir."
+        },
+        "dignity": {
+          "title": "\u00c7arp\u0131tmadan sayg\u0131nl\u0131k",
+          "text": "Al\u0131nt\u0131lar d\u00fczeltilir ama asla \u00e7arp\u0131t\u0131lmaz; kat\u0131l\u0131mc\u0131n\u0131n sesine sayg\u0131 duyulur."
+        }
+      },
+      "books": {
+        "norman": "\u0130nsan odakl\u0131 tasar\u0131m\u0131 bir disiplin yapan kitap \u2014 kullan\u0131c\u0131y\u0131 de\u011fil, tasar\u0131m\u0131 su\u00e7lay\u0131n.",
+        "nielsen": "Alan\u0131n s\u00fcrt\u00fcnmeyi bulmak i\u00e7in h\u00e2l\u00e2 ba\u015fvurdu\u011fu on kullan\u0131labilirlik ilkesi.",
+        "braunClarke": "Refleksif tematik analizin pratik rehberi \u2014 kat\u0131l\u0131mc\u0131lar\u0131n kendi s\u00f6zlerinden temalar.",
+        "lazarus": "Bili\u015fsel de\u011ferlendirme kuram\u0131 \u2014 duygu, ba\u015f\u0131m\u0131za geleni tartma bi\u00e7imimiz."
+      },
+      "tips": {
+        "firstAnalysis": {
+          "text": "Bir kay\u0131t klas\u00f6r\u00fcnden okunabilir bir rapora, dakikalar i\u00e7inde.",
+          "more": "Tek bir \u00e7al\u0131\u015ft\u0131rmay\u0131 ba\u015ftan sona izler; her ad\u0131m\u0131n ne yapt\u0131\u011f\u0131n\u0131 g\u00f6r\u00fcrs\u00fcn\u00fcz.",
+          "link": "\u0130lk analiz"
+        },
+        "setUpClaude": {
+          "text": "Analiz i\u00e7in bir yapay zek\u00e2 sa\u011flay\u0131c\u0131s\u0131 ba\u011flay\u0131n.",
+          "more": "Claude \u00f6nerilen varsay\u0131land\u0131r; ChatGPT, Gemini ve Azure da \u00e7al\u0131\u015f\u0131r.",
+          "link": "Claude'u ayarla"
+        },
+        "setUpOllama": {
+          "text": "API anahtar\u0131 yok mu? **Ollama**'y\u0131 yerel \u00e7al\u0131\u015ft\u0131r\u0131n \u2014 \u00fccretsiz, hesaps\u0131z, y\u00fckleme yok.",
+          "more": "T\u00fcm analiz kendi makinenizde \u00e7al\u0131\u015f\u0131r; bulut da anahtar da gerekmez.",
+          "link": "Ollama'y\u0131 ayarla"
+        },
+        "runAnalysis": {
+          "text": "D\u00f6k\u00fcmde bir zaman koduna t\u0131klay\u0131n; video o andan oynar.",
+          "more": "D\u00f6k\u00fcm videoyla birlikte kayar; yerinizi asla kaybetmezsiniz.",
+          "link": "Analiz \u00e7al\u0131\u015ft\u0131r"
+        },
+        "exportQuotes": {
+          "text": "Al\u0131nt\u0131lar\u0131n\u0131z\u0131 tek ad\u0131mda bir hesap tablosuna g\u00f6nderin.",
+          "more": "Panoya kopyalay\u0131n ya da CSV veya Excel olarak indirin.",
+          "link": "Al\u0131nt\u0131 d\u0131\u015fa aktar\u0131m\u0131"
+        },
+        "videoClips": {
+          "text": "En iyi al\u0131nt\u0131lar\u0131 payla\u015f\u0131labilir video klibe \u00e7evirin.",
+          "more": "Bristlenose her y\u0131ld\u0131zl\u0131 ya da \u00f6ne \u00e7\u0131kan al\u0131nt\u0131 i\u00e7in k\u0131sa bir klip keser.",
+          "link": "Video klipler"
+        },
+        "shareReport": {
+          "text": "Tek bir ba\u011f\u0131ms\u0131z HTML dosyas\u0131 payla\u015f\u0131n \u2014 kurulum gerekmez.",
+          "more": "Herkes taray\u0131c\u0131da a\u00e7abilir; isterseniz \u00f6nce adlar\u0131 ve yerleri anonimle\u015ftirin.",
+          "link": "Rapor payla\u015f"
+        },
+        "sendToMiro": {
+          "text": "Al\u0131nt\u0131lar\u0131 do\u011frudan **Miro** panosuna g\u00f6nderin.",
+          "more": "Yap\u0131\u015fkan not olarak gelirler; k\u00fcmelemeye ve yak\u0131nl\u0131k haritas\u0131na haz\u0131r (deneysel).",
+          "link": "Miro'ya g\u00f6nder"
+        },
+        "connectAgent": {
+          "text": "**Claude Desktop** ya da herhangi bir MCP ajan\u0131ndan projeye dair soru sorun.",
+          "more": "Ajan eri\u015fimini a\u00e7\u0131n, uzant\u0131y\u0131 bir kez kurun, sorunuzu kendi s\u00f6zc\u00fcklerinizle sorun.",
+          "link": "Ajan ba\u011fla"
+        },
+        "useCodebooks": {
+          "text": "**AutoCode** her al\u0131nt\u0131ya etiket \u00f6nersin.",
+          "more": "Elle etiketleyin ya da bir kod kitab\u0131yla ba\u015flay\u0131p modelin \u00f6nerilerini kabul edin.",
+          "link": "Kod kitaplar\u0131"
+        },
+        "tagForMeaning": {
+          "text": "Etiketlemek analizdir: al\u0131nt\u0131lar temaya d\u00f6n\u00fc\u015f\u00fcr.",
+          "more": "Al\u0131nt\u0131lar\u0131 bir kod alt\u0131nda toplay\u0131n; bulgular belirmeye ba\u015flar.",
+          "link": "Anlam i\u00e7in etiketle"
+        },
+        "howItWorks": {
+          "text": "Bristlenose g\u00f6r\u00fc\u015fmeleri oturumlar ve al\u0131nt\u0131lar olarak okur.",
+          "more": "Oturumlar, kat\u0131l\u0131mc\u0131lar, al\u0131nt\u0131lar, b\u00f6l\u00fcmler ve temalar \u2014 modelin tamam\u0131 bu.",
+          "link": "Nas\u0131l \u00e7al\u0131\u015f\u0131r"
+        },
+        "signals": {
+          "text": "**Sinyaller** sekmesi duygu durumunun yo\u011funla\u015ft\u0131\u011f\u0131 yeri g\u00f6sterir.",
+          "more": "Sinyal, beklenenden daha s\u0131cak ya da so\u011fuk seyreden temay\u0131 i\u015faretler.",
+          "link": "Sinyaller"
+        },
+        "frameworks": {
+          "text": "Haz\u0131r bir UX ara\u015ft\u0131rma \u00e7er\u00e7evesiyle etiketleyin.",
+          "more": "Her \u00e7er\u00e7eve (Norman, Nielsen ve di\u011ferleri) kendi bak\u0131\u015f a\u00e7\u0131s\u0131n\u0131 getirir.",
+          "link": "\u00c7er\u00e7eveler"
+        },
+        "researchFoundations": {
+          "text": "Y\u00f6ntem, yay\u0131mlanm\u0131\u015f ve hakemli ara\u015ft\u0131rmalara dayan\u0131r.",
+          "more": "Duygu durumu s\u0131n\u0131fland\u0131rmas\u0131, analiz ve kod kitaplar\u0131 kaynaklar\u0131n\u0131 belirtir.",
+          "link": "Ara\u015ft\u0131rma temelleri"
+        },
+        "thePipeline": {
+          "text": "Her analiz ayn\u0131 on iki a\u015famadan ge\u00e7er.",
+          "more": "\u00d6nbellek sayesinde yeniden \u00e7al\u0131\u015ft\u0131rma yaln\u0131zca de\u011fi\u015feni yeniler; maliyet d\u00fc\u015f\u00fck kal\u0131r.",
+          "link": "\u0130\u015flem hatt\u0131"
+        },
+        "cloudOrLocal": {
+          "text": "Yapay zek\u00e2n\u0131n g\u00f6rd\u00fc\u011f\u00fcn\u00fc se\u00e7in: bulut veya yerel.",
+          "more": "Bulut modelleri daha h\u0131zl\u0131 ve keskindir; yerel modeller Mac'inizden \u00e7\u0131kmaz.",
+          "link": "Bulut ya da yerel"
+        },
+        "privacy": {
+          "text": "Yapay zek\u00e2n\u0131n ne g\u00f6rd\u00fc\u011f\u00fcn\u00fc ve neyin Mac'inizde kald\u0131\u011f\u0131n\u0131 g\u00f6r\u00fcn.",
+          "more": "Kay\u0131tlar ve dosyalar yerelde kal\u0131r; sa\u011flay\u0131c\u0131ya yaln\u0131zca d\u00f6k\u00fcm metni gider.",
+          "link": "Gizlilik"
+        },
+        "configuration": {
+          "text": "Her ayar\u0131n de\u011fi\u015ftirebilece\u011finiz makul bir varsay\u0131lan\u0131 vard\u0131r.",
+          "more": "Tek bir ba\u015fvuru sayfas\u0131 hepsini, ne yapt\u0131klar\u0131yla birlikte listeler.",
+          "link": "Yap\u0131land\u0131rma"
+        },
+        "keyboardShortcuts": {
+          "text": "Y\u0131ld\u0131zlamak i\u00e7in `s`, gizlemek i\u00e7in `h`; sonra \u00f6nemli olan\u0131 filtreleyin.",
+          "more": "Uygulamada da taray\u0131c\u0131 raporunda da neredeyse her \u015feyin bir tu\u015fu var.",
+          "link": "Klavye k\u0131sayollar\u0131"
+        },
+        "supportedFiles": {
+          "text": "**.srt**, **.vtt** ya da **.docx** b\u0131rak\u0131n; d\u00f6k\u00fcm\u00fc atlay\u0131n.",
+          "more": "Bristlenose elinizdeki metni okur ve do\u011frudan analize ge\u00e7er.",
+          "link": "Desteklenen dosyalar"
+        },
+        "matchingFiles": {
+          "text": "**p1.srt**'yi **p1.mp4**'\u00fcn yan\u0131na koyun; birle\u015firler.",
+          "more": "E\u015fle\u015fen adlar her d\u00f6k\u00fcm\u00fc ses ya da videosuyla otomatik e\u015fler.",
+          "link": "E\u015fle\u015fen dosyalar"
+        },
+        "outputFiles": {
+          "text": "Bristlenose'un \u00fcretti\u011fi her \u015fey tek bir klas\u00f6re gider.",
+          "more": "Rapor, d\u00f6k\u00fcmler ve veriler kay\u0131tlar\u0131n\u0131z\u0131n yan\u0131nda durur \u2014 hepsi sizindir.",
+          "link": "\u00c7\u0131kt\u0131 dosyalar\u0131"
+        },
+        "appearance": {
+          "text": "Size g\u00f6re olsun: a\u00e7\u0131k, koyu, palet ve yaz\u0131 tipi.",
+          "more": "Renk paletini ve tipografiyi Ayarlar'da zevkinize g\u00f6re de\u011fi\u015ftirin.",
+          "link": "G\u00f6r\u00fcn\u00fcm"
+        },
+        "languages": {
+          "text": "\u0130ngilizce de\u011fil mi? Aray\u00fcz dilini de\u011fi\u015ftirin.",
+          "more": "Bristlenose yirmiden fazla dille gelir \u2014 sizinkini Ayarlar'da se\u00e7in.",
+          "link": "Diller"
+        }
+      },
+      "aiConfigured": {
+        "localModels": {
+          "title": "Yerel modeller",
+          "text": "Ollama tamamen Mac'inizde \u00e7al\u0131\u015f\u0131r \u2014 hesap yok, y\u00fckleme yok."
+        },
+        "switchAnytime": {
+          "title": "Her an de\u011fi\u015ftirin",
+          "text": "Sa\u011flay\u0131c\u0131y\u0131 ya da modeli istedi\u011finiz an Ayarlar'da de\u011fi\u015ftirin."
+        },
+        "localOrCloud": {
+          "title": "Yerel ya da bulut",
+          "text": "Yerel modeller \u00fccretsizdir; bulut modelleri daha h\u0131zl\u0131 ve keskindir."
+        }
+      },
+      "ingestRows": {
+        "video": "Video \u2014 MP4 \u00b7 MOV \u00b7 MKV \u00b7 WebM \u00b7 AVI \u00b7 M4V",
+        "audio": "Ses \u2014 WAV \u00b7 MP3 \u00b7 M4A \u00b7 FLAC \u00b7 OGG \u00b7 AAC \u00b7 WMA",
+        "captions": "Altyaz\u0131lar \u2014 VTT \u00b7 SRT, ad\u0131na g\u00f6re videosuyla e\u015fle\u015ftirilir",
+        "transcripts": "D\u00f6k\u00fcmler \u2014 Zoom, Teams ya da Meet'ten Word d\u0131\u015fa aktar\u0131mlar\u0131",
+        "folders": "Klas\u00f6rler \u2014 bir oturumun dosyalar\u0131 bir arada, kar\u0131\u015f\u0131k"
+      },
+      "clipsIllustration": {
+        "subtitle": "Al\u0131nt\u0131 ba\u015f\u0131na bir klip"
+      }
     }
   },
   "toolbar": {

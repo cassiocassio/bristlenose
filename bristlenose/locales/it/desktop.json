@@ -387,6 +387,241 @@
       "processDetail": "Trascrive, individua le citazioni, raggruppa i temi.",
       "exportTitle": "Sfoglia ed esporta",
       "exportDetail": "Leggi i risultati, esporta in HTML o CSV."
+    },
+    "home": {
+      "tags": {
+        "studyTools": "Strumenti di studio",
+        "science": "Basi scientifiche",
+        "tip": "Suggerimento",
+        "ai": "IA"
+      },
+      "learnMore": "Scopri di più",
+      "more": "Altro",
+      "rotatorPosition": "{{n}} di {{total}}",
+      "tools": {
+        "autocode": {
+          "title": "AutoCode",
+          "text": "Lascia che AutoCode proponga tag per ogni citazione — poi accetta o rifiuta.",
+          "link": "Tag con l'IA"
+        },
+        "codebooks": {
+          "title": "Libri dei codici",
+          "text": "Costruisci un libro dei codici o parti da un framework pronto.",
+          "link": "Codifica manuale",
+          "link2": "Framework di ricerca"
+        },
+        "tag": {
+          "title": "Etichetta",
+          "text": "Seleziona una o più citazioni e premi `t` per assegnare un codice del tuo libro dei codici.",
+          "link": "Tag manuali"
+        },
+        "starHide": {
+          "title": "Stella e nascondi",
+          "text": "`s` assegna la stella alle citazioni che contano, `h` nasconde il resto.",
+          "link": "Abbreviazioni"
+        },
+        "clips": {
+          "title": "Clip video",
+          "text": "Trasforma le citazioni scelte in clip video.",
+          "link": "Esportazione"
+        },
+        "miro": {
+          "title": "Invia a Miro",
+          "text": "Invia le citazioni a Miro.",
+          "link": "Collega Miro"
+        },
+        "agent": {
+          "title": "Collega un agente IA",
+          "text": "Interroga i tuoi dati da Claude Code, Claude Desktop o qualsiasi agente MCP.",
+          "link": "Collega un agente…",
+          "link2": "Scopri di più"
+        },
+        "ingest": {
+          "title": "Acquisizione",
+          "text": "Trascina una cartella di registrazioni o trascrizioni — Bristlenose trascrive, analizza e produce il report.",
+          "link": "Importazione"
+        },
+        "redactPii": {
+          "title": "Oscuramento dati",
+          "text": "Oscura automaticamente i dati personali, prima dell'analisi.",
+          "link": "Rimuovi nomi e altro"
+        }
+      },
+      "science": {
+        "emergentThemes": {
+          "title": "Temi emergenti",
+          "text": "I temi emergono dalle parole stesse dei partecipanti, non da una tassonomia fissa (Braun & Clarke, 2006)."
+        },
+        "sentiments": {
+          "title": "Sette sentiment",
+          "text": "Sette sentiment, fondati sulla teoria dell'appraisal (Scherer) e sul core affect (Russell)."
+        },
+        "signals": {
+          "title": "Segnali",
+          "text": "Un segnale è un punteggio che combina l'intensità delle opinioni o delle emozioni dei partecipanti, il loro grado di attenzione a un'area o a un tema e una misura del loro accordo."
+        },
+        "dignity": {
+          "title": "Dignità senza distorsione",
+          "text": "Le citazioni vengono ripulite, mai distorte; la voce del partecipante è rispettata."
+        }
+      },
+      "books": {
+        "norman": "Il libro fondativo del design centrato sulla persona — la colpa è del design, non dell'utente.",
+        "nielsen": "Dieci euristiche di usabilità che ancora orientano l'individuazione degli attriti.",
+        "braunClarke": "La guida pratica all'analisi tematica riflessiva — i temi dalle parole stesse dei partecipanti.",
+        "lazarus": "La teoria dell'appraisal — l'emozione valuta ciò che ci accade."
+      },
+      "tips": {
+        "firstAnalysis": {
+          "text": "Da una cartella di registrazioni a un report leggibile in pochi minuti.",
+          "more": "La guida segue un'analisi da capo a fondo e mostra cosa fa ogni passaggio.",
+          "link": "Prima analisi"
+        },
+        "setUpClaude": {
+          "text": "Collega un provider di IA per eseguire l'analisi.",
+          "more": "Claude è la scelta consigliata; funzionano anche ChatGPT, Gemini e Azure.",
+          "link": "Configura Claude"
+        },
+        "setUpOllama": {
+          "text": "Senza chiave API? Esegui **Ollama** in locale — gratis, senza account, nulla caricato.",
+          "more": "L'intera analisi gira sul tuo computer, senza cloud e senza chiave.",
+          "link": "Configura Ollama"
+        },
+        "runAnalysis": {
+          "text": "Fai clic su un timecode della trascrizione per riprodurre da lì.",
+          "more": "La trascrizione scorre in sincronia con il video: non perdi mai il punto.",
+          "link": "Esegui un'analisi"
+        },
+        "exportQuotes": {
+          "text": "Le citazioni in un foglio di calcolo, in un passaggio.",
+          "more": "Copiale negli appunti oppure scaricale in CSV o Excel.",
+          "link": "Esporta citazioni"
+        },
+        "videoClips": {
+          "text": "Le citazioni migliori diventano clip video da condividere.",
+          "more": "Bristlenose ritaglia una clip per ogni citazione con stella o in evidenza.",
+          "link": "Clip video"
+        },
+        "shareReport": {
+          "text": "Condividi un unico file HTML autonomo — senza installare nulla.",
+          "more": "Chiunque può aprirlo in un browser; se vuoi, prima anonimizza nomi e luoghi.",
+          "link": "Condividi un report"
+        },
+        "sendToMiro": {
+          "text": "Invia le citazioni a una bacheca **Miro**.",
+          "more": "Arrivano come post-it, pronte da raggruppare in mappe di affinità (sperimentale).",
+          "link": "Invia a Miro"
+        },
+        "connectAgent": {
+          "text": "Fai domande su un progetto da **Claude Desktop** o da qualsiasi agente MCP.",
+          "more": "Attiva l'accesso agli agenti, installa l'estensione una volta e chiedi con parole tue.",
+          "link": "Collega un agente"
+        },
+        "useCodebooks": {
+          "text": "Lascia che **AutoCode** proponga tag per ogni citazione.",
+          "more": "Etichetta a mano, o parti da un libro dei codici e accetta i suggerimenti del modello.",
+          "link": "Libri dei codici"
+        },
+        "tagForMeaning": {
+          "text": "Etichettare è analizzare — dalle citazioni ai temi.",
+          "more": "Raggruppa più citazioni sotto un codice e i risultati iniziano a emergere.",
+          "link": "Etichettare il senso"
+        },
+        "howItWorks": {
+          "text": "Bristlenose legge le interviste come sessioni e citazioni.",
+          "more": "Sessioni, partecipanti, citazioni, sezioni e temi — tutto il modello è qui.",
+          "link": "Come funziona"
+        },
+        "signals": {
+          "text": "La scheda **Segnali** mostra dove si concentra il sentiment.",
+          "more": "Un segnale indica un tema più caldo o più freddo del previsto.",
+          "link": "Segnali"
+        },
+        "frameworks": {
+          "text": "Etichetta con un framework di ricerca UX pronto.",
+          "more": "Ogni framework — Norman, Nielsen e altri — offre la propria lente.",
+          "link": "Framework"
+        },
+        "researchFoundations": {
+          "text": "Il metodo poggia su ricerche pubblicate con revisione paritaria.",
+          "more": "La tassonomia dei sentiment, l'analisi e i libri dei codici citano tutti le fonti.",
+          "link": "Basi scientifiche"
+        },
+        "thePipeline": {
+          "text": "Ogni analisi esegue le stesse dodici fasi.",
+          "more": "Grazie alla cache, una nuova esecuzione rifà solo ciò che è cambiato, contenendo i costi.",
+          "link": "La pipeline"
+        },
+        "cloudOrLocal": {
+          "text": "Scegli cosa vede l'IA: cloud o locale.",
+          "more": "I modelli cloud sono più rapidi e precisi; quelli locali non lasciano mai il Mac.",
+          "link": "Cloud o locale"
+        },
+        "privacy": {
+          "text": "Vedi esattamente cosa vede l'IA e cosa non lascia mai il tuo Mac.",
+          "more": "Registrazioni e file restano in locale; solo il testo trascritto va al provider.",
+          "link": "Privacy"
+        },
+        "configuration": {
+          "text": "Ogni impostazione ha un default sensato che puoi cambiare.",
+          "more": "Una pagina di riferimento le elenca tutte, con il ruolo di ciascuna.",
+          "link": "Configurazione"
+        },
+        "keyboardShortcuts": {
+          "text": "Premi `s` per la stella, `h` per nascondere — poi filtra ciò che conta.",
+          "more": "C'è un tasto per quasi tutto, nell'app e nel report nel browser.",
+          "link": "Abbreviazioni"
+        },
+        "supportedFiles": {
+          "text": "Trascina **.srt**, **.vtt** o **.docx** e salta la trascrizione.",
+          "more": "Bristlenose legge il testo che hai già e passa direttamente all'analisi.",
+          "link": "File supportati"
+        },
+        "matchingFiles": {
+          "text": "Nomina **p1.srt** accanto a **p1.mp4** per unirli.",
+          "more": "Nomi identici abbinano ogni trascrizione al suo audio o video, in automatico.",
+          "link": "File abbinati"
+        },
+        "outputFiles": {
+          "text": "Tutto ciò che Bristlenose produce finisce in una cartella.",
+          "more": "Report, trascrizioni e dati stanno accanto alle registrazioni — e restano tuoi.",
+          "link": "File di output"
+        },
+        "appearance": {
+          "text": "Come piace a te: chiaro, scuro, palette e caratteri.",
+          "more": "Cambia palette di colori e tipografia a tuo gusto, nelle Impostazioni.",
+          "link": "Aspetto"
+        },
+        "languages": {
+          "text": "Non in inglese? Cambia la lingua dell'interfaccia.",
+          "more": "Bristlenose è disponibile in oltre venti lingue — scegli la tua nelle Impostazioni.",
+          "link": "Lingue"
+        }
+      },
+      "aiConfigured": {
+        "localModels": {
+          "title": "Sui modelli locali",
+          "text": "Ollama gira interamente sul tuo Mac — nessun account, nessun upload."
+        },
+        "switchAnytime": {
+          "title": "Cambia quando vuoi",
+          "text": "Cambia provider o modello quando vuoi, nelle Impostazioni."
+        },
+        "localOrCloud": {
+          "title": "Locale o cloud",
+          "text": "I modelli locali sono gratuiti; quelli cloud, più rapidi e precisi."
+        }
+      },
+      "ingestRows": {
+        "video": "Video — MP4 · MOV · MKV · WebM · AVI · M4V",
+        "audio": "Audio — WAV · MP3 · M4A · FLAC · OGG · AAC · WMA",
+        "captions": "Sottotitoli — VTT · SRT, abbinati al video per nome",
+        "transcripts": "Trascrizioni — export Word da Zoom, Teams o Meet",
+        "folders": "Cartelle — i file di una sessione insieme, formati misti"
+      },
+      "clipsIllustration": {
+        "subtitle": "Una clip per citazione"
+      }
     }
   },
   "toolbar": {

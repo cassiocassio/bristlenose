@@ -387,6 +387,241 @@
       "processDetail": "Transkriberar, hittar citat, grupperar teman.",
       "exportTitle": "Bläddra och exportera",
       "exportDetail": "Läs resultat, exportera HTML eller CSV."
+    },
+    "home": {
+      "tags": {
+        "studyTools": "Studieverktyg",
+        "science": "Vetenskaplig bakgrund",
+        "tip": "Tips",
+        "ai": "AI"
+      },
+      "learnMore": "L\u00e4s mer",
+      "more": "Mer",
+      "rotatorPosition": "{{n}} av {{total}}",
+      "tools": {
+        "autocode": {
+          "title": "AutoCode",
+          "text": "L\u00e5t AutoCode f\u00f6resl\u00e5 taggar f\u00f6r varje citat \u2013 du godk\u00e4nner eller avvisar.",
+          "link": "Tagga med AI"
+        },
+        "codebooks": {
+          "title": "Kodb\u00f6cker",
+          "text": "Bygg en kodbok, eller utg\u00e5 fr\u00e5n ett f\u00e4rdigt ramverk.",
+          "link": "Koda f\u00f6r hand",
+          "link2": "Forskningsramverk"
+        },
+        "tag": {
+          "title": "Tagga",
+          "text": "Markera ett eller flera citat och tryck p\u00e5 `t` f\u00f6r att tagga dem med en kod ur din kodbok.",
+          "link": "Manuell taggning"
+        },
+        "starHide": {
+          "title": "Stj\u00e4rnm\u00e4rk och d\u00f6lj",
+          "text": "Tryck p\u00e5 `s` f\u00f6r att spara de citat som r\u00e4knas, `h` f\u00f6r att d\u00f6lja resten.",
+          "link": "Tangentbordsgenv\u00e4gar"
+        },
+        "clips": {
+          "title": "Videoklipp",
+          "text": "G\u00f6r markerade citat till videoklipp.",
+          "link": "Exportalternativ"
+        },
+        "miro": {
+          "title": "Skicka till Miro",
+          "text": "Skicka citat till en Miro-tavla.",
+          "link": "Anslut till Miro"
+        },
+        "agent": {
+          "title": "Anslut en AI-agent",
+          "text": "Chatta med dina data fr\u00e5n Claude Code, Claude Desktop eller valfri MCP-agent.",
+          "link": "Anslut en agent\u2026",
+          "link2": "L\u00e4s mer"
+        },
+        "ingest": {
+          "title": "Inl\u00e4sning",
+          "text": "Sl\u00e4pp en mapp med inspelningar eller transkriptioner \u2013 Bristlenose transkriberar, analyserar och rapporterar.",
+          "link": "Importalternativ"
+        },
+        "redactPii": {
+          "title": "Maskera PII",
+          "text": "Ta bort personuppgifter automatiskt, f\u00f6re analysen.",
+          "link": "Rensa namn och mer"
+        }
+      },
+      "science": {
+        "emergentThemes": {
+          "title": "Framv\u00e4xande teman",
+          "text": "Teman v\u00e4xer fram ur deltagarnas egna ord, inte ur en fast taxonomi (Braun & Clarke, 2006)."
+        },
+        "sentiments": {
+          "title": "Sju sentiment",
+          "text": "Sju sentiment, f\u00f6rankrade i appraisalteorin (Scherer) och k\u00e4rnaffekt (Russell)."
+        },
+        "signals": {
+          "title": "Signaler",
+          "text": "En signal \u00e4r ett v\u00e4rde som v\u00e4ger samman styrkan i deltagarnas \u00e5sikter eller k\u00e4nslor, hur mycket de fokuserar p\u00e5 ett omr\u00e5de eller tema, och ett m\u00e5tt p\u00e5 deras samst\u00e4mmighet."
+        },
+        "dignity": {
+          "title": "V\u00e4rdighet utan f\u00f6rvr\u00e4ngning",
+          "text": "Citat st\u00e4das men f\u00f6rvr\u00e4ngs aldrig; deltagarens r\u00f6st respekteras."
+        }
+      },
+      "books": {
+        "norman": "Boken som gjorde m\u00e4nniskocentrerad design till en disciplin \u2013 skyll p\u00e5 designen, inte anv\u00e4ndaren.",
+        "nielsen": "Tio heuristiker f\u00f6r anv\u00e4ndbarhet som fortfarande styr hur f\u00e4ltet hittar friktion.",
+        "braunClarke": "Den praktiska handboken i reflexiv tematisk analys \u2013 teman ur deltagarnas egna ord.",
+        "lazarus": "V\u00e4rderingsteorin (appraisal) \u2013 k\u00e4nslor som hur vi v\u00e4ger det som sker."
+      },
+      "tips": {
+        "firstAnalysis": {
+          "text": "Fr\u00e5n en mapp med inspelningar till en l\u00e4sbar rapport p\u00e5 minuter.",
+          "more": "Guiden f\u00f6ljer en k\u00f6rning fr\u00e5n start till m\u00e5l, s\u00e5 du ser vad varje steg g\u00f6r.",
+          "link": "F\u00f6rsta analysen"
+        },
+        "setUpClaude": {
+          "text": "Anslut en AI-leverant\u00f6r f\u00f6r att k\u00f6ra analysen.",
+          "more": "Claude \u00e4r rekommenderad standard; ChatGPT, Gemini och Azure fungerar ocks\u00e5.",
+          "link": "St\u00e4ll in Claude"
+        },
+        "setUpOllama": {
+          "text": "Ingen API-nyckel? K\u00f6r **Ollama** lokalt \u2013 gratis, inget konto, inget laddas upp.",
+          "more": "Hela analysen k\u00f6rs p\u00e5 din egen dator, utan moln och utan nyckel.",
+          "link": "St\u00e4ll in Ollama"
+        },
+        "runAnalysis": {
+          "text": "Klicka p\u00e5 en tidkod i transkriptionen f\u00f6r att spela d\u00e4rifr\u00e5n.",
+          "more": "Transkriptionen rullar i takt med videon, s\u00e5 du tappar aldrig bort dig.",
+          "link": "K\u00f6r en analys"
+        },
+        "exportQuotes": {
+          "text": "Skicka dina citat till ett kalkylark i ett steg.",
+          "more": "Kopiera dem till urklipp, eller ladda ner som CSV eller Excel.",
+          "link": "Exportera citat"
+        },
+        "videoClips": {
+          "text": "G\u00f6r dina b\u00e4sta citat till delbara videoklipp.",
+          "more": "Bristlenose klipper ett kort klipp f\u00f6r varje stj\u00e4rnm\u00e4rkt eller utvalt citat.",
+          "link": "Videoklipp"
+        },
+        "shareReport": {
+          "text": "Dela en enda frist\u00e5ende HTML-fil \u2013 ingen installation kr\u00e4vs.",
+          "more": "Vem som helst kan \u00f6ppna den i en webbl\u00e4sare; anonymisera namn och platser f\u00f6rst om du vill.",
+          "link": "Dela en rapport"
+        },
+        "sendToMiro": {
+          "text": "Skicka citat direkt till en **Miro**-tavla.",
+          "more": "De hamnar som lappar, redo att klustras och affinitetsmappas (experimentellt).",
+          "link": "Skicka till Miro"
+        },
+        "connectAgent": {
+          "text": "St\u00e4ll fr\u00e5gor om ett projekt fr\u00e5n **Claude Desktop** eller valfri MCP-agent.",
+          "more": "Sl\u00e5 p\u00e5 agent\u00e5tkomst, installera till\u00e4gget en g\u00e5ng och fr\u00e5ga med egna ord.",
+          "link": "Anslut en agent"
+        },
+        "useCodebooks": {
+          "text": "L\u00e5t **AutoCode** f\u00f6resl\u00e5 taggar f\u00f6r varje citat.",
+          "more": "Tagga f\u00f6r hand, eller utg\u00e5 fr\u00e5n en kodbok och godk\u00e4nn modellens f\u00f6rslag.",
+          "link": "Kodb\u00f6cker"
+        },
+        "tagForMeaning": {
+          "text": "Att tagga \u00e4r analys \u2013 g\u00f6r citat till teman.",
+          "more": "Samla en upps\u00e4ttning citat under en kod, s\u00e5 b\u00f6rjar fynden tr\u00e4da fram.",
+          "link": "Tagga f\u00f6r mening"
+        },
+        "howItWorks": {
+          "text": "Bristlenose l\u00e4ser intervjuer som sessioner och citat.",
+          "more": "Sessioner, deltagare, citat, avsnitt och teman \u2013 det \u00e4r hela modellen.",
+          "link": "S\u00e5 fungerar det"
+        },
+        "signals": {
+          "text": "Fliken **Signaler** visar var sentimentet koncentreras.",
+          "more": "En signal markerar ett tema som g\u00e5r varmare eller kallare \u00e4n v\u00e4ntat.",
+          "link": "Signaler"
+        },
+        "frameworks": {
+          "text": "Tagga med ett f\u00e4rdigt ramverk f\u00f6r UX-forskning.",
+          "more": "Varje ramverk \u2013 Norman, Nielsen med flera \u2013 har sitt eget perspektiv.",
+          "link": "Ramverk"
+        },
+        "researchFoundations": {
+          "text": "Metoden vilar p\u00e5 publicerad, kollegialt granskad forskning.",
+          "more": "Sentimenttaxonomin, analysen och kodb\u00f6ckerna anger alla sina k\u00e4llor.",
+          "link": "Forskningsgrund"
+        },
+        "thePipeline": {
+          "text": "Varje analys k\u00f6r samma tolv steg.",
+          "more": "Cachning g\u00f6r att en omk\u00f6rning bara g\u00f6r om det som faktiskt \u00e4ndrats, s\u00e5 kostnaden h\u00e5lls nere.",
+          "link": "Pipelinen"
+        },
+        "cloudOrLocal": {
+          "text": "V\u00e4lj vad AI:n f\u00e5r se: moln eller lokalt.",
+          "more": "Molnmodeller \u00e4r snabbare och skarpare; lokala l\u00e4mnar aldrig din Mac.",
+          "link": "Moln eller lokalt"
+        },
+        "privacy": {
+          "text": "Se exakt vad AI:n ser, och vad som aldrig l\u00e4mnar din Mac.",
+          "more": "Inspelningar och filer stannar lokalt; bara transkriptionstext g\u00e5r till din leverant\u00f6r.",
+          "link": "Integritet"
+        },
+        "configuration": {
+          "text": "Varje inst\u00e4llning har ett rimligt standardv\u00e4rde du kan \u00e4ndra.",
+          "more": "En referenssida listar alla, med vad var och en g\u00f6r.",
+          "link": "Konfiguration"
+        },
+        "keyboardShortcuts": {
+          "text": "`s` stj\u00e4rnm\u00e4rker, `h` d\u00f6ljer \u2013 filtrera sedan fram det viktiga.",
+          "more": "Det finns en tangent f\u00f6r n\u00e4stan allt, i appen och i webbl\u00e4sarrapporten.",
+          "link": "Tangentbordsgenv\u00e4gar"
+        },
+        "supportedFiles": {
+          "text": "Sl\u00e4pp **.srt**, **.vtt** eller **.docx** och slipp transkribera.",
+          "more": "Bristlenose l\u00e4ser texten du redan har och g\u00e5r direkt till analys.",
+          "link": "Filformat som st\u00f6ds"
+        },
+        "matchingFiles": {
+          "text": "L\u00e4gg **p1.srt** bredvid **p1.mp4** s\u00e5 paras de ihop.",
+          "more": "Matchande namn parar automatiskt varje transkription med sitt ljud eller sin video.",
+          "link": "Matchande filer"
+        },
+        "outputFiles": {
+          "text": "Allt Bristlenose skapar hamnar i en enda mapp.",
+          "more": "Rapport, transkriptioner och data ligger bredvid dina inspelningar \u2013 dina att beh\u00e5lla.",
+          "link": "Utdatafiler"
+        },
+        "appearance": {
+          "text": "Anpassa: ljust, m\u00f6rkt, palett och typsnitt.",
+          "more": "Byt f\u00e4rgpalett och typografi efter smak i Inst\u00e4llningar.",
+          "link": "Utseende"
+        },
+        "languages": {
+          "text": "Inte p\u00e5 engelska? Byt gr\u00e4nssnittsspr\u00e5k.",
+          "more": "Bristlenose finns p\u00e5 \u00f6ver tjugo spr\u00e5k \u2013 v\u00e4lj ditt i Inst\u00e4llningar.",
+          "link": "Spr\u00e5k"
+        }
+      },
+      "aiConfigured": {
+        "localModels": {
+          "title": "Om lokala modeller",
+          "text": "Ollama k\u00f6rs helt p\u00e5 din Mac \u2013 inget konto, inget laddas upp."
+        },
+        "switchAnytime": {
+          "title": "Byt n\u00e4r som helst",
+          "text": "Byt leverant\u00f6r eller modell n\u00e4r du vill, i Inst\u00e4llningar."
+        },
+        "localOrCloud": {
+          "title": "Lokalt eller moln",
+          "text": "Lokala modeller \u00e4r gratis; molnmodeller \u00e4r snabbare och skarpare."
+        }
+      },
+      "ingestRows": {
+        "video": "Video \u2013 MP4 \u00b7 MOV \u00b7 MKV \u00b7 WebM \u00b7 AVI \u00b7 M4V",
+        "audio": "Ljud \u2013 WAV \u00b7 MP3 \u00b7 M4A \u00b7 FLAC \u00b7 OGG \u00b7 AAC \u00b7 WMA",
+        "captions": "Undertexter \u2013 VTT \u00b7 SRT, matchas mot sin video via namnet",
+        "transcripts": "Transkriptioner \u2013 Word-exporter fr\u00e5n Zoom, Teams eller Meet",
+        "folders": "Mappar \u2013 en sessions filer tillsammans, i valfri mix"
+      },
+      "clipsIllustration": {
+        "subtitle": "Beskuret klipp per citat"
+      }
     }
   },
   "toolbar": {

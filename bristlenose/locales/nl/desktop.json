@@ -387,6 +387,241 @@
       "processDetail": "Transcriberen, citaten vinden, thema's clusteren.",
       "exportTitle": "Bladeren en exporteren",
       "exportDetail": "Lees bevindingen, exporteer HTML of CSV."
+    },
+    "home": {
+      "tags": {
+        "studyTools": "Onderzoekstools",
+        "science": "Wetenschappelijke basis",
+        "tip": "Tip",
+        "ai": "AI"
+      },
+      "learnMore": "Meer info",
+      "more": "Meer",
+      "rotatorPosition": "{{n}} van {{total}}",
+      "tools": {
+        "autocode": {
+          "title": "AutoCode",
+          "text": "Laat AutoCode tags voorstellen voor elk citaat — jij accepteert of weigert.",
+          "link": "AI helpt taggen"
+        },
+        "codebooks": {
+          "title": "Codeboeken",
+          "text": "Bouw een codeboek, of begin met een kant-en-klaar framework.",
+          "link": "Handmatig coderen",
+          "link2": "Onderzoeksframeworks"
+        },
+        "tag": {
+          "title": "Taggen",
+          "text": "Selecteer een of meer citaten en druk op `t` om ze te taggen met een code uit je codeboek.",
+          "link": "Handmatig taggen"
+        },
+        "starHide": {
+          "title": "Ster & verberg",
+          "text": "Druk op `s` om te bewaren wat telt, `h` om de rest te verbergen.",
+          "link": "Sneltoetsen"
+        },
+        "clips": {
+          "title": "Videoclips",
+          "text": "Maak van geselecteerde citaten videoclips.",
+          "link": "Exportopties"
+        },
+        "miro": {
+          "title": "Stuur naar Miro",
+          "text": "Stuur citaten naar een Miro-bord.",
+          "link": "Verbind met Miro"
+        },
+        "agent": {
+          "title": "Verbind een AI-agent",
+          "text": "Praat met je data vanuit Claude Code, Claude Desktop of elke MCP-agent.",
+          "link": "Verbind een agent…",
+          "link2": "Meer info"
+        },
+        "ingest": {
+          "title": "Inlezen",
+          "text": "Sleep een map met opnamen of transcripten — Bristlenose transcribeert, analyseert en rapporteert.",
+          "link": "Importopties"
+        },
+        "redactPii": {
+          "title": "PII verwijderen",
+          "text": "Verwijder persoonsgegevens automatisch, vóór de analyse.",
+          "link": "Namen en meer weghalen"
+        }
+      },
+      "science": {
+        "emergentThemes": {
+          "title": "Emergente thema's",
+          "text": "Thema's komen uit de eigen woorden van deelnemers, niet uit een vaste taxonomie (Braun & Clarke, 2006)."
+        },
+        "sentiments": {
+          "title": "Zeven sentimenten",
+          "text": "Zeven sentimenten, gegrond in appraisaltheorie (Scherer) en core affect (Russell)."
+        },
+        "signals": {
+          "title": "Signalen",
+          "text": "Een signaal is een score die de kracht van meningen of gevoelens van deelnemers, hun focus op een gebied of thema en de mate van overeenstemming combineert."
+        },
+        "dignity": {
+          "title": "Waardigheid zonder vertekening",
+          "text": "Citaten worden opgeschoond, nooit verdraaid — de stem van de deelnemer wordt geëerd."
+        }
+      },
+      "books": {
+        "norman": "Het boek dat mensgericht ontwerp tot vakgebied maakte — geef het ontwerp de schuld, niet de gebruiker.",
+        "nielsen": "Tien usability-heuristieken die nog altijd bepalen hoe het vak frictie herkent.",
+        "braunClarke": "De praktische gids voor reflexieve thematische analyse — thema's uit de eigen woorden van deelnemers.",
+        "lazarus": "Appraisaltheorie van emotie — hoe we wegen wat ons overkomt."
+      },
+      "tips": {
+        "firstAnalysis": {
+          "text": "Van een map met opnamen naar een leesbaar rapport in minuten.",
+          "more": "Het loopt één run van begin tot eind door, zodat je ziet wat elke stap doet.",
+          "link": "Eerste analyse"
+        },
+        "setUpClaude": {
+          "text": "Verbind een AI-provider om de analyse te draaien.",
+          "more": "Claude is de aanbevolen standaard; ChatGPT, Gemini en Azure werken ook.",
+          "link": "Claude instellen"
+        },
+        "setUpOllama": {
+          "text": "Geen API-sleutel? Draai **Ollama** lokaal — gratis, geen account, niets geüpload.",
+          "more": "De hele analyse draait op je eigen machine, zonder cloud en zonder sleutel.",
+          "link": "Ollama instellen"
+        },
+        "runAnalysis": {
+          "text": "Klik een tijdcode in het transcript aan om daar af te spelen.",
+          "more": "Het transcript scrolt mee met de video, zodat je nooit je plek kwijtraakt.",
+          "link": "Analyse draaien"
+        },
+        "exportQuotes": {
+          "text": "Zet je citaten in één stap in een spreadsheet.",
+          "more": "Kopieer ze naar het klembord, of download als CSV of Excel.",
+          "link": "Citaten exporteren"
+        },
+        "videoClips": {
+          "text": "Maak van je beste citaten deelbare videoclips.",
+          "more": "Bristlenose knipt voor elk citaat met ster of uitgelicht citaat een clip.",
+          "link": "Videoclips"
+        },
+        "shareReport": {
+          "text": "Deel één zelfstandig HTML-bestand — geen installatie nodig.",
+          "more": "Iedereen opent het in een browser; anonimiseer eerst namen en plaatsen als je wilt.",
+          "link": "Rapport delen"
+        },
+        "sendToMiro": {
+          "text": "Stuur citaten direct naar een **Miro**-bord.",
+          "more": "Ze landen als plaknotities, klaar om te clusteren en affinity-mappen (experimenteel).",
+          "link": "Stuur naar Miro"
+        },
+        "connectAgent": {
+          "text": "Stel vragen over een project vanuit **Claude Desktop** of elke MCP-agent.",
+          "more": "Zet agenttoegang aan, installeer de extensie eenmalig en vraag in je eigen woorden.",
+          "link": "Verbind een agent"
+        },
+        "useCodebooks": {
+          "text": "Laat **AutoCode** tags voorstellen voor elk citaat.",
+          "more": "Tag met de hand, of begin met een codeboek en accepteer de suggesties van het model.",
+          "link": "Codeboeken"
+        },
+        "tagForMeaning": {
+          "text": "Taggen is analyseren — maak van citaten thema's.",
+          "more": "Groepeer een reeks citaten onder een code en de bevindingen komen bovendrijven.",
+          "link": "Taggen op betekenis"
+        },
+        "howItWorks": {
+          "text": "Bristlenose leest interviews als sessies en citaten.",
+          "more": "Sessies, deelnemers, citaten, secties en thema's — dat is het hele model.",
+          "link": "Hoe het werkt"
+        },
+        "signals": {
+          "text": "Tabblad **Signalen**: waar sentiment zich concentreert.",
+          "more": "Een signaal markeert een thema dat heter of kouder loopt dan verwacht.",
+          "link": "Signalen"
+        },
+        "frameworks": {
+          "text": "Tag met een kant-en-klaar UX-onderzoeksframework.",
+          "more": "Elk framework — Norman, Nielsen en meer — brengt zijn eigen blik mee.",
+          "link": "Frameworks"
+        },
+        "researchFoundations": {
+          "text": "De methode rust op gepubliceerd, peer-reviewed onderzoek.",
+          "more": "De sentimenttaxonomie, de analyse en de codeboeken vermelden allemaal hun bronnen.",
+          "link": "Onderzoeksbasis"
+        },
+        "thePipeline": {
+          "text": "Elke analyse doorloopt dezelfde twaalf stappen.",
+          "more": "Door caching doet een nieuwe run alleen over wat echt veranderd is, wat kosten bespaart.",
+          "link": "De pipeline"
+        },
+        "cloudOrLocal": {
+          "text": "Kies wat de AI ziet: cloud of lokaal.",
+          "more": "Cloudmodellen zijn sneller en scherper; lokale verlaten je Mac nooit.",
+          "link": "Cloud of lokaal"
+        },
+        "privacy": {
+          "text": "Zie precies wat de AI ziet, en wat je Mac nooit verlaat.",
+          "more": "Opnamen en bestanden blijven lokaal; alleen transcripttekst gaat naar je provider.",
+          "link": "Privacy"
+        },
+        "configuration": {
+          "text": "Elke instelling heeft een goede, aanpasbare standaard.",
+          "more": "Eén referentiepagina somt ze allemaal op, met wat elke doet.",
+          "link": "Configuratie"
+        },
+        "keyboardShortcuts": {
+          "text": "Druk op `s` voor een ster, `h` om te verbergen — filter dan op wat telt.",
+          "more": "Er is een toets voor bijna alles, in de app en in het browserrapport.",
+          "link": "Sneltoetsen"
+        },
+        "supportedFiles": {
+          "text": "Sleep **.srt**, **.vtt** of **.docx** en sla transcriptie over.",
+          "more": "Bristlenose leest de tekst die je al hebt en gaat direct door naar de analyse.",
+          "link": "Bestandstypen"
+        },
+        "matchingFiles": {
+          "text": "Zet **p1.srt** naast **p1.mp4** om ze samen te voegen.",
+          "more": "Gelijke namen koppelen elk transcript automatisch aan zijn audio of video.",
+          "link": "Bestanden koppelen"
+        },
+        "outputFiles": {
+          "text": "Alles wat Bristlenose maakt, komt in één map terecht.",
+          "more": "Het rapport, de transcripten en de data staan naast je opnamen — van jou.",
+          "link": "Uitvoerbestanden"
+        },
+        "appearance": {
+          "text": "Maak het van jou: licht, donker, palet en letter.",
+          "more": "Wissel naar smaak van kleurenpalet en typografie in Instellingen.",
+          "link": "Weergave"
+        },
+        "languages": {
+          "text": "Geen Engels? Wissel van interfacetaal.",
+          "more": "Bristlenose komt in meer dan twintig talen — kies de jouwe in Instellingen.",
+          "link": "Talen"
+        }
+      },
+      "aiConfigured": {
+        "localModels": {
+          "title": "Over lokale modellen",
+          "text": "Ollama draait volledig op je Mac — geen account, niets geüpload."
+        },
+        "switchAnytime": {
+          "title": "Wissel op elk moment",
+          "text": "Wijzig provider of model wanneer je wilt, in Instellingen."
+        },
+        "localOrCloud": {
+          "title": "Lokaal of cloud",
+          "text": "Lokale modellen zijn gratis; cloudmodellen sneller en scherper."
+        }
+      },
+      "ingestRows": {
+        "video": "Video — MP4 · MOV · MKV · WebM · AVI · M4V",
+        "audio": "Audio — WAV · MP3 · M4A · FLAC · OGG · AAC · WMA",
+        "captions": "Ondertitels — VTT · SRT, op naam gekoppeld aan hun video",
+        "transcripts": "Transcripten — Word-exports uit Zoom, Teams of Meet",
+        "folders": "Mappen — de bestanden van één sessie samen, elke mix"
+      },
+      "clipsIllustration": {
+        "subtitle": "Geknipte clip per citaat"
+      }
     }
   },
   "toolbar": {

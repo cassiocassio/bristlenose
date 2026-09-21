@@ -387,6 +387,241 @@
       "processDetail": "Transkriberer, finner sitater, grupperer temaer.",
       "exportTitle": "Bla og eksporter",
       "exportDetail": "Les funn, eksporter HTML eller CSV."
+    },
+    "home": {
+      "tags": {
+        "studyTools": "Studieverktøy",
+        "science": "Vitenskapelig bakgrunn",
+        "tip": "Tips",
+        "ai": "KI"
+      },
+      "learnMore": "Les mer",
+      "more": "Mer",
+      "rotatorPosition": "{{n}} av {{total}}",
+      "tools": {
+        "autocode": {
+          "title": "AutoCode",
+          "text": "La AutoCode foreslå tagger for hvert sitat – du godtar eller avviser.",
+          "link": "Tagg med KI"
+        },
+        "codebooks": {
+          "title": "Kodebøker",
+          "text": "Bygg en kodebok, eller start fra et ferdig rammeverk.",
+          "link": "Kod for hånd",
+          "link2": "Forskningsrammeverk"
+        },
+        "tag": {
+          "title": "Tagg",
+          "text": "Velg ett eller flere sitater og trykk `t` for å tagge dem med en kode fra kodeboken din.",
+          "link": "Manuell tagging"
+        },
+        "starHide": {
+          "title": "Stjernemerk og skjul",
+          "text": "Trykk `s` for å beholde sitatene som teller, `h` for å skjule resten.",
+          "link": "Hurtigtaster"
+        },
+        "clips": {
+          "title": "Videoklipp",
+          "text": "Gjør valgte sitater om til videoklipp.",
+          "link": "Eksportvalg"
+        },
+        "miro": {
+          "title": "Send til Miro",
+          "text": "Send sitater til en Miro-tavle.",
+          "link": "Koble til Miro"
+        },
+        "agent": {
+          "title": "Koble til en KI-agent",
+          "text": "Chat med dataene dine fra Claude Code, Claude Desktop eller en annen MCP-agent.",
+          "link": "Koble til en agent…",
+          "link2": "Les mer"
+        },
+        "ingest": {
+          "title": "Innlesing",
+          "text": "Slipp en mappe med opptak eller transkripsjoner – Bristlenose transkriberer, analyserer og rapporterer tilbake.",
+          "link": "Importvalg"
+        },
+        "redactPii": {
+          "title": "Sladd persondata",
+          "text": "Fjern personopplysninger automatisk, før analysen.",
+          "link": "Fjern navn og mer"
+        }
+      },
+      "science": {
+        "emergentThemes": {
+          "title": "Framvoksende temaer",
+          "text": "Temaer vokser fram av deltakernes egne ord, ikke av en fast taksonomi (Braun & Clarke, 2006)."
+        },
+        "sentiments": {
+          "title": "Sju sentimenter",
+          "text": "Sju sentimenter, forankret i vurderingsteori (Scherer) og kjerneaffekt (Russell)."
+        },
+        "signals": {
+          "title": "Signaler",
+          "text": "Et signal er en verdi som veier sammen styrken i deltakernes meninger eller følelser, hvor mye de fokuserer på et område eller tema, og et mål på hvor enige de er."
+        },
+        "dignity": {
+          "title": "Verdighet uten forvrengning",
+          "text": "Sitater ryddes, men forvrenges aldri; deltakerens stemme respekteres."
+        }
+      },
+      "books": {
+        "norman": "Boken som gjorde menneskesentrert design til et fag – skyld på designen, ikke brukeren.",
+        "nielsen": "Ti brukskvalitetsheuristikker som fortsatt styrer hvordan faget finner friksjon.",
+        "braunClarke": "Den praktiske guiden til refleksiv tematisk analyse – temaer fra deltakernes egne ord.",
+        "lazarus": "Vurderingsteori (appraisal) – følelser er slik vi veier det som skjer."
+      },
+      "tips": {
+        "firstAnalysis": {
+          "text": "Fra en mappe med opptak til en lesbar rapport på minutter.",
+          "more": "Guiden følger én kjøring fra start til slutt, så du ser hva hvert steg gjør.",
+          "link": "Første analyse"
+        },
+        "setUpClaude": {
+          "text": "Koble til en KI-leverandør for å kjøre analysen.",
+          "more": "Claude er anbefalt standard; ChatGPT, Gemini og Azure fungerer også.",
+          "link": "Konfigurer Claude"
+        },
+        "setUpOllama": {
+          "text": "Ingen API-nøkkel? Kjør **Ollama** lokalt – gratis, ingen konto, ingenting lastes opp.",
+          "more": "Hele analysen kjører på din egen maskin, uten sky og uten nøkkel.",
+          "link": "Konfigurer Ollama"
+        },
+        "runAnalysis": {
+          "text": "Klikk på en tidskode i transkripsjonen for å spille av derfra.",
+          "more": "Transkripsjonen ruller i takt med videoen, så du mister aldri plassen.",
+          "link": "Kjør en analyse"
+        },
+        "exportQuotes": {
+          "text": "Send sitatene dine til et regneark i ett steg.",
+          "more": "Kopier dem til utklippstavlen, eller last ned som CSV eller Excel.",
+          "link": "Eksporter sitater"
+        },
+        "videoClips": {
+          "text": "Gjør de beste sitatene dine om til delbare videoklipp.",
+          "more": "Bristlenose lager et kort klipp av hvert stjernemerkede eller utvalgte sitat.",
+          "link": "Videoklipp"
+        },
+        "shareReport": {
+          "text": "Del én selvstendig HTML-fil – ingen installasjon nødvendig.",
+          "more": "Hvem som helst kan åpne den i en nettleser; anonymiser navn og steder først om du vil.",
+          "link": "Del en rapport"
+        },
+        "sendToMiro": {
+          "text": "Send sitater rett til en **Miro**-tavle.",
+          "more": "De lander som lapper, klare til å klynges og affinitetskartlegges (eksperimentelt).",
+          "link": "Send til Miro"
+        },
+        "connectAgent": {
+          "text": "Still spørsmål om et prosjekt fra **Claude Desktop** eller en annen MCP-agent.",
+          "more": "Slå på agenttilgang, installer utvidelsen én gang, og spør med egne ord.",
+          "link": "Koble til en agent"
+        },
+        "useCodebooks": {
+          "text": "La **AutoCode** foreslå tagger for hvert sitat.",
+          "more": "Tagg for hånd, eller start fra en kodebok og godta modellens forslag.",
+          "link": "Kodebøker"
+        },
+        "tagForMeaning": {
+          "text": "Tagging er analyse – gjør sitater om til temaer.",
+          "more": "Samle et sett sitater under én kode, og funnene begynner å tre fram.",
+          "link": "Tagg for mening"
+        },
+        "howItWorks": {
+          "text": "Bristlenose leser intervjuer som økter og sitater.",
+          "more": "Økter, deltakere, sitater, seksjoner og temaer – det er hele modellen.",
+          "link": "Slik fungerer det"
+        },
+        "signals": {
+          "text": "Fanen **Signaler** viser hvor sentimentet samler seg.",
+          "more": "Et signal markerer et tema som går varmere eller kaldere enn ventet.",
+          "link": "Signaler"
+        },
+        "frameworks": {
+          "text": "Tagg med et ferdig rammeverk for UX-forskning.",
+          "more": "Hvert rammeverk – Norman, Nielsen og flere – har sin egen linse.",
+          "link": "Rammeverk"
+        },
+        "researchFoundations": {
+          "text": "Metoden hviler på publisert, fagfellevurdert forskning.",
+          "more": "Sentimenttaksonomien, analysen og kodebøkene oppgir alle sine kilder.",
+          "link": "Forskningsgrunnlag"
+        },
+        "thePipeline": {
+          "text": "Hver analyse kjører de samme tolv stegene.",
+          "more": "Mellomlagring gjør at en ny kjøring bare gjør om det som er endret, så kostnaden holdes nede.",
+          "link": "Pipelinen"
+        },
+        "cloudOrLocal": {
+          "text": "Velg hva KI-en får se: sky eller lokalt.",
+          "more": "Skymodeller er raskere og skarpere; lokale forlater aldri Mac-en din.",
+          "link": "Sky eller lokalt"
+        },
+        "privacy": {
+          "text": "Se nøyaktig hva KI-en ser, og hva som aldri forlater Mac-en din.",
+          "more": "Opptak og filer blir lokalt; bare transkripsjonstekst går til leverandøren din.",
+          "link": "Personvern"
+        },
+        "configuration": {
+          "text": "Hver innstilling har en fornuftig standard du kan endre.",
+          "more": "Én referanseside lister alle, med hva hver enkelt gjør.",
+          "link": "Konfigurasjon"
+        },
+        "keyboardShortcuts": {
+          "text": "`s` stjernemerker, `h` skjuler – filtrer så fram det som teller.",
+          "more": "Det finnes en tast for nesten alt, i appen og i nettleserrapporten.",
+          "link": "Hurtigtaster"
+        },
+        "supportedFiles": {
+          "text": "Slipp **.srt**, **.vtt** eller **.docx** og slipp å transkribere.",
+          "more": "Bristlenose leser teksten du allerede har og går rett til analyse.",
+          "link": "Støttede filer"
+        },
+        "matchingFiles": {
+          "text": "Legg **p1.srt** ved **p1.mp4**, så slås de sammen.",
+          "more": "Like navn parer hver transkripsjon med lyden eller videoen sin automatisk.",
+          "link": "Matchende filer"
+        },
+        "outputFiles": {
+          "text": "Alt Bristlenose lager, havner i én mappe.",
+          "more": "Rapport, transkripsjoner og data ligger ved opptakene dine – dine å beholde.",
+          "link": "Utdatafiler"
+        },
+        "appearance": {
+          "text": "Gjør den til din: lyst, mørkt, palett og skrift.",
+          "more": "Bytt fargepalett og typografi etter smak i Innstillinger.",
+          "link": "Utseende"
+        },
+        "languages": {
+          "text": "Ikke på engelsk? Bytt språk i grensesnittet.",
+          "more": "Bristlenose finnes på over tjue språk – velg ditt i Innstillinger.",
+          "link": "Språk"
+        }
+      },
+      "aiConfigured": {
+        "localModels": {
+          "title": "Om lokale modeller",
+          "text": "Ollama kjører helt på Mac-en din – ingen konto, ingenting lastes opp."
+        },
+        "switchAnytime": {
+          "title": "Bytt når som helst",
+          "text": "Bytt leverandør eller modell når du vil, i Innstillinger."
+        },
+        "localOrCloud": {
+          "title": "Lokalt eller sky",
+          "text": "Lokale modeller er gratis; skymodeller er raskere og skarpere."
+        }
+      },
+      "ingestRows": {
+        "video": "Video – MP4 · MOV · MKV · WebM · AVI · M4V",
+        "audio": "Lyd – WAV · MP3 · M4A · FLAC · OGG · AAC · WMA",
+        "captions": "Undertekster – VTT · SRT, matchet til videoen sin etter navn",
+        "transcripts": "Transkripsjoner – Word-eksporter fra Zoom, Teams eller Meet",
+        "folders": "Mapper – filene fra én økt samlet, i valgfri blanding"
+      },
+      "clipsIllustration": {
+        "subtitle": "Beskåret klipp per sitat"
+      }
     }
   },
   "toolbar": {

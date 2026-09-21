@@ -422,6 +422,241 @@
       "processDetail": "Přepis, hledání citátů, shlukování témat.",
       "exportTitle": "Procházet a exportovat",
       "exportDetail": "Čtěte zjištění, exportujte HTML nebo CSV."
+    },
+    "home": {
+      "tags": {
+        "studyTools": "N\u00e1stroje pro studii",
+        "science": "V\u011bdeck\u00e9 pozad\u00ed",
+        "tip": "Tip",
+        "ai": "AI"
+      },
+      "learnMore": "Dal\u0161\u00ed informace",
+      "more": "V\u00edce",
+      "rotatorPosition": "{{n}} z {{total}}",
+      "tools": {
+        "autocode": {
+          "title": "AutoCode",
+          "text": "Nechte AutoCode navrhnout \u0161t\u00edtky ke v\u0161em cit\u00e1t\u016fm \u2014 vy p\u0159ijmete, nebo odm\u00edtnete.",
+          "link": "\u0160t\u00edtkov\u00e1n\u00ed s AI"
+        },
+        "codebooks": {
+          "title": "Knihy k\u00f3d\u016f",
+          "text": "Sestavte knihu k\u00f3d\u016f, nebo za\u010dn\u011bte s hotov\u00fdm r\u00e1mcem.",
+          "link": "K\u00f3dovat ru\u010dn\u011b",
+          "link2": "V\u00fdzkumn\u00e9 r\u00e1mce"
+        },
+        "tag": {
+          "title": "Ozna\u010dit \u0161t\u00edtkem",
+          "text": "Vyberte jeden \u010di v\u00edce cit\u00e1t\u016f a stiskem `t` je ozna\u010dte k\u00f3dem z va\u0161\u00ed knihy k\u00f3d\u016f.",
+          "link": "Ru\u010dn\u00ed \u0161t\u00edtkov\u00e1n\u00ed"
+        },
+        "starHide": {
+          "title": "Hv\u011bzdi\u010dka a skryt\u00ed",
+          "text": "Stiskem `s` ponech\u00e1te d\u016fle\u017eit\u00e9 cit\u00e1ty, stiskem `h` skryjete zbytek.",
+          "link": "Kl\u00e1vesov\u00e9 zkratky"
+        },
+        "clips": {
+          "title": "Videoklipy",
+          "text": "Prom\u011b\u0148te vybran\u00e9 cit\u00e1ty ve videoklipy.",
+          "link": "Mo\u017enosti exportu"
+        },
+        "miro": {
+          "title": "Odeslat do Mira",
+          "text": "Ode\u0161lete cit\u00e1ty na tabuli Miro.",
+          "link": "P\u0159ipojit Miro"
+        },
+        "agent": {
+          "title": "P\u0159ipojit agenta AI",
+          "text": "Ptejte se sv\u00fdch dat z Claude Code, Claude Desktop nebo jak\u00e9hokoli agenta MCP.",
+          "link": "P\u0159ipojit agenta\u2026",
+          "link2": "Dal\u0161\u00ed informace"
+        },
+        "ingest": {
+          "title": "Na\u010dten\u00ed",
+          "text": "P\u0159et\u00e1hn\u011bte slo\u017eku nahr\u00e1vek nebo p\u0159epis\u016f \u2014 Bristlenose je p\u0159ep\u00ed\u0161e, zanalyzuje a vr\u00e1t\u00ed zpr\u00e1vu.",
+          "link": "Mo\u017enosti importu"
+        },
+        "redactPii": {
+          "title": "Smazat osobn\u00ed \u00fadaje",
+          "text": "Osobn\u00ed \u00fadaje se odstran\u00ed automaticky, je\u0161t\u011b p\u0159ed anal\u00fdzou.",
+          "link": "Odstranit jm\u00e9na a dal\u0161\u00ed"
+        }
+      },
+      "science": {
+        "emergentThemes": {
+          "title": "Emergentn\u00ed t\u00e9mata",
+          "text": "T\u00e9mata vyr\u016fstaj\u00ed z vlastn\u00edch slov \u00fa\u010dastn\u00edk\u016f, ne z pevn\u00e9 taxonomie (Braun & Clarke, 2006)."
+        },
+        "sentiments": {
+          "title": "Sedm n\u00e1lad",
+          "text": "Sedm n\u00e1lad, ukotven\u00fdch v teorii hodnocen\u00ed (Scherer) a j\u00e1drov\u00e9m afektu (Russell)."
+        },
+        "signals": {
+          "title": "Sign\u00e1ly",
+          "text": "Sign\u00e1l je sk\u00f3re, kter\u00e9 spojuje s\u00edlu n\u00e1zor\u016f \u010di pocit\u016f \u00fa\u010dastn\u00edk\u016f, m\u00edru jejich soust\u0159ed\u011bn\u00ed na oblast nebo t\u00e9ma a m\u00edru jejich shody."
+        },
+        "dignity": {
+          "title": "D\u016fstojnost bez zkreslen\u00ed",
+          "text": "Cit\u00e1ty jsou upraven\u00e9, nikdy p\u0159ekroucen\u00e9; hlas \u00fa\u010dastn\u00edka je ct\u011bn."
+        }
+      },
+      "books": {
+        "norman": "Kniha, kter\u00e1 ud\u011blala z designu zam\u011b\u0159en\u00e9ho na \u010dlov\u011bka obor \u2014 vinu nese design, ne u\u017eivatel.",
+        "nielsen": "Deset heuristik pou\u017eitelnosti, podle nich\u017e obor dodnes hled\u00e1 t\u0159en\u00ed.",
+        "braunClarke": "Praktick\u00fd pr\u016fvodce reflexivn\u00ed tematickou anal\u00fdzou \u2014 t\u00e9mata z vlastn\u00edch slov \u00fa\u010dastn\u00edk\u016f.",
+        "lazarus": "Teorie kognitivn\u00edho hodnocen\u00ed \u2014 emoce jako v\u00e1\u017een\u00ed toho, co se n\u00e1m d\u011bje."
+      },
+      "tips": {
+        "firstAnalysis": {
+          "text": "Ze slo\u017eky nahr\u00e1vek k \u010diteln\u00e9 zpr\u00e1v\u011b za p\u00e1r minut.",
+          "more": "Provede v\u00e1s jednou anal\u00fdzou od za\u010d\u00e1tku do konce, krok za krokem.",
+          "link": "Prvn\u00ed anal\u00fdza"
+        },
+        "setUpClaude": {
+          "text": "Pro spu\u0161t\u011bn\u00ed anal\u00fdzy p\u0159ipojte poskytovatele AI.",
+          "more": "Doporu\u010denou volbou je Claude; funguj\u00ed i ChatGPT, Gemini a Azure.",
+          "link": "Nastavit Claude"
+        },
+        "setUpOllama": {
+          "text": "Bez kl\u00ed\u010de API? Spus\u0165te **Ollama** m\u00edstn\u011b \u2014 zdarma, bez \u00fa\u010dtu, nic se nenahr\u00e1v\u00e1.",
+          "more": "Cel\u00e1 anal\u00fdza b\u011b\u017e\u00ed na va\u0161em po\u010d\u00edta\u010di, bez cloudu a bez kl\u00ed\u010de.",
+          "link": "Nastavit Ollama"
+        },
+        "runAnalysis": {
+          "text": "Klikn\u011bte na \u010dasov\u00fd k\u00f3d v p\u0159episu a p\u0159ehr\u00e1v\u00e1n\u00ed za\u010dne od toho m\u00edsta.",
+          "more": "P\u0159epis se posouv\u00e1 spolu s videem, tak\u017ee nikdy neztrat\u00edte m\u00edsto.",
+          "link": "Spustit anal\u00fdzu"
+        },
+        "exportQuotes": {
+          "text": "Po\u0161lete cit\u00e1ty do tabulky jedn\u00edm krokem.",
+          "more": "Zkop\u00edrujte je do schr\u00e1nky, nebo st\u00e1hn\u011bte jako CSV \u010di Excel.",
+          "link": "Exportovat cit\u00e1ty"
+        },
+        "videoClips": {
+          "text": "Prom\u011b\u0148te nejlep\u0161\u00ed cit\u00e1ty ve videoklipy ke sd\u00edlen\u00ed.",
+          "more": "Bristlenose vyst\u0159ihne klip ke ka\u017ed\u00e9mu cit\u00e1tu s hv\u011bzdi\u010dkou \u010di zv\u00fdrazn\u011bn\u00e9mu.",
+          "link": "Videoklipy"
+        },
+        "shareReport": {
+          "text": "Sd\u00edlejte jeden samostatn\u00fd soubor HTML \u2014 bez instalace.",
+          "more": "Otev\u0159e ho ka\u017ed\u00fd v prohl\u00ed\u017ee\u010di; jm\u00e9na a m\u00edsta m\u016f\u017eete p\u0159edem anonymizovat.",
+          "link": "Sd\u00edlet zpr\u00e1vu"
+        },
+        "sendToMiro": {
+          "text": "Po\u0161lete cit\u00e1ty rovnou na tabuli **Miro**.",
+          "more": "P\u0159istanou jako lepic\u00ed l\u00edstky, p\u0159ipraven\u00e9 ke shlukov\u00e1n\u00ed a afinitn\u00ed map\u011b (experiment\u00e1ln\u00ed).",
+          "link": "Odeslat do Mira"
+        },
+        "connectAgent": {
+          "text": "Ptejte se na projekt z **Claude Desktop** nebo z jak\u00e9hokoli agenta MCP.",
+          "more": "Zapn\u011bte p\u0159\u00edstup agent\u016f, jednou nainstalujte roz\u0161\u00ed\u0159en\u00ed a ptejte se vlastn\u00edmi slovy.",
+          "link": "P\u0159ipojit agenta"
+        },
+        "useCodebooks": {
+          "text": "Nechte **AutoCode** navrhnout \u0161t\u00edtky ke v\u0161em cit\u00e1t\u016fm.",
+          "more": "\u0160t\u00edtkujte ru\u010dn\u011b, nebo za\u010dn\u011bte s knihou k\u00f3d\u016f a p\u0159ij\u00edmejte n\u00e1vrhy modelu.",
+          "link": "Knihy k\u00f3d\u016f"
+        },
+        "tagForMeaning": {
+          "text": "\u0160t\u00edtkov\u00e1n\u00ed u\u017e je anal\u00fdza \u2014 z cit\u00e1t\u016f vzniknou t\u00e9mata.",
+          "more": "Seskupte sadu cit\u00e1t\u016f pod jeden k\u00f3d a zji\u0161t\u011bn\u00ed se za\u010dnou vyno\u0159ovat.",
+          "link": "\u0160t\u00edtky s v\u00fdznamem"
+        },
+        "howItWorks": {
+          "text": "Bristlenose \u010dte rozhovory jako sezen\u00ed a cit\u00e1ty.",
+          "more": "Sezen\u00ed, \u00fa\u010dastn\u00edci, cit\u00e1ty, sekce a t\u00e9mata \u2014 to je cel\u00fd model.",
+          "link": "Jak to funguje"
+        },
+        "signals": {
+          "text": "Karta **Sign\u00e1ly** ukazuje, kde se n\u00e1lada koncentruje.",
+          "more": "Sign\u00e1l ozna\u010d\u00ed t\u00e9ma, kter\u00e9 je teplej\u0161\u00ed \u010di chladn\u011bj\u0161\u00ed, ne\u017e byste \u010dekali.",
+          "link": "Sign\u00e1ly"
+        },
+        "frameworks": {
+          "text": "\u0160t\u00edtkujte podle hotov\u00e9ho r\u00e1mce UX v\u00fdzkumu.",
+          "more": "Ka\u017ed\u00fd r\u00e1mec nab\u00edz\u00ed vlastn\u00ed pohled \u2014 Norman, Nielsen a dal\u0161\u00ed.",
+          "link": "R\u00e1mce"
+        },
+        "researchFoundations": {
+          "text": "Metoda stoj\u00ed na publikovan\u00e9m, recenzovan\u00e9m v\u00fdzkumu.",
+          "more": "Taxonomie n\u00e1lad, anal\u00fdza i knihy k\u00f3d\u016f uv\u00e1d\u011bj\u00ed sv\u00e9 zdroje.",
+          "link": "V\u011bdeck\u00e9 z\u00e1klady"
+        },
+        "thePipeline": {
+          "text": "Ka\u017ed\u00e1 anal\u00fdza proch\u00e1z\u00ed stejn\u00fdmi dvan\u00e1cti f\u00e1zemi.",
+          "more": "D\u00edky cache opakovan\u00fd b\u011bh p\u0159epo\u010d\u00edt\u00e1 jen to, co se opravdu zm\u011bnilo, a \u0161et\u0159\u00ed n\u00e1klady.",
+          "link": "Pipeline"
+        },
+        "cloudOrLocal": {
+          "text": "Zvolte, co AI uvid\u00ed: cloud, nebo m\u00edstn\u00ed model.",
+          "more": "Cloudov\u00e9 modely jsou rychlej\u0161\u00ed a p\u0159esn\u011bj\u0161\u00ed; m\u00edstn\u00ed nikdy neopust\u00ed v\u00e1\u0161 Mac.",
+          "link": "Cloud nebo m\u00edstn\u00ed"
+        },
+        "privacy": {
+          "text": "P\u0159esn\u011b vid\u00edte, co AI vid\u00ed a co nikdy neopust\u00ed v\u00e1\u0161 Mac.",
+          "more": "Nahr\u00e1vky a soubory z\u016fst\u00e1vaj\u00ed u v\u00e1s; poskytovateli jde jen text p\u0159episu.",
+          "link": "Soukrom\u00ed"
+        },
+        "configuration": {
+          "text": "Ka\u017ed\u00e9 nastaven\u00ed m\u00e1 rozumnou v\u00fdchoz\u00ed hodnotu, kterou zm\u011bn\u00edte.",
+          "more": "Jedna referen\u010dn\u00ed str\u00e1nka je vyp\u00ed\u0161e v\u0161echna i s t\u00edm, co d\u011blaj\u00ed.",
+          "link": "Konfigurace"
+        },
+        "keyboardShortcuts": {
+          "text": "Stiskem `s` p\u0159id\u00e1te hv\u011bzdi\u010dku, `h` skryje \u2014 pak filtrujte d\u016fle\u017eit\u00e9.",
+          "more": "Kl\u00e1vesa je skoro na v\u0161echno, v aplikaci i ve zpr\u00e1v\u011b v prohl\u00ed\u017ee\u010di.",
+          "link": "Kl\u00e1vesov\u00e9 zkratky"
+        },
+        "supportedFiles": {
+          "text": "P\u0159et\u00e1hn\u011bte **.srt**, **.vtt** nebo **.docx** a p\u0159esko\u010dte p\u0159epis.",
+          "more": "Bristlenose na\u010dte text, kter\u00fd u\u017e m\u00e1te, a jde rovnou k anal\u00fdze.",
+          "link": "Podporovan\u00e9 soubory"
+        },
+        "matchingFiles": {
+          "text": "Pojmenujte **p1.srt** vedle **p1.mp4** a spoj\u00ed se.",
+          "more": "Shodn\u00e9 n\u00e1zvy automaticky sp\u00e1ruj\u00ed ka\u017ed\u00fd p\u0159epis s jeho audiem \u010di videem.",
+          "link": "P\u00e1rov\u00e1n\u00ed soubor\u016f"
+        },
+        "outputFiles": {
+          "text": "V\u0161e, co Bristlenose vytvo\u0159\u00ed, p\u0159istane v jedn\u00e9 slo\u017ece.",
+          "more": "Zpr\u00e1va, p\u0159episy i data le\u017e\u00ed vedle va\u0161ich nahr\u00e1vek \u2014 a jsou va\u0161e.",
+          "link": "V\u00fdstupn\u00ed soubory"
+        },
+        "appearance": {
+          "text": "Upravte si ho: sv\u011btl\u00fd, tmav\u00fd, paleta i p\u00edsmo.",
+          "more": "Paletu barev a typografii si p\u0159epnete v Nastaven\u00ed podle chuti.",
+          "link": "Vzhled"
+        },
+        "languages": {
+          "text": "Nejste na angli\u010dtinu? P\u0159epn\u011bte jazyk rozhran\u00ed.",
+          "more": "Bristlenose je ve v\u00edce ne\u017e dvaceti jazyc\u00edch \u2014 ten sv\u016fj nastav\u00edte v Nastaven\u00ed.",
+          "link": "Jazyky"
+        }
+      },
+      "aiConfigured": {
+        "localModels": {
+          "title": "O m\u00edstn\u00edch modelech",
+          "text": "Ollama b\u011b\u017e\u00ed cel\u00e1 na va\u0161em Macu \u2014 bez \u00fa\u010dtu, nic se nenahr\u00e1v\u00e1."
+        },
+        "switchAnytime": {
+          "title": "Kdykoli p\u0159epnete",
+          "text": "Poskytovatele \u010di model zm\u011bn\u00edte kdykoli v Nastaven\u00ed."
+        },
+        "localOrCloud": {
+          "title": "M\u00edstn\u00ed nebo cloud",
+          "text": "M\u00edstn\u00ed modely jsou zdarma; cloudov\u00e9 jsou rychlej\u0161\u00ed a p\u0159esn\u011bj\u0161\u00ed."
+        }
+      },
+      "ingestRows": {
+        "video": "Video \u2014 MP4 \u00b7 MOV \u00b7 MKV \u00b7 WebM \u00b7 AVI \u00b7 M4V",
+        "audio": "Audio \u2014 WAV \u00b7 MP3 \u00b7 M4A \u00b7 FLAC \u00b7 OGG \u00b7 AAC \u00b7 WMA",
+        "captions": "Titulky \u2014 VTT \u00b7 SRT, k videu p\u0159i\u0159azen\u00e9 podle n\u00e1zvu",
+        "transcripts": "P\u0159episy \u2014 exporty Wordu ze Zoomu, Teams nebo Meetu",
+        "folders": "Slo\u017eky \u2014 soubory jednoho sezen\u00ed spolu, jak\u00e1koli sm\u011bs"
+      },
+      "clipsIllustration": {
+        "subtitle": "Klip ke ka\u017ed\u00e9mu cit\u00e1tu"
+      }
     }
   },
   "toolbar": {

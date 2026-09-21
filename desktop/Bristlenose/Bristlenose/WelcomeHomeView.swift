@@ -16,15 +16,25 @@ import AppKit
 // Type follows the macOS ladder (design-welcome-screen.md §6).
 
 // MARK: Content model
+//
+// Slots carry a KEY, never a string. The pools are non-isolated `static let`s
+// built before any environment exists, so the text cannot be resolved here —
+// `resolve(_:_:)` reads it from `I18n` at render time, which also means a slot
+// re-reads itself when the interface language changes mid-session rather than
+// freezing whatever was current when the pool was first touched.
+//
+// The key is a path under `desktop.welcome.home.`; its leaves are `title`,
+// `text`, `more`, `link` and `link2`, every one of them optional — an absent
+// leaf is how a tip says "no title" or a tool says "no second route". The
+// arrow on a CTA stays in code (`cta(_:)`), so translators get a clean word
+// and a glyph cannot go missing from one of 21 files.
 
 private struct SlotItem: Identifiable {
     let id = UUID()
-    let title: String?     // nil for tips
-    let text: String       // may contain markdown (**bold**); the core sentence, sized to fit even the small cell
-    var more: String? = nil    // optional follow-up sentence, shown ONLY when the whole tip fits un-truncated (larger cells)
-    let linkLabel: String
+    /// Path under `desktop.welcome.home.` — nil for a slot whose illustration
+    /// owns all of its own prose (the book shelf).
+    let key: String?
     let href: String
-    var linkLabel2: String? = nil   // optional second CTA — e.g. Codebooks offers both paths (manual vs framework)
     var href2: String? = nil
     var illustration: WelcomeIllustration = .none   // looping illustration for this slot (WelcomeIllustrations.swift)
     // Where the PRIMARY CTA goes when it should stay in the app — set instead of `href`,
@@ -43,6 +53,52 @@ private enum SlotDestination {
     case mcpAgentsSettings
 }
 
+/// One slot's resolved prose. Every field may be absent; `text` collapses to
+/// empty so a caller can test it the way it always could.
+private struct ResolvedSlot {
+    let title: String?
+    let text: String
+    let more: String?
+    let linkLabel: String
+    let linkLabel2: String?
+}
+
+private extension I18n {
+    /// The value for `key`, or nil when the key is absent. `t` returns the key
+    /// itself on a miss, which is the signal this turns into an Optional —
+    /// so a missing `title` reads as "this slot has no title", not as a
+    /// dotted path rendered at `.title3` on the welcome pane.
+    @MainActor func optional(_ key: String) -> String? {
+        let value = t(key)
+        return value == key ? nil : value
+    }
+}
+
+/// A CTA label plus its arrow. A label that already ends in an ellipsis is
+/// opening something *here* (macOS convention) and takes no arrow.
+private func cta(_ label: String) -> String {
+    label.hasSuffix("\u{2026}") ? label : label + " \u{2192}"
+}
+
+@MainActor private func resolve(_ item: SlotItem, _ i18n: I18n) -> ResolvedSlot {
+    guard let key = item.key else {
+        return ResolvedSlot(title: nil, text: "", more: nil, linkLabel: "", linkLabel2: nil)
+    }
+    let base = "desktop.welcome.home." + key
+    return ResolvedSlot(
+        title: i18n.optional(base + ".title"),
+        text: i18n.optional(base + ".text") ?? "",
+        more: i18n.optional(base + ".more"),
+        // A slot with no `link` of its own falls back to the shared word — the
+        // configured-AI pool has always read "More →" and has no per-slot label
+        // yet (design-welcome-screen.md §Cell 3 wants descriptive ones; that is
+        // new copy in 21 languages, tracked separately). Without the fallback
+        // these three render a bare arrow.
+        linkLabel: i18n.optional(base + ".link") ?? i18n.t("desktop.welcome.home.more"),
+        linkLabel2: i18n.optional(base + ".link2")
+    )
+}
+
 private enum WelcomeContent {
     static let docs = "https://bristlenose.app/docs/"
 
@@ -51,21 +107,19 @@ private enum WelcomeContent {
     // 14 Aug 2026, completing the "no screenshots long-term" decision recorded in
     // design-welcome-screen.md §Cell 1. CTA labels are per-tool (doc §Cell 1 pool).
     static let studyTools: [SlotItem] = [
-        .init(title: "AutoCode", text: "Let AutoCode propose tags across every quote — you Accept or Deny.", linkLabel: "AI helps tag →", href: docs + "use-codebooks.html", illustration: .autocode),
-        .init(title: "Codebooks", text: "Build a codebook, or start from a ready-made framework.", linkLabel: "Code by hand →", href: docs + "tag-for-meaning.html", linkLabel2: "Research frameworks →", href2: docs + "codebook-frameworks.html", illustration: .manualTags),
-        .init(title: "Tag", text: "Select one or more quotes, and press `t` to tag them with a code from your codebook.", linkLabel: "Manual tagging →", href: docs + "tag-for-meaning.html", illustration: .tag),
-        .init(title: "Star & hide", text: "Press `s` to keep the quotes that matter, `h` to hide the rest.", linkLabel: "Keyboard shortcuts →", href: docs + "keyboard-shortcuts.html", illustration: .starHide),
-        .init(title: "Video clips", text: "Turn selected quotes into video clips.", linkLabel: "Export options →", href: docs + "export-clips.html", illustration: .clips),
-        .init(title: "Send to Miro", text: "Send quotes to a Miro board.", linkLabel: "Connect to Miro →", href: docs + "send-to-miro.html", illustration: .miro),
+        .init(key: "tools.autocode", href: docs + "use-codebooks.html", illustration: .autocode),
+        .init(key: "tools.codebooks", href: docs + "tag-for-meaning.html", href2: docs + "codebook-frameworks.html", illustration: .manualTags),
+        .init(key: "tools.tag", href: docs + "tag-for-meaning.html", illustration: .tag),
+        .init(key: "tools.starHide", href: docs + "keyboard-shortcuts.html", illustration: .starHide),
+        .init(key: "tools.clips", href: docs + "export-clips.html", illustration: .clips),
+        .init(key: "tools.miro", href: docs + "send-to-miro.html", illustration: .miro),
         // The only slot whose first step is setup, so the primary CTA opens the control
         // (Settings ▸ MCP Agents) rather than a docs page — same destination as the
         // Bristlenose ▸ Connect an Agent… menu item, and the same "…" that says it opens
         // something here. The docs keep their route as the second link.
-        .init(title: "Connect an AI agent", text: "Chat to your data from Claude Code, Claude Desktop, or any MCP agent.",
-              linkLabel: "Connect an agent…", href: "",
-              linkLabel2: "Learn more →", href2: docs + "connect-an-agent.html",
+        .init(key: "tools.agent", href: "", href2: docs + "connect-an-agent.html",
               illustration: .agentChat, primaryDestination: .mcpAgentsSettings),
-        .init(title: "Ingest", text: "Drop a folder of recordings or transcripts — Bristlenose transcribes, analyses and reports back.", linkLabel: "Import options →", href: docs + "first-analysis.html", illustration: .ingest),
+        .init(key: "tools.ingest", href: docs + "first-analysis.html", illustration: .ingest),
         // WITHHELD from the desktop pool (2 Aug 2026) — this slot taught a tool the .app cannot run.
         // Still withheld, but for ONE of the original two reasons: as of 12 Sep 2026 presidio and
         // spaCy are BUNDLED, not excluded (bristlenose-sidecar.spec's `excludes=[]` says so in its
@@ -76,16 +130,17 @@ private enum WelcomeContent {
         // (The Tip cell likewise skips /docs/redact-pii.html for being CLI-only.)
         // Restore this line when a control ships. Verify with `grep -rn 'piiEnabled' Bristlenose/`:
         // a second, WRITING call site is the signal — this comment cannot tell you, it only rots.
-        // .init(title: "Redact PII", text: "Remove personal details automatically, before analysis.", linkLabel: "Strip names and more →", href: docs + "redact-pii.html"),
+        // Its strings are translated and waiting under `tools.redactPii` in all 21 locales.
+        // .init(key: "tools.redactPii", href: docs + "redact-pii.html"),
     ]
 
     static let science: [SlotItem] = [
-        .init(title: "Emergent themes", text: "Themes emerge from participants’ own words, not a fixed taxonomy (Braun & Clarke, 2006).", linkLabel: "Learn more →", href: docs + "research-foundations.html", illustration: .emergentThemes),
-        // One "tip the hat" shelf for all the source books — BookShelfView owns its own author + line + link, synced to the front cover (title/text/href left empty here).
-        .init(title: nil, text: "", linkLabel: "", href: "", illustration: .books),
-        .init(title: "Seven sentiments", text: "Seven sentiments, grounded in appraisal theory (Scherer) and core affect (Russell).", linkLabel: "Learn more →", href: docs + "signals.html", illustration: .sentimentFan),
-        .init(title: "Signals", text: "A signal is a score that combines the strength of participants’ opinions or feelings, their level of focus on an area or theme, and a measure of their agreement.", linkLabel: "Learn more →", href: docs + "signals.html", illustration: .signal),
-        .init(title: "Dignity without distortion", text: "Quotes are tidied but never twisted; the participant’s voice is honoured.", linkLabel: "Learn more →", href: docs + "research-foundations.html", illustration: .quote),
+        .init(key: "science.emergentThemes", href: docs + "research-foundations.html", illustration: .emergentThemes),
+        // One "tip the hat" shelf for all the source books — BookShelfView owns its own author + line + link, synced to the front cover (no key here).
+        .init(key: nil, href: "", illustration: .books),
+        .init(key: "science.sentiments", href: docs + "signals.html", illustration: .sentimentFan),
+        .init(key: "science.signals", href: docs + "signals.html", illustration: .signal),
+        .init(key: "science.dignity", href: docs + "research-foundations.html", illustration: .quote),
     ]
 
     // An ambient map of the docs. ORDER mirrors the website's sidebar curriculum
@@ -94,96 +149,43 @@ private enum WelcomeContent {
     // (SlotRotator `curriculum`). Each tip: a core sentence that fits the small cell, an
     // optional `more` follow-up shown only when a larger cell fits it whole, and a 1–3
     // word link naming the destination page (label ← page title, follow-up ← page lead).
-    // Keep this list in NAV order and update it when the docs nav changes.
+    // Keep this list in NAV order and update it when the docs nav changes — the keys are
+    // slugs, not indices, so reordering this list costs no translation.
     static let tips: [SlotItem] = [
-        // Get started
-        .init(title: nil, text: "From a folder of recordings to a readable report in minutes.",
-              more: "It walks a single run end to end, so you see what each step does.",
-              linkLabel: "First analysis →", href: docs + "first-analysis.html"),
-        // How-to guides
-        .init(title: nil, text: "Connect an AI provider to run the analysis.",
-              more: "Claude is the recommended default; ChatGPT, Gemini and Azure work too.",
-              linkLabel: "Set up Claude →", href: docs + "set-up-claude.html"),
-        .init(title: nil, text: "No API key? Run **Ollama** locally — free, no account, nothing uploaded.",
-              more: "The whole analysis runs on your own machine, with no cloud and no key.",
-              linkLabel: "Set up Ollama →", href: docs + "set-up-ollama.html"),
-        .init(title: nil, text: "Click any transcript timecode to play from that moment.",
-              more: "The transcript scrolls in step with the video, so you never lose your place.",
-              linkLabel: "Run an analysis →", href: docs + "run-an-analysis.html"),
-        .init(title: nil, text: "Send your quotes to a spreadsheet in one step.",
-              more: "Copy them to the clipboard, or download as CSV or Excel.",
-              linkLabel: "Export quotes →", href: docs + "export-quotes.html"),
-        .init(title: nil, text: "Turn your best quotes into shareable video clips.",
-              more: "Bristlenose cuts a short clip for each starred or featured quote.",
-              linkLabel: "Video clips →", href: docs + "export-clips.html"),
-        .init(title: nil, text: "Share one self-contained HTML file — no install needed.",
-              more: "Anyone can open it in a browser; anonymise names and places first if you like.",
-              linkLabel: "Share a report →", href: docs + "share-report.html"),
-        .init(title: nil, text: "Send quotes straight to a **Miro** board.",
-              more: "They land as sticky notes, ready to cluster and affinity-map (experimental).",
-              linkLabel: "Send to Miro →", href: docs + "send-to-miro.html"),
-        .init(title: nil, text: "Ask questions about a project from **Claude Desktop**, or any MCP agent.",
-              more: "Turn on agent access, install the extension once, and ask in your own words.",
-              linkLabel: "Connect an agent →", href: docs + "connect-an-agent.html"),
-        .init(title: nil, text: "Let **AutoCode** propose tags across every quote.",
-              more: "Tag by hand, or start from a codebook and accept the model's suggestions.",
-              linkLabel: "Codebooks →", href: docs + "use-codebooks.html"),
-        .init(title: nil, text: "Tagging is analysis — turn quotes into themes.",
-              more: "Group a set of quotes under a code and the findings start to surface.",
-              linkLabel: "Tag for meaning →", href: docs + "tag-for-meaning.html"),
-        // Understand
-        .init(title: nil, text: "Bristlenose reads interviews as sessions and quotes.",
-              more: "Sessions, participants, quotes, sections and themes — that's the whole model.",
-              linkLabel: "How it works →", href: docs + "how-it-works.html"),
-        .init(title: nil, text: "The **Signals** tab shows where sentiment concentrates.",
-              more: "A signal marks a theme running hotter or cooler than you'd expect.",
-              linkLabel: "Signals →", href: docs + "signals.html"),
-        .init(title: nil, text: "Tag with a ready-made UX research framework.",
-              more: "Each framework — Norman, Nielsen and more — brings its own lens.",
-              linkLabel: "Frameworks →", href: docs + "codebook-frameworks.html"),
-        .init(title: nil, text: "The method rests on published, peer-reviewed research.",
-              more: "The sentiment taxonomy, the analysis and the codebooks all cite their sources.",
-              linkLabel: "Research foundations →", href: docs + "research-foundations.html"),
-        .init(title: nil, text: "Every analysis runs the same twelve stages.",
-              more: "Caching means a re-run only redoes what actually changed, keeping the cost down.",
-              linkLabel: "The pipeline →", href: docs + "the-pipeline.html"),
-        .init(title: nil, text: "Choose what the AI sees: cloud or local.",
-              more: "Cloud models are faster and sharper; local ones never leave your Mac.",
-              linkLabel: "Cloud or local →", href: docs + "cloud-or-local.html"),
-        .init(title: nil, text: "See exactly what the AI sees, and what never leaves your Mac.",
-              more: "Recordings and files stay local; only transcript text goes to your provider.",
-              linkLabel: "Privacy →", href: docs + "privacy.html"),
-        // Reference
-        .init(title: nil, text: "Every setting has a sensible default you can change.",
-              more: "One reference page lists them all, with what each one does.",
-              linkLabel: "Configuration →", href: docs + "configuration.html"),
-        .init(title: nil, text: "Press `s` to star, `h` to hide — then filter to what matters.",
-              more: "There's a key for nearly everything, in the app and the browser report.",
-              linkLabel: "Keyboard shortcuts →", href: docs + "keyboard-shortcuts.html"),
-        .init(title: nil, text: "Drop **.srt**, **.vtt** or **.docx** and skip transcription.",
-              more: "Bristlenose reads the text you already have and goes straight to analysis.",
-              linkLabel: "Supported files →", href: docs + "supported-files.html"),
-        .init(title: nil, text: "Name **p1.srt** next to **p1.mp4** to merge them.",
-              more: "Matching names pair each transcript with its audio or video automatically.",
-              linkLabel: "Matching files →", href: docs + "supported-files.html"),
-        .init(title: nil, text: "Everything Bristlenose makes lands in one folder.",
-              more: "The report, transcripts and data sit beside your recordings — yours to keep.",
-              linkLabel: "Output files →", href: docs + "output-files.html"),
-        .init(title: nil, text: "Make it yours: light, dark, palette and type.",
-              more: "Switch the colour palette and typography to taste in Settings.",
-              linkLabel: "Appearance →", href: docs + "appearance.html"),
-        .init(title: nil, text: "Not in English? Switch the interface language.",
-              more: "Bristlenose ships in more than twenty languages — set yours in Settings.",
-              linkLabel: "Languages →", href: docs + "languages.html"),
+        .init(key: "tips.firstAnalysis", href: docs + "first-analysis.html"),
+        .init(key: "tips.setUpClaude", href: docs + "set-up-claude.html"),
+        .init(key: "tips.setUpOllama", href: docs + "set-up-ollama.html"),
+        .init(key: "tips.runAnalysis", href: docs + "run-an-analysis.html"),
+        .init(key: "tips.exportQuotes", href: docs + "export-quotes.html"),
+        .init(key: "tips.videoClips", href: docs + "export-clips.html"),
+        .init(key: "tips.shareReport", href: docs + "share-report.html"),
+        .init(key: "tips.sendToMiro", href: docs + "send-to-miro.html"),
+        .init(key: "tips.connectAgent", href: docs + "connect-an-agent.html"),
+        .init(key: "tips.useCodebooks", href: docs + "use-codebooks.html"),
+        .init(key: "tips.tagForMeaning", href: docs + "tag-for-meaning.html"),
+        .init(key: "tips.howItWorks", href: docs + "how-it-works.html"),
+        .init(key: "tips.signals", href: docs + "signals.html"),
+        .init(key: "tips.frameworks", href: docs + "codebook-frameworks.html"),
+        .init(key: "tips.researchFoundations", href: docs + "research-foundations.html"),
+        .init(key: "tips.thePipeline", href: docs + "the-pipeline.html"),
+        .init(key: "tips.cloudOrLocal", href: docs + "cloud-or-local.html"),
+        .init(key: "tips.privacy", href: docs + "privacy.html"),
+        .init(key: "tips.configuration", href: docs + "configuration.html"),
+        .init(key: "tips.keyboardShortcuts", href: docs + "keyboard-shortcuts.html"),
+        .init(key: "tips.supportedFiles", href: docs + "supported-files.html"),
+        .init(key: "tips.matchingFiles", href: docs + "supported-files.html"),
+        .init(key: "tips.outputFiles", href: docs + "output-files.html"),
+        .init(key: "tips.appearance", href: docs + "appearance.html"),
+        .init(key: "tips.languages", href: docs + "languages.html"),
     ]
 
     static let aiConfigured: [SlotItem] = [
-        .init(title: "About local models", text: "Ollama runs entirely on your Mac — no account, nothing uploaded.", linkLabel: "More →", href: docs + "set-up-ollama.html"),
-        .init(title: "Switch anytime", text: "Change provider or model whenever you like, in Settings.", linkLabel: "More →", href: docs + "configuration.html"),
-        .init(title: "Local or cloud", text: "Local models are free; cloud models are faster and sharper.", linkLabel: "More →", href: docs + "cloud-or-local.html"),
+        .init(key: "aiConfigured.localModels", href: docs + "set-up-ollama.html"),
+        .init(key: "aiConfigured.switchAnytime", href: docs + "configuration.html"),
+        .init(key: "aiConfigured.localOrCloud", href: docs + "cloud-or-local.html"),
     ]
 
-    static let placeholder = SlotItem(title: nil, text: "", linkLabel: "", href: docs)
+    static let placeholder = SlotItem(key: nil, href: docs)
     static func pick(_ items: [SlotItem]) -> SlotItem { items.randomElement() ?? placeholder }
 }
 
@@ -241,7 +243,7 @@ struct WelcomeHomeView: View {
     // Info cells — calm, ignorable; NOT whole-clickable (D3).
     private var studyToolsCell: some View {
         VStack(alignment: .leading, spacing: 8) {
-            tag("Study tools")
+            tag(i18n.t("desktop.welcome.home.tags.studyTools"))
             SlotRotator(items: WelcomeContent.studyTools, storageKey: "welcome.rotator.tools",
                         onCurrent: { item in
                             baton.report(.studyTools, wants: item.illustration != .none, turn: item.illustration.welcomeTurn)
@@ -255,7 +257,7 @@ struct WelcomeHomeView: View {
 
     private var scienceCell: some View {
         VStack(alignment: .leading, spacing: 8) {
-            tag("Scientific background")
+            tag(i18n.t("desktop.welcome.home.tags.science"))
             SlotRotator(items: WelcomeContent.science, storageKey: "welcome.rotator.science",
                         onCurrent: { item in
                             baton.report(.science, wants: item.illustration != .none, turn: item.illustration.welcomeTurn)
@@ -268,7 +270,7 @@ struct WelcomeHomeView: View {
 
     private var tipCell: some View {
         VStack(alignment: .leading, spacing: 6) {
-            tag("Tip")
+            tag(i18n.t("desktop.welcome.home.tags.tip"))
             SlotRotator(items: WelcomeContent.tips, storageKey: "welcome.rotator.tip", curriculum: true)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -278,11 +280,11 @@ struct WelcomeHomeView: View {
     // The card is inert; the Setup link is the only target (design-welcome-screen.md §2).
     @ViewBuilder private var aiCell: some View {
         if aiConfigured {
-            VStack(alignment: .leading, spacing: 6) { tag("AI"); slotBody(aiItem) }
+            VStack(alignment: .leading, spacing: 6) { tag(i18n.t("desktop.welcome.home.tags.ai")); slotBody(aiItem) }
                 .welcomeCell(.ai)
         } else {
             VStack(alignment: .leading, spacing: 6) {
-                tag("AI")
+                tag(i18n.t("desktop.welcome.home.tags.ai"))
                 MorphingAIIcon()
                 // Deep-link straight to the LLM pane. The AppKit Settings
                 // window (`SettingsWindow`) opens on the requested pane; no
@@ -332,17 +334,18 @@ struct WelcomeHomeView: View {
     }
 
     private func slotBody(_ item: SlotItem) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            if let title = item.title {
+        let slot = resolve(item, i18n)
+        return VStack(alignment: .leading, spacing: 3) {
+            if let title = slot.title {
                 Text(title).font(.title3).fontWeight(.semibold)
             }
-            Text(markdown(item.text)).font(.body).foregroundStyle(.secondary)
+            Text(markdown(slot.text)).font(.body).foregroundStyle(.secondary)
             if !item.href.isEmpty {
-                Link(item.linkLabel, destination: url(item.href))   // discrete control, not inline
+                Link(cta(slot.linkLabel), destination: url(item.href))   // discrete control, not inline
                     .font(.callout).padding(.vertical, 2)
             }
-            if let href2 = item.href2, !href2.isEmpty, let label2 = item.linkLabel2 {
-                Link(label2, destination: url(href2))   // second path — both routes offered (e.g. manual vs framework)
+            if let href2 = item.href2, !href2.isEmpty, let label2 = slot.linkLabel2 {
+                Link(cta(label2), destination: url(href2))   // second path — both routes offered (e.g. manual vs framework)
                     .font(.callout).padding(.vertical, 2)
             }
         }
@@ -494,6 +497,7 @@ private func welcomeKeyText(_ s: String, dark: Bool) -> Text {
 // reinforcement once you've seen the whole map. No auto-advance. VoiceOver via an
 // adjustable action; reduce-motion → instant.
 private struct SlotRotator: View {
+    @EnvironmentObject var i18n: I18n
     let items: [SlotItem]
     let curriculum: Bool
     let onCurrent: ((SlotItem) -> Void)?   // baton: report the current slot so the cell can want/skip
@@ -540,7 +544,8 @@ private struct SlotRotator: View {
         .onKeyPress(.leftArrow)  { go(index - 1); return .handled }
         .onKeyPress(.rightArrow) { go(index + 1); return .handled }
         .accessibilityElement(children: .contain)
-        .accessibilityValue("\(index + 1) of \(count)")
+        .accessibilityValue(i18n.t("desktop.welcome.home.rotatorPosition",
+                                   ["n": "\(index + 1)", "total": "\(count)"]))
         .accessibilityAdjustableAction { dir in
             switch dir {
             case .increment: go(index + 1)
@@ -584,21 +589,22 @@ private struct SlotRotator: View {
     }
 
     @ViewBuilder private func slotView(_ item: SlotItem) -> some View {
+        let slot = resolve(item, i18n)
         VStack(alignment: .leading, spacing: 3) {
-            if let title = item.title {
+            if let title = slot.title {
                 Text(title).font(.title3).fontWeight(.semibold)
             }
-            if let more = item.more {
+            if let more = slot.more {
                 // Progressive disclosure inside the fixed cell (never a trim): show
                 // the core sentence alone in a small cell, and the whole follow-up
                 // sentence ONLY when a larger cell can display all of it un-truncated.
                 // ViewThatFits picks the first (richest) candidate that fits vertically.
                 ViewThatFits(in: .vertical) {
-                    tipBody("\(item.text) \(more)")
-                    tipBody(item.text)
+                    tipBody("\(slot.text) \(more)")
+                    tipBody(slot.text)
                 }
-            } else if !item.text.isEmpty {
-                welcomeKeyText(item.text, dark: scheme == .dark)
+            } else if !slot.text.isEmpty {
+                welcomeKeyText(slot.text, dark: scheme == .dark)
                     .font(.body).foregroundStyle(.secondary)
             }
             if item.illustration != .none {
@@ -629,16 +635,16 @@ private struct SlotRotator: View {
                     case .mcpAgentsSettings: SettingsWindow.shared.show(pane: .mcpAgents)
                     }
                 } label: {
-                    Text(item.linkLabel).font(.callout).foregroundStyle(Color.accentColor)
+                    Text(cta(slot.linkLabel)).font(.callout).foregroundStyle(Color.accentColor)
                 }
                 .buttonStyle(.plain)
                 .padding(.vertical, 2)
             } else if !item.href.isEmpty, let url = URL(string: item.href) {
-                Link(item.linkLabel, destination: url).font(.callout).padding(.vertical, 2)
+                Link(cta(slot.linkLabel), destination: url).font(.callout).padding(.vertical, 2)
             }
-            if let href2 = item.href2, !href2.isEmpty, let label2 = item.linkLabel2,
+            if let href2 = item.href2, !href2.isEmpty, let label2 = slot.linkLabel2,
                let url2 = URL(string: href2) {
-                Link(label2, destination: url2).font(.callout).padding(.vertical, 2)
+                Link(cta(label2), destination: url2).font(.callout).padding(.vertical, 2)
             }
         }
     }

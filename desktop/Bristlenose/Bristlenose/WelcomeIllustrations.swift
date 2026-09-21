@@ -152,9 +152,14 @@ private struct SentimentChipSizeKey: PreferenceKey {
 /// because only it cannot reflow. Until 20 Aug 2026 a single `scaleEffect`
 /// wrapped the lot, so a narrow window shrank the prose along with the covers.
 struct BookShelfView: View {
+    @EnvironmentObject var i18n: I18n
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var front = 0
 
+    // `line` is a KEY under `desktop.welcome.home.books.`; author and title are
+    // proper names and stay as printed. Whether a cover should show the local
+    // edition's title is a second-pass question — see design-welcome-screen.md
+    // §Copy & i18n and the illustration inventory it points at.
     private struct Book {
         let author, title, line, href: String
         let spine: UInt
@@ -166,16 +171,16 @@ struct BookShelfView: View {
     // book itself is the clickable-cover idea from the author outreach.)
     private let books: [Book] = [
         .init(author: "Don Norman", title: "The Design of Everyday Things",
-              line: "The book that made human-centred design a discipline — blame the design, not the user.",
+              line: "norman",
               href: "https://bristlenose.app/docs/codebook-frameworks.html", spine: 0x334155, image: "welcome-book-norman"),
         .init(author: "Jakob Nielsen", title: "Usability Engineering",
-              line: "Ten usability heuristics that still anchor how the field spots friction.",
+              line: "nielsen",
               href: "https://bristlenose.app/docs/codebook-frameworks.html", spine: 0x0f5c9e, image: "welcome-book-nielsen"),
         .init(author: "Braun & Clarke", title: "Thematic Analysis",
-              line: "The practical guide to reflexive thematic analysis — themes from participants’ own words.",
+              line: "braunClarke",
               href: "https://bristlenose.app/docs/research-foundations.html", spine: 0x7c3aed, image: "welcome-book-braun-clarke"),
         .init(author: "Richard Lazarus", title: "Emotion & Adaptation",
-              line: "Appraisal theory — emotion as how we weigh what happens to us.",
+              line: "lazarus",
               href: "https://bristlenose.app/docs/signals.html", spine: 0xb45309, image: "welcome-book-lazarus"),
     ]
     private let cardW: CGFloat = 106     // 80×114 grown ~33% to use more of the cell
@@ -196,7 +201,7 @@ struct BookShelfView: View {
             caption(current)
             coverFan
             if let url = URL(string: current.href) {
-                Link("Learn more →", destination: url)
+                Link(i18n.t("desktop.welcome.home.learnMore") + " \u{2192}", destination: url)
                     .font(.callout)
                     .id("lnk-\(front)")
                     .transition(.opacity)
@@ -218,7 +223,8 @@ struct BookShelfView: View {
     // Scaling is for the covers, which cannot reflow; text bends by losing
     // words, never by losing size. (docs/design-welcome-screen.md §2.)
     private func caption(_ b: Book) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        let line = i18n.t("desktop.welcome.home.books." + b.line)
+        return VStack(alignment: .leading, spacing: 2) {
             Text(b.author).font(.title3).fontWeight(.semibold)
             // Longest candidate that fits, in order. NO `.fixedSize` — that
             // would force each candidate to demand its full height and defeat
@@ -226,11 +232,11 @@ struct BookShelfView: View {
             // it is honest (`…` marks omission) but it promises a disclosure
             // this cell cannot offer, so a shorter complete reading wins.
             ViewThatFits(in: .vertical) {
-                captionLine(b.line, limit: nil)
-                if let short = WelcomeClauseFit.shortened(b.line) {
+                captionLine(line, limit: nil)
+                if let short = WelcomeClauseFit.shortened(line) {
                     captionLine(short, limit: nil)
                 }
-                captionLine(b.line, limit: 2)
+                captionLine(line, limit: 2)
             }
             .frame(height: captionReserve, alignment: .topLeading)
         }
@@ -492,25 +498,29 @@ struct AgentChatIllustrationView: View {
 /// out. Reduce Motion — or losing the baton — shows the finished list. Content sits at
 /// x = 0: the Swift frame owns the cell inset (no second, illustration-side padding).
 struct IngestIllustrationView: View {
+    @EnvironmentObject var i18n: I18n
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
 
+    // `surtitle` is a KEY under `desktop.welcome.home.ingestRows.`; `name` is a
+    // sample filename — research data, localised in the second pass (see the
+    // illustration inventory in design-welcome-screen.md §Copy & i18n).
     private struct Row { let icon, surtitle, name: String }
     private static let rows: [Row] = [
         .init(icon: "film",
-              surtitle: "Video — MP4 · MOV · MKV · WebM · AVI · M4V",
+              surtitle: "video",
               name: "usability-test-03.mp4"),
         .init(icon: "waveform",
-              surtitle: "Audio — WAV · MP3 · M4A · FLAC · OGG · AAC · WMA",
+              surtitle: "audio",
               name: "interview-with-anna.m4a"),
         .init(icon: "captions.bubble",
-              surtitle: "Captions — VTT · SRT, matched to their video by name",
+              surtitle: "captions",
               name: "usability-test-03.vtt"),
         .init(icon: "doc.text",
-              surtitle: "Transcripts — Word exports from Zoom, Teams or Meet",
+              surtitle: "transcripts",
               name: "Discovery call - Transcript.docx"),
         .init(icon: "folder",
-              surtitle: "Folders — one session’s files together, any mix",
+              surtitle: "folders",
               name: "2026-01-15 14.30 Usability study"),
     ]
 
@@ -532,7 +542,7 @@ struct IngestIllustrationView: View {
         // Opacity (never conditional views) so every row keeps its space — nothing
         // reflows while icons blink and names type.
         return VStack(alignment: .leading, spacing: 1) {
-            Text(r.surtitle)
+            Text(i18n.t("desktop.welcome.home.ingestRows." + r.surtitle))
                 .font(.system(size: 10.5)).foregroundStyle(.secondary)
                 .opacity(detailOn[i] ? 1 : 0)
             HStack(spacing: 8) {
@@ -603,6 +613,7 @@ struct IngestIllustrationView: View {
 /// beat (participant code · timecode · quote snippet · .mp4) so the naming scheme
 /// reads. Pause on the finished set, then loop back to the menu choice.
 struct ClipsIllustrationView: View {
+    @EnvironmentObject var i18n: I18n
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
 
@@ -672,10 +683,10 @@ struct ClipsIllustrationView: View {
                 .font(.system(size: 15))
                 .foregroundStyle(highlight ? AnyShapeStyle(.white) : AnyShapeStyle(Color.accentColor))
             VStack(alignment: .leading, spacing: 1) {
-                Text("Extract Video Clips…")
+                Text(i18n.t("desktop.menu.quotes.extractClips"))
                     .font(.system(size: 13))
                     .foregroundStyle(highlight ? .white : .primary)
-                Text("Trimmed clip per quote")
+                Text(i18n.t("desktop.welcome.home.clipsIllustration.subtitle"))
                     .font(.system(size: 11))
                     .foregroundStyle(highlight ? AnyShapeStyle(.white.opacity(0.85)) : AnyShapeStyle(.secondary))
             }

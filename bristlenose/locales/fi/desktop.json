@@ -387,6 +387,241 @@
       "processDetail": "Litteroi, etsii sitaatit, ryhmittelee teemat.",
       "exportTitle": "Selaa ja vie",
       "exportDetail": "Lue löydökset, vie HTML tai CSV."
+    },
+    "home": {
+      "tags": {
+        "studyTools": "Tutkimusty\u00f6kalut",
+        "science": "Tieteellinen tausta",
+        "tip": "Vinkki",
+        "ai": "Teko\u00e4ly"
+      },
+      "learnMore": "Lue lis\u00e4\u00e4",
+      "more": "Lis\u00e4\u00e4",
+      "rotatorPosition": "{{n}}/{{total}}",
+      "tools": {
+        "autocode": {
+          "title": "AutoCode",
+          "text": "AutoCode ehdottaa tunnisteita joka sitaattiin \u2014 sin\u00e4 hyv\u00e4ksyt tai hylk\u00e4\u00e4t.",
+          "link": "Teko\u00e4ly ehdottaa"
+        },
+        "codebooks": {
+          "title": "Koodikirjat",
+          "text": "Rakenna koodikirja tai aloita valmiista viitekehyksest\u00e4.",
+          "link": "Koodaa k\u00e4sin",
+          "link2": "Tutkimusviitekehykset"
+        },
+        "tag": {
+          "title": "Tunnistemerkint\u00e4",
+          "text": "Valitse yksi tai useampi sitaatti ja paina `t` merkit\u00e4ksesi ne koodikirjasi koodilla.",
+          "link": "Manuaalinen merkint\u00e4"
+        },
+        "starHide": {
+          "title": "T\u00e4hdet ja piilotus",
+          "text": "Paina `s` s\u00e4ilytt\u00e4\u00e4ksesi t\u00e4rke\u00e4t sitaatit, `h` piilottaaksesi loput.",
+          "link": "Pikan\u00e4pp\u00e4imet"
+        },
+        "clips": {
+          "title": "Videoleikkeet",
+          "text": "Tee valituista sitaateista videoleikkeit\u00e4.",
+          "link": "Vientivaihtoehdot"
+        },
+        "miro": {
+          "title": "L\u00e4het\u00e4 Miroon",
+          "text": "L\u00e4het\u00e4 sitaatit Miro-taululle.",
+          "link": "Yhdist\u00e4 Miroon"
+        },
+        "agent": {
+          "title": "Yhdist\u00e4 teko\u00e4lyagentti",
+          "text": "Kysy aineistoltasi Claude Codesta, Claude Desktopista tai muusta MCP-agentista.",
+          "link": "Yhdist\u00e4 agentti\u2026",
+          "link2": "Lue lis\u00e4\u00e4"
+        },
+        "ingest": {
+          "title": "Sis\u00e4\u00e4nluku",
+          "text": "Pudota kansio tallenteita tai litterointeja \u2014 Bristlenose litteroi, analysoi ja raportoi.",
+          "link": "Tuontiasetukset"
+        },
+        "redactPii": {
+          "title": "Peit\u00e4 henkil\u00f6tiedot",
+          "text": "Poista henkil\u00f6tiedot automaattisesti ennen analyysia.",
+          "link": "Poista nimet ja muut"
+        }
+      },
+      "science": {
+        "emergentThemes": {
+          "title": "Nousevat teemat",
+          "text": "Teemat nousevat osallistujien omista sanoista, eiv\u00e4t valmiista luokittelusta (Braun & Clarke, 2006)."
+        },
+        "sentiments": {
+          "title": "Seitsem\u00e4n tunnes\u00e4vy\u00e4",
+          "text": "Seitsem\u00e4n tunnes\u00e4vy\u00e4, jotka perustuvat arviointiteoriaan (Scherer) ja ydinaffektiin (Russell)."
+        },
+        "signals": {
+          "title": "Signaalit",
+          "text": "Signaali on luku, joka yhdist\u00e4\u00e4 osallistujien mielipiteiden tai tunteiden voimakkuuden, heid\u00e4n keskittymisens\u00e4 alueeseen tai teemaan ja mitan heid\u00e4n yksimielisyydest\u00e4\u00e4n."
+        },
+        "dignity": {
+          "title": "Arvokkuus v\u00e4\u00e4rist\u00e4m\u00e4tt\u00e4",
+          "text": "Sitaatit siistit\u00e4\u00e4n mutta ei koskaan v\u00e4\u00e4ristet\u00e4; osallistujan \u00e4\u00e4nt\u00e4 kunnioitetaan."
+        }
+      },
+      "books": {
+        "norman": "Kirja, joka teki ihmiskeskeisest\u00e4 suunnittelusta oman alansa \u2014 syyt\u00e4 suunnittelua, \u00e4l\u00e4 k\u00e4ytt\u00e4j\u00e4\u00e4.",
+        "nielsen": "Kymmenen k\u00e4ytett\u00e4vyysheuristiikkaa, joilla ala yh\u00e4 tunnistaa kitkan.",
+        "braunClarke": "K\u00e4yt\u00e4nn\u00f6n opas refleksiiviseen temaattiseen analyysiin \u2014 teemat osallistujien omista sanoista.",
+        "lazarus": "Arviointiteoria (appraisal) \u2014 tunne on tapa punnita, mit\u00e4 meille tapahtuu."
+      },
+      "tips": {
+        "firstAnalysis": {
+          "text": "Tallennekansiosta luettavaksi raportiksi minuuteissa.",
+          "more": "Opas k\u00e4y yhden ajon l\u00e4pi alusta loppuun, niin n\u00e4et mit\u00e4 kukin vaihe tekee.",
+          "link": "Ensimm\u00e4inen analyysi"
+        },
+        "setUpClaude": {
+          "text": "Yhdist\u00e4 teko\u00e4lyn palveluntarjoaja analyysia varten.",
+          "more": "Claude on suositeltu oletus; my\u00f6s ChatGPT, Gemini ja Azure toimivat.",
+          "link": "Ota Claude k\u00e4ytt\u00f6\u00f6n"
+        },
+        "setUpOllama": {
+          "text": "Ei API-avainta? Aja **Ollama** paikallisesti \u2014 ilmainen, ei tili\u00e4, mit\u00e4\u00e4n ei ladata.",
+          "more": "Koko analyysi ajetaan omalla koneellasi, ilman pilve\u00e4 ja avainta.",
+          "link": "Ota Ollama k\u00e4ytt\u00f6\u00f6n"
+        },
+        "runAnalysis": {
+          "text": "Napsauta aikakoodia litteroinnissa toistaaksesi siit\u00e4 kohdasta.",
+          "more": "Litterointi vierii videon tahdissa, joten et koskaan hukkaa kohtaa.",
+          "link": "Aja analyysi"
+        },
+        "exportQuotes": {
+          "text": "Vie sitaatit taulukkoon yhdell\u00e4 toimella.",
+          "more": "Kopioi ne leikep\u00f6yd\u00e4lle tai lataa CSV- tai Excel-muodossa.",
+          "link": "Vie sitaatit"
+        },
+        "videoClips": {
+          "text": "Tee parhaista sitaateista jaettavia videoleikkeit\u00e4.",
+          "more": "Bristlenose leikkaa lyhyen leikkeen jokaisesta t\u00e4hdell\u00e4 merkityst\u00e4 sitaatista.",
+          "link": "Videoleikkeet"
+        },
+        "shareReport": {
+          "text": "Jaa yksi itsen\u00e4inen HTML-tiedosto \u2014 ei asennusta.",
+          "more": "Kuka tahansa voi avata sen selaimessa; anonymisoi halutessasi nimet ja paikat ensin.",
+          "link": "Jaa raportti"
+        },
+        "sendToMiro": {
+          "text": "L\u00e4het\u00e4 sitaatit suoraan **Miro**-taululle.",
+          "more": "Ne asettuvat tarroiksi, valmiina ryhmittelyyn ja affiniteettikarttaan (kokeellinen).",
+          "link": "L\u00e4het\u00e4 Miroon"
+        },
+        "connectAgent": {
+          "text": "Kysy projektista **Claude Desktop** -sovelluksesta tai mist\u00e4 tahansa MCP-agentista.",
+          "more": "Ota agenttik\u00e4ytt\u00f6 k\u00e4ytt\u00f6\u00f6n, asenna laajennus kerran ja kysy omin sanoin.",
+          "link": "Yhdist\u00e4 agentti"
+        },
+        "useCodebooks": {
+          "text": "**AutoCode** ehdottaa tunnisteita joka sitaattiin.",
+          "more": "Merkitse k\u00e4sin tai aloita koodikirjasta ja hyv\u00e4ksy mallin ehdotukset.",
+          "link": "Koodikirjat"
+        },
+        "tagForMeaning": {
+          "text": "Merkint\u00e4 on analyysia \u2014 sitaateista teemoiksi.",
+          "more": "Kokoa joukko sitaatteja koodin alle, niin l\u00f6yd\u00f6kset alkavat hahmottua.",
+          "link": "Merkint\u00e4 ja merkitys"
+        },
+        "howItWorks": {
+          "text": "Bristlenose lukee haastattelut istuntoina ja sitaatteina.",
+          "more": "Istunnot, osallistujat, sitaatit, osiot ja teemat \u2014 siin\u00e4 koko malli.",
+          "link": "N\u00e4in se toimii"
+        },
+        "signals": {
+          "text": "**Signaalit**-v\u00e4lilehti n\u00e4ytt\u00e4\u00e4, mihin tunnes\u00e4vy keskittyy.",
+          "more": "Signaali merkitsee teeman, joka k\u00e4y odotettua kuumempana tai viile\u00e4mp\u00e4n\u00e4.",
+          "link": "Signaalit"
+        },
+        "frameworks": {
+          "text": "Merkitse valmiilla UX-tutkimuksen viitekehyksell\u00e4.",
+          "more": "Jokainen viitekehys \u2014 Norman, Nielsen ja muut \u2014 tuo oman n\u00e4k\u00f6kulmansa.",
+          "link": "Viitekehykset"
+        },
+        "researchFoundations": {
+          "text": "Menetelm\u00e4 nojaa julkaistuun, vertaisarvioituun tutkimukseen.",
+          "more": "Tunnes\u00e4vyluokitus, analyysi ja koodikirjat ilmoittavat kaikki l\u00e4hteens\u00e4.",
+          "link": "Tutkimusperusta"
+        },
+        "thePipeline": {
+          "text": "Jokainen analyysi ajaa samat kaksitoista vaihetta.",
+          "more": "Uusintaajo tekee v\u00e4limuistin ansiosta vain sen, mik\u00e4 muuttui, joten kulut pysyv\u00e4t pienin\u00e4.",
+          "link": "Analyysiketju"
+        },
+        "cloudOrLocal": {
+          "text": "P\u00e4\u00e4t\u00e4, mit\u00e4 teko\u00e4ly n\u00e4kee: pilvi vai oma kone.",
+          "more": "Pilvimallit ovat nopeampia ja tarkempia; paikalliset pysyv\u00e4t Macillasi.",
+          "link": "Pilvi vai oma kone"
+        },
+        "privacy": {
+          "text": "N\u00e4e tarkalleen, mit\u00e4 teko\u00e4ly n\u00e4kee ja mik\u00e4 ei koskaan poistu Macistasi.",
+          "more": "Tallenteet ja tiedostot pysyv\u00e4t koneella; vain litterointiteksti l\u00e4htee palvelulle.",
+          "link": "Yksityisyys"
+        },
+        "configuration": {
+          "text": "Jokaisella asetuksella on j\u00e4rkev\u00e4 oletus, jonka voit muuttaa.",
+          "more": "Yksi viitesivu luettelee ne kaikki ja kertoo, mit\u00e4 kukin tekee.",
+          "link": "M\u00e4\u00e4ritykset"
+        },
+        "keyboardShortcuts": {
+          "text": "`s` merkitsee t\u00e4hdell\u00e4, `h` piilottaa \u2014 suodata sitten olennaiseen.",
+          "more": "N\u00e4pp\u00e4in l\u00f6ytyy l\u00e4hes kaikkeen, sek\u00e4 sovelluksessa ett\u00e4 selainraportissa.",
+          "link": "Pikan\u00e4pp\u00e4imet"
+        },
+        "supportedFiles": {
+          "text": "Pudota **.srt**, **.vtt** tai **.docx** ja ohita litterointi.",
+          "more": "Bristlenose lukee valmiin tekstisi ja siirtyy suoraan analyysiin.",
+          "link": "Tuetut tiedostot"
+        },
+        "matchingFiles": {
+          "text": "Nime\u00e4 **p1.srt** ja **p1.mp4** samoin, niin ne yhdistyv\u00e4t.",
+          "more": "Samannimiset tiedostot parittavat litteroinnin \u00e4\u00e4neen tai videoon automaattisesti.",
+          "link": "Vastaavat tiedostot"
+        },
+        "outputFiles": {
+          "text": "Kaikki Bristlenosen tuottama p\u00e4\u00e4tyy yhteen kansioon.",
+          "more": "Raportti, litteroinnit ja data ovat tallenteidesi vieress\u00e4 \u2014 omiasi.",
+          "link": "Tulostiedostot"
+        },
+        "appearance": {
+          "text": "Tee omasi: vaalea, tumma, paletti ja kirjasin.",
+          "more": "Vaihda v\u00e4ripalettia ja typografiaa makusi mukaan Asetuksissa.",
+          "link": "Ulkoasu"
+        },
+        "languages": {
+          "text": "Etk\u00f6 k\u00e4yt\u00e4 englantia? Vaihda k\u00e4ytt\u00f6liittym\u00e4n kieli.",
+          "more": "Bristlenose puhuu yli kahtakymment\u00e4 kielt\u00e4 \u2014 valitse omasi Asetuksissa.",
+          "link": "Kielet"
+        }
+      },
+      "aiConfigured": {
+        "localModels": {
+          "title": "Paikalliset mallit",
+          "text": "Ollama toimii kokonaan Macillasi \u2014 ei tili\u00e4, mit\u00e4\u00e4n ei ladata."
+        },
+        "switchAnytime": {
+          "title": "Vaihda milloin vain",
+          "text": "Vaihda palveluntarjoajaa tai mallia milloin haluat Asetuksissa."
+        },
+        "localOrCloud": {
+          "title": "Oma kone vai pilvi",
+          "text": "Paikalliset mallit ovat ilmaisia; pilvimallit nopeampia ja tarkempia."
+        }
+      },
+      "ingestRows": {
+        "video": "Videot \u2014 MP4 \u00b7 MOV \u00b7 MKV \u00b7 WebM \u00b7 AVI \u00b7 M4V",
+        "audio": "\u00c4\u00e4ni \u2014 WAV \u00b7 MP3 \u00b7 M4A \u00b7 FLAC \u00b7 OGG \u00b7 AAC \u00b7 WMA",
+        "captions": "Tekstitykset \u2014 VTT \u00b7 SRT, yhdistet\u00e4\u00e4n videoon nimen mukaan",
+        "transcripts": "Litteroinnit \u2014 Word-viennit Zoomista, Teamsista tai Meetist\u00e4",
+        "folders": "Kansiot \u2014 yhden istunnon tiedostot yhdess\u00e4, sekoitus k\u00e4y"
+      },
+      "clipsIllustration": {
+        "subtitle": "Rajattu leike per sitaatti"
+      }
     }
   },
   "toolbar": {

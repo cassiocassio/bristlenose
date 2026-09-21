@@ -168,6 +168,51 @@ The load-bearing terms. Blank = no glossary row yet (anchor these to prevent dri
 
 ---
 
+## Star / favourite — the four metaphors, and where each one stands
+
+Re-measured 21 Sep 2026 while localising the Welcome pane. English has one
+word; the locales landed on **four different metaphors**, and that is mostly
+deliberate:
+
+| metaphor | locales | menu term |
+|---|---|---|
+| **star** | cs, da, fi, it, ja, ko, nb, nl, pl, pt-BR, pt-PT, sv, tr, uk, zh-Hant | *Stjernemarkér*, *Stella*, *스타*, *Yıldızla*, *標星* … |
+| **favourite** | fr, ru | *Favori*, *В избранное* |
+| **highlight** | ca, es | *Destaca*, *Destacar* |
+| **mark** | de | *Markieren* |
+
+**Settled, and now followed everywhere:** fr = « favori ». The fr review named
+its own two survivors — the spreadsheet column « Marqué » and the clips-empty
+string — and both were still unaligned. Fixed 21 Sep: `export.colStarred`
+→ « Favori », `export.clips.noClips` → « citation favorite ». The Welcome block
+was already correct.
+
+**Settled: es = destacar / destacadas.** The Welcome block follows it.
+
+**Still open, and the Welcome pass sharpened both:**
+
+- **`it` — stella vs contrassegna.** The menu says *Stella*, `common` says
+  *Citazione contrassegnata*. The Welcome block followed the menu. §it above
+  already asks for this reconciliation; it is still owed.
+- **`pt-BR` / `pt-PT` — one root for two different states.** *destacada* means
+  **starred** (`announce.starred`) while *em destaque* means **featured**
+  (`noClips`). Same root, opposite sides of a real distinction. Pre-existing,
+  not introduced by the Welcome pass, but the pane is where a new researcher
+  meets both in one cell.
+
+**And an open question is now answerable.** The es review asked: *"is there any
+'featured' concept distinct from 'starred'?"* — **yes.** `pick_featured_quotes`
+(`server/export_core.py`) selects the most interesting quotes algorithmically
+(word-count filter → score → diversify by participant and polarity), and the
+clips export historically cuts **starred ∪ featured**. Starred is the
+researcher's choice; featured is ours.
+
+That **supersedes the reviewer's hunch** to collapse the stray *favoritas* into
+*destacadas*: the hunch was conditional on there being no distinct state, and
+there is one. Collapsing would merge two real things. What es actually needs is
+a distinct word for *featured* that is not built on *destacar* — which is a
+native call, not a mechanical one, and is left open here rather than invented.
+
 ## Audit log
 
 - **2026-06-30** — First full multi-locale quality audit (12 locales, fanned out one agent

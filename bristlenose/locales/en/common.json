@@ -340,7 +340,7 @@
       "sentimentTitle": "Sentiment tagging",
       "sentimentBody": "Seven sentiment tags designed for UX research: frustration, confusion, doubt, surprise, satisfaction, delight, and confidence. Each quote receives one tag based on the participant’s expressed emotion.",
       "signalsTitle": "Signals",
-      "signalsBody": "The Signals lens surfaces statistically notable concentrations of sentiment within report sections. Strong and moderate signals highlight where participant experience clusters.",
+      "signalsBody": "Signals are statistically notable concentrations of sentiment within report sections. Strong and moderate signals highlight where participant experience clusters.",
       "starsTitle": "Stars, tags, and filters",
       "starsBody": "Star quotes to mark important findings. Add tags to build your own coding scheme. Use the tag filter and search to focus on what matters. All changes are saved automatically.",
       "exportTitle": "Export",
@@ -405,7 +405,7 @@
       "actionAudit": "We publish a full <a href=\"https://github.com/cassiocassio/bristlenose/tree/main/docs/pii-audit\" target=\"_blank\" rel=\"noopener noreferrer\">PII redaction audit</a> with a <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/tests/fixtures/pii_horror_transcript.txt\" target=\"_blank\" rel=\"noopener noreferrer\">test transcript</a>, <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/redacted-transcript.md\" target=\"_blank\" rel=\"noopener noreferrer\">redacted output</a>, and <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/pii-summary.txt\" target=\"_blank\" rel=\"noopener noreferrer\">raw audit log</a> — so you can judge the limits for yourself."
     },
     "signals": {
-      "intro": "The Signals lens surfaces statistically notable concentrations of sentiment or codebook tags within report sections. Two types of signal card.",
+      "intro": "Signals are statistically notable concentrations of sentiment or codebook tags within report sections. Two types of signal card.",
       "sentimentHeading": "Sentiment signals",
       "sentimentIntro": "Each quote is tagged with one of seven sentiments designed for UX research:",
       "frustrationDesc": "difficulty, annoyance, friction. Points to performance or interaction problems.",
@@ -452,7 +452,7 @@
     "labelMixed": "Mixed sentiments",
     "heading": "Signals",
     "loadingData": "Loading signals…",
-    "noData": "No signals yet. Run the pipeline or apply codebook tags to generate them.",
+    "noData": "No signals yet. Run the pipeline or apply codebook tags to generate signals.",
     "tagError": "Tag signal error: {{error}}",
     "title": "Signals",
     "sentiment": "Sentiment",

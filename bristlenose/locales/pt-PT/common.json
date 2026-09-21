@@ -340,7 +340,7 @@
       "sentimentTitle": "Etiquetagem de sentimento",
       "sentimentBody": "Sete etiquetas de sentimento concebidas para investigação de UX: frustração, confusão, dúvida, surpresa, satisfação, encantamento e confiança. Cada citação recebe uma etiqueta com base na emoção expressa pelo participante.",
       "signalsTitle": "Sinais",
-      "signalsBody": "A vista Sinais revela concentrações estatisticamente notáveis de sentimento dentro das secções do relatório. Sinais fortes e moderados destacam onde a experiência do participante se concentra.",
+      "signalsBody": "Sinais são concentrações estatisticamente notáveis de sentimento dentro das secções do relatório. Sinais fortes e moderados destacam onde a experiência do participante se concentra.",
       "starsTitle": "Estrelas, etiquetas e filtros",
       "starsBody": "Marque citações com estrela para destacar descobertas importantes. Adicione etiquetas para construir o seu próprio esquema de codificação. Use o filtro de etiquetas e a procura para se focar no que importa. Todas as alterações são guardadas automaticamente.",
       "exportTitle": "Exportar",
@@ -405,7 +405,7 @@
       "actionAudit": "Publicamos uma <a href=\"https://github.com/cassiocassio/bristlenose/tree/main/docs/pii-audit\" target=\"_blank\" rel=\"noopener noreferrer\">auditoria completa de redação de PII</a> com uma <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/tests/fixtures/pii_horror_transcript.txt\" target=\"_blank\" rel=\"noopener noreferrer\">transcrição de teste</a>, <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/redacted-transcript.md\" target=\"_blank\" rel=\"noopener noreferrer\">resultado redigido</a> e <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/pii-summary.txt\" target=\"_blank\" rel=\"noopener noreferrer\">registo de auditoria em bruto</a> — para que possa avaliar os limites por si próprio."
     },
     "signals": {
-      "intro": "A vista Sinais revela concentrações estatisticamente notáveis de sentimento ou etiquetas do livro de códigos dentro das secções do relatório. Dois tipos de cartão de sinal.",
+      "intro": "Sinais são concentrações estatisticamente notáveis de sentimento ou etiquetas do livro de códigos dentro das secções do relatório. Dois tipos de cartão de sinal.",
       "sentimentHeading": "Sinais de sentimento",
       "sentimentIntro": "Cada citação é etiquetada com um de sete sentimentos concebidos para investigação de UX:",
       "frustrationDesc": "dificuldade, irritação, atrito. Aponta para problemas de desempenho ou de interação.",

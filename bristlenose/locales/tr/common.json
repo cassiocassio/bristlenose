@@ -340,7 +340,7 @@
       "sentimentTitle": "Duygu durumu etiketleme",
       "sentimentBody": "UX araştırması için tasarlanmış yedi duygu durumu etiketi: hayal kırıklığı, kafa karışıklığı, kuşku, şaşkınlık, memnuniyet, keyif ve güven. Her alıntı, katılımcının ifade ettiği duyguya göre bir etiket alır.",
       "signalsTitle": "Sinyaller",
-      "signalsBody": "Sinyaller görünümü, rapor bölümleri içinde istatistiksel olarak dikkat çekici duygu durumu yoğunlaşmalarını gösterir. Güçlü ve orta sinyaller, katılımcı deneyiminin nerede kümelendiğini vurgular.",
+      "signalsBody": "Sinyaller, rapor bölümleri içinde istatistiksel olarak dikkat çekici duygu durumu yoğunlaşmalarıdır. Güçlü ve orta sinyaller, katılımcı deneyiminin nerede kümelendiğini vurgular.",
       "starsTitle": "Yıldızlar, etiketler ve filtreler",
       "starsBody": "Önemli bulguları işaretlemek için alıntıları yıldızlayın. Kendi kodlama şemanızı oluşturmak için etiketler ekleyin. Önemli olana odaklanmak için etiket filtresini ve aramayı kullanın. Tüm değişiklikler otomatik olarak kaydedilir.",
       "exportTitle": "Dışa aktarma",
@@ -405,7 +405,7 @@
       "actionAudit": "Bir <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/tests/fixtures/pii_horror_transcript.txt\" target=\"_blank\" rel=\"noopener noreferrer\">test deşifresi</a>, <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/redacted-transcript.md\" target=\"_blank\" rel=\"noopener noreferrer\">maskelenmiş çıktı</a> ve <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/pii-summary.txt\" target=\"_blank\" rel=\"noopener noreferrer\">ham denetim günlüğü</a> ile birlikte eksiksiz bir <a href=\"https://github.com/cassiocassio/bristlenose/tree/main/docs/pii-audit\" target=\"_blank\" rel=\"noopener noreferrer\">PII maskeleme denetimi</a> yayımlıyoruz — böylece sınırları kendiniz değerlendirebilirsiniz."
     },
     "signals": {
-      "intro": "Sinyaller görünümü, rapor bölümleri içinde istatistiksel olarak dikkat çekici duygu durumu veya kod kitabı etiketi yoğunlaşmalarını gösterir. İki tür sinyal kartı.",
+      "intro": "Sinyaller, rapor bölümleri içinde istatistiksel olarak dikkat çekici duygu durumu veya kod kitabı etiketi yoğunlaşmalarıdır. İki tür sinyal kartı.",
       "sentimentHeading": "Duygu durumu sinyalleri",
       "sentimentIntro": "Her alıntı, UX araştırması için tasarlanmış yedi duygu durumundan biriyle etiketlenir:",
       "frustrationDesc": "zorluk, sıkıntı, sürtünme. Performans veya etkileşim sorunlarına işaret eder.",

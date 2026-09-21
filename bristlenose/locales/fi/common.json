@@ -340,7 +340,7 @@
       "sentimentTitle": "Tunnesävymerkinnät",
       "sentimentBody": "Seitsemän UX-tutkimukseen suunniteltua tunnesävymerkintää: turhautuminen, hämmennys, epäily, yllätys, tyytyväisyys, ilahtuminen ja luottamus. Jokainen sitaatti saa yhden merkinnän osallistujan ilmaiseman tunteen perusteella.",
       "signalsTitle": "Signaalit",
-      "signalsBody": "Signaalit-näkymä nostaa esiin tilastollisesti merkittäviä tunnesävyjen keskittymiä raportin osioissa. Vahvat ja kohtalaiset signaalit korostavat, missä osallistujakokemus keskittyy.",
+      "signalsBody": "Signaalit ovat tilastollisesti merkittäviä tunnesävyjen keskittymiä raportin osioissa. Vahvat ja kohtalaiset signaalit korostavat, missä osallistujakokemus keskittyy.",
       "starsTitle": "Tähdet, tunnisteet ja suodattimet",
       "starsBody": "Merkitse sitaatteja tähdellä nostaaksesi esiin tärkeät löydökset. Lisää tunnisteita rakentaaksesi oman koodausjärjestelmäsi. Käytä tunnistesuodatinta ja hakua keskittyäksesi olennaiseen. Kaikki muutokset tallennetaan automaattisesti.",
       "exportTitle": "Vienti",
@@ -405,7 +405,7 @@
       "actionAudit": "Julkaisemme täyden <a href=\"https://github.com/cassiocassio/bristlenose/tree/main/docs/pii-audit\" target=\"_blank\" rel=\"noopener noreferrer\">henkilötietojen peittämisen auditoinnin</a>, mukana <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/tests/fixtures/pii_horror_transcript.txt\" target=\"_blank\" rel=\"noopener noreferrer\">testilitterointi</a>, <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/redacted-transcript.md\" target=\"_blank\" rel=\"noopener noreferrer\">peitetty tuloste</a> ja <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/pii-summary.txt\" target=\"_blank\" rel=\"noopener noreferrer\">raaka auditointiloki</a> — jotta voit itse arvioida rajat."
     },
     "signals": {
-      "intro": "Signaalit-näkymä nostaa esiin tilastollisesti merkittäviä tunnesävyjen tai koodikirjatunnisteiden keskittymiä raportin osioissa. Kahdenlaisia signaalikortteja.",
+      "intro": "Signaalit ovat tilastollisesti merkittäviä tunnesävyjen tai koodikirjatunnisteiden keskittymiä raportin osioissa. Kahdenlaisia signaalikortteja.",
       "sentimentHeading": "Tunnesävysignaalit",
       "sentimentIntro": "Jokainen sitaatti merkitään yhdellä seitsemästä UX-tutkimukseen suunnitellusta tunnesävystä:",
       "frustrationDesc": "vaikeus, ärtymys, kitka. Viittaa suorituskyky- tai vuorovaikutusongelmiin.",

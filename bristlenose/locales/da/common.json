@@ -340,7 +340,7 @@
       "sentimentTitle": "Stemningstagging",
       "sentimentBody": "Syv stemningstags designet til UX-undersøgelser: frustration, forvirring, tvivl, overraskelse, tilfredshed, glæde og tillid. Hvert citat får ét tag baseret på den følelse, deltageren udtrykker.",
       "signalsTitle": "Signaler",
-      "signalsBody": "Visningen Signaler fremhæver statistisk bemærkelsesværdige koncentrationer af stemning inden for rapportens afsnit. Stærke og moderate signaler viser, hvor deltagernes oplevelse klumper sig sammen.",
+      "signalsBody": "Signaler er statistisk bemærkelsesværdige koncentrationer af stemning inden for rapportens afsnit. Stærke og moderate signaler viser, hvor deltagernes oplevelse klumper sig sammen.",
       "starsTitle": "Stjerner, tags og filtre",
       "starsBody": "Stjernemarkér citater for at markere vigtige fund. Tilføj tags for at opbygge dit eget kodningsskema. Brug tag-filteret og søgningen til at fokusere på det, der betyder noget. Alle ændringer gemmes automatisk.",
       "exportTitle": "Eksport",
@@ -405,7 +405,7 @@
       "actionAudit": "Vi offentliggør en fuld <a href=\"https://github.com/cassiocassio/bristlenose/tree/main/docs/pii-audit\" target=\"_blank\" rel=\"noopener noreferrer\">PII-redigeringsrevision</a> med en <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/tests/fixtures/pii_horror_transcript.txt\" target=\"_blank\" rel=\"noopener noreferrer\">testtransskription</a>, <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/redacted-transcript.md\" target=\"_blank\" rel=\"noopener noreferrer\">redigeret output</a> og <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/pii-summary.txt\" target=\"_blank\" rel=\"noopener noreferrer\">rå revisionslog</a> — så du selv kan vurdere grænserne."
     },
     "signals": {
-      "intro": "Visningen Signaler fremhæver statistisk bemærkelsesværdige koncentrationer af stemning eller kodebogstags inden for rapportens afsnit. To typer signalkort.",
+      "intro": "Signaler er statistisk bemærkelsesværdige koncentrationer af stemning eller kodebogstags inden for rapportens afsnit. To typer signalkort.",
       "sentimentHeading": "Stemningssignaler",
       "sentimentIntro": "Hvert citat tagges med en af syv stemninger designet til UX-undersøgelser:",
       "frustrationDesc": "besvær, irritation, friktion. Peger på ydeevne- eller interaktionsproblemer.",

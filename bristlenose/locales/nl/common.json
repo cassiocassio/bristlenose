@@ -340,7 +340,7 @@
       "sentimentTitle": "Sentimenttagging",
       "sentimentBody": "Zeven sentimenttags ontworpen voor UX-onderzoek: frustratie, verwarring, twijfel, verrassing, tevredenheid, verrukking en vertrouwen. Elk citaat krijgt één tag op basis van de emotie die de deelnemer uit.",
       "signalsTitle": "Signalen",
-      "signalsBody": "De weergave Signalen toont statistisch opvallende concentraties van sentiment binnen rapportsecties. Sterke en gematigde signalen laten zien waar de ervaring van deelnemers samenklontert.",
+      "signalsBody": "Signalen zijn statistisch opvallende concentraties van sentiment binnen rapportsecties. Sterke en gematigde signalen laten zien waar de ervaring van deelnemers samenklontert.",
       "starsTitle": "Sterren, tags en filters",
       "starsBody": "Markeer citaten met een ster om belangrijke bevindingen aan te duiden. Voeg tags toe om je eigen coderingsschema op te bouwen. Gebruik het tagfilter en zoeken om je te richten op wat belangrijk is. Alle wijzigingen worden automatisch bewaard.",
       "exportTitle": "Exporteren",
@@ -405,7 +405,7 @@
       "actionAudit": "We publiceren een volledige <a href=\"https://github.com/cassiocassio/bristlenose/tree/main/docs/pii-audit\" target=\"_blank\" rel=\"noopener noreferrer\">PII-redactieaudit</a> met een <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/tests/fixtures/pii_horror_transcript.txt\" target=\"_blank\" rel=\"noopener noreferrer\">testtranscript</a>, <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/redacted-transcript.md\" target=\"_blank\" rel=\"noopener noreferrer\">geredigeerde uitvoer</a> en <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/pii-summary.txt\" target=\"_blank\" rel=\"noopener noreferrer\">ruwe auditlog</a> — zodat je zelf de grenzen kunt beoordelen."
     },
     "signals": {
-      "intro": "De weergave Signalen toont statistisch opvallende concentraties van sentiment of codeboektags binnen rapportsecties. Twee soorten signaalkaart.",
+      "intro": "Signalen zijn statistisch opvallende concentraties van sentiment of codeboektags binnen rapportsecties. Twee soorten signaalkaart.",
       "sentimentHeading": "Sentimentsignalen",
       "sentimentIntro": "Elk citaat wordt getagd met een van zeven sentimenten ontworpen voor UX-onderzoek:",
       "frustrationDesc": "moeite, ergernis, wrijving. Wijst op prestatie- of interactieproblemen.",

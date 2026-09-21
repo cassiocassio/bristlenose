@@ -340,7 +340,7 @@
       "sentimentTitle": "Étiquetage des sentiments",
       "sentimentBody": "Sept étiquettes de sentiment conçues pour la recherche UX : frustration, confusion, doute, surprise, satisfaction, enchantement et confiance. Chaque verbatim reçoit une étiquette basée sur l'émotion exprimée par le participant.",
       "signalsTitle": "Signaux",
-      "signalsBody": "La vue Signaux fait ressortir des concentrations statistiquement notables de sentiment au sein des sections du rapport. Les signaux forts et modérés indiquent où les expériences des participants se concentrent.",
+      "signalsBody": "Les signaux sont des concentrations statistiquement notables de sentiment au sein des sections du rapport. Les signaux forts et modérés indiquent où les expériences des participants se concentrent.",
       "starsTitle": "Favoris, étiquettes et filtres",
       "starsBody": "Mettez des verbatim en favori pour marquer les résultats importants. Ajoutez des étiquettes pour construire votre propre schéma de codage. Utilisez le filtre d'étiquettes et la recherche pour vous concentrer sur l'essentiel. Tous les changements sont enregistrés automatiquement.",
       "exportTitle": "Exporter",
@@ -405,7 +405,7 @@
       "actionAudit": "Nous publions un <a href=\"https://github.com/cassiocassio/bristlenose/tree/main/docs/pii-audit\" target=\"_blank\" rel=\"noopener noreferrer\">audit PII complet</a> avec une <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/tests/fixtures/pii_horror_transcript.txt\" target=\"_blank\" rel=\"noopener noreferrer\">transcription test</a>, le <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/redacted-transcript.md\" target=\"_blank\" rel=\"noopener noreferrer\">résultat anonymisé</a> et le <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/pii-summary.txt\" target=\"_blank\" rel=\"noopener noreferrer\">journal d’audit</a> pour juger des limites par vous-même."
     },
     "signals": {
-      "intro": "La vue Signaux fait ressortir des concentrations statistiquement notables de sentiment ou d’étiquettes de grille de codage au sein des sections du rapport. Deux types de carte de signal.",
+      "intro": "Les signaux sont des concentrations statistiquement notables de sentiment ou d’étiquettes de grille de codage au sein des sections du rapport. Deux types de carte de signal.",
       "sentimentHeading": "Signaux de sentiment",
       "sentimentIntro": "Chaque verbatim est étiqueté avec l’un des sept sentiments conçus pour la recherche UX :",
       "frustrationDesc": "difficulté, agacement, friction. Indique des problèmes de performance ou d’interaction.",

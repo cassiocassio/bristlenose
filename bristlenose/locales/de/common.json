@@ -340,7 +340,7 @@
       "sentimentTitle": "Stimmungsmarkierung",
       "sentimentBody": "Sieben Stimmungs-Tags für UX-Forschung: Frustration, Verwirrung, Zweifel, Überraschung, Zufriedenheit, Begeisterung und Vertrauen. Jedes Zitat erhält einen Tag basierend auf der vom Teilnehmer ausgedrückten Emotion.",
       "signalsTitle": "Signale",
-      "signalsBody": "Die Ansicht „Signale“ zeigt statistisch auffällige Konzentrationen von Stimmungen innerhalb der Berichtsabschnitte. Starke und moderate Signale heben hervor, wo sich die Erfahrungen der Teilnehmer bündeln.",
+      "signalsBody": "Signale sind statistisch auffällige Konzentrationen von Stimmungen innerhalb der Berichtsabschnitte. Starke und moderate Signale heben hervor, wo sich die Erfahrungen der Teilnehmer bündeln.",
       "starsTitle": "Sterne, Tags und Filter",
       "starsBody": "Markieren Sie Zitate mit Sternen, um wichtige Erkenntnisse hervorzuheben. Fügen Sie Tags hinzu, um Ihr eigenes Codierungsschema aufzubauen. Verwenden Sie den Tag-Filter und die Suche, um sich auf das Wesentliche zu konzentrieren. Alle Änderungen werden automatisch gespeichert.",
       "exportTitle": "Exportieren",
@@ -405,7 +405,7 @@
       "actionAudit": "Wir veröffentlichen ein vollständiges <a href=\"https://github.com/cassiocassio/bristlenose/tree/main/docs/pii-audit\" target=\"_blank\" rel=\"noopener noreferrer\">PII-Audit</a> mit einem <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/tests/fixtures/pii_horror_transcript.txt\" target=\"_blank\" rel=\"noopener noreferrer\">Testtranskript</a>, der <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/redacted-transcript.md\" target=\"_blank\" rel=\"noopener noreferrer\">geschwärzten Ausgabe</a> und dem <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/pii-summary.txt\" target=\"_blank\" rel=\"noopener noreferrer\">Audit-Protokoll</a> — damit Sie die Grenzen selbst beurteilen können."
     },
     "signals": {
-      "intro": "Die Ansicht „Signale“ zeigt statistisch auffällige Konzentrationen von Stimmung oder Codebuch-Tags innerhalb der Berichtsabschnitte. Zwei Arten von Signalkarten.",
+      "intro": "Signale sind statistisch auffällige Konzentrationen von Stimmung oder Codebuch-Tags innerhalb der Berichtsabschnitte. Zwei Arten von Signalkarten.",
       "sentimentHeading": "Stimmungssignale",
       "sentimentIntro": "Jedes Zitat wird mit einer von sieben Stimmungen für die UX-Forschung getaggt:",
       "frustrationDesc": "Schwierigkeit, Ärger, Reibung. Weist auf Leistungs- oder Interaktionsprobleme hin.",

@@ -340,7 +340,7 @@
       "sentimentTitle": "Sentimenttaggning",
       "sentimentBody": "Sju sentimenttaggar utformade för UX-forskning: frustration, förvirring, tvivel, överraskning, tillfredsställelse, förtjusning och tillit. Varje citat får en tagg baserat på deltagarens uttryckta känsla.",
       "signalsTitle": "Signaler",
-      "signalsBody": "Vyn Signaler lyfter fram statistiskt märkbara koncentrationer av sentiment inom rapportens avsnitt. Starka och måttliga signaler visar var deltagarupplevelsen klustrar sig.",
+      "signalsBody": "Signaler är statistiskt märkbara koncentrationer av sentiment inom rapportens avsnitt. Starka och måttliga signaler visar var deltagarupplevelsen klustrar sig.",
       "starsTitle": "Stjärnor, taggar och filter",
       "starsBody": "Stjärnmärk citat för att markera viktiga fynd. Lägg till taggar för att bygga ditt eget kodningsschema. Använd taggfiltret och sökningen för att fokusera på det som är viktigt. Alla ändringar sparas automatiskt.",
       "exportTitle": "Export",
@@ -405,7 +405,7 @@
       "actionAudit": "Vi publicerar en fullständig <a href=\"https://github.com/cassiocassio/bristlenose/tree/main/docs/pii-audit\" target=\"_blank\" rel=\"noopener noreferrer\">PII-redigeringsgranskning</a> med en <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/tests/fixtures/pii_horror_transcript.txt\" target=\"_blank\" rel=\"noopener noreferrer\">testtranskription</a>, <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/redacted-transcript.md\" target=\"_blank\" rel=\"noopener noreferrer\">redigerad utdata</a> och <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/pii-summary.txt\" target=\"_blank\" rel=\"noopener noreferrer\">rå granskningslogg</a> — så att du kan bedöma gränserna själv."
     },
     "signals": {
-      "intro": "Vyn Signaler lyfter fram statistiskt märkbara koncentrationer av sentiment eller kodbokstaggar inom rapportens avsnitt. Två typer av signalkort.",
+      "intro": "Signaler är statistiskt märkbara koncentrationer av sentiment eller kodbokstaggar inom rapportens avsnitt. Två typer av signalkort.",
       "sentimentHeading": "Sentimentsignaler",
       "sentimentIntro": "Varje citat taggas med ett av sju sentiment utformade för UX-forskning:",
       "frustrationDesc": "svårighet, irritation, friktion. Pekar på prestanda- eller interaktionsproblem.",

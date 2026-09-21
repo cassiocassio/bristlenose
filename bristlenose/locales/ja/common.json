@@ -335,7 +335,7 @@
       "sentimentTitle": "感情タグ付け",
       "sentimentBody": "UX リサーチ向けに設計された 7 種類の感情タグ: フラストレーション、混乱、疑念、驚き、満足、喜び、自信。各発言には、参加者が表現した感情に基づいて 1 つのタグが付けられます。",
       "signalsTitle": "シグナル",
-      "signalsBody": "「シグナル」では、レポートの各セクション内で統計的に目立つ感情の集中が示されます。強いシグナルと中程度のシグナルが、参加者の体験がどこに集まっているかを示します。",
+      "signalsBody": "シグナルとは、レポートの各セクション内で統計的に目立つ感情の集中です。強いシグナルと中程度のシグナルが、参加者の体験がどこに集まっているかを示します。",
       "starsTitle": "スター、タグ、フィルタ",
       "starsBody": "重要な発見にはスターを付けます。タグを追加して独自のコーディングスキームを構築できます。タグフィルタと検索を使って、注目したい点に焦点を絞れます。すべての変更は自動的に保存されます。",
       "exportTitle": "書き出し",
@@ -400,7 +400,7 @@
       "actionAudit": "詳細な <a href=\"https://github.com/cassiocassio/bristlenose/tree/main/docs/pii-audit\" target=\"_blank\" rel=\"noopener noreferrer\">PII 削除監査</a> を、<a href=\"https://github.com/cassiocassio/bristlenose/blob/main/tests/fixtures/pii_horror_transcript.txt\" target=\"_blank\" rel=\"noopener noreferrer\">テスト用トランスクリプト</a>、<a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/redacted-transcript.md\" target=\"_blank\" rel=\"noopener noreferrer\">削除済み出力</a>、<a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/pii-summary.txt\" target=\"_blank\" rel=\"noopener noreferrer\">生の監査ログ</a> とともに公開しています — 限界をご自身でご判断ください。"
     },
     "signals": {
-      "intro": "「シグナル」では、レポートの各セクション内で、統計的に目立つ感情やコードブックタグの集中が示されます。シグナルカードは 2 種類あります。",
+      "intro": "シグナルとは、レポートの各セクション内で統計的に目立つ感情やコードブックタグの集中です。シグナルカードは 2 種類あります。",
       "sentimentHeading": "感情シグナル",
       "sentimentIntro": "各発言には、UX リサーチ向けに設計された 7 種類の感情のうち 1 つがタグ付けされます:",
       "frustrationDesc": "困難、いらだち、フリクション。性能やインタラクションの問題を示します。",

@@ -340,7 +340,7 @@
       "sentimentTitle": "Etichettatura del sentiment",
       "sentimentBody": "Sette etichette di sentiment pensate per la ricerca UX: frustrazione, confusione, dubbio, sorpresa, soddisfazione, entusiasmo e fiducia. Ogni citazione riceve un'etichetta in base all'emozione espressa dal partecipante.",
       "signalsTitle": "Segnali",
-      "signalsBody": "La vista Segnali mette in evidenza concentrazioni statisticamente rilevanti di sentiment all'interno delle sezioni del report. I segnali forti e moderati evidenziano dove si concentra l'esperienza dei partecipanti.",
+      "signalsBody": "I segnali sono concentrazioni statisticamente rilevanti di sentiment all'interno delle sezioni del report. I segnali forti e moderati evidenziano dove si concentra l'esperienza dei partecipanti.",
       "starsTitle": "Contrassegni, tag e filtri",
       "starsBody": "Contrassegna le citazioni per evidenziare i risultati importanti. Aggiungi tag per costruire il proprio schema di codifica. Usa il filtro dei tag e la ricerca per concentrarti su ciò che conta. Tutte le modifiche vengono salvate automaticamente.",
       "exportTitle": "Esporta",
@@ -405,7 +405,7 @@
       "actionAudit": "Pubblichiamo un <a href=\"https://github.com/cassiocassio/bristlenose/tree/main/docs/pii-audit\" target=\"_blank\" rel=\"noopener noreferrer\">controllo completo della rimozione dei dati personali</a> con una <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/tests/fixtures/pii_horror_transcript.txt\" target=\"_blank\" rel=\"noopener noreferrer\">trascrizione di prova</a>, l'<a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/redacted-transcript.md\" target=\"_blank\" rel=\"noopener noreferrer\">output redatto</a> e il <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/pii-summary.txt\" target=\"_blank\" rel=\"noopener noreferrer\">registro di controllo grezzo</a> — così da poter valutare di persona i limiti."
     },
     "signals": {
-      "intro": "La vista Segnali mette in evidenza concentrazioni statisticamente rilevanti di sentiment o di tag del libro dei codici all'interno delle sezioni del report. Due tipi di scheda segnale.",
+      "intro": "I segnali sono concentrazioni statisticamente rilevanti di sentiment o di tag del libro dei codici all'interno delle sezioni del report. Due tipi di scheda segnale.",
       "sentimentHeading": "Segnali di sentiment",
       "sentimentIntro": "Ogni citazione è etichettata con uno di sette sentiment pensati per la ricerca UX:",
       "frustrationDesc": "difficoltà, fastidio, attrito. Indica problemi di prestazioni o di interazione.",

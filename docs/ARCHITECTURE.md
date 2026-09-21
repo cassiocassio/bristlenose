@@ -164,8 +164,13 @@ There are two release paths, because there are two kinds of artefact.
 
 Ordinary day-to-day: commit to `main`, and when you want to ship, bump the version and
 tag. Version lives in exactly one place — `bristlenose/__init__.py`
-(`__version__`) — and `./scripts/bump-version.py` updates it plus the man page and creates
-the tag. GitHub Actions then does the rest: CI → PyPI publish → GitHub Release → Homebrew
+(`__version__`) — and `./scripts/bump-version.py` updates it plus the man page and the
+pbxproj, and **stages them without committing or tagging** — it cannot tag
+correctly, because the commit the tag belongs on does not exist yet (the
+CHANGELOG and README prose come after the bump). It stopped tagging on 14 Aug
+2026. You commit, then `git tag v<X.Y.Z>`, then push `main` and the tag as two
+separate pushes — never `--tags`. `./scripts/release.sh run` does this in order.
+GitHub Actions then does the rest: CI → PyPI publish → GitHub Release → Homebrew
 tap dispatch → Copr build (after PyPI is verified fetchable — Source0 comes from there); the Snap workflow builds edge on push and stable on a `v*` tag.
 
 The full pipeline, secrets, cross-repo topology, and the mandatory **post-push PyPI

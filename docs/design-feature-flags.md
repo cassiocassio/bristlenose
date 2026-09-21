@@ -271,8 +271,15 @@ toggle nobody asked for.
 
 ## 6. When the mechanism doesn't exist yet
 
-**Python has no parked-feature flag.** Every Python gate is a host fact (§ 3)
-or a seed (§ 4). If a pipeline or server feature needs parking, copy the
+**Python's parked-feature flags are fields on `Config`, not a register of their
+own.** Two ship: `experimental_codebook_lab` (`config.py:232`, default `False`
+since 20 Sep 2026) and `experimental_chat_lens` (`:238`, default `True`), each
+gating a router mount in `server/app.py` (`:250`, `:265`). So the mechanism is
+not missing — it is spelled differently from § 1's, and a reader told Python
+has none will invent a third shape. _This section said "Python has no
+parked-feature flag" on the day it was written, which was the same day the lab
+flag was flipped default-off._ Neither has a `DEFAULTS` or a
+`reset_feature_flags()`, which is the real gap; if a third is added, copy the
 frontend shape rather than reaching for an env var: a `bristlenose/feature_flags.py`
 holding a dataclass of booleans with a `DEFAULTS` and a `reset_feature_flags()`,
 read by production code and flipped by tests. An env var is the wrong shape

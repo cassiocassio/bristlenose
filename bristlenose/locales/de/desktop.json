@@ -134,6 +134,7 @@
       "revealTranscriptsHint": "Die Transkriptdateien auf der Festplatte"
     },
     "video": {
+      "title": "Video",
       "play": "Wiedergabe",
       "pause": "Pause",
       "skipForward5": "5 Sekunden vorspulen",

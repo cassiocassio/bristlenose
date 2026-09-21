@@ -134,6 +134,7 @@
       "revealTranscriptsHint": "Los archivos de transcripci\u00f3n en el disco"
     },
     "video": {
+      "title": "V\u00eddeo",
       "play": "Reproducir",
       "pause": "Pausar",
       "skipForward5": "Avanzar 5 segundos",

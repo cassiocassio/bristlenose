@@ -134,6 +134,7 @@
       "revealTranscriptsHint": "Els fitxers de transcripció al disc"
     },
     "video": {
+      "title": "V\u00eddeo",
       "play": "Reprodueix",
       "pause": "Pausa",
       "skipForward5": "Avança 5 segons",

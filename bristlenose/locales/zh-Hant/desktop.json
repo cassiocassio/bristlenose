@@ -132,6 +132,7 @@
       "revealTranscriptsHint": "磁碟上的逐字稿檔案"
     },
     "video": {
+      "title": "\u5f71\u7247",
       "play": "播放",
       "pause": "暫停",
       "skipForward5": "向前跳 5 秒",

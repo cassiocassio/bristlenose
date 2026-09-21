@@ -134,6 +134,7 @@
       "revealTranscriptsHint": "Diskteki döküm dosyaları"
     },
     "video": {
+      "title": "Video",
       "play": "Oynat",
       "pause": "Duraklat",
       "skipForward5": "5 Saniye İleri Sar",

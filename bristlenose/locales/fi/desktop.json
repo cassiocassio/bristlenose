@@ -134,6 +134,7 @@
       "revealTranscriptsHint": "Litterointitiedostot levyllä"
     },
     "video": {
+      "title": "Video",
       "play": "Toista",
       "pause": "Tauko",
       "skipForward5": "Kelaa eteenpäin 5 sekuntia",

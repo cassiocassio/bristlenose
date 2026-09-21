@@ -132,6 +132,7 @@
       "revealTranscriptsHint": "\u30c7\u30a3\u30b9\u30af\u4e0a\u306e\u30c8\u30e9\u30f3\u30b9\u30af\u30ea\u30d7\u30c8\u30d5\u30a1\u30a4\u30eb"
     },
     "video": {
+      "title": "\u30d3\u30c7\u30aa",
       "play": "再生",
       "pause": "一時停止",
       "skipForward5": "5 秒進む",

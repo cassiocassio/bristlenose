@@ -138,6 +138,7 @@
       "revealTranscriptsHint": "Pliki transkrypcji na dysku"
     },
     "video": {
+      "title": "Wideo",
       "play": "Odtwórz",
       "pause": "Wstrzymaj",
       "skipForward5": "Przewiń do przodu o 5 sekund",

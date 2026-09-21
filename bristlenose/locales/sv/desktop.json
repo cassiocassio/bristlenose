@@ -134,6 +134,7 @@
       "revealTranscriptsHint": "Transkriptionsfilerna på disken"
     },
     "video": {
+      "title": "Video",
       "play": "Spela",
       "pause": "Pausa",
       "skipForward5": "Hoppa framåt 5 sekunder",

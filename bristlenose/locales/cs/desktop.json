@@ -138,6 +138,7 @@
       "revealTranscriptsHint": "Soubory p\u0159epis\u016f na disku"
     },
     "video": {
+      "title": "Video",
       "play": "Přehrát",
       "pause": "Pozastavit",
       "skipForward5": "Přeskočit o 5 sekund vpřed",

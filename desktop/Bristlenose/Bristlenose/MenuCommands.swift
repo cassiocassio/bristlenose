@@ -343,16 +343,40 @@ private struct CustomMenus: Commands {
     let i18n: I18n
 
     var body: some Commands {
-        CommandMenu("Project") {
+        // **Menu-bar titles, via `LocalizedStringKey(runtime String)`.**
+        //
+        // `CommandMenu` takes a `LocalizedStringKey`, which resolves against the
+        // main bundle's `.lproj` tables — not our runtime JSON — which is why
+        // these were English literals and `docs/design-i18n.md` recorded them as
+        // untranslatable. The escape is that a `LocalizedStringKey` built from a
+        // runtime string **falls back to its own content when the lookup misses**,
+        // and this bundle has `knownRegions = (en, Base)` and ships no
+        // `Localizable.strings` at all, so every lookup misses by construction.
+        // The already-translated value is what renders. Same idiom as
+        // `Text(LocalizedStringKey(error))` in `LLMSettingsView` and the two in
+        // `OllamaDownloadPill`.
+        //
+        // Three of the four are **lifts of reviewed strings**, not new copy —
+        // the house rule from `CLAUDE.md` ("look for an already-translated twin
+        // first"). Only `video.title` is new.
+        //
+        // **Caveat that comes with the idiom:** `LocalizedStringKey` interprets
+        // markdown and `%` format specifiers. Today's twenty-one values are all
+        // single plain nouns, and `tests/test_menu_title_keys.py` fails if one
+        // ever gains a character that would be eaten.
+        //
+        // Not `Diagnostics` (below): App-Store-hidden chrome, English by the
+        // surface table in `docs/design-i18n.md`.
+        CommandMenu(LocalizedStringKey(i18n.t("common.nav.project"))) {
             ProjectMenuContent(bridgeHandler: bridgeHandler, projectIndex: projectIndex, i18n: i18n)
         }
-        CommandMenu("Codes") {
+        CommandMenu(LocalizedStringKey(i18n.t("desktop.toolbar.codes"))) {
             CodesMenuContent(bridgeHandler: bridgeHandler, i18n: i18n)
         }
-        CommandMenu("Quotes") {
+        CommandMenu(LocalizedStringKey(i18n.t("common.nav.quotes"))) {
             QuotesMenuContent(bridgeHandler: bridgeHandler, i18n: i18n)
         }
-        CommandMenu("Video") {
+        CommandMenu(LocalizedStringKey(i18n.t("desktop.menu.video.title"))) {
             VideoMenuContent(bridgeHandler: bridgeHandler, i18n: i18n)
         }
     }

@@ -134,6 +134,7 @@
       "revealTranscriptsHint": "The transcript files on disk"
     },
     "video": {
+      "title": "Video",
       "play": "Play",
       "pause": "Pause",
       "skipForward5": "Skip Forward 5 Seconds",

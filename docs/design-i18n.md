@@ -331,9 +331,49 @@ Low-frequency content. Researchers see it once.
    > not been touched since May 2026** — it inherits this correction and has
    > not yet had it applied.
 
-### `CommandMenu` titles stay in English
+### `CommandMenu` titles — **our four now follow the locale (21 Sep 2026)**
 
-SwiftUI's `CommandMenu("Project")` takes `LocalizedStringKey` which resolves from `.lproj` bundles, not runtime JSON. Rather than maintaining a second localisation format for 4 strings, menu titles ("Project", "Codes", "Quotes", "Video") stay in English. Menu *items* inside are translated via `I18n.t()`. This matches ATLAS.ti and MAXQDA precedent — both keep English menu titles even in localised UIs.
+> **Superseded.** This section read: *"SwiftUI's `CommandMenu("Project")` takes
+> `LocalizedStringKey` which resolves from `.lproj` bundles, not runtime JSON.
+> Rather than maintaining a second localisation format for 4 strings, menu titles
+> stay in English… This matches ATLAS.ti and MAXQDA precedent."* The premise is
+> accurate and the conclusion did not follow.
+
+`LocalizedStringKey` built from a **runtime string** falls back to its own content
+when the bundle lookup misses — and this bundle ships no `Localizable.strings` and
+declares `knownRegions = (en, Base)`, so every lookup misses by construction. So
+`CommandMenu(LocalizedStringKey(i18n.t("common.nav.project")))` renders the
+translated value. The idiom was already in the tree three times
+(`LLMSettingsView:237`, `OllamaDownloadPill` ×2) and nobody had connected it to
+this section.
+
+Three of the four are **lifts of reviewed strings**, not new copy —
+`common.nav.project`, `desktop.toolbar.codes`, `common.nav.quotes`. Only
+`desktop.menu.video.title` is new (21 locales, machine-seeded from the standard
+noun; zh-Hant-HK inherits).
+
+**The hazard that comes with it:** `LocalizedStringKey` interprets markdown and
+`%` format specifiers, so a translation gaining a `*`, `_`, backtick, bracket or
+`%` would render mangled. `tests/test_menu_title_keys.py` fails on that, and on a
+key rename — the titles are string literals in Swift, invisible to every other
+gate. Both halves mutation-proved.
+
+**`Diagnostics` stays English** — App-Store-hidden chrome, per §"Which surfaces
+are targets".
+
+### The *standard* menus are a different mechanism — and still English
+
+File, Edit, View, Window and Help are **AppKit's**, not ours, and AppKit localises
+them from the app's own declared localizations. The project has
+`knownRegions = (en, Base)` and the built `.app` carries no `.lproj` directories,
+so macOS serves its English strings — along with every standard item inside them
+(Cut/Copy/Paste, Minimize, Zoom, Enter Full Screen…).
+
+Declaring the locales would hand all of that over in **Apple's own wording, for
+free** — the same "look it up, don't translate it" move as the `Choose` button and
+the TCC prompts. It is an Xcode project change with App Store Connect
+consequences, so it is written down here rather than taken in passing. Measured
+21 Sep 2026; nothing in the tree had recorded *why* those five were English.
 
 ### Toolbar overflow: `_short` keys
 

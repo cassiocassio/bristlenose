@@ -134,6 +134,7 @@
       "revealTranscriptsHint": "De transcriptbestanden op schijf"
     },
     "video": {
+      "title": "Video",
       "play": "Speel af",
       "pause": "Pauzeer",
       "skipForward5": "5 seconden vooruit",

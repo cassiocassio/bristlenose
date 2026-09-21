@@ -595,10 +595,20 @@ Both builds are DEBUG, `sandbox=on`, `sidecar=bundled`, so the sidecar is the
 real bundled one rather than a dev server — the SPA, the locale files and the
 route all came through the shipped path.
 
-## 12. Not done here — release
+## 12. Released — 0.30.0, 21 Sep 2026
 
-The rename is on `main` and in **no released build**. Every channel is still
-0.29.1; `main` is 488 commits past that tag, of which this work is six.
+**Shipped.** Tag `v0.30.0` on `f5309362`, TestFlight build 3578, the notarised
+`.dmg`; PyPI and the downstream channels follow the tag run (`release.sh verify`
+is the record). The release itself failed four times before it built — none of
+them the rename's fault, one of them mine — and is written up in
+`docs/release-log.md` § 0.30.0 and `docs/release-premortem.md` incidents 23–27.
+
+The paragraph below is what this section said before the release, kept as
+written because its reasoning about ordering was correct and still applies to
+the *website* commit, which waits on `verify`.
+
+> The rename is on `main` and in **no released build**. Every channel is still
+> 0.29.1; `main` is 488 commits past that tag, of which this work is six.
 
 - **The website commit (`12981ac`) stays local until the release.** It documents
   a lens called Signals; publishing it before a build exists that says so would

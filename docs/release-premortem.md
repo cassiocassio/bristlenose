@@ -130,6 +130,61 @@ it can be inspected.
 > pipeline's `attempted == succeeded + failed`. On the 23 Aug denominator
 > nothing moved: 22 arrived and was closed the same day.
 
+> **21 Sep 2026 — incidents 23–27, from the 0.30.0 run. The 23 Aug counts
+> above are left as written; this records the delta.**
+>
+> Five new instances in one night, and they sort into the two shapes without
+> remainder. Four are the house defect; one is the reorder's residual.
+>
+> **A check that reports success while seeing nothing — 23, 24, 25, 26.**
+>
+> - **23 — the drift gate reads the venv the release then discards.** Both
+>   release lanes run `ensure-sidecar.sh --force`, which re-resolves every
+>   `>=` floor; preflight's `check-dep-drift.py` reads `.venv-sidecar` *before*
+>   either force. It cannot see the drift the release causes, only drift that
+>   was already there. 24 packages moved, including a major — the recurrence of
+>   #5 that the 23 Aug fix was meant to prevent, and would have, had the
+>   discovery been of the right venv. Same night, the live-provider probe ran
+>   under `.venv` and passed 7/7 on an SDK eleven minors older than the one
+>   shipping. Fix: resolve once, in preflight; lanes reuse.
+> - **24 — eleven green tests over an archive that could not run.**
+>   `test_entitlements_split.py` asserted the `CODE_SIGN_ENTITLEMENTS` override
+>   *appeared in the archive invocation*. It did. The path was relative, and a
+>   command-line build setting reaches every target — the Settings package
+>   resolved it against its own `SRCROOT` and the archive died on a target the
+>   override was never about. First `.dmg` since the override landed. Two tests
+>   added, mutation-proved.
+> - **25 — `bash -n` blessed a truncated command.** A comment placed inside a
+>   backslash continuation ended the `xcodebuild` invocation: no override, no
+>   `archive` verb, BUILD SUCCEEDED, next line "command not found". Valid shell,
+>   wrong command. The quiet variant ships MAS entitlements on the Developer-ID
+>   channel with no error at all. Fix is the general one: run the block with a
+>   stub and assert on the arguments that *arrive*, not the text of the file.
+> - **26 — PyInstaller logs a missing hidden import as ERROR and builds
+>   anyway.** Five entries named a package renamed a day earlier; the step
+>   exited on an unrelated cause and the errors scrolled past. Nothing in the
+>   repo read them. A module is a hidden import *because* analysis cannot see
+>   it, so its absence is silent until a researcher hits the `ImportError`.
+>   Gate added: every `bristlenose.*` hidden import must resolve.
+>
+> **A verdict arriving after the act it should have gated — 27.**
+>
+> - **27 — the tag checks provenance; the uploads before it do not.**
+>   `verdict_tag_provenance` runs only in `TAG_CMD`. `ci-green` finds its run by
+>   `ci-sha` and never compares HEAD. Land a fix mid-run, resume with
+>   `strict-ci` still marked ok, and the TestFlight build and the `.dmg`
+>   permalink both ship from a HEAD the strict verdict does not name — then the
+>   tag refuses. #5's shape exactly, one step later. Avoided twice tonight by
+>   the documented hand-update of `ci-sha`, at ~38 minutes of CI each. Fix: the
+>   resume path refuses, or resets `strict-ci`, when HEAD ≠ `ci-sha`.
+>
+> What generalises past the five: **every one was caught by running the
+> release, not by a gate**, and three of the five were latent — green under
+> tests that could not fail, waiting for the first real archive. The 23 Aug
+> observation stands and hardens: a gate written against a *string* in a file
+> is the house defect wearing a test's clothes. Assert on the thing that
+> arrives.
+
 ---
 
 ## What this exercise changed

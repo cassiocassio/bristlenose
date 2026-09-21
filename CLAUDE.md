@@ -1161,7 +1161,22 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 
 ## Current status
 
-**Internal TestFlight since 14 Jul 2026** — shipping build **0.29.0 (3067)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
+**Internal TestFlight since 14 Jul 2026** — shipping build **0.30.0 (3578)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
+
+**0.30.0 shipped 21 Sep 2026, overnight and unattended — verified 7 of 9 channels at 06:58 BST with Snap edge and Copr in flight.** The
+Signals release: the Analysis lens is Signals on every surface (labels, route,
+package, API, CSS, symbols, locale namespace, website), generation-4 signal
+cards, CLI-only PII redaction end to end, the Codebooks focus cursor, ⌘F, one
+keychain. **The release machine failed four times before it built, three of
+them latent** — an unsigned test bundle in DerivedData, the sidecar re-resolving
+24 dependencies *after* the drift gate had looked (a recurrence of 0.27.0 #5), a
+relative `CODE_SIGN_ENTITLEMENTS` that the Settings package could not resolve,
+and a comment of mine that truncated the archive command. Two of those were
+green under tests that could not fail. Three gates and a resume guard came out
+of it, all mutation-proved; `--yes` was already there and now appears on the
+resume hints. Full account: `docs/release-log.md` § 0.30.0 and
+`docs/release-premortem.md` incidents 23–27. Structural work on the board:
+resolve dependencies once, in preflight.
 
 **0.29.1 shipped 31 Aug 2026, evening — verified 9 of 9 channels.** A patch,
 and a regression in 0.29.0's own headline feature: only one codebook could be

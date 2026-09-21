@@ -52,6 +52,161 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+## 0.30.0 — 21 Sep 2026 · Tier 1
+
+**Channels:** PyPI · GitHub Release · Homebrew · TestFlight (build 3578) ·
+`.dmg` · website · Snap edge · Copr. **7 of 9 verified at 06:58 BST, fifteen minutes after the tag.** Snap edge had
+published (workflow green; the store channel-map lags) and Copr was building
+`0.30.0-1` (build 11009213). Neither is a failure; both are re-verified below. The website deploy ran
+unattended (`deploy.sh --yes`, BatchMode SSH) once PyPI answered 200 on the
+version-specific endpoint — twelve minutes after the tag.
+
+**What shipped.** The Analysis lens is Signals on every surface (21 locales,
+route, package, API, CSS, symbols — and the website copy, held for deploy);
+signal cards generation 4; PII redaction end to end on the CLI; a focus cursor
+in Codebooks with a Codes menu; ⌘F; one keychain across app and CLI. 489
+commits since v0.29.1, 182 of them product-touching. Build 3578.
+
+**The headline of this entry is that the release machine failed four times
+before it built, and three of the four were latent rather than new.** Two had
+been green under tests that could not fail; one had been waiting since 11 Sep
+for the first `.dmg` archive to meet it; one was mine, introduced while fixing
+the third. Every one was found by the run, not by a gate — the gates that
+existed reported success while seeing nothing, which is the premortem's named
+house defect, and this entry adds four instances of it.
+
+### Timing (measured unless noted)
+
+From `events.jsonl`. Pipeline time only; the wall was 6.3 h (23:28Z → 05:43Z) of which
+most was a human asleep and me debugging.
+
+| step | attempts | outcome | time |
+|---|---|---|---|
+| preflight | 2 | fail (dirty tree — another session's WIP) → ok | 1m23 · 1m17 |
+| bump + commit | 1 | ok | 0s |
+| push main | 1 | ok | 3s |
+| strict CI dispatch | 3 | ok each; verdict re-pointed by hand twice | 2s · 1s · 1s |
+| build-all | 3 | fail (unsigned xctest) → fail (inventory drift) → ok | 0m16 · 3m28 · **5m28** |
+| build-dmg | 3 | fail (entitlements path) → fail (my truncation) → ok | 3m22 · 4m07 · **13m35** |
+| ci-green | 1 | ok — verdict already green | 2s |
+| testflight | 1 | ok — build 3578 | 6m51 |
+| dmg | 1 | ok | 1m57 |
+| tag | 1 | ok — `v0.30.0` on `f5309362` | 2s |
+| snap | 1 | ok (dispatch) | 2s |
+
+Strict CI ran **four** times on three commits (`99b47511`, `b99e97f9` ×2,
+`4aac8523`, `f5309362`); each ~38 min, all green bar the mypy soft gate. Two
+of those cycles were the cost of landing fixes mid-run — see #6.
+
+### Builds
+
+- Sidecar rebuilt three times, each a full dependency re-resolve (see #2).
+- `build-all` attempt 3 and `build-dmg` attempt 3 both from a clean tree.
+- The archive was independently verified before the driver reached it: real
+  `xcodebuild archive` with the fix → **ARCHIVE SUCCEEDED**, app carries
+  `app-sandbox` and **no** `application-groups`, `Settings_Settings.bundle`
+  signs clean.
+
+### Tricky things
+
+1. **DerivedData held `BristlenoseTests.xctest` built but unsigned.** The
+   incremental build called it up to date; the version bump forced the app's
+   signing step, which refused to wrap an unsigned nested bundle. Not keychain
+   — the identity signed a scratch binary non-interactively, exit 0. Fixed by
+   `xcodebuild clean` on the Debug scheme. The gate's own message ("Swift
+   suite red, *or* the test bundle failed to build") covers both and names
+   neither.
+2. **Both release lanes `--force` the sidecar, which re-resolves every
+   dependency — after the drift gate has looked.** `build-all.sh:314` and
+   `build-dmg.sh:287`. `check-release-ready.sh` reads whatever `.venv-sidecar`
+   exists *before* either force, so it is structurally blind to the drift the
+   release itself causes. Tonight: 24 packages moved between two builds an hour
+   apart — `filelock` 3.32.4 → 4.0.1 (major), `openai` 3.5.0 → 3.16.2 under the
+   provider this release rewrites. Preflight's "providers live 7/7" had been
+   measured under `.venv`. Re-run under `.venv-sidecar`: 21 live calls, 7/7.
+   **A recurrence of 0.27.0 #5 (`openai>=1.50` → 3.0.0 at 10pm mid-release).**
+   The 23 Aug fix moved the discovery into preflight; the discovery is of the
+   wrong venv.
+3. **`CODE_SIGN_ENTITLEMENTS` was relative, and a command-line build setting
+   applies to every target.** Xcode resolved it against the Settings Swift
+   package's `SRCROOT` in DerivedData, where it does not exist. Unexercised
+   since `11d9cb6f`: the last `.dmg` predates it (31 Aug). Eleven tests in
+   `test_entitlements_split.py` were green throughout — they assert the
+   override *appears in the invocation*, never that the archive runs.
+4. **My comment truncated the command it explained.** A `#` line between two
+   backslash-continued lines ends the command there. `xcodebuild` ran with no
+   override and no `archive` verb, printed BUILD SUCCEEDED, and the next line
+   failed as a command. `bash -n` passes it. The quiet variant — truncate
+   *after* `archive` — ships the MAS entitlements on the Developer-ID channel
+   with no error. The thirteenth test now stubs `xcodebuild` and reads the
+   arguments that arrive.
+5. **The PyInstaller spec still named `bristlenose.analysis.*`.** Five hidden
+   imports. PyInstaller logs `ERROR: Hidden import ... not found` and keeps
+   building; the step exited on something else. The rename sweep covered
+   `.py/.md/.json/.toml/.cfg` and not `.spec`. Gate added:
+   `test_packaging_artifacts_coverage` resolves every `bristlenose.*` hidden
+   import (`_build_info` excepted with its reason).
+6. **`ci-sha` and HEAD diverge on every mid-run fix, and only the tag checks.**
+   `verdict_tag_provenance` is called from `TAG_CMD` alone; `ci-green` looks up
+   the run by `ci-sha` and never compares HEAD; the TestFlight and `.dmg`
+   uploads precede the tag. A resume with `strict-ci` marked ok and HEAD moved
+   would ship builds CI never saw and refuse only at the tag. Avoided twice by
+   hand-updating `ci-sha` after a hand re-dispatch — the remedy the guard's
+   own comment documents — at ~38 min of CI each.
+7. **`--yes` already existed, tested at five sites in `test-release-e2e.sh`.**
+   Missed because the four runtime resume hints (`plan` footer, "fix, then …
+   resumes here", "Resume:", `retry`'s) print the command without it. The
+   unattended run was driven by `printf '0.30.0\n' |` instead — equivalent,
+   unnecessary, and one grep from a duplicate flag.
+8. **A backgrounded `pytest … | tail` reported exit 0 on a real failure.**
+   `test_lead_paragraph_atom.py` hardcoded `organisms/analysis.css`. The
+   documented trap; caught by reading the output.
+9. **mypy is 164 against a ceiling of 149.** Pre-existing — red on four
+   commits before the rename — and a declared soft gate. Left alone.
+10. **The Swift suite reports 1462 or 1463 on an unchanged tree.** A flake, not
+    a one-test regression; two runs on the same HEAD gave both numbers.
+
+### Skill changes provoked by this release
+
+| Change | Why |
+|---|---|
+| `build-dmg.sh`: entitlements override is absolute, comment moved above the invocation | #3, #4 |
+| `test_entitlements_split.py` +2: path is absolute; stub `xcodebuild` reads arriving args | #3, #4 — mutation-proved against each |
+| `test_packaging_artifacts_coverage.py` +1: every `bristlenose.*` hidden import resolves | #5 — mutation-proved |
+| `THIRD-PARTY-BINARIES.md` regenerated twice, second time proven live | #2 |
+| `release.sh`: four resume hints carry `[--yes]`; resume re-dispatches strict CI when HEAD ≠ `ci-sha` | #7, #6 |
+
+### Owed out of this release
+
+- **Resolve dependencies once per release, in preflight.** Rebuild
+  `.venv-sidecar` there; both lanes then reuse it (no `--force`). The drift
+  verdict becomes a verdict about the venv that ships, and a regenerated
+  inventory folds into the bump commit — one HEAD move, one CI dispatch, no
+  cascade. Closes #2 and most of #6's cost. Also lets the live-provider probe
+  run under `.venv-sidecar`, which closes the standing board card.
+- **Resume refuses, or resets `strict-ci`, when HEAD ≠ `ci-sha`** — before any
+  upload, not at the tag. Closes #6. Three lines in the resume path.
+- **`xcodebuild clean` before `build-for-testing`** in `build-all` 1c, or a
+  nested-signature check on the built products. Closes #1.
+- **The unpinned stack is a decision, not a defect** — board card stands.
+- ~~**Website deploy** after `verify`; commit `12981ac` is waiting on it.~~ ✅ **done
+  06:57 BST, same night, unattended.** `deploy.sh --yes` over BatchMode SSH;
+  its own verify all 200, sensitive paths 404/403; live changelog's first
+  header is 0.30.0 and the three renamed pages say Signals.
+- **Re-verify Snap edge and Copr.** Both were in flight at 06:58; `release.sh
+  verify 0.30.0` is the record. If Copr's build fails, see
+  `docs/design-fedora-packaging.md` §7 — the wheelhouse arch pin is the usual
+  suspect.
+- 0.28.0, 0.29.0 and 0.29.1 remain unlogged here; this entry does not owe
+  them.
+
+### What this entry produced, beyond the release
+
+Three gates that fail on the defects they were written for; one script fix;
+two board cards written before the run and one structural finding that
+upgrades both; the four `--yes` hints; and the observation that the two
+premortem shapes each gained instances tonight — recorded there as 23–27.
+
 ## 0.27.0 — 22 Aug 2026 · Tier 1
 
 **Channels:** TestFlight · `.dmg` · PyPI · GitHub Release · Homebrew · Snap edge

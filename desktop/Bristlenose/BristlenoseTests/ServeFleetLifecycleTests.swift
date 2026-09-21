@@ -174,11 +174,11 @@ struct ServeManagerStartGuardTests {
     @Test func aFailedServeCanBeRestartedOnTheSameProject() {
         let m = ServeManager()
         m.instance.currentProjectPath = "/p/A"
-        m.instance.state = .failed(error: "boom")
+        m.instance.state = .failed(error: .passthrough("boom"))
 
         m.start(projectPath: "/p/A")
 
-        #expect(m.state != .failed(error: "boom"), "Retry was swallowed by the guard")
+        #expect(m.state != .failed(error: .passthrough("boom")), "Retry was swallowed by the guard")
     }
 }
 

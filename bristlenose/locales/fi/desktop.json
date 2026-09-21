@@ -415,6 +415,13 @@
     "inCloud": "iCloudissa"
   },
   "boot": {
+    "failure": {
+      "sidecarMissing": "Bristlenose ei l\u00f6yd\u00e4 analyysimoottoriaan sijainnista {{path}}.",
+      "launchFailed": "Analyysimoottoria ei voitu k\u00e4ynnist\u00e4\u00e4. {{reason}}",
+      "startTimeout": "Bristlenose ei ehtinyt k\u00e4ynnisty\u00e4 15 sekunnissa.",
+      "exitedWithCode": "Bristlenose pys\u00e4htyi koodilla {{status}}.\n{{details}}",
+      "exitedBeforeReady": "Bristlenose pys\u00e4htyi ennen kuin k\u00e4ynnistys valmistui (koodi {{status}}).\n{{details}}"
+    },
     "tagline": "Ymmärrystä käyttäjätutkimukseen",
     "startingSidecar": "Käynnistetään Bristlenosea…",
     "loadingReport": "Ladataan raporttia…",

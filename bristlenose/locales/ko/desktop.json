@@ -397,6 +397,13 @@
     "inCloud": "iCloud에 있음"
   },
   "boot": {
+    "failure": {
+      "sidecarMissing": "Bristlenose\uac00 {{path}}\uc5d0\uc11c \ubd84\uc11d \uc5d4\uc9c4\uc744 \ucc3e\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.",
+      "launchFailed": "\ubd84\uc11d \uc5d4\uc9c4\uc744 \uc2dc\uc791\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4. {{reason}}",
+      "startTimeout": "Bristlenose\uac00 15\ucd08 \uc548\uc5d0 \uc2dc\uc791\uc744 \ub9c8\uce58\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.",
+      "exitedWithCode": "Bristlenose\uac00 \ucf54\ub4dc {{status}}\ub85c \uc911\uc9c0\ub418\uc5c8\uc2b5\ub2c8\ub2e4.\n{{details}}",
+      "exitedBeforeReady": "Bristlenose\uac00 \uc2dc\uc791\uc744 \ub9c8\uce58\uae30 \uc804\uc5d0 \uc911\uc9c0\ub418\uc5c8\uc2b5\ub2c8\ub2e4(\ucf54\ub4dc {{status}}).\n{{details}}"
+    },
     "tagline": "사용자 조사 분석",
     "startingSidecar": "Bristlenose 시작 중…",
     "loadingReport": "보고서 불러오는 중…",

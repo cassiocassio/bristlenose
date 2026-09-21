@@ -15,7 +15,12 @@ enum ServeState: Equatable {
     case idle
     case starting
     case running(port: Int)
-    case failed(error: String)
+    /// The subprocess could not start, or died. The payload is a
+    /// `FailureMessage`, not a sentence: `ServeManager` is not a view and has
+    /// no `I18n`, and this is the **boot screen** — the one surface a
+    /// researcher reads when nothing else in the app works, so it must be in
+    /// their language. `BootView` resolves it.
+    case failed(error: FailureMessage)
 }
 
 /// Manages the `bristlenose serve` subprocess lifecycle.
@@ -38,6 +43,12 @@ enum ServeState: Equatable {
 /// never has to enumerate processes (impossible under sandbox anyway).
 @MainActor
 final class ServeManager: ObservableObject {
+
+    /// Key prefix for the boot screen's failure sentences. Spelled once so a
+    /// rename is one edit and `tests/test_pipeline_failure_keys.py` has
+    /// something to grep for.
+    fileprivate static let B = "desktop.boot.failure."
+
 
     /// The one sidecar, today. Stage 3b turns this into a dictionary keyed on
     /// `Project.ID`; everything below forwards, so the ~50 existing call sites
@@ -257,7 +268,7 @@ final class ServeManager: ObservableObject {
         case .failure(let error):
             self.mode = nil
             log.error("sidecar mode resolution failed: \(error.description, privacy: .public)")
-            self.state = .failed(error: error.localizedDescription)
+            self.state = .failed(error: error.failureMessage)
         }
 
         // Re-publish the instance's changes as our own. A nested
@@ -574,7 +585,10 @@ final class ServeManager: ObservableObject {
         do {
             try proc.run()
         } catch {
-            state = .failed(error: "Failed to launch: \(error.localizedDescription)")
+            state = .failed(error: .keyed(
+                Self.B + "launchFailed",
+                vars: ["reason": error.localizedDescription]
+            ))
             return
         }
 
@@ -583,7 +597,7 @@ final class ServeManager: ObservableObject {
             guard !Task.isCancelled else { return }
             await MainActor.run {
                 guard let self, case .starting = self.state else { return }
-                self.state = .failed(error: "Server failed to start within 15 seconds")
+                self.state = .failed(error: .keyed(Self.B + "startTimeout"))
                 self.process?.terminate()
             }
         }
@@ -1031,9 +1045,15 @@ final class ServeManager: ObservableObject {
             dropHandshake()
             let lastLines = outputLines.suffix(5).joined(separator: "\n")
             if case .running = state {
-                state = .failed(error: "Server exited with code \(status)\n\(lastLines)")
+                state = .failed(error: .keyed(
+                    Self.B + "exitedWithCode",
+                    vars: ["status": String(status), "details": lastLines]
+                ))
             } else if case .starting = state {
-                state = .failed(error: "Server exited before becoming ready (code \(status))\n\(lastLines)")
+                state = .failed(error: .keyed(
+                    Self.B + "exitedBeforeReady",
+                    vars: ["status": String(status), "details": lastLines]
+                ))
             }
         } else if let entry = parked, ObjectIdentifier(entry.process) == procID {
             // Death-while-parked: drop the stale slot so a later switch-back

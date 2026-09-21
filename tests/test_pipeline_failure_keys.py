@@ -42,6 +42,7 @@ _APP = _ROOT / "desktop" / "Bristlenose" / "Bristlenose"
 _RUNNER = _APP / "PipelineRunner.swift"
 _MESSAGE = _APP / "FailureMessage.swift"
 _VALIDATOR = _APP / "LLMValidator.swift"
+_SERVE = _APP / "ServeManager.swift"
 
 
 def _swift() -> str:
@@ -151,6 +152,7 @@ _PREFIXES = {
     "desktop.pipeline.failure.": ("pipeline", "failure"),
     "desktop.llmSettings.validation.": ("llmSettings", "validation"),
     "desktop.llmSettings.revalidating": ("llmSettings", "revalidating"),
+    "desktop.boot.failure.": ("boot", "failure"),
 }
 
 
@@ -314,4 +316,54 @@ def test_a_declined_file_does_not_read_as_a_failure(locale: str) -> None:
     )["pipeline"]["category"]
     assert labels["unusableInput"] != labels["unknown"], (
         f"{locale}: a declined file and a broken run read identically"
+    )
+
+
+@pytest.mark.parametrize("locale", _full_locales())
+def test_every_boot_failure_key_resolves(locale: str) -> None:
+    """The boot screen's failure line, in every locale.
+
+    The *title* above it (`desktop.boot.failedTitle`) was localised and the line
+    under it was not — a half-translated view, and the worst possible one to
+    leave English: it is what a researcher reads when nothing else in the app
+    works, so it is the one screen they cannot navigate around.
+    """
+    produced = set(
+        re.findall(r'Self\.B \+ "(\w+)"', _SERVE.read_text(encoding="utf-8"))
+    )
+    # `SidecarResolveError.failureMessage` spells its one key in full.
+    produced |= set(
+        re.findall(
+            r'"desktop\.boot\.failure\.(\w+)"',
+            (_APP / "SidecarMode.swift").read_text(encoding="utf-8"),
+        )
+    )
+    assert produced, "nothing produces a boot failure key — did the prefix move?"
+    block = _en_like(locale, "boot", "failure")
+    missing = sorted(produced - set(block))
+    assert not missing, f"{locale}: {missing} absent — the boot screen would render raw keys"
+    orphans = sorted(set(block) - produced)
+    assert not orphans, (
+        f"desktop.boot.failure.{orphans} are produced by nobody. Wire them or "
+        f"delete them from all 21 locales."
+    )
+
+
+def test_dev_only_sidecar_errors_stay_english() -> None:
+    """Three of `SidecarResolveError`'s four cases are reachable only from Xcode.
+
+    Register row 25 called the whole conformer English-by-decision and row 29
+    corrected it: `bundledSidecarMissing` is on the shipping path. This pins the
+    split, so a future case is classified deliberately rather than by whichever
+    arm someone copied.
+    """
+    body = (_APP / "SidecarMode.swift").read_text(encoding="utf-8")
+    block = re.search(r"var failureMessage: FailureMessage \{(.*?)\n    \}", body, re.DOTALL)
+    assert block, "SidecarResolveError.failureMessage not found"
+    passthrough = re.search(r"case ([^:]+):\n\s*return \.passthrough", block.group(1))
+    assert passthrough, "no passthrough arm — is every case localised now?"
+    dev_cases = {c.strip().lstrip(".") for c in passthrough.group(1).split(",")}
+    assert dev_cases == {"bothDevEnvVarsSet", "invalidExternalPort", "invalidSidecarPath"}, (
+        f"the English-by-decision set changed to {sorted(dev_cases)}. Each case there "
+        f"must be unreachable outside a #if DEBUG env-var read — check before widening it."
     )

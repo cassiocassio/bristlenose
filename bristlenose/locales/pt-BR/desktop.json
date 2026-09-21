@@ -415,6 +415,13 @@
     "inCloud": "No iCloud"
   },
   "boot": {
+    "failure": {
+      "sidecarMissing": "O Bristlenose n\u00e3o encontra seu motor de an\u00e1lise em {{path}}.",
+      "launchFailed": "N\u00e3o foi poss\u00edvel iniciar o motor de an\u00e1lise. {{reason}}",
+      "startTimeout": "O Bristlenose n\u00e3o terminou de iniciar em 15 segundos.",
+      "exitedWithCode": "O Bristlenose parou com o c\u00f3digo {{status}}.\n{{details}}",
+      "exitedBeforeReady": "O Bristlenose parou antes de terminar de iniciar (c\u00f3digo {{status}}).\n{{details}}"
+    },
     "tagline": "Interpretação para Pesquisa com Usuários",
     "startingSidecar": "Iniciando o Bristlenose…",
     "loadingReport": "Carregando relatório…",

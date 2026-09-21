@@ -415,6 +415,13 @@
     "inCloud": "In iCloud"
   },
   "boot": {
+    "failure": {
+      "sidecarMissing": "Bristlenose non trova il suo motore di analisi in {{path}}.",
+      "launchFailed": "Impossibile avviare il motore di analisi. {{reason}}",
+      "startTimeout": "Bristlenose non ha completato l\u2019avvio entro 15 secondi.",
+      "exitedWithCode": "Bristlenose si \u00e8 arrestato con codice {{status}}.\n{{details}}",
+      "exitedBeforeReady": "Bristlenose si \u00e8 arrestato prima di completare l\u2019avvio (codice {{status}}).\n{{details}}"
+    },
     "tagline": "Analisi di senso per la ricerca utenti",
     "startingSidecar": "Avvio di Bristlenose…",
     "loadingReport": "Caricamento del report…",

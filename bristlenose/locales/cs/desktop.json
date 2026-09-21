@@ -450,6 +450,13 @@
     "inCloud": "Na iCloudu"
   },
   "boot": {
+    "failure": {
+      "sidecarMissing": "Bristlenose nem\u016f\u017ee naj\u00edt sv\u016fj analytick\u00fd modul v {{path}}.",
+      "launchFailed": "Analytick\u00fd modul se nepoda\u0159ilo spustit. {{reason}}",
+      "startTimeout": "Bristlenose se nestihl spustit do 15 sekund.",
+      "exitedWithCode": "Bristlenose skon\u010dil s k\u00f3dem {{status}}.\n{{details}}",
+      "exitedBeforeReady": "Bristlenose skon\u010dil d\u0159\u00edve, ne\u017e se spustil (k\u00f3d {{status}}).\n{{details}}"
+    },
     "tagline": "Smysl pro uživatelský výzkum",
     "startingSidecar": "Spouštění Bristlenose…",
     "loadingReport": "Načítání zprávy…",

@@ -451,6 +451,13 @@
     "inCloud": "W iCloud"
   },
   "boot": {
+    "failure": {
+      "sidecarMissing": "Bristlenose nie mo\u017ce znale\u017a\u0107 swojego silnika analizy w {{path}}.",
+      "launchFailed": "Nie uda\u0142o si\u0119 uruchomi\u0107 silnika analizy. {{reason}}",
+      "startTimeout": "Bristlenose nie zako\u0144czy\u0142 uruchamiania w ci\u0105gu 15 sekund.",
+      "exitedWithCode": "Bristlenose zatrzyma\u0142 si\u0119 z kodem {{status}}.\n{{details}}",
+      "exitedBeforeReady": "Bristlenose zatrzyma\u0142 si\u0119 przed zako\u0144czeniem uruchamiania (kod {{status}}).\n{{details}}"
+    },
     "tagline": "Analiza badań użytkowników",
     "startingSidecar": "Uruchamianie Bristlenose…",
     "loadingReport": "Wczytywanie raportu…",

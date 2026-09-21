@@ -415,6 +415,13 @@
     "inCloud": "En iCloud"
   },
   "boot": {
+    "failure": {
+      "sidecarMissing": "Bristlenose no encuentra su motor de an\u00e1lisis en {{path}}.",
+      "launchFailed": "No se ha podido iniciar el motor de an\u00e1lisis. {{reason}}",
+      "startTimeout": "Bristlenose no ha terminado de iniciarse en 15 segundos.",
+      "exitedWithCode": "Bristlenose se ha detenido con el c\u00f3digo {{status}}.\n{{details}}",
+      "exitedBeforeReady": "Bristlenose se ha detenido antes de terminar de iniciarse (c\u00f3digo {{status}}).\n{{details}}"
+    },
     "tagline": "Análisis para investigación de usuarios",
     "startingSidecar": "Iniciando Bristlenose…",
     "loadingReport": "Cargando informe…",

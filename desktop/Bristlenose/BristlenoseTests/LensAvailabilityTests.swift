@@ -40,7 +40,7 @@ struct LensAvailabilityTests {
     // MARK: - Serve gate
 
     @Test func failedSidecarIsUnavailableWhateverThePriorSays() {
-        #expect(derive(serveState: .failed(error: "boom"), prior: true)
+        #expect(derive(serveState: .failed(error: .passthrough("boom")), prior: true)
                 == .unavailable(.serveFailed))
     }
 

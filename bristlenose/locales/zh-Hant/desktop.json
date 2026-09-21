@@ -397,6 +397,13 @@
     "inCloud": "在 iCloud 中"
   },
   "boot": {
+    "failure": {
+      "sidecarMissing": "Bristlenose \u5728 {{path}} \u627e\u4e0d\u5230\u5206\u6790\u5f15\u64ce\u3002",
+      "launchFailed": "\u7121\u6cd5\u555f\u52d5\u5206\u6790\u5f15\u64ce\u3002{{reason}}",
+      "startTimeout": "Bristlenose \u672a\u80fd\u5728 15 \u79d2\u5167\u5b8c\u6210\u555f\u52d5\u3002",
+      "exitedWithCode": "Bristlenose \u4ee5\u4ee3\u78bc {{status}} \u505c\u6b62\u3002\n{{details}}",
+      "exitedBeforeReady": "Bristlenose \u5728\u5b8c\u6210\u555f\u52d5\u524d\u505c\u6b62\uff08\u4ee3\u78bc {{status}}\uff09\u3002\n{{details}}"
+    },
     "tagline": "為使用者研究賦予意義",
     "startingSidecar": "正在啟動 Bristlenose…",
     "loadingReport": "正在載入報告…",

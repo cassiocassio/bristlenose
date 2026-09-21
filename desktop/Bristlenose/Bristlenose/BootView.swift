@@ -21,7 +21,10 @@ struct BootView: View {
         case loadingReport
         /// Sidecar failed to start. `message` is shown verbatim under the
         /// status line; `retry` reattempts; `details` reveals raw output.
-        case failed(message: String, retry: () -> Void)
+        /// The sidecar could not start. The message is a `FailureMessage` so
+        /// the line under the localised title is localised too — it was the
+        /// English half of a half-translated view.
+        case failed(message: FailureMessage, retry: () -> Void)
         /// Lazy start: this window has a study but deliberately has not begun
         /// serving it, because nobody is looking. Renders **at rest** — no verb,
         /// no motion. `.idle` used to map to `.startingSidecar`, which was true
@@ -143,7 +146,7 @@ struct BootView: View {
             VStack(spacing: 10) {
                 Text(statusText)
                     .font(.headline)
-                Text(message)
+                Text(message.resolved(i18n))
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

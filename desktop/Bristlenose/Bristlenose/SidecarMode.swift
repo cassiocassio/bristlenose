@@ -78,8 +78,32 @@ enum SidecarResolveError: Error, Equatable, LocalizedError, CustomStringConverti
     }
 
     /// SwiftUI error cards read `localizedDescription`, which is backed by
-    /// `errorDescription` when the type conforms to `LocalizedError`.
+    /// `errorDescription` when the type conforms to `LocalizedError`. It stays
+    /// **English** — it reaches the log and any pasted bug report, and those are
+    /// English by decision (`docs/design-i18n.md` §"Which surfaces are targets").
+    /// What the researcher reads is `failureMessage`.
     var errorDescription: String? { description }
+
+    /// What the boot screen shows, in the researcher's language.
+    ///
+    /// Three of the four cases can only be reached from Xcode — they are about
+    /// `_BRISTLENOSE_DEV_*` env vars, the reads for which are `#if DEBUG`-only —
+    /// so they pass through in English, deliberately. `bundledSidecarMissing`
+    /// is the one a user with a damaged install reaches, and it is the reason
+    /// this property exists: the boot screen's *title* was localised while the
+    /// line underneath it was not, which is a half-translated view.
+    ///
+    /// Register row 29 in `docs/i18n-defects.md`; row 25 had called this whole
+    /// conformer English-by-decision, which was three-quarters right.
+    var failureMessage: FailureMessage {
+        switch self {
+        case .bundledSidecarMissing(let expectedPath):
+            return .keyed("desktop.boot.failure.sidecarMissing",
+                          vars: ["path": expectedPath])
+        case .bothDevEnvVarsSet, .invalidExternalPort, .invalidSidecarPath:
+            return .passthrough(description)
+        }
+    }
 }
 
 extension SidecarMode {

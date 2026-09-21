@@ -415,6 +415,13 @@
     "inCloud": "I iCloud"
   },
   "boot": {
+    "failure": {
+      "sidecarMissing": "Bristlenose finner ikke analysemotoren sin p\u00e5 {{path}}.",
+      "launchFailed": "Kunne ikke starte analysemotoren. {{reason}}",
+      "startTimeout": "Bristlenose ble ikke ferdig med \u00e5 starte innen 15 sekunder.",
+      "exitedWithCode": "Bristlenose stoppet med kode {{status}}.\n{{details}}",
+      "exitedBeforeReady": "Bristlenose stoppet f\u00f8r oppstarten var ferdig (kode {{status}}).\n{{details}}"
+    },
     "tagline": "Innsikt for brukerundersøkelser",
     "startingSidecar": "Starter Bristlenose…",
     "loadingReport": "Laster rapport…",

@@ -415,6 +415,13 @@
     "inCloud": "iCloud’da"
   },
   "boot": {
+    "failure": {
+      "sidecarMissing": "Bristlenose, analiz motorunu {{path}} konumunda bulam\u0131yor.",
+      "launchFailed": "Analiz motoru ba\u015flat\u0131lamad\u0131. {{reason}}",
+      "startTimeout": "Bristlenose 15 saniye i\u00e7inde ba\u015flatmay\u0131 tamamlayamad\u0131.",
+      "exitedWithCode": "Bristlenose {{status}} koduyla durdu.\n{{details}}",
+      "exitedBeforeReady": "Bristlenose ba\u015flatmay\u0131 tamamlamadan durdu ({{status}} kodu).\n{{details}}"
+    },
     "tagline": "Kullanıcı Araştırması İçin Anlamlandırma",
     "startingSidecar": "Bristlenose başlatılıyor…",
     "loadingReport": "Rapor yükleniyor…",

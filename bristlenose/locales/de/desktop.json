@@ -415,6 +415,13 @@
     "inCloud": "In iCloud"
   },
   "boot": {
+    "failure": {
+      "sidecarMissing": "Bristlenose findet seine Analyse-Engine unter {{path}} nicht.",
+      "launchFailed": "Die Analyse-Engine konnte nicht gestartet werden. {{reason}}",
+      "startTimeout": "Bristlenose wurde nicht innerhalb von 15 Sekunden fertig gestartet.",
+      "exitedWithCode": "Bristlenose wurde mit Code {{status}} beendet.\n{{details}}",
+      "exitedBeforeReady": "Bristlenose wurde beendet, bevor der Start abgeschlossen war (Code {{status}}).\n{{details}}"
+    },
     "tagline": "Analyse für User Research",
     "startingSidecar": "Bristlenose wird gestartet…",
     "loadingReport": "Bericht wird geladen…",

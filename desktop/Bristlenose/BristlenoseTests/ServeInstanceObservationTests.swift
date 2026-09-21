@@ -54,8 +54,8 @@ struct ServeInstanceObservationTests {
         #expect(manager.state == .running(port: 4242))
         #expect(manager.runningPort == 4242)
 
-        manager.state = .failed(error: "boom")
-        #expect(manager.instance.state == .failed(error: "boom"))
+        manager.state = .failed(error: .passthrough("boom"))
+        #expect(manager.instance.state == .failed(error: .passthrough("boom")))
         #expect(manager.runningPort == nil)
 
         manager.instance.currentProjectPath = "/p/A"

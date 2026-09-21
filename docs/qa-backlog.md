@@ -4,6 +4,28 @@ Manual QA steps waiting to be confirmed. Per-item — say "QA done for X" to che
 
 ---
 
+## macOS localisation — menu bar, Settings, and the failure surfaces
+
+**Date:** 21 Sep 2026
+**Branch:** main (`9c200e6b`..`cc4a4573`, 17 commits)
+**Context:** Roughly 700 translated values across 21 locales, plus two mechanisms
+that only take effect at launch. Every item below is something **no test can
+see** — the `.lproj` work is a bundle property, the menu bar is built once per
+process, and the chip grid is a measured layout.
+
+**Do items 1–3 after a RELAUNCH** (⇧⌘K then ⌘R if the build looks stale).
+
+- [ ] **Apple's own menus are localised.** Set Settings ▸ Appearance ▸ Language to Türkçe, relaunch, and check `File / Edit / View / Window / Help` read `Dosya / Düzen / Görünüm / Pencere / Yardım` — and the items inside them (Minimize, Zoom, Bring All to Front, Cut/Copy/Paste, Enter Full Screen). These come from AppKit now that the app declares 22 `.lproj`; we translated none of them.
+- [ ] **Our four menus follow too** — `Proje / Kodlar / Alıntılar / Video`. `Diagnostics` stays English by decision.
+- [ ] **Nothing regressed for an existing install.** A profile that already had a language set should come up in it, not in English: the private `language` key still wins over the new `Bundle.preferredLocalizations` fallback.
+- [ ] **Sentiment chips at 14".** Welcome ▸ the "Seven sentiments" card in **tr** — `Kafa karışıklığı` is +24% on the widest row, past the screen's documented +20% budget. The grid scales to fit; check it shrinks rather than clipping or colliding with the text beside it. Then check **ja/zh-Hant**, which are 35–49% *narrower*, do not look lost.
+- [ ] **Settings language switch stays put.** Change language with Settings open: the six tabs flip AND the window stays on Appearance (it used to snap to General).
+- [ ] **A failed cloud-import row speaks the language.** Easiest via Diagnostics ▸ Cloud Import ▸ a partial-failure fixture: the red rows should read e.g. `Dosyanın yalnızca bir kısmı ulaştı.`, not `Only part of the file arrived`.
+- [ ] **A sign-in failure speaks the language.** Start a cloud sign-in and cancel it — expect the translated sentence. Microsoft/Zoom refusals that carry the provider's *own* reason are supposed to stay in the provider's words; that is not a bug.
+- [ ] **A drag-and-drop refusal speaks the language.** Drop a folder containing nothing importable → translated toast.
+
+---
+
 ## Keychain Security.framework migration
 
 **Date:** 24 Mar 2026

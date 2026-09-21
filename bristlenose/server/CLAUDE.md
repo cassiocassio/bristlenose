@@ -272,7 +272,9 @@ The factory is stored on `app.state` during `create_app()`.  Each route creates 
 
 ## React island integration
 
-React islands replace Jinja2 content at serve time via **marker-based substitution** — `<!-- bn-{name} -->` comments in `render/report.py` become `<div id="bn-{name}-root">` at serve time (regex replacement in `app.py:serve_report_html()`). Browser mounts React into the div via `main.tsx`.
+> **Dead as of 21 Sep 2026 — nothing reads these markers.** `serve_report_html()` does not exist in the tree, and neither does `_REACT_APP_MOUNT`; serve mode emits `<div id="bn-app-root">` directly (`server/app.py:657`) and the browser mounts the whole SPA there. The sealed Jinja2 renderer still *writes* `<!-- bn-app -->` and `<!-- bn-session-table -->` (`s12_render/report.py:189`, `:219`, `:235`, `:485`), but no Python reads either one. Per-island substitution is history; do not copy the pattern for a new island.
+
+_Superseded, kept as the record of how islands were mounted:_ React islands replace Jinja2 content at serve time via **marker-based substitution** — `<!-- bn-{name} -->` comments in `render/report.py` become `<div id="bn-{name}-root">` at serve time (regex replacement in `app.py:serve_report_html()`). Browser mounts React into the div via `main.tsx`.
 
 **When adding a new island:** register it in the renderer overlay CSS (4 places) so it shows green (React) not blue (Jinja2) under the dev-only overlay.
 

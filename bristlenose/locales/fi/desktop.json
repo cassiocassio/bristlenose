@@ -417,7 +417,7 @@
         },
         "starHide": {
           "title": "T\u00e4hdet ja piilotus",
-          "text": "Paina `s` s\u00e4ilytt\u00e4\u00e4ksesi t\u00e4rke\u00e4t sitaatit, `h` piilottaaksesi loput.",
+          "text": "Valitse sitaatit ja paina `s` merkit\u00e4ksesi t\u00e4hdell\u00e4 tai `h` piilottaaksesi.",
           "link": "Pikan\u00e4pp\u00e4imet"
         },
         "clips": {
@@ -568,7 +568,7 @@
           "link": "M\u00e4\u00e4ritykset"
         },
         "keyboardShortcuts": {
-          "text": "`s` merkitsee t\u00e4hdell\u00e4, `h` piilottaa \u2014 suodata sitten olennaiseen.",
+          "text": "Valitse sitaatti: `s` merkitsee t\u00e4hdell\u00e4, `h` piilottaa.",
           "more": "N\u00e4pp\u00e4in l\u00f6ytyy l\u00e4hes kaikkeen, sek\u00e4 sovelluksessa ett\u00e4 selainraportissa.",
           "link": "Pikan\u00e4pp\u00e4imet"
         },

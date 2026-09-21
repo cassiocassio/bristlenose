@@ -452,7 +452,7 @@
         },
         "starHide": {
           "title": "Hv\u011bzdi\u010dka a skryt\u00ed",
-          "text": "Stiskem `s` ponech\u00e1te d\u016fle\u017eit\u00e9 cit\u00e1ty, stiskem `h` skryjete zbytek.",
+          "text": "Vyberte jeden \u010di v\u00edce cit\u00e1t\u016f a stiskem `s` je ozna\u010dte hv\u011bzdi\u010dkou, `h` skryjte.",
           "link": "Kl\u00e1vesov\u00e9 zkratky"
         },
         "clips": {
@@ -603,7 +603,7 @@
           "link": "Konfigurace"
         },
         "keyboardShortcuts": {
-          "text": "Stiskem `s` p\u0159id\u00e1te hv\u011bzdi\u010dku, `h` skryje \u2014 pak filtrujte d\u016fle\u017eit\u00e9.",
+          "text": "Vyberte cit\u00e1t a `s` jej ozna\u010d\u00ed hv\u011bzdi\u010dkou, `h` jej skryje.",
           "more": "Kl\u00e1vesa je skoro na v\u0161echno, v aplikaci i ve zpr\u00e1v\u011b v prohl\u00ed\u017ee\u010di.",
           "link": "Kl\u00e1vesov\u00e9 zkratky"
         },

@@ -417,7 +417,7 @@
         },
         "starHide": {
           "title": "Stjerne og skjul",
-          "text": "Tryk `s` for at beholde det, der tæller, `h` for at skjule resten.",
+          "text": "Vælg citater, og tryk på `s` for at stjernemarkere eller `h` for at skjule.",
           "link": "Tastaturgenveje"
         },
         "clips": {
@@ -568,7 +568,7 @@
           "link": "Konfiguration"
         },
         "keyboardShortcuts": {
-          "text": "Tryk `s` for stjerne, `h` for at skjule — filtrér så til det, der tæller.",
+          "text": "Vælg et citat: `s` stjernemarkerer det, `h` skjuler det.",
           "more": "Der er en tast til næsten alt, både i appen og i browserrapporten.",
           "link": "Tastaturgenveje"
         },

@@ -417,7 +417,7 @@
         },
         "starHide": {
           "title": "Destacar e ocultar",
-          "text": "Prima `s` para guardar as citações que importam, `h` para ocultar o resto.",
+          "text": "Selecione citações e prima `s` para marcar com estrela ou `h` para ocultar.",
           "link": "Atalhos de teclado"
         },
         "clips": {
@@ -568,7 +568,7 @@
           "link": "Configuração"
         },
         "keyboardShortcuts": {
-          "text": "Prima `s` para destacar, `h` para ocultar — depois filtre o que importa.",
+          "text": "Selecione uma citação: `s` marca-a com estrela, `h` oculta-a.",
           "more": "Há uma tecla para quase tudo, na app e no relatório no browser.",
           "link": "Atalhos de teclado"
         },

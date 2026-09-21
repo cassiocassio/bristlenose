@@ -417,7 +417,7 @@
         },
         "starHide": {
           "title": "Stella e nascondi",
-          "text": "`s` assegna la stella alle citazioni che contano, `h` nasconde il resto.",
+          "text": "Seleziona una o più citazioni e premi `s` per la stella o `h` per nascondere.",
           "link": "Scorciatoie"
         },
         "clips": {
@@ -568,7 +568,7 @@
           "link": "Configurazione"
         },
         "keyboardShortcuts": {
-          "text": "Premi `s` per la stella, `h` per nascondere — poi filtra ciò che conta.",
+          "text": "Seleziona una citazione: `s` assegna la stella, `h` nasconde.",
           "more": "C'è un tasto per quasi tutto, nell'app e nel report nel browser.",
           "link": "Scorciatoie"
         },

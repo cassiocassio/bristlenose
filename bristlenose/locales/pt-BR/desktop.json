@@ -417,7 +417,7 @@
         },
         "starHide": {
           "title": "Destacar e ocultar",
-          "text": "Pressione `s` para destacar o que importa, `h` para ocultar o resto.",
+          "text": "Selecione citações e pressione `s` para marcar com estrela, `h` para ocultar.",
           "link": "Atalhos de teclado"
         },
         "clips": {
@@ -568,7 +568,7 @@
           "link": "Configuração"
         },
         "keyboardShortcuts": {
-          "text": "Pressione `s` para destacar, `h` para ocultar — e filtre o que importa.",
+          "text": "Selecione uma citação: `s` marca com estrela e `h` oculta.",
           "more": "Há uma tecla para quase tudo, no app e no relatório no navegador.",
           "link": "Atalhos de teclado"
         },

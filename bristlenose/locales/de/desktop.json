@@ -417,7 +417,7 @@
         },
         "starHide": {
           "title": "Stern & Ausblenden",
-          "text": "Mit `s` behalten Sie wichtige Zitate, mit `h` blenden Sie den Rest aus.",
+          "text": "Zitate auswählen und `s` zum Markieren oder `h` zum Ausblenden drücken.",
           "link": "Tastaturkurzbefehle"
         },
         "clips": {
@@ -568,7 +568,7 @@
           "link": "Konfiguration"
         },
         "keyboardShortcuts": {
-          "text": "`s` markiert, `h` blendet aus — dann filtern Sie auf das Wesentliche.",
+          "text": "Zitat auswählen, dann markiert `s` es und `h` blendet es aus.",
           "more": "Es gibt fast für alles eine Taste, in der App und im Browser-Bericht.",
           "link": "Tastaturkurzbefehle"
         },

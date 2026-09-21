@@ -417,7 +417,7 @@
         },
         "starHide": {
           "title": "Destaca i oculta",
-          "text": "Prem `s` per destacar les cites que importen, `h` per ocultar la resta.",
+          "text": "Selecciona una o més cites i prem `s` per destacar o `h` per ocultar.",
           "link": "Dreceres de teclat"
         },
         "clips": {
@@ -568,7 +568,7 @@
           "link": "Configuració"
         },
         "keyboardShortcuts": {
-          "text": "Prem `s` per destacar, `h` per ocultar — després filtra el que importa.",
+          "text": "Selecciona una cita: `s` la destaca i `h` l'oculta.",
           "more": "Hi ha una tecla per a gairebé tot, a l'app i a l'informe del navegador.",
           "link": "Dreceres de teclat"
         },

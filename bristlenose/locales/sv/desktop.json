@@ -417,7 +417,7 @@
         },
         "starHide": {
           "title": "Stj\u00e4rnm\u00e4rk och d\u00f6lj",
-          "text": "Tryck p\u00e5 `s` f\u00f6r att spara de citat som r\u00e4knas, `h` f\u00f6r att d\u00f6lja resten.",
+          "text": "Markera citat och tryck p\u00e5 `s` f\u00f6r att stj\u00e4rnm\u00e4rka eller `h` f\u00f6r att d\u00f6lja.",
           "link": "Tangentbordsgenv\u00e4gar"
         },
         "clips": {
@@ -568,7 +568,7 @@
           "link": "Konfiguration"
         },
         "keyboardShortcuts": {
-          "text": "`s` stj\u00e4rnm\u00e4rker, `h` d\u00f6ljer \u2013 filtrera sedan fram det viktiga.",
+          "text": "Markera ett citat: `s` stj\u00e4rnm\u00e4rker det, `h` d\u00f6ljer det.",
           "more": "Det finns en tangent f\u00f6r n\u00e4stan allt, i appen och i webbl\u00e4sarrapporten.",
           "link": "Tangentbordsgenv\u00e4gar"
         },

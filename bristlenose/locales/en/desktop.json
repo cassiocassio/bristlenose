@@ -420,7 +420,7 @@
         },
         "starHide": {
           "title": "Star & hide",
-          "text": "Press `s` to keep the quotes that matter, `h` to hide the rest.",
+          "text": "Select one or more quotes, then press `s` to star or `h` to hide.",
           "link": "Keyboard shortcuts"
         },
         "clips": {
@@ -441,6 +441,7 @@
         },
         "ingest": {
           "title": "Ingest",
+          "_divergent_title": "en:0b652f \u2014 every locale names this with its own everyday word for bringing files in, not a transliteration of the English: de Einlesen, es/pt-BR/pt-PT Importar, fr Importation, it Acquisizione, nl Inlezen, pl Wczytywanie, ru \u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430, uk \u0406\u043c\u043f\u043e\u0440\u0442, ja \u53d6\u308a\u8fbc\u307f, zh-Hant \u532f\u5165. Two of them \u2014 pt-PT and uk \u2014 deliberately do NOT match their own cli:stage.ingest value (Ingest\u00e3o, \u041f\u0440\u0438\u0439\u043c\u0430\u043d\u043d\u044f): those read as pipeline jargon on a card whose own link says Import options, and the card teaches a first-run user what the tool does. The stage name is a different register and stays as it is. Do not 'restore' either one to its stage anchor.",
           "text": "Drop a folder of recordings or transcripts — Bristlenose transcribes, analyses and reports back.",
           "link": "Import options"
         },
@@ -572,7 +573,7 @@
           "link": "Configuration"
         },
         "keyboardShortcuts": {
-          "text": "Press `s` to star, `h` to hide — then filter to what matters.",
+          "text": "Select a quote, then `s` stars it and `h` hides it.",
           "more": "There's a key for nearly everything, in the app and the browser report.",
           "link": "Keyboard shortcuts"
         },

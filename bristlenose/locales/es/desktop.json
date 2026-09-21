@@ -417,7 +417,7 @@
         },
         "starHide": {
           "title": "Destacar y ocultar",
-          "text": "Pulsa `s` para destacar lo que importa y `h` para ocultar el resto.",
+          "text": "Selecciona una o varias citas y pulsa `s` para destacar o `h` para ocultar.",
           "link": "Atajos de teclado"
         },
         "clips": {
@@ -568,7 +568,7 @@
           "link": "Configuración"
         },
         "keyboardShortcuts": {
-          "text": "Pulsa `s` para destacar y `h` para ocultar — luego filtra lo que importa.",
+          "text": "Selecciona una cita: `s` la destaca y `h` la oculta.",
           "more": "Hay una tecla para casi todo, en la app y en el informe del navegador.",
           "link": "Atajos de teclado"
         },

@@ -417,7 +417,7 @@
         },
         "starHide": {
           "title": "Ster & verberg",
-          "text": "Druk op `s` om te bewaren wat telt, `h` om de rest te verbergen.",
+          "text": "Selecteer een of meer citaten, druk op `s` voor een ster, `h` om te verbergen.",
           "link": "Sneltoetsen"
         },
         "clips": {
@@ -568,7 +568,7 @@
           "link": "Configuratie"
         },
         "keyboardShortcuts": {
-          "text": "Druk op `s` voor een ster, `h` om te verbergen — filter dan op wat telt.",
+          "text": "Selecteer een citaat: `s` geeft een ster, `h` verbergt het.",
           "more": "Er is een toets voor bijna alles, in de app en in het browserrapport.",
           "link": "Sneltoetsen"
         },

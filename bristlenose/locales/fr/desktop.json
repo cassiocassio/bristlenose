@@ -417,7 +417,7 @@
         },
         "starHide": {
           "title": "Favoris et masquage",
-          "text": "Appuyez sur `s` pour garder les verbatim clés, `h` pour masquer le reste.",
+          "text": "Sélectionnez des verbatim, puis `s` pour mettre en favori ou `h` pour masquer.",
           "link": "Raccourcis clavier"
         },
         "clips": {
@@ -568,7 +568,7 @@
           "link": "Configuration"
         },
         "keyboardShortcuts": {
-          "text": "Touche `s` pour le favori, `h` pour masquer — puis filtrez l’essentiel.",
+          "text": "Sélectionnez un verbatim : `s` met en favori, `h` masque.",
           "more": "Il y a une touche pour presque tout, dans l’app comme dans le rapport web.",
           "link": "Raccourcis clavier"
         },

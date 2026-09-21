@@ -453,7 +453,7 @@
         },
         "starHide": {
           "title": "Gwiazdka i ukrywanie",
-          "text": "Klawisz `s` dodaje gwiazdkę ważnym cytatom, `h` ukrywa resztę.",
+          "text": "Zaznacz jeden lub więcej cytatów, a `s` doda gwiazdkę, `h` je ukryje.",
           "link": "Skróty klawiszowe"
         },
         "clips": {
@@ -604,7 +604,7 @@
           "link": "Konfiguracja"
         },
         "keyboardShortcuts": {
-          "text": "`s` dodaje gwiazdkę, `h` ukrywa — potem filtruj to, co ważne.",
+          "text": "Zaznacz cytat, a `s` doda mu gwiazdkę, `h` go ukryje.",
           "more": "Jest klawisz na prawie wszystko, w aplikacji i w raporcie w przeglądarce.",
           "link": "Skróty klawiszowe"
         },

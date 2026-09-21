@@ -417,7 +417,7 @@
         },
         "starHide": {
           "title": "Stjernemerk og skjul",
-          "text": "Trykk `s` for å beholde sitatene som teller, `h` for å skjule resten.",
+          "text": "Velg ett eller flere sitater, trykk `s` for å stjernemerke, `h` for å skjule.",
           "link": "Hurtigtaster"
         },
         "clips": {
@@ -568,7 +568,7 @@
           "link": "Konfigurasjon"
         },
         "keyboardShortcuts": {
-          "text": "`s` stjernemerker, `h` skjuler – filtrer så fram det som teller.",
+          "text": "Velg et sitat: `s` stjernemerker det, `h` skjuler det.",
           "more": "Det finnes en tast for nesten alt, i appen og i nettleserrapporten.",
           "link": "Hurtigtaster"
         },

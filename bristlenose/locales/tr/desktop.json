@@ -417,7 +417,7 @@
         },
         "starHide": {
           "title": "Y\u0131ld\u0131zla ve gizle",
-          "text": "\u00d6nemli al\u0131nt\u0131lar\u0131 tutmak i\u00e7in `s`, gerisini gizlemek i\u00e7in `h` tu\u015funa bas\u0131n.",
+          "text": "Bir ya da daha fazla al\u0131nt\u0131 se\u00e7in, `s` ile y\u0131ld\u0131zlay\u0131n, `h` ile gizleyin.",
           "link": "Klavye k\u0131sayollar\u0131"
         },
         "clips": {
@@ -568,7 +568,7 @@
           "link": "Yap\u0131land\u0131rma"
         },
         "keyboardShortcuts": {
-          "text": "Y\u0131ld\u0131zlamak i\u00e7in `s`, gizlemek i\u00e7in `h`; sonra \u00f6nemli olan\u0131 filtreleyin.",
+          "text": "Bir al\u0131nt\u0131 se\u00e7in; `s` onu y\u0131ld\u0131zlar, `h` gizler.",
           "more": "Uygulamada da taray\u0131c\u0131 raporunda da neredeyse her \u015feyin bir tu\u015fu var.",
           "link": "Klavye k\u0131sayollar\u0131"
         },

@@ -370,6 +370,7 @@ struct BookShelfView: View {
 /// screensaver — it wants a big canvas and is for fun; this cell has to make a
 /// point). Reuses the approved mockup verbatim, so the feel is preserved exactly.
 struct EmergentThemesView: View {
+    @EnvironmentObject private var i18n: I18n
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
@@ -377,7 +378,7 @@ struct EmergentThemesView: View {
     var body: some View {
         let still = reduceMotion || !active   // baton: animate only while this cell holds it
         return IllustrationWebView(html: WelcomeIllustrationHTML.emergentThemes(dark: scheme == .dark, reduce: still))
-            .id("themes-\(scheme)-\(still)")
+            .id("themes-\(scheme)-\(still)-\(i18n.locale)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -388,6 +389,17 @@ struct EmergentThemesView: View {
 /// Transparent, inert WKWebView that renders a self-contained HTML illustration.
 /// No external resources (loadHTMLString, baseURL nil) — sandbox-clean; fonts are
 /// the system stack. Transparency via the documented `drawsBackground` KVC.
+///
+/// The HTML is handed over once, at `makeNSView` — `updateNSView` does not reload,
+/// so nothing a caller changes ever reaches a webview that already exists. The only
+/// thing that redraws one is SwiftUI tearing it down and building a fresh one, which
+/// happens when the caller's `.id` changes. Every caller therefore owes its `.id` a
+/// key for every input its HTML is built from: appearance, palette, stillness and
+/// language. Miss one and that input stops reaching the illustration in silence — no
+/// build error, nothing red. Language was the one missing: none of the nine callers
+/// observed `I18n` or keyed on it, so changing the picker left every illustration
+/// exactly as it was, until a dark-mode toggle happened to rebuild it by accident
+/// (wired up 21 Sep 2026).
 private struct IllustrationWebView: NSViewRepresentable {
     let html: String
 
@@ -397,11 +409,13 @@ private struct IllustrationWebView: NSViewRepresentable {
         wv.loadHTMLString(html, baseURL: nil)
         return wv
     }
+    /// Empty by design — reloading is the caller's `.id`, per the note above.
     func updateNSView(_ nsView: WKWebView, context: Context) {}
 }
 
 /// #3 — the dignity strike-and-collapse quote.
 struct QuoteIllustrationView: View {
+    @EnvironmentObject private var i18n: I18n
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
@@ -409,7 +423,7 @@ struct QuoteIllustrationView: View {
     var body: some View {
         let still = reduceMotion || !active   // baton: animate only while this cell holds it
         return IllustrationWebView(html: WelcomeIllustrationHTML.quote(dark: scheme == .dark, reduce: still))
-            .id("quote-\(scheme)-\(still)")   // reload on appearance / reduce-motion / baton change
+            .id("quote-\(scheme)-\(still)-\(i18n.locale)")   // reload on appearance / reduce-motion / baton / language change
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -417,6 +431,7 @@ struct QuoteIllustrationView: View {
 
 /// #2 — the real analysis signal card ticking through examples.
 struct SignalIllustrationView: View {
+    @EnvironmentObject private var i18n: I18n
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
@@ -425,7 +440,7 @@ struct SignalIllustrationView: View {
     var body: some View {
         let still = reduceMotion || !active   // baton: animate only while this cell holds it
         return IllustrationWebView(html: WelcomeIllustrationHTML.signal(dark: scheme == .dark, palette: palette, reduce: still))
-            .id("signal-\(scheme)-\(palette)-\(still)")
+            .id("signal-\(scheme)-\(palette)-\(still)-\(i18n.locale)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -438,6 +453,7 @@ struct SignalIllustrationView: View {
 /// changes — the reason study-tool illustrations that reproduce report chrome are
 /// webviews, not native rebuilds (matches the Signals / Dignity science cells).
 struct AutoCodeIllustrationView: View {
+    @EnvironmentObject private var i18n: I18n
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
@@ -446,7 +462,7 @@ struct AutoCodeIllustrationView: View {
     var body: some View {
         let still = reduceMotion || !active   // baton: animate only while this cell holds it
         return IllustrationWebView(html: WelcomeIllustrationHTML.autocode(dark: scheme == .dark, palette: palette, reduce: still))
-            .id("autocode-\(scheme)-\(palette)-\(still)")   // reload on appearance / palette / reduce-motion / baton
+            .id("autocode-\(scheme)-\(palette)-\(still)-\(i18n.locale)")   // reload on appearance / palette / reduce-motion / baton / language
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -456,6 +472,7 @@ struct AutoCodeIllustrationView: View {
 /// (title + description + codes typed, in real codebook colours). Human counterpart
 /// to AutoCode; ported from docs/mockups/welcome-studytools-animations.html.
 struct ManualTagsIllustrationView: View {
+    @EnvironmentObject private var i18n: I18n
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
@@ -464,7 +481,7 @@ struct ManualTagsIllustrationView: View {
     var body: some View {
         let still = reduceMotion || !active   // baton: animate only while this cell holds it
         return IllustrationWebView(html: WelcomeIllustrationHTML.manualTags(dark: scheme == .dark, palette: palette, reduce: still))
-            .id("manualtags-\(scheme)-\(palette)-\(still)")
+            .id("manualtags-\(scheme)-\(palette)-\(still)-\(i18n.locale)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -475,6 +492,7 @@ struct ManualTagsIllustrationView: View {
 /// presses under the cursor, and a code types itself in as a real `.badge-user` chip.
 /// Ported from docs/mockups/welcome-studytools-animations.html.
 struct TagIllustrationView: View {
+    @EnvironmentObject private var i18n: I18n
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
@@ -483,7 +501,7 @@ struct TagIllustrationView: View {
     var body: some View {
         let still = reduceMotion || !active   // baton: animate only while this cell holds it
         return IllustrationWebView(html: WelcomeIllustrationHTML.tag(dark: scheme == .dark, palette: palette, reduce: still))
-            .id("tag-\(scheme)-\(palette)-\(still)")
+            .id("tag-\(scheme)-\(palette)-\(still)-\(i18n.locale)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -493,6 +511,7 @@ struct TagIllustrationView: View {
 /// tint, body weight bumps), press `h` to hide (real `.bn-hiding` collapse) and the hidden
 /// count ticks up by one. Ported from docs/mockups/welcome-studytools-animations.html.
 struct StarHideIllustrationView: View {
+    @EnvironmentObject private var i18n: I18n
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
@@ -501,7 +520,7 @@ struct StarHideIllustrationView: View {
     var body: some View {
         let still = reduceMotion || !active   // baton: animate only while this cell holds it
         return IllustrationWebView(html: WelcomeIllustrationHTML.starHide(dark: scheme == .dark, palette: palette, reduce: still))
-            .id("starhide-\(scheme)-\(palette)-\(still)")
+            .id("starhide-\(scheme)-\(palette)-\(still)-\(i18n.locale)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -513,6 +532,7 @@ struct StarHideIllustrationView: View {
 /// line lands, and a cited answer streams back word-by-word. Drawn, not screenshotted:
 /// no window chrome, theme- and palette-aware like every other webview illustration.
 struct AgentChatIllustrationView: View {
+    @EnvironmentObject private var i18n: I18n
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
@@ -521,7 +541,7 @@ struct AgentChatIllustrationView: View {
     var body: some View {
         let still = reduceMotion || !active   // baton: animate only while this cell holds it
         return IllustrationWebView(html: WelcomeIllustrationHTML.agentChat(dark: scheme == .dark, palette: palette, reduce: still))
-            .id("agentchat-\(scheme)-\(palette)-\(still)")
+            .id("agentchat-\(scheme)-\(palette)-\(still)-\(i18n.locale)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -814,6 +834,7 @@ struct ClipsIllustrationView: View {
 /// grid distract; the famous colours ARE the recognition). Webview so the sticky type
 /// and hand-set line wrapping stay exact. Appears in order, then holds.
 struct MiroIllustrationView: View {
+    @EnvironmentObject private var i18n: I18n
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
@@ -821,7 +842,7 @@ struct MiroIllustrationView: View {
     var body: some View {
         let still = reduceMotion || !active   // baton: animate only while this cell holds it
         return IllustrationWebView(html: WelcomeIllustrationHTML.miro(dark: scheme == .dark, reduce: still))
-            .id("miro-\(scheme)-\(still)")
+            .id("miro-\(scheme)-\(still)-\(i18n.locale)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }

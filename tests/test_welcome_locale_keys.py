@@ -208,3 +208,47 @@ def test_every_locale_resolves_every_requested_key(locale: str) -> None:
     have = leaves(home, "", set())
     want = _en_leaves()
     assert not (want - have), f"{locale} is missing {sorted(want - have)}"
+
+
+def test_every_illustration_webview_keys_its_id_on_locale() -> None:
+    """A webview illustration that forgets `i18n.locale` in its `.id` goes silent.
+
+    `IllustrationWebView.updateNSView` is empty by design — the HTML is handed
+    over once at `makeNSView`, so nothing a caller changes ever reaches a webview
+    that already exists. The only thing that redraws one is SwiftUI tearing it
+    down, which happens when the caller's `.id` changes.
+
+    All nine `.id`s keyed on appearance, palette and stillness and **none on
+    language**, so changing the picker left every illustration in the language it
+    was built in until a dark-mode toggle happened to rebuild it by accident
+    (fixed 21 Sep 2026). Nothing was red, and nothing could have been: this is
+    `desktop/CLAUDE.md`'s "a gate that answers confidently and wrongly" shape,
+    one layer up — the contract lives in a string interpolation that no compiler
+    and no locale gate can see.
+
+    So the tenth illustration is the one this exists for.
+    """
+    body = (REPO / "desktop/Bristlenose/Bristlenose/WelcomeIllustrations.swift").read_text(
+        encoding="utf-8"
+    )
+    # Each illustration is `IllustrationWebView(html: …)` followed, within its
+    # modifier chain, by the `.id(...)` that owns its identity.
+    call_sites = [m.start() for m in re.finditer(r"IllustrationWebView\(", body)]
+    assert call_sites, "no IllustrationWebView call sites — did the type get renamed?"
+
+    unkeyed = []
+    for start in call_sites:
+        # The `.id(...)` belonging to this call is the next one after it.
+        ident = re.search(r'\.id\("([^"]*)"\)', body[start:])
+        line_no = body.count("\n", 0, start) + 1
+        if ident is None:
+            unkeyed.append(f"line {line_no}: no .id at all")
+        elif "i18n.locale" not in ident.group(1):
+            unkeyed.append(f"line {line_no}: .id(\"{ident.group(1)}\") omits i18n.locale")
+
+    assert not unkeyed, (
+        "every IllustrationWebView's `.id` must key on `i18n.locale`, or that "
+        "illustration stops following the language picker in silence — no build "
+        "error, nothing red, and it self-corrects only when the user toggles "
+        "dark mode:\n  " + "\n  ".join(unkeyed)
+    )

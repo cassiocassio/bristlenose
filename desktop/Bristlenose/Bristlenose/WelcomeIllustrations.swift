@@ -500,7 +500,17 @@ struct AutoCodeIllustrationView: View {
 
     var body: some View {
         let still = reduceMotion || !active   // baton: animate only while this cell holds it
-        return IllustrationWebView(html: WelcomeIllustrationHTML.autocode(dark: scheme == .dark, palette: palette, reduce: still))
+        // OURS, lifted: the badge the AI applies is a `Sentiment` enum value and
+        // the role is a `speakerRole` — both already translated, and both what a
+        // Spanish researcher genuinely sees. The quotes and the code badges stay
+        // English for now: quotes are THEIRS and await the content pass, and the
+        // codes belong to whichever codebook produced them.
+        let strings = [
+            "sentiment": i18n.t("enums.sentiment.satisfaction"),
+            "role": i18n.t("enums.speakerRole.participant"),
+        ]
+        return IllustrationWebView(html: WelcomeIllustrationHTML.autocode(
+            dark: scheme == .dark, palette: palette, reduce: still, strings: strings))
             .id("autocode-\(scheme)-\(palette)-\(still)-\(i18n.locale)")   // reload on appearance / palette / reduce-motion / baton / language
             .allowsHitTesting(false)
             .accessibilityHidden(true)
@@ -1255,7 +1265,14 @@ enum WelcomeIllustrationHTML {
     /// AutoCode (study tools #1) — quote streams in, the AI code arrives proposed,
     /// is accepted, goes solid, then a 3-play burst rests. Tag + quote CSS copied
     /// from badge.css / blockquote.css (dark-mode selector adapted to data-appearance).
-    static func autocode(dark: Bool, palette: String, reduce: Bool) -> String {
+    /// The AI-tagging illustration.
+    ///
+    /// Mixed by nature, which is the point: the sentiment badge and the speaker
+    /// role are **OURS** and lift from `enums.*`; the quotes are the
+    /// participant's; the code badges belong to whichever codebook produced
+    /// them. See `docs/design-i18n.md` §"Examples, mockups and illustrations".
+    static func autocode(dark: Bool, palette: String, reduce: Bool,
+                         strings: [String: String]) -> String {
         let kind = WelcomeIllustration.autocode
         return """
         <!doctype html><html data-appearance="\(dark ? "dark" : "light")" data-palette="\(palette)" data-reduce="\(reduce ? "1" : "0")">
@@ -1338,6 +1355,7 @@ enum WelcomeIllustrationHTML {
           @media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } }
         </style></head>
         <body><div id="ac"></div>
+        \(stringsBlock(strings))
         <script>
           var host=document.getElementById("ac");
           var REDUCED=document.documentElement.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
@@ -1345,8 +1363,8 @@ enum WelcomeIllustrationHTML {
           function sleep(ms){ return new Promise(function(r){ setTimeout(r, Math.round(ms*PACE)); }); }
           function nap(ms){ return sleep(ms); }   // PACE lives in sleep now; nap kept as the beat verb
           var QUOTES=[
-            { time:"11:30", speaker:"p1", role:"Participant", sentiment:"Satisfaction", q:"In the end, browsing rather than searching works. Yeah, it did.", code:"visible options", codeClass:"code-blue" },
-            { time:"13:08", speaker:"p1", role:"Participant", sentiment:"Satisfaction", q:"Is it normal it’s called a shopping bag? On another site it’d feel weird — you’re used to a cart.", code:"platform convention", codeClass:"code-violet" }
+            { time:"11:30", speaker:"p1", role:S["role"], sentiment:S["sentiment"], q:"In the end, browsing rather than searching works. Yeah, it did.", code:"visible options", codeClass:"code-blue" },
+            { time:"13:08", speaker:"p1", role:S["role"], sentiment:S["sentiment"], q:"Is it normal it’s called a shopping bag? On another site it’d feel weird — you’re used to a cart.", code:"platform convention", codeClass:"code-violet" }
           ];
           function cardHTML(d){
             return '<blockquote class="quote-card card-hidden"><div class="quote-row">'
@@ -1361,7 +1379,14 @@ enum WelcomeIllustrationHTML {
                 qclose=host.querySelector(".smart-quote.closing"), speaker=host.querySelector(".speaker"), badges=host.querySelector(".badges");
             if(REDUCED){
               qtext.textContent=d.q; qclose.style.visibility=""; speaker.style.visibility="";
-              badges.innerHTML='<span class="badge badge-ai badge-satisfaction">'+d.sentiment+'</span><span class="badge badge-user '+d.codeClass+'">'+d.code+'</span><span class="badge badge-add">+</span>';
+              // Built, not concatenated: a sentiment or code reaching innerHTML
+              // is outside the one escape site (see `stringsBlock`).
+              badges.textContent="";
+              [["badge badge-ai badge-satisfaction", d.sentiment],
+               ["badge badge-user "+d.codeClass,     d.code],
+               ["badge badge-add",                   "+"]].forEach(function(b){
+                var e=document.createElement("span"); e.className=b[0]; e.textContent=b[1]; badges.appendChild(e);
+              });
               card.classList.remove("card-hidden"); card.classList.add("card-shown"); return;
             }
             await sleep(60);
@@ -1630,7 +1655,7 @@ enum WelcomeIllustrationHTML {
           async function pressCap(c){ await nap(140); c.classList.add("cap-press"); await nap(150); c.classList.remove("cap-press"); await nap(150); }
           async function leaveCap(c){ c.classList.remove("cap-enter"); void c.offsetWidth; c.classList.add("cap-leave"); await nap(240); c.remove(); }
           async function typeInto(el, text, ms){ for(var i=0;i<text.length;i++){ el.textContent+=text[i]; await sleep(ms); } }
-          var TAGQ={ time:"09:14", speaker:"p3", role:"Participant", sentiment:"Satisfaction", q:"I knew straight away where to click — it matched what I expected.", tag:"mental model", tagClass:"code-blue" };
+          var TAGQ={ time:"09:14", speaker:"p3", role:S["role"], sentiment:S["sentiment"], q:"I knew straight away where to click — it matched what I expected.", tag:"mental model", tagClass:"code-blue" };
           function tagCard(d){
             return '<blockquote class="quote-card sh-card"><div class="quote-row">'
               +'<span class="timecode"><span class="timecode-bracket">[</span>'+d.time+'<span class="timecode-bracket">]</span></span>'
@@ -1789,8 +1814,8 @@ enum WelcomeIllustrationHTML {
           async function pressCap(c){ await nap(140); c.classList.add("cap-press"); await nap(150); c.classList.remove("cap-press"); await nap(150); }
           async function leaveCap(c){ c.classList.remove("cap-enter"); void c.offsetWidth; c.classList.add("cap-leave"); await nap(240); c.remove(); }
           var SHQ=[
-            { time:"11:30", speaker:"p1", role:"Participant", sentiment:"Satisfaction", q:"Browsing beat searching — it just worked." },
-            { time:"04:52", speaker:"p2", role:"Participant", sentiment:"Satisfaction", q:"Honestly, I skimmed straight past this bit." }
+            { time:"11:30", speaker:"p1", role:S["role"], sentiment:S["sentiment"], q:"Browsing beat searching — it just worked." },
+            { time:"04:52", speaker:"p2", role:S["role"], sentiment:S["sentiment"], q:"Honestly, I skimmed straight past this bit." }
           ];
           function fullCard(d){
             return '<blockquote class="quote-card sh-card"><button class="hide-btn" tabindex="-1">'+HIDE_SVG+'</button><button class="star-btn" tabindex="-1">★</button><div class="quote-row">'

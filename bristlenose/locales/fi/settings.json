@@ -34,6 +34,10 @@
     "legend": "Typografia"
   },
   "language": {
+    "relaunchTitle": "Bristlenose-apin kieliasetus on muuttunut. Avataanko appi uudelleen nyt?",
+    "relaunchBody": "Bristlenose ei k\u00e4yt\u00e4 uutta kielt\u00e4 ennen kuin se avataan uudelleen.",
+    "relaunchNow": "Avaa uudelleen nyt",
+    "dontRelaunch": "\u00c4l\u00e4 avaa uudelleen",
     "legend": "Kieli",
     "description": "Ohjaa käyttöliittymän näyttökieltä. Raportin sisältöä ei käännetä.",
     "helpTranslate": "Auta kääntämään Bristlenose omalle kielellesi palvelussa"

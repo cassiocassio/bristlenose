@@ -34,6 +34,10 @@
     "legend": "Tipograf\u00eda"
   },
   "language": {
+    "relaunchTitle": "El ajuste de idioma de la app Bristlenose ha cambiado. \u00bfQuieres reiniciarla ahora?",
+    "relaunchBody": "Bristlenose no usar\u00e1 el nuevo idioma hasta que se reinicie.",
+    "relaunchNow": "Reiniciar ahora",
+    "dontRelaunch": "No reiniciar",
     "legend": "Idioma",
     "description": "Controla el idioma de la interfaz. El contenido del informe no se traduce.",
     "helpTranslate": "Ayuda a traducir Bristlenose a tu idioma en"

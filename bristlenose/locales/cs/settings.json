@@ -34,6 +34,10 @@
     "legend": "Typografie"
   },
   "language": {
+    "relaunchTitle": "Zm\u011bnilo se nastaven\u00ed jazyka v\u00a0aplikaci Bristlenose. Chcete ji te\u010f restartovat?",
+    "relaunchBody": "Bristlenose m\u016f\u017ee pou\u017e\u00edt nov\u00fd jazyk a\u017e p\u0159i dal\u0161\u00edm spu\u0161t\u011bn\u00ed.",
+    "relaunchNow": "Restartovat",
+    "dontRelaunch": "Nerestartovat",
     "legend": "Jazyk",
     "description": "Určuje jazyk zobrazení rozhraní. Obsah reportu se nepřekládá.",
     "helpTranslate": "Pomozte přeložit Bristlenose do svého jazyka na"

@@ -61,6 +61,14 @@ final class SettingsWindow {
     /// The fronted serve, or the fleet's idle stand-in.
     private var serveManager: ServeManager? { serveFleet?.frontedOrIdle }
     var projectIndex: ProjectIndex?
+    /// Read for one question only: is an analysis running? A language change
+    /// offers to relaunch, and relaunching mid-run would kill the subprocess.
+    var pipelineRunner: PipelineRunner?
+
+    /// True when any project is mid-analysis.
+    var isAnalysing: Bool {
+        pipelineRunner?.state.values.contains { $0.keepsMachineAwake } ?? false
+    }
 
     /// Built on first open, and **rebuilt when the UI language changes**.
     ///

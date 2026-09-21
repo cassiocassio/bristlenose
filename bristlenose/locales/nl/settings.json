@@ -34,6 +34,10 @@
     "legend": "Typografie"
   },
   "language": {
+    "relaunchTitle": "Taalinstelling voor Bristlenose is gewijzigd. Wil je de app opnieuw openen?",
+    "relaunchBody": "Bristlenose gebruikt de nieuwe taal pas na opnieuw openen.",
+    "relaunchNow": "Open nu opnieuw",
+    "dontRelaunch": "Open niet opnieuw",
     "legend": "Taal",
     "description": "Bepaalt de weergavetaal van de interface. De inhoud van het rapport wordt niet vertaald.",
     "helpTranslate": "Help Bristlenose in jouw taal te vertalen op"

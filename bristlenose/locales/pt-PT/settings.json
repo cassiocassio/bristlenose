@@ -34,6 +34,10 @@
     "legend": "Tipografia"
   },
   "language": {
+    "relaunchTitle": "As defini\u00e7\u00f5es de idioma para Bristlenose foram alteradas. Pretende reabrir a aplica\u00e7\u00e3o agora?",
+    "relaunchBody": "A aplica\u00e7\u00e3o Bristlenose n\u00e3o usar\u00e1 o novo idioma at\u00e9 ser reaberta.",
+    "relaunchNow": "Reabrir agora",
+    "dontRelaunch": "N\u00e3o reabrir",
     "legend": "Idioma",
     "description": "Controla o idioma de apresentação da interface. O conteúdo do relatório não é traduzido.",
     "helpTranslate": "Ajude a traduzir o Bristlenose para o seu idioma em"

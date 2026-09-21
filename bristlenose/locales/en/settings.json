@@ -34,6 +34,10 @@
     "legend": "Typography"
   },
   "language": {
+    "relaunchTitle": "Language setting for Bristlenose has changed. Do you want to relaunch the app now?",
+    "relaunchBody": "Bristlenose will not use the new language until relaunched.",
+    "relaunchNow": "Relaunch Now",
+    "dontRelaunch": "Don\u2019t Relaunch",
     "legend": "Language",
     "description": "Controls the display language of the interface. Report content is not translated.",
     "helpTranslate": "Help translate Bristlenose into your language on"

@@ -34,6 +34,10 @@
     "legend": "Typografi"
   },
   "language": {
+    "relaunchTitle": "Spr\u00e5kinnstillingen for Bristlenose er endret. Vil du starte appen p\u00e5 nytt n\u00e5?",
+    "relaunchBody": "Bristlenose m\u00e5 startes p\u00e5 nytt for at det nye spr\u00e5ket skal tas i bruk.",
+    "relaunchNow": "Start p\u00e5 nytt n\u00e5",
+    "dontRelaunch": "Ikke start p\u00e5 nytt",
     "legend": "Språk",
     "description": "Styrer visningsspråket for grensesnittet. Rapportinnholdet oversettes ikke.",
     "helpTranslate": "Hjelp til med å oversette Bristlenose til språket ditt på"

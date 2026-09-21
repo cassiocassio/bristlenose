@@ -34,6 +34,10 @@
     "legend": "Tipografi"
   },
   "language": {
+    "relaunchTitle": "Bristlenose i\u00e7in dil ayar\u0131 de\u011fi\u015fti. \u015eimdi uygulamay\u0131 yeniden \u00e7al\u0131\u015ft\u0131rmak ister\u00a0misiniz?",
+    "relaunchBody": "Bristlenose, yeniden \u00e7al\u0131\u015ft\u0131r\u0131l\u0131ncaya dek yeni dili kullanamaz.",
+    "relaunchNow": "\u015eimdi Yeniden \u00c7al\u0131\u015ft\u0131r",
+    "dontRelaunch": "Yeniden \u00c7al\u0131\u015ft\u0131rma",
     "legend": "Dil",
     "description": "Arayüzün görüntüleme dilini denetler. Rapor içeriği çevrilmez.",
     "helpTranslate": "Bristlenose'u kendi dilinize çevirmeye şurada yardımcı olun:"

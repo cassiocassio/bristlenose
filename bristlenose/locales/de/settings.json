@@ -34,6 +34,10 @@
     "legend": "Typografie"
   },
   "language": {
+    "relaunchTitle": "Die Spracheinstellung f\u00fcr Bristlenose wurde ge\u00e4ndert. M\u00f6chtest du die App jetzt neu starten?",
+    "relaunchBody": "Bristlenose verwendet die neue Sprache erst nach einem Neustart.",
+    "relaunchNow": "Jetzt neu starten",
+    "dontRelaunch": "Nicht neu starten",
     "legend": "Sprache",
     "description": "Legt die Anzeigesprache der Benutzeroberfläche fest. Berichtsinhalte werden nicht übersetzt.",
     "helpTranslate": "Helfen Sie, Bristlenose in Ihre Sprache zu übersetzen auf"

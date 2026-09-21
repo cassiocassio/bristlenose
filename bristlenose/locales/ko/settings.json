@@ -34,6 +34,10 @@
     "legend": "\ud0c0\uc774\ud3ec\uadf8\ub798\ud53c"
   },
   "language": {
+    "relaunchTitle": "Bristlenose \uc5b8\uc5b4 \uc124\uc815\uc774 \ubcc0\uacbd\ub418\uc5c8\uc2b5\ub2c8\ub2e4. \uc571\uc744 \ub2e4\uc2dc \uc2e4\ud589\ud558\uaca0\uc2b5\ub2c8\uae4c?",
+    "relaunchBody": "Bristlenose\uc740(\ub294) \uc7ac\uc2e4\ud589\ub418\uae30 \uc804\uae4c\uc9c0 \uc0c8\ub85c\uc6b4 \uc5b8\uc5b4\ub97c \uc0ac\uc6a9\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.",
+    "relaunchNow": "\uc9c0\uae08 \uc7ac\uc2e4\ud589",
+    "dontRelaunch": "\uc7ac\uc2e4\ud589\ud558\uc9c0 \uc54a\uc74c",
     "legend": "언어",
     "description": "인터페이스의 표시 언어를 설정합니다. 보고서 내용은 번역되지 않습니다.",
     "helpTranslate": "Bristlenose를 여러분의 언어로 번역하는 데 도움을 주세요:"

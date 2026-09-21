@@ -34,6 +34,10 @@
     "legend": "Typografia"
   },
   "language": {
+    "relaunchTitle": "Ustawienia j\u0119zyka dla aplikacji Bristlenose zosta\u0142y zmienione. Czy chcesz j\u0105 teraz uruchomi\u0107 ponownie?",
+    "relaunchBody": "Aplikacja Bristlenose nie b\u0119dzie u\u017cywa\u0142a nowego j\u0119zyka do momentu ponownego uruchomienia.",
+    "relaunchNow": "Uruchom ponownie teraz",
+    "dontRelaunch": "Nie uruchamiaj ponownie",
     "legend": "Język",
     "description": "Steruje językiem wyświetlania interfejsu. Treść raportu nie jest tłumaczona.",
     "helpTranslate": "Pomóż przetłumaczyć Bristlenose na Twój język w serwisie"

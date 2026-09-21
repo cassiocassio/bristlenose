@@ -30,8 +30,8 @@ beforeEach(() => {
 
 describe("dt", () => {
   it("returns base translation when not on desktop", () => {
-    const result = dt(stubT, "help.privacy.redactionIntro");
-    expect(result).toBe("translated:help.privacy.redactionIntro");
+    const result = dt(stubT, "configReference.intro");
+    expect(result).toBe("translated:configReference.intro");
     expect(mockExists).not.toHaveBeenCalled();
   });
 
@@ -41,10 +41,10 @@ describe("dt", () => {
     mockExists.mockReturnValue(true);
 
     const t = vi.fn().mockImplementation((key: string) => `translated:${key}`);
-    const result = dt(t as unknown as TFunction, "help.privacy.redactionIntro");
+    const result = dt(t as unknown as TFunction, "configReference.intro");
 
-    expect(mockExists).toHaveBeenCalledWith("desktop:help.privacy.redactionIntro");
-    expect(result).toBe("translated:desktop:help.privacy.redactionIntro");
+    expect(mockExists).toHaveBeenCalledWith("desktop:configReference.intro");
+    expect(result).toBe("translated:desktop:configReference.intro");
   });
 
   it("falls back to base translation when on desktop but key missing", () => {
@@ -52,10 +52,10 @@ describe("dt", () => {
     _resetPlatformCache();
     mockExists.mockReturnValue(false);
 
-    const result = dt(stubT, "help.privacy.redactionIntro");
+    const result = dt(stubT, "configReference.intro");
 
-    expect(mockExists).toHaveBeenCalledWith("desktop:help.privacy.redactionIntro");
-    expect(result).toBe("translated:help.privacy.redactionIntro");
+    expect(mockExists).toHaveBeenCalledWith("desktop:configReference.intro");
+    expect(result).toBe("translated:configReference.intro");
   });
 
   it("works with settings namespace keys", () => {

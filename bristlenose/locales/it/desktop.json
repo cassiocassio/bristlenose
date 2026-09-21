@@ -716,15 +716,7 @@
     "mcpAgents": "Agenti MCP",
     "transcription": "Trascrizione"
   },
-  "help": {
-    "privacy": {
-      "redactionIntro": "L'oscuramento dei dati personali è facoltativo. È disattivato di default perché i falsi positivi (l'oscuramento di testo rilevante per la ricerca) compromettono l'accuratezza dei dati. La funzione utilizza Microsoft Presidio, uno scanner di testo open source, con una soglia di affidabilità configurabile (di default 0,7).",
-      "actionThreshold": "Per i dati sensibili, abbassare la soglia di affidabilità (provare 0,5) per rilevarne di più, a costo di un maggior numero di falsi positivi."
-    },
-    "contributing": {
-      "beforeBody": "Consulta la <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">guida ai contributi</a> su GitHub per la configurazione dell'ambiente di sviluppo e i controlli di qualità del codice."
-    }
-  },
+
   "configReference": {
     "intro": "La maggior parte delle impostazioni si trova nella finestra Impostazioni (⌘,). I nomi delle variabili d'ambiente sono mostrati di seguito per la configurazione avanzata."
   },

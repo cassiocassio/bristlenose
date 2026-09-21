@@ -752,15 +752,7 @@
     "mcpAgents": "Agenci MCP",
     "transcription": "Transkrypcja"
   },
-  "help": {
-    "privacy": {
-      "redactionIntro": "Usuwanie danych osobowych (PII) jest opcjonalne. Domyślnie jest wyłączone, ponieważ fałszywe trafienia (usuwanie tekstu istotnego dla badania) obniżają dokładność danych. Funkcja korzysta z Microsoft Presidio, otwartoźródłowego skanera tekstu, z konfigurowalnym progiem pewności (domyślnie 0,7).",
-      "actionThreshold": "W przypadku danych wrażliwych obniż próg pewności (spróbuj 0,5), aby wykrywać więcej kosztem większej liczby fałszywych trafień."
-    },
-    "contributing": {
-      "beforeBody": "Zobacz <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">przewodnik dla współtwórców</a> na GitHubie, aby poznać konfigurację środowiska programistycznego i kontrole jakości kodu."
-    }
-  },
+
   "configReference": {
     "intro": "Większość ustawień znajduje się w oknie Ustawień (⌘,). Nazwy zmiennych środowiskowych pokazano poniżej na potrzeby zaawansowanej konfiguracji."
   },

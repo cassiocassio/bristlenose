@@ -751,15 +751,7 @@
     "mcpAgents": "Agenti MCP",
     "transcription": "Přepis"
   },
-  "help": {
-    "privacy": {
-      "redactionIntro": "Redakce osobních údajů je volitelná. Ve výchozím nastavení je vypnutá, protože falešně pozitivní výsledky (redakce textu relevantního pro výzkum) poškozují přesnost dat. Funkce využívá Microsoft Presidio, open-source skener textu, s nastavitelným prahem spolehlivosti (výchozí 0,7).",
-      "actionThreshold": "U citlivých dat snižte práh spolehlivosti (zkuste 0,5), abyste zachytili více za cenu většího počtu falešně pozitivních výsledků."
-    },
-    "contributing": {
-      "beforeBody": "Pro nastavení vývoje a kontroly kvality kódu si přečtěte <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">průvodce přispíváním</a> na GitHubu."
-    }
-  },
+
   "configReference": {
     "intro": "Většina nastavení je v okně Nastavení (⌘,). Názvy proměnných prostředí jsou uvedeny níže pro pokročilou konfiguraci."
   },

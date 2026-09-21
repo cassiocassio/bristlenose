@@ -29,8 +29,8 @@ import { isDesktop } from "./platform";
  * Return desktop-specific translation if available, else fall back to base key.
  *
  * Desktop keys use the same key path in the `desktop` namespace.
- * E.g. `dt(t, "help.privacy.redactionIntro")` checks
- * `desktop:help.privacy.redactionIntro` first.
+ * E.g. `dt(t, "configReference.intro")` checks
+ * `desktop:configReference.intro` first.
  */
 export function dt(t: TFunction, key: string): string {
   if (!isDesktop()) return t(key);

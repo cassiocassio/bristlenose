@@ -716,15 +716,7 @@
     "mcpAgents": "MCP-agenter",
     "transcription": "Transkripsjon"
   },
-  "help": {
-    "privacy": {
-      "redactionIntro": "Sladding av personopplysninger må slås på manuelt. Det er av som standard fordi falske treff (sladding av forskningsrelevant tekst) skader datakvaliteten. Funksjonen bruker Microsoft Presidio, en åpen kildekode-tekstskanner, med en konfigurerbar konfidensterskel (standard 0,7).",
-      "actionThreshold": "For sensitive data kan du senke konfidensterskelen (prøv 0,5) for å fange opp mer, på bekostning av flere falske treff."
-    },
-    "contributing": {
-      "beforeBody": "Se <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">bidragsveiledningen</a> på GitHub for utviklingsoppsett og kodekvalitetssjekker."
-    }
-  },
+
   "configReference": {
     "intro": "De fleste innstillinger finnes i Innstillinger-vinduet (⌘,). Navn på miljøvariabler vises nedenfor for avansert konfigurasjon."
   },

@@ -716,15 +716,7 @@
     "mcpAgents": "MCP-agents",
     "transcription": "Transcriptie"
   },
-  "help": {
-    "privacy": {
-      "redactionIntro": "PII-redactie is opt-in. Het staat standaard uit omdat valse positieven (het redigeren van onderzoeksrelevante tekst) de datanauwkeurigheid schaden. De functie gebruikt Microsoft Presidio, een opensource-tekstscanner, met een instelbare betrouwbaarheidsdrempel (standaard 0.7).",
-      "actionThreshold": "Verlaag voor gevoelige data de betrouwbaarheidsdrempel (probeer 0.5) om meer op te pikken, ten koste van meer valse positieven."
-    },
-    "contributing": {
-      "beforeBody": "Zie de <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">bijdragegids</a> op GitHub voor het opzetten van de ontwikkelomgeving en de codekwaliteitscontroles."
-    }
-  },
+
   "configReference": {
     "intro": "De meeste instellingen staan in het Instellingen-venster (⌘,). Namen van omgevingsvariabelen worden hieronder getoond voor geavanceerde configuratie."
   },

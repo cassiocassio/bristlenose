@@ -305,15 +305,7 @@
     "mcpAgents": "MCP\u30a8\u30fc\u30b8\u30a7\u30f3\u30c8",
     "transcription": "文字起こし"
   },
-  "help": {
-    "privacy": {
-      "redactionIntro": "個人情報の削除はオプションです。誤検出（研究に関連するテキストの削除）がデータの精度を損なうため、デフォルトでは無効になっています。Microsoft Presidio オープンソーステキストスキャナーを使用し、設定可能な信頼度しきい値（デフォルト 0.7）があります。",
-      "actionThreshold": "機密データの場合、信頼度しきい値を下げると（0.5 を試してください）、より多く検出できますが、誤検出も増加します。"
-    },
-    "contributing": {
-      "beforeBody": "開発環境のセットアップとコード品質チェックについては、GitHub の <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">コントリビューションガイド</a> を参照してください。"
-    }
-  },
+
   "configReference": {
     "intro": "ほとんどの設定は設定ウインドウ (⌘,) にあります。高度な設定には、以下の環境変数名を参照してください。"
   },

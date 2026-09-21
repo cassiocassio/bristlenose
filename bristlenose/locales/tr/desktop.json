@@ -716,15 +716,7 @@
     "mcpAgents": "MCP Ajanlar\u0131",
     "transcription": "Döküm"
   },
-  "help": {
-    "privacy": {
-      "redactionIntro": "Kişisel veri (PII) sansürleme isteğe bağlıdır. Yanlış pozitifler (araştırmayla ilgili metnin sansürlenmesi) veri doğruluğuna zarar verdiğinden varsayılan olarak kapalıdır. Bu özellik, yapılandırılabilir bir güven eşiğiyle (varsayılan 0,7) açık kaynaklı bir metin tarayıcısı olan Microsoft Presidio’yu kullanır.",
-      "actionThreshold": "Hassas veriler için, daha fazla yanlış pozitif pahasına daha fazlasını yakalamak amacıyla güven eşiğini düşürün (0,5 deneyin)."
-    },
-    "contributing": {
-      "beforeBody": "Geliştirme kurulumu ve kod kalitesi denetimleri için GitHub’daki <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">katkı kılavuzuna</a> bakın."
-    }
-  },
+
   "configReference": {
     "intro": "Çoğu ayar, Ayarlar penceresindedir (⌘,). Gelişmiş yapılandırma için ortam değişkeni adları aşağıda gösterilmiştir."
   },

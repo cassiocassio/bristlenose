@@ -716,15 +716,7 @@
     "mcpAgents": "Agents MCP",
     "transcription": "Transcripció"
   },
-  "help": {
-    "privacy": {
-      "redactionIntro": "L'ocultació de dades personals és opcional. Està desactivada per defecte perquè els falsos positius (ocultar text rellevant per a la recerca) perjudiquen l'exactitud de les dades. La funció utilitza Microsoft Presidio, un escàner de text de codi obert, amb un llindar de confiança configurable (0,7 per defecte).",
-      "actionThreshold": "Per a dades sensibles, abaixa el llindar de confiança (prova 0,5) per detectar-ne més a canvi de més falsos positius."
-    },
-    "contributing": {
-      "beforeBody": "Consulta la <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">guia de contribució</a> a GitHub per a la configuració de desenvolupament i les comprovacions de qualitat del codi."
-    }
-  },
+
   "configReference": {
     "intro": "La majoria de les opcions són a la finestra de configuració (⌘,). A continuació es mostren els noms de les variables d'entorn per a la configuració avançada."
   },

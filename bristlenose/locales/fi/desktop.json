@@ -716,15 +716,7 @@
     "mcpAgents": "MCP-agentit",
     "transcription": "Litterointi"
   },
-  "help": {
-    "privacy": {
-      "redactionIntro": "Henkilötietojen peittäminen on valinnainen. Se on oletuksena pois päältä, koska väärät positiiviset (tutkimuksen kannalta olennaisen tekstin peittäminen) heikentävät aineiston tarkkuutta. Ominaisuus käyttää Microsoft Presidiota, avoimen lähdekoodin tekstiskanneria, jonka luottamuskynnys on määritettävissä (oletus 0,7).",
-      "actionThreshold": "Arkaluontoisen aineiston kohdalla laske luottamuskynnystä (kokeile arvoa 0,5) havaitaksesi enemmän useampien väärien positiivisten kustannuksella."
-    },
-    "contributing": {
-      "beforeBody": "Katso <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">osallistumisopas</a> GitHubissa kehitysympäristön asennusta ja koodin laatutarkistuksia varten."
-    }
-  },
+
   "configReference": {
     "intro": "Useimmat asetukset ovat Asetukset-ikkunassa (⌘,). Ympäristömuuttujien nimet näkyvät alla edistynyttä määritystä varten."
   },

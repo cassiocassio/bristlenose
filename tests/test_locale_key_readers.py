@@ -45,13 +45,16 @@ before the register is consulted, so they never reach it:
 * **pseudo-keys.** `_comment_*` and `_divergent_*` are notes to maintainers, as
   `flatten()` in `check-locales.py` already has it.
 
-What is left is 283 keys, and they are not one thing either. `_KNOWN_ORPHANS`
-below carries them in 26 blocks, each with a tag and the commit that did it:
+What is left is 152 keys, and they are not one thing either. `_KNOWN_ORPHANS`
+below carries them in 24 blocks, each with a tag and the commit that did it:
 
-* `DEAD` — the reader was deleted and the key stayed. 242 of the 283, and
-  `common.help.` alone is 129 of those: `3f49d170` retired the in-app help
-  modal on 10 Jul 2026, and two of its keys were still being reworded and
-  re-translated into 20 locales on 21 Sep 2026.
+* `DEAD` — the reader was deleted and the key stayed. `common.help.` was 129
+  of them and is **gone as of 21 Sep 2026**: `3f49d170` had retired the in-app
+  help modal on 10 Jul, two of its keys were still being reworded and
+  re-translated into 20 locales on 20 Sep, and the public docs superseded the
+  content entirely. Deleting it took 2,730 values out of the tree, plus the
+  three `desktop.help.` overrides `docs/platform-text-map.md` had been carrying
+  an open "decision owed" on since it was written.
 * `UNWIRED` — a surface that never had a call site at all. The `cli`, `doctor`
   and `pipeline` namespaces are wholly in this class; they anticipate a
   translation that `docs/design-i18n.md` §"Which surfaces are targets" has
@@ -286,74 +289,6 @@ class _Block:
 
 
 _KNOWN_ORPHANS: dict[str, _Block] = {
-    "common.help.": _Block(
-        tag=DEAD,
-        why="`3f49d170` (10 Jul 2026) retired the in-app help modal in favour of the "
-            "live docs, deleting `HelpModal.tsx` and `components/about/*` — the only "
-            "readers this whole block ever had. The largest orphan in the tree by a "
-            "factor of four, and still being maintained: two of these were reworded "
-            "and re-translated into 20 locales on 21 Sep 2026 (register item 21).",
-        leaves="""
-            acknowledgements.ai acknowledgements.frontend
-            acknowledgements.intro acknowledgements.python
-            codebook.bristlenoseDesc codebook.citBraun2006
-            codebook.citEricsson1993 codebook.citSaldana2021
-            codebook.frameworkBody codebook.frameworkTitle
-            codebook.garrettDesc codebook.normanDesc
-            codebook.platonicDesc codebook.quoteEthicsBody
-            codebook.referencesTitle codebook.sectionsBody
-            codebook.sectionsTitle codebook.sentimentBody
-            codebook.sentimentTitle codebook.themesBody
-            contributing.beforeBody contributing.beforeTitle
-            contributing.licence contributing.linkBug
-            contributing.linkGuide contributing.linkSource
-            contributing.linksTitle contributing.translateBody
-            contributing.translateTitle guide.exportBody
-            guide.exportTitle guide.intro guide.sectionsBody
-            guide.sectionsTitle guide.sentimentBody
-            guide.sentimentTitle guide.signalsBody guide.signalsTitle
-            guide.starsBody guide.starsTitle navAbout
-            navAcknowledgements navCodebook navContributing navDesign
-            navDeveloper navHelp navPrivacy navShortcuts navSignals
-            privacy.actionAudit privacy.actionNames
-            privacy.actionRetention privacy.actionReview
-            privacy.actionSharing privacy.actionThreshold
-            privacy.actionTitle privacy.cannotBody
-            privacy.cannotIndirect privacy.cannotTitle
-            privacy.catchesBody privacy.catchesTitle privacy.localAnon
-            privacy.localBody privacy.localOllama privacy.localTitle
-            privacy.missesBody privacy.missesTitle
-            privacy.redactionTitle privacy.speakerIdNote
-            shortcuts.actions shortcuts.addTag shortcuts.closeClear
-            shortcuts.extend shortcuts.global shortcuts.hideQuotes
-            shortcuts.navigation shortcuts.nextQuote
-            shortcuts.playInVideo shortcuts.previousQuote
-            shortcuts.repeatLastTag shortcuts.search
-            shortcuts.selection shortcuts.starQuotes
-            shortcuts.thisHelp shortcuts.toggleBothSidebars
-            shortcuts.toggleContents shortcuts.toggleHeatmap
-            shortcuts.toggleSelect shortcuts.toggleTags
-            signals.agreementDesc signals.citBarrett2017
-            signals.citBenedek2002 signals.citBradley1994
-            signals.citDemszky2020 signals.citEkman1992
-            signals.citFogg1999 signals.citFogg2001
-            signals.citFogg2003 signals.citHassenzahl2003
-            signals.citLaugwitz2008 signals.citPicard1997
-            signals.citPlutchik1980 signals.citRussell2003
-            signals.citScherer2005 signals.citStanford2002
-            signals.concentrationDesc signals.confidenceDesc
-            signals.confusionDesc signals.delightDesc
-            signals.doubtDesc signals.frameworkBody
-            signals.frameworkHeading signals.frustrationDesc
-            signals.intensityMetricDesc signals.intensityScale
-            signals.intro signals.patternTypesBody
-            signals.refAffectiveComputing signals.refEmotionScience
-            signals.refTrustCredibility signals.refUxResearch
-            signals.referencesHeading signals.satisfactionDesc
-            signals.sentimentHeading signals.sentimentIntro
-            signals.surpriseDesc signals.thresholds title
-        """,  # 129
-    ),
     "common.codebook.": _Block(
         tag=DEAD,
         why="`baa1aa0e` deleted the v1 codebook lens. The v2 navigator reuses the "
@@ -553,16 +488,6 @@ _KNOWN_ORPHANS: dict[str, _Block] = {
             "call site wrote the base and took the whole family with it.",
         leaves="""
             quotes_one quotes_other
-        """,  # 2
-    ),
-    "desktop.help.": _Block(
-        tag=DEAD,
-        why="Register item 16 — the `dt()` overrides whose SPA sections "
-            "`3f49d170` deleted. Only two of the three appear here: "
-            "`privacy.redactionIntro` is masked by the worked example in "
-            "`platformTranslation.ts`'s doc comment, exactly as item 16 predicted.",
-        leaves="""
-            contributing.beforeBody privacy.actionThreshold
         """,  # 2
     ),
     "doctor.": _Block(

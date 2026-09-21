@@ -716,15 +716,7 @@
     "mcpAgents": "MCP-agenter",
     "transcription": "Transskription"
   },
-  "help": {
-    "privacy": {
-      "redactionIntro": "Fjernelse af personoplysninger er valgfri. Den er slået fra som standard, fordi falske positiver (fjernelse af undersøgelsesrelevant tekst) skader datakvaliteten. Funktionen bruger Microsoft Presidio, en open source-tekstscanner, med en konfigurerbar konfidenstærskel (standard 0,7).",
-      "actionThreshold": "For følsomme data kan du sænke konfidenstærsklen (prøv 0,5) for at fange mere på bekostning af flere falske positiver."
-    },
-    "contributing": {
-      "beforeBody": "Se <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">bidragsguiden</a> på GitHub for udviklingsopsætning og kodekvalitetstjek."
-    }
-  },
+
   "configReference": {
     "intro": "De fleste indstillinger findes i vinduet Indstillinger (⌘,). Navne på miljøvariabler vises nedenfor til avanceret konfiguration."
   },

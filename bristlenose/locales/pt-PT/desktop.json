@@ -716,15 +716,7 @@
     "mcpAgents": "Agentes MCP",
     "transcription": "Transcrição"
   },
-  "help": {
-    "privacy": {
-      "redactionIntro": "A ocultação de PII é opcional. Vem desativada por predefinição porque os falsos positivos (ocultar texto relevante para a investigação) prejudicam a exatidão dos dados. A funcionalidade usa o Microsoft Presidio, um scanner de texto de código aberto, com um limiar de confiança configurável (predefinição 0,7).",
-      "actionThreshold": "Para dados sensíveis, reduza o limiar de confiança (experimente 0,5) para captar mais, ao custo de mais falsos positivos."
-    },
-    "contributing": {
-      "beforeBody": "Consulte o <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">guia de contribuição</a> no GitHub para a configuração de desenvolvimento e as verificações de qualidade de código."
-    }
-  },
+
   "configReference": {
     "intro": "A maioria das definições está na janela de Definições (⌘,). Os nomes das variáveis de ambiente são mostrados abaixo para configuração avançada."
   },

@@ -27,11 +27,7 @@
       }
     }
   },
-  "help": {
-    "contributing": {
-      "beforeBody": "請參閱 GitHub 上的<a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">貢獻指南</a>，了解開發環境設定與程式碼質素檢查。"
-    }
-  },
+
   "ollamaSetup": {
     "tagBest": "最佳質素",
     "foreshadow": "這些模型透過 **Ollama** 執行，這是你接下來要設定的免費軟件。",

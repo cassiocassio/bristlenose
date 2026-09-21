@@ -716,15 +716,7 @@
     "mcpAgents": "MCP-agenter",
     "transcription": "Transkription"
   },
-  "help": {
-    "privacy": {
-      "redactionIntro": "Redigering av personuppgifter är valfri. Den är avstängd som standard eftersom falska träffar (att redigera bort forskningsrelevant text) skadar dataprecisionen. Funktionen använder Microsoft Presidio, en textskanner med öppen källkod, med ett justerbart tröskelvärde för säkerhet (standard 0,7).",
-      "actionThreshold": "För känsliga data, sänk tröskelvärdet för säkerhet (prova 0,5) för att fånga fler, till priset av fler falska träffar."
-    },
-    "contributing": {
-      "beforeBody": "Se <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">bidragsguiden</a> på GitHub för utvecklingsmiljö och kodkvalitetskontroller."
-    }
-  },
+
   "configReference": {
     "intro": "De flesta inställningar finns i inställningsfönstret (⌘,). Miljövariabelnamn visas nedan för avancerad konfiguration."
   },

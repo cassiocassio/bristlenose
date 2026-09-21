@@ -698,15 +698,7 @@
     "mcpAgents": "MCP \u4ee3\u7406",
     "transcription": "逐字稿轉錄"
   },
-  "help": {
-    "privacy": {
-      "redactionIntro": "個人識別資訊（PII）的遮蔽為選擇加入。預設為關閉，因為誤判（遮蔽到研究相關的文字）會損害資料準確性。此功能使用 Microsoft Presidio（一款開放原始碼的文字掃描工具），並具備可調整的信賴門檻（預設為 0.7）。",
-      "actionThreshold": "對於敏感資料，可調低信賴門檻（試試 0.5）以攔截更多內容，但代價是更多誤判。"
-    },
-    "contributing": {
-      "beforeBody": "請參閱 GitHub 上的<a href=\"https://github.com/cassiocassio/bristlenose/blob/main/CONTRIBUTING.md\" target=\"_blank\" rel=\"noopener noreferrer\">貢獻指南</a>，了解開發環境設定與程式碼品質檢查。"
-    }
-  },
+
   "configReference": {
     "intro": "大多數設定位於「設定」視窗（⌘,）中。下方列出環境變數名稱，供進階配置使用。"
   },

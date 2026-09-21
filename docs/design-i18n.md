@@ -73,6 +73,32 @@ Three layers, three strategies:
 
 ## Strategy: why we don't translate prompts or transcripts
 
+### Which surfaces are targets
+
+The rule is a property of the **surface**, never a stage of the project. "Not yet,
+we're in alpha" is not a reason — it is the absence of one, and stated often enough
+it becomes a policy nobody chose. If a surface is English, the row below says why in
+terms that will still be true next year.
+
+| Surface | Status | Why |
+|---|---|---|
+| CLI terminal chrome — `--help`, Rich output, checkmark lines, `man` page | **English** | The terminal is the operator surface. The researcher's deliverable is the artefact it produces, and that is localised — `--lang` steers the artefact, not the terminal |
+| Public-facing docs — website `docs-src/`, `README`, `CONTRIBUTING`, `SECURITY` | **English** | Volume |
+| Developer / diagnostic chrome — System Health, the Diagnostics menu, alpha-expiry | **English** | Hidden on the App Store build. Exposed during alpha / TestFlight, and never on the shipping consumer surface |
+| **Browser SPA** — serve mode and the exported report | **21 full locales** | The researcher's deliverable |
+| **macOS app UI** | **21 full locales** | The researcher's workspace |
+| Forensic / wire records — `Cause.message`, the events log, the Copy-details plaintext | **English** | A run analysed while the UI was German must not read as German forever, and a pasted bug report must read the same whatever the reporter's language |
+| Data — transcripts, quotes, prompts, codebook YAML | **Untranslated** | Methodology — see the rest of this section |
+
+**The authoring failure this table exists to prevent is a sentence filed as data.**
+Every gap the 21 Sep 2026 Swift audit found was a `String` property on a type that
+models a *thing* rather than a *screen* — `signInTitle` on a platform,
+`errorDescription` on an error, `rowMessage` on a verdict, `humanSummary` on a
+category, `label` on an icon. The tell is sitting in `CloudPlatform.swift`:
+`windowTitle(_ i18n: I18n)` takes an `I18n` and explains in a comment which part of
+itself does not move; `signInTitle`, three lines below, is hardcoded English. Same
+file, same type. The pattern was there and the next member did not reach for it.
+
 **Option rejected: translate prompts into target languages.** Would require maintaining N copies of every prompt for diminishing returns. Codebook concepts often originate in English — translating them adds a lossy step.
 
 **Option rejected: translate transcripts to English.** Destroys nuance, idiom, and cultural context — exactly what UX researchers care about. "Das ist mir total egal" carries different weight than "I don't care at all". Adds a compounding-error pipeline stage.

@@ -42,6 +42,15 @@ final class I18n: ObservableObject {
     /// Namespaces to load — must match the JSON filenames in bristlenose/locales/.
     private static let namespaces = ["common", "settings", "enums", "desktop"]
 
+    /// The other five namespaces that exist in `bristlenose/locales/` and are
+    /// deliberately not loaded here — they belong to the CLI and the server,
+    /// which are their own surfaces. Kept beside `namespaces` because the two
+    /// are only meaningful as a pair: this is the complement, and the `t`
+    /// assertion below is the only thing that reads it.
+    private static let unloadedOnDiskNamespaces: Set<String> = [
+        "cli", "doctor", "pipeline", "preflight", "server",
+    ]
+
     // MARK: - Setup
 
     /// Set the locales directory and load the initial locale from UserDefaults.
@@ -94,6 +103,26 @@ final class I18n: ObservableObject {
         let namespace = String(key[key.startIndex..<dotIndex])
         let remainder = String(key[key.index(after: dotIndex)...])
         let parts = remainder.split(separator: ".").map(String.init)
+
+        // A namespace that exists in `bristlenose/locales/` but is NOT in
+        // `namespaces` above can never resolve here, and `t` has no error path —
+        // it returns the raw key, which renders as `server.statusPage.help` on
+        // screen and reads like a missing *translation* rather than an
+        // unreachable *namespace*. Assert in DEBUG so the mistake is loud where
+        // it is cheap.
+        //
+        // Deliberately NOT `!namespaces.contains(namespace)`: an entirely unknown
+        // namespace returning the raw key is a tested contract
+        // (`I18nTests.t_missingNamespace_returnsRawKey`, which passes
+        // "bogus.some.key"), and the graceful degradation it pins is wanted. The
+        // bug this catches is the opposite shape — a key that exists on disk and
+        // is unreachable from this target.
+        assert(
+            !Self.unloadedOnDiskNamespaces.contains(namespace),
+            "i18n: '\(namespace)' is a real namespace in bristlenose/locales/ but this target does not "
+                + "load it (loaded: \(Self.namespaces.joined(separator: ", "))). Key '\(key)' can never "
+                + "resolve and will render raw. Add it to I18n.namespaces, or re-home the key."
+        )
 
         // Try current locale
         if let ns = strings[namespace], let value = Self.resolve(ns, parts: parts) {

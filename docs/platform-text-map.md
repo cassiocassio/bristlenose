@@ -87,7 +87,7 @@ Text that only appears in terminal output. Never rendered in the web UI or deskt
 | `bristlenose.1` man page | 517 lines | Full man page | English only |
 | `preflight.json` | 33 | First-run preflight banners, prompts, error recovery (Whisper download, ffmpeg install table, API-key validation, closing line) | 21 locales (en source; machine-seeded locales pending native review). Reachable in a non-English locale via `bristlenose --lang=<code>` — `cli.py:_lang_callback`. de/es/fr/ja/ko carried raw English here until 21 Aug 2026 |
 
-**Gap**: CLI `--help` strings and the man page are English-only and not wired through i18next. Translating these is a future task (low priority — CLI users overwhelmingly work in English).
+**Settled, not a gap** (corrected 21 Sep 2026): CLI `--help` strings and the man page are English **by design** — terminal chrome and public-facing docs respectively, both English rows in `docs/design-i18n.md` §"Which surfaces are targets". This line previously booked them as "a future task (low priority)", which is the same stage-shaped framing that let three other English-only policies read as temporary. There is no future task here.
 
 ---
 

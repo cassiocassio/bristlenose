@@ -25,6 +25,35 @@ If code files were changed:
 2. **Run linter** — `.venv/bin/ruff check .` (whole repo, not just `bristlenose/`)
 3. If frontend files changed: `cd frontend && npm run build` (tsc catches type errors Vitest doesn't)
 4. If `desktop/` files changed: `desktop/scripts/test-swift.sh` (~3 min; exits 0 green, 1 red, 3 compile break)
+5. If this session added a **new user-facing surface** in `desktop/Bristlenose/Bristlenose/` or `frontend/src/`:
+
+   ```bash
+   BASE=$(git merge-base main HEAD 2>/dev/null || echo HEAD~10)
+   git diff --name-only --diff-filter=A "$BASE"..HEAD \
+       -- 'desktop/Bristlenose/Bristlenose/**/*.swift' 'frontend/src/**/*.tsx' |
+     while read -r f; do
+       case "$f" in *.test.tsx|*.test.ts) continue ;; esac
+       if [ -f "$f" ] && ! grep -qE 'i18n\??\.t\(|[^a-zA-Z]t\(' "$f"; then echo "no i18n: $f"; fi
+     done
+   ```
+
+   (Globs quoted so zsh hands them to git rather than expanding them against `cwd`; `while read` rather than `xargs -r`, which is GNU-only and absent on this Mac; an `if` rather than `&& … || …`, whose `||` arm fires on a missing file as readily as on a missing key. All three are traps this repo has already paid for — root `CLAUDE.md` §Gotchas.)
+
+   Any file listed has **zero** i18n call sites. That is failure class 2 — a surface never enrolled in English — and **nothing mechanical will ever ask again**, because every gate we own (`check-locales.py`, the locale key-parity tests, Weblate) is downstream of a key existing. Judge, don't obey: a presentation shell that takes its strings from a caller (`ToastView`, `StatusPill`, `SessionsPopoverList`) correctly has none, and a whole-file `#if DEBUG` lab is out of scope. What you are looking for is a surface a researcher reads. The boundary is `docs/design-i18n.md` §"Which surfaces are targets"; the authoring rule is `desktop/CLAUDE.md` §"A user-facing string needs a key".
+
+   **And one exact check with no judgement in it** — every `LocalizedError` conformer in the app target held hardcoded English on 21 Sep 2026, 6 of 6, no false positives:
+
+   ```bash
+   grep -rln ': LocalizedError' desktop/Bristlenose/Bristlenose |
+     while read -r f; do
+       if grep -qE '(errorDescription|failureReason|recoverySuggestion)' "$f" \
+          && ! grep -qE 'i18n\??\.t\(' "$f"; then echo "English LocalizedError: $f"; fi
+     done
+   ```
+
+   The protocol's name is the promise. A conformer whose `errorDescription` returns a bare literal is a sentence filed as data, and it renders — the six found on 21 Sep reach the cloud-import window, the Miro sheet and the main-window toast.
+
+   **This is the register's own standing recommendation** (`docs/i18n-defects.md`, "What to build next", the fourth item), which had been correct and unmechanised since 21 Aug 2026. It caught nothing for a month because it lived in a document rather than in a checklist that runs.
 
 If anything fails, **stop and fix before documenting**. Don't document a broken state.
 

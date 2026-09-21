@@ -137,6 +137,37 @@ Gruber is dragging the design back to Mac reality, native-first got skipped. The
 recurring panels/dialogs checklist and the origin post-mortem live in the
 `feedback_native_primitives_first.md` memory.
 
+## A user-facing string needs a key — the authoring rule
+
+**macOS app UI is an i18n target** (`docs/design-i18n.md` §"Which surfaces are
+targets"; 21 full locales). The exceptions are narrow and stated there: System
+Health and the Diagnostics menu, which are hidden on the App Store build, and the
+alpha-expiry chrome.
+
+**The failure is a sentence filed as data.** Every one of the ~100 gaps the 21 Sep
+2026 audit found was a `String` property on a type that models a *thing* rather than
+a *screen* — `signInTitle` on a platform, `errorDescription` on an error,
+`rowMessage` on a verdict, `humanSummary` on a category, `label` on an icon. Writing
+a View makes you think about a reader; writing a model does not, and the string
+renders just the same.
+
+Three rules, in the order they bite:
+
+1. **Errors carry a case, not a sentence.** `Cause.reason` travels on the wire and
+   the pane resolves `desktop.pipeline.diagnostic.reason.*`; the SPA's
+   `autocodeFailure.ts` maps `failure_kind` → `(key, fallback, kind)`. Both keep the
+   forensic record English *and* give the reader their language. A `switch` returning
+   a bare literal is that table missing its key column.
+2. **`LocalizedError.errorDescription` is the highest-risk site in this codebase** —
+   6 of 6 conformers held hardcoded English on 21 Sep 2026. The protocol's name is
+   the promise; keep it.
+3. **A non-View type takes `I18n` as a parameter.** There is no `I18n.shared` — one
+   instance, injected. `CloudPlatform.windowTitle(_ i18n: I18n)` is the worked
+   example, and `signInTitle` three lines below it in the same enum is what happens
+   without this rule.
+
+Sweeping rather than authoring? The grep recipe is in Gotchas, "Swift i18n sweeps".
+
 ## Appearance (light / dark) — one seam, nothing per-surface
 
 **Adding a window, panel, sheet, alert, menu, or popover? Do nothing. It already
@@ -695,7 +726,7 @@ The Xcode project uses `PBXFileSystemSynchronizedRootGroup` — Swift files adde
 
 **Auto-sync only covers files inside `desktop/Bristlenose/Bristlenose/`.** Shared data dirs at the repo root (e.g. `bristlenose/locales/`) won't ship in the bundle unless an explicit Copy Bundle Resources phase or shell-script copy puts them there. Without that, `Bundle.main` lookups return nil at runtime — symptom is chrome strings rendering as raw i18n keys (e.g. `desktop.settingsTabs.llm` instead of "LLM"). The "Copy Sidecar Resources" shell-script phase in `Bristlenose.xcodeproj/project.pbxproj` is the established pattern for this — it `rsync`s the sidecar, ffmpeg, models, and locales (added Apr 2026 after locales were missing from the bundle on `main`). Add new shared dirs to that phase rather than inventing new ones.
 
-**Swift i18n sweeps: grep helper-function `return "…"` + `Button("…")` / `.help("…")`, not just `Text("…")`.** Hardcoded user-facing strings hide in computed vars and static funcs that `return "…"` (e.g. `PipelineActivityItem.headlineStatus`, `pillHelp`, `humanCategoryLabel`) and in `Button("…")` / `.help("…")` / `.accessibilityLabel("…")`. A `Text("…")`-only grep undercounts and ships a half-localised view (popover header English, body translated). Grep `return "[A-Z]`, `Button("`, `.help("`, `.accessibilityLabel("` too. **Watch static funcs shared with English-only surfaces:** `humanCategoryLabel` is the single source for the UI label AND the English-only `formatDiagnosticPlaintext` copy-payload — translating it in place breaks the plaintext; it needs a UI-vs-plaintext split (cz-branch i18n review Finding 13, deferred).
+**Swift i18n sweeps: grep helper-function `return "…"` + `Button("…")` / `.help("…")`, not just `Text("…")`.** _(Authoring a string rather than sweeping for one? See §"A user-facing string needs a key" above — this is the audit recipe, not the rule.)_ **Start with the six `LocalizedError` conformers** — `grep -rn ": LocalizedError" desktop/Bristlenose/Bristlenose` — which held 6 of 6 gaps on 21 Sep 2026, then widen. Hardcoded user-facing strings hide in computed vars and static funcs that `return "…"` (e.g. `PipelineActivityItem.headlineStatus`, `pillHelp`, `humanCategoryLabel`) and in `Button("…")` / `.help("…")` / `.accessibilityLabel("…")`. A `Text("…")`-only grep undercounts and ships a half-localised view (popover header English, body translated). Grep `return "[A-Z]`, `Button("`, `.help("`, `.accessibilityLabel("` too. **Watch static funcs shared with English-only surfaces:** `humanCategoryLabel` is the single source for the UI label AND the English-only `formatDiagnosticPlaintext` copy-payload — translating it in place breaks the plaintext; it needs a UI-vs-plaintext split (cz-branch i18n review Finding 13, deferred).
 
 ### Alpha build (Track C C1 and beyond)
 

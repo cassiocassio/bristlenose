@@ -3,12 +3,14 @@ name: i18n check
 on:
   push:
     branches: [main]
-    paths:
+    paths: &i18n_paths
       - "bristlenose/locales/**"
+      - "desktop/Bristlenose/Bristlenose/**/*.swift"
+      - "frontend/src/**"
+      - "bristlenose/**/*.py"
   pull_request:
     branches: [main]
-    paths:
-      - "bristlenose/locales/**"
+    paths: *i18n_paths
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"

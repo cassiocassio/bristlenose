@@ -140,7 +140,7 @@ don't turn reference chatty.
 - **Callouts are rationed.** `info` = a useful aside; `warn` = data/privacy risk or a real footgun; `tip` = a shortcut. If every paragraph is a callout, none is. No new callout types.
 - **Channel fork** authored as the two `<details>` (`macOS` / `CLI`) — quiet labels, app-first on Mac (see channel-fork thread).
 - **Links — three roles, applied by the generator.** *Internal* (another docs page): accent + underline, same tab, no icon. *External* (off `bristlenose.app`): accent + underline + a trailing `external-link` glyph, new tab (`rel="noopener noreferrer"`). The generator adds external treatment automatically by host, so authors write plain markdown links. **`code` is for literals you type or read** (commands, flags, paths, env vars) — **never a URL you're meant to visit**: a settings URL is a link, not a code chip. When a treatment is unclear, match **Stripe** — calm, confident, unmistakable links are the bar.
-- **Code/commands out of translatable prose** — so the future translation pipeline never mangles a command.
+- **Code/commands out of prose** — a command that sits inside a sentence gets reflowed, line-broken and smart-quoted by every renderer that touches it. (This used to say "so the future translation pipeline never mangles a command". There is no future docs translation pipeline — public-facing docs are English by design, `docs/design-i18n.md` §"Which surfaces are targets". The practice is right; the reason given for it was not.)
 
 ### B5. Voice checklist (before publishing a page)
 

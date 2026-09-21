@@ -116,7 +116,97 @@ whole content is a visual distinction the reader is not making.
 
 **Option rejected: translate transcripts to English.** Destroys nuance, idiom, and cultural context — exactly what UX researchers care about. "Das ist mir total egal" carries different weight than "I don't care at all". Adds a compounding-error pipeline stage.
 
-**What works: cross-lingual LLM reasoning.** Send the LLM original-language transcripts with English codebook/prompts. The LLM tags in the codebook's language, extracts quotes verbatim in the original language, and generates summaries in the user's preferred language. Translation happens at the display layer only.
+**What works: cross-lingual LLM reasoning.** Send the LLM original-language transcripts with English codebook/prompts. The LLM tags in the codebook's language and extracts quotes verbatim in the original language. Translation happens at the display layer only.
+
+> **Corrected 21 Sep 2026.** This paragraph used to end *"and generates summaries
+> in the user's preferred language"*. That is **not implemented and never was**:
+> none of the 14 files in `bristlenose/llm/prompts/` names an output language, and
+> no stage passes a locale, a language or the UI preference to `LLMClient`. Whisper
+> detects the *input* language in `s05_transcribe`; nothing carries that, or the
+> researcher's chosen locale, into generation.
+>
+> So the generated text — theme titles, cluster names, signal elaborations — is in
+> **whatever language the model picks** given Spanish content and English
+> instructions. Undefined, unmeasured, and possibly inconsistent between two runs
+> of the same corpus. That is worse for a researcher than either answer would be,
+> and it is certainly not "the user's preferred language".
+>
+> This sentence mattered beyond its own accuracy: it is what someone reaching for
+> "what does a Spanish researcher actually see?" would have relied on — including
+> anyone deciding what the Welcome illustrations should depict. **Measuring it is
+> one paid run** on a Spanish corpus (`-m slow`, a fraction of £1), and that is the
+> next step, not another reading of the code.
+
+### What a non-English researcher actually receives
+
+Measured 21 Sep 2026. The point of the table is that the answer is **mixed**, and
+that the mix is mostly deliberate — so a surface showing English is not
+automatically a gap, and a surface showing the researcher's language is not
+automatically right.
+
+| What they see | Language | Why, and is it a decision |
+|---|---|---|
+| App chrome — menus, Settings, buttons, errors, the boot screen | **Theirs** | 21 locales. A decision, and the bulk of the i18n work |
+| Sentiment labels | **Theirs** | `Sentiment` is a Python `Enum`; the SPA resolves `sentiment.<value>` through `enums.json` with `defaultValue: raw`. So *Frustración, Confusión, Duda* — a decision |
+| Their own quotes, transcripts, participant speech | **Theirs** | Verbatim extraction, source-language transcription. A decision, and the one the methodology most depends on |
+| Their own codebooks — the ones they author | **Theirs** | They type them. Nothing translates, and nothing should |
+| Shipped framework codes — Garrett, Norman, Nielsen, Morville… | **English** | Codebook YAML is data (see this section's table). A decision: the concepts originate in English and translating them adds a lossy step |
+| AutoCode tags applied *from* a shipped framework | **English** | The tag **is** the code name. Follows the row above, unavoidably |
+| Theme titles, cluster names, signal elaborations | **Undefined** | Generated. Nothing steers the language — see the correction above. **Not a decision; a gap** |
+
+#### The Renfe case: 207 of 234 shipped tags key on literal English phrases
+
+Measured 21 Sep 2026, prompted by the question *"what happens when Garrett's
+Skeleton group runs against a Spanish discussion of the Renfe navigation
+scheme?"* — which turns out to be the sharpest version of the cross-lingual
+question, because it is about **matching**, not about display.
+
+Each tag in a shipped codebook carries `definition`, `apply_when` (inclusion)
+and `not_this` (exclusion). `server/autocode.py` puts all three into the prompt
+verbatim. The `definition` is conceptual and travels. `apply_when` frequently
+does not — it names **literal English exemplar phrases**:
+
+| Garrett ▸ Skeleton | `apply_when` cues |
+|---|---|
+| `component placement` | *"I can't find the," "this should be up here," "the button is right where I expected."* |
+| `convention` | *"usually you can," "on other sites," "I'd expect this to work like."* |
+| `wireframe issue` | *"this should be bigger," "I almost missed," "why is this so prominent."* |
+
+A Renfe participant says *"no encuentro el botón de horarios"* and *"esto
+debería estar arriba"* — semantically identical, lexically unrelated to every
+cue above. **207 of 234 tags across the nine shipped codebooks** carry quoted
+English cues of this kind.
+
+**What is and is not being claimed.** Not that tagging breaks: a frontier model
+will usually read those as illustrative. What is claimed is that **nothing tells
+it so** — `autocode.md` says nothing about language, about the transcript's
+language, or about the cues being exemplars rather than strings to match — so
+the behaviour is undefined, unmeasured, and **silent**. You get tags, they look
+plausible, and there is no signal that recall dropped.
+
+**The codebase already knows this is wrong, for the other kind of codebook.**
+`codebook-synthesize.md:39`, which governs codebooks the LLM *authors*, says:
+*"Prefer 'the participant expresses / describes / reacts to …' over restating
+example wording."* The nine shipped YAMLs restate example wording 207 times. The
+rule exists; it was never applied backwards to the fixtures.
+
+**Two cheap moves, in order of cost.** (1) One line in `autocode.md` stating
+that the transcript may be in any language and that quoted cues are English
+exemplars of a *pattern*, to be matched semantically — no YAML churn, testable
+by one paid run. (2) Rewrite `apply_when` in the house style the synthesise
+prompt already mandates, which is a large, careful editorial pass and wants a
+measurement first to justify it.
+
+**Do not reach for translating the codebooks.** That is the option this section
+already rejects on methodology grounds, and it would not help: the tag *name* is
+the thing that must stay stable across studies.
+
+**The consequence for illustrations, since that is what prompted the audit:** an
+example card must depict the row it belongs to. A codebook the researcher
+*authors* is their language; a Garrett code is English and correctly so; a
+participant quote is their language. Getting this wrong in either direction
+misleads — an all-English illustration says the tool is for English research, and
+an all-translated one promises framework codes we do not produce.
 
 > **⚠️ Status correction (verified in code 14 Aug 2026): the third clause is NOT implemented.** The
 > locale never reaches the prompt. `LLMClient.analyze()` takes no language or locale parameter; no

@@ -20,6 +20,11 @@ Checks:
 6. Divergence markers are current — a ``_divergent_<key>`` note in ``en`` pins
    the English value it was written against, so a later reword of that value
    invalidates the note instead of silently keeping a stale "this is fine".
+7. ``glossary.csv`` is well-formed — every row carries exactly the header's four
+   fields. An unquoted comma inside a note silently splits it, so Weblate shows
+   the translator a note truncated at the comma and a spurious fifth column.
+   Nothing else in the repo reads this file, so 20 such rows shipped green on
+   21 Sep 2026; this is the gate that would have caught them.
 
 A *genuine* missing key — non-plural and not covered by a fallback base — renders
 English silently. It is a WARNING by default and an ERROR under ``--strict``.
@@ -32,6 +37,7 @@ Exit code 1: errors found
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import re
 import sys
@@ -178,6 +184,35 @@ def _plural_base(key: str):
         if key.endswith(suffix):
             return key[: -len(suffix)]
     return None
+
+
+GLOSSARY = LOCALES_DIR / "glossary.csv"
+
+
+def check_glossary() -> list[str]:
+    """Every glossary row must carry exactly the header's fields.
+
+    A note containing a comma must be double-quoted; without the quotes the
+    row parses one field wider and the note is cut at the comma.
+    """
+    if not GLOSSARY.is_file():
+        return [f"{GLOSSARY.name}: file not found"]
+    problems: list[str] = []
+    with GLOSSARY.open(encoding="utf-8", newline="") as fh:
+        rows = list(csv.reader(fh))
+    if not rows:
+        return [f"{GLOSSARY.name}: empty"]
+    width = len(rows[0])
+    for n, row in enumerate(rows[1:], start=2):
+        if not row:
+            continue
+        if len(row) != width:
+            problems.append(
+                f"{GLOSSARY.name}:{n}: {len(row)} fields, expected {width} "
+                f"({row[0]}/{row[2] if len(row) > 2 else '?'}) — "
+                "quote any field containing a comma"
+            )
+    return problems
 
 
 def main() -> int:
@@ -336,6 +371,8 @@ def main() -> int:
                             "{{count}} — in ru/uk the `one` form recurs at 21/31/101, "
                             "so a hardcoded number renders wrong for those counts."
                         )
+
+    errors.extend(check_glossary())
 
     if args.strict and genuine_total:
         errors.append(

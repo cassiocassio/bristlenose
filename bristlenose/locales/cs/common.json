@@ -373,7 +373,7 @@
       "sentimentTitle": "Označování nálady",
       "sentimentBody": "Sedm štítků nálady navržených pro UX výzkum: frustrace, zmatení, pochybnost, překvapení, spokojenost, potěšení a sebejistota. Každý citát dostane jeden štítek na základě emoce vyjádřené účastníkem.",
       "signalsTitle": "Signály",
-      "signalsBody": "Zobrazení Signály odhaluje statisticky významné koncentrace nálady v rámci sekcí zprávy. Silné a střední signály zvýrazňují, kde se zkušenosti účastníků shlukují.",
+      "signalsBody": "Zobrazení „Signály“ odhaluje statisticky významné koncentrace nálady v rámci sekcí zprávy. Silné a střední signály zvýrazňují, kde se zkušenosti účastníků shlukují.",
       "starsTitle": "Hvězdičky, štítky a filtry",
       "starsBody": "Označte citáty hvězdičkou, abyste vyznačili důležitá zjištění. Přidávejte štítky a vytvořte si vlastní schéma kódování. Použijte filtr štítků a hledání, abyste se zaměřili na to podstatné. Všechny změny se ukládají automaticky.",
       "exportTitle": "Export",
@@ -438,7 +438,7 @@
       "actionAudit": "Zveřejňujeme úplný <a href=\"https://github.com/cassiocassio/bristlenose/tree/main/docs/pii-audit\" target=\"_blank\" rel=\"noopener noreferrer\">audit redakce osobních údajů</a> s <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/tests/fixtures/pii_horror_transcript.txt\" target=\"_blank\" rel=\"noopener noreferrer\">testovacím přepisem</a>, <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/redacted-transcript.md\" target=\"_blank\" rel=\"noopener noreferrer\">redigovaným výstupem</a> a <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/pii-summary.txt\" target=\"_blank\" rel=\"noopener noreferrer\">surovým auditním protokolem</a> — abyste mohli sami posoudit jeho limity."
     },
     "signals": {
-      "intro": "Zobrazení Signály odhaluje statisticky významné koncentrace nálady nebo štítků z knihy kódů v rámci sekcí zprávy. Dva typy karet signálu.",
+      "intro": "Zobrazení „Signály“ odhaluje statisticky významné koncentrace nálady nebo štítků z knihy kódů v rámci sekcí zprávy. Dva typy karet signálu.",
       "sentimentHeading": "Signály nálady",
       "sentimentIntro": "Každý citát je označen jednou ze sedmi nálad navržených pro UX výzkum:",
       "frustrationDesc": "obtíž, podráždění, tření. Ukazuje na problémy s výkonem nebo interakcí.",

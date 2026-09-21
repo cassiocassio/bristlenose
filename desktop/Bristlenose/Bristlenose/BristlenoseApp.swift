@@ -167,6 +167,12 @@ struct BristlenoseApp: App {
                 .onAppear {
                     // The AppKit Settings window is built lazily on first open;
                     // hand it the app's i18n so its SwiftUI panes can translate.
+                    // AppKit picks its language from AppleLanguages at
+                    // process start, and only the picker used to write it — so
+                    // an install that had already chosen never told AppKit, and
+                    // File / Edit / View / Window / Help stayed English under a
+                    // fully translated app. Takes effect next launch.
+                    I18n.adoptChosenLanguageForAppKit()
                     SettingsWindow.shared.i18n = i18n
                     // Dock-icon click with no project window open — see
                     // `AppDelegate.applicationShouldHandleReopen`.

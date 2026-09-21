@@ -82,6 +82,40 @@ final class I18n: ObservableObject {
         } ?? [:]
     }
 
+    /// Make AppKit's language agree with the researcher's choice.
+    ///
+    /// **Called once at app launch, deliberately not from `configure`.** The
+    /// first version did it there and broke `CloudImportOutlineTests.dayLabels`:
+    /// `configure` runs inside the `I18n` initialiser, every test that builds an
+    /// `I18n` would have run it, and writing `AppleLanguages` moves
+    /// `Locale.current` for the whole process — so a date formatter three files
+    /// away started producing non-English month names. A loader must not have
+    /// process-wide side effects; an app launching may.
+    ///
+    /// Only when the picker's key is set. A fresh install should go on
+    /// following the system, and pinning it here would freeze the app at
+    /// whatever the language happened to be on first launch.
+    static func adoptChosenLanguageForAppKit() {
+        guard let chosen = UserDefaults.standard.string(forKey: "language") else { return }
+        let safe = sanitized(chosen)
+        guard supportedLocales.contains(safe) else { return }
+        syncAppleLanguages(safe)
+    }
+
+    /// Point `AppleLanguages` at our own choice, in the app's own domain —
+    /// the same key System Settings ▸ Apps ▸ Bristlenose ▸ Language writes, so
+    /// the two controls agree rather than compete.
+    ///
+    /// Reads before writing because `UserDefaults` searches the global domain
+    /// too: a first run finds the system's `en-GB` there, writes ours, and
+    /// every run after that finds ours and leaves it alone.
+    static func syncAppleLanguages(_ locale: String) {
+        let defaults = UserDefaults.standard
+        let current = defaults.array(forKey: "AppleLanguages") as? [String]
+        guard current?.first != locale else { return }
+        defaults.set([locale], forKey: "AppleLanguages")
+    }
+
     /// The best of our supported locales for this user's language preferences,
     /// or `en`. Reads `AppleLanguages` through Apple's matcher rather than
     /// parsing it, so script and region subtags (`zh-Hant`, `zh-Hant-HK`,

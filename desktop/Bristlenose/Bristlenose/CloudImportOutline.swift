@@ -485,13 +485,24 @@ enum CloudImportOutline {
     /// from Google Meet". The dated form goes through the system formatter,
     /// which is free and gets weekday-and-month ordering right per locale
     /// whatever happens to the rest.
-    static func dayLabel(for date: Date, now: Date, calendar: Calendar) -> String {
+    /// - Parameter locale: defaults to `.current`, which is what the window
+    ///   wants — the dated form is meant to follow the reader. It is a parameter
+    ///   so a test can pin it. Without that, `dayLabels()` asserted English
+    ///   month names out of a formatter that follows the machine, which passed
+    ///   only because every machine that had run it was English. The moment the
+    ///   language picker started writing `AppleLanguages` (21 Sep 2026) the test
+    ///   began failing for real, on the app's own supported behaviour.
+    static func dayLabel(
+        for date: Date, now: Date, calendar: Calendar, locale: Locale = .current
+    ) -> String {
         if calendar.isDate(date, inSameDayAs: now) { return "Today" }
         if let yesterday = calendar.date(byAdding: .day, value: -1, to: now),
            calendar.isDate(date, inSameDayAs: yesterday) {
             return "Yesterday"
         }
-        var style = Date.FormatStyle.dateTime.weekday(.abbreviated).day().month(.abbreviated)
+        var style = Date.FormatStyle.dateTime
+            .weekday(.abbreviated).day().month(.abbreviated)
+            .locale(locale)
         if calendar.component(.year, from: date) != calendar.component(.year, from: now) {
             style = style.year()
         }

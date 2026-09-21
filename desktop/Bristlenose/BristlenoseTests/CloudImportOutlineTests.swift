@@ -232,7 +232,12 @@ struct CloudImportOutlineTests {
     @Test("Today and Yesterday are named; older days carry their weekday")
     func dayLabels() {
         func label(_ date: Date) -> String {
-            CloudImportOutline.dayLabel(for: date, now: now, calendar: calendar)
+            // Pinned, because the dated form follows the reader's locale by
+            // design and this test asserts English names. It passed for as long
+            // as it did only because every machine running it happened to be
+            // English — see dayLabel's own note.
+            CloudImportOutline.dayLabel(for: date, now: now, calendar: calendar,
+                                        locale: Locale(identifier: "en_GB"))
         }
         #expect(label(moment(daysAgo: 0, hour: 9)) == "Today")
         #expect(label(moment(daysAgo: 1, hour: 9)) == "Yesterday")

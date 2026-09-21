@@ -485,7 +485,7 @@
     "agreeLabel": "Agree.",
     "agreeTitle": "Agreement — effective number of voices (Simpson's diversity)",
     "intensityLabel": "Intensity",
-    "intensityTitle": "Mean emotional intensity (0–3)",
+    "intensityTitle": "Mean emotional intensity (1–3)",
     "intensityTooltip": "Intensity {{value}}/3",
     "total": "Total",
     "accepted": "{{count}} accepted",

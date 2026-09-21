@@ -9,6 +9,7 @@ split-candidate: true
 
 ## Changelog
 
+- _2026-09-21_ — **The Signals rename's prose caught up in 20 locales, and the word *lens* got a rule.** `2aba263b` had rewritten five `en` strings (`signals.{loadingData,noData,tagError}`, `help.guide.signalsBody`, `help.signals.intro`) and the other 20 locales kept "analysis data" / "the analysis page" — failure class 3, register item 21. Translated against each file's own vocabulary. *Lens* had never been rendered in any locale before those two help strings; Apple's loctables ship it as the camera part everywhere, so `docs/glossary.md` now says: the platform's View noun or the bare name, never the optical word, and `glossary.csv` carries a `Lens` row per locale. Ride-along: `signals.intensityTitle` said 0–3 in all 21 locales; the scale is 1–3.
 - _2026-08-21_ — **First front-matter, and two sections that described the opposite of what ships.** This doc had no `status`/`last-trued` at all, so nothing signalled that a March-2026 body was carrying 20–21 Aug additions (the CJK punctuation finding, Catalan, the gotchas) on top of it. Corrected: (1) §"No in-app language picker on desktop" — there **is** one, a 22-entry autonym `Picker` at `AppearanceSettingsView.swift:63`, and the `UIPrefersShowingLanguageSettings` key it credited appears nowhere in `project.pbxproj`. Both halves false, and `docs/design-locale-negotiation.md` repeats both and has not been touched since May. (2) §"Toolbar overflow: `_short` keys" described a live mechanism — zero `common.nav.*Short` keys exist in any locale, so `Tab.localizedLabel` falls through every time; the es/fr table illustrates a convention rather than describing strings. **Left flagged rather than rewritten**, because they want a measuring pass not a banner: the namespace inventory (`common ~34` against a measured 539; 8 namespaces against 9; "~180 keys × 7 languages" against 1,445 × 21) and `findLocalesDirectory()`'s priority list, which is inverted and missing its first branch (`Bundle.main.resourcePath`). `docs/platform-text-map.md` already carries the correct counts, regenerated — two docs on one subject, one measured and one three orders stale.
 
 ## Why we localise at all — read this before evaluating any locale
@@ -201,8 +202,9 @@ Norman at #5,251 in Japan is a genuinely popular book still actively selling 10+
 > vocabulary was reasoned about. **It is no longer a list of work outstanding.**
 > Measured against `bristlenose/locales/en/`: **1,503 keys across 9 namespaces**,
 > not 34, and every string in the Tier 1 *Analysis* line below now ships —
-> `analysis.signalLabel` / `concLabel` / `agreeLabel` / `intensityLabel` and
-> their four `*Title` siblings live in the `analysis` block (47 keys) across all
+> `signals.signalLabel` / `concLabel` / `agreeLabel` / `intensityLabel` and
+> their four `*Title` siblings live in the `signals` block (47 keys, renamed from
+> `analysis` on 20 Sep 2026) across all
 > 22 locale directories. Read this section for the reasoning; read
 > `en/common.json` for what exists. (The "34 keys" figure was already
 > self-flagged in this doc's 2026-08-21 changelog entry and deliberately left

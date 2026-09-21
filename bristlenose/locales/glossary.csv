@@ -18,7 +18,7 @@ Reset,Restablecer,es,Apple HIG
 Codebook,Libro de códigos,es,ATLAS.ti/MAXQDA convention
 Quotes,Citas,es,QDA term — not Comillas
 Sessions,Sesiones,es,QDA term
-Signals,Señales,es,QDA term
+Signals,Señales,es,"QDA term Lens name and nav label since 20 Sep 2026 - was Analysis. Lifted from the reviewed toolbar/analysis.signals twin, no new translation."
 Codes,Códigos,es,QDA term
 Save,Sichern,de,Apple HIG
 Cancel,Abbrechen,de,Apple HIG
@@ -39,7 +39,7 @@ Reset,Zurücksetzen,de,Apple HIG
 Codebook,Codebuch,de,QDA convention
 Quotes,Zitate,de,QDA term
 Sessions,Interviews,de,QDA term
-Signals,Signale,de,QDA term
+Signals,Signale,de,"QDA term Lens name and nav label since 20 Sep 2026 - was Analysis. Lifted from the reviewed toolbar/analysis.signals twin, no new translation."
 Codes,Kodes,de,QDA term
 Save,Enregistrer,fr,Apple HIG
 Cancel,Annuler,fr,Apple HIG
@@ -60,7 +60,7 @@ Reset,Réinitialiser,fr,Apple HIG
 Codebook,Grille de codage,fr,QDA convention
 Quotes,Verbatim,fr,QDA term
 Sessions,Entretiens,fr,QDA term
-Signals,Signaux,fr,QDA term
+Signals,Signaux,fr,"QDA term Lens name and nav label since 20 Sep 2026 - was Analysis. Lifted from the reviewed toolbar/analysis.signals twin, no new translation."
 Codes,Codes,fr,QDA term
 Save,저장,ko,Apple HIG
 Cancel,취소,ko,Apple HIG
@@ -81,7 +81,7 @@ Reset,재설정,ko,Apple HIG
 Codebook,코드북,ko,QDA convention
 Quotes,인용문,ko,QDA term
 Sessions,세션,ko,QDA term
-Signals,시그널,ko,QDA term
+Signals,시그널,ko,"QDA term Lens name and nav label since 20 Sep 2026 - was Analysis. Lifted from the reviewed toolbar/analysis.signals twin, no new translation."
 Codes,코드,ko,QDA term
 Save,保存,ja,Apple HIG
 Cancel,キャンセル,ja,Apple HIG
@@ -129,7 +129,7 @@ Codebook,コードブック,ja,QDA / design-i18n.md table
 Tags,タグ,ja,Universal loanword (design-i18n.md table)
 Quotes,発言,ja,design-i18n.md anchored — hatsugen (utterance) — not 引用
 Sessions,セッション,ja,design-i18n.md table
-Signals,シグナル,ja,design-i18n.md anchored — Bristlenose-specific concept
+Signals,シグナル,ja,"design-i18n.md anchored — Bristlenose-specific concept Lens name and nav label since 20 Sep 2026 - was Analysis. Lifted from the reviewed toolbar/analysis.signals twin, no new translation."
 Theme,テーマ,ja,UX TIMES / design-i18n.md
 Topic,トピック,ja,Apple HIG
 Cluster,クラスタ,ja,Apple JA (no long mark)
@@ -186,7 +186,7 @@ Reset,Obnovit,cs,Apple HIG
 Codebook,Kniha kódů,cs,QDA convention
 Quotes,Citáty,cs,QDA term — countable: citát
 Sessions,Sezení,cs,QDA term
-Signals,Signály,cs,QDA term
+Signals,Signály,cs,"QDA term Lens name and nav label since 20 Sep 2026 - was Analysis. Lifted from the reviewed toolbar/analysis.signals twin, no new translation."
 Codes,Kódy,cs,QDA term
 Save,Salva,it,Apple HIG
 Cancel,Annulla,it,Apple HIG
@@ -214,7 +214,7 @@ Quit,Esci,it,Apple HIG
 Codebook,Libro dei codici,it,QDA convention
 Quotes,Citazioni,it,QDA term — countable: citazione
 Sessions,Sessioni,it,QDA term
-Signals,Segnali,it,QDA term
+Signals,Segnali,it,"QDA term Lens name and nav label since 20 Sep 2026 - was Analysis. Lifted from the reviewed toolbar/analysis.signals twin, no new translation."
 Codes,Codici,it,QDA term
 Save,Salvar,pt-BR,Apple HIG (BR: Salvar vs PT: Guardar)
 Cancel,Cancelar,pt-BR,Apple HIG
@@ -235,7 +235,7 @@ Reset,Redefinir,pt-BR,Apple HIG (BR: Redefinir vs PT: Repor)
 Codebook,Livro de códigos,pt-BR,ATLAS.ti/MAXQDA convention
 Quotes,Citações,pt-BR,QDA term — not Aspas (punctuation)
 Sessions,Sessões,pt-BR,QDA term
-Signals,Sinais,pt-BR,QDA term
+Signals,Sinais,pt-BR,"QDA term Lens name and nav label since 20 Sep 2026 - was Analysis. Lifted from the reviewed toolbar/analysis.signals twin, no new translation."
 Codes,Códigos,pt-BR,QDA term
 Save,Guardar,pt-PT,Apple HIG (PT: Guardar vs BR: Salvar)
 Cancel,Cancelar,pt-PT,Apple HIG
@@ -256,7 +256,7 @@ Reset,Repor,pt-PT,Apple HIG (PT: Repor vs BR: Redefinir)
 Codebook,Livro de códigos,pt-PT,ATLAS.ti/MAXQDA convention
 Quotes,Citações,pt-PT,QDA term — not Aspas (punctuation)
 Sessions,Sessões,pt-PT,QDA term
-Signals,Sinais,pt-PT,QDA term
+Signals,Sinais,pt-PT,"QDA term Lens name and nav label since 20 Sep 2026 - was Analysis. Lifted from the reviewed toolbar/analysis.signals twin, no new translation."
 Codes,Códigos,pt-PT,QDA term
 Save,儲存,zh-Hant,Apple HIG
 Cancel,取消,zh-Hant,Apple HIG
@@ -284,7 +284,7 @@ Quit,結束,zh-Hant,Apple HIG
 Codebook,編碼簿,zh-Hant,Was 代碼簿; changed 20 Sep 2026 to 編碼簿 because the body shipped 編碼簿 x29 and 代碼簿 x0 and the Library row below already said 編碼簿庫. Prior art measured the same day is a register fork not an error: MAXQDA zh-TW and zh-CN and NVivo zh-CN all use 代碼 for a code-as-noun and 編碼 only for the activity (MAXQDA zh-TW Getting Started 代碼 x96) so the tool register is 代碼/代碼簿 and a 2021 台灣教育研究期刊 paper writes NVivo 代碼簿; the academic-statistical register is 編碼簿 (NAER x2 entries; Academia Sinica SRDA 過錄編碼簿). The body follows the second. PENDING native review - Taiwan-native decides; see docs/i18n-reviews/zh-Hant.md
 Quotes,引述,zh-Hant,QDA term — countable
 Sessions,工作階段,zh-Hant,QDA term
-Signals,訊號,zh-Hant,QDA term
+Signals,訊號,zh-Hant,"QDA term Lens name and nav label since 20 Sep 2026 - was Analysis. Lifted from the reviewed toolbar/analysis.signals twin, no new translation."
 Codes,代碼,zh-Hant,QDA term
 
 Save,Zapisz,pl,Apple HIG
@@ -306,7 +306,7 @@ Reset,Resetuj,pl,Apple HIG
 Codebook,Księga kodów,pl,QDA convention
 Quotes,Cytaty,pl,QDA term — countable: cytat
 Sessions,Sesje,pl,QDA term
-Signals,Sygnały,pl,QDA term
+Signals,Sygnały,pl,"QDA term Lens name and nav label since 20 Sep 2026 - was Analysis. Lifted from the reviewed toolbar/analysis.signals twin, no new translation."
 Codes,Kody,pl,QDA term
 Save,Сохранить,ru,Apple HIG
 Cancel,Отмена,ru,Apple HIG (button); Отменить = Undo
@@ -327,7 +327,7 @@ Reset,Сбросить,ru,Apple HIG
 Codebook,Кодировочная книга,ru,Was Книга кодов (alt Кодировочная схема); changed 20 Sep 2026 to Кодировочная книга because the body shipped it x30 and Книга кодов x0. Prior art measured the same day: MAXQDA ru UI says Система кодов / Кодовое дерево and its Codebook report label was not found in any Russian document; Russian survey methodology says кодировочная книга (variable-dictionary sense); the qualitative literature (HSE; Strauss and Corbin tr.) says кодировочная схема and avoids a book noun; кодовая книга / книга кодов carry the telecom and cryptography senses (patents; Singh's The Code Book). Body form kept; схема is the literature's alternative. PENDING native review
 Quotes,Цитаты,ru,QDA term — countable: цитата
 Sessions,Сессии,ru,QDA term
-Signals,Сигналы,ru,product term
+Signals,Сигналы,ru,"product term Lens name and nav label since 20 Sep 2026 - was Analysis. Lifted from the reviewed toolbar/analysis.signals twin, no new translation."
 Codes,Коды,ru,QDA term
 Save,Зберегти,uk,Apple HIG
 Cancel,Скасувати,uk,Apple HIG
@@ -348,7 +348,7 @@ Reset,Скинути,uk,Apple HIG
 Codebook,Кодова книга,uk,Was Книга кодів (alt Схема кодування); changed 20 Sep 2026 to Кодова книга because the body shipped it x30 and Книга кодів x0. Both forms are attested - uk.wikipedia titles the article Книга кодів and opens Кодова книга - and no QDA tool ships a Ukrainian UI; no qualitative-literature usage was found either way. Body form kept. PENDING native review
 Quotes,Цитати,uk,QDA term — countable: цитата
 Sessions,Сесії,uk,QDA term
-Signals,Сигнали,uk,product term
+Signals,Сигнали,uk,"product term Lens name and nav label since 20 Sep 2026 - was Analysis. Lifted from the reviewed toolbar/analysis.signals twin, no new translation."
 Codes,Коди,uk,QDA term
 Save,Gem,da,Apple HIG
 Cancel,Annullér,da,Apple HIG
@@ -369,7 +369,7 @@ Reset,Nulstil,da,Apple HIG
 Codebook,Kodebog,da,QDA convention
 Quotes,Citater,da,QDA term — countable: citat
 Sessions,Sessioner,da,QDA term
-Signals,Signaler,da,product term
+Signals,Signaler,da,"product term Lens name and nav label since 20 Sep 2026 - was Analysis. Lifted from the reviewed toolbar/analysis.signals twin, no new translation."
 Codes,Koder,da,QDA term
 Save,Spara,sv,Apple HIG
 Cancel,Avbryt,sv,Apple HIG
@@ -390,7 +390,7 @@ Reset,Återställ,sv,Apple HIG
 Codebook,Kodbok,sv,QDA convention
 Quotes,Citat,sv,QDA term — countable: citat
 Sessions,Sessioner,sv,QDA term
-Signals,Signaler,sv,product term
+Signals,Signaler,sv,"product term Lens name and nav label since 20 Sep 2026 - was Analysis. Lifted from the reviewed toolbar/analysis.signals twin, no new translation."
 Codes,Koder,sv,QDA term
 Save,Lagre,nb,Apple HIG
 Cancel,Avbryt,nb,Apple HIG
@@ -411,7 +411,7 @@ Reset,Tilbakestill,nb,Apple HIG
 Codebook,Kodebok,nb,QDA convention
 Quotes,Sitater,nb,QDA term — countable: sitat (nb spelling)
 Sessions,Økter,nb,QDA term
-Signals,Signaler,nb,product term
+Signals,Signaler,nb,"product term Lens name and nav label since 20 Sep 2026 - was Analysis. Lifted from the reviewed toolbar/analysis.signals twin, no new translation."
 Codes,Koder,nb,QDA term
 Save,Kaydet,tr,Apple HIG
 Cancel,Vazgeç,tr,Apple HIG (Mac idiom); İptal = MS/web alt
@@ -432,7 +432,7 @@ Reset,Sıfırla,tr,Apple HIG
 Codebook,Kod kitabı,tr,Was Kod defteri (alt kod kitabı) until 20 Sep 2026; swept to Kod kitabı the same day on the maintainer's call after prior art: MAXQDA's Turkish UI names its Codebook report Kod kitabı (Raporlar › Akıllı Yayıncı · Kod kitabı; listed verbatim in two university training decks) and its official Turkish webinar is titled Kod Kitabı Geliştirme; dergipark returns qualitative-methods papers for kod kitabı and Ottoman cryptography for kod defteri; Elektronik Kod Defteri is the ECB cipher mode. 26 strings and the Codebook Library / Codebooks rows moved with it. PENDING native review - the one place it reads clunky is Kod kitabı kitaplığı (kitab-/kitapl- repetition); a reviewer may prefer another head noun there
 Quotes,Alıntılar,tr,QDA term — countable: alıntı
 Sessions,Oturumlar,tr,QDA term
-Signals,Sinyaller,tr,product term
+Signals,Sinyaller,tr,"product term Lens name and nav label since 20 Sep 2026 - was Analysis. Lifted from the reviewed toolbar/analysis.signals twin, no new translation."
 Codes,Kodlar,tr,QDA term
 Save,Bewaar,nl,Apple HIG
 Cancel,Annuleer,nl,Apple HIG
@@ -453,7 +453,7 @@ Reset,Herstel standaardwaarden,nl,Apple HIG
 Codebook,Codeboek,nl,QDA convention
 Quotes,Citaten,nl,QDA term
 Sessions,Sessies,nl,QDA term
-Signals,Signalen,nl,QDA term
+Signals,Signalen,nl,"QDA term Lens name and nav label since 20 Sep 2026 - was Analysis. Lifted from the reviewed toolbar/analysis.signals twin, no new translation."
 Codes,Codes,nl,QDA term
 Save,Tallenna,fi,Apple HIG
 Cancel,Peruuta,fi,"Apple HIG (dialog); Kumoa = Undo, avoid clash"
@@ -474,7 +474,7 @@ Reset,Palauta,fi,Apple HIG
 Codebook,Koodikirja,fi,QDA convention
 Quotes,Sitaatit,fi,QDA term (FSD KvaliMOTV) — countable: sitaatti
 Sessions,Istunnot,fi,QDA term; session = istunto
-Signals,Signaalit,fi,product term
+Signals,Signaalit,fi,"product term Lens name and nav label since 20 Sep 2026 - was Analysis. Lifted from the reviewed toolbar/analysis.signals twin, no new translation."
 Codes,Koodit,fi,QDA term (FSD): koodi/koodaus
 Agent,Agente,es,AI agent (MCP client); tr/zh-Hant choice pending native review
 Agent,エージェント,ja,AI agent (MCP client); tr/zh-Hant choice pending native review
@@ -540,7 +540,7 @@ Remove,Suprimeix,ca,Ours to disambiguate - Apple uses Elimina for both Delete an
 Codebook,Llibre de codis,ca,QDA term. PENDING native review - ask whether Catalan QDA practice has its own form
 Quotes,Cites,ca,QDA term. PENDING native review - ask whether Catalan UR borrowed verbatim the way French did
 Sessions,Sessions,ca,QDA term. PENDING native review
-Signals,Senyals,ca,Bristlenose coinage - we name it. PENDING native review
+Signals,Senyals,ca,"Bristlenose coinage - we name it. PENDING native review Lens name and nav label since 20 Sep 2026 - was Analysis. Lifted from the reviewed toolbar/analysis.signals twin, no new translation."
 Codes,Codis,ca,QDA term. PENDING native review
 Agent,Agent,ca,AI agent (MCP client). PENDING native review
 Focus Mode,Mode immersió,ca,PROVISIONAL - COLLISION: Apple ca calls system Focus 'Modes de concentració' so Mode concentració is unavailable. Immersion register proposed after it: Full Immersion. PENDING native review
@@ -713,3 +713,23 @@ Turn,torn de parla,ca,ATTRIBUTION ITEM — THIS ONE MOVES WORDS. The safety rule
 Turn,turno di parola,it,ATTRIBUTION ITEM — THIS ONE MOVES WORDS. The safety rule is lexical: a menu item naming a piece of speech re-credits words to a different person while an item naming a speaker only relabels. So the turn-noun must stay distinct from the Quotes term in this language and must never be shortened to an ambiguous bare noun. Pinned 25 Aug 2026 — pending native review.
 Turn,turno de fala,pt-BR,ATTRIBUTION ITEM — THIS ONE MOVES WORDS. The safety rule is lexical: a menu item naming a piece of speech re-credits words to a different person while an item naming a speaker only relabels. So the turn-noun must stay distinct from the Quotes term in this language and must never be shortened to an ambiguous bare noun. Pinned 25 Aug 2026 — pending native review.
 Turn,發言,zh-Hant,ATTRIBUTION ITEM — THIS ONE MOVES WORDS. The safety rule is lexical: a menu item naming a piece of speech re-credits words to a different person while an item naming a speaker only relabels. So the turn-noun must stay distinct from the Quotes term in this language and must never be shortened to an ambiguous bare noun. Pinned 25 Aug 2026 — pending native review.
+Lens,Vista,ca,Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review
+Lens,Zobrazení,cs,Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review
+Lens,Visning,da,Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review
+Lens,Ansicht,de,Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review
+Lens,Vista,es,Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review
+Lens,Näkymä,fi,Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review
+Lens,Vue,fr,Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review
+Lens,Vista,it,Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review
+Lens,表示,ja,Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review
+Lens,보기,ko,Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review
+Lens,Visning,nb,Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review
+Lens,Weergave,nl,Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review
+Lens,Widok,pl,Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review
+Lens,Visualização,pt-BR,Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review
+Lens,Vista,pt-PT,Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review
+Lens,Представление,ru,Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review - not Apple's Вид/Вигляд because 'в виде X' reads as 'in the form of X'; reviewer to confirm
+Lens,Vy,sv,Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review
+Lens,Görünüm,tr,Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review
+Lens,Подання,uk,Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review - not Apple's Вид/Вигляд because 'в виде X' reads as 'in the form of X'; reviewer to confirm
+Lens,檢視,zh-Hant,Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review

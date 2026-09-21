@@ -171,7 +171,7 @@ does, and it still ranks nothing. **Swapping lift for z is not the fix.**
 > sentiment cards move `Win` → `Success`, which is the same correction showing
 > up in `classify_flag`'s breadth bar. The locale strings did not need to
 > change — `1 / Σ pᵢ²` *is* a Simpson's diversity measure, so
-> `analysis.agreeTitle` and `help.signals.agreementDesc` became more true
+> `signals.agreeTitle` and `help.signals.agreementDesc` became more true
 > rather than less. The paragraphs below describe the defect as it stood.
 
 #### The defect, as it stood
@@ -188,7 +188,7 @@ people speak, counts `[2,1,1,1]`, and `n_eff` = **10.00** in an **eight**-person
 study.
 
 This is user-visible. `SignalsPage.tsx` renders `signal.nEff.toFixed(1)` as
-the card's **Agree.** figure under `analysis.agreeTitle` — *"effective number of
+the card's **Agree.** figure under `signals.agreeTitle` — *"effective number of
 voices"*. The bar beside it is `agreePct`, written
 `Math.min(100, (signal.nEff / allPids.length) * 100)` — **the clamp is already
 there**, so the overflow was noticed at the bar and papered over rather than
@@ -714,9 +714,9 @@ largest structural change here and it touches `/signals/sentiment`,
 `/signals/tags` and `/signals/codebooks`.
 
 **Every number on the card changes.** `Conc. 1.3×`, `Agree. 3.0`, `Signal 0.32`
-are all user-facing, carried by `en/common.json` — `analysis.concLabel` /
-`analysis.concTitle` ("how overrepresented vs study average"),
-`analysis.agreeLabel` / `analysis.agreeTitle`, and the longer
+are all user-facing, carried by `en/common.json` — `signals.concLabel` /
+`signals.concTitle` ("how overrepresented vs study average"),
+`signals.agreeLabel` / `signals.agreeTitle`, and the longer
 `help.signals.agreementDesc` ("Simpson's diversity index") — and all translated
 into 21 locales. `Agree.` keeps its label and finally matches it, but both its
 tooltip and its help text name Simpson's explicitly and must change with it.

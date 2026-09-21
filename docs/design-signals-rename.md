@@ -557,12 +557,16 @@ Two more surfaced that no plan could have listed:
   flagged the analysis one as probably dead; measuring the siblings showed the
   whole block is pre-SPA legacy. Deleting only the renamed one would have been
   inconsistent, and deleting all four is a different change. Left intact.
-- **Three prose strings are English-only.** `signals.loadingData`,
-  `signals.noData` and `signals.tagError` were rewrites rather than swaps, so
-  the other 20 locales keep their current wording until a translation pass.
-  i18n is parked, and unreviewed translation is a deliberate act rather than a
-  side effect of a rename. No gate reports this: `check-locales.py` compares key
-  presence, not value freshness.
+- ~~**Three prose strings are English-only.**~~ **Five, and they landed 21 Sep
+  2026.** `signals.loadingData`, `signals.noData` and `signals.tagError` were
+  rewrites rather than swaps — and so were `help.guide.signalsBody` and
+  `help.signals.intro`, which this bullet did not list: the same commit changed
+  "The analysis page surfaces signals —" to "The Signals lens surfaces …" and
+  left 20 translations on the old sentence. All five were translated the day
+  after the release, against each file's own vocabulary, with *lens* rendered
+  per the new `docs/glossary.md` rule (Apple's View noun or the bare name —
+  never the optical word). No gate reported any of it: `check-locales.py`
+  compares key presence, not value freshness (`docs/i18n-defects.md` item 21).
 - **The `analysis-heatmap` class** — see row 4 above.
 
 ## 11. Verified in the app — 21 Sep 2026

@@ -1751,7 +1751,7 @@ handler.** `createCodeGroup` and `createCode` stay — creation needs no target.
 | Group CRUD — title, `addSubtitle`, `group-close`, `addTag`, `newGroup`, `deleteGroupTitle`, `deleteTagTitle`, `tagOnQuotes`, `tagsWillMove`, `mergeTitle`/`mergeBody`/`merge` | the floor's codebook page, unchanged |
 | `total` / `group-total-row` | group card, unchanged |
 | `uncategorised` / `uncategorisedSubtitle` | floor page |
-| `sentimentTitle` / `analysis.sentiment*` | sentiment's page — **but see the sentiment-shape open question** |
+| `sentimentTitle` / `signals.sentiment*` | sentiment's page — **but see the sentiment-shape open question** |
 | `projectTagsHeading` / `yourTags` | rail row + page title |
 | anchor scroll `#codebook-fw-{id}` | replaced by selection |
 | `all_tag_names` duplicate guard | unchanged — still passed whole, so it still sees every tag |

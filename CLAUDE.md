@@ -52,7 +52,7 @@ LLM providers: Claude, ChatGPT, Azure OpenAI, Gemini, Local (Ollama). See `brist
 
 Quote exclusivity: **every quote appears in exactly one report section.** See `bristlenose/stages/CLAUDE.md`.
 
-Analysis page: `bristlenose/signals/` — signal concentration metrics, pure math. Uses plain dataclasses (not Pydantic). Cell keys use `"label|sentiment"` format. See `docs/design-signals-future.md`.
+Signals lens: `bristlenose/signals/` — signal concentration metrics, pure math. Uses plain dataclasses (not Pydantic). Cell keys use `"label|sentiment"` format. See `docs/design-signals-future.md`.
 
 LLM prompts: Markdown files in `bristlenose/llm/prompts/`. Archive old versions to `bristlenose/llm/prompts-archive/`. See `bristlenose/llm/CLAUDE.md`.
 
@@ -922,7 +922,7 @@ request never reaches.
 
 **i18n:** `docs/design-i18n.md` — terminology table, implementation gotchas
 
-**Codebook:** `docs/design-codebook-island.md`, `docs/design-moderator-question-pill.md`, `docs/design-dynamic-codebook-builder.md`
+**Codebook:** `docs/design-codebook-v2.md` (the navigator that ships), `docs/design-codebook-state-model.md` (what the enable/disable switch means — the canonical spec), `docs/design-codebook-library.md`, `docs/design-codebook-focus.md`, `docs/design-moderator-question-pill.md`, `docs/design-dynamic-codebook-builder.md`. The v1 island's decision log is history: `docs/archive/design-codebook-island.md`
 
 **HTML report / dashboard / auth:**
 - `docs/design-html-report.md`, `docs/design-dashboard-navigation.md`

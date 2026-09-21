@@ -20,7 +20,7 @@ bristlenose/server/
     sessions.py   — GET /api/projects/{id}/sessions (React sessions table, includes source_folder_uri)
     quotes.py     — GET /api/projects/{id}/quotes (quotes grouped by section/theme)
     data.py       — 12 data API endpoints (Phase 1 researcher state sync)
-    autocode.py   — 7 AutoCode endpoints (start, status, proposals, accept/deny)
+    autocode.py   — 8 AutoCode endpoints (start, status, cancel, proposals, accept/deny, accept-all/deny-all)
     codebook_builder.py — 5 dynamic-codebook-builder endpoints (per-tag prompt cultivation)
     dev.py        — Dev-only endpoints (visual diff, system info)
   codebook/       — YAML codebook templates (garrett, norman, uxr, plato)
@@ -55,7 +55,7 @@ stricter than DB presence: a hidden or truncated-out quote is not citable.
 diverges from `routes/signals.py` on purpose** — hidden quotes excluded,
 researcher edits applied, removed sentiment badges honoured, unreviewed
 `ProposedTag` rows excluded (accepted `QuoteTag` rows are the only tag
-truth), `Uncategorised` filtered like the route does. The analysis routes
+truth), `Uncategorised` filtered like the route does. The signals routes
 keep the engine view. The divergence is pinned by a test; don't "fix" it.
 
 ## MCP endpoint (`/mcp/`) — the §9a spike
@@ -399,11 +399,11 @@ After the React migration, Playwright E2E tests will cover the full browser → 
 
 ## React migration status
 
-Migration complete through M5 (Feb 2026): 14 primitives + 2 infrastructure, 8 islands, 330+ Python serve tests. Next islands: transcript page, analysis page. Toast is the only unbuilt infrastructure primitive (build when first consumer needs it). See `docs/archive/design-react-migration-status.md` for the primitive inventory (16 rows), island inventory (8 rows), and CSS alignment summary.
+Migration complete (Steps 1–10). M5 (Feb 2026) landed 14 primitives + 2 infrastructure and 8 islands; there are **18** islands at HEAD, the two once listed as next among them — `TranscriptPage.tsx` and `SignalsPage.tsx`. Toast is the only unbuilt infrastructure primitive (build when first consumer needs it). See `docs/archive/design-react-migration-status.md` for the primitive inventory (16 rows), island inventory (8 rows), and CSS alignment summary.
 
 ## AutoCode (LLM-assisted tag application)
 
-`autocode.py` engine + `routes/autocode.py` (7 endpoints) + two ORM tables (`AutoCodeJob`, `ProposedTag`). First feature to call LLMs from serve mode — uses `asyncio.create_task()`, no Celery/Redis. Cloud-only (prompt weight ~14K-17K tokens doesn't fit Ollama's 4K context). Unique constraint `(project_id, framework_id)` — one job per codebook per project.
+`autocode.py` engine + `routes/autocode.py` (8 endpoints) + two ORM tables (`AutoCodeJob`, `ProposedTag`). First feature to call LLMs from serve mode — uses `asyncio.create_task()`, no Celery/Redis. Cloud-only (prompt weight ~14K-17K tokens doesn't fit Ollama's 4K context). Unique constraint `(project_id, framework_id)` — one job per codebook per project.
 
 **Gotcha:** `LLMClient(settings)` takes only settings, not an LLMUsageTracker — creates its own internally.
 
@@ -435,6 +435,9 @@ See `docs/design-dynamic-codebook-builder.md`.
 - **Domain model rationale**: `docs/archive/design-serve-milestone-1.md`
 - **Migration architecture**: `docs/archive/design-serve-migration.md`
 - **React component library** (16 primitives, build sequence, coverage matrix): `docs/design-react-component-library.md` — **read this before building any React component**
-- **Codebook island design** (audit, decisions, CSS cleanup): `docs/design-codebook-island.md`
+- **Codebook lens**: `docs/design-codebook-v2.md` (the navigator that ships) and
+  `docs/design-codebook-state-model.md` (what the enable/disable switch means).
+  The v1 island's audit and CSS cleanup are history:
+  `docs/archive/design-codebook-island.md`
 - **React migration plan**: `docs/archive/design-reactive-ui.md`
 - **Phase-by-phase walkthrough**: `docs/archive/react-migration-walkthrough.md`

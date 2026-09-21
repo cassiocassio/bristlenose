@@ -51,7 +51,7 @@ collapsed summary meta, Add↔Remove install toggle, sidebar dots, **Forget**. M
 [`docs/mockups/codebook-library-states.html`](mockups/codebook-library-states.html).
 
 Supersedes the "Import / Remove from Codebook" framing. Related:
-[design-autocode.md](design-autocode.md), [design-codebook-island.md](design-codebook-island.md),
+[design-autocode.md](design-autocode.md), [archive/design-codebook-island.md](archive/design-codebook-island.md),
 [design-dynamic-codebook-builder.md](design-dynamic-codebook-builder.md).
 
 ## The shift, in one line

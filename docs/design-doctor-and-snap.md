@@ -1131,7 +1131,7 @@ These two workstreams are mostly independent but doctor landed first:
 6. Update Homebrew formula: add `post_install` for spaCy model, improve caveats
 7. ✅ Tests for doctor checks (mock imports, mock shutil.which, etc.)
 
-### Phase 2: Snap packaging (v0.6.0 local; store publication pending)
+### Phase 2: Snap packaging (published to `latest/edge`; no stable channel)
 
 1. ✅ Write `snap/snapcraft.yaml`
 2. ✅ Test locally with Multipass (arm64 on Apple Silicon)

@@ -267,12 +267,15 @@ Layer 5 (visual regression) would be slower — screenshot comparison, baseline 
 | Trigger | What runs |
 |---------|-----------|
 | `npm test` (Vitest, in `frontend/`) | Unit tests only — stays fast |
-| CI push | pytest + ruff + Vitest + **Playwright layers 1–3** |
+| CI push | pytest + ruff + Vitest + **Playwright layers 1–4** |
 | Manual / weekly | Visual regression (layer 5, when implemented) |
 
 ## Future work
 
-- **Layer 4 (structural smoke tests)** — per-page DOM assertions, `data-testid` selectors
+_Layer 4 shipped on 7 Jul 2026 as `lenses-load-clean.spec.ts` and runs in the
+`e2e` CI job; it was left in this list for two months. See §"4. Structural
+smoke tests" above for what landed._
+
 - **Layer 5 (visual regression)** — `toHaveScreenshot()` baselines for key views
 - **Write-action E2E tests** — 11 DB-mutating user actions (star, hide, edit, tag, etc.)
 - **Richer committed fixture** — 3+ sessions, analysis data, codebook entries, to trigger the known bugs

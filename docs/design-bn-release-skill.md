@@ -4,7 +4,7 @@ last-trued: 2026-08-14
 trued-against: the shipped skill after two live releases and the publish-hold rebuild; D2/D3/D4/D5 carry superseded banners, core sections verbatim-current
 ---
 
-# `/bn-release` — orchestrating the five channels
+# `/bn-release` — orchestrating the release channels
 
 > **Superseded 23 Aug 2026 — the `pypi` required-reviewer hold was REMOVED.**
 > A tag push now publishes. Everything below that describes the publish job
@@ -31,9 +31,13 @@ changelog and the docs are actually ready._
 | The eight-lens audit those runs triggered | ✅ `docs/design-release-system-audit.md` — every mechanical finding closed 14 Aug |
 | Tier 2 (App Store promotion, listing copy, phased release) | ⬜ not started |
 
-The 0.25.2 incident rewrote the ordering this doc originally derived: the
-`pypi` environment now holds `publish` for approval, so the tag goes out
-*first* and every irreversible act follows every verdict. **The shipped
+The 0.25.2 incident rewrote the ordering this doc originally derived. _Its
+mechanism is superseded: the `pypi` environment's required-reviewer hold was
+removed on 23 Aug 2026, so the tag no longer goes out first — it goes **last**,
+after both uploads and a strict CI verdict on `main`. The principle survived the
+mechanism: every irreversible act still follows every verdict, now enforced by
+the `publish` → `build` → `ci` chain that `check-release-ready.sh` asserts
+rather than by a human clicking Approve. See `CLAUDE.md` §Release timing._ **The shipped
 authority is the skill itself** (Phase 5's nine steps); D2–D5 below carry
 superseded banners and are kept as the reasoning of the world they were
 written in.

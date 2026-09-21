@@ -259,7 +259,7 @@ Mechanics worth knowing: a job-level `permissions:` block *fully replaces* the t
 
 ## Matrix strategy
 
-**Why 3.10–3.13?** `pyproject.toml` declares `requires-python = ">=3.10"`. Testing the floor (3.10) and ceiling (3.13) catches compatibility boundaries. The middle versions (3.11, 3.12) catch deprecation-cycle issues where a feature is warned in N and removed in N+1.
+**Why 3.10–3.14?** `pyproject.toml` declares `requires-python = ">=3.10"`. Testing the floor (3.10) and ceiling (3.13) catches compatibility boundaries. The middle versions (3.11, 3.12) catch deprecation-cycle issues where a feature is warned in N and removed in N+1.
 
 **Why macOS is `continue-on-error`?** The desktop app builds separately (Xcode). The Python package ships via PyPI/Homebrew/Snap, all Linux-built. macOS CI catches platform-specific test failures (path handling, FFmpeg behaviour, signal handling) but these rarely block a pure-Python change.
 

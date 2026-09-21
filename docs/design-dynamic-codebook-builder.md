@@ -77,7 +77,9 @@ default-on for the TestFlight cohort, **default-off since 20 Sep 2026** — see
 
 ## The idea
 
-Today the manual codebook (`docs/design-codebook-island.md`) lets a researcher
+Today the manual codebook (`docs/design-codebook-v2.md`; the v1 island this
+paragraph was written against is archived at
+`docs/archive/design-codebook-island.md`) lets a researcher
 make groups of tags. A tag is just a name — a stamp. You apply it to quotes by
 hand, one at a time, and the codebook is a tidy filing cabinet of those stamps.
 

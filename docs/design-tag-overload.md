@@ -29,7 +29,7 @@ trued-against: HEAD@main on 2026-09-20 (835cde98)
 
 > **BLUF.** Tags are highlighters; when several say the same thing they stop highlighting and start shouting, and the reader wants to turn them off. The fix is *visual* (stack same-meaning tags into a deck, show one, hint the rest), never *destructive* (no merge). **Phase 1 — defined and worth building now:** collapse **exactly-same-text** tags on a quote into a deck-of-cards (read one, see the edge of the other). Pure string equality, no thresholds, no LLM, non-destructive. **Later phases — captured, not scheduled:** near-identical text, then true semantic overlap (the hard one). A live calibration experiment (below) proved the semantic version can't be threshold-tuned from small studies yet, so it waits for real data.
 
-Cross-refs: [design-codebook-island.md](design-codebook-island.md) (tag sidebar), [design-autocode.md](design-autocode.md), [design-finding-weight.md](design-finding-weight.md), [methodology/tag-rejections-are-great.md](methodology/tag-rejections-are-great.md) (the tuning corpus).
+Cross-refs: [archive/design-codebook-island.md](archive/design-codebook-island.md) (the v1 tag sidebar, archived 20 Sep 2026), [design-autocode.md](design-autocode.md), [design-finding-weight.md](design-finding-weight.md), [methodology/tag-rejections-are-great.md](methodology/tag-rejections-are-great.md) (the tuning corpus).
 
 ---
 

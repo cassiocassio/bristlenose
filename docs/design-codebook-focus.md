@@ -1,14 +1,38 @@
 ---
-status: proposed
-last-trued: 2026-09-12
-trued-against: HEAD@main on 2026-09-12
+status: current
+last-trued: 2026-09-21
+trued-against: HEAD@main on 2026-09-21; shipped in 7e2159b2, released in 0.30.0
 ---
 
 # Codebook focus — a cursor for code groups and codes
 
-**Status: proposed, 12 Sep 2026.** Not a decision. Supersedes the reasoning —
-though not yet the code — behind four of the six Codes commands retired earlier
-the same day.
+**Status: shipped.** Built the same day in `7e2159b2` — *"codebook: a focus
+cursor, and the Codes menu it makes possible"* — and released in **0.30.0** on
+21 Sep 2026 (*"A focus cursor in Codebooks, and a Codes menu to drive it"*).
+`frontend/src/contexts/CodebookFocusStore.ts` is the cursor; every Codes item
+routes through it.
+
+> _The line below read **"Status: proposed, 12 Sep 2026. Not a decision"** for
+> nine days after the code landed, which is the whole of this document's
+> shipped life. Kept visible: a reader who scanned the header would have
+> concluded the cursor was unbuilt._
+
+> **Three things the code said that the proposal had wrong**, from the
+> implementing commit, and each is why the shipped thing has its shape:
+> **(1) Delete cannot be a direct call.** The confirmation lives in the card, so
+> calling `onDeleteGroup` from the menu would delete a full group without
+> asking; Delete rides a command like the rest. **(2) The capability is two
+> flags, not one** — the card gates its add-tag row on `!isFramework` and
+> rename/delete on `isReadOnly`, so Uncategorised takes codes while refusing to
+> be renamed; mirroring one flag would have dimmed New Code over a card that
+> offers it. **(3) New Code Group needs no command**, but it does need the
+> floor condition the New Group placeholder renders under.
+>
+> §4's **D-a — no keyboard shortcuts in v1** was honoured: the Codes menu
+> carries zero `.keyboardShortcut` modifiers (`MenuCommands.swift:1296-1362`).
+
+Supersedes the reasoning — and now the code — behind four of the six Codes
+commands retired earlier the same day.
 
 Mockup: [`docs/mockups/codes-menu-focus.html`](mockups/codes-menu-focus.html).
 

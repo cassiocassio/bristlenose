@@ -384,7 +384,8 @@ Safe to proceed. Nielsen/NN Group explicitly permits use: "You may use these heu
 - `bristlenose/server/autocode.py` — AutoCode engine (discrimination prompt consumer)
 - `bristlenose/llm/prompts/quote-extraction.md` — `researcher_context` prefix (line 31)
 - `docs/design-codebook-ecosystem.md` — codebook layering strategy
-- `docs/design-codebook-island.md` — codebook UI design
+- `docs/design-codebook-v2.md` — codebook UI design (the navigator that ships;
+  `docs/archive/design-codebook-island.md` is the v1 island it replaced)
 - `docs/private/codebook-frameworks-legal.md` — legal analysis
 - `docs/design-i18n.md` — third-party codebooks stay in the author's language
   (future work). Note the list there names Norman, Morville and Garrett, not

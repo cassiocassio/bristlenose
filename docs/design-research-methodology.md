@@ -286,7 +286,7 @@ These are explicit non-goals, reflecting the philosophy that the tool assists bu
 
 | What | Where |
 |------|-------|
-| LLM prompt templates | `bristlenose/llm/prompts.py` |
+| LLM prompt templates | `bristlenose/llm/prompts/*.md` |
 | Prompt archive | `bristlenose/llm/prompts-archive/` |
 | Structured output schemas | `bristlenose/llm/structured.py` |
 | Sentiment enum | `bristlenose/models.py` (`Sentiment`) |

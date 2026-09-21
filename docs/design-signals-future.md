@@ -1,4 +1,4 @@
-# Analysis Page — Future Phases
+# Signals lens — future phases
 
 _Last updated: 13 Sep 2026_
 
@@ -99,7 +99,12 @@ rather than a menu of equals.
 
 ## Next step: explore before building
 
-Before adding controls, use the analysis page on 2–3 real studies and observe:
+> **Superseded — this step happened on 13 Sep 2026.** The banner at the top of
+> this document and §*Settled — 13 Sep 2026* record what the pass against nine
+> real trial projects decided. The questions below are kept as the baseline they
+> were answered against; they are not work owed.
+
+Before adding controls, use the Signals lens on 2–3 real studies and observe:
 
 - Do the top-ranked signals match what a researcher would prioritise?
 - Is the heatmap useful for discovery, or just confirmation?

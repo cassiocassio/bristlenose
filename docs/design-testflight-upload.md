@@ -1,7 +1,7 @@
 ---
 status: current
 last-trued: 2026-09-20
-trued-against: the altool contract re-verified line by line; --probe / BN_PROBE_WINDOW_S / the sink recorded; shipping build 0.29.0 (3067)
+trued-against: the altool contract re-verified line by line; --probe / BN_PROBE_WINDOW_S / the sink recorded; shipping build 0.30.0 (3578)
 ---
 
 # Scripted TestFlight upload — the gate, then one command

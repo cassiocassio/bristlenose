@@ -132,7 +132,15 @@ the artefact was actually built from.**
    emits the path where the OS wrote the crash report. Pinned by
    `ProcessOutcomeTests`, whose first test is the exact regression.
 
-## Still open — two defects this incident exposed, neither yet fixed
+## Still open — two defects this incident exposed, one since fixed
+
+> **Defect 1 is closed, and it shipped differently from the design below.**
+> `bristlenose/utils/output_backup.py` + `cli.py:1087-1096` stash the previous
+> output and restore it when a run does not succeed, with `reclaim_stale()`
+> reclaiming a stash orphaned by an earlier crash *before* the next stash can
+> sweep it — a failure mode the proposal below did not anticipate. The
+> dot-prefixed-sibling rename sketched here is kept as the reasoning the fix
+> came from, not as work owed. Defect 2 is genuinely open.
 
 1. **Clean-then-crash destroys the previous good output.** `cli.py:1200`
    `shutil.rmtree(output_dir)` runs after preflight and before the pipeline, so

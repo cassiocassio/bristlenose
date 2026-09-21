@@ -993,7 +993,7 @@ _Completed 10 Mar 2026._
 
 ### Bristlenose internal context
 - `docs/codebook futures/bristlenose-codebook-strategy-and-design.md` — codebook strategy, layer 4 custom tags ("frictionless creation"), Dovetail critique
-- `docs/design-codebook-island.md` — TagInput decision (no autocomplete on codebook page, yes on quote page)
+- `docs/archive/design-codebook-island.md` — TagInput decision (no autocomplete on codebook page, yes on quote page). Archived 20 Sep 2026 with the v1 lens; the decision is recorded there, the surface it was made for is gone
 - `docs/mockups/codebook-audit.html` — TagInput feature comparison table
 - `docs/design-transcript-editing.md` — Dovetail prior art (transcript editing, not tagging, but UX patterns overlap)
 - `frontend/src/components/TagInput.tsx` — current implementation (prefix + contains match, ghost text, grouped vocabulary with section headers, 12 max suggestions, keyboard navigation with header skipping)

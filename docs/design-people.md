@@ -8,7 +8,10 @@ trued-against: HEAD@main on 2026-08-24
 
 *Problem-first spec for person identity across Bristlenose: the jobs researchers
 are trying to do, the UX that serves them, and — last, deliberately — the
-functionality and data that fall out. Nothing here is built.*
+functionality and data that fall out. None of the UX in this document is
+built. The people *file* and its endpoints predate it and do ship —
+`GET`/`PUT /projects/{project_id}/people` (`server/routes/data.py:307`, `:335`),
+`PeopleFile` in `models.py`, and `/people` in the export embed.*
 
 ## Changelog
 

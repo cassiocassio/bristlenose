@@ -55,20 +55,20 @@ struct SentimentFanView: View {
     @State private var sizes: [Int: CGSize] = [:]
     @State private var dealt = false
 
-    /// `key` is the canonical sentiment id — the value stored in the DB and sent
+    /// `sentiment` is the canonical sentiment id — the value stored in the DB and sent
     /// to the LLM — resolved through `enums.sentiment.*` for display, exactly as
     /// the report's own badges do (`Badge.tsx`, `SignalsPage.tsx`). These were
     /// hardcoded English until 21 Sep 2026, so the card *explaining* the seven
     /// sentiments was the one place in a Turkish app that did not speak Turkish.
-    private struct Chip { let key: String; let fgL, fgD, bgL, bgD: UInt }
+    private struct Chip { let sentiment: String; let fgL, fgD, bgL, bgD: UInt }
     private let chips: [Chip] = [
-        .init(key: "frustration",  fgL: 0xea580c, fgD: 0xfb923c, bgL: 0xfff7ed, bgD: 0x2d1d0e),
-        .init(key: "confusion",    fgL: 0xdc2626, fgD: 0xf87171, bgL: 0xfef2f2, bgD: 0x2d1515),
-        .init(key: "doubt",        fgL: 0x7c3aed, fgD: 0xa78bfa, bgL: 0xf5f3ff, bgD: 0x1e1533),
-        .init(key: "surprise",     fgL: 0xd97706, fgD: 0xfbbf24, bgL: 0xfffbeb, bgD: 0x2d2305),
-        .init(key: "satisfaction", fgL: 0x16a34a, fgD: 0x4ade80, bgL: 0xf0fdf4, bgD: 0x0f2918),
-        .init(key: "delight",      fgL: 0x059669, fgD: 0x34d399, bgL: 0xecfdf5, bgD: 0x0d261c),
-        .init(key: "confidence",   fgL: 0x2563eb, fgD: 0x60a5fa, bgL: 0xeff6ff, bgD: 0x111d2e),
+        .init(sentiment: "frustration",  fgL: 0xea580c, fgD: 0xfb923c, bgL: 0xfff7ed, bgD: 0x2d1d0e),
+        .init(sentiment: "confusion",    fgL: 0xdc2626, fgD: 0xf87171, bgL: 0xfef2f2, bgD: 0x2d1515),
+        .init(sentiment: "doubt",        fgL: 0x7c3aed, fgD: 0xa78bfa, bgL: 0xf5f3ff, bgD: 0x1e1533),
+        .init(sentiment: "surprise",     fgL: 0xd97706, fgD: 0xfbbf24, bgL: 0xfffbeb, bgD: 0x2d2305),
+        .init(sentiment: "satisfaction", fgL: 0x16a34a, fgD: 0x4ade80, bgL: 0xf0fdf4, bgD: 0x0f2918),
+        .init(sentiment: "delight",      fgL: 0x059669, fgD: 0x34d399, bgL: 0xecfdf5, bgD: 0x0d261c),
+        .init(sentiment: "confidence",   fgL: 0x2563eb, fgD: 0x60a5fa, bgL: 0xeff6ff, bgD: 0x111d2e),
     ]
     // 4 / 3 two-row split in valence order; row bands + gap mirror the mockup.
     private let topRow = [0, 1, 2, 3]
@@ -114,7 +114,7 @@ struct SentimentFanView: View {
 
     private func chipView(_ i: Int) -> some View {
         let chip = chips[i]
-        return Text(i18n.t("enums.sentiment." + chip.key))
+        return Text(i18n.t("enums.sentiment." + chip.sentiment))
             .font(.system(size: 11, weight: .regular, design: .monospaced))
             .foregroundStyle(scheme == .dark ? rgb(chip.fgD) : rgb(chip.fgL))
             .padding(.horizontal, 6).padding(.vertical, 2)

@@ -199,6 +199,38 @@ enum GoogleOAuthError: LocalizedError, Equatable {
     /// actually granted so the UI can name the gap.
     case scopesDeclined(granted: [String], missing: [String])
 
+    /// The row's version: a key where the sentence is ours. `errorDescription`
+    /// below stays English for the log. See `CloudSignInMessage`.
+    var signInMessage: CloudSignInMessage {
+        let p = ["platform": "Google"]
+        switch self {
+        case .notConfigured:
+            return .init(key: "desktop.cloudImport.signInNotConfigured", vars: p,
+                         english: errorDescription ?? "")
+        case .cancelled:
+            return .init(key: "desktop.cloudImport.signInCancelled",
+                         english: errorDescription ?? "")
+        case .stateMismatch:
+            return .init(key: "desktop.cloudImport.signInStateMismatch",
+                         english: errorDescription ?? "")
+        case .noAuthorizationCode:
+            return .init(key: "desktop.cloudImport.signInNoCode", vars: p,
+                         english: errorDescription ?? "")
+        case .tokenExchangeFailed(let status, _):
+            return .init(key: "desktop.cloudImport.signInRefused",
+                         vars: ["platform": "Google", "status": String(status)],
+                         english: errorDescription ?? "")
+        case .scopesDeclined(_, let missing):
+            // Same stripping as `errorDescription` below: the raw scope is a
+            // URL, and "drive.readonly" is the part a researcher can act on.
+            let names = missing.map { $0.replacingOccurrences(
+                of: "https://www.googleapis.com/auth/", with: "") }
+            return .init(key: "desktop.cloudImport.signInScopesDeclined",
+                         vars: ["names": names.joined(separator: ", ")],
+                         english: errorDescription ?? "")
+        }
+    }
+
     var errorDescription: String? {
         switch self {
         case .notConfigured:

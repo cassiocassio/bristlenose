@@ -32,6 +32,21 @@ _APP = _ROOT / "desktop" / "Bristlenose" / "Bristlenose"
 # Conformers whose user-facing text reaches the UI through a discriminator the
 # view resolves. English may still appear in `errorDescription` for the log.
 LOCALISED: dict[str, str] = {
+    "ZoomOAuthError": (
+        "signInMessage carries a key per case; authorizationRefused passes "
+        "through Zoom's own error_description when it sent one, because that is "
+        "short, human-written and more specific than ours. 21 Sep 2026."
+    ),
+    "MicrosoftOAuthError": (
+        "signInMessage mirrors errorDescription's structure including its "
+        "refusal narrowing; MicrosoftSignInRefusal keeps its own judgement that "
+        "Microsoft's words win when it gave any. 21 Sep 2026."
+    ),
+    "GoogleOAuthError": (
+        "signInMessage carries a key per case, with the scope URLs stripped to "
+        "the part a researcher can act on, as errorDescription already did. "
+        "21 Sep 2026."
+    ),
     "APIError": (
         "MiroAPI's. localeKey is set only when the sentence is ours; nil means "
         "`message` is the SERVER's own detail (an invalid-token reason, a "
@@ -74,14 +89,11 @@ ENGLISH_BY_DECISION: dict[str, str] = {
 # tracked. This set may only SHRINK — moving an entry to LOCALISED is the work;
 # adding one is a decision that needs a reason a reader can weigh.
 ENGLISH_PENDING: dict[str, str] = {
-    "ZoomOAuthError": "~10 sign-in sentences → cloud-import window via CloudImportStore:413.",
-    "MicrosoftOAuthError": "~9 sentences, incl. the two longest on the surface (admin approval, Conditional Access).",
-    "GoogleOAuthError": "~6 sentences → same window, same path.",
 }
 
 # The ratchet. Lower it when an entry moves; raising it needs a commit that says
 # why, per docs/testing/soft-gates.json's policy.
-MAX_ENGLISH_PENDING = 3
+MAX_ENGLISH_PENDING = 0
 
 
 def _conformers() -> dict[str, Path]:

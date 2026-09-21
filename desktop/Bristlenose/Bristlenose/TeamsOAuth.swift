@@ -167,6 +167,28 @@ enum MicrosoftSignInRefusal: Equatable {
     /// **"administrator"**: it is what Entra's own screen says, and echoing the
     /// platform's vocabulary is what makes the message recognisable rather than
     /// merely accurate.
+    /// The window's version of `message`, keeping its pass-through judgement:
+    /// Microsoft's own words win when it gave any, because "User declined to
+    /// consent" is already more precise than ours.
+    func signInMessage(rawDescription: String) -> CloudSignInMessage {
+        let en = message(rawDescription: rawDescription)
+        switch self {
+        case .userDeclined:
+            return rawDescription.isEmpty
+                ? .init(key: "desktop.cloudImport.signInDeclined", english: en)
+                : .passthrough(en)
+        case .adminApprovalRequired:
+            return .init(key: "desktop.cloudImport.signInAdminApproval", english: en)
+        case .conditionalAccess:
+            return .init(key: "desktop.cloudImport.signInPolicyBlocked", english: en)
+        case .other(let description):
+            return description.isEmpty
+                ? .init(key: "desktop.cloudImport.signInDeclinedNoReason",
+                        vars: ["platform": "Microsoft"], english: en)
+                : .passthrough(en)
+        }
+    }
+
     func message(rawDescription: String) -> String {
         switch self {
         case .userDeclined:
@@ -221,6 +243,32 @@ enum MicrosoftOAuthError: LocalizedError, Equatable {
             return refusal == .conditionalAccess ? refusal : nil
         default:
             return nil
+        }
+    }
+
+    /// See `CloudSignInMessage`. `errorDescription` below stays English.
+    var signInMessage: CloudSignInMessage {
+        let p = ["platform": "Microsoft"]
+        let en = errorDescription ?? ""
+        switch self {
+        case .notConfigured:
+            return .init(key: "desktop.cloudImport.signInNotConfigured", vars: p, english: en)
+        case .cancelled:
+            return .init(key: "desktop.cloudImport.signInCancelled", english: en)
+        case .stateMismatch:
+            return .init(key: "desktop.cloudImport.signInStateMismatch", english: en)
+        case .noAuthorizationCode:
+            return .init(key: "desktop.cloudImport.signInNoCode", vars: p, english: en)
+        case .consentRefused(let code, let description):
+            return MicrosoftSignInRefusal
+                .classify(code: code, description: description)
+                .signInMessage(rawDescription: description)
+        case .tokenExchangeFailed(let status, let body):
+            if let refusal, refusal == .conditionalAccess {
+                return refusal.signInMessage(rawDescription: body)
+            }
+            return .init(key: "desktop.cloudImport.signInRefused",
+                         vars: ["platform": "Microsoft", "status": String(status)], english: en)
         }
     }
 

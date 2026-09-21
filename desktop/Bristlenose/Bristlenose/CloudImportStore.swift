@@ -38,7 +38,12 @@ final class CloudImportStore: ObservableObject {
         /// a button that turns out not to help is the recoverable way to be
         /// wrong, and withholding one from someone a retry would have rescued is
         /// not.
-        case failed(String, worthRetrying: Bool)
+        /// Carries a `CloudSignInMessage`, not a sentence: the store is not a
+        /// view and has no `I18n`, so the discriminator travels and
+        /// `CloudImportWindow` resolves it. It used to carry
+        /// `error.localizedDescription`, which is why ~25 sign-in sentences
+        /// rendered English inside a fully-localised window.
+        case failed(CloudSignInMessage, worthRetrying: Bool)
 
         /// The consent flow ended and we hold no credentials.
         ///
@@ -129,6 +134,20 @@ final class CloudImportStore: ObservableObject {
 
     /// Per-row fetch state, keyed by row id.
     @Published private(set) var progress: [String: FetchProgress] = [:]
+    /// A sign-in failure as something the window can localise.
+    ///
+    /// Each OAuth enum decides for itself which of its cases are our words and
+    /// which are the provider's — Microsoft's "User declined to consent" is more
+    /// precise than anything we would write, and passes through. Anything that
+    /// is not one of the three falls back to its own `localizedDescription`,
+    /// which for a system error macOS has already localised.
+    static func signInMessage(for error: Error) -> CloudSignInMessage {
+        if let e = error as? MicrosoftOAuthError { return e.signInMessage }
+        if let e = error as? GoogleOAuthError { return e.signInMessage }
+        if let e = error as? ZoomOAuthError { return e.signInMessage }
+        return .passthrough(error.localizedDescription)
+    }
+
     @Published private(set) var outcomes: [String: FetchOutcome] = [:]
     @Published private(set) var isFetching = false
 
@@ -410,7 +429,7 @@ final class CloudImportStore: ObservableObject {
                 // The refusal itself knows whether a second attempt could
                 // differ; nothing else in this app does.
                 let refusal = (error as? MicrosoftOAuthError)?.refusal
-                self.phase = .failed(error.localizedDescription,
+                self.phase = .failed(Self.signInMessage(for: error),
                                      worthRetrying: refusal?.isWorthRetrying ?? true)
             }
         }

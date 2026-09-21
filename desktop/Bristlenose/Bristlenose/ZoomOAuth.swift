@@ -180,6 +180,41 @@ enum ZoomOAuthError: LocalizedError, Equatable {
     /// degrade to one extra sign-in next launch.
     case rotationNotPersisted(ZoomTokens)
 
+    /// The window's version: a key where the sentence is ours, a passthrough
+    /// where it is Zoom's. `errorDescription` below stays English for the log.
+    var signInMessage: CloudSignInMessage {
+        let p = ["platform": "Zoom"]
+        let en = errorDescription ?? ""
+        switch self {
+        case .notConfigured:
+            return .init(key: "desktop.cloudImport.signInNotConfigured", vars: p, english: en)
+        case .cancelled:
+            return .init(key: "desktop.cloudImport.signInCancelled", english: en)
+        case .stateMismatch:
+            return .init(key: "desktop.cloudImport.signInStateMismatch", english: en)
+        case .noAuthorizationCode:
+            return .init(key: "desktop.cloudImport.signInNoCode", vars: p, english: en)
+        case .authorizationRefused(let error, let description):
+            // Zoom's own `error_description` where there is one — short,
+            // human-written, and more specific than ours could be.
+            if let d = description, !d.isEmpty { return .passthrough(en) }
+            return .init(key: "desktop.cloudImport.signInRefusedCode",
+                         vars: ["platform": "Zoom", "code": error], english: en)
+        case .noRefreshTokenIssued:
+            return .init(key: "desktop.cloudImport.signInNoRefreshToken", vars: p, english: en)
+        case .unusableCallback(let detail):
+            return .init(key: "desktop.cloudImport.signInUnusableCallback",
+                         vars: ["platform": "Zoom", "detail": detail], english: en)
+        case .tokenExchangeFailed(let status, _):
+            return .init(key: "desktop.cloudImport.signInRefused",
+                         vars: ["platform": "Zoom", "status": String(status)], english: en)
+        case .refreshRejected:
+            return .init(key: "desktop.cloudImport.signInExpired", vars: p, english: en)
+        case .rotationNotPersisted:
+            return .init(key: "desktop.cloudImport.signInRotationNotPersisted", vars: p, english: en)
+        }
+    }
+
     var errorDescription: String? {
         switch self {
         case .notConfigured:

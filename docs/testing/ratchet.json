@@ -35,12 +35,12 @@
   },
   "swift_english_localizederror": {
     "basis": "len(ENGLISH_PENDING) in tests/test_localized_error_coverage.py",
-    "ceiling": 3,
+    "ceiling": 0,
     "measured": {
       "by": "local",
       "on": "2026-09-21"
     },
-    "note": "Set 21 Sep 2026 at the measured value. The seventh conformer, SidecarResolveError, is classified ENGLISH_BY_DECISION and does not count: its cases are all about _BRISTLENOSE_DEV_* env vars, which a researcher cannot reach. It was also missed by the hand audit that produced the '6 of 6' figure, because that grepped ': LocalizedError' and this one declares ': Error, Equatable, LocalizedError' — the gate found it on its first run. 5 -> 4 on 21 Sep 2026: CopyError moved to LOCALISED (two new keys plus one lifted twin, 42 values). 4 -> 3 the same day: MiroAPI.APIError, two keys, 42 values.",
+    "note": "Set 21 Sep 2026 at the measured value. The seventh conformer, SidecarResolveError, is classified ENGLISH_BY_DECISION and does not count: its cases are all about _BRISTLENOSE_DEV_* env vars, which a researcher cannot reach. It was also missed by the hand audit that produced the '6 of 6' figure, because that grepped ': LocalizedError' and this one declares ': Error, Equatable, LocalizedError' — the gate found it on its first run. 5 -> 4 on 21 Sep 2026: CopyError moved to LOCALISED (two new keys plus one lifted twin, 42 values). 4 -> 3 the same day: MiroAPI.APIError, two keys, 42 values. 3 -> 0 the same day: the three OAuth enums, 15 shared keys with {{platform}} rather than ~25 per-provider ones, 315 values. ENGLISH_PENDING is now empty — the gate's remaining job is to keep it that way.",
     "why": "LocalizedError.errorDescription is the highest-risk site in this codebase for a sentence filed as data — 6 of 7 conformers rendered English on 21 Sep 2026, every one of them on a surface a researcher reads. Held rather than fixed because each entry is new copy in 21 locales, which is a reviewed act, not a sweep."
   }
 }

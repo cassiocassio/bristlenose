@@ -217,7 +217,8 @@ struct CloudImportWindow: View {
                 Button(i18n.t("desktop.cloudImport.tryAgain"), action: store.signIn)
             }
 
-        case .failed(let message, let worthRetrying):
+        case .failed(let failure, let worthRetrying):
+            let message = failure.key.map { i18n.t($0, failure.vars) } ?? failure.english
             ContentUnavailableView {
                 Label(i18n.t("desktop.cloudImport.loadFailedTitle"), systemImage: "exclamationmark.triangle")
             } description: {

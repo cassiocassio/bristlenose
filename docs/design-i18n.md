@@ -256,6 +256,61 @@ an all-translated one promises framework codes we do not produce.
 > an objective, not a resolved design. Written as settled fact above since Mar 2026; treat the
 > paragraph as intent until this note is removed.
 
+### Open: what language should sections and themes be generated in
+
+**Not settled, and not to be settled by reasoning — it needs experiments.**
+Recorded 22 Sep 2026 so the next pass starts from the argument rather than from
+the code.
+
+Today it is *undefined*: nothing steers the model (see the correction above), so
+a Spanish study's section titles come back in whatever the model picks, possibly
+differing between runs. That much is a defect whatever the answer turns out
+to be.
+
+**There are three axes here and the first version of this analysis collapsed
+them into one.** They are independent, and a researcher can hold a different
+answer for each:
+
+| Axis | Whose language | Decided where |
+|---|---|---|
+| **UI** | the researcher's working language | Settings, today |
+| **Analysis output** — section and theme titles, descriptions | *open* | would be the pipeline |
+| **Deliverable** — what the stakeholder reads | the client's, which may be neither of the above | export / report time |
+
+The worked case that separates them: a Barcelona researcher runs the UI in
+Catalan, interviews in a Catalan/Spanish mixture depending on the participant,
+and delivers to a Madrid client in Spanish — or to an international client in
+English. No single setting serves all three.
+
+**The maintainer's leaning, 22 Sep 2026: the language of the conversation.** A
+theme or a section is a *description of what participants said*, so it belongs
+with the data rather than with the chrome — and keeping it in the conversation's
+language preserves the link between a theme title and the quotes sitting under
+it, with no translation seam in between. Probably overrideable rather than fixed.
+
+**That leaning is also the one consistent with this document's own strategy.**
+"Translation happens at the display layer only" is the sentence directly above;
+generating in the conversation's language and translating for a deliverable is
+exactly that, whereas generating in the *UI* language would bake a display
+choice into stored analysis. The clause removed in the correction above — that
+summaries are generated in the user's preferred language — was the part that
+contradicted the strategy, not merely the part that was unimplemented.
+
+**A signal already exists and is currently discarded.** `s05_transcribe`
+detects the language per session and logs it (`info.language`,
+`info.language_probability`); nothing carries it any further. Whatever the
+experiments conclude, the input is already measured — which also means the
+mixed-language case has a per-session answer available rather than one
+project-wide guess.
+
+**What an experiment needs to establish**, in rough order: what the model
+actually does today, unsteered, on a non-English corpus (one paid run); whether
+it is stable across runs of the same corpus; whether an explicit instruction
+changes tagging quality as well as language; and what a mixed-language project
+should do when its sessions disagree. Note the cost of the obvious seam: prompt
+bodies carry a `sha` used for telemetry and cohort baselines, so editing them
+churns `cohort-baselines.json` — a call-site instruction may be cheaper.
+
 ### Examples, mockups and illustrations — the rules
 
 Agreed 21 Sep 2026, after a Welcome card rendered Spanish chrome around an

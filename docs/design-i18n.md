@@ -216,6 +216,23 @@ measurement first to justify it.
 already rejects on methodology grounds, and it would not help: the tag *name* is
 the thing that must stay stable across studies.
 
+**A native-language codebook is a sibling, not a translation — and that is the
+distinction that keeps it legal.** Parked 21 Sep 2026, deliberately: a Spanish
+UXR codebook authored *in Spanish*, with its own id, is a new codebook that
+happens to cover the same ground. It forks nothing, because nobody is comparing
+its tags to Garrett's; translating `garrett.yaml` in place would fork the
+identity every cross-study comparison depends on. Same output, opposite
+mechanics.
+
+So "translate the codebooks" stays wrong and "ship a `uxr-es`" stays available,
+and the two should not be confused when this comes round again. The maintainer's
+own read is that **individuals authoring their own will overtake anything we
+hand-write**, which puts the weight on the Codebook Lab
+(`docs/design-dynamic-codebook-builder.md`, `experimental_codebook_lab`,
+default-off since 20 Sep 2026) rather than on a translation programme. Not
+scheduled; recorded so the next pass does not re-derive the rejected version of
+the idea.
+
 **The consequence for illustrations, since that is what prompted the audit:** an
 example card must depict the row it belongs to. A codebook the researcher
 *authors* is their language; a Garrett code is English and correctly so; a

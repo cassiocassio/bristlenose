@@ -8,8 +8,8 @@ Usage:
     from bristlenose.i18n import t, set_locale
 
     set_locale("es")
-    print(t("cli.stage.transcribe"))  # "Transcribir"
-    print(t("cli.version", version="0.13.4"))  # "bristlenose 0.13.4"
+    print(t("server.statusPage.noRunCliShort"))  # "Aquí no hay nada todavía."
+    print(t("preflight.closing.no_more_questions", estimate_suffix=""))
 """
 
 from __future__ import annotations
@@ -99,7 +99,7 @@ def t(key: str, **kwargs: object) -> str:
     """Translate a dotted key. Format: ``"namespace.dotted.key"``.
 
     Interpolation uses Python ``str.format_map``:
-        t("cli.version", version="0.13.4")  →  "bristlenose {version}" → "bristlenose 0.13.4"
+        t("server.statusPage.runFailedLong")  →  the English, then the raw key
 
     Falls back to the English string, then to the raw key.
     """

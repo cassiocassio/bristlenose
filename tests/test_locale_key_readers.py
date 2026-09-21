@@ -45,8 +45,8 @@ before the register is consulted, so they never reach it:
 * **pseudo-keys.** `_comment_*` and `_divergent_*` are notes to maintainers, as
   `flatten()` in `check-locales.py` already has it.
 
-What is left is 104 keys, and they are not one thing either. `_KNOWN_ORPHANS`
-below carries them in 22 blocks, each with a tag and the commit that did it:
+What is left is 72 keys, and they are not one thing either. `_KNOWN_ORPHANS`
+below carries them in 18 blocks, each with a tag and the commit that did it:
 
 * `DEAD` — the reader was deleted and the key stayed. `common.help.` was 129
   of them and is **gone as of 21 Sep 2026**: `3f49d170` had retired the in-app
@@ -55,10 +55,12 @@ below carries them in 22 blocks, each with a tag and the commit that did it:
   content entirely. Deleting it took 2,730 values out of the tree, plus the
   three `desktop.help.` overrides `docs/platform-text-map.md` had been carrying
   an open "decision owed" on since it was written.
-* `UNWIRED` — a surface that never had a call site at all. The `cli`, `doctor`
-  and `pipeline` namespaces are wholly in this class; they anticipate a
+* `UNWIRED` — *retired 22 Sep 2026, when the last block carrying it went.*
+  A surface that never had a call site at all. The `cli`, `doctor`
+  and `pipeline` namespaces were wholly in this class — they anticipated a
   translation that `docs/design-i18n.md` §"Which surfaces are targets" has
-  since decided against.
+  since decided against — and were **deleted on 22 Sep 2026**, all three files,
+  in every locale. What remains under this tag is smaller and case by case.
 * `RESERVED` — a key waiting for a reader rather than one whose reader went
   away (register item 6, pending Decision 4).
 * `TRIAGED` — decided, not yet executed (register item 24).
@@ -270,13 +272,12 @@ def orphans(keys: dict[str, str] | None = None) -> list[str]:
 #: The reader was deleted and the key stayed behind.
 DEAD = "dead"
 #: A surface that never had a call site at all — failure class 2's residue.
-UNWIRED = "unwired"
 #: A key waiting for a reader, not one whose reader went away.
 RESERVED = "reserved"
 #: Decided, not yet executed.
 TRIAGED = "triaged"
 
-_TAGS = {DEAD, UNWIRED, RESERVED, TRIAGED}
+_TAGS = {DEAD, RESERVED, TRIAGED}
 
 
 class _Block:
@@ -311,23 +312,6 @@ _KNOWN_ORPHANS: dict[str, _Block] = {
         leaves="""
             completed_partial
         """,  # 1
-    ),
-    "cli.": _Block(
-        tag=UNWIRED,
-        why="A surface that was never wired: CLI terminal chrome is English by "
-            "design (`docs/design-i18n.md` §\"Which surfaces are targets\"), so these "
-            "17 of the file's 19 keys have never had a call site. The two that are "
-            "not here — `cli.stage.transcribe` and `cli.version` — are 'read' "
-            "only by the usage example in `bristlenose/i18n.py`'s docstring, which is "
-            "the one place this gate's literal scan cannot tell prose from code.",
-        leaves="""
-            error.noFiles error.noInput error.notFound help
-            progress.complete progress.failed progress.skipped
-            stage.extractAudio stage.identifySpeakers stage.ingest
-            stage.mergeTranscript stage.piiRemoval
-            stage.quoteClustering stage.quoteExtraction stage.render
-            stage.thematicGrouping stage.topicSegmentation
-        """,  # 17
     ),
     "common.export.": _Block(
         tag=DEAD,
@@ -462,29 +446,6 @@ _KNOWN_ORPHANS: dict[str, _Block] = {
             quotes_one quotes_other
         """,  # 2
     ),
-    "doctor.": _Block(
-        tag=UNWIRED,
-        why="The whole `doctor` namespace, born orphaned: `git log -S` finds no "
-            "commit that ever wrote one of these literals at a call site. The "
-            "Diagnostics menu and `doctor.py` are English by decision (register item "
-            "13), so the file anticipates a translation the surface rule has since "
-            "decided against.",
-        leaves="""
-            checkFail checkOk checkWarn heading summary.allPassed
-            summary.issuesFound
-        """,  # 6
-    ),
-    "server.": _Block(
-        tag=UNWIRED,
-        why="Born orphaned, same shape: `server.error.*` and `server.status.*` have "
-            "no call site in any commit. `server.statusPage.*` in the same file IS "
-            "live (`status_page.py` reads eleven of them), which is why this entry "
-            "pins leaves rather than the namespace.",
-        leaves="""
-            error.badRequest error.internal error.notFound
-            status.degraded status.healthy
-        """,  # 5
-    ),
     "common.emptyState.": _Block(
         tag=DEAD,
         why="The pre-pipeline empty state names its own key now; `postZeroQuotes`, the "
@@ -503,16 +464,6 @@ _KNOWN_ORPHANS: dict[str, _Block] = {
         leaves="""
             project.delete
         """,  # 1
-    ),
-    "pipeline.": _Block(
-        tag=UNWIRED,
-        why="The whole four-key `pipeline` namespace, born orphaned. It is "
-            "unreachable from the desktop target by construction "
-            "(`I18n.unloadedOnDiskNamespaces`) and has no Python call site; the CLI "
-            "prints these lines as English literals, by design.",
-        leaves="""
-            done stageComplete stageStart start
-        """,  # 4
     ),
     "settings.configReference.": _Block(
         tag=DEAD,
@@ -758,7 +709,9 @@ def test_the_corpus_is_not_empty() -> None:
     assert len(exact) > 5000, f"only {len(exact)} literals — is the scanner reading?"
     assert len(composed) > 100, f"only {len(composed)} composed prefixes"
     assert len(_en_keys()) > 1000, "en shipped fewer keys than any release has"
-    assert set(_NAMESPACES) >= {"cli", "common", "desktop", "enums", "settings"}
+    # `cli`, `doctor` and `pipeline` were deleted on 22 Sep 2026 — surfaces
+    # that are English by decision cannot use a translation.
+    assert set(_NAMESPACES) >= {"common", "desktop", "enums", "settings"}
 
 
 @pytest.mark.parametrize("tag", sorted(_TAGS))

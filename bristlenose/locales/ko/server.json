@@ -1,13 +1,4 @@
 {
-  "error": {
-    "notFound": "리소스를 찾을 수 없습니다.",
-    "badRequest": "잘못된 요청: {detail}",
-    "internal": "내부 서버 오류."
-  },
-  "status": {
-    "healthy": "정상",
-    "degraded": "저하됨"
-  },
   "statusPage": {
     "noRunDesktopShort": "아직 분석할 인터뷰가 없습니다.",
     "noRunDesktopLong": "여기에 인터뷰 폴더를 드래그하여 시작하세요.",

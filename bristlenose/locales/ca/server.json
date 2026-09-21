@@ -1,13 +1,4 @@
 {
-  "error": {
-    "notFound": "No s'ha trobat el recurs.",
-    "badRequest": "Sol·licitud incorrecta: {detail}",
-    "internal": "Error intern del servidor."
-  },
-  "status": {
-    "healthy": "Correcte",
-    "degraded": "Degradat"
-  },
   "statusPage": {
     "noRunDesktopShort": "Encara no hi ha entrevistes per analitzar.",
     "noRunDesktopLong": "Arrossega-hi una carpeta d'entrevistes per començar.",

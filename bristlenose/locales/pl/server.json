@@ -1,13 +1,4 @@
 {
-  "error": {
-    "notFound": "Nie znaleziono zasobu.",
-    "badRequest": "Nieprawidłowe żądanie: {detail}",
-    "internal": "Wewnętrzny błąd serwera."
-  },
-  "status": {
-    "healthy": "Sprawny",
-    "degraded": "Ograniczona sprawność"
-  },
   "statusPage": {
     "noRunDesktopShort": "Brak wywiadów do analizy.",
     "noRunDesktopLong": "Przeciągnij tutaj folder z wywiadami, aby rozpocząć.",

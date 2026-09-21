@@ -1,13 +1,4 @@
 {
-  "error": {
-    "notFound": "Risorsa non trovata.",
-    "badRequest": "Richiesta non valida: {detail}",
-    "internal": "Errore interno del server."
-  },
-  "status": {
-    "healthy": "Integro",
-    "degraded": "Degradato"
-  },
   "statusPage": {
     "noRunDesktopShort": "Non ci sono ancora interviste da analizzare.",
     "noRunDesktopLong": "Trascina qui una cartella di interviste per iniziare.",

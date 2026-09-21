@@ -48,7 +48,12 @@ final class I18n: ObservableObject {
     /// are only meaningful as a pair: this is the complement, and the `t`
     /// assertion below is the only thing that reads it.
     private static let unloadedOnDiskNamespaces: Set<String> = [
-        "cli", "doctor", "pipeline", "preflight", "server",
+        // `cli`, `doctor` and `pipeline` were deleted on 22 Sep 2026 — their
+        // surfaces are English by decision, so their translations could never
+        // be read. What is left is the genuine shape this assertion is for:
+        // a namespace that exists in `bristlenose/locales/` and is not loaded
+        // by this target, so a key in it can only ever render raw.
+        "preflight", "server",
     ]
 
     // MARK: - Setup

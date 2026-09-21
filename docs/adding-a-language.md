@@ -118,17 +118,25 @@ loudly on missing key files, which is what you want for the next steps.
 
 ## Step 2 — Make the locale directory + namespace files
 
+> **Six files, not nine.** `cli.json`, `doctor.json` and `pipeline.json` were
+> deleted in every locale on 22 Sep 2026. They described surfaces that are
+> **English by decision** — terminal chrome and Diagnostics
+> (`docs/design-i18n.md` §"Which surfaces are targets") — so their translations
+> could never be read, and `git log -S` found no commit that had ever written
+> one of those keys at a call site. This list previously said *"CLI is
+> English-only **in alpha** — mirror only"*, which is exactly the framing that
+> section exists to retire: English here is a property of the surface, not a
+> stage of the project, and it will still be true next year. Nothing to mirror.
+
+
 ```
 bristlenose/locales/<code>/
-  common.json          ~452 keys (largest)
-  desktop.json         ~331 keys (desktop chrome + pipeline messaging)
-  settings.json        ~85 keys
-  cli.json             ~19 keys (CLI is English-only in alpha — mirror only)
+  common.json          ~423 keys (largest)
+  desktop.json         ~870 keys (desktop chrome + pipeline messaging)
+  settings.json        ~183 keys
   enums.json           ~11 keys
-  doctor.json          ~6 keys
-  server.json          ~5 keys
-  pipeline.json        ~4 keys
-bristlenose/locales/<code>/preflight.json   ~33 keys (root namespace, not under desktop)
+  server.json          ~11 keys
+bristlenose/locales/<code>/preflight.json   ~34 keys (root namespace, not under desktop)
 ```
 
 Mirror an existing locale (`es/` is a good "average" baseline; `cs/` is a

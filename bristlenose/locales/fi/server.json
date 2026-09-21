@@ -1,13 +1,4 @@
 {
-  "error": {
-    "notFound": "Resurssia ei löytynyt.",
-    "badRequest": "Virheellinen pyyntö: {detail}",
-    "internal": "Palvelimen sisäinen virhe."
-  },
-  "status": {
-    "healthy": "Kunnossa",
-    "degraded": "Heikentynyt"
-  },
   "statusPage": {
     "noRunDesktopShort": "Ei vielä analysoitavia haastatteluja.",
     "noRunDesktopLong": "Aloita pudottamalla haastattelukansio tähän.",

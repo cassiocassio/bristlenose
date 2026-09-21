@@ -1,13 +1,4 @@
 {
-  "error": {
-    "notFound": "Resursen hittades inte.",
-    "badRequest": "Felaktig begäran: {detail}",
-    "internal": "Internt serverfel."
-  },
-  "status": {
-    "healthy": "Frisk",
-    "degraded": "Försämrad"
-  },
   "statusPage": {
     "noRunDesktopShort": "Inga intervjuer att analysera ännu.",
     "noRunDesktopLong": "Släpp en mapp med intervjuer här för att börja.",

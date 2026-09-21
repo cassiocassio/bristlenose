@@ -1,13 +1,4 @@
 {
-  "error": {
-    "notFound": "Recurso no encontrado.",
-    "badRequest": "Solicitud incorrecta: {detail}",
-    "internal": "Error interno del servidor."
-  },
-  "status": {
-    "healthy": "Correcto",
-    "degraded": "Degradado"
-  },
   "statusPage": {
     "noRunDesktopShort": "Aún no hay entrevistas que analizar.",
     "noRunDesktopLong": "Arrastra aquí una carpeta de entrevistas para empezar.",

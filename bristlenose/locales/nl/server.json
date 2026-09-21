@@ -1,13 +1,4 @@
 {
-  "error": {
-    "notFound": "Bron niet gevonden.",
-    "badRequest": "Ongeldig verzoek: {detail}",
-    "internal": "Interne serverfout."
-  },
-  "status": {
-    "healthy": "Gezond",
-    "degraded": "Verminderd"
-  },
   "statusPage": {
     "noRunDesktopShort": "Nog geen interviews om te analyseren.",
     "noRunDesktopLong": "Sleep hier een map met interviews om te beginnen.",

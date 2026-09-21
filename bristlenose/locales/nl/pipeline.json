@@ -1,6 +1,0 @@
-{
-  "start": "Pijplijn wordt gestart voor {path}",
-  "stageStart": "{stage} wordt uitgevoerd…",
-  "stageComplete": "{stage} voltooid ({duration})",
-  "done": "Pijplijn voltooid. Uitvoer: {output}"
-}

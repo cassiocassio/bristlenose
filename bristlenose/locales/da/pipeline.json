@@ -1,6 +1,0 @@
-{
-  "start": "Starter pipeline for {path}",
-  "stageStart": "Kører {stage}…",
-  "stageComplete": "{stage} fuldført ({duration})",
-  "done": "Pipeline fuldført. Output: {output}"
-}

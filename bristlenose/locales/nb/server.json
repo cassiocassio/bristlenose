@@ -1,13 +1,4 @@
 {
-  "error": {
-    "notFound": "Fant ikke ressursen.",
-    "badRequest": "Ugyldig forespørsel: {detail}",
-    "internal": "Intern tjenerfeil."
-  },
-  "status": {
-    "healthy": "Frisk",
-    "degraded": "Redusert"
-  },
   "statusPage": {
     "noRunDesktopShort": "Ingen intervjuer å analysere ennå.",
     "noRunDesktopLong": "Slipp en mappe med intervjuer her for å starte.",

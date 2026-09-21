@@ -1,13 +1,4 @@
 {
-  "error": {
-    "notFound": "リソースが見つかりません。",
-    "badRequest": "不正なリクエスト: {detail}",
-    "internal": "サーバー内部エラーです。"
-  },
-  "status": {
-    "healthy": "正常",
-    "degraded": "低下"
-  },
   "statusPage": {
     "noRunDesktopShort": "分析するインタビューがまだありません。",
     "noRunDesktopLong": "インタビューのフォルダをここにドラッグして始めましょう。",

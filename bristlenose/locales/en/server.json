@@ -1,13 +1,4 @@
 {
-  "error": {
-    "notFound": "Resource not found.",
-    "badRequest": "Bad request: {detail}",
-    "internal": "Internal server error."
-  },
-  "status": {
-    "healthy": "Healthy",
-    "degraded": "Degraded"
-  },
   "statusPage": {
     "noRunDesktopShort": "No interviews to analyse yet.",
     "noRunDesktopLong": "Drop a folder of interviews here to start.",

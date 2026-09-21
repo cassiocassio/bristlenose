@@ -1,13 +1,4 @@
 {
-  "error": {
-    "notFound": "Ressource ikke fundet.",
-    "badRequest": "Ugyldig anmodning: {detail}",
-    "internal": "Intern serverfejl."
-  },
-  "status": {
-    "healthy": "Sund",
-    "degraded": "Forringet"
-  },
   "statusPage": {
     "noRunDesktopShort": "Ingen interviews at analysere endnu.",
     "noRunDesktopLong": "Træk en mappe med interviews hertil for at starte.",

@@ -32,17 +32,22 @@ class TestSetLocale:
 
 
 class TestTranslation:
+    # These exercise `t()` itself — simple key, nesting, a miss, interpolation —
+    # and used `cli.*` as their corpus until that namespace was deleted on
+    # 22 Sep 2026 (CLI chrome is English by decision, so its translations could
+    # never be read). Repointed at `server.statusPage.*`, which is live and is
+    # read by `status_page.py`. The assertions are unchanged in substance.
     def test_simple_key(self):
-        result = t("cli.version", version="1.0.0")
-        assert result == "bristlenose 1.0.0"
+        result = t("server.statusPage.cliExitedWithCode", code="1")
+        assert result == "CLI exited with code 1"
 
     def test_nested_key(self):
-        result = t("cli.stage.transcribe")
-        assert result == "Transcribe"
+        result = t("server.statusPage.noRunCliShort")
+        assert result == "Nothing to see here, yet."
 
     def test_missing_key_returns_raw_key(self):
-        result = t("cli.nonexistent.key")
-        assert result == "cli.nonexistent.key"
+        result = t("server.nonexistent.key")
+        assert result == "server.nonexistent.key"
 
     def test_missing_namespace_returns_raw_key(self):
         result = t("nonexistent.key")
@@ -53,13 +58,13 @@ class TestTranslation:
         assert result == "plainkey"
 
     def test_interpolation(self):
-        result = t("cli.error.notFound", path="/tmp/test")
-        assert result == "Directory not found: /tmp/test"
+        result = t("preflight.whisper.banner_intro", size="1.5 GB")
+        assert result == "Bristlenose needs the Whisper transcription model (1.5 GB)."
 
     def test_interpolation_missing_placeholder_returns_string(self):
         # If kwargs has extra keys, format_map just ignores them
-        result = t("cli.version", version="1.0", extra="unused")
-        assert result == "bristlenose 1.0"
+        result = t("server.statusPage.cliExitedWithCode", code="2", extra="unused")
+        assert result == "CLI exited with code 2"
 
 
 class TestEnumTranslations:

@@ -888,9 +888,21 @@ enum AttendeeLine {
     /// - Returns: nil when there is nothing to say. **Nothing, not "0
     ///   attendees"** — a meeting with no invitees is an ordinary meeting, and
     ///   announcing the zero is chrome for a non-event.
+    /// - Parameter attendeeCount: the residue line, already pluralised —
+    ///   `i18n.plural("desktop.cloudImport.attendeeCount", count:)`. Passed in
+    ///   for the same reason `subtitle` takes `unscheduledLabel`: this stays a
+    ///   pure function and the vocabulary belongs to the caller. It used to be
+    ///   `CloudCount.noun(attendees.count, "attendee")`, which hand-rolled the
+    ///   English plural as `singular + "s"` and could never have produced the
+    ///   four Czech, Polish, Russian and Ukrainian forms the locale files have
+    ///   carried all along (`docs/i18n-defects.md` row 27). Rendered eagerly by
+    ///   the caller although only one branch reads it — a dictionary lookup and
+    ///   a substitution, against a closure or an `I18n` parameter that would
+    ///   make this `@MainActor`.
     static func summary(
         _ attendees: [CloudImportRow.Attendee],
         organiser: CloudImportRow.Attendee?,
+        attendeeCount: String,
         limit: Int = 3
     ) -> String? {
         let (names, overflow) = compose(attendees, limit: limit)
@@ -900,7 +912,7 @@ enum AttendeeLine {
             if let organiser { return organiser.listLabel }
             // Names existed and were all shed: you, decliners, resources. The
             // count is the honest residue and worth saying.
-            return attendees.isEmpty ? nil : CloudCount.noun(attendees.count, "attendee")
+            return attendees.isEmpty ? nil : attendeeCount
         }
         let joined = names.joined(separator: " · ")
         // A count, not an ellipsis: "+4" says there are six.
@@ -920,14 +932,17 @@ enum AttendeeLine {
     ///   instant meeting"; Teams says "Meet now" for the same act and will want
     ///   its own string when it can tell an unbooked call from an unread
     ///   calendar.
+    /// - Parameter attendeeCount: forwarded to `summary` — see its note.
     static func subtitle(
         _ attendees: [CloudImportRow.Attendee],
         organiser: CloudImportRow.Attendee?,
         isUnscheduled: Bool,
         unscheduledLabel: String,
+        attendeeCount: String,
         limit: Int = 3
     ) -> String? {
-        if let line = summary(attendees, organiser: organiser, limit: limit) { return line }
+        if let line = summary(attendees, organiser: organiser,
+                              attendeeCount: attendeeCount, limit: limit) { return line }
         return isUnscheduled ? unscheduledLabel : nil
     }
 

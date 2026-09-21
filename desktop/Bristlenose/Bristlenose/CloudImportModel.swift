@@ -373,12 +373,20 @@ enum ImportRowState: Equatable {
 /// is to be believed about quantities. Hardcoding the `s` looks fine at each
 /// site and is wrong across all of them.
 ///
-/// Deliberately **not** a general pluraliser. The CLI already has one
-/// (`count_noun`, wrapping inflect) and the React SPA uses i18next's CLDR
-/// plurals; this window is hardcoded English only because cloud import is not
-/// localised yet. When it is, these become `t(key, count:)` — and routing them
-/// through one function now means there is a single shape to convert rather
-/// than five interpolations to hunt down.
+/// **Superseded, and production-dead as of 21 Sep 2026 — do not reach for it.**
+/// The conversion this comment predicted has happened: every one of those five
+/// sites now calls `i18n.plural("desktop.cloudImport.<key>", count:)`, which
+/// picks a CLDR category and so can produce the four Czech, Polish, Russian and
+/// Ukrainian forms that `singular + "s"` never could. The last holdout was
+/// `AttendeeLine.summary` (`docs/i18n-defects.md` row 27). Nothing outside
+/// `CloudCountTests` calls this any more; both it and those tests should go in
+/// the next pass through this file, and it is left standing only because that
+/// deletion wants a build to prove it.
+///
+/// The CLI's own pluraliser is `count_noun` (wrapping inflect) and the React SPA
+/// uses i18next's CLDR plurals. Routing the five sites through one function
+/// first is what made the conversion a single shape rather than five
+/// interpolations to hunt down — the part of this plan that worked.
 ///
 /// Verb agreement is **not** handled here, on purpose: "1 meeting is here" and
 /// "3 meetings are here" are different sentences, not a pluralised token, and a

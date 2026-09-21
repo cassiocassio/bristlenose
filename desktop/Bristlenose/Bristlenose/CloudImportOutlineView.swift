@@ -626,11 +626,27 @@ extension CloudImportOutlineView {
             }
         }
 
+        /// The group row. The label is rendered **here**, not carried on the
+        /// node: `Day` holds only the midnight it groups by, and the two words
+        /// we own come from `I18n` at draw time — see `CloudImportOutline.Day`
+        /// for why that is the only honest place for them.
+        ///
+        /// `Date()` rather than the `now` the tree was built from, because a
+        /// header is drawn on demand and an import window can be left open
+        /// across midnight; asking at draw time is what lets yesterday's header
+        /// stop calling itself Today. `.current` matches `build`'s own default
+        /// calendar, so the header agrees with the grouping that put rows under
+        /// it.
         private func dayView(for day: CloudImportOutline.Day, in outline: NSOutlineView) -> NSView {
             let view = reuse(TwoLineCellView.self, Column.meeting, in: outline)
             view.leadingInset = Metrics.dayLabelInset
             view.configure(
-                title: day.label,
+                title: CloudImportOutline.dayLabel(
+                    for: day.start,
+                    now: Date(),
+                    calendar: .current,
+                    today: i18n.t("desktop.cloudImport.dayToday"),
+                    yesterday: i18n.t("desktop.cloudImport.dayYesterday")),
                 titleFont: .systemFont(ofSize: Metrics.subtitleSize, weight: .semibold),
                 subtitle: nil
             )
@@ -776,7 +792,9 @@ extension CloudImportOutlineView {
                         meeting.attendees,
                         organiser: meeting.organiser,
                         isUnscheduled: meeting.isUnscheduled,
-                        unscheduledLabel: i18n.t("desktop.cloudImport.instantMeeting"))
+                        unscheduledLabel: i18n.t("desktop.cloudImport.instantMeeting"),
+                        attendeeCount: i18n.plural("desktop.cloudImport.attendeeCount",
+                                                   count: meeting.attendees.count))
                         ?? i18n.plural("desktop.cloudImport.meetingRecordingCount", count: meeting.recordingCount)
                 )
 
@@ -808,7 +826,9 @@ extension CloudImportOutlineView {
                             row.attendees,
                             organiser: row.organiser,
                             isUnscheduled: row.isUnscheduled,
-                            unscheduledLabel: i18n.t("desktop.cloudImport.instantMeeting"))
+                            unscheduledLabel: i18n.t("desktop.cloudImport.instantMeeting"),
+                            attendeeCount: i18n.plural("desktop.cloudImport.attendeeCount",
+                                                       count: row.attendees.count))
                     )
                 }
             }

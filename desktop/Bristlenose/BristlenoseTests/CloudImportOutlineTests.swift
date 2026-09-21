@@ -62,7 +62,10 @@ struct CloudImportOutlineTests {
     }
 
     private func build(_ rows: [CloudImportRow]) -> CloudImportOutline.Result {
-        CloudImportOutline.build(rows: rows, now: now, calendar: calendar)
+        // No `now:` — the tree stopped knowing about today when the day header's
+        // wording moved to the cell. `dayLabels` below still passes one, because
+        // that is the function the named forms live in now.
+        CloudImportOutline.build(rows: rows, calendar: calendar)
     }
 
     // MARK: - The reason this is an outline
@@ -232,11 +235,18 @@ struct CloudImportOutlineTests {
     @Test("Today and Yesterday are named; older days carry their weekday")
     func dayLabels() {
         func label(_ date: Date) -> String {
-            // Pinned, because the dated form follows the reader's locale by
-            // design and this test asserts English names. It passed for as long
-            // as it did only because every machine running it happened to be
-            // English — see dayLabel's own note.
+            // The two named forms are now the caller's strings — the cell reads
+            // `desktop.cloudImport.dayToday` / `dayYesterday` from `I18n`, and
+            // English is passed here so the assertions below still read as the
+            // sentence they are checking. What is under test is which arm fires,
+            // not the wording.
+            //
+            // `locale` is pinned, because the *dated* form follows the reader's
+            // locale by design and this test asserts English names. It passed
+            // for as long as it did only because every machine running it
+            // happened to be English — see dayLabel's own note.
             CloudImportOutline.dayLabel(for: date, now: now, calendar: calendar,
+                                        today: "Today", yesterday: "Yesterday",
                                         locale: Locale(identifier: "en_GB"))
         }
         #expect(label(moment(daysAgo: 0, hour: 9)) == "Today")
@@ -260,10 +270,16 @@ struct CloudImportOutlineTests {
     /// across the New Year it is the only thing that disambiguates.
     @Test("The year appears only when it differs from this one")
     func yearOnlyWhenDifferent() {
+        // Both dates are far enough back that neither named arm can fire, so
+        // the strings passed here are unreachable by construction — named for
+        // what they are rather than left to a default, because `dayLabel` has
+        // none on purpose.
         let thisYear = CloudImportOutline.dayLabel(
-            for: moment(daysAgo: 30, hour: 9), now: now, calendar: calendar)
+            for: moment(daysAgo: 30, hour: 9), now: now, calendar: calendar,
+            today: "Today", yesterday: "Yesterday")
         let lastYear = CloudImportOutline.dayLabel(
-            for: moment(daysAgo: 300, hour: 9), now: now, calendar: calendar)
+            for: moment(daysAgo: 300, hour: 9), now: now, calendar: calendar,
+            today: "Today", yesterday: "Yesterday")
         #expect(!thisYear.contains("2026"))
         #expect(lastYear.contains("2025"))
     }

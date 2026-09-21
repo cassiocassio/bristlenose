@@ -25,10 +25,24 @@ enum CloudImportOutline {
     /// an AppKit outline and not a SwiftUI `Table` (which has no group rows at
     /// all).
     struct Day: Equatable {
-        /// Midnight of the day, in the current calendar. The grouping key.
+        /// Midnight of the day, in the current calendar. The grouping key — and,
+        /// since 21 Sep 2026, the only thing a day carries.
+        ///
+        /// **The rendered label is deliberately not here.** It was, built in
+        /// `build` where there is no `I18n` to reach, so "Today" and "Yesterday"
+        /// were English literals while `desktop.cloudImport.dayToday` and
+        /// `dayYesterday` sat translated in 21 locales and read by nobody
+        /// (`docs/i18n-defects.md` row 27).
+        ///
+        /// Threading an `I18n` into `build` would have closed that row and
+        /// opened the same register's failure 6 in its place: the tree is built
+        /// from a store update and outlives a language change, so a label
+        /// resolved at construction is a label frozen in whatever language was
+        /// current when the rows arrived. The cell renders it instead, from
+        /// `start` — see `dayLabel(for:now:calendar:today:yesterday:locale:)`.
+        /// Same move, same reason, as the `signature(of:)` note below: carry the
+        /// cause, render the sentence.
         let start: Date
-        /// "Today" / "Yesterday" / "Wed 13 Aug".
-        let label: String
     }
 
     /// A call that owns more than one recording. Context only — it has no file
@@ -274,7 +288,6 @@ enum CloudImportOutline {
     ///   fixture whose headers drift with the wall clock stops being a fixture.
     static func build(
         rows: [CloudImportRow],
-        now: Date = Date(),
         calendar: Calendar = .current
     ) -> Result {
         guard !rows.isEmpty else { return .empty }
@@ -378,8 +391,7 @@ enum CloudImportOutline {
             let sorted = (byDay[dayStart] ?? []).sorted { $0.anchor < $1.anchor }
             return Node(
                 id: "day:\(dayStart.timeIntervalSinceReferenceDate)",
-                kind: .day(Day(start: dayStart,
-                               label: dayLabel(for: dayStart, now: now, calendar: calendar))),
+                kind: .day(Day(start: dayStart)),
                 children: sorted.map(\.node)
             )
         }
@@ -417,7 +429,7 @@ enum CloudImportOutline {
     ///   language until something else happened to move.
     static func fingerprint(of result: Result, locale: String) -> [String] {
         [locale] + result.days.flatMap { day -> [String] in
-            var out = [day.id + "|" + label(of: day)]
+            var out = [day.id + "|" + dayKey(of: day)]
             for node in day.children {
                 out.append(node.id + "|" + signature(of: node))
                 out.append(contentsOf: node.children.map { $0.id + "|" + signature(of: $0) })
@@ -426,15 +438,21 @@ enum CloudImportOutline {
         }
     }
 
-    private static func label(of node: Node) -> String {
-        if case .day(let day) = node.kind { return day.label }
+    /// The day header's whole input, as a token. Not its label: the cell
+    /// renders that from `I18n`, and a fingerprint that carried the rendered
+    /// string would need an `I18n` to compute — which is the dependency the
+    /// `Day` note above exists to keep out. `locale` is already the
+    /// fingerprint's first element, so a language change still forces the
+    /// reload that redraws this.
+    private static func dayKey(of node: Node) -> String {
+        if case .day(let day) = node.kind { return String(describing: day.start) }
         return ""
     }
 
     private static func signature(of node: Node) -> String {
         switch node.kind {
         case .day(let day):
-            return day.label
+            return String(describing: day.start)
         case .meeting(let meeting):
             return [meeting.title,
                     meeting.scheduledAt.map(String.init(describing:)) ?? "",
@@ -478,13 +496,23 @@ enum CloudImportOutline {
     /// Mail's rule. Eleven months of the year it is noise; across the New Year
     /// it is essential.
     ///
-    /// "Today" and "Yesterday" are English literals rather than a relative
-    /// `DateFormatter`, and that is the same debt the rest of this window
-    /// carries (see `CloudCount`): cloud import is not localised yet, so the
-    /// header would otherwise read "Aujourd'hui" above a window titled "Import
-    /// from Google Meet". The dated form goes through the system formatter,
-    /// which is free and gets weekday-and-month ordering right per locale
-    /// whatever happens to the rest.
+    /// **Called from the cell, not from `build`** — see the `Day` note above for
+    /// why the named form cannot be resolved when the tree is assembled.
+    ///
+    /// - Parameters:
+    ///   - today: `desktop.cloudImport.dayToday`, already translated.
+    ///   - yesterday: `desktop.cloudImport.dayYesterday`, already translated.
+    ///
+    ///   Both are passed in rather than looked up, so this stays a pure function
+    ///   with no `I18n` — the same bargain `AttendeeLine.subtitle` strikes with
+    ///   `unscheduledLabel`. Neither has a default: a default would be an
+    ///   English literal that a forgetful caller could ship in silence, which is
+    ///   precisely the state this function was in until 21 Sep 2026.
+    ///
+    ///   They are *whole strings*, not a key and a count, because these two
+    ///   words are the only part of the label we own. The dated form belongs to
+    ///   the system formatter, which is free and gets weekday-and-month ordering
+    ///   right per locale.
     /// - Parameter locale: defaults to `.current`, which is what the window
     ///   wants — the dated form is meant to follow the reader. It is a parameter
     ///   so a test can pin it. Without that, `dayLabels()` asserted English
@@ -492,13 +520,26 @@ enum CloudImportOutline {
     ///   only because every machine that had run it was English. The moment the
     ///   language picker started writing `AppleLanguages` (21 Sep 2026) the test
     ///   began failing for real, on the app's own supported behaviour.
+    ///
+    ///   Deliberately **not** `Locale(identifier: i18n.locale)`. Our locale
+    ///   codes are language-only, so `en` would resolve to US ordering and draw
+    ///   *Thu, Aug 13* for a British reader who has never asked for it. The
+    ///   region belongs to the OS. The cost is that the dated form follows
+    ///   `AppleLanguages`, which the picker only writes for the next launch,
+    ///   while `today`/`yesterday` switch live — the same one-launch lag the
+    ///   standard menus already carry, and the right side of the trade.
     static func dayLabel(
-        for date: Date, now: Date, calendar: Calendar, locale: Locale = .current
+        for date: Date,
+        now: Date,
+        calendar: Calendar,
+        today: String,
+        yesterday: String,
+        locale: Locale = .current
     ) -> String {
-        if calendar.isDate(date, inSameDayAs: now) { return "Today" }
-        if let yesterday = calendar.date(byAdding: .day, value: -1, to: now),
-           calendar.isDate(date, inSameDayAs: yesterday) {
-            return "Yesterday"
+        if calendar.isDate(date, inSameDayAs: now) { return today }
+        if let previousDay = calendar.date(byAdding: .day, value: -1, to: now),
+           calendar.isDate(date, inSameDayAs: previousDay) {
+            return yesterday
         }
         var style = Date.FormatStyle.dateTime
             .weekday(.abbreviated).day().month(.abbreviated)

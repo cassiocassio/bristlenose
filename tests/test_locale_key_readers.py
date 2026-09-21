@@ -445,11 +445,14 @@ _KNOWN_ORPHANS: dict[str, _Block] = {
         tag=DEAD,
         why="The SPA renders `sessions.speakerPlaceholder.{moderator,observer, "
             "participant}` instead (`SessionsTable.tsx:49`), keyed off the badge-code "
-            "prefix rather than the stored role. Four keys for a vocabulary that is "
-            "spelled somewhere else.",
+            "prefix rather than the stored role \u2014 so these were a vocabulary spelled "
+            "somewhere else. **`participant` left this set on 22 Sep 2026**: the "
+            "AutoCode illustration reads it, because the role on a quote card is "
+            "genuinely this vocabulary and genuinely translated. The gate caught the "
+            "staleness the same night, from the other direction.",
         leaves="""
-            observer participant researcher unknown
-        """,  # 4
+            observer researcher unknown
+        """,  # 3
     ),
     "common.footer.": _Block(
         tag=DEAD,

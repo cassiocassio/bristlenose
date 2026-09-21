@@ -677,3 +677,87 @@ no edition exists.
 | Lazarus | `https://www.amazon.<tld>/s?k=Richard+Lazarus` |
 
 Swap `<tld>` for `de`, `fr`, `es`, `it`, `nl`, `pl`, `co.jp`, `com.br`.
+
+---
+
+## Answers to the two open calls, from the Swift-strings session (21 Sep 2026)
+
+This session asked the Swift English-strings audit session for a call on §"Open
+questions for the pass" items (a) and (b), plus the fourth-class item left open
+in the taxonomy. Its answers, kept whole so the reasoning travels with them.
+**It had not read the nine webview templates** — its Welcome work was the native
+sentiment fan and nothing else — so these are judgements about the *rules*, not
+about the templates, and nothing here duplicates this doc's own analysis.
+
+**(a) The illustration should NOT say "Conc." Give it its own key.**
+
+An abbreviation is an English orthographic convention, not a word. "Conc."
+abbreviates "Concentration" in English; the Polish, Finnish or Japanese term may
+not abbreviate at all, or abbreviate at a different cut. Word-for-word here does
+not preserve our copy — it exports an English convention into twenty languages
+that do not share it, and asks a Japanese translator to shorten 集中度 to match a
+column width that exists in a different surface.
+
+There is settled precedent for calling this a **fork** rather than drift:
+`docs/i18n-defects.md` Decision 3, closed 21 Sep 2026. Three of twenty-three
+mirrored CLI/SPA strings diverge, every one of them a technical name in the
+terminal against a plain name in the SPA, and the conclusion recorded there is
+that *"keep both in sync" is the wrong instruction and no equality check should
+be written*. Same structure: the lens abbreviates under a column width, the
+illustration spells out under a teaching job. Put the reason in a comment at the
+site so a later sweep cannot "fix" the two into each other.
+
+**(b) Per-locale data — and the plan's own inconsistency is the tell.**
+
+Commissioning per-locale participant names and filenames *is* the decision;
+"one study told in every language" with localised names is the worst available
+cell, because a study whose metadata is Japanese and whose quotes are English
+reads as a tool that was translated rather than one that fits. §8's disfluency
+token array forces the answer regardless — a translated sentence destroys the
+demonstration, so one class-C item must be written per locale already, and one
+is enough to settle the taxonomy.
+
+Scope it as the repo scopes everything else here: machine-written sample data
+pending native review has the same standing as the ten machine-seeded locales
+that already ship. "Needs a native writer" must not become "never".
+
+**The fourth class (our own English-by-design surfaces) — close it English.**
+
+The Miro sticky's count comes from `count_noun`, and a translated sticky depicts
+a board Bristlenose has never produced. That is the same defect as a translated
+"Thinking…", decided the same way, by the rule this doc already applies to
+third-party UI: depict what actually ships. `docs/design-i18n.md` §"Which
+surfaces are targets" now states CLI-English as permanent rather than interim,
+and carries a second row (the icon picker) for a surface that is English
+*because of what it does for the reader*. This fourth class is not an exception
+to the taxonomy — it is the taxonomy working.
+
+**On §5, whether the native fit approach transfers.** The rule does, the
+arithmetic does not. `fitScale(in:)` / `rowWidth(_:)` on the sentiment fan
+compute widths from a known chip set only because SwiftUI would not measure the
+text; the constants are tuned to that set and port to nothing. What generalises
+is *measure the content, not the container* — which is exactly this doc's
+`offsetWidth`-on-a-hard-440px finding, and a webview can measure real laid-out
+text at render time, a capability the native side lacks. The webview half is the
+stronger one.
+
+Its added warning: `overflow:hidden` + `white-space:nowrap` is worse than
+truncation, because the label does not shorten, it disappears. One gate that
+renders each template at the tightest supported width in the longest locale and
+asserts nothing has zero measured height would catch the class; absence is the
+failure mode, and absence is what screenshot review does not catch.
+
+**On §9, the literal-scanning gate.** Independently confirmed the same day, from
+the other side. A `.failed("…")` literal scanner built for the pipeline-failure
+work fired on `DoctorReportView`'s unrelated `.failed(String)` enum — System
+Health, English by decision. The fix was to anchor on something structurally
+unique to the call meant (`category:` as the second argument), never on the
+text. Same instrument, same failure, same repair shape; this doc's "Settings"
+example is that trap one layer meaner, because there the fix the gate names is
+actively wrong.
+
+**On §1.** Ship it first and alone. Nine illustrations that never reload on a
+locale change make every other item here invisible when it lands — the whole
+content pass would go in and nothing would appear to change. It is small,
+verifiable by eye, and it is the difference between the rest of the work being
+testable and not.

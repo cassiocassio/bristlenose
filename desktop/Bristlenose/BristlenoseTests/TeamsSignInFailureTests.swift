@@ -45,7 +45,7 @@ struct TeamsSignInFailureTests {
             destination: URL,
             progress: @escaping @Sendable (FetchProgress) -> Void
         ) async -> FetchOutcome {
-            .failed(reason: "not reached", isRetryable: false)
+            .failed(reason: .downloadFailed, isRetryable: false)
         }
     }
 

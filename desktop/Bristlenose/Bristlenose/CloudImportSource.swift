@@ -53,9 +53,36 @@ enum FetchOutcome: Equatable {
     /// and the disagreement would surface as a surprise-files count pill on a
     /// row that had just imported them deliberately.
     case imported(bytes: Int64, at: URL)
-    /// Carries a *sentence*, not a code — this string is rendered in the row.
-    case failed(reason: String, isRetryable: Bool)
+    /// Carries a **case, not a sentence**. It used to carry the English
+    /// sentence, and the row rendered it verbatim — so the cloud-import window
+    /// was fully localised (38 `i18n.t` sites) while the failure rows inside it
+    /// spoke English in all 21 locales. The translations existed the whole
+    /// time: `49ec8a50` extracted "every string in the window" on 16 Aug 2026
+    /// and these live one layer below the window, in the adapters, so the pass
+    /// never reached them. Ten keys sat in 21 locales with **zero readers**
+    /// until 21 Sep 2026.
+    ///
+    /// The adapters have no `I18n` and cannot get one — they are not views. So
+    /// the discriminator travels and the row resolves it, which is the same
+    /// shape as `Cause.reason` → `desktop.pipeline.diagnostic.reason.*` and the
+    /// SPA's `failure_kind` → `autocodeFailure.ts`.
+    case failed(reason: CloudFetchFailure, isRetryable: Bool)
     case cancelled
+}
+
+/// Why a fetch failed, in the researcher's language at the point it is drawn.
+///
+/// `rawValue` is the leaf of `desktop.cloudImport.error*`, so the key is derived
+/// rather than restated — one place to be wrong instead of nine. Pinned by
+/// `tests/test_cloud_fetch_failure_keys.py`, which fails if a case loses its key
+/// or a key loses its case.
+enum CloudFetchFailure: String, CaseIterable, Equatable, Sendable {
+    case noRecordingFile, noAccessYet, unusableIdentifier, downloadFailed
+    case noDownloadableFile, signedOut, noDownloadLink, accessNotGranted
+
+    var localeKey: String {
+        "desktop.cloudImport.error" + rawValue.prefix(1).uppercased() + rawValue.dropFirst()
+    }
 }
 
 // MARK: - The protocol
@@ -239,11 +266,16 @@ final class FixtureCloudSource: CloudImportSource {
             // so the retry path and the "2 imported · 2 failed" terminus are
             // reachable without unplugging a network cable.
             if scenario == .partialFailure, step == 17 {
+                // The cases, not the old bespoke sentences: this block's own
+                // job (above) is making the retry path and the terminus
+                // reachable, and the two `isRetryable` values are what carry
+                // that. Inventing fixture-only failure cases would put strings
+                // in 21 locales that only the Diagnostics menu can ever show.
                 if row.id == "evt-p06" {
-                    return .failed(reason: "Lost connection at 71%", isRetryable: true)
+                    return .failed(reason: .downloadFailed, isRetryable: true)
                 }
                 if row.id == "evt-p07" {
-                    return .failed(reason: "Not enough disk space", isRetryable: false)
+                    return .failed(reason: .noAccessYet, isRetryable: false)
                 }
             }
         }

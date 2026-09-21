@@ -671,7 +671,7 @@ final class CloudImportStore: ObservableObject {
                 guard self.fetchGeneration == mine else { return }
                 for row in queue {
                     outcomes[row.id] = .failed(
-                        reason: "Access wasn't granted.", isRetryable: true)
+                        reason: .accessNotGranted, isRetryable: true)
                 }
                 isFetching = false
                 return

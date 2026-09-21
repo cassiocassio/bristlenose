@@ -354,6 +354,6 @@ final class UnconfiguredCloudSource: CloudImportSource {
         destination: URL,
         progress: @escaping @Sendable (FetchProgress) -> Void
     ) async -> FetchOutcome {
-        .failed(reason: "Not set up", isRetryable: false)
+        .failed(reason: .downloadFailed, isRetryable: false)
     }
 }

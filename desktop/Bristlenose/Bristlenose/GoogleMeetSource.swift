@@ -1438,14 +1438,14 @@ final class GoogleMeetSource: CloudImportSource {
         progress: @escaping @Sendable (FetchProgress) -> Void
     ) async -> FetchOutcome {
         guard let fileID = driveFileIDs[row.id] else {
-            return .failed(reason: "That meeting has no recording file.", isRetryable: false)
+            return .failed(reason: .noRecordingFile, isRetryable: false)
         }
         // The grant is per-file, so a row the researcher did not include in the
         // Picker selection is unreachable — and saying so beats a 403 that
         // reads like a bug.
         guard grantedFileIDs.contains(fileID), let token = mediaToken?.accessToken else {
             return .failed(
-                reason: "Bristlenose doesn't have access to this file yet.",
+                reason: .noAccessYet,
                 isRetryable: true
             )
         }
@@ -1474,7 +1474,7 @@ final class GoogleMeetSource: CloudImportSource {
         // untrusted" — a third party controls what Drive hands back.
         guard var components = URLComponents(
             string: "https://www.googleapis.com/drive/v3/files/\(fileID)")
-        else { return .failed(reason: "That file has an unusable identifier.", isRetryable: false) }
+        else { return .failed(reason: .unusableIdentifier, isRetryable: false) }
         components.queryItems = [URLQueryItem(name: "alt", value: "media")]
 
         let name = CloudDownloadNaming.filename(
@@ -1485,7 +1485,7 @@ final class GoogleMeetSource: CloudImportSource {
             // the other, with both rows reporting success.
             part: row.siblingOrdinal)
         guard let mediaURL = components.url else {
-            return .failed(reason: "That file has an unusable identifier.", isRetryable: false)
+            return .failed(reason: .unusableIdentifier, isRetryable: false)
         }
         let request = CloudDownloadRequest(
             url: mediaURL,
@@ -1517,7 +1517,10 @@ final class GoogleMeetSource: CloudImportSource {
         } catch let error as CloudDownloadError {
             if case .cancelled = error { return .cancelled }
             return .failed(
-                reason: error.errorDescription ?? "The download failed.",
+            // Same deliberate loss as ZoomSource's download catch — the
+            // verdict sentences have no keys yet, and a translated generic row
+            // beats an English specific one. See the comment there.
+                reason: .downloadFailed,
                 isRetryable: {
                     if case .rejected(let verdict) = error { return verdict.isRetryable }
                     return false
@@ -1534,7 +1537,7 @@ final class GoogleMeetSource: CloudImportSource {
             // rows they had chosen to abandon.
             return .cancelled
         } catch {
-            return .failed(reason: "The download failed.", isRetryable: true)
+            return .failed(reason: .downloadFailed, isRetryable: true)
         }
     }
 

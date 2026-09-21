@@ -199,7 +199,7 @@ struct CloudImportBatchSettlementTests {
             progress: @escaping @Sendable (FetchProgress) -> Void
         ) async -> FetchOutcome {
             if failing.contains(row.id) {
-                return .failed(reason: "stubbed failure", isRetryable: true)
+                return .failed(reason: .downloadFailed, isRetryable: true)
             }
             return .imported(bytes: 1_024,
                              at: destination.appendingPathComponent("\(row.id).mp4"))

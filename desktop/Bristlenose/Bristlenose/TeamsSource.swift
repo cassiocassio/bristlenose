@@ -754,7 +754,7 @@ final class TeamsSource: CloudImportSource {
             url = try await resolveDownloadURL(itemID: row.id)
         } catch {
             guard let cached = downloadURLs[row.id] else {
-                return .failed(reason: "That recording has no download link.", isRetryable: true)
+                return .failed(reason: .noDownloadLink, isRetryable: true)
             }
             url = cached
         }
@@ -785,7 +785,10 @@ final class TeamsSource: CloudImportSource {
         } catch let error as CloudDownloadError {
             if case .cancelled = error { return .cancelled }
             return .failed(
-                reason: error.errorDescription ?? "The download failed.",
+            // Same deliberate loss as ZoomSource's download catch — the
+            // verdict sentences have no keys yet, and a translated generic row
+            // beats an English specific one. See the comment there.
+                reason: .downloadFailed,
                 isRetryable: {
                     if case .rejected(let verdict) = error { return verdict.isRetryable }
                     return false
@@ -802,7 +805,7 @@ final class TeamsSource: CloudImportSource {
             // rows they had chosen to abandon.
             return .cancelled
         } catch {
-            return .failed(reason: "The download failed.", isRetryable: true)
+            return .failed(reason: .downloadFailed, isRetryable: true)
         }
     }
 

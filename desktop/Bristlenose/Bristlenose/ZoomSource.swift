@@ -621,7 +621,7 @@ final class ZoomSource: CloudImportSource {
         progress: @escaping @Sendable (FetchProgress) -> Void
     ) async -> FetchOutcome {
         guard let file = chosenFiles[row.id], let url = file.downloadURL else {
-            return .failed(reason: "That recording has no downloadable file.", isRetryable: false)
+            return .failed(reason: .noDownloadableFile, isRetryable: false)
         }
         // Renew before every file, not once per batch. The tail of a long
         // import is exactly where an unrenewed grant fails — after the
@@ -642,7 +642,7 @@ final class ZoomSource: CloudImportSource {
         // refuse to write the error body, so this costs a wrong label rather
         // than a corrupt file; matching `list()` costs nothing and is honest.
         guard await renewedTokenIfNeeded(), let token = tokens?.accessToken else {
-            return .failed(reason: "Signed out.", isRetryable: true)
+            return .failed(reason: .signedOut, isRetryable: true)
         }
 
         let name = CloudDownloadNaming.filename(
@@ -679,8 +679,18 @@ final class ZoomSource: CloudImportSource {
             return .imported(bytes: bytes, at: request.destination)
         } catch let error as CloudDownloadError {
             if case .cancelled = error { return .cancelled }
+            // **A known loss, taken deliberately.** This used to interpolate
+            // `CloudDownloadError.errorDescription`, which carries the specific
+            // verdict — "Only part of the file arrived", "The file arrived
+            // damaged", "The server sent a web page, not a recording". Those
+            // six sentences have no keys yet (`docs/i18n-defects.md`, the
+            // download-verification cluster), so keeping them would keep this
+            // row English in 21 locales. Translated-and-generic beats
+            // English-and-specific for a row a researcher has to act on, and
+            // the verdict is still in the log. Restore the detail when those
+            // six keys land — that is the next cluster, not a someday.
             return .failed(
-                reason: error.errorDescription ?? "The download failed.",
+                reason: .downloadFailed,
                 isRetryable: {
                     if case .rejected(let verdict) = error { return verdict.isRetryable }
                     return false
@@ -697,7 +707,7 @@ final class ZoomSource: CloudImportSource {
             // rows they had chosen to abandon.
             return .cancelled
         } catch {
-            return .failed(reason: "The download failed.", isRetryable: true)
+            return .failed(reason: .downloadFailed, isRetryable: true)
         }
     }
 

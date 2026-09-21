@@ -247,7 +247,7 @@ extension CloudImportOutlineView {
             let outcome: String? = store.outcomes[row.id].map { outcome in
                 switch outcome {
                 case .imported:                 return "imported"
-                case .failed(let reason, _):    return "failed:\(reason)"
+                case .failed(let reason, _):    return "failed:\(reason.rawValue)"
                 case .cancelled:                return "cancelled"
                 }
             }
@@ -911,7 +911,7 @@ extension CloudImportOutlineView {
                     view.configure(i18n.t("desktop.cloudImport.statusImported"),
                                    kind: .success, bold: true)
                 case .failed(let reason, _):
-                    view.configure(reason, kind: .error, bold: false)
+                    view.configure(i18n.t(reason.localeKey), kind: .error, bold: false)
                 case .cancelled:
                     // `skipped`, not `error`: the researcher stopped this on
                     // purpose. Nothing went wrong, and a red cross would say

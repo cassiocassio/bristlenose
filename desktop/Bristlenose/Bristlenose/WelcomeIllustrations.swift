@@ -48,21 +48,27 @@ private func rgb(_ v: UInt) -> Color {
 /// and fill the slot without crashing into the surrounding text. Chip typography
 /// matches the report badge (SF Mono + the sentiment colour tokens).
 struct SentimentFanView: View {
+    @EnvironmentObject private var i18n: I18n
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
     @State private var sizes: [Int: CGSize] = [:]
     @State private var dealt = false
 
-    private struct Chip { let name: String; let fgL, fgD, bgL, bgD: UInt }
+    /// `key` is the canonical sentiment id — the value stored in the DB and sent
+    /// to the LLM — resolved through `enums.sentiment.*` for display, exactly as
+    /// the report's own badges do (`Badge.tsx`, `SignalsPage.tsx`). These were
+    /// hardcoded English until 21 Sep 2026, so the card *explaining* the seven
+    /// sentiments was the one place in a Turkish app that did not speak Turkish.
+    private struct Chip { let key: String; let fgL, fgD, bgL, bgD: UInt }
     private let chips: [Chip] = [
-        .init(name: "frustration",  fgL: 0xea580c, fgD: 0xfb923c, bgL: 0xfff7ed, bgD: 0x2d1d0e),
-        .init(name: "confusion",    fgL: 0xdc2626, fgD: 0xf87171, bgL: 0xfef2f2, bgD: 0x2d1515),
-        .init(name: "doubt",        fgL: 0x7c3aed, fgD: 0xa78bfa, bgL: 0xf5f3ff, bgD: 0x1e1533),
-        .init(name: "surprise",     fgL: 0xd97706, fgD: 0xfbbf24, bgL: 0xfffbeb, bgD: 0x2d2305),
-        .init(name: "satisfaction", fgL: 0x16a34a, fgD: 0x4ade80, bgL: 0xf0fdf4, bgD: 0x0f2918),
-        .init(name: "delight",      fgL: 0x059669, fgD: 0x34d399, bgL: 0xecfdf5, bgD: 0x0d261c),
-        .init(name: "confidence",   fgL: 0x2563eb, fgD: 0x60a5fa, bgL: 0xeff6ff, bgD: 0x111d2e),
+        .init(key: "frustration",  fgL: 0xea580c, fgD: 0xfb923c, bgL: 0xfff7ed, bgD: 0x2d1d0e),
+        .init(key: "confusion",    fgL: 0xdc2626, fgD: 0xf87171, bgL: 0xfef2f2, bgD: 0x2d1515),
+        .init(key: "doubt",        fgL: 0x7c3aed, fgD: 0xa78bfa, bgL: 0xf5f3ff, bgD: 0x1e1533),
+        .init(key: "surprise",     fgL: 0xd97706, fgD: 0xfbbf24, bgL: 0xfffbeb, bgD: 0x2d2305),
+        .init(key: "satisfaction", fgL: 0x16a34a, fgD: 0x4ade80, bgL: 0xf0fdf4, bgD: 0x0f2918),
+        .init(key: "delight",      fgL: 0x059669, fgD: 0x34d399, bgL: 0xecfdf5, bgD: 0x0d261c),
+        .init(key: "confidence",   fgL: 0x2563eb, fgD: 0x60a5fa, bgL: 0xeff6ff, bgD: 0x111d2e),
     ]
     // 4 / 3 two-row split in valence order; row bands + gap mirror the mockup.
     private let topRow = [0, 1, 2, 3]
@@ -84,6 +90,13 @@ struct SentimentFanView: View {
                 }
             }
             .frame(width: geo.size.width, height: geo.size.height)
+            // Shrink to fit rather than run off the slot. English is the
+            // narrowest layout this grid will ever be asked to draw: measured
+            // 21 Sep 2026, tr is +24% on the widest row and pl +22%, both past
+            // the +20% budget `design-welcome-screen.md` records for this
+            // screen. Withholding a translation to protect a pixel budget is
+            // the wrong trade — the grid gives way instead.
+            .scaleEffect(fitScale(in: geo.size), anchor: .center)
         }
         .onPreferenceChange(SentimentChipSizeKey.self) { sizes = $0 }
         .accessibilityHidden(true)
@@ -101,7 +114,7 @@ struct SentimentFanView: View {
 
     private func chipView(_ i: Int) -> some View {
         let chip = chips[i]
-        return Text(chip.name)
+        return Text(i18n.t("enums.sentiment." + chip.key))
             .font(.system(size: 11, weight: .regular, design: .monospaced))
             .foregroundStyle(scheme == .dark ? rgb(chip.fgD) : rgb(chip.fgL))
             .padding(.horizontal, 6).padding(.vertical, 2)
@@ -118,6 +131,30 @@ struct SentimentFanView: View {
     }
 
     /// Centre-relative offset for the dealt 2-row layout (deck = .zero = ZStack centre).
+    /// 1 when the widest measured row fits, otherwise the ratio that makes it.
+    /// Returns 1 before the first measurement pass, so the deal animation is
+    /// never driven from a half-measured grid.
+    private func fitScale(in size: CGSize) -> CGFloat {
+        guard size.width > 0, sizes.count == chips.count else { return 1 }
+        let widest: CGFloat = max(rowWidth(topRow), rowWidth(bottomRow))
+        guard widest > size.width else { return 1 }
+        return size.width / widest
+    }
+
+    /// Deliberately spelled out. The chained
+    /// `[topRow, bottomRow].map { $0.map(…).reduce(…) + gap * CGFloat(…) }.max()`
+    /// form is what a Swift `CGFloat` closure chain looks like when the type
+    /// checker gives up — it compiled as "unable to type-check this expression
+    /// in reasonable time" rather than as a type error, so the message names no
+    /// type and points at the whole function.
+    private func rowWidth(_ row: [Int]) -> CGFloat {
+        var total: CGFloat = 0
+        for index in row {
+            total += sizes[index]?.width ?? 0
+        }
+        return total + gap * CGFloat(row.count - 1)
+    }
+
     private func homeOffset(_ i: Int, in size: CGSize) -> CGSize {
         let row = topRow.contains(i) ? topRow : bottomRow
         let widths = row.map { sizes[$0]?.width ?? 0 }

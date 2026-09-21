@@ -452,7 +452,7 @@
     "labelMixed": "Sentimenti contrastanti",
     "heading": "Segnali",
     "loadingData": "Caricamento dei segnali…",
-    "noData": "Nessun segnale per ora. Esegui la pipeline o applica i tag del libro dei codici per generarli.",
+    "noData": "Nessun segnale per ora. Esegui la pipeline o applica i tag del libro dei codici per generarne.",
     "tagError": "Errore nei segnali dei tag: {{error}}",
     "title": "Segnali",
     "sentiment": "Sentiment",

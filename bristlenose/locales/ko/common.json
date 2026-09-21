@@ -321,7 +321,7 @@
       "sentimentTitle": "감정 태깅",
       "sentimentBody": "UX 연구를 위해 설계된 7가지 감정 태그: 좌절, 혼란, 의심, 놀라움, 만족, 기쁨, 확신. 각 인용문은 참가자가 표현한 감정에 따라 하나의 태그를 받습니다.",
       "signalsTitle": "시그널",
-      "signalsBody": "시그널 보기는 보고서 섹션 내에서 통계적으로 주목할 만한 감정 집중을 표시합니다. 강한 시그널과 보통 시그널은 참가자 경험이 집중되는 곳을 강조합니다.",
+      "signalsBody": "“시그널”에서는 보고서 섹션 내에서 통계적으로 주목할 만한 감정 집중이 표시됩니다. 강한 시그널과 보통 시그널은 참가자 경험이 집중되는 곳을 강조합니다.",
       "starsTitle": "즐겨찾기, 태그 및 필터",
       "starsBody": "중요한 발견을 표시하려면 인용문에 즐겨찾기를 추가하세요. 자신만의 코딩 체계를 구축하려면 태그를 추가하세요. 태그 필터와 검색을 사용하여 중요한 것에 집중하세요. 모든 변경 사항은 자동으로 저장됩니다.",
       "exportTitle": "내보내기",
@@ -386,7 +386,7 @@
       "actionAudit": "전체 <a href=\"https://github.com/cassiocassio/bristlenose/tree/main/docs/pii-audit\" target=\"_blank\" rel=\"noopener noreferrer\">PII 감사</a>를 공개합니다 — <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/tests/fixtures/pii_horror_transcript.txt\" target=\"_blank\" rel=\"noopener noreferrer\">테스트 전사본</a>, <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/redacted-transcript.md\" target=\"_blank\" rel=\"noopener noreferrer\">삭제된 결과</a>, <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/pii-summary.txt\" target=\"_blank\" rel=\"noopener noreferrer\">감사 로그</a>를 직접 확인하세요."
     },
     "signals": {
-      "intro": "시그널 보기는 보고서 섹션 내에서 감정 또는 코드북 태그의 통계적으로 주목할 만한 집중 현상을 표시합니다. 두 가지 유형의 시그널 카드가 있습니다.",
+      "intro": "“시그널”에서는 보고서 섹션 내에서 감정 또는 코드북 태그의 통계적으로 주목할 만한 집중 현상이 표시됩니다. 두 가지 유형의 시그널 카드가 있습니다.",
       "sentimentHeading": "감정 시그널",
       "sentimentIntro": "각 인용문은 UX 연구를 위해 설계된 7가지 감정 중 하나로 태그됩니다:",
       "frustrationDesc": "어려움, 짜증, 마찰. 성능 또는 인터랙션 문제를 가리킵니다.",

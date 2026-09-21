@@ -381,7 +381,7 @@
       "sentimentTitle": "Tagowanie sentymentu",
       "sentimentBody": "Siedem tagów sentymentu zaprojektowanych dla badań UX: frustracja, zdezorientowanie, wątpliwość, zaskoczenie, satysfakcja, zachwyt i pewność. Każdy cytat otrzymuje jeden tag na podstawie emocji wyrażonej przez uczestnika.",
       "signalsTitle": "Sygnały",
-      "signalsBody": "Widok „Sygnały” wydobywa statystycznie znaczące skupiska sentymentu w sekcjach raportu. Silne i umiarkowane sygnały wskazują, gdzie koncentrują się doświadczenia uczestników.",
+      "signalsBody": "Widok „Sygnały” pokazuje statystycznie znaczące skupiska sentymentu w sekcjach raportu. Silne i umiarkowane sygnały wskazują, gdzie koncentrują się doświadczenia uczestników.",
       "starsTitle": "Gwiazdki, tagi i filtry",
       "starsBody": "Oznaczaj cytaty gwiazdką, aby wskazać ważne ustalenia. Dodawaj tagi, aby zbudować własny schemat kodowania. Użyj filtra tagów i wyszukiwania, aby skupić się na tym, co istotne. Wszystkie zmiany są zapisywane automatycznie.",
       "exportTitle": "Eksport",
@@ -446,7 +446,7 @@
       "actionAudit": "Publikujemy pełny <a href=\"https://github.com/cassiocassio/bristlenose/tree/main/docs/pii-audit\" target=\"_blank\" rel=\"noopener noreferrer\">audyt redakcji PII</a> wraz z <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/tests/fixtures/pii_horror_transcript.txt\" target=\"_blank\" rel=\"noopener noreferrer\">testową transkrypcją</a>, <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/redacted-transcript.md\" target=\"_blank\" rel=\"noopener noreferrer\">zredagowanym wynikiem</a> oraz <a href=\"https://github.com/cassiocassio/bristlenose/blob/main/docs/pii-audit/pii-summary.txt\" target=\"_blank\" rel=\"noopener noreferrer\">surowym dziennikiem audytu</a> — dzięki czemu możesz sam ocenić granice."
     },
     "signals": {
-      "intro": "Widok „Sygnały” wydobywa statystycznie znaczące skupiska sentymentu lub tagów z księgi kodów w sekcjach raportu. Dwa typy kart sygnałów.",
+      "intro": "Widok „Sygnały” pokazuje statystycznie znaczące skupiska sentymentu lub tagów z księgi kodów w sekcjach raportu. Dwa typy kart sygnałów.",
       "sentimentHeading": "Sygnały sentymentu",
       "sentimentIntro": "Każdy cytat jest otagowany jednym z siedmiu sentymentów zaprojektowanych dla badań UX:",
       "frustrationDesc": "trudność, irytacja, tarcie. Wskazuje na problemy z wydajnością lub interakcją.",
@@ -493,7 +493,7 @@
     "labelMixed": "Mieszane odczucia",
     "heading": "Sygnały",
     "loadingData": "Wczytywanie sygnałów…",
-    "noData": "Nie ma jeszcze sygnałów. Uruchom potok lub zastosuj tagi z księgi kodów, aby je wygenerować.",
+    "noData": "Nie ma jeszcze sygnałów. Uruchom potok lub zastosuj tagi z księgi kodów, aby wygenerować sygnały.",
     "tagError": "Błąd sygnałów tagów: {{error}}",
     "title": "Sygnały",
     "sentiment": "Sentyment",

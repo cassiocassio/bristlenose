@@ -452,7 +452,7 @@
     "labelMixed": "Gemischte Stimmung",
     "heading": "Signale",
     "loadingData": "Signale werden geladen…",
-    "noData": "Noch keine Signale. Führen Sie die Pipeline aus oder wenden Sie Codebuch-Tags an, um sie zu generieren.",
+    "noData": "Noch keine Signale. Führen Sie die Pipeline aus oder wenden Sie Codebuch-Tags an, um Signale zu generieren.",
     "tagError": "Fehler bei Tag-Signalen: {{error}}",
     "title": "Signale",
     "sentiment": "Stimmung",

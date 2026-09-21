@@ -452,7 +452,7 @@
     "labelMixed": "Sentimientos mixtos",
     "heading": "Señales",
     "loadingData": "Cargando señales…",
-    "noData": "Aún no hay señales. Ejecuta el pipeline o aplica etiquetas del libro de códigos para generarlas.",
+    "noData": "Aún no hay señales. Ejecuta el pipeline o aplica etiquetas del libro de códigos para generar señales.",
     "tagError": "Error en las señales de etiquetas: {{error}}",
     "title": "Señales",
     "sentiment": "Sentimiento",

@@ -452,7 +452,7 @@
     "labelMixed": "Ristiriitaiset tunteet",
     "heading": "Signaalit",
     "loadingData": "Ladataan signaaleja…",
-    "noData": "Ei vielä signaaleja. Suorita analyysi tai lisää koodikirjatunnisteita tuottaaksesi niitä.",
+    "noData": "Ei vielä signaaleja. Suorita analyysi tai lisää koodikirjatunnisteita tuottaaksesi signaaleja.",
     "tagError": "Tunnistesignaalien virhe: {{error}}",
     "title": "Signaalit",
     "sentiment": "Tunnesävy",

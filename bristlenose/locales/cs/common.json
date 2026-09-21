@@ -485,7 +485,7 @@
     "labelMixed": "Sm\u00ed\u0161en\u00e9 pocity",
     "heading": "Signály",
     "loadingData": "Načítání signálů…",
-    "noData": "Zatím žádné signály. Spusťte zpracování nebo použijte štítky z knihy kódů, abyste je vygenerovali.",
+    "noData": "Zatím žádné signály. Spusťte zpracování nebo použijte štítky z knihy kódů, abyste signály vygenerovali.",
     "tagError": "Chyba signálů štítků: {{error}}",
     "title": "Signály",
     "sentiment": "Nálada",

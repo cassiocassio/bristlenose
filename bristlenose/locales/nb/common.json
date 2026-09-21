@@ -452,7 +452,7 @@
     "labelMixed": "Blandede f\u00f8lelser",
     "heading": "Signaler",
     "loadingData": "Laster inn signaler …",
-    "noData": "Ingen signaler ennå. Kjør pipelinen eller bruk kodebok-tagger for å generere dem.",
+    "noData": "Ingen signaler ennå. Kjør pipelinen eller bruk kodebok-tagger for å generere signaler.",
     "tagError": "Feil i tagg-signaler: {{error}}",
     "title": "Signaler",
     "sentiment": "Sentiment",

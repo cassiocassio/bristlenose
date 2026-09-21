@@ -1,6 +1,6 @@
 # Renaming the Analysis lens to Signals
 
-_Last updated: 20 Sep 2026_
+_Last updated: 21 Sep 2026_
 
 **Status: IMPLEMENTED 20 Sep 2026** — Phases 1–5 landed in five commits
 (`2aba263b`, `c93d9c92`, `94e23670`, `a7e2a153`, and this one). Every count
@@ -563,10 +563,16 @@ Two more surfaced that no plan could have listed:
   `help.signals.intro`, which this bullet did not list: the same commit changed
   "The analysis page surfaces signals —" to "The Signals lens surfaces …" and
   left 20 translations on the old sentence. All five were translated the day
-  after the release, against each file's own vocabulary, with *lens* rendered
-  per the new `docs/glossary.md` rule (Apple's View noun or the bare name —
-  never the optical word). No gate reported any of it: `check-locales.py`
-  compares key presence, not value freshness (`docs/i18n-defects.md` item 21).
+  after the release, against each file's own vocabulary. No gate reported any
+  of it: `check-locales.py` compares key presence, not value freshness.
+  **Read `docs/i18n-defects.md` item 21 rather than this bullet for what
+  shipped**, because the wording moved twice in one day: the first pass
+  rendered *lens* per the new `docs/glossary.md` rule, and a second pass that
+  evening made the two help strings definition-first — *"Signals are
+  statistically notable concentrations of sentiment within report sections."* —
+  which restored the definition the rename's dropped apposition had carried and
+  removed the word *lens* from every product string. The glossary rule stands
+  for the next string that needs the word; no string needs it today.
 - **The `analysis-heatmap` class** — see row 4 above.
 
 ## 11. Verified in the app — 21 Sep 2026
@@ -614,14 +620,18 @@ the *website* commit, which waits on `verify`.
 > The rename is on `main` and in **no released build**. Every channel is still
 > 0.29.1; `main` is 488 commits past that tag, of which this work is six.
 
-- **The website commit (`12981ac`) stays local until the release.** It documents
-  a lens called Signals; publishing it before a build exists that says so would
-  tell a reader that ⌘5 opens Signals while their app says Analysis. Nothing
-  auto-deploys — no workflows in that repo, `deploy.sh` is the only path — so
-  the ordering is enforced by there being no trigger.
-- **The changelog entry is release-time work and is not written.** `release.sh`
-  *commits* `CHANGELOG.md` during its bump step but does not compose it, and
-  there is no Unreleased section to add to. The entry will cover 488 commits,
-  not six.
+- **The website commit (`12981ac`) was held until the release, and that
+  condition is now discharged.** It documents a lens called Signals; publishing
+  it before a build existed that said so would have told a reader that ⌘5 opens
+  Signals while their app says Analysis. Nothing auto-deploys — no workflows in
+  that repo, `deploy.sh` is the only path — so the ordering was enforced by
+  there being no trigger. **Whether it has been deployed is not knowable from
+  this repo**: the rsync is manual and run by the maintainer, so treat the
+  commit as ready rather than published.
+- ~~**The changelog entry is release-time work and is not written.**~~
+  Written at release time, as expected: `CHANGELOG.md`'s `**0.30.0** — _21 Sep
+  2026_` entry leads on the rename. `release.sh` *commits* the file during its
+  bump step but does not compose it, which is why this was release-time work
+  rather than the rename's.
 - **Bump kind: minor.** Settled in §6.2 — the rename earns no version of its
   own and rides with whatever else the minor carries.

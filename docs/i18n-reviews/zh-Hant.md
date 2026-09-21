@@ -50,3 +50,91 @@ Bristlenose turns a folder of user-interview recordings into a browsable report 
 ## Anything I've got wrong?
 
 If any of these feels off, or a concept reads awkwardly in Traditional Chinese that I haven't even flagged, please call it — your ear wins over ours on every one of these.
+
+
+---
+
+# Round three — the Signals lens (21 Sep 2026)
+
+Bristlenose turns a folder of user-interview recordings into a browsable report
+— quotes, themes, sentiment. One of its five lenses was called **Analysis** and
+is now called **Signals**, and that rename left five sentences describing the
+old name in every language but English. They are fixed, and **everything below
+is a first draft I wrote, not a translation anyone has checked.**
+
+Two of the five are worth knowing the history of, because the English moved
+twice in one day:
+
+- **The definition came back.** Before the rename the sentence read *"the
+  analysis page surfaces signals — statistically notable concentrations of
+  sentiment within report sections"*, and that dash was the only place the
+  product said **what a signal is**. The rename dropped it, so the next
+  sentence talked about *strong and moderate signals* without the term ever
+  being introduced. The English is now definition-first: *"Signals are
+  statistically notable concentrations of sentiment within report sections."*
+- **A pronoun was pointing at the wrong noun.** The empty state said *"apply
+  codebook tags to generate **them**"* — and in thirteen languages the nearest
+  candidate for *them* was **the tags**, which invites *apply tags to generate
+  tags*. Your language was one of the five where the pronoun form matched the
+  tags noun *exactly*, so the wrong reading was the easier one. It now names
+  the noun.
+
+Where your language's own earlier wording already carried the definition, I
+reused it verbatim rather than re-translating — so the clause in the middle of
+those sentences is the one a predecessor already wrote. The copula and the
+subject at the front are mine, and they are what I would most like checked.
+
+## The five new strings
+
+```
+正在載入訊號…
+尚無訊號。請執行管線或套用編碼簿標籤以產生訊號。
+標籤訊號錯誤：{{error}}
+訊號是報告區段中統計上值得注意的情緒集中現象。強烈與中等的訊號會凸顯參與者經驗集中之處。
+訊號是報告區段中統計上值得注意的情緒或編碼簿標籤集中現象。共有兩種訊號卡。
+```
+
+## Where I'd value your steer
+
+### 「訊號是 …」  ·  the copula is mine
+- **What we use now:** 「訊號是報告區段中統計上值得注意的情緒集中現象。」
+- **The nuance:** defining the term under a heading that just says **訊號**. The
+  previous wording was 「分析頁面會呈現訊號——…」, a sentence about the page, and
+  the double dash went with it.
+- **You:** does it read as a definition, or would you prefer 「訊號指的是…」?
+
+### 訊號 vs 信號  ·  the live question, and it is measurable
+- **What we use now:** **訊號** throughout, which the glossary anchors.
+- **What Apple ships:** its single *Signal* string is **信號** in `zh_TW` and
+  **訊號** in `zh_HK` — so the platform's Taiwan word is the one we do *not*
+  use.
+- **The nuance:** one string is not a convention, and 訊號 is common Taiwan usage
+  (手機訊號). But this is our own coined product term, so if a Taiwanese
+  researcher would read 訊號 as *reception bars* rather than as a finding, that
+  matters.
+- **You:** 訊號 or 信號 for a feature name?
+
+### 「標籤訊號錯誤：」  ·  measured
+- Fullwidth **：** with no following space, which is what Apple's zh-Hant ships
+  (239 fullwidth against 0 halfwidth). Settled, not open — flagging so you know
+  it was measured rather than guessed.
+
+### 編碼簿 vs 代碼簿  ·  older and bigger than this round
+- The files say **編碼簿** and the glossary was corrected to match on 20 Sep 2026
+  — but that resolved a contradiction, not the question. Measured the same day:
+  MAXQDA's zh-TW interface uses **代碼** for a code-as-noun (×96) and 編碼 for the
+  activity, as do MAXQDA and NVivo in zh-CN; **NAER** and Academia Sinica's SRDA
+  say **編碼簿**. So the tools and the terminology authorities disagree, and our
+  files follow the authorities.
+- **You:** 編碼簿 or 代碼簿 — which would a Taiwanese qualitative researcher
+  expect?
+
+## Quick confirms — all first-draft
+
+- **Intensity tooltip** — «平均情緒強度（1–3）». The range said 0–3 in every language
+  including English; the scale has always been 1–3.
+- **The lens name is unchanged** and glossary-anchored.
+- **A *Signals view* phrasing existed for a few hours and is gone.** If a future
+  string has to name a lens, the glossary says: the platform's **View** noun,
+  never the optical word — Apple ships *Lens* as the camera part in all 21 of
+  our languages.

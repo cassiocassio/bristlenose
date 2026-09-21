@@ -80,3 +80,82 @@ These are showing in English in the Spanish build, or are missing outright. I'll
 ## Anything I've got wrong?
 
 If any term feels off, or there's a concept we've rendered awkwardly that you'd phrase differently, please flag it — I'd rather hear it now. On all of these your call wins over mine.
+
+
+---
+
+# Round three — the Signals lens (21 Sep 2026)
+
+Bristlenose turns a folder of user-interview recordings into a browsable report
+— quotes, themes, sentiment. One of its five lenses was called **Analysis** and
+is now called **Signals**, and that rename left five sentences describing the
+old name in every language but English. They are fixed, and **everything below
+is a first draft I wrote, not a translation anyone has checked.**
+
+Two of the five are worth knowing the history of, because the English moved
+twice in one day:
+
+- **The definition came back.** Before the rename the sentence read *"the
+  analysis page surfaces signals — statistically notable concentrations of
+  sentiment within report sections"*, and that dash was the only place the
+  product said **what a signal is**. The rename dropped it, so the next
+  sentence talked about *strong and moderate signals* without the term ever
+  being introduced. The English is now definition-first: *"Signals are
+  statistically notable concentrations of sentiment within report sections."*
+- **A pronoun was pointing at the wrong noun.** The empty state said *"apply
+  codebook tags to generate **them**"* — and in thirteen languages the nearest
+  candidate for *them* was **the tags**, which invites *apply tags to generate
+  tags*. Your language was one of the five where the pronoun form matched the
+  tags noun *exactly*, so the wrong reading was the easier one. It now names
+  the noun.
+
+Where your language's own earlier wording already carried the definition, I
+reused it verbatim rather than re-translating — so the clause in the middle of
+those sentences is the one a predecessor already wrote. The copula and the
+subject at the front are mine, and they are what I would most like checked.
+
+## The five new strings
+
+```
+Cargando señales…
+Aún no hay señales. Ejecuta el pipeline o aplica etiquetas del libro de códigos para generar señales.
+Error en las señales de etiquetas: {{error}}
+Las señales son concentraciones estadísticamente notables de sentimiento dentro de las secciones del informe. Las señales fuertes y moderadas destacan dónde se agrupan las experiencias de los participantes.
+Las señales son concentraciones estadísticamente notables de sentimiento o etiquetas del libro de códigos dentro de las secciones del informe. Dos tipos de tarjeta de señal.
+```
+
+## Where I'd value your steer
+
+### «Las señales son …»  ·  the copula is mine
+- Plural with the definite article, so your existing clause survived verbatim.
+  A definition might prefer «Una señal es una concentración…».
+- **You:** plural as it stands, or singular?
+
+### «para generar señales» right after «Aún no hay señales»  ·  repetition
+- **What we use now:** «Aún no hay señales. Ejecuta el pipeline o aplica
+  etiquetas del libro de códigos **para generar señales**.»
+- **Was:** «para generarlas» — changed because *-las* is feminine plural and so
+  is *etiquetas*, so it read as *to generate the tags*.
+- **The nuance:** naming the noun removes the ambiguity but repeats *señales*
+  within one breath. Catalan solved the same problem with the partitive
+  («per generar-ne»), which Spanish does not have.
+- **You:** live with the repetition, restructure the sentence, or is there a
+  cleaner pronoun I have missed?
+
+### «Error en las señales de etiquetas»  ·  quick check
+- English is singular (*Tag signal error*); I went plural, as fourteen locales
+  did. The *en*-phrase avoids stacking *de* twice, which is why I kept it.
+- **You:** confirm?
+
+## Quick confirms — all first-draft
+
+- **Intensity tooltip** — «Intensidad emocional media (1–3)». The range said 0–3 in every language
+  including English, and the scale has always been 1–3; one digit, corrected
+  everywhere.
+- **The lens name is unchanged** and glossary-anchored. This round is about the
+  sentences around it.
+- **A *Signals view* phrasing existed for a few hours and is gone.** Before the
+  definition-first rewrite these sentences named the lens with your language's
+  own word for a *view*. No string does now. If a future one needs it, the
+  glossary says: use the platform's **View** noun, never the optical word —
+  Apple ships *Lens* as the camera part in all 21 of our languages.

@@ -36,3 +36,81 @@ Bristlenose turns a folder of user-interview recordings into a browsable report 
 ## Anything I've got wrong?
 
 If any of the "settled" terms feels off, or if there's a concept we render awkwardly in European Portuguese, flag it — your call wins over mine on all of these.
+
+
+---
+
+# Round three — the Signals lens (21 Sep 2026)
+
+Bristlenose turns a folder of user-interview recordings into a browsable report
+— quotes, themes, sentiment. One of its five lenses was called **Analysis** and
+is now called **Signals**, and that rename left five sentences describing the
+old name in every language but English. They are fixed, and **everything below
+is a first draft I wrote, not a translation anyone has checked.**
+
+Two of the five are worth knowing the history of, because the English moved
+twice in one day:
+
+- **The definition came back.** Before the rename the sentence read *"the
+  analysis page surfaces signals — statistically notable concentrations of
+  sentiment within report sections"*, and that dash was the only place the
+  product said **what a signal is**. The rename dropped it, so the next
+  sentence talked about *strong and moderate signals* without the term ever
+  being introduced. The English is now definition-first: *"Signals are
+  statistically notable concentrations of sentiment within report sections."*
+- **A pronoun was pointing at the wrong noun.** The empty state said *"apply
+  codebook tags to generate **them**"* — and in thirteen languages the nearest
+  candidate for *them* was **the tags**, which invites *apply tags to generate
+  tags*. Your language was one of the five where the pronoun form matched the
+  tags noun *exactly*, so the wrong reading was the easier one. It now names
+  the noun.
+
+Where your language's own earlier wording already carried the definition, I
+reused it verbatim rather than re-translating — so the clause in the middle of
+those sentences is the one a predecessor already wrote. The copula and the
+subject at the front are mine, and they are what I would most like checked.
+
+## The five new strings
+
+```
+A carregar sinais…
+Ainda não há sinais. Execute o pipeline ou aplique etiquetas do livro de códigos para os gerar.
+Erro nos sinais de etiqueta: {{error}}
+Sinais são concentrações estatisticamente notáveis de sentimento dentro das secções do relatório. Sinais fortes e moderados destacam onde a experiência do participante se concentra.
+Sinais são concentrações estatisticamente notáveis de sentimento ou etiquetas do livro de códigos dentro das secções do relatório. Dois tipos de cartão de sinal.
+```
+
+## Where I'd value your steer
+
+### «Sinais são …» without an article  ·  I think this may be wrong
+- **What we use now:** «Sinais são concentrações estatisticamente notáveis de
+  sentimento…»
+- **The nuance:** I left the subject bare to match the English. Every other
+  Romance locale uses the definite article — Italian «**I** segnali sono»,
+  Spanish «**Las** señales son», French «**Les** signaux sont», Catalan «**Els**
+  senyals són».
+- **My hunch:** it should be «**Os** sinais são…».
+- **You:** article or no article?
+
+### «para os gerar»  ·  no change needed, but here is why
+- European Portuguese was one of only three locales needing **no** fix to the
+  pronoun described at the top — *os* is masculine, *etiquetas* feminine. The
+  pre-verbal clitic placement is yours, not mine, and I kept it rather than
+  importing the Brazilian *gerá-los*.
+- **You:** confirm.
+
+### The no-cross-borrow rule held  ·  for information
+- Everything here is European: *A carregar* (not *Carregando*), *secções* (not
+  *seções*), *para os gerar* (not *gerá-los*), *vista*. Nothing was copied from
+  pt-BR, which is the standing rule for this pair.
+- **You:** shout if any of it reads as Brazilian anyway.
+
+## Quick confirms — all first-draft
+
+- **Intensity tooltip** — «Intensidade emocional média (1–3)». The range said 0–3 in every language
+  including English; the scale has always been 1–3.
+- **The lens name is unchanged** and glossary-anchored.
+- **A *Signals view* phrasing existed for a few hours and is gone.** If a future
+  string has to name a lens, the glossary says: the platform's **View** noun,
+  never the optical word — Apple ships *Lens* as the camera part in all 21 of
+  our languages.

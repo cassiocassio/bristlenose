@@ -184,9 +184,11 @@ deleted from 21 locales by a regex aimed at `toast.undo`.
 
 ## Questions for native reviewers
 
-These are wording, not engineering, and belong in `docs/i18n-reviews/` when
-someone opens a brief there. Recorded here because the 21 Aug sweep produced
-them and there is nowhere else for them yet.
+These are wording, not engineering, and belong in `docs/i18n-reviews/`.
+**Every one of the 20 full locales now has a brief there, as of 21 Sep 2026** —
+the ten that were missing were written by the Signals-rename round, which
+touched every language. So a question recorded below should also be *in* its
+locale's brief; if it is only here, it is not in front of a reviewer.
 
 **Everything seeded on 21 Aug 2026 is machine-seeded and unreviewed.** That is
 862 new or replaced strings across 21 locales (305 added, 557 corrected).

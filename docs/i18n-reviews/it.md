@@ -184,3 +184,111 @@ The four toss-ups above are unanswered and unchanged: **PII masking**
 *frizione*), plus the sentiment-tag question (*tag di sentiment* vs *etichette
 di sentiment*). Those are still the highest-value ones — they touch far more
 strings than anything in round two.
+
+
+---
+
+# Round three — the Signals lens (21 Sep 2026)
+
+Bristlenose turns a folder of user-interview recordings into a browsable report
+— quotes, themes, sentiment. One of its five lenses was called **Analysis** and
+is now called **Signals**, and that rename left five sentences describing the
+old name in every language but English. They are fixed, and **everything below
+is a first draft I wrote, not a translation anyone has checked.**
+
+Two of the five are worth knowing the history of, because the English moved
+twice in one day:
+
+- **The definition came back.** Before the rename the sentence read *"the
+  analysis page surfaces signals — statistically notable concentrations of
+  sentiment within report sections"*, and that dash was the only place the
+  product said **what a signal is**. The rename dropped it, so the next
+  sentence talked about *strong and moderate signals* without the term ever
+  being introduced. The English is now definition-first: *"Signals are
+  statistically notable concentrations of sentiment within report sections."*
+- **A pronoun was pointing at the wrong noun.** The empty state said *"apply
+  codebook tags to generate **them**"* — and in thirteen languages the nearest
+  candidate for *them* was **the tags**, which invites *apply tags to generate
+  tags*. Most locales now name the noun outright.
+
+Where your language's own earlier wording already carried the definition, I
+reused it verbatim rather than re-translating — so the clause in the middle of
+those sentences is the one you (or a predecessor) already saw. The copula and
+the subject at the front are mine, and they are what I would most like checked.
+
+## The five strings, as they stand
+
+```
+Caricamento dei segnali…
+Nessun segnale per ora. Esegui la pipeline o applica i tag del libro dei codici per generarne.
+Errore nei segnali dei tag: {{error}}
+I segnali sono concentrazioni statisticamente rilevanti di sentiment all'interno delle sezioni del report. I segnali forti e moderati evidenziano dove si concentra l'esperienza dei partecipanti.
+I segnali sono concentrazioni statisticamente rilevanti di sentiment o di tag del libro dei codici all'interno delle sezioni del report. Due tipi di scheda segnale.
+```
+
+## Where I'd value your steer
+
+### A definition in the plural  ·  genuine toss-up
+- **What we use now:** «I segnali sono concentrazioni statisticamente rilevanti di sentiment…»
+- **Also in play:** «Un segnale è una concentrazione statisticamente rilevante di sentiment…»
+- **The nuance:** I kept the plural because it let me reuse your existing clause
+  word for word — the singular would have meant re-inflecting article, noun and
+  adjective, i.e. re-translating the sentence. But a *definition* often wants
+  the singular, and this sentence sits under a heading that just says
+  **Segnali**, so it is doing dictionary work.
+- **My hunch:** the plural is fine and reads naturally, but I have no feel for
+  whether Italian prefers the singular for a definition of a term.
+- **You:** plural as it stands, or singular for the definition?
+
+### «Errore nei segnali dei tag»  ·  I think this may be clumsy
+- **What we use now:** «Errore nei segnali dei tag: {{error}}»
+- **Also in play:** «Errore nel calcolo dei segnali dei tag» — which is the
+  shape your own sibling string already uses: «Errore nel caricamento del libro
+  dei codici» (a verbal noun, then the object)
+- **The nuance:** mine stacks two genitives on a bare noun; the sibling avoids
+  that by naming the action. The English is singular (*Tag signal error*) and I
+  went plural, which fourteen locales did independently — coherent, but a
+  deliberate departure from the source worth confirming once.
+- **My hunch:** «Errore nel calcolo dei segnali dei tag» matches the file's own
+  precedent and reads better; I left it alone because it asserts *what* failed.
+- **You:** is the double genitive acceptable here, and is plural right where
+  English is singular?
+
+### «per generarne»  ·  close call
+- **What we use now:** «Nessun segnale per ora. … applica i tag … **per generarne**.»
+- **Was:** «per generarli» — which I changed, because *-li* is masculine plural
+  and so is *i tag*, so it read as *to generate the tags*.
+- **The nuance:** *ne* is partitive and refers to the topic already established
+  by *Nessun segnale*, so it cannot reach the tags. The alternative is to name
+  it: «per generare segnali».
+- **My hunch:** *ne* is the more elegant Italian and the ambiguity is gone
+  either way.
+- **You:** *ne*, or name the noun as the other locales do?
+
+### «Due tipi di scheda segnale»  ·  sanity-check me
+- **The nuance:** *scheda segnale* is a bare noun-plus-noun compound, and it is
+  the **only** occurrence of *scheda* in the whole Italian file, so there is no
+  in-house precedent to follow. English *signal card* compounds freely; Italian
+  usually wants a preposition.
+- **You:** «scheda segnale», «scheda del segnale», or «scheda di segnale»?
+
+## Quick confirms — all first-draft
+
+- **«di sentiment»** — the file uses the English loanword **22 times** against
+  one *sentimenti*, so I kept it. Shout if a UX researcher would expect
+  *sentimento*.
+- **«Caricamento dei segnali…»** — progress string, nominal style, matching the
+  file's other *Caricamento…* lines.
+- **Intensity tooltip** — «Intensità emotiva media (1–3)». The range said 0–3
+  in every language including English and the scale has always been 1–3; one
+  digit, corrected everywhere.
+- **«Segnali»** as the lens name is unchanged and glossary-anchored — this round
+  is about the sentences around it, not the term.
+
+## Still open from rounds one and two
+
+Unchanged and still the highest-value: **PII masking** (*oscuramento* vs
+*rimozione*), **Star** (*contrassegnare* vs *con stella*), **Speaker**
+(*interlocutore* vs *parlante*), **Friction** (*attrito* vs *frizione*), the
+**three words for one shelf** from round two, and **«Libreria dei libri dei
+codici»**, which is still the clumsiest string in the file.

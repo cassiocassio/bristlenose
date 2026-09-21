@@ -43,3 +43,85 @@ Bristlenose turns a folder of user-interview recordings into a browsable report 
 ## Anything I've got wrong?
 
 If any term feels off, or a concept reads awkwardly in Czech that I haven't even flagged, please call it out — your ear beats my glossary every time, so your call wins.
+
+
+---
+
+# Round three — the Signals lens (21 Sep 2026)
+
+Bristlenose turns a folder of user-interview recordings into a browsable report
+— quotes, themes, sentiment. One of its five lenses was called **Analysis** and
+is now called **Signals**, and that rename left five sentences describing the
+old name in every language but English. They are fixed, and **everything below
+is a first draft I wrote, not a translation anyone has checked.**
+
+Two of the five are worth knowing the history of, because the English moved
+twice in one day:
+
+- **The definition came back.** Before the rename the sentence read *"the
+  analysis page surfaces signals — statistically notable concentrations of
+  sentiment within report sections"*, and that dash was the only place the
+  product said **what a signal is**. The rename dropped it, so the next
+  sentence talked about *strong and moderate signals* without the term ever
+  being introduced. The English is now definition-first: *"Signals are
+  statistically notable concentrations of sentiment within report sections."*
+- **A pronoun was pointing at the wrong noun.** The empty state said *"apply
+  codebook tags to generate **them**"* — and in thirteen languages the nearest
+  candidate for *them* was **the tags**, which invites *apply tags to generate
+  tags*. Your language was one of the five where the pronoun form matched the
+  tags noun *exactly*, so the wrong reading was the easier one. It now names
+  the noun.
+
+Where your language's own earlier wording already carried the definition, I
+reused it verbatim rather than re-translating — so the clause in the middle of
+those sentences is the one a predecessor already wrote. The copula and the
+subject at the front are mine, and they are what I would most like checked.
+
+## The five new strings
+
+```
+Načítání signálů…
+Zatím žádné signály. Spusťte zpracování nebo použijte štítky z knihy kódů, abyste signály vygenerovali.
+Chyba signálů štítků: {{error}}
+Signály jsou statisticky významné koncentrace nálady v rámci sekcí zprávy. Silné a střední signály zvýrazňují, kde se zkušenosti účastníků shlukují.
+Signály jsou statisticky významné koncentrace nálady nebo štítků z knihy kódů v rámci sekcí zprávy. Dva typy karet signálu.
+```
+
+## Where I'd value your steer
+
+### «Signály jsou …»  ·  the copula is mine
+- **What we use now:** «Signály jsou statisticky významné koncentrace nálady…»
+- **The nuance:** I kept the plural so your existing clause could be reused word
+  for word; the singular («Signál je statisticky významná koncentrace…») would
+  have meant re-inflecting the whole predicate. A definition sometimes wants the
+  singular.
+- **You:** plural, or singular for a defined term?
+
+### «Chyba signálů štítků»  ·  I think this is clumsy
+- Three nouns in a genitive chain. The previous wording had the same shape with
+  *analýzy* in place of *signálů*, so it is **not new** — but it was already
+  awkward. Alternatives: «Chyba při zpracování signálů štítků», «Chyba výpočtu
+  signálů štítků». English is singular (*Tag signal error*); I went plural, as
+  fourteen locales did.
+- **You:** break the chain, and is plural right?
+
+### «Spusťte zpracování»  ·  pre-existing, worth your view
+- The empty state says *zpracování* for the pipeline, while the rest of the file
+  says **analýza** (*Spustit analýzu*, *Analýza dokončena*). That predates this
+  round and I deliberately did not "fix" it — but now that the lens is no longer
+  called Analysis, the two words sit less comfortably together.
+- **You:** should the pipeline be *analýza* here too, or is *zpracování* right
+  in an empty state?
+
+## Quick confirms — all first-draft
+
+- **Intensity tooltip** — «Průměrná emocionální intenzita (1–3)». The range said 0–3 in every language
+  including English, and the scale has always been 1–3; one digit, corrected
+  everywhere.
+- **The lens name is unchanged** and glossary-anchored. This round is about the
+  sentences around it.
+- **A *Signals view* phrasing existed for a few hours and is gone.** Before the
+  definition-first rewrite these sentences named the lens with your language's
+  own word for a *view*. No string does now. If a future one needs it, the
+  glossary says: use the platform's **View** noun, never the optical word —
+  Apple ships *Lens* as the camera part in all 21 of our languages.

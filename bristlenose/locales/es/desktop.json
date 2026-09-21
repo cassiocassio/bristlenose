@@ -289,6 +289,9 @@
     "folderNamePlaceholder": "Nombre de la carpeta",
     "projectNamePlaceholder": "Nombre del proyecto"
   },
+  "player": {
+    "windowTitle": "Reproductor de Bristlenose"
+  },
   "pipeline": {
     "category": {
       "auth": "Problema con la clave",

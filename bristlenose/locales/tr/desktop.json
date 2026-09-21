@@ -289,6 +289,9 @@
     "folderNamePlaceholder": "Klasör adı",
     "projectNamePlaceholder": "Proje adı"
   },
+  "player": {
+    "windowTitle": "Bristlenose Oynat\u0131c\u0131"
+  },
   "pipeline": {
     "category": {
       "auth": "Anahtar sorunu",

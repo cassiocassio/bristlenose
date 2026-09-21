@@ -323,6 +323,9 @@
     "folderNamePlaceholder": "Назва папки",
     "projectNamePlaceholder": "Назва проєкту"
   },
+  "player": {
+    "windowTitle": "\u041f\u0440\u043e\u0433\u0440\u0430\u0432\u0430\u0447 Bristlenose"
+  },
   "pipeline": {
     "category": {
       "auth": "\u041f\u0440\u043e\u0431\u043b\u0435\u043c\u0430 \u0437 \u043a\u043b\u044e\u0447\u0435\u043c",

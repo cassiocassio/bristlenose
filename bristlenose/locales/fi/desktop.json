@@ -289,6 +289,9 @@
     "folderNamePlaceholder": "Kansion nimi",
     "projectNamePlaceholder": "Projektin nimi"
   },
+  "player": {
+    "windowTitle": "Bristlenose-soitin"
+  },
   "pipeline": {
     "category": {
       "auth": "Avainongelma",

@@ -628,7 +628,11 @@ struct WebView: NSViewRepresentable {
                 alert.messageText = self.i18n.t("common.export.saveFailedAlert")
                 alert.informativeText = error.localizedDescription
                 alert.alertStyle = .warning
-                alert.addButton(withTitle: "OK")
+                // No `addButton` — `NSAlert` supplies its own OK, in AppKit's
+                // own localised wording, and the app declares the locales that
+                // make that resolve. Adding one here hardcoded English into an
+                // otherwise translated alert. Native primitives first: the
+                // stock control already does this job.
                 alert.runModal()
             }
         }
@@ -743,7 +747,7 @@ struct WebView: NSViewRepresentable {
                 defer: false
             )
             window.contentView = popoutWebView
-            window.title = "Bristlenose Player"
+            window.title = i18n.t("desktop.player.windowTitle")
             window.setFrameAutosaveName("BristlenosePlayer")
             window.makeKeyAndOrderFront(nil)
 

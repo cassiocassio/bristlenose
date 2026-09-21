@@ -339,6 +339,9 @@
     "ollamaDownloadSize": "~%@ をダウンロード",
     "done": "完了"
   },
+  "player": {
+    "windowTitle": "Bristlenose \u30d7\u30ec\u30a4\u30e4\u30fc"
+  },
   "pipeline": {
     "category": {
       "auth": "\u30ad\u30fc\u306e\u554f\u984c",

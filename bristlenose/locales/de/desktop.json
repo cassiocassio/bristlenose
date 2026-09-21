@@ -289,6 +289,9 @@
     "folderNamePlaceholder": "Ordnername",
     "projectNamePlaceholder": "Projektname"
   },
+  "player": {
+    "windowTitle": "Bristlenose-Player"
+  },
   "pipeline": {
     "category": {
       "auth": "Problem mit Schl\u00fcssel",

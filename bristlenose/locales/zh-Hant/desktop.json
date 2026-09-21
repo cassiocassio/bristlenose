@@ -272,6 +272,9 @@
     "folderNamePlaceholder": "檔案夾名稱",
     "projectNamePlaceholder": "專案名稱"
   },
+  "player": {
+    "windowTitle": "Bristlenose \u64ad\u653e\u5668"
+  },
   "pipeline": {
     "category": {
       "auth": "\u91d1\u9470\u554f\u984c",

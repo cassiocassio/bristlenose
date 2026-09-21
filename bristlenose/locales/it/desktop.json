@@ -289,6 +289,9 @@
     "folderNamePlaceholder": "Nome della cartella",
     "projectNamePlaceholder": "Nome del progetto"
   },
+  "player": {
+    "windowTitle": "Lettore Bristlenose"
+  },
   "pipeline": {
     "category": {
       "auth": "Problema con la chiave",

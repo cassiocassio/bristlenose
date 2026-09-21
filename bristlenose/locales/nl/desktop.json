@@ -289,6 +289,9 @@
     "folderNamePlaceholder": "Mapnaam",
     "projectNamePlaceholder": "Projectnaam"
   },
+  "player": {
+    "windowTitle": "Bristlenose-speler"
+  },
   "pipeline": {
     "category": {
       "auth": "Probleem met sleutel",

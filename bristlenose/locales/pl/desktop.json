@@ -323,6 +323,9 @@
     "folderNamePlaceholder": "Nazwa folderu",
     "projectNamePlaceholder": "Nazwa projektu"
   },
+  "player": {
+    "windowTitle": "Odtwarzacz Bristlenose"
+  },
   "pipeline": {
     "category": {
       "auth": "Problem z kluczem",

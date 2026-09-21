@@ -272,6 +272,9 @@
     "folderNamePlaceholder": "\ud3f4\ub354 \uc774\ub984",
     "projectNamePlaceholder": "\ud504\ub85c\uc81d\ud2b8 \uc774\ub984"
   },
+  "player": {
+    "windowTitle": "Bristlenose \ud50c\ub808\uc774\uc5b4"
+  },
   "pipeline": {
     "category": {
       "auth": "\ud0a4 \ubb38\uc81c",

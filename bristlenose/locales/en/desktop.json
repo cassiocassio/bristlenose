@@ -290,6 +290,9 @@
     "folderNamePlaceholder": "Folder name",
     "projectNamePlaceholder": "Project name"
   },
+  "player": {
+    "windowTitle": "Bristlenose Player"
+  },
   "pipeline": {
     "category": {
       "auth": "Provider key issue",

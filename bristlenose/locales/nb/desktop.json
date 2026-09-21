@@ -289,6 +289,9 @@
     "folderNamePlaceholder": "Mappenavn",
     "projectNamePlaceholder": "Prosjektnavn"
   },
+  "player": {
+    "windowTitle": "Bristlenose-spiller"
+  },
   "pipeline": {
     "category": {
       "auth": "Problem med n\u00f8kkel",

@@ -256,6 +256,78 @@ an all-translated one promises framework codes we do not produce.
 > an objective, not a resolved design. Written as settled fact above since Mar 2026; treat the
 > paragraph as intent until this note is removed.
 
+### Examples, mockups and illustrations — the rules
+
+Agreed 21 Sep 2026, after a Welcome card rendered Spanish chrome around an
+English example codebook. These govern **any example a user sees**, not only the
+Welcome pane: illustration content, screenshots we author, the fixture corpora, a
+mocked row in a design doc.
+
+**The governing rule: an example depicts what the researcher would actually
+receive.** Not a translation of the English example — a rendering of the real
+product's real output, in their language *mix*.
+
+The consequence is counterintuitive and is why this needs rules rather than a
+sweep: **a correct example is usually not monolingual.** A Spanish researcher's
+Codebooks pane genuinely holds their Spanish codes *and* Garrett's English ones.
+Translating everything depicts software we do not ship; leaving everything
+English says the tool is for English research. Both are false, in opposite
+directions.
+
+#### The unit of classification is the fragment, not the string
+
+`Discovery call - Transcript.docx`, one filename in the ingest illustration, is
+three classes at once:
+
+| Fragment | Class | Becomes |
+|---|---|---|
+| `Discovery call` | the researcher named the meeting | their language |
+| ` - `, `.docx`, any digits | structural | unchanged |
+| `Transcript` | the **platform** wrote this word | whatever Teams/Meet writes in that tenant |
+
+So classify fragments. A string is rarely one thing.
+
+#### The four classes
+
+| Class | Language | Authoring rule |
+|---|---|---|
+| **OURS** — our own chrome, quoted in a picture | Theirs | **Lift the shipped key.** Never re-translate. If the picture needs a different register from the live surface — spelled-out where the lens abbreviates `Conc.` — that is a *sibling key with the reason at the site*, not a second translation of the same words |
+| **THEIRS** — quotes, transcripts, meeting titles, filenames they chose, codebooks they authored | Theirs | **Translated**, with one exception below. Names and places should be locally plausible: a Spanish study about Renfe, not a transliterated `anna` |
+| **FRAMEWORK** — shipped codebook codes (Garrett, Norman, Nielsen…) | **English** | Leave them. Translating advertises output we do not produce, and the tag *name* is the identity every cross-study comparison depends on |
+| **FOREIGN** — another product's words, whether in its UI or in a file it wrote onto the researcher's disk | Whatever **that product** ships in that locale | **Look it up; never compose it.** Claude Code's CLI is English-only, so a translated "Thinking…" depicts software that does not exist. Teams localises the recording/transcript suffix, so an English one is wrong |
+
+#### Two exceptions, both narrow and both earned
+
+**The disfluency illustration is authored, not translated.** `WelcomeIllustrationHTML.quote` is not a sentence — it is a token array where each word is marked keep-or-trim, the filler is struck through, and spacing and punctuation live *inside* the tokens. A translator handed the sentence returns clean Spanish prose and a dead demonstration, because Spanish repairs are different words in different positions (*o sea*, *eh*, *bueno*). This one needs a native speaker writing a native hesitation whose `join("")` is the sentence.
+
+**Generated text has no correct answer yet.** Theme titles and signal elaborations come back in an undefined language (see the correction above). "Take the real text" cannot resolve it because the real text is whatever the model picked. So: **an example must not become the specification.** Either keep generated content out of shot, or draw it in the researcher's language *and fix generation in the same breath* — never draw the fixed version over a pipeline that still produces the broken one.
+
+#### Why FOREIGN is worth the trouble, in this codebase specifically
+
+`s01_ingest.py`'s `_GMEET_TAIL_RE` carries the argument already: *"'Recording' and 'Notes by Gemini' are localised in a non-English tenant; the digits are not. Enumerating the English words is the trap that made `_TEAMS_SUFFIX_RE` — and Swift's `TeamsRecordingName` — match only the fixtures invented alongside them."* The regex matches the kind word **structurally** for exactly this reason, and its comment lists `Recording / Gravació / 錄影`.
+
+An English `- Transcript` in a Spanish illustration is that same bug in picture
+form: a fixture that agrees with the defect. Getting it right in the artwork is
+cheap insurance that nobody re-derives the English-only assumption from it.
+
+#### Mechanism — the two halves are not symmetrical
+
+**Native SwiftUI illustrations are already solved.** `i18n.t("enums.sentiment." + chip.sentiment)` — a key composed from a discriminator, resolved in the view. Four illustrations do this. Adding a string is adding a key; no new rules.
+
+**Webview illustrations need three things the native side does not:**
+
+1. **The HTML builder stays pure; the view resolves.** `WelcomeIllustrationHTML.*` must not take `I18n` — that would make a testable static `@MainActor` and resolve strings at build time. The view resolves and passes a value. Same shape as `FailureMessage`, `Day.start` and `CloudCount.noun`: carry the cause, render at the view.
+2. **One JSON blob, one escape site.** A JS string literal, an HTML text node and an attribute are three different escapes, and `innerHTML` interpolation inside the script is a fourth. Emit the strings once as JSON, read them via `textContent`, and no fragment is ever concatenated into markup.
+3. **Measure; never rely on the box.** Every template is `overflow:hidden`, so a label that does not fit **vanishes** — no scrollbar, no error, no clipping artefact. `fit()` reads `offsetWidth` on a hard 440px box, which cannot see its own content; it must read `scrollWidth`.
+
+#### What is gated
+
+* every example fragment carries a declared class — unclassified is a failure;
+* no bare English literal survives in an HTML builder;
+* verbatim content (shell commands, product names) survives translation intact;
+* the locale participates in each webview's `.id` (`tests/test_welcome_locale_keys.py`, landed 21 Sep 2026);
+* **a render at the longest locale asserts nothing measures zero height** — the silent one, and the one screenshots do not catch.
+
 ## Internal representation: English always
 
 - `Sentiment.FRUSTRATION` enum — DB stores `"frustration"`

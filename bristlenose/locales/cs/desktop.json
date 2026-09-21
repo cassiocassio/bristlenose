@@ -323,6 +323,24 @@
     "projectNamePlaceholder": "N\u00e1zev projektu"
   },
   "pipeline": {
+    "category": {
+      "auth": "Probl\u00e9m s kl\u00ed\u010dem",
+      "outOfCredit": "Bez kreditu",
+      "network": "Chyba s\u00edt\u011b",
+      "quota": "Limit po\u017eadavk\u016f",
+      "disk": "Nedostatek m\u00edsta na disku",
+      "whisper": "P\u0159epis selhal",
+      "userSignal": "Zastaveno",
+      "apiRequest": "Po\u017eadavek odm\u00edtnut",
+      "apiServer": "Poskytovatel nedostupn\u00fd",
+      "missingDep": "Je pot\u0159eba nastaven\u00ed",
+      "missingInput": "Chyb\u00ed vstup",
+      "missingBinary": "Chyb\u00ed n\u00e1stroj",
+      "outputExists": "Ji\u017e analyzov\u00e1no",
+      "outputTruncated": "Dosa\u017een limit v\u00fdstupu",
+      "unusableInput": "Neanalyzov\u00e1no",
+      "unknown": "Selhalo"
+    },
     "failure": {
       "stranded": "Anal\u00fdza se ne\u010dekan\u011b zastavila.",
       "launchFailed": "Anal\u00fdzu se nepoda\u0159ilo spustit. {{reason}}",
@@ -377,6 +395,7 @@
       }
     },
     "diagnostic": {
+      "categoryLine": "Kategorie: {{category}}",
       "unreachable": {
         "timedOut": "Slo\u017eka neodpov\u011bd\u011bla \u2013 m\u016f\u017ee j\u00edt o odpojen\u00fd disk nebo s\u00ed\u0165ov\u00e9 \u00falo\u017ei\u0161t\u011b.",
         "unreadable": "Slo\u017eka existuje, ale jej\u00ed obsah se nepoda\u0159ilo p\u0159e\u010d\u00edst.",

@@ -290,6 +290,24 @@
     "projectNamePlaceholder": "Nome do projeto"
   },
   "pipeline": {
+    "category": {
+      "auth": "Problema com a chave",
+      "outOfCredit": "Sem cr\u00e9dito",
+      "network": "Erro de rede",
+      "quota": "Limite de pedidos",
+      "disk": "Espa\u00e7o em disco insuficiente",
+      "whisper": "Falha na transcri\u00e7\u00e3o",
+      "userSignal": "Parado",
+      "apiRequest": "Pedido rejeitado",
+      "apiServer": "Fornecedor indispon\u00edvel",
+      "missingDep": "Configura\u00e7\u00e3o necess\u00e1ria",
+      "missingInput": "Entrada em falta",
+      "missingBinary": "Ferramenta em falta",
+      "outputExists": "J\u00e1 analisado",
+      "outputTruncated": "Limite de sa\u00edda atingido",
+      "unusableInput": "N\u00e3o analisado",
+      "unknown": "Falhou"
+    },
     "failure": {
       "stranded": "A an\u00e1lise parou inesperadamente.",
       "launchFailed": "N\u00e3o foi poss\u00edvel iniciar a an\u00e1lise. {{reason}}",
@@ -344,6 +362,7 @@
       }
     },
     "diagnostic": {
+      "categoryLine": "Categoria: {{category}}",
       "unreachable": {
         "timedOut": "A pasta n\u00e3o respondeu \u2014 pode ser um disco desligado ou uma partilha de rede.",
         "unreadable": "A pasta existe, mas n\u00e3o foi poss\u00edvel ler o seu conte\u00fado.",

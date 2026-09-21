@@ -324,6 +324,24 @@
     "projectNamePlaceholder": "Nazwa projektu"
   },
   "pipeline": {
+    "category": {
+      "auth": "Problem z kluczem",
+      "outOfCredit": "Brak \u015brodk\u00f3w",
+      "network": "B\u0142\u0105d sieci",
+      "quota": "Limit zapyta\u0144",
+      "disk": "Za ma\u0142o miejsca na dysku",
+      "whisper": "Transkrypcja nie powiod\u0142a si\u0119",
+      "userSignal": "Zatrzymano",
+      "apiRequest": "\u017b\u0105danie odrzucone",
+      "apiServer": "Dostawca niedost\u0119pny",
+      "missingDep": "Wymagana konfiguracja",
+      "missingInput": "Brak danych wej\u015bciowych",
+      "missingBinary": "Brak narz\u0119dzia",
+      "outputExists": "Ju\u017c przeanalizowano",
+      "outputTruncated": "Osi\u0105gni\u0119to limit wyj\u015bcia",
+      "unusableInput": "Nieprzeanalizowane",
+      "unknown": "Niepowodzenie"
+    },
     "failure": {
       "stranded": "Analiza zosta\u0142a nieoczekiwanie przerwana.",
       "launchFailed": "Nie uda\u0142o si\u0119 uruchomi\u0107 analizy. {{reason}}",
@@ -378,6 +396,7 @@
       }
     },
     "diagnostic": {
+      "categoryLine": "Kategoria: {{category}}",
       "unreachable": {
         "timedOut": "Folder nie odpowiedzia\u0142 \u2014 mo\u017ce to by\u0107 od\u0142\u0105czony dysk lub udzia\u0142 sieciowy.",
         "unreadable": "Folder istnieje, ale nie uda\u0142o si\u0119 odczyta\u0107 jego zawarto\u015bci.",

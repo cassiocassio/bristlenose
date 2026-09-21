@@ -194,7 +194,8 @@ struct ProjectDiagnosticPopover: View {
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            Text("Category: \(Self.humanCategoryLabel(category))")
+            Text(i18n.t("desktop.pipeline.diagnostic.categoryLine",
+                        ["category": i18n.t(category.labelKey)]))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -467,28 +468,6 @@ struct ProjectDiagnosticPopover: View {
         return allRefusals
             ? "desktop.chrome.notAnalysedCount"
             : "desktop.chrome.failureCount"
-    }
-
-    /// Single source of truth for the human-readable failure-category string.
-    static func humanCategoryLabel(_ category: PipelineFailureCategory) -> String {
-        switch category {
-        case .auth:       return "Provider key issue"
-        case .outOfCredit: return "Out of credit"
-        case .network:    return "Network error"
-        case .quota:      return "Rate limited"
-        case .disk:       return "Out of disk space"
-        case .whisper:    return "Transcription failed"
-        case .userSignal: return "Stopped"
-        case .apiRequest: return "Provider rejected request"
-        case .apiServer:  return "Provider unavailable"
-        case .missingDep: return "Setup needed"
-        case .missingInput: return "Missing input"
-        case .missingBinary: return "Missing tool"
-        case .outputExists: return "Already analysed"
-        case .outputTruncated: return "Output limit reached"
-        case .unusableInput: return "Not analysed"
-        case .unknown:    return "Failed"
-        }
     }
 
     /// Extract the truncation count from the Python-emitted overflow message and

@@ -290,6 +290,24 @@
     "projectNamePlaceholder": "Prosjektnavn"
   },
   "pipeline": {
+    "category": {
+      "auth": "Problem med n\u00f8kkel",
+      "outOfCredit": "Tom for kreditt",
+      "network": "Nettverksfeil",
+      "quota": "Hastighetsgrense",
+      "disk": "Ikke nok diskplass",
+      "whisper": "Transkripsjon mislyktes",
+      "userSignal": "Stoppet",
+      "apiRequest": "Foresp\u00f8rsel avvist",
+      "apiServer": "Leverand\u00f8r utilgjengelig",
+      "missingDep": "Oppsett kreves",
+      "missingInput": "Manglende inndata",
+      "missingBinary": "Manglende verkt\u00f8y",
+      "outputExists": "Allerede analysert",
+      "outputTruncated": "Utdatagrense n\u00e5dd",
+      "unusableInput": "Ikke analysert",
+      "unknown": "Mislyktes"
+    },
     "failure": {
       "stranded": "Analysen stoppet uventet.",
       "launchFailed": "Kunne ikke starte analysen. {{reason}}",
@@ -344,6 +362,7 @@
       }
     },
     "diagnostic": {
+      "categoryLine": "Kategori: {{category}}",
       "unreachable": {
         "timedOut": "Mappen svarte ikke \u2013 det kan v\u00e6re en frakoblet disk eller en nettverksplassering.",
         "unreadable": "Mappen finnes, men innholdet kunne ikke leses.",

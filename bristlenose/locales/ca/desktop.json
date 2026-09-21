@@ -290,6 +290,24 @@
     "projectNamePlaceholder": "Nom del projecte"
   },
   "pipeline": {
+    "category": {
+      "auth": "Problema amb la clau",
+      "outOfCredit": "Sense cr\u00e8dit",
+      "network": "Error de xarxa",
+      "quota": "L\u00edmit de peticions",
+      "disk": "No hi ha prou espai al disc",
+      "whisper": "Transcripci\u00f3 fallida",
+      "userSignal": "Aturat",
+      "apiRequest": "Petici\u00f3 rebutjada",
+      "apiServer": "Prove\u00efdor no disponible",
+      "missingDep": "Cal configuraci\u00f3",
+      "missingInput": "Falta l'entrada",
+      "missingBinary": "Falta una eina",
+      "outputExists": "Ja analitzat",
+      "outputTruncated": "L\u00edmit de sortida assolit",
+      "unusableInput": "No analitzat",
+      "unknown": "Execuci\u00f3 fallida"
+    },
     "failure": {
       "stranded": "L'an\u00e0lisi s'ha aturat inesperadament.",
       "launchFailed": "No s'ha pogut iniciar l'an\u00e0lisi. {{reason}}",
@@ -344,6 +362,7 @@
       }
     },
     "diagnostic": {
+      "categoryLine": "Categoria: {{category}}",
       "unreachable": {
         "timedOut": "La carpeta no ha respost: pot ser un disc desconnectat o un recurs de xarxa.",
         "unreadable": "La carpeta hi \u00e9s, per\u00f2 no se n'ha pogut llegir el contingut.",

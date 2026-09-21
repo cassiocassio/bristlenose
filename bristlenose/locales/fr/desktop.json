@@ -290,6 +290,24 @@
     "projectNamePlaceholder": "Nom du projet"
   },
   "pipeline": {
+    "category": {
+      "auth": "Probl\u00e8me de cl\u00e9",
+      "outOfCredit": "Plus de cr\u00e9dit",
+      "network": "Erreur r\u00e9seau",
+      "quota": "Limite de d\u00e9bit",
+      "disk": "Espace disque insuffisant",
+      "whisper": "\u00c9chec de la transcription",
+      "userSignal": "Arr\u00eat\u00e9",
+      "apiRequest": "Requ\u00eate refus\u00e9e",
+      "apiServer": "Fournisseur indisponible",
+      "missingDep": "Configuration requise",
+      "missingInput": "Entr\u00e9e manquante",
+      "missingBinary": "Outil manquant",
+      "outputExists": "D\u00e9j\u00e0 analys\u00e9",
+      "outputTruncated": "Limite de sortie atteinte",
+      "unusableInput": "Non analys\u00e9",
+      "unknown": "\u00c9chec"
+    },
     "failure": {
       "stranded": "L\u2019analyse s\u2019est arr\u00eat\u00e9e de fa\u00e7on inattendue.",
       "launchFailed": "Impossible de lancer l\u2019analyse. {{reason}}",
@@ -344,6 +362,7 @@
       }
     },
     "diagnostic": {
+      "categoryLine": "Cat\u00e9gorie : {{category}}",
       "unreachable": {
         "timedOut": "Le dossier n'a pas r\u00e9pondu : il peut s'agir d'un disque d\u00e9connect\u00e9 ou d'un partage r\u00e9seau.",
         "unreadable": "Le dossier est pr\u00e9sent, mais son contenu n'a pas pu \u00eatre lu.",

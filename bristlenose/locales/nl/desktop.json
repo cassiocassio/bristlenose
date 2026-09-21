@@ -290,6 +290,24 @@
     "projectNamePlaceholder": "Projectnaam"
   },
   "pipeline": {
+    "category": {
+      "auth": "Probleem met sleutel",
+      "outOfCredit": "Geen tegoed",
+      "network": "Netwerkfout",
+      "quota": "Snelheidslimiet",
+      "disk": "Onvoldoende schijfruimte",
+      "whisper": "Transcriptie mislukt",
+      "userSignal": "Gestopt",
+      "apiRequest": "Verzoek geweigerd",
+      "apiServer": "Provider niet beschikbaar",
+      "missingDep": "Instellen nodig",
+      "missingInput": "Ontbrekende invoer",
+      "missingBinary": "Ontbrekend hulpmiddel",
+      "outputExists": "Al geanalyseerd",
+      "outputTruncated": "Uitvoerlimiet bereikt",
+      "unusableInput": "Niet geanalyseerd",
+      "unknown": "Mislukt"
+    },
     "failure": {
       "stranded": "De analyse is onverwacht gestopt.",
       "launchFailed": "Kan de analyse niet starten. {{reason}}",
@@ -344,6 +362,7 @@
       }
     },
     "diagnostic": {
+      "categoryLine": "Categorie: {{category}}",
       "unreachable": {
         "timedOut": "De map reageerde niet \u2014 mogelijk een losgekoppelde schijf of netwerkshare.",
         "unreadable": "De map bestaat, maar de inhoud kon niet worden gelezen.",

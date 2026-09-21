@@ -291,6 +291,24 @@
     "projectNamePlaceholder": "Project name"
   },
   "pipeline": {
+    "category": {
+      "auth": "Provider key issue",
+      "outOfCredit": "Out of credit",
+      "network": "Network error",
+      "quota": "Rate limited",
+      "disk": "Not enough disk space",
+      "whisper": "Transcription failed",
+      "userSignal": "Stopped",
+      "apiRequest": "Provider rejected request",
+      "apiServer": "Provider unavailable",
+      "missingDep": "Setup needed",
+      "missingInput": "Missing input",
+      "missingBinary": "Missing tool",
+      "outputExists": "Already analysed",
+      "outputTruncated": "Output limit reached",
+      "unusableInput": "Not analysed",
+      "unknown": "Failed"
+    },
     "failure": {
       "stranded": "Analysis stopped unexpectedly.",
       "launchFailed": "Couldn't start the analysis. {{reason}}",
@@ -345,6 +363,7 @@
       }
     },
     "diagnostic": {
+      "categoryLine": "Category: {{category}}",
       "unreachable": {
         "timedOut": "The folder didn't answer \u2014 it may be a disconnected drive or network share.",
         "unreadable": "The folder is there, but its contents couldn't be read.",

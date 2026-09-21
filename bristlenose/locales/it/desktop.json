@@ -290,6 +290,24 @@
     "projectNamePlaceholder": "Nome del progetto"
   },
   "pipeline": {
+    "category": {
+      "auth": "Problema con la chiave",
+      "outOfCredit": "Credito esaurito",
+      "network": "Errore di rete",
+      "quota": "Limite di richieste",
+      "disk": "Spazio su disco insufficiente",
+      "whisper": "Trascrizione non riuscita",
+      "userSignal": "Interrotto",
+      "apiRequest": "Richiesta rifiutata",
+      "apiServer": "Fornitore non disponibile",
+      "missingDep": "Configurazione necessaria",
+      "missingInput": "Input mancante",
+      "missingBinary": "Strumento mancante",
+      "outputExists": "Gi\u00e0 analizzato",
+      "outputTruncated": "Limite di output raggiunto",
+      "unusableInput": "Non analizzato",
+      "unknown": "Non riuscito"
+    },
     "failure": {
       "stranded": "L'analisi si \u00e8 interrotta in modo imprevisto.",
       "launchFailed": "Impossibile avviare l'analisi. {{reason}}",
@@ -344,6 +362,7 @@
       }
     },
     "diagnostic": {
+      "categoryLine": "Categoria: {{category}}",
       "unreachable": {
         "timedOut": "La cartella non ha risposto: potrebbe essere un disco scollegato o una condivisione di rete.",
         "unreadable": "La cartella \u00e8 presente, ma non \u00e8 stato possibile leggerne il contenuto.",

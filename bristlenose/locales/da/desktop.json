@@ -290,6 +290,24 @@
     "projectNamePlaceholder": "Projektnavn"
   },
   "pipeline": {
+    "category": {
+      "auth": "Problem med n\u00f8gle",
+      "outOfCredit": "Ingen kredit",
+      "network": "Netv\u00e6rksfejl",
+      "quota": "Hastighedsgr\u00e6nse",
+      "disk": "Ikke nok diskplads",
+      "whisper": "Transskription mislykkedes",
+      "userSignal": "Stoppet",
+      "apiRequest": "Foresp\u00f8rgsel afvist",
+      "apiServer": "Udbyder utilg\u00e6ngelig",
+      "missingDep": "Ops\u00e6tning kr\u00e6ves",
+      "missingInput": "Manglende input",
+      "missingBinary": "Manglende v\u00e6rkt\u00f8j",
+      "outputExists": "Allerede analyseret",
+      "outputTruncated": "Outputgr\u00e6nse n\u00e5et",
+      "unusableInput": "Ikke analyseret",
+      "unknown": "Mislykkedes"
+    },
     "failure": {
       "stranded": "Analysen stoppede uventet.",
       "launchFailed": "Analysen kunne ikke startes. {{reason}}",
@@ -344,6 +362,7 @@
       }
     },
     "diagnostic": {
+      "categoryLine": "Kategori: {{category}}",
       "unreachable": {
         "timedOut": "Mappen svarede ikke \u2013 det kan v\u00e6re en frakoblet disk eller et netv\u00e6rksdrev.",
         "unreadable": "Mappen findes, men indholdet kunne ikke l\u00e6ses.",

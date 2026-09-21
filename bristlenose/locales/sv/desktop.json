@@ -290,6 +290,24 @@
     "projectNamePlaceholder": "Projektnamn"
   },
   "pipeline": {
+    "category": {
+      "auth": "Problem med nyckel",
+      "outOfCredit": "Inget saldo",
+      "network": "N\u00e4tverksfel",
+      "quota": "Hastighetsgr\u00e4ns",
+      "disk": "Inte tillr\u00e4ckligt med diskutrymme",
+      "whisper": "Transkriberingen misslyckades",
+      "userSignal": "Stoppad",
+      "apiRequest": "Beg\u00e4ran avvisad",
+      "apiServer": "Leverant\u00f6r otillg\u00e4nglig",
+      "missingDep": "Konfiguration kr\u00e4vs",
+      "missingInput": "Saknad indata",
+      "missingBinary": "Saknat verktyg",
+      "outputExists": "Redan analyserad",
+      "outputTruncated": "Utdatagr\u00e4ns n\u00e5dd",
+      "unusableInput": "Inte analyserad",
+      "unknown": "Misslyckades"
+    },
     "failure": {
       "stranded": "Analysen stoppades ov\u00e4ntat.",
       "launchFailed": "Det gick inte att starta analysen. {{reason}}",
@@ -344,6 +362,7 @@
       }
     },
     "diagnostic": {
+      "categoryLine": "Kategori: {{category}}",
       "unreachable": {
         "timedOut": "Mappen svarade inte \u2013 det kan vara en fr\u00e5nkopplad disk eller en n\u00e4tverksplats.",
         "unreadable": "Mappen finns, men inneh\u00e5llet kunde inte l\u00e4sas.",

@@ -290,6 +290,24 @@
     "projectNamePlaceholder": "Projektin nimi"
   },
   "pipeline": {
+    "category": {
+      "auth": "Avainongelma",
+      "outOfCredit": "Ei saldoa",
+      "network": "Verkkovirhe",
+      "quota": "Pyynt\u00f6raja",
+      "disk": "Levytila ei riit\u00e4",
+      "whisper": "Litterointi ep\u00e4onnistui",
+      "userSignal": "Pys\u00e4ytetty",
+      "apiRequest": "Pyynt\u00f6 hyl\u00e4tty",
+      "apiServer": "Palvelu ei k\u00e4ytett\u00e4viss\u00e4",
+      "missingDep": "M\u00e4\u00e4ritys tarvitaan",
+      "missingInput": "Sy\u00f6te puuttuu",
+      "missingBinary": "Ty\u00f6kalu puuttuu",
+      "outputExists": "Jo analysoitu",
+      "outputTruncated": "Tulosteraja saavutettu",
+      "unusableInput": "Ei analysoitu",
+      "unknown": "Ep\u00e4onnistui"
+    },
     "failure": {
       "stranded": "Analyysi pys\u00e4htyi odottamatta.",
       "launchFailed": "Analyysi\u00e4 ei voitu k\u00e4ynnist\u00e4\u00e4. {{reason}}",
@@ -344,6 +362,7 @@
       }
     },
     "diagnostic": {
+      "categoryLine": "Luokka: {{category}}",
       "unreachable": {
         "timedOut": "Kansio ei vastannut \u2013 kyseess\u00e4 voi olla irrotettu levy tai verkkojako.",
         "unreadable": "Kansio on olemassa, mutta sen sis\u00e4lt\u00f6\u00e4 ei voitu lukea.",

@@ -290,6 +290,24 @@
     "projectNamePlaceholder": "Nombre del proyecto"
   },
   "pipeline": {
+    "category": {
+      "auth": "Problema con la clave",
+      "outOfCredit": "Sin cr\u00e9dito",
+      "network": "Error de red",
+      "quota": "L\u00edmite de peticiones",
+      "disk": "Espacio en disco insuficiente",
+      "whisper": "Transcripci\u00f3n fallida",
+      "userSignal": "Detenido",
+      "apiRequest": "Petici\u00f3n rechazada",
+      "apiServer": "Proveedor no disponible",
+      "missingDep": "Falta configuraci\u00f3n",
+      "missingInput": "Falta la entrada",
+      "missingBinary": "Falta una herramienta",
+      "outputExists": "Ya analizado",
+      "outputTruncated": "L\u00edmite de salida alcanzado",
+      "unusableInput": "No analizado",
+      "unknown": "Fall\u00f3"
+    },
     "failure": {
       "stranded": "El an\u00e1lisis se ha detenido inesperadamente.",
       "launchFailed": "No se ha podido iniciar el an\u00e1lisis. {{reason}}",
@@ -344,6 +362,7 @@
       }
     },
     "diagnostic": {
+      "categoryLine": "Categor\u00eda: {{category}}",
       "unreachable": {
         "timedOut": "La carpeta no ha respondido: puede ser un disco desconectado o un recurso de red.",
         "unreadable": "La carpeta existe, pero no se ha podido leer su contenido.",

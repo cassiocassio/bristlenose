@@ -273,6 +273,24 @@
     "projectNamePlaceholder": "專案名稱"
   },
   "pipeline": {
+    "category": {
+      "auth": "\u91d1\u9470\u554f\u984c",
+      "outOfCredit": "\u984d\u5ea6\u7528\u76e1",
+      "network": "\u7db2\u8def\u932f\u8aa4",
+      "quota": "\u901f\u7387\u4e0a\u9650",
+      "disk": "\u78c1\u789f\u7a7a\u9593\u4e0d\u8db3",
+      "whisper": "\u8f49\u9304\u5931\u6557",
+      "userSignal": "\u5df2\u505c\u6b62",
+      "apiRequest": "\u8acb\u6c42\u906d\u62d2",
+      "apiServer": "\u4f9b\u61c9\u5546\u7121\u6cd5\u4f7f\u7528",
+      "missingDep": "\u9700\u8981\u8a2d\u5b9a",
+      "missingInput": "\u7f3a\u5c11\u8f38\u5165",
+      "missingBinary": "\u7f3a\u5c11\u5de5\u5177",
+      "outputExists": "\u5df2\u5206\u6790",
+      "outputTruncated": "\u9054\u5230\u8f38\u51fa\u4e0a\u9650",
+      "unusableInput": "\u672a\u5206\u6790",
+      "unknown": "\u5931\u6557"
+    },
     "failure": {
       "stranded": "\u5206\u6790\u610f\u5916\u505c\u6b62\u3002",
       "launchFailed": "\u7121\u6cd5\u958b\u59cb\u5206\u6790\u3002{{reason}}",
@@ -327,6 +345,7 @@
       }
     },
     "diagnostic": {
+      "categoryLine": "\u985e\u5225\uff1a{{category}}",
       "unreachable": {
         "timedOut": "\u6a94\u6848\u593e\u6c92\u6709\u56de\u61c9\uff0c\u53ef\u80fd\u662f\u5df2\u4e2d\u65b7\u9023\u63a5\u7684\u78c1\u789f\u6216\u7db2\u8def\u5171\u4eab\u3002",
         "unreadable": "\u6a94\u6848\u593e\u5b58\u5728\uff0c\u4f46\u7121\u6cd5\u8b80\u53d6\u5176\u5167\u5bb9\u3002",

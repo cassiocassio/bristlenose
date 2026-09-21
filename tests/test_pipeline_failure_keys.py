@@ -197,3 +197,34 @@ def test_classifier_carries_cases_not_sentences() -> None:
         "`PipelineRunner.failureMessage(for:provider:)` for ours:\n  "
         + "\n  ".join(offenders)
     )
+@pytest.mark.parametrize("locale", _full_locales())
+def test_every_category_has_a_label(locale: str) -> None:
+    """The `Category:` line in the diagnostic popover, one noun phrase per case."""
+    data = json.loads((_LOCALES / locale / "desktop.json").read_text(encoding="utf-8"))
+    labels = data.get("pipeline", {}).get("category", {})
+    leaves = set(_leaves().values())
+    missing = sorted(leaves - set(labels))
+    assert not missing, f"{locale}: {missing} have no desktop.pipeline.category label"
+    orphans = sorted(set(labels) - leaves)
+    assert not orphans, f"{locale}: desktop.pipeline.category.{orphans} have no category"
+    assert data["pipeline"]["diagnostic"].get("categoryLine", "").count("{{category}}") == 1, (
+        f"{locale}: diagnostic.categoryLine must interpolate {{{{category}}}} exactly once"
+    )
+
+
+@pytest.mark.parametrize("locale", _full_locales())
+def test_a_declined_file_does_not_read_as_a_failure(locale: str) -> None:
+    """`unusableInput` is "Not analysed", not "Failed" — and the distinction is the point.
+
+    A file Bristlenose declined by format is not a run that broke, and the two
+    categories sit in the same `Category:` slot. `IngestOutcomeTests` asserted
+    this in English until the labels became locale values; it moved here because
+    a bare Swift `I18n()` resolves to the key rather than the copy, so the
+    assertion there would have been about the key name.
+    """
+    labels = json.loads(
+        (_LOCALES / locale / "desktop.json").read_text(encoding="utf-8")
+    )["pipeline"]["category"]
+    assert labels["unusableInput"] != labels["unknown"], (
+        f"{locale}: a declined file and a broken run read identically"
+    )

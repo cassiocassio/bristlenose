@@ -94,6 +94,18 @@ enum PipelineFailureCategory: String, Codable, Equatable {
         return leaf
     }
 
+    /// The short noun phrase this category shows beside `Category:` in the
+    /// diagnostic popover — "Out of credit", "Rate limited".
+    ///
+    /// It was `ProjectDiagnosticPopover.humanCategoryLabel`, and
+    /// `desktop/CLAUDE.md` recorded it as blocked: the same function was said to
+    /// feed the English-only "Copy error details" payload, so translating it
+    /// would have broken the paste. **That stopped being true in `11435ddd`** —
+    /// the payload prints `category.rawValue` (the wire name, `out_of_credit`),
+    /// which is what a bug report wants anyway. One production caller, one view,
+    /// no split needed.
+    var labelKey: String { "desktop.pipeline.category." + localeLeaf }
+
     /// True when `localeLeaf`'s value interpolates `{{provider}}`. The provider
     /// is captured where the run's failure is classified, not where it is drawn
     /// — by display time the user may have switched, and naming the wrong one is

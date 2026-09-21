@@ -273,6 +273,24 @@
     "projectNamePlaceholder": "\ud504\ub85c\uc81d\ud2b8 \uc774\ub984"
   },
   "pipeline": {
+    "category": {
+      "auth": "\ud0a4 \ubb38\uc81c",
+      "outOfCredit": "\ud06c\ub808\ub527 \uc18c\uc9c4",
+      "network": "\ub124\ud2b8\uc6cc\ud06c \uc624\ub958",
+      "quota": "\uc694\uccad \ud55c\ub3c4",
+      "disk": "\ub514\uc2a4\ud06c \uacf5\uac04 \ubd80\uc871",
+      "whisper": "\uc804\uc0ac \uc2e4\ud328",
+      "userSignal": "\uc911\uc9c0\ub428",
+      "apiRequest": "\uc694\uccad \uac70\ubd80\ub428",
+      "apiServer": "\uc81c\uacf5\uc790 \uc0ac\uc6a9 \ubd88\uac00",
+      "missingDep": "\uc124\uc815 \ud544\uc694",
+      "missingInput": "\uc785\ub825 \uc5c6\uc74c",
+      "missingBinary": "\ub3c4\uad6c \uc5c6\uc74c",
+      "outputExists": "\uc774\ubbf8 \ubd84\uc11d\ub428",
+      "outputTruncated": "\ucd9c\ub825 \ud55c\ub3c4 \ub3c4\ub2ec",
+      "unusableInput": "\ubd84\uc11d \uc548 \ub428",
+      "unknown": "\uc2e4\ud328"
+    },
     "failure": {
       "stranded": "\ubd84\uc11d\uc774 \uc608\uae30\uce58 \uc54a\uac8c \uc911\ub2e8\ub418\uc5c8\uc2b5\ub2c8\ub2e4.",
       "launchFailed": "\ubd84\uc11d\uc744 \uc2dc\uc791\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4. {{reason}}",
@@ -327,6 +345,7 @@
       }
     },
     "diagnostic": {
+      "categoryLine": "\ubd84\ub958: {{category}}",
       "unreachable": {
         "timedOut": "\ud3f4\ub354\uac00 \uc751\ub2f5\ud558\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4. \uc5f0\uacb0\uc774 \ub04a\uae34 \ub514\uc2a4\ud06c\ub098 \ub124\ud2b8\uc6cc\ud06c \uacf5\uc720\uc77c \uc218 \uc788\uc2b5\ub2c8\ub2e4.",
         "unreadable": "\ud3f4\ub354\ub294 \uc788\uc9c0\ub9cc \ub0b4\uc6a9\uc744 \uc77d\uc744 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.",

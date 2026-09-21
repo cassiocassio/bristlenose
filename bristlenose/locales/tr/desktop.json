@@ -290,6 +290,24 @@
     "projectNamePlaceholder": "Proje adı"
   },
   "pipeline": {
+    "category": {
+      "auth": "Anahtar sorunu",
+      "outOfCredit": "Kredi yok",
+      "network": "A\u011f hatas\u0131",
+      "quota": "H\u0131z s\u0131n\u0131r\u0131",
+      "disk": "Yeterli disk alan\u0131 yok",
+      "whisper": "Deste\u011fe d\u00f6k\u00fcm ba\u015far\u0131s\u0131z",
+      "userSignal": "Durduruldu",
+      "apiRequest": "\u0130stek reddedildi",
+      "apiServer": "Sa\u011flay\u0131c\u0131 kullan\u0131lam\u0131yor",
+      "missingDep": "Kurulum gerekiyor",
+      "missingInput": "Girdi eksik",
+      "missingBinary": "Ara\u00e7 eksik",
+      "outputExists": "Zaten analiz edildi",
+      "outputTruncated": "\u00c7\u0131kt\u0131 s\u0131n\u0131r\u0131na ula\u015f\u0131ld\u0131",
+      "unusableInput": "Analiz edilmedi",
+      "unknown": "Ba\u015far\u0131s\u0131z"
+    },
     "failure": {
       "stranded": "Analiz beklenmedik \u015fekilde durdu.",
       "launchFailed": "Analiz ba\u015flat\u0131lamad\u0131. {{reason}}",
@@ -344,6 +362,7 @@
       }
     },
     "diagnostic": {
+      "categoryLine": "Kategori: {{category}}",
       "unreachable": {
         "timedOut": "Klas\u00f6r yan\u0131t vermedi; ba\u011flant\u0131s\u0131 kesilmi\u015f bir disk veya a\u011f payla\u015f\u0131m\u0131 olabilir.",
         "unreadable": "Klas\u00f6r var, ancak i\u00e7eri\u011fi okunamad\u0131.",

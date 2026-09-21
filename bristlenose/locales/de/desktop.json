@@ -290,6 +290,24 @@
     "projectNamePlaceholder": "Projektname"
   },
   "pipeline": {
+    "category": {
+      "auth": "Problem mit Schl\u00fcssel",
+      "outOfCredit": "Kein Guthaben",
+      "network": "Netzwerkfehler",
+      "quota": "Ratenlimit",
+      "disk": "Nicht genug Speicherplatz",
+      "whisper": "Transkription fehlgeschlagen",
+      "userSignal": "Angehalten",
+      "apiRequest": "Anfrage abgelehnt",
+      "apiServer": "Anbieter nicht erreichbar",
+      "missingDep": "Einrichtung erforderlich",
+      "missingInput": "Eingabe fehlt",
+      "missingBinary": "Werkzeug fehlt",
+      "outputExists": "Bereits analysiert",
+      "outputTruncated": "Ausgabelimit erreicht",
+      "unusableInput": "Nicht analysiert",
+      "unknown": "Fehlgeschlagen"
+    },
     "failure": {
       "stranded": "Die Analyse wurde unerwartet beendet.",
       "launchFailed": "Die Analyse konnte nicht gestartet werden. {{reason}}",
@@ -344,6 +362,7 @@
       }
     },
     "diagnostic": {
+      "categoryLine": "Kategorie: {{category}}",
       "unreachable": {
         "timedOut": "Der Ordner hat nicht geantwortet \u2013 m\u00f6glicherweise ein getrenntes Laufwerk oder eine Netzwerkfreigabe.",
         "unreadable": "Der Ordner ist vorhanden, aber sein Inhalt konnte nicht gelesen werden.",

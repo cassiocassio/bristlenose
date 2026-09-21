@@ -119,7 +119,12 @@ import Foundation
         // "Ingest" is our word for it, not theirs. "Files" is already the word
         // on the empty-project pane and in the unanalysed sheet.
         #expect(PipelineSummary.BucketName.ingest.label == "Files")
-        #expect(ProjectDiagnosticPopover.humanCategoryLabel(.unusableInput) == "Not analysed")
+        // The `.unusableInput` label used to be asserted here as "Not analysed".
+        // It is a locale value now, and a bare `I18n()` resolves nothing — so
+        // asserting it in Swift would assert the key name, not the copy. The
+        // contract it was protecting (that a declined file does not read as a
+        // failure) moved to `tests/test_pipeline_failure_keys.py`, which can
+        // read all 21 locales.
     }
 
     @Test func everyBucketHasALabel() {

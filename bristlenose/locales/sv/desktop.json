@@ -961,6 +961,9 @@
     "badgeTooltip": "Agent\u00e5tkomst \u00e4r p\u00e5 f\u00f6r det h\u00e4r projektet."
   },
   "cloudImport": {
+    "signInTeams": "Logga in med Microsoft",
+    "signInMeet": "Logga in med Google",
+    "signInZoom": "Logga in med Zoom",
     "destinationNewProject": "Nytt projekt\u2026",
     "newProjectSaveMessage": "Inspelningarna du importerar kopieras till den h\u00e4r mappen.",
     "instantMeeting": "Snabbm\u00f6te",

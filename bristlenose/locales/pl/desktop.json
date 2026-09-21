@@ -1005,6 +1005,9 @@
     "badgeTooltip": "Dost\u0119p agenta jest w\u0142\u0105czony dla tego projektu."
   },
   "cloudImport": {
+    "signInTeams": "Zaloguj si\u0119 przy u\u017cyciu konta Microsoft",
+    "signInMeet": "Zaloguj si\u0119 przez Google",
+    "signInZoom": "Zaloguj si\u0119 przy u\u017cyciu konta Zoom",
     "destinationNewProject": "Nowy projekt\u2026",
     "newProjectSaveMessage": "Importowane nagrania s\u0105 kopiowane do tego folderu.",
     "instantMeeting": "Spotkanie b\u0142yskawiczne",

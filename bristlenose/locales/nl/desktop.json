@@ -961,6 +961,9 @@
     "badgeTooltip": "Agenttoegang staat aan voor dit project."
   },
   "cloudImport": {
+    "signInTeams": "Aanmelden met Microsoft",
+    "signInMeet": "Inloggen met Google",
+    "signInZoom": "Aanmelden met Zoom",
     "destinationNewProject": "Nieuw project\u2026",
     "newProjectSaveMessage": "De opnamen die je importeert worden naar deze map gekopieerd.",
     "instantMeeting": "Directe vergadering",

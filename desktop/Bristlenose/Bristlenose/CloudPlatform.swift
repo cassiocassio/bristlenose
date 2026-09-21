@@ -75,19 +75,47 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
         i18n.t("desktop.cloudImport.windowTitle", ["platform": displayName])
     }
 
-    /// The vendor's own sign-in string. **Look these up; never compose them.**
+    /// The vendor's own sign-in string. **Look these up; never compose them** —
+    /// and, as of 21 Sep 2026, they *are* looked up, in all 21 locales.
     ///
     /// Microsoft permits "Sign in with Microsoft" or bare "Sign in" and nothing
-    /// else — "Sign in *to* Microsoft" is not a permitted variant. Google
-    /// specifies "Sign in with Google" beside its unaltered mark. Both publish
-    /// localised strings, so the 21 translations are *looked up* rather than
-    /// machine-translated — the same trick as the `TCC.loctable` lift for the
-    /// macOS permission prompt, third vendor.
-    var signInTitle: String {
+    /// else; "Sign in *to* Microsoft" is not a permitted variant. Google
+    /// specifies "Sign in with Google" beside its unaltered mark. **Zoom
+    /// mandates nothing** — this line used to say all three publish localised
+    /// strings, which was true of two of them.
+    ///
+    /// Where each translation came from, because the obvious source is wrong:
+    /// Microsoft's *machine-translated* branding page renders it two different
+    /// ways on one page (de: "Bei Microsoft anmelden" in the prose, "Mit
+    /// Microsoft anmelden" on the button assets), so it is not a source. The
+    /// sources that are: the **Microsoft Terminology Collection**, which
+    /// Microsoft's own English guidance nominates — concept `45028`, term
+    /// `2539847` — covering 16 of 21; and Google's **GSI button library**,
+    /// which ships the string per locale as executable rendering code, covering
+    /// 21 of 21. The tell that these are genuine is `ru`, which renders the
+    /// company as *Майкрософт* in Cyrillic — Microsoft's real Russian
+    /// convention, and not something a translation would invent.
+    ///
+    /// The five locales Microsoft has no term for (ca, uk, da, nb, fi) take its
+    /// **short form** — "If you don't have enough space for 'Sign in with
+    /// Microsoft', it's ok to shorten it to 'Sign in'", verbatim from the same
+    /// guidance. That is a sanctioned variant, not a compromise.
+    ///
+    /// Zoom's is ours to write, so it is composed into the frame each
+    /// language's verified Microsoft string already uses — those frames are
+    /// vendor-reviewed and leave the brand uninflected, which is exactly why
+    /// substitution is safe here and is not safe for a generic noun.
+    ///
+    /// Takes `I18n` because this enum models a *platform*, not a screen, and
+    /// there is no `I18n.shared`. `windowTitle` above is the same shape;
+    /// this property being three lines below it and hardcoded was
+    /// `desktop/CLAUDE.md`'s own worked example of the rule (register row 32).
+    @MainActor
+    func signInTitle(_ i18n: I18n) -> String {
         switch self {
-        case .teams: return "Sign in with Microsoft"
-        case .meet:  return "Sign in with Google"
-        case .zoom:  return "Sign in with Zoom"
+        case .teams: return i18n.t("desktop.cloudImport.signInTeams")
+        case .meet:  return i18n.t("desktop.cloudImport.signInMeet")
+        case .zoom:  return i18n.t("desktop.cloudImport.signInZoom")
         }
     }
 

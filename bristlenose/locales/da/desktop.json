@@ -961,6 +961,9 @@
     "badgeTooltip": "Agentadgang er sl\u00e5et til for dette projekt."
   },
   "cloudImport": {
+    "signInTeams": "Log p\u00e5",
+    "signInMeet": "Log ind med Google",
+    "signInZoom": "Log ind med Zoom",
     "destinationNewProject": "Nyt projekt\u2026",
     "newProjectSaveMessage": "De optagelser, du importerer, kopieres til denne mappe.",
     "instantMeeting": "\u00d8jeblikkeligt m\u00f8de",

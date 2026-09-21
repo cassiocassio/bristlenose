@@ -192,20 +192,24 @@ struct ShippingPlatformTests {
     func parkedPlatformStaysComplete() {
         _ = CloudTransferPolicy.for(.zoom)
         #expect(!CloudPlatform.zoom.displayName.isEmpty)
-        #expect(!CloudPlatform.zoom.signInTitle.isEmpty)
-        // `windowTitle` is a lookup now, so its presence is `check-locales.py`'s
-        // job rather than this suite's. What stays here is the vocabulary the
+        // `windowTitle` and `signInTitle` are both lookups now, so their
+        // presence is `check-locales.py`'s job rather than this suite's. What stays here is the vocabulary the
         // vendor mandates, which is platform data.
         #expect(CloudPlatform.zoom.mandatesAccountNoun == false)
     }
 
+    @MainActor
     @Test("Each platform has a transfer policy and a distinct vocabulary")
     func vocabularies() {
         var titles = Set<String>()
         for platform in CloudPlatform.allCases {
             _ = CloudTransferPolicy.for(platform)
             #expect(!platform.displayName.isEmpty)
-            titles.insert(platform.signInTitle)
+            // A bare `I18n()` resolves nothing, so this collects the KEYS —
+            // which is the right layer for this assertion. That the three
+            // *values* also differ in all 21 locales is a locale-file fact and
+            // lives in `tests/test_cloud_fetch_failure_keys.py`.
+            titles.insert(platform.signInTitle(I18n()))
         }
         // Each vendor mandates its own string; a shared one would breach all
         // three sets of brand guidelines at once.

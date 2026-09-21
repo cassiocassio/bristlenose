@@ -939,6 +939,9 @@
     "badgeTooltip": "\u9019\u500b\u5c08\u6848\u5df2\u958b\u555f\u4ee3\u7406\u7a0b\u5f0f\u5b58\u53d6\u6b0a\u3002"
   },
   "cloudImport": {
+    "signInTeams": "\u4f7f\u7528 Microsoft \u5e33\u6236\u767b\u5165",
+    "signInMeet": "\u4f7f\u7528 Google \u5e33\u6236\u767b\u5165",
+    "signInZoom": "\u4f7f\u7528 Zoom \u5e33\u6236\u767b\u5165",
     "destinationNewProject": "\u65b0\u589e\u5c08\u6848\u2026",
     "newProjectSaveMessage": "\u532f\u5165\u7684\u9304\u5f71\u6703\u8907\u88fd\u5230\u9019\u500b\u6a94\u6848\u593e\u3002",
     "instantMeeting": "\u5373\u6642\u6703\u8b70",

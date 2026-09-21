@@ -961,6 +961,9 @@
     "badgeTooltip": "L'acc\u00e8s agent est activ\u00e9 pour ce projet."
   },
   "cloudImport": {
+    "signInTeams": "Se connecter avec Microsoft",
+    "signInMeet": "Se connecter avec Google",
+    "signInZoom": "Se connecter avec Zoom",
     "destinationNewProject": "Nouveau projet\u2026",
     "newProjectSaveMessage": "Les enregistrements que vous importez sont copi\u00e9s dans ce dossier.",
     "instantMeeting": "R\u00e9union instantan\u00e9e",

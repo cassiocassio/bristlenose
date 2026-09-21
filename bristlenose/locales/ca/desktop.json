@@ -961,6 +961,9 @@
     "badgeTooltip": "L'acc\u00e9s d'agent est\u00e0 activat per a aquest projecte."
   },
   "cloudImport": {
+    "signInTeams": "Inicia la sessi\u00f3",
+    "signInMeet": "Inicia la sessi\u00f3 amb Google",
+    "signInZoom": "Inicia la sessi\u00f3 amb Zoom",
     "destinationNewProject": "Projecte nou\u2026",
     "newProjectSaveMessage": "Els enregistraments que importis es copien en aquesta carpeta.",
     "instantMeeting": "Reuni\u00f3 instant\u00e0nia",

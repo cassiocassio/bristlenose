@@ -961,6 +961,9 @@
     "badgeTooltip": "Agentenzugriff ist f\u00fcr dieses Projekt aktiviert."
   },
   "cloudImport": {
+    "signInTeams": "Bei Microsoft anmelden",
+    "signInMeet": "\u00dcber Google anmelden",
+    "signInZoom": "Bei Zoom anmelden",
     "destinationNewProject": "Neues Projekt\u2026",
     "newProjectSaveMessage": "Die importierten Aufzeichnungen werden in diesen Ordner kopiert.",
     "instantMeeting": "Sofortbesprechung",

@@ -265,7 +265,7 @@ struct CloudImportWindow: View {
             Button(action: store.signIn) {
                 HStack(spacing: 8) {
                     VendorMark(platform: platform)
-                    Text(platform.signInTitle)
+                    Text(platform.signInTitle(i18n))
                 }
             }
             .controlSize(.large)

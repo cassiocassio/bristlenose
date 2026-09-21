@@ -966,6 +966,9 @@
     "badgeTooltip": "Agent Access is on for this project."
   },
   "cloudImport": {
+    "signInTeams": "Sign in with Microsoft",
+    "signInMeet": "Sign in with Google",
+    "signInZoom": "Sign in with Zoom",
     "destinationNewProject": "New Project\u2026",
     "newProjectSaveMessage": "The recordings you import are copied into this folder.",
     "instantMeeting": "Instant meeting",

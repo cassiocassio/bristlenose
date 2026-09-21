@@ -961,6 +961,9 @@
     "badgeTooltip": "L'accesso agente \u00e8 attivo per questo progetto."
   },
   "cloudImport": {
+    "signInTeams": "Accedi con Microsoft",
+    "signInMeet": "Accedi con Google",
+    "signInZoom": "Accedi con Zoom",
     "destinationNewProject": "Nuovo progetto\u2026",
     "newProjectSaveMessage": "Le registrazioni che importi vengono copiate in questa cartella.",
     "instantMeeting": "Riunione istantanea",

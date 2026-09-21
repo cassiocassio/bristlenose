@@ -103,3 +103,37 @@ def test_adapters_carry_cases_not_sentences() -> None:
         "FetchOutcome.failed takes a CloudFetchFailure, not a sentence — an English "
         "literal here renders untranslated in the row:\n  " + "\n  ".join(offenders)
     )
+
+
+_SIGN_IN_KEYS = ["signInTeams", "signInMeet", "signInZoom"]
+
+
+@pytest.mark.parametrize("locale", _full_locales())
+def test_each_vendor_signs_in_in_its_own_words(locale: str) -> None:
+    """Three sign-in buttons, three distinct strings, in every locale.
+
+    These are **vendor-mandated** and were English in all 21 until 21 Sep 2026
+    (register row 32). Microsoft permits "Sign in with Microsoft" or bare
+    "Sign in" and forbids "Sign in *to* Microsoft"; Google specifies its own
+    wording beside its unaltered mark. A shared string would breach two sets of
+    brand guidelines at once, so the distinctness is the contract — and it is a
+    *per locale* fact, which is why it cannot live in the Swift suite (a bare
+    `I18n()` there resolves to the key, not the value).
+
+    Sources, since the obvious one is wrong: Microsoft's machine-translated
+    branding page renders it two ways on a single page, so the strings came from
+    the Microsoft Terminology Collection (which Microsoft's English guidance
+    nominates) and Google's own GSI button library. Zoom mandates nothing, so
+    its string is ours, composed into each language's verified frame.
+    """
+    block = _block(locale)
+    missing = [k for k in _SIGN_IN_KEYS if not block.get(k)]
+    assert not missing, f"{locale}: {missing} absent — the button would render a raw key"
+    values = [block[k] for k in _SIGN_IN_KEYS]
+    assert len(set(values)) == len(values), (
+        f"{locale}: two vendors share a sign-in string {values} — that breaches "
+        f"both sets of brand guidelines at once."
+    )
+    assert "Sign in to Microsoft" not in block["signInTeams"], (
+        f"{locale}: Microsoft explicitly forbids the 'to' variant."
+    )

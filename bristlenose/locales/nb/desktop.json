@@ -961,6 +961,9 @@
     "badgeTooltip": "Agenttilgang er p\u00e5 for dette prosjektet."
   },
   "cloudImport": {
+    "signInTeams": "Logg p\u00e5",
+    "signInMeet": "Logg p\u00e5 med Google",
+    "signInZoom": "Logg p\u00e5 med Zoom",
     "destinationNewProject": "Nytt prosjekt\u2026",
     "newProjectSaveMessage": "Opptakene du importerer, kopieres til denne mappen.",
     "instantMeeting": "Umiddelbart m\u00f8te",

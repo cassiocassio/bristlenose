@@ -339,29 +339,8 @@
       "unknown": "Er is iets misgegaan tijdens de analyse."
     },
     "status": {
-      "stopping": "Stoppen…",
-      "starting": "Starten…",
-      "analysing": "Analyseren…",
-      "working": "Bezig…",
-      "stage": "Fase {{index}} · {{stage}}",
-      "stageShort": "Fase {{index}}",
-      "queued": "In wachtrij · {{position}}",
-      "waitingSubprocess": "Wachten tot het analyse-subproces wordt afgesloten.",
-      "resuming": "Analyse hervatten (opnieuw verbonden na herstart van de app).",
-      "startingUp": "Opstarten — modellen laden en inloggegevens valideren.",
-      "elapsed": "Verstreken: {{time}}",
-      "waitingInQueue": "Wachten tot een ander project klaar is (positie {{position}} in de wachtrij).",
-      "stop": "Stop",
       "headline": {
-        "running": "Actief",
-        "stopping": "Stoppen",
-        "queued": "In wachtrij",
         "failed": "Mislukt"
-      },
-      "help": {
-        "running": "Toon voortgang van de analyse voor {{project}}",
-        "queued": "Analyse in wachtrij voor {{project}}",
-        "failed": "Analyse mislukt voor {{project}}"
       }
     },
     "diagnostic": {

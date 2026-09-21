@@ -249,17 +249,25 @@ def test_chrome_count_four_form_locales_carry_all_forms(prefix: str, locale: str
             )
 
 
-# ── pipeline.status.* — the activity-pill / popover live status strings ──────
-# (PipelineActivityItem.swift; added in the cz-branch desktop i18n wave). Same
-# silent-failure class as the diagnostic block: a missing key renders the raw
-# dotted string in the running-analysis popover.
-_REQUIRED_STATUS_KEYS = (
-    "stopping", "starting", "analysing", "working", "stage", "stageShort",
-    "queued", "waitingSubprocess", "resuming", "startingUp", "elapsed",
-    "waitingInQueue", "stop",
-)
-_REQUIRED_STATUS_HEADLINE = ("running", "stopping", "queued", "failed")
-_REQUIRED_STATUS_HELP = ("running", "queued", "failed")
+# ── pipeline.status.* — all but one key removed, 22 Sep 2026 ──────────────
+#
+# This block guarded the activity pill and its popover — `PipelineActivityItem.
+# swift`, **deleted in `11435ddd`**. Two tests here went on requiring its 19
+# strings in all 21 locales for months afterwards, and that is the interesting
+# part: the tests are *why* nobody noticed the keys were dead. A hardcoded
+# allow-list makes a block look load-bearing, and `check-locales.py` is green
+# when a key is present whether or not anyone reads it. The orphan gate
+# (`tests/test_locale_key_readers.py`) is what finally asked the other question.
+#
+# One key survives and is read: `status.headline.failed`
+# (`ProjectDiagnosticPopover.swift:125`).
+#
+# One piece of knowledge is worth keeping from the deleted
+# `test_status_and_chrome_pipeline_agree`: that test existed because the two
+# surfaces once forked in German — "Wird gestoppt…" against "Wird angehalten…".
+# `chrome.pipeline.*` is the only surviving wording, so there is nothing left to
+# fork against; if a second live status surface is ever added, pin them together
+# again rather than rediscovering the fork.
 _PLACEHOLDER_RE = re.compile(r"\{\{(\w+)\}\}")
 
 
@@ -275,21 +283,6 @@ def _flatten_status(status: dict) -> dict:
     return out
 
 
-@pytest.mark.parametrize("locale", _ALL_LOCALES)
-def test_pipeline_status_keys_present(locale: str) -> None:
-    status = _load_desktop(locale)["pipeline"]["status"]
-    for key in _REQUIRED_STATUS_KEYS:
-        assert status.get(key), f"locale={locale} missing/empty status.{key}"
-    for key in _REQUIRED_STATUS_HEADLINE:
-        assert status.get("headline", {}).get(key), (
-            f"locale={locale} missing/empty status.headline.{key}"
-        )
-    for key in _REQUIRED_STATUS_HELP:
-        assert status.get("help", {}).get(key), (
-            f"locale={locale} missing/empty status.help.{key}"
-        )
-
-
 @pytest.mark.parametrize("locale", [loc for loc in _ALL_LOCALES if loc != "en"])
 def test_pipeline_status_placeholders_match_english(locale: str) -> None:
     # A dropped/typo'd {{placeholder}} during translation ships a literal
@@ -302,22 +295,6 @@ def test_pipeline_status_placeholders_match_english(locale: str) -> None:
         assert en_ph == loc_ph, (
             f"locale={locale} status.{key} placeholder mismatch: "
             f"en={en_ph} {locale}={loc_ph}"
-        )
-
-
-@pytest.mark.parametrize("locale", _ALL_LOCALES)
-def test_status_and_chrome_pipeline_agree(locale: str) -> None:
-    # `pipeline.status.*` (activity popover) and `chrome.pipeline.*` (sidebar
-    # row) deliberately use separate key-sets, but MUST render the same word
-    # for the states they share — else the two surfaces fork (they did once:
-    # de "Wird gestoppt…" vs "Wird angehalten…"). This pins the contract.
-    d = _load_desktop(locale)
-    status = d["pipeline"]["status"]
-    chrome = d["chrome"]["pipeline"]
-    for key in ("stopping", "analysing"):
-        assert status[key] == chrome[key], (
-            f"locale={locale} status.{key}={status[key]!r} != "
-            f"chrome.pipeline.{key}={chrome[key]!r}"
         )
 
 

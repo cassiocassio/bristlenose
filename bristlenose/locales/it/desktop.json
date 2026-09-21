@@ -339,29 +339,8 @@
       "unknown": "Si \u00e8 verificato un problema durante l'analisi."
     },
     "status": {
-      "stopping": "Interruzione…",
-      "starting": "Avvio…",
-      "analysing": "Analisi…",
-      "working": "Elaborazione…",
-      "stage": "Fase {{index}} · {{stage}}",
-      "stageShort": "Fase {{index}}",
-      "queued": "In coda · {{position}}",
-      "waitingSubprocess": "In attesa della chiusura del sottoprocesso di analisi.",
-      "resuming": "Ripresa dell'analisi (riconnessione dopo il riavvio dell'app).",
-      "startingUp": "Avvio in corso — caricamento dei modelli e convalida delle credenziali.",
-      "elapsed": "Tempo trascorso: {{time}}",
-      "waitingInQueue": "In attesa del completamento di un altro progetto (posizione {{position}} in coda).",
-      "stop": "Interrompi",
       "headline": {
-        "running": "In esecuzione",
-        "stopping": "Interruzione",
-        "queued": "In coda",
         "failed": "Non riuscito"
-      },
-      "help": {
-        "running": "Mostra l'avanzamento della pipeline per {{project}}",
-        "queued": "Esecuzione della pipeline in coda per {{project}}",
-        "failed": "Esecuzione della pipeline non riuscita per {{project}}"
       }
     },
     "diagnostic": {

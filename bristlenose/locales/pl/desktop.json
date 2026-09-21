@@ -373,29 +373,8 @@
       "unknown": "Co\u015b posz\u0142o nie tak podczas analizy."
     },
     "status": {
-      "stopping": "Zatrzymywanie…",
-      "starting": "Uruchamianie…",
-      "analysing": "Analizowanie…",
-      "working": "Praca w toku…",
-      "stage": "Etap {{index}} · {{stage}}",
-      "stageShort": "Etap {{index}}",
-      "queued": "W kolejce · {{position}}",
-      "waitingSubprocess": "Oczekiwanie na zakończenie podprocesu analizy.",
-      "resuming": "Wznawianie analizy (ponowne połączenie po restarcie aplikacji).",
-      "startingUp": "Uruchamianie — wczytywanie modeli i weryfikowanie poświadczeń.",
-      "elapsed": "Upłynęło: {{time}}",
-      "waitingInQueue": "Oczekiwanie na zakończenie innego projektu (pozycja {{position}} w kolejce).",
-      "stop": "Zatrzymaj",
       "headline": {
-        "running": "W toku",
-        "stopping": "Zatrzymywanie",
-        "queued": "W kolejce",
         "failed": "Niepowodzenie"
-      },
-      "help": {
-        "running": "Pokaż postęp analizy dla {{project}}",
-        "queued": "Analiza w kolejce dla {{project}}",
-        "failed": "Analiza nie powiodła się dla {{project}}"
       }
     },
     "diagnostic": {

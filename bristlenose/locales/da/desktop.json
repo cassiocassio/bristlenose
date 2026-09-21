@@ -339,29 +339,8 @@
       "unknown": "Noget gik galt under analysen."
     },
     "status": {
-      "stopping": "Stopper…",
-      "starting": "Starter…",
-      "analysing": "Analyserer…",
-      "working": "Arbejder…",
-      "stage": "Trin {{index}} · {{stage}}",
-      "stageShort": "Trin {{index}}",
-      "queued": "I kø · {{position}}",
-      "waitingSubprocess": "Venter på, at analyseunderprocessen afsluttes.",
-      "resuming": "Genoptager analyse (genforbundet efter genstart af appen).",
-      "startingUp": "Starter op — indlæser modeller og validerer legitimationsoplysninger.",
-      "elapsed": "Forløbet: {{time}}",
-      "waitingInQueue": "Venter på, at et andet projekt bliver færdigt (position {{position}} i køen).",
-      "stop": "Stop",
       "headline": {
-        "running": "Kører",
-        "stopping": "Stopper",
-        "queued": "I kø",
         "failed": "Mislykkedes"
-      },
-      "help": {
-        "running": "Vis analysefremgang for {{project}}",
-        "queued": "Analysekørsel sat i kø for {{project}}",
-        "failed": "Analysekørsel mislykkedes for {{project}}"
       }
     },
     "diagnostic": {

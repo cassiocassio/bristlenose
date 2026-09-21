@@ -322,29 +322,8 @@
       "unknown": "\u5206\u6790\u904e\u7a0b\u4e2d\u767c\u751f\u554f\u984c\u3002"
     },
     "status": {
-      "stopping": "正在停止…",
-      "starting": "正在啟動…",
-      "analysing": "正在分析…",
-      "working": "處理中…",
-      "stage": "第 {{index}} 階段 · {{stage}}",
-      "stageShort": "第 {{index}} 階段",
-      "queued": "已排入佇列 · {{position}}",
-      "waitingSubprocess": "正在等待分析子程序結束。",
-      "resuming": "正在繼續分析（App 重新啟動後重新連接）。",
-      "startingUp": "正在啟動 — 載入模型並驗證憑證。",
-      "elapsed": "已經過：{{time}}",
-      "waitingInQueue": "正在等待另一個專案完成（佇列中第 {{position}} 位）。",
-      "stop": "停止",
       "headline": {
-        "running": "執行中",
-        "stopping": "正在停止",
-        "queued": "已排入佇列",
         "failed": "失敗"
-      },
-      "help": {
-        "running": "顯示 {{project}} 的分析進度",
-        "queued": "{{project}} 的分析已排入佇列",
-        "failed": "{{project}} 的分析失敗"
       }
     },
     "diagnostic": {

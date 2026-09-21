@@ -45,8 +45,8 @@ before the register is consulted, so they never reach it:
 * **pseudo-keys.** `_comment_*` and `_divergent_*` are notes to maintainers, as
   `flatten()` in `check-locales.py` already has it.
 
-What is left is 152 keys, and they are not one thing either. `_KNOWN_ORPHANS`
-below carries them in 24 blocks, each with a tag and the commit that did it:
+What is left is 104 keys, and they are not one thing either. `_KNOWN_ORPHANS`
+below carries them in 22 blocks, each with a tag and the commit that did it:
 
 * `DEAD` — the reader was deleted and the key stayed. `common.help.` was 129
   of them and is **gone as of 21 Sep 2026**: `3f49d170` had retired the in-app
@@ -289,37 +289,6 @@ class _Block:
 
 
 _KNOWN_ORPHANS: dict[str, _Block] = {
-    "common.codebook.": _Block(
-        tag=DEAD,
-        why="`baa1aa0e` deleted the v1 codebook lens. The v2 navigator reuses the "
-            "block, so the live and dead keys are interleaved and only a "
-            "fully-qualified sweep separates them. `foldedSummary_one/_other` is "
-            "register item 8 — seeded into 19 locales on 21 Aug 2026 to clear the "
-            "last `check-locales.py` warning, and dead within ten days.",
-        leaves="""
-            autoCodePreserved autoCodeQuotes autoCodeStartFailed
-            browseSubtitle browseTitle codebookFramework codebookLab
-            comingSoon description errorLoading foldedSummary_one
-            foldedSummary_other frameworksHeader hide hideTitle
-            importHelp importingCodebook loadingImpact newCode
-            noQuotesTagged previouslyImported restoreAnytime
-            restoreCodebook restoreHelp restoringCodebook
-            sentimentTitle tagGroups tagsRemovedFromQuotes_one
-            tagsRemovedFromQuotes_other
-        """,  # 29
-    ),
-    "desktop.pipeline.status.": _Block(
-        tag=DEAD,
-        why="`11435ddd` removed the per-project pipeline toolbar pill. The one "
-            "survivor, `headline.failed`, is read by `ProjectDiagnosticPopover:125` — "
-            "which is why the block cannot be deleted wholesale.",
-        leaves="""
-            analysing elapsed headline.queued headline.running
-            headline.stopping help.failed help.queued help.running
-            queued resuming stage stageShort starting startingUp stop
-            stopping waitingInQueue waitingSubprocess working
-        """,  # 19
-    ),
     "desktop.pipeline.diagnostic.pill.": _Block(
         tag=RESERVED,
         why="Register item 6: `ProjectDiagnosticPopover.humanCategoryLabel` is "

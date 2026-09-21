@@ -339,29 +339,8 @@
       "unknown": "Alguna cosa ha anat malament durant l'an\u00e0lisi."
     },
     "status": {
-      "stopping": "S'està aturant…",
-      "starting": "S'està iniciant…",
-      "analysing": "S'està analitzant…",
-      "working": "S'està treballant…",
-      "stage": "Etapa {{index}} · {{stage}}",
-      "stageShort": "Etapa {{index}}",
-      "queued": "En cua · {{position}}",
-      "waitingSubprocess": "S'està esperant que finalitzi el subprocés d'anàlisi.",
-      "resuming": "S'està reprenent l'anàlisi (s'ha tornat a connectar després de reiniciar l'app).",
-      "startingUp": "S'està iniciant — s'estan carregant els models i validant les credencials.",
-      "elapsed": "Temps transcorregut: {{time}}",
-      "waitingInQueue": "S'està esperant que acabi un altre projecte (posició {{position}} a la cua).",
-      "stop": "Atura",
       "headline": {
-        "running": "En execució",
-        "stopping": "En aturada",
-        "queued": "En cua",
         "failed": "Execució fallida"
-      },
-      "help": {
-        "running": "Mostra el progrés del processament de {{project}}",
-        "queued": "Execució en cua per a {{project}}",
-        "failed": "L'execució ha fallat per a {{project}}"
       }
     },
     "diagnostic": {

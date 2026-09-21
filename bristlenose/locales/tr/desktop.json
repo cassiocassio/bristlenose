@@ -339,29 +339,8 @@
       "unknown": "Analiz s\u0131ras\u0131nda bir sorun olu\u015ftu."
     },
     "status": {
-      "stopping": "Durduruluyor…",
-      "starting": "Başlatılıyor…",
-      "analysing": "Analiz ediliyor…",
-      "working": "Çalışıyor…",
-      "stage": "Aşama {{index}} · {{stage}}",
-      "stageShort": "Aşama {{index}}",
-      "queued": "Kuyrukta · {{position}}",
-      "waitingSubprocess": "Analiz alt sürecinin çıkması bekleniyor.",
-      "resuming": "Analiz sürdürülüyor (uygulama yeniden başlatıldıktan sonra yeniden bağlandı).",
-      "startingUp": "Başlatılıyor — modeller yükleniyor ve kimlik bilgileri doğrulanıyor.",
-      "elapsed": "Geçen süre: {{time}}",
-      "waitingInQueue": "Başka bir projenin bitmesi bekleniyor (kuyrukta {{position}}. sırada).",
-      "stop": "Durdur",
       "headline": {
-        "running": "Çalışıyor",
-        "stopping": "Durduruluyor",
-        "queued": "Kuyrukta",
         "failed": "Başarısız"
-      },
-      "help": {
-        "running": "{{project}} için işlem hattı ilerlemesini göster",
-        "queued": "{{project}} için işlem hattı çalıştırması kuyruğa alındı",
-        "failed": "{{project}} için işlem hattı çalıştırması başarısız oldu"
       }
     },
     "diagnostic": {

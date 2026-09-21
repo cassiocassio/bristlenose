@@ -339,29 +339,8 @@
       "unknown": "Analyysin aikana tapahtui virhe."
     },
     "status": {
-      "stopping": "Pysäytetään…",
-      "starting": "Käynnistetään…",
-      "analysing": "Analysoidaan…",
-      "working": "Työstetään…",
-      "stage": "Vaihe {{index}} · {{stage}}",
-      "stageShort": "Vaihe {{index}}",
-      "queued": "Jonossa · {{position}}",
-      "waitingSubprocess": "Odotetaan analyysin aliprosessin päättymistä.",
-      "resuming": "Jatketaan analyysia (yhteys muodostettu uudelleen sovelluksen uudelleenkäynnistyksen jälkeen).",
-      "startingUp": "Käynnistetään — ladataan malleja ja vahvistetaan tunnistetietoja.",
-      "elapsed": "Kulunut: {{time}}",
-      "waitingInQueue": "Odotetaan toisen projektin valmistumista (sija {{position}} jonossa).",
-      "stop": "Pysäytä",
       "headline": {
-        "running": "Käynnissä",
-        "stopping": "Pysäytetään",
-        "queued": "Jonossa",
         "failed": "Epäonnistui"
-      },
-      "help": {
-        "running": "Näytä analyysin edistyminen projektille {{project}}",
-        "queued": "Analyysiajo jonossa projektille {{project}}",
-        "failed": "Analyysiajo epäonnistui projektille {{project}}"
       }
     },
     "diagnostic": {

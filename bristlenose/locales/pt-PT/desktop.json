@@ -339,29 +339,8 @@
       "unknown": "Algo correu mal durante a an\u00e1lise."
     },
     "status": {
-      "stopping": "A parar…",
-      "starting": "A iniciar…",
-      "analysing": "A analisar…",
-      "working": "A trabalhar…",
-      "stage": "Etapa {{index}} · {{stage}}",
-      "stageShort": "Etapa {{index}}",
-      "queued": "Em fila · {{position}}",
-      "waitingSubprocess": "A aguardar que o subprocesso de análise termine.",
-      "resuming": "A retomar a análise (reconectado após reinício da aplicação).",
-      "startingUp": "A iniciar — a carregar modelos e a validar credenciais.",
-      "elapsed": "Decorrido: {{time}}",
-      "waitingInQueue": "A aguardar que outro projeto termine (posição {{position}} na fila).",
-      "stop": "Parar",
       "headline": {
-        "running": "Em execução",
-        "stopping": "A parar",
-        "queued": "Em fila",
         "failed": "Falhou"
-      },
-      "help": {
-        "running": "Mostrar progresso do pipeline de {{project}}",
-        "queued": "Execução do pipeline em fila para {{project}}",
-        "failed": "Execução do pipeline falhou para {{project}}"
       }
     },
     "diagnostic": {

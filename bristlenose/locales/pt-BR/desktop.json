@@ -339,29 +339,8 @@
       "unknown": "Algo deu errado durante a an\u00e1lise."
     },
     "status": {
-      "stopping": "Parando…",
-      "starting": "Iniciando…",
-      "analysing": "Analisando…",
-      "working": "Trabalhando…",
-      "stage": "Etapa {{index}} · {{stage}}",
-      "stageShort": "Etapa {{index}}",
-      "queued": "Na fila · {{position}}",
-      "waitingSubprocess": "Aguardando o subprocesso de análise encerrar.",
-      "resuming": "Retomando análise (reconectado após reinício do aplicativo).",
-      "startingUp": "Iniciando — carregando modelos e validando credenciais.",
-      "elapsed": "Decorrido: {{time}}",
-      "waitingInQueue": "Aguardando outro projeto terminar (posição {{position}} na fila).",
-      "stop": "Parar",
       "headline": {
-        "running": "Executando",
-        "stopping": "Parando",
-        "queued": "Na fila",
         "failed": "Falhou"
-      },
-      "help": {
-        "running": "Mostrar progresso do pipeline de {{project}}",
-        "queued": "Execução do pipeline na fila para {{project}}",
-        "failed": "Execução do pipeline falhou para {{project}}"
       }
     },
     "diagnostic": {

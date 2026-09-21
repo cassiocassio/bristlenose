@@ -339,29 +339,8 @@
       "unknown": "N\u00e5got gick fel under analysen."
     },
     "status": {
-      "stopping": "Stoppar…",
-      "starting": "Startar…",
-      "analysing": "Analyserar…",
-      "working": "Arbetar…",
-      "stage": "Steg {{index}} · {{stage}}",
-      "stageShort": "Steg {{index}}",
-      "queued": "I kö · {{position}}",
-      "waitingSubprocess": "Väntar på att analysens delprocess ska avslutas.",
-      "resuming": "Återupptar analysen (återansluten efter omstart av appen).",
-      "startingUp": "Startar – läser in modeller och validerar autentiseringsuppgifter.",
-      "elapsed": "Förlupen tid: {{time}}",
-      "waitingInQueue": "Väntar på att ett annat projekt ska bli klart (plats {{position}} i kön).",
-      "stop": "Stoppa",
       "headline": {
-        "running": "Körs",
-        "stopping": "Stoppar",
-        "queued": "I kö",
         "failed": "Misslyckades"
-      },
-      "help": {
-        "running": "Visa körningsförlopp för {{project}}",
-        "queued": "Körning i kö för {{project}}",
-        "failed": "Körningen misslyckades för {{project}}"
       }
     },
     "diagnostic": {

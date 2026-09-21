@@ -372,29 +372,8 @@
       "unknown": "P\u0159i anal\u00fdze se n\u011bco pokazilo."
     },
     "status": {
-      "stopping": "Zastavování…",
-      "starting": "Spouštění…",
-      "analysing": "Analýza…",
-      "working": "Zpracování…",
-      "stage": "Fáze {{index}} · {{stage}}",
-      "stageShort": "Fáze {{index}}",
-      "queued": "Ve frontě · {{position}}",
-      "waitingSubprocess": "Čekání na ukončení podprocesu analýzy.",
-      "resuming": "Obnovování analýzy (znovu připojeno po restartu aplikace).",
-      "startingUp": "Spouštění — načítání modelů a ověřování přihlašovacích údajů.",
-      "elapsed": "Uplynulo: {{time}}",
-      "waitingInQueue": "Čekání na dokončení jiného projektu (pozice {{position}} ve frontě).",
-      "stop": "Zastavit",
       "headline": {
-        "running": "Probíhá",
-        "stopping": "Zastavování",
-        "queued": "Ve frontě",
         "failed": "Selhalo"
-      },
-      "help": {
-        "running": "Zobrazit průběh zpracování pro {{project}}",
-        "queued": "Zpracování ve frontě pro {{project}}",
-        "failed": "Zpracování pro {{project}} selhalo"
       }
     },
     "diagnostic": {

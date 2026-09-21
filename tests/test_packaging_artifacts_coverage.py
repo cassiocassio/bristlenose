@@ -132,3 +132,55 @@ def test_server_runtime_asset_dirs_are_packaged(asset_dir: str, reader: str) -> 
         f"{asset_dir}/ is not covered by [tool.hatch.build] artifacts, so it "
         f"ships in no wheel or sdist — but {reader} reads it at runtime."
     )
+
+
+class TestSpecHiddenImportsResolve:
+    """Every `bristlenose.*` hidden import in the sidecar spec must exist.
+
+    PyInstaller logs a missing hidden import as ``ERROR: Hidden import 'x' not
+    found`` and **keeps going** — the bundle builds, the build script reports
+    success, and the module is simply absent. It is listed as a hidden import
+    precisely because static analysis cannot see it (a deferred import inside a
+    function), so nothing else will pull it in either. The failure surfaces at
+    runtime, in the app, as an ImportError the researcher sees.
+
+    Found 21 Sep 2026: the Analysis→Signals rename moved
+    ``bristlenose.analysis`` to ``bristlenose.signals`` and the sweep covered
+    ``.py/.md/.json/.toml/.cfg`` but not ``.spec``, so all five entries dangled.
+    The release's own build-dmg log carried five ERROR lines and exited 0 on
+    that step. Nothing in the repo read them.
+    """
+
+    def test_every_bristlenose_hidden_import_exists(self) -> None:
+        import ast
+        import importlib.util
+
+        spec_src = (REPO_ROOT / "desktop" / "bristlenose-sidecar.spec").read_text(encoding="utf-8")
+        names: list[str] = []
+        for node in ast.walk(ast.parse(spec_src)):
+            if isinstance(node, ast.keyword) and node.arg == "hiddenimports":
+                for elt in getattr(node.value, "elts", []):
+                    if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                        names.append(elt.value)
+        # Written by build-sidecar.sh:259 and removed by its EXIT trap, so it is
+        # correctly absent from a source tree and correctly gitignored. The only
+        # entry here that is generated rather than committed.
+        generated = {"bristlenose._build_info"}
+
+        ours = [n for n in names if n.startswith("bristlenose") and n not in generated]
+        assert ours, "parsed no bristlenose hidden imports — the spec's shape changed"
+
+        def resolves(name: str) -> bool:
+            # find_spec RAISES when a parent package is missing rather than
+            # returning None, which is the exact case this test exists for.
+            try:
+                return importlib.util.find_spec(name) is not None
+            except (ImportError, ModuleNotFoundError, ValueError):
+                return False
+
+        missing = [n for n in ours if not resolves(n)]
+        assert not missing, (
+            f"hidden import(s) named in the spec do not exist: {missing}. "
+            "PyInstaller logs these as ERROR and builds anyway, so the module "
+            "is silently absent from the sidecar."
+        )

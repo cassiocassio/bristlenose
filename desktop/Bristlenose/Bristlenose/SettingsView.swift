@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import Settings
 import SwiftUI
 
@@ -61,7 +62,82 @@ final class SettingsWindow {
     private var serveManager: ServeManager? { serveFleet?.frontedOrIdle }
     var projectIndex: ProjectIndex?
 
-    private lazy var controller: SettingsWindowController = {
+    /// Built on first open, and **rebuilt when the UI language changes**.
+    ///
+    /// This was `private lazy var controller`, built once per process. The pane
+    /// bodies below hold `i18n` as an `@EnvironmentObject` and re-render on a
+    /// locale change; a `PkgSettings.Pane`'s `title` is a plain `String`,
+    /// resolved when the pane is constructed, and cannot. So the six toolbar
+    /// labels — and the window title, which the package derives from the
+    /// selected pane — stayed frozen in whatever language was active the first
+    /// time Settings was opened.
+    ///
+    /// **That is not an edge case: the language picker lives in this window.**
+    /// The only way to change language is to open Settings (resolving the
+    /// titles at the old locale) and then switch, so every user who changed
+    /// language saw English tabs over translated content for the rest of the
+    /// session, in every locale. Found on screen (a Polish screenshot,
+    /// 21 Sep 2026), and findable no other way — the key is present, the value
+    /// is correctly translated, `i18n.t` is called, and `check-locales.py` is
+    /// green. `docs/i18n-defects.md` calls this failure class 6.
+    ///
+    /// Note the sibling trap the MCP Agents pane already documents below: that
+    /// closure "runs ONCE, so anything resolved in it is pinned for the
+    /// process". `serveManager` was fixed for exactly this reason. The titles
+    /// have the same shape and were missed.
+    private var builtController: SettingsWindowController?
+
+    /// Where to put the user back after a locale rebuild. Nil when the window
+    /// was opened with `show()` rather than a deep link — the package restores
+    /// its own last-used tab in that case, which is where they are.
+    private var lastShownPane: PkgSettings.PaneIdentifier?
+
+    /// Live once the controller exists; `I18n.locale` is `@Published` and
+    /// `AppearanceSettingsView` drives it through `setLocale`.
+    private var localeObservation: AnyCancellable?
+
+    private var controller: SettingsWindowController {
+        if let built = builtController { return built }
+        let made = makeController()
+        builtController = made
+        observeLocale()
+        return made
+    }
+
+    /// Rebuild on the next locale change, restoring visibility and pane.
+    ///
+    /// `dropFirst()` because `@Published` publishes the current value on
+    /// subscribe, and subscribing happens during the first build — without it
+    /// the controller would tear itself down the moment it was created.
+    private func observeLocale() {
+        guard localeObservation == nil, let i18n else { return }
+        localeObservation = i18n.$locale
+            .dropFirst()
+            .removeDuplicates()
+            .sink { [weak self] _ in
+                // Hop a tick before tearing down. The rebuild cancels this very
+                // subscription, and it runs inside the picker's own change
+                // handler — doing both on the current stack means cancelling a
+                // Combine subscription from within its own `sink` and closing an
+                // NSWindow mid-event. Neither is worth the risk for a rare,
+                // deliberate action.
+                DispatchQueue.main.async { self?.rebuildForLocaleChange() }
+            }
+    }
+
+    private func rebuildForLocaleChange() {
+        guard let existing = builtController else { return }
+        let wasVisible = existing.window?.isVisible ?? false
+        existing.window?.close()
+        builtController = nil
+        localeObservation = nil
+        guard wasVisible else { return }
+        // Reopening is what re-resolves the titles. A closed window needs
+        // nothing — the next `show()` builds fresh.
+        if let pane = lastShownPane { show(pane: pane) } else { show() }
+    }
+
+    private func makeController() -> SettingsWindowController {
         let i18n = self.i18n ?? I18n()
         return SettingsWindowController(
             panes: [
@@ -156,7 +232,7 @@ final class SettingsWindow {
             style: .toolbarItems,
             animated: true
         )
-    }()
+    }
 
     /// Re-fit the window to the pane's current content height.
     ///
@@ -247,6 +323,7 @@ final class SettingsWindow {
     /// Open the Settings window on a specific pane (deep-link).
     func show(pane: PkgSettings.PaneIdentifier) {
         applyAppearance()
+        lastShownPane = pane
         controller.show(pane: pane)
     }
 

@@ -186,10 +186,20 @@ were wrong in ways that change the English:
 2. **Sentiment casing.** `enums:sentiment.*` is capitalised; `SentimentFanView`
    and the signal card draw lowercase. Adopting the keys changes both surfaces.
 
-**Two class-A defects already exist in English**, found while building this
-table, and the pass will surface them either way: the intensity tooltip says
-`(0–3)` where the shipped string says `(1–3)`, and the Miro sticky says
-`2 quote(s)` where the exporter writes `2 quotes` via `count_noun`.
+**Two class-A defects already existed in English** — found while building this
+table, and **fixed 21 Sep 2026** rather than carried into the pass. The intensity
+tooltip said `(0–3)`; intensity is 1–3 (`models.py`: *1=mild, 2=moderate,
+3=strong*, and the quote-extraction prompt says the same), so the shipped string
+was right and the picture was wrong. The Miro sticky said `2 quote(s)`, which
+`tests/test_miro_board.py::test_header_count_is_singular_or_plural_never_parenthesised`
+exists specifically to stop the exporter producing — the illustration was
+depicting the one output the product is tested never to emit. The source mockup
+carried the same intensity error twice and was corrected with it, since that is
+where a future port would pick it up again.
+
+Both were literal strings, not keys. They become key lookups in this pass; the
+fix was to make the English true first, so the pass is not translating a
+falsehood into twenty languages.
 
 **The gate: extend the existing test, do not build a sibling.**
 `tests/test_welcome_locale_keys.py` already scans `WelcomeIllustrations.swift`

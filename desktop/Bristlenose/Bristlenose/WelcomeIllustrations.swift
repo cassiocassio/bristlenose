@@ -923,7 +923,7 @@ enum WelcomeIllustrationHTML {
                 <span class="metric-label" title="Agreement — effective number of voices (Simpson's diversity)">Agreement</span>
                 <span class="metric-value" data-mv="agree"></span>
                 <span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" data-abar></span></span></span>
-                <span class="metric-label" title="Mean emotional intensity (0–3)">Intensity</span>
+                <span class="metric-label" title="Mean emotional intensity (1–3)">Intensity</span>
                 <span class="metric-value" data-mv="intensity"></span>
                 <span class="metric-viz" data-dots></span>
               </div>
@@ -1808,7 +1808,7 @@ enum WelcomeIllustrationHTML {
         </style></head>
         <body>
           <div class="board" id="board">
-            <div class="sticky pink"><div class="t1">Homepage</div><div class="t2">2 quote(s)</div></div>
+            <div class="sticky pink"><div class="t1">Homepage</div><div class="t2">2 quotes</div></div>
             <div class="sticky y1">“I’ve got these…<br>categorizations<br>that I can go to<br>but… that’s<br>probably…<br>quite busy.<br><span class="attr">— P1 · 8:27</span></div>
             <div class="sticky y2">“The obvious<br>thing to pick<br>here is<br>kitchenware<br>and tableware.”<br><span class="attr">— P1 · 9:10</span></div>
           </div>

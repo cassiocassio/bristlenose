@@ -377,7 +377,24 @@ struct EmergentThemesView: View {
 
     var body: some View {
         let still = reduceMotion || !active   // baton: animate only while this cell holds it
-        return IllustrationWebView(html: WelcomeIllustrationHTML.emergentThemes(dark: scheme == .dark, reduce: still))
+        // Resolved here, not in the builder. Still English literals: this change
+        // is the *mechanism*, and is deliberately invisible in every language
+        // until the content pass gives these keys
+        // (`docs/design-i18n.md` §"Examples, mockups and illustrations").
+        //
+        // Classes, per those rules: the two `name`s are **generated** text —
+        // theme titles, whose output language is currently undefined — and the
+        // eight words are **theirs**, participant speech.
+        let strings = [
+            "a.name": "How to begin unclear",
+            "a.w0": "\u{201C}where do I start?\u{201D}", "a.w1": "confusing",
+            "a.w2": "too many steps", "a.w3": "I gave up",
+            "b.name": "Intuitive",
+            "b.w0": "\u{201C}found it fast\u{201D}", "b.w1": "really clear",
+            "b.w2": "one tap", "b.w3": "obvious",
+        ]
+        return IllustrationWebView(html: WelcomeIllustrationHTML.emergentThemes(
+            dark: scheme == .dark, reduce: still, strings: strings))
             .id("themes-\(scheme)-\(still)-\(i18n.locale)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
@@ -852,6 +869,51 @@ struct MiroIllustrationView: View {
 
 enum WelcomeIllustrationHTML {
 
+    // MARK: - The one escape site
+
+    /// Embed an illustration's user-visible strings as a single JSON blob.
+    ///
+    /// **Why one blob and not interpolation.** A string reaching this HTML has
+    /// four different escapes waiting for it, and they disagree: a JS string
+    /// literal wants JSON encoding, an HTML text node wants entity encoding
+    /// (JSON encoding would inject literal quote marks), an attribute wants both
+    /// plus the quote, and anything concatenated into `innerHTML` inside the
+    /// script is a fourth that the first three do not cover. Nine templates
+    /// times ~57 strings is not a set of decisions worth making individually.
+    ///
+    /// So the strings cross the boundary exactly once, as JSON, and are read
+    /// back through `textContent` — which parses nothing. No fragment is ever
+    /// concatenated into markup, so there is no injection surface to audit.
+    ///
+    /// **`<` `>` `&` are escaped, and that is not belt-and-braces.** A `</script>`
+    /// inside any value closes the block and everything after it is markup. The
+    /// root `CLAUDE.md` records this exact trap from the HTML export, where the
+    /// long-standing belief that `ensure_ascii` handles it turned out to be
+    /// false: those three are ASCII and pass through untouched.
+    ///
+    /// Sorted keys so the HTML is byte-stable for a given input — otherwise the
+    /// `.id` changes on nothing and the webview reloads at random.
+    static func stringsBlock(_ strings: [String: String], id: String = "bn-strings") -> String {
+        let json: String
+        if let data = try? JSONSerialization.data(withJSONObject: strings, options: [.sortedKeys]),
+           let text = String(data: data, encoding: .utf8) {
+            json = text
+                .replacingOccurrences(of: "<", with: "\\u003c")
+                .replacingOccurrences(of: ">", with: "\\u003e")
+                .replacingOccurrences(of: "&", with: "\\u0026")
+        } else {
+            // Unserialisable input cannot happen for [String: String], but an
+            // empty table degrades to an illustration with no words rather than
+            // to broken markup.
+            json = "{}"
+        }
+        return """
+        <script id="\(id)" type="application/json">\(json)</script>
+        <script>var S=JSON.parse(document.getElementById("\(id)").textContent);</script>
+        """
+    }
+
+
     static func quote(dark: Bool, reduce: Bool) -> String {
         let kind = WelcomeIllustration.quote
         return """
@@ -1063,7 +1125,17 @@ enum WelcomeIllustrationHTML {
         """
     }
 
-    static func emergentThemes(dark: Bool, reduce: Bool) -> String {
+    /// The themes illustration.
+    ///
+    /// `strings` is resolved by the view and passed in — the builder never sees
+    /// `I18n`. Making it `@MainActor` to look a key up would cost the static its
+    /// testability and would resolve the words at build time, which is the
+    /// freezing this file spent 21 Sep 2026 undoing elsewhere.
+    ///
+    /// Keys: `a.name`, `a.w0`…`a.w3`, `b.name`, `b.w0`…`b.w3`. Flat rather than
+    /// nested so the table stays `[String: String]` and a gate can ask whether
+    /// every key the JS reads is present.
+    static func emergentThemes(dark: Bool, reduce: Bool, strings: [String: String]) -> String {
         let kind = WelcomeIllustration.emergentThemes
         return """
         <!doctype html><html data-appearance="\(dark ? "dark" : "light")" data-reduce="\(reduce ? "1" : "0")">
@@ -1078,17 +1150,20 @@ enum WelcomeIllustrationHTML {
           .tl.on{ opacity:1; }
         </style></head>
         <body>
+        \(stringsBlock(strings))
         <script>
           var R = document.documentElement.getAttribute("data-reduce")==="1" || matchMedia("(prefers-reduced-motion:reduce)").matches;
           var PACE=\(WelcomeTempo.jsStretch(for: kind)), LEAD=\(WelcomeTempo.jsLeadMs);
-          var SH={ A:{ name:"How to begin unclear", words:["“where do I start?”","confusing","too many steps","I gave up"] },
-                   B:{ name:"Intuitive",            words:["“found it fast”","really clear","one tap","obvious"] } };
+          var SH={ A:{ name:S["a.name"], words:[S["a.w0"],S["a.w1"],S["a.w2"],S["a.w3"]] },
+                   B:{ name:S["b.name"], words:[S["b.w0"],S["b.w1"],S["b.w2"],S["b.w3"]] } };
           var host=document.body, fishes=[], labels={};
           ["A","B"].forEach(function(key){ SH[key].words.forEach(function(txt){
             var el=document.createElement("span"); el.className="fish"; el.textContent=txt; host.appendChild(el);
             fishes.push({ el:el, key:key, phase:Math.random()*6.28, freq:(0.6+Math.random()*0.6)/PACE, amp:8+Math.random()*6 });
           }); });
-          ["A","B"].forEach(function(key){ var l=document.createElement("div"); l.className="tl"; l.innerHTML='<div class="n">'+SH[key].name+'</div>'; host.appendChild(l); labels[key]=l; });
+          ["A","B"].forEach(function(key){ var l=document.createElement("div"); l.className="tl";
+            var n=document.createElement("div"); n.className="n"; n.textContent=SH[key].name;  // textContent, not innerHTML: the fourth escape sink
+            l.appendChild(n); host.appendChild(l); labels[key]=l; });
           function homes(W,H){ var cx=W/2, cy=H/2;
             var flock=fishes.map(function(f,i){ return { x:cx+Math.cos(i*1.7)*44, y:cy+Math.sin(i*2.3)*28 }; });
             var split=fishes.map(function(f){ var g=SH[f.key].words, idx=g.indexOf(f.el.textContent), n=g.length;

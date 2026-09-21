@@ -526,6 +526,31 @@ export function useKeyboardShortcuts({
         }
       }
 
+      // z — focus mode (Quotes and Signals lenses)
+      //
+      // Sits ABOVE the Quotes-lens gate below because it is live on Signals
+      // too. Needs no focused or selected quote (it's a view state, not a
+      // quote mutation), but does need a route guard the sibling bare keys
+      // don't:
+      //
+      // 1. Modifiers, via the shared `bare` predicate — ⌘Z is Undo, and the
+      //    report has inline quote/heading/name editing. This was the first
+      //    handler to need the guard, and for a while the only one with it.
+      // 2. Route. The recede transform is defined for the Quotes and Signals
+      //    lenses (templates/focus-mode.css); the native View-menu twin dims
+      //    elsewhere, and the two must agree or the menu says "unavailable"
+      //    while the key still works.
+      if (key === "z" && bare) {
+        if (
+          pathMatches(locationRef.current.pathname, "/report/quotes") ||
+          pathMatches(locationRef.current.pathname, "/report/signals")
+        ) {
+          e.preventDefault();
+          toggleFocusMode();
+          return;
+        }
+      }
+
       // / — focus search
       if (key === "/" && bare) {
         e.preventDefault();
@@ -617,25 +642,6 @@ export function useKeyboardShortcuts({
         if (selectedIdsRef.current.size > 0 || focusedIdRef.current) {
           e.preventDefault();
           handleStar();
-          return;
-        }
-      }
-
-      // z — focus mode (quotes lens only)
-      //
-      // Needs no focused or selected quote (it's a view state, not a quote
-      // mutation), but does need a route guard the sibling bare keys don't:
-      //
-      // 1. Modifiers, via the shared `bare` predicate — ⌘Z is Undo, and the
-      //    report has inline quote/heading/name editing. This was the first
-      //    handler to need the guard, and for a while the only one with it.
-      // 2. Route. The recede transform is defined for quote cards; the native
-      //    View-menu twin dims off this lens, and the two must agree or the
-      //    menu says "unavailable" while the key still works.
-      if (key === "z" && bare) {
-        if (pathMatches(locationRef.current.pathname, "/report/quotes")) {
-          e.preventDefault();
-          toggleFocusMode();
           return;
         }
       }

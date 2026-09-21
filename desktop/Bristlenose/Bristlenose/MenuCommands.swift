@@ -805,6 +805,11 @@ private struct FindMenuContent: View {
 // MARK: - View menu
 
 private struct ViewMenuContent: View {
+    /// The lenses on which View ▸ Focus Mode is live. Each has a recede
+    /// transform in `templates/focus-mode.css`; the bare `z` route gate in
+    /// `useKeyboardShortcuts.ts` lists the same lenses, and the two must agree.
+    static let focusModeTabs: Set<Tab> = [.quotes, .signals]
+
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
     @FocusedValue(\.windowCommands) private var windowCommands
@@ -1022,16 +1027,18 @@ private struct ViewMenuContent: View {
         // radio pair above is the only item here carrying one. See
         // docs/design-focus-mode.md § Label and shortcut.
         //
-        // Quotes-scoped like the pair above: the recede transform is defined for
-        // quote cards only, and a live-but-inert menu item is worse than a dimmed
-        // one. Un-dimming later, once the other lenses have a defined transform,
-        // is a free upgrade.
+        // Live on the lenses that define a recede transform — Quotes and, since
+        // docs/design-focus-mode-signals.md, Signals — and dimmed elsewhere: a
+        // live-but-inert menu item is worse than a dimmed one. Must agree with
+        // the bare `z` route gate in useKeyboardShortcuts.ts, or the menu says
+        // "unavailable" while the key still works. Adding a lens is a change to
+        // both lists.
         Toggle(i18n.t("desktop.menu.view.focusMode"), isOn: Binding(
             get: { bridgeHandler.focusModeActive },
             set: { _ in bridgeHandler.menuAction("focusMode") }
         ))
         .keyboardShortcut("f", modifiers: [.command, .option])
-        .disabled(bridgeHandler.activeTab != .quotes)
+        .disabled(!(bridgeHandler.activeTab.map(Self.focusModeTabs.contains) ?? false))
 
         Divider()
 

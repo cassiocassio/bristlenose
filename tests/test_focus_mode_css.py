@@ -362,3 +362,117 @@ class TestPrintRestoresTheArtefact:
             "the starred edge from the printout. Offending selector(s):\n  "
             + "\n  ".join(offenders)
         )
+
+
+class TestSignalsLens:
+    """docs/design-focus-mode-signals.md — the same two axes on a second card.
+
+    Same discipline as above: the guards here are the SILENT failures. Which
+    elements recede and at what value is taste, tuned in the mockup, and not
+    pinned.
+    """
+
+    def test_signal_card_dissolve_excludes_selection(self, css: str) -> None:
+        """`.signal-card.bn-selected` is the inspector-pointed card and expresses
+        itself through `background` — the property the dissolve sets. Drop the
+        guard and the blue wash silently vanishes in Focus."""
+        body = _strip_comments(css)
+        offenders = [
+            selector.strip()
+            for selector, block in re.findall(r"([^{}]+)\{([^{}]*)\}", body)
+            if ".bn-focus-mode" in selector
+            and "signal-card" in _positive(selector)
+            and re.search(r"\bbackground\s*:", block)
+            and ":not(.bn-selected)" not in selector
+        ]
+        assert not offenders, (
+            "Focus Mode sets `background` on a signal card without excluding "
+            "`.bn-selected`, so it wins on source order and blinds the "
+            "inspector's pointer. Offending selector(s):\n  " + "\n  ".join(offenders)
+        )
+
+    def test_timecode_ghost_ties_the_sequence_rule(self, css: str) -> None:
+        """The half-state this section replaced, kept out.
+
+        `.signal-card-quotes blockquote.seq-middle .timecode` holds continuation
+        timecodes at 0.6 (organisms/signals.css) at (0,3,1). A ghost rule written
+        at the quote-card shape — `.bn-focus-mode blockquote .timecode`, (0,2,1)
+        — loses to it, and a run's first timecode ghosts while its continuations
+        stay brighter. The Signals ghost must carry `.signal-card-quotes` to tie
+        and win on source order.
+        """
+        body = _strip_comments(css)
+        ghost = [
+            selector.strip()
+            for selector, block in re.findall(r"([^{}]+)\{([^{}]*)\}", body)
+            if ".bn-focus-mode" in selector
+            and ".signal-card-quotes" in _positive(selector)
+            and ".timecode" in _positive(selector)
+            and ":hover" not in selector
+            and ":focus-within" not in selector
+            and "bn-focus-ghost-opacity" in block
+        ]
+        assert ghost, (
+            "No Signals-scoped timecode ghost. Without a `.signal-card-quotes … "
+            ".timecode` rule at (0,3,1), the organism's `seq-middle` 0.6 rule "
+            "out-specifies the quote-card ghost and continuation timecodes end up "
+            "brighter than the run's first."
+        )
+
+    def test_reads_only_the_shared_knobs(self, css: str) -> None:
+        """One set of knobs for both lenses. A Signals rule declaring its own
+        opacity, duration or mix forks the tuning — change the token and one
+        lens moves while the other doesn't.
+
+        The single permitted literal is the 0.6 continuation restore, which is
+        the sequence treatment's own number, quoted.
+        """
+        body = _strip_comments(css)
+        start = body.find(".signal-card")
+        assert start > 0, "no Signals rules in focus-mode.css"
+        signals = body[start:]
+        # Strip the media blocks — print restores to full presence by
+        # definition, and reduce-motion zeroes durations.
+        signals = re.sub(r"@media[^{]*\{.*", "", signals, flags=re.DOTALL)
+        offenders = [
+            (selector.strip(), value.strip())
+            for selector, block in re.findall(r"([^{}]+)\{([^{}]*)\}", signals)
+            for prop, value in re.findall(r"([\w-]+)\s*:\s*([^;]+);", block)
+            if prop in ("opacity", "transition", "border-color", "background")
+            and "var(--bn-focus-" not in value
+            and value not in ("1", "transparent", "0.6")
+        ]
+        assert not offenders, (
+            "Signals-lens rule(s) carry a literal where the shared Focus knob "
+            "belongs:\n  " + "\n  ".join(f"{s} → {v}" for s, v in offenders)
+        )
+
+    def test_print_restores_every_signals_recede(self, css: str) -> None:
+        """Print always gets the full artefact. Every property the Signals rules
+        recede must be restored in the print block — a class added to the
+        recede set and forgotten here prints ghosted."""
+        body = _strip_comments(css)
+        print_block = re.search(r"@media\s*print\s*\{(.*?)\n\}", body, re.DOTALL)
+        assert print_block, "No @media print block in focus-mode.css"
+        screen = re.sub(r"@media[^{]*\{.*", "", body, flags=re.DOTALL)
+
+        def receded(scope: str) -> set[str]:
+            found: set[str] = set()
+            for selector, block in re.findall(r"([^{}]+)\{([^{}]*)\}", scope):
+                if ".bn-focus-mode" not in selector or "signal" not in selector:
+                    continue
+                if ":hover" in selector or ":focus-within" in selector:
+                    continue
+                if "aria-expanded" in selector:
+                    continue
+                if not re.search(r"\b(opacity|background|pointer-events)\s*:", block):
+                    continue
+                for one in selector.split(","):
+                    found.add(one.strip())
+            return found
+
+        missing = receded(screen) - receded(print_block.group(1))
+        assert not missing, (
+            "Signals-lens selector(s) receded on screen but not restored for "
+            "print:\n  " + "\n  ".join(sorted(missing))
+        )

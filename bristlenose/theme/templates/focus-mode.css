@@ -53,7 +53,7 @@
    Pinned by tests/test_focus_mode_css.py. */
 .bn-focus-mode blockquote.quote-card:not(.bn-selected):not(.bn-focused) {
     background: transparent;
-    border-left-color: color-mix(in srgb, var(--bn-colour-border) 40%, transparent);
+    border-left-color: color-mix(in srgb, var(--bn-colour-border) var(--bn-focus-outline-mix), transparent);
 }
 
 /* The starred border dissolves with everything else — reversed 3 Aug 2026.
@@ -140,6 +140,147 @@
     opacity: 1;
 }
 
+/* ══ The Signals lens ═════════════════════════════════════════════════════
+   Spec: docs/design-focus-mode-signals.md. Mockup: docs/mockups/signals-focus-mode.html.
+
+   The same two axes, applied to the signal card. Nothing below names a value
+   of its own: every opacity is one of the two knobs above, every fade is the
+   shared duration and ease, and the outline is the shared mix — so speed and
+   depth are tuned once, in tokens.css, for both lenses.
+
+   Before this section existed the mode still LEAKED onto this lens (the class
+   lives on <html> and the store survives navigation) as a half-state made of
+   whichever quote-card selectors happened to match signal-card markup: the
+   source banner at 0.4, timecodes at 0.14 — except a sequence's continuation
+   timecodes, which the organism holds at 0.6 at a higher specificity and which
+   therefore ended up BRIGHTER than the run's first. */
+
+/* ── Transitions (always live, so the exit is symmetric) ───────────────── */
+
+.bn-focus-ready .signal-card {
+    transition: background var(--bn-focus-dur) var(--bn-focus-ease),
+                border-color var(--bn-focus-dur) var(--bn-focus-ease);
+}
+
+.bn-focus-ready .signal-card-quotes {
+    transition: background var(--bn-focus-dur) var(--bn-focus-ease);
+}
+
+.bn-focus-ready .signals-codebook-heading,
+.bn-focus-ready .signal-card-location,
+.bn-focus-ready .signal-elaboration,
+.bn-focus-ready .signal-card-hero,
+.bn-focus-ready .signal-card-alternates,
+.bn-focus-ready .signal-card-footer,
+.bn-focus-ready .signal-card-quotes .signal-quote-tag,
+.bn-focus-ready .signal-card-quotes .intensity-dots,
+.bn-focus-ready .signal-card-quotes blockquote .timecode {
+    transition: opacity var(--bn-focus-dur) var(--bn-focus-ease);
+}
+
+/* ── Card dissolve ─────────────────────────────────────────────────────── */
+
+/* Same guard as the quote card, same reason: `.signal-card.bn-selected` is
+   the inspector-pointed card and expresses itself through `background`. The
+   fused stack's seam is a card's own border, so it survives as a faint line. */
+.bn-focus-mode .signal-card:not(.bn-selected) {
+    background: transparent;
+    border-color: color-mix(in srgb, var(--bn-colour-border) var(--bn-focus-outline-mix), transparent);
+}
+
+/* The quote box is a second container inside the first. Dissolving one and
+   not the other leaves a slab inside a ghost. */
+.bn-focus-mode .signal-card:not(.bn-selected) .signal-card-quotes {
+    background: transparent;
+}
+
+/* ── Wayfinding dims less ─────────────────────────────────────────────── */
+
+/* The location heading is this lens's `.bn-group-header`. The headline and
+   the claim are the machine's reading of the quotes — the same object a theme
+   title + description is on the Quotes lens — and take the same treatment:
+   legible enough to know which finding you are under, not competing with the
+   evidence. Chosen over keeping them lit (docs/design-focus-mode-signals.md
+   § 3): lit, the same key would privilege the machine's words here and the
+   participants' words one lens over. */
+.bn-focus-mode .signals-codebook-heading,
+.bn-focus-mode .signal-card-location,
+.bn-focus-mode .signal-elaboration {
+    opacity: var(--bn-focus-heading-opacity);
+}
+
+/* ── Chrome recedes ────────────────────────────────────────────────────── */
+
+.bn-focus-mode .signal-card-hero,
+.bn-focus-mode .signal-card-alternates,
+.bn-focus-mode .signal-card-footer,
+.bn-focus-mode .signal-card-quotes .signal-quote-tag,
+.bn-focus-mode .signal-card-quotes .intensity-dots {
+    opacity: var(--bn-focus-ghost-opacity);
+}
+
+/* (0,3,1) on purpose. `.signal-card-quotes blockquote.seq-middle .timecode`
+   holds continuation timecodes at 0.6 (organisms/signals.css) at that same
+   specificity, so the quote-card ghost rule above — (0,2,1) — loses to it.
+   Equal specificity, later file: this one wins. Pinned by
+   tests/test_focus_mode_css.py. */
+.bn-focus-mode .signal-card-quotes blockquote .timecode {
+    opacity: var(--bn-focus-ghost-opacity);
+}
+
+/* Resting decorative chrome leaves hit-testing. The tag chips on a signal
+   quote are readonly and the dots are a title-only glyph. The hero chip and
+   the footer toggle are CONTROLS and keep their pointer-events — they recede
+   at rest and return on engagement, never disabled (axis 2). */
+.bn-focus-mode .signal-card-quotes .signal-quote-tag,
+.bn-focus-mode .signal-card-quotes .intensity-dots {
+    pointer-events: none;
+}
+
+/* ── Axis 2: engaged chrome returns to full presence ───────────────────── */
+
+/* A hero whose working is open is engaged whether or not the pointer is on
+   it — the researcher opened it, and the metrics beneath are never receded. */
+.bn-focus-mode .signal-card:hover .signal-card-hero,
+.bn-focus-mode .signal-card:focus-within .signal-card-hero,
+.bn-focus-mode .signal-card-hero[aria-expanded="true"],
+.bn-focus-mode .signal-card:hover .signal-card-alternates,
+.bn-focus-mode .signal-card:focus-within .signal-card-alternates,
+.bn-focus-mode .signal-card:hover .signal-card-footer,
+.bn-focus-mode .signal-card:focus-within .signal-card-footer,
+.bn-focus-mode .signal-card:hover .signal-quote-tag,
+.bn-focus-mode .signal-card:focus-within .signal-quote-tag,
+.bn-focus-mode .signal-card:hover .intensity-dots,
+.bn-focus-mode .signal-card:focus-within .intensity-dots,
+.bn-focus-mode .signal-card:hover .signal-card-quotes blockquote .timecode,
+.bn-focus-mode .signal-card:focus-within .signal-card-quotes blockquote .timecode,
+.bn-focus-mode .signal-card:hover .signal-card-location,
+.bn-focus-mode .signal-card:focus-within .signal-card-location,
+.bn-focus-mode .signal-card:hover .signal-elaboration,
+.bn-focus-mode .signal-card:focus-within .signal-elaboration,
+.bn-focus-mode .signals-codebook-heading:hover,
+.bn-focus-mode .signals-codebook-heading:focus-within {
+    opacity: 1;
+}
+
+.bn-focus-mode .signal-card:hover .signal-quote-tag,
+.bn-focus-mode .signal-card:focus-within .signal-quote-tag,
+.bn-focus-mode .signal-card:hover .intensity-dots,
+.bn-focus-mode .signal-card:focus-within .intensity-dots {
+    pointer-events: auto;
+}
+
+/* Engagement restores the ORDINARY reading, and 0.6 is the ordinary reading
+   for a continuation timecode. That number is the sequence treatment's own
+   (organisms/signals.css), not a Focus value — it stays a literal there and
+   is quoted here. */
+.bn-focus-mode .signal-card:hover .signal-card-quotes blockquote.seq-middle .timecode,
+.bn-focus-mode .signal-card:hover .signal-card-quotes blockquote.seq-last .timecode,
+.bn-focus-mode .signal-card:focus-within .signal-card-quotes blockquote.seq-middle .timecode,
+.bn-focus-mode .signal-card:focus-within .signal-card-quotes blockquote.seq-last .timecode {
+    opacity: 0.6;
+}
+
 /* ── Print — Focus is a reading state, not a property of the artefact ──── */
 
 /* A printout is a deliverable someone else reads. Faded tags and ghosted
@@ -176,6 +317,33 @@
     .bn-focus-mode blockquote.quote-card:not(.bn-selected):not(.bn-focused):not(.starred) {
         border-left-color: var(--bn-colour-border);
     }
+
+    /* The Signals lens, same reasoning. */
+    .bn-focus-mode .signals-codebook-heading,
+    .bn-focus-mode .signal-card-location,
+    .bn-focus-mode .signal-elaboration,
+    .bn-focus-mode .signal-card-hero,
+    .bn-focus-mode .signal-card-alternates,
+    .bn-focus-mode .signal-card-footer,
+    .bn-focus-mode .signal-card-quotes .signal-quote-tag,
+    .bn-focus-mode .signal-card-quotes .intensity-dots,
+    .bn-focus-mode .signal-card-quotes blockquote .timecode {
+        opacity: 1;
+    }
+
+    .bn-focus-mode .signal-card-quotes .signal-quote-tag,
+    .bn-focus-mode .signal-card-quotes .intensity-dots {
+        pointer-events: auto;
+    }
+
+    .bn-focus-mode .signal-card:not(.bn-selected) {
+        background: var(--bn-colour-bg);
+        border-color: var(--bn-colour-border);
+    }
+
+    .bn-focus-mode .signal-card:not(.bn-selected) .signal-card-quotes {
+        background: var(--bn-colour-quote-bg);
+    }
 }
 
 /* ── Reduce Motion — snap, don't fade ──────────────────────────────────── */
@@ -186,7 +354,18 @@
     .bn-focus-ready blockquote .timecode,
     .bn-focus-ready blockquote .context,
     .bn-focus-ready .bn-group-header,
-    .bn-focus-ready .description {
+    .bn-focus-ready .description,
+    .bn-focus-ready .signal-card,
+    .bn-focus-ready .signal-card-quotes,
+    .bn-focus-ready .signals-codebook-heading,
+    .bn-focus-ready .signal-card-location,
+    .bn-focus-ready .signal-elaboration,
+    .bn-focus-ready .signal-card-hero,
+    .bn-focus-ready .signal-card-alternates,
+    .bn-focus-ready .signal-card-footer,
+    .bn-focus-ready .signal-card-quotes .signal-quote-tag,
+    .bn-focus-ready .signal-card-quotes .intensity-dots,
+    .bn-focus-ready .signal-card-quotes blockquote .timecode {
         transition-duration: 0s;
     }
 }

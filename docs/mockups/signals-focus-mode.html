@@ -5,8 +5,8 @@
 <title>Focus Mode on the Signals lens — what recedes</title>
 
 <!--
-  PROPOSED 21 Sep 2026 — Focus Mode extended to the Signals lens.
-  Spec: docs/design-focus-mode-signals.md
+  PROPOSED 21 Sep 2026 · IMPLEMENTED 21 Sep 2026 — Focus Mode extended to the
+  Signals lens, variant A as drawn. Spec: docs/design-focus-mode-signals.md
 
   The stylesheet beside this file is the REAL shipped theme, generated verbatim:
 
@@ -26,8 +26,9 @@
   .seq-*, .bn-dissenting). What renders in the LEFT column is what the app
   renders today.
 
-  The ONLY new CSS in this file is the proposal layer at the bottom of the
-  <style> block, gated on [data-variant] on <html>. It has not shipped. The
+  The proposal layer at the bottom of the <style> block is now a copy of what
+  shipped in templates/focus-mode.css (re-bake the theme and the baked copy
+  carries the same rules), plus the rejected variant B behind [data-variant]. The
   quotes are synthetic — no participant speech from a real study.
 -->
 
@@ -163,9 +164,10 @@ body {
 .lab-commentary code { font-family: var(--bn-font-mono); font-size: 11.5px; color: #fff; }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   PROPOSAL LAYER — the candidate rules for templates/focus-mode.css.
-   Gated on [data-variant] so the two readings can be flicked between.
-   NONE of this has shipped.
+   PROPOSAL LAYER — now a copy of the Signals section of templates/focus-mode.css
+   (shipped 21 Sep 2026), plus the rejected variant B gated on [data-variant].
+   The baked theme carries the same rules; this layer stays so the file still
+   draws the comparison if the theme is re-baked from a tree without them.
    ═══════════════════════════════════════════════════════════════════════ */
 
 /* ── Transitions (always live, so the exit is symmetric) ───────────────── */
@@ -196,7 +198,7 @@ body {
    the inspector-pointed card and expresses itself through `background`. */
 .bn-focus-mode .signal-card:not(.bn-selected) {
     background: transparent;
-    border-color: color-mix(in srgb, var(--bn-colour-border) 40%, transparent);
+    border-color: color-mix(in srgb, var(--bn-colour-border) var(--bn-focus-outline-mix), transparent);
 }
 
 /* The quote box inside the card is a second container; it dissolves too, so
@@ -346,7 +348,7 @@ body {
     <div class="lab-group">
         <span>The finding (headline + claim)</span>
         <div>
-            <button data-act="variant" data-val="strict" aria-pressed="true">A · wayfinding at 0.4 (proposed)</button>
+            <button data-act="variant" data-val="strict" aria-pressed="true">A · wayfinding at 0.4 (shipped)</button>
             <button data-act="variant" data-val="findings" aria-pressed="false">B · stays lit</button>
         </div>
     </div>

@@ -1,12 +1,12 @@
 ---
-status: proposed
+status: current
 last-trued: 2026-09-21
-trued-against: HEAD@main on 2026-09-21 — written against the tree, not built
+trued-against: HEAD@main on 2026-09-21 — built the same day it was proposed; §4 is what landed
 ---
 
 # Focus Mode on the Signals lens
 
-**Status: PROPOSED 21 Sep 2026.** Nothing here is built. The parent feature is
+**Status: BUILT 21 Sep 2026**, the same day it was proposed, with variant A (§3) as drawn. §4 is the record of what landed; the mockup's proposal layer is now a copy of the shipped rules plus the rejected variant B, kept so the choice can be re-judged. The parent feature is
 [`design-focus-mode.md`](design-focus-mode.md) (shipped 0.24.0, Quotes lens
 only); this doc extends it to one more lens and changes nothing about how it
 works there.
@@ -124,7 +124,7 @@ The recommendation is A. The mockup is there so the choice is made by eye, not
 by this paragraph; if B reads better on real data, §4 is unchanged and only
 two opacity declarations move.
 
-## 4. Build plan
+## 4. Build plan — as built
 
 Ordered so each step is green on its own and the affordances are ungated
 **last** — a live-but-inert menu item is the failure the Swift comment warns
@@ -156,8 +156,7 @@ harness only. One file, one section; the tests read one file.
 Prove each red first by deleting its target declaration, as the parent suite's
 `_positive()` note records having had to.
 
-**Step 3 — the `z` key.** `useKeyboardShortcuts.ts:635`: gate on
-`/report/quotes` **or** `/report/signals`. `useKeyboardShortcuts.test.ts` pins
+**Step 3 — the `z` key.** Gate on `/report/quotes` **or** `/report/signals` — and **move the handler above the Quotes-lens gate** (`// Everything below acts on quotes`), which the plan missed: the first cut widened the route check and the new test still read `false`, because the handler sat below a `return` that fires on every non-Quotes route. The `m` key already lives above that gate for the same reason. `useKeyboardShortcuts.test.ts` pins
 the route guard at `:847` (off-route `z` returns false) and the table at
 `:1082`; add the signals-route positive case and keep the negative one on a
 third route so the guard is still asserted to exist.
@@ -176,12 +175,13 @@ In the browser the Signals lens gets `z`; in the app it gets the menu and
 `⌘⌥F`. Mounting a lone moon button on Signals would be a new surface with one
 control in it — raise it separately if the key alone proves undiscoverable.
 
+**Also landed: a fifth knob.** `--bn-focus-outline-mix` (40%) in `tokens.css`, read by both the quote-card and signal-card dissolves — the percentage was a literal in one place and would have been in two. Speed and depth are now four numbers for both lenses, all in `tokens.css`; `test_reads_only_the_shared_knobs` refuses a Signals rule that declares its own.
+
 **Step 6 — docs.** In `design-focus-mode.md`: the affordance table's route
 column, the non-goals (the lens list, not the sidebar rule), and a one-line
 pointer to this doc. Flip this doc's status. Register the mockup's outcome in
 `docs/mockups/STATUS.md`. `CHANGELOG.md` under **Improved** — Focus Mode is
-not new, its reach is; this is a **minor**-bump-free change unless it ships
-with a feature.
+not new, its reach is; 0.30.0 was tagged the same morning, so the entry waits for the next version's heading.
 
 **Not touched:** `FocusModeStore.ts` (route-independent already, correctly),
 the bridge, the locale files (no new string), `theme/js/analysis.js` (frozen,

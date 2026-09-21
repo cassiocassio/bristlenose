@@ -259,6 +259,11 @@
     --bn-focus-heading-opacity: 0.4;
     --bn-focus-dur: 320ms;
     --bn-focus-ease: ease-in-out;
+    /* How much of a receded card's outline survives — the border is mixed
+       toward transparent by the remainder. One number for both lenses (the
+       quote card's left edge, the signal card's box and fused seam); it was a
+       literal 40% in two places until the Signals lens made it three. */
+    --bn-focus-outline-mix: 40%;
 
     /* Thinking-shimmer — the "work in progress" travelling-sheen for text.
        Shared cross-surface spec, locked 18 Jul 2026 (docs/design-motion.md

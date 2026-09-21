@@ -839,10 +839,22 @@ describe("useKeyboardShortcuts", () => {
       unmount();
     });
 
-    it("z is not handled off the quotes lens", () => {
-      // The native View-menu twin dims off this lens. If the key still fired,
-      // the menu would claim the feature is unavailable while it was running.
+    it("z toggles focus mode on the signals lens", () => {
+      // The Signals lens has a defined recede transform of its own
+      // (docs/design-focus-mode-signals.md), so the key is live there too.
       const { unmount } = renderWithProviders(undefined, "/report/signals/");
+
+      expect(dispatchKey("z")).toBe(true);
+      expect(isFocusMode()).toBe(true);
+
+      unmount();
+    });
+
+    it("z is not handled on a lens with no recede transform", () => {
+      // The native View-menu twin dims off Quotes and Signals. If the key still
+      // fired, the menu would claim the feature is unavailable while it was
+      // running.
+      const { unmount } = renderWithProviders(undefined, "/report/sessions/");
 
       expect(dispatchKey("z")).toBe(false);
       expect(isFocusMode()).toBe(false);
@@ -1080,6 +1092,7 @@ describe("useKeyboardShortcuts", () => {
       ["j", "/report/quotes/"],
       ["k", "/report/quotes/"],
       ["z", "/report/quotes/"],
+      ["z", "/report/signals/"],
     ];
 
     for (const [key, route] of cases) {

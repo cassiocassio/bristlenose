@@ -190,6 +190,21 @@ plausible, and there is no signal that recall dropped.
 example wording."* The nine shipped YAMLs restate example wording 207 times. The
 rule exists; it was never applied backwards to the fixtures.
 
+**How much this matters, stated plainly, because 207 of 234 invites an
+over-reaction.** Frontier models do handle cross-lingual semantic matching well,
+and the working assumption that "the LLM just speaks everything" is broadly
+correct — this is a *probably fine, currently unmeasured* finding, not a known
+defect. The residual worry is narrow and specific: those cues instruct the model
+to look for **surface forms**, and an instruction to pattern-match on wording is
+the kind that can pull a model toward literal matching when it could have
+reasoned semantically. The failure that would produce is a **recall** drop, and
+recall drops are invisible — you get plausible tags and no signal.
+
+So the proportionate response is one measurement, not a rewrite. **Rank it below
+the generation gap above**: undefined *output language* is visible in the product
+(English theme titles sitting over Spanish quotes), whereas this is a
+quality question nobody has yet shown to be real.
+
 **Two cheap moves, in order of cost.** (1) One line in `autocode.md` stating
 that the transcript may be in any language and that quoted cues are English
 exemplars of a *pattern*, to be matched semantically — no YAML churn, testable

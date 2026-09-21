@@ -1332,6 +1332,13 @@ body {
             </div>
             <div class="preview-body-sidebar">
               <div class="preview-author">
+                <!-- The bio below is a hand-abridged stand-in for the shipped one, and the
+                     shipped one has since moved: on 21 Sep 2026 nielsen.yaml was trimmed
+                     from 77 words to 50 (and yablonski.yaml from 99 to 51) so both sit in
+                     the same band as Garrett and Norman. Not re-synced on purpose — the
+                     long form is worth keeping somewhere, and codebook-v2-prototype.html
+                     holds it verbatim for marketing or anywhere with room for the detail.
+                     Read bristlenose/server/codebook/*.yaml for what the app shows today. -->
                 <div class="preview-author-name">Jakob Nielsen</div>
                 <div class="preview-author-bio">Co-founder of Nielsen Norman Group and one of the most cited
                   researchers in human&ndash;computer interaction. Coined "discount usability" and developed the
@@ -1352,9 +1359,12 @@ body {
     </div>
     <div class="commentary">
       <span class="clabel">Commentary &middot; the page I4 was asking for</span>
-      <p><b>Everything here is real.</b> The description, the bio, and all four links are the shipped
-         <code>nielsen.yaml</code> &mdash; including the two Amazon links, which is the "purchase links"
-         half of the rich page. The group names and layout are the shipped
+      <p><b>Everything here is real.</b> The description, the bio, and all four links come from the
+         shipped <code>nielsen.yaml</code> &mdash; including the two Amazon links, which is the
+         "purchase links" half of the rich page. (The bio is abridged here, and the shipped one was
+         trimmed to about fifty words on 21 Sep 2026; the pre-trim long form is kept in
+         <code>codebook-v2-prototype.html</code>, where the extra detail stays useful for marketing.)
+         The group names and layout are the shipped
          <code>.preview-*</code> classes, lifted verbatim: two columns, tag groups left, author card
          right.</p>
       <p><b>And it no longer disappears on install.</b> That is I4 closing in one frame: today this

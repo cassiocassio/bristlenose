@@ -14,16 +14,11 @@ description: >
   frameworks describe only as generic "usability" issues.
 
 author_bio: >
-  Senior product designer based in Detroit, currently at Google. Created
-  lawsofux.com in 2017 as a curated collection of UX principles backed
-  by named psychological research. The site became one of the most-shared
-  UX resources worldwide and was expanded into "Laws of UX: Using
-  Psychology to Design Better Products & Services" (O'Reilly, 1st ed 2020,
-  2nd ed 2024). Yablonski did not invent the underlying laws — each
-  originates from a named researcher (Hick, Fitts, Miller, Kahneman,
-  Zeigarnik, etc.) — but his contribution is the curation, design-context
-  translation, and accessible presentation that made them standard
-  vocabulary for a generation of practitioners.
+  Product designer at Google, based in Detroit. Created lawsofux.com in 2017,
+  a curated collection of UX principles backed by named psychological
+  research, expanded into "Laws of UX" (O'Reilly, 2020; 2nd edition 2024).
+  Each law originates with a named researcher — Hick, Fitts, Kahneman — the
+  contribution is curation and design-context translation.
 
 author_links:
   - label: lawsofux.com — all laws with explanations

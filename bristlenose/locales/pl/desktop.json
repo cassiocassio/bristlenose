@@ -780,6 +780,28 @@
     "done": "Gotowe"
   },
   "llmSettings": {
+    "validation": {
+      "outOfCredit": "{{provider}} nie ma ju\u017c \u015brodk\u00f3w. Klucz jest poprawny \u2013 do\u0142aduj konto, aby go u\u017cywa\u0107.",
+      "keyRejected": "{{provider}} odrzuci\u0142 ten klucz ({{status}}). M\u00f3g\u0142 zosta\u0107 usuni\u0119ty, wymieniony albo nigdy nie mie\u0107 dost\u0119pu \u2013 wygeneruj nowy w panelu dostawcy.",
+      "rateLimited": "{{provider}} stosuje teraz limit zapyta\u0144 (429). Klucz jest poprawny \u2013 spr\u00f3buj za minut\u0119.",
+      "httpStatus": "{{provider}} zwr\u00f3ci\u0142 HTTP {{status}}.",
+      "azureEndpointMissing": "Dodaj adres URL punktu ko\u0144cowego Azure, aby doko\u0144czy\u0107 konfiguracj\u0119.",
+      "azureEndpointScheme": "Punkt ko\u0144cowy Azure musi zaczyna\u0107 si\u0119 od https:// \u2013 otrzymano \u201e{{endpoint}}\u201d.",
+      "azureNotFound": "Nie znaleziono punktu ko\u0144cowego ani wdro\u017cenia Azure (404). Klucz jest poprawny \u2013 sprawd\u017a adres URL i nazw\u0119 wdro\u017cenia.",
+      "buildFailed": "Nie uda\u0142o si\u0119 zbudowa\u0107 \u017c\u0105dania.",
+      "noResponse": "Brak odpowiedzi od {{provider}}.",
+      "timedOut": "Przekroczono czas \u017c\u0105dania \u2013 {{provider}} nie odpowiedzia\u0142 w ci\u0105gu 5 s.",
+      "offline": "Brak po\u0142\u0105czenia sieciowego. Klucz by\u0142 poprawny \u2013 po prostu nie mo\u017cemy go teraz sprawdzi\u0107.",
+      "unreachable": "Nie mo\u017cna po\u0142\u0105czy\u0107 si\u0119 z {{provider}}. Sprawd\u017a po\u0142\u0105czenie.",
+      "networkError": "B\u0142\u0105d sieci podczas \u0142\u0105czenia z {{provider}}.",
+      "ollamaURLMissing": "Podaj adres URL serwera Ollama.",
+      "ollamaURLInvalid": "Adres URL Ollamy jest nieprawid\u0142owy.",
+      "ollamaNoResponse": "Brak odpowiedzi od Ollamy.",
+      "ollamaHTTPError": "Ollama zwr\u00f3ci\u0142a HTTP {{status}}. Czy serwer dzia\u0142a?",
+      "ollamaNoModels": "Ollama jest dost\u0119pna, ale nie ma pobranych modeli. Uruchom `ollama pull llama3.2:3b`, aby doda\u0107 model.",
+      "ollamaUnreachable": "Ollama nie jest dost\u0119pna pod {{url}}. Uruchom j\u0105 poleceniem `ollama serve` lub otw\u00f3rz aplikacj\u0119 Ollama.",
+      "ollamaProbeFailed": "Sprawdzenie Ollamy nie powiod\u0142o si\u0119."
+    },
     "statusSection": "Stan",
     "apiKeySection": "Klucz API",
     "apiKeyPlaceholder": "Klucz API",

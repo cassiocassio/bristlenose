@@ -749,6 +749,28 @@
     "done": "Done"
   },
   "llmSettings": {
+    "validation": {
+      "outOfCredit": "{{provider}} is out of credit. Your key is fine \u2014 top up your account to use it.",
+      "keyRejected": "{{provider}} rejected this key ({{status}}). It may have been deleted, rotated, or never had access \u2014 generate a new key in your provider dashboard.",
+      "rateLimited": "{{provider}} is rate-limited right now (429). Your key is fine \u2014 try again in a minute.",
+      "httpStatus": "{{provider}} returned HTTP {{status}}.",
+      "azureEndpointMissing": "Add the Azure endpoint URL to finish setting this up.",
+      "azureEndpointScheme": "The Azure endpoint must start with https:// \u2014 got \u201c{{endpoint}}\u201d.",
+      "azureNotFound": "Azure endpoint or deployment not found (404). The key is fine \u2014 check the endpoint URL and deployment name.",
+      "buildFailed": "Couldn\u2019t build the request.",
+      "noResponse": "No response from {{provider}}.",
+      "timedOut": "Request timed out \u2014 {{provider}} didn\u2019t respond in 5s.",
+      "offline": "No network connection. Your key was fine \u2014 we just can\u2019t check it right now.",
+      "unreachable": "Couldn't reach {{provider}}. Check your connection.",
+      "networkError": "Network error reaching {{provider}}.",
+      "ollamaURLMissing": "Set the Ollama server URL.",
+      "ollamaURLInvalid": "The Ollama URL is not valid.",
+      "ollamaNoResponse": "No response from Ollama.",
+      "ollamaHTTPError": "Ollama returned HTTP {{status}}. Is the server running?",
+      "ollamaNoModels": "Ollama is reachable but has no models pulled. Run `ollama pull llama3.2:3b` to add one.",
+      "ollamaUnreachable": "Ollama isn\u2019t reachable at {{url}}. Start it with `ollama serve` or open the Ollama app.",
+      "ollamaProbeFailed": "The Ollama check failed."
+    },
     "statusSection": "Status",
     "apiKeySection": "API Key",
     "apiKeyPlaceholder": "API Key",

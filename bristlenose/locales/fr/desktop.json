@@ -744,6 +744,28 @@
     "done": "Terminé"
   },
   "llmSettings": {
+    "validation": {
+      "outOfCredit": "{{provider}} n\u2019a plus de cr\u00e9dit. Votre cl\u00e9 est correcte \u2014 rechargez votre compte pour l\u2019utiliser.",
+      "keyRejected": "{{provider}} a refus\u00e9 cette cl\u00e9 ({{status}}). Elle a pu \u00eatre supprim\u00e9e, renouvel\u00e9e, ou n\u2019avoir jamais eu acc\u00e8s \u2014 g\u00e9n\u00e9rez-en une nouvelle dans le tableau de bord du fournisseur.",
+      "rateLimited": "{{provider}} applique une limite de d\u00e9bit en ce moment (429). Votre cl\u00e9 est correcte \u2014 r\u00e9essayez dans une minute.",
+      "httpStatus": "{{provider}} a renvoy\u00e9 HTTP {{status}}.",
+      "azureEndpointMissing": "Ajoutez l\u2019URL du point de terminaison Azure pour terminer la configuration.",
+      "azureEndpointScheme": "Le point de terminaison Azure doit commencer par https:// \u2014 re\u00e7u \u00ab\u00a0{{endpoint}}\u00a0\u00bb.",
+      "azureNotFound": "Point de terminaison ou d\u00e9ploiement Azure introuvable (404). La cl\u00e9 est correcte : v\u00e9rifiez l\u2019URL et le nom du d\u00e9ploiement.",
+      "buildFailed": "Impossible de construire la requ\u00eate.",
+      "noResponse": "Aucune r\u00e9ponse de {{provider}}.",
+      "timedOut": "D\u00e9lai d\u2019attente d\u00e9pass\u00e9 \u2014 {{provider}} n\u2019a pas r\u00e9pondu en 5\u00a0s.",
+      "offline": "Aucune connexion r\u00e9seau. Votre cl\u00e9 \u00e9tait correcte \u2014 nous ne pouvons simplement pas la v\u00e9rifier pour l\u2019instant.",
+      "unreachable": "Impossible de joindre {{provider}}. V\u00e9rifiez votre connexion.",
+      "networkError": "Erreur r\u00e9seau lors de la connexion \u00e0 {{provider}}.",
+      "ollamaURLMissing": "Indiquez l\u2019URL du serveur Ollama.",
+      "ollamaURLInvalid": "L\u2019URL Ollama n\u2019est pas valide.",
+      "ollamaNoResponse": "Aucune r\u00e9ponse d\u2019Ollama.",
+      "ollamaHTTPError": "Ollama a renvoy\u00e9 HTTP {{status}}. Le serveur est-il en cours d\u2019ex\u00e9cution\u00a0?",
+      "ollamaNoModels": "Ollama est joignable mais aucun mod\u00e8le n\u2019est t\u00e9l\u00e9charg\u00e9. Ex\u00e9cutez `ollama pull llama3.2:3b` pour en ajouter un.",
+      "ollamaUnreachable": "Ollama n\u2019est pas joignable \u00e0 {{url}}. Lancez-le avec `ollama serve` ou ouvrez l\u2019app Ollama.",
+      "ollamaProbeFailed": "La v\u00e9rification d\u2019Ollama a \u00e9chou\u00e9."
+    },
     "statusSection": "État",
     "apiKeySection": "Clé API",
     "apiKeyPlaceholder": "Clé API",

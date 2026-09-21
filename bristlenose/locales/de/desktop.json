@@ -744,6 +744,28 @@
     "done": "Fertig"
   },
   "llmSettings": {
+    "validation": {
+      "outOfCredit": "{{provider}} hat kein Guthaben. Ihr Schl\u00fcssel ist in Ordnung \u2013 laden Sie Ihr Konto auf, um ihn zu nutzen.",
+      "keyRejected": "{{provider}} hat diesen Schl\u00fcssel abgelehnt ({{status}}). Er wurde m\u00f6glicherweise gel\u00f6scht, ersetzt oder hatte nie Zugriff \u2013 erzeugen Sie einen neuen im Dashboard des Anbieters.",
+      "rateLimited": "{{provider}} ist derzeit ratenbegrenzt (429). Ihr Schl\u00fcssel ist in Ordnung \u2013 versuchen Sie es in einer Minute erneut.",
+      "httpStatus": "{{provider}} hat HTTP {{status}} zur\u00fcckgegeben.",
+      "azureEndpointMissing": "F\u00fcgen Sie die Azure-Endpunkt-URL hinzu, um die Einrichtung abzuschlie\u00dfen.",
+      "azureEndpointScheme": "Der Azure-Endpunkt muss mit https:// beginnen \u2013 erhalten wurde \u201e{{endpoint}}\u201c.",
+      "azureNotFound": "Azure-Endpunkt oder -Deployment nicht gefunden (404). Der Schl\u00fcssel ist in Ordnung \u2013 pr\u00fcfen Sie URL und Deployment-Namen.",
+      "buildFailed": "Die Anfrage konnte nicht erstellt werden.",
+      "noResponse": "Keine Antwort von {{provider}}.",
+      "timedOut": "Zeit\u00fcberschreitung \u2013 {{provider}} hat nicht innerhalb von 5 s geantwortet.",
+      "offline": "Keine Netzwerkverbindung. Ihr Schl\u00fcssel war in Ordnung \u2013 wir k\u00f6nnen ihn nur gerade nicht pr\u00fcfen.",
+      "unreachable": "{{provider}} nicht erreichbar. Pr\u00fcfen Sie Ihre Verbindung.",
+      "networkError": "Netzwerkfehler beim Verbinden mit {{provider}}.",
+      "ollamaURLMissing": "Geben Sie die URL des Ollama-Servers an.",
+      "ollamaURLInvalid": "Die Ollama-URL ist nicht g\u00fcltig.",
+      "ollamaNoResponse": "Keine Antwort von Ollama.",
+      "ollamaHTTPError": "Ollama hat HTTP {{status}} zur\u00fcckgegeben. L\u00e4uft der Server?",
+      "ollamaNoModels": "Ollama ist erreichbar, hat aber keine Modelle geladen. F\u00fchren Sie `ollama pull llama3.2:3b` aus, um eines hinzuzuf\u00fcgen.",
+      "ollamaUnreachable": "Ollama ist unter {{url}} nicht erreichbar. Starten Sie es mit `ollama serve` oder \u00f6ffnen Sie die Ollama-App.",
+      "ollamaProbeFailed": "Die Ollama-Pr\u00fcfung ist fehlgeschlagen."
+    },
     "statusSection": "Status",
     "apiKeySection": "API-Schlüssel",
     "apiKeyPlaceholder": "API-Schlüssel",

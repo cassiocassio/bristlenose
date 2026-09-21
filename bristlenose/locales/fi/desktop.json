@@ -744,6 +744,28 @@
     "done": "Valmis"
   },
   "llmSettings": {
+    "validation": {
+      "outOfCredit": "Palvelun {{provider}} saldo on lopussa. Avain on kunnossa \u2013 lis\u00e4\u00e4 tilille saldoa k\u00e4ytt\u00e4\u00e4ksesi sit\u00e4.",
+      "keyRejected": "{{provider}} hylk\u00e4si t\u00e4m\u00e4n avaimen ({{status}}). Se on voitu poistaa tai vaihtaa, tai sill\u00e4 ei ole koskaan ollut oikeuksia \u2013 luo uusi palveluntarjoajan hallintan\u00e4kym\u00e4ss\u00e4.",
+      "rateLimited": "Palvelu {{provider}} rajoittaa pyynt\u00f6j\u00e4 juuri nyt (429). Avain on kunnossa \u2013 yrit\u00e4 minuutin kuluttua uudelleen.",
+      "httpStatus": "{{provider}} palautti HTTP {{status}}.",
+      "azureEndpointMissing": "Viimeistele m\u00e4\u00e4ritys lis\u00e4\u00e4m\u00e4ll\u00e4 Azure-p\u00e4\u00e4tepisteen osoite.",
+      "azureEndpointScheme": "Azure-p\u00e4\u00e4tepisteen on alettava https:// \u2013 saatiin \u201d{{endpoint}}\u201d.",
+      "azureNotFound": "Azure-p\u00e4\u00e4tepistett\u00e4 tai -k\u00e4ytt\u00f6\u00f6nottoa ei l\u00f6ytynyt (404). Avain on kunnossa \u2013 tarkista osoite ja k\u00e4ytt\u00f6\u00f6noton nimi.",
+      "buildFailed": "Pyynn\u00f6n luonti ep\u00e4onnistui.",
+      "noResponse": "Ei vastausta palvelusta {{provider}}.",
+      "timedOut": "Pyynt\u00f6 aikakatkaistiin \u2013 {{provider}} ei vastannut 5 sekunnissa.",
+      "offline": "Ei verkkoyhteytt\u00e4. Avain oli kunnossa \u2013 emme vain voi tarkistaa sit\u00e4 juuri nyt.",
+      "unreachable": "Palveluun {{provider}} ei saatu yhteytt\u00e4. Tarkista verkkoyhteys.",
+      "networkError": "Verkkovirhe yhdistett\u00e4ess\u00e4 palveluun {{provider}}.",
+      "ollamaURLMissing": "Aseta Ollama-palvelimen osoite.",
+      "ollamaURLInvalid": "Ollaman osoite ei kelpaa.",
+      "ollamaNoResponse": "Ei vastausta Ollamasta.",
+      "ollamaHTTPError": "Ollama palautti HTTP {{status}}. Onko palvelin k\u00e4ynniss\u00e4?",
+      "ollamaNoModels": "Ollamaan saadaan yhteys, mutta malleja ei ole ladattu. Lis\u00e4\u00e4 malli komennolla `ollama pull llama3.2:3b`.",
+      "ollamaUnreachable": "Ollamaan ei saada yhteytt\u00e4 osoitteessa {{url}}. K\u00e4ynnist\u00e4 se komennolla `ollama serve` tai avaa Ollama-app.",
+      "ollamaProbeFailed": "Ollaman tarkistus ep\u00e4onnistui."
+    },
     "statusSection": "Tila",
     "apiKeySection": "API-avain",
     "apiKeyPlaceholder": "API-avain",

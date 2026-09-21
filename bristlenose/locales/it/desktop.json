@@ -744,6 +744,28 @@
     "done": "Fine"
   },
   "llmSettings": {
+    "validation": {
+      "outOfCredit": "{{provider}} ha esaurito il credito. La chiave \u00e8 corretta: ricarica l\u2019account per usarla.",
+      "keyRejected": "{{provider}} ha rifiutato questa chiave ({{status}}). Potrebbe essere stata eliminata, ruotata o non aver mai avuto accesso: generane una nuova nella console del fornitore.",
+      "rateLimited": "{{provider}} applica un limite di richieste in questo momento (429). La chiave \u00e8 corretta: riprova tra un minuto.",
+      "httpStatus": "{{provider}} ha restituito HTTP {{status}}.",
+      "azureEndpointMissing": "Aggiungi l\u2019URL dell\u2019endpoint Azure per completare la configurazione.",
+      "azureEndpointScheme": "L\u2019endpoint Azure deve iniziare con https:// \u2014 ricevuto \u201c{{endpoint}}\u201d.",
+      "azureNotFound": "Endpoint o distribuzione Azure non trovati (404). La chiave \u00e8 corretta: controlla l\u2019URL e il nome della distribuzione.",
+      "buildFailed": "Impossibile creare la richiesta.",
+      "noResponse": "Nessuna risposta da {{provider}}.",
+      "timedOut": "Richiesta scaduta: {{provider}} non ha risposto entro 5 s.",
+      "offline": "Nessuna connessione di rete. La chiave era corretta: al momento non possiamo verificarla.",
+      "unreachable": "Impossibile raggiungere {{provider}}. Controlla la connessione.",
+      "networkError": "Errore di rete nel contattare {{provider}}.",
+      "ollamaURLMissing": "Imposta l\u2019URL del server Ollama.",
+      "ollamaURLInvalid": "L\u2019URL di Ollama non \u00e8 valido.",
+      "ollamaNoResponse": "Nessuna risposta da Ollama.",
+      "ollamaHTTPError": "Ollama ha restituito HTTP {{status}}. Il server \u00e8 in esecuzione?",
+      "ollamaNoModels": "Ollama \u00e8 raggiungibile ma non ha modelli scaricati. Esegui `ollama pull llama3.2:3b` per aggiungerne uno.",
+      "ollamaUnreachable": "Ollama non \u00e8 raggiungibile a {{url}}. Avvialo con `ollama serve` oppure apri l\u2019app Ollama.",
+      "ollamaProbeFailed": "Il controllo di Ollama non \u00e8 riuscito."
+    },
     "statusSection": "Stato",
     "apiKeySection": "Chiave API",
     "apiKeyPlaceholder": "Chiave API",

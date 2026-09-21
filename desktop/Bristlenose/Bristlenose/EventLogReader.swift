@@ -214,7 +214,7 @@ enum EventLogReader {
                 return .running
             }
             return .failed(
-                FailureMessage.moment("stranded"),
+                FailureMessage.keyed("desktop.pipeline.failure.stranded"),
                 category: .unknown,
             )
         case "run_completed":

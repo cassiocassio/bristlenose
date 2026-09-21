@@ -744,6 +744,28 @@
     "done": "Klaar"
   },
   "llmSettings": {
+    "validation": {
+      "outOfCredit": "{{provider}} heeft geen tegoed meer. Je sleutel is in orde \u2014 vul je account aan om hem te gebruiken.",
+      "keyRejected": "{{provider}} heeft deze sleutel geweigerd ({{status}}). Hij kan verwijderd of vervangen zijn, of nooit toegang hebben gehad \u2014 maak een nieuwe aan in het dashboard van de provider.",
+      "rateLimited": "{{provider}} hanteert op dit moment een snelheidslimiet (429). Je sleutel is in orde \u2014 probeer het over een minuut opnieuw.",
+      "httpStatus": "{{provider}} gaf HTTP {{status}} terug.",
+      "azureEndpointMissing": "Voeg de URL van het Azure-eindpunt toe om het instellen af te ronden.",
+      "azureEndpointScheme": "Het Azure-eindpunt moet beginnen met https:// \u2014 ontvangen: \u2018{{endpoint}}\u2019.",
+      "azureNotFound": "Azure-eindpunt of -implementatie niet gevonden (404). De sleutel is in orde \u2014 controleer de URL en de naam van de implementatie.",
+      "buildFailed": "Kan het verzoek niet opbouwen.",
+      "noResponse": "Geen reactie van {{provider}}.",
+      "timedOut": "Time-out \u2014 {{provider}} reageerde niet binnen 5 s.",
+      "offline": "Geen netwerkverbinding. Je sleutel was in orde \u2014 we kunnen die alleen nu niet controleren.",
+      "unreachable": "Kan {{provider}} niet bereiken. Controleer je verbinding.",
+      "networkError": "Netwerkfout bij het bereiken van {{provider}}.",
+      "ollamaURLMissing": "Stel de URL van de Ollama-server in.",
+      "ollamaURLInvalid": "De Ollama-URL is niet geldig.",
+      "ollamaNoResponse": "Geen reactie van Ollama.",
+      "ollamaHTTPError": "Ollama gaf HTTP {{status}} terug. Draait de server?",
+      "ollamaNoModels": "Ollama is bereikbaar maar heeft geen modellen opgehaald. Voer `ollama pull llama3.2:3b` uit om er een toe te voegen.",
+      "ollamaUnreachable": "Ollama is niet bereikbaar op {{url}}. Start het met `ollama serve` of open de Ollama-app.",
+      "ollamaProbeFailed": "De Ollama-controle is mislukt."
+    },
     "statusSection": "Status",
     "apiKeySection": "API-sleutel",
     "apiKeyPlaceholder": "API-sleutel",

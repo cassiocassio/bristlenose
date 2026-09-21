@@ -779,6 +779,28 @@
     "done": "Hotovo"
   },
   "llmSettings": {
+    "validation": {
+      "outOfCredit": "{{provider}} nem\u00e1 kredit. Kl\u00ed\u010d je v po\u0159\u00e1dku \u2013 dobijte \u00fa\u010det, abyste jej mohli pou\u017e\u00edvat.",
+      "keyRejected": "{{provider}} tento kl\u00ed\u010d odm\u00edtl ({{status}}). Mohl b\u00fdt smaz\u00e1n, obnoven, nebo nikdy nem\u011bl p\u0159\u00edstup \u2013 vygenerujte nov\u00fd v konzoli poskytovatele.",
+      "rateLimited": "{{provider}} nyn\u00ed omezuje po\u010det po\u017eadavk\u016f (429). Kl\u00ed\u010d je v po\u0159\u00e1dku \u2013 zkuste to za minutu.",
+      "httpStatus": "{{provider}} vr\u00e1til HTTP {{status}}.",
+      "azureEndpointMissing": "Dokon\u010dete nastaven\u00ed p\u0159id\u00e1n\u00edm URL koncov\u00e9ho bodu Azure.",
+      "azureEndpointScheme": "Koncov\u00fd bod Azure mus\u00ed za\u010d\u00ednat https:// \u2013 p\u0159i\u0161lo \u201e{{endpoint}}\u201c.",
+      "azureNotFound": "Koncov\u00fd bod nebo nasazen\u00ed Azure nenalezeno (404). Kl\u00ed\u010d je v po\u0159\u00e1dku \u2013 zkontrolujte URL a n\u00e1zev nasazen\u00ed.",
+      "buildFailed": "Po\u017eadavek se nepoda\u0159ilo sestavit.",
+      "noResponse": "\u017d\u00e1dn\u00e1 odpov\u011b\u010f od {{provider}}.",
+      "timedOut": "\u010cas po\u017eadavku vypr\u0161el \u2013 {{provider}} neodpov\u011bd\u011bl do 5 s.",
+      "offline": "\u017d\u00e1dn\u00e9 s\u00ed\u0165ov\u00e9 p\u0159ipojen\u00ed. Kl\u00ed\u010d byl v po\u0159\u00e1dku \u2013 te\u010f ho jen nem\u016f\u017eeme ov\u011b\u0159it.",
+      "unreachable": "Nepoda\u0159ilo se spojit s poskytovatelem {{provider}}. Zkontrolujte p\u0159ipojen\u00ed.",
+      "networkError": "Chyba s\u00edt\u011b p\u0159i spojen\u00ed s {{provider}}.",
+      "ollamaURLMissing": "Zadejte URL serveru Ollama.",
+      "ollamaURLInvalid": "URL Ollamy nen\u00ed platn\u00e1.",
+      "ollamaNoResponse": "\u017d\u00e1dn\u00e1 odpov\u011b\u010f od Ollamy.",
+      "ollamaHTTPError": "Ollama vr\u00e1tila HTTP {{status}}. B\u011b\u017e\u00ed server?",
+      "ollamaNoModels": "Ollama je dostupn\u00e1, ale nem\u00e1 sta\u017een\u00fd \u017e\u00e1dn\u00fd model. P\u0159idejte ho p\u0159\u00edkazem `ollama pull llama3.2:3b`.",
+      "ollamaUnreachable": "Ollama nen\u00ed dostupn\u00e1 na {{url}}. Spus\u0165te ji p\u0159\u00edkazem `ollama serve` nebo otev\u0159ete aplikaci Ollama.",
+      "ollamaProbeFailed": "Kontrola Ollamy selhala."
+    },
     "statusSection": "Stav",
     "apiKeySection": "Klíč API",
     "apiKeyPlaceholder": "Klíč API",

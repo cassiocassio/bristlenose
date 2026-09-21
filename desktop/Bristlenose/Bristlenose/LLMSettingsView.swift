@@ -34,7 +34,11 @@ struct LLMSettingsView: View {
     @AppStorage("activeProvider") private var activeProvider: String = "anthropic"
     @State private var selectedProvider: LLMProvider = .claude
     @State private var statuses: [LLMProvider: ProviderStatus] = [:]
-    @State private var statusErrors: [LLMProvider: String] = [:]
+    /// The validator's explanation per provider, unresolved. `FailureMessage`
+    /// rather than `String` so the pane re-renders in the language the user is
+    /// reading *now* — this is the pane the language is changed from, so a
+    /// sentence frozen at check time would sit there in the outgoing language.
+    @State private var statusErrors: [LLMProvider: FailureMessage] = [:]
     @State private var validationTasks: [LLMProvider: Task<Void, Never>] = [:]
     @State private var lastVerifiedTick: Date = .now  // forces relative-time refresh
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -134,7 +138,7 @@ struct LLMSettingsView: View {
     private var heightSignature: String {
         [selectedProvider.rawValue,
          String(describing: statusFor(selectedProvider)),
-         statusErrors[selectedProvider] ?? "",
+         statusErrors[selectedProvider]?.resolved(i18n) ?? "",
          useCustomModel ? "custom" : "listed"].joined(separator: "|")
     }
 
@@ -193,7 +197,7 @@ struct LLMSettingsView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
-                        .modifier(OptionalHelp(text: statusErrors[provider]))
+                        .modifier(OptionalHelp(text: statusErrors[provider]?.resolved(i18n)))
                     }
                     .padding(.vertical, 2)
                     .animation(
@@ -226,7 +230,7 @@ struct LLMSettingsView: View {
                     .animation(
                         reduceMotion ? nil : .easeInOut(duration: 0.2),
                         value: statusFor(selectedProvider))
-                    if let error = statusErrors[selectedProvider],
+                    if let error = statusErrors[selectedProvider]?.resolved(i18n),
                        statusFor(selectedProvider) != .online {
                         // Per Mac convention (Mail, Internet Accounts) the dot
                         // carries the colour signal; the error text is .secondary
@@ -815,7 +819,7 @@ struct LLMSettingsView: View {
             statuses[provider] = cached.status
             statusErrors[provider] =
                 (cached == .invalid)
-                ? i18n.t("desktop.llmSettings.revalidating")
+                ? .keyed("desktop.llmSettings.revalidating")
                 : nil
         } else {
             // Key present but no cached verdict yet. Leave the existing status
@@ -924,7 +928,7 @@ struct LLMSettingsView: View {
                 // shows the "revalidating" hint instead.
                 statusErrors[provider] =
                     (cached == .invalid)
-                    ? i18n.t("desktop.llmSettings.revalidating")
+                    ? .keyed("desktop.llmSettings.revalidating")
                     : error  // typically "No network connection" / "rate-limited"
                 Self.logger.info(
                     "validate \(provider.rawValue, privacy: .public) → \(String(describing: resolved), privacy: .public) (cache fallback, network said \(String(describing: status), privacy: .public))"

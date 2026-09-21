@@ -21,7 +21,7 @@ struct LLMValidatorTests {
     func classifyAuthFailure() {
         let (s401, e401) = LLMValidator.classify(provider: .claude, status: 401)
         #expect(s401 == .invalid)
-        #expect(e401?.contains("rejected") == true)
+        #expect(e401?.key == "desktop.llmSettings.validation.keyRejected")
 
         let (s403, _) = LLMValidator.classify(provider: .chatGPT, status: 403)
         #expect(s403 == .invalid)
@@ -36,26 +36,32 @@ struct LLMValidatorTests {
         // The invariant is the DISTINCTION, not the exact words: the 402 copy
         // must read differently from the 401 ("invalid key") copy so the user
         // tops up instead of deleting a good key. Asserting exact substrings on
-        // user-facing copy reddens this test on any reword (prior Finding 21);
-        // assert non-empty + differs-from-401 instead.
+        // user-facing copy reddens this test on any reword (prior Finding 21) —
+        // and since 21 Sep 2026 the copy is a locale value, so a substring
+        // assertion would be about the English that nobody outside en reads.
+        // The key IS the distinction; assert that.
         let (_, invalidErr) = LLMValidator.classify(provider: .claude, status: 401)
-        #expect(err?.isEmpty == false)
-        #expect(err != invalidErr)
+        #expect(err?.key == "desktop.llmSettings.validation.outOfCredit")
+        #expect(err?.key != invalidErr?.key)
     }
 
     @Test("429 maps to .unavailable with rate-limit message naming the key as fine")
     func classifyRateLimit() {
         let (status, err) = LLMValidator.classify(provider: .claude, status: 429)
         #expect(status == .unavailable)
-        #expect(err?.contains("rate-limited") == true)
-        #expect(err?.contains("Your key is fine") == true)
+        // Key, not copy — the invariant is that a 429 reads as *transient*
+        // and distinct from a rejected key, so the user waits instead of
+        // regenerating. A substring assertion on English would also have gone
+        // red the moment this sentence gained 20 translations.
+        #expect(err?.key == "desktop.llmSettings.validation.rateLimited")
+        #expect(err?.key != LLMValidator.classify(provider: .claude, status: 401).1?.key)
     }
 
     @Test("Azure 404 maps to .invalid with endpoint-not-found message")
     func classifyAzure404() {
         let (status, err) = LLMValidator.classify(provider: .azure, status: 404)
         #expect(status == .invalid)
-        #expect(err?.contains("endpoint or deployment not found") == true)
+        #expect(err?.key == "desktop.llmSettings.validation.azureNotFound")
     }
 
     @Test("Anthropic 4xx other than auth/billing/rate-limit treated as .online (forward-compat)")

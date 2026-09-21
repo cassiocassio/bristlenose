@@ -744,6 +744,28 @@
     "done": "Færdig"
   },
   "llmSettings": {
+    "validation": {
+      "outOfCredit": "{{provider}} har ingen kredit. Din n\u00f8gle er fin \u2014 fyld kontoen op for at bruge den.",
+      "keyRejected": "{{provider}} afviste denne n\u00f8gle ({{status}}). Den kan v\u00e6re slettet, udskiftet eller aldrig have haft adgang \u2014 generer en ny i udbyderens dashboard.",
+      "rateLimited": "{{provider}} er hastighedsbegr\u00e6nset lige nu (429). Din n\u00f8gle er fin \u2014 pr\u00f8v igen om et minut.",
+      "httpStatus": "{{provider}} returnerede HTTP {{status}}.",
+      "azureEndpointMissing": "Tilf\u00f8j Azure-slutpunktets URL for at f\u00e6rdigg\u00f8re ops\u00e6tningen.",
+      "azureEndpointScheme": "Azure-slutpunktet skal begynde med https:// \u2014 modtog \u201d{{endpoint}}\u201d.",
+      "azureNotFound": "Azure-slutpunkt eller -deployment blev ikke fundet (404). N\u00f8glen er fin \u2014 tjek URL\u2019en og deployment-navnet.",
+      "buildFailed": "Anmodningen kunne ikke opbygges.",
+      "noResponse": "Intet svar fra {{provider}}.",
+      "timedOut": "Anmodningen fik timeout \u2014 {{provider}} svarede ikke inden for 5 s.",
+      "offline": "Ingen netv\u00e6rksforbindelse. Din n\u00f8gle var fin \u2014 vi kan bare ikke tjekke den lige nu.",
+      "unreachable": "Kunne ikke n\u00e5 {{provider}}. Tjek din forbindelse.",
+      "networkError": "Netv\u00e6rksfejl ved kontakt til {{provider}}.",
+      "ollamaURLMissing": "Angiv URL\u2019en til Ollama-serveren.",
+      "ollamaURLInvalid": "Ollama-URL\u2019en er ikke gyldig.",
+      "ollamaNoResponse": "Intet svar fra Ollama.",
+      "ollamaHTTPError": "Ollama returnerede HTTP {{status}}. K\u00f8rer serveren?",
+      "ollamaNoModels": "Ollama kan n\u00e5s, men har ingen hentede modeller. K\u00f8r `ollama pull llama3.2:3b` for at tilf\u00f8je en.",
+      "ollamaUnreachable": "Ollama kan ikke n\u00e5s p\u00e5 {{url}}. Start den med `ollama serve`, eller \u00e5bn Ollama-appen.",
+      "ollamaProbeFailed": "Ollama-tjekket mislykkedes."
+    },
     "statusSection": "Status",
     "apiKeySection": "API-nøgle",
     "apiKeyPlaceholder": "API-nøgle",

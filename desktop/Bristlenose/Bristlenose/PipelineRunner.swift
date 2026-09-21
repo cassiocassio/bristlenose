@@ -1435,8 +1435,9 @@ var args = ["run", project.path, "--no-serve"]
                 // `localizedDescription` is Foundation's, already in the user's
                 // language — it passes through as a variable rather than being
                 // re-described by us.
-                FailureMessage.moment(
-                    "launchFailed", vars: ["reason": error.localizedDescription]
+                FailureMessage.keyed(
+                    "desktop.pipeline.failure.launchFailed",
+                    vars: ["reason": error.localizedDescription]
                 ),
                 category: .unknown
             )

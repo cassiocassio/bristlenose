@@ -744,6 +744,28 @@
     "done": "Bitti"
   },
   "llmSettings": {
+    "validation": {
+      "outOfCredit": "{{provider}} kredisi t\u00fckendi. Anahtar\u0131n\u0131z sorunsuz \u2014 kullanmak i\u00e7in hesab\u0131n\u0131za kredi y\u00fckleyin.",
+      "keyRejected": "{{provider}} bu anahtar\u0131 reddetti ({{status}}). Silinmi\u015f, de\u011fi\u015ftirilmi\u015f ya da hi\u00e7 eri\u015fimi olmam\u0131\u015f olabilir \u2014 sa\u011flay\u0131c\u0131 panelinden yeni bir anahtar olu\u015fturun.",
+      "rateLimited": "{{provider}} \u015fu anda h\u0131z s\u0131n\u0131r\u0131 uyguluyor (429). Anahtar\u0131n\u0131z sorunsuz \u2014 bir dakika sonra tekrar deneyin.",
+      "httpStatus": "{{provider}} HTTP {{status}} d\u00f6nd\u00fcrd\u00fc.",
+      "azureEndpointMissing": "Kurulumu tamamlamak i\u00e7in Azure u\u00e7 nokta URL\u2019sini ekleyin.",
+      "azureEndpointScheme": "Azure u\u00e7 noktas\u0131 https:// ile ba\u015flamal\u0131 \u2014 al\u0131nan: \u201c{{endpoint}}\u201d.",
+      "azureNotFound": "Azure u\u00e7 noktas\u0131 veya da\u011f\u0131t\u0131m\u0131 bulunamad\u0131 (404). Anahtar sorunsuz \u2014 URL\u2019yi ve da\u011f\u0131t\u0131m ad\u0131n\u0131 kontrol edin.",
+      "buildFailed": "\u0130stek olu\u015fturulamad\u0131.",
+      "noResponse": "{{provider}} yan\u0131t vermedi.",
+      "timedOut": "\u0130stek zaman a\u015f\u0131m\u0131na u\u011frad\u0131 \u2014 {{provider}} 5 sn i\u00e7inde yan\u0131t vermedi.",
+      "offline": "A\u011f ba\u011flant\u0131s\u0131 yok. Anahtar\u0131n\u0131z sorunsuzdu \u2014 sadece \u015fu anda kontrol edemiyoruz.",
+      "unreachable": "{{provider}} hizmetine ula\u015f\u0131lamad\u0131. Ba\u011flant\u0131n\u0131z\u0131 kontrol edin.",
+      "networkError": "{{provider}} hizmetine ba\u011flan\u0131rken a\u011f hatas\u0131 olu\u015ftu.",
+      "ollamaURLMissing": "Ollama sunucu URL\u2019sini ayarlay\u0131n.",
+      "ollamaURLInvalid": "Ollama URL\u2019si ge\u00e7erli de\u011fil.",
+      "ollamaNoResponse": "Ollama yan\u0131t vermedi.",
+      "ollamaHTTPError": "Ollama HTTP {{status}} d\u00f6nd\u00fcrd\u00fc. Sunucu \u00e7al\u0131\u015f\u0131yor mu?",
+      "ollamaNoModels": "Ollama\u2019ya ula\u015f\u0131l\u0131yor ancak indirilmi\u015f model yok. Model eklemek i\u00e7in `ollama pull llama3.2:3b` komutunu \u00e7al\u0131\u015ft\u0131r\u0131n.",
+      "ollamaUnreachable": "{{url}} adresinde Ollama\u2019ya ula\u015f\u0131lam\u0131yor. `ollama serve` ile ba\u015flat\u0131n veya Ollama uygulamas\u0131n\u0131 a\u00e7\u0131n.",
+      "ollamaProbeFailed": "Ollama kontrol\u00fc ba\u015far\u0131s\u0131z oldu."
+    },
     "statusSection": "Durum",
     "apiKeySection": "API Anahtarı",
     "apiKeyPlaceholder": "API Anahtarı",

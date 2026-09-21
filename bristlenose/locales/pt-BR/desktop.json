@@ -744,6 +744,28 @@
     "done": "Concluído"
   },
   "llmSettings": {
+    "validation": {
+      "outOfCredit": "{{provider}} est\u00e1 sem cr\u00e9dito. Sua chave est\u00e1 correta \u2014 adicione cr\u00e9dito \u00e0 conta para us\u00e1-la.",
+      "keyRejected": "{{provider}} rejeitou esta chave ({{status}}). Ela pode ter sido exclu\u00edda, rotacionada ou nunca ter tido acesso \u2014 gere uma nova no painel do provedor.",
+      "rateLimited": "{{provider}} est\u00e1 com limite de requisi\u00e7\u00f5es agora (429). Sua chave est\u00e1 correta \u2014 tente novamente em um minuto.",
+      "httpStatus": "{{provider}} retornou HTTP {{status}}.",
+      "azureEndpointMissing": "Adicione a URL do endpoint do Azure para concluir a configura\u00e7\u00e3o.",
+      "azureEndpointScheme": "O endpoint do Azure precisa come\u00e7ar com https:// \u2014 recebido \u201c{{endpoint}}\u201d.",
+      "azureNotFound": "Endpoint ou implanta\u00e7\u00e3o do Azure n\u00e3o encontrados (404). A chave est\u00e1 correta \u2014 confira a URL e o nome da implanta\u00e7\u00e3o.",
+      "buildFailed": "N\u00e3o foi poss\u00edvel montar a solicita\u00e7\u00e3o.",
+      "noResponse": "Sem resposta de {{provider}}.",
+      "timedOut": "Tempo esgotado \u2014 {{provider}} n\u00e3o respondeu em 5 s.",
+      "offline": "Sem conex\u00e3o de rede. Sua chave estava correta \u2014 s\u00f3 n\u00e3o podemos verificar agora.",
+      "unreachable": "N\u00e3o foi poss\u00edvel contatar {{provider}}. Verifique sua conex\u00e3o.",
+      "networkError": "Erro de rede ao contatar {{provider}}.",
+      "ollamaURLMissing": "Defina a URL do servidor Ollama.",
+      "ollamaURLInvalid": "A URL do Ollama n\u00e3o \u00e9 v\u00e1lida.",
+      "ollamaNoResponse": "Sem resposta do Ollama.",
+      "ollamaHTTPError": "O Ollama retornou HTTP {{status}}. O servidor est\u00e1 em execu\u00e7\u00e3o?",
+      "ollamaNoModels": "O Ollama est\u00e1 acess\u00edvel, mas nenhum modelo foi baixado. Execute `ollama pull llama3.2:3b` para adicionar um.",
+      "ollamaUnreachable": "O Ollama n\u00e3o est\u00e1 acess\u00edvel em {{url}}. Inicie-o com `ollama serve` ou abra o app Ollama.",
+      "ollamaProbeFailed": "A verifica\u00e7\u00e3o do Ollama falhou."
+    },
     "statusSection": "Status",
     "apiKeySection": "Chave de API",
     "apiKeyPlaceholder": "Chave de API",

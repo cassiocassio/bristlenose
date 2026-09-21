@@ -41,6 +41,7 @@ _LOCALES = _ROOT / "bristlenose" / "locales"
 _APP = _ROOT / "desktop" / "Bristlenose" / "Bristlenose"
 _RUNNER = _APP / "PipelineRunner.swift"
 _MESSAGE = _APP / "FailureMessage.swift"
+_VALIDATOR = _APP / "LLMValidator.swift"
 
 
 def _swift() -> str:
@@ -65,14 +66,14 @@ def _names_provider() -> set[str]:
 
 
 def _swift_english() -> dict[str, str]:
-    """`englishFailureSentences`, parsed as JSON. Lives on `FailureMessage`,
-    which is nonisolated — `EventLogReader` builds one off the main actor."""
+    """`englishSentences`, parsed as JSON. Lives on `FailureMessage`, which is
+    nonisolated — `EventLogReader` builds one off the main actor."""
     body = re.search(
-        r"static let englishFailureSentences: \[String: String\] = \[(.*?)\n    \]",
+        r"static let englishSentences: \[String: String\] = \[(.*?)\n    \]",
         _MESSAGE.read_text(encoding="utf-8"),
         re.DOTALL,
     )
-    assert body, "englishFailureSentences not found"
+    assert body, "englishSentences not found"
     return json.loads("{" + body.group(1).rstrip().rstrip(",") + "}")
 
 
@@ -142,17 +143,103 @@ def test_no_orphan_keys() -> None:
     )
 
 
-def test_swift_english_matches_the_en_locale() -> None:
-    """The two copies of the English, held equal.
+#: Every key prefix `FailureMessage.englishSentences` carries, and where in
+#: `en/desktop.json` its block lives. A new prefix is enrolled here; until it is,
+#: `test_every_swift_sentence_is_enrolled` fails rather than letting it go
+#: unchecked.
+_PREFIXES = {
+    "desktop.pipeline.failure.": ("pipeline", "failure"),
+    "desktop.llmSettings.validation.": ("llmSettings", "validation"),
+    "desktop.llmSettings.revalidating": ("llmSettings", "revalidating"),
+}
 
-    `englishFailureSentences` exists because the log and the copy-payload stay
-    English whatever the UI shows. That makes it a second copy of `en`, and the
-    only thing standing between it and silent drift is this assertion.
+
+def _en(*path: str) -> dict:
+    data = json.loads((_LOCALES / "en" / "desktop.json").read_text(encoding="utf-8"))
+    for part in path:
+        data = data[part]
+    return data
+
+
+def test_every_swift_sentence_is_enrolled() -> None:
+    """A key in the table under no known prefix is a sentence nothing checks."""
+    stray = sorted(
+        k for k in _swift_english() if not any(k.startswith(p) for p in _PREFIXES)
+    )
+    assert not stray, (
+        f"{stray} are in FailureMessage.englishSentences under no prefix this "
+        f"test knows. Add the prefix to _PREFIXES so its block is compared."
+    )
+
+
+def test_swift_english_matches_the_en_locale() -> None:
+    """The two copies of the English, held equal, for every enrolled prefix.
+
+    `englishSentences` exists because the log and the copy-payload stay English
+    whatever the UI shows. That makes it a second copy of `en`, and the only
+    thing standing between it and silent drift is this assertion.
     """
-    assert _swift_english() == _block("en"), (
-        "PipelineRunner.englishFailureSentences and en/desktop.json's "
-        "pipeline.failure disagree. Reword both in the same commit — the "
-        "locale gates cannot see this, they only ask whether the key is present."
+    table = _swift_english()
+    for prefix, path in _PREFIXES.items():
+        block = _en(*path)
+        if not isinstance(block, dict):  # a single key, not a block
+            assert table[prefix] == block, f"{prefix} disagrees with en"
+            continue
+        mine = {k[len(prefix):]: v for k, v in table.items() if k.startswith(prefix)}
+        assert mine == block, (
+            f"FailureMessage.englishSentences and en/desktop.json's "
+            f"{'.'.join(path)} disagree. Reword both in the same commit — the "
+            f"locale gates cannot see this, they only ask whether the key is present."
+        )
+
+
+#: Shell commands the researcher is told to run. They are code, not prose, and a
+#: translator who "helpfully" localises `ollama serve` hands someone a command
+#: that does not exist. `check-locales.py` validates `{{vars}}` and cannot see
+#: these.
+_VERBATIM_COMMANDS = {
+    "ollamaNoModels": "`ollama pull llama3.2:3b`",
+    "ollamaUnreachable": "`ollama serve`",
+}
+
+
+@pytest.mark.parametrize("locale", _full_locales())
+def test_shell_commands_survive_translation(locale: str) -> None:
+    block = _en_like(locale, "llmSettings", "validation")
+    for leaf, command in _VERBATIM_COMMANDS.items():
+        assert command in block[leaf], (
+            f"{locale}: {leaf} must carry {command} verbatim, backticks and all "
+            f"— it is rendered as markdown, and a translated command is one the "
+            f"researcher cannot run."
+        )
+
+
+def _en_like(locale: str, *path: str) -> dict:
+    data = json.loads((_LOCALES / locale / "desktop.json").read_text(encoding="utf-8"))
+    for part in path:
+        data = data[part]
+    return data
+
+
+@pytest.mark.parametrize("locale", _full_locales())
+def test_every_validation_key_resolves(locale: str) -> None:
+    """One key per sentence `LLMValidator` can produce, in every locale.
+
+    The validator is not a view and has no `I18n`; the pane resolves what it
+    returns. `LLMSettingsView` is also the pane the language is changed from, so
+    a sentence resolved at check time would sit there in the outgoing language.
+    """
+    produced = set(
+        re.findall(r'\.keyed\(Self\.V \+ "(\w+)"', _VALIDATOR.read_text(encoding="utf-8"))
+    )
+    assert produced, "LLMValidator produces no keyed messages — did the prefix move?"
+    block = _en_like(locale, "llmSettings", "validation")
+    missing = sorted(produced - set(block))
+    assert not missing, f"{locale}: {missing} absent — the pane would render raw keys"
+    orphans = sorted(set(block) - produced)
+    assert not orphans, (
+        f"desktop.llmSettings.validation.{orphans} are produced by nobody. Wire "
+        f"them at the validator or delete them from all 21 locales."
     )
 
 

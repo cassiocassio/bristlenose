@@ -744,6 +744,28 @@
     "done": "Ferdig"
   },
   "llmSettings": {
+    "validation": {
+      "outOfCredit": "{{provider}} er tom for kreditt. N\u00f8kkelen din er i orden \u2013 fyll p\u00e5 kontoen for \u00e5 bruke den.",
+      "keyRejected": "{{provider}} avviste denne n\u00f8kkelen ({{status}}). Den kan v\u00e6re slettet, byttet ut eller aldri ha hatt tilgang \u2013 lag en ny i leverand\u00f8rens dashbord.",
+      "rateLimited": "{{provider}} er hastighetsbegrenset akkurat n\u00e5 (429). N\u00f8kkelen din er i orden \u2013 pr\u00f8v igjen om et minutt.",
+      "httpStatus": "{{provider}} returnerte HTTP {{status}}.",
+      "azureEndpointMissing": "Legg til URL-en til Azure-endepunktet for \u00e5 fullf\u00f8re oppsettet.",
+      "azureEndpointScheme": "Azure-endepunktet m\u00e5 begynne med https:// \u2013 mottok \u00ab{{endpoint}}\u00bb.",
+      "azureNotFound": "Fant ikke Azure-endepunkt eller -distribusjon (404). N\u00f8kkelen er i orden \u2013 sjekk URL-en og distribusjonsnavnet.",
+      "buildFailed": "Kunne ikke bygge foresp\u00f8rselen.",
+      "noResponse": "Ingen svar fra {{provider}}.",
+      "timedOut": "Foresp\u00f8rselen fikk tidsavbrudd \u2013 {{provider}} svarte ikke innen 5 s.",
+      "offline": "Ingen nettverkstilkobling. N\u00f8kkelen din var i orden \u2013 vi kan bare ikke sjekke den n\u00e5.",
+      "unreachable": "Kunne ikke n\u00e5 {{provider}}. Sjekk tilkoblingen din.",
+      "networkError": "Nettverksfeil ved tilkobling til {{provider}}.",
+      "ollamaURLMissing": "Angi URL-en til Ollama-serveren.",
+      "ollamaURLInvalid": "Ollama-URL-en er ikke gyldig.",
+      "ollamaNoResponse": "Ingen svar fra Ollama.",
+      "ollamaHTTPError": "Ollama returnerte HTTP {{status}}. Kj\u00f8rer serveren?",
+      "ollamaNoModels": "Ollama er tilgjengelig, men ingen modeller er lastet ned. Kj\u00f8r `ollama pull llama3.2:3b` for \u00e5 legge til en.",
+      "ollamaUnreachable": "Ollama er ikke tilgjengelig p\u00e5 {{url}}. Start den med `ollama serve`, eller \u00e5pne Ollama-appen.",
+      "ollamaProbeFailed": "Ollama-sjekken mislyktes."
+    },
     "statusSection": "Status",
     "apiKeySection": "API-nøkkel",
     "apiKeyPlaceholder": "API-nøkkel",

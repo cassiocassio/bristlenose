@@ -744,6 +744,28 @@
     "done": "Fet"
   },
   "llmSettings": {
+    "validation": {
+      "outOfCredit": "{{provider}} s\u2019ha quedat sense cr\u00e8dit. La clau \u00e9s correcta: recarrega el compte per fer-la servir.",
+      "keyRejected": "{{provider}} ha rebutjat aquesta clau ({{status}}). Pot haver estat esborrada, rotada o no haver tingut acc\u00e9s mai: genera\u2019n una de nova al tauler del prove\u00efdor.",
+      "rateLimited": "{{provider}} t\u00e9 un l\u00edmit de peticions actiu (429). La clau \u00e9s correcta: torna-ho a provar d\u2019aqu\u00ed a un minut.",
+      "httpStatus": "{{provider}} ha retornat HTTP {{status}}.",
+      "azureEndpointMissing": "Afegeix l\u2019URL de l\u2019extrem d\u2019Azure per acabar la configuraci\u00f3.",
+      "azureEndpointScheme": "L\u2019extrem d\u2019Azure ha de comen\u00e7ar amb https:// \u2014 s\u2019ha rebut \u00ab{{endpoint}}\u00bb.",
+      "azureNotFound": "No s\u2019ha trobat l\u2019extrem o el desplegament d\u2019Azure (404). La clau \u00e9s correcta: comprova l\u2019URL de l\u2019extrem i el nom del desplegament.",
+      "buildFailed": "No s\u2019ha pogut crear la petici\u00f3.",
+      "noResponse": "Cap resposta de {{provider}}.",
+      "timedOut": "La petici\u00f3 ha excedit el temps: {{provider}} no ha respost en 5 s.",
+      "offline": "No hi ha connexi\u00f3 a la xarxa. La clau \u00e9s correcta; ara mateix no la podem comprovar.",
+      "unreachable": "No s'ha pogut contactar amb {{provider}}. Comprova la connexi\u00f3.",
+      "networkError": "Error de xarxa en contactar amb {{provider}}.",
+      "ollamaURLMissing": "Indica l\u2019URL del servidor d\u2019Ollama.",
+      "ollamaURLInvalid": "L\u2019URL d\u2019Ollama no \u00e9s v\u00e0lid.",
+      "ollamaNoResponse": "Cap resposta d\u2019Ollama.",
+      "ollamaHTTPError": "Ollama ha retornat HTTP {{status}}. El servidor s\u2019est\u00e0 executant?",
+      "ollamaNoModels": "Ollama \u00e9s accessible per\u00f2 no t\u00e9 cap model baixat. Executa `ollama pull llama3.2:3b` per afegir-ne un.",
+      "ollamaUnreachable": "Ollama no \u00e9s accessible a {{url}}. Inicia\u2019l amb `ollama serve` o obre l\u2019app Ollama.",
+      "ollamaProbeFailed": "Ha fallat la comprovaci\u00f3 d\u2019Ollama."
+    },
     "statusSection": "Estat",
     "apiKeySection": "Clau API",
     "apiKeyPlaceholder": "Clau API",

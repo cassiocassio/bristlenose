@@ -744,6 +744,28 @@
     "done": "Listo"
   },
   "llmSettings": {
+    "validation": {
+      "outOfCredit": "{{provider}} se ha quedado sin cr\u00e9dito. Tu clave es correcta: recarga la cuenta para usarla.",
+      "keyRejected": "{{provider}} ha rechazado esta clave ({{status}}). Puede que se haya eliminado, rotado o que nunca tuviera acceso: genera una nueva en el panel del proveedor.",
+      "rateLimited": "{{provider}} tiene un l\u00edmite de peticiones activo (429). Tu clave es correcta: int\u00e9ntalo dentro de un minuto.",
+      "httpStatus": "{{provider}} ha devuelto HTTP {{status}}.",
+      "azureEndpointMissing": "A\u00f1ade la URL del extremo de Azure para terminar la configuraci\u00f3n.",
+      "azureEndpointScheme": "El extremo de Azure debe empezar por https:// \u2014 se ha recibido \u00ab{{endpoint}}\u00bb.",
+      "azureNotFound": "No se ha encontrado el extremo o la implementaci\u00f3n de Azure (404). La clave es correcta: comprueba la URL y el nombre de la implementaci\u00f3n.",
+      "buildFailed": "No se ha podido crear la petici\u00f3n.",
+      "noResponse": "Sin respuesta de {{provider}}.",
+      "timedOut": "La petici\u00f3n ha superado el tiempo l\u00edmite: {{provider}} no ha respondido en 5 s.",
+      "offline": "No hay conexi\u00f3n de red. Tu clave era correcta; ahora mismo no podemos comprobarla.",
+      "unreachable": "No se ha podido contactar con {{provider}}. Comprueba tu conexi\u00f3n.",
+      "networkError": "Error de red al contactar con {{provider}}.",
+      "ollamaURLMissing": "Indica la URL del servidor de Ollama.",
+      "ollamaURLInvalid": "La URL de Ollama no es v\u00e1lida.",
+      "ollamaNoResponse": "Sin respuesta de Ollama.",
+      "ollamaHTTPError": "Ollama ha devuelto HTTP {{status}}. \u00bfEst\u00e1 el servidor en marcha?",
+      "ollamaNoModels": "Ollama es accesible pero no tiene modelos descargados. Ejecuta `ollama pull llama3.2:3b` para a\u00f1adir uno.",
+      "ollamaUnreachable": "Ollama no es accesible en {{url}}. In\u00edcialo con `ollama serve` o abre la app Ollama.",
+      "ollamaProbeFailed": "Ha fallado la comprobaci\u00f3n de Ollama."
+    },
     "statusSection": "Estado",
     "apiKeySection": "Clave de API",
     "apiKeyPlaceholder": "Clave de API",

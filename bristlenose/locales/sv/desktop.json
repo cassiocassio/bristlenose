@@ -744,6 +744,28 @@
     "done": "Klar"
   },
   "llmSettings": {
+    "validation": {
+      "outOfCredit": "{{provider}} har inget saldo kvar. Din nyckel \u00e4r korrekt \u2013 fyll p\u00e5 kontot f\u00f6r att anv\u00e4nda den.",
+      "keyRejected": "{{provider}} avvisade den h\u00e4r nyckeln ({{status}}). Den kan ha raderats, bytts ut eller aldrig haft beh\u00f6righet \u2013 skapa en ny i leverant\u00f6rens kontrollpanel.",
+      "rateLimited": "{{provider}} till\u00e4mpar en hastighetsgr\u00e4ns just nu (429). Din nyckel \u00e4r korrekt \u2013 f\u00f6rs\u00f6k igen om en minut.",
+      "httpStatus": "{{provider}} returnerade HTTP {{status}}.",
+      "azureEndpointMissing": "L\u00e4gg till URL:en till Azure-slutpunkten f\u00f6r att slutf\u00f6ra konfigurationen.",
+      "azureEndpointScheme": "Azure-slutpunkten m\u00e5ste b\u00f6rja med https:// \u2013 fick \u201d{{endpoint}}\u201d.",
+      "azureNotFound": "Azure-slutpunkt eller -distribution hittades inte (404). Nyckeln \u00e4r korrekt \u2013 kontrollera URL:en och distributionsnamnet.",
+      "buildFailed": "Det gick inte att bygga beg\u00e4ran.",
+      "noResponse": "Inget svar fr\u00e5n {{provider}}.",
+      "timedOut": "Tidsgr\u00e4nsen \u00f6verskreds \u2013 {{provider}} svarade inte inom 5 s.",
+      "offline": "Ingen n\u00e4tverksanslutning. Din nyckel var korrekt \u2013 vi kan bara inte kontrollera den just nu.",
+      "unreachable": "Kunde inte n\u00e5 {{provider}}. Kontrollera din anslutning.",
+      "networkError": "N\u00e4tverksfel vid anslutning till {{provider}}.",
+      "ollamaURLMissing": "Ange URL:en till Ollama-servern.",
+      "ollamaURLInvalid": "Ollama-URL:en \u00e4r inte giltig.",
+      "ollamaNoResponse": "Inget svar fr\u00e5n Ollama.",
+      "ollamaHTTPError": "Ollama returnerade HTTP {{status}}. K\u00f6rs servern?",
+      "ollamaNoModels": "Ollama g\u00e5r att n\u00e5 men har inga h\u00e4mtade modeller. K\u00f6r `ollama pull llama3.2:3b` f\u00f6r att l\u00e4gga till en.",
+      "ollamaUnreachable": "Ollama g\u00e5r inte att n\u00e5 p\u00e5 {{url}}. Starta den med `ollama serve` eller \u00f6ppna Ollama-appen.",
+      "ollamaProbeFailed": "Ollama-kontrollen misslyckades."
+    },
     "statusSection": "Status",
     "apiKeySection": "API-nyckel",
     "apiKeyPlaceholder": "API-nyckel",

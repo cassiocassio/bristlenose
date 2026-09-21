@@ -11,6 +11,10 @@ enum LLMValidator {
 
     private static let logger = Logger(subsystem: "app.bristlenose", category: "llm-validator")
 
+    /// Key prefix for every sentence this type produces. Spelled once so a
+    /// rename is one edit and the gate has something to grep for.
+    private static let V = "desktop.llmSettings.validation."
+
     /// Per-provider extra config the validator may need (currently Azure only).
     struct AzureConfig {
         var endpoint: String
@@ -18,14 +22,23 @@ enum LLMValidator {
     }
 
     /// Validate a credential and return the resulting status plus a short
-    /// human-readable error string (for tooltip / inline display) when the
-    /// status is anything other than `.online`.
+    /// explanation (for tooltip / inline display) when the status is anything
+    /// other than `.online`.
+    ///
+    /// The explanation is a `FailureMessage`, not a sentence. This type is not a
+    /// view and has no `I18n`; resolving here would also pin the wording to the
+    /// language in force when the check ran, which is wrong for a pane the user
+    /// can change the language from. `LLMSettingsView` resolves it.
+    ///
+    /// The key prefix is `desktop.llmSettings.validation.*`, and two of the
+    /// values carry a **backticked shell command** that must survive
+    /// translation verbatim — `tests/test_pipeline_failure_keys.py` asserts it.
     static func validate(
         provider: LLMProvider,
         key: String,
         azureConfig: AzureConfig? = nil,
         ollamaURL: String? = nil
-    ) async -> (ProviderStatus, String?) {
+    ) async -> (ProviderStatus, FailureMessage?) {
         // Ollama is keyless — URL presence + reachability is the contract.
         if provider == .ollama {
             return await probeOllama(urlString: ollamaURL ?? "")
@@ -41,7 +54,7 @@ enum LLMValidator {
                 // Started-but-incomplete: user has entered a key, the
                 // endpoint is missing. Orange .unavailable is more honest
                 // than grey .notSetUp — they've done work, they're not done.
-                return (.unavailable, "Add the Azure endpoint URL to finish setting this up.")
+                return (.unavailable, .keyed(Self.V + "azureEndpointMissing"))
             }
             // Reject schemeless input early with a friendly message rather
             // than letting URLSession fail with "unsupported URL scheme."
@@ -52,7 +65,8 @@ enum LLMValidator {
             } else {
                 return (
                     .invalid,
-                    "Azure endpoint must start with https:// — got \"\(endpoint.prefix(40))…\""
+                    .keyed(Self.V + "azureEndpointScheme",
+                           vars: ["endpoint": String(endpoint.prefix(40))])
                 )
             }
         }
@@ -64,13 +78,13 @@ enum LLMValidator {
         } catch {
             logger.warning(
                 "validate(\(provider.rawValue, privacy: .public)) build error: \(error.localizedDescription, privacy: .public)")
-            return (.unavailable, "Could not build request")
+            return (.unavailable, .keyed(Self.V + "buildFailed"))
         }
 
         do {
             let (data, response) = try await urlSession.data(for: request)
             guard let http = response as? HTTPURLResponse else {
-                return (.unavailable, "No HTTP response")
+                return (.unavailable, .keyed(Self.V + "noResponse", vars: ["provider": provider.displayName]))
             }
             // Body is needed for credit detection (Anthropic 400 "credit balance
             // is too low" / OpenAI insufficient_quota). It's a provider error
@@ -86,21 +100,22 @@ enum LLMValidator {
                 "validate(\(provider.rawValue, privacy: .public)) URLError \(urlErr.code.rawValue, privacy: .public)")
             switch urlErr.code {
             case .timedOut:
-                return (.unavailable, "Request timed out — \(provider.displayName) didn't respond in 5s.")
+                return (.unavailable, .keyed(Self.V + "timedOut", vars: ["provider": provider.displayName]))
             case .notConnectedToInternet, .networkConnectionLost:
                 // Past tense: offline, we can't re-check, so we can only vouch for
                 // what we knew before. "is fine" overclaims (the key may have
                 // changed since the last good check); "was fine" is honest.
-                return (.unavailable, "No network connection. Your key was fine — we just can't check it right now.")
+                return (.unavailable, .keyed(Self.V + "offline"))
             case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed:
-                return (.unavailable, "Could not reach \(provider.displayName). Check your network connection.")
+                return (.unavailable, .keyed(Self.V + "unreachable", vars: ["provider": provider.displayName]))
             default:
-                return (.unavailable, "Network error reaching \(provider.displayName).")
+                return (.unavailable, .keyed(Self.V + "networkError", vars: ["provider": provider.displayName]))
             }
         } catch {
             logger.error(
                 "validate(\(provider.rawValue, privacy: .public)) error: \(error.localizedDescription, privacy: .private)")
-            return (.unavailable, "Network error reaching \(provider.displayName).")
+            return (.unavailable, .keyed(Self.V + "networkError",
+                                          vars: ["provider": provider.displayName]))
         }
     }
 
@@ -192,7 +207,7 @@ enum LLMValidator {
         provider: LLMProvider,
         status: Int,
         body: String? = nil
-    ) -> (ProviderStatus, String?) {
+    ) -> (ProviderStatus, FailureMessage?) {
         // Body-aware credit detection FIRST (precedence: provider error
         // code/message before HTTP status — mirrors the shared Python classifier
         // in bristlenose/llm/failure_classifier.py). This is load-bearing:
@@ -217,9 +232,12 @@ enum LLMValidator {
                 || lower.contains("billing_error")
                 || lower.contains("exceeded your current quota")
             {
+                // Same situation as the 402 arm below, learned from the body
+                // instead of the status line — one key, because the user's
+                // position is identical and "(402)" told them nothing.
                 return (
                     .outOfCredit,
-                    "\(provider.displayName) is out of credit — your key is fine, top up your account to use it."
+                    .keyed(Self.V + "outOfCredit", vars: ["provider": provider.displayName])
                 )
             }
         }
@@ -233,7 +251,8 @@ enum LLMValidator {
         case 401, 403:
             return (
                 .invalid,
-                "\(provider.displayName) rejected this key (\(status)). It may have been deleted, rotated, or never had access — generate a new key in your provider dashboard."
+                .keyed(Self.V + "keyRejected",
+                       vars: ["provider": provider.displayName, "status": String(status)])
             )
         case 402:
             // Observed negative, NOT a failed observation: the account is
@@ -242,7 +261,7 @@ enum LLMValidator {
             // must not show green while every run fails on quota.
             return (
                 .outOfCredit,
-                "\(provider.displayName) is out of credits (402). Your key is fine — top up your account to use it."
+                .keyed(Self.V + "outOfCredit", vars: ["provider": provider.displayName])
             )
         case 429:
             // Transient: self-clears in a minute. Masking behind cache-green is
@@ -250,7 +269,7 @@ enum LLMValidator {
             // rate-limit that resolves itself.
             return (
                 .unavailable,
-                "\(provider.displayName) is rate-limited right now (429). Your key is fine — try again in a minute."
+                .keyed(Self.V + "rateLimited", vars: ["provider": provider.displayName])
             )
         case 404 where provider == .azure:
             // Azure 404 = wrong endpoint URL or wrong deployment name —
@@ -259,7 +278,7 @@ enum LLMValidator {
             // endpoint, not the key.
             return (
                 .invalid,
-                "Azure endpoint or deployment not found (404). The key is fine — check the endpoint URL and deployment name."
+                .keyed(Self.V + "azureNotFound")
             )
         case 400..<500 where provider == .claude:
             // Anthropic auth-checks before payload parsing, so any 4xx that
@@ -286,7 +305,9 @@ enum LLMValidator {
             // the user's fault (unlike 402); the next Run surfaces a clear
             // server error if it's still down. If a specific 5xx ever needs to
             // be *shown* (not masked), split it out here the way 402 is.
-            return (.unavailable, "\(provider.displayName) returned HTTP \(status).")
+            return (.unavailable, .keyed(Self.V + "httpStatus",
+                                          vars: ["provider": provider.displayName,
+                                                 "status": String(status)]))
         }
     }
 
@@ -317,12 +338,12 @@ enum LLMValidator {
     /// dot to reflect "Ollama is reachable + has at least one model" so
     /// the user doesn't activate Ollama and then hit a confusing
     /// localhost:11434 connection error at pipeline-run time.
-    private static func probeOllama(urlString: String) async -> (ProviderStatus, String?) {
+    private static func probeOllama(urlString: String) async -> (ProviderStatus, FailureMessage?) {
         let trimmed = urlString
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         if trimmed.isEmpty {
-            return (.notSetUp, "Set the Ollama server URL.")
+            return (.notSetUp, .keyed(Self.V + "ollamaURLMissing"))
         }
         // Match bristlenose/ollama.py: strip trailing /v1 if present so we
         // can hit /api/tags directly.
@@ -330,19 +351,20 @@ enum LLMValidator {
             ? String(trimmed.dropLast(3))
             : trimmed
         guard let url = URL(string: "\(base)/api/tags") else {
-            return (.invalid, "Ollama URL is not valid.")
+            return (.invalid, .keyed(Self.V + "ollamaURLInvalid"))
         }
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
         do {
             let (data, response) = try await urlSession.data(for: req)
             guard let http = response as? HTTPURLResponse else {
-                return (.unavailable, "Ollama: no HTTP response.")
+                return (.unavailable, .keyed(Self.V + "ollamaNoResponse"))
             }
             guard (200...299).contains(http.statusCode) else {
                 return (
                     .unavailable,
-                    "Ollama returned HTTP \(http.statusCode). Is the server running?"
+                    .keyed(Self.V + "ollamaHTTPError",
+                           vars: ["status": String(http.statusCode)])
                 )
             }
             // Parse models list — empty list means Ollama is up but has no
@@ -355,17 +377,17 @@ enum LLMValidator {
             }
             return (
                 .unavailable,
-                "Ollama is reachable but has no models pulled. Run `ollama pull llama3.2:3b` to add one."
+                .keyed(Self.V + "ollamaNoModels")
             )
         } catch let urlErr as URLError {
             logger.info(
                 "probeOllama URLError \(urlErr.code.rawValue, privacy: .public)")
             return (
                 .unavailable,
-                "Ollama not reachable at \(base). Start it with `ollama serve` or open the Ollama app."
+                .keyed(Self.V + "ollamaUnreachable", vars: ["url": base])
             )
         } catch {
-            return (.unavailable, "Ollama probe failed.")
+            return (.unavailable, .keyed(Self.V + "ollamaProbeFailed"))
         }
     }
 

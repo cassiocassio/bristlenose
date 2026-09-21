@@ -30,14 +30,14 @@ If code files were changed:
    ```bash
    BASE=$(git merge-base main HEAD 2>/dev/null || echo HEAD~10)
    git diff --name-only --diff-filter=A "$BASE"..HEAD \
-       -- 'desktop/Bristlenose/Bristlenose/**/*.swift' 'frontend/src/**/*.tsx' |
+       -- desktop/Bristlenose/Bristlenose/ frontend/src/ |
      while read -r f; do
-       case "$f" in *.test.tsx|*.test.ts) continue ;; esac
+       case "$f" in *.test.tsx|*.test.ts) continue ;; *.swift|*.tsx) ;; *) continue ;; esac
        if [ -f "$f" ] && ! grep -qE 'i18n\??\.t\(|[^a-zA-Z]t\(' "$f"; then echo "no i18n: $f"; fi
      done
    ```
 
-   (Globs quoted so zsh hands them to git rather than expanding them against `cwd`; `while read` rather than `xargs -r`, which is GNU-only and absent on this Mac; an `if` rather than `&& … || …`, whose `||` arm fires on a missing file as readily as on a missing key. All three are traps this repo has already paid for — root `CLAUDE.md` §Gotchas.)
+   (Directories, not `**/*.swift` — a `**/` **git pathspec matches zero files at the top level**, and `desktop/Bristlenose/Bristlenose/` is flat, so the glob form silently matched nothing and this step would never have fired. Extension filtering moved into the loop. Caught reviewing this very session, in which the same trap was written up in root `CLAUDE.md` §Gotchas an hour earlier; `while read` rather than `xargs -r`, which is GNU-only and absent on this Mac; an `if` rather than `&& … || …`, whose `||` arm fires on a missing file as readily as on a missing key. All three are traps this repo has already paid for — root `CLAUDE.md` §Gotchas.)
 
    Any file listed has **zero** i18n call sites. That is failure class 2 — a surface never enrolled in English — and **nothing mechanical will ever ask again**, because every gate we own (`check-locales.py`, the locale key-parity tests, Weblate) is downstream of a key existing. Judge, don't obey: a presentation shell that takes its strings from a caller (`ToastView`, `StatusPill`, `SessionsPopoverList`) correctly has none, and a whole-file `#if DEBUG` lab is out of scope. What you are looking for is a surface a researcher reads. The boundary is `docs/design-i18n.md` §"Which surfaces are targets"; the authoring rule is `desktop/CLAUDE.md` §"A user-facing string needs a key".
 

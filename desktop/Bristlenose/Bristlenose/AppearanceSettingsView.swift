@@ -174,70 +174,16 @@ struct AppearanceSettingsView: View {
             // bar once per process, and this app can be mid-analysis, so it
             // does not get to relaunch itself behind the researcher's back.
             UserDefaults.standard.set([newValue], forKey: "AppleLanguages")
-            promptToRelaunch()
+            // The prompt is NOT raised here. `SettingsWindow` rebuilds this very
+            // window on the same locale change, and closing a window dismisses
+            // any sheet attached to it — so an alert put up from this handler
+            // appeared and vanished in the same frame. It is raised by the
+            // rebuild instead, once there is a window that will stay.
             // VoiceOver language for web content is set via the bridge
             // (syncLocale → HTML lang attribute). Native SwiftUI elements
             // inherit the system language — no per-window override needed.
             // Restart serve to update BRISTLENOSE_WHISPER_LANGUAGE
             NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
-        }
-    }
-
-    /// Offer the relaunch, because AppKit will not change its mind without one.
-    ///
-    /// **Apple's pattern and Apple's words.** System Settings ▸ General ▸
-    /// Language & Region ▸ Applications puts up exactly this dialog, and Apple
-    /// DTS is explicit that there is no supported way for an app to change its
-    /// own language at runtime (developer.apple.com/forums/thread/718512:
-    /// *"AppleLanguages is an implementation detail, not something that's
-    /// considered API"* … *"there is no supported mechanism for your app to
-    /// change its own language"*). A relaunch is the platform's answer, not a
-    /// shortcoming of ours — and Apple's own UI offers it rather than hiding it.
-    ///
-    /// The four strings are **lifted, not translated**, out of
-    /// `Localization.appex/Localizable.loctable`, which carries all 21 of our
-    /// locales. Same principle as the `Choose` button and the TCC prompts: look
-    /// it up, do not write it. Apple writes the app-name slot two ways — plain
-    /// `%@` and the typed `%[tt]@` (fi, ja, zh-Hant) — and both are baked to
-    /// "Bristlenose" at seed time, because the app name is a constant here and
-    /// not a variable.
-    ///
-    /// Without this the researcher gets what prompted it: a German menu bar
-    /// over a French app, because AppKit read its language once at process
-    /// start while everything else follows `I18n` live.
-    ///
-    /// **Never relaunches during an analysis.** That would kill the subprocess
-    /// mid-run to fix a cosmetic mismatch. The alert then states Apple's own
-    /// "will not use the new language until relaunched" and offers no button.
-    @MainActor
-    private func promptToRelaunch() {
-        let busy = SettingsWindow.shared.isAnalysing
-        let alert = NSAlert()
-        alert.alertStyle = .informational
-        alert.messageText = i18n.t(
-            busy ? "settings.language.relaunchBody" : "settings.language.relaunchTitle")
-        if busy {
-            alert.addButton(withTitle: i18n.t("common.buttons.ok"))
-        } else {
-            alert.informativeText = i18n.t("settings.language.relaunchBody")
-            alert.addButton(withTitle: i18n.t("settings.language.relaunchNow"))
-            alert.addButton(withTitle: i18n.t("settings.language.dontRelaunch"))
-        }
-
-        let act = { (response: NSApplication.ModalResponse) in
-            guard !busy, response == .alertFirstButtonReturn else { return }
-            let configuration = NSWorkspace.OpenConfiguration()
-            configuration.createsNewApplicationInstance = true
-            NSWorkspace.shared.openApplication(
-                at: Bundle.main.bundleURL, configuration: configuration
-            ) { _, _ in
-                DispatchQueue.main.async { NSApp.terminate(nil) }
-            }
-        }
-        if let window = SettingsWindow.shared.window {
-            alert.beginSheetModal(for: window, completionHandler: act)
-        } else {
-            act(alert.runModal())
         }
     }
 }

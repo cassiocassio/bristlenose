@@ -339,6 +339,8 @@
     "oneQuote": "1 cita",
     "signalLabel": "Señal",
     "signalTitle": "Intensidad de señal compuesta",
+    "concLabelFull": "Concentraci\u00f3n",
+    "agreeLabelFull": "Acuerdo",
     "concLabel": "Conc.",
     "concTitle": "Ratio de concentración — sobrerrepresentación respecto al promedio del estudio",
     "agreeLabel": "Acuerdo",

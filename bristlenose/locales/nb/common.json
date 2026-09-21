@@ -339,6 +339,8 @@
     "oneQuote": "1 sitat",
     "signalLabel": "Signal",
     "signalTitle": "Sammensatt signalstyrke",
+    "concLabelFull": "Konsentrasjon",
+    "agreeLabelFull": "Enighet",
     "concLabel": "Kons.",
     "concTitle": "Konsentrasjonsforhold – hvor overrepresentert vs. studiegjennomsnittet",
     "agreeLabel": "Enighet",

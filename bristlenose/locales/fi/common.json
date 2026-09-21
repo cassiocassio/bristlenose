@@ -339,6 +339,8 @@
     "oneQuote": "1 sitaatti",
     "signalLabel": "Signaali",
     "signalTitle": "Yhdistetty signaalin vahvuus",
+    "concLabelFull": "Keskittyminen",
+    "agreeLabelFull": "Yksimielisyys",
     "concLabel": "Kesk.",
     "concTitle": "Keskittymäsuhde — kuinka yliedustettu tutkimuksen keskiarvoon nähden",
     "agreeLabel": "Yksim.",

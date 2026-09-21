@@ -318,6 +318,8 @@
     "oneQuote": "1 則引述",
     "signalLabel": "訊號",
     "signalTitle": "綜合訊號強度",
+    "concLabelFull": "\u96c6\u4e2d",
+    "agreeLabelFull": "\u5171\u8b58",
     "concLabel": "集中",
     "concTitle": "集中比率——相對於研究平均值的過度呈現程度",
     "agreeLabel": "共識",

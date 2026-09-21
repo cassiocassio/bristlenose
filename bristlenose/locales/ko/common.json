@@ -318,6 +318,8 @@
     "oneQuote": "인용문 1개",
     "signalLabel": "시그널",
     "signalTitle": "복합 시그널 강도",
+    "concLabelFull": "\uc9d1\uc911",
+    "agreeLabelFull": "\uc77c\uce58",
     "concLabel": "집중",
     "concTitle": "집중도 — 연구 평균 대비 과잉 표현 비율",
     "agreeLabel": "일치",

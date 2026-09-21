@@ -384,6 +384,8 @@
     "oneQuote": "1 cytat",
     "signalLabel": "Sygnał",
     "signalTitle": "Złożona siła sygnału",
+    "concLabelFull": "Koncentracja",
+    "agreeLabelFull": "Zgodno\u015b\u0107",
     "concLabel": "Konc.",
     "concTitle": "Wskaźnik koncentracji — jak bardzo nadreprezentowany względem średniej badania",
     "agreeLabel": "Zgod.",

@@ -339,6 +339,8 @@
     "oneQuote": "1 quote",
     "signalLabel": "Signal",
     "signalTitle": "Composite signal strength",
+    "concLabelFull": "Concentration",
+    "agreeLabelFull": "Agreement",
     "concLabel": "Conc.",
     "concTitle": "Concentration ratio — how overrepresented vs study average",
     "agreeLabel": "Agree.",

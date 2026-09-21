@@ -339,6 +339,8 @@
     "oneQuote": "1 verbatim",
     "signalLabel": "Signal",
     "signalTitle": "Intensité du signal composite",
+    "concLabelFull": "Concentration",
+    "agreeLabelFull": "Accord",
     "concLabel": "Conc.",
     "concTitle": "Ratio de concentration — surreprésentation par rapport à la moyenne de l'étude",
     "agreeLabel": "Accord",

@@ -333,6 +333,8 @@
     "oneQuote": "1 件の発言",
     "signalLabel": "シグナル",
     "signalTitle": "総合シグナル強度",
+    "concLabelFull": "\u96c6\u4e2d",
+    "agreeLabelFull": "\u5408\u610f",
     "concLabel": "集中",
     "concTitle": "集中比 — 研究平均と比べてどれだけ過剰に出現しているか",
     "agreeLabel": "合意",

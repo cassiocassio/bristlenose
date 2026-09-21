@@ -339,6 +339,8 @@
     "oneQuote": "1 citat",
     "signalLabel": "Signal",
     "signalTitle": "Sammansatt signalstyrka",
+    "concLabelFull": "Koncentration",
+    "agreeLabelFull": "Samst\u00e4mmighet",
     "concLabel": "Konc.",
     "concTitle": "Koncentrationskvot — hur överrepresenterat jämfört med studiens genomsnitt",
     "agreeLabel": "Samst.",

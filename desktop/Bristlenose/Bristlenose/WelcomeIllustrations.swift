@@ -456,7 +456,29 @@ struct SignalIllustrationView: View {
 
     var body: some View {
         let still = reduceMotion || !active   // baton: animate only while this cell holds it
-        return IllustrationWebView(html: WelcomeIllustrationHTML.signal(dark: scheme == .dark, palette: palette, reduce: still))
+        // OURS, every one: the same labels and tooltips the Signals lens ships,
+        // lifted by key rather than re-translated. The three `*Title` tooltips
+        // are byte-identical to the lens's, so those 21 translations came free.
+        //
+        // The two `*LabelFull` keys are the deliberate exception the rules allow
+        // — the lens abbreviates under a column width ("Conc."), the picture
+        // teaches and spells out. Not drift: **10 of 21 locales already spell
+        // `agreeLabel` out**, and CJK never abbreviates at all, so the
+        // abbreviation is a per-language orthographic choice rather than a word.
+        let strings = [
+            "signalLabel": i18n.t("common.signals.signalLabel"),
+            "signalTitle": i18n.t("common.signals.signalTitle"),
+            "concLabelFull": i18n.t("common.signals.concLabelFull"),
+            "concTitle": i18n.t("common.signals.concTitle"),
+            "agreeLabelFull": i18n.t("common.signals.agreeLabelFull"),
+            "agreeTitle": i18n.t("common.signals.agreeTitle"),
+            "intensityLabel": i18n.t("common.signals.intensityLabel"),
+            "intensityTitle": i18n.t("common.signals.intensityTitle"),
+            "section": i18n.t("common.signals.section"),
+            "theme": i18n.t("common.signals.theme"),
+        ]
+        return IllustrationWebView(html: WelcomeIllustrationHTML.signal(
+            dark: scheme == .dark, palette: palette, reduce: still, strings: strings))
             .id("signal-\(scheme)-\(palette)-\(still)-\(i18n.locale)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
@@ -953,7 +975,14 @@ enum WelcomeIllustrationHTML {
         """
     }
 
-    static func signal(dark: Bool, palette: String, reduce: Bool) -> String {
+    /// The signal-card illustration.
+    ///
+    /// Its chrome is almost entirely **OURS** — the same labels and tooltips the
+    /// Signals lens ships — so `strings` is a lift from `common:signals.*`
+    /// rather than a second translation of the same words
+    /// (`docs/design-i18n.md` §"Examples, mockups and illustrations").
+    static func signal(dark: Bool, palette: String, reduce: Bool,
+                       strings: [String: String]) -> String {
         let kind = WelcomeIllustration.signal
         let accent = palette == "edo" ? (dark ? "#4d9fe0" : "#0f5c9e") : (dark ? "#0a84ff" : "#007aff")
         return """
@@ -1026,6 +1055,21 @@ enum WelcomeIllustrationHTML {
           @media (prefers-reduced-motion:reduce){ .flap.flip .roll{ animation:none !important; } .conc-bar-fill{ transition:none !important; } }
         </style></head>
         <body>
+        \(stringsBlock(strings))
+        <script>
+          // Labels and tooltips are the lens's own, lifted rather than
+          // re-translated. `loc` values are deliberately NOT in the blob — they
+          // are generated section and theme names, whose output language is
+          // currently undefined (`docs/design-i18n.md`), so translating them
+          // here would draw a product behaviour we do not have.
+          document.addEventListener("DOMContentLoaded", function(){
+            document.querySelectorAll("[data-x]").forEach(function(el){
+              el.textContent = S[el.getAttribute("data-x")] || "";
+              var tip = S[el.getAttribute("data-t")];
+              if (tip) el.setAttribute("title", tip);
+            });
+          });
+        </script>
           <div class="signal-card">
             <div class="signal-card-top">
               <div class="signal-card-identity">
@@ -1034,16 +1078,16 @@ enum WelcomeIllustrationHTML {
                 <div class="signal-card-tags"><span class="badge" data-tag></span><span class="pattern-label" data-pat></span></div>
               </div>
               <div class="signal-card-metrics">
-                <span class="metric-label" title="Composite signal strength">Signal</span>
+                <span class="metric-label" data-t="signalTitle" data-x="signalLabel"></span>
                 <span class="metric-value" data-mv="signal"></span>
                 <span class="metric-viz"><span class="signal-sparkbars" data-spark></span></span>
-                <span class="metric-label" title="Concentration ratio — how overrepresented vs study average">Concentration</span>
+                <span class="metric-label" data-t="concTitle" data-x="concLabelFull"></span>
                 <span class="metric-value" data-mv="conc"></span>
                 <span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" data-cbar></span></span></span>
-                <span class="metric-label" title="Agreement — effective number of voices (Simpson's diversity)">Agreement</span>
+                <span class="metric-label" data-t="agreeTitle" data-x="agreeLabelFull"></span>
                 <span class="metric-value" data-mv="agree"></span>
                 <span class="metric-viz"><span class="conc-bar-track"><span class="conc-bar-fill" data-abar></span></span></span>
-                <span class="metric-label" title="Mean emotional intensity (1–3)">Intensity</span>
+                <span class="metric-label" data-t="intensityTitle" data-x="intensityLabel"></span>
                 <span class="metric-value" data-mv="intensity"></span>
                 <span class="metric-viz" data-dots></span>
               </div>
@@ -1063,10 +1107,10 @@ enum WelcomeIllustrationHTML {
             });
           }
           var SIGNALS=[
-            { src:"SECTION", loc:"Onboarding",     tag:["badge-confusion","confusion"],     accent:"var(--bn-sentiment-confusion)",   pat:["pattern-gap","GAP"],           signal:"2.41", conc:"3.2×", concPct:64, agree:"4.1", agreePct:68, intensity:2.5 },
-            { src:"THEME",   loc:"Search results", tag:["badge-delight","delight"],         accent:"var(--bn-sentiment-delight)",     pat:["pattern-success","SUCCESS"],   signal:"1.98", conc:"2.6×", concPct:52, agree:"5.3", agreePct:88, intensity:2.1 },
-            { src:"THEME",   loc:"Checkout",       tag:["badge-frustration","frustration"], accent:"var(--bn-sentiment-frustration)", pat:["pattern-tension","TENSION"],   signal:"3.12", conc:"4.3×", concPct:86, agree:"3.4", agreePct:57, intensity:2.8 },
-            { src:"SECTION", loc:"Settings",       tag:["badge-doubt","doubt"],             accent:"var(--bn-sentiment-doubt)",       pat:["pattern-recovery","RECOVERY"], signal:"1.74", conc:"1.9×", concPct:38, agree:"2.2", agreePct:37, intensity:1.6 }
+            { src:S["section"], loc:"Onboarding",     tag:["badge-confusion","confusion"],     accent:"var(--bn-sentiment-confusion)",   pat:["pattern-gap","GAP"],           signal:"2.41", conc:"3.2×", concPct:64, agree:"4.1", agreePct:68, intensity:2.5 },
+            { src:S["theme"],   loc:"Search results", tag:["badge-delight","delight"],         accent:"var(--bn-sentiment-delight)",     pat:["pattern-success","SUCCESS"],   signal:"1.98", conc:"2.6×", concPct:52, agree:"5.3", agreePct:88, intensity:2.1 },
+            { src:S["theme"],   loc:"Checkout",       tag:["badge-frustration","frustration"], accent:"var(--bn-sentiment-frustration)", pat:["pattern-tension","TENSION"],   signal:"3.12", conc:"4.3×", concPct:86, agree:"3.4", agreePct:57, intensity:2.8 },
+            { src:S["section"], loc:"Settings",       tag:["badge-doubt","doubt"],             accent:"var(--bn-sentiment-doubt)",       pat:["pattern-recovery","RECOVERY"], signal:"1.74", conc:"1.9×", concPct:38, agree:"2.2", agreePct:37, intensity:1.6 }
           ];
           var VALS=SIGNALS.map(function(s){ return parseFloat(s.signal); });
           function sparkbars(idx, accent){
@@ -1113,7 +1157,12 @@ enum WelcomeIllustrationHTML {
           // layout is a fixed 440px), never scrolls (body overflow hidden).
           function fit(){
             var c=document.querySelector('.signal-card');
-            var s=Math.min(0.9,(window.innerWidth-8)/c.offsetWidth,(window.innerHeight-8)/c.offsetHeight);
+            // `scrollWidth`, not `offsetWidth`. The card is a hard 440px, so
+            // `offsetWidth` returns 440 whatever the labels say — the fit could
+            // not see its own content, and a longer locale simply vanished
+            // under `overflow:hidden`. See docs/design-i18n.md §Mechanism.
+            var cw=Math.max(c.scrollWidth,c.offsetWidth), ch=Math.max(c.scrollHeight,c.offsetHeight);
+            var s=Math.min(0.9,(window.innerWidth-8)/cw,(window.innerHeight-8)/ch);
             if(isFinite(s) && s>0) c.style.transform='translate(-50%,-50%) scale('+s+')';
           }
           set();

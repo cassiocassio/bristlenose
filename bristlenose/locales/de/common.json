@@ -339,6 +339,8 @@
     "oneQuote": "1 Zitat",
     "signalLabel": "Signal",
     "signalTitle": "Zusammengesetzte Signalstärke",
+    "concLabelFull": "Konzentration",
+    "agreeLabelFull": "\u00dcbereinstimmung",
     "concLabel": "Konz.",
     "concTitle": "Konzentrationsrate — Überrepräsentation im Vergleich zum Studiendurchschnitt",
     "agreeLabel": "Übereinstimmung",

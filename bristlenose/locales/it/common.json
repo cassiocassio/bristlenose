@@ -339,6 +339,8 @@
     "oneQuote": "1 citazione",
     "signalLabel": "Segnale",
     "signalTitle": "Forza del segnale composito",
+    "concLabelFull": "Concentrazione",
+    "agreeLabelFull": "Consenso",
     "concLabel": "Conc.",
     "concTitle": "Rapporto di concentrazione — quanto è sovrarappresentato rispetto alla media dello studio",
     "agreeLabel": "Cons.",

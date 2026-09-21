@@ -339,6 +339,8 @@
     "oneQuote": "1 alıntı",
     "signalLabel": "Sinyal",
     "signalTitle": "Bileşik sinyal gücü",
+    "concLabelFull": "Yo\u011funla\u015fma",
+    "agreeLabelFull": "Uzla\u015fma",
     "concLabel": "Yoğ.",
     "concTitle": "Yoğunlaşma oranı — çalışma ortalamasına göre ne kadar fazla temsil edildiği",
     "agreeLabel": "Uzl.",

@@ -649,6 +649,65 @@ Here `bristlenose status` prints `✓ Quotes  8 quotes (2 sessions)` directly un
 `✓ Transcribe  3 sessions` — the loss visible in plain sight, unmarked, while the
 resume logic reads `COMPLETE` from the same file and skips the stage entirely.
 
+### Renaming a lookup map's KEY orphans every caller, and the fallback makes it look fine
+
+A rename sweep greps for the old *name*. It does not ask which strings are
+**keys into a map**, and a map with a default answers a missing key with a
+plausible result rather than an error.
+
+0.30.0's Analysis→Signals rename moved `TAB_ROUTES`'s key from `analysis` to
+`signals` (`Dashboard.tsx:62-70`, `shims/navigation.ts:20`) and left one caller
+emitting the old one: `target: "analysis:section-x-sentiment"` at
+`Dashboard.tsx:230`. `TAB_ROUTES[tab] ?? "/report/"` then returned the project
+dashboard, so **the AI-tags stat card put the researcher back on the page they
+clicked from** — no error, no console warning, a real href, and a tab switch
+that "worked". It shipped to nine channels. At `v0.29.1` the same card reached
+`/report/analysis/`.
+
+Nothing could have caught it: `tsc` cannot type a `Record<string, string>`
+lookup, five stat cards had targets, and **no test anywhere asserted where a
+stat card goes** — only that cards render. The suite was green on both sides of
+the break.
+
+**Rule: when a rename touches a map key, grep for the key as a STRING LITERAL in
+callers, not just as an identifier** — `grep -rn '"analysis:' src/` is the whole
+check, and it is a different grep from the one that renamed the symbol. **And
+gate the destination, not the spelling:** `Dashboard.test.tsx`'s
+*"every stat card reaches the lens its target names"* asserts the resolved href
+per card, so the next key move fails loudly instead of resolving to a fallback.
+
+**Tell:** a lookup with `?? default`, `.get(k, fallback)`, or `|| FALLBACK`
+whose default is a *working* value. A fallback that throws is safe; a fallback
+that navigates somewhere real is the trap. Same family as the ternary-arm entry
+below — both produce valid, running, wrong code.
+
+**Sibling, same rename:** the *sealed* static renderer was never part of it, so
+its `analysis:section-x-sentiment` (`s12_render/dashboard.py:539`) is
+**correct** — its panel is `data-tab="analysis"` (`report.py:396`) and its
+anchor lives in `theme/templates/analysis.html`. Before "finishing" a rename on
+a second surface, check whether that surface was in scope.
+
+### A proposal's "What it touches" and "New file X" are not claims that X exists
+
+The existing trap above — prose *about* a deleted file reading as a dead pointer
+— has a second face that fires on the opposite tense, and a doc audit walks into
+it just as readily. A design doc's **proposal** sections name files the work
+*would* create or edit: `**What it touches**: server/database.py`,
+`**What it touches**: New file bristlenose/merge.py`. A path-resolution pass
+reports both as broken links. They are neither broken nor links.
+
+Measured 21 Sep 2026: a truing pass over 27 docs reported **six** dead paths.
+**One was real.** Three were prose about deleted files (*"span bars removed
+(`atoms/span-bar.css` + tokens deleted)"*, *"`molecules/name-edit.css` was
+deleted on …"*, *"Renamed `molecules/person-id.css` → `person-badge.css`"*) and
+two were proposals naming their own future files. Each was convincing because
+the one real finding sat in the same list.
+
+**Before reporting a path as dead, read the sentence around it and the heading
+above it.** Past-tense verbs (*removed*, *deleted*, *renamed*) mean the doc is
+doing its job; `**What it touches**`, `### Files to create`, `New file`, and
+`Maybe 10-20 lines` mean you are inside a proposal. Neither is a defect.
+
 ### A backgrounded `pytest … | tail`'s reported exit code is `tail`'s, not pytest's
 
 Sibling to the two above, and the one most likely to produce a **confident false

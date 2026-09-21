@@ -73,6 +73,10 @@
     "clearAriaLabel": "Очистити пошук"
   },
   "quotes": {
+    "hiddenCount_one": "{{count}} \u043f\u0440\u0438\u0445\u043e\u0432\u0430\u043d\u0430 \u0446\u0438\u0442\u0430\u0442\u0430",
+    "hiddenCount_few": "{{count}} \u043f\u0440\u0438\u0445\u043e\u0432\u0430\u043d\u0456 \u0446\u0438\u0442\u0430\u0442\u0438",
+    "hiddenCount_many": "{{count}} \u043f\u0440\u0438\u0445\u043e\u0432\u0430\u043d\u0438\u0445 \u0446\u0438\u0442\u0430\u0442",
+    "hiddenCount_other": "{{count}} \u043f\u0440\u0438\u0445\u043e\u0432\u0430\u043d\u043e\u0457 \u0446\u0438\u0442\u0430\u0442\u0438",
     "unhideHeader": "Показати:",
     "unhideAll": "Показати всі",
     "dismissModeratorQuestion": "Приховати запитання модератора",

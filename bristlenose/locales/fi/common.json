@@ -61,6 +61,8 @@
     "clearAriaLabel": "Tyhjennä haku"
   },
   "quotes": {
+    "hiddenCount_one": "{{count}} piilotettu sitaatti",
+    "hiddenCount_other": "{{count}} piilotettua sitaattia",
     "unhideHeader": "Tuo näkyviin:",
     "unhideAll": "Tuo kaikki näkyviin",
     "dismissModeratorQuestion": "Ohita moderaattorin kysymys",

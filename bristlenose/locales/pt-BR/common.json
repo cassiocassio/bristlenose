@@ -61,6 +61,8 @@
     "clearAriaLabel": "Limpar busca"
   },
   "quotes": {
+    "hiddenCount_one": "{{count}} cita\u00e7\u00e3o oculta",
+    "hiddenCount_other": "{{count}} cita\u00e7\u00f5es ocultas",
     "unhideHeader": "Reexibir:",
     "unhideAll": "Reexibir tudo",
     "dismissModeratorQuestion": "Dispensar pergunta do moderador",

@@ -61,6 +61,8 @@
     "clearAriaLabel": "Rensa sökning"
   },
   "quotes": {
+    "hiddenCount_one": "{{count}} dolt citat",
+    "hiddenCount_other": "{{count}} dolda citat",
     "unhideHeader": "Visa igen:",
     "unhideAll": "Visa alla igen",
     "dismissModeratorQuestion": "Dölj moderatorfråga",

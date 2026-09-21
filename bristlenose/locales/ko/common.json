@@ -47,6 +47,7 @@
     "clearAriaLabel": "검색 지우기"
   },
   "quotes": {
+    "hiddenCount_other": "\uc228\uae34 \uc778\uc6a9 {{count}}\uac1c",
     "unhideHeader": "표시:",
     "unhideAll": "모두 표시",
     "dismissModeratorQuestion": "진행자 질문 닫기",

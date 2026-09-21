@@ -61,6 +61,8 @@
     "clearAriaLabel": "Aramayı temizle"
   },
   "quotes": {
+    "hiddenCount_one": "{{count}} gizli al\u0131nt\u0131",
+    "hiddenCount_other": "{{count}} gizli al\u0131nt\u0131",
     "unhideHeader": "Göster:",
     "unhideAll": "Tümünü göster",
     "dismissModeratorQuestion": "Moderatör sorusunu kapat",

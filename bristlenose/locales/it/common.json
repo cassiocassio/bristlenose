@@ -61,6 +61,8 @@
     "clearAriaLabel": "Cancella ricerca"
   },
   "quotes": {
+    "hiddenCount_one": "{{count}} citazione nascosta",
+    "hiddenCount_other": "{{count}} citazioni nascoste",
     "unhideHeader": "Mostra:",
     "unhideAll": "Mostra tutto",
     "dismissModeratorQuestion": "Ignora domanda del moderatore",

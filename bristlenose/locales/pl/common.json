@@ -73,6 +73,10 @@
     "clearAriaLabel": "Wyczyść wyszukiwanie"
   },
   "quotes": {
+    "hiddenCount_one": "{{count}} ukryty cytat",
+    "hiddenCount_few": "{{count}} ukryte cytaty",
+    "hiddenCount_many": "{{count}} ukrytych cytat\u00f3w",
+    "hiddenCount_other": "{{count}} ukrytego cytatu",
     "unhideHeader": "Pokaż ponownie:",
     "unhideAll": "Pokaż wszystkie",
     "dismissModeratorQuestion": "Odrzuć pytanie moderatora",

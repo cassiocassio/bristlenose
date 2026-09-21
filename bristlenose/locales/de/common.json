@@ -51,6 +51,8 @@
     "clearAriaLabel": "Suche löschen"
   },
   "quotes": {
+    "hiddenCount_one": "{{count}} ausgeblendetes Zitat",
+    "hiddenCount_other": "{{count}} ausgeblendete Zitate",
     "unhideHeader": "Einblenden:",
     "unhideAll": "Alle einblenden",
     "dismissModeratorQuestion": "Moderatorfrage verwerfen",

@@ -55,6 +55,7 @@
     "clearAriaLabel": "清除搜尋"
   },
   "quotes": {
+    "hiddenCount_other": "{{count}} \u5247\u96b1\u85cf\u7684\u5f15\u8a00",
     "unhideHeader": "取消隱藏：",
     "unhideAll": "全部取消隱藏",
     "dismissModeratorQuestion": "關閉主持人提問",

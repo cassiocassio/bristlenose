@@ -69,6 +69,10 @@
     "clearAriaLabel": "Vymazat hledání"
   },
   "quotes": {
+    "hiddenCount_one": "{{count}} skryt\u00fd cit\u00e1t",
+    "hiddenCount_few": "{{count}} skryt\u00e9 cit\u00e1ty",
+    "hiddenCount_many": "{{count}} skryt\u00e9ho cit\u00e1tu",
+    "hiddenCount_other": "{{count}} skryt\u00fdch cit\u00e1t\u016f",
     "unhideHeader": "Zobrazit:",
     "unhideAll": "Zobrazit vše",
     "dismissModeratorQuestion": "Zavřít otázku moderátora",

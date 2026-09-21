@@ -61,6 +61,8 @@
     "clearAriaLabel": "Clear search"
   },
   "quotes": {
+    "hiddenCount_one": "{{count}} hidden quote",
+    "hiddenCount_other": "{{count}} hidden quotes",
     "unhideHeader": "Unhide:",
     "unhideAll": "Unhide all",
     "dismissModeratorQuestion": "Dismiss moderator question",

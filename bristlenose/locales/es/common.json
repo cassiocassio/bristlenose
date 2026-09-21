@@ -51,6 +51,8 @@
     "clearAriaLabel": "Borrar búsqueda"
   },
   "quotes": {
+    "hiddenCount_one": "{{count}} cita oculta",
+    "hiddenCount_other": "{{count}} citas ocultas",
     "unhideHeader": "Mostrar:",
     "unhideAll": "Mostrar todo",
     "dismissModeratorQuestion": "Descartar pregunta del moderador",

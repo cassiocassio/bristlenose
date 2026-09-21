@@ -61,6 +61,8 @@
     "clearAriaLabel": "Zoekopdracht wissen"
   },
   "quotes": {
+    "hiddenCount_one": "{{count}} verborgen citaat",
+    "hiddenCount_other": "{{count}} verborgen citaten",
     "unhideHeader": "Tonen:",
     "unhideAll": "Alles tonen",
     "dismissModeratorQuestion": "Moderatorvraag verbergen",

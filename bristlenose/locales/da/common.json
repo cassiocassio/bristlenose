@@ -61,6 +61,8 @@
     "clearAriaLabel": "Ryd søgning"
   },
   "quotes": {
+    "hiddenCount_one": "{{count}} skjult citat",
+    "hiddenCount_other": "{{count}} skjulte citater",
     "unhideHeader": "Vis igen:",
     "unhideAll": "Vis alle igen",
     "dismissModeratorQuestion": "Afvis moderatorspørgsmål",

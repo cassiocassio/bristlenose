@@ -51,7 +51,13 @@ export function Counter({
   const { t } = useTranslation();
   if (count === 0) return null;
 
-  const label = `${count} hidden quote${count !== 1 ? "s" : ""}`;
+  // `t` was already in scope and used for every other string in this component
+  // — the header, "Unhide all", the per-item labels. This one line hand-rolled
+  // English pluralisation instead, so a Spanish reader got "1 hidden quote"
+  // above a translated "Mostrar:". i18next picks the CLDR category from
+  // `count`, which is what Czech, Polish, Russian and Ukrainian need and what
+  // `+ "s"` can never express.
+  const label = t("quotes.hiddenCount", { count });
 
   return (
     <div className="bn-hidden-badge" data-testid={testId}>

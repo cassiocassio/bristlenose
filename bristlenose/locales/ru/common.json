@@ -73,6 +73,10 @@
     "clearAriaLabel": "Очистить поиск"
   },
   "quotes": {
+    "hiddenCount_one": "{{count}} \u0441\u043a\u0440\u044b\u0442\u0430\u044f \u0446\u0438\u0442\u0430\u0442\u0430",
+    "hiddenCount_few": "{{count}} \u0441\u043a\u0440\u044b\u0442\u044b\u0435 \u0446\u0438\u0442\u0430\u0442\u044b",
+    "hiddenCount_many": "{{count}} \u0441\u043a\u0440\u044b\u0442\u044b\u0445 \u0446\u0438\u0442\u0430\u0442",
+    "hiddenCount_other": "{{count}} \u0441\u043a\u0440\u044b\u0442\u043e\u0439 \u0446\u0438\u0442\u0430\u0442\u044b",
     "unhideHeader": "Показать снова:",
     "unhideAll": "Показать все",
     "dismissModeratorQuestion": "Скрыть вопрос модератора",

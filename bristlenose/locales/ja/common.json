@@ -57,6 +57,7 @@
     "clearAriaLabel": "検索をクリア"
   },
   "quotes": {
+    "hiddenCount_other": "\u975e\u8868\u793a\u306e\u5f15\u7528 {{count}} \u4ef6",
     "unhideHeader": "再表示:",
     "unhideAll": "すべて再表示",
     "dismissModeratorQuestion": "モデレーターの質問を非表示",

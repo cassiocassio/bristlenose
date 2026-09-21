@@ -248,6 +248,8 @@
   },
   "miro": {
     "menuLabel": "Envia al Miro…",
+    "serverUnreachable": "No s\u2019ha pogut connectar amb el servidor local.",
+    "requestFailed": "La sol\u00b7licitud ha fallat (HTTP {{status}}).",
     "popoverSubtitle": "Les cites com a notes en un tauler nou",
     "title": "Envia a un tauler del Miro",
     "checkingConnection": "S'està comprovant la connexió…",

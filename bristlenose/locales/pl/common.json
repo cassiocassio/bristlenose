@@ -287,6 +287,8 @@
   },
   "miro": {
     "menuLabel": "Wyślij do Miro…",
+    "serverUnreachable": "Nie mo\u017cna po\u0142\u0105czy\u0107 si\u0119 z serwerem lokalnym.",
+    "requestFailed": "\u017b\u0105danie nie powiod\u0142o si\u0119 (HTTP {{status}}).",
     "popoverSubtitle": "Cytaty jako karteczki na nowej tablicy",
     "title": "Wyślij do tablicy Miro",
     "checkingConnection": "Sprawdzanie połączenia…",

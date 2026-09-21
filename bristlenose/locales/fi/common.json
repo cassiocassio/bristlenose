@@ -248,6 +248,8 @@
   },
   "miro": {
     "menuLabel": "Lähetä Miroon…",
+    "serverUnreachable": "Paikalliseen palvelimeen ei saatu yhteytt\u00e4.",
+    "requestFailed": "Pyynt\u00f6 ep\u00e4onnistui (HTTP {{status}}).",
     "popoverSubtitle": "Sitaatit tarroina uudelle taululle",
     "title": "Lähetä Miro-taululle",
     "checkingConnection": "Tarkistetaan yhteyttä…",

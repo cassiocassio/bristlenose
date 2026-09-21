@@ -248,6 +248,8 @@
   },
   "miro": {
     "menuLabel": "Send til Miro …",
+    "serverUnreachable": "Kunne ikke n\u00e5 den lokale serveren.",
+    "requestFailed": "Foresp\u00f8rselen mislyktes (HTTP {{status}}).",
     "popoverSubtitle": "Sitater som lapper på en ny tavle",
     "title": "Send til Miro-tavle",
     "checkingConnection": "Sjekker tilkobling …",

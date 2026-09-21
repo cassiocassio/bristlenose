@@ -248,6 +248,8 @@
   },
   "miro": {
     "menuLabel": "Enviar a Miro\u2026",
+    "serverUnreachable": "No se pudo conectar con el servidor local.",
+    "requestFailed": "La solicitud fall\u00f3 (HTTP {{status}}).",
     "popoverSubtitle": "Citas como notas en un tablero nuevo",
     "title": "Enviar a un tablero de Miro",
     "checkingConnection": "Comprobando la conexi\u00f3n\u2026",

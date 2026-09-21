@@ -230,6 +230,8 @@
   },
   "miro": {
     "menuLabel": "Miro\ub85c \ubcf4\ub0b4\uae30\u2026",
+    "serverUnreachable": "\ub85c\uceec \uc11c\ubc84\uc5d0 \uc5f0\uacb0\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.",
+    "requestFailed": "\uc694\uccad\uc774 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4(HTTP {{status}}).",
     "popoverSubtitle": "\uc778\uc6a9\uc744 \uc0c8 \ubcf4\ub4dc\uc5d0 \uc2a4\ud2f0\ud0a4 \ub178\ud2b8\ub85c",
     "title": "Miro \ubcf4\ub4dc\ub85c \ubcf4\ub0b4\uae30",
     "checkingConnection": "\uc5f0\uacb0 \ud655\uc778 \uc911\u2026",

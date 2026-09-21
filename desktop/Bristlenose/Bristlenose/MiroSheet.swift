@@ -46,6 +46,16 @@ final class MiroSheetModel: ObservableObject {
 
     func t(_ key: String) -> String { i18n.t("common.miro.\(key)") }
 
+    /// An `APIError`'s sentence in the reader's language: its key when the
+    /// sentence is ours, its raw `message` when it is the server's own detail,
+    /// and `nil` when it is not an `APIError` at all — which leaves the caller's
+    /// own fallback in place, as before.
+    static func text(for error: Error, _ i18n: I18n) -> String? {
+        guard let api = error as? MiroAPI.APIError else { return nil }
+        guard let key = api.localeKey else { return api.message }
+        return i18n.t(key, api.localeVars)
+    }
+
     /// Desktop-only override of a `miro.*` string — used where the native sheet
     /// must drop a web idiom the shared `common.miro` string carries (the `↗` /
     /// `✓` glyphs, the "Open in Miro…" ellipsis). Lives in `desktop.miro.*`.
@@ -134,7 +144,7 @@ final class MiroSheetModel: ObservableObject {
             MiroConnectionStore.remember(conn)
             step = .configure
         } catch {
-            self.error = (error as? MiroAPI.APIError)?.message ?? t("connectError")
+            self.error = Self.text(for: error, i18n) ?? t("connectError")
         }
         busy = false
     }
@@ -179,7 +189,7 @@ final class MiroSheetModel: ObservableObject {
             } catch is CancellationError {
                 // User cancelled the wait; server-side push may still finish.
             } catch {
-                self.error = (error as? MiroAPI.APIError)?.message ?? t("exportError")
+                self.error = Self.text(for: error, i18n) ?? t("exportError")
                 self.step = .configure
             }
         }

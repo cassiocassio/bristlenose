@@ -230,6 +230,8 @@
   },
   "miro": {
     "menuLabel": "傳送至 Miro…",
+    "serverUnreachable": "\u7121\u6cd5\u9023\u63a5\u672c\u6a5f\u4f3a\u670d\u5668\u3002",
+    "requestFailed": "\u8acb\u6c42\u5931\u6557\uff08HTTP {{status}}\uff09\u3002",
     "popoverSubtitle": "將引述以便利貼形式置於新看板上",
     "title": "傳送至 Miro 看板",
     "checkingConnection": "正在檢查連線…",

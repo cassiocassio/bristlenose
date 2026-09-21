@@ -248,6 +248,8 @@
   },
   "miro": {
     "menuLabel": "Skicka till Miro…",
+    "serverUnreachable": "Kunde inte n\u00e5 den lokala servern.",
+    "requestFailed": "Beg\u00e4ran misslyckades (HTTP {{status}}).",
     "popoverSubtitle": "Citat som lappar på en ny tavla",
     "title": "Skicka till Miro-tavla",
     "checkingConnection": "Kontrollerar anslutning…",

@@ -20,7 +20,23 @@ struct MiroAPI {
     /// invalid-token reason, or a partial-board recovery URL on a 502).
     struct APIError: LocalizedError {
         let message: String
+        /// Set when the sentence is ours; `nil` when `message` is the **server's**
+        /// own `detail` (an invalid-token reason, a partial-board recovery URL on
+        /// a 502), which we pass through rather than second-guess.
+        ///
+        /// `errorDescription` keeps the English for the log, as elsewhere. The
+        /// display path is `localeKey` — resolved by `MiroSheet`, which is a view
+        /// and has an `I18n`; this type is not and does not.
+        var localeKey: String?
+        var localeVars: [String: String] = [:]
         var errorDescription: String? { message }
+
+        /// The transport could not reach our own sidecar — not Miro's problem,
+        /// and worth saying so, since the sheet's fallback blames the token.
+        static func serverUnreachable() -> APIError {
+            APIError(message: "Could not reach the local server.",
+                     localeKey: "common.miro.serverUnreachable")
+        }
     }
 
     private struct StatusResponse: Decodable {
@@ -73,6 +89,22 @@ struct MiroAPI {
         return "Request failed (HTTP \(status))."
     }
 
+    /// The server's own `detail` when it sent one, otherwise our generic
+    /// sentence — and only the generic one carries a key, because the server's
+    /// detail is already the most specific thing anyone has.
+    private func apiError(from data: Data, status: Int) -> APIError {
+        if let body = try? JSONDecoder().decode(ErrorBody.self, from: data),
+           let d = body.detail, !d.isEmpty
+        {
+            return APIError(message: d)
+        }
+        return APIError(
+            message: "Request failed (HTTP \(status)).",
+            localeKey: "common.miro.requestFailed",
+            localeVars: ["status": String(status)]
+        )
+    }
+
     /// GET status — is a Miro token configured?
     ///
     /// Intentionally collapses every failure (network, 5xx, decode) to `false`,
@@ -98,14 +130,14 @@ struct MiroAPI {
     @discardableResult
     func connect(token miroToken: String) async throws -> Connection {
         guard let req = request("/connect", method: "POST", body: ["token": miroToken]) else {
-            throw APIError(message: "Could not reach the local server.")
+            throw APIError.serverUnreachable()
         }
         let (data, resp) = try await URLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse else {
-            throw APIError(message: "Could not reach the local server.")
+            throw APIError.serverUnreachable()
         }
         guard (200..<300).contains(http.statusCode) else {
-            throw APIError(message: detail(from: data, status: http.statusCode))
+            throw apiError(from: data, status: http.statusCode)
         }
         let parsed = try? JSONDecoder().decode(StatusResponse.self, from: data)
         return Connection(connected: parsed?.connected ?? true,
@@ -133,14 +165,14 @@ struct MiroAPI {
             "/export", method: "POST",
             body: ["board_name": boardName, "colour_by": colourBy, "clips_base": clipsBase]
         ) else {
-            throw APIError(message: "Could not reach the local server.")
+            throw APIError.serverUnreachable()
         }
         let (data, resp) = try await URLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse else {
-            throw APIError(message: "Could not reach the local server.")
+            throw APIError.serverUnreachable()
         }
         guard (200..<300).contains(http.statusCode) else {
-            throw APIError(message: detail(from: data, status: http.statusCode))
+            throw apiError(from: data, status: http.statusCode)
         }
         let parsed = try JSONDecoder().decode(ExportResponse.self, from: data)
         return ExportResult(boardURL: parsed.board_url, stickies: parsed.stickies)

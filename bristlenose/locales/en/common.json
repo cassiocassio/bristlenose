@@ -248,6 +248,8 @@
   },
   "miro": {
     "menuLabel": "Send to Miro…",
+    "serverUnreachable": "Could not reach the local server.",
+    "requestFailed": "Request failed (HTTP {{status}}).",
     "popoverSubtitle": "Quotes as stickies on a new board",
     "title": "Send to Miro board",
     "checkingConnection": "Checking connection…",

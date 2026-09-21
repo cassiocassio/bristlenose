@@ -248,6 +248,8 @@
   },
   "miro": {
     "menuLabel": "Invia a Miro…",
+    "serverUnreachable": "Impossibile raggiungere il server locale.",
+    "requestFailed": "Richiesta non riuscita (HTTP {{status}}).",
     "popoverSubtitle": "Citazioni come adesivi su una nuova bacheca",
     "title": "Invia alla bacheca Miro",
     "checkingConnection": "Verifica della connessione…",

@@ -248,6 +248,8 @@
   },
   "miro": {
     "menuLabel": "Miro'ya Gönder…",
+    "serverUnreachable": "Yerel sunucuya ula\u015f\u0131lamad\u0131.",
+    "requestFailed": "\u0130stek ba\u015far\u0131s\u0131z oldu (HTTP {{status}}).",
     "popoverSubtitle": "Yeni bir panoda yapışkan not olarak alıntılar",
     "title": "Miro panosuna gönder",
     "checkingConnection": "Bağlantı denetleniyor…",

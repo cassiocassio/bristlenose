@@ -248,6 +248,8 @@
   },
   "miro": {
     "menuLabel": "Envoyer vers Miro\u2026",
+    "serverUnreachable": "Impossible de joindre le serveur local.",
+    "requestFailed": "\u00c9chec de la requ\u00eate (HTTP {{status}}).",
     "popoverSubtitle": "Citations en pense-b\u00eates sur un nouveau tableau",
     "title": "Envoyer vers un tableau Miro",
     "checkingConnection": "V\u00e9rification de la connexion\u2026",

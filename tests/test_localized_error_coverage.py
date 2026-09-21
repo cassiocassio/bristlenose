@@ -32,6 +32,14 @@ _APP = _ROOT / "desktop" / "Bristlenose" / "Bristlenose"
 # Conformers whose user-facing text reaches the UI through a discriminator the
 # view resolves. English may still appear in `errorDescription` for the log.
 LOCALISED: dict[str, str] = {
+    "APIError": (
+        "MiroAPI's. localeKey is set only when the sentence is ours; nil means "
+        "`message` is the SERVER's own detail (an invalid-token reason, a "
+        "partial-board recovery URL on a 502), which is already the most "
+        "specific thing anyone has and is passed through untranslated. "
+        "MiroSheet.text(for:) resolves it and falls back to the sheet's own "
+        "connectError / exportError as before. 21 Sep 2026."
+    ),
     "CopyError": (
         "errorDescription stays English for the log and for `.underlying`, whose "
         "system error macOS has already localised — translating that again would "
@@ -69,12 +77,11 @@ ENGLISH_PENDING: dict[str, str] = {
     "ZoomOAuthError": "~10 sign-in sentences → cloud-import window via CloudImportStore:413.",
     "MicrosoftOAuthError": "~9 sentences, incl. the two longest on the surface (admin approval, Conditional Access).",
     "GoogleOAuthError": "~6 sentences → same window, same path.",
-    "APIError": "2 distinct sentences → Miro sheet (MiroSheet:137/182), which already has a localised fallback beside them.",
 }
 
 # The ratchet. Lower it when an entry moves; raising it needs a commit that says
 # why, per docs/testing/soft-gates.json's policy.
-MAX_ENGLISH_PENDING = 4
+MAX_ENGLISH_PENDING = 3
 
 
 def _conformers() -> dict[str, Path]:

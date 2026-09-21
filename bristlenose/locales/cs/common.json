@@ -280,6 +280,8 @@
   },
   "miro": {
     "menuLabel": "Odeslat do Mira\u2026",
+    "serverUnreachable": "Nepoda\u0159ilo se spojit s m\u00edstn\u00edm serverem.",
+    "requestFailed": "Po\u017eadavek selhal (HTTP {{status}}).",
     "popoverSubtitle": "Citace jako l\u00edstky na nov\u00e9 tabuli",
     "title": "Odeslat na tabuli Miro",
     "checkingConnection": "Ov\u011b\u0159uje se p\u0159ipojen\u00ed\u2026",

@@ -248,6 +248,8 @@
   },
   "miro": {
     "menuLabel": "An Miro senden\u2026",
+    "serverUnreachable": "Der lokale Server ist nicht erreichbar.",
+    "requestFailed": "Anfrage fehlgeschlagen (HTTP {{status}}).",
     "popoverSubtitle": "Zitate als Haftnotizen auf einem neuen Board",
     "title": "An ein Miro-Board senden",
     "checkingConnection": "Verbindung wird gepr\u00fcft\u2026",

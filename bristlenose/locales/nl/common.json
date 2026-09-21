@@ -248,6 +248,8 @@
   },
   "miro": {
     "menuLabel": "Naar Miro sturen…",
+    "serverUnreachable": "Kan de lokale server niet bereiken.",
+    "requestFailed": "Verzoek mislukt (HTTP {{status}}).",
     "popoverSubtitle": "Citaten als plaknotities op een nieuw bord",
     "title": "Naar Miro-bord sturen",
     "checkingConnection": "Verbinding controleren…",

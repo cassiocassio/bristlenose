@@ -248,6 +248,8 @@
   },
   "miro": {
     "menuLabel": "Enviar para o Miro…",
+    "serverUnreachable": "N\u00e3o foi poss\u00edvel acessar o servidor local.",
+    "requestFailed": "A solicita\u00e7\u00e3o falhou (HTTP {{status}}).",
     "popoverSubtitle": "Citações como adesivos em um novo quadro",
     "title": "Enviar para o quadro do Miro",
     "checkingConnection": "Verificando conexão…",

@@ -42,7 +42,7 @@ import Testing
     /// Every case, once, with a representative payload.
     static let exemplars: [SubtitleVariant] = [
         .cantFind(reason: .moved),
-        .failed(summary: "All topic segmentation calls failed."),
+        .failed(message: .passthrough("All topic segmentation calls failed.")),
         .failedDiagnostic,
         .completedPartial,
         .stopping,

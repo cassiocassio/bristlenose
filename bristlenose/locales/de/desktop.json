@@ -290,6 +290,33 @@
     "projectNamePlaceholder": "Projektname"
   },
   "pipeline": {
+    "failure": {
+      "stranded": "Die Analyse wurde unerwartet beendet.",
+      "launchFailed": "Die Analyse konnte nicht gestartet werden. {{reason}}",
+      "auth": "Ihr {{provider}}-Schl\u00fcssel wurde abgelehnt.",
+      "authGeneric": "Ihr API-Schl\u00fcssel wurde abgelehnt.",
+      "outOfCredit": "{{provider}} hat kein Guthaben mehr.",
+      "outOfCreditGeneric": "Das Guthaben Ihres KI-Anbieter-Kontos ist aufgebraucht.",
+      "network": "{{provider}} nicht erreichbar. Pr\u00fcfen Sie Ihre Verbindung.",
+      "networkGeneric": "KI-Anbieter nicht erreichbar. Pr\u00fcfen Sie Ihre Verbindung.",
+      "quota": "Ratenlimit von {{provider}} erreicht. Versuchen Sie es bald erneut.",
+      "quotaGeneric": "Ratenlimit erreicht. Versuchen Sie es bald erneut.",
+      "apiRequest": "{{provider}} hat die Anfrage abgelehnt.",
+      "apiRequestGeneric": "Der KI-Anbieter hat die Anfrage abgelehnt.",
+      "apiServer": "{{provider}} ist nicht erreichbar. Versuchen Sie es in K\u00fcrze erneut.",
+      "apiServerGeneric": "Der KI-Anbieter ist nicht erreichbar. Versuchen Sie es in K\u00fcrze erneut.",
+      "outputTruncated": "Diese Sitzung ist zu dicht f\u00fcr das Ausgabelimit von {{provider}}. Versuchen Sie ein Modell mit gr\u00f6\u00dferer Ausgabe oder teilen Sie die Aufnahme auf.",
+      "outputTruncatedGeneric": "Diese Sitzung ist zu dicht f\u00fcr das Ausgabelimit des Modells. Versuchen Sie ein Modell mit gr\u00f6\u00dferer Ausgabe oder teilen Sie die Aufnahme auf.",
+      "disk": "Nicht gen\u00fcgend Speicherplatz.",
+      "whisper": "Transkription fehlgeschlagen \u2013 das Sprachmodell wurde nicht geladen.",
+      "userSignal": "Der Lauf wurde gestoppt.",
+      "missingDep": "Einrichtung erforderlich \u2013 ein ben\u00f6tigtes Werkzeug ist nicht installiert.",
+      "missingInput": "Eine ben\u00f6tigte Eingabedatei fehlt.",
+      "missingBinary": "FFmpeg wurde nicht gefunden.",
+      "outputExists": "Bereits analysiert \u2013 eine erneute Analyse w\u00fcrde die vorhandenen Ergebnisse ersetzen.",
+      "unusableInput": "Einige Dateien konnten nicht analysiert werden.",
+      "unknown": "Bei der Analyse ist etwas schiefgelaufen."
+    },
     "status": {
       "stopping": "Wird angehalten…",
       "starting": "Wird gestartet…",

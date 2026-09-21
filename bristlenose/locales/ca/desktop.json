@@ -290,6 +290,33 @@
     "projectNamePlaceholder": "Nom del projecte"
   },
   "pipeline": {
+    "failure": {
+      "stranded": "L'an\u00e0lisi s'ha aturat inesperadament.",
+      "launchFailed": "No s'ha pogut iniciar l'an\u00e0lisi. {{reason}}",
+      "auth": "La teva clau de {{provider}} ha estat rebutjada.",
+      "authGeneric": "La teva clau d'API ha estat rebutjada.",
+      "outOfCredit": "{{provider}} s'ha quedat sense cr\u00e8dit.",
+      "outOfCreditGeneric": "El teu compte del prove\u00efdor d'IA s'ha quedat sense cr\u00e8dit.",
+      "network": "No s'ha pogut contactar amb {{provider}}. Comprova la connexi\u00f3.",
+      "networkGeneric": "No s'ha pogut contactar amb el prove\u00efdor d'IA. Comprova la connexi\u00f3.",
+      "quota": "S'ha assolit el l\u00edmit de peticions de {{provider}}. Torna-ho a provar aviat.",
+      "quotaGeneric": "S'ha assolit el l\u00edmit de peticions. Torna-ho a provar aviat.",
+      "apiRequest": "{{provider}} ha rebutjat la petici\u00f3.",
+      "apiRequestGeneric": "El prove\u00efdor d'IA ha rebutjat la petici\u00f3.",
+      "apiServer": "{{provider}} no est\u00e0 disponible. Torna-ho a provar aviat.",
+      "apiServerGeneric": "El prove\u00efdor d'IA no est\u00e0 disponible. Torna-ho a provar aviat.",
+      "outputTruncated": "Aquesta sessi\u00f3 \u00e9s massa densa per al l\u00edmit de sortida de {{provider}}. Prova un model amb m\u00e9s sortida o divideix l'enregistrament.",
+      "outputTruncatedGeneric": "Aquesta sessi\u00f3 \u00e9s massa densa per al l\u00edmit de sortida del model. Prova un model amb m\u00e9s sortida o divideix l'enregistrament.",
+      "disk": "No hi ha prou espai al disc.",
+      "whisper": "Ha fallat la transcripci\u00f3: el model de veu no s'ha carregat.",
+      "userSignal": "S'ha aturat l'execuci\u00f3.",
+      "missingDep": "Cal configuraci\u00f3: falta una eina necess\u00e0ria.",
+      "missingInput": "Falta un fitxer d'entrada necessari.",
+      "missingBinary": "No s'ha trobat FFmpeg.",
+      "outputExists": "Ja s'ha analitzat: tornar a analitzar substituiria els resultats existents.",
+      "unusableInput": "No s'han pogut analitzar alguns fitxers.",
+      "unknown": "Alguna cosa ha anat malament durant l'an\u00e0lisi."
+    },
     "status": {
       "stopping": "S'està aturant…",
       "starting": "S'està iniciant…",

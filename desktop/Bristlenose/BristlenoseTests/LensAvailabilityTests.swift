@@ -99,7 +99,7 @@ struct ArtifactPriorTests {
     @Test func nonCompletedTerminusPredictsStatusPage() {
         // Pre-P5 serve rule: any non-completed last terminus intercepts —
         // even when an older good report exists, so no sessionCount override.
-        #expect(!predicts(.failed("x", category: .auth), sessions: 12))
+        #expect(!predicts(.failed(.passthrough("x"), category: .auth), sessions: 12))
         #expect(!predicts(.failedWithDiagnostic(summary: PipelineSummary()), sessions: 12))
         #expect(!predicts(.stopped(stagesComplete: []), sessions: 12))
         #expect(!predicts(.idle, sessions: 12))

@@ -98,7 +98,8 @@ import Testing
         // `.failed` carries no summary — a sentence and a category line, and it
         // must not be padded out to the ceiling either.
         let size = size(for: .failed(
-            "Anthropic API authentication failed: invalid API key", category: .auth))
+            .passthrough("Anthropic API authentication failed: invalid API key"),
+            category: .auth))
         #expect(size.width == ProjectDiagnosticPopover.width)
         #expect(size.height < ProjectDiagnosticPopover.ceiling)
     }

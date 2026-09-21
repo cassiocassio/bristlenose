@@ -8,7 +8,7 @@ Manual QA steps waiting to be confirmed. Per-item — say "QA done for X" to che
 
 **Date:** 21 Sep 2026
 **Branch:** main (`9c200e6b`..`cc4a4573`, 17 commits)
-**Context:** Roughly 700 translated values across 21 locales, plus two mechanisms
+**Context:** 567 translated values across 21 locales, plus 525 more from the run-failure work on 21 Sep, plus two mechanisms
 that only take effect at launch. Every item below is something **no test can
 see** — the `.lproj` work is a bundle property, the menu bar is built once per
 process, and the chip grid is a measured layout.
@@ -23,6 +23,9 @@ process, and the chip grid is a measured layout.
 - [ ] **A failed cloud-import row speaks the language.** Easiest via Diagnostics ▸ Cloud Import ▸ a partial-failure fixture: the red rows should read e.g. `Dosyanın yalnızca bir kısmı ulaştı.`, not `Only part of the file arrived`.
 - [ ] **A sign-in failure speaks the language.** Start a cloud sign-in and cancel it — expect the translated sentence. Microsoft/Zoom refusals that carry the provider's *own* reason are supposed to stay in the provider's words; that is not a bug.
 - [ ] **A drag-and-drop refusal speaks the language.** Drop a folder containing nothing importable → translated toast.
+- [ ] **A run-failure popover speaks the language** (added 21 Sep 2026). Diagnostics ▸ fixtures ▸ `failed_no_summary` puts a project into `.failed` with a category; click the row's error glyph. The body should be the translated sentence, and **switching language with the popover's project still selected should re-render it** — that is the whole point of deferring the resolve, and it is the half a test cannot reach. The `Category:` line below it is still English (register row 6, next commit).
+- [ ] **The named and generic sentences both read right.** With a provider configured, an LLM-category failure should name it (`Claude rejected the request.` → tr `Claude isteği reddetti.`); with none configured it should fall back to the `…Generic` sibling, which says "the AI provider" in the locale's own words rather than leaving `{{provider}}` on screen.
+- [ ] **VoiceOver and the sighted row disagree on a failed project, and did before this change.** The row shows the short "Run failed" header; VO speaks the full summary. `ProjectRow.pipelineStateAccessibilityPhrase`'s own docstring says they must not drift. Decide which one is right — left alone rather than settled in passing.
 
 ---
 

@@ -24,7 +24,7 @@ import Testing
         #expect(!CompletionRescan.isAnalysing(.idle))
         #expect(!CompletionRescan.isAnalysing(.queued(position: 1)))
         #expect(!CompletionRescan.isAnalysing(.ready(Date())))
-        #expect(!CompletionRescan.isAnalysing(.failed("x", category: .unknown)))
+        #expect(!CompletionRescan.isAnalysing(.failed(.passthrough("x"), category: .unknown)))
         #expect(!CompletionRescan.isAnalysing(.unreachable(reason: .timedOut)))
         #expect(!CompletionRescan.isAnalysing(.partial(kind: "transcribe-only", stagesComplete: [])))
         #expect(!CompletionRescan.isAnalysing(.stopped(stagesComplete: [])))
@@ -39,7 +39,7 @@ import Testing
         let terminals: [PipelineState] = [
             .ready(Date()),
             .completedPartial(summary: PipelineSummary()),
-            .failed("boom", category: .unknown),
+            .failed(.passthrough("boom"), category: .unknown),
             .partial(kind: "transcribe-only", stagesComplete: []),
             .stopped(stagesComplete: []),
             .idle,
@@ -125,7 +125,7 @@ import Testing
         // The gate asks "has this been analysed at all?", not "did it go well" —
         // a failed or cancelled run still leaves ingested sessions behind.
         for outcome: PipelineState in [
-            .failed("boom", category: .unknown),
+            .failed(.passthrough("boom"), category: .unknown),
             .stopped(stagesComplete: []),
             .partial(kind: "transcribe-only", stagesComplete: []),
             .idle,

@@ -290,6 +290,33 @@
     "projectNamePlaceholder": "Projektnavn"
   },
   "pipeline": {
+    "failure": {
+      "stranded": "Analysen stoppede uventet.",
+      "launchFailed": "Analysen kunne ikke startes. {{reason}}",
+      "auth": "Din {{provider}}-n\u00f8gle blev afvist.",
+      "authGeneric": "Din API-n\u00f8gle blev afvist.",
+      "outOfCredit": "{{provider}} har ingen kredit.",
+      "outOfCreditGeneric": "Din konto hos AI-udbyderen er l\u00f8bet t\u00f8r for kredit.",
+      "network": "Kunne ikke n\u00e5 {{provider}}. Tjek din forbindelse.",
+      "networkGeneric": "Kunne ikke n\u00e5 AI-udbyderen. Tjek din forbindelse.",
+      "quota": "Hastighedsgr\u00e6nsen for {{provider}} er n\u00e5et. Pr\u00f8v igen snart.",
+      "quotaGeneric": "Hastighedsgr\u00e6nsen er n\u00e5et. Pr\u00f8v igen snart.",
+      "apiRequest": "{{provider}} afviste foresp\u00f8rgslen.",
+      "apiRequestGeneric": "AI-udbyderen afviste foresp\u00f8rgslen.",
+      "apiServer": "{{provider}} er utilg\u00e6ngelig. Pr\u00f8v igen om lidt.",
+      "apiServerGeneric": "AI-udbyderen er utilg\u00e6ngelig. Pr\u00f8v igen om lidt.",
+      "outputTruncated": "Denne session er for t\u00e6t til outputgr\u00e6nsen for {{provider}}. Pr\u00f8v en model med st\u00f8rre output, eller del optagelsen op.",
+      "outputTruncatedGeneric": "Denne session er for t\u00e6t til modellens outputgr\u00e6nse. Pr\u00f8v en model med st\u00f8rre output, eller del optagelsen op.",
+      "disk": "Der er ikke nok plads p\u00e5 disken.",
+      "whisper": "Transskription mislykkedes \u2013 talemodellen blev ikke indl\u00e6st.",
+      "userSignal": "K\u00f8rslen blev stoppet.",
+      "missingDep": "Ops\u00e6tning kr\u00e6ves \u2013 et n\u00f8dvendigt v\u00e6rkt\u00f8j er ikke installeret.",
+      "missingInput": "En n\u00f8dvendig inputfil mangler.",
+      "missingBinary": "FFmpeg blev ikke fundet.",
+      "outputExists": "Allerede analyseret \u2013 en ny analyse ville erstatte de eksisterende resultater.",
+      "unusableInput": "Nogle filer kunne ikke analyseres.",
+      "unknown": "Noget gik galt under analysen."
+    },
     "status": {
       "stopping": "Stopper…",
       "starting": "Starter…",

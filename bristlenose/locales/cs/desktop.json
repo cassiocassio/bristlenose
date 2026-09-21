@@ -323,6 +323,33 @@
     "projectNamePlaceholder": "N\u00e1zev projektu"
   },
   "pipeline": {
+    "failure": {
+      "stranded": "Anal\u00fdza se ne\u010dekan\u011b zastavila.",
+      "launchFailed": "Anal\u00fdzu se nepoda\u0159ilo spustit. {{reason}}",
+      "auth": "V\u00e1\u0161 kl\u00ed\u010d {{provider}} byl odm\u00edtnut.",
+      "authGeneric": "V\u00e1\u0161 kl\u00ed\u010d API byl odm\u00edtnut.",
+      "outOfCredit": "{{provider}} nem\u00e1 kredit.",
+      "outOfCreditGeneric": "Na \u00fa\u010dtu poskytovatele AI do\u0161el kredit.",
+      "network": "Nepoda\u0159ilo se spojit s poskytovatelem {{provider}}. Zkontrolujte p\u0159ipojen\u00ed.",
+      "networkGeneric": "Nepoda\u0159ilo se spojit s poskytovatelem AI. Zkontrolujte p\u0159ipojen\u00ed.",
+      "quota": "Dosa\u017een limit po\u017eadavk\u016f poskytovatele {{provider}}. Zkuste to brzy znovu.",
+      "quotaGeneric": "Dosa\u017een limit po\u017eadavk\u016f. Zkuste to brzy znovu.",
+      "apiRequest": "{{provider}} odm\u00edtl po\u017eadavek.",
+      "apiRequestGeneric": "Poskytovatel AI odm\u00edtl po\u017eadavek.",
+      "apiServer": "{{provider}} je nedostupn\u00fd. Zkuste to za chv\u00edli.",
+      "apiServerGeneric": "Poskytovatel AI je nedostupn\u00fd. Zkuste to za chv\u00edli.",
+      "outputTruncated": "Tato relace je p\u0159\u00edli\u0161 hust\u00e1 na limit v\u00fdstupu poskytovatele {{provider}}. Zkuste model s v\u011bt\u0161\u00edm v\u00fdstupem nebo nahr\u00e1vku rozd\u011blte.",
+      "outputTruncatedGeneric": "Tato relace je p\u0159\u00edli\u0161 hust\u00e1 na limit v\u00fdstupu modelu. Zkuste model s v\u011bt\u0161\u00edm v\u00fdstupem nebo nahr\u00e1vku rozd\u011blte.",
+      "disk": "Nedostatek m\u00edsta na disku.",
+      "whisper": "P\u0159epis selhal \u2013 \u0159e\u010dov\u00fd model se nena\u010detl.",
+      "userSignal": "B\u011bh byl zastaven.",
+      "missingDep": "Je pot\u0159eba nastaven\u00ed \u2013 chyb\u00ed pot\u0159ebn\u00fd n\u00e1stroj.",
+      "missingInput": "Chyb\u00ed pot\u0159ebn\u00fd vstupn\u00ed soubor.",
+      "missingBinary": "FFmpeg nebyl nalezen.",
+      "outputExists": "Ji\u017e analyzov\u00e1no \u2013 op\u011btovn\u00e1 anal\u00fdza by nahradila st\u00e1vaj\u00edc\u00ed v\u00fdsledky.",
+      "unusableInput": "N\u011bkter\u00e9 soubory se nepoda\u0159ilo analyzovat.",
+      "unknown": "P\u0159i anal\u00fdze se n\u011bco pokazilo."
+    },
     "status": {
       "stopping": "Zastavování…",
       "starting": "Spouštění…",

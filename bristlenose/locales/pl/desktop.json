@@ -324,6 +324,33 @@
     "projectNamePlaceholder": "Nazwa projektu"
   },
   "pipeline": {
+    "failure": {
+      "stranded": "Analiza zosta\u0142a nieoczekiwanie przerwana.",
+      "launchFailed": "Nie uda\u0142o si\u0119 uruchomi\u0107 analizy. {{reason}}",
+      "auth": "Tw\u00f3j klucz {{provider}} zosta\u0142 odrzucony.",
+      "authGeneric": "Tw\u00f3j klucz API zosta\u0142 odrzucony.",
+      "outOfCredit": "{{provider}} nie ma ju\u017c \u015brodk\u00f3w.",
+      "outOfCreditGeneric": "Na koncie dostawcy AI sko\u0144czy\u0142y si\u0119 \u015brodki.",
+      "network": "Nie mo\u017cna po\u0142\u0105czy\u0107 si\u0119 z {{provider}}. Sprawd\u017a po\u0142\u0105czenie.",
+      "networkGeneric": "Nie mo\u017cna po\u0142\u0105czy\u0107 si\u0119 z dostawc\u0105 AI. Sprawd\u017a po\u0142\u0105czenie.",
+      "quota": "Osi\u0105gni\u0119to limit zapyta\u0144 dostawcy {{provider}}. Spr\u00f3buj wkr\u00f3tce.",
+      "quotaGeneric": "Osi\u0105gni\u0119to limit zapyta\u0144. Spr\u00f3buj wkr\u00f3tce.",
+      "apiRequest": "{{provider}} odrzuci\u0142 \u017c\u0105danie.",
+      "apiRequestGeneric": "Dostawca AI odrzuci\u0142 \u017c\u0105danie.",
+      "apiServer": "{{provider}} jest niedost\u0119pny. Spr\u00f3buj za chwil\u0119.",
+      "apiServerGeneric": "Dostawca AI jest niedost\u0119pny. Spr\u00f3buj za chwil\u0119.",
+      "outputTruncated": "Ta sesja jest zbyt g\u0119sta dla limitu wyj\u015bcia dostawcy {{provider}}. Wypr\u00f3buj model o wi\u0119kszym wyj\u015bciu lub podziel nagranie.",
+      "outputTruncatedGeneric": "Ta sesja jest zbyt g\u0119sta dla limitu wyj\u015bcia modelu. Wypr\u00f3buj model o wi\u0119kszym wyj\u015bciu lub podziel nagranie.",
+      "disk": "Za ma\u0142o miejsca na dysku.",
+      "whisper": "Transkrypcja nie powiod\u0142a si\u0119 \u2013 nie wczytano modelu mowy.",
+      "userSignal": "Przebieg zosta\u0142 zatrzymany.",
+      "missingDep": "Wymagana konfiguracja \u2013 potrzebne narz\u0119dzie nie jest zainstalowane.",
+      "missingInput": "Brakuje wymaganego pliku wej\u015bciowego.",
+      "missingBinary": "Nie znaleziono FFmpeg.",
+      "outputExists": "Ju\u017c przeanalizowano \u2013 ponowna analiza zast\u0105pi\u0142aby istniej\u0105ce wyniki.",
+      "unusableInput": "Niekt\u00f3rych plik\u00f3w nie uda\u0142o si\u0119 przeanalizowa\u0107.",
+      "unknown": "Co\u015b posz\u0142o nie tak podczas analizy."
+    },
     "status": {
       "stopping": "Zatrzymywanie…",
       "starting": "Uruchamianie…",

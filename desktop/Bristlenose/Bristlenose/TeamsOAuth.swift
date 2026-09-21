@@ -170,7 +170,7 @@ enum MicrosoftSignInRefusal: Equatable {
     /// The window's version of `message`, keeping its pass-through judgement:
     /// Microsoft's own words win when it gave any, because "User declined to
     /// consent" is already more precise than ours.
-    func signInMessage(rawDescription: String) -> CloudSignInMessage {
+    func signInMessage(rawDescription: String) -> FailureMessage {
         let en = message(rawDescription: rawDescription)
         switch self {
         case .userDeclined:
@@ -246,8 +246,8 @@ enum MicrosoftOAuthError: LocalizedError, Equatable {
         }
     }
 
-    /// See `CloudSignInMessage`. `errorDescription` below stays English.
-    var signInMessage: CloudSignInMessage {
+    /// See `FailureMessage`. `errorDescription` below stays English.
+    var signInMessage: FailureMessage {
         let p = ["platform": "Microsoft"]
         let en = errorDescription ?? ""
         switch self {

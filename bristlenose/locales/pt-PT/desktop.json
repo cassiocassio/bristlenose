@@ -290,6 +290,33 @@
     "projectNamePlaceholder": "Nome do projeto"
   },
   "pipeline": {
+    "failure": {
+      "stranded": "A an\u00e1lise parou inesperadamente.",
+      "launchFailed": "N\u00e3o foi poss\u00edvel iniciar a an\u00e1lise. {{reason}}",
+      "auth": "A sua chave {{provider}} foi rejeitada.",
+      "authGeneric": "A sua chave de API foi rejeitada.",
+      "outOfCredit": "{{provider}} est\u00e1 sem cr\u00e9dito.",
+      "outOfCreditGeneric": "A sua conta no fornecedor de IA est\u00e1 sem cr\u00e9ditos.",
+      "network": "N\u00e3o foi poss\u00edvel contactar {{provider}}. Verifique a liga\u00e7\u00e3o.",
+      "networkGeneric": "N\u00e3o foi poss\u00edvel contactar o fornecedor de IA. Verifique a liga\u00e7\u00e3o.",
+      "quota": "Limite de pedidos de {{provider}} atingido. Tente em breve.",
+      "quotaGeneric": "Limite de pedidos atingido. Tente em breve.",
+      "apiRequest": "{{provider}} rejeitou o pedido.",
+      "apiRequestGeneric": "O fornecedor de IA rejeitou o pedido.",
+      "apiServer": "{{provider}} est\u00e1 indispon\u00edvel. Tente novamente em breve.",
+      "apiServerGeneric": "O fornecedor de IA est\u00e1 indispon\u00edvel. Tente novamente em breve.",
+      "outputTruncated": "Esta sess\u00e3o \u00e9 demasiado densa para o limite de sa\u00edda de {{provider}}. Experimente um modelo com sa\u00edda maior ou divida a grava\u00e7\u00e3o.",
+      "outputTruncatedGeneric": "Esta sess\u00e3o \u00e9 demasiado densa para o limite de sa\u00edda do modelo. Experimente um modelo com sa\u00edda maior ou divida a grava\u00e7\u00e3o.",
+      "disk": "Espa\u00e7o em disco insuficiente.",
+      "whisper": "Falha na transcri\u00e7\u00e3o \u2014 o modelo de fala n\u00e3o foi carregado.",
+      "userSignal": "A execu\u00e7\u00e3o foi interrompida.",
+      "missingDep": "Configura\u00e7\u00e3o necess\u00e1ria \u2014 uma ferramenta exigida n\u00e3o est\u00e1 instalada.",
+      "missingInput": "Falta um ficheiro de entrada necess\u00e1rio.",
+      "missingBinary": "FFmpeg n\u00e3o foi encontrado.",
+      "outputExists": "J\u00e1 analisado \u2014 uma nova an\u00e1lise substituiria os resultados existentes.",
+      "unusableInput": "N\u00e3o foi poss\u00edvel analisar alguns ficheiros.",
+      "unknown": "Algo correu mal durante a an\u00e1lise."
+    },
     "status": {
       "stopping": "A parar…",
       "starting": "A iniciar…",

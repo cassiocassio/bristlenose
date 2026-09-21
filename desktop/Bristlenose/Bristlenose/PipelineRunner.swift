@@ -61,6 +61,58 @@ enum PipelineFailureCategory: String, Codable, Equatable {
         let raw = try decoder.singleValueContainer().decode(String.self)
         self = PipelineFailureCategory(rawValue: raw) ?? .unknown
     }
+
+    /// This category's leaf under `desktop.pipeline.failure`. The caller adds
+    /// the namespace, and `Generic` when no provider is known.
+    ///
+    /// Spelled out rather than derived from `rawValue`, which is snake_case on
+    /// the wire (`out_of_credit`) against camelCase in the locale files. A
+    /// `switch` also makes a new category a **compile error** here instead of a
+    /// key that quietly resolves to nothing — `PipelineFailureCategory` decodes
+    /// an unknown raw value as `.unknown` by design, so nothing downstream would
+    /// ever have complained.
+    var localeLeaf: String {
+        let leaf: String
+        switch self {
+        case .auth: leaf = "auth"
+        case .outOfCredit: leaf = "outOfCredit"
+        case .network: leaf = "network"
+        case .quota: leaf = "quota"
+        case .disk: leaf = "disk"
+        case .whisper: leaf = "whisper"
+        case .userSignal: leaf = "userSignal"
+        case .apiRequest: leaf = "apiRequest"
+        case .apiServer: leaf = "apiServer"
+        case .missingDep: leaf = "missingDep"
+        case .missingInput: leaf = "missingInput"
+        case .missingBinary: leaf = "missingBinary"
+        case .outputExists: leaf = "outputExists"
+        case .outputTruncated: leaf = "outputTruncated"
+        case .unusableInput: leaf = "unusableInput"
+        case .unknown: leaf = "unknown"
+        }
+        return leaf
+    }
+
+    /// True when `localeLeaf`'s value interpolates `{{provider}}`. The provider
+    /// is captured where the run's failure is classified, not where it is drawn
+    /// — by display time the user may have switched, and naming the wrong one is
+    /// worse than naming none.
+    ///
+    /// The set is deliberately narrow: a disk or FFmpeg failure has nothing to
+    /// do with the provider, and a sentence that names one there would be a
+    /// small lie. Pinned against the English values by
+    /// `tests/test_pipeline_failure_keys.py`.
+    var namesProvider: Bool {
+        switch self {
+        case .auth, .outOfCredit, .network, .quota, .apiRequest, .apiServer,
+             .outputTruncated:
+            return true
+        case .disk, .whisper, .userSignal, .missingDep, .missingInput,
+             .missingBinary, .outputExists, .unusableInput, .unknown:
+            return false
+        }
+    }
 }
 
 // MARK: - Neutral progress struct
@@ -119,7 +171,14 @@ enum PipelineState: Equatable {
     /// Manifest reports all stages complete.
     case ready(Date)
     /// Last run failed — Retry/Change-provider CTAs.
-    case failed(String, category: PipelineFailureCategory)
+    ///
+    /// The message is a `FailureMessage`, not a sentence: the classifier runs
+    /// where there is no `I18n` and no view, so resolving here would pin the
+    /// wording to whatever language was in force when the run exited. Python's
+    /// `cause.message` arrives as a passthrough (English on the wire by
+    /// design); our own classification arrives as a key plus the provider we
+    /// saw, and the row resolves it.
+    case failed(FailureMessage, category: PipelineFailureCategory)
     /// Project can't be scanned (volume unmounted, path gone, permission denied).
     /// Distinct from `.failed` — nothing to retry, just unreachable right now.
     case unreachable(reason: UnreachableReason)
@@ -328,7 +387,7 @@ final class PipelineRunner: ObservableObject {
             // the `failed_no_summary` debug scenario's popover omits Show Log
             // (the button is gated on a real log file existing). Acceptable —
             // debug-only path; real runs always have a log.
-            self.state[projectID] = .failed(message, category: category)
+            self.state[projectID] = .failed(.passthrough(message), category: category)
         case .simpleState(let injected):
             self.state[projectID] = injected
         }
@@ -1234,14 +1293,23 @@ final class PipelineRunner: ObservableObject {
                 Self.logger.error(
                     "spawn refused: external-server scheme has no binary project=\(project.id.uuidString, privacy: .public)"
                 )
-                state[project.id] = .failed(message, category: .unknown)
+                // Dev-scheme chrome — `.external` is unreachable in Release, so
+                // this sentence can only be read by someone running from Xcode.
+                // English by decision (`docs/design-i18n.md` §"Which surfaces").
+                state[project.id] = .failed(.passthrough(message), category: .unknown)
                 return
             }
         case .failure(let err):
             Self.logger.error(
                 "spawn binary resolve failed: \(err.localizedDescription, privacy: .public) project=\(project.id.uuidString, privacy: .public)"
             )
-            state[project.id] = .failed(err.localizedDescription, category: .unknown)
+            // `SidecarResolveError`'s own words. Three of its four cases are
+            // dev-only; `bundledSidecarMissing` is not, and is still English —
+            // registered in `docs/i18n-defects.md`, not fixed here, because it
+            // needs the discriminator treatment its own siblings got.
+            state[project.id] = .failed(
+                .passthrough(err.localizedDescription), category: .unknown
+            )
             return
         }
 
@@ -1352,7 +1420,12 @@ var args = ["run", project.path, "--no-serve"]
             currentReadTask?.cancel()
             currentReadTask = nil
             state[projectID] = .failed(
-                "Failed to launch: \(error.localizedDescription)",
+                // `localizedDescription` is Foundation's, already in the user's
+                // language — it passes through as a variable rather than being
+                // re-described by us.
+                FailureMessage.moment(
+                    "launchFailed", vars: ["reason": error.localizedDescription]
+                ),
                 category: .unknown
             )
             startNextQueued()
@@ -1562,16 +1635,20 @@ var args = ["run", project.path, "--no-serve"]
         let activeProvider = UserDefaults.standard.string(forKey: "activeProvider")
             .flatMap(LLMProvider.init(rawValue:))
         let category: PipelineFailureCategory
-        let summary: String
+        let summary: FailureMessage
         if let (cat, msg) = derived {
             category = cat
-            summary = msg ?? Self.humanSummary(for: cat, provider: activeProvider)
+            // Python's own sentence wins when it has one — it is more specific
+            // than anything a category can say — and passes through untouched,
+            // English, as the events log is a forensic record.
+            summary = msg.map(FailureMessage.passthrough)
+                ?? FailureMessage.failure(for: cat, provider: activeProvider)
         } else {
             category = Self.categoriseFailure(
                 lines: lines, exitStatus: status, projectName: project?.name,
                 provider: activeProvider
             )
-            summary = Self.humanSummary(for: category, provider: activeProvider)
+            summary = FailureMessage.failure(for: category, provider: activeProvider)
         }
         Self.logger.warning(
             """
@@ -1829,47 +1906,6 @@ var args = ["run", project.path, "--no-serve"]
             return nil
         }
         return (cause.category, cause.message)
-    }
-
-    /// Human-readable one-liner for a failure category. When `provider` is
-    /// supplied, LLM-related categories name it ("Claude rejected the request.")
-    /// instead of the generic "LLM provider …" — the cause classifier can't
-    /// always recover a structured message, and a named provider is the
-    /// difference between an actionable summary and a shrug. Non-LLM categories
-    /// (disk, whisper, …) ignore `provider`.
-    static func humanSummary(
-        for category: PipelineFailureCategory,
-        provider: LLMProvider? = nil
-    ) -> String {
-        // `subject` reads in subject position ("Claude rate limit reached"),
-        // `object` in object position ("Couldn't reach Claude" / "the LLM
-        // provider"). Both collapse to the provider's display name when known.
-        let subject = provider?.displayName ?? "LLM provider"
-        let object = provider?.displayName ?? "the LLM provider"
-        switch category {
-        case .auth:       return "Your \(subject) key isn't working."
-        case .outOfCredit: return "\(subject) is out of credit — add funds to continue."
-        case .network:    return "Couldn't reach \(object)."
-        case .quota:      return "\(subject) rate limit reached."
-        case .disk:       return "Not enough disk space to finish."
-        case .whisper:    return "Transcription failed — the speech model didn't load."
-        case .userSignal: return "Run was stopped."
-        case .apiRequest: return "\(subject) rejected the request."
-        case .apiServer:  return "\(subject) is unavailable — try again shortly."
-        case .missingDep: return "Setup needed — a required tool isn't installed."
-        case .missingInput: return "A required input file is missing."
-        case .missingBinary: return "FFmpeg couldn't be found."
-        case .outputExists: return "Already analysed — re-analysing would replace the existing results."
-        case .outputTruncated: return "This session is too dense for \(subject)'s output limit — try a model with a larger output, or split the recording."
-        case .unusableInput:
-            // Never rendered as a run headline in practice — this category
-            // arrives per-file inside a stage outcome, where the row shows
-            // `Cause.message` ("The file is empty…") beside the filename. The
-            // arm exists so the switch stays exhaustive and a future caller
-            // that does reach it says something true.
-            return "Some files couldn't be analysed."
-        case .unknown:    return "Something went wrong during analysis."
-        }
     }
 
     private static func matches(_ haystack: String, _ pattern: String) -> Bool {

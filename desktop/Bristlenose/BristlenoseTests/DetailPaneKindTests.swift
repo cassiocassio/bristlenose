@@ -71,7 +71,7 @@ struct DetailPaneKindTests {
     /// carries the cause and log tail. (What the *lenses* do over that page
     /// is `LensAvailability`'s job, not the pane's.)
     @Test func failureStatesKeepTheServeSurface() {
-        #expect(resolve(pipelineState: .failed("boom", category: .auth)) == .report)
+        #expect(resolve(pipelineState: .failed(.passthrough("boom"), category: .auth)) == .report)
         #expect(resolve(pipelineState: .failedWithDiagnostic(summary: PipelineSummary())) == .report)
         #expect(resolve(pipelineState: .stopped(stagesComplete: [])) == .report)
     }
@@ -83,7 +83,7 @@ struct DetailPaneKindTests {
         #expect(!DetailPaneKind.hasViewableData(.idle))
         #expect(!DetailPaneKind.hasViewableData(.scanning))
         #expect(!DetailPaneKind.hasViewableData(.running))
-        #expect(!DetailPaneKind.hasViewableData(.failed("x", category: .network)))
+        #expect(!DetailPaneKind.hasViewableData(.failed(.passthrough("x"), category: .network)))
         // Abandon path leaves no report on disk — deliberately not viewable.
         #expect(!DetailPaneKind.hasViewableData(.failedWithDiagnostic(summary: PipelineSummary())))
         #expect(!DetailPaneKind.hasViewableData(nil))

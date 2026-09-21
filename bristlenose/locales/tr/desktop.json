@@ -290,6 +290,33 @@
     "projectNamePlaceholder": "Proje adı"
   },
   "pipeline": {
+    "failure": {
+      "stranded": "Analiz beklenmedik \u015fekilde durdu.",
+      "launchFailed": "Analiz ba\u015flat\u0131lamad\u0131. {{reason}}",
+      "auth": "{{provider}} anahtar\u0131n\u0131z reddedildi.",
+      "authGeneric": "API anahtar\u0131n\u0131z reddedildi.",
+      "outOfCredit": "{{provider}} kredisi t\u00fckendi.",
+      "outOfCreditGeneric": "Yapay zek\u00e2 sa\u011flay\u0131c\u0131s\u0131 hesab\u0131n\u0131zda kredi kalmad\u0131.",
+      "network": "{{provider}} hizmetine ula\u015f\u0131lamad\u0131. Ba\u011flant\u0131n\u0131z\u0131 kontrol edin.",
+      "networkGeneric": "Yapay zek\u00e2 sa\u011flay\u0131c\u0131s\u0131na ula\u015f\u0131lamad\u0131. Ba\u011flant\u0131n\u0131z\u0131 kontrol edin.",
+      "quota": "{{provider}} h\u0131z s\u0131n\u0131r\u0131na ula\u015f\u0131ld\u0131. Birazdan tekrar deneyin.",
+      "quotaGeneric": "H\u0131z s\u0131n\u0131r\u0131na ula\u015f\u0131ld\u0131. Birazdan tekrar deneyin.",
+      "apiRequest": "{{provider}} iste\u011fi reddetti.",
+      "apiRequestGeneric": "Yapay zek\u00e2 sa\u011flay\u0131c\u0131s\u0131 iste\u011fi reddetti.",
+      "apiServer": "{{provider}} kullan\u0131lam\u0131yor. Birazdan tekrar deneyin.",
+      "apiServerGeneric": "Yapay zek\u00e2 sa\u011flay\u0131c\u0131s\u0131 kullan\u0131lam\u0131yor. Birazdan tekrar deneyin.",
+      "outputTruncated": "Bu oturum, {{provider}} \u00e7\u0131kt\u0131 s\u0131n\u0131r\u0131 i\u00e7in fazla yo\u011fun. \u00c7\u0131kt\u0131s\u0131 daha b\u00fcy\u00fck bir model deneyin veya kayd\u0131 b\u00f6l\u00fcn.",
+      "outputTruncatedGeneric": "Bu oturum, modelin \u00e7\u0131kt\u0131 s\u0131n\u0131r\u0131 i\u00e7in fazla yo\u011fun. \u00c7\u0131kt\u0131s\u0131 daha b\u00fcy\u00fck bir model deneyin veya kayd\u0131 b\u00f6l\u00fcn.",
+      "disk": "Yeterli disk alan\u0131 yok.",
+      "whisper": "Deste\u011fe d\u00f6k\u00fcm ba\u015far\u0131s\u0131z oldu \u2014 konu\u015fma modeli y\u00fcklenmedi.",
+      "userSignal": "\u00c7al\u0131\u015ft\u0131rma durduruldu.",
+      "missingDep": "Kurulum gerekiyor \u2014 gerekli bir ara\u00e7 y\u00fckl\u00fc de\u011fil.",
+      "missingInput": "Gerekli bir girdi dosyas\u0131 eksik.",
+      "missingBinary": "FFmpeg bulunamad\u0131.",
+      "outputExists": "Zaten analiz edildi \u2014 yeniden analiz mevcut sonu\u00e7lar\u0131n yerini al\u0131r.",
+      "unusableInput": "Baz\u0131 dosyalar analiz edilemedi.",
+      "unknown": "Analiz s\u0131ras\u0131nda bir sorun olu\u015ftu."
+    },
     "status": {
       "stopping": "Durduruluyor…",
       "starting": "Başlatılıyor…",

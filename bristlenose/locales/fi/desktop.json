@@ -290,6 +290,33 @@
     "projectNamePlaceholder": "Projektin nimi"
   },
   "pipeline": {
+    "failure": {
+      "stranded": "Analyysi pys\u00e4htyi odottamatta.",
+      "launchFailed": "Analyysi\u00e4 ei voitu k\u00e4ynnist\u00e4\u00e4. {{reason}}",
+      "auth": "Palvelun {{provider}} avain hyl\u00e4ttiin.",
+      "authGeneric": "API-avaimesi hyl\u00e4ttiin.",
+      "outOfCredit": "Palvelun {{provider}} saldo on lopussa.",
+      "outOfCreditGeneric": "Teko\u00e4lypalvelun tilisi krediitit ovat loppuneet.",
+      "network": "Palveluun {{provider}} ei saatu yhteytt\u00e4. Tarkista verkkoyhteys.",
+      "networkGeneric": "Teko\u00e4lypalveluun ei saatu yhteytt\u00e4. Tarkista verkkoyhteys.",
+      "quota": "Palvelun {{provider}} pyynt\u00f6raja saavutettiin. Yrit\u00e4 pian uudelleen.",
+      "quotaGeneric": "Pyynt\u00f6raja saavutettiin. Yrit\u00e4 pian uudelleen.",
+      "apiRequest": "{{provider}} hylk\u00e4si pyynn\u00f6n.",
+      "apiRequestGeneric": "Teko\u00e4lypalvelu hylk\u00e4si pyynn\u00f6n.",
+      "apiServer": "{{provider}} ei ole k\u00e4ytett\u00e4viss\u00e4. Yrit\u00e4 pian uudelleen.",
+      "apiServerGeneric": "Teko\u00e4lypalvelu ei ole k\u00e4ytett\u00e4viss\u00e4. Yrit\u00e4 pian uudelleen.",
+      "outputTruncated": "T\u00e4m\u00e4 istunto on liian tiivis palvelun {{provider}} tulosterajalle. Kokeile mallia, jonka tuloste on suurempi, tai jaa tallenne osiin.",
+      "outputTruncatedGeneric": "T\u00e4m\u00e4 istunto on liian tiivis mallin tulosterajalle. Kokeile mallia, jonka tuloste on suurempi, tai jaa tallenne osiin.",
+      "disk": "Levytilaa ei ole tarpeeksi.",
+      "whisper": "Litterointi ep\u00e4onnistui \u2013 puhemallia ei ladattu.",
+      "userSignal": "Ajo pys\u00e4ytettiin.",
+      "missingDep": "M\u00e4\u00e4ritys tarvitaan \u2013 tarvittavaa ty\u00f6kalua ei ole asennettu.",
+      "missingInput": "Tarvittava sy\u00f6tetiedosto puuttuu.",
+      "missingBinary": "FFmpegi\u00e4 ei l\u00f6ytynyt.",
+      "outputExists": "Jo analysoitu \u2013 uusi analyysi korvaisi nykyiset tulokset.",
+      "unusableInput": "Joitakin tiedostoja ei voitu analysoida.",
+      "unknown": "Analyysin aikana tapahtui virhe."
+    },
     "status": {
       "stopping": "Pysäytetään…",
       "starting": "Käynnistetään…",

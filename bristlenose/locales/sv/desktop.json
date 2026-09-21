@@ -290,6 +290,33 @@
     "projectNamePlaceholder": "Projektnamn"
   },
   "pipeline": {
+    "failure": {
+      "stranded": "Analysen stoppades ov\u00e4ntat.",
+      "launchFailed": "Det gick inte att starta analysen. {{reason}}",
+      "auth": "Din {{provider}}-nyckel avvisades.",
+      "authGeneric": "Din API-nyckel avvisades.",
+      "outOfCredit": "{{provider}} har inget saldo kvar.",
+      "outOfCreditGeneric": "Ditt konto hos AI-leverant\u00f6ren har slut p\u00e5 kredit.",
+      "network": "Kunde inte n\u00e5 {{provider}}. Kontrollera din anslutning.",
+      "networkGeneric": "Kunde inte n\u00e5 AI-leverant\u00f6ren. Kontrollera din anslutning.",
+      "quota": "Hastighetsgr\u00e4nsen f\u00f6r {{provider}} har n\u00e5tts. F\u00f6rs\u00f6k igen snart.",
+      "quotaGeneric": "Hastighetsgr\u00e4nsen har n\u00e5tts. F\u00f6rs\u00f6k igen snart.",
+      "apiRequest": "{{provider}} avvisade beg\u00e4ran.",
+      "apiRequestGeneric": "AI-leverant\u00f6ren avvisade beg\u00e4ran.",
+      "apiServer": "{{provider}} \u00e4r otillg\u00e4nglig. F\u00f6rs\u00f6k igen snart.",
+      "apiServerGeneric": "AI-leverant\u00f6ren \u00e4r otillg\u00e4nglig. F\u00f6rs\u00f6k igen snart.",
+      "outputTruncated": "Den h\u00e4r sessionen \u00e4r f\u00f6r t\u00e4t f\u00f6r utdatagr\u00e4nsen hos {{provider}}. Prova en modell med st\u00f6rre utdata, eller dela upp inspelningen.",
+      "outputTruncatedGeneric": "Den h\u00e4r sessionen \u00e4r f\u00f6r t\u00e4t f\u00f6r modellens utdatagr\u00e4ns. Prova en modell med st\u00f6rre utdata, eller dela upp inspelningen.",
+      "disk": "Det finns inte tillr\u00e4ckligt med diskutrymme.",
+      "whisper": "Transkriberingen misslyckades \u2013 talmodellen laddades inte.",
+      "userSignal": "K\u00f6rningen stoppades.",
+      "missingDep": "Konfiguration kr\u00e4vs \u2013 ett n\u00f6dv\u00e4ndigt verktyg \u00e4r inte installerat.",
+      "missingInput": "En n\u00f6dv\u00e4ndig indatafil saknas.",
+      "missingBinary": "FFmpeg hittades inte.",
+      "outputExists": "Redan analyserad \u2013 en ny analys skulle ers\u00e4tta de befintliga resultaten.",
+      "unusableInput": "Vissa filer kunde inte analyseras.",
+      "unknown": "N\u00e5got gick fel under analysen."
+    },
     "status": {
       "stopping": "Stoppar…",
       "starting": "Startar…",

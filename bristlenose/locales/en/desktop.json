@@ -291,6 +291,33 @@
     "projectNamePlaceholder": "Project name"
   },
   "pipeline": {
+    "failure": {
+      "stranded": "Analysis stopped unexpectedly.",
+      "launchFailed": "Couldn't start the analysis. {{reason}}",
+      "auth": "Your {{provider}} key was rejected.",
+      "authGeneric": "Your API key was rejected.",
+      "outOfCredit": "{{provider}} is out of credit.",
+      "outOfCreditGeneric": "Your AI provider account is out of credit.",
+      "network": "Couldn't reach {{provider}}. Check your connection.",
+      "networkGeneric": "Couldn't reach the AI provider. Check your connection.",
+      "quota": "{{provider}} rate limit reached. Try again soon.",
+      "quotaGeneric": "Rate limit reached. Try again soon.",
+      "apiRequest": "{{provider}} rejected the request.",
+      "apiRequestGeneric": "The AI provider rejected the request.",
+      "apiServer": "{{provider}} is unavailable. Try again shortly.",
+      "apiServerGeneric": "The AI provider is unavailable. Try again shortly.",
+      "outputTruncated": "This session is too dense for {{provider}}'s output limit. Try a model with a larger output, or split the recording.",
+      "outputTruncatedGeneric": "This session is too dense for the model's output limit. Try a model with a larger output, or split the recording.",
+      "disk": "Not enough disk space.",
+      "whisper": "Transcription failed \u2014 the speech model didn't load.",
+      "userSignal": "Run was stopped.",
+      "missingDep": "Setup needed \u2014 a required tool isn't installed.",
+      "missingInput": "A required input file is missing.",
+      "missingBinary": "FFmpeg couldn't be found.",
+      "outputExists": "Already analysed \u2014 re-analysing would replace the existing results.",
+      "unusableInput": "Some files couldn't be analysed.",
+      "unknown": "Something went wrong during analysis."
+    },
     "status": {
       "stopping": "Stopping…",
       "starting": "Starting…",

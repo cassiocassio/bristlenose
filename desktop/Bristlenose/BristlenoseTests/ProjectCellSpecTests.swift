@@ -22,7 +22,7 @@ import Testing
             .partial(transcribeOnly: false),
             .copying(fraction: 0.5),
             .copyCancelling,
-            .failed(summary: "boom"),
+            .failed(message: .passthrough("boom")),
             .failedDiagnostic,
             .completedPartial,
             .unreachable(reason: .timedOut),

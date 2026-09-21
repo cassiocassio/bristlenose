@@ -96,7 +96,7 @@ struct EventLogReaderTests {
         // A terminus line that is well-formed JSON but doesn't fit `Event` means
         // the Python↔Swift contract drifted. The old loop skipped it and
         // answered from the line behind — so a run that COMPLETED was reported
-        // as `.failed("Analysis stopped unexpectedly.")`, because the fallback
+        // as `.failed(.passthrough("Analysis stopped unexpectedly."))`, because the fallback
         // landed on that run's own `run_started` and the PID was gone. The
         // report was fine the whole time; only the row lied, and
         // `applyScanResult` then preserved the lie across relaunch.
@@ -290,7 +290,7 @@ struct EventLogReaderTests {
             Issue.record("expected .failed, got \(String(describing: result))")
             return
         }
-        #expect(summary == "boom")
+        #expect(summary == .passthrough("boom"))
         #expect(category == expected)
     }
 
@@ -476,7 +476,7 @@ struct EventLogReaderTests {
             Issue.record("expected .failed, got \(String(describing: result))")
             return
         }
-        #expect(summary == "boom")
+        #expect(summary == .passthrough("boom"))
         #expect(category == .auth)
     }
 }

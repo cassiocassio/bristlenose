@@ -178,10 +178,13 @@ struct ProjectDiagnosticPopover: View {
     }
 
     @ViewBuilder
-    private func degradedBody(message: String, category: PipelineFailureCategory) -> some View {
+    private func degradedBody(
+        message: FailureMessage, category: PipelineFailureCategory
+    ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            if !message.isEmpty {
-                Text(message)
+            let resolved = message.resolved(i18n)
+            if !resolved.isEmpty {
+                Text(resolved)
                     .font(.callout)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -302,8 +305,11 @@ struct ProjectDiagnosticPopover: View {
             )
         case .failed(let message, let category):
             let tail = (liveData.outputLines[project.id] ?? []).suffix(20)
+            // `.english`, not the resolved text: the paste is a forensic
+            // payload bound for a log or a bug report, which stay English by
+            // decision (`docs/design-i18n.md` §"Which surfaces are targets").
             text = Self.formatDiagnosticPlaintextDegraded(
-                cause: message, category: category, projectName: project.name,
+                cause: message.english, category: category, projectName: project.name,
                 projectPath: project.path, stdoutTail: Array(tail)
             )
         case .unreachable(let reason):

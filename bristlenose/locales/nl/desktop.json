@@ -290,6 +290,33 @@
     "projectNamePlaceholder": "Projectnaam"
   },
   "pipeline": {
+    "failure": {
+      "stranded": "De analyse is onverwacht gestopt.",
+      "launchFailed": "Kan de analyse niet starten. {{reason}}",
+      "auth": "Je {{provider}}-sleutel is geweigerd.",
+      "authGeneric": "Je API-sleutel is geweigerd.",
+      "outOfCredit": "{{provider}} heeft geen tegoed meer.",
+      "outOfCreditGeneric": "Het tegoed van je AI-provideraccount is op.",
+      "network": "Kan {{provider}} niet bereiken. Controleer je verbinding.",
+      "networkGeneric": "Kan de AI-provider niet bereiken. Controleer je verbinding.",
+      "quota": "Snelheidslimiet van {{provider}} bereikt. Probeer het straks opnieuw.",
+      "quotaGeneric": "Snelheidslimiet bereikt. Probeer het straks opnieuw.",
+      "apiRequest": "{{provider}} heeft het verzoek geweigerd.",
+      "apiRequestGeneric": "De AI-provider heeft het verzoek geweigerd.",
+      "apiServer": "{{provider}} is niet beschikbaar. Probeer het straks opnieuw.",
+      "apiServerGeneric": "De AI-provider is niet beschikbaar. Probeer het straks opnieuw.",
+      "outputTruncated": "Deze sessie is te dicht voor de uitvoerlimiet van {{provider}}. Probeer een model met een grotere uitvoer, of splits de opname.",
+      "outputTruncatedGeneric": "Deze sessie is te dicht voor de uitvoerlimiet van het model. Probeer een model met een grotere uitvoer, of splits de opname.",
+      "disk": "Onvoldoende schijfruimte.",
+      "whisper": "Transcriptie mislukt \u2014 het spraakmodel is niet geladen.",
+      "userSignal": "De run is gestopt.",
+      "missingDep": "Instellen nodig \u2014 een vereist hulpmiddel is niet ge\u00efnstalleerd.",
+      "missingInput": "Er ontbreekt een vereist invoerbestand.",
+      "missingBinary": "FFmpeg is niet gevonden.",
+      "outputExists": "Al geanalyseerd \u2014 opnieuw analyseren zou de bestaande resultaten vervangen.",
+      "unusableInput": "Sommige bestanden konden niet worden geanalyseerd.",
+      "unknown": "Er is iets misgegaan tijdens de analyse."
+    },
     "status": {
       "stopping": "Stoppen…",
       "starting": "Starten…",

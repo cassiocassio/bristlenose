@@ -667,8 +667,13 @@ struct ProjectRow: View {
         case .importingBatch:
             // As above — never produced for this row.
             return nil
-        case .failed(let summary):
-            return summary
+        case .failed(let message):
+            // Spoken in the language showing now, not the one in force when the
+            // run exited. NB this arm speaks the summary while the sighted row
+            // shows the short "Run failed" header — a drift against this
+            // property's own stated contract, and older than this change; left
+            // alone rather than decided in passing (`docs/qa-backlog.md`).
+            return message.resolved(i18n)
         case .failedDiagnostic:
             return i18n.t("desktop.pipeline.diagnostic.header.failed")
         case .completedPartial:

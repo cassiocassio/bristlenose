@@ -290,6 +290,33 @@
     "projectNamePlaceholder": "Nome del progetto"
   },
   "pipeline": {
+    "failure": {
+      "stranded": "L'analisi si \u00e8 interrotta in modo imprevisto.",
+      "launchFailed": "Impossibile avviare l'analisi. {{reason}}",
+      "auth": "La tua chiave {{provider}} \u00e8 stata rifiutata.",
+      "authGeneric": "La tua chiave API \u00e8 stata rifiutata.",
+      "outOfCredit": "{{provider}} ha esaurito il credito.",
+      "outOfCreditGeneric": "Il credito del tuo account del fornitore di IA \u00e8 esaurito.",
+      "network": "Impossibile raggiungere {{provider}}. Controlla la connessione.",
+      "networkGeneric": "Impossibile raggiungere il fornitore di IA. Controlla la connessione.",
+      "quota": "Limite di richieste di {{provider}} raggiunto. Riprova a breve.",
+      "quotaGeneric": "Limite di richieste raggiunto. Riprova a breve.",
+      "apiRequest": "{{provider}} ha rifiutato la richiesta.",
+      "apiRequestGeneric": "Il fornitore di IA ha rifiutato la richiesta.",
+      "apiServer": "{{provider}} non \u00e8 disponibile. Riprova a breve.",
+      "apiServerGeneric": "Il fornitore di IA non \u00e8 disponibile. Riprova a breve.",
+      "outputTruncated": "Questa sessione \u00e8 troppo densa per il limite di output di {{provider}}. Prova un modello con output pi\u00f9 ampio oppure dividi la registrazione.",
+      "outputTruncatedGeneric": "Questa sessione \u00e8 troppo densa per il limite di output del modello. Prova un modello con output pi\u00f9 ampio oppure dividi la registrazione.",
+      "disk": "Spazio su disco insufficiente.",
+      "whisper": "Trascrizione non riuscita: il modello vocale non \u00e8 stato caricato.",
+      "userSignal": "L'esecuzione \u00e8 stata interrotta.",
+      "missingDep": "Configurazione necessaria: uno strumento richiesto non \u00e8 installato.",
+      "missingInput": "Manca un file di input necessario.",
+      "missingBinary": "FFmpeg non \u00e8 stato trovato.",
+      "outputExists": "Gi\u00e0 analizzato: una nuova analisi sostituirebbe i risultati esistenti.",
+      "unusableInput": "Alcuni file non sono stati analizzati.",
+      "unknown": "Si \u00e8 verificato un problema durante l'analisi."
+    },
     "status": {
       "stopping": "Interruzione…",
       "starting": "Avvio…",

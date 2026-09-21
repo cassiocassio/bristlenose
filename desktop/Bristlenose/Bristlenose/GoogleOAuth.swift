@@ -200,8 +200,8 @@ enum GoogleOAuthError: LocalizedError, Equatable {
     case scopesDeclined(granted: [String], missing: [String])
 
     /// The row's version: a key where the sentence is ours. `errorDescription`
-    /// below stays English for the log. See `CloudSignInMessage`.
-    var signInMessage: CloudSignInMessage {
+    /// below stays English for the log. See `FailureMessage`.
+    var signInMessage: FailureMessage {
         let p = ["platform": "Google"]
         switch self {
         case .notConfigured:

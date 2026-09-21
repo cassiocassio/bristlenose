@@ -290,6 +290,33 @@
     "projectNamePlaceholder": "Prosjektnavn"
   },
   "pipeline": {
+    "failure": {
+      "stranded": "Analysen stoppet uventet.",
+      "launchFailed": "Kunne ikke starte analysen. {{reason}}",
+      "auth": "{{provider}}-n\u00f8kkelen din ble avvist.",
+      "authGeneric": "API-n\u00f8kkelen din ble avvist.",
+      "outOfCredit": "{{provider}} er tom for kreditt.",
+      "outOfCreditGeneric": "Kontoen din hos KI-leverand\u00f8ren er tom for kreditt.",
+      "network": "Kunne ikke n\u00e5 {{provider}}. Sjekk tilkoblingen din.",
+      "networkGeneric": "Kunne ikke n\u00e5 KI-leverand\u00f8ren. Sjekk tilkoblingen din.",
+      "quota": "Hastighetsgrensen for {{provider}} er n\u00e5dd. Pr\u00f8v igjen snart.",
+      "quotaGeneric": "Hastighetsgrensen er n\u00e5dd. Pr\u00f8v igjen snart.",
+      "apiRequest": "{{provider}} avviste foresp\u00f8rselen.",
+      "apiRequestGeneric": "KI-leverand\u00f8ren avviste foresp\u00f8rselen.",
+      "apiServer": "{{provider}} er utilgjengelig. Pr\u00f8v igjen snart.",
+      "apiServerGeneric": "KI-leverand\u00f8ren er utilgjengelig. Pr\u00f8v igjen snart.",
+      "outputTruncated": "Denne \u00f8kten er for tett for utdatagrensen til {{provider}}. Pr\u00f8v en modell med st\u00f8rre utdata, eller del opp opptaket.",
+      "outputTruncatedGeneric": "Denne \u00f8kten er for tett for modellens utdatagrense. Pr\u00f8v en modell med st\u00f8rre utdata, eller del opp opptaket.",
+      "disk": "Ikke nok diskplass.",
+      "whisper": "Transkripsjon mislyktes \u2013 talemodellen ble ikke lastet inn.",
+      "userSignal": "Kj\u00f8ringen ble stoppet.",
+      "missingDep": "Oppsett kreves \u2013 et n\u00f8dvendig verkt\u00f8y er ikke installert.",
+      "missingInput": "En n\u00f8dvendig inndatafil mangler.",
+      "missingBinary": "Fant ikke FFmpeg.",
+      "outputExists": "Allerede analysert \u2013 en ny analyse ville erstatte de eksisterende resultatene.",
+      "unusableInput": "Noen filer kunne ikke analyseres.",
+      "unknown": "Noe gikk galt under analysen."
+    },
     "status": {
       "stopping": "Stopper…",
       "starting": "Starter…",

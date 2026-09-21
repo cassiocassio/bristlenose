@@ -100,7 +100,7 @@ struct CloudImportHandoffTests {
         // failure. Retry is a button the researcher presses.
         #expect(CloudImportHandoff.decide(
             landed: 3, shape: .folder,
-            state: .failed("boom", category: .unknown)) == .nothing(.previousRunFailed))
+            state: .failed(.passthrough("boom"), category: .unknown)) == .nothing(.previousRunFailed))
     }
 
     @Test("The diagnostic failure shape declines too, not just the older one")

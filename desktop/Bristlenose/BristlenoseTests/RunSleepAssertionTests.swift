@@ -87,6 +87,6 @@ import Testing
         #expect(!PipelineState.stopped(stagesComplete: []).keepsMachineAwake)
         #expect(!PipelineState.partial(kind: "transcribe-only", stagesComplete: []).keepsMachineAwake)
         #expect(!PipelineState.unreachable(reason: .timedOut).keepsMachineAwake)
-        #expect(!PipelineState.failed("x", category: .unknown).keepsMachineAwake)
+        #expect(!PipelineState.failed(.passthrough("x"), category: .unknown).keepsMachineAwake)
     }
 }

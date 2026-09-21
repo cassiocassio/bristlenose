@@ -217,7 +217,7 @@ import Foundation
     }
 
     @Test func aStoppedOrFailedProjectKeepsTheRetry() {
-        for state in [PipelineState.stopped(stagesComplete: []), .failed("boom", category: .unknown)] {
+        for state in [PipelineState.stopped(stagesComplete: []), .failed(.passthrough("boom"), category: .unknown)] {
             #expect(SidebarOutlineController.analyseIsOffered(
                 isFolderShaped: true, hasPath: true, state: state,
                 data: data(newFiles: 5, sessions: 0)),
@@ -302,7 +302,7 @@ import Foundation
         // output directory the CLI refuses to overwrite.
         #expect(SidebarOutlineController.reAnalyseIsOffered(
             isFolderShaped: true, hasPath: true,
-            state: .failed("boom", category: .unknown), data: data(sessions: 14)))
+            state: .failed(.passthrough("boom"), category: .unknown), data: data(sessions: 14)))
     }
 }
 
@@ -380,7 +380,7 @@ import Foundation
     @Test func stoppedAndFailedStillOffered() {
         // Already true before the fix — pinned so the fix didn't narrow anything.
         #expect(SidebarOutlineController.pipelineIsFree(.stopped(stagesComplete: [])))
-        #expect(SidebarOutlineController.pipelineIsFree(.failed("boom", category: .unknown)))
+        #expect(SidebarOutlineController.pipelineIsFree(.failed(.passthrough("boom"), category: .unknown)))
         #expect(SidebarOutlineController.pipelineIsFree(.idle))
     }
 

@@ -290,6 +290,33 @@
     "projectNamePlaceholder": "Nom du projet"
   },
   "pipeline": {
+    "failure": {
+      "stranded": "L\u2019analyse s\u2019est arr\u00eat\u00e9e de fa\u00e7on inattendue.",
+      "launchFailed": "Impossible de lancer l\u2019analyse. {{reason}}",
+      "auth": "Votre cl\u00e9 {{provider}} a \u00e9t\u00e9 refus\u00e9e.",
+      "authGeneric": "Votre cl\u00e9 d'API a \u00e9t\u00e9 refus\u00e9e.",
+      "outOfCredit": "{{provider}} n\u2019a plus de cr\u00e9dit.",
+      "outOfCreditGeneric": "Le cr\u00e9dit de votre compte fournisseur d'IA est \u00e9puis\u00e9.",
+      "network": "Impossible de joindre {{provider}}. V\u00e9rifiez votre connexion.",
+      "networkGeneric": "Impossible de joindre le fournisseur d'IA. V\u00e9rifiez votre connexion.",
+      "quota": "Limite de d\u00e9bit de {{provider}} atteinte. R\u00e9essayez bient\u00f4t.",
+      "quotaGeneric": "Limite de d\u00e9bit atteinte. R\u00e9essayez bient\u00f4t.",
+      "apiRequest": "{{provider}} a refus\u00e9 la requ\u00eate.",
+      "apiRequestGeneric": "Le fournisseur d'IA a refus\u00e9 la requ\u00eate.",
+      "apiServer": "{{provider}} est indisponible. R\u00e9essayez sous peu.",
+      "apiServerGeneric": "Le fournisseur d'IA est indisponible. R\u00e9essayez sous peu.",
+      "outputTruncated": "Cette session est trop dense pour la limite de sortie de {{provider}}. Essayez un mod\u00e8le \u00e0 sortie plus large ou divisez l\u2019enregistrement.",
+      "outputTruncatedGeneric": "Cette session est trop dense pour la limite de sortie du mod\u00e8le. Essayez un mod\u00e8le \u00e0 sortie plus large ou divisez l\u2019enregistrement.",
+      "disk": "Espace disque insuffisant.",
+      "whisper": "\u00c9chec de la transcription : le mod\u00e8le vocal ne s\u2019est pas charg\u00e9.",
+      "userSignal": "L\u2019ex\u00e9cution a \u00e9t\u00e9 arr\u00eat\u00e9e.",
+      "missingDep": "Configuration requise : un outil n\u00e9cessaire n\u2019est pas install\u00e9.",
+      "missingInput": "Un fichier d\u2019entr\u00e9e n\u00e9cessaire est manquant.",
+      "missingBinary": "FFmpeg est introuvable.",
+      "outputExists": "D\u00e9j\u00e0 analys\u00e9 : une nouvelle analyse remplacerait les r\u00e9sultats existants.",
+      "unusableInput": "Certains fichiers n\u2019ont pas pu \u00eatre analys\u00e9s.",
+      "unknown": "Une erreur s\u2019est produite pendant l\u2019analyse."
+    },
     "status": {
       "stopping": "Arrêt…",
       "starting": "Démarrage…",

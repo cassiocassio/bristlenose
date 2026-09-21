@@ -214,7 +214,7 @@ enum EventLogReader {
                 return .running
             }
             return .failed(
-                "Analysis stopped unexpectedly.",
+                FailureMessage.moment("stranded"),
                 category: .unknown,
             )
         case "run_completed":
@@ -233,8 +233,13 @@ enum EventLogReader {
                pipelineSummary.totalFailureCount > 0 {
                 return .failedWithDiagnostic(summary: pipelineSummary)
             }
-            let summary = event.cause?.message ?? "Failed"
             let category = event.cause?.category ?? .unknown
+            // Python's own sentence when it wrote one; otherwise the category's,
+            // which is a good deal more use than the bare "Failed" that stood
+            // here — and, either way, resolved by the view rather than frozen
+            // into the language in force when the run exited.
+            let summary = event.cause?.message.map(FailureMessage.passthrough)
+                ?? .failure(for: category)
             return .failed(summary, category: category)
         default:
             // Unknown event type — likely forward-compat (Phase 4a stage events).

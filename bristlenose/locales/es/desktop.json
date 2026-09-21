@@ -290,6 +290,33 @@
     "projectNamePlaceholder": "Nombre del proyecto"
   },
   "pipeline": {
+    "failure": {
+      "stranded": "El an\u00e1lisis se ha detenido inesperadamente.",
+      "launchFailed": "No se ha podido iniciar el an\u00e1lisis. {{reason}}",
+      "auth": "Tu clave de {{provider}} ha sido rechazada.",
+      "authGeneric": "Tu clave de API ha sido rechazada.",
+      "outOfCredit": "{{provider}} se ha quedado sin cr\u00e9dito.",
+      "outOfCreditGeneric": "Tu cuenta del proveedor de IA se ha quedado sin cr\u00e9dito.",
+      "network": "No se ha podido contactar con {{provider}}. Comprueba tu conexi\u00f3n.",
+      "networkGeneric": "No se ha podido contactar con el proveedor de IA. Comprueba tu conexi\u00f3n.",
+      "quota": "Se ha alcanzado el l\u00edmite de peticiones de {{provider}}. Int\u00e9ntalo pronto.",
+      "quotaGeneric": "Se ha alcanzado el l\u00edmite de peticiones. Int\u00e9ntalo pronto.",
+      "apiRequest": "{{provider}} ha rechazado la petici\u00f3n.",
+      "apiRequestGeneric": "El proveedor de IA ha rechazado la petici\u00f3n.",
+      "apiServer": "{{provider}} no est\u00e1 disponible. Int\u00e9ntalo en breve.",
+      "apiServerGeneric": "El proveedor de IA no est\u00e1 disponible. Int\u00e9ntalo en breve.",
+      "outputTruncated": "Esta sesi\u00f3n es demasiado densa para el l\u00edmite de salida de {{provider}}. Prueba un modelo con m\u00e1s salida o divide la grabaci\u00f3n.",
+      "outputTruncatedGeneric": "Esta sesi\u00f3n es demasiado densa para el l\u00edmite de salida del modelo. Prueba un modelo con m\u00e1s salida o divide la grabaci\u00f3n.",
+      "disk": "No hay suficiente espacio en disco.",
+      "whisper": "Ha fallado la transcripci\u00f3n: el modelo de voz no se ha cargado.",
+      "userSignal": "Se ha detenido la ejecuci\u00f3n.",
+      "missingDep": "Falta configuraci\u00f3n: una herramienta necesaria no est\u00e1 instalada.",
+      "missingInput": "Falta un archivo de entrada necesario.",
+      "missingBinary": "No se ha encontrado FFmpeg.",
+      "outputExists": "Ya analizado: volver a analizar sustituir\u00eda los resultados existentes.",
+      "unusableInput": "No se han podido analizar algunos archivos.",
+      "unknown": "Algo ha salido mal durante el an\u00e1lisis."
+    },
     "status": {
       "stopping": "Deteniendo…",
       "starting": "Iniciando…",

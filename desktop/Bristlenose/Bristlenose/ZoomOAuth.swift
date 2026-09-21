@@ -182,7 +182,7 @@ enum ZoomOAuthError: LocalizedError, Equatable {
 
     /// The window's version: a key where the sentence is ours, a passthrough
     /// where it is Zoom's. `errorDescription` below stays English for the log.
-    var signInMessage: CloudSignInMessage {
+    var signInMessage: FailureMessage {
         let p = ["platform": "Zoom"]
         let en = errorDescription ?? ""
         switch self {

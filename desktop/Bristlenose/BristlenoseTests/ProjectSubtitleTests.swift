@@ -48,7 +48,7 @@ import Testing
 
     @Test func cantFindBeatsFailed() {
         #expect(resolve(availability: .cantFind(reason: .unmountedVolume(name: "T7")),
-                        pipelineState: .failed("boom", category: .unknown))
+                        pipelineState: .failed(.passthrough("boom"), category: .unknown))
             == .cantFind(reason: .unmountedVolume(name: "T7")))
     }
 
@@ -73,8 +73,8 @@ import Testing
     // MARK: - Tier 2–4 — pipeline activity
 
     @Test func failedCarriesSummary() {
-        #expect(resolve(pipelineState: .failed("provider 404", category: .unknown))
-            == .failed(summary: "provider 404"))
+        #expect(resolve(pipelineState: .failed(.passthrough("provider 404"), category: .unknown))
+            == .failed(message: .passthrough("provider 404")))
     }
 
     @Test func failedWithDiagnosticMapsToHeaderCase() {
@@ -241,7 +241,7 @@ import Testing
     // MARK: - SubtitleVariant.isDiagnostic (failure-glyph clickability, review F35)
 
     @Test func isDiagnostic_trueForFailureAndPartial() {
-        #expect(SubtitleVariant.failed(summary: "boom").isDiagnostic)
+        #expect(SubtitleVariant.failed(message: .passthrough("boom")).isDiagnostic)
         #expect(SubtitleVariant.failedDiagnostic.isDiagnostic)
         #expect(SubtitleVariant.completedPartial.isDiagnostic)
     }

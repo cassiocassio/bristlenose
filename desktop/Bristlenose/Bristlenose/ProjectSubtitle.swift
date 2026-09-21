@@ -15,9 +15,11 @@ enum SubtitleVariant: Equatable {
     /// (and the future detail pane, design doc §7 — which would render the
     /// reason differently); the row render re-reads `availability` directly.
     case cantFind(reason: CantFindReason)
-    /// `run_failed` with a Python-supplied one-line summary (the older
-    /// summary-bearing path). The view shows it behind a clickable error glyph.
-    case failed(summary: String)
+    /// `run_failed` with a one-line summary (the older summary-bearing path).
+    /// The view shows it behind a clickable error glyph, resolving the message
+    /// in the language showing now rather than the one in force when the run
+    /// exited — see `FailureMessage`.
+    case failed(message: FailureMessage)
     /// `run_failed` with a structured diagnostic but no inline summary — the
     /// view shows the localised "Run failed" header behind the error glyph; the
     /// detail lives in the popover.
@@ -302,8 +304,8 @@ enum ProjectSubtitle {
         // an unmapped future `PipelineState` should be a compile error here,
         // not a silent fall-through to "ready".
         switch pipelineState {
-        case .failed(let summary, _):
-            return .failed(summary: summary)
+        case .failed(let message, _):
+            return .failed(message: message)
         case .failedWithDiagnostic:
             return .failedDiagnostic
         case .completedPartial:

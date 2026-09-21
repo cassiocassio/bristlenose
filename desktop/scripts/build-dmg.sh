@@ -350,7 +350,15 @@ xcodebuild \
     PROVISIONING_PROFILE_SPECIFIER="" \
     DEVELOPMENT_TEAM="$TEAM_ID" \
     SWIFT_ACTIVE_COMPILATION_CONDITIONS="\$(inherited) DEVELOPER_ID_BETA" \
-    CODE_SIGN_ENTITLEMENTS="Bristlenose/BristlenoseDeveloperID.entitlements" \
+    # ABSOLUTE, deliberately. A command-line build setting applies to EVERY
+    # target in the build, including the Settings Swift package, and Xcode
+    # resolves a relative CODE_SIGN_ENTITLEMENTS against each target's own
+    # $(SRCROOT). The package's SRCROOT is its checkout under
+    # DerivedData/SourcePackages, where "Bristlenose/..." does not exist, so
+    # the archive died with "could not be opened" on Settings_Settings —
+    # never on the app target the override was written for. An absolute path
+    # resolves identically from every SRCROOT.
+    CODE_SIGN_ENTITLEMENTS="$PROJECT_DIR/Bristlenose/BristlenoseDeveloperID.entitlements" \
     -allowProvisioningUpdates \
     archive \
     > "$ARCHIVE_LOG" 2>&1 \

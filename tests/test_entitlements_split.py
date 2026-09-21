@@ -84,6 +84,37 @@ class TestTheBuildActuallySelectsIt:
             "the override drifted out of the archive invocation and is now inert"
         )
 
+    def test_the_override_path_is_absolute(self) -> None:
+        """A relative path here cannot resolve, and not for the app target.
+
+        A command-line build setting applies to EVERY target in the build, and
+        Xcode resolves a relative ``CODE_SIGN_ENTITLEMENTS`` against each
+        target's own ``$(SRCROOT)``. The Settings Swift package's SRCROOT is its
+        checkout under ``DerivedData/SourcePackages``, where
+        ``Bristlenose/BristlenoseDeveloperID.entitlements`` does not exist — so
+        the archive died on ``Settings_Settings`` with "could not be opened",
+        naming a target nobody had thought about, while the app target the
+        override was written for was never the problem.
+
+        Every test above passed throughout: they assert the override EXISTS in
+        the invocation, which it did. Nothing asserted the archive could run.
+        Caught on the 0.30.0 release, the first ``.dmg`` built since the split
+        landed — the previous one was 31 Aug 2026, and the override arrived
+        after it.
+        """
+        text = _BUILD_DMG.read_text(encoding="utf-8")
+        line = next(
+            ln for ln in text.splitlines()
+            if "CODE_SIGN_ENTITLEMENTS=" in ln and not ln.lstrip().startswith("#")
+        )
+        value = line.split("CODE_SIGN_ENTITLEMENTS=", 1)[1].strip().rstrip("\\").strip().strip('"')
+        assert value.startswith(("/", "$")), (
+            f"CODE_SIGN_ENTITLEMENTS is {value!r} — a bare relative path. It "
+            "resolves against each target's own SRCROOT, so the Settings "
+            "package cannot find it and the archive fails before the app is "
+            "ever signed. Use an absolute path."
+        )
+
 
 class TestTheEntitlementsAreActuallyCommitted:
     """Reading the working tree is not enough for these two files.

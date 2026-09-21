@@ -137,6 +137,25 @@ METRICS: dict[str, dict] = {
         # script's to make.
         "authority": "ci",
     },
+    "swift_english_localizederror": {
+        # Counted from the gate's own declared set rather than by grepping Swift:
+        # the gate is where the judgement lives (a conformer can be English for a
+        # durable reason — SidecarResolveError is), and a second, dumber measure
+        # would disagree with it the first time that judgement was exercised.
+        "measure": lambda: len(
+            __import__("importlib").import_module(
+                "tests.test_localized_error_coverage"
+            ).ENGLISH_PENDING
+        ),
+        "basis": "len(ENGLISH_PENDING) in tests/test_localized_error_coverage.py",
+        "why": (
+            "LocalizedError.errorDescription is the highest-risk site in this "
+            "codebase for a sentence filed as data — 6 of 7 conformers rendered "
+            "English on 21 Sep 2026, every one of them on a surface a researcher "
+            "reads. Held rather than fixed because each entry is new copy in 21 "
+            "locales, which is a reviewed act, not a sweep."
+        ),
+    },
     "pytest_skip_sites": {
         # `@pytest.mark.skip` matches inside `skipif`, so count skipif separately
         # and require a non-word char after `skip`. Getting this wrong gave three

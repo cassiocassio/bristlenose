@@ -344,6 +344,26 @@ _This section said both were app-level, with ContentView holding them via `@Envi
 
 _Corrected 12 Sep 2026._ This paragraph used to say `switchToTab` / `setLeftPanel` / `setLocale` / `menuAction` all wrote the inert spelling and that two `catch` blocks were dead, citing `BridgeHandler.swift:155/164/184/208/237/238`. Every clause was false: the first and last moved to the real overload (`891823da`), **`setLeftPanel` does not exist**, the method is `syncLocale` not `setLocale`, and all six anchors point at unrelated `@Published` declarations. Measure the split with the two greps above rather than trusting a remembered count.
 
+**A Swift test that configures `I18n` and never pins a locale asserts against YOUR app's language.**
+`I18n.configure(localesDirectory:)` reads `UserDefaults.standard.string(forKey: "language") ?? "en"`,
+and in a test host that is the app's own domain — so a test asserting English output
+passes until somebody switches the app's language, then fails with no code change.
+Eight tests had this shape; they went red the moment the Welcome pane was QA'd in
+German and Russian (21 Sep 2026), and the failure reads as a regression in whatever
+you last touched. The tell is exact: **only the assertions that go through `i18n`
+fail, while a sibling asserting the raw fallback passes** — in
+`PipelineSummaryTests` the two `localisedOverflowText_*` plural tests failed and
+`localisedOverflowText_fallsBackToRawWhenRegexFails` passed, because that one never
+resolves a key. The stored value lives in the sandboxed container plist, which TCC
+blocks you from reading, so do not try to confirm it by reading the preference —
+confirm it by the failure *pattern*, and fix it the way `I18nTests`'
+`localisedOverflowText_czech_selectsFewForm` always did: call `i18n.setLocale("en")`
+straight after `configure`. This is the Swift instance of root `CLAUDE.md`'s
+"tests must not depend on local environment", and CI never caught it because CI has
+no stored preference — only a developer who changed the app's language does.
+The audit is one grep: a test body containing `configure(localesDirectory` and no
+`setLocale(`.
+
 **Report auto-reload after a run finishes — don't reach for `.id`.** When a run completes and the user *stays* on the project, the detail WebView is still on the serve's status page ("Nothing to see here, yet."). The serve re-imports the report on the `run_completed` terminus within ~1s and sets `last_run`, but the WebView never reloads itself. Three traps, all hit on the determinate-progress branch (`ContentView.scheduleReportReloadOnCompletion`):
 - **`.id(project.id)`-bump recreation does not reliably reload.** SwiftUI may *reuse* the `NSViewRepresentable` rather than recreate it, running `updateNSView` — whose `guard url != lastLoadedURL` short-circuits because the serve URL never changes. The bump silently no-ops. Reload directly via `bridgeHandler.reloadWebView()` (`reloadFromOrigin`, bypasses cache) instead.
 - **Three signals, three questions — pick by what your gate actually guards** (added 12 Sep 2026, after a menu item spent months lit over a dead channel). `hasChannel` = is there a web view at all (a published mirror of the `weak var webView`, driven by its `didSet`); `documentState == .spa` = is this document one that carries `window.__bristlenose`; `canDispatch` = both, and the gate for anything routed through `menuAction`. **`isReady` is none of them** — see the next bullet. The rule that settles it: a menu gate should be a literal restatement of the `guard` in the thing it enables, so File ▸ Print gates on `hasChannel` (it hands the view to AppKit and dispatches no JS) while zoom and Export gate on `canDispatch`. The trap when adding a signal like this is the siblings: `isReady` goes false only in `reset()` (a *selection* change) while `webView` clears at `dismantleNSView`, so a sidecar dying mid-session left ⌘P enabled and inert — the old gate's own comment still justified itself with "`webView` can't drive SwiftUI", which the change adding `hasChannel` had just falsified.
@@ -621,9 +641,18 @@ read-only `/mcp/` endpoint. Native surface since the extension shipped
   researcher already sees in every other open panel on their Mac
   (`Auswählen`, `Choisir`, `選択`, `Выбрать`). Used for Settings ▸ General
   in `38b76bfa`. **Check the loctables before hand-translating any string
-  that names a system control** — and note Apple's locale codes differ
-  from ours, so four of ours need an alias to find their row: `nb`→`no`,
-  `pt-BR`→`pt`, `pt-PT`→`pt_PT`, `zh-Hant`→`zh_TW`.
+  that names a system control** — and note Apple's locale codes differ from
+  ours, so several need an alias to find their row. **Do not take that map
+  from prose: read `scripts/apple-locale-map.json`**, which
+  `scripts/apple-locale-map.py` derives by probing the corpus. This line used
+  to carry the map itself and said `pt-BR`→`pt`, which is wrong — bare `pt`
+  is Apple's *legacy* Brazilian spelling (454 tables to `pt_BR`'s 2,589, and
+  no file carries both), so the lookup resolved, returned nothing, and read as
+  "Apple ships no translation here". It hid 91 of the 264 strings Apple
+  answers in Brazilian Portuguese. `nb`, `zh-Hant` and `pt-PT` are the same
+  trap in waiting: all three exist verbatim as Apple codes carrying ~75 keys
+  against ~211,000, so existence proves nothing and only coverage does.
+  Corrected 22 Sep 2026; `.claude/agents/i18n-review.md` §6c has the record.
 - **Known gaps, deliberate:** the handshake follows the *fronted* serve
   only (a parked warm sidecar's live `/mcp` is not advertised — v1 scope);
   `MCPTokenStore.revoke()` unwired (Turn Off Agent Access deletes the

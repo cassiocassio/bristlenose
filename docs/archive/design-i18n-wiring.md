@@ -1,4 +1,44 @@
+---
+status: archived-historical
+last-trued: 2026-09-22
+trued-against: HEAD@main on 2026-09-22 (08bb2cb6)
+superseded-by:
+  - docs/design-i18n.md
+---
+
 # i18n Wiring — Connect React Components to Translation Keys
+
+> **Historical — this plan was executed within a week of being written, and the
+> tree moved past it the same month.** Kept because it is the only record of what
+> the SPA looked like immediately before i18n, not because any instruction in it
+> is still followable. **Do not use it as a key map: eight of its key names are
+> wrong.**
+>
+> `c2d18a6e` (24 Mar 2026) wired ~200 strings and falsified this doc's premise —
+> *"zero components call `useTranslation()`"* — six days after it was written; 48
+> source files call it today. `ab09dd7a`, the same day, deleted
+> `frontend/src/locales/` and moved the corpus to `bristlenose/locales/` behind
+> the `@locales` Vite alias, so every path here points at a tree that no longer
+> exists. All ten component sections and all five "not in scope (future work)"
+> items have shipped.
+>
+> **Where the reasoning went:** `docs/design-i18n.md` § "Frontend extraction
+> lessons (24 Mar 2026)" is the as-built successor, carrying the patterns table
+> and the five recorded mistakes. Nothing here was worth rescuing into it.
+>
+> **Three sections actively mislead and are the reason for the warning above.**
+> §10 *Speaker roles* instructs wiring `enums:speakerRole.*`, which the SPA
+> deliberately does not do — it keys on the badge-code prefix via
+> `sessions.speakerPlaceholder.*`, because the m-code speaker's stored role is
+> `researcher`, never `moderator`. §"Config reference intro" prescribes the
+> `Trans` component as preferred; `Trans` is imported nowhere in the repo, and
+> the shipped choice is the option this doc ranks second, for a bundle-size
+> reason recorded only at `MiroExportPanel.tsx:232`. And the `## Pattern` block
+> omits the `useMemo([t, i18n.language])` invariant, so a contributor working
+> from it alone reintroduces the stale-memo bug.
+>
+> **This archiving is the reconciliation `docs/design-people.md` was waiting on**
+> before deciding the `enums:speakerRole.*` deletion.
 
 ## Context
 

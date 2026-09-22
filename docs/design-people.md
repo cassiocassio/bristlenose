@@ -1678,9 +1678,10 @@ so the glossary was the outlier, not the product.
 
 **Held deliberately.** The ~~dead~~ `enums:speakerRole.*` block (4 keys × 21 locales)
 is **not** deleted: verification found the census incomplete —
-`design-i18n-wiring.md:76` instructs a future implementer to wire roles to those
+~~`design-i18n-wiring.md:76`~~ (now `docs/archive/design-i18n-wiring.md`)
+instructs a future implementer to wire roles to those
 very keys — and the near-homonym argument used to justify deleting it applies
-equally to the proposed replacement. Reconcile the wiring doc first.
+equally to the proposed replacement. ~~Reconcile the wiring doc first.~~
 
 > **The "dead" premise is wrong in one of four, measured 22 Sep 2026.**
 > `speakerRole.participant` has **three live callers** —
@@ -1696,6 +1697,23 @@ equally to the proposed replacement. Reconcile the wiring doc first.
 > (`SessionsTable.tsx:49`) resolves `sessions.speakerPlaceholder.*`, a separate
 > set, so a census that greps for the rendered *word* rather than the key will
 > keep finding the wrong one.
+>
+> **Reconciled 22 Sep 2026 — the hold is lifted for three of the four.** The
+> wiring doc was archived (`docs/archive/design-i18n-wiring.md`) as a plan whose
+> every item shipped in March; its §10 was the *only* thing asking anyone to wire
+> `enums:speakerRole.*`, and it was wrong to — the SPA keys on the badge-code
+> prefix because an m-code speaker's stored role is `researcher`, never
+> `moderator`, so these were a vocabulary spelled somewhere else. That removes
+> the reason this paragraph was waiting. The repo's own register had already
+> reached the same place from the other side:
+> `tests/test_locale_key_readers.py:397` tags `enums.speakerRole.` **DEAD** with
+> leaves `observer researcher unknown` — three, not four — and its note records
+> that *"`participant` left this set on 22 Sep 2026"*.
+>
+> So: `participant` **stays** and is live; `observer` / `researcher` / `unknown`
+> are deletable, 3 × 21 = 63 values. Left undone deliberately — it is a deletion,
+> the gate already excuses the keys so nothing is red while it waits, and the
+> near-homonym question above is still an owner call.
 
 **Owner calls, none of them safely inferable:**
 

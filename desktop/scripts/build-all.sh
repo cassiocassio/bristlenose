@@ -317,18 +317,26 @@ bn_step_ok 2 elapsed=$((SECONDS-_bn_t2)) detail="built + signed under $SIGN_IDEN
 # ------------------------------------------------------------
 # 2a. Bundle integrity self-test
 # ------------------------------------------------------------
-# Spawns the just-built sidecar binary with `doctor --self-test`. Asserts
-# every runtime-data file (React SPA, codebook YAMLs, LLM prompts, locales,
-# theme, Alembic migrations) is present in the bundle and non-trivial.
+# Verifies that `doctor --self-test` ran against THIS bundle, by checking the
+# stamp ensure-sidecar.sh wrote. It does NOT run the test — see the block below
+# the step header for why it cannot, and what happened the month it tried.
 #
-# Catches the BUG-3/4/5 class — data file in source, missing from bundle.
+# The test itself asserts every runtime-data file (React SPA, codebook YAMLs,
+# LLM prompts, locales, theme, Alembic migrations) is present and non-trivial,
+# catching the BUG-3/4/5 class — data file in source, missing from bundle.
 # Spec→bundle complement to step 1b's source→spec check (which catches
 # "forgot to add to spec"). This step catches "in spec but PyInstaller
 # silently dropped it." See docs/walkthroughs/c3-smoke-test results.md
 # for the post-mortem.
 #
-# Runs the binary directly (single in-process exec, ~2-3s). No HTTP,
-# no port handling, no subprocess orchestration.
+# This header said "Spawns the just-built sidecar binary" and "Runs the binary
+# directly (single in-process exec, ~2-3s)" until 22 Sep 2026 — the pre-14-Jul
+# behaviour, describing a step that had not worked that way for two months,
+# and contradicting the block ten lines below it. It is corrected rather than
+# deleted because the invited mistake is specific: read the header, conclude
+# the step should exec the binary, "restore" that, and the gate silently skips
+# on every build again. That is not hypothetical — it is what the block below
+# records happening for a month.
 
 bn_step_start 2a Verify "Bundle self-test" \
     narrative="Asserts doctor --self-test ran against THIS bundle — every runtime-data file present, checked pre-sign in step 2."

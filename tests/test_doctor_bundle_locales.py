@@ -26,6 +26,7 @@ Three things make it worth a test file rather than a one-line fix:
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -34,6 +35,7 @@ from bristlenose import doctor
 from bristlenose.doctor import CheckStatus, check_bundle_locales
 from bristlenose.i18n import FALLBACK_ONLY_LOCALES, SUPPORTED_LOCALES
 
+_ROOT_DOC = Path(__file__).resolve().parents[1] / "docs" / "design-doctor-and-snap.md"
 _FULL = sorted(set(SUPPORTED_LOCALES) - FALLBACK_ONLY_LOCALES)
 _FORK = sorted(FALLBACK_ONLY_LOCALES)
 
@@ -160,4 +162,29 @@ def test_the_classification_has_exactly_one_home():
     source = Path(sibling.__file__).read_text(encoding="utf-8")
     assert '_FALLBACK_ONLY_LOCALES = ("zh-Hant-HK",)' not in source, (
         "the sibling restated the list instead of deriving it — one copy only"
+    )
+
+
+def test_every_bundle_check_is_documented():
+    """The design doc's table of `--self-test` checks must name all of them.
+
+    It drifted by two — `check_bundle_admin_panel` and `check_bundle_mcp` were
+    added after it was written, and the table stopped at six while the code had
+    eight. That is the `_JS_FILES` disease the root CLAUDE.md names: a list kept
+    in prose is a list nobody recomputes, and the same pass found the table's
+    locale row asserting 21 dirs when there are 22.
+
+    Names, not a count — a count is the brittle version and would fail on a
+    reordering that changed nothing.
+    """
+    doc = (_ROOT_DOC).read_text(encoding="utf-8")
+    source = (Path(__file__).resolve().parents[1] / "bristlenose" / "doctor.py").read_text(
+        encoding="utf-8"
+    )
+    in_code = set(re.findall(r"^def (check_bundle_\w+)", source, re.M))
+    undocumented = sorted(name for name in in_code if f"`{name}`" not in doc)
+    assert not undocumented, (
+        f"{undocumented} run in doctor --self-test but appear in no row of "
+        f"{_ROOT_DOC.name}'s check table. Add a row in the same commit — this "
+        f"table is the only place the checks are described together."
     )

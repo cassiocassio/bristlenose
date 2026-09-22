@@ -118,11 +118,15 @@ A second class of checks, distinct from runtime dependency health. Runs via `bri
 | 1 | `check_bundle_react_spa` | `bristlenose/server/static/` contains `index.html` and hashed JS/CSS assets |
 | 2 | `check_bundle_codebooks` | `bristlenose/llm/codebooks/*.yaml` all present |
 | 3 | `check_bundle_prompts` | `bristlenose/llm/prompts/*.md` all present |
-| 4 | `check_bundle_locales` | `bristlenose/locales/*/*.json` all 21 locale dirs present (20 full + `zh-Hant-HK` override) |
+| 4 | `check_bundle_locales` | 22 locale dirs present; `common.json` per **full** locale (21 of them, size-floored); a non-empty directory for each thin override fork (`FALLBACK_ONLY_LOCALES`), with no size floor |
 | 5 | `check_bundle_theme` | `bristlenose/theme/` CSS + JS modules present |
 | 6 | `check_bundle_alembic` | `bristlenose/server/migrations/` scripts present |
+| 7 | `check_bundle_admin_panel` | SQLAdmin's Jinja2 templates + static assets (third-party package data) |
+| 8 | `check_bundle_mcp` | MCP server + its lazily-loaded schema data (third-party package data) |
 
-**Invocation contract:** `desktop/scripts/build-all.sh` step 7a invokes `bristlenose doctor --self-test` against the signed bundle before notarisation. Failure of any check aborts the build — the invariant is that a shipped sidecar must pass self-test.
+**Invocation contract:** the self-test runs in `desktop/scripts/ensure-sidecar.sh` step 3a, **pre-sign**, and writes a stamp; `build-all.sh` step 2a then *verifies that stamp* and fails on absent or stale. It does **not** run the test, and cannot: `sign-sidecar.sh` applies `com.apple.security.app-sandbox` unconditionally, and a sandbox-signed binary aborts in `_libsecinit_appsandbox` when exec'd standalone (exit 133, reproduced 22 Sep 2026). Failure of any check aborts the build — the invariant is that a shipped sidecar must pass self-test.
+
+> This paragraph said *"step 7a invokes … against the signed bundle before notarisation"* until 22 Sep 2026 — wrong in all three particulars, and contradicting this doc's own banner. The run/verify split is not incidental: attempting the exec here is what left the gate dead from 14 Jul to 14 Aug 2026, skipping silently on every build, so a reader who "restores" the older description re-creates a month-long outage in the only gate on "PyInstaller dropped a datas entry".
 
 **Sibling gate — source→spec coverage** (`desktop/scripts/check-bundle-manifest.sh`, commit "check-bundle-manifest.sh — source→spec coverage gate"): greps the source tree for data files and checks that each appears in `bristlenose-sidecar.spec` `datas`. Catches the inverse problem: a file added to source that never gets declared for bundling. Runs as a separate CI gate, earlier in the pipeline.
 

@@ -124,6 +124,26 @@ pricing by cells under-counted every s08 row by half. The estimate reads
 `bristlenose.llm.pricing.PRICING`, so it moves when the price table does —
 re-run `--plan` rather than quoting this line.
 
+## Known limitations, measured during the run
+
+**`ikea-es` and `ikea-mixed` cannot answer the s11 question.** Ikea has only
+6 `general_context` quotes, so thematic grouping produces 2–3 themes and the
+hardcoded `Uncategorised` bucket holds two to four of them — the majority, in
+some passes. The partition metric over 6 items in 2 groups is noise, and the
+language table for those cells is polluted by our own English fallback label
+rather than by anything the model did. **Read ikea for s10 only** (27
+screen-specific quotes → 9–11 clusters, which is healthy). `escuela` is the
+corpus that answers s11, with 18 quotes and 5–8 themes.
+
+This is the degenerate-fixture trap the root `CLAUDE.md` documents, arriving
+from the direction nobody watches: the corpus was chosen because it is the only
+one with *screens*, and its thinness on the *other* axis was not checked. It
+was visible only by reading a cell's output rather than its counts.
+
+It also sharpens the `Uncategorised` finding. On a small contextual corpus that
+label is not an edge case — it is where most of the quotes end up, in English,
+under every locale.
+
 ## Measurements
 
 Written to `out/<corpus>/<provider>/<condition>/pass_<n>.json` (the stage's

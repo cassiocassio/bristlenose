@@ -24,6 +24,7 @@ import {
   setTagFilter,
   addTag,
   getLastUsedTag,
+  hideQuotes,
 } from "../contexts/QuotesContext";
 import {
   useSidebarStore,
@@ -181,11 +182,22 @@ export function useKeyboardShortcuts({
     const selected = selectedIdsRef.current;
 
     if (selected.size > 0) {
-      for (const id of selected) {
-        hideQuote(id);
-      }
+      // Straight to the store, once, for the whole selection.
+      //
+      // This used to loop `hideQuote(id)`, which reaches the hide handler the
+      // owning QuoteGroup registered — and that handler expands the selection
+      // again when the id it is given is selected. The two loops multiplied:
+      // measured at 9 persisted writes for 3 selected quotes and 25 for 5,
+      // each one a full-map PUT racing the others. ⌘A selects every visible
+      // quote, so a few hundred were reachable by an ordinary triage gesture.
+      //
+      // Bulk hide has no ghost animation, so nothing here needs the group's
+      // DOM and there is no reason to go through the registry at all.
+      hideQuotes(Array.from(selected));
       clearSelection();
     } else if (focused) {
+      // Single quote keeps the registry, because the ghost that flies to the
+      // hidden badge is measured off the owning group's layout.
       hideQuote(focused);
       moveFocus(1);
     }

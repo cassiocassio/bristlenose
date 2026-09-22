@@ -39,6 +39,18 @@ import { isExportMode } from "../utils/exportData";
 
 export interface QuotesState {
   hidden: Record<string, boolean>;
+  /** Quotes mid hide-animation, shared across every QuoteGroup.
+   *
+   *  A selection spans groups, so a bulk hide is one gesture crossing
+   *  several of them. This lived as per-group `useState` until 22 Sep 2026,
+   *  which meant a group only collapsed the ids it was individually told
+   *  about — and the thing telling every group was a defect (the keyboard
+   *  path called each card's hide handler in turn, and each of those
+   *  re-expanded the whole selection, so the animation worked by accident
+   *  and cost one full-map PUT for every pair of selected quotes). Removing
+   *  the duplication without moving this would have traded the arithmetic
+   *  for a missing animation in every group but the clicked one. */
+  hiding: Set<string>;
   starred: Record<string, boolean>;
   edits: Record<string, string>;
   tags: Record<string, TagResponse[]>;
@@ -61,6 +73,7 @@ export interface QuotesState {
 function emptyState(): QuotesState {
   return {
     hidden: {},
+    hiding: new Set(),
     starred: {},
     edits: {},
     tags: {},
@@ -264,10 +277,73 @@ export function toggleHide(domId: string, newState: boolean): void {
     const hidden = { ...prev.hidden };
     if (newState) hidden[domId] = true;
     else delete hidden[domId];
+    // Drop any in-flight animation record for this quote. An unhide during
+    // the collapse window would otherwise leave it in `hiding` forever, and
+    // every group renders a hiding quote as an empty card.
+    const hiding = new Set(prev.hiding);
+    hiding.delete(domId);
     putHidden(hidden);
-    return { ...prev, hidden };
+    return { ...prev, hidden, hiding };
   });
   announce(i18n.t(newState ? "announce.hidden" : "announce.restored"));
+}
+
+/**
+ * Duration of the hide collapse, in ms. Matches `.bn-hiding` in the theme CSS
+ * and the frozen vanilla renderer's `_HIDE_DURATION`; the store defers the
+ * commit by it so siblings finish sliding up before the card leaves the list.
+ */
+export const HIDE_DURATION = 300;
+
+/**
+ * Hide one or more quotes as a single gesture.
+ *
+ * This is the whole gesture: mark the quotes as animating, wait out the
+ * collapse, then commit them to `hidden` in ONE state write and ONE PUT.
+ *
+ * It replaces a per-quote path that cost O(n^2) writes for an n-quote
+ * selection — the keyboard handler looped the selection calling each card's
+ * registered hide handler, and each of those handlers looped the selection
+ * again. Measured before the fix: 3 selected quotes produced 9 writes, 5
+ * produced 25. Because `/hidden` is a full-map replacement sent fire-and-
+ * forget, those writes also raced each other, and the server kept whichever
+ * landed last.
+ *
+ * Callers pass every quote the gesture applies to. Hiding is one-way, so
+ * there is no direction argument; `toggleHide(id, false)` unhides.
+ */
+export function hideQuotes(domIds: string[]): void {
+  // Read-only in an exported report — mutations have no server to persist to,
+  // and a control that responds then silently discards on reload is a lie.
+  if (isExportMode()) return;
+
+  // Skip anything already hidden or already animating. Without this a second
+  // press during the collapse window schedules a duplicate commit for the
+  // same quotes.
+  const targets = domIds.filter((id) => !state.hidden[id] && !state.hiding.has(id));
+  if (targets.length === 0) return;
+
+  setState((prev) => {
+    const hiding = new Set(prev.hiding);
+    for (const id of targets) hiding.add(id);
+    return { ...prev, hiding };
+  });
+
+  // ONE timer for the gesture, not one per quote. The commit is a single
+  // state write and a single PUT however many quotes are in it.
+  setTimeout(() => {
+    setState((prev) => {
+      const hidden = { ...prev.hidden };
+      const hiding = new Set(prev.hiding);
+      for (const id of targets) {
+        hidden[id] = true;
+        hiding.delete(id);
+      }
+      putHidden(hidden);
+      return { ...prev, hidden, hiding };
+    });
+    announce(i18n.t("announce.hidden"));
+  }, HIDE_DURATION);
 }
 
 export function commitEdit(domId: string, newText: string): void {

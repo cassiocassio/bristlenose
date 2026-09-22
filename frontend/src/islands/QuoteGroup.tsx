@@ -37,6 +37,8 @@ import {
   restoreBadges,
   acceptProposedTag,
   denyProposedTag,
+  hideQuotes,
+  HIDE_DURATION,
 } from "../contexts/QuotesContext";
 import { useSidebarStore, toggleTagGroupHidden } from "../contexts/SidebarStore";
 
@@ -97,10 +99,6 @@ interface TranscriptCache {
   getSegmentRange: (sessionId: string, fromIndex: number, toIndex: number) => Promise<TranscriptSegmentResponse[]>;
   getContextByTimecode: (sessionId: string, startSeconds: number, above: number, below: number) => Promise<{ above: TranscriptSegmentResponse[]; below: TranscriptSegmentResponse[] }>;
 }
-
-// ── Animation constants ─────────────────────────────────────────────────
-
-const HIDE_DURATION = 300; // ms — matches vanilla JS _HIDE_DURATION
 
 // ── Props ───────────────────────────────────────────────────────────────
 
@@ -200,8 +198,8 @@ export function QuoteGroup({
   const [isCounterOpen, setIsCounterOpen] = useState(false);
 
   // Track quotes in hide animation (shown with .bn-hiding class).
-  const [hidingIds, setHidingIds] = useState<Set<string>>(new Set());
-  const hideTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  // Quotes mid-collapse come from the store — the gesture spans groups.
+  const hidingIds = store.hiding;
 
   // Track recently-accepted tags for the accept flash animation.
   // Key: `${domId}:${tagName}`, auto-clears after 500ms.
@@ -350,21 +348,13 @@ export function QuoteGroup({
   const handleToggleHide = useCallback(
     (domId: string, newState: boolean) => {
       if (newState && selectedIds.size > 0 && selectedIds.has(domId)) {
-        // ── Bulk hide: CSS collapse + store toggle (no ghost animation) ──
-        for (const id of selectedIds) {
-          if (store.hidden[id]) continue; // already hidden
-          setHidingIds((prev) => new Set(prev).add(id));
-          const timer = setTimeout(() => {
-            setHidingIds((prev) => {
-              const next = new Set(prev);
-              next.delete(id);
-              return next;
-            });
-            toggleHide(id, true);
-            hideTimers.current.delete(id);
-          }, HIDE_DURATION);
-          hideTimers.current.set(id, timer);
-        }
+        // ── Bulk hide: CSS collapse, no ghost ────────────────────────────
+        // One store call for the whole selection. `hideQuotes` owns the
+        // animation window and commits every quote in a single write, so
+        // this costs one PUT regardless of how many are selected — and
+        // because the hiding set is shared, groups other than this one
+        // collapse their own cards too. Both were broken before 22 Sep 2026.
+        hideQuotes(Array.from(selectedIds));
         clearSelection();
         return;
       }
@@ -383,8 +373,10 @@ export function QuoteGroup({
           badgeRect = { left: hr.right - 60, top: hr.top, width: 60, height: hr.height } as DOMRect;
         }
 
-        // Start CSS collapse (existing .bn-hiding for sibling slide-up).
-        setHidingIds((prev) => new Set(prev).add(domId));
+        // Start CSS collapse (existing .bn-hiding for sibling slide-up) and
+        // commit through the store, which owns the timing. The ghost below is
+        // a detached clone, so it animates independently of this.
+        hideQuotes([domId]);
 
         // Clone the quote card as a ghost overlay (before React re-renders).
         if (quoteRect && quoteEl) {
@@ -422,18 +414,6 @@ export function QuoteGroup({
 
           setTimeout(() => ghost.remove(), HIDE_DURATION + 50);
         }
-
-        // After animation, finalise hidden state in the store.
-        const timer = setTimeout(() => {
-          setHidingIds((prev) => {
-            const next = new Set(prev);
-            next.delete(domId);
-            return next;
-          });
-          toggleHide(domId, true);
-          hideTimers.current.delete(domId);
-        }, HIDE_DURATION);
-        hideTimers.current.set(domId, timer);
       } else {
         // ── Unhide: fly-down from badge ─────────────────────────────────
         pendingUnhides.current.add(domId);

@@ -1,6 +1,27 @@
 /* Atom: button — edit-pencil, badge-restore, toolbar-btn
    (star-btn, hide-btn, toolbar-btn-toggle moved to atoms/toggle.css) */
 
+/* The pencil is HIDDEN AT REST and revealed by hovering its host.
+ *
+ * It used to be permanently visible at `--bn-colour-icon-idle`, which is two
+ * separate mistakes. The first is semantic: that token is defined in
+ * `colors/_contract.css` as "Disabled/idle icon colour", and this is a live
+ * control. The second is that there was no disclosure ramp at all — the only
+ * `:hover` rule was on the pencil ITSELF, so hovering the heading did nothing
+ * and the sole state change in the control required the pointer to already be
+ * on a ~13px glyph rendering at 1.24:1 (light) / 1.44:1 (dark) median ink,
+ * measured. You had to find an invisible target to discover it was there.
+ *
+ * So: nothing at rest, `--bn-colour-muted` on host hover (4.83:1 / 7.44:1),
+ * accent on its own hover. The APPEARANCE is the discoverability signal —
+ * motion reads faster than any static contrast bump — and the heading stops
+ * carrying a permanent speck that serves nobody until hovered.
+ *
+ * This is not a new pattern: `.hide-btn` (atoms/toggle.css) and
+ * `.bn-name-pencil` (molecules/person-badge.css) already ship it. `.star-btn`
+ * deliberately does NOT adopt it — a star is a state display as well as a
+ * control, so a starred quote must read as starred without hovering.
+ */
 .edit-pencil {
     position: absolute;
     top: 0.65rem;
@@ -8,15 +29,45 @@
     background: none;
     border: none;
     font-size: var(--bn-text-label);
-    color: var(--bn-colour-icon-idle);
+    color: var(--bn-colour-muted);
     cursor: pointer;
     padding: var(--bn-space-xs);
     line-height: 1;
-    transition: color var(--bn-transition-normal);
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast), color var(--bn-transition-normal);
+}
+
+/* Revealed by hovering WHATEVER CONTAINS IT. Written parent-agnostically
+   rather than as an enumeration, because the pencil has four hosts already
+   (`h3`, `p.description`, the toc `<li>`, and `blockquote.quote-card`) and a
+   fifth should not need an edit here. The pencil is a direct child in every
+   one of them, so `:hover >` is exact — and at (0,2,0) it outranks the
+   `.edit-pencil` base rule without `!important`.
+
+   `:focus-visible` is load-bearing, not politeness: an `opacity: 0` button is
+   still in the tab order, so without it a keyboard user would land on an
+   invisible control. */
+:hover > .edit-pencil,
+.edit-pencil:focus-visible {
+    opacity: 1;
 }
 
 .edit-pencil:hover {
     color: var(--bn-colour-accent);
+}
+
+/* Baseline-align the SVG the SPA renders — same idiom as `.toolbar-icon-svg`
+   below. The static renderer still emits U+270E as text and ignores this. */
+.edit-pencil svg {
+    vertical-align: -0.15em;
+}
+
+/* A hover-reveal is unreachable where there is no hover. The report is a
+   desktop tool, but a touch visitor must not simply lose the control. */
+@media (hover: none) {
+    .edit-pencil {
+        opacity: 1;
+    }
 }
 
 .edit-pencil-inline {

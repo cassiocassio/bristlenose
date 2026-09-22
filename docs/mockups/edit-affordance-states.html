@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inline-edit affordance — states &amp; proposals</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css, tokens-typography.css,
+   colors/palette-default.css, colors/palette-edo.css).
+
+   Every artefact below reproduces the SHIPPED CASCADE rather than hardcoded
+   pixels — h3 at --bn-text-heading/--bn-weight-emphasis, the pencil as a child
+   at 0.75em of its parent — so the mock stays true if a token moves.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-normal:.2s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #4b5563);
+  --bn-colour-icon-idle:   light-dark(#c9ccd1, #595959);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-hover-bg:           light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.06));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-icon-idle:   light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-hover-bg:           light-dark(rgba(60,40,20,0.05), rgba(255,240,210,0.06));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+}
+/* shipped edit-field tokens (tokens.css:229) */
+:root {
+  --bn-field-edit-edge: var(--bn-colour-accent);
+  --bn-field-edit-fill-on-page: var(--bn-colour-quote-bg);
+  --bn-field-edit-radius: var(--bn-radius-sm);
+  --bn-field-edit-offset: 1px;
+}
+
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap { max-width:1180px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 7rem; }
+
+/* ── page chrome (NOT product) ────────────────────────────────────────── */
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; font-family:var(--bn-font-mono); }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); max-width:72ch; margin:.4rem 0; }
+
+.key { display:flex; gap:1.5rem; flex-wrap:wrap; align-items:center; margin:1.2rem 0 0; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.key b { font-weight:490; color:var(--bn-colour-text); }
+.key .sw-art, .key .sw-com { width:34px; height:16px; border-radius:var(--bn-radius-sm); display:inline-block; vertical-align:-3px; margin-right:.4rem; }
+.key .sw-art { border:1px solid var(--bn-colour-border); background:var(--bn-colour-bg); }
+.key .sw-com { border:1px solid var(--bn-colour-border);
+  background-image:repeating-linear-gradient(45deg, transparent 0 4px, var(--bn-hover-bg) 4px 8px); }
+
+.controls { display:flex; gap:.4rem; align-items:center; margin:1.4rem 0 var(--bn-space-xl); flex-wrap:wrap; }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; font-family:var(--bn-font-mono); }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+
+.bench { margin:3rem 0 0; }
+.bench-head h2 { font-size:var(--bn-text-title); font-weight:490; margin:0 0 .2rem; }
+.bench-head .sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0 0 1.1rem; max-width:78ch; }
+.verdict { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+  padding:.1rem .45rem; border-radius:var(--bn-radius-sm); margin-left:.5rem; vertical-align:2px; }
+.v-bad  { background:light-dark(#fee2e2,#3b1418); color:light-dark(#991b1b,#fca5a5); }
+.v-good { background:light-dark(#dcfce7,#0f2e1c); color:light-dark(#166534,#86efac); }
+.v-open { background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); }
+
+/* ── ARTEFACT ZONE ────────────────────────────────────────────────────── */
+/* Two columns: forced light + forced dark, same markup. color-scheme forces
+   light-dark() resolution, so both appearances sit side by side for judging. */
+.pair { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem; }
+@media (max-width:860px){ .pair { grid-template-columns:1fr; } }
+
+.frame { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); overflow:hidden;
+  box-shadow:0 1px 3px var(--bn-colour-shadow); }
+.frame-bar { display:flex; align-items:center; gap:.45rem; padding:.4rem .7rem;
+  background:var(--bn-colour-badge-bg); border-bottom:1px solid var(--bn-colour-border); }
+.frame-bar .dots { display:flex; gap:4px; }
+.frame-bar .dots i { width:8px; height:8px; border-radius:50%; background:var(--bn-off-track); display:block; }
+.frame-bar .cap { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  text-transform:uppercase; letter-spacing:.06em; color:var(--bn-colour-badge-text); }
+/* `color` MUST be re-declared here, not inherited: colour inherits as a
+   COMPUTED value, so light-dark() would resolve once at <body> (page
+   appearance) and the dark column would render light ink. Re-substituting
+   var() on this element resolves it against the column's own color-scheme. */
+.frame-body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  padding:1.1rem 1.25rem 1.35rem; }
+.lightcol { color-scheme:light; }
+.darkcol  { color-scheme:dark; }
+
+/* ── the surface under test: a real group header ─────────────────────── */
+/* Reproduces organisms/blockquote.css .bn-group-header + templates/report.css
+   h3/.description + molecules/editable-text.css + atoms/button.css */
+.bn-group-header { display:flex; align-items:baseline; justify-content:space-between; gap:var(--bn-space-sm); }
+.rpt h3 { font-size:var(--bn-text-heading); font-weight:var(--bn-weight-emphasis); margin:0 0 .25rem; }
+.rpt .description { color:var(--bn-colour-muted); margin:0; font-size:var(--bn-text-body); }
+.editable-text { padding:1px 3px; margin:-1px -3px; border-radius:var(--bn-radius-sm); }
+
+/* SHIPPED pencil — atoms/button.css:4 + :22. font-size 0.75em resolves against
+   the PARENT (h3 = 18px → 13.5px), because .edit-pencil-inline wins the cascade. */
+.edit-pencil { background:none; border:none; font-size:var(--bn-text-label);
+  color:var(--bn-colour-icon-idle); cursor:pointer; padding:var(--bn-space-xs);
+  line-height:1; transition:color var(--bn-transition-normal); }
+.edit-pencil-inline { position:static; display:inline; margin-left:.4em;
+  vertical-align:baseline; font-size:.75em; }
+
+/* forced states — the mock shows all four at once rather than needing a pointer */
+.s-pen .edit-pencil { color:var(--bn-colour-accent); }
+.s-edit .editable-text { outline:1px solid var(--bn-field-edit-edge);
+  outline-offset:var(--bn-field-edit-offset); background:var(--bn-field-edit-fill-on-page);
+  border-radius:var(--bn-field-edit-radius); }
+.s-edit .caret { display:inline-block; width:1px; height:1.05em; background:var(--bn-colour-text);
+  vertical-align:-2px; margin-left:1px; }
+
+/* ── PROPOSAL A: the house disclosure ramp ───────────────────────────── */
+.pA .edit-pencil { opacity:0; color:var(--bn-colour-muted);
+  transition:opacity var(--bn-transition-fast), color var(--bn-transition-normal); }
+.pA.s-hover .edit-pencil, .pA.s-pen .edit-pencil, .pA.s-edit .edit-pencil { opacity:1; }
+.pA.s-pen .edit-pencil { color:var(--bn-colour-accent); }
+.pA.s-edit .edit-pencil { color:var(--bn-colour-accent); }
+/* live variant */
+.pA-live .edit-pencil { opacity:0; color:var(--bn-colour-muted);
+  transition:opacity var(--bn-transition-fast), color var(--bn-transition-normal); }
+.pA-live:hover .edit-pencil { opacity:1; }
+.pA-live .edit-pencil:hover { color:var(--bn-colour-accent); }
+
+/* ── PROPOSAL B: ramp + stroke SVG instead of U+270E ─────────────────── */
+.pencil-svg { width:1em; height:1em; vertical-align:-.13em; }
+.pB .edit-pencil { opacity:0; color:var(--bn-colour-muted); font-size:var(--bn-text-label);
+  transition:opacity var(--bn-transition-fast), color var(--bn-transition-normal); }
+.pB.s-hover .edit-pencil, .pB.s-pen .edit-pencil, .pB.s-edit .edit-pencil { opacity:1; }
+.pB.s-pen .edit-pencil { color:var(--bn-colour-accent); }
+.pB.s-edit .edit-pencil { color:var(--bn-colour-accent); }
+.pB-live .edit-pencil { opacity:0; color:var(--bn-colour-muted); font-size:var(--bn-text-label);
+  transition:opacity var(--bn-transition-fast), color var(--bn-transition-normal); }
+.pB-live:hover .edit-pencil { opacity:1; }
+.pB-live .edit-pencil:hover { color:var(--bn-colour-accent); }
+
+/* ── PROPOSAL C: the text is the target ──────────────────────────────── */
+.pC .editable-text { border-radius:var(--bn-radius-sm); transition:background var(--bn-transition-fast); }
+.pC.s-hover .editable-text { background:var(--bn-hover-bg); cursor:text; }
+.pC .edit-pencil { opacity:0; color:var(--bn-colour-muted);
+  transition:opacity var(--bn-transition-fast), color var(--bn-transition-normal); }
+.pC.s-hover .edit-pencil { opacity:1; }
+.pC.s-pen .editable-text { background:var(--bn-hover-bg); }
+.pC.s-pen .edit-pencil { opacity:1; color:var(--bn-colour-accent); }
+.pC-live .editable-text { border-radius:var(--bn-radius-sm); transition:background var(--bn-transition-fast); }
+.pC-live .editable-text:hover { background:var(--bn-hover-bg); cursor:text; }
+.pC-live .edit-pencil { opacity:0; color:var(--bn-colour-muted);
+  transition:opacity var(--bn-transition-fast), color var(--bn-transition-normal); }
+.pC-live:hover .edit-pencil { opacity:1; }
+.pC-live .edit-pencil:hover { color:var(--bn-colour-accent); }
+
+/* ── magnifier: hairline glyph vs stroke SVG ─────────────────────────── */
+/* Both panes are RASTERISED AT THE TRUE 13.5px into a canvas, then upscaled
+   with image-rendering:pixelated. A CSS transform:scale() on live text would
+   re-render it vectorially and show none of the antialiasing that is the
+   whole point — so the comparison is drawn, not scaled. */
+.mag { display:flex; gap:1.6rem; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+.mag figure { margin:0; text-align:center; }
+.mag .zoom { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md);
+  background:var(--bn-colour-bg); display:grid; place-items:center;
+  width:124px; height:124px; overflow:hidden; }
+.mag canvas { image-rendering:pixelated; display:block; width:108px; height:108px; }
+.mag figcaption { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  color:var(--bn-colour-muted); margin-top:.5rem; text-transform:uppercase;
+  letter-spacing:.05em; line-height:1.5; }
+.mag figcaption b { display:block; color:var(--bn-colour-text); font-weight:490; }
+.magwrap { padding:1.35rem 1.25rem; }
+
+/* ── COMMENTARY ZONE — deliberately not-the-product ──────────────────── */
+.commentary { margin:1.1rem 0 0; border-left:3px solid var(--bn-colour-border);
+  background-image:repeating-linear-gradient(45deg, transparent 0 6px, var(--bn-hover-bg) 6px 12px);
+  padding:.9rem 1.1rem; border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; }
+.commentary .tag { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  text-transform:uppercase; letter-spacing:.08em; color:var(--bn-colour-muted);
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-sm);
+  padding:.05rem .35rem; margin-bottom:.5rem; background:var(--bn-colour-bg); }
+.commentary p { margin:.45rem 0; font-size:var(--bn-text-label); max-width:82ch; }
+.commentary ul { margin:.45rem 0; padding-left:1.1rem; font-size:var(--bn-text-label); max-width:82ch; }
+.commentary li { margin:.25rem 0; }
+.commentary code { font-family:var(--bn-font-mono); font-size:.92em;
+  background:var(--bn-colour-badge-bg); padding:.05rem .25rem; border-radius:var(--bn-radius-sm); }
+
+table.data { border-collapse:collapse; width:100%; font-size:var(--bn-text-label); margin:.7rem 0; background:var(--bn-colour-bg); }
+table.data th, table.data td { text-align:left; padding:.4rem .6rem; border-bottom:1px solid var(--bn-colour-border); }
+table.data th { font-weight:490; font-size:var(--bn-text-caption); text-transform:uppercase;
+  letter-spacing:.04em; color:var(--bn-colour-muted); font-family:var(--bn-font-mono); }
+table.data td.num { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); white-space:nowrap; }
+.fail { color:light-dark(#991b1b,#fca5a5); font-weight:490; }
+.pass { color:light-dark(#166534,#86efac); font-weight:490; }
+
+@media (prefers-reduced-motion: reduce) {
+  .edit-pencil, .editable-text { transition:none !important; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <div class="eyebrow">Mockup · design-system-true</div>
+  <h1>Inline-edit affordance — states &amp; proposals</h1>
+  <p>The group-heading pencil, as it ships and as three proposals would change it.
+     Light and dark sit side by side in every bench. All four interaction states are
+     rendered simultaneously so they can be compared without a pointer; a live,
+     genuinely-hoverable copy sits at the end.</p>
+  <div class="key">
+    <span><span class="sw-art"></span><b>Artefact</b> — real pixels, real tokens</span>
+    <span><span class="sw-com"></span><b>Commentary</b> — why, not what ships</span>
+  </div>
+</header>
+
+<div class="controls">
+  <span class="lbl">Palette</span>
+  <button class="pbtn on" data-pal="default">default</button>
+  <button class="pbtn" data-pal="edo">edo</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     BENCH 1 — AS IT SHIPS
+     ═══════════════════════════════════════════════════════════════════ -->
+<section class="bench">
+  <div class="bench-head">
+    <h2>1 · As it ships<span class="verdict v-bad">defect</span></h2>
+    <p class="sub">Four states. Note that <em>rest</em> and <em>heading hover</em> are
+       pixel-identical — there is no ancestor-hover rule for <code>.edit-pencil</code>
+       anywhere in the theme.</p>
+  </div>
+
+  <div class="pair">
+    <div class="frame lightcol">
+      <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="cap">current · light</span></div>
+      <div class="frame-body rpt">
+        <div class="bn-group-header s-rest"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline" aria-label="Edit theme title">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header s-hover"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header s-pen"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header s-edit"><h3><span class="editable-text">this is the best label i can think of<span class="caret"></span></span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+      </div>
+    </div>
+    <div class="frame darkcol">
+      <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="cap">current · dark</span></div>
+      <div class="frame-body rpt">
+        <div class="bn-group-header s-rest"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header s-hover"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header s-pen"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header s-edit"><h3><span class="editable-text">this is the best label i can think of<span class="caret"></span></span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="commentary">
+    <span class="tag">Commentary</span>
+    <p>Rows top to bottom: <b>rest</b>, <b>heading hover</b>, <b>pencil hover</b>, <b>editing</b>.
+       Rows 1 and 2 are the same pixels. The only state change in the whole control requires the
+       pointer to already be on a ~13.5px glyph rendering at 1.24:1 (light) / 1.44:1 (dark) median ink.</p>
+    <table class="data">
+      <tr><th>measurement</th><th>light</th><th>dark</th></tr>
+      <tr><td>Heading text — median ink</td><td class="num pass">17.40:1</td><td class="num pass">13.44:1</td></tr>
+      <tr><td>Pencil — peak ink</td><td class="num fail">1.61:1</td><td class="num fail">2.03:1</td></tr>
+      <tr><td>Pencil — <b>median</b> ink</td><td class="num fail">1.24:1</td><td class="num fail">1.44:1</td></tr>
+      <tr><td>Pencil on hover (accent)</td><td class="num pass">4.02:1</td><td class="num pass">5.18:1</td></tr>
+    </table>
+    <p>Measured from the two supplied screenshots by pixel sampling, not derived from tokens.
+       Peak and median diverge because U+270E is a hairline glyph — most of its pixels are
+       antialiasing, so the token value (<code>1.61 / 2.70</code>) flatters what the eye receives.</p>
+    <p><b>Root cause is semantic, not just numeric.</b> <code>--bn-colour-icon-idle</code> is defined in
+       <code>colors/_contract.css:66</code> as “Disabled/idle icon colour”, and is being used as the
+       resting colour of a live control.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     BENCH 2 — PROPOSAL A
+     ═══════════════════════════════════════════════════════════════════ -->
+<section class="bench">
+  <div class="bench-head">
+    <h2>2 · Proposal A — the house disclosure ramp<span class="verdict v-good">recommended base</span></h2>
+    <p class="sub">Hidden at rest, revealed at <code>--bn-colour-muted</code> on heading hover,
+       accent on its own hover. No new tokens, no new elements — this is the pattern
+       <code>.hide-btn</code> and <code>.bn-name-pencil</code> already ship.</p>
+  </div>
+
+  <div class="pair">
+    <div class="frame lightcol">
+      <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="cap">proposal A · light</span></div>
+      <div class="frame-body rpt">
+        <div class="bn-group-header pA s-rest"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header pA s-hover"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header pA s-pen"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header pA s-edit"><h3><span class="editable-text">this is the best label i can think of<span class="caret"></span></span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+      </div>
+    </div>
+    <div class="frame darkcol">
+      <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="cap">proposal A · dark</span></div>
+      <div class="frame-body rpt">
+        <div class="bn-group-header pA s-rest"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header pA s-hover"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header pA s-pen"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header pA s-edit"><h3><span class="editable-text">this is the best label i can think of<span class="caret"></span></span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="commentary">
+    <span class="tag">Commentary</span>
+    <p>Rest is now <em>empty</em> — the heading reads as prose, with no permanent 13.5px
+       speck beside every group title. That is a real gain beyond contrast: on a dashboard
+       with a dozen groups, the current design draws twelve near-invisible marks that
+       serve nobody until hovered.</p>
+    <p>On hover the pencil arrives at <code>--bn-colour-muted</code> —
+       <span class="pass">4.83:1 light / 7.44:1 dark</span>, comfortably legible without
+       competing with the heading. The <em>appearance</em> itself is the discoverability
+       signal; motion is a stronger cue than any static contrast bump, which is the point
+       you made about hovering being the moment that matters.</p>
+    <p><b>Cost:</b> zero discoverability for a user who never hovers. That is the trade,
+       and it is the one <code>.hide-btn</code> already takes on every quote card.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     BENCH 3 — PROPOSAL B
+     ═══════════════════════════════════════════════════════════════════ -->
+<section class="bench">
+  <div class="bench-head">
+    <h2>3 · Proposal B — ramp + stroke SVG<span class="verdict v-good">fixes the hairline</span></h2>
+    <p class="sub">Proposal A, with U+270E replaced by a 1.5-stroke SVG on the 16px grid —
+       matching the seven SVGs already in the theme.</p>
+  </div>
+
+  <div class="pair">
+    <div class="frame lightcol">
+      <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="cap">proposal B · light</span></div>
+      <div class="frame-body rpt">
+        <div class="bn-group-header pB s-rest"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline"><svg class="pencil-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 1.5 14.5 4.5 5.5 13.5 1.5 14.5 2.5 10.5z"/><path d="M9.5 3.5 12.5 6.5"/></svg></button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header pB s-hover"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline"><svg class="pencil-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 1.5 14.5 4.5 5.5 13.5 1.5 14.5 2.5 10.5z"/><path d="M9.5 3.5 12.5 6.5"/></svg></button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header pB s-pen"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline"><svg class="pencil-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 1.5 14.5 4.5 5.5 13.5 1.5 14.5 2.5 10.5z"/><path d="M9.5 3.5 12.5 6.5"/></svg></button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header pB s-edit"><h3><span class="editable-text">this is the best label i can think of<span class="caret"></span></span><button class="edit-pencil edit-pencil-inline"><svg class="pencil-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 1.5 14.5 4.5 5.5 13.5 1.5 14.5 2.5 10.5z"/><path d="M9.5 3.5 12.5 6.5"/></svg></button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+      </div>
+    </div>
+    <div class="frame darkcol">
+      <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="cap">proposal B · dark</span></div>
+      <div class="frame-body rpt">
+        <div class="bn-group-header pB s-rest"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline"><svg class="pencil-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 1.5 14.5 4.5 5.5 13.5 1.5 14.5 2.5 10.5z"/><path d="M9.5 3.5 12.5 6.5"/></svg></button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header pB s-hover"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline"><svg class="pencil-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 1.5 14.5 4.5 5.5 13.5 1.5 14.5 2.5 10.5z"/><path d="M9.5 3.5 12.5 6.5"/></svg></button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header pB s-pen"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline"><svg class="pencil-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 1.5 14.5 4.5 5.5 13.5 1.5 14.5 2.5 10.5z"/><path d="M9.5 3.5 12.5 6.5"/></svg></button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header pB s-edit"><h3><span class="editable-text">this is the best label i can think of<span class="caret"></span></span><button class="edit-pencil edit-pencil-inline"><svg class="pencil-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 1.5 14.5 4.5 5.5 13.5 1.5 14.5 2.5 10.5z"/><path d="M9.5 3.5 12.5 6.5"/></svg></button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="pair">
+    <div class="frame lightcol">
+      <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="cap">glyph · rasterised at 13.5px, shown 6× · light</span></div>
+      <div class="frame-body magwrap">
+        <div class="mag">
+          <figure><span class="zoom"><canvas data-scheme="light" data-kind="glyph" data-ink="idle"></canvas></span><figcaption><b>today</b>U+270E · idle</figcaption></figure>
+          <figure><span class="zoom"><canvas data-scheme="light" data-kind="svg" data-ink="idle"></canvas></span><figcaption><b>asset only</b>SVG · idle</figcaption></figure>
+          <figure><span class="zoom"><canvas data-scheme="light" data-kind="svg" data-ink="muted"></canvas></span><figcaption><b>proposal B</b>SVG · muted</figcaption></figure>
+        </div>
+      </div>
+    </div>
+    <div class="frame darkcol">
+      <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="cap">glyph · rasterised at 13.5px, shown 6× · dark</span></div>
+      <div class="frame-body magwrap">
+        <div class="mag">
+          <figure><span class="zoom"><canvas data-scheme="dark" data-kind="glyph" data-ink="idle"></canvas></span><figcaption><b>today</b>U+270E · idle</figcaption></figure>
+          <figure><span class="zoom"><canvas data-scheme="dark" data-kind="svg" data-ink="idle"></canvas></span><figcaption><b>asset only</b>SVG · idle</figcaption></figure>
+          <figure><span class="zoom"><canvas data-scheme="dark" data-kind="svg" data-ink="muted"></canvas></span><figcaption><b>proposal B</b>SVG · muted</figcaption></figure>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="commentary">
+    <span class="tag">Commentary</span>
+    <p>The three panes deliberately separate the two variables — <b>asset</b> and <b>colour</b> —
+       because proposal B changes both and they should be judged apart. Left is today.
+       Middle changes only the asset. Right is B as it would ship.</p>
+    <p>Each pane is rasterised at the true 13.5px and upscaled 6× with
+       <code>image-rendering:pixelated</code>, so the fuzz you see is genuine — what the
+       rasteriser produced at that size, not a vector redraw. That is why peak and median
+       diverged: U+270E is drawn by whichever font the OS resolves it to, and at 13.5px it is
+       a hairline that is mostly antialiasing. A 1.5px stroke lands on the full token colour,
+       so <b>median ink ≈ peak ink</b> — and it renders identically on macOS, Windows and Linux
+       instead of varying by font fallback.</p>
+    <p>The icon catalog already asked for this: <code>docs/design-system/icon-catalog.html</code>
+       lists <b>pencil as migration priority 3</b>, explicitly because “rendering varies across OS”.
+       That plan is dated 9 Feb 2026 and names <code>render_html.py</code> as its target — a file
+       that no longer exists — so it needs re-homing at the SPA regardless of what we decide here.</p>
+    <p><b>Scope note:</b> adopting B for one icon does not require the full icon-set migration.
+       It does mean choosing the stroke grid now so the remaining glyphs
+       (<code>&#9733;</code> star, <code>&#9654;</code> play ×2) can follow consistently.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     BENCH 4 — PROPOSAL C
+     ═══════════════════════════════════════════════════════════════════ -->
+<section class="bench">
+  <div class="bench-head">
+    <h2>4 · Proposal C — the text is the target<span class="verdict v-open">open question</span></h2>
+    <p class="sub">The heading itself takes a hover tint and <code>cursor: text</code>; clicking it
+       starts the edit. The pencil stays as a secondary hint. This is the web-native convention —
+       and it is where the macOS convention disagrees.</p>
+  </div>
+
+  <div class="pair">
+    <div class="frame lightcol">
+      <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="cap">proposal C · light</span></div>
+      <div class="frame-body rpt">
+        <div class="bn-group-header pC s-rest"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header pC s-hover"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header pC s-pen"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header pC s-edit"><h3><span class="editable-text">this is the best label i can think of<span class="caret"></span></span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+      </div>
+    </div>
+    <div class="frame darkcol">
+      <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="cap">proposal C · dark</span></div>
+      <div class="frame-body rpt">
+        <div class="bn-group-header pC s-rest"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header pC s-hover"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header pC s-pen"><h3><span class="editable-text">this is the best label i can think of</span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+        <div style="height:1.1rem"></div>
+        <div class="bn-group-header pC s-edit"><h3><span class="editable-text">this is the best label i can think of<span class="caret"></span></span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <p class="description">Users interact with search results and sorting controls to find what they need.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="commentary">
+    <span class="tag">Commentary</span>
+    <p><b>This one is a product call, not a defect fix</b> — which is why it is separated.
+       <code>EditableText</code> already supports <code>trigger="click"</code> and already applies
+       <code>cursor: text</code> in that mode
+       (<code>frontend/src/components/EditableText.tsx:178</code>). All seven call sites pass
+       <code>trigger="external"</code>, so the path is written, tested-adjacent, and dead.</p>
+    <ul>
+      <li><b>Web expectation:</b> click the text, get a caret. Notion, Linear, Figma layer names.
+          <code>cursor: text</code> is the promise.</li>
+      <li><b>macOS expectation:</b> a single click <em>selects</em>; renaming is a deliberate second
+          act (Return, or slow double-click) precisely so a stray click cannot start an edit.
+          Finder, and the sidebar.</li>
+      <li><b>Today Bristlenose satisfies neither</b> — there is no selection model on a heading,
+          and no click-to-edit either.</li>
+    </ul>
+    <p>The hover tint shown is <code>--bn-hover-bg</code> (the shipped token,
+       <code>rgba(0,0,0,.04)</code> / <code>rgba(255,255,255,.06)</code>) — no new value.
+       Judge whether that tint on a heading reads as “editable” or as “selected”; if it reads
+       as selected, C is actively misleading on the Mac and A/B is the safer answer.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     BENCH 5 — LIVE
+     ═══════════════════════════════════════════════════════════════════ -->
+<section class="bench">
+  <div class="bench-head">
+    <h2>5 · Live — actually hover these</h2>
+    <p class="sub">Real pointer behaviour, real transition timings
+       (<code>--bn-transition-fast</code> on opacity, <code>--bn-transition-normal</code> on colour).
+       Feel the ramp rather than reading it.</p>
+  </div>
+
+  <div class="pair">
+    <div class="frame lightcol">
+      <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="cap">live · light</span></div>
+      <div class="frame-body rpt">
+        <div class="bn-group-header"><h3><span class="editable-text">current — hover me, nothing happens</span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <div style="height:1rem"></div>
+        <div class="bn-group-header pA-live"><h3><span class="editable-text">proposal A — glyph, ramp</span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <div style="height:1rem"></div>
+        <div class="bn-group-header pB-live"><h3><span class="editable-text">proposal B — SVG, ramp</span><button class="edit-pencil edit-pencil-inline"><svg class="pencil-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 1.5 14.5 4.5 5.5 13.5 1.5 14.5 2.5 10.5z"/><path d="M9.5 3.5 12.5 6.5"/></svg></button></h3></div>
+        <div style="height:1rem"></div>
+        <div class="bn-group-header pC-live"><h3><span class="editable-text">proposal C — the text is the target</span><button class="edit-pencil edit-pencil-inline"><svg class="pencil-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 1.5 14.5 4.5 5.5 13.5 1.5 14.5 2.5 10.5z"/><path d="M9.5 3.5 12.5 6.5"/></svg></button></h3></div>
+      </div>
+    </div>
+    <div class="frame darkcol">
+      <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="cap">live · dark</span></div>
+      <div class="frame-body rpt">
+        <div class="bn-group-header"><h3><span class="editable-text">current — hover me, nothing happens</span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <div style="height:1rem"></div>
+        <div class="bn-group-header pA-live"><h3><span class="editable-text">proposal A — glyph, ramp</span><button class="edit-pencil edit-pencil-inline">&#9998;</button></h3></div>
+        <div style="height:1rem"></div>
+        <div class="bn-group-header pB-live"><h3><span class="editable-text">proposal B — SVG, ramp</span><button class="edit-pencil edit-pencil-inline"><svg class="pencil-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 1.5 14.5 4.5 5.5 13.5 1.5 14.5 2.5 10.5z"/><path d="M9.5 3.5 12.5 6.5"/></svg></button></h3></div>
+        <div style="height:1rem"></div>
+        <div class="bn-group-header pC-live"><h3><span class="editable-text">proposal C — the text is the target</span><button class="edit-pencil edit-pencil-inline"><svg class="pencil-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 1.5 14.5 4.5 5.5 13.5 1.5 14.5 2.5 10.5z"/><path d="M9.5 3.5 12.5 6.5"/></svg></button></h3></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     THE WIDER INCONSISTENCY
+     ═══════════════════════════════════════════════════════════════════ -->
+<section class="bench">
+  <div class="bench-head">
+    <h2>6 · The pattern this sits in</h2>
+    <p class="sub">Four controls of the same class ship three different disclosure behaviours.
+       Whatever is chosen above should settle all four.</p>
+  </div>
+  <div class="commentary">
+    <span class="tag">Commentary</span>
+    <table class="data">
+      <tr><th>control</th><th>rest</th><th>ancestor hover</th><th>self hover</th></tr>
+      <tr><td><code>.edit-pencil</code> — group heading</td><td>icon-idle, always on</td><td class="fail">— nothing —</td><td>accent</td></tr>
+      <tr><td><code>.star-btn</code> — quote card</td><td>icon-idle, always on</td><td class="fail">— nothing —</td><td>accent</td></tr>
+      <tr><td><code>.hide-btn</code> — quote card</td><td class="pass">opacity 0</td><td class="pass">opacity 1</td><td>accent</td></tr>
+      <tr><td><code>.bn-name-pencil</code> — sessions</td><td class="pass">opacity 0</td><td>opacity 0.4</td><td>opacity 0.8</td></tr>
+    </table>
+    <p><code>.star-btn</code> is deliberately excluded from the fix in the proposals above:
+       a star is a <b>state display</b> as well as a control — a starred quote must read as
+       starred without hovering — so it cannot simply adopt the hide/ramp pattern. It needs
+       its own answer (likely: idle→muted for the unstarred affordance, with the
+       <em>starred</em> state keeping <code>--bn-colour-starred</code>). Flagging rather than
+       assuming.</p>
+    <p><code>.bn-name-pencil</code>’s 0.4 row-hover step composites to
+       <span class="fail">1.70:1 light / 2.16:1 dark</span> — fainter than it looks in the code,
+       and worth aligning to whatever A/B settles on.</p>
+  </div>
+</section>
+
+<script>
+/* ── glyph magnifier ───────────────────────────────────────────────────
+   Draw both assets at the TRUE rendered size (13.5px = 0.75em of an 18px h3)
+   into an 18×18 backing store, then let CSS upscale 6× with
+   image-rendering:pixelated. The antialiasing you see is real: it is what the
+   rasteriser produced at 13.5px, not a vector redraw at 81px.
+   Ink and ground are probed from the live cascade, so both the palette toggle
+   and each column's own color-scheme are honoured.                        */
+var PENCIL_PATH = 'M11.5 1.5 14.5 4.5 5.5 13.5 1.5 14.5 2.5 10.5z M9.5 3.5 12.5 6.5';
+
+function resolve(host, expr) {
+  var probe = document.createElement('span');
+  probe.style.color = expr;
+  probe.style.display = 'none';
+  host.appendChild(probe);
+  var v = getComputedStyle(probe).color;
+  host.removeChild(probe);
+  return v;
+}
+
+function paint(cv) {
+  var host = cv.parentNode;
+  var ink = resolve(host, 'var(--bn-colour-' + (cv.dataset.ink === 'muted' ? 'muted' : 'icon-idle') + ')');
+  var bg = resolve(host, 'var(--bn-colour-bg)');
+  var S = 18, SZ = 13.5;
+  cv.width = S; cv.height = S;
+  var ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, S, S);
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, S, S);
+
+  if (cv.dataset.kind === 'glyph') {
+    ctx.fillStyle = ink;
+    ctx.font = SZ + 'px ' + getComputedStyle(document.body).fontFamily;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('✎', S / 2, S / 2);
+  } else {
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + SZ + '" height="' + SZ +
+      '" viewBox="0 0 16 16" fill="none" stroke="' + ink +
+      '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="' + PENCIL_PATH + '"/></svg>';
+    var img = new Image();
+    img.onload = function () { ctx.drawImage(img, (S - SZ) / 2, (S - SZ) / 2, SZ, SZ); };
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  }
+}
+
+function paintAll() { document.querySelectorAll('.mag canvas').forEach(paint); }
+if (document.fonts && document.fonts.ready) { document.fonts.ready.then(paintAll); } else { paintAll(); }
+paintAll();
+
+document.querySelectorAll('[data-pal]').forEach(function (b) {
+  b.addEventListener('click', function () {
+    document.querySelectorAll('[data-pal]').forEach(function (x) { x.classList.remove('on'); });
+    b.classList.add('on');
+    document.documentElement.setAttribute('data-color-theme', b.dataset.pal);
+    paintAll();
+  });
+});
+</script>
+</div>
+</body>
+</html>

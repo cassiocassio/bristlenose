@@ -44,6 +44,42 @@ import {
 } from "../contexts/QuotesContext";
 import { useSidebarStore, toggleTagGroupHidden } from "../contexts/SidebarStore";
 
+// ── Icons ───────────────────────────────────────────────────────────────
+
+/**
+ * Pencil — the inline edit affordance.
+ *
+ * A stroke SVG rather than U+270E. The glyph renders at 0.75em of an 18px
+ * heading — ~13.5px — where it is a hairline that is mostly antialiasing:
+ * sampled from the shipped report, its MEDIAN ink was 1.24:1 (light) and
+ * 1.44:1 (dark) against the page, well under its own token value, because
+ * few of its pixels ever reach full colour. It is also drawn by whichever
+ * font the OS resolves it to, so it differs across platforms. A 1.5 stroke
+ * lands on the token colour and renders the same everywhere.
+ *
+ * Geometry and weight match `EyeToggle`, the nearest sibling control: the
+ * 16px grid is the theme's dominant viewBox and 1.5 its most common stroke.
+ * `aria-hidden` because the wrapping button already carries the label.
+ */
+function PencilIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M11.5 1.5 14.5 4.5 5.5 13.5 1.5 14.5 2.5 10.5z" />
+      <path d="M9.5 3.5 12.5 6.5" />
+    </svg>
+  );
+}
+
 // ── Tag group lookup (codebook → group info) ────────────────────────────
 
 /** Codebook group info for a tag, keyed by lowercased tag name. */
@@ -841,7 +877,7 @@ export function QuoteGroup({
               aria-label={`Edit ${itemType} title`}
               onClick={() => setIsEditingHeading(!isEditingHeading)}
             >
-              &#9998;
+              <PencilIcon />
             </button>
           )}
           <NewBadge isNew={isNew} dismissKey={editKeyBase} newSince={newSince} />
@@ -877,7 +913,7 @@ export function QuoteGroup({
               aria-label={`Edit ${itemType} description`}
               onClick={() => setIsEditingDesc(!isEditingDesc)}
             >
-              &#9998;
+              <PencilIcon />
             </button>
           )}
         </p>

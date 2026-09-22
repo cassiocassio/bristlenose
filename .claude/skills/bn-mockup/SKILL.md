@@ -53,6 +53,14 @@ Set `<html data-color-theme="default">`, `color-scheme: light dark`, and theme e
 
 Before drawing a control, confirm it exists: components in `frontend/src/components/` (`Badge`, `EyeToggle`, `TagInput`, `Toggle`, `ConfirmDialog`, `ThresholdReviewModal`, `TagSidebar`) and `frontend/src/islands/` (`CodebookPanel`, `QuoteGroup`); CSS in `bristlenose/theme/{atoms,molecules,organisms}`; existing mockups in `docs/mockups/`; design intent in `docs/design-*.md`. A mockup should surface *existing* components in new states — flag any genuinely new element to the user before inventing it (per `feedback_shared_taxonomy_render_native_per_surface` and the no-bespoke-CSS rule).
 
+### 6. If the mockup's argument IS the rendering, don't zoom with CSS
+
+A `transform: scale(6)` on live text re-renders it **vectorially** at the new size — the browser redraws the glyph, it does not magnify the pixels. So a magnifier built that way shows shape and weight honestly and shows *antialiasing, hinting and stroke coverage* not at all. If the point you are making is "this hairline is mostly antialiasing at 13px", a CSS zoom demonstrates nothing while looking like proof.
+
+Draw it instead: rasterise each candidate into a `<canvas>` at its **true** rendered size, then upscale the canvas with `image-rendering: pixelated`. The fuzz is then real. Probe ink and ground from the live cascade (a throwaway `<span>` with `style.color = 'var(--bn-colour-…)'`, read `getComputedStyle().color`, remove it) so the panes follow both the palette toggle and each column's `color-scheme`. Worked example: the three-pane magnifier in `docs/mockups/edit-affordance-states.html`.
+
+**And separate your variables.** If a proposal changes two things (asset *and* colour), show three panes — current, one variable moved, both moved — or the reviewer cannot tell which change did the work.
+
 ## Self-contained + viewable
 
 Full standalone HTML doc (DOCTYPE/html/head/body) so it opens as `file://` and in `serve --dev`. No external font/CSS CDNs (inline everything). After writing, the file shows in the Browser pane; tell the user the path.

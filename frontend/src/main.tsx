@@ -48,7 +48,6 @@ if (!appRoot) {
     import("./islands/SignalsPage"),
     import("./islands/TranscriptPage"),
     import("./islands/SettingsPanel"),
-    import("./islands/AboutPanel"),
   ]).then(([
     { HelloIsland },
     { Dashboard },
@@ -59,7 +58,6 @@ if (!appRoot) {
     { SignalsPage },
     { TranscriptPage },
     { SettingsPanel },
-    { AboutPanel },
   ]) => {
     const helloRoot = document.getElementById("bn-react-root");
     if (helloRoot) {
@@ -113,11 +111,6 @@ if (!appRoot) {
     const settingsRoot = document.getElementById("bn-settings-root");
     if (settingsRoot) {
       createRoot(settingsRoot).render(<SettingsPanel />);
-    }
-
-    const aboutRoot = document.getElementById("bn-about-root");
-    if (aboutRoot) {
-      createRoot(aboutRoot).render(<AboutPanel />);
     }
   });
 }

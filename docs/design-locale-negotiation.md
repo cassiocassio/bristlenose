@@ -1,68 +1,270 @@
 ---
 status: partial
-last-trued: 2026-09-20
-trued-against: HEAD@main on 2026-09-20
+last-trued: 2026-09-22
+trued-against: HEAD@main on 2026-09-22 (52bfc67d), measured against a Debug build of that tree
 ---
 
 # Locale negotiation — desktop vs web
 
-**Status (20 Sep 2026): the decision below was REVERSED in shipped code, and no doc
-recorded it.** The original text is preserved unedited — it is the only written statement
-of the position — but do not read it as describing the app.
+**Status (22 Sep 2026): the decision below was reversed, and then, on the evening of
+21 September, half-implemented after all.** The original text is preserved unedited — it
+is still the only written statement of the position — but do not read it as describing the
+app. The banner that stood here from 20 Sep is also superseded: it was written hours
+before the code moved, and one of its four rows became wrong in the opposite direction.
 
-> ### ⚠️ What actually shipped, measured at HEAD
+> ### ⚠️ Row by row, measured at HEAD
 >
-> | The decision said | What ships |
-> |---|---|
-> | "**No in-app language picker** in Settings → Appearance" | A `Picker` listing every supported language by autonym — `desktop/Bristlenose/Bristlenose/AppearanceSettingsView.swift:63` |
-> | "Set `UIPrefersShowingLanguageSettings = YES` in `Info.plist`" | **Never set.** Zero hits across every `.plist`, `.swift` and `.pbxproj` in the repo |
-> | "`I18n.swift` reads `Bundle.preferredLocalizations(from:forPreferences:)`" | **Nothing in `desktop/` reads the OS language preference at all** — zero hits for `preferredLocalizations`, `AppleLanguages` or `Locale.preferredLanguages` |
-> | "Settings → Appearance includes a hint paragraph pointing to System Settings" | Never written. `settings.language.description` (`locales/en/settings.json`) says only that report content is not translated |
+> | The decision said | Measured at HEAD | Verdict |
+> |---|---|---|
+> | "**No in-app language picker** in Settings ▸ Appearance" | A `Picker` listing 22 languages by autonym — `AppearanceSettingsView.swift:64-87` | **Still reversed.** The picker was kept deliberately (see *Why the picker stayed* below) |
+> | "Set `UIPrefersShowingLanguageSettings = YES` in `Info.plist`" | Never set. Zero `INFOPLIST_KEY_UIPrefers…` in `xcodebuild -showBuildSettings -target Bristlenose -configuration Release`; not in the built `Info.plist` of either the 0.30.0 archive or a HEAD build | **Still true.** Never done |
+> | "`I18n.swift` reads `Bundle.preferredLocalizations(from:forPreferences:)`" | **It does.** `I18n.systemPreferredLocale()` — `I18n.swift:128-133` — reached from `configure` at `I18n.swift:75-76` whenever the private `language` key is unset | **The 20 Sep banner said "nothing in `desktop/` reads the OS language preference at all". That is now false.** `b9ba08f2`, 21 Sep 17:15, four hours after the banner |
+> | "Settings ▸ Appearance includes a hint paragraph pointing to System Settings" | Never written. The footer under the picker is an invitation to translate on Weblate (`AppearanceSettingsView.swift:88-95`) | **Still true.** Never done |
 >
-> ### 🔴 The live consequence — this doc named the bug, and the bug is what shipped
+> ### What landed on 21 Sep 2026
 >
-> The doc argues against an in-app picker partly because of a race it says we had already
-> hit: *"We had this bug — System Settings → Apps → Bristlenose → Korean was being
-> silently ignored because we read our private `language` key, not `AppleLanguages`."*
+> Three commits in one evening, all after the 20 Sep banner was written:
 >
-> **That is the current code path.** Four production sites read the private key and fall
-> back to a hardcoded `"en"`:
+> - **`b9ba08f2` 17:15 — "declare the localisations, so Apple's own menus stop speaking
+>   English."** 22 `.lproj` directories, `systemPreferredLocale()`, and the picker starts
+>   writing `AppleLanguages`.
+> - **`d480accc` 18:35 — "tell AppKit the language an existing install already chose."**
+>   `adoptChosenLanguageForAppKit()`, called once from `BristlenoseApp.swift:175`.
+> - **`2a3bcbe4` 19:29 — the relaunch prompt.** `SettingsWindow.promptToRelaunch()`,
+>   `SettingsView.swift:197-227`.
 >
-> - `I18n.swift:55` — `UserDefaults.standard.string(forKey: "language") ?? "en"`
-> - `BristlenoseShared.swift:256`
-> - `BridgeHandler.swift:596`
-> - `AppearanceSettingsView.swift:14` — `@AppStorage("language") … = "en"`
+> **None of it shipped in 0.30.0.** The release archive was built at 06:25 that morning,
+> eleven hours before the first of the three: `desktop/build/Bristlenose-DeveloperID.xcarchive`
+> (0.30.0, build 3578) carries **zero** `.lproj` directories, and a Debug build of HEAD
+> carries **22**. Everything below is therefore unreleased behaviour landing in the next
+> version.
+
+## 1. Resolution order at launch — measured
+
+`I18n.configure(localesDirectory:)` (`I18n.swift:62-88`) consults exactly two things, in
+this order:
+
+1. **The private `language` key** — `UserDefaults.standard.string(forKey: "language")`,
+   `I18n.swift:75`. Written only by the picker (`@AppStorage("language")`,
+   `AppearanceSettingsView.swift:15`).
+2. **`systemPreferredLocale()`** — `I18n.swift:76`, and only when (1) is absent. That is
+   `Bundle.preferredLocalizations(from: Array(supportedLocales), forPreferences: nil)`
+   (`I18n.swift:128-133`), which reads the process's `AppleLanguages` — the app's own
+   preference domain first, the global domain behind it.
+
+The result is passed through `sanitized(_:)` (`I18n.swift:309-311`), which falls back to
+`"en"` for anything not in `supportedLocales`. **`Bundle.preferredLocalizations` is not
+consulted at all once the picker has been used, and the hardcoded `"en"` is reached only
+when the matcher returns nothing or returns an unsupported code.**
+
+Measured, with `AppleLanguages` set in an app's own preference domain — which is what
+System Settings ▸ Apps writes — and the 22-code `supportedLocales` array:
+
+| per-app `AppleLanguages` | `systemPreferredLocale()` |
+|---|---|
+| unset (inherits global `en-GB, es-GB, ca-GB`) | `en` |
+| `fr` | `fr` |
+| `ja` | `ja` |
+| `pt-BR` | `pt-BR` |
+| `zh-Hant-HK` | `zh-Hant-HK` |
+| `nn-NO` | `nb` — Nynorsk falls to Bokmål |
+| `zh-Hans` | `en` — we ship no Simplified, correct |
+
+So the matcher half of the original decision now works, and works well: script and region
+subtags resolve the way the rest of macOS resolves them, which is the "free correctness"
+the decision below argued for.
+
+**Fresh install → the OS wins.** Measured: launching a HEAD build against an empty
+preference container wrote nothing at all. `language` is unset, so `configure` asks the
+matcher, and `adoptChosenLanguageForAppKit()` returns at its first `guard`
+(`I18n.swift:104`). *"Korean Mac boots Korean"* — the decision's own headline — is true
+again for the first time.
+
+**Install that has used the picker → the private key wins,** permanently and
+unconditionally. There is no expiry, no migration, and no path back: nothing anywhere
+removes the `language` key. The one-shot `removeObject(forKey: "language")` the decision
+below lists under *What we add* was never written.
+
+## 2. Restart — what the researcher actually experiences
+
+`AppearanceSettingsView.swift` carries three comments about the language row that read as
+if they disagree — *"Live, NOT a restart"* (line 152, which is about **palette**, not
+language), *"only at launch"* (line 165), *"does not get to relaunch itself behind the
+researcher's back"* (line 174). They are all true, of different surfaces. The split:
+
+| Surface | Reads from | When it changes |
+|---|---|---|
+| Everything drawn through `i18n.t(…)` — SwiftUI panes, toolbar, sidebar, our own menu titles | `I18n.locale`, `@Published` | **Live.** `setLocale` on `onChange` (`AppearanceSettingsView.swift:160`) |
+| The Settings window's own toolbar/pane titles | rebuilt, not re-rendered | **Live**, via `SettingsWindow.rebuildForLocaleChange()` (`SettingsView.swift:155-169`) — the window is closed and reopened |
+| File / Edit / View / Window / Help and every standard item inside them | AppKit, from `AppleLanguages`, once per process | **Next launch** |
+| Save panels, system dialogs, `NSAlert` default buttons | same | **Next launch** |
+| Date and month names in the cloud-import outline | `Locale.current`, which follows `AppleLanguages` | **Next launch** — documented at `CloudImportOutline.swift:521-531` |
+| The web report in the WKWebView | bridge `syncLocale` → serve restart | **Live** (a sidecar restart, posted at `AppearanceSettingsView.swift:186`) |
+
+**The researcher is told.** `promptToRelaunch()` (`SettingsView.swift:197-227`) raises an
+`NSAlert` after the Settings window rebuild, offering *Relaunch Now* / *Don't Relaunch*.
+The four strings are lifted verbatim out of Apple's own
+`Localization.appex/Localizable.loctable` and are present in all 21 full locales
+(`settings.language.{relaunchTitle,relaunchBody,relaunchNow,dontRelaunch}`). During an
+analysis the alert states Apple's *"will not use the new language until relaunched"* and
+offers no button, so a run is never killed to fix a cosmetic mismatch.
+
+**This supersedes the 21 Sep note that telling the researcher was "the one piece still
+owed".** It was owed for about ninety minutes.
+
+## 3. The relationship with System Settings — half fixed, and the other half got worse
+
+Both controls write **the same key in the same domain**: `AppleLanguages` under the app's
+own preference domain. The picker writes it at `AppearanceSettingsView.swift:176`; System
+Settings ▸ Apps ▸ Bristlenose ▸ Language writes it as the platform's per-app override. So
+there is no storage conflict. The conflict is over which one `I18n` reads, and it is
+one-sided.
+
+Measured decision table. Each row is a launch; the last column is the state left behind
+*after* `.onAppear` has run `adoptChosenLanguageForAppKit()`:
+
+| Starting state | `I18n` chrome | AppKit's own menus | `AppleLanguages` after launch |
+|---|---|---|---|
+| fresh — no `language`, no per-app override | `en` (follows global) | `en` | untouched |
+| System Settings ▸ Apps → French; picker never used | **`fr`** ✅ | **`fr`** ✅ | untouched ✅ |
+| picker → German, then System Settings ▸ Apps → French | **`de`** ❌ | **`fr`** ❌ | **rewritten to `de`** ❌ |
+| …the launch after that | `de` | `de` | `de` (guard trips, no write) |
+
+> ### 🔴 Defect — the per-app override is not merely ignored now, it is reverted
 >
-> **No production code seeds that key from the system locale** — the only writes to it
-> anywhere are in `BristlenoseTests/ServeManagerEnvTests.swift:235,241`.
+> The decision below argues against an in-app picker partly because of a race it says we
+> had already hit: *"System Settings ▸ Apps ▸ Bristlenose ▸ Korean was being silently
+> ignored because we read our private `language` key, not `AppleLanguages`."*
 >
-> So on a fresh install on a Korean Mac the key is absent, resolves to `"en"`, and the app
-> **boots English** — directly contradicting this doc's "Do nothing → follow system.
-> Korean Mac boots Korean." The user must find the in-app picker to get their own language.
+> **Row 2 above fixes that. Row 3 reintroduces it and adds a second failure on top.**
 >
-> ### It is already tracked, and the fix is already decided
+> Once the picker has been touched even once, a researcher who then sets a language in
+> System Settings gets:
 >
-> **Correction to this banner's first draft, which claimed the reversal was recorded
-> nowhere. It is.** The maintainer's private planning notes carry it as a Beta item,
-> naming the same evidence independently — `I18n.swift:55`, the `?? "en"`, and the
-> observation that this re-introduces the very race this doc documents as already fixed —
-> plus a decided fix (**Option A, 2 Jul 2026**: seed from
-> `Bundle.preferredLocalizations(from:)`, read/write `AppleLanguages`, drop the private key
-> with a one-shot migration, keep `UIPrefersShowingLanguageSettings` for discoverability)
-> and a full implementation brief.
+> 1. **A French menu bar over a German app** on the next launch — the exact mismatch
+>    `promptToRelaunch` exists to prevent, arriving through a door that raises no prompt,
+>    because the prompt hangs off the picker's `onChange` and System Settings does not go
+>    through it.
+> 2. **Their System Settings choice silently discarded.** `adoptChosenLanguageForAppKit()`
+>    (`I18n.swift:103-108`) fires unconditionally whenever `language` is set, and
+>    `syncAppleLanguages` (`I18n.swift:117-122`) overwrites `AppleLanguages` with the
+>    picker's value. By the second launch the System Settings pane itself reads German,
+>    and nothing records that the user ever asked for French. The guard at `I18n.swift:120`
+>    (`current?.first != locale`) only suppresses a redundant write; it does not detect
+>    that the value it is about to clobber was set by somebody else.
 >
-> So the shipped picker is **not** an undocumented reversal — it is a known defect with a
-> planned repair. What this doc got wrong is narrower: it says "approved, pending
-> implementation" for a delegation design that was never implemented, while a picker was
-> built instead.
+> The write-back is the right fix for the problem it was written for — `d480accc`, an
+> install that chose a language before `.lproj` existed and never told AppKit. It has no
+> way to tell that case apart from a deliberate per-app override, because absence of
+> provenance is the same shape as both.
 >
-> _The first draft searched `docs/` and the CLAUDE.md files and concluded "recorded
-> nowhere". The record was in the gitignored maintainer-only notes — outside the corpus
-> that was scanned. Scope of a search is not scope of the world._
+> **Not fixed here.** This is a truing pass, and the repair is a product decision: either
+> the private key goes (Option A in the maintainer's private planning notes, decided
+> 2 Jul 2026 — seed from the matcher, read and write `AppleLanguages` only, drop the key
+> with a one-shot migration), or the write-back learns to notice that `AppleLanguages`
+> changed underneath it and defer. The first is the decision below, finally taken.
+
+## 4. Does the per-app pane appear at all?
+
+`UIPrefersShowingLanguageSettings` is set nowhere — confirmed against the build system,
+not the file tree, and confirmed again in the built `Info.plist`. So the discoverability
+argument the decision below rests on is **unaddressed**: per
+[Apple Developer Forums #721302](https://developer.apple.com/forums/thread/721302), the
+per-app Language section is hidden for a user who has configured only one preferred
+language globally.
+
+What *has* changed is the other precondition. The pane needs the app to be localised for
+more than one language, and at HEAD it is: the built bundle reports **22** localisations
+(`Bundle(path:).localizations`, measured), against **1** for the shipped 0.30.0. So the
+row is now capable of appearing where before it could not appear at all — for a
+multi-language user. For a single-language user it still needs the key.
+
+**Not measured here:** whether the row is actually drawn in System Settings ▸ Apps on this
+machine. Reading an app's sandboxed preference container needs Full Disk Access, which
+this session did not have; the container writes were simulated in a throwaway bundle with
+the same APIs. The remaining check is a human one — build, launch once, then look at
+System Settings ▸ General ▸ Language & Region ▸ Applications.
+
+## 5. `knownRegions`, `.lproj`, and what the matcher is really matching
+
+Root `CLAUDE.md` recorded that `knownRegions = (en, Base)` and no `.lproj` ship. **Both
+halves went stale on 21 Sep 2026**, and that line is corrected in the same commit as this
+pass. Measured: `knownRegions` holds `en`, `Base` and all
+22 language codes (`project.pbxproj:172-196`), 22 `.lproj` directories are tracked under
+`desktop/Bristlenose/Bristlenose/`, and a HEAD build copies all 22 into
+`Contents/Resources`. Each holds one `InfoPlist.strings` containing **only a comment** —
+the declaration is the whole payload, and Xcode's filesystem-synchronised group picks the
+directories up without a single file reference in the project.
+
+**Two different mechanisms are at work here, and the code comments conflate them.**
+
+- **`Bundle.preferredLocalizations(from:forPreferences:)` — the static — ignores the
+  bundle entirely.** It matches the array you hand it against the process's language
+  preferences. Measured from a process whose main bundle declares only English: it
+  returned `fr`, `ja`, `de`, `nb` and `pt-BR` correctly. So `systemPreferredLocale()`
+  would work identically with zero `.lproj`, and the comment at `I18n.swift:70-74`
+  crediting the declaration for it (*"now that the app declares its localisations, Apple's
+  BCP 47 matcher can answer"*) attributes the wrong cause. Harmless today; misleading to
+  anyone who later wonders whether the `.lproj` can go.
+- **What the `.lproj` *do* buy is every other bundle in the process, AppKit's included.**
+  Measured directly: a probe app declaring only `en`, with its per-app `AppleLanguages` set
+  to `fr`, resolved `AppKit.framework` (45 localisations) to `["en"]`. Adding a single
+  `fr.lproj/InfoPlist.strings` to the *probe* — same process, same preference, one marker
+  file — flipped AppKit to `["fr"]`. **The main bundle's declared localisations gate every
+  other bundle's resolution in the process.** That is precisely why File / Edit / View /
+  Window / Help were English, and why they will not be from the next release.
+- **Graceful degradation.** Same probe, preference `de`, probe declaring only `en`/`fr`/`ja`:
+  AppKit resolved to `["en"]`. An undeclared language costs you Apple's menus, not the app.
+
+> ### ⚠️ New registration site, gated by nothing
 >
-> **Do not archive this doc yet.** The planned fix re-trues it: once the OS-canonical
-> picker lands, the delegation design below becomes half-true again rather than wholly
-> superseded, and the private notes' own breadcrumb says to re-true it *after* the fix.
+> `docs/adding-a-language.md` does not mention `.lproj` or `knownRegions` — zero hits.
+> Neither does root `CLAUDE.md`'s three-site Swift list, and no test anywhere asserts that
+> the `.lproj` set matches `I18n.supportedLocales` (zero hits for `lproj` across
+> `BristlenoseTests/`, `tests/` and `scripts/`).
+>
+> So a 23rd language added by following the guide gets 21 full locale files, five Swift
+> and Python registrations, a green `check-locales.py`, a green suite — and File / Edit /
+> View silently in English for that language alone. The degradation is graceful, which is
+> what makes it survivable and also what makes it invisible. Fixing the guide and adding
+> the gate is follow-up work, not part of this pass.
+
+## Why the picker stayed
+
+It ships, it is a registration site for a new language (`docs/adding-a-language.md`
+Step 8), and removing a working control to satisfy a doc is the wrong order. The
+decision's substance — *the OS is the source of truth* — is honoured by writing
+`AppleLanguages` rather than by deleting the UI. What the decision below got right and
+what shipped now agree on the fresh-install path; they still disagree on precedence once
+a choice has been made, and §3 is the cost of that disagreement.
+
+**What this all buys, and it is the reason to do it at all:** File, Edit, View, Window and
+Help are AppKit's menus, not ours, and so is every standard item inside them — Minimize,
+Zoom, Bring All to Front, Cut/Copy/Paste, Enter Full Screen. They rendered English in
+every locale because the app declared no localisations. They now come back in **Apple's
+own reviewed wording**, which is the `Choose`-button / TCC-prompt principle one level up:
+look it up, do not translate it. The glossary already carried hand-written
+`Window,ウインドウ,ja` and `Help,ヘルプ,ja` rows — evidence someone once reached for the
+wrong route.
+
+## Where this doc and `design-i18n.md` disagreed
+
+Both were wrong, in different places, and neither wins wholesale:
+
+- **This doc was right** that `Bundle.preferredLocalizations` is the mechanism, that
+  `AppleLanguages` is the key both controls must share, and that reading a private key
+  ahead of it re-opens the per-app-override race. §3 is that prediction coming true a
+  second time.
+- **`design-i18n.md` was right** that the picker exists and that
+  `UIPrefersShowingLanguageSettings` was never set — two things this doc asserted in the
+  present tense for four months.
+- **Both were wrong about the standard menus.** `design-i18n.md` §"The *standard* menus
+  are a different mechanism — and still English" was measured on 21 Sep and obsolete by
+  that evening; this doc's own 20 Sep banner said nothing in `desktop/` read the OS
+  preference, four hours before it did.
+
+There is no precedence rule between them and "trust the older doc" has been falsified
+twice now. Read the code.
 
 ---
 
@@ -70,50 +272,8 @@ _Original decision text, 5 May 2026, unedited below._
 
 **Status:** approved 5 May 2026, pending implementation in branch `locale-system-delegation` (sibling to `i18n-text-sweep` which handles the unrelated mechanical translation gaps).
 
-## Status — partly implemented, 21 Sep 2026
-
-The decision below ("delegate to System Settings, no in-app picker") was never
-implemented, and this doc's own correction banner above records that. What
-shipped instead was an in-app picker writing a private `language` key, and
-nothing reading the OS preference at all.
-
-**What landed on 21 Sep 2026, and why it is a middle path rather than the
-decision as written:**
-
-- **The app declares its localisations.** 22 `.lproj` directories with an
-  `InfoPlist.strings` apiece; Xcode picked them up into `knownRegions` on its
-  own. Verified in the built bundle. This is the load-bearing half: without it
-  macOS treats the app as English-only whatever `AppleLanguages` says.
-- **The picker writes `AppleLanguages`** in the app's own domain, alongside the
-  private key. That is the same key System Settings ▸ Apps ▸ Bristlenose ▸
-  Language writes, so the two controls agree rather than compete.
-- **`I18n.configure` falls back to `Bundle.preferredLocalizations`** when the
-  private key is unset — so a *fresh* install honours the user's own language
-  preferences, which is the part of the decision below that was always right.
-  An existing install keeps its key, so nobody's language changes under them.
-
-**The picker was kept, against the decision below.** It ships, it is registration
-site 9 for a new language (`docs/adding-a-language.md` Step 8), and removing a
-working control to satisfy a doc is the wrong order. The decision's substance —
-the OS is the source of truth — is honoured by writing `AppleLanguages` rather
-than by deleting the UI.
-
-**What this buys, and it is the reason to do it at all:** File, Edit, View,
-Window and Help are AppKit's menus, not ours, and so is every standard item
-inside them — Minimize, Zoom, Bring All to Front, Cut/Copy/Paste, Enter Full
-Screen. They rendered English in every locale because the app declared no
-localisations. They now come back in **Apple's own reviewed wording**, which is
-the `Choose`-button / TCC-prompt principle one level up: look it up, do not
-translate it. The glossary already carried hand-written `Window,ウインドウ,ja`
-and `Help,ヘルプ,ja` rows — evidence someone once reached for the wrong route.
-
-**Takes effect at next launch, deliberately.** AppKit builds the menu bar once
-per process. The app can be mid-analysis, so it does not relaunch itself; our own
-chrome still switches live. Telling the researcher that in the UI is the one
-piece still owed — it needs a new key in 21 locales and a decision about what to
-do when a run is in flight.
-
 ---
+
 
 ## Two deployments, two answers
 

@@ -1,7 +1,7 @@
 ---
 status: mixed
-last-trued: 2026-08-21
-trued-against: HEAD@main on 2026-08-21 (ae05b1c0)
+last-trued: 2026-09-22
+trued-against: HEAD@main on 2026-09-22 (52bfc67d) — desktop locale negotiation only, measured against a Debug build; the rest of this doc is still at its 2026-08-21 truing
 split-candidate: true
 ---
 
@@ -9,6 +9,7 @@ split-candidate: true
 
 ## Changelog
 
+- _2026-09-22_ — **The desktop language story, measured end to end — and the correction written on 20 Sep was itself stale within four hours.** Three commits on the evening of 21 Sep (`b9ba08f2`, `d480accc`, `2a3bcbe4`) gave the app 22 `.lproj` declarations, a `Bundle.preferredLocalizations` fallback, a write to `AppleLanguages`, and a relaunch prompt — after the banner below had recorded that *"nothing in `desktop/` reads the OS language preference at all"*. **None of it shipped in 0.30.0**: that archive was built at 06:25 the same morning and carries zero `.lproj` against a HEAD build's 22. Measured, not reasoned: the main bundle's declared localisations gate every other bundle in the process, AppKit's included — a probe declaring only `en` resolved `AppKit.framework` to English under a `fr` preference, and one `fr.lproj/InfoPlist.strings` marker flipped it to French. So §"The *standard* menus … and still English" is superseded and §"Desktop locale flow" items 1 and 6 are rewritten. **One defect found and not fixed:** once the picker has been used, a language set in System Settings ▸ Apps is ignored by `I18n` *and then overwritten* by `adoptChosenLanguageForAppKit()` on the next launch — a French menu bar over a German app, and the researcher's choice gone without notice. Full measurement, decision tables and the `.lproj` registration-site gap: `docs/design-locale-negotiation.md`.
 - _2026-09-21b_ — **The two `en` regressions the review surfaced were fixed, and "lens" left the product strings.** `signals.noData` names the noun instead of saying "them"; the two help strings are definition-first (*"Signals are statistically notable concentrations of sentiment within report sections."*), restoring what the rename's dropped apposition had carried. Propagated to all 20 locales in the same commit — rewording `en` alone is the value-drift class — and it was a **lift**, since every locale's definition clause survived in its pre-rename value. Net effect: no product string renders the word *lens* any more, so the View-noun rule in `docs/glossary.md` is now forward-looking rather than describing shipped text. `docs/i18n-defects.md` item 21 and Question F carry the detail.
 - _2026-09-21_ — **The Signals rename's prose caught up in 20 locales, and the word *lens* got a rule.** `2aba263b` had rewritten five `en` strings (`signals.{loadingData,noData,tagError}`, `help.guide.signalsBody`, `help.signals.intro`) and the other 20 locales kept "analysis data" / "the analysis page" — failure class 3, register item 21. Translated against each file's own vocabulary. *Lens* had never been rendered in any locale before those two help strings; Apple's loctables ship it as the camera part everywhere, so `docs/glossary.md` now says: the platform's View noun or the bare name, never the optical word, and `glossary.csv` carries a `Lens` row per locale. Ride-along: `signals.intensityTitle` said 0–3 in all 21 locales; the scale is 1–3.
 - _2026-08-21_ — **First front-matter, and two sections that described the opposite of what ships.** This doc had no `status`/`last-trued` at all, so nothing signalled that a March-2026 body was carrying 20–21 Aug additions (the CJK punctuation finding, Catalan, the gotchas) on top of it. Corrected: (1) §"No in-app language picker on desktop" — there **is** one, a 22-entry autonym `Picker` at `AppearanceSettingsView.swift:63`, and the `UIPrefersShowingLanguageSettings` key it credited appears nowhere in `project.pbxproj`. Both halves false, and `docs/design-locale-negotiation.md` repeats both and has not been touched since May. (2) §"Toolbar overflow: `_short` keys" described a live mechanism — zero `common.nav.*Short` keys exist in any locale, so `Tab.localizedLabel` falls through every time; the es/fr table illustrates a convention rather than describing strings. **Left flagged rather than rewritten**, because they want a measuring pass not a banner: the namespace inventory (`common ~34` against a measured 539; 8 namespaces against 9; "~180 keys × 7 languages" against 1,445 × 21) and `findLocalesDirectory()`'s priority list, which is inverted and missing its first branch (`Bundle.main.resourcePath`). `docs/platform-text-map.md` already carries the correct counts, regenerated — two docs on one subject, one measured and one three orders stale.
@@ -636,26 +637,53 @@ Low-frequency content. Researchers see it once.
 
 ### Desktop locale flow
 
-**Canonical design:** `docs/design-locale-negotiation.md` — covers desktop-vs-web split, why we delegate to System Settings → Apps, and the `UIPrefersShowingLanguageSettings` Info.plist key.
+**Canonical design:** `docs/design-locale-negotiation.md`, re-trued 22 Sep 2026 against a
+Debug build — it owns the measured resolution order, the restart split, the System
+Settings interaction and the one open defect. What follows is the summary; when the two
+disagree, that doc is the one with the measurements attached.
 
-1. **macOS picks the locale.** `I18n.swift` reads `Bundle.preferredLocalizations(from: supportedLocales, forPreferences: nil).first ?? "en"` on every launch. Apple's BCP 47 lookup matcher reads `AppleLanguages` (set globally by System Settings → General → Language & Region, or per-app by System Settings → Apps → Bristlenose → Language).
+1. **The private key first, then macOS.** `I18n.configure` (`I18n.swift:62-88`) reads
+   `UserDefaults.standard.string(forKey: "language")` — written only by the Settings
+   picker — and falls back to `systemPreferredLocale()` (`I18n.swift:128-133`) when it is
+   absent, which is `Bundle.preferredLocalizations(from: Array(supportedLocales),
+   forPreferences: nil)`. So a **fresh install follows the OS** (measured: `fr`→`fr`,
+   `nn-NO`→`nb`, `zh-Hans`→`en`), and an install that has used the picker follows the
+   picker, permanently — nothing ever removes that key. **This is the source of the one
+   open defect**: a per-app language set in System Settings ▸ Apps is not only ignored by
+   `I18n` but silently overwritten on the next launch by
+   `adoptChosenLanguageForAppKit()` (`I18n.swift:103-108`). Decision tables and the
+   evidence: `design-locale-negotiation.md` §3.
 2. `I18n.setLocale()` reloads JSON from disk → `@Published` triggers SwiftUI re-render. The setter is now used only for runtime locale propagation, not user choice.
 3. `BridgeHandler.syncLocale()` pushes locale to web via `callAsyncJavaScript`.
 4. Startup flash prevention: locale injected as `?locale=es` URL query param on WKWebView load → `LocaleStore.ts` detects synchronously before first render.
 5. In embedded mode, the web language picker is hidden — System Settings is the single control point. The web picker remains visible and usable in real-browser CLI serve mode (no per-site language override exists in browsers, so the in-app picker is the only escape hatch there).
 6. ~~**No in-app language picker on desktop.** Settings → Appearance contains a hint paragraph pointing users to System Settings → Apps → Bristlenose. `INFOPLIST_KEY_UIPrefersShowingLanguageSettings = YES` (in `project.pbxproj`) forces that section to appear in System Settings even for users with only one preferred language configured globally.~~
 
-   > **False in both halves — corrected 21 Aug 2026.** Settings ▸ Appearance
-   > ships a **22-entry `Picker`** listing every locale by its own autonym
-   > (`AppearanceSettingsView.swift:63`), and it is the control the desktop
-   > actually uses — it is registration site 9 of the ten a new language needs
-   > (`docs/adding-a-language.md` Step 8). There is no hint paragraph. And
-   > `UIPrefersShowingLanguageSettings` appears **nowhere** in `project.pbxproj`
-   > (zero grep hits), so the System Settings mechanism this described was
-   > either never wired or was removed without the doc moving. **Note
-   > `docs/design-locale-negotiation.md` repeats both claims verbatim and has
-   > not been touched since May 2026** — it inherits this correction and has
-   > not yet had it applied.
+   > **False in both halves — corrected 21 Aug 2026, re-measured 22 Sep 2026.**
+   > Settings ▸ Appearance ships a **22-entry `Picker`** listing every locale by
+   > its own autonym (`AppearanceSettingsView.swift:64-87`), and it is the
+   > control the desktop actually uses. There is no hint paragraph — the footer
+   > under it is a Weblate invitation. And `UIPrefersShowingLanguageSettings` is
+   > **still set nowhere**, confirmed 22 Sep against the build system rather
+   > than the file tree (`xcodebuild -showBuildSettings -target Bristlenose
+   > -configuration Release` lists three `INFOPLIST_KEY_*` settings and none is
+   > this one) and again in the built `Info.plist` of both the 0.30.0 archive
+   > and a HEAD build. So the discoverability problem that key exists to solve
+   > is unaddressed: the per-app Language row stays hidden for a user with only
+   > one preferred language.
+   >
+   > **What changed on 21 Sep** — after the August correction, and after the
+   > 20 Sep banner in `design-locale-negotiation.md` — is that the picker is no
+   > longer the *only* input. It now writes `AppleLanguages` in the app's own
+   > domain (`AppearanceSettingsView.swift:176`), the same key System Settings
+   > writes; and `configure` falls back to `Bundle.preferredLocalizations` when
+   > the private key is unset, so a fresh install follows the OS. The delegation
+   > design is half-implemented rather than abandoned. The picker stays: removing
+   > a working control to satisfy a doc is the wrong order.
+   >
+   > **`design-locale-negotiation.md` has now had this applied**, and carries the
+   > measurements, the decision tables and the open defect. It is no longer
+   > repeating the May 2026 claims in the present tense.
 
 ### `CommandMenu` titles — **our four now follow the locale (21 Sep 2026)**
 
@@ -666,8 +694,13 @@ Low-frequency content. Researchers see it once.
 > accurate and the conclusion did not follow.
 
 `LocalizedStringKey` built from a **runtime string** falls back to its own content
-when the bundle lookup misses — and this bundle ships no `Localizable.strings` and
-declares `knownRegions = (en, Base)`, so every lookup misses by construction. So
+when the bundle lookup misses — and this bundle ships no `Localizable.strings` and no
+String Catalog (zero tracked `Localizable.strings` / `.xcstrings`; the 22 `.lproj`
+directories added 21 Sep hold an `InfoPlist.strings` apiece and nothing else, verified in
+a built bundle 22 Sep), so every lookup misses by construction. The clause that used to
+sit here — *"declares `knownRegions = (en, Base)`"* — was true when written and is not
+now; the conclusion is unaffected, because it is the absent `Localizable.strings` that
+makes the lookup miss, not the region list. So
 `CommandMenu(LocalizedStringKey(i18n.t("common.nav.project")))` renders the
 translated value. The idiom was already in the tree three times
 (`LLMSettingsView:237`, `OllamaDownloadPill` ×2) and nobody had connected it to
@@ -687,19 +720,56 @@ gate. Both halves mutation-proved.
 **`Diagnostics` stays English** — App-Store-hidden chrome, per §"Which surfaces
 are targets".
 
-### The *standard* menus are a different mechanism — and still English
+### The *standard* menus are a different mechanism — **and the locales were declared on 21 Sep 2026**
 
-File, Edit, View, Window and Help are **AppKit's**, not ours, and AppKit localises
-them from the app's own declared localizations. The project has
-`knownRegions = (en, Base)` and the built `.app` carries no `.lproj` directories,
-so macOS serves its English strings — along with every standard item inside them
-(Cut/Copy/Paste, Minimize, Zoom, Enter Full Screen…).
+> **Superseded within a day of being written.** This section read: *"The project
+> has `knownRegions = (en, Base)` and the built `.app` carries no `.lproj`
+> directories, so macOS serves its English strings… Declaring the locales would
+> hand all of that over in Apple's own wording, for free. It is an Xcode project
+> change with App Store Connect consequences, so it is written down here rather
+> than taken in passing."* That was measured on 21 Sep 2026 and the change was
+> taken the same afternoon (`b9ba08f2`, 17:15). The diagnosis was right; only the
+> tense is wrong.
 
-Declaring the locales would hand all of that over in **Apple's own wording, for
-free** — the same "look it up, don't translate it" move as the `Choose` button and
-the TCC prompts. It is an Xcode project change with App Store Connect
-consequences, so it is written down here rather than taken in passing. Measured
-21 Sep 2026; nothing in the tree had recorded *why* those five were English.
+File, Edit, View, Window and Help are **AppKit's**, not ours, and AppKit localises them
+from the app's own declared localizations — along with every standard item inside them
+(Cut/Copy/Paste, Minimize, Zoom, Enter Full Screen…). At HEAD the app declares all 22:
+`knownRegions` holds `en`, `Base` and every supported code (`project.pbxproj:172-196`),
+and 22 `.lproj` directories are tracked under `desktop/Bristlenose/Bristlenose/` and
+copied into `Contents/Resources` by Xcode's filesystem-synchronised group — no file
+reference in the project, and each holds one `InfoPlist.strings` whose entire content is a
+comment. **The declaration is the payload.**
+
+**The mechanism, measured 22 Sep rather than reasoned.** A probe app declaring only `en`,
+with its per-app `AppleLanguages` set to `fr`, resolved `AppKit.framework` — 45
+localisations — to `["en"]`. Adding a single `fr.lproj/InfoPlist.strings` to the *probe*
+(same process, same preference, one marker file) flipped AppKit to `["fr"]`. So **the main
+bundle's declared localisations gate every other bundle's resolution in the process**,
+which is exactly why those five menus were English and why they will not be from the next
+release. Under a `de` preference with `de` undeclared, AppKit fell back to `["en"]` — an
+undeclared language costs Apple's menus, not the app.
+
+**Not in 0.30.0.** That archive was built at 06:25 on 21 Sep, eleven hours before the
+commit, and carries **zero** `.lproj` against a HEAD build's 22 — so a 0.30.0 user still
+sees English menus whatever the picker says.
+
+**Two things this does *not* do**, both easy to assume:
+
+- It does not affect `systemPreferredLocale()`. `Bundle.preferredLocalizations(from:
+  forPreferences:)` is a **static** that matches the array you hand it against the
+  process's preferences and ignores the bundle entirely — measured returning `fr`, `ja`,
+  `de`, `nb`, `pt-BR` correctly from a process declaring only English. The comment at
+  `I18n.swift:70-74` crediting the declaration for it attributes the wrong cause.
+- It does not make `LocalizedStringKey` resolve from a table. No `Localizable.strings`
+  ships, so the `CommandMenu` idiom above still works by falling back to its own content.
+
+**And it added a registration site nothing gates.** `docs/adding-a-language.md` never
+mentions `.lproj` or `knownRegions` (zero hits), root `CLAUDE.md`'s Swift registration
+list still names three sites when there are five, and no test anywhere asserts that the
+`.lproj` set matches
+`I18n.supportedLocales` (zero hits for `lproj` in `BristlenoseTests/`, `tests/`,
+`scripts/`). A 23rd language added by following the guide would get every gate green and
+File / Edit / View in English for that language alone.
 
 ### Toolbar overflow: `_short` keys
 

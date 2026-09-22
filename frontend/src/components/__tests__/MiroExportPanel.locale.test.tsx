@@ -36,7 +36,10 @@ async function exportOnce(language: string): Promise<Record<string, unknown>> {
   const button = await screen.findByText(i18n.t("miro.createBoard"));
   fireEvent.click(button);
   await waitFor(() => expect(postMiroExport).toHaveBeenCalled());
-  return postMiroExport.mock.calls.at(-1)![0] as Record<string, unknown>;
+  // Index arithmetic, not `.at(-1)`: the build's tsconfig is `lib: ES2020`
+  // and `Array.prototype.at` is ES2022, so `tsc -b` refuses it.
+  const calls = postMiroExport.mock.calls;
+  return calls[calls.length - 1][0] as Record<string, unknown>;
 }
 
 describe("MiroExportPanel — the board's language travels with the request", () => {

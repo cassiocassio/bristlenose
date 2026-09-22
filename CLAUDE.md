@@ -826,6 +826,25 @@ system's answer is about *the extension*, not about the bytes.
 - **CJK punctuation is SETTLED — measure the platform, don't reason from a style guide.** Japanese labels take a **halfwidth** `:` + space (`名前:` is Apple's own Save dialog); Japanese prose lead-ins `注：` / `例：` take **fullwidth**, no space; Chinese takes fullwidth throughout. Measured: Apple ja 431 halfwidth vs 2 fullwidth, Microsoft ja 38,041 vs 88, Apple zh-Hant 239 fullwidth vs 0. The JTF translation-industry guide says fullwidth for Japanese and is the wrong authority for macOS chrome — both vendors treat `:` as an international symbol, not Japanese 約物. A sweep on 20 Aug 2026 got this backwards in both directions and was reverted (`4bd85ff4`). Details + reproduce command: `.claude/agents/i18n-review.md` §6a.
 See `docs/design-i18n.md` for implementation gotchas (Apple glossary cross-check, `useMemo` deps, sentiment tag translation, Intl.DateTimeFormat quirks, Korean plurals, data vs chrome translation, German typographic quote JSON escaping, test mocking requirements). **For a whole new language, `docs/adding-a-language.md` is the canonical step-by-step** — the summary above is a lossy index over it and has drifted before (it undercounted the registration sites while that guide's Step 8 was correct, 3 Aug 2026). When the two disagree, **reconcile them and record which won** — read both, fix both, and say in the commit which was right and why. There is no precedence rule: "trust the guide" was one, and row 47 falsified it (the guide had no concept of a thin override fork in either language-addition step, while the summary carried the exception, so following it would have propagated the defect into the next fork).
 
+### A fixed number of tags per group is the tell of an invented taxonomy
+
+Every February 2026 framework codebook shipped with exactly four tags per
+group — Norman 7×4, Garrett 5×4, Morville 7×4 — and the Norman audit on
+22 Sep 2026 found why: the origin document had one tag per principle in
+the author's words, and the extraction commit padded each group to four,
+inventing where the book ran out (`system model`, `logical layout`,
+`exploration`, `first-time use`; Garrett's `task flow`, `component
+placement`, `wireframe issue`; seventeen of Morville's twenty-eight, from
+a one-page essay with seven facets and no sub-facets). Nielsen, whose
+source has real sub-structure, was 4/4/4/3/4/4/3/3/4/3 and mostly sound.
+**A codebook that claims an author must carry only that author's terms and
+concepts, cited to the page**; a useful tag that is not theirs is rescued
+into the Bristlenose UXR codebook, which is ours to extend. Every authored
+codebook now has a decision register (`docs/design-codebook-*.md`) and
+`tests/test_codebook_registers.py` gates it. **Tell:** identical tag counts
+across groups whose sources are of very different sizes; a tag name you
+cannot find in the author's table of contents or index.
+
 ### A file-wide regex over locale JSON deletes same-named keys in other namespaces
 
 Pruning a retired key with `re.sub(r'^\s*"undo":\s*.*?,\s*\n', "", s, flags=re.M)`

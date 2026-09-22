@@ -71,19 +71,20 @@ groups:
   # Useful — "whether our products and systems are useful"
   # -------------------------------------------------------------------
   - name: Useful
-    subtitle: Is the product useful — does it do something the person needs done?
+    subtitle: Is the product useful?
     colour_set: ux
     tags:
-      # M-03 (R). His one thought: "the courage to ask whether our products and systems are useful". v1's relevance / utility / problem-solution fit / feature gap were four ways of saying one word (Nielsen's "utility", lean-startup "problem-solution fit"); feature gap is UXR unmet need / feature request.
+      # M-03 (R). His one thought: "the courage and creativity to ask whether our products and systems are useful". Neither "solve", "problem" nor "need" appears anywhere in the essay — v1's "solve a real problem" and 2.0's first draft ("needs done") were ours; checked 22 Sep 2026. v1's relevance / utility / problem-solution fit / feature gap were four ways of saying one word (Nielsen's "utility", lean-startup "problem-solution fit"); feature gap is UXR unmet need / feature request.
       - name: usefulness
         renamed_from: [relevance, utility, problem-solution fit, feature gap]
         definition: >
-          Whether the product does something the participant actually
-          needs done — it solves the problem they came with, or fails to,
-          regardless of how well it works in other respects.
+          Whether the product is useful to the participant — it does what
+          they came to do, or fails to, regardless of how well it works in
+          other respects. Morville's one question for the facet: whether
+          our products and systems are useful.
         apply_when: >
-          The participant judges the product by whether it helps with
-          their real task: it does the thing, it does not do the thing,
+          The participant judges the product by whether it is useful for
+          what they came to do: it does the thing, it does not do the thing,
           it does a thing they never needed, or it is missing the thing
           they came for. Look for "this is exactly what I needed," "it
           doesn't actually help me with," "I don't need any of this,"
@@ -92,8 +93,8 @@ groups:
           If the product does the right thing but is hard to operate,
           that is ease of use. If the participant is asking for a
           specific feature that does not exist, that is a feature request
-          in the UXR codebook — usefulness is the judgement that the
-          product, as it stands, does or does not serve the need. If the
+          in the UXR codebook — usefulness is the judgement that the product, as it stands, is or
+          is not useful to them. If the
           comment is about whether the product is worth its cost or the
           organisation's while, that is a Valuable tag.
 

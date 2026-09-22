@@ -66,6 +66,11 @@ return intent. Where they came from and where they went is in the register.
   v1's four tags were four ways of saying it (utility is Nielsen's,
   problem-solution fit is lean startup, feature gap is UXR `unmet need` /
   `feature request`). *E4; E1.*
+  Checked 22 Sep 2026 against the essay: neither "solve", "problem" nor
+  "need" appears anywhere in it. v1's subtitle "solve a real problem for its
+  users" was ours (JTBD flavour), and 2.0's first draft still said "needs
+  done"; the tag now says "useful for what they came to do", which is his
+  question and nothing more.
 - **M-04 · Usable → ease of use · settled** — his words. learnability,
   efficiency and error tolerance are Nielsen's 1993 attributes imported into
   the facet he was explicitly deferring to HCI methods; rescued to UXR

@@ -32,6 +32,22 @@ _FALLBACK_CHAINS: dict[str, tuple[str, ...]] = {
     "zh-Hant-HK": ("zh-Hant",),
 }
 
+#: Locales that ship ONLY the namespaces they override, inheriting the rest.
+#: An absent namespace file is how a fork inherits — it is the design, never a
+#: gap — so anything asserting completeness must exempt these.
+#:
+#: Deliberately NOT derived from ``_FALLBACK_CHAINS``. The two coincide today
+#: and are different properties: a full locale could sensibly acquire a chain
+#: (pt-BR → pt-PT), and deriving would then silently exempt it from checks that
+#: exist to catch a half-shipped tree. Name the property, don't infer it.
+#:
+#: This lived in ``tests/test_pipeline_diagnostic_locale_keys.py`` from 3 Jul
+#: 2026 (``b6ae8951``) and was promoted here 22 Sep 2026, because ``doctor.py``
+#: needs it and a self-test running inside a PyInstaller bundle can import
+#: ``bristlenose.i18n`` but not a test module. The test constant now derives
+#: from this one, so there is a single copy.
+FALLBACK_ONLY_LOCALES: frozenset[str] = frozenset({"zh-Hant-HK"})
+
 _current_locale = "en"
 
 

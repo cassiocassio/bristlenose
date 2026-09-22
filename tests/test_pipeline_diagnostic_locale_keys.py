@@ -19,6 +19,7 @@ from pathlib import Path
 import pytest
 
 from bristlenose.events import UnusableReason
+from bristlenose.i18n import FALLBACK_ONLY_LOCALES
 
 _LOCALES_DIR = Path(__file__).resolve().parents[1] / "bristlenose" / "locales"
 
@@ -40,7 +41,14 @@ _SINGLE_FORM_LOCALES = ("ko", "ja", "zh-Hant")
 # Thin-override locales resolved via the runtime fallback chain — these tests
 # read each locale's desktop.json directly (no fallback), so they're not listed
 # in _ALL_LOCALES. Kept here so the classification guard below knows they exist.
-_FALLBACK_ONLY_LOCALES = ("zh-Hant-HK",)
+#
+# Derived, not restated. This list was born here on 3 Jul 2026 (b6ae8951) and
+# was the only place the project named thin-fork-ness — which is why doctor.py,
+# enrolled three days earlier, went on requiring a full locale's common.json
+# from a fork until 22 Sep. A self-test running inside a PyInstaller bundle
+# cannot import a test module, so the constant now lives in bristlenose.i18n
+# and both readers share one copy.
+_FALLBACK_ONLY_LOCALES = tuple(sorted(FALLBACK_ONLY_LOCALES))
 
 _REQUIRED_PILL_CATEGORIES = (
     "auth",

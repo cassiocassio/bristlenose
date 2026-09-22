@@ -259,11 +259,25 @@ pick in their own language.
 ## Step 7 — Doctor + bundle expectation
 
 ```
-bristlenose/doctor.py  expected = {"en", "es", ...}  (line ~972)
+bristlenose/doctor.py  expected = {"en", "es", ...}  (check_bundle_locales)
 ```
 
 One-line edit. Otherwise `bristlenose doctor` flags your new locale as
 missing on first run.
+
+> **A thin override fork also goes in `FALLBACK_ONLY_LOCALES`
+> (`bristlenose/i18n.py`), or the build breaks.** `expected` is the list of
+> locale *codes*; `FALLBACK_ONLY_LOCALES` is what tells the self-test which of
+> them ship only overrides. Enrol a fork in the first and not the second and
+> `doctor --self-test` demands a full locale's `common.json` from it, which
+> fails **every desktop build** — the check runs at `build-all.sh` step 2a.
+>
+> This is not hypothetical: `zh-Hant-HK` was enrolled here on 30 Jun 2026,
+> three days before the fork classification existed at all, and the commit that
+> created it (`b6ae8951`) swept the tests, this guide and `check-locales.py`
+> but not `doctor.py`. It passed anyway for twelve weeks, because the fork
+> happened to carry a `common.json` of `help` overrides — for eleven days, and
+> then for ten weeks of overriding a modal that had been retired.
 
 PyInstaller doesn't need a spec change — `desktop/bristlenose-sidecar.spec`
 already has the whole `bristlenose/locales/` tree in `datas`, so new dirs
@@ -279,6 +293,13 @@ tests/test_pipeline_diagnostic_locale_keys.py
     _PLURAL_LOCALES             — add if your language has _one (i.e. anything that's not ko/ja)
     _SINGLE_FORM_LOCALES        — add if your language is ko/ja-shaped (other-only)
 ```
+
+**A thin override fork goes in none of those three.** It belongs in
+`FALLBACK_ONLY_LOCALES` in `bristlenose/i18n.py` (which `_FALLBACK_ONLY_LOCALES`
+here derives from), because these tests read each locale's file *directly*, with
+no fallback — so a fork listed in `_ALL_LOCALES` is required to carry every key
+and is being asserted as the thing it was created not to be. Same edit, same
+reason, as the callout in Step 7.
 
 The four-form parametrised tests
 (`test_four_form_locales_carry_all_forms` /
@@ -344,7 +365,7 @@ verify.
 - [ ] Plural selector case added (if not one/other-shaped) + Swift @Test
 - [ ] Glossary rows added (Apple HIG + Bristlenose QDA)
 - [ ] 3 picker labels updated (native name)
-- [ ] doctor expected set updated
+- [ ] doctor expected set updated (+ `FALLBACK_ONLY_LOCALES` if it's a thin fork — see Step 7)
 - [ ] Tests parametrised
 - [ ] Full sweep green (pytest + check-locales + ruff + xcodebuild build
       + xcodebuild test + npm build)

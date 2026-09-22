@@ -16,6 +16,7 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from bristlenose.i18n import FALLBACK_ONLY_LOCALES
 from bristlenose.utils.bundled_binary import bundled_binary_path
 from bristlenose.utils.text import count_noun
 
@@ -1136,7 +1137,38 @@ def check_bundle_prompts() -> CheckResult:
 
 
 def check_bundle_locales() -> CheckResult:
-    """i18n locale files (7 languages)."""
+    """i18n locale files — full locales carry common.json, forks carry overrides.
+
+    Two assertions, because the tree holds two kinds of locale. A **full**
+    locale ships every namespace, so a missing ``common.json`` means the tree
+    arrived and its files did not. A **thin override fork**
+    (``FALLBACK_ONLY_LOCALES``) ships only what it overrides and inherits the
+    rest, so an absent namespace there is the design; it still has to have
+    shipped *something*.
+
+    The partial-drop class is ``33c9f6ae``'s stated purpose for this check
+    ("spec entry present, but PyInstaller silently dropped files") and is worth
+    keeping — but note the incidents behind it, BUG-3/4/5, were **whole
+    directory** losses, and that commit's negative test removed a bundled
+    *prompt*, proving the prompts check rather than this loop. So nobody can
+    name a partial drop this loop has caught. Don't defend it on evidence that
+    does not exist; defend it on the strip/SIGBUS precedent, where a file
+    arrived at exactly the right size with zeros inside.
+
+    Requiring ``common.json`` of all 22 codes was the older form, and it failed
+    on 22 Sep 2026 against a correct tree. ``zh-Hant-HK`` was enrolled in the
+    full-locale set on 30 Jun (``c5df6193``) — three days before the thin-fork
+    classification existed at all (``b6ae8951``, which swept the tests, the
+    guide and ``check-locales.py``, but not this file). Its ``common.json``
+    held three ``help`` overrides; the help modal was retired eleven days later,
+    so from 10 Jul this check asserted nothing real about that locale and passed
+    anyway, for ten weeks, until the dead overrides were finally deleted.
+
+    The docstring above used to say "(7 languages)". It was right at birth
+    ("6 languages"), maintained once for Czech (``51027028``), then abandoned
+    while the set grew to 22 — which is worse than never maintained, because a
+    number somebody updated once reads as a number somebody keeps.
+    """
 
     locales_root = _package_root() / "locales"
     if not locales_root.is_dir():
@@ -1156,8 +1188,10 @@ def check_bundle_locales() -> CheckResult:
             detail=f"missing language dirs: {', '.join(sorted(missing))}",
             fix_key="bundle_locales_missing",
         )
-    # Every language must have a non-empty common.json
-    for lang in sorted(expected):
+    # A full locale ships every namespace, so common.json missing or truncated
+    # means the tree arrived and its files did not.
+    full_locales = expected - FALLBACK_ONLY_LOCALES
+    for lang in sorted(full_locales):
         common = locales_root / lang / "common.json"
         if not common.is_file() or common.stat().st_size < 100:
             return CheckResult(
@@ -1166,10 +1200,26 @@ def check_bundle_locales() -> CheckResult:
                 detail=f"{lang}/common.json missing or truncated",
                 fix_key="bundle_locales_missing",
             )
+    # A fork names no required namespace — that is the whole point of it — but
+    # an empty directory is still a drop. No size floor here: a legitimate fork
+    # can be a single short override (a minimal one is 38 bytes, against the
+    # 100-byte floor above), so a floor would fail a correct tree for the second
+    # time in this function's life.
+    for lang in sorted(expected & FALLBACK_ONLY_LOCALES):
+        if not any(p.stat().st_size for p in (locales_root / lang).glob("*.json")):
+            return CheckResult(
+                status=CheckStatus.FAIL,
+                label="Bundle: locales",
+                detail=f"{lang}/ shipped no override files",
+                fix_key="bundle_locales_missing",
+            )
     return CheckResult(
         status=CheckStatus.OK,
         label="Bundle: locales",
-        detail=f"{len(present)} languages, all with common.json",
+        detail=(
+            f"{len(present)} languages, {len(full_locales)} with common.json, "
+            f"{len(expected & FALLBACK_ONLY_LOCALES)} override fork"
+        ),
     )
 
 

@@ -55,6 +55,10 @@ class MiroExportRequest(BaseModel):
     quote_ids: list[str] | None = None  # scope; None = all non-hidden
     colour_by: str = "sentiment"
     clips_base: str = ""  # opt-in clip-link folder base URL
+    # The board is a deliverable, so its chrome follows the caller's UI
+    # language. Unknown or absent falls back to English inside `t_in`, which is
+    # what every caller sent until 22 Sep 2026.
+    locale: str = "en"
 
 
 class MiroExportResponse(BaseModel):
@@ -263,7 +267,7 @@ def miro_preview(project_id: int, body: MiroExportRequest, request: Request) -> 
         name = body.board_name or _project_name(project)
         html = miro_export.build_preview_html(
             db, project_id, name, body.quote_ids,
-            colour_by=body.colour_by, clips_base=body.clips_base,
+            colour_by=body.colour_by, clips_base=body.clips_base, locale=body.locale,
         )
         return MiroPreviewResponse(html=html)
     finally:
@@ -290,7 +294,7 @@ def miro_export_board(project_id: int, body: MiroExportRequest,
         try:
             result = miro_export.push_to_miro(
                 token, db, project_id, name, body.quote_ids,
-                colour_by=body.colour_by, clips_base=body.clips_base,
+                colour_by=body.colour_by, clips_base=body.clips_base, locale=body.locale,
             )
         except miro_client.MiroError as exc:
             raise HTTPException(status_code=502, detail=f"Miro export failed: {exc}") from exc

@@ -89,7 +89,19 @@ terms that will still be true next year.
 | **macOS app UI** | **21 full locales** | The researcher's workspace |
 | Forensic / wire records — `Cause.message`, the events log, the Copy-details plaintext | **English** | A run analysed while the UI was German must not read as German forever, and a pasted bug report must read the same whatever the reporter's language |
 | Decorative, opt-in visual affordances — the project icon picker's 100 symbol labels | **English** | The label describes a *visual* choice to someone not making one. A VoiceOver user already has the project **name**, which is the identity; the icon is decoration layered on top, the picker is opt-in, and nobody chooses a glyph from a 10×10 grid by ear. Localising it would be narration, not access |
+| **Generated artefacts a researcher hands on** — the Miro board and its creds-free preview | **21 full locales** | Same reason as the report: it is the deliverable. Added 22 Sep 2026 after the board shipped English for months — **the table's own absence was the defect**, because a surface no row classifies is a surface nobody reviewed |
 | Data — transcripts, quotes, prompts, codebook YAML | **Untranslated** | Methodology — see the rest of this section |
+
+**The second authoring failure is a surface this table does not name.** The
+Miro board had no row until 22 Sep 2026, and so it shipped English — not because
+anyone decided it should, but because the question was never put. It is the same
+shape as the `en`-blindness the defect register describes: `check-locales.py`
+diffs each locale against English and is silent about a surface English never
+enrolled, and a table that omits a surface is silent in exactly the same way.
+The one tell that would have caught it was in the file: `miro_board.py`'s
+docstring named `count_noun` as its one Bristlenose import, and `count_noun` is
+a *pluraliser*, which means the module was composing sentences a human reads.
+**A module that pluralises is a module with a row in this table.**
 
 **The authoring failure this table exists to prevent is a sentence filed as data.**
 Every gap the 21 Sep 2026 Swift audit found was a `String` property on a type that

@@ -285,7 +285,12 @@
     "boardReady_one": "Tavle klar – {{count}} sitatlapp plassert.",
     "boardReady_other": "Tavle klar – {{count}} sitatlapper plassert.",
     "done": "Ferdig",
-    "openInMiro": "Åpne i Miro ↗"
+    "openInMiro": "Åpne i Miro ↗",
+    "boardTitle": "{{project}} \u2014 forskningstavle ({{quotes}})",
+    "boardQuoteCount_one": "{{count}} sitat",
+    "boardQuoteCount_other": "{{count}} sitater",
+    "clipLink": "klipp",
+    "previewHint": "Forh\u00e5ndsvisning av Miro-tavlen \u2013 dette er det som ville blitt sendt"
   },
   "feedback": {
     "heading": "Hvordan fungerer Bristlenose for deg?",

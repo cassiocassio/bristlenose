@@ -285,7 +285,12 @@
     "boardReady_one": "Tavlan är klar — {{count}} citatlapp placerad.",
     "boardReady_other": "Tavlan är klar — {{count}} citatlappar placerade.",
     "done": "Klar",
-    "openInMiro": "Öppna i Miro ↗"
+    "openInMiro": "Öppna i Miro ↗",
+    "boardTitle": "{{project}} \u2014 forskningstavla ({{quotes}})",
+    "boardQuoteCount_one": "{{count}} citat",
+    "boardQuoteCount_other": "{{count}} citat",
+    "clipLink": "klipp",
+    "previewHint": "F\u00f6rhandsgranskning av Miro-tavlan \u2014 det h\u00e4r skulle skickas"
   },
   "feedback": {
     "heading": "Hur fungerar Bristlenose för dig?",

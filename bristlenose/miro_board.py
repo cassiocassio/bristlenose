@@ -1,13 +1,19 @@
 """Target-agnostic board IR + trivial layout engine for the Miro bridge.
 
 Near-pure stdlib (no pydantic models, no I/O) so it stays fast, testable, and
-renderer-agnostic. The one bristlenose import is `count_noun` — board stickies
-carry count-bearing text a researcher shows a client, and pluralisation has
-exactly one source of truth in this repo (see CLAUDE.md § CLI plurals); a local
-mirror would be a second one. The layout engine turns grouped quotes into a `Board` of
+renderer-agnostic. The layout engine turns grouped quotes into a `Board` of
 frames + stickies + text items in absolute board coordinates; renderers
 (`miro_render_svg` for preview, `miro_client`/`server.miro_export` for the real
 Miro push) translate the IR to a concrete surface.
+
+**The board's words arrive as `BoardStrings`; this module never resolves them.**
+A Miro board is a deliverable a researcher hands to a client, which puts it on
+the localised side of the surface table (`docs/design-i18n.md`) — so the locale
+belongs to `server.miro_export`, which knows who asked, and geometry stays here.
+The defaults are the English the board shipped with, so a caller that has no
+locale is unchanged; `count_noun` is one of them, because English plurals have
+exactly one source of truth in this repo (CLAUDE.md § CLI plurals) and a local
+mirror would be a second.
 
 Ported and generalised from experiments/board-layout-poc/.
 """
@@ -15,6 +21,7 @@ Ported and generalised from experiments/board-layout-poc/.
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from bristlenose.utils.text import count_noun
@@ -48,6 +55,24 @@ SENTIMENT_TOKEN = {
     "neutral": "gray",
     "mixed": "light_yellow",
 }
+
+
+def english_quote_count(n: int) -> str:
+    return count_noun(n, "quote")
+
+
+@dataclass(frozen=True)
+class BoardStrings:
+    """Every word the board says that is not the researcher's own data.
+
+    `quote_count` is a callable rather than a template because the plural form
+    is a function of the number in fourteen of the twenty-one languages, and
+    `2 cytaty` / `5 cytatów` is not something a format string can reach.
+    """
+
+    sections: str = "Sections"
+    themes: str = "Themes"
+    quote_count: Callable[[int], str] = english_quote_count
 
 
 @dataclass
@@ -142,7 +167,8 @@ def _quote_colour(q: QuoteCard, colour_by: str) -> str:
 
 
 def _build_frame(
-    columns: list[Column], kind: str, title: str, left_x: float, colour_by: str
+    columns: list[Column], kind: str, title: str, left_x: float, colour_by: str,
+    strings: BoardStrings,
 ) -> tuple[Frame, list[Sticky]]:
     n = len(columns)
     max_q = max((len(c.quotes) for c in columns), default=0)
@@ -157,7 +183,7 @@ def _build_frame(
         cx = left_x + FRAME_PAD + i * (STICKY_W + GAP_X)
         stickies.append(Sticky(
             kind="header", x=cx, y=FRAMES_Y + FRAME_PAD, width=STICKY_W, height=HEADER_H,
-            colour=HEADER_TOKEN, text=f"{col.label}\n{count_noun(len(col.quotes), 'quote')}",
+            colour=HEADER_TOKEN, text=f"{col.label}\n{strings.quote_count(len(col.quotes))}",
         ))
         sy = FRAMES_Y + FRAME_PAD + HEADER_H + GAP_Y
         for q in sorted(col.quotes, key=_quote_sort_key):
@@ -170,8 +196,10 @@ def _build_frame(
     return frame, stickies
 
 
-def layout_board(columns: list[Column], title: str, colour_by: str = "sentiment") -> Board:
-    """Two named frames: Sections (left) then Themes (right). Pure geometry."""
+def layout_board(columns: list[Column], title: str, colour_by: str = "sentiment",
+                 strings: BoardStrings | None = None) -> Board:
+    """Two named frames: sections (left) then themes (right). Pure geometry."""
+    strings = strings or BoardStrings()
     sections = [c for c in columns if c.kind == "section"]
     themes = [c for c in columns if c.kind == "theme"]
 
@@ -180,12 +208,12 @@ def layout_board(columns: list[Column], title: str, colour_by: str = "sentiment"
 
     x = MARGIN
     if sections:
-        frame, stk = _build_frame(sections, "section", "Sections", x, colour_by)
+        frame, stk = _build_frame(sections, "section", strings.sections, x, colour_by, strings)
         board.frames.append(frame)
         board.stickies.extend(stk)
         x = frame.x + frame.width + FRAME_GAP
     if themes:
-        frame, stk = _build_frame(themes, "theme", "Themes", x, colour_by)
+        frame, stk = _build_frame(themes, "theme", strings.themes, x, colour_by, strings)
         board.frames.append(frame)
         board.stickies.extend(stk)
 

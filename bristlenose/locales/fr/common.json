@@ -285,7 +285,12 @@
     "boardReady_one": "Tableau pr\u00eat \u2014 {{count}} pense-b\u00eate de citation plac\u00e9.",
     "boardReady_other": "Tableau pr\u00eat \u2014 {{count}} pense-b\u00eates de citations plac\u00e9s.",
     "done": "Termin\u00e9",
-    "openInMiro": "Ouvrir dans Miro \u2197"
+    "openInMiro": "Ouvrir dans Miro \u2197",
+    "boardTitle": "{{project}} \u2014 tableau de recherche ({{quotes}})",
+    "boardQuoteCount_one": "{{count}} verbatim",
+    "boardQuoteCount_other": "{{count}} verbatim",
+    "clipLink": "clip",
+    "previewHint": "Aper\u00e7u du tableau Miro \u2014 voici ce qui serait envoy\u00e9"
   },
   "feedback": {
     "heading": "Comment fonctionne Bristlenose pour vous ?",

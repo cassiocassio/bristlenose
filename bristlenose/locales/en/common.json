@@ -285,7 +285,13 @@
     "boardReady_one": "Board ready — {{count}} quote sticky placed.",
     "boardReady_other": "Board ready — {{count}} quote stickies placed.",
     "done": "Done",
-    "openInMiro": "Open in Miro ↗"
+    "openInMiro": "Open in Miro ↗",
+    "_comment_board": "boardQuoteCount_* is a verbatim lift of desktop.connectAgent.quotes_*, not a translation \u2014 same shape, already reviewed. It gets its own key because a reword for the agent-access surface must not silently change a board a researcher has already sent. boardTitle names the artefact, so it composes this locale's own research word (header.researchReport) with its own board noun (above). clipLink is the noun from export.clips.*.",
+    "boardTitle": "{{project}} \u2014 research board ({{quotes}})",
+    "boardQuoteCount_one": "{{count}} quote",
+    "boardQuoteCount_other": "{{count}} quotes",
+    "clipLink": "clip",
+    "previewHint": "Miro board preview \u2014 this is what would be pushed"
   },
   "feedback": {
     "heading": "How is Bristlenose working for you?",

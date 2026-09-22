@@ -7,6 +7,17 @@ a creds-free SVG/HTML preview or pushes a real Miro board.
 
 Synchronous by design for the v0 slice (an export is seconds for hundreds of
 stickies) — no background-job table yet. See design-miro-bridge.md.
+
+**This module owns the board's language.** A Miro board is a deliverable, so it
+follows the caller's UI locale, which the SPA and the Mac sheet each send; the
+layout engine below it is handed words and the renderer under it is handed a
+locale. `locale` defaults to `"en"` throughout so a caller that sends nothing
+gets exactly what the board produced before — the gap this closes is that until
+22 Sep 2026 *every* caller was that caller, and a board built by a researcher
+working in Spanish, from Spanish interviews, still said "Sections" and
+"3 quotes". Whether a researcher can override it per board, as they can for the
+HTML export (`docs/design-export-locale.md`), is an open product question and
+deliberately not answered here.
 """
 
 from __future__ import annotations
@@ -19,8 +30,10 @@ from urllib.parse import urlparse
 from sqlalchemy.orm import Session
 
 from bristlenose import miro_client
+from bristlenose.i18n import plural_in, t_in
 from bristlenose.miro_board import (
     Board,
+    BoardStrings,
     Column,
     QuoteCard,
     Sticky,
@@ -35,6 +48,20 @@ from bristlenose.utils.timecodes import parse_timecode
 logger = logging.getLogger(__name__)
 
 MAX_QUOTE_CHARS = 300  # keep stickies readable (Miro hard cap is 6000)
+
+
+def board_strings(locale: str) -> BoardStrings:
+    """The board's vocabulary in `locale`.
+
+    Section and theme are the report's own nouns, so these are the shipped keys
+    the lenses already use rather than a second set that could disagree with the
+    report the board was built from.
+    """
+    return BoardStrings(
+        sections=t_in(locale, "common.quotes.sections"),
+        themes=t_in(locale, "common.quotes.themes"),
+        quote_count=lambda n: plural_in(locale, "common.miro.boardQuoteCount", n),
+    )
 
 
 def _parse_timecode(s: str) -> float:
@@ -76,7 +103,7 @@ def _clip_url(base: str, q) -> str | None:
 
 
 def build_columns(db: Session, project_id: int, quote_ids: list[str] | None,
-                  clips_base: str = "") -> list[Column]:
+                  clips_base: str = "", locale: str = "en") -> list[Column]:
     """Bucket the project's (optionally scoped) quotes into section/theme columns,
     preserving section display-order (extract_quotes_for_export is pre-sorted)."""
     quotes = extract_quotes_for_export(db, project_id, quote_ids=quote_ids, anonymise=False)
@@ -96,7 +123,7 @@ def build_columns(db: Session, project_id: int, quote_ids: list[str] | None,
         if label:
             sections.setdefault(label, Column(label, "section", [])).quotes.append(card)
             continue
-        tlabel = (q.theme or "").strip() or "Other"
+        tlabel = (q.theme or "").strip() or t_in(locale, "common.tags.other")
         themes.setdefault(tlabel, Column(tlabel, "theme", [])).quotes.append(card)
 
     return list(sections.values()) + list(themes.values())
@@ -104,20 +131,26 @@ def build_columns(db: Session, project_id: int, quote_ids: list[str] | None,
 
 def build_board(db: Session, project_id: int, project_name: str,
                 quote_ids: list[str] | None, *, colour_by: str = "sentiment",
-                clips_base: str = "") -> Board:
-    columns = build_columns(db, project_id, quote_ids, clips_base=clips_base)
+                clips_base: str = "", locale: str = "en") -> Board:
+    columns = build_columns(db, project_id, quote_ids, clips_base=clips_base, locale=locale)
     n = sum(len(c.quotes) for c in columns)
-    title = f"{project_name} — research board ({n} quotes)"
-    return layout_board(columns, title, colour_by=colour_by)
+    # The count goes through CLDR selection even in English, where the old
+    # hand-rolled `({n} quotes)` titled a one-quote board "1 quotes".
+    title = t_in(
+        locale, "common.miro.boardTitle",
+        project=project_name,
+        quotes=plural_in(locale, "common.miro.boardQuoteCount", n),
+    )
+    return layout_board(columns, title, colour_by=colour_by, strings=board_strings(locale))
 
 
 def build_preview_html(db: Session, project_id: int, project_name: str,
                        quote_ids: list[str] | None, *, colour_by: str = "sentiment",
-                       clips_base: str = "") -> str:
+                       clips_base: str = "", locale: str = "en") -> str:
     """Creds-free: render exactly what would be pushed, as standalone HTML."""
     board = build_board(db, project_id, project_name, quote_ids,
-                        colour_by=colour_by, clips_base=clips_base)
-    return render_html(board)
+                        colour_by=colour_by, clips_base=clips_base, locale=locale)
+    return render_html(board, locale=locale)
 
 
 # ---------------------------------------------------------------------------
@@ -125,7 +158,7 @@ def build_preview_html(db: Session, project_id: int, project_name: str,
 # ---------------------------------------------------------------------------
 
 
-def _sticky_content(s: Sticky) -> str:
+def _sticky_content(s: Sticky, locale: str = "en") -> str:
     if s.kind == "header":
         label, *rest = s.text.split("\n")
         sub = f"<br>{escape(rest[0])}" if rest else ""
@@ -135,14 +168,15 @@ def _sticky_content(s: Sticky) -> str:
         body = body[: MAX_QUOTE_CHARS - 1].rstrip() + "…"
     attribution = f"— {s.participant_id.upper()} · {fmt_timecode(s.timecode)}"
     if s.link_url:
-        attribution += f' · <a href="{escape(s.link_url, quote=True)}">▶ clip</a>'
+        clip = escape(t_in(locale, "common.miro.clipLink"))
+        attribution += f' · <a href="{escape(s.link_url, quote=True)}">▶ {clip}</a>'
     return f"{escape(body)}<br><i>{attribution}</i>"
 
 
-def _sticky_item(s: Sticky) -> dict[str, Any]:
+def _sticky_item(s: Sticky, locale: str = "en") -> dict[str, Any]:
     return {
         "type": "sticky_note",
-        "data": {"content": _sticky_content(s), "shape": "square"},
+        "data": {"content": _sticky_content(s, locale), "shape": "square"},
         "style": {"fillColor": s.colour},
         "position": {"x": s.x + s.width / 2, "y": s.y + s.height / 2},
         "geometry": {"width": s.width},
@@ -151,10 +185,10 @@ def _sticky_item(s: Sticky) -> dict[str, Any]:
 
 def push_to_miro(token: str, db: Session, project_id: int, project_name: str,
                  quote_ids: list[str] | None, *, colour_by: str = "sentiment",
-                 clips_base: str = "") -> dict[str, Any]:
+                 clips_base: str = "", locale: str = "en") -> dict[str, Any]:
     """Create a new Miro board from the layout IR. Returns {board_id, board_url, stickies}."""
     board = build_board(db, project_id, project_name, quote_ids,
-                        colour_by=colour_by, clips_base=clips_base)
+                        colour_by=colour_by, clips_base=clips_base, locale=locale)
     n_quotes = sum(1 for s in board.stickies if s.kind == "quote")
     if n_quotes == 0:
         raise miro_client.MiroError("No quotes match the current selection — nothing to export.")
@@ -172,7 +206,7 @@ def push_to_miro(token: str, db: Session, project_id: int, project_name: str,
         for f in board.frames:  # frames (position = centre)
             miro_client.create_frame(token, board_id, f.title,
                                      f.x + f.width / 2, f.y + f.height / 2, f.width, f.height)
-        items = [_sticky_item(s) for s in board.stickies]  # stickies, 20/bulk
+        items = [_sticky_item(s, locale) for s in board.stickies]  # stickies, 20/bulk
         # The `stickies` count returned below is the *intended* count — Miro's
         # bulk endpoint can partially succeed, and we don't yet reconcile the
         # created-count against its response (deferred until a real multi-batch

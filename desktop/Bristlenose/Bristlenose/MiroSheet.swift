@@ -174,13 +174,17 @@ final class MiroSheetModel: ObservableObject {
     func createBoard() {
         step = .creating
         error = nil
+        // Read the locale here, not inside the Task: `I18n` is `@MainActor` and
+        // the board should carry the language the sheet was filled in with.
+        let locale = i18n.locale
         exportTask = Task {
             do {
                 let result = try await api.export(
                     boardName: boardName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                         ? nil : boardName.trimmingCharacters(in: .whitespacesAndNewlines),
                     colourBy: colourBySentiment ? "sentiment" : "none",
-                    clipsBase: linkClips ? clipsBase.trimmingCharacters(in: .whitespacesAndNewlines) : ""
+                    clipsBase: linkClips ? clipsBase.trimmingCharacters(in: .whitespacesAndNewlines) : "",
+                    locale: locale
                 )
                 if Task.isCancelled { return }
                 self.boardURL = result.boardURL

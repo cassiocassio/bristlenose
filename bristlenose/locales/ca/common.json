@@ -285,7 +285,12 @@
     "boardReady_one": "Tauler a punt — s'hi ha col·locat {{count}} nota de cita.",
     "boardReady_other": "Tauler a punt — s'hi han col·locat {{count}} notes de cites.",
     "done": "Fet",
-    "openInMiro": "Obre al Miro ↗"
+    "openInMiro": "Obre al Miro ↗",
+    "boardTitle": "{{project}} \u2014 tauler de recerca ({{quotes}})",
+    "boardQuoteCount_one": "{{count}} cita",
+    "boardQuoteCount_other": "{{count}} cites",
+    "clipLink": "clip",
+    "previewHint": "Vista pr\u00e8via del tauler del Miro: aix\u00f2 \u00e9s el que s'enviaria"
   },
   "feedback": {
     "heading": "Com et va el Bristlenose?",

@@ -320,7 +320,14 @@
     "boardReady_few": "Tabule je hotov\u00e1 \u2014 um\u00edst\u011bny {{count}} cita\u010dn\u00ed l\u00edstky.",
     "boardReady_other": "Tabule je hotov\u00e1 \u2014 um\u00edst\u011bno {{count}} cita\u010dn\u00edch l\u00edstk\u016f.",
     "done": "Hotovo",
-    "openInMiro": "Otev\u0159\u00edt v Miru \u2197"
+    "openInMiro": "Otev\u0159\u00edt v Miru \u2197",
+    "boardTitle": "{{project}} \u2014 v\u00fdzkumn\u00e1 tabule ({{quotes}})",
+    "boardQuoteCount_one": "{{count}} cit\u00e1t",
+    "boardQuoteCount_few": "{{count}} cit\u00e1ty",
+    "boardQuoteCount_many": "{{count}} cit\u00e1tu",
+    "boardQuoteCount_other": "{{count}} cit\u00e1t\u016f",
+    "clipLink": "klip",
+    "previewHint": "N\u00e1hled tabule Miro \u2014 toto by se odeslalo"
   },
   "feedback": {
     "heading": "Jak vám Bristlenose vyhovuje?",

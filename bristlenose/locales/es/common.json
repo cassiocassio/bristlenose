@@ -285,7 +285,12 @@
     "boardReady_one": "Tablero listo: se coloc\u00f3 {{count}} nota de cita.",
     "boardReady_other": "Tablero listo: se colocaron {{count}} notas de citas.",
     "done": "Listo",
-    "openInMiro": "Abrir en Miro \u2197"
+    "openInMiro": "Abrir en Miro \u2197",
+    "boardTitle": "{{project}} \u2014 tablero de investigaci\u00f3n ({{quotes}})",
+    "boardQuoteCount_one": "{{count}} cita",
+    "boardQuoteCount_other": "{{count}} citas",
+    "clipLink": "clip",
+    "previewHint": "Vista previa del tablero de Miro: esto es lo que se enviar\u00eda"
   },
   "feedback": {
     "heading": "¿Cómo te va con Bristlenose?",

@@ -15,6 +15,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Sequence
 from functools import lru_cache
 from pathlib import Path
@@ -95,13 +96,39 @@ def _resolve(data: object, parts: list[str]) -> str | None:
     return None
 
 
-def t(key: str, **kwargs: object) -> str:
-    """Translate a dotted key. Format: ``"namespace.dotted.key"``.
+_I18NEXT_VAR = re.compile(r"\{\{(\w+)\}\}")
 
-    Interpolation uses Python ``str.format_map``:
-        t("server.statusPage.runFailedLong")  →  the English, then the raw key
 
-    Falls back to the English string, then to the raw key.
+def _interpolate(value: str, vars: dict[str, str]) -> str:
+    """Substitute both placeholder conventions the locale corpus actually uses.
+
+    The files carry **two**, and which one a value uses is a property of who
+    wrote it, not of the namespace: ``preflight`` was authored for Python and
+    spells a variable ``{size}``; everything the SPA reads is i18next and spells
+    it ``{{size}}`` — 249 values against 17, measured 22 Sep 2026.
+
+    Python's ``str.format_map`` reads ``{{`` as an *escaped literal brace*, so a
+    double-brace value passed straight to it renders ``{count} quotes`` — the
+    variable name, in braces, in the artefact. No Python caller read such a key
+    until the Miro board did, so this was latent rather than broken; the board is
+    the first, and a gate (``test_miro_board_locale.py``) now keeps it honest.
+
+    i18next form first, then ``format_map`` for the Python form.
+    """
+    out = _I18NEXT_VAR.sub(lambda m: vars.get(m.group(1), m.group(0)), value)
+    try:
+        return out.format_map(vars)
+    except (KeyError, IndexError, ValueError):
+        return out
+
+
+def t_in(locale: str, key: str, **kwargs: object) -> str:
+    """``t`` bound to one locale, without touching the module global.
+
+    ``set_locale`` is process-wide, which is right for the CLI (one run, one
+    language) and wrong for the server, where two requests can want two
+    languages and the loser gets the winner's. Every server-side caller should
+    reach for this; ``t`` is the CLI's convenience and is defined in terms of it.
     """
     namespace, _, dotted = key.partition(".")
     if not dotted:
@@ -109,9 +136,9 @@ def t(key: str, **kwargs: object) -> str:
 
     parts = dotted.split(".")
 
-    # Resolve through the locale's fallback chain: current → base(s) → en.
+    # Resolve through the locale's fallback chain: requested → base(s) → en.
     value = None
-    for loc in _resolution_order(_current_locale):
+    for loc in _resolution_order(locale if locale in SUPPORTED_LOCALES else "en"):
         value = _resolve(_load_namespace(loc, namespace), parts)
         if value is not None:
             break
@@ -120,11 +147,75 @@ def t(key: str, **kwargs: object) -> str:
         return key  # Last resort — return raw key
 
     if kwargs:
-        try:
-            return value.format_map({k: str(v) for k, v in kwargs.items()})
-        except (KeyError, IndexError):
-            return value
+        return _interpolate(value, {k: str(v) for k, v in kwargs.items()})
     return value
+
+
+def t(key: str, **kwargs: object) -> str:
+    """Translate a dotted key in the process-wide locale. ``"namespace.dotted.key"``.
+
+    Falls back to the English string, then to the raw key.
+    """
+    return t_in(_current_locale, key, **kwargs)
+
+
+def plural_category(count: int, locale: str) -> str:
+    """The CLDR plural category for an integer — the Python half of a pair.
+
+    `I18n.swift`'s `pluralCategory(_:locale:)` is the other half and came first;
+    `tests/test_plural_category_parity.py` asserts the two agree across every
+    supported locale over a range that includes each rule's exceptions, so this
+    cannot drift into a board that counts one way and a menu that counts another.
+
+    `count` is always an ``int``, so CLDR's decimal fraction ``v`` is 0 and the
+    decimals-only categories never fire. That is why ``cs`` returns ``other``
+    where ``pl`` returns ``many``: Czech's ``many`` is decimals-only and Polish's
+    is a live integer category. Do not copy the ``cs`` branch to a new Slavic
+    locale — its shape is cs-specific and wrong for the others.
+    """
+    n = abs(count)
+    mod10, mod100 = n % 10, n % 100
+    if locale == "cs":
+        # Czech: one = 1; few = 2–4; other = 0, 5+ (many is decimals-only).
+        if n == 1:
+            return "one"
+        return "few" if 2 <= n <= 4 else "other"
+    if locale == "pl":
+        # Polish: one = 1; few = mod10 2–4 except teens; many = the rest
+        # (0, 5–21, …). 21 → many, unlike ru/uk where 21 → one.
+        if n == 1:
+            return "one"
+        if 2 <= mod10 <= 4 and not 12 <= mod100 <= 14:
+            return "few"
+        return "many"
+    if locale in ("ru", "uk"):
+        # Russian and Ukrainian share an identical integer rule.
+        if mod10 == 1 and mod100 != 11:
+            return "one"
+        if 2 <= mod10 <= 4 and not 12 <= mod100 <= 14:
+            return "few"
+        return "many"
+    if locale == "fr":
+        return "one" if n <= 1 else "other"  # French: 0 and 1 are both "one".
+    if locale in ("ja", "ko", "zh-Hant", "zh-Hant-HK"):
+        return "other"  # Single-form locales.
+    return "one" if n == 1 else "other"  # en, es, de, and any unmapped locale.
+
+
+def plural_in(locale: str, base: str, count: int, **kwargs: object) -> str:
+    """Resolve ``<base>_<category>`` for ``count`` in ``locale``, ``count`` bound.
+
+    Degrades to ``<base>_other`` when the selected stem is absent, which covers
+    both real cases: a single-form locale carrying only ``_other``, and a locale
+    whose category exists in CLDR but not in this key. Without it, pl/ru/uk would
+    be the first to render a raw ``…_many`` into a researcher's deliverable.
+    """
+    merged: dict[str, object] = {**kwargs, "count": count}
+    key = f"{base}_{plural_category(count, locale)}"
+    rendered = t_in(locale, key, **merged)
+    if rendered == key:  # a miss returns the raw key, which carries no count
+        return t_in(locale, f"{base}_other", **merged)
+    return rendered
 
 
 def get_locale() -> str:

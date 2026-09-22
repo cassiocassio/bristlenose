@@ -630,6 +630,9 @@ export interface MiroExportRequest {
   quote_ids?: string[] | null;
   colour_by?: string;
   clips_base?: string;
+  /** The board's chrome language. A Miro board is a deliverable, so it follows
+   *  the researcher's UI language; the server defaults to English if omitted. */
+  locale?: string;
 }
 
 export interface MiroExportResponse {

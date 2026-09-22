@@ -285,7 +285,12 @@
     "boardReady_one": "Board fertig \u2014 {{count}} Zitat-Haftnotiz platziert.",
     "boardReady_other": "Board fertig \u2014 {{count}} Zitat-Haftnotizen platziert.",
     "done": "Fertig",
-    "openInMiro": "In Miro \u00f6ffnen \u2197"
+    "openInMiro": "In Miro \u00f6ffnen \u2197",
+    "boardTitle": "{{project}} \u2014 Forschungsboard ({{quotes}})",
+    "boardQuoteCount_one": "{{count}} Zitat",
+    "boardQuoteCount_other": "{{count}} Zitate",
+    "clipLink": "Clip",
+    "previewHint": "Vorschau des Miro-Boards \u2014 das w\u00fcrde gesendet"
   },
   "feedback": {
     "heading": "Wie funktioniert Bristlenose für Sie?",

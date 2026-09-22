@@ -73,8 +73,17 @@ a glob — `locales/*/*.json` — matching **all 192 files**. Inlining pulls eve
 into the single chunk.
 
 Verified by sampling real strings from each namespace against the built
-`bristlenose/server/static-export/app.js` (2.26 MB). Every namespace is present,
+`bristlenose/server/static-export/app.js` (2.26 MB). Every namespace was present,
 in every locale:
+
+> **Read the table below as the 23 Aug 2026 measurement it is, not as an
+> inventory.** Three of its rows no longer exist: `cli`, `doctor` and `pipeline`
+> were deleted from all 21 locales on 22 Sep 2026 — 27 keys that had never had a
+> call site in any commit, describing surfaces that are English *by decision*
+> (`docs/design-i18n.md` §"Which surfaces are targets"), so their translations
+> could never be read. The `pipeline` row below already said so ("zero live
+> consumers anywhere"); it took thirteen months to act on. The measurement is
+> kept because it is what the one-language fix was sized against.
 
 | Namespace | Weight, all locales (minified) | Reachable from a browser report? |
 |---|---:|---|

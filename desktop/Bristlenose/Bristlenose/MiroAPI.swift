@@ -160,10 +160,17 @@ struct MiroAPI {
 
     /// POST export — create a new board. Throws `APIError` with the server
     /// `detail` (which on a partial-board 502 includes the recovery URL).
-    func export(boardName: String?, colourBy: String, clipsBase: String) async throws -> ExportResult {
+    ///
+    /// `locale` is the board's own language, not the app's convenience: the
+    /// board is a deliverable, and its frame titles and per-column counts are
+    /// rendered server-side, so the sheet has to say who is asking. Omitting it
+    /// is what made every board English (fixed 22 Sep 2026).
+    func export(boardName: String?, colourBy: String, clipsBase: String,
+                locale: String) async throws -> ExportResult {
         guard let req = request(
             "/export", method: "POST",
-            body: ["board_name": boardName, "colour_by": colourBy, "clips_base": clipsBase]
+            body: ["board_name": boardName, "colour_by": colourBy,
+                   "clips_base": clipsBase, "locale": locale]
         ) else {
             throw APIError.serverUnreachable()
         }

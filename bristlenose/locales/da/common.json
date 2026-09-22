@@ -285,7 +285,12 @@
     "boardReady_one": "Board klar — {{count}} citatklistermærke placeret.",
     "boardReady_other": "Board klar — {{count}} citatklistermærker placeret.",
     "done": "Færdig",
-    "openInMiro": "Åbn i Miro ↗"
+    "openInMiro": "Åbn i Miro ↗",
+    "boardTitle": "{{project}} \u2014 unders\u00f8gelsesboard ({{quotes}})",
+    "boardQuoteCount_one": "{{count}} citat",
+    "boardQuoteCount_other": "{{count}} citater",
+    "clipLink": "klip",
+    "previewHint": "Forh\u00e5ndsvisning af Miro-board \u2014 det er dette, der ville blive sendt"
   },
   "feedback": {
     "heading": "Hvordan fungerer Bristlenose for dig?",

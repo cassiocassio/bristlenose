@@ -3,13 +3,19 @@
 Lets a researcher see exactly what would be pushed to Miro *without* any Miro
 account or token — the creds-free preview path. Pure stdlib. Ported from
 experiments/board-layout-poc/render_svg.py and adapted to colour tokens.
+
+The board's own words arrive already resolved, inside the IR; the only string
+this module owns is the preview page's hint, so `render_html` takes a locale
+and nothing else here does.
 """
 
 from __future__ import annotations
 
+import unicodedata
 from html import escape
 
 from bristlenose.board_palette import hex_for
+from bristlenose.i18n import t_in
 from bristlenose.miro_board import Board, Frame, Sticky, TextItem, fmt_timecode
 
 BOARD_BG = "#F4F4F2"
@@ -40,6 +46,51 @@ def _text(x: float, y: float, line: str, *, size: float, weight: str, ink: str,
     )
 
 
+def _width(s: str) -> int:
+    """Rendered width in Latin-character units.
+
+    CJK glyphs take about twice the advance of a Latin character at the same
+    point size, so counting characters puts a Japanese line at roughly double
+    the sticky it is supposed to sit inside. `East_Asian_Width` W and F are the
+    double-width classes; Halfwidth katakana (H) is correctly single.
+    """
+    return sum(2 if unicodedata.east_asian_width(c) in ("W", "F") else 1 for c in s)
+
+
+def _fit(s: str, max_chars: int) -> str:
+    """The longest prefix of `s` that fits, by width."""
+    out = ""
+    for ch in s:
+        if _width(out + ch) > max_chars:
+            break
+        out += ch
+    return out
+
+
+def _hard_break(word: str, max_chars: int) -> list[str]:
+    """Split a run that has no space to break at.
+
+    Japanese, Chinese and Korean prose does not separate words with spaces, so
+    `raw.split(" ")` hands the whole sentence back as one token. Measured 22 Sep
+    2026: a 51-character Japanese quote came back as a single line on a sticky
+    that fits 31 Latin characters — about 3.3× its width, straight over the
+    neighbouring cards — and the ellipsis path could not save it either, because
+    one line is never more than the nine-line budget.
+    """
+    pieces: list[str] = []
+    rest = word
+    while rest and _width(rest) > max_chars:
+        head = _fit(rest, max_chars)
+        if not head:  # a single glyph wider than the sticky — emit it and move on
+            head, rest = rest[0], rest[1:]
+        else:
+            rest = rest[len(head):]
+        pieces.append(head)
+    if rest:
+        pieces.append(rest)
+    return pieces
+
+
 def _wrap(text: str, max_chars: int) -> list[str]:
     lines: list[str] = []
     for raw in text.split("\n"):
@@ -48,13 +99,14 @@ def _wrap(text: str, max_chars: int) -> list[str]:
             continue
         cur = ""
         for w in raw.split(" "):
-            cand = w if not cur else f"{cur} {w}"
-            if len(cand) <= max_chars:
-                cur = cand
-            else:
-                if cur:
-                    lines.append(cur)
-                cur = w
+            for piece in (_hard_break(w, max_chars) if _width(w) > max_chars else [w]):
+                cand = piece if not cur else f"{cur} {piece}"
+                if _width(cand) <= max_chars:
+                    cur = cand
+                else:
+                    if cur:
+                        lines.append(cur)
+                    cur = piece
         lines.append(cur)
     return lines
 
@@ -105,7 +157,7 @@ def _sticky_svg(s: Sticky) -> str:
     budget = max(1, max_lines - 1)
     if len(body_lines) > budget:
         body_lines = body_lines[:budget]
-        body_lines[-1] = body_lines[-1][: max_chars - 1].rstrip() + "…"
+        body_lines[-1] = _fit(body_lines[-1], max_chars - 1).rstrip() + "…"
     ty = s.y + PAD_IN + BODY_FONT
     for line in body_lines:
         parts.append(_text(tx, ty, line, size=BODY_FONT, weight="400", ink=BODY_INK))
@@ -142,11 +194,12 @@ def render_svg(board: Board) -> str:
 """
 
 
-def render_html(board: Board) -> str:
+def render_html(board: Board, locale: str = "en") -> str:
     """Phone/desktop-friendly standalone HTML wrapping the SVG."""
     svg = render_svg(board).split("?>", 1)[-1].strip()
+    hint = escape(t_in(locale, "common.miro.previewHint"))
     return f"""<!DOCTYPE html>
-<html lang="en"><head>
+<html lang="{escape(locale, quote=True)}"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=6, user-scalable=yes">
 <title>{escape(board.title)}</title>
@@ -155,7 +208,7 @@ def render_html(board: Board) -> str:
 background:rgba(255,255,255,.92);border-bottom:1px solid #e4e4e7;z-index:2;}}
 .scroll{{padding-top:34px;overflow:auto;-webkit-overflow-scrolling:touch;}}
 svg{{display:block;width:100%;height:auto;}}</style></head>
-<body><div class="hint">Miro board preview — this is what would be pushed</div>
+<body><div class="hint">{hint}</div>
 <div class="scroll">
 {svg}
 </div></body></html>

@@ -285,7 +285,12 @@
     "boardReady_one": "Quadro pronto — {{count}} autocolante de citação colocado.",
     "boardReady_other": "Quadro pronto — {{count}} autocolantes de citação colocados.",
     "done": "Concluído",
-    "openInMiro": "Abrir no Miro ↗"
+    "openInMiro": "Abrir no Miro ↗",
+    "boardTitle": "{{project}} \u2014 quadro de investiga\u00e7\u00e3o ({{quotes}})",
+    "boardQuoteCount_one": "{{count}} cita\u00e7\u00e3o",
+    "boardQuoteCount_other": "{{count}} cita\u00e7\u00f5es",
+    "clipLink": "clip",
+    "previewHint": "Pr\u00e9-visualiza\u00e7\u00e3o do quadro do Miro \u2014 \u00e9 isto que seria enviado"
   },
   "feedback": {
     "heading": "Como está o Bristlenose a funcionar para si?",

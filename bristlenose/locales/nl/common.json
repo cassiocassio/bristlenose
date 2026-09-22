@@ -285,7 +285,12 @@
     "boardReady_one": "Bord gereed — {{count}} citaatnotitie geplaatst.",
     "boardReady_other": "Bord gereed — {{count}} citaatnotities geplaatst.",
     "done": "Klaar",
-    "openInMiro": "Openen in Miro ↗"
+    "openInMiro": "Openen in Miro ↗",
+    "boardTitle": "{{project}} \u2014 onderzoeksbord ({{quotes}})",
+    "boardQuoteCount_one": "{{count}} citaat",
+    "boardQuoteCount_other": "{{count}} citaten",
+    "clipLink": "clip",
+    "previewHint": "Voorbeeld van het Miro-bord \u2014 dit wordt verstuurd"
   },
   "feedback": {
     "heading": "Hoe bevalt Bristlenose je?",

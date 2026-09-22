@@ -131,7 +131,7 @@ loudly on missing key files, which is what you want for the next steps.
 
 ```
 bristlenose/locales/<code>/
-  common.json          ~423 keys (largest)
+  common.json          ~428 keys (largest)
   desktop.json         ~870 keys (desktop chrome + pipeline messaging)
   settings.json        ~183 keys
   enums.json           ~11 keys

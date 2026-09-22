@@ -285,7 +285,12 @@
     "boardReady_one": "Pano hazır — {{count}} alıntı yapışkanı yerleştirildi.",
     "boardReady_other": "Pano hazır — {{count}} alıntı yapışkanı yerleştirildi.",
     "done": "Tamam",
-    "openInMiro": "Miro'da aç ↗"
+    "openInMiro": "Miro'da aç ↗",
+    "boardTitle": "{{project}} \u2014 ara\u015ft\u0131rma panosu ({{quotes}})",
+    "boardQuoteCount_one": "{{count}} al\u0131nt\u0131",
+    "boardQuoteCount_other": "{{count}} al\u0131nt\u0131",
+    "clipLink": "klip",
+    "previewHint": "Miro panosu \u00f6nizlemesi \u2014 g\u00f6nderilecek olan bu"
   },
   "feedback": {
     "heading": "Bristlenose sizin için nasıl çalışıyor?",

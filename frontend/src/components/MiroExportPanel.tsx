@@ -23,6 +23,7 @@ import {
   postMiroDisconnect,
   postMiroExport,
 } from "../utils/api";
+import { resolveBrowserLang } from "../i18n/LocaleStore";
 import type { MiroExportRequest, MiroStatusResponse } from "../utils/types";
 
 interface MiroExportPanelProps {
@@ -59,7 +60,7 @@ function accountLine(s: MiroStatusResponse): string | null {
 }
 
 export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   useInert(open);
   const [view, setView] = useState<View>("loading");
   const [token, setToken] = useState("");
@@ -129,13 +130,18 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
     return () => document.removeEventListener("keydown", handler, true);
   }, [open, onClose]);
 
+  // Normalise through resolveBrowserLang for the same reason the HTML export
+  // does: `i18n.language` can be a raw region tag (`en-GB`, `zh-TW`) that the
+  // server's SUPPORTED_LOCALES check rejects, silently falling the board back
+  // to English — the exact failure this send exists to end.
   const request = useCallback(
     (): MiroExportRequest => ({
       board_name: boardName.trim() || null,
       colour_by: colourBy,
       clips_base: linkClips ? clipsBase.trim() : "",
+      locale: resolveBrowserLang(i18n.language) ?? "en",
     }),
-    [boardName, colourBy, linkClips, clipsBase],
+    [boardName, colourBy, linkClips, clipsBase, i18n.language],
   );
 
   const handlePasteConnect = useCallback(async () => {

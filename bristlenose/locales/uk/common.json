@@ -328,7 +328,14 @@
     "boardReady_many": "Дошка готова — розміщено {{count}} стікерів із цитатами.",
     "boardReady_other": "Дошка готова — розміщено {{count}} стікерів із цитатами.",
     "done": "Готово",
-    "openInMiro": "Відкрити в Miro ↗"
+    "openInMiro": "Відкрити в Miro ↗",
+    "boardTitle": "{{project}} \u2014 \u0434\u043e\u0448\u043a\u0430 \u0434\u043e\u0441\u043b\u0456\u0434\u0436\u0435\u043d\u043d\u044f ({{quotes}})",
+    "boardQuoteCount_one": "{{count}} \u0446\u0438\u0442\u0430\u0442\u0430",
+    "boardQuoteCount_few": "{{count}} \u0446\u0438\u0442\u0430\u0442\u0438",
+    "boardQuoteCount_many": "{{count}} \u0446\u0438\u0442\u0430\u0442",
+    "boardQuoteCount_other": "{{count}} \u0446\u0438\u0442\u0430\u0442",
+    "clipLink": "\u043a\u043b\u0456\u043f",
+    "previewHint": "\u041f\u043e\u043f\u0435\u0440\u0435\u0434\u043d\u0456\u0439 \u043f\u0435\u0440\u0435\u0433\u043b\u044f\u0434 \u0434\u043e\u0448\u043a\u0438 Miro \u2014 \u043e\u0441\u044c \u0449\u043e \u0431\u0443\u0434\u0435 \u043d\u0430\u0434\u0456\u0441\u043b\u0430\u043d\u043e"
   },
   "feedback": {
     "heading": "Як Bristlenose працює для вас?",

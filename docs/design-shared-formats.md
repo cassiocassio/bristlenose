@@ -12,7 +12,7 @@ trued-against: HEAD@main on 2026-09-12
 
 # Shared formats across Python, TypeScript and Swift
 
-**Status:** live register · established 22 Aug 2026 · trued 12 Sep 2026 against the time audit (`docs/time-defects.md`)
+**Status:** live register · established 22 Aug 2026 · trued 12 Sep 2026 against the time audit (`docs/time-defects.md`) · `plural_category` re-classified 22 Sep 2026 when Python gained a CLDR implementation
 **Machine-readable companion:** [`tests/fixtures/shared-format-contract.json`](../tests/fixtures/shared-format-contract.json)
 **Enforced by:** [`tests/test_shared_format_contract.py`](../tests/test_shared_format_contract.py) · [`frontend/src/utils/sharedFormatContract.test.ts`](../frontend/src/utils/sharedFormatContract.test.ts)
 
@@ -102,11 +102,29 @@ not a new invention, which is most of why it is cheap.
 | `finder_date` | Finder-style relative timestamp | `format_finder_date` | `formatFinderDate` | `SessionsFinderDate.format` | **aligned by pair**, one deliberate fork |
 | `timecode` | position in a recording | `format_timecode` | `formatTimecode` | — | **aligned**, pinned · also parsed |
 | `finder_filename` | middle-ellipsis truncation | `format_finder_filename` | `formatFinderFilename` | — | **aligned**, pinned |
-| `plural_category` | count-dependent noun forms | `count_noun` (inflect) | i18next CLDR | `I18n.pluralCategory` | **deliberately forked** |
+| `plural_category` | count-dependent noun forms | `count_noun` (inflect, CLI) · `plural_category` (CLDR, server) | i18next CLDR | `I18n.pluralCategory` | **aligned by pair**, pinned ([`cldr-plural-contract.json`](../tests/fixtures/cldr-plural-contract.json)) |
 
 Per-entry detail, measured values and the exact case tables live in the JSON
 companion. The table above is a summary and will drift from it; the JSON is the
 source of truth.
+
+**`plural_category` stopped being a three-way fork on 22 Sep 2026.** It was
+listed as *deliberately forked* because each surface had its own mechanism and
+no two needed to agree: `inflect` for English terminal chrome, i18next in the
+browser, `I18n.pluralCategory` for the Mac menus. Then the Miro board — a
+deliverable, rendered server-side, in whatever language the researcher works in
+— needed a CLDR category from **Python**, and the fork acquired a pair that must
+agree. `bristlenose/i18n.py`'s `plural_category` was transcribed from the Swift
+rule, which is precisely the kind of copy that is correct wherever you check it,
+so neither side owns the answer: both assert
+[`tests/fixtures/cldr-plural-contract.json`](../tests/fixtures/cldr-plural-contract.json),
+whose counts are the *exception boundaries* — the teens, and the mod-10 carries
+where pl says `many` and ru/uk say `one` at 21. A range of 1–10 passes against a
+rule that is wrong everywhere it matters.
+
+`count_noun` is untouched and stays the English answer for the terminal, which
+is English by decision (root `CLAUDE.md` § CLI plurals). The stem rule holds:
+one stem, house casing per language — `plural_category` / `pluralCategory`.
 
 ### Status vocabulary
 

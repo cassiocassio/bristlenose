@@ -328,7 +328,14 @@
     "boardReady_many": "Tablica gotowa — umieszczono {{count}} karteczek z cytatami.",
     "boardReady_other": "Tablica gotowa — umieszczono {{count}} karteczek z cytatami.",
     "done": "Gotowe",
-    "openInMiro": "Otwórz w Miro ↗"
+    "openInMiro": "Otwórz w Miro ↗",
+    "boardTitle": "{{project}} \u2014 tablica badawcza ({{quotes}})",
+    "boardQuoteCount_one": "{{count}} cytat",
+    "boardQuoteCount_few": "{{count}} cytaty",
+    "boardQuoteCount_many": "{{count}} cytat\u00f3w",
+    "boardQuoteCount_other": "{{count}} cytat\u00f3w",
+    "clipLink": "klip",
+    "previewHint": "Podgl\u0105d tablicy Miro \u2014 to zosta\u0142oby wys\u0142ane"
   },
   "feedback": {
     "heading": "Jak sprawdza się Bristlenose?",

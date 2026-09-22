@@ -431,6 +431,54 @@ Nothing to "remember" beyond, optionally, the last-used base as a convenience.
 2. **Attribution hierarchy:** accept italic-only (v0), or spend a second text
    item per quote for true smaller/greyer attribution? Decide from tester feel.
 3. **Tier 3 layout strategy:** grid-by-column (v0) vs density/force-directed.
+4. **Can a researcher override the board's language?** The board follows the
+   caller's UI locale as of 22 Sep 2026 (below). The HTML export does not — it
+   has an explicit per-deliverable picker (`docs/design-export-locale.md`),
+   because the recipient's language and the researcher's often differ. The same
+   argument applies to a board shared with a client, and a picker would be four
+   lines in `MiroExportPanel`; it is unbuilt because nobody has asked for it and
+   because it belongs with the larger unsettled question of what language
+   *generated* section and theme names should land in.
+
+---
+
+## The board's language (22 Sep 2026)
+
+A Miro board is a deliverable, which puts it on the localised side of the
+surface table (`docs/design-i18n.md` §"Which surfaces are targets"). It was on
+the English side entirely: `Sections`, `Themes`, the `Other` fallback column,
+`▶ clip`, the preview page's `<html lang="en">` and its hint, and a board title
+whose count was hand-rolled — so a one-quote board was titled **"1 quotes"**,
+wrong in English before any of this was about translation.
+
+**Where the language lives now.** `server/miro_export.py` owns it: the SPA panel
+and the Mac sheet each send their UI locale, the module resolves the board's
+words, and everything below is handed the result — `miro_board.py` takes a
+`BoardStrings` (defaults English, so an un-updated caller is unchanged) and
+never resolves a key, and `miro_render_svg.render_html` takes a locale for the
+one string it owns. That keeps the layout engine target-agnostic, which was
+already its stated job.
+
+**Nothing was translated to do it.** The per-column counts are a verbatim lift
+of `desktop.connectAgent.quotes_*` — identical shape, already reviewed, all four
+Slavic forms present — under their own key, so that a reword for the
+agent-access surface cannot silently change a board a researcher has already
+sent. The frame titles are the lenses' own `common.quotes.sections` /
+`.themes`, so the board cannot disagree with the report it was built from.
+`boardTitle` is the only composed string, and it composes each locale's own
+research word (`common.header.researchReport`) with its own board noun.
+
+**What had to exist first**, all three recorded in the root `CLAUDE.md`:
+`t_in(locale, …)`, because `set_locale` is process-wide and a server is not;
+CLDR plural selection in Python, because `2 cytaty` / `5 cytatów` is a rule a
+format string cannot reach; and `_interpolate`, because the locale files carry
+two placeholder conventions and `format_map` renders the i18next one as literal
+braces.
+
+**Gated by** `tests/test_miro_board_locale.py` — eight mutation-proved
+assertions, including one that reads the expected values out of the locale JSON
+rather than through the resolver under test, and one that names the English
+literals so the next one cannot creep back in unseen.
 
 ---
 
@@ -446,7 +494,9 @@ Nothing to "remember" beyond, optionally, the last-used base as a convenience.
 8. > 200 quotes — rate-limit backoff, no 429 surfaced.
 9. Cancel mid-export — job stops, partial board left.
 10. Consent UI — quote count + destination shown before upload.
-11. `pytest tests/` + `ruff check .`.
+11. Switch the UI to Spanish, export: frames read *Secciones* / *Temas*,
+    headers *3 citas*, title *… — tablero de investigación (3 citas)*.
+12. `pytest tests/` + `ruff check .`.
 
 ---
 

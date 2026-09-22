@@ -285,7 +285,12 @@
     "boardReady_one": "Bacheca pronta — {{count}} adesivo con citazione inserito.",
     "boardReady_other": "Bacheca pronta — {{count}} adesivi con citazioni inseriti.",
     "done": "Fine",
-    "openInMiro": "Apri in Miro ↗"
+    "openInMiro": "Apri in Miro ↗",
+    "boardTitle": "{{project}} \u2014 bacheca di ricerca ({{quotes}})",
+    "boardQuoteCount_one": "{{count}} citazione",
+    "boardQuoteCount_other": "{{count}} citazioni",
+    "clipLink": "clip",
+    "previewHint": "Anteprima della bacheca Miro \u2014 questo \u00e8 ci\u00f2 che verrebbe inviato"
   },
   "feedback": {
     "heading": "Come ti trovi con Bristlenose?",

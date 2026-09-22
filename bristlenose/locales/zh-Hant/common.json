@@ -265,7 +265,11 @@
     "creatingBoard": "正在建立看板…",
     "boardReady_other": "看板已就緒——已放置 {{count}} 則引述便利貼。",
     "done": "完成",
-    "openInMiro": "在 Miro 中開啟 ↗"
+    "openInMiro": "在 Miro 中開啟 ↗",
+    "boardTitle": "{{project}}\u2014\u2014\u7814\u7a76\u770b\u677f\uff08{{quotes}}\uff09",
+    "boardQuoteCount_other": "{{count}} \u5247\u5f15\u8ff0",
+    "clipLink": "\u7247\u6bb5",
+    "previewHint": "Miro \u770b\u677f\u9810\u89bd\u2014\u2014\u9019\u5c31\u662f\u5c07\u50b3\u9001\u7684\u5167\u5bb9"
   },
   "feedback": {
     "heading": "Bristlenose 用起來如何？",

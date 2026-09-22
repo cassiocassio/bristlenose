@@ -218,11 +218,23 @@ struct BookShelfView: View {
         var image: String? = nil
     }
 
-    /// The cover asset for the reader's locale, falling back to the English
-    /// edition's when no local edition ships.
+    /// The cover asset for the reader's locale, falling back the way the
+    /// strings do: exact locale, then its parent, then the English edition.
+    ///
+    /// The parent step is load-bearing rather than tidy. `zh-Hant-HK` is a thin
+    /// override fork that carries only genuine HK-idiom differences, so it
+    /// inherits `bookTitleNorman` from `zh-Hant` — the Traditional Chinese
+    /// title. An exact-match-only lookup would then pair that title with the
+    /// ENGLISH cover, and §7's rule is that title and artwork move together or
+    /// not at all.
     private func cover(_ b: Book) -> NSImage? {
         guard let base = b.image else { return nil }
-        return NSImage(named: "\(base)-\(i18n.locale)") ?? NSImage(named: base)
+        var candidates = ["\(base)-\(i18n.locale)"]
+        if let cut = i18n.locale.lastIndex(of: "-") {
+            candidates.append("\(base)-\(i18n.locale[..<cut])")
+        }
+        candidates.append(base)
+        return candidates.lazy.compactMap { NSImage(named: $0) }.first
     }
     // Hat-tip, not feature pitch — the themes / signals / sentiment cells show the
     // features; this shelf credits the thinking they stand on. Each line names the

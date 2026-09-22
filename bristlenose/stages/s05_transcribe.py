@@ -326,6 +326,22 @@ def _init_mlx_backend(
             compression_ratio_threshold=1.8,
         )
 
+        # What the model decided the audio was. mlx computes the full
+        # probability distribution internally (`model.detect_language` →
+        # `probs`) and keeps only the argmax, so unlike faster-whisper there is
+        # no confidence to report — the label is the whole signal we get.
+        #
+        # And mlx detects on `pad_or_trim(mel, N_FRAMES)`, the RAW first window:
+        # no VAD. faster-whisper strips silence first (`get_speech_timestamps`
+        # → `collect_chunks` → features → `detect_language`), so its 30s is 30s
+        # of speech while this one is 30s of file — mic checks, "can you hear
+        # me", dead air. Since mlx is the Apple Silicon default, the desktop is
+        # the weaker of the two paths here. Don't assume the backends agree.
+        logger.info(
+            "Audio: language=%s (mlx: no confidence reported)",
+            result.get("language"),
+        )
+
         segments: list[TranscriptSegment] = []
         for seg in result.get("segments", []):
             words: list[Word] = []

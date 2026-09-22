@@ -9,6 +9,7 @@
  */
 
 import { useState, useCallback, useRef, useMemo, useReducer, useLayoutEffect, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Counter, EditableText } from "../components";
 import type { TagVocabularyGroup } from "../components";
 import type { CounterItem } from "../components/Counter";
@@ -159,8 +160,8 @@ interface QuoteGroupProps {
   isNew?: boolean;
   /** Server token of the latest new-material import (for badge dismissal). */
   newSince?: string | null;
-  /** Heading edit key prefix ("section" or "theme"). */
-  itemType: string;
+  /** Heading edit key prefix. Narrow: the aria-label keys are looked up per case. */
+  itemType: "section" | "theme";
   /** Visible (filtered) quotes in this group. */
   quotes: QuoteResponse[];
   /** All quotes in this group (including hidden) — for the hidden counter. */
@@ -201,6 +202,7 @@ export function QuoteGroup({
   hasModerator,
   searchQuery,
 }: QuoteGroupProps) {
+  const { t } = useTranslation();
   // ── Shared quote state ─────────────────────────────────────────────────
 
   const store = useQuotesStore();
@@ -874,7 +876,11 @@ export function QuoteGroup({
           {!isExportMode() && (
             <button
               className="edit-pencil edit-pencil-inline"
-              aria-label={`Edit ${itemType} title`}
+              aria-label={
+                itemType === "section"
+                  ? t("quotes.editSectionTitle")
+                  : t("quotes.editThemeTitle")
+              }
               onClick={() => setIsEditingHeading(!isEditingHeading)}
             >
               <PencilIcon />
@@ -910,7 +916,11 @@ export function QuoteGroup({
           {!isExportMode() && (
             <button
               className="edit-pencil edit-pencil-inline"
-              aria-label={`Edit ${itemType} description`}
+              aria-label={
+                itemType === "section"
+                  ? t("quotes.editSectionDescription")
+                  : t("quotes.editThemeDescription")
+              }
               onClick={() => setIsEditingDesc(!isEditingDesc)}
             >
               <PencilIcon />

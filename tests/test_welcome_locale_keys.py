@@ -287,19 +287,6 @@ _DELIBERATELY_ENGLISH_VALUES = {
                        "to whichever codebook produced them, and a translated "
                        "one advertises output we do not produce.",
     "platform convention": "GENERATED — ditto.",
-    # The four shelf titles. Author names never change; a title takes its local
-    # edition's wording ONLY where that edition exists, and title and artwork
-    # move together (design-welcome-illustrations-i18n.md §7), so these cannot
-    # change until the covers can. Measured 22 Sep 2026 across ten Amazon
-    # markets: Norman has six editions (de/es/fr/it/ja/pt-BR — and the German
-    # one keeps this English title, adding a German subtitle), Braun & Clarke
-    # one (pl), Nielsen and Lazarus none.
-    "The Design of Everyday Things": "FRAMEWORK — six local editions exist; "
-                                     "blocked on cover artwork, not on wording.",
-    "Usability Engineering": "FRAMEWORK — no translated edition found in any "
-                             "market, so English is correct, not pending.",
-    "Thematic Analysis": "FRAMEWORK — one local edition (pl); blocked on artwork.",
-    "Emotion & Adaptation": "FRAMEWORK — no translated edition found.",
     "How to begin unclear": "GENERATED — a pipeline theme title. The language "
                             "the pipeline generates in is undefined "
                             "(docs/design-i18n.md §'what language sections and "

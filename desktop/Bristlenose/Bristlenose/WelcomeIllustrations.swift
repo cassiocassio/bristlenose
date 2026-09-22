@@ -193,30 +193,52 @@ struct BookShelfView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var front = 0
 
-    // `line` is a KEY under `desktop.welcome.home.books.`; author and title are
-    // proper names and stay as printed. Whether a cover should show the local
-    // edition's title is a second-pass question — see design-welcome-screen.md
-    // §Copy & i18n and the illustration inventory it points at.
+    // `line` and `titleKey` are KEYS; the author is a proper name and never
+    // changes in any language.
+    //
+    // **A cover shows the local edition's title only where that edition
+    // exists** (`design-welcome-illustrations-i18n.md` §7). Measured 22 Sep 2026
+    // across ten Amazon markets: Norman has six editions (de, es, fr, it, ja,
+    // pt-BR), Braun & Clarke one (pl), Nielsen and Lazarus none — so most
+    // locales' value for `titleKey` is the English title, and that is correct
+    // rather than untranslated. A translated title for a book with no
+    // translation is a false claim the reader can act on: they go looking for
+    // it and find nothing.
+    //
+    // German is the case that proves the per-book-per-language shape was right:
+    // Vahlen keeps the ENGLISH main title and adds a German subtitle, so `de`
+    // shows the same words as `en` and changes only its artwork.
+    //
+    // Title and artwork move together — the cover is an image of a specific
+    // edition with its title drawn into the design, so a translated title over
+    // English artwork is incoherent. `cover(_:)` resolves them as a pair.
     private struct Book {
-        let author, title, line, href: String
+        let author, titleKey, line, href: String
         let spine: UInt
         var image: String? = nil
+    }
+
+    /// The cover asset for the reader's locale, falling back to the English
+    /// edition's when no local edition ships.
+    private func cover(_ b: Book) -> NSImage? {
+        guard let base = b.image else { return nil }
+        return NSImage(named: "\(base)-\(i18n.locale)") ?? NSImage(named: base)
     }
     // Hat-tip, not feature pitch — the themes / signals / sentiment cells show the
     // features; this shelf credits the thinking they stand on. Each line names the
     // contribution. (Links point at our docs today; a future affiliate link to the
     // book itself is the clickable-cover idea from the author outreach.)
     private let books: [Book] = [
-        .init(author: "Don Norman", title: "The Design of Everyday Things",
+        .init(author: "Don Norman", titleKey: "desktop.welcome.examples.bookTitleNorman",
               line: "norman",
               href: "https://bristlenose.app/docs/codebook-frameworks.html", spine: 0x334155, image: "welcome-book-norman"),
-        .init(author: "Jakob Nielsen", title: "Usability Engineering",
+        .init(author: "Jakob Nielsen", titleKey: "desktop.welcome.examples.bookTitleNielsen",
               line: "nielsen",
               href: "https://bristlenose.app/docs/codebook-frameworks.html", spine: 0x0f5c9e, image: "welcome-book-nielsen"),
-        .init(author: "Braun & Clarke", title: "Thematic Analysis",
+        .init(author: "Braun & Clarke", titleKey: "desktop.welcome.examples.bookTitleBraunClarke",
               line: "braunClarke",
               href: "https://bristlenose.app/docs/research-foundations.html", spine: 0x7c3aed, image: "welcome-book-braun-clarke"),
-        .init(author: "Richard Lazarus", title: "Emotion & Adaptation",
+        .init(author: "Richard Lazarus", titleKey: "desktop.welcome.examples.bookTitleLazarus",
               line: "lazarus",
               href: "https://bristlenose.app/docs/signals.html", spine: 0xb45309, image: "welcome-book-lazarus"),
     ]
@@ -330,7 +352,7 @@ struct BookShelfView: View {
 
     @ViewBuilder private func bookCard(_ b: Book) -> some View {
         Group {
-            if let name = b.image, let ns = NSImage(named: name) {   // real cover when the asset lands
+            if let ns = cover(b) {   // the local edition's cover, or the English one
                 Image(nsImage: ns)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
@@ -345,7 +367,7 @@ struct BookShelfView: View {
 
     private func placeholderCard(_ b: Book) -> some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(b.title).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(.white)
+            Text(i18n.t(b.titleKey)).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(.white)
             Spacer(minLength: 0)
             Text(b.author).font(.system(size: 10.5)).foregroundStyle(.white.opacity(0.82))
         }

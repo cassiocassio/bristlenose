@@ -411,6 +411,10 @@
   },
   "welcome": {
     "examples": {
+      "bookTitleNorman": "The Design of Everyday Things",
+      "bookTitleNielsen": "Usability Engineering",
+      "bookTitleBraunClarke": "Thematic Analysis",
+      "bookTitleLazarus": "Emotion & Adaptation",
       "ingestVideoName": "kullanilabilirlik-testi-03",
       "ingestAudioName": "gorusme-elifle",
       "ingestMeetingName": "Tanisma toplantisi",

@@ -411,6 +411,10 @@
   },
   "welcome": {
     "examples": {
+      "bookTitleNorman": "La caffettiera del masochista",
+      "bookTitleNielsen": "Usability Engineering",
+      "bookTitleBraunClarke": "Thematic Analysis",
+      "bookTitleLazarus": "Emotion & Adaptation",
       "ingestVideoName": "test-usabilita-03",
       "ingestAudioName": "intervista-con-giulia",
       "ingestMeetingName": "Primo incontro",

@@ -411,6 +411,10 @@
   },
   "welcome": {
     "examples": {
+      "bookTitleNorman": "O design do dia a dia",
+      "bookTitleNielsen": "Usability Engineering",
+      "bookTitleBraunClarke": "Thematic Analysis",
+      "bookTitleLazarus": "Emotion & Adaptation",
       "ingestVideoName": "teste-usabilidade-03",
       "ingestAudioName": "entrevista-com-beatriz",
       "ingestMeetingName": "Call de descoberta",

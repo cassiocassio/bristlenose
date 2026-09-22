@@ -411,6 +411,10 @@
   },
   "welcome": {
     "examples": {
+      "bookTitleNorman": "Le design des objets du quotidien",
+      "bookTitleNielsen": "Usability Engineering",
+      "bookTitleBraunClarke": "Thematic Analysis",
+      "bookTitleLazarus": "Emotion & Adaptation",
       "ingestVideoName": "test-utilisabilite-03",
       "ingestAudioName": "entretien-avec-chloe",
       "ingestMeetingName": "Appel de cadrage",

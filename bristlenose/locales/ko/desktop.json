@@ -393,6 +393,10 @@
   },
   "welcome": {
     "examples": {
+      "bookTitleNorman": "The Design of Everyday Things",
+      "bookTitleNielsen": "Usability Engineering",
+      "bookTitleBraunClarke": "Thematic Analysis",
+      "bookTitleLazarus": "Emotion & Adaptation",
       "ingestVideoName": "usability-test-03",
       "ingestAudioName": "interview-with-jiwon",
       "ingestMeetingName": "\ud0a5\uc624\ud504 \ud1b5\ud654",

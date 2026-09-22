@@ -452,6 +452,10 @@
   },
   "welcome": {
     "examples": {
+      "bookTitleNorman": "\u8ab0\u306e\u305f\u3081\u306e\u30c7\u30b6\u30a4\u30f3\uff1f",
+      "bookTitleNielsen": "Usability Engineering",
+      "bookTitleBraunClarke": "Thematic Analysis",
+      "bookTitleLazarus": "Emotion & Adaptation",
       "ingestVideoName": "usability-test-03",
       "ingestAudioName": "interview-with-yuki",
       "ingestMeetingName": "\u30ad\u30c3\u30af\u30aa\u30d5\u901a\u8a71",

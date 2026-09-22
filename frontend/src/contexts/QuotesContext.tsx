@@ -269,6 +269,36 @@ export function toggleStar(domId: string, newState: boolean): void {
   announce(i18n.t(newState ? "announce.starred" : "announce.unstarred"));
 }
 
+/**
+ * Star or unstar one or more quotes as a single gesture.
+ *
+ * One state write and one PUT however many quotes are passed. `toggleStar`
+ * per quote cost a full-map PUT each, fire-and-forget, so a bulk star of n
+ * quotes sent n racing replacements of the same map.
+ *
+ * Direction is the caller's, but every caller should take it from
+ * `starActionIsUnstar` — see the note there.
+ */
+export function setStarred(domIds: string[], newState: boolean): void {
+  // Read-only in an exported report — mutations have no server to persist to,
+  // and a control that responds then silently discards on reload is a lie.
+  if (isExportMode()) return;
+
+  const targets = domIds.filter((id) => !!state.starred[id] !== newState);
+  if (targets.length === 0) return;
+
+  setState((prev) => {
+    const starred = { ...prev.starred };
+    for (const id of targets) {
+      if (newState) starred[id] = true;
+      else delete starred[id];
+    }
+    putStarred(starred);
+    return { ...prev, starred };
+  });
+  announce(i18n.t(newState ? "announce.starred" : "announce.unstarred"));
+}
+
 export function toggleHide(domId: string, newState: boolean): void {
   // Read-only in an exported report — mutations have no server to persist to,
   // and a control that responds then silently discards on reload is a lie.
@@ -545,6 +575,25 @@ export function useLastTagName(): string | null {
  * the selection, or the focused quote when nothing is selected (selection wins,
  * matching the click/`s`-key intent). Pure so the native menu's Star⇄Unstar
  * label derivation is unit-testable independent of the shell.
+ */
+/**
+ * THE direction rule for the star action, for every surface.
+ *
+ * The action targets the selection, or the focused quote when nothing is
+ * selected, and it *unstars* only when that whole target set is already
+ * starred. Mixed selection therefore stars, which is the macOS idiom (Mail's
+ * Mark as Read on a mixed selection marks all read).
+ *
+ * It is also what the native Quotes menu reads: AppLayout pushes this value
+ * over the bridge and `MenuCommands.swift` labels the item Star or Unstar
+ * from it. So any caller deciding direction some other way makes the menu
+ * label a lie about what its own command does.
+ *
+ * Until 22 Sep 2026 two callers did exactly that. The `s` key followed the
+ * FOCUSED quote's state when the focus sat inside the selection, and a click
+ * followed the CLICKED card's state — so selecting one starred and one
+ * unstarred quote with focus on the starred one showed a menu saying "Star"
+ * while `s` unstarred both. Three rules, one of them on a label.
  */
 export function starActionIsUnstar(
   selectedIds: Set<string>,

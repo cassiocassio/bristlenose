@@ -39,6 +39,8 @@ import {
   denyProposedTag,
   hideQuotes,
   HIDE_DURATION,
+  setStarred,
+  starActionIsUnstar,
 } from "../contexts/QuotesContext";
 import { useSidebarStore, toggleTagGroupHidden } from "../contexts/SidebarStore";
 
@@ -331,13 +333,16 @@ export function QuoteGroup({
   const handleToggleStar = useCallback(
     (domId: string, newState: boolean) => {
       if (selectedIds.size > 0 && selectedIds.has(domId)) {
-        // Bulk star — clicked quote's toggle intent is the direction.
-        // Click unstarred star → star all; click starred star → unstar all.
-        for (const id of selectedIds) {
-          const isStarred = !!store.starred[id];
-          if (newState && !isStarred) toggleStar(id, true);
-          else if (!newState && isStarred) toggleStar(id, false);
-        }
+        // Bulk star — one store call, and the direction comes from the shared
+        // rule rather than from `newState`. Which card you clicked used to
+        // decide it, so clicking a starred card in a mixed selection unstarred
+        // everything while the native menu's label said "Star".
+        //
+        // `starActionIsUnstar` ignores the focused id whenever the selection
+        // is non-empty, which it is inside this branch, so null is correct
+        // here rather than merely convenient.
+        const willStar = !starActionIsUnstar(selectedIds, null, store.starred);
+        setStarred(Array.from(selectedIds), willStar);
       } else {
         toggleStar(domId, newState);
       }
@@ -421,7 +426,7 @@ export function QuoteGroup({
         setUnhideVersion((v) => v + 1);
       }
     },
-    [selectedIds, store.hidden, clearSelection],
+    [selectedIds, clearSelection],
   );
 
   // Register hide handlers for keyboard shortcut (h) — so the animated

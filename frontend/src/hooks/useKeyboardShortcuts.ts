@@ -19,12 +19,13 @@ import { isExportMode } from "../utils/exportData";
 import { usePlayer } from "../contexts/PlayerContext";
 import {
   useQuotesStore,
-  toggleStar,
   setSearchQuery,
   setTagFilter,
   addTag,
   getLastUsedTag,
   hideQuotes,
+  setStarred,
+  starActionIsUnstar,
 } from "../contexts/QuotesContext";
 import {
   useSidebarStore,
@@ -154,23 +155,13 @@ export function useKeyboardShortcuts({
     const selected = selectedIdsRef.current;
     const s = storeRef.current;
 
-    if (selected.size > 0) {
-      // Bulk star — direction follows focused quote's state
-      let willStar: boolean;
-      if (focused && selected.has(focused)) {
-        willStar = !s.starred[focused];
-      } else {
-        // Fallback: if any unstarred, star all
-        willStar = Array.from(selected).some((id) => !s.starred[id]);
-      }
-      for (const id of selected) {
-        const isStarred = !!s.starred[id];
-        if (willStar && !isStarred) toggleStar(id, true);
-        else if (!willStar && isStarred) toggleStar(id, false);
-      }
-    } else if (focused) {
-      toggleStar(focused, !s.starred[focused]);
-    }
+    // One rule for every surface, and the one the native menu's Star/Unstar
+    // label already reads. This used to follow the focused quote's state when
+    // the focus sat inside the selection, which disagreed with both the label
+    // and the click path on a mixed selection.
+    const targets = selected.size > 0 ? Array.from(selected) : focused ? [focused] : [];
+    if (targets.length === 0) return;
+    setStarred(targets, !starActionIsUnstar(selected, focused, s.starred));
   }, []);
 
   // ── Hide action ─────────────────────────────────────────────────────

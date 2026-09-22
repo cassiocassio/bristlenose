@@ -1,5 +1,5 @@
 /**
- * Bulk hide: the work a gesture does must be proportional to the selection.
+ * Bulk quote actions: hide and star over a selection.
  *
  * `h` on a selection is handled in two places that do not know about each
  * other. `handleHide` (hooks/useKeyboardShortcuts.ts) loops the selection and
@@ -33,12 +33,13 @@ import {
   resetStore,
   initFromQuotes,
   getQuotesSnapshot,
+  starActionIsUnstar,
 } from "../contexts/QuotesContext";
 import { resetSidebarStore } from "../contexts/SidebarStore";
 import { resetInspectorStore } from "../contexts/InspectorStore";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { QuoteGroup } from "./QuoteGroup";
-import { putHidden } from "../utils/api";
+import { putHidden, putStarred } from "../utils/api";
 import type { QuoteResponse } from "../utils/types";
 
 vi.mock("../utils/api", () => ({
@@ -154,6 +155,7 @@ describe("bulk hide cost", () => {
     realScrollIntoView = Element.prototype.scrollIntoView;
     Element.prototype.scrollIntoView = function () {};
     vi.mocked(putHidden).mockClear();
+    vi.mocked(putStarred).mockClear();
     vi.useFakeTimers();
   });
 
@@ -263,6 +265,177 @@ describe("bulk hide cost", () => {
 
     expect(vi.mocked(putHidden).mock.calls.length).toBe(1);
     expect(Object.keys(getQuotesSnapshot().hidden)).toEqual(["q-p1-1"]);
+
+    unmount();
+  });
+});
+
+describe("bulk star direction", () => {
+  // Three surfaces used to decide this differently, and one of them is a
+  // LABEL: AppLayout pushes `starActionIsUnstar` over the bridge and the
+  // native Quotes menu renders "Star" or "Unstar" from it. The `s` key
+  // followed the focused quote's state, a click followed the clicked card's,
+  // so a mixed selection could show "Star" and unstar. These pin the action
+  // against the label rather than against either implementation.
+
+  let realScrollIntoView: typeof Element.prototype.scrollIntoView;
+
+  beforeEach(() => {
+    resetStore();
+    resetSidebarStore();
+    resetInspectorStore();
+    document.body.innerHTML = "";
+    realScrollIntoView = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function () {};
+    vi.mocked(putStarred).mockClear();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    Element.prototype.scrollIntoView = realScrollIntoView;
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  /** Select every quote, focus the first, and return what the menu would say.
+   *
+   *  Takes the GETTER, not a context object. `useFocus()`'s value is a render
+   *  snapshot, so a context captured before the selection still carries an
+   *  empty `selectedIds` afterwards — which made the label read as "Unstar"
+   *  off the focused quote alone and failed this test for the wrong reason. */
+  function selectAllAndRead(getCtx: () => ReturnType<typeof useFocus>, ids: string[]) {
+    act(() => {
+      getCtx().registerVisibleQuoteIds("sections", ids);
+      for (const id of ids) getCtx().toggleSelection(id);
+      getCtx().setFocus(ids[0]);
+    });
+    return starActionIsUnstar(
+      getCtx().selectedIds,
+      ids[0],
+      getQuotesSnapshot().starred,
+    );
+  }
+
+  it("stars a mixed selection, which is what the menu label promises", () => {
+    // The divergence case. Focus sits on the STARRED quote, so the old key
+    // path read its state and unstarred both — while the label said "Star".
+    const quotes = [
+      makeQuote({ dom_id: "q-1", is_starred: true }),
+      makeQuote({ dom_id: "q-2", is_starred: false }),
+    ];
+    const ids = quotes.map((q) => q.dom_id);
+    initFromQuotes(quotes, true);
+
+    const { getCtx, unmount } = renderGroup(quotes);
+    const labelSaysUnstar = selectAllAndRead(getCtx, ids);
+    expect(labelSaysUnstar, "menu should offer Star for a mixed selection").toBe(false);
+
+    act(() => {
+      pressKey("s");
+    });
+
+    // The label said Star, so both must end starred.
+    expect(getQuotesSnapshot().starred).toEqual({ "q-1": true, "q-2": true });
+    expect(vi.mocked(putStarred).mock.calls.length).toBe(1);
+
+    unmount();
+  });
+
+  it("unstars only when the whole selection is already starred", () => {
+    const quotes = [
+      makeQuote({ dom_id: "q-1", is_starred: true }),
+      makeQuote({ dom_id: "q-2", is_starred: true }),
+    ];
+    const ids = quotes.map((q) => q.dom_id);
+    initFromQuotes(quotes, true);
+
+    const { getCtx, unmount } = renderGroup(quotes);
+    const labelSaysUnstar = selectAllAndRead(getCtx, ids);
+    expect(labelSaysUnstar, "menu should offer Unstar when all are starred").toBe(true);
+
+    act(() => {
+      pressKey("s");
+    });
+
+    expect(getQuotesSnapshot().starred).toEqual({});
+    expect(vi.mocked(putStarred).mock.calls.length).toBe(1);
+
+    unmount();
+  });
+
+  it("writes once for a large selection", () => {
+    const quotes = Array.from({ length: 6 }, (_, i) =>
+      makeQuote({ dom_id: `q-${i}` }),
+    );
+    const ids = quotes.map((q) => q.dom_id);
+    initFromQuotes(quotes, true);
+
+    const { getCtx, unmount } = renderGroup(quotes);
+    selectAllAndRead(getCtx, ids);
+
+    act(() => {
+      pressKey("s");
+    });
+
+    expect(Object.keys(getQuotesSnapshot().starred).sort()).toEqual([...ids].sort());
+    expect(vi.mocked(putStarred).mock.calls.length).toBe(1);
+
+    unmount();
+  });
+
+  it("ignores which card you clicked when the selection is mixed", () => {
+    // Clicking the star on an ALREADY-STARRED card in a mixed selection used
+    // to unstar everything, because the clicked card's own toggle intent was
+    // the direction. The menu label said "Star" at the same moment. Nothing
+    // covered this path: reverting it reddened none of the other 1807 tests.
+    const quotes = [
+      makeQuote({ dom_id: "q-1", is_starred: true }),
+      makeQuote({ dom_id: "q-2", is_starred: false }),
+    ];
+    const ids = quotes.map((q) => q.dom_id);
+    initFromQuotes(quotes, true);
+
+    const { getCtx, unmount } = renderGroup(quotes);
+    act(() => {
+      getCtx().registerVisibleQuoteIds("sections", ids);
+      for (const id of ids) getCtx().toggleSelection(id);
+    });
+
+    const starBtn = document
+      .getElementById("q-1")
+      ?.querySelector<HTMLElement>(".star-btn");
+    expect(starBtn, "the starred card should expose a star control").not.toBeNull();
+
+    act(() => {
+      starBtn!.click();
+    });
+
+    // Direction comes from the set, not the card: both end starred.
+    expect(getQuotesSnapshot().starred).toEqual({ "q-1": true, "q-2": true });
+    expect(vi.mocked(putStarred).mock.calls.length).toBe(1);
+
+    unmount();
+  });
+
+  it("still toggles a single focused quote with nothing selected", () => {
+    const quotes = [makeQuote({ dom_id: "q-1" }), makeQuote({ dom_id: "q-2" })];
+    initFromQuotes(quotes, true);
+
+    const { getCtx, unmount } = renderGroup(quotes);
+    act(() => {
+      getCtx().registerVisibleQuoteIds("sections", ["q-1", "q-2"]);
+      getCtx().setFocus("q-1");
+    });
+
+    act(() => {
+      pressKey("s");
+    });
+    expect(getQuotesSnapshot().starred).toEqual({ "q-1": true });
+
+    act(() => {
+      pressKey("s");
+    });
+    expect(getQuotesSnapshot().starred).toEqual({});
 
     unmount();
   });

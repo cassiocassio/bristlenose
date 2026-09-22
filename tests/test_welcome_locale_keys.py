@@ -279,6 +279,27 @@ _AWAITING_CONTENT: set[str] = set()
 #: and still pass English through it, which is how `emergentThemes` shipped ten
 #: hardcoded literals while the classification gate called it done.
 _DELIBERATELY_ENGLISH_VALUES = {
+    "Onboarding": "GENERATED — a pipeline section name on the signal card.",
+    "Search results": "GENERATED — ditto.",
+    "Checkout": "GENERATED — ditto.",
+    "Settings": "GENERATED — ditto.",
+    "visible options": "GENERATED — an AutoCode-proposed code. The codes belong "
+                       "to whichever codebook produced them, and a translated "
+                       "one advertises output we do not produce.",
+    "platform convention": "GENERATED — ditto.",
+    # The four shelf titles. Author names never change; a title takes its local
+    # edition's wording ONLY where that edition exists, and title and artwork
+    # move together (design-welcome-illustrations-i18n.md §7), so these cannot
+    # change until the covers can. Measured 22 Sep 2026 across ten Amazon
+    # markets: Norman has six editions (de/es/fr/it/ja/pt-BR — and the German
+    # one keeps this English title, adding a German subtitle), Braun & Clarke
+    # one (pl), Nielsen and Lazarus none.
+    "The Design of Everyday Things": "FRAMEWORK — six local editions exist; "
+                                     "blocked on cover artwork, not on wording.",
+    "Usability Engineering": "FRAMEWORK — no translated edition found in any "
+                             "market, so English is correct, not pending.",
+    "Thematic Analysis": "FRAMEWORK — one local edition (pl); blocked on artwork.",
+    "Emotion & Adaptation": "FRAMEWORK — no translated edition found.",
     "How to begin unclear": "GENERATED — a pipeline theme title. The language "
                             "the pipeline generates in is undefined "
                             "(docs/design-i18n.md §'what language sections and "
@@ -498,3 +519,36 @@ def test_native_illustration_sample_data_is_keyed() -> None:
             f"{struct} resolves a key inside a `static let`. That runs once, "
             "before any environment exists, and freezes the language."
         )
+
+
+#: JS object fields inside a builder's HTML that carry *content* rather than
+#: structure. A literal in one of these is a word the researcher reads.
+_CONTENT_FIELDS = ("q", "code", "loc", "tag", "title", "subtitle", "name")
+
+
+def test_builder_content_fields_are_keyed_or_registered() -> None:
+    """Content baked into a builder's HTML, which the table gate cannot see.
+
+    `test_strings_tables_resolve_through_i18n` inspects the `strings` table a
+    *view* hands down. It is blind to a literal written straight into the
+    builder's JS — and that is where six of them were hiding when this file's
+    other two gates were both green: four section names on the signal card and
+    two AutoCode codes. Found by reading the file rather than by any gate,
+    22 Sep 2026, which is the reason this one exists.
+    """
+    body = (REPO / "desktop/Bristlenose/Bristlenose/WelcomeIllustrations.swift").read_text(
+        encoding="utf-8"
+    )
+    pattern = re.compile(r'\b(' + "|".join(_CONTENT_FIELDS) + r')\s*:\s*"([^"]{2,90})"')
+    unexplained = [
+        f'{field}:"{value}"'
+        for field, value in pattern.findall(body)
+        if value not in _DELIBERATELY_ENGLISH_VALUES
+        and not re.fullmatch(r"[\w.-]+", value)          # class lists, slugs, ids
+    ]
+    assert not unexplained, (
+        "content fields in an illustration builder hold literals. Read them "
+        "from the strings table (S[...]) or register them in "
+        "_DELIBERATELY_ENGLISH_VALUES with the class that makes English "
+        "correct:\n  " + "\n  ".join(sorted(set(unexplained)))
+    )

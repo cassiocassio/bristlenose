@@ -80,6 +80,60 @@ cd frontend/src && for d in components islands pages layouts hooks shims context
 - **Word-level timing data** — Whisper captures per-word timestamps (`Word` model: `text`, `start_time`, `end_time`, `confidence`). The serve-mode importer populates `TranscriptSegment.words_json` — a TEXT column storing compact JSON (`[{"t":"word","s":0.5,"e":0.8},...]`). The transcript API exposes this as `words: [{text, start, end}, ...] | null` on each segment. VTT/SRT-only sessions have `words: null`. **Frontend consumption not yet implemented** — the API serves the data but `TranscriptPage.tsx` doesn't render word spans yet
 - **Speaker role: the moderator's stored role is `"researcher"`, never `"moderator"`.** The `SpeakerRole` enum (`bristlenose/models.py`) is `researcher`/`participant`/`observer`/`unknown`; `"moderator"` is a display word only, never a stored/returned value. So `sp.role === "moderator"` is dead code that silently never fires on real data. Detect moderators by the badge **code prefix** (`sp.speaker_code.startsWith("m")`) — the robust convention used across `TranscriptPage.tsx`, `SessionsTable.tsx`, and `SessionsSidebar.tsx`. A test fixture hardcoding `role: "moderator"` will mask the bug (it did, until `ae522367`) — real-data-shaped fixtures use `"researcher"`
 
+### Store writes
+
+**Every `putX` helper replaces the WHOLE map, so a per-item store call inside a
+bulk gesture is O(n) racing writes.** `putHidden`, `putStarred`, `putTags`,
+`putEdits`, `putDeletedBadges` all send the complete map, fire-and-forget, with
+no ordering guarantee — so n calls are n full replacements and the server keeps
+whichever lands last. Measured 22 Sep 2026: hiding a selection cost **9 writes
+for 3 quotes and 25 for 5**, because two layers each looped the selection (the
+shortcut handler called each card's registered handler, and each of those
+re-expanded the selection). Bulk star and "restore all" were the linear version
+of the same thing.
+
+The fix shape is a store function that takes a LIST: `hideQuotes`,
+`unhideQuotes`, `setStarred`. One state write, one PUT, one `announce`. **When
+you add a gesture that acts on a selection, add the bulk store function with
+it** — looping an existing per-item one is the defect. Still live at the time
+of writing: `handleQuickApply` (the `r` key) loops `addTag`.
+
+**Two things that made the hide case hard, and generalise.** (1) The
+duplication was **load-bearing**: a selection spans `QuoteGroup`s but the
+mid-collapse record was per-group `useState`, so the *only* reason other groups
+animated was that the defect called each group's handler. Removing the
+arithmetic alone would have traded it for a silent visual regression — the
+record had to move into the store first. (2) A test bounding the cost at "one
+write per quote" **could not fail** once the store deduped, because the caller's
+loop became harmless. Pin the contract (`toBe(1)`), not a bound.
+
+### Mutating a fix: a mutation that does NOT redden is a result, not a bad test
+
+Standard advice is to mutate the code back and watch the new test go red. Worth
+knowing that a *green* mutation can be the correct answer rather than a hole.
+Restoring the old per-quote caller loop above reddened nothing — because the
+bulk store function skips quotes already in flight, so the caller's shape
+genuinely stopped mattering. Defence in depth, not a slack test. **Tell them
+apart by mutating the thing that actually provides the guarantee**: making the
+store write per quote reddened both cases immediately. Record which mutation was
+green and why, or the next reader tries the obvious one and distrusts the suite.
+
+**And mutate to find UNCOVERED paths, not just to validate new ones.** Reverting
+the click-path star direction reddened nothing in 1808 tests — that is how the
+click path turned out to have no coverage at all. A mutation that reddens
+nothing anywhere is a coverage report.
+
+### A prop renamed on destructure is not a mismatch
+
+`Counter` declares `"data-testid"?: string` and destructures it as
+`"data-testid": testId`. Reading the call site (`data-testid={...}`) and the
+local name (`testId`) and concluding they disagree is wrong, convincing, and
+cost a false bug report on 22 Sep 2026 that reached a commit message before
+being retracted. **Read the interface between the two names before claiming they
+disagree** — and note the component's own test file is the cheapest disproof:
+`Counter.test.tsx` reads those ids with `getByTestId` in sixteen green
+assertions.
+
 ### Testing
 
 - **Module-level stores persist across tests** — always call `resetStore()` / `resetSidebarStore()` / `resetPlaygroundStore()` / `resetActivityStore()` in `beforeEach`

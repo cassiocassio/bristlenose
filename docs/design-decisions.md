@@ -651,3 +651,28 @@ considered for the Mac and rejected as not sitting with a native sidebar. The
 timecode does not reflow above the quote text at narrow widths: the transcript
 margin's version of that is tolerated, not wanted more of. Spec and
 measurements: `docs/design-sidebar-playground.md` § Fit to width.
+
+## A bulk star is decided by the selection, not by the card you clicked
+
+_22 Sep 2026 (`87de20d7`)._
+
+Star and unstar over a selection take their direction from
+`starActionIsUnstar` in `QuotesContext`: the action **unstars only when the
+whole target set is already starred**, so a mixed selection stars. That is the
+macOS idiom — Mail's Mark as Read on a mixed selection marks all read — and it
+is the rule the native Quotes menu has always rendered its Star/Unstar label
+from, because `AppLayout` pushes that value over the bridge.
+
+**What changed, and why it could look like a regression.** Clicking the star on
+an already-starred card inside a mixed selection now stars every selected quote
+rather than unstarring them. Before, the clicked card's own toggle intent was
+the direction, and the `s` key used a third rule again — it followed the
+*focused* quote's state whenever focus sat inside the selection. So selecting
+one starred and one unstarred quote with focus on the starred one showed a menu
+saying "Star" and unstarred both.
+
+Three surfaces, three rules, and one of them was a label making a promise the
+other two did not keep. The label was correct; the actions were changed to match
+it. A future pass that restores "the card you clicked decides" would reintroduce
+the divergence — it is pinned by `QuoteGroupBulkActions.test.tsx`, whose click
+case reddens on exactly that mutation and reddened nothing at all before the fix.

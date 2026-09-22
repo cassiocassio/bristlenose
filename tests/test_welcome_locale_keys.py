@@ -258,20 +258,35 @@ def test_every_illustration_webview_keys_its_id_on_locale() -> None:
 #: Everything else must take one — an illustration whose words are literals in
 #: the builder cannot follow the language picker, and nothing else would say so.
 _DELIBERATELY_WORDLESS = {
-    "agentChat": "FOREIGN — it depicts Claude Code's CLI, which ships English "
-                 "only. A translated 'Thinking…' would draw software that does "
-                 "not exist.",
-    "miro": "FOREIGN — the sticky's count comes from `count_noun`, which is "
-            "English permanently (docs/design-i18n.md). A translated board is "
-            "one Bristlenose has never produced. NB the English board is itself "
-            "arguably a gap; if that is fixed, this entry goes with it.",
+    "quote": "THEIRS, and the rules' own named exception. It is not a sentence "
+             "but a token array where each word is marked keep-or-trim and the "
+             "spacing lives inside the tokens, so a translated sentence returns "
+             "clean prose and a dead demonstration. Spanish repairs are "
+             "different words in different positions (o sea, eh, bueno). This "
+             "one needs a native speaker writing a native hesitation, never a "
+             "seed — decided 22 Sep 2026.",
 }
 
 #: Builders whose words are still English literals awaiting the content pass.
-#: They are THEIRS — participant quotes, an authored codebook, a disfluency
-#: token array — and per the rules those are written per locale rather than
-#: swept, so they are blocked on a coverage decision rather than on effort.
-_AWAITING_CONTENT = {"quote", "manualTags", "tag", "starHide"}
+#: Empty since 22 Sep 2026: the four that sat here were seeded into 21 locales
+#: under `desktop.welcome.examples.*`, and `quote` moved to the wordless set
+#: above because its exception is permanent rather than pending.
+_AWAITING_CONTENT: set[str] = set()
+
+#: Values inside a view's `strings` table that are deliberately NOT resolved
+#: through `i18n`, keyed by the literal, with the reason. This is the register
+#: `test_strings_tables_resolve_through_i18n` reads — a builder can take a table
+#: and still pass English through it, which is how `emergentThemes` shipped ten
+#: hardcoded literals while the classification gate called it done.
+_DELIBERATELY_ENGLISH_VALUES = {
+    "How to begin unclear": "GENERATED — a pipeline theme title. The language "
+                            "the pipeline generates in is undefined "
+                            "(docs/design-i18n.md §'what language sections and "
+                            "themes should be generated in'), and the rules "
+                            "forbid drawing the fixed version over a pipeline "
+                            "that still produces the broken one.",
+    "Intuitive": "GENERATED — the second theme title; same reason.",
+}
 
 
 def test_every_illustration_builder_is_classified() -> None:
@@ -315,4 +330,94 @@ def test_every_illustration_builder_is_classified() -> None:
     assert not wordless_but_listed, (
         f"{wordless_but_listed} are marked English-by-decision but now take "
         f"words. Read the reason in _DELIBERATELY_WORDLESS before deleting it."
+    )
+
+
+def _view_strings_tables() -> dict[str, list[str]]:
+    """Every `let strings = [ … ]` table in an illustration view, by view name.
+
+    Returns the raw value expressions, so the caller can ask where each one
+    came from rather than what it rendered.
+    """
+    body = (REPO / "desktop/Bristlenose/Bristlenose/WelcomeIllustrations.swift").read_text(
+        encoding="utf-8"
+    )
+    tables: dict[str, list[str]] = {}
+    for m in re.finditer(r"^struct (\w+View): View", body, re.M):
+        name = m.group(1)
+        end = body.find("\nstruct ", m.end())
+        chunk = body[m.end(): end if end != -1 else len(body)]
+        t = re.search(r"let strings = \[(.*?)\n        \]", chunk, re.S)
+        if not t:
+            continue
+        values = [
+            v.strip()
+            for v in re.findall(r'"[^"]+"\s*:\s*([^,\n]+?),?\s*\n', t.group(1) + "\n")
+        ]
+        tables[name] = values
+    return tables
+
+
+def test_strings_tables_resolve_through_i18n() -> None:
+    """A builder taking a `strings:` table is not evidence its words are localised.
+
+    The classification gate above asks *does this builder take a table?* — which
+    `emergentThemes` answered yes to for months while passing ten hardcoded
+    English literals through it, and `autocode` answered yes to while hardcoding
+    a participant quote in its body. Plumbing is not content. This asks the
+    other question: does every value in that table come from `i18n`?
+
+    A literal is allowed only if it is registered in
+    `_DELIBERATELY_ENGLISH_VALUES` with the class that makes English correct —
+    the same polarity as the orphan register in
+    `tests/test_locale_key_readers.py`: what is excused is listed, so anything
+    unlisted is caught.
+    """
+    tables = _view_strings_tables()
+    assert tables, "no strings tables found — did the views change shape?"
+
+    unexplained: list[str] = []
+    for view, values in sorted(tables.items()):
+        for value in values:
+            if "i18n.t(" in value or "i18n.plural(" in value:
+                continue
+            literal = re.fullmatch(r'"(.*)"', value)
+            if literal and literal.group(1) in _DELIBERATELY_ENGLISH_VALUES:
+                continue
+            unexplained.append(f"{view}: {value}")
+
+    assert not unexplained, (
+        "these illustration strings do not resolve through i18n and are not "
+        "registered as deliberately English. Either route them through a key, "
+        "or add the literal to _DELIBERATELY_ENGLISH_VALUES with the class "
+        "(GENERATED / FOREIGN / FRAMEWORK) that makes English correct:\n  "
+        + "\n  ".join(unexplained)
+    )
+
+
+def test_every_seeded_example_key_has_a_reader() -> None:
+    """`desktop.welcome.examples.*` is written by exactly one surface.
+
+    Row 23's shape, scoped: ten cloud-import keys were translated into 21
+    locales and read by nothing for five weeks. These keys are composed from a
+    prefix in two views (`let e = "desktop.welcome.examples."`), so the
+    corpus-wide orphan gate forgives the whole family by construction — it
+    cannot tell which leaves a computed prefix actually reaches. This asks
+    per-leaf.
+    """
+    import json
+
+    en = json.loads(
+        (REPO / "bristlenose/locales/en/desktop.json").read_text(encoding="utf-8")
+    )
+    keys = set(en["welcome"]["examples"])
+    assert keys, "the examples block is empty"
+
+    swift = (REPO / "desktop/Bristlenose/Bristlenose/WelcomeIllustrations.swift").read_text(
+        encoding="utf-8"
+    )
+    unread = sorted(k for k in keys if k not in swift)
+    assert not unread, (
+        f"{unread} are translated in 21 locales and named by no call site. "
+        "Delete them, or wire the illustration that was meant to read them."
     )

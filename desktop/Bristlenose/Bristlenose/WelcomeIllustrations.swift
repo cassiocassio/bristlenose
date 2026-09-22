@@ -385,13 +385,19 @@ struct EmergentThemesView: View {
         // Classes, per those rules: the two `name`s are **generated** text —
         // theme titles, whose output language is currently undefined — and the
         // eight words are **theirs**, participant speech.
+        // The eight words are participant speech — THEIRS, seeded per locale.
+        // The two theme *names* are pipeline output, and the language the
+        // pipeline generates in is undefined (`docs/design-i18n.md` §"what
+        // language sections and themes should be generated in"). Drawing them
+        // translated would depict a fix we do not ship, so they stay English
+        // until that question is settled.
         let strings = [
             "a.name": "How to begin unclear",
-            "a.w0": "\u{201C}where do I start?\u{201D}", "a.w1": "confusing",
-            "a.w2": "too many steps", "a.w3": "I gave up",
+            "a.w0": i18n.t("desktop.welcome.examples.themeWordA0"), "a.w1": i18n.t("desktop.welcome.examples.themeWordA1"),
+            "a.w2": i18n.t("desktop.welcome.examples.themeWordA2"), "a.w3": i18n.t("desktop.welcome.examples.themeWordA3"),
             "b.name": "Intuitive",
-            "b.w0": "\u{201C}found it fast\u{201D}", "b.w1": "really clear",
-            "b.w2": "one tap", "b.w3": "obvious",
+            "b.w0": i18n.t("desktop.welcome.examples.themeWordB0"), "b.w1": i18n.t("desktop.welcome.examples.themeWordB1"),
+            "b.w2": i18n.t("desktop.welcome.examples.themeWordB2"), "b.w3": i18n.t("desktop.welcome.examples.themeWordB3"),
         ]
         return IllustrationWebView(html: WelcomeIllustrationHTML.emergentThemes(
             dark: scheme == .dark, reduce: still, strings: strings))
@@ -508,6 +514,8 @@ struct AutoCodeIllustrationView: View {
         let strings = [
             "sentiment": i18n.t("enums.sentiment.satisfaction"),
             "role": i18n.t("enums.speakerRole.participant"),
+            "q1": i18n.t("desktop.welcome.examples.autocodeQuote1"),
+            "q2": i18n.t("desktop.welcome.examples.autocodeQuote2"),
         ]
         return IllustrationWebView(html: WelcomeIllustrationHTML.autocode(
             dark: scheme == .dark, palette: palette, reduce: still, strings: strings))
@@ -529,7 +537,20 @@ struct ManualTagsIllustrationView: View {
 
     var body: some View {
         let still = reduceMotion || !active   // baton: animate only while this cell holds it
-        return IllustrationWebView(html: WelcomeIllustrationHTML.manualTags(dark: scheme == .dark, palette: palette, reduce: still))
+        // Every word here is the researcher's own: two codebook groups they
+        // named, the sentence they wrote under each, and the codes they typed.
+        // THEIRS throughout, seeded per locale.
+        let strings = [
+            "g1": i18n.t("desktop.welcome.examples.tagsGroup1"), "g1d": i18n.t("desktop.welcome.examples.tagsGroup1Desc"),
+            "g1t0": i18n.t("desktop.welcome.examples.tagsG1Code0"), "g1t1": i18n.t("desktop.welcome.examples.tagsG1Code1"),
+            "g1t2": i18n.t("desktop.welcome.examples.tagsG1Code2"), "g1t3": i18n.t("desktop.welcome.examples.tagsG1Code3"),
+            "g1t4": i18n.t("desktop.welcome.examples.tagsG1Code4"),
+            "g2": i18n.t("desktop.welcome.examples.tagsGroup2"), "g2d": i18n.t("desktop.welcome.examples.tagsGroup2Desc"),
+            "g2t0": i18n.t("desktop.welcome.examples.tagsG2Code0"), "g2t1": i18n.t("desktop.welcome.examples.tagsG2Code1"),
+            "g2t2": i18n.t("desktop.welcome.examples.tagsG2Code2"), "g2t3": i18n.t("desktop.welcome.examples.tagsG2Code3"),
+        ]
+        return IllustrationWebView(html: WelcomeIllustrationHTML.manualTags(
+            dark: scheme == .dark, palette: palette, reduce: still, strings: strings))
             .id("manualtags-\(scheme)-\(palette)-\(still)-\(i18n.locale)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
@@ -549,7 +570,16 @@ struct TagIllustrationView: View {
 
     var body: some View {
         let still = reduceMotion || !active   // baton: animate only while this cell holds it
-        return IllustrationWebView(html: WelcomeIllustrationHTML.tag(dark: scheme == .dark, palette: palette, reduce: still))
+        // The badge and role are OURS and lift from `enums.*`; the quote and
+        // the hand-typed code are the researcher's own and are seeded per locale.
+        let strings = [
+            "sentiment": i18n.t("enums.sentiment.satisfaction"),
+            "role": i18n.t("enums.speakerRole.participant"),
+            "q": i18n.t("desktop.welcome.examples.tagQuote"),
+            "code": i18n.t("desktop.welcome.examples.tagCode"),
+        ]
+        return IllustrationWebView(html: WelcomeIllustrationHTML.tag(
+            dark: scheme == .dark, palette: palette, reduce: still, strings: strings))
             .id("tag-\(scheme)-\(palette)-\(still)-\(i18n.locale)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
@@ -568,7 +598,19 @@ struct StarHideIllustrationView: View {
 
     var body: some View {
         let still = reduceMotion || !active   // baton: animate only while this cell holds it
-        return IllustrationWebView(html: WelcomeIllustrationHTML.starHide(dark: scheme == .dark, palette: palette, reduce: still))
+        // OURS: the hidden-quotes toggle, lifted from the key the Quotes lens
+        // itself reads. Both counts are resolved here because the builder is
+        // pure and the plural category is a property of the number.
+        let strings = [
+            "hidden2": i18n.plural("common.quotes.hiddenCount", count: 2),
+            "hidden3": i18n.plural("common.quotes.hiddenCount", count: 3),
+            "sentiment": i18n.t("enums.sentiment.satisfaction"),
+            "role": i18n.t("enums.speakerRole.participant"),
+            "q1": i18n.t("desktop.welcome.examples.starHideQuote1"),
+            "q2": i18n.t("desktop.welcome.examples.starHideQuote2"),
+        ]
+        return IllustrationWebView(html: WelcomeIllustrationHTML.starHide(
+            dark: scheme == .dark, palette: palette, reduce: still, strings: strings))
             .id("starhide-\(scheme)-\(palette)-\(still)-\(i18n.locale)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
@@ -589,7 +631,14 @@ struct AgentChatIllustrationView: View {
 
     var body: some View {
         let still = reduceMotion || !active   // baton: animate only while this cell holds it
-        return IllustrationWebView(html: WelcomeIllustrationHTML.agentChat(dark: scheme == .dark, palette: palette, reduce: still))
+        // FOREIGN chrome, THEIRS input. `Thinking…`, the tool line and the
+        // result row are Claude Code's own words and stay English in every
+        // locale — a translated one depicts software that does not exist. The
+        // typed question is not Claude Code's; it is the researcher's, and a
+        // Dutch researcher types Dutch into an English CLI.
+        let strings = ["question": i18n.t("desktop.welcome.examples.agentQuestion")]
+        return IllustrationWebView(html: WelcomeIllustrationHTML.agentChat(
+            dark: scheme == .dark, palette: palette, reduce: still, strings: strings))
             .id("agentchat-\(scheme)-\(palette)-\(still)-\(i18n.locale)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
@@ -890,7 +939,20 @@ struct MiroIllustrationView: View {
 
     var body: some View {
         let still = reduceMotion || !active   // baton: animate only while this cell holds it
-        return IllustrationWebView(html: WelcomeIllustrationHTML.miro(dark: scheme == .dark, reduce: still))
+        // The board we actually produce is localised — `server/miro_export.py`'s
+        // `board_strings(locale)` resolves `common.quotes.sections`,
+        // `common.quotes.themes` and `common.miro.boardQuoteCount` in the
+        // requester's language. So the sticky count lifts the board's own key:
+        // an English "2 quotes" here would depict a board Bristlenose stopped
+        // producing. The pink sticky's title is a *generated* section name and
+        // stays English until the generated-language question is settled.
+        let strings = [
+            "quoteCount": i18n.plural("common.miro.boardQuoteCount", count: 2),
+            "q1": i18n.t("desktop.welcome.examples.miroQuote1"),
+            "q2": i18n.t("desktop.welcome.examples.miroQuote2"),
+        ]
+        return IllustrationWebView(html: WelcomeIllustrationHTML.miro(
+            dark: scheme == .dark, reduce: still, strings: strings))
             .id("miro-\(scheme)-\(still)-\(i18n.locale)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
@@ -1363,8 +1425,8 @@ enum WelcomeIllustrationHTML {
           function sleep(ms){ return new Promise(function(r){ setTimeout(r, Math.round(ms*PACE)); }); }
           function nap(ms){ return sleep(ms); }   // PACE lives in sleep now; nap kept as the beat verb
           var QUOTES=[
-            { time:"11:30", speaker:"p1", role:S["role"], sentiment:S["sentiment"], q:"In the end, browsing rather than searching works. Yeah, it did.", code:"visible options", codeClass:"code-blue" },
-            { time:"13:08", speaker:"p1", role:S["role"], sentiment:S["sentiment"], q:"Is it normal it’s called a shopping bag? On another site it’d feel weird — you’re used to a cart.", code:"platform convention", codeClass:"code-violet" }
+            { time:"11:30", speaker:"p1", role:S["role"], sentiment:S["sentiment"], q:S["q1"], code:"visible options", codeClass:"code-blue" },
+            { time:"13:08", speaker:"p1", role:S["role"], sentiment:S["sentiment"], q:S["q2"], code:"platform convention", codeClass:"code-violet" }
           ];
           function cardHTML(d){
             return '<blockquote class="quote-card card-hidden"><div class="quote-row">'
@@ -1426,7 +1488,8 @@ enum WelcomeIllustrationHTML {
     /// title + description + codes typed via the real + → type → commit flow, in the
     /// real codebook OKLCH colours (ux 250 / opp 75). The human counterpart to
     /// AutoCode; one group per turn (the baton owns the rhythm).
-    static func manualTags(dark: Bool, palette: String, reduce: Bool) -> String {
+    static func manualTags(dark: Bool, palette: String, reduce: Bool,
+                           strings: [String: String]) -> String {
         let kind = WelcomeIllustration.manualTags
         return """
         <!doctype html><html data-appearance="\(dark ? "dark" : "light")" data-palette="\(palette)" data-reduce="\(reduce ? "1" : "0")">
@@ -1482,6 +1545,7 @@ enum WelcomeIllustrationHTML {
           @media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } }
         </style></head>
         <body><div id="mt"></div>
+        \(stringsBlock(strings))
         <script>
           var host=document.getElementById("mt");
           var REDUCED=document.documentElement.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
@@ -1489,12 +1553,10 @@ enum WelcomeIllustrationHTML {
           function sleep(ms){ return new Promise(function(r){ setTimeout(r, Math.round(ms*PACE)); }); }
           function nap(ms){ return sleep(ms); }   // PACE lives in sleep now; nap kept as the beat verb
           var GROUPS=[
-            { cls:"grp-ux",  title:"A/B homepage trial",
-              subtitle:"Reactions to the two homepage variants we tested.",
-              tags:["A +ve","A -ve","B +ve","B -ve","AB choice"] },
-            { cls:"grp-opp", title:"Switching costs",
-              subtitle:"Barriers for a participant already using a rival tool.",
-              tags:["data migration","learning curve","institutional inertia","better-but-not-better-enough"] }
+            { cls:"grp-ux",  title:S["g1"], subtitle:S["g1d"],
+              tags:[S["g1t0"],S["g1t1"],S["g1t2"],S["g1t3"],S["g1t4"]] },
+            { cls:"grp-opp", title:S["g2"], subtitle:S["g2d"],
+              tags:[S["g2t0"],S["g2t1"],S["g2t2"],S["g2t3"]] }
           ];
           async function typeInto(el, text, msPerChar){ for(var i=0;i<text.length;i++){ el.textContent += text[i]; await sleep(msPerChar); } }
           async function buildGroup(g){
@@ -1542,7 +1604,8 @@ enum WelcomeIllustrationHTML {
     /// words — clicking the text opens trim/edit), a plain click focuses + single-selects
     /// (real .bn-focused.bn-selected), the `t` keycap presses under the cursor, and a code
     /// types itself in as a real .badge-user chip. Real selection colours; plays once/turn.
-    static func tag(dark: Bool, palette: String, reduce: Bool) -> String {
+    static func tag(dark: Bool, palette: String, reduce: Bool,
+                    strings: [String: String]) -> String {
         let kind = WelcomeIllustration.tag
         return """
         <!doctype html><html data-appearance="\(dark ? "dark" : "light")" data-palette="\(palette)" data-reduce="\(reduce ? "1" : "0")">
@@ -1628,6 +1691,7 @@ enum WelcomeIllustrationHTML {
           @media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } }
         </style></head>
         <body><div id="stage"></div>
+        \(stringsBlock(strings))
         <script>
           var host=document.getElementById("stage");
           var REDUCED=document.documentElement.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
@@ -1655,7 +1719,7 @@ enum WelcomeIllustrationHTML {
           async function pressCap(c){ await nap(140); c.classList.add("cap-press"); await nap(150); c.classList.remove("cap-press"); await nap(150); }
           async function leaveCap(c){ c.classList.remove("cap-enter"); void c.offsetWidth; c.classList.add("cap-leave"); await nap(240); c.remove(); }
           async function typeInto(el, text, ms){ for(var i=0;i<text.length;i++){ el.textContent+=text[i]; await sleep(ms); } }
-          var TAGQ={ time:"09:14", speaker:"p3", role:S["role"], sentiment:S["sentiment"], q:"I knew straight away where to click — it matched what I expected.", tag:"mental model", tagClass:"code-blue" };
+          var TAGQ={ time:"09:14", speaker:"p3", role:S["role"], sentiment:S["sentiment"], q:S["q"], tag:S["code"], tagClass:"code-blue" };
           function tagCard(d){
             return '<blockquote class="quote-card sh-card"><div class="quote-row">'
               +'<span class="timecode"><span class="timecode-bracket">[</span>'+d.time+'<span class="timecode-bracket">]</span></span>'
@@ -1697,7 +1761,8 @@ enum WelcomeIllustrationHTML {
     /// Star & hide (study-tools #4) — pointer arcs onto card A's rule, clicks (focus+select),
     /// `s` stars it (real #999/#ccc tint differential + weight bump + star-pop); then card B,
     /// `h` collapses it away (real .bn-hiding) and the "N hidden" count ticks up. Plays once/turn.
-    static func starHide(dark: Bool, palette: String, reduce: Bool) -> String {
+    static func starHide(dark: Bool, palette: String, reduce: Bool,
+                         strings: [String: String]) -> String {
         let kind = WelcomeIllustration.starHide
         return """
         <!doctype html><html data-appearance="\(dark ? "dark" : "light")" data-palette="\(palette)" data-reduce="\(reduce ? "1" : "0")">
@@ -1786,6 +1851,7 @@ enum WelcomeIllustrationHTML {
           @media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } }
         </style></head>
         <body><div id="stage"></div>
+        \(stringsBlock(strings))
         <script>
           var host=document.getElementById("stage");
           var REDUCED=document.documentElement.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
@@ -1814,8 +1880,8 @@ enum WelcomeIllustrationHTML {
           async function pressCap(c){ await nap(140); c.classList.add("cap-press"); await nap(150); c.classList.remove("cap-press"); await nap(150); }
           async function leaveCap(c){ c.classList.remove("cap-enter"); void c.offsetWidth; c.classList.add("cap-leave"); await nap(240); c.remove(); }
           var SHQ=[
-            { time:"11:30", speaker:"p1", role:S["role"], sentiment:S["sentiment"], q:"Browsing beat searching — it just worked." },
-            { time:"04:52", speaker:"p2", role:S["role"], sentiment:S["sentiment"], q:"Honestly, I skimmed straight past this bit." }
+            { time:"11:30", speaker:"p1", role:S["role"], sentiment:S["sentiment"], q:S["q1"] },
+            { time:"04:52", speaker:"p2", role:S["role"], sentiment:S["sentiment"], q:S["q2"] }
           ];
           function fullCard(d){
             return '<blockquote class="quote-card sh-card"><button class="hide-btn" tabindex="-1">'+HIDE_SVG+'</button><button class="star-btn" tabindex="-1">★</button><div class="quote-row">'
@@ -1825,11 +1891,16 @@ enum WelcomeIllustrationHTML {
               +'<div class="badges"><span class="badge badge-ai badge-satisfaction">'+d.sentiment+'</span><span class="badge badge-add">+</span></div>'
               +'</div></div></blockquote>';
           }
-          function shToolbar(n){ return '<div class="sh-toolbar"><button class="bn-hidden-toggle" tabindex="-1">'+n+' hidden <span class="bn-hidden-chevron">⌄</span></button></div>'; }
+          // OURS: the hidden-quotes toggle the Quotes lens ships. `Counter.tsx`
+          // reads `quotes.hiddenCount`, so the picture lifts the same key rather
+          // than drawing its own English — and it needs both counts, because the
+          // animation ticks 2 → 3 and fourteen of the twenty-one languages
+          // inflect on the number.
+          function shToolbar(n){ return '<div class="sh-toolbar"><button class="bn-hidden-toggle" tabindex="-1">'+S["hidden"+n]+' <span class="bn-hidden-chevron">⌄</span></button></div>'; }
           async function runStarHide(){
             host.innerHTML=shToolbar(2)+'<div class="sh-stage">'+fullCard(SHQ[0])+fullCard(SHQ[1])+'</div>';
             var cards=host.querySelectorAll(".quote-card"), A=cards[0], B=cards[1], toggle=host.querySelector(".bn-hidden-toggle");
-            if(REDUCED){ A.classList.add("starred"); B.classList.add("bn-hidden"); toggle.firstChild.textContent="3 hidden "; return; }
+            if(REDUCED){ A.classList.add("starred"); B.classList.add("bn-hidden"); toggle.firstChild.textContent=S["hidden3"]+" "; return; }
             await settle();
             var p=mkPointer(); setPtr(p, host.clientWidth-24, host.clientHeight-14);
             await nap(340);
@@ -1848,7 +1919,7 @@ enum WelcomeIllustrationHTML {
             await nap(320);
             var capH=mkCap(p._x-2, p._y+14, "h");
             await pressCap(capH);
-            B.classList.add("bn-hiding"); toggle.firstChild.textContent="3 hidden "; toggle.classList.add("bump");
+            B.classList.add("bn-hiding"); toggle.firstChild.textContent=S["hidden3"]+" "; toggle.classList.add("bump");
             await nap(300); B.classList.add("bn-hidden");
             toggle.classList.remove("bump");
             await leaveCap(capH);
@@ -1866,7 +1937,8 @@ enum WelcomeIllustrationHTML {
     /// the result line lands, and a cited answer streams back. Plays once per turn.
     /// Terminal panel is drawn (no window chrome, no screenshot), theme + palette
     /// aware like the other webview illustrations.
-    static func agentChat(dark: Bool, palette: String, reduce: Bool) -> String {
+    static func agentChat(dark: Bool, palette: String, reduce: Bool,
+                          strings: [String: String]) -> String {
         let kind = WelcomeIllustration.agentChat
         return """
         <!doctype html><html data-appearance="\(dark ? "dark" : "light")" data-palette="\(palette)" data-reduce="\(reduce ? "1" : "0")">
@@ -1924,6 +1996,7 @@ enum WelcomeIllustrationHTML {
           @media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } }
         </style></head>
         <body>
+        \(stringsBlock(strings))
           <div class="term" id="term">
             <div class="row" id="qrow"><span class="pg">&gt; </span><span id="q"></span><span class="tcaret blink" id="qc"></span></div>
             <div class="row ln" id="tool"></div>
@@ -1937,7 +2010,7 @@ enum WelcomeIllustrationHTML {
           function nap(ms){ return sleep(ms); }   // PACE lives in sleep now; nap kept as the beat verb
           function settle(){ return new Promise(function(r){ requestAnimationFrame(function(){ requestAnimationFrame(r); }); }); }
           function q(id){ return document.getElementById(id); }
-          var QUESTION="where did participants struggle in checkout?";
+          var QUESTION=S["question"];
           var TOOLCALL='<span class="tooldot">⏺ </span><span class="toolname">bristlenose · search_quotes</span><span class="toolargs"> (MCP)(query: "checkout")</span>';
           var ANSWER="Checkout is the clearest friction point — six quotes, nearly all frustration: “I couldn’t figure out where to pay.”";
           function fillStill(){
@@ -1982,7 +2055,7 @@ enum WelcomeIllustrationHTML {
         """
     }
 
-    static func miro(dark: Bool, reduce: Bool) -> String {
+    static func miro(dark: Bool, reduce: Bool, strings: [String: String]) -> String {
         let kind = WelcomeIllustration.miro
         return """
         <!doctype html><html data-appearance="\(dark ? "dark" : "light")" data-reduce="\(reduce ? "1" : "0")">
@@ -2010,19 +2083,24 @@ enum WelcomeIllustrationHTML {
           .y2{ background:#f8efa0; width:138px; height:120px; font-size:12px; line-height:1.32; }
           .pink .t1{ font-size:17px; font-weight:700; }
           .pink .t2{ font-size:14px; margin-top:2px; }
+          .qt{ padding:0 8px; }
           .attr{ font-style:italic; margin-top:3px; }
           @media (prefers-reduced-motion:reduce){ *{ transition:none !important; } }
         </style></head>
         <body>
           <div class="board" id="board">
-            <div class="sticky pink"><div class="t1">Homepage</div><div class="t2">2 quotes</div></div>
-            <div class="sticky y1">“I’ve got these…<br>categorizations<br>that I can go to<br>but… that’s<br>probably…<br>quite busy.<br><span class="attr">— P1 · 8:27</span></div>
-            <div class="sticky y2">“The obvious<br>thing to pick<br>here is<br>kitchenware<br>and tableware.”<br><span class="attr">— P1 · 9:10</span></div>
+            <div class="sticky pink"><div class="t1">Homepage</div><div class="t2" id="mCount"></div></div>
+            <div class="sticky y1"><div class="qt" id="mQ1"></div><span class="attr">— P1 · 8:27</span></div>
+            <div class="sticky y2"><div class="qt" id="mQ2"></div><span class="attr">— P1 · 9:10</span></div>
           </div>
+        \(stringsBlock(strings))
         <script>
           var R=document.documentElement.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
           var PACE=\(WelcomeTempo.jsStretch(for: kind)), LEAD=\(WelcomeTempo.jsLeadMs);
-          var S=[].slice.call(document.querySelectorAll(".sticky"));
+          var STK=[].slice.call(document.querySelectorAll(".sticky"));
+          document.getElementById("mCount").textContent=S["quoteCount"];
+          document.getElementById("mQ1").textContent=S["q1"];
+          document.getElementById("mQ2").textContent=S["q2"];
           function fit(){
             var b=document.getElementById("board");
             var s=Math.min((window.innerWidth-2)/b.offsetWidth,(window.innerHeight-4)/b.offsetHeight);
@@ -2030,8 +2108,8 @@ enum WelcomeIllustrationHTML {
           }
           requestAnimationFrame(fit);
           window.addEventListener("resize",fit);
-          if(R){ S.forEach(function(el){ el.classList.add("on"); }); }
-          else{ S.forEach(function(el,i){ setTimeout(function(){ el.classList.add("on"); }, LEAD+Math.round(i*480*PACE)); }); }
+          if(R){ STK.forEach(function(el){ el.classList.add("on"); }); }
+          else{ STK.forEach(function(el,i){ setTimeout(function(){ el.classList.add("on"); }, LEAD+Math.round(i*480*PACE)); }); }
         </script>
         </body></html>
         """

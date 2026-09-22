@@ -84,7 +84,7 @@
     "toggleContents": "Vis/skjul innholdsfortegnelsen",
     "uncategorisedHeading": "Trenger et hjem",
     "uncategorisedIntro_one": "1 sitat du har beholdt, er ikke i noen seksjon eller noe tema akkurat nå — men det ligger trygt her, ingenting gikk tapt.",
-    "thinThemeLabel": "Ikke kategorisert",
+    "thinThemeLabel": "Ukategorisert",
     "thinThemeBody": "Sitater som enn\u00e5 ikke har funnet en plass \u2013 de grupperte seg ikke med andre til et m\u00f8nster.",
     "uncategorisedIntro_other": "{{count}} sitater du har beholdt, er ikke i noen seksjon eller noe tema akkurat nå — men de ligger trygt her, ingenting gikk tapt."
   },

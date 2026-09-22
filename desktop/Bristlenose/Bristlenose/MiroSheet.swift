@@ -53,7 +53,14 @@ final class MiroSheetModel: ObservableObject {
     static func text(for error: Error, _ i18n: I18n) -> String? {
         guard let api = error as? MiroAPI.APIError else { return nil }
         guard let key = api.localeKey else { return api.message }
-        return i18n.t(key, api.localeVars)
+        let text = i18n.t(key, api.localeVars)
+        // A partial board carries its own address in `vars.url`. The localised
+        // sentence says to open it; without the address that is an instruction
+        // nobody can follow, and the raw `detail` used to carry it. Append it
+        // rather than interpolate — the key has no `{{url}}` slot, and adding
+        // one is a 21-locale change for a link that reads the same in each.
+        if let url = api.localeVars["url"], !url.isEmpty { return text + " " + url }
+        return text
     }
 
     /// Desktop-only override of a `miro.*` string — used where the native sheet

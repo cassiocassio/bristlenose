@@ -56,6 +56,8 @@ export interface ApiError extends Error {
   status?: number;
   /** Stable refusal code, when the route raised a `RefusalError`. Localise from this. */
   reason?: string;
+  /** The reason's variables (a partial Miro board's `url`), when the route sent any. */
+  vars?: Record<string, string>;
 }
 
 /**
@@ -68,13 +70,24 @@ export interface ApiError extends Error {
 async function httpError(method: string, path: string, resp: Response): Promise<Error> {
   let detail = "";
   let reason = "";
+  let vars: Record<string, string> | undefined;
   try {
-    const body = (await resp.json()) as { detail?: unknown; reason?: unknown };
+    const body = (await resp.json()) as { detail?: unknown; reason?: unknown; vars?: unknown };
     if (typeof body?.detail === "string") detail = body.detail;
     // A refusal names itself (bristlenose/server/refusal.py). `detail` is English
     // prose written for a log; `reason` is the stable code a caller localises
     // from. Optional — routes that raise a plain HTTPException send no reason.
     if (typeof body?.reason === "string") reason = body.reason;
+    // Its variables travel beside it (routes/miro.py sends `vars`); a caller
+    // that localises from `reason` needs them, or a partial board's address
+    // is dropped along with the English sentence that used to carry it.
+    if (body?.vars && typeof body.vars === "object") {
+      const picked: Record<string, string> = {};
+      for (const [k, v] of Object.entries(body.vars as Record<string, unknown>)) {
+        if (typeof v === "string") picked[k] = v;
+      }
+      vars = picked;
+    }
   } catch {
     /* non-JSON error body — fall back to the status-only message */
   }
@@ -83,6 +96,7 @@ async function httpError(method: string, path: string, resp: Response): Promise<
   annotated.detail = detail;
   annotated.status = resp.status;
   if (reason) annotated.reason = reason;
+  if (vars) annotated.vars = vars;
   return err;
 }
 

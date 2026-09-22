@@ -63,6 +63,12 @@ function errReasonKey(e: unknown): string {
   return typeof r === "string" ? (EXPORT_ERROR_KEYS[r] ?? "") : "";
 }
 
+/** One of the server's `vars` for a reason, else "". */
+function errVar(e: unknown, name: string): string {
+  const v = (e as { vars?: Record<string, unknown> })?.vars?.[name];
+  return typeof v === "string" ? v : "";
+}
+
 /**
  * Account holder · team · org, de-duped — lets the user confirm WHICH Miro
  * account/workspace a board will land in (people have personal + client accounts).
@@ -217,10 +223,12 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
       // Prefer the localised sentence the server's `reason` names. The partial-
       // board case keeps its recovery URL: the board IS half-built, and hiding
       // where it went orphans it behind a generic "try again" — so that key's
-      // copy tells the researcher to open it, and the raw detail still follows
-      // when the reason is one this build does not know.
+      // copy tells the researcher to open it, and the address the server sent
+      // in `vars.url` follows the sentence (the raw detail used to carry it,
+      // and still does when the reason is one this build does not know).
       const key = errReasonKey(e);
-      setError(key ? t(key) : errDetail(e) || t("miro.exportError"));
+      const url = errVar(e, "url");
+      setError(key ? (url ? `${t(key)} ${url}` : t(key)) : errDetail(e) || t("miro.exportError"));
       setView("configure");
     }
   }, [request, t]);

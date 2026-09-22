@@ -64,3 +64,28 @@ describe("MiroExportPanel — the board's language travels with the request", ()
     expect(body).toMatchObject({ colour_by: "sentiment", clips_base: "", locale: "en" });
   });
 });
+
+describe("MiroExportPanel — a partial board keeps its address", () => {
+  it("shows the localised sentence AND the url the server sent in vars", async () => {
+    // The 502 for a half-built board names its reason and carries the board's
+    // address in `vars.url`. The localised sentence tells the researcher to
+    // open it; without the address that is an instruction nobody can follow,
+    // and the raw English `detail` used to be the only thing carrying it.
+    const err = Object.assign(new Error("POST /miro/export 502"), {
+      detail: "Board created but incomplete — open it: https://miro.com/app/board/x9/",
+      reason: "board_incomplete",
+      vars: { url: "https://miro.com/app/board/x9/" },
+    });
+    postMiroExport.mockRejectedValueOnce(err);
+    await i18n.changeLanguage("es");
+    render(<MiroExportPanel open onClose={() => {}} />);
+    fireEvent.click(await screen.findByText(i18n.t("miro.createBoard")));
+    const sentence = i18n.t("miro.errBoardIncomplete");
+    // Match on the element's OWN text, not textContent: every ancestor of the
+    // error line contains it too, and a textContent matcher finds them all.
+    const shown = await screen.findByText((content) => content.includes(sentence));
+    expect(shown.textContent).toContain(sentence);
+    expect(shown.textContent).toContain("https://miro.com/app/board/x9/");
+    expect(shown.textContent).not.toContain("Board created but incomplete");
+  });
+});

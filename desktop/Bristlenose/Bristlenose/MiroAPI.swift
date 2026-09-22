@@ -52,11 +52,17 @@ struct MiroAPI {
         /// diagnostic (HTTP status plus Miro's response text), which is
         /// correctly English — it goes to a log, not to a researcher — and
         /// falls through to `detail` exactly as it always did.
-        let code: String?
+        ///
+        /// Spelled `reason` because that is the field `routes/miro.py` writes.
+        /// This was `code` for a day (22 Sep 2026): the server never sent one,
+        /// so every failure fell through to the English `detail` and the key
+        /// table below was decorative. `tests/test_miro_failure_keys.py` now
+        /// asserts the spelling both clients decode.
+        let reason: String?
         let vars: [String: String]?
     }
 
-    /// Server `code` → the key that says it in the reader's language.
+    /// Server `reason` → the key that says it in the reader's language.
     ///
     /// A table, not a `contains` on the sentence. The server's `detail` is
     /// English prose; matching on it breaks the day somebody rewords it, which
@@ -110,7 +116,7 @@ struct MiroAPI {
         return "Request failed (HTTP \(status))."
     }
 
-    /// The server's own `detail` when it sent one, plus the key its `code`
+    /// The server's own `detail` when it sent one, plus the key its `reason`
     /// names when the failure is one a researcher reads. `detail` stays on the
     /// error either way — it is what a bug report wants, and it is the fallback
     /// when the code is unknown or absent.
@@ -119,7 +125,7 @@ struct MiroAPI {
            let d = body.detail, !d.isEmpty
         {
             return APIError(message: d,
-                            localeKey: body.code.flatMap { Self.errorKeys[$0] },
+                            localeKey: body.reason.flatMap { Self.errorKeys[$0] },
                             localeVars: body.vars ?? [:])
         }
         return APIError(

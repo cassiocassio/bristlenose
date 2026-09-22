@@ -121,3 +121,21 @@ def test_the_route_sends_the_reason() -> None:
         "the export route no longer forwards `reason`, so every client falls "
         "back to English `detail` and the rest of this file passes anyway."
     )
+
+
+@pytest.mark.parametrize("client", ["swift", "spa"])
+def test_both_clients_decode_the_field_the_server_writes(client: str) -> None:
+    """The key table is decorative unless the client reads the field it is keyed on.
+
+    Found preparing 0.31.0: the Swift client decoded `code` while the server
+    wrote `reason`, so every Miro failure on the Mac fell through to the English
+    `detail` with the table above fully populated and every test here green —
+    the tests checked the table's contents, never what indexed it. Assert the
+    read expression, not a declaration a comment could satisfy.
+    """
+    body = (SWIFT if client == "swift" else PANEL).read_text(encoding="utf-8")
+    read = r"body\.reason\.flatMap" if client == "swift" else r"\)\?\.reason;"
+    assert re.search(read, body), (
+        f"{client} does not index its reason→key table by the server's `reason` "
+        "field — the localised sentences can never be reached."
+    )

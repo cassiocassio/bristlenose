@@ -12,7 +12,27 @@ struct AppearanceSettingsView: View {
     @AppStorage("appearance") private var appearance: String = "auto"
     @AppStorage("palette") private var palette: String = "default"
     @AppStorage("typography") private var typography: String = "sf"
-    @AppStorage("language") private var language: String = "en"
+    /// **Seeded from the resolved locale, not from a literal.**
+    ///
+    /// `@AppStorage("language") = "en"` displayed English on a fresh install
+    /// whose Mac is German — the app rendered German via `I18n.resolvedLocale`
+    /// while this pane claimed English, and a user who opened the picker, read
+    /// "English" and selected it to confirm would write the key and silently
+    /// switch a German app to English.
+    ///
+    /// **Deliberately `@State`, not a seeded `@AppStorage` key.** Writing the
+    /// resolved value into `language` at first launch would look equivalent and
+    /// is not: the key's ABSENCE is what makes the app follow the system, and
+    /// what lets System Settings ▸ Apps ▸ Bristlenose work at all
+    /// (`resolvedLocale` reads the private key first). Seeding it would pin
+    /// every install on first launch and quietly disable the OS control — which
+    /// is the one remaining way back to following the system, now that this
+    /// picker deliberately has no "System Default" row.
+    ///
+    /// So: display the resolved locale, write the key only when the researcher
+    /// actually changes it. Selecting the row already shown is a no-op, because
+    /// `onChange` does not fire when the value is unchanged.
+    @State private var language: String = I18n.resolvedLocale
     @AppStorage(RandomProjectIcon.defaultsKey) private var randomProjectIcons: Bool = true
     @AppStorage("showAnalysisAnimation") private var showAnalysisAnimation: Bool = true
     @AppStorage(DiagnosticsPreference.key)
@@ -157,6 +177,9 @@ struct AppearanceSettingsView: View {
             NotificationCenter.default.post(name: .bristlenosePaletteChanged, object: nil)
         }
         .onChange(of: language) { _, newValue in
+            // `@State` does not persist; this is the deliberate write that
+            // turns "following the system" into "pinned to a choice".
+            UserDefaults.standard.set(newValue, forKey: "language")
             i18n.setLocale(newValue)
             // **Tell AppKit too.** Our own chrome switches live off `setLocale`,
             // but File / Edit / View / Window / Help and every standard item

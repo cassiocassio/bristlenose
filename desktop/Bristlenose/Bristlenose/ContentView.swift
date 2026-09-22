@@ -530,12 +530,15 @@ struct ContentView: View {
         guard var components = serveManager?.serveURL.flatMap({
             URLComponents(url: $0, resolvingAgainstBaseURL: false)
         }) else { return serveManager?.serveURL }
-        let locale = i18n.locale
-        if locale != "en" {
-            var items = components.queryItems ?? []
-            items.append(URLQueryItem(name: "locale", value: locale))
-            components.queryItems = items
-        }
+        // Unconditional, including "en". Omitting the param does not mean
+        // English to the SPA — it means ABSENT, so `LocaleStore.detectLocale`
+        // falls through to `navigator.language`, which in a WKWebView follows
+        // the system. A researcher who has explicitly chosen English on a
+        // French Mac was getting a French first paint, corrected only when
+        // `syncLocale` arrived on `ready`. Absence is not a value.
+        var items = components.queryItems ?? []
+        items.append(URLQueryItem(name: "locale", value: i18n.locale))
+        components.queryItems = items
         return components.url ?? serveManager?.serveURL
     }
 

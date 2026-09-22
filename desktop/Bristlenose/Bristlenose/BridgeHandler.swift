@@ -593,7 +593,12 @@ final class BridgeHandler: ObservableObject {
     /// Called on `ready` to confirm the URL query param injection,
     /// and on language change in native Settings.
     func syncLocale() {
-        let locale = UserDefaults.standard.string(forKey: "language") ?? "en"
+        // `I18n.resolvedLocale`, not the raw key with its own `?? "en"`. Two
+        // readers of one fact drift, and this one drifted: the key is unset on
+        // a fresh install, so a French Mac rendered French chrome around an
+        // ENGLISH report — the surface the researcher spends the day in. The
+        // static is `nonisolated`, so no `I18n` instance is needed here.
+        let locale = I18n.resolvedLocale
         guard let webView else { return }
         Task {
             try? await webView.callAsyncJavaScript(

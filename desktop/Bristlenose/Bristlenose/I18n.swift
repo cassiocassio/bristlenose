@@ -102,6 +102,17 @@ final class I18n: ObservableObject {
         guard let chosen = UserDefaults.standard.string(forKey: "language") else { return }
         let safe = sanitized(chosen)
         guard supportedLocales.contains(safe) else { return }
+        // **Only when nothing has told AppKit yet.** This used to write
+        // unconditionally, which meant it did not merely ignore a language set
+        // in System Settings > Apps > Bristlenose — it OVERWROTE it on the next
+        // launch, so the researcher's choice vanished from the System Settings
+        // pane itself with nothing recording that they had ever made it.
+        //
+        // The population this exists for is an install that chose a language
+        // before the `.lproj` declarations shipped (21 Sep 2026) and so never
+        // told AppKit. That install has no explicit `AppleLanguages`, which is
+        // exactly what distinguishes it from one where somebody chose.
+        guard explicitAppleLanguages() == nil else { return }
         syncAppleLanguages(safe)
     }
 
@@ -141,11 +152,41 @@ final class I18n: ObservableObject {
         sanitized(UserDefaults.standard.string(forKey: "language") ?? systemPreferredLocale())
     }
 
+    /// **`forPreferences:` is passed explicitly, and that is load-bearing.**
+    ///
+    /// With `nil`, CoreFoundation resolves the user's language list once — on
+    /// the FIRST call anywhere in the process — and caches it for the process
+    /// lifetime. Measured 22 Sep 2026: write `AppleLanguages`, ask again in the
+    /// same process, and you get the pre-write answer; `Locale.preferredLanguages`
+    /// tracks the write, the `nil` form does not. And the cache is primed before
+    /// any of our code runs, because AppKit resolves the main bundle's
+    /// localisations during `NSApplicationMain` — a probe that reads
+    /// `Bundle.main.preferredLocalizations` first and writes second gets the
+    /// stale value, one that writes first gets the fresh one.
+    ///
+    /// So a `nil` here would make every caller after launch answer with the
+    /// launch-time language: the picker would stop updating the report, and a
+    /// migration could not read back what it had just written.
     nonisolated static func systemPreferredLocale() -> String {
         let best = Bundle.preferredLocalizations(
-            from: Array(supportedLocales), forPreferences: nil
+            from: Array(supportedLocales), forPreferences: Locale.preferredLanguages
         ).first
         return best.map(sanitized) ?? "en"
+    }
+
+    /// `AppleLanguages` as set for THIS app specifically, or `nil` when the app
+    /// domain has none and the value is inherited from the global domain.
+    ///
+    /// `UserDefaults.standard.array(forKey:)` cannot answer this — it searches
+    /// the global domain too, so it returns the system's list and makes "nobody
+    /// has chosen" indistinguishable from "chose the system default".
+    nonisolated static func explicitAppleLanguages() -> [String]? {
+        CFPreferencesCopyValue(
+            "AppleLanguages" as CFString,
+            kCFPreferencesCurrentApplication,
+            kCFPreferencesCurrentUser,
+            kCFPreferencesAnyHost
+        ) as? [String]
     }
 
     /// Change the active locale. Reloads JSON from disk.

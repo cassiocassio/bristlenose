@@ -16,13 +16,15 @@
 # Scope rule (N-01): this codebook reflects the book as Norman set it out. It
 # does not fix him, extend him, or draw on NN/g articles. Concepts that are in
 # the book but not among his seven principles (mode error, knowledge in the
-# world, safeguards) are marked "A" in the register; two tags that are ours and
-# not his (exploration, first-time use) are marked "P".
+# world, safeguards) are marked "A" in the register. Every tag is his. v1's two practitioner tags (exploration, first-time
+# use) were retired in 2.4 and rescued into the UXR codebook (N-17); 2.5
+# retired "learned behaviour" (conventions, folded into cultural
+# constraint) and "grouping" (a source of natural mapping, not a tag).
 id: norman
 title: The Design of Everyday Things
 author: Don Norman
 enabled: true
-version: "2.3"  # N-02: bumped on every accepted wording change; TagPrompt.prompt_version hashes the text
+version: "2.5"  # N-02: bumped on every accepted wording change; TagPrompt.prompt_version hashes the text
 
 description: >
   Norman's seven fundamental principles of design — discoverability,
@@ -77,7 +79,7 @@ groups:
         definition: >
           The participant can see that an action or feature is available —
           the design puts the possibility in front of them without
-          exploration or prior knowledge.
+          searching or prior knowledge.
         apply_when: >
           The participant goes straight to what they need, remarks that an
           option is prominent, or comments that it is obvious what can be
@@ -107,49 +109,8 @@ groups:
           signifier. Hidden feature means the feature itself is out of
           view or behind a non-obvious gesture.
 
-      # P: not Norman's. Kept from v1 as a practitioner tag; see register for the standing question of whether it belongs.
-      - name: exploration
-        definition: >
-          The participant's strategy for discovering what the product can
-          do — trying things, poking around, testing the boundaries of the
-          system without a fixed plan.
-        apply_when: >
-          The participant is deliberately experimenting: clicking to see
-          what happens, opening menus to find out what is there, narrating
-          trial and error. Look for "let me try," "what happens if,"
-          "I'll just poke around," "let's find out."
-        not_this: >
-          If they are performing a known action towards a clear goal,
-          that is not exploration. If they are stuck, look at hidden
-          feature or missing signifier. If they are trying things because
-          they do not understand the system at all, that is
-          knowledge-based mistake. If they are reading a cue to guess how a
-          control works and then trying it, that is clear signifier,
-          missing signifier or misleading signifier depending on what
-          happens. Exploration is deliberate, curious investigation with
-          no particular cue in view.
-
-      # P: not Norman's. Kept from v1 as a practitioner tag.
-      - name: first-time use
-        definition: >
-          The participant's experience of meeting the product or a feature
-          for the first time — first impressions, the initial learning
-          curve, onboarding.
-        apply_when: >
-          The participant says this is their first time, describes early
-          confusion that resolved, or comments on how long it took to get
-          their bearings. Look for "first time I used this," "when I
-          started," "once you learn it," "took me a while to get."
-        not_this: >
-          If they are currently exploring, that is exploration. If they
-          know the product and cannot find something, that is hidden
-          feature. If they are bringing habits from another product, that
-          is learned behaviour. First-time use is the initial encounter
-          and the learning threshold.
 
 
-
-      # N-12 (A, pp. 75-77). v2 wording "it tells you as you go" caught read-aloud narration (Krug: prices, 4 placeholders) and stole the EVP quote; v2.2 narrows to "did not have to remember or learn". Witness: wifi sticker; counter-witness: reading a price.
       - name: knowledge in the world
         definition: >
           The participant did not have to remember or learn something
@@ -293,8 +254,8 @@ groups:
           If the theory has just been shown wrong and they are surprised,
           that is model mismatch. If they are describing what the design
           actually does, discovered by using it, that is system image.
-          If the theory comes from another product, that is learned
-          behaviour. User mental model is the participant's theory,
+          If it is a convention carried from another product, that is
+          cultural constraint. User mental model is the participant's theory,
           right or wrong, before reality tests it.
 
       # N-05 (R, p. 31). Was "system model", which is not a Norman term.
@@ -343,24 +304,6 @@ groups:
           Model mismatch is the gap in understanding; the error it causes
           is coded in Slips and mistakes.
 
-      # N-09. Transfer that does not go wrong stays here; transfer that produced an error is rule-based mistake.
-      - name: learned behaviour
-        definition: >
-          The participant brings habits, conventions or expectations
-          learned from other products to this one — and it works, or at
-          least no error results.
-        apply_when: >
-          The participant references other products, expects a
-          convention, or does what they always do elsewhere. Look for "in
-          [other product] you can," "I'm used to," "that's just what you
-          do on a phone," "every other app."
-        not_this: >
-          If the transferred habit produced an error, that is rule-based
-          mistake. If a violated convention produced surprise but no
-          error, that is model mismatch. If the expectation is a social
-          or cultural norm rather than a product convention, that is
-          cultural constraint. Learned behaviour is transfer from other
-          products that does not go wrong.
 
   # -------------------------------------------------------------------
   # Affordances and signifiers — what is possible, and what says so
@@ -390,7 +333,7 @@ groups:
           mostly work on signifiers; reserve affordance for statements
           about what the thing really permits.
 
-      # N-07 / N-10. The positive case v1 lacked. v2 sent "looks like I can drag it... let me try" to exploration; v2.1 widened apply-when to reading a cue before trying.
+      # N-07 / N-10. The positive case v1 lacked. v2 sent "looks like I can drag it... let me try" to v1's exploration tag (retired in 2.4); v2.1 widened apply-when to reading a cue before trying.
       - name: clear signifier
         definition: >
           A cue — visual, sound, texture, label, or social trace — that
@@ -409,9 +352,7 @@ groups:
           is misleading signifier. If they did not realise something was
           interactive, or a label or icon cannot be read, that is missing
           signifier. If the comment is about the feature being easy to
-          find rather than how to operate it, that is visible action. If
-          they are poking at things with no cue in view, that is
-          exploration.
+          find rather than how to operate it, that is visible action.
 
       # N-07. Was "false signifier"; "misleading" is his word (p. 18).
       - name: misleading signifier
@@ -464,6 +405,7 @@ groups:
     subtitle: Did the controls relate sensibly to what they control?
     colour_set: opp
     tags:
+      # N-22 (2.5). Grouping and proximity are a SOURCE of natural mapping (p. 22); the separate "grouping" tag (2.3, replacing v1's invented "logical layout") was padding and is gone.
       - name: natural mapping
         definition: >
           The relation between a control and its effect is immediately
@@ -478,10 +420,10 @@ groups:
           If the comment is that the control looks operable, that is
           clear signifier. If it is that the arrangement of controls
           mirrors the arrangement of what they control, that is spatial
-          correspondence. If it is about the grouping or order of things
-          on the page rather than a control-to-effect relation, that is
-          grouping. Natural mapping is the felt link between action and
-          result.
+          correspondence. Natural mapping is the felt link between action and result;
+          grouping and proximity — related controls placed together, beside
+          what they affect — are one of its sources (p. 22), not a separate
+          thing.
 
       - name: arbitrary mapping
         definition: >
@@ -502,7 +444,7 @@ groups:
           mapping. Arbitrary mapping is a control-to-effect relation that
           exists but cannot be inferred.
 
-      # N-08. His phrase (p. 21). Not-this now separates "filters beside results" (grouping) from arrangement that encodes which control does what.
+      # N-08 / N-22. His phrase (p. 21). "filters beside results" is natural mapping by grouping, not correspondence. 2.3's "grouping" tag was my own fourth-tag padding and is retired in 2.5.
       - name: spatial correspondence
         definition: >
           The layout of the controls mirrors the layout of the things
@@ -514,33 +456,12 @@ groups:
           effects. Look for "the buttons are laid out like the screen,"
           "top-left does top-left," "it's shaped like the thing."
         not_this: >
-          If the controls are merely near their effects on the page
-          (filters beside results) without their arrangement encoding
-          which does what, that is grouping, not correspondence. If the
+          If the controls are merely near their effects on the page (filters
+          beside results) without their arrangement encoding which does
+          what, that is natural mapping by grouping, not correspondence. If the
           comment is that the control-effect relation is obvious for a
           non-spatial reason (up means more), that is natural mapping.
 
-      # N-08 (R, p. 22). Was "logical layout", not a Norman term and the "good layout = mapping" misreading. Valence-neutral so a complaint about too many steps no longer lands on a praise tag (v1: logical layout 0.60).
-      - name: grouping
-        renamed_from: logical layout
-        definition: >
-          How the design groups, orders and separates things — related
-          controls together, steps in the order they happen, unrelated
-          things apart — and whether that helps or hinders the
-          participant. Either valence.
-        apply_when: >
-          The participant comments on the organisation of the interface:
-          things being together or apart, the order of steps, a section
-          that does or does not belong. Look for "these are grouped
-          well," "the order makes sense," "why is this here," "that's
-          completely random," "too many steps."
-        not_this: >
-          If the comment is a specific control-to-effect relation, that
-          is natural or arbitrary mapping. If it is that a control's
-          position encodes what it affects, that is spatial
-          correspondence. If it is that a feature is easy or hard to
-          find, that is visible action or hidden feature. Grouping is
-          about the structure, not about any one control.
 
   # -------------------------------------------------------------------
   # Constraints — what guided or blocked the action
@@ -571,22 +492,24 @@ groups:
           design asks "are you sure" but would proceed, that is
           safeguard. Physical constraint is an actual refusal.
 
-      # N-13. Colour and symbol conventions are cultural (pp. 128-131, 145); v1 filed "red means danger" under semantic. Witness: "red's obviously stop".
+      # N-13 / N-21. Colour and symbol conventions are cultural (pp. 128-131, 145); v1 filed "red means danger" under semantic. 2.5 folds v1's "learned behaviour" in here: conventions from other products are conventions (p. 145). Witness: "red's obviously stop".
       - name: cultural constraint
         definition: >
-          A convention or social norm guides the participant's action —
-          red means stop, the top switch is the main light, you wait to
-          be seated — because that is what people in their culture do,
-          not because the design enforces it.
+          A convention or social norm guides the participant's action — red
+          means stop, pull-down refreshes, you wait to be seated — because
+          that is what people in their culture, or in the products they
+          already use, do; not because the design enforces it. Norman:
+          conventions are a special kind of cultural constraint (p. 145).
         apply_when: >
-          The participant acts on a convention without reading, or
-          references what is done or not done. Look for "red's obviously
-          stop," "you're supposed to," "that's just not done," "people
+          The participant acts on a convention without reading, brings a
+          convention from other products and it holds, or references what
+          is done or not done. Look for "red's obviously stop," "that's just what you do on a
+          phone," "every other app," "you're supposed to," "people
           expect," "in my country."
         not_this: >
-          If the convention comes from other products specifically, that
-          is learned behaviour. If the design physically enforces it,
-          that is physical constraint. If the guidance comes from the
+          If applying the convention produced an error here, that is
+          rule-based mistake. If the design physically enforces it, that is
+          physical constraint. If the guidance comes from the
           meaning of the situation rather than a convention, that is
           semantic constraint. Colour and symbol conventions are cultural,
           not semantic.
@@ -707,8 +630,8 @@ groups:
         not_this: >
           If they had no usable rule at all and were guessing, that is
           knowledge-based mistake. If the rule was right but the finger
-          wrong, that is action slip. If the transferred habit caused no
-          error, that is learned behaviour. Rule-based mistake requires
+          wrong, that is action slip. If the transferred convention caused no error, that is cultural
+          constraint. Rule-based mistake requires
           a known rule, wrongly applied, and a bad result.
 
       - name: knowledge-based mistake
@@ -724,9 +647,7 @@ groups:
           these mean," "I made one of each and hoped."
         not_this: >
           If they had a rule and it was the wrong rule, that is rule-based
-          mistake. If they are curious and experimenting rather than
-          lost, that is exploration. If they understood and forgot, that
-          is memory lapse. Knowledge-based mistake is a plan built on
+          mistake. If they understood and forgot, that is memory lapse. Knowledge-based mistake is a plan built on
           missing knowledge.
 
       # N-16 (R, ch. 5 designing for error). Was "confirmation" under Feedback; Norman treats checks, undo and sensibility checks as error design, and is sceptical of "are you sure".

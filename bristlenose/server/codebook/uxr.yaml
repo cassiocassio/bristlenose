@@ -1,5 +1,5 @@
 id: uxr
-version: "2.0"
+version: "2.1"
 title: Bristlenose UXR Codebook
 author: ""
 enabled: true
@@ -118,6 +118,26 @@ groups:
           abandonment. Error recovery is specifically the response to
           a mistake, not the confusion that preceded it.
 
+
+      # Rescued from Norman v1 (22 Sep 2026): not Norman's, but it discriminates
+      # well and describes real behaviour. docs/design-codebook-norman.md N-17.
+      - name: exploration
+        definition: >
+          The participant's strategy for discovering what a product can
+          do — trying things, poking around, navigating without a fixed
+          goal, testing the boundaries of the system.
+        apply_when: >
+          The participant is actively experimenting: clicking things to
+          see what happens, opening menus to find out what is there,
+          narrating trial and error. Look for "let me try," "what happens
+          if I," "I'll just poke around," "let's see what this does."
+        not_this: >
+          If the participant is performing a known action towards a clear
+          goal, that's not exploration. If they are stuck with no way
+          forward, that's dead end. If they are improvising around a
+          blocker, that's workaround. If they are doing what they always
+          do, that's habit. Exploration is deliberate, curious
+          investigation.
   - name: Pain points
     subtitle: Where things break down
     colour_set: emo
@@ -570,3 +590,22 @@ groups:
           but aren't showing mastery, that's prior experience.
           Expertise is about demonstrated competence, not just time
           spent.
+
+
+      # Rescued from Norman v1 (22 Sep 2026): not Norman's, useful. N-17.
+      - name: first-time use
+        definition: >
+          The participant's experience of meeting the product or a feature
+          for the first time — first impressions, initial orientation,
+          onboarding.
+        apply_when: >
+          The participant says this is their first time, describes early
+          confusion that resolved, or comments on how long it took to get
+          their bearings. Look for "first time I used this," "when I
+          started," "once you learn it," "took me a while to get."
+        not_this: >
+          If they describe getting better over repeated use, that's
+          learning curve (the slope, not the first encounter). If a
+          sudden insight lands, that's aha moment. If they are currently
+          poking around to see what happens, that's exploration. First-time
+          use is the initial encounter and the learning threshold.

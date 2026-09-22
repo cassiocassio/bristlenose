@@ -6,7 +6,9 @@ names to the model and resolves the answers against the project's
 ``TagDefinition`` rows, keeping only names present in both. A rename in the
 YAML with untouched rows makes every proposal for that tag resolve to ``None``
 and vanish with a log warning, on every instance that already had the
-framework installed. norman 2.3 renamed six tags and two groups.
+framework installed. norman 2.3 renamed six tags and two groups; 2.4 and 2.5
+retired four more, which the sync removes when unreferenced and keeps when a
+researcher has used them.
 """
 
 from __future__ import annotations
@@ -103,7 +105,6 @@ class TestRenameInPlace:
             "ambiguous feedback": "uninformative feedback",
             "system model": "system image",
             "false signifier": "misleading signifier",
-            "logical layout": "grouping",
             "confirmation": "safeguard",
         }
         # ids survive: the renamed row IS the old row
@@ -166,7 +167,9 @@ class TestRenameInPlace:
         assert template is not None
         report = sync_framework_rows(db, template)
         db.commit()
-        assert report.tags_removed == ["perceived affordance"]
+        assert set(report.tags_removed) == {
+            "exploration", "first-time use", "perceived affordance", "learned behaviour", "logical layout",
+        }
         assert db.get(TagDefinition, ids["perceived affordance"]) is None
 
     def test_proposals_survive_a_rename(self, db: SASession) -> None:
@@ -232,7 +235,7 @@ class TestRenamedFromParsing:
     def test_shipped_norman_declares_its_renames(self) -> None:
         template = get_template("norman")
         assert template is not None
-        assert template.version == "2.3"
+        assert template.version == "2.5"
         declared = {t.name: t.renamed_from for g in template.groups for t in g.tags if t.renamed_from}
         assert declared["clear feedback"] == ("system response",)
         assert declared["safeguard"] == ("confirmation",)

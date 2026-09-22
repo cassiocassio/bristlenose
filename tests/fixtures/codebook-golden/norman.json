@@ -1,6 +1,6 @@
 {
  "codebook": "norman",
- "version": "2.3",
+ "version": "2.5",
  "register": "docs/design-codebook-norman.md",
  "kinds": {
   "golden": "two per tag, echoes the wording — a floor, not a gate",
@@ -41,38 +41,6 @@
    "text": "Where's the option to export? ... oh, it's under the three dots, under 'More', under 'Advanced'. Who'd find that?",
    "accept": [
     "hidden feature"
-   ]
-  },
-  {
-   "id": "norman-005",
-   "kind": "golden",
-   "text": "I'm just going to tap around and see what these icons do.",
-   "accept": [
-    "exploration"
-   ]
-  },
-  {
-   "id": "norman-006",
-   "kind": "golden",
-   "text": "Let me try long-pressing this... nope. What if I drag it? Ah, something happened.",
-   "accept": [
-    "exploration"
-   ]
-  },
-  {
-   "id": "norman-007",
-   "kind": "golden",
-   "text": "The first week I had the watch I kept accidentally triggering the SOS thing, but once you learn the button combos it's fine.",
-   "accept": [
-    "first-time use"
-   ]
-  },
-  {
-   "id": "norman-008",
-   "kind": "golden",
-   "text": "When I first opened it I had no idea what any of the tabs were for, took me a couple of sessions to get my bearings.",
-   "accept": [
-    "first-time use"
    ]
   },
   {
@@ -195,16 +163,17 @@
    "kind": "golden",
    "text": "In every other app pull-down refreshes, so that's what I did.",
    "accept": [
-    "learned behaviour"
-   ]
+    "cultural constraint"
+   ],
+   "decision": "N-21"
   },
   {
    "id": "norman-024",
    "kind": "golden",
    "text": "I'm so used to Gmail that I keep hitting 'e' to archive, and here that does nothing.",
    "accept": [
-    "learned behaviour",
-    "rule-based mistake"
+    "rule-based mistake",
+    "cultural constraint"
    ],
    "note": "habit transfer; either defensible"
   },
@@ -333,16 +302,20 @@
    "kind": "golden",
    "text": "All the account stuff is together, and all the money-moving stuff is together. Sensible.",
    "accept": [
-    "grouping"
-   ]
+    "natural mapping",
+    "logical constraint"
+   ],
+   "decision": "N-22"
   },
   {
    "id": "norman-040",
    "kind": "golden",
    "text": "The steps go top to bottom in the order you'd actually do them. That's well organised.",
    "accept": [
-    "grouping"
-   ]
+    "natural mapping",
+    "logical constraint"
+   ],
+   "decision": "N-22"
   },
   {
    "id": "norman-041",
@@ -650,9 +623,10 @@
    "kind": "pair",
    "text": "There's a little grey bar at the bottom, I assumed it was just decoration, turns out you drag it up and that's where the filters live.",
    "accept": [
-    "missing signifier"
+    "missing signifier",
+    "hidden feature"
    ],
-   "note": "visible but unsignalled"
+   "note": "visible bar nobody signals (missing signifier) vs feature behind a gesture (hidden feature): the model has answered both across versions; both are defensible"
   },
   {
    "id": "norman-080",
@@ -710,9 +684,10 @@
    "kind": "pair",
    "text": "I'm swiping from the left to go back, that's just what you do on a phone. Yep, there we go.",
    "accept": [
-    "learned behaviour"
+    "cultural constraint"
    ],
-   "note": "no error"
+   "note": "no error",
+   "decision": "N-21"
   },
   {
    "id": "norman-087",
@@ -739,8 +714,7 @@
    "text": "I'd guess this spins? It's round. Might just be a badge though. Let's see.",
    "accept": [
     "clear signifier",
-    "missing signifier",
-    "exploration"
+    "missing signifier"
    ],
    "decision": "N-10"
   },
@@ -765,8 +739,11 @@
    "kind": "pair",
    "text": "Personal details, then payment, then confirm. That's the sensible order, it's how I'd have put it.",
    "accept": [
-    "grouping"
-   ]
+    "logical constraint",
+    "semantic constraint",
+    "natural mapping"
+   ],
+   "note": "order of steps: sequence logic, meaning of the situation, or natural mapping; was grouping in 2.3 (N-22)"
   },
   {
    "id": "norman-093",
@@ -846,14 +823,6 @@
    "decision": "N-16"
   },
   {
-   "id": "norman-102",
-   "kind": "pair",
-   "text": "Not sure what this one does. Let's find out.",
-   "accept": [
-    "exploration"
-   ]
-  },
-  {
    "id": "norman-103",
    "kind": "pair",
    "text": "I've pressed everything on this screen and none of it's what I want and I still don't get what the screen is for.",
@@ -905,7 +874,7 @@
    "accept": [
     "rule-based mistake",
     "model mismatch",
-    "learned behaviour"
+    "cultural constraint"
    ],
    "note": "repeated wrong rule about an icon"
   },
@@ -935,8 +904,7 @@
    "text": "The filters are down the left and the results are on the right, and when I tick a colour the pictures — yeah, they all go white. Lovely.",
    "accept": [
     "clear feedback",
-    "natural mapping",
-    "grouping"
+    "natural mapping"
    ],
    "decision": "N-08"
   },
@@ -954,9 +922,9 @@
    "kind": "messy",
    "text": "I'm going to guess that little house takes me home, it usually does.",
    "accept": [
-    "learned behaviour",
     "clear signifier",
-    "missing signifier"
+    "missing signifier",
+    "cultural constraint"
    ]
   },
   {
@@ -1018,10 +986,9 @@
    "kind": "messy",
    "text": "That's a lot of steps just to change the delivery address. Back, back, back, edit, save, then it makes you re-confirm the whole thing.",
    "accept": [
-    "grouping",
     "safeguard"
    ],
-   "note": "no efficiency tag in Norman; measure where it lands",
+   "note": "no efficiency principle in Norman; safeguard covers the re-confirm half; N-22",
    "decision": "N-08"
   },
   {
@@ -1030,8 +997,8 @@
    "text": "The buttons on the kiosk are in a different order to the ones on the app, so my fingers go to the wrong place.",
    "accept": [
     "arbitrary mapping",
-    "learned behaviour",
-    "action slip"
+    "action slip",
+    "cultural constraint"
    ],
    "note": "inconsistency; measure"
   },

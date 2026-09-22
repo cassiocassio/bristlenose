@@ -21,12 +21,16 @@ change the words and bump `version:` in the YAML.
 **Scope rule (N-01).** The codebook reflects the book as Norman set it out. We
 do not fix him, extend him, or borrow from NN/g articles or the *Interactions*
 essays; researchers who want a different lens run a second codebook and compare
-signals. Every tag is marked **R** (his term, restored or kept), **A** (his
-concept, in the book but not among the seven principles), or **P** (a
-practitioner convenience that is not his at all).
+signals. Every tag is marked **R** (his term, restored or kept) or **A** (his
+concept, in the book but not among the seven principles). Two v1 tags that
+were neither were retired in 2.4 (N-17).
 
 ## Changelog
 
+- _2026-09-22_, later still — **v2.5**: learned behaviour folded into cultural
+  constraint (N-21) and grouping retired (N-22); 28 tags, every one his.
+  exploration and first-time use rescued into UXR 2.1.
+- _2026-09-22_, later — **v2.4**: exploration and first-time use retired (N-17).
 - _2026-09-22_ — register opened from the audit of v1 (the 20 Feb 2026 text,
   unchanged since). v2, v2.1, v2.2 and v2.3 drafted and measured the same day;
   **v2.3 landed** as `norman.yaml` version 2.3, with `codebook_sync` (N-20)
@@ -61,8 +65,6 @@ sampling recipe.
 |---|---|---|---|
 | Discoverability | visible action | R | discoverability, p. 3, p. 10 |
 | | hidden feature | R | discoverability failure, p. 3 |
-| | exploration | **P** | not his |
-| | first-time use | **P** | not his |
 | | knowledge in the world | A | ch. 3, pp. 75–77, "precise behaviour from imprecise knowledge" |
 | Feedback | clear feedback | R | p. 23, immediate and informative |
 | | no feedback | R | p. 23, the elevator button |
@@ -72,7 +74,6 @@ sampling recipe.
 | Conceptual model | user mental model | R | p. 31 |
 | | system image | R | p. 31 (v1 said "system model", not his) |
 | | model mismatch | R | designer's model ≠ user's model, p. 31 |
-| | learned behaviour | R | conventions, p. 145 |
 | Affordances and signifiers | affordance | R | pp. 11–13, what the thing permits; anti-affordance p. 19 |
 | | clear signifier | R | pp. 13–19 |
 | | misleading signifier | R | p. 18, his word |
@@ -80,9 +81,8 @@ sampling recipe.
 | Mapping | natural mapping | R | pp. 20–22 |
 | | arbitrary mapping | R | stove burners, pp. 113–115 |
 | | spatial correspondence | R | p. 21, his phrase |
-| | grouping | R | p. 22 (v1 said "logical layout", not his) |
 | Constraints | physical constraint | R | p. 125; forcing functions pp. 141–144 |
-| | cultural constraint | R | pp. 128–131, conventions p. 145 |
+| | cultural constraint | R | pp. 128–131; conventions, including those carried from other products, p. 145 |
 | | semantic constraint | R | p. 129 |
 | | logical constraint | R | p. 130 |
 | Slips and mistakes | action slip | R | pp. 171, 173–175 (capture, description-similarity) |
@@ -172,10 +172,22 @@ Format: **id · kind · status** — decision. *Evidence.* Reopen when.
   feedback at 0.70, above the accept line. *E4, p. 177; E1 + E2.*
 - **N-16 · confirmation → safeguard · settled** — moved from Feedback to the
   error group with undo and sensibility checks. *E4, ch. 5.*
-- **N-17 · exploration and first-time use · open** — both are ours, not his.
-  Kept because researchers use them and they cost nothing on the traps. The
-  standing question is whether a codebook under his name should carry tags
-  he did not write. Reopen: by the owner, not by evidence.
+- **N-17 · exploration and first-time use · settled in v2.4, retired** —
+  neither is his. The February 2026 origin document carried one tag per
+  principle, in his words; the commit that built the AutoCode backend
+  padded every group to exactly four tags, and where the book ran out the
+  fourth was invented — these two, plus logical layout, system model and
+  the affordance/perceived-affordance pair (N-05, N-07, N-08). On real speech
+  exploration fired only on navigation narration ("let me look at find
+  cars") at 0.50–0.60, and first-time use once, on a quote the neighbouring
+  chunks read as missing signifier. Behaviour belongs in the UXR codebook
+  (`learning curve` is already there), and both tags were **rescued into
+  UXR 2.1** with their v1 prompts, since they discriminate well; from
+  Norman the right answer to a participant poking around is no tag. *E4 (the book has no such
+  principle); E2, Krug and Wikipedia; scope rule N-01.* Reopen: never on
+  evidence — a practitioner tag that earns its keep is a UXR decision.
+  **Standing check for the other codebooks:** Garrett and Morville also sit
+  at exactly four tags per group.
 - **N-19 · read-aloud is not system image · OPEN, measured in v2.3** — restoring
   knowledge in the world with "reading a price is just reading, no tag from
   this group" pushed read-aloud narration into system image (Krug: prices
@@ -190,6 +202,22 @@ Format: **id · kind · status** — decision. *Evidence.* Reopen when.
   difference?" reached missing signifier 0.85 in v2.3 (v1: ambiguous
   feedback 0.72), which is the N-11 witness that holds. Next lever is the
   system image apply-when, not its not-this.
+- **N-21 · learned behaviour → cultural constraint · settled in v2.5** — not
+  his term. What it coded — a convention carried from other products,
+  applied here — is Norman's *convention*, and "conventions are a special
+  kind of cultural constraint" (p. 145). Folded in; the error case stays
+  rule-based mistake (N-09). UXR carries `prior experience` and `habit` for
+  the behavioural reading. *E4, p. 145; E1 witnesses: "pull-down refreshes,
+  that's what I did", "swiping from the left to go back".*
+- **N-22 · grouping retired · settled in v2.5** — my own padding: 2.3
+  replaced v1's invented "logical layout" with "grouping" to keep Mapping at
+  four tags, the same disease as N-17. Norman names grouping and proximity as
+  a *source* of natural mapping (p. 22), not a principle; the definition of
+  natural mapping now says so and spatial correspondence's not-this sends
+  "filters beside results" there. The too-many-steps complaint has no
+  Norman home (efficiency is not a principle); UXR `friction` and Garrett
+  carry it. *E4, p. 22; E1 witnesses: the two v1 grouping quotes, now
+  natural mapping.*
 - **N-20 · renames reach installed rows · settled** — AutoCode sends the
   YAML's names to the model and resolves its answers against the project's
   `TagDefinition` rows, keeping only names present in both

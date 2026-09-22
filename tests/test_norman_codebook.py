@@ -38,8 +38,10 @@ REGISTER = REPO / "docs" / "design-codebook-norman.md"
 
 # Terms v1 used that are not Norman's, or that the 2013 edition folds away.
 # ``perceived affordance`` is a kind of signifier (p. 18); the others were
-# invented. A tag carrying one of these is a regression against the register.
-NOT_HIS = {"system model", "logical layout", "false signifier", "perceived affordance"}
+# invented; exploration and first-time use were v1 padding to four tags per
+# group (N-17). A tag carrying one of these is a regression against the register.
+NOT_HIS = {"system model", "logical layout", "false signifier", "perceived affordance",
+           "exploration", "first-time use", "learned behaviour", "grouping"}
 
 
 def _fixture() -> dict:
@@ -73,7 +75,7 @@ class TestVocabulary:
         names = set(_tags())
         for name in ("system image", "misleading signifier", "clear signifier", "spatial correspondence",
                      "no feedback", "excessive feedback", "mode error", "knowledge in the world",
-                     "safeguard", "grouping"):
+                     "safeguard"):
             assert name in names, name
 
     def test_every_tag_has_full_prompts(self) -> None:
@@ -105,7 +107,7 @@ class TestVocabulary:
     def test_committed_errors_route_to_the_error_group(self) -> None:
         tags = _tags()
         assert "rule-based mistake" in tags["model mismatch"][1].not_this
-        assert "rule-based mistake" in tags["learned behaviour"][1].not_this
+        assert "rule-based mistake" in tags["cultural constraint"][1].not_this
 
     def test_taxonomy_token_budget(self) -> None:
         """Guards bloat, not exact count: the 4-chars-per-token heuristic

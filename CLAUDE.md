@@ -263,6 +263,61 @@ xcodebuild -showBuildSettings -project desktop/Bristlenose/Bristlenose.xcodeproj
 Tell that you are in this trap: a file write that neither succeeds nor raises, on
 a path the entitlements file says nothing forbids.
 
+### `Bundle.preferredLocalizations(from:forPreferences: nil)` LATCHES on its first call
+
+Passing `nil` does not mean "read the user's languages now" — CoreFoundation
+resolves the preference list on the **first call anywhere in the process** and
+caches it for the process lifetime. `Locale.preferredLanguages` and
+`CFPreferencesCopyValue` both stay live; only the `nil` form freezes.
+
+**And the cache is primed before any of our code runs**, because AppKit resolves
+the main bundle's localisations during `NSApplicationMain`. Measured 22 Sep 2026
+with a bundled probe: write `AppleLanguages` then read → fresh; read
+`Bundle.main.preferredLocalizations` first, then write, then read → **stale**.
+So a migration cannot read back what it just wrote, no matter how early it runs,
+and a "live" resolver answers with the launch-time language for the rest of the
+session.
+
+**Fix: pass the list explicitly** — `forPreferences: Locale.preferredLanguages`.
+Measured live through `ja`, `pt-BR`, `zh-Hant-HK`, `nn-NO`→`nb`, and back to `en`
+on clear. `I18n.systemPreferredLocale` carries the reasoning inline.
+
+**Tell:** a language change that updates the chrome and not the report, or a
+value that reads back as its pre-write self in the same process. **The related
+trap:** `UserDefaults.standard.array(forKey: "AppleLanguages")` searches the
+global domain too, so it cannot distinguish "this app has an override" from
+"inheriting the system list" — use `CFPreferencesCopyValue(…,
+kCFPreferencesCurrentApplication, kCFPreferencesCurrentUser,
+kCFPreferencesAnyHost)`, which reads the app domain alone. That distinction is
+what stops a write-back reverting a language the user set in System Settings.
+
+**Sibling, same family:** `@AppStorage("k") = "default"` is a **Swift-side
+fallback, not a registered default**. The key stays absent until something
+writes it, so a view bound to it displays the literal while the rest of the app
+resolves something else — the Settings picker read "English" on a fresh install
+whose Mac was German, and selecting the row it showed would have *written* the
+key and switched the app. Seed such a control from the real resolver as `@State`;
+do **not** seed the key, because its absence is usually what carries the
+follow-the-system behaviour.
+
+### A subagent can overwrite your scratchpad files — namespace anything you will re-read
+
+`/usual-suspects` subagents share the session's scratchpad directory. During the
+22 Sep locale review one of them built its own `Probe.app` at the same path as
+mine and rewrote its `Info.plist` — so a probe I had built to read one bundle
+identifier silently started reporting another, and two measurements taken after
+that point were against a bundle that was not the one I thought I was testing.
+
+The tell was a bundle id I had never written. **Nothing errored**, and the
+readings were internally consistent — they were simply about a different app.
+
+**Two habits.** Put a session-unique token in the path (`mainloop-probe-7f3a/`),
+and have the probe **assert its own identity** before reporting
+(`guard Bundle.main.bundleIdentifier == "…" else { exit(3) }`). The second is
+what makes a clobber loud instead of plausible. Generalises past probes to any
+scratchpad artefact you write, walk away from, and read back while agents are
+running.
+
 ### macOS BSD userland — use GNU coreutils
 
 macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat`, `readlink`, `tar`, and others. These differ from the GNU versions in subtle, bug-inducing ways:

@@ -165,7 +165,8 @@ automatically right.
 | Their own codebooks — the ones they author | **Theirs** | They type them. Nothing translates, and nothing should |
 | Shipped framework codes — Garrett, Norman, Nielsen, Morville… | **English** | Codebook YAML is data (see this section's table). A decision: the concepts originate in English and translating them adds a lossy step |
 | AutoCode tags applied *from* a shipped framework | **English** | The tag **is** the code name. Follows the row above, unavoidably |
-| Theme titles, cluster names, signal elaborations | **Undefined** | Generated. Nothing steers the language — see the correction above. **Not a decision; a gap** |
+| Section names and theme titles, and their subtitles | **Theirs** | **Shipped 22 Sep 2026.** The three stages that feed the Quotes lens (`s08`, `s10`, `s11`) append an output-language instruction naming the UI language. Measured at 100% compliance across Claude, ChatGPT and Gemini; English sends no instruction at all, so nothing changed for English users. `bristlenose/llm/output_language.py` |
+| Signal names and elaborations, AutoCode rationales, codebook definitions, chat answers | **Undefined** | Generated, and **still a gap**. These run at *serve* time rather than analysis time, so they were out of scope for the above and take the UI language current when the researcher clicks, not the one the analysis ran under. See the PARKED section below |
 
 #### The Renfe case: 207 of 234 shipped tags key on literal English phrases
 
@@ -270,6 +271,38 @@ an all-translated one promises framework codes we do not produce.
 > paragraph as intent until this note is removed.
 
 ### PARKED: what language should sections and themes be generated in
+
+> **Half of this shipped on 22 Sep 2026, and the half that did not is now the
+> interesting half.**
+>
+> **Done — the Quotes lens.** Section names and theme titles follow the UI
+> language, by a one-sentence instruction appended at the call site in `s08`,
+> `s10` and `s11`. The deferral's stated cost #1 (titles in whatever the model
+> picks, differing between runs) is paid off for those surfaces.
+>
+> **The experiment the park was waiting for has run.** 108 cells, three
+> providers, three passes, $1.04 — `experiments/generated-language/FINDINGS.md`.
+> It establishes the first two things this section says an experiment must:
+> unsteered behaviour is *undefined* rather than English (Claude produced
+> English on every pass; ChatGPT and Gemini drifted into Spanish on one corpus
+> and not others), and an explicit instruction is obeyed 100% of the time by all
+> three. It did **not** establish the third — whether steering costs analysis
+> quality — because the corpora are too small to separate that from ordinary
+> run-to-run wobble.
+>
+> **Cost #2 is no longer accurate.** It says seven illustration values stay
+> English because the rules forbid drawing a fix over a broken pipeline. Six of
+> those seven are section or theme names, and that pipeline is now fixed — so
+> they are *unblocked*, and keying them is a follow-up nobody has done. The
+> seventh, the Miro sticky, is a section name too. Their entries in
+> `tests/test_welcome_locale_keys.py` still cite this park as the reason.
+>
+> **Still open, and unchanged:** which language is *right* (this shipped the UI
+> language, not the per-session leaning argued below — the mechanism is the same
+> and only the source differs), the mixed-language case, and every serve-time
+> surface.
+>
+
 
 > **Parked 22 Sep 2026 — with a reason, a trigger and a cost, because a
 > deferral missing any of the three is not a park.**

@@ -90,9 +90,15 @@ menu row (title from `desktop.menu.quotes.extractClips`, subtitle from
    **樽本 徹也**, not Nielsen, and is exactly the false positive the next
    searcher will also find.
 
+   **Amended the same day: it is nine, not six.** The eleven markets recorded
+   below as "no Amazon market, unchecked rather than nil" were checked against
+   national bookstores, and three of them had editions. The caution was right
+   and the number was wrong — a nil from a search that cannot reach the market
+   is not a nil.
+
    | shelf book | editions found | markets |
    |---|---|---|
-   | **Norman**, *The Design of Everyday Things* | **six** | de, es, fr, it, ja, pt-BR |
+   | **Norman**, *The Design of Everyday Things* | **nine** | de, es, fr, it, ja, pt-BR, **zh-Hant, ko, ru** |
    | **Braun & Clarke**, *Thematic Analysis* | **one** | pl — *Analiza tematyczna: Praktyczny przewodnik*, PWN, `8301238356` |
    | **Nielsen**, *Usability Engineering* | none | — |
    | **Lazarus**, *Emotion & Adaptation* | none | — |
@@ -115,10 +121,19 @@ menu row (title from `desktop.menu.quotes.extractClips`, subtitle from
    no-op for the title and a change only for the artwork. A per-book × per-
    language matrix was the right call: one switch would have got this wrong.
 
-   **Eleven of our twenty-one locales have no Amazon market at all** — ca, cs,
-   da, fi, ko, nb, pt-PT, ru, uk, zh-Hant, zh-Hant-HK. Those are *unchecked*,
-   not nil, and Norman plausibly has ko/zh-Hant/ru/cs editions; the appendix's
-   second-choice store per market is where to look.
+   **The eleven non-Amazon markets, checked 22 Sep 2026** against national
+   stores. The prediction in the previous sentence of this paragraph — "Norman
+   plausibly has ko/zh-Hant/ru/cs editions" — was three-quarters right:
+
+   | locale | store | result |
+   |---|---|---|
+   | zh-Hant | 博客來 books.com.tw | **設計的心理學：人性化的產品設計如何改變世界 (3版)**, `0010643797`, 唐納‧諾曼. The same store also stocks Yablonski's *Laws of UX* 2nd ed — a second shipped codebook readable in Chinese |
+   | ko | YES24 | **도널드 노먼의 디자인과 인간 심리**, 학지사, 2016, tr. 박창호 |
+   | ru | Litres | **Дизайн привычных вещей**, tr. Б. Л. Глушак — listed but *нет в продаже* |
+   | cs | Kosmas | no match for Donald Norman |
+   | uk | Yakaboo | **UNCHECKED** — Cloudflare-blocked from here. Not a nil |
+   | pt-PT | Wook | search path redirects; likely carries the Brazilian edition |
+   | ca, da, fi, nb | — | not checked; served by the Spanish edition and by English |
 
    | shelf book | what the earlier research said |
    |---|---|

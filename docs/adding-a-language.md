@@ -104,15 +104,29 @@ There's no clean way to do both in parallel — pick one, then do it. The
 cs branch did Weblate-first and it worked, but the sequence is
 load-bearing both ways.
 
-## Step 1 — Register the code in three places
+## Step 1 — Register the code in four places
 
 ```
 frontend/src/i18n/index.ts          SUPPORTED_LOCALES literal union  (line ~19)
 bristlenose/i18n.py                 SUPPORTED_LOCALES tuple          (line ~23)
 desktop/Bristlenose/Bristlenose/I18n.swift  supportedLocales Set     (line ~29)
+bristlenose/llm/output_language.py  LANGUAGE_NAMES dict              (line ~49)
 ```
 
-Adding the new code to all three is the minimum smoke test that the rest of
+**The fourth is new on 22 Sep 2026 and is the one with a silent failure mode.**
+The other three make something loud go wrong; this one decides what language
+the *pipeline generates section and theme names in*, and a locale missing from
+it falls back to sending no instruction at all — so the researcher gets a fully
+translated app and English themes, with every locale gate green. It fails
+loudly on purpose: `tests/test_output_language.py::test_every_supported_locale_can_be_named`
+compares the map against `SUPPORTED_LOCALES` both ways.
+
+Note it wants the language's name **in English** (`"Norwegian Bokmål"`), not its
+autonym — the prompt around it is English, and a model follows `write in
+Japanese` more reliably than `write in 日本語`. That makes it the one
+registration site that is not a copy of the locale code.
+
+Adding the new code to all four is the minimum smoke test that the rest of
 the work will be plumbed. Do this first; the test suite will start failing
 loudly on missing key files, which is what you want for the next steps.
 
@@ -365,7 +379,7 @@ verify.
 
 ## Step 12 — Done criteria
 
-- [ ] Code registered in 3 SUPPORTED_LOCALES sites
+- [ ] Code registered in 3 SUPPORTED_LOCALES sites + `LANGUAGE_NAMES` (English name, not autonym)
 - [ ] Locale dir + 8 namespace files + preflight.json populated
 - [ ] Plural selector case added (if not one/other-shaped) + Swift @Test
 - [ ] Glossary rows added (Apple HIG + Bristlenose QDA)

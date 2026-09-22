@@ -41,19 +41,32 @@ If code files were changed:
 
    Any file listed has **zero** i18n call sites. That is failure class 2 — a surface never enrolled in English — and **nothing mechanical will ever ask again**, because every gate we own (`check-locales.py`, the locale key-parity tests, Weblate) is downstream of a key existing. Judge, don't obey: a presentation shell that takes its strings from a caller (`ToastView`, `StatusPill`, `SessionsPopoverList`) correctly has none, and a whole-file `#if DEBUG` lab is out of scope. What you are looking for is a surface a researcher reads. The boundary is `docs/design-i18n.md` §"Which surfaces are targets"; the authoring rule is `desktop/CLAUDE.md` §"A user-facing string needs a key".
 
-   **And one exact check with no judgement in it** — every `LocalizedError` conformer in the app target held hardcoded English on 21 Sep 2026, 6 of 6, no false positives:
+   **And one exact check with no judgement in it** — run the gate, don't grep:
 
    ```bash
-   grep -rln ': LocalizedError' desktop/Bristlenose/Bristlenose |
-     while read -r f; do
-       if grep -qE '(errorDescription|failureReason|recoverySuggestion)' "$f" \
-          && ! grep -qE 'i18n\??\.t\(' "$f"; then echo "English LocalizedError: $f"; fi
-     done
+   .venv/bin/python -m pytest tests/test_localized_error_coverage.py -q
    ```
 
-   The protocol's name is the promise. A conformer whose `errorDescription` returns a bare literal is a sentence filed as data, and it renders — the six found on 21 Sep reach the cloud-import window, the Miro sheet and the main-window toast.
+   Every `LocalizedError` conformer must be classified `LOCALISED`,
+   `ENGLISH_BY_DECISION` or `ENGLISH_PENDING`, and `MAX_ENGLISH_PENDING` is **0**
+   — reached 21 Sep 2026 and held there. A new conformer fails the gate until
+   somebody classifies it, which is the whole point.
 
-   **This is the register's own standing recommendation** (`docs/i18n-defects.md`, "What to build next", the fourth item), which had been correct and unmechanised since 21 Aug 2026. It caught nothing for a month because it lived in a document rather than in a checklist that runs.
+   > **This step used to be a grep, and by 22 Sep it was six false positives out
+   > of six.** It looked for `i18n.t(` *inside* the error type — which was the
+   > right shape when it was written (`79f6d8d4`, 21 Sep, when 6 of 6 conformers
+   > genuinely held English), and was obsolete within a day, because **the fix
+   > adopted was the opposite shape**: an error carries a *case* (`localeKey` +
+   > `localeVars`) and the View resolves it, since a view has an `I18n` and an
+   > error does not. `errorDescription` deliberately keeps English for the log.
+   > So the grep flagged `MiroAPI`, `CopyMachinery`, `CloudDownloader` and the
+   > three OAuth enums — all correctly localised — and would have flagged them on
+   > every close-out forever.
+   >
+   > Keep the correction visible, because the failure is this repo's most
+   > expensive recurring one and it bit *the check written to catch it*: a gate
+   > encoding a premise the architecture has since denied. Root `CLAUDE.md` says
+   > a gate that cries wolf gets switched off, which is worse than no gate.
 
 If anything fails, **stop and fix before documenting**. Don't document a broken state.
 

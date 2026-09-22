@@ -1335,6 +1335,23 @@ cmd_run() {
         # refuse afterwards (0.30.0, incident 27 — avoided twice by hand).
         # Re-dispatch here instead: DISPATCH_CMD rewrites ci-sha and ci-green
         # then waits for a verdict about THIS commit.
+        # push-main is the SAME hazard one step earlier, and it bit 0.31.0.
+        # A fix committed between attempts moves HEAD; push-main is a plain
+        # step recorded ok, so the resume skips it and the commit is never
+        # published. strict-ci below then re-dispatches — but DISPATCH_CMD
+        # records `git rev-parse HEAD` while `gh workflow run --ref main`
+        # dispatches against the REMOTE ref, so ci-sha names a commit the
+        # dispatched run is not about, and ci-green (which selects by
+        # headSha == ci-sha) finds nothing 40 minutes later. Measured:
+        # a dispatch carrying headSha a3475297 against ci-sha 3346e692.
+        # Ask whether HEAD is published, not whether we once pushed.
+        if [ "$id" = push-main ] && [ "$prev" = ok ] \
+           && ! git merge-base --is-ancestor HEAD origin/main 2>/dev/null; then
+            printf '  %b!%b %-26s %bHEAD %.8s is not on origin/main — re-pushing%b\n' \
+                "$Y" "$N" "$label" "$D" "$(git rev-parse HEAD)" "$N"
+            ev_append push-main pending "HEAD not published"
+            prev=pending
+        fi
         if [ "$id" = strict-ci ] && [ "$prev" = ok ] && [ -f "$CI_SHA_FILE" ] \
            && [ "$(git rev-parse HEAD 2>/dev/null)" != "$(cat "$CI_SHA_FILE" 2>/dev/null)" ]; then
             printf '  %b!%b %-26s %bverdict is for %.8s but HEAD is %.8s — re-dispatching%b\n' \

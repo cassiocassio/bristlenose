@@ -279,9 +279,12 @@ def miro_preview(project_id: int, body: MiroExportRequest, request: Request) -> 
 # ---------------------------------------------------------------------------
 
 
-@router.post("/projects/{project_id}/miro/export")
+# `response_model` explicitly, because the annotation below has to admit the
+# JSONResponse the 502 path returns and FastAPI would otherwise infer the
+# schema from the union (or refuse to). The documented shape is unchanged.
+@router.post("/projects/{project_id}/miro/export", response_model=MiroExportResponse)
 def miro_export_board(project_id: int, body: MiroExportRequest,
-                      request: Request) -> MiroExportResponse:
+                      request: Request) -> MiroExportResponse | JSONResponse:
     """Create a new Miro board from the project's (optionally scoped) quotes."""
     db = _get_db(request)
     try:

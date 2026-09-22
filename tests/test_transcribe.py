@@ -207,3 +207,59 @@ class TestTheDetectedLanguageReachesTheTranscriptHeader:
 
         write_raw_transcripts(transcripts, tmp_path)
         assert "Language:" not in (tmp_path / "s1.txt").read_text()
+
+
+class TestEveryReturnPathCarriesThreeValues:
+    """`transcribe_sessions` returns (results, languages, outcome) — always.
+
+    The early return for "nothing to transcribe" returned two values while the
+    signature, the docstring's caller contract and `pipeline.py`'s unpack all
+    said three, so reaching it raised ValueError and killed the run. Found by
+    mypy during the 0.31.0 release, after a green suite: no test had ever
+    called this function with sessions it would filter out entirely.
+
+    Reachable because the two filters differ. `pipeline.py` calls when a
+    session is "not already in session_segments and has audio"; this function
+    then keeps only those with "audio and NO existing transcript". A session
+    whose sidecar subtitle was found but failed to parse satisfies the first
+    and fails the second — audio present, transcript flagged, no segments.
+    """
+
+    def _session_with_audio_and_a_failed_subtitle(self, tmp_path):
+        from datetime import datetime
+
+        from bristlenose.models import FileType, InputFile, InputSession
+
+        audio = tmp_path / "s1.wav"
+        audio.write_bytes(b"\0")
+        return InputSession(
+            session_id="s1", session_number=1,
+            participant_id="p1", participant_number=1,
+            files=[InputFile(
+                path=audio, file_type=FileType.AUDIO,
+                created_at=datetime(2026, 9, 22), size_bytes=1,
+            )],
+            audio_path=audio,
+            # The subtitle was found — so this is True — but produced no
+            # segments, so the orchestrator still has nothing for the session.
+            has_existing_transcript=True,
+            session_date=datetime(2026, 9, 22),
+        )
+
+    def test_nothing_to_transcribe_still_returns_three_values(self, tmp_path) -> None:
+        # Mutation proof: make the early return `{}, StageOutcome()` again and
+        # this fails on the unpack, exactly as the pipeline did.
+        from bristlenose.stages import s05_transcribe
+
+        settings = type("S", (), {
+            "whisper_backend": "mlx", "whisper_model": "tiny",
+            "whisper_language": "auto",
+        })()
+
+        results, languages, outcome = s05_transcribe.transcribe_sessions(
+            [self._session_with_audio_and_a_failed_subtitle(tmp_path)], settings,
+        )
+
+        assert results == {}
+        assert languages == {}
+        assert outcome.attempted == 0

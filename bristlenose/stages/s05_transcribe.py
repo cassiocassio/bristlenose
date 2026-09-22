@@ -123,10 +123,18 @@ def transcribe_sessions(
             transcribed — faster-whisper only (mlx is one blocking call).
 
     Returns:
-        Tuple of (results, outcome). ``results`` maps session_id to
-        TranscriptSegments (empty list when that session failed). ``outcome``
-        records per-session attempts/successes/failures so the orchestrator
-        can decide whether to abandon the run.
+        Tuple of (results, languages, outcome). ``results`` maps session_id to
+        TranscriptSegments (empty list when that session failed).
+        ``languages`` maps session_id to the language the backend DETECTED,
+        and is empty for a pinned run (that is the decode option coming back,
+        not a detection). ``outcome`` records per-session
+        attempts/successes/failures so the orchestrator can decide whether to
+        abandon the run.
+
+        **Every** return path returns all three. The early return below used
+        to return two, and the docstring above used to describe two — the
+        caller unpacks three, so that path raised ValueError rather than
+        returning nothing. See the comment there.
     """
     needs_transcription = [
         s for s in sessions
@@ -134,8 +142,16 @@ def transcribe_sessions(
     ]
 
     if not needs_transcription:
+        # Three values, not two. `pipeline.py` unpacks three, and it decides
+        # whether to call us with a DIFFERENT predicate than the one above:
+        # it asks "not already transcribed and has audio", we ask "has audio
+        # and has no existing transcript". A session with audio whose sidecar
+        # subtitle failed to parse satisfies the caller's test and fails ours,
+        # so this path is reachable with a non-empty `sessions` — and returned
+        # a 2-tuple into a 3-name unpack, crashing the run. Found by mypy
+        # during the 0.31.0 release; no test covered the empty path.
         logger.info("No sessions need transcription.")
-        return {}, StageOutcome()
+        return {}, {}, StageOutcome()
 
     # Detect hardware and choose backend
     hw = detect_hardware()

@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="en" data-palette="default" data-appearance="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Welcome — Focus slot, fidelity &amp; spacing harness</title>
+
+<!--
+  MOCKUP — Tier 1 (pixel-true). The BUILD pass for candidate A, "the dissolve",
+  chosen 21 Sep 2026. The ideas page (welcome-focus-cell.html) is where A won and
+  the moon lost; this page is about whether A SURVIVES THE REAL GEOMETRY.
+
+  Everything here is extracted from source, not eyeballed:
+
+  CARD DOM          islands/QuoteCard.tsx:608-760 — blockquote.quote-card >
+                    .context? + .quote-row > .timecode + .quote-body >
+                    .quote-text-wrapper(.smart-quote/.quote-text) + .speaker +
+                    .badges; .hide-btn and .star-btn are absolute siblings.
+                    Timecode renders WITH square brackets: [11:30].
+  CARD CSS          organisms/blockquote.css, atoms/badge.css, atoms/timecode.css,
+                    molecules/badge-row.css, molecules/quote-actions.css,
+                    atoms/toggle.css — copied verbatim. NB the real card has a
+                    LEFT border only and is rounded on the RIGHT only
+                    (border-radius: 0 6px 6px 0). An earlier draft drew a full
+                    box; that was an impression, not the product.
+  FOCUS TRANSFORM   templates/focus-mode.css:48-120. Dissolve touches ONLY
+                    `background` and `border-left-color`. Recede set is exactly
+                    .badges / .timecode / .context at 0.14, headings at 0.4.
+                    .speaker and .star-btn are NOT in it, by design.
+  TOKENS            tokens.css, colors/palette-{default,edo}.css,
+                    tokens-desktop.css. Values below are the light-dark() pairs.
+  GEOMETRY          WelcomeHomeView.swift:226 (.frame(width: w, height: w/1.618)
+                    .padding(20)), GoldenSplit phi=0.618 gutter=8 (:398-409),
+                    ContentView.swift:661 sidebar min180/ideal220/max300,
+                    BristlenoseApp.swift:149 minWidth 700, :267 defaultSize 1000.
+  TEMPO             WelcomeBaton.swift:97-111 — speed 0.6 (stretch 1.667), tool
+                    webviews pace 1.3 => effective 2.167; leadIn 3s, holdEnd 3s.
+                    Micro-transitions (the 320ms dissolve) do NOT stretch —
+                    that is stated policy, not an omission.
+
+  Status: 21 Sep 2026. Nothing built in Swift; there is no `.focus` case.
+-->
+<style>
+  /* ============================================================= *
+   *  TOKENS — verbatim light-dark() pairs from the palette files    *
+   * ============================================================= */
+  :root{
+    --bn-colour-bg:#ffffff; --bn-colour-text:#1a1a1a; --bn-colour-muted:#6b7280;
+    --bn-colour-border:#e5e7eb; --bn-colour-accent:#007aff; --bn-colour-quote-bg:#f9fafb;
+    --bn-colour-badge-bg:#f3f4f6; --bn-colour-badge-text:#374151;
+    --bn-colour-border-hover:#d1d5db; --bn-colour-icon-idle:#c9ccd1; --bn-colour-starred:#999;
+    --bn-sentiment-frustration:#ea580c;  --bn-sentiment-frustration-bg:#fff7ed;
+    --bn-sentiment-confusion:#dc2626;    --bn-sentiment-confusion-bg:#fef2f2;
+    --bn-sentiment-satisfaction:#16a34a; --bn-sentiment-satisfaction-bg:#f0fdf4;
+    --page-bg:#f4f4f5; --page-ink:#1a1a1a; --page-faint:#6b7280; --page-line:#e5e7eb; --page-card:#f9f9fa;
+    --cell-tag:#9a9a9a;
+  }
+  :root[data-appearance="dark"]{
+    --bn-colour-bg:#111111; --bn-colour-text:#e5e7eb; --bn-colour-muted:#9ca3af;
+    --bn-colour-border:#2d2d2d; --bn-colour-accent:#0a84ff; --bn-colour-quote-bg:#1a1a1a;
+    --bn-colour-badge-bg:#252525; --bn-colour-badge-text:#d1d5db;
+    --bn-colour-border-hover:#4b5563; --bn-colour-icon-idle:#595959; --bn-colour-starred:#ccc;
+    --bn-sentiment-frustration:#fb923c;  --bn-sentiment-frustration-bg:#2d1d0e;
+    --bn-sentiment-confusion:#f87171;    --bn-sentiment-confusion-bg:#2d1515;
+    --bn-sentiment-satisfaction:#4ade80; --bn-sentiment-satisfaction-bg:#0f2918;
+    --page-bg:#161618; --page-ink:#e5e7eb; --page-faint:#9ca3af; --page-line:#2d2d2d; --page-card:#232326;
+    --cell-tag:#888;
+  }
+  :root[data-palette="edo"]{
+    --bn-colour-bg:#fdfbf7; --bn-colour-text:#1b2230; --bn-colour-muted:#4a698a;
+    --bn-colour-border:#d4c9a8; --bn-colour-accent:#0f5c9e; --bn-colour-quote-bg:#f0e9d8;
+    --bn-colour-badge-bg:#e8dfc9; --bn-colour-badge-text:#2d3654;
+    --bn-colour-icon-idle:#b8ad91; --bn-colour-starred:#9e8b6e;
+    --page-bg:#efe9db; --page-ink:#1b2230; --page-faint:#4a698a; --page-line:#d4c9a8; --page-card:#f7f2e6;
+    --cell-tag:#9c8f70;
+  }
+  :root[data-palette="edo"][data-appearance="dark"]{
+    --bn-colour-bg:#1a1816; --bn-colour-text:#e8e3d6; --bn-colour-muted:#7ba8a0;
+    --bn-colour-border:#2d2820; --bn-colour-accent:#4d9fe0; --bn-colour-quote-bg:#211e18;
+    --bn-colour-badge-bg:#2d2820; --bn-colour-badge-text:#c4b898;
+    --bn-colour-icon-idle:#4a4030; --bn-colour-starred:#b8a880;
+    --page-bg:#141210; --page-ink:#e8e3d6; --page-faint:#7ba8a0; --page-line:#2d2820; --page-card:#211e18;
+    --cell-tag:#7a7060;
+  }
+
+  :root{
+    /* tokens.css */
+    --bn-space-xs:0.15rem; --bn-space-sm:0.35rem; --bn-space-md:0.75rem;
+    --bn-radius-sm:3px; --bn-radius-md:6px;
+    --bn-transition-fast:0.15s ease; --bn-transition-normal:0.2s ease; --bn-transition-slow:0.3s ease;
+    --bn-focus-ghost-opacity:0.14; --bn-focus-heading-opacity:0.4;
+    --bn-focus-dur:320ms; --bn-focus-ease:ease-in-out; --bn-focus-outline-mix:40%;
+    /* tokens-desktop.css */
+    --bn-font-mono:"SF Mono", ui-monospace, monospace;
+    --bn-font-body:-apple-system,"SF Pro Text",system-ui,sans-serif;
+    --bn-text-badge:0.6875rem;  /* 11px subheadline */
+    --bn-text-label:0.8125rem;  /* 13px body       */
+    --bn-text-body:0.9375rem;   /* 15px title3     */
+    --bn-text-body-lh:1.4;
+    --bn-weight-light:300; --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-starred:520;
+    /* keycap */
+    --bn-cap-face:#fbfbfc; --bn-cap-face-lo:#f0f1f3; --bn-cap-highlight:rgba(255,255,255,.9); --bn-cap-edge:#cfd2d7;
+  }
+  :root[data-appearance="dark"]{ --bn-cap-face:#2c2c2e; --bn-cap-face-lo:#232325; --bn-cap-highlight:rgba(255,255,255,.06); --bn-cap-edge:#000; }
+  :root[data-palette="edo"]{ --bn-cap-face:#fdfbf7; --bn-cap-face-lo:#f3ecdb; --bn-cap-highlight:rgba(255,255,255,.85); --bn-cap-edge:#d4c9a8; }
+  :root[data-palette="edo"][data-appearance="dark"]{ --bn-cap-face:#211e18; --bn-cap-face-lo:#1a1816; --bn-cap-highlight:rgba(255,255,255,.05); --bn-cap-edge:#000; }
+
+  /* ============================================================= *
+   *  PAGE CHROME                                                    *
+   * ============================================================= */
+  *{ box-sizing:border-box; }
+  body{ margin:0; padding:20px; font:13px/1.45 var(--bn-font-body); color:var(--page-ink); background:var(--page-bg); }
+  .page{ max-width:1400px; margin:0 auto; }
+  h1{ font-size:18px; margin:0 0 4px; font-weight:600; }
+  .lede{ margin:0 0 12px; color:var(--page-faint); max-width:96ch; font-size:12px; line-height:1.5; }
+  h2.sec{ font-size:13px; font-weight:600; margin:26px 0 4px; }
+  h2.sec .n{ color:var(--bn-colour-accent); }
+  h2.sec .q{ color:var(--page-faint); font-weight:400; }
+  p.map{ font-size:12px; color:var(--page-faint); margin:2px 0 10px; max-width:92ch; line-height:1.5; }
+  p.map b{ color:var(--page-ink); font-weight:600; }
+  code{ font:11px var(--bn-font-mono); background:var(--page-card); padding:1px 4px; border-radius:4px; }
+  .notes{ font-size:12px; color:var(--page-faint); line-height:1.55; }
+  .notes ul{ margin:6px 0 0; padding-left:17px; } .notes li{ margin:0 0 7px; }
+  .notes b{ color:var(--page-ink); font-weight:600; }
+
+  .controls{ display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin:0 0 10px;
+    font-size:12px; position:sticky; top:0; background:var(--page-bg); padding:8px 0; z-index:30;
+    border-bottom:1px solid var(--page-line); }
+  .controls label{ color:var(--page-faint); display:flex; gap:5px; align-items:center; }
+  .controls select,.controls button,.controls input{ font:inherit; }
+  .controls input[type=range]{ width:190px; }
+
+  /* readout */
+  .readout{ display:flex; gap:0; flex-wrap:wrap; margin:0 0 14px; border:1px solid var(--page-line);
+    border-radius:8px; overflow:hidden; background:var(--page-card); }
+  .readout div{ padding:7px 12px; border-right:1px solid var(--page-line); font-size:11px; }
+  .readout div:last-child{ border-right:0; }
+  .readout .k{ color:var(--page-faint); display:block; font-size:10px; text-transform:uppercase; letter-spacing:.04em; }
+  .readout .v{ font:12px var(--bn-font-mono); color:var(--page-ink); }
+  .readout .v.bad{ color:var(--bn-sentiment-confusion); font-weight:700; }
+  .readout .v.warn{ color:var(--bn-sentiment-frustration); font-weight:700; }
+  .readout .v.ok{ color:var(--bn-sentiment-satisfaction); }
+
+  /* ============================================================= *
+   *  THE CELL — true-to-source furniture                            *
+   * ============================================================= */
+  .cellwrap{ overflow:auto; padding-bottom:8px; }
+  /* welcomeCell(large:) = 16pt padding, radius 10, tint = accent 3% into card */
+  .cell{ border:0.5px solid var(--page-line); border-radius:10px; padding:16px;
+    background:color-mix(in srgb, var(--bn-colour-accent) 3%, var(--page-card));
+    display:flex; flex-direction:column; gap:8px; overflow:hidden; }
+  .cell .tag{ font-size:var(--bn-text-badge); line-height:1.273; font-weight:500;
+    letter-spacing:0.4px; text-transform:uppercase; color:var(--cell-tag); flex:none; }
+  .cell .t{ font-size:var(--bn-text-body); line-height:1.333; font-weight:600; color:var(--page-ink); flex:none; }
+  .cell .summary{ font-size:var(--bn-text-label); line-height:1.231; font-weight:400; color:var(--page-faint); flex:none; }
+  .cell .lnk{ font-size:0.75rem; line-height:1.25; font-weight:400; color:var(--bn-colour-accent);
+    text-decoration:none; flex:none; }
+  .cell .navrow{ height:26px; flex:none; display:flex; align-items:center; justify-content:center; gap:0; }
+  .cell .navrow .dot{ width:16px; height:26px; display:flex; align-items:center; justify-content:center; }
+  .cell .navrow .dot i{ display:block; height:5px; width:5px; border-radius:999px; background:var(--page-line); }
+  .cell .navrow .dot.on i{ width:10px; background:color-mix(in srgb,var(--bn-colour-accent) 60%, transparent); }
+  .dropcard{ margin-top:auto; flex:none; border:1px dashed color-mix(in srgb,var(--bn-colour-border) 85%,var(--page-ink));
+    border-radius:8px; padding:14px; background:var(--bn-colour-bg); }
+  .dropcard .dt{ font-size:var(--bn-text-body); font-weight:600; line-height:1.333; }
+  .dropcard .dd{ font-size:var(--bn-text-label); color:var(--page-faint); margin-top:2px; line-height:1.231; }
+
+  /* the illustration slot — measured, not guessed */
+  .slot{ flex:1 1 auto; min-height:0; overflow:hidden; position:relative; }
+  .slot.capped{ flex:none; }
+  .slot.over{ outline:1px dashed var(--bn-sentiment-confusion); outline-offset:2px; }
+
+  /* ============================================================= *
+   *  QUOTE CARD — VERBATIM from the shipped system                  *
+   *  blockquote.css / badge.css / timecode.css / badge-row.css /    *
+   *  quote-actions.css / toggle.css                                 *
+   * ============================================================= */
+  .stage blockquote{ margin:0; padding:var(--bn-space-sm) 1rem; }
+  .stage blockquote.quote-card{
+    background:var(--bn-colour-quote-bg);
+    border-left:1px solid var(--bn-colour-border);
+    margin:0.8rem 0;
+    padding:var(--bn-space-md) 1rem;
+    border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0;
+    position:relative;
+    padding-right:4.5rem;            /* .quote-group .quote-card */
+  }
+  .stage blockquote.quote-card:first-child{ margin-top:0; }
+  .stage blockquote.quote-card:last-child{ margin-bottom:0; }
+  .stage blockquote .context{ display:block; color:var(--bn-colour-muted);
+    font-size:var(--bn-text-label); margin-bottom:0.3rem; }
+  .stage blockquote .quote-row{ display:flex; gap:0.5rem; align-items:baseline; }
+  .stage blockquote .quote-row .timecode{ flex-shrink:0; }
+  .stage blockquote .quote-body{ flex:1; min-width:0;
+    font-size:var(--bn-text-body); line-height:var(--bn-text-body-lh); }
+  .stage blockquote .timecode{ color:var(--bn-colour-accent);
+    font-family:var(--bn-font-mono); font-size:var(--bn-text-label); }
+  .stage blockquote .speaker{ color:var(--bn-colour-muted);
+    font-size:var(--bn-text-label); white-space:nowrap; }
+  /* badge-row.css */
+  .stage .quote-card .badges{ display:flex; gap:var(--bn-space-sm); margin-top:0.4rem;
+    flex-wrap:wrap; opacity:0.9; transition:opacity var(--bn-transition-fast); }
+  .stage .quote-card:hover .badges{ opacity:1; }
+  /* badge.css */
+  .stage .badge{ display:inline-block; font-family:var(--bn-font-mono);
+    font-size:var(--bn-text-badge); font-weight:var(--bn-weight-light);
+    padding:var(--bn-space-xs) 0.45rem; border-radius:var(--bn-radius-sm);
+    background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); }
+  .stage .badge-frustration{ background:var(--bn-sentiment-frustration-bg); color:var(--bn-sentiment-frustration); }
+  .stage .badge-confusion{ background:var(--bn-sentiment-confusion-bg); color:var(--bn-sentiment-confusion); }
+  .stage .badge-satisfaction{ background:var(--bn-sentiment-satisfaction-bg); color:var(--bn-sentiment-satisfaction); }
+  /* toggle.css */
+  .stage .star-btn{ position:absolute; top:0.65rem; right:0.65rem; background:none; border:none;
+    font-size:var(--bn-text-label); color:var(--bn-colour-icon-idle); padding:var(--bn-space-xs);
+    line-height:1; transition:color var(--bn-transition-normal); }
+  .stage .hide-btn{ position:absolute; top:0.65rem; right:2rem; background:none; border:none;
+    font-size:var(--bn-text-label); color:var(--bn-colour-icon-idle); padding:var(--bn-space-xs);
+    line-height:1; opacity:0;
+    transition:color var(--bn-transition-normal), opacity var(--bn-transition-normal); }
+  .stage .quote-card:hover .hide-btn{ opacity:1; }
+  /* quote-actions.css */
+  .stage .quote-card.starred .star-btn{ color:var(--bn-colour-starred); }
+  .stage .quote-card.starred{ font-weight:var(--bn-weight-starred);
+    border-left-color:var(--bn-colour-starred); }
+  :root[data-appearance="dark"] .stage .quote-card.starred{
+    border-left-color:color-mix(in srgb, var(--bn-colour-starred) 39%, var(--bn-colour-quote-bg)); }
+  .stage .quote-card.starred .context,
+  .stage .quote-card.starred .timecode,
+  .stage .quote-card.starred .speaker,
+  .stage .quote-card.starred .badges{ font-weight:var(--bn-weight-normal); }
+  /* group header — receded at 0.4 in focus */
+  .stage .bn-group-header{ display:flex; align-items:baseline; justify-content:space-between;
+    gap:var(--bn-space-sm); font-size:0.75rem; font-weight:600; margin:0 0 6px; color:var(--bn-colour-text); }
+
+  /* ---- FOCUS TRANSFORM — verbatim from templates/focus-mode.css ---- */
+  .stage.bn-focus-ready blockquote.quote-card{
+    transition:background var(--bn-focus-dur) var(--bn-focus-ease),
+               border-left-color var(--bn-focus-dur) var(--bn-focus-ease); }
+  .stage.bn-focus-ready .quote-card .badges,
+  .stage.bn-focus-ready blockquote .timecode,
+  .stage.bn-focus-ready blockquote .context,
+  .stage.bn-focus-ready .bn-group-header{
+    transition:opacity var(--bn-focus-dur) var(--bn-focus-ease); }
+
+  .stage.bn-focus-mode blockquote.quote-card:not(.bn-selected):not(.bn-focused){
+    background:transparent;
+    border-left-color:color-mix(in srgb, var(--bn-colour-border) var(--bn-focus-outline-mix), transparent); }
+  .stage.bn-focus-mode .quote-card .badges,
+  .stage.bn-focus-mode blockquote .timecode,
+  .stage.bn-focus-mode blockquote .context{ opacity:var(--bn-focus-ghost-opacity); }
+  .stage.bn-focus-mode .quote-card .badges{ pointer-events:none; }
+  .stage.bn-focus-mode .bn-group-header{ opacity:var(--bn-focus-heading-opacity); }
+  /* Axis 2 — engaged chrome returns whole */
+  .stage.bn-focus-mode .quote-card.lean .badges,
+  .stage.bn-focus-mode .quote-card.lean .timecode,
+  .stage.bn-focus-mode .quote-card.lean .context{ opacity:1; }
+  .stage.bn-focus-mode .quote-card.lean{ background:var(--bn-colour-quote-bg);
+    border-left-color:var(--bn-colour-border); }
+  .stage.bn-focus-mode .quote-card.lean.starred{ border-left-color:var(--bn-colour-starred); }
+  .stage.bn-focus-mode .quote-card.lean .hide-btn{ opacity:1; }
+  /* NOTE: no rule for .star-btn anywhere. Deliberate — see focus-mode.css. */
+
+  /* keycap — Skin A flat, split combo */
+  .cap{ display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px;
+    padding:0 5px; border-radius:5px; background:linear-gradient(var(--bn-cap-face),var(--bn-cap-face-lo));
+    border:0.5px solid var(--bn-cap-edge);
+    box-shadow:inset 0 0.5px 0 var(--bn-cap-highlight), 0 1px 1.5px rgba(0,0,0,.14);
+    font:11px/1 var(--bn-font-body); color:var(--page-ink);
+    transition:transform 90ms ease, box-shadow 90ms ease, filter 90ms ease; }
+  .cap.mod{ font-family:var(--bn-font-mono); }
+  .cap.down{ transform:translateY(1.5px); filter:brightness(0.97);
+    box-shadow:inset 0 0.5px 0 var(--bn-cap-highlight), 0 0 0 rgba(0,0,0,.14); }
+  .combo{ display:inline-flex; align-items:center; gap:0.28rem; vertical-align:-4px; }
+  .puck{ position:absolute; width:13px; height:19px; pointer-events:none; opacity:0; z-index:5;
+    transition:opacity 220ms ease, transform 620ms cubic-bezier(.4,0,.2,1); }
+  .puck.show{ opacity:1; }
+
+  /* preset row */
+  .presets{ display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap; }
+  .preset .cap-label{ font-size:11px; color:var(--page-faint); text-align:center; margin-top:6px; }
+  .preset .cap-label b{ color:var(--page-ink); }
+
+  @media (prefers-reduced-motion:reduce){ *{ transition-duration:1ms !important; } }
+  :root[data-reduce="1"] *{ transition-duration:1ms !important; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>Focus slot — fidelity &amp; spacing harness <span style="font-weight:400;color:var(--page-faint);font-size:13px">· candidate A, “the dissolve”</span></h1>
+<p class="lede">Candidate A chosen 21 Sep 2026. This page is not about whether the idea is right — it is about whether it
+  <b>survives the real geometry</b>. Every value is extracted from source: the card DOM from <code>QuoteCard.tsx</code>, its CSS
+  verbatim from six theme files, the focus transform from <code>focus-mode.css</code>, the φ arithmetic from
+  <code>WelcomeHomeView.swift</code> + <code>GoldenSplit</code>, the window sizes from <code>BristlenoseApp.swift</code>, and the
+  timings from <code>WelcomeBaton.swift</code>. <b>The cell renders at true pixel size</b> (1px = 1pt @1x), so what you see is
+  what fits. Drag <b>Window</b> and watch the budget readout go red.</p>
+
+<div class="controls">
+  <label>Window <input type="range" id="win" min="700" max="1800" step="10" value="1000"><span class="v" id="winV" style="font:12px var(--bn-font-mono)">1000</span></label>
+  <label>Sidebar <select id="sb"><option value="220">out (220)</option><option value="0">collapsed</option><option value="180">min (180)</option><option value="300">max (300)</option></select></label>
+  <label>Quotes <select id="nq"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></label>
+  <label>Length <select id="len"><option value="s">short</option><option value="m" selected>typical</option><option value="l">long</option></select></label>
+  <label>Copy <select id="copy"><option value="cut" selected>cut (83)</option><option value="core">core only (33)</option><option value="long">first draft (110)</option></select></label>
+  <label>Tags <select id="tags"><option value="0">0</option><option value="1" selected>1 (sentiment)</option><option value="2">2</option><option value="3">3</option></select></label>
+  <label>Slot <select id="mode"><option value="cap">cap 176 (as shipped)</option><option value="fill">fill (full-bleed)</option></select></label>
+  <label>Palette <select id="pal"><option value="default">Default</option><option value="edo">Edo</option></select></label>
+  <label>Appearance <select id="app"><option value="light">Light</option><option value="dark">Dark</option></select></label>
+  <label>Motion <select id="rm"><option value="0">Animate</option><option value="1">Still</option></select></label>
+</div>
+
+<div class="readout" id="readout"></div>
+
+<!-- ======================================================= live cell -->
+<h2 class="sec"><span class="n">1</span> · The live cell <span class="q">— true pixel size, real card CSS, real transform</span></h2>
+<p class="map">The φ arithmetic, in full: the spiral is framed <code>width: w, height: w / 1.618</code> with
+  <code>.padding(20)</code>, so <code>w = window − sidebar − 40</code>. <code>GoldenSplit(.horizontal)</code> hands the major
+  cell <code>width: (w − 8) × 0.618</code> and the spiral's full height <code>w × 0.618</code> — square to within the gutter's
+  share. <b>At the 700pt minimum window with the sidebar out, that is a 267pt cell</b>, and the furniture (tag, title, the
+  two-line summary, CTA, the 26pt nav row, the drop card, six 8pt gaps) does not shrink with it. The budget readout above is
+  measured from the DOM after layout, not calculated — if it says the slot is negative, the illustration genuinely has nowhere
+  to go at that size.</p>
+<div class="cellwrap"><div id="live"></div></div>
+
+<!-- ======================================================= presets -->
+<h2 class="sec"><span class="n">2</span> · The three windows <span class="q">— minimum · shipping default · large, side by side</span></h2>
+<p class="map">Scaled to fit this page; the scale factor is stated under each so you can read the real size off it. These are
+  the sizes that matter: <b>700</b> is the enforced minimum (<code>BristlenoseApp.swift:149</code>), <b>1000</b> is what every
+  new window opens at (<code>:267</code>), and <b>1600</b> stands for a maximised display. Sidebar out at 220 in all three.</p>
+<div class="presets" id="presets"></div>
+
+<!-- ======================================================= notes -->
+<h2 class="sec"><span class="n">3</span> · What the harness is for</h2>
+<div class="notes"><ul>
+  <li><b>The card is not what the ideas page drew.</b> The real <code>blockquote.quote-card</code> has a <b>left border only</b>
+    and is rounded on the <b>right only</b> (<code>border-radius: 0 6px 6px 0</code>); the layout is a <b>hanging indent</b> —
+    <code>.quote-row</code> is a baseline-aligned flex with the timecode in a left gutter and <code>.quote-body</code> carrying
+    text, speaker and badges. Timecodes render <b>with square brackets</b>, <code>[11:30]</code>. The earlier draft drew a full
+    box with a meta row underneath, which was an impression of a quote card rather than the product's one.</li>
+  <li><b>The dissolve touches two properties, not four.</b> <code>background: transparent</code> and
+    <code>border-left-color</code> mixed to <code>40%</code> — there is no full border to dissolve. The recede set is exactly
+    <code>.badges</code>, <code>.timecode</code>, <code>.context</code> at <code>0.14</code>, plus headings at <code>0.4</code>.
+    <b><code>.speaker</code> is not in it</b> (axis 1 keeps "whose voice" lit) and <b>neither is <code>.star-btn</code></b> —
+    there is no Focus rule for the star anywhere in the system, which the illustration inherits for free by having none either.</li>
+  <li><b>Timing is two clocks, and mixing them is the easy mistake.</b> Beats stretch by <code>WelcomeTempo</code> —
+    <code>speed 0.6</code> → <code>stretch 1.667</code>, and a tool webview carries <code>pace 1.3</code>, so
+    <b>×2.167</b> — plus a <b>3s rest on the opening frame</b> and <b>3s on the finished frame</b>. The
+    <b>320ms dissolve does not stretch</b>: micro-transitions stay at authored speed by stated policy, because slowing a fade
+    reads as lag rather than calm. So the loop is slow and the transition is not.</li>
+  <li><b>At the minimum window the slot is GONE, and that is the headline finding.</b> Derived from source, sidebar
+    out at 220: a <b>700pt</b> window gives a <b>272pt</b> cell, and the furniture &mdash; tag 14 + title 20 + a two-line
+    summary 32 + CTA 15 + nav row 26 + drop card 78 + six 8pt gaps 48 + 32 cell padding &mdash; is <b>~265pt</b>. That
+    leaves <b>about 7pt</b>. Not "cramped": arithmetically nothing. At the <b>1000pt</b> shipping default the cell is
+    457pt and the slot gets <b>~192pt</b>, which is why the pool&rsquo;s caps cluster at 160&ndash;196 &mdash; they are
+    tuned to the default window and are already at its limit. At <b>1600pt</b> it is ~563pt and everything is easy.
+    <b>So the design target is the default window, and the minimum window is a degradation case every illustration
+    already handles by self-scaling</b> &mdash; which is exactly why <code>BookShelfView</code>&rsquo;s fan reaches 0.29
+    there. Collapse the sidebar and 700pt becomes a 408pt cell, which is survivable; it is the sidebar-out minimum that
+    is brutal.</li>
+  <li><b>The first-draft copy was the longest line in the pool, and copy length is a spacing decision here.</b> Measured
+    against the eight shipped slots: Miro 28 chars, clips 38, codebooks 55, starHide 65, autocode 66, agent 69, tag 84,
+    ingest 96 &mdash; and the 21 Sep draft of this line, <b>110</b>. At the 700pt window&rsquo;s ~36 characters per line
+    that is <b>four lines against the pool&rsquo;s typical two</b>, spending ~26pt of a budget that is already at zero.
+    The default here is now the <b>cut</b> at 83 chars, written <b>inverted-pyramid with an em-dash hinge</b> so
+    <code>WelcomeClauseFit</code> can drop the trailing clause and leave a grammatical 33-char core &mdash; the rewrite
+    discipline the 20 Aug pass adopted across all 45 slots. Switch <b>Copy</b> to compare the three.</li>
+  <li><b>The spacing question has a measurable answer, and it is not flattering at the minimum window.</b> The furniture is a
+    near-constant ~210–230pt while the cell is square and scales linearly, so the slot's share collapses as the window narrows.
+    Switch <b>Slot</b> between <code>cap 176</code> and <code>fill</code> to see the two mechanisms: every shipped illustration
+    takes a <b>cap</b> and self-scales under it, while <code>fill</code> is the full-bleed proposal that measures its box and
+    stops when the next card will not fit. Only the second answers "how many quotes" honestly at every size.</li>
+</ul></div>
+
+<p class="notes" style="margin-top:22px;border-top:1px solid var(--page-line);padding-top:12px">
+  Ideas and the rejected candidates: <a href="welcome-focus-cell.html">welcome-focus-cell.html</a>. The pool's reference spec:
+  <a href="welcome-studytools-animations.html">welcome-studytools-animations.html</a>. Nothing here is built —
+  <code>WelcomeIllustration</code> has no <code>.focus</code> case.
+</p>
+</div>
+
+<script>
+var root = document.documentElement;
+var $ = function(id){ return document.getElementById(id); };
+
+/* ---------------- geometry, from source ---------------- */
+var PHI = 0.618, GUTTER = 8, SPIRAL_PAD = 20, CAP = 176, NAV_ROW = 26;
+function cellSize(win, sidebar){
+  var w = win - sidebar - (SPIRAL_PAD * 2);          // WelcomeHomeView.swift:226-227
+  return { w: w, cw: (w - GUTTER) * PHI, ch: w * PHI };  // GoldenSplit:409 / spiral height
+}
+
+/* ---------------- content ---------------- */
+var COPY = {
+  /* Inverted pyramid: the core survives alone, and the clause after the em dash is
+     what WelcomeClauseFit drops first (em/en dash and semicolon only, outermost
+     first). "long" is the 21 Sep first draft, kept so its cost is visible: 110
+     chars is the longest line in the pool, ~4 lines at the 700pt window. */
+  core: "Press {K} to read the quotes alone.",
+  cut:  "Press {K} to read the quotes alone \u2014 everything else recedes until you reach for it.",
+  long: "Press {K} to read the quotes alone \u2014 tags, timecodes and the cards themselves recede until you reach for them."
+};
+
+var TEXT = {
+  s: "I kept scrolling back up to check.",
+  m: "I kept scrolling back up to check I hadn’t missed the delivery options somewhere.",
+  l: "I kept scrolling back up to check I hadn’t missed the delivery options somewhere, because the page never told me whether postage was included in that total or added at the end."
+};
+var QUOTES = [
+  { tc:"11:30", who:"p04", sent:["frustration","badge-frustration"],  tags:["navigation","checkout"], star:false },
+  { tc:"13:08", who:"p07", sent:["satisfaction","badge-satisfaction"],tags:["checkout","saved-address"], star:true  },
+  { tc:"08:14", who:"p02", sent:["confusion","badge-confusion"],      tags:["pricing","postage"], star:false },
+  { tc:"21:47", who:"p11", sent:["frustration","badge-frustration"],  tags:["navigation","labels"], star:false }
+];
+var CURSOR = '<svg width="13" height="19" viewBox="0 0 13 19"><path d="M1 1l10.5 10.5H6.2l2.6 5.8-2.2 1-2.6-5.9L1 15.6z" fill="#fff" stroke="#000" stroke-width="1.1" stroke-linejoin="round"/></svg>';
+
+function cardHTML(q, len, nTags){
+  var badges = "";
+  if (nTags > 0) badges += '<span class="badge ' + q.sent[1] + '">' + q.sent[0] + '</span>';
+  for (var i = 0; i < nTags - 1 && i < q.tags.length; i++)
+    badges += '<span class="badge">' + q.tags[i] + '</span>';
+  return '<blockquote class="quote-card' + (q.star ? ' starred' : '') + '">' +
+    '<div class="quote-row">' +
+      '<span class="timecode">[' + q.tc + ']</span>' +
+      '<div class="quote-body">' +
+        '<span class="quote-text-wrapper"><span class="smart-quote">“</span>' +
+          TEXT[len] + '<span class="smart-quote">”</span></span> ' +
+        '<span class="speaker">' + q.who + '</span>' +
+        (badges ? '<div class="badges">' + badges + '</div>' : '') +
+      '</div>' +
+    '</div>' +
+    '<button class="hide-btn" tabindex="-1">◌</button>' +
+    '<button class="star-btn" tabindex="-1">★</button>' +
+  '</blockquote>';
+}
+
+/* ---------------- build one cell ---------------- */
+function buildCell(host, opts){
+  var g = cellSize(opts.win, opts.sidebar);
+  host.innerHTML =
+    '<div class="cell" style="width:' + g.cw + 'px;height:' + g.ch + 'px">' +
+      '<span class="tag">Study tools</span>' +
+      '<div class="t">Focus</div>' +
+      '<div class="summary">' + COPY[opts.copy].replace('{K}',
+        '<span class="combo"><span class="cap mod k-opt">⌥</span>' +
+        '<span class="cap mod k-cmd">⌘</span><span class="cap k-key">F</span></span>') + '</div>' +
+      '<div class="slot' + (opts.mode === 'cap' ? ' capped' : '') + '"' +
+           (opts.mode === 'cap' ? ' style="height:' + CAP + 'px"' : '') + '>' +
+        '<div class="stage bn-focus-ready" style="position:relative">' +
+          '<div class="bn-group-header">Finding things</div>' +
+          '<div class="cards"></div>' +
+          '<div class="puck">' + CURSOR + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<a class="lnk" href="#">Reading the report&nbsp;→</a>' +
+      '<div class="navrow">' +
+        '<span class="dot"><i></i></span><span class="dot"><i></i></span><span class="dot"><i></i></span>' +
+        '<span class="dot"><i></i></span><span class="dot on"><i></i></span><span class="dot"><i></i></span>' +
+        '<span class="dot"><i></i></span><span class="dot"><i></i></span><span class="dot"><i></i></span>' +
+      '</div>' +
+      '<div class="dropcard"><div class="dt">Drop a folder</div>' +
+        '<div class="dd">Drag a folder of recordings or transcripts here to add it as a project.</div></div>' +
+    '</div>';
+
+  var slot  = host.querySelector('.slot'),
+      cards = host.querySelector('.cards');
+
+  /* Fill by QUANTITY: render until the next card would overflow the measured box.
+     This is the full-bleed mechanism — it measures, it does not assume. */
+  var wanted = parseInt(opts.nq, 10), placed = 0;
+  for (var i = 0; i < wanted; i++){
+    cards.insertAdjacentHTML('beforeend', cardHTML(QUOTES[i % QUOTES.length], opts.len, opts.tags));
+    placed++;
+    if (cards.scrollHeight > slot.clientHeight && opts.mode === 'fill'){
+      cards.removeChild(cards.lastElementChild); placed--; break;
+    }
+  }
+  var over = cards.scrollHeight > slot.clientHeight;
+  slot.classList.toggle('over', over);
+  return { g:g, slot:slot, placed:placed, needed:cards.scrollHeight, have:slot.clientHeight, over:over };
+}
+
+/* ---------------- the loop (candidate A, four beats) ---------------- */
+var timers = [];
+function clearTimers(){ timers.forEach(clearTimeout); timers = []; }
+function at(ms, fn){ timers.push(setTimeout(fn, ms)); }
+
+var STRETCH = (1/0.6) * 1.3;   // WelcomeBaton: speed 0.6, tool-webview pace 1.3 => 2.167
+var LEAD_MS = 3000, HOLD_MS = 3000;
+function beat(sec){ return sec * 1000 * STRETCH; }
+
+function chord(host){
+  var k = ['.k-opt','.k-cmd','.k-key'].map(function(s){ return host.querySelector(s); });
+  return {
+    down: function(){ k[0].classList.add('down'); at(60,function(){k[1].classList.add('down');}); at(120,function(){k[2].classList.add('down');}); },
+    now:  function(){ k.forEach(function(c){ c.classList.add('down'); }); },
+    up:   function(){ k.forEach(function(c){ c.classList.remove('down'); }); }
+  };
+}
+
+function animate(host){
+  var stage = host.querySelector('.stage'),
+      cap   = chord(host),
+      puck  = host.querySelector('.puck'),
+      cards = host.querySelectorAll('.quote-card'),
+      lean  = cards[cards.length > 1 ? 1 : 0];
+  if (!lean) return;
+  if (reduced()){ stage.classList.add('bn-focus-mode'); cap.now(); return; }
+
+  function loop(){
+    stage.classList.remove('bn-focus-mode'); cap.up();
+    lean.classList.remove('lean'); puck.classList.remove('show');
+
+    at(LEAD_MS,                      cap.down);                                   // 3s rest, then press
+    at(LEAD_MS + 240,                function(){ stage.classList.add('bn-focus-mode'); });
+    at(LEAD_MS + beat(1.6),          function(){                                   // Axis 2: pointer arrives
+      var r = lean.getBoundingClientRect(), h = host.getBoundingClientRect();
+      puck.style.transform = 'translate(' + (r.left - h.left + r.width*0.55) + 'px,' +
+                                            (r.top  - h.top  + r.height*0.5) + 'px)';
+      puck.classList.add('show');
+    });
+    at(LEAD_MS + beat(2.3),          function(){ lean.classList.add('lean'); });
+    at(LEAD_MS + beat(4.1),          function(){ lean.classList.remove('lean'); puck.classList.remove('show'); });
+    at(LEAD_MS + beat(5.2),          function(){ cap.up(); stage.classList.remove('bn-focus-mode'); });
+    at(LEAD_MS + beat(5.2) + HOLD_MS, loop);                                       // 3s hold, then loop
+  }
+  loop();
+}
+
+function reduced(){
+  return root.getAttribute('data-reduce') === '1' ||
+         matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/* ---------------- render ---------------- */
+function opts(){
+  return { win:+$('win').value, sidebar:+$('sb').value, nq:$('nq').value,
+           len:$('len').value, tags:+$('tags').value, mode:$('mode').value,
+           copy:$('copy').value };
+}
+
+function render(){
+  clearTimers();
+  var o = opts();
+  $('winV').textContent = o.win;
+
+  var r = buildCell($('live'), o);
+  animate($('live'));
+
+  var slack = r.have - r.needed;
+  var cls = r.over ? 'bad' : (slack < 24 ? 'warn' : 'ok');
+  $('readout').innerHTML =
+    cell('window',        o.win + ' × ' + (o.win === 700 ? '500' : '700') + 'pt') +
+    cell('content w',     Math.round(r.g.w) + 'pt') +
+    cell('major cell',    Math.round(r.g.cw) + ' × ' + Math.round(r.g.ch) + 'pt') +
+    cell('slot has',      Math.round(r.have) + 'pt') +
+    cell('cards need',    Math.round(r.needed) + 'pt', cls) +
+    cell('slack',         (slack >= 0 ? '+' : '') + Math.round(slack) + 'pt', cls) +
+    cell('cards shown',   r.placed + ' of ' + o.nq, r.placed < +o.nq ? 'warn' : 'ok') +
+    cell('turn',          turnLabel());
+
+  var P = $('presets'); P.innerHTML = '';
+  [[700,'minimum'],[1000,'shipping default'],[1600,'large display']].forEach(function(p){
+    var box = document.createElement('div'); box.className = 'preset';
+    var inner = document.createElement('div'); box.appendChild(inner);
+    var res = buildCell(inner, { win:p[0], sidebar:220, nq:o.nq, len:o.len, tags:o.tags, mode:o.mode, copy:o.copy });
+    var scale = Math.min(1, 380 / res.g.cw);
+    inner.style.transform = 'scale(' + scale + ')';
+    inner.style.transformOrigin = 'top left';
+    inner.style.width  = res.g.cw + 'px';
+    inner.style.height = res.g.ch + 'px';
+    box.style.width  = (res.g.cw * scale) + 'px';
+    box.style.height = (res.g.ch * scale + 34) + 'px';
+    var lab = document.createElement('div'); lab.className = 'cap-label';
+    lab.innerHTML = '<b>' + p[0] + 'pt</b> — ' + p[1] + '<br>cell ' + Math.round(res.g.cw) +
+                    'pt · ' + res.placed + ' card' + (res.placed === 1 ? '' : 's') +
+                    ' · scale ' + scale.toFixed(2);
+    box.appendChild(lab);
+    P.appendChild(box);
+    animate(inner);
+  });
+}
+function cell(k, v, cls){
+  return '<div><span class="k">' + k + '</span><span class="v ' + (cls || '') + '">' + v + '</span></div>';
+}
+function turnLabel(){
+  // welcomeTurn = base * stretch + leadIn + holdEnd  (WelcomeBaton.swift:147)
+  var base = 5.2;
+  return (base * STRETCH + 6).toFixed(1) + 's  (base ' + base + 's × ' + STRETCH.toFixed(3) + ' + 6s holds)';
+}
+
+['win','sb','nq','len','tags','mode','copy'].forEach(function(id){
+  $(id).addEventListener('input', render);
+});
+$('pal').onchange = function(e){ root.setAttribute('data-palette', e.target.value); render(); };
+$('app').onchange = function(e){ root.setAttribute('data-appearance', e.target.value); render(); };
+$('rm').onchange  = function(e){ root.setAttribute('data-reduce',  e.target.value); render(); };
+render();
+</script>
+</body>
+</html>

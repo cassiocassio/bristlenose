@@ -104,8 +104,17 @@ _CA = {"amb", "això", "és", "què", "aquest", "aquesta", "els", "hi", "seva", 
 _SHARED_ROMANCE = {"de", "que", "la", "del", "una", "en", "i", "y", "les", "no",
                    "compra"}
 
-_CA_MARKS = ("l'", "d'", "n'", "s'", "·l", "tx", "ig ", "ny")
-_ES_MARKS = ("ñ", "¿", "¡", "ción", "ciones")
+_CA_MARKS = ("l'", "d'", "n'", "s'", "·", "tx", "ny", "à", "è", "ò", "ï")
+_ES_MARKS = ("ñ", "¿", "¡", "ción", "ciones", "sión")
+#: Evidence the string is Romance rather than English, carrying no information
+#: about WHICH Romance language. The shared function words are the bulk of it —
+#: excluding them from the es/ca scores is right (a word two languages share
+#: cannot discriminate them) but throwing them away entirely was wrong: `de` and
+#: `que` are excellent evidence that the text is not English, which is the first
+#: question. Without this, every label whose distinctive vocabulary sat outside
+#: a 30-word lexicon fell to `?`, and openai's terser labels are mostly that
+#: shape — "Decisión de estudiar gastronomía" read as unknown.
+_ROMANCE_ACCENTS = "áéíóúàèòïüñç"
 
 
 def _words(text: str) -> list[str]:
@@ -129,13 +138,34 @@ def classify(text: str) -> str:
 
     ranked = sorted(score.items(), key=lambda kv: -kv[1])
     (top, hi), (_, second) = ranked[0], ranked[1]
-    if hi <= 0:
-        return "?"
-    if hi == second:
+    if hi > 0 and hi != second:
+        return top
+    if hi > 0 and hi == second:
         return "mixed"
-    if len(words) <= 2 and hi < 2:
-        return "?"                        # a two-word label is the normal case here
-    return top
+
+    # No distinctive vocabulary matched. Before giving up, ask the cheaper
+    # question: is this Romance at all? Shared function words and Romance
+    # accents both answer it, and Catalan's orthography (à, è, ò, l·l, ny, tx,
+    # elided articles) is distinctive enough that its absence in a Romance
+    # string of any length is good evidence for Spanish.
+    romance = sum(w in _SHARED_ROMANCE for w in _words(text))
+    romance += sum(c in _ROMANCE_ACCENTS for c in low)
+    if romance and score["en"] <= 0:
+        return "ca" if any(m in low for m in _CA_MARKS) else "es"
+    if score["en"] > 0:
+        return "en"
+    # The mirror of the Romance fallback, and needed for the same reason: an
+    # English label built only of content words ("Gastronomy education
+    # background") carries no function word either, and fell to `?` while its
+    # Spanish counterpart was resolved. In a corpus known to be en/es/ca, a
+    # multi-word phrase with no accent and no shared Romance word is English —
+    # a Spanish or Catalan phrase of that length almost always carries an
+    # article or a preposition. Single words stay `?`: `Checkout` and `Stage`
+    # are the shape this must not guess at, being exactly the on-screen terms
+    # the mixed corpus exists to watch.
+    if len(words) >= 3 and text.isascii():
+        return "en"
+    return "?"
 
 
 # --------------------------------------------------------------------------

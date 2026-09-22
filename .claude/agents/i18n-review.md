@@ -225,7 +225,24 @@ Same corpus as §6a, different use: that section *measures a convention*, this o
 *borrows a value*. `/System/Library/{Frameworks,PrivateFrameworks}/*/Resources/*.loctable`,
 ~2200 files, read with `plistlib.load(open(p,'rb'))` — a dict keyed by language,
 each a `{key: translated}` table. Apple's codes differ from ours: `nb`→`no`,
-`pt-BR`→`pt`, `pt-PT`→`pt_PT`, `zh-Hant`→`zh_TW`, `zh-Hant-HK`→`zh_HK`.
+**`pt-BR`→`pt_BR`**, `pt-PT`→`pt_PT`, `zh-Hant`→`zh_TW`, `zh-Hant-HK`→`zh_HK`.
+
+> **`pt-BR`→`pt` was wrong, and it failed silently — corrected 22 Sep 2026.**
+> Measured across the 10,448 loctables under
+> `/System/Library/{Frameworks,PrivateFrameworks}`: `pt` appears in **1,706**,
+> `pt_BR` in **8,028**, and **both in zero**. So the documented alias is the
+> minority spelling by 4.7:1, and the two never co-occur — which is what makes
+> the failure invisible. A lookup under `pt` finds a key set that exists but is
+> not the one carrying Brazilian Portuguese, so the check reports *"Apple ships
+> nothing here"* for a string Apple does ship, and that reads as a completed
+> audit rather than a miss. Found while lifting `Uncategorized`, which Apple
+> carries as `Sem Categoria` under `pt_BR` and not at all under `pt`.
+>
+> **The general method, which outlives this one alias:** read the table's own
+> key list before concluding a locale is absent. `sorted(d.keys())` costs
+> nothing and answers the question the alias map is only guessing at — and the
+> never-both shape means a table tells you unambiguously which convention it
+> follows.
 
 Two uses, both proven 22 Aug 2026:
 

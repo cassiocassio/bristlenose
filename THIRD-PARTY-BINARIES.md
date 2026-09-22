@@ -98,7 +98,7 @@ procurement; under-listing would be a compliance risk.
 | `alembic` | 1.20.0 | MIT | <https://alembic.sqlalchemy.org> |
 | `annotated-doc` | 0.0.5 | MIT | <https://github.com/fastapi/annotated-doc> |
 | `annotated-types` | 0.8.0 | MIT | <https://github.com/annotated-types/annotated-types> |
-| `anthropic` | 1.7.0 | MIT License | <https://github.com/anthropics/anthropic-sdk-python> |
+| `anthropic` | 1.8.0 | MIT License | <https://github.com/anthropics/anthropic-sdk-python> |
 | `anyio` | 4.15.1 | MIT | <https://anyio.readthedocs.io/en/stable/versionhistory.html> |
 | `attrs` | 26.1.0 | MIT | <https://www.attrs.org/en/stable/changelog.html> |
 | `av` | 18.1.0 | BSD-3-Clause | <https://pyav.basswood.io> |
@@ -121,7 +121,7 @@ procurement; under-listing would be a compliance risk.
 | `flatbuffers` | 25.12.19 | Apache Software License | <https://google.github.io/flatbuffers/> |
 | `fsspec` | 2026.9.0 | BSD-3-Clause | <https://github.com/fsspec/filesystem_spec> |
 | `google-auth` | 2.58.0 | Apache Software License | <https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth> |
-| `google-genai` | 2.24.0 | Apache-2.0 | <https://github.com/googleapis/python-genai> |
+| `google-genai` | 2.25.0 | Apache-2.0 | <https://github.com/googleapis/python-genai> |
 | `h11` | 0.16.0 | MIT License | <https://github.com/python-hyper/h11> |
 | `hf-xet` | 1.6.0 | Apache-2.0 | <https://github.com/huggingface/xet-core> |
 | `httpcore` | 1.0.9 | BSD-3-Clause | <https://www.encode.io/httpcore/> |
@@ -138,7 +138,7 @@ procurement; under-listing would be a compliance risk.
 | `jsonschema-specifications` | 2025.9.1 | MIT | <https://github.com/python-jsonschema/jsonschema-specifications> |
 | `llvmlite` | 0.49.0 | BSD-2-Clause AND Apache-2.0 WITH LLVM-exception | <http://llvmlite.readthedocs.io> |
 | `lxml` | 6.1.3 | BSD-3-Clause | <https://lxml.de/> |
-| `Mako` | 1.4.1 | MIT | <https://www.makotemplates.org/> |
+| `Mako` | 1.4.3 | MIT | <https://www.makotemplates.org/> |
 | `markdown-it-py` | 4.2.0 | MIT License | <https://github.com/executablebooks/markdown-it-py> |
 | `MarkupSafe` | 3.0.3 | BSD-3-Clause | <https://github.com/pallets/markupsafe/> |
 | `mcp` | 2.2.0 | MIT License | <https://modelcontextprotocol.io> |
@@ -153,7 +153,7 @@ procurement; under-listing would be a compliance risk.
 | `networkx` | 3.7 | BSD-3-Clause | <https://networkx.org/> |
 | `numba` | 0.67.0 | BSD License | <https://numba.pydata.org> |
 | `numpy` | 2.4.6 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | <https://numpy.org> |
-| `openai` | 3.17.0 | Apache-2.0 | <https://github.com/openai/openai-python> |
+| `openai` | 3.18.0 | Apache-2.0 | <https://github.com/openai/openai-python> |
 | `openpyxl` | 3.1.5 | MIT License | <https://openpyxl.readthedocs.io> |
 | `opentelemetry-api` | 1.44.0 | Apache-2.0 | <https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api> |
 | `packaging` | 26.3 | Apache-2.0 OR BSD-2-Clause | <https://github.com/pypa/packaging> |

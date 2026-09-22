@@ -167,6 +167,45 @@ struct ServeManagerEnvTests {
         #expect(env["_BRISTLENOSE_HOSTED_BY_DESKTOP"] == "1")
     }
 
+    /// The pipeline is told what language the app is displaying.
+    ///
+    /// Without it, section and theme names come back in whatever the model
+    /// picks — measured as English over Spanish quotes on every pass of every
+    /// provider (`experiments/generated-language/FINDINGS.md`). The CLI has read
+    /// `BRISTLENOSE_LANG` since it grew a `--lang` flag; the app simply never
+    /// set it, so a run started from the Mac generated in nobody's language.
+    ///
+    /// Asserted through `childEnvironment` rather than at the two spawn sites,
+    /// for the same reason as the provider key above: both route through the
+    /// factory, so neither can forget it.
+    @Test func childEnvironment_passes_the_ui_language_to_the_pipeline() {
+        let mode = SidecarMode.devSidecar(path: URL(fileURLWithPath: "/tmp/fake-bristlenose"))
+        let defaults = UserDefaults.standard
+        let before = defaults.string(forKey: "language")
+        defer {
+            if let before { defaults.set(before, forKey: "language") }
+            else { defaults.removeObject(forKey: "language") }
+        }
+
+        defaults.set("es", forKey: "language")
+        var env = BristlenoseShared.childEnvironment(for: mode, store: InMemoryKeychain())
+        #expect(env["BRISTLENOSE_LANG"] == "es")
+
+        // A picker value that is not a supported locale must not reach the
+        // pipeline, or it asks the model to write in a language we cannot name.
+        defaults.set("kl", forKey: "language")
+        env = BristlenoseShared.childEnvironment(for: mode, store: InMemoryKeychain())
+        #expect(env["BRISTLENOSE_LANG"] == "en")
+
+        // Never absent: an unset variable and an English one must be
+        // distinguishable, because the pipeline treats English as "send no
+        // instruction" and absence as the same thing only by accident.
+        defaults.removeObject(forKey: "language")
+        env = BristlenoseShared.childEnvironment(for: mode, store: InMemoryKeychain())
+        #expect(env["BRISTLENOSE_LANG"] != nil)
+        #expect(I18n.supportedLocales.contains(env["BRISTLENOSE_LANG"] ?? ""))
+    }
+
     /// Keyless provider through the factory injects no key (local-only users
     /// trigger no Keychain access — the "loudest possible local-only failure"
     /// the single-provider scoping was designed to avoid).

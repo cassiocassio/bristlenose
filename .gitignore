@@ -124,6 +124,9 @@ experiments/thematic-spike/**/__pycache__/
 experiments/quote-stability/out/
 experiments/quote-stability/out_s08/
 experiments/quote-stability/**/__pycache__/
+experiments/generated-language/out/
+experiments/generated-language/corpora/
+experiments/generated-language/**/__pycache__/
 
 # Stray worktree dirs from spawned background sessions
 .claude/worktrees/

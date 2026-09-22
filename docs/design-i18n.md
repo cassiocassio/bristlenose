@@ -299,6 +299,12 @@ an all-translated one promises framework codes we do not produce.
 >    (`info.language`) and throws it away. The input the experiment needs is
 >    being measured and discarded every run.
 >
+> **V1 decision and the spike, 22 Sep 2026.** V1 enforces one language — the
+> UI language — for every generated label; a mixed Catalan/Spanish study is
+> forced into Spanish, accepted. The experiment that has to run before it is
+> built is specced in `experiments/generated-language/README.md`; the
+> per-session leaning below stays the V2 candidate.
+>
 > **What is NOT parked:** that generated text currently has no steer at all.
 > Whatever the answer, undefined is wrong, and making it *defined* is a smaller
 > change than deciding *which* language is right.

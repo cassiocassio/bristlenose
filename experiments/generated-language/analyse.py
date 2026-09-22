@@ -261,11 +261,16 @@ def main() -> int:
 
     # ---- 2 & 3. stability, and steered vs unsteered ----------------------
     lines += ["", "## Stability and drift", "",
-              "`within` is ARI between passes of the same cell — the wobble. ",
-              "`across` is ARI between steered and unsteered passes of the same ",
-              "corpus and provider. A gap smaller than the wobble is not a gap.", "",
-              "| corpus | stage | provider | groups | within | across |",
-              "|---|---|---|---|---|---|"]
+              "ARI over the quote→group partition. `un` and `st` are the wobble "
+              "*within* each condition — how much the same cell disagrees with "
+              "itself across passes. `across` is steered vs unsteered.", "",
+              "Read `across` against the two wobble bands, not against 1.0. The "
+              "two conditions are reported separately because pooling them hides "
+              "the case that matters: a steer that makes the analysis *less* "
+              "stable would raise the pooled band and so disguise itself as "
+              "ordinary noise.", "",
+              "| corpus | stage | provider | groups | un | st | across |",
+              "|---|---|---|---|---|---|---|"]
 
     for (corpus, stage, provider), _ in sorted(
         {(c, s, p): 1 for c, s, p, _ in by_cell}.items()
@@ -274,12 +279,14 @@ def main() -> int:
             continue
         cells = {cond: by_cell.get((corpus, stage, provider, cond), [])
                  for cond in ("unsteered", "steered")}
-        within = []
-        for group in cells.values():
+        within = {}
+        for cond, group in cells.items():
+            band = []
             for x, y in combinations(group, 2):
                 ari, n = compare_partitions(partition(x), partition(y))
                 if n >= 2:
-                    within.append(ari)
+                    band.append(ari)
+            within[cond] = band
         across = []
         for x in cells["unsteered"]:
             for y in cells["steered"]:
@@ -289,7 +296,9 @@ def main() -> int:
         counts = sorted({len(r["result"]) for g in cells.values() for r in g})
         fmt = lambda v: f"{min(v):.2f}–{max(v):.2f}" if v else "—"   # noqa: E731
         lines.append(f"| {corpus} | {stage} | {provider} | "
-                     f"{','.join(map(str, counts)) or '—'} | {fmt(within)} | {fmt(across)} |")
+                     f"{','.join(map(str, counts)) or '—'} | "
+                     f"{fmt(within['unsteered'])} | {fmt(within['steered'])} | "
+                     f"{fmt(across)} |")
 
     # ---- the labels themselves, for the human read ----------------------
     lines += ["", "## Every label produced", "",

@@ -470,13 +470,20 @@ _KNOWN_ORPHANS: dict[str, _Block] = {
     ),
     "settings.configReference.": _Block(
         tag=DEAD,
-        why="A copy confirmation the config reference no longer shows. One key out of "
-            "the 76 in this block, every other one of which is read bare through "
-            "`useTranslation(\"settings\")` — the case that made the namespace rule "
-            "necessary.",
+        why="Two chrome strings the config reference no longer shows, out of the 76 "
+            "in this block — every other one of which is read bare through "
+            "`useTranslation(\"settings\")`, the case that made the namespace rule "
+            "necessary. `copied` lost its reader when the modal replaced the copy "
+            "confirmation with a `::after` checkmark (`settings.css:188`). "
+            "`heading` lost its on 22 Sep 2026, when `islands/SettingsPanel.tsx` "
+            "was deleted: it was the config reference's own `<h2>`, and `ModalNav` "
+            "gives the section a nav item instead, titled from `settings.heading`. "
+            "Note those two are different keys one word apart — a prune matching "
+            "the bare leaf `heading` would take the modal's live title with it.",
         leaves="""
             copied
-        """,  # 1
+            heading
+        """,  # 2
     ),
 }
 
@@ -669,8 +676,13 @@ def test_a_computed_key_is_not_an_orphan() -> None:
 
 def test_a_key_read_only_by_the_spa_is_not_an_orphan() -> None:
     """`settings.configReference.categories.llm` is written bare at
-    `SettingsPanel.tsx:56` and resolved by `useTranslation("settings")`. There
-    are 76 keys in that one block; a namespace-strict reader loses them all."""
+    `SettingsModal.tsx:132` and resolved by `useTranslation("settings")`. There
+    are 76 keys in that one block; a namespace-strict reader loses them all.
+
+    The call site was `SettingsPanel.tsx:56` until 22 Sep 2026, when that island
+    was deleted as unreachable. The keys did not move with it — the modal had
+    been reading 75 of the 76 all along, which is what made the deletion safe.
+    """
     exact, composed = _read_literals()
     key = "settings.configReference.categories.llm"
     assert key in _en_keys()

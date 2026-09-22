@@ -336,8 +336,10 @@ autocomplete) and should be reverted.
 - **Where enable/disable lives.** _Superseded 31 Aug 2026 — the "later version" the
   original bullet anticipated arrived, so both halves inverted._ The switch now rides
   on **each row of the navigator sidebar** (`EnableControl`,
-  `frontend/src/components/CodebookV2Sidebar.tsx`), and the dot is gone —
-  `codebookDot.ts` has no non-test caller and `.codebook-dot` no JSX consumer. The
+  `frontend/src/components/CodebookV2Sidebar.tsx`), and the dot is gone — both
+  halves of it were deleted on 22 Sep 2026: `codebookDot.ts` (no non-test caller)
+  and `.codebook-dot{,-on,-off}` in `theme/organisms/sidebar.css` (no emitter in
+  the SPA, the frozen vanilla JS or the static templates). The
   floor still gets no switch. The v1 statement is kept below because its *reasoning*
   is the thing to weigh before moving a control onto a navigation row, and that
   reasoning was overridden deliberately, not forgotten:

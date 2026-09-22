@@ -244,13 +244,18 @@ Reproduce the measurement rather than trusting this table if you doubt it:
 reasoning and the community argument are in `.claude/agents/i18n-review.md`
 §6a.
 
-## Step 6 — Pickers (three sites)
+## Step 6 — Pickers (two sites)
 
 ```
-frontend/src/islands/SettingsPanel.tsx       LOCALE_LABELS  (line ~31)
-frontend/src/components/SettingsModal.tsx    LOCALE_LABELS  (line ~39)
+frontend/src/i18n/localeLabels.ts            LOCALE_LABELS  (line ~20)
 desktop/Bristlenose/Bristlenose/AppearanceSettingsView.swift   .tag(...)  (line ~36)
 ```
+
+This was three sites until `30f9305d` pulled `LOCALE_LABELS` out of
+`SettingsPanel.tsx` and `SettingsModal.tsx` into one module, which all three
+web readers now import (the modal, the export dialog, and — until it was
+deleted as unreachable on 22 Sep 2026 — the panel). Adding a language is a
+one-line edit on the web side now, not two that could disagree.
 
 Use the **native name** of the language ("Čeština" not "Czech", "日本語"
 not "Japanese", "Português (Brasil)" not "Portuguese (Brazil)"). Users

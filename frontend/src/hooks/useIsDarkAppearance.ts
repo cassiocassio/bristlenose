@@ -6,7 +6,7 @@
  *
  * - **Browser serve mode.** The web appearance picker *forces* a choice by
  *   writing `data-theme="light|dark"` on `<html>` (`applyTheme` in
- *   SettingsModal / SettingsPanel, plus the pre-paint boot script in
+ *   SettingsModal, plus the pre-paint boot script in
  *   `index.html`). An explicit override outranks the OS — that's what picking
  *   it means. "Auto" removes the attribute rather than setting it.
  * - **Desktop embedded mode.** `data-theme` is never written at all.

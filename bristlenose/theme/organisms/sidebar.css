@@ -826,21 +826,6 @@ body.dragging * {
     color: var(--bn-colour-muted);
 }
 
-.codebook-dot {
-    flex-shrink: 0;
-    width: 7px;
-    height: 7px;
-    margin-top: 0.45em;                /* optical alignment to the first text line */
-    border-radius: 50%;
-    background: transparent;           /* available / floor — reserved slot */
-}
-.codebook-dot-on {
-    background: var(--bn-colour-accent);        /* switch on  */
-}
-.codebook-dot-off {
-    background: var(--bn-colour-border-hover);  /* switch off-track */
-}
-
 /* Compact action button inside sidebar body — e.g. "Browse codebooks →".
    Smaller than .bn-btn, fits the sidebar's dense information layout. */
 .sidebar-mini-btn {

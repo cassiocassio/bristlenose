@@ -47,7 +47,6 @@ if (!appRoot) {
     import("./islands/QuoteThemes"),
     import("./islands/SignalsPage"),
     import("./islands/TranscriptPage"),
-    import("./islands/SettingsPanel"),
   ]).then(([
     { HelloIsland },
     { Dashboard },
@@ -57,7 +56,6 @@ if (!appRoot) {
     { QuoteThemes },
     { SignalsPage },
     { TranscriptPage },
-    { SettingsPanel },
   ]) => {
     const helloRoot = document.getElementById("bn-react-root");
     if (helloRoot) {
@@ -108,9 +106,5 @@ if (!appRoot) {
       );
     }
 
-    const settingsRoot = document.getElementById("bn-settings-root");
-    if (settingsRoot) {
-      createRoot(settingsRoot).render(<SettingsPanel />);
-    }
   });
 }

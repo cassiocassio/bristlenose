@@ -201,6 +201,28 @@ describe("SettingsModal", () => {
     expect(light.checked).toBe(true);
   });
 
+  // The two defensive arms of `readSaved()`. Both are live code here, and
+  // until 22 Sep 2026 their only witness anywhere was `SettingsPanel.test.tsx`
+  // — the test file of an island mounted on `#bn-settings-root`, an element no
+  // template has emitted since the modal replaced it. Deleting that island
+  // would have taken the guard with it, silently, with every suite green.
+
+  it("restores a bare string written before the value was JSON-encoded", () => {
+    // A researcher who last opened settings in an older build has `dark`, not
+    // `"dark"`, in their browser. JSON.parse throws; the bare-string arm is
+    // what stops them being silently reset to auto.
+    localStorage.setItem("bristlenose-appearance", "dark");
+    render(<SettingsModal open={true} onClose={vi.fn()} />);
+    expect((screen.getByLabelText("Dark") as HTMLInputElement).checked).toBe(true);
+  });
+
+  it("falls back to auto when the stored value is not an appearance", () => {
+    localStorage.setItem("bristlenose-appearance", "banana");
+    render(<SettingsModal open={true} onClose={vi.fn()} />);
+    const auto = screen.getByLabelText(/Use system appearance/) as HTMLInputElement;
+    expect(auto.checked).toBe(true);
+  });
+
   // ── General section: Colour palette ────────────────────────────────────
 
   const paletteSelect = () =>

@@ -274,14 +274,14 @@ describe.each(LENSES)("codebook authoring — $name", (lens) => {
     const calls = mockFetch();
     await lens.floor();
     await userEvent.click(screen.getByLabelText("Delete unused"));
-    expect(screen.queryByText(/Delete "unused"/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Delete “unused”/)).not.toBeInTheDocument();
     await waitFor(() => expect(sent(calls, "/codebook/tags/11", "DELETE")).toBeTruthy());
   });
 
   it("confirms before deleting a tag that is on quotes", async () => {
     await lens.floor();
     await userEvent.click(screen.getByLabelText("Delete confusion"));
-    expect(screen.getByText(/Delete "confusion"/)).toBeInTheDocument();
+    expect(screen.getByText(/Delete “confusion”/)).toBeInTheDocument();
     expect(screen.getByText(/This tag is on 5 quotes/)).toBeInTheDocument();
     // Mid-review is the normal state, so both numbers get their own sentence
     // rather than one standing in for the other.
@@ -294,7 +294,7 @@ describe.each(LENSES)("codebook authoring — $name", (lens) => {
     const calls = mockFetch();
     await lens.floor();
     await userEvent.click(screen.getByLabelText("Delete pending"));
-    expect(screen.getByText(/Delete "pending"/)).toBeInTheDocument();
+    expect(screen.getByText(/Delete “pending”/)).toBeInTheDocument();
     expect(sent(calls, "/codebook/tags/12", "DELETE")).toBeFalsy();
   });
 
@@ -312,7 +312,7 @@ describe.each(LENSES)("codebook authoring — $name", (lens) => {
     await lens.floor();
     await userEvent.click(screen.getByLabelText("Delete confusion"));
     const card = groupCard("Friction");
-    expect(within(card).getByText(/Delete "confusion"/)).toBeInTheDocument();
+    expect(within(card).getByText(/Delete “confusion”/)).toBeInTheDocument();
     expect(document.querySelector(".merge-overlay")).toBeNull();
   });
 
@@ -323,7 +323,7 @@ describe.each(LENSES)("codebook authoring — $name", (lens) => {
     const calls = mockFetch(WITH_EMPTY_GROUP);
     await lens.floor();
     await userEvent.click(screen.getByLabelText("Delete group Scratch"));
-    expect(screen.queryByText(/Delete "Scratch"/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Delete “Scratch”/)).not.toBeInTheDocument();
     await waitFor(() => expect(sent(calls, "/codebook/groups/4", "DELETE")).toBeTruthy());
   });
 
@@ -331,7 +331,7 @@ describe.each(LENSES)("codebook authoring — $name", (lens) => {
     const calls = mockFetch();
     await lens.floor();
     await userEvent.click(screen.getByLabelText("Delete group Friction"));
-    expect(screen.getByText(/Delete "Friction"/)).toBeInTheDocument();
+    expect(screen.getByText(/Delete “Friction”/)).toBeInTheDocument();
     expect(screen.getByText(/3 tags will move to Uncategorised/)).toBeInTheDocument();
     expect(sent(calls, "/codebook/groups/1", "DELETE")).toBeFalsy();
   });
@@ -460,7 +460,7 @@ describe.each(LENSES)("codebook authoring — $name", (lens) => {
     editing.textContent = "Friction";
     editing.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     expect(
-      await screen.findByText('The name "Friction" is already taken. Please choose another name.'),
+      await screen.findByText('The name “Friction” is already taken. Please choose another name.'),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
     expect(sent(calls, "/codebook/groups/2", "PATCH")).toBeFalsy();
@@ -515,7 +515,7 @@ describe.each(LENSES)("codebook authoring — $name", (lens) => {
     fireEvent.dragStart(tagRow("joy"), { dataTransfer: dt });
     fireEvent.dragEnter(tagRow("confusion"), { dataTransfer: dt });
     fireEvent.drop(tagRow("confusion"), { dataTransfer: dt });
-    expect(await screen.findByText(/Merge "joy" into "confusion"\?/)).toBeInTheDocument();
+    expect(await screen.findByText(/Merge “joy” into “confusion”\?/)).toBeInTheDocument();
     expect(screen.getByText(/cannot be undone/)).toBeInTheDocument();
     // The merge alone is centred over the lens: it names two tags that may sit
     // in different cards, so there is no one card to cover.

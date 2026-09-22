@@ -17,7 +17,8 @@ beforeEach(() => {
   root.setAttribute("data-project-id", "1");
   document.body.appendChild(root);
 
-  // Mock matchMedia (used by SettingsPanel's updateLogo when Header renders a logo)
+  // Mock matchMedia — jsdom ships none, and `useIsDarkAppearance` calls it
+  // whenever no `data-theme` override is set (see its own header comment).
   Object.defineProperty(window, "matchMedia", {
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({

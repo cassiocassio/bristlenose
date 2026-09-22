@@ -116,10 +116,13 @@ s08 `segment_topics` on `escuela` only (its transcripts are Spanish; the ikea
 transcripts are English and translating 4.4k chars of transcript adds nothing
 the quotes do not already test).
 
-Cell count: 3 corpora × 2 conditions × 3 providers × 3 passes × (s10 + s11)
-minus the s10 cells `escuela` cannot fill, plus 2 sessions × 2 × 3 × 3 for s08
-= **≈ 130 calls**. Each is 2–3k tokens in, ≈ 400 out. Printed by `--plan`;
-expect low single-digit dollars across all three providers.
+**Measured by `--plan`, 22 Sep 2026: 108 cells = 126 LLM calls, $1.04** across
+the three providers at their current defaults — $0.53 Claude, $0.38 ChatGPT,
+$0.13 Gemini. A cell is not a call: `segment_topics` fans out one call per
+session inside a single cell, which is why the two numbers differ and why
+pricing by cells under-counted every s08 row by half. The estimate reads
+`bristlenose.llm.pricing.PRICING`, so it moves when the price table does —
+re-run `--plan` rather than quoting this line.
 
 ## Measurements
 
@@ -135,8 +138,11 @@ own model dumps) and summarised by `analyse.py` into `out/compare.md`.
    sorts it.
 2. **Stability across passes**, per cell: theme count; label-set overlap
    after normalising case and accents; **adjusted Rand index** between the
-   quote→group partitions of pass *n* and pass *m* (`sklearn` is already in
-   the dev venv from `thematic-spike`).
+   quote→group partitions of pass *n* and pass *m*. `scikit-learn` is **not**
+   in this venv — `thematic-spike`'s README says it installs it, the venv has
+   been rebuilt since, and it is gone. ARI is a closed form over a contingency
+   table, so `analyse.py` computes it and self-checks at import against four
+   published values, rather than pulling numpy and scipy in for a throwaway.
 3. **Partition drift, steered vs unsteered**: ARI between each steered pass
    and each unsteered pass on the same corpus and provider. This is the
    "same analysis, different language" check. Report it next to the

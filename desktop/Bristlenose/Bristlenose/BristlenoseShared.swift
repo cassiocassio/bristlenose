@@ -150,6 +150,14 @@ enum BristlenoseShared {
         // Typography (sf/inter) rides overlayPreferences as BRISTLENOSE_TYPOGRAPHY.
         env["BRISTLENOSE_PLATFORM"] = "desktop"
         env["BRISTLENOSE_PALETTE"] = UserDefaults.standard.string(forKey: "palette") ?? "default"
+        // The UI language, read by the CLI's `--lang` (same env var), so a run
+        // spawned from the app generates section and theme names in the
+        // researcher's own language. Without it the pipeline has no idea what
+        // the app is displaying and generated text lands in whatever the model
+        // picks — measured as "English, mostly, but not reliably"
+        // (experiments/generated-language/FINDINGS.md). Set for both spawn
+        // sites because it rides the shared builder.
+        env["BRISTLENOSE_LANG"] = I18n.resolvedLocale
         #if DEBUG
         // Mount the dev API router (/api/dev/*, incl. the Run Inspector) in the
         // sidecar. Distinct from `_BRISTLENOSE_DEV` (which flips the report mount

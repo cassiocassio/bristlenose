@@ -10,6 +10,7 @@ from bristlenose.events import StageFailure, StageOutcome
 from bristlenose.llm import telemetry
 from bristlenose.llm.boundary import wrap_untrusted
 from bristlenose.llm.client import LLMClient
+from bristlenose.llm.output_language import output_language_steer
 from bristlenose.llm.prompts import get_prompt_template
 from bristlenose.llm.structured import TopicSegmentationResult
 from bristlenose.models import (
@@ -159,7 +160,10 @@ async def _segment_single(
     _tmpl = get_prompt_template("topic-segmentation")
 
     result = await llm_client.analyze(
-        system_prompt=_tmpl.system,
+        # Generated text follows the UI language (V1, 22 Sep 2026). Empty for
+        # English, so the prompt stays byte-identical to the one that shipped
+        # before this existed — see bristlenose/llm/output_language.py.
+        system_prompt=_tmpl.system + output_language_steer(),
         user_prompt=_tmpl.user.format(transcript_text=wrap_untrusted("transcript", transcript_text)),
         response_model=TopicSegmentationResult,
         prompt_template=_tmpl,

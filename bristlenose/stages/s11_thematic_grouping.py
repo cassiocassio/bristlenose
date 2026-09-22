@@ -6,8 +6,10 @@ import json
 import logging
 
 from bristlenose.events import StageFailure, StageOutcome
+from bristlenose.i18n import get_locale, plural_in, t_in
 from bristlenose.llm.boundary import wrap_untrusted
 from bristlenose.llm.client import LLMClient
+from bristlenose.llm.output_language import output_language_steer
 from bristlenose.llm.prompts import get_prompt_template
 from bristlenose.llm.structured import ThematicGroupingResult
 from bristlenose.models import ExtractedQuote, QuoteType, ThemeGroup
@@ -66,7 +68,10 @@ async def group_by_theme(
 
     try:
         result = await llm_client.analyze(
-            system_prompt=_tmpl.system,
+            # Generated text follows the UI language (V1, 22 Sep 2026). Empty for
+            # English, so the prompt stays byte-identical to the one that shipped
+            # before this existed — see bristlenose/llm/output_language.py.
+            system_prompt=_tmpl.system + output_language_steer(),
             user_prompt=_tmpl.user.format(quotes_json=wrap_untrusted("quotes", quotes_json)),
             response_model=ThematicGroupingResult,
             prompt_template=_tmpl,
@@ -125,10 +130,28 @@ async def group_by_theme(
                 seen_ids.add(key)
                 unique_weak.append(q)
 
+        # OURS, not the model's — and it was the only English string left in a
+        # fully-steered Spanish run (`experiments/generated-language/`), which
+        # is how it was found. The lens already calls this bucket "Needs a
+        # home" in 21 locales, so the pipeline now uses the lens's own words
+        # instead of a second, untranslated name for the same thing.
+        #
+        # Safe to translate: the server's uncategorised *floor* is computed by
+        # join absence (`routes/quotes.py`), not by matching this label, and
+        # `UNCATEGORISED_GROUP_NAME` in `server/models.py` is a codebook-group
+        # sentinel that shares the spelling and nothing else. Checked before
+        # changing it, because a label something routes on is not a label.
+        #
+        # Resolved at generation time, like everything else this stage writes,
+        # so it freezes in the analysis language. Display-time would be better
+        # and is a bigger change: the SPA renders `theme_label` raw.
+        locale = get_locale()
         strong_themes.append(
             ThemeGroup(
-                theme_label="Uncategorised",
-                description="Quotes that don't have a home yet — they didn't cluster with others into a pattern.",
+                theme_label=t_in(locale, "common.quotes.uncategorisedHeading"),
+                description=plural_in(
+                    locale, "common.quotes.uncategorisedIntro", count=len(unique_weak),
+                ),
                 quotes=unique_weak,
             )
         )

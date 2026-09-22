@@ -29,7 +29,7 @@ final class I18n: ObservableObject {
 
     // MARK: - Locale allowlist (security: prevents path traversal)
 
-    static let supportedLocales: Set<String> = [
+    nonisolated static let supportedLocales: Set<String> = [
         "en", "es", "ca", "ja", "fr", "de", "ko", "cs", "it", "pl", "ru", "uk", "da", "sv", "nb", "tr", "nl", "fi", "pt-BR", "pt-PT", "zh-Hant", "zh-Hant-HK",
     ]
 
@@ -72,9 +72,7 @@ final class I18n: ObservableObject {
         // matcher can answer from the user's own language preferences, which is
         // what `docs/design-locale-negotiation.md` decided and nothing had
         // implemented.
-        let saved = UserDefaults.standard.string(forKey: "language")
-            ?? Self.systemPreferredLocale()
-        let safe = Self.sanitized(saved)
+        let safe = Self.resolvedLocale
         locale = safe
 
         if safe != "en" {
@@ -125,7 +123,25 @@ final class I18n: ObservableObject {
     /// or `en`. Reads `AppleLanguages` through Apple's matcher rather than
     /// parsing it, so script and region subtags (`zh-Hant`, `zh-Hant-HK`,
     /// `pt-BR`) resolve the way the rest of macOS resolves them.
-    static func systemPreferredLocale() -> String {
+    /// The locale the app displays in: the picker's choice when set, otherwise
+    /// the best match against the user's own system language preferences.
+    ///
+    /// Extracted so there is **one** statement of that rule. `configure` needs
+    /// it to load strings, and `BristlenoseShared.childEnvironment` needs it to
+    /// tell the pipeline what language to generate section and theme names in
+    /// (`BRISTLENOSE_LANG` → `bristlenose/llm/output_language.py`). Two copies
+    /// would drift the moment the fallback changed, and the symptom would be a
+    /// researcher whose UI is Catalan getting Spanish themes — which looks like
+    /// a model failure and is not one.
+    /// `nonisolated` because `BristlenoseShared.childEnvironment` builds a
+    /// subprocess environment off the main actor. Safe: this reads
+    /// `UserDefaults` and `Bundle` and touches none of the class's
+    /// `@MainActor` state.
+    nonisolated static var resolvedLocale: String {
+        sanitized(UserDefaults.standard.string(forKey: "language") ?? systemPreferredLocale())
+    }
+
+    nonisolated static func systemPreferredLocale() -> String {
         let best = Bundle.preferredLocalizations(
             from: Array(supportedLocales), forPreferences: nil
         ).first
@@ -306,7 +322,7 @@ final class I18n: ObservableObject {
 
     // MARK: - Private
 
-    private static func sanitized(_ code: String) -> String {
+    nonisolated private static func sanitized(_ code: String) -> String {
         supportedLocales.contains(code) ? code : "en"
     }
 

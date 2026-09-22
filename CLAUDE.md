@@ -419,6 +419,56 @@ pathspec as a plain directory and compare the counts before believing the zero.
 Same family as the zsh nomatch and `rg -rn` entries: tooling that fails quietly
 and plausibly.
 
+### A gate that matches on PROXIMITY or on a NAME is a gate that drifts with the file
+
+Two shapes, both found on 22 Sep 2026 in the same hour, and the second one
+passed for a while before anyone noticed.
+
+**Proximity.** `test_every_native_illustration_is_classified` decided "is this a
+webview or a native view?" by looking for `WelcomeIllustrationHTML.` within
+**2500 characters** of the `struct` declaration. Adding four locale keys and a
+comment to `SignalIllustrationView`'s strings table pushed its builder call past
+the cutoff, and a webview was reported as an unclassified native illustration.
+That direction is loud. **The same arithmetic misclassifies silently the other
+way**: a genuinely native view whose body happens to mention the builder type
+within 2500 characters drops out of the gate entirely, and nothing says so. Scope
+to the construct — find the next `\nstruct ` and read the body between — never to
+a character count nothing recomputes.
+
+**Name.** A test asserting the catch-all theme uses the right locale keys was
+written as `assert "uncategorisedHeading" in src`. The fix replaced those keys and
+the test **stayed green**, because the comment explaining why they were wrong
+names them both. Assert the call expression (`t_in(locale, "common.quotes.thinThemeLabel")`),
+not the identifier. Sibling of the `.innerHTML=` rule in the illustration gate,
+which had to match the *assignment* so that documenting the hazard did not trip
+the test that forbids it — same lesson, opposite direction: **a test a comment can
+satisfy is not a test.**
+
+**Tell for both:** a gate whose verdict changes when you add a comment.
+
+### A locale key that fits is not a locale key that MEANS the same thing
+
+`s11`'s thin-theme bucket reused the Quotes lens's `uncategorisedHeading` /
+`uncategorisedIntro` — same concept, apparently, and it bought 21 reviewed
+translations free. It was wrong in all 21 at once. Those keys belong to the
+**floor**: pinned quotes the persistence layer froze. The sentence reads *"quotes
+you kept aren't in any section or theme"*, and for the thin-theme bucket both
+halves are false — these were never kept, and they **are** in a theme, the one the
+sentence is the description of.
+
+Two further hazards in the same move. The floor's copy interpolates a count the
+SPA **recomputes live** from its own array; a theme description is persisted and
+rendered raw, so borrowing it froze a number that nothing recomputes — hide one
+quote and the prose contradicts the cards under it. And root `CLAUDE.md` already
+warns that rewording an `en` value is a 21-file change no gate can see: sharing a
+key across two surfaces in two languages of the codebase means a future copy tweak
+to one silently rewords the other, with nothing connecting them.
+
+**Rule: before reusing a key, read the value in full and ask what surface wrote
+it.** Two concepts that share a word are still two concepts, and a new key pair
+costs one seeding pass. **Tell:** borrowed copy that interpolates a count, or a
+value whose subject is named in the sentence rather than implied.
+
 ### A new gate that contradicts a pinned contract fails the whole suite, not one test
 
 Adding an `assert` to `I18n.t` for "namespace not loaded" turned **307 Swift tests

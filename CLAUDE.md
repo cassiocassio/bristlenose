@@ -575,6 +575,24 @@ while ten files were modified by a concurrent session. **When the point of a com
 confirm something, print the evidence and read it — `git status --porcelain` alone, then
 judge — rather than appending a verdict the shell cannot withhold.**
 
+### `printf "$big" | grep -q` under `pipefail` reports NO MATCH when the match is early
+
+`grep -q` exits on the first hit. If the writer on the other side of the pipe
+still has bytes to send — anything over the 64 KB pipe buffer — it takes
+SIGPIPE, and under `set -o pipefail` the pipeline's status is the writer's
+141, not grep's 0. So `printf '%s' "$README" | grep -qE "$pat" && r=1` sets
+`r` only when the match sits in the LAST 64 KB of a 101 KB README. Measured
+22 Sep 2026 in `scripts/check-doc-surfaces.sh`: `--whisper-language`,
+documented at README line 277, reported *missing from the README*, while
+flags mentioned only in the changelog at the end of the file matched — which
+is why the gate looked healthy through every earlier run. Same script, same
+day: `is_new()` ran `grep -qxF "$1"` with a flag as the argument, so
+`--version` printed grep's own version and was "new since the last tag" on
+every run, and every other flag errored and was never new. **Herestrings
+(`<<< "$var"`) or a file for the haystack; `--` before any argument that can
+begin with a dash.** Tell: a gate whose verdict depends on *where* in the file
+the evidence sits.
+
 ### A one-line fix landing on the wrong arm of a ternary is invisible to every gate
 
 `.foregroundStyle(a ? .tertiary : .primary)` needed `.tertiary` → `.secondary`.

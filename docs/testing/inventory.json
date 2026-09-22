@@ -8,7 +8,7 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 4507
+        "tests": 5439
       },
       {
         "basis": "test files",
@@ -21,12 +21,12 @@
       },
       {
         "basis": "declared \u2014 a floor; parameterised cases expand at runtime",
-        "files": 110,
+        "files": 114,
         "kind": "swift unit",
         "runner": "xcodebuild",
         "source": "desktop/Bristlenose/BristlenoseTests/",
         "suite": "BristlenoseTests",
-        "tests": 1417
+        "tests": 1456
       },
       {
         "basis": "spec files",
@@ -202,6 +202,7 @@
     "local_hooks": {
       "agent_hooks": [
         "SessionStart:* -> install-git-guards.sh",
+        "SessionStart:* -> memory-index-size.sh",
         "PreToolUse:Bash -> block-checkout.sh",
         "PreToolUse:Bash -> block-private-add.sh",
         "PreToolUse:Edit|Write|MultiEdit -> block-env-edits.sh",
@@ -407,8 +408,8 @@
         "name": "i18n check",
         "piped_steps": [],
         "triggers": [
-          "push [main] paths=bristlenose/locales/**",
-          "pull_request [main] paths=bristlenose/locales/**"
+          "push [main] paths=bristlenose/locales/**,desktop/Bristlenose/Bristlenose/**/*.swift,frontend/src/**,bristlenose/**/*.py",
+          "pull_request [main] paths=bristlenose/locales/**,desktop/Bristlenose/Bristlenose/**/*.swift,frontend/src/**,bristlenose/**/*.py"
         ]
       },
       {

@@ -262,36 +262,48 @@ struct WelcomeHomeView: View {
         VStack(alignment: .leading, spacing: 8) {
             tag(i18n.t("desktop.welcome.home.tags.studyTools"))
             SlotRotator(items: WelcomeContent.studyTools, storageKey: "welcome.rotator.tools",
-                        onCurrent: { item in
-                            baton.report(.studyTools, wants: item.illustration != .none, turn: item.illustration.welcomeTurn)
-                        })
+                        onCurrent: { item, userPicked in report(.studyTools, item, userPicked) })
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             dropCard
         }
         .welcomeCell(.studyTools, large: true)
-        .environment(\.welcomeAnimationActive, baton.isActive(.studyTools))
+        .batonCell(.studyTools, baton)
     }
 
     private var scienceCell: some View {
         VStack(alignment: .leading, spacing: 8) {
             tag(i18n.t("desktop.welcome.home.tags.science"))
             SlotRotator(items: WelcomeContent.science, storageKey: "welcome.rotator.science",
-                        onCurrent: { item in
-                            baton.report(.science, wants: item.illustration != .none, turn: item.illustration.welcomeTurn)
-                        })
+                        onCurrent: { item, userPicked in report(.science, item, userPicked) })
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .welcomeCell(.science, large: true)
-        .environment(\.welcomeAnimationActive, baton.isActive(.science))
+        .batonCell(.science, baton)
     }
 
     private var tipCell: some View {
         VStack(alignment: .leading, spacing: 6) {
             tag(i18n.t("desktop.welcome.home.tags.tip"))
-            SlotRotator(items: WelcomeContent.tips, storageKey: "welcome.rotator.tip", curriculum: true)
+            SlotRotator(items: WelcomeContent.tips, storageKey: "welcome.rotator.tip", curriculum: true,
+                        onCurrent: { item, userPicked in report(.tip, item, userPicked) })
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .welcomeCell(.tip)
+        // No tip carries an illustration today, so this cell reports `wants: false` and
+        // never takes the baton. It is wired anyway because the environment default is
+        // TRUE: an illustration dropped into a cell that sets nothing would free-run
+        // forever, ignoring the baton, with nothing to report it.
+        .batonCell(.tip, baton)
+    }
+
+    /// One place where a rotator's current slot becomes baton state.
+    ///
+    /// `userPicked` is the researcher having moved the carousel themselves — paging to
+    /// a slide IS "show me this one", so the playhead follows them rather than leaving
+    /// the new illustration frozen on its still until the spiral comes round.
+    private func report(_ slot: WelcomeSlot, _ item: SlotItem, _ userPicked: Bool) {
+        baton.report(slot, wants: item.illustration != .none, turn: item.illustration.welcomeTurn)
+        if userPicked { baton.claim(slot) }
     }
 
     // The card is inert; the Setup link is the only target (design-welcome-screen.md §2).
@@ -328,7 +340,7 @@ struct WelcomeHomeView: View {
                 .buttonStyle(.plain)
             }
             .welcomeCell(.ai)
-            .environment(\.welcomeAnimationActive, baton.isActive(.ai))
+            .batonCell(.ai, baton)
             .onAppear { baton.report(.ai, wants: true, turn: 8) }
         }
     }
@@ -339,6 +351,8 @@ struct WelcomeHomeView: View {
             Text(i18n.t("desktop.welcome.aiPrivacyLink"))
                 .font(.body).foregroundStyle(.secondary)
         }
+        // Nothing animates here yet; wired for the same reason as the Tip cell.
+        .batonCell(.delight, baton)
     }
 
     // MARK: building blocks
@@ -517,6 +531,19 @@ private func joinSentences(_ head: String, _ tail: String) -> String {
     return head + tail
 }
 
+// MARK: - Baton wiring for a cell
+
+private extension View {
+    /// Everything a welcome cell owes the baton: whether it may animate, and how its
+    /// illustration says it has played out. One modifier so a new cell cannot wire half
+    /// of it — the environment default for `welcomeAnimationActive` is TRUE, so a cell
+    /// that sets neither animates forever and reports nothing.
+    func batonCell(_ slot: WelcomeSlot, _ baton: WelcomeBaton) -> some View {
+        environment(\.welcomeAnimationActive, baton.isActive(slot))
+            .environment(\.welcomeTurnDone, WelcomeTurnDone { baton.finish(slot) })
+    }
+}
+
 // MARK: - Slot rotator (manual content carousel, in place)
 //
 // Content cross-fades in the SAME frame (no card slide, so no edge-peek problem).
@@ -531,7 +558,9 @@ private struct SlotRotator: View {
     @EnvironmentObject var i18n: I18n
     let items: [SlotItem]
     let curriculum: Bool
-    let onCurrent: ((SlotItem) -> Void)?   // baton: report the current slot so the cell can want/skip
+    /// Baton: report the current slot, and whether the RESEARCHER put it there.
+    /// A first appearance is registration; a chevron, swipe, dot or arrow key is intent.
+    let onCurrent: ((SlotItem, Bool) -> Void)?
     @AppStorage private var lastIndex: Int
     @AppStorage private var visits: Int
     @State private var index = 0
@@ -541,7 +570,8 @@ private struct SlotRotator: View {
     /// Caps are rasterised per appearance, so the rotator has to know it.
     @Environment(\.colorScheme) private var scheme
 
-    init(items: [SlotItem], storageKey: String, curriculum: Bool = false, onCurrent: ((SlotItem) -> Void)? = nil) {
+    init(items: [SlotItem], storageKey: String, curriculum: Bool = false,
+         onCurrent: ((SlotItem, Bool) -> Void)? = nil) {
         self.items = items
         self.curriculum = curriculum
         self.onCurrent = onCurrent
@@ -590,7 +620,7 @@ private struct SlotRotator: View {
             index = startIndex()
             visits += 1
             lastIndex = index
-            onCurrent?(currentItem)
+            onCurrent?(currentItem, false)   // registration, not a choice
         }
     }
 
@@ -616,7 +646,7 @@ private struct SlotRotator: View {
         guard wrapped != index else { return }
         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.22)) { index = wrapped }
         lastIndex = wrapped
-        onCurrent?(items[wrapped])
+        onCurrent?(items[wrapped], true)   // every caller of `go` is the researcher
     }
 
     @ViewBuilder private func slotView(_ item: SlotItem) -> some View {

@@ -185,6 +185,40 @@ contract — including that `--list-providers` refuses API-key auth while
 bloats a log 12,000× — is in `docs/design-testflight-upload.md` § Observed
 contract. Don't re-derive either.
 
+### An unsigned `.xctest` in shared DerivedData fails the APP's signing, and deleting the bundle does not fix it
+
+`desktop/scripts/test-swift.sh` refuses with `BUILD FAILED (xcodebuild exit 65)`
+and, several hundred lines up the log:
+
+```
+…/Bristlenose.app: code object is not signed at all
+In subcomponent: …/Bristlenose.app/Contents/PlugIns/BristlenoseTests.xctest
+```
+
+The message blames the **app**, and the fix is in the **test target**. Xcode's
+incremental build decided the `.xctest` was up to date and emitted **no `CodeSign`
+step for it at all** — grep the log for `CodeSign .*xctest` and find nothing —
+so the parent's signing then refuses an unsigned subcomponent. This is release
+incident #1 of 0.30.0 (`docs/release-premortem.md`), recorded there without a
+remedy; here is the remedy.
+
+**Deleting the `.xctest` is NOT enough.** It rebuilds from cached intermediates
+and comes back unsigned, which reads as a genuine signing failure rather than a
+cache one — that is the second cycle you lose. Invalidate **both**:
+
+```bash
+DD=~/Library/Developer/Xcode/DerivedData/Bristlenose-<hash>/Build
+rm -rf "$DD/Intermediates.noindex/Bristlenose.build/Debug/BristlenoseTests.build" \
+       "$DD/Products/Debug/Bristlenose.app/Contents/PlugIns"
+```
+
+**Tell that this is what you are in, and not a real break: the same source builds
+and tests clean against a fresh `-derivedDataPath`.** That is also the workaround
+when another session is using the shared DerivedData and you would rather not
+touch it — the isolated-worktree recipe in `desktop/CLAUDE.md` already passes
+one. Cost three build cycles on 22 Sep 2026, two of them spent looking for a
+Swift defect that was never there.
+
 ### "Is this Swift file in the Xcode project?" is not a question `project.pbxproj` can answer
 
 `Bristlenose.xcodeproj` uses **`PBXFileSystemSynchronizedRootGroup`** (Xcode 16+),

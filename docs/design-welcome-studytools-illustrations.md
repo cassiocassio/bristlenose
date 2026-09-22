@@ -1,8 +1,8 @@
 ---
 status: current
-last-trued: 2026-09-20
-previous-trued: 2026-08-02
-trued-against: HEAD@main on 2026-09-20 — the withholding reason only (presidio is bundled since 12 Sep); illustration status carries its 2026-08-02 verdict
+last-trued: 2026-09-22
+previous-trued: 2026-09-20
+trued-against: HEAD@main on 2026-09-22 — the baton section rewritten for v2 (the illustration owns the clock, the curtain, the two webview channels, carousel claims); illustration status carries its 2026-08-02 verdict
 ---
 
 # Welcome screen — study-tools cell illustrations
@@ -240,24 +240,102 @@ back word-by-word.
 ## The animation baton (welcome-screen infra — every new illustration plugs in)
 
 Only **one cell animates at a time**; the baton travels the golden spiral so focus
-moves without competition (`WelcomeBaton.swift`). Contract for any new illustration:
+moves without competition (`WelcomeBaton.swift`).
+
+### v2, 22 Sep 2026 — the illustration owns the clock
+
+The "later upgrade if it reads loose" this section used to park is done, because it
+read loose. v1 declared a turn LENGTH and slept for it, which meant **two clocks that
+had to agree with nothing making them agree**: the declared turn, and the
+illustration's own beat list. They never agreed. Measured across the six looping
+illustrations:
+
+| illustration | turn | one pass | passes/turn |
+|---|---|---|---|
+| quote | 22.7s | 23.3s | **0.97** — never completed once |
+| signal | 24.3s | 18.7s | **1.30** |
+| emergentThemes | 21.0s | 16.7s | **1.26** |
+| sentimentFan | 24.3s | 13.3s | **1.83** |
+| ingest | 26.0s | 16.4s | **1.58** |
+| clips | 29.3s | 21.0s | **1.39** |
+
+Not one is a whole number, so **every turn ended mid-play**, and a truncated pass was
+the last thing on screen before the cell went still. All five Science slots were
+loopers, which is why it read as concentrated there.
+
+**Every illustration now plays exactly one pass**, holds its finished frame, drops its
+curtain and reports; the baton passes then. `welcomeTurn` survives as a **watchdog
+ceiling** — what to do when the report never arrives — not as a schedule, so the
+hand-written estimates it is built from stopped being load-bearing.
+
+### The curtain
+
+One grammar, so a sequence has a visible beginning and end instead of being joined
+already running:
+
+    fade up → establish → play once → hold the finished frame → fade down to rest
+
+- **The fade is the cue.** The opening frame used to sit inert for a flat three
+  seconds; motion is the only thing that summons the eye in that grid, so the eye
+  arrived *after* the beginning by design. Worse for Tag and Star&hide, which built
+  their card *inside* the play function — the three seconds were an empty box, then a
+  snap. Both build up front now.
+- **The establish beat is per-illustration.** `WelcomeTempo.establish(for:)` — the
+  long form for an opener that is a scene to read (Tag, Star&hide), the short one for
+  the rest, which open on an empty stage.
+- **The end hold is longer than the establish, deliberately.** The opening frame is a
+  stage nobody has earned yet; the closing one is the result. Pinned by
+  `WelcomeTempoTests` because someone will eventually tidy them to match.
+- **Rest is a recession, not a blackout** (`WelcomeTempo.restOpacity`). The curtain
+  needs somewhere to fall that is neither a hole in the grid nor — since the resting
+  frame and the finished frame are the same picture — a blink. It earns its keep
+  twice: it also makes "which cell is playing" visible, which nothing said before.
+
+### Contract for any new illustration
 
 1. **Read the gate.** `@Environment(\.welcomeAnimationActive) private var active` and
-   animate only when `active && !reduceMotion`; otherwise show the still. Webviews:
-   `reduce = reduceMotion || !active`, and put that in the `.id()` so it reloads.
-   Native views: gate the loop (`.task(id:)` / timer `guard`).
-2. **Declare a turn length** in `WelcomeIllustration.welcomeTurn` (how long one turn
-   runs before the baton passes). Continuous loops = a "showcase" length (a cut just
-   freezes to the still); discrete plays (AutoCode) = one full run.
-3. **The cell reports wants.** Via `SlotRotator(onCurrent:)` → `baton.report(slot,
-   wants: item.illustration != .none, turn: item.illustration.welcomeTurn)`, and sets
-   `.environment(\.welcomeAnimationActive, baton.isActive(slot))`.
+   animate only when `active && !reduceMotion`.
+2. **Report when the pass is over.** `@Environment(\.welcomeTurnDone) private var
+   turnDone`, called once the curtain is down. Webviews get this free by enrolling
+   with `BN.register({still, open, play})`; natives call it after
+   `WelcomeCurtain.pass(…)`.
+3. **Register three frames, not one.** `still` = the finished frame, painted at load
+   so a cell that has not had a turn still shows a picture; `open` = the opening
+   frame, painted *behind* the curtain so the establishing beat lands on the scene the
+   pass is about to act on; `play` = one pass, which must not loop.
+4. **Declare a watchdog** in `WelcomeIllustration.welcomeTurn`. Generous, not tight —
+   a ceiling that trips during a healthy pass is the two-clock bug all over again.
+5. **The cell wires both halves together** with `.batonCell(slot, baton)` — one
+   modifier, because the environment default for `welcomeAnimationActive` is `true`
+   and a cell that sets neither animates forever while reporting nothing.
 
-Known tradeoff (v1, duration-declared handoff): a cell going inactive **reloads** its
-webview to the still — a brief fade. Precise handoff (webview posts `"done"`) is the
-later upgrade if it reads loose. AutoCode's in-app JS plays **once per turn** (random
-quote) then holds — the baton owns the rhythm, so its standalone 3-burst-then-rest
-loop (still in the mock) is not used in-app.
+`tests/test_welcome_curtain_contract.py` enrols a new illustration by its existence:
+it reads the templates and fails one that does not embed the curtain, does not
+register a `still` and a `play`, or starts an interval.
+
+### Two channels for a webview, and the split is the point
+
+`.id` carries what the illustration **is** — appearance, palette, language,
+reduce-motion — and changing one still rebuilds the `WKWebView`. `active` carries what
+it is **doing**, and rides a `WKScriptMessageHandler` channel instead. It used to be in
+the `.id` too, so every baton handoff destroyed a webview and built another: the
+opening frame arrived after an async `loadHTMLString` of unknowable length, and there
+was a blank gap nothing could fade across. *(This section called that gap "a brief
+fade". Nothing made that true — identity replacement has no transition.)*
+
+### Paging a carousel takes the playhead with it
+
+Moving a rotator to a new slide IS "show me this one". `SlotRotator.onCurrent` now
+carries whether the researcher put it there, and a user-initiated change calls
+`baton.claim(slot)`, which interrupts whatever was playing and restarts the new slide
+from the top. Without it a new slide sat on its still until the spiral came round —
+most of a minute — which reads as a broken illustration. A claim for a cell with
+nothing to animate is ignored, so paging the Tip cell never takes the baton off a
+cell that is mid-play.
+
+AutoCode's in-app JS plays **once per turn** (random quote, picked behind the curtain
+so the establishing beat is on the card the pass is about) then holds — its standalone
+3-burst-then-rest loop (still in the mock) is not used in-app.
 
 ## Where things live
 

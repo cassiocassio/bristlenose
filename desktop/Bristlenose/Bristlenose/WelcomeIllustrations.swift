@@ -52,8 +52,10 @@ struct SentimentFanView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
+    @Environment(\.welcomeTurnDone) private var turnDone
     @State private var sizes: [Int: CGSize] = [:]
     @State private var dealt = false
+    @State private var curtain = WelcomeTempo.restOpacity
 
     /// `sentiment` is the canonical sentiment id — the value stored in the DB and sent
     /// to the LLM — resolved through `enums.sentiment.*` for display, exactly as
@@ -99,17 +101,34 @@ struct SentimentFanView: View {
             .scaleEffect(fitScale(in: geo.size), anchor: .center)
         }
         .onPreferenceChange(SentimentChipSizeKey.self) { sizes = $0 }
+        .opacity(curtain)
         .accessibilityHidden(true)
-        // Baton: deal only while this cell holds it; otherwise rest on the open fan.
-        .task(id: active && !reduceMotion) {
-            guard active && !reduceMotion else { await MainActor.run { dealt = true }; return }
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(2.4 * Self.tempo))    // gathered (deck) hold — clears the 3s opening floor at the group tempo
-                await MainActor.run { dealt = true }
-                try? await Task.sleep(for: .seconds(5.6 * Self.tempo))    // dealt (readable) hold — likewise clears the 3s end floor
-                await MainActor.run { dealt = false }
+        .task(id: active && !reduceMotion) { await drive() }
+    }
+
+    /// One deal per turn, ending on the open fan — the readable grid IS the point, so
+    /// it is the frame to hold. The old loop gathered the chips back up afterwards to
+    /// be ready for the next lap, and the baton cut that lap at 83% every time.
+    private func drive() async {
+        guard active && !reduceMotion else {
+            await MainActor.run {
+                dealt = true
+                curtain = reduceMotion ? 1 : WelcomeTempo.restOpacity
             }
+            return
         }
+        await WelcomeCurtain.pass(
+            .sentimentFan,
+            fade: { v, d in withAnimation(.easeInOut(duration: d)) { curtain = v } },
+            open: { dealt = false },                       // gathered, as a deck
+            play: {
+                await MainActor.run { dealt = true }
+                // The deal is an implicit `.animation` on each chip's offset, so there is
+                // nothing to await but its own length: one chip's duration plus the last
+                // chip's stagger.
+                try? await Task.sleep(for: .seconds((1.0 + Double(chips.count - 1) * 0.12) * Self.tempo))
+            })
+        if !Task.isCancelled { turnDone() }
     }
 
     private func chipView(_ i: Int) -> some View {
@@ -263,14 +282,18 @@ struct BookShelfView: View {
     /// jump as the front cover changes and the line length with it.
     private let captionReserve: CGFloat = 38
     @Environment(\.welcomeAnimationActive) private var active
-    private let timer = Timer.publish(every: 3.8 * WelcomeTempo.stretch(for: .books), on: .main, in: .common).autoconnect()
+    @Environment(\.welcomeTurnDone) private var turnDone
+    @State private var curtain = WelcomeTempo.restOpacity
 
     var body: some View {
         let n = books.count
         let current = books[min(front, n - 1)]
         return VStack(alignment: .leading, spacing: 6) {
             caption(current)
-            coverFan
+            // The curtain falls on the FAN alone. The caption and the Learn-more link
+            // are content, not animation — a live link resting at 70% is a contrast
+            // regression, and the caption already cross-fades on its own `.id`.
+            coverFan.opacity(curtain)
             if let url = URL(string: current.href) {
                 Link(i18n.t("desktop.welcome.home.learnMore") + " \u{2192}", destination: url)
                     .font(.callout)
@@ -279,10 +302,33 @@ struct BookShelfView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .onReceive(timer) { _ in
-            guard active && !reduceMotion else { return }   // baton: advance only while holding it
-            withAnimation(.easeInOut(duration: 0.6)) { front = (front + 1) % n }
+        .task(id: active && !reduceMotion) { await drive() }
+    }
+
+    /// One lap of the shelf per turn: every cover comes forward once, and the turn ends
+    /// on a different book from the one it started on — so the resting shelf changes
+    /// between turns without anything rotating while the cell is at rest.
+    private func drive() async {
+        guard active && !reduceMotion else {
+            await MainActor.run { curtain = reduceMotion ? 1 : WelcomeTempo.restOpacity }
+            return
         }
+        let n = books.count
+        let dwell = 3.8 * WelcomeTempo.stretch(for: .books)
+        await WelcomeCurtain.pass(
+            .books,
+            fade: { v, d in withAnimation(.easeInOut(duration: d)) { curtain = v } },
+            open: {},                                  // resumes from wherever the last turn left it
+            play: {
+                for _ in 0..<max(0, n - 1) {
+                    try? await Task.sleep(for: .seconds(dwell))
+                    if Task.isCancelled { return }
+                    await MainActor.run {
+                        withAnimation(.easeInOut(duration: 0.6)) { front = (front + 1) % n }
+                    }
+                }
+            })
+        if !Task.isCancelled { turnDone() }
     }
 
     // Caption — synced to the front cover, cross-fades on change.
@@ -408,9 +454,11 @@ struct EmergentThemesView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
+    @Environment(\.welcomeTurnDone) private var turnDone
 
     var body: some View {
-        let still = reduceMotion || !active   // baton: animate only while this cell holds it
+        // `reduce` is reduce-motion ALONE now. The baton rides the script channel
+        // (`active:` below), so losing a turn no longer rebuilds the webview.
         // Resolved here, not in the builder. Still English literals: this change
         // is the *mechanism*, and is deliberately invisible in every language
         // until the content pass gives these keys
@@ -434,8 +482,9 @@ struct EmergentThemesView: View {
             "b.w2": i18n.t("desktop.welcome.examples.themeWordB2"), "b.w3": i18n.t("desktop.welcome.examples.themeWordB3"),
         ]
         return IllustrationWebView(html: WelcomeIllustrationHTML.emergentThemes(
-            dark: scheme == .dark, reduce: still, strings: strings))
-            .id("themes-\(scheme)-\(still)-\(i18n.locale)")
+            dark: scheme == .dark, reduce: reduceMotion, strings: strings),
+            active: active && !reduceMotion, onDone: { turnDone() })
+            .id("themes-\(scheme)-\(reduceMotion)-\(i18n.locale)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -447,27 +496,92 @@ struct EmergentThemesView: View {
 /// No external resources (loadHTMLString, baseURL nil) — sandbox-clean; fonts are
 /// the system stack. Transparency via the documented `drawsBackground` KVC.
 ///
-/// The HTML is handed over once, at `makeNSView` — `updateNSView` does not reload,
-/// so nothing a caller changes ever reaches a webview that already exists. The only
-/// thing that redraws one is SwiftUI tearing it down and building a fresh one, which
-/// happens when the caller's `.id` changes. Every caller therefore owes its `.id` a
-/// key for every input its HTML is built from: appearance, palette, stillness and
-/// language. Miss one and that input stops reaching the illustration in silence — no
-/// build error, nothing red. Language was the one missing: none of the nine callers
+/// **Two channels, and the split is the point (22 Sep 2026).**
+///
+/// `.id` carries what the illustration **is** — appearance, palette, language,
+/// reduce-motion. The HTML is built from those and handed over once at
+/// `makeNSView`, so changing one is still SwiftUI tearing this view down and
+/// building a fresh one. Every caller owes its `.id` a key for every such input;
+/// miss one and that input stops reaching the illustration in silence — no build
+/// error, nothing red. Language was the one missing: none of the nine callers
 /// observed `I18n` or keyed on it, so changing the picker left every illustration
 /// exactly as it was, until a dark-mode toggle happened to rebuild it by accident
 /// (wired up 21 Sep 2026).
+///
+/// `active` carries what it is **doing**, and goes over a script-message channel
+/// instead. It used to be in the `.id` too, which meant every baton handoff
+/// destroyed a `WKWebView` and built another — so the opening frame arrived after
+/// an async `loadHTMLString` of unknowable length, and there was a blank gap
+/// nothing could fade across. (The design doc called that gap "a brief fade";
+/// nothing made that true — identity replacement has no transition.) Now the
+/// document stays alive and is told `BN.setActive(…)`, so the curtain is a CSS
+/// transition on a live page, and the same channel carries `done` back.
 private struct IllustrationWebView: NSViewRepresentable {
     let html: String
+    let active: Bool
+    let onDone: () -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(onDone: onDone) }
 
     func makeNSView(context: Context) -> WKWebView {
-        let wv = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+        let cfg = WKWebViewConfiguration()
+        cfg.userContentController.add(context.coordinator, name: Coordinator.channel)
+        let wv = WKWebView(frame: .zero, configuration: cfg)
         wv.setValue(false, forKey: "drawsBackground")   // paint transparent (see WebView.swift)
+        wv.navigationDelegate = context.coordinator
+        context.coordinator.attach(wv)
         wv.loadHTMLString(html, baseURL: nil)
+        context.coordinator.setActive(active)           // queued until the document is up
         return wv
     }
-    /// Empty by design — reloading is the caller's `.id`, per the note above.
-    func updateNSView(_ nsView: WKWebView, context: Context) {}
+
+    /// Does NOT reload — the HTML is `.id`'s business. This only forwards the baton.
+    func updateNSView(_ nsView: WKWebView, context: Context) {
+        context.coordinator.onDone = onDone
+        context.coordinator.setActive(active)
+    }
+
+    static func dismantleNSView(_ nsView: WKWebView, coordinator: Coordinator) {
+        nsView.configuration.userContentController
+            .removeScriptMessageHandler(forName: Coordinator.channel)
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
+        static let channel = "bn"
+
+        var onDone: () -> Void
+        private weak var webView: WKWebView?
+        private var loaded = false
+        /// Last value asked for, applied on load if it arrived first. `nil` = never asked.
+        private var wanted: Bool?
+
+        init(onDone: @escaping () -> Void) { self.onDone = onDone }
+
+        func attach(_ wv: WKWebView) { webView = wv }
+
+        func setActive(_ on: Bool) {
+            guard wanted != on else { return }   // SwiftUI calls updateNSView freely
+            wanted = on
+            flush()
+        }
+
+        private func flush() {
+            guard loaded, let wanted, let webView else { return }
+            webView.evaluateJavaScript("window.BN && BN.setActive(\(wanted));")
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            loaded = true
+            flush()
+        }
+
+        func userContentController(_ controller: WKUserContentController,
+                                   didReceive message: WKScriptMessage) {
+            guard message.body as? String == "done" else { return }
+            onDone()
+        }
+    }
 }
 
 /// #3 — the dignity strike-and-collapse quote.
@@ -476,9 +590,11 @@ struct QuoteIllustrationView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
+    @Environment(\.welcomeTurnDone) private var turnDone
 
     var body: some View {
-        let still = reduceMotion || !active   // baton: animate only while this cell holds it
+        // `reduce` is reduce-motion ALONE now. The baton rides the script channel
+        // (`active:` below), so losing a turn no longer rebuilds the webview.
         // THEIRS, and the rules' named exception: authored per locale, never
         // translated. A translator handed the English sentence returns clean
         // prose and a dead demonstration — the strike-through only teaches
@@ -487,8 +603,9 @@ struct QuoteIllustrationView: View {
         // seeded string; the marked-up form means a reviewer rewrites one line.
         let strings = ["disfluency": i18n.t("desktop.welcome.examples.disfluency")]
         return IllustrationWebView(html: WelcomeIllustrationHTML.quote(
-            dark: scheme == .dark, reduce: still, strings: strings))
-            .id("quote-\(scheme)-\(still)-\(i18n.locale)")   // reload on appearance / reduce-motion / baton / language change
+            dark: scheme == .dark, reduce: reduceMotion, strings: strings),
+            active: active && !reduceMotion, onDone: { turnDone() })
+            .id("quote-\(scheme)-\(reduceMotion)-\(i18n.locale)")   // rebuild on appearance / reduce-motion / language; the baton does NOT rebuild
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -500,10 +617,12 @@ struct SignalIllustrationView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
+    @Environment(\.welcomeTurnDone) private var turnDone
     @AppStorage("palette") private var palette: String = "default"
 
     var body: some View {
-        let still = reduceMotion || !active   // baton: animate only while this cell holds it
+        // `reduce` is reduce-motion ALONE now. The baton rides the script channel
+        // (`active:` below), so losing a turn no longer rebuilds the webview.
         // OURS, every one: the same labels and tooltips the Signals lens ships,
         // lifted by key rather than re-translated. The three `*Title` tooltips
         // are byte-identical to the lens's, so those 21 translations came free.
@@ -538,8 +657,9 @@ struct SignalIllustrationView: View {
             "loc3": i18n.t("desktop.welcome.examples.sectionSettings"),
         ]
         return IllustrationWebView(html: WelcomeIllustrationHTML.signal(
-            dark: scheme == .dark, palette: palette, reduce: still, strings: strings))
-            .id("signal-\(scheme)-\(palette)-\(still)-\(i18n.locale)")
+            dark: scheme == .dark, palette: palette, reduce: reduceMotion, strings: strings),
+            active: active && !reduceMotion, onDone: { turnDone() })
+            .id("signal-\(scheme)-\(palette)-\(reduceMotion)-\(i18n.locale)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -556,10 +676,12 @@ struct AutoCodeIllustrationView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
+    @Environment(\.welcomeTurnDone) private var turnDone
     @AppStorage("palette") private var palette: String = "default"
 
     var body: some View {
-        let still = reduceMotion || !active   // baton: animate only while this cell holds it
+        // `reduce` is reduce-motion ALONE now. The baton rides the script channel
+        // (`active:` below), so losing a turn no longer rebuilds the webview.
         // OURS, lifted: the badge the AI applies is a `Sentiment` enum value and
         // the role is a `speakerRole` — both already translated, and both what a
         // Spanish researcher genuinely sees. The quotes and the code badges stay
@@ -572,8 +694,9 @@ struct AutoCodeIllustrationView: View {
             "q2": i18n.t("desktop.welcome.examples.autocodeQuote2"),
         ]
         return IllustrationWebView(html: WelcomeIllustrationHTML.autocode(
-            dark: scheme == .dark, palette: palette, reduce: still, strings: strings))
-            .id("autocode-\(scheme)-\(palette)-\(still)-\(i18n.locale)")   // reload on appearance / palette / reduce-motion / baton / language
+            dark: scheme == .dark, palette: palette, reduce: reduceMotion, strings: strings),
+            active: active && !reduceMotion, onDone: { turnDone() })
+            .id("autocode-\(scheme)-\(palette)-\(reduceMotion)-\(i18n.locale)")   // appearance / palette / reduce-motion / language — not the baton
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -587,10 +710,12 @@ struct ManualTagsIllustrationView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
+    @Environment(\.welcomeTurnDone) private var turnDone
     @AppStorage("palette") private var palette: String = "default"
 
     var body: some View {
-        let still = reduceMotion || !active   // baton: animate only while this cell holds it
+        // `reduce` is reduce-motion ALONE now. The baton rides the script channel
+        // (`active:` below), so losing a turn no longer rebuilds the webview.
         // Every word here is the researcher's own: two codebook groups they
         // named, the sentence they wrote under each, and the codes they typed.
         // THEIRS throughout, seeded per locale.
@@ -604,8 +729,9 @@ struct ManualTagsIllustrationView: View {
             "g2t2": i18n.t("desktop.welcome.examples.tagsG2Code2"), "g2t3": i18n.t("desktop.welcome.examples.tagsG2Code3"),
         ]
         return IllustrationWebView(html: WelcomeIllustrationHTML.manualTags(
-            dark: scheme == .dark, palette: palette, reduce: still, strings: strings))
-            .id("manualtags-\(scheme)-\(palette)-\(still)-\(i18n.locale)")
+            dark: scheme == .dark, palette: palette, reduce: reduceMotion, strings: strings),
+            active: active && !reduceMotion, onDone: { turnDone() })
+            .id("manualtags-\(scheme)-\(palette)-\(reduceMotion)-\(i18n.locale)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -620,10 +746,12 @@ struct TagIllustrationView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
+    @Environment(\.welcomeTurnDone) private var turnDone
     @AppStorage("palette") private var palette: String = "default"
 
     var body: some View {
-        let still = reduceMotion || !active   // baton: animate only while this cell holds it
+        // `reduce` is reduce-motion ALONE now. The baton rides the script channel
+        // (`active:` below), so losing a turn no longer rebuilds the webview.
         // The badge and role are OURS and lift from `enums.*`; the quote and
         // the hand-typed code are the researcher's own and are seeded per locale.
         let strings = [
@@ -633,8 +761,9 @@ struct TagIllustrationView: View {
             "code": i18n.t("desktop.welcome.examples.tagCode"),
         ]
         return IllustrationWebView(html: WelcomeIllustrationHTML.tag(
-            dark: scheme == .dark, palette: palette, reduce: still, strings: strings))
-            .id("tag-\(scheme)-\(palette)-\(still)-\(i18n.locale)")
+            dark: scheme == .dark, palette: palette, reduce: reduceMotion, strings: strings),
+            active: active && !reduceMotion, onDone: { turnDone() })
+            .id("tag-\(scheme)-\(palette)-\(reduceMotion)-\(i18n.locale)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -648,10 +777,12 @@ struct StarHideIllustrationView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
+    @Environment(\.welcomeTurnDone) private var turnDone
     @AppStorage("palette") private var palette: String = "default"
 
     var body: some View {
-        let still = reduceMotion || !active   // baton: animate only while this cell holds it
+        // `reduce` is reduce-motion ALONE now. The baton rides the script channel
+        // (`active:` below), so losing a turn no longer rebuilds the webview.
         // OURS: the hidden-quotes toggle, lifted from the key the Quotes lens
         // itself reads. Both counts are resolved here because the builder is
         // pure and the plural category is a property of the number.
@@ -664,8 +795,9 @@ struct StarHideIllustrationView: View {
             "q2": i18n.t("desktop.welcome.examples.starHideQuote2"),
         ]
         return IllustrationWebView(html: WelcomeIllustrationHTML.starHide(
-            dark: scheme == .dark, palette: palette, reduce: still, strings: strings))
-            .id("starhide-\(scheme)-\(palette)-\(still)-\(i18n.locale)")
+            dark: scheme == .dark, palette: palette, reduce: reduceMotion, strings: strings),
+            active: active && !reduceMotion, onDone: { turnDone() })
+            .id("starhide-\(scheme)-\(palette)-\(reduceMotion)-\(i18n.locale)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -681,10 +813,12 @@ struct AgentChatIllustrationView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
+    @Environment(\.welcomeTurnDone) private var turnDone
     @AppStorage("palette") private var palette: String = "default"
 
     var body: some View {
-        let still = reduceMotion || !active   // baton: animate only while this cell holds it
+        // `reduce` is reduce-motion ALONE now. The baton rides the script channel
+        // (`active:` below), so losing a turn no longer rebuilds the webview.
         // FOREIGN chrome, THEIRS input. `Thinking…`, the tool line and the
         // result row are Claude Code's own words and stay English in every
         // locale — a translated one depicts software that does not exist. The
@@ -699,8 +833,9 @@ struct AgentChatIllustrationView: View {
             "queryArg": i18n.t("desktop.welcome.examples.agentQueryArg"),
         ]
         return IllustrationWebView(html: WelcomeIllustrationHTML.agentChat(
-            dark: scheme == .dark, palette: palette, reduce: still, strings: strings))
-            .id("agentchat-\(scheme)-\(palette)-\(still)-\(i18n.locale)")
+            dark: scheme == .dark, palette: palette, reduce: reduceMotion, strings: strings),
+            active: active && !reduceMotion, onDone: { turnDone() })
+            .id("agentchat-\(scheme)-\(palette)-\(reduceMotion)-\(i18n.locale)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -717,6 +852,7 @@ struct IngestIllustrationView: View {
     @EnvironmentObject var i18n: I18n
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
+    @Environment(\.welcomeTurnDone) private var turnDone
 
     // `surtitle` is a KEY under `desktop.welcome.home.ingestRows.`.
     //
@@ -753,12 +889,14 @@ struct IngestIllustrationView: View {
     @State private var iconOn = [Bool](repeating: false, count: 5)
     @State private var detailOn = [Bool](repeating: false, count: 5)
     @State private var typed = [Int](repeating: 0, count: 5)
+    @State private var curtain = WelcomeTempo.restOpacity
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             ForEach(Self.rows.indices, id: \.self) { i in row(i) }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
+        .opacity(curtain)
         .accessibilityHidden(true)
         .task(id: active && !reduceMotion) { await drive() }
     }
@@ -797,37 +935,50 @@ struct IngestIllustrationView: View {
         try? await Task.sleep(for: .milliseconds(ms * Self.tempo))
     }
 
+    @MainActor private func reset() {
+        iconOn = [Bool](repeating: false, count: 5)
+        detailOn = [Bool](repeating: false, count: 5)
+        typed = [Int](repeating: 0, count: 5)
+    }
+
+    /// One pass per turn. The `while` this used to sit inside restarted the list at
+    /// ~16s against a 26s turn, so the last thing on screen was always a second pass
+    /// cut 58% through — the curtain and the baton between them own the rhythm now.
     private func drive() async {
-        guard active && !reduceMotion else { await MainActor.run { setComplete() }; return }
-        while !Task.isCancelled {
+        guard active && !reduceMotion else {
             await MainActor.run {
-                iconOn = [Bool](repeating: false, count: 5)
-                detailOn = [Bool](repeating: false, count: 5)
-                typed = [Int](repeating: 0, count: 5)
+                setComplete()
+                curtain = reduceMotion ? 1 : WelcomeTempo.restOpacity
             }
-            // Rest on the empty opening frame (absolute — holds don't scale).
-            try? await Task.sleep(for: .seconds(WelcomeTempo.leadInSeconds))
-            for i in Self.rows.indices {
+            return
+        }
+        await WelcomeCurtain.pass(
+            .ingest,
+            fade: { v, d in withAnimation(.easeInOut(duration: d)) { curtain = v } },
+            open: { reset() },
+            play: { await playOnce() })
+        if !Task.isCancelled { turnDone() }
+    }
+
+    private func playOnce() async {
+        for i in Self.rows.indices {
+            if Task.isCancelled { return }
+            // Blink: on — off — on, hard cuts (a fade would read as a fade-in).
+            await MainActor.run { iconOn[i] = true }
+            await nap(90)
+            await MainActor.run { iconOn[i] = false }
+            await nap(70)
+            await MainActor.run {
+                iconOn[i] = true
+                withAnimation(.easeOut(duration: 0.25)) { detailOn[i] = true }
+            }
+            await nap(140)
+            for c in 1...name(Self.rows[i]).count {
                 if Task.isCancelled { return }
-                // Blink: on — off — on, hard cuts (a fade would read as a fade-in).
-                await MainActor.run { iconOn[i] = true }
-                await nap(90)
-                await MainActor.run { iconOn[i] = false }
-                await nap(70)
-                await MainActor.run {
-                    iconOn[i] = true
-                    withAnimation(.easeOut(duration: 0.25)) { detailOn[i] = true }
-                }
-                await nap(140)
-                for c in 1...name(Self.rows[i]).count {
-                    if Task.isCancelled { return }
-                    await MainActor.run { typed[i] = c }
-                    await nap(26)
-                }
-                await nap(280)
+                await MainActor.run { typed[i] = c }
+                await nap(26)
             }
-            // Rest on the finished list before looping.
-            try? await Task.sleep(for: .seconds(WelcomeTempo.holdEndSeconds))
+            await nap(280)
         }
     }
 }
@@ -842,6 +993,7 @@ struct ClipsIllustrationView: View {
     @EnvironmentObject var i18n: I18n
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
+    @Environment(\.welcomeTurnDone) private var turnDone
 
     // A clip's name is the participant's own words, which the exporter puts in
     // the filename — THEIRS, so it is a key. Speaker code, timecode and
@@ -877,6 +1029,7 @@ struct ClipsIllustrationView: View {
     @State private var pointerHome = false
     @State private var thumbOn = [false, false, false]
     @State private var unitsShown = [0, 0, 0]
+    @State private var curtain = WelcomeTempo.restOpacity
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -885,6 +1038,7 @@ struct ClipsIllustrationView: View {
             pointer
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
+        .opacity(curtain)
         .accessibilityHidden(true)
         .task(id: active && !reduceMotion) { await drive() }
     }
@@ -968,43 +1122,53 @@ struct ClipsIllustrationView: View {
         try? await Task.sleep(for: .milliseconds(ms * Self.tempo))
     }
 
+    /// One pass per turn — see the note on `IngestIllustrationView.drive`. This one was
+    /// cut 39% into its second pass, right as the first clip landed.
     private func drive() async {
-        guard active && !reduceMotion else { await MainActor.run { setComplete() }; return }
-        while !Task.isCancelled {
-            await MainActor.run { reset() }
-            // Rest on the empty opening frame (absolute — holds don't scale).
-            try? await Task.sleep(for: .seconds(WelcomeTempo.leadInSeconds))
-            await MainActor.run { withAnimation(.easeOut(duration: 0.25)) { menuOn = true; pointerOn = true } }
-            await nap(250)
-            await MainActor.run { withAnimation(.easeInOut(duration: 0.55 * Self.tempo)) { pointerHome = true } }
-            await nap(620)
+        guard active && !reduceMotion else {
+            await MainActor.run {
+                setComplete()
+                curtain = reduceMotion ? 1 : WelcomeTempo.restOpacity
+            }
+            return
+        }
+        await WelcomeCurtain.pass(
+            .clips,
+            fade: { v, d in withAnimation(.easeInOut(duration: d)) { curtain = v } },
+            open: { reset() },
+            play: { await playOnce() })
+        if !Task.isCancelled { turnDone() }
+    }
+
+    private func playOnce() async {
+        await MainActor.run { withAnimation(.easeOut(duration: 0.25)) { menuOn = true; pointerOn = true } }
+        await nap(250)
+        await MainActor.run { withAnimation(.easeInOut(duration: 0.55 * Self.tempo)) { pointerHome = true } }
+        await nap(620)
+        await MainActor.run { highlight = true }
+        await nap(350)
+        await MainActor.run { withAnimation(.easeIn(duration: 0.09)) { pressed = true } }
+        await nap(100)
+        await MainActor.run { withAnimation(.easeOut(duration: 0.12)) { pressed = false } }
+        for _ in 0..<2 {   // the real menu's confirmation flash
+            await MainActor.run { highlight = false }
+            await nap(70)
             await MainActor.run { highlight = true }
-            await nap(350)
-            await MainActor.run { withAnimation(.easeIn(duration: 0.09)) { pressed = true } }
-            await nap(100)
-            await MainActor.run { withAnimation(.easeOut(duration: 0.12)) { pressed = false } }
-            for _ in 0..<2 {   // the real menu's confirmation flash
-                await MainActor.run { highlight = false }
-                await nap(70)
-                await MainActor.run { highlight = true }
-                await nap(70)
-            }
-            await nap(180)
-            await MainActor.run { withAnimation(.easeIn(duration: 0.3)) { menuOn = false; pointerOn = false } }
-            await nap(380)
-            for i in Self.clips.indices {
+            await nap(70)
+        }
+        await nap(180)
+        await MainActor.run { withAnimation(.easeIn(duration: 0.3)) { menuOn = false; pointerOn = false } }
+        await nap(380)
+        for i in Self.clips.indices {
+            if Task.isCancelled { return }
+            await MainActor.run { withAnimation(.spring(duration: 0.3, bounce: 0.35)) { thumbOn[i] = true } }
+            await nap(330)
+            for u in 1...units(Self.clips[i]).count {
                 if Task.isCancelled { return }
-                await MainActor.run { withAnimation(.spring(duration: 0.3, bounce: 0.35)) { thumbOn[i] = true } }
-                await nap(330)
-                for u in 1...units(Self.clips[i]).count {
-                    if Task.isCancelled { return }
-                    await MainActor.run { unitsShown[i] = u }
-                    await nap(430)
-                }
-                await nap(240)
+                await MainActor.run { unitsShown[i] = u }
+                await nap(430)
             }
-            // Rest on the finished set before looping back to the menu.
-            try? await Task.sleep(for: .seconds(WelcomeTempo.holdEndSeconds))
+            await nap(240)
         }
     }
 }
@@ -1017,9 +1181,11 @@ struct MiroIllustrationView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
+    @Environment(\.welcomeTurnDone) private var turnDone
 
     var body: some View {
-        let still = reduceMotion || !active   // baton: animate only while this cell holds it
+        // `reduce` is reduce-motion ALONE now. The baton rides the script channel
+        // (`active:` below), so losing a turn no longer rebuilds the webview.
         // The board we actually produce is localised — `server/miro_export.py`'s
         // `board_strings(locale)` resolves `common.quotes.sections`,
         // `common.quotes.themes` and `common.miro.boardQuoteCount` in the
@@ -1034,8 +1200,9 @@ struct MiroIllustrationView: View {
             "q2": i18n.t("desktop.welcome.examples.miroQuote2"),
         ]
         return IllustrationWebView(html: WelcomeIllustrationHTML.miro(
-            dark: scheme == .dark, reduce: still, strings: strings))
-            .id("miro-\(scheme)-\(still)-\(i18n.locale)")
+            dark: scheme == .dark, reduce: reduceMotion, strings: strings),
+            active: active && !reduceMotion, onDone: { turnDone() })
+            .id("miro-\(scheme)-\(reduceMotion)-\(i18n.locale)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -1089,6 +1256,78 @@ enum WelcomeIllustrationHTML {
         """
     }
 
+    // MARK: - The curtain
+
+    /// The one grammar every illustration plays to, as CSS + a `BN` global. Emit it
+    /// after `stringsBlock` and before the illustration's own script, which registers
+    /// its two frames and its single pass:
+    ///
+    ///     BN.register({ still: function(){ … },        // finished frame
+    ///                   open:  function(){ … },        // opening frame
+    ///                   play:  async function(){ … } });  // exactly one pass
+    ///
+    /// `still` paints the FINISHED frame with nothing animating — it is what the cell
+    /// shows while resting, and it runs once at load so a cell that has not had a turn
+    /// yet still shows a picture rather than an empty stage. `open` paints the opening
+    /// frame and is called *behind the curtain*, so the establishing beat lands on the
+    /// scene the pass is about to act on rather than on a blank box (which is what the
+    /// old three-second lead-in actually showed for Tag and Star&hide — both built
+    /// their card inside the play function). `play` runs exactly one pass and must not
+    /// loop: the baton waits for it now (`WelcomeBaton.finish`), where it used to guess
+    /// a duration and guillotine whatever was on screen when the guess ran out.
+    ///
+    /// Under reduce-motion the whole thing is inert: `still` has already painted, the
+    /// body stays at full strength, and `setActive` is refused, so nothing moves and no
+    /// `done` is ever posted (the baton is stopped in that mode anyway).
+    ///
+    /// `gen` is what makes losing the baton mid-pass safe. Every `setActive` bumps it,
+    /// and each step of a running pass abandons if it is no longer the current one — so
+    /// a pass interrupted by a carousel claim stops at its next beat instead of
+    /// finishing into a cell that has moved on and posting a `done` that isn't its own.
+    static func curtain(_ kind: WelcomeIllustration) -> String {
+        """
+        <style>
+          html.bn-curtain body{ opacity:\(WelcomeTempo.jsRestOpacity);
+                                transition:opacity \(WelcomeTempo.jsFadeMs)ms ease; }
+          html.bn-curtain.bn-up body{ opacity:1; }
+          html.bn-curtain.bn-blank body{ opacity:0; }
+        </style>
+        <script>
+        (function(){
+          var H=document.documentElement;
+          var R=H.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
+          var FADE=\(WelcomeTempo.jsFadeMs), EST=\(WelcomeTempo.jsEstablishMs(for: kind)), HOLD=\(WelcomeTempo.jsHoldEndMs);
+          var still=null, open=null, play=null, gen=0, on=false;
+          if(!R) H.classList.add("bn-curtain");
+          function wait(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+          function post(){ try{ webkit.messageHandlers.bn.postMessage("done"); }catch(e){} }
+          window.BN={
+            wait:wait,
+            register:function(o){ still=o.still; open=o.open||o.still; play=o.play; if(still) still(); },
+            setActive:function(v){
+              if(R || v===on) return;
+              on=v; gen++;
+              if(!v){ H.classList.remove("bn-up","bn-blank"); if(still) still(); return; }  // baton lost
+              var mine=gen;
+              (async function(){
+                H.classList.remove("bn-up"); H.classList.add("bn-blank");   // dip out of the resting frame
+                await wait(FADE);                           if(mine!==gen) return;
+                if(open) open();                                            // opening frame, unseen
+                H.classList.remove("bn-blank"); H.classList.add("bn-up");   // curtain up
+                await wait(FADE+EST);                       if(mine!==gen) return;
+                if(play) await play();                      if(mine!==gen) return;
+                await wait(HOLD);                           if(mine!==gen) return;
+                H.classList.remove("bn-up");                                // curtain down to rest
+                await wait(FADE);                           if(mine!==gen) return;
+                post();
+              })();
+            }
+          };
+        })();
+        </script>
+        """
+    }
+
 
     static func quote(dark: Bool, reduce: Bool,
                       strings: [String: String]) -> String {
@@ -1113,6 +1352,7 @@ enum WelcomeIllustrationHTML {
         </style></head>
         <body><div class="q" id="q"></div>
         \(stringsBlock(strings))
+        \(curtain(kind))
         <script>
           var R = document.documentElement.getAttribute("data-reduce")==="1" || matchMedia("(prefers-reduced-motion:reduce)").matches;
           var PACE=\(WelcomeTempo.jsStretch(for: kind));
@@ -1131,10 +1371,19 @@ enum WelcomeIllustrationHTML {
           q.innerHTML='<span class="qm">“</span>';
           T.forEach(function(o){ var s=document.createElement("span"); s.className="tok "+(o.x?"trim":"kept"); s.textContent=o.t; q.appendChild(s); });
           var c=document.createElement("span"); c.className="qm"; c.textContent="”"; q.appendChild(c);
-          var S=[["",3800],["marked",3000],["marked tidied",4800],["marked",1400],["",1000]];
-          var i=0;
-          function set(){ q.className="q "+S[i][0]; }
-          if(R){ i=1; set(); } else { set(); (function loop(){ setTimeout(function(){ i=(i+1)%S.length; set(); loop(); }, Math.round(S[i][1]*PACE)); })(); }
+          // One pass, ending on the point of the demonstration. The old loop ran
+          // clean → marked → tidied → marked → clean, and the last two states existed
+          // only to get back to the top for the next lap; a one-shot has no lap to
+          // return to, so it stops on the tidied quote and holds there.
+          var STATES=[["",3800],["marked",3000],["marked tidied",0]];
+          function set(n){ q.className="q "+STATES[n][0]; }
+          BN.register({
+            still: function(){ set(2); },      // the clean quote — what the tool leaves you with
+            open:  function(){ set(0); },      // the quote as spoken, fillers and all
+            play:  async function(){
+              for(var n=0;n<STATES.length-1;n++){ await BN.wait(Math.round(STATES[n][1]*PACE)); set(n+1); }
+            }
+          });
         </script></body></html>
         """
     }
@@ -1213,6 +1462,7 @@ enum WelcomeIllustrationHTML {
         </style></head>
         <body>
         \(stringsBlock(strings))
+        \(curtain(kind))
         <script>
           // Labels and tooltips are the lens's own, lifted rather than
           // re-translated. `loc` values are deliberately NOT in the blob — they
@@ -1288,14 +1538,16 @@ enum WelcomeIllustrationHTML {
           }
           function q(sel){ return document.querySelector(sel); }
           var idx=0;
-          function set(){
+          // `flap` is a parameter, not a read of R: a RESTING cell paints statically
+          // too, and it is only the pass itself that flips the split-flap.
+          function set(flap){
             var s=SIGNALS[idx];
             q("[data-src]").textContent=s.src;
             q("[data-tag]").className="badge "+s.tag[0]; q("[data-tag]").textContent=s.tag[1];
             q("[data-spark]").innerHTML=sparkbars(idx,s.accent);
             q("[data-cbar]").style.width=s.concPct+"%"; q("[data-abar]").style.width=s.agreePct+"%";
             q("[data-dots]").innerHTML=dotsSVG(s.intensity);
-            if(R){
+            if(R || !flap){
               q("[data-loc]").textContent=s.loc;
               q('[data-mv="signal"]').textContent=s.signal; q('[data-mv="conc"]').textContent=s.conc;
               q('[data-mv="agree"]').textContent=s.agree;  q('[data-mv="intensity"]').textContent=s.intensity.toFixed(1);
@@ -1320,10 +1572,21 @@ enum WelcomeIllustrationHTML {
             var s=Math.min(0.9,(window.innerWidth-8)/cw,(window.innerHeight-8)/ch);
             if(isFinite(s) && s>0) c.style.transform='translate(-50%,-50%) scale('+s+')';
           }
-          set();
           requestAnimationFrame(fit);
           window.addEventListener('resize', fit);
-          if(!R) setInterval(function(){ idx=(idx+1)%SIGNALS.length; set(); }, Math.round(2800*PACE));
+          // One lap of the four example signals, then hold on the last. The old
+          // setInterval never stopped, so the baton always cut it mid-card and it
+          // snapped back to the first — the jump that read as a glitch.
+          BN.register({
+            still: function(){ idx=SIGNALS.length-1; set(false); fit(); },
+            open:  function(){ idx=0; set(false); fit(); },
+            play:  async function(){
+              for(var n=1;n<SIGNALS.length;n++){
+                await BN.wait(Math.round(2800*PACE));
+                idx=n; set(true); fit();
+              }
+            }
+          });
         </script>
         </body></html>
         """
@@ -1355,9 +1618,10 @@ enum WelcomeIllustrationHTML {
         </style></head>
         <body>
         \(stringsBlock(strings))
+        \(curtain(kind))
         <script>
           var R = document.documentElement.getAttribute("data-reduce")==="1" || matchMedia("(prefers-reduced-motion:reduce)").matches;
-          var PACE=\(WelcomeTempo.jsStretch(for: kind)), LEAD=\(WelcomeTempo.jsLeadMs);
+          var PACE=\(WelcomeTempo.jsStretch(for: kind));
           var SH={ A:{ name:S["a.name"], words:[S["a.w0"],S["a.w1"],S["a.w2"],S["a.w3"]] },
                    B:{ name:S["b.name"], words:[S["b.w0"],S["b.w1"],S["b.w2"],S["b.w3"]] } };
           var host=document.body, fishes=[], labels={};
@@ -1375,33 +1639,51 @@ enum WelcomeIllustrationHTML {
             return { flock:flock, split:split };
           }
           function posLabels(){ var W=host.clientWidth||300; labels.A.style.left=(W*0.30)+"px"; labels.A.style.top="14px"; labels.B.style.left=(W*0.70)+"px"; labels.B.style.top="14px"; }
-          if(R){
-            var W0=host.clientWidth||300, H0=host.clientHeight||140, h0=homes(W0,H0);
-            fishes.forEach(function(f,i){ f.el.style.transform="translate(-50%,-50%) translate("+h0.split[i].x+"px,"+h0.split[i].y+"px)"; });
-            posLabels(); labels.A.classList.add("on"); labels.B.classList.add("on");
-          } else {
-            var CYCLE=Math.round(8200*PACE), SWOOP=Math.round(1600*PACE), t0=performance.now()+LEAD;   // LEAD rests on the gathered flock
-            function ease(x){ return x<0.5 ? 2*x*x : 1-Math.pow(-2*x+2,2)/2; }
-            function tick(now){ var W=host.clientWidth||300, H=host.clientHeight||140, hm=homes(W,H); posLabels();
-              var el=now-t0; if(el<0) el=0;   // pre-LEAD: hold the opening flock
-              var p=(el%CYCLE)/CYCLE, blend, show;
-              if(p<SWOOP/CYCLE){ blend=ease(p/(SWOOP/CYCLE)); show=false; }
-              else if(p<0.5){ blend=1; show=true; }
-              else if(p<0.5+SWOOP/CYCLE){ blend=1-ease((p-0.5)/(SWOOP/CYCLE)); show=false; }
-              else { blend=0; show=false; }
-              labels.A.classList.toggle("on",show); labels.B.classList.toggle("on",show);
-              var ts=now/1000;
-              fishes.forEach(function(f,i){
-                var hx=hm.flock[i].x+(hm.split[i].x-hm.flock[i].x)*blend;
-                var hy=hm.flock[i].y+(hm.split[i].y-hm.flock[i].y)*blend;
-                var j=f.amp*(1-blend*0.7);
-                var x=hx+Math.cos(ts*f.freq+f.phase)*j, y=hy+Math.sin(ts*f.freq*1.3+f.phase)*j*0.8;
-                f.el.style.transform="translate(-50%,-50%) translate("+x+"px,"+y+"px)";
-              });
-              requestAnimationFrame(tick);
-            }
-            requestAnimationFrame(tick);
+          // One swoop per turn, ending SPLIT — the flock resolving into two named
+          // themes is the point, so that is the frame to hold. The old loop swooped
+          // back out to the gathered flock to get ready for the next lap, and the
+          // baton cut it wherever it happened to be.
+          var SWOOP=Math.round(1600*PACE), SETTLE=Math.round(900*PACE);
+          var raf=null, swoopFrom=-1;
+          function ease(x){ return x<0.5 ? 2*x*x : 1-Math.pow(-2*x+2,2)/2; }
+          function place(blend, jitter, now){
+            var W=host.clientWidth||300, H=host.clientHeight||140, hm=homes(W,H); posLabels();
+            var ts=now/1000;
+            fishes.forEach(function(f,i){
+              var hx=hm.flock[i].x+(hm.split[i].x-hm.flock[i].x)*blend;
+              var hy=hm.flock[i].y+(hm.split[i].y-hm.flock[i].y)*blend;
+              var j=jitter ? f.amp*(1-blend*0.7) : 0;
+              var x=hx+(j?Math.cos(ts*f.freq+f.phase)*j:0), y=hy+(j?Math.sin(ts*f.freq*1.3+f.phase)*j*0.8:0);
+              f.el.style.transform="translate(-50%,-50%) translate("+x+"px,"+y+"px)";
+            });
           }
+          function paintStatic(blend, show){
+            place(blend, false, 0);
+            labels.A.classList.toggle("on",show); labels.B.classList.toggle("on",show);
+          }
+          function stopRaf(){ if(raf!==null){ cancelAnimationFrame(raf); raf=null; } }
+          function startRaf(){
+            if(raf!==null) return;
+            raf=requestAnimationFrame(function tick(now){
+              var blend=0;
+              if(swoopFrom>=0){ var el=now-swoopFrom; blend = el>=SWOOP ? 1 : ease(el/SWOOP); }
+              place(blend, true, now);
+              var show=blend>0.98;
+              labels.A.classList.toggle("on",show); labels.B.classList.toggle("on",show);
+              raf=requestAnimationFrame(tick);
+            });
+          }
+          BN.register({
+            still: function(){ stopRaf(); swoopFrom=-1; paintStatic(1,true); },
+            // The flock jitters through the establishing beat — a murmuration holding
+            // perfectly still is not one.
+            open:  function(){ stopRaf(); swoopFrom=-1; paintStatic(0,false); startRaf(); },
+            play:  async function(){
+              swoopFrom=performance.now();
+              await BN.wait(SWOOP+SETTLE);
+              stopRaf(); paintStatic(1,true);
+            }
+          });
         </script>
         </body></html>
         """
@@ -1501,10 +1783,11 @@ enum WelcomeIllustrationHTML {
         </style></head>
         <body><div id="ac"></div>
         \(stringsBlock(strings))
+        \(curtain(kind))
         <script>
           var host=document.getElementById("ac");
           var REDUCED=document.documentElement.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
-          var PACE=\(WelcomeTempo.jsStretch(for: kind)), LEAD=\(WelcomeTempo.jsLeadMs);
+          var PACE=\(WelcomeTempo.jsStretch(for: kind));
           function sleep(ms){ return new Promise(function(r){ setTimeout(r, Math.round(ms*PACE)); }); }
           function nap(ms){ return sleep(ms); }   // PACE lives in sleep now; nap kept as the beat verb
           var QUOTES=[
@@ -1518,22 +1801,28 @@ enum WelcomeIllustrationHTML {
               +'<span class="speaker" style="visibility:hidden"><span class="badge">'+d.speaker+'</span><span class="badge">'+d.role+'</span></span>'
               +'<div class="badges"></div></div></div></blockquote>';
           }
-          async function runCard(d, fadeOut){
+          // The finished frame, drawn in one go. This is what a RESTING cell shows and
+          // what reduce-motion shows — the same picture the pass ends on, which is why
+          // the curtain can fall on it without the image changing.
+          function paintStill(d){
             host.innerHTML=cardHTML(d);
             var card=host.querySelector(".quote-card"), qtext=host.querySelector(".quote-text"),
                 qclose=host.querySelector(".smart-quote.closing"), speaker=host.querySelector(".speaker"), badges=host.querySelector(".badges");
-            if(REDUCED){
-              qtext.textContent=d.q; qclose.style.visibility=""; speaker.style.visibility="";
-              // Built, not concatenated: a sentiment or code reaching innerHTML
-              // is outside the one escape site (see `stringsBlock`).
-              badges.textContent="";
-              [["badge badge-ai badge-satisfaction", d.sentiment],
-               ["badge badge-user "+d.codeClass,     d.code],
-               ["badge badge-add",                   "+"]].forEach(function(b){
-                var e=document.createElement("span"); e.className=b[0]; e.textContent=b[1]; badges.appendChild(e);
-              });
-              card.classList.remove("card-hidden"); card.classList.add("card-shown"); return;
-            }
+            qtext.textContent=d.q; qclose.style.visibility=""; speaker.style.visibility="";
+            // Built, not concatenated: a sentiment or code reaching innerHTML
+            // is outside the one escape site (see `stringsBlock`).
+            badges.textContent="";
+            [["badge badge-ai badge-satisfaction", d.sentiment],
+             ["badge badge-user "+d.codeClass,     d.code],
+             ["badge badge-add",                   "+"]].forEach(function(b){
+              var e=document.createElement("span"); e.className=b[0]; e.textContent=b[1]; badges.appendChild(e);
+            });
+            card.classList.remove("card-hidden"); card.classList.add("card-shown");
+          }
+          async function runCard(d){
+            host.innerHTML=cardHTML(d);
+            var card=host.querySelector(".quote-card"), qtext=host.querySelector(".quote-text"),
+                qclose=host.querySelector(".smart-quote.closing"), speaker=host.querySelector(".speaker"), badges=host.querySelector(".badges");
             await sleep(60);
             card.classList.remove("card-hidden"); card.classList.add("card-shown");
             var caret=document.createElement("span"); caret.className="caret blink"; qtext.after(caret);
@@ -1554,14 +1843,20 @@ enum WelcomeIllustrationHTML {
             chip.classList.remove("badge-proposed","show-pill","chip-arrive"); chip.classList.add("badge-user");
             void chip.offsetWidth; chip.classList.add("badge-accept-flash");
             await nap(300); if(pill) pill.remove();
-            await nap(2600);
-            if(fadeOut){ card.classList.remove("card-shown"); card.classList.add("card-hidden"); await nap(560); }
+            // No trailing rest here — the curtain owns the end hold now, for every
+            // illustration at once, so the dwell cannot drift per picture.
           }
-          async function run(){   // the native baton owns the rhythm: play once per turn, then hold
-            var d = REDUCED ? QUOTES[0] : QUOTES[Math.floor(Math.random()*QUOTES.length)];
-            await runCard(d, false);
-          }
-          if(REDUCED){ run(); } else { setTimeout(run, LEAD); }   // rest on the empty opening frame first
+          // One quote per turn, picked when the curtain is DOWN — so the establishing
+          // beat is on the card this pass is actually about.
+          var current=QUOTES[0];
+          BN.register({
+            still: function(){ paintStill(current); },
+            open:  function(){
+              current = REDUCED ? QUOTES[0] : QUOTES[Math.floor(Math.random()*QUOTES.length)];
+              host.innerHTML=cardHTML(current);
+            },
+            play:  function(){ return runCard(current); }
+          });
         </script>
         </body></html>
         """
@@ -1629,10 +1924,11 @@ enum WelcomeIllustrationHTML {
         </style></head>
         <body><div id="mt"></div>
         \(stringsBlock(strings))
+        \(curtain(kind))
         <script>
           var host=document.getElementById("mt");
           var REDUCED=document.documentElement.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
-          var PACE=\(WelcomeTempo.jsStretch(for: kind)), LEAD=\(WelcomeTempo.jsLeadMs);
+          var PACE=\(WelcomeTempo.jsStretch(for: kind));
           function sleep(ms){ return new Promise(function(r){ setTimeout(r, Math.round(ms*PACE)); }); }
           function nap(ms){ return sleep(ms); }   // PACE lives in sleep now; nap kept as the beat verb
           var GROUPS=[
@@ -1642,17 +1938,24 @@ enum WelcomeIllustrationHTML {
               tags:[S["g2t0"],S["g2t1"],S["g2t2"],S["g2t3"]] }
           ];
           async function typeInto(el, text, msPerChar){ for(var i=0;i<text.length;i++){ el.textContent += text[i]; await sleep(msPerChar); } }
-          async function buildGroup(g){
+          function shell(g){
             host.innerHTML='<div class="cb-group '+g.cls+'"><div class="group-title"></div><div class="group-subtitle"></div><div class="tag-list"></div></div>';
-            var grp=host.querySelector(".cb-group"), titleEl=host.querySelector(".group-title"),
-                subEl=host.querySelector(".group-subtitle"), list=host.querySelector(".tag-list");
+            var grp=host.querySelector(".cb-group");
             void grp.offsetWidth; grp.classList.add("slide-in");
-            if(REDUCED){
-              titleEl.textContent=g.title; subEl.textContent=g.subtitle;
-              for(var k=0;k<g.tags.length;k++){ var r=document.createElement("div"); r.className="tag-row";
-                var c=document.createElement("span"); c.className="badge badge-user cb-tag s"+k; c.textContent=g.tags[k]; r.appendChild(c); list.appendChild(r); }
-              return;
-            }
+          }
+          // The finished group — what a resting cell shows, and where the pass ends.
+          function paintStill(g){
+            shell(g);
+            var titleEl=host.querySelector(".group-title"), subEl=host.querySelector(".group-subtitle"),
+                list=host.querySelector(".tag-list");
+            titleEl.textContent=g.title; subEl.textContent=g.subtitle;
+            for(var k=0;k<g.tags.length;k++){ var r=document.createElement("div"); r.className="tag-row";
+              var c=document.createElement("span"); c.className="badge badge-user cb-tag s"+k; c.textContent=g.tags[k]; r.appendChild(c); list.appendChild(r); }
+          }
+          async function buildGroup(g){
+            shell(g);
+            var titleEl=host.querySelector(".group-title"), subEl=host.querySelector(".group-subtitle"),
+                list=host.querySelector(".tag-list");
             await nap(140);
             await typeInto(titleEl, g.title, 46);      // title, by hand
             await nap(240);
@@ -1671,13 +1974,19 @@ enum WelcomeIllustrationHTML {
               chip.textContent=g.tags[i]; row.appendChild(chip); list.appendChild(row);
               await nap(380);
             }
-            await nap(1700);                           // hold on the finished group
+            // The hold on the finished group is the curtain's now, not this file's.
           }
-          async function run(){   // one group per turn (random); the baton alternates across turns
-            var g = REDUCED ? GROUPS[0] : GROUPS[Math.floor(Math.random()*GROUPS.length)];
-            await buildGroup(g);
-          }
-          if(REDUCED){ run(); } else { setTimeout(run, LEAD); }   // rest on the empty opening frame first
+          // One group per turn, chosen behind the curtain so the establishing beat is
+          // on the group this pass builds.
+          var current=GROUPS[0];
+          BN.register({
+            still: function(){ paintStill(current); },
+            open:  function(){
+              current = REDUCED ? GROUPS[0] : GROUPS[Math.floor(Math.random()*GROUPS.length)];
+              shell(current);
+            },
+            play:  function(){ return buildGroup(current); }
+          });
         </script>
         </body></html>
         """
@@ -1775,10 +2084,11 @@ enum WelcomeIllustrationHTML {
         </style></head>
         <body><div id="stage"></div>
         \(stringsBlock(strings))
+        \(curtain(kind))
         <script>
           var host=document.getElementById("stage");
           var REDUCED=document.documentElement.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
-          var PACE=\(WelcomeTempo.jsStretch(for: kind)), LEAD=\(WelcomeTempo.jsLeadMs);
+          var PACE=\(WelcomeTempo.jsStretch(for: kind));
           function sleep(ms){ return new Promise(function(r){ setTimeout(r, Math.round(ms*PACE)); }); }
           function nap(ms){ return sleep(ms); }   // PACE lives in sleep now; nap kept as the beat verb
           function settle(){ return new Promise(function(r){ requestAnimationFrame(function(){ requestAnimationFrame(r); }); }); }
@@ -1811,10 +2121,22 @@ enum WelcomeIllustrationHTML {
               +'<div class="badges"><span class="badge badge-ai badge-satisfaction">'+d.sentiment+'</span><span class="badge badge-add">+</span></div>'
               +'</div></div></blockquote>';
           }
-          async function runTag(){
+          // The card is built UP FRONT now, not inside the play. It used to be the
+          // first line of `runTag`, so the three-second "rest on the opening frame"
+          // was three seconds of an empty box followed by a card snapping in — the
+          // establishing beat had nothing to establish.
+          function buildTag(){
             host.innerHTML='<div class="sh-stage">'+tagCard(TAGQ)+'</div>';
+          }
+          function paintStill(){
+            buildTag();
+            var badges=host.querySelector(".badges"), add=host.querySelector(".badge-add");
+            var rc=document.createElement("span"); rc.className="badge badge-user "+TAGQ.tagClass; rc.textContent=TAGQ.tag;
+            badges.insertBefore(rc, add);
+          }
+          async function runTag(){
+            buildTag();
             var card=host.querySelector(".quote-card"), badges=host.querySelector(".badges"), add=host.querySelector(".badge-add");
-            if(REDUCED){ var rc=document.createElement("span"); rc.className="badge badge-user "+TAGQ.tagClass; rc.textContent=TAGQ.tag; badges.insertBefore(rc, add); return; }
             await settle();
             var p=mkPointer();
             var s=relXY(card, card.offsetWidth-6, card.offsetHeight+20); setPtr(p,s[0],s[1]);
@@ -1835,7 +2157,7 @@ enum WelcomeIllustrationHTML {
             await leaveCap(cap);
             card.classList.remove("bn-focused","bn-selected"); fadePtr(p);
           }
-          if(REDUCED){ runTag(); } else { setTimeout(runTag, LEAD); }   // rest on the opening frame first
+          BN.register({ still: paintStill, open: buildTag, play: runTag });
         </script>
         </body></html>
         """
@@ -1935,10 +2257,11 @@ enum WelcomeIllustrationHTML {
         </style></head>
         <body><div id="stage"></div>
         \(stringsBlock(strings))
+        \(curtain(kind))
         <script>
           var host=document.getElementById("stage");
           var REDUCED=document.documentElement.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
-          var PACE=\(WelcomeTempo.jsStretch(for: kind)), LEAD=\(WelcomeTempo.jsLeadMs);
+          var PACE=\(WelcomeTempo.jsStretch(for: kind));
           function sleep(ms){ return new Promise(function(r){ setTimeout(r, Math.round(ms*PACE)); }); }
           function nap(ms){ return sleep(ms); }   // PACE lives in sleep now; nap kept as the beat verb
           function settle(){ return new Promise(function(r){ requestAnimationFrame(function(){ requestAnimationFrame(r); }); }); }
@@ -1980,10 +2303,19 @@ enum WelcomeIllustrationHTML {
           // animation ticks 2 → 3 and fourteen of the twenty-one languages
           // inflect on the number.
           function shToolbar(n){ return '<div class="sh-toolbar"><button class="bn-hidden-toggle" tabindex="-1">'+S["hidden"+n]+' <span class="bn-hidden-chevron">⌄</span></button></div>'; }
-          async function runStarHide(){
+          // Built up front, same reason as Tag: two real quote cards are a scene to
+          // read, and the establishing beat only works if the scene is on screen.
+          function buildStarHide(){
             host.innerHTML=shToolbar(2)+'<div class="sh-stage">'+fullCard(SHQ[0])+fullCard(SHQ[1])+'</div>';
+          }
+          function paintStill(){
+            buildStarHide();
             var cards=host.querySelectorAll(".quote-card"), A=cards[0], B=cards[1], toggle=host.querySelector(".bn-hidden-toggle");
-            if(REDUCED){ A.classList.add("starred"); B.classList.add("bn-hidden"); toggle.firstChild.textContent=S["hidden3"]+" "; return; }
+            A.classList.add("starred"); B.classList.add("bn-hidden"); toggle.firstChild.textContent=S["hidden3"]+" ";
+          }
+          async function runStarHide(){
+            buildStarHide();
+            var cards=host.querySelectorAll(".quote-card"), A=cards[0], B=cards[1], toggle=host.querySelector(".bn-hidden-toggle");
             await settle();
             var p=mkPointer(); setPtr(p, host.clientWidth-24, host.clientHeight-14);
             await nap(340);
@@ -2008,7 +2340,7 @@ enum WelcomeIllustrationHTML {
             await leaveCap(capH);
             fadePtr(p);
           }
-          if(REDUCED){ runStarHide(); } else { setTimeout(runStarHide, LEAD); }   // rest on the opening frame first
+          BN.register({ still: paintStill, open: buildStarHide, play: runStarHide });
         </script>
         </body></html>
         """
@@ -2080,6 +2412,7 @@ enum WelcomeIllustrationHTML {
         </style></head>
         <body>
         \(stringsBlock(strings))
+        \(curtain(kind))
           <div class="term" id="term">
             <div class="row" id="qrow"><span class="pg">&gt; </span><span id="q"></span><span class="tcaret blink" id="qc"></span></div>
             <div class="row ln" id="tool"></div>
@@ -2088,11 +2421,15 @@ enum WelcomeIllustrationHTML {
           </div>
         <script>
           var REDUCED=document.documentElement.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
-          var PACE=\(WelcomeTempo.jsStretch(for: kind)), LEAD=\(WelcomeTempo.jsLeadMs);
+          var PACE=\(WelcomeTempo.jsStretch(for: kind));
           function sleep(ms){ return new Promise(function(r){ setTimeout(r, Math.round(ms*PACE)); }); }
           function nap(ms){ return sleep(ms); }   // PACE lives in sleep now; nap kept as the beat verb
           function settle(){ return new Promise(function(r){ requestAnimationFrame(function(){ requestAnimationFrame(r); }); }); }
           function q(id){ return document.getElementById(id); }
+          // Pristine markup, captured before anything touches it: `fillStill` removes the
+          // caret, so neither frame can be repainted without a restore to go back to.
+          var TERM0=q("term").innerHTML;
+          function reset(){ q("term").innerHTML=TERM0; }
           var QUESTION=S["question"];
           var TOOLCALL='<span class="tooldot">⏺ </span><span class="toolname">bristlenose · search_quotes</span><span class="toolargs"> (MCP)(query: "'+S["queryArg"]+'")</span>';
           // Claude answers in the language it was ASKED in, so an Italian
@@ -2103,6 +2440,7 @@ enum WelcomeIllustrationHTML {
           // structure, not a sentence of ours.
           var ANSWER=S["answer"];
           function fillStill(){
+            reset();
             q("q").textContent=QUESTION; q("qc").remove(); q("qrow").classList.add("done");
             q("tool").innerHTML=TOOLCALL; q("tool").classList.add("on");
             q("res").classList.add("on");
@@ -2129,6 +2467,7 @@ enum WelcomeIllustrationHTML {
             q("cite").classList.add("on");
           }
           async function runAgentChat(){
+            reset();
             await settle();
             await typeQuestion();
             await think();
@@ -2138,7 +2477,9 @@ enum WelcomeIllustrationHTML {
             await nap(650);
             await streamAnswer();
           }
-          if(REDUCED){ fillStill(); } else { setTimeout(runAgentChat, LEAD); }   // rest on the empty prompt first
+          // The opening frame is the empty prompt with its caret blinking — which is
+          // exactly the right thing to rest on before the question types itself.
+          BN.register({ still: fillStill, open: reset, play: runAgentChat });
         </script>
         </body></html>
         """
@@ -2183,9 +2524,10 @@ enum WelcomeIllustrationHTML {
             <div class="sticky y2"><div class="qt" id="mQ2"></div><span class="attr">— P1 · 9:10</span></div>
           </div>
         \(stringsBlock(strings))
+        \(curtain(kind))
         <script>
           var R=document.documentElement.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
-          var PACE=\(WelcomeTempo.jsStretch(for: kind)), LEAD=\(WelcomeTempo.jsLeadMs);
+          var PACE=\(WelcomeTempo.jsStretch(for: kind));
           var STK=[].slice.call(document.querySelectorAll(".sticky"));
           document.getElementById("mCount").textContent=S["quoteCount"];
           document.getElementById("mSection").textContent=S["section"];
@@ -2198,8 +2540,14 @@ enum WelcomeIllustrationHTML {
           }
           requestAnimationFrame(fit);
           window.addEventListener("resize",fit);
-          if(R){ STK.forEach(function(el){ el.classList.add("on"); }); }
-          else{ STK.forEach(function(el,i){ setTimeout(function(){ el.classList.add("on"); }, LEAD+Math.round(i*480*PACE)); }); }
+          BN.register({
+            still: function(){ STK.forEach(function(el){ el.classList.add("on"); }); fit(); },
+            open:  function(){ STK.forEach(function(el){ el.classList.remove("on"); }); },
+            play:  async function(){
+              for(var i=0;i<STK.length;i++){ STK[i].classList.add("on"); await BN.wait(Math.round(480*PACE)); }
+              fit();
+            }
+          });
         </script>
         </body></html>
         """

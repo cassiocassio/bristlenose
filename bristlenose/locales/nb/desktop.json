@@ -411,6 +411,9 @@
   },
   "welcome": {
     "examples": {
+      "agentAnswer": "Betalingen er det tydeligste friksjonspunktet \u2014 seks sitater, nesten alle frustrasjon: \u00abJeg fant ikke ut hvor jeg skulle betale.\u00bb",
+      "agentQueryArg": "betaling",
+      "disfluency": "~\u00d8h, alts\u00e5, ~betalingen~, liksom,~ var~ \u00e6rlig talt, den\u2014den~ forvirrende~, vet du?~ Jeg fant~ egentlig~ ikke ut hvor jeg skulle betale.",
       "bookTitleNorman": "The Design of Everyday Things",
       "bookTitleNielsen": "Usability Engineering",
       "bookTitleBraunClarke": "Thematic Analysis",

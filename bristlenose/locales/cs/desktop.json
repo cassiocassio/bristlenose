@@ -446,6 +446,9 @@
   },
   "welcome": {
     "examples": {
+      "agentAnswer": "Pokladna je nejjasn\u011bj\u0161\u00ed t\u0159ec\u00ed bod \u2014 \u0161est citac\u00ed, t\u00e9m\u011b\u0159 sam\u00e1 frustrace: \u201eNemohla jsem naj\u00edt, kde zaplatit.\u201c",
+      "agentQueryArg": "pokladna",
+      "disfluency": "~No, ehm, ~ta pokladna~, jako,~ byla~ up\u0159\u00edmn\u011b, to\u2014to~ zmaten\u00e1~, v\u00ed\u0161?~ Nemohla jsem~ vlastn\u011b~ naj\u00edt, kde zaplatit.",
       "bookTitleNorman": "The Design of Everyday Things",
       "bookTitleNielsen": "Usability Engineering",
       "bookTitleBraunClarke": "Thematic Analysis",

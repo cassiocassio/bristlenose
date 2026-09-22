@@ -411,6 +411,9 @@
   },
   "welcome": {
     "examples": {
+      "agentAnswer": "Le paiement est le point de friction le plus net\u2009: six citations, presque toutes de la frustration. \u00ab\u202fJe ne trouvais pas o\u00f9 payer.\u202f\u00bb",
+      "agentQueryArg": "paiement",
+      "disfluency": "~Alors, euh, ~le paiement~, genre,~ \u00e9tait~ franchement, le\u2014le~ confus~, tu vois\u2009?~ Je ne trouvais~ en fait~ pas o\u00f9 payer.",
       "bookTitleNorman": "Le design des objets du quotidien",
       "bookTitleNielsen": "Usability Engineering",
       "bookTitleBraunClarke": "Thematic Analysis",

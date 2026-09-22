@@ -411,6 +411,9 @@
   },
   "welcome": {
     "examples": {
+      "agentAnswer": "El pago es el punto de fricci\u00f3n m\u00e1s claro: seis citas, casi todas de frustraci\u00f3n. \u00abNo encontraba d\u00f3nde pagar.\u00bb",
+      "agentQueryArg": "pago",
+      "disfluency": "~Bueno, eh, ~el pago~, o sea,~ era~ la verdad, el\u2014el~ confuso~, \u00bfsabes?~ No encontraba~ realmente~ d\u00f3nde pagar.",
       "bookTitleNorman": "El dise\u00f1o de las cosas cotidianas",
       "bookTitleNielsen": "Usability Engineering",
       "bookTitleBraunClarke": "Thematic Analysis",

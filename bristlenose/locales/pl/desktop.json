@@ -447,6 +447,9 @@
   },
   "welcome": {
     "examples": {
+      "agentAnswer": "Kasa to najwyra\u017aniejszy punkt tarcia \u2014 sze\u015b\u0107 cytat\u00f3w, niemal same frustracje: \u201eNie mog\u0142am znale\u017a\u0107, gdzie zap\u0142aci\u0107.\u201d",
+      "agentQueryArg": "kasa",
+      "disfluency": "~No, yyy, ~ta kasa~, znaczy,~ by\u0142a~ szczerze, ta\u2014ta~ myl\u0105ca~, wiesz?~ Nie mog\u0142am~ w\u0142a\u015bciwie~ znale\u017a\u0107, gdzie zap\u0142aci\u0107.",
       "bookTitleNorman": "The Design of Everyday Things",
       "bookTitleNielsen": "Usability Engineering",
       "bookTitleBraunClarke": "Analiza tematyczna",

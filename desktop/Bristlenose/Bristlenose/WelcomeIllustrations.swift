@@ -479,7 +479,15 @@ struct QuoteIllustrationView: View {
 
     var body: some View {
         let still = reduceMotion || !active   // baton: animate only while this cell holds it
-        return IllustrationWebView(html: WelcomeIllustrationHTML.quote(dark: scheme == .dark, reduce: still))
+        // THEIRS, and the rules' named exception: authored per locale, never
+        // translated. A translator handed the English sentence returns clean
+        // prose and a dead demonstration — the strike-through only teaches
+        // anything when the struck words are that language's own hesitations.
+        // Machine-authored pending native review, same standing as every other
+        // seeded string; the marked-up form means a reviewer rewrites one line.
+        let strings = ["disfluency": i18n.t("desktop.welcome.examples.disfluency")]
+        return IllustrationWebView(html: WelcomeIllustrationHTML.quote(
+            dark: scheme == .dark, reduce: still, strings: strings))
             .id("quote-\(scheme)-\(still)-\(i18n.locale)")   // reload on appearance / reduce-motion / baton / language change
             .allowsHitTesting(false)
             .accessibilityHidden(true)
@@ -670,7 +678,14 @@ struct AgentChatIllustrationView: View {
         // locale — a translated one depicts software that does not exist. The
         // typed question is not Claude Code's; it is the researcher's, and a
         // Dutch researcher types Dutch into an English CLI.
-        let strings = ["question": i18n.t("desktop.welcome.examples.agentQuestion")]
+        let strings = [
+            "question": i18n.t("desktop.welcome.examples.agentQuestion"),
+            // The model's own prose, in the reader's language.
+            "answer": i18n.t("desktop.welcome.examples.agentAnswer"),
+            // The search term Claude picked from an Italian question would be
+            // Italian too — it is the model's choice, not our identifier.
+            "queryArg": i18n.t("desktop.welcome.examples.agentQueryArg"),
+        ]
         return IllustrationWebView(html: WelcomeIllustrationHTML.agentChat(
             dark: scheme == .dark, palette: palette, reduce: still, strings: strings))
             .id("agentchat-\(scheme)-\(palette)-\(still)-\(i18n.locale)")
@@ -1062,7 +1077,8 @@ enum WelcomeIllustrationHTML {
     }
 
 
-    static func quote(dark: Bool, reduce: Bool) -> String {
+    static func quote(dark: Bool, reduce: Bool,
+                      strings: [String: String]) -> String {
         let kind = WelcomeIllustration.quote
         return """
         <!doctype html><html data-appearance="\(dark ? "dark" : "light")" data-reduce="\(reduce ? "1" : "0")">
@@ -1083,12 +1099,21 @@ enum WelcomeIllustrationHTML {
           @media (prefers-reduced-motion:reduce){ *{ transition:none !important; } }
         </style></head>
         <body><div class="q" id="q"></div>
+        \(stringsBlock(strings))
         <script>
           var R = document.documentElement.getAttribute("data-reduce")==="1" || matchMedia("(prefers-reduced-motion:reduce)").matches;
           var PACE=\(WelcomeTempo.jsStretch(for: kind));
-          var T=[{t:"So, ",x:1},{t:"um, ",x:1},{t:"The checkout",k:1},{t:", like,",x:1},{t:" was",k:1},
-                 {t:" honestly,",x:1},{t:" the—the",x:1},{t:" confusing",k:1},{t:", you know?",x:1},
-                 {t:" I couldn’t",k:1},{t:" actually",x:1},{t:" figure out where to",k:1},{t:" pay.",k:1}];
+          // The hesitation is AUTHORED per locale, not translated — a translator
+          // handed this sentence returns clean prose and a dead demonstration,
+          // because Dutch repairs are different words in different positions
+          // (eh, nou ja, zeg maar). So each locale writes its own, in one line,
+          // with the filler spans wrapped in ~: alternating segments, odd ones
+          // struck through. One string a native speaker can rewrite without
+          // touching any code.
+          var T=[];
+          (S["disfluency"]||"").split("~").forEach(function(seg,i){
+            if(seg.length) T.push(i%2 ? {t:seg,x:1} : {t:seg,k:1});
+          });
           var q=document.getElementById("q");
           q.innerHTML='<span class="qm">“</span>';
           T.forEach(function(o){ var s=document.createElement("span"); s.className="tok "+(o.x?"trim":"kept"); s.textContent=o.t; q.appendChild(s); });
@@ -2065,8 +2090,14 @@ enum WelcomeIllustrationHTML {
           function settle(){ return new Promise(function(r){ requestAnimationFrame(function(){ requestAnimationFrame(r); }); }); }
           function q(id){ return document.getElementById(id); }
           var QUESTION=S["question"];
-          var TOOLCALL='<span class="tooldot">⏺ </span><span class="toolname">bristlenose · search_quotes</span><span class="toolargs"> (MCP)(query: "checkout")</span>';
-          var ANSWER="Checkout is the clearest friction point — six quotes, nearly all frustration: “I couldn’t figure out where to pay.”";
+          var TOOLCALL='<span class="tooldot">⏺ </span><span class="toolname">bristlenose · search_quotes</span><span class="toolargs"> (MCP)(query: "'+S["queryArg"]+'")</span>';
+          // Claude answers in the language it was ASKED in, so an Italian
+          // question gets an Italian answer — this line is the model's prose,
+          // not Claude Code's chrome. `Thinking…` and `⎿ Found 6 quotes` stay
+          // English because those ARE the chrome: search_quotes returns
+          // dict[str, Any], so that result line is Claude Code rendering a
+          // structure, not a sentence of ours.
+          var ANSWER=S["answer"];
           function fillStill(){
             q("q").textContent=QUESTION; q("qc").remove(); q("qrow").classList.add("done");
             q("tool").innerHTML=TOOLCALL; q("tool").classList.add("on");

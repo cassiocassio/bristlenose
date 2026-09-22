@@ -411,6 +411,9 @@
   },
   "welcome": {
     "examples": {
+      "agentAnswer": "Het afrekenen is het duidelijkste knelpunt: zes citaten, bijna allemaal frustratie. \u201dIk kon niet vinden waar ik moest betalen.\u201d",
+      "agentQueryArg": "afrekenen",
+      "disfluency": "~Eh, nou ja, ~het afrekenen~, zeg maar,~ was~ eerlijk gezegd, de\u2014de~ verwarrend~, weet je wel?~ Ik kon~ eigenlijk~ niet vinden waar ik moest betalen.",
       "bookTitleNorman": "The Design of Everyday Things",
       "bookTitleNielsen": "Usability Engineering",
       "bookTitleBraunClarke": "Thematic Analysis",

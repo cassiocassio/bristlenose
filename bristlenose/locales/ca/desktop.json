@@ -411,6 +411,9 @@
   },
   "welcome": {
     "examples": {
+      "agentAnswer": "El pagament \u00e9s el punt de fricci\u00f3 m\u00e9s clar: sis cites, gaireb\u00e9 totes de frustraci\u00f3. \u00abNo trobava on pagar.\u00bb",
+      "agentQueryArg": "pagament",
+      "disfluency": "~B\u00e9, eh, ~el pagament~, o sigui,~ era~ la veritat, el\u2014el~ conf\u00fas~, saps?~ No trobava~ realment~ on pagar.",
       "bookTitleNorman": "The Design of Everyday Things",
       "bookTitleNielsen": "Usability Engineering",
       "bookTitleBraunClarke": "Thematic Analysis",

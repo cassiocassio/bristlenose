@@ -411,6 +411,9 @@
   },
   "welcome": {
     "examples": {
+      "agentAnswer": "Il pagamento \u00e8 il punto di attrito pi\u00f9 chiaro: sei citazioni, quasi tutte di frustrazione. \u201cNon trovavo dove pagare.\u201d",
+      "agentQueryArg": "pagamento",
+      "disfluency": "~Allora, ehm, ~il pagamento~, cio\u00e8,~ era~ sinceramente, il\u2014il~ confuso~, capisci?~ Non trovavo~ in realt\u00e0~ dove pagare.",
       "bookTitleNorman": "La caffettiera del masochista",
       "bookTitleNielsen": "Usability Engineering",
       "bookTitleBraunClarke": "Thematic Analysis",

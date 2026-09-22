@@ -411,6 +411,9 @@
   },
   "welcome": {
     "examples": {
+      "agentAnswer": "Maksaminen on selkein kitkakohta \u2014 kuusi sitaattia, l\u00e4hes kaikki turhautumista: \u201dEn l\u00f6yt\u00e4nyt mist\u00e4 maksetaan.\u201d",
+      "agentQueryArg": "maksaminen",
+      "disfluency": "~No, \u00f6\u00f6, ~se maksaminen~, niinku,~ oli~ rehellisesti, se\u2014se~ sekavaa~, tii\u00e4kk\u00f6?~ En l\u00f6yt\u00e4nyt~ oikeastaan~ mist\u00e4 maksetaan.",
       "bookTitleNorman": "The Design of Everyday Things",
       "bookTitleNielsen": "Usability Engineering",
       "bookTitleBraunClarke": "Thematic Analysis",

@@ -257,14 +257,20 @@ def test_every_illustration_webview_keys_its_id_on_locale() -> None:
 #: Webview builders that take no `strings:` **by decision**, with the reason.
 #: Everything else must take one — an illustration whose words are literals in
 #: the builder cannot follow the language picker, and nothing else would say so.
-_DELIBERATELY_WORDLESS = {
-    "quote": "THEIRS, and the rules' own named exception. It is not a sentence "
-             "but a token array where each word is marked keep-or-trim and the "
-             "spacing lives inside the tokens, so a translated sentence returns "
-             "clean prose and a dead demonstration. Spanish repairs are "
-             "different words in different positions (o sea, eh, bueno). This "
-             "one needs a native speaker writing a native hesitation, never a "
-             "seed — decided 22 Sep 2026.",
+_DELIBERATELY_WORDLESS: dict[str, str] = {
+    # Empty since 22 Sep 2026, and that is the finding rather than the absence
+    # of one. `quote` sat here as the rules' named exception — a translator
+    # handed a disfluency returns clean prose and a dead demonstration — and
+    # the carve-out was read too broadly. Translating the sentence is indeed
+    # forbidden; AUTHORING a hesitation in each language is a different act,
+    # and it is what the exception always asked for. Each locale now writes its
+    # own in one line, fillers wrapped in ~, so a native reviewer rewrites a
+    # string rather than a token array. es "o sea", fi "niinku", ja "えっと /
+    # なんか" are the repairs those speakers actually make.
+    #
+    # Nothing is wordless now. A builder that takes no `strings:` table fails
+    # the gate below, and the entry that excuses it has to say which class
+    # (FOREIGN / FRAMEWORK / GENERATED) makes English correct.
 }
 
 #: Builders whose words are still English literals awaiting the content pass.

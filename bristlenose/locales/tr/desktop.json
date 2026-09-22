@@ -411,6 +411,9 @@
   },
   "welcome": {
     "examples": {
+      "agentAnswer": "\u00d6deme en belirgin s\u00fcrt\u00fcnme noktas\u0131 \u2014 alt\u0131 al\u0131nt\u0131, neredeyse hepsi hayal k\u0131r\u0131kl\u0131\u011f\u0131: \u201cNereden \u00f6deyece\u011fimi bulamad\u0131m.\u201d",
+      "agentQueryArg": "\u00f6deme",
+      "disfluency": "~\u015eey, \u0131\u0131\u0131, ~\u00f6deme k\u0131sm\u0131~, yani,~~ a\u00e7\u0131k\u00e7as\u0131 o\u2014o~ kafa kar\u0131\u015ft\u0131r\u0131c\u0131yd\u0131~, anlad\u0131n m\u0131?~ Nereden \u00f6deyece\u011fimi~ asl\u0131nda~ bulamad\u0131m.",
       "bookTitleNorman": "The Design of Everyday Things",
       "bookTitleNielsen": "Usability Engineering",
       "bookTitleBraunClarke": "Thematic Analysis",

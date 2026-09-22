@@ -411,6 +411,9 @@
   },
   "welcome": {
     "examples": {
+      "agentAnswer": "Kassan \u00e4r den tydligaste friktionspunkten \u2014 sex citat, n\u00e4stan alla frustration: \u201dJag hittade inte var jag skulle betala.\u201d",
+      "agentQueryArg": "kassan",
+      "disfluency": "~\u00d6h, allts\u00e5, ~kassan~, liksom,~ var~ \u00e4rligt talat, den\u2014den~ f\u00f6rvirrande~, du vet?~ Jag hittade~ faktiskt~ inte var jag skulle betala.",
       "bookTitleNorman": "The Design of Everyday Things",
       "bookTitleNielsen": "Usability Engineering",
       "bookTitleBraunClarke": "Thematic Analysis",

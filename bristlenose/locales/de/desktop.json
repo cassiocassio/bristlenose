@@ -411,6 +411,9 @@
   },
   "welcome": {
     "examples": {
+      "agentAnswer": "Die Kasse ist der deutlichste Reibungspunkt \u2014 sechs Zitate, fast alle Frust: \u201eIch fand nicht, wo ich zahlen sollte.\u201c",
+      "agentQueryArg": "Kasse",
+      "disfluency": "~Also, \u00e4hm, ~die Kasse~, halt,~ war~ ehrlich gesagt, die\u2014die~ verwirrend~, wei\u00dft du?~ Ich fand~ eigentlich~ nicht, wo ich zahlen sollte.",
       "bookTitleNorman": "The Design of Everyday Things",
       "bookTitleNielsen": "Usability Engineering",
       "bookTitleBraunClarke": "Thematic Analysis",

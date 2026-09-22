@@ -412,6 +412,9 @@
   },
   "welcome": {
     "examples": {
+      "agentAnswer": "Checkout is the clearest friction point \u2014 six quotes, nearly all frustration: \u201cI couldn\u2019t figure out where to pay.\u201d",
+      "agentQueryArg": "checkout",
+      "disfluency": "~So, um, ~The checkout~, like,~ was~ honestly, the\u2014the~ confusing~, you know?~ I couldn\u2019t~ actually~ figure out where to pay.",
       "bookTitleNorman": "The Design of Everyday Things",
       "bookTitleNielsen": "Usability Engineering",
       "bookTitleBraunClarke": "Thematic Analysis",

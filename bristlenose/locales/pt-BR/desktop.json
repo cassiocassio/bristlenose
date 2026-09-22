@@ -411,6 +411,9 @@
   },
   "welcome": {
     "examples": {
+      "agentAnswer": "O checkout \u00e9 o ponto de atrito mais claro: seis cita\u00e7\u00f5es, quase todas de frustra\u00e7\u00e3o. \u201cEu n\u00e3o achava onde pagar.\u201d",
+      "agentQueryArg": "checkout",
+      "disfluency": "~Ent\u00e3o, \u00e9, ~o checkout~, tipo,~ era~ sinceramente, o\u2014o~ confuso~, sabe?~ Eu n\u00e3o achava~ na verdade~ onde pagar.",
       "bookTitleNorman": "O design do dia a dia",
       "bookTitleNielsen": "Usability Engineering",
       "bookTitleBraunClarke": "Thematic Analysis",

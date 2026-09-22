@@ -97,8 +97,17 @@ question turns out to matter.
 ## What this decides
 
 The V1 design — one language, the UI language, by a call-site instruction — is
-**supported**. The steer is reliable across providers, it does not need the shipped
+**supported, and shipped the same day for the Quotes lens** (`22d91b5d`): `s08`,
+`s10` and `s11` append the steer, the desktop passes its picker's language
+through `BRISTLENOSE_LANG`, and a real `bristlenose analyze` run over the
+Spanish demo project returned all ten section names and all six theme titles in
+Spanish. The steer is reliable across providers, it does not need the shipped
 prompt's `sha` to move, and no analysis-quality cost was found.
+
+**One thing the ship changed about this document.** The `Uncategorised` finding
+in §1 is fixed — the catch-all now uses the lens's own translated keys — so a
+future re-run of this spike will not see it, and §1's count of "26 occurrences"
+is a measurement of the tree before the fix rather than something to reproduce.
 
 Three things it does not decide, all recorded rather than resolved:
 

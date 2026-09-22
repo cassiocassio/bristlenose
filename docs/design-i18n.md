@@ -268,7 +268,40 @@ an all-translated one promises framework codes we do not produce.
 > an objective, not a resolved design. Written as settled fact above since Mar 2026; treat the
 > paragraph as intent until this note is removed.
 
-### Open: what language should sections and themes be generated in
+### PARKED: what language should sections and themes be generated in
+
+> **Parked 22 Sep 2026 — with a reason, a trigger and a cost, because a
+> deferral missing any of the three is not a park.**
+>
+> **Why.** Answering it needs a paid experimental run on a non-English corpus
+> and a stability check across repeats — research, not i18n work, and not
+> something the localisation pass can carry. Everything the experiment must
+> establish is listed at the end of this section; none of it is reachable by
+> argument, which is why the sentence below has stood since it was written.
+>
+> **Trigger to reopen.** The first non-English study actually run through the
+> pipeline — that is the moment the undefined behaviour stops being theoretical
+> and a real person reads a theme title in a language nobody chose. In practice:
+> **before any non-English cohort tester is onboarded**, not after.
+>
+> **What the deferral costs**, stated so it does not read as free:
+> 1. Section and theme titles come back in whatever the model picks, and may
+>    differ between two runs of the same corpus. That is a defect today,
+>    independent of which answer is eventually right.
+> 2. **Seven illustration values stay English because of this** — the two theme
+>    names in `emergentThemes`, the `Homepage` section title on the Miro card,
+>    and the four `loc:` section names on the signal card. They are registered
+>    in `tests/test_welcome_locale_keys.py` as GENERATED, and the rules forbid
+>    drawing the fixed version over a pipeline that still produces the broken
+>    one. So a non-English researcher sees a picture that is right about the
+>    chrome and English about the output — truthfully, which is the point.
+> 3. `s05_transcribe` already detects and logs the language per session
+>    (`info.language`) and throws it away. The input the experiment needs is
+>    being measured and discarded every run.
+>
+> **What is NOT parked:** that generated text currently has no steer at all.
+> Whatever the answer, undefined is wrong, and making it *defined* is a smaller
+> change than deciding *which* language is right.
 
 **Not settled, and not to be settled by reasoning — it needs experiments.**
 Recorded 22 Sep 2026 so the next pass starts from the argument rather than from

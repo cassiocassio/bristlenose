@@ -288,11 +288,15 @@ _DELIBERATELY_ENGLISH_VALUES = {
                        "one advertises output we do not produce.",
     "platform convention": "GENERATED — ditto.",
     "How to begin unclear": "GENERATED — a pipeline theme title. The language "
-                            "the pipeline generates in is undefined "
-                            "(docs/design-i18n.md §'what language sections and "
-                            "themes should be generated in'), and the rules "
-                            "forbid drawing the fixed version over a pipeline "
-                            "that still produces the broken one.",
+                            "the pipeline generates in is undefined, and the "
+                            "question is PARKED (22 Sep 2026) with a trigger: "
+                            "before any non-English cohort tester is onboarded. "
+                            "See docs/design-i18n.md §'PARKED: what language "
+                            "should sections and themes be generated in'. These "
+                            "entries are the parked question's stated cost, so "
+                            "they are settled-for-now rather than pending — the "
+                            "rules forbid drawing the fixed version over a "
+                            "pipeline that still produces the broken one.",
     "Intuitive": "GENERATED — the second theme title; same reason.",
 }
 

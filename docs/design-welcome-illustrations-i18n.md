@@ -133,7 +133,13 @@ menu row (title from `desktop.menu.quotes.extractClips`, subtitle from
    | cs | Kosmas | no match for Donald Norman |
    | uk | Yakaboo | **UNCHECKED** — Cloudflare-blocked from here. Not a nil |
    | pt-PT | Wook | search path redirects; likely carries the Brazilian edition |
-   | ca, da, fi, nb | — | not checked; served by the Spanish edition and by English |
+   | ca | La Central (Barcelona) | **nil, measured 22 Sep 2026.** Nine Norman titles, not one in Catalan — *El diseño de las cosas cotidianas* (Capitán Swing), *El ordenador invisible* (Paidós), the English original. `disseny de les coses` returns nothing. Catalan readers are served by the Spanish edition |
+   | da, fi, nb, sv | Saxo, Adlibris, Ark | nil — each store's own language facet reads English for every hit |
+   | nl, tr | Amazon | nil — English editions only |
+
+   **All 21 locales are now accounted for**: eleven carry a local edition
+   (ten Norman plus Braun & Clarke in Polish), nine are measured nil, and `en`
+   is the source. There is no "unchecked" row left.
 
    | shelf book | what the earlier research said |
    |---|---|

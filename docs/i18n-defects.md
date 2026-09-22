@@ -183,10 +183,20 @@ The figure above is counted. `en` itself: 1,641 → 1,536 keys, 9 → 6 namespac
 
 ### Deferred on purpose, not missed
 
-* **What language generated sections and themes should land in** — needs
-  experiments, explicitly parked. The UI language is plausible and probably wants
-  an override; the interview language is arguable because a theme describes what
-  participants said. Three axes are recorded in `docs/design-i18n.md`.
+* **What language generated sections and themes should land in** — **PARKED
+  22 Sep 2026**, and now parked properly: `docs/design-i18n.md` carries the
+  reason (it needs a paid experimental run, which is research rather than
+  localisation work), the trigger (**before any non-English cohort tester is
+  onboarded** — the first real non-English study is when a person reads a theme
+  title in a language nobody chose), and the cost (seven illustration values
+  stay English *because* of it, and `s05_transcribe` already measures the
+  per-session language and discards it).
+
+  The three axes are still the thing to read first: UI, analysis output and
+  deliverable are independent, and a Barcelona researcher can want a different
+  answer for each. **Not parked:** that generated text has no steer at all today,
+  so the language can differ between two runs of the same corpus. Undefined is
+  wrong whichever answer wins.
 * **Row 45** — the signal card's `GAP / TENSION / RECOVERY`: a vestigial tail, kept
   by decision.
 * **Decision 6** — the guide-versus-summary precedence rule: declined on scope,

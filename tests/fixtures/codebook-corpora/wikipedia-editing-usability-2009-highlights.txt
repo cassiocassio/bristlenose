@@ -1,0 +1,313 @@
+Source: Wikimedia Commons highlight clips from the Wikipedia Usability Initiative's March 2009 "Usability and Experience Study" (https://usability.wikimedia.org/wiki/Usability_and_Experience_Study); clips listed inline; speech transcribed locally with Whisper (mlx large-v3-turbo / faster-whisper small.en), not a published transcript — expect ASR errors, no speaker labels
+Licence: CC BY-SA 3.0 (per each file page on Commons; attribution: Wikimedia Foundation)
+Description: New/non-editors of English Wikipedia thinking aloud while attempting to edit an article in the 2009 MonoBook editor, with occasional facilitator questions; edited highlight reels of real lab sessions, themed "editing makes me feel stupid", "I can't tell what this looks like", "explain the editing process", plus general first impressions.
+
+########## File:Editing makes me feel stupid.ogv (4:56) — https://commons.wikimedia.org/wiki/File:Editing_makes_me_feel_stupid.ogv ##########
+
+Let's see if we can, okay.
+So basically, okay, so my first expectation was kind of a little bit more user friendly.
+This looks like a, for example, I'm not sure what these two are for and I'm guessing that
+these two might be to make that as a link because I see it on several occasions.
+I'm kind of trying to understand how when I have to edit, if I have to make something
+as a link, do I have to put these two like here, but I am not sure on that.
+In many websites or at many places, you kind of see the screen just the way you see it in
+the article.
+But here it looks like they have converted that and now it's like plain text.
+Nah.
+Nah.
+What's making you say nah here?
+I have no clue how to do that.
+Toolbox, red-eyed, template.
+Oh, look at all that.
+What the hell is it?
+I don't want to know about it.
+Um.
+No, I can't do it.
+I cannot add a section.
+I have no idea how to add a section.
+Well, that's fairly a lot more than I'm willing to mess with.
+It's quite a bit of HTML.
+Forget it, folks.
+I'm getting fairly frustrated.
+I mean, not do it at home.
+Overall, how'd you feel about doing all this stuff?
+Um, kind of stupid.
+I guess this is the article as it is in its basic format.
+How it's, how the computer, you know, I don't know that much about computers.
+Uh-huh, sure.
+How the computer has, how it's been put in so that it will appear the way we see it.
+It's kind of hard to read in this format, I have to say.
+Because it has all this almost, I don't know, I don't know how to call it.
+Title, author, work, date, access date, reference, reference.
+It's formatting so that the computer can read it, I guess.
+So whoever reads it, whatever, I don't know that much about it.
+I talked about it.
+Sure, sure.
+This interface is more confusing than now.
+I feel like this is pretty scary to me.
+Well, like, there's like all this, I don't know, it just looks like hard to read.
+Do you know what I mean?
+Like, there's all these brackets and then like the reference website is here.
+Oh my god.
+Well, like, look at it.
+You have no idea what this is.
+Like, I guess I have a hard time seeing this and like going back to the way it like actually looked.
+So like this is like obvious, right?
+Like San Francisco and then it tells you about San Francisco and that's obvious.
+But then like when you go to this, then like, what is all this stuff?
+This is like computer stuff.
+Oh my god, what is all this stuff?
+There's like some newspaper article here.
+I mean, I couldn't really understand that.
+Just being like the first time looking at like the format that it's in.
+I didn't know what it was saying.
+Okay.
+Because there's like a bunch of little asterisks and blah blah blah and this and that.
+Right.
+You know, I have no idea what that says.
+I would just go to where there's stuff that's readable.
+If I had to guess, it looks kind of like a website, like those stuff.
+They're making a website.
+What is it called?
+Like the, it looks like source, page source kind of stuff.
+Oh, okay.
+I mean, it's just telling the website what it means.
+I'm trying to remember some of the coding so I could just kind of reference in my mind what the page was telling me.
+And I'm certainly not a programmer by any means.
+So that would be something that I would have to spend a little bit more time on.
+A couple things that I had quickly tried didn't come out when you went to the video.
+I was trying to create like one of the links and things like that.
+I'm not really familiar with the coding.
+I don't even know if by hitting the quotes, I'm putting a quote in if I'm actually using Wikipedia code for something that would get it.
+So again, I'm just not totally on board with how to do it.
+The main thing with me is to make it ridiculously easy just because like I said, I'm a layman.
+It's like...
+Not really sure what to do to insert a picture.
+Insert a picture gallery.
+Now that that's on, I don't really understand what that's all about.
+I don't know what to do.
+There's no box, which is what I thought there would be.
+A box like they'd have on Facebook or MySpace.
+Right.
+I don't know how I would go about it.
+Honestly don't know.
+Okay.
+
+########## File:UX lookslike.ogv (3:03) — https://commons.wikimedia.org/wiki/File:UX_lookslike.ogv ##########
+
+But on a blog, usually when you look at it, it looks like the real page.
+Do you know what I mean?
+So like, for example, like this link that we tried to add for the liposomes, it would
+just like, you would click it and then like a little window would come up and you'd put
+the website there and then the words would like be blue or whatever.
+But now here it's like more like computers, right?
+Because there's like brackets and it like has all these weird things that the computer
+knows how to do.
+Right.
+And so then like that makes it like hard to look at when you're like looking at like a
+lot of things.
+Sure.
+So I mean like I would feel okay about it if I would just like wrote something and then
+I pushed a button and it like showed up like that.
+Like that's okay.
+Okay.
+It's a computer thing.
+Right.
+But it is like easier to read if it looks like it does.
+And I guess like there's this preview thing.
+So I guess you could like keep using this and then you would know like what your thing
+looked like.
+Which I guess I should have done more because then I would know instead of like saving it
+like 10 times.
+So I'll open up the right of the page again.
+See where I am.
+I'll try to edit it for now.
+In many websites or at many places you kind of see the screen just the way you see it
+in the article.
+Okay.
+But here it looks like they have converted that and now it's like plain text.
+Okay.
+And I think what I will have to do or what I would really do is probably open another Wikipedia.
+Okay.
+In English.
+So that I can kind of compare because I can see only one view over there.
+which is to go back.
+Why don't I do it in two tabs.
+Because I, yeah isn't that interesting.
+Um, another tab or another, oh because this one's on editing so I want to see transportation.
+So now I don't know where I'm editing.
+Is this going to edit C ports or?
+Uh, well the, when I look over here the text, the text when you edit it looks so much more
+different than the text that I see up here.
+And it's hard to figure out if I'm cutting the right part out.
+It'd be nice to have a, a GUI.
+That's where you can see the, what you're doing or what.
+You don't see your results as you're going.
+Like have it done so that the software, you just edit it and then the software kind of automatically
+translates it into the common formula.
+Uh huh.
+Normal colors for links and whatnot.
+And you can see it as you're going because now you, uh, you know, you've made these things
+and now you're looking at it and you don't know, um, how it's going to look on the page.
+Let's see if you've got an important resource for important resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource resource
+
+########## File:WIK-P Impressions.ogv (5:16) — https://commons.wikimedia.org/wiki/File:WIK-P_Impressions.ogv ##########
+
+So all the editing you've done has been fixing errors?
+Right.
+Is there anything holding you back from contributing otherwise?
+I just don't think I have very much to say.
+I don't know where I can contribute.
+So if I was very knowledgeable at one subject, I'm sure I would take the time to do it, but
+it's not really something I find myself having the time for, I guess.
+Have you ever edited anything?
+I haven't, no.
+I'm kind of scared of that.
+I don't know if I know so much about one subject to where I should edit the thing, but I've never
+really tried either.
+Okay.
+So why not?
+You said you're a little scared of it.
+Yeah, I mean, it's just the information that everybody else reads.
+So if I go out there and put something in the date's wrong, I'm telling these kids for a
+homework project or something like that, that incorrect information.
+So it's a little intimidating just how many people would rely on that information.
+I mean, if I go look for something, I expect the information to be correct.
+I don't know if it is, but I'm assuming it is correct.
+So to have that kind of idea that, oh, I better be 100% sure, you know, it's a little intimidating.
+I know that when I first looked at this, I mean, that was all I could tell you about my
+previous edit session was there were a lot of special characters showing up.
+I don't know if I could remember anything else about it except the number of widgets that were involved in it.
+There's still a lot of widgets.
+I don't remember any tools to support, you know, skipping over knowing the widgets.
+And so the tools are helpful.
+Well, you know, they're on the right track as far as making it easier to edit because there have been
+times that I did want to edit something I saw, but I remembered what a hassle it was before to have to
+remember all the little bits of code and whatnot.
+So I like that they're heading in that direction.
+Okay.
+And it's definitely, you know, knowing that this is what we're looking at, I'd be definitely
+more likely to edit more if I know I can just click a link and click some buttons.
+Okay.
+It seemed like before that you had to really kind of be one of the heavy hitter contributors
+and to really be into it in order to edit.
+So I think this is actually a really good step in making wiki editing, Wikipedia editing more accessible to
+people who maybe don't feel like they're tech savvy enough.
+So I would say like keep checking down that path.
+So you're just edited Wikipedia.
+Hmm.
+Does anyone go in there and see and check on me?
+Do you think somebody does?
+I don't know.
+That was very easy to do.
+I'm not sure.
+And it is as easy as it coming right up, which I feel I was very skeptical about and I am still, but
+even though somebody is not checking on it, like that's their responsibility.
+There's still people who are interested in like keeping the page accurate out there.
+So I think that everything balances itself out.
+What do you think that minor edit box does?
+Um, I think it, I mean, because there must be a lot of edits happening on Wikipedia, it must filter who's going to look at what, right?
+If it's a minor edit, people don't have to look at it.
+And if it's just, if it's not controversial, I assume it just means, you know, I'm cleaning up the, I'm cleaning up the commas or something.
+It's so easy to do, just like manipulate the information.
+And then who has the time to actually check over the, the content that is, the, is that somebody's job?
+Do they just like sit around both day waiting for people to edit stuff and then they look into it and check into it and stuff?
+Let's see.
+Let's see.
+Let's see.
+Let's see.
+Let's see.
+Let's see.
+Let's see.
+Let's see.
+Let's see.
+Let's see.
+Let's see.
+Let's see.
+Let's see.
+Let's see.
+
+########## File:WMFUsability highlights explain.ogv (4:19) — https://commons.wikimedia.org/wiki/File:WMFUsability_highlights_explain.ogv ##########
+
+I don't see how you cite what you added.
+Like if I just made that up, in a way I did because I copied it from a completely different
+irrelevant website.
+But I'm surprised that they don't ask you for a footnote.
+I mean what's to stop you from just putting in anything?
+Right.
+Yeah, where would you expect them to be asking for that?
+What if you wanted to edit and you put that stuff in?
+Right after you put it in.
+Okay.
+If I started doing something like that I'd want to be a conscientious contributor and I wouldn't
+want to just contribute on the fly.
+Right.
+So I kind of respect the idea of the wiki itself and the contributory nature of it in the sense
+that you're trying to put garbage up there.
+Sure.
+So I guess I would obviously in this case being a new user I'd be somewhat cautious
+on where I would actually put that link.
+Mm-hm.
+Kind of more appropriate to kind of the standards that people use for Wikipedia.
+Okay.
+Good.
+So I would have to, if I decided to become more of an editor I would definitely spend a little
+bit more time instead of getting information from it I would be a little bit more observant
+of its form and culture.
+Okay.
+So now that I'm thinking about it I actually consider challenging.
+I don't know what the pro, I don't quite understand the whole process.
+I've read some of those rules and the processes and I'd like to challenge the processes, some
+of the comments that were made about the person that I know that was written about.
+So in Europe on 17th April my, like being from the US I would say like May 12th instead of
+12th May.
+Right.
+Do you can, would you continue in what someone else wrote or would you rewrite it or would
+you just write your own thing and have them be different?
+Right.
+Like I wouldn't, I wouldn't be sure and I'm, I'm a perfectionist so I'd want to, you know,
+make sure if other people are going to be reading it that it looks right so I wouldn't
+know.
+I guess I'd be a little concerned about that.
+12th, I guess I'd continue even though it's not my, it's not how I'd write it.
+Okay.
+I feel like I would want to read like some rules about formatting before I did anything.
+Um, just so I, see like this is like indented a little bit so I'd want to, I'd probably
+do that with the, the C also.
+Okay.
+I'd probably make the whole thing metallic just cause I don't know, I just look at some
+rules and like how, how generally you should edit something or create something.
+Right.
+Maybe it has to go through acceptance kind of like on other sites.
+Like if you, if you put something on there, it has to be accepted before it's placed on.
+Uh huh.
+That's my, that's, that's my thought.
+Okay.
+I guess I wouldn't panic just yet.
+Um, but if it's not on there within a couple of days then I'd probably wonder why it's not.
+Okay.
+Got it.
+Who do you think would be like accepting or reaching the changes?
+Like what's your, around that?
+Uh, it works for Wikipedia but it's non-profit so I, I, I really don't know.
+Okay.
+Got it.
+Maybe somebody that, that, that understands the terms of service, uh, a lot better than anybody
+else.
+Uh huh.
+Uh huh.
+And they're regular.
+The thing is it looks like there are, uh, references in here.
+Uh huh.
+Which I don't have.
+It would be word of, you know, to tell you the truth, she probably, she might not have
+even lived in Phoenix.
+I just heard her house a couple of times.
+So she could have just meeting someone.
+So I don't even know if I should do it, add that in but.
+Well from what I understand it used to be pretty free form and then it kind of went into
+like a peer reviewed, uh, process for the more well established articles.
+Okay.
+It was made basically you would sit it and then people would go over and decide whether
+or not it's a good idea.
+Yeah.

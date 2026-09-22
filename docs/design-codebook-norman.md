@@ -50,7 +50,10 @@ Public corpora used so far (all E2): Steve Krug's *Rocket Surgery Made Easy*
 demo test, Zipcar, 2020 (publicly posted, licence unstated — local only);
 Wikimedia Usability Initiative 2009 highlight clips (CC BY-SA 3.0, transcribed
 locally); Davies, Turner and Udell, Instagram think-aloud corpus, Figshare
-21195811 (CC BY 4.0).
+21195811 (CC BY 4.0). **The two openly licensed ones are committed** under
+`tests/fixtures/codebook-corpora/`, with the exact chunked quote files the
+numbers below were measured on; its README carries the licences and the
+sampling recipe.
 
 ## Concept map — what each tag carries, and where it comes from
 

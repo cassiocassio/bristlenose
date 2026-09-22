@@ -1676,11 +1676,26 @@ invariant, since Weblate shows one string at a time. The ja **Observer** drift i
 corrected: `glossary.csv` said 観察者 against four live keys shipping オブザーバー,
 so the glossary was the outlier, not the product.
 
-**Held deliberately.** The dead `enums:speakerRole.*` block (4 keys × 21 locales)
+**Held deliberately.** The ~~dead~~ `enums:speakerRole.*` block (4 keys × 21 locales)
 is **not** deleted: verification found the census incomplete —
 `design-i18n-wiring.md:76` instructs a future implementer to wire roles to those
 very keys — and the near-homonym argument used to justify deleting it applies
 equally to the proposed replacement. Reconcile the wiring doc first.
+
+> **The "dead" premise is wrong in one of four, measured 22 Sep 2026.**
+> `speakerRole.participant` has **three live callers** —
+> `WelcomeIllustrations.swift:570`, `:631`, `:662`, which `i18n.t` it into the
+> rendered illustration data, and Swift's `I18n.namespaces` does load `enums`
+> (`I18n.swift:43`), so it resolves rather than falling through to the raw key.
+> They arrived with the native-illustration enrolment on 22 Sep (`i18n-defects.md`
+> row 48), *after* this paragraph was written. `researcher`, `observer` and
+> `unknown` still have none. **The conclusion is unchanged and the reason is now
+> stronger: deleting the block would break the welcome illustrations in 21
+> locales**, which is a live regression rather than a lost future. Note also that
+> the sessions grid does *not* read this family — `speakerRolePlaceholder`
+> (`SessionsTable.tsx:49`) resolves `sessions.speakerPlaceholder.*`, a separate
+> set, so a census that greps for the rendered *word* rather than the key will
+> keep finding the wrong one.
 
 **Owner calls, none of them safely inferable:**
 

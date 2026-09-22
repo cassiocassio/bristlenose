@@ -1113,7 +1113,6 @@
     "errorNoDownloadLink": "Tallenteella ei ole latauslinkki\u00e4.",
     "errorNoDownloadableFile": "Tallenteella ei ole ladattavaa tiedostoa.",
     "errorSignedOut": "Kirjauduttu ulos.",
-    "untitledMeeting": "Nimet\u00f6n kokous",
     "zoomCloudRecordingOff": "Pilvitallennus on pois k\u00e4yt\u00f6st\u00e4 t\u00e4ll\u00e4 Zoom-tilill\u00e4, joten Bristlenosella ei ole mit\u00e4\u00e4n haettavaa. Omalle Macille tallennetut tallenteet voi yh\u00e4 vet\u00e4\u00e4 sis\u00e4\u00e4n Finderista.",
     "zoomTranscriptOff": "\u201dLuo \u00e4\u00e4nitekstitys\u201d on pois k\u00e4yt\u00f6st\u00e4 Zoomin tallennusasetuksissa, joten n\u00e4iden tallenteiden mukana ei tule tekstityksi\u00e4.",
     "restoredEmptyTitle": "Ei vielä mitään tuotavaa",

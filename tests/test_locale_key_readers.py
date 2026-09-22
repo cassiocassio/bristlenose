@@ -418,15 +418,18 @@ _KNOWN_ORPHANS: dict[str, _Block] = {
     ),
     "desktop.cloudImport.": _Block(
         tag=TRIAGED,
-        why="`untitledMeeting` is register item 24 — decided: the adapter is right to "
-            "hardcode English because `row.title` feeds search and the downloaded "
-            "filename, so the *key* is the mistake and should be deleted. The two "
-            "`zoom*` sentences have no reader on any surface and are a new find. "
+        why="The two `zoom*` sentences have no reader on any surface. "
+            "`untitledMeeting` WAS here as register item 24 and is now deleted "
+            "from all 21 locales (22 Sep 2026): the adapters are right to "
+            "hardcode English, because `row.title` feeds search, and "
+            "`docs/design-i18n.md` §\"Internal representation\" gives the test "
+            "verbatim — does anything downstream match or join this string? It "
+            "does. The key was the mistake, not the literal. "
             "Note what is NOT here: `dayToday` / `dayYesterday` / `attendeeCount_*` "
             "were register item 27 and are now read from `CloudImportOutlineView`.",
         leaves="""
-            untitledMeeting zoomCloudRecordingOff zoomTranscriptOff
-        """,  # 3
+            zoomCloudRecordingOff zoomTranscriptOff
+        """,  # 2
     ),
     "common.labels.": _Block(
         tag=DEAD,

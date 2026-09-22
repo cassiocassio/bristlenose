@@ -1113,7 +1113,6 @@
     "errorNoDownloadLink": "Den optagelse har intet downloadlink.",
     "errorNoDownloadableFile": "Den optagelse har ingen fil, der kan hentes.",
     "errorSignedOut": "Logget ud.",
-    "untitledMeeting": "M\u00f8de uden titel",
     "zoomCloudRecordingOff": "Skyoptagelse er sl\u00e5et fra p\u00e5 denne Zoom-konto, s\u00e5 der er intet for Bristlenose at hente. Optagelser gemt p\u00e5 din egen Mac kan stadig tr\u00e6kkes ind fra Finder.",
     "zoomTranscriptOff": "\u201cOpret lydudskrift\u201d er sl\u00e5et fra i dine Zoom-optagelsesindstillinger, s\u00e5 disse optagelser kommer uden udskrifter.",
     "restoredEmptyTitle": "Der er endnu intet at importere",

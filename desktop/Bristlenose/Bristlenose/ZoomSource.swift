@@ -574,6 +574,11 @@ final class ZoomSource: CloudImportSource {
 
         return CloudImportRow(
             id: uuid,
+            // English on purpose: `row.title` feeds search, so
+            // design-i18n.md §"Internal representation" makes this
+            // a canonical value, not chrome. A `untitledMeeting`
+            // key existed for it and was deleted 22 Sep 2026 —
+            // don't re-add one (i18n-defects.md row 24).
             title: meeting.topic ?? "Untitled meeting",
             startsAt: start,
             duration: meeting.duration.map { TimeInterval($0 * 60) },

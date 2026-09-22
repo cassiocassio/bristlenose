@@ -1113,7 +1113,6 @@
     "errorNoDownloadLink": "Die opname heeft geen downloadlink.",
     "errorNoDownloadableFile": "Die opname heeft geen bestand om te downloaden.",
     "errorSignedOut": "Uitgelogd.",
-    "untitledMeeting": "Vergadering zonder titel",
     "zoomCloudRecordingOff": "Cloudopname staat uit voor dit Zoom-account, dus er is niets voor Bristlenose om op te halen. Opnames op je eigen Mac kun je nog steeds vanuit de Finder naar binnen slepen.",
     "zoomTranscriptOff": "\u2018Audiotranscriptie maken\u2019 staat uit in je Zoom-opname-instellingen, dus bij deze opnames komen geen transcripties.",
     "restoredEmptyTitle": "Nog niets om te importeren",

@@ -817,6 +817,11 @@ final class GoogleMeetSource: CloudImportSource {
             ) -> CloudImportRow {
                 CloudImportRow(
                     id: id,
+                    // English on purpose: `row.title` feeds search, so
+                    // design-i18n.md §"Internal representation" makes this
+                    // a canonical value, not chrome. A `untitledMeeting`
+                    // key existed for it and was deleted 22 Sep 2026 —
+                    // don't re-add one (i18n-defects.md row 24).
                     title: event.summary ?? "Untitled meeting",
                     // **The video is the session; the meeting is context.**
                     //

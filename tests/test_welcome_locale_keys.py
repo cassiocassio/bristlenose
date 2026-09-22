@@ -462,7 +462,7 @@ def test_every_native_illustration_is_classified() -> None:
     declared = set(re.findall(r"^struct (\w+IllustrationView|\w+FanView|\w+ShelfView): View", body, re.M))
     # The webview wrappers are covered by the builder gate; these are the ones
     # that draw natively and so have no `strings:` table to inspect.
-    native = {n for n in declared if f"WelcomeIllustrationHTML." not in
+    native = {n for n in declared if "WelcomeIllustrationHTML." not in
               body[body.index(f"struct {n}: View"): body.index(f"struct {n}: View") + 2500]}
 
     unclassified = sorted(native - set(_NATIVE_ILLUSTRATIONS))

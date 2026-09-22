@@ -1113,7 +1113,6 @@
     "errorNoDownloadLink": "Quella registrazione non ha un link per il download.",
     "errorNoDownloadableFile": "Quella registrazione non ha file scaricabili.",
     "errorSignedOut": "Disconnesso.",
-    "untitledMeeting": "Riunione senza titolo",
     "zoomCloudRecordingOff": "La registrazione nel cloud \u00e8 disattivata per questo account Zoom, quindi Bristlenose non ha nulla da scaricare. Le registrazioni salvate sul tuo Mac si possono comunque trascinare dal Finder.",
     "zoomTranscriptOff": "\u00abCrea trascrizione audio\u00bb \u00e8 disattivato nelle impostazioni di registrazione di Zoom, quindi queste registrazioni non avranno trascrizioni.",
     "restoredEmptyTitle": "Non c’è ancora nulla da importare",

@@ -1113,7 +1113,6 @@
     "errorNoDownloadLink": "Den inspelningen har ingen h\u00e4mtningsl\u00e4nk.",
     "errorNoDownloadableFile": "Den inspelningen har ingen fil att h\u00e4mta.",
     "errorSignedOut": "Utloggad.",
-    "untitledMeeting": "M\u00f6te utan titel",
     "zoomCloudRecordingOff": "Molninspelning \u00e4r avst\u00e4ngd f\u00f6r det h\u00e4r Zoom-kontot, s\u00e5 det finns inget f\u00f6r Bristlenose att h\u00e4mta. Inspelningar som sparats p\u00e5 din egen Mac kan fortfarande dras in fr\u00e5n Finder.",
     "zoomTranscriptOff": "\u201dSkapa ljudtranskription\u201d \u00e4r avst\u00e4ngt i dina Zoom-inspelningsinst\u00e4llningar, s\u00e5 de h\u00e4r inspelningarna kommer utan transkriptioner.",
     "restoredEmptyTitle": "Inget att importera ännu",

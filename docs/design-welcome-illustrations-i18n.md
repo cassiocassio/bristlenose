@@ -82,12 +82,48 @@ menu row (title from `desktop.menu.quotes.extractClips`, subtitle from
    `docs/design-i18n.md` § "Third-party codebooks" already did this work
    (Amazon sales-rank data, Mar 2026) and settles two of the four shelf books:
 
-   | shelf book | what the research says |
+   **Measured 22 Sep 2026 — all four books, ten Amazon markets.** The two rows
+   below that said "not covered" are now covered, and one of them turned out to
+   be a yes. Method: search each market for the original English title (the
+   stores index it), then confirm the hit is a translation rather than a
+   same-titled local book — `4274214834` 「ユーザビリティエンジニアリング」 is by
+   **樽本 徹也**, not Nielsen, and is exactly the false positive the next
+   searcher will also find.
+
+   | shelf book | editions found | markets |
+   |---|---|---|
+   | **Norman**, *The Design of Everyday Things* | **six** | de, es, fr, it, ja, pt-BR |
+   | **Braun & Clarke**, *Thematic Analysis* | **one** | pl — *Analiza tematyczna: Praktyczny przewodnik*, PWN, `8301238356` |
+   | **Nielsen**, *Usability Engineering* | none | — |
+   | **Lazarus**, *Emotion & Adaptation* | none | — |
+
+   Per-edition, for cover capture:
+
+   | market | ISBN/ASIN | title | max cover |
+   |---|---|---|---|
+   | de | `3800648091` | *The Design of Everyday Things: Psychologie und Design der alltäglichen Dinge* (Vahlen) | 441×700 |
+   | es | `8412779916` | *El diseño de las cosas cotidianas* | 769×1200 |
+   | fr | `B08NTXLNRZ` | *Le design des objets du quotidien* | 1600×2378 |
+   | it | `8809986865` | *La caffettiera del masochista* (Giunti) | 1000×1514 |
+   | ja | `4788514346` | 『誰のためのデザイン？ 増補・改訂版』(新曜社) | 683×1000 |
+   | pt-BR | `6555324473` | *O design do dia a dia* | 1781×2560 |
+   | pl | `8301238356` | *Analiza tematyczna: Praktyczny przewodnik* (PWN) | 776×1080 |
+
+   **German is the finding that changes the rule's shape.** Vahlen keeps the
+   **English main title** and adds a German subtitle, so "show the local
+   edition's title" resolves for `de` to *the title already on the shelf* — a
+   no-op for the title and a change only for the artwork. A per-book × per-
+   language matrix was the right call: one switch would have got this wrong.
+
+   **Eleven of our twenty-one locales have no Amazon market at all** — ca, cs,
+   da, fi, ko, nb, pt-PT, ru, uk, zh-Hant, zh-Hant-HK. Those are *unchecked*,
+   not nil, and Norman plausibly has ko/zh-Hant/ru/cs editions; the appendix's
+   second-choice store per market is where to look.
+
+   | shelf book | what the earlier research said |
    |---|---|
    | **Norman**, *The Design of Everyday Things* | translated into 20+ languages; the one title with genuine international traction (#5,251 in Japan, 155 ratings). Its codebook is the one the existing decision says to translate |
    | **Nielsen**, *Usability Engineering* | **no French translation exists**; #532,405 in Japan on 4 ratings. The existing decision is that Nielsen stays English |
-   | **Braun & Clarke**, *Thematic Analysis* | not covered — check per language before assuming |
-   | **Lazarus**, *Emotion & Adaptation* | not covered — check per language before assuming |
 
    Two constraints that fall out. The **covers are images of the English
    editions** (typographic placeholders today), so a translated title drawn over
@@ -360,11 +396,15 @@ cover images is an unbudgeted addition to the app bundle. The titles also live
 as literals in a static array, so they need the same key treatment as everything
 else.
 
-Prioritisation falls out of the research already in `design-i18n.md`: **Norman
-is the only one of the four with broad translation**, so it is the one worth
-doing across many markets; Nielsen was never translated into French and ranks
-near-zero everywhere; Braun & Clarke and Lazarus are unchecked. If only one book
-gets local covers, it is Norman.
+Prioritisation, **measured 22 Sep 2026** (the per-market table is in §"Open
+questions for the pass" item 1): **Norman has six editions**, Braun & Clarke has
+**one** (Polish), and Nielsen and Lazarus have none in any Amazon market. So the
+work is seven (book × language) covers, not the 4 × 21 this section budgeted
+for — which retires the bundle-size concern below rather than answering it.
+Four of the seven are under the shipping spec (~1000×1500) at the best
+resolution Amazon serves; **accepted for v1, 22 Sep 2026**. The open half is
+not resolution but permission: these are publisher artwork, and the images
+Amazon serves come with Amazon's own terms attached.
 
 ### 8. Sequencing — people-time first, gate after the seam
 

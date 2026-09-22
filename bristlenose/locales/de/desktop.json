@@ -1113,7 +1113,6 @@
     "errorNoDownloadLink": "Diese Aufzeichnung hat keinen Downloadlink.",
     "errorNoDownloadableFile": "Diese Aufzeichnung hat keine herunterladbare Datei.",
     "errorSignedOut": "Abgemeldet.",
-    "untitledMeeting": "Besprechung ohne Titel",
     "zoomCloudRecordingOff": "Cloud-Aufzeichnung ist f\u00fcr dieses Zoom-Konto ausgeschaltet, also gibt es f\u00fcr Bristlenose nichts abzurufen. Auf deinem Mac gespeicherte Aufzeichnungen lassen sich weiterhin aus dem Finder hereinziehen.",
     "zoomTranscriptOff": "\u201eAudiotranskript erstellen\u201c ist in deinen Zoom-Aufzeichnungseinstellungen aus, daher kommen zu diesen Aufzeichnungen keine Transkripte.",
     "restoredEmptyTitle": "Noch nichts zu importieren",

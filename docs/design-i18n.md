@@ -462,6 +462,17 @@ Neither German nor French QDA uses "session" — interviews are interviews. Germ
 
 ## Third-party codebooks (future work)
 
+**Measured across ten Amazon markets, 22 Sep 2026 — supersedes the sales-rank
+research below for the question "does a translated edition exist?".** Norman:
+six (de, es, fr, it, ja, pt-BR). Braun & Clarke: one (pl). Nielsen: none.
+Lazarus: none. Eleven of our locales have no Amazon market and are unchecked
+rather than nil. The per-edition table, the German finding (Vahlen keeps the
+English main title), and the Japanese false positive — 「ユーザビリティエンジニアリング」
+is by 樽本 徹也, not Nielsen — are in `docs/design-welcome-illustrations-i18n.md`
+§"Open questions for the pass" item 1. The rank data below is still the right
+input for *how much a translation is read*; it was never a survey of which
+exist.
+
 ### Don Norman — The Design of Everyday Things
 
 Translated into 20+ languages. Key finding for Japanese: the community uses **katakana transliterations** rather than native Japanese terms:

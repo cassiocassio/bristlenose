@@ -94,6 +94,63 @@ def value_pin(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()[:6]
 
 
+#: Where the English value pins live. One entry per `en` key: the 6-hex pin of
+#: the value the translations were last written against.
+#:
+#: This closes **failure class 3** — `en` reworded, translations left on the old
+#: words. Nothing saw it, by construction: every other gate here asks *is the key
+#: there?*, and a reword does not touch the key. That is how the Signals rename
+#: shipped drift twice in two days, five strings sitting in 20 locales describing
+#: a lens that had been renamed.
+#:
+#: **What it can and cannot do.** It makes a reword *visible* — the gate fails
+#: the moment an `en` value changes, and names the keys whose translations now
+#: need re-reading. It cannot verify the translations were actually corrected:
+#: re-stamping is a deliberate act and somebody could re-stamp without doing the
+#: work. That is the same limit every ratchet has, and it is not the failure this
+#: exists to stop. Invisible drift was.
+VALUE_PINS = LOCALES_DIR / "en-value-pins.json"
+
+
+def load_value_pins() -> dict[str, str]:
+    if not VALUE_PINS.exists():
+        return {}
+    with open(VALUE_PINS, encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def current_value_pins() -> dict[str, str]:
+    """Every renderable `en` value, pinned. Pseudo-keys excluded — a note to
+    maintainers is not a string anyone translates."""
+    pins: dict[str, str] = {}
+    for ns_path in sorted((LOCALES_DIR / SOURCE_LANG).glob("*.json")):
+        with open(ns_path, encoding="utf-8") as fh:
+            flat = flatten(json.load(fh))
+        for key, value in flat.items():
+            if _is_comment_key(key) or not isinstance(value, str):
+                continue
+            pins[f"{ns_path.stem}.{key}"] = value_pin(value)
+    return pins
+
+
+def check_value_drift() -> list[str]:
+    """An `en` value that moved while its pin did not: the translations are stale."""
+    recorded = load_value_pins()
+    if not recorded:
+        return []  # not stamped yet — `--stamp` creates it
+    current = current_value_pins()
+    moved = sorted(k for k, pin in current.items() if k in recorded and recorded[k] != pin)
+    if not moved:
+        return []
+    shown = ", ".join(moved[:6]) + (f" … and {len(moved) - 6} more" if len(moved) > 6 else "")
+    return [
+        f"{len(moved)} English value(s) reworded since the translations were "
+        f"written: {shown}. Re-read those keys in the other locales, then "
+        f"`scripts/check-locales.py --stamp` to accept. Reword and propagate in "
+        f"the SAME commit, or you have created drift nothing will report."
+    ]
+
+
 def check_divergence_markers(raw: dict, ns: str) -> list[str]:
     """Validate every `_divergent_*` marker in one English namespace.
 
@@ -222,7 +279,21 @@ def main() -> int:
         action="store_true",
         help="treat genuine (non-plural, non-fallback-covered) missing keys as errors",
     )
+    parser.add_argument(
+        "--stamp",
+        action="store_true",
+        help="record the current English values as the ones the translations "
+             "were written against, and exit (see VALUE_PINS)",
+    )
     args = parser.parse_args()
+
+    if args.stamp:
+        pins = current_value_pins()
+        with open(VALUE_PINS, "w", encoding="utf-8") as fh:
+            json.dump(pins, fh, ensure_ascii=True, indent=1, sort_keys=True)
+            fh.write("\n")
+        print(f"Stamped {len(pins)} English values -> {VALUE_PINS.name}")
+        return 0
 
     errors: list[str] = []
     warnings: list[str] = []
@@ -373,6 +444,7 @@ def main() -> int:
                         )
 
     errors.extend(check_glossary())
+    errors.extend(check_value_drift())
 
     if args.strict and genuine_total:
         errors.append(

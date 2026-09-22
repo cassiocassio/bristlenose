@@ -9,12 +9,16 @@ native reviewers — "is this the right word in Czech". This file holds
 namespace, a plural that will not inflect. Different question, different reader,
 different fix.
 
-**Why a file and not a test.** Most of these *cannot* fail a test today.
-`scripts/check-locales.py` reports missing keys as warnings and CI runs it
-non-strict, and `tests/test_pipeline_diagnostic_locale_keys.py` checks
-hardcoded allow-lists rather than en→locale parity — so adding a key to `en`
-never obliges anyone to extend anything. A green suite does not mean the locales
-are complete, and that is exactly the gap this register covers.
+**Why a file and not a test — and how much of that is still true.** When this
+was written most of these *could not* fail a test. Three now can: missing keys
+error under `--strict` (CI, since 3 Sep), orphan keys fail
+`tests/test_locale_key_readers.py` (21 Sep), and **value drift fails
+`check-locales.py` (22 Sep)**. What remains ungated is classes 2, 4 and 6 — a
+surface absent from `en` entirely, a value that is coincidentally identical to
+English, and a string resolved once at construction. All three are invisible by
+construction rather than by oversight, and the register is still where they get
+caught. A green suite does not mean the locales are complete; it means less
+than it did that it means nothing.
 
 **How to use it.** Add a row when you notice something, even mid-unrelated-work.
 Do not fix it there and then unless it is free — the point is to stop losing
@@ -31,8 +35,8 @@ problem but five, and that the tooling only ever looked for the first.
 |---|---|---|---|
 | 1 | **Missing key** | key in `en`, absent from a locale | `check-locales.py` — as a **warning**, CI non-strict |
 | 2 | **Surface absent from `en`** | a whole feature with no `i18n.t` call sites | **nothing** — with no `en` key there is nothing to be missing *from* |
-| 3 | **Value drift** | `en` reworded; translations keep the old words | **nothing** finds it — but since 22 Aug a `_divergent_<key>` marker can record that a difference is *intended*, and `check-locales.py` errors when the marker goes stale |
-| 4 | **Untranslated value** | a locale's value is byte-identical English | **nothing** — same reason |
+| 3 | **Value drift** | `en` reworded; translations keep the old words | **`check-locales.py`, since 22 Sep 2026** — 1,575 English values are pinned in `bristlenose/locales/en-value-pins.json`, and a value that moves while its pin does not is an **error**. `_divergent_<key>` markers (22 Aug) record an intended difference; this records an unintended one |
+| 4 | **Untranslated value** | a locale's value is byte-identical English | **nothing, and deliberately so** — measured 22 Sep 2026 at **350 raw hits across 20 locales**, and the overwhelming majority are coincidental identity: `in {{provider}}` in Dutch, `Local (Ollama)` in French, `Session {{number}}` in Swedish. A gate needs a hand-maintained allow-list of legitimately-invariant strings, which is the exact shape item 4 warns about. Periodic sweep, not a gate |
 | 5 | **Orphan key** | present in every locale, read by no call site | **nothing** — invisible from both directions |
 | 6 | **Resolved once at construction** | key present, value correctly translated, `i18n.t` called — and it still renders in the wrong language, because the call happened once when an object was built rather than on each render | **nothing mechanical** — only a screenshot |
 
@@ -125,6 +129,8 @@ Detection recipes, if you need to re-run them:
 | 48 | The four **native** illustration views | **Failure class 2, and the gate could not have seen them.** `test_every_illustration_builder_is_classified` parses `static func …(dark: Bool…)` builders, so a SwiftUI `View` struct was never in scope; no test named `IngestIllustrationView`, `ClipsIllustrationView`, `BookShelfView` or `SentimentFanView`. Three of the four held English content. The worst was **the design doc's own counter-example**: `interview-with-anna.m4a` shipped in 21 locales while `docs/design-i18n.md` uses that exact string to teach *"locally plausible, not a transliterated `anna`"*. Also `Discovery call - Transcript.docx`, the study-folder name, and three clip names built from participant speech. | 22 Sep 2026 | **struck** — 7 keys x 21; `test_every_native_illustration_is_classified` + `test_native_illustration_sample_data_is_keyed`, both mutation-proved. `Transcript` stays English as FOREIGN, pending the per-platform lookup |
 | 49 | `starHide` — the hidden-quotes toggle | **OURS chrome rendered in English inside a translated frame.** The illustration drew `2 hidden` as a JS literal while `Counter.tsx:60` has read `quotes.hiddenCount` in 21 locales since row 40 — so the picture of the toggle disagreed with the toggle. Visible in the 22 Sep Dutch screenshot: Dutch heading, Dutch subtitle, English count. | 22 Sep 2026, from a screenshot | **struck** — lifts the shipped key, both counts (the animation ticks 2 → 3 and fourteen languages inflect on the number) |
 | 50 | Book covers — which titles have a local edition | **The research existed and covered two of the four.** `design-welcome-illustrations-i18n.md` §7 said Braun & Clarke and Lazarus were *"unchecked in every market"*, and the prioritisation rested on Norman being the only translated one. Measured across ten Amazon markets: **Norman six** (de, es, fr, it, ja, pt-BR), **Braun & Clarke one** (pl, PWN), Nielsen none, Lazarus none. German keeps the **English main title** with a German subtitle, so the rule resolves to a no-op there. Eleven locales have no Amazon market and remain unchecked rather than nil. | 22 Sep 2026 | **struck 22 Sep 2026** — seven covers added as per-locale imagesets and `cover(_:)` resolves `welcome-book-<slug>-<locale>` with an English fallback; titles are keys whose value is the local edition's where one exists. Permission is a courtesy the maintainer is handling directly, not a blocker at this scale (7 stars, 6 release downloads ever, 3 unique visitors a fortnight) |
+
+| 51 | Failure class 3 had no gate, and class 4 cannot have one | **The register reached 50-of-50 closed while the mechanism that stops it refilling was still missing.** Every gate asked *is the key there?*, and a reword does not touch the key — so `en` could be reworded and twenty locales left on the old words with nothing red, which is how the Signals rename shipped drift twice in two days. **Built:** 1,575 English values pinned in `bristlenose/locales/en-value-pins.json`; `check-locales.py` errors on a moved value and `--stamp` accepts one. Mutation-proved in both directions — a reword fails, a *new* key does not (that is the parity check's job). **Measured and deliberately not built:** class 4, untranslated values, is **350 raw hits across 20 locales** and almost all coincidental identity (`in {{provider}}` in Dutch, `Local (Ollama)` in French, `Session {{number}}` in Swedish). Gating it needs a hand-maintained allow-list of invariant strings, which is the shape item 4 exists to warn about. | 22 Sep 2026 | **struck** — class 3 gated; class 4 stays a periodic sweep, by decision |
 
 ## State of the audit — 22 Sep 2026, 09:30 BST
 
@@ -423,12 +429,21 @@ are a compact five-line sample for the reviewer already in the loop.
 The three detectors used on 21 Aug are throwaway scripts in a scratch
 directory. Two are worth keeping, and one probably is not:
 
-1. **A value-side gate** — the highest-value one by a distance, because failure
-   class 3 is where the 18-key Codebook Library drift lived unnoticed for five
-   weeks. Cheapest workable form: store a hash of each `en` value alongside it
-   (or in a sidecar), and fail when an `en` value changes without the locales
-   being re-touched. This is the gate Decision 1 needs to make a "deliberate
-   divergence" distinguishable from an accidental one.
+1. ~~**A value-side gate**~~ — **BUILT 22 Sep 2026**, in the sidecar form this
+   paragraph proposed. `bristlenose/locales/en-value-pins.json` holds a 6-hex
+   pin per English value (1,575 of them); `check-locales.py` errors when a value
+   moves and its pin does not, and `--stamp` accepts a reword once the
+   translations have been re-read. CI runs it on every locale change.
+
+   **What it cannot do, stated because a gate oversold is worse than none:** it
+   makes a reword *visible*, not verified. Re-stamping is a deliberate act and
+   someone could re-stamp without doing the work. That is every ratchet's limit
+   and it is not the failure this closes — invisible drift was, and the Signals
+   rename shipped it twice in two days.
+
+   Note the division of labour with the missing-key check: a **new** key has no
+   pin, so drift stays silent and the parity check reports it. Proved in both
+   directions.
 2. ~~**A call-site gate**~~ — **built for one family, 21 Sep 2026, and the
    general version is still owed.** `tests/test_cloud_fetch_failure_keys.py`
    closes the round trip for `desktop.cloudImport.error*`: every case resolves

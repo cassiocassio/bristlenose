@@ -364,6 +364,12 @@
     "pendingWeighted": "(etiquetas pendentes ponderadas pela confiança da IA)"
   },
   "codebook": {
+    "uninstallTitle": "Desinstalar \u201c{{name}}\u201d?",
+    "uninstallUnknown": "N\u00e3o foi poss\u00edvel verificar o que seria descartado. Se foi usado para codificar, esse trabalho vai com ele.",
+    "uninstallChecking": "A verificar o que seria descartado\u2026",
+    "uninstallNothingLost": "Ainda n\u00e3o foi codificado nada com ele, por isso n\u00e3o se perde nada.",
+    "uninstallReinstallCost": "Reinstalar come\u00e7a do zero e custa uma nova execu\u00e7\u00e3o. Para manter os resultados e deixar de o usar por agora, desative-o.",
+    "noTagsInCodebook": "Este livro de c\u00f3digos n\u00e3o tem etiquetas.",
     "autocodeFailure": {
       "outOfCredit": "A sua conta no fornecedor de IA est\u00e1 sem cr\u00e9ditos.",
       "rateLimited": "Limite de pedidos atingido \u2014 etiquetagem interrompida. Tente em breve.",

@@ -103,7 +103,7 @@ export function CodebookV2UninstallSheet({
     // must arrive already visible.
     <div className="bn-overlay visible" data-testid="bn-v2-uninstall-sheet">
       <div className="bn-modal v2-uninstall-sheet" role="dialog" aria-modal="true">
-        <h2 className="v2-uninstall-title">Uninstall &ldquo;{title}&rdquo;?</h2>
+        <h2 className="v2-uninstall-title">{t("codebook.uninstallTitle", { name: title })}</h2>
         {losses.length > 0 ? (
           <>
             <p className="v2-uninstall-lead">{t("codebook.uninstallDiscards")}</p>
@@ -117,26 +117,22 @@ export function CodebookV2UninstallSheet({
           // Say we do not know. The alternative — reassurance we have not
           // earned — is the one outcome worse than an unhelpful sheet.
           <p className="v2-uninstall-lead" data-testid="bn-v2-uninstall-unknown">
-            Couldn&rsquo;t check what this would discard. If it has been used
-            for coding, that work goes with it.
+            {t("codebook.uninstallUnknown")}
           </p>
         ) : impact === null ? (
           <p className="v2-uninstall-lead" data-testid="bn-v2-uninstall-counting">
-            Checking what this would discard&hellip;
+            {t("codebook.uninstallChecking")}
           </p>
         ) : (
           // Reached only with a measurement in hand that says zero.
           <p className="v2-uninstall-lead" data-testid="bn-v2-uninstall-nothing">
-            Nothing has been coded with it yet, so nothing is lost.
+            {t("codebook.uninstallNothingLost")}
           </p>
         )}
-        <p className="v2-uninstall-lead">
-          Reinstalling starts over and costs a fresh run. To keep the results and
-          stop using it for now, switch it off instead.
-        </p>
+        <p className="v2-uninstall-lead">{t("codebook.uninstallReinstallCost")}</p>
         <div className="bn-modal-actions">
           <button className="bn-btn bn-btn-cancel" onClick={onCancel} data-testid="bn-v2-uninstall-cancel">
-            Cancel
+            {t("buttons.cancel")}
           </button>
           <button
             className="bn-btn bn-btn-primary"
@@ -144,7 +140,7 @@ export function CodebookV2UninstallSheet({
             data-testid="bn-v2-uninstall-confirm"
             ref={confirmRef}
           >
-            Uninstall
+            {t("codebook.removeFromCodebook")}
           </button>
         </div>
       </div>

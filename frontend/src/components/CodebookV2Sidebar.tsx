@@ -340,7 +340,7 @@ export function CodebookV2Sidebar() {
   );
 
   return (
-    <nav className="v2-nav" aria-label="Codebooks" data-testid="bn-v2-nav">
+    <nav className="v2-nav" aria-label={t("nav.codebook")} data-testid="bn-v2-nav">
       {section(t("codebook.yourTags"), floor)}
       {section(t("codebook.builtIn"), builtIn)}
       {section(t("codebook.frameworksSection"), frameworks)}

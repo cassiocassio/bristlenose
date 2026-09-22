@@ -364,6 +364,12 @@
     "pendingWeighted": "(bekleyen etiketler YZ güvenine göre ağırlıklandırıldı)"
   },
   "codebook": {
+    "uninstallTitle": "\u201c{{name}}\u201d kald\u0131r\u0131ls\u0131n m\u0131?",
+    "uninstallUnknown": "Nelerin at\u0131laca\u011f\u0131 kontrol edilemedi. Kodlama i\u00e7in kullan\u0131ld\u0131ysa o \u00e7al\u0131\u015fma da onunla gider.",
+    "uninstallChecking": "Nelerin at\u0131laca\u011f\u0131 kontrol ediliyor\u2026",
+    "uninstallNothingLost": "Hen\u00fcz onunla hi\u00e7bir \u015fey kodlanmad\u0131, dolay\u0131s\u0131yla bir kay\u0131p yok.",
+    "uninstallReinstallCost": "Yeniden kurmak s\u0131f\u0131rdan ba\u015flar ve yeni bir \u00e7al\u0131\u015ft\u0131rma maliyeti getirir. Sonu\u00e7lar\u0131 korumak ve \u015fimdilik kullanmamak i\u00e7in bunun yerine kapat\u0131n.",
+    "noTagsInCodebook": "Bu kod kitab\u0131nda etiket yok.",
     "autocodeFailure": {
       "outOfCredit": "Yapay zek\u00e2 sa\u011flay\u0131c\u0131s\u0131 hesab\u0131n\u0131zda kredi kalmad\u0131.",
       "rateLimited": "H\u0131z s\u0131n\u0131r\u0131na ula\u015f\u0131ld\u0131 \u2014 etiketleme durdu. Birazdan tekrar deneyin.",

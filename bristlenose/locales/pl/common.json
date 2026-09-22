@@ -414,6 +414,12 @@
     "pendingWeighted": "(oczekujące tagi ważone pewnością AI)"
   },
   "codebook": {
+    "uninstallTitle": "Odinstalowa\u0107 \u201e{{name}}\u201d?",
+    "uninstallUnknown": "Nie uda\u0142o si\u0119 sprawdzi\u0107, co zosta\u0142oby odrzucone. Je\u015bli u\u017cywano go do kodowania, ta praca przepada razem z nim.",
+    "uninstallChecking": "Sprawdzanie, co zosta\u0142oby odrzucone\u2026",
+    "uninstallNothingLost": "Nic jeszcze nim nie zakodowano, wi\u0119c nic nie przepada.",
+    "uninstallReinstallCost": "Ponowna instalacja zaczyna od zera i kosztuje nowe uruchomienie. Aby zachowa\u0107 wyniki i na razie z niego nie korzysta\u0107, po prostu go wy\u0142\u0105cz.",
+    "noTagsInCodebook": "Ta ksi\u0119ga kod\u00f3w nie ma tag\u00f3w.",
     "autocodeFailure": {
       "outOfCredit": "Na koncie dostawcy AI sko\u0144czy\u0142y si\u0119 \u015brodki.",
       "rateLimited": "Osi\u0105gni\u0119to limit zapyta\u0144 \u2013 tagowanie zatrzymane. Spr\u00f3buj wkr\u00f3tce.",

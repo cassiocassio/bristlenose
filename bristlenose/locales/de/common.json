@@ -364,6 +364,12 @@
     "pendingWeighted": "(ausstehende Tags gewichtet nach KI-Konfidenz)"
   },
   "codebook": {
+    "uninstallTitle": "\u201e{{name}}\u201c deinstallieren?",
+    "uninstallUnknown": "Es lie\u00df sich nicht pr\u00fcfen, was dabei verworfen w\u00fcrde. Falls damit kodiert wurde, geht diese Arbeit mit verloren.",
+    "uninstallChecking": "Es wird gepr\u00fcft, was verworfen w\u00fcrde\u2026",
+    "uninstallNothingLost": "Es wurde noch nichts damit kodiert, es geht also nichts verloren.",
+    "uninstallReinstallCost": "Eine Neuinstallation beginnt von vorn und kostet einen neuen Durchlauf. Um die Ergebnisse zu behalten und es vorerst nicht zu nutzen, schalten Sie es stattdessen aus.",
+    "noTagsInCodebook": "Dieses Codebuch hat keine Tags.",
     "autocodeFailure": {
       "outOfCredit": "Das Guthaben Ihres KI-Anbieter-Kontos ist aufgebraucht.",
       "rateLimited": "Ratenlimit erreicht \u2013 Verschlagwortung gestoppt. Versuchen Sie es bald erneut.",

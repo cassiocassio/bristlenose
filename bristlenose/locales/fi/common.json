@@ -364,6 +364,12 @@
     "pendingWeighted": "(vireillä olevat tunnisteet painotettu tekoälyn luottamuksen mukaan)"
   },
   "codebook": {
+    "uninstallTitle": "Poistetaanko \u201d{{name}}\u201d?",
+    "uninstallUnknown": "Ei voitu tarkistaa, mit\u00e4 t\u00e4m\u00e4 hylk\u00e4isi. Jos sit\u00e4 on k\u00e4ytetty koodaukseen, se ty\u00f6 katoaa mukana.",
+    "uninstallChecking": "Tarkistetaan, mit\u00e4 t\u00e4m\u00e4 hylk\u00e4isi\u2026",
+    "uninstallNothingLost": "Sill\u00e4 ei ole viel\u00e4 koodattu mit\u00e4\u00e4n, joten mit\u00e4\u00e4n ei menetet\u00e4.",
+    "uninstallReinstallCost": "Uudelleenasennus aloittaa alusta ja maksaa uuden ajon. Jos haluat s\u00e4ilytt\u00e4\u00e4 tulokset etk\u00e4 k\u00e4ytt\u00e4\u00e4 sit\u00e4 toistaiseksi, kytke se pois p\u00e4\u00e4lt\u00e4.",
+    "noTagsInCodebook": "T\u00e4ss\u00e4 koodikirjassa ei ole tunnisteita.",
     "autocodeFailure": {
       "outOfCredit": "Teko\u00e4lypalvelun tilisi krediitit ovat loppuneet.",
       "rateLimited": "Pyynt\u00f6raja saavutettu \u2013 merkint\u00e4 pys\u00e4ytetty. Yrit\u00e4 pian uudelleen.",

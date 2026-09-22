@@ -364,6 +364,12 @@
     "pendingWeighted": "(afventende tags vægtet efter AI-tillid)"
   },
   "codebook": {
+    "uninstallTitle": "Afinstall\u00e9r \u201d{{name}}\u201d?",
+    "uninstallUnknown": "Kunne ikke tjekke, hvad det ville kassere. Hvis det er brugt til kodning, ryger det arbejde med.",
+    "uninstallChecking": "Tjekker, hvad det ville kassere\u2026",
+    "uninstallNothingLost": "Der er ikke kodet noget med det endnu, s\u00e5 intet g\u00e5r tabt.",
+    "uninstallReinstallCost": "En geninstallation starter forfra og koster en ny k\u00f8rsel. Vil du beholde resultaterne og holde op med at bruge det indtil videre, s\u00e5 sl\u00e5 det fra i stedet.",
+    "noTagsInCodebook": "Denne kodebog har ingen tags.",
     "autocodeFailure": {
       "outOfCredit": "Din konto hos AI-udbyderen er l\u00f8bet t\u00f8r for kredit.",
       "rateLimited": "Hastighedsgr\u00e6nse n\u00e5et \u2013 tagging stoppet. Pr\u00f8v igen snart.",

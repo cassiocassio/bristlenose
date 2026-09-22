@@ -364,6 +364,12 @@
     "pendingWeighted": "(tags in behandeling gewogen op AI-betrouwbaarheid)"
   },
   "codebook": {
+    "uninstallTitle": "\u201d{{name}}\u201d de\u00efnstalleren?",
+    "uninstallUnknown": "Kon niet controleren wat hiermee zou verdwijnen. Als ermee is gecodeerd, gaat dat werk mee verloren.",
+    "uninstallChecking": "Controleren wat hiermee zou verdwijnen\u2026",
+    "uninstallNothingLost": "Er is nog niets mee gecodeerd, dus er gaat niets verloren.",
+    "uninstallReinstallCost": "Opnieuw installeren begint van voren af aan en kost een nieuwe run. Wil je de resultaten houden en het voorlopig niet gebruiken, zet het dan uit.",
+    "noTagsInCodebook": "Dit codeboek heeft geen tags.",
     "autocodeFailure": {
       "outOfCredit": "Het tegoed van je AI-provideraccount is op.",
       "rateLimited": "Snelheidslimiet bereikt \u2014 taggen gestopt. Probeer het straks opnieuw.",

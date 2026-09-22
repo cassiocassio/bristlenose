@@ -364,6 +364,12 @@
     "pendingWeighted": "(étiquettes en attente pondérées par la confiance IA)"
   },
   "codebook": {
+    "uninstallTitle": "D\u00e9sinstaller \u00ab\u202f{{name}}\u202f\u00bb\u00a0?",
+    "uninstallUnknown": "Impossible de v\u00e9rifier ce qui serait supprim\u00e9. S\u2019il a servi au codage, ce travail dispara\u00eet avec lui.",
+    "uninstallChecking": "V\u00e9rification de ce qui serait supprim\u00e9\u2026",
+    "uninstallNothingLost": "Rien n\u2019a encore \u00e9t\u00e9 cod\u00e9 avec, donc rien n\u2019est perdu.",
+    "uninstallReinstallCost": "Le r\u00e9installer repart de z\u00e9ro et co\u00fbte une nouvelle analyse. Pour garder les r\u00e9sultats et cesser de l\u2019utiliser, d\u00e9sactivez-le plut\u00f4t.",
+    "noTagsInCodebook": "Ce codebook ne contient aucune \u00e9tiquette.",
     "autocodeFailure": {
       "outOfCredit": "Le cr\u00e9dit de votre compte fournisseur d'IA est \u00e9puis\u00e9.",
       "rateLimited": "Limite de d\u00e9bit atteinte : \u00e9tiquetage arr\u00eat\u00e9. R\u00e9essayez bient\u00f4t.",

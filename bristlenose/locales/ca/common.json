@@ -364,6 +364,12 @@
     "pendingWeighted": "(les etiquetes pendents es ponderen per la confiança de la IA)"
   },
   "codebook": {
+    "uninstallTitle": "Voleu desinstal\u00b7lar \u00ab{{name}}\u00bb?",
+    "uninstallUnknown": "No s\u2019ha pogut comprovar qu\u00e8 es descartaria. Si s\u2019ha fet servir per codificar, aquella feina se\u2019n va amb ell.",
+    "uninstallChecking": "S\u2019est\u00e0 comprovant qu\u00e8 es descartaria\u2026",
+    "uninstallNothingLost": "Encara no s\u2019hi ha codificat res, per tant no es perd res.",
+    "uninstallReinstallCost": "Reinstal\u00b7lar-lo comen\u00e7a de zero i costa una execuci\u00f3 nova. Per conservar els resultats i deixar d\u2019usar-lo ara, desactiva\u2019l.",
+    "noTagsInCodebook": "Aquest llibre de codis no t\u00e9 etiquetes.",
     "autocodeFailure": {
       "outOfCredit": "El teu compte del prove\u00efdor d'IA s'ha quedat sense cr\u00e8dit.",
       "rateLimited": "L\u00edmit de peticions assolit: etiquetatge aturat. Torna-ho a provar aviat.",

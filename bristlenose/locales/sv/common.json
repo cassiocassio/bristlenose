@@ -364,6 +364,12 @@
     "pendingWeighted": "(väntande taggar viktade efter AI-konfidens)"
   },
   "codebook": {
+    "uninstallTitle": "Avinstallera \u201d{{name}}\u201d?",
+    "uninstallUnknown": "Kunde inte kontrollera vad som skulle kastas. Om den anv\u00e4nts f\u00f6r kodning f\u00f6rsvinner det arbetet med den.",
+    "uninstallChecking": "Kontrollerar vad som skulle kastas\u2026",
+    "uninstallNothingLost": "Inget har kodats med den \u00e4n, s\u00e5 inget g\u00e5r f\u00f6rlorat.",
+    "uninstallReinstallCost": "En ominstallation b\u00f6rjar om och kostar en ny k\u00f6rning. Vill du beh\u00e5lla resultaten och sluta anv\u00e4nda den tills vidare, st\u00e4ng av den i st\u00e4llet.",
+    "noTagsInCodebook": "Den h\u00e4r kodboken har inga taggar.",
     "autocodeFailure": {
       "outOfCredit": "Ditt konto hos AI-leverant\u00f6ren har slut p\u00e5 kredit.",
       "rateLimited": "Hastighetsgr\u00e4ns n\u00e5dd \u2013 taggning stoppad. F\u00f6rs\u00f6k igen snart.",

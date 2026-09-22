@@ -364,6 +364,12 @@
     "pendingWeighted": "(tag in sospeso ponderati in base alla confidenza dell'IA)"
   },
   "codebook": {
+    "uninstallTitle": "Disinstallare \u201c{{name}}\u201d?",
+    "uninstallUnknown": "Non \u00e8 stato possibile verificare cosa verrebbe scartato. Se \u00e8 stato usato per codificare, quel lavoro va perso con esso.",
+    "uninstallChecking": "Verifica di cosa verrebbe scartato\u2026",
+    "uninstallNothingLost": "Non \u00e8 ancora stato codificato nulla, quindi non si perde nulla.",
+    "uninstallReinstallCost": "Reinstallarlo riparte da zero e costa una nuova esecuzione. Per conservare i risultati e smettere di usarlo per ora, disattivalo.",
+    "noTagsInCodebook": "Questo codebook non ha tag.",
     "autocodeFailure": {
       "outOfCredit": "Il credito del tuo account del fornitore di IA \u00e8 esaurito.",
       "rateLimited": "Limite di richieste raggiunto: etichettatura interrotta. Riprova a breve.",

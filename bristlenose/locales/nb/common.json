@@ -364,6 +364,12 @@
     "pendingWeighted": "(ventende tagger vektet etter AI-tillit)"
   },
   "codebook": {
+    "uninstallTitle": "Avinstaller \u00ab{{name}}\u00bb?",
+    "uninstallUnknown": "Kunne ikke sjekke hva dette ville forkaste. Hvis den er brukt til koding, forsvinner det arbeidet med den.",
+    "uninstallChecking": "Sjekker hva dette ville forkaste\u2026",
+    "uninstallNothingLost": "Ingenting er kodet med den enn\u00e5, s\u00e5 ingenting g\u00e5r tapt.",
+    "uninstallReinstallCost": "En reinstallasjon starter p\u00e5 nytt og koster en ny kj\u00f8ring. Vil du beholde resultatene og slutte \u00e5 bruke den forel\u00f8pig, sl\u00e5 den av i stedet.",
+    "noTagsInCodebook": "Denne kodeboken har ingen tagger.",
     "autocodeFailure": {
       "outOfCredit": "Kontoen din hos KI-leverand\u00f8ren er tom for kreditt.",
       "rateLimited": "Hastighetsgrense n\u00e5dd \u2013 merking stoppet. Pr\u00f8v igjen snart.",

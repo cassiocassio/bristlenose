@@ -169,7 +169,7 @@ export function CodebookV2Page({
                     onClick={() => onUninstall(book.id)}
                     data-testid="bn-v2-uninstall"
                   >
-                    Uninstall
+                    {t("codebook.removeFromCodebook")}
                   </button>
                 ) : (
                   <button
@@ -177,7 +177,7 @@ export function CodebookV2Page({
                     onClick={() => onInstall(book.id)}
                     data-testid="bn-v2-install"
                   >
-                    Install
+                    {t("codebook.importCodebook")}
                   </button>
                 )}
               </div>
@@ -315,7 +315,7 @@ export function CodebookV2Page({
         // leave a researcher with no way to begin, which is precisely the state
         // the shipped lens never puts them in.
         <div className="pg-empty" data-testid="bn-v2-empty">
-          This codebook has no tags.
+          {t("codebook.noTagsInCodebook")}
         </div>
       ) : (
         <div className="v2-groups">

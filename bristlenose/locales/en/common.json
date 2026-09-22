@@ -365,6 +365,12 @@
     "pendingWeighted": "(pending tags weighted by AI confidence)"
   },
   "codebook": {
+    "uninstallTitle": "Uninstall \u201c{{name}}\u201d?",
+    "uninstallUnknown": "Couldn\u2019t check what this would discard. If it has been used for coding, that work goes with it.",
+    "uninstallChecking": "Checking what this would discard\u2026",
+    "uninstallNothingLost": "Nothing has been coded with it yet, so nothing is lost.",
+    "uninstallReinstallCost": "Reinstalling starts over and costs a fresh run. To keep the results and stop using it for now, switch it off instead.",
+    "noTagsInCodebook": "This codebook has no tags.",
     "autocodeFailure": {
       "outOfCredit": "Your AI provider account is out of credit.",
       "rateLimited": "Rate limited \u2014 tagging stopped. Try again soon.",

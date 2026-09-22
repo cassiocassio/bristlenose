@@ -403,6 +403,12 @@
     "pendingWeighted": "(čekající štítky vážené spolehlivostí AI)"
   },
   "codebook": {
+    "uninstallTitle": "Odinstalovat \u201e{{name}}\u201c?",
+    "uninstallUnknown": "Nepoda\u0159ilo se ov\u011b\u0159it, co by se zahodilo. Pokud se pou\u017e\u00edval ke k\u00f3dov\u00e1n\u00ed, ta pr\u00e1ce zmiz\u00ed s n\u00edm.",
+    "uninstallChecking": "Zji\u0161\u0165uje se, co by se zahodilo\u2026",
+    "uninstallNothingLost": "Zat\u00edm s n\u00edm nebylo nic zak\u00f3dov\u00e1no, tak\u017ee se nic neztrat\u00ed.",
+    "uninstallReinstallCost": "Op\u011btovn\u00e1 instalace za\u010dne od za\u010d\u00e1tku a stoj\u00ed nov\u00fd b\u011bh. Chcete-li v\u00fdsledky zachovat a zat\u00edm jej nepou\u017e\u00edvat, rad\u011bji jej vypn\u011bte.",
+    "noTagsInCodebook": "Tato k\u00f3dovac\u00ed kniha nem\u00e1 \u017e\u00e1dn\u00e9 \u0161t\u00edtky.",
     "autocodeFailure": {
       "outOfCredit": "Na \u00fa\u010dtu poskytovatele AI do\u0161el kredit.",
       "rateLimited": "Dosa\u017een limit po\u017eadavk\u016f \u2013 ozna\u010dov\u00e1n\u00ed zastaveno. Zkuste to brzy znovu.",

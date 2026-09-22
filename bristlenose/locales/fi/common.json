@@ -84,6 +84,8 @@
     "toggleContents": "Näytä tai piilota sisällysluettelo",
     "uncategorisedHeading": "Etsii paikkaa",
     "uncategorisedIntro_one": "1 säilyttämäsi sitaatti ei ole juuri nyt missään osiossa tai teemassa — mutta se on täällä tallessa, mitään ei kadonnut.",
+    "thinThemeLabel": "Luokittelematon",
+    "thinThemeBody": "Sitaatit, joille ei viel\u00e4 ole paikkaa: ne eiv\u00e4t ryhmittyneet muiden kanssa kaavaksi.",
     "uncategorisedIntro_other": "{{count}} säilyttämääsi sitaattia ei ole juuri nyt missään osiossa tai teemassa — mutta ne ovat täällä tallessa, mitään ei kadonnut."
   },
   "sessions": {

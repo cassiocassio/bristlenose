@@ -29,6 +29,31 @@ before this existed. That makes the rollout a no-op for most users, keeps the
 `prompt_sha` cohort baselines comparable for them, and means a study in any
 language mixture behaves exactly as it did while the UI is English.
 
+**Three stages use this, and that is not the whole set of generated text.**
+Known gaps, recorded here because the next reader will otherwise assume it is:
+
+- **`s09_quote_extraction` is unsteered and writes prose the researcher reads.**
+  `ExtractedQuote.researcher_context` is model-authored ("When asked about the
+  settings page") and rendered in brackets on every quote card, so a steered
+  Spanish run shows Spanish sections and themes with English lead-ins on the
+  cards beneath them. Not steered here **because it is untested and that stage
+  also carries the verbatim quotes**, which must never be altered; adding an
+  instruction to the stage that extracts evidence deserves its own measurement
+  rather than an assumption that the "do not translate the quotes" clause holds.
+- **Four serve-time generators are unsteered**: signal names and elaborations,
+  AutoCode rationales, codebook definitions and chat answers. They run per
+  request rather than per run, so they take the UI language *current when the
+  researcher clicks*, not the one the analysis ran under, and a project
+  accumulates languages over its life. That is a design question rather than a
+  prompt one — `docs/design-i18n.md` §PARKED.
+
+**Telemetry records the template, not the bytes sent.** `prompt_sha` is the
+shipped file's hash while `input_chars` counts the composed prompt, so a
+non-English row is internally inconsistent by about thirty tokens and cohort
+baselines pool steered and unsteered runs together. Left alone deliberately:
+the alternative is a new field in `llm-calls.jsonl`, which is a
+re-identification key where every field is a disclosure decision.
+
 **The instruction lives at the call site, not in the prompt file.** Prompt
 bodies carry a `sha` that telemetry and cohort baselines key on, so steering by
 editing `bristlenose/llm/prompts/*.md` would churn `cohort-baselines.json` for

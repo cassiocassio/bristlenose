@@ -84,6 +84,8 @@
     "toggleContents": "Vis/skjul indholdsfortegnelse",
     "uncategorisedHeading": "Mangler et hjem",
     "uncategorisedIntro_one": "1 citat, du har beholdt, er ikke i nogen sektion eller noget tema lige nu — men det er sikkert her, intet gik tabt.",
+    "thinThemeLabel": "Ikke kategoriseret",
+    "thinThemeBody": "Citater, der endnu ikke har fundet en plads \u2013 de grupperede sig ikke med andre til et m\u00f8nster.",
     "uncategorisedIntro_other": "{{count}} citater, du har beholdt, er ikke i nogen sektion eller noget tema lige nu — men de er sikre her, intet gik tabt."
   },
   "sessions": {

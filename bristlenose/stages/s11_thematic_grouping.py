@@ -6,7 +6,7 @@ import json
 import logging
 
 from bristlenose.events import StageFailure, StageOutcome
-from bristlenose.i18n import get_locale, plural_in, t_in
+from bristlenose.i18n import get_locale, t_in
 from bristlenose.llm.boundary import wrap_untrusted
 from bristlenose.llm.client import LLMClient
 from bristlenose.llm.output_language import output_language_steer
@@ -132,9 +132,19 @@ async def group_by_theme(
 
         # OURS, not the model's — and it was the only English string left in a
         # fully-steered Spanish run (`experiments/generated-language/`), which
-        # is how it was found. The lens already calls this bucket "Needs a
-        # home" in 21 locales, so the pipeline now uses the lens's own words
-        # instead of a second, untranslated name for the same thing.
+        # is how it was found.
+        #
+        # Its own keys, deliberately, after a first attempt reused the Quotes
+        # lens's `uncategorisedHeading` / `uncategorisedIntro`. Those describe
+        # the *floor* — pinned quotes the persistence layer froze — and the
+        # sentence reads "quotes you kept aren't in any section or theme",
+        # which is false here twice: these were never kept, and they ARE in a
+        # theme, the one it is the description of. It was wrong in 21 languages
+        # at once. The floor's copy also interpolates a count the SPA
+        # recomputes live, so borrowing it froze a number into persisted prose
+        # that nothing recomputes — hide one quote and the sentence contradicts
+        # the cards under it. Two concepts that share a word are still two
+        # concepts.
         #
         # Safe to translate: the server's uncategorised *floor* is computed by
         # join absence (`routes/quotes.py`), not by matching this label, and
@@ -148,10 +158,8 @@ async def group_by_theme(
         locale = get_locale()
         strong_themes.append(
             ThemeGroup(
-                theme_label=t_in(locale, "common.quotes.uncategorisedHeading"),
-                description=plural_in(
-                    locale, "common.quotes.uncategorisedIntro", count=len(unique_weak),
-                ),
+                theme_label=t_in(locale, "common.quotes.thinThemeLabel"),
+                description=t_in(locale, "common.quotes.thinThemeBody"),
                 quotes=unique_weak,
             )
         )

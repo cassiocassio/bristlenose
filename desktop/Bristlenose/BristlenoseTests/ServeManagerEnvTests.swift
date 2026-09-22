@@ -259,28 +259,36 @@ struct ServeManagerEnvTests {
         }
     }
 
-    /// UI locale rides overlayPreferences: default "en" (or unset) injects
-    /// nothing (the server defaults to English), any other locale injects
-    /// BRISTLENOSE_LANG so the Python-rendered status page calls set_locale and
-    /// the failed-run surface matches the app's chosen language.
-    @Test func overlayPreferences_injects_lang_only_when_not_english() {
+    /// The TRANSCRIPTION language rides overlayPreferences, and only when the
+    /// picker is set: unset means "let Whisper detect", which is a real third
+    /// state rather than a default.
+    ///
+    /// This test used to assert the same only-when-set rule for
+    /// `BRISTLENOSE_LANG` as well, and that contract was deliberately broken
+    /// rather than deleted. It was right while the UI locale's only consumer
+    /// was the server-rendered status page, where absence and "en" mean the
+    /// same thing. The pipeline is a second consumer that cannot read absence
+    /// that way — it generates section and theme names in that language — and
+    /// on a fresh install the picker key is unset while the app may well be
+    /// rendering German. `BRISTLENOSE_LANG` therefore moved to
+    /// `childEnvironment`, unconditional, and is asserted by
+    /// `childEnvironment_passes_the_ui_language_to_the_pipeline`.
+    @Test func overlayPreferences_injects_whisper_language_only_when_set() {
         withIsolatedDefaults { defaults in
             var env: [String: String] = [:]
-            // Unset → no injection
             BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
-            #expect(env["BRISTLENOSE_LANG"] == nil)
+            #expect(env["BRISTLENOSE_WHISPER_LANGUAGE"] == nil)
+            #expect(env["BRISTLENOSE_LANG"] == nil, "the UI locale is childEnvironment's now")
 
-            // Explicit English → no injection
             defaults.set("en", forKey: "language")
             env = [:]
             BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
-            #expect(env["BRISTLENOSE_LANG"] == nil)
+            #expect(env["BRISTLENOSE_WHISPER_LANGUAGE"] == nil)
 
-            // Non-English → injected
             defaults.set("pt-BR", forKey: "language")
             env = [:]
             BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
-            #expect(env["BRISTLENOSE_LANG"] == "pt-BR")
+            #expect(env["BRISTLENOSE_WHISPER_LANGUAGE"] == "pt-BR")
         }
     }
 

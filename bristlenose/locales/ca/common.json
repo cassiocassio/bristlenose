@@ -84,6 +84,8 @@
     "toggleContents": "Commuta la taula de continguts",
     "uncategorisedHeading": "Encara sense lloc",
     "uncategorisedIntro_one": "1 cita que has conservat ara mateix no és a cap secció ni tema — però és segura aquí, no s'ha perdut res.",
+    "thinThemeLabel": "Sense categoritzar",
+    "thinThemeBody": "Cites que encara no tenen lloc: no s\u2019han agrupat amb altres en cap patr\u00f3.",
     "uncategorisedIntro_other": "{{count}} cites que has conservat ara mateix no són a cap secció ni tema — però són segures aquí, no s'ha perdut res."
   },
   "sessions": {

@@ -84,6 +84,8 @@
     "toggleContents": "Toggle table of contents",
     "uncategorisedHeading": "Needs a home",
     "uncategorisedIntro_one": "1 quote you kept isn’t in any section or theme right now — but it’s safe here, nothing was lost.",
+    "thinThemeLabel": "Uncategorised",
+    "thinThemeBody": "Quotes that don\u2019t have a home yet \u2014 they didn\u2019t cluster with others into a pattern.",
     "uncategorisedIntro_other": "{{count}} quotes you kept aren’t in any section or theme right now — but they’re safe here, nothing was lost."
   },
   "sessions": {

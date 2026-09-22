@@ -79,6 +79,8 @@
     "toggleContents": "目次を表示/非表示",
     "uncategorisedHeading": "行き場を探しています",
     "uncategorisedIntro_one": "保存した発言のうち 1 件は、現在どのセクションにもテーマにも属していません — ただしここに安全に残っており、失われたものはありません。",
+    "thinThemeLabel": "\u672a\u5206\u985e",
+    "thinThemeBody": "\u307e\u3060\u884c\u304d\u5834\u306e\u306a\u3044\u767a\u8a00\u3067\u3059\u3002\u307b\u304b\u306e\u767a\u8a00\u3068\u307e\u3068\u307e\u3063\u3066\u30d1\u30bf\u30fc\u30f3\u306b\u306a\u308a\u307e\u305b\u3093\u3067\u3057\u305f\u3002",
     "uncategorisedIntro_other": "保存した発言のうち {{count}} 件は、現在どのセクションにもテーマにも属していません — ただしここに安全に残っており、失われたものはありません。"
   },
   "sessions": {

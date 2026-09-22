@@ -68,6 +68,8 @@
     "contents": "목차",
     "toggleContents": "목차 표시/숨기기",
     "uncategorisedHeading": "자리를 찾는 중",
+    "thinThemeLabel": "\ubbf8\ubd84\ub958",
+    "thinThemeBody": "\uc544\uc9c1 \uc790\ub9ac\ub97c \ucc3e\uc9c0 \ubabb\ud55c \uc778\uc6a9\uc785\ub2c8\ub2e4. \ub2e4\ub978 \uc778\uc6a9\uacfc \ubb36\uc5ec \ud328\ud134\uc744 \uc774\ub8e8\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.",
     "uncategorisedIntro_other": "보관한 인용문 {{count}}개는 현재 어떤 섹션이나 테마에도 속해 있지 않습니다 — 하지만 여기에 안전하게 남아 있으며 손실된 것은 없습니다."
   },
   "sessions": {

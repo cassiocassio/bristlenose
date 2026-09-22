@@ -84,6 +84,8 @@
     "toggleContents": "Alternar índice",
     "uncategorisedHeading": "À procura de um lugar",
     "uncategorisedIntro_one": "1 citação que guardou não está em nenhuma secção ou tema neste momento — mas está segura aqui, nada se perdeu.",
+    "thinThemeLabel": "Sem categoria",
+    "thinThemeBody": "Cita\u00e7\u00f5es que ainda n\u00e3o t\u00eam um lugar: n\u00e3o se agruparam com outras num padr\u00e3o.",
     "uncategorisedIntro_other": "{{count}} citações que guardou não estão em nenhuma secção ou tema neste momento — mas estão seguras aqui, nada se perdeu."
   },
   "sessions": {

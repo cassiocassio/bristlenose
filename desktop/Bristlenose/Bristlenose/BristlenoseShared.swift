@@ -262,12 +262,21 @@ enum BristlenoseShared {
             env["BRISTLENOSE_WHISPER_MODEL"] = model
         }
         if let lang = defaults.string(forKey: "language"), lang != "en" {
+            // TRANSCRIPTION language, not the UI's — a different axis that
+            // happens to read the same preference. Unset is meaningful here
+            // ("let Whisper detect"), which is why this keeps the only-when-set
+            // rule that `BRISTLENOSE_LANG` had to give up.
             env["BRISTLENOSE_WHISPER_LANGUAGE"] = lang
-            // UI locale for server-rendered surfaces (e.g. the failed-run
-            // status page). The SPA localises client-side via the bridge, but
-            // the Python-rendered status page reads BRISTLENOSE_LANG → set_locale.
-            env["BRISTLENOSE_LANG"] = lang
         }
+        // `BRISTLENOSE_LANG` is deliberately NOT set here — `childEnvironment`
+        // owns it, unconditionally, from `I18n.resolvedLocale`. It used to live
+        // here with the only-when-set rule above, which was right while its one
+        // consumer was the server-rendered status page (no var = English page =
+        // what an English app wants). It gained a second consumer that cannot
+        // read absence the same way: the pipeline, which generates section and
+        // theme names in it. On a fresh install with a German system the picker
+        // key is unset while the app renders German, so "unset" would have meant
+        // German chrome around English themes.
         // Typography (Appearance ▸ Typography). Default "sf" is the server's
         // implicit default (no attr → SF Pro), so only inject when the user
         // opted back to Inter — app.py then emits data-typography="inter".

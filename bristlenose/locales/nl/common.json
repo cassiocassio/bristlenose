@@ -84,6 +84,8 @@
     "toggleContents": "Inhoudsopgave in-/uitschakelen",
     "uncategorisedHeading": "Zoekt een plek",
     "uncategorisedIntro_one": "1 citaat dat je hebt bewaard, zit op dit moment in geen enkele sectie of thema — maar het staat hier veilig, er is niets verloren gegaan.",
+    "thinThemeLabel": "Niet ingedeeld",
+    "thinThemeBody": "Citaten die nog geen plek hebben \u2014 ze vormden met andere geen patroon.",
     "uncategorisedIntro_other": "{{count}} citaten die je hebt bewaard, zitten op dit moment in geen enkele sectie of thema — maar ze staan hier veilig, er is niets verloren gegaan."
   },
   "sessions": {

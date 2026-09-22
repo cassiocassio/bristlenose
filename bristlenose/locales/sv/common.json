@@ -84,6 +84,8 @@
     "toggleContents": "Växla innehållsförteckning",
     "uncategorisedHeading": "Söker en plats",
     "uncategorisedIntro_one": "1 citat du har behållit hör just nu inte till någon sektion eller något tema — men det ligger tryggt här, ingenting har gått förlorat.",
+    "thinThemeLabel": "Okategoriserat",
+    "thinThemeBody": "Citat som \u00e4nnu inte har n\u00e5gon plats \u2013 de grupperade sig inte med andra till ett m\u00f6nster.",
     "uncategorisedIntro_other": "{{count}} citat du har behållit hör just nu inte till någon sektion eller något tema — men de ligger tryggt här, ingenting har gått förlorat."
   },
   "sessions": {

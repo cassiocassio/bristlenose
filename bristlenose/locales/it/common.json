@@ -84,6 +84,8 @@
     "toggleContents": "Mostra/nascondi indice",
     "uncategorisedHeading": "Cerca una collocazione",
     "uncategorisedIntro_one": "1 citazione che hai conservato al momento non è in nessuna sezione né tema — ma è al sicuro qui, non è andato perso nulla.",
+    "thinThemeLabel": "Non categorizzato",
+    "thinThemeBody": "Citazioni che non hanno ancora una collocazione: non si sono raggruppate con altre in uno schema.",
     "uncategorisedIntro_other": "{{count}} citazioni che hai conservato al momento non sono in nessuna sezione né tema — ma sono al sicuro qui, non è andato perso nulla."
   },
   "sessions": {

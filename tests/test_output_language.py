@@ -130,6 +130,21 @@ def test_the_fallback_bucket_is_not_english_in_a_spanish_run() -> None:
     assert 'theme_label="Uncategorised"' not in src, (
         "the catch-all theme label is hardcoded English again"
     )
-    assert "uncategorisedHeading" in src and "uncategorisedIntro" in src, (
-        "the catch-all should use the lens's own translated keys"
+    # Assert the KEYS THIS USES, not words that appear in the file. The first
+    # version asserted `uncategorisedHeading`/`uncategorisedIntro` and went on
+    # passing after those keys were replaced, because the comment explaining
+    # why they were wrong names them both. A test that a comment can satisfy is
+    # not a test.
+    assert 't_in(locale, "common.quotes.thinThemeLabel")' in src, (
+        "the catch-all label is not reading its own key"
+    )
+    assert 't_in(locale, "common.quotes.thinThemeBody")' in src, (
+        "the catch-all description is not reading its own key"
+    )
+    # No count here. The floor's copy interpolates one and the SPA recomputes
+    # it live; this description is persisted, so a number in it is a number
+    # nothing recomputes.
+    assert "plural_in" not in src, (
+        "a count interpolated here freezes into persisted prose that nothing "
+        "recomputes — hide one quote and the sentence contradicts the cards"
     )

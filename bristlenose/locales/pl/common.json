@@ -98,6 +98,8 @@
     "toggleContents": "Przełącz spis treści",
     "uncategorisedHeading": "Szuka miejsca",
     "uncategorisedIntro_one": "1 zachowany cytat nie należy teraz do żadnej sekcji ani tematu — ale jest tu bezpieczny, nic nie przepadło.",
+    "thinThemeLabel": "Bez kategorii",
+    "thinThemeBody": "Cytaty, kt\u00f3re nie maj\u0105 jeszcze miejsca \u2014 nie po\u0142\u0105czy\u0142y si\u0119 z innymi we wzorzec.",
     "uncategorisedIntro_other": "{{count}} zachowanych cytatów nie należy teraz do żadnej sekcji ani tematu — ale są tu bezpieczne, nic nie przepadło.",
     "uncategorisedIntro_few": "{{count}} zachowane cytaty nie należą teraz do żadnej sekcji ani tematu — ale są tu bezpieczne, nic nie przepadło.",
     "uncategorisedIntro_many": "{{count}} zachowanych cytatów nie należy teraz do żadnej sekcji ani tematu — ale są tu bezpieczne, nic nie przepadło."

@@ -76,6 +76,8 @@
     "contents": "目錄",
     "toggleContents": "切換目錄",
     "uncategorisedHeading": "還沒有歸屬",
+    "thinThemeLabel": "\u672a\u5206\u985e",
+    "thinThemeBody": "\u5c1a\u672a\u627e\u5230\u6b78\u5c6c\u7684\u5f15\u8ff0\uff1a\u5b83\u5011\u6c92\u6709\u8207\u5176\u4ed6\u5f15\u8ff0\u805a\u6210\u4efb\u4f55\u6a21\u5f0f\u3002",
     "uncategorisedIntro_other": "你保留的 {{count}} 則引述目前不屬於任何區塊或主題 — 但它們安全地留在這裡，沒有任何遺失。"
   },
   "sessions": {

@@ -754,6 +754,11 @@ def import_template(
 
         if orphaned:
             # ── Relink path — the rows belong to another project ─────
+            # They may predate a wording revision of the YAML; bring them up
+            # to it before linking, so this project never sees stale names.
+            from bristlenose.server.codebook_sync import sync_framework_rows
+
+            sync_framework_rows(db, tmpl)
             max_order = (
                 db.query(func.max(ProjectCodebookGroup.sort_order))
                 .filter_by(project_id=project_id)

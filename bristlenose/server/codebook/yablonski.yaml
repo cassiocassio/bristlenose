@@ -519,7 +519,7 @@ groups:
         not_this: >
           If the participant can't find the element (not too small,
           just invisible or badly placed), that's discoverability
-          (Norman → Signifiers) or findability (Morville). If they
+          (Norman → Affordances and signifiers) or findability (Morville). If they
           struggle with a gesture (not a target), consider the
           interaction type. Target difficulty is specifically about the
           physical reachability and size of interactive elements.

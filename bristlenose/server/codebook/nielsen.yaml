@@ -65,7 +65,7 @@ groups:
         not_this: >
           If the participant is commenting on the result of a specific
           action (not ambient system state), consider whether Norman's
-          Feedback group (system response) is a better fit. Clear status
+          Feedback group (clear feedback) is a better fit. Clear status
           is about ongoing system state awareness, not one-shot action
           confirmation.
 
@@ -82,7 +82,7 @@ groups:
           supposed to wait?"
         not_this: >
           If the system responded but the response was confusing, that's
-          closer to cryptic error (H9) or ambiguous feedback (Norman).
+          closer to cryptic error (H9) or uninformative feedback (Norman).
           Opaque status is about the absence of communication — the
           system is silent, not unclear.
 
@@ -181,7 +181,7 @@ groups:
         not_this: >
           If the participant can see the icon but doesn't know what
           action it triggers, that's missing signifier (Norman →
-          Signifiers). Metaphor fit is about whether the visual
+          Affordances and signifiers). Metaphor fit is about whether the visual
           representation matches a real-world concept, not whether the
           interaction mechanism is clear.
 
@@ -198,7 +198,7 @@ groups:
           most important one at the top."
         not_this: >
           If the participant is commenting on the grouping or hierarchy
-          of items (not their sequence), consider logical layout (Norman
+          of items (not their sequence), consider grouping (Norman
           → Mapping). If the ordering issue is about navigation
           structure, consider navigation clarity (Morville → Findable).
           Logical ordering is about sequence matching real-world
@@ -385,7 +385,7 @@ groups:
           in," "that was close."
         not_this: >
           If the participant actually made the error (didn't catch it),
-          that's action slip (Norman → Slips vs Mistakes). If the
+          that's action slip (Norman → Slips and mistakes). If the
           system prevented the error (not the participant), that's
           guardrail. Near miss specifically involves the participant
           catching their own mistake before it lands.
@@ -470,7 +470,7 @@ groups:
         not_this: >
           If the participant forgot a step in a process (memory lapse
           about what to do, not about data), that's memory lapse (Norman
-          → Slips vs Mistakes). If they can't find information that is
+          → Slips and mistakes). If they can't find information that is
           actually on the current screen, that's a findability issue.
           Memory burden is about information that's needed here but was
           shown there.

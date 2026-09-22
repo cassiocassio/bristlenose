@@ -186,9 +186,10 @@ class TestNormanStructure:
     def test_seven_groups(self, norman: CodebookTemplate) -> None:
         assert len(norman.groups) == 7
 
-    def test_twenty_eight_tags(self, norman: CodebookTemplate) -> None:
+    def test_thirty_two_tags(self, norman: CodebookTemplate) -> None:
+        """v2.3 (22 Sep 2026): 32 tags — see docs/design-codebook-norman.md."""
         total = sum(len(g.tags) for g in norman.groups)
-        assert total == 28
+        assert total == 32
 
     def test_tags_have_full_prompts(self, norman: CodebookTemplate) -> None:
         """Norman tags have discrimination prompts."""

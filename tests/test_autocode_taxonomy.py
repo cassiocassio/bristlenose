@@ -138,7 +138,7 @@ class TestBuildTagTaxonomy:
         assert template is not None
         taxonomy = build_tag_taxonomy(template)
         assert "**visible action**" in taxonomy
-        assert "**system response**" in taxonomy
+        assert "**clear feedback**" in taxonomy
         # Norman now has full discrimination prompts
         assert "Apply when:" in taxonomy
         assert "Not this:" in taxonomy

@@ -1,0 +1,1075 @@
+{
+ "codebook": "norman",
+ "version": "2.3",
+ "register": "docs/design-codebook-norman.md",
+ "kinds": {
+  "golden": "two per tag, echoes the wording — a floor, not a gate",
+  "pair": "one quote each side of a sibling seam",
+  "messy": "think-aloud register, no keyword echoes",
+  "canon": "the book's own examples",
+  "oos": "everyday uses of tag words; must stay under 0.4",
+  "trap": "a must-not case for one tag"
+ },
+ "quotes": [
+  {
+   "id": "norman-001",
+   "kind": "golden",
+   "text": "Oh nice, the 'Split bill' button's right there at the bottom of the receipt, exactly where I'd look.",
+   "accept": [
+    "visible action"
+   ]
+  },
+  {
+   "id": "norman-002",
+   "kind": "golden",
+   "text": "It's obvious what to do here — there's a big 'Start scan' and nothing else competing with it.",
+   "accept": [
+    "visible action"
+   ]
+  },
+  {
+   "id": "norman-003",
+   "kind": "golden",
+   "text": "Wait, you can swipe left on a message to reply to it? I've had this phone two years.",
+   "accept": [
+    "hidden feature"
+   ]
+  },
+  {
+   "id": "norman-004",
+   "kind": "golden",
+   "text": "Where's the option to export? ... oh, it's under the three dots, under 'More', under 'Advanced'. Who'd find that?",
+   "accept": [
+    "hidden feature"
+   ]
+  },
+  {
+   "id": "norman-005",
+   "kind": "golden",
+   "text": "I'm just going to tap around and see what these icons do.",
+   "accept": [
+    "exploration"
+   ]
+  },
+  {
+   "id": "norman-006",
+   "kind": "golden",
+   "text": "Let me try long-pressing this... nope. What if I drag it? Ah, something happened.",
+   "accept": [
+    "exploration"
+   ]
+  },
+  {
+   "id": "norman-007",
+   "kind": "golden",
+   "text": "The first week I had the watch I kept accidentally triggering the SOS thing, but once you learn the button combos it's fine.",
+   "accept": [
+    "first-time use"
+   ]
+  },
+  {
+   "id": "norman-008",
+   "kind": "golden",
+   "text": "When I first opened it I had no idea what any of the tabs were for, took me a couple of sessions to get my bearings.",
+   "accept": [
+    "first-time use"
+   ]
+  },
+  {
+   "id": "norman-009",
+   "kind": "golden",
+   "text": "Good, it went green and said 'Saved' straight away, so I know it took.",
+   "accept": [
+    "clear feedback"
+   ]
+  },
+  {
+   "id": "norman-010",
+   "kind": "golden",
+   "text": "As soon as I tapped pay the little tick came up and my phone buzzed. Clear.",
+   "accept": [
+    "clear feedback"
+   ]
+  },
+  {
+   "id": "norman-011",
+   "kind": "golden",
+   "text": "I pressed submit and... is it doing anything? There's no spinner. Should I press it again?",
+   "accept": [
+    "no feedback",
+    "delayed feedback"
+   ],
+   "decision": "N-06"
+  },
+  {
+   "id": "norman-012",
+   "kind": "golden",
+   "text": "It just sat there for ages after I hit 'Book', I genuinely thought it had crashed, then the confirmation popped up.",
+   "accept": [
+    "delayed feedback",
+    "no feedback"
+   ]
+  },
+  {
+   "id": "norman-013",
+   "kind": "golden",
+   "text": "It says 'Error 0x80004005'. What am I supposed to do with that?",
+   "accept": [
+    "uninformative feedback"
+   ]
+  },
+  {
+   "id": "norman-014",
+   "kind": "golden",
+   "text": "It flashed something and went back to the list — did it save? Did it delete? I honestly can't tell.",
+   "accept": [
+    "uninformative feedback"
+   ]
+  },
+  {
+   "id": "norman-015",
+   "kind": "golden",
+   "text": "I do like that it asked 'Are you sure?' before it wiped the playlist.",
+   "accept": [
+    "safeguard"
+   ]
+  },
+  {
+   "id": "norman-016",
+   "kind": "golden",
+   "text": "It just deleted the whole folder with no 'are you sure'. I wish it had checked first.",
+   "accept": [
+    "safeguard"
+   ]
+  },
+  {
+   "id": "norman-017",
+   "kind": "golden",
+   "text": "I'm assuming the cloud icon means it's backed up somewhere, and the phone icon means it's only on this device.",
+   "accept": [
+    "user mental model"
+   ]
+  },
+  {
+   "id": "norman-018",
+   "kind": "golden",
+   "text": "So my theory is the thermostat learns from when I turn it down, and it'll start doing that itself.",
+   "accept": [
+    "user mental model"
+   ]
+  },
+  {
+   "id": "norman-019",
+   "kind": "golden",
+   "text": "Oh I see, it actually sorts by the date you added it, not the date it was taken. That explains the order.",
+   "accept": [
+    "system image"
+   ]
+  },
+  {
+   "id": "norman-020",
+   "kind": "golden",
+   "text": "Turns out the 'favourites' are shared across all the profiles in the house, it's not per person.",
+   "accept": [
+    "system image"
+   ]
+  },
+  {
+   "id": "norman-021",
+   "kind": "golden",
+   "text": "Hang on, I archived it, why has it disappeared completely? I thought archive meant 'put it away', not 'delete'.",
+   "accept": [
+    "model mismatch"
+   ]
+  },
+  {
+   "id": "norman-022",
+   "kind": "golden",
+   "text": "I expected 'Undo' to bring back the last thing I deleted, but it undid the rename instead. That's not what I meant.",
+   "accept": [
+    "model mismatch"
+   ]
+  },
+  {
+   "id": "norman-023",
+   "kind": "golden",
+   "text": "In every other app pull-down refreshes, so that's what I did.",
+   "accept": [
+    "learned behaviour"
+   ]
+  },
+  {
+   "id": "norman-024",
+   "kind": "golden",
+   "text": "I'm so used to Gmail that I keep hitting 'e' to archive, and here that does nothing.",
+   "accept": [
+    "learned behaviour",
+    "rule-based mistake"
+   ],
+   "note": "habit transfer; either defensible"
+  },
+  {
+   "id": "norman-025",
+   "kind": "golden",
+   "text": "The dial actually turns, so I turned it — it's a physical knob, it does what a knob does.",
+   "accept": [
+    "affordance",
+    "clear signifier"
+   ],
+   "decision": "N-07"
+  },
+  {
+   "id": "norman-026",
+   "kind": "golden",
+   "text": "It's a proper slider, you can grab it and drag it, there's no question about what it's for.",
+   "accept": [
+    "clear signifier",
+    "affordance"
+   ],
+   "decision": "N-07"
+  },
+  {
+   "id": "norman-027",
+   "kind": "golden",
+   "text": "This looks like I should be able to drag it up... I think. Let me try.",
+   "accept": [
+    "clear signifier",
+    "missing signifier"
+   ],
+   "decision": "N-10"
+  },
+  {
+   "id": "norman-028",
+   "kind": "golden",
+   "text": "That tile seems tappable, it's got a shadow like a card. I'll assume it opens something.",
+   "accept": [
+    "clear signifier"
+   ],
+   "decision": "N-10"
+  },
+  {
+   "id": "norman-029",
+   "kind": "golden",
+   "text": "I've been tapping this banner for ten seconds — it looks like a button but it's just a picture.",
+   "accept": [
+    "misleading signifier"
+   ]
+  },
+  {
+   "id": "norman-030",
+   "kind": "golden",
+   "text": "That underlined blue text, I clicked it, nothing. It's not a link, it's just styled like one.",
+   "accept": [
+    "misleading signifier"
+   ]
+  },
+  {
+   "id": "norman-031",
+   "kind": "golden",
+   "text": "How was I supposed to know you could tap the header to sort? There's nothing to suggest it.",
+   "accept": [
+    "missing signifier"
+   ]
+  },
+  {
+   "id": "norman-032",
+   "kind": "golden",
+   "text": "There's no handle or anything on this panel — I only found out it slides because I brushed it by accident.",
+   "accept": [
+    "missing signifier"
+   ]
+  },
+  {
+   "id": "norman-033",
+   "kind": "golden",
+   "text": "Turn the ring right, volume goes up. Obviously.",
+   "accept": [
+    "natural mapping"
+   ]
+  },
+  {
+   "id": "norman-034",
+   "kind": "golden",
+   "text": "The left stick moves left, the right stick moves right — you don't even have to think about it.",
+   "accept": [
+    "natural mapping"
+   ]
+  },
+  {
+   "id": "norman-035",
+   "kind": "golden",
+   "text": "Four identical buttons in a row and the lights are in a square. I always get the wrong one.",
+   "accept": [
+    "arbitrary mapping"
+   ]
+  },
+  {
+   "id": "norman-036",
+   "kind": "golden",
+   "text": "Why does the top switch control the bottom light? I have to memorise it every time.",
+   "accept": [
+    "arbitrary mapping"
+   ]
+  },
+  {
+   "id": "norman-037",
+   "kind": "golden",
+   "text": "The seat controls are shaped like the seat, so you push the bit you want to move. Lovely.",
+   "accept": [
+    "spatial correspondence"
+   ],
+   "note": "Norman's Mercedes seat example"
+  },
+  {
+   "id": "norman-038",
+   "kind": "golden",
+   "text": "The little map of the rooms matches where the rooms actually are, so I just tap the room I'm in.",
+   "accept": [
+    "spatial correspondence"
+   ]
+  },
+  {
+   "id": "norman-039",
+   "kind": "golden",
+   "text": "All the account stuff is together, and all the money-moving stuff is together. Sensible.",
+   "accept": [
+    "grouping"
+   ]
+  },
+  {
+   "id": "norman-040",
+   "kind": "golden",
+   "text": "The steps go top to bottom in the order you'd actually do them. That's well organised.",
+   "accept": [
+    "grouping"
+   ]
+  },
+  {
+   "id": "norman-041",
+   "kind": "golden",
+   "text": "The 'Pay' button's greyed out until I fill in the amount, so I can't send nothing by accident.",
+   "accept": [
+    "physical constraint"
+   ]
+  },
+  {
+   "id": "norman-042",
+   "kind": "golden",
+   "text": "The plug only goes in one way, so you can't get it wrong.",
+   "accept": [
+    "physical constraint"
+   ]
+  },
+  {
+   "id": "norman-043",
+   "kind": "golden",
+   "text": "I'd never put my full name in a public username, that's just not done where I'm from.",
+   "accept": [
+    "cultural constraint"
+   ]
+  },
+  {
+   "id": "norman-044",
+   "kind": "golden",
+   "text": "You're supposed to wait to be seated, so I didn't just tap 'take table 4' even though I could have.",
+   "accept": [
+    "cultural constraint"
+   ]
+  },
+  {
+   "id": "norman-045",
+   "kind": "golden",
+   "text": "There's only one slot labelled 'Card', so obviously that's where the card goes.",
+   "accept": [
+    "semantic constraint"
+   ],
+   "note": "arguably a signifier; codebook's own example shape"
+  },
+  {
+   "id": "norman-046",
+   "kind": "golden",
+   "text": "The field says 'Postcode' so I'm not going to put my phone number in it, it wouldn't make sense.",
+   "accept": [
+    "semantic constraint"
+   ]
+  },
+  {
+   "id": "norman-047",
+   "kind": "golden",
+   "text": "There are three cables and three sockets left, so by elimination that one goes there.",
+   "accept": [
+    "logical constraint"
+   ],
+   "note": "Norman's Lego example shape"
+  },
+  {
+   "id": "norman-048",
+   "kind": "golden",
+   "text": "It wouldn't make sense to pick a delivery slot before I've entered an address, so I'll do the address first.",
+   "accept": [
+    "logical constraint"
+   ]
+  },
+  {
+   "id": "norman-049",
+   "kind": "golden",
+   "text": "Oops, I hit 'Delete' instead of 'Edit', they're right next to each other.",
+   "accept": [
+    "action slip"
+   ]
+  },
+  {
+   "id": "norman-050",
+   "kind": "golden",
+   "text": "Fat-fingered the 9 instead of the 8. My fault, but the keys are tiny.",
+   "accept": [
+    "action slip"
+   ]
+  },
+  {
+   "id": "norman-051",
+   "kind": "golden",
+   "text": "Wait, where was I... did I already add the coupon or not?",
+   "accept": [
+    "memory lapse"
+   ]
+  },
+  {
+   "id": "norman-052",
+   "kind": "golden",
+   "text": "I forgot to attach the file again. Every single time.",
+   "accept": [
+    "memory lapse"
+   ]
+  },
+  {
+   "id": "norman-053",
+   "kind": "golden",
+   "text": "I double-tapped to zoom like you do in Maps, but here double-tap 'likes' the photo. Sent a like to my ex.",
+   "accept": [
+    "rule-based mistake"
+   ]
+  },
+  {
+   "id": "norman-054",
+   "kind": "golden",
+   "text": "I thought you had to save before leaving, like in the old version, so I hit Save and it created a duplicate.",
+   "accept": [
+    "rule-based mistake"
+   ]
+  },
+  {
+   "id": "norman-055",
+   "kind": "golden",
+   "text": "I don't know what any of these settings mean — 'bitrate', 'codec' — I'm just guessing.",
+   "accept": [
+    "knowledge-based mistake"
+   ]
+  },
+  {
+   "id": "norman-056",
+   "kind": "golden",
+   "text": "I have no idea how to get it to do the thing. I'm just pressing things and hoping.",
+   "accept": [
+    "knowledge-based mistake"
+   ]
+  },
+  {
+   "id": "norman-057",
+   "kind": "canon",
+   "text": "I pushed, it didn't open. There's a handle so I pulled. Turns out you push — the handle is lying to me.",
+   "accept": [
+    "misleading signifier"
+   ],
+   "note": "the Norman door",
+   "decision": "N-07"
+  },
+  {
+   "id": "norman-058",
+   "kind": "canon",
+   "text": "The knobs are in a straight line but the burners are in a square, so I keep heating the wrong pan.",
+   "accept": [
+    "arbitrary mapping"
+   ],
+   "note": "stove burners",
+   "decision": "N-08"
+  },
+  {
+   "id": "norman-059",
+   "kind": "canon",
+   "text": "I couldn't work out how to make the shower hot — one knob does temperature AND pressure and there's no marking at all.",
+   "accept": [
+    "missing signifier",
+    "arbitrary mapping"
+   ],
+   "note": "hotel shower; either"
+  },
+  {
+   "id": "norman-060",
+   "kind": "canon",
+   "text": "You can't start it unless your foot's on the brake, which annoyed me at first but it's stopped me lurching forward.",
+   "accept": [
+    "physical constraint"
+   ],
+   "note": "interlock forcing function",
+   "decision": "N-13"
+  },
+  {
+   "id": "norman-061",
+   "kind": "canon",
+   "text": "Six switches in a row by the door and I still don't know which one does the hall light.",
+   "accept": [
+    "arbitrary mapping"
+   ],
+   "note": "light switches",
+   "decision": "N-08"
+  },
+  {
+   "id": "norman-062",
+   "kind": "canon",
+   "text": "I typed my message and it went into the search box instead, because I was in the wrong mode and nothing told me.",
+   "accept": [
+    "mode error"
+   ],
+   "note": "mode error — no home in this codebook",
+   "decision": "N-15"
+  },
+  {
+   "id": "norman-063",
+   "kind": "canon",
+   "text": "I meant to go to the settings but I ended up on the home screen — my thumb just does the usual thing out of habit.",
+   "accept": [
+    "action slip"
+   ],
+   "note": "capture slip",
+   "decision": "N-14"
+  },
+  {
+   "id": "norman-064",
+   "kind": "canon",
+   "text": "I don't have to remember the wifi password, it's on the sticker on the router.",
+   "accept": [
+    "knowledge in the world"
+   ],
+   "note": "knowledge in the world — no home; expect low confidence",
+   "decision": "N-12"
+  },
+  {
+   "id": "norman-065",
+   "kind": "canon",
+   "text": "I pressed the button on the hob and I genuinely can't tell whether it's on now.",
+   "accept": [
+    "no feedback",
+    "uninformative feedback"
+   ],
+   "note": "gulf of evaluation",
+   "decision": "N-06"
+  },
+  {
+   "id": "norman-066",
+   "kind": "canon",
+   "text": "It's a beautiful colour, I love the green of it.",
+   "accept": [],
+   "note": "visceral reaction — Norman ch.2, not in codebook; expect low confidence",
+   "decision": "N-01"
+  },
+  {
+   "id": "norman-067",
+   "kind": "oos",
+   "text": "I got some really useful feedback from my manager on the presentation.",
+   "accept": []
+  },
+  {
+   "id": "norman-068",
+   "kind": "oos",
+   "text": "My dad was a plumber so I grew up knowing how boilers work.",
+   "accept": []
+  },
+  {
+   "id": "norman-069",
+   "kind": "oos",
+   "text": "We normally do the big shop on a Saturday and I take the kids.",
+   "accept": []
+  },
+  {
+   "id": "norman-070",
+   "kind": "oos",
+   "text": "I've been a nurse for twelve years, mostly in A&E.",
+   "accept": []
+  },
+  {
+   "id": "norman-071",
+   "kind": "oos",
+   "text": "The pandemic changed everything about how we worked as a team.",
+   "accept": []
+  },
+  {
+   "id": "norman-072",
+   "kind": "oos",
+   "text": "I love hiking, I'm out most weekends if the weather's decent.",
+   "accept": []
+  },
+  {
+   "id": "norman-073",
+   "kind": "oos",
+   "text": "My mental model of the housing market is basically that it's a bubble.",
+   "accept": []
+  },
+  {
+   "id": "norman-074",
+   "kind": "oos",
+   "text": "Honestly I'm just tired today, it's been a long week.",
+   "accept": []
+  },
+  {
+   "id": "norman-075",
+   "kind": "oos",
+   "text": "I usually explore a new city on foot the first day, no map.",
+   "accept": []
+  },
+  {
+   "id": "norman-076",
+   "kind": "oos",
+   "text": "The train was delayed forty minutes so I missed the connection.",
+   "accept": []
+  },
+  {
+   "id": "norman-077",
+   "kind": "oos",
+   "text": "I made a mistake choosing that university, in hindsight.",
+   "accept": []
+  },
+  {
+   "id": "norman-078",
+   "kind": "oos",
+   "text": "You're supposed to bring a gift when you visit someone's house, that's just manners.",
+   "accept": []
+  },
+  {
+   "id": "norman-079",
+   "kind": "pair",
+   "text": "There's a little grey bar at the bottom, I assumed it was just decoration, turns out you drag it up and that's where the filters live.",
+   "accept": [
+    "missing signifier"
+   ],
+   "note": "visible but unsignalled"
+  },
+  {
+   "id": "norman-080",
+   "kind": "pair",
+   "text": "I've been through every menu. There are no filters anywhere. ... Oh. It's a two-finger swipe. Nobody on earth would find that.",
+   "accept": [
+    "hidden feature"
+   ],
+   "note": "not visible at all"
+  },
+  {
+   "id": "norman-081",
+   "kind": "pair",
+   "text": "I tapped it and it went a bit darker for a second and then, nothing, so, has it added it? I'll check the basket later I suppose.",
+   "accept": [
+    "uninformative feedback"
+   ],
+   "note": "response came, unclear"
+  },
+  {
+   "id": "norman-082",
+   "kind": "pair",
+   "text": "It's thinking. Still thinking. Okay. I'll give it a minute.",
+   "accept": [
+    "delayed feedback",
+    "no feedback"
+   ]
+  },
+  {
+   "id": "norman-083",
+   "kind": "pair",
+   "text": "I reckon it's saving as I go, it looks like the sort of thing that would, so I'm not going to bother looking for a save button.",
+   "accept": [
+    "user mental model"
+   ]
+  },
+  {
+   "id": "norman-084",
+   "kind": "pair",
+   "text": "Ah right, so it's doing it per line, not per document. Okay. That's why only that bit changed.",
+   "accept": [
+    "system image"
+   ]
+  },
+  {
+   "id": "norman-085",
+   "kind": "pair",
+   "text": "No, that's — I set it to Tuesday and it's booked Thursday. What? Why would it do that?",
+   "accept": [
+    "model mismatch"
+   ]
+  },
+  {
+   "id": "norman-086",
+   "kind": "pair",
+   "text": "I'm swiping from the left to go back, that's just what you do on a phone. Yep, there we go.",
+   "accept": [
+    "learned behaviour"
+   ],
+   "note": "no error"
+  },
+  {
+   "id": "norman-087",
+   "kind": "pair",
+   "text": "I swiped to go back and it deleted the row. On my phone swiping is back. Well that's gone then.",
+   "accept": [
+    "rule-based mistake"
+   ],
+   "note": "error made",
+   "decision": "N-09"
+  },
+  {
+   "id": "norman-088",
+   "kind": "pair",
+   "text": "You can tell that rotates, it's got that ridged edge you get on a dial, and yeah, it does.",
+   "accept": [
+    "clear signifier"
+   ],
+   "decision": "N-07"
+  },
+  {
+   "id": "norman-089",
+   "kind": "pair",
+   "text": "I'd guess this spins? It's round. Might just be a badge though. Let's see.",
+   "accept": [
+    "clear signifier",
+    "missing signifier",
+    "exploration"
+   ],
+   "decision": "N-10"
+  },
+  {
+   "id": "norman-090",
+   "kind": "pair",
+   "text": "Up is louder. That's how it should be, I don't want to think about it.",
+   "accept": [
+    "natural mapping"
+   ]
+  },
+  {
+   "id": "norman-091",
+   "kind": "pair",
+   "text": "The four buttons are laid out the same way as the four zones on the screen, so top-left does top-left. Good.",
+   "accept": [
+    "spatial correspondence"
+   ]
+  },
+  {
+   "id": "norman-092",
+   "kind": "pair",
+   "text": "Personal details, then payment, then confirm. That's the sensible order, it's how I'd have put it.",
+   "accept": [
+    "grouping"
+   ]
+  },
+  {
+   "id": "norman-093",
+   "kind": "pair",
+   "text": "It won't take the form until the date's in. Fine, it's not letting me skip it.",
+   "accept": [
+    "physical constraint"
+   ]
+  },
+  {
+   "id": "norman-094",
+   "kind": "pair",
+   "text": "Well there's only one section I haven't filled in, so it must be that one that's stopping it.",
+   "accept": [
+    "logical constraint"
+   ]
+  },
+  {
+   "id": "norman-095",
+   "kind": "pair",
+   "text": "The red one's obviously stop and the green one's go, I didn't even read them.",
+   "accept": [
+    "cultural constraint"
+   ],
+   "note": "colour convention = cultural in Norman; codebook says semantic",
+   "decision": "N-13"
+  },
+  {
+   "id": "norman-096",
+   "kind": "pair",
+   "text": "The 'to' address obviously goes in the recipient box, that's what recipient means.",
+   "accept": [
+    "semantic constraint"
+   ]
+  },
+  {
+   "id": "norman-097",
+   "kind": "pair",
+   "text": "I went to type my postcode and I'd typed it in the city box, I was looking at the other screen.",
+   "accept": [
+    "action slip"
+   ]
+  },
+  {
+   "id": "norman-098",
+   "kind": "pair",
+   "text": "Got to the end and it says no delivery date. Oh — I never picked one, did I. Skipped straight past it.",
+   "accept": [
+    "memory lapse"
+   ]
+  },
+  {
+   "id": "norman-099",
+   "kind": "pair",
+   "text": "I assumed 'archive' worked like it does in Outlook so I archived the lot, and now they've vanished from the app entirely.",
+   "accept": [
+    "rule-based mistake"
+   ]
+  },
+  {
+   "id": "norman-100",
+   "kind": "pair",
+   "text": "I don't really know what a 'workspace' is versus a 'project', so I've made one of each and I'm hoping one of them's right.",
+   "accept": [
+    "knowledge-based mistake"
+   ]
+  },
+  {
+   "id": "norman-101",
+   "kind": "pair",
+   "text": "It made me type DELETE in capitals before it would go ahead. Bit much, but I get why.",
+   "accept": [
+    "safeguard",
+    "physical constraint"
+   ],
+   "note": "Norman lock-out; either",
+   "decision": "N-16"
+  },
+  {
+   "id": "norman-102",
+   "kind": "pair",
+   "text": "Not sure what this one does. Let's find out.",
+   "accept": [
+    "exploration"
+   ]
+  },
+  {
+   "id": "norman-103",
+   "kind": "pair",
+   "text": "I've pressed everything on this screen and none of it's what I want and I still don't get what the screen is for.",
+   "accept": [
+    "knowledge-based mistake"
+   ]
+  },
+  {
+   "id": "norman-104",
+   "kind": "pair",
+   "text": "The checkout button's massive and yellow, can't miss it.",
+   "accept": [
+    "visible action"
+   ]
+  },
+  {
+   "id": "norman-105",
+   "kind": "pair",
+   "text": "Yep, it's in. Little number on the bag went to one.",
+   "accept": [
+    "clear feedback"
+   ]
+  },
+  {
+   "id": "norman-106",
+   "kind": "messy",
+   "text": "Right so I want a bed, a double, um, let me — beds... here we go, beds and mattresses, and then it's giving me bed frames, mattresses, um, I don't want a mattress yet, bed frames. And now there's like forty of them, is there a — can I do it by price, I'd have thought there'd be a sort thing, um... there it is, top right, tiny.",
+   "accept": [
+    "hidden feature",
+    "missing signifier"
+   ],
+   "note": "found eventually, tiny"
+  },
+  {
+   "id": "norman-107",
+   "kind": "messy",
+   "text": "Okay, add to bag. Did it — hm. I'll press it again. Oh no, now I've got two. Great.",
+   "accept": [
+    "no feedback",
+    "delayed feedback",
+    "uninformative feedback"
+   ],
+   "decision": "N-06"
+  },
+  {
+   "id": "norman-108",
+   "kind": "messy",
+   "text": "I always think the heart's for the basket. It's not, it's a wishlist. I do this every single time on every site.",
+   "accept": [
+    "rule-based mistake",
+    "model mismatch",
+    "learned behaviour"
+   ],
+   "note": "repeated wrong rule about an icon"
+  },
+  {
+   "id": "norman-109",
+   "kind": "messy",
+   "text": "So it's asking me for my postcode before it'll show me stock, I suppose that's because it's per store, yeah, that makes sense actually.",
+   "accept": [
+    "system image",
+    "logical constraint",
+    "semantic constraint"
+   ]
+  },
+  {
+   "id": "norman-110",
+   "kind": "messy",
+   "text": "Hmm. 'Click and collect' and 'Collect from store'. What's the difference? Are those the same thing?",
+   "accept": [
+    "missing signifier"
+   ],
+   "note": "no clean home — two labels that don't discriminate",
+   "decision": "N-11"
+  },
+  {
+   "id": "norman-111",
+   "kind": "messy",
+   "text": "The filters are down the left and the results are on the right, and when I tick a colour the pictures — yeah, they all go white. Lovely.",
+   "accept": [
+    "clear feedback",
+    "natural mapping",
+    "grouping"
+   ],
+   "decision": "N-08"
+  },
+  {
+   "id": "norman-112",
+   "kind": "messy",
+   "text": "Why is 'remove' right next to 'save for later'? I've just binned the thing I wanted to keep. Fine. Back it goes.",
+   "accept": [
+    "action slip"
+   ],
+   "decision": "N-14"
+  },
+  {
+   "id": "norman-113",
+   "kind": "messy",
+   "text": "I'm going to guess that little house takes me home, it usually does.",
+   "accept": [
+    "learned behaviour",
+    "clear signifier",
+    "missing signifier"
+   ]
+  },
+  {
+   "id": "norman-114",
+   "kind": "messy",
+   "text": "The page has gone completely white. Is it loading? Is it broken? Is it me?",
+   "accept": [
+    "delayed feedback",
+    "no feedback",
+    "uninformative feedback"
+   ]
+  },
+  {
+   "id": "norman-115",
+   "kind": "messy",
+   "text": "Oh, it's remembered my basket from last week. I didn't expect that. That's nice.",
+   "accept": [
+    "model mismatch",
+    "system image",
+    "clear feedback"
+   ],
+   "note": "pleasant surprise"
+  },
+  {
+   "id": "norman-116",
+   "kind": "messy",
+   "text": "You know what, I'd expected it to say 'thanks, your order's on its way' or something at the end. It just went back to the homepage and I'm sat here going, did that go through?",
+   "accept": [
+    "no feedback",
+    "uninformative feedback"
+   ],
+   "decision": "N-06"
+  },
+  {
+   "id": "norman-117",
+   "kind": "messy",
+   "text": "It won't let me put more than nine in the basket, which, fair enough, who needs ten wardrobes.",
+   "accept": [
+    "physical constraint"
+   ]
+  },
+  {
+   "id": "norman-118",
+   "kind": "messy",
+   "text": "I keep pressing the picture expecting it to get bigger and it doesn't.",
+   "accept": [
+    "misleading signifier"
+   ]
+  },
+  {
+   "id": "norman-119",
+   "kind": "messy",
+   "text": "My wife would have gone straight to the app. I never use the app, I go on the laptop.",
+   "accept": [],
+   "note": "personal habit, expect low confidence"
+  },
+  {
+   "id": "norman-120",
+   "kind": "messy",
+   "text": "That's a lot of steps just to change the delivery address. Back, back, back, edit, save, then it makes you re-confirm the whole thing.",
+   "accept": [
+    "grouping",
+    "safeguard"
+   ],
+   "note": "no efficiency tag in Norman; measure where it lands",
+   "decision": "N-08"
+  },
+  {
+   "id": "norman-121",
+   "kind": "messy",
+   "text": "The buttons on the kiosk are in a different order to the ones on the app, so my fingers go to the wrong place.",
+   "accept": [
+    "arbitrary mapping",
+    "learned behaviour",
+    "action slip"
+   ],
+   "note": "inconsistency; measure"
+  },
+  {
+   "id": "norman-122",
+   "kind": "messy",
+   "text": "Sorry, what was the question? Oh, the delivery. Yeah it was fine, came on the day it said.",
+   "accept": [],
+   "note": "moderator-answer, no interaction moment"
+  },
+  {
+   "id": "norman-123",
+   "kind": "messy",
+   "text": "The little man icon, I don't know if that's my account or like, help, or accessibility. I'll leave it.",
+   "accept": [
+    "missing signifier",
+    "clear signifier",
+    "user mental model"
+   ],
+   "note": "ambiguous icon"
+  },
+  {
+   "id": "norman-124",
+   "kind": "trap",
+   "text": "It's going to cost me fifty dollars a year for the annual fee and twenty-five to apply, it says here.",
+   "accept": [],
+   "note": "read-aloud of a price; must not be knowledge in the world (N-12) and takes no tag above 0.4 (N-19, open)",
+   "decision": "N-19"
+  },
+  {
+   "id": "norman-125",
+   "kind": "messy",
+   "text": "Rates shown for EVP, fifty dollars. I don't know what that means. I have no idea what that means.",
+   "accept": [
+    "missing signifier"
+   ],
+   "note": "synthetic twin of Krug's Zipcar EVP finding (E2, local only)",
+   "decision": "N-11"
+  }
+ ]
+}

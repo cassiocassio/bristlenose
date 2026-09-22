@@ -47,6 +47,10 @@ class TemplateTag:
     definition: str = ""
     apply_when: str = ""
     not_this: str = ""
+    #: Names this tag carried in earlier versions of the YAML. ``codebook_sync``
+    #: renames the project's ``TagDefinition`` row in place so applied tags and
+    #: AutoCode proposals keep their ids across a wording revision.
+    renamed_from: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -55,6 +59,7 @@ class TemplateGroup:
     subtitle: str
     colour_set: str  # "ux", "emo", "task", "trust", "opp"
     tags: list[TemplateTag] = field(default_factory=list)
+    renamed_from: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -69,6 +74,10 @@ class CodebookTemplate:
     groups: list[TemplateGroup] = field(default_factory=list)
     enabled: bool = True
     sort_order: int = 50  # lower = earlier in browse list
+    #: Free-form wording version (``"2.3"``). Bumped on every accepted change to
+    #: a definition / apply_when / not_this; the decision register in
+    #: ``docs/design-codebook-<id>.md`` says why. Not read by the runtime.
+    version: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -95,6 +104,16 @@ def _require(raw: dict[str, Any], key: str, filename: str) -> Any:
     return raw[key]
 
 
+def _renamed_from(raw: dict[str, Any]) -> tuple[str, ...]:
+    """``renamed_from`` may be a string or a list; normalise to a tuple."""
+    value = raw.get("renamed_from")
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        return (_str(value),)
+    return tuple(_str(v) for v in value)
+
+
 def _parse_tag(raw: dict[str, Any], filename: str) -> TemplateTag:
     name = _require(raw, "name", filename)
     return TemplateTag(
@@ -102,6 +121,7 @@ def _parse_tag(raw: dict[str, Any], filename: str) -> TemplateTag:
         definition=_str(raw.get("definition")),
         apply_when=_str(raw.get("apply_when")),
         not_this=_str(raw.get("not_this")),
+        renamed_from=_renamed_from(raw),
     )
 
 
@@ -117,7 +137,13 @@ def _parse_group(raw: dict[str, Any], filename: str) -> TemplateGroup:
         raise ValueError(msg)
     raw_tags = raw.get("tags", []) or []
     tags = [_parse_tag(t, filename) for t in raw_tags]
-    return TemplateGroup(name=name, subtitle=subtitle, colour_set=colour_set, tags=tags)
+    return TemplateGroup(
+        name=name,
+        subtitle=subtitle,
+        colour_set=colour_set,
+        tags=tags,
+        renamed_from=_renamed_from(raw),
+    )
 
 
 def _parse_template(raw: dict[str, Any], filename: str) -> CodebookTemplate:
@@ -130,6 +156,7 @@ def _parse_template(raw: dict[str, Any], filename: str) -> CodebookTemplate:
     preamble = _str(raw.get("preamble"))
     enabled = bool(raw.get("enabled", True))
     sort_order = int(raw.get("sort_order", 50))
+    version = _str(raw.get("version"))
 
     # Gate the links HERE, not at each render site. A codebook YAML is config
     # the maintainer curates today and the community may submit once the public
@@ -167,6 +194,7 @@ def _parse_template(raw: dict[str, Any], filename: str) -> CodebookTemplate:
         groups=groups,
         enabled=enabled,
         sort_order=sort_order,
+        version=version,
     )
 
 

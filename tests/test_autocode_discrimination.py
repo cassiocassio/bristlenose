@@ -110,7 +110,7 @@ GOLDEN_QUOTES: list[GoldenQuote] = [
         text="When I click 'add to tank' I expected it to show me compatibility right away, but nothing happened.",
         correct_tag="interaction design",
         correct_group="Structure",
-        plausible_wrong_tag="ambiguous feedback",
+        plausible_wrong_tag="uninformative feedback",
         plausible_wrong_group="Feedback",  # Norman — cross-framework test
     ),
     GoldenQuote(

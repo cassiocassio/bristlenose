@@ -279,9 +279,14 @@ async def run_autocode_job(
         )
 
         # Build tag name → TagDefinition.id map from DB
-        # (framework groups have framework_id set on the CodebookGroup)
+        # (framework groups have framework_id set on the CodebookGroup).
+        # Sync first: the taxonomy above came from the YAML, and a tag the
+        # YAML renamed since import would otherwise resolve to nothing.
+        from bristlenose.server.codebook_sync import sync_framework_rows
         from bristlenose.server.models import CodebookGroup
 
+        sync_framework_rows(db, template)
+        db.commit()
         framework_groups = (
             db.query(CodebookGroup).filter_by(framework_id=framework_id).all()
         )
@@ -736,6 +741,10 @@ async def reapply_to_new_quotes(
         ]
 
         taxonomy_text = build_tag_taxonomy(template)
+        from bristlenose.server.codebook_sync import sync_framework_rows
+
+        sync_framework_rows(db, template)
+        db.commit()
         framework_groups = (
             db.query(CodebookGroup).filter_by(framework_id=framework_id).all()
         )

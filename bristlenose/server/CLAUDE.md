@@ -23,7 +23,8 @@ bristlenose/server/
     autocode.py   — 8 AutoCode endpoints (start, status, cancel, proposals, accept/deny, accept-all/deny-all)
     codebook_builder.py — 5 dynamic-codebook-builder endpoints (per-tag prompt cultivation)
     dev.py        — Dev-only endpoints (visual diff, system info)
-  codebook/       — YAML codebook templates (garrett, norman, uxr, plato)
+  codebook/       — YAML codebook templates (garrett, norman, uxr, plato …); a renamed tag carries renamed_from:
+  codebook_sync.py — renames installed framework rows in place after a YAML rewording (AutoCode resolves the model's answers against the ROWS, so a rename in the YAML alone drops every proposal for that tag); runs at startup, before AutoCode, on import relink
   grounding.py    — SHARED CORE for assistant surfaces (chat lens + MCP)
   chat_lens.py    — in-app cited question box (see docs/design-chat-lens.md)
   mcp_server.py   — read-only MCP endpoint at /mcp/ (see below)

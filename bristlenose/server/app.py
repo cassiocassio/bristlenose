@@ -936,6 +936,7 @@ def _reconcile_orphaned_autocode_jobs(session_factory: object) -> None:
     startup. See ``autocode.reconcile_orphaned_jobs``.
     """
     from bristlenose.server.autocode import reconcile_orphaned_jobs
+    from bristlenose.server.codebook_sync import sync_installed_frameworks
 
     db = session_factory()  # type: ignore[operator]
     try:
@@ -944,6 +945,19 @@ def _reconcile_orphaned_autocode_jobs(session_factory: object) -> None:
             logger.info("Reconciled %d orphaned AutoCode job(s) on startup", n)
     except Exception:
         logger.exception("Failed to reconcile orphaned AutoCode jobs")
+    finally:
+        db.close()
+
+    # A framework YAML may have been reworded since this instance imported it
+    # (norman 2.3 renamed eight tags and two groups). Rename the rows in place
+    # now, so the UI and the next AutoCode run agree with the YAML.
+    db = session_factory()  # type: ignore[operator]
+    try:
+        for report in sync_installed_frameworks(db):
+            if report.changed:
+                logger.info("codebook %s brought up to its YAML on startup", report.framework_id)
+    except Exception:
+        logger.exception("Failed to sync installed codebook frameworks")
     finally:
         db.close()
 

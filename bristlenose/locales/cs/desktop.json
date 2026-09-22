@@ -446,6 +446,13 @@
   },
   "welcome": {
     "examples": {
+      "ingestVideoName": "test-pouzitelnosti-03",
+      "ingestAudioName": "rozhovor-s-terezou",
+      "ingestMeetingName": "Uvodni hovor",
+      "ingestFolderName": "Studie pouzitelnosti",
+      "clipName1": "Mam tuhle vecicku",
+      "clipName2": "je to neco noveho",
+      "clipName3": "zpatky na hlavni stranku",
       "miroQuote1": "M\u00e1m tady v\u0161echny ty\u2026 kategorie, kam m\u016f\u017eu j\u00edt, ale\u2026 je jich\u2026 dost, \u017ee?",
       "miroQuote2": "Nab\u00edz\u00ed se tu vybrat kuchy\u0148sk\u00e9 pot\u0159eby a n\u00e1dob\u00ed.",
       "agentQuestion": "kde se \u00fa\u010dastn\u00edci zasekli p\u0159i placen\u00ed?",

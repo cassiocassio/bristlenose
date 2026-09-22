@@ -411,6 +411,13 @@
   },
   "welcome": {
     "examples": {
+      "ingestVideoName": "kullanilabilirlik-testi-03",
+      "ingestAudioName": "gorusme-elifle",
+      "ingestMeetingName": "Tanisma toplantisi",
+      "ingestFolderName": "Kullanilabilirlik arastirmasi",
+      "clipName1": "Bende su kucuk sey var",
+      "clipName2": "yeni bir sey",
+      "clipName3": "ana sayfaya donus",
       "miroQuote1": "Girebilece\u011fim bir s\u00fcr\u00fc\u2026 kategori var ama\u2026 say\u0131lar\u0131\u2026 epey fazla, de\u011fil mi?",
       "miroQuote2": "Buradaki en bariz se\u00e7im mutfak gere\u00e7leri ve sofra tak\u0131m\u0131.",
       "agentQuestion": "kat\u0131l\u0131mc\u0131lar \u00f6deme ad\u0131m\u0131nda nerede tak\u0131ld\u0131?",

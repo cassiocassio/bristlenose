@@ -411,6 +411,13 @@
   },
   "welcome": {
     "examples": {
+      "ingestVideoName": "brukertest-03",
+      "ingestAudioName": "intervju-med-ingrid",
+      "ingestMeetingName": "Oppstartsmote",
+      "ingestFolderName": "Brukervennlighetsstudie",
+      "clipName1": "Jeg har denne lille tingen",
+      "clipName2": "det er noe nytt",
+      "clipName3": "tilbake til forsiden",
       "miroQuote1": "Jeg har alle disse\u2026 kategoriene jeg kan g\u00e5 inn i, men\u2026 det er\u2026 ganske mange, ikke sant?",
       "miroQuote2": "Det opplagte her er kj\u00f8kkenutstyr og servise.",
       "agentQuestion": "hvor stoppet deltakerne opp i kassen?",

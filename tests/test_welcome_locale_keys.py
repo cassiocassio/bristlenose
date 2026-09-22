@@ -421,3 +421,80 @@ def test_every_seeded_example_key_has_a_reader() -> None:
         f"{unread} are translated in 21 locales and named by no call site. "
         "Delete them, or wire the illustration that was meant to read them."
     )
+
+
+#: The four NATIVE illustration views, and what classifies each one's words.
+#: They are outside `test_every_illustration_builder_is_classified` by
+#: construction — it parses `static func …(dark: Bool…)` builders, and a
+#: SwiftUI `View` struct is not one — so until 22 Sep 2026 nothing asked
+#: anything of them at all, and three of the four held English content
+#: including the design doc's own `anna` counter-example.
+_NATIVE_ILLUSTRATIONS = {
+    "SentimentFanView": "OURS — the seven sentiment names, composed onto "
+                        "`enums.sentiment.` and resolved in the view.",
+    "BookShelfView": "FRAMEWORK/foreign — author names never change, and a "
+                     "title takes its local edition's wording only where that "
+                     "edition exists. Measured 22 Sep 2026 across ten Amazon "
+                     "markets: Norman has six, Braun & Clarke one (pl), "
+                     "Nielsen and Lazarus none. Blocked on cover artwork, "
+                     "because title and artwork move together.",
+    "IngestIllustrationView": "MIXED — meeting name, person and study folder "
+                              "are THEIRS and keyed; the date, separators and "
+                              "extensions are structural; `Transcript` is "
+                              "FOREIGN and stays English pending the per-"
+                              "platform lookup.",
+    "ClipsIllustrationView": "THEIRS — the clip names are the participant's "
+                             "own words, keyed.",
+}
+
+
+def test_every_native_illustration_is_classified() -> None:
+    """A native illustration view states what class its words are.
+
+    The webview builders have had this since 21 Sep; the native half had
+    nothing, which is why `interview-with-anna.m4a` shipped in 21 locales
+    while `docs/design-i18n.md` used that exact string as its example of what
+    not to do ("a Spanish study about Renfe, not a transliterated `anna`").
+    """
+    body = (REPO / "desktop/Bristlenose/Bristlenose/WelcomeIllustrations.swift").read_text(
+        encoding="utf-8"
+    )
+    declared = set(re.findall(r"^struct (\w+IllustrationView|\w+FanView|\w+ShelfView): View", body, re.M))
+    # The webview wrappers are covered by the builder gate; these are the ones
+    # that draw natively and so have no `strings:` table to inspect.
+    native = {n for n in declared if f"WelcomeIllustrationHTML." not in
+              body[body.index(f"struct {n}: View"): body.index(f"struct {n}: View") + 2500]}
+
+    unclassified = sorted(native - set(_NATIVE_ILLUSTRATIONS))
+    assert not unclassified, (
+        f"{unclassified} draw natively and no entry says what class their words "
+        "are. Add them to _NATIVE_ILLUSTRATIONS with the reason, or key their "
+        "strings."
+    )
+    stale = sorted(set(_NATIVE_ILLUSTRATIONS) - declared)
+    assert not stale, f"{stale} are registered but no longer exist: {stale}"
+
+
+def test_native_illustration_sample_data_is_keyed() -> None:
+    """The ingest and clips sample data carry keys, not finished strings.
+
+    Both are `static let` arrays built before any environment exists, so a
+    string resolved into them would freeze in whatever language the app first
+    opened in — failure class 6, and invisible to every key-shaped gate. The
+    array holds the key; the view resolves it.
+    """
+    body = (REPO / "desktop/Bristlenose/Bristlenose/WelcomeIllustrations.swift").read_text(
+        encoding="utf-8"
+    )
+    for marker, struct in (("private static let rows: [Row]", "Row"),
+                           ("private static let clips: [Clip]", "Clip")):
+        start = body.index(marker)
+        block = body[start: body.index("]", body.index("[", start + len(marker)))]
+        assert "desktop.welcome.examples." in block, (
+            f"{struct} sample data no longer carries locale keys — a literal "
+            "here cannot follow the language picker."
+        )
+        assert "i18n.t(" not in block, (
+            f"{struct} resolves a key inside a `static let`. That runs once, "
+            "before any environment exists, and freezes the language."
+        )

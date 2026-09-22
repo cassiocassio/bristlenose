@@ -411,6 +411,13 @@
   },
   "welcome": {
     "examples": {
+      "ingestVideoName": "prueba-usabilidad-03",
+      "ingestAudioName": "entrevista-con-lucia",
+      "ingestMeetingName": "Llamada inicial",
+      "ingestFolderName": "Estudio de usabilidad",
+      "clipName1": "Tengo esta cosita",
+      "clipName2": "es algo nuevo",
+      "clipName3": "volver a la portada",
       "miroQuote1": "Tengo todas estas\u2026 categor\u00edas a las que puedo ir, pero\u2026 seguramente\u2026 son demasiadas.",
       "miroQuote2": "Lo obvio aqu\u00ed es elegir menaje y vajilla.",
       "agentQuestion": "\u00bfd\u00f3nde se atascaron los participantes al pagar?",

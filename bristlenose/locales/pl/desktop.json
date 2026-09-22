@@ -447,6 +447,13 @@
   },
   "welcome": {
     "examples": {
+      "ingestVideoName": "test-uzytecznosci-03",
+      "ingestAudioName": "wywiad-z-zuzanna",
+      "ingestMeetingName": "Rozmowa wstepna",
+      "ingestFolderName": "Badanie uzytecznosci",
+      "clipName1": "Mam taka rzecz",
+      "clipName2": "to cos nowego",
+      "clipName3": "powrot na strone glowna",
       "miroQuote1": "Mam te wszystkie\u2026 kategorie, do kt\u00f3rych mog\u0119 wej\u015b\u0107, ale\u2026 jest ich\u2026 sporo, prawda?",
       "miroQuote2": "Oczywisty wyb\u00f3r to tutaj akcesoria kuchenne i zastawa.",
       "agentQuestion": "gdzie uczestnicy utkn\u0119li przy p\u0142atno\u015bci?",

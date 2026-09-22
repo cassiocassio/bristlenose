@@ -657,27 +657,37 @@ struct IngestIllustrationView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
 
-    // `surtitle` is a KEY under `desktop.welcome.home.ingestRows.`; `name` is a
-    // sample filename — research data, localised in the second pass (see the
-    // illustration inventory in design-welcome-screen.md §Copy & i18n).
-    private struct Row { let icon, surtitle, name: String }
+    // `surtitle` is a KEY under `desktop.welcome.home.ingestRows.`.
+    //
+    // The filenames are the design doc's own worked example of fragment
+    // classification (`docs/design-i18n.md` §"Examples, mockups and
+    // illustrations"): `Discovery call` is the name the researcher gave the
+    // meeting and is THEIRS; ` - `, the digits and the extension are
+    // structural; `Transcript` is the word the PLATFORM wrote and is FOREIGN —
+    // Teams, Meet and Zoom each localise it per tenant, so it stays English
+    // until somebody looks up what each one actually writes. That lookup is
+    // real work, and pretending otherwise by translating it here would put a
+    // filename on screen that no export has ever produced.
+    //
+    // The array is a `static let` built before any environment exists, so it
+    // carries KEYS and the view resolves them — a string resolved here would
+    // freeze in whatever language the app first opened in.
+    private struct Row { let icon, surtitle, nameKey, prefix, suffix: String }
     private static let rows: [Row] = [
-        .init(icon: "film",
-              surtitle: "video",
-              name: "usability-test-03.mp4"),
-        .init(icon: "waveform",
-              surtitle: "audio",
-              name: "interview-with-anna.m4a"),
-        .init(icon: "captions.bubble",
-              surtitle: "captions",
-              name: "usability-test-03.vtt"),
-        .init(icon: "doc.text",
-              surtitle: "transcripts",
-              name: "Discovery call - Transcript.docx"),
-        .init(icon: "folder",
-              surtitle: "folders",
-              name: "2026-01-15 14.30 Usability study"),
+        .init(icon: "film", surtitle: "video",
+              nameKey: "desktop.welcome.examples.ingestVideoName", prefix: "", suffix: ".mp4"),
+        .init(icon: "waveform", surtitle: "audio",
+              nameKey: "desktop.welcome.examples.ingestAudioName", prefix: "", suffix: ".m4a"),
+        .init(icon: "captions.bubble", surtitle: "captions",
+              nameKey: "desktop.welcome.examples.ingestVideoName", prefix: "", suffix: ".vtt"),
+        .init(icon: "doc.text", surtitle: "transcripts",
+              nameKey: "desktop.welcome.examples.ingestMeetingName", prefix: "", suffix: " - Transcript.docx"),
+        .init(icon: "folder", surtitle: "folders",
+              nameKey: "desktop.welcome.examples.ingestFolderName", prefix: "2026-01-15 14.30 ", suffix: ""),
     ]
+
+    /// The row's filename, assembled at render time from its three classes.
+    private func name(_ r: Row) -> String { r.prefix + i18n.t(r.nameKey) + r.suffix }
 
     @State private var iconOn = [Bool](repeating: false, count: 5)
     @State private var detailOn = [Bool](repeating: false, count: 5)
@@ -706,7 +716,7 @@ struct IngestIllustrationView: View {
                     .foregroundStyle(.secondary)
                     .frame(width: 18)
                     .opacity(iconOn[i] ? 1 : 0)
-                Text(String(r.name.prefix(typed[i])))
+                Text(String(name(r).prefix(typed[i])))
                     .font(.system(size: 13))
                 Spacer(minLength: 0)
             }
@@ -717,7 +727,7 @@ struct IngestIllustrationView: View {
     @MainActor private func setComplete() {
         iconOn = [Bool](repeating: true, count: 5)
         detailOn = [Bool](repeating: true, count: 5)
-        typed = Self.rows.map(\.name.count)
+        typed = Self.rows.map { name($0).count }
     }
 
     private static var tempo: Double { WelcomeTempo.stretch(for: .ingest) }
@@ -748,7 +758,7 @@ struct IngestIllustrationView: View {
                     withAnimation(.easeOut(duration: 0.25)) { detailOn[i] = true }
                 }
                 await nap(140)
-                for c in 1...Self.rows[i].name.count {
+                for c in 1...name(Self.rows[i]).count {
                     if Task.isCancelled { return }
                     await MainActor.run { typed[i] = c }
                     await nap(26)
@@ -772,17 +782,27 @@ struct ClipsIllustrationView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.welcomeAnimationActive) private var active
 
-    private struct Clip { let units: [String]; let a, b: UInt }
+    // A clip's name is the participant's own words, which the exporter puts in
+    // the filename — THEIRS, so it is a key. Speaker code, timecode and
+    // extension are structural and stay as they are. Static, so it carries the
+    // key and the view resolves it.
+    private struct Clip { let speaker, time, nameKey, ext: String; let a, b: UInt }
     private static let clips: [Clip] = [
-        .init(units: ["p1", "00m14", "Ive got this little thing", ".mp4"], a: 0x8FA1B8, b: 0x39445A),
-        .init(units: ["p1", "02m46", "its a new thing", ".mp4"], a: 0xD9B38A, b: 0x6E5136),
-        .init(units: ["p2", "07m11", "back to the homepage", ".mp4"], a: 0x9CBCAA, b: 0x46685A),
+        .init(speaker: "p1", time: "00m14", nameKey: "desktop.welcome.examples.clipName1", ext: ".mp4",
+              a: 0x8FA1B8, b: 0x39445A),
+        .init(speaker: "p1", time: "02m46", nameKey: "desktop.welcome.examples.clipName2", ext: ".mp4",
+              a: 0xD9B38A, b: 0x6E5136),
+        .init(speaker: "p2", time: "07m11", nameKey: "desktop.welcome.examples.clipName3", ext: ".mp4",
+              a: 0x9CBCAA, b: 0x46685A),
     ]
+
+    /// The four units the exporter joins, resolved at render time.
+    private func units(_ c: Clip) -> [String] { [c.speaker, c.time, i18n.t(c.nameKey), c.ext] }
     /// First n units joined the way the exporter names files: spaces between units,
     /// the extension glued on.
-    private static func filename(_ clip: Clip, units n: Int) -> String {
+    private func filename(_ clip: Clip, units n: Int) -> String {
         var s = ""
-        for (i, u) in clip.units.prefix(n).enumerated() {
+        for (i, u) in units(clip).prefix(n).enumerated() {
             if i > 0 && !u.hasPrefix(".") { s += " " }
             s += u
         }
@@ -820,7 +840,7 @@ struct ClipsIllustrationView: View {
                             .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5))
                         .opacity(thumbOn[i] ? 1 : 0)
                         .scaleEffect(thumbOn[i] ? 1 : 0.7)
-                    Text(Self.filename(Self.clips[i], units: unitsShown[i]))
+                    Text(filename(Self.clips[i], units: unitsShown[i]))
                         .font(.system(size: 13))
                     Spacer(minLength: 0)
                 }
@@ -872,7 +892,7 @@ struct ClipsIllustrationView: View {
     @MainActor private func setComplete() {
         menuOn = false; pointerOn = false; highlight = false; pressed = false; pointerHome = false
         thumbOn = [true, true, true]
-        unitsShown = Self.clips.map(\.units.count)
+        unitsShown = Self.clips.map { units($0).count }
     }
 
     @MainActor private func reset() {
@@ -915,7 +935,7 @@ struct ClipsIllustrationView: View {
                 if Task.isCancelled { return }
                 await MainActor.run { withAnimation(.spring(duration: 0.3, bounce: 0.35)) { thumbOn[i] = true } }
                 await nap(330)
-                for u in 1...Self.clips[i].units.count {
+                for u in 1...units(Self.clips[i]).count {
                     if Task.isCancelled { return }
                     await MainActor.run { unitsShown[i] = u }
                     await nap(430)

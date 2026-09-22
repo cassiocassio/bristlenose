@@ -411,6 +411,13 @@
   },
   "welcome": {
     "examples": {
+      "ingestVideoName": "teste-usabilidade-03",
+      "ingestAudioName": "entrevista-com-beatriz",
+      "ingestMeetingName": "Call de descoberta",
+      "ingestFolderName": "Estudo de usabilidade",
+      "clipName1": "Tenho essa coisinha",
+      "clipName2": "e uma coisa nova",
+      "clipName3": "voltar para a home",
       "miroQuote1": "Tenho todas essas\u2026 categorias para onde posso ir, mas\u2026 \u00e9\u2026 bastante coisa, n\u00e9?",
       "miroQuote2": "O \u00f3bvio aqui \u00e9 escolher utens\u00edlios e lou\u00e7as.",
       "agentQuestion": "onde os participantes travaram no checkout?",

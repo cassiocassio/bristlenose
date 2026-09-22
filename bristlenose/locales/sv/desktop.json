@@ -411,6 +411,13 @@
   },
   "welcome": {
     "examples": {
+      "ingestVideoName": "anvandartest-03",
+      "ingestAudioName": "intervju-med-elsa",
+      "ingestMeetingName": "Uppstartsmote",
+      "ingestFolderName": "Anvandbarhetsstudie",
+      "clipName1": "Jag har den har lilla saken",
+      "clipName2": "det ar nagot nytt",
+      "clipName3": "tillbaka till startsidan",
       "miroQuote1": "Jag har alla de h\u00e4r\u2026 kategorierna jag kan g\u00e5 till, men\u2026 det \u00e4r\u2026 ganska m\u00e5nga, va?",
       "miroQuote2": "Det sj\u00e4lvklara h\u00e4r \u00e4r k\u00f6ksredskap och porslin.",
       "agentQuestion": "var fastnade deltagarna i kassan?",

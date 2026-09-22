@@ -393,6 +393,13 @@
   },
   "welcome": {
     "examples": {
+      "ingestVideoName": "usability-test-03",
+      "ingestAudioName": "interview-with-yiting",
+      "ingestMeetingName": "\u958b\u6848\u901a\u8a71",
+      "ingestFolderName": "\u53ef\u7528\u6027\u7814\u7a76",
+      "clipName1": "\u6211\u6709\u9019\u500b\u5c0f\u6771\u897f",
+      "clipName2": "\u9019\u662f\u65b0\u7684",
+      "clipName3": "\u56de\u5230\u9996\u9801",
       "miroQuote1": "\u6211\u6709\u9019\u4e9b\u2026\u5206\u985e\u53ef\u4ee5\u9032\u53bb\u770b\uff0c\u53ef\u662f\u2026\u5927\u6982\u2026\u6709\u9ede\u592a\u591a\u4e86\u3002",
       "miroQuote2": "\u9019\u88e1\u6700\u76f4\u89ba\u7684\u9078\u64c7\u662f\u5eda\u623f\u7528\u54c1\u8ddf\u9910\u5177\u3002",
       "agentQuestion": "\u53c3\u8207\u8005\u5728\u7d50\u5e33\u54ea\u4e00\u6b65\u5361\u4f4f\uff1f",

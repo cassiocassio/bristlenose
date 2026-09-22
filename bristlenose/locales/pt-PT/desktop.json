@@ -411,6 +411,13 @@
   },
   "welcome": {
     "examples": {
+      "ingestVideoName": "teste-usabilidade-03",
+      "ingestAudioName": "entrevista-com-ines",
+      "ingestMeetingName": "Reuniao inicial",
+      "ingestFolderName": "Estudo de usabilidade",
+      "clipName1": "Tenho esta coisinha",
+      "clipName2": "e uma coisa nova",
+      "clipName3": "voltar a pagina inicial",
       "miroQuote1": "Tenho todas estas\u2026 categorias para onde posso ir, mas\u2026 \u00e9\u2026 bastante, n\u00e3o \u00e9?",
       "miroQuote2": "O \u00f3bvio aqui \u00e9 escolher utens\u00edlios e lou\u00e7a.",
       "agentQuestion": "onde \u00e9 que os participantes ficaram presos no pagamento?",

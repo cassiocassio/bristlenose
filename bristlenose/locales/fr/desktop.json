@@ -411,6 +411,13 @@
   },
   "welcome": {
     "examples": {
+      "ingestVideoName": "test-utilisabilite-03",
+      "ingestAudioName": "entretien-avec-chloe",
+      "ingestMeetingName": "Appel de cadrage",
+      "ingestFolderName": "Etude d utilisabilite",
+      "clipName1": "J ai ce petit truc",
+      "clipName2": "c est nouveau",
+      "clipName3": "retour a l accueil",
       "miroQuote1": "J\u2019ai toutes ces\u2026 cat\u00e9gories o\u00f9 je peux aller mais\u2026 \u00e7a fait\u2026 beaucoup, non\u00a0?",
       "miroQuote2": "Ici, le choix \u00e9vident c\u2019est ustensiles et vaisselle.",
       "agentQuestion": "o\u00f9 les participants ont-ils bloqu\u00e9 au paiement\u00a0?",

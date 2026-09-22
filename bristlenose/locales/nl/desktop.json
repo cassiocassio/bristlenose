@@ -411,6 +411,13 @@
   },
   "welcome": {
     "examples": {
+      "ingestVideoName": "usability-test-03",
+      "ingestAudioName": "interview-met-sanne",
+      "ingestMeetingName": "Kennismakingsgesprek",
+      "ingestFolderName": "Usability-onderzoek",
+      "clipName1": "Ik heb dit kleine dingetje",
+      "clipName2": "het is iets nieuws",
+      "clipName3": "terug naar de homepage",
       "miroQuote1": "Ik heb al die\u2026 categorie\u00ebn waar ik heen kan maar\u2026 dat is\u2026 best veel, h\u00e8?",
       "miroQuote2": "Voor de hand ligt hier keukengerei en serviesgoed.",
       "agentQuestion": "waar liepen deelnemers vast bij het afrekenen?",

@@ -411,6 +411,13 @@
   },
   "welcome": {
     "examples": {
+      "ingestVideoName": "test-usabilita-03",
+      "ingestAudioName": "intervista-con-giulia",
+      "ingestMeetingName": "Primo incontro",
+      "ingestFolderName": "Studio di usabilita",
+      "clipName1": "Ho questa cosina",
+      "clipName2": "e una cosa nuova",
+      "clipName3": "torno alla home",
       "miroQuote1": "Ho tutte queste\u2026 categorie in cui posso andare ma\u2026 sono\u2026 parecchie, no?",
       "miroQuote2": "Qui la scelta ovvia \u00e8 casalinghi e stoviglie.",
       "agentQuestion": "dove si sono bloccati i partecipanti al pagamento?",

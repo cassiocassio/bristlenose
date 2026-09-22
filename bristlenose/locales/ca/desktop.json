@@ -411,6 +411,13 @@
   },
   "welcome": {
     "examples": {
+      "ingestVideoName": "prova-usabilitat-03",
+      "ingestAudioName": "entrevista-amb-nuria",
+      "ingestMeetingName": "Trucada inicial",
+      "ingestFolderName": "Estudi d usabilitat",
+      "clipName1": "Tinc aquesta coseta",
+      "clipName2": "es una cosa nova",
+      "clipName3": "tornar a la portada",
       "miroQuote1": "Tinc totes aquestes\u2026 categories on puc anar, per\u00f2\u2026 segurament\u2026 s\u00f3n massa.",
       "miroQuote2": "Aqu\u00ed l\u2019obvi \u00e9s triar parament i vaixella.",
       "agentQuestion": "on es van encallar els participants en pagar?",

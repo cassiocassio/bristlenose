@@ -411,6 +411,13 @@
   },
   "welcome": {
     "examples": {
+      "ingestVideoName": "brugertest-03",
+      "ingestAudioName": "interview-med-freja",
+      "ingestMeetingName": "Opstartsmoede",
+      "ingestFolderName": "Brugervenlighedsstudie",
+      "clipName1": "Jeg har den her lille ting",
+      "clipName2": "det er noget nyt",
+      "clipName3": "tilbage til forsiden",
       "miroQuote1": "Jeg har alle de her\u2026 kategorier, jeg kan g\u00e5 ind i, men\u2026 det er\u2026 ret mange, ikke?",
       "miroQuote2": "Det oplagte her er k\u00f8kkenudstyr og service.",
       "agentQuestion": "hvor gik deltagerne i st\u00e5 ved betalingen?",

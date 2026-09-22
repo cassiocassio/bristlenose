@@ -411,6 +411,13 @@
   },
   "welcome": {
     "examples": {
+      "ingestVideoName": "usability-test-03",
+      "ingestAudioName": "interview-mit-lena",
+      "ingestMeetingName": "Erstgespraech",
+      "ingestFolderName": "Usability-Studie",
+      "clipName1": "Ich hab da so ein Ding",
+      "clipName2": "das ist neu",
+      "clipName3": "zurueck zur Startseite",
       "miroQuote1": "Ich habe all diese\u2026 Kategorien, die ich aufrufen kann, aber\u2026 das ist wohl\u2026 ziemlich viel.",
       "miroQuote2": "Naheliegend w\u00e4re hier K\u00fcchenbedarf und Geschirr.",
       "agentQuestion": "wo sind die Teilnehmenden beim Bezahlen h\u00e4ngen geblieben?",

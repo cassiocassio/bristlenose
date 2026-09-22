@@ -412,6 +412,13 @@
   },
   "welcome": {
     "examples": {
+      "ingestVideoName": "usability-test-03",
+      "ingestAudioName": "interview-with-anna",
+      "ingestMeetingName": "Discovery call",
+      "ingestFolderName": "Usability study",
+      "clipName1": "Ive got this little thing",
+      "clipName2": "its a new thing",
+      "clipName3": "back to the homepage",
       "miroQuote1": "I\u2019ve got these\u2026 categorizations that I can go to but\u2026 that\u2019s probably\u2026 quite busy.",
       "miroQuote2": "The obvious thing to pick here is kitchenware and tableware.",
       "agentQuestion": "where did participants struggle in checkout?",

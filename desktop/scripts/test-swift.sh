@@ -101,6 +101,21 @@ env "$BYPASS_A" "$BYPASS_B" xcodebuild build-for-testing \
 if [ "$build_rc" -ne 0 ]; then
   echo "BUILD FAILED (xcodebuild exit $build_rc)" >&2
   grep -E "error:" "$BUILD_LOG" | sort -u | head -20 >&2 || true
+  # The codesign failure carries no "error:" line, so the grep above prints
+  # nothing and the gate reads as a compile break. It is not one. It is a
+  # stale, UNSIGNED BristlenoseTests.xctest sitting inside Bristlenose.app's
+  # PlugIns when the app's own signing step runs — the residue of a build that
+  # died between linking the test bundle and signing it. Bit the 0.30.0 and
+  # 0.31.0 releases (21 and 22 Sep 2026). The race that produced it is closed
+  # by building the test bundle BESIDE the app (TARGET_BUILD_DIR on the test
+  # target, project.pbxproj), so the app's signature never has to cover it —
+  # but a residue already on disk from before that change still needs
+  # removing once, and this message is how a session finds out.
+  if grep -q "is not signed at all" "$BUILD_LOG" && grep -q "In subcomponent: .*BristlenoseTests.xctest" "$BUILD_LOG"; then
+    _plug=$(grep -oE "In subcomponent: \S+BristlenoseTests\.xctest" "$BUILD_LOG" | head -1 | sed 's/^In subcomponent: //')
+    echo "not a compile break: an unsigned BristlenoseTests.xctest is embedded in the app from an earlier build." >&2
+    echo "  remove it and re-run:  rm -rf '${_plug}'" >&2
+  fi
   exit 3
 fi
 

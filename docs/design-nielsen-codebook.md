@@ -26,6 +26,8 @@ trued-against: HEAD@main on 2026-09-20 (835cde98)
 
 # Nielsen's 10 Usability Heuristics — Codebook Design
 
+> **22 Sep 2026:** the shipped YAML is at **2.0** — group names are the 2020 titles, `mode confusion` and `context loss` are retired, `destructive action` moved to H5, `helpful default` is `remembered for me`, and every cross-codebook pointer was repointed after the Norman and Morville rewordings. The decision register is `design-codebook-nielsen-register.md`; the prose below keeps the v1 names where it describes the adaptation analysis.
+
 _Mar 2026. Evaluates whether Nielsen's heuristics transfer from expert evaluation to participant quote-coding, and proposes a codebook structure for Bristlenose._
 
 ---
@@ -396,5 +398,5 @@ Safe to proceed. Nielsen/NN Group explicitly permits use: "You may use these heu
 ## References
 
 - Nielsen, J. (1994). Enhancing the explanatory power of usability heuristics. _Proceedings of the SIGCHI Conference on Human Factors in Computing Systems_ (CHI '94, pp. 152–158). ACM.
-- Nielsen, J. (1994). _Usability Engineering._ Morgan Kaufmann.
+- Nielsen, J. (1993). _Usability Engineering._ Academic Press / Morgan Kaufmann.
 - Nielsen Norman Group. (2024). 10 Usability Heuristics for User Interface Design (updated). https://www.nngroup.com/articles/ten-usability-heuristics/

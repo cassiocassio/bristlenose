@@ -61,7 +61,7 @@ Examples, with the group named so the rule is visible:
 - Discoverability, all negative, bed sizes hidden behind paths → "Sizes buried in paths"
 - Conceptual model, all negative → "Expectation mismatch"
 - Feedback, negative then positive → "Response delay"
-- Recognition over recall, one tag satisfied and one violated → "Visible, then remembered"
+- Recognition rather than recall, one tag satisfied and one violated → "Visible, then remembered"
 
 ### Step 5 — Elaboration
 

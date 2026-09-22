@@ -86,13 +86,10 @@ class TestGarrettStructure:
         names = [g.name for g in garrett.groups]
         assert names == ["Strategy", "Scope", "Structure", "Skeleton", "Surface"]
 
-    def test_twenty_tags(self, garrett: CodebookTemplate) -> None:
-        total = sum(len(g.tags) for g in garrett.groups)
-        assert total == 20
-
-    def test_four_tags_per_group(self, garrett: CodebookTemplate) -> None:
-        for g in garrett.groups:
-            assert len(g.tags) == 4, f"{g.name} has {len(g.tags)} tags, expected 4"
+    def test_eighteen_tags_uneven_like_the_book(self, garrett: CodebookTemplate) -> None:
+        """2.0 (22 Sep 2026): 18 tags, every one a chapter element or sub-heading;
+        the planes are uneven because the book's are — docs/design-codebook-garrett.md."""
+        assert [len(g.tags) for g in garrett.groups] == [4, 4, 3, 4, 3]
 
     def test_colour_sets(self, garrett: CodebookTemplate) -> None:
         expected = {"ux", "emo", "task", "trust", "opp"}
@@ -102,11 +99,11 @@ class TestGarrettStructure:
     def test_author_links(self, garrett: CodebookTemplate) -> None:
         assert len(garrett.author_links) == 3
         labels = [lbl for lbl, _ in garrett.author_links]
-        assert "jjg.net" in labels
+        assert "jessejamesgarrett.com" in labels
 
     def test_preamble_present(self, garrett: CodebookTemplate) -> None:
         assert garrett.preamble
-        assert "five layers" in garrett.preamble.lower()
+        assert "five planes" in garrett.preamble.lower()
 
     def test_group_subtitles_present(self, garrett: CodebookTemplate) -> None:
         for g in garrett.groups:
@@ -260,13 +257,11 @@ class TestMorvilleStructure:
             "Accessible", "Credible", "Valuable",
         ]
 
-    def test_twenty_eight_tags(self, morville: CodebookTemplate) -> None:
-        total = sum(len(g.tags) for g in morville.groups)
-        assert total == 28
-
-    def test_four_tags_per_group(self, morville: CodebookTemplate) -> None:
-        for g in morville.groups:
-            assert len(g.tags) == 4, f"{g.name} has {len(g.tags)} tags, expected 4"
+    def test_fifteen_tags_uneven_like_the_essay(self, morville: CodebookTemplate) -> None:
+        """2.0 (22 Sep 2026): the essay has seven facets and no sub-facets, so a
+        sub-tag exists only where his books or the source he cites support it —
+        docs/design-codebook-morville.md."""
+        assert [len(g.tags) for g in morville.groups] == [1, 1, 2, 4, 1, 3, 3]
 
     def test_tags_have_full_prompts(self, morville: CodebookTemplate) -> None:
         """Morville tags have discrimination prompts."""
@@ -278,7 +273,7 @@ class TestMorvilleStructure:
 
     def test_preamble_present(self, morville: CodebookTemplate) -> None:
         assert morville.preamble
-        assert "quality dimension" in morville.preamble.lower()
+        assert "facets" in morville.preamble.lower()
 
     def test_author_links(self, morville: CodebookTemplate) -> None:
         assert len(morville.author_links) >= 3

@@ -251,3 +251,76 @@ class TestStartupSweep:
         db.expire_all()
         names = {r.name for r in db.query(TagDefinition).all()}
         assert "clear feedback" in names and "system response" not in names
+
+
+# ---------------------------------------------------------------------------
+# Every reworded codebook, from its archived v1
+# ---------------------------------------------------------------------------
+
+import yaml  # noqa: E402
+
+from bristlenose.server.codebook import _parse_template  # noqa: E402
+
+_ARCHIVE = {
+    "garrett": "garrett_2026-09-22_v1-before-audit.yaml",
+    "nielsen": "nielsen_2026-09-22_v1-before-audit.yaml",
+    "yablonski": "yablonski_2026-09-22_v1-before-audit.yaml",
+    "morville": "morville_2026-09-22_v1-before-audit.yaml",
+    "norman": "norman_2026-02-20_v1-28-tags.yaml",
+}
+
+
+def _install_archived(db: SASession, cid: str) -> dict[str, int]:
+    """Import the archived v1 rows the way import_template did; return name → id."""
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parent.parent / "bristlenose" / "server" / "codebook" / "archive" / _ARCHIVE[cid]
+    v1 = _parse_template(yaml.safe_load(path.read_text(encoding="utf-8")), path.name)
+    project = Project(name="P", slug="p", input_dir="/tmp/in", output_dir="/tmp/out")
+    db.add(project)
+    db.flush()
+    ids: dict[str, int] = {}
+    for i, g in enumerate(v1.groups):
+        row = CodebookGroup(name=g.name, subtitle=g.subtitle, colour_set=g.colour_set, sort_order=i, framework_id=cid)
+        db.add(row)
+        db.flush()
+        db.add(ProjectCodebookGroup(project_id=project.id, codebook_group_id=row.id, sort_order=i))
+        for x in g.tags:
+            td = TagDefinition(name=x.name, codebook_group_id=row.id)
+            db.add(td)
+            db.flush()
+            ids[x.name] = td.id
+    db.commit()
+    return ids
+
+
+@pytest.mark.parametrize("cid", sorted(_ARCHIVE))
+class TestArchivedV1ToCurrent:
+    def test_every_current_tag_resolvable_after_sync(self, db: SASession, cid: str) -> None:
+        _install_archived(db, cid)
+        template = get_template(cid)
+        assert template is not None
+        sync_framework_rows(db, template)
+        db.commit()
+        groups = db.query(CodebookGroup).filter_by(framework_id=cid).all()
+        rows = db.query(TagDefinition).filter(TagDefinition.codebook_group_id.in_([g.id for g in groups])).all()
+        lookup = {r.name.lower(): r.id for r in rows}
+        wanted = {t.name.lower() for g in template.groups for t in g.tags}
+        assert set(build_tag_name_map(template, lookup)) == wanted
+
+    def test_every_renamed_from_keeps_its_row_id(self, db: SASession, cid: str) -> None:
+        ids = _install_archived(db, cid)
+        template = get_template(cid)
+        assert template is not None
+        sync_framework_rows(db, template)
+        db.commit()
+        for g in template.groups:
+            for t in g.tags:
+                olds = [o for o in t.renamed_from if o in ids]
+                if not olds or t.name in ids:
+                    # its own name already existed in v1: that row survives and the
+                    # absorbed names are retired (kept only if a researcher used them)
+                    continue
+                # the first archived name that existed is the row that survives
+                row = db.get(TagDefinition, ids[olds[0]])
+                assert row is not None and row.name == t.name, (cid, t.name, olds[0])

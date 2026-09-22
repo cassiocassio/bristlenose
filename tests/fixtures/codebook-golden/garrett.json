@@ -1,0 +1,244 @@
+{
+ "codebook": "garrett",
+ "version": "2.0",
+ "register": "docs/design-codebook-garrett.md",
+ "quotes": [
+  {
+   "id": "garrett-001",
+   "kind": "golden",
+   "text": "What I'm trying to do is find a fish that'll live in my tank without a heater, that's the whole reason I'm here.",
+   "accept": [
+    "user need"
+   ],
+   "decision": "G-03"
+  },
+  {
+   "id": "garrett-002",
+   "kind": "golden",
+   "text": "For me the test is whether I can find a compatible fish in under two minutes.",
+   "accept": [
+    "user need"
+   ],
+   "note": "the participant's own criterion is a user need, not a success metric",
+   "decision": "G-05"
+  },
+  {
+   "id": "garrett-003",
+   "kind": "golden",
+   "text": "They obviously want me on the premium plan before they'll even show me prices.",
+   "accept": [
+    "product objective"
+   ],
+   "decision": "G-04"
+  },
+  {
+   "id": "garrett-004",
+   "kind": "golden",
+   "text": "You can tell the whole page is built to get you to book a demo.",
+   "accept": [
+    "product objective"
+   ],
+   "decision": "G-04"
+  },
+  {
+   "id": "garrett-005",
+   "kind": "golden",
+   "text": "Honestly I'd come back to this every week if it stayed like this.",
+   "accept": [
+    "success metric"
+   ],
+   "decision": "G-05"
+  },
+  {
+   "id": "garrett-006",
+   "kind": "golden",
+   "text": "I gave up at the form, I'm not filling in all that just to see a price.",
+   "accept": [
+    "success metric"
+   ],
+   "decision": "G-05"
+  },
+  {
+   "id": "garrett-007",
+   "kind": "golden",
+   "text": "This doesn't feel like a real bank at all, it looks like a generic template.",
+   "accept": [
+    "brand identity"
+   ],
+   "decision": "G-06"
+  },
+  {
+   "id": "garrett-008",
+   "kind": "golden",
+   "text": "It's very them, you'd know it was theirs from across the room.",
+   "accept": [
+    "brand identity"
+   ],
+   "decision": "G-06"
+  },
+  {
+   "id": "garrett-009",
+   "kind": "golden",
+   "text": "There's no way to compare two fish side by side, I keep going back and forth.",
+   "accept": [
+    "functional requirement"
+   ],
+   "decision": "G-07"
+  },
+  {
+   "id": "garrett-010",
+   "kind": "golden",
+   "text": "They don't list water parameters for any of the fish.",
+   "accept": [
+    "content requirement"
+   ]
+  },
+  {
+   "id": "garrett-011",
+   "kind": "golden",
+   "text": "The compatibility checker is the one thing that matters, everything else is nice to have.",
+   "accept": [
+    "requirement priority"
+   ],
+   "decision": "G-09"
+  },
+  {
+   "id": "garrett-012",
+   "kind": "golden",
+   "text": "Why does a fish shop have a social feed? I don't need any of this.",
+   "accept": [
+    "scope creep"
+   ]
+  },
+  {
+   "id": "garrett-013",
+   "kind": "golden",
+   "text": "When I hit 'add to tank' I expected it to check compatibility straight away, and it just sat there.",
+   "accept": [
+    "interaction design"
+   ],
+   "decision": "G-11"
+  },
+  {
+   "id": "garrett-014",
+   "kind": "golden",
+   "text": "Create an account, verify the email, set up a tank profile, and only then can I browse. That's a lot of flow.",
+   "accept": [
+    "interaction design"
+   ],
+   "note": "multi-step flow stays with interaction design (v1 sent it to task flow)",
+   "decision": "G-11"
+  },
+  {
+   "id": "garrett-015",
+   "kind": "golden",
+   "text": "I'd have expected angelfish under tropical freshwater, not just under 'fish'.",
+   "accept": [
+    "information architecture"
+   ]
+  },
+  {
+   "id": "garrett-016",
+   "kind": "golden",
+   "text": "It wouldn't let me submit without a date, fine, but once I'd paid there was no way back.",
+   "accept": [
+    "error handling"
+   ],
+   "decision": "G-13"
+  },
+  {
+   "id": "garrett-017",
+   "kind": "golden",
+   "text": "The filter button is buried at the bottom of the page, it should be up here next to the search.",
+   "accept": [
+    "interface design"
+   ],
+   "decision": "G-14"
+  },
+  {
+   "id": "garrett-018",
+   "kind": "golden",
+   "text": "This page is really cramped, there's too much going on and I can't focus on anything.",
+   "accept": [
+    "interface design"
+   ],
+   "decision": "G-14"
+  },
+  {
+   "id": "garrett-019",
+   "kind": "golden",
+   "text": "I keep having to go back to the home page, there's no way to jump between sections.",
+   "accept": [
+    "navigation design"
+   ],
+   "decision": "G-15"
+  },
+  {
+   "id": "garrett-020",
+   "kind": "golden",
+   "text": "The buy button is massive but the species info is tiny, it feels backwards.",
+   "accept": [
+    "information design"
+   ],
+   "decision": "G-16"
+  },
+  {
+   "id": "garrett-021",
+   "kind": "golden",
+   "text": "Usually there's a search bar at the top, I can't find one anywhere.",
+   "accept": [
+    "convention"
+   ]
+  },
+  {
+   "id": "garrett-022",
+   "kind": "golden",
+   "text": "The photos are gorgeous, really high quality, you can see all the colours.",
+   "accept": [
+    "visual design"
+   ]
+  },
+  {
+   "id": "garrett-023",
+   "kind": "golden",
+   "text": "I didn't see the checkout button at all, it's the same grey as everything else.",
+   "accept": [
+    "contrast and uniformity"
+   ],
+   "decision": "G-19"
+  },
+  {
+   "id": "garrett-024",
+   "kind": "golden",
+   "text": "This page looks like a completely different site from the last one, the buttons are all different shapes.",
+   "accept": [
+    "consistency"
+   ],
+   "decision": "G-20"
+  },
+  {
+   "id": "garrett-025",
+   "kind": "golden",
+   "text": "The whole site just feels premium and modern, like a proper specialist retailer.",
+   "accept": [
+    "visual design"
+   ],
+   "note": "v1 'sensory experience'; under 2.0 mood at the surface reads as his visual design (G-21)",
+   "decision": "G-21"
+  },
+  {
+   "id": "garrett-026",
+   "kind": "trap",
+   "text": "Ooh, that's nice. I like that.",
+   "accept": [],
+   "note": "bare aesthetic reaction, retired; must stay low",
+   "decision": "G-21"
+  },
+  {
+   "id": "garrett-027",
+   "kind": "oos",
+   "text": "I've been keeping fish for twenty years, mostly cichlids.",
+   "accept": []
+  }
+ ]
+}

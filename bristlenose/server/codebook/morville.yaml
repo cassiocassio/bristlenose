@@ -1,31 +1,54 @@
+# Morville codebook — the User Experience Honeycomb (Semantic Studios, 21 June 2004).
+#
+# HOW TO CHANGE THIS FILE. Every wording decision carries a dated `# M-xx`
+# comment pointing at the register in docs/design-codebook-morville.md. A
+# decision is reopened by a WITNESS QUOTE that fails in the golden fixture
+# (tests/fixtures/codebook-golden/morville.json), never by a hunch. Before
+# rewording a tag: read its M-xx entry, add or change the witness, then change
+# the words, and bump `version:`.
+#
+# RENAMES. A tag that absorbed earlier names carries `renamed_from:`;
+# `codebook_sync` renames the installed rows in place so applied tags and
+# AutoCode proposals survive.
+#
+# Scope rule (M-01): the source is a one-page essay with seven facets and no
+# sub-facets. A sub-tag exists here only where his paragraph, his books
+# (Rosenfeld & Morville; Ambient Findability) or the source he cites by name
+# (Stanford's credibility guidelines) supports it; everything else lives in
+# apply_when as examples. v1 had 7 × 4 = 28 tags, 17 of them from Nielsen,
+# Fogg, Microsoft, Cialdini and elsewhere — the four-per-group padding the
+# Norman audit found. 2.0 is 15, uneven, and the unevenness is his.
 id: morville
 title: The User Experience Honeycomb
 author: Peter Morville
 enabled: true
+version: "2.0"  # M-02: bumped on every accepted wording change
 
 description: >
-  Seven facets of user experience arranged as a honeycomb — useful, usable,
-  desirable, findable, accessible, credible, valuable. A broader evaluation
-  framework than Garrett or Norman, designed to ask whether a product
-  delivers on every quality dimension, not just ease of use. Particularly
-  strong at surfacing credibility and findability findings that other
-  frameworks miss.
+  Seven facets of user experience — useful, usable, desirable, findable,
+  accessible, credible, valuable — drawn as a honeycomb so that each can
+  be "a singular looking glass" on a product. Morville drew it to move
+  the conversation beyond usability and to help teams define priorities:
+  the facets are not a checklist, and which ones matter most depends on
+  the balance of context, content and users. Broader than Garrett's
+  planes or Norman's principles; the place where credibility, findability
+  and value to the sponsor get named at all.
 
 author_bio: >
-  Pioneer of information architecture, and the author of the User Experience
-  Honeycomb (2004) this codebook is built on. Co-author of "Information
-  Architecture: For the Web and Beyond" (the Polar Bear book, 4th edition 2015
-  with Rosenfeld and Arango) and author of "Ambient Findability" (2005).
-  Founded Semantic Studios in 2001.
+  Pioneer of information architecture and author of the User Experience
+  Honeycomb (2004). Co-author of "Information Architecture for the World
+  Wide Web" (the polar bear book; 4th ed. 2015 with Rosenfeld and Arango)
+  and author of "Ambient Findability" (2005). Founded Semantic Studios in
+  2001.
 
 author_links:
   - label: semanticstudios.com
     url: https://semanticstudios.com
-  - label: Original honeycomb article
+  - label: User Experience Design (2004)
     url: https://semanticstudios.com/user_experience_design/
-  - label: Amazon US — Information Architecture (4th ed)
+  - label: Amazon US — Information Architecture
     url: https://www.amazon.com/dp/1491911689
-  - label: Amazon UK — Information Architecture (4th ed)
+  - label: Amazon UK — Information Architecture
     url: https://www.amazon.co.uk/dp/1491911689
   - label: Amazon US — Ambient Findability
     url: https://www.amazon.com/dp/0596007655
@@ -33,568 +56,365 @@ author_links:
     url: https://www.amazon.co.uk/dp/0596007655
 
 preamble: >
-  The following tags describe seven quality dimensions of user experience.
-  Unlike frameworks that diagnose specific interaction breakdowns (Norman)
-  or locate findings on a design stack (Garrett), these tags ask whether
-  the product is succeeding on a broader set of quality dimensions —
-  including credibility, findability, and desirability that interaction
-  frameworks often miss. The facets are not mutually exclusive — a single
-  finding can reveal problems on multiple dimensions. When a quote touches
-  two facets, choose the one the participant is primarily reacting to. If
-  the participant is not discussing a designed product, service, or
+  The following tags name the seven facets of Morville's honeycomb. They
+  ask whether an experience is useful, usable, desirable, findable,
+  accessible, credible and valuable — and Morville's point is that a
+  team must choose which of these matter most for its context, content
+  and users; the honeycomb is a tool for setting priorities, not a
+  checklist to be satisfied in full. The facets overlap by design: when a
+  quote touches two, choose the one the participant is primarily reacting
+  to. If the participant is not discussing a designed product, service or
   information system, do not apply any tag from this codebook.
 
 groups:
   # -------------------------------------------------------------------
-  # Useful — does it solve a real problem?
+  # Useful — "whether our products and systems are useful"
   # -------------------------------------------------------------------
   - name: Useful
-    subtitle: Does the product actually solve a real problem for its users?
+    subtitle: Is the product useful — does it do something the person needs done?
     colour_set: ux
     tags:
-      - name: relevance
+      # M-03 (R). His one thought: "the courage to ask whether our products and systems are useful". v1's relevance / utility / problem-solution fit / feature gap were four ways of saying one word (Nielsen's "utility", lean-startup "problem-solution fit"); feature gap is UXR unmet need / feature request.
+      - name: usefulness
+        renamed_from: [relevance, utility, problem-solution fit, feature gap]
         definition: >
-          The product or feature addresses a genuine need in the
-          participant's life — it solves a problem they actually have,
-          not one the product imagines they have.
+          Whether the product does something the participant actually
+          needs done — it solves the problem they came with, or fails to,
+          regardless of how well it works in other respects.
         apply_when: >
-          The participant connects the product to a real situation in
-          their life, or notes that a feature matches something they
-          genuinely need. Look for "this is exactly what I needed,"
-          "I've been looking for something like this," "this solves my
-          problem."
+          The participant judges the product by whether it helps with
+          their real task: it does the thing, it does not do the thing,
+          it does a thing they never needed, or it is missing the thing
+          they came for. Look for "this is exactly what I needed," "it
+          doesn't actually help me with," "I don't need any of this,"
+          "there's no way to do the one thing I came for."
         not_this: >
-          If the participant is evaluating the cost-benefit trade-off,
-          that's worth it (Valuable). Relevance is about whether the
-          product addresses a real need, not whether the exchange is
-          fair.
-
-      - name: problem-solution fit
-        definition: >
-          The product's approach to solving the problem is appropriate —
-          it solves the right problem in the right way, not just any
-          problem or the right problem badly.
-        apply_when: >
-          The participant comments on whether the product's approach
-          matches the actual problem, or notes a mismatch between what
-          the product offers and what they need. Look for "this isn't
-          really what I need," "it does X but I need Y," "they've
-          nailed it," "close but not quite."
-        not_this: >
-          If the participant questions whether the product has the right
-          features, that's feature gap. If the product is useful but
-          the interaction is poor, that's a Usable issue. Problem-
-          solution fit is about conceptual alignment between the offering
-          and the need.
-
-      - name: utility
-        definition: >
-          The product provides practical, functional value — it helps
-          the participant accomplish tasks or achieve outcomes more
-          effectively than without it.
-        apply_when: >
-          The participant describes concrete practical benefits they get
-          from the product, or notes that a feature is genuinely helpful
-          in getting things done. Look for "this saves me," "I use this
-          every day for," "it actually helps me," "this makes my job
-          easier."
-        not_this: >
-          If the participant enjoys using the product beyond its
-          functional value, that's emotional appeal (Desirable). If
-          they're commenting on ease of use rather than usefulness,
-          that's a Usable issue. Utility is about practical outcomes,
-          not the experience of achieving them.
-
-      - name: feature gap
-        definition: >
-          The participant identifies a missing capability that would make
-          the product genuinely more useful — a functional hole that
-          limits the product's ability to solve their problem.
-        apply_when: >
-          The participant describes something the product should do but
-          doesn't, reducing its usefulness for their real situation.
-          Look for "if only it could," "the one thing it's missing is,"
-          "I still have to use X for that," "it would be so much more
-          useful if."
-        not_this: >
-          If the participant can't find a feature that exists, that's a
-          Findable issue, not a feature gap. If the gap is about content
-          or information rather than capability, consider whether the
-          finding is about findability or usefulness. Feature gap is
-          about genuinely absent functionality.
+          If the product does the right thing but is hard to operate,
+          that is ease of use. If the participant is asking for a
+          specific feature that does not exist, that is a feature request
+          in the UXR codebook — usefulness is the judgement that the
+          product, as it stands, does or does not serve the need. If the
+          comment is about whether the product is worth its cost or the
+          organisation's while, that is a Valuable tag.
 
   # -------------------------------------------------------------------
-  # Usable — can people actually use it?
+  # Usable — "Ease of use remains vital"
   # -------------------------------------------------------------------
   - name: Usable
-    subtitle: Can people use it effectively without unnecessary difficulty?
+    subtitle: Can the person use it — is it easy, and does it stay out of the way?
     colour_set: emo
     tags:
+      # M-04 (R). "Ease of use remains vital, and yet the interface-centered methods and perspectives of human-computer interaction do not address all dimensions." His own words, and his own deferral: v1's learnability / efficiency / error tolerance were Nielsen's 1993 usability attributes imported into the facet he was declining to decompose. Rescued: learnability → UXR learning curve; efficiency and error tolerance → Nielsen H7, H3/H5/H9.
       - name: ease of use
+        renamed_from: [learnability, efficiency, error tolerance]
         definition: >
-          The product is straightforward to use — the participant can
-          accomplish their goal without confusion, hesitation, or
-          unnecessary effort.
+          Whether the participant can operate the product without
+          unnecessary difficulty — it is easy to pick up, quick to get
+          through, forgiving when they slip. Morville's "ease of use",
+          the whole usable facet in one tag.
         apply_when: >
-          The participant comments on how easy or difficult the product
-          is to use in the moment. Look for "that was easy," "I didn't
-          have to think," "straightforward," "this is confusing," "I
-          can't figure out how to."
+          The participant comments on how easy or hard the product is to
+          use: getting started, getting through a task, recovering from
+          a wrong turn, the effort it takes. Look for "that was easy,"
+          "so many steps," "I had to learn how it wanted me to," "it let
+          me undo that," "I keep getting it wrong." Positive and negative
+          both belong here.
         not_this: >
-          If the participant is describing the initial learning
-          experience specifically, that's learnability. If they know how
-          to use it but it takes too many steps, that's efficiency. Ease
-          of use is about in-the-moment clarity, not the learning curve
-          or speed.
-
-      - name: learnability
-        definition: >
-          How quickly the participant can get up to speed — the initial
-          investment required to become competent with the product.
-        apply_when: >
-          The participant describes their learning experience, compares
-          initial confusion with later competence, or comments on the
-          onboarding process. Look for "once you figure it out," "the
-          learning curve is," "at first I had no idea but now," "it
-          took me a while to get the hang of."
-        not_this: >
-          If the participant is describing ongoing difficulty (not an
-          initial learning phase), that's ease of use. If they learned
-          from other people or external resources, consider whether
-          the finding is about the product's learnability or about
-          external support. Learnability is about the transition from
-          novice to competent.
-
-      - name: efficiency
-        definition: >
-          The product lets the participant accomplish their goal with
-          minimal wasted time, steps, or effort — once they know how
-          to use it, the process is streamlined.
-        apply_when: >
-          The participant comments on speed, number of steps, or effort
-          required for a task they already understand. Look for "too
-          many clicks," "this should be faster," "I can do it but it
-          takes forever," "nice, that was quick," "why so many steps."
-        not_this: >
-          If the participant doesn't know how to proceed (not slow but
-          stuck), that's ease of use. If they're commenting on system
-          performance (loading times) rather than interaction steps,
-          that's outside this tag — consider whether the finding is
-          really about the UX or the technology. Efficiency is about
-          workflow streamlining, not comprehension.
-
-      - name: error tolerance
-        definition: >
-          The product handles mistakes gracefully — the participant can
-          recover from errors without losing work, hitting dead ends,
-          or feeling punished for missteps.
-        apply_when: >
-          The participant makes a mistake and comments on how the
-          product responds — whether they could undo, whether they
-          lost work, whether the error message helped. Look for "I
-          accidentally," "there's no undo," "it let me fix that
-          easily," "I lost everything," "good, it warned me."
-        not_this: >
-          If the participant is worried about making mistakes
-          (anticipatory), that's closer to a Credible concern about
-          safety. If the error is about not understanding the system
-          rather than recovering from a mistake, that's ease of use.
-          Error tolerance is about the product's response to errors,
-          not the errors themselves.
+          If the product does the wrong thing rather than doing the right
+          thing awkwardly, that is usefulness. If the difficulty is
+          finding something, that is a Findable tag. If the participant is
+          anxious about making a mistake rather than describing one, that
+          is anxiety in the UXR codebook or hesitation in Nielsen's.
+          Finer usability distinctions — learnability, efficiency, error
+          handling — are Nielsen's heuristics and live there.
 
   # -------------------------------------------------------------------
-  # Desirable — does it create emotional engagement?
+  # Desirable — "image, identity, brand, and other elements of emotional design"
   # -------------------------------------------------------------------
   - name: Desirable
-    subtitle: Does the design create a positive emotional connection?
+    subtitle: Do people want it — image, identity, brand, emotional design?
     colour_set: opp
     tags:
-      - name: emotional appeal
+      # M-05 (R). "brand" and "identity" are his words. v1 said "brand perception".
+      - name: brand and identity
+        renamed_from: brand perception
         definition: >
-          The product evokes a positive emotional response — the
-          participant feels drawn to it, enjoys using it, or experiences
-          pleasure beyond functional satisfaction.
+          How the product's image and identity — the brand, the
+          organisation it belongs to, what using it says about the
+          person — colour the participant's wish to use it.
         apply_when: >
-          The participant expresses feelings about the product that go
-          beyond utility — delight, pride, enjoyment, affection. Look
-          for "I love this," "it makes me feel," "I enjoy using it,"
-          "it's fun," "this is delightful," "it brings me joy."
+          The participant reacts to the brand or to the identity the
+          product projects: it feels like the company, it does not, they
+          like being associated with it, they are embarrassed to be. Look
+          for "it feels very them," "this doesn't look like a real
+          [company]," "I'd be happy to be seen using this," "it's a bit
+          cheap-looking for a bank."
         not_this: >
-          If the participant is commenting on specific visual elements
-          (colours, fonts, imagery), that's aesthetic quality. If
-          they're expressing brand affinity, that's brand perception.
-          Emotional appeal is the holistic feeling the product evokes,
-          not the analysis of what causes it.
+          If the reaction is to the look and feel itself rather than to
+          whose it is, that is emotional design. If the participant is
+          judging whether to trust what the product tells them, that is a
+          Credible tag. Brand and identity is about wanting it because of
+          who it is from and what it stands for.
 
-      - name: aesthetic quality
+      # M-06 (R). "other elements of emotional design" — his citation of Norman's Emotional Design (2004). v1 split this into emotional appeal + aesthetic quality, and added "engagement", which has no source.
+      - name: emotional design
+        renamed_from: [emotional appeal, aesthetic quality, engagement]
         definition: >
-          The visual and sensory design of the product — its look, feel,
-          and polish. Whether the product is beautiful, ugly, modern,
-          dated, or visually coherent.
+          Whether the product's look, feel and behaviour create a positive
+          emotional response — the visceral pull of something attractive,
+          the pleasure of something that feels good to use, the pride of
+          owning it. Morville's "elements of emotional design".
         apply_when: >
-          The participant comments on the visual presentation, design
-          quality, or sensory experience. Look for "it looks great,"
-          "the design is clean," "this looks dated," "the colours are,"
-          "it feels polished," "the animations are nice."
+          The participant expresses feeling about the product's design as
+          such: delight, warmth, disgust, indifference, "it's gorgeous," "I
+          love how this feels," "it looks polished," "it's ugly," "it just
+          leaves me cold." Look for reactions to appearance, texture, motion
+          and tone.
         not_this: >
-          If the participant describes an overall emotional response
-          without analysing visual elements, that's emotional appeal.
-          If they're judging whether the visuals communicate the right
-          identity, that's brand perception. If the visual treatment
-          affects usability (can't read text, poor contrast), that's
-          a Usable or Accessible issue. Aesthetic quality is about
-          visual craft judgement.
-
-      - name: brand perception
-        definition: >
-          The product communicates a specific identity, personality, and
-          market position through its design — the participant forms an
-          impression of what kind of organisation is behind it.
-        apply_when: >
-          The participant judges the organisation through the product's
-          design, or comments on whether the product matches their
-          expectations for the brand. Look for "it feels like a proper,"
-          "this doesn't look like a serious," "the brand comes
-          through," "it feels premium," "it looks cheap."
-        not_this: >
-          If the participant is judging trustworthiness or honesty,
-          that's a Credible issue, not brand perception. If they're
-          reacting to visual beauty without connecting it to brand
-          identity, that's aesthetic quality. Brand perception is about
-          what the design communicates about the organisation.
-
-      - name: engagement
-        definition: >
-          The product holds the participant's attention and draws them
-          back — it's compelling, not just functional. The participant
-          wants to spend time with it.
-        apply_when: >
-          The participant describes wanting to explore further, losing
-          track of time, returning repeatedly, or being drawn in. Look
-          for "I kept exploring," "I couldn't put it down," "I come
-          back to this," "it's addictive," "I find myself spending
-          time."
-        not_this: >
-          If the participant returns because the product is useful (not
-          because it's compelling), that's return intent (Valuable). If
-          they're describing a single moment of delight rather than
-          sustained engagement, that's emotional appeal. Engagement is
-          about sustained attention and pull, not momentary pleasure.
+          If the feeling attaches to the brand or organisation rather than
+          the design, that is brand and identity. If beauty is being read
+          as a reason to trust, that is trustworthiness (Credible). If the
+          participant is describing what the product does for them rather
+          than how it makes them feel, that is usefulness. Emotional
+          design is the feeling the design itself produces.
 
   # -------------------------------------------------------------------
-  # Findable — can users locate what they need?
+  # Findable — "navigable web sites and locatable objects"
   # -------------------------------------------------------------------
   - name: Findable
-    subtitle: Can users find the content, features, and information they need?
+    subtitle: Can people find what they need — navigation, search, labels?
     colour_set: task
     tags:
+      # M-07 (A). Essay: "design navigable web sites"; Ambient Findability: the degree to which a system "supports navigation and retrieval". The one group where every v1 tag traced to him; all four kept.
       - name: navigation clarity
         definition: >
-          The navigation system helps the participant understand where
-          they are, where things live, and how to get to what they need —
-          the wayfinding system works.
+          Whether the participant can move through the product's structure
+          and know where they are — the navigation supports getting from
+          here to there and back.
         apply_when: >
-          The participant comments on menus, links, breadcrumbs, tabs,
-          or other navigation elements — whether they help or hinder
-          finding things. Look for "I knew exactly where to go," "the
-          menu makes sense," "I keep getting lost," "where am I," "how
-          do I get back."
+          The participant comments on moving around: menus that make sense
+          or don't, knowing where they are, getting back, getting lost.
+          Look for "I can see where I am," "how do I get back to," "I'm
+          lost," "the menu is clear."
         not_this: >
-          If the participant is commenting on the conceptual
-          organisation of content (categories, groupings) rather than
-          navigation controls, consider whether the finding is about
-          findability or information architecture (Garrett → Structure).
-          Navigation clarity is about the wayfinding interface, not the
-          underlying conceptual structure.
+          If they are typing a query, that is search effectiveness. If the
+          thing they want is present but they cannot tell it is there, that
+          is content discoverability. If the words on the navigation are
+          the problem, that is labelling. Navigation clarity is the
+          structure of movement.
 
+      # M-07 (A). "retrieval" (Ambient Findability); "search systems" is one of Rosenfeld & Morville's four IA systems; Search Patterns (2010) is his.
       - name: search effectiveness
         definition: >
-          The product's search functionality helps the participant find
-          what they're looking for — search works well, returns
-          relevant results, and supports the way people actually look
-          for things.
+          Whether searching returns what the participant is looking for —
+          the query is understood, the results are relevant, the ranking
+          puts the right thing in reach.
         apply_when: >
-          The participant uses or comments on search functionality. Look
-          for "I searched for," "the results weren't helpful," "search
-          found it immediately," "I typed X and got Y," "there's no
-          search," "the filters helped me narrow down."
+          The participant searches and judges the result: found it, got
+          nothing, got the wrong things, had to rephrase. Look for "it
+          found it straight away," "no results," "these aren't what I
+          meant," "I had to try three different words."
         not_this: >
-          If the participant is browsing or navigating (not searching),
-          that's navigation clarity. If the content they want doesn't
-          exist (not just hard to find), that's feature gap (Useful).
-          Search effectiveness is about the search-and-filter tools
-          specifically.
+          If they are browsing rather than searching, that is navigation
+          clarity or content discoverability. If the result was right but
+          the page it led to was wrong for them, that is usefulness.
+          Search effectiveness is the query and its results.
 
+      # M-07 (A). Essay: "locatable objects"; Ambient Findability: "easy to discover or locate".
       - name: content discoverability
         definition: >
-          Content, features, or information the participant needs are
-          easy to locate within the product — they surface naturally
-          rather than being buried or hidden.
+          Whether content and features the participant would want are
+          surfaced where they would look — or sit unseen even though they
+          exist.
         apply_when: >
-          The participant finds or fails to find content they need —
-          not through search or navigation specifically, but through
-          the general visibility and prominence of information. Look
-          for "I didn't know that was there," "this was buried," "oh,
-          I didn't see that," "it's right where I expected," "I almost
-          missed this."
+          The participant discovers something they did not know was there,
+          or fails to see something that was, or comments that useful
+          things are hidden or well placed. Look for "I didn't know that
+          was there," "oh, there's a whole section for that," "why is
+          this buried," "good, it's right where I'd expect."
         not_this: >
-          If the participant is commenting on navigation controls, that's
-          navigation clarity. If the content genuinely doesn't exist,
-          that's feature gap (Useful). If a specific interactive control
-          lacks visual cues, that's a signifier issue (Norman). Content
-          discoverability is about whether existing content is prominent
-          enough to be found.
+          If they are navigating a known structure, that is navigation
+          clarity. If they used search, that is search effectiveness. If
+          they saw it but the word for it misled them, that is labelling.
+          Content discoverability is presence versus visibility.
 
+      # M-07 (A). "Labeling systems" — one of the four IA systems in Rosenfeld & Morville.
       - name: labelling
         definition: >
-          The words used in the interface — menu labels, button text,
-          category names, headings — help or hinder the participant's
-          ability to find and understand what they need.
+          Whether the words the product uses for its sections, controls
+          and content match what the participant would call them — labels
+          that lead the right way, or mislead.
         apply_when: >
-          The participant is confused by or helped by the terminology
-          used in the interface, or can't match their vocabulary to the
-          product's vocabulary. Look for "what does X mean," "I'd call
-          that Y," "the label doesn't make sense," "I knew what that
-          meant immediately," "I wouldn't have looked under that name."
+          The participant reads a label and is helped or misled by it, or
+          comments on the vocabulary: "I'd never have called it that,"
+          "what does 'workspace' mean," "the heading told me exactly what
+          was in there," "it says 'archive' but it means delete."
         not_this: >
-          If the participant understands the label but disagrees with
-          the categorisation, that's navigation clarity or information
-          architecture (Garrett → Structure). If the wording affects
-          trust rather than findability, that's a Credible issue.
-          Labelling is about the match between the product's vocabulary
-          and the participant's vocabulary.
+          If the problem is where a thing sits rather than what it is
+          called, that is navigation clarity or content discoverability.
+          If the label is jargon the participant cannot decode at all,
+          Nielsen's jargon barrier also applies; here the question is
+          whether the word led them to the right place.
 
   # -------------------------------------------------------------------
-  # Accessible — does it work for everyone?
+  # Accessible — "accessible to people with disabilities"
   # -------------------------------------------------------------------
   - name: Accessible
-    subtitle: Can people with diverse abilities and contexts use it effectively?
+    subtitle: Can people with disabilities use it?
     colour_set: trust
     tags:
-      - name: inclusive design
+      # M-08 (R). His sentence: "our web sites should be accessible to people with disabilities (more than 10% of the population)". v1's four tags widened this to Microsoft's persona spectrum ("situational access", "and contexts") and to cognitive load ("cognitive accessibility", which is Nielsen H8 / Yablonski). Rescued: device and context → UXR device/channel; cognitive load → Yablonski Sweller.
+      - name: accessibility
+        renamed_from: [inclusive design, assistive compatibility, cognitive accessibility, situational access]
         definition: >
-          The product accommodates people with diverse physical,
-          sensory, or cognitive abilities — it doesn't assume one kind
-          of user or one way of interacting.
+          Whether people with disabilities can use the product — it works
+          with a screen reader, keyboard or other assistive technology,
+          text can be read and enlarged, contrast is sufficient, media
+          are captioned. Morville's accessible facet, scoped as he scoped
+          it.
         apply_when: >
-          The participant encounters or comments on the product's
-          accommodation (or lack of it) for diverse abilities. Look for
-          "I can't read this text," "there's no way to increase the
-          size," "the contrast is too low," "it works with my screen
-          reader," "the audio has captions."
+          The participant names a disability or an assistive technology
+          and reports what worked or failed, or comments on contrast,
+          text size, captions, keyboard operation, focus order, timing.
+          Look for "my screen reader just says 'button'," "I can't read
+          that grey text," "there are no captions," "I can't tab to it,"
+          "I need it bigger."
         not_this: >
-          If the participant faces difficulty that any user would face
-          (not specific to ability or context), that's a Usable issue.
-          If the text is small because of a visual design choice rather
-          than an accessibility failure, consider aesthetic quality
-          (Desirable). Inclusive design is specifically about
-          accommodating diverse abilities and needs.
-
-      - name: assistive compatibility
-        definition: >
-          The product works with assistive technologies — screen
-          readers, voice control, keyboard navigation, switch devices,
-          and other tools people with disabilities rely on.
-        apply_when: >
-          The participant uses or attempts to use assistive technology
-          with the product. Look for "my screen reader can't," "I
-          can't tab to this," "it works with voice control," "the
-          keyboard navigation is," "focus order doesn't make sense."
-        not_this: >
-          If the participant is using standard interaction methods (not
-          assistive technology) and having difficulty, that's a Usable
-          issue. Assistive compatibility is specifically about
-          compatibility with tools used by people with disabilities.
-
-      - name: cognitive accessibility
-        definition: >
-          The product doesn't overload the participant with too much
-          information, too many choices, or too much complexity —
-          it respects cognitive limits and varied cognitive abilities.
-        apply_when: >
-          The participant feels overwhelmed by information density,
-          complexity, or the number of options presented. Look for
-          "there's too much going on," "I can't take all this in,"
-          "it's overwhelming," "too many choices," "I need it simpler,"
-          "my brain hurts."
-        not_this: >
-          If the participant is confused by a specific interaction (not
-          by overall complexity), that's ease of use (Usable). If the
-          visual layout is cluttered but the participant isn't
-          describing cognitive strain, consider aesthetic quality
-          (Desirable). Cognitive accessibility is about the mental
-          demand placed on the user, not visual clutter alone.
-
-      - name: situational access
-        definition: >
-          The product works in the participant's real-world context —
-          on their device, in their environment, in their language,
-          under their connectivity conditions.
-        apply_when: >
-          The participant describes using the product in a specific
-          context that affects their experience — on a phone, in bright
-          sunlight, with one hand, in a noisy environment, with slow
-          internet. Look for "on my phone it," "I couldn't see the
-          screen because," "when I'm on the bus," "it doesn't work
-          offline," "it's not in my language."
-        not_this: >
-          If the difficulty is about permanent disability rather than
-          situational context, that's inclusive design. If the
-          participant is switching between devices as a behaviour
-          pattern, consider whether the finding is about accessibility
-          or about the product's cross-platform strategy. Situational
-          access is about temporary or environmental constraints.
+          If the participant is not describing a disability or assistive
+          need, this facet does not apply: a small screen or a noisy
+          room is device/channel in the UXR codebook; too much to take in
+          is cognitive overload in Yablonski's. If the difficulty is
+          general rather than access-related, that is ease of use.
 
   # -------------------------------------------------------------------
-  # Credible — do users trust it?
+  # Credible — "whether users trust and believe what we tell them"
   # -------------------------------------------------------------------
   - name: Credible
-    subtitle: Do users trust and believe what the product tells them?
+    subtitle: Do people trust and believe what the product tells them?
     colour_set: emo
     tags:
+      # M-09 (R). "trust and believe what we tell them"; Stanford guideline 4 (honest, trustworthy people behind the site) and 3 (visible expertise) fold in. The essay points readers at "Stanford's ten guidelines", so the Credible sub-tags are one step from him — the one group where sub-tags come from a source he names. v1's "social proof" (Cialdini) is UXR social influence.
       - name: trustworthiness
+        renamed_from: social proof
         definition: >
-          The participant forms an overall judgement about whether the
-          product and the organisation behind it can be trusted — whether
-          they feel safe giving it their time, data, or money.
+          Whether the participant believes there are honest, competent
+          people behind the product and that it will do what it says —
+          the overall judgement of trust, and the cues that build or
+          break it.
         apply_when: >
-          The participant makes trust judgements about the product or
-          its creators. Look for "I don't trust this," "it feels
-          legit," "I wouldn't put my card details in here," "it seems
-          reliable," "something feels off," "I feel safe using this."
+          The participant expresses or withholds trust: "I believe them,"
+          "this looks dodgy," "I wouldn't put my card details in here,"
+          "they clearly know what they're doing," "it feels legit." Also
+          expertise on display, or its absence.
         not_this: >
-          If the participant is commenting on the visual impression of
-          professionalism, that's brand perception (Desirable). If
-          they're evaluating the accuracy of specific content, that's
-          content accuracy. Trustworthiness is the holistic trust
-          judgement, not visual impression or factual accuracy alone.
+          If the doubt is specifically about a fact being right or up to
+          date, that is content accuracy. If it is about who is behind it
+          or how to reach them, that is transparency. If the participant
+          is relying on other people's reviews or ratings, that is social
+          influence in the UXR codebook. Trustworthiness is the
+          participant's own judgement of the product's good faith.
 
+      # M-09 (A). Stanford guidelines 1 ("make it easy to verify the accuracy of the information") and 8 ("update your site's content often").
       - name: content accuracy
         definition: >
-          The participant evaluates whether the product's content —
-          descriptions, specifications, claims, prices, dates — is
-          accurate, current, and honest.
+          Whether the participant believes the information is correct and
+          current — facts check out, prices are right, nothing is stale
+          or contradicted elsewhere.
         apply_when: >
-          The participant questions or confirms the accuracy of specific
-          information in the product. Look for "is this up to date,"
-          "that price is wrong," "the description doesn't match," "I
-          checked and it's accurate," "this information seems old."
+          The participant questions or confirms a fact, spots something
+          out of date, notices two pages disagree, or says they would
+          check elsewhere. Look for "is that still right," "that's not
+          what the other page said," "this looks out of date," "I'd
+          double-check that."
         not_this: >
-          If the participant is making a general trust judgement (not
-          about specific content), that's trustworthiness. If the
-          content is accurate but misleading in how it's presented,
-          that's transparency. Content accuracy is about factual
-          correctness of specific claims.
+          If the doubt is about the organisation's honesty rather than a
+          specific fact, that is trustworthiness. If information is
+          missing rather than wrong, that is usefulness or content
+          discoverability. Content accuracy is about the truth and
+          currency of what is shown.
 
+      # M-09 (A, reworded). Stanford guidelines 2 (a real organisation behind the site), 5 (easy to contact), 9 (restraint with promotional content). v1's "algorithms, business model, data collection" was 2010s privacy vocabulary, not the 2002 guidelines he cites.
       - name: transparency
         definition: >
-          The product is open about its practices — pricing, data
-          collection, terms, algorithms, and business model. The
-          participant can understand what's happening and why.
+          Whether the participant can tell who is behind the product, how
+          to reach them, and what is being sold — a real organisation,
+          contact details, promotion kept in proportion.
         apply_when: >
-          The participant comments on whether the product is upfront
-          about what it does, what it costs, or how it uses their
-          data. Look for "why do they need this," "hidden fees," "it's
-          not clear what happens to my data," "I like that they
-          explain," "what's the catch," "the pricing is transparent."
+          The participant looks for or comments on the people and
+          organisation behind the product, ways to contact them, physical
+          presence, or the honesty of its promotional tone. Look for
+          "who actually runs this," "there's no way to contact anyone,"
+          "at least they say who they are," "it's a bit salesy."
         not_this: >
-          If the participant is making a general trust judgement, that's
-          trustworthiness. If they're questioning the accuracy of a
-          specific claim, that's content accuracy. Transparency is
-          about openness of practices and policies, not truthfulness of
-          individual facts.
-
-      - name: social proof
-        definition: >
-          Evidence from other people — reviews, ratings, testimonials,
-          usage counts, expert endorsements — that influences the
-          participant's trust in the product.
-        apply_when: >
-          The participant references or looks for evidence from other
-          users or authorities. Look for "the reviews say," "how many
-          people use this," "has anyone recommended this," "I'd want
-          to see ratings," "no reviews makes me nervous," "the expert
-          endorsement helped."
-        not_this: >
-          If other people are influencing the participant's behaviour
-          through social norms (not product reviews), that's social
-          influence in the UXR codebook, not social proof here. If
-          the participant is judging the product's visual credibility,
-          that's trustworthiness or brand perception (Desirable). Social
-          proof is about third-party evidence specifically.
+          If the participant trusts or distrusts the product as a whole,
+          that is trustworthiness. If they are questioning a specific
+          fact, that is content accuracy. Transparency is about the
+          organisation showing itself.
 
   # -------------------------------------------------------------------
-  # Valuable — is the exchange worth it?
+  # Valuable — "deliver value to our sponsors"
   # -------------------------------------------------------------------
   - name: Valuable
-    subtitle: Does the product deliver enough value to justify the exchange?
+    subtitle: Does it deliver value to the sponsor — the mission, the bottom line, customer satisfaction?
     colour_set: opp
     tags:
-      - name: worth it
+      # M-10 (R). Essay: for-profits, the experience "must contribute to the bottom line and improve customer satisfaction"; non-profits, "advance the mission". v1 inverted the facet to user-side cost-benefit (worth it, competitive value, time well spent — Tristan Harris 2013 — and return intent). The participant-side evidence for the sponsor's value is what they say they would pay, switch, recommend, or came away with.
+      - name: customer satisfaction
+        renamed_from: [worth it, time well spent]
         definition: >
-          The participant's assessment of whether the product justifies
-          their investment of time, money, attention, or personal data —
-          the cost-benefit equation from the user's perspective.
+          Whether the experience left the participant satisfied — their
+          overall verdict on whether it was worth their time and money,
+          the thing Morville names as the for-profit sponsor's second
+          measure of value.
         apply_when: >
-          The participant weighs what they get against what they give.
-          Look for "it's worth the price," "not worth the hassle,"
-          "I'd pay for this," "the free version is enough," "for what
-          it costs," "I'm getting my money's worth."
+          The participant sums up: happy with it, not happy, worth the
+          money, not worth the bother, would use it again. Look for "I'm
+          really pleased with that," "that was worth it," "not worth the
+          hassle," "I'd use this again," "I feel a bit cheated."
         not_this: >
-          If the participant is describing the product's usefulness
-          without a value judgement, that's a Useful issue. If they're
-          comparing to competitors, that's competitive value. Worth it
-          is about the personal cost-benefit assessment, not the
-          product's absolute quality.
+          If the verdict is specifically about paying, switching or
+          recommending, that is bottom line. If it is about the outcome
+          the organisation exists to produce, that is mission. If it is a
+          judgement about one facet (it was easy, it was pretty), use that
+          facet. Customer satisfaction is the overall verdict.
 
-      - name: competitive value
+      # M-10 (R). "contribute to the bottom line". Evidence from the participant: what they would pay for, switch for, recommend, or leave over.
+      - name: bottom line
+        renamed_from: [return intent, competitive value]
         definition: >
-          The participant compares the product to alternatives —
-          competitors, substitutes, or doing nothing — and judges
-          whether it offers enough to win their choice.
+          Whether the participant's behaviour would contribute to the
+          sponsor's commercial success — they would pay, come back,
+          switch to it, recommend it, or take their business elsewhere.
         apply_when: >
-          The participant names or implies alternatives and makes a
-          comparison. Look for "compared to X," "I could just use,"
-          "what makes this better than," "nothing else does this,"
-          "there are cheaper options," "I switched from X because."
+          The participant states an intention that has commercial weight:
+          "I'd pay for this," "I'd switch from what I use now," "I'd
+          tell my friends," "I'd cancel," "I'll go back to the other one."
+          Comparisons to competitors on the same footing belong here.
         not_this: >
-          If the participant evaluates the product on its own merits
-          (no comparison), that's worth it. If they reference a
-          competitor's specific feature rather than overall value,
-          consider whether the finding is about competitive positioning
-          or about a feature gap (Useful). Competitive value requires
-          explicit or implicit comparison.
+          If the participant is satisfied but says nothing about paying,
+          returning or recommending, that is customer satisfaction. If the
+          value they describe is the outcome the organisation exists for
+          rather than revenue, that is mission. Bottom line is the
+          commercial consequence of the experience.
 
-      - name: time well spent
+      # M-10 (R, new). "The user experience must advance the mission." No predecessor in v1 — the tag that makes the honeycomb usable for public-sector, charity and clinical research, where the sponsor's value is not revenue.
+      - name: mission
         definition: >
-          The participant feels the product respects their time — the
-          experience is worthwhile, not wasteful. They leave feeling
-          they gained something rather than lost something.
+          Whether the experience advanced what the organisation exists to
+          do — the participant got the benefit the service is there to
+          deliver: the appointment booked, the claim made, the lesson
+          learned, the help received.
         apply_when: >
-          The participant comments on whether the time they spent was
-          productive, enjoyable, or wasted. Look for "that was a waste
-          of time," "time well spent," "I got what I needed quickly,"
-          "I spent an hour and got nowhere," "it respects my time."
+          The participant reports that the outcome the service is for was
+          reached, or not: "I got my prescription sorted," "I still don't
+          know if I'm eligible," "I understand my rights now," "I gave
+          up before I could apply." Applies to non-profit, public and
+          internal services above all, and to any product whose purpose
+          is an outcome rather than a sale.
         not_this: >
-          If the participant is commenting on task speed (too many
-          steps), that's efficiency (Usable). If they feel their money
-          was wasted, that's worth it. Time well spent is the
-          subjective assessment of whether the time investment was
-          justified by the outcome, not about the interaction speed.
-
-      - name: return intent
-        definition: >
-          The participant signals whether they would use the product
-          again, recommend it, or continue their relationship with it —
-          the forward-looking commitment.
-        apply_when: >
-          The participant expresses intent about future use or
-          recommendation. Look for "I'd definitely use this again,"
-          "I'd tell my friends," "I wouldn't come back," "I'll stick
-          with it," "I'm done with this," "I'd recommend it."
-        not_this: >
-          If the participant is describing sustained engagement in the
-          current session, that's engagement (Desirable). If they're
-          expressing loyalty to the brand rather than intent to return,
-          that's brand perception (Desirable). Return intent is about
-          the forward-looking decision to come back or not.
+          If the value is commercial — paying, switching, recommending —
+          that is bottom line. If it is the participant's overall
+          contentment without reference to the outcome, that is customer
+          satisfaction. If the product simply did what they needed in the
+          moment, usefulness may fit better; mission is about the
+          organisation's purpose being served.

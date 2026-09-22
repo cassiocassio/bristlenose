@@ -1,0 +1,220 @@
+{
+ "codebook": "yablonski",
+ "version": "2.0",
+ "register": "docs/design-codebook-yablonski.md",
+ "quotes": [
+  {
+   "id": "yablonski-001",
+   "kind": "golden",
+   "text": "There are fifty options here and I just froze, I can't decide.",
+   "accept": [
+    "Choice overload"
+   ],
+   "decision": "Y-03"
+  },
+  {
+   "id": "yablonski-002",
+   "kind": "golden",
+   "text": "Only three choices, easy, I picked straight away.",
+   "accept": [
+    "Hick: decision simplicity"
+   ],
+   "decision": "Y-03"
+  },
+  {
+   "id": "yablonski-003",
+   "kind": "golden",
+   "text": "The blue one caught my eye, that's the one I remember.",
+   "accept": [
+    "Von Restorff: option salience"
+   ],
+   "decision": "Y-06"
+  },
+  {
+   "id": "yablonski-004",
+   "kind": "golden",
+   "text": "I expected it to work like my email app, and it does.",
+   "accept": [
+    "Jakob: convention expectation"
+   ]
+  },
+  {
+   "id": "yablonski-005",
+   "kind": "golden",
+   "text": "I assumed swipe would go back like on my phone, and it didn't.",
+   "accept": [
+    "Jakob: transfer confusion"
+   ]
+  },
+  {
+   "id": "yablonski-006",
+   "kind": "golden",
+   "text": "It rejected my phone number because I put spaces in it.",
+   "accept": [
+    "Postel: input intolerance"
+   ]
+  },
+  {
+   "id": "yablonski-007",
+   "kind": "golden",
+   "text": "I typed the date any old way and it understood.",
+   "accept": [
+    "Postel: input forgiveness"
+   ]
+  },
+  {
+   "id": "yablonski-008",
+   "kind": "golden",
+   "text": "I never read the tour, I just skipped it and started clicking.",
+   "accept": [
+    "Carroll: active user paradox"
+   ],
+   "decision": "Y-09"
+  },
+  {
+   "id": "yablonski-009",
+   "kind": "golden",
+   "text": "That one moment when it found my file instantly, that's what I'll remember.",
+   "accept": [
+    "Kahneman: peak moment"
+   ]
+  },
+  {
+   "id": "yablonski-010",
+   "kind": "golden",
+   "text": "It all went fine and then the last screen crashed, so the whole thing feels bad.",
+   "accept": [
+    "Kahneman: ending effect"
+   ]
+  },
+  {
+   "id": "yablonski-011",
+   "kind": "golden",
+   "text": "That half-finished form is nagging at me, I want to go back and complete it.",
+   "accept": [
+    "Zeigarnik: unfinished pull"
+   ]
+  },
+  {
+   "id": "yablonski-012",
+   "kind": "golden",
+   "text": "I'm on step 4 of 5, I'm not stopping now.",
+   "accept": [
+    "Hull: completion momentum"
+   ]
+  },
+  {
+   "id": "yablonski-013",
+   "kind": "golden",
+   "text": "By the time I got to the last option I'd forgotten the first one.",
+   "accept": [
+    "Working memory: overload"
+   ],
+   "decision": "Y-04"
+  },
+  {
+   "id": "yablonski-014",
+   "kind": "golden",
+   "text": "It looks so polished I just assumed it would work.",
+   "accept": [
+    "Kurosu: beauty trust"
+   ]
+  },
+  {
+   "id": "yablonski-015",
+   "kind": "golden",
+   "text": "It's a bit clunky but it's so pretty I don't mind.",
+   "accept": [
+    "Kurosu: aesthetic forgiveness"
+   ]
+  },
+  {
+   "id": "yablonski-016",
+   "kind": "golden",
+   "text": "I thought those two buttons went together because they were next to each other.",
+   "accept": [
+    "Gestalt: grouping confusion"
+   ],
+   "decision": "Y-07"
+  },
+  {
+   "id": "yablonski-017",
+   "kind": "golden",
+   "text": "The related settings are boxed together, it's obvious what belongs to what.",
+   "accept": [
+    "Gestalt: grouping clarity"
+   ]
+  },
+  {
+   "id": "yablonski-018",
+   "kind": "golden",
+   "text": "I thought that big banner was an ad so I never looked at it.",
+   "accept": [
+    "Selective attention: overlooked"
+   ],
+   "decision": "Y-09"
+  },
+  {
+   "id": "yablonski-019",
+   "kind": "golden",
+   "text": "It makes me pick the region, the format, the codec — why can't it just do it?",
+   "accept": [
+    "Tesler: complexity burden"
+   ]
+  },
+  {
+   "id": "yablonski-020",
+   "kind": "golden",
+   "text": "It just worked it out for me, I didn't have to choose anything.",
+   "accept": [
+    "Tesler: complexity absorbed"
+   ]
+  },
+  {
+   "id": "yablonski-021",
+   "kind": "golden",
+   "text": "The buttons are tiny and right next to each other, I keep hitting the wrong one.",
+   "accept": [
+    "Fitts: target difficulty"
+   ]
+  },
+  {
+   "id": "yablonski-022",
+   "kind": "golden",
+   "text": "There's too much to take in on this screen, I can't process it.",
+   "accept": [
+    "Sweller: cognitive overload"
+   ]
+  },
+  {
+   "id": "yablonski-023",
+   "kind": "golden",
+   "text": "It responds instantly, it feels like it's keeping up with me.",
+   "accept": [
+    "Doherty: instant response"
+   ]
+  },
+  {
+   "id": "yablonski-024",
+   "kind": "golden",
+   "text": "Every click takes two seconds and it's driving me mad.",
+   "accept": [
+    "Doherty: waiting frustration"
+   ]
+  },
+  {
+   "id": "yablonski-025",
+   "kind": "trap",
+   "text": "I just went with whatever was pre-selected, I didn't look at the others.",
+   "accept": [],
+   "note": "Thaler retired; Nielsen remembered for me / risky default",
+   "decision": "Y-05"
+  },
+  {
+   "id": "yablonski-026",
+   "kind": "oos",
+   "text": "I usually explore a new city on foot the first day, no map.",
+   "accept": []
+  }
+ ]
+}

@@ -1,0 +1,309 @@
+{
+ "codebook": "nielsen",
+ "version": "2.0",
+ "register": "docs/design-codebook-nielsen-register.md",
+ "quotes": [
+  {
+   "id": "nielsen-001",
+   "kind": "golden",
+   "text": "Good, it says 'uploading, 40%' so I know it's working.",
+   "accept": [
+    "clear status"
+   ]
+  },
+  {
+   "id": "nielsen-002",
+   "kind": "golden",
+   "text": "Is it doing anything? Nothing's changed, I can't tell.",
+   "accept": [
+    "opaque status"
+   ]
+  },
+  {
+   "id": "nielsen-003",
+   "kind": "golden",
+   "text": "Oh, I was still in edit mode, that's why everything looked different.",
+   "accept": [
+    "opaque status"
+   ],
+   "note": "the mode case: Norman owns mode error; here it reads as status",
+   "decision": "NL-04"
+  },
+  {
+   "id": "nielsen-004",
+   "kind": "golden",
+   "text": "There's a progress bar, so at least I know how long it'll be.",
+   "accept": [
+    "progress indication"
+   ]
+  },
+  {
+   "id": "nielsen-005",
+   "kind": "golden",
+   "text": "It says 'Add to bag', plain English, I know what that does.",
+   "accept": [
+    "natural language"
+   ]
+  },
+  {
+   "id": "nielsen-006",
+   "kind": "golden",
+   "text": "What's an 'EVP'? I have no idea what that means.",
+   "accept": [
+    "jargon barrier"
+   ]
+  },
+  {
+   "id": "nielsen-007",
+   "kind": "golden",
+   "text": "The little folder icon, I get it, it works like a folder.",
+   "accept": [
+    "metaphor fit"
+   ]
+  },
+  {
+   "id": "nielsen-008",
+   "kind": "golden",
+   "text": "Why is 'Confirm' before 'Review'? I'd expect to review first.",
+   "accept": [
+    "logical ordering"
+   ]
+  },
+  {
+   "id": "nielsen-009",
+   "kind": "golden",
+   "text": "There's a clear 'cancel' so I can bail out, good.",
+   "accept": [
+    "emergency exit"
+   ]
+  },
+  {
+   "id": "nielsen-010",
+   "kind": "golden",
+   "text": "I'm stuck in this wizard, there's no way out except closing the tab.",
+   "accept": [
+    "trapped"
+   ]
+  },
+  {
+   "id": "nielsen-011",
+   "kind": "golden",
+   "text": "I deleted it by mistake but there's an undo, phew.",
+   "accept": [
+    "undo available"
+   ]
+  },
+  {
+   "id": "nielsen-012",
+   "kind": "golden",
+   "text": "On this page the button's on the left, on the other page it's on the right.",
+   "accept": [
+    "internal inconsistency"
+   ]
+  },
+  {
+   "id": "nielsen-013",
+   "kind": "golden",
+   "text": "Every other app puts settings under the gear, this one hides it in 'More'.",
+   "accept": [
+    "platform convention"
+   ]
+  },
+  {
+   "id": "nielsen-014",
+   "kind": "golden",
+   "text": "It calls it a 'bag' here and a 'basket' there, are those the same thing?",
+   "accept": [
+    "terminology inconsistency"
+   ]
+  },
+  {
+   "id": "nielsen-015",
+   "kind": "golden",
+   "text": "I'm scared to press this in case it charges me.",
+   "accept": [
+    "hesitation"
+   ]
+  },
+  {
+   "id": "nielsen-016",
+   "kind": "golden",
+   "text": "I nearly deleted the whole folder, I caught it just in time.",
+   "accept": [
+    "near miss"
+   ]
+  },
+  {
+   "id": "nielsen-017",
+   "kind": "golden",
+   "text": "It won't let me submit without filling in the date, good.",
+   "accept": [
+    "guardrail"
+   ],
+   "decision": "NL-08"
+  },
+  {
+   "id": "nielsen-018",
+   "kind": "golden",
+   "text": "It had 'send to everyone' ticked by default, that's dangerous.",
+   "accept": [
+    "risky default"
+   ]
+  },
+  {
+   "id": "nielsen-019",
+   "kind": "golden",
+   "text": "It deleted everything without warning, I can't get that back.",
+   "accept": [
+    "destructive action"
+   ],
+   "decision": "NL-06"
+  },
+  {
+   "id": "nielsen-020",
+   "kind": "golden",
+   "text": "All the options are right there on the screen, I don't have to remember anything.",
+   "accept": [
+    "visible options"
+   ]
+  },
+  {
+   "id": "nielsen-021",
+   "kind": "golden",
+   "text": "I have to remember the code from the previous screen, why doesn't it show it?",
+   "accept": [
+    "memory burden"
+   ]
+  },
+  {
+   "id": "nielsen-022",
+   "kind": "golden",
+   "text": "Nice, it remembered my address, I don't have to type it again.",
+   "accept": [
+    "remembered for me"
+   ],
+   "decision": "NL-07"
+  },
+  {
+   "id": "nielsen-023",
+   "kind": "golden",
+   "text": "I wish there was a keyboard shortcut for this, I do it fifty times a day.",
+   "accept": [
+    "shortcut desire"
+   ]
+  },
+  {
+   "id": "nielsen-024",
+   "kind": "golden",
+   "text": "Doing this one at a time for two hundred items is killing me.",
+   "accept": [
+    "repetitive task"
+   ]
+  },
+  {
+   "id": "nielsen-025",
+   "kind": "golden",
+   "text": "I'd like to hide the panels I never use.",
+   "accept": [
+    "customisation"
+   ]
+  },
+  {
+   "id": "nielsen-026",
+   "kind": "golden",
+   "text": "There's so much on this page I can't see the thing I want.",
+   "accept": [
+    "information overload"
+   ]
+  },
+  {
+   "id": "nielsen-027",
+   "kind": "golden",
+   "text": "It's clean, just the essentials, I like that.",
+   "accept": [
+    "focused design"
+   ]
+  },
+  {
+   "id": "nielsen-028",
+   "kind": "golden",
+   "text": "Everything is shouting at me, nothing stands out.",
+   "accept": [
+    "competing elements"
+   ]
+  },
+  {
+   "id": "nielsen-029",
+   "kind": "golden",
+   "text": "It says 'password needs a number', fine, that tells me what to do.",
+   "accept": [
+    "clear error message"
+   ]
+  },
+  {
+   "id": "nielsen-030",
+   "kind": "golden",
+   "text": "Error 0x80004005. What am I supposed to do with that?",
+   "accept": [
+    "cryptic error"
+   ]
+  },
+  {
+   "id": "nielsen-031",
+   "kind": "golden",
+   "text": "'Invalid input' — well thanks, that makes me feel stupid.",
+   "accept": [
+    "blame language"
+   ]
+  },
+  {
+   "id": "nielsen-032",
+   "kind": "golden",
+   "text": "It told me exactly how to fix it, click here to resend.",
+   "accept": [
+    "recovery guidance"
+   ]
+  },
+  {
+   "id": "nielsen-033",
+   "kind": "golden",
+   "text": "I found the FAQ and it answered my question.",
+   "accept": [
+    "self-service help"
+   ]
+  },
+  {
+   "id": "nielsen-034",
+   "kind": "golden",
+   "text": "There's no help anywhere, no FAQ, no contact, nothing.",
+   "accept": [
+    "help absent"
+   ]
+  },
+  {
+   "id": "nielsen-035",
+   "kind": "golden",
+   "text": "The little tooltip right next to the field told me the format, that's handy.",
+   "accept": [
+    "contextual guidance"
+   ]
+  },
+  {
+   "id": "nielsen-036",
+   "kind": "golden",
+   "text": "Where was I? I've lost track of which step I'm on.",
+   "accept": [
+    "progress indication",
+    "opaque status"
+   ],
+   "note": "v1 'context loss' retired to UXR; 'which step am I on' is also H1 status, which Nielsen would accept (NL-05)",
+   "decision": "NL-05"
+  },
+  {
+   "id": "nielsen-037",
+   "kind": "oos",
+   "text": "I've been a nurse for twelve years, mostly in A&E.",
+   "accept": []
+  }
+ ]
+}

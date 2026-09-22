@@ -1,0 +1,206 @@
+{
+ "codebook": "morville",
+ "version": "2.0",
+ "register": "docs/design-codebook-morville.md",
+ "quotes": [
+  {
+   "id": "morville-001",
+   "kind": "golden",
+   "text": "This is exactly what I needed, it does the one thing I came for.",
+   "accept": [
+    "usefulness"
+   ],
+   "decision": "M-03"
+  },
+  {
+   "id": "morville-002",
+   "kind": "golden",
+   "text": "It's got a hundred features and not the one I actually need.",
+   "accept": [
+    "usefulness"
+   ],
+   "decision": "M-03"
+  },
+  {
+   "id": "morville-003",
+   "kind": "golden",
+   "text": "That was easy, three taps and done.",
+   "accept": [
+    "ease of use"
+   ],
+   "decision": "M-04"
+  },
+  {
+   "id": "morville-004",
+   "kind": "golden",
+   "text": "I had to learn how it wanted me to do it, it's not obvious at all.",
+   "accept": [
+    "ease of use"
+   ],
+   "note": "v1 would have said learnability",
+   "decision": "M-04"
+  },
+  {
+   "id": "morville-005",
+   "kind": "golden",
+   "text": "It doesn't look like a real bank, it looks like a cheap template.",
+   "accept": [
+    "brand and identity"
+   ],
+   "decision": "M-05"
+  },
+  {
+   "id": "morville-006",
+   "kind": "golden",
+   "text": "It's gorgeous, I love how it feels to use.",
+   "accept": [
+    "emotional design"
+   ],
+   "decision": "M-06"
+  },
+  {
+   "id": "morville-007",
+   "kind": "golden",
+   "text": "It just leaves me cold, there's nothing to it.",
+   "accept": [
+    "emotional design"
+   ],
+   "decision": "M-06"
+  },
+  {
+   "id": "morville-008",
+   "kind": "golden",
+   "text": "I can always see where I am, the menu makes sense.",
+   "accept": [
+    "navigation clarity"
+   ]
+  },
+  {
+   "id": "morville-009",
+   "kind": "golden",
+   "text": "I searched for 'king size' and got nothing, then just 'king' and got everything.",
+   "accept": [
+    "search effectiveness"
+   ]
+  },
+  {
+   "id": "morville-010",
+   "kind": "golden",
+   "text": "Oh, there's a whole section for that? I had no idea it was there.",
+   "accept": [
+    "content discoverability"
+   ]
+  },
+  {
+   "id": "morville-011",
+   "kind": "golden",
+   "text": "It says 'archive' but it means delete, I'd never have called it that.",
+   "accept": [
+    "labelling"
+   ]
+  },
+  {
+   "id": "morville-012",
+   "kind": "golden",
+   "text": "My screen reader just says 'button', 'button', 'button', I've no idea which is which.",
+   "accept": [
+    "accessibility"
+   ],
+   "decision": "M-08"
+  },
+  {
+   "id": "morville-013",
+   "kind": "golden",
+   "text": "I can't read that grey text on white, I need it bigger.",
+   "accept": [
+    "accessibility"
+   ],
+   "decision": "M-08"
+  },
+  {
+   "id": "morville-014",
+   "kind": "golden",
+   "text": "I wouldn't put my card details in here, it feels dodgy.",
+   "accept": [
+    "trustworthiness"
+   ],
+   "decision": "M-09"
+  },
+  {
+   "id": "morville-015",
+   "kind": "golden",
+   "text": "That's not what the other page said, one of them is out of date.",
+   "accept": [
+    "content accuracy"
+   ],
+   "decision": "M-09"
+  },
+  {
+   "id": "morville-016",
+   "kind": "golden",
+   "text": "There's no way to find out who actually runs this or how to contact anyone.",
+   "accept": [
+    "transparency"
+   ],
+   "decision": "M-09"
+  },
+  {
+   "id": "morville-017",
+   "kind": "golden",
+   "text": "I'm really pleased with that, it was worth the money.",
+   "accept": [
+    "customer satisfaction"
+   ],
+   "decision": "M-10"
+  },
+  {
+   "id": "morville-018",
+   "kind": "golden",
+   "text": "I'd switch from what I use now, and I'd tell my friends.",
+   "accept": [
+    "bottom line"
+   ],
+   "decision": "M-10"
+  },
+  {
+   "id": "morville-019",
+   "kind": "golden",
+   "text": "I still don't know if I'm eligible, so I gave up before I could apply.",
+   "accept": [
+    "mission"
+   ],
+   "decision": "M-10"
+  },
+  {
+   "id": "morville-020",
+   "kind": "golden",
+   "text": "I got my prescription sorted, which is all I wanted from it.",
+   "accept": [
+    "mission"
+   ],
+   "decision": "M-10"
+  },
+  {
+   "id": "morville-021",
+   "kind": "trap",
+   "text": "It's so small on my phone in the sun, I can't see anything.",
+   "accept": [],
+   "note": "situational access retired; UXR device/channel",
+   "decision": "M-08"
+  },
+  {
+   "id": "morville-022",
+   "kind": "trap",
+   "text": "The reviews all said it was good so I went for it.",
+   "accept": [],
+   "note": "social proof retired; UXR social influence",
+   "decision": "M-09"
+  },
+  {
+   "id": "morville-023",
+   "kind": "oos",
+   "text": "We normally do the big shop on a Saturday and I take the kids.",
+   "accept": []
+  }
+ ]
+}

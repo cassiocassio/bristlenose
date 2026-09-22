@@ -1,22 +1,7 @@
-# Nielsen codebook — 10 Usability Heuristics for User Interface Design (NN/g,
-# 1994; revised 2020).
-#
-# HOW TO CHANGE THIS FILE. Every wording decision carries a dated `# NL-xx`
-# comment pointing at the register in docs/design-codebook-nielsen-register.md
-# (the adaptation analysis is docs/design-nielsen-codebook.md). A decision is
-# reopened by a WITNESS QUOTE that fails in the golden fixture
-# (tests/fixtures/codebook-golden/nielsen.json), never by a hunch. Renamed
-# tags and groups carry `renamed_from:`; `codebook_sync` renames installed rows.
-#
-# Scope rule (NL-01): the heuristics are Nielsen's; the sub-tags are Bristlenose's
-# participant-side reading of each, and the register says which are his words,
-# which are his concepts under our labels, and which are deliberate adaptation
-# (H5's hesitation and near miss observe the symptom, by design).
 id: nielsen
 title: 10 Usability Heuristics for User Interface Design
 author: Jakob Nielsen
 enabled: true
-version: "2.0"  # NL-02: bumped on every accepted wording change
 
 description: >
   Ten broad rules of thumb for interaction design, refined from a factor
@@ -28,11 +13,11 @@ description: >
   frameworks subsume into broader categories.
 
 author_bio: >
-  Co-founder of Nielsen Norman Group. Coined the term "discount usability" and
+  Co-founder of Nielsen Norman Group and one of the most cited researchers in
+  human-computer interaction. Coined the term "discount usability" and
   developed the heuristic evaluation method that became standard UX practice.
-  Author of "Usability Engineering" (1993). Nine heuristics were published with Rolf Molich in 1990; the
-  tenth, help and documentation, followed in "Usability Engineering",
-  and the set was refined in 1994.
+  Author of "Usability Engineering" (1993). The 10 heuristics were published
+  with Rolf Molich in 1990 and refined in 1994.
 
 author_links:
   - label: 10 Usability Heuristics
@@ -54,19 +39,15 @@ preamble: >
   careful discrimination because the participant feels the friction but
   may not name the cause. For these, look for explicit comparison
   language ("on the other page," "in [other app]," "every other app does
-  it this way") or moderator-elicited context before applying. Error prevention
-  (#5) is an expert's judgement about what a design stops; its tags here
-  observe the participant-side symptom — hesitation, a near miss — by
-  design. If the participant is not discussing a designed product, interface, or service,
+  it this way") or moderator-elicited context before applying. If the
+  participant is not discussing a designed product, interface, or service,
   do not apply any tag from this codebook.
 
 groups:
   # -------------------------------------------------------------------
   # H1: Visibility of system status
   # -------------------------------------------------------------------
-  # NL-03 (R). The 2020 title, sentence-cased; v1 compressed it to "Status visibility".
-  - name: Visibility of system status
-    renamed_from: Status visibility
+  - name: Status visibility
     subtitle: Does the user know what's happening right now?
     colour_set: ux
     tags:
@@ -88,7 +69,6 @@ groups:
           is about ongoing system state awareness, not one-shot action
           confirmation.
 
-      # NL-04 (2.0). v1's "mode confusion" is Norman's term (1983; DOET) and duplicated norman.yaml's mode error; retired, and the pointer lives here.
       - name: opaque status
         definition: >
           The participant cannot tell what the system is doing or has
@@ -103,9 +83,8 @@ groups:
         not_this: >
           If the system responded but the response was confusing, that's
           closer to cryptic error (H9) or uninformative feedback (Norman).
-          If a hidden mode or state is what changed the behaviour, that's mode
-          error (Norman → Slips and mistakes). Opaque status is about the
-          absence of communication — the system is silent, not unclear.
+          Opaque status is about the absence of communication — the
+          system is silent, not unclear.
 
       - name: progress indication
         definition: >
@@ -126,13 +105,29 @@ groups:
           is specifically about knowing where you are in a multi-step or
           time-consuming process.
 
+      - name: mode confusion
+        definition: >
+          The participant doesn't realise the system is in a particular
+          mode or state, and their actions produce unexpected results
+          because of it.
+        apply_when: >
+          The participant is surprised by the system's behaviour because
+          they didn't know they were in a particular mode — edit mode,
+          preview mode, offline mode, a filtered view. Look for "oh, I
+          was in edit mode," "I didn't realise the filter was on," "why
+          is it doing that — oh, I'm still in," "everything looks
+          different because."
+        not_this: >
+          If the participant expected a different outcome because they
+          misunderstood the system (not because of a hidden mode), that's
+          model mismatch (Norman → Conceptual model). Mode confusion
+          specifically involves an undisclosed or easy-to-miss system
+          state that changes behaviour.
 
   # -------------------------------------------------------------------
   # H2: Match between system and the real world
   # -------------------------------------------------------------------
-  # NL-03 (R). The 2020 title, sentence-cased; v1 compressed it to "Real-world matching".
-  - name: Match between system and the real world
-    renamed_from: Real-world matching
+  - name: Real-world matching
     subtitle: Does the system speak the user's language?
     colour_set: ux
     tags:
@@ -203,7 +198,7 @@ groups:
           most important one at the top."
         not_this: >
           If the participant is commenting on the grouping or hierarchy
-          of items (not their sequence), consider natural mapping (Norman
+          of items (not their sequence), consider grouping (Norman
           → Mapping). If the ordering issue is about navigation
           structure, consider navigation clarity (Morville → Findable).
           Logical ordering is about sequence matching real-world
@@ -212,9 +207,7 @@ groups:
   # -------------------------------------------------------------------
   # H3: User control and freedom
   # -------------------------------------------------------------------
-  # NL-03 (R). The 2020 title, sentence-cased; v1 compressed it to "Control and freedom".
-  - name: User control and freedom
-    renamed_from: Control and freedom
+  - name: Control and freedom
     subtitle: Can the user escape, undo, and recover?
     colour_set: task
     tags:
@@ -249,7 +242,7 @@ groups:
           cancel," "I have to start all over."
         not_this: >
           If the participant is confused about what to do next (not
-          trapped), that's ease of use (Morville → Usable). If
+          trapped), that's an ease-of-use issue (Morville → Usable). If
           they made an error and can't reverse it, that's a missing undo
           — being trapped is about escape routes, not action reversal.
 
@@ -268,6 +261,24 @@ groups:
           action), that's emergency exit. If they worry about
           irreversible consequences before acting, that's destructive
           action. Undo is about reversing something already done.
+
+      - name: destructive action
+        definition: >
+          An action has permanent or hard-to-reverse consequences and
+          the participant is aware of or worried about the risk —
+          deleting data, submitting irreversibly, overwriting work.
+        apply_when: >
+          The participant expresses concern about an action's
+          permanence, asks whether something can be undone, or reacts to
+          losing data. Look for "will this delete everything?," "I'm
+          afraid to click this," "what if I lose my work?," "it didn't
+          warn me before deleting," "I can't get that back."
+        not_this: >
+          If the participant is hesitating about a risky action but
+          hasn't taken it yet, that's hesitation (H5 Error prevention).
+          If they've already lost data and are reacting to the error
+          message, that's H9 (error recovery). Destructive action is
+          about the consequences of permanent actions, real or feared.
 
   # -------------------------------------------------------------------
   # H4: Consistency and standards
@@ -291,10 +302,9 @@ groups:
         not_this: >
           If the participant expected something based on habits from
           other products (not this product's own screens), that's
-          platform convention, or prior
-          experience (UXR → Mental models). If they can't find something without referencing
-          another screen, that's content discoverability (Morville → Findable).
-          Internal
+          platform convention or learned behaviour (Norman → Conceptual
+          model). If they can't find something without referencing
+          another screen, that's findability (Morville). Internal
           inconsistency requires the participant to compare two parts of
           the same product.
 
@@ -310,9 +320,9 @@ groups:
           "I expected the standard [pattern]," "in [competitor] you
           can," "usually there's a [element] here."
         not_this: >
-          If the participant applies a habit from another
+          If the participant applies learned behaviour from another
           product without explicitly noting a convention violation,
-          consider prior experience (UXR → Mental models). If
+          consider learned behaviour (Norman → Conceptual model). If
           they just expected something without stating a reference point,
           that's model mismatch (Norman), not this tag. Platform
           convention requires an explicit reference to how other
@@ -382,10 +392,10 @@ groups:
 
       - name: guardrail
         definition: >
-          A design element prevents or discourages a mistake — Nielsen's
-          "helpful constraints and good defaults", input validation, a
-          confirmation option before the participant commits, a warning
-          that guides them away from error.
+          A design element prevents or discourages a mistake — a
+          disabled button, a confirmation dialog, a smart default, input
+          validation, or a visual warning that guides the participant
+          away from error.
         apply_when: >
           The participant encounters something that stops or redirects
           them from making a mistake, or comments on the absence of such
@@ -395,29 +405,10 @@ groups:
         not_this: >
           If the participant is commenting on a specific constraint
           mechanism (grey-out, input mask), Norman's physical constraint
-          (Constraints) may be more precise. If they encountered a confirmation dialog specifically, Norman's
-          safeguard (Slips and mistakes) may fit. Guardrail is the broader Nielsen concept —
+          (Constraints) may be more precise. If they encountered a
+          confirmation dialog specifically, Norman's confirmation
+          (Feedback) may fit. Guardrail is the broader Nielsen concept —
           any design-level prevention, not a specific mechanism type.
-
-
-      # NL-06 (2.0, moved). H3 is about the exit; permanence of consequences is H5 ("present users with a confirmation option before they commit", "prevent high-cost errors first"). v1 filed it under H3.
-      - name: destructive action
-        definition: >
-          An action has permanent or hard-to-reverse consequences and
-          the participant is aware of or worried about the risk —
-          deleting data, submitting irreversibly, overwriting work.
-        apply_when: >
-          The participant expresses concern about an action's
-          permanence, asks whether something can be undone, or reacts to
-          losing data. Look for "will this delete everything?," "I'm
-          afraid to click this," "what if I lose my work?," "it didn't
-          warn me before deleting," "I can't get that back."
-        not_this: >
-          If the participant is hesitating about a risky action but
-          hasn't taken it yet, that's hesitation (H5 Error prevention).
-          If they've already lost data and are reacting to the error
-          message, that's H9 (error recovery). Destructive action is
-          about the consequences of permanent actions, real or feared.
 
       - name: risky default
         definition: >
@@ -433,7 +424,7 @@ groups:
           if I hadn't looked carefully."
         not_this: >
           If the participant benefits from a good default (it matches
-          their intent), that's remembered for me (H6 Recognition). If
+          their intent), that's helpful default (H6 Recognition). If
           the default causes an error that they discover later, that's
           an error recovery issue (H9). Risky default is about defaults
           that could mislead — whether or not they actually do in this
@@ -442,9 +433,7 @@ groups:
   # -------------------------------------------------------------------
   # H6: Recognition rather than recall
   # -------------------------------------------------------------------
-  # NL-03 (R). The 2020 title, sentence-cased; v1 compressed it to "Recognition over recall".
-  - name: Recognition rather than recall
-    renamed_from: Recognition over recall
+  - name: Recognition over recall
     subtitle: Does the interface minimise memory load?
     colour_set: ux
     tags:
@@ -482,18 +471,15 @@ groups:
           If the participant forgot a step in a process (memory lapse
           about what to do, not about data), that's memory lapse (Norman
           → Slips and mistakes). If they can't find information that is
-          actually on the current screen, that's content discoverability (Morville → Findable).
+          actually on the current screen, that's a findability issue.
           Memory burden is about information that's needed here but was
           shown there.
 
-      # NL-07 (R). NN/g files defaults under H5 ("Choose Good Defaults"); what it puts under H6 is "History and Recently Visited Content", suggestions, "easily retrievable" — which is what this definition always described. Only the name was wrong.
-      - name: remembered for me
-        renamed_from: helpful default
+      - name: helpful default
         definition: >
-          The system remembers, suggests or pre-fills from what the
-          participant has done before — recent items, history,
-          autocomplete — so they recognise rather than recall. NN/g's
-          "history and recently visited content".
+          The system pre-fills, suggests, or remembers based on context
+          — reducing what the participant must recall or type from
+          scratch.
         apply_when: >
           The participant encounters a pre-filled form, auto-suggestion,
           or remembered preference that saves them effort. Look for "it
@@ -504,15 +490,31 @@ groups:
           (H5 Error prevention). If the system remembers the
           participant's previous actions to offer shortcuts, consider
           whether that's more about efficiency (H7) than memory
-          reduction. Remembered for me is the system shouldering the recall burden.
+          reduction. Helpful default is about the system shouldering the
+          recall burden.
 
+      - name: context loss
+        definition: >
+          The participant loses track of where they are, what they were
+          doing, or what state they're in — the interface doesn't
+          maintain enough context for the participant to stay oriented.
+        apply_when: >
+          The participant asks "where was I?," navigates back to
+          reorient, or loses their place in a multi-step process. Look
+          for "I've lost track," "what was I doing?," "where am I in
+          this process?," "I need to start over because I forgot where
+          I was."
+        not_this: >
+          If the participant doesn't know what mode the system is in,
+          that's mode confusion (H1). If they lost their place because
+          of a navigation failure, that's navigation clarity (Morville →
+          Findable). Context loss is about the participant's own
+          orientation — losing the thread of what they were doing.
 
   # -------------------------------------------------------------------
   # H7: Flexibility and efficiency of use
   # -------------------------------------------------------------------
-  # NL-03 (R). The 2020 title, sentence-cased; v1 compressed it to "Flexibility and efficiency".
-  - name: Flexibility and efficiency of use
-    renamed_from: Flexibility and efficiency
+  - name: Flexibility and efficiency
     subtitle: Does the interface support both novice and expert workflows?
     colour_set: opp
     tags:
@@ -530,7 +532,8 @@ groups:
         not_this: >
           If the participant is frustrated by too many steps in a
           process they're learning (not one they know well), that's
-          ease of use (Morville → Usable). Shortcut desire specifically involves a participant
+          ease of use (Morville → Usable) or efficiency (Morville →
+          Usable). Shortcut desire specifically involves a participant
           who knows the task and wants a faster path — not a novice
           struggling with complexity.
 
@@ -549,7 +552,8 @@ groups:
         not_this: >
           If the participant has found a workaround for the repetition,
           that's workaround (UXR codebook). If the process has too many
-          steps for a single task (not repeated tasks), that's ease of use (Morville → Usable). Repetitive task is
+          steps for a single task (not repeated tasks), that's
+          efficiency (Morville → Usable). Repetitive task is
           specifically about the same action performed many times.
 
       - name: customisation
@@ -568,16 +572,14 @@ groups:
           If the participant is confused by too many options (not
           wanting to customise), that's information overload (H8). If
           they want a feature that doesn't exist (not a configuration
-          of existing features), that's feature request (UXR → Needs and desires).
+          of existing features), that's feature gap (Morville → Useful).
           Customisation is about adapting what's already there to
           personal workflow.
 
   # -------------------------------------------------------------------
   # H8: Aesthetic and minimalist design
   # -------------------------------------------------------------------
-  # NL-03 (R). The 2020 title, sentence-cased; v1 compressed it to "Aesthetics and minimalism".
-  - name: Aesthetic and minimalist design
-    renamed_from: Aesthetics and minimalism
+  - name: Aesthetics and minimalism
     subtitle: Does every element earn its place on screen?
     colour_set: emo
     tags:
@@ -593,8 +595,10 @@ groups:
           thing I need because there's so much other stuff."
         not_this: >
           If the participant is reacting to the visual attractiveness
-          (not the density), that's emotional design (Morville → Desirable). If they feel cognitively overloaded in a way that
-          relates to ability rather than design, that's cognitive overload (Yablonski). Information overload is
+          (not the density), that's aesthetic quality (Morville →
+          Desirable). If they feel cognitively overloaded in a way that
+          relates to ability rather than design, that's cognitive
+          accessibility (Morville → Accessible). Information overload is
           about too many elements competing for attention, not about
           visual taste or cognitive capacity.
 
@@ -610,7 +614,8 @@ groups:
           that," "they only show me what matters."
         not_this: >
           If the participant is commenting on visual beauty (clean
-          lines, nice colours), that's emotional design (Morville → Desirable). If they appreciate that the interface is easy to
+          lines, nice colours), that's aesthetic quality (Morville →
+          Desirable). If they appreciate that the interface is easy to
           use (not specifically that it's uncluttered), that's ease of
           use (Morville → Usable). Focused design is about information
           discipline — showing only what's relevant.
@@ -628,8 +633,8 @@ groups:
           of these should I click first?," "nothing stands out."
         not_this: >
           If the participant can't find a specific element (not a
-          hierarchy problem), that's content discoverability (Morville →
-          Findable) or hidden feature (Norman → Discoverability). If there are genuinely too many
+          hierarchy problem), that's findability (Morville → Findable)
+          or discoverability (Norman). If there are genuinely too many
           options (not a visual hierarchy problem), consider whether
           this is about choice overload rather than visual competition.
           Competing elements is about visual hierarchy failure.
@@ -637,9 +642,7 @@ groups:
   # -------------------------------------------------------------------
   # H9: Help users recognise, diagnose, and recover from errors
   # -------------------------------------------------------------------
-  # NL-03 (R). The 2020 title, sentence-cased; v1 compressed it to "Errors and recovery".
-  - name: Help users recognise, diagnose, and recover from errors
-    renamed_from: Errors and recovery
+  - name: Errors and recovery
     subtitle: When things go wrong, does the system explain clearly and help fix it?
     colour_set: task
     tags:
@@ -675,7 +678,8 @@ groups:
           idea what happened."
         not_this: >
           If the system was unclear about a non-error state (not an
-          error message), that's opaque status (H1) or uninformative feedback (Norman). If the error uses jargon but isn't
+          error message), that's opaque status (H1) or ambiguous
+          feedback (Norman). If the error uses jargon but isn't
           technically an error message (confusing label), that's jargon
           barrier (H2). Cryptic error is specifically about unhelpful
           error messages.

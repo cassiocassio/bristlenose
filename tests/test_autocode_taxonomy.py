@@ -65,43 +65,35 @@ def _make_quote(index: int, text: str = "Sample quote text") -> QuoteBatchItem:
 class TestBuildTagTaxonomy:
     """Tests for formatting codebook templates into prompt text."""
 
-    def test_garrett_has_all_20_tags(self) -> None:
-        """All 20 Garrett sub-tags appear in the formatted taxonomy."""
+    def test_garrett_has_all_18_tags(self) -> None:
+        """All 18 Garrett tags (2.0) appear in the formatted taxonomy."""
         template = get_template("garrett")
         assert template is not None
         taxonomy = build_tag_taxonomy(template)
         expected_tags = [
-            "user need", "business objective", "success metric", "value proposition",
-            "feature requirement", "content requirement", "priority", "scope creep",
-            "interaction design", "information architecture", "navigation pattern", "task flow",
-            "interface layout", "wireframe issue", "convention", "component placement",
-            "visual design", "sensory experience", "brand alignment", "aesthetic reaction",
+            "user need", "product objective", "success metric", "brand identity",
+            "functional requirement", "content requirement", "requirement priority", "scope creep",
+            "interaction design", "information architecture", "error handling",
+            "interface design", "navigation design", "information design", "convention",
+            "visual design", "contrast and uniformity", "consistency",
         ]
-        for tag_name in expected_tags:
-            assert f"**{tag_name}**" in taxonomy, f"Missing tag: {tag_name}"
-
-    def test_garrett_has_all_5_groups(self) -> None:
-        """All 5 Garrett groups appear as headers."""
-        template = get_template("garrett")
-        assert template is not None
-        taxonomy = build_tag_taxonomy(template)
-        for group_name in ("Strategy", "Scope", "Structure", "Skeleton", "Surface"):
-            assert f"### {group_name}" in taxonomy, f"Missing group: {group_name}"
+        for tag in expected_tags:
+            assert f"**{tag}**" in taxonomy, f"Missing tag: {tag}"
 
     def test_includes_preamble_reference(self) -> None:
         """Preamble text is available separately (not in taxonomy itself)."""
         template = get_template("garrett")
         assert template is not None
-        assert "mutually exclusive" in template.preamble
+        assert "dependent" in template.preamble.lower()
 
     def test_includes_not_this(self) -> None:
         """Tags with not_this have it in the formatted output."""
         template = get_template("garrett")
         assert template is not None
         taxonomy = build_tag_taxonomy(template)
-        # Garrett's "user need" has not_this mentioning "feature requirement"
+        # Garrett's "user need" has not_this mentioning "functional requirement"
         assert "Not this:" in taxonomy
-        assert "feature requirement" in taxonomy.lower()
+        assert "functional requirement" in taxonomy.lower()
 
     def test_includes_apply_when(self) -> None:
         """Tags with apply_when have it in the formatted output."""

@@ -1038,5 +1038,8 @@
    "note": "synthetic twin of Krug's Zipcar EVP finding (E2, local only)",
    "decision": "N-11"
   }
+ ],
+ "uncovered_by_decision": [
+  "excessive feedback"
  ]
 }

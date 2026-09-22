@@ -536,7 +536,7 @@ class TestImportTemplate:
         strategy = next(g for g in data["groups"] if g["name"] == "Strategy")
         tag_names = [t["name"] for t in strategy["tags"]]
         assert "user need" in tag_names
-        assert "business objective" in tag_names
+        assert "product objective" in tag_names
         assert len(tag_names) == 4
 
     def test_imported_groups_have_framework_id(self, client: TestClient) -> None:

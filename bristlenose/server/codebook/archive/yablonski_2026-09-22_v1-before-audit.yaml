@@ -1,34 +1,21 @@
-# Yablonski codebook — Laws of UX (O'Reilly, 2020; 2nd ed. 2024) and lawsofux.com.
-#
-# HOW TO CHANGE THIS FILE. Every wording decision carries a dated `# Y-xx`
-# comment pointing at the register in docs/design-codebook-yablonski.md. A
-# decision is reopened by a WITNESS QUOTE that fails in the golden fixture
-# (tests/fixtures/codebook-golden/yablonski.json), never by a hunch. Renamed
-# tags carry `renamed_from:`; `codebook_sync` renames installed rows.
-#
-# Scope rule (Y-01): every tag is a law lawsofux.com states, in the sense he
-# states it. The six groups and the "Surname: effect" tag prefix are
-# Bristlenose's conventions — the site files entries only as theory or
-# psychology, and the book has one chapter per law.
 id: yablonski
 title: Laws of UX
 author: Jon Yablonski
 enabled: true
-version: "2.0"  # Y-02: bumped on every accepted wording change
 
 description: >
   A collection of psychological principles that underpin user experience,
   drawn from cognitive psychology, perception science, and behavioural
-  economics. Each law names a specific mechanism — Choice Overload (choice
-  paralysis), Hick's Law (decision time), the Peak-End Rule (memory distortion), Fitts's Law (motor
+  economics. Each law names a specific mechanism — Hick's Law (choice
+  paralysis), the Peak-End Rule (memory distortion), Fitts's Law (motor
   difficulty) — that explains why a participant reacts the way they do.
   Particularly strong at surfacing decision friction, expectation transfer
   from other products, and the cognitive weight of complexity that other
   frameworks describe only as generic "usability" issues.
 
 author_bio: >
-  Senior product designer, based in Detroit. Creator of lawsofux.com, a
-  curated collection of UX principles backed by named psychological
+  Product designer at Google, based in Detroit. Created lawsofux.com in 2017,
+  a curated collection of UX principles backed by named psychological
   research, expanded into "Laws of UX" (O'Reilly, 2020; 2nd edition 2024).
   Each law originates with a named researcher — Hick, Fitts, Kahneman — the
   contribution is curation and design-context translation.
@@ -40,8 +27,8 @@ author_links:
     url: https://www.amazon.com/dp/1098146964
   - label: Amazon UK — Laws of UX (2nd edition, 2024)
     url: https://www.amazon.co.uk/dp/1098146964
-  - label: O'Reilly — Laws of UX, 2nd edition
-    url: https://www.oreilly.com/library/view/laws-of-ux/9781098146955/
+  - label: O'Reilly — Laws of UX
+    url: https://www.oreilly.com/library/view/laws-of-ux/9781098146948/
 
 preamble: >
   The following tags translate Yablonski's Laws of UX into a codebook for
@@ -49,15 +36,13 @@ preamble: >
   principle. The laws were originally formulated as design guidance
   ("reduce choices to speed decisions"), but participants in think-aloud
   usability sessions narrate the effects directly: "there are too many
-  options, I can't decide" (Choice Overload), "I expected it to work like my
+  options, I can't decide" (Hick's Law), "I expected it to work like my
   email app" (Jakob's Law), "that one error at the end ruined the whole
-  thing" (Peak-End Rule). The book covers ten laws and lawsofux.com lists thirty; this codebook
-  takes the ones participants narrate and leaves out those they do not
-  (Occam's Razor, Parkinson's Law, Serial Position Effect, Pareto,
-  Chunking; Mental Model belongs to Norman). The six groups and the
-  "Surname: effect" tag prefix are Bristlenose's conventions — the site
-  files entries only as theory or psychology, and the book has one chapter
-  per law. If the participant is not discussing interaction with a
+  thing" (Peak-End Rule). Not all 21 laws from the book are included —
+  three (Occam's Razor, Parkinson's Law, Serial Position Effect) are
+  design advice or analytical constructs that participants do not
+  articulate. The remaining laws are grouped by the cognitive mechanism
+  they describe. If the participant is not discussing interaction with a
   designed product, interface, or service, do not apply any tag from this
   codebook.
 
@@ -69,15 +54,13 @@ groups:
     subtitle: Can the user choose without freezing?
     colour_set: ux
     tags:
-      # Y-03 (R). v1 called this Hick's Law; Hick's is decision TIME. Being overwhelmed and abandoning is lawsofux.com/choice-overload (Toffler 1970).
-      - name: "Choice overload"
-        renamed_from: "Hick: choice paralysis"
+      - name: "Hick: choice paralysis"
         definition: >
           The participant is overwhelmed by the number of available options
           and struggles to make a decision — they freeze, hesitate, or
-          abandon the task because there are too many choices. Yablonski's
-          Choice Overload: people get overwhelmed when presented with a
-          large number of options.
+          abandon the task because there are too many choices. This is the
+          core manifestation of Hick's Law: decision time increases with
+          the number and complexity of choices.
         apply_when: >
           The participant describes being unable to choose, feeling
           overwhelmed by options, or delaying a decision because of too
@@ -88,10 +71,8 @@ groups:
         not_this: >
           If the participant is overwhelmed by information density on
           screen (not specifically by choices they must make), that's
-          cognitive overload (Effort and complexity group). If the point is
-          that deciding took longer rather than that they froze, that is
-          Hick's Law — decision simplicity's negative reading. Choice
-          overload requires an active decision between alternatives.
+          cognitive overload (Effort and complexity group). Choice
+          paralysis requires an active decision between alternatives.
           If the participant is confused by what options mean (not
           overwhelmed by how many there are), consider jargon barrier
           (Nielsen H2) or model mismatch (Norman).
@@ -115,11 +96,10 @@ groups:
 
       - name: "Von Restorff: option salience"
         definition: >
-          One option stands out visually or conceptually from the rest, and
-          it is the one the participant notices and remembers — the Von
-          Restorff Effect (isolation effect): when several similar objects
-          are present, the one that differs is most likely to be
-          remembered.
+          One option stands out visually or conceptually from the rest,
+          drawing the participant's attention and often their choice —
+          the Von Restorff Effect (isolation effect). The distinctive
+          item is the one they notice and remember.
         apply_when: >
           The participant describes being drawn to one option because it
           stood out — different colour, size, position, or emphasis. Look
@@ -128,13 +108,33 @@ groups:
           because that one was so prominent," "it was the obvious choice
           because it was bigger."
         not_this: >
-          If the participant went with the default because it was pre-selected
-          (not because it was visually distinctive), that's remembered for
-          me or risky default (Nielsen). If they were drawn to an element because it
+          If the participant went with the default because it was
+          pre-selected (not because it was visually distinctive), that's
+          default acceptance. If they were drawn to an element because it
           was familiar (not visually prominent), consider convention
           expectation (Expectation group). Option salience is specifically
           about visual distinctiveness directing attention and choice.
 
+      - name: "Thaler: default acceptance"
+        definition: >
+          The participant accepts a pre-selected, recommended, or
+          highlighted option without evaluating alternatives — the
+          design's default steered their choice, whether intentionally
+          or not.
+        apply_when: >
+          The participant goes with whatever was pre-selected, or
+          describes choosing the recommended option without considering
+          others. Look for "I just went with the one they recommended,"
+          "it was already selected so I left it," "I picked the default,"
+          "they highlighted one plan so I chose that," "I didn't bother
+          looking at the others."
+        not_this: >
+          If the default was helpful and saved the participant effort,
+          consider helpful default (Nielsen H6). If the default was
+          risky or misleading, consider risky default (Nielsen H5).
+          Default acceptance is about the participant's behaviour of
+          going with the pre-selected option — neutral about whether
+          the default was good or bad for them.
 
   # -------------------------------------------------------------------
   # Expectation & Convention — Jakob's Law, Postel's Law
@@ -202,7 +202,7 @@ groups:
           doesn't tell me what."
         not_this: >
           If the participant entered genuinely wrong data (not a format
-          issue), that's recovery guidance (Nielsen H9). If the
+          issue), that's an error situation (Nielsen H9). If the
           validation message was unhelpful, that's cryptic error
           (Nielsen H9). Input intolerance is specifically about
           correct information rejected due to format strictness.
@@ -221,32 +221,11 @@ groups:
           format," "I put my phone number with spaces and it was fine."
         not_this: >
           If the system auto-corrected something the participant didn't
-          intend, that could be trapped (Nielsen H3). If
-          the system helpfully pre-filled data, that's remembered for me
+          intend, that could be a loss-of-control issue (Nielsen H3). If
+          the system helpfully pre-filled data, that's helpful default
           (Nielsen H6). Input forgiveness is about tolerating format
           variation in user-submitted data.
 
-
-      # Y-09 (A). lawsofux.com/paradox-of-the-active-user (Carroll & Rosson 1987): users never read manuals but start using the software immediately.
-      - name: "Carroll: active user paradox"
-        definition: >
-          The participant skips instructions, onboarding or help and
-          starts doing — then pays for it later, or does not. Yablonski's
-          Paradox of the Active User: people never read manuals but start
-          using the software immediately.
-        apply_when: >
-          The participant dismisses a tour, ignores a help panel, skips a
-          setup step, or says they never read that sort of thing, and
-          the consequence is visible or explicitly disclaimed. Look for
-          "I never read those," "I just skipped that," "I'll work it out
-          as I go," "I should probably have read that."
-        not_this: >
-          If they are deliberately exploring to learn (not skipping help
-          to get on with a task), that's exploration (UXR → Behaviour).
-          If they taught themselves over time, that's self-taught (UXR →
-          Learning). If the help they skipped was absent or unfindable,
-          that's help absent (Nielsen H10). The paradox is choosing to act
-          over choosing to read.
   # -------------------------------------------------------------------
   # Memory & Experience — Peak-End Rule, Zeigarnik, Goal-Gradient, Miller
   # -------------------------------------------------------------------
@@ -294,7 +273,8 @@ groups:
           the end was worth it."
         not_this: >
           If the participant is describing a specific error at the end
-          (not its effect on overall assessment), that's recovery guidance (Nielsen H9). If the ending was just the last
+          (not its effect on overall assessment), that's an error
+          recovery issue (Nielsen H9). If the ending was just the last
           in a sequence of problems (not disproportionately influential),
           use the appropriate specific tags for those problems. Ending
           colours everything requires the ending to distort the overall
@@ -346,15 +326,13 @@ groups:
           indication (Nielsen H1). Completion momentum is about the
           acceleration of effort as the goal approaches.
 
-      # Y-04 (R). v1 rested on Miller's 7±2, which his own first takeaway says not to use as a limit; lawsofux.com/working-memory is the right parent.
-      - name: "Working memory: overload"
-        renamed_from: "Miller: memory overload"
+      - name: "Miller: memory overload"
         definition: >
           The participant cannot hold all the necessary information in
           working memory — they need to scroll back, take notes, or
           check a previous screen because there is too much to remember
-          at once. Yablonski's Working Memory: the system that temporarily holds and
-          manipulates the information needed to complete a task.
+          at once. This reflects Miller's Law: working memory holds
+          approximately 7 (plus or minus 2) items.
         apply_when: >
           The participant describes forgetting information they just
           saw, needing to go back to check, or being unable to compare
@@ -366,7 +344,7 @@ groups:
           down."
         not_this: >
           If the participant is overwhelmed by choice quantity (not
-          information retention), that's choice overload.
+          information retention), that's choice paralysis (Hick's Law).
           If they can't process the visual density on screen (not a
           memory issue), that's cognitive overload (Effort group).
           Memory overload specifically involves the participant
@@ -397,7 +375,7 @@ groups:
         not_this: >
           If the participant is commenting on visual attractiveness
           without linking it to trust or quality judgement, that's
-          emotional design (Morville → Desirable). If they enjoy the
+          aesthetic quality (Morville → Desirable). If they enjoy the
           design without it affecting their trust, that's also Morville.
           Beauty-trust transfer specifically requires the participant to
           connect appearance with perceived trustworthiness or
@@ -420,7 +398,7 @@ groups:
           If the participant is simply tolerant of a problem (without
           linking that tolerance to visual quality), that's general
           tolerance — not this tag. If they like the design AND find it
-          usable (no friction to forgive), that's Kurosu: beauty trust
+          usable (no friction to forgive), that's beauty-trust transfer
           or Morville's desirability. Aesthetic forgiveness requires both
           a usability problem AND beauty as the reason for tolerance.
 
@@ -431,7 +409,7 @@ groups:
           or enclosure leads them to assume a relationship that isn't
           there, or miss one that is. This reflects the Gestalt
           principles of perception (proximity, similarity, common region,
-          uniform connectedness).
+          uniform connectedness, Pragnanz).
         apply_when: >
           The participant narrates incorrect assumptions about element
           relationships based on visual layout. Look for "I thought
@@ -443,7 +421,8 @@ groups:
         not_this: >
           If the participant misreads an icon or metaphor (not a
           grouping issue), that's metaphor fit (Nielsen H2). If they
-          can't find an element (not grouping, just visibility), that's content discoverability (Morville → Findable). If the issue is inconsistent visual
+          can't find an element (not grouping, just visibility), that's
+          findability (Morville). If the issue is inconsistent visual
           treatment of the same concept, that's internal inconsistency
           (Nielsen H4). Grouping confusion is specifically about
           perceiving spatial/visual relationships incorrectly.
@@ -471,26 +450,6 @@ groups:
           clarity is specifically about spatial and visual relationships
           being correctly communicated.
 
-
-      # Y-09 (A). lawsofux.com/selective-attention: attention on a subset of the environment while the rest is ignored — banner blindness, change blindness.
-      - name: "Selective attention: overlooked"
-        definition: >
-          The participant did not see something that was on screen
-          because their attention was elsewhere — they took it for an
-          advert, it changed without them noticing, it sat outside the
-          area they were scanning. Yablonski's Selective Attention.
-        apply_when: >
-          The participant discovers something was there all along, or
-          admits to tuning a region out. Look for "I thought that was an
-          ad," "I didn't even see that," "it must have changed and I
-          didn't notice," "I was only looking at the left."
-        not_this: >
-          If the element was hard to see because nothing distinguished it
-          from its surroundings, that's competing elements (Nielsen H8)
-          or contrast and uniformity (Garrett → Surface). If it was
-          genuinely hidden or off-screen, that's hidden feature (Norman →
-          Discoverability). Selective attention is the participant's own
-          filter doing the hiding.
   # -------------------------------------------------------------------
   # Effort & Complexity — Tesler's Law, Fitts's Law, Cognitive Load
   # -------------------------------------------------------------------
@@ -518,7 +477,7 @@ groups:
           easy steps, not complexity), consider repetitive task (Nielsen
           H7). If the participant is confused by the interface (not
           burdened by real complexity), that's ease of use (Morville).
-          Tesler: complexity burden specifically involves inherent complexity
+          Complexity on user specifically involves inherent complexity
           that the system could have absorbed but didn't.
 
       - name: "Tesler: complexity absorbed"
@@ -537,7 +496,7 @@ groups:
           complicated stuff for me."
         not_this: >
           If the system pre-filled a form field (a specific instance,
-          not broad complexity absorption), that's remembered for me
+          not broad complexity absorption), that's helpful default
           (Nielsen H6). If the participant appreciates simplicity of
           design (not complexity management), that's focused design
           (Nielsen H8). Complexity absorbed is about the system taking
@@ -559,8 +518,8 @@ groups:
           one," "I wish the checkout button was bigger."
         not_this: >
           If the participant can't find the element (not too small,
-          just invisible or badly placed), that's hidden feature (Norman → Discoverability)
-          or content discoverability (Morville → Findable). If they
+          just invisible or badly placed), that's discoverability
+          (Norman → Affordances and signifiers) or findability (Morville). If they
           struggle with a gesture (not a target), consider the
           interaction type. Target difficulty is specifically about the
           physical reachability and size of interactive elements.
@@ -581,7 +540,8 @@ groups:
           "I'm completely lost — there's too much."
         not_this: >
           If the participant is specifically overwhelmed by choices
-          (not general information), that's choice overload. If they can't remember something from earlier (not
+          (not general information), that's choice paralysis (Hick's
+          Law). If they can't remember something from earlier (not
           currently overwhelmed), that's memory overload (Miller's Law).
           If the screen is visually cluttered (a design issue), that's
           information overload (Nielsen H8). Cognitive overload is about
@@ -614,7 +574,7 @@ groups:
           If the participant knows the system is working because of good
           status communication (not speed), that's clear status (Nielsen
           H1). If they're commenting on the efficiency of a workflow
-          (not response speed), that's ease of use (Morville → Usable).
+          (not response speed), that's efficiency (Morville → Usable).
           Instant response is specifically about perceived speed of
           system response to individual actions.
 

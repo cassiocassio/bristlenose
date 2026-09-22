@@ -1,5 +1,5 @@
 id: uxr
-version: "2.1"
+version: "2.2"
 title: Bristlenose UXR Codebook
 author: ""
 enabled: true
@@ -188,6 +188,24 @@ groups:
           Abandonment means they stopped pursuing the goal entirely —
           no fallback, no retry, just done.
 
+
+      # Rescued from Nielsen v1 "context loss" (22 Sep 2026): not Nielsen's, but real. docs/codebook-audits/2026-09-22-nielsen.md.
+      - name: lost my place
+        definition: >
+          The participant loses track of where they are in a task or a
+          process — what they were doing, which step they are on, what
+          they had already done.
+        apply_when: >
+          The participant asks where they were, goes back to reorient, or
+          restarts because they lost the thread. Look for "where was I,"
+          "what was I doing," "which step am I on," "I'll have to start
+          again, I've lost track."
+        not_this: >
+          If they lost their place because the navigation failed them,
+          that's navigation clarity (Morville → Findable). If they forgot
+          a step they knew, that's memory lapse (Norman → Slips and
+          mistakes). If they hit a wall with no way forward, that's dead
+          end. Lost my place is the participant's own orientation going.
   - name: Needs and desires
     subtitle: What people want
     colour_set: emo

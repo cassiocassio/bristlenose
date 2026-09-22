@@ -52,48 +52,48 @@ GOLDEN_QUOTES: list[GoldenQuote] = [
         text="I'm trying to find a fish that can live in my tank without a heater — that's why I'm here.",
         correct_tag="user need",
         correct_group="Strategy",
-        plausible_wrong_tag="feature requirement",
+        plausible_wrong_tag="functional requirement",
         plausible_wrong_group="Scope",
     ),
     GoldenQuote(
         text="They obviously want me to sign up for the premium plan before I can see prices.",
-        correct_tag="business objective",
+        correct_tag="product objective",
         correct_group="Strategy",
         plausible_wrong_tag="scope creep",
         plausible_wrong_group="Scope",
     ),
     GoldenQuote(
-        text="For me the test is whether I can find a compatible fish in under two minutes.",
+        text="Honestly I'd come back to this every week if it stayed like this — I've already spent half an hour on it.",
         correct_tag="success metric",
         correct_group="Strategy",
         plausible_wrong_tag="user need",
         plausible_wrong_group="Strategy",
     ),
     GoldenQuote(
-        text="Why would I use this instead of just asking in the forum? The forum is free and people know their stuff.",
-        correct_tag="value proposition",
+        text="This doesn't look like a real fish shop — it looks more like some generic template site, not them at all.",
+        correct_tag="brand identity",
         correct_group="Strategy",
-        plausible_wrong_tag="user need",
-        plausible_wrong_group="Strategy",
+        plausible_wrong_tag="visual design",
+        plausible_wrong_group="Surface",
     ),
     # --- Scope ---
     GoldenQuote(
         text="There's no way to compare two fish side by side — I have to keep going back and forth.",
-        correct_tag="feature requirement",
+        correct_tag="functional requirement",
         correct_group="Scope",
-        plausible_wrong_tag="navigation pattern",
-        plausible_wrong_group="Structure",
+        plausible_wrong_tag="navigation design",
+        plausible_wrong_group="Skeleton",
     ),
     GoldenQuote(
         text="They don't have any water parameters listed for any of the fish.",
         correct_tag="content requirement",
         correct_group="Scope",
-        plausible_wrong_tag="feature requirement",
+        plausible_wrong_tag="functional requirement",
         plausible_wrong_group="Scope",
     ),
     GoldenQuote(
         text="The most important thing for me is the compatibility checker — everything else is nice to have.",
-        correct_tag="priority",
+        correct_tag="requirement priority",
         correct_group="Scope",
         plausible_wrong_tag="user need",
         plausible_wrong_group="Strategy",
@@ -102,7 +102,7 @@ GOLDEN_QUOTES: list[GoldenQuote] = [
         text="Why does a fish shop have a social media feed? I don't need this.",
         correct_tag="scope creep",
         correct_group="Scope",
-        plausible_wrong_tag="business objective",
+        plausible_wrong_tag="product objective",
         plausible_wrong_group="Strategy",
     ),
     # --- Structure ---
@@ -117,19 +117,12 @@ GOLDEN_QUOTES: list[GoldenQuote] = [
         text="I would have expected angelfish to be under tropical freshwater, not just in a generic 'fish' category.",
         correct_tag="information architecture",
         correct_group="Structure",
-        plausible_wrong_tag="navigation pattern",
-        plausible_wrong_group="Structure",
+        plausible_wrong_tag="navigation design",
+        plausible_wrong_group="Skeleton",
     ),
     GoldenQuote(
-        text="I keep having to go back to the home page to find anything — there's no way to jump between sections.",
-        correct_tag="navigation pattern",
-        correct_group="Structure",
-        plausible_wrong_tag="information architecture",
-        plausible_wrong_group="Structure",
-    ),
-    GoldenQuote(
-        text="First I had to create an account, then verify my email, then set up a tank profile, and only then could I browse — that's way too many steps.",
-        correct_tag="task flow",
+        text="It wouldn't let me check out without a delivery date, fine, but once I'd paid there was no way to fix the address.",
+        correct_tag="error handling",
         correct_group="Structure",
         plausible_wrong_tag="interaction design",
         plausible_wrong_group="Structure",
@@ -137,30 +130,30 @@ GOLDEN_QUOTES: list[GoldenQuote] = [
     # --- Skeleton ---
     GoldenQuote(
         text="This page feels really cramped — there's too much going on and I can't focus on anything.",
-        correct_tag="interface layout",
+        correct_tag="interface design",
         correct_group="Skeleton",
-        plausible_wrong_tag="wireframe issue",
+        plausible_wrong_tag="information design",
         plausible_wrong_group="Skeleton",
     ),
     GoldenQuote(
-        text="The 'buy now' button is massive but the species information is tiny — seems backwards.",
-        correct_tag="wireframe issue",
+        text="I keep having to go back to the home page to find anything — there's no way to jump between sections.",
+        correct_tag="navigation design",
         correct_group="Skeleton",
-        plausible_wrong_tag="interface layout",
+        plausible_wrong_tag="information architecture",
+        plausible_wrong_group="Structure",
+    ),
+    GoldenQuote(
+        text="The 'buy now' button is massive but the species information is tiny — seems backwards.",
+        correct_tag="information design",
+        correct_group="Skeleton",
+        plausible_wrong_tag="interface design",
         plausible_wrong_group="Skeleton",
     ),
     GoldenQuote(
         text="Usually on other sites there's a search bar at the top — I can't find one anywhere.",
         correct_tag="convention",
         correct_group="Skeleton",
-        plausible_wrong_tag="component placement",
-        plausible_wrong_group="Skeleton",
-    ),
-    GoldenQuote(
-        text="The filter button is buried at the bottom of the page — it should be up here next to the search.",
-        correct_tag="component placement",
-        correct_group="Skeleton",
-        plausible_wrong_tag="interface layout",
+        plausible_wrong_tag="interface design",
         plausible_wrong_group="Skeleton",
     ),
     # --- Surface ---
@@ -168,29 +161,22 @@ GOLDEN_QUOTES: list[GoldenQuote] = [
         text="The photos of the fish are gorgeous — really high quality, you can see all the colours.",
         correct_tag="visual design",
         correct_group="Surface",
-        plausible_wrong_tag="aesthetic reaction",
+        plausible_wrong_tag="contrast and uniformity",
         plausible_wrong_group="Surface",
     ),
     GoldenQuote(
-        text="The whole site just feels really premium and modern — like a proper specialist retailer.",
-        correct_tag="sensory experience",
+        text="I didn't see the checkout button at all — it's the same grey as everything else around it.",
+        correct_tag="contrast and uniformity",
         correct_group="Surface",
-        plausible_wrong_tag="brand alignment",
-        plausible_wrong_group="Surface",
+        plausible_wrong_tag="interface design",
+        plausible_wrong_group="Skeleton",
     ),
     GoldenQuote(
-        text="This doesn't look like a real fish shop — it looks more like some generic template site.",
-        correct_tag="brand alignment",
+        text="This page looks like a completely different site from the last one — the buttons are all different shapes.",
+        correct_tag="consistency",
         correct_group="Surface",
-        plausible_wrong_tag="sensory experience",
-        plausible_wrong_group="Surface",
-    ),
-    GoldenQuote(
-        text="Ooh, that's nice. I like that.",
-        correct_tag="aesthetic reaction",
-        correct_group="Surface",
-        plausible_wrong_tag="visual design",
-        plausible_wrong_group="Surface",
+        plausible_wrong_tag="convention",
+        plausible_wrong_group="Skeleton",
     ),
 ]
 
@@ -252,11 +238,12 @@ class TestPromptStructure:
             + "\n".join(missing)
         )
 
-    def test_preamble_has_exclusivity_instruction(self) -> None:
-        """Garrett preamble instructs mutual exclusivity."""
+    def test_preamble_states_plane_dependence(self) -> None:
+        """Garrett 2.0: the planes are dependent (ch. 2), not mutually exclusive;
+        the single-tag rule is stated as ours, not his."""
         template = get_template("garrett")
         assert template is not None
-        assert "mutually exclusive" in template.preamble.lower()
+        assert "depends on the one below" in template.preamble.lower()
 
     def test_preamble_has_no_tag_guard(self) -> None:
         """Preamble instructs not to tag non-product quotes."""
@@ -282,7 +269,7 @@ class TestPromptStructure:
                 tag_lookup[tag.name] = tag
 
         # "information architecture" (Structure) should mention
-        # "navigation pattern" or "Skeleton" in its not_this
+        # "navigation design" or "Skeleton" in its not_this
         ia_tag = tag_lookup["information architecture"]
         assert ia_tag.not_this
         assert (
@@ -290,9 +277,9 @@ class TestPromptStructure:
             or "skeleton" in ia_tag.not_this.lower()
         )
 
-        # "component placement" (Skeleton) should mention "navigation"
+        # "interface design" (Skeleton) should mention "navigation"
         # or "Structure" in its not_this
-        cp_tag = tag_lookup["component placement"]
+        cp_tag = tag_lookup["interface design"]
         assert cp_tag.not_this
         assert (
             "navigation" in cp_tag.not_this.lower()
@@ -305,9 +292,9 @@ class TestPromptStructure:
         assert groups == {"Strategy", "Scope", "Structure", "Skeleton", "Surface"}
 
     def test_golden_quotes_cover_all_tags(self) -> None:
-        """Golden dataset covers all 20 Garrett sub-tags."""
+        """Golden dataset covers all 18 Garrett tags (2.0)."""
         tags = {gq.correct_tag for gq in GOLDEN_QUOTES}
-        assert len(tags) == 20
+        assert len(tags) == 18
 
     def test_golden_quotes_batch_format(self) -> None:
         """Golden quotes can be formatted into a valid batch."""

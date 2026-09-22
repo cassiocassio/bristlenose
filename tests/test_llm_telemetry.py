@@ -300,3 +300,111 @@ def test_writer_creates_target_directory(tmp_path: Path) -> None:
 def test_telemetry_module_constants_exported() -> None:
     assert telemetry.JSONL_FILENAME == "llm-calls.jsonl"
     assert telemetry.DEFAULT_RETENTION == 1000
+
+
+# ---------------------------------------------------------------------------
+# Cost fields
+# ---------------------------------------------------------------------------
+#
+# ``cost_usd_actual_estimate`` and ``cost_usd_predicted`` were declared on
+# LLMCallEvent in Slice A and written by nothing until 2026-09-21, so every
+# row in every llm-calls.jsonl in the tree carried ``null`` for both. The
+# schema round-trip test above passed throughout — it asserts the fields
+# exist, which was never the thing in doubt.
+
+
+def test_record_call_derives_actual_cost(tmp_path: Path) -> None:
+    """A priced model gets a cost without the caller computing one."""
+    from bristlenose.llm.pricing import estimate_cost
+
+    _record_basic(tmp_path, input_tokens=10_000, output_tokens=5_000)
+    row = next(iter_rows(tmp_path))
+
+    expected = estimate_cost("claude-sonnet-4-20250514", 10_000, 5_000)
+    assert expected is not None
+    assert row["cost_usd_actual_estimate"] == pytest.approx(expected)
+
+
+def test_record_call_derives_predicted_cost_from_cohort_median(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Predicted is the cohort's median call, not this call.
+
+    The residual ``actual - predicted`` is the point of the pair, so the two
+    must be computed from different inputs. Feeding tokens far off the median
+    is what distinguishes a real prediction from a copy of the actual.
+    """
+    from bristlenose.llm import pricing
+
+    monkeypatch.setattr(pricing, "_load_baselines", lambda: [
+        {
+            "stage_id": "s09_quote_extraction",
+            "model_family": "claude-sonnet", "model_major": "4",
+            "median_input_tokens": 4_000, "median_output_tokens": 2_000,
+        },
+    ])
+    _record_basic(tmp_path, input_tokens=40_000, output_tokens=20_000)
+    row = next(iter_rows(tmp_path))
+
+    actual = pricing.estimate_cost("claude-sonnet-4-20250514", 40_000, 20_000)
+    predicted = pricing.estimate_cost("claude-sonnet-4-20250514", 4_000, 2_000)
+    assert actual is not None and predicted is not None
+    assert row["cost_usd_actual_estimate"] == pytest.approx(actual)
+    assert row["cost_usd_predicted"] == pytest.approx(predicted)
+    assert row["cost_usd_actual_estimate"] != row["cost_usd_predicted"]
+
+
+def test_unpriced_response_model_falls_back_to_request_model(
+    tmp_path: Path,
+) -> None:
+    """OpenAI answers ``gpt-4o`` with ``gpt-4o-2024-08-06``, which is unpriced.
+
+    Every OpenAI row in the corpus has this shape, so pricing the response
+    model alone would leave the whole provider costless.
+    """
+    from bristlenose.llm.pricing import PRICING, estimate_cost
+
+    assert "gpt-4o-2024-08-06" not in PRICING
+    _record_basic(
+        tmp_path, provider="openai", request_model="gpt-4o",
+        response_model="gpt-4o-2024-08-06",
+        input_tokens=10_000, output_tokens=5_000,
+    )
+    row = next(iter_rows(tmp_path))
+
+    expected = estimate_cost("gpt-4o", 10_000, 5_000)
+    assert expected is not None
+    assert row["cost_usd_actual_estimate"] == pytest.approx(expected)
+
+
+def test_unpriced_model_leaves_costs_null(tmp_path: Path) -> None:
+    """An Azure deployment name is an opaque user string, never priceable.
+
+    Token counts are still worth recording, so a null cost is correct here
+    and not a failure.
+    """
+    _record_basic(
+        tmp_path, provider="azure", request_model="my-deployment",
+        response_model="my-deployment",
+    )
+    row = next(iter_rows(tmp_path))
+    assert row["cost_usd_actual_estimate"] is None
+    assert row["cost_usd_predicted"] is None
+    assert row["gen_ai.usage.input_tokens"] == 800
+
+
+def test_missing_usage_leaves_actual_cost_null(tmp_path: Path) -> None:
+    """No token counts means no cost — never a zero, which reads as free."""
+    _record_basic(
+        tmp_path, input_tokens=None, output_tokens=None,
+        usage_source="missing", outcome="error",
+    )
+    row = next(iter_rows(tmp_path))
+    assert row["cost_usd_actual_estimate"] is None
+
+
+def test_caller_supplied_cost_is_not_overwritten(tmp_path: Path) -> None:
+    """The derivation fills a gap; it does not override an explicit value."""
+    _record_basic(tmp_path, cost_usd_actual_estimate=0.4242)
+    row = next(iter_rows(tmp_path))
+    assert row["cost_usd_actual_estimate"] == pytest.approx(0.4242)

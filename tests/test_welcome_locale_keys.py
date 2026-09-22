@@ -284,26 +284,46 @@ _AWAITING_CONTENT: set[str] = set()
 #: `test_strings_tables_resolve_through_i18n` reads — a builder can take a table
 #: and still pass English through it, which is how `emergentThemes` shipped ten
 #: hardcoded literals while the classification gate called it done.
+#: ⚠ SIX OF THESE ARE NOW UNBLOCKED AND NOBODY HAS KEYED THEM (22 Sep 2026).
+#: Every entry below was excused by one argument: the pipeline's output language
+#: is undefined, and the illustration rules forbid drawing the fixed version over
+#: a pipeline that still produces the broken one. **That pipeline is fixed for
+#: section and theme names** — `s08`, `s10` and `s11` now generate in the
+#: researcher's language (`bristlenose/llm/output_language.py`, measured at 100%
+#: compliance across three providers). So a Spanish researcher really does get
+#: Spanish sections and themes, and an illustration showing them in English now
+#: depicts software we stopped shipping.
+#:
+#: They stay English only because keying them is work nobody has done, not
+#: because English is right. This is the "owed item that quietly stopped being
+#: owed" shape the root CLAUDE.md records twice — left loud rather than tidy so
+#: the next reader does not re-derive the settled argument from a stale reason.
+#:
+#: The two AutoCode codes are NOT unblocked: they are framework tag names
+#: (Nielsen's), and framework codes stay English by a separate, live decision.
 _DELIBERATELY_ENGLISH_VALUES = {
-    "Onboarding": "GENERATED — a pipeline section name on the signal card.",
-    "Search results": "GENERATED — ditto.",
-    "Checkout": "GENERATED — ditto.",
-    "Settings": "GENERATED — ditto.",
-    "visible options": "GENERATED — an AutoCode-proposed code. The codes belong "
-                       "to whichever codebook produced them, and a translated "
-                       "one advertises output we do not produce.",
-    "platform convention": "GENERATED — ditto.",
-    "How to begin unclear": "GENERATED — a pipeline theme title. The language "
-                            "the pipeline generates in is undefined, and the "
-                            "question is PARKED (22 Sep 2026) with a trigger: "
-                            "before any non-English cohort tester is onboarded. "
-                            "See docs/design-i18n.md §'PARKED: what language "
-                            "should sections and themes be generated in'. These "
-                            "entries are the parked question's stated cost, so "
-                            "they are settled-for-now rather than pending — the "
-                            "rules forbid drawing the fixed version over a "
-                            "pipeline that still produces the broken one.",
-    "Intuitive": "GENERATED — the second theme title; same reason.",
+    "Onboarding": "GENERATED, now UNBLOCKED — a pipeline section name on the "
+                  "signal card. Steered since 22 Sep 2026; keying it is owed.",
+    "Search results": "GENERATED, now UNBLOCKED — ditto.",
+    "Checkout": "GENERATED, now UNBLOCKED — ditto.",
+    "Settings": "GENERATED, now UNBLOCKED — ditto.",
+    # These two are Nielsen's own tag names, so FRAMEWORK is the accurate class
+    # and the decision behind it is live, not parked: the tag name is the
+    # identity cross-study comparison depends on, and 207 of 234 shipped tags
+    # key on literal English phrases anyway (docs/design-i18n.md, the Renfe
+    # case). Unaffected by the generation fix above.
+    "visible options": "FRAMEWORK — a Nielsen codebook tag name, not free "
+                       "generated text. Shipped framework codes stay English.",
+    "platform convention": "FRAMEWORK — ditto.",
+    "How to begin unclear": "GENERATED, now UNBLOCKED — a pipeline theme "
+                            "title. The park this cited was half-answered on "
+                            "22 Sep 2026: theme titles follow the UI language "
+                            "now, so the English shown here is stale rather "
+                            "than correct. Keying it is owed work. What stays "
+                            "parked is WHICH language is right (this ships the "
+                            "UI's, not the per-session leaning) — but that "
+                            "question no longer makes English the answer.",
+    "Intuitive": "GENERATED, now UNBLOCKED — the second theme title; same.",
 }
 
 

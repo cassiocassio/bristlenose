@@ -41,7 +41,32 @@ KIND_MAP = {
     "12": "12. Legal/Compliance",
     "13": "13. Go-to-Market",
     "14": "14. Accessibility",
+    "15": "15. Performance",
 }
+
+# Categories that reach the board as ONE card instead of one per bullet.
+#
+# §15 was added to the doc after KIND_MAP was written (14 Apr 2026) and stopped
+# at 14, so `KIND_MAP.get("15")` returned None, `current_kind is None` skipped
+# the section, and all 39 of its bullets were invisible to the board — silently,
+# and including sprint-tagged ones. Mapping it alone would have swung the other
+# way and created 39 cards in one sync.
+#
+# The card is a POINTER, never a summary. `sync_new_to_board` only ever creates
+# a card; nothing updates a body afterwards (`body:` appears once in this file,
+# inside addProjectV2DraftIssue). So a count or an item list written here would
+# be a number nothing recomputes — this repo's most reliable way to grow a lie.
+ROLLUP_CATEGORIES = {
+    "15": "Performance backlog (§15)",
+}
+
+ROLLUP_BODY = (
+    "One card for a whole section of the planning doc, by design. The items live "
+    "under this section in the doc and are worked from there. This body carries no "
+    "count and no list on purpose: a card body is written once at creation and "
+    "never updated, so anything summarised here would go stale with nothing to "
+    "report it."
+)
 
 
 # ---------------------------------------------------------------------------
@@ -102,6 +127,33 @@ _SUPPLEMENTARY_RE = re.compile(
 )
 
 
+def _collapse_rollups(items: list[dict]) -> list[dict]:
+    """Replace each rollup category's items with one pointer card.
+
+    Takes the position of the section's first item, so board order still
+    tracks the doc. Strips the internal `_category` key, leaving the item
+    shape every caller already expects.
+    """
+    out: list[dict] = []
+    rolled: set[str] = set()
+    for item in items:
+        category = item.pop("_category", None)
+        if category not in ROLLUP_CATEGORIES:
+            out.append(item)
+            continue
+        if category in rolled:
+            continue
+        rolled.add(category)
+        out.append({
+            "kind": KIND_MAP.get(category),
+            "priority": None,
+            "title": ROLLUP_CATEGORIES[category],
+            "description": ROLLUP_BODY,
+            "sprint": None,
+        })
+    return out
+
+
 def parse_doc(filepath: str = FILE) -> list[dict]:
     """Parse 100days.md into structured items.
 
@@ -114,12 +166,14 @@ def parse_doc(filepath: str = FILE) -> list[dict]:
     items: list[dict] = []
     current_kind = None
     current_priority = None
+    current_category = None
 
     for line in lines:
         # Category heading: ## N. ...
         m = _CATEGORY_RE.match(line)
         if m:
-            current_kind = KIND_MAP.get(m.group(1))
+            current_category = m.group(1)
+            current_kind = KIND_MAP.get(current_category)
             current_priority = None
             continue
 
@@ -133,6 +187,7 @@ def parse_doc(filepath: str = FILE) -> list[dict]:
                 current_kind = "Needs Design Doc"
             elif "Investigations" in section or "Dependency" in section:
                 current_kind = "Investigations"
+            current_category = None
             current_priority = None
             continue
 
@@ -145,6 +200,7 @@ def parse_doc(filepath: str = FILE) -> list[dict]:
         # Non-category ## heading resets context
         if line.startswith("## ") and not _CATEGORY_RE.match(line) and not _SUPPLEMENTARY_RE.match(line):
             current_kind = None
+            current_category = None
             current_priority = None
             continue
 
@@ -163,6 +219,7 @@ def parse_doc(filepath: str = FILE) -> list[dict]:
                 "title": title,
                 "description": description,
                 "sprint": f"Sprint {sprint_num}" if sprint_num else None,
+                "_category": current_category,
             })
             continue
 
@@ -177,9 +234,10 @@ def parse_doc(filepath: str = FILE) -> list[dict]:
                 "title": title,
                 "description": "",
                 "sprint": f"Sprint {sprint_num}" if sprint_num else None,
+                "_category": current_category,
             })
 
-    return items
+    return _collapse_rollups(items)
 
 
 # ---------------------------------------------------------------------------

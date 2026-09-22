@@ -222,6 +222,82 @@ class TestParseDoc:
         items = sync.parse_doc(path)
         assert items[0]["priority"] == "Won't"
 
+    def test_rollup_category_becomes_one_card(self, tmp_path):
+        """A rollup section reaches the board as a single pointer card."""
+        path = _write_doc(tmp_path, """\
+        ## 15. Performance — "never let it get slower"
+
+        ### Must
+        - [S1] **Profile against FOSSDA** — run Lighthouse
+        - **Bundle slimming pass** — analysis done
+        ### Could
+        - **Virtualise the quote grid** — deferred
+        """)
+        items = sync.parse_doc(path)
+        assert len(items) == 1
+        assert items[0]["title"] == sync.ROLLUP_CATEGORIES["15"]
+        assert items[0]["kind"] == "15. Performance"
+        # The section's own sprint/priority don't transfer — the card spans them.
+        assert items[0]["sprint"] is None
+        assert items[0]["priority"] is None
+
+    def test_rollup_body_carries_no_count_or_list(self, tmp_path):
+        """Card bodies are write-once, so a summary here would rot unreported.
+
+        Guards the design, not the wording: any digit, or any item title
+        leaking into the body, means someone made it a summary again.
+        """
+        path = _write_doc(tmp_path, """\
+        ## 15. Performance — "never let it get slower"
+
+        ### Must
+        - **Profile against FOSSDA** — run Lighthouse
+        - **Bundle slimming pass** — analysis done
+        """)
+        body = sync.parse_doc(path)[0]["description"]
+        assert not any(c.isdigit() for c in body)
+        assert "Profile against FOSSDA" not in body
+        assert "Bundle slimming" not in body
+
+    def test_rollup_does_not_swallow_the_next_category(self, tmp_path):
+        """A following category parses normally, one card per bullet."""
+        path = _write_doc(tmp_path, """\
+        ## 15. Performance — "never let it get slower"
+
+        ### Must
+        - **Profile against FOSSDA** — run Lighthouse
+        - **Bundle slimming pass** — analysis done
+
+        ## 1. Missing — essential feature gaps
+
+        ### Must
+        - **Demo dataset** — 5h IKEA study
+        - **Second thing** — also real
+        """)
+        items = sync.parse_doc(path)
+        titles = [i["title"] for i in items]
+        assert titles == [sync.ROLLUP_CATEGORIES["15"], "Demo dataset", "Second thing"]
+
+    def test_rollup_absent_when_section_is_empty(self, tmp_path):
+        """No bullets, no card — the heading alone doesn't conjure one."""
+        path = _write_doc(tmp_path, """\
+        ## 15. Performance — "never let it get slower"
+
+        ### Must
+        """)
+        assert sync.parse_doc(path) == []
+
+    def test_internal_category_key_never_reaches_callers(self, tmp_path):
+        """`_category` is parse-internal; the returned shape is the old one."""
+        path = _write_doc(tmp_path, """\
+        ## 1. Missing — essential feature gaps
+
+        ### Must
+        - **Demo dataset** — 5h IKEA study
+        """)
+        items = sync.parse_doc(path)
+        assert set(items[0]) == {"kind", "priority", "title", "description", "sprint"}
+
     def test_en_dash_separator(self, tmp_path):
         path = _write_doc(tmp_path, """\
         ## 1. Missing — essential feature gaps

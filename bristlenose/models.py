@@ -254,6 +254,14 @@ class FullTranscript(BaseModel):
     session_date: datetime
     duration_seconds: float
     segments: list[TranscriptSegment]
+    #: What Whisper decided the audio was, when it was left to decide. ``None``
+    #: for a transcript that came from a subtitle or docx file (nothing
+    #: detected anything), and ``None`` for a run that PINNED the language via
+    #: ``--whisper-language`` — a pinned value is our input echoed back, not a
+    #: detection, and recording it as one would be a tautology dressed as
+    #: evidence. Surfaced in the transcript file's header so the researcher can
+    #: see what the model thought it was listening to.
+    detected_language: str | None = None
 
     def full_text(self) -> str:
         """Return the full transcript as timestamped text, for LLM PROMPTS.

@@ -211,9 +211,12 @@ def test_transcribe_sessions_records_failures(monkeypatch, tmp_path: Path) -> No
     settings = type("S", (), {
         "whisper_backend": "mlx",
         "whisper_model": "tiny",
+        # `transcribe_sessions` reads this to decide whether a backend's
+        # reported language is a DETECTION or its own input echoed back.
+        "whisper_language": "auto",
     })()
 
-    results, outcome = s05_transcribe.transcribe_sessions(sessions, settings)
+    results, _languages, outcome = s05_transcribe.transcribe_sessions(sessions, settings)
 
     assert outcome.attempted == 3
     assert outcome.succeeded == 0
@@ -313,8 +316,12 @@ def test_pipeline_run_abandons_when_all_transcribe_fail(tmp_path: Path) -> None:
     ]
 
     def _fake_transcribe_sessions(needs, _settings, *, on_progress=None, on_segment=None):
+        # Three-tuple since 2026-09-22: (segments, detected languages, outcome).
+        # The middle map is empty here because these sessions all FAIL — nothing
+        # was detected, which is exactly the shape the production code writes.
         return (
             {s.session_id: [] for s in needs},
+            {},
             StageOutcome(
                 attempted=len(needs), succeeded=0, failed=list(failures),
             ),
@@ -691,8 +698,12 @@ def _pii_run_fixture(tmp_path: Path):
     ]
 
     def _fake_transcribe(needs, _settings, *, on_progress=None, on_segment=None):
+        # Three-tuple since 2026-09-22 — see `transcribe_sessions`. The middle
+        # map is the per-session DETECTED language; empty here stands for a
+        # pinned run, which is what these tests exercise.
         return (
             {s.session_id: list(segments) for s in needs},
+            {},
             StageOutcome(attempted=len(needs), succeeded=len(needs), failed=[]),
         )
 

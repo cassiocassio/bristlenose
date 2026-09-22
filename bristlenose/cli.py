@@ -1018,6 +1018,13 @@ def run(
             help="Whisper model size: tiny, base, small, medium, large-v3, large-v3-turbo. [default: large-v3-turbo]",
         ),
     ] = None,
+    whisper_language: Annotated[
+        str | None,
+        typer.Option(
+            "--whisper-language",
+            help="Spoken language of the recordings as a Whisper code (es, ne, yue…), or auto to detect per file. [default: auto]",
+        ),
+    ] = None,
     llm_provider: Annotated[
         str | None,
         typer.Option("--llm", "-l", help="LLM provider: claude, chatgpt, azure, gemini, local."),
@@ -1172,6 +1179,8 @@ def run(
         settings_kwargs["whisper_backend"] = whisper_backend
     if whisper_model is not None:
         settings_kwargs["whisper_model"] = whisper_model
+    if whisper_language is not None:
+        settings_kwargs["whisper_language"] = whisper_language
     if codebook is not None:
         settings_kwargs["codebook"] = codebook
     # Record the forward-or-not decision in the resolution ledger BEFORE resolving,
@@ -1411,6 +1420,10 @@ def transcribe(
         str | None,
         typer.Option("--whisper-model", "-w", help="Whisper model size. [default: large-v3-turbo]"),
     ] = None,
+    whisper_language: Annotated[
+        str | None,
+        typer.Option("--whisper-language", help="Spoken language of the recordings as a Whisper code (es, ne, yue…), or auto to detect per file. [default: auto]"),
+    ] = None,
     verbose: Annotated[
         bool,
         typer.Option("--verbose", "-v", help="Enable verbose logging."),
@@ -1436,6 +1449,8 @@ def transcribe(
     }
     if whisper_model is not None:
         settings_kwargs["whisper_model"] = whisper_model
+    if whisper_language is not None:
+        settings_kwargs["whisper_language"] = whisper_language
     settings = load_settings(**settings_kwargs)
 
     _print_header(settings, show_provider=False)
@@ -2637,7 +2652,7 @@ def _help_config() -> None:
     console.print("  [bold]Transcription[/bold]")
     console.print("  BRISTLENOSE_WHISPER_BACKEND      auto | mlx | faster-whisper")
     console.print("  BRISTLENOSE_WHISPER_MODEL         Model size (default: large-v3-turbo)")
-    console.print("  BRISTLENOSE_WHISPER_LANGUAGE      Language code (default: en)")
+    console.print("  BRISTLENOSE_WHISPER_LANGUAGE      Language code, or auto to detect (default: auto)")
     console.print("  BRISTLENOSE_WHISPER_DEVICE        cpu | cuda | auto (faster-whisper only)")
     console.print("  BRISTLENOSE_WHISPER_COMPUTE_TYPE  int8 | float16 | float32")
     console.print()

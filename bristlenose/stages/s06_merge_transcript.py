@@ -15,10 +15,27 @@ from bristlenose.models import (
 logger = logging.getLogger(__name__)
 
 
+def _language_header(transcript: FullTranscript) -> dict[str, str] | None:
+    """The `Language:` line for a transcript header, or nothing.
+
+    Absent when the language was pinned or the transcript came from a subtitle
+    or docx file — in both cases nothing detected anything, and a header line
+    claiming otherwise would be worse than no line. The code is printed rather
+    than a language name: the names live in the backends' own tables (100
+    entries), and importing a backend here to pretty-print one string would
+    couple the merge stage to whichever one happened to run.
+    """
+    if not transcript.detected_language:
+        return None
+    return {"Language": f"{transcript.detected_language} (detected)"}
+
+
 def merge_transcripts(
     sessions: list[InputSession],
     session_segments: dict[str, list[TranscriptSegment]],
     input_dir: Path | None = None,
+    *,
+    session_languages: dict[str, str] | None = None,
 ) -> list[FullTranscript]:
     """Merge all transcript sources into unified FullTranscript objects.
 
@@ -80,6 +97,7 @@ def merge_transcripts(
             session_date=session.session_date,
             duration_seconds=duration,
             segments=merged,
+            detected_language=(session_languages or {}).get(session.session_id),
         )
         transcripts.append(transcript)
         logger.info(
@@ -126,6 +144,7 @@ def write_raw_transcripts(
             source_file=transcript.source_file,
             session_date=transcript.session_date.isoformat(),
             duration=format_timecode(transcript.duration_seconds),
+            extra_headers=_language_header(transcript),
         )
 
         lines: list[str] = [header, ""]
@@ -180,6 +199,7 @@ def write_raw_transcripts_md(
             source_file=transcript.source_file,
             session_date=transcript.session_date.isoformat(),
             duration=format_timecode(transcript.duration_seconds),
+            extra_headers=_language_header(transcript),
         )
 
         lines: list[str] = [header, ""]

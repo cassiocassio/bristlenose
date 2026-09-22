@@ -174,7 +174,13 @@ class BristlenoseSettings(BaseSettings):
     # Whisper
     whisper_backend: str = "auto"  # "auto", "mlx", "faster-whisper"
     whisper_model: str = "large-v3-turbo"
-    whisper_language: str = "en"
+    #: What language to tell Whisper the audio is. ``"auto"`` lets the backend
+    #: detect per file, which is the only setting that handles a mixed-language
+    #: study. It was ``"en"`` until 22 Sep 2026 — a PIN, not a default, so every
+    #: CLI user and every English-UI desktop user had non-English recordings
+    #: decoded under an English assumption. Whisper speaks 100 languages; we
+    #: render 22, and the 78 in between were the ones it hurt.
+    whisper_language: str = "auto"
     whisper_device: str = "auto"  # "cpu", "cuda", "auto" (faster-whisper only)
     whisper_compute_type: str = "int8"  # faster-whisper only
 

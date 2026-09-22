@@ -604,6 +604,12 @@ class Pipeline:
         # includes whatever ran before the failing stage.
         self._summary = PipelineSummary()
 
+        #: session_id -> the language Whisper DETECTED (populated only when the
+        #: language was left to the backend, never when pinned). Written by
+        #: `_gather_all_segments`, read at the two `merge_transcripts` call
+        #: sites — see the note there for why it is not a return value.
+        self._detected_languages: dict[str, str] = {}
+
         # Logging is configured later (once output_dir is known) via
         # _configure_logging().  Pipeline methods call it at the top of
         # run() / run_analysis_only() / run_transcription_only() /
@@ -1493,7 +1499,10 @@ class Pipeline:
             mark_stage_running(manifest, STAGE_MERGE_TRANSCRIPT)
             status.update("[dim]Merging transcripts...[/dim]")
             t0 = time.perf_counter()
-            transcripts = merge_transcripts(sessions, session_segments, input_dir)
+            transcripts = merge_transcripts(
+                sessions, session_segments, input_dir,
+                session_languages=self._detected_languages,
+            )
             raw_dir = output_dir / "transcripts-raw"
             write_raw_transcripts(transcripts, raw_dir)
             write_raw_transcripts_md(transcripts, raw_dir)
@@ -2392,7 +2401,10 @@ class Pipeline:
             # ── Merge and write transcripts ──
             status.update("[dim]Merging transcripts...[/dim]")
             t0 = time.perf_counter()
-            transcripts = merge_transcripts(sessions, session_segments, input_dir)
+            transcripts = merge_transcripts(
+                sessions, session_segments, input_dir,
+                session_languages=self._detected_languages,
+            )
             raw_dir = output_dir / "transcripts-raw"
             write_raw_transcripts(transcripts, raw_dir)
             write_raw_transcripts_md(transcripts, raw_dir)
@@ -2919,13 +2931,19 @@ class Pipeline:
                 if s.session_id not in session_segments and s.audio_path is not None
             ]
             if needs_transcription:
-                whisper_results, whisper_outcome = transcribe_sessions(
+                whisper_results, whisper_languages, whisper_outcome = transcribe_sessions(
                     needs_transcription,
                     self.settings,
                     on_progress=on_progress,
                     on_segment=on_segment,
                 )
                 session_segments.update(whisper_results)
+                # Deliberately instance state, not a third return value.
+                # `_gather_all_segments` has two callers and `merge_transcripts`
+                # two more; widening all four to carry an optional map would
+                # cost more than it explains. Per-run derived data on a per-run
+                # object, read at the `merge_transcripts` call sites.
+                self._detected_languages.update(whisper_languages)
                 transcript_outcome.attempted += whisper_outcome.attempted
                 transcript_outcome.succeeded += whisper_outcome.succeeded
                 transcript_outcome.failed.extend(whisper_outcome.failed)

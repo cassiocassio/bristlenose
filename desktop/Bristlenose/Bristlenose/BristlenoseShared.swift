@@ -261,13 +261,23 @@ enum BristlenoseShared {
         if let model = defaults.string(forKey: "whisperModel") {
             env["BRISTLENOSE_WHISPER_MODEL"] = model
         }
-        if let lang = defaults.string(forKey: "language"), lang != "en" {
-            // TRANSCRIPTION language, not the UI's — a different axis that
-            // happens to read the same preference. Unset is meaningful here
-            // ("let Whisper detect"), which is why this keeps the only-when-set
-            // rule that `BRISTLENOSE_LANG` had to give up.
-            env["BRISTLENOSE_WHISPER_LANGUAGE"] = lang
-        }
+        // `BRISTLENOSE_WHISPER_LANGUAGE` is deliberately NOT set here. It used
+        // to be derived from the UI preference — the comment that stood here
+        // named it "a different axis that happens to read the same preference",
+        // which was exactly right and is why the derivation had to go.
+        //
+        // The UI language is a property of the READER; the spoken language is a
+        // property of the RECORDING. Coupling them meant an English interface
+        // pinned Whisper to English, so a UK study with Polish or Nepali
+        // participants was decoded under an English assumption — and a researcher
+        // whose Mac is set to a language we do not render got English twice over,
+        // once correctly for the chrome and once wrongly for the audio.
+        //
+        // `whisper_language` now defaults to "auto" in config.py, so injecting
+        // nothing means per-file detection. A researcher who knows their corpus
+        // passes `--whisper-language`. Nothing to inject until there is a
+        // control for it, and not injecting also lets a project .env win again
+        // (pydantic ranks env above dotenv).
         // `BRISTLENOSE_LANG` is deliberately NOT set here — `childEnvironment`
         // owns it, unconditionally, from `I18n.resolvedLocale`. It used to live
         // here with the only-when-set rule above, which was right while its one

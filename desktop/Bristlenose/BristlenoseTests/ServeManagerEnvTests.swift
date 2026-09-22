@@ -273,22 +273,40 @@ struct ServeManagerEnvTests {
     /// rendering German. `BRISTLENOSE_LANG` therefore moved to
     /// `childEnvironment`, unconditional, and is asserted by
     /// `childEnvironment_passes_the_ui_language_to_the_pipeline`.
-    @Test func overlayPreferences_injects_whisper_language_only_when_set() {
+    /// **The transcription language is never derived from the UI preference.**
+    ///
+    /// This test asserted the opposite until 22 Sep 2026 — a `pt-BR` interface
+    /// injected `BRISTLENOSE_WHISPER_LANGUAGE=pt-BR` — and the assertion was
+    /// correct about the code and wrong about the product. The UI language is a
+    /// property of the reader; the spoken language is a property of the
+    /// recording. Coupling them meant an English interface PINNED Whisper to
+    /// English, so a UK study with Polish or Nepali participants was decoded
+    /// under an English assumption, and a researcher whose Mac is set to a
+    /// language we do not render got the English fallback applied twice: once
+    /// correctly, to the chrome, and once wrongly, to the audio.
+    ///
+    /// `whisper_language` now defaults to `"auto"` in `config.py`, so injecting
+    /// nothing means per-file detection — which is also the only setting that
+    /// handles a mixed-language study. The escape hatch is `--whisper-language`.
+    ///
+    /// Mutation proof: restore the `if let lang = …, lang != "en"` block in
+    /// `overlayPreferences` and the `pt-BR` case below goes red.
+    @Test func overlayPreferences_never_derives_whisper_language_from_the_ui() {
         withIsolatedDefaults { defaults in
             var env: [String: String] = [:]
             BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
             #expect(env["BRISTLENOSE_WHISPER_LANGUAGE"] == nil)
             #expect(env["BRISTLENOSE_LANG"] == nil, "the UI locale is childEnvironment's now")
 
-            defaults.set("en", forKey: "language")
-            env = [:]
-            BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
-            #expect(env["BRISTLENOSE_WHISPER_LANGUAGE"] == nil)
-
-            defaults.set("pt-BR", forKey: "language")
-            env = [:]
-            BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
-            #expect(env["BRISTLENOSE_WHISPER_LANGUAGE"] == "pt-BR")
+            for uiLanguage in ["en", "pt-BR", "ja"] {
+                defaults.set(uiLanguage, forKey: "language")
+                env = [:]
+                BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
+                #expect(
+                    env["BRISTLENOSE_WHISPER_LANGUAGE"] == nil,
+                    "a \(uiLanguage) interface must not tell Whisper the audio is \(uiLanguage)"
+                )
+            }
         }
     }
 

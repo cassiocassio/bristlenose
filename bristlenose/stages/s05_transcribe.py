@@ -105,7 +105,7 @@ def transcribe_sessions(
     *,
     on_progress: ProgressCallback | None = None,
     on_segment: object | None = None,
-) -> tuple[dict[str, list[TranscriptSegment]], StageOutcome]:
+) -> tuple[dict[str, list[TranscriptSegment]], dict[str, str], StageOutcome]:
     """Transcribe audio for sessions that need it.
 
     Detects hardware and selects the optimal backend automatically.
@@ -156,6 +156,10 @@ def transcribe_sessions(
         transcribe_fn = _init_faster_whisper_backend(settings, hw)
 
     results: dict[str, list[TranscriptSegment]] = {}
+    #: session_id -> the language the backend DETECTED. Populated only when the
+    #: language was left to the backend; see the note at the assignment site.
+    languages: dict[str, str] = {}
+    pinned = settings.whisper_language if settings.whisper_language != "auto" else None
     outcome = StageOutcome(attempted=len(needs_transcription))
     total = len(needs_transcription)
 
@@ -177,12 +181,21 @@ def transcribe_sessions(
             # heartbeat — keeps backward-compat with transcribe_fn callables
             # (and test stubs) that take only (audio_path, settings).
             if seg_cb is not None:
-                segments = transcribe_fn(
+                out = transcribe_fn(
                     session.audio_path, settings, on_segment=seg_cb,
                 )
             else:
-                segments = transcribe_fn(session.audio_path, settings)
+                out = transcribe_fn(session.audio_path, settings)
+            # Backends return (segments, label); a stub may still return a bare
+            # list — the same backward-compat the on_segment arity dance above
+            # exists for.
+            segments, detected = out if isinstance(out, tuple) else (out, None)
             results[session.session_id] = segments
+            # Only record a label we did NOT supply. With the language pinned,
+            # every backend echoes the decode option straight back, so storing
+            # it would be our own input wearing the clothes of evidence.
+            if pinned is None and detected:
+                languages[session.session_id] = detected
             outcome.succeeded += 1
             logger.info(
                 "%s: Transcribed %d segments",
@@ -218,7 +231,7 @@ def transcribe_sessions(
         if on_progress:
             on_progress(i, total)
 
-    return results, outcome
+    return results, languages, outcome
 
 
 # ---------------------------------------------------------------------------
@@ -306,7 +319,7 @@ def _init_mlx_backend(
         audio_path: Path,
         settings: BristlenoseSettings,
         on_segment: object | None = None,
-    ) -> list[TranscriptSegment]:
+    ) -> tuple[list[TranscriptSegment], str | None]:
         # on_segment is ignored: mlx_whisper.transcribe() is one blocking call
         # that returns every segment at once, so there's no within-file
         # heartbeat to surface (per-file progress still ticks in the caller).
@@ -365,7 +378,7 @@ def _init_mlx_backend(
                     source="mlx-whisper",
                 ))
 
-        return segments
+        return segments, result.get("language")
 
     return transcribe_mlx
 
@@ -452,7 +465,7 @@ def _init_faster_whisper_backend(
         audio_path: Path,
         settings: BristlenoseSettings,
         on_segment: object | None = None,
-    ) -> list[TranscriptSegment]:
+    ) -> tuple[list[TranscriptSegment], str | None]:
         segments_iter, info = model.transcribe(
             str(audio_path),
             language=settings.whisper_language if settings.whisper_language != "auto" else None,
@@ -499,6 +512,6 @@ def _init_faster_whisper_backend(
             if on_segment is not None and info.duration:
                 on_segment(segment.end, info.duration)
 
-        return transcript_segments
+        return transcript_segments, info.language
 
     return transcribe_faster_whisper

@@ -42,7 +42,7 @@ final class I18n: ObservableObject {
     /// Namespaces to load — must match the JSON filenames in bristlenose/locales/.
     private static let namespaces = ["common", "settings", "enums", "desktop"]
 
-    /// The other five namespaces that exist in `bristlenose/locales/` and are
+    /// The namespaces that exist in `bristlenose/locales/` and are
     /// deliberately not loaded here — they belong to the CLI and the server,
     /// which are their own surfaces. Kept beside `namespaces` because the two
     /// are only meaningful as a pair: this is the complement, and the `t`

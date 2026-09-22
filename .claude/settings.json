@@ -6,6 +6,10 @@
           {
             "type": "command",
             "command": ".claude/hooks/install-git-guards.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/memory-index-size.sh"
           }
         ]
       }

@@ -87,7 +87,10 @@ _self_check()
 # Language classification
 # --------------------------------------------------------------------------
 
-_EN = {"the", "and", "of", "to", "in", "for", "with", "on", "is", "are", "a", "an",
+# `a` is absent deliberately: it is an English article and an everyday Spanish
+# preposition, and it was scoring English on "Identidad de marca frente a
+# contenido editorial". A token two languages use is evidence for neither.
+_EN = {"the", "and", "of", "to", "in", "for", "with", "on", "is", "are", "an",
        "that", "this", "their", "from", "about", "how", "what", "when", "over",
        "into", "during", "its", "it", "as", "at", "by", "or", "challenges",
        "experience", "issues", "concerns", "expectations"}
@@ -102,7 +105,7 @@ _CA = {"amb", "això", "és", "què", "aquest", "aquesta", "els", "hi", "seva", 
 # `compra` is spelled identically in both and counted for neither: a word
 # two languages share is evidence for neither of them.
 _SHARED_ROMANCE = {"de", "que", "la", "del", "una", "en", "i", "y", "les", "no",
-                   "compra"}
+                   "compra", "a"}
 
 _CA_MARKS = ("l'", "d'", "n'", "s'", "·", "tx", "ny", "à", "è", "ò", "ï")
 _ES_MARKS = ("ñ", "¿", "¡", "ción", "ciones", "sión")

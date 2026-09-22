@@ -1,7 +1,7 @@
 ---
 status: partial
 last-trued: 2026-09-22
-trued-against: HEAD@main on 2026-09-22 (52bfc67d), measured against a Debug build of that tree
+trued-against: HEAD@main on 2026-09-22 — re-trued the same day after the defects below were FIXED (see "Decisions and fixes, 22 Sep 2026")
 ---
 
 # Locale negotiation — desktop vs web
@@ -79,7 +79,7 @@ build against an empty preference container wrote nothing at all. `language` is 
 `configure` asks the matcher, and `adoptChosenLanguageForAppKit()` returns at its first
 `guard` (`I18n.swift:104`).
 
-> ### 🔴 Second defect — two readers never got the memo, and they own the bigger surface
+> ### ✅ Second defect — FIXED 22 Sep 2026. Two readers never got the memo, and they owned the bigger surface
 >
 > `I18n` is not the only reader of the private key. Five sites read it; three go through
 > `I18n`, and **two bypass it entirely and default to `"en"` on their own**:
@@ -153,7 +153,7 @@ Measured decision table. Each row is a launch; the last column is the state left
 | picker → German, then System Settings ▸ Apps → French | **`de`** ❌ | **`fr`** ❌ | **rewritten to `de`** ❌ |
 | …the launch after that | `de` | `de` | `de` (guard trips, no write) |
 
-> ### 🔴 Defect — the per-app override is not merely ignored now, it is reverted
+> ### ✅ Defect — FIXED 22 Sep 2026. The per-app override was not merely ignored, it was reverted
 >
 > The decision below argues against an in-app picker partly because of a race it says we
 > had already hit: *"System Settings ▸ Apps ▸ Bristlenose ▸ Korean was being silently
@@ -251,6 +251,85 @@ directories up without a single file reference in the project.
 > View silently in English for that language alone. The degradation is graceful, which is
 > what makes it survivable and also what makes it invisible. Fixing the guide and adding
 > the gate is follow-up work, not part of this pass.
+
+## Decisions and fixes, 22 Sep 2026
+
+Everything above was measured, then decided, then fixed on the same day. The
+sections keep their original wording so the reasoning survives; this is what
+changed and what was chosen.
+
+### The conflation, which was the real finding
+
+One value drove three unrelated facts. Each has a different owner, and they come
+apart in ordinary working setups, not exotic ones:
+
+| axis | owner | example where it differs |
+|---|---|---|
+| **UI language** | the reader | a French researcher at a London agency |
+| **Transcription language** | the recording | …interviewing in English |
+| **Generated output** | the deliverable's audience | …for a British client |
+
+A researcher whose Mac is set to a language we do not ship got the English
+fallback applied three times: correctly to the chrome, and wrongly to both the
+audio and the analysis. Whisper speaks 100 languages, we render 22, and the 78
+in between were exactly the people it hurt.
+
+### Fixed
+
+- **The matcher was latching.** `preferredLocalizations(from:forPreferences: nil)`
+  resolves the language list on the first call in the process and caches it for
+  the process lifetime — and AppKit primes it during `NSApplicationMain`, before
+  any of our code runs. Now passed explicitly. Five review lanes found this
+  independently; three measured it.
+- **The write-back reverted a System Settings choice.** Now gated on there being
+  no explicit `AppleLanguages`, which distinguishes the install it was written
+  for from one where somebody chose.
+- **The picker lied.** `@AppStorage("language") = "en"` displayed English while
+  the app ran in German. Seeded from `I18n.resolvedLocale` — as `@State`, not a
+  seeded key, because the key's *absence* is what makes the app follow the
+  system and what lets System Settings work at all.
+- **Absence was read as English** in two web-facing readers and the `?locale=`
+  param. All read the one resolver now.
+- **Transcription decoupled.** `whisper_language` `"en"` → `"auto"`, the desktop
+  injects nothing, `--whisper-language` added, and the detected label reaches
+  the transcript header.
+
+### Declined, deliberately
+
+- **No "System Default" row in the picker.** The population that wants a way
+  back to following the system has two or more preferred languages by
+  definition — and that is precisely who macOS shows the per-app Language row
+  to. The row would also have cost a `String?` binding, whose non-optional tags
+  render a blank, dead control with no compiler error.
+  **Consequence, accepted:** a monolingual user who picks a language can only
+  un-pick it via System Settings. The slow-burn case — someone pinned to English
+  before we ship their language — does *not* arise: nothing writes the key
+  unless a row is actively selected, so a user who browses and closes stays on
+  follow-the-system and upgrades automatically.
+- **`UIPrefersShowingLanguageSettings` still not set.** Same reasoning: the
+  users who cannot see the per-app row are the users who do not need it.
+- **Swiss German falling through to English rather than German.** Apple's
+  matcher does not treat `gsw` as a German variant. A `gsw`-only Mac gets
+  English where German would be better; in practice such Macs list `de`/`fr`/`it`
+  too, so it self-rescues. Accepted for v1.
+- **Decoupling the UI language from the generated-output language.** The V1
+  decision — one language, the UI language — stands. The case that most argues
+  for decoupling is the unsupported-locale user, where the UI language is a
+  fallback rather than a choice; revisit there first if it is ever reopened.
+
+### Still open
+
+- **`UIPrefersShowingLanguageSettings`'s premise is unverified end to end.** That
+  System Settings ▸ Apps writes the key and our read sees it has only ever been
+  simulated — reading the real sandboxed container needs Full Disk Access. The
+  first acceptance step is: set a language there, relaunch, confirm the app
+  follows, then relaunch again and confirm it *stays*. That second relaunch is
+  what proves the revert is gone.
+- **The `.lproj` set is still an unlisted registration site** — see §5.
+- **English is the *unsteered* case for generated output**, not "steered to
+  English", so a non-English corpus under an English UI gets provider-dependent
+  theme language (Claude reliably English; ChatGPT and Gemini drift). One line
+  to fix, at the cost of forking the prompt hash. Not taken.
 
 ## Why the picker stayed
 

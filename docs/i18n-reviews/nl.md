@@ -42,6 +42,40 @@ Signalen zijn statistisch opvallende concentraties van sentiment of codeboektags
 
 ## Where I'd value your steer
 
+### Uninstall and Delete are the same word  ·  nl `Verwijder` ×3
+
+Three rows sit in one open menu: uninstalling a codebook, deleting a code, and
+deleting a code group. English distinguishes them **in the verb** — Uninstall is
+reversible, Delete is not, and the Library can reinstall what you uninstalled.
+In your language all three currently read nl `Verwijder` ×3, so nothing signals that one
+of them is recoverable and two are permanent.
+
+The objects differ, so the rows are tellable apart. The question is whether that
+is enough, or whether the uninstall row should carry a longer, unambiguous form.
+
+**Please don't feel you have to reach for a dictionary word.** We measured the
+obvious candidates against Apple's own system strings and they appear **zero
+times** — `Afinstaller`, `Deïnstalleer`, `Poista asennus`, `Деинсталлировать`, `설치 제거` — while the verb you
+already have is exactly what Apple ships for Uninstall. So the seeded word is
+right *and* the collision is real, at the same time. Danish and Korean happen to
+avoid it because their delete verb differs.
+
+One candidate, to accept or reject: `Deïnstalleer codeboek`.
+
+### Which quotation marks?  ·  a measurement, not a preference
+
+Your values use **two** pairs: `”…”` in 13 places and `“…”` in 11. Every other
+language in the product settled on one, so this is the only locale where a
+researcher could see both styles in the same session.
+
+The strings are dialog titles quoting something the researcher typed —
+*“{{name}}” verwijderen?* and similar.
+
+We have deliberately **not** picked for you. Choosing a side and then pinning it
+with a test would be inventing an answer, and the rest of the product's pairs
+came from reviewed translations rather than from a style guide. Which pair
+should Dutch use throughout?
+
 ### The copula sentence is mine  ·  low risk, but unread
 - The definition sentence puts **zijn** in front of your existing clause, which
   survived from the earlier wording word for word. The construction is the only

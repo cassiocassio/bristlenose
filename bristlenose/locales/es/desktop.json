@@ -923,7 +923,7 @@
     "connected": "Conectado",
     "cantSignIn": "Bristlenose no puede iniciar sesi\u00f3n en {{service}}.",
     "cantSignInStranded": "Bristlenose no puede iniciar sesi\u00f3n en {{service}} en esta versi\u00f3n, pero este inicio de sesi\u00f3n sigue guardado.",
-    "connectMiroElsewhere": "Conecta Miro desde \"Enviar a Miro\", en el men\u00fa Exportar de un proyecto.",
+    "connectMiroElsewhere": "Conecta Miro desde \u00abEnviar a Miro\u00bb, en el men\u00fa Exportar de un proyecto.",
     "signInAgain": "El proveedor cerr\u00f3 este inicio de sesi\u00f3n. Volver a iniciar sesi\u00f3n lo restaura.",
     "cannotHoldRecordings": "Esta cuenta no puede guardar grabaciones de reuniones, as\u00ed que no hay nada que importar.",
     "connect": "Conectar\u2026",

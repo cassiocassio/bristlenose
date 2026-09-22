@@ -923,7 +923,7 @@
     "connected": "Verbunden",
     "cantSignIn": "Bristlenose kann sich nicht bei {{service}} anmelden.",
     "cantSignInStranded": "Bristlenose kann sich in diesem Build nicht bei {{service}} anmelden, aber diese Anmeldung ist weiterhin gespeichert.",
-    "connectMiroElsewhere": "Verbinde Miro \u00fcber \"An Miro senden\" im Men\u00fc Exportieren eines Projekts.",
+    "connectMiroElsewhere": "Verbinde Miro \u00fcber \u201eAn Miro senden\u201c im Men\u00fc Exportieren eines Projekts.",
     "signInAgain": "Der Anbieter hat diese Anmeldung beendet. Eine erneute Anmeldung stellt sie wieder her.",
     "cannotHoldRecordings": "Dieser Account kann keine Meeting-Aufzeichnungen enthalten, also gibt es nichts zu importieren.",
     "connect": "Verbinden\u2026",

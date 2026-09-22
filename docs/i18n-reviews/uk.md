@@ -47,6 +47,26 @@ last section.
 
 ## Where I'd value your steer
 
+### Uninstall and Delete are the same word  ·  uk `Видалити` ×3
+
+Three rows sit in one open menu: uninstalling a codebook, deleting a code, and
+deleting a code group. English distinguishes them **in the verb** — Uninstall is
+reversible, Delete is not, and the Library can reinstall what you uninstalled.
+In your language all three currently read uk `Видалити` ×3, so nothing signals that one
+of them is recoverable and two are permanent.
+
+The objects differ, so the rows are tellable apart. The question is whether that
+is enough, or whether the uninstall row should carry a longer, unambiguous form.
+
+**Please don't feel you have to reach for a dictionary word.** We measured the
+obvious candidates against Apple's own system strings and they appear **zero
+times** — `Afinstaller`, `Deïnstalleer`, `Poista asennus`, `Деинсталлировать`, `설치 제거` — while the verb you
+already have is exactly what Apple ships for Uninstall. So the seeded word is
+right *and* the collision is real, at the same time. Danish and Korean happen to
+avoid it because their delete verb differs.
+
+One candidate, to accept or reject: `Деінсталювати кодову книгу`.
+
 ### «Сигнали — це …»  ·  I chose the definition idiom deliberately
 - **What we use now:** «Сигнали — це статистично помітні концентрації…»
 - **Also in play:** «Сигнали становлять…», or a plain dash without *це*

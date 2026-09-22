@@ -220,6 +220,13 @@ Transcription backend: \fBauto\fR (detect hardware), \fBmlx\fR (Apple Silicon GP
 Whisper model size: \fBtiny\fR, \fBbase\fR, \fBsmall\fR, \fBmedium\fR,
 \fBlarge-v3\fR, \fBlarge-v3-turbo\fR. Default: \fBlarge-v3-turbo\fR.
 .TP
+.BR \-\-whisper\-language " " \fILANG\fR
+Spoken language of the recordings, as a Whisper language code
+(\fBes\fR, \fBne\fR, \fByue\fR \(em 100 are supported), or \fBauto\fR to detect
+it per file. Default: \fBauto\fR. Set this only when you already know the
+corpus; detection handles a study whose sessions are in different languages,
+which a fixed value cannot.
+.TP
 .BR \-l ", " \-\-llm " " \fIPROVIDER\fR
 LLM provider: \fBclaude\fR (or \fBanthropic\fR), \fBchatgpt\fR (or \fBopenai\fR),
 \fBazure\fR (or \fBazure-openai\fR), \fBgemini\fR (or \fBgoogle\fR),
@@ -279,6 +286,10 @@ Output directory. Default: \fIbristlenose-output/\fR inside the input folder.
 .TP
 .BR \-w ", " \-\-whisper\-model " " \fIMODEL\fR
 Whisper model size.
+.TP
+.BR \-\-whisper\-language " " \fILANG\fR
+Spoken language of the recordings, or \fBauto\fR to detect per file.
+Default: \fBauto\fR.
 .TP
 .BR \-\-no\-fetch
 Abort instead of downloading the Whisper model if it isn't cached.
@@ -435,7 +446,7 @@ Local model name. Default: \fBllama3.2:3b\fR. Other options: \fBllama3.1:8b\fR,
 Model size. Default: \fBlarge-v3-turbo\fR.
 .TP
 .B BRISTLENOSE_WHISPER_LANGUAGE
-Language code. Default: \fBen\fR.
+Whisper language code, or \fBauto\fR to detect per file. Default: \fBauto\fR.
 .TP
 .B BRISTLENOSE_WHISPER_DEVICE
 Device for faster-whisper: \fBcpu\fR, \fBcuda\fR, or \fBauto\fR. Default: \fBauto\fR.

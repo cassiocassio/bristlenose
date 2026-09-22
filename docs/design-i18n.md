@@ -646,8 +646,11 @@ disagree, that doc is the one with the measurements attached.
    `UserDefaults.standard.string(forKey: "language")` — written only by the Settings
    picker — and falls back to `systemPreferredLocale()` (`I18n.swift:128-133`) when it is
    absent, which is `Bundle.preferredLocalizations(from: Array(supportedLocales),
-   forPreferences: nil)`. So a **fresh install follows the OS** (measured: `fr`→`fr`,
-   `nn-NO`→`nb`, `zh-Hans`→`en`), and an install that has used the picker follows the
+   forPreferences: nil)`. So a **fresh install follows the OS for the native chrome**
+   (measured: `fr`→`fr`, `nn-NO`→`nb`, `zh-Hans`→`en`) — **but not for the report**:
+   `BridgeHandler.swift:596` and `BristlenoseShared.swift:256` read the raw key with their
+   own `?? "en"` and never see the matcher, so a French Mac gets French menus around an
+   English report. An install that has used the picker follows the
    picker, permanently — nothing ever removes that key. **This is the source of the one
    open defect**: a per-app language set in System Settings ▸ Apps is not only ignored by
    `I18n` but silently overwritten on the next launch by

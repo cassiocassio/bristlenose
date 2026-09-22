@@ -74,11 +74,34 @@ So the matcher half of the original decision now works, and works well: script a
 subtags resolve the way the rest of macOS resolves them, which is the "free correctness"
 the decision below argued for.
 
-**Fresh install → the OS wins.** Measured: launching a HEAD build against an empty
-preference container wrote nothing at all. `language` is unset, so `configure` asks the
-matcher, and `adoptChosenLanguageForAppKit()` returns at its first `guard`
-(`I18n.swift:104`). *"Korean Mac boots Korean"* — the decision's own headline — is true
-again for the first time.
+**Fresh install → the OS wins, for the native chrome only.** Measured: launching a HEAD
+build against an empty preference container wrote nothing at all. `language` is unset, so
+`configure` asks the matcher, and `adoptChosenLanguageForAppKit()` returns at its first
+`guard` (`I18n.swift:104`).
+
+> ### 🔴 Second defect — two readers never got the memo, and they own the bigger surface
+>
+> `I18n` is not the only reader of the private key. Five sites read it; three go through
+> `I18n`, and **two bypass it entirely and default to `"en"` on their own**:
+>
+> - `BridgeHandler.swift:596` — `UserDefaults.standard.string(forKey: "language") ?? "en"`,
+>   pushed into the WKWebView by `syncLocale()`. This is the language of **the report** —
+>   the surface the researcher spends the day in.
+> - `BristlenoseShared.swift:256` — `if let lang = defaults.string(forKey: "language"),
+>   lang != "en"`, which sets `BRISTLENOSE_LANG` and `BRISTLENOSE_WHISPER_LANGUAGE` in the
+>   sidecar's environment. Absent key → no env var → the server-rendered status page is
+>   English.
+>
+> So on a fresh install on a French Mac at HEAD: **French SwiftUI chrome, French AppKit
+> menus, an English report inside them.** *"Korean Mac boots Korean"* is true of the shell
+> and false of the contents, which is close to the worst available outcome — it looks
+> deliberate.
+>
+> The 20 Sep banner listed all four private-key readers. `b9ba08f2` changed the one in
+> `I18n` and left the other two, and nothing was red, because no test asserts that the
+> web layer and the native layer resolve the same locale. **Listed causes are a hypothesis;
+> the unlisted ones are the unlooked-at ones** — here the list was right and only two
+> thirds of it was acted on.
 
 **Install that has used the picker → the private key wins,** permanently and
 unconditionally. There is no expiry, no migration, and no path back: nothing anywhere

@@ -28,7 +28,7 @@ import { useFocus } from "../contexts/FocusContext";
 import {
   useQuotesStore,
   toggleStar,
-  toggleHide,
+  unhideQuotes,
   commitEdit,
   commitHeadingEdit,
   addTag,
@@ -422,7 +422,7 @@ export function QuoteGroup({
       } else {
         // ── Unhide: fly-down from badge ─────────────────────────────────
         pendingUnhides.current.add(domId);
-        toggleHide(domId, false);
+        unhideQuotes([domId]);
         setUnhideVersion((v) => v + 1);
       }
     },
@@ -708,11 +708,21 @@ export function QuoteGroup({
   );
 
   const handleUnhideAll = useCallback(() => {
-    for (const q of hiddenQuotes) {
-      handleToggleHide(q.dom_id, false);
+    // One store call for the whole restore, not one per hidden quote.
+    //
+    // The fly-down cascade is unaffected: it reads `pendingUnhides` in an
+    // effect keyed on `unhideVersion`, so it already expected a batch and
+    // staggers whatever it finds. Only the writes were per-quote — this
+    // looped `handleToggleHide`, and each pass sent a full-map replacement
+    // of `/hidden`, fire-and-forget and racing the others.
+    const ids = hiddenQuotes.map((q) => q.dom_id);
+    if (ids.length > 0) {
+      for (const id of ids) pendingUnhides.current.add(id);
+      unhideQuotes(ids);
+      setUnhideVersion((v) => v + 1);
     }
     setIsCounterOpen(false);
-  }, [hiddenQuotes, handleToggleHide]);
+  }, [hiddenQuotes]);
 
   // ── Heading/description handlers ──────────────────────────────────────
 

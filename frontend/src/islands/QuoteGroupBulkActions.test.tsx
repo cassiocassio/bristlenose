@@ -270,6 +270,57 @@ describe("bulk hide cost", () => {
   });
 });
 
+describe("restore all", () => {
+  let realScrollIntoView: typeof Element.prototype.scrollIntoView;
+
+  beforeEach(() => {
+    resetStore();
+    resetSidebarStore();
+    resetInspectorStore();
+    document.body.innerHTML = "";
+    realScrollIntoView = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function () {};
+    vi.mocked(putHidden).mockClear();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    Element.prototype.scrollIntoView = realScrollIntoView;
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it("restores a group in one write, not one per hidden quote", () => {
+    // "Restore all" looped the per-quote unhide, so a group with n hidden
+    // quotes sent n full-map replacements of /hidden, racing each other. The
+    // fly-down cascade was never the problem: it reads a pending set in an
+    // effect keyed on a version counter, so it already handled a batch.
+    const quotes = ["q-1", "q-2", "q-3"].map((id) =>
+      makeQuote({ dom_id: id, is_hidden: true }),
+    );
+    initFromQuotes(quotes, true);
+
+    const { unmount } = renderGroup(quotes);
+
+    const toggle = document.querySelector<HTMLElement>(".bn-hidden-toggle");
+    expect(toggle, "the hidden-count badge should be rendered").not.toBeNull();
+    act(() => {
+      toggle!.click();
+    });
+
+    const restoreAll = document.querySelector<HTMLElement>(".bn-unhide-all");
+    expect(restoreAll, "the dropdown should offer Restore all").not.toBeNull();
+    act(() => {
+      restoreAll!.click();
+    });
+
+    expect(getQuotesSnapshot().hidden).toEqual({});
+    expect(vi.mocked(putHidden).mock.calls.length).toBe(1);
+
+    unmount();
+  });
+});
+
 describe("bulk star direction", () => {
   // Three surfaces used to decide this differently, and one of them is a
   // LABEL: AppLayout pushes `starActionIsUnstar` over the bridge and the

@@ -10,7 +10,9 @@ import {
   initHeadingEdits,
   resetStore,
   toggleStar,
-  toggleHide,
+  hideQuotes,
+  unhideQuotes,
+  HIDE_DURATION,
   commitEdit,
   commitHeadingEdit,
   addTag,
@@ -207,21 +209,45 @@ describe("QuotesStore", () => {
     });
   });
 
-  describe("toggleHide", () => {
-    it("hides a quote and calls putHidden", () => {
-      initFromQuotes([makeQuote()]);
-      toggleHide("q-P1-120", true);
-      const { result } = renderHook(() => useQuotesStore());
-      expect(result.current.hidden["q-P1-120"]).toBe(true);
-      expect(mockPutHidden).toHaveBeenCalledWith({ "q-P1-120": true });
+  // These two contracts used to be pinned against `toggleHide`, which had no
+  // production callers left once both paths moved to the bulk functions — an
+  // exported helper whose only callers are tests. Re-homed rather than deleted
+  // with it, and the deferral below is a contract the old shape could not
+  // express, because `toggleHide` wrote synchronously.
+  describe("hideQuotes / unhideQuotes", () => {
+    it("writes nothing until the collapse window has passed", () => {
+      vi.useFakeTimers();
+      try {
+        initFromQuotes([makeQuote()]);
+        hideQuotes(["q-P1-120"]);
+        expect(mockPutHidden).not.toHaveBeenCalled();
+
+        vi.advanceTimersByTime(HIDE_DURATION + 50);
+        const { result } = renderHook(() => useQuotesStore());
+        expect(result.current.hidden["q-P1-120"]).toBe(true);
+        expect(mockPutHidden).toHaveBeenCalledTimes(1);
+        expect(mockPutHidden).toHaveBeenCalledWith({ "q-P1-120": true });
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
-    it("unhides a quote", () => {
+    it("restores immediately, in one write", () => {
       initFromQuotes([makeQuote({ is_hidden: true })]);
-      toggleHide("q-P1-120", false);
+      unhideQuotes(["q-P1-120"]);
       const { result } = renderHook(() => useQuotesStore());
       expect(result.current.hidden["q-P1-120"]).toBeUndefined();
+      expect(mockPutHidden).toHaveBeenCalledTimes(1);
       expect(mockPutHidden).toHaveBeenCalledWith({});
+    });
+
+    it("restores a whole group in one write, not one per quote", () => {
+      const ids = ["q-a", "q-b", "q-c"];
+      initFromQuotes(ids.map((id) => makeQuote({ dom_id: id, is_hidden: true })));
+      unhideQuotes(ids);
+      const { result } = renderHook(() => useQuotesStore());
+      expect(result.current.hidden).toEqual({});
+      expect(mockPutHidden).toHaveBeenCalledTimes(1);
     });
   });
 

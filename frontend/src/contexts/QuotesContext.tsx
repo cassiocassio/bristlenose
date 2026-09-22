@@ -299,23 +299,37 @@ export function setStarred(domIds: string[], newState: boolean): void {
   announce(i18n.t(newState ? "announce.starred" : "announce.unstarred"));
 }
 
-export function toggleHide(domId: string, newState: boolean): void {
+/**
+ * Restore one or more hidden quotes as a single gesture.
+ *
+ * One state write and one PUT however many are passed. "Restore all" used to
+ * loop a per-quote toggle, sending one full-map replacement of `/hidden` per
+ * hidden quote, fire-and-forget and racing the others.
+ *
+ * Unhide has no collapse window — the card comes back immediately and the
+ * fly-down cascade is applied by the group to the elements once they render.
+ */
+export function unhideQuotes(domIds: string[]): void {
   // Read-only in an exported report — mutations have no server to persist to,
   // and a control that responds then silently discards on reload is a lie.
   if (isExportMode()) return;
+
+  const targets = domIds.filter((id) => state.hidden[id] || state.hiding.has(id));
+  if (targets.length === 0) return;
+
   setState((prev) => {
     const hidden = { ...prev.hidden };
-    if (newState) hidden[domId] = true;
-    else delete hidden[domId];
-    // Drop any in-flight animation record for this quote. An unhide during
-    // the collapse window would otherwise leave it in `hiding` forever, and
-    // every group renders a hiding quote as an empty card.
     const hiding = new Set(prev.hiding);
-    hiding.delete(domId);
+    for (const id of targets) {
+      delete hidden[id];
+      // A quote can be restored mid-collapse; leaving it in `hiding` would
+      // render it as an empty card forever.
+      hiding.delete(id);
+    }
     putHidden(hidden);
     return { ...prev, hidden, hiding };
   });
-  announce(i18n.t(newState ? "announce.hidden" : "announce.restored"));
+  announce(i18n.t("announce.restored"));
 }
 
 /**
@@ -340,7 +354,7 @@ export const HIDE_DURATION = 300;
  * landed last.
  *
  * Callers pass every quote the gesture applies to. Hiding is one-way, so
- * there is no direction argument; `toggleHide(id, false)` unhides.
+ * there is no direction argument; `unhideQuotes` restores.
  */
 export function hideQuotes(domIds: string[]): void {
   // Read-only in an exported report — mutations have no server to persist to,

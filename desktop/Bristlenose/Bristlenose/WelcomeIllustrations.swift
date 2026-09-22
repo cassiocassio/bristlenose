@@ -426,10 +426,10 @@ struct EmergentThemesView: View {
         // translated would depict a fix we do not ship, so they stay English
         // until that question is settled.
         let strings = [
-            "a.name": "How to begin unclear",
+            "a.name": i18n.t("desktop.welcome.examples.themeNameA"),
             "a.w0": i18n.t("desktop.welcome.examples.themeWordA0"), "a.w1": i18n.t("desktop.welcome.examples.themeWordA1"),
             "a.w2": i18n.t("desktop.welcome.examples.themeWordA2"), "a.w3": i18n.t("desktop.welcome.examples.themeWordA3"),
-            "b.name": "Intuitive",
+            "b.name": i18n.t("desktop.welcome.examples.themeNameB"),
             "b.w0": i18n.t("desktop.welcome.examples.themeWordB0"), "b.w1": i18n.t("desktop.welcome.examples.themeWordB1"),
             "b.w2": i18n.t("desktop.welcome.examples.themeWordB2"), "b.w3": i18n.t("desktop.welcome.examples.themeWordB3"),
         ]
@@ -524,6 +524,18 @@ struct SignalIllustrationView: View {
             "intensityTitle": i18n.t("common.signals.intensityTitle"),
             "section": i18n.t("common.signals.section"),
             "theme": i18n.t("common.signals.theme"),
+            // GENERATED — pipeline section and theme names. English until
+            // 22 Sep 2026 because the pipeline generated in whatever language
+            // the model picked; it now generates in the researcher's, so an
+            // English example here would depict software we stopped shipping.
+            // Authored as OUTPUT, not translated chrome: a Spanish study's
+            // checkout section is "Proceso de pago", which is what the steer
+            // actually produces (it translates on-screen terms even when told
+            // not to — experiments/generated-language/FINDINGS.md §3).
+            "loc0": i18n.t("desktop.welcome.examples.sectionOnboarding"),
+            "loc1": i18n.t("desktop.welcome.examples.sectionSearchResults"),
+            "loc2": i18n.t("desktop.welcome.examples.sectionCheckout"),
+            "loc3": i18n.t("desktop.welcome.examples.sectionSettings"),
         ]
         return IllustrationWebView(html: WelcomeIllustrationHTML.signal(
             dark: scheme == .dark, palette: palette, reduce: still, strings: strings))
@@ -1017,6 +1029,7 @@ struct MiroIllustrationView: View {
         // stays English until the generated-language question is settled.
         let strings = [
             "quoteCount": i18n.plural("common.miro.boardQuoteCount", count: 2),
+            "section": i18n.t("desktop.welcome.examples.miroSection"),
             "q1": i18n.t("desktop.welcome.examples.miroQuote1"),
             "q2": i18n.t("desktop.welcome.examples.miroQuote2"),
         ]
@@ -1192,13 +1205,6 @@ enum WelcomeIllustrationHTML {
           .intensity-dots-svg{ display:flex; align-items:center; gap:2px; width:46px; }
           .signal-sparkbars{ display:inline-flex; align-items:flex-end; gap:2px; height:28px; width:96px; }
           .signal-sparkbar{ width:12px; border-radius:1px 1px 0 0; }
-          .pattern-label{ display:inline-block; font-family:var(--mono); font-size:0.72rem; font-weight:520; text-transform:uppercase; letter-spacing:0.06em; padding:0.15rem 0.45rem; border-radius:3px; opacity:0.9; }
-          .pattern-success{ background:#dcfce7; color:#166534; } .pattern-tension{ background:#fef3c7; color:#92400e; }
-          .pattern-gap{ background:#fee2e2; color:#991b1b; } .pattern-recovery{ background:#e0f2fe; color:#075985; }
-          html[data-appearance="dark"] .pattern-success{ background:#14532d; color:#86efac; }
-          html[data-appearance="dark"] .pattern-tension{ background:#451a03; color:#fcd34d; }
-          html[data-appearance="dark"] .pattern-gap{ background:#450a0a; color:#fca5a5; }
-          html[data-appearance="dark"] .pattern-recovery{ background:#0c4a6e; color:#7dd3fc; }
           .flap{ display:inline-block; overflow:hidden; vertical-align:bottom; }
           .flap .roll{ display:block; }
           .flap.flip .roll{ animation:flap-flip .3s ease-in; }
@@ -1226,7 +1232,7 @@ enum WelcomeIllustrationHTML {
               <div class="signal-card-identity">
                 <span class="signal-card-source" data-src></span>
                 <div class="signal-card-location" data-loc></div>
-                <div class="signal-card-tags"><span class="badge" data-tag></span><span class="pattern-label" data-pat></span></div>
+                <div class="signal-card-tags"><span class="badge" data-tag></span></div>
               </div>
               <div class="signal-card-metrics">
                 <span class="metric-label" data-t="signalTitle" data-x="signalLabel"></span>
@@ -1258,10 +1264,10 @@ enum WelcomeIllustrationHTML {
             });
           }
           var SIGNALS=[
-            { src:S["section"], loc:"Onboarding",     tag:["badge-confusion","confusion"],     accent:"var(--bn-sentiment-confusion)",   pat:["pattern-gap","GAP"],           signal:"2.41", conc:"3.2×", concPct:64, agree:"4.1", agreePct:68, intensity:2.5 },
-            { src:S["theme"],   loc:"Search results", tag:["badge-delight","delight"],         accent:"var(--bn-sentiment-delight)",     pat:["pattern-success","SUCCESS"],   signal:"1.98", conc:"2.6×", concPct:52, agree:"5.3", agreePct:88, intensity:2.1 },
-            { src:S["theme"],   loc:"Checkout",       tag:["badge-frustration","frustration"], accent:"var(--bn-sentiment-frustration)", pat:["pattern-tension","TENSION"],   signal:"3.12", conc:"4.3×", concPct:86, agree:"3.4", agreePct:57, intensity:2.8 },
-            { src:S["section"], loc:"Settings",       tag:["badge-doubt","doubt"],             accent:"var(--bn-sentiment-doubt)",       pat:["pattern-recovery","RECOVERY"], signal:"1.74", conc:"1.9×", concPct:38, agree:"2.2", agreePct:37, intensity:1.6 }
+            { src:S["section"], loc:S["loc0"], tag:["badge-confusion","confusion"],     accent:"var(--bn-sentiment-confusion)",   signal:"2.41", conc:"3.2×", concPct:64, agree:"4.1", agreePct:68, intensity:2.5 },
+            { src:S["theme"],   loc:S["loc1"], tag:["badge-delight","delight"],         accent:"var(--bn-sentiment-delight)",     signal:"1.98", conc:"2.6×", concPct:52, agree:"5.3", agreePct:88, intensity:2.1 },
+            { src:S["theme"],   loc:S["loc2"], tag:["badge-frustration","frustration"], accent:"var(--bn-sentiment-frustration)", signal:"3.12", conc:"4.3×", concPct:86, agree:"3.4", agreePct:57, intensity:2.8 },
+            { src:S["section"], loc:S["loc3"], tag:["badge-doubt","doubt"],             accent:"var(--bn-sentiment-doubt)",       signal:"1.74", conc:"1.9×", concPct:38, agree:"2.2", agreePct:37, intensity:1.6 }
           ];
           var VALS=SIGNALS.map(function(s){ return parseFloat(s.signal); });
           function sparkbars(idx, accent){
@@ -1286,18 +1292,16 @@ enum WelcomeIllustrationHTML {
             var s=SIGNALS[idx];
             q("[data-src]").textContent=s.src;
             q("[data-tag]").className="badge "+s.tag[0]; q("[data-tag]").textContent=s.tag[1];
-            q("[data-pat]").className="pattern-label "+s.pat[0];
             q("[data-spark]").innerHTML=sparkbars(idx,s.accent);
             q("[data-cbar]").style.width=s.concPct+"%"; q("[data-abar]").style.width=s.agreePct+"%";
             q("[data-dots]").innerHTML=dotsSVG(s.intensity);
             if(R){
-              q("[data-loc]").textContent=s.loc; q("[data-pat]").textContent=s.pat[1];
+              q("[data-loc]").textContent=s.loc;
               q('[data-mv="signal"]').textContent=s.signal; q('[data-mv="conc"]').textContent=s.conc;
               q('[data-mv="agree"]').textContent=s.agree;  q('[data-mv="intensity"]').textContent=s.intensity.toFixed(1);
               return;
             }
             flapWord(q("[data-loc]"), s.loc);
-            flapWord(q("[data-pat]"), s.pat[1]);
             flapWord(q('[data-mv="signal"]'), s.signal);
             flapWord(q('[data-mv="conc"]'), s.conc);
             flapWord(q('[data-mv="agree"]'), s.agree);
@@ -2174,7 +2178,7 @@ enum WelcomeIllustrationHTML {
         </style></head>
         <body>
           <div class="board" id="board">
-            <div class="sticky pink"><div class="t1">Homepage</div><div class="t2" id="mCount"></div></div>
+            <div class="sticky pink"><div class="t1" id="mSection"></div><div class="t2" id="mCount"></div></div>
             <div class="sticky y1"><div class="qt" id="mQ1"></div><span class="attr">— P1 · 8:27</span></div>
             <div class="sticky y2"><div class="qt" id="mQ2"></div><span class="attr">— P1 · 9:10</span></div>
           </div>
@@ -2184,6 +2188,7 @@ enum WelcomeIllustrationHTML {
           var PACE=\(WelcomeTempo.jsStretch(for: kind)), LEAD=\(WelcomeTempo.jsLeadMs);
           var STK=[].slice.call(document.querySelectorAll(".sticky"));
           document.getElementById("mCount").textContent=S["quoteCount"];
+          document.getElementById("mSection").textContent=S["section"];
           document.getElementById("mQ1").textContent=S["q1"];
           document.getElementById("mQ2").textContent=S["q2"];
           function fit(){

@@ -284,46 +284,25 @@ _AWAITING_CONTENT: set[str] = set()
 #: `test_strings_tables_resolve_through_i18n` reads — a builder can take a table
 #: and still pass English through it, which is how `emergentThemes` shipped ten
 #: hardcoded literals while the classification gate called it done.
-#: ⚠ SIX OF THESE ARE NOW UNBLOCKED AND NOBODY HAS KEYED THEM (22 Sep 2026).
-#: Every entry below was excused by one argument: the pipeline's output language
-#: is undefined, and the illustration rules forbid drawing the fixed version over
-#: a pipeline that still produces the broken one. **That pipeline is fixed for
-#: section and theme names** — `s08`, `s10` and `s11` now generate in the
-#: researcher's language (`bristlenose/llm/output_language.py`, measured at 100%
-#: compliance across three providers). So a Spanish researcher really does get
-#: Spanish sections and themes, and an illustration showing them in English now
-#: depicts software we stopped shipping.
+#: Values inside a view's `strings` table that are deliberately NOT resolved
+#: through `i18n`, keyed by the literal, with the reason.
 #:
-#: They stay English only because keying them is work nobody has done, not
-#: because English is right. This is the "owed item that quietly stopped being
-#: owed" shape the root CLAUDE.md records twice — left loud rather than tidy so
-#: the next reader does not re-derive the settled argument from a stale reason.
+#: **Down to the two that are genuinely a decision.** The other seven were
+#: excused by the pipeline's output language being undefined, and that stopped
+#: being true on 22 Sep 2026 (`22d91b5d`): sections and themes now generate in
+#: the researcher's language, so an English example depicted software we no
+#: longer ship. They are keyed under `desktop.welcome.examples.*` — authored as
+#: *output* rather than translated chrome, because a Spanish study's checkout
+#: section really does come back as "Proceso de pago".
 #:
-#: The two AutoCode codes are NOT unblocked: they are framework tag names
-#: (Nielsen's), and framework codes stay English by a separate, live decision.
+#: What is left is FRAMEWORK, and its decision is live rather than parked: a
+#: shipped codebook tag name IS the identity that cross-study comparison
+#: depends on, and 207 of 234 shipped tags key on literal English phrases
+#: anyway (`docs/design-i18n.md`, the Renfe case). These two are Nielsen's.
 _DELIBERATELY_ENGLISH_VALUES = {
-    "Onboarding": "GENERATED, now UNBLOCKED — a pipeline section name on the "
-                  "signal card. Steered since 22 Sep 2026; keying it is owed.",
-    "Search results": "GENERATED, now UNBLOCKED — ditto.",
-    "Checkout": "GENERATED, now UNBLOCKED — ditto.",
-    "Settings": "GENERATED, now UNBLOCKED — ditto.",
-    # These two are Nielsen's own tag names, so FRAMEWORK is the accurate class
-    # and the decision behind it is live, not parked: the tag name is the
-    # identity cross-study comparison depends on, and 207 of 234 shipped tags
-    # key on literal English phrases anyway (docs/design-i18n.md, the Renfe
-    # case). Unaffected by the generation fix above.
     "visible options": "FRAMEWORK — a Nielsen codebook tag name, not free "
                        "generated text. Shipped framework codes stay English.",
     "platform convention": "FRAMEWORK — ditto.",
-    "How to begin unclear": "GENERATED, now UNBLOCKED — a pipeline theme "
-                            "title. The park this cited was half-answered on "
-                            "22 Sep 2026: theme titles follow the UI language "
-                            "now, so the English shown here is stale rather "
-                            "than correct. Keying it is owed work. What stays "
-                            "parked is WHICH language is right (this ships the "
-                            "UI's, not the per-session leaning) — but that "
-                            "question no longer makes English the answer.",
-    "Intuitive": "GENERATED, now UNBLOCKED — the second theme title; same.",
 }
 
 
@@ -500,8 +479,22 @@ def test_every_native_illustration_is_classified() -> None:
     declared = set(re.findall(r"^struct (\w+IllustrationView|\w+FanView|\w+ShelfView): View", body, re.M))
     # The webview wrappers are covered by the builder gate; these are the ones
     # that draw natively and so have no `strings:` table to inspect.
-    native = {n for n in declared if "WelcomeIllustrationHTML." not in
-              body[body.index(f"struct {n}: View"): body.index(f"struct {n}: View") + 2500]}
+    #
+    # Scoped to the struct's own body, NOT a fixed character window. It was
+    # `+ 2500` and that is a constant nothing recomputes: on 22 Sep 2026 adding
+    # four keys and a comment to `SignalIllustrationView`'s strings table pushed
+    # its `WelcomeIllustrationHTML.signal(` call past the cutoff, and a webview
+    # was reported as an unclassified native illustration. Loud, so it cost
+    # minutes — but the same arithmetic misclassifies in the other direction
+    # too, and *that* direction is silent: a native view whose body happens to
+    # mention the builder type within 2500 characters drops out of the gate
+    # entirely.
+    def _body_of(name: str) -> str:
+        start = body.index(f"struct {name}: View")
+        nxt = body.find("\nstruct ", start + 1)
+        return body[start: nxt if nxt != -1 else len(body)]
+
+    native = {n for n in declared if "WelcomeIllustrationHTML." not in _body_of(n)}
 
     unclassified = sorted(native - set(_NATIVE_ILLUSTRATIONS))
     assert not unclassified, (

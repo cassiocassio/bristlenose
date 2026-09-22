@@ -249,6 +249,9 @@
     "saveFailedAlert": "Dışa aktarma kaydedilemedi."
   },
   "miro": {
+    "errNoQuotesSelected": "Hi\u00e7bir al\u0131nt\u0131 ge\u00e7erli se\u00e7imle e\u015fle\u015fmiyor \u2014 g\u00f6nderilecek bir \u015fey yok.",
+    "errNoBoardId": "Miro bir pano d\u00f6nd\u00fcrmedi. Hi\u00e7bir \u015fey olu\u015fturulmad\u0131.",
+    "errBoardIncomplete": "Pano olu\u015fturuldu ancak eksik. Nelerin aktar\u0131ld\u0131\u011f\u0131n\u0131 g\u00f6rmek i\u00e7in a\u00e7\u0131n.",
     "menuLabel": "Miro'ya Gönder…",
     "serverUnreachable": "Yerel sunucuya ula\u015f\u0131lamad\u0131.",
     "requestFailed": "\u0130stek ba\u015far\u0131s\u0131z oldu (HTTP {{status}}).",

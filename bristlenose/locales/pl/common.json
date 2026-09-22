@@ -290,6 +290,9 @@
     "saveFailedAlert": "Nie udało się zapisać wyeksportowanego raportu."
   },
   "miro": {
+    "errNoQuotesSelected": "\u017badne cytaty nie pasuj\u0105 do bie\u017c\u0105cego wyboru \u2014 nie ma czego wys\u0142a\u0107.",
+    "errNoBoardId": "Miro nie zwr\u00f3ci\u0142o tablicy. Nic nie zosta\u0142o utworzone.",
+    "errBoardIncomplete": "Tablica zosta\u0142a utworzona, ale jest niekompletna. Otw\u00f3rz j\u0105, aby zobaczy\u0107, co dotar\u0142o.",
     "menuLabel": "Wyślij do Miro…",
     "serverUnreachable": "Nie mo\u017cna po\u0142\u0105czy\u0107 si\u0119 z serwerem lokalnym.",
     "requestFailed": "\u017b\u0105danie nie powiod\u0142o si\u0119 (HTTP {{status}}).",

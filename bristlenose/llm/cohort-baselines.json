@@ -1,6 +1,212 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-04-27T00:00:00Z",
-  "source": "empty — populated post-Slice-B from FOSSDA dogfood",
-  "cohorts": []
+  "generated_at": "2026-09-21T12:45:16Z",
+  "source": "aggregated by scripts/regenerate-cohort-baselines.py from maintainer dogfood runs; medians and counts only, no per-call rows",
+  "cohorts": [
+    {
+      "stage_id": "s05b_identify_speakers",
+      "prompt_id": "speaker-splitting",
+      "prompt_version": "0.1.1",
+      "prompt_versions_contributing": [
+        "0.1.0",
+        "0.1.1"
+      ],
+      "model_family": "*",
+      "model_major": "*",
+      "median_input_tokens": 1936,
+      "median_output_tokens": 153,
+      "sample_count": 87
+    },
+    {
+      "stage_id": "s08_topic_segmentation",
+      "prompt_id": "topic-segmentation",
+      "prompt_version": "0.1.1",
+      "prompt_versions_contributing": [
+        "0.1.0",
+        "0.1.1"
+      ],
+      "model_family": "*",
+      "model_major": "*",
+      "median_input_tokens": 2536,
+      "median_output_tokens": 275,
+      "sample_count": 57
+    },
+    {
+      "stage_id": "s09_quote_extraction",
+      "prompt_id": "quote-extraction",
+      "prompt_version": "0.1.1",
+      "prompt_versions_contributing": [
+        "0.1.0",
+        "0.1.1"
+      ],
+      "model_family": "*",
+      "model_major": "*",
+      "median_input_tokens": 3329,
+      "median_output_tokens": 2329,
+      "sample_count": 56
+    },
+    {
+      "stage_id": "s10_quote_clustering",
+      "prompt_id": "quote-clustering",
+      "prompt_version": "0.1.1",
+      "prompt_versions_contributing": [
+        "0.1.0",
+        "0.1.1"
+      ],
+      "model_family": "*",
+      "model_major": "*",
+      "median_input_tokens": 2698,
+      "median_output_tokens": 569,
+      "sample_count": 14
+    },
+    {
+      "stage_id": "s11_thematic_grouping",
+      "prompt_id": "thematic-grouping",
+      "prompt_version": "0.1.1",
+      "prompt_versions_contributing": [
+        "0.1.0",
+        "0.1.1"
+      ],
+      "model_family": "*",
+      "model_major": "*",
+      "median_input_tokens": 1566,
+      "median_output_tokens": 256,
+      "sample_count": 14
+    },
+    {
+      "stage_id": "s05b_identify_speakers",
+      "prompt_id": "speaker-splitting",
+      "prompt_version": "0.1.1",
+      "prompt_versions_contributing": [
+        "0.1.0",
+        "0.1.1"
+      ],
+      "model_family": "claude-sonnet",
+      "model_major": "4",
+      "median_input_tokens": 2416,
+      "median_output_tokens": 258,
+      "sample_count": 47
+    },
+    {
+      "stage_id": "s08_topic_segmentation",
+      "prompt_id": "topic-segmentation",
+      "prompt_version": "0.1.1",
+      "prompt_versions_contributing": [
+        "0.1.0",
+        "0.1.1"
+      ],
+      "model_family": "claude-sonnet",
+      "model_major": "4",
+      "median_input_tokens": 2907,
+      "median_output_tokens": 373,
+      "sample_count": 35
+    },
+    {
+      "stage_id": "s09_quote_extraction",
+      "prompt_id": "quote-extraction",
+      "prompt_version": "0.1.1",
+      "prompt_versions_contributing": [
+        "0.1.0",
+        "0.1.1"
+      ],
+      "model_family": "claude-sonnet",
+      "model_major": "4",
+      "median_input_tokens": 3930,
+      "median_output_tokens": 2667,
+      "sample_count": 34
+    },
+    {
+      "stage_id": "s10_quote_clustering",
+      "prompt_id": "quote-clustering",
+      "prompt_version": "0.1.1",
+      "prompt_versions_contributing": [
+        "0.1.0",
+        "0.1.1"
+      ],
+      "model_family": "claude-sonnet",
+      "model_major": "4",
+      "median_input_tokens": 3122,
+      "median_output_tokens": 556,
+      "sample_count": 7
+    },
+    {
+      "stage_id": "s11_thematic_grouping",
+      "prompt_id": "thematic-grouping",
+      "prompt_version": "0.1.1",
+      "prompt_versions_contributing": [
+        "0.1.0",
+        "0.1.1"
+      ],
+      "model_family": "claude-sonnet",
+      "model_major": "4",
+      "median_input_tokens": 2589,
+      "median_output_tokens": 500,
+      "sample_count": 7
+    },
+    {
+      "stage_id": "s05b_identify_speakers",
+      "prompt_id": "speaker-splitting",
+      "prompt_version": "0.1.1",
+      "prompt_versions_contributing": [
+        "0.1.1"
+      ],
+      "model_family": "gpt-4o",
+      "model_major": "4",
+      "median_input_tokens": 1485,
+      "median_output_tokens": 93,
+      "sample_count": 40
+    },
+    {
+      "stage_id": "s08_topic_segmentation",
+      "prompt_id": "topic-segmentation",
+      "prompt_version": "0.1.1",
+      "prompt_versions_contributing": [
+        "0.1.1"
+      ],
+      "model_family": "gpt-4o",
+      "model_major": "4",
+      "median_input_tokens": 1892,
+      "median_output_tokens": 235,
+      "sample_count": 22
+    },
+    {
+      "stage_id": "s09_quote_extraction",
+      "prompt_id": "quote-extraction",
+      "prompt_version": "0.1.1",
+      "prompt_versions_contributing": [
+        "0.1.1"
+      ],
+      "model_family": "gpt-4o",
+      "model_major": "4",
+      "median_input_tokens": 2875,
+      "median_output_tokens": 2015,
+      "sample_count": 22
+    },
+    {
+      "stage_id": "s10_quote_clustering",
+      "prompt_id": "quote-clustering",
+      "prompt_version": "0.1.1",
+      "prompt_versions_contributing": [
+        "0.1.1"
+      ],
+      "model_family": "gpt-4o",
+      "model_major": "4",
+      "median_input_tokens": 2520,
+      "median_output_tokens": 655,
+      "sample_count": 7
+    },
+    {
+      "stage_id": "s11_thematic_grouping",
+      "prompt_id": "thematic-grouping",
+      "prompt_version": "0.1.1",
+      "prompt_versions_contributing": [
+        "0.1.1"
+      ],
+      "model_family": "gpt-4o",
+      "model_major": "4",
+      "median_input_tokens": 906,
+      "median_output_tokens": 193,
+      "sample_count": 7
+    }
+  ]
 }

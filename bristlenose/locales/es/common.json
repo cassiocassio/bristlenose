@@ -249,6 +249,9 @@
     "saveFailedAlert": "No se pudo guardar la exportaci\u00f3n."
   },
   "miro": {
+    "errNoQuotesSelected": "Ninguna cita coincide con la selecci\u00f3n actual: no hay nada que enviar.",
+    "errNoBoardId": "Miro no devolvi\u00f3 ning\u00fan tablero. No se cre\u00f3 nada.",
+    "errBoardIncomplete": "El tablero se cre\u00f3 pero est\u00e1 incompleto. \u00c1brelo para ver qu\u00e9 lleg\u00f3.",
     "menuLabel": "Enviar a Miro\u2026",
     "serverUnreachable": "No se pudo conectar con el servidor local.",
     "requestFailed": "La solicitud fall\u00f3 (HTTP {{status}}).",

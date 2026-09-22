@@ -191,12 +191,15 @@ def push_to_miro(token: str, db: Session, project_id: int, project_name: str,
                         colour_by=colour_by, clips_base=clips_base, locale=locale)
     n_quotes = sum(1 for s in board.stickies if s.kind == "quote")
     if n_quotes == 0:
-        raise miro_client.MiroError("No quotes match the current selection — nothing to export.")
+        raise miro_client.MiroError(
+            "No quotes match the current selection — nothing to export.",
+            reason="no_quotes_selected",
+        )
 
     created = miro_client.create_board(token, board.title)
     board_id = created.get("id")
     if not board_id:
-        raise miro_client.MiroError("Miro did not return a board id")
+        raise miro_client.MiroError("Miro did not return a board id", reason="no_board_id")
     view = created.get("viewLink") or f"https://miro.com/app/board/{board_id}/"
     logger.info("Miro board %s created (%s) — populating %d stickies", board_id, view, n_quotes)
 
@@ -219,7 +222,9 @@ def push_to_miro(token: str, db: Session, project_id: int, project_name: str,
     except miro_client.MiroError as exc:
         logger.warning("Miro board %s partially populated: %s", board_id, exc)
         raise miro_client.MiroError(
-            f"Board created but incomplete — open it: {view} ({exc})"
+            f"Board created but incomplete — open it: {view} ({exc})",
+            reason="board_incomplete",
+            vars={"url": view},
         ) from exc
 
     return {"board_id": board_id, "board_url": view, "stickies": n_quotes}

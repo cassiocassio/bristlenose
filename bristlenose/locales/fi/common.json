@@ -249,6 +249,9 @@
     "saveFailedAlert": "Vientiä ei voitu tallentaa."
   },
   "miro": {
+    "errNoQuotesSelected": "Mik\u00e4\u00e4n sitaatti ei vastaa nykyist\u00e4 valintaa \u2014 l\u00e4hetett\u00e4v\u00e4\u00e4 ei ole.",
+    "errNoBoardId": "Miro ei palauttanut taulua. Mit\u00e4\u00e4n ei luotu.",
+    "errBoardIncomplete": "Taulu luotiin, mutta se on puutteellinen. Avaa se n\u00e4hd\u00e4ksesi, mit\u00e4 siirtyi.",
     "menuLabel": "Lähetä Miroon…",
     "serverUnreachable": "Paikalliseen palvelimeen ei saatu yhteytt\u00e4.",
     "requestFailed": "Pyynt\u00f6 ep\u00e4onnistui (HTTP {{status}}).",

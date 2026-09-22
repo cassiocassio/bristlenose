@@ -249,6 +249,9 @@
     "saveFailedAlert": "De export kon niet worden bewaard."
   },
   "miro": {
+    "errNoQuotesSelected": "Geen citaten passen bij de huidige selectie \u2014 er is niets te versturen.",
+    "errNoBoardId": "Miro heeft geen bord teruggegeven. Er is niets aangemaakt.",
+    "errBoardIncomplete": "Het bord is aangemaakt maar is onvolledig. Open het om te zien wat er is aangekomen.",
     "menuLabel": "Naar Miro sturen…",
     "serverUnreachable": "Kan de lokale server niet bereiken.",
     "requestFailed": "Verzoek mislukt (HTTP {{status}}).",

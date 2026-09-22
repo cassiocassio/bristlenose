@@ -249,6 +249,9 @@
     "saveFailedAlert": "The export could not be saved."
   },
   "miro": {
+    "errNoQuotesSelected": "No quotes match the current selection \u2014 there is nothing to send.",
+    "errNoBoardId": "Miro did not return a board. Nothing was created.",
+    "errBoardIncomplete": "The board was created but is incomplete. Open it to see what arrived.",
     "menuLabel": "Send to Miro…",
     "serverUnreachable": "Could not reach the local server.",
     "requestFailed": "Request failed (HTTP {{status}}).",

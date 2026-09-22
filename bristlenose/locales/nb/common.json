@@ -249,6 +249,9 @@
     "saveFailedAlert": "Eksporten kunne ikke lagres."
   },
   "miro": {
+    "errNoQuotesSelected": "Ingen sitater samsvarer med utvalget \u2014 det er ingenting \u00e5 sende.",
+    "errNoBoardId": "Miro returnerte ikke noe tavle. Ingenting ble opprettet.",
+    "errBoardIncomplete": "Tavlen ble opprettet, men er ufullstendig. \u00c5pne den for \u00e5 se hva som kom med.",
     "menuLabel": "Send til Miro …",
     "serverUnreachable": "Kunne ikke n\u00e5 den lokale serveren.",
     "requestFailed": "Foresp\u00f8rselen mislyktes (HTTP {{status}}).",

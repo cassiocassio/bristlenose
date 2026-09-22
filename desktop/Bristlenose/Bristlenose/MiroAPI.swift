@@ -46,7 +46,28 @@ struct MiroAPI {
         let org_name: String?
     }
     private struct ExportResponse: Decodable { let board_url: String; let stickies: Int }
-    private struct ErrorBody: Decodable { let detail: String? }
+    private struct ErrorBody: Decodable {
+        let detail: String?
+        /// The discriminator, when the server had one. `nil` for a wire
+        /// diagnostic (HTTP status plus Miro's response text), which is
+        /// correctly English — it goes to a log, not to a researcher — and
+        /// falls through to `detail` exactly as it always did.
+        let code: String?
+        let vars: [String: String]?
+    }
+
+    /// Server `code` → the key that says it in the reader's language.
+    ///
+    /// A table, not a `contains` on the sentence. The server's `detail` is
+    /// English prose; matching on it breaks the day somebody rewords it, which
+    /// is the whole reason `Cause.reason` and `CloudFetchFailure` exist. An
+    /// unknown code falls through to `detail`, so a newer sidecar talking to an
+    /// older app degrades to the previous behaviour rather than to nothing.
+    private static let errorKeys: [String: String] = [
+        "no_quotes_selected": "common.miro.errNoQuotesSelected",
+        "no_board_id": "common.miro.errNoBoardId",
+        "board_incomplete": "common.miro.errBoardIncomplete",
+    ]
 
     /// Connection state + account identity surfaced to the configure screen.
     /// `userName` is the account holder; `teamName` is the workspace new boards
@@ -89,14 +110,17 @@ struct MiroAPI {
         return "Request failed (HTTP \(status))."
     }
 
-    /// The server's own `detail` when it sent one, otherwise our generic
-    /// sentence — and only the generic one carries a key, because the server's
-    /// detail is already the most specific thing anyone has.
+    /// The server's own `detail` when it sent one, plus the key its `code`
+    /// names when the failure is one a researcher reads. `detail` stays on the
+    /// error either way — it is what a bug report wants, and it is the fallback
+    /// when the code is unknown or absent.
     private func apiError(from data: Data, status: Int) -> APIError {
         if let body = try? JSONDecoder().decode(ErrorBody.self, from: data),
            let d = body.detail, !d.isEmpty
         {
-            return APIError(message: d)
+            return APIError(message: d,
+                            localeKey: body.code.flatMap { Self.errorKeys[$0] },
+                            localeVars: body.vars ?? [:])
         }
         return APIError(
             message: "Request failed (HTTP \(status)).",

@@ -249,6 +249,9 @@
     "saveFailedAlert": "Exporten kunde inte sparas."
   },
   "miro": {
+    "errNoQuotesSelected": "Inga citat matchar det aktuella urvalet \u2014 det finns inget att skicka.",
+    "errNoBoardId": "Miro returnerade ingen tavla. Inget skapades.",
+    "errBoardIncomplete": "Tavlan skapades men \u00e4r ofullst\u00e4ndig. \u00d6ppna den f\u00f6r att se vad som kom fram.",
     "menuLabel": "Skicka till Miro…",
     "serverUnreachable": "Kunde inte n\u00e5 den lokala servern.",
     "requestFailed": "Beg\u00e4ran misslyckades (HTTP {{status}}).",

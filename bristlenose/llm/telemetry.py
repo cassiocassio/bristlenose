@@ -198,6 +198,74 @@ def _retention_cap() -> int:
     return cap if cap > 0 else DEFAULT_RETENTION
 
 
+def _price_with_either_model(
+    request_model: str,
+    response_model: str | None,
+    input_tokens: int,
+    output_tokens: int,
+) -> float | None:
+    """Price against the response model, falling back to the request model.
+
+    The response model is what was billed, but it is frequently unpriced or
+    absent: a provider may answer ``gpt-4o`` with ``gpt-4o-2024-08-06``, and
+    an errored call has no response model at all. The request model is what
+    the user chose and is always in the table for a supported provider.
+    """
+    from .pricing import estimate_cost  # local: pricing imports iter_rows here
+
+    for candidate in (response_model, request_model):
+        if not candidate:
+            continue
+        cost = estimate_cost(candidate, input_tokens, output_tokens)
+        if cost is not None:
+            return cost
+    return None
+
+
+def _actual_cost(
+    request_model: str,
+    response_model: str | None,
+    input_tokens: int | None,
+    output_tokens: int | None,
+) -> float | None:
+    """Cost of the tokens this call actually reported.
+
+    Still an *estimate* — provider billing carries invisible adjustments
+    (cache discounts, batch tiers, custom contracts), which is why the field
+    is ``cost_usd_actual_estimate`` and never ``cost_usd_actual``.
+    """
+    if not isinstance(input_tokens, int) or not isinstance(output_tokens, int):
+        return None
+    return _price_with_either_model(
+        request_model, response_model, input_tokens, output_tokens,
+    )
+
+
+def _predicted_cost(
+    request_model: str,
+    response_model: str | None,
+    family: str,
+    major: str,
+    stage_id: str,
+) -> float | None:
+    """What the shipped baseline expected this call to cost.
+
+    ``cost_usd_actual_estimate - cost_usd_predicted`` is the residual, which
+    is the point of recording it: the median residual per cohort is a
+    systematic-bias signal on the forecast, and its spread says whether a
+    cohort wants splitting. Reads only the lru-cached baselines — never the
+    JSONL — because this runs on every LLM call.
+    """
+    from .pricing import cohort_medians  # local: pricing imports iter_rows here
+
+    medians = cohort_medians(family, major, stage_id)
+    if medians is None:
+        return None
+    return _price_with_either_model(
+        request_model, response_model, medians[0], medians[1],
+    )
+
+
 def record_call(
     *,
     provider: str,
@@ -234,6 +302,16 @@ def record_call(
     ``session_id_override``) exist for tests; production code relies on
     the contextvars set by ``run_lifecycle`` and the ``stage`` / ``session``
     context managers.
+
+    ``cost_usd_actual_estimate`` and ``cost_usd_predicted`` are derived here
+    when the caller leaves them ``None``, which every caller does. They were
+    declared on the schema from Slice A and written by nothing until
+    2026-09-21, so no row in any ``llm-calls.jsonl`` carried a cost —
+    deriving them centrally covers every call site, pipeline and serve-mode
+    alike, rather than asking each to remember. Either stays ``None`` when
+    the model is unpriced (an Azure deployment name, a local Ollama tag) or
+    when no baseline covers the cohort; the token counts are still worth
+    recording, so that is not an error.
     """
     if not _telemetry_enabled():
         return
@@ -259,6 +337,15 @@ def record_call(
     sid = session_id_override if session_id_override is not None else _session_id.get()
 
     family, major = normalise_model(provider, response_model or request_model)
+
+    if cost_usd_actual_estimate is None:
+        cost_usd_actual_estimate = _actual_cost(
+            request_model, response_model, input_tokens, output_tokens,
+        )
+    if cost_usd_predicted is None:
+        cost_usd_predicted = _predicted_cost(
+            request_model, response_model, family, major, stg,
+        )
 
     event = LLMCallEvent(
         ts=datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace(

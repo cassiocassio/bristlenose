@@ -249,6 +249,9 @@
     "saveFailedAlert": "No s'ha pogut desar l'exportació."
   },
   "miro": {
+    "errNoQuotesSelected": "Cap cita coincideix amb la selecci\u00f3 actual: no hi ha res per enviar.",
+    "errNoBoardId": "Miro no ha retornat cap tauler. No s\u2019ha creat res.",
+    "errBoardIncomplete": "El tauler s\u2019ha creat per\u00f2 \u00e9s incomplet. Obre\u2019l per veure qu\u00e8 hi ha arribat.",
     "menuLabel": "Envia al Miro…",
     "serverUnreachable": "No s\u2019ha pogut connectar amb el servidor local.",
     "requestFailed": "La sol\u00b7licitud ha fallat (HTTP {{status}}).",

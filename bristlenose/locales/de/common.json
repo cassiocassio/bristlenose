@@ -249,6 +249,9 @@
     "saveFailedAlert": "Der Export konnte nicht gespeichert werden."
   },
   "miro": {
+    "errNoQuotesSelected": "Keine Zitate passen zur aktuellen Auswahl \u2014 es gibt nichts zu senden.",
+    "errNoBoardId": "Miro hat kein Board zur\u00fcckgegeben. Es wurde nichts erstellt.",
+    "errBoardIncomplete": "Das Board wurde erstellt, ist aber unvollst\u00e4ndig. \u00d6ffnen Sie es, um zu sehen, was angekommen ist.",
     "menuLabel": "An Miro senden\u2026",
     "serverUnreachable": "Der lokale Server ist nicht erreichbar.",
     "requestFailed": "Anfrage fehlgeschlagen (HTTP {{status}}).",

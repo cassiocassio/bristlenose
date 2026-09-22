@@ -249,6 +249,9 @@
     "saveFailedAlert": "L'exportation n'a pas pu être enregistrée."
   },
   "miro": {
+    "errNoQuotesSelected": "Aucune citation ne correspond \u00e0 la s\u00e9lection : il n\u2019y a rien \u00e0 envoyer.",
+    "errNoBoardId": "Miro n\u2019a renvoy\u00e9 aucun tableau. Rien n\u2019a \u00e9t\u00e9 cr\u00e9\u00e9.",
+    "errBoardIncomplete": "Le tableau a \u00e9t\u00e9 cr\u00e9\u00e9 mais il est incomplet. Ouvrez-le pour voir ce qui est arriv\u00e9.",
     "menuLabel": "Envoyer vers Miro\u2026",
     "serverUnreachable": "Impossible de joindre le serveur local.",
     "requestFailed": "\u00c9chec de la requ\u00eate (HTTP {{status}}).",

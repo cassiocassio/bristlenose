@@ -249,6 +249,9 @@
     "saveFailedAlert": "Não foi possível salvar a exportação."
   },
   "miro": {
+    "errNoQuotesSelected": "Nenhuma cita\u00e7\u00e3o corresponde \u00e0 sele\u00e7\u00e3o atual \u2014 n\u00e3o h\u00e1 nada para enviar.",
+    "errNoBoardId": "O Miro n\u00e3o retornou um quadro. Nada foi criado.",
+    "errBoardIncomplete": "O quadro foi criado, mas est\u00e1 incompleto. Abra para ver o que chegou.",
     "menuLabel": "Enviar para o Miro…",
     "serverUnreachable": "N\u00e3o foi poss\u00edvel acessar o servidor local.",
     "requestFailed": "A solicita\u00e7\u00e3o falhou (HTTP {{status}}).",

@@ -283,6 +283,9 @@
     "saveFailedAlert": "Export se nepodařilo uložit."
   },
   "miro": {
+    "errNoQuotesSelected": "\u017d\u00e1dn\u00e9 citace neodpov\u00eddaj\u00ed aktu\u00e1ln\u00edmu v\u00fdb\u011bru \u2014 nen\u00ed co odeslat.",
+    "errNoBoardId": "Miro nevr\u00e1tilo \u017e\u00e1dnou tabuli. Nic se nevytvo\u0159ilo.",
+    "errBoardIncomplete": "Tabule byla vytvo\u0159ena, ale je ne\u00fapln\u00e1. Otev\u0159ete ji a pod\u00edvejte se, co dorazilo.",
     "menuLabel": "Odeslat do Mira\u2026",
     "serverUnreachable": "Nepoda\u0159ilo se spojit s m\u00edstn\u00edm serverem.",
     "requestFailed": "Po\u017eadavek selhal (HTTP {{status}}).",

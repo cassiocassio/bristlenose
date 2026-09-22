@@ -249,6 +249,9 @@
     "saveFailedAlert": "Eksporten kunne ikke gemmes."
   },
   "miro": {
+    "errNoQuotesSelected": "Ingen citater matcher det aktuelle valg \u2014 der er intet at sende.",
+    "errNoBoardId": "Miro returnerede ikke et board. Der blev ikke oprettet noget.",
+    "errBoardIncomplete": "Boardet blev oprettet, men er ufuldst\u00e6ndigt. \u00c5bn det for at se, hvad der kom med.",
     "menuLabel": "Send til Miro …",
     "serverUnreachable": "Kunne ikke n\u00e5 den lokale server.",
     "requestFailed": "Foresp\u00f8rgslen mislykkedes (HTTP {{status}}).",

@@ -41,6 +41,29 @@ function errDetail(e: unknown): string {
 }
 
 /**
+ * Server `reason` → the key that says it in the reader's language.
+ *
+ * `api.ts` is explicit that `detail` is "English prose. Do not display it to a
+ * researcher" — and this panel displayed it, because until the server carried a
+ * discriminator there was nothing else to show. A table, not a `includes()` on
+ * the sentence: matching English prose breaks the day somebody rewords it.
+ *
+ * An unknown or absent reason falls through to `detail`, so an older sidecar
+ * behaves exactly as it did before.
+ */
+const EXPORT_ERROR_KEYS: Record<string, string> = {
+  no_quotes_selected: "miro.errNoQuotesSelected",
+  no_board_id: "miro.errNoBoardId",
+  board_incomplete: "miro.errBoardIncomplete",
+};
+
+/** The localised sentence when the server named a reason, else "". */
+function errReasonKey(e: unknown): string {
+  const r = (e as { reason?: unknown })?.reason;
+  return typeof r === "string" ? (EXPORT_ERROR_KEYS[r] ?? "") : "";
+}
+
+/**
  * Account holder · team · org, de-duped — lets the user confirm WHICH Miro
  * account/workspace a board will land in (people have personal + client accounts).
  * Personal/free accounts return organization.name == team.name, so drop repeats
@@ -191,10 +214,13 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
       setStickies(res.stickies);
       setView("done");
     } catch (e) {
-      // On a partial-board 502 the detail carries the recovery URL ("Board
-      // created but incomplete — open it: <url>"); surface it so the half-built
-      // board isn't orphaned behind a generic "try again".
-      setError(errDetail(e) || t("miro.exportError"));
+      // Prefer the localised sentence the server's `reason` names. The partial-
+      // board case keeps its recovery URL: the board IS half-built, and hiding
+      // where it went orphans it behind a generic "try again" — so that key's
+      // copy tells the researcher to open it, and the raw detail still follows
+      // when the reason is one this build does not know.
+      const key = errReasonKey(e);
+      setError(key ? t(key) : errDetail(e) || t("miro.exportError"));
       setView("configure");
     }
   }, [request, t]);

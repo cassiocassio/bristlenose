@@ -7,7 +7,7 @@ import os
 import secrets
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -297,7 +297,29 @@ def miro_export_board(project_id: int, body: MiroExportRequest,
                 colour_by=body.colour_by, clips_base=body.clips_base, locale=body.locale,
             )
         except miro_client.MiroError as exc:
-            raise HTTPException(status_code=502, detail=f"Miro export failed: {exc}") from exc
+            # `detail` stays English and forensic — it is what a bug report
+            # wants, and what an older client already reads.
+            #
+            # `reason` is the addition: a discriminator the clients localise,
+            # because a client cannot pattern-match an English sentence and
+            # every attempt to do so breaks the day somebody rewords it. The
+            # name is deliberately the one the SPA already documents for this
+            # job — `api.ts`: "Stable refusal code … Localise from this" —
+            # rather than a parallel sibling that means the same thing.
+            #
+            # It is None for the six wire diagnostics (HTTP status plus Miro's
+            # response text), which are correctly English: they go to a log,
+            # not to a researcher, and the client falls back to `detail` there
+            # exactly as before.
+            logger.warning("Miro export failed: reason=%s %s", exc.reason, exc)
+            return JSONResponse(
+                status_code=502,
+                content={
+                    "detail": f"Miro export failed: {exc}",
+                    "reason": exc.reason,
+                    "vars": exc.vars,
+                },
+            )
         return MiroExportResponse(**result)
     finally:
         db.close()

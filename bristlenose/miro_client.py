@@ -24,7 +24,22 @@ SCOPES = "boards:read boards:write"
 
 
 class MiroError(RuntimeError):
-    """A Miro API call failed (non-2xx after retries)."""
+    """A Miro API call failed (non-2xx after retries).
+
+    `reason` is the discriminator a client can localise; the message stays
+    English and forensic. Same shape as `Cause.reason` and `CloudFetchFailure`
+    — a client cannot pattern-match an English sentence, and every attempt to
+    do so is a bug waiting for the sentence to be reworded.
+
+    `None` means a wire diagnostic (HTTP status plus response text) that is
+    correctly English: it goes to a log, not to a researcher.
+    """
+
+    def __init__(self, message: str, *, reason: str | None = None,
+                 vars: dict[str, str] | None = None) -> None:
+        super().__init__(message)
+        self.reason = reason
+        self.vars = vars or {}
 
 
 def validate_miro_token(token: str) -> tuple[bool | None, str | None]:

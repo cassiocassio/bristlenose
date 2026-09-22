@@ -110,7 +110,25 @@ _BASELINES_PATH = Path(__file__).parent / "cohort-baselines.json"
 # Minimum sample size before a local-cohort cell is trusted over the
 # shipped baseline. Three is enough to compute a non-degenerate median
 # while still being conservative.
+#
+# It applies to PER-SESSION stages only. A per-run stage (s10, s11) issues
+# exactly one call per run by construction, so demanding three samples
+# demands three runs of the same project — and because an under-sampled
+# bucket used to veto the whole forecast, a single-run project could never
+# use its own data no matter how many sessions it had. Measured 21 Sep 2026
+# on the FOSSDA log: 39 well-sampled per-session rows thrown away because
+# s10 and s11 had one row each, which is all they will ever have.
 _LOCAL_N_THRESHOLD = 3
+
+# Per-run stages need one sample, because one is the whole population.
+_PER_RUN_N_THRESHOLD = 1
+
+# Cohort key used when no family-specific baseline matches. Token usage is
+# driven by the transcript and the prompt schema far more than by the model,
+# so a pooled median is a better answer than no answer at all — which is
+# what every unseen model got before 21 Sep 2026, including three of the
+# four cloud providers' current defaults.
+_GENERIC_COHORT = "*"
 
 
 def estimate_cost(
@@ -139,11 +157,77 @@ def _load_baselines() -> list[dict[str, Any]]:
 
 
 def _baseline_lookup(family: str, major: str) -> list[dict[str, Any]]:
-    """Return baseline rows for the (family, major) cohort key."""
-    return [
-        row for row in _load_baselines()
+    """Return one baseline row per stage for the nearest matching cohort.
+
+    Resolution is widest-last, and returns at most one row per ``stage_id``
+    so a family carrying two majors cannot double-count a stage:
+
+      1. exact ``(family, major)``;
+      2. same ``family``, nearest major (prefer the highest below the one
+         asked for, else the lowest above it);
+      3. the pooled ``("*", "*")`` cohort.
+
+    Step 2 exists because a model generation bump does not change how many
+    tokens a transcript is. ``claude-sonnet-5`` is priced but unseen, and
+    before this it forecast ``None`` while ``claude-sonnet-4`` rows sat in
+    the same file. Step 3 covers a family we have never measured at all —
+    ``gpt-5.6-terra`` and ``gemini-3.8-flash``, two current provider
+    defaults, both of which normalise to a family with no rows.
+    """
+    rows = _load_baselines()
+
+    exact = [
+        row for row in rows
         if row.get("model_family") == family and row.get("model_major") == major
     ]
+    if exact:
+        return _one_row_per_stage(exact)
+
+    same_family = [row for row in rows if row.get("model_family") == family]
+    if same_family:
+        nearest = _nearest_major(same_family, major)
+        if nearest is not None:
+            return _one_row_per_stage(
+                [row for row in same_family if row.get("model_major") == nearest],
+            )
+
+    generic = [
+        row for row in rows
+        if row.get("model_family") == _GENERIC_COHORT
+    ]
+    return _one_row_per_stage(generic)
+
+
+def _one_row_per_stage(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Collapse to the first row seen per ``stage_id``.
+
+    A forecast sums across stages, so two rows for one stage would silently
+    bill it twice.
+    """
+    seen: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        stage_id = str(row.get("stage_id", ""))
+        if stage_id and stage_id not in seen:
+            seen[stage_id] = row
+    return list(seen.values())
+
+
+def _nearest_major(rows: list[dict[str, Any]], major: str) -> str | None:
+    """Pick the closest available major: highest below, else lowest above."""
+    try:
+        want = int(major)
+    except (TypeError, ValueError):
+        return None
+    available: set[int] = set()
+    for row in rows:
+        try:
+            available.add(int(str(row.get("model_major"))))
+        except (TypeError, ValueError):
+            continue
+    if not available:
+        return None
+    below = [m for m in available if m <= want]
+    return str(max(below)) if below else str(min(available))
 
 
 def _scan_local_jsonl(
@@ -193,17 +277,25 @@ def _forecast_from_local(
 ) -> tuple[int, int] | None:
     """Sum per-stage medians; multiply per-session stages by n_sessions.
 
-    Returns ``(total_input_tokens, total_output_tokens)`` or ``None`` if
-    any stage has fewer than ``_LOCAL_N_THRESHOLD`` samples.
+    Returns ``(total_input_tokens, total_output_tokens)``, or ``None`` when
+    no bucket clears its threshold.
+
+    The threshold is per-bucket and depends on the stage's cardinality:
+    ``_LOCAL_N_THRESHOLD`` for a per-session stage, ``_PER_RUN_N_THRESHOLD``
+    for a per-run one. A bucket that misses its threshold is **skipped**
+    rather than vetoing the forecast — the caller tops the result up from
+    the shipped baseline for whichever stages the local data could not
+    speak for, so one thin cell no longer discards every good one.
     """
     if not buckets:
         return None
+    covered = _local_covered_stages(buckets)
+    if not covered:
+        return None
     total_in = 0
     total_out = 0
-    for bucket in buckets.values():
-        n = len(bucket["input_tokens"])
-        if n < _LOCAL_N_THRESHOLD:
-            return None
+    for stage_id in covered:
+        bucket = buckets[stage_id]
         med_in = int(statistics.median(bucket["input_tokens"]))
         med_out = int(statistics.median(bucket["output_tokens"]))
         multiplier = n_sessions if bucket["per_session"] else 1
@@ -212,33 +304,83 @@ def _forecast_from_local(
     return total_in, total_out
 
 
+def _local_covered_stages(buckets: dict[str, dict[str, Any]]) -> set[str]:
+    """Stage ids whose local bucket cleared its threshold.
+
+    The single place the threshold rule lives — ``_forecast_from_local``
+    sums exactly these stages and ``estimate_pipeline_cost`` skips exactly
+    these when topping up from the shipped baseline, so the two cannot
+    disagree about which stage the local data spoke for.
+    """
+    covered: set[str] = set()
+    for stage_id, bucket in buckets.items():
+        threshold = (
+            _LOCAL_N_THRESHOLD if bucket["per_session"] else _PER_RUN_N_THRESHOLD
+        )
+        if len(bucket["input_tokens"]) >= threshold:
+            covered.add(stage_id)
+    return covered
+
+
+# Stages that issue one call per participant. Everything else is per-run.
+_PER_SESSION_STAGE_PREFIXES = ("s05b", "s08", "s09")
+
+
+def _is_per_session_stage(stage_id: str) -> bool:
+    return str(stage_id).startswith(_PER_SESSION_STAGE_PREFIXES)
+
+
 def _forecast_from_baselines(
-    baseline_rows: list[dict[str, Any]], n_sessions: int,
+    baseline_rows: list[dict[str, Any]],
+    n_sessions: int,
+    skip_stages: set[str] | None = None,
 ) -> tuple[int, int] | None:
     """Sum baseline medians per stage; multiply per-session stages by n_sessions.
 
     Per-session vs per-run is inferred from ``stage_id``: stages 5b/8/9 are
     per-session (one row per participant), stages 10/11 are per-run.
-    A baseline row is treated as per-session if its ``stage_id`` matches
-    the per-session stage prefixes.
+
+    ``skip_stages`` names stages the local log already answered for, so the
+    two sources compose instead of competing — local where it is trusted,
+    shipped baseline for the rest.
     """
     if not baseline_rows:
         return None
-    per_session_prefixes = ("s05b", "s08", "s09")
+    skip = skip_stages or set()
     total_in = 0
     total_out = 0
     for row in baseline_rows:
+        stage_id = str(row.get("stage_id", ""))
+        if stage_id in skip:
+            continue
         med_in = row.get("median_input_tokens")
         med_out = row.get("median_output_tokens")
         if not isinstance(med_in, int) or not isinstance(med_out, int):
             continue
-        stage_id = row.get("stage_id", "")
-        multiplier = n_sessions if str(stage_id).startswith(per_session_prefixes) else 1
+        multiplier = n_sessions if _is_per_session_stage(stage_id) else 1
         total_in += med_in * multiplier
         total_out += med_out * multiplier
     if total_in == 0 and total_out == 0:
         return None
     return total_in, total_out
+
+
+def cohort_medians(family: str, major: str, stage_id: str) -> tuple[int, int] | None:
+    """Shipped per-call median ``(input, output)`` tokens for one stage.
+
+    Used by ``telemetry.record_call`` to stamp ``cost_usd_predicted`` on each
+    row, so the residual against ``cost_usd_actual_estimate`` measures how far
+    the *shipped* calibration is from reality. Reads the lru-cached baselines
+    only — never the JSONL, since this runs on every LLM call.
+    """
+    for row in _baseline_lookup(family, major):
+        if str(row.get("stage_id", "")) != stage_id:
+            continue
+        med_in = row.get("median_input_tokens")
+        med_out = row.get("median_output_tokens")
+        if isinstance(med_in, int) and isinstance(med_out, int):
+            return med_in, med_out
+    return None
 
 
 def estimate_pipeline_cost(
@@ -253,10 +395,15 @@ def estimate_pipeline_cost(
 
     Resolution order:
       1. ``BRISTLENOSE_LLM_FORECAST=legacy`` → pre-Slice-C constant.
-      2. Local ``llm-calls.jsonl`` cohort medians (when every per-stage
-         cell has ≥ 3 samples).
-      3. Shipped ``cohort-baselines.json`` for the (family, major) cohort.
-      4. ``None``.
+      2. Local ``llm-calls.jsonl`` cohort medians, per stage, for every
+         stage whose bucket clears its threshold.
+      3. Shipped ``cohort-baselines.json`` for whichever stages step 2 could
+         not speak for — nearest cohort, pooled ``*`` last.
+      4. ``None`` when neither source has anything.
+
+    Steps 2 and 3 **compose**: a project with plenty of per-session rows and
+    a single per-run row uses its own numbers for the former and the shipped
+    ones for the latter, rather than discarding either.
     """
     if n_sessions <= 0:
         return None
@@ -273,15 +420,23 @@ def estimate_pipeline_cost(
         return None
     family, major = normalise_model(provider, model)
 
+    total_in = 0
+    total_out = 0
+    covered: set[str] = set()
+
     if run_dir is not None:
         buckets = _scan_local_jsonl(run_dir, family, major)
         local = _forecast_from_local(buckets, n_sessions)
         if local is not None:
-            return estimate_cost(model, local[0], local[1])
+            total_in, total_out = local
+            covered = _local_covered_stages(buckets)
 
     baseline_rows = _baseline_lookup(family, major)
-    baseline = _forecast_from_baselines(baseline_rows, n_sessions)
+    baseline = _forecast_from_baselines(baseline_rows, n_sessions, skip_stages=covered)
     if baseline is not None:
-        return estimate_cost(model, baseline[0], baseline[1])
+        total_in += baseline[0]
+        total_out += baseline[1]
 
-    return None
+    if total_in == 0 and total_out == 0:
+        return None
+    return estimate_cost(model, total_in, total_out)

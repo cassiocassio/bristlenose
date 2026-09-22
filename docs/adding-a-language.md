@@ -52,10 +52,20 @@ If the demand signal isn't there, the work that follows is wasted.
   matters to translation: `cs`, `ja`, `ko`. **Use the language code, not the
   country code** — Czech is `cs` (the language) not `cz` (the country).
 - **Region subtag (hyphen)** when a single bare code would read as foreign
-  to one side: `pt-BR` / `pt-PT`, `zh-Hans` / `zh-Hant`. Apple uses the
-  hyphen form; we match. Don't use the underscore form (`pt_BR`) anywhere
-  in our code — it's Apple's internal `Locale.current.identifier` shape and
-  we don't touch that surface (see Swift section below).
+  to one side: `pt-BR` / `pt-PT`, `zh-Hans` / `zh-Hant`. The hyphen is
+  **BCP 47 / i18next**, which is what our stack wants; don't use the
+  underscore form (`pt_BR`) anywhere in our code.
+
+  > **Corrected 22 Sep 2026: this used to say "Apple uses the hyphen form; we
+  > match." Apple does not.** Apple's `.loctable` codes are underscored and
+  > territory-based — `pt_BR`, `pt_PT`, `zh_TW`, `zh_HK` — and Norwegian is
+  > `no`, not `nb`. Measured: `pt-BR` appears in **0** tables against `pt_BR`'s
+  > 2,589. The belief that the two conventions agree is what produced a wrong
+  > alias map in two CLAUDE.md files, and it failed silently for months.
+  > `nb`, `zh-Hant` and `pt-PT` *do* exist as Apple codes — carrying ~75 keys
+  > each against ~211,000 — so the mistake resolves to a real table and returns
+  > nothing, which reads as "Apple ships no translation here". Never hand-write
+  > this map: `scripts/apple-locale-map.py` derives it.
 
 The code you pick is the directory name under `bristlenose/locales/`, the
 `Locale` union member in the frontend, the `Set<String>` member in Swift,
@@ -104,14 +114,22 @@ There's no clean way to do both in parallel — pick one, then do it. The
 cs branch did Weblate-first and it worked, but the sequence is
 load-bearing both ways.
 
-## Step 1 — Register the code in four places
+## Step 1 — Register the code in five places
 
 ```
 frontend/src/i18n/index.ts          SUPPORTED_LOCALES literal union  (line ~19)
 bristlenose/i18n.py                 SUPPORTED_LOCALES tuple          (line ~23)
 desktop/Bristlenose/Bristlenose/I18n.swift  supportedLocales Set     (line ~29)
 bristlenose/llm/output_language.py  LANGUAGE_NAMES dict              (line ~49)
+scripts/apple-locale-map.json       our code -> Apple's .loctable code
 ```
+
+**The fifth is generated, not typed** — run `scripts/apple-locale-map.py --write`
+on a Mac and commit the result. It is what lets an i18n pass check our wording
+against Apple's own translations, and before 22 Sep 2026 it was prose in two
+CLAUDE.md files, was wrong for `pt-BR`, and could not fail (see "Pick the
+language code" above). `tests/test_apple_locale_map.py` fails on any locale it
+cannot resolve, on every platform.
 
 **The fourth is new on 22 Sep 2026 and is the one with a silent failure mode.**
 The other three make something loud go wrong; this one decides what language
@@ -126,7 +144,7 @@ autonym — the prompt around it is English, and a model follows `write in
 Japanese` more reliably than `write in 日本語`. That makes it the one
 registration site that is not a copy of the locale code.
 
-Adding the new code to all four is the minimum smoke test that the rest of
+Adding the new code to all five is the minimum smoke test that the rest of
 the work will be plumbed. Do this first; the test suite will start failing
 loudly on missing key files, which is what you want for the next steps.
 
@@ -242,6 +260,20 @@ Evidence, from `.loctable` files on this machine: Apple ja is 431 halfwidth to
 guide says fullwidth for Japanese and would have you do the opposite; it is
 the right authority for a translated document and the wrong one for macOS
 chrome.
+
+**The ellipsis splits the same way, and it is invisible.** Traditional Chinese
+takes `⋯` (U+22EF, midline) where Simplified, Japanese and Korean take `…`
+(U+2026, baseline). Measured 22 Sep 2026 over a 1,200-file sample: Apple `zh_TW`
+is **982 U+22EF to 5 U+2026** and `zh_HK` 984 to 5, while `zh_CN` (987), `ja`
+(984) and `ko` (957) use U+2026 exclusively — **zero** U+22EF between them. Our
+`zh-Hant` had it backwards in 79 values, fixed the same day; `ja` and `ko` were
+already right. The two characters are indistinguishable in a terminal, a diff
+and a code review, so **grep by codepoint, never by eye**:
+`grep -c $'\u22ef' bristlenose/locales/zh-Hant/*.json`.
+
+Two exclusions, both real: a `…` inside a Latin URL (`drive.google.com/…/clips`)
+is a path elision, not CJK punctuation, and a `…` rendering speech hesitation in
+a sample transcript is *data*, not chrome. Both stay U+2026.
 
 Two mechanical traps when checking or fixing this:
 

@@ -222,27 +222,61 @@ authoritative, part-of-speech correct for that language, free, and it makes the
 app read the word the OS already uses.
 
 Same corpus as §6a, different use: that section *measures a convention*, this one
-*borrows a value*. `/System/Library/{Frameworks,PrivateFrameworks}/*/Resources/*.loctable`,
-~2200 files, read with `plistlib.load(open(p,'rb'))` — a dict keyed by language,
-each a `{key: translated}` table. Apple's codes differ from ours: `nb`→`no`,
-**`pt-BR`→`pt_BR`**, `pt-PT`→`pt_PT`, `zh-Hant`→`zh_TW`, `zh-Hant-HK`→`zh_HK`.
+*borrows a value*. `/System/Library/{Frameworks,PrivateFrameworks}/**/*.loctable`,
+**3,275 distinct files**, read with `plistlib.load(open(p,'rb'))` — a dict keyed by
+language, each a `{key: translated}` table.
 
-> **`pt-BR`→`pt` was wrong, and it failed silently — corrected 22 Sep 2026.**
-> Measured across the 10,448 loctables under
-> `/System/Library/{Frameworks,PrivateFrameworks}`: `pt` appears in **1,706**,
-> `pt_BR` in **8,028**, and **both in zero**. So the documented alias is the
-> minority spelling by 4.7:1, and the two never co-occur — which is what makes
-> the failure invisible. A lookup under `pt` finds a key set that exists but is
-> not the one carrying Brazilian Portuguese, so the check reports *"Apple ships
-> nothing here"* for a string Apple does ship, and that reads as a completed
-> audit rather than a miss. Found while lifting `Uncategorized`, which Apple
-> carries as `Sem Categoria` under `pt_BR` and not at all under `pt`.
+**Do not write the code map down — generate it.** `scripts/apple-locale-map.py`
+resolves our codes to Apple’s by probing the corpus and writes
+`scripts/apple-locale-map.json`; `tests/test_apple_locale_map.py` fails if a
+locale we ship has no resolvable Apple code, so adding a language cannot
+silently skip this check. Regenerate with `--write`, verify with `--check`.
+The resolved map, measured 22 Sep 2026:
+
+| ours | Apple | ours | Apple | ours | Apple |
+|---|---|---|---|---|---|
+| en | `en` (never lifted) | it | `it` | sv | `sv` |
+| es | `es` | pl | `pl` | **nb** | **`no`** |
+| ca | `ca` | ru | `ru` | tr | `tr` |
+| ja | `ja` | uk | `uk` | nl | `nl` |
+| fr | `fr` | da | `da` | fi | `fi` |
+| de | `de` | ko | `ko` | **pt-BR** | **`pt_BR`** |
+| cs | `cs` | | | **pt-PT** | **`pt_PT`** |
+| **zh-Hant** | **`zh_TW`** | **zh-Hant-HK** | **`zh_HK`** | | |
+
+> **Existence is not the test — coverage is. Three of our codes are decoys.**
+> `nb`, `zh-Hant` and `pt-PT` all exist *verbatim* as Apple codes, carrying
+> **75, 74 and 72 keys** against ~211,000 for the correct alias. So a resolver
+> that asks “does a table with this name exist?” picks the decoy, finds nothing
+> for the key, and reports a clean audit. That is why the script resolves on a
+> coverage floor (10% of the best-covered locale; the decoys sit at 0.04%, the
+> real answers above 24%) and records every rejected candidate as evidence.
 >
-> **The general method, which outlives this one alias:** read the table's own
-> key list before concluding a locale is absent. `sorted(d.keys())` costs
-> nothing and answers the question the alias map is only guessing at — and the
-> never-both shape means a table tells you unambiguously which convention it
-> follows.
+> **`pt-BR`→`pt` was the live instance of this, corrected 22 Sep 2026.** Bare
+> `pt` is a real Apple code carrying **454 tables / 51,761 keys** to `pt_BR`’s
+> **2,589 / 159,305**, and **no file carries both** — so a modern table yields
+> nothing under `pt`, and a null result reads as a completed audit.
+> **Measured cost: of the 264 English strings in our corpus that Apple answers
+> in Brazilian Portuguese, 91 (34%) were invisible under `pt`.**
+>
+> **What bare `pt` actually is, decided from content rather than from the code:**
+> Brazilian Portuguese in Apple’s legacy spelling. Across its 454 tables it says
+> `arquivo` 926 times and `ficheiro` never, `usuário` 143 and `utilizador` never,
+> `tela` 343 and `ecrã` never; it writes `Carregando imagens…` where `pt_PT`
+> writes `A carregar imagens…`. Every bare-`pt` table also carries European
+> Portuguese *separately* (450 as `pt_PT`, 4 as `pt-PT`). So the old alias was the
+> right language in the wrong, minority table — not, as feared, a mis-source of
+> European Portuguese.
+>
+> **Counting caveat, and it inflates by 3.19×.** A framework’s Resources dir is
+> reachable as both `Foo.framework/Resources` and `Foo.framework/Versions/A/Resources`,
+> so `find -L` reports **10,448** files where **3,275** distinct ones exist. Earlier
+> figures here (10,448 / 8,028 / 1,706) were symlink-inflated; the ratios and the
+> never-both shape were unaffected. Don’t follow symlinks.
+>
+> **The general method, which outlives any one alias:** read the table’s own key
+> list before concluding a locale is absent, and price a candidate by how much of
+> the corpus it carries — never by whether it resolves.
 
 Two uses, both proven 22 Aug 2026:
 

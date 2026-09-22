@@ -859,10 +859,23 @@ Corollary of the Apple-wins rule above, and it bites harder because the
 `.loctable` files, after a sweep that got the polarity exactly backwards in
 both directions.
 
-| | labels (`Name:`) | prose lead-ins (`Note:`, `e.g.:`) |
-|---|---|---|
-| Japanese | halfwidth `:` + space | fullwidth `：`, no space |
-| Chinese (Hant + Hans) | fullwidth `：`, no space | fullwidth `：`, no space |
+| | labels (`Name:`) | prose lead-ins (`Note:`, `e.g.:`) | ellipsis |
+|---|---|---|---|
+| Japanese | halfwidth `:` + space | fullwidth `：`, no space | `…` U+2026 |
+| Chinese **Hant** | fullwidth `：`, no space | fullwidth `：`, no space | **`⋯` U+22EF** |
+| Chinese **Hans** | fullwidth `：`, no space | fullwidth `：`, no space | `…` U+2026 |
+| Korean | halfwidth `:` + space | — | `…` U+2026 |
+
+**The ellipsis column is the one that splits Hant from Hans**, and it is
+invisible to every review. Measured 22 Sep 2026 over a 1,200-file sample:
+`zh_TW` **982 U+22EF : 5 U+2026**, `zh_HK` 984 : 5, against `zh_CN` 0 : 987,
+`ja` 0 : 984, `ko` 0 : 957. Our `zh-Hant` carried U+2026 in 79 values — every
+menu and action ellipsis in the locale — and was corrected the same day; `ja`
+and `ko` were already correct, so there was no collateral. `zh-Hant-HK` has no
+ellipsis strings and inherits. Two deliberate exceptions stay U+2026: a path
+elision inside a Latin URL, and speech hesitation in a sample transcript, which
+is data rather than chrome. Check it by codepoint — the two render alike in a
+terminal, a diff and a PR.
 
 The counts: Apple ja 431 halfwidth to 2 fullwidth, and its own Save dialog
 ships `名前:`; Microsoft ja 38,041 to 88; Apple zh-Hant 239 fullwidth to 0.

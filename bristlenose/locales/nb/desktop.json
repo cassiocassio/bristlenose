@@ -32,11 +32,11 @@
       "undoRemove": "Angre fjerning av «%@»",
       "undo": "Angre",
       "redo": "Gjør om",
-      "find": "Søk…",
+      "find": "Finn…",
       "findNext": "Finn neste",
       "findPrevious": "Finn forrige",
-      "useSelectionForFind": "Bruk utvalg til søk",
-      "jumpToSelection": "Gå til utvalg"
+      "useSelectionForFind": "Bruk markering til søk",
+      "jumpToSelection": "Gå til markering"
     },
     "view": {
       "hideProjects": "Skjul prosjekter",

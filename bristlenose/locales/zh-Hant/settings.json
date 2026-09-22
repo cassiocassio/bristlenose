@@ -2,7 +2,7 @@
   "general": {
     "projectFolderLegend": "\u65b0\u5c08\u6848\u7684\u9810\u8a2d\u4f4d\u7f6e",
     "lastLocationUsed": "\u4e0a\u6b21\u4f7f\u7528\u7684\u4f4d\u7f6e",
-    "chooseOther": "\u5176\u4ed6\u2026",
+    "chooseOther": "\u5176\u4ed6\u22ef",
     "useLastLocation": "\u4f7f\u7528\u4e0a\u6b21\u7684\u4f4d\u7f6e",
     "choosePrompt": "\u9078\u64c7",
     "chooseMessage": "\u9078\u64c7\u65b0\u5c08\u6848\u7684\u5efa\u7acb\u4f4d\u7f6e\u3002",
@@ -161,7 +161,7 @@
   },
     "pipeline": {
       "intro": "唯讀檢視 Bristlenose 目前在各處理流程階段所使用的模型。若要變更後端，請編輯你的設定（環境變數或 .env 檔案）。",
-      "loading": "正在載入處理流程檢視…",
+      "loading": "正在載入處理流程檢視⋯",
       "error": "無法載入處理流程檢視",
       "keys": "金鑰",
       "keysNone": "無",

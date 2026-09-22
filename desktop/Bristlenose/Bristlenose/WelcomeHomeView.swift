@@ -76,8 +76,20 @@ private extension I18n {
 
 /// A CTA label plus its arrow. A label that already ends in an ellipsis is
 /// opening something *here* (macOS convention) and takes no arrow.
+///
+/// **Both ellipsis characters count.** Traditional Chinese spells it `\u{22EF}`
+/// (midline) where every other language we ship spells it `\u{2026}` — Apple’s own
+/// `zh_TW` tables are 982 U+22EF to 5 U+2026, and `zh_HK` 984 to 5, against zero
+/// U+22EF in `zh_CN`, `ja` and `ko`. This used to test U+2026 alone, which meant
+/// the moment `zh-Hant` was given its correct ellipsis the sniff stopped matching
+/// and an in-app control grew a `→` — in one locale, invisibly, since the two
+/// characters are indistinguishable in a terminal and a diff. Pinned from the
+/// Python side by `tests/test_welcome_locale_keys.py`, which also asserts each
+/// locale uses the *right* one of the two.
 private func cta(_ label: String) -> String {
-    label.hasSuffix("\u{2026}") ? label : label + " \u{2192}"
+    let ellipses: Set<Character> = ["\u{2026}", "\u{22EF}"]
+    guard let last = label.last, ellipses.contains(last) else { return label + " \u{2192}" }
+    return label
 }
 
 /// Resolve a slot. `fallbackLink` is the label for a pool whose slots carry no

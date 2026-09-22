@@ -23,7 +23,7 @@
       "newWindow": "Nova Janela",
       "addFiles": "Adicionar Arquivos\u2026",
       "openInNewWindow": "Abrir em Nova Janela",
-      "openAllInNewWindows": "Abrir em novas janelas",
+      "openAllInNewWindows": "Abrir em Novas Janelas",
       "exportReport": "Exportar Relatório…",
       "pageSetup": "Configurar Página…",
       "print": "Imprimir…"
@@ -36,7 +36,7 @@
       "findNext": "Buscar Próxima",
       "findPrevious": "Buscar Anterior",
       "useSelectionForFind": "Usar Seleção para Buscar",
-      "jumpToSelection": "Ir para a Seleção"
+      "jumpToSelection": "Ir para Seleção"
     },
     "view": {
       "hideProjects": "Ocultar Projetos",
@@ -144,8 +144,8 @@
       "speedUp": "Acelerar",
       "slowDown": "Desacelerar",
       "normalSpeed": "Velocidade Normal",
-      "volumeUp": "Aumentar volume",
-      "volumeDown": "Diminuir volume",
+      "volumeUp": "Aumentar Volume",
+      "volumeDown": "Diminuir Volume",
       "mute": "Silenciar",
       "pictureInPicture": "Picture in Picture",
       "fullscreen": "Tela cheia"

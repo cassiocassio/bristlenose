@@ -164,8 +164,22 @@ def test_the_in_app_cta_keeps_its_ellipsis_in_every_locale() -> None:
         label = data.get("welcome", {}).get("home", {}).get("tools", {}).get("agent", {}).get("link")
         if label is None:
             continue  # zh-Hant-HK inherits; absence is correct there
-        assert label.endswith("\u2026"), f"{locale}: agent link must end in … — {label!r}"
-        assert not label.endswith("\u2026\u2026"), f"{locale}: doubled ellipsis — {label!r}"
+        # Traditional Chinese spells the ellipsis U+22EF (midline); everything
+        # else we ship spells it U+2026. Apple's own zh_TW tables are 982:5 and
+        # zh_HK 984:5, against zero U+22EF in zh_CN, ja and ko. Swift's cta()
+        # accepts both -- it tested U+2026 alone until 22 Sep 2026, so giving
+        # zh-Hant its correct ellipsis silently put an arrow on an in-app
+        # control. Assert the RIGHT one, not merely one of the two: a bare
+        # "endswith either" would let a zh-Hant regression back in unseen.
+        want = "\u22ef" if locale.startswith("zh-Hant") else "\u2026"
+        other = "\u2026" if want == "\u22ef" else "\u22ef"
+        assert label.endswith(want), (
+            f"{locale}: agent link must end in {want!r} (U+{ord(want):04X}) — {label!r}"
+        )
+        assert not label.endswith(want * 2), f"{locale}: doubled ellipsis — {label!r}"
+        assert other not in label, (
+            f"{locale}: carries the other locale family's ellipsis {other!r} — {label!r}"
+        )
 
 
 def test_no_english_string_is_stranded_without_a_call_site() -> None:

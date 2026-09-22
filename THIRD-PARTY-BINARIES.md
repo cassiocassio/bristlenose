@@ -150,10 +150,10 @@ procurement; under-listing would be a compliance risk.
 | `more-itertools` | 11.1.0 | MIT | <https://github.com/more-itertools/more-itertools> |
 | `mpmath` | 1.3.0 | BSD License | <http://mpmath.org/> |
 | `murmurhash` | 1.0.15 | MIT License | <https://github.com/explosion/murmurhash> |
-| `networkx` | 3.6.1 | BSD-3-Clause | <https://networkx.org/> |
+| `networkx` | 3.7 | BSD-3-Clause | <https://networkx.org/> |
 | `numba` | 0.67.0 | BSD License | <https://numba.pydata.org> |
 | `numpy` | 2.4.6 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | <https://numpy.org> |
-| `openai` | 3.16.2 | Apache-2.0 | <https://github.com/openai/openai-python> |
+| `openai` | 3.17.0 | Apache-2.0 | <https://github.com/openai/openai-python> |
 | `openpyxl` | 3.1.5 | MIT License | <https://openpyxl.readthedocs.io> |
 | `opentelemetry-api` | 1.44.0 | Apache-2.0 | <https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api> |
 | `packaging` | 26.3 | Apache-2.0 OR BSD-2-Clause | <https://github.com/pypa/packaging> |
@@ -205,7 +205,7 @@ procurement; under-listing would be a compliance risk.
 | `uvicorn` | 0.53.0 | BSD-3-Clause | <https://uvicorn.dev/> |
 | `uvloop` | 0.22.1 | Apache Software License; MIT License | — |
 | `wasabi` | 1.1.3 | MIT | <https://github.com/explosion/wasabi> |
-| `watchfiles` | 1.2.0 | MIT License | <https://github.com/samuelcolvin/watchfiles> |
+| `watchfiles` | 1.3.0 | MIT License | <https://github.com/samuelcolvin/watchfiles> |
 | `weasel` | 1.0.0 | MIT License | <https://github.com/explosion/weasel/> |
 | `websockets` | 16.1.1 | BSD-3-Clause | <https://github.com/python-websockets/websockets> |
 | `webvtt-py` | 0.5.1 | MIT License | <https://github.com/glut23/webvtt-py> |

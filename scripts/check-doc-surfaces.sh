@@ -140,7 +140,7 @@ if [ -n "$LAST_TAG" ]; then
     NEW_FLAGS=$(git diff "$LAST_TAG"..HEAD -- bristlenose/ 2>/dev/null \
         | grep -E '^\+' | grep -oE '"--[a-z][a-z0-9-]+"' | tr -d '"' | sort -u)
 fi
-is_new() { [ -n "$NEW_FLAGS" ] && printf '%s\n' $NEW_FLAGS | grep -qxF "$1"; }
+is_new() { [ -n "$NEW_FLAGS" ] && printf '%s\n' $NEW_FLAGS | grep -qxF -- "$1"; }
 
 GAPS=0; TOTAL=0; PARTIAL=0
 printf '\n\033[1mDoc surfaces\033[0m  (README · man · %s)\n\n' \
@@ -150,14 +150,22 @@ for f in $FLAGS; do
     printf '%s' "$f" | grep -qE "^($IGNORE)$" && continue
     TOTAL=$((TOTAL+1))
     r=0; m=0; w=absent
+    # Herestrings, not `printf | grep -q`: this script sets pipefail, and
+    # README.md is over the 64 KB pipe buffer. When grep -q matched early it
+    # exited, printf took SIGPIPE, the pipeline read as failed, and a flag
+    # documented in the first half of the README was reported MISSING from it
+    # (22 Sep 2026, --whisper-language at README line 277). A flag mentioned
+    # only in the changelog at the end of the file matched, which is why the
+    # gate looked healthy. Same class as CLAUDE.md's `cmd && ok` entry: the
+    # shell withheld a verdict the command had reached.
     # Whole-token, not substring: a README mentioning --tiered would otherwise
     # report --tier as documented. Same class as CLAUDE.md's .badge-accept /
     # .badge-accept-flash note, and the sibling script solved it an hour earlier.
     _fq=$(printf '%s' "$f" | sed 's/[][\.^$*+?(){}|\/]/\\&/g')
-    printf '%s' "$README" | grep -qE -- "(^|[^a-zA-Z0-9-])${_fq}([^a-zA-Z0-9-]|\$)" && r=1
-    printf '%s' "$MAN"    | grep -qE -- "(^|[^a-zA-Z0-9-])${_fq}([^a-zA-Z0-9-]|\$)" && m=1
+    grep -qE -- "(^|[^a-zA-Z0-9-])${_fq}([^a-zA-Z0-9-]|\$)" <<< "$README" && r=1
+    grep -qE -- "(^|[^a-zA-Z0-9-])${_fq}([^a-zA-Z0-9-]|\$)" <<< "$MAN" && m=1
     if [ "$WEB_STATE" = present ]; then
-        w=0; printf '%s' "$WEB" | grep -qE -- "(^|[^a-zA-Z0-9-])${_fq}([^a-zA-Z0-9-]|\$)" && w=1
+        w=0; grep -qE -- "(^|[^a-zA-Z0-9-])${_fq}([^a-zA-Z0-9-]|\$)" <<< "$WEB" && w=1
     fi
     # The man page owes every flag — that is a hard gate on any tree.
     if [ "$m" = 0 ]; then

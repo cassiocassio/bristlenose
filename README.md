@@ -274,6 +274,7 @@ Override the output location with `--output`: `bristlenose run interviews/ -o /e
 ```bash
 bristlenose run interviews -p "Q1 Usability Study"    # name the project
 bristlenose transcribe interviews                        # transcribe, no LLM
+bristlenose run interviews --whisper-language cy      # pin the spoken language (detected per file by default)
 bristlenose analyze interviews/bristlenose-output/transcripts-raw/   # skip transcription, run LLM analysis
 bristlenose serve interviews                             # open a previous report (no analysis)
 bristlenose status interviews                            # check project status (read-only)

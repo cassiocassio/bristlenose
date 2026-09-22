@@ -387,6 +387,45 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.31.0** — _22 Sep 2026_
+
+Bristlenose hears the language a recording was spoken in, writes its headings back in yours, and the Mac app speaks it everywhere — and the framework codebooks now carry only their authors' words.
+
+**New**
+
+- **Recordings are transcribed in the language they were spoken.** Every run told Whisper the audio was English — the command line by default, and the Mac app whatever language its interface happened to use — so a non-English interview was decoded under an English assumption and came out wrong. The spoken language is now detected per file: a study whose sessions are in different languages transcribes each in its own, with nothing to configure, and the transcript files record what was detected. Pin it when you already know the corpus: `--whisper-language es` on `run` and `transcribe`, or `BRISTLENOSE_WHISPER_LANGUAGE`.
+- **Section and theme names come back in your language.** A Spanish researcher got English headings over Spanish quotes. The stages that write section names, theme titles and descriptions now write them in the interface language — `--lang es`, or the language the Mac app is running in — and the quotes stay verbatim, product names and on-screen labels as the participants said them. English sends the model nothing extra, so an English run's prompts are unchanged. Signal findings, AutoCode reasons and chat answers are not steered and usually arrive in English.
+- **The framework codebooks say what their authors said.** Every codebook shipped in February had exactly four tags per group, because the extraction padded each group where the book ran out. Norman, Garrett, Nielsen, Yablonski and Morville have been re-read against the source: tags the author never wrote are gone (Morville's twenty-eight are fifteen), tags in the author's own words are back, groups take the author's titles, and the useful tags that were ours moved to the Bristlenose UXR Codebook. A codebook you already have installed migrates in place: a renamed tag keeps the quotes it was on, a retired tag stays if any quote still carries it, and new tags arrive empty. Each codebook has a decision register, and a change to one now needs a witness quote.
+- **The Mac menu bar follows your language.** File, Edit, View, Window and Help — and every standard item inside them — were English in every language, because the app declared no localisations; Project, Codes, Quotes and Video were English literals. All follow the language now. Changing it offers to relaunch, in Apple's own words; the menus pick up the change at the next launch, and an analysis that is running is never interrupted. A fresh install starts in your Mac's language instead of English, and a language chosen in System Settings ▸ Apps ▸ Bristlenose is respected.
+- **The Welcome screen is translated.** Its prose, tips and study tools, and the example quotes, tags, theme words and filenames inside the illustrations, authored per language rather than translated — the disfluency demo strikes out "o sea" in Spanish and 「えっと、あの」 in Japanese. The shelf shows the local edition of a book where one exists: Norman in ten languages, Braun & Clarke in Polish.
+- **Focus mode reaches the Signals lens.** `z` on Signals, and View ▸ Focus Mode is live there. Before, switching lenses while in focus mode left Signals half-dimmed by rules meant for quote cards.
+- **The Miro board follows your language.** Frame titles, counts, "Other" and the clip marker were English on every board, and a one-quote board was titled "1 quotes". Long Japanese quotes now wrap instead of running over neighbouring stickies.
+- **The pre-run cost estimate prints.** "Estimated LLM cost: ~$X for N sessions" had been silent since April: the shipped baseline was empty and a model generation it had not seen found nothing. Backtested against twelve real runs at a median of 0.95× the actual spend.
+
+**Improved**
+
+- **The Mac app speaks your language in the places that were still English.** Failure rows and sign-in failures in the Teams, Meet and Zoom import window; the "Sign in with Microsoft / Google / Zoom" buttons, in the vendors' own words; Today, Yesterday and attendee counts in the recordings list; the run-failure line under a project and the diagnostic popover's category; the explanations under the status dot in Settings ▸ AI; the screen that says why Bristlenose couldn't start; the player window's title; drag-and-drop refusals; the Miro sheet's own failure sentences. Settings tab titles follow a language change and no longer jump you back to General.
+- **The Language picker tells the truth.** It showed English while the app ran in German on a fresh install, and choosing the row it showed would have switched you to English; the report opened in English inside a French app.
+- **The edit pencil on a section or theme heading is visible.** It was drawn in the disabled-icon colour and hovering the heading did nothing. It now appears when you hover the heading, brightens under the pointer, reveals for keyboard focus, stays visible on touch — and announces itself to screen readers in your language.
+- **Codebook author cards fit their column**, and Morville's says he devised the UX Honeycomb the codebook is built on.
+- **Signals navigation rows indent under their location**, so a heading and its entries no longer start at the same edge.
+- **Better words in more places.** Traditional Chinese uses Apple's ⋯; Norwegian says Finn… and markering; the French export column says favori; dialog titles use each language's own quotation marks; the catch-all theme uses each platform's own "Uncategorised".
+
+**Fixed**
+
+- **The AI-tags stat card put you back on the dashboard you clicked from** — a 0.30.0 regression from the Signals rename. It opens the Signals lens again.
+- **Twenty languages still described "the analysis page"** one sentence below the Signals labels 0.30.0 renamed, the help text had lost its definition of a signal, and the intensity tooltip said 0–3 when the scale is 1–3.
+- **Hiding a selection sent a write for every pair of quotes** — twenty-five for five, all racing — and starring a selection or Restore all sent one per quote. Each is one write now, and hiding a selection that spans several groups collapses every group.
+- **Star and Unstar disagreed.** With a mixed selection the Quotes menu said Star while `s` unstarred everything. One rule everywhere: unstar only when every selected quote is already starred.
+- **The Codebooks uninstall sheet had an English title and buttons** inside a translated warning, since 0.29.0.
+- **Miro export failures were English prose** in the report's panel; they are sentences in your language now, and a half-built board still gives you its link.
+- **"1 hidden quote" sat in English above a translated "Show:"**, in every language.
+- **The Welcome illustrations didn't change language until dark mode was toggled**, and one depicted a 0–3 scale and "2 quote(s)" — two things the product doesn't do.
+
+**Removed**
+
+- **The pattern chip from the illustrated signal card.** The Signals lens dropped it in 0.30.0; the illustration was teaching a control that no longer exists.
+
 **0.30.0** — _21 Sep 2026_
 
 The Analysis lens is called Signals, its cards were redrawn, and PII redaction finally works end to end on the command line.

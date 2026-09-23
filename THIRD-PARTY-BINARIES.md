@@ -125,10 +125,10 @@ procurement; under-listing would be a compliance risk.
 | `h11` | 0.16.0 | MIT License | <https://github.com/python-hyper/h11> |
 | `hf-xet` | 1.6.0 | Apache-2.0 | <https://github.com/huggingface/xet-core> |
 | `httpcore` | 1.0.9 | BSD-3-Clause | <https://www.encode.io/httpcore/> |
-| `httpcore2` | 2.13.0 | BSD-3-Clause | <https://github.com/pydantic/httpx2> |
+| `httpcore2` | 2.13.1 | BSD-3-Clause | <https://github.com/pydantic/httpx2> |
 | `httptools` | 0.8.0 | MIT | <https://github.com/MagicStack/httptools> |
 | `httpx` | 0.28.1 | BSD License | <https://github.com/encode/httpx> |
-| `httpx2` | 2.13.0 | BSD-3-Clause | <https://github.com/pydantic/httpx2> |
+| `httpx2` | 2.13.1 | BSD-3-Clause | <https://github.com/pydantic/httpx2> |
 | `huggingface_hub` | 1.32.0 | Apache Software License | <https://github.com/huggingface/huggingface_hub> |
 | `idna` | 3.20 | BSD-3-Clause | <https://github.com/kjd/idna> |
 | `inflect` | 7.5.0 | MIT License | <https://github.com/jaraco/inflect> |

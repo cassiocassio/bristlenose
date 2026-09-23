@@ -69,10 +69,12 @@ cd "$ROOT"
 
 SCOPE=all
 VERSION=""
+RESOLVE=0
 for arg in "$@"; do
     case "$arg" in
         --mac) SCOPE=mac ;;
         --cli) SCOPE=cli ;;
+        --resolve) RESOLVE=1 ;;
         -h|--help) sed -n '2,/^set -uo/p' "$0" | sed 's/^# \{0,1\}//;$d'; exit 0 ;;
         [0-9]*) VERSION="$arg" ;;
         *) echo "unknown argument: $arg" >&2; exit 2 ;;
@@ -108,6 +110,37 @@ BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
 DIRTY=$(git status --porcelain --untracked-files=no | wc -l | tr -d ' ')
 [ "$DIRTY" = "0" ] && ok "working tree" "clean" || bad "working tree" "$DIRTY uncommitted change(s)"
+
+# --resolve: make the closure this preflight measures the closure the LANE will
+# build from.
+#
+# Both release lanes run `ensure-sidecar.sh --force`, which re-resolves every
+# `>=` floor against live PyPI at build time. Preflight reads `.venv-sidecar`
+# as it stands, so it is structurally blind to the drift the release itself
+# causes — four occurrences (release-log 0.27.0 #5, 0.30.0 #2, 0.31.0 #3, and
+# 0.31.1, where `openai` published 3.19.0 in the seven hours between two builds
+# and the lane picked it up two minutes after this script said READY).
+# check-dep-drift.py's own docstring says it exists so the discovery is not
+# "10pm, mid-release"; it could not deliver that while reading the wrong venv.
+#
+# `build-sidecar.sh --deps-only`, NOT `ensure-sidecar.sh --force`: the latter
+# also fetches ffmpeg, rebuilds the frontend, runs PyInstaller, self-tests and
+# codesigns ~224 Mach-Os, and would write a `-` ad-hoc sign stamp that the real
+# build then has to undo. Only layer V answers a dependency question.
+#
+# Deliberately after the working-tree row: a dirty tree fails in two seconds
+# rather than after a venv rebuild. Deliberately NOT cached by a marker — this
+# is a gate, and a recorded gate is skipped wholesale on a resume, so the only
+# time it re-runs is after it FAILED, which is exactly when the answer may have
+# changed (a pyproject fix). A marker there would reinstate the blindness.
+if [ "$RESOLVE" = 1 ]; then
+    _t0=$SECONDS
+    if _out=$(desktop/scripts/build-sidecar.sh --deps-only 2>&1); then
+        ok "sidecar deps" "re-resolved against live PyPI — $(( SECONDS - _t0 ))s"
+    else
+        bad "sidecar deps" "$(printf '%s' "$_out" | grep -vE '^\s*$' | tail -1 | cut -c1-58)"
+    fi
+fi
 
 # A file marked skip-worktree is invisible to `git status`, so the row above can
 # report a clean tree while carrying the modification most likely to stop a
@@ -656,7 +689,10 @@ else
     # anthropic ceiling lift read green at preflight and would have died at
     # 2b. The file-age test says so up front, without duplicating
     # build-sidecar.sh's deps fingerprint in a second file.
-    if [ pyproject.toml -nt .venv-sidecar/pyvenv.cfg ]; then
+    # Silent under --resolve: the venv was recreated moments ago, so "pyproject
+    # is newer than the venv" can only mislead. The warning exists for the
+    # standalone path, which still reads a venv of unknown age.
+    if [ "$RESOLVE" = 0 ] && [ pyproject.toml -nt .venv-sidecar/pyvenv.cfg ]; then
         warn "dependency drift (age)" "pyproject.toml is newer than the sidecar venv — the two rows below describe the LAST build; step 2b will re-resolve"
     fi
     _drift=$(.venv/bin/python scripts/check-dep-drift.py 2>&1); _drift_rc=$?
@@ -685,9 +721,22 @@ else
     # can flag drift that isn't real on a non-canonical machine. A duplicate gate that
     # false-positives is exactly the "gate that cries wolf gets switched off" failure
     # from release-log 0.27.0 #4. Warn early, refuse late.
+    #
+    # ...UNLESS --resolve just re-resolved the venv by the release's own path.
+    # Both objections above are about measuring the WRONG venv: a non-canonical
+    # machine, or a build that has not happened yet. Neither survives here — we
+    # are on the canonical Mac runner by definition (we just ran build-sidecar)
+    # and the closure is the one the lane will build from minutes later. So a
+    # stale verdict is real, build-all WILL refuse, and warning about a certain
+    # future failure is how 0.31.1 spent a build failure plus two cascade
+    # retries on a warning this script had already printed.
     case "$_dep_rc" in
         0) ok   "dependency drift" "inventory matches the resolved set" ;;
-        1) warn "dependency drift" "inventory stale — regenerate now, or build-all will refuse later" ;;
+        1) if [ "$RESOLVE" = 1 ]; then
+               bad  "dependency drift" "inventory stale vs the live resolve — .venv/bin/python scripts/generate-third-party-binaries.py"
+           else
+               warn "dependency drift" "inventory stale — regenerate now, or build-all will refuse later"
+           fi ;;
         *) warn "dependency drift" "could not run the check (exit $_dep_rc) — unverified" ;;
     esac
 fi

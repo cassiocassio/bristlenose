@@ -434,7 +434,7 @@ run_steps() {
 # check-doc-surfaces.sh. Unset in every real invocation.
 if [ -n "${RELEASE_STEPS_FILE:-}" ]; then cat "$RELEASE_STEPS_FILE"; return; fi
 cat <<'RUNTBL'
-preflight|preflight|gate|1m|||./scripts/check-release-ready.sh __V__
+preflight|preflight|gate|3m|||./scripts/check-release-ready.sh __V__ --resolve
 bump|bump + commit|plain|1m|||__BUMP__
 push-main|push main|plain|1m|||git push origin main
 strict-ci|dispatch strict CI on main|plain|1m|||__DISPATCH__

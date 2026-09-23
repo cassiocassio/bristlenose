@@ -19,9 +19,18 @@
 #   V  venv       → .venv-sidecar/.deps-stamp + .deps-ok         (pyproject + pip freeze)
 #   P  pyinstaller→ <bundle>/.source-stamp                       (sidecar_source_hash)
 #
-# Usage: build-sidecar.sh [--force] [--dry-run]
-#   --force    rebuild every layer from scratch (original behaviour; release uses this)
-#   --dry-run  report what WOULD rebuild and why; do no work; exit 0
+# Usage: build-sidecar.sh [--force] [--deps-only] [--dry-run]
+#   --force      rebuild every layer from scratch (original behaviour; release uses this)
+#   --deps-only  re-resolve layer V ONLY — recreate .venv-sidecar against live
+#                PyPI exactly as --force does, and skip F and P entirely. For
+#                preflight: the release lanes force a live re-resolve at build
+#                time, so a preflight that reads the venv as it stands is blind
+#                to the drift the release itself causes (four occurrences:
+#                release-log 0.27.0 #5, 0.30.0 #2, 0.31.0 #3, 0.31.1). This
+#                makes the closure preflight measures the closure the lane will
+#                build from, without paying for the frontend, the freeze or the
+#                signing that --force also does.
+#   --dry-run    report what WOULD rebuild and why; do no work; exit 0
 #
 # Prerequisites: the .tool-versions python + Node 24 on PATH; frontend deps installed.
 # The dedicated .venv-sidecar carries only .[serve,apple,desktop,mcp] so
@@ -30,14 +39,20 @@
 set -euo pipefail
 
 FORCE=0
+DEPS_ONLY=0
 DRY_RUN=0
 for arg in "$@"; do
     case "$arg" in
-        --force)   FORCE=1 ;;
-        --dry-run) DRY_RUN=1 ;;
-        *) echo "error: unknown argument: $arg (expected --force / --dry-run)" >&2; exit 2 ;;
+        --force)     FORCE=1 ;;
+        --deps-only) DEPS_ONLY=1 ;;
+        --dry-run)   DRY_RUN=1 ;;
+        *) echo "error: unknown argument: $arg (expected --force / --deps-only / --dry-run)" >&2; exit 2 ;;
     esac
 done
+[ "$FORCE" = 1 ] && [ "$DEPS_ONLY" = 1 ] && {
+    echo "error: --force and --deps-only are contradictory (one rebuilds every layer, the other only V)" >&2
+    exit 2
+}
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DESKTOP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -173,7 +188,8 @@ _deps_fingerprint() {
 # ---------------------------------------------------------------------------
 frontend_rebuilt=0
 need_f=0; f_reason=""
-if [ "$FORCE" = 1 ]; then need_f=1; f_reason="forced"
+if [ "$DEPS_ONLY" = 1 ]; then need_f=0; f_reason="skipped (--deps-only)"
+elif [ "$FORCE" = 1 ]; then need_f=1; f_reason="forced"
 elif [ ! -s "$STATIC_DIR/index.html" ]; then need_f=1; f_reason="output missing (static/index.html absent)"
 elif [ "$FRONTEND_HASH" != "$(cat "$FRONTEND_STAMP" 2>/dev/null || true)" ]; then need_f=1; f_reason="frontend source moved"
 fi
@@ -195,7 +211,7 @@ fi
 # ---------------------------------------------------------------------------
 venv_rebuilt=0
 need_v=0; v_reason=""
-if [ "$FORCE" = 1 ]; then need_v=1; v_reason="forced"
+if [ "$FORCE" = 1 ] || [ "$DEPS_ONLY" = 1 ]; then need_v=1; v_reason="forced"
 elif [ ! -x "$PYTHON" ]; then need_v=1; v_reason="venv missing"
 elif [ ! -f "$DEPS_OK" ]; then need_v=1; v_reason="no .deps-ok sentinel (half-install?)"
 elif [ "$("$PYTHON" -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null)" != "$PY_PIN" ]; then
@@ -218,8 +234,12 @@ if [ "$need_v" = 1 ]; then
         # wheel is already on disk, so no network. --force (release) keeps
         # --no-cache-dir so the closure re-resolves against live PyPI and picks up
         # a transitive republish within a >= floor (the documented release audit).
+        # --no-cache-dir is what makes the closure re-resolve against live PyPI
+        # rather than the local wheel cache. --deps-only exists to reproduce the
+        # lane's resolve, so it must take this path too — without it preflight
+        # would measure the cache and still miss a republish.
         cache_bypass=""
-        [ "$FORCE" = 1 ] && cache_bypass="--no-cache-dir"
+        { [ "$FORCE" = 1 ] || [ "$DEPS_ONLY" = 1 ]; } && cache_bypass="--no-cache-dir"
         "$SIDECAR_VENV/bin/pip" install $cache_bypass --quiet --upgrade pip
         "$SIDECAR_VENV/bin/pip" install $cache_bypass -e "$ROOT[serve,apple,desktop,mcp]"
         if ! "$PYTHON" -m PyInstaller --version >/dev/null 2>&1; then
@@ -229,6 +249,19 @@ if [ "$need_v" = 1 ]; then
         # Stamp + sentinel LAST, only after a fully successful install + tool check.
         _deps_fingerprint > "$DEPS_STAMP"
         date -u +%Y-%m-%dT%H:%M:%SZ > "$DEPS_OK"
+        # --deps-only moved the venv and deliberately did NOT rebuild P, so the
+        # bundle on disk was frozen from the PREVIOUS closure. Writing the deps
+        # stamp above would otherwise tell the next non-forced build "deps
+        # unchanged" and it would skip P too — shipping a bundle built from a
+        # venv that no longer exists, with every stamp claiming it was current.
+        # Invalidate the freeze explicitly: the venv IS current, the bundle is
+        # not, and that is exactly what the next build must be told. A release
+        # lane forces P anyway; this is for the Xcode inner loop, whose
+        # freshness gate should now fail LOUDLY rather than pass on a lie.
+        if [ "$DEPS_ONLY" = 1 ]; then
+            rm -f "$BUNDLE/.source-stamp"
+            _say "deps-only: invalidated the bundle's freeze stamp — next build rebuilds P"
+        fi
     fi
 else
     _layer V "skip (deps unchanged; .deps-ok present)"
@@ -241,7 +274,8 @@ fi
 # ---------------------------------------------------------------------------
 SOURCE_STAMP="$BUNDLE/.source-stamp"
 need_p=0; p_reason=""
-if [ "$FORCE" = 1 ]; then need_p=1; p_reason="forced"
+if [ "$DEPS_ONLY" = 1 ]; then need_p=0; p_reason="skipped (--deps-only)"
+elif [ "$FORCE" = 1 ]; then need_p=1; p_reason="forced"
 elif [ ! -x "$BUNDLE/bristlenose-sidecar" ]; then need_p=1; p_reason="bundle missing"
 elif [ "$venv_rebuilt" = 1 ]; then need_p=1; p_reason="venv rebuilt"
 elif [ "$frontend_rebuilt" = 1 ]; then need_p=1; p_reason="frontend rebuilt (rebundle static/)"

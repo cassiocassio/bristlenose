@@ -185,6 +185,64 @@ it can be inspected.
 > is the house defect wearing a test's clothes. Assert on the thing that
 > arrives.
 
+> **23 Sep 2026 — incidents 28–31, from the 0.31.0 run.** Four more, and the
+> shape has shifted: only one is the house defect. Three are a *third* shape
+> this log should now name.
+>
+> **A check that reports success while seeing nothing — 28.**
+>
+> - **28 — the doc-surfaces gate could not see a flag in the first half of the
+>   README.** Two defects in one script. `is_new()` ran `grep -qxF "$1"` with a
+>   flag as its argument, so every `--flag` was parsed as a grep *option*:
+>   `--version` printed grep's own version and was "new since the tag" on every
+>   run, and every other flag errored and was never new. And the three surface
+>   checks piped a 101 KB README into `grep -q` under `pipefail` — `grep -q`
+>   exits on first match, `printf` takes SIGPIPE, and the pipeline reports
+>   failure. A flag documented at line 277 was reported *missing from the
+>   README that documents it*, while flags mentioned only in the changelog at
+>   the end of the file matched. That asymmetry is why it looked healthy.
+>
+> **A verdict that is about a commit, applied after the commit moved — 29, 30.**
+> This is the new shape, and it is the sibling of "a verdict arriving after the
+> act it should have gated": here the verdict is *correct* and the tree is what
+> moved underneath it.
+>
+> - **29 — a fix committed between attempts was never pushed.** `push-main` is
+>   a plain step, so a recorded success is skipped on resume. `strict-ci` knows
+>   about moved HEADs and re-dispatches — but records `git rev-parse HEAD` while
+>   `gh workflow run --ref main` dispatches the *remote* ref, so `ci-sha` named
+>   a commit the dispatched run was not about (measured: `a3475297` against a
+>   `ci-sha` of `3346e692`). `ci-green` selects by `headSha == ci-sha`; it would
+>   have failed closed 40 minutes later naming neither cause. Fixed: push-main
+>   asks whether HEAD is an ancestor of `origin/main`. Fired correctly twice on
+>   its first night.
+> - **30 — and the same class one step lower, where it is worse.** `build-all`
+>   is plain too, so the final resume printed `skipped (done)` over a `.pkg`
+>   built at the previous commit. The App Store build and the `.dmg` would have
+>   carried **different commits out of one release**. Invalidated by hand. The
+>   rule the driver needs is one line: *a step whose output is a function of
+>   the tree is invalidated when the tree moves* — it already implements
+>   exactly that for `strict-ci`, with a comment explaining why, and it was
+>   applied to one step instead of to the class.
+>
+> **A correct gate whose signal reached nobody — 31.**
+>
+> - **31 — two hard CI gates had been red for the whole release.** `ratchet`
+>   (skip sites, slow marks) and `inventory` (stale generated test map) failed
+>   on every CI run of the 178 commits and nothing surfaced it until a release
+>   read the verdict. Both ratcheted counts sat *exactly at* their ceilings when
+>   0.30.0 shipped, so the first addition pushed them over. This is the same
+>   shape as the Swift suite going unrun for three months (`gaps.md`): the gate
+>   is right, it fires, and no one is downstream of it. **The standing question
+>   it raises is whether anything watches CI on `main` between releases.**
+>
+> **What earned its keep this release.** mypy — soft, ratcheted, the gate most
+> tempting to wave through — was two over its ceiling, and one of the two was a
+> `ValueError` that kills any run reaching it. 5,247 tests were green. The move
+> that found it was diffing the error *sets* against a worktree at the previous
+> tag rather than comparing the counts. **A soft gate is not a weak gate; it is
+> a gate whose verdict someone has to read.**
+
 ---
 
 ## What this exercise changed

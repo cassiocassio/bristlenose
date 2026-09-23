@@ -52,6 +52,142 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+## 0.31.0 — 22 Sep 2026 · Tier 1
+
+**Channels:** tag `v0.31.0` on `8b525e42` at 00:21Z · TestFlight build **3764**
+(delivery `faba5539`) · notarised `.dmg` published · Snap edge dispatched ·
+PyPI, GitHub Release, Homebrew, Copr and the website follow the tag run.
+Verified separately — see the verification note below.
+
+**What shipped.** Recordings transcribed in the language they were spoken in
+(the default had been pinned to English on every channel since January);
+section and theme names generated in the researcher's language; the five
+framework codebooks re-read against their authors, with in-place migration of
+installed rows; the Mac menu bar, Welcome screen and every remaining English
+surface localised; focus mode on Signals; a localised Miro board; and the
+pre-run cost estimate printing again after five months silent. 178 commits
+since v0.30.0.
+
+**The headline of this entry is that a soft gate found the release's worst
+bug, and two hard gates had been red for the whole release with nobody
+watching.** mypy — informational, ratcheted, the one gate everyone is tempted
+to wave through — was two errors over its ceiling. One of the two was a live
+crash. Meanwhile `ratchet` and `inventory` had failed on every CI run of this
+release and nothing surfaced it until a release actually read the verdict.
+
+### Timing (measured, from `events.jsonl`)
+
+Wall 22:40Z → 00:21Z = **1h41**, of which the build and CI steps that actually
+ran are ~47 min; the rest is diagnosis and three builds deliberately discarded.
+
+| step | attempts | outcome | time |
+|---|---|---|---|
+| preflight | 2 | fail (dirty tree — another session's WIP) → ok | 1m35 |
+| bump + commit | 1 | ok | 1s |
+| push main | 3 | ok each; twice re-pushed by the new guard | 8s · 2s · 2s |
+| strict CI dispatch | 5 | ok each; re-dispatched on every moved HEAD | ~2s each |
+| build-all | 5 | fail (unsigned xctest) → fail (inventory drift) → **ok** ×3 | 5m29 · 5m29 · **5m26** |
+| build-dmg | 4 | killed ×3 (artefact provably doomed) → **ok** | **13m11** |
+| ci-green | 1 | ok | 12m16 |
+| testflight | 1 | ok — build 3764 | 7m36 |
+| dmg | 1 | ok | 1m19 |
+| tag | 1 | ok — `v0.31.0` on `8b525e42` | 2s |
+| snap | 1 | ok (dispatch) | 2s |
+
+Strict CI ran **four** times, on `3346e692`, `c15720bc` and `8b525e42`; all
+green bar the mypy soft gate once its two real errors were fixed. Three of the
+four cycles were the cost of landing fixes mid-run.
+
+**Three build-dmg attempts are recorded as `fail (exit 143)` and none was a
+defect.** Each was killed deliberately the moment its artefact became
+provably discardable — because a fix had landed and the build would have
+shipped a different commit than the tag. Recorded as failures because that is
+what the driver saw; worth reading as 25 minutes each of saved wall-clock, not
+as instability.
+
+### Tricky things
+
+1. **The test bundle was built inside the app, and two signing tasks raced.**
+   Xcode derives a hosted macOS test target's `TARGET_BUILD_DIR` as the host's
+   `Contents/PlugIns`, so `BristlenoseTests.xctest` is linked into the `.app`
+   and the app's `CodeSign` has to seal it — with nothing ordering the
+   xctest's own `CodeSign` first. Three build logs of one tree ran it both
+   ways. The failing order leaves an unsigned residue *inside* the app that
+   fails the next build too, and the error carries no `error:` line, so the
+   Swift gate reported a compile break. **0.30.0 hit this and recorded
+   "fixed by `xcodebuild clean`"** — a cache-clear against a symptom, so it
+   recurred at the very next release. Fixed at the cause: the bundle now
+   builds beside the app. `parallelizeBuildables = NO` was tried, measured to
+   change nothing, and reverted.
+
+2. **The sidecar rebuild re-resolved four packages after the gate had looked**
+   — `anthropic` 1.7.0→1.8.0, `openai` 3.17.0→3.18.0, `google-genai`
+   2.24.0→2.25.0, `mako` 1.4.1→1.4.3. **Third occurrence: 0.27.0 #5, 0.30.0 #2,
+   now.** 0.30.0's own entry names the structural fix — resolve dependencies
+   once, in preflight — and it remains unbuilt, so preflight is still
+   structurally blind to the drift the release itself causes. Providers
+   re-probed under the rebuilt `.venv-sidecar` afterwards: 7/7 live.
+
+3. **mypy's ratchet was pointing at a crash.** Two errors over ceiling. The
+   useful move was diffing the error *sets* against a detached worktree at
+   v0.30.0 rather than comparing counts: 148 at the tag, 150 at HEAD, and the
+   two additions named themselves. One was a Miro annotation. The other:
+   `transcribe_sessions` is declared to return `(results, languages, outcome)`
+   and its "nothing needs transcription" path still returned two values, so
+   reaching it raises `ValueError` and kills the run. Reachable because the
+   caller and the callee ask different questions — the caller selects "not
+   already transcribed and has audio", the callee keeps "has audio and no
+   existing transcript", and a session whose sidecar subtitle parsed to
+   nothing satisfies the first and fails the second. **5,247 tests were green:
+   no test had ever called the function with sessions it would filter out
+   entirely**, and the docstring still described the pre-widening shape. Fixed,
+   with a test proved red first.
+
+4. **Two hard CI gates had been red all release.** `ratchet` (skip sites
+   25→29, slow marks 9→12) and `inventory` (generated test map stale). Neither
+   was news about the release night: both counts sat *exactly at* their
+   ceilings when 0.30.0 shipped, so the first addition in 178 commits pushed
+   them over. All seven ratchet additions are in the two codebook-register
+   test files and all seven are house idiom — live runs of an authored
+   codebook against a real provider, and the sanctioned "SKIPPED, NOT PASSED"
+   degradation. Ceilings raised deliberately, with the reasoning in the file.
+   **The gates were right and their signal reached nobody** until a release
+   read it.
+
+5. **A fix committed between attempts was never pushed.** `push-main` is a
+   plain step, so a recorded success is skipped on resume. `strict-ci` *does*
+   notice a moved HEAD and re-dispatch — but it records `git rev-parse HEAD`
+   while `gh workflow run --ref main` dispatches the *remote* ref, so `ci-sha`
+   named a commit the dispatched run was not about (measured: a run carrying
+   `a3475297` against a `ci-sha` of `3346e692`). `ci-green` selects by
+   `headSha == ci-sha` and would have found nothing, 40 minutes later, with a
+   message naming neither cause. Fixed: push-main now asks whether HEAD is an
+   ancestor of `origin/main`. It fired correctly on its first two outings.
+
+6. **…and the same class bit once more, on the step below.** `build-all` is
+   also plain, so on the final resume it printed `skipped (done)` while its
+   `.pkg` had been built at the previous commit. Left alone, the App Store
+   build and the `.dmg` would have carried **different commits out of one
+   release**, with only the app's embedded build-info to show it. Invalidated
+   by hand (`release.sh retry 0.31.0 build-all`) and both rebuilt from
+   `8b525e42`. The general rule the driver still needs: *a step whose output
+   is a function of the tree is invalidated when the tree moves.* It already
+   implements exactly that for `strict-ci`, and its comment explains why — it
+   was applied to one step instead of to the class.
+
+### Changes made to the machine this release
+
+- `desktop/Bristlenose/Bristlenose.xcodeproj`: test target builds beside the
+  app (both configurations).
+- `desktop/scripts/test-swift.sh`: names the unsigned-residue state and the one
+  `rm -rf` that clears it, instead of printing a compile-break with no errors.
+- `scripts/release.sh`: push-main re-pushes when HEAD is not published.
+- `scripts/check-doc-surfaces.sh`: two defects, both of which made the gate
+  report a documented flag as missing — a flag passed to `grep` as an option,
+  and `grep -q` under `pipefail` losing any match in the first 64 KB of a
+  101 KB README.
+- `docs/testing/ratchet.json`: two ceilings raised, with reasons.
+
 ## 0.30.0 — 21 Sep 2026 · Tier 1
 
 **Channels:** PyPI · GitHub Release · Homebrew · TestFlight (build 3578) ·

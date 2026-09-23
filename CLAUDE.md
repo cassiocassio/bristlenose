@@ -1445,7 +1445,34 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 
 ## Current status
 
-**Internal TestFlight since 14 Jul 2026** — shipping build **0.30.0 (3578)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
+**Internal TestFlight since 14 Jul 2026** — shipping build **0.31.0 (3764)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
+
+**0.31.0 shipped 22 Sep 2026, overnight and unattended — tag `v0.31.0` on
+`8b525e42` at 00:21Z, TestFlight build 3764.** The language release:
+recordings are transcribed in the language they were spoken in (the default
+had been *pinned* to English on every channel since January, and on the Mac
+the UI language was being fed to Whisper as the spoken language), section and
+theme names are generated in the researcher's language, the five framework
+codebooks were re-read against their authors with in-place migration of
+installed rows, and the Mac menu bar and Welcome screen stopped speaking
+English. **The headline is that a soft gate found the release's worst bug and
+two hard gates had been red all release with nobody downstream of them.** mypy
+was two errors over its ceiling; one of the two was a `ValueError` that kills
+any run reaching it (`transcribe_sessions` returning a 2-tuple from a 3-tuple
+signature, reachable whenever a sidecar subtitle parses to nothing), invisible
+to 5,247 green tests. `ratchet` and `inventory` had failed on every CI run of
+the 178 commits. Four incidents, two of them a **new** recurring shape — *a
+verdict that is about a commit, applied after the commit moved*: a fix
+committed between attempts was never pushed because `push-main` is skipped on
+resume, and `build-all` was skipped the same way over a `.pkg` built at the
+previous commit, which would have shipped the App Store build and the `.dmg`
+from **different commits**. Fixed at the cause: the test bundle now builds
+beside the app (an Xcode signing race that 0.30.0 had papered over with
+`xcodebuild clean`, which is why it recurred immediately), and push-main
+re-pushes when HEAD is not published. Full account: `docs/release-log.md`
+§ 0.31.0 and `docs/release-premortem.md` incidents 28–31. Structural work still
+on the board: resolve dependencies once, in preflight (third occurrence); and
+generalise the moved-HEAD guard from `strict-ci` to every tree-dependent step.
 
 **0.30.0 shipped 21 Sep 2026, overnight and unattended — verified 9 of 9 channels by 07:08 BST.** The
 Signals release: the Analysis lens is Signals on every surface (labels, route,

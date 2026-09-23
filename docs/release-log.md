@@ -52,6 +52,110 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+## 0.31.1 — 23 Sep 2026 · Tier 1 (patch — the machine, verified)
+
+**What shipped.** One accessibility fix (a tag-group control announcing
+itself in English to screen readers). **The point of the release was to
+verify 0.31.0's three release-machine changes on a real run**, not the
+patch itself.
+
+**Timing** (`events.jsonl`):
+
+| step | attempts | outcome |
+|---|---|---|
+| preflight | 1 | ok, 93s |
+| push-main | 2 | ok — the moved-HEAD guard re-pushed once |
+| strict-ci | 2 | ok — re-dispatched once |
+| build-all | 2 | fail (dep drift) → ok, 319s |
+| build-dmg | 1 | ok, 620s |
+| ci-green | 2 | fail (HTTP 503 mid-watch) → ok, 534s |
+| testflight / dmg / tag / snap | 1 each | ok |
+
+**The three 0.31.0 changes, on their first real outing.** The artefact-
+provenance guard and the dispatched-sha fix both did exactly what they were
+built for — `push-main` and `strict-ci` each noticed a moved HEAD and
+corrected themselves without a human. The new preflight gates (ratchet,
+inventory) stayed green because the counts they guard were already fixed the
+night before; unproven in anger, proved only by mutation.
+
+**What was deferred and shouldn't have been.** `build-all` still failed once
+on dependency drift — `openai` published 3.19.0 in the seven hours between
+one sidecar build and the next. This is the fourth occurrence of the class
+(0.27.0 #5, 0.30.0 #2, 0.31.0 #3, now), and it is the argument for resolving
+dependencies before the bump rather than after — see 0.31.2 below.
+
+**New: `gh run watch` treats a transient HTTP 503 as a verdict.** `ci-green`
+died mid-watch while the CI run it was watching was still queued and later
+went green on its own. Failing closed is right; discarding a 38-minute wait
+over one dropped API call is not. Unfixed.
+
+**Fedora Copr, post-tag: `hf-xet` had no wheel available for one build.**
+Build 11024205 died in `%install` — `hf-xet` (a faster-whisper →
+huggingface-hub transitive) resolved to "from versions: none" against the
+vendored wheelhouse. Reproduced the exact `rpm/make-srpm.sh` pass B command
+locally minutes later against live PyPI: it vendored cleanly. Not a real
+incompatibility — a momentary index/CDN hiccup on one transitive package
+failed the whole SRPM. Fixed by re-running the `trigger-copr` job (build
+11027008 succeeded), and given a durable fix afterward: pass B now retries
+three times, 90s apart, the same shape the sdist fetch beside it already
+uses and for the same reason. Lands too late to have helped this release —
+the fix landed on `main` after `v0.31.1` was already tagged and published,
+and tags are immutable once a version is on PyPI.
+
+## 0.31.2 — 23 Sep 2026 · Tier 1 (patch — resolve dependencies before the bump)
+
+**What shipped.** A second, similar accessibility fix (a tag's assign
+control, same defect family as 0.31.1's). **The point of the release was to
+test resolving the sidecar's dependencies once at preflight**, closing the
+class of failure named above.
+
+**Timing:**
+
+| step | attempts | outcome |
+|---|---|---|
+| preflight | 2 | fail (dep drift, caught for the first time ever) → ok, 210s |
+| build-all | 2 | fail (a SECOND drift, between preflight and build-all) → ok, 361s |
+| build-dmg | 1 | ok, 908s |
+| ci-green | 2 | fail (empty run lookup) → ok, 534s |
+| tag | 2 | fail (dirty tree — my own doing, see below) → ok |
+
+**The fix worked, once, then proved itself insufficient twice in one
+release.** `check-release-ready.sh --resolve` caught a real drift
+(`starlette` 1.6.0 → 1.7.0) at preflight for the first time in five
+releases — before the bump, before the push, before anything irreversible.
+Cost: a regenerate and a resume, not a build failure. Then `build-all`
+drifted AGAIN four minutes later, on different packages (`httpx`/`httpcore`
+patch releases) — proving the residual the change's own commit message
+already named: preflight resolving once does not stop the two build lanes
+from each re-resolving independently and disagreeing with each other. Full
+analysis, including why the per-release-lock alternative is *also* unsafe
+until the inventory is read from the built bundle rather than the venv:
+`experiments/dep-resolve-spike/FINDINGS.md`.
+
+**New: `ci-green` failed with a zero-byte log while the CI run was genuinely
+still in progress.** `CI_CMD`'s `&&` chain (`_id=$(gh run list …); [ -n
+"$_id" ] && … && gh run watch …`) fails silently on the *middle* test when
+the run lookup returns nothing — no error text, just exit 1. Third failure
+shape for this one gate in two releases: a 503 mid-watch (0.31.1), and now a
+silent empty lookup, both "an unreachable or lagging oracle read as a
+negative answer." Unfixed; the second one is worse because it is silent.
+
+**Self-inflicted: the tag step refused on a dirty tree.** Unrelated
+`experiments/` work was staged via a `git reset --soft` back to the
+validated commit (correct, to avoid moving HEAD past what TestFlight and the
+`.dmg` had already shipped from) — which left the tree dirty and `tag`
+correctly refused rather than tagging the wrong thing. Fixed by stashing the
+unrelated files, tagging, then restoring and committing them once HEAD was
+safe to move again. The gate did its job; the mess was mine.
+
+**Fedora Copr succeeded first time** on this release — the transient class
+from 0.31.1 did not recur, though the durable fix (pass B retry, committed
+after v0.31.1 was tagged) was also not yet present in the v0.31.2 tag's
+source, since it landed on `main` afterward and takes effect from the next
+tag onward.
+
+**9 of 9 channels, verified.**
+
 ## 0.31.0 — 22 Sep 2026 · Tier 1
 
 **Channels: 9 of 9 verified at 01:45Z**, unattended. Tag `v0.31.0` first

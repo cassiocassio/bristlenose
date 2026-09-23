@@ -189,7 +189,7 @@ procurement; under-listing would be a compliance risk.
 | `SQLAlchemy` | 2.0.54 | MIT | <https://www.sqlalchemy.org> |
 | `srsly` | 2.5.3 | MIT License | <https://github.com/explosion/srsly> |
 | `sse-starlette` | 3.4.11 | BSD-3-Clause | <https://github.com/sysid/sse-starlette> |
-| `starlette` | 1.6.0 | BSD-3-Clause | <https://github.com/Kludex/starlette> |
+| `starlette` | 1.7.0 | BSD-3-Clause | <https://github.com/Kludex/starlette> |
 | `sympy` | 1.14.0 | BSD License | <https://sympy.org> |
 | `tenacity` | 9.1.4 | Apache Software License | <https://github.com/jd/tenacity> |
 | `thinc` | 8.3.13 | MIT License | <https://github.com/explosion/thinc> |

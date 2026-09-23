@@ -1284,7 +1284,26 @@ cmd_run() {
     # READS it. That also survives what a lazy $(git rev-parse HEAD) at watch
     # time would not — a resume in a new shell, and a concurrent session
     # committing during the 41 minutes.
-    DISPATCH_CMD="git rev-parse HEAD > '$CI_SHA_FILE' && gh workflow run $WF_CI --ref main -f $WF_STRICT_INPUT=true"
+    # `origin/main`, not HEAD: `gh workflow run --ref main` dispatches the
+    # REMOTE ref, so recording the local head names a commit the run may not be
+    # about. Measured on 0.31.0 — a dispatched run carrying headSha a3475297
+    # against a ci-sha of 3346e692, because a fix had been committed and not
+    # pushed. ci-green selects by `headSha == ci-sha` and would have found
+    # nothing 40 minutes later. Recording what was dispatched also makes
+    # verdict_tag_provenance compare the tag against what CI actually ran.
+    # ...and `--verify`, with HEAD as the fallback, because a repo with no
+    # remote makes `git rev-parse origin/main` print the literal string
+    # "origin/main" — the same shape as the unborn-HEAD trap, and it wrote that
+    # string into ci-sha on the first run of this change (test-release-e2e F39,
+    # which pins that the gate filters on the post-bump sha). Where origin/main
+    # does not resolve nothing was dispatched against a remote ref anyway, so
+    # HEAD is both the honest answer and the previous behaviour.
+    # Temp-then-move: `{ …; } > ci-sha` truncates the file the moment the
+    # redirect opens, so a dispatch whose rev-parse then failed left an EMPTY
+    # ci-sha. That fails closed at ci-green and at the tag (both test for a
+    # non-empty sha) but NOT at the resume guard, which tests `-f` and would
+    # compare HEAD against "" and dispatch a second run for the same commit.
+    DISPATCH_CMD="gh workflow run $WF_CI --ref main -f $WF_STRICT_INPUT=true && { git rev-parse --verify origin/main 2>/dev/null || git rev-parse --verify HEAD; } > '$CI_SHA_FILE.tmp' && mv '$CI_SHA_FILE.tmp' '$CI_SHA_FILE'"
     # env.SHA rather than interpolating into the jq program: one less quoting
     # level, and the sha never passes through a string the shell re-parses.
     CI_CMD="SHA=\$(cat '$CI_SHA_FILE' 2>/dev/null); [ -n \"\$SHA\" ] || { echo 'strict-ci recorded no dispatched sha — release.sh retry $V strict-ci'; exit 1; }; export SHA; _id=\$(gh run list --workflow=$WF_CI --event workflow_dispatch --branch main --limit 10 --json databaseId,headSha --jq '[.[]|select(.headSha==env.SHA)]|.[0].databaseId'); [ -n \"\$_id\" ] && [ \"\$_id\" != null ] && gh run watch \"\$_id\" --exit-status"
@@ -1361,6 +1380,40 @@ cmd_run() {
             ev_append push-main pending "HEAD not published"
             prev=pending
         fi
+        # An artefact is a function of the tree it was built from. build-all and
+        # build-dmg are plain steps, so a recorded ok is skipped on resume —
+        # and on 0.31.0 that printed `skipped (done)` over a .pkg built at the
+        # previous commit while build-dmg archived the new one. Left alone, the
+        # App Store build and the .dmg leave one release carrying DIFFERENT
+        # COMMITS, with only the embedded build info to show it. Caught by eye;
+        # invalidated by hand. This is the same rule strict-ci below already
+        # states, applied to the two steps whose OUTPUT carries the tree.
+        #
+        # Deliberately not testflight/dmg, which carry it too: they are
+        # irreversible, so the answer to a moved HEAD there is to stop, not to
+        # re-spend a build number — and the tag already refuses that case,
+        # because verdict_tag_provenance compares the tag against ci-sha and
+        # a HEAD that moved past the verdict cannot be tagged. The backstop is
+        # one step later than ideal and it is real; widening this guard to an
+        # irreversible step without teaching it to STOP would be worse.
+        #
+        # An unreadable HEAD (unborn branch: `git rev-parse HEAD` prints the
+        # literal "HEAD") answers nothing, and cannot-answer is not
+        # answered-no — the same distinction the push-main guard below had to
+        # learn the hard way. Leave the recorded verdict alone.
+        case "$id" in build-all|build-dmg)
+            _sf="$RUNDIR/sha/$id"
+            if [ "$prev" = ok ] && [ -f "$_sf" ]; then
+                _built=$(cat "$_sf" 2>/dev/null)
+                _now=$(git rev-parse --verify HEAD 2>/dev/null || true)
+                if [ -n "$_now" ] && [ -n "$_built" ] && [ "$_now" != "$_built" ]; then
+                    printf '  %b!%b %-26s %bbuilt at %.8s but HEAD is %.8s — rebuilding%b\n' \
+                        "$Y" "$N" "$label" "$D" "$_built" "$_now" "$N"
+                    ev_append "$id" pending "HEAD moved since the artefact was built"
+                    prev=pending
+                fi
+            fi ;;
+        esac
         if [ "$id" = strict-ci ] && [ "$prev" = ok ] && [ -f "$CI_SHA_FILE" ] \
            && [ "$(git rev-parse HEAD 2>/dev/null)" != "$(cat "$CI_SHA_FILE" 2>/dev/null)" ]; then
             printf '  %b!%b %-26s %bverdict is for %.8s but HEAD is %.8s — re-dispatching%b\n' \
@@ -1474,6 +1527,12 @@ cmd_run() {
         sink_line_or_die step id="$id" attempt="$n" status=start \
             || die "cannot write the event sink at $BN_EVENT_SINK"
         t0=$SECONDS
+        # The commit the artefact will be built FROM, captured before the build
+        # rather than after it. build-dmg is a thirty-minute step on a repo that
+        # is trunk-with-concurrent-sessions: a commit landing mid-build would
+        # otherwise be recorded as the artefact's provenance, and the guard
+        # would read it as fresh — silent on precisely its own failure mode.
+        _step_sha=$(git rev-parse --verify HEAD 2>/dev/null || true)
         # REDIRECT, never pipe. $? is then the command's own status, not tail's.
         # release-log 0.27.0 #1: five runs reported exit 0 and three had failed.
         # Backgrounded + wait, NOT a foreground call: bash defers traps until the
@@ -1500,6 +1559,20 @@ cmd_run() {
             || die "cannot write the event sink at $BN_EVENT_SINK"
         if [ "$rc" -eq 0 ]; then
             ev_append "$id" ok "${el}s"
+            # The commit this step's ARTEFACT came from. Only build-all and
+            # build-dmg: they are the two steps whose output carries the tree
+            # (a .pkg and a .dmg, each with its own embedded build info), and
+            # they are the two the fold will otherwise skip on a resume.
+            # Written HERE rather than inside ev_append so no future `ok`
+            # caller inherits it silently. Created lazily — `mkdir -p` at run
+            # start would leave the run dir non-empty, and a DECLINED bare run
+            # must leave nothing for the EXIT trap's rmdir.
+            case "$id" in
+                build-all|build-dmg)
+                    if [ -n "$_step_sha" ]; then
+                        mkdir -p "$RUNDIR/sha" && printf '%s\n' "$_step_sha" > "$RUNDIR/sha/$id"
+                    fi ;;
+            esac
             printf '  %b✓%b %-26s %b%ss%b\n\n' "$G" "$N" "$label" "$D" "$el" "$N"
         else
             ev_append "$id" fail "exit $rc"

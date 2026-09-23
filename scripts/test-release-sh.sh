@@ -392,6 +392,60 @@ case "$_out" in *"interrupted and its outcome is unrecorded"*) ok "the stranded 
 [ "$(git rev-parse HEAD)" = "$_h0" ] && ok "HEAD unchanged" || bad "HEAD MOVED during a test"
 [ "$(git tag -l | wc -l | tr -d ' ')" = "$_t0" ] && ok "no tag created" || bad "A TAG WAS CREATED during a test"
 
+head_ "run — an artefact built at another commit is rebuilt, not skipped"
+# 0.31.0 incident 7: build-all is a plain step, so a recorded ok is skipped on
+# resume. After a fix landed, the fold printed `skipped (done)` over a .pkg
+# built at the PREVIOUS commit while build-dmg archived the new one — the App
+# Store build and the .dmg leaving one release carrying different commits.
+# Caught by eye and invalidated by hand.
+_rd4="$ROOT/.release/9.9.6"; rm -rf "$_rd4"; mkdir -p "$_rd4/logs" "$_rd4/sha"
+cat > "$_rd4/events.jsonl" <<'LOG'
+{"ts":"2026-09-23T10:00:00Z","run":"9.9.6","step":"preflight","status":"ok","detail":"52s"}
+{"ts":"2026-09-23T10:02:00Z","run":"9.9.6","step":"bump","status":"ok","detail":"4s"}
+{"ts":"2026-09-23T10:03:00Z","run":"9.9.6","step":"push-main","status":"ok","detail":"11s"}
+{"ts":"2026-09-23T10:04:00Z","run":"9.9.6","step":"strict-ci","status":"ok","detail":"2s"}
+{"ts":"2026-09-23T10:05:00Z","run":"9.9.6","step":"build-all","status":"ok","detail":"329s"}
+LOG
+git rev-parse HEAD > "$_rd4/ci-sha"
+# The artefact came from a commit that is not HEAD.
+printf '%s\n' "0000000000000000000000000000000000000000" > "$_rd4/sha/build-all"
+_out=$(echo "9.9.6" | RELEASE_STEPS_FILE="$_SYNTH_TBL" bash "$ROOT/scripts/release.sh" run 9.9.6 --bump patch 2>&1)
+case "$_out" in *"rebuilding"*) ok "a stale artefact is noticed and rebuilt" ;;
+                *) bad "build-all was skipped although its artefact predates HEAD" ;; esac
+grep -q '"step":"build-all","status":"pending","detail":"HEAD moved since the artefact was built"' "$_rd4/events.jsonl" \
+    && ok "build-all reset to pending in the log" || bad "no pending event written for build-all"
+
+# Control 1: the artefact came from HEAD, so the guard must stay silent —
+# otherwise every resume pays for an 11-minute rebuild and gets --skip'd.
+rm -rf "$_rd4"; mkdir -p "$_rd4/logs" "$_rd4/sha"
+cat > "$_rd4/events.jsonl" <<'LOG'
+{"ts":"2026-09-23T10:04:00Z","run":"9.9.6","step":"strict-ci","status":"ok","detail":"2s"}
+{"ts":"2026-09-23T10:05:00Z","run":"9.9.6","step":"build-all","status":"ok","detail":"329s"}
+{"ts":"2026-09-23T10:06:00Z","run":"9.9.6","step":"build-dmg","status":"running","detail":"attempt 1"}
+LOG
+git rev-parse HEAD > "$_rd4/ci-sha"; git rev-parse HEAD > "$_rd4/sha/build-all"
+_out=$(echo "9.9.6" | RELEASE_STEPS_FILE="$_SYNTH_TBL" bash "$ROOT/scripts/release.sh" run 9.9.6 --bump patch 2>&1)
+case "$_out" in *"rebuilding"*) bad "guard fired although the artefact came from HEAD" ;;
+                *"skipped (done)"*) ok "artefact sha == HEAD: build-all skipped" ;;
+                *) bad "control run produced neither outcome" ;; esac
+
+# Control 2: NO sha file — a run that predates this guard, or a step whose
+# write was interrupted. Cannot answer is not answered-no: the recorded
+# verdict must stand, exactly as it did before the guard existed.
+rm -rf "$_rd4"; mkdir -p "$_rd4/logs"
+cat > "$_rd4/events.jsonl" <<'LOG'
+{"ts":"2026-09-23T10:04:00Z","run":"9.9.6","step":"strict-ci","status":"ok","detail":"2s"}
+{"ts":"2026-09-23T10:05:00Z","run":"9.9.6","step":"build-all","status":"ok","detail":"329s"}
+{"ts":"2026-09-23T10:06:00Z","run":"9.9.6","step":"build-dmg","status":"running","detail":"attempt 1"}
+LOG
+git rev-parse HEAD > "$_rd4/ci-sha"
+_out=$(echo "9.9.6" | RELEASE_STEPS_FILE="$_SYNTH_TBL" bash "$ROOT/scripts/release.sh" run 9.9.6 --bump patch 2>&1)
+case "$_out" in *"rebuilding"*) bad "guard fired with no sha file to compare against" ;;
+                *"skipped (done)"*) ok "no sha file: the recorded verdict stands" ;;
+                *) bad "control run produced neither outcome" ;; esac
+[ "$(git rev-parse HEAD)" = "$_h0" ] && ok "HEAD unchanged" || bad "HEAD MOVED during a test"
+rm -rf "$_rd4"
+
 head_ "run — resume re-dispatches strict CI when HEAD moved past ci-sha"
 # Incident 27 (0.30.0): a fix landed mid-run, the run resumed with strict-ci
 # recorded ok, and nothing before the tag compares HEAD to the verdict's sha —

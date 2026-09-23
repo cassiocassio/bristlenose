@@ -757,6 +757,51 @@ for _g in check-window-surfaces check-appearance-seam check-menu-routing \
     fi
 done
 
+# The two CI hard gates that are cheap, local and deterministic.
+#
+# 0.31.0: `ratchet` and `inventory` were red on EVERY ci.yml run of that
+# release and nothing surfaced it until build-all refused, 23 minutes and one
+# bump-and-push after preflight said READY. Neither is a build-time fact —
+# both read the source tree, both run in under five seconds, and both had
+# already been true at the first preflight.
+#
+# Note what this is NOT: a check that ci.yml on main is green. That was the
+# first proposal and the evidence killed it — the last ci.yml run on main
+# before that release was `c9c5908e`, 21 Sep, SUCCESS, because all 175 commits
+# sat unpushed until the release pushed them. A streak row would have read
+# green and said nothing. Run the gates here; do not ask CI whether it has
+# seen work it has never been given.
+_rt="$ROOT/.venv/bin/python"
+if [ ! -x "$_rt" ]; then
+    warn "ratchet" "no .venv python — unverified"
+    warn "test inventory" "no .venv python — unverified"
+else
+    # `check-ratchet.py` exits 0 for an `authority: ci` overage measured off-CI
+    # (mypy), which is right — CI owns that number. It ALSO exits 0 when mypy is
+    # unresolvable and the metric is simply unguarded, printing "NOT MEASURED".
+    # A row keyed on the exit code alone would print ✓ over an unguarded metric,
+    # which is this project's house defect wearing a tick. Read the output too.
+    _t0=$SECONDS
+    if _out=$("$_rt" "$ROOT/scripts/check-ratchet.py" 2>&1); then
+        case "$_out" in
+            *"NOT MEASURED"*) warn "ratchet" "a metric is unguarded: $(printf '%s' "$_out" | grep -o '[a-z_]*: NOT MEASURED[^—]*' | head -1 | cut -c1-40)" ;;
+            *"ADVISORY here"*) warn "ratchet" "over ceiling, but CI owns that metric — $(( SECONDS - _t0 ))s" ;;
+            *) ok "ratchet" "every ceiling holds — $(( SECONDS - _t0 ))s" ;;
+        esac
+    else
+        bad "ratchet" "$(printf '%s' "$_out" | grep -E '> ceiling' | head -1 | cut -c1-58)"
+    fi
+    # `.venv` python deliberately: --check compares `structure`, which includes
+    # the ingest-format scan, and that silently degrades when `bristlenose` is
+    # not importable — a false red is how a gate gets switched off.
+    _t0=$SECONDS
+    if _out=$("$_rt" "$ROOT/scripts/gen-test-inventory.py" --check 2>&1); then
+        ok "test inventory" "structure current — $(( SECONDS - _t0 ))s"
+    else
+        bad "test inventory" "$(printf '%s' "$_out" | grep -vE '^\s*$' | tail -1 | cut -c1-58)"
+    fi
+fi
+
 # Tap-workflow drift.
 #
 # .github/workflows/homebrew-tap/update-formula.yml is a COPY. The workflow that

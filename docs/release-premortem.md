@@ -236,6 +236,19 @@ it can be inspected.
 >   is right, it fires, and no one is downstream of it. **The standing question
 >   it raises is whether anything watches CI on `main` between releases.**
 >
+> **32 — and the fix for 29 failed the release run.** Four hours old. The new
+> push-main guard asked `git merge-base --is-ancestor HEAD origin/main` and
+> negated it; a fixture repo has no `origin/main`, so merge-base *errors* and
+> `!` reads the error as "not published". It re-pushed inside
+> `test-release-sh`'s stranded-resume case, which asserts that no step runs at
+> all — 206 passed, 1 failed, and `release-suites` sits inside the publish
+> gate, so PyPI never received the tag. **Green locally, red in CI**: this repo
+> has the ref, so the guard never fired once while it was being proved. The
+> missing distinction is *cannot answer ≠ answered no*. Filed here rather than
+> in the log alone because it is a fourth shape, and a mean one: **a mitigation
+> written for one incident becoming the next incident**, verified only in the
+> environment where it cannot misbehave.
+>
 > **What earned its keep this release.** mypy — soft, ratcheted, the gate most
 > tempting to wave through — was two over its ceiling, and one of the two was a
 > `ValueError` that kills any run reaching it. 5,247 tests were green. The move

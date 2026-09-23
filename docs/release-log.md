@@ -175,6 +175,23 @@ as instability.
    implements exactly that for `strict-ci`, and its comment explains why — it
    was applied to one step instead of to the class.
 
+7. **The push-main guard from #5 then failed the release run, four hours
+   old.** `release-suites` is inside the publish gate, and it went red on
+   `test-release-sh`: 206 passed, 1 failed, *"a step ran during a stranded
+   resume"*. The guard asked `git merge-base --is-ancestor HEAD origin/main`
+   and negated the result — but a fixture repo has no `origin/main`, so
+   merge-base *errors*, `!` turns that error into "not published", and the
+   guard re-pushed inside the one test that asserts no step runs at all.
+   **Green locally and red in CI for the oldest reason in the book:** this
+   repo has `origin/main` and HEAD was an ancestor of it, so the new guard
+   never fired once while I was proving it worked. The distinction the
+   condition was missing is *cannot answer is not the same as answered no* —
+   `origin/main` must resolve before the question means anything. The tag was
+   moved to the fixed commit (`8b525e42` → `8e4433bf`, a `scripts/` change
+   only, so neither the `.pkg` nor the `.dmg` is affected) and re-pushed, per
+   the documented remedy for a release run that fired and failed. PyPI had not
+   published, so 0.31.0 was never spent.
+
 ### Changes made to the machine this release
 
 - `desktop/Bristlenose/Bristlenose.xcodeproj`: test target builds beside the

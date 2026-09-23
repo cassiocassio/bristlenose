@@ -170,16 +170,39 @@ done
 # --find-links so pip does not try to fetch pysrt from an index that has no
 # wheel for it.
 echo "    pass B: the rest, as x86_64 wheels"
-"$BN_PYTHON" -m pip download --quiet --dest="$WORK/vendor" --no-cache-dir \
-    --find-links="$WORK/vendor" \
-    --only-binary=:all: \
-    --python-version "$BN_TARGET_PY" \
-    --implementation cp \
-    --platform manylinux_2_28_x86_64 \
-    --platform manylinux_2_17_x86_64 \
-    --platform manylinux2014_x86_64 \
-    "bristlenose[serve]==$VERSION" || {
-        echo "error: could not vendor every dependency as an x86_64 wheel." >&2
+# Bounded retry, same shape as the Source0 fetch above and for the same
+# reason: `pip download` resolves the FULL dependency tree against PyPI's
+# live index, and a transitive package can hit a momentary index/CDN hiccup
+# that has nothing to do with bristlenose's own freshness. Measured 23 Sep
+# 2026: 0.31.1's Copr build failed here on `hf-xet` (a faster-whisper ->
+# huggingface-hub transitive) with "from versions: none" — and the IDENTICAL
+# command, run minutes later against the same live PyPI, vendored it cleanly.
+# One retry fixed it by hand (a fresh Copr build); this makes that automatic.
+#
+# Unlike Source0, there is no status code to gate on — pip's "from versions:
+# none" is the same text for "genuinely no compatible wheel" and "index blip".
+# Retrying the whole command is safe either way: a genuine incompatibility
+# still fails, just a few minutes later, with the same message. `--dest`
+# is stable across attempts — wheels pass A/B already fetched are already on
+# disk and pip does not re-fetch what is present and valid.
+_wheelhouse_ok=0
+for _try in 1 2 3; do
+    if "$BN_PYTHON" -m pip download --quiet --dest="$WORK/vendor" --no-cache-dir \
+        --find-links="$WORK/vendor" \
+        --only-binary=:all: \
+        --python-version "$BN_TARGET_PY" \
+        --implementation cp \
+        --platform manylinux_2_28_x86_64 \
+        --platform manylinux_2_17_x86_64 \
+        --platform manylinux2014_x86_64 \
+        "bristlenose[serve]==$VERSION"; then
+        _wheelhouse_ok=1
+        break
+    fi
+    [ "$_try" -lt 3 ] && { echo "    pass B failed on attempt $_try/3 — retrying in 90s (transient index/CDN lag, not necessarily a real incompatibility)" >&2; sleep 90; }
+done
+[ "$_wheelhouse_ok" = 1 ] || {
+        echo "error: could not vendor every dependency as an x86_64 wheel, after 3 attempts." >&2
         echo "       A 'from versions: none' here means the package has no" >&2
         echo "       manylinux x86_64 wheel for cp${BN_TARGET_PY//./} — it cannot be" >&2
         echo "       vendored for that chroot at all. Check the named package on" >&2

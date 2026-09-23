@@ -54,10 +54,16 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ## 0.31.0 — 22 Sep 2026 · Tier 1
 
-**Channels:** tag `v0.31.0` on `8b525e42` at 00:21Z · TestFlight build **3764**
-(delivery `faba5539`) · notarised `.dmg` published · Snap edge dispatched ·
-PyPI, GitHub Release, Homebrew, Copr and the website follow the tag run.
-Verified separately — see the verification note below.
+**Channels: 9 of 9 verified at 01:45Z**, unattended. Tag `v0.31.0` first
+pushed on `8b525e42` at 00:21Z and **moved to `8e4433bf` at 01:00Z** when the
+first release run failed inside the publish gate (#7) — a `scripts/` change
+only, so neither the `.pkg` nor the `.dmg` was affected and PyPI, which had
+published nothing, was never spent. PyPI answered 200 at 01:42Z, 42 minutes
+after the second tag push and on the first poll. TestFlight build **3764**
+(delivery `faba5539`), notarised `.dmg`, Snap edge, Copr `0.31.0`, GitHub
+Release, Homebrew, and the website deployed once PyPI answered — the order
+0.30.0 established, so the site never advertises a version nobody can
+install.
 
 **What shipped.** Recordings transcribed in the language they were spoken in
 (the default had been pinned to English on every channel since January);

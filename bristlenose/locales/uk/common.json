@@ -197,6 +197,8 @@
     "summary": "{{count}} тегів у {{frameworks}} фреймворках",
     "showFramework": "Показати {{framework}}",
     "hideFramework": "Приховати {{framework}}",
+    "showGroup": "Показати {{group}}",
+    "hideGroup": "Приховати {{group}}",
     "frameworkSentiment": "Настрій"
   },
   "footer": {

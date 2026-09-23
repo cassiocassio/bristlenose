@@ -167,6 +167,8 @@
     "summary": "{{count}} tunnistetta {{frameworks}} viitekehyksessä",
     "showFramework": "Näytä {{framework}}",
     "hideFramework": "Piilota {{framework}}",
+    "showGroup": "Näytä {{group}}",
+    "hideGroup": "Piilota {{group}}",
     "frameworkSentiment": "Tunnesävy"
   },
   "footer": {

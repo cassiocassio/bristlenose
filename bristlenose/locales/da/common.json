@@ -167,6 +167,8 @@
     "summary": "{{count}} tags fordelt på {{frameworks}} frameworks",
     "showFramework": "Vis {{framework}}",
     "hideFramework": "Skjul {{framework}}",
+    "showGroup": "Vis {{group}}",
+    "hideGroup": "Skjul {{group}}",
     "frameworkSentiment": "Stemning"
   },
   "footer": {

@@ -152,6 +152,8 @@
     "summary": "{{frameworks}} 個架構中的 {{count}} 個標籤",
     "showFramework": "顯示 {{framework}}",
     "hideFramework": "隱藏 {{framework}}",
+    "showGroup": "顯示 {{group}}",
+    "hideGroup": "隱藏 {{group}}",
     "frameworkSentiment": "情緒"
   },
   "footer": {

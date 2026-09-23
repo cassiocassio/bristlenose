@@ -63,9 +63,14 @@ _KNOWN_UNENROLLED = frozenset({
     "components/EditableText.tsx",
     "components/EyeToggle.tsx",
     "components/ModalNav.tsx",
-    "components/TagGroupCard.tsx",
     "components/TagRow.tsx",
 })
+# TagGroupCard struck 23 Sep 2026 (0.31.1): its eye toggle built
+# `Show ${name}` / `Hide ${name}` in English while the identical control in
+# TagSidebar had used t("tags.showFramework"/"hideFramework") since it shipped.
+# Now t("tags.showGroup"/"hideGroup") — separate keys rather than the framework
+# pair, because sharing one key across two surfaces is how a later reword in one
+# silently changes the other.
 
 # A literal carrying a letter — i.e. words, not "", "-" or a lone separator.
 _WORDY_LITERAL = re.compile(r'"[^"\n]*[A-Za-z][^"\n]*"|`[^`]*[A-Za-z][^`]*`')

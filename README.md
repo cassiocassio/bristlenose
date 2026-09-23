@@ -387,6 +387,12 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.31.1** — _23 Sep 2026_
+
+A control in the Quotes lens announced itself in English to screen readers, whatever language the report was in.
+
+- **The show/hide button on a tag group spoke English to screen readers.** It announced "Show Frustration" or "Hide Onboarding" in every language, because the label was assembled in English in the code rather than translated. The identical control in the panel beside it had been translated since the day it shipped, so the two disagreed. Sighted users saw nothing wrong; anyone using VoiceOver or a screen reader in one of the other twenty languages heard English. It now uses the same words as the rest of the lens.
+
 **0.31.0** — _22 Sep 2026_
 
 Bristlenose hears the language a recording was spoken in, writes its headings back in yours, and the Mac app speaks it everywhere — and the framework codebooks now carry only their authors' words.

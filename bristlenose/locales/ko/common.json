@@ -144,6 +144,8 @@
     "summary": "{{frameworks}}개 프레임워크의 {{count}}개 태그",
     "showFramework": "{{framework}} 표시",
     "hideFramework": "{{framework}} 숨기기",
+    "showGroup": "{{group}} 표시",
+    "hideGroup": "{{group}} 숨기기",
     "frameworkSentiment": "감정"
   },
   "header": {

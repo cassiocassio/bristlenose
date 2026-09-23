@@ -167,6 +167,8 @@
     "summary": "{{count}} taggar i {{frameworks}} ramverk",
     "showFramework": "Visa {{framework}}",
     "hideFramework": "Dölj {{framework}}",
+    "showGroup": "Visa {{group}}",
+    "hideGroup": "Dölj {{group}}",
     "frameworkSentiment": "Sentiment"
   },
   "footer": {

@@ -167,6 +167,8 @@
     "summary": "{{count}} tags over {{frameworks}} raamwerken",
     "showFramework": "{{framework}} tonen",
     "hideFramework": "{{framework}} verbergen",
+    "showGroup": "{{group}} tonen",
+    "hideGroup": "{{group}} verbergen",
     "frameworkSentiment": "Sentiment"
   },
   "footer": {

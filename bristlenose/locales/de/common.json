@@ -157,6 +157,8 @@
     "summary": "{{count}} Tags in {{frameworks}} Frameworks",
     "showFramework": "{{framework}} anzeigen",
     "hideFramework": "{{framework}} ausblenden",
+    "showGroup": "{{group}} anzeigen",
+    "hideGroup": "{{group}} ausblenden",
     "frameworkSentiment": "Stimmung"
   },
   "header": {

@@ -162,6 +162,8 @@
     "summary": "{{frameworks}} フレームワーク中 {{count}} タグ",
     "showFramework": "{{framework}} を表示",
     "hideFramework": "{{framework}} を非表示",
+    "showGroup": "{{group}} を表示",
+    "hideGroup": "{{group}} を非表示",
     "frameworkSentiment": "感情"
   },
   "footer": {

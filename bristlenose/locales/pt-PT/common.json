@@ -167,6 +167,8 @@
     "summary": "{{count}} etiquetas em {{frameworks}} frameworks",
     "showFramework": "Mostrar {{framework}}",
     "hideFramework": "Ocultar {{framework}}",
+    "showGroup": "Mostrar {{group}}",
+    "hideGroup": "Ocultar {{group}}",
     "frameworkSentiment": "Sentimento"
   },
   "footer": {

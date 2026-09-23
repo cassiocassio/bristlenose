@@ -167,6 +167,8 @@
     "summary": "{{count}} tag in {{frameworks}} framework",
     "showFramework": "Mostra {{framework}}",
     "hideFramework": "Nascondi {{framework}}",
+    "showGroup": "Mostra {{group}}",
+    "hideGroup": "Nascondi {{group}}",
     "frameworkSentiment": "Sentiment"
   },
   "footer": {

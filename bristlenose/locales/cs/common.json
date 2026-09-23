@@ -193,6 +193,8 @@
     "summary": "{{count}} štítků v {{frameworks}} rámcích",
     "showFramework": "Zobrazit {{framework}}",
     "hideFramework": "Skrýt {{framework}}",
+    "showGroup": "Zobrazit {{group}}",
+    "hideGroup": "Skrýt {{group}}",
     "frameworkSentiment": "Nálada"
   },
   "footer": {

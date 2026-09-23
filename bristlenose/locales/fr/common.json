@@ -157,6 +157,8 @@
     "summary": "{{count}} étiquettes dans {{frameworks}} cadres",
     "showFramework": "Afficher {{framework}}",
     "hideFramework": "Masquer {{framework}}",
+    "showGroup": "Afficher {{group}}",
+    "hideGroup": "Masquer {{group}}",
     "frameworkSentiment": "Sentiment"
   },
   "header": {

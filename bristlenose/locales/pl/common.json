@@ -197,6 +197,8 @@
     "summary": "{{count}} tagów w {{frameworks}} ramach",
     "showFramework": "Pokaż {{framework}}",
     "hideFramework": "Ukryj {{framework}}",
+    "showGroup": "Pokaż {{group}}",
+    "hideGroup": "Ukryj {{group}}",
     "frameworkSentiment": "Sentyment"
   },
   "footer": {

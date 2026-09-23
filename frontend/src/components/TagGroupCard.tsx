@@ -110,7 +110,7 @@ export function TagGroupCard({
             open={!isHidden}
             onClick={handleEyeClick}
             className="group-eye"
-            aria-label={isHidden ? `Show ${name}` : `Hide ${name}`}
+            aria-label={isHidden ? t("tags.showGroup", { group: name }) : t("tags.hideGroup", { group: name })}
           />
         </div>
       )}

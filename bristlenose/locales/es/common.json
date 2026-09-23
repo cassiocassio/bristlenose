@@ -157,6 +157,8 @@
     "summary": "{{count}} etiquetas en {{frameworks}} marcos",
     "showFramework": "Mostrar {{framework}}",
     "hideFramework": "Ocultar {{framework}}",
+    "showGroup": "Mostrar {{group}}",
+    "hideGroup": "Ocultar {{group}}",
     "frameworkSentiment": "Sentimiento"
   },
   "header": {

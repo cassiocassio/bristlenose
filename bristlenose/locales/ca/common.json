@@ -167,6 +167,8 @@
     "summary": "{{count}} etiquetes en {{frameworks}} marcs",
     "showFramework": "Mostra {{framework}}",
     "hideFramework": "Oculta {{framework}}",
+    "showGroup": "Mostra {{group}}",
+    "hideGroup": "Oculta {{group}}",
     "frameworkSentiment": "Sentiment"
   },
   "footer": {

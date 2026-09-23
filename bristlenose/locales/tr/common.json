@@ -167,6 +167,8 @@
     "summary": "{{frameworks}} çerçeve boyunca {{count}} etiket",
     "showFramework": "{{framework}} göster",
     "hideFramework": "{{framework}} gizle",
+    "showGroup": "{{group}} göster",
+    "hideGroup": "{{group}} gizle",
     "frameworkSentiment": "Duygu durumu"
   },
   "footer": {

@@ -167,6 +167,8 @@
     "summary": "{{count}} tags across {{frameworks}} frameworks",
     "showFramework": "Show {{framework}}",
     "hideFramework": "Hide {{framework}}",
+    "showGroup": "Show {{group}}",
+    "hideGroup": "Hide {{group}}",
     "frameworkSentiment": "Sentiment"
   },
   "footer": {

@@ -199,6 +199,7 @@
     "hideFramework": "Ukryj {{framework}}",
     "showGroup": "Pokaż {{group}}",
     "hideGroup": "Ukryj {{group}}",
+    "assignToSelected": "Przypisz {{name}} do wybranych cytat\u00f3w",
     "frameworkSentiment": "Sentyment"
   },
   "footer": {

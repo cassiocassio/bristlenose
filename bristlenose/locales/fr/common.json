@@ -159,6 +159,7 @@
     "hideFramework": "Masquer {{framework}}",
     "showGroup": "Afficher {{group}}",
     "hideGroup": "Masquer {{group}}",
+    "assignToSelected": "Attribuer {{name}} aux verbatim s\u00e9lectionn\u00e9s",
     "frameworkSentiment": "Sentiment"
   },
   "header": {

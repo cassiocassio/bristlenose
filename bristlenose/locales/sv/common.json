@@ -169,6 +169,7 @@
     "hideFramework": "Dölj {{framework}}",
     "showGroup": "Visa {{group}}",
     "hideGroup": "Dölj {{group}}",
+    "assignToSelected": "Tilldela {{name}} till valda citat",
     "frameworkSentiment": "Sentiment"
   },
   "footer": {

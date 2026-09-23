@@ -146,6 +146,7 @@
     "hideFramework": "{{framework}} 숨기기",
     "showGroup": "{{group}} 표시",
     "hideGroup": "{{group}} 숨기기",
+    "assignToSelected": "\uc120\ud0dd\ud55c \uc778\uc6a9\ubb38\uc5d0 {{name}} \ud560\ub2f9",
     "frameworkSentiment": "감정"
   },
   "header": {

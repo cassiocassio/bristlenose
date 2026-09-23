@@ -387,6 +387,12 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.31.2** — _23 Sep 2026_
+
+A second control in the Quotes lens announced itself in English to screen readers.
+
+- **The tag badge that assigns a tag to your selected quotes spoke English to screen readers.** It announced "Assign Frustration to selected quotes" in every language, because the label was assembled in English in the code rather than translated. Sighted users saw the tag's own name, which was already correct; anyone using VoiceOver or a screen reader in one of the other twenty languages heard the surrounding sentence in English. Same defect as the tag group's show and hide button in 0.31.1, one control along.
+
 **0.31.1** — _23 Sep 2026_
 
 A control in the Quotes lens announced itself in English to screen readers, whatever language the report was in.

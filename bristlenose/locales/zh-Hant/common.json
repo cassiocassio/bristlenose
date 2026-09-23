@@ -154,6 +154,7 @@
     "hideFramework": "隱藏 {{framework}}",
     "showGroup": "顯示 {{group}}",
     "hideGroup": "隱藏 {{group}}",
+    "assignToSelected": "\u5c07 {{name}} \u6307\u6d3e\u7d66\u9078\u53d6\u7684\u5f15\u8ff0",
     "frameworkSentiment": "情緒"
   },
   "footer": {

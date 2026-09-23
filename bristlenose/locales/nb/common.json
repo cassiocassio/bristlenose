@@ -169,6 +169,7 @@
     "hideFramework": "Skjul {{framework}}",
     "showGroup": "Vis {{group}}",
     "hideGroup": "Skjul {{group}}",
+    "assignToSelected": "Tildel {{name}} til valgte sitater",
     "frameworkSentiment": "Sentiment"
   },
   "footer": {

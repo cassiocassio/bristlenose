@@ -195,6 +195,7 @@
     "hideFramework": "Skrýt {{framework}}",
     "showGroup": "Zobrazit {{group}}",
     "hideGroup": "Skrýt {{group}}",
+    "assignToSelected": "P\u0159i\u0159adit {{name}} k vybran\u00fdm cit\u00e1t\u016fm",
     "frameworkSentiment": "Nálada"
   },
   "footer": {

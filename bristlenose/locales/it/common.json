@@ -169,6 +169,7 @@
     "hideFramework": "Nascondi {{framework}}",
     "showGroup": "Mostra {{group}}",
     "hideGroup": "Nascondi {{group}}",
+    "assignToSelected": "Assegna {{name}} alle citazioni selezionate",
     "frameworkSentiment": "Sentiment"
   },
   "footer": {

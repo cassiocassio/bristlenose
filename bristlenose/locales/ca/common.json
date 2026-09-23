@@ -169,6 +169,7 @@
     "hideFramework": "Oculta {{framework}}",
     "showGroup": "Mostra {{group}}",
     "hideGroup": "Oculta {{group}}",
+    "assignToSelected": "Assigna {{name}} a les cites seleccionades",
     "frameworkSentiment": "Sentiment"
   },
   "footer": {

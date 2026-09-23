@@ -169,6 +169,7 @@
     "hideFramework": "{{framework}} verbergen",
     "showGroup": "{{group}} tonen",
     "hideGroup": "{{group}} verbergen",
+    "assignToSelected": "{{name}} toewijzen aan geselecteerde citaten",
     "frameworkSentiment": "Sentiment"
   },
   "footer": {

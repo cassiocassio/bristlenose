@@ -159,6 +159,7 @@
     "hideFramework": "Ocultar {{framework}}",
     "showGroup": "Mostrar {{group}}",
     "hideGroup": "Ocultar {{group}}",
+    "assignToSelected": "Asignar {{name}} a las citas seleccionadas",
     "frameworkSentiment": "Sentimiento"
   },
   "header": {

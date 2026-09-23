@@ -159,6 +159,7 @@
     "hideFramework": "{{framework}} ausblenden",
     "showGroup": "{{group}} anzeigen",
     "hideGroup": "{{group}} ausblenden",
+    "assignToSelected": "{{name}} den ausgew\u00e4hlten Zitaten zuweisen",
     "frameworkSentiment": "Stimmung"
   },
   "header": {

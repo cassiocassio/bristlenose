@@ -11,6 +11,7 @@
  */
 
 import { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { MicroBar } from "./MicroBar";
 
 interface TagRowProps {
@@ -50,6 +51,7 @@ export function TagRow({
   onSoloClick,
   soloFocused,
 }: TagRowProps) {
+  const { t } = useTranslation();
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       onToggle(name, e.target.checked);
@@ -120,7 +122,7 @@ export function TagRow({
           tabIndex={onAssign && assignActive ? 0 : -1}
           onClick={handleBadgeClick}
           onKeyDown={handleBadgeKeyDown}
-          aria-label={assignActive ? `Assign ${name} to selected quotes` : undefined}
+          aria-label={assignActive ? t("tags.assignToSelected", { name }) : undefined}
         >
           {name}
         </span>

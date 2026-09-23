@@ -169,6 +169,7 @@
     "hideFramework": "Hide {{framework}}",
     "showGroup": "Show {{group}}",
     "hideGroup": "Hide {{group}}",
+    "assignToSelected": "Assign {{name}} to selected quotes",
     "frameworkSentiment": "Sentiment"
   },
   "footer": {

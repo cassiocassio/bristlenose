@@ -1345,7 +1345,16 @@ cmd_run() {
         # headSha == ci-sha) finds nothing 40 minutes later. Measured:
         # a dispatch carrying headSha a3475297 against ci-sha 3346e692.
         # Ask whether HEAD is published, not whether we once pushed.
+        # `origin/main` must RESOLVE before the question means anything. A
+        # fixture repo has no remote, so `merge-base` errors, `!` turns that
+        # into "not published", and the guard re-pushed inside a test that
+        # asserts no step runs at all (test-release-sh's stranded-resume case,
+        # green locally where the ref exists, red in CI where it does not —
+        # root CLAUDE.md's "tests must not depend on local environment",
+        # earned the hard way at 00:22Z on 23 Sep 2026). Cannot answer is not
+        # the same as answered no: leave the recorded verdict alone.
         if [ "$id" = push-main ] && [ "$prev" = ok ] \
+           && git rev-parse --verify --quiet origin/main >/dev/null 2>&1 \
            && ! git merge-base --is-ancestor HEAD origin/main 2>/dev/null; then
             printf '  %b!%b %-26s %bHEAD %.8s is not on origin/main — re-pushing%b\n' \
                 "$Y" "$N" "$label" "$D" "$(git rev-parse HEAD)" "$N"

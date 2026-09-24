@@ -1368,6 +1368,20 @@ decisions that propagate rather than on 1,247 strings, which is what would inver
 bottleneck — *if* the ratification pass happens before they are asked to proofread. Reviewer availability is a legitimate override of the two-axis model;
 the chart ranks *candidates we would have to go and find someone for*.
 
+**Closed 24 Sep 2026 — not scheduled, and that is a resting state rather than a gap.**
+The reviewers are in Mallorca and there is no trip before 2027, so the "available
+*first*" premise that made Catalan worth running backwards has lapsed. `ca` ships as it
+stands and rests machine-seeded alongside the other ten, which is the accepted standard
+here. **Two things stay true and must not be read as discharged.** (1) The glossary was
+never ratified — `glossary.csv`'s `ca` rows are an *assembled* table, sourced from Apple's
+shipped strings, the Microsoft style guide and Softcatalà/TERMCAT, and never ratified by a
+native speaker. Do not cite them as authoritative, and do not let a later locale copy them
+on the assumption that they were reviewed. (2) The experiment is **unresolved, not
+refuted**: whether ~30 ratified decisions beat proofreading 1,247 strings is still the open
+question the inversion was built to answer, and the measurement survives — a reviewer's
+change rate against a locale seeded without a glossary, whenever one does sit down.
+Reopening needs a reviewer, not a decision.
+
 **Mechanical pass, 28 Aug 2026 — and it is not the native pass.** The seed had drifted:
 eight commits added `ca` strings after 14 Aug (the diagnostic popover's 21 languages, the
 sidebar's unreachable rows, the re-analyse sheet), none of them written against the

@@ -112,7 +112,10 @@ done
 sink_line frobnicate ts_note="an event kind the board has no rule for" widget=7
 step_end preflight 1 0
 
-for s in bump push-main strict-ci; do step_start "$s" 1; sleep "$PACE"; echo "did $s" >> "$RUNDIR/logs/$s.1.log"; step_end "$s" 1 0; done
+# `inventory` first: it is a real station on the real table, and a station the
+# rehearsal never walks is a station whose rendering nothing proves. It writes
+# the supply-chain record from the closure preflight resolved, before the bump.
+for s in inventory bump push-main strict-ci; do step_start "$s" 1; sleep "$PACE"; echo "did $s" >> "$RUNDIR/logs/$s.1.log"; step_end "$s" 1 0; done
 
 # build-all: the real report.sh helpers, plain mode, stdout to the step log — exactly what the driver captures
 step_start build-all 1
@@ -197,6 +200,7 @@ bad = []
 def want(cond, what):
     if not cond: bad.append(what)
 want(m["phase"] == "completed", f"phase {m['phase']}")
+want(st.get("inventory") == "ok", "inventory station walked and green")
 want(st.get("build-dmg") == "ok" and next(s for s in m["line"]["stations"] if s["id"] == "build-dmg")["attempt"] == 2, "build-dmg ok on attempt 2")
 want(m["preflight"]["state"] == "data" and len(m["preflight"]["rows"]) >= 12, f"preflight rows {len(m['preflight']['rows'])}")
 lanes = {l["id"]: l for l in m["build"]["lanes"]}

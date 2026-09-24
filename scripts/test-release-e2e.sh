@@ -602,5 +602,323 @@ grep -q 'next minor after v6.0.0' "$WORK/out" \
     && ok "narrated the inference" || bad "silent inference"
 eq "landed on 6.1.0" ok "$(status_of 6.1.0 one)"
 
+# ---------------------------------------------------------------------------
+# 30-34 · the CI gate must not mistake "could not ask" for "the answer is no"
+#
+# Two incidents, two releases (release-log 0.31.1, 0.31.2). A transient 503
+# killed `gh run watch` mid-poll and a 38-minute wait was discarded while the
+# run went green on its own; then an empty lookup short-circuited the old
+# `&&` chain on its middle test and produced a ZERO-BYTE log for a run that
+# was still in progress. `sleep` is stubbed throughout so the backoffs are
+# instant — the intervals are not what these assert.
+# ---------------------------------------------------------------------------
+
+head_ "30 · a dropped watch is reattached, not read as a verdict"
+fresh
+steps <<'EOF'
+strict-ci|dispatch strict CI|plain|1m|||__DISPATCH__
+ci-green|GATE strict CI green|gate|1m|||__CIWAIT__
+EOF
+stub sleep 'exit 0'
+stub gh 'case "$1 $2" in
+  "run list")  echo 12345 ;;
+  "run watch") n=$(cat "$PWD/watch-n" 2>/dev/null || echo 0); n=$((n+1))
+               echo "$n" > "$PWD/watch-n"
+               [ "$n" -ge 2 ] && exit 0 || exit 1 ;;
+  "run view")  echo in_progress ;;
+  *) exit 0 ;;
+esac'
+rc=$(drive 1.0.0)
+eq "the run completes"                 75 "$rc"
+eq "the gate goes green"               ok "$(status_of 1.0.0 ci-green)"
+eq "and it reattached rather than giving up" 2 "$(cat "$WORK/repo/watch-n" 2>/dev/null)"
+
+head_ "31 · a run that CONCLUDED red is still red, and is not retried"
+# The regression this whole change could have introduced. Retrying a verdict
+# is not resilience, it is asking CI to change its mind.
+fresh
+steps <<'EOF'
+strict-ci|dispatch strict CI|plain|1m|||__DISPATCH__
+ci-green|GATE strict CI green|gate|1m|||__CIWAIT__
+EOF
+stub sleep 'exit 0'
+stub gh 'case "$1 $2" in
+  "run list")  echo 12345 ;;
+  "run watch") n=$(cat "$PWD/watch-n" 2>/dev/null || echo 0)
+               echo $((n+1)) > "$PWD/watch-n"; exit 1 ;;
+  "run view")  echo completed ;;
+  *) exit 0 ;;
+esac'
+rc=$(drive 1.0.0)
+eq "the run fails"                    1 "$rc"
+eq "the gate records the failure"  fail "$(status_of 1.0.0 ci-green)"
+eq "watched exactly once — a verdict is not weather" 1 "$(cat "$WORK/repo/watch-n" 2>/dev/null)"
+grep -q 'not green' "$WORK/out" && ok "and says it concluded" || bad "silent about the conclusion"
+
+head_ "32 · an unreachable lookup fails closed WITH A REASON, three times over"
+fresh
+steps <<'EOF'
+strict-ci|dispatch strict CI|plain|1m|||__DISPATCH__
+ci-green|GATE strict CI green|gate|1m|||__CIWAIT__
+EOF
+stub sleep 'exit 0'
+stub gh 'case "$1 $2" in
+  "run list") n=$(cat "$PWD/list-n" 2>/dev/null || echo 0)
+              echo $((n+1)) > "$PWD/list-n"; exit 1 ;;
+  *) exit 0 ;;
+esac'
+rc=$(drive 1.0.0)
+eq "the run fails"                    1 "$rc"
+eq "asked three times, then stopped"  3 "$(cat "$WORK/repo/list-n" 2>/dev/null)"
+grep -q 'could not reach GitHub' "$WORK/out" \
+    && ok "names the wire, not the build" || bad "no reason given"
+# The 0.31.2 tell was a zero-byte log. A gate that fails silently reads as a
+# defect in the gate; this is the assertion that the log now carries evidence.
+[ -s "$WORK/repo/.release/1.0.0/logs/ci-green.1.log" ] \
+    && ok "the step log is not empty" || bad "zero-byte log — the 0.31.2 shape"
+
+head_ "33 · a lookup that SUCCEEDS and finds nothing gets a different sentence"
+# "I could not ask" and "I asked, and there is no such run" lead to different
+# actions — one retries the gate, the other re-dispatches CI.
+fresh
+steps <<'EOF'
+strict-ci|dispatch strict CI|plain|1m|||__DISPATCH__
+ci-green|GATE strict CI green|gate|1m|||__CIWAIT__
+EOF
+stub sleep 'exit 0'
+stub gh 'case "$1 $2" in
+  "run list") echo null ;;
+  *) exit 0 ;;
+esac'
+rc=$(drive 1.0.0)
+eq "the run fails" 1 "$rc"
+grep -q 'the dispatch did not take' "$WORK/out" \
+    && ok "points at the dispatch" || bad "wrong remedy"
+grep -q 'could not reach GitHub' "$WORK/out" \
+    && bad "blamed the wire for an answered question" || ok "does not blame the wire"
+
+head_ "34 · a lookup that recovers on the second ask still gets its verdict"
+fresh
+steps <<'EOF'
+strict-ci|dispatch strict CI|plain|1m|||__DISPATCH__
+ci-green|GATE strict CI green|gate|1m|||__CIWAIT__
+EOF
+stub sleep 'exit 0'
+stub gh 'case "$1 $2" in
+  "run list")  n=$(cat "$PWD/list-n" 2>/dev/null || echo 0); n=$((n+1))
+               echo "$n" > "$PWD/list-n"
+               [ "$n" -ge 2 ] && { echo 12345; exit 0; } || exit 1 ;;
+  "run watch") exit 0 ;;
+  *) exit 0 ;;
+esac'
+rc=$(drive 1.0.0)
+eq "the run completes"   75 "$rc"
+eq "the gate goes green" ok "$(status_of 1.0.0 ci-green)"
+eq "it took two asks"     2 "$(cat "$WORK/repo/list-n" 2>/dev/null)"
+
+# ---------------------------------------------------------------------------
+# 35-37 · a known remedy prepares, records itself, and never runs twice
+#
+# Drift is the one live, recurring, mechanically-remediable failure: four of
+# the twenty-five recorded step failures across 0.28.0-0.31.2, in four
+# consecutive releases. The contract under test is that a remedy PREPARES and
+# stops — it must not commit, and it must not fire twice on a cause it did not
+# fix.
+# ---------------------------------------------------------------------------
+
+_stub_venv_python() {   # a sidecar python that records that it was asked to run
+    mkdir -p "$WORK/repo/.venv/bin"
+    printf '#!/bin/sh\necho ran >> "$PWD/remedy-ran"\nexit 0\n' > "$WORK/repo/.venv/bin/python"
+    chmod +x "$WORK/repo/.venv/bin/python"
+}
+
+head_ "35 · a known remedy is applied, recorded, and the run stops for review"
+fresh
+_stub_venv_python
+steps <<'EOF'
+drift|supply-chain inventory|gate|1m|||echo "THIRD-PARTY-BINARIES.md is out of date"; exit 1
+EOF
+rc=$(drive 1.0.0)
+eq "the run stops"                 1 "$rc"
+eq "the remedy actually ran"       1 "$(wc -l < "$WORK/repo/remedy-ran" 2>/dev/null | tr -d ' ')"
+grep -q 'known remedy' "$WORK/out" && ok "it says which remedy" || bad "silent remedy"
+grep -q 'read the diff, commit it' "$WORK/out" \
+    && ok "and hands the commit back to a person" || bad "no review handoff"
+grep -q '"step":"drift","status":"pending","detail":"remedy applied: deps-inventory"' \
+    "$WORK/repo/.release/1.0.0/events.jsonl" \
+    && ok "the ledger records it as pending, not a new status word" || bad "nothing recorded"
+# pending, not a word of its own: fold_status folds anything outside its fixed
+# set to `corrupt`, which takes the stranded path and makes the step unresumable.
+eq "the step folds to a resumable state" pending "$(status_of 1.0.0 drift)"
+
+head_ "36 · the same failure twice does not apply the remedy twice"
+# The ledger is the interlock. A second identical failure means the remedy did
+# not address the cause; re-applying would mutate the tree again for nothing.
+rc=$(drive 1.0.0)
+eq "the resume stops too"          1 "$rc"
+eq "the remedy did NOT run again"  1 "$(wc -l < "$WORK/repo/remedy-ran" 2>/dev/null | tr -d ' ')"
+grep -q 'fix, then' "$WORK/out" && ok "it falls through to the ordinary failure path" \
+                                || bad "still offering the spent remedy"
+
+head_ "37 · an unrelated failure gets no remedy at all"
+# A remedy that fires on a cause it cannot address is worse than none: it
+# mutates the tree over that cause and pollutes the next run's evidence.
+fresh
+_stub_venv_python
+steps <<'EOF'
+other|build the app|gate|1m|||echo "BUILD FAILED (xcodebuild exit 65)"; exit 1
+EOF
+rc=$(drive 1.0.0)
+eq "the run stops"                1 "$rc"
+[ -f "$WORK/repo/remedy-ran" ] && bad "a remedy ran for a failure it cannot fix" \
+                               || ok "no remedy attempted"
+grep -q 'known remedy' "$WORK/out" && bad "claimed a remedy it does not have" \
+                                   || ok "and says nothing about remedies"
+
+head_ "38 · the run names itself to every step (one resolve per release)"
+# build-sidecar.sh stamps BN_RELEASE_RUN into the sidecar venv when it resolves,
+# and build-all reuses that venv only when the stamp matches. If the export ever
+# stops reaching the steps, the stamp silently becomes "adhoc", nothing matches,
+# and both lanes quietly resolve again — the exact double-resolve this closes,
+# back with no symptom. So the export is the load-bearing part, and it is here.
+fresh
+steps <<'EOF'
+name|names the run|plain|1m|||printf '%s' "$BN_RELEASE_RUN" > "$PWD/run-name"
+EOF
+rc=$(drive 3.2.1)
+eq "the run completes"            75 "$rc"
+eq "steps see the release version" 3.2.1 "$(cat "$WORK/repo/run-name" 2>/dev/null)"
+
+# ---------------------------------------------------------------------------
+# 39-41 · `ready` — discovery moved OFF the critical path
+#
+# Three of seven releases died on an uncommitted tree and one on genuinely red
+# tests: four nights lost to things a person could have fixed in minutes before
+# bed. `ready` asks those questions while they are cheap. The contract is that
+# it answers honestly and performs NO irreversible act — no run dir, no tag.
+# ---------------------------------------------------------------------------
+
+_ready() {   # _ready <version> — run the real cmd_ready in the sandbox
+    ( cd "$WORK/repo" && PATH="$WORK/bin:$PATH" \
+        bash "$WORK/repo/scripts/release.sh" ready "$1" ) >"$WORK/out" 2>&1
+    echo $?
+}
+_stub_preflight() {   # <exit-code>
+    printf '#!/bin/sh\necho "  (preflight stub)"\nexit %s\n' "$1" > "$WORK/repo/scripts/check-release-ready.sh"
+    chmod +x "$WORK/repo/scripts/check-release-ready.sh"
+}
+
+head_ "39 · ready reports READY, and performs no irreversible act"
+fresh
+_stub_preflight 0
+stub sleep 'exit 0'
+stub gh 'case "$1 $2" in
+  "run list")  echo 4242 ;;
+  "run watch") exit 0 ;;
+  *) exit 0 ;;
+esac'
+rc=$(_ready 5.0.0)
+eq "exits 0"                     0 "$rc"
+grep -q 'READY' "$WORK/out" && ok "says READY" || bad "no verdict printed"
+grep -q 'NOT READY' "$WORK/out" && bad "said NOT READY on a clean run" || ok "and it is the positive one"
+[ -d "$WORK/repo/.release" ] && bad "ready created a run directory" || ok "no run dir — it is not a release"
+eq "no tag was created" "" "$(cd "$WORK/repo" && git tag -l)"
+
+head_ "40 · a failing preflight is NOT READY, and says so before CI is spent"
+fresh
+_stub_preflight 1
+stub sleep 'exit 0'
+stub gh 'case "$1 $2" in
+  "run list")  echo 4242 ;;
+  "run watch") exit 0 ;;
+  *) exit 0 ;;
+esac'
+rc=$(_ready 5.0.0)
+eq "exits non-zero"              1 "$rc"
+grep -q 'NOT READY' "$WORK/out" && ok "says NOT READY" || bad "no failure verdict"
+grep -q 'preflight above' "$WORK/out" && ok "names preflight as the reason" || bad "unattributed failure"
+
+head_ "41 · genuinely red CI is NOT READY — the one gate nothing else runs early"
+# 0.28.0 died here, at 11pm, on a real test failure. This is that night, moved.
+fresh
+_stub_preflight 0
+stub sleep 'exit 0'
+stub gh 'case "$1 $2" in
+  "run list")  echo 4242 ;;
+  "run watch") exit 1 ;;
+  "run view")  echo completed ;;
+  *) exit 0 ;;
+esac'
+rc=$(_ready 5.0.0)
+eq "exits non-zero"              1 "$rc"
+grep -q 'NOT READY' "$WORK/out" && ok "says NOT READY" || bad "red CI reported as ready"
+grep -q 'strict CI did not go green' "$WORK/out" && ok "names CI as the reason" || bad "unattributed"
+[ -d "$WORK/repo/.release" ] && bad "ready created a run directory" || ok "still no run dir"
+
+# ---------------------------------------------------------------------------
+# 42-44 · the inventory step — the file is written from the closure that ships
+#
+# Drift was 5 of 25 recorded failures because the inventory was generated from
+# one resolve and checked against another. This step writes it from the resolve
+# preflight just did, and commits it before anything is built.
+# ---------------------------------------------------------------------------
+
+_stub_generator() {   # <content-to-write>
+    mkdir -p "$WORK/repo/.venv/bin"
+    printf '#!/bin/sh\nprintf "%%s\\n" "%s" > "$PWD/THIRD-PARTY-BINARIES.md"\nexit 0\n' "$1" \
+        > "$WORK/repo/.venv/bin/python"
+    chmod +x "$WORK/repo/.venv/bin/python"
+}
+_track_inventory() {  # the real file is tracked; `git commit -- <path>` needs it to be
+    ( cd "$WORK/repo" && printf 'old closure\n' > THIRD-PARTY-BINARIES.md \
+      && git add THIRD-PARTY-BINARIES.md && git commit -q -m "seed inventory" ) 2>/dev/null
+}
+
+head_ "42 · a changed closure is written down and committed before the build"
+fresh
+_track_inventory
+_stub_generator "new closure"
+steps <<'EOF'
+inventory|refresh the inventory|plain|1m|||__INVENTORY__
+EOF
+rc=$(drive 1.0.0)
+eq "the run completes"        75 "$rc"
+eq "the step went green"      ok "$(status_of 1.0.0 inventory)"
+eq "the file was rewritten"   "new closure" "$(cat "$WORK/repo/THIRD-PARTY-BINARIES.md")"
+( cd "$WORK/repo" && git log -1 --pretty=%s ) | grep -q 'inventory: the closure' \
+    && ok "and committed under its own subject" || bad "not committed"
+# Scoped to the file: the sandbox carries its own untracked scaffolding
+# (.release/, .venv/, the copied scripts), which is not what this asserts.
+eq "the inventory is left committed, not dirty" "" \
+   "$(cd "$WORK/repo" && git status --porcelain -- THIRD-PARTY-BINARIES.md)"
+
+head_ "43 · an unchanged closure commits nothing and says so"
+fresh
+_track_inventory
+_stub_generator "old closure"
+steps <<'EOF'
+inventory|refresh the inventory|plain|1m|||__INVENTORY__
+EOF
+rc=$(drive 1.0.0)
+eq "the run completes"   75 "$rc"
+eq "the step went green" ok "$(status_of 1.0.0 inventory)"
+eq "HEAD did not move"   "seed inventory" "$(cd "$WORK/repo" && git log -1 --pretty=%s)"
+grep -q 'already current' "$WORK/repo/.release/1.0.0/logs/inventory.1.log" \
+    && ok "and says it was already current" || bad "silent no-op"
+
+head_ "44 · no interpreter is a loud failure, not a skipped inventory"
+# A check that cannot run must report that it could not run. Silently shipping
+# a stale licensing record is the outcome this refuses.
+fresh
+_track_inventory
+steps <<'EOF'
+inventory|refresh the inventory|plain|1m|||__INVENTORY__
+EOF
+rc=$(drive 1.0.0)
+eq "the run stops"        1 "$rc"
+eq "the step is recorded failed" fail "$(status_of 1.0.0 inventory)"
+grep -q 'cannot generate the supply-chain inventory' "$WORK/out" \
+    && ok "and names the reason" || bad "unattributed failure"
+
 meta_check
 finish

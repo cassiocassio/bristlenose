@@ -191,6 +191,52 @@ eq "HEAD matches, dirty"    dirty  "$(cd "$_TP" && CI_SHA_FILE="$_TP/ci-sha" ver
 eq "HEAD moved past verdict" moved "$(cd "$_TP" && CI_SHA_FILE="$_TP/ci-sha" verdict_tag_provenance)"
 rm -rf "$_TP"; unset CI_SHA_FILE
 
+head_ "verdict_run_lookup — an empty answer is two different facts"
+# `_id=$(gh run list …)` discards the exit status, so "the call failed" and
+# "the call worked and nothing matched" arrive identically. They lead to
+# opposite actions: retry the gate, or re-dispatch CI. release-log 0.31.2.
+eq "a run id"                      found:12345 "$(verdict_run_lookup 0 12345)"
+eq "jq's empty match"              absent      "$(verdict_run_lookup 0 null)"
+eq "succeeded, said nothing"       absent      "$(verdict_run_lookup 0 '')"
+eq "the CALL failed"               unreadable  "$(verdict_run_lookup 1 '')"
+# A failed call's stdout is not evidence: refuse it rather than watch it.
+eq "failed, but printed something" unreadable  "$(verdict_run_lookup 1 12345)"
+eq "not an id — a word"            absent      "$(verdict_run_lookup 0 abc)"
+eq "not an id — trailing junk"     absent      "$(verdict_run_lookup 0 12345x)"
+eq "not an id — two of them"       absent      "$(verdict_run_lookup 0 '12 34')"
+eq "unreadable rc fails closed"    unreadable  "$(verdict_run_lookup boom 12345)"
+eq "no arguments at all"           unreadable  "$(verdict_run_lookup)"
+
+head_ "verdict_watch_drop — one exit code, two unrelated facts"
+# `gh run watch --exit-status` says non-zero both when CI failed and when the
+# WATCH failed. Only the run's own state tells them apart. release-log 0.31.1.
+eq "green"                     verdict "$(verdict_watch_drop 0 completed)"
+eq "concluded, and red"        verdict "$(verdict_watch_drop 1 completed)"
+eq "still building — the wire broke" dropped "$(verdict_watch_drop 1 in_progress)"
+eq "not started yet"           dropped "$(verdict_watch_drop 1 queued)"
+eq "state unreadable"          unknown "$(verdict_watch_drop 1 '')"
+eq "state unrecognised"        unknown "$(verdict_watch_drop 1 sideways)"
+# Green wins whatever the state reads — a completed success is not ambiguous.
+eq "green with an odd state"   verdict "$(verdict_watch_drop 0 sideways)"
+eq "no arguments at all"       unknown "$(verdict_watch_drop)"
+
+head_ "verdict_remedy — it matches the arm that can fire, and only that one"
+# build-all's hard check is the one failure shape left once the inventory step
+# generates the file from the same closure build-all reuses. Preflight's
+# wording is deliberately NOT matched: preflight only warns about drift now, so
+# an arm for it could never fire, and a matcher with an unreachable arm is the
+# shape of a gate that looks alive and is half dead.
+eq "build-all's wording" deps-inventory \
+   "$(printf 'x\nTHIRD-PARTY-BINARIES.md is out of date — run scripts/...\ny\n' | verdict_remedy)"
+eq "preflight's wording is NOT matched" none \
+   "$(printf '  x dependency drift  inventory stale vs the live resolve — .venv/bin/python\n' | verdict_remedy)"
+# Negative cases matter more than positive ones here: a remedy that fires on a
+# cause it cannot address mutates the tree over it and pollutes the evidence.
+eq "an unrelated build failure"  none "$(printf 'BUILD FAILED (xcodebuild exit 65)\n' | verdict_remedy)"
+eq "a zero-byte log"             none "$(printf '' | verdict_remedy)"
+eq "the file named, but fresh"   none "$(printf 'THIRD-PARTY-BINARIES.md fresh\n' | verdict_remedy)"
+eq "a 503, which is not drift"   none "$(printf 'failed to get run: HTTP 503\n' | verdict_remedy)"
+
 head_ "ev_append — every detail must survive as valid JSON"
 _EA=$(mktemp -d); EVENTS="$_EA/events.jsonl"; V=9.9.9
 ev_append q ok 'id="Dev ID" path=C:\Users and a

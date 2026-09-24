@@ -3,9 +3,18 @@
 #
 # WHAT THIS IS
 #
-# The release train. `plan` shows what would happen, `run` does it, `verify`
-# probes every channel, `status` folds the log, `abandon` prints the recipe and
-# its website consequence, `retry` un-strands a step.
+# The release train. `plan` shows what would happen, `ready` says whether you
+# may, `run` does it, `verify` probes every channel, `status` folds the log,
+# `abandon` prints the recipe and its website consequence, `retry` un-strands a
+# step.
+#
+# `ready` is the evening pass, and it exists because of a measurement: across
+# 0.28.0-0.31.2, three releases died on an uncommitted working tree and one on
+# genuinely red tests — four nights lost to four things a person could have
+# fixed in minutes before bed, had anything asked them before 11pm. It runs
+# every preflight row, resolves dependencies, and waits out a strict CI verdict
+# on published main. It performs no irreversible act and writes nothing under
+# .release/, so run it as often as you like.
 #
 # THE TAG IS THE RELEASE (23 Aug 2026). The pypi required-reviewer hold was
 # removed, so `release.yml` runs to completion on a tag push. `run` therefore
@@ -22,6 +31,9 @@
 # inference is narrated):
 #   release.sh plan [<X.Y.Z>] [--bump minor|patch|major] [--tier 1|2]
 #                                     bare = next minor after the last tag
+#   release.sh ready [<X.Y.Z>]        am I allowed to release tonight? Runs
+#                                     preflight + a strict CI wait (~40 min),
+#                                     performs no act. bare = next minor.
 #   release.sh run [<X.Y.Z>] [--bump minor|patch|major] [--yes] [--board]
 #                                     version alone infers the bump; --bump
 #                                     alone infers the version; bare = next
@@ -217,6 +229,89 @@ verdict_tag_provenance() {
     [ "$have" = "$want" ] || { echo moved; return; }
     git diff-index --quiet HEAD -- 2>/dev/null || { echo dirty; return; }
     echo ok
+}
+
+# verdict_run_lookup <rc> <stdout> — what `gh run list` actually said.
+#   found:<id>   one run id, for the sha we asked about
+#   absent       the call SUCCEEDED and no run matches it
+#   unreadable   the call FAILED — it said nothing, either way
+#
+#   `_id=$(gh run list …)` throws the exit status away, so those last two
+#   arrive as the same empty string, and the old test — `[ -n "$_id" ] &&
+#   [ "$_id" != null ]` — read emptiness as an answer. 0.31.2: ci-green
+#   exited 1 with a ZERO-BYTE log while the run it wanted was genuinely still
+#   in progress, because that `&&` chain short-circuits on its MIDDLE test in
+#   silence. Root CLAUDE.md's `cmd && ok` entry, in its quiet direction.
+#
+#   A run id is all digits. `null` (jq's answer for an empty match), a stray
+#   warning, whitespace — none of those is an id, and none may be watched.
+verdict_run_lookup() {
+    [ "${1:-1}" -eq 0 ] 2>/dev/null || { echo unreadable; return; }
+    case "${2:-}" in
+        ""|*[!0-9]*) echo absent ;;
+        *)           echo "found:$2" ;;
+    esac
+}
+
+# verdict_watch_drop <watch-rc> <run-status> — did the watch deliver a verdict?
+#   verdict   the run reached a conclusion; the watch's own exit status IS it
+#   dropped   the run is still going — the WATCH broke, not the build
+#   unknown   the run's state could not be read, so neither may be claimed
+#
+#   `gh run watch --exit-status` spends ONE exit code on two unrelated facts:
+#   "CI says no" and "the wire broke". 0.31.1: a transient HTTP 503 killed it
+#   mid-poll, a 38-minute wait was discarded over one dropped API call, and
+#   the run it had been watching went green on its own minutes later. Asking
+#   the RUN what state it is in is what tells the two apart — the same rule
+#   the channel probes already follow, that an unreachable oracle is not a
+#   negative one (REPORT-STYLE.md, "Probes are tri-state").
+verdict_watch_drop() {
+    [ "${1:-1}" -eq 0 ] 2>/dev/null && { echo verdict; return; }
+    case "${2:-}" in
+        completed)                                    echo verdict ;;
+        queued|in_progress|requested|waiting|pending) echo dropped ;;
+        *)                                            echo unknown ;;
+    esac
+}
+
+# verdict_remedy — stdin is a failed step's log. Is there a known, mechanical
+# remedy for what went wrong?
+#
+#   deps-inventory   the supply-chain inventory is stale against the live resolve
+#   none             nothing known — a human decides
+#
+#   Keyed on the FAILURE SIGNATURE, never on the step id. Measured 23 Sep 2026
+#   over .release/*/events.jsonl for 0.28.0-0.31.2: `build-all` produced nine of
+#   the twenty-five recorded failures and did so for at least four unrelated
+#   reasons. A remedy chosen by step id would fire on causes it cannot address,
+#   mutate the tree over them, and pollute the next run's evidence.
+#
+#   ONE spelling, deliberately. check-release-ready.sh has a second wording for
+#   the same condition ("inventory stale vs the live resolve") and it is NOT
+#   matched here, because preflight no longer fails on drift — the `inventory`
+#   step refreshes the file from that same resolve moments later, so preflight
+#   only warns. Matching an arm that cannot fire is how a matcher comes to look
+#   alive while being half dead, so the arm is gone. If preflight is ever made
+#   to fail on drift again, this is the line that has to grow back.
+#
+#   grep on stdin rather than a case over $(cat): one of these logs is 4.7 MB.
+#
+#   SCOPE, honestly: this is now a BACKSTOP, not the fix. Drift used to be
+#   sought twice — preflight resolved live, build-all resolved live again, and
+#   nothing required the two answers to agree. --keep-venv makes that one
+#   resolve, and the `inventory` step writes the file from it, so build-all's
+#   check compares a file against the closure it was generated from and cannot
+#   normally disagree. What is left is the degraded path: a run that skipped
+#   preflight, or a venv rebuilt for some other reason, where build-all
+#   re-resolves and the committed file really can be stale. Rare, real, and
+#   worth a remedy — which is a different claim from the one this started as.
+verdict_remedy() {
+    local hit
+    hit="$(grep -m1 -oE 'THIRD-PARTY-BINARIES\.md is out of date' 2>/dev/null || true)"
+    case "$hit" in
+        "") echo none ;;
+        *)  echo deps-inventory ;;
+    esac
 }
 
 # write_context <rundir> — what this run was CONFIGURED with, to context.json.
@@ -435,6 +530,7 @@ run_steps() {
 if [ -n "${RELEASE_STEPS_FILE:-}" ]; then cat "$RELEASE_STEPS_FILE"; return; fi
 cat <<'RUNTBL'
 preflight|preflight|gate|3m|||./scripts/check-release-ready.sh __V__ --resolve
+inventory|refresh the inventory|plain|1m|||__INVENTORY__
 bump|bump + commit|plain|1m|||__BUMP__
 push-main|push main|plain|1m|||git push origin main
 strict-ci|dispatch strict CI on main|plain|1m|||__DISPATCH__
@@ -913,6 +1009,200 @@ cmd_recover() {
     esac
 }
 
+# remedy_apply <token> — perform a known remedy. Impure by definition.
+#
+#   THE CONTRACT IS THAT A REMEDY PREPARES, IT DOES NOT COMPLETE. It may change
+#   the working tree. It must not commit, push, tag, or touch anything a passed
+#   gate certified. The run then stops so a person reads the diff before it
+#   becomes history.
+#
+#   That is a deliberate refusal of the more autonomous version, for two
+#   reasons. THIRD-PARTY-BINARIES.md is a licensing record, and on 23 Sep 2026
+#   its generator was found to be hiding five packages that genuinely ship — so
+#   an unattended loop committing its output would have been committing a wrong
+#   supply-chain document, five releases running, with more authority than a
+#   person doing it by hand. And stopping here sidesteps the invalidation
+#   problem entirely: nothing in a remedy moves HEAD, so no verdict the loop has
+#   already passed goes stale inside it. When the human commits, HEAD moves, and
+#   the resume's existing guards — strict-ci's ci-sha comparison and the
+#   sha/<step> artefact guards — re-verify exactly what that commit invalidated.
+#   The re-running of invalidated gates is therefore already built; it just had
+#   to not be bypassed.
+remedy_apply() {
+    case "${1:-}" in
+        deps-inventory)
+            [ -x .venv/bin/python ] || {
+                echo "no .venv/bin/python — cannot regenerate the inventory" >&2; return 1; }
+            .venv/bin/python scripts/generate-third-party-binaries.py ;;
+        *)  return 1 ;;
+    esac
+}
+
+# ci_await_verdict <workflow> <sha> <version> — wait for the strict CI verdict
+# about EXACTLY this commit, and fail closed for a reason it can name.
+#
+#   Exit 0 only when a run for <sha> reached a successful conclusion.
+#   Everything else is non-zero WITH an explanation — the half that was
+#   missing twice in two releases (release-log 0.31.1, 0.31.2). Both were "an
+#   unreachable or lagging oracle read as a negative answer"; the second was
+#   silent as well as wrong, which is worse: a zero-byte log for a 38-minute
+#   gate reads as a defect in the gate rather than a dropped API call.
+#
+#   The retries are bounded, and they are NOT the whole fix. A retry decides
+#   how many times to ask; the two verdicts above decide whether what came
+#   back was an answer at all. Without them, more attempts only means asking
+#   a question we cannot hear the reply to more often — and, worse, a
+#   genuinely red CI would be retried as though it were weather.
+ci_await_verdict() {
+    local wf="$1" sha="$2" ver="$3" id="" out rc v st try last=unreadable
+    # Callers that are not the release loop say so; a resume hint printed at
+    # someone running `ready` in the evening points at a run that does not exist.
+    local hint="${4:-release.sh retry $ver ci-green}"
+
+    # Find the run. Two attempts is usually one too many — by the time this
+    # gate runs, the dispatch is forty minutes old and long since visible —
+    # but an empty answer here has TWO causes that look identical, and only
+    # one of them is worth waiting out.
+    # --event workflow_dispatch and the headSha filter are BOTH load-bearing,
+    # and neither is a tidiness choice — the reasoning is at DISPATCH_CMD in
+    # cmd_run: a `push` run of the same workflow is the non-strict one, and
+    # `--limit 1` by recency would watch whichever landed last. env.SHA rather
+    # than interpolating into the jq program: one less quoting level, and the
+    # sha never passes through a string the shell re-parses.
+    for try in 1 2 3; do
+        out=$(SHA="$sha" gh run list --workflow="$wf" --event workflow_dispatch \
+                  --branch main --limit 10 --json databaseId,headSha \
+                  --jq '[.[]|select(.headSha==env.SHA)]|.[0].databaseId'); rc=$?
+        last=$(verdict_run_lookup "$rc" "$out")
+        case "$last" in found:*) id="${last#found:}"; break ;; esac
+        if [ "$try" -lt 3 ]; then
+            printf '    run lookup: %s on attempt %s/3 — retrying in 30s\n' "$last" "$try"
+            sleep 30
+        fi
+    done
+
+    if [ -z "$id" ]; then
+        # Two different failures, deliberately worded apart: one is a fact
+        # about the release (nothing was dispatched for this commit), the
+        # other is a fact about the wire (we could not ask). They lead to
+        # different actions, so they must not print the same sentence.
+        case "$last" in
+            absent) printf 'no strict-CI run on main for %.8s — the dispatch did not take, or ci-sha names a commit no run is about. release.sh retry %s strict-ci\n' "$sha" "$ver" ;;
+            *)      printf 'could not reach GitHub to find the strict-CI run for %.8s — no verdict was read, and none is implied. %s\n' "$sha" "$hint" ;;
+        esac
+        return 1
+    fi
+
+    # Watch it. A non-zero `gh run watch` is only a verdict if the RUN says it
+    # finished; otherwise the watch broke and the run is still going, so
+    # reattach to the same id rather than discarding the wait.
+    for try in 1 2 3; do
+        gh run watch "$id" --exit-status; rc=$?
+        [ "$rc" -eq 0 ] && return 0
+        st=$(gh run view "$id" --json status --jq .status 2>/dev/null)
+        v=$(verdict_watch_drop "$rc" "$st")
+        if [ "$v" = verdict ]; then
+            printf '    strict CI reached a conclusion, and it is not green (run %s)\n' "$id"
+            return "$rc"
+        fi
+        if [ "$try" -lt 3 ]; then
+            printf '    watch %s (run %s reads %s) on attempt %s/3 — reattaching in 60s\n' \
+                "$v" "$id" "${st:-unreadable}" "$try"
+            sleep 60
+        fi
+    done
+
+    printf 'run %s could not be read to a conclusion in 3 attempts — it may still be in progress, and this is NOT a CI failure. %s\n' "$id" "$hint"
+    return 1
+}
+
+# cmd_ready — the evening pass. Everything that can fail for a HUMAN-fixable
+# reason, run while a human is awake, performing no irreversible act.
+#
+#   THE POINT IS THE ORDERING, NOT THE CHECKS. `run` already does all of this;
+#   it just does it at 11pm, inside the release, where each discovery costs a
+#   night. Measured over 0.28.0-0.31.2 (25 failed attempts): three releases
+#   died on an uncommitted working tree and one on a genuinely red test suite —
+#   four nights lost to four things that a person could have fixed in minutes
+#   before going to bed, had anything asked them.
+#
+#   So this asks. It resolves dependencies, runs every preflight row, and then
+#   spends the expensive thirty-odd minutes getting a STRICT CI verdict on what
+#   is actually published on main — the one gate that can say "your code is
+#   broken" and the one nothing else runs early.
+#
+#   What it deliberately does NOT do: claim that verdict covers the release.
+#   The bump commits, so the tree the release tags is not the tree verified
+#   here, and `run` re-dispatches strict CI for exactly that reason. This
+#   proves the CODE is good before you commit the night to it; it does not
+#   shorten the release.
+#
+#   It writes nothing under .release/ and performs no act that cannot be
+#   repeated, so it is safe to run as often as you like.
+cmd_ready() {
+    local V="${1-}" _tagbase _pf_rc _ci_rc _sha
+    _tagbase="$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')"
+    if [ -z "$V" ]; then
+        [ -n "$_tagbase" ] || die "usage: release.sh ready [<X.Y.Z>] — no tag to infer a version from"
+        V="$(next_version "$_tagbase" minor)" \
+            || die "cannot compute the next minor from v$_tagbase — pass the version explicitly"
+        printf '  %breadiness for %s%b %b— next minor after v%s; pass a version to change it%b\n' \
+            "$B" "$V" "$N" "$D" "$_tagbase" "$N"
+    fi
+    [ "$(verdict_version "$V")" = ok ] || die "refusing: unexpected version shape '$V'"
+
+    printf '\n  %bEvening readiness — no irreversible act is performed.%b\n' "$B" "$N"
+    printf '  %bThe strict CI wait is the slow part, and it is the point.%b\n\n' "$D" "$N"
+
+    ./scripts/check-release-ready.sh "$V" --resolve; _pf_rc=$?
+
+    # origin/main, not HEAD: the dispatch runs against the REMOTE ref, so a
+    # local commit that has not been pushed is not what CI will read. Same
+    # reasoning as DISPATCH_CMD, and the same fallback for a repo with no remote.
+    _sha=$(git rev-parse --verify origin/main 2>/dev/null || git rev-parse --verify HEAD 2>/dev/null || true)
+    if [ -z "$_sha" ]; then
+        printf '\n  %b✗ no commit to verify%b — cannot resolve origin/main or HEAD.\n\n' "$R" "$N"
+        return 1
+    fi
+
+    printf '\n  %b— strict CI on %.8s —%b\n' "$B" "$_sha" "$N"
+    if ! gh workflow run "$WF_CI" --ref main -f "$WF_STRICT_INPUT=true"; then
+        printf '  %b✗ could not dispatch strict CI%b — that is a fact about GitHub, not about your code.\n' "$R" "$N"
+        _ci_rc=1
+    else
+        ci_await_verdict "$WF_CI" "$_sha" "$V" "re-run: release.sh ready $V"; _ci_rc=$?
+    fi
+
+    # THINGS ONLY YOU CAN CONFIRM. Printed, never probed: the probe for this one
+    # is an Apple event to Finder, and firing a TCC dialog from automation is
+    # exactly what trains a person to click Confirm without reading. Print the
+    # check, let the human run it — root memory, "don't auto-fire OS trust
+    # dialogs", which names osascript specifically.
+    #
+    # It is here because it is EVIDENCE, not hygiene. 0.29.0's build-dmg died
+    # ~30 minutes in on "Not authorised to send Apple events to Finder (-1743)"
+    # — create-dmg drives Finder by AppleScript to lay the window out. No retry
+    # could ever have helped: it is a permission, not a flake. This is the
+    # cheapest possible moment to find out.
+    printf '\n  %b— only you can check these —%b\n' "$B" "$N"
+    printf '    · Finder automation for the terminal you will run the release from.\n'
+    printf '      %bSystem Settings ▸ Privacy & Security ▸ Automation%b\n' "$D" "$N"
+    printf '      %bwithout it build-dmg fails ~30 min in: "Not authorised to send Apple events to Finder (-1743)"%b\n' "$D" "$N"
+
+    printf '\n'
+    if [ "$_pf_rc" -eq 0 ] && [ "$_ci_rc" -eq 0 ]; then
+        printf '  %b✓ READY%b — preflight clean, strict CI green on %.8s.\n' "$G" "$N" "$_sha"
+        printf '    %brelease.sh run %s%b when the window opens.\n' "$B" "$V" "$N"
+        printf '    %b(the release re-verifies the bumped commit; that is by design)%b\n\n' "$D" "$N"
+        return 0
+    fi
+    printf '  %b✗ NOT READY%b — fix these now, while you are awake:\n' "$R" "$N"
+    [ "$_pf_rc" -ne 0 ] && printf '      · preflight above (exit %s)\n' "$_pf_rc"
+    [ "$_ci_rc" -ne 0 ] && printf '      · strict CI did not go green on %.8s\n' "$_sha"
+    printf '    then %brelease.sh ready %s%b again.\n\n' "$B" "$V" "$N"
+    return 1
+}
+
 cmd_run() {
     V=""
     case "${1-}" in ""|-*) : ;; *) V="$1"; shift ;; esac
@@ -1002,6 +1292,11 @@ cmd_run() {
     done
 
     RUNDIR=".release/$V"; EVENTS="$RUNDIR/events.jsonl"; LOGDIR="$RUNDIR/logs"
+    # Names THIS release to every step that cares. build-sidecar.sh stamps it
+    # into the sidecar venv when it resolves, and build-all reuses that venv
+    # only when the stamp matches — one live dependency resolve per release
+    # instead of two, which is where 5 of 25 recorded failures came from.
+    export BN_RELEASE_RUN="$V"
 
     # One driver at a time. mkdir is atomic on every POSIX filesystem and its
     # failure is unambiguous — flock does not exist on macOS.
@@ -1043,6 +1338,17 @@ cmd_run() {
     # distinguish from a slow step. The ticker exits by itself within one
     # interval of the driver dying (the kill -0 guard), and reads nothing
     # from stdin — the step table lives there.
+    #
+    # It writes nothing to STDOUT either, and that redirect is load-bearing
+    # rather than tidy. `_stop_heartbeat` kills the subshell; it cannot kill
+    # the `sleep` the subshell has already forked, which is orphaned holding
+    # whatever stdout it inherited. On a terminal that is harmless, which is
+    # why it went unseen; under `out=$(release.sh run …)` — every driver
+    # assertion in test-release-sh.sh — the orphan holds the command
+    # substitution's pipe open and the CALLER blocks for up to 300s after the
+    # driver has exited. It reads as a hung suite, and it is a race, so it
+    # comes and goes with machine load: measured 23 Sep 2026 as ~30s for a
+    # clean run against >5 minutes for the same commit under load.
     #   format: epoch<TAB>step<TAB>elapsed-seconds<TAB>last non-blank log line
     HB_PID=""
     _start_heartbeat() { # _start_heartbeat <step> <logfile>
@@ -1056,7 +1362,7 @@ cmd_run() {
                   "$(tr '\r' '\n' < "$_log" 2>/dev/null | grep -vE '^[[:space:]]*$' \
                        | tail -1 | tr -d '\000-\037' | cut -c1-100)" \
                   > "$RUNDIR/heartbeat"
-          done ) < /dev/null 2>/dev/null &
+          done ) < /dev/null > /dev/null 2>/dev/null &
         HB_PID=$!
     }
     _stop_heartbeat() {
@@ -1239,6 +1545,28 @@ cmd_run() {
     # commit whose version was already immutable on PyPI. Same family as the
     # `cmd && ok "passed"` gate in CLAUDE.md: the success arm asserted a
     # conclusion the command never established.
+    # THE INVENTORY IS GENERATED FROM THE CLOSURE THIS RELEASE SHIPS, and
+    # committed before anything is built from it. That is the whole fix for
+    # dependency drift, and it only works because of --keep-venv above: ONE
+    # live resolve happens, at preflight; this writes down what it produced;
+    # build-all reuses the same closure. The file therefore describes the
+    # bundle by construction rather than by a comparison that can fail.
+    #
+    # Measured 23 Sep 2026: drift was 5 of the 25 recorded step failures across
+    # 0.28.0-0.31.2, in four consecutive releases, every one of them a file
+    # generated from one resolve and checked against another.
+    #
+    # Its own commit rather than folded into the bump: a licensing record is
+    # worth being able to read on its own in the history, and a step that can
+    # be planned, logged, resumed and skipped is worth more than a longer
+    # BUMP_CMD. It runs BEFORE the bump so a failure here costs nothing.
+    #
+    # `git diff --quiet HEAD --`, never `git diff --quiet --`: the second
+    # compares the worktree to the INDEX and reports no difference against a
+    # staged change, which is how 0.29.1 announced a commit it never made.
+    INVENTORY_CMD="[ -x .venv/bin/python ] || { echo 'no .venv/bin/python — cannot generate the supply-chain inventory'; exit 1; }"
+    INVENTORY_CMD="$INVENTORY_CMD; .venv/bin/python scripts/generate-third-party-binaries.py"
+    INVENTORY_CMD="$INVENTORY_CMD && { git diff --quiet HEAD -- THIRD-PARTY-BINARIES.md && echo 'inventory already current' || git commit -m 'inventory: the closure $V ships' -- THIRD-PARTY-BINARIES.md; }"
     BUMP_CMD="{ [ \"\$(sed -n '$VERSION_REGEX' '$VERSION_FILE')\" = \"$V\" ] || ./scripts/bump-version.py $BUMP; }"
     BUMP_CMD="$BUMP_CMD && { git diff --quiet HEAD -- bristlenose/__init__.py bristlenose/data/bristlenose.1 desktop/Bristlenose/Bristlenose.xcodeproj/project.pbxproj CHANGELOG.md README.md && echo 'version files already committed' || git commit -m \"bump to $V\" -- bristlenose/__init__.py bristlenose/data/bristlenose.1 desktop/Bristlenose/Bristlenose.xcodeproj/project.pbxproj CHANGELOG.md README.md; }"
     # $V and --bump are two sources for one number. `run 0.29.0 --bump minor`
@@ -1271,7 +1599,9 @@ cmd_run() {
     # Pinned to a sha too: 41 minutes of build sit between dispatch and watch,
     # and this repo is trunk-on-main with concurrent sessions. A push in that
     # window would otherwise become "the newest run" — a verdict about a
-    # DIFFERENT commit. Empty id fails closed (measured: `gh run watch ""` → 1).
+    # DIFFERENT commit. No id fails closed by NAME now, in ci_await_verdict:
+    # it used to fall through to `gh run watch ""` (measured → 1), which is
+    # the right exit code arrived at without ever saying what happened.
     #
     # WHICH sha is the whole fix. This was `CI_SHA=$(git rev-parse HEAD)`
     # evaluated HERE, before the loop — i.e. BEFORE the bump step commits. The
@@ -1304,9 +1634,11 @@ cmd_run() {
     # non-empty sha) but NOT at the resume guard, which tests `-f` and would
     # compare HEAD against "" and dispatch a second run for the same commit.
     DISPATCH_CMD="gh workflow run $WF_CI --ref main -f $WF_STRICT_INPUT=true && { git rev-parse --verify origin/main 2>/dev/null || git rev-parse --verify HEAD; } > '$CI_SHA_FILE.tmp' && mv '$CI_SHA_FILE.tmp' '$CI_SHA_FILE'"
-    # env.SHA rather than interpolating into the jq program: one less quoting
-    # level, and the sha never passes through a string the shell re-parses.
-    CI_CMD="SHA=\$(cat '$CI_SHA_FILE' 2>/dev/null); [ -n \"\$SHA\" ] || { echo 'strict-ci recorded no dispatched sha — release.sh retry $V strict-ci'; exit 1; }; export SHA; _id=\$(gh run list --workflow=$WF_CI --event workflow_dispatch --branch main --limit 10 --json databaseId,headSha --jq '[.[]|select(.headSha==env.SHA)]|.[0].databaseId'); [ -n \"\$_id\" ] && [ \"\$_id\" != null ] && gh run watch \"\$_id\" --exit-status"
+    # The sha check stays inline: it is a fact about OUR OWN ledger, needs no
+    # network, and must fail before anything is asked of GitHub. Everything
+    # past it is a question about a remote, eventually-consistent system, and
+    # lives in ci_await_verdict so it can be read, and tested, as code.
+    CI_CMD="SHA=\$(cat '$CI_SHA_FILE' 2>/dev/null); [ -n \"\$SHA\" ] || { echo 'strict-ci recorded no dispatched sha — release.sh retry $V strict-ci'; exit 1; }; ci_await_verdict '$WF_CI' \"\$SHA\" '$V'"
 
     # Count prior invocations BEFORE this one is appended (it was counted after,
     # and every run recorded one attempt too many — review, 5 Sep 2026).
@@ -1335,7 +1667,8 @@ cmd_run() {
         # run is Tier 1; a Tier 2 promotion is a different act, not a longer run.
         [ -n "$steptier" ] && continue
         cmd="${cmd//__V__/$V}"; cmd="${cmd//__WF_CI__/$WF_CI}"; cmd="${cmd//__WF_STRICT__/$WF_STRICT_INPUT}"; cmd="${cmd//__WF_SNAP__/$WF_SNAP}"
-        [ "$cmd" = "__BUMP__" ] && cmd="$BUMP_CMD"
+        [ "$cmd" = "__INVENTORY__" ] && cmd="$INVENTORY_CMD"
+    [ "$cmd" = "__BUMP__" ] && cmd="$BUMP_CMD"
         [ "$cmd" = "__TAG__" ] && cmd="$TAG_CMD"
         [ "$cmd" = "__DISPATCH__" ] && cmd="$DISPATCH_CMD"
         [ "$cmd" = "__CIWAIT__" ] && cmd="$CI_CMD"
@@ -1581,6 +1914,32 @@ cmd_run() {
             # the START of one enormous line and a healthy transfer reads frozen.
             tr '\r' '\n' < "$LOG" | grep -vE '^[[:space:]]*$' | tail -12 | sed 's/^/      /'
             printf '\n  %blog%b %s\n' "$D" "$N" "$LOG"
+
+            # A known remedy, at most once per step per run. THE LEDGER IS THE
+            # INTERLOCK: a second identical failure means the remedy did not
+            # address the cause, and applying it again would only mutate the
+            # tree twice over something it cannot fix. `pending` rather than a
+            # new status word because fold_status folds anything outside
+            # ok|fail|running|pending|skipped to `corrupt`, which takes the
+            # stranded path — and pending is also exactly what the step now is.
+            _rem="$(verdict_remedy < "$LOG")"
+            if [ "$_rem" != none ] \
+               && ! grep -q "\"step\":\"$id\",\"status\":\"pending\",\"detail\":\"remedy applied" \
+                        "$EVENTS" 2>/dev/null; then
+                printf '  %b⟳%b known remedy %b%s%b — applying, then stopping for review\n' \
+                    "$Y" "$N" "$B" "$_rem" "$N"
+                if remedy_apply "$_rem" >> "$LOG" 2>&1; then
+                    ev_append "$id" pending "remedy applied: $_rem"
+                    printf '  %b✓%b applied. The tree now:\n' "$G" "$N"
+                    git status --porcelain | sed 's/^/      /'
+                    printf '\n  %bread the diff, commit it, then%b release.sh run %s --bump %s%s [--yes]\n' \
+                        "$B" "$N" "$V" "$BUMP" "$SKIP_FLAGS"
+                    printf '  %b(a remedy prepares; it never commits — see design-release-principles.md)%b\n\n' "$D" "$N"
+                    exit 1
+                fi
+                printf '  %b✗%b the remedy itself failed; its output is at the end of the log\n' "$R" "$N"
+            fi
+
             # SKIP_FLAGS, or the printed resume silently drops the skips and the
             # next invocation re-performs what they were protecting.
             printf '  %bfix, then%b release.sh run %s --bump %s%s [--yes]   %b(resumes here)%b\n\n' \
@@ -1648,9 +2007,10 @@ case "${1-}" in
     status|"") cmd_status ;;
     board)   shift; cmd_board "$@" ;;
     abandon) shift; cmd_abandon "$@" ;;
+    ready)   shift; cmd_ready "$@" ;;
     run)     shift; cmd_run "$@" ;;
     retry)   shift; cmd_retry "$@" ;;
     recover) shift; cmd_recover "$@" ;;
     -h|--help|help) usage ;;
-    *)       die "unknown command: $1 (try: plan run verify status board abandon retry recover)" ;;
+    *)       die "unknown command: $1 (try: plan ready run verify status board abandon retry recover)" ;;
 esac

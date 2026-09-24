@@ -24,6 +24,10 @@ Every script resolves its own paths (via `$0`), so invoke it from anywhere.
 
 ```bash
 ./scripts/release.sh plan     # what would happen — bare = the next minor, narrated
+./scripts/release.sh ready    # EVENING: may I release tonight? preflight + a strict
+                              # CI verdict on published main. No act is performed.
+                              # Four of seven past releases died on something this
+                              # asks about — a dirty tree, or genuinely red tests.
 ./scripts/release.sh run      # do it — bare = the next minor; typing the version is the consent
 ./scripts/release.sh verify   # is it actually live on every channel? bare = the tree's version
 ./scripts/release.sh status   # fold the event log for the current run
@@ -43,7 +47,7 @@ given.
 
 | | |
 |---|---|
-| [`release.sh`](release.sh) | The conductor's page, executable. `plan · run · verify · status · board · abandon · retry · recover` — **eight** verbs, all with inferred defaults (above); `board [<v>] [--stop\|--restart]` manages the live board server. **The tag is the release** — `run` puts it last among the *irreversible* steps, after the soft uploads (`snap` and `snap-stable` still execute after it, being re-runnable), takes its strict verdict from a `workflow_dispatch` of CI on `main`, and refuses to tag any HEAD the recorded verdict does not name. |
+| [`release.sh`](release.sh) | The conductor's page, executable. `plan · ready · run · verify · status · board · abandon · retry · recover` — **nine** verbs, all with inferred defaults (above); `board [<v>] [--stop\|--restart]` manages the live board server. **The tag is the release** — `run` puts it last among the *irreversible* steps, after the soft uploads (`snap` and `snap-stable` still execute after it, being re-runnable), takes its strict verdict from a `workflow_dispatch` of CI on `main`, and refuses to tag any HEAD the recorded verdict does not name. |
 | [`check-release-ready.sh`](check-release-ready.sh) | Preflight. The mechanical half of the release skill: a precondition inside a script is structurally unskippable, one in a skill is an instruction a model can misread. `run` calls it as step 1; run it alone any time. |
 | [`verify-channels.sh`](verify-channels.sh) | Is a version live on all eight channels? No version = the tree's. Iterates `CHANNELS` from `project.conf`, one tri-state probe each — including TestFlight, asked directly via `upload-testflight.sh --probe` when the ASC key is present. |
 | [`project.conf`](project.conf) | Every project-specific literal — name, repo, tap, site, version file, derived URLs, workflow names, the channel set, and the self-hosted PII model pack's URL + SHA-256 pin (both empty until it is hosted; the preflight row stays silent while they are). Sourced by the three above. Change identity here, never in a script. |

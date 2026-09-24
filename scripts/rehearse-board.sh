@@ -97,7 +97,7 @@ step_start() { # <id> <attempt>
 }
 step_end() { # <id> <attempt> <rc> [detail]
     local el=$(( $(date +%s) - STEP_T0 )); sink_line step id="$1" attempt="$2" status=end rc="$3" elapsed="$el"
-    if [ "$3" = 0 ]; then ev_append "$1" ok "${el}s"; say "$1" "ok · ${el}s"; else ev_append "$1" fail "exit $3"; say "$1" "FAIL · exit $3"; fi
+    if [ "$3" = 0 ]; then ev_append "$1" ok "${el}s"; say "$1" "ok · ${el}s"; else ev_append "$1" fail "exit $3${4:+ class=$4}"; say "$1" "FAIL · exit $3${4:+ · $4}"; fi
 }
 
 # preflight: the real gate's row shape, with the three things the drift guard exists for
@@ -144,7 +144,8 @@ step_end build-all 1 0
 # build-dmg: fails once (its log fills the Log pane), then a retry succeeds and writes the dmg clock
 step_start build-dmg 1; sleep "$PACE"
 printf 'hdiutil: create failed - Resource busy\nerror: could not attach the staging image\n' >> "$RUNDIR/logs/build-dmg.1.log"
-step_end build-dmg 1 1
+# A classified failure, so the line's "fail · <class>" rendering is walked.
+step_end build-dmg 1 1 tool-flake
 sleep "$PACE"
 step_start build-dmg 2; sleep "$PACE"
 echo "created Bristlenose-$V.dmg" >> "$RUNDIR/logs/build-dmg.2.log"
@@ -201,6 +202,7 @@ def want(cond, what):
     if not cond: bad.append(what)
 want(m["phase"] == "completed", f"phase {m['phase']}")
 want(st.get("inventory") == "ok", "inventory station walked and green")
+want(next(s for s in m["line"]["stations"] if s["id"] == "build-dmg").get("fclass", "") in ("", "tool-flake"), "a failure class reaches the line")
 want(st.get("build-dmg") == "ok" and next(s for s in m["line"]["stations"] if s["id"] == "build-dmg")["attempt"] == 2, "build-dmg ok on attempt 2")
 want(m["preflight"]["state"] == "data" and len(m["preflight"]["rows"]) >= 12, f"preflight rows {len(m['preflight']['rows'])}")
 lanes = {l["id"]: l for l in m["build"]["lanes"]}

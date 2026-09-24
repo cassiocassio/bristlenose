@@ -237,6 +237,38 @@ eq "a zero-byte log"             none "$(printf '' | verdict_remedy)"
 eq "the file named, but fresh"   none "$(printf 'THIRD-PARTY-BINARIES.md fresh\n' | verdict_remedy)"
 eq "a 503, which is not drift"   none "$(printf 'failed to get run: HTTP 503\n' | verdict_remedy)"
 
+head_ "verdict_failure_class — the taxonomy is measured, and must not guess"
+# Every class here is a shape that actually stopped a release across
+# 0.28.0-0.31.2. `unknown` is a real answer and must stay loud: a rising
+# unknown count means the taxonomy has fallen behind, which is the one thing a
+# classifier that guesses can never tell you.
+_FC=$(mktemp -d)
+_fc() { printf '%b' "$2" > "$_FC/l"; verdict_failure_class "$_FC/l"; }
+eq "stale inventory"     dep-drift        "$(_fc x 'error: THIRD-PARTY-BINARIES.md is out of date\n')"
+eq "preflight's wording" dep-drift        "$(_fc x '  x dependency drift  inventory stale vs the live resolve\n')"
+eq "a dropped API call"  ci-unreachable   "$(_fc x 'failed to get run: HTTP 503 Service Unavailable\n')"
+eq "the tag refusing"    dirty-tree       "$(_fc x 'refusing (dirty): the tag must land on the exact commit\n')"
+eq "no signing identity" signing-identity "$(_fc x 'error: SIGN_IDENTITY_APPSTORE is not set.\n')"
+eq "the xctest race"     xcode-cache      "$(_fc x 'BUILD FAILED (xcodebuild exit 65)\n')"
+eq "a red suite"         ci-red           "$(_fc x 'X Process completed with exit code 2.\n')"
+eq "an interrupted step" interrupted      "$(_fc x 'Terminated: 15   desktop/scripts/build-dmg.sh\n')"
+# Specific before generic: 0.29.0's build-dmg log holds BOTH of these lines and
+# only the first is the cause. Retrying the second could never have helped.
+eq "permission, not flake" tcc-automation \
+   "$(_fc x 'execution error: Not authorised to send Apple events to Finder. (-1743)\nerror: create-dmg failed\n')"
+# Absence of evidence, reported as itself rather than as a guess.
+eq "a zero-byte log"     no-output        "$(_fc x '')"
+eq "no log at all"       no-log           "$(verdict_failure_class "$_FC/absent")"
+eq "a shape we do not know" unknown       "$(_fc x 'something nobody has seen before\n')"
+# THE REGRESSION THIS FUNCTION WAS WRITTEN WITH: `printf "$big" | grep -q` under
+# pipefail reports NO MATCH when the match is early — grep exits on the first
+# hit, printf takes SIGPIPE, the pipeline is 141. 0.28.0's real 4.7 MB ci-green
+# log classified as `unknown` for exactly this reason. Evidence at the TOP of a
+# large file is the case that fails.
+{ printf 'X Process completed with exit code 2.\n'; head -c 3000000 /dev/zero | tr '\0' 'y'; } > "$_FC/big"
+eq "a big log with early evidence" ci-red "$(verdict_failure_class "$_FC/big")"
+rm -rf "$_FC"
+
 head_ "ev_append — every detail must survive as valid JSON"
 _EA=$(mktemp -d); EVENTS="$_EA/events.jsonl"; V=9.9.9
 ev_append q ok 'id="Dev ID" path=C:\Users and a
@@ -434,7 +466,24 @@ case "$_out" in *"skipped (done)"*) ok "steps already ok are skipped" ;;
                 *) bad "completed steps were not skipped" ;; esac
 case "$_out" in *"interrupted and its outcome is unrecorded"*) ok "the stranded step is named" ;;
                 *) bad "stranded step not reported" ;; esac
-[ -z "$(ls -A "$_rd/logs" 2>/dev/null)" ] && ok "no step executed" || bad "a step ran during a stranded resume"
+# push-main may legitimately re-run here, and ONLY push-main: the incident-29
+# guard re-pushes when HEAD is not an ancestor of `origin/main`, which is
+# exactly what it exists for and is correct on a stranded resume.
+#
+# So this assertion has to ask the guard's own question, or it becomes
+# environment-dependent — which it was. It passed for a developer whose HEAD was
+# published and failed for one with unpushed commits, and nothing said so; the
+# failure read as "a step ran during a stranded resume", i.e. as the incident-32
+# regression this line exists to catch. Mirror the guard's full condition,
+# including the `origin/main` resolves half, or a repo with no remote expects a
+# log that correctly never appears.
+_expect_logs=""
+if git -C "$ROOT" rev-parse --verify --quiet origin/main >/dev/null 2>&1 \
+   && ! git -C "$ROOT" merge-base --is-ancestor HEAD origin/main 2>/dev/null; then
+    _expect_logs="push-main.1.log"
+fi
+eq "only a legitimately re-pushed push-main ran" \
+   "$_expect_logs" "$(ls -A "$_rd/logs" 2>/dev/null | tr '\n' ' ' | sed 's/ $//')"
 [ "$(git rev-parse HEAD)" = "$_h0" ] && ok "HEAD unchanged" || bad "HEAD MOVED during a test"
 [ "$(git tag -l | wc -l | tr -d ' ')" = "$_t0" ] && ok "no tag created" || bad "A TAG WAS CREATED during a test"
 

@@ -18,9 +18,44 @@
   This is a SNAPSHOT. There is no live mode; regenerate and reload.
 -->
 <style>
-  :root{--bg:#f4f4f2;--panel:#fff;--ink:#1d1d1f;--mute:#8a8a8e;--rule:#e3e3e0;--rule2:#cfcfcc;
-    --ok:#2e9e5b;--bad:#d0342c;--warn:#d9930d;--soft:#d9d9d6;--now:#0a66ff;--skip:#b9b9b7;--hatch:repeating-linear-gradient(135deg,#f3f3f1 0 4px,#fff 4px 8px);
+  /* ── Palette ──────────────────────────────────────────────────────────
+     Two axes, because a release station answers two questions at once:
+     WHAT HAPPENED (ok / warn / bad / unknown / skip) and WHEN (now / ahead /
+     later). Every colour below is one of those; nothing in this file should
+     carry a raw hex again.
+
+     `unknown` is violet and deliberately NOT red. "I could not ask" is not
+     "the answer is no" — that distinction is the one this release machine
+     keeps having to relearn (a 503 read as a verdict cost 0.31.1 a 38-minute
+     wait), and a board that paints them the same colour teaches the opposite.
+
+     Dark mode is a redefinition of the same tokens, never a second stylesheet:
+     one vocabulary, two renderings. */
+  :root{
+    --bg:#f4f4f2; --panel:#fff; --panel-2:#fafaf8;
+    --ink:#1d1d1f; --ink-2:#5b5b60; --mute:#8a8a8e;
+    --rule:#e3e3e0; --rule2:#cfcfcc; --soft:#d9d9d6;
+    --ok:#2e9e5b;      --ok-bg:#eaf6ee;      --ok-bd:#cfe9d8;
+    --warn:#d9930d;    --warn-bg:#fff8e8;    --warn-bd:#f3dfa5;
+    --bad:#d0342c;     --bad-bg:#fff1f0;     --bad-bd:#f1c9c6;
+    --unknown:#6b5bd2; --unknown-bg:#f0edfd; --unknown-bd:#d5cdf5;
+    --skip:#b9b9b7;    --skip-bg:#f3f3f1;    --skip-bd:#d9d9d6;
+    --now:#0a66ff;     --now-bg:#e9f0ff;     --now-bd:#bcd0ff;
+    --hatch:repeating-linear-gradient(135deg,#f3f3f1 0 4px,#fff 4px 8px);
     --font:-apple-system,"SF Pro Text",Inter,system-ui,sans-serif;--mono:"SF Mono",ui-monospace,Menlo,monospace}
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#131316; --panel:#1c1c21; --panel-2:#232329;
+      --ink:#ececf0; --ink-2:#b2b2bb; --mute:#87878f;
+      --rule:#2e2e36; --rule2:#3d3d47; --soft:#33333c;
+      --ok:#4cc582;      --ok-bg:#12301e;      --ok-bd:#205337;
+      --warn:#e3a83f;    --warn-bg:#31250c;    --warn-bd:#5b4215;
+      --bad:#ff6f64;     --bad-bg:#331815;     --bad-bd:#5d2622;
+      --unknown:#9e90f2; --unknown-bg:#1f1a3b; --unknown-bd:#382f66;
+      --skip:#6b6b74;    --skip-bg:#202026;    --skip-bd:#32323a;
+      --now:#4f8dff;     --now-bg:#0e2344;     --now-bd:#1c3e75;
+      --hatch:repeating-linear-gradient(135deg,#202026 0 4px,#1c1c21 4px 8px)}
+  }
   html,body{margin:0;background:var(--bg);color:var(--ink);font:11.5px/1.3 var(--font)}
   .screen{margin:0;padding:8px;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto 1fr auto;gap:8px}
   .screen>*{min-width:0}
@@ -30,8 +65,8 @@
   .top .m{color:var(--mute);font-size:11px}
   a{color:inherit;text-decoration:underline dotted;text-underline-offset:2px} a:hover{text-decoration-style:solid;color:var(--now)}
   .pill{padding:3px 9px;border-radius:12px;border:1px solid var(--rule2);font-size:11px;color:var(--mute)}
-  .pill.ok{background:#eaf6ee;border-color:#cfe9d8;color:var(--ok)} .pill.bad{background:#fff1f0;border-color:#f1c9c6;color:var(--bad)}
-  .pill.now{background:#e9f0ff;border-color:#bcd0ff;color:var(--now);font-weight:600} .pill.warn{background:#fff8e8;border-color:#f3dfa5;color:var(--warn)}
+  .pill.ok{background:var(--ok-bg);border-color:var(--ok-bd);color:var(--ok)} .pill.bad{background:var(--bad-bg);border-color:var(--bad-bd);color:var(--bad)}
+  .pill.now{background:var(--now-bg);border-color:var(--now-bd);color:var(--now);font-weight:600} .pill.warn{background:var(--warn-bg);border-color:var(--warn-bd);color:var(--warn)}
   .pill.hatch{background:var(--hatch)}
   /* the line */
   .line{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:10px 14px 6px;overflow-x:auto}
@@ -39,9 +74,9 @@
   .station{flex:1;display:flex;flex-direction:column;align-items:center;position:relative;min-width:64px;cursor:pointer}
   .station::before{content:"";position:absolute;top:9px;left:0;right:0;height:4px;background:var(--rule2);z-index:0}
   .station:first-child::before{left:50%} .station:last-child::before{right:50%}
-  .station i{width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--rule2);z-index:1;box-sizing:border-box;margin-top:4px}
+  .station i{width:14px;height:14px;border-radius:50%;background:var(--panel);border:3px solid var(--rule2);z-index:1;box-sizing:border-box;margin-top:4px}
   .station.ok i{border-color:var(--ok);background:var(--ok)} .station.fail i{border-color:var(--bad);background:var(--bad)}
-  .station.running i{border-color:var(--now);background:var(--now);box-shadow:0 0 0 4px #dbe7ff} .station.skipped i{border-color:var(--skip)}
+  .station.running i{border-color:var(--now);background:var(--now);box-shadow:0 0 0 4px var(--now-bd)} .station.skipped i{border-color:var(--skip)}
   .station.stranded i,.station.corrupt i{border-color:var(--bad);background:var(--hatch)} .station.later i,.station.not-in-this-run i{border-color:var(--soft);border-style:dotted}
   .station.gate i{width:18px;height:18px;margin-top:2px;border-width:4px} .station.hard i{border-radius:2px;width:16px;height:16px;margin-top:3px}
   .station.soft i{border-style:dashed}
@@ -54,7 +89,7 @@
   .main{display:grid;grid-template-columns:minmax(0,var(--c1,1fr)) 14px minmax(0,var(--c2,1fr)) 14px minmax(0,var(--c3,1.25fr));gap:8px;min-height:0;min-width:0}
   .col{display:grid;gap:8px;align-content:start;min-width:0}
   .gutter{cursor:col-resize;user-select:none;touch-action:none;border-radius:4px}
-  .gutter:hover,.gutter.dragging{background:#e9f0ff}
+  .gutter:hover,.gutter.dragging{background:var(--now-bg)}
   .divider{writing-mode:vertical-rl;text-orientation:mixed;display:flex;align-items:center;justify-content:center;color:var(--bad);font:600 9px var(--font);letter-spacing:.14em;border-left:1px dashed var(--bad);opacity:.8}
   .gutter.plain{border-left:1px solid var(--rule2);opacity:.7}
   /* the activity band: one skinny full-width row under the line — events belong to the whole process */
@@ -63,7 +98,7 @@
   .band h2 b{color:var(--ink);font-weight:600;letter-spacing:0;text-transform:none;font-size:11.5px;margin-left:8px}
   .band .r{font:10px var(--mono);color:var(--mute);white-space:nowrap;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
   .band .strip{flex:1 1 0;min-width:0;height:22px;gap:0;overflow:hidden}
-  .band .strip i{flex:1 1 0;min-width:0;border-radius:0;border-right:1px solid #fff;box-sizing:border-box}
+  .band .strip i{flex:1 1 0;min-width:0;border-radius:0;border-right:1px solid var(--panel);box-sizing:border-box}
   .band .strip.dense i{border-right:0}
   .panel{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:8px 10px;resize:vertical;overflow:auto;min-height:44px;max-height:520px}
   .panel h2{margin:0 0 6px;font-size:10.5px;font-weight:600;letter-spacing:.07em;color:var(--mute);text-transform:uppercase;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
@@ -79,41 +114,41 @@
   @media (prefers-reduced-motion: reduce){ .panel,.band,.station,.ch,.cell,.chip,.rat{transition:none} }
   /* live: motion carries liveness, and every motion is driven by a stamp that expires */
   @keyframes rb-pulse{0%{box-shadow:0 0 0 0 rgba(10,102,255,.5)}100%{box-shadow:0 0 0 12px rgba(10,102,255,0)}}
-  @keyframes rb-glisten{0%{background:#fff6d6}100%{background:var(--panel)}}
+  @keyframes rb-glisten{0%{background:var(--warn-bg)}100%{background:var(--panel)}}
   .station.running.fresh i{animation:rb-pulse 1.4s ease-out infinite}
   .station.running.stale i{background:var(--warn);border-color:var(--warn);box-shadow:none}
   .station.running.stale small{color:var(--warn)}
   .panel.changed,.band.changed{animation:rb-glisten 1.2s ease-out}
-  .panel.fresh{border-color:#bcd0ff;box-shadow:0 0 0 2px #e9f0ff}
-  .pill.live{background:#e9f0ff;border-color:#bcd0ff;color:var(--now)} .pill.live.stale{background:#fff8e8;border-color:#f3dfa5;color:var(--warn)}
+  .panel.fresh{border-color:var(--now-bd);box-shadow:0 0 0 2px var(--now-bg)}
+  .pill.live{background:var(--now-bg);border-color:var(--now-bd);color:var(--now)} .pill.live.stale{background:var(--warn-bg);border-color:var(--warn-bd);color:var(--warn)}
   @media (prefers-reduced-motion: reduce){ .station.running.fresh i{animation:none;outline:2px solid var(--now);outline-offset:2px} .panel.changed,.band.changed{animation:none} }
   .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:3px 8px}
   .chip{display:flex;align-items:center;gap:5px;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .chip span{overflow:hidden;text-overflow:ellipsis}
   .dot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--soft);border:1px solid transparent}
-  .ok>.dot{background:var(--ok)} .bad>.dot,.fail>.dot{background:var(--bad)} .warn>.dot{background:var(--warn)} .now>.dot,.running>.dot{background:var(--now);box-shadow:0 0 0 3px #dbe7ff}
+  .ok>.dot{background:var(--ok)} .bad>.dot,.fail>.dot{background:var(--bad)} .warn>.dot{background:var(--warn)} .now>.dot,.running>.dot{background:var(--now);box-shadow:0 0 0 3px var(--now-bd)}
   .skipped>.dot,.no-data>.dot,.unreachable>.dot,.pending>.dot,.later>.dot{background:transparent;border-color:var(--skip)}
   .unreachable>.dot{border-color:var(--warn)} .stranded>.dot,.corrupt>.dot{background:var(--hatch);border-color:var(--bad)}
   .steps{display:grid;grid-template-columns:34px 1fr 150px 48px;gap:2px 8px;align-items:center;font-size:11px}
   .steps .k{font:10px var(--mono);color:var(--mute)}
-  .bar{height:6px;background:#ececea;border-radius:3px;position:relative;overflow:hidden}
+  .bar{height:6px;background:var(--rule);border-radius:3px;position:relative;overflow:hidden}
   .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--ok);border-radius:3px}
-  .bar i.fail{background:var(--bad)} .bar i.running{background:var(--now)} .bar i.skipped{background:var(--soft)} .bar i.est{background:repeating-linear-gradient(90deg,#c9d7ff 0 4px,#fff 4px 6px)}
+  .bar i.fail{background:var(--bad)} .bar i.running{background:var(--now)} .bar i.skipped{background:var(--soft)} .bar i.est{background:repeating-linear-gradient(90deg,var(--now-bd) 0 4px,var(--panel) 4px 6px)}
   .t{font:10px var(--mono);color:var(--mute);text-align:right}
   .sub{margin:2px 0 4px 34px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1px 10px;font-size:10px;color:var(--mute)}
   .matrix{display:grid;gap:3px;font-size:10.5px;margin-bottom:6px}
   .matrix .h{color:var(--mute);font:10px var(--mono);text-align:center} .matrix .rl{color:var(--mute);font:10px var(--mono)}
-  .cell{height:18px;border-radius:3px;background:var(--soft);display:flex;align-items:center;justify-content:center;font:600 10px var(--mono);color:#fff}
+  .cell{height:18px;border-radius:3px;background:var(--soft);display:flex;align-items:center;justify-content:center;font:600 10px var(--mono);color:var(--panel)}
   .cell.success{background:var(--ok)} .cell.failure{background:var(--bad)} .cell.in_progress,.cell.queued,.cell.waiting{background:var(--now)} .cell.na{background:transparent;border:1px dashed var(--soft);color:var(--skip)} .cell.cancelled,.cell.skipped{background:var(--skip)}
   .gates{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:3px}
   .gate{border-radius:3px;padding:3px 5px;font:10px var(--font);border:1px solid var(--rule);display:flex;justify-content:space-between;gap:4px}
-  .gate.success,.gate.ok{border-color:#cfe9d8;background:#f2faf5} .gate.failure,.gate.fail{border-color:#f1c9c6;background:#fff4f3} .gate.skip,.gate.skipped{border-style:dashed;color:var(--mute)}
+  .gate.success,.gate.ok{border-color:var(--ok-bd);background:var(--ok-bg)} .gate.failure,.gate.fail{border-color:var(--bad-bd);background:var(--bad-bg)} .gate.skip,.gate.skipped{border-style:dashed;color:var(--mute)}
   .gate small{font-family:var(--mono);color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ratchets{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
   .rat{font-size:10px;color:var(--mute)} .rat b{display:block;font:600 11px var(--mono);color:var(--ink)}
   .channels{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px}
   .ch{border:1px solid var(--rule);border-radius:7px;padding:7px 9px;display:grid;gap:3px}
-  .ch.ok{border-color:#cfe9d8} .ch.bad{border-color:#f1c9c6} .ch.unreachable{border-color:#f3dfa5} .ch.no-data,.ch.skipped{opacity:.7;background:var(--hatch)}
+  .ch.ok{border-color:var(--ok-bd)} .ch.bad{border-color:var(--bad-bd)} .ch.unreachable{border-color:var(--unknown-bd);background:var(--unknown-bg);color:var(--unknown)} .ch.no-data,.ch.skipped{opacity:.7;background:var(--hatch)}
   .ch .n{display:flex;align-items:center;gap:7px;font-weight:600;font-size:12px}
   .ch .n .idx{font:10px var(--mono);color:var(--mute);margin-left:auto}
   .ch .rows{display:grid;grid-template-columns:auto 1fr;gap:1px 8px;font-size:10.5px}
@@ -127,13 +162,13 @@
   pre{margin:0;font:10px/1.35 var(--mono);white-space:pre;overflow:auto}
   /* the log pane: the pre scrolls inside a fixed-height pane; the pane's own resize handle sets the height */
   #pane-log{display:flex;flex-direction:column;min-height:160px;height:320px}
-  #pane-log pre.logtail{flex:1;min-height:0;overflow:auto;background:#fafaf8;border:1px solid var(--rule);border-radius:6px;padding:6px 8px;white-space:pre-wrap;overflow-wrap:anywhere}
+  #pane-log pre.logtail{flex:1;min-height:0;overflow:auto;background:var(--panel-2);border:1px solid var(--rule);border-radius:6px;padding:6px 8px;white-space:pre-wrap;overflow-wrap:anywhere}
   #pane-log select{font:10.5px var(--font);max-width:260px}
   #pane-log .follow{color:var(--now);font:10px var(--mono)}
   .ev{display:grid;grid-template-columns:150px 60px 1fr;gap:8px;font:10px/1.35 var(--mono)}
   .ev .ts{color:var(--mute)} .ev .src{color:var(--now)} .ev .src.ledger{color:var(--ink);font-weight:600} .ev span{overflow-wrap:anywhere;min-width:0}
   .strip{display:flex;gap:2px;align-items:flex-end;height:26px}
-  .strip i{flex:1;background:#dfe6ff;border-radius:2px 2px 0 0;min-width:1px}
+  .strip i{flex:1;background:var(--now-bd);border-radius:2px 2px 0 0;min-width:1px}
   .conf ul{margin:0;padding-left:16px} .conf li{margin:1px 0} .conf h3{margin:6px 0 2px;font-size:10.5px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em}
   .conf .count{font:600 12px var(--mono)}
   footer{color:var(--mute);font-size:10.5px;padding:4px 2px 20px;display:flex;gap:18px;flex-wrap:wrap}
@@ -151,7 +186,7 @@
   var fault = function(err){
     var old = document.getElementById("fault"); if (old) old.remove();
     var band = document.createElement("div"); band.id = "fault";
-    band.style.cssText = "margin:8px;padding:10px 14px;border:2px solid #d0342c;border-radius:8px;background:#fff1f0;color:#d0342c;font:12px/1.4 -apple-system,system-ui,sans-serif";
+    band.style.cssText = "margin:8px;padding:10px 14px;border:2px solid var(--bad);border-radius:8px;background:var(--bad-bg);color:var(--bad);font:12px/1.4 -apple-system,system-ui,sans-serif";
     band.textContent = "The board failed to render: " + (err && err.message ? err.message : String(err)) + " — the data block is intact; regenerate with scripts/release-board.py and reload.";
     screenEl.insertBefore(band, screenEl.firstChild);
   };
@@ -220,6 +255,7 @@
     idle(st, s.state === "pending" || s.state === "later" || s.state === "not-in-this-run");
     if (s.id === "tag") st.classList.add("irrev-after");
     var sm = $("small"); if (s.state === "running" && s.ts) { sm.setAttribute("data-since", s.ts); if (s.attempt>1) sm.setAttribute("data-attempt", s.attempt); sm.textContent = "running · "+elapsed(((data.now ? Date.parse(data.now) : Date.now())-Date.parse(s.ts))/1000)+(s.attempt>1 ? " · #"+s.attempt : ""); } else sm.textContent = s.state + (s.elapsed!=null ? " · "+elapsed(s.elapsed) : (s.est && s.state==="pending" ? " · est "+s.est : "")) + (s.attempt>1 ? " · #"+s.attempt : "");
+    if (s.state === "fail" && s.fclass) sm.textContent += " · " + s.fclass;
     add(st, $("i"), $("b",null,s.id), sm);
     st.title = (s.label||s.id)+" — "+s.kind+(s.consequence?" — "+s.consequence:"");
     st.addEventListener("click", function(){ var target = (data.build.lane_ids||[]).indexOf(s.id) >= 0 ? "build-"+s.id : CLICK_MAP[s.id]; var el = target && document.getElementById("pane-"+target); if (el) el.scrollIntoView({behavior:"smooth", block:"center"}); });
@@ -427,11 +463,11 @@
     // ── replay scrubber: a design tool over real frames; never on the real board ──
     var frames = payload.replay, at = frames.length - 1;
     var bar = document.createElement("div"); bar.id = "replay";
-    bar.style.cssText = "position:fixed;right:12px;bottom:12px;z-index:9;display:flex;gap:8px;align-items:center;background:#1d1d1f;color:#fff;border-radius:20px;padding:6px 10px 6px 14px;font:11px/1.3 -apple-system,system-ui,sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.25);max-width:70vw";
-    var mk = function(t, title){ var b = document.createElement("button"); b.textContent = t; b.title = title; b.style.cssText = "background:#3a3a3c;color:#fff;border:0;border-radius:14px;width:28px;height:28px;font-size:14px;cursor:pointer"; return b; };
+    bar.style.cssText = "position:fixed;right:12px;bottom:12px;z-index:9;display:flex;gap:8px;align-items:center;background:var(--ink);color:var(--panel);border-radius:20px;padding:6px 10px 6px 14px;font:11px/1.3 -apple-system,system-ui,sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.25);max-width:70vw";
+    var mk = function(t, title){ var b = document.createElement("button"); b.textContent = t; b.title = title; b.style.cssText = "background:var(--rule2);color:var(--panel);border:0;border-radius:14px;width:28px;height:28px;font-size:14px;cursor:pointer"; return b; };
     var prev = mk("‹", "previous ledger line (←)"), next = mk("›", "next ledger line (→)");
     var lab = document.createElement("span"); lab.style.cssText = "font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";
-    var tag = document.createElement("span"); tag.textContent = "REPLAY · liveness assumed"; tag.style.cssText = "font-weight:600;letter-spacing:.06em;font-size:9.5px;color:#ffd60a";
+    var tag = document.createElement("span"); tag.textContent = "REPLAY · liveness assumed"; tag.style.cssText = "font-weight:600;letter-spacing:.06em;font-size:9.5px;color:var(--warn)";
     bar.appendChild(tag); bar.appendChild(prev); bar.appendChild(lab); bar.appendChild(next);
     var show = function(i){
       at = Math.max(0, Math.min(frames.length - 1, i));

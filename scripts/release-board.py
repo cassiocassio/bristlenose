@@ -539,8 +539,14 @@ def fold_stations(steps: list[dict], ledger: dict, liveness: dict, source: str) 
                 state = "running"
             else:
                 state = "stranded"
+        # The driver stamps `class=<token>` into a failure's detail at the
+        # moment it fails (release.sh verdict_failure_class). Lifted into its
+        # own field so the line can SAY what broke rather than carrying it as
+        # text nobody reads: "fail · dep-drift" beats "fail" plus a log hunt.
+        _d = f.get("detail", "")
+        _m = re.search(r"class=(\S+)", _d) if f.get("status") == "fail" else None
         stations.append({**s, "state": state, "attempt": f.get("attempt", 0), "elapsed": f.get("elapsed"),
-                         "detail": f.get("detail", ""), "ts": f.get("ts")})
+                         "detail": _d, "fclass": _m.group(1) if _m else "", "ts": f.get("ts")})
     unknown = [k for k in fold if k not in known and source == "steps.tbl"]
     return stations, unknown
 

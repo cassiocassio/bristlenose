@@ -31,6 +31,9 @@
 # inference is narrated):
 #   release.sh plan [<X.Y.Z>] [--bump minor|patch|major] [--tier 1|2]
 #                                     bare = next minor after the last tag
+#   release.sh stats                  every past run: attempts, failures, and
+#                                     which failure classes RECUR across
+#                                     releases. Read-only.
 #   release.sh ready [<X.Y.Z>]        am I allowed to release tonight? Runs
 #                                     preflight + a strict CI wait (~40 min),
 #                                     performs no act. bare = next minor.
@@ -313,6 +316,56 @@ verdict_remedy() {
         *)  echo deps-inventory ;;
     esac
 }
+
+# verdict_failure_class <logfile> — which known failure is this, by name?
+#
+#   Recorded into the ledger at the moment a step fails, so "how often does this
+#   recur?" is a query rather than an excavation. On 23 Sep 2026 answering that
+#   question for 0.28.0-0.31.2 meant hand-writing a script to re-read 25 step
+#   logs and guess at their causes months after the fact — which is how a
+#   failure class reaches its fourth occurrence before anyone counts it.
+#
+#   THE TAXONOMY IS MEASURED, NOT IMAGINED. Every class below is a shape that
+#   actually stopped a release in those seven runs; the counts are in
+#   docs/design-release-principles.md. `unknown` is a real answer and must stay
+#   loud — a rising unknown count means the taxonomy has fallen behind, which is
+#   the one thing a classifier cannot tell you if it guesses.
+#
+#   Priority order matters and is not alphabetical: 0.29.0's build-dmg log holds
+#   BOTH "Not authorised to send Apple events" and "create-dmg failed", and only
+#   the first is the cause. Specific before generic, always.
+#
+#   Takes a path, not stdin: the caller always has one (the driver has $LOG, the
+#   reader has the file), a 4.7 MB log should not pass through a shell variable,
+#   and a single pass cannot be tested in priority order.
+verdict_failure_class() {
+    local f="${1:-}"
+    [ -f "$f" ] || { echo no-log; return; }
+    [ -s "$f" ] || { echo no-output; return; }   # 0.31.2's zero-byte ci-green
+    # Greps the FILE, never a variable through a pipe. `printf "$big" | grep -q`
+    # under `set -o pipefail` reports NO MATCH when the match is early: grep
+    # exits on the first hit, printf takes SIGPIPE, and the pipeline's status is
+    # 141. Walked into it writing this — 0.28.0's 4.7 MB ci-green log classified
+    # as `unknown` because its evidence was near the top. Root CLAUDE.md
+    # documents the trap; the fix is to give grep a filename.
+    _vfc_has() { grep -qiE "$1" "$f" 2>/dev/null; }
+    if   _vfc_has 'not authoris?ed to send apple events'; then echo tcc-automation
+    elif _vfc_has 'THIRD-PARTY-BINARIES\.md is out of date|inventory stale vs the live resolve'; then echo dep-drift
+    elif _vfc_has 'HTTP 503|could not reach GitHub'; then echo ci-unreachable
+    elif _vfc_has 'refusing \(dirty\)|uncommitted change'; then echo dirty-tree
+    elif _vfc_has 'SIGN_IDENTITY[A-Z_]* is not set'; then echo signing-identity
+    elif _vfc_has 'code object is not signed at all|xcodebuild exit 65'; then echo xcode-cache
+    elif _vfc_has 'is not shippable'; then echo notarisation
+    elif _vfc_has 'ExitFailure \(31\)'; then echo upload-refused
+    elif _vfc_has 'command not found|unterminated substitute pattern'; then echo script-defect
+    elif _vfc_has 'Terminated: 15'; then echo interrupted
+    elif _vfc_has 'Process completed with exit code'; then echo ci-red
+    elif _vfc_has 'The following build commands failed'; then echo xcode-archive
+    elif _vfc_has 'create-dmg failed'; then echo tool-flake
+    else echo unknown
+    fi
+}
+
 
 # write_context <rundir> — what this run was CONFIGURED with, to context.json.
 #
@@ -1139,6 +1192,19 @@ ci_await_verdict() {
 #
 #   It writes nothing under .release/ and performs no act that cannot be
 #   repeated, so it is safe to run as often as you like.
+# cmd_stats — what the ledgers already knew. Read-only, performs nothing.
+#
+#   The data has been there since 0.28.0; reading it was the missing half. The
+#   column that matters is RELEASES, not count: three failures in one run is one
+#   bad night, three across three runs is a class that will happen again.
+cmd_stats() {
+    local _py _gen="${RELEASE_STATS_PY:-$ROOT/scripts/release-stats.py}"
+    _py="$ROOT/.venv/bin/python"; [ -x "$_py" ] || _py="$(command -v python3 || true)"
+    [ -n "$_py" ] || die "no python to read the ledgers with"
+    [ -f "$_gen" ] || die "missing $_gen"
+    "$_py" "$_gen" "$@"
+}
+
 cmd_ready() {
     local V="${1-}" _tagbase _pf_rc _ci_rc _sha
     _tagbase="$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')"
@@ -1908,8 +1974,12 @@ cmd_run() {
             esac
             printf '  %b✓%b %-26s %b%ss%b\n\n' "$G" "$N" "$label" "$D" "$el" "$N"
         else
-            ev_append "$id" fail "exit $rc"
-            printf '  %b✗%b %-26s %bexit %s%b\n' "$R" "$N" "$label" "$R" "$rc" "$N"
+            # Classified HERE, while the log is in hand and the cause is known.
+            # Recovering it later means re-reading logs and guessing (measured:
+            # that is exactly what answering "how often?" cost on 23 Sep 2026).
+            _cls="$(verdict_failure_class "$LOG")"
+            ev_append "$id" fail "exit $rc class=$_cls"
+            printf '  %b✗%b %-26s %bexit %s%b %b(%s)%b\n' "$R" "$N" "$label" "$R" "$rc" "$N" "$D" "$_cls" "$N"
             # tr: rsync --progress writes carriage returns, so a raw tail shows
             # the START of one enormous line and a healthy transfer reads frozen.
             tr '\r' '\n' < "$LOG" | grep -vE '^[[:space:]]*$' | tail -12 | sed 's/^/      /'
@@ -2008,9 +2078,10 @@ case "${1-}" in
     board)   shift; cmd_board "$@" ;;
     abandon) shift; cmd_abandon "$@" ;;
     ready)   shift; cmd_ready "$@" ;;
+    stats)   shift; cmd_stats "$@" ;;
     run)     shift; cmd_run "$@" ;;
     retry)   shift; cmd_retry "$@" ;;
     recover) shift; cmd_recover "$@" ;;
     -h|--help|help) usage ;;
-    *)       die "unknown command: $1 (try: plan ready run verify status board abandon retry recover)" ;;
+    *)       die "unknown command: $1 (try: plan ready run verify status board abandon retry recover stats)" ;;
 esac

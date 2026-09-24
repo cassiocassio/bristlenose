@@ -86,12 +86,21 @@
   /* main grid */
   /* three columns: before the tag · after the tag · the stream. The gutters set
      the widths by drag (persisted); double-click a gutter to reset. */
-  .main{display:grid;grid-template-columns:minmax(0,var(--c1,1fr)) 14px minmax(0,var(--c2,1fr)) 14px minmax(0,var(--c3,1.25fr));gap:8px;min-height:0;min-width:0}
+  .main{display:grid;grid-template-columns:minmax(0,var(--c1,2fr)) 18px minmax(0,var(--c2,1fr)) 14px minmax(0,var(--c3,1fr));gap:8px;min-height:0;min-width:0}
+  /* 2fr : 1fr : 1fr, and the asymmetry is semantic rather than cosmetic. The
+     left column is the REVERSIBLE region — preflight, the build lanes, CI,
+     ratchets — which is where you diagnose, and diagnosis needs evidence on
+     screen. The middle only has to confirm that an irreversible act landed,
+     and the stream's natural width is a line of monospace: past ~80 columns
+     extra width there is wasted, not used. The left has no such ceiling. */
   .col{display:grid;gap:8px;align-content:start;min-width:0}
   .gutter{cursor:col-resize;user-select:none;touch-action:none;border-radius:4px}
   .gutter:hover,.gutter.dragging{background:var(--now-bg)}
-  .divider{writing-mode:vertical-rl;text-orientation:mixed;display:flex;align-items:center;justify-content:center;color:var(--bad);font:600 9px var(--font);letter-spacing:.14em;border-left:1px dashed var(--bad);opacity:.8}
+  .divider{writing-mode:vertical-rl;text-orientation:mixed;display:flex;align-items:center;justify-content:center;color:var(--bad);font:600 9px var(--font);letter-spacing:.14em;
+    border-left:2px solid var(--bad);background:var(--bad-bg);border-radius:4px;opacity:1}
   .gutter.plain{border-left:1px solid var(--rule2);opacity:.7}
+  .caphead{font:600 9px var(--font);letter-spacing:.14em;color:var(--mute);text-transform:uppercase;padding:1px 3px 0}
+  .caphead b{color:var(--ink-2);font-weight:600}
   /* the activity band: one skinny full-width row under the line — events belong to the whole process */
   .band{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:4px 14px;display:flex;align-items:center;gap:12px;min-height:30px}
   .band h2{margin:0;font-size:10.5px;font-weight:600;letter-spacing:.07em;color:var(--mute);text-transform:uppercase;white-space:nowrap}
@@ -122,9 +131,16 @@
   .panel.fresh{border-color:var(--now-bd);box-shadow:0 0 0 2px var(--now-bg)}
   .pill.live{background:var(--now-bg);border-color:var(--now-bd);color:var(--now)} .pill.live.stale{background:var(--warn-bg);border-color:var(--warn-bd);color:var(--warn)}
   @media (prefers-reduced-motion: reduce){ .station.running.fresh i{animation:none;outline:2px solid var(--now);outline-offset:2px} .panel.changed,.band.changed{animation:none} }
-  .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:3px 8px}
-  .chip{display:flex;align-items:center;gap:5px;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:3px 14px}
+  /* 330px, not 150px: with a 150px minimum a wider column buys MORE COLUMNS
+     and each row stays too narrow to carry its evidence — the extra width
+     went to whitespace between labels. */
+  .chip{display:grid;grid-template-columns:12px minmax(0,190px) minmax(0,1fr);align-items:center;gap:6px;font-size:10.5px;white-space:nowrap;overflow:hidden}
+  /* A fixed label column, so the evidence starts at the same x on every row.
+     Right-aligning it instead (margin-left:auto) leaves a ragged void down
+     the middle, and 46 rows of that is 46 saccades to nowhere. */
   .chip span{overflow:hidden;text-overflow:ellipsis}
+  .chip .ev{color:var(--mute);overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
   .dot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--soft);border:1px solid transparent}
   .ok>.dot{background:var(--ok)} .bad>.dot,.fail>.dot{background:var(--bad)} .warn>.dot{background:var(--warn)} .now>.dot,.running>.dot{background:var(--now);box-shadow:0 0 0 3px var(--now-bd)}
   .skipped>.dot,.no-data>.dot,.unreachable>.dot,.pending>.dot,.later>.dot{background:transparent;border-color:var(--skip)}
@@ -216,7 +232,13 @@
   var link = function(text, url, cls){ if (!url) return $("span", cls, text); var a = $("a", cls, text); a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer"; return a; };
   var render = function(data, root){
   var L = data.links || {channels: {}};
-  var chip = function(state, label, evidence){ var c = $("div","chip "+(state||"no-data")); add(c, $("i","dot"), $("span",null,String(label).replace(/https?:\/\/[^\s"')]+/g, shortUrl))); if (evidence) c.title = evidence; return c; };
+  var chip = function(state, label, evidence){ var c = $("div","chip "+(state||"no-data")); add(c, $("i","dot"), $("span",null,String(label).replace(/https?:\/\/[^\s"')]+/g, shortUrl)));
+    // The evidence is the whole point of a preflight row — "ok" tells you
+    // nothing, "3.12 matches .tool-versions" tells you what was checked. It
+    // used to live only in a title attribute, i.e. behind a hover nobody
+    // performs while reading 46 rows. Shown, and still in the title for the
+    // case where it ellipsises.
+    if (evidence) { add(c, $("span","ev", String(evidence).replace(/https?:\/\/[^\s"')]+/g, shortUrl))); c.title = evidence; } return c; };
 
   var screen = root || screenEl;
   screen.textContent = "";
@@ -278,6 +300,13 @@
 
   // ── main ────────────────────────────────────────────────────────────────
   var main = $("div","main"), left = $("div","col"), right = $("div","col"), stream = $("div","col"); main.id = "main";
+  // The three columns mean something, so they say so. left = everything that
+  // can be run again; right = what has been spent, published, and is now
+  // ageing (the clocks pane only exists because of irreversible acts);
+  // stream = narration, which spans both and is neither.
+  add(left,   $("div","caphead", "REVERSIBLE \u00b7 run it again, free"));
+  add(right,  $("div","caphead", "IRREVERSIBLE \u00b7 spent, published, ageing"));
+  add(stream, $("div","caphead", "NARRATION \u00b7 what happened, in order"));
 
   // preflight
   var pf = data.preflight;
@@ -431,7 +460,11 @@
   // Widths are fractions of the row, never pixels: a saved layout must fit
   // whatever window opens it (a 640px fixed column plus two 1fr blew past a
   // narrower window, 5 Sep 2026). The 360px floor applies only while dragging.
-  var COLS_KEY = "rb-cols-fr", MIN = 360;
+  // Bumped when the DEFAULT changed: a saved triple is restored ahead of the
+  // default, so anyone who had ever dragged a gutter would never have seen the
+  // new proportions. Changing a default that localStorage overrides is a
+  // silent no-op for exactly the people who use the thing most.
+  var COLS_KEY = "rb-cols-fr-2", MIN = 300;
   var applyFr = function(f){ main.style.setProperty("--c1", f[0]+"fr"); main.style.setProperty("--c2", f[1]+"fr"); main.style.setProperty("--c3", f[2]+"fr"); };
   var currentCols = function(){ return [left, right, stream].map(function(c){ return c.getBoundingClientRect().width; }); };
   var toFr = function(w){ var t = w[0]+w[1]+w[2] || 1; return w.map(function(x){ return Math.round(1000*x/t)/1000; }); };

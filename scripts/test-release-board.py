@@ -665,7 +665,27 @@ class Html(unittest.TestCase):
         self.assertIn(".panel.idle", tpl)
         self.assertIn('idle(pfP, pf.state === "no-data")', code)
         self.assertNotIn('idle(bp, lane.state !== "data")', code, "ran-no-sink and failed lanes must not be dimmed")
-        self.assertIn("minmax(0,var(--c1,1fr)) 14px minmax(0,var(--c2,1fr)) 14px minmax(0,var(--c3,1.25fr))", tpl)
+        # Three fr columns separated by two pixel gutters. Pinned as a RELATION,
+        # not as literal proportions: the left column is widest by intent — it is
+        # the reversible region, where you diagnose, and diagnosis needs evidence
+        # on screen, while the stream's natural width is a line of monospace. A
+        # literal string here would make every retune a test edit, which teaches
+        # people to edit tests.
+        m = re.search(r"grid-template-columns:minmax\(0,var\(--c1,([\d.]+)fr\)\) (\d+)px "
+                      r"minmax\(0,var\(--c2,([\d.]+)fr\)\) (\d+)px minmax\(0,var\(--c3,([\d.]+)fr\)\)", tpl)
+        self.assertIsNotNone(m, "three fr columns separated by two pixel gutters")
+        c1, g1, c2, g2, c3 = (float(m.group(1)), int(m.group(2)), float(m.group(3)),
+                              int(m.group(4)), float(m.group(5)))
+        self.assertGreater(c1, c2, "the reversible column is the widest — it carries the evidence")
+        self.assertGreaterEqual(c1, c3)
+        # The irreversible boundary is not the same thing as a layout divider.
+        self.assertGreaterEqual(g1, g2, "the reversible/irreversible gutter is the emphasised one")
+        self.assertIn("IRREVERSIBLE", tpl)
+        # Each column says what it is; the semantics were only ever in variable names.
+        for cap in ("REVERSIBLE", "NARRATION"):
+            self.assertIn(cap, code, f"column caption {cap} is missing")
+        # Preflight evidence is SHOWN, not parked in a tooltip nobody hovers.
+        self.assertIn('$("span","ev"', code, "a preflight row renders its evidence")
         # the live behaviour itself is pinned by scripts/test-release-board-dom.js (jsdom), not by strings here
         self.assertNotIn('+"px")', code, "column widths persist as fractions, never pixels — a saved layout must fit any window")
 

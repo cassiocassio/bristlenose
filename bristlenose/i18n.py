@@ -32,6 +32,38 @@ _FALLBACK_CHAINS: dict[str, tuple[str, ...]] = {
     "zh-Hant-HK": ("zh-Hant",),
 }
 
+#: Macrolanguage aliases, resolved BEFORE the ``SUPPORTED_LOCALES`` gate.
+#:
+#: Norwegian is the only family that needs one today: ``no`` is the
+#: macrolanguage over Bokmål (``nb``) and Nynorsk (``nn``), and we ship only
+#: Bokmål. This is NOT a fallback chain — a chain is consulted after a code has
+#: been accepted, and ``no`` never got that far, so ``bristlenose --lang no``
+#: silently ran in English.
+#:
+#: Parity, not a new policy: the desktop already resolves both to ``nb``
+#: because Apple's matcher does CLDR language matching rather than a prefix
+#: strip (measured — ``docs/design-locale-negotiation.md`` §1).
+#:
+#: One-way by construction: nothing maps FROM a code we ship.
+_LOCALE_ALIASES: dict[str, str] = {"no": "nb", "nn": "nb"}
+
+
+def canonical_locale(code: str) -> str:
+    """The supported locale a requested code should display in, or ``en``.
+
+    The one place an incoming code is normalised. This existed as three copies
+    of ``locale if locale in SUPPORTED_LOCALES else "en"``, which is precisely
+    why an alias could not be added in one place — and why ``_FALLBACK_CHAINS``,
+    which sits *after* the gate, could never have fixed it.
+
+    Region-tagged forms (``nb-NO``) are deliberately out of scope: Python's
+    ingress is a hand-typed ``--lang`` and a ``?locale=`` the SPA sets from its
+    own canonical list, so bare codes are what actually arrive here. The browser
+    side does the BCP 47 work, in ``frontend/src/i18n/LocaleStore.ts``.
+    """
+    resolved = _LOCALE_ALIASES.get(code, code)
+    return resolved if resolved in SUPPORTED_LOCALES else "en"
+
 #: Locales that ship ONLY the namespaces they override, inheriting the rest.
 #: An absent namespace file is how a fork inherits — it is the design, never a
 #: gap — so anything asserting completeness must exempt these.
@@ -88,7 +120,7 @@ def locale_resources(
     the caller can embed the result without pruning.
     """
     out: dict[str, dict[str, object]] = {}
-    for loc in _resolution_order(locale if locale in SUPPORTED_LOCALES else "en"):
+    for loc in _resolution_order(canonical_locale(locale)):
         bundle = {
             ns: data for ns in namespaces if (data := _load_namespace(loc, ns))
         }
@@ -154,7 +186,7 @@ def t_in(locale: str, key: str, **kwargs: object) -> str:
 
     # Resolve through the locale's fallback chain: requested → base(s) → en.
     value = None
-    for loc in _resolution_order(locale if locale in SUPPORTED_LOCALES else "en"):
+    for loc in _resolution_order(canonical_locale(locale)):
         value = _resolve(_load_namespace(loc, namespace), parts)
         if value is not None:
             break
@@ -242,7 +274,5 @@ def get_locale() -> str:
 def set_locale(locale: str) -> None:
     """Set the active locale. Clears the file cache."""
     global _current_locale
-    if locale not in SUPPORTED_LOCALES:
-        locale = "en"
-    _current_locale = locale
+    _current_locale = canonical_locale(locale)
     _load_namespace.cache_clear()

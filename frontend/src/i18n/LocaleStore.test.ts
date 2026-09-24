@@ -87,6 +87,26 @@ describe("resolveBrowserLang (BCP 47 script/region awareness)", () => {
     expect(resolveBrowserLang("zh-Hant-HK")).toBe("zh-Hant-HK");
   });
 
+  // Norwegian is the same shape as Chinese: a macrolanguage (`no`) over two
+  // written standards (`nb`, `nn`), of which we ship only Bokmal. A naive
+  // prefix strip yields `no` or `nn`, neither supported, so a Norwegian browser
+  // fell to English. The desktop already resolves both to `nb` via Apple's
+  // matcher — this is parity with it, not a new policy.
+  it("maps the Norwegian macrolanguage to Bokmal", () => {
+    expect(resolveBrowserLang("no")).toBe("nb");
+    expect(resolveBrowserLang("no-NO")).toBe("nb");
+  });
+
+  it("maps Nynorsk to Bokmal, as the desktop matcher does", () => {
+    expect(resolveBrowserLang("nn")).toBe("nb");
+    expect(resolveBrowserLang("nn-NO")).toBe("nb");
+  });
+
+  it("leaves Bokmal itself alone", () => {
+    expect(resolveBrowserLang("nb")).toBe("nb");
+    expect(resolveBrowserLang("nb-NO")).toBe("nb");
+  });
+
   it("does NOT force Simplified or bare zh into a Traditional variant", () => {
     expect(resolveBrowserLang("zh-CN")).toBeNull();
     expect(resolveBrowserLang("zh-Hans")).toBeNull();

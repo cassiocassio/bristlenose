@@ -39,8 +39,10 @@ export interface LocaleState {
  * `zh-Hant-HK`. A plain `lang.split("-")[0]` yields `zh`, which matches no
  * supported locale. Simplified tags (`zh-Hans`/`zh-CN`/`zh-SG`) and bare `zh`
  * have no supported locale yet, so they fall through rather than being forced
- * into a Traditional variant. Non-Chinese tags keep exact-or-prefix behaviour
- * (`fr-FR` → `fr`).
+ * into a Traditional variant. Norwegian needs the same treatment for the same
+ * reason: `no` and `nn` are not supported codes, and a prefix strip strands
+ * both on English rather than reaching Bokmål. Non-Chinese, non-Norwegian tags
+ * keep exact-or-prefix behaviour (`fr-FR` → `fr`).
  */
 export function resolveBrowserLang(lang: string): Locale | null {
   // Exact match first (browser may send "zh-Hant" / "zh-Hant-HK" verbatim).
@@ -54,6 +56,19 @@ export function resolveBrowserLang(lang: string): Locale | null {
     if (lower.includes("hk") || lower.includes("mo")) return "zh-Hant-HK";
     if (lower.includes("hant") || lower.includes("tw")) return "zh-Hant";
     return null; // bare "zh" is ambiguous (CLDR default is Simplified) → fall through
+  }
+
+  // Norwegian is the same shape as Chinese: a macrolanguage (`no`) over two
+  // written standards, `nb` (Bokmål) and `nn` (Nynorsk), of which we ship only
+  // Bokmål. The prefix strip below yields `no` or `nn`, neither of which is a
+  // supported locale, so a Norwegian browser fell through to English.
+  //
+  // Parity, not a new policy: the desktop resolves both to `nb` already,
+  // because Apple's matcher does CLDR language matching rather than a prefix
+  // strip (measured — docs/design-locale-negotiation.md §1). Giving a Nynorsk
+  // reader Bokmål is what that matcher does and is plainly better than English.
+  if (lower === "no" || lower.startsWith("no-") || lower.startsWith("nn")) {
+    return "nb";
   }
 
   // Non-Chinese: exact ("ja") or prefix ("fr-FR" → "fr").

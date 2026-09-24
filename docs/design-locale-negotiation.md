@@ -48,9 +48,12 @@ this order:
    `I18n.swift:75`. Written only by the picker (`@AppStorage("language")`,
    `AppearanceSettingsView.swift:15`).
 2. **`systemPreferredLocale()`** — `I18n.swift:76`, and only when (1) is absent. That is
-   `Bundle.preferredLocalizations(from: Array(supportedLocales), forPreferences: nil)`
-   (`I18n.swift:128-133`), which reads the process's `AppleLanguages` — the app's own
-   preference domain first, the global domain behind it.
+   `Bundle.preferredLocalizations(from: Array(supportedLocales), forPreferences:
+   Locale.preferredLanguages)` (`I18n.swift:170-175`), which reads the process's
+   `AppleLanguages` — the app's own preference domain first, the global domain behind it.
+   *(Trued 24 Sep 2026: this line said `forPreferences: nil` and cited `:128-133`. The
+   `nil` form is the latching bug §Fixed below records as fixed on 22 Sep — so the doc
+   was describing the defect in one section and its repair in another.)*
 
 The result is passed through `sanitized(_:)` (`I18n.swift:309-311`), which falls back to
 `"en"` for anything not in `supportedLocales`. **`Bundle.preferredLocalizations` is not
@@ -447,7 +450,7 @@ The desktop case is the interesting decision; the web case is conventional.
 
 - **Settings modal in the React SPA keeps a language dropdown** (status quo).
 - **`frontend/src/i18n/LocaleStore.ts` precedence:** stored localStorage choice → `navigator.language` ∩ supported → English fallback.
-- **Auto-detect uses BCP 47 lookup, not naive prefix-strip on `-`** (same `zh-Hant` / `zh-Hans` correctness as desktop). Audit during the desktop branch; if `LocaleStore` does prefix-strip, file a sibling fix.
+- **Auto-detect uses BCP 47 lookup, not naive prefix-strip on `-`** (same `zh-Hant` / `zh-Hans` correctness as desktop). ~~Audit during the desktop branch; if `LocaleStore` does prefix-strip, file a sibling fix.~~ **Audited 24 Sep 2026 — it did, and the prediction was right.** `resolveBrowserLang` special-cases Chinese and then falls to `lang.split("-")[0]`, so every family that needs macrolanguage awareness rather than a prefix was stranded. Norwegian was the live instance: `no` and `nn` are not supported codes, the strip yields them unchanged, and a Norwegian browser fell to English — while the desktop resolved both to `nb`, because Apple's matcher does CLDR language matching. Fixed for Norwegian, in the same shape as the Chinese block. **The general prefix-strip remains**, so the next family with a macrolanguage over written standards will need the same one-off. That is the sibling fix still owed.
 
 ### Why keep the picker on the web side
 

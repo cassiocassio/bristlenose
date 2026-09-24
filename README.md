@@ -387,6 +387,14 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.31.3** — _24 Sep 2026_
+
+Norwegian browsers were shown English.
+
+**Fixed**
+
+- **A browser set to Norwegian got an English report.** The codes a system reports for Norwegian — `no`, and Nynorsk's `nn` — were not recognised as the Bokmål we ship, so the interface fell through to English. Both resolve to Bokmål now, as the Mac app already did. `bristlenose --lang no` works too.
+
 **0.31.2** — _23 Sep 2026_
 
 A second control in the Quotes lens announced itself in English to screen readers.

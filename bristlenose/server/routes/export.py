@@ -18,7 +18,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.encoders import jsonable_encoder
 from starlette.responses import Response
 
-from bristlenose.i18n import SUPPORTED_LOCALES, locale_resources
+from bristlenose.i18n import canonical_locale, locale_resources
 from bristlenose.server.routes.health import build_health_payload
 
 logger = logging.getLogger(__name__)
@@ -558,7 +558,7 @@ def export_report(
     # Downloads.  The locale token rather than the native language name because
     # the rest of this filename is a slug; "acme-research-report (Deutsch).html"
     # would be two naming conventions in one string.
-    lang = locale if locale in SUPPORTED_LOCALES else "en"
+    lang = canonical_locale(locale)
     filename = f"{slug}-report-{lang}.html"
 
     return Response(

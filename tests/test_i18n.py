@@ -30,6 +30,24 @@ class TestSetLocale:
         set_locale("en")
         assert get_locale() == "en"
 
+    # Norwegian is a macrolanguage: `no` encompasses Bokmal (`nb`) and Nynorsk
+    # (`nn`), and we ship only Bokmal. The desktop already resolves both to `nb`
+    # because Apple's matcher does CLDR language matching (measured, see
+    # docs/design-locale-negotiation.md section 1). Python had no such step, so
+    # `bristlenose --lang no` silently ran in English.
+    def test_norwegian_macrolanguage_resolves_to_bokmal(self):
+        set_locale("no")
+        assert get_locale() == "nb"
+
+    def test_nynorsk_resolves_to_bokmal(self):
+        set_locale("nn")
+        assert get_locale() == "nb"
+
+    def test_alias_is_one_way(self):
+        # nb must never be rewritten to anything else.
+        set_locale("nb")
+        assert get_locale() == "nb"
+
 
 class TestTranslation:
     # These exercise `t()` itself — simple key, nesting, a miss, interpolation —

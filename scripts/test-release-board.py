@@ -392,16 +392,44 @@ class Merge(unittest.TestCase):
 
 
 class Activity(unittest.TestCase):
-    def test_long_span_bins_adaptively_and_drops_nothing(self):
+    def test_a_long_span_quantises_the_scale_and_drops_nothing(self):
+        """The strip's axis must not move while a run is live.
+
+        It used to fit the bins to the span, which re-scaled on every refresh:
+        bars shifted, bins merged underneath you, and "busier than a minute ago"
+        became unreadable because the axis had moved too. The scale is now a
+        fixed budget that DOUBLES when a run outgrows it, and the bin COUNT is
+        constant — which is what makes a minute a fixed number of pixels.
+        """
         t = Tree()
         try:
             evs = [ev("2026-09-01T00:00:00Z", "run", "started")] + [ev(f"2026-09-0{d}T12:00:00Z", "bump", "ok", "1s") for d in range(1, 6)]
             t.run(events="\n".join(evs) + "\n")
             a = t.model()["activity"]
-            self.assertLessEqual(len(a["minutes"]), 600)
-            self.assertEqual(sum(a["minutes"]), 6)
-            self.assertEqual(a["bin_minutes"], -(-a["span_minutes"] // 600))
-            self.assertGreater(a["bin_minutes"], 1)
+            self.assertEqual(sum(a["minutes"]), 6, "nothing is dropped, whatever the bracket")
+            # The property the design turns on: same width, always.
+            self.assertEqual(len(a["minutes"]), rb.SCALE_BINS, "the bin count is fixed, so a bin is a fixed share of the viewport")
+            self.assertGreater(a["bin_minutes"], 1, "a multi-day span coarsens the bin, not the count")
+            # A bracket is a doubling of the base, and always covers the span.
+            self.assertGreaterEqual(a["window_minutes"], a["span_minutes"])
+            k = a["window_minutes"] / rb.SCALE_BASE_MINUTES
+            self.assertEqual(k, int(k), "brackets double from the base rather than fitting")
+            self.assertEqual(int(k) & (int(k) - 1), 0, f"{k} is not a power of two")
+        finally:
+            t.close()
+
+    def test_a_normal_run_never_leaves_the_first_bracket(self):
+        """Measured 24 Sep 2026: this machine is busy for 31-74 minutes, every
+        run, good night or bad. The base bracket covers that with headroom, so a
+        normal release never rescales its own axis even once."""
+        t = Tree()
+        try:
+            evs = [ev("2026-09-01T00:00:00Z", "run", "started"),
+                   ev("2026-09-01T01:14:00Z", "tag", "ok", "2s")]
+            t.run(events="\n".join(evs) + "\n")
+            a = t.model()["activity"]
+            self.assertEqual(a["window_minutes"], rb.SCALE_BASE_MINUTES)
+            self.assertEqual(a["bin_minutes"], 1, "one minute per bin in the base bracket")
         finally:
             t.close()
 

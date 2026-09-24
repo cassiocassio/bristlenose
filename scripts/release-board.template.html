@@ -40,7 +40,7 @@
     --bad:#d0342c;     --bad-bg:#fff1f0;     --bad-bd:#f1c9c6;
     --unknown:#6b5bd2; --unknown-bg:#f0edfd; --unknown-bd:#d5cdf5;
     --skip:#b9b9b7;    --skip-bg:#f3f3f1;    --skip-bd:#d9d9d6;
-    --now:#0a66ff;     --now-bg:#e9f0ff;     --now-bd:#bcd0ff;
+    --now:#0a66ff; --now-rgb:10,102,255;     --now-bg:#e9f0ff;     --now-bd:#bcd0ff;
     --hatch:repeating-linear-gradient(135deg,#f3f3f1 0 4px,#fff 4px 8px);
     --font:-apple-system,"SF Pro Text",Inter,system-ui,sans-serif;--mono:"SF Mono",ui-monospace,Menlo,monospace}
   @media (prefers-color-scheme: dark){
@@ -53,7 +53,7 @@
       --bad:#ff6f64;     --bad-bg:#331815;     --bad-bd:#5d2622;
       --unknown:#9e90f2; --unknown-bg:#1f1a3b; --unknown-bd:#382f66;
       --skip:#6b6b74;    --skip-bg:#202026;    --skip-bd:#32323a;
-      --now:#4f8dff;     --now-bg:#0e2344;     --now-bd:#1c3e75;
+      --now:#4f8dff; --now-rgb:79,141,255;     --now-bg:#0e2344;     --now-bd:#1c3e75;
       --hatch:repeating-linear-gradient(135deg,#202026 0 4px,#1c1c21 4px 8px)}
   }
   html,body{margin:0;background:var(--bg);color:var(--ink);font:11.5px/1.3 var(--font)}
@@ -122,7 +122,17 @@
   .station.idle,.ch.idle,.chip.idle,.cell.idle{opacity:.38}
   @media (prefers-reduced-motion: reduce){ .panel,.band,.station,.ch,.cell,.chip,.rat{transition:none} }
   /* live: motion carries liveness, and every motion is driven by a stamp that expires */
-  @keyframes rb-pulse{0%{box-shadow:0 0 0 0 rgba(10,102,255,.5)}100%{box-shadow:0 0 0 12px rgba(10,102,255,0)}}
+  /* TWO ANIMATIONS, TWO MEANINGS, and they must not be confused:
+     rb-pulse / .is-now = WHERE THE WORK IS, a state that persists;
+     rb-glisten         = THIS JUST CHANGED, an event that passes.
+     Both run at 1.4s deliberately. Activity is in several places at once —
+     the station on the line, the step inside the lane, the newest bin on the
+     strip — and a shared period makes them breathe together, so the eye
+     reads one `now` rather than three things independently fidgeting. */
+  @keyframes rb-pulse{0%{box-shadow:0 0 0 0 rgba(var(--now-rgb),.5)}100%{box-shadow:0 0 0 12px rgba(var(--now-rgb),0)}}
+  @keyframes rb-now{0%,100%{opacity:1}50%{opacity:.42}}
+  .is-now{animation:rb-now 1.4s ease-in-out infinite}
+  .band .strip i.is-now{background:var(--now)}
   @keyframes rb-glisten{0%{background:var(--warn-bg)}100%{background:var(--panel)}}
   .station.running.fresh i{animation:rb-pulse 1.4s ease-out infinite}
   .station.running.stale i{background:var(--warn);border-color:var(--warn);box-shadow:none}
@@ -130,7 +140,7 @@
   .panel.changed,.band.changed{animation:rb-glisten 1.2s ease-out}
   .panel.fresh{border-color:var(--now-bd);box-shadow:0 0 0 2px var(--now-bg)}
   .pill.live{background:var(--now-bg);border-color:var(--now-bd);color:var(--now)} .pill.live.stale{background:var(--warn-bg);border-color:var(--warn-bd);color:var(--warn)}
-  @media (prefers-reduced-motion: reduce){ .station.running.fresh i{animation:none;outline:2px solid var(--now);outline-offset:2px} .panel.changed,.band.changed{animation:none} }
+  @media (prefers-reduced-motion: reduce){ .station.running.fresh i{animation:none;outline:2px solid var(--now);outline-offset:2px} .panel.changed,.band.changed{animation:none} .is-now{animation:none;outline:1px solid var(--now)} }
   .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:3px 14px}
   /* 330px, not 150px: with a 150px minimum a wider column buys MORE COLUMNS
      and each row stays too narrow to carry its evidence — the extra width
@@ -291,10 +301,16 @@
   var band = $("div","band"); band.id = "pane-activity";
   var bh = $("h2"); add(bh, $("span",null,"ACTIVITY"), $("b",null, act.bin_minutes > 1 ? "events per "+act.bin_minutes+" min" : "events per minute")); add(band, bh);
   var strip = $("div","strip"+(act.minutes.length > 200 ? " dense" : "")); var maxC = Math.max.apply(null, act.minutes.concat([1]));
-  act.minutes.forEach(function(c){ var b = $("i"); b.style.height = Math.max(2, Math.round(20*c/maxC))+"px"; b.title = c+" events"; add(strip, b); });
+  // The newest bin is "now" only while a step is actually in flight — derived
+  // from the stations rather than a new model field, because a station in
+  // `running` IS the definition of work happening, and a second source for the
+  // same fact is a second thing to drift.
+  var liveNow = (data.line.stations || []).some(function(st){ return st.state === "running"; });
+  var lastLive = -1; act.minutes.forEach(function(c, i){ if (c > 0) lastLive = i; });
+  act.minutes.forEach(function(c, i){ var b = $("i", i === lastLive && liveNow ? "is-now" : null); b.style.height = Math.max(2, Math.round(20*c/maxC))+"px"; b.title = c+" events"; add(strip, b); });
   add(band, act.minutes.length ? strip : $("span","nodata","no timestamped events"));
   idle(band, !act.minutes.length);
-  var capt = act.start ? ("from "+fmtT(act.start)+" · "+act.span_minutes+" min in "+act.minutes.length+" bins"+(act.unparseable ? " · "+act.unparseable+" unparseable timestamps excluded" : "")) : (act.unparseable ? act.unparseable+" unparseable timestamps, nothing to draw" : "");
+  var capt = act.start ? ("from "+fmtT(act.start)+" · "+act.span_minutes+" min elapsed of a "+(act.window_minutes||act.span_minutes)+" min scale · "+act.minutes.length+" bins"+(act.unparseable ? " · "+act.unparseable+" unparseable timestamps excluded" : "")) : (act.unparseable ? act.unparseable+" unparseable timestamps, nothing to draw" : "");
   var cap = $("span","r", capt); cap.title = capt; add(band, cap);
   add(screen, band);
 
@@ -339,7 +355,7 @@
     var grid = $("div","steps");
     lane.steps.forEach(function(s){
       add(grid, $("span","k",s.id), $("span",null,(s.phase?s.phase+" · ":"")+(s.name||"")+(s.detail?" — "+s.detail:"")));
-      var bar = $("div","bar"); var fill = $("i",s.state); fill.style.width = (100*(s.elapsed||0)/maxE)+"%"; add(bar, fill); add(grid, bar);
+      var bar = $("div","bar"); var fill = $("i",s.state+(s.state==="running" ? " is-now" : "")); fill.style.width = (100*(s.elapsed||0)/maxE)+"%"; add(bar, fill); add(grid, bar);
       add(grid, $("span","t", s.state==="running" ? "…" : elapsed(s.elapsed)));
     });
     add(bp, grid);

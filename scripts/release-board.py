@@ -928,6 +928,12 @@ def events_total(ledger: dict, sink: dict) -> int:
     return len(ledger["events"]) + len(sink["events"])
 
 
+#: The activity strip's first time bracket, and the bin count it always draws.
+#: Brackets double (90 -> 180 -> 360 ...) so the axis is stable within a run.
+SCALE_BASE_MINUTES = 90
+SCALE_BINS = 90
+
+
 def activity(ledger: dict, sink: dict) -> dict:
     stamps = [ev.get("ts") for ev in ledger["events"]] + [ev.get("ts") for ev in sink["events"]]
     stamps = [s for s in stamps if s]
@@ -944,15 +950,36 @@ def activity(ledger: dict, sink: dict) -> dict:
         return {"minutes": [], "start": None, "unparseable": bad, "span_minutes": 0, "bin_minutes": 1}
     t0 = min(parsed).replace(second=0)
     full = int((max(parsed) - t0).total_seconds() // 60) + 1
-    # Bin adaptively: at most 600 bins across the whole span, so a five-day run
-    # is 600 bins of 12 minutes rather than its first 600 minutes (which the
-    # strip then reported as truncated, 5 Sep 2026). Nothing is dropped.
-    bin_minutes = max(1, -(-full // 600))
-    counts = [0] * (-(-full // bin_minutes))
+
+    # THE SCALE IS QUANTISED, NOT FITTED, and that is the whole point. Fitting
+    # the bins to the span re-scales the strip on every refresh of a live run:
+    # bars shift, bins merge under you, and "busier than a minute ago" becomes
+    # unreadable because the axis moved too. Instead the full width is a fixed
+    # time budget which DOUBLES when a run outgrows it — so a normal run never
+    # rescales at all, a bad one rescales two or three times, and each rescale
+    # is itself information: this run has entered a longer bracket.
+    #
+    # 90 minutes is the first bracket because it covers every run this machine
+    # has ever spent doing its own work. Measured 24 Sep 2026 across
+    # 0.28.0-0.31.2: time actually inside steps was 31 to 74 minutes, every
+    # time, good night or bad. The runs that took six to ten hours were idle
+    # for 86-89% of it, waiting for a person — so the brackets absorb human
+    # latency without shrinking the working half into a sliver.
+    window = SCALE_BASE_MINUTES
+    while full > window:
+        window *= 2
+    # A fixed bin count per bracket is what makes a minute a fixed number of
+    # pixels: the strip is always SCALE_BINS wide, so each bin is the same
+    # share of the viewport whatever the run is doing.
+    bin_minutes = max(1, -(-window // SCALE_BINS))
+    n_bins = -(-window // bin_minutes)
+    counts = [0] * n_bins
     for t in parsed:
-        counts[int((t - t0).total_seconds() // 60) // bin_minutes] += 1
+        i = int((t - t0).total_seconds() // 60) // bin_minutes
+        if 0 <= i < n_bins:
+            counts[i] += 1
     return {"minutes": counts, "start": t0.strftime("%Y-%m-%dT%H:%M:%SZ"), "unparseable": bad,
-            "span_minutes": full, "bin_minutes": bin_minutes}
+            "span_minutes": full, "bin_minutes": bin_minutes, "window_minutes": window}
 
 
 def confounded(steps: list[dict], steps_source: str, stations: list[dict], unknown_steps: list[str], grouped: dict,

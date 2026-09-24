@@ -87,7 +87,11 @@ dependencies before the bump rather than after — see 0.31.2 below.
 **New: `gh run watch` treats a transient HTTP 503 as a verdict.** `ci-green`
 died mid-watch while the CI run it was watching was still queued and later
 went green on its own. Failing closed is right; discarding a 38-minute wait
-over one dropped API call is not. Unfixed.
+over one dropped API call is not. Fixed 23 Sep 2026, together with 0.31.2's
+sibling below: the watch now asks the RUN whether it finished before treating
+a non-zero `gh run watch` as CI's answer, and reattaches to the same run id
+if it did not. Lands too late for this release — it is on `main` after
+`v0.31.1` was tagged — and takes effect from the next tag.
 
 **Fedora Copr, post-tag: `hf-xet` had no wheel available for one build.**
 Build 11024205 died in `%install` — `hf-xet` (a faster-whisper →
@@ -138,7 +142,22 @@ still in progress.** `CI_CMD`'s `&&` chain (`_id=$(gh run list …); [ -n
 the run lookup returns nothing — no error text, just exit 1. Third failure
 shape for this one gate in two releases: a 503 mid-watch (0.31.1), and now a
 silent empty lookup, both "an unreachable or lagging oracle read as a
-negative answer." Unfixed; the second one is worse because it is silent.
+negative answer" — and the second is worse because it is silent.
+
+Fixed 23 Sep 2026. The chain is now `ci_await_verdict`, reading two pure
+verdicts (`verdict_run_lookup`, `verdict_watch_drop`) that separate the
+question from the answer: an empty lookup is classified by `gh run list`'s
+**exit status**, not by its emptiness, so "the call failed" and "the call
+worked and nothing matched" get different retries and different sentences;
+and a non-zero `gh run watch` is only a verdict once the run itself reads
+`completed`. Both reads are retried three times with backoff. Retries alone
+would not have been the fix — they decide how often to ask, not whether what
+came back was an answer, and blind retries would have made a genuinely red
+CI look like weather. `test-release-e2e.sh` 30–34 pins all five cases,
+including that a concluded-red run is watched exactly **once**; the pre-fix
+chain fails 11 of those 17 assertions, one of them by producing the same
+zero-byte log this paragraph is about. Lands after `v0.31.2` was tagged, so
+it takes effect from the next release.
 
 **Self-inflicted: the tag step refused on a dirty tree.** Unrelated
 `experiments/` work was staged via a `git reset --soft` back to the

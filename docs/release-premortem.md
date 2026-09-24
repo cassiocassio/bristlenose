@@ -256,6 +256,43 @@ it can be inspected.
 > tag rather than comparing the counts. **A soft gate is not a weak gate; it is
 > a gate whose verdict someone has to read.**
 
+> **23 Sep 2026 — incidents 33–34, from the 0.31.1 and 0.31.2 runs.** Both are
+> the distinction incident 32 had named hours earlier — *cannot answer ≠
+> answered no* — sitting unfixed in a different gate. One gate, two releases,
+> two shapes.
+>
+> - **33 — a transient HTTP 503 killed `gh run watch` mid-poll (0.31.1).** The
+>   run it was watching was still queued, and went green on its own minutes
+>   later. `gh run watch --exit-status` spends ONE exit code on two unrelated
+>   facts — "CI says no" and "the wire broke" — so a 38-minute wait was
+>   discarded over one dropped API call.
+> - **34 — and the same gate failed SILENTLY the next release (0.31.2).**
+>   `CI_CMD`'s `[ -n "$_id" ] && … && gh run watch …` short-circuited on its
+>   *middle* test when the lookup came back empty: exit 1, no error text, a
+>   **zero-byte log** for a CI run that was genuinely still in progress. The
+>   `cmd && ok` shape this repo already documents, in its quiet direction —
+>   and worse than 33, because a gate that fails without saying anything reads
+>   as a defect in the gate.
+>
+> **What the fix is, and what it deliberately is not.** `ci_await_verdict`
+> retries both reads with backoff, which is the obvious half and the smaller
+> one. The half that matters is two pure verdicts above the sourcing seam:
+> `verdict_run_lookup` classifies an empty lookup by `gh run list`'s **exit
+> status** rather than by its emptiness, because `$(…)` discards the status
+> and that is precisely what made the two causes indistinguishable; and
+> `verdict_watch_drop` refuses to read a non-zero watch as CI's answer until
+> the run itself reads `completed`. **Retries alone would have been the wrong
+> fix and a dangerous one** — they decide how many times to ask, not whether
+> what came back was an answer, so a genuinely red CI would have been retried
+> as though it were weather. `test-release-e2e.sh` 30–34 pins that a concluded
+> failure is watched exactly *once*; run against the pre-fix chain, 11 of
+> those 17 assertions go red, one of them by reproducing 34's zero-byte log.
+>
+> The generalisation is already in this file twice (incident 32; the tri-state
+> probe rule) and was still absent here: **every gate that reads a remote
+> system needs three outcomes, not two.** A gate with two has to spend one of
+> them on both "no" and "I could not ask".
+
 ---
 
 ## What this exercise changed

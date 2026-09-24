@@ -311,7 +311,11 @@ bn_step_start 2 Build "Sidecar — fetch · build · sign" \
     narrative="Freezes the Python engine (PyInstaller), bundles FFmpeg, and signs every Mach-O under your identity."
 _bn_t2=$SECONDS
 export SIGN_IDENTITY
-_BRISTLENOSE_RELEASE=1 "$SCRIPT_DIR/ensure-sidecar.sh" --force
+# --keep-venv: reuse the closure preflight resolved for THIS release rather
+# than resolving a second time against a live index that has moved since.
+# Degrades to a full resolve whenever the stamp does not match, so a run that
+# skipped preflight still gets a fresh closure. See build-sidecar.sh layer V.
+_BRISTLENOSE_RELEASE=1 "$SCRIPT_DIR/ensure-sidecar.sh" --force --keep-venv
 bn_step_ok 2 elapsed=$((SECONDS-_bn_t2)) detail="built + signed under $SIGN_IDENTITY"
 
 # ------------------------------------------------------------

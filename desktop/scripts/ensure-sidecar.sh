@@ -18,7 +18,7 @@
 # only /bin/bash 3.2). The same prepend makes python3.12 resolvable for
 # build-sidecar.sh. Both were dead in-phase until this was added (29 Jun 2026).
 #
-# Usage:   ensure-sidecar.sh [--force] [--dry-run]
+# Usage:   ensure-sidecar.sh [--force] [--keep-venv] [--dry-run]
 # Env:
 #   SIGN_IDENTITY                codesign identity; default "-" (ad-hoc).
 #   _BRISTLENOSE_RELEASE=1       set by build-all.sh — REQUIRED to use a real
@@ -51,10 +51,13 @@ export PATH
 
 FORCE=0
 DRY_RUN=0
+KEEP_VENV=0
 for arg in "$@"; do
     case "$arg" in
         --force)   FORCE=1 ;;
         --dry-run) DRY_RUN=1 ;;
+        # Forwarded verbatim; build-sidecar.sh owns the meaning.
+        --keep-venv) KEEP_VENV=1 ;;
         *) echo "error: unknown argument: $arg" >&2; exit 2 ;;
     esac
 done
@@ -154,6 +157,7 @@ build_args=""
 [ "$FORCE" = 1 ] && build_args="$build_args --force"
 [ "$identity_changed" = 1 ] && build_args="$build_args --force"
 [ "$DRY_RUN" = 1 ] && build_args="$build_args --dry-run"
+[ "$KEEP_VENV" = 1 ] && build_args="$build_args --keep-venv"
 
 TMP_OUT="$(mktemp -t ensure-sidecar.XXXXXX)"
 trap 'rm -f "$TMP_OUT"' EXIT

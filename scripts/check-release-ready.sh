@@ -722,21 +722,20 @@ else
     # false-positives is exactly the "gate that cries wolf gets switched off" failure
     # from release-log 0.27.0 #4. Warn early, refuse late.
     #
-    # ...UNLESS --resolve just re-resolved the venv by the release's own path.
-    # Both objections above are about measuring the WRONG venv: a non-canonical
-    # machine, or a build that has not happened yet. Neither survives here — we
-    # are on the canonical Mac runner by definition (we just ran build-sidecar)
-    # and the closure is the one the lane will build from minutes later. So a
-    # stale verdict is real, build-all WILL refuse, and warning about a certain
-    # future failure is how 0.31.1 spent a build failure plus two cascade
-    # retries on a warning this script had already printed.
+    # This row was briefly BAD under --resolve, on the reasoning that warning
+    # about a certain future failure is useless. That reasoning was right about
+    # the warning and wrong about the failure: the release now has an
+    # `inventory` step immediately after this one, which regenerates the file
+    # from THIS resolve and commits it, and --keep-venv makes build-all reuse
+    # the same closure. A stale inventory is therefore no longer a future
+    # failure — it is the next step's input. Failing here would stop a release
+    # over something the following step exists to repair.
+    #
+    # So: informational, and say which step will deal with it. If that step is
+    # ever skipped, build-all's own hard check is still the backstop.
     case "$_dep_rc" in
         0) ok   "dependency drift" "inventory matches the resolved set" ;;
-        1) if [ "$RESOLVE" = 1 ]; then
-               bad  "dependency drift" "inventory stale vs the live resolve — .venv/bin/python scripts/generate-third-party-binaries.py"
-           else
-               warn "dependency drift" "inventory stale — regenerate now, or build-all will refuse later"
-           fi ;;
+        1) warn "dependency drift" "stale — the inventory step refreshes it from this resolve" ;;
         *) warn "dependency drift" "could not run the check (exit $_dep_rc) — unverified" ;;
     esac
 fi

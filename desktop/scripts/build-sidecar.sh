@@ -41,12 +41,14 @@ set -euo pipefail
 FORCE=0
 DEPS_ONLY=0
 DRY_RUN=0
+KEEP_VENV=0
 for arg in "$@"; do
     case "$arg" in
         --force)     FORCE=1 ;;
         --deps-only) DEPS_ONLY=1 ;;
+        --keep-venv) KEEP_VENV=1 ;;
         --dry-run)   DRY_RUN=1 ;;
-        *) echo "error: unknown argument: $arg (expected --force / --deps-only / --dry-run)" >&2; exit 2 ;;
+        *) echo "error: unknown argument: $arg (expected --force / --deps-only / --keep-venv / --dry-run)" >&2; exit 2 ;;
     esac
 done
 [ "$FORCE" = 1 ] && [ "$DEPS_ONLY" = 1 ] && {
@@ -81,6 +83,10 @@ STATIC_DIR="$ROOT/bristlenose/server/static"
 FRONTEND_STAMP="$STATIC_DIR/.frontend-stamp"
 DEPS_STAMP="$SIDECAR_VENV/.deps-stamp"
 DEPS_OK="$SIDECAR_VENV/.deps-ok"
+# Which release run last resolved this venv against the live index. Written
+# beside the deps stamp, inside the venv, so it cannot outlive the closure it
+# describes. See the --keep-venv block below for why a RUN rather than a clock.
+RESOLVED_FOR="$SIDECAR_VENV/.resolved-for"
 
 _say() { echo "==> $*"; }
 _layer() { echo "    [$1] $2"; }   # e.g. _layer F "REBUILD — frontend source moved"
@@ -211,7 +217,34 @@ fi
 # ---------------------------------------------------------------------------
 venv_rebuilt=0
 need_v=0; v_reason=""
-if [ "$FORCE" = 1 ] || [ "$DEPS_ONLY" = 1 ]; then need_v=1; v_reason="forced"
+# --keep-venv: ONE LIVE RESOLVE PER RELEASE, instead of two.
+#
+#   A release used to resolve the sidecar closure twice against live PyPI —
+#   once at preflight (check-release-ready --resolve → --deps-only) and again
+#   at build-all (ensure-sidecar --force) — both with --no-cache-dir, minutes
+#   apart, with nothing requiring the two answers to agree. Anything published
+#   in that window failed the build on an inventory generated from the first
+#   resolve and checked against the second. Measured 23 Sep 2026: 5 of the 25
+#   recorded step failures across 0.28.0-0.31.2, in four consecutive releases.
+#   The gap was self-inflicted; this closes it.
+#
+#   Keyed on the RUN, not a clock. "Resolved recently" needs a threshold nobody
+#   can justify and drifts with how long a release takes; "resolved for THIS
+#   release" is exact, and release.sh exports BN_RELEASE_RUN for the whole run
+#   so preflight and build-all agree on what it is.
+#
+#   It suppresses --force ALONE, and only that arm. Every other reason to
+#   rebuild still applies below — a missing venv, a half-install, an
+#   interpreter minor that moved, a changed closure fingerprint — so the worst
+#   case of a stamp that does not match is exactly today's behaviour: resolve
+#   again. --deps-only is never suppressed: resolving IS its job.
+_keep_ok=0
+if [ "$KEEP_VENV" = 1 ] && [ -n "${BN_RELEASE_RUN:-}" ] \
+   && [ "$(cat "$RESOLVED_FOR" 2>/dev/null || true)" = "$BN_RELEASE_RUN" ]; then
+    _keep_ok=1
+fi
+if [ "$DEPS_ONLY" = 1 ]; then need_v=1; v_reason="forced (--deps-only)"
+elif [ "$FORCE" = 1 ] && [ "$_keep_ok" = 0 ]; then need_v=1; v_reason="forced"
 elif [ ! -x "$PYTHON" ]; then need_v=1; v_reason="venv missing"
 elif [ ! -f "$DEPS_OK" ]; then need_v=1; v_reason="no .deps-ok sentinel (half-install?)"
 elif [ "$("$PYTHON" -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null)" != "$PY_PIN" ]; then
@@ -248,6 +281,9 @@ if [ "$need_v" = 1 ]; then
         fi
         # Stamp + sentinel LAST, only after a fully successful install + tool check.
         _deps_fingerprint > "$DEPS_STAMP"
+        # Whose resolve this closure is. "adhoc" outside a release, which can
+        # never equal a version string, so a dev venv is never reused by one.
+        printf '%s\n' "${BN_RELEASE_RUN:-adhoc}" > "$RESOLVED_FOR"
         date -u +%Y-%m-%dT%H:%M:%SZ > "$DEPS_OK"
         # --deps-only moved the venv and deliberately did NOT rebuild P, so the
         # bundle on disk was frozen from the PREVIOUS closure. Writing the deps

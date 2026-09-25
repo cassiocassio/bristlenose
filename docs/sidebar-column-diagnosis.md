@@ -619,3 +619,30 @@ hand-over: the four sessions are archived after it.
   test selected by `-only-testing` needs its trailing `()`; without it the
   suite starts, runs nothing and exits 0.
 - S5–S7 remain open on the terms above.
+
+---
+
+## macOS 15, measured (25 Sep 2026, late evening)
+
+The "version risk is real and unmeasured" line above is now measured. A
+macOS 15.7.3 VM (tart, test target floor lowered in a staged copy only) ran
+`SidebarFitHarnessTests` at `2f0d7fbb`: **6 of 20 failed on 15, 20 of 20
+passed on 27.** Evidence: `/Volumes/Iona/tart/evidence/sidebar-fit-2f0d7fbb/`.
+
+- **Mechanism, same on both versions:** at mount SwiftUI reports the split
+  at 1 pt; with a floor already set, `decide` collapsed; at the real width it
+  expanded, inside the same animation. On 27 the expand wins. On 15 the
+  collapse's visibility write lands last: the column ends hidden, with the
+  "ours" flag cleared, so it is never given back — the shape of the original
+  "the column vanishes and won't come back".
+- **Guard (`9bcd881b`):** `decide` ignores a split below
+  `SidebarAutoCollapse.windowMinWidth` (700, the window's own minimum).
+- **What is not yet known:** the app mounts with no floor (the SPA cannot
+  post `panel-state` before its window exists), so the mount trigger is
+  harness-only in the app. Whether the 15 ordering reaches the app through a
+  real threshold crossing is what `s22a`–`s22d` measure: they mount as the
+  app does and then drag, jump, flicker, and collapse-then-expand inside one
+  animation. They pass on 27; the 15 run is pending. If `s22d` fails on 15,
+  the next fix is the unanimated visibility write (session 4's D).
+- Classic split on 15 measured: a 1-pt divider (`detail x=221` beside a 220
+  column), inside the 2-pt `dividerSlack` allowance.

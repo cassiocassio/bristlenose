@@ -6,6 +6,10 @@ trued-against: HEAD@main on 2026-09-02
 
 ## Changelog
 
+- _2026-09-25_ — the two guests exist (§3.6): Sequoia 15.7.3 and Tahoe 26.6.2
+  under tart on an external SSD, with the host now on 27. §2's table and §6 updated. First
+  runs found a Sequoia-only sidebar defect and a Tahoe-only 8-pt column offset; both
+  handed to the sidebar diagnosis (`docs/sidebar-column-diagnosis.md`).
 - _2026-09-02_ — initial draft. Written when supporting three simultaneous
   macOS sidebar geometries (Sequoia 15 flat, Tahoe 26 inset plateau, Golden
   Gate 27 edge-anchored-again) made "which machine can actually prove this?"
@@ -61,9 +65,9 @@ worst at.
 
 | Environment | Have it? | Proves | Blind to |
 |---|---|---|---|
-| **macOS 26 Tahoe, Apple Silicon, bare metal** | ✅ daily driver | everything, at full fidelity | other OS versions |
-| **macOS 15 Sequoia, VM** | ⬜ to build | geometry, behaviour, launch, regressions | Liquid Glass fidelity (§3.2); anything needing an Apple ID (§3.3) |
-| **macOS 27, bare metal** | ⬜ when beta lands | the 27 rendering | — |
+| **macOS 27, Apple Silicon, bare metal** | ✅ daily driver (since Sep 2026) | everything, at full fidelity | other OS versions |
+| **macOS 15 Sequoia, VM** | ✅ 15.7.3, Xcode 26.3 (§3.6) | geometry, behaviour, launch, regressions, the Swift suite | Liquid Glass fidelity (§3.2); anything needing an Apple ID (§3.3) |
+| **macOS 26 Tahoe, VM** | ✅ 26.6.2, Xcode 27.0 (§3.6) | the same, on the inset-plateau geometry | the same |
 | **Linux x86_64, GitHub Actions** | ✅ | CI matrix, packaging, release pipeline | anything GUI; no LLM keys, no Ollama |
 | **Claude Code Cloud VM** | ✅ | code/test/lint/frontend build | GUI; **not for pipeline runs on private interview data** |
 | **Fedora 43 x86_64** | ✅ real Intel hardware | Copr packaging end to end | GUI |
@@ -137,6 +141,26 @@ The reassuring shape: the OS where visual fidelity matters most (26, then 27) is
 the one we run natively. The one that needs a VM (15) is the one where "nothing
 changed" is the whole test.
 
+### 3.6 The guests as built (25 Sep 2026)
+
+Two guests under [tart](https://tart.run) on Virtualization.framework, stored on an
+external SSD, cloned from Cirrus Labs' prebuilt images (`macos-sequoia-xcode:26.3`,
+`macos-tahoe-xcode:27`) so no Setup Assistant or Apple ID was needed. The recipe, the
+scripts and the traps sit next to the guests, in the maintainer's notes on that drive,
+because they carry machine paths. What matters here:
+
+- **The Swift suite runs on 15 only with the test target lowered to 15.0.** It compiles
+  and loads clean there (XCTest and Testing are floored at 14.0); on `main` the target is
+  still 26.1 pending a decision (`design-platform-policy.md` Pillar 3).
+- **Guests build unsigned** (`CI=1` in `test-swift.sh`, as on the GitHub runner).
+- **The guest screen must be set from inside the guest.** Tart's `--display` alone left
+  it at 1024×768 points, which clamps any test that opens a wide window.
+- **Measured findings on the first day:** on 15 a transient 1-pt split reading at mount
+  collapsed the projects column and it stayed hidden (fixed by the window-minimum guard);
+  on 26.6 AppKit reports the sidebar column 8 pt wider than declared, where 15 and 27
+  match it. And `test-swift.sh` exited 0 without building under stock `/bin/bash` 3.2,
+  which only a clean machine could show.
+
 ## 4. The instrument for the seam question
 
 **Diagnostics ▸ Seam Lab**
@@ -179,10 +203,11 @@ measurements. Paste each host's readout into this doc as it is captured.
 ## 6. Open
 
 1. **§3.2 is unverified.** Settle it before any VM-sourced visual verdict.
-2. **No Sequoia environment exists yet.** Until one does, the macOS 15 arm of
-   the availability branch is unexercised — it is "change nothing", which is the
-   safest possible unexercised branch, but it is still unexercised.
-3. **No macOS 27 environment**, and none possible until the beta is installable.
+2. **The Seam Lab readouts are still uncaptured on every host** (§4). Both guests
+   can now run the Debug app; the lab is a menu item, so it needs a person at the
+   guest window.
+3. **The test target's floor** decides whether the suite on 15 runs from `main` or
+   from a patched copy (§3.6).
 4. **Nothing here is automated.** These are instruments for the human walk and
    for one-off measurement, not a matrix that runs nightly. Whether any of it
    should join the mechanical tier is an

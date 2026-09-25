@@ -272,13 +272,6 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// apply selection programmatically, so `selectRowIndexes` doesn't echo back.
     private var isApplyingProgrammatic = false
 
-    /// Same shape for expansion: `reloadAndRestore()` re-expands folders from the
-    /// model after every `reloadData`, and those `expandItem` calls post the same
-    /// `…DidExpand` notification a click does. Persisting from there would save,
-    /// republish, re-enter `update()` and reload again. Only user-driven
-    /// expand/collapse writes `Folder.collapsed`.
-    private var isRestoringExpansion = false
-
     /// The open row popover — diagnostic (failure glyph / menu) or icon-picker
     /// (menu). One at a time; held so opening another closes the prior. Anchored to
     /// the *outline view* (not the per-cell view), so a progress-tick `reloadData` —
@@ -554,7 +547,6 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// selection, and the two one-shot gestures. Extracted from `update()` so the
     /// post-drop-animation release can re-run exactly the same tail.
     private func reloadAndRestore() {
-        isRestoringExpansion = true
         outlineView.reloadData()
 
         // Expand groups (always) + non-collapsed folders.
@@ -564,7 +556,6 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 outlineView.expandItem(child)
             }
         }
-        isRestoringExpansion = false
 
         applySelection(lastSelection)
 
@@ -1139,8 +1130,13 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         persistFolderExpansion(notification, collapsed: false)
     }
 
+    // The `collapsed != …` check is what keeps a restore from writing. An ordinary
+    // republish expands nothing (nodes are equal by model id, so `reloadData` keeps
+    // expansion); `reloadAndRestore()` only calls `expandItem` on a folder when the
+    // model leads the view — a Finder drop onto a collapsed folder sets it expanded
+    // first — and then the model already agrees, so there is nothing to save. A
+    // write there would republish into another reload.
     private func persistFolderExpansion(_ notification: Notification, collapsed: Bool) {
-        if isRestoringExpansion { return }
         guard let node = notification.userInfo?["NSObject"] as? OutlineNode,
               case .folder(let id) = node.kind,
               let index = projectIndex,

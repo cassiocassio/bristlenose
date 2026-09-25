@@ -272,6 +272,13 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// apply selection programmatically, so `selectRowIndexes` doesn't echo back.
     private var isApplyingProgrammatic = false
 
+    /// Same shape for expansion: `reloadAndRestore()` re-expands folders from the
+    /// model after every `reloadData`, and those `expandItem` calls post the same
+    /// `…DidExpand` notification a click does. Persisting from there would save,
+    /// republish, re-enter `update()` and reload again. Only user-driven
+    /// expand/collapse writes `Folder.collapsed`.
+    private var isRestoringExpansion = false
+
     /// The open row popover — diagnostic (failure glyph / menu) or icon-picker
     /// (menu). One at a time; held so opening another closes the prior. Anchored to
     /// the *outline view* (not the per-cell view), so a progress-tick `reloadData` —
@@ -547,6 +554,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// selection, and the two one-shot gestures. Extracted from `update()` so the
     /// post-drop-animation release can re-run exactly the same tail.
     private func reloadAndRestore() {
+        isRestoringExpansion = true
         outlineView.reloadData()
 
         // Expand groups (always) + non-collapsed folders.
@@ -556,6 +564,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 outlineView.expandItem(child)
             }
         }
+        isRestoringExpansion = false
 
         applySelection(lastSelection)
 
@@ -1112,6 +1121,32 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // (verified by sampling every UI-element-colour), so a hand-placed capsule
         // can't match — genuine selection is the only exact path.
         SourceListSelectionRowView()
+    }
+
+    // MARK: Folder expansion (persisted)
+
+    // The model is the only record of a folder's expansion that survives a reload:
+    // `reloadAndRestore()` rebuilds every node and re-expands from `Folder.collapsed`.
+    // Without these, a triangle click (or ←/→, or ⌥-click) collapsed the view only,
+    // and the next `update()` — a selection change, a run's progress tick — sprang
+    // every folder open again. The SwiftUI sidebar persisted this through its
+    // `DisclosureGroup` binding; the AppKit port carried the read and lost the write.
+    func outlineViewItemDidCollapse(_ notification: Notification) {
+        persistFolderExpansion(notification, collapsed: true)
+    }
+
+    func outlineViewItemDidExpand(_ notification: Notification) {
+        persistFolderExpansion(notification, collapsed: false)
+    }
+
+    private func persistFolderExpansion(_ notification: Notification, collapsed: Bool) {
+        if isRestoringExpansion { return }
+        guard let node = notification.userInfo?["NSObject"] as? OutlineNode,
+              case .folder(let id) = node.kind,
+              let index = projectIndex,
+              let folder = index.folders.first(where: { $0.id == id }),
+              folder.collapsed != collapsed else { return }
+        index.setFolderCollapsed(id: id, collapsed: collapsed)
     }
 
     func outlineViewSelectionDidChange(_ notification: Notification) {

@@ -350,6 +350,9 @@ umask "$_prev_umask"
 # and HTTP/2 lowercase `authorization:` lines that our sed redaction
 # wouldn't reliably catch.  Instead we use -w to print response metrics
 # (no request-side echo) and cat the response headers — both are safe.
+# Empty unless --verbose, so it is expanded with the `+` guard: bash 3.2's
+# `set -u` calls an empty array unbound, and inside this pipeline the abort
+# exits 0 — curl never runs and the script carries on.
 CURL_WRITEOUT=()
 if [[ "$VERBOSE" == "true" ]]; then
   CURL_WRITEOUT=(-w '   export: HTTP %{http_code}  %{size_download} bytes  %{time_total}s total  %{time_starttransfer}s TTFB\n')
@@ -358,7 +361,7 @@ fi
 # Mask xtrace across the printf so the bearer token doesn't hit stderr.
 { set +x; } 2>/dev/null
 printf 'header = "Authorization: Bearer %s"\n' "$_BRISTLENOSE_AUTH_TOKEN" \
-  | curl -sSf "${CURL_WRITEOUT[@]}" -K - \
+  | curl -sSf ${CURL_WRITEOUT[@]+"${CURL_WRITEOUT[@]}"} -K - \
       -D "$EXPORT_HEADERS" -o "$EXPORT_FILE" \
       "http://127.0.0.1:$PORT/api/projects/1/export"
 if [[ "$VERBOSE" == "true" ]]; then

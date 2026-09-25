@@ -64,7 +64,9 @@ fi
 
 is_allowlisted() {
     local line="$1"
-    for pat in "${ALLOW_REGEXES[@]}"; do
+    # `+` guard: an empty ALLOW_REGEXES is "unbound" to `set -u` under macOS's
+    # stock /bin/bash 3.2, and the abort exits 0 — a real leak reported clean.
+    for pat in ${ALLOW_REGEXES[@]+"${ALLOW_REGEXES[@]}"}; do
         if echo "$line" | grep -qE "$pat"; then
             return 0
         fi

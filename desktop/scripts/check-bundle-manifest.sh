@@ -70,7 +70,9 @@ fi
 
 is_allowlisted() {
     local path="$1"
-    for pat in "${ALLOW_REGEXES[@]}"; do
+    # `+` guard: ALLOW_REGEXES is empty today, and bash < 4.4 calls an empty
+    # array "unbound" under `set -u` (see check-logging-hygiene.sh).
+    for pat in ${ALLOW_REGEXES[@]+"${ALLOW_REGEXES[@]}"}; do
         if echo "$path" | grep -qE "$pat"; then return 0; fi
     done
     return 1

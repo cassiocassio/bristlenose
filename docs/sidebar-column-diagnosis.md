@@ -133,9 +133,20 @@ Scheme ▸ Run ▸ Arguments), then:
 /usr/bin/log stream --predicate 'subsystem == "app.bristlenose" AND category == "sidebar-fit"'
 ```
 
-**Not `defaults write`**: the app is sandboxed, and writing its preferences
-from Terminal fails with *"Could not write domain …/Containers/app.bristlenose/…"*
-(measured 25 Sep 2026). Each line pairs
+Or, with no relaunch, in a running instance:
+
+```bash
+defaults write NSGlobalDomain BristlenoseDebugSidebarFit -bool YES    # on
+defaults delete NSGlobalDomain BristlenoseDebugSidebarFit             # off
+```
+
+`defaults write app.bristlenose …` fails — the app is sandboxed and Terminal
+cannot write its container (*"Could not write domain"*) — but the flag is read
+live from `UserDefaults.standard`, and a sandboxed app still reads the global
+domain from `~/Library/Preferences` (measured by session 3, 25 Sep 2026).
+**Filter on the process:** every app-hosted test host shares the bundle id,
+reads the same flag and logs to the same category — add
+`AND processID == <pid>` to the predicate. Each line pairs
 SwiftUI's belief (`split detail last floor vis auto`) with AppKit's layout
 (`itemCollapsed sidebarW thickness webX webW webSafeLeft`). Reproduce, note
 the time, keep the stream. For the web half: Web Inspector on the report,

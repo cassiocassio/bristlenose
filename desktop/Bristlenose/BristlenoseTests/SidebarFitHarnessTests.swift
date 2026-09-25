@@ -782,8 +782,6 @@ struct SidebarFitRig {
         before.close()
         #expect(autosaveName == control + SidebarAutosaveMigration.keySuffix,
                 "the rig did not name the split view's autosave: \(autosaveName)")
-        #expect(abs(clamped - SidebarAutoCollapse.columnMin) <= 1,
-                "stored 148 should restore clamped to the minimum \(SidebarAutoCollapse.columnMin); got \(clamped)")
 
         // Fix: migrate before the window exists; the ideal applies.
         defaults.set(frames148, forKey: key(fixed))
@@ -793,8 +791,17 @@ struct SidebarFitRig {
         let restored = after.appKitSidebarWidth ?? -1
         after.dump("s21b migrated, stored 148 removed")
         after.close()
-        #expect(abs(restored - SidebarAutoCollapse.columnIdeal) <= 1,
-                "after migration the column should open at the ideal \(SidebarAutoCollapse.columnIdeal); got \(restored)")
+        // Asserted as a DIFFERENCE, because the declared widths land 8 pt wide
+        // on macOS 26.6 (min 200 → 208, ideal 220 → 228) and exactly on 15 and
+        // 27 (measured on VMs, 25 Sep 2026). Whatever the platform offset, the
+        // clamped launch opens at the minimum and the migrated one at the
+        // ideal, so they differ by exactly ideal − minimum.
+        let offset = restored - SidebarAutoCollapse.columnIdeal
+        Attachment.record("clamped \(clamped), migrated \(restored), platform offset \(offset)", named: "s21-widths.txt")
+        #expect(abs((restored - clamped) - (SidebarAutoCollapse.columnIdeal - SidebarAutoCollapse.columnMin)) <= 1,
+                "clamped launch \(clamped) and migrated launch \(restored) should differ by ideal − minimum")
+        #expect((0...SidebarAutoCollapse.platformSlack).contains(offset),
+                "migrated launch \(restored) is not the ideal \(SidebarAutoCollapse.columnIdeal) within the measured platform offset")
     }
 
     /// Where does a web page's left edge land after the column hides again?

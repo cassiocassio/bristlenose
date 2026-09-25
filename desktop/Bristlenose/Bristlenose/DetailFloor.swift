@@ -108,12 +108,19 @@ enum SidebarAutoCollapse {
     static let windowMinWidth: CGFloat = 700
     static let columnIdeal: CGFloat = 220
     static let columnMax: CGFloat = 300
-    /// On macOS 26 the detail runs under the floating sidebar, so split −
-    /// detail is exactly the column (measured). A classic split view on the
-    /// 15.0 floor has a divider between them, which the inference would add;
-    /// the slack keeps a column at its maximum from reading as out of range.
-    /// Unmeasured on 15 — an allowance, not a finding.
-    static let dividerSlack: CGFloat = 2
+    /// How far above `columnMax` a genuine resting reading can land, per OS —
+    /// measured on VMs, 25 Sep 2026, at the same commit:
+    /// - macOS 15.7.3: a classic split with a real 1-pt divider, which split −
+    ///   detail counts as column (a 220 column reads 221).
+    /// - macOS 26.6.2: the DECLARED widths land 8 pt wide (ideal 220 lays out
+    ///   at 228, and presumably max 300 at 308), while a dragged divider lands
+    ///   exactly where it is put (260 → 260).
+    /// - macOS 27: exact.
+    /// The rule never uses the declared widths for its arithmetic — it uses the
+    /// measured column — so the offset moves the thresholds only by the space
+    /// the report really loses. This slack only keeps a column at its maximum
+    /// from being rejected as an animation frame.
+    static let platformSlack: CGFloat = 8
 
     /// The column width to remember from one detail-geometry reading, or
     /// `nil` to keep the last one.
@@ -128,7 +135,7 @@ enum SidebarAutoCollapse {
     static func restingColumnWidth(splitWidth: CGFloat, detailWidth: CGFloat, sidebarVisible: Bool) -> CGFloat? {
         guard sidebarVisible, splitWidth > 0 else { return nil }
         let width = splitWidth - detailWidth
-        guard width >= columnMin, width <= columnMax + dividerSlack else { return nil }
+        guard width >= columnMin, width <= columnMax + platformSlack else { return nil }
         return width
     }
 

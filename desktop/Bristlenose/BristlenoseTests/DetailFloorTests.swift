@@ -61,11 +61,12 @@ struct SidebarAutoCollapseTests {
         #expect(A.restingColumnWidth(splitWidth: 1400, detailWidth: 1100, sidebarVisible: true) == A.columnMax)
     }
 
-    @Test func allowsADividerAtTheMaximum() {
-        // A classic split view (the macOS 15 floor) puts a divider between the
-        // columns, which split − detail counts as column.
-        #expect(A.restingColumnWidth(splitWidth: 1400, detailWidth: 1098, sidebarVisible: true) == 302)
-        #expect(A.restingColumnWidth(splitWidth: 1400, detailWidth: 1097, sidebarVisible: true) == nil)
+    @Test func allowsThePlatformOffsetAtTheMaximum() {
+        // macOS 15 adds a 1-pt divider to split − detail; macOS 26 lays the
+        // declared widths out 8 pt wide (measured on VMs, 25 Sep 2026).
+        #expect(A.restingColumnWidth(splitWidth: 1400, detailWidth: 1400 - 301, sidebarVisible: true) == 301)
+        #expect(A.restingColumnWidth(splitWidth: 1400, detailWidth: 1400 - 308, sidebarVisible: true) == 308)
+        #expect(A.restingColumnWidth(splitWidth: 1400, detailWidth: 1400 - 309, sidebarVisible: true) == nil)
     }
 
     @Test func theMinimumPutsTheCellsAtTheDesignWidth() {

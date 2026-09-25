@@ -648,4 +648,16 @@ passed on 27.** Evidence: `/Volumes/Iona/tart/evidence/sidebar-fit-2f0d7fbb/`.
   ordering does not reach the app through a real threshold crossing, so the
   unanimated write (session 4's D) stays optional.
 - Classic split on 15 measured: a 1-pt divider (`detail x=221` beside a 220
-  column), inside the 2-pt `dividerSlack` allowance.
+  column).
+- **macOS 26.6.2 (Xcode 27.0), same commit: 23 of 24.** Every declared width
+  lands 8 pt wide there — ideal 220 → 228, clamped minimum 200 → 208 — while
+  a dragged divider lands exactly (260 → 260); 15 and 27 are exact. The rule
+  was never wrong on 26, because its arithmetic uses the measured column, so
+  the thresholds move only by space the report really loses. Two things did
+  change: the old 2-pt allowance would have rejected a column resting at its
+  maximum on 26 (308), so `dividerSlack` became `platformSlack` = 8, covering
+  both measured offsets; and `s21`, the one test that asserted declared widths
+  absolutely, now asserts the clamped and migrated launches differ by
+  ideal − minimum (it still fails if the restore is not clamped, 72, or the
+  migration does nothing, 0). Evidence: `traces-macos26.txt` beside the 15
+  files.

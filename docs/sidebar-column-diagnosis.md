@@ -661,3 +661,13 @@ passed on 27.** Evidence: `/Volumes/Iona/tart/evidence/sidebar-fit-2f0d7fbb/`.
   ideal − minimum (it still fails if the restore is not clamped, 72, or the
   migration does nothing, 0). Evidence: `traces-macos26.txt` beside the 15
   files.
+- **At `54b3fce1`: 24 of 24 on 15.7.3 and 24 of 24 on 26.6.2.** `s21` reads
+  offset 0 on 15 and 8 on 26. A divider probe on both guests refines the 26
+  story: the +8 is only on widths AppKit applies from the declaration (the
+  launch ideal, and the clamps at 208 and **308**); a hand-placed divider at
+  220, 260 or 300 reads exactly. On 15 the clamps are exactly 200 and 300 and
+  the 1-pt divider adds 1 to every reading. `restingColumnWidth` accepts every
+  row on both, 308 included — which the old 2-pt allowance would have
+  rejected. Evidence: `/Volumes/Iona/tart/evidence/sidebar-fit-54b3fce1/`
+  (the probe is the `vm-max-width` entry; it lives in the VM's staged copy,
+  not the repo).

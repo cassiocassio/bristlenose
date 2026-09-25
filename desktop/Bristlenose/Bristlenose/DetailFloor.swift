@@ -112,9 +112,10 @@ enum SidebarAutoCollapse {
     /// measured on VMs, 25 Sep 2026, at the same commit:
     /// - macOS 15.7.3: a classic split with a real 1-pt divider, which split −
     ///   detail counts as column (a 220 column reads 221).
-    /// - macOS 26.6.2: the DECLARED widths land 8 pt wide (ideal 220 lays out
-    ///   at 228, and presumably max 300 at 308), while a dragged divider lands
-    ///   exactly where it is put (260 → 260).
+    /// - macOS 26.6.2: AppKit adds 8 pt to every width it applies FROM the
+    ///   declaration — the ideal at launch (220 → 228) and both clamps
+    ///   (minimum 200 → 208, maximum 300 → 308) — while a divider placed by
+    ///   hand lands exactly (220, 260, 300 read as themselves).
     /// - macOS 27: exact.
     /// The rule never uses the declared widths for its arithmetic — it uses the
     /// measured column — so the offset moves the thresholds only by the space

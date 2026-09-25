@@ -90,13 +90,18 @@ BYPASS_B=BRISTLENOSE_ALLOW_STALE_SIDECAR=1
 # Keychain reads that some future test may want are entitlement-gated.
 SIGNING=()
 [ -n "${CI:-}" ] && SIGNING=(CODE_SIGNING_ALLOWED=NO)
+# Always expand it with the `+` guard, never as a bare quoted [@]. Under macOS's
+# stock /bin/bash (3.2) an EMPTY array is "unbound" to `set -u`, and the abort that
+# follows exits 0: the script stops before building anything and reports green.
+# Bash 5 does not do this, so it bites only where `env bash` finds /bin/bash, i.e.
+# a clean Mac or VM with no Homebrew bash (measured in a macOS 15 guest, 25 Sep 2026).
 
 [ "$QUIET" -eq 1 ] || echo "==> building test bundle"
 build_rc=0
 env "$BYPASS_A" "$BYPASS_B" xcodebuild build-for-testing \
     -scheme Bristlenose -configuration Debug -destination "$DEST" \
     -project "$PROJECT_DIR/Bristlenose.xcodeproj" \
-    "${SIGNING[@]}" \
+    ${SIGNING[@]+"${SIGNING[@]}"} \
     "$BYPASS_A" "$BYPASS_B" > "$BUILD_LOG" 2>&1 || build_rc=$?
 if [ "$build_rc" -ne 0 ]; then
   echo "BUILD FAILED (xcodebuild exit $build_rc)" >&2
@@ -124,7 +129,7 @@ test_rc=0
 env "$BYPASS_A" xcodebuild test-without-building \
     -scheme Bristlenose -destination "$DEST" \
     -project "$PROJECT_DIR/Bristlenose.xcodeproj" \
-    -only-testing:BristlenoseTests "${SIGNING[@]}" > "$TEST_LOG" 2>&1 || test_rc=$?
+    -only-testing:BristlenoseTests ${SIGNING[@]+"${SIGNING[@]}"} > "$TEST_LOG" 2>&1 || test_rc=$?
 
 # `grep` exits 1 when it matches nothing, so under `set -e` + `pipefail` a suite
 # with ZERO failures kills the script — exit 1, no output, indistinguishable from

@@ -399,3 +399,117 @@ it. The trace was switched off in the global domain at 18:00.
 
 Session 3's rows are in its scratchpad (`axprobe-25c3/trace.log`); session
 2's are the `s19`/`s20`/SPA-harness attachments.
+
+---
+
+## Session 2 — the live autosave value, the real-SPA rows, and an opinion (18:20, 25 Sep 2026)
+
+Adds to the converged table above what it lists as unread or attachment-only.
+Two uncommitted test files carry the evidence: `BristlenoseTests/SidebarFitSPAHarnessTests.swift`
+(the harness split view with the real report loaded from a serve on :8199)
+and `BristlenoseTests/SidebarRealWindowProbeTests.swift` (the test host's own
+real `ContentView` window, read and driven in place). MEASURED throughout.
+
+### The live value, read from inside the container (closes "the live value is unread")
+
+`p03` dumps `UserDefaults.standard` from the test host — the same bundle id
+and container as the app, which is why a shell's `defaults read
+app.bristlenose` reports the domain absent:
+
+```
+split.autosaveName       = 'main-AppWindow-1, SidebarNavigationSplitView'
+window.frameAutosaveName = 'main-AppWindow-1'
+NSSplitView Subview Frames main-AppWindow-1, SidebarNavigationSplitView
+    = ["0, 0, 260, 827, NO, NO", "260, 0, 895, 827, NO, NO"]   ← p01 had just set 260
+after setPosition(209) + 1.5 s: column w=209
+    = ["0, 0, 209, 827, NO, NO", "209, 0, 946, 827, NO, NO"]   ← rewritten at once
+```
+
+So the split view carries an `autosaveName` from creation — this is
+**AppKit's own `NSSplitView` autosave, restored synchronously when the name
+is set**, not the delayed SwiftUI bridge restore of the macOS 27 report. That
+answers session 3's timing caveat: the first geometry pass at launch reads
+the restored width because the restore has already happened by then.
+
+The same dump holds **21 further `main-AppWindow-N` keys** (N = 2…25): four
+at 210 (the live app's other windows, after Martin's drag) and **fifteen at
+148 — one per window opened while the modifier was inert, the pre-ca00e7c8
+resting width** (one stored collapsed). Any window that restores one of
+those today is clamped to 180 and re-saved at 180; that is the 180 the
+trace showed all afternoon. Whichever process last lays out a window id
+wins its key: the live app rewrote `AppWindow-1` to 209 between my two
+runs, which is why my second host launched at 209 although my first had
+left 260. `p01` now puts the column back to its launch width before it
+ends, and `p03` is read-only — a test that moves the divider in the real
+window is writing the researcher's next launch.
+
+### The real app's own window, driven in place (`p01`)
+
+AppKit holds exactly what we declared and nothing content-shaped adds to
+it: sidebar item min 180 / max 300 / holding 260 / `canCollapseFromWindowResize`
+true / preferredFraction 1.0; detail item min −1 / max −1 / holding 250; the
+column wrapper's `fittingSize` is 180 (the hosting view inside offers 10),
+so "ideal from content" is out. `setPosition(260)` held through three window
+nudges (both geometry readers → `@State` → body → split update), a toolbar
+hide and show (back at 260), and a +300/back jump — the divider does not
+spring in the app window, as it does not in the harness (`p02`, List
+sidebar, same steps, 260 throughout).
+
+### The real SPA in the harness — the rows (6 of 6 passed)
+
+Codebook, Signals, Quotes; embedded flag + token injected at document
+start, left panel pre-opened via localStorage (and tags on Quotes), the
+`panel-state` post received and used as the floor; toolbar, `.frame(minWidth:
+700, minHeight: 500)`, `ZStack` + boot cover as `ContentView` has them.
+Column · web x/w · page `innerWidth` · `.layout` l/w · classes:
+
+| step | column | web x/w | innerWidth | .layout | classes |
+|---|---|---|---|---|---|
+| start 1200 | 220 | 220/980 | 980 | 0/980 | `embedded [layout-no-right] toc-open` |
+| toolbar hide | 0 | 0/1200 | 1200 | 0/1200 | toc-open kept |
+| drag 800 | 0 | 0/800 | 800 | 0/800 | Quotes: cascade closes toc; Codebooks/Signals keep it |
+| drag 1500 | 0 | 0/1500 | 1500 | 0/1500 | toc-open on all three |
+| toolbar show | 220 | 220/1280 | 1280 | 0/1280 | — |
+| menu show | 220 | 220/1280 | 1280 | 0/1280 | — |
+| setPosition 260 | 260 | 260/1240 | 1240 | 0/1240 | — |
+
+The detail subview is `x/w = 0/1200` on 27 (it runs under the floating
+column; SwiftUI places the web view at the column's edge inside it, `webSafeLeft`
+0, `webSafeTop` 52). The auto-collapse path with the real floor (Quotes 968,
+Codebooks/Signals 608): collapse at floor + 100, expand at 1500, page fills
+at both ends. So with the real page the harness excludes the fit cascade,
+the toolbar, the boot cover, the window minimum and the `panel-state`
+plumbing. Its own cost: loading `/report/signals/` made one real
+`serve_signal_elaboration` call (claude-sonnet-4-6) through the serve; the
+telemetry line it wrote into the fixture's `.bristlenose/` was deleted.
+
+**Trap, for whoever extends it:** SwiftUI's `NavigationSplitViewController`
+does not implement `splitView(_:constrainMinCoordinate:ofSubviewAt:)`. An
+unconditional call crashed the test host (`unrecognized selector`), the
+suite then sat silent for its whole deadline, and the only record was
+`StandardOutputAndStandardError.txt` inside the `.xcresult`. Optional-protocol
+call or nothing.
+
+### Opinion
+
+1. **S4 is a decision, not a bug.** Restore-over-ideal is the platform
+   doing the right thing — a dragged width should survive relaunch. The
+   defect is that 180 pt of column is 160 pt of cells. Raise `columnMin` to
+   what the cells need (one constant; `restingColumnWidth`'s range
+   follows). No autosave-clearing migration without a stored min-version
+   marker, or it deletes the width it exists to keep (session 4's caution,
+   agreed).
+2. **Give the harness an autosave identity.** Every harness window was
+   id-less, so nothing was ever stored or restored there — which is exactly
+   why three variants could not see the one thing the app does.
+3. **Stay in SwiftUI for this round.** Everything that reached a
+   measurement was a measurement defect (A/B/C, fixed) or a platform
+   behaviour we had not modelled (the autosave). Nothing measured needs
+   `NSSplitViewController`; the "what no run included" list above is what
+   would change that. Session 4's D (no animation during a live resize) is
+   free and orthogonal.
+4. **Keep both test files as diagnostics, not gates, until the serve is
+   part of the recipe.** The SPA harness skips without :8199 and asserts the
+   fill/width invariants, so it can become a real-SPA gate later; the
+   real-window probe is a reader (with `p01`'s restore) and belongs in a
+   diagnosis run, not the default suite.

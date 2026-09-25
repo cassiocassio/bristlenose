@@ -642,7 +642,10 @@ passed on 27.** Evidence: `/Volumes/Iona/tart/evidence/sidebar-fit-2f0d7fbb/`.
   harness-only in the app. Whether the 15 ordering reaches the app through a
   real threshold crossing is what `s22a`–`s22d` measure: they mount as the
   app does and then drag, jump, flicker, and collapse-then-expand inside one
-  animation. They pass on 27; the 15 run is pending. If `s22d` fails on 15,
-  the next fix is the unanimated visibility write (session 4's D).
+  animation. **Measured at `9bcd881b` on the same 15.7.3 guest: all 24
+  scenarios pass, the six earlier failures and `s22a`–`s22d` included**
+  (`/Volumes/Iona/tart/evidence/sidebar-fit-9bcd881b/`). The late-write
+  ordering does not reach the app through a real threshold crossing, so the
+  unanimated write (session 4's D) stays optional.
 - Classic split on 15 measured: a 1-pt divider (`detail x=221` beside a 220
   column), inside the 2-pt `dividerSlack` allowance.

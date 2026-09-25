@@ -317,3 +317,25 @@ paired frame/DOM read. Then D regardless, because it is free. Then A if the
 readings say the column's width is still being misread, E if they say the
 page's is. F only after its two spikes come back, and only if A leaves a
 defect standing.
+
+### Converged across sessions 2, 3 and 4 (17:40, 25 Sep 2026)
+
+Each reached independently, then compared. Readings are from the **real
+app** (session 3's live trace, pid 91553) and the **unified log** (session
+2's two-day count) unless marked otherwise.
+
+| | Verdict | Evidence |
+|---|---|---|
+| "Invalid frame dimension" | **Closed as a lead.** Welcome pane, not the report | Static source `WelcomeHomeView.swift:435`; 320 faults in two days, ten within 1 s of every launch, one late burst after a new window opened |
+| H3 | **Closed for the shipped app** | The only layout-loop guard in two days (pid 48754, 12:02) has `SidebarFitRig.settle` → `runUntilDate:` at the bottom of its backtrace: the harness's own synchronous round. No real pid ever hit it |
+| H4 | **Refuted on this build** | Live trace during a 1197→1054→1156 resize: `thickness=180…300 sidebarW=180`, split − detail = 180 on every frame. The modifier is live |
+| S4 | **Leading explanation: the glass card, not the column** | On 26/27 the sidebar card is inset from its column; a 180 column shows ~155–165. Pending session 3's paired column/card read. If confirmed, the action is to raise `columnMin` so the card meets the floor |
+| macOS 27 column autosave (session 2's mechanism) | **No evidence here** | Container Preferences dir empty; no split/column/sidebar key in any domain. A mechanism, not a lead, unless a repro relaunch writes one |
+| Launch first pass (session 3, new) | **A real-app lead, not one of S4–S7** | First trace lines on a fresh instance: `split=1000 detail=0 … appKit=no-key-window` — the WindowGroup's `defaultSize(1000)` pass before frame restore, and `applySidebarAutoCollapse` runs on it. Quotes with both panels wished is 1008, so a report collapses the column against a width the window never has; it should return on the restore (a resize, column marked ours). Cheap guard: no decision until AppKit has a window |
+
+Still open, and what decides each: S5 (a seam drag with `AXSplitter` settable
+read, session 3; or the divider's legal range min == max from session 2's
+harness), S6 and S7 (session 2's real-SPA harness rows pairing the WKWebView
+frame with the `.layout`/`.center` rects; session 3's AX read of the same via
+`AXDOMClassList`). Session 3 is blocked on the Accessibility grant for the
+Claude app.

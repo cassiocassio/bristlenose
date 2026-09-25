@@ -141,6 +141,26 @@ and the cascade run, Quotes needs 448 (floor + minimap) and fits.
 Floors are one constant for every lens for now; Codebook, Sessions and the
 dashboard have not been measured for their own.
 
+**Measuring the column (25 Sep 2026).** The column's width is inferred as
+split − detail, and those readers report widths no column has at rest: a
+detail of 0 as it mounts (so "the column" was the whole window, and a column
+taken after that never came back), and every frame of a hide or show
+animation. `restingColumnWidth` ignores anything outside the column's
+declared 180–300 range — which only exists because the width modifier now
+sits on the sidebar column; on the split view it was inert (AppKit reported
+min 140, no max). Whether the column is ours is set where the logic writes
+the visibility, not cleared by `onChange`: a collapse and an expand inside one
+update never fire it, and a showing column stayed "ours", so a column the
+researcher hid was given back. The toolbar button animates before the binding
+flips, so the width is also re-measured the moment the column becomes visible
+(otherwise a toolbar show kept the hide's frames: 220 → 182). One residual is
+kept on purpose: the hide's in-range frames are still recorded, but only while
+the column is hidden — when the value is read only to give back a column the
+logic took, and a researcher-hidden one never is. The evidence and the scenarios are
+`SidebarFitHarnessTests`; `SidebarFitTrace` (off unless
+`BristlenoseDebugSidebarFit` is set) logs each decision beside AppKit's own
+state for a live session.
+
 ---
 
 ## TOC overlay behaviour

@@ -50,9 +50,11 @@ enum SidebarAutoCollapse {
     /// - Parameters:
     ///   - windowWidth: The split view's width.
     ///   - sidebarWidth: The projects column's width — as measured while it
-    ///     showed, or the last such measurement while it is collapsed, so the
-    ///     expand test asks whether the column would fit at the width the
-    ///     researcher last dragged it to, not at an ideal it may not have.
+    ///     showed, or the last such measurement while it is collapsed. Read by
+    ///     BOTH branches: the collapse test (window − this) while it shows, and
+    ///     the expand test, which asks whether the column would fit at the
+    ///     width the researcher last dragged it to, not at an ideal it may not
+    ///     have. See `restingColumnWidth` for what is accepted as a measurement.
     ///   - minWidth: `DetailFloor.resolve`, or `nil` to do nothing.
     ///   - sidebarVisible: Whether the column shows now.
     ///   - autoCollapsed: Whether *this* logic hid it. A column the researcher
@@ -78,5 +80,49 @@ enum SidebarAutoCollapse {
             return detailBesideSidebar >= minWidth ? .expand : .none
         }
         return .none
+    }
+
+    /// The projects column's width range, declared on the column itself
+    /// (`navigationSplitViewColumnWidth` on the sidebar view — on the split
+    /// view it is inert: AppKit reported min 140 and no maximum, measured
+    /// 25 Sep 2026 by `SidebarFitHarnessTests.s00`).
+    static let columnMin: CGFloat = 180
+    static let columnIdeal: CGFloat = 220
+    static let columnMax: CGFloat = 300
+    /// On macOS 26 the detail runs under the floating sidebar, so split −
+    /// detail is exactly the column (measured). A classic split view on the
+    /// 15.0 floor has a divider between them, which the inference would add;
+    /// the slack keeps a column at its maximum from reading as out of range.
+    /// Unmeasured on 15 — an allowance, not a finding.
+    static let dividerSlack: CGFloat = 2
+
+    /// The column width to remember from one detail-geometry reading, or
+    /// `nil` to keep the last one.
+    ///
+    /// The width is inferred as split − detail, and the two readers report
+    /// widths the column never has at rest: a detail of 0 when it mounts (so
+    /// "the column" is the whole window, and a taken column never fits again),
+    /// and every frame of a hide or show animation (1, 2, 4, 7 … pt). The
+    /// column cannot rest outside its declared range, so any reading outside
+    /// it is one of those, and is ignored rather than clamped — clamping would
+    /// store a width the column did not have either.
+    static func restingColumnWidth(splitWidth: CGFloat, detailWidth: CGFloat, sidebarVisible: Bool) -> CGFloat? {
+        guard sidebarVisible, splitWidth > 0 else { return nil }
+        let width = splitWidth - detailWidth
+        guard width >= columnMin, width <= columnMax + dividerSlack else { return nil }
+        return width
+    }
+
+    /// Whether the column is ours after acting on `action`. Set here, at the
+    /// write, rather than cleared by `onChange(of: columnVisibility)`: a
+    /// collapse and an expand inside one SwiftUI update net to no change, the
+    /// onChange never fires, and a showing column stayed marked as ours — so a
+    /// column the researcher then hid was given back on the next resize.
+    static func autoCollapsed(after action: Action, was current: Bool) -> Bool {
+        switch action {
+        case .collapse: return true
+        case .expand: return false
+        case .none: return current
+        }
     }
 }

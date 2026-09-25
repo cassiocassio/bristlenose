@@ -7,16 +7,19 @@ import Testing
 // Diagnosis harness for the projects-sidebar auto-collapse (DetailFloor.swift,
 // ContentView.splitViewCore). NOT a fix, and it changes no production code.
 //
-// It hosts a real NavigationSplitView in a real NSWindow, wired exactly the way
+// It hosts a real NavigationSplitView in a real NSWindow, wired the way
 // ContentView wires it (two onGeometryChange readers, the onChange that clears
-// `autoCollapsed`, `SidebarAutoCollapse.decide`, the column-width modifier on
-// the split view rather than on the sidebar column), then resizes the window
+// `autoCollapsed` and re-measures, `SidebarAutoCollapse.decide`, the
+// column-width modifier on the sidebar column), then resizes the window
 // and toggles the sidebar through AppKit's own `toggleSidebar:`. After each step
 // it records both what SwiftUI believes (`visibility`) and what AppKit shows
 // (`NSSplitViewItem.isCollapsed`, the sidebar subview's frame).
 //
-// Mirror of ContentView as of 25 Sep 2026 — lines 559-577 (apply), 582-640
-// (split view + readers + onChange), 672 (column width). If that wiring
+// The two rules that decide — what width to remember, and whether the column
+// is ours — are ContentView's own (`SidebarAutoCollapse.restingColumnWidth`,
+// `.autoCollapsed(after:was:)`), called here rather than copied. The wiring
+// around them (two readers, the onChange, the animated write, the column-width
+// modifier on the sidebar column) mirrors `ContentView.splitViewCore`; if that
 // changes, this harness must change with it or it is testing a ghost.
 
 // MARK: - The mirror
@@ -26,7 +29,7 @@ final class SidebarFitProbe: ObservableObject {
     @Published var visibility: NavigationSplitViewVisibility = .all
     var splitWidth: CGFloat = 0
     var detailWidth: CGFloat = 0
-    var lastSidebarWidth: CGFloat = 220
+    var lastSidebarWidth: CGFloat = SidebarAutoCollapse.columnIdeal
     var autoCollapsed = false
     /// `bridgeHandler.detailMinWidth` stand-in. 0 = the SPA has not reported.
     var webMinWidth: CGFloat = 968
@@ -35,9 +38,6 @@ final class SidebarFitProbe: ObservableObject {
     var log: [String] = []
     /// Every value `lastSidebarWidth` was ever assigned.
     var lastSidebarWidthHistory: [CGFloat] = []
-    /// Survey knobs. ContentView = animate: true, deferApply: false.
-    var animate = true
-    var deferApply = false
 
     func note(_ s: String) {
         log.append(s + "  [split=\(Int(splitWidth)) detail=\(Int(detailWidth)) last=\(Int(lastSidebarWidth)) vis=\(Self.name(visibility)) auto=\(autoCollapsed)]")
@@ -53,19 +53,12 @@ final class SidebarFitProbe: ObservableObject {
         }
     }
 
-    func apply() {
-        if deferApply {
-            DispatchQueue.main.async { self.applyNow() }
-        } else {
-            applyNow()
-        }
-    }
-
+    /// ContentView writes the visibility animated; so does this.
     private func set(_ v: NavigationSplitViewVisibility) {
-        if animate { withAnimation { visibility = v } } else { visibility = v }
+        withAnimation { visibility = v }
     }
 
-    private func applyNow() {
+    func apply() {
         let action = SidebarAutoCollapse.decide(
             windowWidth: splitWidth,
             sidebarWidth: lastSidebarWidth,
@@ -73,9 +66,9 @@ final class SidebarFitProbe: ObservableObject {
             sidebarVisible: SidebarToggle.isVisible(visibility),
             autoCollapsed: autoCollapsed
         )
+        autoCollapsed = SidebarAutoCollapse.autoCollapsed(after: action, was: autoCollapsed)
         switch action {
         case .collapse:
-            autoCollapsed = true
             note("apply → COLLAPSE")
             set(.detailOnly)
         case .expand:
@@ -87,8 +80,9 @@ final class SidebarFitProbe: ObservableObject {
     }
 }
 
-/// Where `.navigationSplitViewColumnWidth` goes. ContentView puts it on the
-/// NavigationSplitView; SeamLabView puts it on the sidebar column's content.
+/// Where `.navigationSplitViewColumnWidth` goes. ContentView and SeamLabView
+/// put it on the sidebar column; on the NavigationSplitView it is inert, which
+/// is how it shipped until 25 Sep 2026 (s00 keeps that measured).
 enum ColumnWidthPlacement { case onSplitView, onSidebarColumn }
 
 struct SidebarFitHarnessView: View {
@@ -102,12 +96,13 @@ struct SidebarFitHarnessView: View {
             Color.gray.opacity(0.2)
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
                     probe.detailWidth = width
-                    if SidebarToggle.isVisible(probe.visibility), probe.splitWidth > 0 {
-                        let sidebar = probe.splitWidth - width
-                        if sidebar > 0 {
-                            probe.lastSidebarWidth = sidebar
-                            probe.lastSidebarWidthHistory.append(sidebar)
-                        }
+                    if let sidebar = SidebarAutoCollapse.restingColumnWidth(
+                        splitWidth: probe.splitWidth,
+                        detailWidth: width,
+                        sidebarVisible: SidebarToggle.isVisible(probe.visibility)
+                    ) {
+                        probe.lastSidebarWidth = sidebar
+                        probe.lastSidebarWidthHistory.append(sidebar)
                     }
                     probe.note("detail geometry \(Int(width))")
                 }
@@ -119,11 +114,21 @@ struct SidebarFitHarnessView: View {
         }
         .onChange(of: probe.visibility) { _, now in
             if SidebarToggle.isVisible(now) { probe.autoCollapsed = false }
+            if let sidebar = SidebarAutoCollapse.restingColumnWidth(
+                splitWidth: probe.splitWidth,
+                detailWidth: probe.detailWidth,
+                sidebarVisible: SidebarToggle.isVisible(now)
+            ) {
+                probe.lastSidebarWidth = sidebar
+                probe.lastSidebarWidthHistory.append(sidebar)
+            }
             probe.note("visibility → \(SidebarFitProbe.name(now))")
         }
         switch placement {
         case .onSplitView:
-            split.navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 300)
+            split.navigationSplitViewColumnWidth(
+                min: SidebarAutoCollapse.columnMin, ideal: SidebarAutoCollapse.columnIdeal,
+                max: SidebarAutoCollapse.columnMax)
         case .onSidebarColumn:
             split
         }
@@ -133,7 +138,9 @@ struct SidebarFitHarnessView: View {
         let list = List { ForEach(0..<5, id: \.self) { Text("Project \($0)") } }
         switch placement {
         case .onSplitView: list
-        case .onSidebarColumn: list.navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 300)
+        case .onSidebarColumn: list.navigationSplitViewColumnWidth(
+            min: SidebarAutoCollapse.columnMin, ideal: SidebarAutoCollapse.columnIdeal,
+            max: SidebarAutoCollapse.columnMax)
         }
     }
 }
@@ -145,42 +152,24 @@ struct SidebarFitRig {
     let probe = SidebarFitProbe()
     let window: NSWindow
 
-    init(placement: ColumnWidthPlacement = .onSplitView, width: CGFloat = 1400, minWidth: CGFloat = 968,
-         animate: Bool = true, deferApply: Bool = false, styled: Bool = false,
-         visible: Bool = false) async {
+    /// Window style and occlusion were surveyed during the diagnosis (plain
+    /// vs unified toolbar over full-size content, floated vs background) and
+    /// changed nothing, so the rig uses the plain window.
+    init(placement: ColumnWidthPlacement = .onSidebarColumn, width: CGFloat = 1400,
+         minWidth: CGFloat = 968) async {
         probe.webMinWidth = minWidth
-        probe.animate = animate
-        probe.deferApply = deferApply
         let host = NSHostingController(rootView: SidebarFitHarnessView(probe: probe, placement: placement))
         host.sizingOptions = []
-        var mask: NSWindow.StyleMask = [.titled, .resizable, .closable, .miniaturizable]
-        // The app's WindowGroup window: unified toolbar over full-size content.
-        if styled { mask.insert(.fullSizeContentView) }
         window = NSWindow(
             contentRect: NSRect(x: 40, y: 40, width: width, height: 700),
-            styleMask: mask,
+            styleMask: [.titled, .resizable, .closable, .miniaturizable],
             backing: .buffered, defer: false)
-        if styled {
-            window.toolbar = NSToolbar(identifier: "harness")
-            window.toolbarStyle = .unified
-            window.titlebarAppearsTransparent = false
-        }
         window.isReleasedWhenClosed = false
         window.contentViewController = host
         window.setContentSize(NSSize(width: width, height: 700))
-        if visible {
-            // Unoccluded: AppKit pauses display-link animation for a window
-            // nobody can see, and the test host is never the active app.
-            window.level = .floating
-            NSApp.activate(ignoringOtherApps: true)
-            window.makeKeyAndOrderFront(nil)
-        } else {
-            window.orderFront(nil)
-        }
+        window.orderFront(nil)
         await settle()
     }
-
-    var isVisibleOnScreen: Bool { window.occlusionState.contains(.visible) }
 
     func close() { window.orderOut(nil); window.close() }
 
@@ -298,13 +287,22 @@ struct SidebarFitRig {
 
 @Suite(.serialized) @MainActor struct SidebarFitHarnessTests {
 
+    static let columnRange = SidebarAutoCollapse.columnMin...SidebarAutoCollapse.columnMax
+
     @Test func s00_whatAppKitIsTold() async {
-        // Is the column-width declaration live where ContentView puts it?
+        // The declared range is load-bearing: `restingColumnWidth` ignores any
+        // reading outside it. If the modifier went inert again the column would
+        // rest near 144, every reading would be rejected, and the collapse
+        // threshold would be off by ~76 pt with nothing else red.
         for placement in [ColumnWidthPlacement.onSplitView, .onSidebarColumn] {
             let rig = await SidebarFitRig(placement: placement)
             defer { rig.close() }
             rig.dump("s00 placement=\(placement)")
             #expect(rig.splitController != nil, "no NSSplitViewController found — harness blind")
+            if placement == .onSidebarColumn {
+                #expect(rig.sidebarItem?.minimumThickness == SidebarAutoCollapse.columnMin)
+                #expect(rig.sidebarItem?.maximumThickness == SidebarAutoCollapse.columnMax)
+            }
         }
     }
 
@@ -341,12 +339,11 @@ struct SidebarFitRig {
         await rig.resize(to: 1250)   // still fits: 1250 − 220 = 1030 ≥ 968
         rig.dump("s03a 1700 → 1250 (fits)")
         #expect(rig.appKitCollapsed == false, "column fits at 1250 and must stay")
-        // DEFECT A (mount): the detail reader reports width 0 once, while the
-        // column shows, so lastSidebarWidth = split − 0 = the WINDOW width.
-        withKnownIssue("defect A: detail geometry 0 at mount records the window width as the column's") {
-            #expect(rig.probe.lastSidebarWidthHistory.allSatisfy { $0 <= 320 },
-                    "lastSidebarWidth took a value no column had: \(rig.probe.lastSidebarWidthHistory)")
-        }
+        // Defect A (fixed 25 Sep 2026): the detail reader reports width 0 once
+        // at mount, while the column shows, so split − detail was the WINDOW
+        // width — and a column taken after that never fitted again.
+        #expect(rig.probe.lastSidebarWidthHistory.allSatisfy { SidebarFitHarnessTests.columnRange.contains($0) },
+                "lastSidebarWidth took a value no column had: \(rig.probe.lastSidebarWidthHistory)")
         await rig.resize(to: 1000)   // does not fit
         await rig.resize(to: 1700)   // fits again
         rig.dump("s03b 1250 → 1000 → 1700")
@@ -395,7 +392,6 @@ struct SidebarFitRig {
     @Test func s07_userHidesThenWindowGrows() async {
         let rig = await SidebarFitRig(width: 1400)
         defer { rig.close() }
-        rig.probe.autoCollapsed = false               // the harness launch leaves it stale (s13)
         await rig.appKitToggle()                      // researcher hides it
         await rig.resize(to: 1000)
         await rig.resize(to: 1700)
@@ -441,12 +437,6 @@ struct SidebarFitRig {
         rig.dump("s10 threshold jumps (ends at 1728)")
         #expect(rig.appKitCollapsed == false)
         #expect(rig.inAgreement)
-        // DEFECTS A + C: the mount value, then every frame of each expand
-        // animation (1, 2, 4, 7 … pt) lands in lastSidebarWidth.
-        withKnownIssue("defects A + C: lastSidebarWidth takes the window width and mid-animation widths") {
-            #expect(rig.probe.lastSidebarWidthHistory.allSatisfy { $0 >= 140 && $0 <= 320 },
-                    "lastSidebarWidth history: \(rig.probe.lastSidebarWidthHistory)")
-        }
     }
 
     @Test func s11_resizeDuringCollapseAnimation() async {
@@ -476,85 +466,11 @@ struct SidebarFitRig {
         #expect(rig.inAgreement)
     }
 
-    /// Not a pass/fail scenario: a matrix of the knobs that could decide
-    /// whether a programmatic collapse/expand made from inside the window's
-    /// geometry callback actually lands. One attachment, one row per variant.
-    /// Only the "visible pt" column is ground truth (the sidebar subview's
-    /// frame); the rest is what each layer believes.
-    @Test func survey_whatDecidesAZeroWidthReturn() async {
-        var rows = "variant | after 1000: vis/itemCollapsed/visiblePt | after 1700: vis/itemCollapsed/visiblePt\n"
-        for placement in [ColumnWidthPlacement.onSplitView, .onSidebarColumn] {
-            for animate in [true, false] {
-                for deferApply in [false, true] {
-                    for styled in [false, true] { for visible in [false, true] {
-                        let rig = await SidebarFitRig(placement: placement, width: 1400,
-                                                animate: animate, deferApply: deferApply, styled: styled,
-                                                visible: visible)
-                        await rig.resize(to: 1000)
-                        let a = "\(SidebarFitProbe.name(rig.probe.visibility))/\(rig.appKitCollapsed.map(String.init) ?? "nil")/\(Int(rig.appKitSidebarWidth ?? -1))"
-                        await rig.resize(to: 1700)
-                        let b = "\(SidebarFitProbe.name(rig.probe.visibility))/\(rig.appKitCollapsed.map(String.init) ?? "nil")/\(Int(rig.appKitSidebarWidth ?? -1))"
-                        rows += "\(placement) animate=\(animate) defer=\(deferApply) styled=\(styled) onScreen=\(rig.isVisibleOnScreen) | \(a) | \(b)\n"
-                        rig.close()
-                    } }
-                }
-            }
-        }
-        Attachment.record(rows, named: "survey.txt")
-    }
-
-    /// Control for the survey: the same animated binding write, with the
-    /// window standing still. If this also fails, animation is broken in the
-    /// test host generally and the survey proves nothing about resizes.
-    @Test func control_animatedToggleWithoutResize() async {
-        var rows = "step | vis/itemCollapsed/visiblePt | windowVisible\n"
-        for visible in [false, true] {
-        let rig = await SidebarFitRig(width: 1400, minWidth: 0, visible: visible)   // no floor: logic never acts
-        defer { rig.close() }
-        func row(_ step: String) {
-            rows += "\(visible ? "floated" : "plain") \(step) | \(SidebarFitProbe.name(rig.probe.visibility))/\(rig.appKitCollapsed.map(String.init) ?? "nil")/\(Int(rig.appKitSidebarWidth ?? -1)) | \(rig.isVisibleOnScreen)\n"
-        }
-        row("start")
-        withAnimation { rig.probe.visibility = .detailOnly }; await rig.settle(); row("animated hide")
-        withAnimation { rig.probe.visibility = .all }; await rig.settle(); row("animated show")
-        rig.probe.visibility = .detailOnly; await rig.settle(); row("plain hide")
-        rig.probe.visibility = .all; await rig.settle(); row("plain show")
-        }
-        // NOT here, because it kills the test host: an animated visibility
-        // write followed at once by a programmatic window resize. SwiftUI's
-        // NSHostingView.windowDidLayout → updateAnimatedWindowSize and the
-        // setFrame fight over the window frame until AppKit's layout-loop
-        // guard throws in -[NSWindow _postWindowNeedsUpdateConstraints]
-        // (measured 25 Sep 2026). A shipped app logs and swallows that
-        // exception — leaving whatever half-applied layout it interrupted.
-        Attachment.record(rows, named: "control.txt")
-    }
-
-    /// Does an animated hide move anything at all, and over what time? Samples
-    /// the sidebar subview's frame, its layer's presentation position, and
-    /// the split view's divider every 50 ms for 2 s.
-    @Test func control_animatedHideTimeline() async {
-        let rig = await SidebarFitRig(width: 1400, minWidth: 0, visible: true)
-        defer { rig.close() }
-        var rows = "t(ms) | vis | itemCollapsed | sidebar frame x/w | layer pres x | detail frame x/w\n"
-        func sample(_ t: Int) {
-            guard let sv = rig.splitController?.splitView, sv.arrangedSubviews.count >= 2 else { return }
-            let a = sv.arrangedSubviews[0], b = sv.arrangedSubviews[1]
-            let pres = a.layer?.presentation()?.position.x ?? a.layer?.position.x ?? -1
-            rows += "\(t) | \(SidebarFitProbe.name(rig.probe.visibility)) | \(rig.appKitCollapsed.map(String.init) ?? "nil") | \(Int(a.frame.minX))/\(Int(a.frame.width)) | \(Int(pres)) | \(Int(b.frame.minX))/\(Int(b.frame.width))\n"
-        }
-        sample(-1)
-        withAnimation { rig.probe.visibility = .detailOnly }
-        for i in 0..<40 { await rig.settle(0.05); sample(i * 50) }
-        rows += "--- animated show\n"
-        withAnimation { rig.probe.visibility = .all }
-        for i in 0..<40 { await rig.settle(0.05); sample(i * 50) }
-        Attachment.record(rows, named: "timeline.txt")
-    }
-
     // MARK: Isolating the two state defects s07 exposed
 
-    /// Invariant: a showing column is never marked as ours. At launch the
+    /// Invariant: a showing column is never marked as ours. The only scenario
+    /// that reproduced defect B — a same-turn pair of window frames did not.
+    /// At launch the
     /// split's first geometry pass is 1 pt wide, so the logic collapses and
     /// then expands inside one update — `onChange(of: visibility)` sees
     /// .all → .all and never clears the flag.
@@ -562,24 +478,7 @@ struct SidebarFitRig {
         let rig = await SidebarFitRig(width: 1400)
         defer { rig.close() }
         rig.dump("s13 launch 1400")
-        withKnownIssue("defect B: collapse+expand inside one update never clears the ours-flag") {
-            #expect(!(SidebarToggle.isVisible(rig.probe.visibility) && rig.probe.autoCollapsed),
-                    "column is showing but still marked auto-collapsed")
-        }
-    }
-
-    /// Same invariant, reached the way the shipped app can reach it: two
-    /// window frames inside one run-loop turn (a zoom or full-screen exit
-    /// can deliver an intermediate frame), collapse then expand, one update.
-    @Test func s14_ownershipFlagClearedWhenShowing_sameTurnPair() async {
-        let rig = await SidebarFitRig(width: 1400)
-        defer { rig.close() }
-        rig.probe.autoCollapsed = false          // start clean, whatever launch did
-        var f = rig.window.frame
-        f.size.width = 1000; rig.window.setFrame(f, display: true, animate: false)
-        f.size.width = 1400; rig.window.setFrame(f, display: true, animate: false)
-        await rig.settle()
-        rig.dump("s14 1400 → 1000 → 1400 in one turn")
+        // Defect B (fixed 25 Sep 2026).
         #expect(!(SidebarToggle.isVisible(rig.probe.visibility) && rig.probe.autoCollapsed),
                 "column is showing but still marked auto-collapsed")
     }
@@ -595,7 +494,19 @@ struct SidebarFitRig {
         await rig.appKitToggle()
         rig.dump("s15 toolbar hide at 1400")
         #expect(rig.appKitCollapsed == true)
-        withKnownIssue("defect C: the toolbar hide's animation frames are recorded as the column width") {
+        // Residual of defect C, deliberately left: the toolbar's hide animation
+        // runs before the binding flips, and the frames that fall inside the
+        // column's range are still recorded — measured 220 → 182. It lives
+        // only while the column is hidden, when the value is read only to give
+        // back a column WE took (a researcher-hidden one never is — s07); the
+        // show re-measures at rest (s18). Fixing the hide itself would need a
+        // signal for "the column is animating", which nothing here has.
+        // Note what this does NOT supervise: withKnownIssue absorbs the failure
+        // however far the value drifts, so a regression to 90 would read green
+        // here too. restingColumnWidth's range is what bounds it (DetailFloorTests).
+        // Intermittent: whether an in-range frame is sampled is display-link timing.
+        withKnownIssue("residual C: toolbar hide records in-range animation frames (unconsulted)",
+                       isIntermittent: true) {
             #expect(abs(rig.probe.lastSidebarWidth - before) <= 2,
                     "lastSidebarWidth \(before) → \(rig.probe.lastSidebarWidth); history \(rig.probe.lastSidebarWidthHistory)")
         }
@@ -624,9 +535,26 @@ struct SidebarFitRig {
         rig.probe.lastSidebarWidthHistory.removeAll()
         await rig.resize(to: 1400)
         rig.dump("s17 expand 1000 → 1400")
-        let transient = rig.probe.lastSidebarWidthHistory.filter { $0 < 140 }
-        withKnownIssue("defect C: the expand animation's frames are recorded as the column width") {
-            #expect(transient.isEmpty, "recorded mid-animation widths: \(transient)")
+        let transient = rig.probe.lastSidebarWidthHistory.filter { !SidebarFitHarnessTests.columnRange.contains($0) }
+        // Defect C on the expand path (fixed 25 Sep 2026).
+        #expect(transient.isEmpty, "recorded mid-animation widths: \(transient)")
+    }
+
+    /// The residual's other half: after a toolbar hide (which records in-range
+    /// animation frames), does a toolbar show re-record the column at rest?
+    /// `lastSidebarWidth` is read in the collapse branch too, so a value that
+    /// survives the show would misjudge the next collapse.
+    @Test func s18_toolbarShowReRecordsTheColumnAtRest() async {
+        let rig = await SidebarFitRig(width: 1400, minWidth: 0)
+        defer { rig.close() }
+        await rig.appKitToggle()   // hide
+        let afterHide = rig.probe.lastSidebarWidth
+        await rig.appKitToggle()   // show
+        rig.dump("s18 toolbar hide → show at 1400 (after hide: \(Int(afterHide)))")
+        #expect(rig.appKitCollapsed == false)
+        if let real = rig.appKitSidebarWidth {
+            #expect(abs(rig.probe.lastSidebarWidth - real) <= 2,
+                    "after hide \(afterHide), after show \(rig.probe.lastSidebarWidth), real column \(real)")
         }
     }
 }

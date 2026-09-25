@@ -228,7 +228,7 @@ struct ContentView: View {
     /// as ours, so a column the researcher hid is never given back unasked.
     @State private var splitWidth: CGFloat = 0
     @State private var detailWidth: CGFloat = 0
-    @State private var lastSidebarWidth: CGFloat = 220
+    @State private var lastSidebarWidth: CGFloat = SidebarAutoCollapse.columnIdeal
     @State private var sidebarAutoCollapsed = false
     @State private var showingAIConsent = false
     @State private var aiConsentReviewMode = false
@@ -576,9 +576,9 @@ struct ContentView: View {
             floor: DetailFloor.resolve(webMinWidth: bridgeHandler.detailMinWidth,
                                        showingReport: detailPaneKind == .report),
             visibility: columnVisibility, autoCollapsed: sidebarAutoCollapsed) }
+        sidebarAutoCollapsed = SidebarAutoCollapse.autoCollapsed(after: action, was: sidebarAutoCollapsed)
         switch action {
         case .collapse:
-            sidebarAutoCollapsed = true
             withAnimation { columnVisibility = .detailOnly }
         case .expand:
             withAnimation { columnVisibility = .all }
@@ -589,7 +589,15 @@ struct ContentView: View {
 
     private var splitViewCore: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
+            // On the column, not the split view: there it is inert (AppKit
+            // reported min 140, no max). The range is also what
+            // `restingColumnWidth` trusts.
             sidebar
+                .navigationSplitViewColumnWidth(
+                    min: SidebarAutoCollapse.columnMin,
+                    ideal: SidebarAutoCollapse.columnIdeal,
+                    max: SidebarAutoCollapse.columnMax
+                )
         } detail: {
             detail
                 .toolbar {
@@ -609,12 +617,17 @@ struct ContentView: View {
                 // showing this yields its width (window − detail), which is
                 // what the auto-collapse decision uses for the expand test —
                 // see `SidebarAutoCollapse`. Not updated while the column is
-                // hidden, so the value survives a collapse for the way back.
+                // hidden, so the value survives a collapse for the way back;
+                // readings no resting column could give (mount, animation
+                // frames) are ignored — `restingColumnWidth`.
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
                     detailWidth = width
-                    if SidebarToggle.isVisible(columnVisibility), splitWidth > 0 {
-                        let sidebar = splitWidth - width
-                        if sidebar > 0 { lastSidebarWidth = sidebar }
+                    if let sidebar = SidebarAutoCollapse.restingColumnWidth(
+                        splitWidth: splitWidth,
+                        detailWidth: width,
+                        sidebarVisible: SidebarToggle.isVisible(columnVisibility)
+                    ) {
+                        lastSidebarWidth = sidebar
                     }
                     SidebarFitTrace.note(
                         "detail geometry", split: splitWidth, detail: detailWidth, lastSidebar: lastSidebarWidth,
@@ -644,6 +657,9 @@ struct ContentView: View {
         // with the width it is given. A column the researcher shows in a
         // narrow window therefore stays shown until the next resize, as in
         // Mail. Why not a declared detail minimum: see `DetailFloor`.
+        // `SidebarFitHarnessTests` mirrors this wiring (both readers, the
+        // onChange, the animated writes) in a real split view — change one,
+        // change the other.
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
             splitWidth = width
             applySidebarAutoCollapse()
@@ -656,6 +672,17 @@ struct ContentView: View {
         .onChange(of: columnVisibility) { _, now in
             // Shown again — by us or by the researcher — is no longer ours.
             if SidebarToggle.isVisible(now) { sidebarAutoCollapsed = false }
+            // And measure it now. The toolbar button animates the column open
+            // before this binding flips, so every frame arrived while it read
+            // hidden and was skipped — the column would otherwise keep a width
+            // from the frames of its last hide (220 → 182, measured).
+            if let sidebar = SidebarAutoCollapse.restingColumnWidth(
+                splitWidth: splitWidth,
+                detailWidth: detailWidth,
+                sidebarVisible: SidebarToggle.isVisible(now)
+            ) {
+                lastSidebarWidth = sidebar
+            }
             SidebarFitTrace.note(
                 "visibility changed", split: splitWidth, detail: detailWidth, lastSidebar: lastSidebarWidth,
                 floor: DetailFloor.resolve(webMinWidth: bridgeHandler.detailMinWidth,
@@ -689,7 +716,6 @@ struct ContentView: View {
             }
             #endif
         }
-        .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 300)
         .preferredColorScheme(colorScheme)
         // Report chrome follows *this* window's key state. Was two
         // `NSWindow.did{Become,Resign}Key` observers with a TODO on them: they

@@ -126,12 +126,16 @@ is stale.
 
 ## How to capture
 
+Pass `-BristlenoseDebugSidebarFit YES` as a launch argument (Xcode ▸ Edit
+Scheme ▸ Run ▸ Arguments), then:
+
 ```bash
-defaults write app.bristlenose BristlenoseDebugSidebarFit -bool YES
 /usr/bin/log stream --predicate 'subsystem == "app.bristlenose" AND category == "sidebar-fit"'
 ```
 
-(or `-BristlenoseDebugSidebarFit YES` as a launch argument). Each line pairs
+**Not `defaults write`**: the app is sandboxed, and writing its preferences
+from Terminal fails with *"Could not write domain …/Containers/app.bristlenose/…"*
+(measured 25 Sep 2026). Each line pairs
 SwiftUI's belief (`split detail last floor vis auto`) with AppKit's layout
 (`itemCollapsed sidebarW thickness webX webW webSafeLeft`). Reproduce, note
 the time, keep the stream. For the web half: Web Inspector on the report,

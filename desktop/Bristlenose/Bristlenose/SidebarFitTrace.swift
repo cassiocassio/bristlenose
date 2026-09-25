@@ -10,12 +10,13 @@ import WebKit
 /// Off unless asked for, because the geometry readers fire on every frame of a
 /// live resize:
 ///
-///     defaults write app.bristlenose BristlenoseDebugSidebarFit -bool YES
+///     -BristlenoseDebugSidebarFit YES      (launch argument, in the scheme)
 ///     /usr/bin/log stream --predicate 'subsystem == "app.bristlenose" AND category == "sidebar-fit"'
 ///
-/// (or pass `-BristlenoseDebugSidebarFit YES` as a launch argument in the
-/// scheme). `.notice` so the default `log stream` shows it; `/usr/bin/log`
-/// because zsh's `log` builtin shadows it.
+/// Not `defaults write`: the app is sandboxed and Terminal cannot write its
+/// container's preferences ("Could not write domain", measured). `.notice` so
+/// the default `log stream` shows it; `/usr/bin/log` because zsh's `log`
+/// builtin shadows it.
 ///
 /// Each line pairs what the SwiftUI side believes (split/detail/last widths,
 /// `columnVisibility`, the ours-flag, the floor) with what AppKit has actually

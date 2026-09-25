@@ -180,6 +180,14 @@ checksum_sidecar "$SHA64" "Bristlenose-0.28.0.dmg" > "$_td/s.sha256"
     || bad "shasum -c REJECTS our sidecar — the verify instruction would not work"
 rm -rf "$_td"
 
+# ── latest.json ──────────────────────────────────────────────────────────────
+# The homepage reads the version beside its download button from this file. It
+# must parse, and carry exactly the version and file the redirect names.
+out="$(latest_json "0.31.3" "Bristlenose-0.31.3.dmg")"
+printf '%s' "$out" | python3 -c 'import json, sys; d = json.load(sys.stdin); assert d == {"version": "0.31.3", "file": "Bristlenose-0.31.3.dmg"}, d' 2>/dev/null \
+    && ok "latest.json parses, with the version and file the redirect names" \
+    || bad "latest.json is not the JSON the homepage reads: $out"
+
 echo
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

@@ -283,6 +283,12 @@ The redirect lives in `/dmg/.htaccess`, and that file is **written by
 don't hunt for it in the website repo; the uploader owns it (and the documented
 rollback is editing its `Redirect` line to point at a previous versioned file).
 
+Beside it, the uploader writes **`/dmg/latest.json`** — `{"version": …, "file": …}`,
+from the `latest_json` helper — and renames it into place in the same ssh call as
+the `.htaccess`. The homepage reads it for the version shown under its download
+button, keeping the typed version only as the fallback (added 25 Sep 2026: a typed
+number goes stale at every release). A rollback therefore edits **both** files.
+
 The redirect **takes precedence over a real file of the same name**. mod_alias
 resolves the URL before the filesystem is consulted, so the pre-redirect
 `Bristlenose.dmg` still sitting in that directory is unreachable — which is the

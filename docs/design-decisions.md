@@ -639,8 +639,10 @@ Decided 20 Sep 2026 (`5bdabf8d`). Native owns one fact, the window width, and
 one decision, the projects column: it collapses on window shrink when the
 report would fall below the width its open panels need, and comes back on
 growth — the Mail behaviour, done explicitly rather than by declaring a
-column minimum (which `NSSplitView` honours by overflowing the window; see
-`desktop/CLAUDE.md` § Gotchas). A panel opening, a lens change and the column
+detail-column minimum (which `NSSplitView` honours by overflowing the window; see
+`desktop/CLAUDE.md` § Gotchas). The projects column itself declares 200–300,
+which a 700-pt window always holds, and the rule ignores any split narrower
+than that window (a mount reading, 25 Sep 2026). A panel opening, a lens change and the column
 toggling are **not** triggers: the web copes with the width it is given, closing
 Contents, then Tags, then the minimap, with the panel just opened exempt so a
 press never opens nothing. If even that leaves the centre under its floor, the

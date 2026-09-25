@@ -1306,7 +1306,7 @@ forcing the toggle back onto the page, and it stops the lens being
 master&ndash;detail at exactly the moment you are using the master list.
 
 **Where the rail does cost width:** below a window of **220 + 320 + 832 = 1372pt**
-the content column starts being squeezed (1332 at the sidebar's 180 minimum). A
+the content column starts being squeezed (1352 at the sidebar's 200 minimum — 1332 at the 180 it was until 25 Sep 2026). A
 windowed-small app is a real case — and it is already handled, by the user. D9
 makes the rail closable and next/prev covers traversal once it is shut. **Closing
 it is the researcher's call, not something the page does to them.**

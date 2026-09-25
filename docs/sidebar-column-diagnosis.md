@@ -1,10 +1,50 @@
 ---
-status: s4-fixed
+status: partial
 date: 25 Sep 2026
+last-trued: 2026-09-25
+trued-against: HEAD@main on 2026-09-25
 area: desktop — projects column (NavigationSplitView) + report web view
 ---
 
+> **Truing status:** Partial (trued 2026-09-25). S4 is explained and fixed;
+> S5–S7 were reproduced by nobody and stay open as "note the preceding step,
+> trace on". The body is a dated investigation record: values inside dated
+> sections (the 180 minimum, the 2-pt slack) describe their moment. Read
+> "Status at HEAD" first, then § Agreed solution and the sections after it.
+
+## Changelog
+
+- _2026-09-25_ — trued up: added a status-at-HEAD block; marked the original
+  brief, "For the confirming sessions" and "The version risk is real and
+  unmeasured" as superseded in place; fixed a table row whose evidence cell
+  had slid onto the next row; corrected a trace command that cannot reach the
+  sandbox; recorded that the AX driver landed and the test target is at 15.0
+  in-tree. Anchors: `DetailFloor.swift` (`columnMin`, `windowMinWidth`,
+  `platformSlack`), `SidebarAutosaveMigration.swift`, commits "the projects
+  column opens at its ideal again", "the column rule ignores a split narrower
+  than any window", "the column's accepted range covers macOS 26's 8-pt
+  offset", "the swift suite now runs on the oldest macos we ship to", "an AX
+  driver for the shipped app".
+
 # The projects column and the report beside it — diagnosis
+
+## Status at HEAD (25 Sep 2026)
+
+- **S4 fixed.** The column opened at a *restored* width, not its ideal, and
+  a 180 column shows 160-pt rows. `SidebarAutoCollapse.columnMin` is 200, and
+  `SidebarAutosaveMigration` drops stored widths below it at launch.
+- **Mount guard.** `decide` ignores a split narrower than the window's own
+  minimum (`windowMinWidth`, 700) — the 1-pt mount reading that stranded the
+  column on macOS 15.
+- **Per-OS slack.** `restingColumnWidth` accepts up to `columnMax +
+  platformSlack` (8): macOS 15 adds a 1-pt divider, 26 lays declared widths out
+  8 pt wide.
+- **Measured on three OSes.** `SidebarFitHarnessTests` passes 24 of 24 on
+  macOS 15.7.3, 26.6.2 and 27 (§ macOS 15, measured).
+- **Open:** S5–S7, not reproduced by anyone. If seen, note the step that
+  preceded it with the trace on (§ Verdict, "What no run included").
+
+**Original brief (16:00, 25 Sep 2026), superseded by the status above.**
 
 A brief for other sessions: **confirm or refute this diagnosis, and propose
 fixes against it.** Nothing below the "Open" heading has been fixed. The
@@ -42,7 +82,8 @@ a test that fails if it returns.
 | — | `.navigationSplitViewColumnWidth(180/220/300)` sat on the split view, where it is **inert** (AppKit: min 140, no max) | s00 |
 
 Fix: modifier onto the sidebar column; `restingColumnWidth` ignores readings
-outside 180–300 (+2 pt divider slack); the ours-flag is set at the write
+outside 180–300 (+2 pt divider slack) — *now 200–300 + 8 pt `platformSlack`,
+see § macOS 15, measured*; the ours-flag is set at the write
 (`autoCollapsed(after:was:)`); the width is re-measured when the column
 becomes visible. Residual kept on purpose (s15): a toolbar *hide* still records
 in-range frames, read only while hidden, when the column is never ours.
@@ -54,6 +95,9 @@ queue and every SwiftUI animation freezes at frame 0 (`desktop/CLAUDE.md`).
 The harness is async now; those results did not survive it.
 
 ## Open — reported by Martin after ca00e7c8
+
+> **Status at HEAD (2026-09-25):** S4 explained and fixed (§ Implemented);
+> S5–S7 not reproduced (§ Verdict, § Agreed solution).
 
 Unknown whether these are new with ca00e7c8 or were always there.
 
@@ -154,6 +198,9 @@ the time, keep the stream. For the web half: Web Inspector on the report,
 
 ## For the confirming sessions
 
+> **Superseded by § Agreed solution as of 2026-09-25.** Answered; retained
+> as the brief the sessions worked from.
+
 1. Reproduce S4–S7 on a report, trace on. Which of H1–H4 do the readings pick?
 2. Run the same steps on `2d4a8baa` — do S4/S5 predate ca00e7c8?
 3. Propose fixes against the hypothesis the readings pick, not the one that
@@ -178,6 +225,10 @@ feed the window's minimum, which is the very overflow SwiftUI's two floors
 created on 20 Sep. The sidebar's rows already moved to AppKit
 (`ProjectSidebarOutline`) for the same class of reason; the split view
 around them is the same argument one level up.
+
+> **Superseded by § macOS 15, measured as of 2026-09-25.** Measured on
+> 15.7.3 and 26.6.2 VMs; the test target's floor is 15.0 in-tree ("the swift
+> suite now runs on the oldest macos we ship to"). Retained as written.
 
 **The version risk is real and unmeasured.** macOS 26 floats the sidebar over
 a full-width detail (split − detail is exactly the column — measured); a
@@ -347,9 +398,9 @@ app** (session 3's live trace, pid 91553) and the **unified log** (session
 | S5 | **Not reproduced on the real app** (session 3, AX) | A real mouse drag of the seam on Signals works and clamps at exactly 180 — which also refutes H4 by drag, not only by thickness |
 | S6 on Signals, one path | **Did not reproduce** (session 3, AX, 91553) | Toolbar hide at 900 wide: web area x=0 w=900, TOC entry at 13, `.center` at 240 w=660, splitter −1 ↔ 180 across hide/show. `webSafeLeft` 5–8 only during the show animation. Floor on Signals is 608 (368 + 240, no right column). Codebooks and the 1400→760 range still to run |
 | S4 | **Accounted for (17:50): a restored width, shown as a ~160 pt card.** Confirmed cross-process by session 2 | The test host — same bundle id, same container — opened its own real `ContentView` window at column w=209, the exact width session 3 saw the live app dragged to at 16:30:08. Two processes, one number, no code of ours carrying it: the split view **restores the saved column width, and the 220 ideal applies only when nothing is stored**. History of the 180: the pre-fix split view rested at 144 (inert placement, s19); ca00e7c8 raised the min to 180; the restored 144 clamped up to 180 and was re-saved, so every launch read 180 until Martin dragged it. AppKit was told exactly what we declared (sidebar min 180 / max 300 / holding 260, detail −1 / −1 / 250, `preferredFraction` 1.0); the column wrapper's `fittingSize` is 180, so "ideal from content" is out; a `setPosition(260)` survived three window nudges, a toolbar hide/show and a +300/back jump — the divider does not spring. **This will recur for any user whose stored frame predates a min change.** Fix shapes: raise `columnMin` to what the card needs and accept restore-over-ideal (one line); or clear/override the `NSSplitView Subview Frames main-AppWindow-1, SidebarNavigationSplitView` entry once at a min change (a migration); or both |
-| (S4, earlier reading) | superseded by the row above |
+| (S4, earlier reading) | superseded by the row above | On 26/27 the sidebar card is inset from its column; a 180 column shows ~155–165. Pending session 3's paired column/card read. If confirmed, the action is to raise `columnMin` so the card meets the floor — *done: AX read 160-pt rows in a 180 column; `columnMin` 200 (§ Implemented)* |
 | Timing caveat on the restore (session 3) | Open, does not change the verdict | 91553's first geometry pass at launch (16:10:55.306, five lines in 1 ms) already read the column at 180, so if the restore lands ~0.5 s late the 180 predates it. But `NSSplitView` applies autosaved frames synchronously on `viewDidMoveToWindow`, so timing alone cannot settle when the restore lands; the cross-process 209 settles that it does |
-| Live resize on Codebooks (session 3, AX, real CGEvent edge drag 1155→700→1155, TOC wish 824) | **The collapse logic works as designed on the real app** | 83 live frames; `decide → collapse` at 1013 and `decide → expand` at 1044, both mid-drag and correct; column back at 209 (its pre-hide width); nav and web area in step. No layout-loop guard and no negative-frame fault in the log through it, so H3's mechanism did not fire under a real live resize either. ⌥⌘L hides Contents with `.center` spanning the full web width (946 at x=209): **S6's 141 pt margins are not a `max-width` on `.center`**. Remaining cell: column hidden + Contents hidden, nav presence verified per step | On 26/27 the sidebar card is inset from its column; a 180 column shows ~155–165. Pending session 3's paired column/card read. If confirmed, the action is to raise `columnMin` so the card meets the floor |
+| Live resize on Codebooks (session 3, AX, real CGEvent edge drag 1155→700→1155, TOC wish 824) | **The collapse logic works as designed on the real app** | 83 live frames; `decide → collapse` at 1013 and `decide → expand` at 1044, both mid-drag and correct; column back at 209 (its pre-hide width); nav and web area in step. No layout-loop guard and no negative-frame fault in the log through it, so H3's mechanism did not fire under a real live resize either. ⌥⌘L hides Contents with `.center` spanning the full web width (946 at x=209): **S6's 141 pt margins are not a `max-width` on `.center`**. Remaining cell: column hidden + Contents hidden, nav presence verified per step |
 | macOS 27 column autosave (session 2's mechanism) | **Present, and the live value is now read — see § Session 2 (18:20).** It is AppKit's own `NSSplitView` autosave, named at creation and restored synchronously, not the delayed bridge restore of the macOS 27 report; fifteen stored windows at the pre-fix 148 are the 180 of the afternoon. This row corrects an earlier "no keys anywhere" | `~/Library/Preferences/app.bristlenose.plist` (the pre-sandbox user domain, last written 14 Aug) holds `NSSplitView Subview Frames main-AppWindow-1, SidebarNavigationSplitView` = sidebar `227.5 × 758`, second subview `1162 × 758` (the full window: on 27 the detail subview runs under the floating column). So SwiftUI's split view autosaves under the WindowGroup id, and restores it. The **sandboxed** Debug build reads its container domain, which is empty on disk and invisible from outside (`defaults read app.bristlenose` → "not found", because `defaults` redirects a sandboxed id to the container). The value the running app restores can only be read from inside it: Xcode's lldb console on the attached process, `po UserDefaults.standard.dictionaryRepresentation().filter { $0.key.hasPrefix("NSSplitView") }`. Decides "why 180, never the 220 ideal": a saved 180 frame is restored over the ideal on every launch, which no harness (fresh window, no id) can see |
 | Launch first pass (session 3, new) | **A real-app lead, not one of S4–S7** | First trace lines on a fresh instance: `split=1000 detail=0 … appKit=no-key-window` — the WindowGroup's `defaultSize(1000)` pass before frame restore, and `applySidebarAutoCollapse` runs on it. Quotes with both panels wished is 1008, so a report collapses the column against a width the window never has; it should return on the restore (a resize, column marked ours). Cheap guard: no decision until AppKit has a window |
 
@@ -393,9 +444,10 @@ project switch while the column was hidden; the Welcome→report transition
 with the column already hidden (the floor goes nil→N with `auto=false`); a
 hide or show during the SPA's own panel animation; macOS 15 and 26. If S6
 or S7 is seen again, note which of these it followed — that is the missing
-ingredient, and the trace (`defaults write app.bristlenose
-BristlenoseDebugSidebarFit -bool YES`, or the launch argument) will catch
-it. The trace was switched off in the global domain at 18:00.
+ingredient, and the trace (`defaults write NSGlobalDomain
+BristlenoseDebugSidebarFit -bool YES`, or the launch argument — the app's own
+domain is sandboxed, so `defaults write app.bristlenose` does not reach it)
+will catch it. The trace was switched off in the global domain at 18:00.
 
 Session 3's rows are in its scratchpad (`axprobe-25c3/trace.log`); session
 2's are the `s19`/`s20`/SPA-harness attachments.
@@ -405,7 +457,9 @@ Session 3's rows are in its scratchpad (`axprobe-25c3/trace.log`); session
 ## Session 2 — the live autosave value, the real-SPA rows, and an opinion (18:20, 25 Sep 2026)
 
 Adds to the converged table above what it lists as unread or attachment-only.
-Two uncommitted test files carry the evidence: `BristlenoseTests/SidebarFitSPAHarnessTests.swift`
+Two test files carry the evidence (uncommitted when written; committed and
+gated on `BRISTLENOSE_SIDEBAR_DIAGNOSIS=1` since "sidebar column: the agreed
+solution"): `BristlenoseTests/SidebarFitSPAHarnessTests.swift`
 (the harness split view with the real report loaded from a serve on :8199)
 and `BristlenoseTests/SidebarRealWindowProbeTests.swift` (the test host's own
 real `ContentView` window, read and driven in place). MEASURED throughout.
@@ -590,8 +644,8 @@ hand-over: the four sessions are archived after it.
   neither runs in the default suite.
 - Session 3: the AX driver (`bndrive.swift` + `snap.sh`: pid-targeted, AX
   dump with WebKit's `AXDOMClassList`, window resize/move, toolbar and menu
-  presses, CGEvent seam and edge drags), to land in `desktop/scripts/ax-drive/`
-  with the three trace notes (NSGlobalDomain lights the trace without a
+  presses, CGEvent seam and edge drags) — **landed** in `desktop/scripts/ax-drive/`,
+  its README carrying the three trace notes (NSGlobalDomain lights the trace without a
   relaunch; test hosts share the flag and category, filter on pid; the
   Accessibility grant covers every Claude session, one driver per instance).
 - Session 4: the approaches ladder in its section above.
@@ -625,7 +679,8 @@ hand-over: the four sessions are archived after it.
 ## macOS 15, measured (25 Sep 2026, late evening)
 
 The "version risk is real and unmeasured" line above is now measured. A
-macOS 15.7.3 VM (tart, test target floor lowered in a staged copy only) ran
+macOS 15.7.3 VM (tart, test target floor lowered in a staged copy only — in-tree
+since "the swift suite now runs on the oldest macos we ship to") ran
 `SidebarFitHarnessTests` at `2f0d7fbb`: **6 of 20 failed on 15, 20 of 20
 passed on 27.** Evidence: `/Volumes/Iona/tart/evidence/sidebar-fit-2f0d7fbb/`.
 

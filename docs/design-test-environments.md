@@ -157,8 +157,9 @@ because they carry machine paths. What matters here:
   it at 1024×768 points, which clamps any test that opens a wide window.
 - **Measured findings on the first day:** on 15 a transient 1-pt split reading at mount
   collapsed the projects column and it stayed hidden (fixed by the window-minimum guard);
-  on 26.6 AppKit reports the sidebar column 8 pt wider than declared, where 15 and 27
-  match it. And `test-swift.sh` exited 0 without building under stock `/bin/bash` 3.2,
+  on 26.6 AppKit lays the sidebar column's declared widths out 8 pt wide (ideal
+  220 → 228, clamps 208 and 308) while a hand-placed divider lands exactly, where 15
+  and 27 match the declaration. And `test-swift.sh` exited 0 without building under stock `/bin/bash` 3.2,
   which only a clean machine could show.
 
 ## 4. The instrument for the seam question

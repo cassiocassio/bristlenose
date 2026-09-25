@@ -1,3 +1,23 @@
+---
+status: current
+last-trued: 2026-09-25
+trued-against: HEAD@main on 2026-09-25
+---
+
+> **Truing status:** Current with targeted edits (trued 2026-09-25).
+> § Fit to width was brought up to the projects-column fixes and the macOS
+> 15/26 measurements; the rest of the body was not re-audited in this pass.
+
+## Changelog
+
+- _2026-09-25_ — trued up § Fit to width: retitled the column-minimum
+  paragraph to name the detail column; recorded the shared window minimum and
+  the mount guard; the accepted range now names `platformSlack`; the
+  restored-width paragraph gained the unparseable rule, the gated probes, the
+  macOS 26 figures and the three-OS verification. Anchors: `DetailFloor.swift`,
+  `SidebarAutosaveMigration.swift`, `docs/sidebar-column-diagnosis.md`
+  § macOS 15, measured.
+
 # Sidebar Layout & Responsive Playground — Design & Implementation Notes
 
 **Status:** Shipped on `main`.
@@ -117,7 +137,8 @@ Mail. The figure is the wish, not the fit, because a figure that fell as
 panels auto-closed would pop the column back into the space the cascade had
 just made.
 
-**Why nothing declares a column minimum — measured.** The first cut declared
+**Why the detail column declares no minimum — measured.** (The projects
+column does declare one — 200, below — which cannot overflow a 700 window.) The first cut declared
 the figure on the detail column with `navigationSplitViewColumnWidth(min:)`.
 `NSSplitView` never clamps: given minimums that add up to more than its
 width, it lays the columns out at those minimums and lets the total run off
@@ -134,8 +155,11 @@ Overlay is not part of this. It is a browser-only idiom (rail hover-peek),
 unreachable in the app since the rails went, and was considered and rejected
 as the Mac answer.
 
-**Window minimum.** `.frame(minWidth: 700)` on `ContentView` under
-`.windowResizability(.contentMinSize)`, unchanged. With the column collapsed
+**Window minimum.** `.frame(minWidth: SidebarAutoCollapse.windowMinWidth)`
+(700) on `ContentView` under `.windowResizability(.contentMinSize)` — one
+constant since 25 Sep 2026, because `decide` also reads it: a split narrower
+than any window is a mount reading (SwiftUI reports 1 pt before layout), and
+deciding on it stranded the column hidden on macOS 15.7.3. With the column collapsed
 and the cascade run, Quotes needs 448 (floor + minimap) and fits.
 
 Floors are one constant for every lens for now; Codebook, Sessions and the
@@ -146,7 +170,9 @@ split − detail, and those readers report widths no column has at rest: a
 detail of 0 as it mounts (so "the column" was the whole window, and a column
 taken after that never came back), and every frame of a hide or show
 animation. `restingColumnWidth` ignores anything outside the column's
-declared 200–300 range (180 until 25 Sep 2026) — which only exists because the width modifier now
+declared 200–300 range (180 until 25 Sep 2026), plus an 8-pt `platformSlack`
+above the maximum (macOS 15's 1-pt divider; macOS 26 lays declared widths out
+8 pt wide, so its maximum reads 308) — a range which only exists because the width modifier now
 sits on the sidebar column; on the split view it was inert (AppKit reported
 min 140, no max). Whether the column is ours is set where the logic writes
 the visibility, not cleared by `onChange`: a collapse and an expand inside one
@@ -173,9 +199,14 @@ because the rows sit 10 pt inside the column on each side and the design's
 from `applicationWillFinishLaunching`, before any window exists, removing only
 stored widths below the minimum: those are the widths AppKit would clamp, so
 the rule needs no version marker and never touches a width the researcher
-chose inside the range. Proven across two launches by
-`SidebarRealWindowProbeTests` p04/p05 (seed 150 → next launch opens at 220,
-not the clamped 200) and in-process by `SidebarFitHarnessTests.s21`.
+chose inside the range; an entry it cannot parse is left alone. Proven across
+two launches by `SidebarRealWindowProbeTests` p04/p05 (diagnosis-gated on
+`BRISTLENOSE_SIDEBAR_DIAGNOSIS=1`, because they write the real autosave: seed
+150 → next launch opens at 220, not the clamped 200) and in-process by
+`SidebarFitHarnessTests.s21`, which asserts the 20-pt gap rather than the
+widths, since macOS 26 reads them as 228 and 208. The harness passes 24 of 24
+on macOS 15.7.3, 26.6.2 and 27 (`docs/sidebar-column-diagnosis.md` § macOS
+15, measured).
 
 ---
 

@@ -265,13 +265,13 @@ consume the same data via the PipelineEvent callback").
 
 ## Sidebar width + truncation
 
-Current: `.navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 300)`; title + subtitle
+Current: `.navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 300)` (min 180 until 25 Sep 2026 — the rows sit 10 pt inside the column each side, so 180 drew 160-pt rows); title + subtitle
 `.lineLimit(1)`. **Some truncation is expected and acceptable** — names always truncate (user-set,
 unbounded), status sometimes; the full text lives in the row tooltip. The determinate ring lets the
 status text be terse (markers + ETA, no restated verb), which fits the narrow column. **German /
 long-locale width is not a TF concern** — tune the TF default against the real *English* strings; lay
 out against the real in-code strings (never lorem ipsum). The exact progress copy is a separate copy
-pass. Default ideal stays ~220–240, resizable + persisted; collapse = `NavigationSplitView` hide.
+pass. Ideal 220, resizable; the width persists per window through AppKit's split-view autosave, so the ideal applies only to a window with nothing stored (widths below the minimum are dropped at launch, `SidebarAutosaveMigration`); collapse = `NavigationSplitView` hide, also automatic on window shrink (`SidebarAutoCollapse`).
 
 ## Cloud (out of this branch — availability, already settled)
 

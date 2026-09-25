@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Highlighter playground</title>
+<!-- Scroll-linked highlighter-pen marks for the bristlenose.app feature text.
+     Mark the words in the page source with <mark>…</mark>. This playground
+     drives the effect from JS so every knob is live in any browser; the
+     production version would be pure CSS (animation-timeline: view(), Chrome
+     and Edge 115+, Safari 26, Firefox 159) with the numbers picked here, and a
+     static highlight under prefers-reduced-motion. -->
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #ffffff; --ink: #1a1a1a; --muted: #666; --line: #e5e5e5; --panel: #f8f8f8; --img: #efece4;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #121214; --ink: #e6e7e9; --muted: #9ca3af; --line: #2a2a2c; --panel: #1a1a1d; --img: #232019;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 420 16px/1.568 "InterVariable", "Inter", system-ui, -apple-system, sans-serif; }
+
+  /* ── controls ─────────────────────────────────────────────── */
+  .panel { position: fixed; top: 12px; right: 12px; z-index: 10; width: 300px; max-height: calc(100vh - 24px);
+           overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+           padding: 12px 14px; font: 13px/1.4 -apple-system, system-ui, sans-serif;
+           box-shadow: 0 10px 30px rgba(0,0,0,.12); }
+  .panel h1 { font-size: 13px; margin: 0 0 8px; }
+  .panel fieldset { border: 0; border-top: 1px solid var(--line); margin: 8px 0 0; padding: 8px 0 0; }
+  .panel legend { font-weight: 600; padding: 0; margin-bottom: 4px; }
+  .panel label { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+  .panel label span { width: 92px; flex: none; color: var(--muted); }
+  .panel input[type=range] { flex: 1; }
+  .panel output { width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+  .panel select { flex: 1; font: inherit; }
+  .swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .swatches button { font: 11.5px/1.2 -apple-system, system-ui, sans-serif; color: var(--ink); background: var(--bg);
+                     border: 1px solid var(--line); border-radius: 6px; padding: 5px 4px; cursor: pointer; text-align: left; }
+  .swatches button i { display: block; height: 10px; border-radius: 2px; margin-bottom: 4px; }
+  .swatches button[aria-pressed="true"] { outline: 2px solid #2563eb; outline-offset: 1px; }
+  .row-btns { display: flex; gap: 6px; margin-top: 10px; }
+  .row-btns button { flex: 1; font: inherit; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+                     border-radius: 6px; padding: 5px; cursor: pointer; }
+  .guide { position: fixed; left: 0; right: 0; height: 0; border-top: 1px dashed rgba(37,99,235,.45);
+           pointer-events: none; z-index: 5; }
+  .guide.hold { border-top-color: rgba(181,67,42,.45); }
+
+  /* ── page stand-in (homepage feature rows) ────────────────── */
+  main { max-width: 1100px; margin: 0 auto; padding: 60vh 340px 70vh 24px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; margin-bottom: 18vh; }
+  .row:nth-child(even) .text { order: 2; }
+  .text h3 { font-size: 22.4px; font-weight: 580; line-height: 1.3; margin: 0 0 8px; }
+  .text p { margin: 0; color: var(--muted); font-weight: 440; }
+  .img { aspect-ratio: 16 / 10; background: var(--img); border-radius: 12px; }
+  .intro { color: var(--muted); max-width: 520px; margin: 0 0 30vh; }
+
+  /* ── the mark ─────────────────────────────────────────────── */
+  mark {
+    color: inherit;
+    --a: 0.5; --rgb: 233 196 106; --depth: 100%; --lift: 0%; --size: 0%; --pos: 0%;
+    background-color: transparent;
+    background-image: linear-gradient(to bottom,
+        transparent calc(100% - var(--depth) - var(--lift)),
+        rgb(var(--rgb) / var(--a)) calc(100% - var(--depth) - var(--lift)),
+        rgb(var(--rgb) / var(--a)) calc(100% - var(--lift)),
+        transparent calc(100% - var(--lift)));
+    background-repeat: no-repeat;
+    background-size: var(--size) 100%;
+    background-position: var(--pos) 0;
+    padding: 0 var(--pad, 2px);
+    margin: 0 calc(-1 * var(--pad, 2px));
+    border-radius: var(--radius, 0px);
+    -webkit-box-decoration-break: var(--bdb, slice); box-decoration-break: var(--bdb, slice);
+  }
+  body.ink mark { color: var(--ink); }   /* marked words in body ink, not muted grey */
+</style>
+</head>
+<body>
+
+<div class="guide" id="g-start"></div><div class="guide hold" id="g-hold-a"></div>
+<div class="guide hold" id="g-hold-b"></div><div class="guide" id="g-end"></div>
+
+<aside class="panel" aria-label="Highlighter settings">
+  <h1>Highlighter playground</h1>
+  <label><span>Theme</span><select id="theme"><option value="light">Light</option><option value="dark">Dark</option></select></label>
+
+  <fieldset><legend>Colour (Edo)</legend><div class="swatches" id="swatches"></div>
+    <label><span>Strength</span><input id="alpha" type="range" min="10" max="100" value="50"><output></output></label>
+  </fieldset>
+
+  <fieldset><legend>Shape</legend>
+    <label><span>Depth</span><input id="depth" type="range" min="15" max="100" value="100"><output></output></label>
+    <label><span>Lift</span><input id="lift" type="range" min="0" max="30" value="0"><output></output></label>
+    <label><span>Overhang</span><input id="pad" type="range" min="0" max="8" value="2"><output></output></label>
+    <label><span>Corners</span><input id="radius" type="range" min="0" max="8" value="0"><output></output></label>
+    <label><span>Multi-line</span><select id="bdb">
+      <option value="slice">Pen travels line by line</option>
+      <option value="clone">All lines at once</option></select></label>
+    <label><span>Marked words</span><select id="ink">
+      <option value="1">Full ink</option><option value="0">Same grey as text</option></select></label>
+  </fieldset>
+
+  <fieldset><legend>Motion</legend>
+    <label><span>Mode</span><select id="mode">
+      <option value="scrub">Scrubbed by scroll</option>
+      <option value="swipe">Swipe once (timed)</option></select></label>
+    <label><span>Starts at</span><input id="start" type="range" min="50" max="100" value="80"><output></output></label>
+    <label><span>Swipe length</span><input id="len" type="range" min="4" max="40" value="18"><output></output></label>
+    <label><span>Swipe time</span><input id="dur" type="range" min="150" max="1500" step="50" value="550"><output></output></label>
+    <label><span>Going out</span><select id="exit">
+      <option value="back">Pen rewinds (right → left)</option>
+      <option value="forward">Pen lifts (left → right)</option>
+      <option value="fade">Fades</option>
+      <option value="stay">Stays</option></select></label>
+    <label><span>Show guides</span><select id="guides"><option value="1">On</option><option value="0">Off</option></select></label>
+  </fieldset>
+  <div class="row-btns"><button id="copy">Copy settings</button><button id="reset">Reset</button></div>
+</aside>
+
+<main>
+  <p class="intro">Scroll. Marked phrases are swiped in as they reach the middle of the screen and taken away as
+    they leave. Blue dashed lines: where the swipe starts and ends. Red: the band in which a mark is fully drawn.</p>
+  <section class="row"><div class="text"><h3>Star your favourite quotes</h3>
+    <p>The <mark>evidence worth sharing</mark>, pulled from each interview.</p></div><div class="img"></div></section>
+  <section class="row"><div class="text"><h3>Watch the moment, word by word</h3>
+    <p>Every quote links back to the recording, and the transcript <mark>highlights each word as it's spoken</mark>.
+      Ten seconds of context, then close the player.</p></div><div class="img"></div></section>
+  <section class="row"><div class="text"><h3>AI expert auto-tags — or switch to manual</h3>
+    <p>Apply the in-house <mark>Bristlenose UXR codebook, Nielsen's heuristics, Garrett's Elements of UX, Norman's
+      Design of Everyday Things</mark>, Morville's honeycomb, Yablonski's Laws of UX, or a Command-Line UX set for
+      developer tools.</p></div><div class="img"></div></section>
+  <section class="row"><div class="text"><h3>Signal in the noise</h3>
+    <p>Clusters of tags reveal <mark>where the data is running hot</mark>. A signal-card describes this — and its
+      score combines the strength of participants' opinions or feelings, their focus on the theme, and how far they
+      agree.</p></div><div class="img"></div></section>
+  <section class="row"><div class="text"><h3>Talk to your data from your AI agent</h3>
+    <p>Connect Claude, Claude Code, ChatGPT or Codex to an analysed project and <mark>ask about it in the agent's own
+      window</mark>, on your own subscription. It reads your quotes, themes and codebook, and cites quote IDs you can
+      look up. Read-only, and per project — you turn it on.</p></div><div class="img"></div></section>
+  <section class="row"><div class="text"><h3>Export a standalone HTML report</h3>
+    <p>Share the whole report as <mark>a single HTML file</mark> — quotes, themes, analysis, your edits, all inside
+      it. It opens in any browser straight from the file. <mark>No server, no internet, nothing to install.</mark>
+      Read-only, so it can't change your project.</p></div><div class="img"></div></section>
+  <section class="row"><div class="text"><h3>Import video from Microsoft Teams and Google Meet calls</h3>
+    <p>Connect your work account and tick the meetings you recorded. Bristlenose fetches the recordings, puts them in
+      a project and starts the analysis — <mark>no downloading by hand</mark>.</p></div><div class="img"></div></section>
+</main>
+
+<script>
+/* Edo pigments as highlighter inks. Light tints are the pigment lifted toward
+   washi; dark values are the palette's own dark-mode accents, which read as a
+   glow on sumi rather than a stripe. */
+const INKS = {
+  kincha:  { name: 'Kincha ochre',    light: '233 196 106', dark: '196 169 106' },
+  shu:     { name: 'Shu vermilion',   light: '240 150 120', dark: '224 106 74'  },
+  rokusho: { name: 'Rokushō green',   light: '123 168 160', dark: '123 168 160' },
+  beroai:  { name: 'Bero-ai blue',    light: '120 170 225', dark: '77 159 224'  },
+  washi:   { name: 'Washi cream',     light: '240 226 186', dark: '104 88 44'   },
+  classic: { name: 'Office yellow',   light: '255 235 59',  dark: '255 235 59'  }
+};
+const DEFAULTS = { ink: 'kincha', alpha: 50, depth: 100, lift: 0, pad: 2, radius: 0, bdb: 'slice', inkText: '1',
+                   mode: 'scrub', start: 80, len: 18, dur: 550, exit: 'back', guides: '1', theme: 'light' };
+let S = Object.assign({}, DEFAULTS);
+try { Object.assign(S, JSON.parse(localStorage.getItem('bn-hl-playground') || '{}')); } catch (e) {}
+const $ = id => document.getElementById(id);
+const marks = [...document.querySelectorAll('mark')];
+
+/* swatches */
+const sw = $('swatches');
+Object.entries(INKS).forEach(([k, v]) => {
+  const b = document.createElement('button'); b.type = 'button'; b.dataset.ink = k;
+  b.innerHTML = `<i></i>${v.name}`; sw.appendChild(b);
+  b.addEventListener('click', () => { S.ink = k; apply(); });
+});
+
+const RANGES = { alpha: v => v + '%', depth: v => v + '%', lift: v => v + '%', pad: v => v + 'px', radius: v => v + 'px',
+                 start: v => v + '%', len: v => v + '%', dur: v => v + 'ms' };
+Object.keys(RANGES).forEach(k => $(k).addEventListener('input', e => { S[k] = +e.target.value; apply(); }));
+[['bdb','bdb'],['ink','inkText'],['mode','mode'],['exit','exit'],['guides','guides'],['theme','theme']].forEach(([id, key]) =>
+  $(id).addEventListener('change', e => { S[key] = e.target.value; apply(); }));
+
+function apply() {
+  try { localStorage.setItem('bn-hl-playground', JSON.stringify(S)); } catch (e) {}
+  document.documentElement.dataset.theme = S.theme;
+  const dark = S.theme === 'dark';
+  Object.keys(RANGES).forEach(k => { $(k).value = S[k]; $(k).nextElementSibling.textContent = RANGES[k](S[k]); });
+  $('bdb').value = S.bdb; $('ink').value = S.inkText; $('mode').value = S.mode; $('exit').value = S.exit;
+  $('guides').value = S.guides; $('theme').value = S.theme;
+  $('len').closest('label').style.display = S.mode === 'scrub' ? '' : 'none';
+  $('dur').closest('label').style.display = S.mode === 'swipe' ? '' : 'none';
+  document.body.classList.toggle('ink', S.inkText === '1');
+  sw.querySelectorAll('button').forEach(b => {
+    const v = INKS[b.dataset.ink]; b.setAttribute('aria-pressed', b.dataset.ink === S.ink);
+    b.querySelector('i').style.background = `rgb(${dark ? v.dark : v.light} / ${S.alpha / 100})`;
+  });
+  const rgb = dark ? INKS[S.ink].dark : INKS[S.ink].light;
+  marks.forEach(m => {
+    m.style.setProperty('--rgb', rgb);
+    m.style.setProperty('--depth', S.depth + '%');
+    m.style.setProperty('--lift', S.lift + '%');
+    m.style.setProperty('--pad', S.pad + 'px');
+    m.style.setProperty('--radius', S.radius + 'px');
+    m.style.setProperty('--bdb', S.bdb);
+  });
+  placeGuides(); tick(true);
+}
+
+/* Geometry, as fractions of the viewport height measured from the TOP.
+   A mark's centre crossing `start` begins the swipe; it is fully drawn `len`
+   later (scrub) or `dur` ms later (timed). Going out mirrors it around the
+   middle of the screen, so the fully-drawn band is centred. */
+function zones() {
+  const s = S.start / 100, l = S.mode === 'scrub' ? S.len / 100 : 0;
+  const inStart = s, inEnd = Math.max(0.5, s - l);
+  const outStart = 1 - inEnd, outEnd = 1 - inStart;
+  return { inStart, inEnd, outStart, outEnd };
+}
+function placeGuides() {
+  const z = zones(), H = innerHeight, show = S.guides === '1';
+  [['g-start', z.inStart], ['g-hold-b', z.inEnd], ['g-hold-a', z.outStart], ['g-end', z.outEnd]].forEach(([id, f]) => {
+    const g = $(id); g.style.top = (f * H) + 'px'; g.style.display = show ? '' : 'none';
+  });
+}
+const clamp = x => Math.max(0, Math.min(1, x));
+function paint(m, fill, phase) {         // fill 0..1, phase 'in' | 'out'
+  let size = fill, pos = '0%', a = S.alpha / 100;
+  if (phase === 'out') {
+    if (S.exit === 'forward') { pos = '100%'; }
+    else if (S.exit === 'fade') { a *= fill; size = 1; }
+    else if (S.exit === 'stay') { size = 1; }
+  }
+  m.style.setProperty('--size', (size * 100) + '%');
+  m.style.setProperty('--pos', pos);
+  m.style.setProperty('--a', a);
+}
+
+/* swipe mode keeps per-mark animation state */
+const anim = new Map();
+function animate(m, from, to, phase) {
+  const t0 = performance.now(), d = S.dur, st = { phase, to };
+  anim.set(m, st);
+  const step = now => {
+    if (anim.get(m) !== st) return;
+    const k = clamp((now - t0) / d), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    const v = from + (to - from) * e; m._fill = v; paint(m, v, phase);
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+function tick(force) {
+  const z = zones(), H = innerHeight;
+  marks.forEach(m => {
+    const r = m.getBoundingClientRect(), y = (r.top + r.bottom) / 2 / H;
+    if (S.mode === 'scrub') {
+      if (y > z.outStart) { const f = z.inStart === z.inEnd ? (y <= z.inEnd ? 1 : 0) : clamp((z.inStart - y) / (z.inStart - z.inEnd)); paint(m, f, 'in'); }
+      else { const f = z.outStart === z.outEnd ? 0 : clamp((y - z.outEnd) / (z.outStart - z.outEnd)); paint(m, f, 'out'); }
+    } else {
+      const want = y <= z.inStart && y >= z.outEnd ? 'on' : (y < z.outEnd ? 'gone' : 'off');
+      if (want === m._state && !force) return;
+      const from = m._fill || 0;
+      if (want === 'on') animate(m, from, 1, 'in');
+      else if (want === 'gone' && m._state === 'on') animate(m, from, 0, 'out');
+      else if (!m._state || force) { m._fill = want === 'on' ? 1 : 0; paint(m, m._fill, 'in'); }
+      else animate(m, from, 0, 'in');     // scrolled back down below the band: rewind
+      m._state = want;
+    }
+  });
+}
+let raf = 0;
+addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; tick(); }); }, { passive: true });
+addEventListener('resize', () => { placeGuides(); tick(true); });
+
+$('reset').addEventListener('click', () => { S = Object.assign({}, DEFAULTS); marks.forEach(m => { m._state = null; m._fill = 0; }); apply(); });
+$('copy').addEventListener('click', e => {
+  const txt = JSON.stringify(Object.assign({ inkRGB: { light: INKS[S.ink].light, dark: INKS[S.ink].dark } }, S), null, 2);
+  navigator.clipboard && navigator.clipboard.writeText(txt);
+  e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy settings', 1200);
+});
+apply();
+</script>
+</body>
+</html>

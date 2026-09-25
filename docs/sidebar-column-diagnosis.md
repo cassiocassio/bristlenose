@@ -513,3 +513,85 @@ call or nothing.
    fill/width invariants, so it can become a real-SPA gate later; the
    real-window probe is a reader (with `p01`'s restore) and belongs in a
    diagnosis run, not the default suite.
+
+---
+
+## Agreed solution — sessions 1, 2, 3 and 4 (18:50, 25 Sep 2026)
+
+Each session answered one proposal in one message; this is the intersection,
+with the two disagreements recorded rather than resolved. This section is the
+hand-over: the four sessions are archived after it.
+
+**Unanimous.**
+
+1. **S4 is a restored width, not a defect in `SidebarAutoCollapse`.**
+   `NSSplitView` autosaves the column under `main-AppWindow-1,
+   SidebarNavigationSplitView` (read live, rewritten 1.5 s after a divider
+   move); fifteen older windows hold the pre-fix 148, which clamps to 180
+   today; 180 pt of column shows 160 pt of cells (AX: 10 pt inset each side).
+   The 220 ideal applies only when nothing is stored. The bump that raised
+   the minimum turned every stored 144–148 into 180 — and 0.31.0 shipped with
+   the modifier inert, so this includes TestFlight users.
+2. **Options for Martin on S4** (a design call, not a finding): (a) raise
+   `columnMin` in `DetailFloor.swift`, derived as wanted cells + 20, one
+   constant — `restingColumnWidth`'s range reads the same constant and so
+   follows it; the collapse threshold moves by the same amount, which the
+   commit should say; (b) a scoped migration: drop only `NSSplitView Subview
+   Frames main-AppWindow-*` entries whose sidebar frame is below the current
+   minimum, before any window restores — AppKit clamps those anyway, so no
+   version marker is needed, and a parse failure leaves the entry alone; (c)
+   both; (d) clamp as today. **Never** an unscoped clear: it deletes the width
+   the autosave exists to keep.
+3. **H3 closed** for the shipped app (the only layout-loop guard was the
+   harness's synchronous round). **H4 refuted** (AppKit holds 180…300; drags
+   clamp at 180). **S5, S6, S7 reproduced by nobody** — real report in the
+   harness, AX/CGEvent on the live app (edge drag, ⌥⌘L), programmatic
+   resizes. They stay open only as *"report the step that preceded it, trace
+   on"*, with the "what no run included" list above as the checklist —
+   **full-screen enter/exit first**, since it was Martin's original trigger.
+4. **Give the harness an autosave identity**, so restore-over-ideal is
+   visible there; every harness window so far was id-less.
+5. **SwiftUI this round.** `NSSplitViewController` only if S6/S7 recur with
+   a named ingredient; session 4's ladder (read AppKit from inside SwiftUI →
+   bisect the app → one-shot dump → no live-resize animation → container
+   queries → `NSSplitViewController` with its two spikes) is the shelf to
+   start from.
+
+**Resolved in discussion.**
+
+- *A launch guard* (`guard detailWidth > 0` in `applySidebarAutoCollapse`,
+  proposed by sessions 3 and 4) — **withdrawn.** The first geometry pass
+  reads the `WindowGroup`'s `defaultSize(1000)` with `detail=0`, but every
+  launch line in session 3's own capture (pids 95676 and 98452, 16:10:55 and
+  16:20:24, that pass included) reads `floor=nil`, on which `decide` returns
+  `.none`. Structurally so: the floor is `bridgeHandler.detailMinWidth`,
+  0 until the SPA posts `panel-state`, which cannot precede the page load,
+  which cannot precede the window. Nothing to guard.
+
+**Disputed, recorded not resolved.**
+
+- *No animation on the resize-path collapse while in live resize* (session
+  4's D): agreed optional by both — nothing measured came from the
+  animation. If anyone does it, `NSApp.keyWindow?.inLiveResize` is how the
+  trace already reaches the window from `ContentView`; a Mail-style instant
+  collapse, not a fix for anything seen today.
+
+**What each session leaves behind.**
+
+- Session 1: this brief; `SidebarFitHarnessTests.s00`, which pins the live
+  180–300 range `restingColumnWidth` depends on; the trace fix (`git log
+  -S'appKit=no-window' -- …/SidebarFitTrace.swift`) — `NSApp.keyWindow`
+  with a fallback to the first visible split-view window, logged as `win=`,
+  exact with one window and ambiguous with two.
+- Session 2: `SidebarFitSPAHarnessTests` (real report in the harness) and
+  `SidebarRealWindowProbeTests` (the app's own window, restores its launch
+  width), both **gated on `BRISTLENOSE_SIDEBAR_DIAGNOSIS=1`** — the probe
+  writes the autosave and the harness spends a serve-time LLM call, so
+  neither runs in the default suite.
+- Session 3: the AX driver (`bndrive.swift` + `snap.sh`: pid-targeted, AX
+  dump with WebKit's `AXDOMClassList`, window resize/move, toolbar and menu
+  presses, CGEvent seam and edge drags), to land in `desktop/scripts/ax-drive/`
+  with the three trace notes (NSGlobalDomain lights the trace without a
+  relaunch; test hosts share the flag and category, filter on pid; the
+  Accessibility grant covers every Claude session, one driver per instance).
+- Session 4: the approaches ladder in its section above.

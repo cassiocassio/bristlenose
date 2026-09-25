@@ -60,7 +60,7 @@ private enum Probe {
     }
 }
 
-@Suite(.serialized) @MainActor struct SidebarRealWindowProbeTests {
+@Suite(.serialized, .enabled(if: sidebarDiagnosisEnabled)) @MainActor struct SidebarRealWindowProbeTests {
 
     /// The app's real window: what the column was told, what its content
     /// offers, and whether a divider position survives SwiftUI updates.

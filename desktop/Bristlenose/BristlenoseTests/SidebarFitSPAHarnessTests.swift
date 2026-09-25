@@ -441,7 +441,13 @@ private func expectFills(_ r: SPARig.Row, _ rig: SPARig, _ label: String) {
 
 // MARK: - Scenarios
 
-@Suite(.serialized) @MainActor struct SidebarFitSPAHarnessTests {
+/// Diagnosis suites run only when asked for: `BRISTLENOSE_SIDEBAR_DIAGNOSIS=1`
+/// in the test host's environment. Unset, every test here is skipped — the
+/// probe drives the app's REAL window (and writes its autosave), and the SPA
+/// harness spends a serve-time LLM call when a serve answers on :8199.
+let sidebarDiagnosisEnabled = ProcessInfo.processInfo.environment["BRISTLENOSE_SIDEBAR_DIAGNOSIS"] == "1"
+
+@Suite(.serialized, .enabled(if: sidebarDiagnosisEnabled)) @MainActor struct SidebarFitSPAHarnessTests {
 
     static let lenses = ["codebook", "signals", "quotes"]
 

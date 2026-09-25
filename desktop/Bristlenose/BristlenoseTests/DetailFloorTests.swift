@@ -107,6 +107,16 @@ struct SidebarAutoCollapseTests {
         #expect(!A.autoCollapsed(after: .none, was: false))
     }
 
+    @Test func ignoresASplitNarrowerThanAnyWindow() {
+        // SwiftUI reports the split at 1 pt before the window lays out. With a
+        // floor already set that read as "collapse" — and on macOS 15 the
+        // collapse outlived the expand that followed.
+        #expect(A.decide(windowWidth: 1, sidebarWidth: 220, minWidth: 968, sidebarVisible: true, autoCollapsed: false) == .none)
+        #expect(A.decide(windowWidth: A.windowMinWidth - 1, sidebarWidth: 220, minWidth: 968, sidebarVisible: true, autoCollapsed: false) == .none)
+        // At the window's own minimum it is a real width, and it decides.
+        #expect(A.decide(windowWidth: A.windowMinWidth, sidebarWidth: 220, minWidth: 968, sidebarVisible: true, autoCollapsed: false) == .collapse)
+    }
+
     @Test func noFloorMeansNoAction() {
         #expect(A.decide(windowWidth: 700, sidebarWidth: 220, minWidth: nil, sidebarVisible: true, autoCollapsed: false) == .none)
         #expect(A.decide(windowWidth: 0, sidebarWidth: 220, minWidth: 968, sidebarVisible: true, autoCollapsed: false) == .none)

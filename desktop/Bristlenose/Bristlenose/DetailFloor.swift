@@ -71,7 +71,14 @@ enum SidebarAutoCollapse {
         sidebarVisible: Bool,
         autoCollapsed: Bool
     ) -> Action {
-        guard let minWidth, windowWidth > 0 else { return .none }
+        // A split narrower than any window can be is a mount reading, not a
+        // width: SwiftUI reports the split at 1 pt before the window lays out
+        // (defect A's sibling, on the split reader). Deciding on it collapsed
+        // the column and then expanded it inside one animation — and on macOS
+        // 15 the collapse's late visibility write landed after the expand, so
+        // the column ended hidden and no longer ours (measured on a 15.7.3
+        // VM, 25 Sep 2026: six harness scenarios; macOS 27 happened to recover).
+        guard let minWidth, windowWidth >= windowMinWidth else { return .none }
         let detailBesideSidebar = windowWidth - sidebarWidth
         if sidebarVisible {
             return detailBesideSidebar < minWidth ? .collapse : .none
@@ -95,6 +102,10 @@ enum SidebarAutoCollapse {
     /// amount — window − column is compared with the floor — which is correct.
     /// Widths stored below it are removed at launch (`SidebarAutosaveMigration`).
     static let columnMin: CGFloat = 200
+    /// The main window's minimum content width — the `.frame(minWidth:)` on
+    /// `ContentView` in `BristlenoseApp`, which reads this. A split reading
+    /// below it cannot be a window, so `decide` ignores it.
+    static let windowMinWidth: CGFloat = 700
     static let columnIdeal: CGFloat = 220
     static let columnMax: CGFloat = 300
     /// On macOS 26 the detail runs under the floating sidebar, so split −

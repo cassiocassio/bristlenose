@@ -670,6 +670,86 @@ struct SidebarFitRig {
         Attachment.record(rows, named: "s19.txt")
     }
 
+    // MARK: Mounted as the app mounts: the floor arrives AFTER the window
+    //
+    // Every rig above sets the floor before the window exists. The app cannot:
+    // the floor is the SPA's `panel-state`, which cannot be posted before the
+    // page loads, which cannot happen before the window. On a macOS 15.7.3 VM
+    // (25 Sep 2026) six scenarios failed because a 1-pt mount reading with a
+    // floor already set collapsed the column, an expand followed inside the
+    // same animation, and the collapse's late visibility write landed last —
+    // ending hidden, not ours, never given back. These four mount with no
+    // floor, post it once the window is up, and then cross the threshold, so
+    // whether that ordering reaches the APP is measured rather than assumed.
+    // The invariant each asserts beyond its own ending: a column this logic
+    // hid is marked ours, so it is never left hidden-and-not-ours without the
+    // researcher having hidden it.
+
+    private func rigWithLateFloor(width: CGFloat = 1400) async -> SidebarFitRig {
+        let rig = await SidebarFitRig(width: width, minWidth: 0)
+        rig.probe.webMinWidth = 968
+        await rig.settle(0.3)
+        return rig
+    }
+
+    private func expectNotStranded(_ rig: SidebarFitRig, _ label: String) {
+        let strandedByUs = rig.appKitCollapsed == true && !rig.probe.autoCollapsed
+        #expect(!strandedByUs, "\(label): column hidden but not marked ours, with no researcher hide — it will never come back")
+    }
+
+    @Test func s22a_lateFloor_dragAcrossAndBack() async {
+        let rig = await rigWithLateFloor()
+        defer { rig.close() }
+        await rig.drag(from: 1400, to: 1000)
+        rig.dump("s22a dragged to 1000")
+        #expect(rig.appKitCollapsed == true)
+        #expect(rig.probe.autoCollapsed)
+        await rig.drag(from: 1000, to: 1400)
+        rig.dump("s22a dragged back to 1400")
+        #expect(rig.appKitCollapsed == false)
+        #expect(rig.inAgreement)
+        expectNotStranded(rig, "s22a")
+    }
+
+    @Test func s22b_lateFloor_thresholdJumps() async {
+        let rig = await rigWithLateFloor()
+        defer { rig.close() }
+        for w: CGFloat in [1728, 1180, 1728, 1190, 1500, 900, 1728, 1200, 1728] {
+            await rig.resize(to: w, settleFor: 0.5)
+        }
+        rig.dump("s22b threshold jumps (ends at 1728)")
+        #expect(rig.appKitCollapsed == false)
+        #expect(rig.inAgreement)
+        expectNotStranded(rig, "s22b")
+    }
+
+    @Test func s22c_lateFloor_flickerThroughAnimation() async {
+        let rig = await rigWithLateFloor()
+        defer { rig.close() }
+        await rig.resize(to: 1000, settleFor: 0.05)
+        await rig.resize(to: 1700, settleFor: 0.05)
+        await rig.resize(to: 1000, settleFor: 0.05)
+        await rig.resize(to: 1700)
+        rig.dump("s22c flicker through animation, ends 1700")
+        #expect(rig.appKitCollapsed == false)
+        #expect(rig.inAgreement)
+        expectNotStranded(rig, "s22c")
+    }
+
+    /// The suspected race on its own: from a stable, shown column, a collapse
+    /// and an expand inside one animation.
+    @Test func s22d_lateFloor_collapseThenExpandInsideOneAnimation() async {
+        let rig = await rigWithLateFloor()
+        defer { rig.close() }
+        #expect(rig.appKitCollapsed == false, "precondition: shown at 1400 with the floor posted")
+        await rig.resize(to: 1000, settleFor: 0.05)
+        await rig.resize(to: 1400, settleFor: 1.2)
+        rig.dump("s22d 1400 → 1000 → 1400 inside one animation")
+        #expect(rig.appKitCollapsed == false)
+        #expect(rig.inAgreement)
+        expectNotStranded(rig, "s22d")
+    }
+
     /// Restore-over-ideal, and the migration that fixes the clamped case.
     ///
     /// A window with an identity restores its column from

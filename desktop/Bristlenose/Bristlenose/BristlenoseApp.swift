@@ -155,7 +155,7 @@ struct BristlenoseApp: App {
             // write the new one back, or restoration returns it to the study it
             // was *opened* on rather than the one it was showing.
             ContentView(seed: $seed)
-                .frame(minWidth: 700, minHeight: 500)
+                .frame(minWidth: SidebarAutoCollapse.windowMinWidth, minHeight: 500)
                 .environmentObject(serveFleet)
                 .environmentObject(projectIndex)
                 .environmentObject(pipelineRunner)

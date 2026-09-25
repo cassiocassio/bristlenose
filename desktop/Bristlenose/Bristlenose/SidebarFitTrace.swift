@@ -56,12 +56,16 @@ enum SidebarFitTrace {
         }
     }
 
-    /// The key window's sidebar as AppKit has it. The key window is a
-    /// stand-in for "this ContentView's window" — good enough for a trace
-    /// read one window at a time.
+    /// The sidebar as AppKit has it, in the key window — or, when the app is
+    /// not frontmost (driven by Accessibility, or read beside another app),
+    /// the first visible window holding a split view. `keyWindow` alone is nil
+    /// whenever the app is inactive, which blanked this half of every line
+    /// during the 25 Sep AX runs. Trace-only; `win=` names which window.
     @MainActor
     private static func appKitTruth() -> String {
-        guard let window = NSApp.keyWindow, let root = window.contentView else { return "appKit=no-key-window" }
+        let window = NSApp.keyWindow
+            ?? NSApp.windows.first { $0.isVisible && $0.contentView.map { findSplitView(in: $0) != nil } == true }
+        guard let window, let root = window.contentView else { return "appKit=no-window" }
         guard let split = findSplitView(in: root) else { return "appKit=no-split win=\(window.windowNumber)" }
         let item = (split.delegate as? NSSplitViewController)?.splitViewItems.first
         let first = split.arrangedSubviews.first

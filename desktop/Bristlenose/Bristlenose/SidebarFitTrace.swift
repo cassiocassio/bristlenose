@@ -1,6 +1,7 @@
 import AppKit
 import OSLog
 import SwiftUI
+import WebKit
 
 /// Opt-in trace of the projects-column auto-collapse (`SidebarAutoCollapse`),
 /// for catching the rare "column gone and won't come back" in a real session.
@@ -64,11 +65,30 @@ enum SidebarFitTrace {
         let item = (split.delegate as? NSSplitViewController)?.splitViewItems.first
         let first = split.arrangedSubviews.first
         let fullScreen = window.styleMask.contains(.fullScreen)
+        // The report's web view: where it starts in the window and any leading
+        // inset it carries. A white strip left of the page after a hide is
+        // either this frame (native) or the page's own layout (web) — this
+        // line separates the two.
+        let web = findWebView(in: root)
+        let webFrame = web.map { $0.convert($0.bounds, to: nil) }
         return "appKit win=\(window.windowNumber) frameW=\(Int(window.frame.width)) "
             + "liveResize=\(window.inLiveResize) fullScreen=\(fullScreen) "
             + "itemCollapsed=\(item.map { String($0.isCollapsed) } ?? "nil") "
             + "sidebarW=\(first.map { "\(Int($0.frame.width))" } ?? "nil") "
-            + "sidebarHidden=\(first.map { String($0.isHidden) } ?? "nil")"
+            + "sidebarHidden=\(first.map { String($0.isHidden) } ?? "nil") "
+            + "thickness=\(item.map { "\(Int($0.minimumThickness))…\(Int($0.maximumThickness))" } ?? "nil") "
+            + "canCollapseFromResize=\(item.map { String($0.canCollapseFromWindowResize) } ?? "nil") "
+            + "webX=\(webFrame.map { "\(Int($0.minX))" } ?? "nil") webW=\(webFrame.map { "\(Int($0.width))" } ?? "nil") "
+            + "webSafeLeft=\(web.map { "\(Int($0.safeAreaInsets.left))" } ?? "nil")"
+    }
+
+    @MainActor
+    private static func findWebView(in view: NSView) -> WKWebView? {
+        if let web = view as? WKWebView { return web }
+        for sub in view.subviews {
+            if let web = findWebView(in: sub) { return web }
+        }
+        return nil
     }
 
     @MainActor

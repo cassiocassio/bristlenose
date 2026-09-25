@@ -2,6 +2,7 @@ import AppKit
 import Combine
 import SwiftUI
 import Testing
+import WebKit
 @testable import Bristlenose
 
 // Diagnosis harness for the projects-sidebar auto-collapse (DetailFloor.swift,
@@ -85,15 +86,76 @@ final class SidebarFitProbe: ObservableObject {
 /// is how it shipped until 25 Sep 2026 (s00 keeps that measured).
 enum ColumnWidthPlacement { case onSplitView, onSidebarColumn }
 
+/// What the sidebar column hosts. The app runs the AppKit outline
+/// (`ProjectSidebarOutline`, an NSViewControllerRepresentable); `outlineShape`
+/// is a stand-in built the way its `loadView` builds it — a zero-frame
+/// autoresizing container around a source-list NSOutlineView in a scroll view
+/// — without its dozen data dependencies.
+enum SidebarKind { case list, outlineShape }
+
+/// What the detail hosts. The app hosts the report in a WKWebView that
+/// ignores the top safe area only (ContentView, `.ignoresSafeArea(.container,
+/// edges: .top)`), under a sidebar that floats over it on macOS 26.
+enum DetailKind { case color, webView }
+
+/// A page with a 200-px left panel at x = 0, standing in for the report's
+/// Contents panel: wherever the page's own left edge lands, the panel shows it.
+struct HarnessWebView: NSViewRepresentable {
+    static var last: WKWebView?
+    func makeNSView(context: Context) -> WKWebView {
+        let web = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+        web.setValue(false, forKey: "drawsBackground")   // as WebView.swift does
+        web.loadHTMLString("""
+            <html><body style="margin:0"><div id="panel" style="position:absolute;left:0;top:0;\
+            width:200px;height:100vh;background:#ddd"></div></body></html>
+            """, baseURL: nil)
+        Self.last = web
+        return web
+    }
+    func updateNSView(_ web: WKWebView, context: Context) {}
+}
+
+struct OutlineShapeStandIn: NSViewControllerRepresentable {
+    func makeNSViewController(context: Context) -> NSViewController {
+        let controller = NSViewController()
+        let outline = NSOutlineView()
+        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("main"))
+        column.resizingMask = .autoresizingMask
+        outline.addTableColumn(column)
+        outline.outlineTableColumn = column
+        outline.headerView = nil
+        outline.style = .sourceList
+        outline.autoresizingMask = [.width, .height]
+        let scroll = NSScrollView()
+        scroll.documentView = outline
+        scroll.drawsBackground = false
+        let container = NSView()
+        container.autoresizingMask = [.width, .height]
+        scroll.frame = container.bounds
+        scroll.autoresizingMask = [.width, .height]
+        container.addSubview(scroll)
+        controller.view = container
+        return controller
+    }
+    func updateNSViewController(_ controller: NSViewController, context: Context) {}
+}
+
 struct SidebarFitHarnessView: View {
     @ObservedObject var probe: SidebarFitProbe
     let placement: ColumnWidthPlacement
+    var kind: SidebarKind = .list
+    var detailKind: DetailKind = .color
 
     var body: some View {
         let split = NavigationSplitView(columnVisibility: $probe.visibility) {
             sidebar
         } detail: {
-            Color.gray.opacity(0.2)
+            Group {
+                switch detailKind {
+                case .color: Color.gray.opacity(0.2)
+                case .webView: HarnessWebView().ignoresSafeArea(.container, edges: .top)
+                }
+            }
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
                     probe.detailWidth = width
                     if let sidebar = SidebarAutoCollapse.restingColumnWidth(
@@ -135,7 +197,12 @@ struct SidebarFitHarnessView: View {
     }
 
     @ViewBuilder private var sidebar: some View {
-        let list = List { ForEach(0..<5, id: \.self) { Text("Project \($0)") } }
+        let list = Group {
+            switch kind {
+            case .list: List { ForEach(0..<5, id: \.self) { Text("Project \($0)") } }
+            case .outlineShape: OutlineShapeStandIn()
+            }
+        }
         switch placement {
         case .onSplitView: list
         case .onSidebarColumn: list.navigationSplitViewColumnWidth(
@@ -155,10 +222,11 @@ struct SidebarFitRig {
     /// Window style and occlusion were surveyed during the diagnosis (plain
     /// vs unified toolbar over full-size content, floated vs background) and
     /// changed nothing, so the rig uses the plain window.
-    init(placement: ColumnWidthPlacement = .onSidebarColumn, width: CGFloat = 1400,
-         minWidth: CGFloat = 968) async {
+    init(placement: ColumnWidthPlacement = .onSidebarColumn, kind: SidebarKind = .list,
+         detail: DetailKind = .color, width: CGFloat = 1400, minWidth: CGFloat = 968) async {
         probe.webMinWidth = minWidth
-        let host = NSHostingController(rootView: SidebarFitHarnessView(probe: probe, placement: placement))
+        let host = NSHostingController(rootView: SidebarFitHarnessView(
+            probe: probe, placement: placement, kind: kind, detailKind: detail))
         host.sizingOptions = []
         window = NSWindow(
             contentRect: NSRect(x: 40, y: 40, width: width, height: 700),
@@ -556,5 +624,69 @@ struct SidebarFitRig {
             #expect(abs(rig.probe.lastSidebarWidth - real) <= 2,
                     "after hide \(afterHide), after show \(rig.probe.lastSidebarWidth), real column \(real)")
         }
+    }
+
+    /// Can the researcher resize the column? Reads AppKit's thickness range
+    /// and moves the divider the way a drag ends, for each sidebar kind and
+    /// each modifier placement. Reported 25 Sep 2026: with the AppKit outline
+    /// the column showed the resize cursor and would not move.
+    @Test func s19_theColumnResizesForEachSidebarKind() async {
+        var rows = "kind placement | min max | start → after setPosition(260) → after setPosition(190)\n"
+        for kind in [SidebarKind.list, .outlineShape] {
+            for placement in [ColumnWidthPlacement.onSplitView, .onSidebarColumn] {
+                let rig = await SidebarFitRig(placement: placement, kind: kind, minWidth: 0)
+                let start = rig.appKitSidebarWidth ?? -1
+                rig.splitController?.splitView.setPosition(260, ofDividerAt: 0)
+                await rig.settle()
+                let wide = rig.appKitSidebarWidth ?? -1
+                rig.splitController?.splitView.setPosition(190, ofDividerAt: 0)
+                await rig.settle()
+                let narrow = rig.appKitSidebarWidth ?? -1
+                let item = rig.sidebarItem
+                rows += "\(kind) \(placement) | \(Int(item?.minimumThickness ?? -1)) \(Int(item?.maximumThickness ?? -1)) | \(Int(start)) → \(Int(wide)) → \(Int(narrow))\n"
+                if placement == .onSidebarColumn {
+                    #expect(abs(wide - 260) <= 2, "\(kind): column did not follow the divider to 260 (got \(wide))")
+                    #expect(abs(narrow - 190) <= 2, "\(kind): column did not follow the divider to 190 (got \(narrow))")
+                }
+                rig.close()
+            }
+        }
+        Attachment.record(rows, named: "s19.txt")
+    }
+
+    /// Where does a web page's left edge land after the column hides again?
+    /// Reported 25 Sep 2026: after show → hide, the report's Contents panel
+    /// sat ~70 pt in from the window edge with white to its left. Reads the
+    /// web view's frame in the window, its leading safe-area inset, and the
+    /// page's own panel position from inside the page.
+    @Test func s20_webDetailLeftEdgeAcrossHideShow() async {
+        var rows = "kind step | sidebarW collapsed | webView x/w | safeArea.left | page innerWidth panelLeft\n"
+        for kind in [SidebarKind.list, .outlineShape] {
+            let rig = await SidebarFitRig(kind: kind, detail: .webView, width: 1000, minWidth: 0)
+            await rig.settle(1.5)   // page load
+            func row(_ step: String) async {
+                let web = HarnessWebView.last
+                let frame = web.map { $0.convert($0.bounds, to: nil) } ?? .zero
+                let js = try? await web?.evaluateJavaScript(
+                    "innerWidth + ' ' + document.getElementById('panel').getBoundingClientRect().left")
+                // The web view starts where the column ends, and the page's own
+                // left edge is the web view's — no inset left behind by a hide.
+                let columnEdge = rig.appKitCollapsed == true ? 0 : (rig.appKitSidebarWidth ?? -1)
+                #expect(abs(frame.minX - columnEdge) <= 1, "\(kind) \(step): web view at \(frame.minX), column edge \(columnEdge)")
+                #expect((js as? String)?.hasSuffix(" 0") == true, "\(kind) \(step): page panel at \(String(describing: js))")
+                rows += "\(kind) \(step) | \(Int(rig.appKitSidebarWidth ?? -1)) \(rig.appKitCollapsed.map(String.init) ?? "nil") | "
+                    + "\(Int(frame.minX))/\(Int(frame.width)) | \(Int(web?.safeAreaInsets.left ?? -1)) | \((js as? String) ?? "js-failed")\n"
+            }
+            await row("start (shown)")
+            await rig.appKitToggle(); await row("toolbar hide")
+            await rig.appKitToggle(); await row("toolbar show")
+            await rig.appKitToggle(); await row("toolbar hide again")
+            withAnimation { rig.probe.visibility = .all }; await rig.settle(); await row("menu show")
+            withAnimation { rig.probe.visibility = .detailOnly }; await rig.settle(); await row("menu hide")
+            rig.probe.visibility = .all; await rig.settle()
+            rig.splitController?.splitView.setPosition(260, ofDividerAt: 0); await rig.settle(); await row("shown, divider → 260")
+            rig.close()
+        }
+        Attachment.record(rows, named: "s20.txt")
     }
 }

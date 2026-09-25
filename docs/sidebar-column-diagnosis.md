@@ -171,3 +171,149 @@ is an allowance, not a measurement). Everything here ran on 27. And
 `BristlenoseTests` sits at a **26.1** deployment target, so this harness
 cannot run on 15 as the suite is built — a 15 or 26 VM would need the test
 target's floor lowered, or the harness in its own target.
+
+---
+
+## Session 4 — other approaches (read only, nothing built)
+
+Written 25 Sep 2026, 17:10, independently of sessions 2 and 3, from the
+code, the harness and the unified log. First what I read that the brief
+does not yet say; then the approaches, ranked by cost.
+
+### Three readings the brief does not have
+
+**The "Invalid frame dimension" lead is attributable, and it is not the
+report.** The only `.frame(width:)` in the app whose argument can go
+negative is `WelcomeHomeView.swift:435` — `major.frame(width:
+(geo.size.width - gutter) * phi)` inside a `GeometryReader`, which reports
+0 on its first pass, so the Welcome pane's golden-ratio split logs a fault
+per mount (the log shows them in bursts of 10 at launch timestamps, e.g.
+16:07:35). `SidebarShimmerText:74` already guards with `max(1, …)`;
+`WelcomeIllustrations:94` passes the size through unchanged. Session 3
+reports bursts at **lens changes** too, which this does not explain — if
+those are real, the cheap way to name the view is Xcode's *Runtime Issue*
+breakpoint with the debugger already attached, which stops in the Swift
+frames the log's backtrace lacks. Either way: close this as a lead for
+S4–S7. A negative frame on Welcome cannot centre the report.
+
+**S4 may be a measurement, not a defect.** On macOS 26/27 the sidebar is a
+floating glass card **inset** from the column it sits in. A 180 pt column
+shows a card of roughly 155–165 pt. If "~150–165" was read off the card
+rather than the divider, the column is at its minimum and the modifier is
+live. The trace's `sidebarW=` decides it in one line. If that is what it
+is, the action is the opposite of H4's: raise `columnMin` so the *card*
+meets the design's floor, and record that the range is a column range, not
+a card range.
+
+**A native fault is lens-blind; S6 is not.** `ContentView` does not know
+which lens the SPA is showing, so a wrong web-view frame (H1) would produce
+the *same* wrong picture on Signals and Codebooks. Martin saw two different
+pictures: a white strip left of the panel on Signals, equal ~141 pt
+margins on Codebooks. Either the two observations were at different
+widths, or the shape has a web ingredient — each lens's CSS rendering the
+same (native or web) width fault differently. Codebooks is
+`.layout-no-right` (0 | 1fr | 0 in embedded), Signals has its own
+`signals-layout` grid and a sticky left panel at x = 0; those would indeed
+draw one fault two ways. So the H1/H2 split is probably not either/or, and
+the decisive reading is the pair `webX/webW` **and** the `.layout` rect
+from the same instant — which is what session 3's AX driver reads.
+
+One more cheap discriminator for S6-Codebooks: "the toolbar's bottom
+hairline spans only the centre". If that hairline is AppKit's toolbar
+separator (drawn over whichever view scrolls under it), its span *is* the
+WKWebView's width and S6 is native. If it is the SPA's own `h2`
+`border-bottom` (`report.css:93`, a full-pane section divider), its span is
+the `.center` column and S6 is web. Web Inspector, hide the `h2`: if the
+line goes, it was web.
+
+### Approaches
+
+**A. Read the column from AppKit instead of inferring it (small, keeps
+SwiftUI).** Every fixed defect (A, B, C) and hypothesis H4 come from
+reconstructing `split − detail` through two geometry readers. The trace
+already walks from the key window to the `NSSplitView` and reads the
+item's `isCollapsed`, `minimumThickness` and the sidebar subview's frame;
+the *decision* could read the same. A one-view `NSViewRepresentable` probe
+placed in the sidebar column finds its enclosing `NSSplitView` in
+`viewDidMoveToWindow`, subscribes to `NSSplitView.didResizeSubviewsNotification`
+and KVO on the item's `isCollapsed`, and publishes the real column width,
+the real collapsed state, and — because the notification fires per layout,
+not per SwiftUI frame — a clean "animation finished" edge. `restingColumnWidth`
+and its 180–300 filter go away; the version slack (`dividerSlack`) goes
+away because the reading is whatever this OS lays out. `decide()` and the
+ours-flag stay exactly as they are. Cost: ~60 lines, one representable, no
+migration. This is the first thing I would try, because it removes the
+whole class rather than the three instances.
+
+**B. Bisect the app, not the harness (diagnosis, ~5 lines per switch).**
+The harness is clean with three stand-ins; the app is broken with the real
+things. Rather than guess which missing ingredient matters, remove them
+from the *app* one at a time behind DEBUG launch arguments:
+`-BristlenoseDebugDetail color` (the WebView becomes a `Color`, keeping
+`.id(viewID)`, the `ZStack` and the boot overlay), `-BristlenoseDebugNoToolbar`,
+`-BristlenoseDebugNoResizability` (drop `.windowResizability(.contentMinSize)`).
+Run Martin's S6 steps under each; the first switch that clears it names the
+cause. Meets the harness in the middle and needs no Accessibility grant.
+
+**C. One-shot dump instead of a stream.** Diagnostics ▸ *Dump Layout*
+writes, to one file, the NSView frame tree under the key window's content
+view and the result of `evaluateJavaScript("innerWidth, .layout rect,
+.center rect, SidebarStore.availableWidth")` from the same run-loop turn —
+both halves of H1/H2 at the instant of the symptom, no timing to line up.
+Zero-code variant: Xcode ▸ Debug ▸ View Debugging ▸ *Capture View
+Hierarchy* while S6 is on screen; the WKWebView's frame and whether it is
+centred are on the canvas. Session 3's AX driver is the same information
+through a wider door; this is the narrower one if the grant is slow.
+
+**D. Take the animation out of the resize path (one line, removes H3's
+mechanism whatever the diagnosis).** `applySidebarAutoCollapse` writes
+`columnVisibility` inside `withAnimation` from a geometry callback that
+fires during a live window drag — the two-drivers shape H3 describes. Mail
+does not animate a resize-collapse. Wrap the write in a `Transaction` with
+`disablesAnimations = window.inLiveResize` (animate only the expand on a
+programmatic or post-drag change). Cheap, safe, and it also removes one
+candidate for "Publishing changes from within view updates", which is a
+state write during layout by another name.
+
+**E. Make the web side incapable of a stale width.** H2 exists because the
+cascade is JS state fed by a `ResizeObserver` on one element; an observer
+that stops firing (element remounted under it, effect deps unchanged) leaves
+`availableWidth` frozen and nothing reports it. Container queries make the
+fit a pure function of the width the engine is laying out *right now*:
+`.layout { container-type: inline-size }` and `@container (max-width: …)`
+rules closing the left panel, then tags, then minimap, with `lastOpened`
+as a class the query respects. `wantedWidth` (the wish, posted to native)
+stays JS, because it is computed from state, not from width. This kills S7's
+class rather than the instance — but it is the biggest change of the cheap
+ones, and only worth it if the readings pick H2.
+
+**F. Hand the whole split to `NSSplitViewController` (the large option).**
+Session 1's question 4. What it buys that A does not: the detail floor
+becomes `detailItem.minimumThickness = webMinWidth`, the collapse-on-resize
+becomes `sidebarItem.canCollapseFromWindowResize` (already `true`), and
+the window's minimum **follows the split's minimums automatically** — which
+is precisely the property whose absence in SwiftUI produced the 20 Sep
+overflow and forced the "declare no minimum, decide ourselves" design.
+`SidebarAutoCollapse.decide` would not need to exist. What it costs: the
+toolbar (`NSToolbar` + `NSTrackingSeparatorToolbarItem`, and every
+`ToolbarItem` in `ContentView` rehomed), title/subtitle (direct on the
+window — simpler), `focusedSceneValue` plumbing through hosting views
+(should hold, unmeasured), and the whole harness rewritten. **Two things
+are unmeasured and decide whether it is worth it:** (1) whether AppKit
+re-expands a resize-collapsed item when the window widens again, or leaves
+that to the app as Mail may do — if the app still has to do it, the
+ours-flag survives the migration; (2) whether a `minimumThickness` change
+*without* a resize (a panel opening) collapses the sidebar in AppKit, or
+overflows exactly as SwiftUI did — the design's "the window is the only
+trigger" rule was written against the SwiftUI behaviour and may be AppKit's
+too. Both are a 30-line AppKit spike in the existing test host, and I would
+run that spike before choosing F over A.
+
+### Order I would take
+
+Readings first: `sidebarW=` (settles S4 for or against the card inset),
+the `h2` test (settles which side S6 is on for Codebooks), then session 3's
+paired frame/DOM read. Then D regardless, because it is free. Then A if the
+readings say the column's width is still being misread, E if they say the
+page's is. F only after its two spikes come back, and only if A leaves a
+defect standing.

@@ -25,8 +25,23 @@
 .layout:has(.signals-layout) {
     height: calc(100vh - var(--bn-toolbar-inset, 0px) - var(--bn-space-xl));
     height: calc(100dvh - var(--bn-toolbar-inset, 0px) - var(--bn-space-xl));
-    overflow: hidden;
     grid-template-rows: 1fr;
+    /* No `overflow: hidden` here. It shipped with the cap (14 Sep 2026) and
+       did two things the cap does not need: it clipped the 32px the left panel
+       bleeds ABOVE the grid (sidebar.css: `.toc-sidebar` margin-top), so on
+       Signals alone the panel's tint and keyline started a full pad below the
+       toolbar while Codebooks' ran to the top — and it made `.layout` a scroll
+       container, so the sticky panel pinned to the grid instead of the window.
+       The scrolling content is contained by `.center` below; the bleed ends
+       exactly at the grid's bottom edge, so nothing overflows downward. */
+}
+
+/* The icon rail has no bleed and is `height: 100vh`, so with the clip gone it
+   would stand 32px past the capped grid and hand the page back the phantom
+   scrollbar. Size it to the row instead. Browser-only in effect: embedded
+   mode hides the rails outright (sidebar.css `.layout.embedded .toc-rail`). */
+.layout:has(.signals-layout) > .toc-rail {
+    height: 100%;
 }
 
 /* Height-fitted lens: the bottom pad `.center` carries elsewhere (sidebar.css)

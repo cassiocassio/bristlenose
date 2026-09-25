@@ -41,8 +41,11 @@ export function SignalsSidebar() {
 
   if (signals.length === 0) return null;
 
+  // No wrapper: SidebarLayout already mounts this inside `.toc-sidebar-body`,
+  // and a second one nested the panel's side padding twice — the Signals rows
+  // sat 0.85rem further in than the Codebooks rows in the same column.
   return (
-    <div className="toc-sidebar-body">
+    <>
       {groupSignalsByLocation(signals).map(({ location, cards }) => (
         <Fragment key={location}>
           <div className="toc-sub-heading">{location}</div>
@@ -56,7 +59,7 @@ export function SignalsSidebar() {
           ))}
         </Fragment>
       ))}
-    </div>
+    </>
   );
 }
 

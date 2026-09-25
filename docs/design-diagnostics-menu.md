@@ -20,8 +20,16 @@ Phase-1 implementation notes (deltas from the plan below):
 - `BetaDebugMenuContent` → `DiagnosticsMenuContent` in `MenuCommands.swift`;
   the old channel-gated `CommandMenu("Debug")` is gone. `DebugMenuActions` →
   `DiagnosticsActions` (`DiagnosticsActions.swift`, no longer `#if DEBUG`),
-  which also hosts `DiagnosticsPreference` (key + build-config default +
-  `isEnabled()` reader).
+  which also hosts `DiagnosticsPreference` (key + default + `isEnabled()`
+  reader). The default is **off in every build, Debug included** — until
+  25 Sep 2026 Debug defaulted on as a dev convenience; it now matches the
+  shipped app. The toggle only seeds an absent key, so a Mac that ever
+  flipped it keeps its stored value.
+- The Debug-only build-info capsule (`BuildInfo.oneLine`, bottom-trailing in
+  `ContentView`) also follows the toggle, so one switch hides all the
+  machinery for screenshots and demos. It stays compiled out of Release
+  (`#if DEBUG || BRISTLENOSE_SHOW_DIAGNOSTIC_OVERLAY`); the toggle's help text
+  deliberately does not mention it, since Release users never see it.
 - The Reveal / Open Log / Copy Provenance trio moved OUT of the Section-3
   harness (not duplicated) — they live only in Section 1 now.
 - **Check Health** is the top item of Section 1 (moved here from the app menu,

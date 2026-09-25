@@ -642,7 +642,16 @@ growth — the Mail behaviour, done explicitly rather than by declaring a
 detail-column minimum (which `NSSplitView` honours by overflowing the window; see
 `desktop/CLAUDE.md` § Gotchas). The projects column itself declares 200–300,
 which a 700-pt window always holds, and the rule ignores any split narrower
-than that window (a mount reading, 25 Sep 2026). A panel opening, a lens change and the column
+than that window (a mount reading, 25 Sep 2026).
+
+The split view stays SwiftUI's `NavigationSplitView` (decided 25 Sep 2026, four
+sessions agreeing): every defect that reached a measurement was either a
+measurement defect in our code or a platform behaviour we had not modelled
+(the column's width is restored from AppKit's autosave, not its ideal), and
+nothing measured needed `NSSplitViewController`. Moving to it is on the shelf,
+not rejected: it is the last rung of the ladder in
+`docs/sidebar-column-diagnosis.md` § Session 4, and it comes off the shelf only if
+the unreproduced symptoms there recur with a named ingredient. A panel opening, a lens change and the column
 toggling are **not** triggers: the web copes with the width it is given, closing
 Contents, then Tags, then the minimap, with the panel just opened exempt so a
 press never opens nothing. If even that leaves the centre under its floor, the

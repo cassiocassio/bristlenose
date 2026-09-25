@@ -571,6 +571,11 @@ struct ContentView: View {
             sidebarVisible: SidebarToggle.isVisible(columnVisibility),
             autoCollapsed: sidebarAutoCollapsed
         )
+        if action != .none { SidebarFitTrace.note(
+            "decide → \(action)", split: splitWidth, detail: detailWidth, lastSidebar: lastSidebarWidth,
+            floor: DetailFloor.resolve(webMinWidth: bridgeHandler.detailMinWidth,
+                                       showingReport: detailPaneKind == .report),
+            visibility: columnVisibility, autoCollapsed: sidebarAutoCollapsed) }
         switch action {
         case .collapse:
             sidebarAutoCollapsed = true
@@ -611,6 +616,11 @@ struct ContentView: View {
                         let sidebar = splitWidth - width
                         if sidebar > 0 { lastSidebarWidth = sidebar }
                     }
+                    SidebarFitTrace.note(
+                        "detail geometry", split: splitWidth, detail: detailWidth, lastSidebar: lastSidebarWidth,
+                        floor: DetailFloor.resolve(webMinWidth: bridgeHandler.detailMinWidth,
+                                                   showingReport: detailPaneKind == .report),
+                        visibility: columnVisibility, autoCollapsed: sidebarAutoCollapsed)
                 }
                 // Subtitle composition lives in `WindowSubtitle.swift` — it has
                 // to observe `liveData` itself to tick during a run, and its
@@ -637,10 +647,20 @@ struct ContentView: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
             splitWidth = width
             applySidebarAutoCollapse()
+            SidebarFitTrace.note(
+                "split geometry", split: splitWidth, detail: detailWidth, lastSidebar: lastSidebarWidth,
+                floor: DetailFloor.resolve(webMinWidth: bridgeHandler.detailMinWidth,
+                                           showingReport: detailPaneKind == .report),
+                visibility: columnVisibility, autoCollapsed: sidebarAutoCollapsed)
         }
         .onChange(of: columnVisibility) { _, now in
             // Shown again — by us or by the researcher — is no longer ours.
             if SidebarToggle.isVisible(now) { sidebarAutoCollapsed = false }
+            SidebarFitTrace.note(
+                "visibility changed", split: splitWidth, detail: detailWidth, lastSidebar: lastSidebarWidth,
+                floor: DetailFloor.resolve(webMinWidth: bridgeHandler.detailMinWidth,
+                                           showingReport: detailPaneKind == .report),
+                visibility: columnVisibility, autoCollapsed: sidebarAutoCollapsed)
         }
         .overlay(alignment: .bottomTrailing) {
             // Compact build-info diagnostic — Debug only by default; Release
@@ -712,9 +732,19 @@ struct ContentView: View {
         // window frame is stable when we read it.
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didEnterFullScreenNotification)) { _ in
             bridgeHandler.syncToolbarInset()
+            SidebarFitTrace.note(
+                "didEnterFullScreen", split: splitWidth, detail: detailWidth, lastSidebar: lastSidebarWidth,
+                floor: DetailFloor.resolve(webMinWidth: bridgeHandler.detailMinWidth,
+                                           showingReport: detailPaneKind == .report),
+                visibility: columnVisibility, autoCollapsed: sidebarAutoCollapsed)
         }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didExitFullScreenNotification)) { _ in
             bridgeHandler.syncToolbarInset()
+            SidebarFitTrace.note(
+                "didExitFullScreen", split: splitWidth, detail: detailWidth, lastSidebar: lastSidebarWidth,
+                floor: DetailFloor.resolve(webMinWidth: bridgeHandler.detailMinWidth,
+                                           showingReport: detailPaneKind == .report),
+                visibility: columnVisibility, autoCollapsed: sidebarAutoCollapsed)
         }
         // Belt-and-braces: didResize fires many times during the full-screen
         // animation as the window frame interpolates, and once more when it

@@ -359,3 +359,43 @@ harness), S6 and S7 (session 2's real-SPA harness rows pairing the WKWebView
 frame with the `.layout`/`.center` rects; session 3's AX read of the same via
 `AXDOMClassList`). Session 3 is blocked on the Accessibility grant for the
 Claude app.
+
+### Verdict at 18:05, 25 Sep 2026
+
+All on pid 91553 (Martin's Xcode Debug of `db20574f`-dirty, macOS 27), via
+AX and CGEvent on the real WKWebView (session 3), plus the real-report
+harness (session 2, 6 of 6) and the unified log.
+
+- **S4 — explained.** A 180/209 column whose AX rows are full width and AX
+  cells 160 (a 10 pt inset; no card element in AX). The width is the
+  autosaved one, confirmed across two processes. Recurs for any user whose
+  stored frame predates a minimum change. Fix shapes in the S4 row above.
+- **S5 — not reproduced.** Seam drags, clamps at exactly 180, `AXSplitter`
+  value settable, no spring-back.
+- **S6 — not reproduced.** Toolbar hide at 1155 and 900 on Signals and
+  Codebooks; Contents hidden; both hidden. Final cell: web area x=0 w=1155,
+  `.center` x=0 w=1155, page main landmark at x=56 w=1043 — 56 pt page
+  margins, not 141. `.center` has no cap.
+- **S7 — not reproduced.** The cascade closed the left panel at 700 (TOC
+  wish 824) and it returned at 1155, on both a programmatic `setSize` and an
+  83-frame live edge drag. Auto-collapse and expand correct mid-drag.
+- **H3 — closed.** No layout-loop guard or negative-frame fault in the
+  app's log since 16:28, through every step above. The only guard in two
+  days was the harness's own synchronous round.
+- **H4 — refuted.** Thickness 180…300 live; the drag clamps at the
+  declared minimum.
+- The 16:30:05–08 events (hide, show, seam to 209, window moved) came from
+  no session — Martin's hands — and produced no defect either.
+
+**What no run included** — the list to walk before reopening H1 or H2:
+full-screen entry and exit; a second window (⌥⌘N); a lens change or
+project switch while the column was hidden; the Welcome→report transition
+with the column already hidden (the floor goes nil→N with `auto=false`); a
+hide or show during the SPA's own panel animation; macOS 15 and 26. If S6
+or S7 is seen again, note which of these it followed — that is the missing
+ingredient, and the trace (`defaults write app.bristlenose
+BristlenoseDebugSidebarFit -bool YES`, or the launch argument) will catch
+it. The trace was switched off in the global domain at 18:00.
+
+Session 3's rows are in its scratchpad (`axprobe-25c3/trace.log`); session
+2's are the `s19`/`s20`/SPA-harness attachments.

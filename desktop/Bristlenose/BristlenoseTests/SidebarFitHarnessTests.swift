@@ -222,8 +222,14 @@ struct SidebarFitRig {
     /// Window style and occlusion were surveyed during the diagnosis (plain
     /// vs unified toolbar over full-size content, floated vs background) and
     /// changed nothing, so the rig uses the plain window.
+    /// `identifier`: give the window an identity, as the app's `WindowGroup`
+    /// does (`main-AppWindow-N`). With none — every rig until 25 Sep 2026 —
+    /// the split view has no autosave name, so nothing is ever stored or
+    /// restored, and restore-over-ideal (the whole of symptom S4) could not
+    /// be seen here.
     init(placement: ColumnWidthPlacement = .onSidebarColumn, kind: SidebarKind = .list,
-         detail: DetailKind = .color, width: CGFloat = 1400, minWidth: CGFloat = 968) async {
+         detail: DetailKind = .color, width: CGFloat = 1400, minWidth: CGFloat = 968,
+         identifier: String? = nil) async {
         probe.webMinWidth = minWidth
         let host = NSHostingController(rootView: SidebarFitHarnessView(
             probe: probe, placement: placement, kind: kind, detailKind: detail))
@@ -233,8 +239,18 @@ struct SidebarFitRig {
             styleMask: [.titled, .resizable, .closable, .miniaturizable],
             backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
+        if let identifier { window.identifier = NSUserInterfaceItemIdentifier(identifier) }
         window.contentViewController = host
         window.setContentSize(NSSize(width: width, height: 700))
+        // SwiftUI names the split view's autosave only for windows it builds
+        // from a scene (`main-AppWindow-1, SidebarNavigationSplitView`); a
+        // plain NSWindow with an identifier gets none (measured 25 Sep 2026,
+        // s21's first run). So the rig names it the same way, as soon as the
+        // split view exists and before the window is shown.
+        if let identifier {
+            window.contentView?.layoutSubtreeIfNeeded()
+            splitController?.splitView.autosaveName = identifier + SidebarAutosaveMigration.keySuffix
+        }
         window.orderFront(nil)
         await settle()
     }
@@ -631,7 +647,7 @@ struct SidebarFitRig {
     /// each modifier placement. Reported 25 Sep 2026: with the AppKit outline
     /// the column showed the resize cursor and would not move.
     @Test func s19_theColumnResizesForEachSidebarKind() async {
-        var rows = "kind placement | min max | start → after setPosition(260) → after setPosition(190)\n"
+        var rows = "kind placement | min max | start → after setPosition(260) → after setPosition(210)\n"
         for kind in [SidebarKind.list, .outlineShape] {
             for placement in [ColumnWidthPlacement.onSplitView, .onSidebarColumn] {
                 let rig = await SidebarFitRig(placement: placement, kind: kind, minWidth: 0)
@@ -639,19 +655,66 @@ struct SidebarFitRig {
                 rig.splitController?.splitView.setPosition(260, ofDividerAt: 0)
                 await rig.settle()
                 let wide = rig.appKitSidebarWidth ?? -1
-                rig.splitController?.splitView.setPosition(190, ofDividerAt: 0)
+                rig.splitController?.splitView.setPosition(210, ofDividerAt: 0)
                 await rig.settle()
                 let narrow = rig.appKitSidebarWidth ?? -1
                 let item = rig.sidebarItem
                 rows += "\(kind) \(placement) | \(Int(item?.minimumThickness ?? -1)) \(Int(item?.maximumThickness ?? -1)) | \(Int(start)) → \(Int(wide)) → \(Int(narrow))\n"
                 if placement == .onSidebarColumn {
                     #expect(abs(wide - 260) <= 2, "\(kind): column did not follow the divider to 260 (got \(wide))")
-                    #expect(abs(narrow - 190) <= 2, "\(kind): column did not follow the divider to 190 (got \(narrow))")
+                    #expect(abs(narrow - 210) <= 2, "\(kind): column did not follow the divider to 210 (got \(narrow))")
                 }
                 rig.close()
             }
         }
         Attachment.record(rows, named: "s19.txt")
+    }
+
+    /// Restore-over-ideal, and the migration that fixes the clamped case.
+    ///
+    /// A window with an identity restores its column from
+    /// `NSSplitView Subview Frames <identifier>, SidebarNavigationSplitView`,
+    /// clamping a stored width below the minimum UP to the minimum — which is
+    /// how 148 (the pre-fix resting width) became a column stuck at its
+    /// narrowest (docs/sidebar-column-diagnosis.md, S4). The control seeds
+    /// 148 and launches: the column opens at the minimum, not the ideal. The
+    /// fix seeds 148, runs the migration, and launches: the ideal applies.
+    @Test func s21_storedWidthBelowMinimumIsClampedUnlessMigrated() async {
+        let defaults = UserDefaults.standard
+        let frames148 = ["0.000000, 0.000000, 148.000000, 700.000000, NO, NO",
+                         "148.000000, 0.000000, 1252.000000, 700.000000, NO, NO"]
+        func key(_ id: String) -> String {
+            SidebarAutosaveMigration.keyPrefix + id + SidebarAutosaveMigration.keySuffix
+        }
+        let control = "harness-s21-control-\(UUID().uuidString.prefix(8))"
+        let fixed = "harness-s21-migrated-\(UUID().uuidString.prefix(8))"
+        defer {
+            defaults.removeObject(forKey: key(control))
+            defaults.removeObject(forKey: key(fixed))
+        }
+
+        // Control: the stored width is restored, clamped to the minimum.
+        defaults.set(frames148, forKey: key(control))
+        let before = await SidebarFitRig(width: 1400, minWidth: 0, identifier: control)
+        let autosaveName = before.splitController?.splitView.autosaveName ?? "nil"
+        let clamped = before.appKitSidebarWidth ?? -1
+        before.dump("s21a control, stored 148, autosaveName=\(autosaveName)")
+        before.close()
+        #expect(autosaveName == control + SidebarAutosaveMigration.keySuffix,
+                "the rig did not name the split view's autosave: \(autosaveName)")
+        #expect(abs(clamped - SidebarAutoCollapse.columnMin) <= 1,
+                "stored 148 should restore clamped to the minimum \(SidebarAutoCollapse.columnMin); got \(clamped)")
+
+        // Fix: migrate before the window exists; the ideal applies.
+        defaults.set(frames148, forKey: key(fixed))
+        let removed = SidebarAutosaveMigration.run(defaults: defaults)
+        #expect(removed.contains(key(fixed)))
+        let after = await SidebarFitRig(width: 1400, minWidth: 0, identifier: fixed)
+        let restored = after.appKitSidebarWidth ?? -1
+        after.dump("s21b migrated, stored 148 removed")
+        after.close()
+        #expect(abs(restored - SidebarAutoCollapse.columnIdeal) <= 1,
+                "after migration the column should open at the ideal \(SidebarAutoCollapse.columnIdeal); got \(restored)")
     }
 
     /// Where does a web page's left edge land after the column hides again?

@@ -146,7 +146,7 @@ split − detail, and those readers report widths no column has at rest: a
 detail of 0 as it mounts (so "the column" was the whole window, and a column
 taken after that never came back), and every frame of a hide or show
 animation. `restingColumnWidth` ignores anything outside the column's
-declared 180–300 range — which only exists because the width modifier now
+declared 200–300 range (180 until 25 Sep 2026) — which only exists because the width modifier now
 sits on the sidebar column; on the split view it was inert (AppKit reported
 min 140, no max). Whether the column is ours is set where the logic writes
 the visibility, not cleared by `onChange`: a collapse and an expand inside one
@@ -160,6 +160,22 @@ logic took, and a researcher-hidden one never is. The evidence and the scenarios
 `SidebarFitHarnessTests`; `SidebarFitTrace` (off unless
 `BristlenoseDebugSidebarFit` is set) logs each decision beside AppKit's own
 state for a live session.
+
+**The column's width is restored, not ideal (25 Sep 2026).** The split view
+under `NavigationSplitView` autosaves each column's frame per window
+(`NSSplitView Subview Frames main-AppWindow-N, SidebarNavigationSplitView`)
+and restores it when the window is built, so the declared `ideal` (220)
+applies only to a window with nothing stored. A stored width below the
+minimum is clamped up to it and re-saved — which is how windows saved at the
+pre-fix 148 opened at 180 for good. Two changes follow. The minimum is 200,
+because the rows sit 10 pt inside the column on each side and the design's
+180 is the width the researcher reads. And `SidebarAutosaveMigration` runs
+from `applicationWillFinishLaunching`, before any window exists, removing only
+stored widths below the minimum: those are the widths AppKit would clamp, so
+the rule needs no version marker and never touches a width the researcher
+chose inside the range. Proven across two launches by
+`SidebarRealWindowProbeTests` p04/p05 (seed 150 → next launch opens at 220,
+not the clamped 200) and in-process by `SidebarFitHarnessTests.s21`.
 
 ---
 

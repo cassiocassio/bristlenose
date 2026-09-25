@@ -150,6 +150,85 @@ private enum Probe {
         Attachment.record(text, named: "p03-defaults.txt")
     }
 
+    // MARK: Does the migration run before the window restores? (two launches)
+    //
+    // Run p04 alone, then p05 alone, as two xcodebuild invocations: the
+    // question is about what happens at LAUNCH, so it takes a launch between
+    // them. p04 seeds a width below the minimum into this window's own
+    // autosave key and records the original; p05, in the next process, reads
+    // where the column opened — the ideal if `SidebarAutosaveMigration` ran
+    // in `applicationWillFinishLaunching` before the split view restored, the
+    // minimum (clamped) if it ran too late or not at all — and then drags the
+    // divider back to the recorded width, so AppKit itself rewrites the key.
+    // The container is shared with any running copy of the app; if that copy
+    // lays out its first window in between, p05 reads its width instead and
+    // says so.
+
+    static let seedRecord = "BristlenoseDiagnosisAutosaveSeed"
+
+    @Test func p04_seedABelowMinimumWidth() async throws {
+        try? await Task.sleep(nanoseconds: 1_500_000_000)
+        let window = try #require(NSApp.windows.first(where: { $0.isVisible && Probe.findSplit($0.contentView) != nil }))
+        let split = try #require(Probe.findSplit(window.contentView))
+        let name = try #require(split.autosaveName, "the app's split view has no autosave name")
+        let key = SidebarAutosaveMigration.keyPrefix + name
+        let original = UserDefaults.standard.stringArray(forKey: key)
+        let originalWidth = Double(split.arrangedSubviews.first?.frame.width ?? SidebarAutoCollapse.columnIdeal)
+        // Move off the ideal first, so the three outcomes differ in p05:
+        // 220 = migrated before restore, 200 = restored and clamped,
+        // 240 = this process rewrote the key on its way out (seed lost).
+        split.setPosition(240, ofDividerAt: 0)
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        let seeded = ["0.000000, 0.000000, 150.000000, 827.000000, NO, NO",
+                      "150.000000, 0.000000, 1005.000000, 827.000000, NO, NO"]
+        UserDefaults.standard.set([
+            "key": key,
+            "pid": Int(ProcessInfo.processInfo.processIdentifier),
+            "originalWidth": originalWidth,
+            "original": original ?? [],
+        ] as [String: Any], forKey: Self.seedRecord)
+        UserDefaults.standard.set(seeded, forKey: key)
+        UserDefaults.standard.synchronize()
+        Attachment.record("seeded \(key)\n  was: \(original ?? [])\n  now: \(seeded)\n  pid \(ProcessInfo.processInfo.processIdentifier)",
+                          named: "p04-seed.txt")
+    }
+
+    @Test func p05_nextLaunchOpensAtTheIdeal() async throws {
+        guard let record = UserDefaults.standard.dictionary(forKey: Self.seedRecord),
+              let key = record["key"] as? String,
+              let seedPid = record["pid"] as? Int,
+              let originalWidth = record["originalWidth"] as? Double else {
+            Attachment.record("no seed record — run p04 in a previous launch first", named: "p05-skipped.txt")
+            return
+        }
+        guard seedPid != Int(ProcessInfo.processInfo.processIdentifier) else {
+            Attachment.record("seeded in THIS process; the question needs a launch in between", named: "p05-skipped.txt")
+            return
+        }
+        try? await Task.sleep(nanoseconds: 1_500_000_000)
+        let window = try #require(NSApp.windows.first(where: { $0.isVisible && Probe.findSplit($0.contentView) != nil }))
+        let split = try #require(Probe.findSplit(window.contentView))
+        let opened = split.arrangedSubviews.first?.frame.width ?? -1
+        let keyNow = UserDefaults.standard.stringArray(forKey: key) ?? []
+
+        // Put the researcher's width back through AppKit, which rewrites the key.
+        split.setPosition(CGFloat(originalWidth), ofDividerAt: 0)
+        try? await Task.sleep(nanoseconds: 1_500_000_000)
+        let restored = split.arrangedSubviews.first?.frame.width ?? -1
+        UserDefaults.standard.removeObject(forKey: Self.seedRecord)
+
+        Attachment.record("""
+            key \(key)
+            seeded in pid \(seedPid); this launch pid \(ProcessInfo.processInfo.processIdentifier)
+            column opened at \(Int(opened)) (ideal \(Int(SidebarAutoCollapse.columnIdeal)), clamped would be \(Int(SidebarAutoCollapse.columnMin)))
+            key at test start: \(keyNow)
+            restored to the recorded \(Int(originalWidth)): column now \(Int(restored)); key \(UserDefaults.standard.stringArray(forKey: key) ?? [])
+            """, named: "p05-verify.txt")
+        #expect(abs(opened - SidebarAutoCollapse.columnIdeal) <= 1,
+                "column opened at \(opened): the migration did not run before the restore (or another copy of the app rewrote \(key))")
+        #expect(abs(restored - CGFloat(originalWidth)) <= 1, "could not put the recorded width \(originalWidth) back")
+    }
+
     /// Control: the harness's List sidebar under the same divider + churn.
     @Test func p02_harnessListUnderChurn() async {
         let rig = await SidebarFitRig(width: 1200, minWidth: 0)

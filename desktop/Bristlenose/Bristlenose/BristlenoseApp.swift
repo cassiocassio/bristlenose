@@ -7,6 +7,15 @@ private let appLog = Logger(subsystem: "app.bristlenose", category: "app")
 /// Dock-icon reopen. Sidecar teardown on quit is *not* here — `ServeManager`
 /// observes termination itself, because it owns the process.
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    /// Before any window exists: SwiftUI names each window's split-view
+    /// autosave as it builds the window, and AppKit restores the stored column
+    /// width at that moment, so a stored width can only be corrected before
+    /// it. Proven across two launches (`SidebarRealWindowProbeTests` p04/p05).
+    /// See `SidebarAutosaveMigration`.
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        SidebarAutosaveMigration.run()
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Symmetry with the existing `Mode:` line in ServeManager — this one
         // captures provenance facts known at *build* time so support sessions

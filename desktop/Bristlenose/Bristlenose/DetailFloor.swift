@@ -86,7 +86,15 @@ enum SidebarAutoCollapse {
     /// (`navigationSplitViewColumnWidth` on the sidebar view — on the split
     /// view it is inert: AppKit reported min 140 and no maximum, measured
     /// 25 Sep 2026 by `SidebarFitHarnessTests.s00`).
-    static let columnMin: CGFloat = 180
+    ///
+    /// The minimum is the COLUMN; the rows the researcher reads are 20 pt
+    /// narrower (a 10 pt inset each side on macOS 26/27, measured by AX on
+    /// 25 Sep 2026: a 180 column drew 160 pt cells, which read as "the column
+    /// came back below its minimum"). 200 puts the cells at the 180 the design
+    /// meant. Raising it also raises the collapse threshold by the same
+    /// amount — window − column is compared with the floor — which is correct.
+    /// Widths stored below it are removed at launch (`SidebarAutosaveMigration`).
+    static let columnMin: CGFloat = 200
     static let columnIdeal: CGFloat = 220
     static let columnMax: CGFloat = 300
     /// On macOS 26 the detail runs under the floating sidebar, so split −

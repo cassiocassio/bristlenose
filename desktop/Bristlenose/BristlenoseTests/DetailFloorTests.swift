@@ -57,7 +57,7 @@ struct SidebarAutoCollapseTests {
 
     @Test func remembersAColumnAtRest() {
         #expect(A.restingColumnWidth(splitWidth: 1400, detailWidth: 1180, sidebarVisible: true) == 220)
-        #expect(A.restingColumnWidth(splitWidth: 1400, detailWidth: 1220, sidebarVisible: true) == A.columnMin)
+        #expect(A.restingColumnWidth(splitWidth: 1400, detailWidth: 1400 - A.columnMin, sidebarVisible: true) == A.columnMin)
         #expect(A.restingColumnWidth(splitWidth: 1400, detailWidth: 1100, sidebarVisible: true) == A.columnMax)
     }
 
@@ -66,6 +66,20 @@ struct SidebarAutoCollapseTests {
         // columns, which split − detail counts as column.
         #expect(A.restingColumnWidth(splitWidth: 1400, detailWidth: 1098, sidebarVisible: true) == 302)
         #expect(A.restingColumnWidth(splitWidth: 1400, detailWidth: 1097, sidebarVisible: true) == nil)
+    }
+
+    @Test func theMinimumPutsTheCellsAtTheDesignWidth() {
+        // The column's rows are 20 pt narrower than the column (10 pt inset
+        // each side, measured by AX 25 Sep 2026). The design's 180 is the
+        // width the researcher reads, so the column minimum is 200.
+        #expect(A.columnMin - 20 == 180)
+        #expect(A.columnMin < A.columnIdeal && A.columnIdeal < A.columnMax)
+    }
+
+    @Test func aReadingAtTheOldMinimumIsNotARestingColumn() {
+        // 180 was the minimum until 25 Sep 2026; a column can no longer rest
+        // there, so a reading of it is a mount or an animation frame.
+        #expect(A.restingColumnWidth(splitWidth: 1400, detailWidth: 1220, sidebarVisible: true) == nil)
     }
 
     @Test func ignoresTheDetailMountingAtZero() {

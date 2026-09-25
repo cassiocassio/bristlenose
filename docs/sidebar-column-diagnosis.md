@@ -1,5 +1,5 @@
 ---
-status: open
+status: s4-fixed
 date: 25 Sep 2026
 area: desktop — projects column (NavigationSplitView) + report web view
 ---
@@ -595,3 +595,27 @@ hand-over: the four sessions are archived after it.
   relaunch; test hosts share the flag and category, filter on pid; the
   Accessibility grant covers every Claude session, one driver per instance).
 - Session 4: the approaches ladder in its section above.
+
+---
+
+## Implemented (25 Sep 2026, evening) — option (c): raise the minimum AND migrate
+
+- `SidebarAutoCollapse.columnMin` 180 → **200** (cells 180). The collapse
+  threshold rises by the same 20 pt, by design.
+- `SidebarAutosaveMigration` (`desktop/.../SidebarAutosaveMigration.swift`),
+  called from `AppDelegate.applicationWillFinishLaunching`: removes
+  `NSSplitView Subview Frames *, SidebarNavigationSplitView` entries whose
+  sidebar width parses below the minimum; unparseable entries are left alone.
+- **Evidence.** Unit rules (`SidebarAutosaveMigrationTests`, 7 cases incl.
+  idempotence against a real defaults suite). In-process: s21 — a stored 148
+  opens clamped at 200; after the migration the same window opens at the 220
+  ideal. Real app, two launches (gated p04/p05): seeded 150 over a 240
+  position; the next launch opened at **220** (clamped would be 200, a lost
+  seed 240) and logged `autosave migration: removed 1`; Martin's 209 was then
+  put back through AppKit.
+- **Two facts the harness work turned up.** SwiftUI gives the split view an
+  autosave name only in windows it builds from a scene — a plain `NSWindow`
+  with an identifier gets none, so the rig now names it. And a Swift Testing
+  test selected by `-only-testing` needs its trailing `()`; without it the
+  suite starts, runs nothing and exits 0.
+- S5–S7 remain open on the terms above.

@@ -189,6 +189,10 @@ struct ContentView: View {
     @EnvironmentObject var i18n: I18n
     @AppStorage("appearance") private var appearance: String = "auto"
     @AppStorage("showAnalysisAnimation") private var showAnalysisAnimation = true
+    /// Also gates the build-info capsule: the same "show me the machinery"
+    /// switch as the Diagnostics menu, so one toggle hides both.
+    @AppStorage(DiagnosticsPreference.key)
+    private var showDiagnostics: Bool = DiagnosticsPreference.defaultValue
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Whether this window is the key one. `.key` while it is frontmost,
     /// `.active` when a sibling window is, `.inactive` when the app itself
@@ -643,22 +647,26 @@ struct ContentView: View {
             // exposure gated on a custom build flag so internal/ad-hoc archives
             // can opt in. Never shipped to TestFlight / App Store users.
             // See BuildInfo.swift for the rationale and target format.
+            // Within those builds it follows Settings ▸ Appearance ▸ Show
+            // Diagnostics menu, so it can be hidden for screenshots and demos.
             #if DEBUG || BRISTLENOSE_SHOW_DIAGNOSTIC_OVERLAY
-            // Frosted capsule so the diagnostic reads on any background —
-            // including the bright empty/welcome state, where first-run QA
-            // happens and branch-verification from a screenshot matters most.
-            // .thinMaterial + .secondary stay on the system grid (adapts to
-            // light/dark automatically); no off-grid colours or opacities.
-            Text(BuildInfo.current.oneLine(sidecar: serveManager?.mode?.shortSummary ?? "?"))
-                .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(.secondary)
-                .textSelection(.enabled)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(.thinMaterial, in: Capsule())
-                .padding(8)
-                .allowsHitTesting(true)
-                .accessibilityHidden(true)
+            if showDiagnostics {
+                // Frosted capsule so the diagnostic reads on any background —
+                // including the bright empty/welcome state, where first-run QA
+                // happens and branch-verification from a screenshot matters most.
+                // .thinMaterial + .secondary stay on the system grid (adapts to
+                // light/dark automatically); no off-grid colours or opacities.
+                Text(BuildInfo.current.oneLine(sidecar: serveManager?.mode?.shortSummary ?? "?"))
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(.thinMaterial, in: Capsule())
+                    .padding(8)
+                    .allowsHitTesting(true)
+                    .accessibilityHidden(true)
+            }
             #endif
         }
         .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 300)

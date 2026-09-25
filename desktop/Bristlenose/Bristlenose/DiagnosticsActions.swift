@@ -13,18 +13,13 @@ import Foundation
 
 /// The `showDiagnosticsMenu` preference — one switch (Safari's pattern) that
 /// reveals the Diagnostics menu and, as a disclosed side-effect, enables the
-/// Web Inspector on the report WebView. Default off in Release; on in local
-/// DEBUG builds as a dev convenience.
+/// Web Inspector on the report WebView. Off by default in every build,
+/// Debug included, so a fresh Debug build looks like the shipped app; it also
+/// hides the Debug build-info capsule (`ContentView`).
 enum DiagnosticsPreference {
     static let key = "showDiagnosticsMenu"
 
-    static let defaultValue: Bool = {
-        #if DEBUG
-        return true
-        #else
-        return false
-        #endif
-    }()
+    static let defaultValue = false
 
     /// Current effective value — the stored preference, or the build-config
     /// default when the user has never touched the toggle.

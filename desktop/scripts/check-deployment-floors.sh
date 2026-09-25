@@ -19,16 +19,17 @@
 # answers, two of which reached a committed doc.
 #
 #   Bristlenose       (all 4 app schemes, Debug + Release)  15.0
-#   BristlenoseTests  (Debug + Release)                     26.1
+#   BristlenoseTests  (Debug + Release)                     15.0
 #
-# KNOWN GAP, deliberately pinned rather than "fixed" here
-# ------------------------------------------------------
-# The test target's floor is ABOVE the app's, so the Swift suite cannot run on
-# the minimum OS the product ships to. The 26.1 arrived incidentally in
-# cce34d2a ("wire up BristlenoseTests target") — Xcode defaults a new test
-# target to the current SDK — and no test uses a macOS 26 API. Lowering it to
-# match the app is a real change with real risk, so this gate pins today's
-# reality and fails on drift; it does not assert the gap is acceptable.
+# THE TWO FLOORS ARE EQUAL, AND THAT IS WHAT THIS GATE NOW PROTECTS
+# ----------------------------------------------------------------
+# The test target sat at 26.1 from cce34d2a ("wire up BristlenoseTests target"),
+# because Xcode defaults a new test target to the current SDK. That put it ABOVE
+# the app's floor, so the Swift suite could not run on the minimum OS the product
+# ships to. Lowered to 15.0 on 25 Sep 2026 after it was proven on real guests:
+# the suite builds and runs on macOS 15.7.3 (Xcode 26.3) and 26.6.2 (Xcode 27.0),
+# and its first run on 15 found a sidebar defect no 26/27 machine could show.
+# A test target above the app's floor is the regression this gate now catches.
 #
 # Bumping a floor on purpose? Change the constant here in the same commit.
 
@@ -37,7 +38,7 @@ set -euo pipefail
 PROJ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/Bristlenose/Bristlenose.xcodeproj"
 
 EXPECT_APP="15.0"
-EXPECT_TESTS="26.1"
+EXPECT_TESTS="15.0"
 
 die() { printf 'check-deployment-floors: FAIL — %s\n' "$*" >&2; exit 1; }
 

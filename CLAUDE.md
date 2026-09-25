@@ -247,11 +247,12 @@ filenames were never going to be in there.
 
 **Nor can it answer "what is the deployment target?" — and that one fails
 *plausibly*.** The file holds several `XCBuildConfiguration` blocks; which one a
-scheme resolves to is decided by the build system, not by reading order, and the
-project deliberately carries **two** floors — production at `MACOSX_DEPLOYMENT_TARGET
-= 15.0` on all four app schemes, and `BristlenoseTests` at 26.1
-(`docs/design-platform-policy.md` §"Pillar 3"; pinned by
-`desktop/scripts/check-deployment-floors.sh`).
+scheme resolves to is decided by the build system, not by reading order. The
+project carried **two** floors until 25 Sep 2026 — production at
+`MACOSX_DEPLOYMENT_TARGET = 15.0` on all four app schemes, and `BristlenoseTests` at
+26.1 — and both are now 15.0 (`docs/design-platform-policy.md` §"Pillar 3"; pinned by
+`desktop/scripts/check-deployment-floors.sh`). The trap outlives the gap: any build
+setting a test target overrides can be misread the same way.
 Hand-parsing therefore returns a real number that is nonetheless the wrong one for
 the scheme you meant, with nothing to signal the error.
 

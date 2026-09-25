@@ -209,12 +209,12 @@ bn_check 1 ok "menu routing" "commands target a window, not every window"
 "$SCRIPT_DIR/check-bundle-manifest.sh" "$ROOT" >/dev/null
 bn_check 1 ok "bundle manifest" "every runtime dir covered by spec"
 
-# 1c. Deployment floors: every app scheme at 15.0, BristlenoseTests at 26.1, read from
+# 1c. Deployment floors: every app scheme and BristlenoseTests at 15.0, read from
 # xcodebuild's resolved settings (docs/design-platform-policy.md §Pillar 3). The script
 # existed from 3 Sep 2026 and five docs said the floors were "pinned" by it; nothing
 # invoked it until 12 Sep. A few seconds; fails the build on drift.
 "$SCRIPT_DIR/check-deployment-floors.sh" >/dev/null
-bn_check 1 ok "deployment floors" "app 15.0, tests 26.1 (resolved by xcodebuild)"
+bn_check 1 ok "deployment floors" "app 15.0, tests 15.0 (resolved by xcodebuild)"
 
 if [ "$SIGN_IDENTITY" = "-" ]; then
     bn_check 1 warn "signing identity" \

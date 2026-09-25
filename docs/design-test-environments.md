@@ -149,9 +149,9 @@ external SSD, cloned from Cirrus Labs' prebuilt images (`macos-sequoia-xcode:26.
 scripts and the traps sit next to the guests, in the maintainer's notes on that drive,
 because they carry machine paths. What matters here:
 
-- **The Swift suite runs on 15 only with the test target lowered to 15.0.** It compiles
-  and loads clean there (XCTest and Testing are floored at 14.0); on `main` the target is
-  still 26.1 pending a decision (`design-platform-policy.md` Pillar 3).
+- **The Swift suite runs on 15 because the test target is at 15.0**, lowered on
+  25 Sep 2026 once these guests proved it (XCTest and Testing are floored at 14.0).
+  It was 26.1 before that (`design-platform-policy.md` Pillar 3).
 - **Guests build unsigned** (`CI=1` in `test-swift.sh`, as on the GitHub runner).
 - **The guest screen must be set from inside the guest.** Tart's `--display` alone left
   it at 1024×768 points, which clamps any test that opens a wide window.
@@ -206,9 +206,7 @@ measurements. Paste each host's readout into this doc as it is captured.
 2. **The Seam Lab readouts are still uncaptured on every host** (§4). Both guests
    can now run the Debug app; the lab is a menu item, so it needs a person at the
    guest window.
-3. **The test target's floor** decides whether the suite on 15 runs from `main` or
-   from a patched copy (§3.6).
-4. **Nothing here is automated.** These are instruments for the human walk and
+3. **Nothing here is automated.** These are instruments for the human walk and
    for one-off measurement, not a matrix that runs nightly. Whether any of it
    should join the mechanical tier is an
    [`testing/acceptance-matrix.md`](testing/acceptance-matrix.md) question,

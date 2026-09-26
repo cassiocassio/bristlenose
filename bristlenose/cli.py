@@ -6,7 +6,7 @@ import asyncio
 import os
 import sys
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 from rich.console import Console
@@ -22,6 +22,9 @@ from bristlenose.preflight.whisper import WHISPER_SIZE_HUMAN
 from bristlenose.run_lifecycle import ConcurrentRunError, run_lifecycle
 from bristlenose.ui_kinds import MessageKind, cli_prefix
 from bristlenose.utils.text import count_noun
+
+if TYPE_CHECKING:  # imported lazily at runtime; mypy still resolves the name
+    from bristlenose.status import ProjectStatus
 
 # Known commands — used by _maybe_inject_run() to detect bare directory arguments
 _COMMANDS = {
@@ -2091,7 +2094,7 @@ def _resolve_output_dir(project_dir: Path) -> Path | None:
 
 
 def _print_project_status(
-    project_status: ProjectStatus,  # noqa: F821 — lazy import
+    project_status: ProjectStatus,
     *,
     output_dir: Path | None = None,
     verbose: bool = False,
@@ -2321,6 +2324,12 @@ def configure(
 
     # Validate
     console.print("Validating...", end=" ")
+    # Declared, because the four branches disagree: three validators return
+    # tuple[bool | None, str] and validate_miro_token returns
+    # tuple[bool | None, str | None], so inference pins `error` to whichever
+    # branch is read first.
+    is_valid: bool | None
+    error: str | None
     if canonical == "anthropic":
         is_valid, error = _validate_anthropic_key(key)
     elif canonical == "openai":

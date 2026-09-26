@@ -66,33 +66,37 @@
 /* Vertical flexbox wrapper for analysis page.
    .signals-center scrolls signal cards.
    .inspector-panel sits below as a fixed-height pane.
-   flex: 1 fills whatever space remains after Header + NavBar. */
+   flex: 1 fills whatever space remains after Header + NavBar.
+
+   Full column width: bleeds out of .center's side padding (the properties
+   sidebar.css publishes) so the heatmap bar runs edge to edge like a panel —
+   to the left panel's keyline and the window edge — and .signals-center takes
+   the same padding back, so the cards stay on the shared content edge. */
 .signals-layout {
     display: flex;
     flex-direction: column;
     flex: 1;
     min-height: 0;
     overflow: hidden;
+    margin-left: calc(-1 * var(--bn-center-pad-left, 0px));
+    margin-right: calc(-1 * var(--bn-center-pad-right, 0px));
 }
 
 .signals-center {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    /* Horizontal padding removed so signal cards align to the shared content
-       edge like every other lens — was `padding: var(--bn-space-lg)`, a 24px
-       gutter DOUBLED inside .center's own 32px (cards at x=80 not x=56). The
-       bleed idiom (neg-margin to give the drop shadow room) can't be used here:
-       the parent .signals-layout is `overflow: hidden`, which clips it. So the
-       signal-card shadow clips ~8px at the scroll-box edge — accepted until the
-       structural fix (scroll pane owns the single gutter) in
-       docs/design-lens-template.md § Analysis.
+    /* The scroll pane owns the single gutter (docs/design-lens-template.md
+       § Analysis): .signals-layout bled out of .center's side padding, and
+       this takes exactly that padding back, so cards sit on the shared
+       content edge while the scroll box — and its scrollbar — reach the
+       column edges. That also gives the card shadows room: they used to clip
+       ~8px at a scroll edge that sat flush against the cards.
 
-       Top padding is 0 so the first zone-title ("Sentiment signals") flushes to
-       the same datum as every other lens's first content (Codebook/Sessions
-       sit flush; Analysis was 24px low). Bottom keeps space-lg so the last card
-       clears the scroll edge. */
-    padding: 0 0 var(--bn-space-lg);
+       Top padding is 0 so the first heading flushes to the same datum as
+       every other lens's first content. Bottom keeps space-lg so the last
+       card clears the scroll edge. */
+    padding: 0 var(--bn-center-pad-right, 0px) var(--bn-space-lg) var(--bn-center-pad-left, 0px);
 }
 
 /* When the analysis layout is active, hide the report footer — the inspector

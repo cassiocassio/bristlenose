@@ -127,7 +127,7 @@
    the right-side separation, so it's the full layout, not -no-right. */
 .layout.layout-no-right > .center,
 .layout.layout-inert > .center {
-    padding-right: var(--bn-gutter-left);
+    --bn-center-pad-right: var(--bn-gutter-left);
 }
 
 /* Embedded body pads 0 horizontally (report.css: the 24px flank showed the
@@ -136,12 +136,12 @@
    prose gets those 24px back wherever NO panel stands between it and an edge,
    so every current text position is preserved and only the strip is gone. */
 .layout.embedded:not(.toc-open) > .center {
-    padding-left: calc(var(--bn-gutter-left) + var(--bn-space-lg));
+    --bn-center-pad-left: calc(var(--bn-gutter-left) + var(--bn-space-lg));
 }
 
 .layout.embedded.layout-no-right > .center,
 .layout.embedded.layout-inert > .center {
-    padding-right: calc(var(--bn-gutter-left) + var(--bn-space-lg));
+    --bn-center-pad-right: calc(var(--bn-gutter-left) + var(--bn-space-lg));
 }
 
 .layout.embedded:not(.tags-open) > .minimap-slot {
@@ -540,8 +540,16 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    padding-left: var(--bn-gutter-left);
-    padding-right: var(--bn-gutter-right);
+    /* The side padding is PUBLISHED as two properties, and every rule that
+       changes it (no-right, inert, embedded — above) sets the property, never
+       padding-left/right directly. Descendants inherit the live value, so a
+       lens can bleed a full-width band out of this padding and give it back
+       exactly: inspector.css does it for the Signals heatmap bar. A rule that
+       sets padding here directly would desync that bleed silently. */
+    --bn-center-pad-left: var(--bn-gutter-left);
+    --bn-center-pad-right: var(--bn-gutter-right);
+    padding-left: var(--bn-center-pad-left);
+    padding-right: var(--bn-center-pad-right);
     /* The page's bottom breathing room, moved here from body (report.css) so
        it is inside the grid row the sticky panels span. */
     padding-bottom: var(--bn-space-xl);

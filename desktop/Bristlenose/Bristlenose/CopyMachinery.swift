@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import os
 
@@ -129,8 +130,6 @@ final class CopyMachinery: ObservableObject {
            available < totalBytes {
             throw CopyError.insufficientDiskSpace(needed: totalBytes, available: available)
         }
-        let resolved = Self.resolveDestinations(items: items, root: projectFolder)
-
         inFlight = InFlight(
             projectID: projectID,
             projectName: projectName,
@@ -139,29 +138,50 @@ final class CopyMachinery: ObservableObject {
             totalBytes: totalBytes
         )
 
-        // Heavy lift on a detached task — FileManager.copyItem is sync.
+        // Heavy lift on a detached task — FileManager.copyItem is sync, and
+        // planning now hashes file contents to recognise a re-drop, which must
+        // not run on the main thread.
         let machineryLogger = self.logger
         let task = Task.detached { [weak self] () throws -> [URL] in
             var written: [URL] = []
             let totalBytesD = max(Double(totalBytes), 1.0)
             var copiedBytes: Int64 = 0
+            var skipped = 0
+            let resolved = Self.resolveDestinations(items: items, root: projectFolder)
             do {
-                for item in resolved {
+                for resolution in resolved {
                     try Task.checkCancellation()
-                    try FileManager.default.createDirectory(
-                        at: item.destination.deletingLastPathComponent(),
-                        withIntermediateDirectories: true
-                    )
-                    // copyItem on APFS same-volume uses clonefile(2): O(1).
-                    // Cross-volume: synchronous copy, no cancellation mid-file
-                    // — Cancel takes effect at the next file boundary.
-                    try FileManager.default.copyItem(at: item.source, to: item.destination)
-                    written.append(item.destination)
-                    copiedBytes += CopyMachinery.fileSize(of: item.source) ?? 0
+                    switch resolution {
+                    case .skip(let source, _):
+                        // Already in the project, byte for byte. Nothing is
+                        // written, so `written` never learns this path — which
+                        // is what keeps `rollback` away from the researcher's
+                        // existing recording if the copy is cancelled.
+                        skipped += 1
+                        copiedBytes += CopyMachinery.fileSize(of: source) ?? 0
+                    case .copy(let item):
+                        try FileManager.default.createDirectory(
+                            at: item.destination.deletingLastPathComponent(),
+                            withIntermediateDirectories: true
+                        )
+                        // copyItem on APFS same-volume uses clonefile(2): O(1).
+                        // Cross-volume: synchronous copy, no cancellation mid-file
+                        // — Cancel takes effect at the next file boundary.
+                        try FileManager.default.copyItem(at: item.source, to: item.destination)
+                        written.append(item.destination)
+                        copiedBytes += CopyMachinery.fileSize(of: item.source) ?? 0
+                    }
                     let progress = Double(copiedBytes) / totalBytesD
                     await MainActor.run { [weak self] in
                         self?.inFlight?.progress = progress
                     }
+                }
+                if skipped > 0 {
+                    // Counts only. A basename can name a participant, so it is
+                    // never logged — the same rule the folder watcher carries.
+                    machineryLogger.info(
+                        "copy: \(skipped, privacy: .public) already present, byte-identical; not copied"
+                    )
                 }
                 return written
             } catch is CancellationError {
@@ -196,6 +216,25 @@ final class CopyMachinery: ObservableObject {
     struct ResolvedItem: Equatable {
         let source: URL
         let destination: URL
+    }
+
+    /// What to do with one planned item.
+    ///
+    /// `.skip` exists because the collision rename had exactly one verdict —
+    /// rename — and so answered "is there something at this name?" when the
+    /// question a re-drop asks is "do I already hold this content?". The
+    /// duplicate it produced was free on disk (same-volume `copyItem` clones)
+    /// and expensive downstream: the transcription cache keys on
+    /// path + size + mtime, so a renamed copy is a guaranteed miss, and one
+    /// re-dropped folder measured $0.6170 across 15 LLM calls against $0.0907
+    /// clean. Two copies of one interview also become two participants, whose
+    /// identical quotes then cluster together — so the report reads as
+    /// corroboration rather than as a mistake.
+    enum Resolution: Equatable {
+        case copy(ResolvedItem)
+        /// `existing` is the file already in the project that answered for
+        /// this source. Carried so a caller can say which file it recognised.
+        case skip(source: URL, existing: URL)
     }
 
     /// Expand top-level URLs into a flat list of items. Walks folders
@@ -252,13 +291,18 @@ final class CopyMachinery: ObservableObject {
     /// rename (`clip.mp4` → `clip 2.mp4` → `clip 3.mp4`, …) so we never
     /// overwrite. Within-batch collisions also work — `inUse` tracks paths
     /// already assigned to earlier items in this same call.
+    ///
+    /// A file the project already holds **byte for byte** resolves to `.skip`
+    /// instead. Nothing is deleted, moved or overwritten to achieve that — the
+    /// never-overwrite guarantee above is unchanged, and a skip simply writes
+    /// nothing. Identity is proven, never guessed: see `holdsSameContent`.
     nonisolated static func resolveDestinations(
         items: [PlannedItem],
         root: URL
-    ) -> [ResolvedItem] {
+    ) -> [Resolution] {
         var inUse: Set<String> = []
         let fm = FileManager.default
-        var out: [ResolvedItem] = []
+        var out: [Resolution] = []
         for item in items {
             let parentComponents = Array(item.relativeComponents.dropLast())
             let leaf = item.relativeComponents.last ?? "item"
@@ -268,16 +312,148 @@ final class CopyMachinery: ObservableObject {
             }
             var candidateLeaf = leaf
             var n = 2
-            while inUse.contains(parent.appendingPathComponent(candidateLeaf).path)
-                || fm.fileExists(atPath: parent.appendingPathComponent(candidateLeaf).path) {
+            var alreadyHeld: URL?
+            while true {
+                let candidate = parent.appendingPathComponent(candidateLeaf)
+                // A path claimed by an earlier item in this same batch is not
+                // on disk yet, so it can answer the collision question but not
+                // the identity one.
+                let claimed = inUse.contains(candidate.path)
+                guard claimed || fm.fileExists(atPath: candidate.path) else { break }
+                // Every *existing* file in the chain is an identity candidate,
+                // not just the first. A folder that has already been re-dropped
+                // holds `clip.mov` AND `clip 2.mov`, and the next drop has to
+                // recognise either one rather than minting `clip 3.mov`.
+                if !claimed, Self.holdsSameContent(as: item.source, candidate: candidate) {
+                    alreadyHeld = candidate
+                    break
+                }
                 candidateLeaf = Self.appendCount(to: leaf, n: n)
                 n += 1
             }
+            if let alreadyHeld {
+                out.append(.skip(source: item.source, existing: alreadyHeld))
+                continue
+            }
             let dest = parent.appendingPathComponent(candidateLeaf)
             inUse.insert(dest.path)
-            out.append(ResolvedItem(source: item.source, destination: dest))
+            out.append(.copy(ResolvedItem(source: item.source, destination: dest)))
         }
         return out
+    }
+
+    /// Whether `candidate` — a file the project already holds — is byte for
+    /// byte the same content as `source`.
+    ///
+    /// **Exact, never heuristic.** The cost of a false positive is a distinct
+    /// interview silently not imported, so every uncertainty answers `false`
+    /// and the caller falls back to the rename. Cheaper signals were measured
+    /// and rejected:
+    ///
+    /// - **size alone** — two distinct AppleDouble sidecars on an ExFAT card
+    ///   measure *exactly* 4096 bytes. Size collisions are ordinary.
+    /// - **mtime** — a cross-volume copy truncates nanoseconds to ExFAT's 10 ms
+    ///   (measured 1790431020.6103103 → 1790431020.6100001), so equality is not
+    ///   portable; and two unrelated files can share one anyway.
+    /// - **duration** — reading a container header faults a cloud placeholder
+    ///   in, so answering "do I have this?" would download it; and it cannot
+    ///   separate two half-hour interviews. This is why `CloudImportLocalMatch`,
+    ///   which matches on duration, is not reused for identity here — only its
+    ///   `isMaterialised` measurement is.
+    /// - **inode / `fileResourceIdentifierKey`** — proves *same file*
+    ///   (a hard link), not same content. A clone gets a fresh one, so it
+    ///   cannot see the duplicate this exists to stop.
+    ///
+    /// The full digest is affordable because the equal-length gate below almost
+    /// never fires on a genuine new drop: 465 MB hashes in 0.22 s uncached
+    /// (CryptoKit, ~2 GB/s), so the common case costs one extra `stat`.
+    nonisolated static func holdsSameContent(as source: URL, candidate: URL) -> Bool {
+        // Cancelling mid-hash answers "not identical", which renames; the copy
+        // loop then throws and rolls back. Fail-safe direction.
+        if Task.isCancelled { return false }
+
+        // Both sides must be ordinary files. A symbolic link reports
+        // `isRegularFile == false` (measured), which is the answer we want:
+        // `copyItem` would copy the link rather than the bytes, so the link's
+        // content identity is not the question being asked.
+        guard Self.isPlainFile(source), Self.isPlainFile(candidate) else { return false }
+
+        // Never fault in a placeholder to answer "do I already have this?".
+        // A dataless file reports its full logical size over zero allocated
+        // blocks (measured: 397975112 bytes, 0 blocks), so the size gate below
+        // would match and prove nothing.
+        guard CloudImportLocalMatch.isMaterialised(source),
+              CloudImportLocalMatch.isMaterialised(candidate) else { return false }
+
+        // Cheap gate: a different length is a definite answer for one `stat`.
+        guard let sourceStamp = Self.stamp(of: source),
+              let candidateStamp = Self.stamp(of: candidate),
+              sourceStamp.size == candidateStamp.size else { return false }
+
+        // Both digests must exist AND agree. Spelled out rather than compared
+        // as optionals on purpose: `(try? a) == (try? b)` is `nil == nil` when
+        // *both* files are unreadable, which would declare two files we cannot
+        // read identical and silently drop one.
+        guard let sourceDigest = Self.sha256(of: source),
+              let candidateDigest = Self.sha256(of: candidate),
+              sourceDigest == candidateDigest else { return false }
+
+        // The digests describe the files as they were a moment ago. A recording
+        // still being written — or a cloud client still syncing into the folder
+        // — can have grown since, and skipping then loses the longer file. Both
+        // stamps must be unchanged for the skip to stand.
+        guard Self.stamp(of: source) == sourceStamp,
+              Self.stamp(of: candidate) == candidateStamp else { return false }
+
+        return true
+    }
+
+    /// Size + mtime, read together, for the before/after comparison in
+    /// `holdsSameContent`. `nil` when the file cannot be measured at all.
+    private struct Stamp: Equatable {
+        let size: Int64
+        let modified: Date?
+    }
+
+    nonisolated private static func stamp(of url: URL) -> Stamp? {
+        guard let values = try? url.resourceValues(
+            forKeys: [.fileSizeKey, .contentModificationDateKey]
+        ), let size = values.fileSize else { return nil }
+        return Stamp(size: Int64(size), modified: values.contentModificationDate)
+    }
+
+    /// A regular file and not a symbolic link. Both keys are checked because
+    /// `resourceValues` on a symlink URL describes the *link* (measured:
+    /// `isRegularFile == false`, `isSymbolicLink == true`), while
+    /// `fileExists(atPath:)` follows it — an asymmetry worth not relying on.
+    nonisolated private static func isPlainFile(_ url: URL) -> Bool {
+        guard let values = try? url.resourceValues(
+            forKeys: [.isRegularFileKey, .isSymbolicLinkKey]
+        ) else { return false }
+        return values.isRegularFile == true && values.isSymbolicLink != true
+    }
+
+    /// Streaming SHA-256 over a 1 MiB buffer.
+    ///
+    /// `nil` on *any* read failure, so an unreadable file can never compare
+    /// equal to anything — including another unreadable file. Checks
+    /// cancellation per chunk so a large re-drop stays stoppable.
+    nonisolated static func sha256(of url: URL) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        var hasher = SHA256()
+        while true {
+            if Task.isCancelled { return nil }
+            let chunk: Data?
+            do {
+                chunk = try handle.read(upToCount: 1 << 20)
+            } catch {
+                return nil
+            }
+            guard let chunk, !chunk.isEmpty else { break }
+            hasher.update(data: chunk)
+        }
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
 
     /// Finder-style rename: `name.mp4` → `name 2.mp4`; `name` → `name 2`.

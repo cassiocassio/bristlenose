@@ -410,7 +410,14 @@ enum CloudImportLocalMatch {
     /// and every NSFileProvider extension publish; allocated-size-zero over a
     /// non-zero logical size is what the file *is*, and catches a provider
     /// that publishes no status at all.
-    private static func isMaterialised(_ url: URL) -> Bool {
+    ///
+    /// Internal rather than private: `CopyMachinery.holdsSameContent` asks the
+    /// same question before hashing a dropped file, and one measurement of
+    /// "are the bytes actually here?" is better than two that can drift apart.
+    /// Only this helper is shared — the duration matcher above is deliberately
+    /// **not** reused for content identity (duration cannot separate two
+    /// half-hour interviews, and probing it faults a placeholder in).
+    static func isMaterialised(_ url: URL) -> Bool {
         if ProjectFolderWatcher.isCloudEvicted(url) { return false }
         let values = try? url.resourceValues(
             forKeys: [.fileSizeKey, .totalFileAllocatedSizeKey])

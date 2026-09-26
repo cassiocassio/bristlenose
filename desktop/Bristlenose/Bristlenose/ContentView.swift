@@ -2104,7 +2104,23 @@ struct ContentView: View {
                     projectName: project.name,
                     acceptedExtensions: Self.acceptedExtensions
                 )
-                if !wasFolderShaped {
+                if !wasFolderShaped, copied.isEmpty {
+                    // Every dropped file was already in the project, byte for
+                    // byte, so nothing was copied and there is nothing to
+                    // register. Showing the sheet here would read "Added 0
+                    // interviews" — outcome 3b in
+                    // docs/design-analysis-lifecycle.md §5.1, a record saying
+                    // work happened when none did. The drop was understood and
+                    // correctly changed nothing, so the acknowledgement is the
+                    // same 400 ms row accent the self-drop case above uses:
+                    // §4.2 removed all five drop toasts and the standing rule
+                    // is not to add new ones.
+                    dropTargetProjectID = id
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 400_000_000)
+                        if dropTargetProjectID == id { dropTargetProjectID = nil }
+                    }
+                } else if !wasFolderShaped {
                     projectIndex.addFiles(to: id, files: copied.map(\.path))
                     // Only the file-subset path surfaces the "Added N…" sheet — it
                     // doesn't auto-run, so the sheet is its sole feedback. On the
@@ -2112,6 +2128,9 @@ struct ContentView: View {
                     // storyboard explicitly rejects (the "Adding N interviews…"
                     // subtitle + the run IS the acknowledgement). See
                     // docs/mockups/incremental-analysis-flows.html §7.
+                    // `copied` carries only what genuinely landed — a file
+                    // skipped as already-present is not in it, so the count and
+                    // the list are both true.
                     newFilesSheet = NewFilesSheetState(
                         projectID: id,
                         projectName: project.name,

@@ -431,7 +431,8 @@ class Activity(unittest.TestCase):
         manual = re.search(r':root\[data-theme="dark"\]\{(.*?--hatch:[^\n]*?\)\})', tpl, re.S)
         self.assertIsNotNone(media, "the system-preference dark block")
         self.assertIsNotNone(manual, "the manual-override dark block")
-        toks = lambda b: sorted(t.strip() for t in re.findall(r"(--[a-z0-9-]+:[^;]+);", b))
+        def toks(b):
+            return sorted(t.strip() for t in re.findall(r"(--[a-z0-9-]+:[^;]+);", b))
         self.assertEqual(toks(media.group(1)), toks(manual.group(1)),
                          "the two dark palettes have drifted apart")
         self.assertTrue(toks(media.group(1)), "a dark palette that defines nothing is not a palette")

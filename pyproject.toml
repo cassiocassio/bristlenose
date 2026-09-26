@@ -100,7 +100,13 @@ dev = [
 serve = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
-    "sqlalchemy>=2.0",
+    # The [asyncio] extra is what pulls greenlet, and sqladmin needs it:
+    # importing sqladmin reaches sqlalchemy.ext.asyncio, which from
+    # SQLAlchemy 2.1 raises ImportError without greenlet rather than
+    # degrading. 2.0 installed it as an ordinary dependency, so this was
+    # invisible until 2.1.1 shipped and CI — which resolves fresh every
+    # run — went red on 25 Sep 2026 with nothing in the tree changed.
+    "sqlalchemy[asyncio]>=2.0",
     "sqladmin>=0.20",
     "openpyxl>=3.1",
     "alembic>=1.13",

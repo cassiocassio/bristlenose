@@ -117,11 +117,12 @@ procurement; under-listing would be a compliance risk.
 | `docstring_parser` | 0.18.0 | MIT License | <https://github.com/rr-/docstring_parser> |
 | `et_xmlfile` | 2.0.0 | MIT License | <https://foss.heptapod.net/openpyxl/et_xmlfile> |
 | `fastapi` | 0.141.1 | MIT | <https://github.com/fastapi/fastapi> |
-| `filelock` | 4.0.3 | MIT | <https://github.com/tox-dev/py-filelock> |
+| `filelock` | 4.0.4 | MIT | <https://github.com/tox-dev/py-filelock> |
 | `flatbuffers` | 25.12.19 | Apache Software License | <https://google.github.io/flatbuffers/> |
 | `fsspec` | 2026.9.0 | BSD-3-Clause | <https://github.com/fsspec/filesystem_spec> |
-| `google-auth` | 2.58.0 | Apache Software License | <https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth> |
+| `google-auth` | 2.58.1 | Apache Software License | <https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth> |
 | `google-genai` | 2.25.0 | Apache-2.0 | <https://github.com/googleapis/python-genai> |
+| `greenlet` | 3.5.6 | MIT AND PSF-2.0 | <https://greenlet.readthedocs.io> |
 | `h11` | 0.16.0 | MIT License | <https://github.com/python-hyper/h11> |
 | `hf-xet` | 1.6.0 | Apache-2.0 | <https://github.com/huggingface/xet-core> |
 | `httpcore` | 1.0.9 | BSD-3-Clause | <https://www.encode.io/httpcore/> |
@@ -129,7 +130,7 @@ procurement; under-listing would be a compliance risk.
 | `httptools` | 0.8.0 | MIT | <https://github.com/MagicStack/httptools> |
 | `httpx` | 0.28.1 | BSD License | <https://github.com/encode/httpx> |
 | `httpx2` | 2.13.1 | BSD-3-Clause | <https://github.com/pydantic/httpx2> |
-| `huggingface_hub` | 1.32.0 | Apache Software License | <https://github.com/huggingface/huggingface_hub> |
+| `huggingface_hub` | 1.33.0 | Apache Software License | <https://github.com/huggingface/huggingface_hub> |
 | `idna` | 3.20 | BSD-3-Clause | <https://github.com/kjd/idna> |
 | `inflect` | 7.5.0 | MIT License | <https://github.com/jaraco/inflect> |
 | `Jinja2` | 3.1.6 | BSD License | <https://github.com/pallets/jinja/> |
@@ -155,7 +156,7 @@ procurement; under-listing would be a compliance risk.
 | `numpy` | 2.4.6 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | <https://numpy.org> |
 | `openai` | 3.19.2 | Apache-2.0 | <https://github.com/openai/openai-python> |
 | `openpyxl` | 3.1.5 | MIT License | <https://openpyxl.readthedocs.io> |
-| `opentelemetry-api` | 1.44.0 | Apache-2.0 | <https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api> |
+| `opentelemetry-api` | 1.45.0 | Apache-2.0 | <https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api> |
 | `packaging` | 26.3 | Apache-2.0 OR BSD-2-Clause | <https://github.com/pypa/packaging> |
 | `phonenumbers` | 9.0.40 | Apache-2.0 | <https://github.com/daviddrysdale/python-phonenumbers> |
 | `preshed` | 3.0.13 | MIT License | <https://github.com/explosion/preshed> |
@@ -186,7 +187,7 @@ procurement; under-listing would be a compliance risk.
 | `spacy-legacy` | 3.0.12 | MIT License | <https://spacy.io> |
 | `spacy-loggers` | 1.0.5 | MIT | <https://github.com/explosion/spacy-loggers> |
 | `sqladmin` | 0.32.0 | BSD-3-Clause | <https://github.com/smithyhq/sqladmin> |
-| `SQLAlchemy` | 2.0.54 | MIT | <https://www.sqlalchemy.org> |
+| `SQLAlchemy` | 2.1.1 | MIT | <https://www.sqlalchemy.org> |
 | `srsly` | 2.5.3 | MIT License | <https://github.com/explosion/srsly> |
 | `sse-starlette` | 3.4.11 | BSD-3-Clause | <https://github.com/sysid/sse-starlette> |
 | `starlette` | 1.7.0 | BSD-3-Clause | <https://github.com/Kludex/starlette> |
@@ -202,7 +203,7 @@ procurement; under-listing would be a compliance risk.
 | `typer` | 0.27.2 | MIT | <https://github.com/fastapi/typer> |
 | `typing_extensions` | 4.16.0 | PSF-2.0 | <https://github.com/python/typing_extensions> |
 | `urllib3` | 2.8.0 | MIT | <https://github.com/urllib3/urllib3/blob/main/CHANGES.rst> |
-| `uvicorn` | 0.53.0 | BSD-3-Clause | <https://uvicorn.dev/> |
+| `uvicorn` | 0.54.0 | BSD-3-Clause | <https://uvicorn.dev/> |
 | `uvloop` | 0.22.1 | Apache Software License; MIT License | — |
 | `wasabi` | 1.1.3 | MIT | <https://github.com/explosion/wasabi> |
 | `watchfiles` | 1.3.0 | MIT License | <https://github.com/samuelcolvin/watchfiles> |

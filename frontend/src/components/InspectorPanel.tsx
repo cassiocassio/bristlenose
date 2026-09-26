@@ -2,7 +2,8 @@
  * InspectorPanel — collapsible bottom panel for heatmap matrices.
  *
  * DevTools-style inspector sitting below the signal cards in the Analysis tab.
- * Collapsed by default: 28px bar with grid icon + "Heatmap" label. Opens to
+ * Collapsed by default: 28px bar (1px keyline + 27px fill) with grid icon +
+ * "Heatmap" label. Opens to
  * show source tabs and a scrollable heatmap body.
  *
  * @module InspectorPanel
@@ -161,8 +162,10 @@ export function InspectorPanel({ sources, shimmerTrigger }: InspectorPanelProps)
     const rAF = requestAnimationFrame(() => {
       if (!bodyRef.current) return;
       const contentH = bodyRef.current.scrollHeight;
-      // Add handle (28px) + tabs (32px) heights
-      const totalH = contentH + 28 + 32;
+      // Add the pane's keyline (1px) + handle (27px fill + 1px line) + tabs
+      // (32px). The panel is border-box, so its height includes the keyline;
+      // leaving it out made the body scroll by exactly 1px.
+      const totalH = contentH + 1 + 28 + 32;
       const maxVh = window.innerHeight * 0.7;
       const autoH = Math.max(MIN_HEIGHT, Math.min(totalH, maxVh));
       setInspectorHeight(autoH);

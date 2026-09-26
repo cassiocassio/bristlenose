@@ -153,8 +153,17 @@ body.dragging-v * {
     align-items: center;
     gap: var(--bn-space-sm);
     padding: 0 var(--bn-space-md);
-    height: 1.75rem;
-    min-height: 1.75rem;
+    /* A 28pt pitch in both states, on the 4pt grid: 1pt keyline + 27pt fill,
+       the unit Safari's Web Inspector bar repeats on (measured 26 Sep 2026).
+       The fill is 27 and the bar's own bottom line — drawn only when open —
+       sits OUTSIDE it (content-box), so collapsed = pane keyline 1 + 27 = 28,
+       and open = pane keyline 1 + 27 to the next line, the tabs row's. As
+       border-box at 1.75rem the fill grew to 28 once the bottom line went, and
+       the closed pane stood 29. COLLAPSED_HEIGHT (useVerticalDragResize.ts)
+       and the auto-height sum (InspectorPanel.tsx) both assume this. */
+    box-sizing: content-box;
+    height: calc(1.75rem - 1px);
+    min-height: calc(1.75rem - 1px);
     user-select: none;
     border-bottom: 1px solid var(--bn-colour-border);
     /* Chrome, not content: the same tint as the left panel (.toc-sidebar) so

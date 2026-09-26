@@ -31,7 +31,8 @@ import {
 /** Pixels of pointer movement before we enter drag mode. */
 const DRAG_THRESHOLD = 3;
 const RESIZE_STEP = 10;
-/** Height of the collapsed handle bar (1.75rem = 28px). */
+/** Height of the collapsed pane: 1px keyline + 27px bar fill = the 28px
+ *  pitch set in inspector.css (.inspector-handle). */
 const COLLAPSED_HEIGHT = 28;
 
 // ── Types ────────────────────────────────────────────────────────────────

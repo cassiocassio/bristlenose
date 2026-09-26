@@ -123,3 +123,7 @@ Signale sind statistisch auffällige Konzentrationen von Stimmung oder Codebuch-
   own word for a *view*. No string does now. If a future one needs it, the
   glossary says: use the platform's **View** noun, never the optical word —
   Apple ships *Lens* as the camera part in all 21 of our languages.
+
+---
+
+_26 Sep 2026: every question in the rounds above that is still open, plus new ones found by re-reading the locale, is consolidated in [de-review-notes.md](de-review-notes.md) — that is the one to send._

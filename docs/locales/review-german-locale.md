@@ -1,5 +1,7 @@
 # German locale review — questions for a native speaker
 
+> **Superseded 26 Sep 2026** by [../i18n-reviews/de-review-notes.md](../i18n-reviews/de-review-notes.md), which carries every question below that is still open, re-checked against the current locale files. Send that one, not this. Kept as the March 2026 record.
+
 Bristlenose is a local-first user-research analysis tool (macOS desktop app + web). We've machine-translated the UI into German and need a native speaker — ideally someone who does qualitative research — to sanity-check the terminology.
 
 You don't need to review every string. The standard UI chrome (Save = Sichern, Cancel = Abbrechen, etc.) comes straight from Apple's official German macOS glossary — those are fine. What we need your eye on is the **research domain vocabulary** and a few specific choices.

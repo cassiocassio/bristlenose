@@ -5,7 +5,7 @@ One short, self-contained brief per locale — email it to, or use as call notes
 - [Catalan](ca.md)
 - [Czech](cs.md)
 - [Danish](da.md)
-- [German](de.md)
+- [German](de.md) — **send [de-review-notes.md](de-review-notes.md)**, which consolidates every open German question (26 Sep 2026)
 - [Spanish](es.md)
 - [Finnish](fi.md)
 - [French](fr.md)

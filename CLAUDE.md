@@ -212,6 +212,13 @@ rm -rf "$DD/Intermediates.noindex/Bristlenose.build/Debug/BristlenoseTests.build
        "$DD/Products/Debug/Bristlenose.app/Contents/PlugIns"
 ```
 
+**And if the rebuild comes back unsigned again, clear Xcode's cached build
+description too** — `rm -rf "$DD/Intermediates.noindex/XCBuildData"` with the two
+paths above. On 26 Sep 2026, after the test target's floor changed, deleting the two
+directories alone produced a second unsigned `.xctest` with no `CodeSign` step; only
+dropping `XCBuildData` made Xcode re-plan and sign it (1525 passed). Check nothing
+else is building first: another session's build reads the same description.
+
 **Tell that this is what you are in, and not a real break: the same source builds
 and tests clean against a fresh `-derivedDataPath`.** That is also the workaround
 when another session is using the shared DerivedData and you would rather not

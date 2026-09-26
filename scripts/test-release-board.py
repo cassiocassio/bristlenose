@@ -418,6 +418,27 @@ class Activity(unittest.TestCase):
         finally:
             t.close()
 
+    def test_the_two_dark_palettes_cannot_drift(self):
+        """The dark tokens exist twice — once for the system preference and once
+        for the manual override — because CSS cannot share a whole block between
+        two selectors. Two copies of a palette is exactly the shape that drifts,
+        and the drift shows up as one theme quietly going stale months later. So
+        they are kept identical mechanically rather than by intention."""
+        tpl = TEMPLATE.read_text()
+        # Bounded by the last token rather than by a brace: the blocks close on
+        # the same line as --hatch, so a `\n  }` anchor matches the wrong thing.
+        media = re.search(r':root:not\(\[data-theme="light"\]\)\{(.*?--hatch:[^\n]*?\)\})', tpl, re.S)
+        manual = re.search(r':root\[data-theme="dark"\]\{(.*?--hatch:[^\n]*?\)\})', tpl, re.S)
+        self.assertIsNotNone(media, "the system-preference dark block")
+        self.assertIsNotNone(manual, "the manual-override dark block")
+        toks = lambda b: sorted(t.strip() for t in re.findall(r"(--[a-z0-9-]+:[^;]+);", b))
+        self.assertEqual(toks(media.group(1)), toks(manual.group(1)),
+                         "the two dark palettes have drifted apart")
+        self.assertTrue(toks(media.group(1)), "a dark palette that defines nothing is not a palette")
+        # The guard is what makes the override work at all: without :not(), the
+        # media query wins on a dark machine and forcing light silently no-ops.
+        self.assertIn(':root:not([data-theme="light"])', tpl)
+
     def test_a_normal_run_never_leaves_the_first_bracket(self):
         """Measured 24 Sep 2026: this machine is busy for 31-74 minutes, every
         run, good night or bad. The base bracket covers that with headroom, so a
@@ -644,8 +665,16 @@ class Html(unittest.TestCase):
     def test_template_has_no_dom_sinks(self):
         tpl = TEMPLATE.read_text()
         code = tpl.split("<script>", 1)[1]  # the renderer, not the comment block above it
-        for name in ("innerHTML", "insertAdjacentHTML", "outerHTML", "document.write"):
-            self.assertIsNone(re.search(r"(?<![\w-])" + re.escape(name) + r"(?![\w-])", code), f"{name} in the renderer")
+        # Match the SINK'S USE, not its name. A bare-word match also fires on a
+        # comment explaining why the sink is avoided — so the gate forbade
+        # documenting the very hazard it exists for, which is the inverse of
+        # "a test a comment can satisfy is not a test" and just as wrong.
+        for name, pat in (("innerHTML", r"\.innerHTML\s*="), ("outerHTML", r"\.outerHTML\s*="),
+                          ("insertAdjacentHTML", r"\.insertAdjacentHTML\s*\("),
+                          ("document.write", r"\bdocument\.write\s*\(")):
+            self.assertIsNone(re.search(pat, code), f"{name} used as a sink in the renderer")
+        # ...and prove the gate can still fail, since it just got looser.
+        self.assertIsNotNone(re.search(r"\.innerHTML\s*=", 'x.innerHTML = "<b>"'))
 
     def test_canary_context_never_reaches_the_board(self):
         t = Tree()

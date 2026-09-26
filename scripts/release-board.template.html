@@ -43,8 +43,11 @@
     --now:#0a66ff; --now-rgb:10,102,255;     --now-bg:#e9f0ff;     --now-bd:#bcd0ff;
     --hatch:repeating-linear-gradient(135deg,#f3f3f1 0 4px,#fff 4px 8px);
     --font:-apple-system,"SF Pro Text",Inter,system-ui,sans-serif;--mono:"SF Mono",ui-monospace,Menlo,monospace}
+  /* System by default; the toggle is an OVERRIDE. The :not([data-theme="light"])
+     guard is what lets someone on a dark Mac force light and have it stick —
+     without it the media query wins and the button silently does nothing. */
   @media (prefers-color-scheme: dark){
-    :root{
+    :root:not([data-theme="light"]){
       --bg:#131316; --panel:#1c1c21; --panel-2:#232329;
       --ink:#ececf0; --ink-2:#b2b2bb; --mute:#87878f;
       --rule:#2e2e36; --rule2:#3d3d47; --soft:#33333c;
@@ -56,10 +59,25 @@
       --now:#4f8dff; --now-rgb:79,141,255;     --now-bg:#0e2344;     --now-bd:#1c3e75;
       --hatch:repeating-linear-gradient(135deg,#202026 0 4px,#1c1c21 4px 8px)}
   }
+  /* Same tokens, reached by the manual override. Kept identical by
+     test-release-board.py rather than by intention — two copies of a palette
+     is exactly the shape that drifts, and the drift shows up as one theme
+     quietly going stale. */
+  :root[data-theme="dark"]{
+      --bg:#131316; --panel:#1c1c21; --panel-2:#232329;
+      --ink:#ececf0; --ink-2:#b2b2bb; --mute:#87878f;
+      --rule:#2e2e36; --rule2:#3d3d47; --soft:#33333c;
+      --ok:#4cc582;      --ok-bg:#12301e;      --ok-bd:#205337;
+      --warn:#e3a83f;    --warn-bg:#31250c;    --warn-bd:#5b4215;
+      --bad:#ff6f64;     --bad-bg:#331815;     --bad-bd:#5d2622;
+      --unknown:#9e90f2; --unknown-bg:#1f1a3b; --unknown-bd:#382f66;
+      --skip:#6b6b74;    --skip-bg:#202026;    --skip-bd:#32323a;
+      --now:#4f8dff; --now-rgb:79,141,255;     --now-bg:#0e2344;     --now-bd:#1c3e75;
+      --hatch:repeating-linear-gradient(135deg,#202026 0 4px,#1c1c21 4px 8px)}
   html,body{margin:0;background:var(--bg);color:var(--ink);font:11.5px/1.3 var(--font)}
   .screen{margin:0;padding:8px;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto 1fr auto;gap:8px}
   .screen>*{min-width:0}
-  .top{display:flex;flex-wrap:wrap;gap:16px;align-items:center;background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:8px 14px}
+  .top{position:relative;display:flex;flex-wrap:wrap;gap:16px;align-items:center;background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:8px 46px 8px 14px}
   .top h1{margin:0;font-size:14px;font-weight:600}
   .top .v{font:600 15px var(--mono)}
   .top .m{color:var(--mute);font-size:11px}
@@ -101,6 +119,12 @@
   .gutter.plain{border-left:1px solid var(--rule2);opacity:.7}
   .caphead{font:600 9px var(--font);letter-spacing:.14em;color:var(--mute);text-transform:uppercase;padding:1px 3px 0}
   .caphead b{color:var(--ink-2);font-weight:600}
+  /* Taken out of the flex flow: `margin-left:auto` only pushes it to the right
+     of whatever WRAPPED LINE it lands on, which on a busy header is the middle
+     of row two. Top-right means top-right. */
+  .themetog{position:absolute;top:7px;right:10px;display:flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;border:1px solid var(--rule2);border-radius:7px;background:var(--panel);color:var(--ink-2);cursor:pointer}
+  .themetog:hover{color:var(--now);border-color:var(--now-bd);background:var(--now-bg)}
+  .themetog svg{width:15px;height:15px;display:block}
   /* the activity band: one skinny full-width row under the line — events belong to the whole process */
   .band{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:4px 14px;display:flex;align-items:center;gap:12px;min-height:30px}
   .band h2{margin:0;font-size:10.5px;font-weight:600;letter-spacing:.07em;color:var(--mute);text-transform:uppercase;white-space:nowrap}
@@ -224,7 +248,32 @@
   // helpers: shared by render, the tick and the patch
   var $ = function(tag, cls, text){ var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = String(text); return e; };
   var add = function(parent){ for (var i = 1; i < arguments.length; i++) if (arguments[i]) parent.appendChild(arguments[i]); return parent; };
-  var fmtT = function(iso){ return iso ? iso.replace("T"," ").replace("Z","Z") : "—"; };
+  // The ledger is UTC and stays UTC — that is correct, and every stamp in it is
+  // true (verified 24 Sep 2026: a 09:46:13Z line written at 10:48 BST really was
+  // two minutes old). But a person reading this during a release compares it to
+  // the clock on their wall, and `09:46Z` against a 10:48 wall clock reads as an
+  // hour-and-a-bit of lag that is not there. So: shown local, labelled with the
+  // zone, and the second .replace("Z","Z") that made the old one a no-op is gone.
+  // Per TIMESTAMP, not per page load. Computing the label once caches the zone
+  // that happened to be in effect when the board opened — the same latching
+  // shape as a locale resolved once and reused, which this project has paid for
+  // before. Two ways it is wrong: a board left open across the last Sunday in
+  // October keeps saying BST into GMT, and — the sharper one — this board shows
+  // stamps that STRADDLE the transition. The clocks pane right now holds a dmg
+  // expiring 24 Oct (BST) and a TestFlight build expiring 23 Dec (GMT); one
+  // page-level label has to be wrong about one of them.
+  var zoneOf = function(d){
+    try { return new Intl.DateTimeFormat(undefined, {timeZoneName:"short"})
+        .formatToParts(d).filter(function(p){ return p.type === "timeZoneName"; })[0].value; }
+    catch(e) { return "local"; }
+  };
+  var fmtT = function(iso){
+    if (!iso) return "—";
+    var d = new Date(iso); if (isNaN(d.getTime())) return String(iso).replace("T"," ");
+    var p2 = function(n){ return (n < 10 ? "0" : "") + n; };
+    return d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate())+" "
+         + p2(d.getHours())+":"+p2(d.getMinutes())+":"+p2(d.getSeconds())+" "+zoneOf(d);
+  };
   var age = function(iso){ if(!iso) return ""; var d=(Date.now()-Date.parse(iso))/1000; if(d<90) return Math.round(d)+"s ago"; if(d<5400) return Math.round(d/60)+"m ago"; if(d<172800) return Math.round(d/3600)+"h ago"; return Math.round(d/86400)+"d ago"; };
   var elapsed = function(s){ if(s==null) return "—"; s=Number(s); if(isNaN(s)) return "—"; if(s<90) return Math.round(s)+"s"; return Math.round(s/60)+"m"; };
   var panelSize = function(panel, key){ try{ var h = localStorage.getItem("rb-h-"+key); if(h) panel.style.height = h; panel.addEventListener("mouseup", function(){ try{ localStorage.setItem("rb-h-"+key, panel.style.height); }catch(e){} }); }catch(e){} };
@@ -268,6 +317,49 @@
   if (data.live) add(top, frag(function(){ var p = $("span","pill live"); p.id = "live-pill"; add(p, frag("live · ", ageEl(data.live.served_at), data.live.error ? " · generator error: "+data.live.error : "")); return p; }()));
   var conf = data.confounded;
   add(top, $("span","pill "+(conf.computable ? (conf.count ? "warn" : "ok") : "hatch"), conf.computable ? ("confounded expectations: "+conf.count) : "confounded log: not computable"));
+  // Theme override. The board follows the browser unless someone says
+  // otherwise; the attribute is only ever set when they have. Alt-click clears
+  // it, because "go back to following my system" is a real thing to want and
+  // burying it in a second control is not worth the chrome.
+  //
+  // createElementNS, not innerHTML: the renderer has a no-DOM-sinks gate
+  // because this board displays raw build logs, and a sink that is safe today
+  // with a literal is a sink somebody interpolates into tomorrow.
+  (function(){
+    var KEY = "rb-theme", root = document.documentElement, NS = "http://www.w3.org/2000/svg";
+    var el = function(n, a){ var e = document.createElementNS(NS, n); for (var k in a) e.setAttribute(k, a[k]); return e; };
+    var icon = function(dark){
+      var g = el("svg", {viewBox:"0 0 16 16", fill:"none", stroke:"currentColor",
+                         "stroke-width":"1.4", "stroke-linecap":"round", "stroke-linejoin":"round"});
+      if (dark) {
+        g.appendChild(el("circle", {cx:"8", cy:"8", r:"3.1"}));
+        g.appendChild(el("path", {d:"M8 1v1.7M8 13.3V15M15 8h-1.7M2.7 8H1M12.9 3.1l-1.2 1.2M4.3 11.7l-1.2 1.2M12.9 12.9l-1.2-1.2M4.3 4.3L3.1 3.1"}));
+      } else {
+        g.appendChild(el("path", {d:"M13.2 9.6A5.6 5.6 0 0 1 6.4 2.8 5.6 5.6 0 1 0 13.2 9.6Z"}));
+      }
+      return g;
+    };
+    var sysDark = function(){ try { return matchMedia("(prefers-color-scheme: dark)").matches; } catch(e) { return false; } };
+    try { var stored = localStorage.getItem(KEY); if (stored) root.setAttribute("data-theme", stored); } catch(e0) {}
+    var btn = $("button","themetog");
+    var paint = function(){
+      var set = root.getAttribute("data-theme"), dark = set ? set === "dark" : sysDark();
+      while (btn.firstChild) btn.removeChild(btn.firstChild);
+      btn.appendChild(icon(dark));
+      btn.title = (dark ? "Switch to light" : "Switch to dark")
+               + (set ? " \u00b7 alt-click to follow your system again" : " \u00b7 currently following your system");
+      btn.setAttribute("aria-label", btn.title);
+    };
+    btn.addEventListener("click", function(e){
+      if (e.altKey) { root.removeAttribute("data-theme"); try { localStorage.removeItem(KEY); } catch(e2) {} paint(); return; }
+      var set = root.getAttribute("data-theme");
+      var next = (set ? set === "dark" : sysDark()) ? "light" : "dark";
+      root.setAttribute("data-theme", next); try { localStorage.setItem(KEY, next); } catch(e3) {}
+      paint();
+    });
+    try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", paint); } catch(e4) {}
+    paint(); add(top, btn);
+  })();
   add(top, $("span","m", (data.live ? "model built " : "snapshot generated ")+fmtT(data.generated)+" · newest source "+fmtT(h.newest_source)+(h.with_logs ? " · CONTAINS RAW BUILD LOGS — do not attach to anything" : "")));
   add(screen, top);
 

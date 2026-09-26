@@ -2,13 +2,22 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
-**0.31.3** — _24 Sep 2026_
+**0.31.3** — _26 Sep 2026_
 
-Norwegian browsers were shown English.
+Dropping the same folder in twice no longer imports everything twice.
+
+**Improved**
+
+- **The Signals lens scrolls like every other lens, and the heatmap stays put.** It was the one lens with its own scroll model — the cards scrolled inside a fixed frame while the page did not — and that is where the phantom scrollbar, the heading cut off under the toolbar and the clipped card shadows all came from. The page scrolls now, and the heatmap pane is pinned to the bottom of the window as you go. Jumping to a card or tabbing to one lands it above the pane rather than behind it.
+- **The heatmap bar reads as part of the panel it sits on.** It runs edge to edge, wears the left panel's tint, keeps its height whether open or closed, and its title and icon line up with their neighbours.
 
 **Fixed**
 
+- **Dropping a folder you had already dropped made a second copy of every recording in it.** The importer asked only whether something already sat at that name, so re-dropping — the natural way to ask for another analysis — put `clip 2.mov` beside `clip.mov`. That cost more than disk. The transcription cache keys on the file's path, so every renamed copy was a guaranteed miss and paid to transcribe the same interview again: one re-dropped folder came to $0.62 against $0.09 for the same work done once. Worse, the two copies became two participants saying identical things, which then clustered together — so the report read as corroboration rather than as a mistake. A file you already hold is now recognised by its contents and skipped, and identity is proven rather than guessed, because getting it wrong the other way would silently drop a real interview.
+- **Folders in the sidebar would not stay collapsed.** Closing one held only until the next selection change or progress tick, which re-expanded it. Collapsed folders now stay shut, and survive a relaunch.
+- **The projects column stayed away when the window grew, and came back after you had hidden it.** Both were the same root: the column's width was being measured at moments when it had none — as the window mounted, and mid-animation — so a column you had taken never fitted again, and one you had deliberately hidden was handed back on the next resize.
 - **A browser set to Norwegian got an English report.** The codes a system reports for Norwegian — `no`, and Nynorsk's `nn` — were not recognised as the Bokmål we ship, so the interface fell through to English. Both resolve to Bokmål now, as the Mac app already did. `bristlenose --lang no` works too.
+- **Show Diagnostics did not hide the build-info capsule in development builds.** One switch now hides the machinery, which is what you want before a screenshot or a demo.
 
 **0.31.2** — _23 Sep 2026_
 

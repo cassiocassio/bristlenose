@@ -6,9 +6,10 @@ trued-against: HEAD@main on 2026-07-26 (uncommitted Phase B change in-tree)
 
 > **Truing status:** Partial — the h1 scheme, keyline token, radius tiers,
 > and the Phase B geometry (B1 truth-measuring `syncToolbarInset`, B2 datum
-> re-scope, B3 TOC treatment) have shipped as code (trued 2026-07-26); the
-> Analysis pane variant and the `__bnLayoutAudit`/Playwright gate remain
-> deferred. The **on-device acceptance pass** for the datum (Open question 3)
+> re-scope, B3 TOC treatment) have shipped as code (trued 2026-07-26). The
+> Analysis pane variant is **superseded** (26 Sep 2026): Signals scrolls the
+> body like every lens, with the heatmap pane `position: sticky` — see step 2.
+> The `__bnLayoutAudit`/Playwright gate remains deferred. The **on-device acceptance pass** for the datum (Open question 3)
 > is still pending — the residual-vs-52 HUD read and pixel tune haven't run.
 > See the changelog and the annotated Sequencing list.
 
@@ -206,7 +207,17 @@ template work.
 | Sessions | SessionsSidebar | – | – | – | body |
 | Quotes | TocSidebar | ✓ | ✓ | – | body |
 | Codebook | CodebookSidebar | – | – | – | body |
-| Analysis | SignalsSidebar | – | – | ✓ | **pane** |
+| Analysis | SignalsSidebar | – | – | ✓ | body |
+
+**Superseded 26 Sep 2026 — there is no `scroll: pane` variant.** Signals
+scrolls the body like every other lens; the inspector is `position: sticky;
+bottom: 0` (the primitive the side panels use at the top), with
+a `scroll-margin-bottom` on the card list's contents set from the pane's live
+height, so jump-to-card and Tab focus land above it. The private scroll model was the cause of every Signals-only layout
+bug of Sep 2026. Rationale, risks and measurements: `inspector.css` header
+comment and `docs/mockups/signals-heatmap-sticky-pane.html`; the chain is
+gated by `tests/test_signals_sticky_pane_css.py`. The paragraph below is the
+plan it replaced:
 
 The `scroll: pane` variant becomes a SidebarLayout feature: the template
 renders the scroll container and applies the shared gutter tokens to it.
@@ -355,8 +366,10 @@ shrinks to match in the same pass.)
    acceptance/tune still pending (Open question 3).
 2. **Analysis pane variant** — scroll container into SidebarLayout, gutter
    fix, `.signal-card` radius fix. (`git branch -f checkpoint` first — the
-   riskiest step.) **Deferred** — `.signal-card` radius already landed
-   (`be1835b7`); the scroll-pane → SidebarLayout structural move is post-Phase-B.
+   riskiest step.) **Superseded 26 Sep 2026** — `.signal-card` radius landed
+   (`be1835b7`); the gutter fix landed as the scroll pane owning the single
+   gutter; and rather than moving the scroll pane into SidebarLayout, the pane
+   was removed: Signals scrolls the body, the inspector is sticky.
 3. **TOC sidebar treatment.** **Shipped as code 2026-07-26** — `.toc-sidebar`
    mirrors the tag sidebar's toolbar bleed (`sidebar.css`). Colour tier
    followed 14 Aug 2026 — `.toc-sidebar` rides `--bn-colour-inspector-bg`

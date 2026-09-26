@@ -282,6 +282,39 @@ describe("useVerticalDragResize", () => {
     expect(storeResult.current.height).toBe(310);
   });
 
+  // inspector.css caps the pane to the window, so a stored 600 can render at
+  // 400. Resizing must work from what is on screen, not the stored number.
+  it("drag and keys start from the window-capped height, not the stored one", () => {
+    const container = makeContainer();
+    container.style.maxHeight = "400px";
+    const ref = { current: container };
+    const { result: resizeResult } = renderHook(() =>
+      useVerticalDragResize({ containerRef: ref, currentHeight: 600, isOpen: true }),
+    );
+    const { result: storeResult } = renderHook(() => useInspectorStore());
+
+    // Drag DOWN 20px: from the rendered 400 → 380. From the stored 600 it
+    // would compute 580, which the cap renders as 400 — nothing moves.
+    act(() => {
+      resizeResult.current.handlePointerDown(makePointerEvent("pointerdown", 500));
+    });
+    act(() => firePointerMove(520));
+    expect(container.style.getPropertyValue("--inspector-height")).toBe("380px");
+    // Drag far UP: stops at the cap, so the stored height never exceeds it.
+    act(() => firePointerMove(100));
+    expect(container.style.getPropertyValue("--inspector-height")).toBe("400px");
+    act(() => firePointerUp());
+    expect(storeResult.current.height).toBe(400);
+
+    act(() => {
+      resizeResult.current.handleKeyDown({
+        key: "ArrowDown", preventDefault: vi.fn(),
+      } as unknown as React.KeyboardEvent);
+    });
+    expect(storeResult.current.height).toBe(390);
+    container.remove();
+  });
+
   it("keyboard Home sets max height, End sets min height", () => {
     const container = makeContainer();
     const ref = { current: container };

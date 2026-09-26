@@ -14,6 +14,8 @@ Move all heatmaps into a **collapsible bottom panel** using the Chrome/Safari De
 
 This is purely vertical layout — coexists with the left nav being built in a separate session.
 
+> **Layout model changed 26 Sep 2026.** As built in March the panel was the lower half of a split pane: the lens was capped to the viewport and the cards scrolled inside `.signals-center`. It is now `position: sticky; bottom: 0` over a page that scrolls like every other lens, with a `scroll-margin-bottom` on everything in the card list fed the pane's live height (`InspectorPanel.tsx` publishes `--bn-inspector-pane-height` on `<html>`) so a cell click still lands its card above the pane. Margins on the targets, not `scroll-padding` on the page: page padding also reserves the strip the pane sits in, so focusing a control inside the pane scrolled the page. The pane is also capped to the window (`max-height`), and resizing starts from the capped height. The interaction model below is unchanged. Why and how it was measured: the header comment in `bristlenose/theme/organisms/inspector.css`.
+
 ## Design exploration (3 iterations)
 
 ### v1 mockup (`docs/mockups/analysis-inspector-panel.html`)

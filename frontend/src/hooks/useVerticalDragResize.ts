@@ -59,6 +59,25 @@ export interface UseVerticalDragResizeReturn {
   isDragging: boolean;
 }
 
+/**
+ * The pane can render SHORTER than the stored height: inspector.css caps it to
+ * the window (`max-height`), because a sticky pane taller than the window
+ * would push its own handle off the top. Resizing has to start from, and stop
+ * at, what is on screen — otherwise a 600px height stored on a large display
+ * renders at 554 on a small one, and the first 46px of a drag (or the first
+ * few ArrowDowns) move nothing. `max-height` computes to "none" in jsdom and
+ * to px in a browser; anything unparseable falls back to the store's bounds.
+ */
+function effectiveBounds(
+  el: HTMLElement | null,
+  stored: number,
+  maxHeight: number,
+): { height: number; max: number } {
+  const cssMax = el ? parseFloat(getComputedStyle(el).maxHeight) : NaN;
+  const max = Number.isFinite(cssMax) && cssMax > 0 ? Math.min(maxHeight, cssMax) : maxHeight;
+  return { height: Math.min(stored, max), max };
+}
+
 // ── Hook ─────────────────────────────────────────────────────────────────
 
 export function useVerticalDragResize({
@@ -86,8 +105,10 @@ export function useVerticalDragResize({
 
       const startY = e.clientY;
       const wasCollapsed = !isOpenRef.current;
-      // When collapsed, grow from the handle bar height (28px), not the stored height.
-      const startHeight = wasCollapsed ? COLLAPSED_HEIGHT : currentHeightRef.current;
+      // When collapsed, grow from the handle bar height (28px), not the stored
+      // height; when open, from the height actually on screen.
+      const bounds = effectiveBounds(container, currentHeightRef.current, maxHeight);
+      const startHeight = wasCollapsed ? COLLAPSED_HEIGHT : bounds.height;
       let enteredDrag = false;
       let lastHeight = startHeight;
 
@@ -117,7 +138,7 @@ export function useVerticalDragResize({
           container.style.setProperty("--inspector-height", "0px");
           lastHeight = 0;
         } else {
-          const clamped = Math.max(minHeight, Math.min(maxHeight, raw));
+          const clamped = Math.max(minHeight, Math.min(bounds.max, raw));
           container.style.setProperty("--inspector-height", `${clamped}px`);
           lastHeight = clamped;
         }
@@ -167,13 +188,16 @@ export function useVerticalDragResize({
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       let newHeight: number | null = null;
+      const { height, max } = effectiveBounds(
+        containerRef.current, currentHeightRef.current, maxHeight,
+      );
 
       if (e.key === "ArrowUp") {
-        newHeight = Math.min(maxHeight, currentHeightRef.current + RESIZE_STEP);
+        newHeight = Math.min(max, height + RESIZE_STEP);
       } else if (e.key === "ArrowDown") {
-        newHeight = Math.max(minHeight, currentHeightRef.current - RESIZE_STEP);
+        newHeight = Math.max(minHeight, height - RESIZE_STEP);
       } else if (e.key === "Home") {
-        newHeight = maxHeight;
+        newHeight = max;
       } else if (e.key === "End") {
         newHeight = minHeight;
       }
@@ -183,7 +207,7 @@ export function useVerticalDragResize({
         setInspectorHeight(newHeight);
       }
     },
-    [minHeight, maxHeight],
+    [containerRef, minHeight, maxHeight],
   );
 
   // Cleanup on unmount if drag is in progress.

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
-import { InspectorPanel, type InspectorSource } from "./InspectorPanel";
+import { InspectorPanel, PANE_HEIGHT_VAR, type InspectorSource } from "./InspectorPanel";
 import {
   resetInspectorStore,
   openInspector,
@@ -144,6 +144,27 @@ describe("InspectorPanel", () => {
 
     const tab = screen.getByTestId("inspector-tab-cb-1");
     expect(tab.classList.contains("active")).toBe(true);
+  });
+
+  // The pane is sticky over a scrolling page; inspector.css reads this for
+  // `scroll-padding-bottom` so jump-to-card lands above the pane. jsdom has no
+  // layout (offsetHeight is 0), so this pins the publish/withdraw contract,
+  // not the number — the number is measured in the mockup and the app.
+  it("publishes its height on <html> while mounted and withdraws it on unmount", () => {
+    const root = document.documentElement;
+    const { unmount } = render(<InspectorPanel sources={SOURCES} />);
+    expect(root.style.getPropertyValue(PANE_HEIGHT_VAR)).toMatch(/^\d+px$/);
+    unmount();
+    expect(root.style.getPropertyValue(PANE_HEIGHT_VAR)).toBe("");
+  });
+
+  it("publishes once sources arrive after mount", () => {
+    const root = document.documentElement;
+    const { rerender, unmount } = render(<InspectorPanel sources={[]} />);
+    expect(root.style.getPropertyValue(PANE_HEIGHT_VAR)).toBe("");
+    rerender(<InspectorPanel sources={SOURCES} />);
+    expect(root.style.getPropertyValue(PANE_HEIGHT_VAR)).toMatch(/^\d+px$/);
+    unmount();
   });
 
   it("falls back to sectionContent when themeContent is missing", () => {

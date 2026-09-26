@@ -1,117 +1,106 @@
 /* ── Inspector panel — collapsible bottom heatmap pane ──── */
 
-/* Constrain the grid and center column to viewport height when the
-   analysis layout is active — keeps the collapsed inspector handle
-   visible at the bottom of the viewport without scrolling.
-   .layout normally has min-height: 100vh (can grow); here we cap it. */
-/* The viewport MINUS everything `body` pads with.
-   `body` carries `padding: var(--bn-space-xl) var(--bn-space-lg) 0` (bottom 0
-   since 20 Sep 2026 — see report.css), so a child sized at a bare 100vh makes
-   the document taller than the viewport by the top pad — and the page grows a
-   scrollbar that scrolls the padding and nothing else. (Before the bottom pad
-   moved it was 64px, measured 14 Sep 2026.) On a lens that scrolls for real (Quotes) it hides inside a genuine
-   5000px of overflow; on a lens capped to the viewport it is the whole of the
-   page's scroll range, and on Analysis it appears immediately beside
-   .signals-center's legitimate bar, which is how one phantom reads as two
-   scrollbars.
+/* Signals scrolls the PAGE, like every other lens (26 Sep 2026). The heatmap
+   pane is pinned to the window bottom with `position: sticky; bottom: 0`
+   (Panel shell, below) — the primitive the side panels use at the top edge.
 
-   `--bn-toolbar-inset` is subtracted too, and it is the half a browser cannot
-   show you. In embedded mode report.css pads the top by
-   `calc(var(--bn-toolbar-inset, 0px) + var(--bn-space-xl))`, so the WebView
-   carries an extra inset that Playwright never sees — subtract 64 alone and
-   the fix measures perfect in a browser while the app keeps a phantom bar
-   exactly as tall as the toolbar. The fallback is 0px, which is what makes one
-   expression right on both surfaces. */
-.layout:has(.signals-layout) {
-    height: calc(100vh - var(--bn-toolbar-inset, 0px) - var(--bn-space-xl));
-    height: calc(100dvh - var(--bn-toolbar-inset, 0px) - var(--bn-space-xl));
-    grid-template-rows: 1fr;
-    /* No `overflow: hidden` here. It shipped with the cap (14 Sep 2026) and
-       did two things the cap does not need: it clipped the 32px the left panel
-       bleeds ABOVE the grid (sidebar.css: `.toc-sidebar` margin-top), so on
-       Signals alone the panel's tint and keyline started a full pad below the
-       toolbar while Codebooks' ran to the top — and it made `.layout` a scroll
-       container, so the sticky panel pinned to the grid instead of the window.
-       The scrolling content is contained by `.center` below; the bleed ends
-       exactly at the grid's bottom edge, so nothing overflows downward. */
-}
+   Until then this was the one lens with a private scroll model: the grid
+   capped to the viewport, `overflow: hidden` down the chain, and the cards
+   scrolling inside .signals-center. Every Signals-only layout bug of Sep 2026
+   came from it — a phantom page scrollbar (306a7efd), the pane stopping a pad
+   short of the window bottom (1c563b29), the left panel's band clipped 32px
+   low (4c678097), the heading cut off 32px under the toolbar in the app, and
+   the card shadows clipped at the scroll edge. The mockup that measured the
+   swap: docs/mockups/signals-heatmap-sticky-pane.html.
 
-/* The icon rail has no bleed and is `height: 100vh`, so with the clip gone it
-   would stand 32px past the capped grid and hand the page back the phantom
-   scrollbar. Size it to the row instead. Browser-only in effect: embedded
-   mode hides the rails outright (sidebar.css `.layout.embedded .toc-rail`). */
-.layout:has(.signals-layout) > .toc-rail {
-    height: 100%;
-}
+   KEEP THIS CHAIN FREE OF `overflow: hidden | auto | scroll`. Any ancestor of the pane that clips or
+   scrolls (.layout, .center, .bn-main, .signals-layout) becomes the pane's
+   sticky reference, and the pane quietly stops pinning to the window.
+   tests/test_signals_sticky_pane_css.py holds the line. */
 
-/* Height-fitted lens: the bottom pad `.center` carries elsewhere (sidebar.css)
-   would only push the inspector handle up off the window bottom here. */
+/* Two rules stay Signals-specific. (1) No bottom pad on .center: the pad sits
+   below the pane, so at scroll end a sticky pane would rest 32px off the
+   window bottom — the 1c563b29 bug, which the mockup reproduced exactly. */
 .layout > .center:has(.signals-layout) {
-    overflow: hidden;
     padding-bottom: 0;
 }
 
-/* The <main> landmark wraps the routed content (sidebar.css: transparent flex
-   pass-through with no flex:1). On the analysis lens that breaks the height
-   chain: .center is capped to 100vh + overflow:hidden and .signals-center is
-   meant to scroll internally, but a content-height .bn-main overflows the cap
-   and the bottom is clipped with NO scrollbar to reach it. Give the wrapper
-   flex:1 + min-height:0 so .signals-layout resolves against "space left after
-   Header + NavBar", not its own content height — restoring internal scroll. */
-.bn-main:has(.signals-layout) {
-    flex: 1;
-    min-height: 0;
+/* (2) The report footer stays hidden — browser only, the app renders none.
+   Shown, it arrives after the pane at scroll end and carries it off its pin.
+   The footer is a sibling of <main.bn-main>, not of .signals-layout, so the
+   combinator reaches up to .center. */
+.center:has(.signals-layout) > .report-footer {
+    display: none;
 }
 
-/* Vertical flexbox wrapper for analysis page.
-   .signals-center scrolls signal cards.
-   .inspector-panel sits below as a fixed-height pane.
-   flex: 1 fills whatever space remains after Header + NavBar.
+/* The pinned pane covers the bottom of the window, so everything in the card
+   list carries a bottom scroll-margin as tall as the pane: scroll-into-view (a
+   heatmap-cell click, the left panel) and focus scrolling (Tab) land it ABOVE
+   the pane, not behind it. Measured without: a jump with the pane at 45% left
+   the card 73px under it.
 
-   Full column width: bleeds out of .center's side padding (the properties
+   On the targets, NOT `scroll-padding-bottom` on <html> (the first cut). Page
+   padding also reserves the strip the pane itself sits in, so focusing a
+   control INSIDE the pane — a tab, the grip — scrolled the page to "reveal"
+   something already on screen: +19 to +523px, measured in WebKit and Chromium
+   (review, 26 Sep 2026). Margins on targets are the house pattern
+   (toolbar.css, transcript.css). InspectorPanel publishes the pane's live
+   height on <html>; it inherits down to here. */
+.signals-center * {
+    scroll-margin-bottom: var(--bn-inspector-pane-height, 28px);
+}
+
+/* A short lens must still put the pane on the window bottom. Sticky only
+   LIFTS an element that would fall below the window; it never pulls one down,
+   so with three cards the pane would sit under the last one, mid-window. The
+   chain therefore grows to fill the grid row, whose floor is the viewport
+   (sidebar.css `.layout` min-height) — by flex-grow, never a height or an
+   overflow, so nothing here can become a clipping ancestor. With long content
+   these grow by nothing and size to the cards. */
+.bn-main:has(.signals-layout) {
+    flex: 1 0 auto;
+}
+
+/* Full column width: bleeds out of .center's side padding (the properties
    sidebar.css publishes) so the heatmap bar runs edge to edge like a panel —
    to the left panel's keyline and the window edge — and .signals-center takes
    the same padding back, so the cards stay on the shared content edge. */
 .signals-layout {
     display: flex;
     flex-direction: column;
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
+    flex: 1 0 auto;
     margin-left: calc(-1 * var(--bn-center-pad-left, 0px));
     margin-right: calc(-1 * var(--bn-center-pad-right, 0px));
 }
 
 .signals-center {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    /* The scroll pane owns the single gutter (docs/design-lens-template.md
-       § Analysis): .signals-layout bled out of .center's side padding, and
-       this takes exactly that padding back, so cards sit on the shared
-       content edge while the scroll box — and its scrollbar — reach the
-       column edges. That also gives the card shadows room: they used to clip
-       ~8px at a scroll edge that sat flush against the cards.
+    flex: 1 0 auto;   /* pushes the pane to the bottom of a short lens */
+    /* Takes back exactly the side padding .signals-layout bled out of, so the
+       cards sit on the shared content edge — and, with no scroll edge beside
+       them any more, their shadows are never clipped.
 
-       Top padding is 0 so the first heading flushes to the same datum as
-       every other lens's first content. Bottom keeps space-lg so the last
-       card clears the scroll edge. */
+       Top padding is 0 so the first heading flushes to the same datum as every
+       other lens's first content. Bottom keeps space-lg so the last card
+       clears the pane at scroll end. */
     padding: 0 var(--bn-center-pad-right, 0px) var(--bn-space-lg) var(--bn-center-pad-left, 0px);
-}
-
-/* When the analysis layout is active, hide the report footer — the inspector
-   panel owns the bottom of the viewport and the footer would eat scroll space
-   inside the 100vh-capped column. The footer is a sibling of <main.bn-main>
-   (not of .signals-layout, which is *inside* main), so the combinator must
-   reach up to .center — `.signals-layout ~ .report-footer` never matched. */
-.center:has(.signals-layout) > .report-footer {
-    display: none;
 }
 
 /* ── Panel shell ────────────────────────────────────────── */
 
 .inspector-panel {
     flex-shrink: 0;
+    /* Pinned to the window bottom while the page scrolls. It stays in flow at
+       the end of the lens, so the last card ends above it with no padding.
+       The opaque background matters now: cards scroll behind it. z-index 2
+       lifts it over the cards (position: relative, z auto) and nothing else. */
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    /* A pane taller than the window would push its own handle off the top,
+       with no way to drag it back. The store allows 600px whatever the window;
+       this keeps the handle reachable and a band of cards above it. */
+    max-height: calc(100vh - 3 * var(--bn-space-xl));
+    max-height: calc(100dvh - 3 * var(--bn-space-xl));
     border-top: 1px solid var(--bn-colour-border);
     background: var(--bn-colour-bg);
     display: flex;

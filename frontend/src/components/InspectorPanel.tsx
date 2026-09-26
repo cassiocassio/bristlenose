@@ -29,6 +29,10 @@ import {
 import { useVerticalDragResize } from "../hooks/useVerticalDragResize";
 import { useTranslation } from "react-i18next";
 
+/** Custom property the pane's live height is published under, on <html>;
+ *  read by `.signals-center * { scroll-margin-bottom }` in inspector.css. */
+export const PANE_HEIGHT_VAR = "--bn-inspector-pane-height";
+
 // ── DimensionToggle — for the heatmap table's top-left <th> cell ─────────
 
 export function DimensionToggle({ hasBoth }: { hasBoth: boolean }) {
@@ -219,6 +223,31 @@ export function InspectorPanel({ sources, shimmerTrigger }: InspectorPanelProps)
     isOpen: open,
   });
   void isDragging;
+
+  // ── Scroll padding for the pinned pane ──────────────────────────────
+  // The pane is `position: sticky; bottom: 0` over a page that scrolls, so it
+  // covers the bottom of the window. Publish its RENDERED height on <html>;
+  // inspector.css gives every card-list element a `scroll-margin-bottom` of
+  // it, so jump-to-card (scrollIntoView) and Tab focus land cards above the
+  // pane, not behind it. Observed rather than derived from `height`, so it is right mid-drag,
+  // mid-animation and when the CSS max-height clamps. Removed on unmount so no
+  // other lens inherits the padding. Keyed on whether the panel exists: it
+  // renders nothing until there are sources, and they can arrive after mount.
+  const hasPanel = sources.length > 0;
+  useEffect(() => {
+    const el = panelRef.current;
+    if (!el) return;
+    const root = document.documentElement;
+    const publish = () =>
+      root.style.setProperty(PANE_HEIGHT_VAR, `${el.offsetHeight}px`);
+    publish();
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(publish);
+    ro?.observe(el);
+    return () => {
+      ro?.disconnect();
+      root.style.removeProperty(PANE_HEIGHT_VAR);
+    };
+  }, [hasPanel]);
 
   // ── Handlers ────────────────────────────────────────────────────────
 

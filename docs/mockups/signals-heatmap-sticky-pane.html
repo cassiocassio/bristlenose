@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en" data-model="split" data-surface="app" data-sp="on" data-cpad="off" data-footer="off">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signals heatmap pane: split vs sticky</title>
+<!--
+  Mechanism mockup, quick mode (25 Sep 2026).
+
+  Question: can the Signals lens drop its private scroll model (a height-capped
+  layout with an inner scroller, .signals-center) and scroll the PAGE like every
+  other lens, with the Heatmap pane pinned by `position: sticky; bottom: 0`?
+
+  The DOM mirrors the real tree: body > .layout > [.toc-sidebar | .center] >
+  main > .signals-layout > [.signals-center | .inspector-panel]. The "split"
+  model reproduces today's inspector.css after 4c678097; the "sticky" model is
+  the proposal. Open in Safari — WebKit is the app's engine, so the overlay
+  scrollbars and scrollIntoView behave as they will in the WKWebView.
+
+  The top edge of this browser window stands in for the app's toolbar seam.
+-->
+<style>
+:root {
+  --pad-top: 32px;           /* body padding-top: --bn-toolbar-inset (0) + --bn-space-xl */
+  --pane-h: 28px;            /* the pane's LIVE rendered height, written by JS */
+  /* Real values: colors/palette-default.css + tokens-desktop.css (13px chrome) */
+  --bg: light-dark(#ffffff, #111111);             /* --bn-colour-bg */
+  --panel: light-dark(#f9f9fa, #1c1c1e);          /* --bn-colour-inspector-bg */
+  --text: light-dark(#1a1a1a, #e5e7eb);           /* --bn-colour-text */
+  --muted: light-dark(#6b7280, #9ca3af);          /* --bn-colour-muted */
+  --border: light-dark(#e5e7eb, #2d2d2d);         /* --bn-colour-border */
+  --accent: light-dark(#007aff, #0a84ff);         /* --bn-colour-accent */
+  --card: light-dark(#ffffff, #111111);
+  --quote: light-dark(#f9fafb, #1a1a1a);          /* --bn-colour-quote-bg */
+  --label: 13px; --label-lh: 1.231;               /* --bn-text-label (desktop) */
+  --emphasis: 490;                                /* --bn-weight-emphasis */
+  --good: light-dark(#1f8a3b, #4cd964);
+  --bad: light-dark(#c62828, #ff6b6b);
+  --hud: light-dark(rgba(255,255,255,.96), rgba(40,40,42,.96));
+  color-scheme: light dark;
+}
+
+/* Proposal's fix for jump-to-card: the browser's scroll-into-view (and focus
+   scrolling) treats the bottom `--pane-h` px of the window as unusable. */
+html[data-model="sticky"][data-sp="on"] { scroll-padding-bottom: var(--pane-h); }
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: var(--pad-top) 0 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.4 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
+/* ── Shared layout (identical in both models) ───────────────────── */
+.layout { display: grid; grid-template-columns: 250px 1fr; }
+
+.toc-sidebar {
+  position: sticky; top: 0; height: 100vh;
+  /* the bleed idiom: reach the seam, re-inset the content */
+  margin-top: calc(-1 * var(--pad-top));
+  padding: var(--pad-top) 14px 24px;
+  overflow-y: auto;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  font-size: 13px;
+}
+.toc-sidebar h2 { font-size: var(--label); line-height: var(--label-lh); font-weight: var(--emphasis); margin: 0 0 8px; }
+.toc-sidebar .loc { color: var(--muted); margin: 14px 0 4px; }
+.toc-sidebar a { display: block; color: var(--text); text-decoration: none; padding: 2px 6px; border-radius: 5px; }
+.toc-sidebar a:hover { background: light-dark(#ececef, #333336); }
+
+.center { display: flex; flex-direction: column; min-width: 0; padding: 0 32px; }
+html[data-cpad="on"] .center { padding-bottom: 32px; }
+
+.webhead, .webnav { display: none; }
+html[data-surface="browser"] .webhead { display: flex; }
+html[data-surface="browser"] .webnav { display: flex; }
+.webhead { align-items: center; gap: 12px; padding: 4px 0 16px; border-bottom: 1px solid var(--border); font-size: 20px; }
+.webnav { gap: 28px; padding: 14px 16px 0; border-bottom: 1px solid var(--border); margin-bottom: 24px; font-size: 14px; color: var(--muted); }
+.webnav span { padding-bottom: 12px; }
+.webnav .on { color: var(--accent); border-bottom: 2px solid var(--accent); }
+
+main { display: flex; flex-direction: column; min-width: 0; }
+/* Edge to edge: bleed out of .center's 32px side padding, cards take it back */
+.signals-layout { display: flex; flex-direction: column; margin: 0 -32px; }
+.signals-center { padding: 0 32px 24px; }
+
+h1 { font-size: 34px; margin: 0 0 6px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.basis { color: var(--muted); margin: 0 0 18px; }
+.location { font-size: 21px; font-weight: 500; margin: 28px 0 10px; }
+.signal-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 18px 22px; margin-bottom: 14px; outline: none;
+}
+.signal-card:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent); }
+.signal-card.flash { box-shadow: 0 0 0 3px var(--accent); transition: box-shadow .2s; }
+.signal-card h3 { font-size: 18px; font-weight: 500; margin: 0 0 6px; display: flex; justify-content: space-between; }
+.signal-card h3 small { font: 12px ui-monospace, Menlo, monospace; color: var(--muted); background: var(--quote); padding: 3px 8px; border-radius: 6px; }
+.signal-card p { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
+.quotes { background: var(--quote); border-radius: 10px; padding: 10px 16px; }
+.quotes div { padding: 4px 0; font-size: 14px; }
+.quotes code { color: var(--accent); margin-right: 8px; }
+
+.report-footer { display: none; padding: 24px 0; color: var(--muted); font-size: 13px; border-top: 1px solid var(--border); }
+html[data-model="sticky"][data-footer="on"] .report-footer { display: block; }
+
+/* ── The Heatmap pane ───────────────────────────────────────────── */
+.inspector-panel {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: var(--bg);          /* opaque: cards scroll behind it in sticky */
+  display: flex; flex-direction: column;
+  height: var(--pane-set, 28px);
+  overflow: hidden;
+}
+.inspector-panel.collapsed { height: 28px; }
+.pane-handle {                /* .inspector-handle */
+  flex-shrink: 0; height: 28px; display: flex; align-items: center; gap: 8px;
+  padding: 0 12px; cursor: ns-resize; user-select: none;
+  background: var(--panel);   /* same chrome tint as the left panel */
+}
+.pane-icon { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; color: var(--text); }
+.pane-title {                 /* .inspector-handle-title = the "Signals" heading */
+  font-size: var(--label); line-height: var(--label-lh); font-weight: var(--emphasis); color: var(--text);
+}
+.pane-size { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pane-grip { flex: 1; display: flex; justify-content: center; }
+.pane-grip::before { content: ""; width: 32px; height: 3px; border-radius: 2px; background: var(--border); }
+.inspector-panel:not(.collapsed) .pane-handle { border-bottom: 1px solid var(--border); }
+.pane-handle::before { content: ""; position: absolute; }
+.pane-body { flex: 1; overflow: auto; padding: 0 4px 12px; }
+.pane-body table { border-collapse: collapse; font-size: 12px; }
+.pane-body th, .pane-body td { border: 1px solid var(--border); padding: 5px 9px; text-align: center; }
+.pane-body th { position: sticky; top: 0; background: var(--bg); font-weight: 500; }
+.pane-body th:first-child, .pane-body td:first-child { text-align: left; white-space: nowrap; }
+.pane-body td.hit { background: color-mix(in srgb, var(--accent) 22%, transparent); cursor: pointer; }
+.pane-body td.hit:hover { outline: 2px solid var(--accent); outline-offset: -2px; }
+body.dragging-v, body.dragging-v * { cursor: ns-resize !important; user-select: none; }
+
+/* ── MODEL A: split (today, inspector.css after 4c678097) ───────── */
+html[data-model="split"] .layout { height: calc(100dvh - var(--pad-top)); grid-template-rows: 1fr; }
+html[data-model="split"] .center { overflow: hidden; padding-bottom: 0; }
+html[data-model="split"] main { flex: 1; min-height: 0; }
+html[data-model="split"] .signals-layout { flex: 1; min-height: 0; overflow: hidden; }
+html[data-model="split"] .signals-center { flex: 1; min-height: 0; overflow-y: auto; }
+
+/* ── MODEL B: sticky (proposal) — the page scrolls, like every lens ─ */
+html[data-model="sticky"] .inspector-panel { position: sticky; bottom: 0; z-index: 5; }
+
+/* ── Test HUD (not part of either model) ───────────────────────── */
+.hud {
+  position: fixed; top: 12px; right: 12px; z-index: 100; width: 320px;
+  background: var(--hud); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.18); font-size: 12.5px; padding: 12px 14px;
+  backdrop-filter: blur(12px);
+}
+.hud h4 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); display: flex; justify-content: space-between; }
+.hud h4 button { all: unset; cursor: pointer; color: var(--accent); text-transform: none; letter-spacing: 0; }
+.hud.min .hud-body { display: none; }
+.hud .row { display: flex; gap: 4px; flex-wrap: wrap; margin: 0 0 8px; align-items: center; }
+.hud .row > b { width: 100%; font-weight: 600; margin-bottom: 2px; }
+.seg button, .hud .jump {
+  font: inherit; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text); cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.hud label { display: flex; gap: 6px; align-items: center; margin: 3px 0; }
+.hud label.dim { opacity: .45; }
+.readout { font: 11.5px/1.5 ui-monospace, Menlo, monospace; background: var(--quote); border-radius: 8px; padding: 8px 10px; margin: 8px 0; }
+.ok { color: var(--good); } .no { color: var(--bad); }
+.hud details { margin-top: 6px; }
+.hud summary { cursor: pointer; font-weight: 600; }
+.hud ol { padding-left: 18px; margin: 6px 0 0; }
+.hud li { margin-bottom: 5px; }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <nav class="toc-sidebar" id="toc"><h2>Signals</h2></nav>
+
+  <div class="center">
+    <div class="webhead">🐟 <span>Bristlenose project-ikea</span></div>
+    <div class="webnav"><span>Project</span><span>Sessions</span><span>Quotes</span><span>Codebooks</span><span class="on">Signals</span></div>
+
+    <main>
+      <div class="signals-layout">
+        <div class="signals-center" id="scroller">
+          <h1>Signals</h1>
+          <p class="basis">Based on 25 accepted + 24 pending tags (pending tags weighted by AI confidence)</p>
+          <div id="cards"></div>
+        </div>
+
+        <div class="inspector-panel collapsed" id="pane">
+          <div class="pane-handle" id="handle">
+            <span class="pane-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <rect x="1.25" y="1.25" width="5.75" height="5.75" rx="1.6" stroke="currentColor" stroke-width="1.3"/>
+              <rect x="9" y="1.25" width="5.75" height="5.75" rx="1.6" stroke="currentColor" stroke-width="1.3"/>
+              <rect x="1.25" y="9" width="5.75" height="5.75" rx="1.6" stroke="currentColor" stroke-width="1.3"/>
+              <rect x="9" y="9" width="5.75" height="5.75" rx="1.6" stroke="currentColor" stroke-width="1.3"/></svg></span>
+            <span class="pane-title">Heatmap</span>
+            <span class="pane-grip"></span>
+            <span class="pane-size" id="paneLabel"></span>
+          </div>
+          <div class="pane-body" id="paneBody"></div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="report-footer">Report footer — hidden on Signals today; visible here only if you tick it.</footer>
+  </div>
+</div>
+
+<aside class="hud" id="hud">
+  <h4>Test controls <button id="hudMin">hide</button></h4>
+  <div class="hud-body">
+    <div class="row"><b>Scroll model</b>
+      <span class="seg" data-attr="model"><button data-v="split">Split (today)</button><button data-v="sticky">Sticky (proposed)</button></span></div>
+    <div class="row"><b>Surface</b>
+      <span class="seg" data-attr="surface"><button data-v="app">App (no web nav)</button><button data-v="browser">Browser</button></span></div>
+    <div class="row"><b>Heatmap pane</b>
+      <span class="seg" id="paneSeg"><button data-h="0">Collapsed</button><button data-h="150">150px</button><button data-h="0.45">45% window</button></span>
+      <span style="color:var(--muted)">or drag its bar</span></div>
+    <label id="spLabel"><input type="checkbox" id="sp" checked> scroll-padding-bottom = pane height</label>
+    <label id="cpadLabel"><input type="checkbox" id="cpad"> .center keeps its 32px bottom padding</label>
+    <label id="footLabel"><input type="checkbox" id="foot"> show report footer</label>
+
+    <div class="row" style="margin-top:8px"><b>Jump to card (scrollIntoView, block: center)</b>
+      <button class="jump" data-i="6">#7</button><button class="jump" data-i="14">#15</button><button class="jump" data-i="23">#24</button>
+      <span style="color:var(--muted)">· or click a heatmap cell · or Tab through cards</span></div>
+
+    <div class="readout" id="readout">—</div>
+
+    <details open>
+      <summary>What to look for</summary>
+      <ol>
+        <li><b>Heading.</b> App + Split, scroll a little: "Signals" is cut off 32px under the top edge. Sticky: it slides out at the top edge like every other lens.</li>
+        <li><b>Jump lands behind the pane.</b> Sticky, pane at 45%, <i>untick</i> scroll-padding, jump to #15: the readout should say it's hidden. Tick it again and repeat.</li>
+        <li><b>Focus.</b> Same setup, Tab through cards: with scroll-padding off, focused cards can sit under the pane.</li>
+        <li><b>Scrollbars.</b> Split: the card scrollbar stops at the pane. Sticky: the window's scrollbar runs the full height, next to the pane's own. Which reads better?</li>
+        <li><b>Resize while scrolled.</b> Scroll to the middle, drag the pane bar up and down. Does the content jump?</li>
+        <li><b>Scroll-end lift.</b> Sticky, tick "32px bottom padding", scroll to the end: the pane lifts off the window bottom (the 1c563b29 bug).</li>
+        <li><b>Footer.</b> Sticky, tick footer, scroll to the end: the pane stops being pinned once the footer arrives. Acceptable, or keep it hidden?</li>
+      </ol>
+    </details>
+  </div>
+</aside>
+
+<script>
+(() => {
+  const root = document.documentElement;
+  const LOCS = ["Shopping Bag", "Session wrap-up", "Search & Sort Results", "Beds & Mattresses", "Top Navigation"];
+  const SENT = ["frustration", "confusion", "doubt", "surprise", "satisfaction", "delight", "confidence"];
+  const TITLES = ["Removal notice obscured", "Bag logic breaks down", "Wrap-up expectation mismatch",
+    "Results read immediately", "Category orientation lost", "Personal criteria override",
+    "Sizes buried in listing", "Navigation works, then stalls", "Editorial crowds the entry"];
+  const QUOTES = ["It takes me to a QR code. Okay, let's take my basket out… Save for later.",
+    "And I've spent £947. Go to checkout. Continue as guest.",
+    "Express delivery is the way to go. Unavailable products are safe for later.",
+    "Okay, there's no way I'm going to collect. Collect from locker.",
+    "Right, and an item was removed from your shopping bag — notify me.",
+    "I approve. Okay, I think this is enough data for a second test."];
+
+  // ── build cards + toc ─────────────────────────────────────────────
+  const cardsEl = document.getElementById("cards"), toc = document.getElementById("toc");
+  const cards = [];
+  let n = 0;
+  LOCS.forEach((loc, li) => {
+    const h = document.createElement("div"); h.className = "location"; h.textContent = loc; cardsEl.append(h);
+    const t = document.createElement("div"); t.className = "loc"; t.textContent = loc; toc.append(t);
+    for (let k = 0; k < 5; k++, n++) {
+      const c = document.createElement("section");
+      c.className = "signal-card"; c.tabIndex = 0; c.dataset.i = n;
+      const q = 2 + ((n * 7) % 3);
+      c.innerHTML = `<h3>#${n + 1} · ${TITLES[n % TITLES.length]}<small>${SENT[n % 7]} 0.${30 + (n * 13) % 60}</small></h3>
+        <p>Three participants read this without difficulty; one disengaged before completing the flow.</p>
+        <div class="quotes">${Array.from({ length: q }, (_, j) =>
+          `<div><code>[0${(j + n) % 5}:${String(10 + (n * 7 + j * 11) % 50)}]</code>${QUOTES[(n + j) % QUOTES.length]}</div>`).join("")}</div>`;
+      cardsEl.append(c); cards.push(c);
+      const a = document.createElement("a"); a.href = "#"; a.textContent = `#${n + 1} ${TITLES[n % TITLES.length]}`;
+      a.onclick = (e) => { e.preventDefault(); jumpTo(+c.dataset.i, "sidebar"); };
+      toc.append(a);
+    }
+  });
+
+  // ── heatmap: 12 rows so the pane body scrolls too ─────────────────
+  const rows = [...LOCS, "Checkout", "Delivery", "Privacy prompt", "Homepage widgets", "Filters", "Wishlist", "Store stock"];
+  let html = `<table><thead><tr><th>Section ↓ / Sentiment →</th>${SENT.map(s => `<th>${s}</th>`).join("")}</tr></thead><tbody>`;
+  rows.forEach((r, ri) => {
+    html += `<tr><td>${r}</td>` + SENT.map((_, si) => {
+      const target = (ri * 7 + si * 3) % 25;
+      return (ri + si) % 3 === 0 ? `<td class="hit" data-i="${target}">#${target + 1}</td>` : `<td>·</td>`;
+    }).join("") + `</tr>`;
+  });
+  document.getElementById("paneBody").innerHTML = html + "</tbody></table>";
+  document.getElementById("paneBody").addEventListener("click", (e) => {
+    const td = e.target.closest("td.hit"); if (td) jumpTo(+td.dataset.i, "heatmap cell");
+  });
+
+  // ── pane height + live --pane-h ───────────────────────────────────
+  const pane = document.getElementById("pane"), paneLabel = document.getElementById("paneLabel");
+  const setPane = (px) => {
+    if (px <= 28) { pane.classList.add("collapsed"); }
+    else { pane.classList.remove("collapsed"); pane.style.setProperty("--pane-set", Math.round(px) + "px"); }
+  };
+  new ResizeObserver(() => {
+    const h = pane.offsetHeight;
+    root.style.setProperty("--pane-h", h + "px");
+    paneLabel.textContent = `${h}px`;
+    live();
+  }).observe(pane);
+
+  document.getElementById("paneSeg").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    const v = +b.dataset.h; setPane(v === 0 ? 0 : v < 1 ? innerHeight * v : v);
+  });
+
+  // drag the bar (up = taller)
+  const handle = document.getElementById("handle");
+  handle.addEventListener("pointerdown", (e) => {
+    const y0 = e.clientY, h0 = pane.offsetHeight;
+    // Drag readout: did the CONTENT move while the pane resized? Measured as
+    // the page's (sticky) or the inner pane's (split) scroll position, plus a
+    // card's on-screen top, so either kind of movement shows.
+    const sticky = root.dataset.model === "sticky";
+    const pos = () => sticky ? scrollY : scroller.scrollTop;
+    const max = () => sticky ? document.documentElement.scrollHeight - innerHeight : scroller.scrollHeight - scroller.clientHeight;
+    const probeCard = cards.find(c => c.getBoundingClientRect().top > 0) || cards[0];
+    const s0 = pos(), m0 = max(), c0 = probeCard.getBoundingClientRect().top;
+    try { handle.setPointerCapture(e.pointerId); } catch { /* synthetic events have no live pointer */ }
+    document.body.classList.add("dragging-v");
+    const move = (ev) => setPane(Math.min(innerHeight * 0.8, Math.max(28, h0 + (y0 - ev.clientY))));
+    const up = () => {
+      handle.removeEventListener("pointermove", move); document.body.classList.remove("dragging-v");
+      const dh = pane.offsetHeight - h0, ds = pos() - s0, dc = probeCard.getBoundingClientRect().top - c0;
+      lastJump = `drag: pane ${dh >= 0 ? "+" : ""}${dh}px → scroll ${ds >= 0 ? "+" : ""}${Math.round(ds)}px, ` +
+        `card #${+probeCard.dataset.i + 1} moved ${Math.round(dc)}px ` +
+        `(started ${m0 > 0 ? Math.round(100 * s0 / m0) : 0}% down, ${Math.round(m0 - s0)}px from the end)`;
+      live();
+    };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", up, { once: true });
+  });
+
+  // ── attribute toggles ─────────────────────────────────────────────
+  const syncSegs = () => document.querySelectorAll(".seg[data-attr]").forEach(seg =>
+    seg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", root.dataset[seg.dataset.attr] === b.dataset.v)));
+  document.querySelectorAll(".seg[data-attr]").forEach(seg => seg.addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    root.dataset[seg.dataset.attr] = b.dataset.v; syncSegs(); dims(); live();
+  }));
+  const bind = (id, key) => document.getElementById(id).addEventListener("change", (e) => {
+    root.dataset[key] = e.target.checked ? "on" : "off"; live();
+  });
+  bind("sp", "sp"); bind("cpad", "cpad"); bind("foot", "footer");
+  const dims = () => ["spLabel", "cpadLabel", "footLabel"].forEach(id =>
+    document.getElementById(id).classList.toggle("dim", root.dataset.model !== "sticky"));
+  document.getElementById("hudMin").onclick = () => {
+    const h = document.getElementById("hud"); h.classList.toggle("min");
+    document.getElementById("hudMin").textContent = h.classList.contains("min") ? "show" : "hide";
+  };
+
+  // ── measurement: is the card actually visible? ────────────────────
+  const scroller = document.getElementById("scroller");
+  const region = () => {
+    // visible band for cards: from the scroller's top (split) or the window
+    // top (sticky) down to the pane's top edge
+    const top = root.dataset.model === "split" ? Math.max(0, scroller.getBoundingClientRect().top) : 0;
+    return { top, bottom: pane.getBoundingClientRect().top };
+  };
+  const verdict = (el) => {
+    const r = el.getBoundingClientRect(), v = region();
+    const under = Math.max(0, Math.min(r.bottom, innerHeight) - v.bottom);
+    const over = Math.max(0, v.top - r.top);
+    const h = r.height;
+    if (under >= h || r.top >= v.bottom) return `<span class="no">✗ entirely behind the pane</span>`;
+    if (over >= h) return `<span class="no">✗ above the visible area</span>`;
+    if (under > 0) return `<span class="no">✗ ${Math.round(under)}px hidden under the pane</span>`;
+    if (over > 0) return `<span class="no">✗ ${Math.round(over)}px clipped at the top</span>`;
+    return `<span class="ok">✓ fully visible</span>`;
+  };
+  let lastJump = "—";
+  const live = () => {
+    const sticky = root.dataset.model === "sticky";
+    const docScroll = document.documentElement.scrollHeight > innerHeight + 1;
+    document.getElementById("readout").innerHTML =
+      `scroller: ${sticky ? "the page (window)" : ".signals-center (inner)"}<br>` +
+      `page scrollable: ${docScroll ? `<span class="${sticky ? "ok" : "no"}">yes</span>` : `<span class="${sticky ? "no" : "ok"}">no</span>`}` +
+      `${!sticky && docScroll ? " ← phantom page scrollbar" : ""}<br>` +
+      `pane: ${pane.offsetHeight}px · scroll-padding-bottom: ${getComputedStyle(root).scrollPaddingBottom}<br>` +
+      `last: ${lastJump}`;
+  };
+  const settle = (fn) => {
+    // wait for smooth scrolling to stop on whichever box scrolls
+    let t; const done = () => { clearTimeout(t); t = setTimeout(fn, 120); };
+    addEventListener("scroll", done, { passive: true }); scroller.addEventListener("scroll", done, { passive: true });
+    done();
+    setTimeout(() => { removeEventListener("scroll", done); scroller.removeEventListener("scroll", done); }, 1500);
+  };
+  function jumpTo(i, via) {
+    const el = cards[i];
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1500);
+    settle(() => { lastJump = `#${i + 1} via ${via}: ${verdict(el)}`; live(); });
+  }
+  document.querySelectorAll(".hud .jump").forEach(b => b.onclick = () => jumpTo(+b.dataset.i, "button"));
+  cardsEl.addEventListener("focusin", (e) => {
+    const c = e.target.closest(".signal-card"); if (!c) return;
+    settle(() => { lastJump = `#${+c.dataset.i + 1} via Tab focus: ${verdict(c)}`; live(); });
+  });
+  addEventListener("resize", live);
+
+  syncSegs(); dims(); live();
+})();
+</script>
+</body>
+</html>

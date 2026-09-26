@@ -153,7 +153,11 @@ body.dragging-v * {
     min-height: 1.75rem;
     user-select: none;
     border-bottom: 1px solid var(--bn-colour-border);
-    background: var(--bn-colour-bg);
+    /* Chrome, not content: the same tint as the left panel (.toc-sidebar) so
+       the bar reads as another panel edge. Only the bar — the heatmap body
+       below it stays on --bn-colour-bg. The keyline above is the panel's
+       border-top, already --bn-colour-border like the left panel's. */
+    background: var(--bn-colour-inspector-bg);
 }
 
 .collapsed .inspector-handle {

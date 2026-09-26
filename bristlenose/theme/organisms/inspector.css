@@ -173,7 +173,9 @@ body.dragging-v * {
     height: 24px;
     border: none;
     background: none;
-    color: var(--bn-colour-muted);
+    /* Text colour, not muted: the grid glyph is the web twin of the Mac
+       toolbar's square.grid.2x2, which draws in the primary label colour. */
+    color: var(--bn-colour-text);
     cursor: pointer;
     border-radius: var(--bn-radius-sm);
     padding: 0;
@@ -185,24 +187,25 @@ body.dragging-v * {
     color: var(--bn-colour-text);
 }
 
-/* Title text */
+/* Title text — the same heading as the left panel's "Signals"
+   (`.toc-sidebar-header .sidebar-title`, sidebar.css): label size, emphasis
+   weight, text colour. Two panel headings in one lens, one typography. */
 .inspector-handle-title {
-    font-size: var(--bn-text-caption);
-    line-height: var(--bn-text-caption-lh);
+    font-size: var(--bn-text-label);
+    line-height: var(--bn-text-label-lh);
     font-weight: var(--bn-weight-emphasis);
-    letter-spacing: 0.02em;
-    color: var(--bn-colour-muted);
+    color: var(--bn-colour-text);
     cursor: default;
 }
 
 /* Shimmer teaching animation — plays when a signal card is focused
    while the panel is collapsed. sessionStorage counter: max 3 times. */
 @keyframes inspector-shimmer {
-    0%   { color: var(--bn-colour-muted); }
+    0%   { color: var(--bn-colour-text); }
     25%  { color: var(--bn-colour-accent); }
-    50%  { color: var(--bn-colour-muted); }
+    50%  { color: var(--bn-colour-text); }
     75%  { color: var(--bn-colour-accent); }
-    100% { color: var(--bn-colour-muted); }
+    100% { color: var(--bn-colour-text); }
 }
 
 .inspector-handle-title.shimmer {

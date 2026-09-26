@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edo Website Palettes — six candidates, light and dark</title>
+<style>
+/* ────────────────────────────────────────────────────────────────
+   Exploratory mockup. Six candidate Edo palettes for bristlenose.app.
+   NOT the shipped theme — see bristlenose/theme/colors/palette-edo.css
+   for that. Nothing here is a token; nothing here is imported anywhere.
+
+   The page chrome is deliberately a CONSTANT neutral, not OS-responsive.
+   A colour comparison needs one surround for all twelve specimens, or
+   the light ones are judged against a different ground from the dark
+   ones and the comparison is worthless.
+   ──────────────────────────────────────────────────────────────── */
+
+:root {
+    --ui-font: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --ui-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    --ui-bg: #e9e9e6;
+    --ui-panel: #f7f7f5;
+    --ui-text: #1c1c1a;
+    --ui-muted: #6a6a64;
+    --ui-line: #d3d3ce;
+    --ui-good: #2f6b42;
+    --ui-bad: #a33217;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: var(--ui-font);
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--ui-text);
+    background: var(--ui-bg);
+    padding: 2.5rem 2rem 5rem;
+    -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 1240px; margin: 0 auto; }
+
+header.page { margin-bottom: 2.5rem; }
+
+header.page h1 {
+    font-size: 1.5rem;
+    font-weight: 640;
+    letter-spacing: -0.015em;
+    margin-bottom: 0.4rem;
+}
+
+header.page .lede {
+    color: var(--ui-muted);
+    max-width: 62em;
+    margin-bottom: 1.2rem;
+}
+
+.note {
+    background: var(--ui-panel);
+    border: 1px solid var(--ui-line);
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    max-width: 62em;
+    font-size: 13px;
+    color: var(--ui-muted);
+}
+.note strong { color: var(--ui-text); font-weight: 600; }
+.note p + p { margin-top: 0.5rem; }
+
+/* ── Palette section ── */
+
+.palette { margin-bottom: 3.2rem; }
+
+.palette > header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+    padding-bottom: 0.55rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--ui-line);
+}
+
+.palette > header .idx {
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    color: var(--ui-muted);
+    font-weight: 600;
+}
+
+.palette > header h2 {
+    font-size: 1.12rem;
+    font-weight: 620;
+    letter-spacing: -0.01em;
+}
+
+.palette > header .leads {
+    font-size: 12px;
+    color: var(--ui-muted);
+    font-family: var(--ui-mono);
+}
+
+.palette > header .character {
+    flex-basis: 100%;
+    font-size: 13px;
+    color: var(--ui-muted);
+    max-width: 68em;
+}
+
+.pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.3rem;
+}
+
+@media (max-width: 880px) { .pair { grid-template-columns: 1fr; } }
+
+.variant {
+    border: 1px solid var(--ui-line);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--ui-panel);
+}
+
+.variant > .mode-label {
+    font-size: 11px;
+    font-weight: 620;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ui-muted);
+    padding: 0.45rem 0.8rem;
+    border-bottom: 1px solid var(--ui-line);
+}
+
+/* ── The page fragment — identical markup for all twelve ── */
+
+.frag {
+    background: var(--bg);
+    color: var(--text);
+    padding: 1.15rem 1.35rem 1.4rem;
+    font-size: 13.5px;
+}
+
+.frag-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.8rem;
+    margin-bottom: 1.3rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.frag-nav .wordmark {
+    font-weight: 640;
+    letter-spacing: -0.01em;
+    font-size: 14px;
+    color: var(--text);
+}
+
+.frag-nav nav { display: flex; gap: 0.95rem; font-size: 12.5px; }
+.frag-nav nav a { color: var(--muted); text-decoration: none; }
+.frag-nav nav a:hover { color: var(--accent-hover); }
+.frag-nav nav a.here { color: var(--text); }
+
+.frag h3.hero {
+    font-size: 1.35rem;
+    line-height: 1.22;
+    font-weight: 640;
+    letter-spacing: -0.018em;
+    margin-bottom: 0.55rem;
+    color: var(--text);
+}
+
+.frag p.sub {
+    color: var(--muted);
+    margin-bottom: 1.05rem;
+    max-width: 34em;
+}
+
+.frag p.para {
+    margin-bottom: 1.05rem;
+    max-width: 36em;
+}
+
+.frag a.inline {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-thickness: 1px;
+}
+.frag a.inline:hover { color: var(--accent-hover); }
+
+.btn-row { display: flex; gap: 0.55rem; margin-bottom: 1.3rem; }
+
+.btn {
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 560;
+    padding: 0.42rem 0.85rem;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    border: 1px solid transparent;
+}
+
+.btn-primary { background: var(--accent); color: var(--bg); }
+.btn-primary:hover { background: var(--accent-hover); }
+
+.btn-secondary {
+    background: transparent;
+    color: var(--text);
+    border-color: var(--border);
+}
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+.frag .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.8rem 0.9rem;
+    margin-bottom: 0.85rem;
+}
+
+.frag .card-title { font-weight: 600; font-size: 13px; margin-bottom: 0.1rem; }
+.frag .card-meta { color: var(--muted); font-size: 12px; margin-bottom: 0.6rem; }
+
+.status-row { display: flex; gap: 1rem; font-size: 12px; flex-wrap: wrap; }
+.status { display: inline-flex; align-items: center; gap: 0.35rem; }
+.status .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.status.pos { color: var(--pos); } .status.pos .dot { background: var(--pos); }
+.status.neg { color: var(--neg); } .status.neg .dot { background: var(--neg); }
+
+.frag p.caption { color: var(--muted); font-size: 11.5px; }
+
+/* ── Measurements ── */
+
+.ratios {
+    border-top: 1px solid var(--ui-line);
+    padding: 0.65rem 0.8rem 0.5rem;
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 0.15rem 0.6rem;
+    font-size: 12px;
+    align-items: baseline;
+}
+
+.ratios .rname { color: var(--ui-muted); }
+.ratios .rval { font-family: var(--ui-mono); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+
+.pill {
+    font-size: 10px;
+    font-weight: 660;
+    letter-spacing: 0.04em;
+    padding: 0.05rem 0.34rem;
+    border-radius: 3px;
+    min-width: 3.1em;
+    text-align: center;
+}
+.pill.aaa  { background: #dbe9df; color: var(--ui-good); }
+.pill.aa   { background: #e6e6e1; color: #4d4d47; }
+.pill.fail { background: #f4d9d1; color: var(--ui-bad); }
+
+.swatches {
+    border-top: 1px solid var(--ui-line);
+    padding: 0.6rem 0.8rem 0.75rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.3rem 0.55rem;
+}
+
+.sw { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
+
+.sw .chip {
+    width: 15px; height: 15px; flex: none;
+    border-radius: 3px;
+    border: 1px solid rgba(0,0,0,0.16);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.22);
+}
+
+.sw .txt { min-width: 0; line-height: 1.25; }
+.sw .role { font-size: 10.5px; color: var(--ui-muted); white-space: nowrap; }
+.sw .hex  { font-family: var(--ui-mono); font-size: 10.5px; }
+
+/* ── Verdict ── */
+
+.verdict {
+    margin-top: 1rem;
+    background: var(--ui-panel);
+    border: 1px solid var(--ui-line);
+    border-radius: 10px;
+    padding: 1.5rem 1.6rem;
+}
+
+.verdict h2 { font-size: 1.15rem; font-weight: 640; margin-bottom: 0.2rem; }
+.verdict .sub { color: var(--ui-muted); font-size: 13px; margin-bottom: 1.2rem; }
+.verdict h3 { font-size: 13px; font-weight: 650; margin: 1.3rem 0 0.45rem; }
+.verdict h3:first-of-type { margin-top: 0; }
+.verdict p { max-width: 70em; margin-bottom: 0.6rem; }
+.verdict p:last-child { margin-bottom: 0; }
+.verdict .pname { font-weight: 640; }
+.verdict .tag {
+    font-size: 10px; font-weight: 660; letter-spacing: 0.04em;
+    padding: 0.05rem 0.34rem; border-radius: 3px; margin-right: 0.35rem;
+    vertical-align: 1.5px;
+}
+.verdict .tag.keep { background: #dbe9df; color: var(--ui-good); }
+.verdict .tag.flaw { background: #f1e6cf; color: #7a5a12; }
+.verdict .tag.drop { background: #f4d9d1; color: var(--ui-bad); }
+.verdict code {
+    font-family: var(--ui-mono); font-size: 11.5px;
+    background: #e6e6e1; padding: 0.05rem 0.28rem; border-radius: 3px;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+    <h1>Edo website palettes — six candidates</h1>
+    <p class="lede">
+        Exploratory. Six ways the Edo pigments could dress the public site, each with a light and a
+        dark variant, shown as the same small page fragment twelve times so they can be compared like
+        for like. Swatches are reference, underneath, not the main event.
+    </p>
+    <div class="note">
+        <p><strong>How to read this.</strong> Every fragment is identical markup — nav, hero, body
+        paragraph with an inline link, primary and secondary button, a bordered card with two
+        semantic states, a muted caption. Only the nine colour values change. Hover the links and
+        buttons: the hover colour is live, not just a swatch.</p>
+        <p>The surround is a constant neutral on purpose, and does not follow your OS. Judging light
+        specimens against a light page and dark ones against a dark page is not a comparison.</p>
+        <p><strong>Contrast is computed, not eyeballed</strong> — WCAG 2.x relative luminance, in the
+        page, from the same hex values the fragment renders, so the two cannot drift apart. Anything
+        under 4.5:1 is flagged <span class="pill fail">FAIL</span>.</p>
+        <p>Nothing here touches <code>bristlenose/theme/colors/palette-edo.css</code>. That file
+        remains the shipped palette and the source of truth for the app.</p>
+    </div>
+</header>
+
+<main id="grid"></main>
+
+<section class="verdict">
+    <h2>Verdict</h2>
+    <p class="sub">Asked for candour rather than six polite paragraphs. Here it is.</p>
+
+    <h3>The three that work</h3>
+
+    <p><span class="tag keep">KEEP</span><span class="pname">Wave Indigo</span> is the one I would
+    build. It is the only candidate where the <em>page itself</em> carries pigment — a bero-ai wash
+    with paper cards floating on it in light, a genuine deep Prussian field in dark — so the two
+    modes read as one idea rather than two unrelated themes that happen to share a name. Everything
+    else in the set goes warm-neutral in light and warm-black in dark, which is a convention, not a
+    palette. The risk is real and worth saying: a blue-washed page reads "considered SaaS" to anyone
+    who does not already know the print it came from. The Edo reference is invisible; only the
+    quality survives the translation.</p>
+
+    <p><span class="tag keep">KEEP</span><span class="pname">Passport Paper</span> works and is
+    boring, which for a product site may be exactly right. It is essentially the shipped light theme
+    wearing website chrome: Prussian link at 6.7:1 on near-white paper, navy ink, parchment rules. A
+    stranger would call it a well-made neutral site and never guess at an exhibition. If the goal is
+    that the site not fight the product, this is the answer. If the goal is that the site be
+    remembered, it isn't.</p>
+
+    <p><span class="tag flaw">FLAW</span><span class="pname">Cinnabar Seal</span> works, with one
+    structural defect that should decide it. Vermillion is the only pigment in the whole Edo set with
+    enough chroma to behave like an accent against a warm ground, and it has the widest hue
+    separation from the body ink of anything here — 19° in light, 41° in dark, against 0–4.5° in light
+    for the three below that do not. That is why the links actually look like links. But if vermillion is the accent then
+    danger cannot also be red: in the dark variant the failure state and the primary button are
+    1.1:1 apart, i.e. the same colour. On a marketing site with no destructive actions that is
+    survivable. It is not a palette the app could ever take, so choosing it forks site and product.</p>
+
+    <h3>The three that don't</h3>
+
+    <p><span class="tag drop">MUDDY</span><span class="pname">Sail Parchment</span> is the muddiest
+    thing here and it is instructive about why. Accent hue 74°, body ink hue 78°: a bronze link, on a
+    brown-black ink, on a tan page, is three lightnesses of one hue. Nothing distinguishes a link
+    from a word except that it is paler — and on an already-warm ground paler reads as
+    <em>fading</em>, not as emphasis. Ochre has to be darkened to <code>#7d5410</code> just to clear
+    4.5:1 against its own paper, at which point it has stopped being gold. The dark variant is
+    decent, but a dark ground with a gold accent is not parchment; it is any dark theme.</p>
+
+    <p><span class="tag drop">MUDDY</span><span class="pname">Rokusho Court</span> fails the same way,
+    greener. Accent 183°, ink 185°. Verdigris at its real value (<code>#7ba8a0</code>) cannot carry
+    a link on a pale ground — it lands near 2:1 — so it has to be deepened to a dark teal, and a
+    dark teal beside a teal-black ink is the ink's sibling, not a signal. The dark variant is the
+    best-looking thing in this document that is not Wave Indigo: the true pigment on
+    <code>#121a18</code> is genuinely handsome. A palette that only works in one of its two modes is
+    half a palette.</p>
+
+    <p><span class="tag drop">DROP</span><span class="pname">Sumi Snow</span> is not a palette, it is
+    a typographic position, and it should be judged as one. The accent <em>is</em> the body text —
+    0° apart, zero chroma delta, by construction — so a link is carried entirely by its underline and
+    the only colour event on the whole page is the Bengara hover. That can be beautiful, and it is
+    the most honestly Edo thing in the set. It also puts every affordance on
+    <code>text-decoration</code>, leaves nothing for buttons, diagrams or state, and gives the site
+    no colour to be recognised by. Ink on paper is a book. A website has to do more jobs than a
+    book.</p>
+
+    <h3>And the bigger question</h3>
+
+    <p>Not premature — just narrower than six. The honest finding is that the Edo source is
+    overwhelmingly a <em>paper-and-ink</em> palette: five of its pigments are low-chroma warm
+    earths, and the two with real saturation (bero-ai, cinnabar) are precisely the two that sampled
+    badly off aged prints — which is why the shipped theme already had to reach past the masstone for
+    Prussian's undertone. Low-chroma earths make lovely <em>application</em> chrome, where colour's
+    job is to get out of the way of the researcher's own content. They make a weak <em>marketing</em>
+    surface, where colour's job is to be remembered. Note what that implies: Wave Indigo and Cinnabar
+    Seal are the two that work, and both work by being <em>less</em> faithful to the source.</p>
+
+    <p>So the choice is smaller than it looks — Wave Indigo if the site should look like the theme,
+    Passport Paper if it should look like the product — and it sits underneath a question this
+    exercise did not ask. The site and the app do not have to match, and "the public site is dressed
+    in the app's optional non-default palette" is a slightly odd promise to make a visitor. Worth
+    settling that before tuning any of these further.</p>
+
+    <p><strong>One limit on this verdict, stated plainly:</strong> the contrast numbers and the hue
+    and chroma separations behind these judgements are measured, but I have not looked at the
+    rendered page — the house rule is that Claude Code preview tools are not used for QA here. Open
+    it and the muddy three should be obvious in about four seconds; if they are not, distrust this
+    section before you distrust your eyes.</p>
+</section>
+
+</div>
+
+<script>
+"use strict";
+
+/* One source of truth: the fragment, the swatches and the ratios are all
+   rendered from these values, so a displayed hex cannot drift from a painted one. */
+
+const PALETTES = [
+  {
+    name: "Passport Paper",
+    leads: "Paper White · Passport Navy · Vivid Prussian",
+    character: "Paper-and-ink led. Warm neutrals carry everything; the only colour on the page is the link. Closest to the shipped light theme, which is both its strength and its problem.",
+    light: { bg:"#fdfbf7", surface:"#f4efe3", text:"#1b2230", muted:"#55606f", border:"#ded5bd", accent:"#0f5c9e", accentHover:"#0a4676", pos:"#4a6b4a", neg:"#b5432a" },
+    dark:  { bg:"#1a1816", surface:"#232019", text:"#e8e3d6", muted:"#a89f8c", border:"#332e25", accent:"#4d9fe0", accentHover:"#7cb9ea", pos:"#7fa87f", neg:"#e06a4a" },
+  },
+  {
+    name: "Wave Indigo",
+    leads: "Wave Indigo · Vivid Prussian · Sail Parchment",
+    character: "Bero-ai as the field, not the accent. The page is washed indigo and the cards are paper floating on it; in dark the field becomes a true Prussian night rather than a warm black.",
+    light: { bg:"#dde7f0", surface:"#f8f6ef", text:"#16243a", muted:"#47617e", border:"#b9cbdd", accent:"#0f5c9e", accentHover:"#0a4270", pos:"#3f6350", neg:"#a63c26" },
+    dark:  { bg:"#101d2e", surface:"#172940", text:"#dfe7f0", muted:"#92aac4", border:"#243954", accent:"#6fb2ea", accentHover:"#9acbf2", pos:"#85b39a", neg:"#e87a5c" },
+  },
+  {
+    name: "Sail Parchment",
+    leads: "Sail Parchment · Gold Ochre · Starred Tan",
+    character: "Aged paper. Everything warms — the ground, the ink, the rules — and the accent is Gold Ochre deepened far enough to hold a link, which is far enough that it stops looking like gold.",
+    light: { bg:"#f2e9d4", surface:"#e9dcbf", text:"#302719", muted:"#6f6041", border:"#d5c39a", accent:"#7d5410", accentHover:"#5c3d0b", pos:"#4a6b4a", neg:"#a63c26" },
+    dark:  { bg:"#201b12", surface:"#2a2418", text:"#ecdfc2", muted:"#b3a37c", border:"#3b3323", accent:"#d2a94f", accentHover:"#e6c47a", pos:"#8fae7f", neg:"#e0795a" },
+  },
+  {
+    name: "Sumi Snow",
+    leads: "Sumi Black · Snow White · Bengara Red",
+    character: "Near-monochrome: ink on washi. The accent is the ink, so links live entirely on their underline, and the single colour event on the page is a Bengara shift on hover.",
+    light: { bg:"#f5f0e6", surface:"#ece5d6", text:"#1a1a1a", muted:"#5f5b52", border:"#d8d1c2", accent:"#1a1a1a", accentHover:"#8b3a3a", pos:"#4a6b4a", neg:"#8b3a3a" },
+    dark:  { bg:"#161513", surface:"#1f1e1b", text:"#ece7dc", muted:"#a09a8e", border:"#2e2c27", accent:"#ece7dc", accentHover:"#d98a70", pos:"#8fae8f", neg:"#d97a5c" },
+  },
+  {
+    name: "Rokusho Court",
+    leads: "Verdigris · Pine Green · Court Indigo",
+    character: "The pigment the shipped light theme barely uses, promoted to lead. A pale rokusho ground with teal-black ink; verdigris itself only becomes legible as an accent once the ground goes dark.",
+    light: { bg:"#e8efe9", surface:"#dae5dd", text:"#1f2c2a", muted:"#4c6660", border:"#c2d3cb", accent:"#2d6b62", accentHover:"#1e4f48", pos:"#3f6b4a", neg:"#a8402a" },
+    dark:  { bg:"#121a18", surface:"#1a2422", text:"#dfe8e2", muted:"#8fb0a8", border:"#263531", accent:"#7ba8a0", accentHover:"#a2c8c1", pos:"#8ebd94", neg:"#e0795a" },
+  },
+  {
+    name: "Cinnabar Seal",
+    leads: "Vermillion · Washi Cream · Pine Green",
+    character: "Cinnabar as a hot accent used sparingly, the way the prints use it — cartouche seals and a scatter of garments against warm neutral. The one palette whose links are unmistakably links.",
+    light: { bg:"#fbf7f0", surface:"#f4eee2", text:"#241f1c", muted:"#6b5f57", border:"#ded2c0", accent:"#a03721", accentHover:"#7f2b18", pos:"#4a6b4a", neg:"#8b3a3a" },
+    dark:  { bg:"#1c1715", surface:"#262019", text:"#ece3d6", muted:"#ab9b8b", border:"#382f27", accent:"#e06a4a", accentHover:"#ef8e72", pos:"#86b086", neg:"#e8705a" },
+  },
+];
+
+/* ── WCAG 2.x relative luminance and contrast ratio ── */
+
+function channel(c) {
+  c = c / 255;
+  return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+
+function luminance(hex) {
+  const m = hex.replace("#", "").match(/.{2}/g);
+  const [r, g, b] = m.map(h => channel(parseInt(h, 16)));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrast(a, b) {
+  const la = luminance(a), lb = luminance(b);
+  const hi = Math.max(la, lb), lo = Math.min(la, lb);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+function grade(r) {
+  if (r >= 7)   return ["aaa",  "AAA"];
+  if (r >= 4.5) return ["aa",   "AA"];
+  return            ["fail", "FAIL"];
+}
+
+/* ── Render ── */
+
+const SWATCH_ROLES = [
+  ["bg",          "Page"],
+  ["surface",     "Card"],
+  ["text",        "Body"],
+  ["muted",       "Muted"],
+  ["border",      "Border"],
+  ["accent",      "Link"],
+  ["accentHover", "Hover"],
+  ["pos",         "Positive"],
+  ["neg",         "Negative"],
+];
+
+const MEASURED = [
+  ["Body on page",  "text",   "bg"],
+  ["Muted on page", "muted",  "bg"],
+  ["Link on page",  "accent", "bg"],
+  ["Body on card",  "text",   "surface"],
+];
+
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+}
+
+function fragment(v, mode) {
+  return `
+  <div class="frag" style="
+      color-scheme: ${mode};
+      --bg:${v.bg}; --surface:${v.surface}; --text:${v.text}; --muted:${v.muted};
+      --border:${v.border}; --accent:${v.accent}; --accent-hover:${v.accentHover};
+      --pos:${v.pos}; --neg:${v.neg};">
+    <div class="frag-nav">
+      <span class="wordmark">Bristlenose</span>
+      <nav>
+        <a href="#" class="here">Docs</a>
+        <a href="#">Changelog</a>
+        <a href="#">Install</a>
+      </nav>
+    </div>
+    <h3 class="hero">A folder of interviews in.<br>A report you own out.</h3>
+    <p class="sub">Quotes, themes, sentiment and friction points, assembled into one browsable
+      file you can edit, share and keep.</p>
+    <p class="para">Point it at the recordings you already have. What comes back is a report, not a
+      dashboard &mdash; <a href="#" class="inline">see a worked example</a> from a nine-session study.</p>
+    <div class="btn-row">
+      <a href="#" class="btn btn-primary">Get Bristlenose</a>
+      <a href="#" class="btn btn-secondary">Read the docs</a>
+    </div>
+    <div class="card">
+      <div class="card-title">Kitchen planning, round two</div>
+      <div class="card-meta">9 sessions &middot; 353 quotes &middot; 14 themes</div>
+      <div class="status-row">
+        <span class="status pos"><span class="dot"></span>Analysis complete</span>
+        <span class="status neg"><span class="dot"></span>2 recordings failed</span>
+      </div>
+    </div>
+    <p class="caption">Last run 22 Sep 2026 &middot; Claude &middot; 4 min 12 s</p>
+  </div>`;
+}
+
+function ratios(v) {
+  return `<div class="ratios">` + MEASURED.map(([label, fg, bg]) => {
+    const r = contrast(v[fg], v[bg]);
+    const [cls, tag] = grade(r);
+    return `<span class="rname">${label}</span>` +
+           `<span class="rval">${r.toFixed(2)}:1</span>` +
+           `<span class="pill ${cls}">${tag}</span>`;
+  }).join("") + `</div>`;
+}
+
+function swatches(v) {
+  return `<div class="swatches">` + SWATCH_ROLES.map(([key, role]) =>
+    `<div class="sw">
+       <span class="chip" style="background:${v[key]}"></span>
+       <span class="txt"><span class="role">${role}</span><br><span class="hex">${v[key]}</span></span>
+     </div>`).join("") + `</div>`;
+}
+
+function variant(v, mode) {
+  return `<div class="variant">
+    <div class="mode-label">${mode}</div>
+    ${fragment(v, mode)}
+    ${ratios(v)}
+    ${swatches(v)}
+  </div>`;
+}
+
+document.getElementById("grid").innerHTML = PALETTES.map((p, i) => `
+  <section class="palette">
+    <header>
+      <span class="idx">${String(i + 1).padStart(2, "0")}</span>
+      <h2>${esc(p.name)}</h2>
+      <span class="leads">${esc(p.leads)}</span>
+      <span class="character">${esc(p.character)}</span>
+    </header>
+    <div class="pair">
+      ${variant(p.light, "light")}
+      ${variant(p.dark, "dark")}
+    </div>
+  </section>`).join("");
+</script>
+</body>
+</html>

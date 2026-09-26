@@ -1,14 +1,15 @@
 ---
 status: partial
-last-trued: 2026-09-12
-trued-against: HEAD@main (895fe8a6) on 2026-09-12
-last-trued-sections: [rename slice (2026-07-28), §3.3 reorder slice (2026-09-12)]
+last-trued: 2026-09-26
+trued-against: HEAD@main (9b512c4b) on 2026-09-26
+last-trued-sections: [rename slice (2026-07-28), §3.3 reorder slice (2026-09-12), folder-expansion slice (2026-09-26)]
 ---
 
 # Desktop sidebar — native AppKit source list (`NSOutlineView`)
 
 ## Changelog
 
+- _2026-09-26_ — **folder-expansion slice trued** (`/true-the-docs`, after the fix in *"sidebar folders stay collapsed: the AppKit outline persists expand/collapse"*). §3.4's *"`outlineView(shouldExpandItem:)` + persist on expand/collapse"* row described a port that never happened: the outline **read** `Folder.collapsed` on every `reloadAndRestore()` and **nothing wrote it**, so a triangle click collapsed the view only and the next `update()` — a selection change, a run's progress tick — sprang every folder open. The SwiftUI path's `DisclosureGroup` binding had been the only writer; the port carried the read and lost the write. Both rows (§2.5's reload table, §3.4) now record the as-built, original text kept as the delta. §5 gains the controller harness that pins it.
 - _2026-09-12_ — **reorder slice trued** (`/true-the-docs --topic desktop-bridge-and-menu-gating`). §3.3's *"Within-scope manual reorder — DEFERRED future enhancement"* had been false since `bbda9a6a` (1 Aug 2026); the deferral text is preserved inline as the delta. Dropped the same claim from the header's **What remains** list. The three artefacts carrying it moved together — this doc, `design-undo-debt.md` (whose Reorder row read *"not yet reachable"*, with both its line anchors stale), and `design-sidebar-drop-v2.md` (whose 18 Jun banner still called drag-out-of-folder structurally broken). **Still stale and out of this mode's scope:** `desktop/CLAUDE.md`'s *"Scoped 18 Jun 2026 — READ BEFORE re-deriving the drag-drop limits"* gotcha says out-of-folder and between-folder drag don't work; on the AppKit path they do.
 - _2026-07-28_ — **rename slice trued** (`/true-the-docs --topic sidebar-rename`). Flipped the header's *"Inline rename DEFERRED — explicitly not built this pass"* to shipped, and retired the "one remaining controller-track item" framing it cited (the `ProjectSidebarOutline.swift` header comment carrying that claim was corrected in the same pass — three artefacts, one sweep). Folder context menu **2 → 3** items; project menu gained **Rename** (and **Analyse**, shipped earlier, previously unrecorded). Closed §6's "Context-menu demux (when menus land)". Added **§2.6** — rename + the reload contract: the four guard-rails share one framing (a per-tick `reloadData` table hosting a live field editor), so they earn a section, not table rows; three invariants promoted from code comments. Added a **"What remains"** statement to replace the retired single-item claim. Line refs in §2.5/§3.4 outside the rename slice still trail (~1,425 → ~1,765 lines) — flagged in the header, not swept this pass. Anchors are `file:line`, not SHAs — the work was uncommitted at truing time.
 
@@ -151,7 +152,7 @@ NSScrollView(hasVerticalScroller: true)
 | move project | `reloadItem(oldParent, reloadChildren: true)` + new parent |
 | remove / restore | animated `removeItems`/`insertItems`, else `reloadData()` (avoid dangling-item crash) |
 | live `unanalysed` / `pipelineRunner.state` / copy fraction | sink → `reloadItem(node(forProjectID:))` — else the activity ring freezes + count goes stale (the WAL count-blank class) |
-| folder collapse | `autosaveExpandedItems` + `autosaveName`, else manual `folder.collapsed` |
+| folder collapse | ✅ **manual `folder.collapsed`** (25 Sep 2026) — `outlineViewItemDidCollapse`/`DidExpand` → `ProjectIndex.setFolderCollapsed`, only when the value changes. Not autosave: nodes are rebuilt every `update()`, and `projects.json` is the record the SwiftUI path already reads. _Was: "`autosaveExpandedItems` + `autosaveName`, else manual `folder.collapsed`"._ |
 
 ### 2.6 Inline rename + the reload contract (SHIPPED 28 Jul 2026)
 
@@ -234,7 +235,7 @@ The whole migration in one effort:
 | Internal project drag → folder; root + per-folder reorder | `:1457,1522,SidebarDrop.swift` | unified insertion model (Phase B fixes the gaps) |
 | Empty-click deselect (`SidebarDeselectMonitor`) | `:36-80` | **native** — monitor retired; but **keep the deselect → §2.5 funnel → `serveManager.stop()` side effect** (verify auto-deselect on both floors) |
 | ⌘0 focus (`focusProjectsList`, positional finder) | `:247-259` | `makeFirstResponder(outlineView)` directly — **no positional finder** |
-| Folder collapse state (`folder.collapsed`) | `ProjectIndex` | `outlineView(shouldExpandItem:)` + persist on expand/collapse |
+| Folder collapse state (`folder.collapsed`) | `ProjectIndex` | ✅ **SHIPPED 25 Sep 2026 — three months after the rest of the port.** Read: `reloadAndRestore()` expands every folder whose `collapsed` is false. Write: `outlineViewItemDidCollapse`/`DidExpand` → `persistFolderExpansion` → `setFolderCollapsed`, covering triangle, ←/→ and ⌥-click alike; it saves only when the value differs, which is what stops a restore from writing (an ordinary republish expands nothing — `OutlineNode` is equal by model id, so `reloadData` keeps expansion; the restore acts only when the model leads, as a Finder drop onto a collapsed folder does). Pinned by `SidebarOutlineExpansionTests`. _Was: "`outlineView(shouldExpandItem:)` + persist on expand/collapse" — the persist half was never ported._ |
 | Activity / copy / failure indicators, session-count refresh | `ProjectRow*`, `:1779+` | **future (only session-count shipped)** — Phase A reloads via full `reloadData()`; the §2.5 targeted-`reloadItem` contract is the later optimisation. In-row **buttons** re-target to controller callbacks — a dead glyph = no failure cause |
 | Icon-picker + diagnostic **popovers** | `:1821-1863,400-408` | anchored to the row via the **controller** (`NSPopover.show(relativeTo:of:)`), torn down on reload — NOT welded to a recycled cell |
 | Cmd+Delete remove + plain-Delete reserved | `MenuCommands.swift:470,552` | the outline becomes a new first responder — decide responder vs menu-notification routing; keep plain Delete free (`feedback_delete_key_layering`) |
@@ -265,6 +266,8 @@ The project's rule fits — but the pure mappings below **cover none of the §2.
 - **Push:** set the `selection` binding to B → outline's `selectedRowIndexes` resolves to B **and** the `.onChange`→`applySelectionChange` spy recorded `switchProject(to: B.path)` once. *(Catches the §2.5 spine: highlight without serve.)*
 - **Pull:** simulated user click → `selection` updated **and** `persistedProjectID == id` **and** spy fired once. *(Catches stale `selectedProject`.)*
 - **Idempotence:** re-applying the same selection / a `reloadItem`-triggering rename → spy fires **zero** extra times. *(Catches double-start + reload re-fire.)*
+
+**Controller harness (25 Sep 2026).** `SidebarOutlineExpansionTests` drives the real `SidebarOutlineController` — `ProjectIndex(fileURL:)` on a temp file, the controller's own `loadView`, `update(roots:)` fed from `OutlineTree.build` — so a SwiftUI republish is one `publish()` call, no window and no app. First used for folder expansion; it is the rig the push/pull/idempotence round-trips above would stand on. One trap it surfaced: because nodes are equal by model id, an ordinary republish exercises almost nothing of `reloadAndRestore()`'s restore loop, so a test of the restore has to make the model lead the view first, or it cannot fail.
 
 **Phase B — `DropRouting.resolve(...)` exhaustive table test** (the apocalypse fix's real gate; the routing produces *silent wrong placement*): `(dragged, target/location, tree) -> insertionDecision` over ~12 cases — out-of-folder, into-folder, between-folder, root-reorder, folder→folder, invalid targets. Factor the helper (static-shaped on a value type, no `NSOutlineView`) **before** Phase B ships.
 

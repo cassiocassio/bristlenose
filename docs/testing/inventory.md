@@ -9,9 +9,9 @@
 
 | suite | kind | size | what the number counts | source |
 |---|---|---|---|---|
-| `pytest` | python unit/integration | 5439 | collected (expands parametrize — authoritative) | `tests/` |
+| `pytest` | python unit/integration | 5445 | collected (expands parametrize — authoritative) | `tests/` |
 | `vitest` | frontend unit | 114 files | test files | `frontend/src/**/*.test.*` |
-| `BristlenoseTests` | swift unit | 1456 in 114 files | declared — a floor; parameterised cases expand at runtime | `desktop/Bristlenose/BristlenoseTests/` |
+| `BristlenoseTests` | swift unit | 1507 in 119 files | declared — a floor; parameterised cases expand at runtime | `desktop/Bristlenose/BristlenoseTests/` |
 | `playwright` | browser e2e | 8 files | spec files | `e2e/tests/ (console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts)` |
 
 **Ingest formats: 27** (audio 10, docx 1, subtitle_srt 1, subtitle_vtt 1, video 14) — from `models.ALL_EXTENSIONS`. Do not restate this number in prose; link here. It was simultaneously 16 and 27 in two docs on 2 Sep 2026, one of which named the other as its single source.
@@ -66,7 +66,7 @@
 
 - **Triggers:** push [main] paths=desktop/**,.github/workflows/mac-build.yml; pull_request [main] paths=desktop/**,.github/workflows/mac-build.yml
 - **Default shell:** `bash` (pipefail on)
-  - `build` · on `macos-26`
+  - `build` · on `${{ matrix.runner }}`
     - Build and test — runs tests, **hard**
 
 ### mockup register (`mockup-register.yml`)

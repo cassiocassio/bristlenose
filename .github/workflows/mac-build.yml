@@ -43,19 +43,35 @@ defaults:
 
 jobs:
   build:
-    # macos-26 (arm64, standard => free on a public repo; NOT the -xlarge variants,
-    # which are billed even here). macos-15 ships Xcode 16.4 / macOS 15 SDK, which
-    # cannot compile the macOS 26 APIs the codebase now uses — StatusPill's
-    # `sharedBackgroundVisibility` and SeamLabView's `backgroundExtensionEffect`.
-    # `#available(macOS 26.0, *)` gates RUNTIME availability; the symbol still has
-    # to exist in the SDK at compile time. Deployment target stays 15.0.
-    runs-on: macos-26
+    # Two runners, both arm64 standard (free on a public repo; NOT the -xlarge
+    # variants, which are billed even here). macos-26 uses its default Xcode.
+    # macos-15 DEFAULTS to Xcode 16.4 / the macOS 15 SDK, which cannot compile the
+    # macOS 26 APIs the codebase uses (StatusPill's `sharedBackgroundVisibility`,
+    # SeamLabView's `backgroundExtensionEffect`: `#available` gates the runtime, the
+    # symbol must still exist in the SDK). The image also carries Xcode 26.3, which
+    # runs on macOS 15.6+, so that leg selects it. The macOS 15 leg is the point:
+    # the app ships to 15.0, the test target has matched since 25 Sep 2026, and the
+    # first suite run on 15 found a sidebar defect no 26/27 machine could show.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-26
+            xcode: ""
+          - runner: macos-15
+            xcode: /Applications/Xcode_26.3.app
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30  # compile ~4 min + 1400-test suite
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
+      - name: Select Xcode
+        if: matrix.xcode != ''
+        run: sudo xcode-select -s "${{ matrix.xcode }}"
+
       - name: Show toolchain
         run: |
+          sw_vers -productVersion
           xcodebuild -version
           cd desktop/Bristlenose && xcodebuild -list
 
@@ -104,6 +120,6 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
-          name: swift-build-test-logs
+          name: swift-build-test-logs-${{ matrix.runner }}
           path: desktop/build/swift-test-logs/
           retention-days: 30

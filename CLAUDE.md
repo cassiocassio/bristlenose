@@ -1478,9 +1478,16 @@ from **different commits**. Fixed at the cause: the test bundle now builds
 beside the app (an Xcode signing race that 0.30.0 had papered over with
 `xcodebuild clean`, which is why it recurred immediately), and push-main
 re-pushes when HEAD is not published. Full account: `docs/release-log.md`
-§ 0.31.0 and `docs/release-premortem.md` incidents 28–31. Structural work still
-on the board: resolve dependencies once, in preflight (third occurrence); and
-generalise the moved-HEAD guard from `strict-ci` to every tree-dependent step.
+§ 0.31.0 and `docs/release-premortem.md` incidents 28–31. **Both pieces of
+structural work that line used to name are now built** (24 Sep, verified 26 Sep):
+dependencies resolve **once**, in preflight, with the lanes reusing that venv
+(`84b8a742`, `2be60bf2` — `build-sidecar.sh --keep-venv`, and a new `inventory`
+step), and the moved-HEAD guard is generalised from `strict-ci` to the class
+(`scripts/release.sh`, `case "$id" in build-all|build-dmg)` → `pending` with
+"HEAD moved since the artefact was built"). Left here as a worked example of
+this file's own rule: **an owed item is a claim about the tree exactly as a
+resolved one is** — three other docs still carried the first of these as owed
+when it had shipped.
 
 **0.30.0 shipped 21 Sep 2026, overnight and unattended — verified 9 of 9 channels by 07:08 BST.** The
 Signals release: the Analysis lens is Signals on every surface (labels, route,
@@ -1494,8 +1501,9 @@ and a comment of mine that truncated the archive command. Two of those were
 green under tests that could not fail. Three gates and a resume guard came out
 of it, all mutation-proved; `--yes` was already there and now appears on the
 resume hints. Full account: `docs/release-log.md` § 0.30.0 and
-`docs/release-premortem.md` incidents 23–27. Structural work on the board:
-resolve dependencies once, in preflight.
+`docs/release-premortem.md` incidents 23–27. Its one piece of structural work —
+resolve dependencies once, in preflight — was **built on 24 Sep 2026**; see the
+0.31.0 paragraph above.
 
 **0.29.1 shipped 31 Aug 2026, evening — verified 9 of 9 channels.** A patch,
 and a regression in 0.29.0's own headline feature: only one codebook could be

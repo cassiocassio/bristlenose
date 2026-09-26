@@ -106,7 +106,7 @@ the lifecycle in two, and nothing below makes sense without it.
 | Origin | a folder was dropped / chosen | individual files were dropped |
 | Project *is* | the folder | a list of paths inside a folder |
 | New files fold in? | **Yes** — the CLI rescans the folder at run time, so the per-session cache re-transcribes only what's new | **No** — the CLI can't scope a `--files` run |
-| Drop onto it when analysed | copied, folds in on next Analyse | copied, then a toast: "Adding extra interviews to an analysed project isn't supported yet" |
+| Drop onto it when analysed | copied unless already held byte-for-byte, folds in on next Analyse | copied unless already held; the `+N unanalysed` row delta is the whole acknowledgement. *(The toast this cell used to name was removed with the other four — §4.2.)* |
 | Route to include new work | **Analyse** (already incremental) | **Re-analyse** (full, destructive) |
 
 **Consequence: for a folder-shaped project, `Analyse` *is* the incremental verb.**
@@ -131,9 +131,11 @@ under different keys and their curation would be orphaned — silently, because
 the import would still report success. Any change that can invalidate a stage
 cache must be read against that sentence.
 
-**For a file-subset project the honest offer is Re-analyse**, and the toast's
-"isn't supported yet" is misleading — including the files is entirely possible,
-it just costs a full re-run. Saying so would let the researcher choose.
+**For a file-subset project the honest offer is Re-analyse.** The toast that
+used to say "isn't supported yet" is gone (§4.2), so nothing misleads any more
+— but nothing offers, either: including the files is entirely possible, it just
+costs a full re-run, and the row's `+N unanalysed` delta does not say so.
+Saying it would let the researcher choose.
 
 ---
 
@@ -374,8 +376,22 @@ the ⊘ pointer, and the item springing back.
 | **File-subset**, analysed | toast: "Files added. They won't be in the report…" | the row's `+N unanalysed` delta |
 | **No project selected** | toast: "Select a project first…" | File ▸ Add Files… dims; unreachable by drag, since you drop *on* something |
 | **Folder-shaped** | *(no toast)* | unchanged — the run starts, and the run is the acknowledgement |
+| **Already held**, byte-for-byte | *(no outcome — it was copied again, renamed)* | recognised and **not copied**; a 400 ms accent on the row, chosen against this section's own rule rather than a toast (`ContentView.swift`, which cites §4.2 and §5.1 outcome 3b at the call site) |
 
-**The root cause was one line.** `validateDrop` returned `.copy` for any project
+**The same shape, one layer down, found 26 Sep 2026.** `resolveDestinations`
+had a single verdict — rename — so it answered *is there something at this
+name?* when the question a re-drop asks is *do I already hold this content?*
+Dropping a folder twice minted `clip 2.mov`: free on disk (a same-volume
+`copyItem` clones), and expensive everywhere else — the transcription cache
+keys on the path, so a renamed copy is a guaranteed miss, and two copies of
+one interview become two participants whose identical quotes cluster
+together, so the report reads as corroboration rather than as a mistake.
+`Resolution` is now `.copy | .skip`, identity proven by size **and** full
+SHA-256 with both sides materialised, falling back to the rename whenever the
+answer is unknown — a false positive would silently drop a real interview.
+Shipped in 0.31.3 (`CopyMachinery.swift`, `holdsSameContent`).
+
+**The original root cause was one line.** `validateDrop` returned `.copy` for any project
 row unconditionally and left every question to `ContentView` after the fact, so a
 post-hoc message was the only grammar available. The AppKit side's own comment
 said as much: *"The AppKit side just collects URLs + target."*
@@ -531,7 +547,7 @@ Two items, both measured, both owned by
 | Files removed after analysis | state it, offer nothing | ✅ `missingFiles` |
 | Volume unmounted mid-run | `cantFind` + Locate… | ✅ shipped |
 | Drop onto an analysed **folder-shaped** project | copy, fold in next Analyse | ✅ shipped |
-| Drop onto an analysed **file-subset** project | say it needs a full re-run, and offer it | toast says "isn't supported yet" — misleading, it is possible via Re-analyse |
+| Drop onto an analysed **file-subset** project | say it needs a full re-run, and offer it | the `+N unanalysed` delta, and no offer. The misleading toast was removed (§4.2); the gap it named is still open |
 | Files added in **Finder** | detect, report, **and offer the action** | detects and reports; offers nothing |
 | Zero sessions found | say so, don't render an empty report | ✅ "No usable content" |
 

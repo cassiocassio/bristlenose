@@ -38,7 +38,7 @@ invisible.
 | **19** | **0.17.0 blocked by a stale locale test + size budget** | Discovered mid-release | ✅ The preflight's `CI status` row asks for a green run on HEAD before anything |
 | **20** | **Already-bumped / publish-pending** | A re-run had to distinguish "bump not done" from "bump done, push pending" | ✅ This is exactly what the fold is: `run` re-entered is the resume path, and every step's status is derived from the log |
 | **21** | **App Store — 3 nested-binary MAS signing rejections** | Found at upload, after a full build | ⚠️ `check-pkg-shippable.sh` is an unskippable precondition **inside** `upload-testflight.sh`, so it fails before the upload — but still after the build. Only an archive can be inspected |
-| **22** | **0.28.0 reported "every act is done" over an unpublished release** | The step loop reads its table from a heredoc on **stdin**, and each step runs backgrounded, inheriting it. `ssh` inside `upload-dmg.sh` consumed the remaining rows, so `tag` and `snap` were never read, never ran, and left **no events** — the loop hit EOF and exited normally. TestFlight and the `.dmg` had already published; PyPI had nothing | ✅ Two fixes, instance and class. Steps now run `< /dev/null` (no release step may read stdin). And `run completed` became a **checklist** claim: `verdict_complete` re-derives the table and names any Tier-1 step without a terminal event — exit 1, no completed event. e2e test 19 reproduces the eaten table with `cat` standing in for ssh, and fails on the old code |
+| **22** | **0.28.0 reported "every act is done" over an unpublished release** | The step loop reads its table from a heredoc on **stdin**, and each step runs backgrounded, inheriting it. `ssh` inside `upload-dmg.sh` consumed the remaining rows, so `tag` and `snap` were never read, never ran, and left **no events** — the loop hit EOF and exited normally. TestFlight and the `.dmg` had already published; PyPI had nothing | ✅ Two fixes, instance and class. Steps now run `< /dev/null` (no release step may read stdin). And `run completed` became a **checklist** claim: `verdict_complete` re-derives the table and names any Tier-1 step without a terminal event — exit 1, no completed event. e2e test 19 reproduces the eaten table with `cat` standing in for ssh, and fails on the old code **⚠️ REOPENED, measured 26 Sep 2026.** `--skip` writes `skipped`, and `verdict_complete` counts `ok|skipped` as complete — so a run that skips the irreversible block reaches `run completed` and prints *"✓ every act is done"* over a skipped `tag`. That is not hypothetical: the 24 Sep 0.31.3 run did exactly this, and the release then sat bumped, pushed and **announced on the website** for two days with no tag and nothing on PyPI, while `release.sh status` reported `success`. The checklist has to treat a skipped *irreversible* step as incomplete, or say plainly that acts were skipped. §7's own contract already says "before skipping any step in the irreversible block, probe it". |
 
 ---
 
@@ -146,7 +146,9 @@ it can be inspected.
 >   #5 that the 23 Aug fix was meant to prevent, and would have, had the
 >   discovery been of the right venv. Same night, the live-provider probe ran
 >   under `.venv` and passed 7/7 on an SDK eleven minors older than the one
->   shipping. Fix: resolve once, in preflight; lanes reuse.
+>   shipping. Fix: resolve once, in preflight; lanes reuse. **✅ built 24 Sep
+>   2026** — `84b8a742` + `2be60bf2` (`build-sidecar.sh --keep-venv`, the stamp
+>   keyed on `BN_RELEASE_RUN`, and a new `inventory` step).
 > - **24 — eleven green tests over an archive that could not run.**
 >   `test_entitlements_split.py` asserted the `CODE_SIGN_ENTITLEMENTS` override
 >   *appeared in the archive invocation*. It did. The path was relative, and a
@@ -177,6 +179,7 @@ it can be inspected.
 >   tag refuses. #5's shape exactly, one step later. Avoided twice tonight by
 >   the documented hand-update of `ci-sha`, at ~38 minutes of CI each. Fix: the
 >   resume path refuses, or resets `strict-ci`, when HEAD ≠ `ci-sha`.
+>   **✅ built** — `scripts/release.sh`, the `strict-ci` reset on a moved HEAD.
 >
 > What generalises past the five: **every one was caught by running the
 > release, not by a gate**, and three of the five were latent — green under
@@ -223,7 +226,9 @@ it can be inspected.
 >   rule the driver needs is one line: *a step whose output is a function of
 >   the tree is invalidated when the tree moves* — it already implements
 >   exactly that for `strict-ci`, with a comment explaining why, and it was
->   applied to one step instead of to the class.
+>   applied to one step instead of to the class. **✅ built** — it is applied to
+>   the class now: `case "$id" in build-all|build-dmg)` re-marks the step
+>   `pending` with "HEAD moved since the artefact was built".
 >
 > **A correct gate whose signal reached nobody — 31.**
 >

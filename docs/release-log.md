@@ -27,6 +27,19 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+> ## ✅ The log resumed — measured 26 Sep 2026
+>
+> **The banner below is kept as the diagnosis that worked, and is no longer
+> the state of this file.** Four entries landed 21–23 Sep 2026 (0.31.0, 0.31.1,
+> 0.31.2 and the principles doc), so the log is live. One gap remains and it is
+> the shape the old banner warned about: **0.31.3 ran on 24 Sep and stopped
+> before its irreversible steps** — bumped, pushed, never tagged — and nothing
+> here recorded that it stopped or what was owed, so the website advertised a
+> version PyPI 404s for two days. See `docs/release-premortem.md` incident 22,
+> reopened.
+>
+> <details><summary>The original 20 Sep banner</summary>
+>
 > ## ⚠️ The log stopped after one entry — measured 20 Sep 2026
 >
 > The header above says *one entry per release*. There is **one entry, for
@@ -44,6 +57,8 @@ or the averages will slowly describe how fast the maintainer answers questions.
 > gate for incident 12 shipped; no entry recorded it; and the premortem carried
 > "it is not built" against a built gate for four weeks, in three places, while
 > its own Score block said otherwise.
+>
+> </details>
 >
 > Nothing here is retro-written: entries are written at the time or not at all,
 > and inventing three is worse than lacking them. The decision owed is whether
@@ -460,7 +475,7 @@ of those cycles were the cost of landing fixes mid-run — see #6.
 
 ### Owed out of this release
 
-- **Resolve dependencies once per release, in preflight.** Rebuild
+- ~~**Resolve dependencies once per release, in preflight.**~~ ✅ **done 24 Sep 2026** (`84b8a742`, `2be60bf2`). Rebuild
   `.venv-sidecar` there; both lanes then reuse it (no `--force`). The drift
   verdict becomes a verdict about the venv that ships, and a regenerated
   inventory folds into the bump commit — one HEAD move, one CI dispatch, no

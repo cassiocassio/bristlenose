@@ -25,7 +25,7 @@ combined snapshot. Coordinates are screen points, top-left origin, as AX and
 CGEvent both use them; every frame is also printed as `winX=` relative to the
 window.
 
-## Three things that cost time
+## Four things that cost time
 
 **The caller must be AX-trusted, and the grant is per app, not per session.**
 Nothing spawned from a Claude session is trusted until *Claude* is added under
@@ -58,6 +58,15 @@ share the container, read the same flag, log into the same category, and open
 the app's own `ContentView` window under the same autosave name. Filter trace
 reads on `processID`, and expect the projects column's width to be whatever
 the last process saved (`NSSplitView Subview Frames main-AppWindow-1, …`).
+
+**A relaunch that returns the old pid measured the old build.** `open`
+on an app that is still quitting fronts the existing instance instead of
+starting the new binary, silently — the window comes forward and every
+reading afterwards is the build you meant to replace. Hit 25 Sep 2026
+re-verifying a rebuild: half the checks ran on the previous binary. Compare
+`pgrep` before and after the relaunch and refuse to measure on a match.
+Build `bndrive` into a scratch path (`swiftc … -o "$TMPDIR/bndrive"`) rather
+than beside its source, where it sits as an untracked binary.
 
 ## Two answers the real app gave that a harness could not
 

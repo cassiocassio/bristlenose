@@ -480,6 +480,70 @@ grouping.
 5. **Guide as an input** — a project artefact that is not a recording, stored
    under `.bristlenose/` with a fingerprint.
 
+### Across the guide spectrum — v2, 27 Sep (evening)
+
+Reconcile prompt v0.2.0: every asked question gets one of five fates —
+**asked as planned** (●), **ad-lib on topic** (+), **new section** (✦),
+**placed by flow** (↦), or **standalone** (·) — plus a role, **opener** (⌃) or
+**closer** (⌄), for questions that belong to a moment rather than a topic.
+The model judges meaning and sorts questions into those buckets; code
+(`structure()` in the spike) applies the new-section rule, orders sections by
+median relative time, and places homeless questions by flow: the section the
+session was in when it was asked, an opener taking the next section and a
+closer the previous one. A question the timeline cannot place is standalone.
+
+| guide | sections | asked as planned | ad-lib on topic | new section | by flow | unplanned share |
+|---|---|---|---|---|---|---|
+| none (trial project) | 4 ✦ | — | — | 25 items | 9 | 100% by definition |
+| terse, run a | 7 | 11 | 11 | 0 | 1 | 46% |
+| terse, run b | 6 | 8 | 24 | 0 | 3 | 58% |
+| detailed † | 6 | 21 (+14 ○) | 3 | 0 | 4 | 15% † |
+| none (Rockclimbing, 7 synthetic sessions) | 8 ✦ | — | — | 33 items | 3 | 100% by definition |
+
+† The detailed guide is a synthetic expansion of the real one, **written after
+reading these transcripts** — it anticipates "store vs online" and "delivery vs
+collect". It proves the mechanics (sub-questions kept, 14 planned items visibly
+never asked), not the share. A detailed guide written *before* the sessions is
+still the missing input.
+
+What this shows:
+
+- **No guide works.** From the questions alone the model recovered the study's
+  real spine (object → trip → site task → checkout) on the trial project, and a
+  clean eight-section guide on Rockclimbing, where closing questions formed
+  their own "Closing" section and a stray IKEA recording in that project
+  contributed nothing (its quotes stayed UNROUTED, correctly).
+- **Flow placement catches junk as well as homeless questions.** With no guide,
+  "Transcript editing idea", "Mask personal data" and "Scope creep: tea towels" —
+  chatter and mis-attributed participant speech — were filed as homeless
+  questions and placed by flow. The filter for *not a research question* has to
+  run before placement, or flow placement becomes a junk drawer.
+- **The structure is still not stable.** Two runs of the same guide gave 7 and 6
+  sections, 23 and 36 items, and an unplanned share of 46% and 58%. Code now
+  decides order and placement, but the model still re-draws the *planned spine*
+  and the item granularity each run. **Next step: freeze the spine.** Parse the
+  guide once into planned sections and items and persist them; then classify
+  each asked *turn* against that fixed spine (matches planned item N / ad-lib in
+  section X / new-cluster label / not a question). Structure then changes only
+  when the guide or the sessions do.
+- **Delivery was never promoted.** On every real run the model kept the delivery
+  ad-libs inside "Try to buy" — defensible, since delivery is part of buying.
+  Whether it is a new top-level section or a **sub-group within** "Try to buy"
+  is a researcher's call; the gold labels will say which.
+- **One over-long label must not sink a run.** The detailed guide failed twice on
+  a 35-character label against a 34-character cap. Labels over budget are now
+  clipped and counted, not fatal.
+- **The timing anchor agrees more when sections are broader**: 69/101 (7
+  sections), 77 (6), 79 (detailed), 83 (4, no guide).
+- Cost: ≈ $0.15–0.21 per reconcile + route run.
+
+**Gold labels.** A pre-filled workbook (kept with the guide, outside the repo:
+it holds participant speech) asks the researcher to label each of the 148
+moderator turns (kind, planned question, section or `NEW:` or `STANDALONE`,
+opener/closer) and each of the 101 quotes (section). A Results sheet computes the
+researcher's unplanned share next to the model's, and section agreement for
+turns and quotes, with live formulas.
+
 ### Synthetic data — the evaluation plan
 
 Real data gave the direction; a labelled corpus is what makes the rules

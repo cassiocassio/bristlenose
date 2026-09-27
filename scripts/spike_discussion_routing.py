@@ -34,10 +34,11 @@ import json
 import re
 import sys
 import time
+from collections import Counter
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from bristlenose.config import load_settings
 from bristlenose.llm.client import LLMClient
@@ -56,12 +57,31 @@ PROMPTS = Path(__file__).resolve().parent.parent / "bristlenose" / "llm" / "prom
 # runaway string is caught rather than silently blowing the sidebar.
 
 
+# One over-long label must not sink a whole-guide call (a detailed guide failed
+# twice on 'Size/colour/price/material priority', 35 chars). Clip and count.
+CLIPPED: list[str] = []
+
+
+def _clip(v: object, cap: int) -> object:
+    if isinstance(v, str) and len(v) > cap:
+        CLIPPED.append(v)
+        return v[: cap - 1].rstrip() + "…"
+    return v
+
+
 class ScaffoldItem(BaseModel):
     terse: str = Field(max_length=34)  # sidebar disclosure sub-label (prompt: ≤24)
+
+    @field_validator("terse", mode="before")
+    @classmethod
+    def _clip_terse(cls, v: object) -> object:
+        return _clip(v, 34)
     verbatim: str = ""                 # hidden match material — uncapped
     # Reconcile mode only (planned guide ⋈ questions actually asked):
     source: Literal["planned", "asked", "both"] = "planned"
     turns: list[str] = Field(default_factory=list)  # "s3@05:19" — where it was asked
+    role: Literal["opening", "core", "closing"] = "core"
+    placed: str = ""  # set by CODE, never the model: "flow" = placed by timing
 
 
 class Territory(BaseModel):
@@ -70,11 +90,24 @@ class Territory(BaseModel):
     intent: str = Field(max_length=140)    # content one-liner (prompt: ≤100); match = intent + scaffold
     kind: Literal["questions", "task", "instruction"] = "questions"
     stance_axis: Literal["opinion", "pattern", "none"] = "pattern"
+    origin: Literal["planned", "emergent"] = "planned"
     scaffold: list[ScaffoldItem] = Field(default_factory=list)
+
+    @field_validator("nav_terse", mode="before")
+    @classmethod
+    def _clip_nav(cls, v: object) -> object:
+        return _clip(v, 26)
+
+    @field_validator("heading", mode="before")
+    @classmethod
+    def _clip_heading(cls, v: object) -> object:
+        return _clip(v, 56)
 
 
 class ParsedGuide(BaseModel):
     territories: list[Territory]
+    homeless: list[ScaffoldItem] = Field(default_factory=list)  # reconcile: no topical home
+
 
 
 class QuoteRoute(BaseModel):
@@ -176,10 +209,12 @@ def territories_block(guide: ParsedGuide) -> str:
     lines = []
     for i, t in enumerate(guide.territories):
         scaf = " · ".join(s.terse for s in t.scaffold)
+        asked = " / ".join(s.verbatim[:90] for s in t.scaffold if s.source != "planned")
         lines.append(
             f"t{i} [{t.kind}/{t.stance_axis}] {t.heading}\n"
             f"    intent: {t.intent}\n"
             f"    covers: {scaf or '(none)'}"
+            + (f"\n    asked as: {asked}" if asked else "")
         )
     return "\n".join(lines)
 
@@ -204,6 +239,188 @@ def tc_seconds(tc: str) -> float:
     for part in tc.split(":"):
         total = total * 60 + float(part)
     return total
+
+
+def session_lengths(transcripts: Path) -> dict[str, float]:
+    """Last timecode per session — the denominator for relative position."""
+    out = {}
+    for f in transcripts.glob("s*.txt"):
+        last = 0.0
+        for raw in f.read_text(encoding="utf-8").splitlines():
+            m = _TURN_RE.match(raw)
+            if m:
+                last = tc_seconds(m.group(1))
+        out[f.stem] = max(last, 1.0)
+    return out
+
+
+# The promotion rule: an emergent section stands alone only if it recurs.
+MIN_SESSIONS, MIN_ITEMS = 2, 3
+
+
+def structure(guide: ParsedGuide, valid_turns: set[str],
+              lengths: dict[str, float]) -> tuple[list[ScaffoldItem], Counter]:
+    """Code, not the model, decides structure — so it is repeatable.
+
+    1. drop turn ids the model invented; 2. dissolve emergent sections that
+    fail the promotion rule (their items become homeless); 3. order emergent
+    sections by median relative time among the planned ones; 4. place each
+    homeless question by FLOW — the section the session was in when it was
+    asked (openers take the next section, closers the previous one); a
+    question the timeline cannot place is STANDALONE.
+    """
+    stats: Counter = Counter()
+    every = [it for t in guide.territories for it in t.scaffold] + guide.homeless
+    for it in every:
+        kept = [x for x in it.turns if x in valid_turns]
+        stats["invented_turn_ids"] += len(it.turns) - len(kept)
+        it.turns = kept
+        it.placed = ""
+
+    has_plan = any(t.origin == "planned" and t.kind != "instruction"
+                   for t in guide.territories)
+    kept_t: list[Territory] = []
+    for t in guide.territories:
+        if t.origin == "emergent" and t.kind != "instruction":
+            sess = {x.split("@")[0] for it in t.scaffold for x in it.turns}
+            if len(sess) < MIN_SESSIONS or len(t.scaffold) < MIN_ITEMS:
+                stats["dissolved"] += 1
+                stats[f"dissolved: {t.nav_terse} ({len(sess)} sess, {len(t.scaffold)} items)"] += 1
+                guide.homeless.extend(t.scaffold)
+                continue
+        kept_t.append(t)
+    if not any(t.kind != "instruction" for t in kept_t):  # nothing survived — keep all
+        kept_t = guide.territories
+
+    def rel(turn: str) -> float:
+        sid, _, tc = turn.partition("@")
+        return tc_seconds(tc) / lengths.get(sid, 1.0)
+
+    def median_pos(t: Territory) -> float:
+        xs = sorted(rel(x) for it in t.scaffold for x in it.turns)
+        return xs[len(xs) // 2] if xs else 1.0
+
+    head = [t for t in kept_t if t.kind == "instruction" and t is kept_t[0]]
+    rest = [t for t in kept_t if t not in head]
+    if has_plan:
+        ordered = [t for t in rest if t.origin == "planned"]
+        for e in sorted((t for t in rest if t.origin == "emergent"), key=median_pos):
+            m = median_pos(e)
+            at = next((i for i, t in enumerate(ordered)
+                       if t.kind != "instruction" and t.origin == "planned"
+                       and median_pos(t) > m), len(ordered))
+            ordered.insert(at, e)
+    else:
+        ordered = sorted(rest, key=median_pos)
+    guide.territories = head + ordered
+
+    timeline: dict[str, list[tuple[float, int]]] = {}
+    for i, t in enumerate(guide.territories):
+        if t.kind == "instruction":
+            continue
+        for it in t.scaffold:
+            for x in it.turns:
+                sid, _, tc = x.partition("@")
+                timeline.setdefault(sid, []).append((tc_seconds(tc), i))
+    for v in timeline.values():
+        v.sort()
+
+    standalone: list[ScaffoldItem] = []
+    for it in guide.homeless:
+        votes: Counter = Counter()
+        for x in it.turns:
+            sid, _, tc = x.partition("@")
+            sec = tc_seconds(tc)
+            tl = timeline.get(sid, [])
+            prev = next((e for e in reversed(tl) if e[0] <= sec), None)
+            nxt = next((e for e in tl if e[0] > sec), None)
+            if it.role == "opening":
+                pick = nxt or prev
+            elif it.role == "closing":
+                pick = prev or nxt
+            elif prev and nxt:
+                pick = prev if (prev[1] == nxt[1] or sec - prev[0] <= nxt[0] - sec) else nxt
+            else:
+                pick = prev or nxt
+            if pick:
+                votes[pick[1]] += 1
+        top = votes.most_common(2)
+        if not top or (len(top) == 2 and top[0][1] == top[1][1]):
+            standalone.append(it)
+            stats["standalone"] += 1
+            continue
+        it.placed = "flow"
+        scaf = guide.territories[top[0][0]].scaffold
+        if it.role == "opening":
+            scaf.insert(0, it)
+        else:
+            scaf.append(it)
+        stats["placed_by_flow"] += 1
+    guide.homeless = []
+    return standalone, stats
+
+
+def emit_guide_tree(emit, guide: ParsedGuide, standalone: list[ScaffoldItem]) -> None:
+    """The tight summary — the navigation the lens would show."""
+    emit("## The guide as planned and as run")
+    emit("   ● asked as planned · ○ planned, never asked · + ad-lib on topic · "
+         "↦ placed by flow · ✦ new section · ⌃ opener · ⌄ closer")
+    for t in guide.territories:
+        tag = "  (instruction)" if t.kind == "instruction" else ""
+        new = "✦ " if t.origin == "emergent" else ""
+        emit(f"  {new}{t.nav_terse}{tag}")
+        for it in t.scaffold:
+            sym = "↦" if it.placed == "flow" else {"both": "●", "planned": "○", "asked": "+"}[it.source]
+            role = {"opening": " ⌃", "closing": " ⌄"}.get(it.role, "")
+            sessions = sorted({x.split("@")[0] for x in it.turns})
+            where = f"  {','.join(sessions)}" if sessions else ""
+            emit(f"     {sym} {it.terse}{role}{where}")
+    if standalone:
+        emit("  Standalone — asked, not placeable")
+        for it in standalone:
+            sessions = sorted({x.split("@")[0] for x in it.turns})
+            emit(f"     · {it.terse}  {','.join(sessions)}")
+    emit()
+
+
+def emit_fate_counts(emit, guide: ParsedGuide, standalone: list[ScaffoldItem],
+                     stats: Counter) -> None:
+    items: Counter = Counter()
+    turns: Counter = Counter()
+    for t in guide.territories:
+        if t.kind == "instruction":
+            continue
+        for it in t.scaffold:
+            if it.placed == "flow":
+                fate = "placed by flow"
+            elif it.source == "planned":
+                fate = "planned, never asked"
+            elif it.source == "both":
+                fate = "asked as planned"
+            elif t.origin == "emergent":
+                fate = "ad-lib, new section"
+            else:
+                fate = "ad-lib on topic"
+            items[fate] += 1
+            turns[fate] += len(it.turns)
+    for it in standalone:
+        items["standalone"] += 1
+        turns["standalone"] += len(it.turns)
+    asked_turns = sum(v for k, v in turns.items())
+    unplanned = asked_turns - turns["asked as planned"]
+    emit("## Placement — items (question-turns)")
+    for fate in ("asked as planned", "planned, never asked", "ad-lib on topic",
+                 "ad-lib, new section", "placed by flow", "standalone"):
+        emit(f"  {items[fate]:>3} ({turns[fate]:>3})  {fate}")
+    emit(f"  → {unplanned} of {asked_turns} asked question-turns were not in the guide "
+         f"({100 * unplanned // max(asked_turns, 1)}%)")
+    for k, v in sorted(stats.items()):
+        emit(f"  · {k}: {v}")
+    if CLIPPED:
+        emit(f"  · labels over budget, clipped: {len(CLIPPED)} — {'; '.join(CLIPPED)}")
+    sig = " | ".join(t.nav_terse for t in guide.territories if t.kind != "instruction")
+    emit(f"  signature: {sig}")
+    emit()
 
 
 def emit_anchor_agreement(emit, guide: ParsedGuide, rows) -> None:
@@ -253,11 +470,12 @@ async def run(args: argparse.Namespace) -> str:
         report.append(line)
 
     emit(f"# Discussion-routing spike — {args.project}")
-    emit(f"provider={settings.llm_provider}  guide={Path(args.guide).name}")
+    emit(f"provider={settings.llm_provider}  guide={Path(args.guide).name if args.guide else 'NONE'}")
     emit()
 
     # 1. parse the guide -------------------------------------------------------
-    guide_text = load_guide_text(Path(args.guide))
+    guide_text = (load_guide_text(Path(args.guide)) if args.guide
+                  else "(no guide was supplied — build the guide from the questions asked)")
     if args.transcripts:
         asked = load_moderator_turns(Path(args.transcripts))
         emit(f"reconcile mode: {asked.count(chr(10)) + 1} moderator turns from {args.transcripts}")
@@ -281,17 +499,13 @@ async def run(args: argparse.Namespace) -> str:
         tag = "  (instruction — quarantined)" if t.kind == "instruction" else ""
         emit(f"  t{i}  {t.heading}  [{t.kind}/{t.stance_axis}]  ·{len(t.scaffold)} folded{tag}")
     emit()
+    standalone: list[ScaffoldItem] = []
     if args.transcripts:
-        # The tight summary: planned ⋈ asked. ● both · ○ planned, never asked · + ad-lib
-        mark = {"both": "●", "planned": "○", "asked": "+"}
-        emit("## The guide as planned and as run   (● asked as planned · ○ never asked · + ad-lib)")
-        for i, t in enumerate(guide.territories):
-            emit(f"  {t.nav_terse}" + ("  (instruction)" if t.kind == "instruction" else ""))
-            for it in t.scaffold:
-                sessions = sorted({x.split("@")[0] for x in it.turns})
-                where = f"  {','.join(sessions)}" if sessions else ""
-                emit(f"     {mark[it.source]} {it.terse}{where}")
-        emit()
+        valid = {ln.split(" | ", 1)[0] for ln in asked.splitlines()}
+        standalone, stats = structure(guide, valid, session_lengths(Path(args.transcripts)))
+        routable = [i for i, t in enumerate(guide.territories) if t.kind != "instruction"]
+        emit_guide_tree(emit, guide, standalone)
+        emit_fate_counts(emit, guide, standalone, stats)
 
     # 2. route quotes in batches ----------------------------------------------
     quotes = load_quotes(Path(args.project))
@@ -386,6 +600,7 @@ async def run(args: argparse.Namespace) -> str:
     if args.json_out:
         Path(args.json_out).write_text(json.dumps({
             "guide": guide.model_dump(),
+            "standalone": [it.model_dump() for it in standalone],
             "routes": [{"dest": d, "session_id": q.get("session_id"),
                         "participant_id": q.get("participant_id"),
                         "start": q.get("start_timecode"), "text": q.get("text"),
@@ -412,7 +627,8 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Discussion lens routing spike")
     ap.add_argument("--project", required=True,
                     help="path to <project>/bristlenose-output (or an extracted_quotes.json)")
-    ap.add_argument("--guide", required=True, help="discussion guide .txt/.md/.docx")
+    ap.add_argument("--guide", default="",
+                    help="discussion guide .txt/.md/.docx (omit with --transcripts: no-guide mode)")
     ap.add_argument("--transcripts", default="",
                     help="transcripts-raw/ dir: reconcile the guide with the questions actually asked")
     ap.add_argument("--json-out", default="", help="write the guide + every route as JSON")

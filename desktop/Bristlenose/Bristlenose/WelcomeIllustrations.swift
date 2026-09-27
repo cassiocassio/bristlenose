@@ -293,7 +293,12 @@ struct BookShelfView: View {
             // The curtain falls on the FAN alone. The caption and the Learn-more link
             // are content, not animation — a live link resting at 70% is a contrast
             // regression, and the caption already cross-fades on its own `.id`.
-            coverFan.opacity(curtain)
+            //
+            // `.compositingGroup()` is load-bearing: `.opacity` on a container fades
+            // each LEAF, so at the 0.7 rest every cover (and its shadow) went 70% on
+            // its own and the back covers showed through the front one — a resting
+            // shelf that read as a cross-fade stuck halfway. Flatten, then fade.
+            coverFan.compositingGroup().opacity(curtain)
             if let url = URL(string: current.href) {
                 Link(i18n.t("desktop.welcome.home.learnMore") + " \u{2192}", destination: url)
                     .font(.callout)
@@ -1038,6 +1043,9 @@ struct ClipsIllustrationView: View {
             pointer
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
+        // Flatten before fading: the menu and pointer overlap the rows, and a bare
+        // `.opacity` would fade each layer on its own and let the rows show through.
+        .compositingGroup()
         .opacity(curtain)
         .accessibilityHidden(true)
         .task(id: active && !reduceMotion) { await drive() }

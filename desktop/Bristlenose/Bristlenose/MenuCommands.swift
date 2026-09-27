@@ -1181,7 +1181,10 @@ private struct ProjectMenuContent: View {
             Button(i18n.t("desktop.chrome.locate"), systemImage: "location.magnifyingglass") {
                 windowCommands?.perform(.locateProject)
             }
-            .disabled(bridgeHandler.selectedProjectAvailable || !enabled(.locateProject))
+            .disabled(
+                (bridgeHandler.selectedProjectAvailable
+                    && !bridgeHandler.selectedProjectNeedsFolderAccess)
+                || !enabled(.locateProject))
 
             // HIG: every context-menu item is also reachable from the menu
             // bar. Turn On/Off Agent Access — the context menu's verb swap

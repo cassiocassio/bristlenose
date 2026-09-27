@@ -1926,7 +1926,12 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // sizes from — `.preferredContentSize` set explicitly so the controller
         // publishes that size rather than inheriting an ambient one.
         // `docs/design-pipeline-popover-sizing.md`.
-        let content = ProjectDiagnosticPopover(project: project, state: state, liveData: liveData)
+        let content = ProjectDiagnosticPopover(
+            project: project, state: state, liveData: liveData,
+            onLocate: { [weak self] in
+                self?.activePopover?.close()
+                self?.onLocate(id)
+            })
             .environmentObject(i18n)
         let host = NSHostingController(rootView: content)
         host.sizingOptions = .preferredContentSize
@@ -2085,6 +2090,9 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             menu.addItem(.separator())
         }
         if case .cantFind = availability {
+            menu.addItem(menuItem("desktop.chrome.locate", #selector(menuLocate(_:))))
+            menu.addItem(.separator())
+        } else if state?.needsFolderAccess == true {
             menu.addItem(menuItem("desktop.chrome.locate", #selector(menuLocate(_:))))
             menu.addItem(.separator())
         }

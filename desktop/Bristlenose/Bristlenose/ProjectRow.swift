@@ -425,7 +425,10 @@ struct ProjectRow: View {
                     // height follows content, capped at its ceiling.
                     // `docs/design-pipeline-popover-sizing.md`.
                     ProjectDiagnosticPopover(
-                        project: project, state: state, liveData: liveData
+                        project: project, state: state, liveData: liveData,
+                        onLocate: onLocate.map { locate in
+                            { isShowingDiagnostics = false; locate() }
+                        }
                     )
                 }
             }

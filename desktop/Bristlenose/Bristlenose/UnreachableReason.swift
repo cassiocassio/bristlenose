@@ -28,6 +28,24 @@ import Foundation
 ///
 /// Audited 26 Aug 2026; `docs/design-pipeline-diagnostic-popover.md` §303 had
 /// specified the glyph + greyed row for this state all along.
+extension PipelineState {
+    /// The folder is there and the app may not read it — under App Sandbox
+    /// that is almost always a lost or never-granted folder permission, and
+    /// the one remedy is to pick the folder again (`Locate…`), which mints a
+    /// fresh security-scoped bookmark. Nothing inside the folder is reachable
+    /// in this state, the log included, so `Show Log` cannot work here.
+    ///
+    /// A project lands here rather than in `.cantFind` because availability
+    /// asks only whether the path EXISTS, and the sandbox answers that without
+    /// a grant. Measured 28 Sep 2026: every read of the manifest denied
+    /// (`deny(1) file-read-data …/pipeline-manifest.json`), the row showed
+    /// "Can't be read", and no surface offered a way to grant access again.
+    var needsFolderAccess: Bool {
+        if case .unreachable(reason: .unreadable) = self { return true }
+        return false
+    }
+}
+
 enum UnreachableReason: String, Codable, Equatable, CaseIterable, Sendable {
 
     /// The manifest read exceeded its 5 s timeout — a sleeping drive or a

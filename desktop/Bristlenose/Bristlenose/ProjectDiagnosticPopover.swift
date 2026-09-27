@@ -22,6 +22,10 @@ struct ProjectDiagnosticPopover: View {
     let project: Project
     let state: PipelineState
     @ObservedObject var liveData: PipelineLiveData
+    /// Re-grant folder access. Offered only when `state.needsFolderAccess`,
+    /// in `Show Log`'s place — the log lives in the folder that can't be read.
+    /// The caller closes the popover (an AppKit-hosted one ignores `dismiss`).
+    var onLocate: (() -> Void)? = nil
     @EnvironmentObject var i18n: I18n
     @Environment(\.dismiss) private var dismiss
 
@@ -76,7 +80,11 @@ struct ProjectDiagnosticPopover: View {
         HStack(spacing: 8) {
             Text(headlineStatus).font(.headline)
             Spacer()
-            if FileManager.default.fileExists(
+            if state.needsFolderAccess, let onLocate {
+                Button(i18n.t("desktop.chrome.locate")) { onLocate() }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+            } else if FileManager.default.fileExists(
                 atPath: PipelineRunner.logFileURL(for: project).path
             ) {
                 Button(i18n.t("desktop.pipeline.diagnostic.action.showLog")) {

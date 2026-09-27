@@ -1060,7 +1060,16 @@ final class ProjectIndex: ObservableObject {
     private static func createBookmark(for path: String) -> Data? {
         guard !path.isEmpty else { return nil }
         let url = URL(fileURLWithPath: path)
-        return try? url.bookmarkData(options: .withSecurityScope)
+        do {
+            return try url.bookmarkData(options: .withSecurityScope)
+        } catch {
+            // Every caller stores the nil, and a nil bookmark on a folder that
+            // exists reads as `.ready` and then fails every read — "Can't be
+            // read" with nothing in the log to say why (28 Sep 2026). The
+            // usual cause is a URL the process holds no sandbox grant for.
+            log.error("security-scoped bookmark not created for \(path, privacy: .private): \(error.localizedDescription, privacy: .public)")
+            return nil
+        }
     }
 
     /// Capture the stable filesystem identity for a path, base64-encoded.

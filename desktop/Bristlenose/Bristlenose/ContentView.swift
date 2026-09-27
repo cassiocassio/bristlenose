@@ -1086,8 +1086,9 @@ struct ContentView: View {
 
     /// Re-enter the Locate flow at the NSOpenPanel step (skips Spotlight,
     /// since this fires after the user already rejected one folder).
-    private func chooseDifferentFolder(for project: Project) {
+    private func chooseDifferentFolder(for project: Project, startingAt directory: URL? = nil) {
         let panel = NSOpenPanel()
+        if let directory { panel.directoryURL = directory }
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
@@ -1098,6 +1099,7 @@ struct ContentView: View {
                 guard response == .OK, let url = panel.url else { return }
                 if LocateFlow.folderLooksAnalysed(url: url) {
                     projectIndex.relocateProject(id: project.id, newPath: url.path)
+                    rescanAfterRelocate(project.id)
                     bridgeHandler.selectedProjectPath = url.path
                     bridgeHandler.selectedProjectAvailable = true
                     bridgeHandler.selectedProjectRevealablePath = url.path
@@ -1167,6 +1169,8 @@ struct ContentView: View {
                 }
                 bridgeHandler.selectedProjectPath = project.path
                 bridgeHandler.selectedProjectAvailable = project.isAvailable
+                bridgeHandler.selectedProjectNeedsFolderAccess =
+                    pipelineRunner.state[id]?.needsFolderAccess == true
                 bridgeHandler.selectedProjectRevealablePath = revealPath(for: project) ?? ""
                 bridgeHandler.hasSelectedProject = true
                 bridgeHandler.selectedProjectIsRunning =
@@ -1517,7 +1521,27 @@ struct ContentView: View {
         )
     }
 
+    /// Re-read the manifest once a Locate has re-anchored the project. When the
+    /// folder was already at its path (a re-grant), availability does not
+    /// change, so nothing else would clear a "Can't be read" row until the
+    /// next launch.
+    private func rescanAfterRelocate(_ id: UUID) {
+        guard let fresh = projectIndex.projects.first(where: { $0.id == id }) else { return }
+        pipelineRunner.scan(project: fresh)
+    }
+
     private func locateProject(_ project: Project) {
+        // The folder is where the project says it is, so the location is not
+        // the question — the permission is. Spotlight can only return a URL
+        // with no sandbox grant, from which no security-scoped bookmark can be
+        // made; the open panel is the grant. Open it on the folder itself so
+        // one click on Open re-grants.
+        if !project.path.isEmpty,
+           FileManager.default.fileExists(atPath: project.path) {
+            chooseDifferentFolder(for: project,
+                                  startingAt: URL(fileURLWithPath: project.path, isDirectory: true))
+            return
+        }
         let flow = LocateFlow(project: project, i18n: i18n)
         flow.run(
             confirm: { candidate in
@@ -1535,6 +1559,7 @@ struct ContentView: View {
                 switch result {
                 case .located(let url):
                     projectIndex.relocateProject(id: project.id, newPath: url.path)
+                    rescanAfterRelocate(project.id)
                     bridgeHandler.selectedProjectPath = url.path
                     bridgeHandler.selectedProjectAvailable = true
                     bridgeHandler.selectedProjectRevealablePath = url.path
@@ -2921,7 +2946,10 @@ struct ContentView: View {
     private func updateSelectedProjectRunState() {
         if case .project(let id) = (selection.count == 1 ? selection.first : nil) {
             bridgeHandler.selectedProjectIsRunning = isRunningOrQueued(pipelineRunner.state[id])
+            bridgeHandler.selectedProjectNeedsFolderAccess =
+                pipelineRunner.state[id]?.needsFolderAccess == true
         } else {
+            bridgeHandler.selectedProjectNeedsFolderAccess = false
             bridgeHandler.selectedProjectIsRunning = false
             bridgeHandler.selectedProjectIsAnalysed = false
             bridgeHandler.hasSelectedProject = false
@@ -2969,7 +2997,7 @@ struct ContentView: View {
             onDelete: {
                 removeFromSidebarContextMenu(targetingProject: project.id)
             },
-            onLocate: project.isAvailable ? nil : { locateProject(project) },
+            onLocate: { locateProject(project) },
             onOpenUnanalysed: { openUnanalysedSheet(for: project) },
             onShowDiagnostics: {
                 selection = [.project(project.id)]
@@ -3022,8 +3050,14 @@ struct ContentView: View {
                 Divider()
             }
 
-            // "Locate…" for moved/deleted projects — actionable first.
+            // "Locate…" for moved/deleted projects — actionable first — and for
+            // a folder that is there but can't be read (a lost permission).
             if case .cantFind = project.availability {
+                Button(i18n.t("desktop.chrome.locate")) {
+                    locateProject(project)
+                }
+                Divider()
+            } else if pipelineRunner.state[project.id]?.needsFolderAccess == true {
                 Button(i18n.t("desktop.chrome.locate")) {
                     locateProject(project)
                 }

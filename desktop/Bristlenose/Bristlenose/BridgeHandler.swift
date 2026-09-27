@@ -254,6 +254,12 @@ final class BridgeHandler: ObservableObject {
     /// enable/disable "Locate…" and "Show in Finder".
     @Published var selectedProjectAvailable: Bool = true
 
+    /// The selected project's folder exists but can't be read — a lost folder
+    /// permission (`PipelineState.needsFolderAccess`). Enables "Locate…"
+    /// alongside `!selectedProjectAvailable`: it is the only way to grant
+    /// access again, and availability alone reads this project as fine.
+    @Published var selectedProjectNeedsFolderAccess: Bool = false
+
     /// Best-effort path to hand to Finder for the currently selected project.
     /// Equal to `selectedProjectPath` for available projects; falls back to
     /// `lastSeenPath` when the project is `cantFind` so Finder can show its
@@ -983,6 +989,7 @@ final class BridgeHandler: ObservableObject {
         selectedProjectRevealablePath = ""
         selectedFolderName = ""
         selectedProjectAvailable = true
+        selectedProjectNeedsFolderAccess = false
         selectedProjectIsRunning = false
         selectedProjectIsAnalysed = false
         hasSelectedProject = false

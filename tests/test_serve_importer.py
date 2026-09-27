@@ -1351,6 +1351,9 @@ def _write_transcript_and_words(
             {"text": "I'm", "start_time": 10.0, "end_time": 10.3, "confidence": 0.9},
             {"text": "doing", "start_time": 10.3, "end_time": 10.6, "confidence": 0.95},
             {"text": "well,", "start_time": 10.6, "end_time": 10.9, "confidence": 0.92},
+            {"text": "thanks", "start_time": 11.0, "end_time": 11.3, "confidence": 0.9},
+            {"text": "for", "start_time": 11.3, "end_time": 11.4, "confidence": 0.9},
+            {"text": "asking.", "start_time": 11.4, "end_time": 11.8, "confidence": 0.9},
         ]
         if words  # only include second seg words when first seg has words too
         else []
@@ -1387,6 +1390,15 @@ def _write_transcript_and_words(
     return tmp_path
 
 
+_HELLO_WORDS = [
+    {"text": "Hello,", "start_time": 2.0, "end_time": 2.5, "confidence": 0.9},
+    {"text": "how", "start_time": 2.5, "end_time": 2.8, "confidence": 0.95},
+    {"text": "are", "start_time": 2.8, "end_time": 3.0, "confidence": 0.95},
+    {"text": "you", "start_time": 3.0, "end_time": 3.2, "confidence": 0.95},
+    {"text": "today?", "start_time": 3.2, "end_time": 3.7, "confidence": 0.95},
+]
+
+
 class TestWordEnrichment:
     """Test that word-level timing from intermediate JSON populates words_json."""
 
@@ -1394,10 +1406,7 @@ class TestWordEnrichment:
         """Segments with word data in session_segments.json get words_json."""
         project_dir = _write_transcript_and_words(
             tmp_path,
-            words=[
-                {"text": "Hello,", "start_time": 2.0, "end_time": 2.5, "confidence": 0.9},
-                {"text": "how", "start_time": 2.5, "end_time": 2.8, "confidence": 0.95},
-            ],
+            words=_HELLO_WORDS,
         )
         import_project(db, project_dir)
 
@@ -1411,7 +1420,7 @@ class TestWordEnrichment:
         # First segment (m1) has word data
         assert segs[0].words_json is not None
         parsed = json.loads(segs[0].words_json)
-        assert len(parsed) == 2
+        assert len(parsed) == 5
         assert parsed[0]["t"] == "Hello,"
         assert parsed[0]["s"] == 2.0
         assert parsed[0]["e"] == 2.5
@@ -1419,8 +1428,92 @@ class TestWordEnrichment:
         # Second segment (p1) also has word data
         assert segs[1].words_json is not None
         parsed1 = json.loads(segs[1].words_json)
-        assert len(parsed1) == 3
+        assert len(parsed1) == 6
         assert parsed1[0]["t"] == "I'm"
+
+    def test_partial_words_are_refused(self, db: Session, tmp_path: Path) -> None:
+        """Words that do not spell the segment's text are not attached to it.
+
+        The transcript page renders word spans *in place of* the text, so two
+        words for a five-word line would display as a two-word line.
+        """
+        project_dir = _write_transcript_and_words(tmp_path, words=_HELLO_WORDS[:2])
+        import_project(db, project_dir)
+
+        first = (
+            db.query(TranscriptSegment)
+            .order_by(TranscriptSegment.start_time)
+            .first()
+        )
+        assert first is not None
+        assert first.words_json is None
+
+    def test_merged_segments_get_their_own_words(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        """The .txt is post-merge; session_segments.json is pre-merge.
+
+        Stage 6 merges consecutive same-speaker segments, so the intermediate
+        holds more segments than the transcript, all with segment_index -1.
+        Matching by position gave the paragraph at 0:20 the words spoken at
+        0:05 — the shape of an 18-minute interview whose transcript page showed
+        only its first two and a half minutes (27 Sep 2026).
+        """
+        out = tmp_path / "bristlenose-output"
+        intermediate = out / ".bristlenose" / "intermediate"
+        intermediate.mkdir(parents=True)
+        (intermediate / "metadata.json").write_text('{"project_name": "Merge Test"}')
+        (intermediate / "screen_clusters.json").write_text("[]")
+        (intermediate / "theme_groups.json").write_text("[]")
+        (out / "transcripts-raw").mkdir()
+        (out / "transcripts-raw" / "s1.txt").write_text(
+            "# Transcript: s1\n"
+            "# Duration: 00:00:30\n"
+            "\n"
+            "[00:00] [m1] (Speaker A) Tell me about it. What happened next?\n"
+            "[00:20] [p1] (Speaker B) We went to the shop.\n"
+        )
+
+        def raw(start: float, text: str) -> dict:
+            toks = text.split()
+            return {
+                "start_time": start,
+                "end_time": start + len(toks) * 0.5,
+                "text": text,
+                "speaker_label": None,
+                "speaker_role": "unknown",
+                "speaker_code": "",
+                "source": "mlx-whisper",
+                "segment_index": -1,
+                "words": [
+                    {"text": t, "start_time": start + i * 0.5,
+                     "end_time": start + i * 0.5 + 0.4, "confidence": 0.9}
+                    for i, t in enumerate(toks)
+                ],
+            }
+
+        (intermediate / "session_segments.json").write_text(json.dumps({
+            "s1": [
+                raw(0.4, "Tell me about it."),
+                raw(5.0, "What happened next?"),
+                raw(20.3, "We went to the shop."),
+            ],
+        }))
+        import_project(db, tmp_path)
+
+        segs = (
+            db.query(TranscriptSegment)
+            .order_by(TranscriptSegment.start_time)
+            .all()
+        )
+        assert [s.start_time for s in segs] == [0.0, 20.0]
+        first = json.loads(segs[0].words_json or "[]")
+        second = json.loads(segs[1].words_json or "[]")
+        assert [w["t"] for w in first] == (
+            "Tell me about it. What happened next?".split()
+        )
+        assert [w["t"] for w in second] == "We went to the shop.".split()
+        assert second[0]["s"] == 20.3
 
     def test_words_null_when_no_intermediate(self, db: Session) -> None:
         """Smoke-test fixture (VTT source, no session_segments.json with words)."""
@@ -1444,9 +1537,7 @@ class TestWordEnrichment:
         """words_json uses compact keys (t, s, e) and no whitespace."""
         project_dir = _write_transcript_and_words(
             tmp_path,
-            words=[
-                {"text": "Hello", "start_time": 2.0, "end_time": 2.5, "confidence": 0.9},
-            ],
+            words=_HELLO_WORDS,
         )
         import_project(db, project_dir)
 

@@ -53,7 +53,7 @@ A typical word entry:
 ┌─────────────────────────────┐
 │  Serve-mode importer        │
 │  _enrich_words_from_        │  ← reads JSON, matches by
-│    intermediate()           │     segment_index
+│    intermediate()           │     time, verifies by text
 │                             │
 │  Compact JSON in SQLite:    │
 │  [{"t":"It","s":12.92,     │
@@ -111,6 +111,17 @@ Not all sessions have word-level data:
 | DOCX import | ✗ No | Segment-level glow only |
 
 When `words` is `null`, the transcript renders as plain text and the segment-level glow (background highlight on the whole paragraph) still works.
+
+Two more cases carry no word timings, by design:
+
+- **PII-redacted projects** (`transcripts-cooked/` present). The intermediate JSON predates redaction and holds the original words, so the importer refuses to backfill and clears any rows an older import left.
+- **Any paragraph whose words don't read as its text.** The word spans *replace* the paragraph text on screen, so a wrong pairing hides the real transcript. The importer keeps a paragraph's words only when they match its text (≥ 0.9 on the token sequence — Whisper's word and segment text disagree by a word or two on long segments).
+
+### Matching words to transcript paragraphs
+
+`session_segments.json` is written **before** stage 6 merges consecutive same-speaker segments, so it holds Whisper's raw segments (263 for an 18-minute interview), all with `segment_index = -1`, while the `.txt` the importer reads holds the merged ones (37). Each raw segment is assigned to the paragraph with the latest start at or before its own; the `.txt` timecode is the floor of the merged paragraph's first raw start, so the first raw segment always lands in its own paragraph.
+
+Until 27 Sep 2026 the `-1` fell back to **list position**: paragraph 36 (17:32) got raw segment 36's words (2:30). Every diarised interview showed its first few minutes of speech smeared across the whole timeline, with most of the transcript missing. Pinned by `tests/test_serve_importer.py::TestWordEnrichment::test_merged_segments_get_their_own_words`.
 
 ## Storage format
 

@@ -12,6 +12,8 @@ deleted badges) is preserved for quotes that survive the re-import.
 
 from __future__ import annotations
 
+import bisect
+import difflib
 import json
 import logging
 import os
@@ -600,6 +602,28 @@ def _import_transcript_segments(
             db.add(seg)
 
 
+_SPEAKER_PREFIX_RE = re.compile(r"^\([^)]*\)\s*")
+
+
+def _words_read_as(words: list[dict[str, object]], text: str) -> bool:
+    """True when ``words`` spell out ``text``, allowing Whisper's own noise.
+
+    Whisper's word-level text and its segment text disagree by a word or two
+    on long segments (a repeated "it's", a dropped "you know"), so exact
+    equality would throw away good timings. 0.9 on the token sequence keeps
+    those and refuses any pairing with a different paragraph. The ``.txt``
+    carries a ``(Speaker A)`` label ahead of the utterance, which the words
+    do not.
+    """
+    said = re.findall(r"\w+", " ".join(str(w["text"]) for w in words).lower())
+    shown = re.findall(r"\w+", _SPEAKER_PREFIX_RE.sub("", text).lower())
+    if said == shown:
+        return True
+    if not said or not shown:
+        return False
+    return difflib.SequenceMatcher(None, said, shown, autojunk=False).ratio() >= 0.9
+
+
 def _enrich_words_from_intermediate(
     db: Session,
     session_map: dict[str, SessionModel],
@@ -610,8 +634,22 @@ def _enrich_words_from_intermediate(
     The pipeline's ``session_segments.json`` contains Whisper word-level
     timestamps (``Word`` objects with text, start_time, end_time).  The
     ``.txt`` importer doesn't capture these — this function reads the
-    intermediate JSON and backfills ``words_json`` by matching segments on
-    ``segment_index``.
+    intermediate JSON and backfills ``words_json``.
+
+    **Matched by time, then verified by text — never by position.**
+    ``session_segments.json`` is written *before* stage 6 merges consecutive
+    same-speaker segments, so it holds Whisper's raw segments (263 for an
+    18-minute interview) while the ``.txt`` holds the merged ones (37). Every
+    raw segment carries ``segment_index = -1``; until 27 Sep 2026 that fell
+    back to list position, so merged segment 36 (at 17:32) received raw
+    segment 36's words (at 2:30). The transcript page renders word spans *in
+    place of* the paragraph text, so the researcher saw the first two and a
+    half minutes of speech spread across eighteen minutes of timecodes, and
+    most of the interview was simply absent. Each raw segment now goes to the
+    DB segment whose start is the latest at or before its own (the ``.txt``
+    timecode is the floor of the merged segment's first raw start), and a
+    segment keeps its words only if they read as that segment's text — so a
+    stale or mismatched intermediate costs karaoke, never the transcript.
 
     Compact JSON format: ``[{"t":"word","s":0.5,"e":0.8},...]``
 
@@ -672,37 +710,38 @@ def _enrich_words_from_intermediate(
         if not sess:
             continue
 
-        # Build lookup from segment_index → word data
-        word_lookup: dict[int, list[dict[str, object]]] = {}
-        for i, pseg in enumerate(pipeline_segs):
-            words = pseg.get("words", [])
-            if not words:
-                continue
-            seg_idx = pseg.get("segment_index", -1)
-            # Prefer explicit segment_index; fall back to position in list
-            key = seg_idx if seg_idx >= 0 else i
-            compact = [
-                {"t": w["text"], "s": w["start_time"], "e": w["end_time"]}
-                for w in words
-                if w.get("text")
-            ]
-            if compact:
-                word_lookup[key] = compact
-
-        if not word_lookup:
+        raw_segs = sorted(
+            (p for p in pipeline_segs if p.get("words")),
+            key=lambda p: float(p.get("start_time", 0.0)),
+        )
+        if not raw_segs:
             continue
 
-        # Match DB segments and populate words_json
         db_segs = (
             db.query(TranscriptSegment)
             .filter_by(session_id=sess.id)
-            .order_by(TranscriptSegment.start_time)
+            .order_by(TranscriptSegment.start_time, TranscriptSegment.segment_index)
             .all()
         )
-        for db_seg in db_segs:
-            compact = word_lookup.get(db_seg.segment_index)
-            if compact:
-                db_seg.words_json = json.dumps(compact, separators=(",", ":"))
+        if not db_segs:
+            continue
+
+        starts = [s.start_time for s in db_segs]
+        buckets: list[list[dict[str, object]]] = [[] for _ in db_segs]
+        for pseg in raw_segs:
+            k = bisect.bisect_right(starts, float(pseg.get("start_time", 0.0))) - 1
+            if k < 0:
+                continue
+            buckets[k].extend(w for w in pseg["words"] if w.get("text"))
+
+        for db_seg, words in zip(db_segs, buckets):
+            if not words or not _words_read_as(words, db_seg.text):
+                continue
+            compact = [
+                {"t": w["text"], "s": w["start_time"], "e": w["end_time"]}
+                for w in words
+            ]
+            db_seg.words_json = json.dumps(compact, separators=(",", ":"))
 
     db.flush()
 

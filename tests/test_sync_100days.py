@@ -396,3 +396,59 @@ class TestSyncDoneToDoc:
         changes = sync.sync_done_to_doc(board_items, path, apply=False)
         assert changes == 1
         assert pathlib.Path(path).read_text() == original
+
+
+# ---------------------------------------------------------------------------
+# Hand-struck lines — the human's decision, reported and never rewritten
+# ---------------------------------------------------------------------------
+
+_HAND_DOC = """\
+## 1. Missing — essential feature gaps
+
+### Must
+- [S1] ~~**Phase 2b** — verify hashes (done 25 Mar 2026)~~
+- ~~**Clickable bars**~~ — filtered view
+- ~~[S4] **Harness** — XCTest target. Done 26 Apr~~
+- ~~[S3]~~ **Drag-to-reorder** — _Demoted to Could_
+- ~~**Shipped and closed**~~ — done
+"""
+
+
+def _open(*titles, status="Todo"):
+    return [{"normalized": sync.normalize(t), "status": status} for t in titles]
+
+
+class TestHandStruck:
+    def test_reports_hand_struck_items_whose_card_is_open(self, tmp_path):
+        path = _write_doc(tmp_path, _HAND_DOC)
+        board = _open("Phase 2b", "Clickable bars", "Harness", "Drag-to-reorder")
+        board += _open("Shipped and closed", status="Done")
+        found = sync.report_hand_struck_open(board, path)
+        assert found == ["Phase 2b", "Clickable bars", "Harness"]
+
+    def test_struck_sprint_tag_is_demoted_not_done(self, tmp_path):
+        """`~~[S3]~~ **T**` strikes only the tag: the item moved, it did not finish."""
+        path = _write_doc(tmp_path, _HAND_DOC)
+        assert "Drag-to-reorder" not in sync.report_hand_struck_open(
+            _open("Drag-to-reorder"), path
+        )
+
+    def test_hand_strike_is_never_unstruck(self, tmp_path):
+        """The doc was right the one time this fired (Phase 2b, 27 Sep 2026)."""
+        path = _write_doc(tmp_path, _HAND_DOC)
+        before = pathlib.Path(path).read_text()
+        board = _open("Phase 2b", "Clickable bars", "Harness", "Drag-to-reorder")
+        assert sync.sync_done_to_doc(board, path, apply=True) == 0
+        assert pathlib.Path(path).read_text() == before
+
+
+class TestNewCardsNearTitles:
+    def test_near_title_is_still_created_and_flagged(self, capsys):
+        """A close match is a warning, not a veto: Phase 2d is not Phase 2c."""
+        doc = [{"kind": "1. Missing", "priority": "Must", "title": "Pipeline resilience Phase 2d",
+                "description": "", "sprint": None}]
+        board = [{"normalized": sync.normalize("Pipeline resilience Phase 2c"),
+                  "title": "Pipeline resilience Phase 2c", "status": "Todo"}]
+        new = sync.sync_new_to_board(doc, board, apply=False)
+        assert [i["title"] for i in new] == ["Pipeline resilience Phase 2d"]
+        assert "possible rename of: 'Pipeline resilience Phase 2c'" in capsys.readouterr().out

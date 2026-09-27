@@ -495,8 +495,9 @@ measurable. Two tracks:
   out of order / skipped; plus scripted ad-libs, including **one planted
   cross-session theme** (must be promoted) and **one single-session tangent**
   (must not be). Every moderator turn and every answer span carries its gold
-  territory and item. **Save the guide beside the VTTs** — the Fishkeeping and
-  Rockclimbing sets were generated from guides nobody kept.
+  territory and item. **Write the guide to a file beside the VTTs.** The existing
+  synthetic sets (`trial-runs/Fishkeeping`, `trial-runs/Rockclimbing`) have no
+  guide at all, so they can stand in only for the no-guide case.
   Variants: a clean-attribution set; the same set with ~15% of turns given the
   wrong speaker (the s2 failure); a non-English set.
 - **Metrics:** ad-lib share error; item recall over asked turns; promotion

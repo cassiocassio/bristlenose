@@ -1431,6 +1431,26 @@ class TestWordEnrichment:
         assert len(parsed1) == 6
         assert parsed1[0]["t"] == "I'm"
 
+    def test_last_segment_ends_at_the_header_duration(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        """The final segment has no successor; `# Duration:` is its end.
+
+        A flat start + 10 s cut the playback glow off 28 s early on an
+        interview whose last answer ran to the end of the recording.
+        """
+        project_dir = _write_transcript_and_words(tmp_path, words=[])
+        import_project(db, project_dir)
+
+        last = (
+            db.query(TranscriptSegment)
+            .order_by(TranscriptSegment.start_time.desc())
+            .first()
+        )
+        assert last is not None
+        assert last.start_time == 10.0
+        assert last.end_time == 30.0  # "# Duration: 00:00:30"
+
     def test_partial_words_are_refused(self, db: Session, tmp_path: Path) -> None:
         """Words that do not spell the segment's text are not attached to it.
 

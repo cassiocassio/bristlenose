@@ -581,14 +581,21 @@ def _import_transcript_segments(
 
         content = txt_file.read_text(encoding="utf-8")
         segments = _SEGMENT_RE.findall(content)
+        # The last segment has no successor to end at. `# Duration:` is written
+        # from that segment's own end (s06: `merged[-1].end_time`), so it is
+        # the right end, floored to the second. A flat "+10 s" cut the playback
+        # glow 28 s early on an interview whose final answer ran to the end.
+        dur_match = _HEADER_DURATION_RE.search(content[:500])
+        duration = _parse_duration_to_seconds(dur_match.group(1)) if dur_match else 0.0
 
         for i, (timecode, speaker_code, text) in enumerate(segments):
             start = _parse_timecode_to_seconds(timecode)
-            # End time: use next segment's start, or start + duration estimate
             if i + 1 < len(segments):
                 end = _parse_timecode_to_seconds(segments[i + 1][0])
+            elif duration > start:
+                end = duration
             else:
-                end = start + 10.0  # rough estimate for last segment
+                end = start + 10.0  # no usable header: a rough estimate
 
             seg = TranscriptSegment(
                 session_id=sess.id,

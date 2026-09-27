@@ -15,6 +15,7 @@ Usage:
     python scripts/sync_100days.py mark-done --apply "X"    # apply mark-done
 """
 
+import difflib
 import json
 import re
 import subprocess
@@ -82,6 +83,32 @@ def normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text)
 
 
+def find_close_match(doc_title: str, board_titles: list[str], threshold: float = 0.8) -> str | None:
+    """Find a close match for a doc title in the board titles list using fuzzy matching.
+
+    Returns the matching board title if similarity is above threshold, else None.
+    """
+    norm_doc = normalize(doc_title)
+    if not norm_doc:
+        return None
+
+    best_match = None
+    best_ratio = 0
+
+    for board_title in board_titles:
+        norm_board = normalize(board_title)
+        if not norm_board:
+            continue
+
+        # Use SequenceMatcher to find similarity
+        ratio = difflib.SequenceMatcher(None, norm_doc, norm_board).ratio()
+        if ratio > best_ratio:
+            best_ratio = ratio
+            best_match = board_title
+
+    return best_match if best_ratio >= threshold else None
+
+
 def escape_graphql(text: str) -> str:
     """Escape a string for embedding in a GraphQL query."""
     return text.replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ")
@@ -111,12 +138,15 @@ _ITEM_NO_DESC_RE = re.compile(
 )
 _LINE_RE = re.compile(
     r"^(\s*- )"            # prefix: "- "
+    r"(~~)?"               # optional strikethrough BEFORE sprint/bold
     r"(\[S\d+\]\s+)?"     # optional sprint tag (preserved as-is)
+    r"(~~)?"               # optional strikethrough BEFORE bold
     r"(\*\*)"              # open bold
-    r"(~~)?"               # optional strikethrough open
+    r"(~~)?"               # optional strikethrough INSIDE bold (open)
     r"(.+?)"               # title text
-    r"(~~)?"               # optional strikethrough close
+    r"(~~)?"               # optional strikethrough INSIDE bold (close)
     r"(\*\*)"              # close bold
+    r"(~~)?"               # optional strikethrough AFTER bold
     r"(.*)"                # rest of line
     r"$"
 )
@@ -367,8 +397,10 @@ def set_field(item_id: str, field_id: str, option_id: str):
 # ---------------------------------------------------------------------------
 
 def sync_done_to_doc(board_items: list[dict], filepath: str = FILE, apply: bool = False) -> int:
-    """Board → doc: strike through Done items, un-strike un-Done items."""
+    """Board → doc: strike through Done items, un-strike un-Done items that exist on board."""
     done_normalized = {item["normalized"] for item in board_items if item["status"] == "Done"}
+    # Also track all items on the board (to avoid un-striking orphaned strikes)
+    board_normalized = {item["normalized"] for item in board_items}
 
     with open(filepath) as f:
         lines = f.readlines()
@@ -383,19 +415,31 @@ def sync_done_to_doc(board_items: list[dict], filepath: str = FILE, apply: bool 
             continue
 
         prefix = m.group(1)
-        sprint_tag = m.group(2) or ""
-        had_strike = bool(m.group(4))
-        title = m.group(5).replace("~~", "").strip()
-        rest = m.group(8)
+        line_strike_open = m.group(2) or ""
+        sprint_tag = m.group(3) or ""
+        pre_strike = m.group(4) or ""
+        bold_open = m.group(5)
+        inside_strike_open = m.group(6) or ""
+        title = m.group(7).strip()
+        inside_strike_close = m.group(8) or ""
+        bold_close = m.group(9)
+        post_strike = m.group(10) or ""
+        rest = m.group(11)
 
-        is_done = normalize(title) in done_normalized
+        # Title is struck if there's ~~ anywhere around it (outside or inside bold)
+        had_strike = bool(line_strike_open or pre_strike or inside_strike_open or post_strike)
+        norm_title = normalize(title)
+        is_done = norm_title in done_normalized
+        is_on_board = norm_title in board_normalized
 
         if is_done and not had_strike:
+            # Strike through: keep same format as original (with ~~) inside bold
             new_line = f"{prefix}{sprint_tag}**~~{title}~~**{rest}\n"
             changes += 1
             print(f"  + STRIKE: {title}")
             new_lines.append(new_line)
-        elif not is_done and had_strike:
+        elif not is_done and had_strike and is_on_board:
+            # Un-strike only if the item exists on the board (avoid orphaned strikes)
             new_line = f"{prefix}{sprint_tag}**{title}**{rest}\n"
             changes += 1
             print(f"  - UNSTRIKE: {title}")
@@ -416,8 +460,20 @@ def sync_new_to_board(
     apply: bool = False,
 ) -> list[dict]:
     """Doc → board: create cards for items not yet on the board. Returns list of new items."""
-    board_titles = {item["normalized"] for item in board_items}
-    new_items = [item for item in doc_items if normalize(item["title"]) not in board_titles]
+    board_titles_list = [item["title"] for item in board_items]
+    board_normalized = {item["normalized"] for item in board_items}
+
+    # Filter to items that don't have exact or close matches on the board
+    new_items = []
+    for item in doc_items:
+        norm_title = normalize(item["title"])
+        # Check exact match first
+        if norm_title in board_normalized:
+            continue
+        # Check fuzzy match (80% similarity threshold)
+        if find_close_match(item["title"], board_titles_list, threshold=0.80):
+            continue
+        new_items.append(item)
 
     if not new_items:
         return []

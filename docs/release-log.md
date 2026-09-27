@@ -67,6 +67,89 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+## 0.31.3 — 27 Sep 2026 · Tier 1 (patch — the release that stopped, and the CI that went red on its own)
+
+**What shipped.** The re-drop fix: dropping a folder the project already held
+copied every recording again, paid to transcribe it again, and made two
+participants whose identical quotes clustered as corroboration. Plus the
+Signals scroll model, the heatmap bar, sidebar folder-expansion and
+projects-column fixes, and the Norwegian locale fix that was the *only* thing
+the changelog described when this release first stopped.
+
+**This release ran twice and stopped once before that.** Three separate runs,
+and the first two are the entry:
+
+| run | date | got to | why it stopped |
+|---|---|---|---|
+| 1 | 24 Sep | `ci-green` ok, then `--skip` on the whole irreversible block | deliberate — but it printed `✓ every act is done` and `release.sh status` reported `success` |
+| 2 | 27 Sep 00:0x | `build-dmg` | stopped by hand: CI was red and the gate would have refused after the build |
+| 3 | 27 Sep | **shipped** | — |
+
+**The two days between run 1 and run 3 are the finding.** Run 1 left the tree
+bumped to 0.31.3 and pushed to `main`, with no tag and nothing on PyPI — and
+the website, which renders its changelog page from `CHANGELOG.md` at build
+time, was deployed in that window. So **bristlenose.app advertised 0.31.3 for
+two days while `pypi.org/pypi/bristlenose/0.31.3/json` returned 404**, which is
+the exact thing the 0.30.0 ordering rule exists to prevent. Nothing recorded
+that the release had stopped: this log had no entry, and the premortem's
+incident 22 was marked ✅. It is now reopened — `--skip` writes `skipped`, and
+`verdict_complete` counts `ok|skipped` as complete, so skipping the
+irreversible block still satisfies the completion checklist.
+
+**CI had been red on `main` since 25 Sep with nothing in the tree to explain
+it.** SQLAlchemy 2.1.1 shipped; CI resolves fresh on every run; from 2.1 the
+`ext.asyncio` import *raises* without `greenlet` where 2.0 had installed it as
+an ordinary dependency. Importing `sqladmin` reaches that module, so one test
+module failed to import and took eight of ten test cells with it — 3.11 through
+3.14 but not 3.10, which is the resolver picking an older SQLAlchemy there.
+Fixed by declaring `sqlalchemy[asyncio]`, proved in a throwaway venv on 2.1.1
+in both directions before the edit, and the compiled `greenlet` extension
+confirmed inside the signed sidecar afterwards.
+
+**Underneath that, mypy was two over its ceiling** (151 vs 149), which reddens
+`ratchet` — a hard gate — and would have failed `ci-green` after the DMG build.
+Both overflow errors were real and were fixed, not suppressed: a `ProjectStatus`
+annotation carrying a `# noqa: F821` that quiets ruff and does nothing for
+mypy, and an `error` variable pinned to `str` by the first branch of a chain
+whose fourth validator returns `str | None`. Margin was deliberately *not*
+bought by annotating FastAPI route handlers — a return annotation there is the
+response model, so it is a behaviour change wearing a type fix's clothes.
+
+**Timing (run 3):**
+
+| step | attempts | outcome |
+|---|---|---|
+| preflight | 1 | ok, 191s |
+| inventory | 1 | ok, 2s (already current — HEAD did not move) |
+| bump | 1 | ok, 0s (tree was already at 0.31.3 from run 1) |
+| build-all | 1 | ok, 371s |
+| build-dmg | 1 | ok, 791s |
+| ci-green | 1 | ok, 1s (the verdict was already in) |
+| testflight | 1 | ok, 479s |
+| dmg | 1 | ok, 125s |
+| tag | 1 | ok, 2s |
+| snap | 1 | ok, 2s |
+
+**One flake, and it matters more than it looks.** `test (3.12, macos-latest)`
+failed run 2's strict CI with `KeyError: 'tracemalloc'` in thread teardown
+while 3.11, 3.13 and 3.14 macOS passed the same commit; it passed on run 3.
+The reason to record it: macOS test failures are `continue-on-error` on push
+runs and **hard** under `strict-macos`, so a green push run is not evidence the
+release gate will pass. Anyone reasoning "CI is green, the release will sail"
+is reading the wrong run.
+
+**Owed out of this release**
+
+- **Close incident 22 properly.** A skipped *irreversible* step must not satisfy
+  `verdict_complete`, or the completion line must name what was skipped.
+- **`release.sh status` should not report `success` for a run that skipped the
+  tag** — it did, for two days.
+- **`release-stats.py` counts the stopped run as the only clean run in eight**
+  (zero failures, because four steps were skipped). The metric is inflated by an
+  abandoned release, and a hand-renamed run dir is the only record that it stopped.
+- **mypy has zero margin** at 149/149. The next dependency bump that adds one
+  inferred error turns `ratchet` red on a release night.
+
 ## 0.31.1 — 23 Sep 2026 · Tier 1 (patch — the machine, verified)
 
 **What shipped.** One accessibility fix (a tag-group control announcing

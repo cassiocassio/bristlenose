@@ -1453,7 +1453,24 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 
 ## Current status
 
-**Internal TestFlight since 14 Jul 2026** — shipping build **0.31.0 (3764)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
+**Internal TestFlight since 14 Jul 2026** — shipping build **0.31.3 (3793)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
+
+**0.31.3 shipped 27 Sep 2026, overnight — tag `v0.31.3` on `9b1e4d84`,
+TestFlight build 3793.** The re-drop release: dropping a folder the project
+already held copied every recording again and paid to transcribe it again, and
+the two copies became two participants whose identical quotes clustered as
+corroboration. Also the Signals scroll model, the heatmap bar, sidebar folder
+expansion and the projects column. **The release is the story, not the
+payload.** It had already run once on 24 Sep and skipped its whole irreversible
+block — which still printed `✓ every act is done`, so `main` sat bumped to
+0.31.3 with no tag while the website advertised a version PyPI 404s, for two
+days. Meanwhile CI went red on `main` on its own: SQLAlchemy 2.1.1 shipped and
+`ext.asyncio` now raises without `greenlet`, where 2.0 installed it as an
+ordinary dependency — nothing in the tree changed. Under that, mypy sat two
+over its ceiling, reddening `ratchet`. Full account: `docs/release-log.md`
+§ 0.31.3. Owed: **incident 22 is reopened** — a skipped irreversible step must
+not satisfy the completion checklist — and mypy now has **zero margin** at
+149/149.
 
 **0.31.0 shipped 22 Sep 2026, overnight and unattended — tag `v0.31.0` on
 `8b525e42` at 00:21Z, TestFlight build 3764.** The language release:

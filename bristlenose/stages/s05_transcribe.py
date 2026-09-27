@@ -96,6 +96,96 @@ def collapse_adjacent_repeats(text: str) -> str:
     return " ".join(tokens)
 
 
+# ---------------------------------------------------------------------------
+# Signal gate — Whisper invents speech over silence
+# ---------------------------------------------------------------------------
+#
+# Given a recording with no signal in it, Whisper does not return nothing: it
+# returns "Thank you." once per 30-second window. Measured 27 Sep 2026 on four
+# 29-minute videos whose audio track was digital zero — 58, 66, 52 and 62
+# invented lines, which the pipeline then analysed as interviews.
+#
+# Whisper has a guard for this and it does not work on the model we ship. The
+# `no_speech_prob` behind `no_speech_threshold` is read from the `<|nospeech|>`
+# logit, and large-v3-turbo (the default) reports 0.0 for it on everything:
+# digital silence, and all 673 segments of two real interviews. whisper-tiny,
+# on the same silent minute, reports 0.94. So the threshold below is inert on
+# the default model and no amount of tuning it helps.
+#
+# faster-whisper is unaffected — its `vad_filter` strips silence first and
+# returns 0 segments on the same file. mlx has no VAD, and the sidecar excludes
+# onnxruntime (and faster_whisper), so Silero is not available on the Mac. What
+# is always available is the signal itself: the gate below needs nothing but
+# the samples mlx decodes anyway.
+#
+# A session this gate empties reaches the orchestrator with zero segments,
+# which already has a stated outcome — `UnusableReason.NO_SPEECH`, "No speech
+# found — nothing was said in this recording." (pipeline.py). No new message.
+#
+# Scope: *no signal*, not *no speech*. Room tone, music or a hum all pass, so
+# Whisper can still hallucinate over them. The gate fails open by design — a
+# kept hallucination is visible and deletable; a dropped word is not.
+
+#: 100 ms windows at Whisper's 16 kHz sample rate.
+_LEVEL_WINDOW_SAMPLES = 1600
+_LEVEL_WINDOWS_PER_SECOND = 10
+
+#: The loudest 100 ms window must reach this for there to be anything to hear.
+#: Measured margins over two real interviews (a Teams and a Meet recording, 669
+#: segments with text), at the ±2 s pad below: the quietest peaks at -40.1 dBFS
+#: (the early-stamped "drainer"), the next at -28.3. Their room tone sits at
+#: -71 to -87. Digital silence is -inf. So ~20 dB of margin either side.
+_SIGNAL_FLOOR_DBFS = -60.0
+
+#: Segment timestamps drift from the audio they describe. One real word
+#: ("drainer") was stamped ~1.2 s before the speech it came from, so ±0.5 s
+#: would have dropped it (-73 dBFS); ±2 s keeps it at -40. Wider is the safe
+#: direction — it can only keep more.
+_SEGMENT_PAD_S = 2.0
+
+
+def window_levels_dbfs(audio: object) -> object:
+    """RMS level of each 100 ms window, in dBFS (digital silence → -inf).
+
+    ``audio`` is mono float samples at 16 kHz, full scale ±1.0 — the shape
+    both Whisper backends decode to. Returns a 1-D numpy array.
+    """
+    import numpy as np
+
+    samples = np.asarray(audio, dtype=np.float32).ravel()
+    n = len(samples) // _LEVEL_WINDOW_SAMPLES
+    if n == 0:
+        # Shorter than one window: treat the whole thing as one.
+        samples = samples if len(samples) else np.zeros(1, dtype=np.float32)
+        frames = samples.reshape(1, -1)
+    else:
+        frames = samples[: n * _LEVEL_WINDOW_SAMPLES].reshape(n, _LEVEL_WINDOW_SAMPLES)
+    rms = np.sqrt(np.mean(frames.astype(np.float64) ** 2, axis=1))
+    with np.errstate(divide="ignore"):
+        return 20.0 * np.log10(rms)
+
+
+def has_signal(levels: object) -> bool:
+    """True when any window of the recording reaches the signal floor."""
+    import numpy as np
+
+    arr = np.asarray(levels)
+    return bool(arr.size) and bool(np.max(arr) >= _SIGNAL_FLOOR_DBFS)
+
+
+def segment_has_signal(start: float, end: float, levels: object) -> bool:
+    """True when the padded span of a segment reaches the signal floor."""
+    import numpy as np
+
+    arr = np.asarray(levels)
+    i0 = max(0, int((start - _SEGMENT_PAD_S) * _LEVEL_WINDOWS_PER_SECOND))
+    i1 = min(len(arr), int(np.ceil((end + _SEGMENT_PAD_S) * _LEVEL_WINDOWS_PER_SECOND)) + 1)
+    if i1 <= i0:
+        # Timestamps past the end of the audio — nothing to judge by, so keep.
+        return True
+    return bool(np.max(arr[i0:i1]) >= _SIGNAL_FLOOR_DBFS)
+
+
 ProgressCallback = type(lambda current, total: None)
 
 
@@ -342,10 +432,26 @@ def _init_mlx_backend(
         # mlx-whisper uses HuggingFace model names
         model_name = _mlx_model_name(settings.whisper_model)
 
-        # Hallucination mitigations for mlx-whisper (faster-whisper has
-        # vad_filter); revisit after cohort feedback (see 100days.md).
+        # Decode once, here, so the signal gate and Whisper read the same
+        # samples. `transcribe` would otherwise run this same ffmpeg call on
+        # the path itself.
+        audio = mlx_whisper.audio.load_audio(str(audio_path))
+        levels = window_levels_dbfs(audio)
+        if not has_signal(levels):
+            # Nothing to hear — and Whisper would not return nothing, it would
+            # return "Thank you." every 30 s. See the signal-gate note above.
+            # Zero segments is stated downstream as NO_SPEECH.
+            logger.info(
+                "%s: no signal above %.0f dBFS — not transcribed",
+                audio_path.name, _SIGNAL_FLOOR_DBFS,
+            )
+            return [], None
+
+        # Loop-breaking kwargs for mlx-whisper. `no_speech_threshold` is inert
+        # on large-v3-turbo (its no_speech_prob is always 0.0 — see the gate
+        # note above); it is kept for the smaller models, where it still works.
         result = mlx_whisper.transcribe(
-            str(audio_path),
+            audio,
             path_or_hf_repo=model_name,
             language=settings.whisper_language if settings.whisper_language != "auto" else None,
             word_timestamps=True,
@@ -372,7 +478,14 @@ def _init_mlx_backend(
         )
 
         segments: list[TranscriptSegment] = []
+        in_silence = 0
         for seg in result.get("segments", []):
+            if not segment_has_signal(seg.get("start", 0.0), seg.get("end", 0.0), levels):
+                # A recording with speech in it can still carry long silent
+                # stretches, and Whisper fills those the same way.
+                if seg.get("text", "").strip():
+                    in_silence += 1
+                continue
             words: list[Word] = []
             for w in seg.get("words", []):
                 word_text = w.get("word", "").strip()
@@ -393,6 +506,12 @@ def _init_mlx_backend(
                     words=words,
                     source="mlx-whisper",
                 ))
+
+        if in_silence:
+            logger.info(
+                "%s: dropped %d segment(s) with no signal above %.0f dBFS",
+                audio_path.name, in_silence, _SIGNAL_FLOOR_DBFS,
+            )
 
         return segments, result.get("language")
 

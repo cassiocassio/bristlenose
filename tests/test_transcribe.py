@@ -263,3 +263,142 @@ class TestEveryReturnPathCarriesThreeValues:
         assert results == {}
         assert languages == {}
         assert outcome.attempted == 0
+
+
+# ---------------------------------------------------------------------------
+# Signal gate — Whisper invents "Thank you." over silence
+# ---------------------------------------------------------------------------
+
+_SR = 16_000
+
+
+def _tone(seconds: float, dbfs: float):
+    """A 220 Hz sine at the given RMS level (a sine's RMS is peak / √2)."""
+    import numpy as np
+
+    t = np.arange(int(seconds * _SR)) / _SR
+    peak = 10 ** (dbfs / 20) * np.sqrt(2)
+    return (peak * np.sin(2 * np.pi * 220 * t)).astype(np.float32)
+
+
+def _silence(seconds: float):
+    import numpy as np
+
+    return np.zeros(int(seconds * _SR), dtype=np.float32)
+
+
+class TestSignalGate:
+    """The shape measured on 27 Sep 2026: four videos whose audio track was
+    digital zero came back as 52–66 lines of "Thank you.", one per 30-second
+    window, and were analysed as interviews. large-v3-turbo reports
+    ``no_speech_prob == 0.0`` even there, so Whisper's own guard cannot help.
+    """
+
+    def test_digital_silence_has_no_signal(self) -> None:
+        from bristlenose.stages.s05_transcribe import has_signal, window_levels_dbfs
+
+        assert not has_signal(window_levels_dbfs(_silence(60)))
+
+    def test_room_tone_alone_is_not_signal(self) -> None:
+        # The two real interviews measured had room tone at -71 to -87 dBFS.
+        from bristlenose.stages.s05_transcribe import has_signal, window_levels_dbfs
+
+        assert not has_signal(window_levels_dbfs(_tone(60, -80)))
+
+    def test_quiet_speech_level_is_signal(self) -> None:
+        # The quietest real segment measured peaked at -46.8 dBFS.
+        import numpy as np
+
+        from bristlenose.stages.s05_transcribe import has_signal, window_levels_dbfs
+
+        audio = np.concatenate([_silence(30), _tone(0.5, -47), _silence(30)])
+        assert has_signal(window_levels_dbfs(audio))
+
+    def test_empty_audio_has_no_signal(self) -> None:
+        import numpy as np
+
+        from bristlenose.stages.s05_transcribe import has_signal, window_levels_dbfs
+
+        assert not has_signal(window_levels_dbfs(np.zeros(0, dtype=np.float32)))
+
+    def test_a_segment_deep_in_silence_is_dropped(self) -> None:
+        import numpy as np
+
+        from bristlenose.stages.s05_transcribe import segment_has_signal, window_levels_dbfs
+
+        # Speech in the first ten seconds, then silence; Whisper's invented
+        # line sits at the start of the next 30 s window, as measured.
+        levels = window_levels_dbfs(np.concatenate([_tone(10, -30), _silence(50)]))
+        assert not segment_has_signal(30.0, 30.12, levels)
+
+    def test_a_word_stamped_early_is_kept(self) -> None:
+        # Measured: "drainer" was stamped at 1750.08–1750.50 while its speech
+        # began at 1751.3 — the stamp sits entirely in room tone. A gate that
+        # read only the stamped span would have dropped a real word.
+        import numpy as np
+
+        from bristlenose.stages.s05_transcribe import segment_has_signal, window_levels_dbfs
+
+        levels = window_levels_dbfs(np.concatenate([_tone(11.3, -82), _tone(3, -45)]))
+        assert segment_has_signal(10.08, 10.50, levels)
+
+    def test_a_segment_past_the_end_of_the_audio_is_kept(self) -> None:
+        # Nothing to judge by — fail open.
+        from bristlenose.stages.s05_transcribe import segment_has_signal, window_levels_dbfs
+
+        levels = window_levels_dbfs(_tone(5, -30))
+        assert segment_has_signal(100.0, 101.0, levels)
+
+
+class TestMlxBackendAppliesTheSignalGate:
+    """The wiring, not the arithmetic: a silent file must never reach Whisper,
+    and a line Whisper puts in a silent stretch must not reach the transcript.
+    Needs mlx-whisper installed (Apple Silicon); skipped elsewhere."""
+
+    def _backend(self, monkeypatch, audio, whisper_segments):
+        import pytest
+
+        pytest.importorskip("mlx_whisper")
+        import mlx_whisper
+        import mlx_whisper.audio
+
+        calls: list[object] = []
+
+        def _fake_transcribe(audio_in, **_kw):
+            calls.append(audio_in)
+            return {"language": "en", "segments": whisper_segments}
+
+        monkeypatch.setattr(mlx_whisper.audio, "load_audio", lambda _p: audio)
+        monkeypatch.setattr(mlx_whisper, "transcribe", _fake_transcribe)
+
+        from bristlenose.stages import s05_transcribe
+
+        settings = type("S", (), {"whisper_model": "tiny", "whisper_language": "auto"})()
+        return s05_transcribe._init_mlx_backend(settings), settings, calls
+
+    def test_a_silent_file_is_not_sent_to_whisper(self, monkeypatch, tmp_path) -> None:
+        thank_you = [{"start": 30.0 * i, "end": 30.0 * i + 0.12, "text": " Thank you."}
+                     for i in range(4)]
+        fn, settings, calls = self._backend(monkeypatch, _silence(120), thank_you)
+
+        segments, language = fn(tmp_path / "p3.wav", settings)
+
+        assert segments == []
+        assert language is None
+        assert calls == []
+
+    def test_lines_in_a_silent_stretch_are_dropped_and_speech_is_kept(
+        self, monkeypatch, tmp_path,
+    ) -> None:
+        import numpy as np
+
+        audio = np.concatenate([_tone(10, -30), _silence(50)])
+        fn, settings, calls = self._backend(monkeypatch, audio, [
+            {"start": 1.0, "end": 4.0, "text": " We bought the sofa in May."},
+            {"start": 30.0, "end": 30.12, "text": " Thank you."},
+        ])
+
+        segments, _language = fn(tmp_path / "p1.wav", settings)
+
+        assert [s.text for s in segments] == ["We bought the sofa in May."]
+        assert len(calls) == 1

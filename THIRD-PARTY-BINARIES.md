@@ -188,7 +188,7 @@ procurement; under-listing would be a compliance risk.
 | `spacy-loggers` | 1.0.5 | MIT | <https://github.com/explosion/spacy-loggers> |
 | `sqladmin` | 0.32.0 | BSD-3-Clause | <https://github.com/smithyhq/sqladmin> |
 | `SQLAlchemy` | 2.1.1 | MIT | <https://www.sqlalchemy.org> |
-| `srsly` | 2.5.3 | MIT License | <https://github.com/explosion/srsly> |
+| `srsly` | 2.5.4 | MIT License | <https://github.com/explosion/srsly> |
 | `sse-starlette` | 3.4.11 | BSD-3-Clause | <https://github.com/sysid/sse-starlette> |
 | `starlette` | 1.7.0 | BSD-3-Clause | <https://github.com/Kludex/starlette> |
 | `sympy` | 1.14.0 | BSD License | <https://sympy.org> |
@@ -210,7 +210,7 @@ procurement; under-listing would be a compliance risk.
 | `weasel` | 1.0.0 | MIT License | <https://github.com/explosion/weasel/> |
 | `websockets` | 16.1.1 | BSD-3-Clause | <https://github.com/python-websockets/websockets> |
 | `webvtt-py` | 0.5.1 | MIT License | <https://github.com/glut23/webvtt-py> |
-| `wrapt` | 2.4.1 | BSD-2-Clause | <https://github.com/GrahamDumpleton/wrapt> |
+| `wrapt` | 2.5.0 | BSD-2-Clause | <https://github.com/GrahamDumpleton/wrapt> |
 | `WTForms` | 3.2.2 | BSD License | <https://wtforms.readthedocs.io> |
 <!-- END AUTO: python-wheels -->
 

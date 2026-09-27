@@ -2,6 +2,18 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.31.4** — _28 Sep 2026_
+
+A recording with no sound no longer comes back as an interview of "Thank you.", and the transcript page shows the whole interview again.
+
+**Fixed**
+
+- **A recording with no sound was transcribed as "Thank you." every thirty seconds, and analysed as an interview.** On the Mac, and at the command line on Apple Silicon, Whisper answers silence with an invented "Thank you." for each thirty-second stretch rather than with nothing, so a 29-minute video whose audio track was silent produced some sixty lines that were then read as a participant's session. Whisper's own no-speech check never fires on the model Bristlenose uses. The audio is now measured before it is transcribed: a recording with nothing in it is reported as "No speech found" and left out, and lines invented over long silences inside a real interview are dropped. Quiet speech is kept — the cut-off sits far below the quietest speaker measured. Speech invented over room tone or music is not caught yet. Projects already transcribed keep their old transcripts until those sessions are transcribed again.
+- **Most of a transcript could vanish behind a few words from its first minutes.** Word-level timings were matched to transcript paragraphs by position instead of by time, and the transcript page shows those words in place of the paragraph. So an interview whose lines were merged by speaker displayed its opening minutes spread across the whole timeline. Existing projects correct themselves the next time they open; nothing needs re-running.
+- **Playback highlighting went out early on the last paragraph of a transcript.** It now lasts until the recording's final words.
+- **A project whose folder permission was lost had no way back.** The Mac app showed "Can't be read", and Show Log failed with a permission error. The project now offers Locate…, which opens on the folder, so one click grants access again.
+- **At rest, the book shelf on the Welcome screen showed every cover through the one in front.**
+
 **0.31.3** — _26 Sep 2026_
 
 Dropping the same folder in twice no longer imports everything twice.

@@ -39,8 +39,9 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from bristlenose.config import BristlenoseSettings
+from bristlenose.config import load_settings
 from bristlenose.llm.client import LLMClient
+from bristlenose.llm.pricing import estimate_cost
 
 PROMPTS = Path(__file__).resolve().parent.parent / "bristlenose" / "llm" / "prompts"
 
@@ -58,6 +59,9 @@ PROMPTS = Path(__file__).resolve().parent.parent / "bristlenose" / "llm" / "prom
 class ScaffoldItem(BaseModel):
     terse: str = Field(max_length=34)  # sidebar disclosure sub-label (prompt: ≤24)
     verbatim: str = ""                 # hidden match material — uncapped
+    # Reconcile mode only (planned guide ⋈ questions actually asked):
+    source: Literal["planned", "asked", "both"] = "planned"
+    turns: list[str] = Field(default_factory=list)  # "s3@05:19" — where it was asked
 
 
 class Territory(BaseModel):
@@ -122,6 +126,31 @@ def load_guide_text(path: Path) -> str:
     raise SystemExit(f"unsupported guide format: {suffix} (use .txt/.md/.docx)")
 
 
+_TURN_RE = re.compile(r"^\[([\d:]+)\] \[([a-z]+\d+)\](?: \([^)]*\))? (.*)$")
+
+
+def load_moderator_turns(transcripts: Path, min_words: int = 3, cap: int = 280) -> str:
+    """Moderator turns from transcripts-raw/*.txt as `session@timecode | text` lines.
+
+    Speaker codes live only in the rendered transcripts (session_segments.json
+    carries none), so read those. Short turns are dropped; long ones capped.
+    """
+    lines = []
+    for f in sorted(transcripts.glob("s*.txt")):
+        sid = f.stem
+        for raw in f.read_text(encoding="utf-8").splitlines():
+            m = _TURN_RE.match(raw)
+            if not m or not m.group(2).startswith("m"):
+                continue
+            text = m.group(3).strip()
+            if len(text.split()) < min_words:
+                continue
+            lines.append(f"{sid}@{m.group(1)} | {text[:cap]}")
+    if not lines:
+        raise SystemExit(f"no moderator turns found under {transcripts}")
+    return "\n".join(lines)
+
+
 def load_quotes(project: Path) -> list[dict]:
     candidates = [
         project / ".bristlenose" / "intermediate" / "extracted_quotes.json",
@@ -170,11 +199,52 @@ def bar(n: int, peak: int, width: int = 18) -> str:
     return "▓" * filled + "░" * (width - filled)
 
 
+def tc_seconds(tc: str) -> float:
+    total = 0.0
+    for part in tc.split(":"):
+        total = total * 60 + float(part)
+    return total
+
+
+def emit_anchor_agreement(emit, guide: ParsedGuide, rows) -> None:
+    """Second, independent signal: the last reconciled question asked before
+    the quote in the same session. Compare it with the semantic route."""
+    anchors: dict[str, list[tuple[float, str]]] = {}
+    for i, t in enumerate(guide.territories):
+        for it in t.scaffold:
+            for turn in it.turns:
+                sid, _, tc = turn.partition("@")
+                anchors.setdefault(sid, []).append((tc_seconds(tc), f"t{i}"))
+    for v in anchors.values():
+        v.sort()
+    agree = disagree = no_anchor = 0
+    diffs = []
+    for dest, q, _r in rows:
+        start = q.get("start_timecode")
+        prior = [tid for sec, tid in anchors.get(q.get("session_id", ""), [])
+                 if start is not None and sec <= float(start)]
+        anchor = prior[-1] if prior else None
+        if anchor is None:
+            no_anchor += 1
+        elif anchor == dest:
+            agree += 1
+        else:
+            disagree += 1
+            text = (q.get("text") or "").replace("\n", " ")[:90]
+            diffs.append(f"  route {dest:>8} · anchor {anchor:>3} · {q.get('participant_id')} "
+                         f"@{int(float(start))//60:02d}:{int(float(start))%60:02d} · {text}")
+    emit(f"## Semantic route vs conversational anchor — agree {agree} · disagree "
+         f"{disagree} · no anchor {no_anchor}")
+    for d in diffs:
+        emit(d)
+    emit()
+
+
 # ── Orchestration ─────────────────────────────────────────────────────────────
 
 
 async def run(args: argparse.Namespace) -> str:
-    settings = BristlenoseSettings()
+    settings = load_settings()  # CLI resolution: --llm → env → current provider → keychain
     client = LLMClient(settings)
     report: list[str] = []
 
@@ -188,13 +258,20 @@ async def run(args: argparse.Namespace) -> str:
 
     # 1. parse the guide -------------------------------------------------------
     guide_text = load_guide_text(Path(args.guide))
-    p_sys, p_usr = load_prompt("parse-discussion-guide.md")
+    if args.transcripts:
+        asked = load_moderator_turns(Path(args.transcripts))
+        emit(f"reconcile mode: {asked.count(chr(10)) + 1} moderator turns from {args.transcripts}")
+        p_sys, p_usr = load_prompt("reconcile-discussion-guide.md")
+        user = fill(p_usr, guide_text=guide_text, asked_block=asked)
+    else:
+        p_sys, p_usr = load_prompt("parse-discussion-guide.md")
+        user = fill(p_usr, guide_text=guide_text)
     t0 = time.monotonic()
     guide = await client.analyze(
         system_prompt=p_sys,
-        user_prompt=fill(p_usr, guide_text=guide_text),
+        user_prompt=user,
         response_model=ParsedGuide,
-        max_tokens=8000,
+        max_tokens=12000,
     )
     parse_s = time.monotonic() - t0
     routable = [i for i, t in enumerate(guide.territories) if t.kind != "instruction"]
@@ -204,6 +281,17 @@ async def run(args: argparse.Namespace) -> str:
         tag = "  (instruction — quarantined)" if t.kind == "instruction" else ""
         emit(f"  t{i}  {t.heading}  [{t.kind}/{t.stance_axis}]  ·{len(t.scaffold)} folded{tag}")
     emit()
+    if args.transcripts:
+        # The tight summary: planned ⋈ asked. ● both · ○ planned, never asked · + ad-lib
+        mark = {"both": "●", "planned": "○", "asked": "+"}
+        emit("## The guide as planned and as run   (● asked as planned · ○ never asked · + ad-lib)")
+        for i, t in enumerate(guide.territories):
+            emit(f"  {t.nav_terse}" + ("  (instruction)" if t.kind == "instruction" else ""))
+            for it in t.scaffold:
+                sessions = sorted({x.split("@")[0] for x in it.turns})
+                where = f"  {','.join(sessions)}" if sessions else ""
+                emit(f"     {mark[it.source]} {it.terse}{where}")
+        emit()
 
     # 2. route quotes in batches ----------------------------------------------
     quotes = load_quotes(Path(args.project))
@@ -217,6 +305,12 @@ async def run(args: argparse.Namespace) -> str:
     counts["UNROUTED"] = 0
     routed_samples: dict[str, list[str]] = {}
     low_margin = 0
+    # A quote the model skipped, or routed to an id that doesn't exist (or to a
+    # quarantined instruction territory), is NOT the same as a considered
+    # UNROUTED — count them apart so a collapse can't hide as conservatism.
+    missing = invalid = to_instruction = 0
+    table: list[str] = []
+    routed_rows: list[tuple[str, dict, object]] = []  # (dest, quote, route)
 
     t0 = time.monotonic()
     batches = [
@@ -233,12 +327,26 @@ async def run(args: argparse.Namespace) -> str:
         by_id = {r.id: r for r in result.routes}
         for qid, q in zip(bids, bq):
             r = by_id.get(qid)
-            dest = r.territory_id if (r and r.territory_id in counts) else "UNROUTED"
+            if r is None:
+                missing += 1
+                dest = "UNROUTED"
+            elif r.territory_id not in counts:
+                invalid += 1
+                dest = "UNROUTED"
+            elif (r.territory_id != "UNROUTED"
+                  and guide.territories[int(r.territory_id[1:])].kind == "instruction"):
+                to_instruction += 1
+                dest = "UNROUTED"
+            else:
+                dest = r.territory_id
+            routed_rows.append((dest, q, r))
+            text = (q.get("text") or "").replace("\n", " ").strip()
+            conf = f"{r.confidence:.2f}/{r.margin:.2f}" if r else "—"
+            table.append(f"| {dest} | {conf} | {q.get('participant_id', '?')} | {text[:110]} |")
             counts[dest] += 1
             if r and dest != "UNROUTED" and r.margin and r.margin < 0.15:
                 low_margin += 1
             if dest != "UNROUTED":
-                text = (q.get("text") or "").replace("\n", " ").strip()
                 routed_samples.setdefault(dest, [])
                 if len(routed_samples[dest]) < 3:
                     routed_samples[dest].append(f'{q.get("participant_id","?")}: "{text[:120]}"')
@@ -253,6 +361,8 @@ async def run(args: argparse.Namespace) -> str:
     emit(f"## Routing — {routed} of {total} quotes routed "
          f"({100*routed//max(total,1)}%), {unrouted} UNROUTED, in {route_s:.1f}s")
     emit(f"   near-ties (margin<0.15): {low_margin}   ·   batches: {len(batches)}")
+    emit(f"   of the UNROUTED: skipped by model {missing} · unknown id {invalid} "
+         f"· sent to an instruction territory {to_instruction}")
     emit()
     emit("## Evidence density by territory (the signal bars)")
     for i, t in enumerate(guide.territories):
@@ -271,7 +381,28 @@ async def run(args: argparse.Namespace) -> str:
         for line in s:
             emit(f"  - {line}")
     emit()
-    emit(f"## Cost footprint\n  {client.tracker.summary() if hasattr(client.tracker, 'summary') else client.tracker}")
+    if args.transcripts:
+        emit_anchor_agreement(emit, guide, routed_rows)
+    if args.json_out:
+        Path(args.json_out).write_text(json.dumps({
+            "guide": guide.model_dump(),
+            "routes": [{"dest": d, "session_id": q.get("session_id"),
+                        "participant_id": q.get("participant_id"),
+                        "start": q.get("start_timecode"), "text": q.get("text"),
+                        "confidence": getattr(r, "confidence", None),
+                        "margin": getattr(r, "margin", None)} for d, q, r in routed_rows],
+        }, ensure_ascii=False, indent=1), encoding="utf-8")
+    emit("## Every routing (dest | confidence/margin | participant | quote)")
+    emit("| dest | c/m | pid | quote |")
+    emit("|---|---|---|---|")
+    for row in table:
+        emit(row)
+    emit()
+    tr = client.tracker
+    usd = estimate_cost(settings.llm_model, tr.input_tokens, tr.output_tokens)
+    emit(f"## Cost footprint\n  {settings.llm_model}: {tr.input_tokens} in / "
+         f"{tr.output_tokens} out tokens over {tr.calls} calls"
+         + (f" ≈ ${usd:.4f}" if usd is not None else " (model not in pricing table)"))
     emit(f"  parse {parse_s:.1f}s · route {route_s:.1f}s · {len(batches)+1} LLM calls")
 
     return "\n".join(report)
@@ -282,6 +413,9 @@ def main() -> None:
     ap.add_argument("--project", required=True,
                     help="path to <project>/bristlenose-output (or an extracted_quotes.json)")
     ap.add_argument("--guide", required=True, help="discussion guide .txt/.md/.docx")
+    ap.add_argument("--transcripts", default="",
+                    help="transcripts-raw/ dir: reconcile the guide with the questions actually asked")
+    ap.add_argument("--json-out", default="", help="write the guide + every route as JSON")
     ap.add_argument("--batch", type=int, default=25, help="quotes per routing call")
     ap.add_argument("--limit", type=int, default=0, help="cap number of quotes (0 = all)")
     ap.add_argument("--out", default="", help="write the full report to this markdown file")

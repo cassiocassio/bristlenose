@@ -1,8 +1,15 @@
 ---
 status: pending
-last-trued: 2026-07-26
-trued-against: HEAD on 2026-07-26
+last-trued: 2026-09-27
+trued-against: HEAD on 2026-09-27
 ---
+
+<!-- Resurrected 2026-09-27. Phase A spike run for the first time, on real
+     interviews; the design gained a RECONCILE step (the guide as planned ⋈ the
+     questions actually asked). Read "Revision 27 Sep 2026" first — it
+     supersedes the parse-only model below where they disagree. Stale names
+     trued (Analysis → Signals; the macOS lens picker is the native `Tab` enum,
+     not the web NavBar). Reuse map re-verified symbol by symbol at HEAD. -->
 
 <!-- Trued 2026-07-26 (/true-the-docs --doc): Archetype P (pending/aspirational).
      Authored + consolidated this session; the feature is unbuilt (design + mockups
@@ -15,11 +22,12 @@ trued-against: HEAD on 2026-07-26
 *Design doc for a new macOS-app report lens that takes the researcher's own
 discussion guide and re-projects the extracted quotes onto it — organising
 findings by the researcher's **own domain model** instead of emergent themes.
-Sibling to the Quotes and Analysis lenses; reuses the quotes-page card, editing,
+Sibling to the Quotes and Signals lenses; reuses the quotes-page card, editing,
 and sequence machinery wholesale.*
 
 Status: **straw man, consolidated 26 Jul 2026** after a long design conversation
-and a usual-suspects review. Findings and their disposition live in the
+and a usual-suspects review; **resurrected 27 Sep 2026** with a spike run on
+real interviews and a reconcile step — see "Revision 27 Sep 2026". Findings and their disposition live in the
 gitignored review log for this doc. The distillation step is proven on real
 guides (see "Proof"); routing is the remaining unknown, to be de-risked by a
 backend spike (see "Sequencing"). Two product calls are still open: the routing
@@ -59,8 +67,8 @@ the *normal, correct* state, not a shortfall.
 
 ## What it is
 
-A sixth tab, **Discussion**, in the macOS app's NavBar next to Quotes /
-Codebook / Analysis. It reads like the Quotes lens — same quote cards, badges,
+A sixth lens, **Discussion**, in the macOS app's toolbar lens picker next to
+Quotes / Codebooks / Signals. It reads like the Quotes lens — same quote cards, badges,
 inline editing, sequence treatment — but its **navigation is the researcher's
 guide** (the ~5–12 territories) and its grouping comes from routing quotes onto
 those territories.
@@ -78,10 +86,15 @@ researchers who work from a structured guide; the CLI/Linux crowd skews less
 formal about guide structure and the cost (parse + route + cluster) isn't
 warranted there.
 
-Mechanics (a gate, not a fork): the desktop app **is** the React SPA in a
-WKWebView, so the lens, its route, and the tab are present only under
-`__BRISTLENOSE_EMBEDDED__`, mirroring the existing `ct()`/`dt()` platform-text
-forking. The CLI report and exported HTML never mount it. *(Note: the repo is
+Mechanics (a gate, not a fork): the desktop's lens picker is **native** —
+`enum Tab` in `desktop/Bristlenose/Bristlenose/Tab.swift` (five cases today, raw
+values keyed to `window.switchToTab` in `frontend/src/shims/navigation.ts`) — so
+the lens is desktop-only by construction: a sixth `Tab` case, its ⌘6 View
+command in `MenuCommands.swift`, `common.nav.discussion*` keys in all 21 full
+locales, and a `TAB_ROUTES` key. The React route ships in the SPA bundle with no
+web-NavBar entry and is gated on `isEmbedded()`, so the CLI report and exported
+HTML never reach it. *(Trued 27 Sep: this said "the macOS app's NavBar", which is
+the web NavBar the desktop does not show.)* *(Note: the repo is
 AGPL, so the code stays visible even though the feature is packaged
 desktop-only — a distribution decision, not a code-visibility one.)*
 
@@ -328,15 +341,181 @@ total; everything else grounds to an existing atom/organism.
   keys). `is_os_metadata()` at the guide scan site. Transparency copy names the
   guide as LLM egress; Ollama keeps it local.
 
+---
+
+## Revision 27 Sep 2026 — the guide as planned *and as run*
+
+**The shift.** The July design took the guide as the spine and routed quotes
+onto it. Running it on real interviews showed that is half the picture: in
+the sessions the researcher asks relevant questions *in context*, and most of
+them were never written down. So the lens's navigation becomes **one very
+tight summary of the guide as planned and as run** — planned questions and
+the questions actually asked, merged into logical thematic groups — and the
+lens groups quotes by **research question and intent**: what the team is
+trying to find out, and what the answers were. Not by section, not by theme.
+It is another lens over the same quotes; most of it exists already.
+
+### Measured on real interviews (27 Sep)
+
+Corpus: the maintainer's own IKEA/"favourite object" guide (27 lines) and a
+three-session trial project, both kept outside the repo — s1 (18 min, English
+site), s2 (36 min, UK site, screen-share trouble), s3 (38 min, the German IKEA
+site). 148 moderator turns ≥ 3 words, 101
+quotes. Claude Sonnet 4.6, `scripts/spike_discussion_routing.py --transcripts`.
+
+- **About 60% of the research questions actually asked are nowhere in the
+  guide.** 31 of the 51 question-turns the model assigned are ad-libs; per
+  session 60% / 64% / 57%. The merged guide is two-thirds retcon: 20 ad-lib
+  items against 10 planned-and-asked. A hand correction for turns the model
+  missed (≈5 planned re-askings such as `s3@16:53`, ≈5 ad-libs such as
+  `s3@22:40` "pros and cons of each context") leaves it at ~59%.
+- **Every planned item was asked by somebody.** None came out `○ never asked`.
+- **The ad-libs are the good questions** — "delivery info gaps", "accidental
+  impulse buys", "guest vs login", "is there a price trade-off for a narrower
+  window?". A guide-only lens would have no place to put what they found.
+- **The model slotted every ad-lib under a planned parent and promoted none.**
+  The miss is delivery: 5 of 8 "Try to buy" items are about fulfilment (cost,
+  minimum order, delivery vs collect, window, unavailable), the guide said
+  *stop at the credit card*, and "Try to buy" was the heaviest territory (46
+  of 101 quotes). That is a new top-level group the researcher would draw by
+  hand — see the promotion rule below.
+- **Routing: 100–101 of 101 quotes routed**, and the hand-check reads right.
+  Built from what was asked, the guide absorbs nearly all the evidence;
+  UNROUTED becomes rare rather than the conservative default.
+- **Speaker attribution is an input risk.** In s2 many turns labelled `m1` are
+  the participant narrating their own browsing, and one turn fuses both
+  speakers. The asked signal is only as
+  good as the moderator/participant split (s05b).
+- **Parse instability** (the parse-only prompt): the same guide gave 4, 6 and
+  5 territories on three runs. The reconcile runs gave 8 and 8, with item
+  lists that differed in detail. See the hierarchy rules — structure should be
+  decided by code from the LLM's items, not re-drawn by the LLM each time.
+- **Cost:** reconcile + route for 101 quotes ≈ 26k in / 7k out tokens ≈ $0.18.
+
+### The hierarchy — topic-led, time-ordered
+
+Two levels, as before: **territory** (a research question/intent) → **item**
+(a question, planned and/or asked). Every item carries a provenance mark,
+which is the whole "planned vs retconned" story at a glance:
+
+| mark | meaning |
+|---|---|
+| ● | planned, and asked (in N sessions) |
+| ○ | planned, never asked — shown, dimmed; absence is information, not a failure |
+| + | asked, never planned — an ad-lib |
+
+Rules — the LLM proposes items with their `turns`; **code** decides structure,
+so it is repeatable:
+
+1. **Planned territories come from the guide's own spine**, in guide order.
+2. **An ad-lib slots under the planned item it follows in time.** For each
+   ad-lib, find the planned item whose turns most often immediately precede it
+   across sessions; it goes directly after that item. Topic decides the
+   territory, time decides the position inside it.
+3. **An ad-lib cluster is promoted to its own territory** when it is asked in
+   **≥ 2 sessions**, has **≥ 3 items**, and its routed evidence is at least the
+   median territory's. Delivery passes all three; a one-session tangent (s3's
+   "pros and cons of online vs in-store") stays folded. The LLM names the
+   cluster; the rule, not the LLM, decides whether it stands alone.
+4. **A promoted territory is placed by time**: at the median relative session
+   position of its turns (delivery lands straight after "Try to buy").
+5. **Moderator technique is not a question.** "Play back themes" (the
+   researcher summarising back) and nudges are dropped from the items; they
+   are method, not enquiry.
+6. **Persist, then re-reconcile incrementally.** A new session adds asked
+   turns; re-reconcile slots them into the persisted structure rather than
+   redrawing it, so the researcher's edits and the sidebar do not reshuffle.
+
+### Which quotes answer which question — two signals
+
+1. **Semantic field match (primary).** Batched LLM classification against each
+   territory's whole field: intent + planned wording + *the moderator's actual
+   wording* for every asked item. The asked wording is what makes this work on
+   ad-libs.
+2. **Conversational anchor (corroboration).** The last reconciled question asked
+   before the quote in the same session. This is the anchor the July design
+   retired — rightly, when it pointed at single guide questions the moderator
+   did not follow. Pointed at territories rebuilt from what was actually asked,
+   it is a real second signal, and its machinery exists (`get_moderator_question`,
+   built for the parked moderator-question pill).
+
+Measured: the two **agree on 69 of 101** quotes. Of the 32 disagreements, 18
+are s1, where the moderator spoke 8 times and the participant ran
+the whole site task unprompted — the anchor was minutes stale and the semantic
+route right every time. Most of the rest sit at task boundaries (replace ↔ buy
+↔ reflect), where participants keep talking about the step they just left.
+
+**Rule:** semantic decides the territory. The anchor corroborates only while
+fresh — within a few minutes and not across an s08 topic boundary. Agreement →
+confident; semantic alone → routed; semantic against a fresh anchor → routed,
+marked low-confidence for review. **Item level** (which question a quote
+answers) comes from a fresh anchor only, as a disclosure — never as the
+grouping.
+
+### Reuse — what already exists
+
+| Need | Existing mechanism | Where |
+|---|---|---|
+| Who asked what, and when | speaker codes `m*`/`p*` (role detection) + timecoded turns | s05b; `transcripts-raw/*.txt` (`session_segments.json` carries no speaker codes) |
+| The preceding moderator question for a quote | `get_moderator_question` | `server/routes/quotes.py` (pill parked, machinery live) |
+| Time segmentation of each session | s08 topic boundaries, incl. `screen_change` transitions | `topic_boundaries.json` |
+| Cross-session routing of quotes to buckets | s11 thematic grouping | `stages/s11_*` (open decision 2) |
+| Guide ingest | s04 docx parser; `.md`/`.txt` direct; native drop + `NSOpenPanel` | `stages/`, `desktop/` |
+| LLM call, structured output, cost | `LLMClient.analyze`, `load_settings()`, `estimate_cost` | `llm/` |
+| Quote cards, groups, editing, runs | `QuoteCard`, `QuoteGroup`, `EditableText`, `seq-*` | `frontend/src/islands/`, `organisms/signals.css` |
+| Lens slot, nav, shortcuts | `enum Tab` + `TAB_ROUTES` + `MenuCommands` | `desktop/`, `frontend/src/shims/navigation.ts` |
+| Adding sessions without redoing work | incremental analysis | `docs/design-incremental-analysis.md` |
+
+### Innovations — what is genuinely new
+
+1. **Reconcile** — guide ⋈ moderator turns → merged items with provenance and
+   `turns`. Prompt written: `bristlenose/llm/prompts/reconcile-discussion-guide.md`.
+2. **Structure by code** — time-slotting of ad-libs, the promotion rule,
+   time-placement of promoted territories, persistence and incremental
+   re-reconcile (rules 2–6 above). Deterministic; this is also the answer to
+   parse instability.
+3. **The two-signal router** with anchor freshness.
+4. **The provenance glyphs** (● ○ +) in a terse two-screen sidebar, plus the
+   evidence-bars atom and response-group molecule already listed.
+5. **Guide as an input** — a project artefact that is not a recording, stored
+   under `.bristlenose/` with a fingerprint.
+
+### Synthetic data — the evaluation plan
+
+Real data gave the direction; a labelled corpus is what makes the rules
+measurable. Two tracks:
+
+- **Gold-label the real corpus once.** Hand-label the trial project's 148 moderator
+  turns: planned item / ad-lib / technique / chatter / mis-attributed speaker.
+  About half an hour, and it turns the 60% figure and item recall from model
+  estimates into measurements.
+- **Generate a labelled synthetic corpus** with `docs/testing/test-data-generation.md`,
+  extended so ground truth is written *before* the dialogue. Per session a run
+  sheet decides, for each guide item: asked verbatim / reworded / split /
+  out of order / skipped; plus scripted ad-libs, including **one planted
+  cross-session theme** (must be promoted) and **one single-session tangent**
+  (must not be). Every moderator turn and every answer span carries its gold
+  territory and item. **Save the guide beside the VTTs** — the Fishkeeping and
+  Rockclimbing sets were generated from guides nobody kept.
+  Variants: a clean-attribution set; the same set with ~15% of turns given the
+  wrong speaker (the s2 failure); a non-English set.
+- **Metrics:** ad-lib share error; item recall over asked turns; promotion
+  precision/recall; quote routing precision/recall at territory level; anchor
+  agreement and the freshness window that maximises it.
+
 ## Open decisions
 
 1. **Routing mechanism** — batched-LLM-classify for v1 (no new infra, ~1–3× the
    existing call budget) vs embeddings (near-free at runtime, but net-new infra).
-   *Rec: batched for v1; embeddings a v2 cost win.* **Gates the spike.**
+   *Rec: batched for v1; embeddings a v2 cost win.* **Spike ran batched (27 Sep):
+   ≈ $0.18 for reconcile + route of 101 quotes.** Nothing measured argues for
+   embeddings in v1; ready to take.
 2. **Fresh router vs parameterise `s11`** (which already routes quotes to buckets
    with cross-session voting). *Rec: fresh router for v1 — decoupled.*
 3. **Spike corpus** — a real project with a guide + transcripts (ideal), or
    synthesize one (pair transcripts with a plausible guide). Run privately.
+   **Answered 27 Sep:** the real one exists (the private trial project + the IKEA
+   guide) and a synthetic one is planned — see "Synthetic data".
 4. **Splitting heavy territories** (a Walkthrough-sized area may exceed ~5 min and
    want splitting into two) — let the model decide from the heuristic; watch in the
    spike.

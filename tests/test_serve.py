@@ -488,11 +488,15 @@ class TestProdServeTranscript:
             )
         return AuthTestClient(app)
 
-    def test_transcript_html_served_as_file(self, prod_client: TestClient) -> None:
-        """Transcript HTML files are served from the output dir (file extension)."""
+    def test_transcript_html_not_served(self, prod_client: TestClient) -> None:
+        """Static transcript pages are not served — /report/ files come only from assets/.
+
+        The SPA's session route is extensionless (below); the static page
+        carries full names outside the token gate. See
+        tests/test_server_report_asset_guard.py.
+        """
         resp = prod_client.get("/report/sessions/transcript_s1.html")
-        assert resp.status_code == 200
-        assert "transcript" in resp.text
+        assert resp.status_code == 404
 
     def test_session_path_serves_spa(self, prod_client: TestClient) -> None:
         """Session paths without extension serve SPA HTML for React Router."""

@@ -11,7 +11,7 @@ import re
 import secrets
 import traceback
 from collections.abc import Awaitable, Callable
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
@@ -447,18 +447,63 @@ _MEDIA_EXTENSIONS = frozenset({
 })
 
 
+# What the SPA loads from the output dir under /report/ — theme CSS, logos,
+# thumbnails, the player page — all of it from assets/. Nothing else in the
+# output dir is served: the static report and transcript pages carry full
+# names, and their embedded JSON is not <-escaped.
+_REPORT_ASSET_EXTENSIONS = frozenset({
+    ".css", ".html",
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico",
+})
+
+
+def _contained_path(root: Path, path: str, allowed_suffixes: frozenset[str]) -> Path | None:
+    """Resolve ``path`` under ``root`` for an unauthenticated file route, or ``None``.
+
+    ``/report/*`` and ``/media/*`` sit outside the bearer-token gate, so this
+    is the only thing between a local process and the disk. Refuses:
+
+    - any component starting with ``.`` — ``..`` and every dot-directory,
+      above all ``.bristlenose/``, which holds ``pii_summary.txt`` and
+      ``llm-calls.jsonl`` (re-identification keys) under suffixes an
+      allowlist would otherwise pass;
+    - anything that resolves outside ``root`` (encoded ``..``, symlinks);
+    - a suffix not in ``allowed_suffixes``.
+
+    ``root`` must already be resolved. Existence is the caller's check.
+    """
+    if any(part.startswith(".") for part in PurePosixPath(path).parts):
+        return None
+    try:
+        full = (root / path).resolve()
+    except (OSError, ValueError):  # e.g. an embedded NUL
+        return None
+    if not full.is_relative_to(root):
+        return None
+    # A symlink can land in a dot-directory without naming one.
+    if any(part.startswith(".") for part in full.relative_to(root).parts):
+        return None
+    if full.suffix.lower() not in allowed_suffixes:
+        return None
+    return full
+
+
+def _report_asset_path(resolved_assets: Path, path: str) -> Path | None:
+    """Map a ``/report/<path>`` request onto ``<output_dir>/assets/``, or ``None``."""
+    head, _, rest = path.partition("/")
+    if head != "assets" or not rest:
+        return None
+    return _contained_path(resolved_assets, rest, _REPORT_ASSET_EXTENSIONS)
+
+
 def _mount_media_route(app: FastAPI, project_dir: Path) -> None:
     """Register a /media/ route with extension allowlist and path-traversal guard."""
     resolved_root = project_dir.resolve()
 
     @app.get("/media/{path:path}")
     async def serve_media(path: str) -> FileResponse:
-        full = (resolved_root / path).resolve()
-        # Path traversal guard — must stay inside project_dir
-        if not full.is_relative_to(resolved_root):
-            raise HTTPException(status_code=403, detail="Forbidden")
-        # Extension allowlist
-        if full.suffix.lower() not in _MEDIA_EXTENSIONS:
+        full = _contained_path(resolved_root, path, _MEDIA_EXTENSIONS)
+        if full is None:
             raise HTTPException(status_code=403, detail="Forbidden")
         if not full.is_file():
             raise HTTPException(status_code=404, detail="Not found")
@@ -723,6 +768,7 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
     footer).  Data comes from API endpoints.
     """
     dev_html = _build_dev_html(output_dir, auth_token=app.state.auth_token)
+    resolved_assets = (output_dir / "assets").resolve()
 
     # Live CSS: re-read theme source files on every request (no caching).
     # Defined before the catch-all so it takes priority.
@@ -748,11 +794,9 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
         Paths with file extensions (CSS, images, thumbnails, player HTML)
         are served from the output directory.
         """
-        from pathlib import PurePosixPath
-
         if PurePosixPath(path).suffix:
-            asset_path = output_dir / path
-            if asset_path.is_file():
+            asset_path = _report_asset_path(resolved_assets, path)
+            if asset_path is not None and asset_path.is_file():
                 return FileResponse(asset_path)
             raise HTTPException(status_code=404, detail="Asset not found")
 
@@ -761,8 +805,9 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
             return status_resp
         return _spa_response(dev_html, app.state.auth_token)
 
-    # Non-HTML assets (CSS, images, thumbnails, player HTML) from the output dir
-    app.mount("/report", StaticFiles(directory=output_dir), name="report")
+    # No StaticFiles mount on /report: the catch-all above answers every
+    # /report/* path, so one would be unreachable — and unguarded, serving
+    # .bristlenose/ the moment route order changed.
 
     # Serve design artifacts (mockups, experiments, design system)
     design_mounts = [
@@ -838,6 +883,7 @@ def _mount_prod_report(app: FastAPI, output_dir: Path, *, dev: bool = False) -> 
         return
 
     spa_html = _build_spa_html(output_dir, dev=dev, auth_token=app.state.auth_token)
+    resolved_assets = (output_dir / "assets").resolve()
 
     @app.get("/report")
     def redirect_report_to_slash_prod() -> RedirectResponse:
@@ -876,11 +922,9 @@ def _mount_prod_report(app: FastAPI, output_dir: Path, *, dev: bool = False) -> 
         Paths with file extensions (CSS, images, thumbnails, player HTML)
         are served from the output directory.
         """
-        from pathlib import PurePosixPath
-
         if PurePosixPath(path).suffix:
-            asset_path = output_dir / path
-            if asset_path.is_file():
+            asset_path = _report_asset_path(resolved_assets, path)
+            if asset_path is not None and asset_path.is_file():
                 return FileResponse(asset_path)
             raise HTTPException(status_code=404, detail="Asset not found")
 
@@ -889,8 +933,9 @@ def _mount_prod_report(app: FastAPI, output_dir: Path, *, dev: bool = False) -> 
             return status_resp
         return _spa_response(spa_html, app.state.auth_token)
 
-    # Non-HTML assets (CSS, images, thumbnails, player HTML) from the output dir
-    app.mount("/report", StaticFiles(directory=output_dir), name="report")
+    # No StaticFiles mount on /report: the catch-all above answers every
+    # /report/* path, so one would be unreachable — and unguarded, serving
+    # .bristlenose/ the moment route order changed.
 
 
 def _ensure_index_symlink(output_dir: Path) -> None:

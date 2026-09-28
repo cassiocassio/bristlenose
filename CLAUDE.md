@@ -1453,7 +1453,20 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 
 ## Current status
 
-**Internal TestFlight since 14 Jul 2026** — shipping build **0.31.3 (3793)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
+**Internal TestFlight since 14 Jul 2026** — shipping build **0.31.4 (3870)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
+
+**0.31.4 shipped 28 Sep 2026, overnight — tag `v0.31.4` on `b80fdc31`,
+TestFlight build 3870.** A patch of five fixes from one real project folder: a
+silent audio track no longer comes back from mlx-whisper as "Thank you." every
+30 s (large-v3-turbo's `no_speech_prob` is always 0.0 — `bristlenose/stages/CLAUDE.md`
+§ Stage 5), word timings are joined to transcript paragraphs by time rather than
+list position, the last paragraph's glow lasts to the end, a project with a lost
+folder grant offers Locate…, and the Welcome shelf's resting covers stop showing
+through each other. **The run went clean end to end in 32.5 min, preflight to
+tag** — a third of the plan table's 1 h 57, because build-all now reuses the
+preflight's resolve; the estimates are owed a re-measure. `Mac Build` has been
+red on CI runners since 26 Sep (sidebar-fit harness) and is not a release gate.
+Full account: `docs/release-log.md` § 0.31.4.
 
 **0.31.3 shipped 27 Sep 2026, overnight — tag `v0.31.3` on `9b1e4d84`,
 TestFlight build 3793.** The re-drop release: dropping a folder the project

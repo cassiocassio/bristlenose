@@ -67,6 +67,79 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+## 0.31.4 — 28 Sep 2026 · Tier 1 (patch — five fixes, one run, nothing stopped)
+
+**What shipped.** Two data-integrity fixes found the same evening on one real
+project folder, plus two Mac-app fixes. A silent audio track came back from
+mlx-whisper as "Thank you." every 30 s and was analysed as an interview
+(`45d025c8`) — large-v3-turbo's `no_speech_prob` is always 0.0, so Whisper's own
+guard was inert on the default model. The transcript page showed a diarised
+interview's first minutes smeared across its whole timeline, because word
+timings were joined to merged paragraphs by list position (`a9d6fb47`, present
+since February); the last paragraph's playback glow ended early (`6dd8a1e4`); a
+project whose folder grant was lost had no way back until Locate… was offered
+for that state (`a54c4dec`); and the Welcome shelf's resting covers showed
+through each other (`6da68bce`). Two sessions produced the fixes; one drove the
+release after both signed off.
+
+**Verified 9 of 9** (`verify-channels.sh 0.31.4`, exit 0) by ~02:05 BST: PyPI,
+GitHub Release, Homebrew, TestFlight 3870, `.dmg`, Snap edge, Copr (build
+11043198, `0.31.4-1`), website — deployed with `deploy.sh --yes` after PyPI
+answered 200.
+
+### Timing (measured, from `events.jsonl`; no human wait inside the run)
+
+| step | s |
+|---|---|
+| preflight | 147 |
+| inventory · bump · push-main · strict-ci dispatch | 8 |
+| build-all | 367 |
+| build-dmg | 699 |
+| ci-green (residual wait after the builds) | 198 |
+| testflight (build 3870) | 415 |
+| dmg publish | 115 |
+| tag · snap dispatch | 4 |
+| **run total, start → tag** | **~32.5 min** (23:51Z → 00:23Z) |
+| tag → PyPI 200 | ~12 min (90 s poll granularity) |
+
+The plan table estimates **1 h 57**. The gap is almost all build time: the plan
+still budgets the cold sidecar rebuild (~19 min) and a 30 min `.dmg`, and with
+the single-resolve preflight (`--keep-venv`) build-all reused the preflight's
+venv and finished in 6 min. **The estimates are now wrong by a factor of ~3.5
+and should be re-measured from the last three entries**, per this log's own rule.
+
+### Builds
+
+One attempt each; no step failed, none was skipped (all twelve `ok` in
+`events.jsonl`, checked because incident 22 lets a skip read as done). Tag,
+`ci-sha` and HEAD all `b80fdc31`.
+
+### Tricky things
+
+- **`mypy` is red in every CI run, including the release's own** — a declared
+  soft gate; `ratchet` (the hard one) passed. Reads as a failure on a skim of
+  the job list. Not new: red on `6da68bce` before this release.
+- **`Mac Build` has been red since 26 Sep** (`SidebarFitHarnessTests` s01/s07/s11
+  on both images, two 5.000 s manifest-read timeouts on macos-15) while the
+  local Swift suite is green. Not a release gate, so 0.31.3 and 0.31.4 both
+  shipped over it. Spun off as its own task. **Tell:** a workflow red for days
+  that no release ever stops for — check whether it is a gate before assuming
+  someone is watching it.
+- **Website deploy carried nothing but the release**: before deploying, the
+  live homepage and assets were diffed against the repo with the build-time
+  `?v=` / `VERSION` stamps normalised away — identical — so `deploy.sh --yes`
+  moved only the changelog and the stamp. Worth doing whenever the website repo
+  has commits newer than the last release, since the deploy ships all of them.
+- The zsh `?` glob and `=====` traps (both already in `CLAUDE.md`) each cost a
+  re-run during the website comparison.
+
+### What is owed
+
+- Re-measure the plan table's estimates (above).
+- The Mac Build red (spawned task).
+- The Talismanic project's s3–s6 transcripts stay "Thank you." until those
+  sessions are transcribed again — the fix is not retroactive, by design.
+
 ## 0.31.3 — 27 Sep 2026 · Tier 1 (patch — the release that stopped, and the CI that went red on its own)
 
 **What shipped.** The re-drop fix: dropping a folder the project already held

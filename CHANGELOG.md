@@ -2,6 +2,18 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.31.5** — _29 Sep 2026_
+
+Other programs on your computer can no longer read a project's private files through the report server, and a re-analysis reaches the report without a restart.
+
+**Fixed**
+
+- **Other programs on the same computer could read files the report server should have kept to itself.** While a report was open, another local program could fetch the PII re-identification key, the unredacted transcripts and the run log without the report's token, and a web page could reach the server by pretending to be your own machine. The server now hands out only recordings and the report's own assets without the token, answers only to local addresses, and its sign-in cookie no longer works for pages served from other local ports.
+- **A static report could run a script hidden in a transcript.** A speaker name in a supplied .docx or .vtt could break out of the page's embedded data and run when the HTML file was opened. It is now escaped.
+- **After Re-analyse, the report could stay on the old analysis until the server was restarted.** A run that is in progress, or that stopped without finishing, also no longer hides the report you already have, and a run that crashed stops reading as in progress.
+- **Queuing a re-analysis showed the previous run's failure.** The Mac app now shows "Queued" or "Analysing…" in its place until the new run finishes.
+- **The projects column could hide itself when the window was resized and not come back.**
+
 **0.31.4** — _28 Sep 2026_
 
 A recording with no sound no longer comes back as an interview of "Thank you.", and the transcript page shows the whole interview again.

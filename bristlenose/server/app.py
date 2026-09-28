@@ -22,6 +22,7 @@ from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response
 
+from bristlenose.models import AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
 from bristlenose.server.db import create_session_factory, db_url_for_project, get_engine, init_db
 from bristlenose.server.middleware import AUTH_COOKIE_NAME, BearerTokenMiddleware
 from bristlenose.server.refusal import RefusalError, refusal_handler
@@ -433,18 +434,13 @@ async def _read_bundle_file(root: Path, path: str) -> Response:
     )
 
 
-_MEDIA_EXTENSIONS = frozenset({
-    # Video
-    ".mp4", ".mov", ".webm", ".avi", ".mkv", ".m4v",
-    # Audio
-    ".mp3", ".wav", ".m4a", ".ogg", ".flac", ".aac", ".wma",
-    # Subtitles
-    ".srt", ".vtt",
-    # Transcripts (docx ingestion)
-    ".docx", ".txt",
-    # Images (thumbnails)
-    ".jpg", ".jpeg", ".png", ".gif", ".webp",
-})
+# Recordings only. /media/ is unauthenticated and rooted at the project dir,
+# and its one producer (_file_to_media_uri, via the video map) points only at
+# video/audio source files. Transcripts, subtitles, .docx and images were
+# once allowed here too — with --redact-pii on, transcripts-raw/ holds every
+# original PII value in context. Derived from ingest's own sets so a format
+# ingest accepts is one the player can load.
+_MEDIA_EXTENSIONS = frozenset(AUDIO_EXTENSIONS | VIDEO_EXTENSIONS)
 
 
 # What the SPA loads from the output dir under /report/ — theme CSS, logos,

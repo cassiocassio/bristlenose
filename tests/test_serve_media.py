@@ -39,14 +39,49 @@ class TestAllowedExtensions:
     def test_wav(self, client: TestClient) -> None:
         assert client.get("/media/audio.wav").status_code == 200
 
-    def test_vtt(self, client: TestClient) -> None:
-        assert client.get("/media/subs.vtt").status_code == 200
-
-    def test_jpg(self, client: TestClient) -> None:
-        assert client.get("/media/thumb.jpg").status_code == 200
-
     def test_nested_subdir(self, client: TestClient) -> None:
         assert client.get("/media/subdir/nested.mp4").status_code == 200
+
+    def test_every_ingestible_recording_suffix(self, tmp_path: Path) -> None:
+        """What ingest accepts as a recording, the player can be pointed at."""
+        from bristlenose.models import AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
+
+        for ext in sorted(AUDIO_EXTENSIONS | VIDEO_EXTENSIONS):
+            (tmp_path / f"rec{ext}").write_bytes(b"fake")
+        c = AuthTestClient(create_app(project_dir=tmp_path, db_url="sqlite://"))
+        for ext in sorted(AUDIO_EXTENSIONS | VIDEO_EXTENSIONS):
+            assert c.get(f"/media/rec{ext}").status_code == 200, ext
+
+
+class TestOnlyRecordingsServed:
+    """``/media/`` is unauthenticated and rooted at the project dir, so it
+    serves recordings and nothing else. The only producer of ``/media/`` URLs
+    (``_file_to_media_uri``, via the video map) points at video/audio source
+    files; transcripts, subtitles, .docx and images are never requested there.
+    With ``--redact-pii`` on, ``transcripts-raw/`` holds every original PII
+    value in context.
+    """
+
+    @pytest.mark.parametrize(
+        "rel",
+        [
+            "bristlenose-output/transcripts-raw/s1.txt",
+            "bristlenose-output/transcripts-raw/s1.md",
+            "interview.docx",
+            "subs.vtt",
+            "subs.srt",
+            "thumb.jpg",
+            "thumb.png",
+        ],
+    )
+    def test_non_recording_refused(self, tmp_path: Path, rel: str) -> None:
+        target = tmp_path / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("Sarah Jones, 07700 900123")
+        c = TestClient(create_app(project_dir=tmp_path, db_url="sqlite://"))
+        resp = c.get(f"/media/{rel}")
+        assert resp.status_code == 403
+        assert "Sarah Jones" not in resp.text
 
 
 class TestBlockedExtensions:

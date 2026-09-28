@@ -56,10 +56,16 @@ def _seed_project(project_dir: Path) -> None:
     (assets / "escape.css").symlink_to(project_dir / "outside.txt")
     (assets / "leak.css").symlink_to(Path("..") / ".bristlenose" / "report.css")
     (output_dir / "report.css").write_text("/* output root, outside assets/ */")
-    # Inside /media/'s root (the project dir), allowed suffix, lands in the
-    # dot-directory — only the post-resolve dot check stops this one.
+    # Inside /media/'s root (the project dir), lands on the key — refused on
+    # suffix since /media/ became recordings-only.
     (project_dir / "notes.txt").symlink_to(
         Path("bristlenose-output") / ".bristlenose" / "pii_summary.txt"
+    )
+    # Allowed suffix at both ends, lands in the dot-directory — only the
+    # post-resolve dot check stops this one.
+    (internal / "cache.wav").write_bytes(b"dotdir audio")
+    (project_dir / "clip.wav").symlink_to(
+        Path("bristlenose-output") / ".bristlenose" / "cache.wav"
     )
     (output_dir / "bristlenose-x-report.html").write_text("<p>static report: Sarah Jones</p>")
 
@@ -176,6 +182,11 @@ class TestMediaPrivateFilesRefused:
         resp = client.get(url)
         assert resp.status_code in (403, 404)
         assert _PII_KEY not in resp.text
+
+    def test_symlink_into_dot_directory(self, client: TestClient) -> None:
+        resp = client.get("/media/clip.wav")
+        assert resp.status_code == 403
+        assert b"dotdir audio" not in resp.content
 
     def test_media_still_served(self, client: TestClient) -> None:
         (Path(client.app.state.project_dir) / "interview.mp4").write_bytes(b"fake-mp4")

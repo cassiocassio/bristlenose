@@ -1,13 +1,21 @@
 ---
 status: partial
-last-trued: 2026-09-20
-trued-against: HEAD@main on 2026-09-20
+last-trued: 2026-09-28
+trued-against: HEAD@main on 2026-09-28
 ---
 
 # The Hello World Study — An End-to-End Architecture Walkthrough
 
 ## Changelog
 
+- _2026-09-28_ — Part 8.1's `create_app` sketch no longer shows three
+  `StaticFiles` mounts. `/static` and `/media` have been hand-written routes
+  for months (sandbox-safe reads; path guard and extension allowlist), and the
+  `/report` mount was removed on 28 Sep. It was unreachable behind the
+  catch-all, and it would have served `.bristlenose/` without a guard if route
+  order had ever changed. Anchors: `server/app.py` `_contained_path`,
+  `_mount_media_route`; commit "serve no longer hands out the pii
+  re-identification key on /report/ without a token".
 - _2026-09-20_ — trued up: nine stale prose counts corrected against the code
   that owns them (JS modules 23→26 in two places, SQLite tables 24→29 in two,
   CSS files 42→67 in two and 65→67 in the Part 15 table, React components
@@ -1264,10 +1272,11 @@ def create_app(
     app.include_router(autocode_router, prefix="/api")
     app.include_router(data_router, prefix="/api")
 
-    # 4. Mount static files
-    app.mount("/static", StaticFiles(directory=frontend_dist))  # React bundle
-    app.mount("/media", StaticFiles(directory=project_dir))     # Video/audio files
-    app.mount("/report", StaticFiles(directory=output_dir))     # HTML report
+    # 4. File routes — hand-written, not StaticFiles mounts
+    _register_static_routes(app, _STATIC_DIR)  # React bundle (read_bytes: sandbox-safe)
+    _mount_media_route(app, project_dir)       # recordings only, via _contained_path
+    #    /report/<file> serves <output_dir>/assets/ only, via the same guard —
+    #    never .bristlenose/, never the static report or transcript pages
 
     # 5. Mount the SPA
     # (_transform_report_html() was deleted — see Part 8.4. The regex

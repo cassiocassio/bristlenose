@@ -33,11 +33,6 @@ from bristlenose.ui_kinds import CLI_GLYPH, MessageKind
 
 logger = logging.getLogger(__name__)
 
-# Tail size for ``bristlenose.log`` shown inside the <details> block. Kept
-# small so the page stays under a single TCP packet for cold loads.
-_LOG_TAIL_BYTES = 4096
-
-
 @dataclass(frozen=True)
 class StatusInfo:
     """What to render. ``None`` from :func:`detect_status` means: let the SPA render."""
@@ -45,7 +40,12 @@ class StatusInfo:
     kind: MessageKind
     short: str
     long: str | None
-    details: str | None  # cause + log tail (pre-formatted plain text)
+    # The structured cause (pre-formatted plain text) — never the log. This
+    # page is served unauthenticated on /report/*, and bristlenose.log carries
+    # absolute paths (the username), input filenames (often participant names)
+    # and provider exception text that can echo prompt fragments. The log tail
+    # was shown here until 28 Sep 2026.
+    details: str | None
     # Document identity for the desktop shell — the fixed vocabulary posted by
     # ``_IDENTITY_SCRIPT`` ("no-run" / "failed" / "cancelled"). Deliberately
     # required, no default: a new status-page variant must declare what it is,
@@ -74,21 +74,6 @@ def _read_last_terminus(events_file: Path) -> AnyEvent | None:
     return None
 
 
-def _tail_log(log_file: Path, max_bytes: int = _LOG_TAIL_BYTES) -> str:
-    """Return the last ``max_bytes`` of ``log_file`` (whole-line aligned)."""
-    if not log_file.exists():
-        return ""
-    try:
-        size = log_file.stat().st_size
-        with log_file.open("rb") as f:
-            if size > max_bytes:
-                f.seek(size - max_bytes)
-                f.readline()  # drop partial first line
-            return f.read().decode("utf-8", errors="replace")
-    except OSError:
-        return ""
-
-
 def _format_cause(cause: Cause | None) -> str:
     if cause is None:
         return ""
@@ -105,14 +90,8 @@ def _format_cause(cause: Cause | None) -> str:
     return "\n".join(parts)
 
 
-def _build_details(cause: Cause | None, log_tail: str) -> str | None:
-    sections: list[str] = []
-    cause_text = _format_cause(cause)
-    if cause_text:
-        sections.append(cause_text)
-    if log_tail.strip():
-        sections.append(t("server.statusPage.recentLog") + "\n" + log_tail.strip())
-    return "\n\n".join(sections) if sections else None
+def _build_details(cause: Cause | None) -> str | None:
+    return _format_cause(cause) or None
 
 
 def detect_status(
@@ -163,8 +142,7 @@ def detect_status(
     cause: Cause | None = None
     if isinstance(terminus, (RunFailedEvent, RunCancelledEvent)):
         cause = terminus.cause
-    log_tail = _tail_log(output_dir / ".bristlenose" / "bristlenose.log")
-    details = _build_details(cause, log_tail)
+    details = _build_details(cause)
 
     if outcome == OutcomeEnum.CANCELLED.value:
         return StatusInfo(

@@ -343,7 +343,7 @@ view isn't internationalised. `{{…}}` / `%d` / `%@` mark runtime-interpolated 
 | W02 | Body (mono) | `:141` | `$ bristlenose run interviews/` |
 | W03 | Headline | `:161` | Last run was cancelled. |
 | W03 | Body | `:162` | Re-run when ready. |
-| W03/W04 | Details disclosure | _dynamic_ | cause (category · stage · provider · message) + last 4 KB of `bristlenose.log` |
+| W03/W04 | Details disclosure | _dynamic_ | cause (category · stage · provider · message). The last 4 KB of `bristlenose.log` was shown here until 28 Sep 2026 — removed because the page is unauthenticated and the log carries paths, participant filenames and provider error text |
 | W04 | Headline | `:170` | Last run failed. |
 | W04 | Body | _dynamic_ `cause.message` | provider/stage-specific; absent if not captured |
 | W05 | — | `app.py` (~625) | "Build incomplete" page — exact body not pinned here; verify in `app.py` before quoting |

@@ -6,7 +6,6 @@
     "cancelledShort": "前回の実行はキャンセルされました。",
     "cancelledLong": "準備ができたら再実行してください。",
     "failedShort": "前回の実行は失敗しました。",
-    "recentLog": "最近のログ:",
     "showDetails": "詳細を表示",
     "sendFeedback": "フィードバックを送信",
     "help": "ヘルプ",

@@ -141,6 +141,29 @@ class TestDetectStatus:
         assert "cancelled" in info.short.lower()
         assert info.outcome == "cancelled"
 
+    @pytest.mark.parametrize("seed,outcome", [
+        (_seed_failed, "failed"), (_seed_cancelled, "cancelled"),
+    ])
+    def test_details_never_carry_the_log(self, tmp_path: Path, seed, outcome: str) -> None:
+        """The page is served unauthenticated on /report/, so it carries the
+        structured cause and never the log: the log holds absolute paths (the
+        username), input filenames (often participant names) and provider
+        exception text that can echo prompt fragments."""
+        out = tmp_path / "bristlenose-output"
+        (out / ".bristlenose").mkdir(parents=True)
+        (out / ".bristlenose" / "bristlenose.log").write_text(
+            "INFO ingest | /Users/sarahj/Research/Sarah Jones interview.mp4\n"
+            "ERROR s09 | provider said: 'Sarah told us she was diagnosed in May'\n",
+            encoding="utf-8",
+        )
+        seed(out)
+        last_run = {1: {"run_id": "X", "outcome": outcome, "completed_at": "t"}}
+        info = detect_status(out, last_run)
+        assert info is not None
+        assert "Sarah" not in (info.details or "")
+        assert "/Users/" not in (info.details or "")
+        assert "Recent log" not in (info.details or "")
+
     def test_failed_with_no_events_file_still_intercepts(self, tmp_path: Path) -> None:
         """``last_run`` says failed but events file missing: still intercept, details empty."""
         last_run = {1: {"run_id": "X", "outcome": "failed", "completed_at": "t"}}
@@ -557,6 +580,23 @@ class TestProdIntercept:
         # Document identity rides the intercept end to end.
         assert "'status-page'" in resp.text
         assert 'outcome: "failed"' in resp.text
+
+    def test_failed_run_page_omits_the_log_unauthenticated(
+        self, prod_app_factory, tmp_path: Path,
+    ) -> None:
+        out = tmp_path / "bristlenose-output"
+        (out / ".bristlenose").mkdir(parents=True)
+        (out / ".bristlenose" / "bristlenose.log").write_text(
+            "INFO ingest | /Users/sarahj/Research/Sarah Jones interview.mp4\n",
+            encoding="utf-8",
+        )
+        _seed_failed(out, message="Provider 503 mid-stage")
+        client, _ = prod_app_factory()
+        resp = TestClient(client.app, base_url="http://127.0.0.1").get("/report/")  # no token
+        assert resp.status_code == 200
+        assert "Provider 503 mid-stage" in resp.text  # the structured cause stays
+        assert "Sarah Jones" not in resp.text
+        assert "/Users/sarahj" not in resp.text
 
     def test_cancelled_run_intercepts(self, prod_app_factory, tmp_path: Path) -> None:
         out = tmp_path / "bristlenose-output"

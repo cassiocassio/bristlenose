@@ -154,11 +154,12 @@ struct SPAHarnessView: View {
             detail
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
                     probe.detailWidth = width
-                    if let sidebar = SidebarAutoCollapse.restingColumnWidth(
+                    let resting = SidebarAutoCollapse.restingColumnWidth(
                         splitWidth: probe.splitWidth, detailWidth: width,
-                        sidebarVisible: SidebarToggle.isVisible(probe.visibility)) {
-                        probe.lastSidebarWidth = sidebar
-                    }
+                        sidebarVisible: SidebarToggle.isVisible(probe.visibility))
+                    if let resting { probe.lastSidebarWidth = resting }
+                    probe.autoCollapsed = SidebarAutoCollapse.autoCollapsed(
+                        afterReading: resting, was: probe.autoCollapsed)
                     probe.note("detail geometry \(Int(width))")
                 }
         }
@@ -168,13 +169,14 @@ struct SPAHarnessView: View {
             probe.apply()
         }
         .onChange(of: probe.visibility) { _, now in
-            if SidebarToggle.isVisible(now) { probe.autoCollapsed = false }
-            if let sidebar = SidebarAutoCollapse.restingColumnWidth(
+            let resting = SidebarAutoCollapse.restingColumnWidth(
                 splitWidth: probe.splitWidth, detailWidth: probe.detailWidth,
-                sidebarVisible: SidebarToggle.isVisible(now)) {
-                probe.lastSidebarWidth = sidebar
-            }
+                sidebarVisible: SidebarToggle.isVisible(now))
+            if let resting { probe.lastSidebarWidth = resting }
+            probe.autoCollapsed = SidebarAutoCollapse.autoCollapsed(
+                afterReading: resting, was: probe.autoCollapsed)
             probe.note("visibility → \(SidebarFitProbe.name(now))")
+            if !SidebarToggle.isVisible(now) { probe.apply() }
         }
         .frame(minWidth: 700, minHeight: 500)   // BristlenoseApp.swift:149
     }

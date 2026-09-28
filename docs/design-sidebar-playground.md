@@ -174,10 +174,18 @@ declared 200–300 range (180 until 25 Sep 2026), plus an 8-pt `platformSlack`
 above the maximum (macOS 15's 1-pt divider; macOS 26 lays declared widths out
 8 pt wide, so its maximum reads 308) — a range which only exists because the width modifier now
 sits on the sidebar column; on the split view it was inert (AppKit reported
-min 140, no max). Whether the column is ours is set where the logic writes
-the visibility, not cleared by `onChange`: a collapse and an expand inside one
-update never fire it, and a showing column stayed "ours", so a column the
-researcher hid was given back. The toolbar button animates before the binding
+min 140, no max). Whether the column is ours is taken where the logic writes
+a collapse, and given up only when the column is measured at rest
+(`autoCollapsed(afterReading:)`) — not by the expand write, and not by
+`onChange` seeing the binding read visible. Both of those were tried: a
+collapse and an expand inside one update never fire `onChange`, so a showing
+column stayed "ours" and a column the researcher hid was given back; and
+NSSplitViewController reports each animation's end state to the binding, so a
+second decision inside the first's animation gets those reports one write late
+— a stale `.all` released the column, a stale `.detailOnly` then hid it, and
+it was stranded (28 Sep 2026, `SidebarFitHarnessTests.s23`). A hide arriving
+on a column still ours therefore re-runs the decision, which can only give
+back what the logic took. The toolbar button animates before the binding
 flips, so the width is also re-measured the moment the column becomes visible
 (otherwise a toolbar show kept the hide's frames: 220 → 182). One residual is
 kept on purpose: the hide's in-range frames are still recorded, but only while

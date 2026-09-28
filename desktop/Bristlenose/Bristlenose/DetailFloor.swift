@@ -140,16 +140,33 @@ enum SidebarAutoCollapse {
         return width
     }
 
-    /// Whether the column is ours after acting on `action`. Set here, at the
-    /// write, rather than cleared by `onChange(of: columnVisibility)`: a
-    /// collapse and an expand inside one SwiftUI update net to no change, the
-    /// onChange never fires, and a showing column stayed marked as ours — so a
-    /// column the researcher then hid was given back on the next resize.
+    /// Whether the column is ours after acting on `action`. A collapse makes
+    /// it ours, at the write. An expand does NOT give it up: only seeing the
+    /// column at rest does (`autoCollapsed(afterReading:was:)`).
+    ///
+    /// Why not at the expand, and why not when the binding reads visible: the
+    /// binding is not only our writes. NSSplitViewController reports each
+    /// animation's end state back to it, and when a second decision lands
+    /// inside the first's animation those reports arrive one write late — a
+    /// `.all` after a collapse, then a `.detailOnly` after the window has
+    /// widened (CI run 36388215413; `SidebarFitHarnessTests.s23`). Released by
+    /// the binding, the stale `.all` gave the column up and the stale
+    /// `.detailOnly` then hid it: hidden, not ours, never given back. The same
+    /// shape is the expand overtaken by the collapse it followed (s22). A
+    /// column the researcher has seen has been at rest; one no one has seen is
+    /// still ours.
     static func autoCollapsed(after action: Action, was current: Bool) -> Bool {
-        switch action {
-        case .collapse: return true
-        case .expand: return false
-        case .none: return current
-        }
+        action == .collapse ? true : current
+    }
+
+    /// Whether the column is ours after one geometry reading. A
+    /// `restingColumnWidth` answer means the column is showing at a width it
+    /// rests at, so whoever showed it — us or the researcher — it is theirs to
+    /// see now and no longer ours to give back. `nil` (hidden, mid-animation,
+    /// mounting) says nothing. This replaces clearing on the binding reading
+    /// visible, which a late animation report could fake, and also covers a
+    /// collapse and an expand inside one update, which fires no `onChange`.
+    static func autoCollapsed(afterReading restingWidth: CGFloat?, was current: Bool) -> Bool {
+        restingWidth == nil ? current : false
     }
 }

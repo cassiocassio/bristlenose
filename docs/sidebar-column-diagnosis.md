@@ -14,6 +14,11 @@ area: desktop — projects column (NavigationSplitView) + report web view
 
 ## Changelog
 
+- _2026-09-28_ — late animation reports stranded the column; ownership now
+  follows what was seen at rest (Status at HEAD, fourth bullet). Anchors:
+  `SidebarAutoCollapse.autoCollapsed(afterReading:was:)`, the
+  `onChange(of: columnVisibility)` in `ContentView.splitViewCore`,
+  `SidebarFitHarnessTests.s23`.
 - _2026-09-25_ — trued up: added a status-at-HEAD block; marked the original
   brief, "For the confirming sessions" and "The version risk is real and
   unmeasured" as superseded in place; fixed a table row whose evidence cell
@@ -41,6 +46,17 @@ area: desktop — projects column (NavigationSplitView) + report web view
   8 pt wide.
 - **Measured on three OSes.** `SidebarFitHarnessTests` passes 24 of 24 on
   macOS 15.7.3, 26.6.2 and 27 (§ macOS 15, measured).
+- **Late animation reports (28 Sep 2026).** A second decision landing inside
+  the first's animation makes NSSplitViewController report each end state one
+  write late: a `.all` after the collapse, a `.detailOnly` after the window
+  widened. The first used to release ownership and the second hid the column —
+  hidden, not ours, never given back (s11 and s22c on the CI runners every
+  run; `SidebarFitHarnessTests.s23` 8 of 8 locally before the fix). Ownership
+  is now released only by a resting reading of the column
+  (`autoCollapsed(afterReading:was:)`), not by the binding reading visible or
+  by the expand write, and a hide arriving on a column still ours re-runs the
+  decision. The edge accepted: a researcher who hides a column within the
+  moment it is animating back open, before it has rested, has it given back.
 - **Open:** S5–S7, not reproduced by anyone. If seen, note the step that
   preceded it with the trace on (§ Verdict, "What no run included").
 

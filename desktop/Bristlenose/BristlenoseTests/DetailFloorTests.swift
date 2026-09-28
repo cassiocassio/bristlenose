@@ -101,11 +101,22 @@ struct SidebarAutoCollapseTests {
 
     // MARK: Whose column it is
 
-    @Test func ownershipIsSetAtTheWrite() {
+    @Test func ownershipIsTakenAtTheCollapse() {
         #expect(A.autoCollapsed(after: .collapse, was: false))
-        #expect(!A.autoCollapsed(after: .expand, was: true))
         #expect(A.autoCollapsed(after: .none, was: true))
         #expect(!A.autoCollapsed(after: .none, was: false))
+    }
+
+    /// The expand keeps it: a late collapse report can still land after it
+    /// (s22, s23), and a column that is not ours then is stranded.
+    @Test func ownershipSurvivesTheExpandWrite() {
+        #expect(A.autoCollapsed(after: .expand, was: true))
+    }
+
+    @Test func ownershipIsGivenUpOnlyBySeeingTheColumnAtRest() {
+        #expect(!A.autoCollapsed(afterReading: 228, was: true))
+        #expect(A.autoCollapsed(afterReading: nil, was: true))
+        #expect(!A.autoCollapsed(afterReading: nil, was: false))
     }
 
     @Test func ignoresASplitNarrowerThanAnyWindow() {

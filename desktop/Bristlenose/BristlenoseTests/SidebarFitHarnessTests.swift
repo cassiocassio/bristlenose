@@ -9,8 +9,9 @@ import WebKit
 // ContentView.splitViewCore). NOT a fix, and it changes no production code.
 //
 // It hosts a real NavigationSplitView in a real NSWindow, wired the way
-// ContentView wires it (two onGeometryChange readers, the onChange that clears
-// `autoCollapsed` and re-measures, `SidebarAutoCollapse.decide`, the
+// ContentView wires it (two onGeometryChange readers that re-measure and give
+// up ownership on a resting reading, the onChange that does the same and
+// decides again on a hide, `SidebarAutoCollapse.decide`, the
 // column-width modifier on the sidebar column), then resizes the window
 // and toggles the sidebar through AppKit's own `toggleSidebar:`. After each step
 // it records both what SwiftUI believes (`visibility`) and what AppKit shows
@@ -18,7 +19,8 @@ import WebKit
 //
 // The two rules that decide — what width to remember, and whether the column
 // is ours — are ContentView's own (`SidebarAutoCollapse.restingColumnWidth`,
-// `.autoCollapsed(after:was:)`), called here rather than copied. The wiring
+// `.autoCollapsed(after:was:)`, `.autoCollapsed(afterReading:was:)`), called
+// here rather than copied. The wiring
 // around them (two readers, the onChange, the animated write, the column-width
 // modifier on the sidebar column) mirrors `ContentView.splitViewCore`; if that
 // changes, this harness must change with it or it is testing a ghost.
@@ -158,14 +160,17 @@ struct SidebarFitHarnessView: View {
             }
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
                     probe.detailWidth = width
-                    if let sidebar = SidebarAutoCollapse.restingColumnWidth(
+                    let resting = SidebarAutoCollapse.restingColumnWidth(
                         splitWidth: probe.splitWidth,
                         detailWidth: width,
                         sidebarVisible: SidebarToggle.isVisible(probe.visibility)
-                    ) {
-                        probe.lastSidebarWidth = sidebar
-                        probe.lastSidebarWidthHistory.append(sidebar)
+                    )
+                    if let resting {
+                        probe.lastSidebarWidth = resting
+                        probe.lastSidebarWidthHistory.append(resting)
                     }
+                    probe.autoCollapsed = SidebarAutoCollapse.autoCollapsed(
+                        afterReading: resting, was: probe.autoCollapsed)
                     probe.note("detail geometry \(Int(width))")
                 }
         }
@@ -175,16 +180,19 @@ struct SidebarFitHarnessView: View {
             probe.apply()
         }
         .onChange(of: probe.visibility) { _, now in
-            if SidebarToggle.isVisible(now) { probe.autoCollapsed = false }
-            if let sidebar = SidebarAutoCollapse.restingColumnWidth(
+            let resting = SidebarAutoCollapse.restingColumnWidth(
                 splitWidth: probe.splitWidth,
                 detailWidth: probe.detailWidth,
                 sidebarVisible: SidebarToggle.isVisible(now)
-            ) {
-                probe.lastSidebarWidth = sidebar
-                probe.lastSidebarWidthHistory.append(sidebar)
+            )
+            if let resting {
+                probe.lastSidebarWidth = resting
+                probe.lastSidebarWidthHistory.append(resting)
             }
+            probe.autoCollapsed = SidebarAutoCollapse.autoCollapsed(
+                afterReading: resting, was: probe.autoCollapsed)
             probe.note("visibility → \(SidebarFitProbe.name(now))")
+            if !SidebarToggle.isVisible(now) { probe.apply() }
         }
         switch placement {
         case .onSplitView:
@@ -776,6 +784,39 @@ struct SidebarFitRig {
         #expect(rig.appKitCollapsed == false)
         #expect(rig.inAgreement)
         expectNotStranded(rig, "s22d")
+    }
+
+    /// The narrow-at-launch flicker, looped until the race shows. The column
+    /// collapses at launch (opened below the threshold), then the window
+    /// crosses the threshold and back faster than the split view animates.
+    /// NSSplitViewController reports each animation's end state back to the
+    /// binding, and when a second decision lands inside the first's animation
+    /// those reports arrive one write late (CI trace, run 36388215413): a
+    /// `visibility → all` after the collapse at 1000, then a `visibility →
+    /// detailOnly` after the window reached 1700, with no decision behind
+    /// either. Before the fix the first cleared the ownership flag and the
+    /// second hid the column — stranded, hidden and not ours, at 1700. A single
+    /// pass failed about 1 run in 5 on a local Mac and every run on the
+    /// runners; looped, it failed 8 of 8 iterations locally (28 Sep 2026), so
+    /// the scenario repeats and asserts every iteration.
+    @Test func s23_narrowLaunchFlickerNeverStrandsTheColumn() async {
+        var outcomes: [String] = []
+        for i in 0..<8 {
+            let rig = await SidebarFitRig(width: 1000)
+            #expect(rig.appKitCollapsed == true, "iteration \(i): precondition — collapsed at launch at 1000")
+            for w: CGFloat in [1000, 1700, 1000] { await rig.resize(to: w, settleFor: 0.05) }
+            await rig.resize(to: 1700, settleFor: 1.2)
+            let stranded = rig.appKitCollapsed == true && !rig.probe.autoCollapsed
+            outcomes.append("\(i): collapsed=\(rig.appKitCollapsed.map(String.init) ?? "nil") auto=\(rig.probe.autoCollapsed) stranded=\(stranded)")
+            if i == 0 || stranded || rig.appKitCollapsed != false || !rig.inAgreement {
+                rig.dump("s23 iteration \(i)")
+            }
+            #expect(rig.appKitCollapsed == false, "iteration \(i): ends at 1700 with the column hidden")
+            #expect(rig.inAgreement, "iteration \(i): SwiftUI and AppKit disagree")
+            expectNotStranded(rig, "s23 iteration \(i)")
+            rig.close()
+        }
+        Attachment.record(outcomes.joined(separator: "\n"), named: "s23-outcomes.txt")
     }
 
     /// Restore-over-ideal, and the migration that fixes the clamped case.

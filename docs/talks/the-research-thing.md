@@ -15,11 +15,15 @@ scripts are written to be said at pace.
 
 > **The brief, read 28 Sep, asks for two things this sheet was not built for**
 > — 15–20 minutes rather than twelve, and *practical AI workflows rather than
-> specific tools*, real stories, failures included. The submission was written
-> to that brief; the sheet has not been re-timed to it. What changes and in
-> what order is at the end of
-> [`the-research-thing-submission.md`](the-research-thing-submission.md).
-> Re-time after shortlisting.
+> specific tools*, real stories, failures included. The submission
+> ([`the-research-thing-submission.md`](the-research-thing-submission.md)) was
+> written to that brief; the sheet has not been re-timed to it, and that is a
+> separate task for after shortlisting. When it comes: the map slide, *What's
+> in the report*, comes back first; the two failure stories the description
+> promises — the wrong-regime calibration (`docs/design-signal-card.md` §5a)
+> and the silent-audio "Thank you." (0.31.4) — need a home, most naturally
+> under slides 6 and 2; and the scripts shift from *here is what it does* to
+> *here is the rule, and what it looks like when it runs*.
 
 ---
 

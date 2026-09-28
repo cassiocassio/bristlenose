@@ -1,4 +1,12 @@
+---
+status: current
+last-trued: 2026-09-28
+trued-against: HEAD@main on 2026-09-28 (after 0.31.4)
+---
+
 # Word-Level Transcript Highlighting
+
+> **Trued 28 Sep 2026 against 0.31.4.** The pipeline diagram put the merge *before* the intermediate file, which is the misreading that let word timings be joined to paragraphs by position for seven months (`a9d6fb47`); redrawn. Added the glow window (the last paragraph's end, `6dd8a1e4`), how the player's messages reach the page, and what renders when words are absent.
 
 ## Overview
 
@@ -39,19 +47,22 @@ A typical word entry:
               │
               ▼
 ┌─────────────────────────────┐
-│  Segment merging            │  ← word lists concatenated
-│  (merge_transcript.py)      │
+│  Intermediate JSON          │  ← persisted to disk BEFORE the
+│  session_segments.json      │     merge: raw Whisper segments,
+│  (pipeline.py)              │     segment_index = -1
 └─────────────┬───────────────┘
               │
               ▼
 ┌─────────────────────────────┐
-│  Intermediate JSON          │
-│  session_segments.json      │  ← persisted to disk
+│  Segment merging            │  ← same-speaker runs merged;
+│  (s06_merge_transcript.py)  │     written to transcripts-raw/
+│                             │     *.txt WITHOUT word timings
 └─────────────┬───────────────┘
               │
               ▼
 ┌─────────────────────────────┐
-│  Serve-mode importer        │
+│  Serve-mode importer        │  ← rows from the .txt (merged),
+│                             │     words from the JSON (raw)
 │  _enrich_words_from_        │  ← reads JSON, matches by
 │    intermediate()           │     time, verifies by text
 │                             │
@@ -93,10 +104,13 @@ A typical word entry:
 2. The page fetches transcript data from the API — each segment includes an array of words with timing
 3. Each word is rendered as a `<span class="transcript-word" data-start="13.54" data-end="14.16">`
 4. User clicks a timecode → popout video player opens
-5. The player sends `bristlenose-timeupdate` messages ~4 times per second with the current playback position
-6. `PlayerContext` receives each update, finds the active segment (via the glow index), then scans its word spans to find which word matches the current timestamp
+5. The player sends `bristlenose-timeupdate` messages ~4 times per second with the current playback position — on every `timeupdate`, so scrubbing drives it too. It posts to `window.opener` (`player.html`); a `BroadcastChannel` is opened only when there is no opener. In the Mac app the popout is created by `WKUIDelegate.createWebViewWith` and **does** get a live opener (measured 28 Sep 2026 with a harness mirroring `WebView.swift`), so the channel is a dormant fallback, not the live path
+6. `PlayerContext` receives each update, finds the active segment (via the glow index), then scans its word spans to find which word matches the current timestamp. Word highlighting runs **only inside the glowing paragraph**, so a word outside that paragraph's `[start, end)` window never lights
 7. The matching word gets a `.bn-word-active` CSS class (subtle highlight background)
 8. As playback continues, the highlight moves word by word through the paragraph
+9. The same update scrolls a newly active paragraph into view and fills its left-border progress bar (`--bn-segment-progress`)
+
+**The glow window.** A paragraph's `start` is its `.txt` timecode and its `end` is the next paragraph's start. The **last** paragraph has no successor: since `6dd8a1e4` its end is the transcript's `# Duration:` header, which s06 writes from that paragraph's own end; the importer falls back to `start + 10 s` only when the header is absent or no later than the start. Before that fix the flat `+10 s` put the glow out — and with it the word highlight — 10 s into any final answer that ran longer.
 
 ### Graceful degradation
 
@@ -110,7 +124,7 @@ Not all sessions have word-level data:
 | SRT subtitle import | ✗ No | Segment-level glow only |
 | DOCX import | ✗ No | Segment-level glow only |
 
-When `words` is `null`, the transcript renders as plain text and the segment-level glow (background highlight on the whole paragraph) still works.
+When `words` is `null`, the paragraph renders its `html_text` (with the `<mark>` quote highlights) or, failing that, plain `text`, and the segment-level glow (background highlight on the whole paragraph) still works. When words *are* kept, the Whisper **word** text is what appears on screen — it can differ from the `.txt` text by the few tokens the ≥ 0.9 check tolerates, and it omits the `(Speaker A)` label the `.txt` carries.
 
 Two more cases carry no word timings, by design:
 
@@ -131,7 +145,7 @@ Word data is stored in the SQLite `transcript_segments.words_json` column as com
 [{"t":"It","s":12.92,"e":13.54},{"t":"works","s":13.54,"e":14.16}]
 ```
 
-Short keys (`t`=text, `s`=start, `e`=end) and no whitespace keep the payload small. A 30-minute interview with ~5,000 words adds ~125KB to the database — negligible for a local-first tool.
+Short keys (`t`=text, `s`=start, `e`=end) and no whitespace keep the payload small. A 30-minute interview with ~5,000 words adds ~125KB to the database — negligible.
 
 Confidence scores are captured by Whisper but not stored in the compact JSON (not needed for highlighting). They could be added later for visual confidence indicators (e.g. dimming low-confidence words).
 
@@ -142,7 +156,7 @@ Confidence scores are captured by Whisper but not stored in the compact JSON (no
 | Pipeline | `bristlenose/stages/s05_transcribe.py` | Whisper word extraction |
 | Pipeline | `bristlenose/models.py` | `Word` Pydantic model |
 | Pipeline | `bristlenose/stages/s06_merge_transcript.py` | Preserves words during merge |
-| Pipeline | `bristlenose/stages/s12_render_output.py` | Writes to `session_segments.json` |
+| Pipeline | `bristlenose/pipeline.py` | Writes `session_segments.json` (inline, after transcription, before s06) |
 | Serve | `bristlenose/server/models.py` | `TranscriptSegment.words_json` ORM column |
 | Serve | `bristlenose/server/db.py` | Schema migration for existing DBs |
 | Serve | `bristlenose/server/importer.py` | `_enrich_words_from_intermediate()` |

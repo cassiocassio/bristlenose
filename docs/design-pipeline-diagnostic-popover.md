@@ -79,7 +79,7 @@ trued-against: HEAD@main (7916e109) on 2026-09-28 (NO_SPEECH definition only; th
 
 ## Changelog
 
-- _2026-09-28_ — **`.unreachable(.unreadable)` offers Locate… in Show Log's place.** The folder exists but the sandbox denies every read — a lost folder permission — and the log lives in that folder, so Show Log failed with a Finder permission alert. Locate… is the only remedy (a fresh security-scoped bookmark), and it was offered only to `.cantFind`, because availability asks whether the path *exists* and the sandbox answers that without a grant. Same verb added to both sidebars' context menus and the menu bar; when the folder is still at its path, Locate… opens the panel on it rather than trying Spotlight, whose URL carries no grant. Gate: `PipelineState.needsFolderAccess`. (`a54c4dec`)
+- _2026-09-28_ — **`.unreachable(.unreadable)` offers Locate… in Show Log's place.** The folder exists but the sandbox denies every read — a lost folder permission — and the log lives in that folder, so Show Log failed with a Finder permission alert. Locate… is the only remedy (a fresh security-scoped bookmark), and it was offered only to `.cantFind`, because availability asks whether the path *exists* and the sandbox answers that without a grant. Same verb added to both sidebars' context menus and the menu bar; when the folder is still at its path, Locate… opens the panel on it rather than trying Spotlight, whose URL carries no grant. A Locate re-scans the project so the row clears without a relaunch, and a failed bookmark is now logged (`project-index`) rather than stored as nil in silence. Gate: `PipelineState.needsFolderAccess`; pinned by `FolderAccessStateTests.swift`. (`a54c4dec`)
 - _2026-08-22_ — **The reason column started speaking the reader's language.** The pane was half-translated and had been since it shipped: header, count line, bucket labels and Show Log all resolved through `i18n.t`, while the sentence that actually says *why a participant is missing from the findings* rendered English in all 21 non-en locales. Not an oversight — there was nothing to translate **from**. All eight refusals share one `category`, and the discriminator lived only in the English prose of `Cause.message`, so the pane had no key to look up. `refusals.py` had promised the opposite in a comment since Aug 2026 — *"the user-facing surfaces localise from the reason, not from this text"* — describing a field that did not exist. It does now: `Cause.reason` carries `UnusableReason` on the wire (Python `events.py`, Swift `PipelineSummary.swift`, contract fixture **v7** with `run_completed_partial_refusals`, the first scenario to pin a refusal at all — the ingest bucket had shipped uncovered by that contract). `message` stays English on purpose: the events log is a forensic record, so a run analysed while the UI was German must not read as German forever, and `formatDiagnosticPlaintext` keeps the raw English so a pasted bug report reads the same whatever the reporter's language. **Three blind spots made this invisible.** `check-locales.py` diffs each locale against English and so cannot report a key English lacks; `test_pipeline_diagnostic_locale_keys.py` checks hardcoded allow-lists; and `test_swift_contract_parity.py` compares only the *intersection* of fields, so adding `reason` to Python alone would have passed every gate in the repo. The new locale test parametrises over `UnusableReason` itself, which closes the first two for this family — a ninth reason cannot ship without 21 translations. Anchors: `events.py::Cause.reason`, `ProjectDiagnosticPopover.reasonKey` / `.localisedReason`, `IngestOutcomeTests::ReasonLocalisationTests` (21 locales × 8 reasons, plus zh-Hant-HK inheriting rather than dropping to English). Does **not** touch the adjacent open defect in the banner above — a refusal-only run still collapses to `.unknown` and the pill still reads "Run had failures". Find it: `git log -S'localisedReason' --`.
 - _2026-08-22_ — **The popover envelope stopped being fixed, and this doc stopped saying it was.** Height now follows content, 360 stays nailed, 320 becomes a ceiling with a scroller only past it. Two sections here asserted the opposite and both are rewritten: the cross-surface conventions list (which also cited `PipelineActivityItem.swift` ≈ 59–63, a file deleted with the pill) and the Resizeability paragraph under Future direction — which had *already predicted* this outcome, listing "a capped height with internal scroll" as the mitigation, so the rewrite reads as that option being taken rather than a reversal. The livelock provenance is preserved in both, as history: the fixed frame was mitigating an NSPopover resize-animation livelock in the live pill's `ProgressView`, and both the pill and the `ProgressView` are gone, leaving a mitigation with nothing to defend. Reasoning, the behaviour ladder, six failure modes and the mockup: [`design-pipeline-popover-sizing.md`](design-pipeline-popover-sizing.md). Commit `5a380eab`.
 - _2026-08-20_ — **What the pane actually rendered, once someone looked at it.** The 19 Aug entry below recorded three decisions; a screenshot of the first real run showed none of them had reached the rendering. (1) The name column read `sessionId` alone, so every *ingest* refusal — the case `source_file` was added for, because a failure before a session exists never gets a session id — rendered **anonymous**. Three rows saying "Not a format Bristlenose reads." and naming nothing is a count with extra steps, which is the outcome this surface exists to end. Same in `formatDiagnosticPlaintext`, where a pasted bug report showed `—`. (2) Every row was hardcoded `MessageKind.error`; refusals are **warnings**, and error red beside 42 good sessions says the run died. (3) `"\(n) failures"` was a bare Swift literal — untranslated in an otherwise localised pane, and the wrong noun. Now `notAnalysedCount` / `failureCount`, chosen by `bucketCountKey` (a pure function, so the *decision* is testable — the first version of that test asserted on the rendered string and silently checked the key name, because an unconfigured `I18n` returns raw keys). A sixth reason landed the same day: `NO_SPEECH`, for a recording that decoded and transcribed fine with nobody talking — distinct from `NO_AUDIO`, since the remedies differ. Commits `04bf7a23`, `6497711a`. _(28 Sep 2026: on the default Mac model this was unreachable for silence — Whisper returned "Thank you." every 30 s — until `45d025c8`, which keeps a file with no signal away from Whisper. So in practice `NO_SPEECH` means *no signal*, not *nobody talking*: room tone with nobody talking can still come back as invented lines.)_
@@ -680,8 +680,10 @@ deferred to a future design pass.
 ### Popover header + actions
 
 **One popover surface for every failure-shaped state.** `.failed`,
-`.completedPartial`, and `.failedWithDiagnostic` all route through the
-same SwiftUI code path (`PipelineActivityItem.unifiedPopoverBody`).
+`.completedPartial`, `.failedWithDiagnostic` and `.unreachable(reason)`
+all route through the same SwiftUI view, `ProjectDiagnosticPopover.swift`
+(`header` + `diagnosticBody`; the `PipelineActivityItem.unifiedPopoverBody`
+it grew out of is deleted).
 Chrome is identical; only the body content branches. Was two surfaces
 through May 2026 — the legacy `.failed` popover was undesigned scaffolding
 that grew out of spec; `unify-failure-popover` (May 2026) deleted it.
@@ -699,22 +701,39 @@ Header (always present):
   `NSWorkspace.shared.open(logURL)` — opens the per-project CLI log in
   the user's default `.log` handler (Console.app for most). LaunchServices
   brokers the file vend across the process boundary so the call works
-  under App Sandbox without extra entitlements. Verb-first label matches
+  under App Sandbox without extra entitlements — **provided the app holds
+  the project folder's grant**. The existence check is not evidence of
+  that: the sandbox answers `fileExists` without a grant, so on a project
+  whose permission was lost Show Log appeared and then raised a Finder
+  "does not have permission to open" alert. Verb-first label matches
   Apple's "Show in Finder" / "Show Package Contents" idiom for
   reveal-and-look gestures.
+- **`Locate…` in Show Log's slot, for `.unreachable(.unreadable)` only**
+  (`PipelineState.needsFolderAccess`, since `a54c4dec`). Same bordered small
+  button, label `desktop.chrome.locate`. The folder exists and every read is
+  denied — a lost folder permission — so the log inside it cannot open, and
+  Locate… (pick the folder; a fresh security-scoped bookmark) is the only
+  remedy. It opens the panel on the folder itself when the folder is still at
+  its path. Other `.unreachable` reasons keep Show Log.
 - Top-right: a single `doc.on.doc` icon button (`buttonStyle(.bordered)` + `.controlSize(.small)` — symmetric chrome with the Show Log button, asymmetric content; Apple's Finder toolbar idiom for bordered icon-only buttons next to bordered text buttons)
   with `help("Copy details")` tooltip. Click → write plaintext to
   `NSPasteboard`. No "Copied" tick flip (silent copy is the native
   Finder / Safari Copy URL pattern). Dispatches on state — uses
   `formatDiagnosticPlaintext` for summary-bearing cases,
-  `formatDiagnosticPlaintextDegraded` for `.failed`.
+  `formatDiagnosticPlaintextDegraded` for `.failed`,
+  `formatUnreachablePlaintext` for `.unreachable` (headline and
+  explanation resolved by the caller).
 
 **No bottom action row anywhere.** No Retry, no Change provider, no
 Re-analyse…, no Email, no Show technical details disclosure.
 Retry / Re-analyse live in the project's natural run affordance
 (sidebar context menu, toolbar Run button); Change provider lives in
 Settings (Cmd+,). The popover stays a calm, diagnostic-only surface
-across all three failure states.
+across the failure states. **The one remedy verb is deliberate and lives
+in the header, not a bottom row:** `.unreachable(.unreadable)` has no
+natural run affordance to defer to — nothing else in the app can grant
+the folder back — so its Locate… is not a breach of this rule and must
+not be stripped as one.
 
 Body content branches on the state:
 

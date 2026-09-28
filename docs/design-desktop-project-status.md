@@ -187,7 +187,7 @@ no target at all.
 | | glyph | door |
 |---|---|---|
 | `failed` · `failedDiagnostic` · `completedPartial` | ✗ / ⚠ | diagnostics — a list of per-session failures |
-| `unreachable` | ⚠ / ✗ by reason | diagnostics — the reason and the folder path, which appear nowhere else |
+| `unreachable` | ⚠ / ✗ by reason | diagnostics — the reason and the folder path, which appear nowhere else. For `.unreadable` (a lost folder permission) the popover also carries **Locate…**, the only act that grants access again (since `a54c4dec`, 28 Sep 2026) |
 | `cantFind` | ⚠, reason-specific symbol | **none** — Locate is a project verb; right-click owns it |
 | `deltaOnly(.missing)` | ⚠ | files — which recordings have vanished |
 | `deltaOnly(.unanalysed)` | ⓘ | files — which files are waiting, plus **Analyse** |

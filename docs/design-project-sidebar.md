@@ -287,7 +287,7 @@ When a project is selected (shipped):
 Project
 ┌──────────────────────────────┐
 │ Show in Finder         ⇧⌘R   │
-│ Locate                        │   (enabled only when project unreachable)
+│ Locate                        │   (enabled when .cantFind, or the folder can't be read)
 │ Rename                        │
 │ Move to                ▶     │   (when folders exist)
 ├──────────────────────────────┤

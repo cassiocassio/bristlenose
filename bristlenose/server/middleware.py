@@ -38,10 +38,11 @@ _UNAUTHORIZED_BODY = json.dumps({"detail": "Unauthorized"}).encode()
 
 # Cookie name carrying the same token as the Bearer header.  Set on the SPA
 # HTML response so plain browser navigations (e.g. the export `<a download>`
-# anchor click) can authenticate without JS adding the header.  CORS
-# middleware blocks all cross-origin requests, so CSRF is not in scope — and
-# LoopbackHostMiddleware refuses a DNS-rebound page, which CORS cannot see
-# because to the browser it is same-origin.
+# anchor click) can authenticate without JS adding the header.  CORS alone
+# does not make CSRF out of scope: a page on another loopback port is
+# same-site, so the cookie rides along — ``_is_own_navigation`` limits the
+# cookie to the SPA's own GETs. LoopbackHostMiddleware refuses a DNS-rebound
+# page, which CORS cannot see because to the browser it is same-origin.
 AUTH_COOKIE_NAME = "bristlenose_auth"
 
 # Hostnames serve answers to.  serve binds 127.0.0.1 only, and every
@@ -96,6 +97,27 @@ class LoopbackHostMiddleware:
                 )
             return
         await self.app(scope, receive, send)
+
+
+def _is_own_navigation(request: Request) -> bool:
+    """Whether a cookie-authenticated request is the SPA's own navigation.
+
+    The cookie exists for the export ``<a download>`` clicks, which are GETs.
+    SameSite ignores the port, so a page on another loopback port is
+    *same-site* and the cookie rides along on its form POSTs and ``no-cors``
+    fetches — measured 28 Sep 2026 in Chromium and WebKit, both sending
+    ``Sec-Fetch-Site: same-site``. CORS hides the answer from that page but
+    does not stop the request reaching a route, and the bodiless POSTs (start
+    an AutoCode run, accept/deny proposals, Miro disconnect) act on arrival.
+
+    So: safe methods only, and not when the browser says another origin sent
+    it. An absent ``Sec-Fetch-Site`` passes — WebKit sends none on the
+    download navigation itself (measured the same day), and a non-browser
+    caller holding the cookie could equally read the token from ``/report/``.
+    """
+    if request.method not in ("GET", "HEAD"):
+        return False
+    return request.headers.get("sec-fetch-site", "same-origin") in ("same-origin", "none")
 
 
 class BearerTokenMiddleware(BaseHTTPMiddleware):
@@ -158,7 +180,11 @@ class BearerTokenMiddleware(BaseHTTPMiddleware):
         # clicks) that don't carry the Authorization header. /mcp is
         # bearer-only: MCP clients always send the header, and keeping the
         # cookie out closes the same-host-different-port ride-along.
-        if not is_mcp and request.cookies.get(AUTH_COOKIE_NAME) == expected:
+        if (
+            not is_mcp
+            and request.cookies.get(AUTH_COOKIE_NAME) == expected
+            and _is_own_navigation(request)
+        ):
             return await call_next(request)
 
         return Response(

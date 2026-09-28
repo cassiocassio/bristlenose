@@ -240,3 +240,105 @@ class TestCookieFallback:
         resp = client.get("/report/")
         assert resp.status_code == 200
         assert resp.cookies.get(AUTH_COOKIE_NAME) == token
+
+
+class TestCookieIsForOwnNavigationsOnly:
+    """The cookie exists for the SPA's own ``<a download>`` GETs. A page on
+    another loopback port is *same-site* to 127.0.0.1, so a SameSite=Strict
+    cookie rides along on its requests — measured 28 Sep 2026 in Chromium and
+    WebKit: an auto-submitted form and a ``fetch(..., {mode: "no-cors",
+    credentials: "include", body: new Blob([...])})`` both carried the cookie,
+    the fetch with no Content-Type, both with ``Sec-Fetch-Site: same-site``.
+    CORS does not stop a simple request reaching the app; it only hides the
+    answer. FastAPI's ``strict_content_type`` (default on) refuses a JSON body
+    without ``application/json`` — but only after auth, and the bodiless POSTs
+    have no body to refuse: starting an AutoCode run, ``synthesize``,
+    accepting or denying proposals, ``miro/disconnect``. These replay the
+    probe's requests.
+    """
+
+    _FOREIGN = {"origin": "http://127.0.0.1:56569", "sec-fetch-site": "same-site"}
+
+    def _groups(self, raw_client: TestClient, token: str) -> list[str]:
+        data = raw_client.get(
+            "/api/projects/1/codebook", headers={"authorization": f"Bearer {token}"}
+        ).json()
+        return [g["name"] for g in data["groups"]]
+
+    def test_bodiless_post_from_another_port_refused(
+        self, raw_client: TestClient, token: str
+    ) -> None:
+        """No body, so nothing for strict_content_type to refuse (404 today: auth passed)."""
+        raw_client.cookies.set(AUTH_COOKIE_NAME, token)
+        resp = raw_client.post(
+            "/api/projects/1/autocode/proposals/999999/deny", headers=self._FOREIGN
+        )
+        assert resp.status_code == 401
+
+    def test_no_cors_blob_post_from_another_port_refused(
+        self, raw_client: TestClient, token: str
+    ) -> None:
+        """422 today from strict_content_type — after auth. Refuse at auth instead."""
+        raw_client.cookies.set(AUTH_COOKIE_NAME, token)
+        resp = raw_client.post(
+            "/api/projects/1/codebook/groups",
+            content=b'{"name": "pwned"}',
+            headers=self._FOREIGN,
+        )
+        raw_client.cookies.clear()
+        assert resp.status_code == 401
+        assert "pwned" not in self._groups(raw_client, token)
+
+    def test_form_post_from_another_port_refused(
+        self, raw_client: TestClient, token: str
+    ) -> None:
+        raw_client.cookies.set(AUTH_COOKIE_NAME, token)
+        resp = raw_client.post(
+            "/api/projects/1/autocode/garrett/cancel",
+            data={"x": "1"},
+            headers=self._FOREIGN,
+        )
+        assert resp.status_code == 401
+
+    def test_cookie_post_without_browser_signals_refused(
+        self, raw_client: TestClient, token: str
+    ) -> None:
+        """No legitimate caller POSTs on the cookie: the SPA's fetches send the header."""
+        raw_client.cookies.set(AUTH_COOKIE_NAME, token)
+        resp = raw_client.post(
+            "/api/projects/1/codebook/groups", json={"name": "cookie-only"}
+        )
+        raw_client.cookies.clear()
+        assert resp.status_code == 401
+        assert "cookie-only" not in self._groups(raw_client, token)
+
+    def test_get_from_another_port_refused(
+        self, raw_client: TestClient, token: str
+    ) -> None:
+        raw_client.cookies.set(AUTH_COOKIE_NAME, token)
+        resp = raw_client.get("/api/projects/1/quotes", headers=self._FOREIGN)
+        assert resp.status_code == 401
+
+    @pytest.mark.parametrize("site", ["same-origin", "none"])
+    def test_own_download_navigation_still_works(
+        self, raw_client: TestClient, token: str, site: str
+    ) -> None:
+        """The export anchor click is same-origin; a typed or bookmarked URL is ``none``."""
+        raw_client.cookies.set(AUTH_COOKIE_NAME, token)
+        resp = raw_client.get(
+            "/api/projects/1/quotes", headers={"sec-fetch-site": site}
+        )
+        assert resp.status_code == 200
+
+    def test_bearer_header_unaffected_by_foreign_signals(
+        self, raw_client: TestClient, token: str
+    ) -> None:
+        """Only the cookie is ambient; a caller holding the header value holds the token."""
+        resp = raw_client.post(
+            "/api/projects/1/codebook/groups",
+            json={"name": "via-header"},
+            headers={"authorization": f"Bearer {token}", **self._FOREIGN},
+        )
+        assert resp.status_code == 200
+
+

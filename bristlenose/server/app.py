@@ -659,8 +659,9 @@ def _spa_response(html: str, auth_token: str) -> HTMLResponse:
 
     The same token already lives in ``window.__BRISTLENOSE_AUTH_TOKEN__`` for
     JS-side ``fetch()`` calls; the cookie covers plain navigations (e.g. the
-    export ``<a download>`` anchor click). CORS middleware blocks all
-    cross-origin requests, so CSRF is out of scope.
+    export ``<a download>`` anchor click). SameSite ignores the port, so a page
+    on another loopback port gets this cookie sent too; the middleware honours
+    it only for the SPA's own GETs (``_is_own_navigation`` in middleware.py).
     """
     response = HTMLResponse(html)
     if auth_token:

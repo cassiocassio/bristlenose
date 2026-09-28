@@ -54,6 +54,31 @@ enum DetailPaneKind: Equatable {
         return .report
     }
 
+    /// What should cover a status page the serve is showing for a project that
+    /// has a new run queued or under way — or nil to leave the page showing.
+    ///
+    /// The serve's status page describes the *last terminus* and knows nothing
+    /// of the Mac's run queue, so re-analysing a project whose last run failed
+    /// put "Last run failed." under a sidebar row saying "Queued · position 1"
+    /// (28 Sep 2026: a 31 Aug out-of-credit failure, resurfaced while the
+    /// project waited behind another study's run). A real report (`.spa`) is
+    /// left alone — reading the previous analysis while the new one waits is
+    /// legitimate. `.running` needs this too: with the shoal off (preference or
+    /// Reduce Motion) it reaches the same stale page.
+    enum RunCover: Equatable {
+        case queued(position: Int)
+        case analysing
+    }
+
+    static func runCover(pipelineState: PipelineState?, documentState: DocumentState) -> RunCover? {
+        guard case .statusPage = documentState else { return nil }
+        switch pipelineState {
+        case .queued(let position): return .queued(position: position)
+        case .running: return .analysing
+        default: return nil
+        }
+    }
+
     /// Whether a pipeline state means the project has analysis data the user
     /// should be able to view. `.ready` and `.partial` both qualify;
     /// `.completedPartial` ran to terminus and wrote a (degraded) report.

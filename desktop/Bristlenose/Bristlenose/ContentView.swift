@@ -2814,10 +2814,13 @@ struct ContentView: View {
         }
     }
 
-    /// True for states whose report is on disk + (re-)imported by serve.
-    private func isReportReady(_ s: PipelineState?) -> Bool {
+    /// A run's terminus — any state whose serve surface changed with it. A
+    /// failed or stopped run rewrites the status page's cause, so it needs the
+    /// same reload a completed one does; without it the pane went back to the
+    /// PREVIOUS run's failure once a re-run failed.
+    private func isSettledAfterRun(_ s: PipelineState?) -> Bool {
         switch s {
-        case .ready, .completedPartial: return true
+        case .ready, .completedPartial, .failed, .failedWithDiagnostic, .stopped: return true
         default: return false
         }
     }
@@ -2849,7 +2852,8 @@ struct ContentView: View {
     /// appears after a manual project switch (which recreates the WebView).
     ///
     /// Fire on the selected project's transition from analysing INTO a
-    /// report-ready state — the one moment an in-place WebView (no switch, so not
+    /// settled state (`isSettledAfterRun` — a failure changes the page too)
+    /// — the one moment an in-place WebView (no switch, so not
     /// recreated) is left on stale content. (Gating on the analysing origin, not
     /// just `!ready → ready`, keeps the launch-time disk read of an
     /// already-finished project from triggering a spurious reload.) Then
@@ -2872,7 +2876,7 @@ struct ContentView: View {
         old: [UUID: PipelineState], new: [UUID: PipelineState]
     ) {
         guard let id = selectedProjectID,
-              isAnalysing(old[id]), isReportReady(new[id]) else { return }
+              isAnalysing(old[id]), isSettledAfterRun(new[id]) else { return }
         Self.reloadLog.info("completion id=\(id.uuidString, privacy: .public)")
         // A run may have renumbered the positional session ids — a remembered
         // `s3` would then restore *successfully* to a different participant's
@@ -2884,11 +2888,11 @@ struct ContentView: View {
             // Ride out the serve's ~1s re-import and any brief serve-restart or
             // webView-nil window. Wait through a not-yet-running serve rather
             // than bailing; abandon only if the user navigates away or the
-            // project stops being report-ready. One real reload is enough.
+            // project stops being settled. One real reload is enough.
             for attempt in 0..<6 {
                 try? await Task.sleep(for: .seconds(1.5))
                 guard selectedProjectID == id,
-                      isReportReady(pipelineRunner.state[id]) else {
+                      isSettledAfterRun(pipelineRunner.state[id]) else {
                     Self.reloadLog.info("reload abandon attempt=\(attempt)")
                     return
                 }
@@ -3227,6 +3231,19 @@ struct ContentView: View {
                             .transition(.opacity)
                         }
 
+                        // A status page describes the LAST run; once a new one
+                        // is queued or under way it is stale. See
+                        // `DetailPaneKind.runCover`.
+                        if let cover = DetailPaneKind.runCover(
+                            pipelineState: pipelineRunner.state[project.id],
+                            documentState: bridgeHandler.documentState
+                        ) {
+                            ZStack {
+                                Color(nsColor: .windowBackgroundColor)
+                                runCoverView(cover)
+                            }
+                        }
+
                     case .failed(let error):
                         BootView(phase: .failed(message: error, retry: {
                             serveFleet.manager(for: project.id).start(projectPath: project.path)
@@ -3248,6 +3265,24 @@ struct ContentView: View {
                 let files = urls.filter { !$0.hasDirectoryPath }
                 createProjectFromURLs(directories: directories, files: files)
             })
+        }
+    }
+
+    /// The native pane over a stale status page. Reuses the sidebar row's own
+    /// strings, so the row and the pane say the same thing.
+    @ViewBuilder
+    private func runCoverView(_ cover: DetailPaneKind.RunCover) -> some View {
+        switch cover {
+        case .queued(let position):
+            ContentUnavailableView(
+                i18n.t("desktop.chrome.pipeline.queuedPosition", ["position": String(position)]),
+                systemImage: "clock"
+            )
+        case .analysing:
+            ContentUnavailableView(
+                i18n.t("desktop.chrome.pipeline.analysing"),
+                systemImage: "waveform"
+            )
         }
     }
 

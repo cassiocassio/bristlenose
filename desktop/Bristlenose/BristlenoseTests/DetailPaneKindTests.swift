@@ -89,3 +89,34 @@ struct DetailPaneKindTests {
         #expect(!DetailPaneKind.hasViewableData(nil))
     }
 }
+
+/// The serve's status page describes the last terminus; a queued or running
+/// project must not show it (28 Sep 2026: "Last run failed." under a row
+/// reading "Queued · position 1").
+struct DetailPaneRunCoverTests {
+    private let failedPage = DocumentState.statusPage(.failed)
+
+    @Test func queuedCoversAStaleFailure() {
+        #expect(DetailPaneKind.runCover(pipelineState: .queued(position: 1), documentState: failedPage)
+                == .queued(position: 1))
+    }
+
+    @Test func runningCoversAStaleFailure() {
+        #expect(DetailPaneKind.runCover(pipelineState: .running, documentState: failedPage) == .analysing)
+        #expect(DetailPaneKind.runCover(pipelineState: .running, documentState: .statusPage(.noRun)) == .analysing)
+    }
+
+    /// Reading the previous report while the new run waits is legitimate.
+    @Test func aRealReportIsNeverCovered() {
+        #expect(DetailPaneKind.runCover(pipelineState: .queued(position: 2), documentState: .spa) == nil)
+        #expect(DetailPaneKind.runCover(pipelineState: .running, documentState: .loading) == nil)
+    }
+
+    /// With no run pending, the status page is the truth — leave it.
+    @Test func settledStatesLeaveThePage() {
+        #expect(DetailPaneKind.runCover(
+            pipelineState: .failed(.passthrough("x"), category: .network), documentState: failedPage) == nil)
+        #expect(DetailPaneKind.runCover(pipelineState: .stopped(stagesComplete: []), documentState: failedPage) == nil)
+        #expect(DetailPaneKind.runCover(pipelineState: nil, documentState: failedPage) == nil)
+    }
+}

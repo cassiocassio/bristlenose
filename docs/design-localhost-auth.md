@@ -61,16 +61,21 @@ A DNS-rebound page is same-origin to the browser, so CORS never fires and the
 `SECURITY.md` §"Serve mode API access control" carries the user-facing
 version of this table.
 
-**Open question, inferred and not reproduced (28 Sep 2026): same-site CSRF
-from another loopback port.** `SameSite` ignores the port, and Starlette's CORS
-middleware forwards simple (non-preflighted) requests to the app and only
-withholds the response headers. So a page served from `127.0.0.1:<other
-port>` — which passes the `Host` check — might send a bodiless or form-encoded
-`POST` to an `/api/*` endpoint with the cookie attached, and the side effect
-would happen even though the page cannot read the answer. The CSRF paragraph
-below, and the comments beside `AUTH_COOKIE_NAME` in `middleware.py` and the
-cookie setter in `app.py`, all claim CORS covers this. Probe it before fixing;
-note that a same-user local page could already read `/report/` for the token.
+**Same-site CSRF from another loopback port — measured and closed 28 Sep
+2026.** `SameSite` ignores the port, so a page served from `127.0.0.1:<other
+port>` (any local dev server) is same-site to serve and passes the `Host`
+check. Probed with Playwright in Chromium and WebKit: an auto-submitted form
+and a `fetch(…, {mode: "no-cors", credentials: "include"})` from such a page
+both carried the cookie, with `Sec-Fetch-Site: same-site`; a `localhost:<port>`
+page (cross-site) did not. CORS hides the answer but does not stop a simple
+request reaching the route, and the bodiless POSTs act on arrival — start an
+AutoCode run, `synthesize`, accept/deny proposals, Miro disconnect. (JSON-body
+POSTs were already refused by FastAPI's `strict_content_type`, after auth.)
+The page could not have read the token itself: `/report/` is cross-origin to
+it. **Fix:** `_is_own_navigation` in `middleware.py` honours the cookie only
+for GET/HEAD, and not when `Sec-Fetch-Site` is `same-site` or `cross-site`.
+An absent header passes, because WebKit sends none on the export download
+navigation (measured). Pinned by `tests/test_serve_auth.py::TestCookieIsForOwnNavigationsOnly`.
 
 **Smaller drift in the plan below, not banner-marked:** the port range is
 8150–8159 on the CLI (`_find_open_port`) and `--port 0` from the desktop, not
@@ -190,7 +195,7 @@ if request.cookies.get(AUTH_COOKIE_NAME) == expected:
 
 Cookie attributes: `HttpOnly` (defence-in-depth — JS already has the same value via `window.__BRISTLENOSE_AUTH_TOKEN__`, but no need to expose the cookie itself), `SameSite=Strict` (CSRF), `Secure=False` (localhost is `http://`; the cookie never traverses a network), `Path=/`, no `Expires` (session-scoped, dies with the WKWebView's ephemeral data store).
 
-CSRF is out of scope: the existing CORS middleware (`allow_origins=[]` by default) blocks every cross-origin request before the cookie ever ships. _(28 Sep 2026: true of cross-origin pages only. A DNS-rebound page is same-site and the cookie would ride along; `LoopbackHostMiddleware` is what refuses it — see §"As built".)_ The cookie carries no per-user/per-project information — it's the same opaque random string as the Bearer header, just in a delivery channel native to anchor-click navigations.
+CSRF is out of scope: the existing CORS middleware (`allow_origins=[]` by default) blocks every cross-origin request before the cookie ever ships. _(28 Sep 2026: true of cross-origin pages only. A DNS-rebound page and a page on another loopback port are both same-site, and the cookie rides along; `LoopbackHostMiddleware` refuses the first and `_is_own_navigation` the second — see §"As built".)_ The cookie carries no per-user/per-project information — it's the same opaque random string as the Bearer header, just in a delivery channel native to anchor-click navigations.
 
 ### 401 response design
 

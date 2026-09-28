@@ -73,6 +73,8 @@ jobs:
         run: |
           sw_vers -productVersion
           xcodebuild -version
+          # The window tests assume a display; record which one the runner has.
+          system_profiler SPDisplaysDataType | grep -E "Resolution|Retina|Main Display|Display Type" || echo "no display reported"
           cd desktop/Bristlenose && xcodebuild -list
 
       - name: Stub bundled sidecar input path

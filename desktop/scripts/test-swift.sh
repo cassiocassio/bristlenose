@@ -39,6 +39,7 @@
 #
 # Usage:
 #   desktop/scripts/test-swift.sh [--quiet]
+#   BN_DERIVED_DATA=<dir> desktop/scripts/test-swift.sh   # private DerivedData
 #
 # Exit codes:
 #   0  Suite green.
@@ -80,6 +81,13 @@ else
 fi
 BUILD_LOG="$LOG_DIR/build.log"
 TEST_LOG="$LOG_DIR/test.log"
+# The result bundle is where a failure's MESSAGE lives. xcodebuild's default
+# reporter prints `Test case '…' failed on …` and nothing else for a Swift
+# Testing issue, so without this a CI failure arrives with no evidence at all
+# (the SidebarFit harness went red on every Mac Build run for three days with
+# its own trace sitting unread in an .xcresult nobody uploaded).
+RESULT_BUNDLE="$LOG_DIR/BristlenoseTests.xcresult"
+rm -rf "$RESULT_BUNDLE"
 
 DEST='platform=macOS,arch=arm64'
 BYPASS_A=BRISTLENOSE_SKIP_SIDECAR_ENSURE=1
@@ -96,12 +104,19 @@ SIGNING=()
 # Bash 5 does not do this, so it bites only where `env bash` finds /bin/bash, i.e.
 # a clean Mac or VM with no Homebrew bash (measured in a macOS 15 guest, 25 Sep 2026).
 
+# BN_DERIVED_DATA runs against a private DerivedData instead of the shared one.
+# The shared one is locked while Xcode builds ("unable to attach DB … database
+# is locked"), and a same-tree build there also fails signing on stale residue;
+# a fresh path sidesteps both (desktop/CLAUDE.md). Costs a full compile.
+DD=()
+[ -n "${BN_DERIVED_DATA:-}" ] && DD=(-derivedDataPath "$BN_DERIVED_DATA")
+
 [ "$QUIET" -eq 1 ] || echo "==> building test bundle"
 build_rc=0
 env "$BYPASS_A" "$BYPASS_B" xcodebuild build-for-testing \
     -scheme Bristlenose -configuration Debug -destination "$DEST" \
     -project "$PROJECT_DIR/Bristlenose.xcodeproj" \
-    ${SIGNING[@]+"${SIGNING[@]}"} \
+    ${SIGNING[@]+"${SIGNING[@]}"} ${DD[@]+"${DD[@]}"} \
     "$BYPASS_A" "$BYPASS_B" > "$BUILD_LOG" 2>&1 || build_rc=$?
 if [ "$build_rc" -ne 0 ]; then
   echo "BUILD FAILED (xcodebuild exit $build_rc)" >&2
@@ -129,7 +144,8 @@ test_rc=0
 env "$BYPASS_A" xcodebuild test-without-building \
     -scheme Bristlenose -destination "$DEST" \
     -project "$PROJECT_DIR/Bristlenose.xcodeproj" \
-    -only-testing:BristlenoseTests ${SIGNING[@]+"${SIGNING[@]}"} > "$TEST_LOG" 2>&1 || test_rc=$?
+    -only-testing:BristlenoseTests -resultBundlePath "$RESULT_BUNDLE" \
+    ${SIGNING[@]+"${SIGNING[@]}"} ${DD[@]+"${DD[@]}"} > "$TEST_LOG" 2>&1 || test_rc=$?
 
 # `grep` exits 1 when it matches nothing, so under `set -e` + `pipefail` a suite
 # with ZERO failures kills the script — exit 1, no output, indistinguishable from
@@ -144,6 +160,16 @@ set -e
 if [ "$failed" -gt 0 ]; then
   echo "SWIFT SUITE RED — $failed failed, $passed passed" >&2
   grep -E "' failed on" "$TEST_LOG" >&2 || true
+  # Each failure's own message, from the result bundle. Best effort: the verdict
+  # above is already decided, so a missing tool or bundle only costs the detail.
+  if [ -d "$RESULT_BUNDLE" ] && command -v python3 >/dev/null 2>&1; then
+    echo "--- failure messages (from $(basename "$RESULT_BUNDLE")):" >&2
+    xcrun xcresulttool get test-results summary --path "$RESULT_BUNDLE" 2>/dev/null \
+      | python3 -c 'import json,sys
+for f in json.load(sys.stdin).get("testFailures", []):
+    print(f"  {f.get(\"testIdentifierString\") or f.get(\"testName\")}: {f.get(\"failureText\", \"\")}")' >&2 \
+      || echo "  (could not read the result bundle)" >&2
+  fi
   exit 1
 fi
 

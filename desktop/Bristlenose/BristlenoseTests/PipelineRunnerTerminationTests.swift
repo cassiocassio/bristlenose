@@ -136,7 +136,7 @@ struct PipelineRunnerTerminationTests {
         let state = await PipelineRunner.readManifestState(
             at: manifestURL, timeout: .seconds(2)
         )
-        #expect(isIdle(state))
+        #expect(isIdle(state), "got \(state)")
     }
 
     /// Manifest stub + `run_completed` event → .ready.
@@ -151,7 +151,7 @@ struct PipelineRunnerTerminationTests {
         let state = await PipelineRunner.readManifestState(
             at: manifestURL, timeout: .seconds(2)
         )
-        #expect(isReady(state))
+        #expect(isReady(state), "got \(state)")
     }
 
     // MARK: - looksLikeSuccess — deletion guard only

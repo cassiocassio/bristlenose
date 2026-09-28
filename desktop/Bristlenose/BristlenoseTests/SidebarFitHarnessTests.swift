@@ -323,7 +323,18 @@ struct SidebarFitRig {
             + "min=\(item.map { "\(Int($0.minimumThickness))" } ?? "nil") max=\(item.map { "\(Int($0.maximumThickness))" } ?? "nil") "
             + "canCollapseFromResize=\(item.map { String($0.canCollapseFromWindowResize) } ?? "nil") "
             + "subviews=\(subviewDescription) "
-            + "| swiftUI vis=\(SidebarFitProbe.name(probe.visibility)) auto=\(probe.autoCollapsed) last=\(Int(probe.lastSidebarWidth))"
+            + "| swiftUI vis=\(SidebarFitProbe.name(probe.visibility)) auto=\(probe.autoCollapsed) last=\(Int(probe.lastSidebarWidth)) "
+            + "| \(environment)"
+    }
+
+    /// Where the rig is running: the window's frame, the screen it landed on,
+    /// and that screen's scale. The scenarios assume a window can be 1700 pt
+    /// wide; a CI runner's virtual display may not agree.
+    var environment: String {
+        let f = window.frame
+        let screen = window.screen ?? NSScreen.main
+        let s = screen.map { "\(Int($0.frame.width))×\(Int($0.frame.height))@\($0.backingScaleFactor)x visible=\(Int($0.visibleFrame.width))×\(Int($0.visibleFrame.height))" } ?? "none"
+        return "window=\(Int(f.minX)),\(Int(f.minY)) \(Int(f.width))×\(Int(f.height)) screen=\(s) screens=\(NSScreen.screens.count)"
     }
 
     /// Every arranged subview: frame x/width, hidden, split-collapsed.

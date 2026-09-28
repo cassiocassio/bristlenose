@@ -456,7 +456,7 @@ _MEDIA_EXTENSIONS = frozenset(AUDIO_EXTENSIONS | VIDEO_EXTENSIONS)
 # What the SPA loads from the output dir under /report/ — theme CSS, logos,
 # thumbnails, the player page — all of it from assets/. Nothing else in the
 # output dir is served: the static report and transcript pages carry full
-# names, and their embedded JSON is not <-escaped.
+# names.
 _REPORT_ASSET_EXTENSIONS = frozenset({
     ".css", ".html",
     ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico",

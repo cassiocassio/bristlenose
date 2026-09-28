@@ -1,10 +1,12 @@
 ---
 status: partial
-last-trued: 2026-09-04
-trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
+last-trued: 2026-09-28
+trued-against: HEAD@main on 2026-09-28 (d314e3b7)
 ---
 
 # Desktop App Security Audit — March 2026
+
+> **Trued 28 Sep 2026 (--topic serve file routes)** — Attack Surface item 10 said the server middleware was confirmed clean; four exposures were found and fixed behind the same guards on 28 Sep, recorded as a postscript under the item with the original verdict kept. The "Bearer token auth" row now names the `Host` check and the recordings-only `/media/` guard. **Known stale, not trued this pass (different topic):** Blocker #2 and Constraint #16 / Opportunity O still describe App Sandbox as in progress (it has shipped since 0.20.0); #13 / Opportunity M's `CFBundleVersion = 1`; Opportunity I (consent dialog — shipped, see #4); the Swift file and call-site counts in Attack Surface items 1–2.
 
 > **Trued 4 Sep 2026 (--topic keychain)** — the Keychain row records the login-keychain copy the app now keeps of each CLI-shared key (a deliberate widening: readable past macOS's ACL dialog, which the data-protection item never was), the environment-scrubbing row stops saying "no cloud tokens" (the Miro token is injected), and the Settings row's "prompt-free" is scoped to the app's own items. Attack-surface item 3 now points at the row rather than restating it. Front-matter added; this audit had none.
 
@@ -33,7 +35,7 @@ Comprehensive security review of the macOS desktop app (`desktop/Bristlenose/`),
 |------|------------|----------|
 | Keychain credential storage | Excellent | Native Security.framework, **data-protection keychain** (`kSecUseDataProtectionKeychain`, `kSecAttrAccessibleAfterFirstUnlock`, team-scoped `keychain-access-groups`; **`kSecAttrSynchronizable` = iCloud Keychain sync by design** — a revocable credential that survives a damaged login keychain), no biometric ACL, no plaintext fallback (migration `8b2ef51`, 2 Jun 2026; see `design-keychain.md`). **C3 (Apr 2026)**: Swift reads Keychain at sidecar launch and injects `BRISTLENOSE_<PROVIDER>_API_KEY` env vars; the sandboxed sidecar never reaches `MacOSCredentialStore`. `credentials_macos.py` remains the CLI-Mac happy path. **4 Sep 2026:** the five CLI-shared keys (`KeychainHelper.sharedWithCLI`) also have a **login-keychain copy** — file-based, non-synchronizable, ACL trusting the app and `/usr/bin/security` — so `bristlenose run` in a terminal reads the same key. A deliberate widening: that copy is readable past macOS's ACL dialog, which the data-protection item never was (measured, `design-keychain.md` §"One keyspace, two keychains"). Reads are quiet by default; only Settings ▸ LLM Provider may raise the dialog. See `design-desktop-python-runtime.md` §"Credential flow" |
 | Environment scrubbing | Excellent | Sidecar receives an allowlisted env dict. No DYLD. **One cloud token:** `overlayMiroToken` injects `BRISTLENOSE_MIRO_ACCESS_TOKEN` whenever a Miro token exists (`BristlenoseShared.swift`), and the stdout redactor matches LLM key shapes only — recorded as open in `design-keychain.md` §Secret-leak defences. **API keys are now intentional, allowlisted entries** (`BRISTLENOSE_<PROVIDER>_API_KEY`) fetched by Swift from Keychain at spawn time — keys live in-process only; no disk write |
-| Bearer token auth | Strong | 256-bit random token per instance, CORS blocks cross-origin, media route has path-traversal guard + extension allowlist |
+| Bearer token auth | Strong | 256-bit random token per instance on `/api/*` and `/mcp`, CORS blocks cross-origin, `LoopbackHostMiddleware` refuses non-loopback `Host` (DNS rebinding, which CORS cannot see; since 28 Sep 2026). `/media/` and `/report/<file>` carry no token and go through `_contained_path` — recordings only / `assets/` only, dot-directories refused (since 28 Sep 2026; see item 10's postscript) |
 | JS bridge design | Strong | All 5 `callAsyncJavaScript` sites use parameterised `arguments:` dicts. Zero `evaluateJavaScript` calls |
 | Ephemeral WKWebView | Strong | `.nonPersistent()` data store per project — no cross-project leakage |
 | SecurityChecklist.swift | Innovative | Compile-time `#error` blocks Release builds with known security gaps |
@@ -137,6 +139,8 @@ Comprehensive security review of the macOS desktop app (`desktop/Bristlenose/`),
 8. Find pasteboard — validates non-empty string
 9. UserDefaults — no sensitive data
 10. Server middleware — bearer token, CORS, media extension allowlist, path traversal guard
+
+    > **Postscript, 28 Sep 2026 — this verdict did not hold.** With these guards in place, four exposures were found and fixed: `/report/<path>` served the whole output dir, including `.bristlenose/pii_summary.txt`, and `..%2F` escaped it ("serve no longer hands out the pii re-identification key on /report/ without a token"); `/media/`'s allowlist admitted `.txt`/`.docx`/`.srt`/`.vtt`/images, so the pre-redaction `transcripts-raw/*.txt` was unauthenticated ("/media/ serves recordings only, no longer the unredacted transcript"); the status page on `/report/` showed the last 4 KB of `bristlenose.log` ("status page no longer shows the run log to unauthenticated callers"); and a DNS-rebound page could read the token-bearing SPA HTML and then `/api/*` and `/admin` ("serve refuses any non-loopback host, closing dns rebinding"). The lesson for the next audit: an allowlist is only as good as the list, and "path traversal guard" says nothing about what the root *contains*. Current model: `docs/design-localhost-auth.md` §"As built".
 
 ---
 

@@ -1,11 +1,22 @@
 ---
-status: current
-last-trued: 2026-05-10
-trued-against: HEAD@sandbox-export-savepanel on 2026-05-10
+status: mixed
+last-trued: 2026-09-28
+trued-against: HEAD@main on 2026-09-28 (d314e3b7)
 ---
 
 ## Changelog
 
+- _2026-09-28_ — trued up: added §"As built — what the token does not
+  cover", marked the six "`/media/*` requires auth" claims, the popout's
+  server-side token injection, the "CORS blocks browser attacks" scoping and
+  CSRF paragraph, and verification step 5 as superseded. Anchors:
+  `middleware.py` `_AUTH_REQUIRED_PREFIXES` / `LoopbackHostMiddleware`,
+  `app.py` `_contained_path`, `tests/test_serve_auth.py::test_media_exempt_from_auth`;
+  commits "serve no longer hands out the pii re-identification key on
+  /report/ without a token", "/media/ serves recordings only, no longer the
+  unredacted transcript", "status page no longer shows the run log to
+  unauthenticated callers", "serve refuses any non-loopback host, closing dns
+  rebinding".
 - _2026-05-10_ — trued up: added §"Cookie fallback for plain navigations"
   describing the `bristlenose_auth` HttpOnly/SameSite=Strict cookie set on
   SPA HTML responses, used by anchor-click downloads (export flow) under
@@ -16,6 +27,57 @@ trued-against: HEAD@sandbox-export-savepanel on 2026-05-10
 - _2026-04-18_ — initial draft + dev-mode env-override gap captured.
 
 # Localhost Auth Token — Design Plan
+
+> **Truing status (28 Sep 2026):** the token mechanism below shipped as
+> planned for `/api/*` (and later `/mcp`). What did **not** ship as planned is
+> the scope: `/media/*` has never required the token since 27 Mar 2026, and
+> several routes carry data without it. The plan text is kept below as the
+> record of intent; §"As built" is authoritative for what the token covers.
+
+## As built — what the token does not cover
+
+The middleware checks the token only on `_AUTH_REQUIRED_PREFIXES` = `/api/`
+and `/mcp` (`bristlenose/server/middleware.py`). `_AUTH_EXEMPT_PREFIXES` is
+`/api/health`, `/api/docs`, `/openapi.json`. **Everything outside the
+required prefixes is open by omission** — a new route not under `/api/` is
+unauthenticated by default, so it needs its own guard. Today's open routes:
+
+| Route | Why no token | What guards it |
+|-------|--------------|----------------|
+| `/media/*` | `<video>`/`<audio>` cannot send headers (unauthenticated since 27 Mar 2026, pinned by `tests/test_serve_auth.py::test_media_exempt_from_auth`) | `_contained_path` in `app.py`: rooted at the project dir, **recordings only** (`AUDIO_EXTENSIONS \| VIDEO_EXTENSIONS` from `models.py`), refuses any `.`-prefixed component before and after resolving, refuses anything outside the root. Until 28 Sep 2026 it also served `.txt`/`.docx`/`.srt`/`.vtt`/images — the pre-redaction `transcripts-raw/*.txt` included |
+| `/report/<file>` | The WKWebView loads the SPA's files without a header | `_contained_path` again, rooted at `<output_dir>/assets/` only. Until 28 Sep 2026 it was a bare `output_dir / path`: it served `.bristlenose/pii_summary.txt` and `..%2F` escaped the output dir |
+| `/report/*` (SPA HTML) | It is where the token is handed out | Nothing but the `Host` check below — the page carries the token and sets the cookie, so anything that can read it can call the API |
+| `/report/*` (status page) | Shown instead of the SPA after a failed/cancelled run, or before any run | Carries the structured cause only. Until 28 Sep 2026 it appended the last 4 KB of `bristlenose.log` (absolute paths, input filenames, provider error text) |
+| `/chat-lens` | Lab page that injects the token like the SPA | `Host` check; mounted when `experimental_chat_lens` is on (the default) |
+| `/codebook-lab` | Lab page that injects the token | `Host` check; mounted only when `experimental_codebook_lab` is on (off by default) |
+| `/admin` | Read-only DB browser (`serve --dev` or `_BRISTLENOSE_ADMIN_PANEL=1`) | `Host` check |
+| `GET /mcp/` from a browser | Static explainer page, no data | — |
+
+**The `Host` check is what makes browser attacks out of scope, not CORS.**
+A DNS-rebound page is same-origin to the browser, so CORS never fires and the
+`SameSite=Strict` cookie rides along. `LoopbackHostMiddleware` (outermost in
+`create_app`) refuses any `Host` other than `127.0.0.1`, `localhost` or
+`[::1]` with a 400; before 28 Sep 2026 only `/mcp/` had that protection.
+`SECURITY.md` §"Serve mode API access control" carries the user-facing
+version of this table.
+
+**Open question, inferred and not reproduced (28 Sep 2026): same-site CSRF
+from another loopback port.** `SameSite` ignores the port, and Starlette's CORS
+middleware forwards simple (non-preflighted) requests to the app and only
+withholds the response headers. So a page served from `127.0.0.1:<other
+port>` — which passes the `Host` check — might send a bodiless or form-encoded
+`POST` to an `/api/*` endpoint with the cookie attached, and the side effect
+would happen even though the page cannot read the answer. The CSRF paragraph
+below, and the comments beside `AUTH_COOKIE_NAME` in `middleware.py` and the
+cookie setter in `app.py`, all claim CORS covers this. Probe it before fixing;
+note that a same-user local page could already read `/report/` for the token.
+
+**Smaller drift in the plan below, not banner-marked:** the port range is
+8150–8159 on the CLI (`_find_open_port`) and `--port 0` from the desktop, not
+8150–9149; `authHeaders(extra?)` serves every helper in `api.ts` (~40, and no
+longer sets `Content-Type` itself), not "all six"; the test helper is
+`AuthTestClient` + `LOOPBACK_BASE_URL` in `tests/conftest.py`, not an
+`auth_headers(app)` fixture; `frontend/src/utils/api.test.ts` was never written.
 
 ## Context
 
@@ -29,6 +91,7 @@ Bristlenose's serve mode API (`bristlenose serve`) listens on `127.0.0.1:8150-91
 - **Attack**: direct HTTP requests to the serve API (not browser-based — CORS irrelevant)
 - **Assets at risk**: participant names, interview quotes, themes, sentiment, codebook, transcript text, **interview recordings via `/media/*`**
 - **Out of scope**: remote network attacks (serve binds to 127.0.0.1 only), browser-based attacks (CORS already blocks)
+  > **Superseded 28 Sep 2026** — CORS does not block DNS rebinding (same-origin to the browser); the `Host` check does. See §"As built".
 - **Honest assessment**: a purposeful attacker can fetch `/report/`, extract the token from HTML, and call any API. The token raises the bar from zero-effort to trivial two-step. Worth doing as defence-in-depth; must not be overstated
 
 ## Design
@@ -54,6 +117,8 @@ Defined as a constant `_AUTH_EXEMPT_PREFIXES` in the middleware module. Tested e
 | `/static/`, `/assets/` | Vite bundle files |
 
 **`/media/*` REQUIRES auth** — interview recordings and audio are the most sensitive data in the system.
+
+> **Superseded 27 Mar 2026** — `/media/` was taken out of the token check because `<video>`/`<audio>` cannot send headers (the player showed "Cannot play this format", `MediaError` 4). The same holds for every `/media/*` claim below (Design step 6, Files to modify, Tests, Implementation order 4, Verification 5, review finding 5). This table is also not the shipped `_AUTH_EXEMPT_PREFIXES`; see §"As built".
 
 ### Token delivery to desktop app
 
@@ -83,6 +148,8 @@ let script = WKUserScript(
 ```
 
 **`forMainFrameOnly: true`** (security review recommendation): the popout player loads `http://127.0.0.1:{port}/report/player.html` which receives the token via server-side HTML injection, same as the main SPA. No need to inject into sub-frames.
+
+> **Superseded** — the popout loads `assets/bristlenose-player.html` (`PlayerContext.tsx`), a plain file with no token injected. It needs none: the only thing it fetches is `/media/`.
 
 **Why not env var**: the token is generated fresh each startup, can't be set before process launch.
 **Why not health endpoint**: chicken-and-egg — you need the token to call the API.
@@ -123,7 +190,7 @@ if request.cookies.get(AUTH_COOKIE_NAME) == expected:
 
 Cookie attributes: `HttpOnly` (defence-in-depth — JS already has the same value via `window.__BRISTLENOSE_AUTH_TOKEN__`, but no need to expose the cookie itself), `SameSite=Strict` (CSRF), `Secure=False` (localhost is `http://`; the cookie never traverses a network), `Path=/`, no `Expires` (session-scoped, dies with the WKWebView's ephemeral data store).
 
-CSRF is out of scope: the existing CORS middleware (`allow_origins=[]` by default) blocks every cross-origin request before the cookie ever ships. The cookie carries no per-user/per-project information — it's the same opaque random string as the Bearer header, just in a delivery channel native to anchor-click navigations.
+CSRF is out of scope: the existing CORS middleware (`allow_origins=[]` by default) blocks every cross-origin request before the cookie ever ships. _(28 Sep 2026: true of cross-origin pages only. A DNS-rebound page is same-site and the cookie would ride along; `LoopbackHostMiddleware` is what refuses it — see §"As built".)_ The cookie carries no per-user/per-project information — it's the same opaque random string as the Bearer header, just in a delivery channel native to anchor-click navigations.
 
 ### 401 response design
 

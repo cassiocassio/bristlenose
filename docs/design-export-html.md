@@ -1,10 +1,17 @@
 ---
 status: partial
-last-trued: 2026-08-22
-trued-against: HEAD@main (ff444036) on 2026-08-22
+last-trued: 2026-09-28
+trued-against: HEAD@main (d314e3b7) on 2026-09-28
 ---
 
 # HTML Export — Design Document
+
+> **Trued 2026-09-28** — the sibling-site audit in §Security fixes is closed:
+> the vulnerable sibling was the static renderer, not the two sites the row
+> named (commit "static render: embedded JSON can no longer close its
+> <script> block"). The one-language export shipped in 0.28.0, and
+> `ExportDialog` has read the project id from the route since `useProjectId`
+> landed; both passages are marked below.
 
 > **Trued 2026-07-26** against the export-hardening work (commits `8895c794`
 > single-file build, `4f0b9855` hash-router links, `30c5c2f7`/`22980677` locale
@@ -84,7 +91,8 @@ The HTML export is the "accountability copy" — a stakeholder or client can ope
   Note the cost, measured 23 Aug 2026: the single-file build inlines **all 22 locales × 9
   namespaces** (1,802 KB, ~half the export) so the baked one is available offline. Making
   that a choice at export time, and carrying one language, is proposed in
-  [`design-export-locale.md`](design-export-locale.md).
+  [`design-export-locale.md`](design-export-locale.md). _(Shipped in 0.28.0: the
+  export embeds one language, 3.38 → 1.55 MB measured.)_
 - Optional anonymisation (report data + source filenames)
 - Works offline in any modern browser (Chromium + WebKit e2e, incl. a link-integrity crawl)
 
@@ -209,7 +217,7 @@ Note: "Anonymise participants" renamed to "Remove participant names from labels"
 
 | Fix | Detail | Status |
 |-----|--------|--------|
-| Escape `<` `>` `&` in the data script | **`ensure_ascii=True` does NOT prevent `</script>` breakout** — it escapes only code points > 127; `<` is ASCII and passes through. The earlier belief was false (`bac75661`). After `json.dumps(ensure_ascii=True)`, chain `.replace("<","\\u003c").replace(">","\\u003e").replace("&","\\u0026")`. Regression test `test_embedded_data_cannot_break_out_of_script`. **Audit sibling embed sites** (serve `/report`, quote CSV/HTML) for the same false belief | Done (`bac75661`) |
+| Escape `<` `>` `&` in the data script | **`ensure_ascii=True` does NOT prevent `</script>` breakout** — it escapes only code points > 127; `<` is ASCII and passes through. The earlier belief was false (`bac75661`). After `json.dumps(ensure_ascii=True)`, chain `.replace("<","\\u003c").replace(">","\\u003e").replace("&","\\u0026")`. Regression test `test_embedded_data_cannot_break_out_of_script`. **Audit sibling embed sites** (serve `/report`, quote CSV/HTML) for the same false belief. _Audited 28 Sep 2026: neither named site was vulnerable — serve `/report` embeds only the URL-safe token, and there is no HTML quote export (CSV/XLSX only). The real sibling was the static renderer's six bare `json.dumps` sites (`BN_PARTICIPANTS` took speaker labels from client .docx/.vtt); now all through `s12_render/html_helpers.script_json`, gated by `tests/test_static_render_script_escape.py`._ | Done (`bac75661`; siblings: "static render: embedded JSON can no longer close its <script> block") |
 | Path stripping | Strip absolute paths from exported `source_files[].path` — use `filename` only | Done |
 | Anonymise source filenames | Neutralise `source_files[].filename` to `<session_id><ext>` under anonymise — `jane-doe.mov` otherwise re-carries the name (`5379e3df`) | Done |
 | Anonymise label clarity | "Remove participant names from labels" + scope explanation | Done |
@@ -262,7 +270,7 @@ The export transcript renderer reuses these formatters. New work: human-readable
 3. **Anonymise label renamed.** "Remove participant names from labels" — accurate, not overpromising.
 4. **Moderator names preserved.** They're the research team, not subjects.
 5. **Role titles removed when anonymised.** "The one manager in the study" narrows the person down. **Implemented 25 Aug 2026** — `_anonymise_data` now blanks `role` alongside the names for `p*` codes, pinned by `test_anonymise_strips_participant_job_titles`. Participant-side only: moderators and observers keep their titles, because the boundary is the participant line and they are named anyway (`design-people.md` §E decision 2).
-6. **ExportDialog project ID.** Current code hardcodes `1` at line 70. All new endpoints must use correct project ID from route params.
+6. **ExportDialog project ID.** Current code hardcodes `1` at line 70. _(Superseded: `ExportDialog` uses `useProjectId()`.)_ All new endpoints must use correct project ID from route params.
 7. **Folder name uses `safe_filename()`** (from `bristlenose/utils/text.py`) — preserves spaces and case: `"Acme Onboarding Research"` not `"acme-onboarding-research"`. `slugify()` would lowercase and hyphenate.
 
 ---
@@ -311,7 +319,7 @@ Every export action should be logged for accountability and debugging:
 
 ### Project ID
 
-`ExportDialog.tsx` line 70 hardcodes project ID `1`. **All new export endpoints must use project ID from route params** (`/api/projects/{id}/export/...`). This applies to quotes CSV/XLS, clips, transcripts, and Miro export — not just HTML.
+`ExportDialog.tsx` line 70 hardcodes project ID `1` _(no longer — it uses `useProjectId()`; the rule for new endpoints stands)_. **All new export endpoints must use project ID from route params** (`/api/projects/{id}/export/...`). This applies to quotes CSV/XLS, clips, transcripts, and Miro export — not just HTML.
 
 ### `safe_filename()` utility (`bristlenose/utils/text.py`)
 

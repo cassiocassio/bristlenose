@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 from pathlib import Path
 from typing import Any
@@ -12,6 +11,7 @@ from bristlenose.stages.s12_render.html_helpers import (
     _esc,
     _footer_html,
     _report_header_html,
+    script_json,
 )
 from bristlenose.stages.s12_render.theme_assets import (
     _get_analysis_js,
@@ -163,7 +163,7 @@ def _serialize_analysis(analysis: object) -> str:
         "sentiments": analysis.sentiments,  # type: ignore[attr-defined]
         "participantIds": sorted_pids,
     }
-    return json.dumps(data, separators=(",", ":"))
+    return script_json(data, separators=(",", ":"))
 
 
 def _render_analysis_page(

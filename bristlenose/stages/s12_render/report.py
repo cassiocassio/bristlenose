@@ -6,7 +6,6 @@ Use ``bristlenose serve`` for the full interactive experience.
 
 from __future__ import annotations
 
-import json
 import logging
 import shutil
 import warnings
@@ -34,6 +33,7 @@ from bristlenose.stages.s12_render.html_helpers import (
     _footer_html,
     _report_header_html,
     _write_player_html,
+    script_json,
 )
 from bristlenose.stages.s12_render.quote_format import _format_quote_html
 from bristlenose.stages.s12_render.sentiment import (
@@ -492,7 +492,7 @@ def render_html(
     _w("<script>")
     _w("(function() {")
     if has_media:
-        _w(f"var BRISTLENOSE_VIDEO_MAP = {json.dumps(video_map)};")
+        _w(f"var BRISTLENOSE_VIDEO_MAP = {script_json(video_map)};")
     else:
         _w("var BRISTLENOSE_VIDEO_MAP = {};")
 
@@ -505,7 +505,7 @@ def render_html(
                 "short_name": _entry.editable.short_name,
                 "role": _entry.editable.role,
             }
-    _w(f"var BN_PARTICIPANTS = {json.dumps(participant_data)};")
+    _w(f"var BN_PARTICIPANTS = {script_json(participant_data)};")
 
     # Feedback feature flag — set to true to enable the feedback widget.
     _w("var BRISTLENOSE_FEEDBACK = true;")
@@ -525,7 +525,7 @@ def render_html(
                 "sentiment": _ann.sentiment,
                 "pid": _ann.participant_id,
             }
-    _w(f"var BRISTLENOSE_QUOTE_MAP = {json.dumps(_combined_qmap)};")
+    _w(f"var BRISTLENOSE_QUOTE_MAP = {script_json(_combined_qmap)};")
     _w("var BRISTLENOSE_REPORT_URL = '';")
 
     # Analysis data for inline rendering in the Analysis tab.

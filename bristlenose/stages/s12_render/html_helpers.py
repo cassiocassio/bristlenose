@@ -6,9 +6,11 @@ video map, and session sorting.
 
 from __future__ import annotations
 
+import json
 import logging
 from html import escape
 from pathlib import Path
+from typing import Any
 
 from bristlenose.models import (
     ExtractedQuote,
@@ -20,6 +22,25 @@ from bristlenose.models import (
 from bristlenose.stages.s12_render.theme_assets import _jinja_env
 
 logger = logging.getLogger(__name__)
+
+
+def script_json(data: Any, **kwargs: Any) -> str:
+    """Serialise ``data`` for inline use inside a ``<script>`` block.
+
+    ``json.dumps`` escapes nothing ASCII, so a ``</script>`` in a speaker
+    name, a label or quote text closes the block and the rest runs as markup.
+    Escaping ``<`` ``>`` ``&`` to ``\\uXXXX`` keeps the JSON value identical and
+    the HTML tokenizer blind to it. Same guard as ``routes/export.py``.
+    Every ``<script>`` embed in this package goes through here
+    (``tests/test_static_render_script_escape.py`` fails on a bare
+    ``json.dumps``).
+    """
+    return (
+        json.dumps(data, **kwargs)
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+    )
 
 
 def _document_shell_open(

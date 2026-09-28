@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 from pathlib import Path
 
@@ -23,6 +22,7 @@ from bristlenose.stages.s12_render.html_helpers import (
     _resolve_speaker_name,
     _split_badge_html,
     _tc_brackets,
+    script_json,
 )
 from bristlenose.stages.s12_render.theme_assets import (
     _get_transcript_js,
@@ -367,7 +367,7 @@ def _render_transcript_page(
     _w("(function() {")
     _w("var BRISTLENOSE_PLAYER_URL = '../assets/bristlenose-player.html';")
     if has_media:
-        _w(f"var BRISTLENOSE_VIDEO_MAP = {json.dumps(video_map)};")
+        _w(f"var BRISTLENOSE_VIDEO_MAP = {script_json(video_map)};")
     else:
         _w("var BRISTLENOSE_VIDEO_MAP = {};")
 
@@ -383,7 +383,7 @@ def _render_transcript_page(
                 "sentiment": ann.sentiment,
                 "pid": ann.participant_id,
             }
-        _w(f"var BRISTLENOSE_QUOTE_MAP = {json.dumps(qmap)};")
+        _w(f"var BRISTLENOSE_QUOTE_MAP = {script_json(qmap)};")
     else:
         _w("var BRISTLENOSE_QUOTE_MAP = {};")
 

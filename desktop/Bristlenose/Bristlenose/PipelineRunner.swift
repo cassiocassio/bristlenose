@@ -1012,10 +1012,12 @@ final class PipelineRunner: ObservableObject {
     /// this ran on the main actor — so `readManifestState`'s timeout could not
     /// guard a hung read (the read blocks the thread the timeout must resume
     /// on), and a main thread merely *busy* for longer than the timeout made a
-    /// healthy manifest read as `.unreachable(.timedOut)`. That second case is
-    /// what turned `PipelineRunnerTerminationTests` red on CI runners, where
-    /// window tests share the main thread (26–28 Sep 2026). File I/O belongs
-    /// off main in any case.
+    /// healthy manifest read as `.unreachable(.timedOut)` (both shown by a
+    /// standalone probe, 28 Sep 2026). The second is the likely cause of the
+    /// intermittent `PipelineRunnerTerminationTests` failures on CI runners,
+    /// where window tests share the main thread — INFERRED: no failing CI run
+    /// has yet shown the returned state; the tests now print it if one does.
+    /// File I/O belongs off main in any case.
     nonisolated static func parseManifest(at url: URL) async -> PipelineState {
         let fm = FileManager.default
         let parentDir = url.deletingLastPathComponent()

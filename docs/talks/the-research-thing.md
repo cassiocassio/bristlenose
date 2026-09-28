@@ -1,7 +1,9 @@
 # The Research Thing — Research in the AI Era
 
 **4 Nov 2026, 6:30pm — Google, 6 Pancras Square, London.**
-Applied via the call for speakers; **application deadline: _(October — fill this in from the LinkedIn post)_**.
+Applied via the call for speakers; **application deadline: end of September
+2026** (the LinkedIn post; shortlisted speakers contacted by early October).
+Doors 6:30pm, talks from 7pm, networking until 9pm.
 
 _Started 20 Sep 2026. Application text finalised 28 Sep 2026 — see
 [`the-research-thing-submission.md`](the-research-thing-submission.md)._
@@ -10,6 +12,14 @@ Twelve minutes, demo-led. Community event — no pricing, no business model, no
 "get in touch". The crowd does this by hand and in Dovetail and is AI-native, so
 every point lands once and moves on. Nothing in here is explained twice, and the
 scripts are written to be said at pace.
+
+> **The brief, read 28 Sep, asks for two things this sheet was not built for**
+> — 15–20 minutes rather than twelve, and *practical AI workflows rather than
+> specific tools*, real stories, failures included. The submission was written
+> to that brief; the sheet has not been re-timed to it. What changes and in
+> what order is at the end of
+> [`the-research-thing-submission.md`](the-research-thing-submission.md).
+> Re-time after shortlisting.
 
 ---
 
@@ -503,8 +513,8 @@ written as "will not be offered".
 
 ## Still outstanding
 
-- **The CFP deadline.** The form does not state one and the LinkedIn post is
-  behind a login. Fill it in at the top of this file, and apply well before it.
+- **The re-timing to 15–20 minutes**, and the story beats the submission
+  promises, once shortlisted.
 - **Sample data — the long pole.** A UX-shaped study, big enough to concentrate,
   free of client confidentiality, stable enough to rehearse against. Neither
   fossda (oral history) nor the two-session fixtures will do. Target 17 Oct.

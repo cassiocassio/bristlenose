@@ -1,94 +1,125 @@
 # The Research Thing — speaker submission
 
-**Research in the AI Era · 4 Nov 2026, 6:30pm · Google, 6 Pancras Square, London.**
+**Research in the AI Era: Stories of experimentation, operationalisation,
+successes and failures · Wednesday 4 Nov 2026 · Google, 6 Pancras Square,
+London · doors 6:30pm, talks from 7pm, networking until 9pm.**
 
-Paste-ready answers for the call for speakers, and nothing else. The run sheet,
-the rig, the three cuts and the slides are in
+Paste-ready answers for the Google Form, and nothing else. The run sheet, the
+rig, the three cuts and the slides are in
 [`the-research-thing.md`](the-research-thing.md).
 
-_Written 28 Sep 2026. The deadline is still to confirm — see the bottom of this
-file._
+_Written 28 Sep 2026 against the LinkedIn post and the form, read that morning._
+
+**Deadline: end of September 2026.** Shortlisted speakers are contacted by
+early October. Speakers must attend in person.
 
 ---
+
+## The brief, verbatim, because the answers are shaped by it
+
+> We want to hear real stories from researchers and research-adjacent
+> practitioners navigating AI in their work — not just polished success
+> stories.
+>
+> Talks should ideally:
+> - Be 15–20 minutes (excluding time for questions)
+> - Share real-world stories detailing how you worked with AI to solve
+>   specific product challenges and the value it delivered.
+> - Evolving research roles and challenges: how has AI changed the way you're
+>   working or the challenges you're solving
+> - Celebrate Learning from Failures: we want to hear about the experiments
+>   that didn't go as planned, the happy accidents and what you learnt from
+>   them.
+> - Focus on practical AI workflows rather than specific tools, highlighting
+>   methods that attendees can realistically apply using widely available AI
+>   capabilities in their own day-to-day work.
+
+Two consequences. **The talk is a story with a demo in it, not a demo.** The
+tool is the vehicle; the thing on offer is the rules that came out of building
+it, every one of which works with the AI the audience already has. And **the
+failures are the content, not the caveats** — the calibration that ran on data
+too thin to mean anything (`docs/design-signal-card.md` §5a), the transcriber
+that hears "Thank you." in silence (0.31.4), and the four things the tool was
+told it must never do.
+
+---
+
+## The form's fields
+
+**Your full name** — Martin Storey
+
+**Current Role and Organisation** — not in the tree; yours to fill. The shape
+that fits the brief: *User researcher, ‹organisation› · maker of Bristlenose
+(open source)*.
+
+**Your contact details (email address)** — as entered.
 
 ## Talk title
 
-**Show your working**
+**I got frustrated with my AI, so I made it show its working**
 
-## Short description (~100 words)
+Completes the line already typed into the form. Two alternates, if that one
+reads as too much of a slogan on the night's programme:
 
-> A folder of interview recordings goes in. What comes out is a report — quotes,
-> themes, and the places where feeling concentrates — that you edit, hand over,
-> and keep as a file. Every claim it makes shows its working.
+- **I got frustrated with my transcripts, so I built the tool I wanted** — the
+  origin story, plainer, says less about AI.
+- **I got frustrated with my AI, so I taught it when to say "I don't know"** —
+  sharper and narrower; it is the one rule on slide 6, not the whole talk.
+
+## Short description for your talk
+
+> I'm a practising user researcher, and the two days after fieldwork are the
+> part I dread: a folder of recordings, a deadline, and an AI that will happily
+> write my findings for me if I let it. So over the last year I built
+> Bristlenose, an open-source tool that turns that folder into a report I edit
+> and own — and made the AI show its working.
 >
-> This is a working demo of Bristlenose, an open-source tool built over the last
-> year for researchers under deadline. The analysis runs through a frontier
-> model, and the design problems turned out to be the limits rather than the
-> capability: what a card shows, which quote earns the fourth slot, and the four
-> things the tool will not decide for you.
+> This is the story of what went wrong on the way — a calibration run on data
+> too thin to mean anything, a transcriber that hears "Thank you" in silence, a
+> model that hedges when it should commit — and the rules that came out of it:
+> which quote earns a slot, when to name a feeling, what to refuse to decide.
 >
-> Mostly live. Some of it is even finished.
+> None of it needs my tool. Every rule works with the AI you already have.
 
-## What attendees will learn
+## What attendees will learn from your talk
 
-> - A concrete method for finding where feeling concentrates in a study — why a
->   ratio beats a count, and what agreement and intensity add to it.
-> - How a card decides what to say: why it names a feeling on the amount of
->   evidence rather than the balance, and why one of its four quotes is held
->   for the person who disagreed.
-> - The editorial rules for cleaning a quote — what is removed, what is never
->   touched, and why "dignity without distortion" is a design constraint rather
->   than a slogan.
-> - Where the limits are: what runs on your machine and what goes to a model,
->   and the four things the tool deliberately will not do — one best guess with
->   its working shown, and every guess yours to overrule.
-
-## Speaker bio
-
-> I'm Martin Storey, a practising user researcher. Over the last year I have
-> built Bristlenose, a free and open-source tool that turns a folder of
-> interview recordings into a report you edit, share and keep as a file. It
-> runs on the Mac and from the command line, and lives at bristlenose.app.
-
-Nothing in the tree says where you practise or for how long, so neither is in
-here. Add a clause if the form wants one.
+> - A workflow for the two days after fieldwork that keeps the researcher in
+>   charge: the AI proposes, every quote lands in exactly one place, and every
+>   proposal is yours to overrule.
+> - Editorial rules for AI-cleaned quotes you can paste into any prompt —
+>   filler out and the cut marked, self-corrections kept, every added word in
+>   brackets — so participants sound like themselves on a good day without a
+>   word being changed.
+> - How to make an AI claim show its working: a ratio rather than a count,
+>   naming a feeling on the amount of evidence rather than the balance, and
+>   holding one of four quotes for the person who disagreed.
+> - What went wrong and what it taught: calibrate on data shaped like your real
+>   studies rather than fixtures, expect a transcriber to invent politeness in
+>   silence, and decide up front what the AI must never do — for me, synthesis,
+>   ranking, recommendations and statistical claims.
 
 ## Availability
 
-4 November 2026 — yes.
-
-## If the form asks
-
-| Field | Answer |
-|---|---|
-| Format | 12-minute live demo from my own Mac, with a handful of slides |
-| Links | [bristlenose.app](https://bristlenose.app) · [github.com/cassiocassio/bristlenose](https://github.com/cassiocassio/bristlenose) |
-| AV | Own laptop, USB-C or HDMI to the projector. No sound needed. Wi-Fi is used for three short moves (the website, the install, Miro); the analysis itself is never run live, so a dead network costs seconds, not the talk |
-| Commercial | None. Free, AGPL-3.0, no pricing and no business model to pitch |
+> Yes — I can attend in person on Wednesday 4 November, 6:30pm, at Google,
+> 6 Pancras Square.
 
 ---
 
-## Why this title
+## What this changes in the run sheet
 
-*Show your working* is literally a feature — every signal card opens to the
-numbers behind it — and it reads as a position in an AI-era line-up without
-being contrarian about it. The two not chosen:
+- **Length.** The brief says 15–20 minutes excluding questions; the run sheet
+  is built for twelve with 80 seconds of slack. The map slide, *What's in the
+  report*, comes back first (it was cut for time and the sheet says so), and
+  the story beats the description promises — the wrong-regime calibration and
+  the silent-audio "Thank you." — need a home, most naturally under slides 6
+  and 2. Re-time after shortlisting, not before.
+- **Frame.** The brief asks for methods over tools. The demo stays; the script
+  around it changes from *here is what it does* to *here is the rule, and here
+  is what it looks like when it runs*. Every slide already carries a rule, so
+  this is a rewording of the scripts, not a restructure.
 
-- **What it refuses to decide** — the stronger position, but cryptic on a
-  programme page without the description beside it. Its argument survives as
-  the last sentence of the description and the last bullet of the learnings.
-- **The two days after the interviews** — names the audience's problem and is
-  the warmest of the three, but the least distinctive in a list of AI talks.
+## Superseded
 
-Everything above is in the present tense on purpose. When the run sheet was
-written on 20 Sep the card's label rule and quote selection were designed and
-measured but not shipped; they shipped the same day and went out in 0.30.0 on
-21 Sep (`docs/design-signal-card.md` §9). The description promises what the
-app does now.
-
-## Still to confirm
-
-- **The deadline.** The form does not state one and the LinkedIn post is behind
-  a login. Fill it in at the top of the run-sheet file and apply well before it.
-- **Whether the form wants a headshot or a LinkedIn URL.** Neither is in the
-  tree; have both to hand.
+The first draft of this file (same day, before the post and the form were
+read) titled the talk *Show your working* and pitched it as a demo. It is in
+git history; the title survives as the second half of the one above.

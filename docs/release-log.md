@@ -125,6 +125,18 @@ One attempt each; no step failed, none was skipped (all twelve `ok` in
   shipped over it. Spun off as its own task. **Tell:** a workflow red for days
   that no release ever stops for — check whether it is a gate before assuming
   someone is watching it.
+  _Resolved 28 Sep 2026 (`15df357d`)._ The runners give the test process a
+  1024×768 screen and `orderFront` clamped every 1400-pt harness window to it,
+  so the scenarios ran from a collapsed start; the harness window now keeps its
+  frame. The "5.000 s" was not a timeout: Xcode 26.3 on macOS 15 rounds test
+  durations to whole seconds. The manifest-read failures (also seen on macos-26)
+  are attributed — by inference, not a captured failure — to `parseManifest`
+  running on the main actor, now `nonisolated`. Correction to "not a release
+  gate": `mac-build.yml` is a hard gate by the gate policy (no
+  `continue-on-error`, no `soft-gates.json` entry), just not a required check;
+  releases take their Swift verdict from `test-swift.sh` inside
+  `build-all.sh`/`build-dmg.sh`. Residual: `s22c` flakes on a genuine
+  column-stranding race, tracked separately.
 - **Website deploy carried nothing but the release**: before deploying, the
   live homepage and assets were diffed against the repo with the build-time
   `?v=` / `VERSION` stamps normalised away — identical — so `deploy.sh --yes`
@@ -136,7 +148,7 @@ One attempt each; no step failed, none was skipped (all twelve `ok` in
 ### What is owed
 
 - Re-measure the plan table's estimates (above).
-- The Mac Build red (spawned task).
+- ~~The Mac Build red (spawned task).~~ Fixed `15df357d`; the `s22c` race it exposed is its own task.
 - The Talismanic project's s3–s6 transcripts stay "Thank you." until those
   sessions are transcribed again — the fix is not retroactive, by design.
 

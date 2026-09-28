@@ -1464,9 +1464,11 @@ list position, the last paragraph's glow lasts to the end, a project with a lost
 folder grant offers Locate…, and the Welcome shelf's resting covers stop showing
 through each other. **The run went clean end to end in 32.5 min, preflight to
 tag** — a third of the plan table's 1 h 57, because build-all now reuses the
-preflight's resolve; the estimates are owed a re-measure. `Mac Build` has been
-red on CI runners since 26 Sep (sidebar-fit harness) and is not a release gate.
-Full account: `docs/release-log.md` § 0.31.4.
+preflight's resolve; the estimates are owed a re-measure. `Mac Build` was red
+on CI from 26 to 28 Sep — an environment defect, not a product one: the runners'
+1024×768 screen clamped the sidebar-fit harness's windows (fixed `15df357d`, see
+`desktop/CLAUDE.md`). It still flakes on `s22c`, a real sidebar-column race
+tracked separately. Full account: `docs/release-log.md` § 0.31.4.
 
 **0.31.3 shipped 27 Sep 2026, overnight — tag `v0.31.3` on `9b1e4d84`,
 TestFlight build 3793.** The re-drop release: dropping a folder the project

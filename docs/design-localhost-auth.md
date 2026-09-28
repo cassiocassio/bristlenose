@@ -1,11 +1,18 @@
 ---
 status: mixed
 last-trued: 2026-09-28
-trued-against: HEAD@main on 2026-09-28 (d314e3b7)
+trued-against: HEAD@main on 2026-09-28 (717fb6a1)
 ---
 
 ## Changelog
 
+- _2026-09-28 (later)_ — trued up: §"Cookie fallback" marks the
+  unconditional cookie check superseded by `_is_own_navigation`; the
+  as-built CSRF question became the measured record of probe and fix.
+  Anchors: `middleware.py` `_is_own_navigation`,
+  `tests/test_serve_auth.py::TestCookieIsForOwnNavigationsOnly`; commit
+  "serve's auth cookie no longer rides along on requests from another
+  loopback port".
 - _2026-09-28_ — trued up: added §"As built — what the token does not
   cover", marked the six "`/media/*` requires auth" claims, the popout's
   server-side token injection, the "CORS blocks browser attacks" scoping and
@@ -192,6 +199,8 @@ To cover those cases, `_spa_response()` in `app.py` sets a `bristlenose_auth` co
 if request.cookies.get(AUTH_COOKIE_NAME) == expected:
     return await call_next(request)
 ```
+
+> **Superseded 28 Sep 2026** — the check also requires `_is_own_navigation(request)`: GET/HEAD only, and refused when `Sec-Fetch-Site` is `same-site` or `cross-site`. A page on another loopback port is same-site and was getting this cookie sent with its POSTs. See §"As built".
 
 Cookie attributes: `HttpOnly` (defence-in-depth — JS already has the same value via `window.__BRISTLENOSE_AUTH_TOKEN__`, but no need to expose the cookie itself), `SameSite=Strict` (CSRF), `Secure=False` (localhost is `http://`; the cookie never traverses a network), `Path=/`, no `Expires` (session-scoped, dies with the WKWebView's ephemeral data store).
 

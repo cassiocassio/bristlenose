@@ -348,7 +348,11 @@ reads `Person.full_name` with a loopback `Host` and no token — zero steps wher
 exempt because `<video>` cannot send a header and serves recordings only, and
 `/report/` serves only `assets/` plus the SPA page; neither returns DB rows.
 Whether that residual is accepted or `/admin` goes behind the auth cookie is an
-open product call (28 Sep 2026). In the App Store *and* TestFlight builds
+open product call (28 Sep 2026). _(Bearing on it, same day: the cookie is now
+honoured only for same-origin GET/HEAD navigations — `_is_own_navigation` in
+`middleware.py` — so it would admit a researcher browsing `/admin` from the
+report's own origin and refuse both a cookie-less `curl` and a page on another
+loopback port.)_ In the App Store *and* TestFlight builds
 the `sqladmin` dependency still ships in the bundle but the route is never
 mounted (the env var is never set in the `.appStoreOrTestFlight` channel) — code
 present, endpoint absent.

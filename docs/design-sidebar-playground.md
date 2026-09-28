@@ -1,15 +1,21 @@
 ---
 status: current
-last-trued: 2026-09-25
-trued-against: HEAD@main on 2026-09-25
+last-trued: 2026-09-28
+trued-against: HEAD@main (6b126377) on 2026-09-28
 ---
 
-> **Truing status:** Current with targeted edits (trued 2026-09-25).
-> § Fit to width was brought up to the projects-column fixes and the macOS
-> 15/26 measurements; the rest of the body was not re-audited in this pass.
+> **Truing status:** Current with targeted edits (trued 2026-09-28).
+> § Fit to width was brought up to the projects-column fixes, the macOS
+> 15/26 measurements and the late-report ownership rules; the rest of the body was not re-audited in this pass.
 
 ## Changelog
 
+- _2026-09-28_ — § Fit to width: the ownership rules after the late-report
+  race (taken at a collapse, given up on a resting reading, a hide within 1 s
+  of the logic's write is ours); "the window is the only trigger" and "never
+  given back" qualified; the s15 residual restated against the new rules;
+  scenario count dated. Anchors: `SidebarAutoCollapse.autoCollapsed(afterReading:was:)`,
+  `.autoCollapsed(hiddenAt:lastWriteAt:was:)`, `SidebarFitHarnessTests` s23, s24.
 - _2026-09-25_ — trued up § Fit to width: retitled the column-minimum
   paragraph to name the detail column; recorded the shared window minimum and
   the mount guard; the accepted range now names `platformSlack`; the
@@ -131,9 +137,10 @@ what is *showing*, so `[` and the View menu row open an auto-closed panel.
 column's measured width would leave the report below that figure, and gives
 the column back when it would fit again at the width it last had. **The window
 is the only trigger** — not a panel opening, not a lens change, not the column
-toggling. A column the researcher hid is never given back; a column the
-researcher shows in a narrow window stays shown until the next resize, as in
-Mail. The figure is the wish, not the fit, because a figure that fell as
+toggling — save one re-run: a hide reported on a column the logic took decides
+again (below). A column the researcher hid is not given back, unless it was
+hidden within a second of an automatic show (below); a column the researcher
+shows in a narrow window stays shown until the next resize, as in Mail. The figure is the wish, not the fit, because a figure that fell as
 panels auto-closed would pop the column back into the space the cascade had
 just made.
 
@@ -192,9 +199,11 @@ last write is taken as a late report of it — ours, whatever the reading said
 within a second of an automatic show and it comes back once. The toolbar button animates before the binding
 flips, so the width is also re-measured the moment the column becomes visible
 (otherwise a toolbar show kept the hide's frames: 220 → 182). One residual is
-kept on purpose: the hide's in-range frames are still recorded, but only while
-the column is hidden — when the value is read only to give back a column the
-logic took, and a researcher-hidden one never is. The evidence and the scenarios are
+kept on purpose: the toolbar hide animates before the binding flips, so its
+in-range frames are still recorded as the width (and, being resting-shaped,
+give ownership up — harmless, since a column the researcher is hiding was
+theirs). The value is read next while the column is hidden, only to give back
+a column the logic took. The evidence and the scenarios are
 `SidebarFitHarnessTests`; `SidebarFitTrace` (off unless
 `BristlenoseDebugSidebarFit` is set) logs each decision beside AppKit's own
 state for a live session.
@@ -216,9 +225,11 @@ two launches by `SidebarRealWindowProbeTests` p04/p05 (diagnosis-gated on
 `BRISTLENOSE_SIDEBAR_DIAGNOSIS=1`, because they write the real autosave: seed
 150 → next launch opens at 220, not the clamped 200) and in-process by
 `SidebarFitHarnessTests.s21`, which asserts the 20-pt gap rather than the
-widths, since macOS 26 reads them as 228 and 208. The harness passes 24 of 24
+widths, since macOS 26 reads them as 228 and 208. The harness passed 24 of 24
 on macOS 15.7.3, 26.6.2 and 27 (`docs/sidebar-column-diagnosis.md` § macOS
-15, measured).
+15, measured); at `6b126377` it has 27 scenarios, and the VMs have not re-run
+s23 and s24. On CI's runners it needs `UnconstrainedWindow` (their 1024×768
+screen clamped every rig, `15df357d`).
 
 ---
 

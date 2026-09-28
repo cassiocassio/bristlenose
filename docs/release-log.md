@@ -136,9 +136,9 @@ One attempt each; no step failed, none was skipped (all twelve `ok` in
   `continue-on-error`, no `soft-gates.json` entry), just not a required check;
   releases take their Swift verdict from `test-swift.sh` inside
   `build-all.sh`/`build-dmg.sh`. The harness then exposed a genuine
-  column-stranding race (`s22c`), fixed in `2129553e`; one residual ordering is
-  still open (a single in-range reading right after an expand releases
-  ownership before a late hide lands).
+  column-stranding race (`s22c`), fixed in `2129553e`, with the residual
+  ordering (a single in-range reading right after an expand released ownership
+  before a late hide landed) closed in `6b126377`.
 - **Website deploy carried nothing but the release**: before deploying, the
   live homepage and assets were diffed against the repo with the build-time
   `?v=` / `VERSION` stamps normalised away — identical — so `deploy.sh --yes`
@@ -150,7 +150,7 @@ One attempt each; no step failed, none was skipped (all twelve `ok` in
 ### What is owed
 
 - Re-measure the plan table's estimates (above).
-- ~~The Mac Build red (spawned task).~~ Fixed `15df357d`; the `s22c` race it exposed fixed in `2129553e`, one residual open.
+- ~~The Mac Build red (spawned task).~~ Fixed `15df357d`; the `s22c` race it exposed fixed in `2129553e` + `6b126377`.
 - The Talismanic project's s3–s6 transcripts stay "Thank you." until those
   sessions are transcribed again — the fix is not retroactive, by design.
 

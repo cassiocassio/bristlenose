@@ -1,12 +1,13 @@
 ---
 status: partial
 date: 25 Sep 2026
-last-trued: 2026-09-25
-trued-against: HEAD@main on 2026-09-25
+last-trued: 2026-09-28
+trued-against: HEAD@main (6b126377) on 2026-09-28
 area: desktop — projects column (NavigationSplitView) + report web view
 ---
 
-> **Truing status:** Partial (trued 2026-09-25). S4 is explained and fixed;
+> **Truing status:** Partial (trued 2026-09-28). S4 is explained and fixed;
+> the late-report stranding race (s11, s22c, s23, s24) is fixed;
 > S5–S7 were reproduced by nobody and stay open as "note the preceding step,
 > trace on". The body is a dated investigation record: values inside dated
 > sections (the 180 minimum, the 2-pt slack) describe their moment. Read
@@ -18,7 +19,7 @@ area: desktop — projects column (NavigationSplitView) + report web view
   give the column up before the late hide. Closed with a 1-s late-report
   window; `SidebarFitHarnessTests.s24`.
 - _2026-09-28_ — late animation reports stranded the column; ownership now
-  follows what was seen at rest (Status at HEAD, fourth bullet). Anchors:
+  follows what was seen at rest (Status at HEAD, "Late animation reports"). Anchors:
   `SidebarAutoCollapse.autoCollapsed(afterReading:was:)`, the
   `onChange(of: columnVisibility)` in `ContentView.splitViewCore`,
   `SidebarFitHarnessTests.s23`.
@@ -36,7 +37,7 @@ area: desktop — projects column (NavigationSplitView) + report web view
 
 # The projects column and the report beside it — diagnosis
 
-## Status at HEAD (25 Sep 2026)
+## Status at HEAD (28 Sep 2026)
 
 - **S4 fixed.** The column opened at a *restored* width, not its ideal, and
   a 180 column shows 160-pt rows. `SidebarAutoCollapse.columnMin` is 200, and
@@ -47,8 +48,16 @@ area: desktop — projects column (NavigationSplitView) + report web view
 - **Per-OS slack.** `restingColumnWidth` accepts up to `columnMax +
   platformSlack` (8): macOS 15 adds a 1-pt divider, 26 lays declared widths out
   8 pt wide.
-- **Measured on three OSes.** `SidebarFitHarnessTests` passes 24 of 24 on
-  macOS 15.7.3, 26.6.2 and 27 (§ macOS 15, measured).
+- **Measured on three OSes.** `SidebarFitHarnessTests` passed 24 of 24 on
+  macOS 15.7.3, 26.6.2 and 27 (§ macOS 15, measured). It has 27 scenarios at
+  `6b126377` (s23 and s24 added 28 Sep), green twice on a macOS 27 Mac; the
+  VMs have not re-run them.
+- **CI runners' screen (28 Sep 2026, `15df357d`).** The GitHub macOS runners
+  give the test process a 1024×768 screen, and `orderFront` clamped every
+  1400-pt rig to it, so s01, s07 and s11 ran from a collapsed start and failed
+  on every Mac Build from 26 to 28 Sep. The rig window is now
+  `UnconstrainedWindow`, and s01 asserts it got the width it asked for. An
+  environment defect, separate from the race below, which CI then exposed.
 - **Late animation reports (28 Sep 2026).** A second decision landing inside
   the first's animation makes NSSplitViewController report each end state one
   write late: a `.all` after the collapse, a `.detailOnly` after the window
@@ -97,6 +106,11 @@ back when it fits — but only if the logic took it. The **Welcome pane has no
 floor** (`DetailFloor.resolve` → nil off the report), so on Welcome the
 column never auto-collapses. That is by design, not a symptom.
 
+*Post-script, 28 Sep 2026: the one other trigger is a hide reported on a column
+the logic took, which re-runs the same decision; and a column hidden within 1 s
+of an automatic show is given back once. Status at HEAD, "Late animation
+reports".*
+
 ## Fixed (ca00e7c8), with the evidence
 
 Found with `SidebarFitHarnessTests` — a real NavigationSplitView in an
@@ -116,6 +130,10 @@ see § macOS 15, measured*; the ours-flag is set at the write
 (`autoCollapsed(after:was:)`); the width is re-measured when the column
 becomes visible. Residual kept on purpose (s15): a toolbar *hide* still records
 in-range frames, read only while hidden, when the column is never ours.
+*Post-script, 28 Sep 2026: the ours-flag is no longer only set at the write — it
+is taken at a collapse and given up on a resting reading, and a hide within 1 s
+of the logic's own write counts as ours ("never ours" no longer absolute). See
+Status at HEAD, "Late animation reports".*
 
 **Not a finding — do not re-derive.** The harness's first round reported
 "the column comes back at 0 pt" and "the toolbar toggle desyncs SwiftUI".
@@ -658,6 +676,12 @@ hand-over: the four sessions are archived after it.
   animation. If anyone does it, `NSApp.keyWindow?.inLiveResize` is how the
   trace already reaches the window from `ContentView`; a Mail-style instant
   collapse, not a fix for anything seen today.
+  *Post-script, 28 Sep 2026: something did come from the animation — its
+  end-state reports, arriving one write late, stranded the column (s11/s22c on
+  CI, s23, s24). D was still not taken: the fix is in the ownership rules
+  (Status at HEAD), because removing the animation would change what the
+  researcher sees to fix bookkeeping, and nothing measured shows an unanimated
+  write stops AppKit reporting late.*
 
 **What each session leaves behind.**
 
@@ -731,6 +755,10 @@ passed on 27.** Evidence: `/Volumes/Iona/tart/evidence/sidebar-fit-2f0d7fbb/`.
   (`/Volumes/Iona/tart/evidence/sidebar-fit-9bcd881b/`). The late-write
   ordering does not reach the app through a real threshold crossing, so the
   unanimated write (session 4's D) stays optional.
+  *Post-script, 28 Sep 2026: it does reach it, by another route — not the mount
+  reading but a real crossing inside an animation, whose late end-state reports
+  stranded the column on CI every run (s22c) and in s23 8 of 8 locally. Fixed
+  in the ownership rules, not with D; Status at HEAD.*
 - Classic split on 15 measured: a 1-pt divider (`detail x=221` beside a 220
   column).
 - **macOS 26.6.2 (Xcode 27.0), same commit: 23 of 24.** Every declared width

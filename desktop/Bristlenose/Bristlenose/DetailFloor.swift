@@ -58,7 +58,8 @@ enum SidebarAutoCollapse {
     ///   - minWidth: `DetailFloor.resolve`, or `nil` to do nothing.
     ///   - sidebarVisible: Whether the column shows now.
     ///   - autoCollapsed: Whether *this* logic hid it. A column the researcher
-    ///     hid stays hidden; only one we took is ours to give back.
+    ///     hid stays hidden; only one we took is ours to give back (a hide
+    ///     within `lateReportWindow` of our own write counts as ours).
     ///
     /// Collapse when the detail beside a showing column would be narrower
     /// than the floor. Expand when a column we took would fit again. The two

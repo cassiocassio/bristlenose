@@ -246,3 +246,27 @@ def session_to_report() -> str:
 def session_to_asset(filename: str) -> str:
     """Relative path from session page to an asset file."""
     return f"../assets/{filename}"
+
+
+def project_output_dir(project_dir: Path) -> Path:
+    """Where a project's output lives — including before it exists.
+
+    ``bristlenose serve`` is handed either the project folder or its output
+    folder. Nine call sites used to decide which with the same two lines —
+    "``bristlenose-output/`` exists? use it, else the caller passed the output
+    dir" — and all nine got the never-run case wrong: with no output folder yet
+    they rooted themselves at the *interview* folder, so a serve started before
+    the first run watched the wrong events log for its whole life
+    (docs/design-project-condition.md §4). This answers the future path instead,
+    and never creates it (a pre-existing ``bristlenose-output/`` makes
+    ``bristlenose run`` refuse with ``output_exists``).
+    """
+    candidate = project_dir / "bristlenose-output"
+    if candidate.is_dir():
+        return candidate
+    # The caller passed an output dir itself: named so, or already holding a log.
+    if project_dir.name == "bristlenose-output" or (
+        project_dir / ".bristlenose" / "pipeline-events.jsonl"
+    ).exists():
+        return project_dir
+    return candidate

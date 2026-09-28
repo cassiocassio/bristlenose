@@ -476,7 +476,8 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
 
     overview: dict[str, Any] = {
         "project": _project_identity(project),
-        "last_run": last_run,  # outcome/completed_at of the newest pipeline run
+        # The newest run (from the condition), not the data version.
+        "last_run": last_run,
         "sessions": {"count": len(sessions), "items": session_rows},
         "participants": {
             "count": sum(1 for c in speakers if c.startswith("p")),
@@ -1033,7 +1034,20 @@ def mount_mcp_server(app: Any, session_factory: Callable[[], Any]) -> Any | None
         return None
 
     def _last_run() -> dict[str, Any] | None:
-        return (getattr(app.state, "last_run", None) or {}).get(1)
+        # The newest run's outcome — what an agent needs to hear ("the latest
+        # analysis failed"). Read from the condition: ``app.state.last_run`` is
+        # the data version only and would hide a failed or running re-run.
+        from bristlenose.output_paths import project_output_dir
+        from bristlenose.server.app import current_condition
+
+        project_dir = getattr(app.state, "project_dir", None)
+        if project_dir is None:
+            return (getattr(app.state, "last_run", None) or {}).get(1)
+        latest = current_condition(app, project_output_dir(project_dir)).latest
+        if latest is None:
+            return None
+        return {"run_id": latest.run_id, "outcome": latest.state.value,
+                "completed_at": latest.ended_at}
 
     # Monotonic, not wall-clock: a wall clock could fake or erase activity
     # on an NTP step. Trade-off, documented in health.py: mach_absolute_time

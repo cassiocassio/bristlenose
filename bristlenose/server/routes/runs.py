@@ -12,6 +12,8 @@ itself in sync is exposed.
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
@@ -22,7 +24,12 @@ router = APIRouter(prefix="/api")
 
 
 class LastRunResponse(BaseModel):
-    """Most recent terminal run for a project. Pinned: do not extend."""
+    """The DATA VERSION: the run whose import the database holds. Pinned: do not extend.
+
+    Set only after a successful re-import (or seeded from the report at
+    startup). It is not "the latest run" — that is ``/condition`` — and a failed
+    or running re-run never moves it.
+    """
 
     run_id: str
     outcome: str
@@ -50,3 +57,51 @@ def get_last_run(
     if entry is None:
         return None
     return LastRunResponse(**entry)
+
+
+class ConditionResponse(BaseModel):
+    """What the project is doing — the reducer's answer plus server-only facts.
+
+    ``condition`` is ``bristlenose.run_condition.Condition.to_wire()``: the same
+    shape the shared fixture pins, so the SPA and the Mac read one vocabulary.
+    ``importing`` / ``import_failed_run_id`` are the server's overlay: facts the
+    events log cannot carry because only this process knows them.
+    ``/last-run`` stays the data version — do not fold this into it.
+    """
+
+    condition: dict[str, Any]
+    importing: str | None = None
+    import_failed_run_id: str | None = None
+    policy: str
+
+
+@router.get(
+    "/projects/{project_id}/condition",
+    response_model=ConditionResponse,
+)
+def get_condition(project_id: int, request: Request) -> ConditionResponse:
+    """The project's condition, as the status page and banner see it."""
+    from bristlenose.output_paths import project_output_dir
+    from bristlenose.server.status_page import policy_from_env
+
+    db = request.app.state.db_factory()
+    try:
+        if not db.get(Project, project_id):
+            raise HTTPException(status_code=404, detail="Project not found")
+    finally:
+        db.close()
+
+    state = request.app.state
+    project_dir = getattr(state, "project_dir", None)
+    if project_dir is None:
+        raise HTTPException(status_code=404, detail="No project directory")
+    from bristlenose.server.app import current_condition
+
+    condition = current_condition(request.app, project_output_dir(project_dir))
+    overlay = getattr(state, "import_overlay", None) or {}
+    return ConditionResponse(
+        condition=condition.to_wire(),
+        importing=overlay.get("importing"),
+        import_failed_run_id=overlay.get("failed_run_id"),
+        policy=policy_from_env().value,
+    )

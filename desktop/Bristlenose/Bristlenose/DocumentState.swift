@@ -47,8 +47,12 @@ enum DocumentState: Equatable {
 /// shell — the page is still a status page, only the reason goes unnamed.
 enum StatusPageOutcome: String, Equatable {
     case noRun = "no-run"
+    /// First run under way, no report yet (a re-run never hides a report).
+    case inProgress = "in-progress"
     case failed = "failed"
     case cancelled = "cancelled"
+    /// Started, never finished, owner process gone.
+    case stranded = "stranded"
     case unknown = "unknown"
 
     /// Tolerant decode for the bridge message: absent or unrecognised → `.unknown`.

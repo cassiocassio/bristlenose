@@ -92,6 +92,7 @@ SERVER_ONLY_PATH_TEMPLATES: frozenset[str] = frozenset(
         "/projects/{project_id}/hidden",  # write-mirror; baked into /quotes
         "/projects/{project_id}/agent-settings",  # MCP-surface switch; no agents offline
         "/projects/{project_id}/last-run",  # live run status
+        "/projects/{project_id}/condition",  # live project condition — an export is a snapshot
         "/projects/{project_id}/miro/auth-url",
         "/projects/{project_id}/miro/status",
         "/projects/{project_id}/starred",  # write-mirror; baked into /quotes

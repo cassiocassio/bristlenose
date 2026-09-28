@@ -23,6 +23,7 @@ from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response
 
 from bristlenose.models import AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
+from bristlenose.run_condition import Condition
 from bristlenose.server.db import create_session_factory, db_url_for_project, get_engine, init_db
 from bristlenose.server.middleware import (
     AUTH_COOKIE_NAME,
@@ -724,6 +725,30 @@ def _build_dev_html(output_dir: Path, *, auth_token: str = "") -> str:
     )
 
 
+def current_condition(app: FastAPI, output_dir: Path) -> Condition:
+    """The project's condition, with liveness re-checked when it matters.
+
+    The watcher refreshes ``app.state.condition`` on every change to the log.
+    But a run that dies without a terminus — SIGKILL, OOM, a crash — changes
+    nothing on disk, so a cached ``in_progress`` would never become
+    ``stranded``; and a run observed in the gap between ``run_started`` and its
+    PID file would read ``stranded`` for its whole life. So whenever the latest
+    run has no terminus, this re-reads (one small file plus the PID file) rather
+    than trusting the cache. Settled states are served from the cache.
+    """
+    from bristlenose.run_condition import RunStateEnum, read_condition
+
+    cached: Condition | None = getattr(app.state, "condition", None)
+    if cached is not None and not (
+        cached.latest is not None
+        and cached.latest.state in (RunStateEnum.IN_PROGRESS, RunStateEnum.STRANDED)
+    ):
+        return cached
+    fresh = read_condition(output_dir)
+    app.state.condition = fresh
+    return fresh
+
+
 def _maybe_status_response(app: FastAPI, output_dir: Path) -> HTMLResponse | None:
     """Return a server-rendered status page when the SPA can't render.
 
@@ -732,11 +757,23 @@ def _maybe_status_response(app: FastAPI, output_dir: Path) -> HTMLResponse | Non
     handle the request as today. See ``status_page.detect_status`` for the
     decision matrix.
     """
-    last_run = getattr(app.state, "last_run", None)
+    from bristlenose.output_paths import project_output_dir
+    from bristlenose.server.status_page import condition_key, policy_from_env
+
+    # The condition, not ``last_run``: ``last_run`` is the data version (what
+    # the database holds), the condition is what the project is doing.
+    project_dir = getattr(app.state, "project_dir", None)
+    if project_dir is not None:
+        output_dir = project_output_dir(project_dir)
+    condition = current_condition(app, output_dir)
+    overlay = getattr(app.state, "import_overlay", None) or {}
     status = detect_status(
         output_dir,
-        last_run,
+        condition,
         platform=os.environ.get("BRISTLENOSE_PLATFORM", ""),
+        policy=policy_from_env(),
+        importing=overlay.get("importing") is not None,
+        has_data=bool(getattr(app.state, "last_run", None)),
     )
     if status is None:
         return None
@@ -760,6 +797,7 @@ def _maybe_status_response(app: FastAPI, output_dir: Path) -> HTMLResponse | Non
         help_url=help_url,
         version=str(health["version"]),
         html_root_attrs=_html_root_attrs(),
+        condition_key=condition_key(condition),
     )
     # Match the SPA response's cookie contract — every /report/* HTML response
     # sets the auth cookie so subsequent /api/* fetches from the same origin
@@ -1035,7 +1073,7 @@ def _make_run_completed_handler(
     from bristlenose.server.db import ensure_schema
     from bristlenose.server.importer import import_project
 
-    def _reimport_sync() -> None:
+    def _reimport_sync() -> bool:
         # `run --clean` rmtrees the output dir — database included — under
         # the live serve, leaving the pool pinned to a deleted inode and the
         # on-disk path holding a fresh, schema-less file. Heal before
@@ -1051,15 +1089,27 @@ def _make_run_completed_handler(
         db = session_factory()  # type: ignore[operator]
         try:
             import_project(db, project_dir)
+            return True
         except Exception:
             logger.exception(
                 "Re-import after run_completed failed for %s", project_dir,
             )
+            return False
         finally:
             db.close()
 
     async def _on_run_completed(ev: RunCompletedEvent) -> None:
-        await asyncio.to_thread(_reimport_sync)
+        overlay = getattr(app.state, "import_overlay", None)
+        if overlay is not None:
+            overlay.update(importing=ev.run_id)
+        ok = await asyncio.to_thread(_reimport_sync)
+        if overlay is not None:
+            overlay.update(importing=None, failed_run_id=None if ok else ev.run_id)
+        if not ok:
+            # ``last_run`` is the data version — "the database holds this run".
+            # A failed import must not claim it; the SPA would refetch into
+            # stale or empty data and call it the new analysis.
+            return
         app.state.last_run[1] = {
             "run_id": ev.run_id,
             "outcome": ev.outcome.value,
@@ -1099,45 +1149,42 @@ def _install_event_watcher(
     """
     from contextlib import asynccontextmanager
 
-    from bristlenose.events import (
-        EventTypeEnum,
-        events_path,
-        read_events,
-    )
+    from bristlenose.events import events_path
+    from bristlenose.output_paths import project_output_dir
+    from bristlenose.run_condition import read_condition
     from bristlenose.server.event_watcher import run_event_watcher
 
-    output_dir = project_dir / "bristlenose-output"
-    if not output_dir.is_dir():
-        output_dir = project_dir
-    events_file = events_path(output_dir)
+    # Resolved on every poll: a serve started before the project's first run
+    # must follow ``bristlenose-output/`` into existence, not watch the
+    # interview folder for its whole life (design-project-condition.md §4).
+    def _events_file() -> Path:
+        return events_path(project_output_dir(project_dir))
 
-    # Per-project last-run map. Single project (id=1) for now; the dict
-    # shape carries forward to multi-project without an API change. Each
-    # entry is populated AFTER the SQLite re-import completes — the
-    # endpoint's correctness contract is "if last_run.run_id is set, the
-    # DB has data from that run".
+    # The project's condition — what it is doing, derived by one reducer.
+    # Status page and the condition endpoint read it; the watcher refreshes it
+    # on every lifecycle event, failures and cancels included.
+    app.state.condition = read_condition(project_output_dir(project_dir))
+
+    # Facts only the server knows, layered over the condition.
+    app.state.import_overlay = {"importing": None, "failed_run_id": None}
+
+    # ``last_run`` is the DATA VERSION: "the database holds this run". Set only
+    # after a successful import, seeded from the condition's report — never
+    # from a failed or cancelled run, which it used to carry so the status page
+    # could find it (the page reads the condition now).
     app.state.last_run = {}
+    report = app.state.condition.report
+    if report is not None:
+        app.state.last_run[1] = {
+            "run_id": report.run_id,
+            "outcome": "completed",
+            # A legacy (manifest) report may carry no timestamp; the pinned
+            # response model requires a string.
+            "completed_at": report.ended_at or "",
+        }
 
-    # Seed from any existing terminus on disk so the SPA's first poll
-    # sees a non-null run_id and can reconcile against its own (null)
-    # baseline. Startup import has already loaded that data into SQLite.
-    # Includes failed and cancelled terminus events so the server-rendered
-    # status page (status_page.detect_status) can surface them on restart
-    # without re-reading the events log on every catch-all request.
-    if events_file.exists():
-        termini = (
-            EventTypeEnum.RUN_COMPLETED,
-            EventTypeEnum.RUN_FAILED,
-            EventTypeEnum.RUN_CANCELLED,
-        )
-        for ev in reversed(read_events(events_file)):
-            if ev.event in termini:
-                app.state.last_run[1] = {
-                    "run_id": ev.run_id,
-                    "outcome": getattr(ev, "outcome").value,
-                    "completed_at": getattr(ev, "ended_at"),
-                }
-                break
+    async def _on_change() -> None:
+        app.state.condition = read_condition(project_output_dir(project_dir))
 
     _on_run_completed = _make_run_completed_handler(
         app, session_factory, project_dir, engine=engine,
@@ -1146,7 +1193,9 @@ def _install_event_watcher(
     @asynccontextmanager
     async def _lifespan(_: FastAPI):
         task = asyncio.create_task(
-            run_event_watcher(events_file, _on_run_completed),
+            run_event_watcher(
+                _events_file, _on_run_completed, on_change=_on_change,
+            ),
             name="bristlenose-event-watcher",
         )
         try:

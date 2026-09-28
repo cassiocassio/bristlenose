@@ -21,15 +21,19 @@ from bristlenose.events import (
     Cause,
     CauseCategoryEnum,
     KindEnum,
+    Process,
     RunCancelledEvent,
     RunCompletedEvent,
     RunFailedEvent,
+    RunStartedEvent,
     append_event,
     events_path,
     new_run_id,
 )
+from bristlenose.run_condition import read_condition
 from bristlenose.server.app import create_app
 from bristlenose.server.status_page import (
+    ReportPolicy,
     StatusInfo,
     detect_status,
     render_page,
@@ -91,9 +95,34 @@ def _seed_cancelled(output_dir: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _cond(out: Path, alive: bool = False):
+    """The project condition as the server derives it (liveness injectable)."""
+    return read_condition(out, liveness=lambda _rid: alive)
+
+
+def _started(out: Path, run_id: str, kind: KindEnum = KindEnum.RUN) -> None:
+    append_event(events_path(out), RunStartedEvent(
+        ts="2026-05-10T19:00:00Z", run_id=run_id, kind=kind,
+        started_at="2026-05-10T19:00:00Z",
+        process=Process(pid=1, start_time="1.0", hostname="h", user="u",
+                        bristlenose_version="0", python_version="3.12", os="darwin-arm64"),
+    ))
+
+
+def _completed(out: Path, run_id: str, kind: KindEnum = KindEnum.RUN) -> None:
+    append_event(events_path(out), RunCompletedEvent(
+        ts="2026-05-10T20:00:00Z", run_id=run_id, kind=kind,
+        started_at="2026-05-10T19:00:00Z", ended_at="2026-05-10T20:00:00Z",
+    ))
+
+
 class TestDetectStatus:
+    """``detect_status`` now reads the project's CONDITION (one reducer) rather
+    than a cached ``last_run`` plus a separate read of the log's last terminus —
+    the two-source design that let a page mix two runs."""
+
     def test_no_run_yet_cli(self, tmp_path: Path) -> None:
-        info = detect_status(tmp_path, {}, platform="")
+        info = detect_status(tmp_path, _cond(tmp_path), platform="")
         assert info is not None
         assert info.kind == MessageKind.INFO
         assert "Nothing to see here" in info.short
@@ -103,7 +132,7 @@ class TestDetectStatus:
         assert info.outcome == "no-run"
 
     def test_no_run_yet_desktop(self, tmp_path: Path) -> None:
-        info = detect_status(tmp_path, {}, platform="desktop")
+        info = detect_status(tmp_path, _cond(tmp_path), platform="desktop")
         assert info is not None
         assert info.kind == MessageKind.INFO
         assert "No interviews" in info.short
@@ -112,15 +141,14 @@ class TestDetectStatus:
         assert info.outcome == "no-run"
 
     def test_completed_lets_spa_render(self, tmp_path: Path) -> None:
-        last_run = {1: {"run_id": "X", "outcome": "completed", "completed_at": "t"}}
-        assert detect_status(tmp_path, last_run) is None
+        _seed_completed(tmp_path)
+        assert detect_status(tmp_path, _cond(tmp_path)) is None
 
     def test_failed_surfaces_cause_message(self, tmp_path: Path) -> None:
         out = tmp_path / "bristlenose-output"
         out.mkdir()
         _seed_failed(out, message="Quota exceeded — top up the account")
-        last_run = {1: {"run_id": "X", "outcome": "failed", "completed_at": "t"}}
-        info = detect_status(out, last_run)
+        info = detect_status(out, _cond(out))
         assert info is not None
         assert info.kind == MessageKind.ERROR
         assert info.short == "Last run failed."
@@ -134,8 +162,7 @@ class TestDetectStatus:
         out = tmp_path / "bristlenose-output"
         out.mkdir()
         _seed_cancelled(out)
-        last_run = {1: {"run_id": "X", "outcome": "cancelled", "completed_at": "t"}}
-        info = detect_status(out, last_run)
+        info = detect_status(out, _cond(out))
         assert info is not None
         assert info.kind == MessageKind.WARNING
         assert "cancelled" in info.short.lower()
@@ -157,34 +184,119 @@ class TestDetectStatus:
             encoding="utf-8",
         )
         seed(out)
-        last_run = {1: {"run_id": "X", "outcome": outcome, "completed_at": "t"}}
-        info = detect_status(out, last_run)
-        assert info is not None
+        info = detect_status(out, _cond(out))
+        assert info is not None and info.outcome == outcome
         assert "Sarah" not in (info.details or "")
         assert "/Users/" not in (info.details or "")
         assert "Recent log" not in (info.details or "")
 
-    def test_failed_with_no_events_file_still_intercepts(self, tmp_path: Path) -> None:
-        """``last_run`` says failed but events file missing: still intercept, details empty."""
-        last_run = {1: {"run_id": "X", "outcome": "failed", "completed_at": "t"}}
-        info = detect_status(tmp_path, last_run)
+    def test_title_and_cause_come_from_the_same_run(self, tmp_path: Path) -> None:
+        """A cancel after a failure is a cancellation page with the cancel's
+        cause — not "Last run failed." over a user_signal cause (F4)."""
+        out = tmp_path / "bristlenose-output"
+        out.mkdir()
+        _seed_failed(out, message="out of credit")
+        _seed_cancelled(out)
+        info = detect_status(out, _cond(out))
         assert info is not None
-        assert info.kind == MessageKind.ERROR
-        # No cause/log → no details block
-        assert info.details is None or info.details == ""
+        assert info.outcome == "cancelled"
+        assert "category: user_signal" in (info.details or "")
+        assert "out of credit" not in (info.details or "")
 
-    def test_unknown_outcome_does_not_intercept(self, tmp_path: Path) -> None:
-        last_run = {1: {"run_id": "X", "outcome": "weird-future-value"}}
-        assert detect_status(tmp_path, last_run) is None
+    def test_undecodable_log_does_not_intercept(self, tmp_path: Path) -> None:
+        """A well-formed line of a known event that no longer fits the model is
+        contract drift: refuse to answer rather than describe the wrong run."""
+        out = tmp_path / "bristlenose-output"
+        _seed_completed(out)
+        with events_path(out).open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps({"event": "run_failed", "run_id": "X"}) + "\n")
+        assert detect_status(out, _cond(out)) is None
 
     def test_corrupt_events_file_does_not_crash(self, tmp_path: Path) -> None:
         out = tmp_path / "bristlenose-output"
         events_path(out).parent.mkdir(parents=True)
         events_path(out).write_text("{ not json\n", encoding="utf-8")
-        last_run = {1: {"run_id": "X", "outcome": "failed"}}
-        info = detect_status(out, last_run)
-        assert info is not None
-        assert info.kind == MessageKind.ERROR
+        info = detect_status(out, _cond(out))
+        assert info is not None and info.outcome == "no-run"
+
+    def test_first_run_in_progress(self, tmp_path: Path) -> None:
+        _started(tmp_path, "A")
+        info = detect_status(tmp_path, _cond(tmp_path, alive=True))
+        assert info is not None and info.outcome == "in-progress"
+
+    def test_rerun_in_progress_never_hides_the_report(self, tmp_path: Path) -> None:
+        _completed(tmp_path, "A")
+        _started(tmp_path, "B")
+        assert detect_status(tmp_path, _cond(tmp_path, alive=True)) is None
+
+    def test_stranded_run(self, tmp_path: Path) -> None:
+        _started(tmp_path, "A")
+        info = detect_status(tmp_path, _cond(tmp_path, alive=False))
+        assert info is not None and info.outcome == "stranded"
+
+    def test_transcribe_only_serves_the_spa(self, tmp_path: Path) -> None:
+        """After `bristlenose transcribe`, the SPA's Sessions and transcript
+        routes are the useful surface. A "transcribed" page was tried in the POC
+        and hid them (review finding) — withdrawn."""
+        _completed(tmp_path, "A", KindEnum.TRANSCRIBE_ONLY)
+        assert detect_status(tmp_path, _cond(tmp_path)) is None
+
+    def test_import_in_flight_with_no_data_is_in_progress(self, tmp_path: Path) -> None:
+        """The log says completed before the database holds the run."""
+        _completed(tmp_path, "A")
+        info = detect_status(tmp_path, _cond(tmp_path), importing=True, has_data=False)
+        assert info is not None and info.outcome == "in-progress"
+        # With an older data version the SPA shows it and refetches when it moves.
+        assert detect_status(tmp_path, _cond(tmp_path), importing=True, has_data=True) is None
+
+    def test_stranded_rerun_never_hides_the_report(self, tmp_path: Path) -> None:
+        _completed(tmp_path, "A")
+        _started(tmp_path, "B")
+        assert detect_status(tmp_path, _cond(tmp_path, alive=False)) is None
+
+    def test_condition_key_moves_with_the_state(self, tmp_path: Path) -> None:
+        from bristlenose.server.status_page import condition_key
+        _started(tmp_path, "A")
+        running = condition_key(_cond(tmp_path, alive=True))
+        stranded = condition_key(_cond(tmp_path, alive=False))
+        _completed(tmp_path, "A")
+        done = condition_key(_cond(tmp_path))
+        assert len({running, stranded, done}) == 3
+
+    def test_failed_transcribe_never_hides_a_report(self, tmp_path: Path) -> None:
+        """N49 — a failed `bristlenose transcribe` after a completed run."""
+        _completed(tmp_path, "A")
+        _started(tmp_path, "B", KindEnum.TRANSCRIBE_ONLY)
+        append_event(events_path(tmp_path), RunFailedEvent(
+            ts="t", run_id="B", kind=KindEnum.TRANSCRIBE_ONLY, started_at="t",
+            ended_at="t", cause=Cause(category=CauseCategoryEnum.WHISPER, message="x"),
+        ))
+        assert detect_status(tmp_path, _cond(tmp_path)) is None
+
+    def test_legacy_project_without_a_log_shows_its_report(self, tmp_path: Path) -> None:
+        """Analysed before the events log existed: the manifest records a
+        finished render and the log records nothing. Measured on 2 of 30 real
+        output folders — both showed "Nothing to see here, yet." over a report."""
+        from bristlenose.manifest import PipelineManifest, StageRecord, StageStatus, write_manifest
+
+        out = tmp_path / "bristlenose-output"
+        write_manifest(PipelineManifest(
+            project_name="p", pipeline_version="0.14.0", created_at="t", updated_at="t",
+            stages={"render": StageRecord(status=StageStatus.COMPLETE, completed_at="t")},
+        ), out)
+        assert detect_status(out, _cond(out)) is None
+
+    @pytest.mark.parametrize("policy,expect", [
+        (ReportPolicy.LATEST_ATTEMPT, "failed"),
+        (ReportPolicy.LAST_GOOD_REPORT, None),
+    ])
+    def test_policy_decides_a_failed_rerun_over_a_report(
+        self, tmp_path: Path, policy: ReportPolicy, expect: str | None,
+    ) -> None:
+        _completed(tmp_path, "A")
+        _seed_failed(tmp_path)
+        info = detect_status(tmp_path, _cond(tmp_path), policy=policy)
+        assert (info.outcome if info else None) == expect
 
 
 # ---------------------------------------------------------------------------

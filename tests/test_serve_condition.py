@@ -70,8 +70,15 @@ def _app(project_dir: Path, tmp_path: Path):
     static.mkdir(exist_ok=True)
     (static / "index.html").write_text(_VITE_INDEX_HTML)
     (static / "assets").mkdir(exist_ok=True)
+    # A file database, not "sqlite://": the in-memory one is a StaticPool — one
+    # connection for every thread — so the watcher's re-import (a worker thread)
+    # and the test's polling requests shared a transaction, and a request's
+    # rollback could wipe the import mid-flight (StaleDataError on `projects`,
+    # 5 of 5 ubuntu cells on 28 Sep 2026, ~1 in 25 locally). Production opens a
+    # connection per thread; so does this.
     with patch("bristlenose.server.app._STATIC_DIR", static):
-        return create_app(project_dir=project_dir, dev=False, db_url="sqlite://")
+        return create_app(project_dir=project_dir, dev=False,
+                          db_url=f"sqlite:///{tmp_path / 'serve.db'}")
 
 
 def _wait(pred, timeout: float = 3.0) -> bool:
@@ -195,8 +202,9 @@ def _pid_file(out: Path, run_id: str, *, alive: bool) -> None:
     from bristlenose.run_lifecycle import _ps_start_time, pid_file_path
 
     start = _ps_start_time(os.getpid()) if alive else "0.000001"
-    if alive and start is None:
-        pytest.skip("process start time unavailable on this platform")
+    # Our own PID's start time is readable on every platform we test on; if it
+    # is not, that is a failure to see, not a test to skip.
+    assert not (alive and start is None), "process start time unavailable"
     path = pid_file_path(out)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(_json.dumps({"pid": os.getpid(), "start_time": start, "run_id": run_id}))

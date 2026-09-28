@@ -197,8 +197,8 @@ def test_pid_liveness_must_match_run_id(tmp_path: Path) -> None:
     _write_log(out, [RunStartedEvent(ts=ts, run_id="B", kind=KindEnum.RUN, started_at=ts,
                                      process=_PROC).model_dump_json()])
     me = _ps_start_time(os.getpid())
-    if me is None:
-        pytest.skip("process start time unavailable on this platform")
+    # Readable on every platform we test on; a None here is a failure, not a skip.
+    assert me is not None, "process start time unavailable"
 
     # A PID file naming a different run — this process is alive, but not B's owner.
     _write_pid_file(out, "A", me)

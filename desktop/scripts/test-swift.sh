@@ -167,7 +167,8 @@ if [ "$failed" -gt 0 ]; then
     xcrun xcresulttool get test-results summary --path "$RESULT_BUNDLE" 2>/dev/null \
       | python3 -c 'import json,sys
 for f in json.load(sys.stdin).get("testFailures", []):
-    print(f"  {f.get(\"testIdentifierString\") or f.get(\"testName\")}: {f.get(\"failureText\", \"\")}")' >&2 \
+    name = f.get("testIdentifierString") or f.get("testName")
+    print("  %s: %s" % (name, f.get("failureText", "")))' >&2 \
       || echo "  (could not read the result bundle)" >&2
   fi
   exit 1

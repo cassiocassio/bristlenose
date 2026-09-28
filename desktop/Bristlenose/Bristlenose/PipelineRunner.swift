@@ -486,7 +486,7 @@ final class PipelineRunner: ObservableObject {
     /// Manifest timestamps include fractional seconds
     /// (`2026-04-17T00:37:27.480978+00:00`), which the default
     /// `ISO8601DateFormatter` does not parse.
-    private static let iso8601: ISO8601DateFormatter = {
+    nonisolated private static let iso8601: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return f
@@ -501,7 +501,7 @@ final class PipelineRunner: ObservableObject {
     /// `bristlenose/manifest.py` `STAGE_RENDER` — the last entry of
     /// `STAGE_ORDER`. Load-bearing: presence of this stage in a manifest
     /// is the canonical "pipeline finished" signal for `parseManifest`.
-    private static let terminalStage = "render"
+    nonisolated private static let terminalStage = "render"
 
     init() {
         Self.logger.info("PipelineRunner initialised")
@@ -1007,7 +1007,16 @@ final class PipelineRunner: ObservableObject {
     /// Internal rather than private so `EventLogReaderTests` can pin the guard
     /// order below — the bug it had was in *reaching* `deriveState`, which the
     /// reader's own tests cannot see because they call it directly.
-    static func parseManifest(at url: URL) async -> PipelineState {
+    ///
+    /// `nonisolated` is load-bearing, not tidiness. Inherited from the class,
+    /// this ran on the main actor — so `readManifestState`'s timeout could not
+    /// guard a hung read (the read blocks the thread the timeout must resume
+    /// on), and a main thread merely *busy* for longer than the timeout made a
+    /// healthy manifest read as `.unreachable(.timedOut)`. That second case is
+    /// what turned `PipelineRunnerTerminationTests` red on CI runners, where
+    /// window tests share the main thread (26–28 Sep 2026). File I/O belongs
+    /// off main in any case.
+    nonisolated static func parseManifest(at url: URL) async -> PipelineState {
         let fm = FileManager.default
         let parentDir = url.deletingLastPathComponent()
             .deletingLastPathComponent()  // strip .bristlenose/, keep bristlenose-output/

@@ -214,6 +214,20 @@ struct SidebarFitHarnessView: View {
 
 // MARK: - The window driver
 
+/// A window that keeps the frame it is given. AppKit constrains a titled
+/// window to its screen when it is ordered front, and the GitHub macOS runners
+/// give the test process a 1024×768 screen: every rig asked for 1400 opened at
+/// 1024 — below the ≈1188 threshold — so s01's "baseline 1400" was a collapsed
+/// baseline, s07's "hide" showed the column, and s11 flickered from a collapsed
+/// start. Red on every Mac Build run from 26 to 28 Sep 2026, green on any Mac
+/// with a wider display. The scenarios are about widths, not screens; later
+/// `setFrame` calls were never constrained, only the opening one.
+final class UnconstrainedWindow: NSWindow {
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+        frameRect
+    }
+}
+
 @MainActor
 struct SidebarFitRig {
     let probe = SidebarFitProbe()
@@ -234,7 +248,7 @@ struct SidebarFitRig {
         let host = NSHostingController(rootView: SidebarFitHarnessView(
             probe: probe, placement: placement, kind: kind, detailKind: detail))
         host.sizingOptions = []
-        window = NSWindow(
+        window = UnconstrainedWindow(
             contentRect: NSRect(x: 40, y: 40, width: width, height: 700),
             styleMask: [.titled, .resizable, .closable, .miniaturizable],
             backing: .buffered, defer: false)
@@ -405,6 +419,9 @@ struct SidebarFitRig {
         let rig = await SidebarFitRig(width: 1400)
         defer { rig.close() }
         rig.dump("s01 baseline 1400")
+        // Every scenario's widths assume the rig got the frame it asked for.
+        #expect(rig.window.frame.width == 1400,
+                "the rig opened \(rig.window.frame.width) wide, not 1400 — \(rig.environment)")
         #expect(rig.inAgreement)
         #expect(rig.appKitCollapsed == false)
         // The measurement the expand test will rely on must equal the real column.

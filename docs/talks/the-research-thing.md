@@ -3,7 +3,8 @@
 **4 Nov 2026, 6:30pm — Google, 6 Pancras Square, London.**
 Applied via the call for speakers; **application deadline: _(October — fill this in from the LinkedIn post)_**.
 
-_Started 20 Sep 2026._
+_Started 20 Sep 2026. Application text finalised 28 Sep 2026 — see
+[`the-research-thing-submission.md`](the-research-thing-submission.md)._
 
 Twelve minutes, demo-led. Community event — no pricing, no business model, no
 "get in touch". The crowd does this by hand and in Dovetail and is AI-native, so
@@ -14,82 +15,32 @@ scripts are written to be said at pace.
 
 ## The application
 
-The form wants four things. Drafts below — pick, cut, make them yours.
-
-**Talk title.** Three options, in order of how much I would back them:
-
-1. **Show your working** — short, memorable, and literally a feature: every
-   signal card opens to the numbers behind it. Reads as a position in an AI-era
-   lineup without being contrarian for its own sake.
-2. **What it refuses to decide** — stronger position, slightly cryptic alone.
-   Needs the description to carry it.
-3. **The two days after the interviews** — names the audience's actual problem.
-   Warmest of the three, least distinctive.
-
-**Short description for your talk** (~100 words)
-
-> A folder of interview recordings goes in. What comes out is a browsable report
-> — quotes, themes, and the places where feeling concentrated — that you edit,
-> hand over, and keep as a file.
->
-> This is a working demo of Bristlenose, built over the last year for
-> researchers under deadline. It runs the analysis through a frontier model, and
-> the interesting design problems turned out to be the limits rather than the
-> capability: what to show on a card, which quote earns the fourth slot, and the
-> four things the tool will not decide for you.
->
-> Mostly live. Some of it is even finished.
-
-**What attendees will learn**
-
-> - What a report looks like when the tool commits to one answer per quote and
->   lets you overrule it, rather than hedging across every possible reading.
-> - A concrete method for surfacing where sentiment concentrates in a study, and
->   why the ratio matters more than the count.
-> - How the editorial rules for cleaning a quote were written — what gets
->   removed, what is never touched, and why "dignity without distortion" is a
->   design constraint rather than a slogan.
-> - Where the honest limits are: what runs on your machine, what goes to a
->   model, and the four things this tool deliberately will not do.
-
-**Availability** — 4 Nov, yes.
+The finished, paste-ready answers are in
+[`the-research-thing-submission.md`](the-research-thing-submission.md): one
+title chosen — **Show your working** — the ~100-word description, four
+learnings in the present tense, a first-person bio, availability, and the
+answers to the fields a form like this usually adds. The two titles not
+chosen are kept there with a line each on why. This file holds nothing that
+goes in the form, so the two cannot drift.
 
 ---
 
-## The build runway
+## The build runway — settled
 
-Six weeks to 4 Nov. One slide describes logic that is **designed and measured,
-not shipped**: slide 6, *How a card decides*. As of 20 Sep 2026 the card shows
-one quote, orders quotes by participant and clock, and labels the sentiment chip
-`Sentiment`.
+Written on 20 Sep 2026 while slide 6, *How a card decides*, described logic
+that was designed and measured but not shipped. **It shipped the same day.**
+`docs/design-signal-card.md` §9 records Tiers 1 and 2 built (`451a43ca`,
+`9e9af6fd`, `96323e58`, `08b4bb93`), and 0.30.0 carried generation 4 of the
+card on 21 Sep. J (the label rule) and I (editorial quote selection) are on
+the wire, so slide 6 is present tense and move 23 shows the real thing.
 
-`docs/design-signal-card.md` §0 names four generations of the card: **the app
-ships generation 3, and slide 6 describes generation 4.** §9 has the build plan,
-and **Tier 1 — the seven frontend changes carrying no open questions — is in
-flight now.** Tier 1 alone changes what the demo looks like: the fused stack,
-the heading owning the location, and four quotes open instead of one.
-
-What slide 6 actually *argues* is Tier 2's **J** (the label rule — already
-written and validated in `label_rule.py`, needing a server-side port so the
-label is on the wire) and **I** (editorial quote selection, which depends on J
-for sentiment cards). So the runway question is not Tier 1, which is happening;
-it is whether J and I land.
-
-- **J and I land.** Slide 6 becomes present tense, the status box comes off, and
-  move 23 shows the real thing. Worth aiming at — J is a port of validated code,
-  not new logic.
-- **They don't.** Tier 1 still lands, so the card on screen looks right and
-  shows four quotes; only the *selection* and the *label* are the old ones.
-  Slide 6 stays as reasoning-in-progress, and you say so at move 23.
-
-**Take a view by mid-October**, not in the week of the talk, because the
-rehearsal depends on which card is on screen — and because the difference is one
-sentence in the script, not a restructure.
-
-> **⚠️ Status check before you present.** If J and I have not landed, slide 6 is
-> design, not behaviour. Check `docs/design-signal-card.md` §9 for
-> what has landed since, and say so at the signal-card beat. Every other slide
-> describes behaviour that ships today.
+Two things still follow from it. **Nobody has yet looked at the card with
+eyes** — §9's status box says tests-green, not eyes-on, and two of its five
+review defects were invisible to every test — so the first rehearsal on the
+rig doubles as that pass; do it early enough to fix what it finds. And what
+remains deferred (L, the `MIN_WEIGHT` recalibration; the escape hatch; the
+clarity signal for the dissenter slot) is backup material under slide 6, not
+the slide.
 
 ---
 
@@ -175,7 +126,7 @@ exception that must land *later*.
 
 | Workstream | Done by | Note |
 |---|---|---|
-| Signal-card build decision | **10 Oct** | Tier 1 + J + I, or not. The demo rehearsal depends on which card is on screen |
+| Signal-card build decision | **done 20 Sep** | generation 4 shipped in 0.30.0 on 21 Sep; the first rig rehearsal is the eyes-on pass the card has not had |
 | Sample data — a purpose-built demo study | **17 Oct** | see below; this is the long pole |
 | Website spruce, three install paths visible | **24 Oct** | separate private repo; the rsync deploy is manual and needs agent access |
 | TestFlight build uploaded | **24 Oct** | 90-day clock from upload — comfortably covers 4 Nov |
@@ -485,9 +436,8 @@ rules firing. Grey the first three quotes so the fourth reads as different.
 
 **Backup**
 
-**Check the status box before delivering this.** If J and I have not shipped,
-this is the design — Tier 1 alone gives the right-looking card with the old
-label and old selection — and you say so at move 23.
+**Shipped.** J and I landed 20 Sep (`docs/design-signal-card.md` §9) and went
+out in 0.30.0; this slide is present tense and move 23 shows the real card.
 
 **Why refuse.** "Mixed sentiments" means *inconsistent, worth investigating*,
 not *the numbers were close*. A named feeling is actionable, so the card names
@@ -563,7 +513,6 @@ written as "will not be offered".
 - **The visuals are specified, not made.** Eight descriptions, no assets. Slide
   3's before/after quote and slide 4's `file://` address bar carry the most
   weight; the rest degrade acceptably to text.
-- **Slide 6's tense**, which follows the build decision due 10 Oct.
 - **A clocked rehearsal on the real rig.** The scripts are written at 140 words
   a minute and the run sheet has 25 seconds of slack. Both are assumptions until
   you have run it twice with the projector attached.

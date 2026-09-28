@@ -1,3 +1,18 @@
+---
+status: current
+last-trued: 2026-09-28
+trued-against: HEAD@main on 2026-09-28 (d314e3b7)
+---
+
+## Changelog
+
+- _2026-09-28_ — trued §"Security posture" and the "No auth token needed"
+  paragraph: localhost binding did not remove the remote (DNS-rebinding) risk
+  — `LoopbackHostMiddleware` does, commit "serve refuses any non-loopback host,
+  closing dns rebinding"; the local-process residual on `/admin` is named and
+  left open; the `/report/*` / `/media/*` analogy dropped; `runningPort`
+  anchor moved to `ServeManager.swift:358`.
+
 # Desktop debug: SQLAdmin panel as a beta-only affordance
 
 > **Re-scoped (14 Jul 2026), gating KEPT.** After sorting all debug affordances
@@ -299,12 +314,12 @@ enum AdminPanelAction {
 ```
 
 Note the port property is `runningPort`
-([`ServeManager.swift:109`](../desktop/Bristlenose/Bristlenose/ServeManager.swift:109)),
+([`ServeManager.swift:358`](../desktop/Bristlenose/Bristlenose/ServeManager.swift:358)),
 not `servedPort` (which does not exist).
 
 **No auth token needed.** `/admin` is *not* under `/api/`, so it is not behind
 `BearerTokenMiddleware` ([`middleware.py`](../bristlenose/server/middleware.py)
-guards only the `/api/` prefix). Localhost-binding plus the loopback-`Host`
+guards only the `/api/` and `/mcp` prefixes). Localhost-binding plus the loopback-`Host`
 check (`LoopbackHostMiddleware`, below) is its protection —
 which is consistent with `SECURITY.md`'s framing of the token as
 defence-in-depth, not an auth boundary. Guard against "no project served yet"
@@ -324,9 +339,16 @@ returned `Person.full_name`. The remote risk is closed by
 which answers 400 to any `Host` other than 127.0.0.1, localhost or [::1]
 (`tests/test_serve_host_header.py::TestAdminPanelBehindTheGate`). With that, it
 matches the existing SECURITY.md
-threat model (local-process defence-in-depth — the bearer token is a
-defence-in-depth speed bump, not the boundary; `/report/*` and `/media/*` are
-already exempt for the same reason). In the App Store *and* TestFlight builds
+threat model for *remote* callers (local-process defence-in-depth — the bearer
+token is a defence-in-depth speed bump, not the boundary). It does **not** match
+it for a same-user local process: that model exists to stop a lazy `curl` at
+`/api/`, and on the Developer-ID beta `curl http://127.0.0.1:<port>/admin/…`
+reads `Person.full_name` with a loopback `Host` and no token — zero steps where
+`/api/` needs two. `/report/*` and `/media/*` are not a precedent: `/media/` is
+exempt because `<video>` cannot send a header and serves recordings only, and
+`/report/` serves only `assets/` plus the SPA page; neither returns DB rows.
+Whether that residual is accepted or `/admin` goes behind the auth cookie is an
+open product call (28 Sep 2026). In the App Store *and* TestFlight builds
 the `sqladmin` dependency still ships in the bundle but the route is never
 mounted (the env var is never set in the `.appStoreOrTestFlight` channel) — code
 present, endpoint absent.

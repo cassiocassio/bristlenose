@@ -696,6 +696,17 @@ model) has to be answered before authors are invited.
 
 ## 6. Transport and auth
 
+> **As built (trued 28 Sep 2026).** Mounted on serve as recommended. `/mcp` is
+> bearer-only — the auth cookie deliberately does not authenticate it — and
+> with a desktop host it validates against the scoped `_BRISTLENOSE_MCP_TOKEN`
+> alone. Both "will bite" risks below are answered: the per-instance token by
+> the scoped token plus the handshake file and `.mcpb` proxy
+> ([`design-mcp-extension.md`](design-mcp-extension.md) §3.1); DNS rebinding by
+> the MCP SDK's own host check (no `host` override) and, since 28 Sep 2026, the
+> app-wide `LoopbackHostMiddleware`, which answers 400 before `/mcp` runs
+> (`tests/test_serve_host_header.py`). CORS was never the rebinding defence. The
+> proposal is kept below as written.
+
 **Recommendation: mount `/mcp` (streamable HTTP) on the existing FastAPI serve.**
 Reuses the bearer token and the block-all CORS policy, keeps a single writer
 against the per-project SQLite, and matches how the desktop app already runs a

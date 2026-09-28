@@ -147,6 +147,83 @@ machinery starts reasoning about audience segments it is inventing a model of th
 userbase that will be wrong, unmaintained, and used to make decisions nobody
 sanity-checks. Ship the release; write the note.
 
+### Changelog register — plain, and sized to the change (from 0.31.5)
+
+Entries through 0.31.4 drifted long and dramatic: small fixes got as many words
+as big ones, and bullets narrated the investigation. Aim for about 60% of that.
+
+- **Say what was wrong and that it's fixed.** Keep one clause of cause when it
+  helps the reader trust the fix; the full story is in the commits and comments.
+- **Length follows weight, not effort.** A small fix is the bold line, plus at
+  most one sentence. A significant one gets two to four.
+- **Keep caveats a user acts on** — what isn't covered yet, whether existing
+  projects need re-running.
+- **No rhetorical beats.** No "Worse, …", "That cost more than disk.", or
+  principles stated for their own sake ("identity is proven rather than guessed").
+
+**Before** (0.31.1, a small fix — 95 words):
+
+> **The show/hide button on a tag group spoke English to screen readers.** It
+> announced "Show Frustration" or "Hide Onboarding" in every language, because the
+> label was assembled in English in the code rather than translated. The identical
+> control in the panel beside it had been translated since the day it shipped, so
+> the two disagreed. Sighted users saw nothing wrong; anyone using VoiceOver or a
+> screen reader in one of the other twenty languages heard English. It now uses the
+> same words as the rest of the lens.
+
+**After** (25 words):
+
+> **The show/hide button on a tag group spoke English to screen readers** in every
+> language. It now uses the same translated words as the rest of the lens.
+
+**Before** (0.31.3, a significant fix — 150 words):
+
+> **Dropping a folder you had already dropped made a second copy of every recording
+> in it.** The importer asked only whether something already sat at that name, so
+> re-dropping — the natural way to ask for another analysis — put `clip 2.mov`
+> beside `clip.mov`. That cost more than disk. The transcription cache keys on the
+> file's path, so every renamed copy was a guaranteed miss and paid to transcribe
+> the same interview again: one re-dropped folder came to $0.62 against $0.09 for
+> the same work done once. Worse, the two copies became two participants saying
+> identical things, which then clustered together — so the report read as
+> corroboration rather than as a mistake. A file you already hold is now recognised
+> by its contents and skipped, and identity is proven rather than guessed, because
+> getting it wrong the other way would silently drop a real interview.
+
+**After** (70 words):
+
+> **Dropping a folder you had already dropped made a second copy of every recording
+> in it.** Each copy was saved as `clip 2.mov` beside `clip.mov`, transcribed again
+> at full cost ($0.62 for one folder instead of $0.09), and treated as a new
+> participant — so identical quotes clustered together and looked like
+> corroboration. Files you already hold are now recognised by their contents and
+> skipped.
+
+**Before** (0.31.3, shows its working — 60 words):
+
+> **The projects column stayed away when the window grew, and came back after you
+> had hidden it.** Both were the same root: the column's width was being measured
+> at moments when it had none — as the window mounted, and mid-animation — so a
+> column you had taken never fitted again, and one you had deliberately hidden was
+> handed back on the next resize.
+
+**After** (35 words):
+
+> **The projects column stayed away when the window grew, and came back after you
+> had hidden it.** Both came from measuring the column's width while it had none,
+> during launch and mid-animation.
+
+**Before** (0.31.4, the release's headline fix — 150 words): the "Thank you."
+bullet. **After** (90 words):
+
+> **A recording with no sound was transcribed as "Thank you." every thirty seconds,
+> and analysed as an interview.** On Apple Silicon, Whisper fills silence with an
+> invented "Thank you.", and its own no-speech check never fires on the model we
+> use. Audio is now measured first: a silent recording is reported as "No speech
+> found" and skipped, and invented lines over long silences inside a real interview
+> are dropped. Speech invented over room tone or music is not caught yet. Existing
+> projects keep their transcripts until re-transcribed.
+
 ### What `--build-only` is actually for
 
 The build-number mechanism is real and useful, but its trigger is **re-shipping

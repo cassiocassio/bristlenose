@@ -58,7 +58,7 @@ Show what landed since the last tag: `git log <lasttag>..HEAD --oneline`. Decide
 
 ## Step 3: Changelog + README (this skill OWNS the entry)
 
-Write the release entry in `CHANGELOG.md` and the README changelog section in house format: `**X.Y.Z** — _D Mon YYYY_` (bold version, em dash, italic date, no leading zero on day, no hyphens in date). Gather the bullets from the `summary` fields `/close-feature` left in `.claude/current-task.json` for work landed since the last release, plus `git log <lasttag>..HEAD --oneline`. There is no "unreleased" buffer section — the entry appears already-dated, like the existing CHANGELOG entries.
+Write the release entry in `CHANGELOG.md` and the README changelog section in house format: `**X.Y.Z** — _D Mon YYYY_` (bold version, em dash, italic date, no leading zero on day, no hyphens in date). Gather the bullets from the `summary` fields `/close-feature` left in `.claude/current-task.json` for work landed since the last release, plus `git log <lasttag>..HEAD --oneline`. There is no "unreleased" buffer section — the entry appears already-dated, like the existing CHANGELOG entries. Register and length: plain, sized to the change — see `docs/design-bn-release-skill.md` §"Changelog register".
 
 ## Step 4: Bump (writes skipped if --dry-run)
 

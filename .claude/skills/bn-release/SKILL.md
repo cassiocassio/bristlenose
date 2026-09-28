@@ -132,7 +132,7 @@ This is the work most likely to be skipped at 9pm, and it is why this is a skill
 **Draft; the human edits.** Never publish prose they have not read.
 
 - **`CHANGELOG.md`** — house format `**X.Y.Z** — _8 Aug 2026_` (em dash, italic
-  date, no leading zero). Then the same entry in `README.md`'s changelog section.
+  date, no leading zero). Then the same entry in `README.md`'s changelog section. Register and length: plain, sized to the change — see `docs/design-bn-release-skill.md` §"Changelog register".
 - **Website** (separate private repo) — `docs-src/cli.md` for CLI surface, install
   instructions if install mechanics changed, homepage rows if the pitch moved.
   The changelog page needs nothing: `build.py` renders it live from `CHANGELOG.md`.

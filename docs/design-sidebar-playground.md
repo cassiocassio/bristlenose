@@ -185,7 +185,11 @@ second decision inside the first's animation gets those reports one write late
 — a stale `.all` released the column, a stale `.detailOnly` then hid it, and
 it was stranded (28 Sep 2026, `SidebarFitHarnessTests.s23`). A hide arriving
 on a column still ours therefore re-runs the decision, which can only give
-back what the logic took. The toolbar button animates before the binding
+back what the logic took. And since one in-range reading can land
+mid-animation and look like rest, a hide within a second of the logic's own
+last write is taken as a late report of it — ours, whatever the reading said
+(`autoCollapsed(hiddenAt:lastWriteAt:was:)`, s24). The price: hide the column
+within a second of an automatic show and it comes back once. The toolbar button animates before the binding
 flips, so the width is also re-measured the moment the column becomes visible
 (otherwise a toolbar show kept the hide's frames: 220 → 182). One residual is
 kept on purpose: the hide's in-range frames are still recorded, but only while

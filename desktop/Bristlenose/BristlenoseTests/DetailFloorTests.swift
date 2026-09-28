@@ -113,6 +113,21 @@ struct SidebarAutoCollapseTests {
         #expect(A.autoCollapsed(after: .expand, was: true))
     }
 
+    /// A hide soon after our own write is a late report of it: ours, even if
+    /// a mid-animation reading had given the column up (CI s22c, s11).
+    @Test func aHideSoonAfterOurWriteIsOurs() {
+        #expect(A.autoCollapsed(hiddenAt: 10.3, lastWriteAt: 10.0, was: false))
+        #expect(A.autoCollapsed(hiddenAt: 10.0 + A.lateReportWindow - 0.01, lastWriteAt: 10.0, was: false))
+    }
+
+    /// Outside the window, and with no write at all, a hide changes nothing:
+    /// the researcher's hide of a column that was theirs stays theirs.
+    @Test func aHideLaterOrWithoutAWriteKeepsOwnership() {
+        #expect(!A.autoCollapsed(hiddenAt: 10.0 + A.lateReportWindow, lastWriteAt: 10.0, was: false))
+        #expect(!A.autoCollapsed(hiddenAt: 10.0, lastWriteAt: nil, was: false))
+        #expect(A.autoCollapsed(hiddenAt: 50.0, lastWriteAt: 10.0, was: true))
+    }
+
     @Test func ownershipIsGivenUpOnlyBySeeingTheColumnAtRest() {
         #expect(!A.autoCollapsed(afterReading: 228, was: true))
         #expect(A.autoCollapsed(afterReading: nil, was: true))

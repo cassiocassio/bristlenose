@@ -169,4 +169,27 @@ enum SidebarAutoCollapse {
     static func autoCollapsed(afterReading restingWidth: CGFloat?, was current: Bool) -> Bool {
         restingWidth == nil ? current : false
     }
+
+    /// How long after our own visibility write a hide is still a late report
+    /// of it. The late reports measured on a Mac landed 11–281 ms after our
+    /// last write (`SidebarFitHarnessTests` s11, s23, s24, 28 Sep 2026); CI's
+    /// runners are slower, so this leaves room. It is also the edge accepted
+    /// in exchange: a researcher who hides the column within this long of an
+    /// automatic show has it given back, once.
+    static let lateReportWindow: TimeInterval = 1.0
+
+    /// Whether the column is ours after the binding reports it hidden.
+    ///
+    /// A resting reading is not proof enough on its own. One in-range reading
+    /// can arrive mid-animation — a single 222 right after an expand (CI s22c,
+    /// run 36392290168), or a collapse frame at exactly the 200 minimum while a
+    /// stale `.all` held the binding (s11) — and give the column up. The
+    /// late collapse report that follows then finds it not ours, and it is
+    /// stranded. So a hide landing within `lateReportWindow` of our own last
+    /// write is ours, whatever a reading said: nobody but us moved the column
+    /// in that time. Outside the window the ownership stands as it was.
+    static func autoCollapsed(hiddenAt now: TimeInterval, lastWriteAt: TimeInterval?, was current: Bool) -> Bool {
+        guard let lastWriteAt, now - lastWriteAt < lateReportWindow else { return current }
+        return true
+    }
 }

@@ -14,6 +14,9 @@ area: desktop — projects column (NavigationSplitView) + report web view
 
 ## Changelog
 
+- _2026-09-28 (later)_ — the residual: a mid-animation reading could still
+  give the column up before the late hide. Closed with a 1-s late-report
+  window; `SidebarFitHarnessTests.s24`.
 - _2026-09-28_ — late animation reports stranded the column; ownership now
   follows what was seen at rest (Status at HEAD, fourth bullet). Anchors:
   `SidebarAutoCollapse.autoCollapsed(afterReading:was:)`, the
@@ -55,8 +58,18 @@ area: desktop — projects column (NavigationSplitView) + report web view
   is now released only by a resting reading of the column
   (`autoCollapsed(afterReading:was:)`), not by the binding reading visible or
   by the expand write, and a hide arriving on a column still ours re-runs the
-  decision. The edge accepted: a researcher who hides a column within the
-  moment it is animating back open, before it has rested, has it given back.
+  decision. A resting reading alone is not proof: one in-range reading can
+  land mid-animation (a single 222 after an expand in CI's s22c; a collapse
+  frame at exactly 200 under a stale `.all` in s11) and give the column up
+  just before the late hide. So a hide within `lateReportWindow` (1 s) of the
+  logic's own last write is ours, whatever a reading said
+  (`autoCollapsed(hiddenAt:lastWriteAt:was:)`). Measured late reports land
+  11–281 ms after the write; with the rule, s11, s22c, s22d and s24 each
+  re-took the column this way on every run. `s24` fails without it on the
+  moment the column reads hidden-and-not-ours, since a Mac usually sends one
+  more `.all` and self-corrects where CI did not. The edge accepted: a
+  researcher who hides the column within 1 s of an automatic show has it
+  given back, once.
 - **Open:** S5–S7, not reproduced by anyone. If seen, note the step that
   preceded it with the trace on (§ Verdict, "What no run included").
 

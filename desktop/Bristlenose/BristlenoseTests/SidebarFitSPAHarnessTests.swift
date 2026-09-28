@@ -47,6 +47,7 @@ final class SPAProbe: ObservableObject {
     var detailWidth: CGFloat = 0
     var lastSidebarWidth: CGFloat = SidebarAutoCollapse.columnIdeal
     var autoCollapsed = false
+    var lastWriteAt: TimeInterval?
     /// `bridgeHandler.detailMinWidth`: the SPA's `panel-state.minWidth`, 0 until posted.
     var webMinWidth: CGFloat = 0
     var leftOpen = false
@@ -68,6 +69,7 @@ final class SPAProbe: ObservableObject {
             autoCollapsed: autoCollapsed
         )
         autoCollapsed = SidebarAutoCollapse.autoCollapsed(after: action, was: autoCollapsed)
+        if action != .none { lastWriteAt = ProcessInfo.processInfo.systemUptime }
         switch action {
         case .collapse: note("apply → COLLAPSE"); withAnimation { visibility = .detailOnly }
         case .expand: note("apply → EXPAND"); withAnimation { visibility = .all }
@@ -175,6 +177,11 @@ struct SPAHarnessView: View {
             if let resting { probe.lastSidebarWidth = resting }
             probe.autoCollapsed = SidebarAutoCollapse.autoCollapsed(
                 afterReading: resting, was: probe.autoCollapsed)
+            if !SidebarToggle.isVisible(now) {
+                probe.autoCollapsed = SidebarAutoCollapse.autoCollapsed(
+                    hiddenAt: ProcessInfo.processInfo.systemUptime,
+                    lastWriteAt: probe.lastWriteAt, was: probe.autoCollapsed)
+            }
             probe.note("visibility → \(SidebarFitProbe.name(now))")
             if !SidebarToggle.isVisible(now) { probe.apply() }
         }

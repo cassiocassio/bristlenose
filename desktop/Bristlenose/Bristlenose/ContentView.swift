@@ -230,6 +230,9 @@ struct ContentView: View {
     @State private var detailWidth: CGFloat = 0
     @State private var lastSidebarWidth: CGFloat = SidebarAutoCollapse.columnIdeal
     @State private var sidebarAutoCollapsed = false
+    /// When the logic last wrote the column's visibility (system uptime): a
+    /// hide landing soon after is a late report of it, not the researcher.
+    @State private var sidebarLastWriteAt: TimeInterval?
     @State private var showingAIConsent = false
     @State private var aiConsentReviewMode = false
     @State private var showingMiroSheet = false
@@ -577,6 +580,7 @@ struct ContentView: View {
                                        showingReport: detailPaneKind == .report),
             visibility: columnVisibility, autoCollapsed: sidebarAutoCollapsed) }
         sidebarAutoCollapsed = SidebarAutoCollapse.autoCollapsed(after: action, was: sidebarAutoCollapsed)
+        if action != .none { sidebarLastWriteAt = ProcessInfo.processInfo.systemUptime }
         switch action {
         case .collapse:
             withAnimation { columnVisibility = .detailOnly }
@@ -701,7 +705,14 @@ struct ContentView: View {
             // a second trigger: a column the researcher hid is not ours, so
             // this returns `.none` for it, and a column shown is never decided
             // on here (the researcher's show in a narrow window must stand).
-            if !SidebarToggle.isVisible(now) { applySidebarAutoCollapse() }
+            // A hide this soon after our own write is ours whatever a reading
+            // said — see `autoCollapsed(hiddenAt:lastWriteAt:was:)`.
+            if !SidebarToggle.isVisible(now) {
+                sidebarAutoCollapsed = SidebarAutoCollapse.autoCollapsed(
+                    hiddenAt: ProcessInfo.processInfo.systemUptime,
+                    lastWriteAt: sidebarLastWriteAt, was: sidebarAutoCollapsed)
+                applySidebarAutoCollapse()
+            }
         }
         .overlay(alignment: .bottomTrailing) {
             // Compact build-info diagnostic — Debug only by default; Release

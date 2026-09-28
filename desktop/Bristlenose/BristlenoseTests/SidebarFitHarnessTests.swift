@@ -19,8 +19,8 @@ import WebKit
 //
 // The two rules that decide — what width to remember, and whether the column
 // is ours — are ContentView's own (`SidebarAutoCollapse.restingColumnWidth`,
-// `.autoCollapsed(after:was:)`, `.autoCollapsed(afterReading:was:)`), called
-// here rather than copied. The wiring
+// `.autoCollapsed(after:was:)`, `.autoCollapsed(afterReading:was:)`,
+// `.autoCollapsed(hiddenAt:lastWriteAt:was:)`), called here rather than copied. The wiring
 // around them (two readers, the onChange, the animated write, the column-width
 // modifier on the sidebar column) mirrors `ContentView.splitViewCore`; if that
 // changes, this harness must change with it or it is testing a ghost.
@@ -34,6 +34,7 @@ final class SidebarFitProbe: ObservableObject {
     var detailWidth: CGFloat = 0
     var lastSidebarWidth: CGFloat = SidebarAutoCollapse.columnIdeal
     var autoCollapsed = false
+    var lastWriteAt: TimeInterval?
     /// `bridgeHandler.detailMinWidth` stand-in. 0 = the SPA has not reported.
     var webMinWidth: CGFloat = 968
     var showingReport = true
@@ -41,9 +42,20 @@ final class SidebarFitProbe: ObservableObject {
     var log: [String] = []
     /// Every value `lastSidebarWidth` was ever assigned.
     var lastSidebarWidthHistory: [CGFloat] = []
+    /// Every moment the binding read hidden with the column not ours. In a
+    /// scenario with no researcher toggle each one is a strand, however brief:
+    /// AppKit sometimes sends one more `.all` and the column comes back by
+    /// itself (every local run of s24), sometimes not (CI) — so the ending
+    /// alone cannot tell a fixed tree from a lucky one.
+    var hiddenNotOurs: [String] = []
+
+    /// When the probe was made, so each line carries its time — how late a
+    /// stale visibility report lands is part of the evidence.
+    let born = ProcessInfo.processInfo.systemUptime
 
     func note(_ s: String) {
-        log.append(s + "  [split=\(Int(splitWidth)) detail=\(Int(detailWidth)) last=\(Int(lastSidebarWidth)) vis=\(Self.name(visibility)) auto=\(autoCollapsed)]")
+        let ms = Int((ProcessInfo.processInfo.systemUptime - born) * 1000)
+        log.append("\(ms)ms ".padding(toLength: 8, withPad: " ", startingAt: 0) + s + "  [split=\(Int(splitWidth)) detail=\(Int(detailWidth)) last=\(Int(lastSidebarWidth)) vis=\(Self.name(visibility)) auto=\(autoCollapsed)]")
     }
 
     static func name(_ v: NavigationSplitViewVisibility) -> String {
@@ -70,6 +82,7 @@ final class SidebarFitProbe: ObservableObject {
             autoCollapsed: autoCollapsed
         )
         autoCollapsed = SidebarAutoCollapse.autoCollapsed(after: action, was: autoCollapsed)
+        if action != .none { lastWriteAt = ProcessInfo.processInfo.systemUptime }
         switch action {
         case .collapse:
             note("apply → COLLAPSE")
@@ -191,7 +204,15 @@ struct SidebarFitHarnessView: View {
             }
             probe.autoCollapsed = SidebarAutoCollapse.autoCollapsed(
                 afterReading: resting, was: probe.autoCollapsed)
+            if !SidebarToggle.isVisible(now) {
+                probe.autoCollapsed = SidebarAutoCollapse.autoCollapsed(
+                    hiddenAt: ProcessInfo.processInfo.systemUptime,
+                    lastWriteAt: probe.lastWriteAt, was: probe.autoCollapsed)
+            }
             probe.note("visibility → \(SidebarFitProbe.name(now))")
+            if !SidebarToggle.isVisible(now) && !probe.autoCollapsed {
+                probe.hiddenNotOurs.append(probe.log.last ?? "?")
+            }
             if !SidebarToggle.isVisible(now) { probe.apply() }
         }
         switch placement {
@@ -817,6 +838,44 @@ struct SidebarFitRig {
             rig.close()
         }
         Attachment.record(outcomes.joined(separator: "\n"), named: "s23-outcomes.txt")
+    }
+
+    /// The residual s23's fix left, from CI's s22c trace (run 36392290168,
+    /// macos-26): from a SHOWN column, collapse at 1000, and the window back at
+    /// 1700 inside that collapse's animation. The expand is decided, ONE
+    /// in-range reading follows (1700 − 1478 = 222, as if at rest), and then
+    /// the collapse's late report hides the column. The reading gave the
+    /// column up, so the hide found it not ours: stranded at 1700. It is the
+    /// s22d shape, ending wide, swept across several short settles because
+    /// whether that one reading lands is sampling luck. A Mac usually sends one
+    /// more `.all` afterwards and the column comes back by itself, so the
+    /// ending passes here while CI strands; what fails here is the moment
+    /// between (`hiddenNotOurs`) — this scenario has no researcher toggle, so
+    /// the column should never read hidden and not ours.
+    @Test func s24_expandInsideCollapseNeverStrandsTheColumn() async {
+        var outcomes: [String] = []
+        var i = 0
+        for settle in [0.02, 0.05, 0.1, 0.15] {
+            for _ in 0..<4 {
+                let rig = await rigWithLateFloor()
+                #expect(rig.appKitCollapsed == false, "iteration \(i): precondition — shown at 1400")
+                await rig.resize(to: 1000, settleFor: settle)
+                await rig.resize(to: 1700, settleFor: 1.5)
+                let stranded = rig.appKitCollapsed == true && !rig.probe.autoCollapsed
+                outcomes.append("\(i) settle=\(settle): collapsed=\(rig.appKitCollapsed.map(String.init) ?? "nil") auto=\(rig.probe.autoCollapsed) stranded=\(stranded)")
+                if i == 0 || stranded || rig.appKitCollapsed != false || !rig.inAgreement {
+                    rig.dump("s24 iteration \(i) settle \(settle)")
+                }
+                #expect(rig.appKitCollapsed == false, "iteration \(i) settle \(settle): ends at 1700 with the column hidden")
+                #expect(rig.inAgreement, "iteration \(i) settle \(settle): SwiftUI and AppKit disagree")
+                expectNotStranded(rig, "s24 iteration \(i) settle \(settle)")
+                #expect(rig.probe.hiddenNotOurs.isEmpty,
+                        "iteration \(i) settle \(settle): hidden and not ours at \(rig.probe.hiddenNotOurs)")
+                rig.close()
+                i += 1
+            }
+        }
+        Attachment.record(outcomes.joined(separator: "\n"), named: "s24-outcomes.txt")
     }
 
     /// Restore-over-ideal, and the migration that fixes the clamped case.

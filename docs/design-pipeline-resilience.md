@@ -1,7 +1,7 @@
 ---
 status: current
-last-trued: 2026-09-12
-trued-against: HEAD@main (42bf545f) on 2026-09-12 (per-session resume, measured against a two-run probe)
+last-trued: 2026-09-28
+trued-against: HEAD@main (7916e109) on 2026-09-28 (silence / NO_SPEECH claims only; per-session resume last trued 2026-09-12 at 42bf545f)
 ---
 
 > **Truing status:** Current. The per-session forward-recovery promise in §5
@@ -29,7 +29,7 @@ trued-against: HEAD@main (42bf545f) on 2026-09-12 (per-session resume, measured 
     - **`PipelineSummary` gains a `topics` bucket** between `transcripts` and `quotes`. Schema-additive — Swift readers that don't yet decode the field still parse fine. Contract fixture bumped v4 → v5 with a `run_failed_abandoned_at_topics` scenario locking the topics-populated abandon shape; all five scenarios populate `topics` end-to-end.
     - **`mark_stage_complete` refuses to record completion for empty content.** New signature: `output_path: Path | None = None`. The private `_is_content_empty(path)` helper checks zero-byte AND content-equivalent-to-empty JSON (`[]` / `{}` / `null`). Defensive — closes the bug structurally even if future refactors miss a call site.
     - **Privacy contract for `cause.message`.** New `_build_cause(exc, *, stage, provider, http_status, session_id)` helper in `run_lifecycle.py`. Constructs `Cause.message` from `exc.__class__.__name__` + provider + stage; **never** consumes `str(exc)` or `repr(exc)`. Provider error bodies (Anthropic rate-limit / content-policy, OpenAI BadRequest, Azure content filters) sometimes echo prompt fragments — without the contract, an abandoned run could persist participant tokens to the named re-identification surface (`pipeline-events.jsonl`). All four analysis stages (s08/s09/s10/s11) use the helper.
-    - **`_succeeded_sids` semantics fix.** Whisper-success-with-zero-segments is now treated as SUCCESS (silent recording is valid input). Predicate driven off `_fresh_transcript_outcome.failed` exclusion, not `session_segments` value-truthiness.
+    - **`_succeeded_sids` semantics fix.** Whisper-success-with-zero-segments is now treated as SUCCESS (silent recording is valid input). Predicate driven off `_fresh_transcript_outcome.failed` exclusion, not `session_segments` value-truthiness. _(Superseded 20 Aug 2026, `6497711a`: a zero-segment session is now stated as `UnusableReason.NO_SPEECH` in `transcripts.failed` and counted out of `succeeded`; it stays out of the abandon predicate — the half of this fix that survives. And on the default mlx model silence reaches zero segments only since `45d025c8` (28 Sep 2026): Whisper itself returned "Thank you." every 30 s, so a silent recording was counted a success with invented speech. See `bristlenose/stages/CLAUDE.md` § Stage 5.)_
     - **SECURITY.md appendix.** New `pipeline-events.jsonl` section under "What Bristlenose writes to your machine" — documents privacy contract, 4 KB cause-message cap, 10-entry `failed`-list cap, and the re-identification-key warning.
     - **Tests:** 5 new fallback-stage-honesty + redaction tests in `tests/test_pipeline_abandon.py` and `tests/test_run_lifecycle.py`; 7 new empty-content rejection tests in `tests/test_manifest.py`; contract fixture v5 round-trip in `tests/test_events.py`.
     - **Deferred:** rerun-dedup (#17) — investigation-shaped, may spawn A5 if scope expands. HF-Hub unauthenticated warning suppression — independently landed via `claude/dreamy-williams-066e59` chip merge (`eb2a63e`).

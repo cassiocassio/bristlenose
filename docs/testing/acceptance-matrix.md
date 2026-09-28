@@ -188,6 +188,18 @@ being guarded here is the orchestrator's arithmetic — which the free fixture
 exercises exactly. Don't re-open it; the cost is real and the return is a second
 route to a state already covered.
 
+> _28 Sep 2026 — the premise was false for the default Mac model; the decision
+> stands._ mlx-whisper on large-v3-turbo does **not** return nothing for real
+> silence: it returns "Thank you." once per 30 s window (its `no_speech_prob` is
+> 0.0 on everything), so a silently-recorded session reached `succeeded` with
+> invented quotes rather than the state above (fixed `45d025c8`, v0.31.4). The
+> orchestrator half of this decision is unaffected. The transcription half is now
+> pinned without shipping audio: `tests/test_transcribe.py` `TestSignalGate` and
+> `TestMlxBackendAppliesTheSignalGate` (Whisper mocked; the second runs on arm64
+> macOS only). **When the Transcription cell is built, give it one file whose
+> audio track is digital zero** — the torture corpus has none: `forgot-to-talk.mp4`
+> has no audio stream at all (the `NO_AUDIO` path), and `oops.mp4` is a 0.04 s tone.
+
 (This does not cancel the **Transcription cell** described above. That one exists
 for different reasons — extract-audio, Whisper, and the handoff into analysis —
 and is still unbuilt.)

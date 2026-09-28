@@ -18,7 +18,7 @@ def client() -> TestClient:
 @pytest.fixture()
 def unauth_client() -> TestClient:
     app = create_app(dev=True, db_url="sqlite://")
-    return TestClient(app)
+    return TestClient(app, base_url="http://127.0.0.1")
 
 
 def test_pipeline_endpoint_returns_payload(client: TestClient) -> None:

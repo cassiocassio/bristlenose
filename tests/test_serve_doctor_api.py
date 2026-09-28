@@ -89,12 +89,12 @@ def test_labels_and_fix_keys_pass_through(client: TestClient) -> None:
 
 def test_requires_auth(app) -> None:
     """The endpoint is NOT auth-exempt (unlike /api/health)."""
-    bare = TestClient(app)  # no bearer token injected
+    bare = TestClient(app, base_url="http://127.0.0.1")  # no bearer token injected
     resp = bare.get("/api/doctor")
     assert resp.status_code == 401
 
 
 def test_health_endpoint_stays_auth_exempt(app) -> None:
     """Guard rail: /api/health must remain reachable without a token."""
-    bare = TestClient(app)
+    bare = TestClient(app, base_url="http://127.0.0.1")
     assert bare.get("/api/health").status_code == 200

@@ -27,7 +27,7 @@ def app():
 @pytest.fixture()
 def raw_client(app) -> TestClient:
     """TestClient WITHOUT auto-injected auth headers (bare client)."""
-    return TestClient(app)
+    return TestClient(app, base_url="http://127.0.0.1")
 
 
 @pytest.fixture()
@@ -234,7 +234,7 @@ class TestCookieFallback:
 
         with patch("bristlenose.server.app._STATIC_DIR", static_dir):
             app = create_app(project_dir=tmp_path, dev=False, db_url="sqlite://")
-        client = TestClient(app)
+        client = TestClient(app, base_url="http://127.0.0.1")
         token = app.state.auth_token
 
         resp = client.get("/report/")

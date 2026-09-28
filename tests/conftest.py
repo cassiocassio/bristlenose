@@ -32,15 +32,22 @@ from bristlenose.models import (
     TranscriptSegment,
 )
 
+# serve answers only to a loopback Host (LoopbackHostMiddleware). A bare
+# TestClient against create_app must pass this, not Starlette's "testserver".
+LOOPBACK_BASE_URL = "http://127.0.0.1"
+
 
 class AuthTestClient(TestClient):
     """TestClient that auto-injects the Bearer token from app.state.auth_token.
 
     All serve-mode test fixtures should use this instead of bare TestClient
-    so the auth middleware passes requests through.
+    so the auth middleware passes requests through. Defaults ``base_url`` to
+    loopback: serve refuses any other ``Host`` (the DNS-rebinding gate), and
+    Starlette's default ``testserver`` is not loopback.
     """
 
     def __init__(self, app: FastAPI, **kwargs: Any) -> None:
+        kwargs.setdefault("base_url", LOOPBACK_BASE_URL)
         super().__init__(app, **kwargs)
         token = getattr(app.state, "auth_token", None)
         if token:

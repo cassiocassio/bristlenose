@@ -32,7 +32,7 @@ def client() -> TestClient:
 def unauth_client() -> TestClient:
     """Create a test client WITHOUT auth headers."""
     app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
-    return TestClient(app)
+    return TestClient(app, base_url="http://127.0.0.1")
 
 
 # ---------------------------------------------------------------------------

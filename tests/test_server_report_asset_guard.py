@@ -94,7 +94,7 @@ def client(
         (static_dir / "assets" / "main-abc123.js").write_text("// bundle")
         with patch("bristlenose.server.app._STATIC_DIR", static_dir):
             app = create_app(project_dir=project_dir, dev=False, db_url="sqlite://")
-    yield TestClient(app)
+    yield TestClient(app, base_url="http://127.0.0.1")
 
 
 class TestReportPrivateFilesRefused:

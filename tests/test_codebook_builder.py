@@ -483,7 +483,7 @@ class TestCodebookLab:
         from fastapi.testclient import TestClient as RawClient
 
         app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
-        bare = RawClient(app)  # no bearer token
+        bare = RawClient(app, base_url="http://127.0.0.1")  # no bearer token
         r = bare.get("/codebook-lab")
         assert r.status_code == 200
         assert "Codebook lab" in r.text
@@ -606,7 +606,7 @@ class TestCodebookLab:
 
         monkeypatch.delenv("BRISTLENOSE_EXPERIMENTAL_CODEBOOK_LAB", raising=False)
         app = create_app(project_dir=_FIXTURE_DIR, dev=False, db_url="sqlite://")
-        assert RawClient(app).get("/codebook-lab").status_code == 404
+        assert RawClient(app, base_url="http://127.0.0.1").get("/codebook-lab").status_code == 404
         assert AuthTestClient(app).get("/api/dev/codebook-lab/tags").status_code == 404
 
     def test_lab_absent_by_default_even_in_dev(self, monkeypatch) -> None:
@@ -621,7 +621,7 @@ class TestCodebookLab:
 
         monkeypatch.delenv("BRISTLENOSE_EXPERIMENTAL_CODEBOOK_LAB", raising=False)
         app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
-        assert RawClient(app).get("/codebook-lab").status_code == 404
+        assert RawClient(app, base_url="http://127.0.0.1").get("/codebook-lab").status_code == 404
 
     def test_lab_mounts_without_dev_when_enabled(self) -> None:
         """Opted in, the lab still reaches a non-dev serve — the sidecar path.
@@ -637,7 +637,7 @@ class TestCodebookLab:
         from fastapi.testclient import TestClient as RawClient
 
         app = create_app(project_dir=_FIXTURE_DIR, dev=False, db_url="sqlite://")
-        page = RawClient(app).get("/codebook-lab")  # served outside /api, no auth
+        page = RawClient(app, base_url="http://127.0.0.1").get("/codebook-lab")  # served outside /api, no auth
         assert page.status_code == 200
         assert "Codebook lab" in page.text
         # API endpoints ride codebook_lab_router — mounted in non-dev too.
@@ -649,7 +649,7 @@ class TestCodebookLab:
 
         monkeypatch.setenv("BRISTLENOSE_EXPERIMENTAL_CODEBOOK_LAB", "0")
         app = create_app(project_dir=_FIXTURE_DIR, dev=False, db_url="sqlite://")
-        assert RawClient(app).get("/codebook-lab").status_code == 404
+        assert RawClient(app, base_url="http://127.0.0.1").get("/codebook-lab").status_code == 404
         assert AuthTestClient(app).get("/api/dev/codebook-lab/tags").status_code == 404
 
     def test_lab_tags_heals_unlinked_uncategorised(self) -> None:

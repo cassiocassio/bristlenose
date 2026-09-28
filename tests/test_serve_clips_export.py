@@ -68,7 +68,7 @@ class TestStartClipExtraction:
         """Unauthenticated request gets 401."""
         clips_export._jobs.clear()
         app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
-        raw_client = TestClient(app)
+        raw_client = TestClient(app, base_url="http://127.0.0.1")
         resp = raw_client.post("/api/projects/1/export/clips")
         assert resp.status_code == 401
 
@@ -127,7 +127,7 @@ class TestCancelClipExtraction:
     def test_requires_auth(self) -> None:
         clips_export._jobs.clear()
         app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
-        raw_client = TestClient(app)
+        raw_client = TestClient(app, base_url="http://127.0.0.1")
         resp = raw_client.post("/api/projects/1/export/clips/cancel")
         assert resp.status_code == 401
 

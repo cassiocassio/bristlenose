@@ -24,7 +24,11 @@ from starlette.responses import PlainTextResponse, Response
 
 from bristlenose.models import AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
 from bristlenose.server.db import create_session_factory, db_url_for_project, get_engine, init_db
-from bristlenose.server.middleware import AUTH_COOKIE_NAME, BearerTokenMiddleware
+from bristlenose.server.middleware import (
+    AUTH_COOKIE_NAME,
+    BearerTokenMiddleware,
+    LoopbackHostMiddleware,
+)
 from bristlenose.server.refusal import RefusalError, refusal_handler
 from bristlenose.server.routes.autocode import router as autocode_router
 from bristlenose.server.routes.clips_export import router as clips_export_router
@@ -200,6 +204,12 @@ def create_app(
     # CORS/auth so it wraps outermost (compresses the final response).  BREACH
     # is not a concern — no user input is reflected in token-bearing responses.
     app.add_middleware(GZipMiddleware, minimum_size=500)
+
+    # DNS-rebinding gate: refuse any Host that is not loopback. Added LAST so it
+    # wraps outermost — a foreign Host is refused before routing, auth, /mcp,
+    # /admin or the token-bearing SPA HTML ever run. CORS cannot do this job:
+    # a rebound page is same-origin to the browser. See LoopbackHostMiddleware.
+    app.add_middleware(LoopbackHostMiddleware)
 
     # Per-project DB: derive path from project_dir unless explicitly overridden
     if db_url is None and project_dir is not None:

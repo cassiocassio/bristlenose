@@ -220,7 +220,7 @@ class TestDevTelemetryStub:
         `/api/dev/` would let any browser tab POST forged events. Guard it.
         """
         app = create_app(dev=True, db_url="sqlite://")
-        raw = TestClient(app)  # no auth header
+        raw = TestClient(app, base_url="http://127.0.0.1")  # no auth header
         assert raw.post("/api/dev/telemetry", json={"events": [self._event()]}).status_code == 401
         assert raw.get("/api/dev/telemetry").status_code == 401
         assert raw.delete("/api/dev/telemetry").status_code == 401
@@ -247,7 +247,7 @@ class TestAppFactory:
     def test_create_app_without_project_dir(self) -> None:
         """App should work without a project directory (no report to serve)."""
         app = create_app(dev=True, db_url="sqlite://")
-        client = TestClient(app)
+        client = TestClient(app, base_url="http://127.0.0.1")
         resp = client.get("/api/health")
         assert resp.status_code == 200
 
@@ -403,7 +403,7 @@ class TestProdServeReport:
             app = create_app(
                 project_dir=tmp_path, dev=False, db_url="sqlite://"
             )
-        client = TestClient(app)
+        client = TestClient(app, base_url="http://127.0.0.1")
         resp = client.get("/report/assets/bristlenose-theme.css")
         assert resp.status_code == 200
         assert "color: red" in resp.text
@@ -432,7 +432,7 @@ class TestProdServeReport:
             app = create_app(
                 project_dir=tmp_path, dev=False, db_url="sqlite://"
             )
-        client = TestClient(app)
+        client = TestClient(app, base_url="http://127.0.0.1")
         resp = client.get("/report/")
         assert resp.status_code == 500
         # Error page should clearly identify the build issue

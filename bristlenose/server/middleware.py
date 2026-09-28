@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import json
 
+from starlette.datastructures import Headers
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import PlainTextResponse, Response
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 # Paths that do not require a bearer token.
 # /api/health: version/status only, no project data — desktop needs it pre-auth.
@@ -37,8 +39,63 @@ _UNAUTHORIZED_BODY = json.dumps({"detail": "Unauthorized"}).encode()
 # Cookie name carrying the same token as the Bearer header.  Set on the SPA
 # HTML response so plain browser navigations (e.g. the export `<a download>`
 # anchor click) can authenticate without JS adding the header.  CORS
-# middleware blocks all cross-origin requests, so CSRF is not in scope.
+# middleware blocks all cross-origin requests, so CSRF is not in scope — and
+# LoopbackHostMiddleware refuses a DNS-rebound page, which CORS cannot see
+# because to the browser it is same-origin.
 AUTH_COOKIE_NAME = "bristlenose_auth"
+
+# Hostnames serve answers to.  serve binds 127.0.0.1 only, and every
+# legitimate client names it by one of these: the WKWebView and every Swift /
+# .mcpb fetch use http://127.0.0.1:<port>, the CLI prints that URL, and the
+# `serve --dev` Vite proxy forwards the browser's localhost:5173.
+_LOOPBACK_HOSTNAMES: frozenset[str] = frozenset({"127.0.0.1", "localhost", "::1"})
+
+
+def is_loopback_host(host: str) -> bool:
+    """True iff a ``Host`` header names loopback, on any port.
+
+    Parses the bracketed IPv6 form itself: Starlette's TrustedHostMiddleware
+    splits on the first ``:``, so ``[::1]:8150`` reads as ``[`` there.
+    """
+    if host.startswith("["):
+        end = host.find("]")
+        if end == -1:
+            return False
+        name, rest = host[1:end], host[end + 1 :]
+        if rest and not rest.startswith(":"):
+            return False
+    else:
+        name = host.partition(":")[0]
+    return name.lower() in _LOOPBACK_HOSTNAMES
+
+
+class LoopbackHostMiddleware:
+    """Refuse any request whose ``Host`` is not loopback — the DNS-rebinding gate.
+
+    A rebinding page (``http://rebind.attacker.example:8150`` re-resolved to
+    127.0.0.1) is same-origin with serve as far as the browser knows, so CORS
+    never fires and ``/report/`` would hand it the auth token in the SPA HTML
+    plus the auth cookie. The ``Host`` header still carries the attacker's
+    name, and a page cannot forge it. Pure ASGI, outermost, so nothing —
+    routing, auth, the MCP mount, /admin — runs for a foreign Host.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] in ("http", "websocket") and not is_loopback_host(
+            Headers(scope=scope).get("host", "")
+        ):
+            if scope["type"] == "websocket":
+                # Close before accept: the server answers the handshake 403.
+                await send({"type": "websocket.close", "code": 1008})
+            else:
+                await PlainTextResponse("Invalid host header", status_code=400)(
+                    scope, receive, send
+                )
+            return
+        await self.app(scope, receive, send)
 
 
 class BearerTokenMiddleware(BaseHTTPMiddleware):

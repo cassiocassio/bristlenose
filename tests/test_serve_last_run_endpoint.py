@@ -95,7 +95,7 @@ class TestEndpointShape:
     def test_requires_auth(self) -> None:
         """Bare TestClient (no bearer token) → 401."""
         app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
-        bare = TestClient(app)
+        bare = TestClient(app, base_url="http://127.0.0.1")
         resp = bare.get("/api/projects/1/last-run")
         assert resp.status_code == 401
 

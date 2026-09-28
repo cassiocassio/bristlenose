@@ -78,7 +78,9 @@ class TestOnlyRecordingsServed:
         target = tmp_path / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text("Sarah Jones, 07700 900123")
-        c = TestClient(create_app(project_dir=tmp_path, db_url="sqlite://"))
+        c = TestClient(
+            create_app(project_dir=tmp_path, db_url="sqlite://"), base_url="http://127.0.0.1"
+        )
         resp = c.get(f"/media/{rel}")
         assert resp.status_code == 403
         assert "Sarah Jones" not in resp.text

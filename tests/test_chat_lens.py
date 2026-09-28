@@ -315,7 +315,7 @@ class TestSupportCheckFormatting:
 class TestChatLensMounting:
     def test_page_and_api_ship_without_dev(self) -> None:
         app = _make_app()
-        page = TestClient(app).get("/chat-lens")  # outside /api, no auth needed
+        page = TestClient(app, base_url="http://127.0.0.1").get("/chat-lens")  # outside /api, no auth needed
         assert page.status_code == 200
         assert "Chat lens" in page.text
         # The page embeds the bearer token for its own fetches.
@@ -328,7 +328,7 @@ class TestChatLensMounting:
         """Escape hatch: BRISTLENOSE_EXPERIMENTAL_CHAT_LENS=0 removes it entirely."""
         monkeypatch.setenv("BRISTLENOSE_EXPERIMENTAL_CHAT_LENS", "0")
         app = create_app(project_dir=_FIXTURE_DIR, dev=False, db_url="sqlite://")
-        assert TestClient(app).get("/chat-lens").status_code == 404
+        assert TestClient(app, base_url="http://127.0.0.1").get("/chat-lens").status_code == 404
         r = AuthTestClient(app).post(
             "/api/dev/chat-lens/ask", json={"question": "anything"}
         )

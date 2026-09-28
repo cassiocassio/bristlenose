@@ -338,11 +338,12 @@ The server currently loads one project (project ID 1). Multi-project is future w
 
 ## Middleware stack
 
-Three middleware layers in `create_app()`, added in this order (Starlette processes in reverse — last added wraps outermost):
+Four middleware layers in `create_app()` (plus the `@app.middleware` no-store hook), added in this order (Starlette processes in reverse — last added wraps outermost):
 
-1. **BearerTokenMiddleware** — auth on `/api/*` and `/media/*`
+1. **BearerTokenMiddleware** — auth on `/api/*` and `/mcp` (not `/media/*` — see Gotchas)
 2. **CORSMiddleware** — blocks all cross-origin requests
 3. **GZipMiddleware** (`minimum_size=500`) — compresses text responses (JSON, HTML, CSS, JS). ~83% reduction on the quotes endpoint. Media files opt out via `Content-Encoding: identity` on the `FileResponse` to avoid wasting CPU on incompressible codecs and breaking byte-range video seeking. BREACH is not a concern — no user input is reflected in token-bearing responses
+4. **LoopbackHostMiddleware** — outermost, the DNS-rebinding gate: 400 for any `Host` not 127.0.0.1 / localhost / [::1] (any port). CORS can't do this — a rebound page is same-origin — and the token is no defence because `/report/` hands it out. **Must stay added last.** Tests: a bare `TestClient` sends Starlette's default `testserver` and gets 400 — pass `base_url="http://127.0.0.1"` (`AuthTestClient` defaults to it, `tests.conftest.LOOPBACK_BASE_URL`). Never add `testserver` to the allowlist
 
 ## Sidecar lifecycle (parent-death detection + structured exit logging)
 

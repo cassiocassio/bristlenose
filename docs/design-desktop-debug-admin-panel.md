@@ -304,7 +304,8 @@ not `servedPort` (which does not exist).
 
 **No auth token needed.** `/admin` is *not* under `/api/`, so it is not behind
 `BearerTokenMiddleware` ([`middleware.py`](../bristlenose/server/middleware.py)
-guards only the `/api/` prefix). Localhost-binding is its sole protection —
+guards only the `/api/` prefix). Localhost-binding plus the loopback-`Host`
+check (`LoopbackHostMiddleware`, below) is its protection —
 which is consistent with `SECURITY.md`'s framing of the token as
 defence-in-depth, not an auth boundary. Guard against "no project served yet"
 via the `.disabled(serveManager.runningPort == nil)` modifier above.
@@ -313,8 +314,16 @@ via the `.disabled(serveManager.runningPort == nil)` modifier above.
 
 In the Developer-ID beta, `/admin` becomes an
 **unauthenticated-but-localhost-bound, read-only** view over transcripts + PII.
-Read-only (incl. `can_export=False`) removes the mutation *and* bulk-exfil risk;
-localhost binding removes the remote risk; it matches the existing SECURITY.md
+Read-only (incl. `can_export=False`) removes the mutation *and* bulk-exfil risk.
+**Localhost binding alone did *not* remove the remote risk**, although this doc
+said it did until 28 Sep 2026. Under DNS rebinding, a web page on an attacker's
+domain whose name re-resolves to 127.0.0.1 is same-origin with the serve. A
+security review measured it: with `Host: rebind.attacker.example:8150`, `/admin`
+returned `Person.full_name`. The remote risk is closed by
+`LoopbackHostMiddleware` (`server/middleware.py`, outermost in `create_app`),
+which answers 400 to any `Host` other than 127.0.0.1, localhost or [::1]
+(`tests/test_serve_host_header.py::TestAdminPanelBehindTheGate`). With that, it
+matches the existing SECURITY.md
 threat model (local-process defence-in-depth — the bearer token is a
 defence-in-depth speed bump, not the boundary; `/report/*` and `/media/*` are
 already exempt for the same reason). In the App Store *and* TestFlight builds

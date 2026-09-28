@@ -106,6 +106,7 @@ state is still evidenced, the day is not.
 |---|---|---|
 | `edo-colour-palette.html` | 2 Jul 2026 | IMPLEMENTED — `theme/colors/palette-edo.css` ships |
 | `edo-theme-studio.html` | 2 Jul 2026 | SANDPIT — the Edo palette tuner; `colors/palette-edo.css` ships |
+| `edo-website-palettes.html` | 26 Sep 2026 | *unreviewed* |
 
 ## export
 
@@ -204,6 +205,9 @@ state is still evidenced, the day is not.
 | `tentative-bars.html` | 19 Mar 2026 | PROPOSED 19 Mar 2026 · IMPLEMENTED — the two-tone `MicroBar` ships (`tag-micro-bar-tentative`), pale tentative + solid accepted, with “N tentative + M accepted” on hover |
 | `tooltip-gallery.html` | 22 Feb 2026 | SANDPIT — “6 variants (A–F) with interactive comparison and dark mode toggle”; **variant D was chosen**, per CLAUDE.md |
 | `typography-comparison.html` | 15 Feb 2026 | PROPOSED 15 Feb 2026 · IMPLEMENTED · SUPERSEDED — as above |
+| `app-icon-directions.html` | 26 Sep 2026 | *unreviewed* |
+| `edit-affordance-states.html` | 22 Sep 2026 | *unreviewed* |
+| `project-condition-poc.html` | 28 Sep 2026 | *unreviewed* |
 
 ## out-of-credit
 
@@ -281,6 +285,7 @@ state is still evidenced, the day is not.
 | `signals-focus-mode.html` | 21 Sep 2026 | PROPOSED 21 Sep 2026 · IMPLEMENTED 21 Sep 2026 — variant A shipped as drawn; Focus Mode extended to the Signals lens: real card markup over the baked theme, Focus off beside Focus on, the finding's treatment (0.4 wayfinding vs lit) switchable. The candidate CSS is the proposal layer at the bottom of its `<style>`. Spec: `design-focus-mode-signals.md` |
 | `signals-heading-hierarchy.html` | 21 Sep 2026 | PROPOSED 21 Sep 2026 · **IMPLEMENTED** 21 Sep 2026 in `b95bf62a` — **the answer was space, not type, and that is the whole point of keeping it.** The location heading and the card headline were byte-identical (`--bn-text-heading` / `--bn-weight-emphasis` / `--bn-colour-text`, measured 17px/490 on both), and eleven mechanisms were drawn over the shipped theme before one was picked. What shipped changed no type token at all. The rejections, so they are not re-proposed: **A** weight 490→420 is real but the faintest of the set (measured 3.63px on SF Pro at 17px, 1.91px on Inter at 18px); **B/F** muting the heading collides with the Codebooks navigator, where `--bn-colour-muted` means *this codebook is switched off*, and both lenses share the panel; **C** breaks the Quotes-lens `<h3>` size parity that `signals.css` states in writing; **D** borrows `h2`'s size without `h2`'s keyline; **E** uppercase was already rejected twice in shipped comments on cross-lens naming grounds; **G** `--bn-weight-starred` (520) is optically the same instance as 490 in SF Pro — measured +1.03px across a 28-character line, so there is no usable step up; **H** 700 is the page-title and destructive-verb weight; **K** the only “move the headline” option that reads needs a sixth weight token (Semibold ~600), which the ladder has no room for. Spec: the commit body |
 | `signals-sidebar-indent.html` | 21 Sep 2026 | PROPOSED 21 Sep 2026 · **IMPLEMENTED** 21 Sep 2026 in `b95bf62a` — the follow-on that picked the *value*, once the mechanism above was settled. Five indents over the real navigation (nine locations, thirteen rows, the shipped 280px panel); **each column measures itself on load**, so its costs cannot go stale the way a number in prose does. `--bn-space-md` (12px) shipped. Rejected: **14px**, the Mac app's own `indentationPerLevel` (`ProjectSidebarOutline.swift`, and `CloudImportOutlineView` repeats it) — indistinguishable from 12px in cost and appearance, and two pixels does not buy a sixth spacing token; **24px** (`--bn-space-lg`, the literal mirror of the card's own padding) costs eight of thirteen rows a second line and grows the panel two fifths. Also settles a question that will be asked again: the spacing ladder is **not** an 8px grid — 2.4 / 5.6 / 12 / 24 / 32, rem-round and roughly doubling, with no step between sm and md, and no macOS derivation (it predates the Mac app by five months) |
+| `signals-heatmap-sticky-pane.html` | 26 Sep 2026 | *unreviewed* |
 
 ## type
 
@@ -295,6 +300,7 @@ state is still evidenced, the day is not.
 |---|---|---|
 | `website-bento-welcome.html` | 22 Aug 2026 | IMPLEMENTED — the website bento welcome shipped (separate deploy repo) |
 | `website-hero-platform-cta.html` | 27 Aug 2026 | IMPLEMENTED — the website hero CTA shipped |
+| `highlighter-playground.html` | 25 Sep 2026 | *unreviewed* |
 
 ## welcome
 
@@ -310,6 +316,8 @@ state is still evidenced, the day is not.
 | `welcome-science-animations.html` | 25 Jul 2026 | IMPLEMENTED — “**reference spec**” for `WelcomeIllustrations.swift`, and the website welcome cells were ported from it |
 | `welcome-science-disclosure.html` | 19 Jul 2026 | SANDPIT — disclosure variants for the science welcome cell; the cell itself ships (`welcome-science-animations.html`) |
 | `welcome-studytools-animations.html` | 20 Aug 2026 | IMPLEMENTED — cited from `WelcomeHomeView.swift`’s own doc comment |
+| `welcome-focus-cell-build.html` | 22 Sep 2026 | *unreviewed* |
+| `welcome-focus-cell.html` | 22 Sep 2026 | *unreviewed* |
 
 ## window
 

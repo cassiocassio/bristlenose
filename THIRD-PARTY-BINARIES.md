@@ -98,7 +98,7 @@ procurement; under-listing would be a compliance risk.
 | `alembic` | 1.20.0 | MIT | <https://alembic.sqlalchemy.org> |
 | `annotated-doc` | 0.0.5 | MIT | <https://github.com/fastapi/annotated-doc> |
 | `annotated-types` | 0.8.0 | MIT | <https://github.com/annotated-types/annotated-types> |
-| `anthropic` | 1.8.0 | MIT License | <https://github.com/anthropics/anthropic-sdk-python> |
+| `anthropic` | 1.9.0 | MIT License | <https://github.com/anthropics/anthropic-sdk-python> |
 | `anyio` | 4.15.1 | MIT | <https://anyio.readthedocs.io/en/stable/versionhistory.html> |
 | `attrs` | 26.1.0 | MIT | <https://www.attrs.org/en/stable/changelog.html> |
 | `av` | 18.1.0 | BSD-3-Clause | <https://pyav.basswood.io> |
@@ -117,10 +117,10 @@ procurement; under-listing would be a compliance risk.
 | `docstring_parser` | 0.18.0 | MIT License | <https://github.com/rr-/docstring_parser> |
 | `et_xmlfile` | 2.0.0 | MIT License | <https://foss.heptapod.net/openpyxl/et_xmlfile> |
 | `fastapi` | 0.141.1 | MIT | <https://github.com/fastapi/fastapi> |
-| `filelock` | 4.0.4 | MIT | <https://github.com/tox-dev/py-filelock> |
+| `filelock` | 4.0.6 | MIT | <https://github.com/tox-dev/py-filelock> |
 | `flatbuffers` | 25.12.19 | Apache Software License | <https://google.github.io/flatbuffers/> |
 | `fsspec` | 2026.9.0 | BSD-3-Clause | <https://github.com/fsspec/filesystem_spec> |
-| `google-auth` | 2.58.1 | Apache Software License | <https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth> |
+| `google-auth` | 2.59.0 | Apache Software License | <https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth> |
 | `google-genai` | 2.25.0 | Apache-2.0 | <https://github.com/googleapis/python-genai> |
 | `greenlet` | 3.5.6 | MIT AND PSF-2.0 | <https://greenlet.readthedocs.io> |
 | `h11` | 0.16.0 | MIT License | <https://github.com/python-hyper/h11> |
@@ -154,7 +154,7 @@ procurement; under-listing would be a compliance risk.
 | `networkx` | 3.7 | BSD-3-Clause | <https://networkx.org/> |
 | `numba` | 0.67.0 | BSD License | <https://numba.pydata.org> |
 | `numpy` | 2.4.6 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | <https://numpy.org> |
-| `openai` | 3.19.2 | Apache-2.0 | <https://github.com/openai/openai-python> |
+| `openai` | 3.20.0 | Apache-2.0 | <https://github.com/openai/openai-python> |
 | `openpyxl` | 3.1.5 | MIT License | <https://openpyxl.readthedocs.io> |
 | `opentelemetry-api` | 1.45.0 | Apache-2.0 | <https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api> |
 | `packaging` | 26.3 | Apache-2.0 OR BSD-2-Clause | <https://github.com/pypa/packaging> |
@@ -168,7 +168,7 @@ procurement; under-listing would be a compliance risk.
 | `pydantic-settings` | 2.15.0 | MIT | <https://github.com/pydantic/pydantic-settings> |
 | `pydantic_core` | 2.46.5 | MIT | <https://github.com/pydantic> |
 | `Pygments` | 2.21.0 | BSD-2-Clause | <https://pygments.org> |
-| `PyJWT` | 2.15.0 | MIT | <https://github.com/jpadilla/pyjwt> |
+| `PyJWT` | 2.15.1 | MIT | <https://github.com/jpadilla/pyjwt> |
 | `pysrt` | 1.1.2 | GPL-3.0-or-later | <https://github.com/byroot/pysrt> |
 | `python-docx` | 1.2.0 | MIT License | <https://github.com/python-openxml/python-docx> |
 | `python-dotenv` | 1.2.3 | BSD-3-Clause | <https://github.com/theskumar/python-dotenv> |
@@ -189,7 +189,7 @@ procurement; under-listing would be a compliance risk.
 | `sqladmin` | 0.32.0 | BSD-3-Clause | <https://github.com/smithyhq/sqladmin> |
 | `SQLAlchemy` | 2.1.1 | MIT | <https://www.sqlalchemy.org> |
 | `srsly` | 2.5.4 | MIT License | <https://github.com/explosion/srsly> |
-| `sse-starlette` | 3.4.11 | BSD-3-Clause | <https://github.com/sysid/sse-starlette> |
+| `sse-starlette` | 3.5.0 | BSD-3-Clause | <https://github.com/sysid/sse-starlette> |
 | `starlette` | 1.7.0 | BSD-3-Clause | <https://github.com/Kludex/starlette> |
 | `sympy` | 1.14.0 | BSD License | <https://sympy.org> |
 | `tenacity` | 9.1.4 | Apache Software License | <https://github.com/jd/tenacity> |

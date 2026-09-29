@@ -20,6 +20,7 @@ from bristlenose.models import (
     TranscriptSegment,
     format_timecode,
 )
+from bristlenose.stages.s06_merge_transcript import _language_header
 from bristlenose.utils.text import count_noun
 
 logger = logging.getLogger(__name__)
@@ -395,6 +396,11 @@ def remove_pii(
             duration_seconds=transcript.duration_seconds,
             segments=clean_segments,
             pii_entities_found=total_entities,
+            # The language rides along: the importer reads it from the cooked
+            # header (it prefers cooked transcripts), and without it a
+            # redacted project's clips are tagged with the app's language.
+            detected_language=transcript.detected_language,
+            pinned_language=transcript.pinned_language,
         )
         clean_transcripts.append(clean_transcript)
 
@@ -447,6 +453,7 @@ def write_cooked_transcripts(
             label="Transcript (cooked)",
             extra_headers={
                 "PII entities redacted": str(transcript.pii_entities_found),
+                **(_language_header(transcript) or {}),
             },
         )
 
@@ -503,6 +510,7 @@ def write_cooked_transcripts_md(
             label="Transcript (cooked)",
             extra_headers={
                 "PII entities redacted": str(transcript.pii_entities_found),
+                **(_language_header(transcript) or {}),
             },
         )
 

@@ -254,7 +254,8 @@
       "ffmpegMissing": "No s'ha trobat l'FFmpeg — instal·la'l per extreure clips",
       "noClips": "No hi ha cites destacades ni rellevants per extreure",
       "burnSubtitles": "Incrusta els subt\u00edtols al v\u00eddeo (per a diapositives)",
-      "burnUnavailable": "Aquest FFmpeg no pot incrustar subt\u00edtols \u2014 nom\u00e9s s'extrauran clips sense subt\u00edtols"
+      "burnUnavailable": "Aquest FFmpeg no pot incrustar subt\u00edtols \u2014 nom\u00e9s s'extrauran clips sense subt\u00edtols",
+      "burnPartial": "Clips a punt \u2014 c\u00f2pies subtitulades: {{burned}} de {{attempted}}"
     },
     "savePanelMessage": "Tria on vols desar l'informe.",
     "saveFailedAlert": "No s'ha pogut desar l'exportació."

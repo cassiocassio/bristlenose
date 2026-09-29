@@ -1664,6 +1664,17 @@ private struct VideoMenuContent: View {
         }
         .disabled(!active)
 
+        // After the sound, before the window commands — what you hear, then
+        // what you read, as QuickTime groups it. A preference, not a player
+        // command: live whenever the report can hear it, so subtitles can be
+        // switched on before the player opens. The SPA owns the setting; this
+        // checkmark mirrors `subtitle-prefs`.
+        Toggle(i18n.t("desktop.menu.video.subtitles"), isOn: Binding(
+            get: { bridgeHandler.playerSubtitlesOn },
+            set: { _ in bridgeHandler.menuAction("toggleSubtitles") }
+        ))
+        .disabled(!bridgeHandler.canDispatch)
+
         Divider()
 
         Button(i18n.t("desktop.menu.video.pictureInPicture"), systemImage: "pip.enter") {
@@ -1675,17 +1686,6 @@ private struct VideoMenuContent: View {
             bridgeHandler.menuAction("fullscreen")
         }
         .disabled(!active)
-
-        Divider()
-
-        // A preference, not a player command: live whenever the report can
-        // hear it, so subtitles can be switched on before the player opens.
-        // The SPA owns the setting; this checkmark mirrors `subtitle-prefs`.
-        Toggle(i18n.t("desktop.menu.video.subtitles"), isOn: Binding(
-            get: { bridgeHandler.playerSubtitlesOn },
-            set: { _ in bridgeHandler.menuAction("toggleSubtitles") }
-        ))
-        .disabled(!bridgeHandler.canDispatch)
     }
 }
 

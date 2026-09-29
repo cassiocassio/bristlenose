@@ -454,3 +454,17 @@ def test_write_raw_md_long_session(tmp_path: Path) -> None:
     assert "**[00:30] p6**" in content      # MM:SS
     assert "**[1:01:00] p6**" in content     # H:MM:SS
     assert "**Duration:** 2:00:00" in content
+
+
+def test_cooked_transcripts_keep_the_language_line(tmp_path: Path) -> None:
+    """The importer prefers cooked transcripts; without the line, a redacted
+    project's clips were tagged with the app's language, not the spoken one."""
+    from bristlenose.server.importer import _HEADER_LANGUAGE_RE
+
+    transcript = _make_cooked_transcript().model_copy(update={"detected_language": "ja"})
+    write_cooked_transcripts([transcript], tmp_path)
+    match = _HEADER_LANGUAGE_RE.search((tmp_path / "s1.txt").read_text(encoding="utf-8"))
+    assert match and match.group(1) == "ja"  # the .txt is what the importer reads
+    write_cooked_transcripts_md([transcript], tmp_path)
+    assert "ja (detected)" in (tmp_path / "s1.md").read_text(encoding="utf-8")
+

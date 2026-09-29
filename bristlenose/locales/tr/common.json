@@ -254,7 +254,8 @@
       "ffmpegMissing": "FFmpeg bulunamadı — klip çıkarmak için yükleyin",
       "noClips": "Çıkarılacak yıldızlı veya öne çıkan alıntı yok",
       "burnSubtitles": "Altyaz\u0131lar\u0131 videoya g\u00f6m (slaytlar i\u00e7in)",
-      "burnUnavailable": "Bu FFmpeg altyaz\u0131 g\u00f6memiyor \u2014 yaln\u0131zca altyaz\u0131s\u0131z klipler \u00e7\u0131kar\u0131lacak"
+      "burnUnavailable": "Bu FFmpeg altyaz\u0131 g\u00f6memiyor \u2014 yaln\u0131zca altyaz\u0131s\u0131z klipler \u00e7\u0131kar\u0131lacak",
+      "burnPartial": "Klipler haz\u0131r \u2014 altyaz\u0131l\u0131 kopyalar: {{burned}}/{{attempted}}"
     },
     "savePanelMessage": "Raporun kaydedileceği yeri seçin.",
     "saveFailedAlert": "Dışa aktarma kaydedilemedi."

@@ -163,9 +163,16 @@ export async function extractVideoClips(
       return;
     }
     addJob("clips", { type: "clips", frameworkId: "", frameworkTitle: "", total: result.total });
-    if (result.pii_warning) toast(t("export.clips.piiWarning"));
-    if (result.burn_unavailable) toast(t("export.clips.burnUnavailable"));
-    announce(t("export.clips.progress", { progress: 0, total: result.total }));
+    // One toast at a time replaces the last, so both notices share one, held
+    // long enough to read; the burn notice is also announced, since it is the
+    // only sign the subtitled copies won't be made.
+    const notices = [
+      result.pii_warning ? t("export.clips.piiWarning") : null,
+      result.burn_unavailable ? t("export.clips.burnUnavailable") : null,
+    ].filter((n): n is string => n !== null);
+    if (notices.length > 0) toast(notices.join(" · "), 6000);
+    const progress = t("export.clips.progress", { progress: 0, total: result.total });
+    announce(result.burn_unavailable ? `${t("export.clips.burnUnavailable")}. ${progress}` : progress);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "";
     if (msg.includes("422")) toast(t("export.clips.ffmpegMissing"));

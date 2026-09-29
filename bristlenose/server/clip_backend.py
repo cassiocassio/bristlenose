@@ -7,13 +7,14 @@ future AVFoundation (macOS desktop) backends implement.
 from __future__ import annotations
 
 import functools
+import json
 import logging
 import re
 import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from bristlenose.utils.bundled_binary import bundled_binary_path
 from bristlenose.utils.fs import CloudFetchTimeoutError, ensure_materialised
@@ -39,17 +40,20 @@ def _can_burn(ffmpeg: str) -> bool:
 
     Homebrew's ffmpeg has neither the ``subtitles`` filter nor libass
     (measured 29 Sep 2026); the macOS app's bundled build and Linux distro
-    builds have both.
+    builds have both. A probe that fails to run raises rather than returning
+    False, so ``lru_cache`` keeps only real answers — one slow start must not
+    read as "can't burn" until the server restarts.
     """
-    try:
-        filters = subprocess.run(
-            [ffmpeg, "-hide_banner", "-filters"], capture_output=True, text=True, timeout=30,
-        ).stdout
-        encoders = subprocess.run(
-            [ffmpeg, "-hide_banner", "-encoders"], capture_output=True, text=True, timeout=30,
-        ).stdout
-    except (OSError, subprocess.TimeoutExpired):
-        return False
+    runs = [
+        subprocess.run([ffmpeg, "-hide_banner", flag], capture_output=True, text=True, timeout=30)
+        for flag in ("-filters", "-encoders")
+    ]
+    for run in runs:
+        # A binary that didn't run properly (a sandbox-signed ffmpeg started
+        # outside the sandbox exits 133 with no output) has told us nothing.
+        if run.returncode != 0:
+            raise OSError(f"{ffmpeg} exited {run.returncode}")
+    filters, encoders = runs[0].stdout, runs[1].stdout
     has_filter = re.search(r"^\s*\S*\s+subtitles\s", filters, flags=re.M) is not None
     has_x264 = re.search(r"\slibx264\s", encoders) is not None
     return has_filter and has_x264
@@ -82,6 +86,36 @@ class ClipBackend(Protocol):
     def burn_subtitles(self, clip: Path, cues: list[Cue], output: Path) -> Path | None:
         """Write a copy of ``clip`` with ``cues`` drawn into the picture."""
         ...
+
+
+def display_size(probe: dict[str, Any]) -> tuple[int, int]:
+    """The upright, square-pixel frame size of ffprobe's first video stream,
+    rounded to even numbers.
+
+    The stored size is not what is shown: a portrait phone recording is
+    stored landscape with a 90° rotation, and an HDV or AVCHD file has
+    non-square pixels. ``probe`` is ffprobe's JSON for ``width``, ``height``,
+    ``sample_aspect_ratio``, the ``rotate`` tag (older files) and the
+    ``rotation`` side data.
+    """
+    stream = probe["streams"][0]
+    width: float = int(stream["width"])
+    height: float = int(stream["height"])
+    sar = str(stream.get("sample_aspect_ratio") or "1:1")
+    num, _, den = sar.partition(":")
+    if num.isdigit() and den.isdigit() and int(num) > 0 and int(den) > 0:
+        width = width * int(num) / int(den)
+    rotation = stream.get("tags", {}).get("rotate")
+    for side in stream.get("side_data_list", []):
+        if "rotation" in side:
+            rotation = side["rotation"]
+    if rotation is not None and abs(round(float(rotation))) % 180 == 90:
+        width, height = height, width
+    return _even(width), _even(height)
+
+
+def _even(n: float) -> int:
+    return max(2, int(round(n / 2)) * 2)
 
 
 class FFmpegBackend:
@@ -178,7 +212,13 @@ class FFmpegBackend:
     def can_burn_subtitles(self) -> bool:
         """Whether the ffmpeg in use has libass's filter and the x264 encoder."""
         ffmpeg = bundled_binary_path("ffmpeg")
-        return ffmpeg is not None and _can_burn(str(ffmpeg))
+        if ffmpeg is None:
+            return False
+        try:
+            return _can_burn(str(ffmpeg))
+        except (OSError, subprocess.TimeoutExpired):
+            logger.warning("Could not ask %s whether it can burn subtitles", ffmpeg, exc_info=True)
+            return False
 
     def burn_subtitles(self, clip: Path, cues: list[Cue], output: Path) -> Path | None:
         """Write a copy of ``clip`` with ``cues`` drawn into the picture.
@@ -197,15 +237,22 @@ class FFmpegBackend:
         try:
             probe = subprocess.run(
                 [ffprobe, "-v", "error", "-select_streams", "v:0",
-                 "-show_entries", "stream=width,height", "-of", "csv=p=0", str(clip)],
+                 "-show_entries",
+                 "stream=width,height,sample_aspect_ratio:stream_tags=rotate"
+                 ":stream_side_data=rotation",
+                 "-of", "json", str(clip)],
                 capture_output=True, text=True, timeout=60,
             )
-            width, height = (int(x) for x in probe.stdout.strip().split(",")[:2])
-        except (OSError, subprocess.TimeoutExpired, ValueError):
+            width, height = display_size(json.loads(probe.stdout))
+        except (OSError, subprocess.TimeoutExpired, ValueError, KeyError, IndexError):
             logger.warning("Could not read the frame size of %s; not burning", clip.name)
             return None
 
-        tmp = Path(tempfile.mkdtemp(prefix="bn-burn-"))
+        try:
+            tmp = Path(tempfile.mkdtemp(prefix="bn-burn-"))
+        except OSError:
+            logger.warning("Could not make a temp folder to burn %s", clip.name, exc_info=True)
+            return None
         try:
             if not _FILTER_SAFE_PATH.match(str(tmp)):
                 logger.warning("Temp path %s is not filter-safe; not burning", tmp)
@@ -217,7 +264,13 @@ class FFmpegBackend:
                 [
                     ffmpeg, "-hide_banner", "-loglevel", "error",
                     "-i", str(clip),
-                    "-vf", f"subtitles={ass}:fontsdir={tmp}",
+                    # ffmpeg turns a rotated phone video upright before the
+                    # filters; scaling to the display size then gives square
+                    # pixels (an anamorphic source's text isn't stretched) and
+                    # even sides, which yuv420p needs — an odd-sized screen
+                    # capture otherwise fails to open the encoder.
+                    "-vf",
+                    f"scale={width}:{height},setsar=1,subtitles={ass}:fontsdir={tmp}",
                     "-c:v", "libx264", "-crf", "18", "-preset", "veryfast",
                     "-pix_fmt", "yuv420p",
                     "-c:a", "copy", "-movflags", "+faststart",

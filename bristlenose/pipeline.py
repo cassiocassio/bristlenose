@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import shutil
 from collections.abc import Callable, Iterable
 from pathlib import Path
@@ -74,6 +75,9 @@ if TYPE_CHECKING:  # annotation only — s01 stays a lazy import
 
 logger = logging.getLogger(__name__)
 console = Console(width=min(80, Console().width))
+
+#: The ``# Language: ja (detected)`` / ``(set)`` line stage 6 writes.
+_LANGUAGE_LINE_RE = re.compile(r"^#\s*Language:\s*(\S+)\s*\((detected|set)\)", re.MULTILINE)
 
 
 
@@ -1503,12 +1507,16 @@ class Pipeline:
             mark_stage_running(manifest, STAGE_MERGE_TRANSCRIPT)
             status.update("[dim]Merging transcripts...[/dim]")
             t0 = time.perf_counter()
+            raw_dir = output_dir / "transcripts-raw"
+            # Sessions served from the transcription cache were not detected
+            # this run; their language is in the header the previous run
+            # wrote, which this stage is about to overwrite.
+            self._recover_languages(raw_dir, session_segments)
             transcripts = merge_transcripts(
                 sessions, session_segments, input_dir,
                 session_languages=self._detected_languages,
                 pinned_languages=self._pinned_languages,
             )
-            raw_dir = output_dir / "transcripts-raw"
             write_raw_transcripts(transcripts, raw_dir)
             write_raw_transcripts_md(transcripts, raw_dir)
             # Feed the desktop shoal animation a sample of real transcript words.
@@ -2958,6 +2966,28 @@ class Pipeline:
                 transcript_outcome.failed.extend(whisper_outcome.failed)
 
         return session_segments, transcript_outcome
+
+    def _recover_languages(self, raw_dir: Path, session_ids: Iterable[str]) -> None:
+        """Read back the ``Language:`` line of sessions not transcribed this run.
+
+        The language is known only while Whisper runs; a session loaded from
+        the transcription cache would otherwise be rewritten without the line,
+        and its clips and player track then tagged with the app's language.
+        """
+        for sid in session_ids:
+            if sid in self._detected_languages or sid in self._pinned_languages:
+                continue
+            path = raw_dir / f"{sid}.txt"
+            try:
+                head = path.read_text(encoding="utf-8")[:2000]
+            except OSError:
+                continue
+            match = _LANGUAGE_LINE_RE.search(head)
+            if match is None:
+                continue
+            code, source = match.group(1), match.group(2)
+            target = self._detected_languages if source == "detected" else self._pinned_languages
+            target[sid] = code
 
     def run_render_only(
         self,

@@ -254,7 +254,8 @@
       "ffmpegMissing": "FFmpeg niet gevonden — installeer het om clips te extraheren",
       "noClips": "Geen citaten met ster of uitgelicht om te extraheren",
       "burnSubtitles": "Ondertiteling in de video branden (voor dia's)",
-      "burnUnavailable": "Deze FFmpeg kan geen ondertiteling inbranden \u2014 alleen clips zonder ondertiteling worden ge\u00ebxtraheerd"
+      "burnUnavailable": "Deze FFmpeg kan geen ondertiteling inbranden \u2014 alleen clips zonder ondertiteling worden ge\u00ebxtraheerd",
+      "burnPartial": "Clips gereed \u2014 ondertitelde kopie\u00ebn: {{burned}} van {{attempted}}"
     },
     "savePanelMessage": "Kies waar je het rapport wilt bewaren.",
     "saveFailedAlert": "De export kon niet worden bewaard."

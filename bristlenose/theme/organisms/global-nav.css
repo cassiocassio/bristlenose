@@ -342,6 +342,13 @@
     outline: none;
 }
 
+/* The tint alone is ~1.05:1 against the menu, so keyboard focus also gets the
+   house ring (badge.css's focus-visible). */
+.export-dropdown-item:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
+}
+
 .export-dropdown-hint {
     padding: 0 0.85rem 0.25rem;
     font-size: var(--bn-text-caption);

@@ -254,7 +254,8 @@
       "ffmpegMissing": "FFmpeg hittades inte — installera det för att extrahera klipp",
       "noClips": "Inga stjärnmärkta eller utvalda citat att extrahera",
       "burnSubtitles": "Br\u00e4nn in undertexter i videon (f\u00f6r bildspel)",
-      "burnUnavailable": "Den h\u00e4r FFmpeg kan inte br\u00e4nna in undertexter \u2014 endast klipp utan undertexter extraheras"
+      "burnUnavailable": "Den h\u00e4r FFmpeg kan inte br\u00e4nna in undertexter \u2014 endast klipp utan undertexter extraheras",
+      "burnPartial": "Klipp klara \u2014 kopior med undertexter: {{burned}} av {{attempted}}"
     },
     "savePanelMessage": "Välj var rapporten ska sparas.",
     "saveFailedAlert": "Exporten kunde inte sparas."

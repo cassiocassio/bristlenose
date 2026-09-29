@@ -216,12 +216,30 @@ final class BridgeHandler: ObservableObject {
     @Published var focusModeActive: Bool = false
 
     /// The two subtitle preferences, mirrored from the SPA (`subtitle-prefs`).
-    /// The web side owns both in localStorage; these drive only the checkmarks
-    /// on Video ▸ Subtitles and Quotes ▸ Burn Subtitles into Clips. Unlike Focus
-    /// they persist, so `reset()` drops them to false only until the remounted
-    /// SPA re-posts them.
-    @Published var playerSubtitlesOn: Bool = false
-    @Published var burnSubtitlesInClips: Bool = false
+    /// The SPA owns their behaviour and reads them from localStorage — but the
+    /// webview's storage is `.nonPersistent()` per serve session
+    /// (`SharedConfigStore`), so on the Mac it would forget them on every
+    /// relaunch and project switch. So each post is also written to
+    /// UserDefaults, and `subtitlePrefsSeedScript()` puts the saved values back
+    /// into every new webview's localStorage before the SPA reads them. These
+    /// properties drive the checkmarks on Video ▸ Subtitles and Quotes ▸ Burn
+    /// Subtitles into Clips, and start from the saved values so the menu is
+    /// right before the report mounts.
+    @Published var playerSubtitlesOn: Bool = UserDefaults.standard.bool(forKey: BridgeHandler.playerSubtitlesKey)
+    @Published var burnSubtitlesInClips: Bool = UserDefaults.standard.bool(forKey: BridgeHandler.burnSubtitlesKey)
+
+    static let playerSubtitlesKey = "subtitlesInPlayer"
+    static let burnSubtitlesKey = "burnSubtitlesInClips"
+
+    /// A document-start script that seeds the SPA's localStorage with the saved
+    /// subtitle preferences. The keys match `frontend/src/utils/subtitlePrefs.ts`;
+    /// the values are only ever the literals `true`/`false`.
+    static func subtitlePrefsSeedScript(defaults: UserDefaults = .standard) -> String {
+        let player = defaults.bool(forKey: playerSubtitlesKey) ? "true" : "false"
+        let burn = defaults.bool(forKey: burnSubtitlesKey) ? "true" : "false"
+        return "try { localStorage.setItem('bristlenose-player-subtitles', '\(player)');"
+            + " localStorage.setItem('bristlenose-burn-subtitles', '\(burn)'); } catch (e) {}"
+    }
 
     /// Whether the report's left panel — whichever list the active lens puts
     /// there (Contents / Sessions / Codes / Signals; they share one `tocMode`)
@@ -835,10 +853,13 @@ final class BridgeHandler: ObservableObject {
         case "subtitle-prefs":
             // Sole writer, same shape as `focus-mode`: a mirror, never a second
             // source of truth. The SPA re-posts on mount and on every change.
+            // Also the one writer of the saved copy that outlives the webview.
             let player = body["player"] as? Bool ?? false
             let burn = body["burn"] as? Bool ?? false
             if player != playerSubtitlesOn { playerSubtitlesOn = player }
             if burn != burnSubtitlesInClips { burnSubtitlesInClips = burn }
+            UserDefaults.standard.set(player, forKey: Self.playerSubtitlesKey)
+            UserDefaults.standard.set(burn, forKey: Self.burnSubtitlesKey)
 
         case "panel-state":
             // Sole writer of the three panel mirrors. Equality-guarded like
@@ -983,8 +1004,9 @@ final class BridgeHandler: ObservableObject {
         quotesSearchQuery = ""
         quotesViewMode = "all"
         focusModeActive = false
-        playerSubtitlesOn = false
-        burnSubtitlesInClips = false
+        // The saved values, which the next webview is seeded with.
+        playerSubtitlesOn = UserDefaults.standard.bool(forKey: Self.playerSubtitlesKey)
+        burnSubtitlesInClips = UserDefaults.standard.bool(forKey: Self.burnSubtitlesKey)
         // Closed is the honest default for a project whose SPA hasn't mounted:
         // the rows dim to "Show", and the incoming `panel-state` corrects them
         // as soon as the new report restores its panels from localStorage.

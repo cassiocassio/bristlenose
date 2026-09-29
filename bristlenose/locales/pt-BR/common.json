@@ -253,8 +253,9 @@
       "failed": "Falha na extração do clipe",
       "ffmpegMissing": "FFmpeg não encontrado — instale-o para extrair clipes",
       "noClips": "Nenhuma citação destacada ou em destaque para extrair",
-      "burnSubtitles": "Gravar legendas no v\u00eddeo (para slides)",
-      "burnUnavailable": "Este FFmpeg n\u00e3o consegue gravar legendas \u2014 s\u00f3 ser\u00e3o extra\u00eddos clipes sem legendas"
+      "burnSubtitles": "Embutir legendas no v\u00eddeo (para slides)",
+      "burnUnavailable": "Este FFmpeg n\u00e3o consegue embutir legendas \u2014 s\u00f3 ser\u00e3o extra\u00eddos clipes sem legendas",
+      "burnPartial": "Clipes prontos \u2014 c\u00f3pias legendadas: {{burned}} de {{attempted}}"
     },
     "savePanelMessage": "Escolha onde salvar o relatório.",
     "saveFailedAlert": "Não foi possível salvar a exportação."

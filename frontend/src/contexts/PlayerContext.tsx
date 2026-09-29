@@ -27,7 +27,11 @@ import { announce } from "../utils/announce";
 import { apiGet, apiGetText } from "../utils/api";
 import i18n from "../i18n";
 import { postPlayerState } from "../shims/bridge";
-import { getSubtitlePrefs, subscribeSubtitlePrefs } from "../utils/subtitlePrefs";
+import {
+  getSubtitlePrefs,
+  setSubtitlePref,
+  subscribeSubtitlePrefs,
+} from "../utils/subtitlePrefs";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -321,8 +325,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         entry = await apiGetText(
           `/sessions/${encodeURIComponent(sessionId)}/subtitles.vtt`,
         );
-      } catch {
-        return; // No subtitles for this recording; the player plays without.
+      } catch (err) {
+        // The player plays without; say why, since a switched-on setting that
+        // shows nothing is otherwise unexplained.
+        console.warn(`bristlenose: no subtitles for session ${sessionId}`, err);
+        return;
       }
       subtitleCacheRef.current.set(sessionId, entry);
     }
@@ -391,7 +398,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
       if (d.type === "bristlenose-ready") {
         pushSubtitleSetting();
-        if (lastUriRef.current) void deliverSubtitles(lastUriRef.current);
+        // The recording the player actually loaded (after a reload that is
+        // the one in its URL, not necessarily our last seek), and the last
+        // seek too, in case that message arrived before the page could hear it.
+        if (typeof d.src === "string" && d.src) void deliverSubtitles(d.src);
+        if (lastUriRef.current && lastUriRef.current !== d.src) {
+          void deliverSubtitles(lastUriRef.current);
+        }
+      } else if (d.type === "bristlenose-subtitles-mode") {
+        // The viewer switched subtitles with the player's own CC control.
+        setSubtitlePref("playerSubtitles", !!d.show);
       } else if (d.type === "bristlenose-timeupdate" && d.pid) {
         const playing = d.playing !== undefined ? d.playing : true;
         updateGlow(d.pid, d.seconds, playing);

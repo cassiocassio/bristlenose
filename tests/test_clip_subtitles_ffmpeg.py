@@ -104,19 +104,67 @@ def test_audio_only_clip_carries_the_track_too(tmp_path: Path) -> None:
     assert "mov_text" in codecs
 
 
-def test_burned_copy_has_the_text_in_its_pixels(tmp_path: Path) -> None:
+def _black_source(path: Path, size: str) -> Path:
+    # A black picture, so any bright pixel is the burned-in text.
+    _run(
+        "ffmpeg", "-hide_banner", "-loglevel", "error",
+        "-f", "lavfi", "-i", f"color=c=black:size={size}:rate={_FPS}:duration=6",
+        "-f", "lavfi", "-i", "sine=frequency=440:duration=6",
+        "-c:v", "mpeg4", "-c:a", "aac", "-shortest", "-y", str(path),
+    )
+    return path
+
+
+def _grey_frame(video: Path, at: float) -> tuple[int, int, bytes]:
+    w, h = (int(x) for x in _run(
+        "ffprobe", "-v", "error", "-select_streams", "v:0",
+        "-show_entries", "stream=width,height", "-of", "csv=p=0", str(video),
+    ).strip().split(",")[:2])
+    raw = subprocess.run(
+        ["ffmpeg", "-hide_banner", "-loglevel", "error", "-ss", f"{at}", "-i", str(video),
+         "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "gray", "-"],
+        capture_output=True, check=True,
+    ).stdout
+    return w, h, raw
+
+
+def _bright_columns(frame: tuple[int, int, bytes]) -> list[int]:
+    w, h, raw = frame
+    return sorted({i % w for i in range(len(raw)) if raw[i] > 180})
+
+
+def _burn(tmp_path: Path, size: str, lines: tuple[str, ...]) -> Path:
     from bristlenose.server.clip_subtitles import Cue
 
     backend = FFmpegBackend()
     if not backend.can_burn_subtitles():
         pytest.skip("this ffmpeg has no libass subtitles filter (e.g. Homebrew's)")
-    source = _video_source(tmp_path / "src.mp4")
-    clip = backend.extract_clip(source, tmp_path / "clip.mp4", 7.0, 12.0)
+    clip = backend.extract_clip(_black_source(tmp_path / "src.mp4", size),
+                                tmp_path / "clip.mp4", 0.0, 5.0)
     assert clip is not None
     burned = backend.burn_subtitles(
-        clip, [Cue(0.0, 4.0, "p1", "white", ("Burned in.",))], tmp_path / "clip (subtitled).mp4",
+        clip, [Cue(0.0, 2.0, "p1", "white", lines)], tmp_path / "clip (subtitled).mp4",
     )
     assert burned is not None
-    # Same length, and the picture differs from the clean clip while a cue is up.
-    assert len(_frame_md5s(burned)) == len(_frame_md5s(clip))
-    assert _frame_md5s(burned)[25] != _frame_md5s(clip)[25]
+    return burned
+
+
+def test_burned_copy_has_the_text_in_its_pixels(tmp_path: Path) -> None:
+    burned = _burn(tmp_path, "320x180", ("Burned in.",))
+    during, after = _grey_frame(burned, 1.0), _grey_frame(burned, 3.5)
+    lit = _bright_columns(during)
+    assert lit, "no text was drawn while the cue was up"
+    assert not _bright_columns(after), "text is still there after the cue ended"
+    w = during[0]
+    assert w * 0.1 < lit[0] and lit[-1] < w * 0.9  # centred, inside the margins
+
+
+def test_portrait_text_stays_inside_the_frame(tmp_path: Path) -> None:
+    """Two full 37-character lines on an upright phone frame: sized from the
+    height, they ran off both edges."""
+    burned = _burn(tmp_path, "180x320", (
+        "I thought the settings page would be", "where I could change the notifications",
+    ))
+    frame = _grey_frame(burned, 1.0)
+    lit = _bright_columns(frame)
+    assert lit and lit[0] > 2 and lit[-1] < frame[0] - 3

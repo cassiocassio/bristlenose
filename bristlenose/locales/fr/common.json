@@ -254,7 +254,8 @@
       "ffmpegMissing": "FFmpeg introuvable — installez-le pour extraire des clips",
       "noClips": "Aucune citation favorite ou mise en avant à extraire",
       "burnSubtitles": "Incruster les sous-titres dans la vid\u00e9o (pour les diapositives)",
-      "burnUnavailable": "Ce FFmpeg ne peut pas incruster les sous-titres \u2014 seuls des clips sans sous-titres seront extraits"
+      "burnUnavailable": "Ce FFmpeg ne peut pas incruster les sous-titres \u2014 seuls des clips sans sous-titres seront extraits",
+      "burnPartial": "Clips pr\u00eats \u2014 copies sous-titr\u00e9es : {{burned}} sur {{attempted}}"
     },
     "savePanelMessage": "Choisissez où enregistrer le rapport.",
     "saveFailedAlert": "L'exportation n'a pas pu être enregistrée."

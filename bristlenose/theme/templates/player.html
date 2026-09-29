@@ -12,6 +12,14 @@ body { display: flex; flex-direction: column; }
            border-bottom: 1px solid #333; flex-shrink: 0; min-height: 1.8rem; }
 #status.error { color: #ef4444; }
 video { flex: 1; width: 100%; min-height: 0; background: #000; }
+/* Subtitles: the clips' styling — white on a 75% black box, other speakers in
+   the BBC colours (the .vtt's <c.yellow> etc.). Set here rather than trusting
+   each engine's built-in colour classes; the viewer's system caption style
+   can still override. */
+::cue { color: #fff; background: rgba(0, 0, 0, 0.75); }
+::cue(.yellow) { color: #ff0; }
+::cue(.cyan) { color: #0ff; }
+::cue(.lime) { color: #0f0; }
 </style>
 </head>
 <body>
@@ -30,27 +38,48 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
   // recording it belongs to. Shown or hidden by the viewer's setting, which
   // arrives as `setSubtitles` and may come before any video is loaded.
   var wantSubtitles = false;
-  var subtitles = null;      // { src, vtt, lang, label } — latest received
+  // Received subtitles, by recording. Kept per recording rather than "latest",
+  // so a slow reply for the previous recording can't displace the current one.
+  var subtitlesBySrc = {};   // src -> { vtt, lang, label }
   var subtitleUrl = null;    // blob: URL of the attached track
   var trackEl = null;
+  var attached = null;       // the entry trackEl was built from
 
+  // Our track only: a recording can carry captions of its own, and turning
+  // those on beside ours would stack two layers of text.
   function applySubtitleMode() {
-    for (var i = 0; i < video.textTracks.length; i++) {
-      video.textTracks[i].mode = wantSubtitles ? 'showing' : 'hidden';
-    }
+    if (trackEl && trackEl.track) trackEl.track.mode = wantSubtitles ? 'showing' : 'hidden';
   }
+
+  // The viewer used the video's own CC control. Adopt their choice and tell
+  // the report, so the setting (and the Mac menu's checkmark) follows it and
+  // the next recording doesn't undo it. Our own mode changes land here too,
+  // but then the mode already equals wantSubtitles and nothing is sent.
+  video.textTracks.addEventListener('change', function() {
+    if (!trackEl || !trackEl.track) return;
+    var showing = trackEl.track.mode === 'showing';
+    if (showing === wantSubtitles) return;
+    wantSubtitles = showing;
+    _notify('bristlenose-subtitles-mode', { show: showing });
+  });
 
   function detachSubtitles() {
     if (trackEl && trackEl.parentNode) trackEl.parentNode.removeChild(trackEl);
     if (subtitleUrl) URL.revokeObjectURL(subtitleUrl);
     trackEl = null;
     subtitleUrl = null;
+    attached = null;
   }
 
-  // Attach the received subtitles only to the recording they were built for.
+  // Attach the current recording's subtitles. Unchanged ones are left in
+  // place: every timecode click re-sends them, and rebuilding the track would
+  // flicker the cue on screen and re-parse the whole session.
   function attachSubtitlesIfCurrent() {
+    var subtitles = currentUri ? subtitlesBySrc[currentUri] : null;
+    if (subtitles && subtitles === attached && trackEl) { applySubtitleMode(); return; }
     detachSubtitles();
-    if (!subtitles || !subtitles.vtt || subtitles.src !== currentUri) return;
+    if (!subtitles || !subtitles.vtt) return;
+    attached = subtitles;
     subtitleUrl = URL.createObjectURL(new Blob([subtitles.vtt], { type: 'text/vtt' }));
     trackEl = document.createElement('track');
     trackEl.kind = 'subtitles';
@@ -119,8 +148,11 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
     if (d && d.type === 'bristlenose-seek' && d.src) {
       loadAndSeek(d.pid || '', d.src, parseFloat(d.t) || 0);
     } else if (d && d.type === 'bristlenose-subtitles' && d.src) {
-      subtitles = { src: d.src, vtt: d.vtt || '', lang: d.lang, label: d.label };
-      attachSubtitlesIfCurrent();
+      var prev = subtitlesBySrc[d.src];
+      if (!(prev && prev.vtt === d.vtt && prev.lang === d.lang && prev.label === d.label)) {
+        subtitlesBySrc[d.src] = { vtt: d.vtt || '', lang: d.lang, label: d.label };
+      }
+      if (d.src === currentUri) attachSubtitlesIfCurrent();
     } else if (d && d.type === 'bristlenose-command' && d.command === 'setSubtitles') {
       // Before the no-video guard: the setting can arrive first.
       wantSubtitles = !!(d.payload && d.payload.show);

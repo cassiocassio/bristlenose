@@ -254,7 +254,8 @@
       "ffmpegMissing": "FFmpeg ei löytynyt — asenna se leikkeiden erottamiseksi",
       "noClips": "Ei tähdellä merkittyjä tai esiin nostettuja sitaatteja erotettavaksi",
       "burnSubtitles": "Polta tekstitys videoon (dioja varten)",
-      "burnUnavailable": "T\u00e4m\u00e4 FFmpeg ei osaa polttaa tekstityst\u00e4 \u2014 vain tekstitt\u00e4m\u00e4tt\u00f6m\u00e4t leikkeet erotetaan"
+      "burnUnavailable": "T\u00e4m\u00e4 FFmpeg ei osaa polttaa tekstityst\u00e4 \u2014 vain tekstitt\u00e4m\u00e4tt\u00f6m\u00e4t leikkeet erotetaan",
+      "burnPartial": "Leikkeet valmiina \u2014 tekstitetyt kopiot: {{burned}}/{{attempted}}"
     },
     "savePanelMessage": "Valitse, mihin raportti tallennetaan.",
     "saveFailedAlert": "Vientiä ei voitu tallentaa."

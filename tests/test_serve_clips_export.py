@@ -512,6 +512,17 @@ class TestBurnIn:
         out = self._run(tmp_path, _spec(tmp_path / "src.mp4"), burn=True, burn_ok=False)
         assert out["manifest"]["clips"][0]["burned"] is None
         assert not stale.exists()
+        # The report is told a copy was attempted and not made, not just "Done".
+        job = clips_export._jobs[1]
+        assert job["burn_attempted"] == 1 and job.get("burned_count", 0) == 0
+
+    def test_export_without_burn_removes_a_stale_copy(self, tmp_path: Path) -> None:
+        """A burned copy made before a correction ("Sarah" → "[her]") must not
+        survive the next export, which has burn off by default."""
+        stale = tmp_path / "p1 00m10 i found the dashboard (subtitled).mp4"
+        stale.write_bytes(b"old text")
+        self._run(tmp_path, _spec(tmp_path / "src.mp4"), burn=False)
+        assert not stale.exists()
 
     def test_start_reports_when_this_ffmpeg_cannot_burn(self, client: TestClient, tmp_path: Path) -> None:
         media = ({"s1": (tmp_path / "s1.mp4", False)}, {"s1": 120.0})

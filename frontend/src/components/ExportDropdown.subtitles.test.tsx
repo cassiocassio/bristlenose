@@ -15,10 +15,10 @@ vi.mock("../contexts/QuotesContext", () => ({
     hidden: {},
     starred: {},
     tags: {},
-    quotes: [],
+    quotes: [{ dom_id: "q1" }],
   }),
 }));
-vi.mock("../utils/filter", () => ({ filterQuotes: () => [] }));
+vi.mock("../utils/filter", () => ({ filterQuotes: (qs: unknown[]) => qs }));
 vi.mock("../utils/exportActions", () => ({
   copyQuotesToClipboard: vi.fn(),
   saveQuotesSpreadsheet: vi.fn(),
@@ -26,6 +26,7 @@ vi.mock("../utils/exportActions", () => ({
 }));
 
 import { ExportDropdown } from "./ExportDropdown";
+import { extractVideoClips } from "../utils/exportActions";
 import { _resetSubtitlePrefsForTests, getSubtitlePrefs } from "../utils/subtitlePrefs";
 
 function openMenu() {
@@ -65,5 +66,28 @@ describe("ExportDropdown — burn subtitles checkbox", () => {
     expect(getSubtitlePrefs().burnSubtitles).toBe(true);
     fireEvent.keyDown(screen.getByTestId("export-clips-burn"), { key: " " });
     expect(getSubtitlePrefs().burnSubtitles).toBe(false);
+  });
+
+  it("sits before the rows that start the export", () => {
+    openMenu();
+    const items = Array.from(
+      screen
+        .getByTestId("export-dropdown-menu")
+        .querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemcheckbox"]'),
+    );
+    const burn = items.findIndex((el) => el.dataset.testid === "export-clips-burn");
+    const firstScope = items.findIndex((el) => el.dataset.testid === "export-clips-all");
+    expect(burn).toBeGreaterThan(-1);
+    expect(burn).toBeLessThan(firstScope);
+  });
+});
+
+describe("ExportDropdown — keyboard", () => {
+  it("runs an action once for one Enter", () => {
+    openMenu();
+    const row = screen.getByTestId("export-clips-all");
+    act(() => row.focus());
+    fireEvent.keyDown(row, { key: "Enter" });
+    expect(vi.mocked(extractVideoClips)).toHaveBeenCalledTimes(1);
   });
 });

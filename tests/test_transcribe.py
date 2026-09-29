@@ -461,3 +461,22 @@ class TestPipelineRecordsAPinnedLanguage:
 
     def test_auto_records_nothing_pinned(self, tmp_path) -> None:
         assert self._gather(tmp_path, "auto")._pinned_languages == {}
+
+    def test_a_cached_session_keeps_the_language_its_last_run_wrote(self, tmp_path) -> None:
+        """Stage 6 rewrites every header; a session served from the
+        transcription cache was not detected this run, so its language is read
+        back from the header the last run wrote."""
+        from bristlenose.config import BristlenoseSettings
+        from bristlenose.pipeline import Pipeline
+
+        raw = tmp_path / "transcripts-raw"
+        raw.mkdir()
+        (raw / "s1.txt").write_text("# Transcript: s1\n# Language: ja (detected)\n\n")
+        (raw / "s2.txt").write_text("# Transcript: s2\n# Language: es (set)\n\n")
+        (raw / "s3.txt").write_text("# Transcript: s3\n\n")
+        pipeline = Pipeline(BristlenoseSettings())
+        pipeline._detected_languages["s4"] = "fr"  # detected this run: kept
+        pipeline._recover_languages(raw, ["s1", "s2", "s3", "s4", "s5"])
+        assert pipeline._detected_languages == {"s1": "ja", "s4": "fr"}
+        assert pipeline._pinned_languages == {"s2": "es"}
+

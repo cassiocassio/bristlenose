@@ -356,6 +356,9 @@ export interface ClipJobStatus {
   skipped_count: number;
   current_clip: string;
   output_dir: string | null;
+  /** Subtitled copies made, and attempted (burn-in asked for and possible). */
+  burned_count?: number;
+  burn_attempted?: number;
 }
 
 export interface ProposedTagResponse {

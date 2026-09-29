@@ -959,4 +959,15 @@ describe("PlayerContext subtitles", () => {
     localStorage.clear();
     _resetSubtitlePrefsForTests();
   });
+
+  it("follows the viewer's own CC control in the player", async () => {
+    const { getSubtitlePrefs, _resetSubtitlePrefsForTests } = await import("../utils/subtitlePrefs");
+    localStorage.clear();
+    _resetSubtitlePrefsForTests();
+    renderProvider();
+    act(() => postPlayerMessage({ type: "bristlenose-subtitles-mode", show: true }));
+    expect(getSubtitlePrefs().playerSubtitles).toBe(true);
+    localStorage.clear();
+    _resetSubtitlePrefsForTests();
+  });
 });

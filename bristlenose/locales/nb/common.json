@@ -254,7 +254,8 @@
       "ffmpegMissing": "FFmpeg ikke funnet – installer det for å trekke ut klipp",
       "noClips": "Ingen stjernemerkede eller fremhevede sitater å trekke ut",
       "burnSubtitles": "Brenn inn undertekster i videoen (for lysbilder)",
-      "burnUnavailable": "Denne FFmpeg kan ikke brenne inn undertekster \u2013 bare klipp uten undertekster trekkes ut"
+      "burnUnavailable": "Denne FFmpeg kan ikke brenne inn undertekster \u2013 bare klipp uten undertekster trekkes ut",
+      "burnPartial": "Klipp klare \u2013 kopier med undertekster: {{burned}} av {{attempted}}"
     },
     "savePanelMessage": "Velg hvor rapporten skal lagres.",
     "saveFailedAlert": "Eksporten kunne ikke lagres."

@@ -656,9 +656,15 @@ function AppShell() {
                 progressLabel: status === "running" ? `${s.progress}/${s.total}` : null,
                 durationLabel: null,
                 errorMessage: status === "failed" ? i18n.t("export.clips.failed") : null,
-                // Clip extraction has no partial outcome — a clip is produced
-                // or it is not.
-                partialMessage: null,
+                // A clip is produced or it is not; but a subtitled copy can
+                // fail beside a clip that worked, and "Done" would hide it.
+                partialMessage:
+                  status === "completed" && (s.burn_attempted ?? 0) > (s.burned_count ?? 0)
+                    ? i18n.t("export.clips.burnPartial", {
+                        burned: s.burned_count ?? 0,
+                        attempted: s.burn_attempted ?? 0,
+                      })
+                    : null,
               };
             },
           };

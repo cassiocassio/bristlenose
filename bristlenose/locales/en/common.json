@@ -254,7 +254,8 @@
       "ffmpegMissing": "FFmpeg not found — install it to extract clips",
       "noClips": "No starred or featured quotes to extract",
       "burnSubtitles": "Burn subtitles into the video (for slides)",
-      "burnUnavailable": "This FFmpeg can\u2019t burn in subtitles \u2014 extracting plain clips only"
+      "burnUnavailable": "This FFmpeg can\u2019t burn in subtitles \u2014 extracting plain clips only",
+      "burnPartial": "Clips ready \u2014 subtitled copies: {{burned}} of {{attempted}}"
     },
     "savePanelMessage": "Choose where to save the report.",
     "saveFailedAlert": "The export could not be saved."

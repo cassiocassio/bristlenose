@@ -151,12 +151,22 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
     onSendToMiro();
   }, [setOpen, onSendToMiro]);
 
+  // Every row's key handler only stops the page scrolling: useMenuKeyboard
+  // already turns Enter/Space on the focused row into a click, so running the
+  // action here as well would run it twice (two clip jobs, two downloads).
+  const suppressKeyScroll = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") e.preventDefault();
+  };
+
   // Render one export action as a labelled group of three scope rows
   // (All / Selected / Starred), each disabled when its id set is empty.
+  // `option` is a setting row shown between the heading and the scopes, so it
+  // is reached before the rows that start the export.
   const renderScopeGroup = (
     action: "copy" | "spreadsheet" | "clips",
     heading: string,
     hint?: string,
+    option?: React.ReactNode,
   ) => {
     // `{{n}}`, not `{{count}}`, is deliberate: i18next reads a `count` option as a
     // plural selector, so these non-plural labels would resolve through `_one`/
@@ -181,6 +191,7 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
         <li role="presentation" className="export-dropdown-group-label">
           {heading}
         </li>
+        {option}
         {scopes.map((s) => {
           const disabled = s.ids.length === 0;
           return (
@@ -192,12 +203,7 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
               className={`export-dropdown-item export-dropdown-scope${disabled ? " is-disabled" : ""}`}
               data-testid={`export-${action}-${s.key}`}
               onClick={disabled ? undefined : () => runScoped(action, s.ids)}
-              onKeyDown={(e) => {
-                if (!disabled && (e.key === "Enter" || e.key === " ")) {
-                  e.preventDefault();
-                  runScoped(action, s.ids);
-                }
-              }}
+              onKeyDown={suppressKeyScroll}
             >
               {s.label}
             </li>
@@ -243,28 +249,27 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
               <li role="separator" className="export-dropdown-separator" />
               {renderScopeGroup("spreadsheet", t("export.saveAsSpreadsheet"))}
               <li role="separator" className="export-dropdown-separator" />
-              {renderScopeGroup("clips", t("export.extractClips"))}
-              {/* A setting, not an action: toggling it leaves the menu open so
-                  the researcher can go on to pick a scope. The key handler only
-                  suppresses the page scroll — useMenuKeyboard already turns
-                  Enter/Space into a click, and toggling here too would flip it
-                  twice (back to where it started). */}
-              <li
-                role="menuitemcheckbox"
-                aria-checked={burnSubtitles}
-                tabIndex={-1}
-                className="export-dropdown-item export-dropdown-scope"
-                data-testid="export-clips-burn"
-                onClick={() => toggleSubtitlePref("burnSubtitles")}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") e.preventDefault();
-                }}
-              >
-                <span className="export-dropdown-check" aria-hidden="true">
-                  {burnSubtitles ? "\u2713" : ""}
-                </span>
-                {t("export.clips.burnSubtitles")}
-              </li>
+              {renderScopeGroup(
+                "clips",
+                t("export.extractClips"),
+                undefined,
+                // A setting, not an action: toggling leaves the menu open so
+                // the researcher can go on to pick a scope.
+                <li
+                  role="menuitemcheckbox"
+                  aria-checked={burnSubtitles}
+                  tabIndex={-1}
+                  className="export-dropdown-item export-dropdown-scope"
+                  data-testid="export-clips-burn"
+                  onClick={() => toggleSubtitlePref("burnSubtitles")}
+                  onKeyDown={suppressKeyScroll}
+                >
+                  <span className="export-dropdown-check" aria-hidden="true">
+                    {burnSubtitles ? "\u2713" : ""}
+                  </span>
+                  {t("export.clips.burnSubtitles")}
+                </li>
+              )}
               <li role="separator" className="export-dropdown-separator" />
             </>
           )}
@@ -273,12 +278,7 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
             tabIndex={-1}
             className="export-dropdown-item"
             onClick={handleExportReport}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                handleExportReport();
-              }
-            }}
+            onKeyDown={suppressKeyScroll}
           >
             {t("export.exportReport")}
           </li>
@@ -288,12 +288,7 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
             tabIndex={-1}
             className="export-dropdown-item"
             onClick={handleSendToMiro}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                handleSendToMiro();
-              }
-            }}
+            onKeyDown={suppressKeyScroll}
           >
             {t("miro.menuLabel")}
           </li>

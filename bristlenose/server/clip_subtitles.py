@@ -368,7 +368,11 @@ def tokens_for_segment(seg: SegmentInput) -> list[Token]:
 
 def _edit_tokens(text: str) -> list[str]:
     """Tokens of a quote or its edit: bracket groups whole, elisions dropped,
-    Japanese and Chinese split as the transcript is (``_split_cjk``)."""
+    Japanese and Chinese split as the transcript is (``_split_cjk``).
+
+    Whitespace is collapsed first, so a bracket group can never carry a line
+    break into a cue (a newline in ASS starts a new event)."""
+    text = " ".join(text.split())
     return [
         piece
         for tok in _EDIT_TOKEN.findall(text) if not _ELISION.match(tok)
@@ -746,7 +750,10 @@ def to_webvtt(cues: list[Cue]) -> str:
 #: green, red. The BBC order, as overrides on the white default.
 _ASS_COLOUR = {"yellow": "&H0000FFFF&", "cyan": "&H00FFFF00&", "green": "&H0000FF00&"}
 #: The bundled face for burned-in subtitles (Inter, SIL OFL; docs §Font).
-BURN_FONT_FAMILY = "Inter"
+# The bundled file's family name (nameID 1). libass matches on that, not on the
+# typographic family "Inter" (nameID 16) — asked for "Inter", it used whatever
+# Inter the machine had installed, or a fallback face where there was none.
+BURN_FONT_FAMILY = "Inter Medium"
 
 
 def _ass_time(seconds: float) -> str:
@@ -766,18 +773,21 @@ def _ass_text(line: str) -> str:
 def to_ass(cues: list[Cue], width: int, height: int) -> str:
     """Burn-in subtitles for a ``width`` × ``height`` video, to the BBC spec.
 
-    - Inter, text 1/15 of the frame height (BBC §9.2.1).
+    - Inter, text 1/15 of the frame height (BBC §9.2.1) — of the shorter side,
+      so a portrait phone recording doesn't get text sized for its height.
     - White on a 75% black box, not an outline (§9.2.4; 75% by decision, so a
       screen share's interface stays readable behind it). ``BorderStyle=3``
       draws the box; ``Outline`` is its padding.
     - Lines no wider than 68% of the frame (§3.1) — 16% side margins — and
       bottom-centre with a 5% margin, inside the central 90% (§10).
-    - The cues' own line breaks are kept (``WrapStyle: 2``); speaker colour is
-      an override on the white default, in the BBC order.
+    - The cues' own line breaks are kept, and libass may break a line again
+      where it would not fit between the margins (``WrapStyle: 0``) — which
+      only happens on a portrait frame; speaker colour is an override on the
+      white default, in the BBC order.
 
     Measured 29 Sep 2026 on 720p FOSSDA clips: about 0.6 s per clip to burn.
     """
-    font_size = max(12, round(height / 15))
+    font_size = max(12, round(min(width, height) / 15))
     pad = max(1, round(font_size * 0.15))
     side = round(width * 0.16)
     bottom = round(height * 0.05)
@@ -786,7 +796,7 @@ def to_ass(cues: list[Cue], width: int, height: int) -> str:
         "ScriptType: v4.00+",
         f"PlayResX: {width}",
         f"PlayResY: {height}",
-        "WrapStyle: 2",
+        "WrapStyle: 0",
         "ScaledBorderAndShadow: yes",
         "",
         "[V4+ Styles]",

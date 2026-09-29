@@ -105,6 +105,14 @@ struct WebView: NSViewRepresentable {
         )
         userContentController.addUserScript(embeddedScript)
 
+        // Seed the saved subtitle preferences into this partition's (ephemeral)
+        // localStorage before the SPA reads them. See BridgeHandler.
+        userContentController.addUserScript(WKUserScript(
+            source: BridgeHandler.subtitlePrefsSeedScript(),
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true
+        ))
+
         // Inject auth token for localhost API access control.
         // Validates format before interpolation (security rule 3 compliance).
         if let token = authToken,

@@ -38,6 +38,16 @@ describe("extractVideoClips — burn-in", () => {
     setSubtitlePref("burnSubtitles", true);
     start.mockResolvedValue({ total: 2, pii_warning: false, burn_unavailable: true } as never);
     await extractVideoClips(["q1"], t);
-    expect(toast).toHaveBeenCalledWith("export.clips.burnUnavailable");
+    expect(toast).toHaveBeenCalledWith("export.clips.burnUnavailable", 6000);
+  });
+
+  it("keeps the privacy warning when both notices apply", async () => {
+    setSubtitlePref("burnSubtitles", true);
+    start.mockResolvedValue({ total: 2, pii_warning: true, burn_unavailable: true } as never);
+    await extractVideoClips(["q1"], t, true);
+    // One toast replaces the last, so a second call would erase the first.
+    expect(toast).toHaveBeenCalledOnce();
+    expect(vi.mocked(toast).mock.calls[0][0]).toContain("export.clips.piiWarning");
+    expect(vi.mocked(toast).mock.calls[0][0]).toContain("export.clips.burnUnavailable");
   });
 });

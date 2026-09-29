@@ -355,10 +355,14 @@ def session_cues(db: DbSession, project_id: int, session_id: str) -> list[Cue]:
 
 
 @router.get("/projects/{project_id}/sessions/{session_id}/subtitles.vtt")
-async def get_session_subtitles(
+def get_session_subtitles(
     request: Request, project_id: int, session_id: str,
 ) -> Response:
     """WebVTT for a whole session, for the popout player's subtitle track.
+
+    A plain ``def``, so FastAPI runs it in its threadpool: building a whole
+    session's cues takes 100–250 ms (measured on FOSSDA) and would otherwise
+    hold the event loop on every popout open.
 
     Fetched by the report with the bearer token and handed to the player as
     text: a ``<track src>`` cannot send the header, and the player page is
@@ -522,16 +526,21 @@ async def _run_clip_extraction(
                         )
                 if burn and cues and not spec.is_audio_only:
                     job["current_clip"] = burned_path.stem
-                    burned = await asyncio.to_thread(
-                        backend.burn_subtitles, output_path, cues, burned_path,
-                    )
+                    job["burn_attempted"] = job.get("burn_attempted", 0) + 1
+                    try:
+                        burned = await asyncio.to_thread(
+                            backend.burn_subtitles, output_path, cues, burned_path,
+                        )
+                    except Exception:
+                        # The subtitled copy is optional: an unexpected error
+                        # costs that copy, never the clean clips already made.
+                        logger.warning(
+                            "Burning subtitles into %s failed", filename, exc_info=True,
+                        )
+                        burned = None
                     if burned is not None:
                         burned_name = burned_path.name
                         job["burned_count"] = job.get("burned_count", 0) + 1
-                    else:
-                        # A stale burned copy from an earlier export must not
-                        # sit beside a clip whose text may since have changed.
-                        burned_path.unlink(missing_ok=True)
                 manifest_entries.append({
                     "quote_id": spec.quote_id,
                     "participant_id": spec.participant_id,
@@ -549,6 +558,10 @@ async def _run_clip_extraction(
                 # A .vtt left by an earlier export must not sit beside a clip
                 # that no longer has one.
                 vtt_path.unlink(missing_ok=True)
+            if burned_name is None:
+                # Nor a burned copy: its pixels may predate a correction (a
+                # name redacted to "[her]"), and nothing would say it is stale.
+                burned_path.unlink(missing_ok=True)
 
         # Write clips_manifest.json
         manifest = {
@@ -613,6 +626,9 @@ class ClipStatusResponse(BaseModel):
     current_clip: str
     output_dir: str | None
     burned_count: int = 0
+    #: Clips a subtitled copy was attempted for; more than ``burned_count``
+    #: means some copies failed, which the report says rather than "Done".
+    burn_attempted: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -708,7 +724,7 @@ async def start_clip_extraction(
         languages = _subtitle_languages(db, project_id)
         # Burning is asked for per export; whether this ffmpeg can do it is
         # checked once here, so the researcher hears about it at the start.
-        burn = burn_requested and backend.can_burn_subtitles()
+        burn = burn_requested and await asyncio.to_thread(backend.can_burn_subtitles)
 
         # Create clips directory
         clips_dir = output_dir / "clips"
@@ -772,6 +788,7 @@ async def get_clip_status(
         total=job.get("total", 0),
         completed_count=job.get("completed_count", 0),
         skipped_count=job.get("skipped_count", 0),
+        burn_attempted=job.get("burn_attempted", 0),
         burned_count=job.get("burned_count", 0),
         current_clip=job.get("current_clip", ""),
         output_dir=job.get("output_dir"),

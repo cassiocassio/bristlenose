@@ -308,10 +308,15 @@ execution for extension Bristlenose: server.type is binary (not
 node/python/uv)"*. The process chain was Claude → `Claude.app/Contents/Helpers/disclaimer
 --pgroup -- …/server/bristlenose-mcp` (team Q6L2SF6YDW) → our binary → our
 own disclaimed child. So under Claude a `type: binary` server is its own
-responsible process before our code runs. A team-signed binary with **no**
-private SPI would therefore very likely read our container as same-team under
-Claude (*inferred*, not yet probed). ChatGPT launches servers differently
-(§1.1), so it still needs the self-disclaim, or the app-group route (§6).
+responsible process before our code runs. **So under Claude a team-signed
+binary needs no private SPI at all.** *Measured* in the same guest: a probe
+signed by our team, unsandboxed, with no relaunch and no SPI, launched by
+Claude through `disclaimer` (responsible = itself), listed our data container
+(*"DATA-CONTAINER LIST ok (3)"*), with no `AppDataDetailed` request to tccd.
+Not yet repeated with the real proxy in no-relaunch mode (`BN_MCP_DISCLAIMED=1`
+set in the manifest). ChatGPT launches servers differently (§1.1), so there
+the self-disclaim is still needed, or the app-group route (§6), which needs no
+SPI on either host.
 
 Node extensions are the opposite case: Claude runs them inside its own utility
 process (§2), so their reads are Claude's, and are denied on a new install.

@@ -279,20 +279,41 @@ Plugin manifest used:
 - The one thing not yet done: the same run with ChatGPT's own Files &
   Folders switch off. tccd already shows the switch was not consulted.
 
-### 4.3 What the spike leaves out
+### 4.3 Parity with the Node proxy
 
-Before it could ship, the Node proxy's remaining states need porting: the
-scope fingerprint on every result, `notifications/tools/list_changed` on the
-offline→ready edge, the contract/outdated check, the 404 "built without agent
-support" branch, and the `unhealthy` / `not-bristlenose` probe distinctions.
-The tool list must stay generated from one source. The spike's `build.sh`
-extracts the Node proxy's `BN-TOOLS-JSON` block; a shipped version should keep
-`tests/test_mcpb_proxy.py`'s drift gate pointed at whatever becomes canonical.
+**Ported, and checked against the Node proxy.** *Measured*, 29 Sep 2026. Both
+proxies were fed the same handshake and the same requests against a live
+`bristlenose serve`. The native port now carries:
+- the scope fingerprint on every result (same arithmetic);
+- `notifications/tools/list_changed` on the offline→ready edge, only after
+  `notifications/initialized`;
+- the contract/outdated check and the 404 "built without agent support" branch;
+- the `unhealthy` / `not-bristlenose` / `stale-instance` probe verdicts, with
+  fail-closed instance matching;
+- schema-1 handshakes, normalised like the Node proxy's;
+- the Node proxy's message table, word for word.
 
-One port bug surfaced on the way: an unknown `project` argument must answer
-*"not open; readable: name = key"*, not *"isn't open"*. The first build did the
-latter and the model reported Bristlenose closed. Fixed; per-call reasons are
-logged to stderr, which lands in Codex's log (§1.3).
+| Case | Node vs native |
+|---|---|
+| `list_projects` (content and scope `ca848ff1`) | identical |
+| `search_quotes`, real data | identical content and scope |
+| unknown `project` key | identical *"not open … Currently readable: …"* |
+| `list_changed` after an unknown-project call, then a good one | both emit it |
+| no handshake | identical *"isn't open"* |
+| stale `instance_id` | identical *"isn't open"* (fail closed) |
+| wrong bearer | identical *"refused this connection's stored credential"* |
+| dead port | identical *"isn't open"* |
+
+**Still different, by design:** the permission sentence. The native build names
+the host, and the sandboxed build says to reinstall rather than pointing at
+Files & Folders (§6.2). The tool list is generated from the Node proxy's
+`BN-TOOLS-JSON` block and compiled in. A shipped version should keep
+`tests/test_mcpb_proxy.py`'s drift gate pointed at whichever becomes canonical.
+
+**Trap when comparing:** the Node proxy exits on stdin EOF before its pending
+fetches resolve, so piping a fixed request file into it answers only the
+synchronous requests. Hold stdin open (`(cat req.jsonl; sleep 6) | node …`).
+The native proxy handles requests sequentially, so it has no such race.
 
 ### 4.4 It serves Claude too
 

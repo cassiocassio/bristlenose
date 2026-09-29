@@ -691,6 +691,27 @@ clean log, but it no longer gates P1. The signer ACL on the helper's container a
 machine's OS. The helper must be compiled with `-target arm64-apple-macos15.0`, the app's floor.
 D3's gate adds: `LC_BUILD_VERSION minos` equals the app's deployment target.
 
+**P0.5 for ChatGPT, measured 29 Sep 2026 (ChatGPT.app 26.924, stub plugin, marketplace
+`bristlenose-p05`).** Install 0.0.8 by link, bump the manifest to 0.0.9, open the same link again:
+- The plugin page **re-reads the marketplace** (it shows "Version 0.0.9") but offers only **Try now**.
+  The ⋯ menu holds a single item, **Uninstall**. The cache keeps `0.0.8`, and that's what ChatGPT runs.
+- **⋯ ▸ Uninstall** acts at once, with no confirmation (toast: "Bristlenose plugin uninstalled"). Then
+  **Install plugin** copies `0.0.9` into the cache.
+
+So ChatGPT is outcome B: an update costs two extra clicks on the page our link already opens. The
+`.olderRelease` foot line on the ChatGPT tab says so (mockup 2.3). Claude's half of P0.5 is still
+open: it needs Claude Desktop, which wasn't in this session's computer-use grant.
+
+**P0.4, partly measured the same evening.** A sandboxed probe (Developer ID, fresh id) wrote a
+dummy `.mcpb` into its own container's `tmp` and opened it with Claude via
+`NSWorkspace.open(_:withApplicationAt:)`. LaunchServices ran its download-style XProtect check on the
+file (`operation:lsopen`, risk level 2) and delivered it. Claude logged *"Handling DXT/MCPB file: 1
+path(s)"*, and tccd logged no AppData request or denial for Claude. Whether Claude's install preview
+then appeared isn't known yet: it wasn't observable from here. Two points follow for P4. A file written
+by a sandboxed app is treated like a download, so expect quarantine on what Claude extracts, which the
+original P0.4 list already covers. And "Claude can't read our container" is **not** the blocker it was
+feared to be: this path goes through LaunchServices, not a cross-team path read.
+
 ### 6.8 Still open
 
 - **Human App Review** of the agent-access feature: a submission, with review
@@ -772,7 +793,7 @@ register in every Settings frame for this reason.
   - P0.2 (**done 29 Sep**, see §6.7: entitlements survive; four signer classes; the TestFlight→store move is the new unknown, with a local Development-vs-Distribution proxy test as P0.2b): install TestFlight 3907 on a clean account; read both copies' signer, id and entitlements (ffmpeg as control). Sets D1's count. Then **expire 3907** in App Store Connect and delete the spike binaries (both carry `--seed`).
   - P0.3: re-export the `.dmg` with the group requested; confirm the minted profile lists it.
   - P0.4: end to end through **Claude's own extraction** of a runtime `.mcpb`, on a clean 27 guest: quarantine flag, exec bit, `__MACOSX` entries, `spctl`; it answers with Files & Folders off.
-  - P0.5: a second install at a bumped version, on each host: what ChatGPT and Claude offer.
+  - P0.5: a second install at a bumped version, on each host: what ChatGPT and Claude offer. (**ChatGPT done 29 Sep: outcome B**, ⋯ ▸ Uninstall then Install plugin; Claude still to do.)
 - **P1 — host half**, only after P0.1 and P0.3 pass: the draft patch, amended to fail closed (D4) with a read-back test, and the reader set written into design-mcp-extension §3.1.
 - **P2 — helper** per D1–D3, source moved to `desktop/mcp-helper/`; the tool list read from the `BN-TOOLS-JSON` block with its annotations; that block moves out of `desktop/mcpb/` before the Node extension is retired, **and `tests/test_mcpb_proxy.py` moves with it in the same commit** (re-point `_PROXY_JS` and the regex). It is the only check that the static tool list and its annotations match the server's `tools/list`, and it looks like it belongs to the Node extension, so it would otherwise be deleted with it and leave the helper's list unguarded.
 - **P3 — ChatGPT**: marketplace per D7, Install Plugin… per D8, link query encoded strictly (unit-tested with `& + # %` and spaces).

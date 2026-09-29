@@ -322,7 +322,7 @@ http_headers = { "Authorization" = "Bearer ••••••••••••"
     <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
     <p class="callout">Adds Bristlenose to ChatGPT as a plugin. ChatGPT will open and ask you to install it.</p>
     <div class="ext"><div class="icon">❋</div><div class="nm"><b>Bristlenose</b><div class="s">Plugin 0.33.0 (4102)</div></div><button class="pbtn">Update Plugin…</button></div>
-    <p class="foot">Installed copy is older: 0.32.0 (3950)</p>
+    <p class="foot">Installed copy is older: 0.32.0 (3950). In ChatGPT, choose ⋯ ▸ Uninstall, then Install plugin.</p>
     <p class="foot">In ChatGPT, ask in Work mode — Bristlenose’s tools aren’t available in Chat.</p>
     <div class="disc">Or connect by hand</div>
   </div></div></div>
@@ -481,7 +481,7 @@ http_headers = { "Authorization" = "Bearer ••••••••••••"
 </div>
 
 <!-- ============================================================ -->
-<h2>5 · After a Bristlenose update <small>P0.5 is unmeasured, so both outcomes are shown</small></h2>
+<h2>5 · After a Bristlenose update <small>ChatGPT measured 29 Sep: outcome B · Claude still to measure</small></h2>
 <div class="grid">
   <div class="cell"><p class="cap">Outcome A · the host updates in place (1 click there)</p>
   <div class="strip" style="margin:0">
@@ -499,6 +499,7 @@ http_headers = { "Authorization" = "Bearer ••••••••••••"
 </div>
 <div class="cm">
 <ul>
+<li><b>ChatGPT, measured:</b> the page shows the new version number but offers only Try now; ⋯ holds a single item, Uninstall (no confirmation), and Install plugin then copies the new version. That is two extra clicks on the page our link already opens, so the fix is one sentence in the foot line (2.3), not a new control.</li>
 <li><b>Most updates never reach this screen.</b> An older helper keeps working as long as the MCP contract still matches (<code>mcp.contract</code>). The "outdated" sentence (section 6) only fires when it doesn't. So outcome B costs a detour only in a release that breaks the contract. The pane's "Update" is advice, not an alarm.</li>
 <li><b>The version stamp (D8) is what makes outcome A possible at all.</b> Without the build number in it, ChatGPT would treat a new build as the version it already cached.</li>
 <li>If P0.5 comes back as B, the <b>fix belongs in the foot line</b> (one extra sentence under the row, only in the <code>.olderRelease</code> state), not in a new control.</li>

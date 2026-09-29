@@ -383,7 +383,7 @@ private struct CustomMenus: Commands {
         }
         CommandMenu(LocalizedStringKey(i18n.t("desktop.menu.video.title"))) {
             VideoMenuContent(bridgeHandler: bridgeHandler, i18n: i18n,
-                             playerInFront: PopoutOwners.owner(of: NSApp.keyWindow) === bridgeHandler)
+                             keyWindow: KeyWindowWatcher.shared)
         }
     }
 }
@@ -1602,8 +1602,14 @@ private struct QuotesMenuContent: View {
 private struct VideoMenuContent: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
+    /// Redraws this section when the key window changes.
+    @ObservedObject var keyWindow: KeyWindowWatcher
+
     /// The popout player is the key window.
-    let playerInFront: Bool
+    private var playerInFront: Bool {
+        _ = keyWindow.keyWindowNumber
+        return PopoutOwners.owner(of: NSApp.keyWindow) === bridgeHandler
+    }
 
     private var active: Bool { bridgeHandler.hasPlayer }
 

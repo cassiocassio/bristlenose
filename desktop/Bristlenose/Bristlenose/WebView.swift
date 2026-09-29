@@ -842,3 +842,36 @@ enum PopoutOwners {
     }
 }
 
+/// Publishes whenever the key window changes, so the Video menu can redraw
+/// with the player's key hints when the player comes to the front.
+///
+/// The menu bar is rebuilt on SwiftUI focus changes, and an AppKit player
+/// window taking the key doesn't reliably cause one — so the menu went on
+/// showing the report's state (no hints) with the player in front, while the
+/// keys themselves worked through the page. Observed only by the Video
+/// section, never by `MenuCommands` itself, which would rewrite the whole menu
+/// bar on every publish (see its header).
+@MainActor
+final class KeyWindowWatcher: ObservableObject {
+    static let shared = KeyWindowWatcher()
+
+    /// The key window's number; its only job is to change.
+    @Published private(set) var keyWindowNumber: Int?
+
+    private var observers: [NSObjectProtocol] = []
+
+    private init() {
+        keyWindowNumber = NSApp?.keyWindow?.windowNumber
+        for name in [NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification] {
+            observers.append(NotificationCenter.default.addObserver(
+                forName: name, object: nil, queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    let number = NSApp.keyWindow?.windowNumber
+                    if self?.keyWindowNumber != number { self?.keyWindowNumber = number }
+                }
+            })
+        }
+    }
+}
+

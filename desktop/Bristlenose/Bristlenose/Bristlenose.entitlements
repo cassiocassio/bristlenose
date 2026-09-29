@@ -12,10 +12,18 @@
 	     every pack into a single namespace, and Whisper's models are the next
 	     customer (docs/design-modularity.md), so a second group would mean a
 	     second portal entry and another profile regeneration for nothing.
-	     NOT on the Developer-ID build — see BristlenoseDeveloperID.entitlements. -->
+	     group.app.bristlenose is NOT on the Developer-ID build — see
+	     BristlenoseDeveloperID.entitlements. -->
+	<!-- The Team-ID-prefixed group carries the MCP handshake for the sandboxed
+	     native proxy: a process signed by this team, sandboxed and carrying
+	     this group, reads its container whichever app launched it, and macOS 27
+	     denies the data container to other teams' readers
+	     (docs/design-mcp-native-proxy.md §6). Authorised by the MAS profile's
+	     Z56GZVA2QB.* entry. The Developer-ID build carries it too. -->
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>group.app.bristlenose</string>
+		<string>$(TeamIdentifierPrefix)app.bristlenose</string>
 	</array>
 </dict>
 </plist>

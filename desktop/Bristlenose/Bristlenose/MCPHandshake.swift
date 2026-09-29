@@ -1,6 +1,7 @@
 import Darwin
 import Foundation
 import OSLog
+import Security
 
 /// The MCP handshake file — how an agent-side proxy finds the running serve.
 ///
@@ -54,6 +55,43 @@ enum MCPHandshake {
         return appSupport.appendingPathComponent("Bristlenose", isDirectory: true)
     }
 
+    // MARK: - The team-prefixed app group (design-mcp-native-proxy §6.4)
+    //
+    // macOS 27 denies another developer team's read of our data container, and
+    // no Files & Folders switch reaches a sandboxed reader. A proxy that is
+    // sandboxed and carries a Team-ID-prefixed group CAN read that group's
+    // container, whichever app is responsible for it (measured under ChatGPT,
+    // Claude Desktop, Claude Code and Terminal, 29 Sep 2026). So the handshake
+    // is written in BOTH places: the data container for today's Node .mcpb,
+    // the group for the native proxy.
+
+    /// The Team-ID-prefixed group this build is signed with, or nil. Read from
+    /// the running process's own entitlements, so there is no hard-coded team
+    /// ID and a build without the entitlement (Debug today) simply skips the
+    /// group copy.
+    static func teamGroupIdentifier() -> String? {
+        guard let task = SecTaskCreateFromSelf(nil),
+              let value = SecTaskCopyValueForEntitlement(
+                task, "com.apple.security.application-groups" as CFString, nil)
+        else { return nil }
+        return teamGroup(from: value as? [String] ?? [])
+    }
+
+    /// Pure: pick the team-prefixed Bristlenose group from an entitlement
+    /// list. `group.`-prefixed groups (Background Assets) are not it.
+    static func teamGroup(from groups: [String]) -> String? {
+        groups.first { !$0.hasPrefix("group.") && $0.hasSuffix(".app.bristlenose") }
+    }
+
+    /// `<group container>/Bristlenose`, or nil when the build carries no team
+    /// group or the system cannot resolve its container.
+    static func groupDirectory() -> URL? {
+        guard let id = teamGroupIdentifier(),
+              let root = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: id)
+        else { return nil }
+        return root.appendingPathComponent("Bristlenose", isDirectory: true)
+    }
+
     /// Serialize the handshake payload. Pure — unit-testable without touching
     /// the filesystem. Schema 1: `{schema, port, token, instance_id,
     /// updated_at}`. Keyed so a project *set* can arrive in phase 2 without a
@@ -99,9 +137,34 @@ enum MCPHandshake {
     /// refuses; a missing handshake degrades to the proxy's "isn't open"
     /// sentence, which is the designed failure surface.
     /// Writes the whole exposed set — see `payload(entries:)`.
+    ///
+    /// With no `directory`, writes the data-container copy AND, when this
+    /// build carries the team group, the group copy — see `writeBoth`. The
+    /// return value is the data-container result, as before.
     @discardableResult
     static func write(entries: [HandshakeExposure.Entry], directory: URL? = nil) -> Bool {
-        guard let dir = directory ?? defaultDirectory() else { return false }
+        if let directory { return writeOne(entries: entries, directory: directory) }
+        return writeBoth(entries: entries, data: defaultDirectory(), group: groupDirectory())
+    }
+
+    /// Both copies, failing CLOSED on the group copy (design-mcp-native-proxy
+    /// §6.9 D4). A group copy that could not be rewritten still holds the
+    /// previous set, and the previous set may name a project whose Agent
+    /// Access has just been turned off — so it is removed, not left. (serve
+    /// refuses an out-of-scope project anyway; this keeps the file honest
+    /// too.) `writer` is the seam that lets a test make the group write fail.
+    @discardableResult
+    static func writeBoth(entries: [HandshakeExposure.Entry], data: URL?, group: URL?,
+                          writer: ([HandshakeExposure.Entry], URL?) -> Bool = { writeOne(entries: $0, directory: $1) }) -> Bool {
+        if let group, !writer(entries, group) {
+            log.error("handshake group copy not written; removing the previous copy")
+            removeOne(directory: group)
+        }
+        return writer(entries, data)
+    }
+
+    static func writeOne(entries: [HandshakeExposure.Entry], directory: URL?) -> Bool {
+        guard let dir = directory else { return false }
         do {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         } catch {
@@ -160,8 +223,14 @@ enum MCPHandshake {
     }
 
     /// Delete the handshake if present. Idempotent, silent on absence.
+    /// With no `directory`, removes both copies (data container and group).
     static func remove(directory: URL? = nil) {
-        guard let dir = directory ?? defaultDirectory() else { return }
+        if directory == nil, let group = groupDirectory() { removeOne(directory: group) }
+        removeOne(directory: directory ?? defaultDirectory())
+    }
+
+    static func removeOne(directory: URL?) {
+        guard let dir = directory else { return }
         let url = dir.appendingPathComponent(filename)
         if unlink(url.path) != 0 && errno != ENOENT {
             log.error("handshake remove failed: errno=\(errno, privacy: .public)")

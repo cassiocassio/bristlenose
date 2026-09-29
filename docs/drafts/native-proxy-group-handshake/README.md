@@ -1,6 +1,6 @@
 # Draft patch: the MCP handshake in the team-prefixed app group
 
-**Not applied.** A ready-to-apply patch for the host half of the recommended
+**Applied 29 Sep 2026** (P1 of the native proxy plan, with the D4 fail-closed amendment: `MCPHandshake.writeBoth`). Kept as the record of what was drafted. A ready-to-apply patch for the host half of the recommended
 architecture in [`docs/design-mcp-native-proxy.md`](../../design-mcp-native-proxy.md)
 §6.4. The proxy half is the spike in `experiments/mcp-native-proxy/`
 (`GROUP_VARIANT`). Drafted 29 Sep 2026 for the maintainer's decision.

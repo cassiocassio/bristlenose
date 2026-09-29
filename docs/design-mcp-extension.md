@@ -419,6 +419,20 @@ on warm re-point, and removes it on stop:
 ~/Library/Containers/app.bristlenose/Data/Library/Application Support/Bristlenose/mcp-handshake.json
 ```
 
+> **Two copies since 29 Sep 2026 (native proxy, P1).** Builds that carry the
+> Team-ID-prefixed app group also write the same bytes to
+> `~/Library/Group Containers/Z56GZVA2QB.app.bristlenose/Bristlenose/mcp-handshake.json`.
+>
+> | Reader | Reads | Why |
+> |---|---|---|
+> | Node `.mcpb` proxy (shipped) | the data-container copy | the only place it knows; on macOS 27 it needs Files & Folders |
+> | native helper `bristlenose-mcp` (`desktop/mcp-helper/`) | the group copy | sandboxed and carrying the group, so it reads it with no grant under any host (`design-mcp-native-proxy.md` §6.2) |
+> | the sidecar's `install_handshake_cleanup` | the data-container copy | deletes it on graceful exit; a stranded group copy fails closed at the proxy's `/api/health` instance check |
+>
+> The group copy fails **closed**: if it can't be rewritten it is removed rather
+> than left naming the previous set (`MCPHandshake.writeBoth`, §6.9 D4). Serve
+> refuses an out-of-scope project either way (`mcp_server._run`).
+
 > **Schema 2 since 19 Aug 2026 — the payload below is the schema-1 shape and is
 > still written, but only as a fallback.** Scope went plural when it stopped
 > being a designated slot and started being derived from the window roster

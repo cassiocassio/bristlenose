@@ -3,16 +3,27 @@
 <plist version="1.0">
 <dict>
 	<!-- The Developer-ID (.dmg) entitlements. Identical to Bristlenose.entitlements
-	     except that it deliberately OMITS com.apple.security.application-groups.
-	     Both channels build the Release configuration, so without this split the
-	     .dmg would carry a group it cannot use and Apple will not authorise on
-	     Developer ID. It does not need one: the .dmg acquires the PII model by
-	     plain HTTPS, not Background Assets, because App Store rules do not apply
-	     to that channel. Selected by the CODE_SIGN_ENTITLEMENTS override in
-	     desktop/scripts/build-dmg.sh. -->
+	     except that it deliberately OMITS group.app.bristlenose, the Background
+	     Assets group. Both channels build the Release configuration, so without
+	     this split the .dmg would carry a group it cannot use. It does not need
+	     one: the .dmg acquires the PII model by plain HTTPS, not Background
+	     Assets. Selected by the CODE_SIGN_ENTITLEMENTS override in
+	     desktop/scripts/build-dmg.sh.
+
+	     It DOES carry the Team-ID-prefixed group, for the MCP handshake
+	     (docs/design-mcp-native-proxy.md §6). Today's Developer ID profile does
+	     not list it, and taskgated logs "Unsatisfied entitlements … Disallowing"
+	     with amfid "Soft-restriction provisioning profile validation failure" —
+	     a soft restriction: measured 29 Sep 2026 on clean macOS 15.7.7, 26.6.2
+	     and 27.0, the app launches and the group works (§6.7, P0.1). Re-export
+	     the profile for a clean log; nothing depends on it. -->
 	<key>keychain-access-groups</key>
 	<array>
 		<string>$(AppIdentifierPrefix)app.bristlenose</string>
+	</array>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>$(TeamIdentifierPrefix)app.bristlenose</string>
 	</array>
 </dict>
 </plist>

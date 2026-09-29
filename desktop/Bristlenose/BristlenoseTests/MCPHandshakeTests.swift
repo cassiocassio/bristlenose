@@ -135,4 +135,51 @@ struct MCPHandshakeTests {
         #expect((object["projects"] as? [[String: Any]])?.isEmpty == true)
     }
 
+
+    // MARK: - Team group selection (design-mcp-native-proxy §6.4)
+
+    @Test func teamGroup_picksTheTeamPrefixedEntry_notTheBackgroundAssetsGroup() {
+        #expect(MCPHandshake.teamGroup(from: ["group.app.bristlenose", "Z56GZVA2QB.app.bristlenose"])
+                == "Z56GZVA2QB.app.bristlenose")
+    }
+
+    @Test func teamGroup_isNilWhenOnlyTheGroupDotGroupIsPresent() {
+        #expect(MCPHandshake.teamGroup(from: ["group.app.bristlenose"]) == nil)
+        #expect(MCPHandshake.teamGroup(from: []) == nil)
+    }
+
+    @Test func teamGroup_ignoresAnotherAppsTeamGroup() {
+        #expect(MCPHandshake.teamGroup(from: ["Z56GZVA2QB.app.other"]) == nil)
+    }
+
+    // MARK: - Both copies (D4: fail closed on the group copy)
+
+    @Test func writeBoth_writesIdenticalCopies_andReadsBack() throws {
+        let data = Self.makeTempDir(), group = Self.makeTempDir()
+        defer { Self.cleanup(data); Self.cleanup(group) }
+        #expect(MCPHandshake.writeBoth(entries: [Self.entry("a"), Self.entry("b", port: 2)],
+                                       data: data, group: group))
+        let one = try Data(contentsOf: data.appendingPathComponent(MCPHandshake.filename))
+        let two = try Data(contentsOf: group.appendingPathComponent(MCPHandshake.filename))
+        #expect(one == two)
+        let names = (try JSONSerialization.jsonObject(with: two) as? [String: Any])?["projects"]
+            as? [[String: Any]]
+        #expect(names?.compactMap { $0["name"] as? String } == ["a", "b"])
+    }
+
+    @Test func writeBoth_removesTheGroupCopy_whenItCannotBeRewritten() throws {
+        let data = Self.makeTempDir(), group = Self.makeTempDir()
+        defer { Self.cleanup(data); Self.cleanup(group) }
+        // A previous set naming a project that has since been unshared.
+        #expect(MCPHandshake.writeOne(entries: [Self.entry("unshared")], directory: group))
+        let stale = group.appendingPathComponent(MCPHandshake.filename)
+        #expect(FileManager.default.fileExists(atPath: stale.path))
+
+        let ok = MCPHandshake.writeBoth(entries: [], data: data, group: group) { entries, dir in
+            dir == group ? false : MCPHandshake.writeOne(entries: entries, directory: dir)
+        }
+        #expect(ok)
+        #expect(!FileManager.default.fileExists(atPath: stale.path))
+        #expect(FileManager.default.fileExists(atPath: data.appendingPathComponent(MCPHandshake.filename).path))
+    }
 }

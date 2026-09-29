@@ -1,11 +1,15 @@
-"""The two Release entitlements files, and why they differ by exactly one key.
+"""The two Release entitlements files, and why they differ by exactly one group.
 
 Both channels build the `Release` configuration, so they would share one
 entitlements file if `build-dmg.sh` did not override `CODE_SIGN_ENTITLEMENTS`.
-The Mac App Store build needs `com.apple.security.application-groups` for
-Background Assets; the Developer-ID `.dmg` must NOT carry it — Apple will not
-authorise an app group on that channel, and the `.dmg` does not need one because
-it acquires the PII model by plain HTTPS.
+The Mac App Store build needs the `group.app.bristlenose` app group for
+Background Assets; the Developer-ID `.dmg` must NOT carry it — its profile does
+not authorise it, and the `.dmg` does not need one because it acquires the PII
+model by plain HTTPS.
+
+Both carry the Team-ID-prefixed group `$(TeamIdentifierPrefix)app.bristlenose`,
+which holds the MCP handshake for the sandboxed native proxy
+(docs/design-mcp-native-proxy.md §6).
 
 The realistic regression is not someone deliberately undoing this. It is someone
 editing one file and not the other, or dropping the override line while tidying
@@ -25,6 +29,8 @@ _DEV_ID = _DESKTOP / "Bristlenose" / "Bristlenose" / "BristlenoseDeveloperID.ent
 _BUILD_DMG = _DESKTOP / "scripts" / "build-dmg.sh"
 
 _APP_GROUP = "com.apple.security.application-groups"
+_BA_GROUP = "group.app.bristlenose"
+_TEAM_GROUP = "$(TeamIdentifierPrefix)app.bristlenose"
 
 
 def _load(path: Path) -> dict:
@@ -40,23 +46,26 @@ class TestTheSplitExists:
 
     def test_mas_carries_the_app_group(self) -> None:
         groups = _load(_MAS).get(_APP_GROUP)
-        assert groups == ["group.app.bristlenose"], (
+        assert groups == [_BA_GROUP, _TEAM_GROUP], (
             "Background Assets deposits packs into the App Group container; "
             "without this the archive signs and BA then fails at runtime."
         )
 
-    def test_developer_id_does_not(self) -> None:
-        assert _APP_GROUP not in _load(_DEV_ID), (
-            "Apple will not authorise an app group on Developer ID, and the "
-            ".dmg does not need one — it fetches the model over plain HTTPS."
+    def test_developer_id_carries_only_the_team_group(self) -> None:
+        groups = _load(_DEV_ID).get(_APP_GROUP)
+        assert groups == [_TEAM_GROUP], (
+            "the .dmg must not carry the Background Assets group (its profile "
+            "does not authorise it, and it fetches the model over plain HTTPS), "
+            "but it needs the team group for the MCP handshake."
         )
 
-    def test_they_differ_by_exactly_that_one_key(self) -> None:
+    def test_they_differ_by_exactly_the_background_assets_group(self) -> None:
         """Anything else diverging is drift, not design."""
         mas, dev = _load(_MAS), _load(_DEV_ID)
-        assert set(mas) - set(dev) == {_APP_GROUP}
-        assert set(dev) - set(mas) == set()
-        for key in set(dev):
+        assert set(mas) == set(dev)
+        assert set(mas[_APP_GROUP]) - set(dev[_APP_GROUP]) == {_BA_GROUP}
+        assert set(dev[_APP_GROUP]) - set(mas[_APP_GROUP]) == set()
+        for key in set(dev) - {_APP_GROUP}:
             assert mas[key] == dev[key], f"{key} drifted between the two files"
 
 
@@ -185,7 +194,7 @@ class TestTheEntitlementsAreActuallyCommitted:
 
     def test_the_committed_mas_file_carries_the_app_group(self) -> None:
         d = self._from_head("desktop/Bristlenose/Bristlenose/Bristlenose.entitlements")
-        assert d.get(_APP_GROUP) == ["group.app.bristlenose"], (
+        assert d.get(_APP_GROUP) == [_BA_GROUP, _TEAM_GROUP], (
             "the app group is missing from the COMMITTED file — a fresh clone "
             "would build without it. Check `git ls-files -v | grep '^S'`."
         )

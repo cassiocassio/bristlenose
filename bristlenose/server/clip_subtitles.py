@@ -10,6 +10,9 @@ maintainer adopted as the spec on 29 Sep 2026 (docs/design-export-clips.md
 § Future: subtitles on clips):
 
 - at most 2 lines per cue (§3.3), at most 37 characters per line (§3.1);
+- Japanese and Chinese, which the BBC doesn't cover, take Netflix's line
+  lengths (13 and 16 full-width characters) and break between characters,
+  never before closing punctuation or after an opening bracket (kinsoku);
 - no speaker labels; speakers are told apart by colour, in the BBC order
   white, yellow, cyan, green (§8.3). The clip's own participant is always
   white, and anyone else takes the next colour in order of first appearance.
@@ -40,6 +43,8 @@ from __future__ import annotations
 
 import difflib
 import re
+import unicodedata
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 
 # ---------------------------------------------------------------------------
@@ -48,6 +53,13 @@ from dataclasses import dataclass, replace
 
 #: BBC §3.1 — the character count for a line (broadcast figure).
 MAX_LINE_CHARS = 37
+#: The BBC gives no figure for Japanese or Chinese, so these extend the spec
+#: (decided 29 Sep 2026, docs/design-export-clips.md § Styling). Netflix's
+#: Japanese Timed Text Style Guide: 13 full-width characters per horizontal
+#: line, a half-width character counting 0.5. Its Traditional Chinese guide:
+#: 16 characters. Measured in full-width units by ``_cjk_width``.
+MAX_LINE_WIDTH_JA = 13
+MAX_LINE_WIDTH_ZH = 16
 #: BBC §3.3 — at most two lines per cue.
 MAX_LINES = 2
 #: Netflix General Requirements: an event is at most 7 s and at least 5/6 s.
@@ -62,10 +74,10 @@ SPEAKER_COLOURS: tuple[str, ...] = ("white", "yellow", "cyan", "green")
 #: WebVTT's built-in colour classes spell BBC green (#00FF00) as ``lime``.
 _VTT_CLASS = {"yellow": "yellow", "cyan": "cyan", "green": "lime"}
 
-_SENTENCE_END = re.compile(r"[.?!…]['\"”’)]*$")
+_SENTENCE_END = re.compile(r"[.?!…。？！．]['\"”’)」』）】]*$")
 #: A line may end after these; a break there reads more naturally (BBC §3.1:
 #: break at natural linguistic points).
-_CLAUSE_END = re.compile(r"[,;:.?!…]['\"”’)]*$")
+_CLAUSE_END = re.compile(r"[,;:.?!…、。，；：．？！]['\"”’)」』）】]*$")
 #: How much longer a line may be to buy a break at a clause end.
 _CLAUSE_BREAK_SLACK = 6
 #: A segment's text can open with its speaker's label, e.g. ``(Speaker B)``
@@ -91,6 +103,29 @@ _WORD_CORE = re.compile(r"^(\W*)(.*?)(\W*)$", re.DOTALL)
 CORRECTION_TAIL_SECONDS = 10.0
 #: Outcomes of ``apply_correction``.
 APPLIED, UNPLACED, NO_WORDS = "applied", "unplaced", "no-words"
+
+#: Scripts written without spaces: CJK punctuation, kana, Bopomofo, Han, and
+#: full-width punctuation. Full-width letters and digits are left out, so
+#: ``２０２６`` stays one run like ``2026``. Hangul is written with spaces and
+#: is not here.
+_CJK_CHAR = re.compile(
+    "[\u2e80-\u2fdf\u3000-\u303f\u3040-\u30ff\u3100-\u312f\u3190-\u31ff"
+    "\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\ufe30-\ufe4f\uff01-\uff0f"
+    "\uff1a-\uff20\uff3b-\uff40\uff5b-\uff9f\U00020000-\U0003134f]"
+)
+_KANA = re.compile("[\u3040-\u30ff\u31f0-\u31ff\uff66-\uff9f]")
+_HAN = re.compile("[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\U00020000-\U0003134f]")
+#: Kinsoku: may not open a line (W3C JLREQ cl-02 to cl-07 and cl-10 —
+#: closing brackets, stops, commas, middle dots, small kana, the long vowel
+#: mark, iteration marks; CLREQ agrees for Chinese). Joined to the character
+#: before, so no break can fall ahead of them.
+_NO_LINE_START = frozenset(
+    "、。，．！？‼⁇⁈⁉；：・」』）］｝〕〉》】〙〗〟’”｠»…‥〜゠"
+    "ぁぃぅぇぉっゃゅょゎゕゖァィゥェォッャュョヮヵヶㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹㇺㇻㇼㇽㇾㇿ"
+    "ーゝゞヽヾ々〻"
+)
+#: Kinsoku: may not close a line. Joined to the character after.
+_NO_LINE_END = frozenset("「『（［｛〔〈《【〘〖〝‘“｟«([{")
 
 
 # ---------------------------------------------------------------------------
@@ -139,6 +174,10 @@ class Token:
     start: float
     end: float
     speaker_code: str
+    #: What goes between this token and the one before it on a line: the
+    #: transcript's own spacing (``""`` inside a run of Japanese or Chinese),
+    #: or None to decide by script (``_join``).
+    sep: str | None = None
 
 
 @dataclass(frozen=True)
@@ -159,6 +198,94 @@ class Cue:
 
 def _norm(text: str) -> str:
     return _NORM_STRIP.sub("", text.lower())
+
+
+def _split_cjk(chunk: str) -> list[str]:
+    """Split a space-free chunk into the units a line may break between.
+
+    Latin text is returned whole. Japanese and Chinese become one character
+    each, with a run of Latin letters or digits inside them kept whole
+    (``Figmaで`` → ``Figma``, ``で``), closing punctuation joined to the
+    character before and an opening bracket to the character after.
+    """
+    if not _CJK_CHAR.search(chunk):
+        return [chunk]
+    pieces: list[str] = []
+    pending = ""  # opening brackets waiting for what they open
+    in_run = False  # the last piece is a Latin run still being read
+    for c in chunk:
+        cjk = _CJK_CHAR.match(c) is not None
+        if not cjk and in_run:
+            pieces[-1] += c
+            continue
+        if c in _NO_LINE_START and pieces and not pending:
+            pieces[-1] += c
+            in_run = False
+            continue
+        if c in _NO_LINE_END:
+            pending += c
+            continue
+        pieces.append(pending + c)
+        pending = ""
+        in_run = not cjk
+    if pending:
+        if pieces:
+            pieces[-1] += pending
+        else:
+            pieces.append(pending)
+    return pieces
+
+
+def _pieces(text: str) -> list[tuple[str, str | None]]:
+    """``(piece, sep)`` for each unit of ``text``, keeping its own spacing."""
+    out: list[tuple[str, str | None]] = []
+    for chunk in text.split():
+        for k, piece in enumerate(_split_cjk(chunk)):
+            out.append((piece, None if not out else (" " if k == 0 else "")))
+    return out
+
+
+def _split_timing(word: WordTiming) -> tuple[WordTiming, ...]:
+    """A timed word cut into the same units as the text, sharing its time.
+
+    Whisper times Japanese and Chinese in chunks of several characters, so
+    each character takes its share of its chunk's time.
+    """
+    pieces = [p for chunk in word.text.split() for p in _split_cjk(chunk)]
+    if len(pieces) <= 1:
+        return (word,)
+    return tuple(
+        WordTiming(text=p, start=s, end=e)
+        for p, (s, e) in zip(pieces, spread_evenly(pieces, word.start, word.end))
+    )
+
+
+def _cjk_width(line: str) -> float:
+    """A line's width in full-width characters: half-width ones count 0.5."""
+    return sum(1.0 if unicodedata.east_asian_width(c) in "WF" else 0.5 for c in line)
+
+
+def _measure(text: str) -> tuple[Callable[[str], float], float]:
+    """How to measure a line of ``text``, and its limit, by the text's script."""
+    if _KANA.search(text):
+        return _cjk_width, MAX_LINE_WIDTH_JA
+    if _HAN.search(text):
+        return _cjk_width, MAX_LINE_WIDTH_ZH
+    return len, MAX_LINE_CHARS
+
+
+def _join(texts: Sequence[str], seps: Sequence[str | None]) -> str:
+    """Join tokens into a line: their own spacing, else a space unless
+    either side is Japanese or Chinese."""
+    if not texts:
+        return ""
+    out = texts[0]
+    for prev, text, sep in zip(texts, texts[1:], seps[1:]):
+        if sep is None:
+            cjk = _CJK_CHAR.match(prev[-1:]) or _CJK_CHAR.match(text[:1])
+            sep = "" if cjk else " "
+        out += sep + text
+    return out
 
 
 def spread_evenly(texts: list[str], start: float, end: float) -> list[tuple[float, float]]:
@@ -215,17 +342,22 @@ def _align_times(
 
 
 def tokens_for_segment(seg: SegmentInput) -> list[Token]:
-    """Split a segment into timed tokens (word timings, or an even spread)."""
-    words = _SPEAKER_PREFIX.sub("", seg.text.strip()).split()
-    if not words:
+    """Split a segment into timed tokens (word timings, or an even spread).
+
+    A token is a word, or in Japanese and Chinese a character (``_split_cjk``).
+    """
+    pieces = _pieces(_SPEAKER_PREFIX.sub("", seg.text.strip()))
+    if not pieces:
         return []
+    words = [p for p, _sep in pieces]
     if seg.words:
-        spans = _align_times(words, seg.words, seg.start, seg.end)
+        timed = tuple(t for w in seg.words for t in _split_timing(w))
+        spans = _align_times(words, timed, seg.start, seg.end)
     else:
         spans = spread_evenly(words, seg.start, seg.end)
     return [
-        Token(text=w, start=s, end=e, speaker_code=seg.speaker_code)
-        for w, (s, e) in zip(words, spans)
+        Token(text=w, start=s, end=e, speaker_code=seg.speaker_code, sep=sep)
+        for (w, sep), (s, e) in zip(pieces, spans)
     ]
 
 
@@ -235,8 +367,13 @@ def tokens_for_segment(seg: SegmentInput) -> list[Token]:
 
 
 def _edit_tokens(text: str) -> list[str]:
-    """Tokens of a quote or its edit: bracket groups whole, elisions dropped."""
-    return [tok for tok in _EDIT_TOKEN.findall(text) if not _ELISION.match(tok)]
+    """Tokens of a quote or its edit: bracket groups whole, elisions dropped,
+    Japanese and Chinese split as the transcript is (``_split_cjk``)."""
+    return [
+        piece
+        for tok in _EDIT_TOKEN.findall(text) if not _ELISION.match(tok)
+        for piece in ([tok] if _BRACKETED.match(tok) else _split_cjk(tok))
+    ]
 
 
 def _edit_key(token: str) -> str:
@@ -374,30 +511,83 @@ def apply_correction(tokens: list[Token], corr: Correction) -> tuple[list[Token]
 # ---------------------------------------------------------------------------
 
 
-def wrap_lines(words: list[str]) -> tuple[str, ...] | None:
-    """Wrap words into at most 2 lines of at most 37 characters.
+def wrap_lines(
+    words: list[str], seps: Sequence[str | None] | None = None,
+) -> tuple[str, ...] | None:
+    """Wrap words into at most 2 lines of at most 37 characters, or 13 / 16
+    full-width characters for Japanese / Chinese (``_measure``).
 
     Picks the break that keeps the longer line shortest, preferring a break
     after a comma or full stop when that costs a few characters, and a
     shorter top line on a tie. Returns None when the words won't fit. A single word
-    longer than a line (a URL) is allowed on a line of its own.
+    longer than a line (a URL) is allowed on a line of its own. ``seps`` is
+    each word's ``Token.sep``; by default words are joined by script.
     """
-    text = " ".join(words)
-    if len(text) <= MAX_LINE_CHARS or len(words) == 1:
+    seps = list(seps) if seps is not None else [None] * len(words)
+    text = _join(words, seps)
+    width, limit = _measure(text)
+    if width(text) <= limit or len(words) == 1:
         return (text,)
-    best: tuple[int, int, int] | None = None  # (longest, top length, break index)
+    # Between words a clause end is worth a few characters. Between Japanese
+    # or Chinese characters any other break falls inside a word, so a clause
+    # end is worth up to half a line.
+    slack = _CLAUSE_BREAK_SLACK if limit == MAX_LINE_CHARS else limit / 2
+    best: tuple[float, float, int] | None = None  # (longest, top length, break index)
     for k in range(1, len(words)):
-        top, bottom = " ".join(words[:k]), " ".join(words[k:])
-        if len(top) > MAX_LINE_CHARS or len(bottom) > MAX_LINE_CHARS:
+        top, bottom = _join(words[:k], seps[:k]), _join(words[k:], seps[k:])
+        top_w, bottom_w = width(top), width(bottom)
+        if top_w > limit or bottom_w > limit:
             continue
-        penalty = 0 if _CLAUSE_END.search(words[k - 1]) else _CLAUSE_BREAK_SLACK
-        key = (max(len(top), len(bottom)) + penalty, len(top), k)
+        penalty = 0 if _CLAUSE_END.search(words[k - 1]) else slack
+        key = (max(top_w, bottom_w) + penalty, top_w, k)
         if best is None or key < best:
             best = key
     if best is None:
         return None
     k = best[2]
-    return (" ".join(words[:k]), " ".join(words[k:]))
+    return (_join(words[:k], seps[:k]), _join(words[k:], seps[k:]))
+
+
+def _clause_carry(current: list[Token], tok: Token) -> list[Token]:
+    """Japanese and Chinese: the tokens to move from a full cue to the next.
+
+    Filling a cue to the last character that fits breaks mid-word and can
+    leave a character or two to flash up alone (``で。`` for 0.4 s, measured
+    on the ja-JP demo, 29 Sep 2026). So the cue ends at its last clause end
+    in its back half instead, if what follows still makes a cue with ``tok``.
+    Latin text needs none of this: it already breaks between words.
+    """
+    for i in range(len(current) - 2, len(current) // 2 - 1, -1):
+        if _CLAUSE_END.search(current[i].text):
+            carry = current[i + 1:]
+            nxt = [*carry, tok]
+            if (
+                tok.end - carry[0].start <= MAX_CUE_SECONDS
+                and wrap_lines([t.text for t in nxt], [t.sep for t in nxt]) is not None
+            ):
+                return carry
+            return []
+    return []
+
+
+def _fill_runts(groups: list[list[Token]]) -> None:
+    """Japanese and Chinese: give a runt cue characters from the one before.
+
+    Where a sentence has no clause end to break at, its last character or two
+    can still land alone (``ン。`` for 0.4 s). Move characters back from the
+    same speaker's previous cue until the runt is a third of a line wide.
+    """
+    for i in range(1, len(groups)):
+        prev, runt = groups[i - 1], groups[i]
+        if prev[-1].speaker_code != runt[0].speaker_code:
+            continue
+        width, limit = _measure(_join([t.text for t in runt], [t.sep for t in runt]))
+        if limit == MAX_LINE_CHARS:
+            continue
+        while len(prev) > 1 and runt[-1].end - prev[-1].start <= MAX_CUE_SECONDS:
+            if width(_join([t.text for t in runt], [t.sep for t in runt])) >= limit / 3:
+                break
+            runt.insert(0, prev.pop())
 
 
 def assign_colours(speakers_in_order: list[str], primary: str) -> dict[str, str]:
@@ -434,24 +624,32 @@ def build_cues(
     for tok in inside:
         if current:
             same_speaker = tok.speaker_code == current[0].speaker_code
-            fits = wrap_lines([t.text for t in current] + [tok.text]) is not None
+            fits = wrap_lines(
+                [t.text for t in current] + [tok.text], [t.sep for t in current] + [tok.sep],
+            ) is not None
             short_enough = tok.end - current[0].start <= MAX_CUE_SECONDS
-            chars = len(" ".join(t.text for t in current))
+            text = _join([t.text for t in current], [t.sep for t in current])
+            width, limit = _measure(text)
             sentence_break = (
                 _SENTENCE_END.search(current[-1].text) is not None
-                and chars >= _SENTENCE_BREAK_MIN_CHARS
+                and width(text) >= _SENTENCE_BREAK_MIN_CHARS * limit / MAX_LINE_CHARS
             )
             if not (same_speaker and fits and short_enough) or sentence_break:
-                groups.append(current)
-                current = []
+                carry: list[Token] = []
+                if same_speaker and not sentence_break and limit != MAX_LINE_CHARS:
+                    carry = _clause_carry(current, tok)
+                groups.append(current[:len(current) - len(carry)])
+                current = carry
         current.append(tok)
     if current:
         groups.append(current)
+    _fill_runts(groups)
 
     colours = assign_colours([g[0].speaker_code for g in groups], primary_speaker)
     cues: list[Cue] = []
     for g in groups:
-        lines = wrap_lines([t.text for t in g]) or (" ".join(t.text for t in g),)
+        texts, seps = [t.text for t in g], [t.sep for t in g]
+        lines = wrap_lines(texts, seps) or (_join(texts, seps),)
         cues.append(Cue(
             start=g[0].start,
             end=g[-1].end,

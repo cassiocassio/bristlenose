@@ -420,3 +420,138 @@ class TestRealTranscriptShapes:
         words = "I'm so glad that you're willing, to take the time to talk to me today.".split()
         lines = wrap_lines(words)
         assert lines is not None and lines[0].endswith("willing,")
+
+
+# ---------------------------------------------------------------------------
+# Japanese and Chinese (review log, export-clips, Finding 11)
+# ---------------------------------------------------------------------------
+
+# Real-shaped: segments from the ja-JP and zh-Hant demo projects, as the
+# importer stores them (speaker label prefix, no spaces, CJK punctuation).
+_JA = (
+    "(Yuki) 雪が降ってて、夕方の五時半くらい。寒くて、手袋外してスマホ操作するのが"
+    "嫌で、なるべく早く決めたかったんです。検索して、上位に出てきたのが、結局"
+    "チェーン店ばっかりで。"
+)
+_ZH = (
+    "(小美) 我上禮拜五下班之後想跟同事去喝一杯，可是在App上搜尋出來的全部都是"
+    "連鎖店，一點都不像在地人會去的地方。後來我就直接問同事了。"
+)
+#: Characters that may not open a line (JLREQ cl-02..cl-07, CLREQ).
+_NO_LINE_START = set("、。，．！？；：」』）】〉》ーっゃゅょッャュョァィゥェォ…")
+_NO_LINE_END = set("「『（【〈《")
+
+
+def _width(line: str) -> float:
+    import unicodedata
+
+    return sum(1.0 if unicodedata.east_asian_width(c) in "WF" else 0.5 for c in line)
+
+
+def _cues_for(text: str, lang_speaker: str = "p1", end: float = 21.0) -> list:
+    seg = SegmentInput(lang_speaker, 0.0, end, text)
+    return build_cues(tokens_for_segment(seg), 0.0, end, lang_speaker)
+
+
+class TestJapaneseAndChinese:
+    def test_japanese_segment_is_split_into_short_cues(self) -> None:
+        cues = _cues_for(_JA)
+        assert len(cues) > 1
+        for c in cues:
+            assert len(c.lines) <= 2
+            assert all(_width(line) <= 13 for line in c.lines), c.lines
+            assert c.end - c.start <= 7.0 + 1e-9
+
+    def test_chinese_segment_uses_the_chinese_line_length(self) -> None:
+        # Spoken fast enough that the line length, not the 7 s cap, binds.
+        cues = _cues_for(_ZH, end=12.0)
+        assert len(cues) > 1
+        assert all(_width(line) <= 16 for c in cues for line in c.lines)
+        # 13 would be the Japanese figure: Chinese lines use the room they have.
+        assert max(_width(line) for c in cues for line in c.lines) > 13
+
+    def test_every_character_survives_and_no_space_is_inserted(self) -> None:
+        for text in (_JA, _ZH):
+            cues = _cues_for(text)
+            assert sum(len(c.lines) for c in cues) > 2
+            shown = "".join(line for c in cues for line in c.lines)
+            assert shown == text.split(") ", 1)[1]
+
+    def test_kinsoku_no_line_opens_on_closing_punctuation(self) -> None:
+        for text in (_JA, _ZH):
+            cues = _cues_for(text)
+            assert sum(len(c.lines) for c in cues) > 2
+            for c in cues:
+                for line in c.lines:
+                    assert line[0] not in _NO_LINE_START, line
+                    assert line[-1] not in _NO_LINE_END, line
+
+    def test_opening_bracket_stays_with_what_it_opens(self) -> None:
+        text = "(Yuki) 友達に「このアプリ、地元の店が全然出てこないね」って言われました。"
+        lines = [line for c in _cues_for(text, end=8.0) for line in c.lines]
+        assert len(lines) > 1
+        for line in lines:
+            assert not line.endswith("「"), line
+
+    def test_latin_word_inside_japanese_is_kept_whole(self) -> None:
+        seg = SegmentInput("p1", 0.0, 4.0, "Figmaで作ったプロトタイプです。")
+        texts = _texts(tokens_for_segment(seg))
+        assert "Figma" in texts
+        assert "で" in texts
+
+    def test_half_width_letters_count_half_in_a_japanese_line(self) -> None:
+        # Netflix Japanese: a half-width character counts 0.5. This is 22.5
+        # units, so it fits one cue of 2 x 13; counted as 29 characters it
+        # would not.
+        cues = _cues_for("新しいiPhoneとMacBookのカメラはとても良いです", end=5.0)
+        assert len(cues) == 1 and len(cues[0].lines) == 2
+        assert all(_width(line) <= 13 for line in cues[0].lines)
+        assert "iPhone" in cues[0].lines[0]
+
+    def test_whisper_word_timings_are_used_for_japanese(self) -> None:
+        # mlx-whisper times Japanese in multi-character chunks, no spaces.
+        seg = SegmentInput("p1", 0.0, 10.0, "ありがとうございます。", _words(
+            ("ありがとう", 1.0, 2.0), ("ございます。", 2.0, 3.0),
+        ))
+        toks = tokens_for_segment(seg)
+        assert "".join(_texts(toks)) == "ありがとうございます。"
+        assert toks[0].start == pytest.approx(1.0)
+        assert toks[-1].end == pytest.approx(3.0)
+        assert all(1.0 <= t.start and t.end <= 3.0 for t in toks)
+
+    def test_researcher_correction_is_placed_in_japanese(self) -> None:
+        seg = SegmentInput("p1", 0.0, 21.0, _JA)
+        tokens = tokens_for_segment(seg)
+        corr = Correction(
+            "p1", 0.0, 21.0,
+            original="寒くて、手袋外してスマホ操作するのが嫌で",
+            corrected="寒くて、手袋を外してスマホを操作するのが嫌で",
+        )
+        out, outcome = apply_correction(tokens, corr)
+        assert outcome == APPLIED
+        shown = "".join(line for c in build_cues(out, 0.0, 21.0, "p1") for line in c.lines)
+        assert "手袋を外してスマホを操作する" in shown
+        # Words outside the quote are untouched.
+        assert shown.startswith("雪が降ってて、")
+
+    def test_latin_text_is_unchanged(self) -> None:
+        words = "I thought the export would be in the share menu but it was not".split()
+        lines = wrap_lines(words)
+        assert lines is not None
+        assert " ".join(lines) == " ".join(words)
+        assert all(len(line) <= MAX_LINE_CHARS for line in lines)
+
+    def test_no_character_or_two_is_left_alone_on_screen(self) -> None:
+        # Filled to the last character that fits, these left "で。" and "ン。"
+        # alone for 0.4 s (ja-JP demo, 29 Sep 2026).
+        for text in (_JA, "(Yuki) なのにオススメに出るのはどこの街にもある居酒屋チェーン。"):
+            for c in _cues_for(text, end=21.0 if text == _JA else 6.5):
+                assert _width("".join(c.lines)) >= 13 / 3, c.lines
+
+    def test_a_full_cue_ends_at_a_clause_rather_than_inside_a_word(self) -> None:
+        firsts = ["".join(c.lines) for c in _cues_for(_JA)]
+        assert "寒くて、手袋外してスマホ操作するのが嫌で、" in firsts
+
+    def test_line_breaks_at_a_sentence_end_rather_than_inside_a_word(self) -> None:
+        lines = _cues_for("(Yuki) あたりで。それでアプリを開きました。", end=3.0)[0].lines
+        assert lines == ("あたりで。", "それでアプリを開きました。")

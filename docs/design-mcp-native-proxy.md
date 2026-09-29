@@ -644,7 +644,7 @@ What this settles and what it doesn't:
 - §2.5.2 / §2.4.5(ii), "installs code into other apps". This applies to
   today's `.mcpb` as well, and needs review notes whichever route ships.
 
-## 6.9 Implementation plan (v2, 29 Sep 2026 — reviewed, decisions pending judgement)
+## 6.9 Implementation plan (v2, 29 Sep 2026 — reviewed; D1–D9 decided 29 Sep 2026)
 
 v1 (commit 67b5e843) went through a six-agent plan review plus a parsimony pass;
 41 findings and their adjudication are in the maintainer's private review log,
@@ -656,7 +656,19 @@ below are proposals for the maintainer to judge on engineering and UX grounds**
 no Node and no Files & Folders step, on the Mac App Store and the Developer-ID
 `.dmg`, with no private SPI. Gemini later, on the same helper.
 
-### Decisions to judge
+### Decisions (taken 29 Sep 2026)
+
+All nine were taken as proposed below, with these notes from the maintainer:
+
+- **D1:** names still to be confirmed (proposed: `app.bristlenose.agent-access` for the App
+  Store, `app.bristlenose.agent-access.devid` for the `.dmg`). A name is fixed per channel for
+  good; new builds from the same signer never need a new one.
+- **D6:** the only existing Claude user who has to reinstall is the maintainer.
+- **D7:** the "move to Applications" rule also goes in the help page.
+- **Not doing:** a "connected at 14:02" line in Settings, because the antenna, Last asked and the
+  row subtitle already show it. Also no per-session exclusion: agent access is opt-in per project,
+  and that model stays.
+- **Later:** help-page screenshots of ChatGPT's Chat | Work switch.
 
 | # | Decision | Chosen | Rejected, and why |
 |---|---|---|---|

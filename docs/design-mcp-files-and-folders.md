@@ -127,7 +127,7 @@ host, give the path, and say "ask again".
 **Two inputs, neither of them client detection:**
 
 - **The host is declared by the package, not detected.** Each package sets
-  `BRISTLENOSE_AGENT_HOST` in its own manifest: the `.mcpb` sets `"Claude"`,
+  `BRISTLENOSE_MCP_HOST` in its own manifest: the `.mcpb` sets `"Claude"`,
   the Codex plugin's `.mcp.json` sets `"ChatGPT"`. The proxy interpolates the
   value. When it's missing (a hand-rolled config, or a future package that
   forgets it), a neutral phrase stands in. One proxy source, as decided on
@@ -147,7 +147,7 @@ users see, and it still works.
 ```js
 // The package declares its host (manifest env); never detected. Must equal the
 // app's row label in Files & Folders — its display name.
-const HOST = (process.env.BRISTLENOSE_AGENT_HOST || "").trim();
+const HOST = (process.env.BRISTLENOSE_MCP_HOST || "").trim();
 // macOS 27 (Darwin 27) denies cross-team container reads without a dialog;
 // macOS 26 is Darwin 25. A platform fact, not a client fact.
 const SILENT_TCC = process.platform === "darwin" && parseInt(os.release(), 10) >= 27;
@@ -177,7 +177,7 @@ Why each clause is there:
   where we control the rendering.
 
 `tests/test_mcpb_proxy.py` already extracts the tool JSON. Two cases would pin
-this: `BRISTLENOSE_AGENT_HOST=ChatGPT` yields "ChatGPT" twice, and unset yields
+this: `BRISTLENOSE_MCP_HOST=ChatGPT` yields "ChatGPT" twice, and unset yields
 no product name at all. Faking the Darwin version means injecting `os.release`.
 The proxy has no seam for that today, so it is a small refactor.
 

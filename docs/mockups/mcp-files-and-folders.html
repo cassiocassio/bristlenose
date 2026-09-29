@@ -293,7 +293,7 @@ http_headers = { "Authorization" = "Bearer 3Kf…q8" }</div>
   tool result during it. It stays English by design: the model relays it in the conversation's language (§5d). So it
   carries facts that survive paraphrase: the host, the path, "no prompt", "ask again", "nothing in Bristlenose".</p>
   <ul>
-    <li><b>The host is declared, never detected.</b> <code>BRISTLENOSE_AGENT_HOST</code> is set in each package's own manifest
+    <li><b>The host is declared, never detected.</b> <code>BRISTLENOSE_MCP_HOST</code> is set in each package's own manifest
     (<code>.mcpb</code> → Claude, Codex <code>.mcp.json</code> → ChatGPT). Unverified: whether Codex passes <code>env</code> through.</li>
     <li><b>The OS branch is a platform fact.</b> <code>os.release()</code> major ≥ 27 (macOS 26 is Darwin 25). On 26 the
     existing "click Allow" sentence stays, with the host interpolated.</li>

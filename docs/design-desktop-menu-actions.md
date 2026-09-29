@@ -2,7 +2,7 @@
 status: partial
 last-trued: 2026-07-25
 trued-against: working tree @main on 2026-07-25
-last-trued-sections: [checkSystemHealth row (2026-07-28), retired-actions section (2026-07-28), find family + channel gate (2026-09-12, c9688b44), Codes menu section (2026-09-12)]
+last-trued-sections: [checkSystemHealth row (2026-07-28), retired-actions section (2026-07-28), find family + channel gate (2026-09-12, c9688b44), Codes menu section (2026-09-12), Video menu + player + Codes restoration (2026-09-29)]
 ---
 
 > **Do not honour the "recently trued, skip" short-circuit on this doc.** The
@@ -40,10 +40,10 @@ failure mode: a contributor finds the row, writes a `case` for it in
 | `find` | **Now native, not bridge** _(12 Sep 2026)_ | ⌘F never reaches the SPA. `requestSearchFocus()` bumps the published counter `BridgeHandler.focusSearchRequests`, which `QuotesSearchToolbarControl` observes to expand and focus. A counter, not a `Bool` — ⌘F must work twice in a row. The old `case "find"` is deleted; it had dispatched cleanly into `focusSearchInput()` and done nothing, in every project, on every lens, since it shipped. |
 | `findNext`, `findPrevious` | **Withdrawn** _(12 Sep 2026)_ | Unimplemented, not ungated — and the plumbing was never the problem. ⌘E writes the find pasteboard, ⌘G reads it back and dispatches with that text, and the handler sets the query that is already set: same filter, identical result. Search here **filters** the quote grid, so every visible card is already a match and nothing renders a `<mark>`; "next" presupposes a cursor stepping through occurrences in content that stays put, and a filter has neither. Stepping through results is list navigation (`j`, arrows). Restore **with transcript search**, where a document has real matches to step between. Commented out in `FindMenuContent`; 21 locale keys kept, `AppLayout.tsx` cases survive orphaned. |
 | `jumpToSelection` | **Withdrawn** _(12 Sep 2026)_ | Unimplemented, not ungated — the distinction this table exists to preserve. The `AppLayout.tsx` case is an explicit `break` behind a comment claiming the native layer handles it; no native handler ever existed. It could not have reached WKWebView as `centerSelectionInVisibleRect:` either — a SwiftUI `.keyboardShortcut` installs an NSMenu key equivalent, matched *before* the responder chain. Commented out in `FindMenuContent` rather than dimmed, because a `.disabled` that will never go live is a lie that reads as diligence. Blocking question: what does "jump to selection" mean in a quote grid? The 21 locale keys are kept so restore is one line. **The `AppLayout.tsx` case survives orphaned.** |
-| `renameCodeGroup`, `deleteCodeGroup`, `toggleCodeGroup` / `showHideCodeGroup`, `renameCode`, `deleteCode` | **Retired** _(12 Sep 2026)_ | **Not deferred — a category error**, and the reason to read this row before writing a `case`. They spent six weeks in a five-arm warn-stub (*"requires native focus context — not yet wired"*), which reads as *blocked on plumbing*; it was never plumbing. `docs/design-codebook-v2.md` pins selection as **single**, living **in the master list**, with the detail pane *"a pure function of it … no second place a thing can be 'current'"* (29 Aug) — and the master list selects a **codebook**, so a command naming one group or one tag has no target the model permits. Each is already direct manipulation on the lens: click a name to rename, a per-chip delete, drag to merge. Show/Hide was never a codebook command at all — **D7** puts the eye in `TagSidebar` / `TagGroupCard` on the **Quotes** lens and confirms hide *"was never a third axis here"*, which closes that doc's **G7**/**Q11** with a third answer the registers did not list. Swift, the `AppLayout.tsx` stub and the `desktop.menu.codes.*` keys in all 21 full locales are all gone — **no orphans left behind**, unlike the rows above. Restoring any of them means reopening the 29 Aug pin, not adding a handler. `createCodeGroup` and `createCode` stay: creation needs no target. **Reasoning corrected the same day** — see `design-codebook-focus.md`: focus is a separate axis from selection, and with a focus cursor these four have a target after all. Proposed, not decided; the commands are still gone. `toggleCodeGroup` is unaffected (D7, wrong lens). |
+| `renameCodeGroup`, `deleteCodeGroup`, `toggleCodeGroup` / `showHideCodeGroup`, `renameCode`, `deleteCode` | **Retired** _(12 Sep 2026)_ — **four of five restored the same day; only `toggleCodeGroup` is still retired** (see the Codes menu section) | **Not deferred — a category error**, and the reason to read this row before writing a `case`. They spent six weeks in a five-arm warn-stub (*"requires native focus context — not yet wired"*), which reads as *blocked on plumbing*; it was never plumbing. `docs/design-codebook-v2.md` pins selection as **single**, living **in the master list**, with the detail pane *"a pure function of it … no second place a thing can be 'current'"* (29 Aug) — and the master list selects a **codebook**, so a command naming one group or one tag has no target the model permits. Each is already direct manipulation on the lens: click a name to rename, a per-chip delete, drag to merge. Show/Hide was never a codebook command at all — **D7** puts the eye in `TagSidebar` / `TagGroupCard` on the **Quotes** lens and confirms hide *"was never a third axis here"*, which closes that doc's **G7**/**Q11** with a third answer the registers did not list. Swift, the `AppLayout.tsx` stub and the `desktop.menu.codes.*` keys in all 21 full locales are all gone — **no orphans left behind**, unlike the rows above. Restoring any of them means reopening the 29 Aug pin, not adding a handler. `createCodeGroup` and `createCode` stay: creation needs no target. **Reasoning corrected the same day** — see `design-codebook-focus.md`: focus is a separate axis from selection, and with a focus cursor these four have a target after all. Proposed, not decided; the commands are still gone. `toggleCodeGroup` is unaffected (D7, wrong lens). _**Post-script, 29 Sep 2026:** decided and built the same afternoon — `codebook: a focus cursor, and the Codes menu it makes possible` restored `renameCodeGroup`, `deleteCodeGroup`, `renameCode` and `deleteCode` in `CodesMenuContent`, handled in `islands/CodebookV2.tsx` and gated on the focus cursor. This row read "still gone" for seventeen days._ |
 | `importFramework`, `removeFramework` | **Retired** _(12 Sep 2026)_ | Replaced by `installCodebook` / `uninstallCodebook` — **one row whose verb swaps** with the detail page's own button, the Turn On/Off Agent Access idiom. `importFramework` could never have worked from a menu: it needed a `templateId`, and a menu cannot name which card on the browse page. Both names, their locale keys in all 21 full locales, and their dead `AppLayout.tsx` dispatches are gone. **The dispatches are the part worth noting** — they fired `bn:codebook-*` CustomEvents that lost their listener in `baa1aa0e`, and a CustomEvent with no listener resolves normally, so nothing was ever red. |
-| `toggleDarkMode` | **Removed from the View menu** | Appearance is owned by Settings ▸ Appearance. **The frontend handler survives orphaned in `AppLayout.tsx` — nothing dispatches it.** |
-| `exportAnonymised` | **Retired** | Anonymise is a **checkbox on the export save panel** (`ExportAccessoryView`, attached as the NSSavePanel `accessoryView` in `WebView.swift`) — it re-points the download at `?anonymise=…`. A second menu item offering the same choice was redundant. Its `AppLayout.tsx` case is now orphaned; `desktop.menu.file.exportAnonymised` is orphaned across 20 locales. |
+| `toggleDarkMode` | **Removed from the View menu** | Appearance is owned by Settings ▸ Appearance. _(This row said the frontend handler survived orphaned in `AppLayout.tsx`; as of 29 Sep 2026 no `toggleDarkMode` remains anywhere in `frontend/src`.)_ |
+| `exportAnonymised` | **Retired** | Anonymise is a **checkbox on the export save panel** (`ExportAccessoryView`, attached as the NSSavePanel `accessoryView` in `WebView.swift`) — it re-points the download at `?anonymise=…`. A second menu item offering the same choice was redundant. _(This row said its `AppLayout.tsx` case was orphaned; as of 29 Sep 2026 no `exportAnonymised` remains in `frontend/src`. The locale key's state was not re-checked.)_ |
 | `filterByTag` | **Retired** | Superseded by the tag sidebar (View ▸ Show Tags). |
 | `exportQuotesCSV` | **Never existed** | No Swift dispatch, no frontend case. |
 | `showHelp`, `showKeyboardShortcuts`, `showReleaseNotes` | **Native** | Help menu opens browser docs directly; no bridge hop. |
@@ -77,6 +77,7 @@ live code; it is the argument, preserved.
 
 ## Changelog
 
+- _2026-09-29_ — **Video menu and popout player; Codes commands restored.** New sub-section **Video menu — the popout player in front**: the menus fall back to the report that owns the player (`PopoutOwners`), so the Video menu no longer dims when the player is key; the player's keys (Space, ← →, ⌥← ⌥→, ⇧, ⇧., C, fn-F) are shown and bound only while it is in front (`KeyWindowWatcher`); Picture in Picture and Full Screen no longer go through the bridge when a player is open. Added `toggleSubtitles`, `toggleBurnSubtitles` and `selectAllQuotes` to the useKeyboardShortcuts table and dropped its count. **Codes:** `createCode` was **Orphaned** here and the four rename/delete commands **Retired**, "proposed, not decided"; all five are handled in `islands/CodebookV2.tsx` behind the focus cursor since `codebook: a focus cursor, and the Codes menu it makes possible` (12 Sep 2026, the same afternoon as the last edit here), and `installCodebook` / `uninstallCodebook` were never rowed. Old text kept with post-scripts. `toggleDarkMode` and `exportAnonymised` no longer leave orphaned `AppLayout.tsx` cases (grep finds neither in `frontend/src`). `last-trued` not bumped — section-scoped, recorded in `last-trued-sections`.
 - _2026-09-12_ — **Codes menu corrected: five actions documented as Shipped have been dispatched into nothing since 0.29.0.** All five send a `bn:codebook-*` CustomEvent; an exhaustive grep of `frontend/src` finds no listener for any of them. `42d06638` put those listeners in v1's `CodebookPanel`; `baa1aa0e` deleted the panel and took them with it — `git describe --contains` → `v0.29.0~3`, three commits before the tag, so the menu has been inert on all nine channels since the release whose headline was the codebook lens. `browseCodebooks` named `CodebookPanel` as its consumer, i.e. the row cited its own missing listener. Old claims preserved inline per never-silently-delete. **Not dimmed, deliberately** — gating an unimplemented command is the lie the `jumpToSelection` row refuses; re-homing the listeners in the v2 navigator versus withdrawing the menu is an untaken product call. Nothing was ever red: a `CustomEvent` with no listener resolves normally, so the bridge succeeds and the Swift `catch` never fires. `last-trued` again NOT bumped — section-scoped, recorded in `last-trued-sections`.
 - _2026-09-12_ — **Trued against the Find sweep and the channel gate; front-matter deliberately NOT bumped.** New **Enablement** section — the doc modelled routing and never availability, while five items gated on `hasChannel` / `canDispatch` / `canSearch`, none of which appeared anywhere in it. `find` and `jumpToSelection` moved from the handled catalogue into **Retired actions** (⌘F is native end-to-end via `BridgeHandler.focusSearchRequests`; ⌘J withdrawn as unimplemented). Two self-contradictions closed: `mergeCode` read **Shipped (bridge)** in the Codes table while the Retired table read **Withdrawn** — the Retired table was right, and had been for six weeks; `hasPlayer`/`playerPlaying` were listed as stubs one section after the prose said they report live — the prose was right. `set-appearance` corrected in three places: the doc recommended deleting the emitter, the deletion happened **30 Jul 2026**, and the doc went on describing it in the present tense for six weeks. Section counts dropped rather than recounted (the AppLayout header claimed 27 over 28 rows / 30 names / 35 `case` arms, eleven of which the code does not have and seven of which this doc already called retired). **Known-stale, not fixed:** the `MenuCommands.swift:N` anchors — the 28 Jul banner asked for struct names and 0 of 5 spot-checked still resolve; new text here uses struct names, old rows do not. Anchors: `FindMenuContent`, `FileMenuContent`, `BridgeHandler.swift:135-149,262-285,517-518`, `AppLayout.tsx:409`, `Toolbar.tsx:63`; commit subjects `find: wire Cmd+F to the search that exists, dim it where none does` and `menus: gate bridge commands on a live channel, not on isReady`.
 - _2026-07-28_ — `checkSystemHealth` row corrected: it is no longer a bridge dispatch (that action was dead — no frontend consumer). Wired to open the native Health window (`DoctorReportView`) via `openWindow(id: "health")` from Diagnostics ▸ Check Health; the window fetches the new `GET /api/doctor` endpoint (`bristlenose/server/routes/doctor.py`, `doctor.run_local_checks`). See `docs/fix-the-menus.md` and `docs/design-diagnostics-menu.md`.
@@ -184,7 +185,7 @@ AppLayout.tsx` is the answer and it is always current.
 > SPA posts `quotes-filter` back (`BridgeHandler.swift:760`). macOS convention
 > agrees — Safari and TextEdit do not open the find bar on ⌘E.
 
-### Already handled — useKeyboardShortcuts (24 actions)
+### Already handled — useKeyboardShortcuts
 
 These are in the `handleMenuAction` switch inside `useKeyboardShortcuts.ts`, sharing closures with the keyboard handlers.
 
@@ -201,8 +202,11 @@ These are in the `handleMenuAction` switch inside `useKeyboardShortcuts.ts`, sha
 | `normalSpeed` | `sendCommand("setSpeed", { rate: 1 })` |
 | `volumeUp` / `volumeDown` | `sendCommand("volumeStep", { delta: ±0.1 })` |
 | `mute` | `sendCommand("toggleMute")` |
-| `pictureInPicture` | `sendCommand("togglePip")` |
-| `fullscreen` | `sendCommand("toggleFullscreen")` |
+| `pictureInPicture` | `sendCommand("togglePip")` — **only when no popout player is open**; with one open the Mac menu runs it in the player page instead (see below) |
+| `fullscreen` | `sendCommand("toggleFullscreen")` — **fallback only**; with a popout open the Mac menu full-screens the player window natively |
+| `toggleSubtitles` | `toggleSubtitlePref("playerSubtitles")` — Video ▸ Subtitles; the setting lives in `utils/subtitlePrefs.ts` |
+| `toggleBurnSubtitles` | `toggleSubtitlePref("burnSubtitles")` — Quotes ▸ Burn Subtitles into Clips, and the checkbox in the toolbar's export popover |
+| `selectAllQuotes` | `selectAll()` — ⌘A |
 | `nextQuote` | `moveFocus(1)` |
 | `previousQuote` | `moveFocus(-1)` |
 | `extendSelectionDown` | `handleShiftMove(1)` |
@@ -211,7 +215,28 @@ These are in the `handleMenuAction` switch inside `useKeyboardShortcuts.ts`, sha
 | `clearSelection` | `clearSelection()` |
 | `revealInTranscript` | `navigate(/report/sessions/:pid#anchor)` |
 
-Video player commands use `sendCommand()` from `PlayerContext` which posts `bristlenose-command` messages to the popout player window. The popout `player.html` handles all commands (skip, speed, volume, PiP, fullscreen). Bridge `getState()` reports live `hasPlayer` / `playerPlaying` from module-level getters in `PlayerContext.tsx` — Swift uses these to dim/enable the Video menu.
+Video player commands use `sendCommand()` from `PlayerContext` which posts `bristlenose-command` messages to the popout player window. The popout `player.html` handles all commands (skip, speed, volume, PiP, fullscreen). Bridge `getState()` reports live `hasPlayer` / `playerPlaying` from module-level getters in `PlayerContext.tsx` — Swift uses these to dim/enable the Video menu's player commands. Video ▸ Subtitles is the exception: it is a preference, gated on `canDispatch`, so it can be set before a player opens.
+
+### Video menu — the popout player in front _(29 Sep 2026)_
+
+The popout player is a plain AppKit `NSWindow` (`WebView.Coordinator` `createWebViewWith`). Three rules follow from that, all in `VideoMenuContent` (`MenuCommands.swift`) and `WebView.swift`:
+
+- **Which bridge the menus read.** `@FocusedValue(\.bridge)` is set only by SwiftUI scenes, so with the player key the menus used to fall back to `BridgeHandler.unattached` and the **whole Video menu dimmed**. Now `bridgeHandler = focusedBridge ?? PopoutOwners.owner(of: NSApp.keyWindow) ?? .unattached`: each popout registers the report bridge that opened it (weak both ways).
+- **The player's keys, bound only while it is in front.** A bare key on a menu item is taken before any view sees it, so with the report in front ← → would stop moving through quotes and Space would stop typing spaces. The player has no text to type into. So the keys are attached (and shown in the menu) only when `playerInFront`, which `KeyWindowWatcher` keeps current — an AppKit window becoming key does not reliably rebuild the SwiftUI menu bar. `player.html` binds the same keys for the browser.
+
+| Item | Key (player in front) | Why this key |
+|---|---|---|
+| Play / Pause | Space | Universal |
+| Skip Back / Forward 5 Seconds | ← / → | QuickTime's arrows, the player's own jump |
+| Skip Back / Forward 30 Seconds | ⌥← / ⌥→ | |
+| Slow Down / Speed Up | ⇧, / ⇧. (`<` `>`) | YouTube's; QuickTime has none |
+| Subtitles | C | YouTube's and Vimeo's; no Mac player has a well-known one (QuickTime, Apple TV app: none; IINA cycles; VLC/mpv use V) |
+| Fullscreen | fn-F | Like every other window; View ▸ Enter Full Screen carries the same keys |
+| Normal Speed, Volume Up/Down, Mute, Picture in Picture | none | The Mac has hardware volume keys; the rest are not earned |
+
+- **Picture in Picture and Full Screen don't go through the bridge when a player is open.** PiP needs a user gesture, and a command relayed by `postMessage` from the report isn't one, so it was refused and swallowed; the menu now runs `window.bristlenosePlayer.togglePip()` in the player page with `evaluateJavaScript` (a constant script, no interpolation). Full Screen calls `toggleFullScreen` on the player window (`PopoutOwners.window(ownedBy:)`), the native window full screen rather than the page's element full screen.
+
+**Related, not menu-routed:** Quotes ▸ **Burn Subtitles into Clips** and the matching checkbox under Extract Video Clips in the toolbar's export popover (`ContentView` `ExportPopoverContent`) mirror a web-owned setting. The SPA posts it as `subtitle-prefs` (`shims/bridge.ts` `postSubtitlePrefs`); `BridgeHandler` saves it to UserDefaults and seeds each new webview with it, because the webview's storage is non-persistent per serve session.
 
 ### Need new frontend implementation (0)
 
@@ -308,14 +333,23 @@ All in `HelpMenuContent` (`MenuCommands.swift`). Order top→bottom: Bristlenose
 | ~~`importFramework`~~ | **Retired** _(12 Sep 2026)_ | Replaced by `installCodebook`. It needed a `templateId` the menu cannot name — install is a browse-card act. See **Retired actions**. |
 | ~~`removeFramework`~~ | **Retired** _(12 Sep 2026)_ | Replaced by `uninstallCodebook`, one row whose verb swaps with the detail page's own button. See **Retired actions**. |
 | `createCodeGroup` | **Shipped (bridge → `CodebookV2`)** _(12 Sep 2026, second edit)_ | Calls `authoring.onCreateGroup()` behind `view === "page" && page.floor && !readOnly` — the condition the page renders its New Group placeholder under. The guard is not belt-and-braces: `createCodebookGroup` takes no codebook id and always writes the floor, so an unguarded call against a stale native dim writes an invisible row. |
-| `createCode` | **Orphaned** _(12 Sep 2026)_ | Dispatches `bn:codebook-create-code` — **nothing listens**. _(Read **Shipped (bridge)**.)_ |
+| `createCode` | **Shipped (bridge → `CodebookV2`)** _(12 Sep 2026, third edit)_ | Handled in `islands/CodebookV2.tsx`, gated on a focused group that accepts tags (a code is created inside a group, so it needed the focus cursor). _(Read **Orphaned** here until 29 Sep 2026 — `bn:codebook-create-code` had no listener before the focus cursor landed — and **Shipped (bridge)** before that.)_ |
+| `renameCodeGroup`, `deleteCodeGroup`, `renameCode`, `deleteCode` | **Shipped (bridge → `CodebookV2`)** _(12 Sep 2026)_ | Restored with the focus cursor (`design-codebook-focus.md`); each targets the focused group or code. See the post-script under **Codebook operations — RETIRED** below. |
+| `installCodebook` / `uninstallCodebook` | **Shipped (bridge → `CodebookV2`)** _(12 Sep 2026)_ | One row whose verb swaps with the detail page's own button; replaced `importFramework` / `removeFramework`. |
 | `mergeCode` | **Deleted** _(12 Sep 2026)_ | Withdrawn 28 Jul, removed from `CodesMenuContent` on 12 Sep with the other five Codes commands; see the Retired-actions table. _(This row said **Shipped (bridge)** until 12 Sep 2026, contradicting that table since 28 Jul. The web half `mergeCodebookTags` still works — it is the menu item that is gone.)_ |
 
 ### Quotes menu — `playPause` triple-dispatch note
 
-`playPause` appears in three menu-source paths: the Video menu, the **Quotes menu** (`MenuCommands.swift:530-533`), and `useKeyboardShortcuts.ts`. All three resolve to `sendCommand("playPause")` via `PlayerContext`.
+`playPause` appears in three menu-source paths: the Video menu, the **Quotes menu** (`QuotesMenuContent`, gated on the Quotes lens, no key), and `useKeyboardShortcuts.ts`. All three resolve to `sendCommand("playPause")` via `PlayerContext`. Since 29 Sep 2026 there is a fourth, outside the menus: Space in the player page itself (`player.html`), which is also what the Video menu's Space binds to while the player is in front.
 
 ### Codebook operations — RETIRED 12 Sep 2026 (was "5 stubs, need native focus context")
+
+> **Post-script, 29 Sep 2026: four of these five came back the same afternoon.**
+> `renameCodeGroup`, `deleteCodeGroup`, `renameCode` and `deleteCode` were
+> restored by `codebook: a focus cursor, and the Codes menu it makes possible`
+> (12 Sep 2026): focus is a separate axis from selection, so a command naming one
+> group or code has a target after all. Only `toggleCodeGroup` stays retired (D7,
+> wrong lens). The section below is the reasoning as it stood that morning.
 
 **This section is kept as a correction, not a backlog.** The five commands are
 gone; so is their `AppLayout.tsx` warn-stub and every `desktop.menu.codes.*` key
@@ -385,7 +419,7 @@ part of that claim — it dims on live state.
 ## Recommended implementation order (remaining)
 
 1. ~~**New frontend handlers, no new infra**~~ — Done. All 14 Tier 2 actions wired in `AppLayout.tsx`
-2. ~~**Codebook**~~ — Done. 5 actions fully wired (browse, import, remove, create group, create code). 5 stubbed pending native focus context (toggle/rename/delete group, rename/delete code)
-3. **Video** — requires PlayerContext bridge (popout window ↔ native state sync)
+2. ~~**Codebook**~~ — Done. _(This said "5 stubbed pending native focus context"; four of them shipped with the focus cursor on 12 Sep 2026 and `toggleCodeGroup` is retired — see the Codes menu section.)_
+3. ~~**Video**~~ — Done. Live `hasPlayer` / `playerPlaying` state, and since 29 Sep 2026 the menu works with the player in front and carries its keys.
 4. **Project operations** — requires project list feature
 5. **Undo/Redo** — requires undo store design

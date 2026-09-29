@@ -660,8 +660,8 @@ no Node and no Files & Folders step, on the Mac App Store and the Developer-ID
 
 All nine were taken as proposed below, with these notes from the maintainer:
 
-- **D1:** names still to be confirmed (proposed: `app.bristlenose.agent-access` for the App
-  Store, `app.bristlenose.agent-access.devid` for the `.dmg`). A name is fixed per channel for
+- **D1:** the helper is `app.bristlenose.mcp` on the App Store and `app.bristlenose.mcp.devid`
+  on the `.dmg`; the executable is `bristlenose-mcp` on both. A name is fixed per channel for
   good; new builds from the same signer never need a new one.
 - **D6:** the only existing Claude user who has to reinstall is the maintainer.
 - **D7:** the "move to Applications" rule also goes in the help page.

@@ -102,3 +102,21 @@ def test_audio_only_clip_carries_the_track_too(tmp_path: Path) -> None:
     codecs = _run("ffprobe", "-v", "error", "-show_entries", "stream=codec_name",
                   "-of", "csv=p=0", str(clip)).split()
     assert "mov_text" in codecs
+
+
+def test_burned_copy_has_the_text_in_its_pixels(tmp_path: Path) -> None:
+    from bristlenose.server.clip_subtitles import Cue
+
+    backend = FFmpegBackend()
+    if not backend.can_burn_subtitles():
+        pytest.skip("this ffmpeg has no libass subtitles filter (e.g. Homebrew's)")
+    source = _video_source(tmp_path / "src.mp4")
+    clip = backend.extract_clip(source, tmp_path / "clip.mp4", 7.0, 12.0)
+    assert clip is not None
+    burned = backend.burn_subtitles(
+        clip, [Cue(0.0, 4.0, "p1", "white", ("Burned in.",))], tmp_path / "clip (subtitled).mp4",
+    )
+    assert burned is not None
+    # Same length, and the picture differs from the clean clip while a cue is up.
+    assert len(_frame_md5s(burned)) == len(_frame_md5s(clip))
+    assert _frame_md5s(burned)[25] != _frame_md5s(clip)[25]

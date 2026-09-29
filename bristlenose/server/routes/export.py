@@ -71,6 +71,9 @@ EMBED_PATH_TEMPLATES: frozenset[str] = frozenset(
 # GET read that is in NEITHER set fails the gate.
 SERVER_ONLY_PATH_TEMPLATES: frozenset[str] = frozenset(
     {
+        # The popout player's subtitle track. Export v1 embeds no video, so
+        # there is nothing for these subtitles to play over offline.
+        "/projects/{project_id}/sessions/{session_id}/subtitles.vtt",
         "/projects/{project_id}/signals/tags",  # no SPA callers; server-compute
         # Progressive delivery of findings while the lens is open. An exported
         # report has no server to stream from, and does not need one: the

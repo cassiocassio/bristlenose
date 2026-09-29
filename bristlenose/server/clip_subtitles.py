@@ -742,6 +742,75 @@ def to_webvtt(cues: list[Cue]) -> str:
     return "\n".join(parts)
 
 
+#: ASS colours are ``&HAABBGGRR``: alpha first (00 = opaque), then blue,
+#: green, red. The BBC order, as overrides on the white default.
+_ASS_COLOUR = {"yellow": "&H0000FFFF&", "cyan": "&H00FFFF00&", "green": "&H0000FF00&"}
+#: The bundled face for burned-in subtitles (Inter, SIL OFL; docs §Font).
+BURN_FONT_FAMILY = "Inter"
+
+
+def _ass_time(seconds: float) -> str:
+    cs = int(round(max(seconds, 0.0) * 100))
+    return f"{cs // 360000}:{cs // 6000 % 60:02d}:{cs // 100 % 60:02d}.{cs % 100:02d}"
+
+
+def _ass_text(line: str) -> str:
+    """Keep a transcript line from being read as ASS markup.
+
+    ``{`` opens a style override and ``\\`` starts an escape (``\\N`` is a
+    line break), so both are swapped for look-alikes, as in ``to_srt``.
+    """
+    return line.replace("\\", "\u29f5").replace("{", "(").replace("}", ")")
+
+
+def to_ass(cues: list[Cue], width: int, height: int) -> str:
+    """Burn-in subtitles for a ``width`` × ``height`` video, to the BBC spec.
+
+    - Inter, text 1/15 of the frame height (BBC §9.2.1).
+    - White on a 75% black box, not an outline (§9.2.4; 75% by decision, so a
+      screen share's interface stays readable behind it). ``BorderStyle=3``
+      draws the box; ``Outline`` is its padding.
+    - Lines no wider than 68% of the frame (§3.1) — 16% side margins — and
+      bottom-centre with a 5% margin, inside the central 90% (§10).
+    - The cues' own line breaks are kept (``WrapStyle: 2``); speaker colour is
+      an override on the white default, in the BBC order.
+
+    Measured 29 Sep 2026 on 720p FOSSDA clips: about 0.6 s per clip to burn.
+    """
+    font_size = max(12, round(height / 15))
+    pad = max(1, round(font_size * 0.15))
+    side = round(width * 0.16)
+    bottom = round(height * 0.05)
+    lines = [
+        "[Script Info]",
+        "ScriptType: v4.00+",
+        f"PlayResX: {width}",
+        f"PlayResY: {height}",
+        "WrapStyle: 2",
+        "ScaledBorderAndShadow: yes",
+        "",
+        "[V4+ Styles]",
+        "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, "
+        "OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, "
+        "ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, "
+        "MarginR, MarginV, Encoding",
+        f"Style: Default,{BURN_FONT_FAMILY},{font_size},&H00FFFFFF,&H00FFFFFF,"
+        f"&H40000000,&H40000000,0,0,0,0,100,100,0,0,3,{pad},0,2,{side},{side},{bottom},1",
+        "",
+        "[Events]",
+        "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
+    ]
+    for cue in cues:
+        colour = _ASS_COLOUR.get(cue.colour)
+        text = "\\N".join(_ass_text(line) for line in cue.lines)
+        if colour:
+            text = f"{{\\c{colour}}}{text}"
+        lines.append(
+            f"Dialogue: 0,{_ass_time(cue.start)},{_ass_time(cue.end)},Default,,0,0,0,,{text}"
+        )
+    return "\n".join(lines) + "\n"
+
+
 def to_srt(cues: list[Cue]) -> str:
     """Plain SRT, the input ffmpeg muxes into the clip's ``mov_text`` track.
 

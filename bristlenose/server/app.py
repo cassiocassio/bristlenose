@@ -495,6 +495,23 @@ def _contained_path(root: Path, path: str, allowed_suffixes: frozenset[str]) -> 
     return full
 
 
+def _player_page_response() -> Response:
+    """The popout video player, rendered from the template on every request.
+
+    The sealed static renderer bakes a copy into each project's ``assets/``
+    (``_write_player_html``), so a change to the player never reached a
+    project rendered before it — the subtitles support included. Serving it
+    live, ahead of the ``/report/{path}`` catch-all, gives every project the
+    current player. No-store, so an open popout picks up a new build on reload.
+    """
+    from bristlenose.stages.s12_render.theme_assets import _jinja_env
+
+    return HTMLResponse(
+        _jinja_env.get_template("player.html").render(),
+        headers={"Cache-Control": "no-store"},
+    )
+
+
 def _report_asset_path(resolved_assets: Path, path: str) -> Path | None:
     """Map a ``/report/<path>`` request onto ``<output_dir>/assets/``, or ``None``."""
     head, _, rest = path.partition("/")
@@ -828,6 +845,10 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
             headers={"Cache-Control": "no-store"},
         )
 
+    @app.get("/report/assets/bristlenose-player.html")
+    def serve_live_player_dev() -> Response:
+        return _player_page_response()
+
     @app.get("/report")
     def redirect_report_to_slash() -> RedirectResponse:
         return RedirectResponse("/report/", status_code=301)
@@ -933,6 +954,10 @@ def _mount_prod_report(app: FastAPI, output_dir: Path, *, dev: bool = False) -> 
     @app.get("/report")
     def redirect_report_to_slash_prod() -> RedirectResponse:
         return RedirectResponse("/report/", status_code=301)
+
+    @app.get("/report/assets/bristlenose-player.html")
+    def serve_live_player() -> Response:
+        return _player_page_response()
 
     # Theme CSS fallback: brand-new projects that haven't been through the
     # pipeline yet have no `<output_dir>/assets/bristlenose-theme.css`. Without

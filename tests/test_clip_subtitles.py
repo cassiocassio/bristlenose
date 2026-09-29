@@ -570,3 +570,39 @@ class TestLanguageTag:
     def test_unknown_is_und(self, code: str | None) -> None:
         from bristlenose.server.clip_subtitles import iso639_2
         assert iso639_2(code) == "und"
+
+
+class TestToAss:
+    def _ass(self, cues=None, w: int = 1280, h: int = 720) -> str:
+        from bristlenose.server.clip_subtitles import Cue, to_ass
+
+        cues = cues or [Cue(0.0, 2.0, "p1", "white", ("Hello there.",))]
+        return to_ass(cues, w, h)
+
+    def test_bbc_geometry_scales_with_the_frame(self) -> None:
+        style = next(line for line in self._ass().splitlines() if line.startswith("Style:"))
+        f = style.split(",")
+        # Inter at 1/15 of 720 = 48; box = BorderStyle 3 at 75% black;
+        # side margins 16% (lines ≤ 68% wide), bottom margin 5%.
+        assert f[1] == "Inter" and f[2] == "48"
+        assert f[5] == f[6] == "&H40000000"  # OutlineColour, BackColour
+        assert f[15] == "3"
+        assert (f[19], f[20], f[21]) == ("205", "205", "36")
+        big = next(line for line in self._ass(w=1920, h=1080).splitlines()
+                   if line.startswith("Style:"))
+        assert big.split(",")[2] == "72"
+
+    def test_lines_kept_and_speaker_colour_overridden(self) -> None:
+        from bristlenose.server.clip_subtitles import Cue
+
+        ass = self._ass([Cue(1.0, 3.5, "m1", "yellow", ("So why", "did you leave?"))])
+        assert "Dialogue: 0,0:00:01.00,0:00:03.50,Default,,0,0,0,,{\\c&H0000FFFF&}So why\\Ndid you leave?" in ass
+        assert "WrapStyle: 2" in ass
+
+    def test_text_cannot_become_ass_markup(self) -> None:
+        from bristlenose.server.clip_subtitles import Cue
+
+        ass = self._ass([Cue(0.0, 1.0, "p1", "white", (r"C:\New {\an8}top",))])
+        line = ass.splitlines()[-1]
+        assert "\\N" not in line.split(",,", 1)[1]
+        assert "{" not in line.split(",,", 1)[1]

@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
@@ -334,6 +334,54 @@ def _safe_clip_cues(db: DbSession, project_id: int, spec: ClipSpec) -> list[Cue]
         return []
 
 
+def session_cues(db: DbSession, project_id: int, session_id: str) -> list[Cue]:
+    """Subtitle cues for a whole session, for the popout player.
+
+    The same cues an exported clip gets — everyone audible, corrections
+    applied, BBC colours — over the whole recording. The session's primary
+    participant (the ``p`` code with the most words) takes white.
+    """
+    segments = _load_segments(db, project_id, session_id, 0.0, float("inf"))
+    tokens = [tok for seg in segments for tok in tokens_for_segment(seg)]
+    for corr in _load_corrections(db, project_id, session_id, 0.0, float("inf")):
+        tokens, _outcome = apply_correction(tokens, corr)
+    words: dict[str, int] = {}
+    for tok in tokens:
+        if tok.speaker_code.startswith("p"):
+            words[tok.speaker_code] = words.get(tok.speaker_code, 0) + 1
+    primary = max(words, key=lambda c: words[c]) if words else ""
+    end = max((tok.end for tok in tokens), default=0.0)
+    return build_cues(tokens, 0.0, end, primary)
+
+
+@router.get("/projects/{project_id}/sessions/{session_id}/subtitles.vtt")
+async def get_session_subtitles(
+    request: Request, project_id: int, session_id: str,
+) -> Response:
+    """WebVTT for a whole session, for the popout player's subtitle track.
+
+    Fetched by the report with the bearer token and handed to the player as
+    text: a ``<track src>`` cannot send the header, and the player page is
+    served without one.
+    """
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+        exists = (
+            db.query(SessionModel.id)
+            .filter(SessionModel.project_id == project_id,
+                    SessionModel.session_id == session_id)
+            .first()
+        )
+        if exists is None:
+            raise HTTPException(status_code=404, detail="Session not found")
+        vtt = to_webvtt(session_cues(db, project_id, session_id))
+    finally:
+        db.close()
+    return Response(vtt, media_type="text/vtt; charset=utf-8",
+                    headers={"Cache-Control": "no-store"})
+
+
 # ---------------------------------------------------------------------------
 # Async job runner
 # ---------------------------------------------------------------------------
@@ -405,12 +453,15 @@ async def _run_clip_extraction(
     anonymise: bool,
     cues_by_clip: dict[int, list[Cue]] | None = None,
     languages: dict[str, str] | None = None,
+    burn: bool = False,
 ) -> None:
     """Extract clips in background. Updates module-level _jobs state.
 
     Each clip with transcript text gets a ``.vtt`` beside it and the same
     cues muxed in as a soft subtitle track. A clip whose subtitle mux fails
-    is cut again without subtitles rather than lost. Any unexpected error
+    is cut again without subtitles rather than lost. With ``burn``, a video
+    clip with cues also gets a copy with the subtitles in its pixels, beside
+    it as ``<name> (subtitled).mp4`` — the clean clip is never replaced. Any unexpected error
     marks the job failed rather than leaving it "running", which would
     refuse every later export until the server restarts.
     """
@@ -454,6 +505,8 @@ async def _run_clip_extraction(
 
             vtt_path = clips_dir / f"{stem}.vtt"
             vtt_name: str | None = None
+            burned_path = clips_dir / f"{stem} (subtitled).mp4"
+            burned_name: str | None = None
             if result is not None:
                 job["completed_count"] = job.get("completed_count", 0) + 1
                 if cues:
@@ -464,12 +517,25 @@ async def _run_clip_extraction(
                         logger.warning(
                             "Could not write %s", vtt_path.name, exc_info=True,
                         )
+                if burn and cues and not spec.is_audio_only:
+                    job["current_clip"] = burned_path.stem
+                    burned = await asyncio.to_thread(
+                        backend.burn_subtitles, output_path, cues, burned_path,
+                    )
+                    if burned is not None:
+                        burned_name = burned_path.name
+                        job["burned_count"] = job.get("burned_count", 0) + 1
+                    else:
+                        # A stale burned copy from an earlier export must not
+                        # sit beside a clip whose text may since have changed.
+                        burned_path.unlink(missing_ok=True)
                 manifest_entries.append({
                     "quote_id": spec.quote_id,
                     "participant_id": spec.participant_id,
                     "session_id": spec.session_id,
                     "filename": filename,
                     "subtitles": vtt_name,
+                    "burned": burned_name,
                     "start": spec.start,
                     "end": spec.end,
                 })
@@ -487,6 +553,7 @@ async def _run_clip_extraction(
             "total": len(clips),
             "completed": job.get("completed_count", 0),
             "skipped": job.get("skipped_count", 0),
+            "burned": job.get("burned_count", 0),
             "anonymised": anonymise,
             "clips": manifest_entries,
         }
@@ -520,12 +587,18 @@ class ClipStartRequest(BaseModel):
     # the native menu until its submenu lands), fall back to the historical
     # starred ∪ featured union below.
     ids: list[str] | None = None
+    # Also write a copy of each video clip with the subtitles in its pixels
+    # ("for slides"). Off by default; the checkbox is the whole of the UI.
+    burn_subtitles: bool = False
 
 
 class ClipStartResponse(BaseModel):
     status: str
     total: int
     pii_warning: bool = False
+    # Burn-in was asked for but this ffmpeg can't do it (no libass/x264 —
+    # Homebrew's build). The clips and their .vtt files are still made.
+    burn_unavailable: bool = False
 
 
 class ClipStatusResponse(BaseModel):
@@ -536,6 +609,7 @@ class ClipStatusResponse(BaseModel):
     skipped_count: int
     current_clip: str
     output_dir: str | None
+    burned_count: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -555,6 +629,7 @@ async def start_clip_extraction(
     picker). With no ids, falls back to the legacy starred ∪ featured union.
     """
     anonymise = body.anonymise if body else False
+    burn_requested = body.burn_subtitles if body else False
 
     # Check FFmpeg availability
     backend = FFmpegBackend()
@@ -628,6 +703,9 @@ async def start_clip_extraction(
             i: _safe_clip_cues(db, project_id, spec) for i, spec in enumerate(specs)
         }
         languages = _subtitle_languages(db, project_id)
+        # Burning is asked for per export; whether this ffmpeg can do it is
+        # checked once here, so the researcher hears about it at the start.
+        burn = burn_requested and backend.can_burn_subtitles()
 
         # Create clips directory
         clips_dir = output_dir / "clips"
@@ -648,7 +726,7 @@ async def start_clip_extraction(
         asyncio.create_task(
             _run_clip_extraction(
                 project_id, specs, clips_dir, participant_count,
-                use_hours, anonymise, cues_by_clip, languages,
+                use_hours, anonymise, cues_by_clip, languages, burn,
             )
         )
 
@@ -656,6 +734,7 @@ async def start_clip_extraction(
             status="started",
             total=len(specs),
             pii_warning=anonymise,
+            burn_unavailable=burn_requested and not burn,
         )
 
     finally:
@@ -690,6 +769,7 @@ async def get_clip_status(
         total=job.get("total", 0),
         completed_count=job.get("completed_count", 0),
         skipped_count=job.get("skipped_count", 0),
+        burned_count=job.get("burned_count", 0),
         current_clip=job.get("current_clip", ""),
         output_dir=job.get("output_dir"),
     )

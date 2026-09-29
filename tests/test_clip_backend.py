@@ -203,3 +203,69 @@ class TestSubtitleMux:
             FFmpegBackend().extract_clip(source, output, 1.0, 2.0)
         args = list(mock_run.call_args[0][0])
         assert "0:v:0?" not in args and "0:a:0?" in args
+
+
+class TestBurnSubtitles:
+    def _cues(self):  # type: ignore[no-untyped-def]
+        from bristlenose.server.clip_subtitles import Cue
+
+        return [Cue(0.0, 2.0, "p1", "white", ("Hello.",))]
+
+    def test_can_burn_needs_libass_and_x264(self) -> None:
+        from bristlenose.server import clip_backend
+
+        def fake(filters: str, encoders: str):  # type: ignore[no-untyped-def]
+            outs = iter([MagicMock(stdout=filters), MagicMock(stdout=encoders)])
+            return lambda *a, **k: next(outs)
+
+        yes = (" .. subtitles  V->V  Render text subtitles\n", " V....D libx264  H.264\n")
+        no = (" .. scale  V->V  Scale\n", " V....D libx264  H.264\n")
+        for (filters, encoders), expected in ((yes, True), (no, False)):
+            clip_backend._can_burn.cache_clear()
+            with patch("bristlenose.server.clip_backend.subprocess.run", fake(filters, encoders)):
+                assert clip_backend._can_burn("/x/ffmpeg") is expected
+        clip_backend._can_burn.cache_clear()
+
+    def test_burn_command_and_cleanup(self, tmp_path: Path) -> None:
+        clip = tmp_path / "clip.mp4"
+        clip.write_bytes(b"clip")
+        out = tmp_path / "clip (subtitled).mp4"
+        seen: dict[str, object] = {}
+
+        def fake_run(cmd, **kwargs):  # type: ignore[no-untyped-def]
+            if "ffprobe" in cmd[0] or "-show_entries" in cmd:
+                return MagicMock(returncode=0, stdout="1280,720\n", stderr="")
+            vf = cmd[cmd.index("-vf") + 1]
+            ass_path = Path(vf.split("subtitles=")[1].split(":fontsdir=")[0])
+            fonts = Path(vf.split(":fontsdir=")[1])
+            seen.update(vf=vf, ass=ass_path.read_text(), font=(fonts / "Inter-Medium.otf").exists(),
+                        tmp=fonts, cmd=cmd)
+            Path(cmd[-1]).write_bytes(b"burned")
+            return MagicMock(returncode=0, stdout="", stderr="")
+
+        with patch("bristlenose.server.clip_backend.subprocess.run", side_effect=fake_run):
+            result = FFmpegBackend().burn_subtitles(clip, self._cues(), out)
+        assert result == out
+        assert "Style: Default,Inter,48," in str(seen["ass"])
+        assert seen["font"] is True  # the bundled face is what libass reads
+        joined = " ".join(seen["cmd"])  # type: ignore[arg-type]
+        assert "-c:v libx264" in joined and "-c:a copy" in joined
+        assert not Path(str(seen["tmp"])).exists()  # temp folder removed
+
+    def test_failed_burn_returns_none(self, tmp_path: Path) -> None:
+        clip = tmp_path / "clip.mp4"
+        clip.write_bytes(b"clip")
+
+        def fake_run(cmd, **kwargs):  # type: ignore[no-untyped-def]
+            if "-show_entries" in cmd:
+                return MagicMock(returncode=0, stdout="1280,720\n", stderr="")
+            return MagicMock(returncode=1, stdout="", stderr="No such filter: 'subtitles'")
+
+        with patch("bristlenose.server.clip_backend.subprocess.run", side_effect=fake_run):
+            assert FFmpegBackend().burn_subtitles(clip, self._cues(), tmp_path / "o.mp4") is None
+
+    def test_bundled_font_ships_with_its_licence(self) -> None:
+        from bristlenose.server.clip_backend import BURN_FONT
+
+        assert BURN_FONT.is_file() and BURN_FONT.stat().st_size > 100_000
+        assert "SIL Open Font License" in (BURN_FONT.parent / "Inter-OFL.txt").read_text()

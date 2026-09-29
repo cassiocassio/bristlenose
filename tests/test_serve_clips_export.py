@@ -401,10 +401,12 @@ class TestExportComposesSubtitles:
                 patch.object(clips_export, "_resolve_output_dir", return_value=tmp_path):
             resp = client.post("/api/projects/1/export/clips", json={"ids": ["q-p1-10"]})
             assert resp.status_code == 200 and resp.json()["status"] == "started"
-            for _ in range(100):
-                if client.get("/api/projects/1/export/clips/status").json()["status"] != "running":
-                    break
+            status = "running"
+            deadline = time.monotonic() + 20.0
+            while status == "running" and time.monotonic() < deadline:
+                status = client.get("/api/projects/1/export/clips/status").json()["status"]
                 time.sleep(0.05)
+        assert status == "completed", f"job ended {status!r}"
         manifest = json.loads((tmp_path / "clips" / "clips_manifest.json").read_text())
         vtt = (tmp_path / "clips" / manifest["clips"][0]["subtitles"]).read_text()
         assert "dashboard pretty confusing" in vtt.replace("\n", " ")
@@ -456,3 +458,98 @@ class TestSubtitleLanguage:
                 {0: [cue]}, {"s1": "jpn"},
             ))
         assert seen == ["jpn"]
+
+
+class TestBurnIn:
+    def _cue(self) -> Cue:
+        return Cue(start=0.0, end=2.0, speaker_code="p1", colour="white", lines=("Hi.",))
+
+    def _run(self, tmp_path: Path, spec: ClipSpec, burn: bool, burn_ok: bool = True) -> dict:
+        burn_calls: list[Path] = []
+
+        def fake_extract(self, source, output, start, end, subtitles=None, subtitle_language="und"):  # type: ignore[no-untyped-def]
+            output.write_bytes(b"clip")
+            return output
+
+        def fake_burn(self, clip, cues, output):  # type: ignore[no-untyped-def]
+            burn_calls.append(output)
+            if not burn_ok:
+                return None
+            output.write_bytes(b"burned")
+            return output
+
+        clips_export._jobs[1] = {"status": "running", "progress": 0, "total": 1}
+        with patch.object(clips_export.FFmpegBackend, "extract_clip", fake_extract), \
+                patch.object(clips_export.FFmpegBackend, "burn_subtitles", fake_burn):
+            asyncio.run(clips_export._run_clip_extraction(
+                1, [spec], tmp_path, 1, False, False, {0: [self._cue()]}, {"s1": "eng"}, burn,
+            ))
+        manifest = json.loads((tmp_path / "clips_manifest.json").read_text())
+        return {"calls": burn_calls, "manifest": manifest}
+
+    def test_burned_copy_sits_beside_the_clean_clip(self, tmp_path: Path) -> None:
+        out = self._run(tmp_path, _spec(tmp_path / "src.mp4"), burn=True)
+        entry = out["manifest"]["clips"][0]
+        stem = entry["filename"].rsplit(".", 1)[0]
+        assert entry["burned"] == f"{stem} (subtitled).mp4"
+        assert (tmp_path / entry["filename"]).read_bytes() == b"clip"  # clean one kept
+        assert (tmp_path / entry["burned"]).read_bytes() == b"burned"
+        assert out["manifest"]["burned"] == 1
+
+    def test_off_by_default_nothing_is_burned(self, tmp_path: Path) -> None:
+        out = self._run(tmp_path, _spec(tmp_path / "src.mp4"), burn=False)
+        assert out["calls"] == [] and out["manifest"]["clips"][0]["burned"] is None
+
+    def test_audio_clip_is_not_burned(self, tmp_path: Path) -> None:
+        from dataclasses import replace
+        spec = replace(_spec(tmp_path / "src.m4a"), is_audio_only=True)
+        out = self._run(tmp_path, spec, burn=True)
+        assert out["calls"] == []
+
+    def test_failed_burn_removes_a_stale_copy(self, tmp_path: Path) -> None:
+        stale = tmp_path / "p1 00m10 i found the dashboard (subtitled).mp4"
+        stale.write_bytes(b"old text")
+        out = self._run(tmp_path, _spec(tmp_path / "src.mp4"), burn=True, burn_ok=False)
+        assert out["manifest"]["clips"][0]["burned"] is None
+        assert not stale.exists()
+
+    def test_start_reports_when_this_ffmpeg_cannot_burn(self, client: TestClient, tmp_path: Path) -> None:
+        media = ({"s1": (tmp_path / "s1.mp4", False)}, {"s1": 120.0})
+        with patch.object(clips_export.FFmpegBackend, "check_available", return_value=(True, "")), \
+                patch.object(clips_export.FFmpegBackend, "can_burn_subtitles", return_value=False), \
+                patch.object(clips_export, "_load_session_media", return_value=media), \
+                patch.object(clips_export, "_resolve_output_dir", return_value=tmp_path), \
+                patch.object(clips_export, "_run_clip_extraction") as run:
+            resp = client.post("/api/projects/1/export/clips",
+                               json={"ids": ["q-p1-10"], "burn_subtitles": True})
+        assert resp.json()["burn_unavailable"] is True
+        assert run.call_args[0][-1] is False  # the job is told not to burn
+
+
+class TestSessionSubtitlesRoute:
+    def test_whole_session_vtt(self, client: TestClient) -> None:
+        resp = client.get("/api/projects/1/sessions/s1/subtitles.vtt")
+        assert resp.status_code == 200
+        assert resp.headers["content-type"].startswith("text/vtt")
+        body = resp.text
+        assert body.startswith("WEBVTT")
+        assert "dashboard pretty confusing" in body.replace("\n", " ")
+        # The moderator's questions are in the session too, in BBC yellow.
+        assert "<c.yellow>" in body
+        assert "m1" not in body and "p1" not in body
+
+    def test_unknown_session_is_404(self, client: TestClient) -> None:
+        assert client.get("/api/projects/1/sessions/s99/subtitles.vtt").status_code == 404
+
+    def test_requires_the_bearer_token(self) -> None:
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        bare = TestClient(app, base_url="http://127.0.0.1")
+        assert bare.get("/api/projects/1/sessions/s1/subtitles.vtt").status_code == 401
+
+
+class TestLivePlayerPage:
+    def test_player_is_served_from_the_template_not_the_baked_copy(self, client: TestClient) -> None:
+        resp = client.get("/report/assets/bristlenose-player.html")
+        assert resp.status_code == 200
+        assert 'id="bristlenose-video"' in resp.text
+        assert resp.headers.get("cache-control") == "no-store"

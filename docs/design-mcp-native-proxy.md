@@ -629,8 +629,15 @@ What this settles and what it doesn't:
 - **Human App Review** of the agent-access feature: a submission, with review
   notes for §2.5.2 / §2.4.5(ii).
 - **Build 3907 installed from TestFlight:** check the helper after Apple's
-  re-signing (its signer and entitlements), and run it once as a ChatGPT
-  plugin's server.
+  re-signing, i.e. its signer and entitlements
+  (`codesign -d --entitlements - …/Contents/Helpers/bristlenose-mcp`). That is
+  all 3907 can verify through normal use: its host is unchanged 0.31.5 code
+  and never writes the group handshake (the host half is the unapplied draft
+  in `docs/drafts/native-proxy-group-handshake/`). A manual end-to-end run is
+  possible, because the helper is the spike build and keeps `--seed`. But **not
+  on a Mac where the Developer-ID spike helper has run**: the Apple-re-signed
+  helper has the same identifier and would hit the §6.6 signer trap. Use a
+  clean Mac or user account.
 - A runtime-built `.mcpb`.
 - §2.5.2 / §2.4.5(ii), "installs code into other apps". This applies to
   today's `.mcpb` as well, and needs review notes whichever route ships.

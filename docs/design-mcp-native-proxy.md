@@ -626,6 +626,25 @@ What this settles and what it doesn't:
   helper's team group intact. Install build 3907 from TestFlight and read the
   helper's entitlements with `codesign -d --entitlements -` to find out.
 
+**Installed and read, 29 Sep 2026 (P0.2).** TestFlight put 3907 at `/Applications/Bristlenose 2.app`
+(an older user-owned `Bristlenose.app` was in the way), and the helper was read from disk without being
+launched:
+
+| Binary | Signer | Entitlements after Apple's re-sign |
+|---|---|---|
+| `Helpers/bristlenose-mcp` | TestFlight Beta Distribution; DR `anchor apple generic and certificate leaf[field.1.2.840.113635.100.6.1.25.1] and identifier "app.bristlenose.mcp-proxy"` | `app-sandbox`, `network.client`, `application-groups: [Z56GZVA2QB.app.bristlenose]`, plus Apple's `beta-reports-active`. No `inherit`. Info.plist bound (5 entries). No quarantine xattr |
+| `Resources/ffmpeg` (control) | TestFlight Beta Distribution | `app-sandbox`, `inherit`, `beta-reports-active` |
+| `MacOS/Bristlenose` | TestFlight Beta Distribution | both groups, `application-identifier`, `team-identifier`, keychain group |
+
+So Apple keeps what the helper needs. What it changes is the **signer**: TestFlight builds carry a
+TestFlight-only certificate, distinct from the App Store's, from the local Apple Distribution one and from
+Developer ID. That makes four signer classes, not two, and the store helper id meets two of them on a
+tester's Mac (TestFlight, then the App Store). Whether that transition trips the §6.6 container trap is
+**unmeasured**. Main apps survive it routinely, but they carry `application-identifier`, and the helper
+doesn't. A local proxy for it: create the helper's container under an Apple Development signature, then
+launch an Apple Distribution one with the same id (two Apple-anchored leaves, like TestFlight and the
+store). If it hangs, the TestFlight→store move probably does too.
+
 ### 6.8 Still open
 
 - **Human App Review** of the agent-access feature: a submission, with review
@@ -704,7 +723,7 @@ register in every Settings frame for this reason.
 
 - **P0 — each can stop the plan.**
   - P0.1: on clean SIP-on macOS **15 and 26** guests, launch (a) a Developer-ID host carrying the team group, and (b) the real profile-less helper as a foreign app's child; read taskgated. This is the least-discussed, highest-impact unknown: if 15/26 enforce the "Disallowing" check, the `.dmg` host breaks at launch for everyone on those versions.
-  - P0.2: install TestFlight 3907 on a clean account; read both copies' signer, id and entitlements (ffmpeg as control). Sets D1's count. Then **expire 3907** in App Store Connect and delete the spike binaries (both carry `--seed`).
+  - P0.2 (**done 29 Sep**, see §6.7: entitlements survive; four signer classes; the TestFlight→store move is the new unknown, with a local Development-vs-Distribution proxy test as P0.2b): install TestFlight 3907 on a clean account; read both copies' signer, id and entitlements (ffmpeg as control). Sets D1's count. Then **expire 3907** in App Store Connect and delete the spike binaries (both carry `--seed`).
   - P0.3: re-export the `.dmg` with the group requested; confirm the minted profile lists it.
   - P0.4: end to end through **Claude's own extraction** of a runtime `.mcpb`, on a clean 27 guest: quarantine flag, exec bit, `__MACOSX` entries, `spctl`; it answers with Files & Folders off.
   - P0.5: a second install at a bumped version, on each host: what ChatGPT and Claude offer.

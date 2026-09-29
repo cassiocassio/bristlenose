@@ -670,6 +670,24 @@ no Node and no Files & Folders step, on the Mac App Store and the Developer-ID
 | D8 | Install state and versions | **Per host.** The plugin version carries the build number (ChatGPT caches by version). Each tab has Install / Reinstall / Update, never "Installed". An old ChatGPT without `codex://` support gets "Update ChatGPT", not "Download". | One shared state (a stale ChatGPT plugin would flip the Claude button). |
 | D9 | App Review | Notes answer the literal words of §2.5.2 and §2.4.5(ii)/(iii)/(iv); screen recording; **external TestFlight before the store**, so a human reviewer sees it first. | — |
 
+### Preserved as shipped (a constraint on every phase)
+
+The plan changes how an agent **reaches** Bristlenose. It does not change how
+Bristlenose tells the researcher what is exposed and what is being read, and no
+phase may regress it:
+
+| Shipped mechanism | Driven by | Obligation |
+|---|---|---|
+| Sidebar antenna, solid (exposed now) | `ServeFleet.handshakeProjectPaths` | P1 writes the group copy from the same set in the same call; D4 stops a group copy outliving the solid antenna |
+| Antenna radiating, then the two-tap sign-off (an agent is reading, then has finished) | serve's per-project tool-call counter, `/api/agent-activity` | Nothing to build: the helper calls the same `/mcp/` with the same bearer. P6 checks a ChatGPT and a Claude question each radiate the right project |
+| Projects register: Active / Available when opened, tick, Sessions, Last asked, roll-up, receipts, empty state, scope note | `AgentProjectRegister`, `projectsSection` | Untouched. P5 edits only the pane's top half; `AgentProjectRegisterTests` and `MCPAgentsSettingsViewTests` pass unedited |
+| Turn On / Off Agent Access, the badge tooltip, consent v2 | `AgentAccessPolicy`, menu verbs | Untouched |
+| Anonymise | serve (`mcp_server.py`) | Untouched; the helper is a pipe |
+| Install row's version compare and "asked recently" subtitle | `X-Bristlenose-Proxy-Version` → `agentProxyVersion` | The helper sends the same header; D8 **adds** a host label beside it and never replaces the per-project register |
+
+The mockup (`docs/mockups/mcp-native-proxy-decisions.html`) draws the real
+register in every Settings frame for this reason.
+
 ### Phases (re-ordered)
 
 - **P0 — each can stop the plan.**
@@ -682,7 +700,7 @@ no Node and no Files & Folders step, on the Mac App Store and the Developer-ID
 - **P2 — helper** per D1–D3, source moved to `desktop/mcp-helper/`; the tool list read from the `BN-TOOLS-JSON` block with its annotations; that block moves out of `desktop/mcpb/` before the Node extension is retired, **and `tests/test_mcpb_proxy.py` moves with it in the same commit** (re-point `_PROXY_JS` and the regex). It is the only check that the static tool list and its annotations match the server's `tools/list`, and it looks like it belongs to the Node extension, so it would otherwise be deleted with it and leave the helper's list unguarded.
 - **P3 — ChatGPT**: marketplace per D7, Install Plugin… per D8, link query encoded strictly (unit-tested with `& + # %` and spaces).
 - **P4 — Claude**: runtime `.mcpb` per P0.4; `MCPExtensionInstaller`'s bundled-file assumptions (`claudeDesktopCanInstall`, the disabled state, `bundledStamp`) repointed at the runtime artefact with a stamp beside it.
-- **P5 — switch-over**, one commit per D6.
+- **P5 — switch-over**, one commit per D6, confined to the pane's top half (see *Preserved as shipped*).
 - **P6 — verify**, each item with its layer named: Swift tests (handshake read-back, installer manifest, zip, link encoding); script gates (D3, and `test-check-pkg-shippable.sh` cases); by hand once: a TestFlight build, Claude and ChatGPT on 15 / 26 / 27, a translocated `.dmg` app, TestFlight→App Store update.
 - **P7 — review notes** per D9.
 

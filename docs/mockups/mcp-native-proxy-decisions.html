@@ -152,6 +152,44 @@ table.ba td:first-child{font-weight:600;width:17%}
 .score td:nth-child(2),.score td:nth-child(3){width:36%}
 .score td:nth-child(4){width:12%}
 @media (max-width:640px){body{padding:24px 16px 80px}.segs{overflow-x:auto}.seg{font-size:11px;padding:4px 3px}table.ba{display:block;overflow-x:auto}.cm{overflow-x:auto}.box{overflow-x:auto}}
+
+/* ---------- the shipped Projects register (spec: mcp-agents-pane.html; code: MCPAgentsSettingsView.projectsSection) ---------- */
+.divider{height:1px;background:var(--line)}
+.shead{padding:20px 20px 8px;display:flex;align-items:baseline;gap:10px}
+.shead .t{font-size:13px;font-weight:700}
+.shead .roll{margin-left:auto;color:var(--dim);font-size:12px;font-variant-numeric:tabular-nums}
+.rtab{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px}
+.rtab thead th{text-align:left;font-weight:600;color:var(--dim);font-size:11.5px;height:26px;padding:0 20px;border-bottom:.5px solid var(--line);white-space:nowrap}
+.rtab thead th.r{text-align:right}
+.rtab td{padding:7px 20px;border-bottom:.5px solid var(--hairline);white-space:nowrap}
+.rtab tr.last td{border-bottom:0}
+.rtab tr.grp th{background:color-mix(in srgb,var(--ink) 5%,var(--page));font-weight:600;font-size:11.5px;text-align:left;padding:5px 20px;border-bottom:.5px solid var(--line)}
+.rtab .num{text-align:right;color:var(--dim);font-variant-numeric:tabular-nums;width:1%}
+.rtab .acc{width:1%}
+.rtab .asked{width:1%;color:var(--dim);font-variant-numeric:tabular-nums}
+.rtab .pn{display:flex;align-items:center;gap:7px}
+.rtab .pi{width:17px;text-align:center;color:var(--ink);font-size:13px}
+.rtab tr.rcpt td{color:var(--dim)} .rtab tr.rcpt .rc{font-size:11.5px;margin-left:4px}
+.tick{display:inline-block;width:14px;height:14px;border-radius:3.5px;background:var(--accent);position:relative;vertical-align:-2px}
+.tick::after{content:"";position:absolute;left:4.5px;top:1.5px;width:3.5px;height:7px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.tick.off{background:var(--page);border:1px solid var(--faint)} .tick.off::after{display:none}
+.scope{margin:8px 20px 0;color:var(--dim);font-size:11px}
+.empty{padding:6px 20px 0} .empty b{font-weight:600;display:block;font-size:13px} .empty span{color:var(--dim);font-size:12px}
+.regwrap{padding-bottom:20px}
+/* sidebar antenna (antenna.radiowaves.left.and.right drawn as SVG) */
+.ant{width:16px;height:14px;vertical-align:-2px}
+.ant path,.ant circle{stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round}
+.ant .arc2{opacity:1} .ant.f0 .arc1,.ant.f0 .arc2{opacity:0} .ant.f1 .arc2{opacity:0}
+.sb{background:var(--chrome);padding:8px 0;font-size:13px}
+.sb .it{display:flex;align-items:center;gap:8px;padding:5px 14px}
+.sb .it.sel{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.sb .it .nm{flex:1} .sb .it .nm small{display:block;color:var(--dim);font-size:11px}
+.sb .it .g{width:18px;text-align:center}
+.menu{background:var(--page);border:.5px solid var(--line);border-radius:7px;box-shadow:var(--shadow);padding:5px;font-size:13px;width:250px}
+.menu div{padding:3px 10px;border-radius:4px;display:flex;gap:8px;align-items:center}
+.menu .hi{background:var(--accent);color:#fff}
+.menu hr{border:0;border-top:.5px solid var(--line);margin:4px 6px}
+.tip{display:inline-block;background:var(--page);border:.5px solid var(--line);box-shadow:0 2px 8px rgba(0,0,0,.15);border-radius:5px;padding:3px 8px;font-size:11.5px}
 </style>
 </head>
 <body>
@@ -186,10 +224,45 @@ shipped <code>en</code> keys unless a commentary block lists them as new.</p>
 </div>
 
 <!-- ============================================================ -->
+<h2>0 · Kept exactly as shipped <small>the half of the experience the plan must not touch</small></h2>
+<p class="lede">The plan changes how an agent <i>reaches</i> Bristlenose. It does not change how Bristlenose tells the researcher what's exposed and what's being read. Everything in this section ships today (0.23.0–0.31.5), is pinned by tests, and appears unchanged in every frame below.</p>
+<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(min(330px,100%),1fr))">
+  <div class="cell"><p class="cap">Sidebar · exposure and activity, per project</p>
+  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">Bristlenose</div></div>
+  <div class="sb">
+    <div class="it"><span class="g">▤</span><span class="nm">Onboarding study<small>14 sessions</small></span><span style="color:var(--accent)" data-ant="f1"></span></div>
+    <div class="it sel"><span class="g">▥</span><span class="nm">Beds &amp; duvets<small>3 sessions</small></span><span data-ant=""></span></div>
+    <div class="it"><span class="g">◧</span><span class="nm">Checkout interviews<small>9 sessions</small></span></div>
+    <div class="it"><span class="g">▦</span><span class="nm">Pilot<small>3 sessions</small></span></div>
+  </div></div></div>
+  <div class="cell"><p class="cap">Project menu and sidebar context menu · the verb swaps</p>
+  <div class="menu">
+    <div>Rename</div><div>Change Icon…</div><hr>
+    <div class="hi"><span style="color:#fff" data-ant=""></span>Turn Off Agent Access</div><hr>
+    <div>Show in Finder</div>
+  </div>
+  <p style="margin:14px 0 0"><span class="tip">Agent Access is on for this project.</span></p></div>
+</div>
+<table class="ba">
+<thead><tr><th>Shipped mechanism</th><th>What it tells the researcher</th><th>What drives it</th><th>What the native plan must do</th></tr></thead>
+<tbody>
+<tr><td>Antenna, solid</td><td>An agent could read this project right now</td><td><code>ServeFleet.handshakeProjectPaths</code>: the handshake writer's own set</td><td>P1 writes the group copy <b>from the same set, in the same call</b>. D4's fail-closed rule stops the group copy outliving the solid antenna</td></tr>
+<tr><td>Antenna, radiating, then two taps</td><td>An agent is reading this project now, and then that it has finished</td><td>serve's per-project tool-call counter (<code>/api/agent-activity</code>)</td><td>Nothing: the helper calls the same <code>/mcp/</code> with the same bearer, so every call counts. <b>P6 checks it</b>: a question from ChatGPT and from Claude each radiates the right project</td></tr>
+<tr><td>Projects register: Active / Available when opened, tick, Sessions, Last asked, roll-up, receipts, empty state, scope note</td><td>What's shared, what could be, what was asked and when; untick to revoke, re-tick to undo</td><td><code>AgentProjectRegister</code> + <code>projectsSection</code></td><td><b>Untouched by every phase.</b> The P5 switch-over edits the top half of the pane only; <code>AgentProjectRegisterTests</code> and <code>MCPAgentsSettingsViewTests</code> must pass unedited</td></tr>
+<tr><td>Turn On / Turn Off Agent Access, the badge tooltip, the consent sheet</td><td>Per-project permission, granted where the project lives</td><td><code>AgentAccessPolicy</code>, the menu verbs, consent v2 (already client-neutral)</td><td>Untouched</td></tr>
+<tr><td>Anonymise</td><td>Participant names removed from everything an agent reads</td><td>serve (<code>mcp_server.py</code>)</td><td>Untouched: the helper is a pipe</td></tr>
+<tr><td>Install row: version compare and "asked recently"</td><td>Whether the agent's copy matches this build</td><td><code>X-Bristlenose-Proxy-Version</code> on each call → <code>agentProxyVersion</code></td><td>The helper sends the same header (the spike does, <code>main.swift:256</code>). D8 <b>adds</b> a host label beside it; it never replaces the per-project register</td></tr>
+</tbody>
+</table>
+<div class="cm">
+<p><b>Why this section exists.</b> The first draft of this page drew the pane's top half in detail and collapsed the register into a one-line stub. That made it read as though the plan replaced the register. It doesn't, and it mustn't: the register and the antenna are the only places a researcher sees what agents can reach, and they took most of August to get right. Every Settings frame now carries the real register, in whichever state fits the story: typical, never asked, just asked, all closed, a receipt, empty.</p>
+</div>
+
+<!-- ============================================================ -->
 <h2>1 · Today, on macOS 27 <small>the two tabs the plan replaces</small></h2>
 <div class="grid">
   <div class="cell"><p class="cap">Before · Claude Desktop tab (0.31.5, macOS 27)</p>
-  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="win" data-reg="typical"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
   <div class="pane">
     <div class="topline"><p class="hl">Agents only see open projects</p><div class="anon"><div>Anonymise<div class="s">Remove participant names</div></div><div class="sw"></div></div></div>
     <div class="segs"><div class="seg on">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
@@ -201,7 +274,7 @@ shipped <code>en</code> keys unless a commentary block lists them as new.</p>
   </div></div>
 
   <div class="cell"><p class="cap">Before · ChatGPT &amp; Codex tab (0.31.5)</p>
-  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="win" data-reg="typical"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
   <div class="pane">
     <div class="topline"><p class="hl">Agents only see open projects</p><div class="anon"><div>Anonymise<div class="s">Remove participant names</div></div><div class="sw"></div></div></div>
     <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
@@ -224,7 +297,7 @@ http_headers = { "Authorization" = "Bearer ••••••••••••"
 <div class="grid">
 
   <div class="cell"><p class="cap">2.1 · Ready — never asked (and just after installing)</p>
-  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="win" data-reg="never"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
   <div class="pane">
     <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
     <p class="callout">Adds Bristlenose to ChatGPT as a plugin. ChatGPT will open and ask you to install it.</p>
@@ -234,7 +307,7 @@ http_headers = { "Authorization" = "Bearer ••••••••••••"
   </div></div></div>
 
   <div class="cell"><p class="cap">2.2 · An agent has asked recently</p>
-  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="win" data-reg="just"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
   <div class="pane">
     <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
     <p class="callout">Adds Bristlenose to ChatGPT as a plugin. ChatGPT will open and ask you to install it.</p>
@@ -244,7 +317,7 @@ http_headers = { "Authorization" = "Bearer ••••••••••••"
   </div></div></div>
 
   <div class="cell"><p class="cap">2.3 · After a Bristlenose update, ChatGPT still runs the old plugin</p>
-  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="win" data-reg="typical"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
   <div class="pane">
     <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
     <p class="callout">Adds Bristlenose to ChatGPT as a plugin. ChatGPT will open and ask you to install it.</p>
@@ -255,7 +328,7 @@ http_headers = { "Authorization" = "Bearer ••••••••••••"
   </div></div></div>
 
   <div class="cell"><p class="cap">2.4 · ChatGPT isn't installed</p>
-  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="win" data-reg="empty"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
   <div class="pane">
     <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
     <p class="callout">Adds Bristlenose to ChatGPT as a plugin. ChatGPT will open and ask you to install it.</p>
@@ -265,7 +338,7 @@ http_headers = { "Authorization" = "Bearer ••••••••••••"
   </div></div></div>
 
   <div class="cell"><p class="cap">2.5 · ChatGPT too old to install by link</p>
-  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="win" data-reg="typical"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
   <div class="pane">
     <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
     <p class="callout">Adds Bristlenose to ChatGPT as a plugin. ChatGPT will open and ask you to install it.</p>
@@ -275,7 +348,7 @@ http_headers = { "Authorization" = "Bearer ••••••••••••"
   </div></div></div>
 
   <div class="cell"><p class="cap">2.6 · .dmg app opened from Downloads (translocated), D7</p>
-  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="win" data-reg="closed"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
   <div class="pane">
     <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
     <p class="callout">Adds Bristlenose to ChatGPT as a plugin. ChatGPT will open and ask you to install it.</p>
@@ -286,7 +359,7 @@ http_headers = { "Authorization" = "Bearer ••••••••••••"
   </div></div></div>
 
   <div class="cell"><p class="cap">2.7 · "Or connect by hand" open</p>
-  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="win" data-reg="typical"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
   <div class="pane">
     <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
     <p class="callout">Adds Bristlenose to ChatGPT as a plugin. ChatGPT will open and ask you to install it.</p>
@@ -304,7 +377,7 @@ http_headers = { "Authorization" = "Bearer ••••••••••••"
 <div class="cm">
 <p><b>Consequences the pictures show.</b></p>
 <ul>
-<li><b>2.1 and 2.2 both say Install</b>, even just after a successful install. That's today's rule on the Claude tab (<code>.unknown</code> and <code>.matching</code> map to Install) and D8 keeps it: we never say "Installed", because we can't see ChatGPT. The subtitle's recent-activity line is the only "it worked" signal, and it arrives with the first question. Benchmarked in section 8.</li>
+<li><b>2.1 and 2.2 both say Install</b>, even just after a successful install. That's today's rule on the Claude tab (<code>.unknown</code> and <code>.matching</code> map to Install) and D8 keeps it: we never say "Installed", because we can't see ChatGPT. The "it worked" signals are the shipped ones, and they arrive with the first question: the sidebar antenna radiates, the register's Last asked turns to <i>Just now</i>, and the row's subtitle says an agent asked recently (2.2). Benchmarked in section 8.</li>
 <li><b>2.3 depends on the plugin version.</b> The version carries the build number, so ChatGPT caches the new copy under a new folder. Whether ChatGPT then offers "Update" by itself, or needs uninstall-then-install, is P0.5 (section 5).</li>
 <li><b>2.4 and 2.5</b> reuse the Claude tab's Link-instead-of-button pattern, so a dead button never produces the system's "no application" dialog. 2.5 can only be detected as "the app is there but no <code>codex://</code> handler is registered". A ChatGPT that has the handler but ignores <code>marketplacePath</code> isn't detectable (F23), so a minimum version check goes on top.</li>
 <li><b>2.6 is .dmg-only.</b> The button is disabled rather than hidden, so the reason sits next to the thing it blocks. The copy deliberately doesn't say "translocation".</li>
@@ -317,7 +390,7 @@ http_headers = { "Authorization" = "Bearer ••••••••••••"
 <h2>3 · Claude Desktop tab, after <small>D6 · P4 · P5</small></h2>
 <div class="grid">
   <div class="cell"><p class="cap">After · any macOS, 15 to 27</p>
-  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="win" data-reg="typical"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
   <div class="pane">
     <div class="topline"><p class="hl">Agents only see open projects</p><div class="anon"><div>Anonymise<div class="s">Remove participant names</div></div><div class="sw"></div></div></div>
     <div class="segs"><div class="seg on">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
@@ -328,7 +401,7 @@ http_headers = { "Authorization" = "Bearer ••••••••••••"
   </div></div>
 
   <div class="cell"><p class="cap">After · the first launch after the switch-over, for an existing user</p>
-  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="win" data-reg="receipt"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
   <div class="pane">
     <div class="topline"><p class="hl">Agents only see open projects</p><div class="anon"><div>Anonymise<div class="s">Remove participant names</div></div><div class="sw"></div></div></div>
     <div class="segs"><div class="seg on">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
@@ -479,6 +552,7 @@ http_headers = { "Authorization" = "Bearer ••••••••••••"
 <tr><td>Claude Desktop tab</td><td>Install Extension… + Files &amp; Folders note and button on macOS 27; the "Allow" note on 26</td><td>Install / Reinstall / Update Extension… only</td><td>Everyone on 27 (a shorter, calmer pane)</td></tr>
 <tr><td>Existing Claude users</td><td>Node <code>.mcpb</code>; works on 26 with the grant, and on 27 once Files &amp; Folders is on</td><td>Their old extension keeps working where it already works, until they click Update/Install. The pane says so on 26; on 27 it just says Install</td><td>All of them: one reinstall each</td></tr>
 <tr><td>ChatGPT &amp; Codex tab</td><td>TOML + Copy Config + Work note</td><td>Install Plugin… row + Work note; the TOML route folds under "Or connect by hand"</td><td>Every ChatGPT user; anyone on a pasted config still needs to re-copy after restarts until they switch</td></tr>
+<tr><td>Register, antenna, Agent Access verbs, Anonymise</td><td>As shipped</td><td>Identical (section 0)</td><td>Nobody, by design</td></tr>
 <tr><td>Files &amp; Folders copy</td><td>On the pane (27), in the proxy, in the help page</td><td>Help page and the Node proxy only</td><td>Nobody new</td></tr>
 <tr><td>Node dependency</td><td>ChatGPT plugin impossible without Node</td><td>None</td><td>ChatGPT users without Node: most of them</td></tr>
 <tr><td>Rollback</td><td>—</td><td>Revert one commit, ship a patch; installed helpers keep answering, because the handshake format doesn't change</td><td>Maintainer</td></tr>
@@ -511,7 +585,7 @@ http_headers = { "Authorization" = "Bearer ••••••••••••"
 <h3 style="margin:26px 0 4px;font-size:15px">Closing the narrow gap: connected, and which host</h3>
 <div class="grid">
   <div class="cell"><p class="cap">Proposal · after the host has reached Bristlenose</p>
-  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="win" data-reg="just"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
   <div class="pane">
     <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
     <p class="callout">Adds Bristlenose to ChatGPT as a plugin. ChatGPT will open and ask you to install it.</p>
@@ -522,8 +596,8 @@ http_headers = { "Authorization" = "Bearer ••••••••••••"
   <div class="cell"><p class="cap">Already shipped · the sidebar antenna, per project</p>
   <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">Bristlenose</div></div>
   <div class="pane" style="padding:10px 0;background:var(--chrome)">
-    <div style="display:flex;align-items:center;gap:8px;padding:6px 16px;font-size:13px"><span style="flex:1"><b style="font-weight:600">Onboarding study</b><div style="color:var(--dim);font-size:11px">14 sessions</div></span><span style="color:var(--accent)">((·))</span></div>
-    <div style="display:flex;align-items:center;gap:8px;padding:6px 16px;font-size:13px;background:rgba(0,122,255,.10)"><span style="flex:1"><b style="font-weight:600">Checkout interviews</b><div style="color:var(--dim);font-size:11px">9 sessions</div></span><span style="color:var(--ink)">(·)</span></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 16px;font-size:13px"><span style="flex:1"><b style="font-weight:600">Onboarding study</b><div style="color:var(--dim);font-size:11px">14 sessions</div></span><span style="color:var(--accent)" data-ant="f1"></span></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 16px;font-size:13px;background:rgba(0,122,255,.10)"><span style="flex:1"><b style="font-weight:600">Checkout interviews</b><div style="color:var(--dim);font-size:11px">9 sessions</div></span><span data-ant=""></span></div>
     <div style="display:flex;align-items:center;gap:8px;padding:6px 16px;font-size:13px"><span style="flex:1"><b style="font-weight:600">Pilot</b><div style="color:var(--dim);font-size:11px">3 sessions</div></span></div>
   </div></div></div>
 </div>
@@ -539,5 +613,32 @@ http_headers = { "Authorization" = "Bearer ••••••••••••"
 </div>
 
 </div>
+
+<script>
+const ANT=f=>`<svg class="ant ${f||''}" viewBox="0 0 20 16"><circle cx="10" cy="8" r="1.3"/><path class="arc1" d="M6.8 4.8a4.5 4.5 0 000 6.4M13.2 4.8a4.5 4.5 0 010 6.4"/><path class="arc2" d="M4 2a8.5 8.5 0 000 12M16 2a8.5 8.5 0 010 12"/></svg>`;
+const ROW=(tick,icon,name,n,asked,cls,rc)=>`<tr class="${cls||''}"><td class="acc"><span class="tick ${tick?'':'off'}"></span></td><td><span class="pn"><span class="pi">${icon}</span>${name}${rc?`<span class="rc">Access turned off</span>`:''}</span></td><td class="num">${n}</td><td class="asked">${asked}</td></tr>`;
+const HEAD=`<thead><tr><th>Access</th><th>Project</th><th class="r">Sessions</th><th>Last asked</th></tr></thead>`;
+const GRP=t=>`<tr class="grp"><th colspan="4">${t}</th></tr>`;
+const SCOPE=`<p class="scope">Last asked is remembered only while a project is open.</p>`;
+const REG={
+ typical:{roll:'Open to agents: 1 project · 14 sessions',body:GRP('Active')+ROW(1,'▤','Onboarding study',14,'12 min. ago','last')+GRP('Available when opened')+ROW(1,'▥','Beds &amp; duvets',3,'Never','last')},
+ never:{roll:'Open to agents: 1 project · 14 sessions',body:GRP('Active')+ROW(1,'▤','Onboarding study',14,'Never','last')+GRP('Available when opened')+ROW(1,'▥','Beds &amp; duvets',3,'Never','last')},
+ just:{roll:'Open to agents: 1 project · 14 sessions',body:GRP('Active')+ROW(1,'▤','Onboarding study',14,'Just now','last')+GRP('Available when opened')+ROW(1,'▥','Beds &amp; duvets',3,'Never','last')},
+ closed:{roll:'',body:GRP('Available when opened')+ROW(1,'▥','Beds &amp; duvets',3,'Never')+ROW(1,'▤','Onboarding study',14,'Never','last')},
+ receipt:{roll:'Open to agents: 1 project · 14 sessions',body:GRP('Active')+ROW(1,'▤','Onboarding study',14,'Just now')+ROW(0,'◧','Checkout interviews',9,'1 hr. ago','last rcpt',1)+GRP('Available when opened')+ROW(1,'▥','Beds &amp; duvets',3,'Never','last')},
+ empty:{empty:true}
+};
+function regHTML(k){const r=REG[k]||REG.typical;
+ if(r.empty) return `<div class="divider"></div><div class="regwrap"><div class="shead"><span class="t">Projects</span></div><div class="empty"><b>No projects are shared with agents</b><span>Select a project, then choose Project ▸ Turn On Agent Access.</span></div></div>`;
+ return `<div class="divider"></div><div class="regwrap"><div class="shead"><span class="t">Projects</span>${r.roll?`<span class="roll">${r.roll}</span>`:''}</div><table class="rtab">${HEAD}<tbody>${r.body}</tbody></table>${SCOPE}</div>`;}
+const TOP=`<div class="topline"><p class="hl">Agents only see open projects</p><div class="anon"><div>Anonymise<div class="s">Remove participant names</div></div><div class="sw"></div></div></div>`;
+document.querySelectorAll('.win[data-reg]').forEach(w=>{
+  const pane=w.querySelector('.pane');
+  if(pane && !pane.querySelector('.topline')) pane.insertAdjacentHTML('afterbegin',TOP);
+  w.querySelectorAll('.reg').forEach(x=>x.remove());
+  w.insertAdjacentHTML('beforeend',regHTML(w.dataset.reg));
+});
+document.querySelectorAll('[data-ant]').forEach(e=>e.innerHTML=ANT(e.dataset.ant));
+</script>
 </body>
 </html>

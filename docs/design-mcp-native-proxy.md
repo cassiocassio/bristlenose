@@ -1,12 +1,17 @@
 ---
-status: spike — measured, nothing shipped
+status: current — built on main (P1–P5), not yet released
 last-trued: 2026-09-29
+trued-against: HEAD@main on 2026-09-29 (after bb50067c)
 ---
 
 # ChatGPT plugin, macOS 27, and the native proxy
 
 _Measured on 29 Sep 2026 on one Mac (macOS 27.0, build 26A428; ChatGPT desktop
-26.924, bundle id `com.openai.codex`, free account). Spike code:
+26.924, bundle id `com.openai.codex`, free account). Production code:
+[`desktop/mcp-helper/`](../desktop/mcp-helper/) (helper and its build script),
+[`desktop/scripts/check-mcp-helper.sh`](../desktop/scripts/check-mcp-helper.sh)
+(the gate), `ChatGPTPluginInstaller.swift` and `NativeExtensionPackage.swift` in
+the app. The spike it came from:
 [`experiments/mcp-native-proxy/`](../experiments/mcp-native-proxy/). Every claim
 is labelled **measured**, **inferred** or **unverified**. The raw session record
 is in the maintainer's private handoff notes, kept outside the public tree._
@@ -15,6 +20,11 @@ Related docs:
 - [`design-mcp-extension.md`](design-mcp-extension.md) — the shipped Claude Desktop `.mcpb`
 - [`design-mcp-server.md`](design-mcp-server.md) — the `/mcp` endpoint
 - [`design-mcp-files-and-folders.md`](design-mcp-files-and-folders.md) — the System Settings route; drafted the same day
+
+> **Truing note (29 Sep 2026, evening).** Sections 1–6.8 are the day's
+> measurements, kept as the record. Where one was later overtaken by what was
+> built, it says so in place. The current state is TL;DR item 7, §6.9 (the
+> plan and each phase's status), §6.10 (break tests) and §6.11 (review notes).
 
 ## TL;DR
 
@@ -31,7 +41,8 @@ Related docs:
 4. **A team-signed binary launched as its own responsible process reads the
    container with no grant at all.** The read never reaches TCC. *Measured.*
 5. **So a 128 KB native proxy, signed by our team, that relaunches itself
-   disclaimed removes both problems:** no Node, and no Files & Folders step.
+   disclaimed removes both problems** (the first route found; §6.1 rejects it
+   for the App Store, and item 6 is the one built): no Node, and no Files & Folders step.
    Proven end to end in ChatGPT with a real study question, and in a fresh
    Claude Desktop with its Files & Folders switch off. *Measured.* Claude
    already launches binary servers disclaimed (§4.4).
@@ -44,8 +55,16 @@ Related docs:
    (`altool --validate-app`) accepts** the shipped app repackaged with that
    sandboxed helper and the group (§6.5), and that build answers real questions
    inside ChatGPT (§6.2). **A real upload (build 3907) processed as VALID,
-   App Store eligible** (§6.7). Human App Review remains. The native port still lacks several of the Node proxy's
-   states (§4.3).
+   App Store eligible** (§6.7). Human App Review remains. The native port
+   carries all of the Node proxy's states (§4.3, pinned by `tests/test_mcp_helper.py`).
+7. **Built on main, 29 Sep 2026 (not yet released).** D1–D9 decided (§6.9). The
+   app writes the handshake into the team group (P1); a sandboxed helper,
+   `bristlenose-mcp`, is built into every signed build (P2); the ChatGPT tab
+   installs it as a plugin in one click and the Claude tab installs it as a
+   runtime `.mcpb`, with no Files & Folders step (P3–P5). ChatGPT end to end is
+   proven on this Mac, and a 34-case break harness plus seven live ChatGPT
+   attacks found and fixed two defects (§6.10). Still to run: Claude through the
+   native package, a TestFlight build, the 15/26 guests, and App Review (§6.8).
 
 ## 1. The ChatGPT plugin channel
 
@@ -265,6 +284,12 @@ So:
 
 ### 4.1 Design
 
+> **Superseded as the shipping design, 29 Sep 2026** — the disclaimed spike
+> below is rejected for the App Store (§6.1). What ships is the sandboxed,
+> app-group helper in `desktop/mcp-helper/` (§6.2, §6.9); it keeps step 2's
+> contract and step 3's host label, and drops step 1 (no `posix_spawn`, no
+> `responsibility_*`, gated by `check-mcp-helper.sh`).
+
 `experiments/mcp-native-proxy/main.swift`, 128 KB, signed Developer ID +
 hardened runtime, identifier `app.bristlenose.mcp-proxy`:
 
@@ -371,6 +396,9 @@ process (§2), so their reads are Claude's, and are denied on a new install.
 
 ## 5. How the pieces fit
 
+The middle column is the rejected spike (§6.1), kept for comparison; the right
+column is what is built.
+
 | Problem | Node proxy today | Native, disclaimed (§4) | Native, sandboxed + app group (§6) |
 |---|---|---|---|
 | ChatGPT one-click install | works (`marketplacePath` link) | works | works (same link) |
@@ -408,7 +436,9 @@ Two independent reasons, either sufficient:
    *sandboxed* disclaimed helper gains nothing, because the sandbox denies
    another bundle's data container first.
 
-**Developer ID only: ship with risk.** If kept as a contingency there:
+**Developer ID only: ship with risk.** *Not taken:* the `.dmg` ships the same
+sandboxed app-group helper as the store (D1, §6.9), so the contingency below
+was never built. If kept as a contingency there:
 - resolve the symbol with `dlsym`, with a fallback;
 - take the re-exec path from `_NSGetExecutablePath`, not `argv[0]` (`argv[0]`
   turns the binary into a disclaim trampoline for anything);
@@ -501,6 +531,12 @@ only, no SPI, no Node) is proven end to end in a real host.
 | 7 | Bonjour, a fixed port, or the keychain | none of these moves the token; the keychain needs a profile the bare proxy can't carry | — |
 
 ### 6.4 Recommended: one mechanism on both channels
+
+> **Built, 29 Sep 2026.** This is the shape that landed (§6.9 P1–P5). The draft
+> host half is applied (`MCPHandshake.writeBoth`, D4); the proxy is
+> `desktop/mcp-helper/`; the Claude package is built at click time by
+> `NativeExtensionPackage.swift`. Bullets below are the recommendation as
+> written; where the build differs, §6.9 says so.
 
 - **Host:** add `Z56GZVA2QB.app.bristlenose` to the application groups in
   **both** entitlements files, and write the handshake there while Agent Access
@@ -599,9 +635,9 @@ server.
 To a host, a helper that hangs at launch is a server that never answers. The
 Developer-ID `.dmg` and the Mac App Store build (re-signed by Apple) have
 different signers, so a person who has run both would hit it. **Give the
-helper a different bundle identifier per channel** (for example
-`app.bristlenose.mcp-proxy` on the App Store and
-`app.bristlenose.mcp-proxy.devid` on the `.dmg`). The group container is
+helper a different bundle identifier per channel.** (The names chosen are
+`app.bristlenose.mcp`, `app.bristlenose.mcp.devid` and, for Debug,
+`app.bristlenose.mcp.dev`; see D1 and P0.2b below.) The group container is
 unaffected: in the same log, `containermanagerd` approved it (*"Requestor's
 signature allows it to access a TCC-protected group container"*).
 
@@ -677,7 +713,8 @@ What that means for the plan:
   the first store release on a tester's Mac.
 - **The maintainer's Mac:** a locally exported App Store build is `enterprise`, while TestFlight is
   `testflight`. Never run a locally exported store build's helper on a Mac that runs the TestFlight
-  one. Debug builds carry no helper (D2), so everyday work is unaffected.
+  one. Debug builds carry the helper under its own id, `app.bristlenose.mcp.dev` (D2 as amended),
+  so everyday work never claims the store id.
 
 **P0.1, measured 29 Sep 2026 on clean SIP-on guests** (Cirrus `-vanilla` images: macOS 15.7.7 24G720
 and 26.6.2 25G83), plus this Mac on 27:
@@ -717,10 +754,13 @@ read).** A probe `.mcpb` (`local.mcpb.bristlenose.bn-open-probe`) opened by a sa
   …/Containers/app.bristlenose.openprobe-7e1a/Data/tmp/bn-open-probe.mcpb"* and then *"Successfully
   installed … v0.0.2"* straight over v0.0.1, with no uninstall in between.
 
-So Claude is outcome A. **Update Extension…** works in one click, as long as the manifest version
-rises with every build, which D8's build-number-in-the-version already guarantees. Only
-**Reinstall Extension…** at an unchanged version would land on the Uninstall-only preview; the ladder
-offers Reinstall only for `.differentBuild`/`.newerRelease`, where the versions differ.
+So Claude is outcome A. **Update Extension…** works in one click when the manifest version
+rises. *As built, the Claude manifest carries the plain release version, not the build number*
+(`NativeExtensionPackage.manifest`: a `-<build>` suffix is a semver pre-release and would sort
+below the Node extension it replaces). So a different **build** of the same release lands on the
+Uninstall-only preview; the Claude tab's foot line tells the researcher to uninstall in Claude
+first, then Install Extension… (`claudeReinstallHow`, `bb50067c`). Only ChatGPT's plugin version
+carries the build (D8).
 
 **P0.4, partly measured the same evening.** A sandboxed probe (Developer ID, fresh id) wrote a
 dummy `.mcpb` into its own container's `tmp` and opened it with Claude via
@@ -735,6 +775,14 @@ original P0.4 list already covers. And "Claude can't read our container" is **no
 feared to be: this path goes through LaunchServices, not a cross-team path read.
 
 ### 6.8 Still open
+
+> **Rebuilt 29 Sep 2026 (evening) from §6.9 and §6.10.** Still to run: Claude
+> through the native package (live install); a TestFlight build of the
+> helper-carrying app; Claude and ChatGPT on the 15 and 26 guests; a translocated
+> `.dmg` app (D7's refusal); the TestFlight→App Store move for one tester (§6.7);
+> the Files & Folders-off run for the Node fallback; the screen recording and
+> external TestFlight for App Review (§6.11). A runtime-built `.mcpb` is built
+> (P4). The list below is the morning's, kept as written.
 
 - **Human App Review** of the agent-access feature: a submission, with review
   notes for §2.5.2 / §2.4.5(ii).
@@ -756,9 +804,9 @@ feared to be: this path goes through LaunchServices, not a cross-team path read.
 
 v1 (commit 67b5e843) went through a six-agent plan review plus a parsimony pass;
 41 findings and their adjudication are in the maintainer's private review log,
-kept outside the public tree. v2 folds in the adjudication. **The decisions
-below are proposals for the maintainer to judge on engineering and UX grounds**
-(mockups of their UX consequences follow separately).
+kept outside the public tree. v2 folds in the adjudication. The decisions below were proposals when written
+and were all taken the same day (see *Decisions (taken 29 Sep 2026)*). Their UX
+consequences are drawn in `docs/mockups/mcp-native-proxy-decisions.html`.
 
 **Goal (decided):** Claude Desktop and ChatGPT read Bristlenose on macOS 27 with
 no Node and no Files & Folders step, on the Mac App Store and the Developer-ID
@@ -784,14 +832,14 @@ All nine were taken as proposed below, with these notes from the maintainer:
 
 | # | Decision | Chosen | Rejected, and why |
 |---|---|---|---|
-| D1 | Helper identifier | **Fresh ids, one per signer class** (how many classes: measured in P0.2). The spike's `app.bristlenose.mcp-proxy` is never shipped: its container on the maintainer's Mac records a spike signer (§6.6). | A different id per *copy*: identical bytes share a container safely. A symlink for the marketplace copy: ChatGPT copies the plugin into its cache, where a link breaks. A `.dev` id for ad-hoc builds: unneeded, see D2. |
-| D2 | How the helper is built | **Compiled and signed inside the Copy phase**, on every build, from the identity the host is being signed with (`EXPANDED_CODE_SIGN_IDENTITY`). Not copied into Debug builds at all; the native path is Release-only. | A pre-built script product plus freshness stamp (the ffmpeg pattern): it can go stale and ship an ad-hoc helper in a Release archive. An Xcode command-line target: `build-dmg.sh`'s command-line `CODE_SIGN_ENTITLEMENTS` override would apply to it too and give it the host's entitlements. |
-| D3 | Gates | **One post-export gate, both copies, both lanes**: sandboxed, no `inherit`, the team group equal to the host's, Info.plist id equal to the signing id, the channel's id, team = `TEAM_ID`, the two copies byte-identical, no `responsibility_*` and no `--seed` string. `nm` and `strings` output written to a file before `grep`. | Five separate gate proposals. |
+| D1 | Helper identifier | **Fresh ids, one per signer class** (how many classes: measured in P0.2). The spike's `app.bristlenose.mcp-proxy` is never shipped: its container on the maintainer's Mac records a spike signer (§6.6). | A different id per *copy*: identical bytes share a container safely. A symlink for the marketplace copy: ChatGPT copies the plugin into its cache, where a link breaks. A `.dev` id: rejected here, then **added** when D2 was amended (Apple Development is its own signer category, so Debug builds need their own id). Ad-hoc builds still carry no helper. |
+| D2 | How the helper is built | **Compiled and signed inside the Copy phase** from the identity the host is being signed with (`EXPANDED_CODE_SIGN_IDENTITY_NAME`; skipped when that is empty or `-`), and skipped when its stamp matches. *As built:* Debug builds carry it too, as `.dev` (see the amended D2 above); the `.dmg` lane pins `BRISTLENOSE_HELPER_CHANNEL=devid` at archive, because it archives with development signing and re-signs at export. | A pre-built script product plus freshness stamp (the ffmpeg pattern): it can go stale and ship an ad-hoc helper in a Release archive. An Xcode command-line target: `build-dmg.sh`'s command-line `CODE_SIGN_ENTITLEMENTS` override would apply to it too and give it the host's entitlements. |
+| D3 | Gates | **One post-export gate, both copies, both lanes**: sandboxed, no `inherit`, the team group equal to the host's, Info.plist id equal to the signing id, the channel's id, team = `TEAM_ID`, the two copies byte-identical, no `responsibility_*` and no `--seed` string. *As built* (`check-mcp-helper.sh`): copies are compared by **CDHash**, not bytes, because export re-signs each nested copy; the gate also checks `minos` equals the app's floor and refuses the test-build path `BN_TEST_HANDSHAKE_PATH`. `nm` and `strings` output written to a file before `grep`. | Five separate gate proposals. |
 | D4 | Group write failure | **Fail closed:** if the group write fails, delete the group copy; a read-back test pins it. Otherwise turning Agent Access off could leave a project readable through a stale group copy. | Log-and-continue (the draft's behaviour). |
 | D5 | Proxy diagnostics | **None added.** Build defects are caught by D3; the proxy's messages stay as ported. | A launch breadcrumb (needs the helper to write the group, and watches the client); a group marker file; an HMAC probe challenge (same exposure as the Node proxy today; the real fix is option 2, Mach IPC). Tokens are re-minted at launch when a leftover handshake is found. |
-| D6 | Rollout | **No feature flag.** The switch-over (Claude tab native, ChatGPT tab Install Plugin…, Files & Folders copy recovery-only) lands as one commit, after P6 passes on a checkpoint build. | A `UserDefaults` flag or `enum FeatureFlags` plus a Diagnostics toggle: before P6 the only audience is one internal tester and local builds. |
+| D6 | Rollout | **No feature flag.** The switch-over (Claude tab native, ChatGPT tab Install Plugin…, Files & Folders copy recovery-only) lands as one commit, after P6 passes on a checkpoint build. *As built:* it landed in two commits (ChatGPT with P3, Claude with P4) before P6 finished; a build without the helper keeps the old layout on both tabs. | A `UserDefaults` flag or `enum FeatureFlags` plus a Diagnostics toggle: before P6 the only audience is one internal tester and local builds. |
 | D7 | ChatGPT marketplace location | **Inside the app bundle**, because a copy in our container is a cross-team read macOS 27 denies. A translocated app (a `.dmg` app run in place) is refused with "move Bristlenose to Applications". Written down so nobody "fixes" it. | The container (denied); a download (not reviewed code). |
-| D8 | Install state and versions | **Per host.** The plugin version carries the build number (ChatGPT caches by version). Each tab has Install / Reinstall / Update, never "Installed". An old ChatGPT without `codex://` support gets "Update ChatGPT", not "Download". | One shared state (a stale ChatGPT plugin would flip the Claude button). |
+| D8 | Install state and versions | **Per host.** The ChatGPT plugin version carries the build number (ChatGPT caches by version); Claude's manifest carries the plain release (§6.7). Each tab has Install / Reinstall / Update, never "Installed". An old ChatGPT without `codex://` support gets "Update ChatGPT", not "Download". | One shared state (a stale ChatGPT plugin would flip the Claude button). |
 | D9 | App Review | Notes answer the literal words of §2.5.2 and §2.4.5(ii)/(iii)/(iv); screen recording; **external TestFlight before the store**, so a human reviewer sees it first. | — |
 
 ### Preserved as shipped (a constraint on every phase)
@@ -825,8 +873,21 @@ register in every Settings frame for this reason.
 - **P3 — ChatGPT** (**landed and proven end to end 29 Sep**, §6.10): marketplace per D7, Install Plugin… per D8, link query encoded strictly (unit-tested with `& + # %` and spaces).
 - **P4 — Claude** (**landed 29 Sep**: `NativeExtensionPackage` zips the helper at click time; the live install through Claude is still to be run): runtime `.mcpb` per P0.4; `MCPExtensionInstaller`'s bundled-file assumptions (`claudeDesktopCanInstall`, the disabled state, `bundledStamp`) repointed at the runtime artefact with a stamp beside it.
 - **P5 — switch-over** (**landed 29 Sep**, in two commits rather than one: ChatGPT with P3, Claude with P4. A build without the helper keeps the old layout on both tabs, so no release carries a half-state), confined to the pane's top half (see *Preserved as shipped*).
-- **P6 — verify** (**29 Sep, done so far:** Swift 1567 passed on the P4 build; the break harness, §6.10; ChatGPT end to end on this Mac; a **Developer-ID archive and export** built as `build-dmg.sh` does, minus notarisation: both helper copies came out signed Developer ID as `app.bristlenose.mcp.devid` with sandbox, network client and the team group intact, identical CDHash, the host carrying exactly the team group, and the app passing `codesign --deep --strict`. **Still to run:** Claude through the native package; a TestFlight build; Claude and ChatGPT on the 15 and 26 guests; a translocated `.dmg`; TestFlight→App Store), each item with its layer named: Swift tests (handshake read-back, installer manifest, zip, link encoding); script gates (D3, and `test-check-pkg-shippable.sh` cases); by hand once: a TestFlight build, Claude and ChatGPT on 15 / 26 / 27, a translocated `.dmg` app, TestFlight→App Store update.
+- **P6 — verify** (**29 Sep, done so far:** Swift 1567 passed on the P4 build; the break harness, §6.10; ChatGPT end to end on this Mac; a **Developer-ID archive and export** built as `build-dmg.sh` does, minus notarisation: both helper copies came out signed Developer ID as `app.bristlenose.mcp.devid` with sandbox, network client and the team group intact, identical CDHash, the host carrying exactly the team group, and the app passing `codesign --deep --strict`. **Still to run:** Claude through the native package; a TestFlight build; Claude and ChatGPT on the 15 and 26 guests; a translocated `.dmg`; TestFlight→App Store), each item with its layer named: Swift tests (handshake read-back, installer manifest, zip, link encoding); script gates (D3, and `test-check-pkg-shippable.sh` cases — that suite has no helper case yet); by hand once: a TestFlight build, Claude and ChatGPT on 15 / 26 / 27, a translocated `.dmg` app, TestFlight→App Store update.
 - **P7 — review notes** per D9 (**drafted 29 Sep**, §6.11; the screen recording and external TestFlight remain).
+
+### Wire contract (D8, as built)
+
+- The helper sends `X-Bristlenose-Proxy-Version` as the Node proxy does, plus
+  `X-Bristlenose-Proxy-Host` from `BRISTLENOSE_MCP_HOST` (`Claude` in the
+  `.mcpb` manifest, `ChatGPT` in the plugin's `.mcp.json`).
+- serve records it per host (`ProxyIdentityRecorder._record_for_host`,
+  `app.state.mcp_proxy_versions`; host label `^[A-Za-z0-9._-]{1,32}$`, at most 8
+  hosts) and returns the map as `proxy_versions` from `/api/agent-activity`.
+- The legacy single `proxy_version` slot stays the Node extension's, so an
+  older app build reads what it always read.
+- Swift reads it as `ServeManager.agentProxyVersions`; each tab compares its own
+  host's entry (`MCPAgentsSettingsView.chatGPTState`, `extensionState`).
 
 **Out of scope for v1:** Mach IPC instead of a handshake file (option 2 — also the real answer to the token-probe exposure); Gemini; the duplicate-row exposure bug.
 

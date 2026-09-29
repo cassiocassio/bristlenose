@@ -628,7 +628,9 @@ read-only `/mcp/` endpoint. Native surface since the extension shipped
   and renders raw keys (bit once, caught in review).
 - **The Claude Desktop tab pre-announces the one-time macOS prompt**
   (`mcpAgents.claudeDesktopPromptNote`, under the install row, 3 Aug
-  2026). Two things about it are load-bearing rather than stylistic.
+  2026). *Scope since 29 Sep 2026:* macOS ≤ 26 and the Node `.mcpb` only —
+  on 27 the Node path shows the Files & Folders note instead, and a build
+  carrying the native helper shows neither. Two things about it are load-bearing rather than stylistic.
   **(1) It sits BELOW the row** because the proxy reads the handshake
   only inside tool calls — so `"Claude" would like to access data from
   other apps` fires on the first *question*, not on install; a note

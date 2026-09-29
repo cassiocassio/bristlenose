@@ -1,7 +1,20 @@
 ---
-status: draft
+status: shipped — the fallback and recovery path (Node .mcpb); the native helper is primary where built
 last-trued: 2026-09-29
+trued-against: HEAD@main on 2026-09-29 (after bb50067c)
 ---
+
+> **Trued 29 Sep 2026 (evening).** Everything this doc proposed for the Node
+> path shipped (`d086f08d`, `4945dce2`). The native helper it anticipates is now
+> built on main, unreleased ([`design-mcp-native-proxy.md`](design-mcp-native-proxy.md)
+> §6.9): on a build that carries it, the Claude tab hides the Files & Folders
+> note and button, and the ChatGPT tab installs a plugin. So this doc's role is
+> now the **fallback** (a build without the helper; the Node `.mcpb` already
+> installed on people's Macs) and the **recovery** sentence. Three things below
+> were overtaken, each marked in place: the ChatGPT Work note gained
+> @Bristlenose; the §8 native-proxy strings shipped under different keys and
+> wording; and "native-proxy state unbuilt" is no longer true. The banners
+> below, written as the day went, are kept as the record.
 
 # Agent access on macOS 27 — the Files & Folders step
 
@@ -9,8 +22,9 @@ _Drafted 29 Sep 2026 for review. **Update, same day: the Claude/Node half
 (§3, the Claude tab of §4, two of the three §8 keys) is built and on `main`
 as `d086f08d`**, applied from the tested patch, and the ChatGPT Work-mode
 line (patch `0002`) as `4945dce2`, once measured on the config-file route.
-Everything in §4(c)'s native-proxy state is still unbuilt. No code, locale or
-manifest file has changed. This doc holds the measured facts, the proposed
+Everything in §4(c)'s native-proxy state was still unbuilt at the time of
+writing (built that evening, see the banner above). At the time, no code,
+locale or manifest file had changed. This doc holds the measured facts, the proposed
 copy for every surface (proxy, Settings pane, help page), and the per-locale
 strings ready to paste once the English is settled. Mockup:
 [`mockups/mcp-files-and-folders.html`](mockups/mcp-files-and-folders.html).
@@ -328,6 +342,10 @@ versus Work, and there was no reason the config route would differ.) Built as
 
 > In ChatGPT, ask in Work mode — Bristlenose’s tools aren’t available in Chat.
 
+*Reworded the same evening, in all 21 locales:* "In ChatGPT, ask in Work mode
+and start with @Bristlenose — otherwise its tools aren’t used." ChatGPT uses a
+plugin only when the question mentions it (native-proxy §6.10).
+
 **(b) The plugin era.** The tab takes the Claude Desktop tab's shape: hint,
 install row, Files & Folders step naming ChatGPT, plus the Work line. The
 install gesture itself is **not designed here**. The spike has since measured
@@ -529,8 +547,10 @@ history.
    decision this opens: a `type: binary` `.mcpb` makes the step unnecessary on
    the Claude channel, because Claude disclaims binary servers. If that ships,
    the Claude tab's note falls to the recovery-path role (§4).
-3. **ChatGPT plugin: ship or not.** Draft (a) is safe to ship on its own.
-   Draft (b) waits for the install gesture and the Node question.
+3. ~~**ChatGPT plugin: ship or not.**~~ **Built 29 Sep 2026 (evening)** as
+   draft (b) on the native helper, which also answers the Node question
+   (native-proxy §6.9 P3). Draft (a) shipped first and stays as the "Or
+   connect by hand" disclosure.
 4. **Website deploy.** The help-page draft replaces a paragraph that is
    already false for every new macOS 27 user.
 
@@ -642,7 +662,7 @@ someone reads ChatGPT's localised labels (§1, unmeasured #4).
 
 | | |
 |---|---|
-| en | In ChatGPT, ask in Work mode — Bristlenose’s tools aren’t available in Chat. |
+| en | In ChatGPT, ask in Work mode — Bristlenose’s tools aren’t available in Chat. *(superseded: shipped wording now adds "start with @Bristlenose"; read the locale files, not this table)* |
 | es | En ChatGPT, pregunta en el modo Work: las herramientas de Bristlenose no están disponibles en Chat. |
 | ca | A ChatGPT, pregunta en el mode Work: les eines del Bristlenose no estan disponibles a Chat. |
 | ja | ChatGPTでは「Work」モードで質問してください。Bristlenoseのツールは「Chat」では使えません。 |
@@ -669,6 +689,13 @@ counterpart is drafted for 26: whether ChatGPT gets the 26-era dialog is
 untested, so there's nothing to quote yet.
 
 ### Native-proxy state: the ChatGPT tab's three strings (drafted, not built)
+
+> **Shipped 29 Sep 2026 under different keys and wording — the locale files
+> are the source of truth, not this table.** The hint is
+> `desktop.mcpAgents.chatgptHint` (en: "…ChatGPT will open and ask you to
+> install it."), beside `installPlugin`, `reinstallPlugin`, `updatePlugin`,
+> `downloadChatGPT`, `updateChatGPT`, `moveToApplications`, `connectByHand` and
+> `chatgptReinstallHow`. The table is kept as the reviewed starting point.
 
 For §4(c)'s "when the native proxy ships" row; the button label is **Install
 Plugin…** (maintainer's choice, 29 Sep 2026). Each locale is built from its

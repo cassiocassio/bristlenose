@@ -1,8 +1,8 @@
 ---
-status: shipped
-last-trued: 2026-09-04
-previous-trued: 2026-08-21
-trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
+status: shipped (Node .mcpb); native helper built on main, unreleased
+last-trued: 2026-09-29
+previous-trued: 2026-09-04
+trued-against: HEAD@main on 2026-09-29 (after bb50067c)
 ---
 
 # The Bristlenose extension — connecting Claude Desktop without a config file
@@ -42,6 +42,10 @@ over a real study through the installed extension.
 | Settings agent-access project list | **Uncut and shipped 21 Aug 2026** — cut 1 Aug (`76d9e92a`), rebuilt as the projects register | §5a-bis, `AgentProjectRegister.swift`, `2741a61c` / `5f5c8eda` / `028d539b` |
 | `bristlenose mcp-proxy` CLI subcommand | **Not shipped** | §7 Q3 |
 | Directory submission | Not done — local install only | §7 Q4, as recommended |
+| Native helper `bristlenose-mcp` (sandboxed, team app group) | **Built on main 29 Sep 2026, unreleased** — the Claude tab installs it as a `type: binary` `.mcpb` when the build carries it; the Node `.mcpb` stays the fallback | `desktop/mcp-helper/`, `NativeExtensionPackage.swift`, native-proxy §6.9 |
+| ChatGPT plugin (Install Plugin…) | **Built on main 29 Sep 2026, unreleased**; proven end to end | `ChatGPTPluginInstaller.swift`, native-proxy §6.10 |
+| Handshake in the team app group | **Built on main 29 Sep 2026** — written beside the container copy, fail-closed | `MCPHandshake.writeBoth`, §3.1 |
+| Per-host proxy versions (D8) | **Built on main 29 Sep 2026** — `proxy_versions` on `/api/agent-activity` | native-proxy §6.9 *Wire contract* |
 
 **Still owed** (TODO.md, before the next TestFlight): the `.mcpb` has no
 512×512 `icon.png`, so Claude Desktop shows a generic tile.
@@ -73,6 +77,11 @@ did not account for.
 
 ## Changelog
 
+- _29 Sep 2026 (evening)_ — **trued after the native helper was built.** Status
+  table gains four rows; the macOS 27 work list marks items 3–13 done or
+  changed; §3.4, §3.5, §3.7, §4 and §5c carry a line each pointing at the built
+  path. Design and measurements live in
+  [`design-mcp-native-proxy.md`](design-mcp-native-proxy.md) §6.9–§6.11.
 - _29 Sep 2026 (later)_ — **one status section and work list for macOS 27
   and the native proxy**, just above §1. It gathers the measurements (the
   silent block and the switch for Claude and ChatGPT; Claude's disclaimer for
@@ -182,6 +191,12 @@ docs; this section is the state and the work left, in order.
 
 ### Shipped to `main`, not yet released
 
+> **Evening, 29 Sep 2026:** the native path landed on `main` too (native-proxy
+> §6.9 P1–P5): the group handshake, the helper and its gate, **Install
+> Plugin…** on the ChatGPT tab, and the runtime `type: binary` `.mcpb` on the
+> Claude tab. On a build carrying the helper, the Claude tab hides the Files &
+> Folders note and button below, which remain for the Node fallback.
+
 - `d086f08d`: the proxy's macOS 27 sentence names the Files & Folders switch
   and the host the package declares (`BRISTLENOSE_MCP_HOST`, fallback "your
   AI app"). It also adds the Claude tab's note and **Open Files & Folders**
@@ -208,20 +223,26 @@ docs; this section is the state and the work left, in order.
    the helper is the spike build and keeps `--seed` to seed the group by hand,
    but only on a clean Mac or user account.
 
-**C. Build the native proxy.** This is the recommendation, not yet a decision.
-5. **Decide:** adopt native-proxy §6.4, the sandboxed app-group binary on both
+**C. Build the native proxy.** Decided and built 29 Sep 2026; per-item status
+below, full record in native-proxy §6.9.
+5. ~~**Decide:**~~ **Decided 29 Sep 2026** (D1–D9). **Decide:** adopt native-proxy §6.4, the sandboxed app-group binary on both
    channels.
-6. **Host half:** apply `docs/drafts/native-proxy-group-handshake/`, which also
+6. **Done 29 Sep 2026 (P1).** `MCPHandshake.writeBoth`, fail-closed; all
+   three entitlements files carry the group. The profile re-export (P0.3) turned
+   out not to gate it (P0.1: "Disallowing" is soft on 15/26/27). **Host half:** apply `docs/drafts/native-proxy-group-handshake/`, which also
    writes the handshake into the group. Keep writing the data-container copy
    for as long as any unsandboxed reader ships, because installed extensions
    never update themselves. Open items in that README: `$(TeamIdentifierPrefix)`
    on a real Release archive; the Developer ID profile must authorise the group
    (re-export); Debug entitlements; the sidecar's cleanup of the group copy.
-7. **Bundle the helper,** sandboxed and carrying the group, with **a different
+7. **Done 29 Sep 2026 (P2)** — `desktop/mcp-helper/`, ids `app.bristlenose.mcp`,
+   `.mcp.devid`, `.mcp.dev`, gated by `check-mcp-helper.sh`. **Bundle the helper,** sandboxed and carrying the group, with **a different
    bundle identifier per channel** (the §6.6 trap).
-8. **Claude channel:** a `type: binary` `.mcpb` assembled at runtime from the
+8. **Built 29 Sep 2026 (P4)**; the live install through Claude is still to run.
+   **Claude channel:** a `type: binary` `.mcpb` assembled at runtime from the
    Apple-re-signed helper. Unverified.
-9. **ChatGPT channel:** the marketplace bundled in the app, and
+9. **Done and proven end to end 29 Sep 2026 (P3, native-proxy §6.10).**
+   **ChatGPT channel:** the marketplace bundled in the app, and
    `codex://plugins/bristlenose?marketplacePath=…`. The tab gets **Install
    Plugin…** (chosen), and its 3 strings × 21 are drafted in
    files-and-folders §8. Check the da, sv, nb and tr words against ChatGPT's
@@ -233,13 +254,16 @@ docs; this section is the state and the work left, in order.
     `list_changed` and every failure state tried. The sandboxed build's
     permission sentence (item 11) is already in place there. It still needs
     moving from `experiments/` into the product when item 7 bundles it.
-11. **Then the copy follows:** the pane stops pre-announcing Files & Folders.
+    **Moved** into `desktop/mcp-helper/main.swift` with item 7.
+11. **Pane copy done (P5):** a native build hides the Files & Folders note on
+    the Claude tab, and the ChatGPT Work note names @Bristlenose. The help
+    draft's Part 2 is not yet deployed. **Then the copy follows:** the pane stops pre-announcing Files & Folders.
     The proxy's `permission` sentence stays as a recovery path, for unsandboxed
     readers only; the sandboxed build says "install the extension again, or
     check for an update". Deploy the help draft's Part 2.
-12. **End-to-end on a real TestFlight build:** Claude and ChatGPT each read a
+12. **Still to run** (native-proxy §6.8). **End-to-end on a real TestFlight build:** Claude and ChatGPT each read a
     study with Files & Folders off, on a clean account.
-13. **App Review notes** for §2.5.2 / §2.4.5(ii) ("installs code into other
+13. **Drafted** (native-proxy §6.11). **App Review notes** for §2.5.2 / §2.4.5(ii) ("installs code into other
     apps") before external TestFlight or store submission.
 
 **D. Related, found the same day**
@@ -937,7 +961,10 @@ Two fixes, both cheap:
 > 0 is the one this list predates: **turn Agent Access on** for the project,
 > from its right-click menu. Steps 2 and 3 are accurate as written, with one
 > addition — the `.mcpb` is copied into BN's own container first and opened
-> from *there*, never from the app bundle.
+> from *there*, never from the app bundle. *Since 29 Sep 2026, on a build that
+> carries the native helper,* that `.mcpb` is assembled at click time from the
+> signed `Contents/Helpers/bristlenose-mcp` (`NativeExtensionPackage.swift`)
+> rather than copied from the bundled Node package.
 
 1. In Bristlenose: **Connect Agent…** → Claude Desktop.
 2. Click **Install Extension…** (ellipsis: the action completes in *another*
@@ -1014,6 +1041,12 @@ its own form — so many researchers never edit the file at all. There is no
 plus the TOML is the ceiling; one-click install is a Claude Desktop-only
 affordance.
 
+> **Built, evening of 29 Sep 2026:** the ChatGPT tab's **Install Plugin…**
+> opens `codex://plugins/bristlenose?marketplacePath=<the bundled
+> marketplace.json>` and installs the native helper, not the Node proxy, so the
+> Node and Files & Folders facts below no longer apply to that path. Proven end
+> to end in native-proxy §6.10.
+>
 > **Corrected 29 Sep 2026 — measured, and the parenthesis above is wrong.**
 > The public-HTTPS requirement applies to OpenAI's *public directory*, not to
 > local plugin marketplaces. A local marketplace (`codex plugin marketplace
@@ -1337,7 +1370,9 @@ the constraint was found.
 > three tabs it does nothing for were selected), and the pane is **660pt wide**
 > to match Appearance / LLM Provider / Transcription exactly, because the
 > Settings package animates height only and 560 was a visible horizontal jump.
-> `Install Extension…` is the pane's single `borderedProminent`.
+> `Install Extension…` is the pane's single `borderedProminent`. *Since 29 Sep
+> 2026 there is one per tab:* the ChatGPT tab's **Install Plugin…** is its own
+> prominent button, and only one tab shows at a time.
 >
 > **The payload slot honours "does not change shape" too, since 2 Aug 2026.**
 > It originally didn't: with no serve the three dialect tabs collapsed to the
@@ -1628,6 +1663,14 @@ per project, so "Connect an agent to 'IKEA discovery'" is honest again — but
 only for J2–J5. If J1 stays in the sheet, the header over-promises.
 
 ## 4. Packaging
+
+> **The native path packages differently (29 Sep 2026):** the helper is built
+> and signed by `desktop/mcp-helper/build-helper.sh` in the Copy Sidecar
+> Resources phase, the ChatGPT marketplace is assembled beside it, and the
+> Claude `.mcpb` is zipped at click time. The gate is
+> `desktop/scripts/check-mcp-helper.sh`, run from `check-pkg-shippable.sh` and
+> `check-dmg-shippable.sh`. This section describes the Node `.mcpb`, which stays
+> the fallback.
 
 ```
 desktop/mcpb/
@@ -2398,7 +2441,9 @@ Worth reusing for any future pre-announcement of a system prompt.
 > responsible process (`design-mcp-files-and-folders.md` §1). The "no background reader, ever" rule above stands and
 > matters more, not less: a denied read no longer queues a dialog, but it is
 > still the only moment we get to tell the person. The redraft is
-> [`design-mcp-files-and-folders.md`](design-mcp-files-and-folders.md) (draft).
+> [`design-mcp-files-and-folders.md`](design-mcp-files-and-folders.md) (shipped
+> in `d086f08d`, now the fallback). The native helper that removes the step is
+> built on main: [`design-mcp-native-proxy.md`](design-mcp-native-proxy.md) §6.9.
 
 **Risk §6.1 dissolves**, and with it the §3.6 dilemma: the handshake stays in
 the container, so **no token is ever written into a project folder** and the

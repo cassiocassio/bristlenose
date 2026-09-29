@@ -397,7 +397,20 @@ The language is known upstream but lost before the export. Whisper detects it pe
 3. a pinned language is recorded with its provenance (`(set)` beside `(detected)`);
 4. the clip track is tagged with the ISO 639-2 code, and later the player's `<track srclang>`.
 
-Still unknown by construction: platform transcripts (Teams, Zoom, docx) and projects from before 0.31.0. **Open:** their fallback, `und` (honest, hidden until chosen) or the researcher's app language.
+Still unknown by construction: platform transcripts (Teams, Zoom, docx) and projects from before 0.31.0.
+
+**Built 29 Sep 2026 (steps 1, 2 and 4; step 3 not yet):**
+- `sessions.language`, added by migration 011;
+- the importer reads the header on every import;
+- `iso639_2()` in `clip_subtitles.py` maps Whisper codes and locale tags to three-letter codes;
+- `_subtitle_languages()` in the route tags each clip's track.
+
+**Fallback decided: the app's language, not `und`.** Measured the same day in QuickTime, with the maintainer at the controls:
+- **Untagged (`und`):** a double-click plus *Subtitles ▸ On* shows nothing. It needs *Language ▸ Unknown language* chosen by hand as well.
+- **Tagged English:** shows on a plain double-click, because QuickTime remembers the viewer's *On (Language)* setting.
+- **Flagged "every line forced"** (the `tx3g` display flag): also shows, but the viewer can't hide it, so it is not used.
+
+A slightly wrong label beats subtitles that never appear. A brand-new QuickTime user with subtitles off still needs one click; that is Apple's convention, and burn-in is the path for text that must always show. Recording a *pinned* `--whisper-language` in the header (step 3) is not done: those runs fall back to the app language for now.
 
 ### Subtitles in Bristlenose's own player — scope added 29 Sep 2026, not built
 

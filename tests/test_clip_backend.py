@@ -172,8 +172,24 @@ class TestSubtitleMux:
         # every-stream mapping let a second audio track fail the mux.
         assert "-map 0:v:0? -map 0:a:0? -map 1:0" in joined
         assert "-c copy -c:s mov_text" in joined
+        # Untagged (und), QuickTime's "subtitles in my language" can't find it.
+        assert "-metadata:s:s:0 language=und" in joined
         # The seek stays an input option on the source, before its -i.
         assert args.index("-ss") < args.index(str(tmp_path / "source.mp4"))
+
+    def test_subtitle_track_carries_the_language(self, tmp_path: Path) -> None:
+        source = tmp_path / "source.mp4"
+        source.write_bytes(b"fake")
+        output = tmp_path / "clip.mp4"
+        output.write_bytes(b"clip")
+        srt = tmp_path / "clip.srt"
+        srt.write_text("1\n00:00:00,000 --> 00:00:01,000\nhi\n")
+        mock_result = MagicMock(returncode=0, stderr="")
+        with patch(
+            "bristlenose.server.clip_backend.subprocess.run", return_value=mock_result,
+        ) as mock_run:
+            FFmpegBackend().extract_clip(source, output, 1.0, 2.0, srt, "jpn")
+        assert "-metadata:s:s:0 language=jpn" in " ".join(mock_run.call_args[0][0])
 
     def test_audio_clip_takes_no_video(self, tmp_path: Path) -> None:
         source = tmp_path / "source.m4a"

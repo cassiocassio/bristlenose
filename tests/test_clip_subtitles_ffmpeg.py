@@ -69,13 +69,18 @@ def _frame_md5s(path: Path) -> list[str]:
 def test_video_clip_carries_a_mov_text_track_in_sync(tmp_path: Path) -> None:
     source = _video_source(tmp_path / "src.mp4")
     clip = FFmpegBackend().extract_clip(
-        source, tmp_path / "clip.mp4", 7.0, 12.0, _srt(tmp_path),
+        source, tmp_path / "clip.mp4", 7.0, 12.0, _srt(tmp_path), "eng",
     )
     assert clip is not None
 
     codecs = _run("ffprobe", "-v", "error", "-show_entries", "stream=codec_name",
                   "-of", "csv=p=0", str(clip)).split()
     assert "mov_text" in codecs
+    # The language tag is what lets a player's "subtitles in my language"
+    # setting find the track (measured in QuickTime, 29 Sep 2026).
+    lang = _run("ffprobe", "-v", "error", "-select_streams", "s",
+                "-show_entries", "stream_tags=language", "-of", "csv=p=0", str(clip))
+    assert lang.strip() == "eng"
 
     # The first frame shown is the source frame at exactly 7.00 s.
     first = _frame_md5s(clip)[0]

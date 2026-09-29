@@ -23,12 +23,13 @@ class ClipBackend(Protocol):
 
     def extract_clip(
         self, source: Path, output: Path, start: float, end: float,
-        subtitles: Path | None = None,
+        subtitles: Path | None = None, subtitle_language: str = "und",
     ) -> Path | None:
         """Extract a clip. Returns output path on success, None on failure.
 
         ``subtitles`` (an SRT file, timed from the clip's start) is muxed in
-        as a soft subtitle track when given.
+        as a soft subtitle track when given, tagged ``subtitle_language``
+        (ISO 639-2).
         """
         ...
 
@@ -48,7 +49,7 @@ class FFmpegBackend:
 
     def extract_clip(
         self, source: Path, output: Path, start: float, end: float,
-        subtitles: Path | None = None,
+        subtitles: Path | None = None, subtitle_language: str = "und",
     ) -> Path | None:
         """Extract a clip using FFmpeg stream-copy into .mp4 container.
 
@@ -62,7 +63,9 @@ class FFmpegBackend:
         or Teams file can't break the cut. The cut starts on the
         requested frame, not the keyframe before it — ffmpeg writes an edit
         list — so subtitles timed from ``start`` stay in sync (measured
-        frame-exact, 29 Sep 2026).
+        frame-exact, 29 Sep 2026). The track carries ``subtitle_language``:
+        untagged (``und``), QuickTime's *Subtitles ▸ On* finds no track in
+        the viewer's language and shows nothing.
         """
         output.parent.mkdir(parents=True, exist_ok=True)
 
@@ -92,7 +95,10 @@ class FFmpegBackend:
             cmd += ["-map", "0:v:0?"]
         cmd += ["-map", "0:a:0?"]
         if subtitles is not None:
-            cmd += ["-map", "1:0", "-c", "copy", "-c:s", "mov_text"]
+            cmd += [
+                "-map", "1:0", "-c", "copy", "-c:s", "mov_text",
+                "-metadata:s:s:0", f"language={subtitle_language}",
+            ]
         else:
             cmd += ["-c", "copy"]
         cmd += ["-y", str(output)]

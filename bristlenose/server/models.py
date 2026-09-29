@@ -236,6 +236,13 @@ class Session(Base):
     has_media: Mapped[bool] = mapped_column(default=False)
     has_video: Mapped[bool] = mapped_column(default=False)
     thumbnail_path: Mapped[str | None] = mapped_column(String(500), default=None)
+    #: The spoken language, as Whisper detected it (ISO 639-1, e.g. ``"en"``),
+    #: read from the transcript header at import. ``None`` when nothing
+    #: detected it: a platform or docx transcript, a pinned
+    #: ``--whisper-language`` run, or a project transcribed before 0.31.0.
+    #: Tags the exported clips' subtitle track, which is what lets a player's
+    #: "subtitles in my language" setting find it.
+    language: Mapped[str | None] = mapped_column(String(20), default=None)
     # Set once, when the session is first imported; never updated.  Drives the
     # "New" flag (Phase 3 — a section/theme is New when its quotes come from a
     # just-added interview).  The max across sessions is the latest import

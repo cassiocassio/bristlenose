@@ -62,6 +62,10 @@ logger = logging.getLogger(__name__)
 _HEADER_DATE_RE = re.compile(r"^#\s*Date:\s*(.+)$", re.MULTILINE)
 _HEADER_DURATION_RE = re.compile(r"^#\s*Duration:\s*(.+)$", re.MULTILINE)
 _HEADER_SOURCE_RE = re.compile(r"^#\s*Source:\s*(.+)$", re.MULTILINE)
+#: Stage 6 writes ``# Language: ja (detected)`` when Whisper detected it.
+_HEADER_LANGUAGE_RE = re.compile(
+    r"^#\s*Language:\s*([A-Za-z]{2,3}(?:-[A-Za-z0-9]+)*)\b", re.MULTILINE,
+)
 _SEGMENT_RE = re.compile(
     r"^\[(\d+:\d{2}(?::\d{2})?)\]\s+\[(\w+)\]\s+(.+)$", re.MULTILINE
 )
@@ -327,6 +331,10 @@ def import_project(db: Session, project_dir: Path) -> Project:
             )
             db.add(sess)
             db.flush()
+        # Refreshed on every import, not only at creation: a re-run can add
+        # the header to a session imported before it existed.
+        if meta.get("language"):
+            sess.language = meta["language"]
         session_map[sid] = sess
 
     # --- Import source files ---------------------------------------------
@@ -404,7 +412,8 @@ def _parse_transcript_headers(
     """Parse transcript file headers for session metadata.
 
     Returns a dict keyed by session_id with keys:
-        date (datetime | None), duration_seconds (float), source (str).
+        date (datetime | None), duration_seconds (float), source (str),
+        language (str | None).
     """
     result: dict[str, dict[str, Any]] = {}
     if not transcripts_dir.is_dir():
@@ -420,6 +429,7 @@ def _parse_transcript_headers(
         date_match = _HEADER_DATE_RE.search(header)
         dur_match = _HEADER_DURATION_RE.search(header)
         source_match = _HEADER_SOURCE_RE.search(header)
+        lang_match = _HEADER_LANGUAGE_RE.search(header)
 
         result[sid] = {
             "date": _parse_date(date_match.group(1)) if date_match else None,
@@ -427,6 +437,7 @@ def _parse_transcript_headers(
                 _parse_duration_to_seconds(dur_match.group(1)) if dur_match else 0.0
             ),
             "source": source_match.group(1).strip() if source_match else "",
+            "language": lang_match.group(1).lower() if lang_match else None,
         }
 
     return result

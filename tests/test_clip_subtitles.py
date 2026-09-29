@@ -555,3 +555,18 @@ class TestJapaneseAndChinese:
     def test_line_breaks_at_a_sentence_end_rather_than_inside_a_word(self) -> None:
         lines = _cues_for("(Yuki) あたりで。それでアプリを開きました。", end=3.0)[0].lines
         assert lines == ("あたりで。", "それでアプリを開きました。")
+
+
+class TestLanguageTag:
+    @pytest.mark.parametrize("code,expected", [
+        ("en", "eng"), ("ja", "jpn"), ("zh", "zho"), ("pt-BR", "por"),
+        ("zh-Hant-HK", "zho"), ("nb", "nob"), ("yue", "yue"), ("EN", "eng"),
+    ])
+    def test_maps_whisper_codes_and_locale_tags(self, code: str, expected: str) -> None:
+        from bristlenose.server.clip_subtitles import iso639_2
+        assert iso639_2(code) == expected
+
+    @pytest.mark.parametrize("code", [None, "", "xx"])
+    def test_unknown_is_und(self, code: str | None) -> None:
+        from bristlenose.server.clip_subtitles import iso639_2
+        assert iso639_2(code) == "und"

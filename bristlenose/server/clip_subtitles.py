@@ -670,6 +670,49 @@ def build_cues(
 
 
 # ---------------------------------------------------------------------------
+# Language tag
+# ---------------------------------------------------------------------------
+
+#: Whisper's language codes (ISO 639-1, plus its own ``haw``/``yue``/``jw``)
+#: to ISO 639-2/T, which is what an MP4 track's language field carries.
+_ISO639_2 = {
+    "af": "afr", "am": "amh", "ar": "ara", "as": "asm", "az": "aze", "ba": "bak",
+    "be": "bel", "bg": "bul", "bn": "ben", "bo": "bod", "br": "bre", "bs": "bos",
+    "ca": "cat", "cs": "ces", "cy": "cym", "da": "dan", "de": "deu", "el": "ell",
+    "en": "eng", "es": "spa", "et": "est", "eu": "eus", "fa": "fas", "fi": "fin",
+    "fo": "fao", "fr": "fra", "gl": "glg", "gu": "guj", "ha": "hau", "haw": "haw",
+    "he": "heb", "hi": "hin", "hr": "hrv", "ht": "hat", "hu": "hun", "hy": "hye",
+    "id": "ind", "is": "isl", "it": "ita", "ja": "jpn", "jw": "jav", "jv": "jav",
+    "ka": "kat", "kk": "kaz", "km": "khm", "kn": "kan", "ko": "kor", "la": "lat",
+    "lb": "ltz", "ln": "lin", "lo": "lao", "lt": "lit", "lv": "lav", "mg": "mlg",
+    "mi": "mri", "mk": "mkd", "ml": "mal", "mn": "mon", "mr": "mar", "ms": "msa",
+    "mt": "mlt", "my": "mya", "nb": "nob", "ne": "nep", "nl": "nld", "nn": "nno",
+    "no": "nor", "oc": "oci", "pa": "pan", "pl": "pol", "ps": "pus", "pt": "por",
+    "ro": "ron", "ru": "rus", "sa": "san", "sd": "snd", "si": "sin", "sk": "slk",
+    "sl": "slv", "sn": "sna", "so": "som", "sq": "sqi", "sr": "srp", "su": "sun",
+    "sv": "swe", "sw": "swa", "ta": "tam", "te": "tel", "tg": "tgk", "th": "tha",
+    "tk": "tuk", "tl": "tgl", "tr": "tur", "tt": "tat", "uk": "ukr", "ur": "urd",
+    "uz": "uzb", "vi": "vie", "yi": "yid", "yo": "yor", "yue": "yue", "zh": "zho",
+}
+
+
+def iso639_2(code: str | None) -> str:
+    """ISO 639-2/T for a language code or locale tag; ``und`` if unknown.
+
+    Accepts Whisper's codes (``en``, ``yue``) and the app's locale tags
+    (``pt-BR``, ``zh-Hant-HK``), taking the primary subtag. A track tagged
+    ``und`` is not matched by a player's "subtitles in my language" setting,
+    so macOS shows an empty Forced variant instead (measured 29 Sep 2026).
+    """
+    if not code:
+        return "und"
+    primary = code.replace("_", "-").split("-")[0].lower()
+    if len(primary) == 3 and primary not in _ISO639_2:
+        return primary
+    return _ISO639_2.get(primary, "und")
+
+
+# ---------------------------------------------------------------------------
 # Serialisation
 # ---------------------------------------------------------------------------
 

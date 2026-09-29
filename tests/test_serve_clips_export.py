@@ -15,6 +15,7 @@ from bristlenose.server.app import create_app
 from bristlenose.server.clip_manifest import ClipSpec
 from bristlenose.server.clip_subtitles import Cue, to_webvtt
 from bristlenose.server.models import Quote, QuoteEdit
+from bristlenose.server.models import Session as SessionModel
 from bristlenose.server.routes import clips_export
 from bristlenose.utils.fs import CloudFetchTimeoutError
 from tests.conftest import AuthTestClient
@@ -286,7 +287,7 @@ class TestExtractionWritesSubtitles:
     def _run(self, tmp_path: Path, cues: dict[int, list[Cue]], fail_with_subs: bool) -> dict:
         calls: list[Path | None] = []
 
-        def fake_extract(self, source, output, start, end, subtitles=None):  # type: ignore[no-untyped-def]
+        def fake_extract(self, source, output, start, end, subtitles=None, subtitle_language="und"):  # type: ignore[no-untyped-def]
             calls.append(subtitles)
             if subtitles is not None:
                 assert subtitles.exists()  # the temp SRT is there while ffmpeg runs
@@ -333,7 +334,7 @@ class TestExtractionWritesSubtitles:
     def test_temp_srt_never_lands_in_the_clips_folder(self, tmp_path: Path) -> None:
         seen: list[Path] = []
 
-        def fake_extract(self, source, output, start, end, subtitles=None):  # type: ignore[no-untyped-def]
+        def fake_extract(self, source, output, start, end, subtitles=None, subtitle_language="und"):  # type: ignore[no-untyped-def]
             if subtitles is not None:
                 seen.append(subtitles)
             output.write_bytes(b"clip")
@@ -350,7 +351,7 @@ class TestExtractionWritesSubtitles:
 
     def test_write_error_marks_the_job_failed_not_running(self, tmp_path: Path) -> None:
         # A stranded "running" job refuses every later export with a 409.
-        def fake_extract(self, source, output, start, end, subtitles=None):  # type: ignore[no-untyped-def]
+        def fake_extract(self, source, output, start, end, subtitles=None, subtitle_language="und"):  # type: ignore[no-untyped-def]
             output.write_bytes(b"clip")
             return output
 
@@ -389,7 +390,7 @@ class TestExportComposesSubtitles:
     def test_export_writes_a_vtt_built_from_the_transcript(
         self, client: TestClient, tmp_path: Path,
     ) -> None:
-        def fake_extract(self, source, output, start, end, subtitles=None):  # type: ignore[no-untyped-def]
+        def fake_extract(self, source, output, start, end, subtitles=None, subtitle_language="und"):  # type: ignore[no-untyped-def]
             output.write_bytes(b"clip")
             return output
 
@@ -419,4 +420,39 @@ class TestExportComposesSubtitles:
                 patch.object(clips_export, "_run_clip_extraction") as run:
             resp = client.post("/api/projects/1/export/clips", json={"ids": ["q-p1-10"]})
         assert resp.status_code == 200
-        assert run.call_args[0][-1] == {0: []}
+        assert run.call_args[0][6] == {0: []}  # cues_by_clip
+
+
+class TestSubtitleLanguage:
+    def test_detected_language_else_the_app_language(self, client: TestClient) -> None:
+        db = client.app.state.db_factory()  # type: ignore[attr-defined]
+        try:
+            sess = db.query(SessionModel).filter_by(session_id="s1").one()
+            sess.language = None
+            db.commit()
+            with patch.object(clips_export, "get_locale", return_value="de"):
+                assert clips_export._subtitle_languages(db, 1) == {"s1": "deu"}
+            sess.language = "ja"
+            db.commit()
+            with patch.object(clips_export, "get_locale", return_value="de"):
+                assert clips_export._subtitle_languages(db, 1) == {"s1": "jpn"}
+        finally:
+            db.close()
+
+    def test_job_tags_each_clip_with_its_sessions_language(self, tmp_path: Path) -> None:
+        seen: list[str] = []
+
+        def fake_extract(self, source, output, start, end, subtitles=None, subtitle_language="und"):  # type: ignore[no-untyped-def]
+            if subtitles is not None:
+                seen.append(subtitle_language)
+            output.write_bytes(b"clip")
+            return output
+
+        cue = Cue(start=0.0, end=2.0, speaker_code="p1", colour="white", lines=("Hi.",))
+        clips_export._jobs[1] = {"status": "running", "progress": 0, "total": 1}
+        with patch.object(clips_export.FFmpegBackend, "extract_clip", fake_extract):
+            asyncio.run(clips_export._run_clip_extraction(
+                1, [_spec(tmp_path / "src.mp4")], tmp_path, 1, False, False,
+                {0: [cue]}, {"s1": "jpn"},
+            ))
+        assert seen == ["jpn"]

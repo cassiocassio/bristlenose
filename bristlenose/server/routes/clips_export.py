@@ -22,6 +22,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
+from bristlenose.i18n import get_locale
 from bristlenose.server.clip_backend import FFmpegBackend
 from bristlenose.server.clip_manifest import (
     ClipSpec,
@@ -39,6 +40,7 @@ from bristlenose.server.clip_subtitles import (
     WordTiming,
     apply_correction,
     build_cues,
+    iso639_2,
     to_srt,
     to_webvtt,
     tokens_for_segment,
@@ -337,8 +339,26 @@ def _safe_clip_cues(db: DbSession, project_id: int, spec: ClipSpec) -> list[Cue]
 # ---------------------------------------------------------------------------
 
 
+def _subtitle_languages(db: DbSession, project_id: int) -> dict[str, str]:
+    """Session id → ISO 639-2 code for its subtitle track.
+
+    The language Whisper detected, where the transcript recorded one;
+    otherwise the app's language, because a track tagged ``und`` is hidden
+    by every "subtitles in my language" setting — a slightly wrong label is
+    better than subtitles that never appear.
+    """
+    fallback = iso639_2(get_locale())
+    rows = (
+        db.query(SessionModel.session_id, SessionModel.language)
+        .filter(SessionModel.project_id == project_id)
+        .all()
+    )
+    return {sid: iso639_2(lang) if lang else fallback for sid, lang in rows}
+
+
 async def _cut_clip(
     backend: FFmpegBackend, spec: ClipSpec, output_path: Path, cues: list[Cue],
+    language: str = "und",
 ) -> tuple[Path | None, bool]:
     """Cut one clip, with its subtitle track when there are cues.
 
@@ -355,7 +375,7 @@ async def _cut_clip(
             # Run FFmpeg in a thread to avoid blocking the event loop
             result = await asyncio.to_thread(
                 backend.extract_clip, spec.source_path, output_path,
-                spec.start, spec.end, srt_path,
+                spec.start, spec.end, srt_path, language,
             )
             if result is not None:
                 return result, True
@@ -384,6 +404,7 @@ async def _run_clip_extraction(
     use_hours: bool,
     anonymise: bool,
     cues_by_clip: dict[int, list[Cue]] | None = None,
+    languages: dict[str, str] | None = None,
 ) -> None:
     """Extract clips in background. Updates module-level _jobs state.
 
@@ -426,7 +447,10 @@ async def _run_clip_extraction(
                 continue
 
             cues = (cues_by_clip or {}).get(i) or []
-            result, with_track = await _cut_clip(backend, spec, output_path, cues)
+            result, with_track = await _cut_clip(
+                backend, spec, output_path, cues,
+                (languages or {}).get(spec.session_id, "und"),
+            )
 
             vtt_path = clips_dir / f"{stem}.vtt"
             vtt_name: str | None = None
@@ -603,6 +627,7 @@ async def start_clip_extraction(
         cues_by_clip = {
             i: _safe_clip_cues(db, project_id, spec) for i, spec in enumerate(specs)
         }
+        languages = _subtitle_languages(db, project_id)
 
         # Create clips directory
         clips_dir = output_dir / "clips"
@@ -623,7 +648,7 @@ async def start_clip_extraction(
         asyncio.create_task(
             _run_clip_extraction(
                 project_id, specs, clips_dir, participant_count,
-                use_hours, anonymise, cues_by_clip,
+                use_hours, anonymise, cues_by_clip, languages,
             )
         )
 

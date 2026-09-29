@@ -1808,3 +1808,38 @@ class TestSentimentAutoImport:
             assert len(tags) == 1, (
                 f"Quote {quote.id} has {len(tags)} sentiment tags, expected 1"
             )
+
+
+class TestTranscriptLanguageHeader:
+    """The detected language reaches the session row (it used to stop at the file)."""
+
+    def test_header_language_is_parsed(self, tmp_path: Path) -> None:
+        from bristlenose.server.importer import _parse_transcript_headers
+
+        (tmp_path / "s1.txt").write_text(
+            "# Transcript: s1\n# Source: a.mp4\n# Language: ja (detected)\n# Duration: 00:10\n",
+            encoding="utf-8",
+        )
+        (tmp_path / "s2.txt").write_text(
+            "# Transcript: s2\n# Source: b.mp4\n# Duration: 00:10\n", encoding="utf-8",
+        )
+        meta = _parse_transcript_headers(tmp_path)
+        assert meta["s1"]["language"] == "ja"
+        assert meta["s2"]["language"] is None
+
+    def test_language_lands_on_the_session_row(self, db: Session) -> None:
+        from unittest.mock import patch
+
+        import bristlenose.server.importer as importer
+
+        real = importer._parse_transcript_headers
+
+        def with_language(transcripts_dir):  # type: ignore[no-untyped-def]
+            meta = real(transcripts_dir)
+            for entry in meta.values():
+                entry["language"] = "ja"
+            return meta
+
+        with patch.object(importer, "_parse_transcript_headers", with_language):
+            import_project(db, _FIXTURE_DIR)
+        assert db.query(SessionModel).one().language == "ja"

@@ -79,8 +79,9 @@ def helper(tmp_path_factory: pytest.TempPathFactory) -> Path:
         ["xcrun", "swiftc", "-O", "-D", "BN_TEST_HANDSHAKE", str(_HELPER_SRC),
          str(work / "BuildConfig.swift"), str(work / "ToolsEmbedded.swift"), "-o", str(out)],
         capture_output=True, text=True)
-    if r.returncode != 0:
-        pytest.skip(f"swiftc unavailable or failed: {r.stderr[-400:]}")
+    # xcrun is present (the module-level guard), so a failed compile is a
+    # broken helper source, not a missing toolchain: fail, never skip.
+    assert r.returncode == 0, f"swiftc failed on the helper source: {r.stderr[-400:]}"
     return out
 
 

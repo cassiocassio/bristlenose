@@ -121,8 +121,9 @@ def test_build_script_maps_each_signer_kind_to_its_own_identifier() -> None:
 
 @pytest.mark.skipif(sys.platform != "darwin", reason="codesign/otool are macOS tools")
 def test_gate_refuses_an_unsandboxed_unsigned_binary(tmp_path: Path) -> None:
-    if shutil.which("clang") is None:
-        pytest.skip("no clang")
+    # macOS only (the skipif); clang ships with the Xcode tools every build
+    # here needs, so its absence is a broken machine, not a reason to skip.
+    assert shutil.which("clang"), "clang not found — install the Xcode command-line tools"
     src = tmp_path / "x.c"
     src.write_text("int main(void){return 0;}\n")
     binary = tmp_path / "bristlenose-mcp"

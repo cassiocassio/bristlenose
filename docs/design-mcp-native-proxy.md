@@ -114,9 +114,11 @@ path inside a signed app bundle (tested with a path in a working tree).
   `annotations.readOnlyHint: true`, six tool calls ran with **no approval card
   at all**. *Inferred* that the annotation is the cause; nothing else changed.
   The config-file route talks to `bristlenose serve`'s own `/mcp/`, whose tools
-  are **not** annotated, and there ChatGPT asked per tool again (*measured*).
-  So annotating the server's tools in `bristlenose/server/mcp_server.py` is the
-  fix for that route too.
+  were **not** annotated at the time, and there ChatGPT asked per tool again
+  (*measured*). So annotating the server's tools in
+  `bristlenose/server/mcp_server.py` should fix that route too. They were
+  annotated on 29 Sep 2026 (`0bcb1963`). **Not re-measured** over this route
+  yet.
 - **The model may reach for ChatGPT's own Computer Use instead** ("Allow
   ChatGPT to use Bristlenose?" — screenshots of the app) when a question names
   the app. Naming the tools in the question avoided it. *Measured, once.*

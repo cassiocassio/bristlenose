@@ -169,9 +169,9 @@ docs; this section is the state and the work left, in order.
   TCC involved. **The Files & Folders switch does not reach the group
   container**, and **can't rescue a sandboxed reader** (the second is inferred).
 - **ChatGPT runs tools in Work mode only,** on both the plugin route and the
-  config-file route. Over the config file it asks for approval per tool; the
-  tools declare no `readOnlyHint`, and with the hint the prompts stopped
-  (inferred as the cause).
+  config-file route. Over the config file it asked for approval per tool; the
+  tools declared no `readOnlyHint` then, and with the hint the prompts stopped
+  (inferred as the cause). They declare it now (item 14).
 - **Apple's automated pipeline accepts the App Store shape.** First
   `altool --validate-app`, then upload processing of **TestFlight build 3907**:
   `VALID`, `APP_STORE_ELIGIBLE`, expiring 28 Dec 2026. **Not settled:** human
@@ -243,8 +243,14 @@ docs; this section is the state and the work left, in order.
     apps") before external TestFlight or store submission.
 
 **D. Related, found the same day**
-14. Mark the MCP tools read-only (`readOnlyHint`), in the server and in the
-    proxy's static copy. A session is on it.
+14. ~~Mark the MCP tools read-only (`readOnlyHint`), in the server and in the
+    proxy's static copy.~~ **Done 29 Sep 2026** (`0bcb1963`). All five tools
+    carry `readOnlyHint: true`, `destructiveHint: false`,
+    `idempotentHint: true`, `openWorldHint: false`, and
+    `tests/test_mcpb_proxy.py` now fails if the server and the proxy's copy
+    disagree on them. **Not re-measured:** nobody has yet run ChatGPT over the
+    config-file route against an annotated server, so "the hint stops the
+    cards" is still inferred.
 15. ~~The red Swift test `ServeManagerStartGuardTests/aFailedServeCanBeRestartedOnTheSameProject`,
     which fails on `main` itself.~~ **Done 29 Sep 2026** (`55628d90`). The
     test was wrong, not the guard: it resolved the sidecar mode from the app
@@ -2585,9 +2591,9 @@ fired is the one it ranked first, and it fired in the shape predicted:
    the in-app button is the realistic channel.
    Note one prerequisite we already have an open finding for: the directory
    requires **tool annotations** (`title` plus `readOnlyHint` /
-   `destructiveHint`) on every tool. That is review-log Finding 53 on the
-   server doc, currently open — it becomes a gate rather than a nicety if we
-   ever submit.
+   `destructiveHint`) on every tool. That was review-log Finding 53 on the
+   server doc; the hints landed 29 Sep 2026 (`0bcb1963`), but the tools still
+   carry no annotation `title`, which the directory also asks for.
 6. **Native modules are foreclosed** (#229). Only matters if someone later
    reaches for a native dependency in the proxy — write it down so they don't.
 7. **`user_config` has a live corruption bug** — values containing `$` are

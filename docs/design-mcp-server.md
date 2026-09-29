@@ -1302,9 +1302,11 @@ telemetry landed as designed:
 
 #### Still open, deliberately
 
-Output schemas (`-> dict`) and `readOnlyHint` — the agent did not flounder
-without declared schemas, which weakens the case for adding them during a
-spike. The `elaboration` field's curation-dependence is recorded here as its
+Output schemas (`-> dict`) — the agent did not flounder without declared
+schemas, which weakens the case for adding them during a spike.
+(`readOnlyHint` was in this list too. It landed on 29 Sep 2026, `0bcb1963`,
+after ChatGPT asked for approval on every tool call; see
+`design-mcp-native-proxy.md` §1.3.) The `elaboration` field's curation-dependence is recorded here as its
 field-inventory note: **present only on uncurated framework cells.**
 
 ### 9a. The first spike — and what it is allowed to skip

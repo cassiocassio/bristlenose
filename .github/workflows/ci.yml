@@ -188,6 +188,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev,serve]"
 
+      - name: Install ffmpeg (Linux)
+        # The clip-subtitle round trip (tests/test_clip_subtitles_ffmpeg.py)
+        # skips without ffmpeg, and until 29 Sep 2026 no CI cell had it, so
+        # the only real-ffmpeg proof that a stream-copied cut stays in sync
+        # with its subtitle track ran on dev machines alone. Linux cells only:
+        # apt is quick; Homebrew's ffmpeg would add minutes to every macOS cell.
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
       - name: Run tests
         # Coverage was paid by all 8 cells and read from 1 — the upload step
         # below has always been conditional; the cost never was. Scoped to the

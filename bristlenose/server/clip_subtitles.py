@@ -24,9 +24,16 @@ across the segment's time in proportion to character count.
 A researcher's quote correction (acronyms, product names, mis-hearings) is
 applied as the difference between the pipeline's quote text and the edited
 text, so the pipeline's own tidying (dropped fillers, ``…`` elisions) never
-removes audible words from the subtitles. A change that can't be placed in
-the transcript falls back to the corrected wording spread evenly across the
-time the participant spoke the quote.
+removes audible words from the subtitles. A bracketed group the researcher
+put in place of spoken words (``Sarah`` → ``[her]``) is shown — their edit
+wins; one they only inserted (``it [the app] crashed``) is not spoken and is
+dropped. A correction that can't be placed word by word is not applied at
+all: the transcript's own words stand, and the caller logs it. Never a
+guess that could delete or repeat what was said.
+
+Frozen dataclasses rather than Pydantic, like the sibling ``clip_manifest``:
+pure internal values shared with a future AVFoundation backend, never parsed
+from or serialised to the outside.
 """
 
 from __future__ import annotations
@@ -62,13 +69,28 @@ _CLAUSE_END = re.compile(r"[,;:.?!…]['\"”’)]*$")
 #: How much longer a line may be to buy a break at a clause end.
 _CLAUSE_BREAK_SLACK = 6
 #: A segment's text can open with its speaker's label, e.g. ``(Speaker B)``
-#: or a real name in brackets — the same prefix the importer strips before
+#: or a real name in brackets — the prefix the importer strips before
 #: matching word timings (``importer._SPEAKER_PREFIX_RE``). Never subtitled.
-_SPEAKER_PREFIX = re.compile(r"^\([^)]*\)\s*")
+#: One level of nesting is allowed, because a Teams or Zoom display name can
+#: carry its own brackets: ``(Robert (Bob) Smith)`` must go whole, or the
+#: surname is left on screen.
+_SPEAKER_PREFIX = re.compile(r"^\((?:[^()]|\([^()]*\))*\)\s*")
 _NORM_STRIP = re.compile(r"[^\w']+", re.UNICODE)
-#: Tokens a researcher's edit carries that are never spoken: elision marks
-#: and bracketed editorial insertions such as ``[the app]``.
-_UNSPOKEN = re.compile(r"^(…|\.\.\.|\[.*\])$")
+#: Elision marks in a quote are the pipeline's tidying, never spoken.
+_ELISION = re.compile(r"^(…|\.\.\.)$")
+#: A researcher's edit, tokenised with a bracketed group as ONE token, so
+#: ``[the app]`` is a single editorial unit rather than ``[the`` + ``app]``.
+_EDIT_TOKEN = re.compile(r"\[[^\]]*\][^\s\[]*|[^\s\[]+")
+_BRACKETED = re.compile(r"^\[[^\]]*\]")
+_WORD_CORE = re.compile(r"^(\W*)(.*?)(\W*)$", re.DOTALL)
+#: How far past a quote's recorded end its corrected words may be spoken.
+#: Quote end times come from the model, which sees only segment start times,
+#: so a quote's last words often fall after them (measured 29 Sep 2026: 19 of
+#: 33 IKEA quotes, 40 of 80 Rockclimbing). The route widens its query by the
+#: same margin.
+CORRECTION_TAIL_SECONDS = 10.0
+#: Outcomes of ``apply_correction``.
+APPLIED, UNPLACED, NO_WORDS = "applied", "unplaced", "no-words"
 
 
 # ---------------------------------------------------------------------------
@@ -105,6 +127,8 @@ class Correction:
     end: float
     original: str
     corrected: str
+    #: The quote's DOM id (``q-p1-123``), so a log line can name it.
+    quote_ref: str = ""
 
 
 @dataclass(frozen=True)
@@ -210,8 +234,23 @@ def tokens_for_segment(seg: SegmentInput) -> list[Token]:
 # ---------------------------------------------------------------------------
 
 
-def _spoken(text: str) -> list[str]:
-    return [t for t in text.split() if not _UNSPOKEN.match(t)]
+def _edit_tokens(text: str) -> list[str]:
+    """Tokens of a quote or its edit: bracket groups whole, elisions dropped."""
+    return [tok for tok in _EDIT_TOKEN.findall(text) if not _ELISION.match(tok)]
+
+
+def _edit_key(token: str) -> str:
+    """Comparison key: a bracket group never equals a spoken word."""
+    if _BRACKETED.match(token):
+        return "\x00" + token
+    return _norm(token)
+
+
+def _respell(spoken: str, researcher: str) -> str:
+    """The researcher's letters inside the transcript word's own punctuation."""
+    lead, _core, trail = _WORD_CORE.match(spoken).groups()  # type: ignore[union-attr]
+    _l, core, _t = _WORD_CORE.match(researcher).groups()  # type: ignore[union-attr]
+    return f"{lead}{core}{trail}"
 
 
 def _retime(texts: list[str], start: float, end: float, speaker: str) -> list[Token]:
@@ -221,31 +260,33 @@ def _retime(texts: list[str], start: float, end: float, speaker: str) -> list[To
     ]
 
 
-def apply_correction(tokens: list[Token], corr: Correction) -> tuple[list[Token], bool]:
+def apply_correction(tokens: list[Token], corr: Correction) -> tuple[list[Token], str]:
     """Apply one researcher correction to ``tokens``.
 
-    Returns the new token list and whether the even-spread fallback was used.
-    Tokens outside the quote's speaker and time are never touched.
+    Returns the new token list and an outcome: ``APPLIED``, ``UNPLACED`` (the
+    change could not be placed word by word, so nothing was changed) or
+    ``NO_WORDS`` (no words of that speaker near the quote). Tokens of other
+    speakers, and words outside the quote, are never touched.
     """
     span = [
         i for i, t in enumerate(tokens)
         if t.speaker_code == corr.speaker_code
-        and corr.start <= (t.start + t.end) / 2 <= corr.end
+        and corr.start - 1.0 <= (t.start + t.end) / 2 <= corr.end + CORRECTION_TAIL_SECONDS
     ]
-    corrected = _spoken(corr.corrected)
+    corrected = _edit_tokens(corr.corrected)
     if not span or not corrected:
-        return tokens, False
-    # The span is contiguous in time for one speaker; other speakers' words
-    # inside it (an interjection) stay where they are.
+        return tokens, NO_WORDS
     span_tokens = [tokens[i] for i in span]
 
-    original = _spoken(corr.original)
+    original = _edit_tokens(corr.original)
     researcher = difflib.SequenceMatcher(
-        None, [_norm(t) for t in original], [_norm(t) for t in corrected], autojunk=False,
+        None, [_edit_key(t) for t in original], [_edit_key(t) for t in corrected],
+        autojunk=False,
     )
-    # Map each original-quote token to its token in the transcript span.
+    # Map each original-quote token to its word in the transcript span. The
+    # span may run past the quote; extra words simply stay unmatched.
     to_span = difflib.SequenceMatcher(
-        None, [_norm(t) for t in original], [_norm(t.text) for t in span_tokens],
+        None, [_edit_key(t) for t in original], [_norm(t.text) for t in span_tokens],
         autojunk=False,
     )
     orig_to_span: dict[int, int] = {}
@@ -260,7 +301,6 @@ def apply_correction(tokens: list[Token], corr: Correction) -> tuple[list[Token]
     respelled: dict[int, str] = {}                   # word -> researcher's spelling
     after: dict[int, list[str]] = {}                 # word -> words inserted after it
     before: dict[int, list[str]] = {}                # word -> words inserted before it
-    placed = True
     for tag, i1, i2, j1, j2 in researcher.get_opcodes():
         new = corrected[j1:j2]
         if tag == "equal":
@@ -271,60 +311,62 @@ def apply_correction(tokens: list[Token], corr: Correction) -> tuple[list[Token]
                 mapped = orig_to_span.get(i1 + k)
                 o, c = original[i1 + k], corrected[j1 + k]
                 if mapped is not None and _NORM_STRIP.sub("", o) != _NORM_STRIP.sub("", c):
-                    respelled[mapped] = c
+                    respelled[mapped] = _respell(span_tokens[mapped].text, c)
         elif tag == "replace":
+            # A bracket that stands in for spoken words on its own
+            # (``Sarah`` -> ``[her]``) is the researcher's substitution and is
+            # shown. Beside real words (``cube ernetes`` -> ``[the] Kubernetes``)
+            # it is editorial and dropped, like an inserted one.
+            if any(not _BRACKETED.match(w) for w in new):
+                new = [w for w in new if not _BRACKETED.match(w)]
             ks: list[int] = []
             for i in range(i1, i2):
                 mapped = orig_to_span.get(i)
                 if mapped is not None:
                     ks.append(mapped)
             if len(ks) != i2 - i1 or ks != list(range(ks[0], ks[0] + len(ks))):
-                placed = False
-                break
+                return tokens, UNPLACED
             replaced[ks[0]] = (ks[-1] + 1, new)
         elif tag == "insert":
+            # A bracket only inserted is editorial, never spoken: dropped.
+            spoken = [w for w in new if not _BRACKETED.match(w)]
+            if not spoken:
+                continue
             prev = orig_to_span.get(i1 - 1) if i1 > 0 else None
             nxt = orig_to_span.get(i1) if i1 < len(original) else None
             if prev is not None:
-                after.setdefault(prev, []).extend(new)
+                after.setdefault(prev, []).extend(spoken)
             elif nxt is not None:
-                before.setdefault(nxt, []).extend(new)
+                before.setdefault(nxt, []).extend(spoken)
             else:
-                placed = False
-                break
+                return tokens, UNPLACED
         # "delete" is ignored: the audio still carries those words.
 
-    fallback = not placed
-    if fallback:
-        first, last = span_tokens[0], span_tokens[-1]
-        span_tokens = _retime(corrected, first.start, last.end, corr.speaker_code)
-    else:
-        rebuilt: list[Token] = []
-        i = 0
-        while i < len(span_tokens):
-            tok = span_tokens[i]
-            if i in replaced:
-                stop, words = replaced[i]
-                start, end = tok.start, span_tokens[stop - 1].end
-                words = [*before.get(i, []), *words, *after.get(stop - 1, [])]
-                rebuilt.extend(_retime(words, start, end, corr.speaker_code))
-                i = stop
-                continue
-            words = [*before.get(i, []), respelled.get(i, tok.text), *after.get(i, [])]
-            if len(words) == 1:
-                rebuilt.append(replace(tok, text=words[0]))
-            else:
-                # Inserted words share the neighbouring word's time.
-                rebuilt.extend(_retime(words, tok.start, tok.end, corr.speaker_code))
-            i += 1
-        span_tokens = rebuilt
+    rebuilt: list[Token] = []
+    i = 0
+    while i < len(span_tokens):
+        tok = span_tokens[i]
+        if i in replaced:
+            stop, words = replaced[i]
+            start, end = tok.start, span_tokens[stop - 1].end
+            words = [*before.get(i, []), *words, *after.get(stop - 1, [])]
+            rebuilt.extend(_retime(words, start, end, corr.speaker_code))
+            i = stop
+            continue
+        words = [*before.get(i, []), respelled.get(i, tok.text), *after.get(i, [])]
+        if len(words) == 1:
+            rebuilt.append(replace(tok, text=words[0]))
+        else:
+            # Inserted words share the neighbouring word's time.
+            rebuilt.extend(_retime(words, tok.start, tok.end, corr.speaker_code))
+        i += 1
 
     # Other speakers' words inside the span stay; the corrected speaker's
     # words go back in where the span began. Order is restored by time in
     # build_cues, so an interjection still lands in the right place.
     in_span = set(span)
     rest = [t for i, t in enumerate(tokens) if i not in in_span]
-    return rest[:span[0]] + span_tokens + rest[span[0]:], fallback
+    return rest[:span[0]] + rebuilt + rest[span[0]:], APPLIED
 
 
 # ---------------------------------------------------------------------------
@@ -423,7 +465,10 @@ def build_cues(
         limit = cues[i + 1].start if i + 1 < len(cues) else duration
         end = max(cue.end, min(cue.start + MIN_CUE_SECONDS, limit))
         cues[i] = replace(cue, end=max(end, cue.start))
-    return cues
+    # A cue with no time on screen can't be read, and the mov_text track
+    # turns one into an empty event (measured 29 Sep 2026): drop it. Crosstalk
+    # merging is the fuller fix, parked (review log, export-clips, Finding 8).
+    return [cue for cue in cues if cue.end > cue.start]
 
 
 # ---------------------------------------------------------------------------
@@ -469,8 +514,12 @@ def to_srt(cues: list[Cue]) -> str:
         parts.append(str(n))
         parts.append(f"{_timestamp(cue.start, ',')} --> {_timestamp(cue.end, ',')}")
         for line in cue.lines:
-            # SRT has no escape for markup; keep a literal bracket from
-            # being read as a tag.
-            parts.append(line.replace("<", "‹").replace(">", "›"))
+            # SRT has no escape for markup, and ffmpeg's SRT reader also takes
+            # ``\N`` as a line break and ``{\…}`` as a style override (a
+            # doubled backslash does not help — measured 29 Sep 2026). Swap
+            # the characters for look-alikes so the words survive as written.
+            parts.append(
+                line.replace("<", "‹").replace(">", "›").replace("\\", "\u29f5")
+            )
         parts.append("")
     return "\n".join(parts)

@@ -57,8 +57,9 @@ class FFmpegBackend:
 
         With ``subtitles``, the file is a second input muxed as a ``mov_text``
         track (MPEG-4 Timed Text), still without re-encoding the video. Only
-        the source's video and audio are mapped, so a data or timecode track
-        in a Zoom or Teams file can't break the cut. The cut starts on the
+        the source's first video and first audio stream are mapped, with or
+        without subtitles, so a data, timecode or extra audio track in a Zoom
+        or Teams file can't break the cut. The cut starts on the
         requested frame, not the keyframe before it — ffmpeg writes an edit
         list — so subtitles timed from ``start`` stay in sync (measured
         frame-exact, 29 Sep 2026).
@@ -80,11 +81,18 @@ class FFmpegBackend:
         ffmpeg = bundled_binary_path("ffmpeg") or "ffmpeg"
         cmd = [ffmpeg, "-ss", f"{start:.3f}", "-to", f"{end:.3f}", "-i", str(source)]
         if subtitles is not None:
-            cmd += [
-                "-i", str(subtitles),
-                "-map", "0:v?", "-map", "0:a?", "-map", "1:0",
-                "-c", "copy", "-c:s", "mov_text",
-            ]
+            cmd += ["-i", str(subtitles)]
+        # The same streams with or without subtitles: the first video and the
+        # first audio track only. Mapping every stream let a second audio
+        # track (or a data track) fail the mux — measured: a second PCM track
+        # into .m4a exits 234 — and made a subtitled clip carry different
+        # tracks from a plain one. An audio clip takes no video, so an
+        # embedded cover image can't be copied into the .m4a.
+        if output.suffix.lower() != ".m4a":
+            cmd += ["-map", "0:v:0?"]
+        cmd += ["-map", "0:a:0?"]
+        if subtitles is not None:
+            cmd += ["-map", "1:0", "-c", "copy", "-c:s", "mov_text"]
         else:
             cmd += ["-c", "copy"]
         cmd += ["-y", str(output)]

@@ -10,8 +10,10 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import platform
 import subprocess
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -29,6 +31,8 @@ from bristlenose.server.clip_manifest import (
     merge_adjacent_clips,
 )
 from bristlenose.server.clip_subtitles import (
+    CORRECTION_TAIL_SECONDS,
+    UNPLACED,
     Correction,
     Cue,
     SegmentInput,
@@ -50,6 +54,7 @@ from bristlenose.server.models import (
     TranscriptSegment,
 )
 from bristlenose.server.models import Session as SessionModel
+from bristlenose.utils.fs import CloudFetchTimeoutError, ensure_materialised
 
 logger = logging.getLogger(__name__)
 
@@ -201,7 +206,12 @@ def _quotes_to_quotelike(
 def _load_segments(
     db: DbSession, project_id: int, session_id: str, start: float, end: float,
 ) -> list[SegmentInput]:
-    """Transcript segments overlapping ``[start, end]`` for one session."""
+    """Transcript segments overlapping ``[start, end]`` for one session.
+
+    A segment whose word timings can't be read is still subtitled, with its
+    words spread across the segment — and the loss of sync is logged, once
+    per call, rather than passing silently.
+    """
     rows = (
         db.query(TranscriptSegment)
         .join(SessionModel, SessionModel.id == TranscriptSegment.session_id)
@@ -215,15 +225,19 @@ def _load_segments(
         .all()
     )
     segments: list[SegmentInput] = []
+    unreadable = 0
     for row in rows:
         words: tuple[WordTiming, ...] | None = None
         if row.words_json:
             try:
-                words = tuple(
-                    WordTiming(text=w["t"], start=float(w["s"]), end=float(w["e"]))
-                    for w in json.loads(row.words_json)
-                )
+                parsed = []
+                for w in json.loads(row.words_json):
+                    if not isinstance(w["t"], str):
+                        raise TypeError("word text is not a string")
+                    parsed.append(WordTiming(text=w["t"], start=float(w["s"]), end=float(w["e"])))
+                words = tuple(parsed)
             except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+                unreadable += 1
                 words = None
         segments.append(SegmentInput(
             speaker_code=row.speaker_code,
@@ -232,60 +246,134 @@ def _load_segments(
             text=row.text,
             words=words or None,
         ))
+    if unreadable:
+        logger.warning(
+            "Clip subtitles: %d segment(s) in %s had unreadable word timings; "
+            "their words are spread across the segment instead",
+            unreadable, session_id,
+        )
     return segments
 
 
 def _load_corrections(
     db: DbSession, project_id: int, session_id: str, start: float, end: float,
 ) -> list[Correction]:
-    """The researcher's latest edit of each quote overlapping ``[start, end]``."""
+    """The researcher's latest edit of each quote near ``[start, end]``.
+
+    Widened by ``CORRECTION_TAIL_SECONDS``: a quote's recorded end can fall
+    before its last words, so a quote ending just before the clip may still
+    have corrected words inside it.
+    """
     rows = (
         db.query(Quote, QuoteEdit.edited_text)
         .join(QuoteEdit, QuoteEdit.quote_id == Quote.id)
         .filter(
             Quote.project_id == project_id,
             Quote.session_id == session_id,
-            Quote.end_timecode > start,
+            Quote.end_timecode > start - CORRECTION_TAIL_SECONDS,
             Quote.start_timecode < end,
         )
         .order_by(QuoteEdit.edited_at.desc())
         .all()
     )
-    latest: dict[int, Correction] = {}
+    seen: set[int] = set()
+    latest: list[Correction] = []
     for quote, edited in rows:
-        if quote.id in latest or edited == quote.text:
+        # Mark seen before the no-op check, so an older edit can never stand
+        # in for a newest one that reverts the quote to its original text.
+        if quote.id in seen:
             continue
-        latest[quote.id] = Correction(
+        seen.add(quote.id)
+        if edited == quote.text:
+            continue
+        latest.append(Correction(
             speaker_code=quote.participant_id,
             start=quote.start_timecode,
             end=quote.end_timecode,
             original=quote.text,
             corrected=edited,
-        )
-    return sorted(latest.values(), key=lambda c: c.start)
+            quote_ref=f"q-{quote.participant_id}-{int(quote.start_timecode)}",
+        ))
+    return sorted(latest, key=lambda c: c.start)
 
 
 def _build_clip_cues(db: DbSession, project_id: int, spec: ClipSpec) -> list[Cue]:
     """Subtitle cues for one clip: everyone audible, with corrections applied.
 
     Never carries a speaker's name: speakers are told apart by colour only.
+    A correction that can't be placed word by word is left out and logged:
+    the transcript's own words stand rather than a guess.
     """
     segments = _load_segments(db, project_id, spec.session_id, spec.start, spec.end)
     tokens = [tok for seg in segments for tok in tokens_for_segment(seg)]
     for corr in _load_corrections(db, project_id, spec.session_id, spec.start, spec.end):
-        tokens, fell_back = apply_correction(tokens, corr)
-        if fell_back:
-            logger.info(
-                "Clip subtitles: correction at %.1fs in %s spread evenly "
-                "(could not be placed word by word)",
-                corr.start, spec.session_id,
+        tokens, outcome = apply_correction(tokens, corr)
+        if outcome == UNPLACED:
+            logger.warning(
+                "Clip subtitles: the researcher's correction to %s could not be "
+                "placed word by word, so the transcript's wording is used",
+                corr.quote_ref,
             )
     return build_cues(tokens, spec.start, spec.end, spec.participant_id)
+
+
+def _safe_clip_cues(db: DbSession, project_id: int, spec: ClipSpec) -> list[Cue]:
+    """``_build_clip_cues``, but a failure costs this clip its subtitles only.
+
+    Subtitles are additive: an error building them must never fail the export.
+    """
+    try:
+        return _build_clip_cues(db, project_id, spec)
+    except Exception:
+        logger.warning(
+            "Clip subtitles skipped for %s at %.1fs: could not build them",
+            spec.session_id, spec.start, exc_info=True,
+        )
+        return []
 
 
 # ---------------------------------------------------------------------------
 # Async job runner
 # ---------------------------------------------------------------------------
+
+
+async def _cut_clip(
+    backend: FFmpegBackend, spec: ClipSpec, output_path: Path, cues: list[Cue],
+) -> tuple[Path | None, bool]:
+    """Cut one clip, with its subtitle track when there are cues.
+
+    Returns the clip path (None if it could not be cut) and whether the
+    subtitle track made it in. The SRT lives in the system temp directory,
+    never in the researcher's clips folder, and is removed afterwards.
+    """
+    if cues:
+        fd, tmp = tempfile.mkstemp(suffix=".srt")
+        srt_path = Path(tmp)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(to_srt(cues))
+            # Run FFmpeg in a thread to avoid blocking the event loop
+            result = await asyncio.to_thread(
+                backend.extract_clip, spec.source_path, output_path,
+                spec.start, spec.end, srt_path,
+            )
+            if result is not None:
+                return result, True
+            logger.warning(
+                "Clip %s failed with its subtitle track; retrying without it",
+                output_path.name,
+            )
+        except OSError:
+            logger.warning(
+                "Could not write the subtitle track for %s; cutting without it",
+                output_path.name, exc_info=True,
+            )
+        finally:
+            srt_path.unlink(missing_ok=True)
+    result = await asyncio.to_thread(
+        backend.extract_clip, spec.source_path, output_path, spec.start, spec.end,
+    )
+    return result, False
 
 
 async def _run_clip_extraction(
@@ -301,89 +389,96 @@ async def _run_clip_extraction(
 
     Each clip with transcript text gets a ``.vtt`` beside it and the same
     cues muxed in as a soft subtitle track. A clip whose subtitle mux fails
-    is cut again without subtitles rather than lost.
+    is cut again without subtitles rather than lost. Any unexpected error
+    marks the job failed rather than leaving it "running", which would
+    refuse every later export until the server restarts.
     """
     backend = FFmpegBackend()
     job = _jobs.get(project_id)
     if job is None:
         return
 
-    manifest_entries: list[dict[str, Any]] = []
+    try:
+        manifest_entries: list[dict[str, Any]] = []
 
-    for i, spec in enumerate(clips):
-        if _jobs.get(project_id, {}).get("status") == "cancelled":
-            break
+        for i, spec in enumerate(clips):
+            # Stop if cancelled, or if a newer job has replaced this one
+            # (cancel, then start again, while this clip was being cut).
+            if job.get("status") == "cancelled" or _jobs.get(project_id) is not job:
+                break
 
-        filename = build_clip_filename(
-            spec, participant_count, use_hours, anonymise=anonymise,
-        )
-        output_path = clips_dir / filename
+            filename = build_clip_filename(
+                spec, participant_count, use_hours, anonymise=anonymise,
+            )
+            output_path = clips_dir / filename
+            stem = filename.rsplit(".", 1)[0]
 
-        job["progress"] = i
-        job["current_clip"] = filename.rsplit(".", 1)[0]  # strip extension
+            job["progress"] = i
+            job["current_clip"] = stem
 
-        cues = (cues_by_clip or {}).get(i) or []
-        stem = filename.rsplit(".", 1)[0]
-        srt_path = clips_dir / f".{stem}.srt.tmp"
-        result = None
-        try:
-            if cues:
-                srt_path.write_text(to_srt(cues), encoding="utf-8")
-                # Run FFmpeg in a thread to avoid blocking the event loop
-                result = await asyncio.to_thread(
-                    backend.extract_clip, spec.source_path, output_path,
-                    spec.start, spec.end, srt_path,
-                )
-                if result is None:
-                    logger.warning(
-                        "Subtitle track failed for %s; cutting without it", filename,
-                    )
-            if result is None:
-                result = await asyncio.to_thread(
-                    backend.extract_clip, spec.source_path, output_path,
-                    spec.start, spec.end,
-                )
-        finally:
-            srt_path.unlink(missing_ok=True)
+            # Fetch an evicted cloud source once, before either attempt, so a
+            # source that never arrives costs one wait and is not retried.
+            try:
+                await asyncio.to_thread(ensure_materialised, spec.source_path)
+            except CloudFetchTimeoutError as exc:
+                job["skipped_count"] = job.get("skipped_count", 0) + 1
+                logger.warning("Skipped clip %s: %s", filename, exc)
+                continue
 
-        if result is not None:
-            job["completed_count"] = job.get("completed_count", 0) + 1
+            cues = (cues_by_clip or {}).get(i) or []
+            result, with_track = await _cut_clip(backend, spec, output_path, cues)
+
+            vtt_path = clips_dir / f"{stem}.vtt"
             vtt_name: str | None = None
-            if cues:
-                vtt_name = f"{stem}.vtt"
-                (clips_dir / vtt_name).write_text(to_webvtt(cues), encoding="utf-8")
-            manifest_entries.append({
-                "quote_id": spec.quote_id,
-                "participant_id": spec.participant_id,
-                "session_id": spec.session_id,
-                "filename": filename,
-                "subtitles": vtt_name,
-                "start": spec.start,
-                "end": spec.end,
-            })
-        else:
-            job["skipped_count"] = job.get("skipped_count", 0) + 1
-            logger.warning("Skipped clip %s (extraction failed)", filename)
+            if result is not None:
+                job["completed_count"] = job.get("completed_count", 0) + 1
+                if cues:
+                    try:
+                        vtt_path.write_text(to_webvtt(cues), encoding="utf-8")
+                        vtt_name = vtt_path.name
+                    except OSError:
+                        logger.warning(
+                            "Could not write %s", vtt_path.name, exc_info=True,
+                        )
+                manifest_entries.append({
+                    "quote_id": spec.quote_id,
+                    "participant_id": spec.participant_id,
+                    "session_id": spec.session_id,
+                    "filename": filename,
+                    "subtitles": vtt_name,
+                    "start": spec.start,
+                    "end": spec.end,
+                })
+            else:
+                job["skipped_count"] = job.get("skipped_count", 0) + 1
+                logger.warning("Skipped clip %s (extraction failed)", filename)
+            if vtt_name is None:
+                # A .vtt left by an earlier export must not sit beside a clip
+                # that no longer has one.
+                vtt_path.unlink(missing_ok=True)
 
-    # Write clips_manifest.json
-    manifest = {
-        "extracted_at": datetime.now(timezone.utc).isoformat(),
-        "total": len(clips),
-        "completed": job.get("completed_count", 0),
-        "skipped": job.get("skipped_count", 0),
-        "anonymised": anonymise,
-        "clips": manifest_entries,
-    }
-    manifest_path = clips_dir / "clips_manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=True))
+        # Write clips_manifest.json
+        manifest = {
+            "extracted_at": datetime.now(timezone.utc).isoformat(),
+            "total": len(clips),
+            "completed": job.get("completed_count", 0),
+            "skipped": job.get("skipped_count", 0),
+            "anonymised": anonymise,
+            "clips": manifest_entries,
+        }
+        manifest_path = clips_dir / "clips_manifest.json"
+        manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=True))
 
-    # A cancelled job broke out of the loop early — record that, don't overwrite
-    # it with "completed". Clips written before the break stay on disk (a partial
-    # folder is honest and usable), so output_dir is set either way.
-    cancelled = _jobs.get(project_id, {}).get("status") == "cancelled"
-    job["status"] = "cancelled" if cancelled else "completed"
-    if not cancelled:
-        job["progress"] = len(clips)
+        # A cancelled job broke out of the loop early — record that, don't
+        # overwrite it with "completed". Clips written before the break stay on
+        # disk (a partial folder is honest and usable), so output_dir is set.
+        cancelled = job.get("status") == "cancelled"
+        job["status"] = "cancelled" if cancelled else "completed"
+        if not cancelled:
+            job["progress"] = len(clips)
+    except Exception:
+        logger.exception("Clip extraction failed")
+        job["status"] = "failed"
     job["output_dir"] = str(clips_dir)
     job["current_clip"] = ""
 
@@ -506,7 +601,7 @@ async def start_clip_extraction(
         # Subtitles are built now, while the DB session is open; the job
         # runs after this request returns.
         cues_by_clip = {
-            i: _build_clip_cues(db, project_id, spec) for i, spec in enumerate(specs)
+            i: _safe_clip_cues(db, project_id, spec) for i, spec in enumerate(specs)
         }
 
         # Create clips directory

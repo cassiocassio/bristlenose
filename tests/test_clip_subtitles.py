@@ -5,7 +5,10 @@ from __future__ import annotations
 import pytest
 
 from bristlenose.server.clip_subtitles import (
+    APPLIED,
     MAX_LINE_CHARS,
+    NO_WORDS,
+    UNPLACED,
     Correction,
     SegmentInput,
     Token,
@@ -109,8 +112,8 @@ class TestApplyCorrection:
             original="We moved to cube ernetes last year.",
             corrected="We moved to Kubernetes last year.",
         )
-        out, fell_back = apply_correction(self._span(), corr)
-        assert not fell_back
+        out, outcome = apply_correction(self._span(), corr)
+        assert outcome == APPLIED
         assert _texts(out) == ["we", "um", "moved", "to", "Kubernetes", "last", "year."]
         kube = out[4]
         assert (kube.start, kube.end) == pytest.approx((11.3, 12.0))
@@ -133,8 +136,8 @@ class TestApplyCorrection:
             original="We moved to cube ernetes last year.",
             corrected="We moved to cube ernetes.",
         )
-        out, fell_back = apply_correction(self._span(), corr)
-        assert not fell_back
+        out, outcome = apply_correction(self._span(), corr)
+        assert outcome == APPLIED
         assert _texts(out) == _texts(self._span())
 
     def test_insertion_of_a_dropped_word(self) -> None:
@@ -143,11 +146,31 @@ class TestApplyCorrection:
             original="We moved to cube ernetes last year.",
             corrected="We moved to cube ernetes only last year.",
         )
-        out, fell_back = apply_correction(self._span(), corr)
-        assert not fell_back
+        out, outcome = apply_correction(self._span(), corr)
+        assert outcome == APPLIED
         assert _texts(out) == [
             "we", "um", "moved", "to", "cube", "ernetes", "only", "last", "year.",
         ]
+
+    def test_bracket_in_place_of_a_spoken_name_is_shown(self) -> None:
+        # The researcher's substitution wins: "[her]" must not revert to the
+        # name, which is what per-word bracket handling did.
+        tokens = [_tok("I", 0.0, 0.2), _tok("told", 0.3, 0.5), _tok("Sarah", 0.6, 1.0),
+                  _tok("that.", 1.1, 1.4)]
+        corr = Correction("p1", 0.0, 2.0, original="I told Sarah that.",
+                          corrected="I told [her] that.")
+        out, outcome = apply_correction(tokens, corr)
+        assert outcome == APPLIED
+        assert _texts(out) == ["I", "told", "[her]", "that."]
+        assert (out[2].start, out[2].end) == (0.6, 1.0)
+
+    def test_multi_word_editorial_insertion_is_not_subtitled(self) -> None:
+        tokens = [_tok("it", 0.0, 0.2), _tok("crashed.", 0.3, 0.8)]
+        corr = Correction("p1", 0.0, 2.0, original="it crashed.",
+                          corrected="it [the app] crashed.")
+        out, outcome = apply_correction(tokens, corr)
+        assert outcome == APPLIED
+        assert _texts(out) == ["it", "crashed."]
 
     def test_elisions_and_editorial_brackets_are_not_subtitled(self) -> None:
         corr = Correction(
@@ -160,17 +183,35 @@ class TestApplyCorrection:
         assert "[the]" not in _texts(out)
         assert "Kubernetes" in _texts(out)
 
-    def test_unplaceable_correction_spreads_the_corrected_words_evenly(self) -> None:
+    def test_unplaceable_correction_changes_nothing(self) -> None:
+        # Never a guess that could delete or repeat what was said: the
+        # transcript's own words stand, and the caller logs the quote.
         corr = Correction(
             "p1", 10.0, 13.0,
             original="Something the transcript never said.",
             corrected="Something entirely different.",
         )
-        out, fell_back = apply_correction(self._span(), corr)
-        assert fell_back
-        assert _texts(out) == ["Something", "entirely", "different."]
-        assert out[0].start == 10.0
-        assert out[-1].end == pytest.approx(12.9)
+        out, outcome = apply_correction(self._span(), corr)
+        assert outcome == UNPLACED
+        assert out == self._span()
+
+    def test_correction_to_words_past_the_quotes_recorded_end(self) -> None:
+        # The model's end time falls before the quote's last words (measured
+        # on real projects). The fix to those words must land once, in place:
+        # no audible word lost, nothing shown twice.
+        tokens = [
+            _tok("Sure.", 10.0, 10.4), _tok("I", 10.5, 10.6), _tok("found", 10.7, 11.0),
+            _tok("my", 17.0, 17.2), _tok("settings", 17.3, 17.8), _tok("were.", 18.2, 18.8),
+        ]
+        corr = Correction(
+            "p1", 10.0, 18.0,
+            original="I found my settings were.",
+            corrected="I found my Settings panel was.",
+        )
+        out, outcome = apply_correction(tokens, corr)
+        assert outcome == APPLIED
+        assert _texts(out) == ["Sure.", "I", "found", "my", "Settings", "panel", "was."]
+        assert out[-1].end == pytest.approx(18.8)
 
     def test_other_speakers_are_untouched(self) -> None:
         tokens = [*self._span(), _tok("Right.", 11.4, 11.5, "m1")]
@@ -184,9 +225,9 @@ class TestApplyCorrection:
 
     def test_correction_outside_the_tokens_changes_nothing(self) -> None:
         corr = Correction("p1", 50.0, 60.0, original="x", corrected="y")
-        out, fell_back = apply_correction(self._span(), corr)
+        out, outcome = apply_correction(self._span(), corr)
         assert out == self._span()
-        assert not fell_back
+        assert outcome == NO_WORDS
 
 
 # ---------------------------------------------------------------------------
@@ -311,6 +352,19 @@ class TestSerialisation:
         assert "<font" not in srt
         assert "Tom ‹said› R&D." in srt
 
+    def test_srt_backslash_cannot_become_a_line_break_or_override(self) -> None:
+        cues = build_cues([_tok(r"C:\New", 0.0, 1.0), _tok(r"{\an8}top", 1.1, 2.0)],
+                          0.0, 5.0, "p1")
+        srt = to_srt(cues)
+        assert "\\" not in srt
+        assert "C:\u29f5New" in srt
+
+    def test_zero_length_cue_is_dropped(self) -> None:
+        # Two cues starting together: the first is clamped to no time at all.
+        toks = [_tok("Yes.", 1.0, 1.0, "p1"), _tok("No.", 1.0, 1.5, "m1")]
+        cues = build_cues(toks, 0.0, 10.0, "p1")
+        assert all(c.end > c.start for c in cues)
+
     def test_hours_in_timestamps(self) -> None:
         cues = build_cues([_tok("late", 3725.5, 3726.0)], 0.0, 4000.0, "p1")
         assert "01:02:05.500 --> " in to_webvtt(cues)
@@ -322,10 +376,17 @@ class TestCaseFixes:
                   _tok("tools", 0.9, 1.2)]
         corr = Correction("p1", 0.0, 2.0, original="We use ux tools",
                           corrected="We use UX tools")
-        out, fell_back = apply_correction(tokens, corr)
-        assert not fell_back
+        out, outcome = apply_correction(tokens, corr)
+        assert outcome == APPLIED
         assert _texts(out) == ["we", "use", "UX", "tools"]
         assert (out[2].start, out[2].end) == (0.6, 0.8)
+
+    def test_capitalisation_fix_keeps_the_transcripts_punctuation(self) -> None:
+        tokens = [_tok("the", 0.0, 0.2), _tok("checkout,", 0.3, 0.8), _tok("then", 0.9, 1.0)]
+        corr = Correction("p1", 0.0, 2.0, original="the checkout then",
+                          corrected="the Checkout then")
+        out, _ = apply_correction(tokens, corr)
+        assert _texts(out) == ["the", "Checkout,", "then"]
 
     def test_pipeline_capitalisation_is_not_forced_onto_the_transcript(self) -> None:
         # The quote text capitalised "We" and the researcher left it: that is
@@ -337,6 +398,12 @@ class TestCaseFixes:
 
 
 class TestRealTranscriptShapes:
+    def test_label_with_brackets_inside_is_stripped_whole(self) -> None:
+        # A Teams display name can carry its own brackets; stopping at the
+        # first ")" left the surname on screen.
+        seg = SegmentInput("p1", 0.0, 4.0, "(Robert (Bob) Smith) Yeah I use it")
+        assert _texts(tokens_for_segment(seg)) == ["Yeah", "I", "use", "it"]
+
     def test_speaker_label_prefix_is_never_subtitled(self) -> None:
         seg = SegmentInput("p1", 0.0, 4.0, "(Sarah Jones) Well, thank you very much.")
         assert _texts(tokens_for_segment(seg))[0] == "Well,"

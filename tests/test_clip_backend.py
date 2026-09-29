@@ -154,10 +154,11 @@ class TestSubtitleMux:
             FFmpegBackend().extract_clip(source, output, 10.0, 20.0, subtitles)
         return list(mock_run.call_args[0][0])
 
-    def test_without_subtitles_the_command_is_unchanged(self, tmp_path: Path) -> None:
+    def test_without_subtitles_first_video_and_audio_only(self, tmp_path: Path) -> None:
         args = self._run(tmp_path, None)
         assert args[1:] == [
             "-ss", "10.000", "-to", "20.000", "-i", str(tmp_path / "source.mp4"),
+            "-map", "0:v:0?", "-map", "0:a:0?",
             "-c", "copy", "-y", str(tmp_path / "clip.mp4"),
         ]
 
@@ -167,8 +168,22 @@ class TestSubtitleMux:
         args = self._run(tmp_path, srt)
         joined = " ".join(args)
         assert f"-i {srt}" in joined
-        # Only the source's video and audio, so a data track can't break the cut.
-        assert "-map 0:v? -map 0:a? -map 1:0" in joined
+        # The same first video and audio as a plain cut, plus the subtitles:
+        # every-stream mapping let a second audio track fail the mux.
+        assert "-map 0:v:0? -map 0:a:0? -map 1:0" in joined
         assert "-c copy -c:s mov_text" in joined
         # The seek stays an input option on the source, before its -i.
         assert args.index("-ss") < args.index(str(tmp_path / "source.mp4"))
+
+    def test_audio_clip_takes_no_video(self, tmp_path: Path) -> None:
+        source = tmp_path / "source.m4a"
+        source.write_bytes(b"fake")
+        output = tmp_path / "clip.m4a"
+        output.write_bytes(b"clip")
+        mock_result = MagicMock(returncode=0, stderr="")
+        with patch(
+            "bristlenose.server.clip_backend.subprocess.run", return_value=mock_result,
+        ) as mock_run:
+            FFmpegBackend().extract_clip(source, output, 1.0, 2.0)
+        args = list(mock_run.call_args[0][0])
+        assert "0:v:0?" not in args and "0:a:0?" in args

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 from pathlib import Path
 from unittest.mock import patch
 
@@ -15,6 +16,7 @@ from bristlenose.server.clip_manifest import ClipSpec
 from bristlenose.server.clip_subtitles import Cue, to_webvtt
 from bristlenose.server.models import Quote, QuoteEdit
 from bristlenose.server.routes import clips_export
+from bristlenose.utils.fs import CloudFetchTimeoutError
 from tests.conftest import AuthTestClient
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
@@ -320,3 +322,101 @@ class TestExtractionWritesSubtitles:
         assert out["manifest"]["clips"][0]["subtitles"] is None
         assert out["calls"] == [None]
         assert not list(tmp_path.glob("*.vtt"))
+
+    def test_stale_vtt_from_an_earlier_export_is_removed(self, tmp_path: Path) -> None:
+        stale = tmp_path / "p1 00m10 i found the dashboard.vtt"
+        stale.write_text("WEBVTT\n")
+        out = self._run(tmp_path, {}, fail_with_subs=False)
+        assert out["manifest"]["clips"][0]["subtitles"] is None
+        assert not stale.exists()
+
+    def test_temp_srt_never_lands_in_the_clips_folder(self, tmp_path: Path) -> None:
+        seen: list[Path] = []
+
+        def fake_extract(self, source, output, start, end, subtitles=None):  # type: ignore[no-untyped-def]
+            if subtitles is not None:
+                seen.append(subtitles)
+            output.write_bytes(b"clip")
+            return output
+
+        clips_export._jobs[1] = {"status": "running", "progress": 0, "total": 1}
+        with patch.object(clips_export.FFmpegBackend, "extract_clip", fake_extract):
+            asyncio.run(clips_export._run_clip_extraction(
+                1, [_spec(tmp_path / "src.mp4")], tmp_path, 1, False, False,
+                {0: self._cues()},
+            ))
+        assert seen and seen[0].parent != tmp_path
+        assert not seen[0].exists()
+
+    def test_write_error_marks_the_job_failed_not_running(self, tmp_path: Path) -> None:
+        # A stranded "running" job refuses every later export with a 409.
+        def fake_extract(self, source, output, start, end, subtitles=None):  # type: ignore[no-untyped-def]
+            output.write_bytes(b"clip")
+            return output
+
+        clips_export._jobs[1] = {"status": "running", "progress": 0, "total": 1}
+        with patch.object(clips_export.FFmpegBackend, "extract_clip", fake_extract), \
+                patch.object(clips_export, "build_clip_filename", side_effect=OSError("disk full")):
+            asyncio.run(clips_export._run_clip_extraction(
+                1, [_spec(tmp_path / "src.mp4")], tmp_path, 1, False, False, {},
+            ))
+        assert clips_export._jobs[1]["status"] == "failed"
+
+    def test_cloud_timeout_skips_the_clip_without_a_retry(self, tmp_path: Path) -> None:
+        calls: list[object] = []
+
+        def fake_extract(self, *args, **kwargs):  # type: ignore[no-untyped-def]
+            calls.append(args)
+            return None
+
+        def never_arrives(path):  # type: ignore[no-untyped-def]
+            raise CloudFetchTimeoutError(path, 1800.0)
+
+        clips_export._jobs[1] = {"status": "running", "progress": 0, "total": 1}
+        with patch.object(clips_export.FFmpegBackend, "extract_clip", fake_extract), \
+                patch.object(clips_export, "ensure_materialised", never_arrives):
+            asyncio.run(clips_export._run_clip_extraction(
+                1, [_spec(tmp_path / "src.mp4")], tmp_path, 1, False, False,
+                {0: self._cues()},
+            ))
+        assert calls == []  # ffmpeg never ran, so nothing was run twice
+        assert clips_export._jobs[1]["skipped_count"] == 1
+
+
+class TestExportComposesSubtitles:
+    """The whole route: POST → cues built from the DB → job → files."""
+
+    def test_export_writes_a_vtt_built_from_the_transcript(
+        self, client: TestClient, tmp_path: Path,
+    ) -> None:
+        def fake_extract(self, source, output, start, end, subtitles=None):  # type: ignore[no-untyped-def]
+            output.write_bytes(b"clip")
+            return output
+
+        media = ({"s1": (tmp_path / "s1.mp4", False)}, {"s1": 120.0})
+        with patch.object(clips_export.FFmpegBackend, "check_available", return_value=(True, "")), \
+                patch.object(clips_export.FFmpegBackend, "extract_clip", fake_extract), \
+                patch.object(clips_export, "_load_session_media", return_value=media), \
+                patch.object(clips_export, "_resolve_output_dir", return_value=tmp_path):
+            resp = client.post("/api/projects/1/export/clips", json={"ids": ["q-p1-10"]})
+            assert resp.status_code == 200 and resp.json()["status"] == "started"
+            for _ in range(100):
+                if client.get("/api/projects/1/export/clips/status").json()["status"] != "running":
+                    break
+                time.sleep(0.05)
+        manifest = json.loads((tmp_path / "clips" / "clips_manifest.json").read_text())
+        vtt = (tmp_path / "clips" / manifest["clips"][0]["subtitles"]).read_text()
+        assert "dashboard pretty confusing" in vtt.replace("\n", " ")
+
+    def test_a_failing_subtitle_build_does_not_fail_the_export(
+        self, client: TestClient, tmp_path: Path,
+    ) -> None:
+        media = ({"s1": (tmp_path / "s1.mp4", False)}, {"s1": 120.0})
+        with patch.object(clips_export.FFmpegBackend, "check_available", return_value=(True, "")), \
+                patch.object(clips_export, "_load_session_media", return_value=media), \
+                patch.object(clips_export, "_resolve_output_dir", return_value=tmp_path), \
+                patch.object(clips_export, "_build_clip_cues", side_effect=RuntimeError("boom")), \
+                patch.object(clips_export, "_run_clip_extraction") as run:
+            resp = client.post("/api/projects/1/export/clips", json={"ids": ["q-p1-10"]})
+        assert resp.status_code == 200
+        assert run.call_args[0][-1] == {0: []}

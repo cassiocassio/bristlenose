@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP Agents — the macOS 27 Files &amp; Folders step</title>
+<style>
+/* Native surface: Settings ▸ MCP Agents is SwiftUI, not the web SPA, so the
+   --bn-* web tokens don't apply. Tokens and geometry are lifted from
+   docs/mockups/mcp-agents-pane.html, which is drawn at the shipped 660pt. */
+:root{
+  color-scheme: light dark;
+  --bg:#f2f2f7; --page:#fff; --ink:#1d1d1f; --dim:#6e6e73; --faint:#8e8e93;
+  --line:#d8d8dc; --hairline:#e6e6ea; --chrome:#f6f6f6;
+  --accent:#007aff; --seg:#e9e9eb; --card:#fbfbfd; --codebg:#f5f5f7;
+  --shadow:0 18px 50px rgba(0,0,0,.18), 0 2px 6px rgba(0,0,0,.10);
+  --comm-bg:repeating-linear-gradient(135deg,#fbf7ee 0 10px,#f7f1e3 10px 20px);
+  --comm-rule:#c9a44c; --off:#e3e3e8; --sidebar:#ebebef;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#161618; --page:#1e1e20; --ink:#f2f2f7; --dim:#a1a1a6; --faint:#78787d;
+    --line:#3a3a3d; --hairline:#2c2c2f; --chrome:#2a2a2c;
+    --accent:#0a84ff; --seg:#3a3a3c; --card:#252527; --codebg:#1a1a1c;
+    --shadow:0 18px 50px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4);
+    --comm-bg:repeating-linear-gradient(135deg,#221f18 0 10px,#1d1a14 10px 20px);
+    --comm-rule:#8a7336; --off:#3a3a3d; --sidebar:#26262a;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;padding:40px 16px 90px;
+  font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1000px;margin:0 auto}
+h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+h2{font-size:17px;font-weight:700;margin:56px 0 4px}
+.sub{color:var(--dim);margin:0 0 8px;max-width:78ch}
+.meta{color:var(--faint);font-size:12px;margin:0 0 20px}
+code{font:11.5px ui-monospace,SFMono-Regular,Menlo,monospace}
+
+/* key */
+.key{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--dim);margin:0 0 28px}
+.key span{display:inline-flex;align-items:center;gap:7px}
+.key i{display:inline-block;width:22px;height:14px;border-radius:3px}
+.key .a{background:var(--page);border:.5px solid var(--line);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.key .c{background:var(--comm-bg);border-left:3px solid var(--comm-rule)}
+
+/* frame label — outside the window, never inside it */
+.flabel{font:600 11px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--faint);
+  text-transform:uppercase;letter-spacing:.06em;margin:18px 0 8px}
+
+/* Settings window */
+.win{width:660px;max-width:100%;background:var(--page);border-radius:11px;box-shadow:var(--shadow);
+     overflow:hidden;border:.5px solid var(--line)}
+.tbar{background:var(--chrome);border-bottom:.5px solid var(--line);padding:9px 14px 9px;position:relative}
+.lights{display:flex;gap:8px;position:absolute;left:14px;top:13px}
+.lights i{width:12px;height:12px;border-radius:50%;display:block}
+.lights i:nth-child(1){background:#ff5f57}.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#c2c2c4}
+.wtitle{text-align:center;font-size:13px;font-weight:600}
+.pane{padding:20px}
+.segs{display:flex;background:var(--seg);border-radius:8px;padding:2px;margin-bottom:11px}
+.seg{flex:1;text-align:center;padding:4px 8px;font-size:12.5px;border-radius:6px;color:var(--ink);white-space:nowrap}
+.seg.on{background:var(--accent);color:#fff;font-weight:600}
+.desc{color:var(--dim);font-size:12px;margin:0 0 11px}
+.how{color:var(--dim);font-size:11.5px;margin:0 0 8px}
+.extcard{border:.5px solid var(--line);border-radius:9px;padding:11px 12px;
+         display:flex;align-items:center;gap:11px;background:var(--card)}
+.extcard .thumb{width:36px;height:36px;border-radius:8px;background:var(--seg);
+  display:flex;align-items:center;justify-content:center;font-size:19px;flex:none}
+.extcard .nm{flex:1}.extcard .nm b{font-size:13px}
+.extcard .nm .s{color:var(--dim);font-size:11.5px;margin-top:1px}
+.pbtn{background:var(--accent);color:#fff;border:0;border-radius:7px;padding:5px 12px;
+      font-size:12.5px;font-weight:600;flex:none;font-family:inherit}
+/* bordered, regular — .buttonStyle(.bordered). NOT prominent: the pane's one
+   filled button stays Install Extension…. */
+.bbtn{background:var(--page);color:var(--ink);border:.5px solid var(--line);border-radius:6px;
+      padding:3px 11px;font-size:12.5px;flex:none;font-family:inherit;
+      box-shadow:0 .5px 1px rgba(0,0,0,.12)}
+.note{color:var(--dim);font-size:11.5px;margin:11px 0 0;line-height:1.4}
+.noterow{display:flex;align-items:flex-start;gap:14px;margin-top:11px}
+.noterow .note{margin:0;flex:1}
+.dialect{background:var(--codebg);border:.5px solid var(--line);border-radius:7px;
+  padding:9px 11px;font:11.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre;overflow-x:auto}
+.new{outline:2px dashed var(--comm-rule);outline-offset:4px;border-radius:3px}
+
+/* System Settings */
+.ss{width:720px;max-width:100%;display:flex;background:var(--page);border-radius:11px;
+  box-shadow:var(--shadow);overflow:hidden;border:.5px solid var(--line);min-height:390px}
+.ss .side{width:200px;background:var(--sidebar);padding:40px 10px 10px;border-right:.5px solid var(--line);flex:none}
+.ss .side div{padding:4px 8px;border-radius:6px;font-size:12.5px;color:var(--ink)}
+.ss .side .sel{background:var(--accent);color:#fff}
+.ss .main{flex:1;padding:12px 18px}
+.ss .crumb{font-weight:700;font-size:14px;margin:2px 0 10px}
+.ss .hdr{color:var(--dim);font-size:11.5px;margin:0 0 10px}
+.ss .row{display:flex;align-items:center;gap:9px;padding:6px 4px;border-bottom:.5px solid var(--hairline);font-size:12.5px}
+.ss .row .tri{width:10px;color:var(--faint);font-size:9px}
+.ss .row .ico{width:20px;height:20px;border-radius:5px;background:var(--seg);display:flex;align-items:center;justify-content:center;font-size:12px}
+.ss .row.child{padding-left:34px}
+.ss .row .grow{flex:1}
+.sw{width:32px;height:19px;border-radius:10px;background:var(--off);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.sw.on{background:var(--accent)}.sw.on::after{left:15px}
+
+/* chat transcript, deliberately generic — not any vendor's UI */
+.chat{width:560px;max-width:100%;background:var(--page);border-radius:11px;box-shadow:var(--shadow);
+  border:.5px solid var(--line);padding:18px}
+.msg{padding:9px 12px;border-radius:12px;margin:0 0 10px;max-width:88%;font-size:13px}
+.msg.me{background:var(--seg);margin-left:auto}
+.msg.tool{font:11.5px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dim);
+  border:.5px dashed var(--line);max-width:100%}
+.msg.ai{background:transparent;padding-left:0}
+
+/* commentary */
+.comm{background:var(--comm-bg);border-left:3px solid var(--comm-rule);padding:12px 16px;margin:18px 0 0;
+  max-width:88ch;font-size:12.5px;color:var(--ink)}
+.comm .lbl{font:600 10.5px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--comm-rule);margin-bottom:6px}
+.comm p{margin:0 0 8px}.comm p:last-child{margin:0}
+.comm ul{margin:4px 0 0;padding-left:18px}.comm li{margin:0 0 5px}
+/* each Settings window is the shipped 660pt, so variants stack rather than sit side by side */
+.two{display:grid;grid-template-columns:1fr;gap:10px}
+@media (max-width:760px){.ss .side{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Agent access on macOS 27: the Files &amp; Folders step</h1>
+<p class="sub">Draft for review. On macOS 27, macOS no longer shows a dialog when Claude or ChatGPT
+reads Bristlenose's handshake file. It denies the read, and the grant lives in System Settings.
+This mockup covers the Settings pane, the page the button opens, and what the researcher sees in chat.</p>
+<p class="meta">29 Sep 2026 · drawn at the shipped 660pt · spec: <code>docs/design-mcp-files-and-folders.md</code> ·
+dashed outline = new or changed</p>
+<div class="key"><span><i class="a"></i>Artefact: what ships</span><span><i class="c"></i>Commentary: why</span></div>
+
+<!-- ============ 1 ============ -->
+<h2>1 · Claude Desktop tab, macOS 27</h2>
+<div class="flabel">Settings ▸ MCP Agents · macOS 27</div>
+<div class="win">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="pane">
+    <div class="segs"><div class="seg on">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
+    <p class="desc">Adds Bristlenose to Claude Desktop as an extension. Claude Desktop will ask you to confirm.</p>
+    <div class="extcard">
+      <div class="thumb">🐟</div>
+      <div class="nm"><b>Bristlenose</b><div class="s">Extension 0.31.5</div></div>
+      <button class="pbtn">Install Extension…</button>
+    </div>
+    <div class="noterow new">
+      <p class="note">The first time you ask a question, macOS blocks Claude from reading Bristlenose, without asking.
+      To allow it, open System Settings ▸ Privacy &amp; Security ▸ Files &amp; Folders, expand Claude and turn on
+      Bristlenose — then ask again.</p>
+      <button class="bbtn">Open Files &amp; Folders</button>
+    </div>
+  </div>
+</div>
+<div class="comm"><div class="lbl">Commentary</div>
+  <p><b>Same slot as the macOS 26 note, same reason.</b> The proxy reads the handshake only inside a tool call,
+  so the block happens on the first <i>question</i>, not at install. The note sits below the row because that's when it applies.</p>
+  <ul>
+    <li><b>The button is new.</b> On 26 the fix came to the researcher as a dialog. On 27 they have to go four levels
+    deep into an app we don't own. <code>x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_FilesAndFolders</code>
+    was opened on 27.0 and lands on Files &amp; Folders. It's bordered, not filled: Install stays the pane's one prominent action.</li>
+    <li><b>The full path stays in the sentence.</b> The button only gets them to the list. They still have to find
+    Claude under C, expand it and find the switch. Every locale quotes macOS's own pane names, so the words match System Settings.</li>
+    <li><b>Info register, no triangle.</b> Nothing has gone wrong. This is how macOS 27 works, once per agent app.</li>
+    <li><b>Always shown on 27.</b> Bristlenose can't see another app's TCC state, and a blocked proxy never reaches
+    the serve. From our side, a denial looks the same as nobody having asked yet (spec §4).</li>
+    <li><b>Not yet proven for Claude.</b> Measured for ChatGPT. The Claude grant on the test Mac carried over from 26.
+    Confirm on a clean account before this ships.</li>
+  </ul>
+</div>
+
+<!-- ============ 2 ============ -->
+<h2>2 · ChatGPT &amp; Codex tab</h2>
+<div class="two">
+<div>
+<div class="flabel">(a) today's path + one line</div>
+<div class="win">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="pane">
+    <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
+    <p class="how">In ChatGPT: Settings → MCP servers → Add server — or add to ~/.codex/config.toml (one entry covers ChatGPT desktop, Codex CLI, and the IDE extension):</p>
+<div class="dialect">[mcp_servers.bristlenose]
+url = "http://127.0.0.1:52811/mcp/"
+http_headers = { "Authorization" = "Bearer 3Kf…q8" }</div>
+    <div class="noterow">
+      <p class="note">This address changes when Bristlenose restarts — re-copy the config after relaunching.</p>
+      <button class="bbtn">Copy Config</button>
+    </div>
+    <p class="note new">In ChatGPT, ask in Work mode — Bristlenose’s tools aren’t available in Chat.</p>
+  </div>
+</div>
+</div>
+<div>
+<div class="flabel">(b) if the Codex plugin ships · macOS 27</div>
+<div class="win">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="pane">
+    <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
+    <p class="desc">Adds Bristlenose to ChatGPT as a plugin. ChatGPT will ask you to confirm.</p>
+    <div class="extcard">
+      <div class="thumb">🐟</div>
+      <div class="nm"><b>Bristlenose</b><div class="s">Plugin 0.31.5</div></div>
+      <button class="pbtn">Add to ChatGPT…</button>
+    </div>
+    <div class="noterow new">
+      <p class="note">The first time you ask a question, macOS blocks ChatGPT from reading Bristlenose, without asking.
+      To allow it, open System Settings ▸ Privacy &amp; Security ▸ Files &amp; Folders, expand ChatGPT and turn on
+      Bristlenose — then ask again.</p>
+      <button class="bbtn">Open Files &amp; Folders</button>
+    </div>
+    <p class="note new">In ChatGPT, ask in Work mode — Bristlenose’s tools aren’t available in Chat.</p>
+  </div>
+</div>
+</div>
+</div>
+<div class="comm"><div class="lbl">Commentary</div>
+  <p><b>Today's tab needs no permission step.</b> The TOML stanza connects over HTTP to <code>127.0.0.1</code> and never
+  touches the container. Only a plugin that runs our proxy reads the handshake, and only that path meets Files &amp; Folders.
+  So (a) is safe to ship now. It adds the one fact that applies to every ChatGPT route: tools work in <b>Work</b>, not <b>Chat</b>.
+  That was measured for the plugin and is inferred for the TOML path.</p>
+  <ul>
+    <li><b>(b) is shape only.</b> The install gesture isn't designed. Whether the <code>codex://plugins/install/…</code>
+    link works before the marketplace is registered decides whether that button is one click or a paste.
+    "Add to ChatGPT…" is a placeholder label.</li>
+    <li><b>(b) has a blocker no copy can fix.</b> ChatGPT spawns <code>node</code> from the login-shell PATH. On a Mac
+    without a user-installed Node, nothing on that PATH supplies one. Keep (a)'s TOML route as the fallback whatever happens.</li>
+    <li><b>"Work" and "Chat" stay in English in every locale</b> until someone reads ChatGPT's own localised labels.
+    They're compiled into its Electron bundle, not shipped as <code>.lproj</code> files.</li>
+    <li>The new note uses the same key as the Claude tab with <code>{{app}}</code> = ChatGPT, one string for both.</li>
+  </ul>
+</div>
+
+<!-- ============ 3 ============ -->
+<h2>3 · Where the button lands</h2>
+<div class="flabel">System Settings ▸ Privacy &amp; Security ▸ Files &amp; Folders · macOS 27.0 · after turning it on</div>
+<div class="ss">
+  <div class="side">
+    <div>Wi-Fi</div><div>Bluetooth</div><div>Network</div><div>General</div><div>Appearance</div>
+    <div>Notifications</div><div class="sel">Privacy &amp; Security</div><div>Desktop &amp; Dock</div>
+  </div>
+  <div class="main">
+    <div class="crumb">‹ › &nbsp;Files &amp; Folders</div>
+    <p class="hdr">Apps that appear here have requested access to files, folders and other app data. You can manage access at any time.</p>
+    <div class="row"><span class="tri">›</span><span class="ico">🎛</span><span class="grow">Audio Hijack</span></div>
+    <div class="row"><span class="tri">›</span><span class="ico">✎</span><span class="grow">BBEdit</span></div>
+    <div class="row"><span class="tri">⌄</span><span class="ico">◎</span><span class="grow"><b>ChatGPT</b></span></div>
+    <div class="row child"><span class="ico">🐟</span><span class="grow">Bristlenose</span><span class="sw on"></span></div>
+    <div class="row"><span class="tri">⌄</span><span class="ico">✳︎</span><span class="grow"><b>Claude</b></span></div>
+    <div class="row child"><span class="ico">🐟</span><span class="grow">Bristlenose</span><span class="sw on"></span></div>
+    <div class="row"><span class="tri">›</span><span class="ico">⌘</span><span class="grow">Codex</span></div>
+  </div>
+</div>
+<div class="comm"><div class="lbl">Commentary</div>
+  <p><b>Redrawn, not a screenshot.</b> The header sentence, the pane name and the host → target nesting match what
+  was seen and described on 29 Sep. The ChatGPT row was turned on and verified to work. The Claude row is drawn
+  by analogy.</p>
+  <ul>
+    <li><b>The list is long and alphabetical.</b> On the test Mac, C is below the fold. That's why the note names the app to expand.</li>
+    <li><b>Does the app appear before its first denied read?</b> The header says apps appear once they've <i>requested</i> access.
+    If so, the order is: ask, get blocked, then turn it on. The copy is written for that order. Verify before changing it to "before you ask".</li>
+    <li><b>Two switches, two meanings.</b> This one lets an agent app find Bristlenose at all. Agent Access, per project,
+    still decides which studies it reads. The help page says so, or researchers will revoke in the wrong place.</li>
+    <li>macOS also has a <b>Data Access Blocked</b> notification with a <b>Manage</b> button for this service
+    (TCC.framework loctable). None appeared during the test, so the copy mentions it only as "may".</li>
+  </ul>
+</div>
+
+<!-- ============ 4 ============ -->
+<h2>4 · What the researcher sees in the agent</h2>
+<div class="two">
+<div>
+<div class="flabel">tool result, macOS 27, host declared as ChatGPT</div>
+<div class="chat">
+  <div class="msg me">Which sections have the strongest frustration signal?</div>
+  <div class="msg tool">bristlenose · get_project_overview →<br>macOS has blocked ChatGPT from reading Bristlenose. On this version of macOS there is no prompt — the access stays off until the person turns it on. Tell the person to open System Settings ▸ Privacy &amp; Security ▸ Files &amp; Folders, expand ChatGPT in the list, and turn on Bristlenose, then ask again. Nothing in Bristlenose needs changing. Do not answer from memory or from general knowledge.</div>
+  <div class="msg ai">I can't reach your Bristlenose study yet. macOS is blocking ChatGPT from reading it. To fix that, open <b>System Settings ▸ Privacy &amp; Security ▸ Files &amp; Folders</b>, expand <b>ChatGPT</b> and turn on <b>Bristlenose</b>. Then ask me again. You don't need to change anything in Bristlenose.</div>
+</div>
+</div>
+<div>
+<div class="flabel">no host declared (neutral fallback)</div>
+<div class="chat">
+  <div class="msg tool">macOS has blocked this agent app from reading Bristlenose. … expand the app they are asking from in the list, and turn on Bristlenose, then ask again. …</div>
+</div>
+<div class="comm" style="margin-top:14px"><div class="lbl">Commentary</div>
+  <p>For hand-rolled configs only. Both shipped packages declare their host. The person reading it is inside
+  the app in question, so "the app they are asking from" is enough for the model to name it.</p>
+</div>
+</div>
+<div class="comm"><div class="lbl">Commentary</div>
+  <p><b>This is the only surface that reaches the moment of failure.</b> The pane is read before the first question, and the
+  tool result during it. It stays English by design: the model relays it in the conversation's language (§5d). So it
+  carries facts that survive paraphrase: the host, the path, "no prompt", "ask again", "nothing in Bristlenose".</p>
+  <ul>
+    <li><b>The host is declared, never detected.</b> <code>BRISTLENOSE_AGENT_HOST</code> is set in each package's own manifest
+    (<code>.mcpb</code> → Claude, Codex <code>.mcp.json</code> → ChatGPT). Unverified: whether Codex passes <code>env</code> through.</li>
+    <li><b>The OS branch is a platform fact.</b> <code>os.release()</code> major ≥ 27 (macOS 26 is Darwin 25). On 26 the
+    existing "click Allow" sentence stays, with the host interpolated.</li>
+    <li>The rendered chat reply is illustrative. The model's wording varies, and that's why the facts are stated plainly.</li>
+  </ul>
+</div>
+
+<!-- ============ 5 ============ -->
+<h2>5 · Unchanged on macOS 26</h2>
+<div class="flabel">Settings ▸ MCP Agents · macOS 26 (shipped today)</div>
+<div class="win">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="pane">
+    <div class="segs"><div class="seg on">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
+    <p class="desc">Adds Bristlenose to Claude Desktop as an extension. Claude Desktop will ask you to confirm.</p>
+    <div class="extcard">
+      <div class="thumb">🐟</div>
+      <div class="nm"><b>Bristlenose</b><div class="s">Extension 0.31.5</div></div>
+      <button class="pbtn">Install Extension…</button>
+    </div>
+    <p class="note">The first time you ask a question, macOS asks once whether Claude may access data from other apps. Click Allow — that permission is how the extension finds Bristlenose.</p>
+  </div>
+</div>
+<div class="comm"><div class="lbl">Commentary</div>
+  <p>Still true on 26, so it stays, with all 21 locale values, until the macOS floor moves past 26. The floor is held at 15.0,
+  so that's a long way off. The branch is <code>isOperatingSystemAtLeast(27)</code>. No new key is needed for 26.</p>
+</div>
+
+</div>
+</body>
+</html>

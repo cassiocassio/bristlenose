@@ -48,7 +48,10 @@ over a real study through the installed extension.
 ~~and the pane's Claude Desktop hint should pre-announce the one-time macOS
 "access data from other apps" prompt (§5c)~~ — **that shipped 3 Aug 2026**
 (`7d815529`), quoting macOS's own dialog wording and Allow-button label per
-locale; see §5c.
+locale; see §5c. **On macOS 27 that note is wrong**: no dialog appears, and
+the grant is a switch in System Settings ▸ Privacy & Security ▸ Files &
+Folders. See the 29 Sep 2026 banner in §5c and
+[`design-mcp-files-and-folders.md`](design-mcp-files-and-folders.md).
 
 **And the icon may not be ours to fix — test before commissioning artwork.**
 The convention is settled (optional PNG, 512×512, transparent, no plate — the
@@ -70,6 +73,17 @@ did not account for.
 
 ## Changelog
 
+- _29 Sep 2026_ — **two measured corrections, no design change.** §5c's
+  "prompt-once-then-silent" was a **macOS 26** result. On macOS 27 a
+  cross-team container read is denied with no dialog
+  (`kTCCServiceSystemPolicyAppDataDetailed`), and the grant is a Files &
+  Folders switch. Measured with ChatGPT; a new Claude install is expected to
+  match but is unproven. §3.5's "OpenAI Plugins need public HTTPS" confused
+  the public directory with local marketplaces: a local Codex plugin runs our
+  unmodified proxy under ChatGPT desktop. Both are banners. The redraft of
+  the proxy and pane copy is
+  [`design-mcp-files-and-folders.md`](design-mcp-files-and-folders.md)
+  (draft, unbuilt).
 - _22 Aug 2026_ — **the register's headline says what it computes.** New
   §5a-ter decides the open question the projects register shipped with:
   "Readable now" promised reachability while the code computed a permission,
@@ -842,6 +856,21 @@ its own form — so many researchers never edit the file at all. There is no
 `.mcpb` equivalent for ChatGPT (their Plugins need public HTTPS), so the form
 plus the TOML is the ceiling; one-click install is a Claude Desktop-only
 affordance.
+
+> **Corrected 29 Sep 2026 — measured, and the parenthesis above is wrong.**
+> The public-HTTPS requirement applies to OpenAI's *public directory*, not to
+> local plugin marketplaces. A local marketplace (`codex plugin marketplace
+> add <path>`) installs a stdio plugin (`.codex-plugin/plugin.json` +
+> `.mcp.json`) that ChatGPT desktop runs. With `"cwd": "./"` it ran the
+> **unmodified** proxy and answered from a real project. So one-click is not
+> structurally Claude-only. What stands between it and shipping is not
+> HTTPS but three measured facts: tools run only in ChatGPT's **Work** mode
+> (not Chat); ChatGPT spawns `node` from the login-shell PATH, which a Mac
+> without a user-installed Node does not have; and on macOS 27 the handshake
+> read needs a Files & Folders grant (§5c banner). Nothing is shipped. The
+> install gesture (`codex://plugins/install/…` against an unregistered
+> marketplace) is untested. See
+> [`design-mcp-files-and-folders.md`](design-mcp-files-and-folders.md) §4.
 
 > **MOOT — §7 Q3 did not ship.** The `bristlenose mcp-proxy` subcommand does
 > not exist, so the Claude Code and Codex tabs kept their URL + bearer payload
@@ -2180,6 +2209,31 @@ sentence read in the pane matches the dialog seen a moment later, in the
 researcher's own language. That is the whole mechanism by which §6.1's
 "the concern inverts into a selling point" actually works: recognition.
 Worth reusing for any future pre-announcement of a system prompt.
+
+> **macOS 27 — 29 Sep 2026: "prompt-once-then-silent" is a macOS 26 result.**
+> Apple's macOS 27 release note: *"Accessing files in other developer teams'
+> app data containers and app group containers no longer prompts the user for
+> authorization; such accesses are denied by default and can be managed by the
+> user in Privacy & Security settings."* The service is now
+> `kTCCServiceSystemPolicyAppDataDetailed`. Measured on 27.0 (26A428) with
+> ChatGPT running this proxy: tccd attributed the read to the real app
+> (`com.openai.codex`) and recorded a denial with **no dialog**; the proxy
+> returned `permission`. **The fix works**: System Settings ▸ Privacy &
+> Security ▸ Files & Folders ▸ expand the agent app ▸ turn on Bristlenose,
+> and the next tool call answered with real data. The deep link
+> `x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_FilesAndFolders`
+> opens that pane on 27. Consequences for what is shipped:
+> (1) `claudeDesktopPromptNote` pre-announces a dialog that no longer comes on
+> 27; (2) `MSG.permission` says "click Allow on the macOS dialog", and it
+> names Claude when the same proxy can run under ChatGPT; (3) the boundary is
+> the **Team ID**, so moving the handshake into `group.app.bristlenose` does
+> not escape it. A grant made on 26 **carried over** the upgrade (Claude ↔
+> Bristlenose worked here on 27 Sep on macOS 27), so existing users are fine.
+> **A new Claude install on 27 is expected to be silently denied too — not
+> yet measured.** The "no background reader, ever" rule above stands and
+> matters more, not less: a denied read no longer queues a dialog, but it is
+> still the only moment we get to tell the person. The redraft is
+> [`design-mcp-files-and-folders.md`](design-mcp-files-and-folders.md) (draft).
 
 **Risk §6.1 dissolves**, and with it the §3.6 dilemma: the handshake stays in
 the container, so **no token is ever written into a project folder** and the

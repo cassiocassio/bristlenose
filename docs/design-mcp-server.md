@@ -27,6 +27,10 @@ _The §9a spike is built and accepted (30 Jul 2026) — see §9a-results. Phase 
 
 ## Changelog
 
+- _29 Sep 2026_ — §1's OpenAI paragraph gets a correction banner: the
+  public-HTTPS rule is for OpenAI's public directory, not local plugin
+  marketplaces. Measured with the Codex-plugin spike. See
+  `design-mcp-files-and-folders.md`.
 - _22 Aug 2026_ — **two deferred decisions taken, and a third premise
   corrected.** New §7a settles what is recorded when an agent reads a study:
   the access record **already exists** (`bristlenose.log`, one `mcp_tool` line
@@ -286,6 +290,16 @@ the OpenAI path. Protocol note for §6: MCP spec **2026-07-28** makes
 sessionless streamable HTTP the direction (HTTP+SSE deprecated) — the
 stateless/JSON posture is forward-aligned, and Codex 0.147+ will default
 sessionless.
+
+> **Corrected 29 Sep 2026 — measured.** "OpenAI Plugins require a public
+> HTTPS endpoint" is true of the **public directory** only. A *local*
+> marketplace installs a stdio plugin that ChatGPT desktop runs, and it ran the
+> unmodified `.mcpb` proxy against a real project. So the extension bundle is
+> not structurally Claude-only. The blockers are Work-mode-only tools, `node`
+> taken from the user's PATH, and the macOS 27 Files & Folders grant. See
+> `design-mcp-extension.md` §3.5 (banner) and
+> [`design-mcp-files-and-folders.md`](design-mcp-files-and-folders.md).
+> Nothing shipped; the TOML stanza is still the OpenAI path today.
 
 ---
 

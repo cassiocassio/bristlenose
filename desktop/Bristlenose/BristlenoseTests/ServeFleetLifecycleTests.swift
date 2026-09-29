@@ -171,14 +171,20 @@ struct ServeManagerStartGuardTests {
     }
 
     /// Retry after a failure must actually retry.
+    ///
+    /// External mode, not the default init: with the mode resolved from the
+    /// bundle this test spawned a real sidecar on `/p/A` wherever the build had
+    /// embedded one, and failed wherever it had not — `start()` returns at its
+    /// `mode` guard before touching state, so the failure read as the guard
+    /// swallowing the retry. A fresh checkout has no built sidecar to embed.
     @Test func aFailedServeCanBeRestartedOnTheSameProject() {
-        let m = ServeManager()
+        let m = ServeManager(resolvedMode: .success(.external(port: 5001)))
         m.instance.currentProjectPath = "/p/A"
         m.instance.state = .failed(error: .passthrough("boom"))
 
         m.start(projectPath: "/p/A")
 
-        #expect(m.state != .failed(error: .passthrough("boom")), "Retry was swallowed by the guard")
+        #expect(m.state == .running(port: 5001), "Retry was swallowed by the guard")
     }
 }
 

@@ -236,7 +236,14 @@ final class ServeManager: ObservableObject {
 
     /// On init, resolve the sidecar mode. Orphan cleanup is delegated to
     /// the sidecar — see `desktop/CLAUDE.md` "Zombie process cleanup".
-    init() {
+    ///
+    /// - Parameter resolvedMode: tests only. Left nil, the mode is resolved
+    ///   from the environment and the app bundle — which makes any test that
+    ///   calls `start()` depend on whether the build embedded a sidecar: with
+    ///   one it spawns a real process, without one `start()` returns at the
+    ///   `mode` guard. Pass `.success(.external(port:))` for a `start()` that
+    ///   runs to completion and spawns nothing.
+    init(resolvedMode: Result<SidecarMode, SidecarResolveError>? = nil) {
         // The env-var string literals for the dev escape hatch live only
         // inside `#if DEBUG`-guarded code so the Release Mach-O has no
         // reference to them. `desktop/scripts/check-release-binary.sh`
@@ -249,7 +256,7 @@ final class ServeManager: ObservableObject {
         let sidecarPathRaw: String? = nil
         #endif
 
-        let resolved = SidecarMode.resolve(
+        let resolved = resolvedMode ?? SidecarMode.resolve(
             externalPortRaw: externalPortRaw,
             sidecarPathRaw: sidecarPathRaw,
             bundleResourceURL: Bundle.main.resourceURL

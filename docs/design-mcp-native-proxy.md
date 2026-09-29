@@ -42,7 +42,8 @@ Related docs:
    Such a proxy reads the group container with no grant, with ChatGPT, Claude
    Code or Terminal responsible (§6). *Measured.* **Apple's validator
    (`altool --validate-app`) accepts** the shipped app repackaged with that
-   sandboxed helper and the group (§6.5). One real TestFlight upload and human
+   sandboxed helper and the group (§6.5), and that build answers real questions
+   inside ChatGPT (§6.2). One real TestFlight upload and human
    App Review remain. The native port still lacks several of the Node proxy's
    states (§4.3).
 
@@ -436,6 +437,14 @@ Under a fresh Terminal it then answered `tools/list` (5, marked `readOnlyHint`),
 serve`. It resolves the group with
 `FileManager.containerURL(forSecurityApplicationGroupIdentifier:)`, because a
 sandboxed `$HOME` is the proxy's own container.
+
+**And inside ChatGPT.** *Measured*, 11:09. The same sandboxed build was
+installed as spike plugin v0.0.6 through the one-click link, into a running
+ChatGPT. A new Work thread asked about the locker and got *"How can they get
+the bed in a locker?" — p3*, through `list_projects` then `search_quotes`,
+with no approval cards. Each server was a single process (no relaunch), and
+tccd logged nothing naming the proxy. So the App Store shape (sandboxed, group
+only, no SPI, no Node) is proven end to end in a real host.
 
 ### 6.3 Options, ranked
 

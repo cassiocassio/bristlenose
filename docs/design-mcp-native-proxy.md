@@ -63,8 +63,8 @@ Related docs:
    installs it as a plugin in one click and the Claude tab installs it as a
    runtime `.mcpb`, with no Files & Folders step (P3–P5). ChatGPT end to end is
    proven on this Mac, and a 34-case break harness plus seven live ChatGPT
-   attacks found and fixed two defects (§6.10). Still to run: Claude through the
-   native package ran end to end at 22:39 (§6.9); still to run: a TestFlight build, the 15/26 guests, and App Review (§6.8).
+   attacks found and fixed two defects (§6.10). Claude through the native
+   package ran end to end at 22:39 (§6.9). Still to run: a TestFlight build, the 15/26 guests, and App Review (§6.8).
 
 ## 1. The ChatGPT plugin channel
 

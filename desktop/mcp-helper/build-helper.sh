@@ -157,8 +157,12 @@ if [ -n "${MARKETPLACE_OUT:-}" ]; then
     # leftover file from an older layout must not survive.
     rm -rf "$MARKETPLACE_OUT"
     PLUGIN="$MARKETPLACE_OUT/plugins/bristlenose"
-    mkdir -p "$MARKETPLACE_OUT/.agents/plugins" "$PLUGIN/.codex-plugin" "$PLUGIN/bin"
+    mkdir -p "$MARKETPLACE_OUT/.agents/plugins" "$PLUGIN/.codex-plugin" "$PLUGIN/bin" "$PLUGIN/assets"
     cp -p "$OUT/bristlenose-mcp" "$PLUGIN/bin/bristlenose-mcp"
+    # The app's own icon, so ChatGPT shows the fish rather than its generic mark.
+    ICONS="$ROOT/desktop/Bristlenose/Bristlenose/Assets.xcassets/AppIcon.appiconset"
+    cp "$ICONS/icon_256x256.png" "$PLUGIN/assets/logo.png"
+    cp "$ICONS/icon_32x32@2x.png" "$PLUGIN/assets/icon.png"
     python3 - "$MARKETPLACE_OUT" "$HELPER_VERSION" <<'PY'
 import json, sys
 root, version = sys.argv[1], sys.argv[2]
@@ -184,7 +188,10 @@ dump(f"{root}/plugins/bristlenose/.codex-plugin/plugin.json", {
     "author": {"name": "Bristlenose"},
     "mcpServers": "./.mcp.json",
     "interface": {"displayName": "Bristlenose", "shortDescription": "Ask your Bristlenose study",
-                  "developerName": "Bristlenose", "category": "Research", "capabilities": ["Read"]},
+                  "developerName": "Bristlenose", "category": "Research", "capabilities": ["Read"],
+                  "composerIcon": "./assets/icon.png", "logo": "./assets/logo.png",
+                  "websiteURL": "https://bristlenose.app",
+                  "privacyPolicyURL": "https://bristlenose.app/privacy.html"},
 })
 # A relative command resolves against the installed plugin folder when cwd is
 # "./"; `env` replaces PATH, which the helper does not need (design §1.1).

@@ -6,9 +6,9 @@ How to place it. Each block below says what it replaces or where it goes; the
 rest of the page is unchanged.
 
 Two things to settle before it goes live:
-  1. The Claude Desktop paragraph says macOS 27 blocks Claude silently. That is
-     measured for ChatGPT and inferred for Claude (spec §1, unmeasured #1).
-     Confirm it on a clean account first.
+  1. The Claude Desktop paragraph says macOS 27 blocks Claude silently. Measured
+     for both: ChatGPT on the host, and a clean Claude in a SIP-on macOS 27
+     guest on 29 Sep 2026, where turning on the switch fixed it (spec §1, #1).
   2. The ChatGPT block is written for today's TOML path. If the Codex plugin
      ships, the ChatGPT block takes the Claude Desktop block's shape instead
      (spec §4 (b)).

@@ -108,7 +108,7 @@ above).
 - **ChatGPT tools run only in Work mode** (and the Codex workspace). In Chat,
   the `@Bristlenose` chip is offered but the model cannot call the tool.
 
-### Not measured, and the copy depends on them
+### What the copy depended on: measured since, except #4
 
 1. ~~**A new Claude Desktop install on 27.**~~ **Measured 29 Sep 2026: silently
    denied, same as ChatGPT.** A clean macOS 27.0 (26A428) guest under tart, with

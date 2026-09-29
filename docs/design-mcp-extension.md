@@ -77,8 +77,9 @@ did not account for.
   "prompt-once-then-silent" was a **macOS 26** result. On macOS 27 a
   cross-team container read is denied with no dialog
   (`kTCCServiceSystemPolicyAppDataDetailed`), and the grant is a Files &
-  Folders switch. Measured with ChatGPT; a new Claude install is expected to
-  match but is unproven. §3.5's "OpenAI Plugins need public HTTPS" confused
+  Folders switch. Measured with ChatGPT, then the same day with a clean
+  Claude Desktop in a SIP-on macOS 27 guest: silently denied, and the switch
+  fixes it. §3.5's "OpenAI Plugins need public HTTPS" confused
   the public directory with local marketplaces: a local Codex plugin runs our
   unmodified proxy under ChatGPT desktop. Both are banners. The redraft of
   the proxy and pane copy is
@@ -2236,11 +2237,19 @@ Worth reusing for any future pre-announcement of a system prompt.
 > (1) `claudeDesktopPromptNote` pre-announces a dialog that no longer comes on
 > 27; (2) `MSG.permission` says "click Allow on the macOS dialog", and it
 > names Claude when the same proxy can run under ChatGPT; (3) the boundary is
-> the **Team ID**, so moving the handshake into `group.app.bristlenose` does
-> not escape it. A grant made on 26 **carried over** the upgrade (Claude ↔
+> the **Team ID**, so moving the handshake into an app group does not escape
+> it **while the reader is another team's process**. It does escape it when
+> the reader is our own team-signed binary (see
+> [`design-mcp-native-proxy.md`](design-mcp-native-proxy.md)). A grant made on 26 **carried over** the upgrade (Claude ↔
 > Bristlenose worked here on 27 Sep on macOS 27), so existing users are fine.
-> **A new Claude install on 27 is expected to be silently denied too — not
-> yet measured.** The "no background reader, ever" rule above stands and
+> **A new Claude install on 27 is silently denied too — measured 29 Sep 2026**
+> in a clean macOS 27.0 guest with SIP on: proxy EPERM, tccd *"does not allow
+> prompting; recording denied"* for `com.anthropic.claudefordesktop`, no
+> dialog, and turning on Files & Folders ▸ Claude ▸ Bristlenose fixed it. The
+> reason is structural: Claude runs a Node `.mcpb` inside its own `Claude
+> Helper (Plugin)` process, so Claude is the reader. A `type: binary` `.mcpb`
+> is spawned through Claude's `Helpers/disclaimer` instead, and is its own
+> responsible process (`design-mcp-files-and-folders.md` §1). The "no background reader, ever" rule above stands and
 > matters more, not less: a denied read no longer queues a dialog, but it is
 > still the only moment we get to tell the person. The redraft is
 > [`design-mcp-files-and-folders.md`](design-mcp-files-and-folders.md) (draft).

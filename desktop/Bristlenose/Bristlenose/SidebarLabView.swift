@@ -6,14 +6,16 @@ import WebKit
 /// DEBUG-only sidebar laboratory — how the top of the projects column meets the
 /// toolbar when the list scrolls.
 ///
-/// **Why this exists.** Scrolled, the shipping sidebar shows three artefacts that
-/// Photos and Notes (same OS) do not: a hard clip at the toolbar's bottom edge, a
-/// 32 pt frosted band, and a 0.5 pt line under it. Two causes are suspected and
-/// neither is proved: the outline is hosted *below* the toolbar safe area (no
-/// `.ignoresSafeArea`, so `automaticallyAdjustsContentInsets` has nothing to
-/// adjust and the system never draws its soft scroll edge), and the blank lens
-/// group row pins itself (`floatsGroupRows`). This window crosses the two, plus
-/// two layouts that keep the lenses fixed, without touching the real sidebar.
+/// **Why this exists.** Until 29 Sep 2026, the scrolled sidebar showed three
+/// artefacts that Photos and Notes (same OS) do not: a hard clip at the
+/// toolbar's bottom edge, a 32 pt frosted band, and a 0.5 pt line under it. This
+/// window crossed the two suspected causes: the outline hosted *below* the
+/// toolbar safe area (so `automaticallyAdjustsContentInsets` had nothing to
+/// adjust and the system never drew its soft scroll edge), and the blank lens
+/// group row pinning itself (`floatsGroupRows`). The "under toolbar yes, pinned
+/// no" corner matched Photos and shipped; "no / yes" reproduces the old build.
+/// The two fixed-lens layouts were explored and not chosen
+/// (`docs/design-desktop-sidebar-appkit.md` §1.4, §5).
 ///
 /// **What is real here.** Both outlines are the shipping
 /// `SidebarOutlineController`, fed a throwaway `ProjectIndex` on a temp file —
@@ -29,8 +31,9 @@ struct SidebarLabView: View {
     @StateObject private var fixture = SidebarLabFixture()
 
     @State private var layout: Layout = .outline
-    @State private var underlap = false
-    @State private var pinHeadings = true
+    // Defaults match the shipping sidebar; flip both to see the pre-fix build.
+    @State private var underlap = true
+    @State private var pinHeadings = false
     @State private var lensDivider = true
     @State private var detailMode: DetailMode = .native
     @State private var webUnderlap = true

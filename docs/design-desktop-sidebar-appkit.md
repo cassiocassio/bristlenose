@@ -1,19 +1,20 @@
 ---
 status: partial
-last-trued: 2026-09-26
-trued-against: HEAD@main (9b512c4b) on 2026-09-26
-last-trued-sections: [rename slice (2026-07-28), §3.3 reorder slice (2026-09-12), folder-expansion slice (2026-09-26)]
+last-trued: 2026-09-29
+trued-against: HEAD@main (502b36c6) on 2026-09-29
+last-trued-sections: [rename slice (2026-07-28), §3.3 reorder slice (2026-09-12), folder-expansion slice (2026-09-26), top-edge slice (2026-09-29)]
 ---
 
 # Desktop sidebar — native AppKit source list (`NSOutlineView`)
 
 ## Changelog
 
+- _2026-09-29_ — **top-edge slice trued** (`/true-the-docs --topic sidebar top edge`, after *"sidebar top edge: the list runs under the toolbar and headings scroll away, as in photos and notes"*). The doc said `floatsGroupRows = true` in three places (§1.3, §2 recipe, §2.1) and nothing about the column's top edge. Scrolled, that pinning stuck the **blank** lens heading under the toolbar as a 32 pt frosted band with a 0.5 pt line, and the hosted outline stopped at the toolbar's bottom edge, so there was a hard clip and no soft scroll edge. Photos and Notes on the same OS pin nothing and let rows fade under the traffic lights. Shipped: headings scroll, the outline runs under the toolbar. §1.4 gains the top-edge paragraph, §3.1 the blank-heading note, §5 the Sidebar Lab, §6 the top-edge QA points and a retired seam risk. The old text stays inline as the delta. The Lab's fixed-lens layouts were explored and not chosen, so §4 decision 1 stands.
 - _2026-09-26_ — **folder-expansion slice trued** (`/true-the-docs`, after the fix in *"sidebar folders stay collapsed: the AppKit outline persists expand/collapse"*). §3.4's *"`outlineView(shouldExpandItem:)` + persist on expand/collapse"* row described a port that never happened: the outline **read** `Folder.collapsed` on every `reloadAndRestore()` and **nothing wrote it**, so a triangle click collapsed the view only and the next `update()` — a selection change, a run's progress tick — sprang every folder open. The SwiftUI path's `DisclosureGroup` binding had been the only writer; the port carried the read and lost the write. Both rows (§2.5's reload table, §3.4) now record the as-built, original text kept as the delta. §5 gains the controller harness that pins it.
 - _2026-09-12_ — **reorder slice trued** (`/true-the-docs --topic desktop-bridge-and-menu-gating`). §3.3's *"Within-scope manual reorder — DEFERRED future enhancement"* had been false since `bbda9a6a` (1 Aug 2026); the deferral text is preserved inline as the delta. Dropped the same claim from the header's **What remains** list. The three artefacts carrying it moved together — this doc, `design-undo-debt.md` (whose Reorder row read *"not yet reachable"*, with both its line anchors stale), and `design-sidebar-drop-v2.md` (whose 18 Jun banner still called drag-out-of-folder structurally broken). **Still stale and out of this mode's scope:** `desktop/CLAUDE.md`'s *"Scoped 18 Jun 2026 — READ BEFORE re-deriving the drag-drop limits"* gotcha says out-of-folder and between-folder drag don't work; on the AppKit path they do.
 - _2026-07-28_ — **rename slice trued** (`/true-the-docs --topic sidebar-rename`). Flipped the header's *"Inline rename DEFERRED — explicitly not built this pass"* to shipped, and retired the "one remaining controller-track item" framing it cited (the `ProjectSidebarOutline.swift` header comment carrying that claim was corrected in the same pass — three artefacts, one sweep). Folder context menu **2 → 3** items; project menu gained **Rename** (and **Analyse**, shipped earlier, previously unrecorded). Closed §6's "Context-menu demux (when menus land)". Added **§2.6** — rename + the reload contract: the four guard-rails share one framing (a per-tick `reloadData` table hosting a live field editor), so they earn a section, not table rows; three invariants promoted from code comments. Added a **"What remains"** statement to replace the retired single-item claim. Line refs in §2.5/§3.4 outside the rename slice still trail (~1,425 → ~1,765 lines) — flagged in the header, not swept this pass. Anchors are `file:line`, not SHAs — the work was uncommitted at truing time.
 
-**Status:** Active · **Alpha / TestFlight** — AppKit ships behind the opt-in `BristlenoseAppKitSidebar` flag, **default-off** through soak (`BristlenoseFlags.swift:11` — a plain `UserDefaults.bool`, no registered default). The cutover — AppKit → default, SwiftUI path deleted — is the **confirmed direction** (22 Jun, supersedes the original Post-TestFlight scoping) but **not yet done**. Note the flag default is *not* a statement of direction: the maintainer runs flag-on, all new sidebar work lands on the AppKit path, and `desktop/CLAUDE.md` already calls AppKit "the shipped source-list sidebar". Build new sidebar features on AppKit; the SwiftUI `List` is the being-deleted path. · updated 28 Jul 2026
+**Status:** Active · **Alpha / TestFlight** — AppKit ships behind the opt-in `BristlenoseAppKitSidebar` flag, **default-off** through soak (`BristlenoseFlags.swift:11` — a plain `UserDefaults.bool`, no registered default). The cutover — AppKit → default, SwiftUI path deleted — is the **confirmed direction** (22 Jun, supersedes the original Post-TestFlight scoping) but **not yet done**. Note the flag default is *not* a statement of direction: the maintainer runs flag-on, all new sidebar work lands on the AppKit path, and `desktop/CLAUDE.md` already calls AppKit "the shipped source-list sidebar". Build new sidebar features on AppKit; the SwiftUI `List` is the being-deleted path. · updated 29 Sep 2026
 **Extends / closes:** `design-desktop-nav-toolbar-rearrangement.md` §2.2 (the parked "AppKit `NSOutlineView` rewrite") · the drag-drop "sidebar apocalypse" forensic (commit `7bf0e96`; gitignored handoff notes)
 **Scope:** the macOS desktop **sidebar** — the project list **and** the lens rail (folded into the same `NSOutlineView` as group rows, §3.1). The toolbar (nav/toolbar spec) is untouched. **This is a framework switch, not a redesign:** every existing affordance is rescued verbatim — no UX is rethought.
 
@@ -22,6 +23,7 @@ last-trued-sections: [rename slice (2026-07-28), §3.3 reorder slice (2026-09-12
 - **Cell port (Phase 4) complete** — `ProjectRow` ported to an AppKit cell verbatim (`28dae0d`, `52768b1`).
 - **Context menus** (project + folder) shipped via `NSMenuDelegate.menuNeedsUpdate` per `clickedRow` — **not** the speculative `menu(for:)` §2.2/§6 anticipated. Project menu is conditional (Stop Analysis · Cancel Copy · Show Diagnostics · Analyse · Locate, all state-gated · Show in Finder · **Rename** · Choose Icon · Move to → · Remove from Sidebar); folder menu is **3** items (**Rename** · Archive disabled · Delete). §6's "when menus land" is now closed (`96c31eb`).
 - **Inline rename SHIPPED** (28 Jul 2026) — supersedes the "DEFERRED" note that stood here, and with it the `ProjectSidebarOutline.swift` header's "one remaining controller-track item" framing. Reachable **four ways**, all funnelling into one seam (`beginRename(nodeID:)`, `ProjectSidebarOutline.swift:556`): context menu (project **and** folder), menu-bar Project ▸ Rename, **Return** on the selected row, and **slow-second-click** (the Photos-sidebar idiom). Plus rename-on-create for New Folder. Mechanism and its four guard-rails: **§2.6**.
+- **Top edge (29 Sep 2026)** — headings scroll with the list (`floatsGroupRows = false`, `ProjectSidebarOutline.swift:373`) and the outline runs under the toolbar (`.ignoresSafeArea(.container, edges: .top)`, `ContentView.swift:2640`), so rows fade softly under the traffic lights as in Photos and Notes. §1.4.
 - Failure/partial glyph → clickable `DiagnosticGlyphButton` (opens the diagnostic popover); default project icon `circle.fill` → open `circle` (`4e0c584`); Finder folder-of-videos drops wired via `SidebarExternalDrop` (3 cases — root/folder/project; empty-area folds to root, not a 4th case).
 
 **What remains** (replaces the retired "inline rename is the one remaining controller-track item"): the flag cutover to default-on + SwiftUI-path deletion (`BristlenoseFlags.swift:11`, `ContentView.swift:1736`) · folder **Archive** still inert (`ProjectSidebarOutline.swift:1396`, `// Phase 5`) · the lens double-selection VoiceOver gap (§6) · `reloadData`-on-every-`update` churn (§6) — now *more* load-bearing, since a live rename survives it only via the §2.6 freeze.
@@ -64,17 +66,21 @@ Apple's own flagship apps keep their sidebars in **AppKit `NSOutlineView`** for 
 ### 1.3 Structure
 - **Multi-group source list** (Finder-style): a **lenses** group (the 5 mode rows, §3.1) · a **"Projects"** group (mixed case, Finder-style — *not* all-caps) holding project + folder rows · **built for more groups** (more headers are coming). ≤2 levels of project hierarchy (HIG); one folder level today, deeper nesting becomes free.
   - **Future (user, 22 Jun — "one day"): a bottom-pinned "Archive" / "Trash" group**, always last regardless of `position`. This is the Notes "Recently Deleted" / Mail Trash *destination* pattern — a row you navigate **to** — which is native and **distinct** from the deprecated bottom +/−/gear *action* strip (`feedback_no_bottom_of_sidebar_actions`); the ban is on bottom *actions*, not bottom *destinations*. Open choice for that day: **Archive** (keep-but-hidden) vs **Trash** (delete-with-grace-period) — two different concepts, pick then. The multi-group structure accommodates it cheaply.
-- **Native disclosure triangles**; **floating/pinned group headers** (`floatsGroupRows = true`).
+- **Native disclosure triangles**; group headers **scroll with the list** (`floatsGroupRows = false`, `ProjectSidebarOutline.swift:373`), as Photos' and Notes' do. _Was, until 29 Sep 2026: "floating/pinned group headers (`floatsGroupRows = true`)". Pinned, the blank lens heading (§3.1) stuck under the toolbar as a frosted band with a line of its own._ This is top-edge pinning only; the bottom-pinned Archive/Trash group above is an ordering rule, not `floatsGroupRows`.
 
 ### 1.4 Material / glass (macOS 26)
 - The sidebar glass/vibrancy is owned by the `NavigationSplitView` sidebar column; the AppKit content renders *into* it. **We add no `NSVisualEffectView`** (double material = wrong). Standard system components adopt the material automatically (HIG materials). **But the column's glass is not *quite* free:** the one material thing we *do* set is a **removal** — `scrollView.drawsBackground = false` + clear `NSOutlineView` background — or the scroll/table's default opaque `controlBackgroundColor` paints a slab over the column's vibrancy (the opposite failure from double-material, equally wrong). QA under **Reduce-Transparency** specifically. Selection / groups / disclosure / row-sizing are all **floor-level (Sequoia 15)**; only the surrounding glass is 26-era — `#available`-gate chrome only, per the nav spec meta-rule.
+- **The top edge is the second thing we set: the outline runs under the toolbar** (29 Sep 2026). A SwiftUI `List` sidebar extends under the titlebar by itself; a hosted `NSViewControllerRepresentable` does not, so the scroll view's frame began at the toolbar's bottom edge (51.5 pt on macOS 27). That gave a hard clip where content met the toolbar, and no soft scroll edge, because macOS draws that only where a scroll view underlaps the toolbar. `automaticallyAdjustsContentInsets = true` (`ProjectSidebarOutline.swift:403`) had nothing to adjust for. The fix is `.ignoresSafeArea(.container, edges: .top)` on `ProjectSidebarOutline` (`ContentView.swift:2640`); the automatic insets then keep the first row clear of the traffic lights. **The two settings only work together:** under the toolbar with headings still pinned keeps the band and line; headings unpinned without the underlap keeps the hard clip. Measured in Diagnostics ▸ Sidebar Lab (§5) against Photos and Notes, where the sidebar shows no line at all and rows fade out between about 30 and 45 pt from the window top.
 
 ---
 
 ## 2. The least-bespoke AppKit recipe
 
 ```
-NavigationSplitView { ProjectSidebarOutline() } detail: { … }
+NavigationSplitView {
+    ProjectSidebarOutline()
+        .ignoresSafeArea(.container, edges: .top)   // run under the toolbar (§1.4) — added 29 Sep 2026
+} detail: { … }
 
 struct ProjectSidebarOutline: NSViewControllerRepresentable {  // controller, not view — real lifecycle
     func makeNSViewController(context:) -> SidebarOutlineController
@@ -87,7 +93,7 @@ NSScrollView(hasVerticalScroller: true)
 └─ NSOutlineView
      selectionHighlightStyle = .sourceList   // ← buys the whole look
      style = .automatic                        // resolves to source-list in a sidebar; `.sourceList` enum case is soft-deprecated — verify vs live SDK
-     floatsGroupRows = true                     // pinned headers
+     floatsGroupRows = false                    // headings scroll (§1.3) — was `true`, pinned, until 29 Sep 2026
      rowSizeStyle = .custom                      // REQUIRED for heightOfRowByItem (was .default)
      headerView = nil                            // sidebars have no column header
      allowsMultipleSelection = true              // preserve today's Cmd/Shift multi-select
@@ -103,7 +109,7 @@ NSScrollView(hasVerticalScroller: true)
 | Row height / glyph / text tracking the icon-size setting | ~~`rowSizeStyle = .default`~~ → **`.custom`** + explicit `heightOfRowByItem` — we own row height AND icon `pointSize` (see the §1 banner) |
 | Disclosure triangles | native `NSOutlineView` |
 | Group-row styling ("Projects" header) | delegate `isGroupItem` + a plain `NSTextField` cell (system applies group attributes) |
-| Floating/pinned headers | `floatsGroupRows = true` |
+| Top-edge scroll fade under the toolbar | the system, once the outline underlaps the toolbar (§1.4). Headers are **not** pinned: `floatsGroupRows = false` is a deliberate opt-out (_was_ "Floating/pinned headers — `floatsGroupRows = true`") |
 | Sidebar vibrancy / glass | the `NavigationSplitView` sidebar column |
 
 ### 2.2 What we must provide (unavoidable content)
@@ -201,6 +207,7 @@ ambiguity against a future double-click-to-open-in-new-window.
 
 ### 3.1 The lens rail — folded into the outline as group rows (DECIDED 22 Jun)
 The 5 lenses become **non-selectable rows in the same `NSOutlineView`** — a group at the top, above the "Projects" group. They fire `switchToTab` (mode); they do **not** join the project selection set. One real source list, no SwiftUI/AppKit seam. The active lens shows the source-list selected-state **system-drawn** — it's kept genuinely in the table's `selectedRowIndexes` (`applySelection` + `selectionIndexesForProposedSelection`) but carries no `SidebarSelection` (lens nodes return `nil`, filtered in `outlineViewSelectionDidChange`, so **serve never sees it**), so the table renders its capsule **identically** to a selected project — exact colour / margin / radius. The selection colour is internal to the table and matches **no public UI-element-colour token** (verified 22 Jun by sampling every token via a throwaway probe, not retained), which is *why* genuine selection, not a hand-placed capsule, is the only exact path (the earlier flat-fill / `NSVisualEffectView` attempts are retired). Mode-vs-selection is the orthogonal split: lens rows switch mode (and are **dimmed + inert when no report is showing** — `lensesEnabled`, restoring the old LensRail's `isEnabled` gating), project rows drive serve.
+  - **The lens group's heading is blank** (`ProjectSidebarOutline.swift:1437-1443`, title `""` — "lens" is code-internal) and 32 pt tall like any non-project row, so at rest it reads as top padding above the Project lens. Since 29 Sep 2026 the lenses **scroll off** with the list, as Library and Collections do in Photos; ⌘1–⌘5 still reach them. While headings pinned, this blank row was the frosted band under the toolbar (§1.3).
   - **Future enhancement (user, 22 Jun — post-TF): remember per-project view state.** Switching projects loads the new report at its overview route, so the lens resets to **Project** each time (fine for TF). Post-TF: remember **each project's last-selected lens** *and* **the scroll position within each lens**, so returning to a project restores exactly where you were (per-project × per-lens state). Ties into the retained-WebView work (`design-desktop-switch-performance.md` Phase C). The outline is a multi-group source list (lenses · Projects · future groups, §1.3). The `VStack`-not-a-`List` constraint that previously forced the rail out of the list is **removed by this migration** (the positional finders retire, §3.2).
 
 ### 3.2 The project list — the migration
@@ -271,14 +278,16 @@ The project's rule fits — but the pure mappings below **cover none of the §2.
 
 **Phase B — `DropRouting.resolve(...)` exhaustive table test** (the apocalypse fix's real gate; the routing produces *silent wrong placement*): `(dragged, target/location, tree) -> insertionDecision` over ~12 cases — out-of-folder, into-folder, between-folder, root-reorder, folder→folder, invalid targets. Factor the helper (static-shaped on a value type, no `NSOutlineView`) **before** Phase B ships.
 
+**Diagnostics ▸ Sidebar Lab (29 Sep 2026, DEBUG only)** — the on-device rig for the column's top edge. It hosts the real `SidebarOutlineController` on fixture projects and crosses "outline under the toolbar" with "headings pin", plus two fixed-lens layouts (explored, not chosen), a `WKWebView` detail with an `obscuredContentInsets` toggle, window-height presets and a geometry readout that names the views drawn over the top of the column. `SidebarLabView.swift`.
+
 **Visual** (selection look, spacing, focus-stability, glass) → cohort + developer-eye on **both floors** {Sequoia 15, Tahoe 26}, Light/Dark, **Reduce-Transparency**, Increase-Contrast — not an automated matrix. No XCUITest / snapshot earned (the look is a one-line `.sourceList` toggle; a snapshot proves unchanged pixels, not correct tint — Hoare's test).
 
 ## 6. Risks
 - **Surface area** — the rich cell content (rings, subtitle precedence, qualifiers, rename, copy progress) is the bulk; faithful port is non-trivial.
 - **Re-wiring** drag-drop / context-menu / rename to AppKit idioms while not regressing the known-working paths.
 - **Serve-on-selection timing** + the `@AppStorage` restore must fire at the same moments.
-- **macOS-26 glass interplay** — verify the AppKit content sits correctly in the column's material on both floors (and the §1.4 `drawsBackground = false` removal actually lets the vibrancy through).
-- **Focus traversal across the SwiftUI-rail ↔ AppKit-outline seam** — Tab / ⌘0 between the (still-SwiftUI) lens rail and the AppKit outline view is a new boundary. Acceptance: ⌘0 focuses the outline, Tab traverses the seam sanely. (Don't design the responder chain in the plan; flag it for the build.)
+- **macOS-26 glass interplay** — verify the AppKit content sits correctly in the column's material on both floors (and the §1.4 `drawsBackground = false` removal actually lets the vibrancy through). For the top edge (§1.4): scrolled, rows fade under the toolbar with no line; at rest, the first row clears the traffic lights; check both under Reduce-Transparency. The Sidebar Lab (§5) measures it.
+- ~~**Focus traversal across the SwiftUI-rail ↔ AppKit-outline seam**~~ — _retired: §3.1 folded the rail into the outline, so there is no seam. Kept as the delta._ **Focus traversal across the SwiftUI-rail ↔ AppKit-outline seam** — Tab / ⌘0 between the (still-SwiftUI) lens rail and the AppKit outline view is a new boundary. Acceptance: ⌘0 focuses the outline, Tab traverses the seam sanely. (Don't design the responder chain in the plan; flag it for the build.)
 - *Mitigation:* Phase A is **parity** — the §3.4 table is the acceptance checklist, verifiable against current behaviour; Phase B is additive.
 
 ### Selection-machinery review findings (22 Jun — code-review + gruber)

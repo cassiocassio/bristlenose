@@ -803,7 +803,7 @@ phase may regress it:
 | Shipped mechanism | Driven by | Obligation |
 |---|---|---|
 | Sidebar antenna, solid (exposed now) | `ServeFleet.handshakeProjectPaths` | P1 writes the group copy from the same set in the same call; D4 stops a group copy outliving the solid antenna |
-| Antenna radiating, then the two-tap sign-off (an agent is reading, then has finished) | serve's per-project tool-call counter, `/api/agent-activity` | Nothing to build: the helper calls the same `/mcp/` with the same bearer. P6 checks a ChatGPT and a Claude question each radiate the right project |
+| Antenna radiating, then the two-tap sign-off (an agent is reading, then has finished) | serve's per-project tool-call counter, `/api/agent-activity` | Nothing to build: the helper calls the same `/mcp/` with the same bearer. P6 checks a ChatGPT and a Claude question each radiate the right project. **ChatGPT confirmed 29 Sep 2026:** the antenna radiated on the asked project and Last asked read *Just now*; Claude still to check |
 | Projects register: Active / Available when opened, tick, Sessions, Last asked, roll-up, receipts, empty state, scope note | `AgentProjectRegister`, `projectsSection` | Untouched. P5 edits only the pane's top half; `AgentProjectRegisterTests` and `MCPAgentsSettingsViewTests` pass unedited |
 | Turn On / Off Agent Access, the badge tooltip, consent v2 | `AgentAccessPolicy`, menu verbs | Untouched |
 | Anonymise | serve (`mcp_server.py`) | Untouched; the helper is a pipe |

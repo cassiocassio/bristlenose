@@ -15,8 +15,17 @@ Help-page draft for the website repo:
 
 Parent docs: [`design-mcp-extension.md`](design-mcp-extension.md) (§3.5, §5b,
 §5c) and [`design-mcp-server.md`](design-mcp-server.md). The ChatGPT half
-depends on the Codex-plugin spike, which is written up in the maintainer's
-private handoff notes, kept outside the public tree.
+depends on the Codex-plugin spike, now written up in
+[`design-mcp-native-proxy.md`](design-mcp-native-proxy.md).
+
+> **Later the same day (29 Sep 2026): a route that needs no Files & Folders
+> step was measured.** A proxy signed by our team and launched as its own
+> responsible process reads the container as Bristlenose itself, and macOS 27
+> allows it without consulting TCC. It was proven end to end in ChatGPT, with no
+> Node either. It uses private SPI, so it is an App Store question first. This
+> doc stays the plan for the Node proxy that ships today, and the fallback for
+> any channel where the native proxy cannot ship. See
+> [`design-mcp-native-proxy.md`](design-mcp-native-proxy.md) §5–§6.
 
 ## 1. What changed underneath us
 
@@ -66,7 +75,10 @@ escape it.
   (`TCC.framework` `Localizable.loctable`): header *"Data Access Blocked"*,
   body *"“%@” tried to access your data from other apps and was blocked. You
   can manage this at any time in Files & Folders settings."*, button
-  *"Manage"*. **We did not see it** during the ChatGPT test. The copy below
+  *"Manage"*. **We did not see it** during the ChatGPT test. **Later the same
+  day it did appear**, for a Terminal read of the container (*"'Terminal'
+  tried to access your data from other apps and was blocked…"*), so it is
+  real, but whether it fires for every host is still unknown. The copy below
   mentions it only conditionally.
 - **ChatGPT tools run only in Work mode** (and the Codex workspace). In Chat,
   the `@Bristlenose` chip is offered but the model cannot call the tool.
@@ -84,10 +96,10 @@ escape it.
    only then find the switch. The copy below is written for that order. If
    the row turns out to be there from install, the copy can say "before you
    ask".
-3. **Whether a carried-over macOS 26 grant shows up in Files & Folders** under
-   Claude. Worth knowing so we can tell an existing user where to revoke it.
-   (The background AX tree doesn't expose the list rows. One manual look
-   settles it.)
+3. ~~**Whether a carried-over macOS 26 grant shows up in Files & Folders** under
+   Claude.~~ **Answered 29 Sep 2026: it does.** Files & Folders ▸ **Claude**
+   lists **Bristlenose: on**, beside Desktop and Downloads. So an existing
+   user revokes it in the same place a new user grants it.
 4. **ChatGPT's localised labels for "Work" and "Chat".** Its strings are
    compiled into the Electron bundle, not shipped as `.lproj` catalogs. The
    draft keeps the English labels in every locale until someone reads them off

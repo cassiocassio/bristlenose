@@ -84,6 +84,16 @@ did not account for.
   the proxy and pane copy is
   [`design-mcp-files-and-folders.md`](design-mcp-files-and-folders.md)
   (draft, unbuilt).
+- _29 Sep 2026, later_ — **a route around both problems, measured, not
+  adopted.** macOS 27 decides a container read by the *responsible* process,
+  and a process signed by our team that is its own responsible process reads
+  our container with no grant at all. A 128 KB native proxy that relaunches
+  itself that way answered a real study question in ChatGPT with no Node and
+  no Files & Folders step. ChatGPT also installs a local plugin in one click
+  (`codex://plugins/<name>?marketplacePath=<marketplace.json>`). The catch is
+  private SPI, so the Mac App Store build is an open review question. Write-up:
+  [`design-mcp-native-proxy.md`](design-mcp-native-proxy.md); spike:
+  `experiments/mcp-native-proxy/`.
 - _22 Aug 2026_ — **the register's headline says what it computes.** New
   §5a-ter decides the open question the projects register shipped with:
   "Readable now" promised reachability while the code computed a permission,

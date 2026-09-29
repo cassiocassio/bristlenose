@@ -1109,6 +1109,7 @@ Two injection points exist for safe testing:
 
 1. **`ProjectIndex(fileURL:)`** — pass a temp directory URL to avoid touching `~/Library/Application Support/Bristlenose/projects.json`
 2. **`KeychainStore` protocol** — `KeychainHelper.liveStore` for production, `InMemoryKeychain()` for tests. The static `KeychainHelper.get/set/delete` methods remain unchanged for existing call sites
+3. **`ServeManager(resolvedMode:)`** — any test that calls `start()` passes `.success(.external(port:))`. A bare `ServeManager()` resolves the sidecar from the **app bundle**, and the bundle has three shapes that give three different `start()`s: the main repo embeds the real sidecar (a unit test spawns a real process), CI's `mac-build.yml` stubs a **0-byte** executable (`proc.run()` throws, state becomes `.failed(launchFailed)`), and a fresh checkout has none (`start()` returns at its `mode` guard and changes nothing). `aFailedServeCanBeRestartedOnTheSameProject` asserted only "not the old failure", so it passed locally by spawning, passed on CI **because the launch failed**, and failed in a fresh checkout — which read as a guard bug for a day (29 Sep 2026, `55628d90`). External mode runs `start()` to completion with no process, so assert the state you expect (`.running(port:)`), never the absence of the old one
 
 ## See also
 

@@ -70,10 +70,12 @@ If code files were changed:
 
 If anything fails, **stop and fix before documenting**. Don't document a broken state.
 
-**Step 4 is not optional-if-you're-in-a-hurry — it is the only thing that looks at
-Swift at all.** Steps 1–2 are Python, and CI does not build the Swift target (see
-`desktop/CLAUDE.md`), so without it a Swift regression sits red on `main` while
-every close-out truthfully records `tests: passed`. That is not hypothetical: a
+**Step 4 is not optional-if-you're-in-a-hurry — it is the only local check that
+looks at Swift at all.** Steps 1–2 are Python. CI's `mac-build.yml` does run the
+suite, but only after a push, only on `desktop/**` paths, and against a stub sidecar
+whose behaviour differs from yours (`desktop/CLAUDE.md` §Testability refactors), so
+without step 4 a Swift regression can sit red on `main` while the close-out
+truthfully records `tests: passed`. That is not hypothetical: a
 stale `Tab.allCases.count` assertion was red for 10 commits under a sentinel that
 said tests passed (31 Aug 2026). Run the script rather than the two `xcodebuild`
 commands by hand — it owns the two ways this verdict lies (a piped or

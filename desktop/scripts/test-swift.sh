@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Run the Swift unit suite (BristlenoseTests) and report an honest verdict.
 #
-# This exists because NOTHING ELSE COVERS THE SWIFT TARGET. `/end-session`
-# Phase 1 runs pytest and ruff; CI does not build the Swift target at all (see
-# desktop/CLAUDE.md). So a Swift regression can sit red on `main` indefinitely
-# while every close-out truthfully records `tests: passed`.
+# This exists because pytest and ruff never look at the Swift target, so a
+# Swift regression could sit red on `main` while every close-out truthfully
+# recorded `tests: passed`. It is the one entry point for all three callers:
+# `/end-session` Phase 1, `build-all.sh` step 1c, and CI's `mac-build.yml`
+# (which runs it on `desktop/**` pushes to main — this header said CI did not
+# build the Swift target until 29 Sep 2026, four weeks after it began to).
 #
 # It already did: `TabLeftPanelTests/everyCaseIsDecided()` asserted
 # `Tab.allCases.count == 6` after baa1aa0e folded `codebookV2` into `codebook`

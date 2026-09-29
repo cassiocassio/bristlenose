@@ -96,3 +96,49 @@ uv tool install --force 'bristlenose[serve,mcp]'
 
 If you installed with pip, run `pip install 'bristlenose[mcp]'` in the same
 environment.
+
+<!-- ════════════════════════════════════════════════════════════════════════
+     PART 2: WHEN THE NATIVE PROXY SHIPS (both channels). Not for today's
+     page. Spec §4(c). Apple's validator accepted the App-Store-shaped proxy on
+     29 Sep 2026; TestFlight upload and review are still open. Replace the
+     Part 1 blocks above with these in the same deploy as that build.
+     ════════════════════════════════════════════════════════════════════ -->
+
+<!-- ═══ REPLACES the Part 1 "There is one more step…" paragraph under
+     "### Claude Desktop": no pre-announced step any more. ═══ -->
+
+That's the whole setup. There's no config to edit, no permission to grant, and
+nothing to re-copy after a restart.
+
+<!-- ═══ REPLACES "### ChatGPT and Codex": the plugin is the Mac-app route;
+     the config file stays, for the Codex CLI and as a fallback. ═══ -->
+
+### ChatGPT and Codex
+
+::: fork
+### Mac app
+**Settings → MCP Agents → ChatGPT & Codex → Install Plugin…**. ChatGPT opens
+and shows its own page for the Bristlenose plugin; click **Install plugin**
+there. That's the whole setup.
+
+Ask your questions in **Work** mode. Bristlenose isn't available in **Chat**.
+
+To connect by hand instead, the same tab shows the configuration for
+`~/.codex/config.toml`.
+
+### Command line
+<!-- keep today's TOML + "Add server" text unchanged here -->
+:::
+
+<!-- ═══ REPLACES Part 1's "## If Claude says macOS blocked it" section: now a
+     rare recovery path. The only case Files & Folders can fix is an
+     unsandboxed reader of the data container (spec §4(c)); the native proxy's
+     sandboxed build says "install the extension again, or check for a
+     Bristlenose update" instead. So the page's recovery text follows the
+     proxy's own sentence. ═══ -->
+
+## If your agent says it can't reach Bristlenose's data
+
+Open **Bristlenose → Settings → MCP Agents** and install the extension (or the
+ChatGPT plugin) again, then ask again. If that doesn't help, check for a
+Bristlenose update.

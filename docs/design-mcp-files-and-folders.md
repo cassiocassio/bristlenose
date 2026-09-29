@@ -407,7 +407,11 @@ enforced below TCC, where no user switch reaches. So Files & Folders can
 rescue exactly one thing, an **unsandboxed** reader of the **data**
 container, and the recovery for the group route is not a switch. It is the
 host also writing the data-container copy, read by the Node or Developer ID
-proxy. The native proxy's sandboxed build accordingly says "install the
+proxy. **So the host must keep writing the data-container copy of the
+handshake for as long as any unsandboxed reader ships** (the Node `.mcpb`, a
+Developer ID binary): dropping it when the group copy arrives would strand
+every installed extension that still reads the old path, and extensions
+never auto-update. The native proxy's sandboxed build accordingly says "install the
 extension again, or check for a Bristlenose update" in its `permission`
 branch, with no Files & Folders mention (experiments/mcp-native-proxy/main.swift).
 

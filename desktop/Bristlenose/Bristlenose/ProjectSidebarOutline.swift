@@ -366,7 +366,11 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // yields the unemphasized source-list selection (grey ground + accent-
         // tinted content, focus-stable). Keep both; the deprecation is accepted.
         outlineView.selectionHighlightStyle = .sourceList
-        outlineView.floatsGroupRows = true
+        // Headings scroll with the list, as Photos' and Notes' do. Pinned, the
+        // blank lens heading stuck under the toolbar as a 32 pt frosted band
+        // with a hairline of its own (measured in Diagnostics ▸ Sidebar Lab,
+        // 29 Sep 2026); the lenses stay reachable scrolled off via ⌘1–⌘5.
+        outlineView.floatsGroupRows = false
         // `.custom` is REQUIRED for `heightOfRowByItem` to be consulted — any other
         // rowSizeStyle (.default/.small/.medium/.large) pins a fixed style height and
         // ignores the delegate, which silently made the variable-height + native-pitch

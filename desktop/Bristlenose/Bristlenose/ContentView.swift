@@ -2632,6 +2632,12 @@ struct ContentView: View {
                 lastAgentCallAt: serveFleet.lastAgentCallAt,
                 renameRequest: renameRequest
             )
+            // Run the list up under the toolbar, as a SwiftUI `List` sidebar
+            // does by itself. Hosted without this, the scroll view stopped at
+            // the toolbar's bottom edge: a hard clip, no soft scroll edge, and
+            // `automaticallyAdjustsContentInsets` with no titlebar to adjust
+            // for. The insets keep the first row clear of the traffic lights.
+            .ignoresSafeArea(.container, edges: .top)
             .navigationTitle(i18n.t("desktop.chrome.projects"))
         } else {
             swiftUISidebar

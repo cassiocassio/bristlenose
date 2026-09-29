@@ -226,8 +226,13 @@ docs; this section is the state and the work left, in order.
    Plugin…** (chosen), and its 3 strings × 21 are drafted in
    files-and-folders §8. Check the da, sv, nb and tr words against ChatGPT's
    own localisation.
-10. **Port the Node proxy's missing states** to the native proxy (native-proxy
-    §4.3).
+10. ~~**Port the Node proxy's missing states** to the native proxy (native-proxy
+    §4.3).~~ **Done 29 Sep 2026** (`39dae413`) in the spike source,
+    `experiments/mcp-native-proxy/main.swift`. Fed the same handshake and
+    requests, it matches the Node proxy on content, scope fingerprint,
+    `list_changed` and every failure state tried. The sandboxed build's
+    permission sentence (item 11) is already in place there. It still needs
+    moving from `experiments/` into the product when item 7 bundles it.
 11. **Then the copy follows:** the pane stops pre-announcing Files & Folders.
     The proxy's `permission` sentence stays as a recovery path, for unsandboxed
     readers only; the sandboxed build says "install the extension again, or

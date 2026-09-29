@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Native Proxy Decisions</title>
+<style>
+/* Native Settings-pane fidelity, lifted from docs/mockups/mcp-agents-pane.html
+   (the shipped pane is SwiftUI, not the SPA, so the bn web tokens don't apply). */
+:root{
+  --bg:#f2f2f7; --page:#fff; --ink:#1d1d1f; --dim:#6e6e73; --faint:#8e8e93;
+  --line:#d8d8dc; --hairline:#e6e6ea; --chrome:#f6f6f6;
+  --accent:#007aff; --seg:#e9e9eb; --card:#fbfbfd; --field:#fff;
+  --shadow:0 14px 40px rgba(0,0,0,.16), 0 2px 6px rgba(0,0,0,.08);
+  --cm-bg:repeating-linear-gradient(135deg,#f7f3ea 0 8px,#f3eee2 8px 16px);
+  --cm-rule:#c9a44a; --cm-ink:#4a3f25;
+  --ok:#248a3d; --mid:#b25000; --bad:#c9302c;
+  --other:#ececef; --otherInk:#3a3a3c;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161618; --page:#1e1e20; --ink:#f2f2f7; --dim:#a1a1a6; --faint:#78787d;
+  --line:#3a3a3d; --hairline:#2c2c2f; --chrome:#2a2a2c;
+  --accent:#0a84ff; --seg:#3a3a3c; --card:#252527; --field:#1b1b1d;
+  --shadow:0 14px 40px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4);
+  --cm-bg:repeating-linear-gradient(135deg,#24211a 0 8px,#211e17 8px 16px);
+  --cm-rule:#9c7e33; --cm-ink:#e6dcc2;
+  --ok:#30d158; --mid:#ff9f0a; --bad:#ff6961;
+  --other:#2c2c2f; --otherInk:#d1d1d6;
+}}
+:root[data-theme="dark"]{
+  --bg:#161618; --page:#1e1e20; --ink:#f2f2f7; --dim:#a1a1a6; --faint:#78787d;
+  --line:#3a3a3d; --hairline:#2c2c2f; --chrome:#2a2a2c;
+  --accent:#0a84ff; --seg:#3a3a3c; --card:#252527; --field:#1b1b1d;
+  --shadow:0 14px 40px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4);
+  --cm-bg:repeating-linear-gradient(135deg,#24211a 0 8px,#211e17 8px 16px);
+  --cm-rule:#9c7e33; --cm-ink:#e6dcc2;
+  --ok:#30d158; --mid:#ff9f0a; --bad:#ff6961;
+  --other:#2c2c2f; --otherInk:#d1d1d6;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:36px 20px 100px;background:var(--bg);color:var(--ink);
+  font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1420px;margin:0 auto}
+h1{font-size:26px;letter-spacing:-.02em;margin:0 0 6px}
+h2{font-size:19px;letter-spacing:-.01em;margin:56px 0 4px;padding-top:18px;border-top:1px solid var(--line)}
+h2 small{font-weight:400;color:var(--dim);font-size:13px;margin-left:8px}
+.lede{color:var(--dim);max-width:92ch;margin:0 0 10px}
+code{font:11.5px ui-monospace,SFMono-Regular,Menlo,monospace}
+
+/* ---------- key ---------- */
+.key{display:flex;gap:14px;flex-wrap:wrap;margin:14px 0 6px;font-size:12px;color:var(--dim)}
+.key span{display:inline-flex;align-items:center;gap:6px}
+.key i{display:inline-block;width:26px;height:14px;border-radius:3px}
+.key .a{background:var(--page);border:.5px solid var(--line);box-shadow:var(--shadow)}
+.key .c{background:var(--cm-bg);border-left:3px solid var(--cm-rule)}
+.key .o{background:var(--other);border:1px dashed var(--faint)}
+
+/* ---------- commentary zone ---------- */
+.cm{background:var(--cm-bg);border-left:3px solid var(--cm-rule);color:var(--cm-ink);
+  padding:12px 16px 12px 14px;border-radius:0 6px 6px 0;font-size:12.5px;margin:14px 0 0;max-width:120ch}
+.cm::before{content:"COMMENTARY";display:block;font:600 9.5px ui-monospace,Menlo,monospace;
+  letter-spacing:.12em;opacity:.7;margin-bottom:5px}
+.cm p{margin:0 0 7px} .cm p:last-child{margin:0}
+.cm ul{margin:4px 0 6px 18px;padding:0} .cm li{margin:0 0 4px}
+.cm b{color:inherit}
+.cm table{border-collapse:collapse;width:100%;margin:4px 0}
+.cm th,.cm td{text-align:left;vertical-align:top;padding:5px 10px 5px 0;border-bottom:1px solid rgba(128,110,60,.25)}
+.cm th{font-size:11px;font-weight:650;opacity:.8}
+.v-ok{color:var(--ok);font-weight:650} .v-mid{color:var(--mid);font-weight:650} .v-bad{color:var(--bad);font-weight:650}
+
+/* ---------- frame grid ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(560px,100%),1fr));gap:28px 26px;margin-top:18px}
+.cell > .cap{font:600 10.5px ui-monospace,Menlo,monospace;letter-spacing:.06em;color:var(--dim);
+  text-transform:uppercase;margin:0 0 7px}
+
+/* ---------- Settings window crop ---------- */
+.win{background:var(--page);border-radius:11px;box-shadow:var(--shadow);overflow:hidden;border:.5px solid var(--line);max-width:660px}
+.tbar{background:var(--chrome);border-bottom:.5px solid var(--line);height:34px;position:relative}
+.lights{display:flex;gap:8px;position:absolute;left:13px;top:11px}
+.lights i{width:12px;height:12px;border-radius:50%;display:block}
+.lights i:nth-child(1){background:#ff5f57}.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#c2c2c4}
+.wtitle{text-align:center;font-size:13px;font-weight:600;line-height:34px}
+.pane{padding:20px}
+.topline{display:flex;align-items:baseline;gap:20px;margin-bottom:20px}
+.hl{margin:0}
+.anon{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px}
+.anon .s{color:var(--dim);font-size:12px}
+.sw{width:38px;height:22px;border-radius:11px;background:var(--accent);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.segs{display:flex;background:var(--seg);border-radius:8px;padding:2px;margin-bottom:11px}
+.seg{flex:1;text-align:center;padding:4px 6px;font-size:12.5px;border-radius:6px;white-space:nowrap}
+.seg.on{background:var(--accent);color:#fff;font-weight:600}
+.callout{color:var(--dim);font-size:12px;margin:0 0 8px}
+.foot{color:var(--dim);font-size:11px;line-height:1.4;margin:8px 0 0}
+.row{display:flex;align-items:flex-start;gap:12px}
+.row .grow{flex:1}
+.ext{border:1px solid var(--line);border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px;background:var(--field)}
+.icon{width:38px;height:38px;border-radius:9px;flex:none;background:linear-gradient(160deg,#5fb3a6,#2f6f86);
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:19px}
+.ext .nm{flex:1;min-width:0} .ext .nm b{font-weight:600}
+.ext .nm .s{color:var(--dim);font-size:10.5px;margin-top:1px}
+.pbtn{background:var(--accent);color:#fff;border:0;border-radius:6px;padding:4px 11px;font:500 12.5px/1.3 inherit;flex:none;white-space:nowrap}
+.bbtn{background:var(--page);color:var(--ink);border:.5px solid var(--line);border-radius:6px;padding:3px 10px;
+  font:12.5px/1.3 inherit;flex:none;white-space:nowrap;box-shadow:0 .5px 1px rgba(0,0,0,.12)}
+.bbtn[disabled],.pbtn[disabled]{opacity:.45}
+.lnk{color:var(--accent);font-size:12px;flex:none;max-width:250px;text-align:right}
+.box{font:11.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--field);border:1px solid var(--line);
+  border-radius:6px;padding:8px 10px;white-space:pre;overflow:hidden;color:var(--ink)}
+.box.inert{color:var(--faint)}
+.disc{display:flex;align-items:center;gap:6px;font-size:12px;margin:14px 0 0;color:var(--ink)}
+.disc::before{content:"";width:0;height:0;border-left:5px solid var(--dim);border-top:4px solid transparent;border-bottom:4px solid transparent}
+.disc.open::before{transform:rotate(90deg)}
+.reg{border-top:.5px solid var(--line);padding:10px 20px 12px;color:var(--faint);font-size:11.5px;display:flex;justify-content:space-between}
+
+/* ---------- third-party windows: schematic, deliberately not their pixels ---------- */
+.other{background:var(--other);color:var(--otherInk);border:1px dashed var(--faint);border-radius:11px;overflow:hidden;max-width:660px}
+.other .tb{height:30px;border-bottom:1px dashed var(--faint);font-size:11.5px;display:flex;align-items:center;justify-content:center;position:relative;font-weight:600}
+.other .tb::before{content:"";position:absolute;left:12px;top:10px;width:44px;height:10px;
+  background:radial-gradient(circle at 5px 5px,var(--faint) 4.5px,transparent 5px) 0 0/16px 10px repeat-x}
+.other .bd{padding:16px 18px}
+.gbtn{display:inline-block;border:1px solid var(--otherInk);border-radius:7px;padding:4px 12px;font-size:12px;font-weight:600}
+.gbtn.fill{background:var(--otherInk);color:var(--other)}
+.toast{display:inline-flex;gap:10px;align-items:center;border:1px solid var(--otherInk);border-radius:9px;padding:6px 12px;font-size:12px;background:var(--page);color:var(--ink)}
+.chip{display:inline-block;border:1px solid var(--otherInk);border-radius:999px;padding:1px 8px;font-size:11.5px}
+.bubble{border-radius:12px;padding:9px 12px;margin:0 0 8px;font-size:12.5px;max-width:92%}
+.bubble.me{margin-left:auto;background:var(--page);border:1px solid var(--line);color:var(--ink);max-width:70%}
+.bubble.ai{background:transparent;padding-left:0}
+.tool{font:11px ui-monospace,Menlo,monospace;opacity:.75;margin:0 0 6px}
+.modes{display:inline-flex;border:1px solid var(--otherInk);border-radius:8px;overflow:hidden;font-size:11.5px}
+.modes span{padding:2px 10px} .modes .on{background:var(--otherInk);color:var(--other)}
+
+/* ---------- step strip ---------- */
+.strip{display:flex;gap:0;align-items:stretch;margin:14px 0 0;flex-wrap:wrap}
+.step{flex:1;min-width:150px;border:1px solid var(--line);background:var(--page);padding:9px 11px;font-size:12px;position:relative}
+.step + .step{border-left:0}
+.step:first-child{border-radius:8px 0 0 8px}.step:last-child{border-radius:0 8px 8px 0}
+.step .n{font:600 10px ui-monospace,Menlo,monospace;color:var(--dim);display:block;margin-bottom:3px}
+.step.them{background:var(--other);border-style:dashed}
+.step.pain{box-shadow:inset 0 -3px 0 var(--bad)}
+.step.maybe{box-shadow:inset 0 -3px 0 var(--mid)}
+.striplabel{font-size:12px;font-weight:600;margin:20px 0 0}
+.striplabel span{font-weight:400;color:var(--dim)}
+
+/* ---------- before/after table ---------- */
+table.ba{border-collapse:collapse;width:100%;margin-top:16px;font-size:12.5px;background:var(--page);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+table.ba th,table.ba td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:.5px solid var(--hairline)}
+table.ba thead th{background:var(--chrome);font-size:11.5px;color:var(--dim)}
+table.ba td:first-child{font-weight:600;width:17%}
+
+/* ---------- score table ---------- */
+.score td:nth-child(2),.score td:nth-child(3){width:36%}
+.score td:nth-child(4){width:12%}
+@media (max-width:640px){body{padding:24px 16px 80px}.segs{overflow-x:auto}.seg{font-size:11px;padding:4px 3px}table.ba{display:block;overflow-x:auto}.cm{overflow-x:auto}.box{overflow-x:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Native proxy — what the decisions look like</h1>
+<p class="lede">The user-facing consequences of plan v2's decisions D1–D9
+(<code>docs/design-mcp-native-proxy.md</code> §6.9), drawn at the shipped 660pt Settings width,
+so they can be judged on UX as well as engineering grounds. 29 Sep 2026. Strings are the
+shipped <code>en</code> keys unless a commentary block lists them as new.</p>
+<div class="key">
+  <span><i class="a"></i> Bristlenose, as it would ship</span>
+  <span><i class="o"></i> another app (ChatGPT, Claude): a schematic from our screenshots, not their pixels</span>
+  <span><i class="c"></i> commentary: not the product</span>
+</div>
+
+<div class="cm">
+<p><b>Engineering read of D1–D9, before the pictures.</b> Five decisions I'd take as written, two that need an amendment, and one new risk the plan doesn't name yet.</p>
+<table>
+<tr><th>#</th><th>Verdict</th><th>Why, and what it costs the user</th></tr>
+<tr><td>D1</td><td class="v-ok">Take</td><td>Fresh ids cost nothing, and the user never sees them. The number of signer classes is a P0.2 measurement, not a design choice: the local Apple Distribution build and the Apple-re-signed TestFlight/App Store build can share an id and still hang the helper (§6.6). In practice only the maintainer's Mac holds both, so the hazard is ours, not users'.</td></tr>
+<tr><td>D2</td><td class="v-ok">Take</td><td>A few seconds of <code>swiftc</code> per Release build buys "the helper is always as fresh as the host". A Debug build has no native path, so a Cmd+R build can't exercise it. <b>That makes the manual P6 pass on a Release build a requirement, not a nicety.</b></td></tr>
+<tr><td>D3</td><td class="v-ok">Take</td><td>One gate over both copies is the right shape, with file-then-grep for the SIGPIPE trap. Invisible to users.</td></tr>
+<tr><td>D4</td><td class="v-mid">Take, with one question</td><td>Fail closed is right. But ask the server too: when Agent Access goes off, does serve refuse that project's MCP calls whatever the handshake says? If it does, a stale group copy only points a proxy at a door that's shut. If it doesn't, D4 is the only guard, and the unlink must be verified. <b>Not checked yet.</b></td></tr>
+<tr><td>D5</td><td class="v-ok">Take</td><td>With no new diagnostics, the proxy's sentences have to carry the recovery on their own. Section 6 shows them. The native "can't reach" sentence is <b>vaguer</b> than today's Files & Folders one ("install again, or check for an update"), because it covers three different build defects, each of which D3 should stop from shipping.</td></tr>
+<tr><td>D6</td><td class="v-ok">Take</td><td>One commit, one release, one tester, and rollback is a revert. The cost is section 7: in that release, every existing Claude user needs one reinstall.</td></tr>
+<tr><td>D7</td><td class="v-mid">Take; the refusal needs copy</td><td>A marketplace inside the bundle is the only readable place. It is a <code>.dmg</code>-only case: the App Store never translocates. The refusal is drawn in state 2.6.</td></tr>
+<tr><td>D8</td><td class="v-ok">Take</td><td>Per-host state keyed by our own label keeps "know the protocol, never the client" intact. It inherits today's honest blind spot: <b>until the first question arrives, the button still says Install</b>, because we can’t see ChatGPT’s or Claude’s state. Section 2 shows it.</td></tr>
+<tr><td>D9</td><td class="v-ok">Take</td><td>External TestFlight before the store costs one review cycle, and it is the only way a human reviewer sees the helper before the public does.</td></tr>
+<tr><td>new</td><td class="v-bad">Add to P0.4</td><td><b>Where does the runtime <code>.mcpb</code> live when Claude opens it?</b> If it's written to our temporary directory, which sits inside our sandbox container, then Claude reading it is exactly the cross-team container read macOS 27 denies. The Install dialog could then fail in Claude with no message from us. P0.4 must test the real path, not an unzip we control. Fallbacks, in order: a location Claude can read (the bundle can't hold it, because Apple re-signs the helper after the zip is made), or an explicit save. <b>Inferred, not measured.</b></td></tr>
+</table>
+</div>
+
+<!-- ============================================================ -->
+<h2>1 · Today, on macOS 27 <small>the two tabs the plan replaces</small></h2>
+<div class="grid">
+  <div class="cell"><p class="cap">Before · Claude Desktop tab (0.31.5, macOS 27)</p>
+  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="pane">
+    <div class="topline"><p class="hl">Agents only see open projects</p><div class="anon"><div>Anonymise<div class="s">Remove participant names</div></div><div class="sw"></div></div></div>
+    <div class="segs"><div class="seg on">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
+    <p class="callout">Adds Bristlenose to Claude Desktop as an extension. Claude Desktop will ask you to confirm.</p>
+    <div class="ext"><div class="icon">❋</div><div class="nm"><b>Bristlenose</b><div class="s">Extension 0.31.5 (3906)</div></div><button class="pbtn">Install Extension…</button></div>
+    <div class="row"><p class="foot grow">The first time you ask a question, macOS blocks Claude from reading Bristlenose, without asking. To allow it, open System Settings ▸ Privacy &amp; Security ▸ Files &amp; Folders, expand Claude and turn on Bristlenose — then ask again.</p><button class="bbtn" style="margin-top:8px">Open Files &amp; Folders</button></div>
+  </div>
+  <div class="reg"><span>Projects</span><span>Open to agents: 2 projects · 14 sessions</span></div>
+  </div></div>
+
+  <div class="cell"><p class="cap">Before · ChatGPT &amp; Codex tab (0.31.5)</p>
+  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="pane">
+    <div class="topline"><p class="hl">Agents only see open projects</p><div class="anon"><div>Anonymise<div class="s">Remove participant names</div></div><div class="sw"></div></div></div>
+    <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
+    <p class="callout">In ChatGPT: Settings → MCP servers → Add server — or add to ~/.codex/config.toml (one entry covers ChatGPT desktop, Codex CLI, and the IDE extension):</p>
+<div class="box">[mcp_servers.bristlenose]
+url = "http://127.0.0.1:8154/mcp/"
+http_headers = { "Authorization" = "Bearer ••••••••••••" }</div>
+    <div class="row"><p class="foot grow">This address changes when Bristlenose restarts — re-copy the config after relaunching.</p><button class="bbtn" style="margin-top:8px">Copy Config</button></div>
+    <p class="foot">In ChatGPT, ask in Work mode — Bristlenose’s tools aren’t available in Chat.</p>
+  </div>
+  <div class="reg"><span>Projects</span><span>Open to agents: 2 projects · 14 sessions</span></div>
+  </div></div>
+</div>
+<div class="cm">
+<p><b>What's wrong with these today.</b> Claude: on macOS 27 a fresh install fails its first question by design, and the user fixes it in System Settings. ChatGPT: the pasted config carries a port and a token that change on every relaunch, so the user re-copies after every restart. The one-click ChatGPT plugin is ready, but it needs Node.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2>2 · ChatGPT &amp; Codex tab, after <small>D7 · D8 — seven states</small></h2>
+<div class="grid">
+
+  <div class="cell"><p class="cap">2.1 · Ready — never asked (and just after installing)</p>
+  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="pane">
+    <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
+    <p class="callout">Adds Bristlenose to ChatGPT as a plugin. ChatGPT will open and ask you to install it.</p>
+    <div class="ext"><div class="icon">❋</div><div class="nm"><b>Bristlenose</b><div class="s">Plugin 0.32.0 (3950)</div></div><button class="pbtn">Install Plugin…</button></div>
+    <p class="foot">In ChatGPT, ask in Work mode — Bristlenose’s tools aren’t available in Chat.</p>
+    <div class="disc">Or connect by hand</div>
+  </div></div></div>
+
+  <div class="cell"><p class="cap">2.2 · An agent has asked recently</p>
+  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="pane">
+    <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
+    <p class="callout">Adds Bristlenose to ChatGPT as a plugin. ChatGPT will open and ask you to install it.</p>
+    <div class="ext"><div class="icon">❋</div><div class="nm"><b>Bristlenose</b><div class="s">An agent has asked about this project recently</div></div><button class="pbtn">Install Plugin…</button></div>
+    <p class="foot">In ChatGPT, ask in Work mode — Bristlenose’s tools aren’t available in Chat.</p>
+    <div class="disc">Or connect by hand</div>
+  </div></div></div>
+
+  <div class="cell"><p class="cap">2.3 · After a Bristlenose update, ChatGPT still runs the old plugin</p>
+  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="pane">
+    <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
+    <p class="callout">Adds Bristlenose to ChatGPT as a plugin. ChatGPT will open and ask you to install it.</p>
+    <div class="ext"><div class="icon">❋</div><div class="nm"><b>Bristlenose</b><div class="s">Plugin 0.33.0 (4102)</div></div><button class="pbtn">Update Plugin…</button></div>
+    <p class="foot">Installed copy is older: 0.32.0 (3950)</p>
+    <p class="foot">In ChatGPT, ask in Work mode — Bristlenose’s tools aren’t available in Chat.</p>
+    <div class="disc">Or connect by hand</div>
+  </div></div></div>
+
+  <div class="cell"><p class="cap">2.4 · ChatGPT isn't installed</p>
+  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="pane">
+    <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
+    <p class="callout">Adds Bristlenose to ChatGPT as a plugin. ChatGPT will open and ask you to install it.</p>
+    <div class="ext"><div class="icon">❋</div><div class="nm"><b>Bristlenose</b><div class="s">Plugin 0.32.0 (3950)</div></div><span class="lnk">ChatGPT isn’t installed — download it from chatgpt.com</span></div>
+    <p class="foot">In ChatGPT, ask in Work mode — Bristlenose’s tools aren’t available in Chat.</p>
+    <div class="disc">Or connect by hand</div>
+  </div></div></div>
+
+  <div class="cell"><p class="cap">2.5 · ChatGPT too old to install by link</p>
+  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="pane">
+    <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
+    <p class="callout">Adds Bristlenose to ChatGPT as a plugin. ChatGPT will open and ask you to install it.</p>
+    <div class="ext"><div class="icon">❋</div><div class="nm"><b>Bristlenose</b><div class="s">Plugin 0.32.0 (3950)</div></div><span class="lnk">This version of ChatGPT can’t add plugins from other apps — update ChatGPT</span></div>
+    <p class="foot">In ChatGPT, ask in Work mode — Bristlenose’s tools aren’t available in Chat.</p>
+    <div class="disc">Or connect by hand</div>
+  </div></div></div>
+
+  <div class="cell"><p class="cap">2.6 · .dmg app opened from Downloads (translocated), D7</p>
+  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="pane">
+    <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
+    <p class="callout">Adds Bristlenose to ChatGPT as a plugin. ChatGPT will open and ask you to install it.</p>
+    <div class="ext"><div class="icon">❋</div><div class="nm"><b>Bristlenose</b><div class="s">Plugin 0.32.0 (3950)</div></div><button class="pbtn" disabled>Install Plugin…</button></div>
+    <p class="foot">Move Bristlenose to your Applications folder and open it from there to install the plugin. ChatGPT can’t install it from where Bristlenose is running now.</p>
+    <p class="foot">In ChatGPT, ask in Work mode — Bristlenose’s tools aren’t available in Chat.</p>
+    <div class="disc">Or connect by hand</div>
+  </div></div></div>
+
+  <div class="cell"><p class="cap">2.7 · "Or connect by hand" open</p>
+  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="pane">
+    <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
+    <p class="callout">Adds Bristlenose to ChatGPT as a plugin. ChatGPT will open and ask you to install it.</p>
+    <div class="ext"><div class="icon">❋</div><div class="nm"><b>Bristlenose</b><div class="s">Plugin 0.32.0 (3950)</div></div><button class="pbtn">Install Plugin…</button></div>
+    <p class="foot">In ChatGPT, ask in Work mode — Bristlenose’s tools aren’t available in Chat.</p>
+    <div class="disc open">Or connect by hand</div>
+    <p class="callout" style="margin-top:8px">For Codex in a terminal or an IDE, add to ~/.codex/config.toml:</p>
+<div class="box">[mcp_servers.bristlenose]
+url = "http://127.0.0.1:8154/mcp/"
+http_headers = { "Authorization" = "Bearer ••••••••••••" }</div>
+    <div class="row"><p class="foot grow">This address changes when Bristlenose restarts — re-copy the config after relaunching.</p><button class="bbtn" style="margin-top:8px">Copy Config</button></div>
+  </div></div></div>
+</div>
+
+<div class="cm">
+<p><b>Consequences the pictures show.</b></p>
+<ul>
+<li><b>2.1 and 2.2 both say Install</b>, even just after a successful install. That's today's rule on the Claude tab (<code>.unknown</code> and <code>.matching</code> map to Install) and D8 keeps it: we never say "Installed", because we can't see ChatGPT. The subtitle's recent-activity line is the only "it worked" signal, and it arrives with the first question. Benchmarked in section 8.</li>
+<li><b>2.3 depends on the plugin version.</b> The version carries the build number, so ChatGPT caches the new copy under a new folder. Whether ChatGPT then offers "Update" by itself, or needs uninstall-then-install, is P0.5 (section 5).</li>
+<li><b>2.4 and 2.5</b> reuse the Claude tab's Link-instead-of-button pattern, so a dead button never produces the system's "no application" dialog. 2.5 can only be detected as "the app is there but no <code>codex://</code> handler is registered". A ChatGPT that has the handler but ignores <code>marketplacePath</code> isn't detectable (F23), so a minimum version check goes on top.</li>
+<li><b>2.6 is .dmg-only.</b> The button is disabled rather than hidden, so the reason sits next to the thing it blocks. The copy deliberately doesn't say "translocation".</li>
+<li><b>2.7:</b> the TOML route survives for Codex CLI and IDE users. It is the one path that still re-copies after every restart, and the copy says so.</li>
+</ul>
+<p><b>New strings</b> (would go into 21 locales): <code>chatgptHint</code>, <code>installPlugin</code> / <code>reinstallPlugin</code> / <code>updatePlugin</code>, <code>pluginBuild</code>, <code>downloadChatGPT</code>, <code>updateChatGPT</code>, <code>moveToApplications</code>, <code>connectByHand</code>, and a shorter <code>chatgptCodexHow</code> for the TOML route. The ellipsis stays on "Install Plugin…" because the command finishes in another app (F9).</p>
+</div>
+
+<!-- ============================================================ -->
+<h2>3 · Claude Desktop tab, after <small>D6 · P4 · P5</small></h2>
+<div class="grid">
+  <div class="cell"><p class="cap">After · any macOS, 15 to 27</p>
+  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="pane">
+    <div class="topline"><p class="hl">Agents only see open projects</p><div class="anon"><div>Anonymise<div class="s">Remove participant names</div></div><div class="sw"></div></div></div>
+    <div class="segs"><div class="seg on">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
+    <p class="callout">Adds Bristlenose to Claude Desktop as an extension. Claude Desktop will ask you to confirm.</p>
+    <div class="ext"><div class="icon">❋</div><div class="nm"><b>Bristlenose</b><div class="s">Extension 0.32.0 (3950)</div></div><button class="pbtn">Install Extension…</button></div>
+  </div>
+  <div class="reg"><span>Projects</span><span>Open to agents: 2 projects · 14 sessions</span></div>
+  </div></div>
+
+  <div class="cell"><p class="cap">After · the first launch after the switch-over, for an existing user</p>
+  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="pane">
+    <div class="topline"><p class="hl">Agents only see open projects</p><div class="anon"><div>Anonymise<div class="s">Remove participant names</div></div><div class="sw"></div></div></div>
+    <div class="segs"><div class="seg on">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
+    <p class="callout">Adds Bristlenose to Claude Desktop as an extension. Claude Desktop will ask you to confirm.</p>
+    <div class="ext"><div class="icon">❋</div><div class="nm"><b>Bristlenose</b><div class="s">Extension 0.32.0 (3950)</div></div><button class="pbtn">Update Extension…</button></div>
+    <p class="foot">Installed copy is older: 0.31.5</p>
+  </div>
+  <div class="reg"><span>Projects</span><span>Open to agents: 2 projects · 14 sessions</span></div>
+  </div></div>
+</div>
+<div class="cm">
+<ul>
+<li><b>Everything below the row goes.</b> The Files & Folders note, its button, and the macOS 26 "access data from other apps" note all disappear. The helper reads the team group, and that read passes no TCC check on any version. The Files & Folders copy (21 locales) becomes recovery-only: it's reachable from the help page and from the Node sentence, for anyone still running the old extension.</li>
+<li><b>The right-hand frame is macOS 26 with a grant</b>: the old Node proxy reaches serve, so the ladder can say "older". <b>On macOS 27 the same user sees the left-hand frame</b>, because their old proxy is denied before it ever calls us, so we never learn its version. Both offer the right button. Only one explains why.</li>
+<li>The tab gets <b>shorter</b>, about 60pt, and the window follows (<code>fittingSize</code>). The ChatGPT tab gets a little longer. Tab switches already refit, so neither is new behaviour.</li>
+</ul>
+</div>
+
+<!-- ============================================================ -->
+<h2>4 · The whole journey, counted <small>clicks from "I want this" to an answer</small></h2>
+
+<p class="striplabel">ChatGPT · today <span>(Node installed; 0.31.5)</span></p>
+<div class="strip">
+  <div class="step"><span class="n">1</span>Turn On Agent Access for a project</div>
+  <div class="step"><span class="n">2</span>Settings ▸ MCP Agents ▸ ChatGPT tab ▸ Copy Config</div>
+  <div class="step them pain"><span class="n">3</span>Edit <code>~/.codex/config.toml</code> by hand, or find ChatGPT's MCP settings and paste</div>
+  <div class="step them"><span class="n">4</span>Restart ChatGPT, switch to Work</div>
+  <div class="step them maybe"><span class="n">5</span>"Always allow" once per tool, up to 5 times</div>
+  <div class="step pain"><span class="n">6</span>Any Bristlenose relaunch: back to step 2</div>
+</div>
+
+<p class="striplabel">ChatGPT · after <span>(no Node, any macOS)</span></p>
+<div class="strip">
+  <div class="step"><span class="n">1</span>Turn On Agent Access for a project</div>
+  <div class="step"><span class="n">2</span>Settings ▸ MCP Agents ▸ ChatGPT tab ▸ <b>Install Plugin…</b></div>
+  <div class="step them"><span class="n">3</span>ChatGPT opens on the plugin page ▸ <b>Install plugin</b></div>
+  <div class="step them"><span class="n">4</span>Toast: “Bristlenose plugin installed · <b>Try now</b>”</div>
+  <div class="step them maybe"><span class="n">5</span>Tool approval: probably none now that the tools are <code>readOnlyHint</code>, <b>not re-measured</b></div>
+</div>
+
+<p class="striplabel">Claude Desktop · today <span>(macOS 27, fresh install)</span></p>
+<div class="strip">
+  <div class="step"><span class="n">1</span>Turn On Agent Access</div>
+  <div class="step"><span class="n">2</span>Install Extension…</div>
+  <div class="step them"><span class="n">3</span>Claude: Install</div>
+  <div class="step them pain"><span class="n">4</span>First question fails: "macOS has blocked Claude…"</div>
+  <div class="step pain"><span class="n">5</span>Open Files &amp; Folders ▸ expand Claude ▸ switch on Bristlenose</div>
+  <div class="step them"><span class="n">6</span>Ask again</div>
+</div>
+
+<p class="striplabel">Claude Desktop · after <span>(any macOS)</span></p>
+<div class="strip">
+  <div class="step"><span class="n">1</span>Turn On Agent Access</div>
+  <div class="step"><span class="n">2</span>Install Extension…</div>
+  <div class="step them"><span class="n">3</span>Claude: Install</div>
+  <div class="step them"><span class="n">4</span>Ask</div>
+</div>
+
+<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(min(420px,100%),1fr))">
+  <div class="cell"><p class="cap">Step 3 · ChatGPT's plugin page (schematic)</p>
+  <div class="other"><div class="tb">ChatGPT</div><div class="bd">
+    <div style="display:flex;gap:12px;align-items:center"><div class="icon">❋</div><div style="flex:1"><b>Bristlenose</b><div style="font-size:11.5px;opacity:.8">Ask your Bristlenose study</div></div><span class="gbtn fill">Install plugin</span></div>
+    <p style="font-size:12px;margin:12px 0 4px">Ask your Bristlenose study — quotes, themes, signals, frameworks — from your agent. Read-only.</p>
+    <p style="font-size:11.5px;opacity:.75;margin:0">MCP servers 1 · 0.32.0-3950 · Research</p>
+  </div></div></div>
+
+  <div class="cell"><p class="cap">Step 4 · the toast, then a Work thread (schematic)</p>
+  <div class="other"><div class="tb">ChatGPT</div><div class="bd">
+    <div class="toast">Bristlenose plugin installed <b style="color:var(--accent)">Try now</b></div>
+    <div style="margin-top:14px;border:1px solid var(--otherInk);border-radius:12px;padding:8px 10px;font-size:12px;display:flex;align-items:center;gap:8px">
+      <span class="chip">@Bristlenose</span><span style="opacity:.6;flex:1">What frustrated people most about onboarding?</span><span class="modes"><span>Chat</span><span class="on">Work</span></span></div>
+  </div></div></div>
+</div>
+
+<div class="cm">
+<p><b>Measured vs inferred.</b> The link, the plugin page, "Install plugin", the toast and "Try now" were all measured on 29 Sep with the spike, and so were Work mode and the per-tool approvals. What isn't measured: whether <code>readOnlyHint</code> removes the approval cards (work-list item 14, "not yet re-measured"), and the page's exact version label. <b>Net:</b> the ChatGPT path goes from 5+ steps with a hand-edited file and a re-copy after every relaunch, to 3 clicks. The Claude path on macOS 27 goes from 6 steps with a detour through System Settings to 3 clicks. Agent Access (step 1) is the same on both, and deliberately so.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2>5 · After a Bristlenose update <small>P0.5 is unmeasured, so both outcomes are shown</small></h2>
+<div class="grid">
+  <div class="cell"><p class="cap">Outcome A · the host updates in place (1 click there)</p>
+  <div class="strip" style="margin:0">
+    <div class="step"><span class="n">1</span>Pane shows <b>Update Plugin…</b> + “Installed copy is older”</div>
+    <div class="step them"><span class="n">2</span>ChatGPT's plugin page offers <b>Update</b> (or Claude's install dialog replaces the old copy)</div>
+    <div class="step them"><span class="n">3</span>Ask</div>
+  </div></div>
+  <div class="cell"><p class="cap">Outcome B · the host keeps the old copy</p>
+  <div class="strip" style="margin:0">
+    <div class="step"><span class="n">1</span>Pane shows <b>Update Plugin…</b></div>
+    <div class="step them pain"><span class="n">2</span>ChatGPT shows the page as <i>installed</i>, with no update. (For the Node <code>.mcpb</code> today, Claude only previewed a same-named extension.)</div>
+    <div class="step pain"><span class="n">3</span>We have to say: “Remove Bristlenose in ChatGPT ▸ Plugins, then click Install Plugin… again”</div>
+    <div class="step them"><span class="n">4</span>Install, then ask</div>
+  </div></div>
+</div>
+<div class="cm">
+<ul>
+<li><b>Most updates never reach this screen.</b> An older helper keeps working as long as the MCP contract still matches (<code>mcp.contract</code>). The "outdated" sentence (section 6) only fires when it doesn't. So outcome B costs a detour only in a release that breaks the contract. The pane's "Update" is advice, not an alarm.</li>
+<li><b>The version stamp (D8) is what makes outcome A possible at all.</b> Without the build number in it, ChatGPT would treat a new build as the version it already cached.</li>
+<li>If P0.5 comes back as B, the <b>fix belongs in the foot line</b> (one extra sentence under the row, only in the <code>.olderRelease</code> state), not in a new control.</li>
+</ul>
+</div>
+
+<!-- ============================================================ -->
+<h2>6 · When it goes wrong <small>what the person reads, in the host's own chat</small></h2>
+<div class="grid">
+  <div class="cell"><p class="cap">Bristlenose isn't running (both proxies, unchanged)</p>
+  <div class="other"><div class="tb">Claude · ChatGPT Work</div><div class="bd">
+    <div class="bubble me">Which participants struggled with the export?</div>
+    <p class="tool">▸ bristlenose · search_quotes</p>
+    <div class="bubble ai">Bristlenose isn’t open, so I can’t see your study right now. Open Bristlenose and select the project, then ask me again.</div>
+  </div></div></div>
+
+  <div class="cell"><p class="cap">Can't read the handshake · Node today, macOS 27</p>
+  <div class="other"><div class="tb">Claude</div><div class="bd">
+    <div class="bubble me">Which participants struggled with the export?</div>
+    <p class="tool">▸ bristlenose · search_quotes</p>
+    <div class="bubble ai">macOS is blocking Claude from reading Bristlenose, and on this version it doesn’t ask. Open System Settings ▸ Privacy &amp; Security ▸ Files &amp; Folders, expand Claude, turn on Bristlenose, then ask again.</div>
+  </div></div></div>
+
+  <div class="cell"><p class="cap">Can't read the handshake · native, after</p>
+  <div class="other"><div class="tb">Claude · ChatGPT Work</div><div class="bd">
+    <div class="bubble me">Which participants struggled with the export?</div>
+    <p class="tool">▸ bristlenose · search_quotes</p>
+    <div class="bubble ai">This Bristlenose extension can’t reach Bristlenose’s data. In Bristlenose, go to Settings ▸ MCP Agents and install it again, or check for a Bristlenose update, then ask me again.</div>
+  </div></div></div>
+
+  <div class="cell"><p class="cap">Contract changed · outdated plugin (both)</p>
+  <div class="other"><div class="tb">Claude · ChatGPT Work</div><div class="bd">
+    <div class="bubble me">Which participants struggled with the export?</div>
+    <p class="tool">▸ bristlenose · search_quotes</p>
+    <div class="bubble ai">Your Bristlenose extension is older than the Bristlenose app and can’t read it any more. In Bristlenose, open Settings ▸ MCP Agents and install it again — it takes a moment and keeps your settings.</div>
+  </div></div></div>
+</div>
+<div class="cm">
+<ul>
+<li>The bubbles are <b>the model paraphrasing our sentence</b>, as it does. The wording we control is the proxy's <code>MSG_*</code> table, which tells the model to "tell the person…". Claude and ChatGPT both relayed it faithfully in the 29 Sep runs.</li>
+<li><b>The native "can't reach" sentence is the weakest one here.</b> It stands in for three build defects (missing group, group never written, network entitlement denied), and D3 is meant to make all three unshippable. So in practice it should only fire for a broken install, where "install again" is the right advice. D5 accepts that.</li>
+<li>The Files & Folders sentence stays in the Node proxy, for users who never reinstall. It retires with the Node extension.</li>
+</ul>
+</div>
+
+<!-- ============================================================ -->
+<h2>7 · D6: one release switches everything <small>before and after, per surface</small></h2>
+<table class="ba">
+<thead><tr><th>Surface</th><th>0.31.x (today)</th><th>The switch-over release</th><th>Who notices</th></tr></thead>
+<tbody>
+<tr><td>Claude Desktop tab</td><td>Install Extension… + Files &amp; Folders note and button on macOS 27; the "Allow" note on 26</td><td>Install / Reinstall / Update Extension… only</td><td>Everyone on 27 (a shorter, calmer pane)</td></tr>
+<tr><td>Existing Claude users</td><td>Node <code>.mcpb</code>; works on 26 with the grant, and on 27 once Files &amp; Folders is on</td><td>Their old extension keeps working where it already works, until they click Update/Install. The pane says so on 26; on 27 it just says Install</td><td>All of them: one reinstall each</td></tr>
+<tr><td>ChatGPT &amp; Codex tab</td><td>TOML + Copy Config + Work note</td><td>Install Plugin… row + Work note; the TOML route folds under "Or connect by hand"</td><td>Every ChatGPT user; anyone on a pasted config still needs to re-copy after restarts until they switch</td></tr>
+<tr><td>Files &amp; Folders copy</td><td>On the pane (27), in the proxy, in the help page</td><td>Help page and the Node proxy only</td><td>Nobody new</td></tr>
+<tr><td>Node dependency</td><td>ChatGPT plugin impossible without Node</td><td>None</td><td>ChatGPT users without Node: most of them</td></tr>
+<tr><td>Rollback</td><td>—</td><td>Revert one commit, ship a patch; installed helpers keep answering, because the handshake format doesn't change</td><td>Maintainer</td></tr>
+</tbody>
+</table>
+<div class="cm">
+<p><b>The cost of no flag</b> is that the first time anyone except the maintainer sees the native path is the release itself. D9's external TestFlight is the mitigation: it puts a human reviewer and any external tester on the build before the store does. The <b>benefit</b> is that no user ever sees a half-state (a native Claude tab next to a TOML ChatGPT tab, say), and there is no Diagnostics toggle to explain.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="bench">8 · Benchmark against the best <small>match, exceed, or fall short</small></h2>
+<p class="lede">Five exemplars, read from their own pages on 29 Sep 2026: Apple Xcode ("Giving external agents access to Xcode"), DEVONthink 4.3, ACE Studio, Figma and Notion. None of the five documents a one-click route to <i>both</i> Claude Desktop and ChatGPT. Where a page is silent, it counts as silent, not as a failure.</p>
+<table class="ba score">
+<thead><tr><th>Measure</th><th>Best out there</th><th>Bristlenose, after the plan</th><th>Verdict</th></tr></thead>
+<tbody>
+<tr><td>Steps to a first answer</td><td>Figma: a preferred route of about 4 actions per client (Codex: Plugins ▸ + ▸ Install ▸ Allow). Xcode: toggle + 1 Terminal command. ACE: 4–5 for ChatGPT, about 12 for Claude Desktop (hand-edited JSON + restart)</td><td>3 clicks per client after Agent Access: Install… in Bristlenose, Install in the host, ask. No file, no terminal, no restart</td><td class="v-ok">Exceed</td></tr>
+<tr><td>Runtime on the user's Mac</td><td>Xcode, DEVONthink and ACE ship a helper inside the app bundle. Notion falls back to <code>npx mcp-remote</code></td><td>A signed, sandboxed helper inside the bundle. No Node</td><td class="v-ok">Match</td></tr>
+<tr><td>Where you turn it on</td><td>DEVONthink: Settings ▸ AI ▸ MCP, a switch per provider. ACE: a per-client button that shows that client's steps. Xcode: one toggle</td><td>Settings ▸ MCP Agents, a tab per client, plus per-project Agent Access from the Project menu and the sidebar</td><td class="v-ok">Match</td></tr>
+<tr><td>Preferred vs manual route</td><td>Figma labels one "preferred" route per client, with a manual fallback and deeplinks</td><td>Install… is the preferred route; "Or connect by hand" is the manual one. Both installs are links (<code>codex://</code>, <code>.mcpb</code>)</td><td class="v-ok">Match</td></tr>
+<tr><td><b>Is it connected? Is it working?</b></td><td><b>Xcode</b>: "alerts you when the external agent connects … and when it's active". <b>Notion</b>: every agent app listed as Connected / Not Connected, disconnect in-app. Figma: "enabled and running" confirmation</td><td>The button still says <b>Install</b> after a successful install. The only signals are a 2-minute "asked recently" subtitle and the register's Last asked column</td><td class="v-bad">Fall short</td></tr>
+<tr><td>Scope control</td><td>DEVONthink: exclude one item or a whole database; encrypted databases excluded automatically; "Redact sensitive content". Notion: full user permissions</td><td>Per project, off by default; only open projects; Anonymise; read-only tools</td><td class="v-mid">Match DEVONthink per database; short of its per-item exclusion; exceed Notion</td></tr>
+<tr><td>Errors and recovery</td><td>Notion and Figma: a troubleshooting page mapping each failure to one fix. None of the five speaks inside the chat</td><td>Every failure is one sentence naming one fix, spoken by the agent where the user is looking (section 6). The help page's troubleshooting table is still to be written</td><td class="v-ok">Exceed in context</td></tr>
+<tr><td>ChatGPT Work vs Chat</td><td>ACE: "Standard Chat mode does not support local MCP", with screenshots of the mode selector and the Work toggle</td><td>One line in the pane. "Try now" lands in a Codex thread, which works. The help page has no screenshot yet</td><td class="v-mid">Match in the pane; short in the docs</td></tr>
+<tr><td>After an app update</td><td>None of the five says anything (ACE: "may change between updates")</td><td>A version comparison says Update… and names the installed build. Outcome depends on P0.5</td><td class="v-ok">Exceed</td></tr>
+<tr><td>macOS permissions</td><td>None of the five mentions them. DEVONthink's one reported failure (config never written) looks like a sandbox problem and has no official answer</td><td>None needed on 15–27, which is measured on 27 and still P0.1 for 15/26</td><td class="v-ok">Exceed, pending P0.1</td></tr>
+</tbody>
+</table>
+
+<h3 style="margin:26px 0 4px;font-size:15px">Closing the one real gap: connected and active</h3>
+<div class="grid">
+  <div class="cell"><p class="cap">Proposal · after the host has reached Bristlenose</p>
+  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="pane">
+    <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
+    <p class="callout">Adds Bristlenose to ChatGPT as a plugin. ChatGPT will open and ask you to install it.</p>
+    <div class="ext"><div class="icon">❋</div><div class="nm"><b>Bristlenose</b><div class="s">Plugin 0.32.0 (3950) · ChatGPT connected today at 14:02</div></div><button class="bbtn">Reinstall Plugin…</button></div>
+    <p class="foot">In ChatGPT, ask in Work mode — Bristlenose’s tools aren’t available in Chat.</p>
+    <div class="disc">Or connect by hand</div>
+  </div></div></div>
+  <div class="cell"><p class="cap">Proposal · while a question is being answered</p>
+  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
+  <div class="pane">
+    <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
+    <p class="callout">Adds Bristlenose to ChatGPT as a plugin. ChatGPT will open and ask you to install it.</p>
+    <div class="ext"><div class="icon">❋</div><div class="nm"><b>Bristlenose</b><div class="s">ChatGPT is asking about Onboarding study now</div></div><button class="bbtn">Reinstall Plugin…</button></div>
+    <p class="foot">In ChatGPT, ask in Work mode — Bristlenose’s tools aren’t available in Chat.</p>
+    <div class="disc">Or connect by hand</div>
+  </div></div></div>
+</div>
+<div class="cm">
+<p><b>How this stays inside "know the protocol, never the client".</b> Both lines are facts about <i>our own endpoint</i>: the helper announced itself with its host label and build, and we recorded it. They say nothing about ChatGPT's state. Two small changes make it work:</p>
+<ul>
+<li><b>At MCP <code>initialize</code>, the helper probes <code>/api/health</code> once</b>, sending its host label and build. Today it touches serve only inside a tool call, so "connected" can't show until the first question. With the probe, it shows the moment "Try now" opens a thread. The native helper reads the group with no TCC check, so the early read costs nothing. This is not D5's rejected breadcrumb, because the helper writes nothing.</li>
+<li><b>Serve keeps the last contact per host</b> (D8 already keys by host). With that in place, the ladder's <code>.matching</code> state turns into a bordered "Reinstall Plugin…" and the pane has no filled button at rest. That's the HIG's "nothing to do here". Before first contact it's Install, filled.</li>
+</ul>
+<p>With both changes, Bristlenose <b>matches Xcode</b> (connected, then active) and <b>Notion</b> (a per-app state line). It does so without claiming anything about a state we can't see: "connected" means "reached us", and it's worded that way. Agent Access off is our "Disconnect", and it already exists per project.</p>
+<p><b>The other two shortfalls, and what I'd do.</b> ChatGPT Work vs Chat in the docs: when the help page (work-list item 2) ships, give it ACE's treatment, with a screenshot of the Chat | Work toggle and one sentence on why Chat can't reach a local app. Per-item exclusion (DEVONthink): this is a product question, not part of this plan. A per-session "exclude from agents" would be the Bristlenose version. Park it.</p>
+</div>
+
+</div>
+</body>
+</html>

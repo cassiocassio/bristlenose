@@ -109,8 +109,13 @@ def test_build_script_refuses_tools_without_read_only_hint() -> None:
 
 def test_build_script_maps_each_signer_kind_to_its_own_identifier() -> None:
     script = _BUILD.read_text(encoding="utf-8")
-    assert '"Developer ID Application:"*) HELPER_ID="app.bristlenose.mcp.devid"' in script
-    assert '"Apple Distribution:"*|"Apple Development:"*) HELPER_ID="app.bristlenose.mcp"' in script
+    for line in ('"Developer ID Application:"*) CHANNEL=devid',
+                 '"Apple Distribution:"*) CHANNEL=appstore',
+                 '"Apple Development:"*) CHANNEL=dev',
+                 'appstore) HELPER_ID="app.bristlenose.mcp"',
+                 'devid) HELPER_ID="app.bristlenose.mcp.devid"',
+                 'dev) HELPER_ID="app.bristlenose.mcp.dev"'):
+        assert line in script, line
     assert "app.bristlenose.mcp-proxy" not in script, "the spike's id is spent (§6.6)"
 
 

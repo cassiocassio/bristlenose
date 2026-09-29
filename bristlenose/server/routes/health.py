@@ -144,7 +144,7 @@ def health(request: Request) -> dict[str, object]:
 
 
 @router.get("/agent-activity")
-def agent_activity(request: Request) -> dict[str, int | str | None]:
+def agent_activity(request: Request) -> dict[str, int | str | dict[str, str | None] | None]:
     """Monotonic count of MCP tool calls this serve has answered.
 
     Deliberately NOT part of the ``/api/health`` payload. That route is
@@ -177,6 +177,9 @@ def agent_activity(request: Request) -> dict[str, int | str | None]:
         # header, so pair this with `calls` before concluding anything.
         "proxy_version": getattr(request.app.state, "mcp_proxy_version", None),
         "proxy_contract": getattr(request.app.state, "mcp_proxy_contract", None),
+        # The native helper names its host ("ChatGPT", "Claude"), so each tab
+        # compares against its own proxy rather than whichever called last.
+        "proxy_versions": dict(getattr(request.app.state, "mcp_proxy_versions", {}) or {}),
     }
 
 

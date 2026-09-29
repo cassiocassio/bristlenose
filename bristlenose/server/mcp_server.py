@@ -250,12 +250,39 @@ class ProxyIdentityRecorder:
         # the `None` sentinel that means "no agent has called yet". Every real
         # proxy call is a POST (index.js), and POST has no auth exemption.
         if scope["type"] == "http" and scope.get("method") == "POST":
-            for name, value in scope.get("headers", []):
-                if name == b"x-bristlenose-proxy-version":
-                    self.state.mcp_proxy_version = self._clean(value)
-                elif name == b"x-bristlenose-proxy-contract":
-                    self.state.mcp_proxy_contract = self._clean(value)
+            headers = dict(scope.get("headers", []))
+            if b"x-bristlenose-proxy-host" in headers:
+                self._record_for_host(headers)
+            else:
+                if b"x-bristlenose-proxy-version" in headers:
+                    self.state.mcp_proxy_version = self._clean(headers[b"x-bristlenose-proxy-version"])
+                if b"x-bristlenose-proxy-contract" in headers:
+                    self.state.mcp_proxy_contract = self._clean(headers[b"x-bristlenose-proxy-contract"])
         await self.inner(scope, receive, send)
+
+    #: A host label is a word, not a sentence: "ChatGPT", "Claude".
+    _HOST = re.compile(r"^[A-Za-z0-9._-]{1,32}$")
+    #: A handful of hosts, never an unbounded map any local caller can grow.
+    _MAX_HOSTS = 8
+
+    def _record_for_host(self, headers: dict[bytes, bytes]) -> None:
+        """The native helper names its host, so each host keeps its own build.
+
+        One slot for every proxy meant the last caller won: a ChatGPT question
+        would overwrite what the Claude tab compares against, and the Claude
+        tab would offer an update it does not need (design-mcp-native-proxy
+        §6.9 D8). The legacy slot stays the Node extension's, which sends no
+        host. An unreadable host records nothing rather than landing in the
+        legacy slot.
+        """
+        host = headers[b"x-bristlenose-proxy-host"].decode("latin-1", errors="replace").strip()
+        if not self._HOST.match(host):
+            return
+        versions: dict[str, str | None] = self.state.mcp_proxy_versions
+        if host not in versions and len(versions) >= self._MAX_HOSTS:
+            return
+        raw = headers.get(b"x-bristlenose-proxy-version")
+        versions[host] = self._clean(raw) if raw is not None else None
 
 
 # ---------------------------------------------------------------------------
@@ -1095,6 +1122,9 @@ def mount_mcp_server(app: Any, session_factory: Callable[[], Any]) -> Any | None
     # agent). Don't let a future gate read more into it than that.
     app.state.mcp_proxy_version = None
     app.state.mcp_proxy_contract = None
+    # Per host, for proxies that name theirs (the native helper). See
+    # ProxyIdentityRecorder._record_for_host.
+    app.state.mcp_proxy_versions = {}
     # Monotonic call count for the sidebar antenna's activity animation. A
     # COUNTER, not a timestamp: the host animates on any increment, and an
     # integer is immune to the sleep-pause skew described above (a lid close

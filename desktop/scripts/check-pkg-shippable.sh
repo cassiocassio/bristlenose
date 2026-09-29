@@ -72,6 +72,7 @@ say()  { printf '  %s\n' "$*"; }
 ok()   { printf '  \033[32m✓\033[0m %-34s %s\n' "$1" "${2:-}"; }
 skip() { printf '  \033[2m—\033[0m %-34s %s\n' "$1" "${2:-}"; }
 die()  { printf '  \033[31m✗\033[0m %-34s %s\n' "$1" "${2:-}" >&2; FAILURES=$((FAILURES+1)); }
+SCRATCH_MCP="$(mktemp "${TMPDIR:-/tmp}/check-pkg-mcp.XXXXXX")"
 
 printf '\nSHIPPABLE?  %s\n\n' "$(basename "$PKG")"
 
@@ -261,6 +262,26 @@ if [ "${#MISSING_SANDBOX[@]}" -eq 0 ]; then
 else
     die "nested app-sandbox" "${#MISSING_SANDBOX[@]} of $TOTAL_MACHO missing it"
     printf '        %s\n' "${MISSING_SANDBOX[@]:0:8}" >&2
+fi
+
+# ---------------------------------------------------------------------------
+# 6b. The native MCP helper — design-mcp-native-proxy §6.9 D3
+#
+# Every copy it ships (today: the ChatGPT plugin's bin/) must be sandboxed, carry
+# exactly the host's team group, match its identifier to its signer kind, target
+# the app's floor, and carry no private SPI and no spike mode. One gate script,
+# shared with the .dmg lane and with the build itself.
+# ---------------------------------------------------------------------------
+MCP_COPIES=()
+while IFS= read -r -d '' h; do MCP_COPIES+=("$h"); done \
+    < <(find "$APP/Contents" -type f -name bristlenose-mcp -print0)
+if [ "${#MCP_COPIES[@]}" -eq 0 ]; then
+    ok "native MCP helper" "not in this build"
+elif "$(dirname "$0")/check-mcp-helper.sh" --host "$APP" "${MCP_COPIES[@]}" >/dev/null 2>"$SCRATCH_MCP"; then
+    ok "native MCP helper" "${#MCP_COPIES[@]} cop$([ "${#MCP_COPIES[@]}" = 1 ] && echo y || echo ies), gate passed"
+else
+    die "native MCP helper" "check-mcp-helper.sh refused it"
+    sed 's/^/        /' "$SCRATCH_MCP" >&2
 fi
 
 # ---------------------------------------------------------------------------

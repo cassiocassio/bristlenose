@@ -94,6 +94,12 @@ final class ServeManager: ObservableObject {
         set { instance.agentProxyVersion = newValue }
     }
 
+    /// Per-host proxy builds (native helper). See `AgentActivity.proxyVersions`.
+    var agentProxyVersions: [String: String] {
+        get { instance.agentProxyVersions }
+        set { instance.agentProxyVersions = newValue }
+    }
+
     /// Tool-call freshness (seconds) that still counts as "connected".
     /// Wider than the poll so a conversation with thinking gaps between
     /// tool calls doesn't flicker the badge.
@@ -479,6 +485,7 @@ final class ServeManager: ObservableObject {
         // lifecycle transition clears, and its own doc-comment says it must
         // not survive a switch.
         agentProxyVersion = nil
+        agentProxyVersions = [:]
         generation += 1
         state = .starting
         outputLines = []
@@ -643,6 +650,7 @@ final class ServeManager: ObservableObject {
         // nothing left to talk to. Without this, a stopped serve still reads
         // "agent using 0.25.3+abc".
         agentProxyVersion = nil
+        agentProxyVersions = [:]
         dropHandshake()
 
         // External mode: no subprocess was spawned — just reset state.
@@ -948,6 +956,7 @@ final class ServeManager: ObservableObject {
         // answer — nil reads as "no extension build has said yet", never as
         // the previous project's.
         agentProxyVersion = nil
+        agentProxyVersions = [:]
         // Restore the token the parked sidecar was SPAWNED with — not a
         // fresh Keychain read. On the Keychain-refusal path the spawn-time
         // value is an ephemeral mint; re-minting here would produce a token
@@ -1162,6 +1171,9 @@ final class ServeManager: ObservableObject {
         if let version = AgentActivity.proxyVersion(json), version != agentProxyVersion {
             agentProxyVersion = version
         }
+        // Merged, not replaced, for the same sticky-within-a-serve reason.
+        let merged = agentProxyVersions.merging(AgentActivity.proxyVersions(json)) { _, new in new }
+        if merged != agentProxyVersions { agentProxyVersions = merged }
     }
 
     /// Fetch the Bristlenose version (and MCP availability) from the serve

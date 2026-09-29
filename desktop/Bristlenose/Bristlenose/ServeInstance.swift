@@ -53,6 +53,11 @@ final class ServeInstance: ObservableObject {
     /// talking to THIS sidecar, and it must not survive a project switch.
     @Published var agentProxyVersion: String?
 
+    /// Per-host proxy builds, for proxies that name their host (the native
+    /// helper). See `AgentActivity.proxyVersions`. Same lifetime as
+    /// `agentProxyVersion`: per serve, cleared when it is.
+    @Published var agentProxyVersions: [String: String] = [:]
+
     /// When the count last INCREASED. The sidebar's envelope is computed from
     /// this — a retriggerable hold, so a burst of calls is one animation
     /// rather than one per call. Nil = no activity observed on this serve.

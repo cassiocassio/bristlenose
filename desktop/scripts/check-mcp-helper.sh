@@ -18,7 +18,9 @@
 #                             mismatch is the 14 Jul "Invalid Code Signature
 #                             Identifier" rejection.
 #   id matches signer kind  — a helper container remembers its signer kind; two
-#                             kinds under one id hang (§6.6, §6.7).
+#                             kinds under one id hang (§6.6, §6.7). Developer ID
+#                             → .mcp.devid, Apple Development → .mcp.dev, Apple's
+#                             store and TestFlight signers → .mcp.
 #   minos == app floor      — built for the build machine's OS it crashes on 15.
 #   no responsibility_*     — private SPI; App Review rejects it (§6.1).
 #   no --seed               — the spike's write-the-group test mode.
@@ -80,9 +82,14 @@ for h in "$@"; do
     [ "$team" = "$TEAM_ID" ] || die_one "TeamIdentifier is '$team', want $TEAM_ID"
     case "$authority" in
         "Developer ID Application:"*) want="app.bristlenose.mcp.devid" ;;
-        "Apple Distribution:"*|"Apple Development:"*|"TestFlight Beta Distribution"|"Apple Mac OS Application Signing") want="app.bristlenose.mcp" ;;
+        "Apple Distribution:"*|"TestFlight Beta Distribution"|"Apple Mac OS Application Signing") want="app.bristlenose.mcp" ;;
+        "Apple Development:"*) want="app.bristlenose.mcp.dev" ;;
         *) want="(unsignable: $authority)" ;;
     esac
+    # Mid-build, a lane whose archive identity is not its final one names the
+    # identifier it will ship with (the .dmg archives Apple Development and is
+    # re-signed Developer ID at export). After export, run without it.
+    want="${MCP_HELPER_EXPECT_ID:-$want}"
     [ "$ident" = "$want" ] || die_one "identifier '$ident' for signer '$authority', want $want"
 
     otool -P "$h" > "$WORK/plist.txt" 2>/dev/null || true

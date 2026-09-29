@@ -1017,6 +1017,40 @@ class TestHealthAdvertisesMount:
             assert got["proxy_version"] is None
             assert got["calls"] == 0
 
+    def test_a_named_host_keeps_its_own_build_and_leaves_the_extensions_alone(self) -> None:
+        # D8: the Claude tab compares against the Node extension's build. A
+        # ChatGPT question through the native helper must not overwrite it,
+        # or the Claude tab offers an update it does not need.
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        app.state.auth_token = "test-mcp-token"
+        with TestClient(app, base_url="http://127.0.0.1:8150") as client:
+            hdr = {"Authorization": "Bearer test-mcp-token"}
+            body = {"jsonrpc": "2.0", "id": 1, "method": "tools/call",
+                    "params": {"name": "get_project_overview", "arguments": {}}}
+            client.post("/mcp/", headers={**hdr, **_PROTO_HEADERS,
+                                          "X-Bristlenose-Proxy-Version": "0.26.0+854270a"}, json=body)
+            client.post("/mcp/", headers={**hdr, **_PROTO_HEADERS,
+                                          "X-Bristlenose-Proxy-Host": "ChatGPT",
+                                          "X-Bristlenose-Proxy-Version": "0.32.0+3950"}, json=body)
+            got = client.get("/api/agent-activity", headers=hdr).json()
+            assert got["proxy_version"] == "0.26.0+854270a"
+            assert got["proxy_versions"] == {"ChatGPT": "0.32.0+3950"}
+
+    def test_an_unreadable_host_records_nothing(self) -> None:
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        app.state.auth_token = "test-mcp-token"
+        with TestClient(app, base_url="http://127.0.0.1:8150") as client:
+            hdr = {"Authorization": "Bearer test-mcp-token"}
+            body = {"jsonrpc": "2.0", "id": 1, "method": "tools/call",
+                    "params": {"name": "get_project_overview", "arguments": {}}}
+            for hostile in ("Chat GPT", "<b>x</b>", "A" * 40, ""):
+                client.post("/mcp/", headers={**hdr, **_PROTO_HEADERS,
+                                              "X-Bristlenose-Proxy-Host": hostile,
+                                              "X-Bristlenose-Proxy-Version": "9.9.9"}, json=body)
+            got = client.get("/api/agent-activity", headers=hdr).json()
+            assert got["proxy_versions"] == {}
+            assert got["proxy_version"] is None
+
     def test_agent_activity_requires_the_bearer(self) -> None:
         # The whole reason this isn't in the /api/health payload: health is
         # auth-exempt, and a call counter IS the activity timeline health

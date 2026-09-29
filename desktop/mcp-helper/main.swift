@@ -19,7 +19,8 @@ func log(_ s: String) { FileHandle.standardError.write(("[bristlenose-mcp] " + s
 let groupDir = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: GROUP_ID)
 let HANDSHAKES = [groupDir?.appendingPathComponent("Bristlenose/mcp-handshake.json").path].compactMap { $0 }
 
-let HOST = ProcessInfo.processInfo.environment["BRISTLENOSE_MCP_HOST"] ?? "your AI app"
+let HOST_LABEL = ProcessInfo.processInfo.environment["BRISTLENOSE_MCP_HOST"]
+let HOST = HOST_LABEL ?? "your AI app"
 let GROUNDING = "Do not answer from memory or from general knowledge."
 let MSG_CLOSED = "Bristlenose isn't open, so there is no study data available. Tell the person to open Bristlenose and select a project, then ask again. " + GROUNDING
 let MSG_STARTING = "Bristlenose is starting — ask again in a moment. " + GROUNDING
@@ -185,10 +186,13 @@ func callTool(_ msg: [String: Any]) -> [String: Any] {
     let token = entry["token"] as? String ?? ""
     let body = try! JSONSerialization.data(withJSONObject: ["jsonrpc": "2.0", "id": msg["id"] ?? 0, "method": "tools/call",
                                                             "params": ["name": name, "arguments": args]])
-    let r = http("http://127.0.0.1:\(port)/mcp/", method: "POST",
-        headers: ["Content-Type": "application/json", "Accept": "application/json, text/event-stream",
-                  "Authorization": "Bearer \(token)", "X-Bristlenose-Proxy-Contract": String(CONTRACT),
-                  "X-Bristlenose-Proxy-Version": VERSION], body: body, timeout: 60)
+    var headers = ["Content-Type": "application/json", "Accept": "application/json, text/event-stream",
+                   "Authorization": "Bearer \(token)", "X-Bristlenose-Proxy-Contract": String(CONTRACT),
+                   "X-Bristlenose-Proxy-Version": VERSION]
+    // Names the host so each Settings tab compares against its own proxy
+    // (design §6.9 D8). Set by the plugin's .mcp.json / the .mcpb manifest.
+    if let host = HOST_LABEL { headers["X-Bristlenose-Proxy-Host"] = host }
+    let r = http("http://127.0.0.1:\(port)/mcp/", method: "POST", headers: headers, body: body, timeout: 60)
     if r.status == 0 { log("upstream call failed port=\(port) timedOut=\(r.timedOut)"); return text(MSG_STARTING) }
     if r.status == 401 { return text(MSG_AUTH) }
     if r.status == 404 { return text(MSG_NO_AGENT) }

@@ -55,6 +55,9 @@ struct MCPAgentsSettingsView: View {
     @EnvironmentObject private var i18n: I18n
     @State private var client: AgentClient = .claudeDesktop
     @State private var copied = false
+    /// "Or connect by hand" on the ChatGPT tab, closed by default: the plugin
+    /// is the route, the pasted config is for Codex in a terminal or an IDE.
+    @State private var chatGPTManualOpen = false
     @State private var copiedResetTask: Task<Void, Never>?
     /// Projects unticked while this pane has been open. They stay on screen as
     /// dimmed receipts and can be re-ticked to undo; cleared on `.onAppear`, so
@@ -909,7 +912,89 @@ struct MCPAgentsSettingsView: View {
     private var extensionState: MCPExtensionState {
         MCPExtensionState.compare(
             bundled: MCPExtensionInstaller.bundledStamp,
-            running: serveManager.agentProxyVersion
+            // A helper that names its host wins; the Node extension, which
+            // names none, is the legacy slot (design §6.9 D8).
+            running: serveManager.agentProxyVersions["Claude"] ?? serveManager.agentProxyVersion
+        )
+    }
+
+    // MARK: - ChatGPT plugin row (design-mcp-native-proxy §6.9 P3)
+
+    private var chatGPTAvailability: ChatGPTPluginInstaller.Availability {
+        ChatGPTPluginInstaller.currentAvailability
+    }
+
+    /// The ChatGPT plugin's own ladder: what we bundle against what the
+    /// ChatGPT-hosted helper said it is. Never "Installed" — we can't see
+    /// ChatGPT, only who reached us.
+    private var chatGPTState: MCPExtensionState {
+        MCPExtensionState.compare(bundled: ChatGPTPluginInstaller.bundledVersion,
+                                  running: serveManager.agentProxyVersions["ChatGPT"])
+    }
+
+    private var chatGPTButtonKey: String {
+        switch chatGPTState {
+        case .unknown, .matching:            return "desktop.mcpAgents.installPlugin"
+        case .differentBuild, .newerRelease: return "desktop.mcpAgents.reinstallPlugin"
+        case .olderRelease:                  return "desktop.mcpAgents.updatePlugin"
+        }
+    }
+
+    /// Under the row: why the button can't act, or which copy ChatGPT runs and
+    /// how to replace it. ChatGPT does not update a plugin in place — its page
+    /// offers only Uninstall — so the remedy names both steps (measured
+    /// 29 Sep 2026, design §6.7 P0.5).
+    private var chatGPTFootLine: String? {
+        if chatGPTAvailability == .notInApplications {
+            return i18n.t("desktop.mcpAgents.moveToApplications")
+        }
+        guard let key = chatGPTState.footnoteKey,
+              let installed = chatGPTState.installedDisplay else { return nil }
+        return i18n.t(key, ["version": installed]) + " " + i18n.t("desktop.mcpAgents.chatgptReinstallHow")
+    }
+
+    /// Same shape as the Claude row: one icon, one name, one line about the
+    /// build, one filled button — or a link when the button could only fail.
+    private var chatGPTRow: some View {
+        HStack(spacing: 12) {
+            Image(nsImage: NSApp.applicationIconImage)
+                .resizable()
+                .frame(width: 38, height: 38)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Bristlenose")
+                    .font(.body.weight(.semibold))
+                Text(ChatGPTPluginInstaller.bundledVersion.map {
+                    i18n.t("desktop.mcpAgents.pluginBuild", ["version": MCPExtensionState.display($0)])
+                } ?? "")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            switch chatGPTAvailability {
+            case .ready, .notBundled, .notInApplications:
+                Button(i18n.t(chatGPTButtonKey)) {
+                    ChatGPTPluginInstaller.install()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(chatGPTAvailability != .ready)
+            case .noChatGPT:
+                Link(i18n.t("desktop.mcpAgents.downloadChatGPT"),
+                     destination: URL(string: "https://chatgpt.com/download")!)
+                    .font(.callout)
+            case .chatGPTTooOld:
+                Link(i18n.t("desktop.mcpAgents.updateChatGPT"),
+                     destination: URL(string: "https://chatgpt.com/download")!)
+                    .font(.callout)
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(nsColor: .textBackgroundColor))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
         )
     }
 
@@ -1047,61 +1132,98 @@ struct MCPAgentsSettingsView: View {
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-            } else if endpoint == nil {
-                // Nothing is serving, so there is no address and no token —
-                // but the SHAPE of the config is the useful thing to a
-                // researcher who opened Settings from Welcome to do setup.
-                // Same structure as the live branch (hint, box, footnote +
-                // button), stubbed and inert: nothing here can be copied
-                // wrong, and the pane doesn't change shape with project
-                // state (§3.7's own rule, which this slot used to break).
-                if let how = client.how(i18n) {
-                    Text(how)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                dialectBox(client.placeholderPayload ?? "", live: false)
-                HStack(alignment: .top) {
-                    // The footnote carries `notRunning` rather than the live
-                    // branch's `addressNote`: it says why everything is grey,
-                    // and a caveat about restarts is moot when nothing runs.
-                    Text(i18n.t("desktop.connectAgent.notRunning"))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer()
-                    copyButton(live: false)
-                }
-                chatGPTWorkNote
-            } else if !serveManager.mcpMounted {
-                Text(i18n.t("desktop.connectAgent.unavailable"))
+            } else if client == .chatgptCodex, chatGPTAvailability != .notBundled {
+                // The plugin route (design-mcp-native-proxy §1.2, mockup §2):
+                // hint, the row, what the row says about itself, the Work
+                // note, and the pasted config folded under "Or connect by
+                // hand" for Codex in a terminal or an IDE. A build without the
+                // plugin (ad-hoc, unsigned) keeps today's layout below.
+                Text(i18n.t("desktop.mcpAgents.chatgptHint"))
                     .font(.callout)
                     .foregroundStyle(.secondary)
-            } else if let payloadText {
-                if let how = client.how(i18n) {
-                    Text(how)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                dialectBox(payloadText, live: true)
-                    .textSelection(.enabled)
-                HStack(alignment: .top) {
-                    // info-circle / secondary, NOT a caution triangle: the
-                    // HIG reserves warnings for negative consequences, and
-                    // a permanent warning stops being read (mockup §2).
-                    Text(i18n.t("desktop.connectAgent.addressNote"))
+                    .fixedSize(horizontal: false, vertical: true)
+                chatGPTRow
+                if let line = chatGPTFootLine {
+                    Text(line)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
-                    Spacer()
-                    copyButton(live: true)
+                        .textSelection(.enabled)
                 }
                 chatGPTWorkNote
+                DisclosureGroup(isExpanded: $chatGPTManualOpen) {
+                    VStack(alignment: .leading, spacing: Spacing.related) {
+                        dialect(workNote: false)
+                    }
+                    .padding(.top, Spacing.related)
+                } label: {
+                    Text(i18n.t("desktop.mcpAgents.connectByHand"))
+                }
+            } else {
+                dialect(workNote: true)
             }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+
+    /// The pasted-config route: hint, box, footnote + Copy. On the ChatGPT tab
+    /// it sits under "Or connect by hand" once the plugin route exists, where
+    /// the Work note is already shown above it (`workNote: false`).
+    @ViewBuilder
+    private func dialect(workNote: Bool) -> some View {
+        if endpoint == nil {
+            // Nothing is serving, so there is no address and no token —
+            // but the SHAPE of the config is the useful thing to a
+            // researcher who opened Settings from Welcome to do setup.
+            // Same structure as the live branch (hint, box, footnote +
+            // button), stubbed and inert: nothing here can be copied
+            // wrong, and the pane doesn't change shape with project
+            // state (§3.7's own rule, which this slot used to break).
+            if let how = client.how(i18n) {
+                Text(how)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            dialectBox(client.placeholderPayload ?? "", live: false)
+            HStack(alignment: .top) {
+                // The footnote carries `notRunning` rather than the live
+                // branch's `addressNote`: it says why everything is grey,
+                // and a caveat about restarts is moot when nothing runs.
+                Text(i18n.t("desktop.connectAgent.notRunning"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer()
+                copyButton(live: false)
+            }
+            if workNote { chatGPTWorkNote }
+        } else if !serveManager.mcpMounted {
+            Text(i18n.t("desktop.connectAgent.unavailable"))
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        } else if let payloadText {
+            if let how = client.how(i18n) {
+                Text(how)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            dialectBox(payloadText, live: true)
+                .textSelection(.enabled)
+            HStack(alignment: .top) {
+                // info-circle / secondary, NOT a caution triangle: the
+                // HIG reserves warnings for negative consequences, and
+                // a permanent warning stops being read (mockup §2).
+                Text(i18n.t("desktop.connectAgent.addressNote"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer()
+                copyButton(live: true)
+            }
+            if workNote { chatGPTWorkNote }
+        }
     }
 
     /// One definition of the dialect box, so the live and placeholder states

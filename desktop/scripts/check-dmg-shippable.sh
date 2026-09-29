@@ -138,6 +138,19 @@ else
         fail "inner app signature" "the app INSIDE the image fails codesign --deep --strict"
     fi
 
+    # The native MCP helper's one gate (design-mcp-native-proxy §6.9 D3), run
+    # over the copies INSIDE the image, as signed after export.
+    MCP_COPIES=()
+    while IFS= read -r -d '' h; do MCP_COPIES+=("$h"); done \
+        < <(find "$INNER_APP/Contents" -type f -name bristlenose-mcp -print0)
+    if [ "${#MCP_COPIES[@]}" -eq 0 ]; then
+        pass "native MCP helper" "not in this build"
+    elif MCP_OUT="$("$(dirname "$0")/check-mcp-helper.sh" --host "$INNER_APP" "${MCP_COPIES[@]}" 2>&1)"; then
+        pass "native MCP helper" "${#MCP_COPIES[@]} copies, gate passed"
+    else
+        fail "native MCP helper" "$(printf '%s' "$MCP_OUT" | grep FAIL | head -1 | sed 's/^ *//')"
+    fi
+
     # Assert the reason, not the word. `grep -q accepted` passes on any output
     # containing that substring; we want the specific verdict Gatekeeper gives
     # a notarised Developer-ID app. With the inner app unstapled (by design),

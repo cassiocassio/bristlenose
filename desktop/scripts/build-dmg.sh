@@ -351,6 +351,10 @@ rm -rf "$ARCHIVE_PATH" "$EXPORT_DIR"
 # DerivedData/SourcePackages, where "Bristlenose/..." does not exist, so the
 # archive died on Settings_Settings — never on the app target the override
 # was written for.
+# BRISTLENOSE_HELPER_CHANNEL=devid: the archive is signed Apple Development and
+# re-signed Developer ID at export, so the native MCP helper built during the
+# archive must take the .dmg's identifier (app.bristlenose.mcp.devid) now — the
+# export keeps whatever identifier it was given (design-mcp-native-proxy §6.9 D1).
 export BRISTLENOSE_SKIP_SIDECAR_ENSURE=1
 xcodebuild \
     -project "$PROJECT_DIR/Bristlenose.xcodeproj" \
@@ -364,6 +368,7 @@ xcodebuild \
     DEVELOPMENT_TEAM="$TEAM_ID" \
     SWIFT_ACTIVE_COMPILATION_CONDITIONS="\$(inherited) DEVELOPER_ID_BETA" \
     CODE_SIGN_ENTITLEMENTS="$PROJECT_DIR/Bristlenose/BristlenoseDeveloperID.entitlements" \
+    BRISTLENOSE_HELPER_CHANNEL=devid \
     -allowProvisioningUpdates \
     archive \
     > "$ARCHIVE_LOG" 2>&1 \

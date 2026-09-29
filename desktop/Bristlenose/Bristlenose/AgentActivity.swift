@@ -55,6 +55,20 @@ enum AgentActivity {
         return (raw?.isEmpty == false) ? raw : nil
     }
 
+    /// The builds of proxies that name their host ("ChatGPT", "Claude"), keyed
+    /// by host (design-mcp-native-proxy §6.9 D8). Kept apart from
+    /// `proxyVersion`, which stays the Node extension's, so a ChatGPT question
+    /// never changes what the Claude tab compares against. Empty and
+    /// unreadable entries are dropped, never guessed.
+    static func proxyVersions(_ json: [String: Any]?) -> [String: String] {
+        guard let raw = json?["proxy_versions"] as? [String: Any] else { return [:] }
+        var out: [String: String] = [:]
+        for (host, value) in raw {
+            if let version = value as? String, !version.isEmpty { out[host] = version }
+        }
+        return out
+    }
+
     /// Project-path identity for the connect sheet + badge. Bookmark healing
     /// (`refreshAvailability`) can respell `project.path` (`/private/…`,
     /// symlink resolution) while `currentProjectPath` holds the spawn-time

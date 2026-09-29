@@ -763,6 +763,10 @@ All nine were taken as proposed below, with these notes from the maintainer:
 - **D1:** the helper is `app.bristlenose.mcp` on the App Store and `app.bristlenose.mcp.devid`
   on the `.dmg`; the executable is `bristlenose-mcp` on both. A name is fixed per channel for
   good; new builds from the same signer never need a new one.
+- **D2, amended when the button was built (29 Sep):** Debug builds DO carry the helper, under a third
+  identifier, `app.bristlenose.mcp.dev` (Apple Development is its own signer category, §6.7), so the
+  ChatGPT flow can be tried from Xcode without ever claiming the store identifier on the maintainer's Mac.
+  An ad-hoc or unsigned build still skips it, and its ChatGPT tab keeps the pasted-config layout.
 - **D6:** the only existing Claude user who has to reinstall is the maintainer.
 - **D7:** the "move to Applications" rule also goes in the help page.
 - **Not doing:** a "connected at 14:02" line in Settings, because the antenna, Last asked and the

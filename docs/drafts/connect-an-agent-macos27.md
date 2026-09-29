@@ -13,9 +13,9 @@ What this draft does and doesn't claim:
   2. ChatGPT: today's TOML / Add server setup connects over HTTP and is never
      blocked, so ChatGPT is NOT named in the troubleshooting section. Add it
      back only when a ChatGPT plugin ships (spec §4(c)).
-  3. The Work-mode note is measured for the ChatGPT plugin and inferred for the
-     TOML setup. Hold it back until it's measured for TOML, or ship the hedged
-     version below.
+  3. The Work-mode note is measured for both the ChatGPT plugin and the TOML
+     setup (29 Sep 2026: a Chat thread said the tool "is not available", and a
+     Work thread returned a quote).
   4. The "Open Files & Folders" button isn't built. The sentences naming it
      sit in comments marked BUILD, for the deploy that ships the button.
 -->
@@ -40,11 +40,12 @@ install, so it can turn up after setup already looks finished.
 Either way you do this once per agent app, not once per project.
 
 <!-- ═══ INSERT: under "### ChatGPT and Codex", after "Restart the app after
-     saving." Hedged until measured for the TOML setup (see note 3). ═══ -->
+     saving." Measured for this setup (see note 3). ═══ -->
 
 ::: info
-In the ChatGPT app, Bristlenose may not be available in **Chat**. If ChatGPT
-says it can't reach Bristlenose, switch to **Work** and ask again.
+In the ChatGPT app, ask your questions in **Work** mode. Bristlenose isn't
+available in **Chat**, even though it appears in the `@` list there. You may
+also be asked to approve each tool the first time ChatGPT uses it.
 :::
 
 <!-- ═══ NEW SECTION: after "## Try asking", before "## Good to know" ═══ -->

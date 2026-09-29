@@ -2,8 +2,9 @@
 
 > **`0001` applied to `main` on 29 Sep 2026 as `d086f08d`**, with the maintainer's
 > approval. Before committing: full pytest (5525 passed), ruff and
-> `check-locales --strict`. **`0002` is still unapplied**, pending one question
-> in ChatGPT's Chat mode on the config-file route.
+> `check-locales --strict`. **`0002` applied as `4945dce2`** the same day, once its
+> claim was measured on the config-file route (the plugin-spike session: a Chat
+> thread refused the tool, and a Work thread used it).
 
 Prepared 29 Sep 2026 while the maintainer was away. **Not applied to `main`**:
 the maintainer asked to approve code and locale changes before they land.

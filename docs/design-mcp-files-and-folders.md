@@ -7,8 +7,9 @@ last-trued: 2026-09-29
 
 _Drafted 29 Sep 2026 for review. **Update, same day: the Claude/Node half
 (§3, the Claude tab of §4, two of the three §8 keys) is built and on `main`
-as `d086f08d`**, applied from the tested patch. The ChatGPT Work-mode line (patch
-`0002`) and everything in §4(c)'s native-proxy state are still unbuilt. No code, locale or
+as `d086f08d`**, applied from the tested patch, and the ChatGPT Work-mode
+line (patch `0002`) as `4945dce2`, once measured on the config-file route.
+Everything in §4(c)'s native-proxy state is still unbuilt. No code, locale or
 manifest file has changed. This doc holds the measured facts, the proposed
 copy for every surface (proxy, Settings pane, help page), and the per-locale
 strings ready to paste once the English is settled. Mockup:
@@ -319,9 +320,11 @@ Be precise about which path needs the step, because today's tab doesn't:
 So there are two drafts, and which one ships depends on the spike:
 
 **(a) Today's tab + one line.** The Work-mode fact applies to the TOML path
-too. That's inferred, not measured: the spike measured the plugin in Chat
-versus Work, and there's no reason the config route would differ. Add under
-the copy button:
+too. **Measured 29 Sep 2026** by the plugin-spike session on the exact
+TOML entry this tab writes: a Chat thread said the tool "is not available",
+and a Work thread returned a quote. (Before that it was inferred: the spike measured the plugin in Chat
+versus Work, and there was no reason the config route would differ.) Built as
+`chatgptWorkNote`, under the copy button:
 
 > In ChatGPT, ask in Work mode — Bristlenose’s tools aren’t available in Chat.
 

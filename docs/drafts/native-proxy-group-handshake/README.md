@@ -55,6 +55,17 @@ only that, and Files & Folders can rescue only a data-container read.
 - **The Swift suite as a whole** was not run for this draft; only
   `MCPHandshakeTests`.
 
+## Related risk, not fixed here: two rows for one folder
+
+Reported by the antenna-badge investigation (29 Sep 2026, notes in `TODO.md`):
+dropping onto an empty New Project row (`establishEmptyProject`) does no
+`findByPath` de-duplication, so one folder can get two sidebar rows. The
+handshake gate `ProjectIndex.agentAccess(forPath:)`, and the menu toggle at
+`MenuCommands.swift:1116`, both take the *first* row matching the path. So with
+duplicate rows, whether a project is exposed depends on array order. This patch
+doesn't change that lookup; it writes whatever set `ServeFleet.syncHandshake`
+already computes, to one more place.
+
 ## Not in this patch: bundling the proxy
 
 This patch is the host half only. When the sandboxed proxy is bundled, give it

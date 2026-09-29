@@ -611,6 +611,14 @@ def _import_transcript_segments(
 
 _SPEAKER_PREFIX_RE = re.compile(r"^\([^)]*\)\s*")
 
+#: Scripts written without spaces (kana, Bopomofo, Han, CJK and full-width
+#: punctuation) — the same class as ``clip_subtitles._CJK_CHAR``.
+_CJK_CHAR = re.compile(
+    "[\u2e80-\u2fdf\u3000-\u303f\u3040-\u30ff\u3100-\u312f\u3190-\u31ff"
+    "\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\ufe30-\ufe4f\uff01-\uff0f"
+    "\uff1a-\uff20\uff3b-\uff40\uff5b-\uff9f\U00020000-\U0003134f]"
+)
+
 
 def _words_read_as(words: list[dict[str, object]], text: str) -> bool:
     """True when ``words`` spell out ``text``, allowing Whisper's own noise.
@@ -621,9 +629,20 @@ def _words_read_as(words: list[dict[str, object]], text: str) -> bool:
     those and refuses any pairing with a different paragraph. The ``.txt``
     carries a ``(Speaker A)`` label ahead of the utterance, which the words
     do not.
+
+    Japanese and Chinese have no spaces, so a word boundary in Whisper's
+    words is not one in the text: ``ありがとう`` + ``ございます。`` is two
+    ``\\w+`` runs against one. When either side holds CJK the comparison is
+    on characters instead, with whitespace and punctuation dropped.
     """
-    said = re.findall(r"\w+", " ".join(str(w["text"]) for w in words).lower())
-    shown = re.findall(r"\w+", _SPEAKER_PREFIX_RE.sub("", text).lower())
+    said_text = " ".join(str(w["text"]) for w in words).lower()
+    shown_text = _SPEAKER_PREFIX_RE.sub("", text).lower()
+    if _CJK_CHAR.search(said_text) or _CJK_CHAR.search(shown_text):
+        said = re.findall(r"\w", said_text)
+        shown = re.findall(r"\w", shown_text)
+    else:
+        said = re.findall(r"\w+", said_text)
+        shown = re.findall(r"\w+", shown_text)
     if said == shown:
         return True
     if not said or not shown:

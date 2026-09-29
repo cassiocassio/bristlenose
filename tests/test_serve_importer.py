@@ -11,7 +11,11 @@ import pytest
 from sqlalchemy.orm import Session
 
 from bristlenose.server.db import create_session_factory, get_engine, init_db
-from bristlenose.server.importer import _find_transcripts_dir, import_project
+from bristlenose.server.importer import (
+    _find_transcripts_dir,
+    _words_read_as,
+    import_project,
+)
 from bristlenose.server.models import (
     ClusterQuote,
     CodebookGroup,
@@ -1534,6 +1538,86 @@ class TestWordEnrichment:
         )
         assert [w["t"] for w in second] == "We went to the shop.".split()
         assert second[0]["s"] == 20.3
+
+    @staticmethod
+    def _import_one_paragraph(
+        db: Session, tmp_path: Path, line: str, raw: list[tuple[float, list[str]]],
+    ) -> TranscriptSegment:
+        """Import a one-paragraph transcript whose raw segments carry ``raw``."""
+        out = tmp_path / "bristlenose-output"
+        intermediate = out / ".bristlenose" / "intermediate"
+        intermediate.mkdir(parents=True)
+        (intermediate / "metadata.json").write_text('{"project_name": "CJK Test"}')
+        (intermediate / "screen_clusters.json").write_text("[]")
+        (intermediate / "theme_groups.json").write_text("[]")
+        (out / "transcripts-raw").mkdir()
+        (out / "transcripts-raw" / "s1.txt").write_text(
+            "# Transcript: s1\n# Duration: 00:00:30\n\n" + line + "\n",
+            encoding="utf-8",
+        )
+        segments = [
+            {
+                "start_time": start,
+                "end_time": start + len(toks) * 0.4,
+                "text": "".join(toks),
+                "speaker_label": None,
+                "speaker_role": "unknown",
+                "speaker_code": "",
+                "source": "mlx-whisper",
+                "segment_index": -1,
+                "words": [
+                    {"text": t, "start_time": start + i * 0.4,
+                     "end_time": start + i * 0.4 + 0.3, "confidence": 0.9}
+                    for i, t in enumerate(toks)
+                ],
+            }
+            for start, toks in raw
+        ]
+        (intermediate / "session_segments.json").write_text(
+            json.dumps({"s1": segments}, ensure_ascii=False), encoding="utf-8",
+        )
+        import_project(db, tmp_path)
+        seg = db.query(TranscriptSegment).one()
+        return seg
+
+    def test_japanese_words_are_attached(self, db: Session, tmp_path: Path) -> None:
+        """Japanese has no spaces, so Whisper's word boundaries are not the text's.
+
+        ``ありがとう`` + ``ございます。`` is two ``\\w+`` runs against the
+        transcript's one; the token comparison refused every ja paragraph and
+        the transcript page and clip subtitles fell back to an even spread.
+        """
+        first = ["ありがとう", "ございます。"]
+        second = ["今日", "は", "よろしく", "お願い", "します。"]
+        seg = self._import_one_paragraph(
+            db, tmp_path,
+            "[00:01] [p1] (Yuki) ありがとうございます。今日はよろしくお願いします。",
+            [(1.2, first), (3.0, second)],
+        )
+        words = json.loads(seg.words_json or "[]")
+        assert [w["t"] for w in words] == first + second
+        assert words[0]["s"] == 1.2
+
+    def test_traditional_chinese_words_are_attached(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        """Same shape in Traditional Chinese, with full-width punctuation."""
+        toks = ["我們", "上週", "去了", "那家", "店，", "覺得", "服務", "很好。"]
+        seg = self._import_one_paragraph(
+            db, tmp_path,
+            "[00:04] [p1] (美玲) 我們上週去了那家店，覺得服務很好。",
+            [(4.5, toks)],
+        )
+        words = json.loads(seg.words_json or "[]")
+        assert [w["t"] for w in words] == toks
+        assert words[0]["s"] == 4.5
+
+    def test_cjk_words_from_another_paragraph_are_refused(self) -> None:
+        """Comparing characters must still tell two paragraphs apart."""
+        words = [{"text": t} for t in ["我們", "上週", "去了", "那家", "店。"]]
+        assert _words_read_as(words, "(美玲) 我們上週去了那家店。")
+        assert not _words_read_as(words, "(美玲) 覺得服務很好，價格也合理。")
+        assert not _words_read_as(words[:2], "(美玲) 我們上週去了那家店。")
 
     def test_words_null_when_no_intermediate(self, db: Session) -> None:
         """Smoke-test fixture (VTT source, no session_segments.json with words)."""

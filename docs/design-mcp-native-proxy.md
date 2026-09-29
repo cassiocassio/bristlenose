@@ -64,7 +64,7 @@ Related docs:
    runtime `.mcpb`, with no Files & Folders step (P3–P5). ChatGPT end to end is
    proven on this Mac, and a 34-case break harness plus seven live ChatGPT
    attacks found and fixed two defects (§6.10). Still to run: Claude through the
-   native package, a TestFlight build, the 15/26 guests, and App Review (§6.8).
+   native package ran end to end at 22:39 (§6.9); still to run: a TestFlight build, the 15/26 guests, and App Review (§6.8).
 
 ## 1. The ChatGPT plugin channel
 
@@ -776,8 +776,8 @@ feared to be: this path goes through LaunchServices, not a cross-team path read.
 
 ### 6.8 Still open
 
-> **Rebuilt 29 Sep 2026 (evening) from §6.9 and §6.10.** Still to run: Claude
-> through the native package (live install); a TestFlight build of the
+> **Rebuilt 29 Sep 2026 (evening) from §6.9 and §6.10.** Claude through the native
+> package ran end to end at 22:39 (§6.9). Still to run: a TestFlight build of the
 > helper-carrying app; Claude and ChatGPT on the 15 and 26 guests; a translocated
 > `.dmg` app (D7's refusal); the TestFlight→App Store move for one tester (§6.7);
 > the Files & Folders-off run for the Node fallback; the screen recording and
@@ -866,14 +866,14 @@ register in every Settings frame for this reason.
   - P0.1 (**done 29 Sep**, passes on 15/26/27; see §6.7): on clean SIP-on macOS **15 and 26** guests, launch (a) a Developer-ID host carrying the team group, and (b) the real profile-less helper as a foreign app's child; read taskgated. This is the least-discussed, highest-impact unknown: if 15/26 enforce the "Disallowing" check, the `.dmg` host breaks at launch for everyone on those versions.
   - P0.2 (**done 29 Sep**, see §6.7: entitlements survive; four signer classes; the TestFlight→store move is the new unknown, with a local Development-vs-Distribution proxy test as P0.2b): install TestFlight 3907 on a clean account; read both copies' signer, id and entitlements (ffmpeg as control). Sets D1's count. Then **expire 3907** in App Store Connect (**done 29 Sep**) and delete the spike binaries (both carry `--seed`).
   - P0.3: re-export the `.dmg` with the group requested; confirm the minted profile lists it.
-  - P0.4 (**install path measured 29 Sep**: Claude reads and installs a `.mcpb` from a sandboxed app's container; the helper-inside-it half, meaning quarantine, exec bit and `spctl` under Claude's extraction, still waits for P4's real artefact): end to end through **Claude's own extraction** of a runtime `.mcpb`, on a clean 27 guest: quarantine flag, exec bit, `__MACOSX` entries, `spctl`; it answers with Files & Folders off.
+  - P0.4 (**done 29 Sep**, both halves — the install path with a probe, then the real artefact, see *Claude through the native package* below): end to end through **Claude's own extraction** of a runtime `.mcpb`, on a clean 27 guest: quarantine flag, exec bit, `__MACOSX` entries, `spctl`; it answers with Files & Folders off.
   - P0.5: a second install at a bumped version, on each host: what ChatGPT and Claude offer. (**done 29 Sep**: ChatGPT outcome B, ⋯ ▸ Uninstall then Install plugin; Claude outcome A, Update in place when the version rises.)
 - **P1 — host half** (**landed 29 Sep**: both copies written, D4 fail-closed via `MCPHandshake.writeBoth` with a read-back test; Swift 1553 passed, Python 5617 passed; P0.3 turned out not to gate it), only after P0.1 and P0.3 pass: the draft patch, amended to fail closed (D4) with a read-back test, and the reader set written into design-mcp-extension §3.1.
 - **P2 — helper** (**landed 29 Sep**: `desktop/mcp-helper/main.swift` + `build-helper.sh`, the D3 gate `desktop/scripts/check-mcp-helper.sh` (also run by `check-pkg-shippable.sh` and `check-dmg-shippable.sh`), `tests/test_mcp_helper.py`; built in the Copy Sidecar Resources phase into `Contents/Helpers` and the ChatGPT marketplace; copies compared by CDHash) per D1–D3, source moved to `desktop/mcp-helper/`; the tool list read from the `BN-TOOLS-JSON` block with its annotations; that block moves out of `desktop/mcpb/` before the Node extension is retired, **and `tests/test_mcpb_proxy.py` moves with it in the same commit** (re-point `_PROXY_JS` and the regex). It is the only check that the static tool list and its annotations match the server's `tools/list`, and it looks like it belongs to the Node extension, so it would otherwise be deleted with it and leave the helper's list unguarded.
 - **P3 — ChatGPT** (**landed and proven end to end 29 Sep**, §6.10): marketplace per D7, Install Plugin… per D8, link query encoded strictly (unit-tested with `& + # %` and spaces).
-- **P4 — Claude** (**landed 29 Sep**: `NativeExtensionPackage` zips the helper at click time; the live install through Claude is still to be run): runtime `.mcpb` per P0.4; `MCPExtensionInstaller`'s bundled-file assumptions (`claudeDesktopCanInstall`, the disabled state, `bundledStamp`) repointed at the runtime artefact with a stamp beside it.
+- **P4 — Claude** (**landed and proven end to end 29 Sep**: `NativeExtensionPackage` zips the helper at click time; the live install is recorded below): runtime `.mcpb` per P0.4; `MCPExtensionInstaller`'s bundled-file assumptions (`claudeDesktopCanInstall`, the disabled state, `bundledStamp`) repointed at the runtime artefact with a stamp beside it.
 - **P5 — switch-over** (**landed 29 Sep**, in two commits rather than one: ChatGPT with P3, Claude with P4. A build without the helper keeps the old layout on both tabs, so no release carries a half-state), confined to the pane's top half (see *Preserved as shipped*).
-- **P6 — verify** (**29 Sep, done so far:** Swift 1567 passed on the P4 build; the break harness, §6.10; ChatGPT end to end on this Mac; a **Developer-ID archive and export** built as `build-dmg.sh` does, minus notarisation: both helper copies came out signed Developer ID as `app.bristlenose.mcp.devid` with sandbox, network client and the team group intact, identical CDHash, the host carrying exactly the team group, and the app passing `codesign --deep --strict`. **Still to run:** Claude through the native package; a TestFlight build; Claude and ChatGPT on the 15 and 26 guests; a translocated `.dmg`; TestFlight→App Store), each item with its layer named: Swift tests (handshake read-back, installer manifest, zip, link encoding); script gates (D3, and `test-check-pkg-shippable.sh` cases — that suite has no helper case yet); by hand once: a TestFlight build, Claude and ChatGPT on 15 / 26 / 27, a translocated `.dmg` app, TestFlight→App Store update.
+- **P6 — verify** (**29 Sep, done so far:** Swift 1567 passed on the P4 build; the break harness, §6.10; ChatGPT end to end on this Mac; a **Developer-ID archive and export** built as `build-dmg.sh` does, minus notarisation: both helper copies came out signed Developer ID as `app.bristlenose.mcp.devid` with sandbox, network client and the team group intact, identical CDHash, the host carrying exactly the team group, and the app passing `codesign --deep --strict`. Claude through the native package, 22:39 (below). **Still to run:** a TestFlight build; Claude and ChatGPT on the 15 and 26 guests; a translocated `.dmg`; TestFlight→App Store), each item with its layer named: Swift tests (handshake read-back, installer manifest, zip, link encoding); script gates (D3, and `test-check-pkg-shippable.sh` cases — that suite has no helper case yet); by hand once: a TestFlight build, Claude and ChatGPT on 15 / 26 / 27, a translocated `.dmg` app, TestFlight→App Store update.
 - **P7 — review notes** per D9 (**drafted 29 Sep**, §6.11; the screen recording and external TestFlight remain).
 
 ### Wire contract (D8, as built)
@@ -888,6 +888,31 @@ register in every Settings frame for this reason.
   older app build reads what it always read.
 - Swift reads it as `ServeManager.agentProxyVersions`; each tab compares its own
   host's entry (`MCPAgentsSettingsView.chatGPTState`, `extensionState`).
+
+### Claude through the native package, 29 Sep 2026, 22:39
+
+On this Mac (macOS 27), from a Debug build of `main` (helper `app.bristlenose.mcp.dev`,
+Apple Development), with the Node extension 0.31.3 already installed:
+- **Install Extension…** opened the runtime package; Claude offered **Update** and replaced
+  the Node extension in place (`extensions-installations.json`: version 0.31.5, `server.type`
+  `binary`). No uninstall was needed, because the versions differed — the Uninstall-only
+  preview applies only to the same version (§6.7).
+- Claude's `main.log`: *"Using basic execution for extension Bristlenose: server.type is
+  "binary""*, *"Connected to Bristlenose (5 tools)"*. Process chain:
+  `Claude.app/Contents/Helpers/disclaimer --pgroup -- …/server/bristlenose-mcp`.
+- **The extracted helper** (P0.4's open half): mode `0700` with the executable bit intact;
+  **no `com.apple.quarantine`**, only `com.apple.provenance`; `codesign --verify --strict`
+  passes with the same identifier, team and entitlements (sandbox, network client, the team
+  group). `spctl -a -t exec` says *rejected* for this Apple Development build, which is the
+  expected verdict for a non-distribution signature and does not matter at launch: without
+  quarantine, Gatekeeper does not assess it.
+- Asked "list projects", Claude answered *"One project is open with Agent Access on:
+  project-ikea"* — read from the **group** copy of the handshake. tccd logged **no**
+  `AppData` request for Claude or Bristlenose in the window: no Files & Folders step.
+
+Not covered by this run: the TestFlight and Developer-ID signatures (same path, different
+signer), and a tool call that goes through serve (the answer above is the helper's own
+`list_projects`).
 
 **Out of scope for v1:** Mach IPC instead of a handshake file (option 2 — also the real answer to the token-probe exposure); Gemini; the duplicate-row exposure bug.
 

@@ -238,7 +238,7 @@ below, full record in native-proxy §6.9.
 7. **Done 29 Sep 2026 (P2)** — `desktop/mcp-helper/`, ids `app.bristlenose.mcp`,
    `.mcp.devid`, `.mcp.dev`, gated by `check-mcp-helper.sh`. **Bundle the helper,** sandboxed and carrying the group, with **a different
    bundle identifier per channel** (the §6.6 trap).
-8. **Built 29 Sep 2026 (P4)**; the live install through Claude is still to run.
+8. **Built and proven end to end 29 Sep 2026 (P4)** — native-proxy §6.9, *Claude through the native package*.
    **Claude channel:** a `type: binary` `.mcpb` assembled at runtime from the
    Apple-re-signed helper. Unverified.
 9. **Done and proven end to end 29 Sep 2026 (P3, native-proxy §6.10).**

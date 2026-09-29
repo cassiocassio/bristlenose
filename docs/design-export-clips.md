@@ -352,16 +352,9 @@ What that changes, and what it doesn't:
 - **The BBC numbers stand** (maintainer, 29 Sep 2026). What makes subtitles legible there — large text, solid black box, short lines, a wide regular-weight sans — is what survives a video encode too. A flat black box with hard white edges is close to the best case for a codec, and thin or light weights are what compression smears. Use a regular or medium weight, never light.
 - **Teams trades resolution against frame rate.** By default screen sharing runs at a low frame rate to keep static content sharp; *Optimize for video* (in the presenter toolbar, beside *Include computer sound*) raises the frame rate and may lower the resolution, depending on the device and bandwidth. [Microsoft Learn](https://learn.microsoft.com/en-us/troubleshoot/microsoftteams/meetings/fix-choppy-video). Interview footage is mostly talking heads and screen shares, and a subtitle cue lasts seconds, so the default (sharp, low frame rate) is probably the better setting for reading. That is a tip for the help text, not a control.
 
-### Size — BBC figures, one sanity check owed
+### Size — BBC figures, no experiment
 
-**Adopt the BBC numbers above as they stand.** The check reproduces the real chain rather than a projector:
-
-- Render one clip at the BBC size in each candidate font, from a 720p Zoom screen share (white UI, the hard case) and a 1080p Teams speaker view.
-- Place each at half-slide size in PowerPoint, share it in a real Teams call with *Include computer sound*, and read it:
-  - as a remote attendee on a laptop, with Teams in an ordinary window rather than full screen;
-  - on a meeting-room display from the back of the room;
-  - with *Optimize for video* both off and on.
-- If it reads, ship the BBC numbers and whichever font survived better. If it doesn't, write the failure down as a finding (which link in the chain broke it) rather than tuning by eye.
+**Use the BBC numbers as they stand; don't reinvent them** (maintainer, 29 Sep 2026). Their guidance was tested with viewers, and what it optimises for survives the Teams chain above. The only check is the ordinary QA of the feature: burn one clip, share it at half-slide size in a real Teams call, and look at it as a remote attendee. The font falls out of the same look (Inter or Atkinson Hyperlegible Next).
 
 **Tooling note:** Homebrew's ffmpeg has **no** `subtitles`/`ass` filter (checked 29 Sep 2026), and the bundled binary exits 133 outside the sandbox. The experiments therefore need the unsigned martin-riedl 8.1 download that `desktop/scripts/fetch-ffmpeg.sh` pins.
 

@@ -671,6 +671,26 @@ What that means for the plan:
   `testflight`. Never run a locally exported store build's helper on a Mac that runs the TestFlight
   one. Debug builds carry no helper (D2), so everyday work is unaffected.
 
+**P0.1, measured 29 Sep 2026 on clean SIP-on guests** (Cirrus `-vanilla` images: macOS 15.7.7 24G720
+and 26.6.2 25G83), plus this Mac on 27:
+
+| Check | macOS 15 | macOS 26 | macOS 27 |
+|---|---|---|---|
+| `.dmg` host (3906 Developer-ID export) re-signed to claim `Z56GZVA2QB.app.bristlenose`, profile unchanged | **launches**; taskgated *"Unsatisfied entitlements … Disallowing"*, amfid *"Soft-restriction provisioning profile validation failure"* | **launches**, same three lines | launches (§6.4) |
+| control, same app without the group | launches | launches | — |
+| profile-less sandboxed helper, Developer ID: write the group (`--seed`), then answer `list_projects` from it | ok | ok | ok |
+| the same, Apple Distribution | ok | not run separately (see next row) | ok |
+| same helper id, Developer ID then Apple Distribution | **no hang** | **hang** (*"not in ACL … prompting"*) | hang (§6.6, P0.2b) |
+
+So "Disallowing" is a soft restriction on every supported version: it's logged, the app runs, and the
+group works. That takes P0.3 (re-export the profile) off the critical path: still worth doing for a
+clean log, but it no longer gates P1. The signer ACL on the helper's container arrived in 26.
+
+**A build requirement found on the way:** the first 15 run crashed at launch with
+*"Library not loaded … libswift_DarwinFoundation1.dylib"*, because `swiftc` defaulted to the build
+machine's OS. The helper must be compiled with `-target arm64-apple-macos15.0`, the app's floor.
+D3's gate adds: `LC_BUILD_VERSION minos` equals the app's deployment target.
+
 ### 6.8 Still open
 
 - **Human App Review** of the agent-access feature: a submission, with review
@@ -748,7 +768,7 @@ register in every Settings frame for this reason.
 ### Phases (re-ordered)
 
 - **P0 — each can stop the plan.**
-  - P0.1: on clean SIP-on macOS **15 and 26** guests, launch (a) a Developer-ID host carrying the team group, and (b) the real profile-less helper as a foreign app's child; read taskgated. This is the least-discussed, highest-impact unknown: if 15/26 enforce the "Disallowing" check, the `.dmg` host breaks at launch for everyone on those versions.
+  - P0.1 (**done 29 Sep**, passes on 15/26/27; see §6.7): on clean SIP-on macOS **15 and 26** guests, launch (a) a Developer-ID host carrying the team group, and (b) the real profile-less helper as a foreign app's child; read taskgated. This is the least-discussed, highest-impact unknown: if 15/26 enforce the "Disallowing" check, the `.dmg` host breaks at launch for everyone on those versions.
   - P0.2 (**done 29 Sep**, see §6.7: entitlements survive; four signer classes; the TestFlight→store move is the new unknown, with a local Development-vs-Distribution proxy test as P0.2b): install TestFlight 3907 on a clean account; read both copies' signer, id and entitlements (ffmpeg as control). Sets D1's count. Then **expire 3907** in App Store Connect and delete the spike binaries (both carry `--seed`).
   - P0.3: re-export the `.dmg` with the group requested; confirm the minted profile lists it.
   - P0.4: end to end through **Claude's own extraction** of a runtime `.mcpb`, on a clean 27 guest: quarantine flag, exec bit, `__MACOSX` entries, `spctl`; it answers with Files & Folders off.

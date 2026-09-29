@@ -644,119 +644,49 @@ What this settles and what it doesn't:
 - §2.5.2 / §2.4.5(ii), "installs code into other apps". This applies to
   today's `.mcpb` as well, and needs review notes whichever route ships.
 
-## 6.9 Implementation plan (v1, 29 Sep 2026 — draft for review)
+## 6.9 Implementation plan (v2, 29 Sep 2026 — reviewed, decisions pending judgement)
 
-**Decision taken:** adopt §6.4 (work-list item 5). ChatGPT is the other main
-host after Claude; a Node-dependent plugin cannot serve researchers, and the
-Files & Folders step is a poor first run on macOS 27. Goal: Claude Desktop and
-ChatGPT read Bristlenose on macOS 27 with **no Node and no Files & Folders
-step**, on both the Mac App Store and the Developer-ID `.dmg`, with nothing
-private-SPI. Gemini later, on the same helper.
+v1 (commit 67b5e843) went through a six-agent plan review plus a parsimony pass;
+41 findings and their adjudication are in the maintainer's private review log,
+kept outside the public tree. v2 folds in the adjudication. **The decisions
+below are proposals for the maintainer to judge on engineering and UX grounds**
+(mockups of their UX consequences follow separately).
 
-Grounding (how the repo builds today): the sidecar and ffmpeg are compiled and
-**signed by scripts before archiving** (`ensure-sidecar.sh` →
-`sign-sidecar.sh` / `sign-ffmpeg.sh`, identity from `SIGN_IDENTITY` per
-channel), then copied in by the *Copy Sidecar Resources* phase. ffmpeg's
-entitlements (`app-sandbox` + `inherit`) are the textbook nested-helper set.
-No target builds Swift outside the app; nothing lives in `Contents/Helpers`.
-The helper follows the **ffmpeg pattern**, not a new Xcode target.
+**Goal (decided):** Claude Desktop and ChatGPT read Bristlenose on macOS 27 with
+no Node and no Files & Folders step, on the Mac App Store and the Developer-ID
+`.dmg`, with no private SPI. Gemini later, on the same helper.
 
-### P0 — cheap checks before any product code (each can stop the plan)
+### Decisions to judge
 
-1. **macOS 15 and 26:** clean SIP-on guests (`-vanilla` images) run the group
-   probe as a foreign app's child. Floor is 15.0; every group measurement so far
-   is on 27.
-2. **Apple re-signing:** install TestFlight 3907 on a clean account; read
-   `Contents/Helpers/bristlenose-mcp`'s signer and entitlements (maintainer).
-3. **Developer-ID profile:** re-export the `.dmg` archive with the team group
-   requested; confirm Xcode mints a profile listing it (removes taskgated
-   "Disallowing").
-4. **Zip in the sandbox:** a Swift test that builds a `.mcpb` via
-   `NSFileCoordinator` `.forUploading` and checks the helper keeps its exec bit
-   and signature (the host cannot exec `/usr/bin/zip`).
+| # | Decision | Chosen | Rejected, and why |
+|---|---|---|---|
+| D1 | Helper identifier | **Fresh ids, one per signer class** (how many classes: measured in P0.2). The spike's `app.bristlenose.mcp-proxy` is never shipped: its container on the maintainer's Mac records a spike signer (§6.6). | A different id per *copy*: identical bytes share a container safely. A symlink for the marketplace copy: ChatGPT copies the plugin into its cache, where a link breaks. A `.dev` id for ad-hoc builds: unneeded, see D2. |
+| D2 | How the helper is built | **Compiled and signed inside the Copy phase**, on every build, from the identity the host is being signed with (`EXPANDED_CODE_SIGN_IDENTITY`). Not copied into Debug builds at all; the native path is Release-only. | A pre-built script product plus freshness stamp (the ffmpeg pattern): it can go stale and ship an ad-hoc helper in a Release archive. An Xcode command-line target: `build-dmg.sh`'s command-line `CODE_SIGN_ENTITLEMENTS` override would apply to it too and give it the host's entitlements. |
+| D3 | Gates | **One post-export gate, both copies, both lanes**: sandboxed, no `inherit`, the team group equal to the host's, Info.plist id equal to the signing id, the channel's id, team = `TEAM_ID`, the two copies byte-identical, no `responsibility_*` and no `--seed` string. `nm` and `strings` output written to a file before `grep`. | Five separate gate proposals. |
+| D4 | Group write failure | **Fail closed:** if the group write fails, delete the group copy; a read-back test pins it. Otherwise turning Agent Access off could leave a project readable through a stale group copy. | Log-and-continue (the draft's behaviour). |
+| D5 | Proxy diagnostics | **None added.** Build defects are caught by D3; the proxy's messages stay as ported. | A launch breadcrumb (needs the helper to write the group, and watches the client); a group marker file; an HMAC probe challenge (same exposure as the Node proxy today; the real fix is option 2, Mach IPC). Tokens are re-minted at launch when a leftover handshake is found. |
+| D6 | Rollout | **No feature flag.** The switch-over (Claude tab native, ChatGPT tab Install Plugin…, Files & Folders copy recovery-only) lands as one commit, after P6 passes on a checkpoint build. | A `UserDefaults` flag or `enum FeatureFlags` plus a Diagnostics toggle: before P6 the only audience is one internal tester and local builds. |
+| D7 | ChatGPT marketplace location | **Inside the app bundle**, because a copy in our container is a cross-team read macOS 27 denies. A translocated app (a `.dmg` app run in place) is refused with "move Bristlenose to Applications". Written down so nobody "fixes" it. | The container (denied); a download (not reviewed code). |
+| D8 | Install state and versions | **Per host.** The plugin version carries the build number (ChatGPT caches by version). Each tab has Install / Reinstall / Update, never "Installed". An old ChatGPT without `codex://` support gets "Update ChatGPT", not "Download". | One shared state (a stale ChatGPT plugin would flip the Claude button). |
+| D9 | App Review | Notes answer the literal words of §2.5.2 and §2.4.5(ii)/(iii)/(iv); screen recording; **external TestFlight before the store**, so a human reviewer sees it first. | — |
 
-### P1 — host half
+### Phases (re-ordered)
 
-Apply `docs/drafts/native-proxy-group-handshake/` (dual-write handshake, team
-group in both entitlements files, split test). Behind no flag: writing a second
-copy is inert until a reader exists.
+- **P0 — each can stop the plan.**
+  - P0.1: on clean SIP-on macOS **15 and 26** guests, launch (a) a Developer-ID host carrying the team group, and (b) the real profile-less helper as a foreign app's child; read taskgated. This is the least-discussed, highest-impact unknown: if 15/26 enforce the "Disallowing" check, the `.dmg` host breaks at launch for everyone on those versions.
+  - P0.2: install TestFlight 3907 on a clean account; read both copies' signer, id and entitlements (ffmpeg as control). Sets D1's count. Then **expire 3907** in App Store Connect and delete the spike binaries (both carry `--seed`).
+  - P0.3: re-export the `.dmg` with the group requested; confirm the minted profile lists it.
+  - P0.4: end to end through **Claude's own extraction** of a runtime `.mcpb`, on a clean 27 guest: quarantine flag, exec bit, `__MACOSX` entries, `spctl`; it answers with Files & Folders off.
+  - P0.5: a second install at a bumped version, on each host: what ChatGPT and Claude offer.
+- **P1 — host half**, only after P0.1 and P0.3 pass: the draft patch, amended to fail closed (D4) with a read-back test, and the reader set written into design-mcp-extension §3.1.
+- **P2 — helper** per D1–D3, source moved to `desktop/mcp-helper/`; the tool list read from the `BN-TOOLS-JSON` block with its annotations; that block moves out of `desktop/mcpb/` before the Node extension is retired.
+- **P3 — ChatGPT**: marketplace per D7, Install Plugin… per D8, link query encoded strictly (unit-tested with `& + # %` and spaces).
+- **P4 — Claude**: runtime `.mcpb` per P0.4; `MCPExtensionInstaller`'s bundled-file assumptions (`claudeDesktopCanInstall`, the disabled state, `bundledStamp`) repointed at the runtime artefact with a stamp beside it.
+- **P5 — switch-over**, one commit per D6.
+- **P6 — verify**, each item with its layer named: Swift tests (handshake read-back, installer manifest, zip, link encoding); script gates (D3, and `test-check-pkg-shippable.sh` cases); by hand once: a TestFlight build, Claude and ChatGPT on 15 / 26 / 27, a translocated `.dmg` app, TestFlight→App Store update.
+- **P7 — review notes** per D9.
 
-### P2 — the helper, built and signed like ffmpeg
-
-- Source: `desktop/mcp-helper/main.swift`, the `GROUP_VARIANT` of the spike
-  **only** (no disclaim variant, no `--seed`, no `BRISTLENOSE_DEV_*` in
-  release). Tools compiled in from the Node proxy's `BN-TOOLS-JSON` block, with
-  `readOnlyHint`.
-- `desktop/scripts/build-mcp-helper.sh`: `swiftc` + embedded Info.plist, signed
-  with the channel's `SIGN_IDENTITY`, entitlements
-  `desktop/bristlenose-mcp-helper.entitlements` (`app-sandbox`,
-  `network.client`, the literal team group — codesign does not expand build
-  variables). **Per-channel identifier** (§6.6):
-  `app.bristlenose.mcp-proxy` (App Store) / `app.bristlenose.mcp-proxy.devid`
-  (`.dmg`), chosen from the identity type the way `build-all.sh` /
-  `build-dmg.sh` already gate it. Output
-  `desktop/Bristlenose/Resources/bristlenose-mcp`.
-- Called from `ensure-sidecar.sh` (both channels). Covered by
-  `sidecar-source-hash.sh`, so an edit trips the freshness gate.
-- Copy phase: into `Contents/Helpers/bristlenose-mcp`.
-- Gates: `check-release-binary.sh` also scans `Contents/Helpers`; a new check
-  that the helper is sandboxed, carries the team group, has the channel's
-  identifier and no `responsibility_*` symbol; `test-check-pkg-shippable.sh`
-  gets a Helpers case.
-- Ad-hoc/Debug builds: an ad-hoc helper cannot open the group (not our team),
-  and Debug does not write it. Dev keeps the Node `.mcpb`; the native path is
-  exercised in Release-signed builds only. Stated, not worked around.
-
-### P3 — ChatGPT channel
-
-- Marketplace in the bundle:
-  `Contents/Resources/chatgpt-marketplace/.agents/plugins/marketplace.json` +
-  `plugins/bristlenose/{.codex-plugin/plugin.json, .mcp.json, bin/bristlenose-mcp}`
-  (a copy of the helper; `.mcp.json` runs `./bin/bristlenose-mcp` with
-  `cwd "./"` and `env BRISTLENOSE_MCP_HOST=ChatGPT`). Built by
-  `build-mcp-helper.sh`; the plugin `version` is the app version.
-- Settings ▸ MCP Agents ▸ ChatGPT & Codex: **Install Plugin…** opens
-  `codex://plugins/bristlenose?marketplacePath=<encoded path from Bundle.main>`;
-  no `codex://` handler → link to chatgpt.com/download. Strings from
-  `design-mcp-files-and-folders.md` §8 (21 locales drafted). The TOML dialect
-  stays, below it, for Codex CLI users.
-
-### P4 — Claude channel
-
-- The installer assembles the `.mcpb` at runtime from the bundled (re-signed)
-  helper: `manifest.json` with `server.type: binary`,
-  `command: ${__dirname}/server/bristlenose-mcp`,
-  `env BRISTLENOSE_MCP_HOST=Claude`, zipped in the container (P0.4), opened as
-  today. Claude disclaims binary servers, so the helper is its own responsible
-  process (§4.4).
-- The Node `.mcpb` stays in the bundle as the fallback until P6 passes, then is
-  retired (with `check-mcpb.sh` rewritten for the binary manifest).
-
-### P5 — copy switch-over and flag
-
-- A `UserDefaults` flag (`BristlenoseNativeAgentProxy`, default **off**) picks
-  native vs Node install for both tabs until P6 passes; then default on, then
-  the flag and the Node path are removed.
-- With the flag on: the pane stops pre-announcing Files & Folders; the proxy's
-  permission sentence is the recovery path only for unsandboxed readers
-  (design-mcp-files-and-folders §4(c)); help Part 2.
-
-### P6 — verification
-
-Unit tests (handshake, installer manifest, zip, URL encoding); script gate
-tests; a local Release `.dmg` build; a TestFlight build; end-to-end on a clean
-user account: Claude and ChatGPT each answer a cited question, macOS 15 / 26 /
-27, with Files & Folders untouched.
-
-### P7 — App Review notes
-
-§2.5.2 / §2.4.5(ii): the helper is a read-only proxy the user installs into
-their own AI app; it reads only data the user shares, over loopback.
-
-### Out of scope for v1
-
-Mach IPC instead of a handshake file (option 2); Gemini; the duplicate-row
-exposure bug (antenna session, item 16).
+**Out of scope for v1:** Mach IPC instead of a handshake file (option 2 — also the real answer to the token-probe exposure); Gemini; the duplicate-row exposure bug.
 
 ## 7. Recipes
 

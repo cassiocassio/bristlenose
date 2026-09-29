@@ -485,12 +485,18 @@ read-only `/mcp/` endpoint. Native surface since the extension shipped
   `grounding._mcp_anonymise_active` ignores the per-project DB flag
   entirely, so desktop behaviour is purely global; applies via the
   prefs-changed serve restart like every other Settings pref), machine-wide
-  install row (`MCPExtensionInstaller` — copies the bundled `.mcpb` into
-  the container and `NSWorkspace.open`s THAT, never a bundle path; no
-  handler → claude.ai download link; Install is the pane's ONE
-  `.borderedProminent`), and four client tabs (Claude Desktop = install
-  hint; Claude Code / ChatGPT & Codex / Generic MCP = copyable dialects,
-  pinned by `MCPAgentsSettingsViewTests`). Pane width is 660 — identical
+  install row (`MCPExtensionInstaller` — since 29 Sep 2026 it zips the
+  native helper from `Contents/Helpers` into a `type: binary` `.mcpb` at
+  click time (`NativeExtensionPackage`), writes it to the container and
+  `NSWorkspace.open`s THAT; a build without the helper falls back to the
+  bundled Node `.mcpb`; no Claude → claude.ai download link; Install is the
+  pane's ONE `.borderedProminent`), and four client tabs (Claude Desktop =
+  that row; ChatGPT & Codex = **Install Plugin…** (`ChatGPTPluginInstaller`,
+  the `codex://plugins/bristlenose?marketplacePath=` link into the bundled
+  `chatgpt-marketplace/`) with the pasted TOML under "Or connect by hand";
+  Claude Code / Generic MCP = copyable dialects, pinned by
+  `MCPAgentsSettingsViewTests`). Design and measurements:
+  `docs/design-mcp-native-proxy.md` §6.9–§6.11. Pane width is 660 — identical
   to the other three panes; the Settings package animates height only.
   **A per-project register sits under the divider** (21 Aug 2026,
   `docs/mockups/mcp-agents-pane.html`): which studies an agent can read,
@@ -661,6 +667,21 @@ read-only `/mcp/` endpoint. Native surface since the extension shipped
   consent-version bump yet for the agent recipient class" — was stale and
   is removed: it shipped 1 Aug 2026, `09b348b1` + `6df94d4f`, and
   `AIConsentView.currentVersion` is 2.)_
+- **The native MCP helper is built in the Copy Sidecar Resources phase, and its
+  identifier follows the signer kind.** `desktop/mcp-helper/build-helper.sh`
+  compiles `bristlenose-mcp` for the app's floor and signs it with the identity
+  the app is being signed with: Developer ID → `app.bristlenose.mcp.devid`, Apple
+  Distribution → `app.bristlenose.mcp`, Apple Development (Debug) →
+  `app.bristlenose.mcp.dev`; ad-hoc builds skip it. The `.dev` name is not
+  cosmetic: a sandboxed helper's container remembers the *kind* of signer that
+  first ran it, and a Debug build claiming the store name would make the
+  TestFlight helper hang on this Mac (`docs/design-mcp-native-proxy.md` §6.7).
+  The `.dmg` lane pins `BRISTLENOSE_HELPER_CHANNEL=devid` at archive because it
+  archives Apple Development and re-signs at export. **Two ChatGPT facts that
+  cost a test cycle each:** a plugin is used only when the question mentions
+  @Bristlenose (without it ChatGPT may call its own built-in `list_projects`),
+  and ChatGPT never updates a plugin in place — ⋯ ▸ Uninstall, then Install
+  plugin. Claude does update in place, but only for a higher manifest version.
 - **macOS 27 silently blocks the shipped Node `.mcpb` for any agent app
   that has never been granted, and how Claude launches a server decides
   it.** Measured 29 Sep 2026 in a clean, SIP-on 27.0 guest

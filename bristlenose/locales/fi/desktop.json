@@ -119,6 +119,7 @@
       "copyQuotes": "Kopioi sitaatit",
       "saveSpreadsheet": "Tallenna taulukkolaskentana…",
       "extractClips": "Erota videoleikkeet…",
+      "burnSubtitles": "Polta tekstitys leikkeisiin",
       "anonymise": "Anonymisoi",
       "anonymiseHint": "Poista osallistujien nimet",
       "reportHint": "Itsenäinen HTML",
@@ -148,7 +149,8 @@
       "volumeDown": "Vähennä äänenvoimakkuutta",
       "mute": "Mykistä",
       "pictureInPicture": "Kuva kuvassa",
-      "fullscreen": "Koko näyttö"
+      "fullscreen": "Koko näyttö",
+      "subtitles": "Tekstitys"
     },
     "help": {
       "bristlenoseHelp": "Bristlenose-ohje",

@@ -233,7 +233,9 @@
       "piiWarning": "片段包含原始音訊——PII 編修僅套用至逐字稿文字",
       "failed": "片段擷取失敗",
       "ffmpegMissing": "找不到 FFmpeg——請安裝以擷取片段",
-      "noClips": "沒有已標示或精選的引述可擷取"
+      "noClips": "沒有已標示或精選的引述可擷取",
+      "burnSubtitles": "\u5c07\u5b57\u5e55\u71d2\u9304\u81f3\u5f71\u7247\uff08\u7528\u65bc\u7c21\u5831\uff09",
+      "burnUnavailable": "\u6b64 FFmpeg \u7121\u6cd5\u71d2\u9304\u5b57\u5e55\u2014\u2014\u50c5\u6703\u64f7\u53d6\u7121\u5b57\u5e55\u7684\u7247\u6bb5"
     },
     "savePanelMessage": "請選擇儲存報告的位置。",
     "saveFailedAlert": "無法儲存匯出內容。"

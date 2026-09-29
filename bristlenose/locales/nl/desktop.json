@@ -119,6 +119,7 @@
       "copyQuotes": "Kopieer citaten",
       "saveSpreadsheet": "Bewaar als spreadsheet…",
       "extractClips": "Extraheer videoclips…",
+      "burnSubtitles": "Ondertiteling in clips branden",
       "anonymise": "Anonimiseer",
       "anonymiseHint": "Verwijder namen van deelnemers",
       "reportHint": "Zelfstandige HTML",
@@ -148,7 +149,8 @@
       "volumeDown": "Volume omlaag",
       "mute": "Demp",
       "pictureInPicture": "Beeld in beeld",
-      "fullscreen": "Volledig scherm"
+      "fullscreen": "Volledig scherm",
+      "subtitles": "Ondertiteling"
     },
     "help": {
       "bristlenoseHelp": "Bristlenose Help",

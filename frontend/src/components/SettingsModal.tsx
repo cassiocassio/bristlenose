@@ -24,6 +24,7 @@ import { dt } from "../utils/platformTranslation";
 import { PALETTES, isPalette, readSavedPalette, type Palette } from "../utils/bootPalette";
 import { LOCALE_LABELS } from "../i18n/localeLabels";
 import { isExportMode } from "../utils/exportData";
+import { setSubtitlePref, useSubtitlePrefs } from "../utils/subtitlePrefs";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -280,6 +281,7 @@ const NAV_KEYS: { id: string; labelKey: string; hasChildren?: boolean }[] = [
 function GeneralSection() {
   const { t } = useTranslation("settings");
   const [appearance, setAppearanceState] = useState<Appearance>(readSaved);
+  const subtitlePrefs = useSubtitlePrefs();
   const { locale } = useLocaleStore();
 
   useEffect(() => {
@@ -373,6 +375,22 @@ function GeneralSection() {
           ))}
         </select>
       </fieldset>
+
+      {/* Hidden in an exported report: its subtitles come from the server
+          (SERVER_ONLY in routes/export.py), so the switch would do nothing. */}
+      {!isExportMode() && (
+      <fieldset className="bn-setting-group">
+        <legend>{t("video.legend")}</legend>
+        <label className="bn-radio-label">
+          <input
+            type="checkbox"
+            checked={subtitlePrefs.playerSubtitles}
+            onChange={(e) => setSubtitlePref("playerSubtitles", e.target.checked)}
+          />
+          {" "}{t("video.subtitles")}
+        </label>
+      </fieldset>
+      )}
 
       {/* Hidden in an exported report: since 23 Aug the export carries only the
           chosen language and its fallback chain, so a picker offering 22 would

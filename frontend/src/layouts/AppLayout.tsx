@@ -45,9 +45,11 @@ import {
   postFocusChange,
   postQuoteActionState,
   postFocusMode,
+  postSubtitlePrefs,
   postPanelState,
 } from "../shims/bridge";
 import { toggleFocusMode, useFocusMode } from "../contexts/FocusModeStore";
+import { useSubtitlePrefs } from "../utils/subtitlePrefs";
 import { getPlayerOpen, getPlayerPlaying } from "../contexts/PlayerContext";
 import { cancelAutoCode, cancelClipExtraction, getAutoCodeStatus, getClipExtractionStatus, revealClips } from "../utils/api";
 import {
@@ -283,6 +285,14 @@ function AppShell() {
     if (!embedded) return;
     postFocusMode(focusModeActive);
   }, [embedded, focusModeActive]);
+
+  // Mirror the subtitle preferences to the native menus' checkmarks. Keyed on
+  // the values, so it also fires on mount — the re-sync after a project switch.
+  const subtitlePrefs = useSubtitlePrefs();
+  useEffect(() => {
+    if (!embedded) return;
+    postSubtitlePrefs(subtitlePrefs.playerSubtitles, subtitlePrefs.burnSubtitles);
+  }, [embedded, subtitlePrefs.playerSubtitles, subtitlePrefs.burnSubtitles]);
 
   // Derived state for the native Quotes menu's adaptive labels. The Star
   // command targets the selection (or the focused quote); it *unstars* when

@@ -119,6 +119,7 @@
       "copyQuotes": "Kopiér citater",
       "saveSpreadsheet": "Arkivér som regneark…",
       "extractClips": "Udtræk videoklip…",
+      "burnSubtitles": "Br\u00e6nd undertekster ind i klip",
       "anonymise": "Anonymisér",
       "anonymiseHint": "Fjern deltagernavne",
       "reportHint": "Selvstændig HTML",
@@ -148,7 +149,8 @@
       "volumeDown": "Skru ned",
       "mute": "Slå lyd fra",
       "pictureInPicture": "Billede i billede",
-      "fullscreen": "Fuld skærm"
+      "fullscreen": "Fuld skærm",
+      "subtitles": "Undertekster"
     },
     "help": {
       "bristlenoseHelp": "Bristlenose-hjælp",

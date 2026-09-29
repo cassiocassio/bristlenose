@@ -12,6 +12,10 @@
     "fallbackNote": "New projects will start in your last location."
   },
   "heading": "Settings",
+  "video": {
+    "legend": "Video",
+    "subtitles": "Show subtitles in the video player"
+  },
   "appearance": {
     "diagnosticsLegend": "Show Diagnostics menu",
     "diagnosticsHelp": "Adds a Diagnostics menu with tools for inspecting analysis runs. Also enables the Web Inspector in the report view.",

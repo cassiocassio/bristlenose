@@ -39,6 +39,7 @@ import {
 } from "../contexts/PlaygroundStore";
 import { toggleInspector } from "../contexts/InspectorStore";
 import { toggleFocusMode } from "../contexts/FocusModeStore";
+import { toggleSubtitlePref } from "../utils/subtitlePrefs";
 import { isEditing } from "../utils/editing";
 import { isEmbedded } from "../utils/embedded";
 import { postEditingStarted, postEditingEnded } from "../shims/bridge";
@@ -747,6 +748,12 @@ export function useKeyboardShortcuts({
           break;
         case "fullscreen":
           sendCommand("toggleFullscreen");
+          break;
+        case "toggleSubtitles":
+          toggleSubtitlePref("playerSubtitles");
+          break;
+        case "toggleBurnSubtitles":
+          toggleSubtitlePref("burnSubtitles");
           break;
         case "nextQuote":
           moveFocus(1);

@@ -12,6 +12,10 @@
     "fallbackNote": "Les nouveaux projets seront cr\u00e9\u00e9s au dernier emplacement utilis\u00e9."
   },
   "heading": "Réglages",
+  "video": {
+    "legend": "Vid\u00e9o",
+    "subtitles": "Afficher les sous-titres dans le lecteur vid\u00e9o"
+  },
   "appearance": {
     "diagnosticsLegend": "Afficher le menu Diagnostics",
     "diagnosticsHelp": "Ajoute un menu Diagnostics avec des outils pour inspecter les analyses. Active \u00e9galement l'inspecteur web dans l'affichage du rapport.",

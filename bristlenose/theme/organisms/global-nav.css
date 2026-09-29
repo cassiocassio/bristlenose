@@ -363,6 +363,15 @@
     padding-left: 1.5rem;
 }
 
+/* The checkmark gutter of a menuitemcheckbox row (Burn subtitles…), hung in
+   the scope indent so the label lines up with the scope rows above it. */
+.export-dropdown-check {
+    display: inline-block;
+    width: 0.75rem;
+    margin-left: -1rem;
+    text-align: center;
+}
+
 .export-dropdown-item.is-disabled {
     color: var(--bn-colour-muted);
     cursor: default;

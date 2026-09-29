@@ -8,7 +8,8 @@
  * - Enter/Space to activate the focused item
  * - Focus moves to first item on open, returns to trigger on close
  *
- * Menu items are identified by `role="menuitem"` within the menu container.
+ * Menu items are identified by `role="menuitem"` (or `menuitemcheckbox`) within
+ * the menu container.
  * Non-menuitem elements (hints, separators) are skipped during navigation.
  */
 
@@ -115,5 +116,7 @@ export function useMenuKeyboard(options: UseMenuKeyboardOptions): UseMenuKeyboar
 /** Get all focusable menuitem elements within a menu container. */
 function getMenuItems(menu: HTMLElement | null): HTMLElement[] {
   if (!menu) return [];
-  return Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+  return Array.from(
+    menu.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemcheckbox"]'),
+  );
 }

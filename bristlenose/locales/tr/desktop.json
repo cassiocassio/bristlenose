@@ -119,6 +119,7 @@
       "copyQuotes": "Alıntıları Kopyala",
       "saveSpreadsheet": "Hesap Tablosu Olarak Kaydet…",
       "extractClips": "Video Klipleri Çıkar…",
+      "burnSubtitles": "Altyaz\u0131lar\u0131 Kliplere G\u00f6m",
       "anonymise": "Anonimleştir",
       "anonymiseHint": "Katılımcı adlarını kaldır",
       "reportHint": "Bağımsız HTML",
@@ -148,7 +149,8 @@
       "volumeDown": "Sesi Azalt",
       "mute": "Sesi Kapat",
       "pictureInPicture": "Resim İçinde Resim",
-      "fullscreen": "Tam Ekran"
+      "fullscreen": "Tam Ekran",
+      "subtitles": "Altyaz\u0131lar"
     },
     "help": {
       "bristlenoseHelp": "Bristlenose Yardımı",

@@ -293,7 +293,9 @@
       "piiWarning": "Klipy zawierają oryginalne audio — redakcja PII dotyczy tylko tekstu transkrypcji",
       "failed": "Wyodrębnianie klipów nie powiodło się",
       "ffmpegMissing": "Nie znaleziono FFmpeg — zainstaluj go, aby wyodrębniać klipy",
-      "noClips": "Brak cytatów z gwiazdką lub wyróżnionych do wyodrębnienia"
+      "noClips": "Brak cytatów z gwiazdką lub wyróżnionych do wyodrębnienia",
+      "burnSubtitles": "Wypal napisy w wideo (do prezentacji)",
+      "burnUnavailable": "Ten FFmpeg nie potrafi wypala\u0107 napis\u00f3w \u2014 zostan\u0105 wyodr\u0119bnione tylko klipy bez napis\u00f3w"
     },
     "savePanelMessage": "Wybierz miejsce zapisania raportu.",
     "saveFailedAlert": "Nie udało się zapisać wyeksportowanego raportu."

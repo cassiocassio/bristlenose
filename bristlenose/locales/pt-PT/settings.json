@@ -12,6 +12,10 @@
     "fallbackNote": "Os novos projetos ser\u00e3o criados na \u00faltima localiza\u00e7\u00e3o usada."
   },
   "heading": "Definições",
+  "video": {
+    "legend": "V\u00eddeo",
+    "subtitles": "Mostrar legendas no leitor de v\u00eddeo"
+  },
   "appearance": {
     "diagnosticsLegend": "Mostrar o menu Diagn\u00f3stico",
     "diagnosticsHelp": "Adiciona um menu Diagn\u00f3stico com ferramentas para examinar as an\u00e1lises. Tamb\u00e9m ativa o inspetor web na vista do relat\u00f3rio.",

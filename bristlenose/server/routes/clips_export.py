@@ -367,19 +367,22 @@ async def get_session_subtitles(
     db = _get_db(request)
     try:
         _check_project(db, project_id)
-        exists = (
-            db.query(SessionModel.id)
+        row = (
+            db.query(SessionModel.language)
             .filter(SessionModel.project_id == project_id,
                     SessionModel.session_id == session_id)
             .first()
         )
-        if exists is None:
+        if row is None:
             raise HTTPException(status_code=404, detail="Session not found")
         vtt = to_webvtt(session_cues(db, project_id, session_id))
+        # The player labels its track with this (``srclang``); the same
+        # detected-else-app-language rule the clip export uses.
+        language = row[0] or get_locale()
     finally:
         db.close()
     return Response(vtt, media_type="text/vtt; charset=utf-8",
-                    headers={"Cache-Control": "no-store"})
+                    headers={"Cache-Control": "no-store", "Content-Language": language})
 
 
 # ---------------------------------------------------------------------------

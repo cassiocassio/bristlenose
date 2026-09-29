@@ -252,7 +252,9 @@
       "piiWarning": "Clips enthalten Originalaudio — Anonymisierung gilt nur für den Text",
       "failed": "Clip-Extraktion fehlgeschlagen",
       "ffmpegMissing": "FFmpeg nicht gefunden — installieren Sie es, um Clips zu extrahieren",
-      "noClips": "Keine markierten oder hervorgehobenen Zitate zum Extrahieren"
+      "noClips": "Keine markierten oder hervorgehobenen Zitate zum Extrahieren",
+      "burnSubtitles": "Untertitel ins Video einbrennen (f\u00fcr Pr\u00e4sentationen)",
+      "burnUnavailable": "Dieses FFmpeg kann keine Untertitel einbrennen \u2014 es werden nur Clips ohne Untertitel extrahiert"
     },
     "savePanelMessage": "W\u00e4hle, wo der Bericht gespeichert werden soll.",
     "saveFailedAlert": "Der Export konnte nicht gespeichert werden."

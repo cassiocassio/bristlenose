@@ -119,6 +119,7 @@
       "copyQuotes": "Copia les cites",
       "saveSpreadsheet": "Desa com a full de càlcul…",
       "extractClips": "Extreu els clips de vídeo…",
+      "burnSubtitles": "Incrusta els subt\u00edtols als clips",
       "anonymise": "Anonimitza",
       "anonymiseHint": "Elimina els noms dels participants",
       "reportHint": "HTML autònom",
@@ -148,7 +149,8 @@
       "volumeDown": "Abaixa el volum",
       "mute": "Silencia",
       "pictureInPicture": "Imatge sobre imatge",
-      "fullscreen": "Pantalla completa"
+      "fullscreen": "Pantalla completa",
+      "subtitles": "Subt\u00edtols"
     },
     "help": {
       "bristlenoseHelp": "Ajuda del Bristlenose",

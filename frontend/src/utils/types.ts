@@ -344,6 +344,8 @@ export interface ClipJobStartResponse {
   status: string;
   total: number;
   pii_warning: boolean;
+  /** Burn-in was asked for but the server's ffmpeg can't (no libass). */
+  burn_unavailable?: boolean;
 }
 
 export interface ClipJobStatus {

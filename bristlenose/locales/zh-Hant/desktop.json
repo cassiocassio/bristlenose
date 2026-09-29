@@ -117,6 +117,7 @@
       "copyQuotes": "拷貝引述",
       "saveSpreadsheet": "儲存為試算表⋯",
       "extractClips": "擷取影片片段⋯",
+      "burnSubtitles": "\u5c07\u5b57\u5e55\u71d2\u9304\u81f3\u7247\u6bb5",
       "anonymise": "匿名化",
       "anonymiseHint": "移除參與者姓名",
       "reportHint": "獨立完整的 HTML",
@@ -146,7 +147,8 @@
       "volumeDown": "降低音量",
       "mute": "靜音",
       "pictureInPicture": "子母畫面",
-      "fullscreen": "全螢幕"
+      "fullscreen": "全螢幕",
+      "subtitles": "\u5b57\u5e55"
     },
     "help": {
       "bristlenoseHelp": "Bristlenose 輔助說明",

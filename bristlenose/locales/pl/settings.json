@@ -12,6 +12,10 @@
     "fallbackNote": "Nowe projekty b\u0119d\u0105 tworzone w ostatnio u\u017cywanej lokalizacji."
   },
   "heading": "Ustawienia",
+  "video": {
+    "legend": "Wideo",
+    "subtitles": "Pokazuj napisy w odtwarzaczu wideo"
+  },
   "appearance": {
     "diagnosticsLegend": "Poka\u017c menu Diagnostyka",
     "diagnosticsHelp": "Dodaje menu Diagnostyka z narz\u0119dziami do badania przebiegu analiz. W\u0142\u0105cza tak\u017ce inspektora WWW w widoku raportu.",

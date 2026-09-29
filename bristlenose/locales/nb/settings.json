@@ -12,6 +12,10 @@
     "fallbackNote": "Nye prosjekter opprettes p\u00e5 sist brukte plassering."
   },
   "heading": "Innstillinger",
+  "video": {
+    "legend": "Video",
+    "subtitles": "Vis undertekster i videospilleren"
+  },
   "appearance": {
     "diagnosticsLegend": "Vis Diagnostikk-menyen",
     "diagnosticsHelp": "Legger til en Diagnostikk-meny med verkt\u00f8y for \u00e5 unders\u00f8ke analyser. Sl\u00e5r ogs\u00e5 p\u00e5 nettinspekt\u00f8ren i rapportvisningen.",

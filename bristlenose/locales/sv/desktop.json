@@ -119,6 +119,7 @@
       "copyQuotes": "Kopiera citat",
       "saveSpreadsheet": "Spara som kalkylark…",
       "extractClips": "Extrahera videoklipp…",
+      "burnSubtitles": "Br\u00e4nn in undertexter i klipp",
       "anonymise": "Anonymisera",
       "anonymiseHint": "Ta bort deltagarnamn",
       "reportHint": "Fristående HTML",
@@ -148,7 +149,8 @@
       "volumeDown": "Sänk volym",
       "mute": "Ljud av",
       "pictureInPicture": "Bild-i-bild",
-      "fullscreen": "Helskärm"
+      "fullscreen": "Helskärm",
+      "subtitles": "Undertexter"
     },
     "help": {
       "bristlenoseHelp": "Bristlenose Hjälp",

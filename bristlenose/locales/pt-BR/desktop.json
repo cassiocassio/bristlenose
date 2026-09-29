@@ -119,6 +119,7 @@
       "copyQuotes": "Copiar Citações",
       "saveSpreadsheet": "Salvar como Planilha…",
       "extractClips": "Extrair Clipes de Vídeo…",
+      "burnSubtitles": "Gravar Legendas nos Clipes",
       "anonymise": "Anonimizar",
       "anonymiseHint": "Remover nomes dos participantes",
       "reportHint": "HTML autocontido",
@@ -148,7 +149,8 @@
       "volumeDown": "Diminuir Volume",
       "mute": "Silenciar",
       "pictureInPicture": "Picture in Picture",
-      "fullscreen": "Tela cheia"
+      "fullscreen": "Tela cheia",
+      "subtitles": "Legendas"
     },
     "help": {
       "bristlenoseHelp": "Ajuda do Bristlenose",

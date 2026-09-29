@@ -252,7 +252,9 @@
       "piiWarning": "Os clipes contêm o áudio original — a remoção de PII se aplica apenas ao texto da transcrição",
       "failed": "Falha na extração do clipe",
       "ffmpegMissing": "FFmpeg não encontrado — instale-o para extrair clipes",
-      "noClips": "Nenhuma citação destacada ou em destaque para extrair"
+      "noClips": "Nenhuma citação destacada ou em destaque para extrair",
+      "burnSubtitles": "Gravar legendas no v\u00eddeo (para slides)",
+      "burnUnavailable": "Este FFmpeg n\u00e3o consegue gravar legendas \u2014 s\u00f3 ser\u00e3o extra\u00eddos clipes sem legendas"
     },
     "savePanelMessage": "Escolha onde salvar o relatório.",
     "saveFailedAlert": "Não foi possível salvar a exportação."

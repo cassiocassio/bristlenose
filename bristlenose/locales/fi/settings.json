@@ -12,6 +12,10 @@
     "fallbackNote": "Uudet projektit luodaan viimeksi k\u00e4ytettyyn sijaintiin."
   },
   "heading": "Asetukset",
+  "video": {
+    "legend": "Video",
+    "subtitles": "N\u00e4yt\u00e4 tekstitys videosoittimessa"
+  },
   "appearance": {
     "diagnosticsLegend": "N\u00e4yt\u00e4 Diagnostiikka-valikko",
     "diagnosticsHelp": "Lis\u00e4\u00e4 Diagnostiikka-valikon, jonka ty\u00f6kaluilla voi tutkia analyyseja. Ottaa k\u00e4ytt\u00f6\u00f6n my\u00f6s raporttin\u00e4kym\u00e4n web-tarkastelun.",

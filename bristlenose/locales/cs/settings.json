@@ -12,6 +12,10 @@
     "fallbackNote": "Nov\u00e9 projekty se budou vytv\u00e1\u0159et v posledn\u00edm pou\u017eit\u00e9m um\u00edst\u011bn\u00ed."
   },
   "heading": "Nastavení",
+  "video": {
+    "legend": "Video",
+    "subtitles": "Zobrazovat titulky v p\u0159ehr\u00e1va\u010di videa"
+  },
   "appearance": {
     "diagnosticsLegend": "Zobrazit nab\u00eddku Diagnostika",
     "diagnosticsHelp": "P\u0159id\u00e1 nab\u00eddku Diagnostika s n\u00e1stroji pro zkoum\u00e1n\u00ed pr\u016fb\u011bhu anal\u00fdz. Zapne tak\u00e9 webov\u00fd inspektor v zobrazen\u00ed reportu.",

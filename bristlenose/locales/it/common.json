@@ -252,7 +252,9 @@
       "piiWarning": "Le clip contengono l'audio originale — la rimozione dei dati personali si applica solo al testo della trascrizione",
       "failed": "Estrazione delle clip non riuscita",
       "ffmpegMissing": "FFmpeg non trovato — installalo per estrarre le clip",
-      "noClips": "Nessuna citazione contrassegnata o in evidenza da estrarre"
+      "noClips": "Nessuna citazione contrassegnata o in evidenza da estrarre",
+      "burnSubtitles": "Imprimi i sottotitoli nel video (per le slide)",
+      "burnUnavailable": "Questo FFmpeg non pu\u00f2 imprimere i sottotitoli \u2014 verranno estratte solo clip senza sottotitoli"
     },
     "savePanelMessage": "Scegli dove salvare il report.",
     "saveFailedAlert": "Impossibile salvare l'esportazione."

@@ -123,6 +123,7 @@
       "copyQuotes": "Kopírovat citace",
       "saveSpreadsheet": "Uložit jako tabulku…",
       "extractClips": "Extrahovat videoklipy…",
+      "burnSubtitles": "Vyp\u00e1lit titulky do klip\u016f",
       "anonymise": "Anonymizovat",
       "anonymiseHint": "Odebrat jm\u00e9na \u00fa\u010dastn\u00edk\u016f",
       "reportHint": "Samostatn\u00e9 HTML",
@@ -152,7 +153,8 @@
       "volumeDown": "Snížit hlasitost",
       "mute": "Ztlumit",
       "pictureInPicture": "Obraz v obraze",
-      "fullscreen": "Celá obrazovka"
+      "fullscreen": "Celá obrazovka",
+      "subtitles": "Titulky"
     },
     "help": {
       "bristlenoseHelp": "Nápověda Bristlenose",

@@ -252,7 +252,9 @@
       "piiWarning": "Les clips contiennent l’audio original — l’anonymisation ne s’applique qu’au texte",
       "failed": "Échec de l’extraction des clips",
       "ffmpegMissing": "FFmpeg introuvable — installez-le pour extraire des clips",
-      "noClips": "Aucune citation favorite ou mise en avant à extraire"
+      "noClips": "Aucune citation favorite ou mise en avant à extraire",
+      "burnSubtitles": "Incruster les sous-titres dans la vid\u00e9o (pour les diapositives)",
+      "burnUnavailable": "Ce FFmpeg ne peut pas incruster les sous-titres \u2014 seuls des clips sans sous-titres seront extraits"
     },
     "savePanelMessage": "Choisissez où enregistrer le rapport.",
     "saveFailedAlert": "L'exportation n'a pas pu être enregistrée."

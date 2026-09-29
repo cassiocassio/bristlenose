@@ -123,6 +123,7 @@
       "copyQuotes": "Скопіювати цитати",
       "saveSpreadsheet": "Зберегти як таблицю…",
       "extractClips": "Витягти відеокліпи…",
+      "burnSubtitles": "\u0412\u0448\u0438\u0442\u0438 \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0438 \u0432 \u043a\u043b\u0456\u043f\u0438",
       "anonymise": "Анонімізувати",
       "anonymiseHint": "Прибрати імена учасників",
       "reportHint": "Автономний HTML",
@@ -152,7 +153,8 @@
       "volumeDown": "Тихіше",
       "mute": "Вимкнути звук",
       "pictureInPicture": "Кадр у кадрі",
-      "fullscreen": "На весь екран"
+      "fullscreen": "На весь екран",
+      "subtitles": "\u0421\u0443\u0431\u0442\u0438\u0442\u0440\u0438"
     },
     "help": {
       "bristlenoseHelp": "Довідка Bristlenose",

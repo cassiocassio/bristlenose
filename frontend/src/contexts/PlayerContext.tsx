@@ -24,9 +24,10 @@ import {
 } from "react";
 import { useLocation } from "react-router-dom";
 import { announce } from "../utils/announce";
-import { apiGet } from "../utils/api";
+import { apiGet, apiGetText } from "../utils/api";
 import i18n from "../i18n";
 import { postPlayerState } from "../shims/bridge";
+import { getSubtitlePrefs, subscribeSubtitlePrefs } from "../utils/subtitlePrefs";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -81,6 +82,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   // Popout window handle
   const playerWinRef = useRef<Window | null>(null);
+
+  // Subtitles: the recording last sent to the player, and each session's
+  // WebVTT once fetched (dropped when the popout closes, so a re-open picks
+  // up corrections made since).
+  const lastUriRef = useRef<string | null>(null);
+  const subtitleCacheRef = useRef<Map<string, { text: string; language: string | null }>>(
+    new Map(),
+  );
 
   // Glow state — refs, not React state (performance)
   const glowIndexRef = useRef<Record<string, GlowEntry[]> | null>(null);
@@ -288,6 +297,53 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  // ── Subtitles ────────────────────────────────────────────────────────
+
+  /** Tell the player whether to show subtitles (the viewer's setting). */
+  const pushSubtitleSetting = useCallback(() => {
+    sendCommand("setSubtitles", { show: getSubtitlePrefs().playerSubtitles });
+  }, [sendCommand]);
+
+  /**
+   * Fetch the session's WebVTT (with the auth token — a <track src> in the
+   * player cannot send it) and hand the text to the player, tagged with the
+   * recording it belongs to. The video map keys each recording by session id
+   * ("s1") as well as speaker code, so the session is recovered from the URI.
+   */
+  const deliverSubtitles = useCallback(async (uri: string) => {
+    const sessionId = Object.keys(videoMapRef.current).find(
+      (key) => /^s\d+$/.test(key) && videoMapRef.current[key] === uri,
+    );
+    if (!sessionId) return;
+    let entry = subtitleCacheRef.current.get(sessionId);
+    if (!entry) {
+      try {
+        entry = await apiGetText(
+          `/sessions/${encodeURIComponent(sessionId)}/subtitles.vtt`,
+        );
+      } catch {
+        return; // No subtitles for this recording; the player plays without.
+      }
+      subtitleCacheRef.current.set(sessionId, entry);
+    }
+    const win = playerWinRef.current;
+    if (!win || win.closed) return;
+    const lang = entry.language || "und";
+    let label = lang;
+    try {
+      label = new Intl.DisplayNames([i18n.language], { type: "language" }).of(lang) ?? lang;
+    } catch {
+      // Unknown or "und" — keep the code.
+    }
+    win.postMessage(
+      { type: "bristlenose-subtitles", src: uri, vtt: entry.text, lang, label },
+      window.location.origin,
+    );
+  }, []);
+
+  // The viewer changed the setting (here, in another tab, or from the menu).
+  useEffect(() => subscribeSubtitlePrefs(pushSubtitleSetting), [pushSubtitleSetting]);
+
   // ── seekTo ───────────────────────────────────────────────────────────
 
   const seekTo = useCallback((pid: string, seconds: number) => {
@@ -295,6 +351,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (!uri) return;
 
     const msg = { type: "bristlenose-seek", pid, src: uri, t: seconds };
+    lastUriRef.current = uri;
     const hash =
       "#src=" +
       encodeURIComponent(uri) +
@@ -315,9 +372,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     } else {
       playerWinRef.current.postMessage(msg, window.location.origin);
       playerWinRef.current.focus();
+      // An already-open player: send this recording's subtitles now. A new
+      // window gets them on its `bristlenose-ready` instead — anything posted
+      // before it has loaded is lost.
+      void deliverSubtitles(uri);
     }
     announce(i18n.t("announce.playing", { pid }));
-  }, []);
+  }, [deliverSubtitles]);
 
   // ── Main effect: message listener + close polling ────────────────────
 
@@ -328,7 +389,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const d = e.data;
       if (!d || typeof d.type !== "string") return;
 
-      if (d.type === "bristlenose-timeupdate" && d.pid) {
+      if (d.type === "bristlenose-ready") {
+        pushSubtitleSetting();
+        if (lastUriRef.current) void deliverSubtitles(lastUriRef.current);
+      } else if (d.type === "bristlenose-timeupdate" && d.pid) {
         const playing = d.playing !== undefined ? d.playing : true;
         updateGlow(d.pid, d.seconds, playing);
       } else if (d.type === "bristlenose-playstate" && d.pid) {
@@ -355,6 +419,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const pollInterval = setInterval(() => {
       if (playerWinRef.current && playerWinRef.current.closed) {
         playerWinRef.current = null;
+        subtitleCacheRef.current.clear();
         _hasPlayer = false;
         _playerPlaying = false;
         postPlayerState(false, false);
@@ -371,7 +436,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       postPlayerState(false, false);
       clearAllGlow();
     };
-  }, [updateGlow, updatePlayState, clearAllGlow]);
+  }, [updateGlow, updatePlayState, clearAllGlow, pushSubtitleSetting, deliverSubtitles]);
 
   // ── Backward-compat shim ─────────────────────────────────────────────
 

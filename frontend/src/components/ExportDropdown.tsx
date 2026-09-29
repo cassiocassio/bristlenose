@@ -24,6 +24,7 @@ import {
   extractVideoClips,
 } from "../utils/exportActions";
 import { isExportMode } from "../utils/exportData";
+import { toggleSubtitlePref, useSubtitlePrefs } from "../utils/subtitlePrefs";
 
 // ── Icon ──────────────────────────────────────────────────────────────────
 
@@ -76,6 +77,7 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
   });
 
   const onQuotes = isQuotesTab(location.pathname);
+  const { burnSubtitles } = useSubtitlePrefs();
 
   // ── Quote count (only compute on Quotes tab) ─────────────────────────
 
@@ -242,6 +244,27 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
               {renderScopeGroup("spreadsheet", t("export.saveAsSpreadsheet"))}
               <li role="separator" className="export-dropdown-separator" />
               {renderScopeGroup("clips", t("export.extractClips"))}
+              {/* A setting, not an action: toggling it leaves the menu open so
+                  the researcher can go on to pick a scope. The key handler only
+                  suppresses the page scroll — useMenuKeyboard already turns
+                  Enter/Space into a click, and toggling here too would flip it
+                  twice (back to where it started). */}
+              <li
+                role="menuitemcheckbox"
+                aria-checked={burnSubtitles}
+                tabIndex={-1}
+                className="export-dropdown-item export-dropdown-scope"
+                data-testid="export-clips-burn"
+                onClick={() => toggleSubtitlePref("burnSubtitles")}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") e.preventDefault();
+                }}
+              >
+                <span className="export-dropdown-check" aria-hidden="true">
+                  {burnSubtitles ? "\u2713" : ""}
+                </span>
+                {t("export.clips.burnSubtitles")}
+              </li>
               <li role="separator" className="export-dropdown-separator" />
             </>
           )}

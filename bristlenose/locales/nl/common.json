@@ -252,7 +252,9 @@
       "piiWarning": "Clips bevatten de originele audio — PII-redactie geldt alleen voor transcripttekst",
       "failed": "Clip-extractie mislukt",
       "ffmpegMissing": "FFmpeg niet gevonden — installeer het om clips te extraheren",
-      "noClips": "Geen citaten met ster of uitgelicht om te extraheren"
+      "noClips": "Geen citaten met ster of uitgelicht om te extraheren",
+      "burnSubtitles": "Ondertiteling in de video branden (voor dia's)",
+      "burnUnavailable": "Deze FFmpeg kan geen ondertiteling inbranden \u2014 alleen clips zonder ondertiteling worden ge\u00ebxtraheerd"
     },
     "savePanelMessage": "Kies waar je het rapport wilt bewaren.",
     "saveFailedAlert": "De export kon niet worden bewaard."

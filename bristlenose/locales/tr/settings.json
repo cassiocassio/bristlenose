@@ -12,6 +12,10 @@
     "fallbackNote": "Yeni projeler son kullan\u0131lan konumda olu\u015fturulacak."
   },
   "heading": "Ayarlar",
+  "video": {
+    "legend": "Video",
+    "subtitles": "Video oynat\u0131c\u0131da altyaz\u0131lar\u0131 g\u00f6ster"
+  },
   "appearance": {
     "diagnosticsLegend": "Tan\u0131lama men\u00fcs\u00fcn\u00fc g\u00f6ster",
     "diagnosticsHelp": "Analizleri incelemek i\u00e7in ara\u00e7lar i\u00e7eren bir Tan\u0131lama men\u00fcs\u00fc ekler. Rapor g\u00f6r\u00fcn\u00fcm\u00fcnde Web Denetleyici'yi de etkinle\u015ftirir.",

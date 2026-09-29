@@ -12,6 +12,10 @@
     "fallbackNote": "Neue Projekte werden am zuletzt verwendeten Ort erstellt."
   },
   "heading": "Einstellungen",
+  "video": {
+    "legend": "Video",
+    "subtitles": "Untertitel im Videoplayer anzeigen"
+  },
   "appearance": {
     "diagnosticsLegend": "Diagnosemen\u00fc anzeigen",
     "diagnosticsHelp": "F\u00fcgt ein Diagnosemen\u00fc mit Werkzeugen zur Untersuchung von Analysen hinzu. Aktiviert au\u00dferdem den Web-Inspektor in der Berichtsansicht.",

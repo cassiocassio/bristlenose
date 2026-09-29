@@ -1,13 +1,14 @@
 ---
 status: partial
-last-trued: 2026-09-12
-trued-against: HEAD@main on 2026-09-12
+last-trued: 2026-09-29
+trued-against: HEAD@main on 2026-09-29 (subtitles sections only)
 ---
 
 > **Truing status:** Partial — the eliding rule, filename scheme and serve-mode flow are current (trued 2026-09-12); the container-preservation claim is superseded inline in three places; the CLI section is deferred and marked so. See changelog and inline banners.
 
 ## Changelog
 
+- _2026-09-29 (later)_ — subtitles built end to end: a `.vtt` beside every clip plus a language-tagged embedded track; an opt-in burned copy, `<name> (subtitled).mp4`, beside the clean clip; and subtitles in the popout player, switched from Settings, the Export menu and the Mac's Video and Quotes menus. See § Shape and § Subtitles in Bristlenose's own player.
 - _2026-09-29_ — added § Future: subtitles on clips (sidecar / embedded track / burned in, speaker colour coding, recommended layering), carried over from the closed issue #59 so the idea outlives the tracker. Proposal only; nothing shipped changed.
 - _2026-09-12_ — trued up: named `format_clip_timecode`/`use_hours` and recorded why per-export eliding is sound by construction plus its zero-duration residual (from the time audit's H6 withdrawal); marked the source-container-preservation claim superseded at three sites (fixed `.mp4`/`.m4a`); added `raw_start`/`is_audio_only` to `ClipSpec`; repointed the never-created `clip_extractor.py` to the three shipped modules; marked the CLI deferred inline. Anchors: `server/clip_manifest.py:107,139-140`, `routes/clips_export.py:119,370-371`, `clip_backend.py:47-50`, `docs/time-defects.md` H6.
 
@@ -382,10 +383,13 @@ What that changes, and what it doesn't:
    - **The embedded track has no colour.** ffmpeg 8.1.1's `mov_text` encoder keeps bold and italic but drops a colour override, writing no style record for it. So the embedded track is plain, and the `.vtt` carries speaker colour through WebVTT's built-in classes (`<c.yellow>`, `<c.cyan>`, `<c.lime>`).
    - **A failed subtitle mux still cuts the clip,** without the track rather than losing it.
    - **Real-data check:** on two FOSSDA clips (185 s and 106 s), every cue fit 2 lines of 37 characters and 7 s, with no overlaps. What the run exposed is in the transcript, not here: a diarisation slip in the source colours the interviewer's question white.
-2. **A single checkbox in the clip export dialog, off by default:** *"Burn subtitles into the video (for slides)"*. That checkbox is the whole of the UI: no font, size or colour controls. It re-encodes with the styling above, and it is the one exception to Decision 2.
+2. **A single checkbox, off by default — built 29 Sep 2026:** *"Burn subtitles into the video (for slides)"*. That checkbox is the whole of the UI: no font, size or colour controls. It re-encodes with the styling above, and it is the one exception to Decision 2.
+   - **Where it lives.** A checkbox row under *Extract clips* in the Export menu, and *Quotes ▸ Burn Subtitles into Clips* on the Mac. It is a remembered setting (`frontend/src/utils/subtitlePrefs.ts`, localStorage), not a per-export question; the Mac menu's checkmark mirrors it over the bridge (`subtitle-prefs`), the Focus Mode pattern.
+   - **What it writes.** `<name> (subtitled).mp4` beside the clean clip, which is untouched; `clips_manifest.json` records it as `burned`. The ASS is built by `to_ass()` in `clip_subtitles.py`; `burn_subtitles()` in `clip_backend.py` renders it with libass and the bundled Inter (`bristlenose/data/fonts/`, OFL). Audio clips and clips with no cues get no copy.
+   - **When ffmpeg can't.** `can_burn_subtitles()` checks for the `subtitles` filter and `libx264` once. If either is missing the request goes ahead with plain clips and the response carries `burn_unavailable`, which the page shows as a toast. Homebrew's ffmpeg is the known case.
 3. **Audio-only sessions** (`.m4a`) can't carry burned-in text. A possible extension is an "audiogram": render a plain `.mp4` of a title card (the gist) with the subtitles over it, so audio quotes can go into a deck too. This is not decided.
 
-**Still open:** whether the burned copy replaces the clean clip or sits beside it (`… (subtitled).mp4`; the Font section argues for beside). Font (Inter) and size (the BBC's) are decided.
+**Decided:** the burned copy sits **beside** the clean clip as `… (subtitled).mp4`, as the Font section argued; it never replaces it. Font (Inter) and size (the BBC's) are decided too.
 
 ### The embedded track needs a language tag — found 29 Sep 2026
 
@@ -412,9 +416,15 @@ Still unknown by construction: platform transcripts (Teams, Zoom, docx) and proj
 
 A slightly wrong label beats subtitles that never appear. A brand-new QuickTime user with subtitles off still needs one click; that is Apple's convention, and burn-in is the path for text that must always show. **Step 3 built the same day:** a pinned `--whisper-language` is written as `# Language: es (set)`, never as a detection (`FullTranscript.pinned_language`, `Pipeline._pinned_languages`), and the importer reads it like a detected one.
 
-### Subtitles in Bristlenose's own player — scope added 29 Sep 2026, not built
+### Subtitles in Bristlenose's own player — built 29 Sep 2026
 
-The maintainer wants the popout player to show the same subtitles, switched on and off from **Appearance** and/or the **Video** menu. Mapped, not designed:
+The maintainer wanted the popout player to show the same subtitles, switched on and off from **Appearance** and/or the **Video** menu. What shipped:
+- **The switch.** *Show subtitles in the video player*, off by default, in Settings (a *Video* group in the web settings) and as *Video ▸ Subtitles* on the Mac. The setting lives in the page's localStorage (`subtitlePrefs.ts`); the menu dispatches a toggle and shows a mirrored checkmark. It is live whenever the report can hear it, so it can be set before the player opens. It is hidden in an exported report, which has no server to fetch subtitles from.
+- **The text.** `GET /api/projects/{id}/sessions/{sid}/subtitles.vtt` builds the whole session from the same cue code as the clips (primary speaker white, the others in BBC colours, researcher corrections applied), with `Content-Language` from the session's language or else the app's. The route is `SERVER_ONLY` in the export classifier.
+- **The handover.** `PlayerContext` fetches the text with the bearer token and posts it to the player (`bristlenose-subtitles`), tagged with the recording it belongs to; the player makes a blob URL and attaches a `<track>` only when that recording is the one playing. The player announces `bristlenose-ready` when it loads, and the report answers with the setting and the current recording's subtitles — anything posted before then is lost. A change of setting is sent as the `setSubtitles` command.
+- **The live page.** Serve now renders the player from the template (`/report/assets/bristlenose-player.html`, no-store) ahead of the baked copy, so existing projects get the new player.
+
+The original mapping, kept for the reasoning:
 - The popout is a web page, `bristlenose/theme/templates/player.html`, opened with `window.open` and hosted in a `WKWebView` window (`WebView.swift` `createWebViewWith`).
 - It is controlled over `postMessage` (`bristlenose-seek` and `bristlenose-command`). A `toggleSubtitles` command would sit beside `togglePip`.
 - The Video menu reaches it through `bridgeHandler.menuAction` → `useKeyboardShortcuts` → `sendCommand`. A checkmark item follows the Focus Mode `Toggle` pattern (`MenuCommands.swift`).

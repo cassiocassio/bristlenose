@@ -541,6 +541,23 @@ class TestSessionSubtitlesRoute:
     def test_unknown_session_is_404(self, client: TestClient) -> None:
         assert client.get("/api/projects/1/sessions/s99/subtitles.vtt").status_code == 404
 
+    def test_names_the_track_language(self, client: TestClient) -> None:
+        """The player labels its track from Content-Language: the detected
+        language when there is one, else the app language — the rule the clip
+        export's track tag uses."""
+        from bristlenose.server.models import Session as SessionModel
+
+        resp = client.get("/api/projects/1/sessions/s1/subtitles.vtt")
+        assert resp.headers["content-language"] == "en"  # fixture: no header → app locale
+        db = client.app.state.db_factory()  # type: ignore[attr-defined]
+        try:
+            db.query(SessionModel).filter_by(session_id="s1").update({"language": "de"})
+            db.commit()
+        finally:
+            db.close()
+        resp = client.get("/api/projects/1/sessions/s1/subtitles.vtt")
+        assert resp.headers["content-language"] == "de"
+
     def test_requires_the_bearer_token(self) -> None:
         app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
         bare = TestClient(app, base_url="http://127.0.0.1")

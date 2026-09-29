@@ -12,6 +12,10 @@
     "fallbackNote": "I nuovi progetti verranno creati nell\u2019ultima posizione utilizzata."
   },
   "heading": "Impostazioni",
+  "video": {
+    "legend": "Video",
+    "subtitles": "Mostra i sottotitoli nel player video"
+  },
   "appearance": {
     "diagnosticsLegend": "Mostra il menu Diagnostica",
     "diagnosticsHelp": "Aggiunge un menu Diagnostica con strumenti per esaminare le analisi. Attiva anche Ispettore web nella vista del report.",

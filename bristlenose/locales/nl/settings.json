@@ -12,6 +12,10 @@
     "fallbackNote": "Nieuwe projecten worden aangemaakt op de laatstgebruikte locatie."
   },
   "heading": "Instellingen",
+  "video": {
+    "legend": "Video",
+    "subtitles": "Toon ondertiteling in de videospeler"
+  },
   "appearance": {
     "diagnosticsLegend": "Toon het menu Diagnose",
     "diagnosticsHelp": "Voegt een menu Diagnose toe met hulpmiddelen om analyses te onderzoeken. Schakelt ook de webinspector in de rapportweergave in.",

@@ -119,6 +119,7 @@
       "copyQuotes": "Copy Quotes",
       "saveSpreadsheet": "Save as Spreadsheet…",
       "extractClips": "Extract Video Clips…",
+      "burnSubtitles": "Burn Subtitles into Clips",
       "anonymise": "Anonymise",
       "anonymiseHint": "Remove participant names",
       "reportHint": "Self contained HTML",
@@ -149,7 +150,8 @@
       "mute": "Mute",
       "pictureInPicture": "Picture in Picture",
       "_divergent_pictureInPicture": "en:d55e9e — it, pt-BR and pt-PT keep the English because Apple does; the other 17 use their own name for the macOS feature, measured from the shipping loctables. Naming a system feature something the user's own Mac does not call it is the defect, so matching English here is the fix, not a gap. See .claude/agents/i18n-review.md §6b.",
-      "fullscreen": "Fullscreen"
+      "fullscreen": "Fullscreen",
+      "subtitles": "Subtitles"
     },
     "help": {
       "bristlenoseHelp": "Bristlenose Help",

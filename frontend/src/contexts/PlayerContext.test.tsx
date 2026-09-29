@@ -10,6 +10,7 @@ import {
 
 vi.mock("../utils/announce", () => ({ announce: vi.fn() }));
 vi.mock("../shims/bridge", () => ({ postPlayerState: vi.fn() }));
+vi.mock("../utils/api", () => ({ apiGetText: vi.fn().mockRejectedValue(new Error("404")) }));
 
 import { announce } from "../utils/announce";
 import { postPlayerState } from "../shims/bridge";
@@ -889,5 +890,73 @@ describe("PlayerContext", () => {
       vi.advanceTimersByTime(1100);
     });
     expect(mockPost).toHaveBeenCalledWith(false, false);
+  });
+});
+
+// ── Subtitles ────────────────────────────────────────────────────────────
+
+describe("PlayerContext subtitles", () => {
+  it("hands the player the session's subtitles and the setting when it is ready", async () => {
+    const { apiGetText } = await import("../utils/api");
+    vi.mocked(apiGetText).mockResolvedValue({ text: "WEBVTT\n", language: "en" });
+    const { _resetSubtitlePrefsForTests } = await import("../utils/subtitlePrefs");
+    localStorage.setItem("bristlenose-player-subtitles", "true");
+    _resetSubtitlePrefsForTests();
+
+    const mockWin = { closed: false, postMessage: vi.fn(), focus: vi.fn() };
+    openSpy.mockReturnValue(mockWin as unknown as Window);
+    let seek: (pid: string, seconds: number) => void = () => {};
+    function Consumer() {
+      seek = usePlayer().seekTo;
+      return null;
+    }
+    renderProvider(<Consumer />);
+    act(() => seek("p1", 3));
+
+    await act(async () => {
+      postPlayerMessage({ type: "bristlenose-ready", src: null });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(apiGetText).toHaveBeenCalledWith("/sessions/s1/subtitles.vtt");
+    expect(mockWin.postMessage).toHaveBeenCalledWith(
+      { type: "bristlenose-command", command: "setSubtitles", payload: { show: true } },
+      window.location.origin,
+    );
+    expect(mockWin.postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "bristlenose-subtitles",
+        src: "/media/session1.mp4",
+        vtt: "WEBVTT\n",
+        lang: "en",
+      }),
+      window.location.origin,
+    );
+    localStorage.clear();
+    _resetSubtitlePrefsForTests();
+  });
+
+  it("tells an open player when the setting changes", async () => {
+    const { setSubtitlePref, _resetSubtitlePrefsForTests } = await import("../utils/subtitlePrefs");
+    localStorage.clear();
+    _resetSubtitlePrefsForTests();
+    const mockWin = { closed: false, postMessage: vi.fn(), focus: vi.fn() };
+    openSpy.mockReturnValue(mockWin as unknown as Window);
+    let seek: (pid: string, seconds: number) => void = () => {};
+    function Consumer() {
+      seek = usePlayer().seekTo;
+      return null;
+    }
+    renderProvider(<Consumer />);
+    act(() => seek("p1", 3));
+    act(() => setSubtitlePref("playerSubtitles", true));
+    expect(mockWin.postMessage).toHaveBeenCalledWith(
+      { type: "bristlenose-command", command: "setSubtitles", payload: { show: true } },
+      window.location.origin,
+    );
+    act(() => setSubtitlePref("playerSubtitles", false));
+    localStorage.clear();
+    _resetSubtitlePrefsForTests();
   });
 });

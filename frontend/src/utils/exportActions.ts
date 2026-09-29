@@ -25,6 +25,7 @@ import type { TFunction } from "i18next";
 import { startClipExtraction } from "./api";
 import { addJob } from "../contexts/ActivityStore";
 import { toast } from "./toast";
+import { getSubtitlePrefs } from "./subtitlePrefs";
 import { announce } from "./announce";
 import { formatTimecode } from "./format";
 import type { QuotesState } from "../contexts/QuotesContext";
@@ -156,13 +157,14 @@ export async function extractVideoClips(
   anonymise = false,
 ): Promise<void> {
   try {
-    const result = await startClipExtraction(anonymise, ids);
+    const result = await startClipExtraction(anonymise, ids, getSubtitlePrefs().burnSubtitles);
     if (result.total === 0) {
       toast(t("export.clips.noClips"));
       return;
     }
     addJob("clips", { type: "clips", frameworkId: "", frameworkTitle: "", total: result.total });
     if (result.pii_warning) toast(t("export.clips.piiWarning"));
+    if (result.burn_unavailable) toast(t("export.clips.burnUnavailable"));
     announce(t("export.clips.progress", { progress: 0, total: result.total }));
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "";

@@ -215,6 +215,14 @@ final class BridgeHandler: ObservableObject {
     /// project boots in normal view). See docs/design-focus-mode.md.
     @Published var focusModeActive: Bool = false
 
+    /// The two subtitle preferences, mirrored from the SPA (`subtitle-prefs`).
+    /// The web side owns both in localStorage; these drive only the checkmarks
+    /// on Video ▸ Subtitles and Quotes ▸ Burn Subtitles into Clips. Unlike Focus
+    /// they persist, so `reset()` drops them to false only until the remounted
+    /// SPA re-posts them.
+    @Published var playerSubtitlesOn: Bool = false
+    @Published var burnSubtitlesInClips: Bool = false
+
     /// Whether the report's left panel — whichever list the active lens puts
     /// there (Contents / Sessions / Codes / Signals; they share one `tocMode`)
     /// — is open. Mirrored from the SPA via `panel-state`, which is the only
@@ -824,6 +832,14 @@ final class BridgeHandler: ObservableObject {
             let on = body["active"] as? Bool ?? false
             if on != focusModeActive { focusModeActive = on }
 
+        case "subtitle-prefs":
+            // Sole writer, same shape as `focus-mode`: a mirror, never a second
+            // source of truth. The SPA re-posts on mount and on every change.
+            let player = body["player"] as? Bool ?? false
+            let burn = body["burn"] as? Bool ?? false
+            if player != playerSubtitlesOn { playerSubtitlesOn = player }
+            if burn != burnSubtitlesInClips { burnSubtitlesInClips = burn }
+
         case "panel-state":
             // Sole writer of the three panel mirrors. Equality-guarded like
             // `quotes-filter`: the SPA re-posts on every sidebar/inspector store
@@ -967,6 +983,8 @@ final class BridgeHandler: ObservableObject {
         quotesSearchQuery = ""
         quotesViewMode = "all"
         focusModeActive = false
+        playerSubtitlesOn = false
+        burnSubtitlesInClips = false
         // Closed is the honest default for a project whose SPA hasn't mounted:
         // the rows dim to "Show", and the incoming `panel-state` corrects them
         // as soon as the new report restores its panels from localStorage.

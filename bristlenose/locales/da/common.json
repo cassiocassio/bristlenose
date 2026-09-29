@@ -252,7 +252,9 @@
       "piiWarning": "Klip indeholder original lyd — PII-redigering gælder kun for transskriptionstekst",
       "failed": "Udtrækning af klip mislykkedes",
       "ffmpegMissing": "FFmpeg blev ikke fundet — installér det for at udtrække klip",
-      "noClips": "Ingen stjernemarkerede eller fremhævede citater at udtrække"
+      "noClips": "Ingen stjernemarkerede eller fremhævede citater at udtrække",
+      "burnSubtitles": "Br\u00e6nd undertekster ind i videoen (til slides)",
+      "burnUnavailable": "Denne FFmpeg kan ikke br\u00e6nde undertekster ind \u2014 kun klip uden undertekster udtr\u00e6kkes"
     },
     "savePanelMessage": "Vælg, hvor rapporten skal gemmes.",
     "saveFailedAlert": "Eksporten kunne ikke gemmes."

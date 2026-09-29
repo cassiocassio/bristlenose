@@ -286,7 +286,9 @@
       "piiWarning": "Klipy obsahují původní zvuk — redakce osobních údajů se vztahuje pouze na text přepisu",
       "failed": "Extrakce klipu se nezdařila",
       "ffmpegMissing": "FFmpeg nebyl nalezen — nainstalujte jej pro extrakci klipů",
-      "noClips": "Žádné citáty s hvězdičkou ani vybrané citáty k extrakci"
+      "noClips": "Žádné citáty s hvězdičkou ani vybrané citáty k extrakci",
+      "burnSubtitles": "Vyp\u00e1lit titulky do videa (pro prezentace)",
+      "burnUnavailable": "Toto FFmpeg neum\u00ed vyp\u00e1lit titulky \u2014 extrahuj\u00ed se jen klipy bez titulk\u016f"
     },
     "savePanelMessage": "Vyberte, kam zprávu uložit.",
     "saveFailedAlert": "Export se nepodařilo uložit."

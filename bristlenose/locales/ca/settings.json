@@ -12,6 +12,10 @@
     "fallbackNote": "Els projectes nous comen\u00e7aran a l'\u00faltima ubicaci\u00f3 utilitzada."
   },
   "heading": "Configuració",
+  "video": {
+    "legend": "V\u00eddeo",
+    "subtitles": "Mostra els subt\u00edtols al reproductor de v\u00eddeo"
+  },
   "appearance": {
     "diagnosticsLegend": "Mostra el menú Diagnòstic",
     "diagnosticsHelp": "Afegeix un menú Diagnòstic amb eines per inspeccionar les execucions d'anàlisi. També activa l'Inspector Web a la vista de l'informe.",

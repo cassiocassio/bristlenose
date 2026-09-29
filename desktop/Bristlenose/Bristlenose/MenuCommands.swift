@@ -1561,6 +1561,16 @@ private struct QuotesMenuContent: View {
         }
         .disabled(!onQuotesTab)
 
+        // A setting that Extract Video Clips reads: each video clip also gets a
+        // "(subtitled)" copy with the subtitles in its pixels, for slides. The
+        // SPA owns it (the Export menu carries the same checkbox); the checkmark
+        // is its mirror, and the toggle is dispatched back rather than set here.
+        Toggle(i18n.t("desktop.menu.quotes.burnSubtitles"), isOn: Binding(
+            get: { bridgeHandler.burnSubtitlesInClips },
+            set: { _ in bridgeHandler.menuAction("toggleBurnSubtitles") }
+        ))
+        .disabled(!onQuotesTab)
+
         // Send to Miro — mirrors the toolbar popover's Miro row. Always enabled
         // (uploads the project's quotes regardless of the active tab), matching
         // the popover. Presents the native MiroSheet (ContentView owns the .sheet).
@@ -1665,6 +1675,17 @@ private struct VideoMenuContent: View {
             bridgeHandler.menuAction("fullscreen")
         }
         .disabled(!active)
+
+        Divider()
+
+        // A preference, not a player command: live whenever the report can
+        // hear it, so subtitles can be switched on before the player opens.
+        // The SPA owns the setting; this checkmark mirrors `subtitle-prefs`.
+        Toggle(i18n.t("desktop.menu.video.subtitles"), isOn: Binding(
+            get: { bridgeHandler.playerSubtitlesOn },
+            set: { _ in bridgeHandler.menuAction("toggleSubtitles") }
+        ))
+        .disabled(!bridgeHandler.canDispatch)
     }
 }
 

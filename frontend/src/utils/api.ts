@@ -100,6 +100,19 @@ async function httpError(method: string, path: string, resp: Response): Promise<
   return err;
 }
 
+/**
+ * GET a text body (e.g. WebVTT) with the auth header, plus the response's
+ * ``Content-Language``. Not available in an exported report (no server).
+ */
+export async function apiGetText(
+  path: string,
+): Promise<{ text: string; language: string | null }> {
+  if (isExportMode()) throw new Error(`Export mode: no server for ${path}`);
+  const resp = await fetch(`${apiBase()}${path}`, { headers: authHeaders() });
+  if (!resp.ok) throw await httpError("GET", path, resp);
+  return { text: await resp.text(), language: resp.headers.get("Content-Language") };
+}
+
 export async function apiGet<T>(path: string): Promise<T> {
   const embedded = resolveFromExport<T>(path);
   if (embedded !== undefined) return embedded;
@@ -565,10 +578,12 @@ export async function streamElaborations(
 export function startClipExtraction(
   anonymise = false,
   ids: string[] | null = null,
+  burnSubtitles = false,
 ): Promise<ClipJobStartResponse> {
   return apiPost<ClipJobStartResponse>("/export/clips", {
     anonymise,
     ...(ids != null ? { ids } : {}),
+    ...(burnSubtitles ? { burn_subtitles: true } : {}),
   });
 }
 

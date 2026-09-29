@@ -46,6 +46,7 @@ export type BridgeMessage =
   | { type: "lens-subtitle"; tab: string; subtitle: string }
   | { type: "quotes-filter"; searchQuery: string; viewMode: string }
   | { type: "focus-mode"; active: boolean }
+  | { type: "subtitle-prefs"; player: boolean; burn: boolean }
   | {
       type: "panel-state";
       leftOpen: boolean;
@@ -273,6 +274,16 @@ export function postQuotesFilter(searchQuery: string, viewMode: string): void {
  */
 export function postFocusMode(active: boolean): void {
   postNativeMessage({ type: "focus-mode", active });
+}
+
+/**
+ * Mirror the two subtitle preferences to the native menus' checkmarks —
+ * Video ▸ Subtitles (the popout player) and Quotes ▸ Burn Subtitles into
+ * Clips. The web layer owns both (localStorage); the menus only reflect them
+ * and dispatch a toggle back, the same shape as Focus Mode.
+ */
+export function postSubtitlePrefs(player: boolean, burn: boolean): void {
+  postNativeMessage({ type: "subtitle-prefs", player, burn });
 }
 
 /**

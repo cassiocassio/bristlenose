@@ -252,7 +252,9 @@
       "piiWarning": "Klipler orijinal sesi içerir — PII maskeleme yalnızca deşifre metnine uygulanır",
       "failed": "Klip çıkarma başarısız oldu",
       "ffmpegMissing": "FFmpeg bulunamadı — klip çıkarmak için yükleyin",
-      "noClips": "Çıkarılacak yıldızlı veya öne çıkan alıntı yok"
+      "noClips": "Çıkarılacak yıldızlı veya öne çıkan alıntı yok",
+      "burnSubtitles": "Altyaz\u0131lar\u0131 videoya g\u00f6m (slaytlar i\u00e7in)",
+      "burnUnavailable": "Bu FFmpeg altyaz\u0131 g\u00f6memiyor \u2014 yaln\u0131zca altyaz\u0131s\u0131z klipler \u00e7\u0131kar\u0131lacak"
     },
     "savePanelMessage": "Raporun kaydedileceği yeri seçin.",
     "saveFailedAlert": "Dışa aktarma kaydedilemedi."

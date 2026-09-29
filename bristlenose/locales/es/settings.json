@@ -12,6 +12,10 @@
     "fallbackNote": "Los proyectos nuevos se crear\u00e1n en la \u00faltima ubicaci\u00f3n utilizada."
   },
   "heading": "Ajustes",
+  "video": {
+    "legend": "V\u00eddeo",
+    "subtitles": "Mostrar subt\u00edtulos en el reproductor de v\u00eddeo"
+  },
   "appearance": {
     "diagnosticsLegend": "Mostrar el men\u00fa Diagn\u00f3stico",
     "diagnosticsHelp": "A\u00f1ade un men\u00fa Diagn\u00f3stico con herramientas para inspeccionar los an\u00e1lisis. Tambi\u00e9n activa el inspector web en la vista del informe.",

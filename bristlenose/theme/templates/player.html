@@ -25,6 +25,43 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
   var currentPid = null;
   var openerOrigin = '*';
 
+  // Subtitles. The report fetches a session's WebVTT (it holds the auth
+  // token; a <track src> cannot send one) and posts the text here with the
+  // recording it belongs to. Shown or hidden by the viewer's setting, which
+  // arrives as `setSubtitles` and may come before any video is loaded.
+  var wantSubtitles = false;
+  var subtitles = null;      // { src, vtt, lang, label } — latest received
+  var subtitleUrl = null;    // blob: URL of the attached track
+  var trackEl = null;
+
+  function applySubtitleMode() {
+    for (var i = 0; i < video.textTracks.length; i++) {
+      video.textTracks[i].mode = wantSubtitles ? 'showing' : 'hidden';
+    }
+  }
+
+  function detachSubtitles() {
+    if (trackEl && trackEl.parentNode) trackEl.parentNode.removeChild(trackEl);
+    if (subtitleUrl) URL.revokeObjectURL(subtitleUrl);
+    trackEl = null;
+    subtitleUrl = null;
+  }
+
+  // Attach the received subtitles only to the recording they were built for.
+  function attachSubtitlesIfCurrent() {
+    detachSubtitles();
+    if (!subtitles || !subtitles.vtt || subtitles.src !== currentUri) return;
+    subtitleUrl = URL.createObjectURL(new Blob([subtitles.vtt], { type: 'text/vtt' }));
+    trackEl = document.createElement('track');
+    trackEl.kind = 'subtitles';
+    trackEl.srclang = subtitles.lang || 'und';
+    trackEl.label = subtitles.label || 'Subtitles';
+    trackEl.src = subtitleUrl;
+    trackEl.addEventListener('load', applySubtitleMode);
+    video.appendChild(trackEl);
+    applySubtitleMode();
+  }
+
   function fmtTC(s) {
     var h = Math.floor(s / 3600);
     var m = Math.floor((s % 3600) / 60);
@@ -37,6 +74,7 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
     currentPid = pid;
     if (fileUri !== currentUri) {
       currentUri = fileUri;
+      attachSubtitlesIfCurrent();  // drops the previous recording's track
       video.src = fileUri;
       video.addEventListener('loadeddata', function onLoad() {
         video.removeEventListener('loadeddata', onLoad);
@@ -80,6 +118,13 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
     var d = e.data;
     if (d && d.type === 'bristlenose-seek' && d.src) {
       loadAndSeek(d.pid || '', d.src, parseFloat(d.t) || 0);
+    } else if (d && d.type === 'bristlenose-subtitles' && d.src) {
+      subtitles = { src: d.src, vtt: d.vtt || '', lang: d.lang, label: d.label };
+      attachSubtitlesIfCurrent();
+    } else if (d && d.type === 'bristlenose-command' && d.command === 'setSubtitles') {
+      // Before the no-video guard: the setting can arrive first.
+      wantSubtitles = !!(d.payload && d.payload.show);
+      applySubtitleMode();
     } else if (d && d.type === 'bristlenose-command') {
       if (!currentUri) return; // No video loaded — ignore commands
       var p = d.payload || {};
@@ -156,6 +201,11 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
     status.className = 'error';
     status.textContent = 'Cannot play this format \u2014 try converting to .mp4';
   });
+
+  // Tell the report this window can now take messages. Anything it posted
+  // before this page loaded (the subtitle setting, the subtitles themselves)
+  // was lost, so it sends them again on hearing this.
+  _notify('bristlenose-ready', { src: currentUri });
 })();
 </script>
 </body>

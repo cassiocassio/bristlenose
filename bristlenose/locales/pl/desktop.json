@@ -123,6 +123,7 @@
       "copyQuotes": "Kopiuj cytaty",
       "saveSpreadsheet": "Zapisz jako arkusz kalkulacyjny…",
       "extractClips": "Wyodrębnij klipy wideo…",
+      "burnSubtitles": "Wypal napisy w klipach",
       "anonymise": "Anonimizuj",
       "anonymiseHint": "Usuń imiona i nazwiska uczestników",
       "reportHint": "Samodzielny plik HTML",
@@ -152,7 +153,8 @@
       "volumeDown": "Ciszej",
       "mute": "Wycisz",
       "pictureInPicture": "Obraz w obrazie",
-      "fullscreen": "Pełny ekran"
+      "fullscreen": "Pełny ekran",
+      "subtitles": "Napisy"
     },
     "help": {
       "bristlenoseHelp": "Pomoc Bristlenose",

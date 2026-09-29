@@ -1105,7 +1105,7 @@ Same family as the piped-`pytest`-exit-code gotcha in the root `CLAUDE.md`: the 
 
 ### Testability refactors
 
-Two injection points exist for safe testing:
+Three injection points exist for safe testing:
 
 1. **`ProjectIndex(fileURL:)`** — pass a temp directory URL to avoid touching `~/Library/Application Support/Bristlenose/projects.json`
 2. **`KeychainStore` protocol** — `KeychainHelper.liveStore` for production, `InMemoryKeychain()` for tests. The static `KeychainHelper.get/set/delete` methods remain unchanged for existing call sites

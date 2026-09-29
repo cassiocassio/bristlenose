@@ -979,6 +979,7 @@
     "moveToApplications": "Eklentiyi y\u00fcklemek i\u00e7in Bristlenose'u Uygulamalar klas\u00f6r\u00fcne ta\u015f\u0131y\u0131n ve oradan a\u00e7\u0131n. ChatGPT, Bristlenose'un \u015fu anda \u00e7al\u0131\u015ft\u0131\u011f\u0131 konumdan y\u00fckleyemez.",
     "connectByHand": "Veya elle ba\u011flay\u0131n",
     "chatgptReinstallHow": "ChatGPT'de \u22ef \u25b8 Kald\u0131r'\u0131, ard\u0131ndan Eklentiyi y\u00fckle'yi se\u00e7in.",
+    "claudeReinstallHow": "\u00d6nce Claude\u2019da Ayarlar \u25b8 Uzant\u0131lar b\u00f6l\u00fcm\u00fcnden Bristlenose\u2019u kald\u0131r\u0131n, ard\u0131ndan Geni\u015fletmeyi Yeniden Y\u00fckle\u2026\u2019yi t\u0131klay\u0131n.",
     "extensionBuild": "Geni\u015fletme {{version}}",
     "reinstall": "Geni\u015fletmeyi Yeniden Y\u00fckle\u2026",
     "update": "Geni\u015fletmeyi G\u00fcncelle\u2026",

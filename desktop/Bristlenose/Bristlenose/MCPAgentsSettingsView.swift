@@ -1038,7 +1038,16 @@ struct MCPAgentsSettingsView: View {
     private var buildLine: String? {
         guard let key = extensionState.footnoteKey,
               let installed = extensionState.installedDisplay else { return nil }
-        return i18n.t(key, ["version": installed])
+        let line = i18n.t(key, ["version": installed])
+        // The native package carries the RELEASE as its manifest version, so a
+        // different build of the same release is the same version to Claude,
+        // and Claude answers a same-version file with an Uninstall-only
+        // preview (measured 29 Sep 2026). Name the extra step. A different
+        // release updates in place, so it needs nothing more.
+        if case .differentBuild = extensionState, MCPExtensionInstaller.usesNativeHelper {
+            return line + " " + i18n.t("desktop.mcpAgents.claudeReinstallHow")
+        }
+        return line
     }
 
     // MARK: - Client tabs

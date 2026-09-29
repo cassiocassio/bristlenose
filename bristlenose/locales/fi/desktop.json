@@ -979,6 +979,7 @@
     "moveToApplications": "Siirr\u00e4 Bristlenose Ohjelmat-kansioon ja avaa se sielt\u00e4 asentaaksesi lis\u00e4osan. ChatGPT ei voi asentaa sit\u00e4 paikasta, josta Bristlenose nyt toimii.",
     "connectByHand": "Tai yhdist\u00e4 k\u00e4sin",
     "chatgptReinstallHow": "Valitse ChatGPT:ss\u00e4 \u22ef \u25b8 Poista asennus ja sitten Asenna lis\u00e4osa.",
+    "claudeReinstallHow": "Poista ensin Bristlenose Clauden kohdassa Asetukset \u25b8 Laajennukset ja valitse sitten Asenna laajennus uudelleen\u2026.",
     "extensionBuild": "Laajennus {{version}}",
     "reinstall": "Asenna laajennus uudelleen\u2026",
     "update": "P\u00e4ivit\u00e4 laajennus\u2026",

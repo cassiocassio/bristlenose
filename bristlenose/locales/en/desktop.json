@@ -984,6 +984,7 @@
     "moveToApplications": "Move Bristlenose to your Applications folder and open it from there to install the plugin. ChatGPT can't install it from where Bristlenose is running now.",
     "connectByHand": "Or connect by hand",
     "chatgptReinstallHow": "In ChatGPT, choose \u22ef \u25b8 Uninstall, then Install plugin.",
+    "claudeReinstallHow": "In Claude, uninstall Bristlenose in Settings \u25b8 Extensions first, then click Reinstall Extension\u2026.",
     "extensionBuild": "Extension {{version}}",
     "reinstall": "Reinstall Extension\u2026",
     "update": "Update Extension\u2026",

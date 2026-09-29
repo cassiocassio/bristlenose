@@ -979,6 +979,7 @@
     "moveToApplications": "Mou el Bristlenose a la carpeta Aplicacions i obre'l des d'all\u00e0 per instal\u00b7lar el complement. El ChatGPT no el pot instal\u00b7lar des d'on s'executa ara el Bristlenose.",
     "connectByHand": "O connecta-ho a m\u00e0",
     "chatgptReinstallHow": "Al ChatGPT, tria \u22ef \u25b8 Desinstal\u00b7la i despr\u00e9s Instal\u00b7la el complement.",
+    "claudeReinstallHow": "Al Claude, primer desinstal\u00b7la el Bristlenose a Configuraci\u00f3 \u25b8 Extensions i despr\u00e9s fes clic a Torna a instal\u00b7lar l\u2019extensi\u00f3\u2026.",
     "extensionBuild": "Extensi\u00f3 {{version}}",
     "reinstall": "Torna a instal\u00b7lar l'extensi\u00f3\u2026",
     "update": "Actualitza l'extensi\u00f3\u2026",

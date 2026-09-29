@@ -979,6 +979,7 @@
     "moveToApplications": "Flyt Bristlenose til mappen Programmer, og \u00e5bn det derfra for at installere pluginnet. ChatGPT kan ikke installere det fra det sted, Bristlenose k\u00f8rer fra nu.",
     "connectByHand": "Eller forbind manuelt",
     "chatgptReinstallHow": "V\u00e6lg \u22ef \u25b8 Afinstaller i ChatGPT, og derefter Installer plugin.",
+    "claudeReinstallHow": "Afinstaller f\u00f8rst Bristlenose i Claude under Indstillinger \u25b8 Udvidelser, og klik derefter p\u00e5 Geninstaller udvidelse\u2026.",
     "extensionBuild": "Udvidelse {{version}}",
     "reinstall": "Geninstaller udvidelse\u2026",
     "update": "Opdater udvidelse\u2026",

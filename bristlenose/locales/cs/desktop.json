@@ -1022,6 +1022,7 @@
     "moveToApplications": "P\u0159esu\u0148te Bristlenose do slo\u017eky Aplikace a otev\u0159ete jej odtud, abyste mohli z\u00e1suvn\u00fd modul nainstalovat. ChatGPT jej nem\u016f\u017ee nainstalovat z m\u00edsta, odkud Bristlenose nyn\u00ed b\u011b\u017e\u00ed.",
     "connectByHand": "Nebo p\u0159ipojit ru\u010dn\u011b",
     "chatgptReinstallHow": "V ChatGPT zvolte \u22ef \u25b8 Odinstalovat a potom Nainstalovat z\u00e1suvn\u00fd modul.",
+    "claudeReinstallHow": "V Claude nejprve odinstalujte Bristlenose v Nastaven\u00ed \u25b8 Roz\u0161\u00ed\u0159en\u00ed a pak klikn\u011bte na P\u0159einstalovat roz\u0161\u00ed\u0159en\u00ed\u2026.",
     "extensionBuild": "Roz\u0161\u00ed\u0159en\u00ed {{version}}",
     "reinstall": "P\u0159einstalovat roz\u0161\u00ed\u0159en\u00ed\u2026",
     "update": "Aktualizovat roz\u0161\u00ed\u0159en\u00ed\u2026",

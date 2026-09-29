@@ -563,14 +563,17 @@ identifier ran normally and served real data. So an Apple Distribution-signed
 tool does run outside the App Store when it isn't quarantined, and the hang was
 purely the container's signer ACL.
 
-**And it blocks the build that *is* trusted, too.** `uncd`, the daemon that
-shows system alert dialogs, started at the second of the hang, so a consent
-dialog was almost certainly raised on screen (*inferred*; not seen, as the
-session had no screen access then). While it stayed unanswered, the
-**Developer-ID** build, whose signer is in the ACL and which had run all
-morning, also hung at the same `_libsecinit_appsandbox` wait on every launch,
-with no new `secinitd` line. One mismatched launch therefore breaks the helper
-for every host until a person answers a dialog they have no context for.
+**And it blocked the build that *is* trusted, too, for a while.** `uncd`, the
+daemon that shows system alert dialogs, started at the second of the hang. For
+the next few minutes the **Developer-ID** build, whose signer is in the ACL and
+which had run all morning, also hung at the same `_libsecinit_appsandbox` wait
+on every launch, with no new `secinitd` line. The maintainer saw **no dialog**
+on screen. By about 11:35 `uncd` had exited and the Developer-ID build ran
+normally again, with nothing answered. So the block is real but was
+self-clearing here, and what `uncd` was doing (a dialog on another Space, one
+that timed out, or none) is unknown. Either way, one mismatched launch can
+stall the helper for every host for minutes, which a host experiences as a dead
+server.
 
 To a host, a helper that hangs at launch is a server that never answers. The
 Developer-ID `.dmg` and the Mac App Store build (re-signed by Apple) have

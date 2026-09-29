@@ -62,5 +62,5 @@ This patch is the host half only. When the sandboxed proxy is bundled, give it
 `app.bristlenose.mcp-proxy` for the App Store and
 `app.bristlenose.mcp-proxy.devid` for the `.dmg`. A sandboxed helper's own
 container remembers the signer that created it, and one launch by a different
-signer raised a consent dialog and hung every later launch, including the
+signer hung it, and for a few minutes every later launch too, including the
 trusted build's (design doc §6.6).

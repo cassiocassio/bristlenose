@@ -395,7 +395,12 @@ class TestExportComposesSubtitles:
             return output
 
         media = ({"s1": (tmp_path / "s1.mp4", False)}, {"s1": 120.0})
-        with patch.object(clips_export.FFmpegBackend, "check_available", return_value=(True, "")), \
+        # `with client` keeps ONE event loop across the POST and the polls. Without
+        # it each request runs in its own loop, which closes when the request
+        # returns and freezes the export task that POST started, so on a slow CI
+        # runner the job stays "running" for ever (measured: a 0.5 s clip).
+        with client, \
+                patch.object(clips_export.FFmpegBackend, "check_available", return_value=(True, "")), \
                 patch.object(clips_export.FFmpegBackend, "extract_clip", fake_extract), \
                 patch.object(clips_export, "_load_session_media", return_value=media), \
                 patch.object(clips_export, "_resolve_output_dir", return_value=tmp_path):

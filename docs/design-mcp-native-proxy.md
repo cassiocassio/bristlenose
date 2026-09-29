@@ -32,9 +32,14 @@ Related docs:
 5. **So a 128 KB native proxy, signed by our team, that relaunches itself
    disclaimed removes both problems:** no Node, and no Files & Folders step.
    Proven end to end in ChatGPT with a real study question. *Measured.*
-6. **Open:** the disclaim call is private SPI, so it is an App Store review
-   question before it can ship in the Mac App Store build (§6). The Node proxy
-   still lacks several states the native port needs (§5.3).
+6. **The disclaim trick cannot ship on the Mac App Store** (private SPI App
+   Review has rejected by name, and an unsandboxed helper in the MAS bundle
+   fails upload). **A public-API route works instead:** write the handshake into
+   a Team-ID-prefixed app group, and ship the proxy **sandboxed** with that group.
+   Such a proxy reads the group container with no grant, with ChatGPT, Claude
+   Code or Terminal responsible (§6). *Measured; App Store acceptance of the
+   nested tool is unverified until one TestFlight upload.* The native port still
+   lacks several of the Node proxy's states (§4.3).
 
 ## 1. The ChatGPT plugin channel
 
@@ -277,39 +282,123 @@ itself (not run inside Claude Desktop).
 
 ## 5. How the pieces fit
 
-| Problem | Node proxy today | Native disclaimed proxy |
-|---|---|---|
-| ChatGPT one-click install | works (`marketplacePath` link) | works |
-| Mac without Node (ChatGPT) | **fails** | works |
-| Claude Desktop runtime | Claude's own Node | binary server |
-| macOS 27, new install | **silently denied** until Files & Folders is switched on | allowed, same-team |
-| macOS 27, carried-over grant | works | works |
-| Mac App Store build | ships today | **open question (§6)** |
+| Problem | Node proxy today | Native, disclaimed (§4) | Native, sandboxed + app group (§6) |
+|---|---|---|---|
+| ChatGPT one-click install | works (`marketplacePath` link) | works | works (same link) |
+| Mac without Node (ChatGPT) | **fails** | works | works |
+| Claude Desktop runtime | Claude's own Node | binary server | binary server |
+| macOS 27, new install | **silently denied** until Files & Folders is switched on | allowed, same-team | allowed, same-team group |
+| macOS 27, carried-over grant | works | works | works |
+| Mac App Store build | ships today | **rejected** (§6) | ship with risk: one TestFlight upload decides |
+| Developer ID `.dmg` | ships today | ship with risk | works (same mechanism as MAS) |
 
 [`design-mcp-files-and-folders.md`](design-mcp-files-and-folders.md) is the
-right plan for the Node proxy, and stays the fallback if the native proxy
-cannot ship on a channel.
+right plan for the Node proxy that ships today, and stays the recovery path on
+any channel where the native proxy is not installed.
 
 ## 6. The App Store question
 
-`responsibility_spawnattrs_setdisclaim` is private SPI. Developer ID (the
-`.dmg`) has no private-API review, so the native proxy can ship there. For the
-Mac App Store build, open questions:
+_Verdict from a research pass with the `app-store-police` agent, 29 Sep 2026.
+Its full record, with draft review notes, is in the maintainer's private
+handoff notes, kept outside the public tree._
 
-- Does App Store Connect's static scan flag the symbol?
-- Must a Mach-O embedded in the MAS app be sandboxed? If it is, does
-  `inherit` abort when a foreign app launches it (exit 133, seen in this
-  codebase)? Without `inherit`, which container does it get?
-- Public alternatives:
-  - a helper `.app` launched through LaunchServices, which is its own
-    responsible process, reached over XPC or a loopback socket;
-  - a Bristlenose-owned XPC service or `SMAppService` agent;
-  - no handshake file at all (loopback discovery plus pairing);
-  - a handshake outside the container;
-  - accepting the Files & Folders step on the MAS channel only.
+### 6.1 The disclaimed helper: rejected on the Mac App Store
 
-A research pass with the `app-store-police` agent was started on 29 Sep 2026;
-its verdict belongs here when it lands.
+Two independent reasons, either sufficient:
+
+1. **Guideline 2.5.1, private API.** `responsibility_spawnattrs_setdisclaim` is
+   exported by `libquarantine` and re-exported through `libSystem.B.tbd`, with
+   no public header. App Review **named this exact symbol** when it rejected Qt
+   6.4.0 apps in Oct–Nov 2022, and those builds only weak-imported it and never
+   called it. Hiding it behind `dlsym` would be concealment under §2.3.1. Of 51
+   Mac App Store apps on the test Mac, only Xcode references it. Every
+   third-party user found (Claude's `Helpers/disclaimer`, Codex, Chrome/CEF,
+   Electron ShipIt, iTerm2) ships Developer ID.
+2. **An unsandboxed executable in the MAS bundle is rejected at upload.** Our
+   own bundled ffmpeg/ffprobe got "App sandbox not enabled" on 14 Jul 2026. A
+   *sandboxed* disclaimed helper gains nothing, because the sandbox denies
+   another bundle's data container first.
+
+**Developer ID only: ship with risk.** If kept as a contingency there:
+- resolve the symbol with `dlsym`, with a fallback;
+- take the re-exec path from `_NSGetExecutablePath`, not `argv[0]` (`argv[0]`
+  turns the binary into a disclaim trampoline for anything);
+- compile out `BRISTLENOSE_DEV_MCP_HANDSHAKE` in release;
+- add a `check-pkg-shippable` gate on `_responsibility_` so the symbol can
+  never reach a MAS build.
+
+### 6.2 The route that works on both channels: a team-prefixed app group
+
+**The proxy ships sandboxed, with no `inherit`, carrying a Team-ID-prefixed
+application group (`Z56GZVA2QB.app.bristlenose…`).** Such a process can list,
+read and write that group's container with no grant and no tccd request. That
+holds whichever app is responsible for it. Apple's app-groups documentation
+gives the reason: macOS checks that the accessing code signature contains the
+same Developer Team ID.
+
+Measured on 29 Sep 2026 with a probe group, `Z56GZVA2QB.app.bristlenose.batest`:
+
+| Probe | Responsible process | Group container |
+|---|---|---|
+| team-signed, sandboxed, with the group | Claude Code (team Q6L2SF6YDW), even with a cached denial for our containers | **list, write, read ok** |
+| same | fresh Terminal | **ok** |
+| same | **ChatGPT.app** (probe run as a ChatGPT plugin's server) | **list, write, read, delete ok** |
+| team-signed, unsandboxed, no group | ChatGPT.app | denied |
+| team-signed, **unsandboxed but with** the group | fresh Terminal | denied: the entitlement only counts when sandboxed (*inferred* from one run) |
+| ad-hoc, sandboxed, with the group | Terminal | denied (not our Team ID) |
+| team-signed, sandboxed, no group | Terminal | denied |
+
+Two gotchas found on the way:
+- **A sandboxed bare Mach-O needs an embedded Info.plist**
+  (`-sectcreate __TEXT __info_plist`). Without one it traps at launch with exit
+  133 (*"Info.plist … has no value for kCFBundleIdentifierKey"*), a different
+  failure from the `inherit` exit 133 this codebase has seen before.
+- `taskgated-helper` logs *"Disallowing"* for the missing provisioning profile,
+  but access is granted anyway. Watch it on point releases.
+
+A helper `.app` launched through LaunchServices *is* its own responsible
+process and reads the data container. On the Mac App Store it must be sandboxed
+too, so it adds nothing over the group route.
+
+### 6.3 Options, ranked
+
+| # | Option | MAS review | Claude + ChatGPT |
+|---|---|---|---|
+| 1 | **Team-prefixed group container + sandboxed native proxy** | ship with risk: acceptance of a nested non-inherit tool carrying its own group is unverified until one TestFlight upload | both |
+| 2 | Mach IPC rendezvous under the group prefix (`CFMessagePort` / XPC). No token on disk; the long-run hardening against macOS 27's tightening on files created by other teams | ship with risk | both |
+| 3 | `SMAppService` agent with `MachServices` | as 2, plus the background-item notice (§2.4.5(iii)) | both |
+| 4 | LaunchServices helper `.app` | useless on MAS (must be sandboxed); needs a relay | — |
+| 5 | Files & Folders on MAS only | ships, but gives ChatGPT nothing on MAS (no Node, and a sandboxed Mach-O can't read the data container) | Claude only |
+| 6 | Handshake outside the container (temporary exception or bookmark) | two exceptions to justify; the token becomes readable by any same-user process | — |
+| 7 | Bonjour, a fixed port, or the keychain | none of these moves the token; the keychain needs a profile the bare proxy can't carry | — |
+
+### 6.4 Recommended: one mechanism on both channels
+
+- **Host:** add `Z56GZVA2QB.app.bristlenose` to the application groups in
+  **both** entitlements files, and write the handshake there while Agent Access
+  is on.
+  - The Mac App Store profile already authorises `XXXXXXXXXX.*`.
+  - Developer ID needs no profile for team-prefixed groups.
+  - Keep the data-container copy while the Node `.mcpb` exists.
+  - `tests/test_entitlements_split.py` must change deliberately: its claim
+    that the `.dmg` carries no app group holds only for `group.`-prefixed
+    groups.
+- **Proxy:** sandboxed with no `inherit`, `network.client`, the group, an
+  embedded Info.plist, tools compiled in, and no `responsibility_*` symbols
+  (gated). Ship it loose in the app bundle so Apple re-signs it.
+- **Claude:** build the `.mcpb` at runtime from the re-signed binary. A Mach-O
+  inside a zip is never re-signed, so whether a pre-built one runs is
+  *unverified*.
+
+### 6.5 Still open
+
+- **One TestFlight upload** carrying the nested sandboxed tool with its own
+  group.
+- **The group probe with Claude Desktop as the parent.** Pending: a clean
+  macOS 27 virtual machine is being prepared for the Claude tests.
+- A runtime-built `.mcpb`.
+- §2.5.2 / §2.4.5(ii), "installs code into other apps". This applies to
+  today's `.mcpb` as well, and needs review notes whichever route ships.
 
 ## 7. Recipes
 
@@ -339,4 +428,7 @@ ps -o pid,ppid,command -ax | grep -E 'bin/bristlenose-mcp|server/index.js'
 - [OpenAI: Package your plugin](https://developers.openai.com/codex/plugins/build)
 - [DEVONthink MCP server](https://www.devontechnologies.com/blog/20260526-devonthink-mcp-server) and
   [Apple: Giving external agents access to Xcode](https://developer.apple.com/documentation/xcode/giving-external-agents-access-to-xcode) — native helpers, no Node
+- [Qt forum 140400: App Store rejections naming the responsibility SPI (Qt 6.4.0, 2022)](https://forum.qt.io/topic/140400)
+- Apple Developer Forums [thread 731504](https://developer.apple.com/forums/thread/731504) (no general API for responsibility) and [thread 721701](https://developer.apple.com/forums/thread/721701) (team-prefixed app groups without a profile)
+- [Apple: Configuring app groups](https://developer.apple.com/documentation/xcode/configuring-app-groups) and the [`com.apple.security.application-groups` entitlement](https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.security.application-groups)
 - [ACE Studio: ChatGPT for desktop](https://docs.acestudio.ai/ai-agent/external-agent-access/chatgpt-for-desktop) — the clearest Work-vs-Chat explainer found

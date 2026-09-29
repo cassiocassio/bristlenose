@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toolbar search</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined from bristlenose/theme/tokens.css +
+   colors/palette-*.css (copied via docs/mockups/codebook-library-states.html).
+   Palette swap via data-color-theme; dark via light-dark() + color-scheme.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  --bn-emo-1-bg:   light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-task-1-bg:  light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-ux-1-bg:    light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 300), oklch(50% 0.12 300));
+  --bn-opp-1-bg:   light-dark(oklch(94% 0.03 75),  oklch(50% 0.10 75));
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-colour-highlight:   light-dark(#fef08a, #854d0e);
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-colour-highlight:   light-dark(#c4a96a, #6b5520);
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap { max-width:1040px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+h1 { font-size:var(--bn-text-display); font-weight:var(--bn-weight-emphasis); margin:0 0 .25rem; letter-spacing:-.01em; }
+h2 { font-size:var(--bn-text-title); font-weight:var(--bn-weight-emphasis); margin:3.5rem 0 .5rem; }
+h3 { font-size:var(--bn-text-heading); font-weight:var(--bn-weight-emphasis); margin:2rem 0 .5rem; }
+.lede { color:var(--bn-colour-muted); max-width:44rem; margin:0 0 1rem; }
+
+/* ---- page controls + key (page chrome, not product) ---- */
+.pagebar { display:flex; gap:1rem; flex-wrap:wrap; align-items:center; margin:1rem 0 1.5rem; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.seg { display:inline-flex; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); overflow:hidden; }
+.seg button { font:inherit; font-size:var(--bn-text-caption); border:0; background:transparent; color:var(--bn-colour-text); padding:.3rem .7rem; cursor:pointer; }
+.seg button + button { border-left:1px solid var(--bn-colour-border); }
+.seg button[aria-pressed="true"] { background:var(--bn-colour-accent); color:#fff; }
+.key { display:flex; gap:1.25rem; flex-wrap:wrap; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.key i { display:inline-block; width:1.4rem; height:.9rem; vertical-align:-2px; margin-right:.35rem; border-radius:3px; }
+.key .k-art { border:1px solid var(--bn-colour-border-hover); background:var(--bn-colour-bg); }
+.key .k-com { background:repeating-linear-gradient(135deg, var(--com-bg), var(--com-bg) 4px, var(--com-hatch) 4px, var(--com-hatch) 5px); border-left:3px solid var(--com-rule); }
+
+/* ---- commentary zone: deliberately not-the-product ---- */
+:root { --com-bg:light-dark(#fbfaf5,#17171a); --com-hatch:light-dark(#f1eee2,#1f1f24); --com-rule:light-dark(#b9a66b,#7d6e45); }
+.com {
+  margin:1rem 0 0; padding:1rem 1.25rem; font-size:var(--bn-text-label); line-height:1.55;
+  background:repeating-linear-gradient(135deg, var(--com-bg), var(--com-bg) 6px, var(--com-hatch) 6px, var(--com-hatch) 7px);
+  border-left:3px solid var(--com-rule); border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0;
+}
+.com::before { content:"Commentary"; display:block; font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); letter-spacing:.08em; text-transform:uppercase; color:var(--com-rule); margin-bottom:.4rem; }
+.com p { margin:.35rem 0; }
+.com ul, .com ol { margin:.35rem 0; padding-left:1.2rem; }
+.com li { margin:.2rem 0; }
+.com code { font-family:var(--bn-font-mono); font-size:.92em; }
+.com table { border-collapse:collapse; width:100%; margin:.5rem 0; font-size:var(--bn-text-caption); }
+.com th, .com td { text-align:left; vertical-align:top; padding:.35rem .5rem; border-bottom:1px solid var(--bn-colour-border); }
+.com th { font-weight:var(--bn-weight-emphasis); }
+.com .flag { color:light-dark(#b45309,#fbbf24); font-weight:var(--bn-weight-emphasis); }
+
+/* ---- artefact zone: window chrome ---- */
+.frame-label { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase; letter-spacing:.08em; color:var(--bn-colour-muted); margin:0 0 .35rem; }
+.win {
+  border:1px solid var(--bn-colour-border-hover); border-radius:12px; overflow:visible;
+  background:var(--bn-colour-bg); box-shadow:0 10px 30px var(--bn-colour-shadow), 0 0 0 .5px var(--bn-colour-shadow);
+  position:relative;
+}
+.tb {
+  display:flex; align-items:center; gap:.6rem; height:52px; padding:0 .75rem 0 .9rem;
+  border-bottom:1px solid var(--bn-colour-border);
+  background:light-dark(#f6f6f7,#1d1d1f); border-radius:12px 12px 0 0;
+  font-size:13px;
+}
+.lights { display:flex; gap:8px; margin-right:.4rem; }
+.lights span { width:12px; height:12px; border-radius:50%; background:#ff5f57; }
+.lights span:nth-child(2){ background:#febc2e; } .lights span:nth-child(3){ background:#28c840; }
+.ttl { display:flex; flex-direction:column; line-height:1.15; min-width:0; }
+.ttl b { font-weight:600; font-size:13px; white-space:nowrap; }
+.ttl small { color:var(--bn-colour-muted); font-size:11px; white-space:nowrap; }
+.tb .sp { flex:1; }
+.tbtn {
+  height:30px; min-width:30px; padding:0 9px; display:inline-flex; align-items:center; justify-content:center; gap:5px;
+  border-radius:var(--bn-radius-pill); color:light-dark(#3c3c43,#d1d1d6);
+  background:light-dark(rgba(0,0,0,.045),rgba(255,255,255,.07));
+  font-size:12px; white-space:nowrap;
+}
+.tbtn svg { width:15px; height:15px; }
+.tbtn.dim { opacity:.35; }
+.tbtn.on { background:var(--bn-colour-accent); color:#fff; }
+/* the search capsule — mirrors QuotesSearchToolbarControl (quaternary capsule) */
+.cap {
+  height:30px; display:inline-flex; align-items:center; gap:5px; padding:0 8px 0 9px;
+  border-radius:var(--bn-radius-pill); background:light-dark(rgba(0,0,0,.06),rgba(255,255,255,.09));
+  font-size:13px; color:var(--bn-colour-text); min-width:190px;
+}
+.cap.focus { box-shadow:0 0 0 3px light-dark(rgba(0,122,255,.35),rgba(10,132,255,.45)); }
+.cap svg { width:13px; height:13px; color:var(--bn-colour-muted); flex:none; }
+.cap .ph { color:var(--bn-colour-muted); }
+.cap .caret { display:inline-block; width:1px; height:15px; background:var(--bn-colour-accent); margin-left:-3px; animation:blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity:0; } }
+.cap .x { margin-left:auto; width:14px; height:14px; border-radius:50%; background:var(--bn-colour-muted); opacity:.55; flex:none; position:relative; }
+.cap .x::before,.cap .x::after{ content:""; position:absolute; left:3px; right:3px; top:6.3px; height:1.4px; background:var(--bn-colour-bg); transform:rotate(45deg); }
+.cap .x::after{ transform:rotate(-45deg); }
+.cap .count { font-size:11px; color:var(--bn-colour-muted); font-variant-numeric:tabular-nums; margin-left:auto; }
+.cap .count + .x { margin-left:6px; }
+/* Mail-style search token inside the field */
+.tok { display:inline-flex; align-items:center; gap:3px; height:20px; padding:0 7px; border-radius:5px; font-size:12px; white-space:nowrap;
+  background:light-dark(rgba(0,122,255,.13),rgba(10,132,255,.28)); color:light-dark(#0a4fae,#bcd8ff); }
+.tok small { opacity:.7; font-size:11px; }
+
+.body { padding:1rem 1.25rem 1.25rem; min-height:120px; font-size:var(--bn-text-label); }
+.split { display:grid; grid-template-columns:190px 1fr; }
+.side { border-right:1px solid var(--bn-colour-border); padding:.75rem .5rem; font-size:12.5px; background:light-dark(#fafafa,#161618); border-radius:0 0 0 12px; }
+.side .grp { font-size:11px; color:var(--bn-colour-muted); font-weight:600; padding:.5rem .5rem .2rem; }
+.side .row { padding:.25rem .5rem; border-radius:6px; display:flex; gap:.45rem; align-items:baseline; }
+.side .row.sel { background:light-dark(rgba(0,0,0,.07),rgba(255,255,255,.09)); }
+.side .dot { width:7px; height:7px; border-radius:50%; background:var(--bn-colour-accent); flex:none; transform:translateY(-1px); }
+.side .dot.off { background:transparent; }
+
+/* ---- real component recipes ---- */
+.badge { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); padding:.08rem .45rem; border-radius:var(--bn-radius-sm); white-space:nowrap; }
+.search-mark { background:var(--bn-colour-highlight); border-radius:2px; padding:0 1px; color:inherit; }
+.search-mark.cur { outline:2px solid light-dark(#f59e0b,#fbbf24); outline-offset:0; }
+.spk { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); color:var(--bn-colour-muted); }
+.tc { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); color:var(--bn-colour-accent); text-decoration:none; }
+.quote { background:var(--bn-colour-quote-bg); border-radius:var(--bn-radius-md); padding:.55rem .75rem; margin:.4rem 0; }
+.quote p { margin:0 0 .3rem; font-size:var(--bn-text-body); line-height:1.45; }
+.quote .meta { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
+.muted { color:var(--bn-colour-muted); }
+.faint { opacity:.35; }
+.trow { display:grid; grid-template-columns:52px 34px 1fr; gap:.5rem; padding:.3rem 0; align-items:baseline; font-size:var(--bn-text-body); }
+.tbl { width:100%; border-collapse:collapse; font-size:var(--bn-text-label); }
+.tbl th { text-align:left; font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-muted); font-size:var(--bn-text-caption); padding:.3rem .5rem; border-bottom:1px solid var(--bn-colour-border); }
+.tbl td { padding:.4rem .5rem; border-bottom:1px solid var(--bn-colour-border); }
+.hits { font-size:11px; font-variant-numeric:tabular-nums; background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); border-radius:var(--bn-radius-pill); padding:0 .45rem; }
+.card { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:.6rem .75rem; }
+.cards { display:grid; grid-template-columns:repeat(3,1fr); gap:.6rem; }
+.card h4 { margin:0 0 .25rem; font-size:var(--bn-text-label); font-weight:var(--bn-weight-emphasis); }
+.card .n { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.cb-row { display:flex; justify-content:space-between; padding:.3rem .5rem; border-radius:var(--bn-radius-sm); }
+.cb-row + .cb-row { border-top:1px solid var(--bn-colour-border); }
+
+/* ---- global search popover (NSMenu-ish suggestions, Mail precedent) ---- */
+.pop {
+  position:absolute; right:14px; top:48px; width:440px; z-index:5;
+  background:light-dark(rgba(250,250,251,.97),rgba(40,40,44,.97)); backdrop-filter:blur(20px);
+  border:.5px solid light-dark(rgba(0,0,0,.18),rgba(255,255,255,.14)); border-radius:10px;
+  box-shadow:0 12px 36px rgba(0,0,0,.22); padding:5px; font-size:13px;
+}
+.pop .hd { font-size:11px; font-weight:600; color:var(--bn-colour-muted); padding:.45rem .55rem .15rem; display:flex; justify-content:space-between; }
+.pop .hd span:last-child { font-weight:400; font-variant-numeric:tabular-nums; }
+.pop .it { display:grid; grid-template-columns:18px 1fr auto; gap:.5rem; align-items:center; padding:.28rem .55rem; border-radius:5px; }
+.pop .it svg { width:14px; height:14px; color:var(--bn-colour-muted); }
+.pop .it.hl { background:var(--bn-colour-accent); color:#fff; }
+.pop .it.hl svg, .pop .it.hl .sub, .pop .it.hl .muted { color:rgba(255,255,255,.85); }
+.pop .it .one { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pop .sub { font-size:11.5px; color:var(--bn-colour-muted); white-space:nowrap; }
+.pop .sep { height:1px; background:light-dark(rgba(0,0,0,.1),rgba(255,255,255,.1)); margin:4px 6px; }
+.pop .foot { display:flex; gap:1rem; justify-content:flex-end; font-size:11px; color:var(--bn-colour-muted); padding:.3rem .55rem .15rem; }
+.pop kbd, .kb { font-family:var(--bn-font-body); font-size:11px; border:1px solid var(--bn-colour-border-hover); border-bottom-width:2px; border-radius:4px; padding:0 4px; }
+.pop .it.hl mark { background:rgba(255,255,255,.28); color:#fff; }
+.pop mark { background:transparent; color:inherit; font-weight:600; }
+
+/* ---- results pseudo-lens ---- */
+.scopebar { display:flex; align-items:center; gap:.5rem; padding:.45rem 1.25rem; border-bottom:1px solid var(--bn-colour-border); font-size:12px; background:light-dark(#fbfbfc,#141416); }
+.scopebar .lbl { color:var(--bn-colour-muted); }
+.scopebar .s { padding:.12rem .6rem; border-radius:var(--bn-radius-pill); color:var(--bn-colour-text); }
+.scopebar .s.on { background:light-dark(rgba(0,0,0,.08),rgba(255,255,255,.12)); font-weight:600; }
+.scopebar .right { margin-left:auto; color:var(--bn-colour-muted); }
+.jump { display:flex; gap:.4rem; flex-wrap:wrap; margin:0 0 1rem; }
+.jump a { font-size:12px; text-decoration:none; color:var(--bn-colour-text); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); padding:.1rem .6rem; }
+.jump a b { font-weight:600; font-variant-numeric:tabular-nums; margin-right:.2rem; }
+.rsec { margin:1.1rem 0 0; }
+.rsec > .h { display:flex; align-items:baseline; gap:.6rem; border-bottom:1px solid var(--bn-colour-border); padding-bottom:.25rem; margin-bottom:.3rem; }
+.rsec > .h b { font-size:var(--bn-text-label); font-weight:var(--bn-weight-emphasis); }
+.rsec > .h .n { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); font-variant-numeric:tabular-nums; }
+.rsec > .h a { margin-left:auto; font-size:var(--bn-text-caption); color:var(--bn-colour-accent); text-decoration:none; }
+.prov { display:inline-flex; align-items:center; gap:.3rem; font-size:11.5px; font-weight:600; color:var(--bn-colour-text); background:light-dark(#eef2f7,#1f2733); border-radius:var(--bn-radius-sm); padding:.05rem .45rem; white-space:nowrap; }
+.prov.off { color:var(--bn-colour-muted); font-weight:420; }
+.pchips { display:flex; gap:.4rem; flex-wrap:wrap; }
+.pchip { display:inline-flex; gap:.35rem; align-items:baseline; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); padding:.25rem .55rem; font-size:var(--bn-text-label); }
+.notice { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-top:1rem; padding-top:.6rem; border-top:1px dashed var(--bn-colour-border); }
+
+.state { display:none; } .state.on { display:block; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; }
+.lens { margin:2.25rem 0 0; }
+.lens > .frame-label b { color:var(--bn-colour-text); }
+@media (max-width:760px){ .grid2,.cards{ grid-template-columns:1fr; } .split{ grid-template-columns:1fr; } .side{ display:none; } .pop{ width:auto; left:8px; right:8px; } .cap{ min-width:0 !important; flex:1; } .tb .tbtn, .lights{ display:none; } .ttl{ overflow:hidden; max-width:40%; } .ttl b, .ttl small{ overflow:hidden; text-overflow:ellipsis; } .scopebar{ flex-wrap:wrap; } }
+@media (prefers-reduced-motion:reduce){ .cap .caret{ animation:none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Search in the toolbar</h1>
+<p class="lede">Part 1 proposes a search for each lens. Part 2 merges them into one field that finds people, quotes, transcript lines, tags, themes, signals and sessions. It searches the current project, or every project in the current folder, and lists the results in a single view.</p>
+
+<div class="pagebar">
+  <div class="key"><span><i class="k-art"></i>Artefact: what the product shows</span><span><i class="k-com"></i>Commentary: why</span></div>
+  <span style="margin-left:auto">Palette</span>
+  <div class="seg" id="pal"><button data-pal="default" aria-pressed="true">Default</button><button data-pal="edo" aria-pressed="false">Edo</button></div>
+  <span>Scheme</span>
+  <div class="seg" id="sch"><button data-s="light dark" aria-pressed="true">Auto</button><button data-s="light" aria-pressed="false">Light</button><button data-s="dark" aria-pressed="false">Dark</button></div>
+</div>
+
+<div class="com">
+  <p><b>What exists today.</b> Search only works in the Quotes lens. The SPA filters in the browser: a case-insensitive substring match from 3 characters, with a 150 ms debounce (<code>utils/filter.ts</code>). It checks the quote text, speaker name, tag names and sentiment. Matches are highlighted with <code>.search-mark</code>. On the Mac the field is a native capsule (<code>QuotesToolbarControls.swift</code>) and ⌘F focuses it. Sessions, Codebook and Signals show a disabled <code>SearchComingSoonButton</code>, and the Project lens shows no search control at all.</p>
+  <p><b>No search runs on the server.</b> No route takes a <code>q</code> parameter, and nothing uses FTS5 or embeddings. MCP <code>search_quotes</code> loads every quote and runs the same substring match in Python. <span class="flag">Stale claim:</span> <code>design-multi-project.md</code> §3b says FTS5 is "already available in the per-project schema". It is not.</p>
+</div>
+
+<!-- ======================================================================= -->
+<h2>Part 1 — One search per lens</h2>
+<p class="lede">The per-lens searches come in two different shapes. A <b>filter</b> narrows a set: rows that don't match disappear. A <b>find</b> moves a cursor through a document: nothing disappears, and you step from hit to hit. Four lenses are filters and the transcript is a find. That is why ⌘G was withdrawn from the Quotes lens (a filter has no cursor to step), and why it comes back in the transcript.</p>
+
+<!-- Quotes -->
+<div class="lens">
+  <p class="frame-label"><b>Quotes</b> · filter · shipped, plus a count</p>
+  <div class="win">
+    <div class="tb">
+      <div class="lights"><span></span><span></span><span></span></div>
+      <div class="ttl"><b>IKEA checkout study</b><small>Quotes · 23 of 214</small></div>
+      <div class="sp"></div>
+      <span class="tbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15 9 22 9 16.5 14 18.5 21 12 17 5.5 21 7.5 14 2 9 9 9"/></svg></span>
+      <span class="tbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1"/></svg></span>
+      <span class="cap focus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>delivery<span class="caret"></span><span class="count">23</span><span class="x"></span></span>
+    </div>
+    <div class="body">
+      <div class="quote"><p>“I got all the way to the end and then the <mark class="search-mark">delivery</mark> was £45, which is more than the shelf.”</p><div class="meta"><a class="tc" href="#">12:04</a><span class="spk">p2 Tom</span><span class="badge" style="background:var(--bn-emo-1-bg)">frustration</span><span class="badge">hidden costs</span></div></div>
+      <div class="quote"><p>“Click and collect or <mark class="search-mark">delivery</mark>? I don’t know which one is cheaper until I’ve picked.”</p><div class="meta"><a class="tc" href="#">08:51</a><span class="spk">p1 Amira</span><span class="badge" style="background:var(--bn-emo-1-bg)">confusion</span></div></div>
+    </div>
+  </div>
+  <div class="com">
+    <p><b>Keep it as it is,</b> and add two things. <b>(1)</b> Put the match count inside the capsule and in the window subtitle (“23 of 214”). The vanilla report used to show a count, and the SPA dropped it. <b>(2)</b> Allow <b>token prefixes</b> in the same field, <code>p3</code>, <code>#trust</code> and <code>is:starred</code>, so the keyboard can reach the tag sidebar's job. Both Mail and Finder offer the same thing as a suggestion menu. Part 2 builds that menu and makes it the shared mechanism, so this lens needs no separate syntax.</p>
+  </div>
+</div>
+
+<!-- Transcript -->
+<div class="lens">
+  <p class="frame-label"><b>Session transcript</b> · find, not filter · the step recorded as next</p>
+  <div class="win">
+    <div class="tb">
+      <div class="lights"><span></span><span></span><span></span></div>
+      <div class="ttl"><b>IKEA checkout study</b><small>s2 · Tom · 41 min</small></div>
+      <div class="sp"></div>
+      <span class="tbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></span>
+      <span class="tbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+      <span class="cap focus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>delivery<span class="caret"></span><span class="count">3 of 7</span><span class="x"></span></span>
+    </div>
+    <div class="body">
+      <div class="trow"><a class="tc" href="#">11:40</a><span class="spk">m1</span><span class="muted">And what did you expect to happen next?</span></div>
+      <div class="trow"><a class="tc" href="#">11:52</a><span class="spk">p2</span><span>I thought it’d tell me the <mark class="search-mark">delivery</mark> price on the product page, honestly.</span></div>
+      <div class="trow"><a class="tc" href="#">12:04</a><span class="spk">p2</span><span>I got all the way to the end and then the <mark class="search-mark cur">delivery</mark> was £45, which is more than the shelf.</span></div>
+      <div class="trow"><a class="tc" href="#">12:19</a><span class="spk">m1</span><span class="muted">Mm. What would you do at that point?</span></div>
+    </div>
+  </div>
+  <div class="com">
+    <p>Every hit is highlighted and one of them is the <b>current</b> hit (outlined). ⌘G and ⇧⌘G step forward and back, and the transcript scrolls to keep the current hit in view. This brings back the Find Next and Find Previous menu items that are commented out at <code>MenuCommands.swift:751-791</code>. It is also the condition the private notes set for restoring them.</p>
+    <p>When the playhead follows the current hit, a researcher can hear every mention of a word in about a minute. No other lens can do that. It is also the <b>highest-value item on record</b> (menu review, Finding 20). It needs no server work: the transcript is already loaded, so this is a DOM walk plus a cursor.</p>
+  </div>
+</div>
+
+<!-- Sessions + Codebook -->
+<div class="grid2">
+<div class="lens">
+  <p class="frame-label"><b>Sessions</b> · filter rows + count hits in transcripts</p>
+  <div class="win">
+    <div class="tb">
+      <div class="lights"><span></span><span></span><span></span></div>
+      <div class="ttl"><b>IKEA checkout study</b><small>Sessions · 5 of 8</small></div>
+      <div class="sp"></div>
+      <span class="cap focus" style="min-width:140px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>delivery<span class="caret"></span><span class="x"></span></span>
+    </div>
+    <div class="body">
+      <table class="tbl"><tr><th>Session</th><th>Participant</th><th style="text-align:right">Mentions</th></tr>
+        <tr><td>s2</td><td>Tom</td><td style="text-align:right"><span class="hits">7</span></td></tr>
+        <tr><td>s1</td><td>Amira</td><td style="text-align:right"><span class="hits">4</span></td></tr>
+        <tr><td>s5</td><td>Jo</td><td style="text-align:right"><span class="hits">2</span></td></tr>
+        <tr class="faint"><td>s3</td><td>Priya</td><td style="text-align:right">—</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="com">
+    <p>This matches participant names, speaker codes, session ids, filenames and dates, and it also counts <b>mentions in each transcript</b>. Clicking a row opens that transcript with Find already running on the same word, so the list and the transcript chain together.</p>
+    <p>Rows with no match are dimmed rather than hidden, so the session numbering stays readable. The counts need either every transcript loaded in the client or the server endpoint from Part 3.</p>
+  </div>
+</div>
+
+<div class="lens">
+  <p class="frame-label"><b>Codebook</b> · filter tags by name + definition</p>
+  <div class="win">
+    <div class="tb">
+      <div class="lights"><span></span><span></span><span></span></div>
+      <div class="ttl"><b>IKEA checkout study</b><small>Codebook · 3 tags</small></div>
+      <div class="sp"></div>
+      <span class="tbtn">Library</span>
+      <span class="cap focus" style="min-width:140px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>cost<span class="caret"></span><span class="x"></span></span>
+    </div>
+    <div class="body">
+      <div class="muted" style="font-size:11px;font-weight:600;margin:.2rem .5rem">UXR · Friction</div>
+      <div class="cb-row"><span><span class="badge" style="background:var(--bn-opp-1-bg)">hidden <mark class="search-mark">cost</mark>s</span></span><span class="muted">14 quotes</span></div>
+      <div class="cb-row"><span><span class="badge" style="background:var(--bn-opp-1-bg)">price surprise</span> <span class="muted" style="font-size:11px">— “…total <mark class="search-mark">cost</mark> revealed late”</span></span><span class="muted">6</span></div>
+      <div class="muted" style="font-size:11px;font-weight:600;margin:.6rem .5rem .2rem">Nielsen · Visibility</div>
+      <div class="cb-row"><span><span class="badge" style="background:var(--bn-ux-1-bg)">system status</span> <span class="muted" style="font-size:11px">— “…<mark class="search-mark">cost</mark> of an action”</span></span><span class="muted">2</span></div>
+    </div>
+  </div>
+  <div class="com">
+    <p>This searches tag names first and then their definitions. A match inside a definition is shown as a short snippet, so you can see why the row matched. Groups with no matching tag disappear, because in this lens hiding is what a filter is for. The same field also filters the Library sheet (<code>design-codebook-v2.md:254</code>: the manager needs search more than the catalogue does).</p>
+  </div>
+</div>
+</div>
+
+<!-- Signals + Project -->
+<div class="grid2">
+<div class="lens">
+  <p class="frame-label"><b>Signals</b> · filter cards, dim the heatmap</p>
+  <div class="win">
+    <div class="tb">
+      <div class="lights"><span></span><span></span><span></span></div>
+      <div class="ttl"><b>IKEA checkout study</b><small>Signals · 2 of 11</small></div>
+      <div class="sp"></div>
+      <span class="cap focus" style="min-width:140px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>delivery<span class="caret"></span><span class="x"></span></span>
+    </div>
+    <div class="body">
+      <div class="cards" style="grid-template-columns:1fr 1fr">
+        <div class="card"><h4>Checkout — <mark class="search-mark">delivery</mark> options</h4><div class="n">frustration · 9 quotes · 4 people</div></div>
+        <div class="card"><h4>Hidden costs</h4><div class="n">doubt · 6 quotes · 3 people · <mark class="search-mark">delivery</mark> in 5</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="com">
+    <p>A card matches when its section or theme label matches, or when the quotes behind it contain the word. The card then says how many of its quotes do (“delivery in 5”). In the heatmap, cells that don't match are dimmed rather than removed, so the grid keeps its shape. Signals are computed when the page is requested, so this filters their <b>labels and the quote ids behind them</b>. Nothing new needs to be stored.</p>
+  </div>
+</div>
+
+<div class="lens">
+  <p class="frame-label"><b>Project</b> · no local search: the field is the global one</p>
+  <div class="win">
+    <div class="tb">
+      <div class="lights"><span></span><span></span><span></span></div>
+      <div class="ttl"><b>IKEA checkout study</b><small>Project</small></div>
+      <div class="sp"></div>
+      <span class="cap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg><span class="ph">Search project</span></span>
+    </div>
+    <div class="body">
+      <div class="cards"><div class="card"><div class="n">Sessions</div><b>8</b></div><div class="card"><div class="n">Quotes</div><b>214</b></div><div class="card"><div class="n">Themes</div><b>11</b></div></div>
+    </div>
+  </div>
+  <div class="com">
+    <p>The dashboard has too little on it to filter. Its field is therefore the <b>global</b> search from Part 2 (placeholder “Search project”) rather than a disabled button. It is also where a researcher who doesn't yet know which lens holds the answer will start.</p>
+  </div>
+</div>
+</div>
+
+<div class="com">
+  <p><b>Summary of Part 1.</b></p>
+  <table>
+    <tr><th>Lens</th><th>Shape</th><th>Matches</th><th>Non-match</th><th>⌘G</th><th>Needs server?</th></tr>
+    <tr><td>Quotes</td><td>filter</td><td>text, edits, speaker, tags, sentiment</td><td>hidden</td><td>—</td><td>no (shipped)</td></tr>
+    <tr><td>Transcript</td><td>find</td><td>segment text</td><td>kept</td><td>next / prev</td><td>no</td></tr>
+    <tr><td>Sessions</td><td>filter + counts</td><td>people, codes, ids, filenames, dates; transcript mentions</td><td>dimmed</td><td>—</td><td>for counts</td></tr>
+    <tr><td>Codebook</td><td>filter</td><td>tag and group names, definitions</td><td>hidden</td><td>—</td><td>no</td></tr>
+    <tr><td>Signals</td><td>filter</td><td>section and theme labels, quotes behind cards</td><td>dimmed (grid)</td><td>—</td><td>no</td></tr>
+    <tr><td>Project</td><td>global entry</td><td>everything (Part 2)</td><td>—</td><td>—</td><td>yes</td></tr>
+  </table>
+  <p>All six use <b>one</b> native capsule, extended beyond Quotes. The bridge message would change from <code>setSearchQuery</code> to <code>setSearchQuery {lens, text}</code>. The <code>canSearch</code> gate would open on every lens except Welcome, which stays dim by decision (Finding 19). Search is still not restored between app launches (<code>LensMemory.swift:25</code>).</p>
+</div>
+
+<!-- ======================================================================= -->
+<h2>Part 2 — One field that finds everything</h2>
+<p class="lede">The merge keeps the per-lens field and adds suggestions as you type, in the way Mail does. Pressing ↩ does what it does today and filters the lens you are in. Choosing a suggestion turns the field's contents into a token (a person, a tag, a theme) or opens that item. ⌘↩ opens every result, grouped by type, in a single results view.</p>
+
+<div class="pagebar" style="margin-top:0">
+  <span>State</span>
+  <div class="seg" id="st">
+    <button data-st="typing" aria-pressed="true">1 · Typing</button>
+    <button data-st="token" aria-pressed="false">2 · Token applied</button>
+    <button data-st="proj" aria-pressed="false">3 · All results: project</button>
+    <button data-st="folder" aria-pressed="false">4 · All results: folder</button>
+  </div>
+</div>
+
+<p class="frame-label" id="st-label">after typing “deliv” in the Quotes lens</p>
+<div class="win" style="margin-bottom:.5rem">
+  <div class="tb">
+    <div class="lights"><span></span><span></span><span></span></div>
+    <div class="ttl"><b>IKEA checkout study</b><small id="st-sub">Quotes</small></div>
+    <div class="sp"></div>
+    <span class="tbtn st-q"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15 9 22 9 16.5 14 18.5 21 12 17 5.5 21 7.5 14 2 9 9 9"/></svg></span>
+    <span class="tbtn st-q"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1"/></svg></span>
+    <!-- capsule variants -->
+    <span class="cap focus state on" data-for="typing" style="min-width:250px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>deliv<span class="caret"></span><span class="x"></span></span>
+    <span class="cap state" data-for="token" style="min-width:250px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg><span class="tok"><small>Person</small> p2 Tom</span><span class="tok"><small>Tag</small> hidden costs</span><span class="count">4</span><span class="x"></span></span>
+    <span class="cap state" data-for="proj folder" style="min-width:250px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>delivery<span class="x"></span></span>
+  </div>
+
+  <!-- STATE 1: suggestions popover -->
+  <div class="pop state on" data-for="typing" role="listbox">
+    <div class="it hl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/></svg><span class="one">Quotes containing “<mark>deliv</mark>”</span><span class="sub">23</span></div>
+    <div class="hd"><span>People</span><span></span></div>
+    <div class="it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg><span class="one">p2 Tom <span class="muted">· says “<mark>deliv</mark>…” most</span></span><span class="sub">7</span></div>
+    <div class="hd"><span>Tags</span><span></span></div>
+    <div class="it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/></svg><span class="one"><span class="badge" style="background:var(--bn-opp-1-bg)"><mark>deliv</mark>ery time</span></span><span class="sub">5 quotes</span></div>
+    <div class="hd"><span>Sections &amp; themes</span><span></span></div>
+    <div class="it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="17" y2="18"/></svg><span class="one">Checkout — <mark>deliv</mark>ery options</span><span class="sub">section · 9</span></div>
+    <div class="hd"><span>Signals</span><span></span></div>
+    <div class="it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span class="one"><mark>Deliv</mark>ery options × frustration</span><span class="sub">4 people</span></div>
+    <div class="hd"><span>Transcripts</span><span></span></div>
+    <div class="it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg><span class="one">41 lines in 6 sessions</span><span class="sub">s2 has 7</span></div>
+    <div class="sep"></div>
+    <div class="it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg><span class="one">Show all results for “<mark>deliv</mark>”</span><span class="sub">⌘↩</span></div>
+    <div class="foot"><span><kbd>↩</kbd> filter Quotes</span><span><kbd>↑</kbd><kbd>↓</kbd> choose</span><span><kbd>esc</kbd> close</span></div>
+  </div>
+
+  <!-- STATE 1 backdrop: the Quotes lens under the menu -->
+  <div class="body state on" data-for="typing" style="min-height:470px">
+    <div class="quote" style="max-width:52%"><p>“The kitchen planner kept losing my measurements whenever I went back a step.”</p><div class="meta"><a class="tc" href="#">04:18</a><span class="spk">p3 Priya</span><span class="badge" style="background:var(--bn-emo-1-bg)">frustration</span></div></div>
+    <div class="quote" style="max-width:52%"><p>“Click and collect or delivery? I don’t know which one is cheaper until I’ve picked.”</p><div class="meta"><a class="tc" href="#">08:51</a><span class="spk">p1 Amira</span><span class="badge" style="background:var(--bn-emo-1-bg)">confusion</span></div></div>
+    <div class="quote" style="max-width:52%"><p>“I liked that it showed the stock at my store straight away.”</p><div class="meta"><a class="tc" href="#">10:02</a><span class="spk">p5 Jo</span><span class="badge" style="background:var(--bn-emo-1-bg)">satisfaction</span></div></div>
+  </div>
+
+  <!-- STATE 2: token applied, lens filtered -->
+  <div class="body state" data-for="token">
+    <div class="quote"><p>“I got all the way to the end and then the delivery was £45, which is more than the shelf.”</p><div class="meta"><a class="tc" href="#">12:04</a><span class="spk">p2 Tom</span><span class="badge" style="background:var(--bn-emo-1-bg)">frustration</span><span class="badge" style="background:var(--bn-opp-1-bg)">hidden costs</span></div></div>
+    <div class="quote"><p>“The fitting kit was extra too. Every screen found another tenner.”</p><div class="meta"><a class="tc" href="#">19:33</a><span class="spk">p2 Tom</span><span class="badge" style="background:var(--bn-emo-1-bg)">doubt</span><span class="badge" style="background:var(--bn-opp-1-bg)">hidden costs</span></div></div>
+  </div>
+
+  <!-- STATE 3/4: results pseudo-lens -->
+  <div class="state" data-for="proj folder">
+    <div class="scopebar">
+      <span class="lbl">Search:</span>
+      <span class="s sc-proj">This project</span>
+      <span class="s sc-folder">IKEA <span class="muted">(folder · 3 projects)</span></span>
+      <span class="right sc-proj-only">77 results</span>
+      <span class="right sc-folder-only">112 results in 3 projects</span>
+    </div>
+    <div class="split">
+      <div class="side">
+        <div class="grp">Results</div>
+        <div class="row sel"><span class="dot"></span>All<span class="muted" style="margin-left:auto"><span class="sc-proj-only">77</span><span class="sc-folder-only">112</span></span></div>
+        <div class="row"><span class="dot off"></span>Quotes<span class="muted" style="margin-left:auto"><span class="sc-proj-only">23</span><span class="sc-folder-only">49</span></span></div>
+        <div class="row"><span class="dot off"></span>Transcripts<span class="muted" style="margin-left:auto"><span class="sc-proj-only">41</span><span class="sc-folder-only">38</span></span></div>
+        <div class="row"><span class="dot off"></span>People<span class="muted" style="margin-left:auto"><span class="sc-proj-only">3</span><span class="sc-folder-only">7</span></span></div>
+        <div class="row"><span class="dot off"></span>Tags<span class="muted" style="margin-left:auto"><span class="sc-proj-only">1</span><span class="sc-folder-only">1</span></span></div>
+        <div class="row"><span class="dot off"></span>Sections &amp; themes<span class="muted" style="margin-left:auto"><span class="sc-proj-only">1</span><span class="sc-folder-only">3</span></span></div>
+        <div class="row"><span class="dot off"></span>Signals<span class="muted" style="margin-left:auto"><span class="sc-proj-only">2</span><span class="sc-folder-only">4</span></span></div>
+        <div class="row"><span class="dot off"></span>Sessions<span class="muted" style="margin-left:auto"><span class="sc-proj-only">6</span><span class="sc-folder-only">10</span></span></div>
+      </div>
+      <div class="body">
+        <!-- project scope -->
+        <div class="sc-proj-only">
+          <div class="rsec" style="margin-top:0"><div class="h"><b>People</b><span class="n">3</span></div>
+            <div class="pchips"><span class="pchip"><b>p2 Tom</b><span class="hits">7</span></span><span class="pchip"><b>p1 Amira</b><span class="hits">4</span></span><span class="pchip"><b>p5 Jo</b><span class="hits">2</span></span></div></div>
+          <div class="rsec"><div class="h"><b>Quotes</b><span class="n">23</span><a href="#">Show all in Quotes →</a></div>
+            <div class="quote"><p>“I got all the way to the end and then the <mark class="search-mark">delivery</mark> was £45…”</p><div class="meta"><a class="tc" href="#">12:04</a><span class="spk">p2 Tom</span><span class="badge" style="background:var(--bn-emo-1-bg)">frustration</span><span class="muted" style="font-size:11px">Checkout — delivery options</span></div></div>
+            <div class="quote"><p>“Click and collect or <mark class="search-mark">delivery</mark>? I don’t know which one is cheaper until I’ve picked.”</p><div class="meta"><a class="tc" href="#">08:51</a><span class="spk">p1 Amira</span><span class="badge" style="background:var(--bn-emo-1-bg)">confusion</span></div></div>
+          </div>
+          <div class="rsec"><div class="h"><b>Transcripts</b><span class="n">41 lines · 6 sessions</span><a href="#">Show all →</a></div>
+            <div class="trow"><a class="tc" href="#">s2 11:52</a><span class="spk">p2</span><span>I thought it’d tell me the <mark class="search-mark">delivery</mark> price on the product page, honestly.</span></div>
+            <div class="trow"><a class="tc" href="#">s5 03:10</a><span class="spk">p5</span><span>Is <mark class="search-mark">delivery</mark> next day or is that only for the small stuff?</span></div>
+          </div>
+          <div class="rsec"><div class="h"><b>Tags · Sections · Signals</b><span class="n">4</span></div>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+              <span class="badge" style="background:var(--bn-opp-1-bg)">delivery time</span>
+              <span class="pchip">§ Checkout — <mark class="search-mark">delivery</mark> options</span>
+              <span class="pchip">▦ <mark class="search-mark">Delivery</mark> options × frustration</span>
+              <span class="pchip">▦ Hidden costs × doubt</span>
+            </div></div>
+        </div>
+        <!-- folder scope -->
+        <div class="sc-folder-only">
+          <div class="rsec" style="margin-top:0"><div class="h"><b>Quotes</b><span class="n">49 in 3 projects</span><a href="#">Show all →</a></div>
+            <div class="quote"><div class="meta" style="margin-bottom:.3rem"><span class="prov">IKEA checkout study</span></div><p>“I got all the way to the end and then the <mark class="search-mark">delivery</mark> was £45…”</p><div class="meta"><a class="tc" href="#">12:04</a><span class="spk">p2</span><span class="badge" style="background:var(--bn-emo-1-bg)">frustration</span></div></div>
+            <div class="quote"><div class="meta" style="margin-bottom:.3rem"><span class="prov">IKEA bookcase finder</span></div><p>“It fits, great — but will they <mark class="search-mark">deliver</mark> up four flights?”</p><div class="meta"><a class="tc" href="#">22:40</a><span class="spk">p4</span><span class="badge" style="background:var(--bn-emo-1-bg)">doubt</span></div></div>
+            <div class="quote"><div class="meta" style="margin-bottom:.3rem"><span class="prov">IKEA returns pilot</span></div><p>“Collecting it back costs the same as the <mark class="search-mark">delivery</mark> did.”</p><div class="meta"><a class="tc" href="#">05:12</a><span class="spk">p1</span><span class="badge" style="background:var(--bn-emo-1-bg)">frustration</span></div></div>
+          </div>
+          <div class="rsec"><div class="h"><b>People</b><span class="n">7 speakers in 3 projects</span></div>
+            <div class="pchips"><span class="pchip"><span class="prov">checkout</span><b>p2</b><span class="hits">7</span></span><span class="pchip"><span class="prov">bookcase</span><b>p4</b><span class="hits">5</span></span><span class="pchip"><span class="prov">returns</span><b>p1</b><span class="hits">3</span></span><span class="pchip muted">+4</span></div></div>
+          <div class="rsec"><div class="h"><b>Tags</b><span class="n">in 2 of 3 projects</span></div>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center"><span class="badge" style="background:var(--bn-opp-1-bg)">delivery time</span><span class="muted" style="font-size:12px">checkout 5 · returns 3</span></div></div>
+          <div class="notice">1 project on an unmounted volume was not searched: <span class="prov off">IKEA kitchen planner — Samsung T7</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="com" id="com-typing">
+  <p><b>This is the pattern Mail and Finder already use.</b> The first row, highlighted, is always the free-text match for the lens you are in, so pressing ↩ keeps today's behaviour exactly. Below it, one suggestion per type (people, tags, sections, signals, transcripts), with a count on every row so the menu also answers “how much is there?”. The menu is capped at about 8 rows, and the last one opens all results.</p>
+  <p><b>Keys.</b> This follows Mail. ⌘F searches what you are looking at: Find in a transcript, the filter in any other lens. <b>⌥⌘F</b> searches the whole project, as Mail's Mailbox Search does. ⌥⌘F currently belongs to Focus Mode, which gives it back and needs a new shortcut; ⌃⌘F is the system's Enter Full Screen, so it is not available. <code>/</code> keeps working on the web.</p>
+</div>
+<div class="com state" data-for="token" id="com-token">
+  <p>Choosing a person or a tag turns it into a <b>token</b>, the blue pill that Mail uses. Tokens combine with AND: here, p2 <i>and</i> the tag hidden costs. The token for a tag does the same job as the tag sidebar, and the two stay in sync: the sidebar shows the tag ticked. Backspace removes the last token.</p>
+  <p><b>Open decision:</b> should tokens stay applied when you switch lens? My recommendation is <b>yes, within a session</b>. The query describes what you are looking at, and the lens is only how you view it. So p2 in Quotes becomes p2's sessions in Sessions and p2's cells in Signals. The query is still not restored after a relaunch.</p>
+</div>
+<div class="com state" data-for="proj folder" id="com-results">
+  <p><b>The results view is a pseudo-lens.</b> It uses the same window and the same sidebar geometry as the other lenses, and the sidebar's rows become result types, the way Mail's sidebar becomes mailboxes. Each group shows its first few rows, and “Show all in Quotes →” carries the query into the real lens, where it becomes a filter. The scope bar is Finder's (“Search: This Mac | ‘Folder’”).</p>
+  <p class="sc-folder-only"><b>In folder scope, the rules from <code>design-multi-project.md</code> §3c apply to how results are shown.</b> The project name is the first thing on every row, above the quote and in bold, not in fine print (Finding 5). People appear as <b>speaker codes only</b>, because a participant who consented to one study may not have consented to being linked across studies. Showing names would need an explicit opt-in with a warning. Projects on unmounted volumes are named, not silently skipped (§3b constraints).</p>
+</div>
+
+<!-- ======================================================================= -->
+<h2>Part 3 — What you're deciding, and how it's built</h2>
+
+<div class="com">
+  <p><span class="flag">Scope: you asked for all projects, but the design record says the folder is the boundary.</span> <code>design-multi-project.md</code> §3b says: “Global — Not supported.” §3c Finding 1 says the folder is the confidentiality boundary between competing clients, “period”. The threat it names is a freelancer who shares their screen, types “onboarding”, and shows client A's participants to client B. The mockup therefore offers <b>This project</b> and <b>this folder</b>. Adding “All projects” later is one more item on the scope bar, and the provenance rules above already assume results come from more than one project. Your options:</p>
+  <ol>
+    <li><b>Keep folder scope</b> (recommended). This follows the record and does not reopen it.</li>
+    <li><b>Allow all projects, but only as an explicit choice.</b> It is never the default and is not remembered after a relaunch, and people always appear as codes. If you pick this, it overturns §3b and needs a line in that doc.</li>
+    <li><b>Allow all projects when there are no folders.</b> A researcher with one client and loose projects has no boundary to protect.</li>
+  </ol>
+
+  <p><b>Build order.</b> Each step ships on its own.</p>
+  <ol>
+    <li><b>Find in the transcript</b> with ⌘G. Client-side only. This is the highest-value step, and it is the condition for restoring the withdrawn menu items.</li>
+    <li><b>Turn on the capsule in Sessions, Codebook and Signals.</b> Client-side filters over data that is already loaded. Retire <code>SearchComingSoonButton</code>. The bridge message gains a <code>lens</code> field.</li>
+    <li><b>Add a server search endpoint:</b> <code>GET /api/projects/{id}/search?q=&amp;kinds=&amp;limit=</code>, returning a count per type plus the top N hits of each. Back it with an <b>FTS5</b> table per project covering quote text and edits, transcript segments, people, tag names and definitions, and heading edits. Build the table after stage 12 and update it on edit. Signals are computed at request time, so the endpoint runs <code>load_signals</code> and matches labels and quote ids. MCP <code>search_quotes</code> should call the same core, following the grounding rule of one shared core and never a parallel sibling.</li>
+    <li><b>Suggestions menu and results pseudo-lens</b> for one project. The UI above.</li>
+    <li><b>Folder scope,</b> once the multi-project work in §7 is in place. The Mac already runs one sidecar per project (<code>ServeFleet</code>), so the natural fan-out is for each project's own sidecar to answer for its own database. That may also avoid the question of whether one sidecar can read another project's folder under the sandbox. <span class="flag">Unverified:</span> that last point needs measuring, not assuming.</li>
+  </ol>
+
+  <p><b>New pieces this adds</b> (the no-bespoke rule means they are flagged, not just drawn): the suggestions popover, search tokens in the field, the results pseudo-lens and its scope bar, the provenance pill, and the transcript's current-hit outline. Everything else reuses shipped parts: <code>.search-mark</code>, <code>.badge</code> with group tints, the quote card, the sidebar row, and the native capsule.</p>
+  <p><b>Native note:</b> the capsule is a SwiftUI TextField, not an <code>NSSearchField</code>. Tokens (<code>NSSearchField</code>'s token support, <code>.searchable(tokens:)</code>) are the one feature that argues for revisiting the choice left open in §4.4 of <code>design-desktop-nav-toolbar-rearrangement.md</code>. The popover can be a SwiftUI popover either way.</p>
+</div>
+
+</div>
+<script>
+function seg(id, attr, fn){ const g=document.getElementById(id); g.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; g.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed', x===b)); fn(b.getAttribute(attr)); }); }
+seg('pal','data-pal', v=>document.documentElement.setAttribute('data-color-theme', v));
+seg('sch','data-s', v=>document.documentElement.style.colorScheme = v);
+const labels = {
+  typing:['after typing “deliv” in the Quotes lens','Quotes'],
+  token:['after choosing p2 and then the tag hidden costs','Quotes · 4 of 214'],
+  proj:['⌘↩ — all results, this project','Search results'],
+  folder:['scope bar → IKEA folder','Search results'],
+};
+function setState(s){
+  document.querySelectorAll('.state').forEach(el=>{ el.classList.toggle('on', (el.dataset.for||'').split(' ').includes(s)); });
+  document.getElementById('com-typing').style.display = s==='typing' ? '' : 'none';
+  document.querySelectorAll('.st-q').forEach(el=>el.style.display = (s==='typing'||s==='token') ? '' : 'none');
+  document.querySelectorAll('.sc-proj-only').forEach(el=>el.style.display = s==='proj' ? '' : 'none');
+  document.querySelectorAll('.sc-folder-only').forEach(el=>el.style.display = s==='folder' ? '' : 'none');
+  document.querySelectorAll('.sc-proj').forEach(el=>el.classList.toggle('on', s==='proj'));
+  document.querySelectorAll('.sc-folder').forEach(el=>el.classList.toggle('on', s==='folder'));
+  document.getElementById('st-label').textContent = labels[s][0];
+  document.getElementById('st-sub').textContent = labels[s][1];
+}
+seg('st','data-st', setState);
+setState('typing');
+</script>
+</body>
+</html>

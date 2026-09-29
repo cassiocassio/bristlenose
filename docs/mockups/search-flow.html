@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Search flow</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined from bristlenose/theme/tokens.css +
+   colors/palette-*.css (copied via docs/mockups/codebook-library-states.html).
+   Palette swap via data-color-theme; dark via light-dark() + color-scheme.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  --bn-emo-1-bg:   light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-task-1-bg:  light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-ux-1-bg:    light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 300), oklch(50% 0.12 300));
+  --bn-opp-1-bg:   light-dark(oklch(94% 0.03 75),  oklch(50% 0.10 75));
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-colour-highlight:   light-dark(#fef08a, #854d0e);
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-colour-highlight:   light-dark(#c4a96a, #6b5520);
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap { max-width:1040px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+h1 { font-size:var(--bn-text-display); font-weight:var(--bn-weight-emphasis); margin:0 0 .25rem; letter-spacing:-.01em; }
+h2 { font-size:var(--bn-text-title); font-weight:var(--bn-weight-emphasis); margin:3.5rem 0 .5rem; }
+h3 { font-size:var(--bn-text-heading); font-weight:var(--bn-weight-emphasis); margin:2rem 0 .5rem; }
+.lede { color:var(--bn-colour-muted); max-width:44rem; margin:0 0 1rem; }
+
+/* ---- page controls + key (page chrome, not product) ---- */
+.pagebar { display:flex; gap:1rem; flex-wrap:wrap; align-items:center; margin:1rem 0 1.5rem; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.seg { display:inline-flex; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); overflow:hidden; }
+.seg button { font:inherit; font-size:var(--bn-text-caption); border:0; background:transparent; color:var(--bn-colour-text); padding:.3rem .7rem; cursor:pointer; }
+.seg button + button { border-left:1px solid var(--bn-colour-border); }
+.seg button[aria-pressed="true"] { background:var(--bn-colour-accent); color:#fff; }
+.key { display:flex; gap:1.25rem; flex-wrap:wrap; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.key i { display:inline-block; width:1.4rem; height:.9rem; vertical-align:-2px; margin-right:.35rem; border-radius:3px; }
+.key .k-art { border:1px solid var(--bn-colour-border-hover); background:var(--bn-colour-bg); }
+.key .k-com { background:repeating-linear-gradient(135deg, var(--com-bg), var(--com-bg) 4px, var(--com-hatch) 4px, var(--com-hatch) 5px); border-left:3px solid var(--com-rule); }
+
+/* ---- commentary zone: deliberately not-the-product ---- */
+:root { --com-bg:light-dark(#fbfaf5,#17171a); --com-hatch:light-dark(#f1eee2,#1f1f24); --com-rule:light-dark(#b9a66b,#7d6e45); }
+.com {
+  margin:1rem 0 0; padding:1rem 1.25rem; font-size:var(--bn-text-label); line-height:1.55;
+  background:repeating-linear-gradient(135deg, var(--com-bg), var(--com-bg) 6px, var(--com-hatch) 6px, var(--com-hatch) 7px);
+  border-left:3px solid var(--com-rule); border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0;
+}
+.com::before { content:"Commentary"; display:block; font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); letter-spacing:.08em; text-transform:uppercase; color:var(--com-rule); margin-bottom:.4rem; }
+.com p { margin:.35rem 0; }
+.com ul, .com ol { margin:.35rem 0; padding-left:1.2rem; }
+.com li { margin:.2rem 0; }
+.com code { font-family:var(--bn-font-mono); font-size:.92em; }
+.com table { border-collapse:collapse; width:100%; margin:.5rem 0; font-size:var(--bn-text-caption); }
+.com th, .com td { text-align:left; vertical-align:top; padding:.35rem .5rem; border-bottom:1px solid var(--bn-colour-border); }
+.com th { font-weight:var(--bn-weight-emphasis); }
+.com .flag { color:light-dark(#b45309,#fbbf24); font-weight:var(--bn-weight-emphasis); }
+
+/* ---- artefact zone: window chrome ---- */
+.frame-label { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase; letter-spacing:.08em; color:var(--bn-colour-muted); margin:0 0 .35rem; }
+.win {
+  border:1px solid var(--bn-colour-border-hover); border-radius:12px; overflow:visible;
+  background:var(--bn-colour-bg); box-shadow:0 10px 30px var(--bn-colour-shadow), 0 0 0 .5px var(--bn-colour-shadow);
+  position:relative;
+}
+.tb {
+  display:flex; align-items:center; gap:.6rem; height:52px; padding:0 .75rem 0 .9rem;
+  border-bottom:1px solid var(--bn-colour-border);
+  background:light-dark(#f6f6f7,#1d1d1f); border-radius:12px 12px 0 0;
+  font-size:13px;
+}
+.lights { display:flex; gap:8px; margin-right:.4rem; }
+.lights span { width:12px; height:12px; border-radius:50%; background:#ff5f57; }
+.lights span:nth-child(2){ background:#febc2e; } .lights span:nth-child(3){ background:#28c840; }
+.ttl { display:flex; flex-direction:column; line-height:1.15; min-width:0; }
+.ttl b { font-weight:600; font-size:13px; white-space:nowrap; }
+.ttl small { color:var(--bn-colour-muted); font-size:11px; white-space:nowrap; }
+.tb .sp { flex:1; }
+.tbtn {
+  height:30px; min-width:30px; padding:0 9px; display:inline-flex; align-items:center; justify-content:center; gap:5px;
+  border-radius:var(--bn-radius-pill); color:light-dark(#3c3c43,#d1d1d6);
+  background:light-dark(rgba(0,0,0,.045),rgba(255,255,255,.07));
+  font-size:12px; white-space:nowrap;
+}
+.tbtn svg { width:15px; height:15px; }
+.tbtn.dim { opacity:.35; }
+.tbtn.on { background:var(--bn-colour-accent); color:#fff; }
+/* the search capsule — mirrors QuotesSearchToolbarControl (quaternary capsule) */
+.cap {
+  height:30px; display:inline-flex; align-items:center; gap:5px; padding:0 8px 0 9px;
+  border-radius:var(--bn-radius-pill); background:light-dark(rgba(0,0,0,.06),rgba(255,255,255,.09));
+  font-size:13px; color:var(--bn-colour-text); min-width:190px;
+}
+.cap.focus { box-shadow:0 0 0 3px light-dark(rgba(0,122,255,.35),rgba(10,132,255,.45)); }
+.cap svg { width:13px; height:13px; color:var(--bn-colour-muted); flex:none; }
+.cap .ph { color:var(--bn-colour-muted); }
+.cap .caret { display:inline-block; width:1px; height:15px; background:var(--bn-colour-accent); margin-left:-3px; animation:blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity:0; } }
+.cap .x { margin-left:auto; width:14px; height:14px; border-radius:50%; background:var(--bn-colour-muted); opacity:.55; flex:none; position:relative; }
+.cap .x::before,.cap .x::after{ content:""; position:absolute; left:3px; right:3px; top:6.3px; height:1.4px; background:var(--bn-colour-bg); transform:rotate(45deg); }
+.cap .x::after{ transform:rotate(-45deg); }
+.cap .count { font-size:11px; color:var(--bn-colour-muted); font-variant-numeric:tabular-nums; margin-left:auto; }
+.cap .count + .x { margin-left:6px; }
+/* Mail-style search token inside the field */
+.tok { display:inline-flex; align-items:center; gap:3px; height:20px; padding:0 7px; border-radius:5px; font-size:12px; white-space:nowrap;
+  background:light-dark(rgba(0,122,255,.13),rgba(10,132,255,.28)); color:light-dark(#0a4fae,#bcd8ff); }
+.tok small { opacity:.7; font-size:11px; }
+
+.body { padding:1rem 1.25rem 1.25rem; min-height:120px; font-size:var(--bn-text-label); }
+.split { display:grid; grid-template-columns:190px 1fr; }
+.side { border-right:1px solid var(--bn-colour-border); padding:.75rem .5rem; font-size:12.5px; background:light-dark(#fafafa,#161618); border-radius:0 0 0 12px; }
+.side .grp { font-size:11px; color:var(--bn-colour-muted); font-weight:600; padding:.5rem .5rem .2rem; }
+.side .row { padding:.25rem .5rem; border-radius:6px; display:flex; gap:.45rem; align-items:baseline; }
+.side .row.sel { background:light-dark(rgba(0,0,0,.07),rgba(255,255,255,.09)); }
+.side .dot { width:7px; height:7px; border-radius:50%; background:var(--bn-colour-accent); flex:none; transform:translateY(-1px); }
+.side .dot.off { background:transparent; }
+
+/* ---- real component recipes ---- */
+.badge { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); padding:.08rem .45rem; border-radius:var(--bn-radius-sm); white-space:nowrap; }
+.search-mark { background:var(--bn-colour-highlight); border-radius:2px; padding:0 1px; color:inherit; }
+.search-mark.cur { outline:2px solid light-dark(#f59e0b,#fbbf24); outline-offset:0; }
+.spk { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); color:var(--bn-colour-muted); }
+.tc { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); color:var(--bn-colour-accent); text-decoration:none; }
+.quote { background:var(--bn-colour-quote-bg); border-radius:var(--bn-radius-md); padding:.55rem .75rem; margin:.4rem 0; }
+.quote p { margin:0 0 .3rem; font-size:var(--bn-text-body); line-height:1.45; }
+.quote .meta { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
+.muted { color:var(--bn-colour-muted); }
+.faint { opacity:.35; }
+.trow { display:grid; grid-template-columns:52px 34px 1fr; gap:.5rem; padding:.3rem 0; align-items:baseline; font-size:var(--bn-text-body); }
+.tbl { width:100%; border-collapse:collapse; font-size:var(--bn-text-label); }
+.tbl th { text-align:left; font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-muted); font-size:var(--bn-text-caption); padding:.3rem .5rem; border-bottom:1px solid var(--bn-colour-border); }
+.tbl td { padding:.4rem .5rem; border-bottom:1px solid var(--bn-colour-border); }
+.hits { font-size:11px; font-variant-numeric:tabular-nums; background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); border-radius:var(--bn-radius-pill); padding:0 .45rem; }
+.card { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:.6rem .75rem; }
+.cards { display:grid; grid-template-columns:repeat(3,1fr); gap:.6rem; }
+.card h4 { margin:0 0 .25rem; font-size:var(--bn-text-label); font-weight:var(--bn-weight-emphasis); }
+.card .n { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.cb-row { display:flex; justify-content:space-between; padding:.3rem .5rem; border-radius:var(--bn-radius-sm); }
+.cb-row + .cb-row { border-top:1px solid var(--bn-colour-border); }
+
+/* ---- global search popover (NSMenu-ish suggestions, Mail precedent) ---- */
+.pop {
+  position:absolute; right:14px; top:48px; width:440px; z-index:5;
+  background:light-dark(rgba(250,250,251,.97),rgba(40,40,44,.97)); backdrop-filter:blur(20px);
+  border:.5px solid light-dark(rgba(0,0,0,.18),rgba(255,255,255,.14)); border-radius:10px;
+  box-shadow:0 12px 36px rgba(0,0,0,.22); padding:5px; font-size:13px;
+}
+.pop .hd { font-size:11px; font-weight:600; color:var(--bn-colour-muted); padding:.45rem .55rem .15rem; display:flex; justify-content:space-between; }
+.pop .hd span:last-child { font-weight:400; font-variant-numeric:tabular-nums; }
+.pop .it { display:grid; grid-template-columns:18px 1fr auto; gap:.5rem; align-items:center; padding:.28rem .55rem; border-radius:5px; }
+.pop .it svg { width:14px; height:14px; color:var(--bn-colour-muted); }
+.pop .it.hl { background:var(--bn-colour-accent); color:#fff; }
+.pop .it.hl svg, .pop .it.hl .sub, .pop .it.hl .muted { color:rgba(255,255,255,.85); }
+.pop .it .one { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pop .sub { font-size:11.5px; color:var(--bn-colour-muted); white-space:nowrap; }
+.pop .sep { height:1px; background:light-dark(rgba(0,0,0,.1),rgba(255,255,255,.1)); margin:4px 6px; }
+.pop .foot { display:flex; gap:1rem; justify-content:flex-end; font-size:11px; color:var(--bn-colour-muted); padding:.3rem .55rem .15rem; }
+.pop kbd, .kb { font-family:var(--bn-font-body); font-size:11px; border:1px solid var(--bn-colour-border-hover); border-bottom-width:2px; border-radius:4px; padding:0 4px; }
+.pop .it.hl mark { background:rgba(255,255,255,.28); color:#fff; }
+.pop mark { background:transparent; color:inherit; font-weight:600; }
+
+/* ---- results pseudo-lens ---- */
+.scopebar { display:flex; align-items:center; gap:.5rem; padding:.45rem 1.25rem; border-bottom:1px solid var(--bn-colour-border); font-size:12px; background:light-dark(#fbfbfc,#141416); }
+.scopebar .lbl { color:var(--bn-colour-muted); }
+.scopebar .s { padding:.12rem .6rem; border-radius:var(--bn-radius-pill); color:var(--bn-colour-text); }
+.scopebar .s.on { background:light-dark(rgba(0,0,0,.08),rgba(255,255,255,.12)); font-weight:600; }
+.scopebar .right { margin-left:auto; color:var(--bn-colour-muted); }
+.jump { display:flex; gap:.4rem; flex-wrap:wrap; margin:0 0 1rem; }
+.jump a { font-size:12px; text-decoration:none; color:var(--bn-colour-text); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); padding:.1rem .6rem; }
+.jump a b { font-weight:600; font-variant-numeric:tabular-nums; margin-right:.2rem; }
+.rsec { margin:1.1rem 0 0; }
+.rsec > .h { display:flex; align-items:baseline; gap:.6rem; border-bottom:1px solid var(--bn-colour-border); padding-bottom:.25rem; margin-bottom:.3rem; }
+.rsec > .h b { font-size:var(--bn-text-label); font-weight:var(--bn-weight-emphasis); }
+.rsec > .h .n { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); font-variant-numeric:tabular-nums; }
+.rsec > .h a { margin-left:auto; font-size:var(--bn-text-caption); color:var(--bn-colour-accent); text-decoration:none; }
+.prov { display:inline-flex; align-items:center; gap:.3rem; font-size:11.5px; font-weight:600; color:var(--bn-colour-text); background:light-dark(#eef2f7,#1f2733); border-radius:var(--bn-radius-sm); padding:.05rem .45rem; white-space:nowrap; }
+.prov.off { color:var(--bn-colour-muted); font-weight:420; }
+.pchips { display:flex; gap:.4rem; flex-wrap:wrap; }
+.pchip { display:inline-flex; gap:.35rem; align-items:baseline; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); padding:.25rem .55rem; font-size:var(--bn-text-label); }
+.notice { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-top:1rem; padding-top:.6rem; border-top:1px dashed var(--bn-colour-border); }
+
+.state { display:none; } .state.on { display:block; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; }
+.lens { margin:2.25rem 0 0; }
+.lens > .frame-label b { color:var(--bn-colour-text); }
+@media (max-width:760px){ .grid2,.cards{ grid-template-columns:1fr; } .split{ grid-template-columns:1fr; } .side{ display:none; } .pop{ width:auto; left:8px; right:8px; } .cap{ min-width:0 !important; flex:1; } .tb .tbtn, .lights{ display:none; } .ttl{ overflow:hidden; max-width:40%; } .ttl b, .ttl small{ overflow:hidden; text-overflow:ellipsis; } .scopebar{ flex-wrap:wrap; } }
+@media (prefers-reduced-motion:reduce){ .cap .caret{ animation:none; } }
+</style>
+<style>
+/* ---- additions for the ideas board ---- */
+.toc { display:grid; grid-template-columns:repeat(3,1fr); gap:.4rem 1.25rem; margin:1.25rem 0 0; padding:0; list-style:none; font-size:var(--bn-text-label); }
+.toc li { display:grid; grid-template-columns:1.6rem 1fr; }
+.toc a { color:var(--bn-colour-text); text-decoration:none; font-weight:var(--bn-weight-emphasis); }
+.toc span { grid-column:2; color:var(--bn-colour-muted); font-size:var(--bn-text-caption); line-height:1.35; }
+.toc b { color:var(--bn-colour-muted); font-variant-numeric:tabular-nums; font-weight:420; }
+.idea { margin:3.25rem 0 0; scroll-margin-top:1rem; }
+.idea > h2 { margin:0 0 .15rem; font-size:var(--bn-text-heading); display:flex; gap:.6rem; align-items:baseline; }
+.idea > h2 .no { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); font-weight:420; }
+.gives { margin:.5rem 0 1rem; padding:.6rem 1rem; font-size:var(--bn-text-label); line-height:1.5;
+  background:repeating-linear-gradient(135deg, var(--com-bg), var(--com-bg) 6px, var(--com-hatch) 6px, var(--com-hatch) 7px);
+  border-left:3px solid var(--com-rule); border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; }
+.gives::before { content:"What it gives the researcher"; display:block; font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); letter-spacing:.08em; text-transform:uppercase; color:var(--com-rule); margin-bottom:.25rem; }
+.gives p { margin:.2rem 0; }
+.gives .q { color:var(--bn-colour-muted); }
+.row2 { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; align-items:start; }
+.row3 { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; align-items:start; }
+.stage { position:relative; }
+/* a popover that sits in the flow (for side-by-side comparisons) */
+.pop.inline { position:relative; right:auto; top:auto; width:100%; }
+.pop .it { grid-template-columns:18px 1fr auto; }
+.t { color:var(--bn-colour-text); }
+.c { color:var(--bn-colour-muted); }
+.pop .it.hl .t, .pop .it.hl .c { color:#fff; } .pop .it.hl .c { opacity:.8; }
+.pop .cnt { font-variant-numeric:tabular-nums; color:var(--bn-colour-text); font-size:13px; }
+.pop .it.hl .cnt { color:#fff; }
+.pop .note { font-size:11px; color:var(--bn-colour-muted); padding:.1rem .55rem .35rem 2.15rem; }
+.pop .it .kind { font-size:11px; color:var(--bn-colour-muted); margin-left:.35rem; }
+.pop .it.hl .kind { color:rgba(255,255,255,.8); }
+.pop .ai { color:light-dark(#6d28d9,#c4b5fd); }
+.pop .it.hl .ai { color:#fff; }
+.pop .clear { color:var(--bn-colour-accent); font-size:11.5px; font-weight:420; }
+.pop .tokrow { display:flex; gap:4px; flex-wrap:wrap; }
+.pop .foot.left { justify-content:flex-start; }
+.spin { display:inline-block; width:10px; height:10px; border-radius:50%; border:1.5px solid var(--bn-colour-muted); border-top-color:transparent; vertical-align:-1px; margin-right:.35rem; animation:sp .9s linear infinite; }
+@keyframes sp { to { transform:rotate(360deg); } }
+.trow { grid-template-columns:minmax(52px,auto) 34px 1fr !important; }
+.glyph { width:14px; height:14px; color:var(--bn-colour-muted); }
+.it.hl .glyph { color:rgba(255,255,255,.9); }
+/* token with disclosure + menu */
+.tok .dis { font-size:9px; opacity:.75; margin-left:1px; }
+.tok.sel { background:var(--bn-colour-accent); color:#fff; }
+.menu { position:absolute; z-index:6; min-width:210px; background:light-dark(rgba(250,250,251,.98),rgba(40,40,44,.98)); border:.5px solid light-dark(rgba(0,0,0,.18),rgba(255,255,255,.14)); border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,.22); padding:4px; font-size:13px; }
+.menu div { white-space:nowrap; padding:.18rem .6rem .18rem 1.5rem; border-radius:4px; position:relative; }
+.menu div.chk::before { content:"✓"; position:absolute; left:.5rem; }
+.menu div.hl { background:var(--bn-colour-accent); color:#fff; }
+.menu hr { border:0; height:1px; background:light-dark(rgba(0,0,0,.1),rgba(255,255,255,.1)); margin:4px 6px; }
+.menu .dimtxt { color:var(--bn-colour-muted); font-size:11.5px; }
+/* search-and-code */
+.selbar { position:sticky; display:flex; align-items:center; gap:.6rem; padding:.45rem .75rem; margin:0 0 .6rem; border-radius:var(--bn-radius-lg); background:light-dark(#eef4ff,#172235); border:1px solid light-dark(#cfe0ff,#26406b); font-size:var(--bn-text-label); }
+.selbar b { font-weight:var(--bn-weight-emphasis); }
+.selbar .sp { flex:1; }
+.btn { font:inherit; font-size:12px; padding:.2rem .65rem; border-radius:var(--bn-radius-md); border:1px solid var(--bn-colour-border-hover); background:var(--bn-colour-bg); color:var(--bn-colour-text); white-space:nowrap; }
+.btn.pri { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+.ck { width:15px; height:15px; border-radius:4px; border:1.5px solid var(--bn-colour-border-hover); display:inline-block; flex:none; position:relative; top:3px; }
+.ck.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); }
+.ck.on::after { content:""; position:absolute; left:4px; top:1px; width:4px; height:8px; border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg); }
+.hitrow { display:grid; grid-template-columns:22px 1fr; gap:.4rem; }
+.hitrow.done .quote { opacity:.6; }
+/* why matched */
+.why { font-size:11.5px; color:var(--bn-colour-muted); display:inline-flex; align-items:center; gap:.3rem; }
+.why::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--bn-colour-highlight); outline:1px solid light-dark(rgba(0,0,0,.15),rgba(255,255,255,.2)); }
+.kwic { font-size:var(--bn-text-body); line-height:1.45; }
+.kwic .ell { color:var(--bn-colour-muted); }
+/* player */
+.player { display:flex; align-items:center; gap:.6rem; padding:.55rem 1.25rem; border-top:1px solid var(--bn-colour-border); background:light-dark(#fafafa,#161618); border-radius:0 0 12px 12px; font-size:12px; }
+.play { width:26px; height:26px; border-radius:50%; background:var(--bn-colour-accent); display:grid; place-items:center; flex:none; }
+.play svg { width:11px; height:11px; color:#fff; }
+.scrub { position:relative; flex:1; height:22px; }
+.scrub .rail { position:absolute; left:0; right:0; top:10px; height:3px; border-radius:2px; background:var(--bn-off-track); }
+.scrub .fill { position:absolute; left:0; top:10px; height:3px; border-radius:2px; background:var(--bn-colour-accent); width:29%; }
+.scrub .tick { position:absolute; top:3px; width:3px; height:16px; border-radius:2px; background:light-dark(#eab308,#facc15); }
+.scrub .tick.cur { background:light-dark(#b45309,#fbbf24); width:4px; top:1px; height:20px; }
+.scrub .head { position:absolute; top:5px; width:12px; height:12px; border-radius:50%; background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.25), 0 1px 3px rgba(0,0,0,.3); left:calc(29% - 6px); }
+.mono { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); font-variant-numeric:tabular-nums; }
+/* groups */
+.grp { margin:.5rem 0; }
+.grp > .gh { display:flex; align-items:center; gap:.4rem; font-size:var(--bn-text-caption); font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-text); padding:.2rem 0; border-bottom:1px solid var(--bn-colour-border); }
+.grp > .gh .n { color:var(--bn-colour-muted); font-weight:420; }
+.grp.moder > .gh { color:var(--bn-colour-muted); }
+.chev { display:inline-block; width:0; height:0; border-left:4px solid transparent; border-right:4px solid transparent; border-top:5px solid currentColor; }
+.chev.r { transform:rotate(-90deg); }
+/* zero */
+.zero { text-align:center; padding:1.6rem 1rem .8rem; }
+.zero h4 { margin:0 0 .2rem; font-size:var(--bn-text-heading); font-weight:var(--bn-weight-emphasis); }
+.zero p { margin:0 0 1rem; color:var(--bn-colour-muted); font-size:var(--bn-text-label); }
+.recover { max-width:380px; margin:0 auto; text-align:left; }
+.recover a { display:flex; justify-content:space-between; align-items:center; gap:.5rem; padding:.45rem .7rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); margin:.35rem 0; color:var(--bn-colour-text); text-decoration:none; font-size:var(--bn-text-label); }
+.recover a .n { color:var(--bn-colour-muted); font-variant-numeric:tabular-nums; }
+.recover a.first { border-color:var(--bn-colour-accent); }
+/* heatmap */
+.hm { display:grid; grid-template-columns:110px repeat(5, 1fr); gap:3px; font-size:11px; }
+.hm .h { color:var(--bn-colour-muted); text-align:center; }
+.hm .l { color:var(--bn-colour-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hm .cell { height:22px; border-radius:3px; background:oklch(from var(--bn-colour-accent) l c h / var(--a)); }
+.hm .cell.dim { opacity:.12; }
+.hm .cell.hit { outline:2px solid light-dark(#eab308,#facc15); outline-offset:-1px; }
+/* lens switch strip */
+.lensnav { display:flex; gap:.25rem; }
+.lensnav span { font-size:12px; padding:.15rem .55rem; border-radius:var(--bn-radius-pill); color:var(--bn-colour-muted); }
+.lensnav span.on { background:light-dark(rgba(0,0,0,.07),rgba(255,255,255,.1)); color:var(--bn-colour-text); font-weight:600; }
+/* sheet */
+.sheet { position:absolute; left:50%; top:52px; transform:translateX(-50%); width:360px; z-index:6; background:var(--bn-colour-bg); border:.5px solid light-dark(rgba(0,0,0,.2),rgba(255,255,255,.15)); border-radius:10px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:1rem 1.1rem .9rem; font-size:13px; }
+.sheet h5 { margin:0 0 .5rem; font-size:13px; font-weight:600; }
+.field { border:1px solid var(--bn-colour-border-hover); border-radius:5px; padding:.25rem .5rem; margin:.25rem 0 .6rem; box-shadow:0 0 0 3px light-dark(rgba(0,122,255,.3),rgba(10,132,255,.4)); }
+.sheet .acts { display:flex; justify-content:flex-end; gap:.5rem; margin-top:.8rem; }
+.sheet small { color:var(--bn-colour-muted); font-size:11.5px; }
+.side .grp { margin:0; }
+.side .row .ico { width:13px; height:13px; color:var(--bn-colour-muted); flex:none; transform:translateY(2px); }
+.side .row.sel .ico { color:var(--bn-colour-accent); }
+@media (max-width:760px){ .toc,.row2,.row3{ grid-template-columns:1fr; } .sheet{ width:auto; left:8px; right:8px; transform:none; } .hm{ grid-template-columns:80px repeat(5,1fr);} }
+</style>
+<style>
+/* ---- REAL badge CSS, lifted from bristlenose/theme/atoms/badge.css and
+        molecules/person-badge.css (sizes from tokens-desktop.css) ---- */
+:root { --bn-weight-light:360; --bn-text-badge-d:0.6875rem;
+  --bn-colour-user-tag-bg: light-dark(#eef2f7,#2a3240); }
+.badge { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge-d); font-weight:var(--bn-weight-light);
+  padding:var(--bn-space-xs) .45rem; border-radius:var(--bn-radius-sm); background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); line-height:1.35; }
+.badge-user { background:var(--bn-colour-user-tag-bg); color:var(--bn-colour-text); font-weight:var(--bn-weight-normal); }
+@media (prefers-color-scheme: dark) { :root:not([data-scheme="light"]) .badge-user { color:#fff; font-weight:var(--bn-weight-emphasis); } }
+:root[data-scheme="dark"] .badge-user { color:#fff; font-weight:var(--bn-weight-emphasis); }
+.badge-frustration { background:light-dark(#fff7ed,#2d1d0e); color:light-dark(#ea580c,#fb923c); }
+.badge-doubt { background:light-dark(#f5f3ff,#1e1533); color:light-dark(#7c3aed,#a78bfa); }
+.badge-confusion { background:light-dark(#fef2f2,#2d1515); color:light-dark(#dc2626,#f87171); }
+.pb { display:inline-flex; align-items:center; white-space:nowrap; border-radius:var(--bn-radius-sm); overflow:hidden; vertical-align:baseline; line-height:1.35; }
+.pb .code { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge-d); padding:var(--bn-space-xs) .4rem; background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text);
+  border:1px solid var(--bn-colour-border); border-right:none; border-radius:var(--bn-radius-sm) 0 0 var(--bn-radius-sm); }
+.pb .name { font-family:var(--bn-font-body); font-size:var(--bn-text-badge-d); font-weight:var(--bn-weight-emphasis); padding:var(--bn-space-xs) .45rem var(--bn-space-xs) .35rem;
+  background:var(--bn-colour-quote-bg); color:var(--bn-colour-text); border:1px solid var(--bn-colour-border); border-left:none; border-radius:0 var(--bn-radius-sm) var(--bn-radius-sm) 0; }
+.pb.selected .code { box-shadow:0 0 0 2px var(--bn-colour-accent); }
+
+/* ---- NEW pieces this slice adds (flagged in the spec) ---- */
+/* token = light container + meaning word + the REAL badge + disclosure */
+.tk { display:inline-flex; align-items:center; gap:5px; height:22px; padding:0 4px 0 7px; border-radius:6px;
+  background:light-dark(rgba(0,0,0,.055),rgba(255,255,255,.08)); font-size:12px; color:var(--bn-colour-muted); white-space:nowrap; }
+.tk .dis { font-size:9px; margin-left:1px; color:var(--bn-colour-muted); }
+.tk.sel { box-shadow:0 0 0 2px var(--bn-colour-accent); }
+.tk.open { background:light-dark(rgba(0,122,255,.12),rgba(10,132,255,.22)); }
+/* browser SPA toolbar field (the web SearchBox, widened) */
+.spa { border:1px solid var(--bn-colour-border-hover); border-radius:10px; background:var(--bn-colour-bg); box-shadow:0 8px 24px var(--bn-colour-shadow); position:relative; }
+.spa .chrome { height:30px; display:flex; align-items:center; gap:6px; padding:0 .7rem; border-bottom:1px solid var(--bn-colour-border); background:light-dark(#f3f3f4,#1b1b1d); border-radius:10px 10px 0 0; font-size:11px; color:var(--bn-colour-muted); }
+.spa .chrome i { width:9px; height:9px; border-radius:50%; background:light-dark(#d4d4d8,#3f3f46); display:inline-block; }
+.spa .chrome .url { margin-left:.6rem; padding:.05rem .6rem; border-radius:5px; background:light-dark(#fff,#111); border:1px solid var(--bn-colour-border); }
+.spa .bar { display:flex; align-items:center; gap:.6rem; padding:.55rem 1rem; border-bottom:1px solid var(--bn-colour-border); font-size:12.5px; }
+.spa .bar .nav { display:flex; gap:1rem; color:var(--bn-colour-muted); margin-right:1rem; }
+.spa .bar .nav b { color:var(--bn-colour-text); font-weight:600; }
+.sfield { position:relative; display:flex; align-items:center; gap:4px; min-width:330px; min-height:30px; padding:3px 26px 3px 6px;
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); background:var(--bn-colour-bg); font-size:var(--bn-text-label); flex-wrap:wrap; }
+.sfield.focus { border-color:var(--bn-colour-accent); }
+.sfield .ph { color:var(--bn-colour-muted); font-style:italic; }
+.sfield .caret { display:inline-block; width:1px; height:15px; background:var(--bn-colour-accent); animation:blink 1s steps(1) infinite; }
+.sfield .clr { position:absolute; right:6px; top:50%; transform:translateY(-50%); width:13px; height:13px; border-radius:50%; background:var(--bn-colour-muted); opacity:.5; }
+.mag { width:15px; height:15px; color:var(--bn-colour-muted); }
+.subtitle { margin-left:auto; color:var(--bn-colour-muted); font-size:12px; font-variant-numeric:tabular-nums; }
+/* web suggestion listbox (same anatomy as the native one) */
+.lb { position:absolute; z-index:5; width:370px; background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border-hover); border-radius:8px;
+  box-shadow:0 10px 30px var(--bn-colour-shadow); padding:4px; font-size:13px; }
+.lb .it, .pop .it { display:grid; grid-template-columns:20px 1fr auto; gap:.5rem; align-items:center; padding:.3rem .5rem; border-radius:5px; }
+.lb .it.hl { background:var(--bn-colour-hover); }
+.lb .gl { width:15px; height:15px; color:var(--bn-colour-muted); }
+.lb .cnt, .pop .cnt { font-variant-numeric:tabular-nums; color:var(--bn-colour-muted); font-size:12.5px; }
+.lb .sep { height:1px; background:var(--bn-colour-border); margin:3px 4px; }
+.t { color:var(--bn-colour-text); } .c { color:var(--bn-colour-muted); }
+.pop .it.hl .t, .pop .it.hl .c, .pop .it.hl .cnt { color:#fff; } .pop .it.hl .c { opacity:.8; }
+.pop .it.hl .badge, .pop .it.hl .pb { outline:1px solid rgba(255,255,255,.55); outline-offset:1px; border-radius:3px; }
+.qlist { padding:.8rem 1rem 1rem; }
+.qlist .quote p { font-size:14px; }
+.card-row { display:flex; gap:.45rem; align-items:center; flex-wrap:wrap; }
+.frame-note { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted); letter-spacing:.06em; text-transform:uppercase; margin:.4rem 0 .25rem; }
+.step { display:grid; grid-template-columns:2.2rem 1fr; gap:.6rem; margin:2.2rem 0 0; }
+.step > .n { font-family:var(--bn-font-mono); font-size:var(--bn-text-label); color:var(--bn-colour-muted); padding-top:.15rem; }
+.step h3 { margin:0 0 .35rem; font-size:var(--bn-text-body); font-weight:var(--bn-weight-emphasis); }
+.expl { margin:.6rem 0 0; padding:.45rem .8rem; font-size:var(--bn-text-caption); line-height:1.5;
+  background:repeating-linear-gradient(135deg, var(--com-bg), var(--com-bg) 6px, var(--com-hatch) 6px, var(--com-hatch) 7px);
+  border-left:3px solid var(--com-rule); border-radius:0 5px 5px 0; }
+.kbd { font-family:var(--bn-font-body); font-size:11px; border:1px solid var(--bn-colour-border-hover); border-bottom-width:2px; border-radius:4px; padding:0 4px; color:var(--bn-colour-text); }
+.menu div.chk::before { content:"✓"; position:absolute; left:.5rem; }
+.menu div { white-space:nowrap; padding:.18rem .7rem .18rem 1.5rem; border-radius:4px; position:relative; }
+.menu div.dim { color:var(--bn-colour-muted); }
+.menu div.hl { background:var(--bn-colour-accent); color:#fff; }
+.menu.web { background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border-hover); }
+.menu.web div.hl { background:var(--bn-colour-hover); color:var(--bn-colour-text); }
+.seam { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+.seam .cell { border:1px solid var(--bn-colour-border); border-radius:8px; padding:.9rem 1rem; }
+.seam .cell .frame-note { margin-top:0; }
+.bigger { zoom:1.3; display:inline-flex; flex-wrap:wrap; gap:.35rem; margin:.2rem 0 .3rem; }
+.tb .cap { gap:4px; }
+.tb .cap .tk { height:20px; }
+@media (max-width:760px){ .seam{ grid-template-columns:1fr; } .sfield{ min-width:0; flex:1; } .lb{ width:auto; left:8px !important; right:8px; } .spa .bar .nav{ display:none; } }
+</style>
+</head>
+<body>
+
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="g-search" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></g></symbol>
+  <!-- drawn to echo SF Symbol text.quote (the Quotes lens glyph); ours, not Apple's -->
+  <symbol id="g-textquote" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7.5c0-1.4 1-2.5 2.4-2.5M4 7.5V10h2.6V7.5H4z" /><path d="M9.5 7.5c0-1.4 1-2.5 2.4-2.5M9.5 7.5V10h2.6V7.5H9.5z"/><line x1="15" y1="8" x2="21" y2="8"/><line x1="4" y1="14" x2="21" y2="14"/><line x1="4" y1="19" x2="16" y2="19"/></g></symbol>
+</svg>
+
+<div class="wrap">
+<h1>Search flow: slice 1</h1>
+<p class="lede">Ideas 01–03 walked through frame by frame, in the Quotes lens. The spec is <code>docs/design-search.md</code>. Browser frames come first, then the Mac, with a side-by-side check that native badges match the web ones. Sample data: IKEA checkout study; p3 is Priya Shah.</p>
+
+<div class="pagebar">
+  <div class="key"><span><i class="k-art"></i>Artefact: what the product shows</span><span><i class="k-com"></i>Why this frame behaves as it does</span></div>
+  <span style="margin-left:auto">Palette</span>
+  <div class="seg" id="pal"><button data-pal="default" aria-pressed="true">Default</button><button data-pal="edo" aria-pressed="false">Edo</button></div>
+  <span>Scheme</span>
+  <div class="seg" id="sch"><button data-s="light dark" aria-pressed="true">Auto</button><button data-s="light" aria-pressed="false">Light</button><button data-s="dark" aria-pressed="false">Dark</button></div>
+</div>
+
+<h2>A · What did Priya say about delivery?</h2>
+
+<!-- A1 -->
+<div class="step"><div class="n">A1</div><div>
+<h3>Type “pri”: the menu offers text, a person and a tag</h3>
+<p class="frame-note">browser · Quotes lens</p>
+<div class="spa" style="min-height:330px">
+  <div class="chrome"><i></i><i></i><i></i><span class="url">localhost:8150/report/quotes</span></div>
+  <div class="bar"><div class="nav"><span>Project</span><span>Sessions</span><b>Quotes</b><span>Codebooks</span><span>Signals</span></div>
+    <div class="sfield focus" role="combobox" aria-expanded="true"><svg class="mag"><use href="#g-search"/></svg>pri<span class="caret"></span><span class="clr"></span></div>
+    <span class="subtitle">14 of 214</span></div>
+  <div class="lb" role="listbox" style="left:330px;top:78px">
+    <div class="it hl"><svg class="gl"><use href="#g-textquote"/></svg><span><span class="c">Quotes containing “</span><span class="t">pri</span><span class="c">”</span></span><span class="cnt">14</span></div>
+    <div class="sep"></div>
+    <div class="it"><span></span><span><span class="pb"><span class="code">p3</span><span class="name">Priya Shah</span></span></span><span class="cnt">38</span></div>
+    <div class="sep"></div>
+    <div class="it"><span></span><span><span class="badge badge-user" style="background:var(--bn-opp-1-bg)">price surprise</span></span><span class="cnt">6</span></div>
+  </div>
+</div>
+<div class="expl">The free-text row is highlighted, so pressing <span class="kbd">↩</span> does exactly what it does today. Priya is offered because “pri” begins a word of her name, and so is the tag. Both appear as the <b>real badges</b> from the quote cards, with no icon. The quote row takes the Quotes lens glyph. Counts are what each choice would show. Rows with a count of 0 are left out.</div>
+</div></div>
+
+<!-- A2 -->
+<div class="step"><div class="n">A2</div><div>
+<h3><span class="kbd">↓</span> <span class="kbd">↩</span>: Priya becomes a token, and the typed text clears</h3>
+<p class="frame-note">browser · after choosing p3</p>
+<div class="spa">
+  <div class="chrome"><i></i><i></i><i></i><span class="url">localhost:8150/report/quotes</span></div>
+  <div class="bar"><div class="nav"><span>Project</span><span>Sessions</span><b>Quotes</b><span>Codebooks</span><span>Signals</span></div>
+    <div class="sfield focus"><svg class="mag"><use href="#g-search"/></svg><span class="tk">said by <span class="pb"><span class="code">p3</span><span class="name">Priya Shah</span></span><span class="dis">▾</span></span><span class="caret"></span><span class="clr"></span></div>
+    <span class="subtitle">38 of 214</span></div>
+  <div class="qlist">
+    <div class="quote"><p>“I couldn’t see which size would fit until I’d measured the alcove twice.”</p><div class="card-row"><a class="tc" href="#">04:18</a><span class="pb"><span class="code">p3</span><span class="name">Priya Shah</span></span><span class="badge badge-confusion">confusion</span></div></div>
+  </div>
+</div>
+<div class="expl">A token is the real speaker badge inside a light container, with the meaning word before it (<i>said by</i>) and ▾ after. Its default is <i>said by</i>, because that's the common case. The text clears, as in Mail, because what was typed became the token.</div>
+</div></div>
+
+<!-- A3 -->
+<div class="step"><div class="n">A3</div><div>
+<h3>Keep typing “deliv”: suggestions are counted within Priya’s quotes</h3>
+<p class="frame-note">browser · token + text</p>
+<div class="spa" style="min-height:300px">
+  <div class="chrome"><i></i><i></i><i></i><span class="url">localhost:8150/report/quotes</span></div>
+  <div class="bar"><div class="nav"><span>Project</span><span>Sessions</span><b>Quotes</b><span>Codebooks</span><span>Signals</span></div>
+    <div class="sfield focus"><svg class="mag"><use href="#g-search"/></svg><span class="tk">said by <span class="pb"><span class="code">p3</span><span class="name">Priya Shah</span></span><span class="dis">▾</span></span>deliv<span class="caret"></span><span class="clr"></span></div>
+    <span class="subtitle">5 of 214</span></div>
+  <div class="lb" style="left:330px;top:78px">
+    <div class="it hl"><svg class="gl"><use href="#g-textquote"/></svg><span><span class="c">Quotes containing “</span><span class="t">deliv</span><span class="c">”</span></span><span class="cnt">5</span></div>
+    <div class="sep"></div>
+    <div class="it"><span></span><span><span class="badge badge-user" style="background:var(--bn-opp-1-bg)">delivery time</span></span><span class="cnt">2</span></div>
+  </div>
+  <div class="qlist" style="padding-top:5.2rem">
+    <div class="quote"><p>“Is <mark class="search-mark">delivery</mark> next day or is that only for the small stuff?”</p><div class="card-row"><a class="tc" href="#">03:10</a><span class="pb"><span class="code">p3</span><span class="name">Priya Shah</span></span></div></div>
+  </div>
+</div>
+<div class="expl">Tokens and text combine with AND. Each count answers the question “what would I see if I chose this now?”, so the tag's 2 means Priya's quotes tagged <i>delivery time</i>.</div>
+</div></div>
+
+<!-- A4 -->
+<div class="step"><div class="n">A4</div><div>
+<h3>Click the token: change its meaning without retyping</h3>
+<p class="frame-note">browser · token menu open</p>
+<div class="spa" style="min-height:250px">
+  <div class="chrome"><i></i><i></i><i></i><span class="url">localhost:8150/report/quotes</span></div>
+  <div class="bar"><div class="nav"><span>Project</span><span>Sessions</span><b>Quotes</b><span>Codebooks</span><span>Signals</span></div>
+    <div class="sfield"><svg class="mag"><use href="#g-search"/></svg><span class="tk open">said by <span class="pb"><span class="code">p3</span><span class="name">Priya Shah</span></span><span class="dis">▾</span></span>delivery<span class="clr"></span></div>
+    <span class="subtitle">5 of 214</span></div>
+  <div class="menu web" role="menu" style="left:350px;top:74px">
+    <div class="chk">Said by Priya Shah</div>
+    <div class="hl">Mentions Priya Shah</div>
+    <div>Not Priya Shah</div>
+    <hr><div>Remove</div>
+  </div>
+</div>
+<div class="expl"><b>Mentions</b> finds what <i>other</i> people said about Priya: quotes whose text contains her name, highlighted. <b>Not</b> finds everyone but her. The menu uses radio items with a checkmark, and names the person in every item so a screen reader hears the full choice. <i>Mentions</i> is disabled when a person has a code but no name.</div>
+</div></div>
+
+<!-- A5 -->
+<div class="step"><div class="n">A5</div><div>
+<h3>After choosing <i>Mentions</i></h3>
+<p class="frame-note">browser · mentions p3 + “delivery”</p>
+<div class="spa">
+  <div class="chrome"><i></i><i></i><i></i><span class="url">localhost:8150/report/quotes</span></div>
+  <div class="bar"><div class="nav"><span>Project</span><span>Sessions</span><b>Quotes</b><span>Codebooks</span><span>Signals</span></div>
+    <div class="sfield"><svg class="mag"><use href="#g-search"/></svg><span class="tk">mentions <span class="pb"><span class="code">p3</span><span class="name">Priya Shah</span></span><span class="dis">▾</span></span>delivery<span class="clr"></span></div>
+    <span class="subtitle">1 of 214</span></div>
+  <div class="qlist"><div class="quote"><p>“When <mark class="search-mark">Priya</mark> said <mark class="search-mark">delivery</mark> was extra I checked mine too.”</p><div class="card-row"><a class="tc" href="#">22:07</a><span class="pb"><span class="code">p5</span><span class="name">Jo</span></span></div></div></div>
+</div>
+<div class="expl">The name is highlighted along with the typed word, so it's clear why the quote matched even though Priya didn't say it.</div>
+</div></div>
+
+<h2>B · A tag, and what else the tag can mean</h2>
+
+<div class="step"><div class="n">B1</div><div>
+<h3>Choose <i>hidden costs</i>, then open its menu</h3>
+<p class="frame-note">browser · tag token menu</p>
+<div class="spa" style="min-height:240px">
+  <div class="chrome"><i></i><i></i><i></i><span class="url">localhost:8150/report/quotes</span></div>
+  <div class="bar"><div class="nav"><span>Project</span><span>Sessions</span><b>Quotes</b><span>Codebooks</span><span>Signals</span></div>
+    <div class="sfield"><svg class="mag"><use href="#g-search"/></svg><span class="tk open">tagged <span class="badge badge-user" style="background:var(--bn-opp-1-bg)">hidden costs</span><span class="dis">▾</span></span><span class="clr"></span></div>
+    <span class="subtitle">14 of 214</span></div>
+  <div class="menu web" style="left:350px;top:74px">
+    <div class="chk">Tagged “hidden costs”</div>
+    <div class="hl">Text contains “hidden costs”</div>
+    <div>Not tagged “hidden costs”</div>
+    <hr><div>Remove</div>
+  </div>
+</div>
+<div class="expl"><b>Text contains</b> finds quotes that use the words but were never coded, which is a way to find what coding missed. <b>Not tagged</b> finds what's left to code. The tag token is independent of the tag sidebar: neither changes the other.</div>
+</div></div>
+
+<h2>C · Words in any order, or an exact phrase</h2>
+
+<div class="step"><div class="n">C1</div><div>
+<div class="row2">
+  <div><h3>“shelf more” finds it: each word matches alone</h3>
+    <div class="spa"><div class="bar"><div class="sfield"><svg class="mag"><use href="#g-search"/></svg>shelf more<span class="clr"></span></div><span class="subtitle">2 of 214</span></div>
+      <div class="qlist"><div class="quote"><p>“…the delivery was £45, which is <mark class="search-mark">more</mark> than the <mark class="search-mark">shelf</mark>.”</p></div></div></div></div>
+  <div><h3>A quoted phrase must appear exactly</h3>
+    <div class="spa"><div class="bar"><div class="sfield"><svg class="mag"><use href="#g-search"/></svg>"than the shelf"<span class="clr"></span></div><span class="subtitle">1 of 214</span></div>
+      <div class="qlist"><div class="quote"><p>“…which is more <mark class="search-mark">than the shelf</mark>.”</p></div></div></div></div>
+</div>
+<div class="expl">Each word must be the <b>start</b> of a word, so “st” finds <i>Storey</i> but not <i>best</i>. Accents and case don't matter. Chinese and Japanese terms match anywhere, because those scripts don't space words. Filtering starts at 2 letters instead of today's 3.</div>
+</div></div>
+
+<h2>D · Taking things away</h2>
+
+<div class="step"><div class="n">D1</div><div>
+<div class="row2">
+  <div><h3><span class="kbd">⌫</span> in an empty field selects the last token…</h3>
+    <div class="spa"><div class="bar"><div class="sfield focus"><svg class="mag"><use href="#g-search"/></svg><span class="tk">said by <span class="pb"><span class="code">p3</span><span class="name">Priya Shah</span></span><span class="dis">▾</span></span><span class="tk sel">tagged <span class="badge badge-user" style="background:var(--bn-opp-1-bg)">hidden costs</span><span class="dis">▾</span></span><span class="caret"></span><span class="clr"></span></div></div></div></div>
+  <div><h3>…and a second <span class="kbd">⌫</span> removes it</h3>
+    <div class="spa"><div class="bar"><div class="sfield focus"><svg class="mag"><use href="#g-search"/></svg><span class="tk">said by <span class="pb"><span class="code">p3</span><span class="name">Priya Shah</span></span><span class="dis">▾</span></span><span class="caret"></span><span class="clr"></span></div></div></div></div>
+</div>
+<div class="expl">Two presses, so one slip can't delete a token. <span class="kbd">Esc</span> closes the menu first, then clears the text, then collapses the field. The ⓧ button clears text <i>and</i> tokens (open question 2 in the spec).</div>
+</div></div>
+
+<h2>M · The same thing on the Mac</h2>
+
+<div class="step"><div class="n">M1</div><div>
+<h3>Native field, native menu, the same badges</h3>
+<p class="frame-note">Mac app · toolbar capsule + native suggestions popover</p>
+<div class="win" style="min-height:300px">
+  <div class="tb"><div class="lights"><span></span><span></span><span></span></div><div class="ttl"><b>IKEA checkout study</b><small>Quotes · 5 of 214</small></div><div class="sp"></div>
+    <span class="cap focus" style="min-width:330px"><svg><use href="#g-search"/></svg><span class="tk">said by <span class="pb"><span class="code">p3</span><span class="name">Priya Shah</span></span><span class="dis">▾</span></span>deliv<span class="caret"></span><span class="x"></span></span></div>
+  <div class="pop" style="width:360px;right:14px;top:48px">
+    <div class="it hl"><svg class="glyph" style="color:#fff"><use href="#g-textquote"/></svg><span><span class="c">Quotes containing “</span><span class="t">deliv</span><span class="c">”</span></span><span class="cnt">5</span></div>
+    <div class="sep"></div>
+    <div class="it"><span></span><span><span class="badge badge-user" style="background:var(--bn-opp-1-bg)">delivery time</span></span><span class="cnt">2</span></div>
+  </div>
+</div>
+<div class="expl">The quote row's glyph is the SF Symbol <code>text.quote</code>, the Quotes lens's own symbol in the sidebar (drawn here as a stand-in). The token and the tag row are <b>native views painted from the styles the web view sends</b> (spec §7a), not a copy of the palette. The selection is the system accent, as in any Mac menu.</div>
+</div></div>
+
+<div class="step"><div class="n">M2</div><div>
+<h3>The token is a native menu</h3>
+<p class="frame-note">Mac app · chip menu open</p>
+<div class="win" style="min-height:220px">
+  <div class="tb"><div class="sp"></div><span class="cap" style="min-width:330px"><svg><use href="#g-search"/></svg><span class="tk open">said by <span class="pb"><span class="code">p3</span><span class="name">Priya Shah</span></span><span class="dis">▾</span></span>deliv<span class="x"></span></span></div>
+  <div class="menu" style="left:auto;right:150px;top:46px">
+    <div class="chk">Said by Priya Shah</div><div class="hl">Mentions Priya Shah</div><div>Not Priya Shah</div><hr><div>Remove</div>
+  </div>
+</div>
+</div></div>
+
+<div class="step"><div class="n">M3</div><div>
+<h3>Parity check: the native badge beside the card badge</h3>
+<div class="seam">
+  <div class="cell"><p class="frame-note">web view · quote card</p>
+    <span class="bigger"><span class="pb"><span class="code">p3</span><span class="name">Priya Shah</span></span> <span class="badge badge-user" style="background:var(--bn-opp-1-bg)">hidden costs</span> <span class="badge badge-frustration">frustration</span></span></div>
+  <div class="cell"><p class="frame-note">native · token and suggestion row</p>
+    <span class="bigger"><span class="pb"><span class="code">p3</span><span class="name">Priya Shah</span></span> <span class="badge badge-user" style="background:var(--bn-opp-1-bg)">hidden costs</span> <span class="badge badge-frustration">frustration</span></span></div>
+</div>
+<div class="expl">These two must be indistinguishable in light and dark, in both palettes, and at any colour a tag is given. Toggle the palette and the scheme above: the native side follows because it's sent the resolved values, never because someone copied them. The spec's snapshot test checks this mechanically, and Digital Color Meter checks it by eye. (Both sides use the same CSS in this mockup. The point of the frame is the rule it states.)</div>
+</div></div>
+
+</div>
+<script>
+function seg(id, attr, fn){ const g=document.getElementById(id); g.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; g.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed', x===b)); fn(b.getAttribute(attr)); }); }
+seg('pal','data-pal', v=>document.documentElement.setAttribute('data-color-theme', v));
+seg('sch','data-s', v=>{ document.documentElement.style.colorScheme = v; if (v==='light dark') document.documentElement.removeAttribute('data-scheme'); else document.documentElement.setAttribute('data-scheme', v); });
+</script>
+
+</body>
+</html>

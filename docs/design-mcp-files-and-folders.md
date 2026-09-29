@@ -133,9 +133,11 @@ above).
      ([`design-mcp-native-proxy.md`](design-mcp-native-proxy.md)).
    A first run was **invalid**: Cirrus `-base`/`-xcode` images ship with SIP
    off, and there the Node read "succeeded". Only `-vanilla` keeps SIP on.
-   Not yet measured: turning the switch on and asking again under Claude.
-   The fix is measured for ChatGPT only. Evidence and runbook are on the test
-   drive, in the maintainer's notes.
+   **The fix, measured for Claude too:** with Files & Folders ▸ Claude ▸
+   Bristlenose turned on (tccd logged a `Modify` event for
+   `com.anthropic.claudefordesktop`), the same Node `.mcpb` answered with real
+   project data. Evidence and runbook are on the test drive, in the
+   maintainer's notes.
 2. ~~**Does the agent app appear in Files & Folders *before* its first denied
    read?**~~ **Settled 29 Sep 2026, by the pane's own contract: no.** Files &
    Folders lists only apps that have requested access (*"Apps that appear here

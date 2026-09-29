@@ -826,7 +826,7 @@ register in every Settings frame for this reason.
 - **P4 — Claude** (**landed 29 Sep**: `NativeExtensionPackage` zips the helper at click time; the live install through Claude is still to be run): runtime `.mcpb` per P0.4; `MCPExtensionInstaller`'s bundled-file assumptions (`claudeDesktopCanInstall`, the disabled state, `bundledStamp`) repointed at the runtime artefact with a stamp beside it.
 - **P5 — switch-over** (**landed 29 Sep**, in two commits rather than one: ChatGPT with P3, Claude with P4. A build without the helper keeps the old layout on both tabs, so no release carries a half-state), confined to the pane's top half (see *Preserved as shipped*).
 - **P6 — verify**, each item with its layer named: Swift tests (handshake read-back, installer manifest, zip, link encoding); script gates (D3, and `test-check-pkg-shippable.sh` cases); by hand once: a TestFlight build, Claude and ChatGPT on 15 / 26 / 27, a translocated `.dmg` app, TestFlight→App Store update.
-- **P7 — review notes** per D9.
+- **P7 — review notes** per D9 (**drafted 29 Sep**, §6.11; the screen recording and external TestFlight remain).
 
 **Out of scope for v1:** Mach IPC instead of a handshake file (option 2 — also the real answer to the token-probe exposure); Gemini; the duplicate-row exposure bug.
 
@@ -884,6 +884,53 @@ crash fix fails exactly its two cases.
 **Leftovers noticed, not fixed:** ChatGPT's config still enables
 `bristlenose@bristlenose-p05`, the P0.5 stub, whose cache is gone; ChatGPT's
 Installed sidebar lagged a reinstall although `config.toml` recorded it.
+
+## 6.11 App Review notes (draft, D9 / P7)
+
+For the App Store Connect "Notes for Review" field on the first build that
+carries the helper. Each paragraph answers the words of the guideline it names.
+
+> **Agent access (optional feature).** Bristlenose can let the researcher's own
+> AI assistant (Claude Desktop or ChatGPT, installed separately) read a study
+> they have chosen to share. It is off until the researcher turns it on for a
+> project (Project ▸ Turn On Agent Access), and it only answers while
+> Bristlenose is running with that project open.
+>
+> **§2.5.2 (self-contained; no code downloaded or executed that changes
+> features).** The helper `Contents/Helpers/bristlenose-mcp` and the copy inside
+> `Contents/Resources/chatgpt-marketplace/` are part of this reviewed bundle,
+> signed with it. Nothing is downloaded. The helper only relays read-only
+> questions to Bristlenose's own local server; it does not change the features
+> or functionality of Bristlenose or of any other app.
+>
+> **§2.4.5(ii) (no writing outside the container, except shared locations).**
+> Bristlenose writes a small connection file into its own container and into its
+> own team app group container (`Z56GZVA2QB.app.bristlenose`). It writes nothing
+> into Claude's or ChatGPT's files or settings.
+>
+> **§2.4.5(iii) (no auto-launch without consent).** Bristlenose never launches
+> the helper. The researcher clicks Install in Settings ▸ MCP Agents; the other
+> app shows its own install confirmation, installs the plugin or extension
+> through its own documented mechanism, and is the process that later runs the
+> helper when the researcher asks it a question.
+>
+> **§2.4.5(iv) (no additional code in the bundle).** The helper is a single
+> signed executable built from this app's source; it is sandboxed, carries only
+> `app-sandbox`, `network.client` and the team app group, and uses no private API.
+>
+> **Scope.** Five read-only tools (list projects, project overview, search
+> quotes, signals, framework). No tool writes, deletes or sends data anywhere
+> but back to the researcher's own assistant. The researcher can revoke access
+> per project at any time, and every agent question lights an indicator in the
+> sidebar.
+>
+> A screen recording of the flow (turn on access, install into ChatGPT and into
+> Claude, ask a question, turn access off) is attached.
+
+**Before submitting:** record that screen recording; ship to **external**
+TestFlight first so a human reviewer sees the helper before the store does
+(D9); run `check-pkg-shippable.sh` on the exported `.pkg`, which now runs the
+helper gate over every copy.
 
 ## 7. Recipes
 

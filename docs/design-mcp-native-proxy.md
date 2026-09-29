@@ -207,7 +207,10 @@ So:
   grant. A new Claude install on 27 has no such entry, so it starts denied:
   *measured* in a clean, SIP-on macOS 27 virtual machine through the shipped
   Node `.mcpb` (tccd subject `com.anthropic.claudefordesktop`, no dialog;
-  §4.4).
+  §4.4). **Switching Files & Folders ▸ Claude ▸ Bristlenose on recovers it**:
+  tccd logged the grant as a `Modify` event, and the next question returned
+  real data (same guest, SIP on). The recovery path is measured for both
+  Claude and ChatGPT.
 - **The pane's deep link works:**
   `x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_FilesAndFolders`.
 - **Bare command-line binaries get one row each, with no icon.** The six

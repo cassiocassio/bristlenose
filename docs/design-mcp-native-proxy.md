@@ -43,8 +43,8 @@ Related docs:
    Code or Terminal responsible (§6). *Measured.* **Apple's validator
    (`altool --validate-app`) accepts** the shipped app repackaged with that
    sandboxed helper and the group (§6.5), and that build answers real questions
-   inside ChatGPT (§6.2). One real TestFlight upload and human
-   App Review remain. The native port still lacks several of the Node proxy's
+   inside ChatGPT (§6.2). **A real upload (build 3907) processed as VALID,
+   App Store eligible** (§6.7). Human App Review remains. The native port still lacks several of the Node proxy's
    states (§4.3).
 
 ## 1. The ChatGPT plugin channel
@@ -357,7 +357,7 @@ process (§2), so their reads are Claude's, and are denied on a new install.
 | Claude Desktop runtime | Claude's own Node | binary server | binary server |
 | macOS 27, new install | **silently denied** until Files & Folders is switched on | allowed, same-team | allowed, same-team group |
 | macOS 27, carried-over grant | works | works | works |
-| Mac App Store build | ships today | **rejected** (§6) | passes `--validate-app` (§6.5); one upload and review remain |
+| Mac App Store build | ships today | **rejected** (§6) | validated and processed as VALID (§6.5–§6.7); human review remains |
 | Developer ID `.dmg` | ships today | ship with risk | works (same mechanism as MAS) |
 
 [`design-mcp-files-and-folders.md`](design-mcp-files-and-folders.md) is the
@@ -471,7 +471,7 @@ only, no SPI, no Node) is proven end to end in a real host.
 
 | # | Option | MAS review | Claude + ChatGPT |
 |---|---|---|---|
-| 1 | **Team-prefixed group container + sandboxed native proxy** | **passes Apple's validator** (§6.5); upload processing and human review remain | both |
+| 1 | **Team-prefixed group container + sandboxed native proxy** | **passes Apple's validator and upload processing** (§6.5–§6.7); human review remains | both |
 | 2 | Mach IPC rendezvous under the group prefix (`CFMessagePort` / XPC). No token on disk; the long-run hardening against macOS 27's tightening on files created by other teams | ship with risk | both |
 | 3 | `SMAppService` agent with `MachServices` | as 2, plus the background-item notice (§2.4.5(iii)) | both |
 | 4 | LaunchServices helper `.app` | useless on MAS (must be sandboxed); needs a relay | — |
@@ -584,12 +584,42 @@ helper a different bundle identifier per channel** (for example
 unaffected: in the same log, `containermanagerd` approved it (*"Requestor's
 signature allows it to access a TCC-protected group container"*).
 
-### 6.7 Still open
+### 6.7 And App Store Connect processes it
 
-- **One real upload to internal TestFlight** carrying the nested sandboxed
-  tool, to see whether processing agrees with validation. It spends a build
-  number for good; pick one that cannot collide with a release. Maintainer's
-  call.
+**Uploaded and processed: `BUILD-STATUS: VALID`, `BUILD-AUDIENCE-TYPE:
+APP_STORE_ELIGIBLE`.** *Measured*, 29 Sep 2026, 11:55–11:59. The same package
+as §6.5 (0.31.5 build **3907**, the shipped app with the sandboxed group proxy
+at `Contents/Helpers/bristlenose-mcp` and the team group in the host's
+entitlements) went up with `altool --upload-package --wait`: 702 MB in 2.8
+minutes, delivery `1541e4c2-5336-4bf5-8e8b-da16c08a373e`. Processing reported
+no issues and set a TestFlight expiry of 28 Dec 2026. A second, independent
+`altool --build-status` call agreed.
+
+Build number 3907 is now spent. That's harmless: build numbers are the git
+commit count at bump time, and `main` is past 3940. The upload went round
+`upload-testflight.sh`, whose gate refuses a package whose build number
+differs from the working tree's (3907 against 3906), by design and with no
+bypass. `altool` was called directly with the same flags.
+
+What this settles and what it doesn't:
+- **Settled:** App Store Connect's automated pipeline, both validation and
+  upload processing, accepts a nested, sandboxed, non-`inherit` helper carrying
+  its own Team-ID-prefixed group, next to a host carrying
+  `group.app.bristlenose` and the team group. No ITMS issue was raised.
+- **Not settled:** human App Review. Internal TestFlight skips it; it happens
+  only on submission for review (external TestFlight or the store), where
+  §2.5.2 / §2.4.5(ii), "installs code into other apps", is the question to
+  prepare notes for. Also unsettled: whether Apple's re-signing keeps the
+  helper's team group intact. Install build 3907 from TestFlight and read the
+  helper's entitlements with `codesign -d --entitlements -` to find out.
+
+### 6.8 Still open
+
+- **Human App Review** of the agent-access feature: a submission, with review
+  notes for §2.5.2 / §2.4.5(ii).
+- **Build 3907 installed from TestFlight:** check the helper after Apple's
+  re-signing (its signer and entitlements), and run it once as a ChatGPT
+  plugin's server.
 - A runtime-built `.mcpb`.
 - §2.5.2 / §2.4.5(ii), "installs code into other apps". This applies to
   today's `.mcpb` as well, and needs review notes whichever route ships.

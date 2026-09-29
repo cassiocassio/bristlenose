@@ -135,7 +135,7 @@ dashed outline = new or changed</p>
 
 <!-- ============ 1 ============ -->
 <h2>1 · Claude Desktop tab, macOS 27</h2>
-<div class="flabel">Settings ▸ MCP Agents · macOS 27</div>
+<div class="flabel">Settings ▸ MCP Agents · macOS 27 · today (Node .mcpb)</div>
 <div class="win">
   <div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
   <div class="pane">
@@ -175,7 +175,7 @@ dashed outline = new or changed</p>
 <h2>2 · ChatGPT &amp; Codex tab</h2>
 <div class="two">
 <div>
-<div class="flabel">(a) today's path + one line</div>
+<div class="flabel">(a) today (Node .mcpb): the config route + one line</div>
 <div class="win">
   <div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
   <div class="pane">
@@ -193,7 +193,7 @@ http_headers = { "Authorization" = "Bearer 3Kf…q8" }</div>
 </div>
 </div>
 <div>
-<div class="flabel">(b) if the Codex plugin ships · macOS 27</div>
+<div class="flabel">(b) when the native proxy ships (both channels)</div>
 <div class="win">
   <div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
   <div class="pane">
@@ -202,15 +202,10 @@ http_headers = { "Authorization" = "Bearer 3Kf…q8" }</div>
     <div class="extcard">
       <div class="thumb">🐟</div>
       <div class="nm"><b>Bristlenose</b><div class="s">Plugin 0.31.5</div></div>
-      <button class="pbtn">Add to ChatGPT…</button>
-    </div>
-    <div class="noterow new">
-      <p class="note">The first time you ask a question, macOS blocks ChatGPT from reading Bristlenose, without asking.
-      To allow it, open System Settings ▸ Privacy &amp; Security ▸ Files &amp; Folders, expand ChatGPT and turn on
-      Bristlenose — then ask again.</p>
-      <button class="bbtn">Open Files &amp; Folders</button>
+      <button class="pbtn">Install Plugin…</button>
     </div>
     <p class="note new">In ChatGPT, ask in Work mode — Bristlenose’s tools aren’t available in Chat.</p>
+    <p class="how" style="margin-top:14px">Or connect by hand: in ChatGPT, Settings → MCP servers → Add server — or add to ~/.codex/config.toml.</p>
   </div>
 </div>
 </div>
@@ -221,11 +216,14 @@ http_headers = { "Authorization" = "Bearer 3Kf…q8" }</div>
   So (a) is safe to ship now. It adds the one fact that applies to every ChatGPT route: tools work in <b>Work</b>, not <b>Chat</b>.
   That was measured for the plugin and is inferred for the TOML path.</p>
   <ul>
-    <li><b>(b) is shape only.</b> The install gesture isn't designed. Whether the <code>codex://plugins/install/…</code>
-    link works before the marketplace is registered decides whether that button is one click or a paste.
-    "Add to ChatGPT…" is a placeholder label.</li>
-    <li><b>(b) has a blocker no copy can fix.</b> ChatGPT spawns <code>node</code> from the login-shell PATH. On a Mac
-    without a user-installed Node, nothing on that PATH supplies one. Keep (a)'s TOML route as the fallback whatever happens.</li>
+    <li><b>(b) has no Files &amp; Folders note, deliberately.</b> A ChatGPT plugin running the Node proxy is dead on arrival:
+    ChatGPT supplies no Node (measured with a control). So the plugin only exists with the native proxy, and that proxy
+    needs no grant: it's sandboxed and carries our Team-ID app group (measured under ChatGPT, Claude Code and Terminal).
+    Files &amp; Folders becomes recovery-only, reached from the in-chat message and the help page, not pre-announced here.</li>
+    <li><b>The install gesture:</b> the button opens <code>codex://plugins/bristlenose?marketplacePath=…</code>, with the marketplace
+    shipped inside the app. ChatGPT shows its own plugin page, whose button reads "Install plugin". "Install Plugin…" mirrors
+    "Install Extension…"; "Add to ChatGPT" is the alternative. The maintainer's call.</li>
+    <li><b>The config route stays</b> below, as the fallback with no install step.</li>
     <li><b>"Work" and "Chat" stay in English in every locale</b> until someone reads ChatGPT's own localised labels.
     They're compiled into its Electron bundle, not shipped as <code>.lproj</code> files.</li>
     <li>The new note uses the same key as the Claude tab with <code>{{app}}</code> = ChatGPT, one string for both.</li>

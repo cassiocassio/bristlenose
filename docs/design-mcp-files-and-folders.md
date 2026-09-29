@@ -402,6 +402,16 @@ Files & Folders ▸ *(host)* ▸ Bristlenose grants group-container access at
 all. Until someone does, the recovery copy is proven for the Node proxy
 only. Put to both peer sessions on 29 Sep 2026.
 
+**And one limit it can't lift, from the App Store session:** Files & Folders
+can't rescue a **sandboxed** proxy's read of the data container at all,
+because the sandbox refuses the path before TCC is asked (inferred: the
+sandboxed probe saw the data container as "doesn't exist" even under Claude's
+disclaimer, run 4). So if the group route fails on some host, recovery means an
+**unsandboxed** reader (the Node proxy, or a Developer ID binary) plus the
+switch. On the Mac App Store build that leaves only the Node proxy under
+Claude. Whether the switch grants the *group* container is the open test above,
+and it needs a person to flip the switch.
+
 ### Can Bristlenose tell that the grant is missing?
 
 **No, and v1 shouldn't try.** We can't read another app's TCC state. *Know the
@@ -508,8 +518,19 @@ history.
 
 ## 8. Strings — proposed keys, all 21 full locales
 
+**i18n review, 29 Sep 2026** (all 21 pane names checked letter-for-letter
+against the loctables; nine fixes applied below). One instruction for the
+paste: **cs, pl and fr need a non-breaking space (`\u00a0`) where Apple ships
+one** (`Soukromí a zabezpečení`, `Soubory a složky`, `Prywatność i ochrona`,
+`Réglages Système`), because Czech and Polish don't let a one-letter
+conjunction end a line and a footnote will wrap. The tables below show plain
+spaces; write the escape when pasting into the locale JSON. **pt-PT: "Definições
+do Sistema"** is what users look for, and `CFBundleName` gives the short
+menu-bar form ("Definições"), so it's the wrong source for that one locale. Check
+it once on applelocalization.com.
+
 Pane names are lifted from macOS 27.0 (26A428): `System Settings.app`
-`InfoPlist.loctable` `CFBundleName` (soft hyphens stripped from de/da/nb),
+`InfoPlist.loctable` `CFBundleName` (soft hyphens stripped from de/da/nb; pt-PT excepted, above),
 `SecurityPrivacyExtension.appex` `InfoPlist.loctable` `CFBundleDisplayName`
 ("Privacy & Security") and `Localizable.loctable` `FILE_ACCESS_COMBINED`
 ("Files & Folders"). Apple codes via `scripts/apple-locale-map.json`.
@@ -535,7 +556,7 @@ Pane names are lifted from macOS 27.0 (26A428): `System Settings.app`
 | nl | Systeeminstellingen | Privacy en beveiliging | Bestanden en mappen |
 | fi | Järjestelmäasetukset | Tietosuoja ja suojaus | Tiedostot ja kansiot |
 | pt-BR | Ajustes do Sistema | Privacidade e Segurança | Arquivos e Pastas |
-| pt-PT | Definições | Privacidade e segurança | Ficheiros e pastas |
+| pt-PT | Definições do Sistema | Privacidade e segurança | Ficheiros e pastas |
 | zh-Hant | 系統設定 | 隱私權與安全性 | 檔案和檔案夾 |
 
 **`{{app}}` is always a product name** ("Claude", "ChatGPT"). The
@@ -553,21 +574,21 @@ where the grammar would otherwise inflect it (cs *aplikaci {{app}}*, pl
 | ca | La primera vegada que facis una pregunta, el macOS impedirà que l'app {{app}} llegeixi el Bristlenose, sense preguntar-ho. Per permetre-ho, obre Configuració del Sistema ▸ Privacitat i seguretat ▸ Arxius i carpetes, desplega l'app {{app}} i activa el Bristlenose; després torna a preguntar. |
 | ja | 最初に質問したとき、macOSは確認なしで{{app}}によるBristlenoseの読み取りをブロックします。許可するには、「システム設定」▸「プライバシーとセキュリティ」▸「ファイルとフォルダ」を開き、{{app}}を展開してBristlenoseをオンにしてから、もう一度質問してください。 |
 | fr | À la première question, macOS empêche {{app}} de lire Bristlenose, sans rien demander. Pour l’autoriser, ouvrez Réglages Système ▸ Confidentialité et sécurité ▸ Fichiers et dossiers, développez {{app}} et activez Bristlenose, puis posez à nouveau la question. |
-| de | Bei der ersten Frage blockiert macOS den Zugriff von {{app}} auf Bristlenose, ohne nachzufragen. Zum Erlauben Systemeinstellungen ▸ Datenschutz & Sicherheit ▸ Dateien & Ordner öffnen, {{app}} aufklappen und Bristlenose aktivieren — dann erneut fragen. |
-| ko | 처음 질문할 때 macOS는 확인 없이 {{app}}의 Bristlenose 읽기를 차단합니다. 허용하려면 시스템 설정 ▸ 개인정보 보호 및 보안 ▸ 파일 및 폴더를 열고 {{app}}을(를) 펼친 다음 Bristlenose를 켜십시오. 그런 다음 다시 질문하십시오. |
+| de | Bei der ersten Frage blockiert macOS den Zugriff von {{app}} auf Bristlenose, ohne nachzufragen. Zum Freigeben Systemeinstellungen ▸ Datenschutz & Sicherheit ▸ Dateien & Ordner öffnen, {{app}} aufklappen und Bristlenose aktivieren — dann erneut fragen. |
+| ko | 처음 질문할 때 macOS는 확인 없이 {{app}}의 Bristlenose 읽기를 차단합니다. 허용하려면 시스템 설정 ▸ 개인정보 보호 및 보안 ▸ 파일 및 폴더를 열고 {{app}}을(를) 펼치고 Bristlenose를 켠 다음 다시 질문하십시오. |
 | cs | Při první otázce macOS bez dotazu zablokuje aplikaci {{app}} přístup k Bristlenose. Chcete-li to povolit, otevřete Nastavení systému ▸ Soukromí a zabezpečení ▸ Soubory a složky, rozbalte položku {{app}} a zapněte Bristlenose. Pak se zeptejte znovu. |
 | it | Alla prima domanda, macOS impedisce a {{app}} di leggere Bristlenose, senza chiedere. Per consentirlo, apri Impostazioni di Sistema ▸ Privacy e sicurezza ▸ File e cartelle, espandi {{app}} e attiva Bristlenose, poi fai di nuovo la domanda. |
 | pl | Przy pierwszym pytaniu macOS, nie prosząc o zgodę, zablokuje aplikacji {{app}} dostęp do Bristlenose. Aby na to pozwolić, otwórz Ustawienia systemowe ▸ Prywatność i ochrona ▸ Pliki i foldery, rozwiń pozycję {{app}} i włącz Bristlenose, a potem zapytaj ponownie. |
 | ru | При первом вопросе macOS без запроса заблокирует приложению {{app}} доступ к Bristlenose. Чтобы разрешить его, откройте «Системные настройки» ▸ «Конфиденциальность и безопасность» ▸ «Файлы и папки», разверните {{app}} и включите Bristlenose, затем задайте вопрос снова. |
 | uk | Під час першого запитання macOS без запиту заблокує програмі {{app}} доступ до Bristlenose. Щоб дозволити його, відкрийте «Системні параметри» ▸ «Приватність і безпека» ▸ «Файли та папки», розгорніть {{app}} і ввімкніть Bristlenose, а тоді поставте запитання знову. |
-| da | Første gang du stiller et spørgsmål, blokerer macOS {{app}} i at læse Bristlenose uden at spørge. Du giver adgang ved at åbne Systemindstillinger ▸ Anonymitet & sikkerhed ▸ Arkiver & mapper, udvide {{app}} og slå Bristlenose til — og derefter spørge igen. |
+| da | Første gang du stiller et spørgsmål, forhindrer macOS {{app}} i at læse Bristlenose uden at spørge. Du giver adgang ved at åbne Systemindstillinger ▸ Anonymitet & sikkerhed ▸ Arkiver & mapper, udvide {{app}} og slå Bristlenose til — og derefter spørge igen. |
 | sv | Första gången du ställer en fråga blockerar macOS {{app}} från att läsa Bristlenose, utan att fråga. Du tillåter det genom att öppna Systeminställningar ▸ Integritet och säkerhet ▸ Filer och mappar, expandera {{app}} och slå på Bristlenose — ställ sedan frågan igen. |
 | nb | Første gang du stiller et spørsmål, hindrer macOS {{app}} i å lese Bristlenose, uten å spørre. For å tillate det åpner du Systeminnstillinger ▸ Personvern og sikkerhet ▸ Filer og mapper, utvider {{app}} og slår på Bristlenose — og spør deretter på nytt. |
 | tr | İlk soruyu sorduğunuzda macOS, sormadan {{app}} uygulamasının Bristlenose’u okumasını engeller. İzin vermek için Sistem Ayarları ▸ Gizlilik ve Güvenlik ▸ Dosyalar ve Klasörler’i açın, {{app}} öğesini genişletin ve Bristlenose’u etkinleştirin; ardından soruyu yeniden sorun. |
-| nl | De eerste keer dat je een vraag stelt, blokkeert macOS zonder te vragen dat {{app}} Bristlenose leest. Om dat toe te staan, open je Systeeminstellingen ▸ Privacy en beveiliging ▸ Bestanden en mappen, klap je {{app}} uit en zet je Bristlenose aan. Stel daarna je vraag opnieuw. |
+| nl | De eerste keer dat je een vraag stelt, voorkomt macOS zonder te vragen dat {{app}} Bristlenose leest. Om dat toe te staan, open je Systeeminstellingen ▸ Privacy en beveiliging ▸ Bestanden en mappen, klap je {{app}} uit en schakel je Bristlenose in. Stel daarna je vraag opnieuw. |
 | fi | Kun esität ensimmäisen kysymyksen, macOS estää kysymättä sovellusta {{app}} lukemasta Bristlenosea. Salli se avaamalla Järjestelmäasetukset ▸ Tietosuoja ja suojaus ▸ Tiedostot ja kansiot, laajentamalla kohta {{app}} ja laittamalla Bristlenose päälle. Kysy sitten uudelleen. |
-| pt-BR | Na primeira pergunta, o macOS impede que o {{app}} leia o Bristlenose, sem perguntar. Para permitir, abra Ajustes do Sistema ▸ Privacidade e Segurança ▸ Arquivos e Pastas, expanda {{app}} e ative o Bristlenose. Depois pergunte de novo. |
-| pt-PT | Na primeira pergunta, o macOS impede que o {{app}} leia o Bristlenose, sem perguntar. Para o permitir, abra Definições ▸ Privacidade e segurança ▸ Ficheiros e pastas, expanda {{app}} e ative o Bristlenose. Depois volte a perguntar. |
+| pt-BR | Na primeira pergunta, o macOS impede que o {{app}} leia o Bristlenose, sem perguntar. Para permitir, abra Ajustes do Sistema ▸ Privacidade e Segurança ▸ Arquivos e Pastas, expanda o {{app}} e ative o Bristlenose. Depois pergunte de novo. |
+| pt-PT | Na primeira pergunta, o macOS impede que o {{app}} leia o Bristlenose, sem perguntar. Para o permitir, abra Definições do Sistema ▸ Privacidade e segurança ▸ Ficheiros e pastas, expanda o {{app}} e ative o Bristlenose. Depois volte a perguntar. |
 | zh-Hant | 第一次提問時，macOS 會直接封鎖 {{app}} 讀取 Bristlenose，不會先詢問。若要允許，請打開「系統設定」▸「隱私權與安全性」▸「檔案和檔案夾」，展開 {{app}} 並開啟 Bristlenose，然後再問一次。 |
 
 ### `desktop.mcpAgents.openFilesFolders` (button, macOS 27+)
@@ -609,7 +630,7 @@ someone reads ChatGPT's localised labels (§1, unmeasured #4).
 | ja | ChatGPTでは「Work」モードで質問してください。Bristlenoseのツールは「Chat」では使えません。 |
 | fr | Dans ChatGPT, posez vos questions en mode Work : les outils de Bristlenose ne sont pas disponibles dans Chat. |
 | de | In ChatGPT im Modus „Work“ fragen — in „Chat“ sind die Werkzeuge von Bristlenose nicht verfügbar. |
-| ko | ChatGPT에서는 Work 모드에서 질문하십시오. Bristlenose 도구는 Chat에서 사용할 수 없습니다. |
+| ko | ChatGPT에서는 ‘Work’ 모드에서 질문하십시오. Bristlenose 도구는 ‘Chat’에서 사용할 수 없습니다. |
 | cs | V ChatGPT se ptejte v režimu Work — v režimu Chat nejsou nástroje Bristlenose k dispozici. |
 | it | In ChatGPT, fai le domande in modalità Work: gli strumenti di Bristlenose non sono disponibili in Chat. |
 | pl | W ChatGPT zadawaj pytania w trybie Work — narzędzia Bristlenose nie są dostępne w trybie Chat. |

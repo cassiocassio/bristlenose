@@ -1,0 +1,279 @@
+From 1702f18e0d5d990601ef48155fd213cd46c4bcf2 Mon Sep 17 00:00:00 2001
+From: Martin Storey <martinstorey@gmail.com>
+Date: Tue, 29 Sep 2026 11:15:39 +0100
+Subject: [PATCH] mcp handshake: also write it to the team-prefixed app group
+ (draft)
+
+---
+ .../Bristlenose/Bristlenose.entitlements      | 10 ++-
+ .../BristlenoseDeveloperID.entitlements       | 24 +++++---
+ .../Bristlenose/MCPHandshake.swift            | 61 ++++++++++++++++++-
+ .../BristlenoseTests/MCPHandshakeTests.swift  | 16 +++++
+ tests/test_entitlements_split.py              | 39 +++++++-----
+ 5 files changed, 125 insertions(+), 25 deletions(-)
+
+diff --git a/desktop/Bristlenose/Bristlenose/Bristlenose.entitlements b/desktop/Bristlenose/Bristlenose/Bristlenose.entitlements
+index 3167f926..ec49d2b7 100644
+--- a/desktop/Bristlenose/Bristlenose/Bristlenose.entitlements
++++ b/desktop/Bristlenose/Bristlenose/Bristlenose.entitlements
+@@ -12,10 +12,18 @@
+ 	     every pack into a single namespace, and Whisper's models are the next
+ 	     customer (docs/design-modularity.md), so a second group would mean a
+ 	     second portal entry and another profile regeneration for nothing.
+-	     NOT on the Developer-ID build — see BristlenoseDeveloperID.entitlements. -->
++	     group.app.bristlenose is NOT on the Developer-ID build — see
++	     BristlenoseDeveloperID.entitlements. -->
++	<!-- The Team-ID-prefixed group carries the MCP handshake for the sandboxed
++	     native proxy: a process signed by this team, sandboxed and carrying
++	     this group, reads its container whichever app launched it, and macOS 27
++	     denies the data container to other teams' readers
++	     (docs/design-mcp-native-proxy.md §6). Authorised by the MAS profile's
++	     Z56GZVA2QB.* entry. The Developer-ID build carries it too. -->
+ 	<key>com.apple.security.application-groups</key>
+ 	<array>
+ 		<string>group.app.bristlenose</string>
++		<string>$(TeamIdentifierPrefix)app.bristlenose</string>
+ 	</array>
+ </dict>
+ </plist>
+diff --git a/desktop/Bristlenose/Bristlenose/BristlenoseDeveloperID.entitlements b/desktop/Bristlenose/Bristlenose/BristlenoseDeveloperID.entitlements
+index 544bc5c4..3a117a8b 100644
+--- a/desktop/Bristlenose/Bristlenose/BristlenoseDeveloperID.entitlements
++++ b/desktop/Bristlenose/Bristlenose/BristlenoseDeveloperID.entitlements
+@@ -3,16 +3,26 @@
+ <plist version="1.0">
+ <dict>
+ 	<!-- The Developer-ID (.dmg) entitlements. Identical to Bristlenose.entitlements
+-	     except that it deliberately OMITS com.apple.security.application-groups.
+-	     Both channels build the Release configuration, so without this split the
+-	     .dmg would carry a group it cannot use and Apple will not authorise on
+-	     Developer ID. It does not need one: the .dmg acquires the PII model by
+-	     plain HTTPS, not Background Assets, because App Store rules do not apply
+-	     to that channel. Selected by the CODE_SIGN_ENTITLEMENTS override in
+-	     desktop/scripts/build-dmg.sh. -->
++	     except that it deliberately OMITS group.app.bristlenose, the Background
++	     Assets group. Both channels build the Release configuration, so without
++	     this split the .dmg would carry a group it cannot use. It does not need
++	     one: the .dmg acquires the PII model by plain HTTPS, not Background
++	     Assets. Selected by the CODE_SIGN_ENTITLEMENTS override in
++	     desktop/scripts/build-dmg.sh.
++
++	     It DOES carry the Team-ID-prefixed group, for the MCP handshake
++	     (docs/design-mcp-native-proxy.md §6). Measured 29 Sep 2026 on macOS 27:
++	     with today's Developer ID profile, which does not list it, taskgated
++	     logs "Unsatisfied entitlements … Disallowing" and access is granted
++	     anyway. Re-export so Xcode mints a profile that authorises it before
++	     relying on that. -->
+ 	<key>keychain-access-groups</key>
+ 	<array>
+ 		<string>$(AppIdentifierPrefix)app.bristlenose</string>
+ 	</array>
++	<key>com.apple.security.application-groups</key>
++	<array>
++		<string>$(TeamIdentifierPrefix)app.bristlenose</string>
++	</array>
+ </dict>
+ </plist>
+diff --git a/desktop/Bristlenose/Bristlenose/MCPHandshake.swift b/desktop/Bristlenose/Bristlenose/MCPHandshake.swift
+index ab827b8a..77b11554 100644
+--- a/desktop/Bristlenose/Bristlenose/MCPHandshake.swift
++++ b/desktop/Bristlenose/Bristlenose/MCPHandshake.swift
+@@ -1,6 +1,7 @@
+ import Darwin
+ import Foundation
+ import OSLog
++import Security
+ 
+ /// The MCP handshake file — how an agent-side proxy finds the running serve.
+ ///
+@@ -54,6 +55,43 @@ enum MCPHandshake {
+         return appSupport.appendingPathComponent("Bristlenose", isDirectory: true)
+     }
+ 
++    // MARK: - The team-prefixed app group (design-mcp-native-proxy §6.4)
++    //
++    // macOS 27 denies another developer team's read of our data container, and
++    // no Files & Folders switch reaches a sandboxed reader. A proxy that is
++    // sandboxed and carries a Team-ID-prefixed group CAN read that group's
++    // container, whichever app is responsible for it (measured under ChatGPT,
++    // Claude Desktop, Claude Code and Terminal, 29 Sep 2026). So the handshake
++    // is written in BOTH places: the data container for today's Node .mcpb,
++    // the group for the native proxy.
++
++    /// The Team-ID-prefixed group this build is signed with, or nil. Read from
++    /// the running process's own entitlements, so there is no hard-coded team
++    /// ID and a build without the entitlement (Debug today) simply skips the
++    /// group copy.
++    static func teamGroupIdentifier() -> String? {
++        guard let task = SecTaskCreateFromSelf(nil),
++              let value = SecTaskCopyValueForEntitlement(
++                task, "com.apple.security.application-groups" as CFString, nil)
++        else { return nil }
++        return teamGroup(from: value as? [String] ?? [])
++    }
++
++    /// Pure: pick the team-prefixed Bristlenose group from an entitlement
++    /// list. `group.`-prefixed groups (Background Assets) are not it.
++    static func teamGroup(from groups: [String]) -> String? {
++        groups.first { !$0.hasPrefix("group.") && $0.hasSuffix(".app.bristlenose") }
++    }
++
++    /// `<group container>/Bristlenose`, or nil when the build carries no team
++    /// group or the system cannot resolve its container.
++    static func groupDirectory() -> URL? {
++        guard let id = teamGroupIdentifier(),
++              let root = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: id)
++        else { return nil }
++        return root.appendingPathComponent("Bristlenose", isDirectory: true)
++    }
++
+     /// Serialize the handshake payload. Pure — unit-testable without touching
+     /// the filesystem. Schema 1: `{schema, port, token, instance_id,
+     /// updated_at}`. Keyed so a project *set* can arrive in phase 2 without a
+@@ -99,9 +137,22 @@ enum MCPHandshake {
+     /// refuses; a missing handshake degrades to the proxy's "isn't open"
+     /// sentence, which is the designed failure surface.
+     /// Writes the whole exposed set — see `payload(entries:)`.
++    ///
++    /// With no `directory`, writes the data-container copy AND, when this
++    /// build carries the team group, the group copy. The return value is the
++    /// data-container result, as before; a failed group write is logged.
+     @discardableResult
+     static func write(entries: [HandshakeExposure.Entry], directory: URL? = nil) -> Bool {
+-        guard let dir = directory ?? defaultDirectory() else { return false }
++        if directory == nil, let group = groupDirectory() {
++            if !writeOne(entries: entries, directory: group) {
++                log.error("handshake group copy not written")
++            }
++        }
++        return writeOne(entries: entries, directory: directory ?? defaultDirectory())
++    }
++
++    private static func writeOne(entries: [HandshakeExposure.Entry], directory: URL?) -> Bool {
++        guard let dir = directory else { return false }
+         do {
+             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+         } catch {
+@@ -160,8 +211,14 @@ enum MCPHandshake {
+     }
+ 
+     /// Delete the handshake if present. Idempotent, silent on absence.
++    /// With no `directory`, removes both copies (data container and group).
+     static func remove(directory: URL? = nil) {
+-        guard let dir = directory ?? defaultDirectory() else { return }
++        if directory == nil, let group = groupDirectory() { removeOne(directory: group) }
++        removeOne(directory: directory ?? defaultDirectory())
++    }
++
++    private static func removeOne(directory: URL?) {
++        guard let dir = directory else { return }
+         let url = dir.appendingPathComponent(filename)
+         if unlink(url.path) != 0 && errno != ENOENT {
+             log.error("handshake remove failed: errno=\(errno, privacy: .public)")
+diff --git a/desktop/Bristlenose/BristlenoseTests/MCPHandshakeTests.swift b/desktop/Bristlenose/BristlenoseTests/MCPHandshakeTests.swift
+index 1d017587..6791fa9f 100644
+--- a/desktop/Bristlenose/BristlenoseTests/MCPHandshakeTests.swift
++++ b/desktop/Bristlenose/BristlenoseTests/MCPHandshakeTests.swift
+@@ -135,4 +135,20 @@ struct MCPHandshakeTests {
+         #expect((object["projects"] as? [[String: Any]])?.isEmpty == true)
+     }
+ 
++
++    // MARK: - Team group selection (design-mcp-native-proxy §6.4)
++
++    @Test func teamGroup_picksTheTeamPrefixedEntry_notTheBackgroundAssetsGroup() {
++        #expect(MCPHandshake.teamGroup(from: ["group.app.bristlenose", "Z56GZVA2QB.app.bristlenose"])
++                == "Z56GZVA2QB.app.bristlenose")
++    }
++
++    @Test func teamGroup_isNilWhenOnlyTheGroupDotGroupIsPresent() {
++        #expect(MCPHandshake.teamGroup(from: ["group.app.bristlenose"]) == nil)
++        #expect(MCPHandshake.teamGroup(from: []) == nil)
++    }
++
++    @Test func teamGroup_ignoresAnotherAppsTeamGroup() {
++        #expect(MCPHandshake.teamGroup(from: ["Z56GZVA2QB.app.other"]) == nil)
++    }
+ }
+diff --git a/tests/test_entitlements_split.py b/tests/test_entitlements_split.py
+index be028c93..08a6605d 100644
+--- a/tests/test_entitlements_split.py
++++ b/tests/test_entitlements_split.py
+@@ -1,11 +1,15 @@
+-"""The two Release entitlements files, and why they differ by exactly one key.
++"""The two Release entitlements files, and why they differ by exactly one group.
+ 
+ Both channels build the `Release` configuration, so they would share one
+ entitlements file if `build-dmg.sh` did not override `CODE_SIGN_ENTITLEMENTS`.
+-The Mac App Store build needs `com.apple.security.application-groups` for
+-Background Assets; the Developer-ID `.dmg` must NOT carry it — Apple will not
+-authorise an app group on that channel, and the `.dmg` does not need one because
+-it acquires the PII model by plain HTTPS.
++The Mac App Store build needs the `group.app.bristlenose` app group for
++Background Assets; the Developer-ID `.dmg` must NOT carry it — its profile does
++not authorise it, and the `.dmg` does not need one because it acquires the PII
++model by plain HTTPS.
++
++Both carry the Team-ID-prefixed group `$(TeamIdentifierPrefix)app.bristlenose`,
++which holds the MCP handshake for the sandboxed native proxy
++(docs/design-mcp-native-proxy.md §6).
+ 
+ The realistic regression is not someone deliberately undoing this. It is someone
+ editing one file and not the other, or dropping the override line while tidying
+@@ -25,6 +29,8 @@ _DEV_ID = _DESKTOP / "Bristlenose" / "Bristlenose" / "BristlenoseDeveloperID.ent
+ _BUILD_DMG = _DESKTOP / "scripts" / "build-dmg.sh"
+ 
+ _APP_GROUP = "com.apple.security.application-groups"
++_BA_GROUP = "group.app.bristlenose"
++_TEAM_GROUP = "$(TeamIdentifierPrefix)app.bristlenose"
+ 
+ 
+ def _load(path: Path) -> dict:
+@@ -40,23 +46,26 @@ class TestTheSplitExists:
+ 
+     def test_mas_carries_the_app_group(self) -> None:
+         groups = _load(_MAS).get(_APP_GROUP)
+-        assert groups == ["group.app.bristlenose"], (
++        assert groups == [_BA_GROUP, _TEAM_GROUP], (
+             "Background Assets deposits packs into the App Group container; "
+             "without this the archive signs and BA then fails at runtime."
+         )
+ 
+-    def test_developer_id_does_not(self) -> None:
+-        assert _APP_GROUP not in _load(_DEV_ID), (
+-            "Apple will not authorise an app group on Developer ID, and the "
+-            ".dmg does not need one — it fetches the model over plain HTTPS."
++    def test_developer_id_carries_only_the_team_group(self) -> None:
++        groups = _load(_DEV_ID).get(_APP_GROUP)
++        assert groups == [_TEAM_GROUP], (
++            "the .dmg must not carry the Background Assets group (its profile "
++            "does not authorise it, and it fetches the model over plain HTTPS), "
++            "but it needs the team group for the MCP handshake."
+         )
+ 
+-    def test_they_differ_by_exactly_that_one_key(self) -> None:
++    def test_they_differ_by_exactly_the_background_assets_group(self) -> None:
+         """Anything else diverging is drift, not design."""
+         mas, dev = _load(_MAS), _load(_DEV_ID)
+-        assert set(mas) - set(dev) == {_APP_GROUP}
+-        assert set(dev) - set(mas) == set()
+-        for key in set(dev):
++        assert set(mas) == set(dev)
++        assert set(mas[_APP_GROUP]) - set(dev[_APP_GROUP]) == {_BA_GROUP}
++        assert set(dev[_APP_GROUP]) - set(mas[_APP_GROUP]) == set()
++        for key in set(dev) - {_APP_GROUP}:
+             assert mas[key] == dev[key], f"{key} drifted between the two files"
+ 
+ 
+@@ -185,7 +194,7 @@ class TestTheEntitlementsAreActuallyCommitted:
+ 
+     def test_the_committed_mas_file_carries_the_app_group(self) -> None:
+         d = self._from_head("desktop/Bristlenose/Bristlenose/Bristlenose.entitlements")
+-        assert d.get(_APP_GROUP) == ["group.app.bristlenose"], (
++        assert d.get(_APP_GROUP) == [_BA_GROUP, _TEAM_GROUP], (
+             "the app group is missing from the COMMITTED file — a fresh clone "
+             "would build without it. Check `git ls-files -v | grep '^S'`."
+         )
+-- 
+2.54.0 (Apple Git-157)
+

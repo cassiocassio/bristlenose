@@ -487,7 +487,20 @@ only, no SPI, no Node) is proven end to end in a real host.
   - The Mac App Store profile already authorises it. *Verified:* the embedded
     "Bristlenose Mac App Store" profile lists application groups
     `group.app.bristlenose` and `Z56GZVA2QB.*`.
-  - Developer ID needs no profile for team-prefixed groups.
+  - Developer ID: **today's `.dmg` profile does not list the group** (the
+    Xcode-minted "Mac Team Direct" profile authorises only
+    `keychain-access-groups`). *Measured* 29 Sep 2026 on macOS 27: a
+    Developer-ID app carrying that profile and claiming the team group ran
+    and read and wrote the group. But taskgated logged *"Unsatisfied
+    entitlements: com.apple.security.application-groups … Disallowing"*,
+    the same lenient path the probes hit. Re-export so Xcode mints a profile
+    that authorises the group, and test on macOS 15 and 26, before relying on
+    it.
+  - A ready-to-apply draft of the host half is in
+    `docs/drafts/native-proxy-group-handshake/`. It writes and removes both
+    copies, reads the team group from the process's own entitlements, and
+    updates both entitlements files and the split test. Not applied; its
+    README lists what was and wasn't verified.
   - Keep the data-container copy while the Node `.mcpb` exists.
   - `tests/test_entitlements_split.py` must change deliberately: its claim
     that the `.dmg` carries no app group holds only for `group.`-prefixed

@@ -763,6 +763,8 @@ struct WebView: NSViewRepresentable {
             // an NSButtonImageView, crashing the app (29 Sep 2026). We own the
             // window; closing only drops our references.
             window.isReleasedWhenClosed = false
+            // Full screen of its own, like any document window (fn-F).
+            window.collectionBehavior.insert(.fullScreenPrimary)
             window.contentView = popoutWebView
             window.title = i18n.t("desktop.player.windowTitle")
             window.setFrameAutosaveName("BristlenosePlayer")
@@ -830,6 +832,13 @@ enum PopoutOwners {
     static func owner(of window: NSWindow?) -> BridgeHandler? {
         guard let window else { return nil }
         return table.object(forKey: window)
+    }
+
+    /// The open player window a report owns, if any.
+    static func window(ownedBy bridge: BridgeHandler) -> NSWindow? {
+        table.keyEnumerator().allObjects
+            .compactMap { $0 as? NSWindow }
+            .first { table.object(forKey: $0) === bridge && $0.isVisible }
     }
 }
 

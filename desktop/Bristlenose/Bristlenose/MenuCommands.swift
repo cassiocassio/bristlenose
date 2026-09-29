@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import WebKit
 
 // MARK: - Menu bar
 
@@ -381,7 +382,8 @@ private struct CustomMenus: Commands {
             QuotesMenuContent(bridgeHandler: bridgeHandler, i18n: i18n)
         }
         CommandMenu(LocalizedStringKey(i18n.t("desktop.menu.video.title"))) {
-            VideoMenuContent(bridgeHandler: bridgeHandler, i18n: i18n)
+            VideoMenuContent(bridgeHandler: bridgeHandler, i18n: i18n,
+                             playerInFront: PopoutOwners.owner(of: NSApp.keyWindow) === bridgeHandler)
         }
     }
 }
@@ -1600,8 +1602,23 @@ private struct QuotesMenuContent: View {
 private struct VideoMenuContent: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
+    /// The popout player is the key window.
+    let playerInFront: Bool
 
     private var active: Bool { bridgeHandler.hasPlayer }
+
+    /// The player's keys, shown — and bound — only while the player is in
+    /// front. Bare keys on a menu item are taken before any view sees them, so
+    /// with the report in front ← → would stop moving through quotes and Space
+    /// would stop typing spaces. The player has no text to type into. Chosen
+    /// 29 Sep 2026: ← → 5 s and ⌥← ⌥→ 30 s (QuickTime's arrows, the player's
+    /// own jumps), YouTube's ⇧, ⇧. for speed and C for subtitles (no Mac
+    /// player has a well-known key for them), Space, and fn-F for full screen
+    /// like the rest of the app. Volume has the Mac's own keys. player.html
+    /// binds the same keys for the browser.
+    private func key(_ shortcut: KeyboardShortcut) -> KeyboardShortcut? {
+        playerInFront ? shortcut : nil
+    }
 
     var body: some View {
         Button(bridgeHandler.playerPlaying
@@ -1610,6 +1627,7 @@ private struct VideoMenuContent: View {
                systemImage: bridgeHandler.playerPlaying ? "pause" : "play") {
             bridgeHandler.menuAction("playPause")
         }
+        .keyboardShortcut(key(KeyboardShortcut(.space, modifiers: [])))
         .disabled(!active)
 
         Divider()
@@ -1617,21 +1635,25 @@ private struct VideoMenuContent: View {
         Button(i18n.t("desktop.menu.video.skipForward5"), systemImage: "goforward.5") {
             bridgeHandler.menuAction("skipForward5")
         }
+        .keyboardShortcut(key(KeyboardShortcut(.rightArrow, modifiers: [])))
         .disabled(!active)
 
         Button(i18n.t("desktop.menu.video.skipBack5"), systemImage: "gobackward.5") {
             bridgeHandler.menuAction("skipBack5")
         }
+        .keyboardShortcut(key(KeyboardShortcut(.leftArrow, modifiers: [])))
         .disabled(!active)
 
         Button(i18n.t("desktop.menu.video.skipForward30"), systemImage: "goforward.30") {
             bridgeHandler.menuAction("skipForward30")
         }
+        .keyboardShortcut(key(KeyboardShortcut(.rightArrow, modifiers: .option)))
         .disabled(!active)
 
         Button(i18n.t("desktop.menu.video.skipBack30"), systemImage: "gobackward.30") {
             bridgeHandler.menuAction("skipBack30")
         }
+        .keyboardShortcut(key(KeyboardShortcut(.leftArrow, modifiers: .option)))
         .disabled(!active)
 
         Divider()
@@ -1639,11 +1661,13 @@ private struct VideoMenuContent: View {
         Button(i18n.t("desktop.menu.video.speedUp"), systemImage: "forward") {
             bridgeHandler.menuAction("speedUp")
         }
+        .keyboardShortcut(key(KeyboardShortcut(".", modifiers: .shift)))
         .disabled(!active)
 
         Button(i18n.t("desktop.menu.video.slowDown"), systemImage: "backward") {
             bridgeHandler.menuAction("slowDown")
         }
+        .keyboardShortcut(key(KeyboardShortcut(",", modifiers: .shift)))
         .disabled(!active)
 
         Button(i18n.t("desktop.menu.video.normalSpeed"), systemImage: "gauge.medium") {
@@ -1677,18 +1701,36 @@ private struct VideoMenuContent: View {
             get: { bridgeHandler.playerSubtitlesOn },
             set: { _ in bridgeHandler.menuAction("toggleSubtitles") }
         ))
+        .keyboardShortcut(key(KeyboardShortcut("c", modifiers: [])))
         .disabled(!bridgeHandler.canDispatch)
 
         Divider()
 
+        // Run in the player page itself, not relayed through the report:
+        // picture in picture is refused without a user gesture, and a
+        // postMessage from another window isn't one. A constant script, no
+        // interpolation.
         Button(i18n.t("desktop.menu.video.pictureInPicture"), systemImage: "pip.enter") {
-            bridgeHandler.menuAction("pictureInPicture")
+            if let player = PopoutOwners.window(ownedBy: bridgeHandler)?.contentView as? WKWebView {
+                player.evaluateJavaScript("window.bristlenosePlayer && window.bristlenosePlayer.togglePip()")
+            } else {
+                bridgeHandler.menuAction("pictureInPicture")
+            }
         }
         .disabled(!active)
 
+        // The player window's own full screen, as fn-F gives every other
+        // window — not the page's element full screen, which kept the title
+        // bar's world behind it. View ▸ Enter Full Screen carries the same
+        // keys and does the same thing to the key window; this row says so.
         Button(i18n.t("desktop.menu.video.fullscreen"), systemImage: "arrow.up.left.and.arrow.down.right") {
-            bridgeHandler.menuAction("fullscreen")
+            if let window = PopoutOwners.window(ownedBy: bridgeHandler) {
+                window.toggleFullScreen(nil)
+            } else {
+                bridgeHandler.menuAction("fullscreen")
+            }
         }
+        .keyboardShortcut(key(KeyboardShortcut("f", modifiers: .function)))
         .disabled(!active)
     }
 }

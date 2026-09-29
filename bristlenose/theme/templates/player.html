@@ -158,9 +158,13 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
       wantSubtitles = !!(d.payload && d.payload.show);
       applySubtitleMode();
     } else if (d && d.type === 'bristlenose-command') {
+      runCommand(d.command, d.payload || {});
+    }
+  });
+
+  function runCommand(command, p) {
       if (!currentUri) return; // No video loaded — ignore commands
-      var p = d.payload || {};
-      switch (d.command) {
+      switch (command) {
         case 'playPause':
           video.paused ? video.play().catch(function(){}) : video.pause();
           break;
@@ -182,16 +186,64 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
           video.muted = !video.muted;
           break;
         case 'togglePip':
-          if (document.pictureInPictureElement) document.exitPictureInPicture().catch(function(){});
-          else if (video.requestPictureInPicture) video.requestPictureInPicture().catch(function(){});
+          // Needs a user gesture: a command relayed by postMessage from the
+          // report is refused. The Mac app runs `bristlenosePlayer.togglePip()`
+          // in this page directly instead; the video's own PiP button always
+          // works. WebKit's older presentation-mode API is the fallback.
+          if (document.pictureInPictureElement) {
+            document.exitPictureInPicture().catch(function(){});
+          } else if (video.webkitSupportsPresentationMode &&
+                     video.webkitSupportsPresentationMode('picture-in-picture')) {
+            video.webkitSetPresentationMode(
+              video.webkitPresentationMode === 'picture-in-picture' ? 'inline' : 'picture-in-picture');
+          } else if (video.requestPictureInPicture) {
+            video.requestPictureInPicture().catch(function(err) {
+              console.warn('bristlenose: picture in picture refused', err);
+            });
+          }
           break;
         case 'toggleFullscreen':
           if (document.fullscreenElement) document.exitFullscreen().catch(function(){});
           else if (video.requestFullscreen) video.requestFullscreen().catch(function(){});
           break;
       }
+  }
+
+  // For the Mac app, which runs these in the page directly so they count as
+  // the user's own action (picture in picture needs one).
+  window.bristlenosePlayer = {
+    togglePip: function() { runCommand('togglePip', {}); }
+  };
+
+  // The player's keys (chosen 29 Sep 2026): Space plays and pauses, ← → jump
+  // 5 s, ⌥← ⌥→ 30 s, YouTube's ⇧, ⇧. (< >) change speed and C switches
+  // subtitles — no Mac player has a well-known key for that, and YouTube's
+  // is the one people know. Captured first
+  // so the video's built-in controls don't also act on the same key. In the
+  // Mac app the Video menu carries these keys while the player is in front
+  // and takes them before the page; this is the browser's path.
+  window.addEventListener('keydown', function(e) {
+    if (e.metaKey || e.ctrlKey) return;
+    var cmd = null, p = {};
+    if (e.key === ' ') cmd = 'playPause';
+    else if (e.key === 'ArrowRight') { cmd = 'skipRelative'; p.seconds = e.altKey ? 30 : 5; }
+    else if (e.key === 'ArrowLeft') { cmd = 'skipRelative'; p.seconds = e.altKey ? -30 : -5; }
+    else if (e.key === '>' || (e.shiftKey && e.key === '.')) { cmd = 'speedStep'; p.delta = 0.25; }
+    else if (e.key === '<' || (e.shiftKey && e.key === ',')) { cmd = 'speedStep'; p.delta = -0.25; }
+    else if ((e.key === 'c' || e.key === 'C') && !e.altKey) {
+      // The setting lives in the report; it hears this and sends it back.
+      e.preventDefault();
+      e.stopPropagation();
+      wantSubtitles = !wantSubtitles;
+      applySubtitleMode();
+      _notify('bristlenose-subtitles-mode', { show: wantSubtitles });
+      return;
     }
-  });
+    if (!cmd) return;
+    e.preventDefault();
+    e.stopPropagation();
+    runCommand(cmd, p);
+  }, true);
 
   // Handle initial load from URL hash
   handleHash();

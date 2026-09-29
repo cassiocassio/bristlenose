@@ -90,12 +90,14 @@ escape it.
    carried over the upgrade, so testing needs a Mac or a user account that has
    never granted Claude. **Don't reset this Mac's grant to find out.** Claude
    is the shipped path and the working setup here.
-2. **Does the agent app appear in Files & Folders *before* its first denied
-   read?** The pane's header says apps appear once they have *requested*
-   access. If so, the researcher has to ask one question, be blocked, and
-   only then find the switch. The copy below is written for that order. If
-   the row turns out to be there from install, the copy can say "before you
-   ask".
+2. ~~**Does the agent app appear in Files & Folders *before* its first denied
+   read?**~~ **Settled 29 Sep 2026, by the pane's own contract: no.** Files &
+   Folders lists only apps that have requested access (*"Apps that appear here
+   have requested access…"*), not every app on the system. The proxy reads the
+   handshake only inside a tool call, so the first question is the first
+   attempt, and no *agent app ▸ Bristlenose* row can exist before it. The
+   copy's order (ask, get blocked, turn it on, ask again) is the only order
+   there is.
 3. ~~**Whether a carried-over macOS 26 grant shows up in Files & Folders** under
    Claude.~~ **Answered 29 Sep 2026: it does.** Files & Folders ▸ **Claude**
    lists **Bristlenose: on**, beside Desktop and Downloads. So an existing
@@ -345,11 +347,14 @@ history.
 
 ## 7. Open decisions for the maintainer
 
-1. **Settle the English** of the three strings in §8, then the 20 translations
-   get pasted in one pass (21 full locales, not `zh-Hant-HK`).
+1. ~~**Settle the English** of the three strings in §8.~~ **Settled 29 Sep
+   2026: the English v1 in §8 stands as drafted.** The 20 translations are
+   pasted in one pass when this is built (21 full locales, not `zh-Hant-HK`).
 2. **Run the Claude-on-27 test** (§1, unmeasured #1) on a clean account before
    the Claude tab's note says "blocks". If Claude turns out still to prompt, the
-   Claude tab keeps its 26 note and only ChatGPT gets the step.
+   Claude tab keeps its 26 note and only ChatGPT gets the step. Plan: a macOS
+   27 guest under tart (`ghcr.io/cirruslabs/macos-golden-gate-base`, built on
+   vanilla 27.0), which has never granted Claude anything.
 3. **ChatGPT plugin: ship or not.** Draft (a) is safe to ship on its own.
    Draft (b) waits for the install gesture and the Node question.
 4. **Website deploy.** The help-page draft replaces a paragraph that is

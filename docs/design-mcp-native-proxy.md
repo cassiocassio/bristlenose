@@ -550,7 +550,29 @@ What this does and does not settle:
   §2.4.5(ii)) happens only when a build is submitted for review. Internal
   TestFlight skips human review.
 
-### 6.6 Still open
+### 6.6 Trap: the helper's own container remembers its first signer
+
+*Measured*, 29 Sep 2026. A sandboxed helper gets its own container
+(`~/Library/Containers/<helper id>/Data`), and macOS records the signing
+identity that created it. The Developer-ID build of `app.bristlenose.mcp-proxy`
+ran first. When the Apple Distribution build with the same identifier then
+ran, it **hung at launch** in `_libsecinit_appsandbox`, waiting on `secinitd`,
+which logged *"binary identity <Z56GZVA2QB/app.bristlenose.mcp-proxy;
+signer:enterprise> not in ACL for container …"*. The same binary under a fresh
+identifier ran normally and served real data. So an Apple Distribution-signed
+tool does run outside the App Store when it isn't quarantined, and the hang was
+purely the container's signer ACL.
+
+To a host, a helper that hangs at launch is a server that never answers. The
+Developer-ID `.dmg` and the Mac App Store build (re-signed by Apple) have
+different signers, so a person who has run both would hit it. **Give the
+helper a different bundle identifier per channel** (for example
+`app.bristlenose.mcp-proxy` on the App Store and
+`app.bristlenose.mcp-proxy.devid` on the `.dmg`). The group container is
+unaffected: in the same log, `containermanagerd` approved it (*"Requestor's
+signature allows it to access a TCC-protected group container"*).
+
+### 6.7 Still open
 
 - **One real upload to internal TestFlight** carrying the nested sandboxed
   tool, to see whether processing agrees with validation. It spends a build

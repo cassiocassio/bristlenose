@@ -262,6 +262,12 @@ class FullTranscript(BaseModel):
     #: evidence. Surfaced in the transcript file's header so the researcher can
     #: see what the model thought it was listening to.
     detected_language: str | None = None
+    #: The language the run was TOLD to transcribe in (``--whisper-language``),
+    #: for a session Whisper transcribed. Kept apart from ``detected_language``
+    #: for the reason above, and recorded as ``(set)`` rather than
+    #: ``(detected)``: it is not evidence of anything, but it IS the language,
+    #: and an exported clip's subtitle track needs one.
+    pinned_language: str | None = None
 
     def full_text(self) -> str:
         """Return the full transcript as timestamped text, for LLM PROMPTS.

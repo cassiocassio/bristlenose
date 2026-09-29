@@ -193,9 +193,32 @@ class TestTheDetectedLanguageReachesTheTranscriptHeader:
         write_raw_transcripts(transcripts, tmp_path)
         assert "Language: es (detected)" in (tmp_path / "s1.txt").read_text()
 
+    def test_header_records_a_pinned_language_as_set_not_detected(self, tmp_path) -> None:
+        # A pinned run: not evidence of anything, but it IS the language, and
+        # an exported clip's subtitle track needs one to be found by players.
+        from bristlenose.stages.s06_merge_transcript import (
+            merge_transcripts,
+            write_raw_transcripts,
+        )
+
+        sessions, segments = self._transcript_inputs(tmp_path)
+        transcripts = merge_transcripts(sessions, segments, pinned_languages={"s1": "es"})
+        assert transcripts[0].detected_language is None
+
+        write_raw_transcripts(transcripts, tmp_path)
+        text = (tmp_path / "s1.txt").read_text()
+        assert "Language: es (set)" in text
+        assert "detected" not in text
+
+    def test_importer_reads_a_set_language(self, tmp_path) -> None:
+        from bristlenose.server.importer import _parse_transcript_headers
+
+        (tmp_path / "s1.txt").write_text("# Transcript: s1\n# Language: es (set)\n")
+        assert _parse_transcript_headers(tmp_path)["s1"]["language"] == "es"
+
     def test_header_stays_silent_when_nothing_was_detected(self, tmp_path) -> None:
-        # A pinned run, or a transcript that came from a subtitle/docx file.
-        # A header line claiming a detection here would be worse than no line.
+        # A transcript that came from a subtitle/docx file: nothing knew the
+        # language. (A pinned run writes "(set)" — see the test above.)
         from bristlenose.stages.s06_merge_transcript import (
             merge_transcripts,
             write_raw_transcripts,
@@ -402,3 +425,39 @@ class TestMlxBackendAppliesTheSignalGate:
 
         assert [s.text for s in segments] == ["We bought the sofa in May."]
         assert len(calls) == 1
+
+
+class TestPipelineRecordsAPinnedLanguage:
+    """A pinned ``--whisper-language`` reaches the transcript header as ``(set)``."""
+
+    def _gather(self, tmp_path, whisper_language: str):
+        import asyncio
+        from datetime import datetime
+        from unittest.mock import patch
+
+        from bristlenose.config import BristlenoseSettings
+        from bristlenose.events import StageOutcome
+        from bristlenose.models import InputSession, TranscriptSegment
+        from bristlenose.pipeline import Pipeline
+
+        audio = tmp_path / "s1.wav"
+        audio.write_bytes(b"")
+        session = InputSession(
+            session_id="s1", session_number=1, participant_id="p1",
+            participant_number=1, files=[], audio_path=audio,
+            session_date=datetime(2026, 9, 29),
+        )
+        seg = TranscriptSegment(start_time=0.0, end_time=1.0, text="hola", speaker_label="A")
+        pipeline = Pipeline(BristlenoseSettings(whisper_language=whisper_language))
+        with patch(
+            "bristlenose.stages.s05_transcribe.transcribe_sessions",
+            return_value=({"s1": [seg]}, {}, StageOutcome(attempted=1, succeeded=1)),
+        ):
+            asyncio.run(pipeline._gather_all_segments([session]))
+        return pipeline
+
+    def test_pinned_language_is_recorded_per_transcribed_session(self, tmp_path) -> None:
+        assert self._gather(tmp_path, "ES")._pinned_languages == {"s1": "es"}
+
+    def test_auto_records_nothing_pinned(self, tmp_path) -> None:
+        assert self._gather(tmp_path, "auto")._pinned_languages == {}

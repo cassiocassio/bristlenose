@@ -609,6 +609,10 @@ class Pipeline:
         #: `_gather_all_segments`, read at the two `merge_transcripts` call
         #: sites — see the note there for why it is not a return value.
         self._detected_languages: dict[str, str] = {}
+        #: session_id -> the language a run PINNED with ``--whisper-language``,
+        #: for sessions Whisper transcribed. Recorded as ``(set)`` in the
+        #: transcript header, never as a detection.
+        self._pinned_languages: dict[str, str] = {}
 
         # Logging is configured later (once output_dir is known) via
         # _configure_logging().  Pipeline methods call it at the top of
@@ -1502,6 +1506,7 @@ class Pipeline:
             transcripts = merge_transcripts(
                 sessions, session_segments, input_dir,
                 session_languages=self._detected_languages,
+                pinned_languages=self._pinned_languages,
             )
             raw_dir = output_dir / "transcripts-raw"
             write_raw_transcripts(transcripts, raw_dir)
@@ -2404,6 +2409,7 @@ class Pipeline:
             transcripts = merge_transcripts(
                 sessions, session_segments, input_dir,
                 session_languages=self._detected_languages,
+                pinned_languages=self._pinned_languages,
             )
             raw_dir = output_dir / "transcripts-raw"
             write_raw_transcripts(transcripts, raw_dir)
@@ -2944,6 +2950,9 @@ class Pipeline:
                 # cost more than it explains. Per-run derived data on a per-run
                 # object, read at the `merge_transcripts` call sites.
                 self._detected_languages.update(whisper_languages)
+                pinned = (self.settings.whisper_language or "").strip().lower()
+                if pinned and pinned != "auto":
+                    self._pinned_languages.update({sid: pinned for sid in whisper_results})
                 transcript_outcome.attempted += whisper_outcome.attempted
                 transcript_outcome.succeeded += whisper_outcome.succeeded
                 transcript_outcome.failed.extend(whisper_outcome.failed)

@@ -410,7 +410,7 @@ Still unknown by construction: platform transcripts (Teams, Zoom, docx) and proj
 - **Tagged English:** shows on a plain double-click, because QuickTime remembers the viewer's *On (Language)* setting.
 - **Flagged "every line forced"** (the `tx3g` display flag): also shows, but the viewer can't hide it, so it is not used.
 
-A slightly wrong label beats subtitles that never appear. A brand-new QuickTime user with subtitles off still needs one click; that is Apple's convention, and burn-in is the path for text that must always show. Recording a *pinned* `--whisper-language` in the header (step 3) is not done: those runs fall back to the app language for now.
+A slightly wrong label beats subtitles that never appear. A brand-new QuickTime user with subtitles off still needs one click; that is Apple's convention, and burn-in is the path for text that must always show. **Step 3 built the same day:** a pinned `--whisper-language` is written as `# Language: es (set)`, never as a detection (`FullTranscript.pinned_language`, `Pipeline._pinned_languages`), and the importer reads it like a detected one.
 
 ### Subtitles in Bristlenose's own player — scope added 29 Sep 2026, not built
 

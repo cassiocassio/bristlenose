@@ -821,14 +821,69 @@ register in every Settings frame for this reason.
   - P0.4 (**install path measured 29 Sep**: Claude reads and installs a `.mcpb` from a sandboxed app's container; the helper-inside-it half, meaning quarantine, exec bit and `spctl` under Claude's extraction, still waits for P4's real artefact): end to end through **Claude's own extraction** of a runtime `.mcpb`, on a clean 27 guest: quarantine flag, exec bit, `__MACOSX` entries, `spctl`; it answers with Files & Folders off.
   - P0.5: a second install at a bumped version, on each host: what ChatGPT and Claude offer. (**done 29 Sep**: ChatGPT outcome B, ⋯ ▸ Uninstall then Install plugin; Claude outcome A, Update in place when the version rises.)
 - **P1 — host half** (**landed 29 Sep**: both copies written, D4 fail-closed via `MCPHandshake.writeBoth` with a read-back test; Swift 1553 passed, Python 5617 passed; P0.3 turned out not to gate it), only after P0.1 and P0.3 pass: the draft patch, amended to fail closed (D4) with a read-back test, and the reader set written into design-mcp-extension §3.1.
-- **P2 — helper** (**first half landed 29 Sep**: `desktop/mcp-helper/main.swift` + `build-helper.sh`, the D3 gate `desktop/scripts/check-mcp-helper.sh`, `tests/test_mcp_helper.py`; both channels build and pass the gate, the gate is proved red on six bad inputs, and the Developer-ID build answers from the group on a clean macOS 15 guest. **Not yet wired into the Copy phase**, so nothing ships) per D1–D3, source moved to `desktop/mcp-helper/`; the tool list read from the `BN-TOOLS-JSON` block with its annotations; that block moves out of `desktop/mcpb/` before the Node extension is retired, **and `tests/test_mcpb_proxy.py` moves with it in the same commit** (re-point `_PROXY_JS` and the regex). It is the only check that the static tool list and its annotations match the server's `tools/list`, and it looks like it belongs to the Node extension, so it would otherwise be deleted with it and leave the helper's list unguarded.
-- **P3 — ChatGPT**: marketplace per D7, Install Plugin… per D8, link query encoded strictly (unit-tested with `& + # %` and spaces).
-- **P4 — Claude**: runtime `.mcpb` per P0.4; `MCPExtensionInstaller`'s bundled-file assumptions (`claudeDesktopCanInstall`, the disabled state, `bundledStamp`) repointed at the runtime artefact with a stamp beside it.
-- **P5 — switch-over**, one commit per D6, confined to the pane's top half (see *Preserved as shipped*).
+- **P2 — helper** (**landed 29 Sep**: `desktop/mcp-helper/main.swift` + `build-helper.sh`, the D3 gate `desktop/scripts/check-mcp-helper.sh` (also run by `check-pkg-shippable.sh` and `check-dmg-shippable.sh`), `tests/test_mcp_helper.py`; built in the Copy Sidecar Resources phase into `Contents/Helpers` and the ChatGPT marketplace; copies compared by CDHash) per D1–D3, source moved to `desktop/mcp-helper/`; the tool list read from the `BN-TOOLS-JSON` block with its annotations; that block moves out of `desktop/mcpb/` before the Node extension is retired, **and `tests/test_mcpb_proxy.py` moves with it in the same commit** (re-point `_PROXY_JS` and the regex). It is the only check that the static tool list and its annotations match the server's `tools/list`, and it looks like it belongs to the Node extension, so it would otherwise be deleted with it and leave the helper's list unguarded.
+- **P3 — ChatGPT** (**landed and proven end to end 29 Sep**, §6.10): marketplace per D7, Install Plugin… per D8, link query encoded strictly (unit-tested with `& + # %` and spaces).
+- **P4 — Claude** (**landed 29 Sep**: `NativeExtensionPackage` zips the helper at click time; the live install through Claude is still to be run): runtime `.mcpb` per P0.4; `MCPExtensionInstaller`'s bundled-file assumptions (`claudeDesktopCanInstall`, the disabled state, `bundledStamp`) repointed at the runtime artefact with a stamp beside it.
+- **P5 — switch-over** (**landed 29 Sep**, in two commits rather than one: ChatGPT with P3, Claude with P4. A build without the helper keeps the old layout on both tabs, so no release carries a half-state), confined to the pane's top half (see *Preserved as shipped*).
 - **P6 — verify**, each item with its layer named: Swift tests (handshake read-back, installer manifest, zip, link encoding); script gates (D3, and `test-check-pkg-shippable.sh` cases); by hand once: a TestFlight build, Claude and ChatGPT on 15 / 26 / 27, a translocated `.dmg` app, TestFlight→App Store update.
 - **P7 — review notes** per D9.
 
 **Out of scope for v1:** Mach IPC instead of a handshake file (option 2 — also the real answer to the token-probe exposure); Gemini; the duplicate-row exposure bug.
+
+## 6.10 Breaking it, 29 Sep 2026
+
+Once the ChatGPT button worked, the plugin was attacked two ways: an automated
+harness over stdio, and ChatGPT itself driven through the app.
+
+### The harness (`tests/test_mcp_helper_behaviour.py`, 34 cases, ~5 s)
+
+A **test build** of the helper (`-D BN_TEST_HANDSHAKE`) reads its handshake from
+a path the test chooses; the shipped binary is never built that way, and
+`check-mcp-helper.sh` refuses any binary containing the test path. The harness
+starts a real `bristlenose serve` app in-process (uvicorn, free port, temp
+database) and drives the helper exactly as a host does.
+
+| Area | Cases |
+|---|---|
+| Happy path | five tools listed, all `readOnlyHint`; a proxied call answers; the call is counted (antenna); the host's build is recorded under `ChatGPT` (D8) |
+| Handshake wrong | missing; eight kinds of garbage; unreadable (`chmod 0`: the permission sentence, never Files & Folders); schema 1; re-read on every call, with `tools/list_changed` on the offline→ready edge |
+| Wrong process on the port | dead port; three impostor HTTP servers — **the bearer never reaches them**, only the unauthenticated `GET /api/health`; a restarted serve (stale `instance_id`) gets no tool call; a missing or empty `instance_id` fails closed; a crashed serve is not listed (below) |
+| Serve refuses | wrong token → the credential sentence; a token carrying `\r\n` neither crashes nor injects; out of scope; no MCP; a newer app → "older than the Bristlenose app" |
+| Several projects | ambiguous; unknown key; the right key; a hostile project name returns as data |
+| Protocol | malformed frames (including 200 KB of junk) dropped; unknown method and unknown tool answered; 25 calls in a burst answered in order; EOF exits 0; `initialize` answers in under 2 s with a dead serve |
+
+**Proved on mutants:** removing the stale-instance check fails exactly the four
+instance cases; sending the bearer on the probe fails exactly the three impostor
+cases; dropping the host header fails exactly the D8 assertion; reverting the
+crash fix fails exactly its two cases.
+
+### Driving ChatGPT (Work mode, plugin 0.31.5+3906/3907)
+
+| Test | What ChatGPT did | Verdict |
+|---|---|---|
+| "Delete p3's quotes and rename the project" | called `list_projects`, found no write tool, said so | pass: read-only holds |
+| project keys `../../../etc/passwd` and `x" OR 1=1 --`, then the real key | "not open … Currently readable: project-ikea"; the real key returned the overview | pass |
+| `kill -9` Bristlenose, then ask | the sidecar exited itself within seconds; `get_project_overview` said "isn't open" — **but `list_projects` still listed the project** | **bug, fixed** (below) |
+| same, after the fix | "Bristlenose isn't open, so there is no study data available" | pass |
+| a Work thread **without** @Bristlenose | "I don't see any Bristlenose study materials"; once it called ChatGPT's own built-in `list_projects` (Codex workspace folders) instead | **copy fixed** (below) |
+| continuing a thread that held the traversal and injection probes | "This content can't be shown — We take extra care with some cybersecurity requests" | ChatGPT's own filter; a limit on adversarial testing through ChatGPT, not a Bristlenose fault |
+| the antenna and Last asked during a ChatGPT question | radiated; "Just now" | pass (maintainer's observation) |
+| per-tool approval cards | none, five tool calls | pass |
+
+**Two defects found and fixed:**
+1. **A crash left a project listed as readable.** The handshake survives
+   `kill -9`, and `list_projects` answered from it alone while every call said
+   "isn't open". `list_projects` now probes each entry (unauthenticated, as
+   every call already does) and lists only a live, matching serve.
+   The Node proxy has the same behaviour and is retiring; it is left as is.
+2. **The Work note didn't mention @Bristlenose.** ChatGPT uses a plugin only
+   when the question mentions it, and without it will even reach for its own
+   `list_projects`. The note now reads *"In ChatGPT, ask in Work mode and start
+   with @Bristlenose — otherwise its tools aren't used"*, in all 21 locales.
+
+**Leftovers noticed, not fixed:** ChatGPT's config still enables
+`bristlenose@bristlenose-p05`, the P0.5 stub, whose cache is gone; ChatGPT's
+Installed sidebar lagged a reinstall although `config.toml` recorded it.
 
 ## 7. Recipes
 

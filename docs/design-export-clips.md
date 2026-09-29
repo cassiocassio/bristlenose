@@ -293,7 +293,7 @@ _Proposed 29 Sep 2026, from the closed GitHub issue #59 ("overlay subtitles" was
 
 Only **C is foolproof** for "drop it into PowerPoint and press play". A and B are cheap and keep the stream-copy guarantee (Decision 2), but each needs the viewer's player to cooperate.
 
-**Burning in is possible with what we already ship.** The bundled ffmpeg (martin-riedl 8.1 build) was configured with `--enable-libass --enable-libfreetype --enable-libharfbuzz --enable-libx264`, and its binary carries the `subtitles` and `drawtext` filter names (read from the binary's strings, 29 Sep 2026). The binary itself exits 133 when run outside the sandbox, so this was **not run**. The path would be: write an `.ass` file per clip, then `-vf subtitles=clip.ass:fontsdir=<bundled fonts>` with x264, or with `h264_videotoolbox` for hardware encoding. **Risk:** inside the sandbox, fontconfig may not find system fonts, so bundle one OFL font (Inter or Atkinson Hyperlegible) and pass `fontsdir`. A future AVFoundation backend would do the same job natively: `AVVideoCompositionCoreAnimationTool` with `CATextLayer`s, hardware encoding and system fonts, with no libass involved.
+**Burning in is possible with what we already ship.** The bundled ffmpeg (martin-riedl 8.1 build) was configured with `--enable-libass --enable-libfreetype --enable-libharfbuzz --enable-libx264`, and its binary carries the `subtitles` and `drawtext` filter names (read from the binary's strings, 29 Sep 2026). The binary itself exits 133 when run outside the sandbox, so this was **not run**. The path would be: write an `.ass` file per clip, then `-vf subtitles=clip.ass:fontsdir=<bundled fonts>` with x264, or with `h264_videotoolbox` for hardware encoding. **Risk:** inside the sandbox, fontconfig may not find system fonts, so bundle the chosen font (Inter, below) and pass `fontsdir`. A future AVFoundation backend would do the same job natively: `AVVideoCompositionCoreAnimationTool` with `CATextLayer`s, hardware encoding and system fonts, with no libass involved.
 
 ### Styling — decided 29 Sep 2026
 
@@ -313,7 +313,7 @@ The two delivery modes answer the font question differently. That is the argumen
   - *The machine's system font* (SF on a Mac). It looks native in a Keynote deck, but the output then depends on where it was made: the CLI on Linux would burn DejaVu or whatever fontconfig finds. SF would also only be reachable cleanly through CoreText, i.e. the future AVFoundation backend. Handing libass the SF font file directly is fragile and a licensing grey area (**unverified**).
   - *One bundled font, Inter* (OFL). The pixels come out identical on every channel. The metrics are known, so line wrapping and sizing can be computed and tested once rather than per machine. It costs a few hundred KB in the bundle for one weight (**estimate**).
 
-  **Recommendation: bundle one font for burn-in, chosen by the BBC's criterion — "a wide font" (§9.1).** The BBC's own examples cannot be bundled: Reith Sans is the BBC's in-house face, and Verdana is Microsoft's and not redistributable. Tiresias's licence is unverified. So the choice is between **Inter** and **Atkinson Hyperlegible Next**, both OFL-style free and both wide; the sanity check below picks. A deck will be in the client's brand font, which no choice of ours can match, so the aim is a neutral, highly legible sans. Being identical everywhere matters more than feeling native for a file that gets passed from laptop to laptop. If the AVFoundation backend is ever built, it could offer the system font on the Mac, but that is a channel fork to take deliberately, not by default.
+  **Decided 29 Sep 2026: bundle Inter** (SIL Open Font License), in regular or medium weight, never light. It meets the BBC's criterion of "a wide font" (§9.1); the BBC's own examples can't be bundled (Reith Sans is the BBC's in-house face, and Verdana is Microsoft's and not redistributable). A deck will be in the client's brand font, which no choice of ours can match, so the aim is a neutral, highly legible sans that comes out identical on every channel. If the AVFoundation backend is ever built, it could offer the system font on the Mac, but that would be a channel fork to take deliberately, not by default.
 
 ### Prior art — surveyed 29 Sep 2026
 
@@ -338,7 +338,7 @@ Sources were read on the page unless marked *claimed* (a secondary source or a s
 - **Box opacity:** sources split — BBC solid, DCMP translucent, YouTube's default reported as 75% black (*claimed*).
 - **Social reels** (Hormozi/Submagic style: uppercase, heavy stroke, 4–6 words, pop-in animation; Kapwing defaults to Montserrat) are **not the model**. They are built for silent vertical feeds competing for a thumb. Legibility research also runs against them: all-caps is slower to read at a glance ([NN/g on the MIT AgeLab study](https://www.nngroup.com/articles/glanceable-fonts/)). Their one transferable lesson is short cues.
 - **Size on a room display:** AVIXA's DISCAS viewing standard puts the minimum element height at about 2.5–3.5% of *screen* height for typical room geometry. That covers the in-room attendees only; remote attendees are the Teams chain below ([source](https://www.avixa.org/resources/display-image-size-calculators/learn-more-about-display-size)). A clip at half slide height halves our text, so we need about 5–7% of *clip* height. That lands on the BBC's 6.67%.
-- **Fonts:** Atkinson Hyperlegible Next (Braille Institute; free, 7 weights, 150+ languages; [source](https://www.brailleinstitute.org/freefont/)) is designed for letterform distinction at low vision, and it is a wide humanist sans of the kind BBC §9.1 and DCMP ask for. It is a serious rival to Inter here. No study compares Inter, SF or Netflix Sans for subtitles.
+- **Fonts:** Atkinson Hyperlegible Next (Braille Institute; free, 7 weights, 150+ languages; [source](https://www.brailleinstitute.org/freefont/)) is designed for letterform distinction at low vision, and it is a wide humanist sans of the kind BBC §9.1 and DCMP ask for. It was considered and not chosen; Inter was (29 Sep 2026). No study compares Inter, SF or Netflix Sans for subtitles.
 
 ### Who watches, and through what
 
@@ -354,7 +354,7 @@ What that changes, and what it doesn't:
 
 ### Size — BBC figures, no experiment
 
-**Use the BBC numbers as they stand; don't reinvent them** (maintainer, 29 Sep 2026). Their guidance was tested with viewers, and what it optimises for survives the Teams chain above. The only check is the ordinary QA of the feature: burn one clip, share it at half-slide size in a real Teams call, and look at it as a remote attendee. The font falls out of the same look (Inter or Atkinson Hyperlegible Next).
+**Use the BBC numbers as they stand; don't reinvent them** (maintainer, 29 Sep 2026). Their guidance was tested with viewers, and what it optimises for survives the Teams chain above. The only check is the ordinary QA of the feature: burn one clip, share it at half-slide size in a real Teams call, and look at it as a remote attendee.
 
 **Tooling note:** Homebrew's ffmpeg has **no** `subtitles`/`ass` filter (checked 29 Sep 2026), and the bundled binary exits 133 outside the sandbox. The experiments therefore need the unsigned martin-riedl 8.1 download that `desktop/scripts/fetch-ffmpeg.sh` pins.
 
@@ -364,7 +364,7 @@ What that changes, and what it doesn't:
 2. **A single checkbox in the clip export dialog, off by default:** *"Burn subtitles into the video (for slides)"*. That checkbox is the whole of the UI: no font, size or colour controls. It re-encodes with the styling above, and it is the one exception to Decision 2.
 3. **Audio-only sessions** (`.m4a`) can't carry burned-in text. A possible extension is an "audiogram": render a plain `.mp4` of a title card (the gist) with the subtitles over it, so audio quotes can go into a deck too. This is not decided.
 
-**Still open:** whether the burned copy replaces the clean clip or sits beside it (`… (subtitled).mp4`; the Font section argues for beside), the font (recommendation above), and the size (experiments).
+**Still open:** whether the burned copy replaces the clean clip or sits beside it (`… (subtitled).mp4`; the Font section argues for beside). Font (Inter) and size (the BBC's) are decided.
 
 ---
 

@@ -273,6 +273,37 @@ runs the button. Opening a URL is not blocked by the sandbox. **One new key
 takes `{{app}}`** so both tabs share it, and the ChatGPT tab reuses the whole
 note.
 
+From the Mac-UX review (29 Sep 2026), folded in:
+
+- **Placement:** the button sits on the note's trailing edge, in the same
+  `HStack(alignment: .top) { note; Spacer(); button }` that `addressNote` +
+  Copy Config already use, so every tab reads "footnote, action on the
+  right". Stacking it under the note makes it look like a second primary step
+  competing with Install Extension…. The mockup already draws it this way.
+- **Fallback:** `NSWorkspace.open` returns a `Bool`. If the anchor stops
+  resolving in a later 27.x, open System Settings itself
+  (`x-apple.systempreferences:`) rather than nothing.
+- **Accessibility:** `accessibilityHint` "Opens System Settings", so
+  VoiceOver users know the button leaves the app.
+- **No ellipsis, confirmed:** the ellipsis means more input is needed in
+  *this* app. Apple's own TCC buttons ("Open System Settings") carry none.
+  Naming the pane beats "Open System Settings", because the label says where
+  you land.
+
+**A v2 copy proposal, not adopted.** The English v1 in §8 is settled by the
+maintainer and stays. The review argues, citing the HIG writing page (*"If you
+need to direct someone to a setting, provide a direct link or button, rather
+than trying to describe its location"*), that the path in the sentence
+duplicates the button. It would drop to about 25 words:
+
+> On macOS 27, Claude can't reach Bristlenose on your first question. Open
+> Files & Folders, expand Claude, turn on Bristlenose, then ask again.
+
+The case for keeping v1: the path is also what the help page and the in-chat
+message say, and it's the only route when the button isn't there (the
+proxy's sentence, a researcher on another Mac). If v2 is adopted, the 20
+translations in §8 are redone in the same pass.
+
 ### ChatGPT & Codex tab
 
 Be precise about which path needs the step, because today's tab doesn't:
@@ -310,6 +341,66 @@ blockers to name before this ships:
 - **The TOML path doesn't go away.** It's the one ChatGPT route with no
   permission step and no Node dependency. Keep it as the fallback, as the
   Generic MCP tab is for everything else.
+
+### 4(c) Copy for both states: today (Node .mcpb), and when the native proxy ships (both channels)
+
+Written 29 Sep 2026 with the plugin-spike session. Which state ships is the
+maintainer's call. The recommendation in
+[`design-mcp-native-proxy.md`](design-mcp-native-proxy.md) §6.4 is a
+sandboxed, app-group-carrying `type: binary` proxy on both channels. So the
+pane's copy is written for both states, and each row says which it belongs to.
+The split is by time, not by channel: if the app-group route ships, the
+`.dmg` and Mac App Store builds show the researcher the same steps (App Store
+session, 29 Sep 2026). **This is a recommendation, not a decision**, and two
+things stay unverified until built: a TestFlight upload accepting the nested
+sandboxed tool with its own group, and a `.mcpb` assembled at runtime from the
+Apple-re-signed binary.
+
+**Today (Node .mcpb).** Claude stays on the Node
+`.mcpb`, and the Files & Folders step is real for every new macOS 27 user.
+
+| Tab | Copy | Status |
+|---|---|---|
+| Claude Desktop | §4 above: `claudeDesktopHint`, install row, then `filesFoldersNote` + **Open Files & Folders** on 27, `claudeDesktopPromptNote` on 26 | drafted, 21 locales in §8 |
+| ChatGPT & Codex | today's TOML/form dialect + `chatgptWorkNote` (draft (a)) | drafted, 21 locales in §8 |
+
+A ChatGPT **plugin** today would run the Node proxy, and ChatGPT
+supplies no Node (measured with a control), so there's no plugin copy for
+today to write. The plugin only exists once the native proxy ships.
+
+**When the native proxy ships (both channels).** Neither host needs a grant
+(measured: Claude disclaims binary servers; the app-group route passes under
+ChatGPT, Claude Code and Terminal). The Files & Folders note leaves the pane.
+
+| Tab | Proposed English | Mirrors |
+|---|---|---|
+| Claude Desktop | hint + install row, **no note** under it | today's tab, minus the pre-announce |
+| ChatGPT & Codex, hint | "Adds Bristlenose to ChatGPT as a plugin. ChatGPT will ask you to confirm." | `claudeDesktopHint` |
+| ChatGPT & Codex, button | **Install Plugin…** (the pane's one prominent button on this tab). Alternative from the App Store session: **Add to ChatGPT**, which names the destination. The maintainer's call. | `mcpAgents.install` ("Install Extension…"). "Plugin" is ChatGPT's own word for it. |
+| ChatGPT & Codex, no handler | "ChatGPT isn't installed — download it from chatgpt.com" | `downloadClaudeDesktop`. Link to `https://chatgpt.com/download` (verified 29 Sep 2026: `openai.com/chatgpt/download` redirects there). |
+| ChatGPT & Codex, below row | `chatgptWorkNote`, unchanged | — |
+| ChatGPT & Codex, fallback | the TOML/form dialect stays below, under a secondary heading ("Or connect by hand") | keeps the no-install route |
+
+The button opens `codex://plugins/bristlenose?marketplacePath=<encoded path>`,
+with the marketplace shipped inside the app and its path computed from
+`Bundle.main` (plugin-spike session's proposal). ChatGPT then shows **its own**
+plugin page, whose button reads "Install plugin", and afterwards a toast,
+"Bristlenose plugin installed · Try now". The hint's "ChatGPT will ask you to
+confirm" is true of that page. It cold-starts ChatGPT if needed (measured).
+The new strings are English only here. They get the §8 treatment (21
+locales, Apple or OpenAI vocabulary lifted, not translated) once the native
+proxy is chosen. ChatGPT showed per-tool approval cards in the spike; they
+stopped once the tools were marked `readOnlyHint` (inferred). The copy promises
+neither.
+
+**What the native-proxy state keeps from this doc.** The proxy's `permission` sentence
+(§3) and the help page's "If Claude says macOS blocked it" section stay,
+now as a recovery path. **One assumption under that is untested:** a binary
+proxy reads the handshake from our **app group** container, not the data
+container, so if that read ever fails on some host, nobody has checked that
+Files & Folders ▸ *(host)* ▸ Bristlenose grants group-container access at
+all. Until someone does, the recovery copy is proven for the Node proxy
+only. Put to both peer sessions on 29 Sep 2026.
 
 ### Can Bristlenose tell that the grant is missing?
 

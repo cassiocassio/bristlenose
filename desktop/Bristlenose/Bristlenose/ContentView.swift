@@ -3576,6 +3576,19 @@ private struct ExportPopoverContent: View {
                     title: i18n.t("desktop.menu.quotes.extractClips"),
                     subtitle: i18n.t("desktop.menu.quotes.clipsHint")
                 ) { dispatch("extractClips") }
+                // The setting Extract Video Clips reads, beside it — the one
+                // place a researcher looks when about to extract. It doesn't
+                // close the popover; the checkmark mirrors the SPA's setting,
+                // like Quotes ▸ Burn Subtitles into Clips.
+                Toggle(i18n.t("desktop.menu.quotes.burnSubtitles"), isOn: Binding(
+                    get: { bridgeHandler.burnSubtitlesInClips },
+                    set: { _ in bridgeHandler.menuAction("toggleBurnSubtitles") }
+                ))
+                .toggleStyle(.checkbox)
+                .controlSize(.small)
+                .padding(.leading, 38)
+                .padding(.trailing, 12)
+                .padding(.bottom, 6)
             }
 
             // Sessions lens: the transcripts already live on disk in the

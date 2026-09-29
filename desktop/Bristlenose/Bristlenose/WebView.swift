@@ -239,6 +239,8 @@ struct WebView: NSViewRepresentable {
         var popoutWindow: NSWindow?
         /// KVO observation for syncing popout document.title → NSWindow title.
         var popoutTitleObservation: NSKeyValueObservation?
+        /// Clears `popoutWindow` when the player closes by any route.
+        var popoutCloseObserver: NSObjectProtocol?
 
         /// Per-download original request URL — used to detect HTML report
         /// downloads (path component) and to build the alternate
@@ -754,13 +756,35 @@ struct WebView: NSViewRepresentable {
                 backing: .buffered,
                 defer: false
             )
+            // An NSWindow made in code releases itself on close, which under
+            // ARC is one release too many: after the viewer closed the player
+            // with its red button, `popoutWindow` pointed at freed memory, and
+            // the next timecode click sent `close` to whatever lived there —
+            // an NSButtonImageView, crashing the app (29 Sep 2026). We own the
+            // window; closing only drops our references.
+            window.isReleasedWhenClosed = false
             window.contentView = popoutWebView
             window.title = i18n.t("desktop.player.windowTitle")
             window.setFrameAutosaveName("BristlenosePlayer")
+            // The menus find their bridge through SwiftUI's focused value,
+            // which a plain AppKit window doesn't provide — so with the player
+            // in front the whole Video menu dimmed. Say which report owns it.
+            PopoutOwners.register(window, owner: bridgeHandler)
             window.makeKeyAndOrderFront(nil)
 
-            // Retain the window — clean up when it closes.
+            // Retain the window — clean up when it closes, however it closes
+            // (red button, ⌘W, or the page's own window.close()).
             popoutWindow = window
+            popoutCloseObserver.map(NotificationCenter.default.removeObserver)
+            popoutCloseObserver = NotificationCenter.default.addObserver(
+                forName: NSWindow.willCloseNotification, object: window, queue: .main
+            ) { [weak self, weak window] _ in
+                MainActor.assumeIsolated {
+                    guard let self, let window, self.popoutWindow === window else { return }
+                    self.popoutWindow = nil
+                    self.popoutTitleObservation = nil
+                }
+            }
 
             // KVO: sync document.title from player.html → NSWindow title bar.
             popoutTitleObservation = popoutWebView.observe(
@@ -786,3 +810,26 @@ struct WebView: NSViewRepresentable {
         }
     }
 }
+
+/// Which report's bridge owns each popout player window.
+///
+/// The menu bar reads the key window's bridge from `@FocusedValue(\.bridge)`,
+/// which only SwiftUI scenes set. The player is an AppKit `NSWindow`, so when
+/// it is key the menus fell back to `BridgeHandler.unattached` and every item
+/// dimmed — Play, Skip, Subtitles — exactly when the viewer reached for them.
+/// Weak on both sides: a closed player or a torn-down report drops out alone.
+@MainActor
+enum PopoutOwners {
+    private static let table = NSMapTable<NSWindow, BridgeHandler>.weakToWeakObjects()
+
+    static func register(_ window: NSWindow, owner: BridgeHandler) {
+        table.setObject(owner, forKey: window)
+    }
+
+    /// The owning report's bridge when `window` is a popout player, else nil.
+    static func owner(of window: NSWindow?) -> BridgeHandler? {
+        guard let window else { return nil }
+        return table.object(forKey: window)
+    }
+}
+

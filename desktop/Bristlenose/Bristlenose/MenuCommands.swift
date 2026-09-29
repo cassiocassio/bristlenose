@@ -52,10 +52,14 @@ struct MenuCommands: Commands {
     /// describes) while the *choice of object* follows the front window.
     @FocusedValue(\.bridge) private var focusedBridge
 
-    /// The bridge the menus read. Falls back to the never-attached stand-in
-    /// when no project window is frontmost — see `BridgeHandler.unattached`,
-    /// whose default state dims exactly the items that need a window.
-    private var bridgeHandler: BridgeHandler { focusedBridge ?? .unattached }
+    /// The bridge the menus read. With a popout player in front there is no
+    /// focused scene, so it is the report that owns the player
+    /// (`PopoutOwners`). Otherwise the never-attached stand-in when no project
+    /// window is frontmost — see `BridgeHandler.unattached`, whose default
+    /// state dims exactly the items that need a window.
+    private var bridgeHandler: BridgeHandler {
+        focusedBridge ?? PopoutOwners.owner(of: NSApp.keyWindow) ?? .unattached
+    }
 
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {

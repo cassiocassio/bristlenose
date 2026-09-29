@@ -54,3 +54,13 @@ only that, and Files & Folders can rescue only a data-container read.
   `instance_id`. The host's own `remove()` clears both.
 - **The Swift suite as a whole** was not run for this draft; only
   `MCPHandshakeTests`.
+
+## Not in this patch: bundling the proxy
+
+This patch is the host half only. When the sandboxed proxy is bundled, give it
+**a different bundle identifier per channel**, for example
+`app.bristlenose.mcp-proxy` for the App Store and
+`app.bristlenose.mcp-proxy.devid` for the `.dmg`. A sandboxed helper's own
+container remembers the signer that created it, and one launch by a different
+signer raised a consent dialog and hung every later launch, including the
+trusted build's (design doc §6.6).

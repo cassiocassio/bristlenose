@@ -345,6 +345,22 @@ def test_a_restarted_bristlenose_is_not_trusted_with_a_stale_handshake(serve: _S
     assert serve.activity()["calls"] == before, "no tool call reached the serve"
 
 
+def test_a_crashed_bristlenose_is_not_listed_as_readable(serve: _Serve, hs_path: Path, run) -> None:
+    # A kill -9 leaves the handshake behind. list_projects answered from it
+    # alone and named a project that every call then called closed (found by
+    # driving ChatGPT, 29 Sep 2026). Only a live, matching serve is listed.
+    _write(hs_path, [serve.entry(instance_id="an-earlier-serve")])
+    assert CLOSED in run().call("list_projects")
+    _write(hs_path, [serve.entry(port=_free_port())])
+    assert CLOSED in run().call("list_projects")
+
+
+def test_a_live_project_is_listed_beside_a_dead_one(serve: _Serve, hs_path: Path, run) -> None:
+    _write(hs_path, [serve.entry(), serve.entry(key="k-dead", name="Crashed study", port=_free_port())])
+    listed = json.loads(run().call("list_projects"))
+    assert [p["name"] for p in listed["projects"]] == ["Beds & duvets"]
+
+
 @pytest.mark.parametrize("instance_id", [None, ""])
 def test_a_handshake_without_an_instance_id_fails_closed(serve: _Serve, hs_path: Path, run, instance_id) -> None:
     e = serve.entry()

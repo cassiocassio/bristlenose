@@ -164,12 +164,19 @@ func callTool(_ msg: [String: Any]) -> [String: Any] {
     let scope = scopeOf(entries)
 
     // Answered here, from the handshake: no upstream call, no bearer sent.
+    // Only entries that answer the unauthenticated probe as the SAME serve are
+    // listed: a crash leaves the handshake behind, and listing its project as
+    // readable while every call says "isn't open" contradicts itself (found by
+    // driving ChatGPT after a kill -9, 29 Sep 2026). A serve that is starting,
+    // outdated or built without MCP is still listed — it is there, and the
+    // call explains itself.
     if name == "list_projects" {
-        let list = projectList(entries)
+        let live = entries.filter { if case .rejected = probe($0) { return false }; return true }
+        let list = projectList(live)
         noteReady(!list.isEmpty)
         if list.isEmpty { return text(MSG_CLOSED) }
         let d = try! JSONSerialization.data(withJSONObject: ["projects": list], options: [.prettyPrinted, .sortedKeys])
-        return withScope(text(String(data: d, encoding: .utf8)!), scope)
+        return withScope(text(String(data: d, encoding: .utf8)!), scopeOf(live))
     }
     if entries.isEmpty { noteReady(false); return text(MSG_CLOSED) }
 

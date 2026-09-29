@@ -1453,7 +1453,18 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 
 ## Current status
 
-**Internal TestFlight since 14 Jul 2026** — shipping build **0.31.4 (3870)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
+**Internal TestFlight since 14 Jul 2026** — shipping build **0.31.5 (3906)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
+
+**0.31.5 shipped 29 Sep 2026, overnight and unattended — tag `v0.31.5` on
+`e173aaa1`, TestFlight build 3906.** A patch: serve's unauthenticated file
+routes stop handing out the PII key, raw transcripts and the run log, the
+server answers only to loopback hosts (DNS rebinding) and its cookie only to
+its own navigations, the static report escapes its embedded JSON, and
+Re-analyse reaches the report (the project-condition reducer). `main` was red
+before the run on two defects from that same evening — two platform `skip`s
+over the ratchet, and a test driving a threaded re-import against the
+in-memory `StaticPool` database — both fixed first. Run 60 min start to tag,
+21 of them the `.dmg` rsync. Full account: `docs/release-log.md` § 0.31.5.
 
 **0.31.4 shipped 28 Sep 2026, overnight — tag `v0.31.4` on `b80fdc31`,
 TestFlight build 3870.** A patch of five fixes from one real project folder: a

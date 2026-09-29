@@ -67,6 +67,84 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+## 0.31.5 — 29 Sep 2026 · Tier 1 (patch — serve's file routes closed, and CI made green first)
+
+**What shipped.** Four serve security fixes found the same evening — the PII
+re-identification key on `/report/` (`ba4429c7`), the unredacted transcript
+and inputs on `/media/` (`eaf7f06a`), the run log on the unauthenticated
+status page (`d309e13e`), DNS rebinding (`caabc99d`), and the auth cookie
+riding along from another loopback port (`717fb6a1`) — plus the static
+renderer's `</script>` breakout (`d314e3b7`). Also the project-condition
+reducer (`d367bcca`: Re-analyse reaches the report, a re-run or stranded run
+no longer hides one), a native cover over a queued re-run's stale failure
+(`738a69f8`), and the projects-column stranding race (`2129553e`,
+`6b126377`). Driven unattended overnight under a `/goal`; the maintainer
+approved a patch and went to bed.
+
+**Verified 9 of 9** (`release.sh verify 0.31.5`, exit 0) by ~01:45 BST: PyPI
+(200 at 01:10, 14 min after the tag), GitHub Release, Homebrew, TestFlight 3906,
+`.dmg`, Snap edge, website (`deploy.sh --yes` after PyPI answered), and Copr
+(build 11046779, `0.31.5-1` — confirmed in `primary.xml`, RPM fetch 200). 8 of 9
+at 01:13 with Copr still queued behind `trigger-copr`, which waited on a runner.
+
+### Before the run: `main` was red, and one of the reds was ours
+
+The first look at CI on `bfc10999` found three reds. `mypy` is the declared
+soft gate (148 errors, ceiling 149 — a notice, not the failure). The two real
+ones both came from `d367bcca`, the same evening:
+
+- **`ratchet`: `pytest_skip_sites` 31 > 29.** Two `pytest.skip("process start
+  time unavailable")` guards on our own PID's start time, which is readable on
+  every platform CI runs. Replaced with asserts — a None there is a failure to
+  see, not a test to skip (`e6c39a05`).
+- **`test_serve_started_before_first_run_follows_the_output` failed on all five
+  ubuntu cells, never on macOS.** The module used `db_url="sqlite://"`, a
+  `StaticPool` — one connection for every thread — while the watcher's
+  re-import runs in `asyncio.to_thread` and the test polls `/condition` every
+  50 ms. A request's rollback could wipe the import mid-flight:
+  `StaleDataError` on `projects`, `FOREIGN KEY constraint failed`. Reproduced
+  locally 1 in 25; 0 in 40 on a file database, which is what production opens
+  (one connection per thread). A test-harness defect, not a product one —
+  but the shape recurs for any test that drives a threaded re-import against
+  the in-memory DB. Same commit.
+
+Plus the long-red `mockup register` (8 mockups unregistered since 22 Sep)
+closed with `*unreviewed*` rows (`ef82d9ba`). The push CI on `cbd6524f` was
+green across the matrix before `run` started.
+
+### Timing (measured, from `events.jsonl`; no human wait inside the run)
+
+| step | s |
+|---|---|
+| preflight | 161 |
+| inventory · bump · push-main · strict-ci dispatch | 6 |
+| build-all | 434 |
+| build-dmg | 784 |
+| ci-green (residual wait after the builds) | 483 |
+| testflight (build 3906) | 455 |
+| dmg publish | **1279** |
+| tag · snap dispatch | 4 |
+| **run total, start → tag** | **~60 min** (22:56Z → 23:56Z) |
+| tag → PyPI 200 | ~14 min (75 s poll granularity) |
+
+The **`.dmg` publish took 21 min against 115 s for 0.31.4** — all of it in
+the rsync to the host (`--partial`, BatchMode ssh, keep-alives on; alive
+throughout). Not diagnosed; one sample. If the next release repeats it, it is
+the host's upload path, not the script.
+
+### Builds
+
+One attempt each; all twelve steps `ok` in `events.jsonl`, none skipped (checked
+because incident 22 lets a skip read as done). Tag, `ci-sha` and HEAD all
+`e173aaa1`.
+
+### What is owed
+
+- The plan table's estimates are still unre-measured (owed since 0.31.4); this
+  run's 60 min sits between the table's 1 h 57 and 0.31.4's 32.5.
+- `/admin` against a same-user local process stays an open product call
+  (`TODO.md`) — not in this release.
+
 ## 0.31.4 — 28 Sep 2026 · Tier 1 (patch — five fixes, one run, nothing stopped)
 
 **What shipped.** Two data-integrity fixes found the same evening on one real

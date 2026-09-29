@@ -201,13 +201,13 @@ const HOST = (process.env.BRISTLENOSE_MCP_HOST || "").trim();
 const SILENT_TCC = process.platform === "darwin" && parseInt(os.release(), 10) >= 27;
 
 permission: SILENT_TCC
-  ? "macOS has blocked " + (HOST || "this agent app") +
+  ? "macOS has blocked " + (HOST || "your AI app") +
     " from reading Bristlenose. On this version of macOS there is no prompt — " +
     "the access stays off until the person turns it on. Tell the person to open " +
     "System Settings ▸ Privacy & Security ▸ Files & Folders, expand " +
-    (HOST || "the app they are asking from") + " in the list, and turn on Bristlenose, then ask " +
+    (HOST || "your AI app") + " in the list, and turn on Bristlenose, then ask " +
     "again. Nothing in Bristlenose needs changing. " + GROUNDING
-  : "macOS is asking whether " + (HOST || "this app") + " may access data from " +
+  : "macOS is asking whether " + (HOST || "your AI app") + " may access data from " +
     "other apps — that permission is how this extension finds Bristlenose. Tell " +
     "the person to click Allow on the macOS dialog (or grant it in System " +
     "Settings ▸ Privacy & Security), then ask again. " + GROUNDING,
@@ -395,22 +395,27 @@ neither.
 
 **What the native-proxy state keeps from this doc.** The proxy's `permission` sentence
 (§3) and the help page's "If Claude says macOS blocked it" section stay,
-now as a recovery path. **One assumption under that is untested:** a binary
-proxy reads the handshake from our **app group** container, not the data
-container, so if that read ever fails on some host, nobody has checked that
-Files & Folders ▸ *(host)* ▸ Bristlenose grants group-container access at
-all. Until someone does, the recovery copy is proven for the Node proxy
-only. Put to both peer sessions on 29 Sep 2026.
+for the unsandboxed readers only (the Node `.mcpb`, a Developer ID binary).
+**Answered 29 Sep 2026 by the plugin-spike session: the Files & Folders switch
+does NOT grant the group container.** Under ChatGPT, an unsandboxed
+team-signed reader was denied on our group container while ChatGPT ▸
+Bristlenose was switched on, and tccd was never consulted: the group rule is
+enforced below TCC, where no user switch reaches. So Files & Folders can
+rescue exactly one thing, an **unsandboxed** reader of the **data**
+container, and the recovery for the group route is not a switch. It is the
+host also writing the data-container copy, read by the Node or Developer ID
+proxy. The native proxy's sandboxed build accordingly says "install the
+extension again, or check for a Bristlenose update" in its `permission`
+branch, with no Files & Folders mention (experiments/mcp-native-proxy/main.swift).
 
-**And one limit it can't lift, from the App Store session:** Files & Folders
-can't rescue a **sandboxed** proxy's read of the data container at all,
+**And the sandbox limit, from the App Store session:** Files & Folders
+can't rescue a **sandboxed** proxy's read of the data container either,
 because the sandbox refuses the path before TCC is asked (inferred: the
 sandboxed probe saw the data container as "doesn't exist" even under Claude's
 disclaimer, run 4). So if the group route fails on some host, recovery means an
 **unsandboxed** reader (the Node proxy, or a Developer ID binary) plus the
 switch. On the Mac App Store build that leaves only the Node proxy under
-Claude. Whether the switch grants the *group* container is the open test above,
-and it needs a person to flip the switch.
+Claude. (The group-container question is answered above: it doesn't.)
 
 ### Can Bristlenose tell that the grant is missing?
 

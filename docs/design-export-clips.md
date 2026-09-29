@@ -295,20 +295,43 @@ Only **C is foolproof** for "drop it into PowerPoint and press play". A and B ar
 
 **Burning in is possible with what we already ship.** The bundled ffmpeg (martin-riedl 8.1 build) was configured with `--enable-libass --enable-libfreetype --enable-libharfbuzz --enable-libx264`, and its binary carries the `subtitles` and `drawtext` filter names (read from the binary's strings, 29 Sep 2026). The binary itself exits 133 when run outside the sandbox, so this was **not run**. The path would be: write an `.ass` file per clip, then `-vf subtitles=clip.ass:fontsdir=<bundled fonts>` with x264, or with `h264_videotoolbox` for hardware encoding. **Risk:** inside the sandbox, fontconfig may not find system fonts, so bundle one OFL font (Inter or Atkinson Hyperlegible) and pass `fontsdir`. A future AVFoundation backend would do the same job natively: `AVVideoCompositionCoreAnimationTool` with `CATextLayer`s, hardware encoding and system fonts, with no libass involved.
 
-### Colour-coding participant and moderator
+### Styling — decided 29 Sep 2026
 
-- **Convention to borrow:** the BBC subtitle guidelines identify speakers by colour, in the order white, yellow, cyan, green, on a black background. Researchers' clients will have seen that on television.
-- **Colour alone isn't enough.** Meeting-room projectors wash colour out, and WCAG 1.4.1 rules out colour as the only signal. Add a short label on every speaker change (`M1:` / `P3:`), or a leading dash per BBC practice.
-- **Use a box, not an outline.** Most Zoom and Teams recordings are screen shares of mostly white UI, where white outlined text disappears. A semi-opaque black box behind each line keeps it readable on any background.
-- **Proposal:** participant in white (the voice the clip exists for, and the most text), moderator in yellow. In a group session, extra participants take cyan, then green. Two lines of at most ~42 characters each; cues break on word timings, never mid-word.
+- **White text on a semi-opaque black box, not an outline.** Most Zoom and Teams recordings are screen shares of mostly white UI, where outlined white text disappears. The box stays readable on any background.
+- **One colour, white. No speaker labels and no per-speaker colours.** A quote is one participant's voice by construction: quotes are filtered for participant speech and narrowed to a single speaker. Most interviews are 1:1, and a viewer can tell from context who is speaking. `P3:`-style badges would only distract.
+- **Kept for later:** exporting an **arbitrary transcript range across speakers** is the one future surface where a clip holds two voices. When it exists, use the BBC convention (speaker colours in the order white, yellow, cyan, green, with a dash on each change of speaker) rather than code labels.
+- **Two lines of at most ~42 characters each**, with cues broken on word timings and never mid-word. The characters-per-line figure depends on the font and the size, so it gets settled by the experiments below.
 
-### Recommended shape
+### Font
 
-1. **Always, and nearly free:** write `<clip name>.vtt` beside every clip (with voice spans, so a browser shows the colours) *and* mux a plain `mov_text` track with `P3:` labels into the `.mp4`. No re-encode, so Decision 2 still holds.
-2. **Opt-in checkbox in the clip export dialog:** *"Burn subtitles into the video (for slides)"*. This re-encodes with the styling above. It is the one exception to Decision 2, and the checkbox says so by existing.
-3. **Audio-only sessions** (`.m4a`) can't carry burned-in text. The natural extension is an "audiogram": render a plain `.mp4` of a title card (`P3` plus the gist) with the subtitles over it, so audio quotes can go into a deck too.
+The two delivery modes answer the font question differently. That is the argument for having both.
 
-**Open decisions (the maintainer's):** whether burning in is on by default; whether the burned copy replaces the clean clip or sits beside it (`… (subtitled).mp4`); the colour assignment above; label style (code prefix or dash); the font.
+- **Soft subtitles (the `.vtt` sidecar and the embedded track) never carry a font.** The player draws them in its own face at playback. On a Mac, *System Settings ▸ Accessibility ▸ Captions* sets the style for AVKit players such as QuickTime. So "the viewer's system font, automatically" is already what soft subtitles do; keep it that way by not styling fonts in the `.vtt`.
+- **Burned-in subtitles are pixels.** There is no playback-time font, so whatever we render with is fixed into the file forever. That is the commitment. It is mitigated by keeping the clean clip beside the burned one rather than replacing it.
+- **Which font to burn with.** Two candidates:
+  - *The machine's system font* (SF on a Mac). It looks native in a Keynote deck, but the output then depends on where it was made: the CLI on Linux would burn DejaVu or whatever fontconfig finds. SF would also only be reachable cleanly through CoreText, i.e. the future AVFoundation backend. Handing libass the SF font file directly is fragile and a licensing grey area (**unverified**).
+  - *One bundled font, Inter* (OFL). The pixels come out identical on every channel. The metrics are known, so line wrapping and sizing can be computed and tested once rather than per machine. It costs a few hundred KB in the bundle for one weight (**estimate**).
+
+  **Recommendation: bundle Inter for burn-in.** A deck will be in the client's brand font, which no choice of ours can match, so the aim is a neutral, highly legible sans. Being identical everywhere matters more than feeling native for a file that gets passed from laptop to laptop. If the AVFoundation backend is ever built, it could offer the system font on the Mac, but that is a channel fork to take deliberately, not by default.
+
+### Size — experiments owed
+
+Nothing is decided here until a clip has been seen in a real deck. The case to design for is a **video shrunk inside a slide**, not full screen: a clip often occupies half a slide, so the text must survive at 50% scale on a projector. Proposed matrix:
+
+- Text height at 4%, 5.5% and 7% of frame height (size as a fraction of the frame, so 720p and 1080p come out the same).
+- Two box opacities.
+- Three sources: a 720p Zoom screen share, 1080p Teams speaker view, and a portrait phone recording.
+- Each output placed in a PowerPoint and a Keynote slide at full-slide and half-slide size, viewed on a laptop and on a TV or projector.
+
+**Tooling note:** Homebrew's ffmpeg has **no** `subtitles`/`ass` filter (checked 29 Sep 2026), and the bundled binary exits 133 outside the sandbox. The experiments therefore need the unsigned martin-riedl 8.1 download that `desktop/scripts/fetch-ffmpeg.sh` pins.
+
+### Shape — decided 29 Sep 2026
+
+1. **Always, and nearly free:** write `<clip name>.vtt` beside every clip *and* mux a plain `mov_text` track into the `.mp4`. No re-encode, so Decision 2 still holds.
+2. **A single checkbox in the clip export dialog, off by default:** *"Burn subtitles into the video (for slides)"*. That checkbox is the whole of the UI: no font, size or colour controls. It re-encodes with the styling above, and it is the one exception to Decision 2.
+3. **Audio-only sessions** (`.m4a`) can't carry burned-in text. A possible extension is an "audiogram": render a plain `.mp4` of a title card (the gist) with the subtitles over it, so audio quotes can go into a deck too. This is not decided.
+
+**Still open:** whether the burned copy replaces the clean clip or sits beside it (`… (subtitled).mp4`; the Font section argues for beside), the font (recommendation above), and the size (experiments).
 
 ---
 

@@ -1,13 +1,14 @@
 ---
 status: partial
 last-trued: 2026-09-29
-trued-against: HEAD@main on 2026-09-29 (subtitles sections only)
+trued-against: HEAD@main on 2026-09-29 (whole doc; the plan-era file tables and endpoint list are marked as the plan, not rewritten)
 ---
 
-> **Truing status:** Partial — the eliding rule, filename scheme and serve-mode flow are current (trued 2026-09-12); the container-preservation claim is superseded inline in three places; the CLI section is deferred and marked so. See changelog and inline banners.
+> **Truing status:** Partial — the eliding rule, filename scheme and serve-mode flow are current (trued 2026-09-12); the container-preservation claim is superseded inline in three places; the CLI section is deferred and marked so. The subtitles sections describe what was built on 29 Sep 2026 (trued the same evening). The plan-era *Tasks*, *Files* and *Endpoints* lists are kept as the plan and flagged where the build went further. See changelog and inline banners.
 
 ## Changelog
 
+- _2026-09-29 (evening, trued)_ — `## Future: subtitles on clips` renamed `## Subtitles on clips` and marked built in place, proposal text kept; Status line names subtitles; the CJK word-timings note flipped (the importer fix landed, "word timings attach to japanese and chinese transcripts"); the language section's pre-fix present tense marked "before"; burn-in's pre-trial paragraph labelled as the baseline; the language steps' "step 3 not yet" reconciled with "Step 3 built"; Cost row measured; Decision 2 given its burn-in exception and Decision 9 (File menu) marked superseded by the Quotes menu; the gap between Styling's BBC box and font figures and the shipped ones flagged, not decided; two stale line anchors repointed; the plan-era lists flagged.
 - _2026-09-29 (later)_ — subtitles built end to end: a `.vtt` beside every clip plus a language-tagged embedded track; an opt-in burned copy, `<name> (subtitled).mp4`, beside the clean clip; and subtitles in the popout player, switched from Settings, the Export menu and the Mac's Video and Quotes menus. See § Shape and § Subtitles in Bristlenose's own player.
 - _2026-09-29_ — added § Future: subtitles on clips (sidecar / embedded track / burned in, speaker colour coding, recommended layering), carried over from the closed issue #59 so the idea outlives the tracker. Proposal only; nothing shipped changed.
 - _2026-09-12_ — trued up: named `format_clip_timecode`/`use_hours` and recorded why per-export eliding is sound by construction plus its zero-duration residual (from the time audit's H6 withdrawal); marked the source-container-preservation claim superseded at three sites (fixed `.mp4`/`.m4a`); added `raw_start`/`is_audio_only` to `ClipSpec`; repointed the never-created `clip_extractor.py` to the three shipped modules; marked the CLI deferred inline. Anchors: `server/clip_manifest.py:107,139-140`, `routes/clips_export.py:119,370-371`, `clip_backend.py:47-50`, `docs/time-defects.md` H6.
@@ -16,7 +17,7 @@ trued-against: HEAD@main on 2026-09-29 (subtitles sections only)
 
 Extract trimmed video clips of key quotes for stakeholder playback and slide decks.
 
-**Status:** v0.14.3 — serve-mode extraction shipped (FFmpeg backend, async job, API endpoints, React UI). CLI command deferred. AVFoundation backend deferred to desktop milestone.
+**Status:** v0.14.3 — serve-mode extraction shipped (FFmpeg backend, async job, API endpoints, React UI). CLI command deferred. AVFoundation backend deferred to desktop milestone. **Subtitles built 29 Sep 2026, on `main` and unreleased after 0.31.5:** a `.vtt` beside every clip, a language-tagged track inside it, an opt-in burned copy `<name> (subtitled).mp4`, and subtitles in the popout player (§ Subtitles on clips).
 
 ---
 
@@ -38,7 +39,7 @@ Researchers spend hours in Final Cut Pro scrubbing through footage to find 15-se
 - Bristlenose stores timecodes for every quote (start/end seconds)
 - `bristlenose/utils/video.py` — existing FFmpeg integration (thumbnail extraction)
 - `bristlenose doctor` — already checks for FFmpeg on PATH
-- No clip extraction feature
+- No clip extraction feature *(at the time of writing; shipped in v0.14.3)*
 
 ---
 
@@ -49,6 +50,8 @@ Researchers spend hours in Final Cut Pro scrubbing through footage to find 15-se
 ```
 clip pool = starred quotes UNION signal card hero quotes
 ```
+
+> **As built, later:** the export's Selected / Starred / All scope picker sends explicit quote ids, and the starred-plus-heroes union is only the fallback when none are sent (`routes/clips_export.py`, "export scopes: visible-set semantics, menu-bar parity, label fixes").
 
 | Source | Who chose it | Typical count | Has timecode? |
 |--------|-------------|---------------|---------------|
@@ -68,6 +71,8 @@ The union typically lands at 20-40 clips, ~5-8 minutes of footage total (~60-100
 |---------|----------|-----|------------------|
 | FFmpeg stream-copy | CLI (all platforms) | `ffmpeg -ss {start} -to {end} -c copy` | Yes |
 | AVFoundation | macOS desktop app | Native framework — Macs are excellent at video snipping | No |
+
+> **As built:** the Mac app also uses FFmpeg — the bundled binary. The AVFoundation row is the plan, deferred (Status, above).
 
 The CLI path uses FFmpeg stream-copy (fast, no re-encoding). The macOS desktop app uses native AVFoundation — no FFmpeg dependency. `bristlenose doctor` already checks for FFmpeg; disable clips if missing with explanation.
 
@@ -101,7 +106,7 @@ Bad:   clip-q-p1-42.mp4
 
 The format is chosen per-export based on `max(duration_seconds)` across all sessions. This keeps lexical sort = chronological sort.
 
-Implemented as `format_clip_timecode(seconds, use_hours=…)` (`server/clip_manifest.py:107`) with `use_hours = max_duration >= 3600` derived once per export (`routes/clips_export.py:370-371`). **Why eliding is safe, not merely tidy:** a clip's start is bounded by its own session's duration, which is ≤ `max_duration`, so when the flag is `False` no clip start can reach an hour and the omitted field is provably zero — no collision is possible. **Residual:** that bound rests on `duration_seconds` being accurate; a session recorded with `duration_seconds == 0` whose quotes ran past an hour would break it (`clips_export.py:119` reads the field unguarded). Measured 12 Sep 2026: 4 of 98 local sessions carry a zero time axis, none with a quote past an hour.
+Implemented as `format_clip_timecode(seconds, use_hours=…)` (`server/clip_manifest.py:107`) with `use_hours = max_duration >= 3600` derived once per export (`routes/clips_export.py`, `git log -S'use_hours = max_duration'` finds it; `:712-713` on 29 Sep 2026). **Why eliding is safe, not merely tidy:** a clip's start is bounded by its own session's duration, which is ≤ `max_duration`, so when the flag is `False` no clip start can reach an hour and the omitted field is provably zero — no collision is possible. **Residual:** that bound rests on `duration_seconds` being accurate; a session recorded with `duration_seconds == 0` whose quotes ran past an hour would break it (`clips_export.py:119` reads the field unguarded). Measured 12 Sep 2026: 4 of 98 local sessions carry a zero time axis, none with a quote past an hour.
 
 **Gist rules:**
 - First ~6 words of quote text
@@ -176,7 +181,7 @@ CLI shows Cargo-style progress:
 
 ### Audio-only sessions
 
-> **Superseded as implemented (v0.14.3) —** clips are written to a fixed container: `.mp4` for video, `.m4a` for audio (`clip_manifest.py:140`, `clip_backend.py:47-50` — stream-copy into `.mp4`). The source container is not preserved. Original text retained below.
+> **Superseded as implemented (v0.14.3) —** clips are written to a fixed container: `.mp4` for video, `.m4a` for audio (`clip_manifest.py:140`, `clip_backend.py` stream-copy cut, `:175-183` on 29 Sep 2026 — into `.mp4`). The source container is not preserved. Original text retained below.
 
 Extract as-is. FFmpeg stream copy preserves container format. If source is `.mp3`, clip is `.mp3`. Filename follows the same pattern. No video frame — audio-only playback.
 
@@ -234,6 +239,8 @@ Shared across all export features. Strips path separators, traversal sequences, 
 | 2.5 | Async job runner: reuse AutoCode `asyncio.create_task()` pattern |
 | 2.7 | Toast progress UI: reuse AutoCodeToast pattern. "Extracting clips... (3 of 15)". "Reveal in Finder" on completion |
 | 2.8 | CLI: `bristlenose export --clips` with Cargo-style progress — **deferred, not shipped** |
+
+> **This task list is the plan.** The build went further — scope picker, cancel and reveal, subtitles — and the *Files* and *Endpoints* lists below it are also plan-era: `routes/clips_export.py` carries the current endpoints (including cancel, reveal and the player's `subtitles.vtt`), and § Subtitles on clips names the subtitle files.
 | 2.9 | Doctor check: verify FFmpeg on PATH when `--clips` is requested |
 | 2.10 | Tests: clip manifest, filename generation, merge logic, FFmpeg command construction (mock) |
 
@@ -260,20 +267,21 @@ Shared across all export features. Strips path separators, traversal sequences, 
 ## Decisions
 
 1. **Separate feature, separate dialog.** Clips are not bundled with XLS/CSV. Own dialog, own menu item, own async flow. Later, the HTML export modal can offer clips as a checkbox, but the feature stands alone.
-2. **FFmpeg stream-copy, no re-encoding.** Fast, preserves quality.
+2. **FFmpeg stream-copy, no re-encoding.** Fast, preserves quality. *Exception, 29 Sep 2026:* the opt-in burned-subtitle copy is re-encoded; the clean clip beside it is still stream-copied (§ Shape 2).
 3. **Padding: 3s before, 2s after.** Sensible default. May expose in export dialog later if researchers ask.
 4. **Adjacent merge within 10s.** Avoids near-duplicate clips from quotes close together in a session.
-5. **New board per clip extraction, never modify existing clips.** Each extraction produces a fresh set.
+5. **New board per clip extraction, never modify existing clips.** Each extraction produces a fresh set. *Exception, 29 Sep 2026:* re-exporting into the same folder deletes a `.vtt` or `(subtitled)` copy an earlier export left beside a clip that no longer gets one, because its text may predate a correction (`routes/clips_export.py`).
 6. **Participant code, not session number, in clip filenames.** A clip is always one person speaking. The code groups clips per person in sort order.
 7. **Spaces, not hyphens.** The gist is lowercase, the capitalised speaker name provides the visual boundary.
 8. **Audio-only: extract as-is.** No special handling needed — FFmpeg stream copy works on audio containers. _(Superseded as implemented: audio clips are written as `.m4a`, not the source container — `clip_manifest.py:140`.)_
 9. **File menu, not Video menu.** Export is a file operation, not a playback operation.
+   > **Superseded on the Mac:** *Extract Clips* and *Burn Subtitles into Clips* live in the **Quotes** menu ("macOS export menu: parity with SPA…"), which is where § Shape 2 puts the burn toggle.
 
 ---
 
-## Future: subtitles on clips
+## Subtitles on clips
 
-_Proposed 29 Sep 2026, from the closed GitHub issue #59 ("overlay subtitles" was its bonus line). Not built. Nothing below changes what ships today._
+_Proposed 29 Sep 2026, from the closed GitHub issue #59 ("overlay subtitles" was its bonus line), and **built the same day** — on `main`, unreleased after 0.31.5. § Shape says what shipped. The proposal and survey text is kept because it is why the shipped thing has the shape it does; where it said "would", "not run" or "estimate", the later paragraphs carry the measurement._
 
 **Why this is the valuable part of #59.** A clip dropped into a deck is usually played in a meeting room, often with the sound low or off, to people who never heard the interview. Subtitles make the quote legible at a glance and put the participant's exact words on screen, which is the point of showing a clip. The logo and badge overlays from the same issue are cosmetic by comparison.
 
@@ -289,12 +297,12 @@ _Proposed 29 Sep 2026, from the closed GitHub issue #59 ("overlay subtitles" was
 | Viewer can turn off | Yes | Yes | No |
 | Editable / translatable later | Yes, it's a text file | Only by re-muxing | No |
 | Colour per speaker | WebVTT's built-in colour classes (`<c.yellow>`); which players honour them is **unverified** (review log, Finding 33) | none — ffmpeg's `mov_text` encoder drops colour (measured) | Full control |
-| Cost | Trivial | Trivial | A few seconds per clip (**estimate**; 1080p x264 `veryfast`) |
+| Cost | Trivial | Trivial | About 0.6 s per 20 s 720p clip (measured in the trial below; the proposal's estimate was "a few seconds") |
 | Failure mode | File separated from its clip; ignored by slide apps | Invisible until someone finds the menu | Wrong text is permanent; small text unreadable on a phone |
 
 Only **C is foolproof** for "drop it into PowerPoint and press play". A and B are cheap and keep the stream-copy guarantee (Decision 2), but each needs the viewer's player to cooperate.
 
-**Burning in is possible with what we already ship — and the trial ran (29 Sep 2026).** The bundled ffmpeg (martin-riedl build — the binary on disk reports **8.0.1**, though `desktop/scripts/fetch-ffmpeg.sh` pins 8.1, so the bundle predates the pin) was configured with `--enable-libass --enable-libfreetype --enable-libharfbuzz --enable-libx264`, and its binary carries the `subtitles` and `drawtext` filter names (read from the binary's strings, 29 Sep 2026). The binary itself exits 133 when run outside the sandbox, so this was **not run**. The path would be: write an `.ass` file per clip, then `-vf subtitles=clip.ass:fontsdir=<bundled fonts>` with x264, or with `h264_videotoolbox` for hardware encoding. **Risk:** inside the sandbox, fontconfig may not find system fonts, so bundle the chosen font (Inter, below) and pass `fontsdir`. A future AVFoundation backend would do the same job natively: `AVVideoCompositionCoreAnimationTool` with `CATextLayer`s, hardware encoding and system fonts, with no libass involved.
+**Burning in is possible with what we already ship — and the trial ran (29 Sep 2026).** The bundled ffmpeg (martin-riedl build — the binary on disk reports **8.0.1**, though `desktop/scripts/fetch-ffmpeg.sh` pins 8.1, so the bundle predates the pin) was configured with `--enable-libass --enable-libfreetype --enable-libharfbuzz --enable-libx264`, and its binary carries the `subtitles` and `drawtext` filter names (read from the binary's strings, 29 Sep 2026). *Before the trial (kept as the baseline):* the binary itself exits 133 when run outside the sandbox, so this was **not run**. The path would be: write an `.ass` file per clip, then `-vf subtitles=clip.ass:fontsdir=<bundled fonts>` with x264, or with `h264_videotoolbox` for hardware encoding. **Risk:** inside the sandbox, fontconfig may not find system fonts, so bundle the chosen font (Inter, below) and pass `fontsdir`. *(Done: Inter is bundled and `fontsdir` passed — § Shape 2. Running it inside the sandboxed app is still to check.)* A future AVFoundation backend would do the same job natively: `AVVideoCompositionCoreAnimationTool` with `CATextLayer`s, hardware encoding and system fonts, with no libass involved.
 
   **Trial, measured 29 Sep 2026.** The bundled binary exits 133 when run outside the sandbox, but a copy re-signed ad hoc (`codesign --remove-signature` then `codesign -s - --force`) runs without a download. It has `subtitles`, `ass` and `drawtext`, plus `libx264` and `h264_videotoolbox`. Two FOSSDA clips (18 s and 21 s, 1280×720) were each converted from their `.vtt` to `.ass`:
   - Inter, from `~/Library/Fonts` via `fontsdir`, at 48 px = 1/15 of the frame height;
@@ -311,7 +319,7 @@ Only **C is foolproof** for "drop it into PowerPoint and press play". A and B ar
 - **White text on a 75% black box, not an outline.** The box geometry is the BBC's (§9.2.4); the opacity is YouTube's reported default rather than the BBC's solid black. Clips are often screen shares, and a solid block hides the interface the participant is talking about (maintainer, 29 Sep 2026). Most Zoom and Teams recordings are screen shares of mostly white UI, where outlined white text disappears. The box stays readable on any background.
 - **Everyone audible is subtitled; speakers are told apart by BBC colour, never by label** (maintainer, 29 Sep 2026). The clip's own participant is always white. Anyone else takes yellow, cyan, then green, in order of first appearance (BBC §8.3). In practice that means the moderator's lead-in in the 3 s padding, or a gap inside a merged clip, shows in yellow. `P3:`-style badges would only distract, and a name must never appear. The machinery knows who is speaking in every cue, so a future **arbitrary transcript range across speakers** export needs no new plumbing.
 - **Researcher corrections are applied** (maintainer, 29 Sep 2026: they fix acronyms, product names and mis-hearings). A correction is taken as the difference between the pipeline's quote text and the researcher's edit, so the pipeline's own tidying never deletes audible words. Replacements take the replaced words' time. Insertions share a neighbouring word's time. Capitalisation fixes (`ux` → `UX`) apply, keeping the transcript's punctuation. Deletions and elisions (`…`) don't. A bracketed group the researcher put *in place of* spoken words (`Sarah` → `[her]`) is shown, because their edit wins. One that is only inserted, or that sits beside real words (`it [the app] crashed`, `[the] Kubernetes`), is editorial and dropped. Corrected words up to 10 s past the quote's recorded end are reached, because model end times fall early (measured: 19 of 33 IKEA quotes, 40 of 80 Rockclimbing). **A change that can't be placed word by word is not applied at all**, and is logged with the quote's id. The transcript's own words stand. An earlier version spread the corrected quote evenly over its time instead, which deleted and duplicated audible words; the 29 Sep review removed that.
-- **Layout per the BBC:** at most 2 lines (§3.3), each no wider than 68% of the frame (§3.1), bottom-centre inside the central 90% of the height (§10). Font size 1/15 of frame height (6.67%) with a line height of 8% (§9.2.1). The box is exactly one line high with no gap between lines, plus 0.5 em each side (§9.2.4). Cues break on word timings, never mid-word (Japanese and Chinese: between characters, below).
+- **Layout per the BBC:** at most 2 lines (§3.3), each no wider than 68% of the frame (§3.1), bottom-centre inside the central 90% of the height (§10). Font size 1/15 of frame height (6.67%) with a line height of 8% (§9.2.1). The box is exactly one line high with no gap between lines, plus 0.5 em each side (§9.2.4). *As built, the burned copy:* the font is 1/15 of the frame's **shorter** side — identical to the BBC's 1/15 of height for every landscape frame, and deliberate for portrait, where 1/15 of height ran text off both edges (pinned by `test_portrait_text_stays_inside_the_frame`). The box pads **0.15 × the font size** (ASS `Outline` with `BorderStyle=3`, in `to_ass()`), not the BBC's 0.5 em. Whether that departure is intended is **not recorded** — an open question for the maintainer, flagged 29 Sep 2026. Cues break on word timings, never mid-word (Japanese and Chinese: between characters, below).
 - **Japanese and Chinese extend the spec** (decided 29 Sep 2026; review log Finding 11). The BBC gives no figure for either, and a segment with no spaces used to become one 62-character line held for 14 s. What we took:
   - **Line length: 13 full-width characters for Japanese, 16 for Chinese**, from Netflix's [Japanese](https://partnerhelp.netflixstudios.com/hc/en-us/articles/215767517-Japanese-Timed-Text-Style-Guide) and [Traditional Chinese](https://partnerhelp.netflixstudios.com/hc/en-us/articles/215994807-Chinese-Traditional-Timed-Text-Style-Guide) Timed Text Style Guides (read on the page, 29 Sep 2026). Two lines, as everywhere. A half-width character counts 0.5. Netflix says that for Japanese only; we apply it to Chinese too, because a Latin letter is half a Han character's width there as well.
   - **The script comes from the cue's own text, never the UI language.** Any kana means Japanese; Han characters without kana mean Chinese. So a short all-kanji Japanese cue gets 16. Korean is written with spaces and takes the Latin path. Netflix gives Korean 16, which is not adopted.
@@ -319,7 +327,7 @@ Only **C is foolproof** for "drop it into PowerPoint and press play". A and B ar
   - **Break at clause ends, not inside words.** A clause mark (`、。，`) is worth up to half a line when choosing a line break. A cue that fills up ends at its last clause mark in its back half, not wherever the characters ran out. If a sentence has no clause mark and a character or two would still be left alone on screen (`ン。` for 0.4 s, on the ja-JP demo), that cue takes characters back from the one before it.
   - **Not taken from Netflix.** Its Japanese guide drops `、。`, and its Chinese guide bans a comma or full stop at a line end. Both rewrite the text, and subtitles are faithful to the transcript, so the punctuation stays. Its reading speeds (4 characters a second for Japanese, 9 for Chinese) are not enforced; Latin cues have no reading-speed rule either, and timing follows speech.
   - **Known limit:** without a morphological analyser a line can still break inside a word (`どん|なふうに`), because only clause marks are known.
-  - **Word timings.** Whisper times Japanese and Chinese in chunks of several characters, and each character takes its share of its chunk. But the importer drops these timings at the moment (`importer._words_read_as` compares space-separated runs, and CJK has none), so ja/zh subtitles are spread evenly across each segment until that is fixed.
+  - **Word timings.** Whisper times Japanese and Chinese in chunks of several characters, and each character takes its share of its chunk. Until later the same day the importer dropped these timings (`importer._words_read_as` compared space-separated runs, and CJK has none), so ja/zh subtitles were spread evenly. It now compares characters when either side is CJK ("word timings attach to japanese and chinese transcripts").
 
 ### Font
 
@@ -341,7 +349,7 @@ Sources were read on the page unless marked *claimed* (a secondary source or a s
 - **PowerPoint and an embedded track:** PowerPoint for Mac and iOS read **MPEG-4 Timed Text**, which is our `mov_text` track. PowerPoint for Windows and mobile web read only **CEA-608/708**, so the `mov_text` track is invisible there. Microsoft's own caveat is that playback "may or may not" work depending on version. [Supported types](https://support.microsoft.com/en-us/accessibility/powerpoint/closed-caption-file-types-supported-by-powerpoint).
   - **Consequence:** soft subtitles reach a PowerPoint audience only if the researcher inserted the file and the presenter remembered to switch them on, live, in front of the client. That is the job the burn-in checkbox does.
 - **Keynote has no caption feature** and ignores subtitle tracks (*claimed*, Apple Community threads only). **Google Slides:** Drive accepts `.vtt`/`.srt` on a video, but nothing says Slides shows them.
-- **No UX research tool burns captions into exported clips.** Dovetail's highlight-reel download says outright that subtitles are not included "even if they are enabled in the video player". Condens, Great Question and Grain document no caption option on their clip exports; Marvin shows captions only in its own player (*claimed*). This would be a first in the category.
+- **No UX research tool burns captions into exported clips.** Dovetail's highlight-reel download says outright that subtitles are not included "even if they are enabled in the video player". Condens, Great Question and Grain document no caption option on their clip exports; Marvin shows captions only in its own player (*claimed*). This is a first in the category (as of 29 Sep 2026).
 - **BBC Subtitle Guidelines** ([source](https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/)):
   - §8.1 white on a black background.
   - §9.1 a wide sans (Reith Sans, Verdana, Tiresias).
@@ -374,17 +382,17 @@ What that changes, and what it doesn't:
 
 **Use the BBC numbers as they stand; don't reinvent them** (maintainer, 29 Sep 2026). Their guidance was tested with viewers, and what it optimises for survives the Teams chain above. The only check is the ordinary QA of the feature: burn one clip, share it at half-slide size in a real Teams call, and look at it as a remote attendee.
 
-**Tooling note:** Homebrew's ffmpeg has **no** `subtitles`/`ass` filter (checked 29 Sep 2026), and the bundled binary exits 133 outside the sandbox. The experiments therefore need the unsigned martin-riedl 8.1 download that `desktop/scripts/fetch-ffmpeg.sh` pins.
+**Tooling note:** Homebrew's ffmpeg has **no** `subtitles`/`ass` filter (checked 29 Sep 2026), and the bundled binary exits 133 outside the sandbox. The experiments therefore need either the unsigned martin-riedl 8.1 download that `desktop/scripts/fetch-ffmpeg.sh` pins, or an ad hoc re-signed copy of the bundled binary (the trial, above).
 
 ### Shape — decided 29 Sep 2026
 
 1. **Always, and nearly free — built 29 Sep 2026:** write `<clip name>.vtt` beside every clip *and* mux a `mov_text` track into the `.mp4` or `.m4a`. No re-encode, so Decision 2 still holds. Code: `server/clip_subtitles.py` (pure: timing, corrections, cues, WebVTT/SRT), `clip_backend.py` (`subtitles=`), `routes/clips_export.py` (`_build_clip_cues`); `clips_manifest.json` names each clip's `.vtt`. Both cuts, subtitled and plain, take only the source's first video and first audio stream. An audio clip takes no video. A subtitle-build or file error costs that clip its subtitles, never the export, and never leaves the job stuck at "running". The SRT for muxing is written to the system temp directory, never the clips folder. CI's Linux cells install ffmpeg, so the round-trip test runs there. The first review pass is logged in the maintainer's private review notes (`export-clips`); Japanese and Chinese line-breaking followed the same day (Styling, above). Measured the same day:
    - **The cut is frame-exact.** A stream-copied cut at 7.00 s starts on the source frame at 7.00 s, not the keyframe at 5 s (ffmpeg writes an edit list), so cues timed from the clip's start are in sync. `tests/test_clip_subtitles_ffmpeg.py` pins it.
-   - **The embedded track has no colour.** ffmpeg 8.1.1's `mov_text` encoder keeps bold and italic but drops a colour override, writing no style record for it. So the embedded track is plain, and the `.vtt` carries speaker colour through WebVTT's built-in classes (`<c.yellow>`, `<c.cyan>`, `<c.lime>`).
+   - **The embedded track has no colour.** ffmpeg's `mov_text` encoder (the version was recorded as 8.1.1; the bundled binary reports 8.0.1, so which one was measured is **unverified**) keeps bold and italic but drops a colour override, writing no style record for it. So the embedded track is plain, and the `.vtt` carries speaker colour through WebVTT's built-in classes (`<c.yellow>`, `<c.cyan>`, `<c.lime>`).
    - **A failed subtitle mux still cuts the clip,** without the track rather than losing it.
    - **Real-data check:** on two FOSSDA clips (185 s and 106 s), every cue fit 2 lines of 37 characters and 7 s, with no overlaps. What the run exposed is in the transcript, not here: a diarisation slip in the source colours the interviewer's question white.
 2. **A single checkbox, off by default — built 29 Sep 2026:** *"Burn subtitles into the video (for slides)"*. That checkbox is the whole of the UI: no font, size or colour controls. It re-encodes with the styling above, and it is the one exception to Decision 2.
-   - **Where it lives.** A checkbox row under *Extract clips* in the Export menu, and *Quotes ▸ Burn Subtitles into Clips* on the Mac. It is a remembered setting (`frontend/src/utils/subtitlePrefs.ts`, localStorage), not a per-export question; the Mac menu's checkmark mirrors it over the bridge (`subtitle-prefs`), the Focus Mode pattern.
+   - **Where it lives.** A checkbox row under *Extract clips* in the Export menu, and *Quotes ▸ Burn Subtitles into Clips* on the Mac — also under *Extract Video Clips* in the Mac toolbar's export popover (added later the same day). It is a remembered setting (`frontend/src/utils/subtitlePrefs.ts`, localStorage), not a per-export question; the Mac menu's checkmark mirrors it over the bridge (`subtitle-prefs`), the Focus Mode pattern.
    - **What it writes.** `<name> (subtitled).mp4` beside the clean clip, which is untouched; `clips_manifest.json` records it as `burned`. The ASS is built by `to_ass()` in `clip_subtitles.py`; `burn_subtitles()` in `clip_backend.py` renders it with libass and the bundled Inter (`bristlenose/data/fonts/`, OFL). Audio clips and clips with no cues get no copy.
    - **When ffmpeg can't.** `can_burn_subtitles()` checks for the `subtitles` filter and `libx264` once. If either is missing the request goes ahead with plain clips and the response carries `burn_unavailable`, which the page shows as a toast. Homebrew's ffmpeg is the known case. A probe that fails to run (a timeout, or a sandbox-signed binary started outside the sandbox, which exits 133) is not remembered as "no".
    - **The frame it draws for is the one the viewer sees** (`display_size()`, from the review pass the same day). A portrait phone recording is stored landscape with a 90° rotation, an HDV/AVCHD file has non-square pixels, and a screen capture can have odd sides that x264's `yuv420p` refuses. So the filter chain scales to the upright, square-pixel, even-sided size first, and the text is sized from the shorter side, with libass free to re-wrap a line that doesn't fit (`WrapStyle: 0`) — which only happens in portrait. Landscape keeps the BBC's 1/15 of the height exactly.
@@ -399,7 +407,7 @@ What that changes, and what it doesn't:
 
 QuickTime showed nothing for an exported clip until the track was tagged. With the track's language `und`, macOS's own player framework offers two options, "Unknown language" and "Unknown language Forced", and picks the **Forced** one by default. That option shows only lines flagged as forced; ours are none, so *Subtitles ▸ On (Language)* displays nothing. Re-muxed with `language=eng`, it offers "English" and QuickTime shows the track. macOS 27 then also offers a live-translated track ("Spanish (Spain) Translated"), which exists only because the subtitles are real text.
 
-The language is known upstream but lost before the export. Whisper detects it per session (since 0.31.0, `cca68462`), `SessionTranscript.detected_language` holds it, and the transcript header records `# Language: ja (detected)`. But the serve database has **no column** for it and the importer doesn't read the header. The header is also deliberately omitted when the language was pinned with `--whisper-language`, which for tagging is exactly the right value. Proposed chain:
+The language is known upstream but lost before the export. Whisper detects it per session (since 0.31.0, `cca68462`), `SessionTranscript.detected_language` holds it, and the transcript header records `# Language: ja (detected)`. *Before 29 Sep 2026*, the serve database had **no column** for it and the importer didn't read the header. The header is also deliberately omitted when the language was pinned with `--whisper-language`, which for tagging is exactly the right value. Proposed chain (all four built 29 Sep 2026, including the player's `<track srclang>`):
 1. a `Session.language` column (Alembic migration);
 2. the importer reads it from the header;
 3. a pinned language is recorded with its provenance (`(set)` beside `(detected)`);
@@ -407,7 +415,7 @@ The language is known upstream but lost before the export. Whisper detects it pe
 
 Still unknown by construction: platform transcripts (Teams, Zoom, docx) and projects from before 0.31.0.
 
-**Built 29 Sep 2026 (steps 1, 2 and 4; step 3 not yet):**
+**Built 29 Sep 2026 (steps 1, 2 and 4 first; step 3 followed the same day, below):**
 - `sessions.language`, added by migration 011;
 - the importer reads the header on every import;
 - `iso639_2()` in `clip_subtitles.py` maps Whisper codes and locale tags to three-letter codes;
@@ -427,11 +435,12 @@ The maintainer wanted the popout player to show the same subtitles, switched on 
 - **On the Mac the setting is kept natively.** The app's webview storage is non-persistent per serve session, so localStorage alone would forget both subtitle settings on every relaunch and project switch. `BridgeHandler` saves each `subtitle-prefs` post to UserDefaults, and every new webview is seeded with the saved values before the page loads (`subtitlePrefsSeedScript()`).
 - **The text.** `GET /api/projects/{id}/sessions/{sid}/subtitles.vtt` builds the whole session from the same cue code as the clips (primary speaker white, the others in BBC colours, researcher corrections applied), with `Content-Language` from the session's language or else the app's. The route is `SERVER_ONLY` in the export classifier.
 - **The handover.** `PlayerContext` fetches the text with the bearer token and posts it to the player (`bristlenose-subtitles`), tagged with the recording it belongs to; the player keeps what it receives per recording, makes a blob URL and attaches a `<track>` only for the one playing, and leaves an unchanged track alone when the same text arrives again (every timecode click re-sends it). The page styles the cues itself (`::cue` white on 75% black, and the three BBC colour classes) rather than trusting each engine's defaults. The route is a plain `def`, off the event loop. The player announces `bristlenose-ready` when it loads, and the report answers with the setting and the current recording's subtitles — anything posted before then is lost. A change of setting is sent as the `setSubtitles` command.
+- **The key.** `C` switches subtitles while the player is in front, one of the player's own keys ("player keys: arrows jump, ⌥ arrows jump further, < > speed, C subtitles, fn-F full screen"); `docs/design-desktop-menu-actions.md` owns the rest.
 - **The live page.** Serve now renders the player from the template (`/report/assets/bristlenose-player.html`, no-store) ahead of the baked copy, so existing projects get the new player.
 
 The original mapping, kept for the reasoning:
 - The popout is a web page, `bristlenose/theme/templates/player.html`, opened with `window.open` and hosted in a `WKWebView` window (`WebView.swift` `createWebViewWith`).
-- It is controlled over `postMessage` (`bristlenose-seek` and `bristlenose-command`). A `toggleSubtitles` command would sit beside `togglePip`.
+- It is controlled over `postMessage` (`bristlenose-seek` and `bristlenose-command`). A `toggleSubtitles` command would sit beside `togglePip` (shipped as `setSubtitles`).
 - The Video menu reaches it through `bridgeHandler.menuAction` → `useKeyboardShortcuts` → `sendCommand`. A checkmark item follows the Focus Mode `Toggle` pattern (`MenuCommands.swift`).
 
 Three traps:
@@ -445,9 +454,10 @@ A whole-session `.vtt` route can reuse `clip_subtitles.py`'s cue building.
 
 ## Open questions
 
-1. **Clip source beyond stars.** For v1, starred + signal heroes is the right default. Future: export dialog adds clip source picker — "Include clips for: starred / [tag picker]". The TagInput component already exists. A researcher creates a "deck" tag, tags the 5 quotes they want, and exports just those.
+1. **Clip source beyond stars.** *Partly answered: the Selected / Starred / All scope picker shipped.* For v1, starred + signal heroes is the right default. Future: export dialog adds clip source picker — "Include clips for: starred / [tag picker]". The TagInput component already exists. A researcher creates a "deck" tag, tags the 5 quotes they want, and exports just those.
 2. **Clip padding controls.** 3s before / 2s after is a sensible default. Expose in export dialog if researchers ask.
 3. **Cross-platform `file://` video.** Inline `<video src="clips/...">` may not work on all browsers from `file://` due to security restrictions. Needs testing. Relevant when clips are later wired into the exported report (Stage 3 of HTML export).
+4. **Subtitles, left open by § Subtitles on clips:** the audiogram for audio-only clips; the burned box padding (0.15 em against the BBC's 0.5 em); CJK font fallback in the burned copy, unchecked inside the sandboxed app and on Linux; the Teams-share QA of a burned clip; and the track language for platform transcripts and projects from before 0.31.0.
 
 ---
 
@@ -465,6 +475,7 @@ A whole-session `.vtt` route can reuse `clip_subtitles.py`'s cue building.
 10. ~~Test CLI: `bristlenose export --clips` — verify Cargo-style progress output~~ (CLI deferred)
 11. Test FFmpeg missing: verify `bristlenose doctor` reports it, clips disabled with explanation
 12. `pytest tests/` + `ruff check .`
+13. Subtitles: a `.vtt` beside each clip; the clip shows its track on a plain double-click in QuickTime; `(subtitled).mp4` appears only with the burn setting on, and a toast says so when ffmpeg can't burn; the popout player's subtitles follow the setting (§ Subtitles on clips).
 
 ---
 

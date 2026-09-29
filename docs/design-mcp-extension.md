@@ -248,9 +248,10 @@ docs; this section is the state and the work left, in order.
     carry `readOnlyHint: true`, `destructiveHint: false`,
     `idempotentHint: true`, `openWorldHint: false`, and
     `tests/test_mcpb_proxy.py` now fails if the server and the proxy's copy
-    disagree on them. **Not re-measured:** nobody has yet run ChatGPT over the
-    config-file route against an annotated server, so "the hint stops the
-    cards" is still inferred.
+    disagree on them. **Plugin route re-measured the same evening:** five tool
+    calls through the native helper, no approval card. **Config-file route not
+    re-measured:** nobody has yet run ChatGPT over it against an annotated
+    server, so there "the hint stops the cards" is still inferred.
 15. ~~The red Swift test `ServeManagerStartGuardTests/aFailedServeCanBeRestartedOnTheSameProject`,
     which fails on `main` itself.~~ **Done 29 Sep 2026** (`55628d90`). The
     test was wrong, not the guard: it resolved the sidecar mode from the app

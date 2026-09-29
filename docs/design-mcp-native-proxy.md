@@ -119,6 +119,14 @@ path inside a signed app bundle (tested with a path in a working tree).
   `bristlenose/server/mcp_server.py` should fix that route too. They were
   annotated on 29 Sep 2026 (`0bcb1963`). **Not re-measured** over this route
   yet.
+- **Re-measured on the plugin route with the production helper, 29 Sep 2026
+  (evening).** Installed from Settings ▸ MCP Agents ▸ Install Plugin…, a
+  Work-mode question ran `list_projects`, `get_project_overview`,
+  `get_framework`, `get_signals` and `search_quotes` with **no approval card**
+  (the maintainer's observation; ChatGPT's `logs_2.sqlite` shows each call
+  answered, `handshake ok`, from the group copy). The whole chain: one click
+  in Bristlenose, **Install plugin** in ChatGPT, ask. No Node, no Files &
+  Folders, no approval.
 - **The model may reach for ChatGPT's own Computer Use instead** ("Allow
   ChatGPT to use Bristlenose?" — screenshots of the app) when a question names
   the app. Naming the tools in the question avoided it. *Measured, once.*

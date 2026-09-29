@@ -331,8 +331,9 @@ Two independent reasons, either sufficient:
 
 **The proxy ships sandboxed, with no `inherit`, carrying a Team-ID-prefixed
 application group (`Z56GZVA2QB.app.bristlenose…`).** Such a process can list,
-read and write that group's container with no grant and no tccd request. That
-holds whichever app is responsible for it. Apple's app-groups documentation
+read and write that group's container with no grant and no tccd request.
+Measured with Claude Code, Terminal and ChatGPT as the responsible process;
+Claude Desktop is pending (§6.5). Apple's app-groups documentation
 gives the reason: macOS checks that the accessing code signature contains the
 same Developer Team ID.
 
@@ -345,8 +346,8 @@ Measured on 29 Sep 2026 with a probe group, `Z56GZVA2QB.app.bristlenose.batest`:
 | same | **ChatGPT.app** (probe run as a ChatGPT plugin's server) | **list, write, read, delete ok** |
 | team-signed, unsandboxed, no group | ChatGPT.app | denied |
 | team-signed, **unsandboxed but with** the group | fresh Terminal | denied: the entitlement only counts when sandboxed (*inferred* from one run) |
-| ad-hoc, sandboxed, with the group | Terminal | denied (not our Team ID) |
-| team-signed, sandboxed, no group | Terminal | denied |
+| ad-hoc, sandboxed, with the group | Claude Code | denied (not our Team ID) |
+| team-signed, sandboxed, no group | Claude Code | denied |
 
 Two gotchas found on the way:
 - **A sandboxed bare Mach-O needs an embedded Info.plist**
@@ -377,7 +378,9 @@ too, so it adds nothing over the group route.
 - **Host:** add `Z56GZVA2QB.app.bristlenose` to the application groups in
   **both** entitlements files, and write the handshake there while Agent Access
   is on.
-  - The Mac App Store profile already authorises `XXXXXXXXXX.*`.
+  - The Mac App Store profile already authorises it. *Verified:* the embedded
+    "Bristlenose Mac App Store" profile lists application groups
+    `group.app.bristlenose` and `Z56GZVA2QB.*`.
   - Developer ID needs no profile for team-prefixed groups.
   - Keep the data-container copy while the Node `.mcpb` exists.
   - `tests/test_entitlements_split.py` must change deliberately: its claim
@@ -395,7 +398,11 @@ too, so it adds nothing over the group route.
 - **One TestFlight upload** carrying the nested sandboxed tool with its own
   group.
 - **The group probe with Claude Desktop as the parent.** Pending: a clean
-  macOS 27 virtual machine is being prepared for the Claude tests.
+  macOS 27 virtual machine is being prepared for the Claude tests. Two probe
+  extensions are ready for it: a one-tool Swift stdio server (`group_probe`)
+  that reports its responsible process and does mkdir / write / read / unlink,
+  built sandboxed with the group, plus the same binary unsandboxed as the
+  control.
 - A runtime-built `.mcpb`.
 - §2.5.2 / §2.4.5(ii), "installs code into other apps". This applies to
   today's `.mcpb` as well, and needs review notes whichever route ships.

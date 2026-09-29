@@ -351,10 +351,13 @@ sandboxed, app-group-carrying `type: binary` proxy on both channels. So the
 pane's copy is written for both states, and each row says which it belongs to.
 The split is by time, not by channel: if the app-group route ships, the
 `.dmg` and Mac App Store builds show the researcher the same steps (App Store
-session, 29 Sep 2026). **This is a recommendation, not a decision**, and two
-things stay unverified until built: a TestFlight upload accepting the nested
-sandboxed tool with its own group, and a `.mcpb` assembled at runtime from the
-Apple-re-signed binary.
+session, 29 Sep 2026). **This is a recommendation, not a decision.** Later the
+same day Apple's validator (`altool --validate-app`) **accepted** a repackaged
+0.31.5 carrying the sandboxed group proxy at `Contents/Helpers/bristlenose-mcp`,
+with nothing uploaded (`design-mcp-native-proxy.md` §6.5). That makes this
+the likely shipping state on both channels. Still unverified: a real TestFlight
+upload and human review (the maintainer's call), and a `.mcpb` assembled at
+runtime from the Apple-re-signed binary.
 
 **Today (Node .mcpb).** Claude stays on the Node
 `.mcpb`, and the Files & Folders step is real for every new macOS 27 user.

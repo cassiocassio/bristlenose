@@ -886,7 +886,7 @@ struct MCPAgentsSettingsView: View {
                     MCPExtensionInstaller.install()
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(!MCPExtensionInstaller.bundledExtensionExists)
+                .disabled(!MCPExtensionInstaller.canPackage)
             } else {
                 // No handler registered for .mcpb — Claude Desktop isn't
                 // installed. A live button would produce the system's
@@ -1112,7 +1112,14 @@ struct MCPAgentsSettingsView: View {
                 // shown on 27: from here a denial looks the same as "nobody has
                 // asked yet". The button sits on the note's trailing edge, the
                 // same shape as `addressNote` + Copy Config on the other tabs.
-                if Self.macOSDeniesCrossTeamContainerReads {
+                //
+                // Neither note applies to the native helper (P5): it reads the
+                // team group, which no dialog and no Files & Folders switch
+                // governs, on any macOS from 15 to 27 (§6.7, P0.1). Only a
+                // build without the helper still installs the Node `.mcpb`.
+                if MCPExtensionInstaller.usesNativeHelper {
+                    EmptyView()
+                } else if Self.macOSDeniesCrossTeamContainerReads {
                     HStack(alignment: .top) {
                         Text(i18n.t("desktop.mcpAgents.filesFoldersNote", ["app": "Claude"]))
                             .font(.footnote)
@@ -1340,7 +1347,32 @@ enum MCPExtensionInstaller {
     /// no extension is bundled at all (`Bristlenose.mcpb` is gitignored, so a
     /// fresh clone has none), because a pane whose job is telling the truth
     /// about builds must not name a version for a file that isn't there.
+    // MARK: Native helper (design-mcp-native-proxy §6.9 P4)
+
+    /// The signed helper in `Contents/Helpers`, present in any build signed
+    /// with a real identity. When it is there, Install builds Claude's
+    /// extension around it at click time (`NativeExtensionPackage`), and the
+    /// Node `.mcpb` is only the fallback for builds without it.
+    static var helperURL: URL? {
+        let url = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/\(NativeExtensionPackage.helperName)")
+        return FileManager.default.isExecutableFile(atPath: url.path) ? url : nil
+    }
+
+    static var usesNativeHelper: Bool { helperURL != nil }
+
+    /// Something to install: the native helper, or the bundled Node `.mcpb`.
+    static var canPackage: Bool { usesNativeHelper || bundledExtensionExists }
+
     static var bundledStamp: String? {
+        if usesNativeHelper {
+            // The helper is built from this app's own version and build
+            // number, and reports exactly this as X-Bristlenose-Proxy-Version.
+            let info = Bundle.main.infoDictionary
+            guard let release = info?["CFBundleShortVersionString"] as? String, !release.isEmpty
+            else { return nil }
+            let build = info?["CFBundleVersion"] as? String
+            return build.map { "\(release)+\($0)" } ?? release
+        }
         guard bundledExtensionExists else { return nil }
         let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
         guard let stampURL = Bundle.main.resourceURL?
@@ -1367,13 +1399,44 @@ enum MCPExtensionInstaller {
     /// absent and the UI should offer the download link instead of a live
     /// button that would produce the system's "no application set" dialog.
     static var claudeDesktopCanInstall: Bool {
+        if usesNativeHelper {
+            return NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.anthropic.claudefordesktop") != nil
+        }
         guard let url = bundledURL else { return false }
         return NSWorkspace.shared.urlForApplication(toOpen: url) != nil
     }
 
+    /// The app icon as PNG, for the extension's own icon in Claude.
+    @MainActor private static var iconPNG: Data? {
+        guard let tiff = NSApp.applicationIconImage.tiffRepresentation,
+              let rep = NSBitmapImageRep(data: tiff) else { return nil }
+        return rep.representation(using: .png, properties: [:])
+    }
+
+    /// Build the native package into the container and hand it to Claude.
+    /// Written into our own container, which Claude reads through LaunchServices
+    /// (measured 29 Sep 2026, §6.7 P0.4). Returns false if it could not be built.
+    @MainActor @discardableResult
+    static func installNative() -> Bool {
+        guard let helper = helperURL,
+              let container = MCPHandshake.defaultDirectory(),
+              let release = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+        else { return false }
+        do {
+            let data = try NativeExtensionPackage.build(helper: helper, iconPNG: iconPNG, version: release)
+            try FileManager.default.createDirectory(at: container, withIntermediateDirectories: true)
+            let dest = container.appendingPathComponent(filename)
+            try data.write(to: dest, options: .atomic)
+            return NSWorkspace.shared.open(dest)
+        } catch {
+            return false
+        }
+    }
+
     /// Copy-then-open. 0644 is fine — the `.mcpb` carries no secret (the
     /// token travels in the handshake, not the extension).
-    static func install() {
+    @MainActor static func install() {
+        if usesNativeHelper, installNative() { return }
         guard let bundled = bundledURL,
               let container = MCPHandshake.defaultDirectory() else { return }
         let dest = container.appendingPathComponent(filename)

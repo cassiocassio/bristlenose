@@ -31,6 +31,8 @@
 #   HELPER_CHANNEL   optional: appstore | devid | dev, overriding the identity's kind.
 #   MARKETPLACE_OUT  optional: also assemble the ChatGPT plugin marketplace there
 #                    (.agents/plugins/marketplace.json + plugins/bristlenose/…).
+#   HELPERS_OUT      optional: also place a copy there (the app's Contents/Helpers,
+#                    which Claude's runtime extension is built from).
 #   TEAM_ID          default Z56GZVA2QB; the group is "$TEAM_ID.app.bristlenose".
 #   MIN_MACOS        default: the app's MACOSX_DEPLOYMENT_TARGET from the pbxproj.
 #
@@ -203,6 +205,12 @@ dump(f"{root}/plugins/bristlenose/.mcp.json", {
 })
 PY
     COPIES+=("$PLUGIN/bin/bristlenose-mcp")
+fi
+
+if [ -n "${HELPERS_OUT:-}" ]; then
+    mkdir -p "$HELPERS_OUT"
+    cp -p "$OUT/bristlenose-mcp" "$HELPERS_OUT/bristlenose-mcp"
+    COPIES+=("$HELPERS_OUT/bristlenose-mcp")
 fi
 
 MCP_HELPER_EXPECT_ID="$HELPER_ID" "$ROOT/desktop/scripts/check-mcp-helper.sh" "${COPIES[@]}"

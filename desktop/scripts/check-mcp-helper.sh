@@ -5,7 +5,8 @@
 #   desktop/scripts/check-mcp-helper.sh [--host <App.app>] <helper> [<helper> ...]
 #
 # Every copy of the helper a build ships (Helpers/, and the ChatGPT
-# marketplace's bin/) is checked, and the copies must be byte-identical. With
+# marketplace's bin/) is checked, and the copies must carry the same code
+# (CDHash; after export their timestamps differ, so bytes can't be compared). With
 # --host, the helper's team group must be one the host app also carries,
 # otherwise the app writes a handshake the helper can never read.
 #
@@ -66,6 +67,7 @@ for h in "$@"; do
     [ -f "$h" ] || { die_one "missing"; continue; }
     codesign --verify --strict "$h" 2>"$WORK/verify.txt" || die_one "codesign --verify: $(tr '\n' ' ' < "$WORK/verify.txt")"
     codesign -dvv "$h" > "$WORK/info.txt" 2>&1 || true
+    codesign -dvvv "$h" > "$WORK/cd.txt" 2>&1 || true
     ident="$(sed -n 's/^Identifier=//p' "$WORK/info.txt")"
     team="$(sed -n 's/^TeamIdentifier=//p' "$WORK/info.txt")"
     authority="$(sed -n 's/^Authority=//p' "$WORK/info.txt" | head -1)"
@@ -113,8 +115,12 @@ PY
     if grep -q 'responsibility_' "$WORK/nm.txt" "$WORK/strings.txt"; then die_one "references responsibility_* (private SPI)"; fi
     if grep -q -- '--seed' "$WORK/strings.txt"; then die_one "contains the spike's --seed mode"; fi
 
-    if [ -z "$first" ]; then first="$h"
-    elif ! cmp -s "$first" "$h"; then die_one "differs from $first (the copies must be byte-identical)"; fi
+    # The same CODE, not the same bytes: an export re-signs each copy with its
+    # own secure timestamp, so two identical helpers differ byte for byte. The
+    # CDHash covers the code and the signing identifier and nothing else.
+    cdhash="$(sed -n 's/^CDHash=//p' "$WORK/cd.txt" 2>/dev/null)"
+    if [ -z "$first" ]; then first="$h"; first_cdhash="$cdhash"
+    elif [ "$cdhash" != "$first_cdhash" ]; then die_one "code differs from $first (CDHash $cdhash vs $first_cdhash)"; fi
     [ "$fail" = 0 ] && echo "  ok  $ident · $authority · macOS $minos+"
 done
 

@@ -119,6 +119,26 @@ class TestProxyToolParity:
                     f"server types {sorted(server_types)}"
                 )
 
+    def test_annotations_match_per_tool(self) -> None:
+        # The hints are what a host reads to decide whether to show an
+        # approval card per call, so a copy that lost them would bring the
+        # cards back on the .mcpb path alone — silently, with the server fine.
+        proxy = {t["name"]: t for t in _proxy_tools()}
+        for server_tool in _server_tools():
+            name = server_tool["name"]
+            assert proxy[name].get("annotations") == server_tool.get("annotations"), (
+                f"{name}: annotations drifted"
+            )
+
+    def test_every_tool_declares_read_only(self) -> None:
+        # Covers list_projects, which the parity check above cannot reach, and
+        # pins the module's thesis. A tool that writes is a deliberate change
+        # to this test, not a copy-paste of the read-only hints.
+        for tool in _proxy_tools():
+            assert tool.get("annotations", {}).get("readOnlyHint") is True, (
+                f"{tool['name']}: not declared read-only"
+            )
+
     def test_proxy_descriptions_are_present(self) -> None:
         # The static list is what the model sees when Bristlenose is closed —
         # a blank description degrades tool choice silently.

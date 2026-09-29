@@ -13,8 +13,9 @@ OUT="${OUT:-build}"
 mkdir -p "$OUT"
 : "${SIGN_IDENTITY:?set SIGN_IDENTITY to a Developer ID identity on the Bristlenose team}"
 
-# Tool list, compiled in: the Node proxy's BN-TOOLS-JSON block, each tool marked
-# read-only so hosts that honour MCP annotations stop asking per tool.
+# Tool list, compiled in: the Node proxy's BN-TOOLS-JSON block, which carries
+# the read-only annotations itself (so hosts that honour them stop asking per
+# tool) — the build only checks they are there.
 python3 - "$ROOT/desktop/mcpb/server/index.js" "$OUT/tools.json" "$OUT/tools_embedded.swift" <<'EOF'
 import json, re, sys
 src = open(sys.argv[1]).read()
@@ -23,7 +24,7 @@ if not m:
     sys.exit("BN-TOOLS-JSON block not found in index.js")
 tools = json.loads(m.group(1))
 for t in tools:
-    t["annotations"] = {"readOnlyHint": True}
+    assert t.get("annotations", {}).get("readOnlyHint") is True, t["name"]
 text = json.dumps(tools, ensure_ascii=True)
 json.dump(tools, open(sys.argv[2], "w"), indent=1)
 assert '"""' not in text and "\\(" not in text

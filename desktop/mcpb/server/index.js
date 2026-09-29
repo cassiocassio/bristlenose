@@ -109,7 +109,9 @@ const MSG = {
 // Mirrors the four §9a tools' signatures in bristlenose/server/mcp_server.py;
 // tests/test_mcpb_proxy.py extracts the JSON between the markers below and
 // compares it against the live server's tools/list, so drift fails CI
-// rather than shipping (review Finding 25's mechanical gate).
+// rather than shipping (review Finding 25's mechanical gate). That includes
+// the annotations: every tool is read-only, and saying so is what lets a host
+// skip its per-tool approval card.
 /* BN-TOOLS-JSON-BEGIN */
 const TOOLS = [
     {
@@ -118,6 +120,12 @@ const TOOLS = [
       "inputSchema": {
         "type": "object",
         "properties": {}
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
       }
     },
     {
@@ -135,6 +143,12 @@ const TOOLS = [
             "description": "Which project to read, by the key from list_projects. Required when more than one project is open; optional when only one is."
           }
         }
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
       }
     },
     {
@@ -182,6 +196,12 @@ const TOOLS = [
             "description": "Which project to read, by the key from list_projects. Required when more than one project is open; optional when only one is."
           }
         }
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
       }
     },
     {
@@ -207,6 +227,12 @@ const TOOLS = [
             "description": "Which project to read, by the key from list_projects. Required when more than one project is open; optional when only one is."
           }
         }
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
       }
     },
     {
@@ -230,6 +256,12 @@ const TOOLS = [
         "required": [
           "framework_id"
         ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
       }
     }
   ];

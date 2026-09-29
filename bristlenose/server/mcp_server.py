@@ -890,8 +890,23 @@ def create_mcp_server(
     ``/api/health`` for its sidebar badge.
     """
     from mcp.server.mcpserver import MCPServer
+    from mcp.types import ToolAnnotations
 
     from bristlenose import __version__
+
+    # Every tool reads the project database and nothing else: no writes, no
+    # network, the same answer for the same arguments. Hosts read these to
+    # decide whether to show an approval card per tool: ChatGPT asked per tool
+    # without them and stopped once the native proxy declared readOnlyHint
+    # (29 Sep 2026, docs/design-mcp-native-proxy.md §1.3 — inferred as the
+    # cause). The .mcpb proxy serves a static copy of these;
+    # tests/test_mcpb_proxy.py holds them equal.
+    read_only = ToolAnnotations(
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=False,
+    )
 
     server = MCPServer(
         name="bristlenose",
@@ -956,7 +971,7 @@ def create_mcp_server(
             logger.exception("mcp_tool_telemetry_failed | tool=%s", tool)
         return result
 
-    @server.tool()
+    @server.tool(annotations=read_only)
     def get_project_overview(project_id: int = 1) -> dict[str, Any]:
         """Cheap orientation: sessions, participants (codes only), sections,
         themes, codebook summary, counts, top signals, and last-run status.
@@ -966,7 +981,7 @@ def create_mcp_server(
             lambda db: _tool_get_project_overview(db, project_id, last_run()),
         )
 
-    @server.tool()
+    @server.tool(annotations=read_only)
     def search_quotes(
         project_id: int = 1,
         query: str | None = None,
@@ -990,7 +1005,7 @@ def create_mcp_server(
             ),
         )
 
-    @server.tool()
+    @server.tool(annotations=read_only)
     def get_signals(project_id: int = 1, lens: str = "sentiment", limit: int = 10) -> dict[str, Any]:
         """Concentration/agreement/intensity signals over the curated corpus.
         lens="sentiment" or "tags" (accepted tags only). Includes cached
@@ -1000,7 +1015,7 @@ def create_mcp_server(
             lambda db: _tool_get_signals(db, project_id, lens, limit),
         )
 
-    @server.tool()
+    @server.tool(annotations=read_only)
     def get_framework(framework_id: str, project_id: int = 1) -> dict[str, Any]:
         """One framework in full — the stance, not just the tag list.
         framework_id is a published template id, or "codebook" for this

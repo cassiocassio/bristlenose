@@ -8,6 +8,7 @@ trued-against: HEAD@main on 2026-09-12
 
 ## Changelog
 
+- _2026-09-29_ — added § Future: subtitles on clips (sidecar / embedded track / burned in, speaker colour coding, recommended layering), carried over from the closed issue #59 so the idea outlives the tracker. Proposal only; nothing shipped changed.
 - _2026-09-12_ — trued up: named `format_clip_timecode`/`use_hours` and recorded why per-export eliding is sound by construction plus its zero-duration residual (from the time audit's H6 withdrawal); marked the source-container-preservation claim superseded at three sites (fixed `.mp4`/`.m4a`); added `raw_start`/`is_audio_only` to `ClipSpec`; repointed the never-created `clip_extractor.py` to the three shipped modules; marked the CLI deferred inline. Anchors: `server/clip_manifest.py:107,139-140`, `routes/clips_export.py:119,370-371`, `clip_backend.py:47-50`, `docs/time-defects.md` H6.
 
 # Video Clip Extraction — Design Document
@@ -266,6 +267,48 @@ Shared across all export features. Strips path separators, traversal sequences, 
 7. **Spaces, not hyphens.** The gist is lowercase, the capitalised speaker name provides the visual boundary.
 8. **Audio-only: extract as-is.** No special handling needed — FFmpeg stream copy works on audio containers. _(Superseded as implemented: audio clips are written as `.m4a`, not the source container — `clip_manifest.py:140`.)_
 9. **File menu, not Video menu.** Export is a file operation, not a playback operation.
+
+---
+
+## Future: subtitles on clips
+
+_Proposed 29 Sep 2026, from the closed GitHub issue #59 ("overlay subtitles" was its bonus line). Not built. Nothing below changes what ships today._
+
+**Why this is the valuable part of #59.** A clip dropped into a deck is usually played in a meeting room, often with the sound low or off, to people who never heard the interview. Subtitles make the quote legible at a glance and put the participant's exact words on screen, which is the point of showing a clip. The logo and badge overlays from the same issue are cosmetic by comparison.
+
+**Text source.** Take the text from the transcript segments and word timings under the clip range, rebased to the clip's `raw_start`. Don't use the quote card's text: that has been cleaned up and elided (`…`), and a subtitle has to match what is heard. Use the transcript as it stands, including the researcher's corrections. Speaker labels are codes only (`P3`, `M1`), never names, in line with the anonymisation rule (names *and* location). If PII redaction is on, the redacted text is what shows. The audio still says the name, which is the separate problem of #58.
+
+### Three ways to deliver them
+
+| | A. Sidecar file | B. Embedded track | C. Burned in |
+|---|---|---|---|
+| What | `<clip name>.vtt` (or `.srt`) beside each clip | a `mov_text` (tx3g) subtitle track inside the `.mp4` | text drawn into the video pixels |
+| Re-encode? | No | No, video stays stream-copied (`-c:v copy -c:s mov_text`) | **Yes** |
+| Plays in | VLC, IINA, browsers via `<track>`; PowerPoint 365 via *Insert ▸ Captions* (needs a manual step per video) | QuickTime Player (*View ▸ Subtitles*), VLC, IINA; PowerPoint and Keynote: **unverified** | everything, including PowerPoint, Keynote, Teams, Slack, LinkedIn and a phone |
+| Viewer can turn off | Yes | Yes | No |
+| Editable / translatable later | Yes, it's a text file | Only by re-muxing | No |
+| Colour per speaker | WebVTT voice spans (`<v P3>`) with `::cue` styling in browsers; elsewhere **unverified** | tx3g can style per cue; players mostly ignore it (**unverified**) | Full control |
+| Cost | Trivial | Trivial | A few seconds per clip (**estimate**; 1080p x264 `veryfast`) |
+| Failure mode | File separated from its clip; ignored by slide apps | Invisible until someone finds the menu | Wrong text is permanent; small text unreadable on a phone |
+
+Only **C is foolproof** for "drop it into PowerPoint and press play". A and B are cheap and keep the stream-copy guarantee (Decision 2), but each needs the viewer's player to cooperate.
+
+**Burning in is possible with what we already ship.** The bundled ffmpeg (martin-riedl 8.1 build) was configured with `--enable-libass --enable-libfreetype --enable-libharfbuzz --enable-libx264`, and its binary carries the `subtitles` and `drawtext` filter names (read from the binary's strings, 29 Sep 2026). The binary itself exits 133 when run outside the sandbox, so this was **not run**. The path would be: write an `.ass` file per clip, then `-vf subtitles=clip.ass:fontsdir=<bundled fonts>` with x264, or with `h264_videotoolbox` for hardware encoding. **Risk:** inside the sandbox, fontconfig may not find system fonts, so bundle one OFL font (Inter or Atkinson Hyperlegible) and pass `fontsdir`. A future AVFoundation backend would do the same job natively: `AVVideoCompositionCoreAnimationTool` with `CATextLayer`s, hardware encoding and system fonts, with no libass involved.
+
+### Colour-coding participant and moderator
+
+- **Convention to borrow:** the BBC subtitle guidelines identify speakers by colour, in the order white, yellow, cyan, green, on a black background. Researchers' clients will have seen that on television.
+- **Colour alone isn't enough.** Meeting-room projectors wash colour out, and WCAG 1.4.1 rules out colour as the only signal. Add a short label on every speaker change (`M1:` / `P3:`), or a leading dash per BBC practice.
+- **Use a box, not an outline.** Most Zoom and Teams recordings are screen shares of mostly white UI, where white outlined text disappears. A semi-opaque black box behind each line keeps it readable on any background.
+- **Proposal:** participant in white (the voice the clip exists for, and the most text), moderator in yellow. In a group session, extra participants take cyan, then green. Two lines of at most ~42 characters each; cues break on word timings, never mid-word.
+
+### Recommended shape
+
+1. **Always, and nearly free:** write `<clip name>.vtt` beside every clip (with voice spans, so a browser shows the colours) *and* mux a plain `mov_text` track with `P3:` labels into the `.mp4`. No re-encode, so Decision 2 still holds.
+2. **Opt-in checkbox in the clip export dialog:** *"Burn subtitles into the video (for slides)"*. This re-encodes with the styling above. It is the one exception to Decision 2, and the checkbox says so by existing.
+3. **Audio-only sessions** (`.m4a`) can't carry burned-in text. The natural extension is an "audiogram": render a plain `.mp4` of a title card (`P3` plus the gist) with the subtitles over it, so audio quotes can go into a deck too.
+
+**Open decisions (the maintainer's):** whether burning in is on by default; whether the burned copy replaces the clean clip or sits beside it (`… (subtitled).mp4`); the colour assignment above; label style (code prefix or dash); the font.
 
 ---
 

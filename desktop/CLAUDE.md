@@ -415,7 +415,7 @@ Keyboard shortcuts: Cmd+1-5 (tabs) and Cmd+Opt+S (sidebar) live in the View menu
 
 **Contextual dimming** — menus dim unavailable items (never hide):
 - Quotes menu: all items dim when not on Quotes tab. Star/Hide/Tag additionally require `focusedQuoteId != nil`
-- Video menu: all items dim when `!hasPlayer`. Play/Pause label swaps
+- Video menu: player commands dim when `!hasPlayer`; Subtitles is a preference and gates on `canDispatch` instead. Play/Pause label swaps
 - Codes menu: group/code operations dim when not on codebook/quotes tab. Browse/Import always enabled
 - Edit > Undo/Redo: hidden when `isEditing` (lets WKWebView handle character-level undo)
 - View > panels: dim based on active tab
@@ -426,7 +426,11 @@ Keyboard shortcuts: Cmd+1-5 (tabs) and Cmd+Opt+S (sidebar) live in the View menu
 - Cmd+F focuses the **native** Quotes search capsule and never crosses the bridge — `bridgeHandler.requestSearchFocus()` bumps a published counter `QuotesSearchToolbarControl` observes (12 Sep 2026; it previously dispatched `menuAction("find")` into a handler that queried an element embedded mode never renders, and so did nothing since it shipped). Lens-gated on `canSearch`. ⌘G/⇧⌘G were withdrawn in the same sweep — search here filters the grid, so there is no "next" to go to
 - Settings Cmd+, comes from the `Settings {}` scene automatically — no custom menu item
 
-**No bare-key menu shortcuts** — `s`, `h`, `[`, `]`, `m`, `?`, arrows work only in WKWebView focus. Menu items for these actions have no keyboard shortcut shown. Help menu points to `?` for the full shortcut reference.
+**No bare-key menu shortcuts while a report is in front** — `s`, `h`, `[`, `]`, `m`, `?`, arrows work only in WKWebView focus. A bare key on a menu item is taken before any view sees it, so it would steal the report's own keys and stop Space typing in an editor. Menu items for these actions have no keyboard shortcut shown; Help points to `?`. **The one exception is the popout player** (29 Sep 2026): `VideoMenuContent` attaches Space, ← →, ⌥← ⌥→, ⇧, ⇧., C and fn-F *only while the player window is key* (`key(_:)` returns nil otherwise), because the player has nothing to type into. See `docs/design-desktop-menu-actions.md` §"Video menu — the popout player in front".
+
+**An AppKit window is invisible to the menus' `@FocusedValue`.** The popout player is a plain `NSWindow`, so with it key `@FocusedValue(\.bridge)` is nil and every bridge-dependent item fell back to `.unattached` and dimmed — the whole Video menu, exactly when the viewer reached for it. `PopoutOwners` (`WebView.swift`) maps each popout to the report bridge that opened it, and `MenuCommands` falls back to it. And a key window change there does **not** reliably rebuild the SwiftUI menu bar, so anything that must follow it needs its own trigger: `KeyWindowWatcher` publishes on `NSWindow.didBecomeKey`/`didResignKey`, observed by the one section that needs it — never by `MenuCommands`, per the whole-menu-bar rule above. Any future AppKit window that should drive the menus needs both.
+
+**An `NSWindow` made in code must set `isReleasedWhenClosed = false`.** The AppKit default releases the window on close, one release too many under ARC: after the viewer closed the popout player with its red button, the Coordinator's `popoutWindow` pointed at freed memory, and the next timecode click sent `close` to whatever lived there — `-[NSButtonImageView close]: unrecognized selector`, crashing the app (29 Sep 2026; latent since the player shipped in March). Also clear your reference on `NSWindow.willCloseNotification`, since a close can come from the red button, ⌘W or the page's `window.close()`.
 
 ### KVO for back/forward
 

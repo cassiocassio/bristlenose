@@ -337,17 +337,31 @@ Sources were read on the page unless marked *claimed* (a secondary source or a s
 - **DCMP Captioning Key** ([source](https://dcmp.org/learn/captioningkey/597)): white, medium-weight sans, and "a translucent box is preferred … especially on light backgrounds". Light backgrounds are exactly our screen-share case.
 - **Box opacity:** sources split — BBC solid, DCMP translucent, YouTube's default reported as 75% black (*claimed*).
 - **Social reels** (Hormozi/Submagic style: uppercase, heavy stroke, 4–6 words, pop-in animation; Kapwing defaults to Montserrat) are **not the model**. They are built for silent vertical feeds competing for a thumb. Legibility research also runs against them: all-caps is slower to read at a glance ([NN/g on the MIT AgeLab study](https://www.nngroup.com/articles/glanceable-fonts/)). Their one transferable lesson is short cues.
-- **Size when projected:** AVIXA's DISCAS viewing standard puts the minimum element height at about 2.5–3.5% of *screen* height for typical room geometry ([source](https://www.avixa.org/resources/display-image-size-calculators/learn-more-about-display-size)). A clip at half slide height halves our text, so we need about 5–7% of *clip* height. That lands on the BBC's 6.67%.
+- **Size on a room display:** AVIXA's DISCAS viewing standard puts the minimum element height at about 2.5–3.5% of *screen* height for typical room geometry. That covers the in-room attendees only; remote attendees are the Teams chain below ([source](https://www.avixa.org/resources/display-image-size-calculators/learn-more-about-display-size)). A clip at half slide height halves our text, so we need about 5–7% of *clip* height. That lands on the BBC's 6.67%.
 - **Fonts:** Atkinson Hyperlegible Next (Braille Institute; free, 7 weights, 150+ languages; [source](https://www.brailleinstitute.org/freefont/)) is designed for letterform distinction at low vision, and it is a wide humanist sans of the kind BBC §9.1 and DCMP ask for. It is a serious rival to Inter here. No study compares Inter, SF or Netflix Sans for subtitles.
+
+### Who watches, and through what
+
+The typical viewing is **not** a room watching a TV. It is a **Teams (or Zoom) call in which the researcher shares their screen and plays the clip from a slide**. Some attendees are in a meeting room looking at the room display; others are remote, watching the shared screen in a Teams window on a laptop. So a subtitle passes through a chain of shrinks and one lossy encode before anyone reads it:
+
+clip → half a slide → the presenter's screen → Teams screen-share encode → the attendee's Teams window, or the room display.
+
+What that changes, and what it doesn't:
+
+- **Burn-in is the only mode that survives the chain.** A screen share carries pixels. Soft captions reach it only if the presenter switched them on in PowerPoint first, and Teams' own live captions caption the people in the call, not a clip's audio played through *Include computer sound* (**unverified**).
+- **The BBC numbers stand** (maintainer, 29 Sep 2026). What makes subtitles legible there — large text, solid black box, short lines, a wide regular-weight sans — is what survives a video encode too. A flat black box with hard white edges is close to the best case for a codec, and thin or light weights are what compression smears. Use a regular or medium weight, never light.
+- **Teams trades resolution against frame rate.** By default screen sharing runs at a low frame rate to keep static content sharp; *Optimize for video* (in the presenter toolbar, beside *Include computer sound*) raises the frame rate and may lower the resolution, depending on the device and bandwidth. [Microsoft Learn](https://learn.microsoft.com/en-us/troubleshoot/microsoftteams/meetings/fix-choppy-video). Interview footage is mostly talking heads and screen shares, and a subtitle cue lasts seconds, so the default (sharp, low frame rate) is probably the better setting for reading. That is a tip for the help text, not a control.
 
 ### Size — BBC figures, one sanity check owed
 
-**Adopt the BBC numbers above as they stand.** The one situation the BBC guidance was not written for is a **video shrunk inside a slide**: a clip often fills only half a slide, which halves the text. The AVIXA arithmetic under Prior art says 6.67% of clip height still clears the projected minimum at half-slide size. One check confirms it before anything ships:
+**Adopt the BBC numbers above as they stand.** The check reproduces the real chain rather than a projector:
 
-- Render one clip at the BBC size in each candidate font.
-- Use two sources: a 720p Zoom screen share (white UI, the hard case) and a 1080p Teams speaker view.
-- Place each in a PowerPoint slide at half-slide size and view it on a projector or TV from the back of a room.
-- If it reads, ship the BBC numbers and whichever font read better. If it doesn't, that is a finding worth writing down, not a reason to tune by eye.
+- Render one clip at the BBC size in each candidate font, from a 720p Zoom screen share (white UI, the hard case) and a 1080p Teams speaker view.
+- Place each at half-slide size in PowerPoint, share it in a real Teams call with *Include computer sound*, and read it:
+  - as a remote attendee on a laptop, with Teams in an ordinary window rather than full screen;
+  - on a meeting-room display from the back of the room;
+  - with *Optimize for video* both off and on.
+- If it reads, ship the BBC numbers and whichever font survived better. If it doesn't, write the failure down as a finding (which link in the chain broke it) rather than tuning by eye.
 
 **Tooling note:** Homebrew's ffmpeg has **no** `subtitles`/`ass` filter (checked 29 Sep 2026), and the bundled binary exits 133 outside the sandbox. The experiments therefore need the unsigned martin-riedl 8.1 download that `desktop/scripts/fetch-ffmpeg.sh` pins.
 

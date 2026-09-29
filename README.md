@@ -412,6 +412,7 @@ Exported clips carry subtitles, ChatGPT can read your studies, and the video pla
 - **Closing the video player and then clicking a timecode could crash the Mac app.**
 - **The Video menu was greyed out exactly while the player was in front,** and Picture in Picture did nothing from the menu.
 - **Japanese and Chinese transcripts had no word timings,** so playback highlighting could not follow the words as it does in other languages.
+- **Transcription failed on a fresh install on Linux, Windows and Intel Macs.** A new release of PyAV, the audio library faster-whisper reads recordings with, broke its decoder on the day it came out. Bristlenose now stays on the previous version until faster-whisper catches up.
 
 **0.31.5** — _29 Sep 2026_
 

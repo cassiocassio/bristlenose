@@ -182,6 +182,7 @@ Things we know we're pinned at, with re-check dates. When a re-check date comes 
 | **Python 3.10 floor** | EOL October 2026. Decision point. | Quarterly review preceding the EOL |
 | **macOS deployment target 15.0** | Sequoia is n-1; the sidebar work on it is done and fragile. **Held 3 Sep 2026 regardless of n-2 status** — see Pillar 3. | When Apple-Intelligence features move into the shipping scheme (not on an n-2 trigger) |
 | ~~**`BristlenoseTests` deployment target 26.1**~~ | Lowered to 15.0 on 25 Sep 2026, matching the app, after proof on macOS 15 and 26 guests. | — (moves with the app floor) |
+| **PyAV (`av`) below 19** — `pyproject.toml` | faster-whisper 1.2.1's `decode_audio` passes `metadata_errors=` to `av.open()`, which av 19.0.0 removed: every decode raises `TypeError`. Caught by the release preflight's dependency-majors row on 29 Sep 2026 (0.32.0), measured on a real clip (19.0.0 fails, 18.1.0 decodes). Also reaches anyone who installs 0.31.x fresh while av 19 is current. | When a faster-whisper release drops the argument or declares av 19 support |
 | **Sidecar CPython 3.12** | Bundled in `Python.framework`; bumping is a signing/entitlement event. | Coordinated with macOS major bump |
 
 ## Triage boundary

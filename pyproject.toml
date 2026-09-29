@@ -22,6 +22,12 @@ dependencies = [
     "pydantic>=2.5",
     "pydantic-settings>=2.1",
     "faster-whisper>=1.0",
+    # PyAV is faster-whisper's audio decoder. av 19.0.0 removed the
+    # `metadata_errors` argument that faster_whisper.audio.decode_audio passes
+    # to av.open(), so every decode raises TypeError (measured 29 Sep 2026 on
+    # faster-whisper 1.2.1, trial clip: 19.0.0 fails, 18.1.0 decodes 120 s).
+    # Lift when a faster-whisper release drops the argument or supports av 19.
+    "av<19",
     "pysrt>=1.1",
     "webvtt-py>=0.5",
     "python-docx>=1.1",

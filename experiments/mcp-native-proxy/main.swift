@@ -14,7 +14,16 @@ func responsibility_spawnattrs_setdisclaim(_ attrs: UnsafeMutablePointer<posix_s
 
 func log(_ s: String) { FileHandle.standardError.write(("[bn-proxy-native] " + s + "\n").data(using: .utf8)!) }
 
+// Two builds from this file:
+//   default          — disclaim variant: relaunches itself with responsibility
+//                      disclaimed (private SPI; Developer ID only).
+//   -D GROUP_VARIANT — App Store shape: sandboxed (entitlements), carries the
+//                      Team-ID-prefixed app group, reads the handshake from the
+//                      group container. No private SPI. See docs §6.
+let GROUP_ID = "Z56GZVA2QB.app.bristlenose"
+
 // --- Stage 1: re-launch disclaimed ------------------------------------------
+#if !GROUP_VARIANT
 if ProcessInfo.processInfo.environment["BN_MCP_DISCLAIMED"] != "1" {
     var attr: posix_spawnattr_t? = nil
     posix_spawnattr_init(&attr)
@@ -35,23 +44,58 @@ if ProcessInfo.processInfo.environment["BN_MCP_DISCLAIMED"] != "1" {
         exit((st >> 8) & 0xff)
     }
 }
+#endif
 
 // --- Stage 2: the proxy -----------------------------------------------------
+#if GROUP_VARIANT
+// Sandboxed: HOME is the proxy's own container, so resolve the group through
+// the API the entitlement authorises rather than building a path.
+let groupDir = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: GROUP_ID)
+let GROUP_HANDSHAKE = groupDir?.appendingPathComponent("Bristlenose/mcp-handshake.json").path
+let HANDSHAKES = [GROUP_HANDSHAKE].compactMap { $0 }
+
+// `--seed`: SPIKE ONLY. Stands in for the Bristlenose app writing the handshake
+// into the group (the shipped app writes only to its data container today).
+// Reads a handshake on stdin and writes it atomically, 0600, into the group.
+if CommandLine.arguments.dropFirst().first == "--seed" {
+    guard let dir = groupDir else { log("seed: no group container (entitlement missing?)"); exit(2) }
+    let data = FileHandle.standardInput.readDataToEndOfFile()
+    guard (try? JSONSerialization.jsonObject(with: data)) != nil else { log("seed: stdin is not JSON"); exit(3) }
+    let sub = dir.appendingPathComponent("Bristlenose")
+    do {
+        try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
+        let tmp = sub.appendingPathComponent(".mcp-handshake.tmp")
+        FileManager.default.createFile(atPath: tmp.path, contents: data, attributes: [.posixPermissions: 0o600])
+        _ = try FileManager.default.replaceItemAt(sub.appendingPathComponent("mcp-handshake.json"), withItemAt: tmp)
+        log("seed: wrote \(data.count) bytes to \(sub.path)/mcp-handshake.json"); exit(0)
+    } catch { log("seed failed: \(error)"); exit(4) }
+}
+#else
 let home = FileManager.default.homeDirectoryForCurrentUser.path
 let HANDSHAKES = [
     ProcessInfo.processInfo.environment["BRISTLENOSE_DEV_MCP_HANDSHAKE"],
     home + "/Library/Containers/app.bristlenose/Data/Library/Application Support/Bristlenose/mcp-handshake.json",
     home + "/Library/Application Support/Bristlenose/mcp-handshake.json",
 ].compactMap { $0 }
+#endif
 let HOST = ProcessInfo.processInfo.environment["BRISTLENOSE_MCP_HOST"] ?? "your AI app"
 let GROUNDING = "Do not answer from memory or from general knowledge."
 let MSG_CLOSED = "Bristlenose isn't open, so there is no study data available. Tell the person to open Bristlenose and select a project, then ask again. " + GROUNDING
 let MSG_STARTING = "Bristlenose is starting — ask again in a moment. " + GROUNDING
-let MSG_PERMISSION = "macOS blocked \(HOST) from reading Bristlenose's data. Tell the person to open System Settings ▸ Privacy & Security ▸ Files & Folders, find \(HOST), and turn on Bristlenose, then ask again. " + GROUNDING
+#if GROUP_VARIANT
+// Sandboxed: the sandbox refuses the path before TCC is asked, so no Files &
+// Folders switch can help. The remedy is the extension itself.
+let MSG_PERMISSION = "This Bristlenose extension can't reach Bristlenose's data. Tell the person to open Bristlenose ▸ Settings ▸ MCP Agents and install the extension again, or check for a Bristlenose update, then ask again. " + GROUNDING
+#else
+// Wording aligned with docs/design-mcp-files-and-folders.md §3.
+let MSG_PERMISSION = "macOS has blocked \(HOST) from reading Bristlenose. On this version of macOS there is no prompt — the access stays off until the person turns it on. Tell the person to open System Settings ▸ Privacy & Security ▸ Files & Folders, expand \(HOST) in the list, and turn on Bristlenose, then ask again. Nothing in Bristlenose needs changing. " + GROUNDING
+#endif
 let MSG_AUTH = "Bristlenose refused this connection's stored credential. Tell the person to open Bristlenose ▸ Settings ▸ MCP Agents and check this project's agent access is turned on, then ask again. " + GROUNDING
 
-// Tool list: copied verbatim from the Node proxy's BN-TOOLS-JSON block at build time.
-let TOOLS: Any = try! JSONSerialization.jsonObject(with: try! Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[0]).deletingLastPathComponent().appendingPathComponent("tools.json")))
+// Tool list: compiled in (TOOLS_JSON, generated by build.sh from the Node
+// proxy's BN-TOOLS-JSON block). A sandboxed proxy cannot read a file beside
+// itself in another app's plugin folder, so nothing is loaded at runtime.
+let TOOLS: Any = try! JSONSerialization.jsonObject(with: Data(TOOLS_JSON.utf8))
 
 enum HS { case none, denied, ok([[String: Any]]) }
 func readHandshake() -> HS {

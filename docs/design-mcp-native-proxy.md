@@ -40,9 +40,11 @@ Related docs:
    fails upload). **A public-API route works instead:** write the handshake into
    a Team-ID-prefixed app group, and ship the proxy **sandboxed** with that group.
    Such a proxy reads the group container with no grant, with ChatGPT, Claude
-   Code or Terminal responsible (§6). *Measured; App Store acceptance of the
-   nested tool is unverified until one TestFlight upload.* The native port still
-   lacks several of the Node proxy's states (§4.3).
+   Code or Terminal responsible (§6). *Measured.* **Apple's validator
+   (`altool --validate-app`) accepts** the shipped app repackaged with that
+   sandboxed helper and the group (§6.5). One real TestFlight upload and human
+   App Review remain. The native port still lacks several of the Node proxy's
+   states (§4.3).
 
 ## 1. The ChatGPT plugin channel
 
@@ -333,7 +335,7 @@ process (§2), so their reads are Claude's, and are denied on a new install.
 | Claude Desktop runtime | Claude's own Node | binary server | binary server |
 | macOS 27, new install | **silently denied** until Files & Folders is switched on | allowed, same-team | allowed, same-team group |
 | macOS 27, carried-over grant | works | works | works |
-| Mac App Store build | ships today | **rejected** (§6) | ship with risk: one TestFlight upload decides |
+| Mac App Store build | ships today | **rejected** (§6) | passes `--validate-app` (§6.5); one upload and review remain |
 | Developer ID `.dmg` | ships today | ship with risk | works (same mechanism as MAS) |
 
 [`design-mcp-files-and-folders.md`](design-mcp-files-and-folders.md) is the
@@ -410,11 +412,36 @@ A helper `.app` launched through LaunchServices *is* its own responsible
 process and reads the data container. On the Mac App Store it must be sandboxed
 too, so it adds nothing over the group route.
 
+Probe sources: `experiments/mcp-group-probe/` (the C probe and a one-tool
+`group_probe` MCP server), beside this spike's `experiments/mcp-native-proxy/`.
+
+**The Files & Folders switch does not reach the group container.** *Measured.*
+At 10:08, under ChatGPT, the unsandboxed team-signed control was refused on the
+group container while **ChatGPT ▸ Bristlenose was switched on**: tccd shows the
+switch turned on at 09:19 and no change after. And tccd logged **no**
+`AppDataDetailed` request for that refusal, only a Full Disk Access preflight.
+The group rule is enforced below TCC, and no user-facing switch reaches it.
+So if the group route ever fails, the recovery is a handshake copy in the
+*data* container, read by an unsandboxed proxy (Node, or the Developer ID
+binary), which Files & Folders can unlock. The sandboxed proxy cannot use that
+fallback: its own sandbox hides the data container.
+
+**The sandboxed proxy works end to end.** *Measured*, 29 Sep 2026: the
+`GROUP_VARIANT` build of `experiments/mcp-native-proxy/main.swift` is sandboxed,
+with `network.client`, the group `Z56GZVA2QB.app.bristlenose` and an embedded
+Info.plist, and has no private symbol (checked by `build.sh`). The handshake was
+seeded into the group through its own `--seed` mode, standing in for the host.
+Under a fresh Terminal it then answered `tools/list` (5, marked `readOnlyHint`),
+`list_projects` and `search_quotes` with real data from a live `bristlenose
+serve`. It resolves the group with
+`FileManager.containerURL(forSecurityApplicationGroupIdentifier:)`, because a
+sandboxed `$HOME` is the proxy's own container.
+
 ### 6.3 Options, ranked
 
 | # | Option | MAS review | Claude + ChatGPT |
 |---|---|---|---|
-| 1 | **Team-prefixed group container + sandboxed native proxy** | ship with risk: acceptance of a nested non-inherit tool carrying its own group is unverified until one TestFlight upload | both |
+| 1 | **Team-prefixed group container + sandboxed native proxy** | **passes Apple's validator** (§6.5); upload processing and human review remain | both |
 | 2 | Mach IPC rendezvous under the group prefix (`CFMessagePort` / XPC). No token on disk; the long-run hardening against macOS 27's tightening on files created by other teams | ship with risk | both |
 | 3 | `SMAppService` agent with `MachServices` | as 2, plus the background-item notice (§2.4.5(iii)) | both |
 | 4 | LaunchServices helper `.app` | useless on MAS (must be sandboxed); needs a relay | — |
@@ -441,11 +468,51 @@ too, so it adds nothing over the group route.
 - **Claude:** build the `.mcpb` at runtime from the re-signed binary. A Mach-O
   inside a zip is never re-signed, so whether a pre-built one runs is
   *unverified*.
+- **Why one binary is enough.** Under Claude, *any* team-signed binary already
+  works, with no group and no SPI, because Claude disclaims binary servers
+  (§4.4). The group is what ChatGPT needs, and what lets a *sandboxed* binary
+  read anything at all. So a single sandboxed binary carrying the group serves
+  both hosts.
+- **Recovery path.** Keep writing the data-container copy too. When the group
+  read fails, the proxy can only tell the person to reinstall the extension or
+  update Bristlenose: the sandboxed proxy can't reach the data container, and
+  Files & Folders doesn't reach the group (§6.2). The unsandboxed Node
+  `.mcpb` stays the path where Files & Folders is the remedy.
 
-### 6.5 Still open
+### 6.5 Apple's validator accepts it
 
-- **One TestFlight upload** carrying the nested sandboxed tool with its own
-  group.
+**`altool --validate-app`: no issues.** *Measured*, 29 Sep 2026, 11:05. The
+test package was the shipped 0.31.5 App Store archive (build 3906), repackaged:
+- the `GROUP_VARIANT` proxy, signed Apple Distribution, added at
+  `Contents/Helpers/bristlenose-mcp`;
+- `Z56GZVA2QB.app.bristlenose` added to the host's application groups, beside
+  `group.app.bristlenose`;
+- the build number raised to 3907, the app re-signed Apple Distribution with
+  hardened runtime, and the package signed with the Mac installer certificate.
+
+`desktop/scripts/check-pkg-shippable.sh` passed every check, including
+*"nested app-sandbox: 5 Mach-Os, all sandboxed"*, which is the rule behind the
+14 Jul rejection. Apple's validator then reported no issues. The gate's one
+failure was the expected *"pkg is 3907, working tree is 3906"*: a
+release-freshness check that a deliberately renumbered spike build is meant to
+fail.
+
+What this does and does not settle:
+- **Settled:** App Store Connect's server-side validation accepts a nested,
+  sandboxed, non-`inherit` tool carrying its own team-prefixed group, and the
+  host carrying that group next to `group.app.bristlenose`. No build was
+  delivered and no build number was spent.
+- **Not settled:** upload *processing* can raise issues that validation does
+  not (they arrive as ITMS emails), and human App Review (§2.5.2,
+  §2.4.5(ii)) happens only when a build is submitted for review. Internal
+  TestFlight skips human review.
+
+### 6.6 Still open
+
+- **One real upload to internal TestFlight** carrying the nested sandboxed
+  tool, to see whether processing agrees with validation. It spends a build
+  number for good; pick one that cannot collide with a release. Maintainer's
+  call.
 - A runtime-built `.mcpb`.
 - §2.5.2 / §2.4.5(ii), "installs code into other apps". This applies to
   today's `.mcpb` as well, and needs review notes whichever route ships.

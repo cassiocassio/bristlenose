@@ -25,6 +25,8 @@
 #   minos == app floor      — built for the build machine's OS it crashes on 15.
 #   no responsibility_*     — private SPI; App Review rejects it (§6.1).
 #   no --seed               — the spike's write-the-group test mode.
+#   no BN_TEST_HANDSHAKE_PATH — the break-test harness's build, which reads its
+#                             handshake from a path any caller could choose.
 #
 # Exit 0 = every copy passes. Anything else = do not ship.
 set -euo pipefail
@@ -114,6 +116,7 @@ PY
     strings -a "$h" > "$WORK/strings.txt" 2>/dev/null || true
     if grep -q 'responsibility_' "$WORK/nm.txt" "$WORK/strings.txt"; then die_one "references responsibility_* (private SPI)"; fi
     if grep -q -- '--seed' "$WORK/strings.txt"; then die_one "contains the spike's --seed mode"; fi
+    if grep -q 'BN_TEST_HANDSHAKE_PATH' "$WORK/strings.txt"; then die_one "is the TEST build (reads its handshake from an env path)"; fi
 
     # The same CODE, not the same bytes: an export re-signs each copy with its
     # own secure timestamp, so two identical helpers differ byte for byte. The

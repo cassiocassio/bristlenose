@@ -14,10 +14,19 @@ import Darwin
 
 func log(_ s: String) { FileHandle.standardError.write(("[bristlenose-mcp] " + s + "\n").data(using: .utf8)!) }
 
+#if BN_TEST_HANDSHAKE
+// TEST BUILD ONLY (tests/test_mcp_helper_behaviour.py): read the handshake from
+// a path the harness chooses, so the protocol can be driven against a real
+// serve without touching the real group. The shipped binary is never compiled
+// with this flag, and check-mcp-helper.sh refuses any binary that contains it.
+let groupDir: URL? = nil
+let HANDSHAKES = [ProcessInfo.processInfo.environment["BN_TEST_HANDSHAKE_PATH"]].compactMap { $0 }
+#else
 // Sandboxed: HOME is the helper's own container, so resolve the group through
 // the API the entitlement authorises rather than building a path.
 let groupDir = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: GROUP_ID)
 let HANDSHAKES = [groupDir?.appendingPathComponent("Bristlenose/mcp-handshake.json").path].compactMap { $0 }
+#endif
 
 let HOST_LABEL = ProcessInfo.processInfo.environment["BRISTLENOSE_MCP_HOST"]
 let HOST = HOST_LABEL ?? "your AI app"

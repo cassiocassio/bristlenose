@@ -2,6 +2,32 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.32.0** — _30 Sep 2026_
+
+Exported clips carry subtitles, ChatGPT can read your studies, and the video player learns its keys.
+
+**New**
+
+- **Exported clips carry subtitles.** Each clip gets a `.vtt` file beside it and a subtitle track inside it, tagged with the language that was spoken so QuickTime shows it on a plain double-click. Everyone audible is subtitled, and speakers are told apart by colour, following the BBC's subtitle guidelines. Your corrections to a quote reach its subtitles.
+- **Subtitles can be burned into the picture,** for slides and screen shares that ignore a subtitle track. Tick **Burn subtitles into the video** under Extract clips (on the Mac, **Quotes ▸ Burn Subtitles into Clips**) and each clip also gets a `(subtitled)` copy; the clean clip is kept. If your FFmpeg can't draw subtitles, the export says so and still makes the plain clips.
+- **The video player shows subtitles.** Switch them on in Settings ▸ Video, or on the Mac with **Video ▸ Subtitles** or the C key.
+- **Japanese and Chinese subtitles break between characters,** keeping closing punctuation off the start of a line and opening brackets off the end.
+- **Install Plugin… for ChatGPT.** Settings ▸ MCP Agents ▸ ChatGPT & Codex adds Bristlenose to the ChatGPT desktop app in two clicks, with no Node and no config file to edit. Ask in Work mode and start the question with @Bristlenose — ChatGPT doesn't use a plugin otherwise. Bristlenose needs to be in your Applications folder.
+- **The video player has keyboard controls on the Mac.** With the player in front: Space plays and pauses, ← → jump 5 seconds, ⌥← ⌥→ jump 30, < and > change speed, C switches subtitles, and fn-F goes full screen. The Video menu shows them while the player is in front.
+
+**Improved**
+
+- **The Claude Desktop extension is now a small helper signed by Bristlenose,** rather than a script run on Claude's own Node. If you installed it before, Settings ▸ MCP Agents offers Update Extension….
+- **ChatGPT no longer asks you to approve each tool call.** Bristlenose's tools now declare themselves read-only.
+- **The projects column scrolls under the toolbar,** fading out beneath it as in Photos and Notes, instead of stopping at a hard edge with a grey band.
+
+**Fixed**
+
+- **On macOS 27, Claude and ChatGPT couldn't read a shared study, and nothing said why.** macOS 27 blocks another app from reading Bristlenose's files without asking. The new helper reads them with no extra permission, so there is nothing to switch on.
+- **Closing the video player and then clicking a timecode could crash the Mac app.**
+- **The Video menu was greyed out exactly while the player was in front,** and Picture in Picture did nothing from the menu.
+- **Japanese and Chinese transcripts had no word timings,** so playback highlighting could not follow the words as it does in other languages.
+
 **0.31.5** — _29 Sep 2026_
 
 Other programs on your computer can no longer read a project's private files through the report server, and a re-analysis reaches the report without a restart.

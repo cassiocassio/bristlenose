@@ -431,6 +431,18 @@ struct BristlenoseApp: App {
         .defaultSize(width: 1100, height: 760)
         .commandsRemoved()   // no auto Window-menu entry — see Type Parity above
 
+        // Where the projects column meets the toolbar when the list scrolls:
+        // crosses "outline under the toolbar" with "headings pin", plus two
+        // fixed-lens layouts, on the real outline controller with fixture
+        // projects. Diagnostics ▸ Sidebar Lab.
+        Window("Sidebar Lab", id: "sidebar-lab") {
+            SidebarLabView()
+                .environmentObject(i18n)
+                .tint(paletteAccent)
+        }
+        .defaultSize(width: 1200, height: 760)
+        .commandsRemoved()
+
         #endif
     }
 }

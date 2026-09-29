@@ -290,6 +290,11 @@ private struct DebugMenuContent: View {
         // edge-anchored, so the numbers are measured rather than assumed.
         Button("Seam Lab") { openWindow(id: "seam-lab") }
 
+        // How the projects column's top meets the toolbar when the list
+        // scrolls — the real outline controller on fixture projects, with the
+        // pinning and safe-area choices crossed.
+        Button("Sidebar Lab") { openWindow(id: "sidebar-lab") }
+
         // Debug lens — test content on a visible grid, inside the report
         // webview itself (measures the production CSS in situ). Routes the
         // SPA to /report/specimen; needs a served project.

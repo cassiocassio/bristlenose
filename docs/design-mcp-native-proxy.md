@@ -26,12 +26,15 @@ Related docs:
    missing on a Mac without its own Node. *Measured, with a control.*
 3. **macOS 27 silently denies an agent app's read of our container** (no
    dialog), and **the decision is made on the *responsible* process, not on who
-   signed the binary doing the read.** *Measured.*
+   signed the binary doing the read.** *Measured* for ChatGPT, and for a fresh
+   Claude Desktop through today's shipped Node `.mcpb`.
 4. **A team-signed binary launched as its own responsible process reads the
    container with no grant at all.** The read never reaches TCC. *Measured.*
 5. **So a 128 KB native proxy, signed by our team, that relaunches itself
    disclaimed removes both problems:** no Node, and no Files & Folders step.
-   Proven end to end in ChatGPT with a real study question. *Measured.*
+   Proven end to end in ChatGPT with a real study question, and in a fresh
+   Claude Desktop with its Files & Folders switch off. *Measured.* Claude
+   already launches binary servers disclaimed (§4.4).
 6. **The disclaim trick cannot ship on the Mac App Store** (private SPI App
    Review has rejected by name, and an unsandboxed helper in the MAS bundle
    fails upload). **A public-API route works instead:** write the handshake into
@@ -201,9 +204,10 @@ So:
   appears; that is wrong for at least this case.
 - **macOS 26 grants migrate.** On this Mac, Files & Folders ▸ **Claude** lists
   **Bristlenose: on** alongside Desktop and Downloads, from the macOS 26 dialog
-  grant. A new Claude install on 27 has no such entry, so it starts denied.
-  That last step is *inferred* from the release note and the ChatGPT
-  measurement, not reproduced on a clean Claude.
+  grant. A new Claude install on 27 has no such entry, so it starts denied:
+  *measured* in a clean, SIP-on macOS 27 virtual machine through the shipped
+  Node `.mcpb` (tccd subject `com.anthropic.claudefordesktop`, no dialog;
+  §4.4).
 - **The pane's deep link works:**
   `x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_FilesAndFolders`.
 - **Bare command-line binaries get one row each, with no icon.** The six
@@ -286,10 +290,31 @@ logged to stderr, which lands in Codex's log (§1.3).
 
 ### 4.4 It serves Claude too
 
-`.mcpb` supports a binary server, and the disclaim makes the host irrelevant:
-proven under two hosts (Terminal and ChatGPT). The same binary would remove the
-Files & Folders step for new Claude users on macOS 27. *Inferred* for Claude
-itself (not run inside Claude Desktop).
+**Measured, 29 Sep 2026**, in a clean macOS 27.0 (26A428) virtual machine with
+**SIP enabled**, Claude 2.9939.2, and Bristlenose 0.31.5 serving a smoke
+project:
+
+| Run | Extension | Files & Folders ▸ Claude ▸ Bristlenose | Result |
+|---|---|---|---|
+| baseline | shipped Node `.mcpb` | off (never granted) | proxy: *"handshake read permission-blocked (TCC) … EPERM"*; tccd: `AppDataDetailed` *"does not allow prompting; recording denied"*, subject `com.anthropic.claudefordesktop`; **no dialog** |
+| native | the same tools as a `type: binary` `.mcpb` (this spike) | **still off** | **real data** (Smoke Test: 1 session, 78 s, 2 sections, 1 theme); proxy logged *"relaunched disclaimed"* and *"handshake ok"*; **no `AppDataDetailed` request** from the proxy |
+
+The only tccd line naming the proxy was a `kTCCServiceDeveloperTool`
+preflight from `syspolicyd`: Gatekeeper's first-launch check on the parent
+before the relaunch, not a container read.
+
+**Claude already disclaims binary servers.** Claude's log says *"Using basic
+execution for extension Bristlenose: server.type is binary (not
+node/python/uv)"*. The process chain was Claude → `Claude.app/Contents/Helpers/disclaimer
+--pgroup -- …/server/bristlenose-mcp` (team Q6L2SF6YDW) → our binary → our
+own disclaimed child. So under Claude a `type: binary` server is its own
+responsible process before our code runs. A team-signed binary with **no**
+private SPI would therefore very likely read our container as same-team under
+Claude (*inferred*, not yet probed). ChatGPT launches servers differently
+(§1.1), so it still needs the self-disclaim, or the app-group route (§6).
+
+Node extensions are the opposite case: Claude runs them inside its own utility
+process (§2), so their reads are Claude's, and are denied on a new install.
 
 ## 5. How the pieces fit
 

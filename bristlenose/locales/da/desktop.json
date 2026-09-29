@@ -992,7 +992,7 @@
     "claudeDesktopPromptNote": "F\u00f8rste gang du stiller et sp\u00f8rgsm\u00e5l, sp\u00f8rger macOS \u00e9n gang, om Claude m\u00e5 f\u00e5 adgang til data fra andre apps. Klik p\u00e5 \u201cTillad\u201d \u2014 s\u00e5dan finder udvidelsen Bristlenose.",
     "filesFoldersNote": "F\u00f8rste gang du stiller et sp\u00f8rgsm\u00e5l, forhindrer macOS {{app}} i at l\u00e6se Bristlenose uden at sp\u00f8rge. Du giver adgang ved at \u00e5bne Systemindstillinger \u25b8 Anonymitet & sikkerhed \u25b8 Arkiver & mapper, udvide {{app}} og sl\u00e5 Bristlenose til \u2014 og derefter sp\u00f8rge igen.",
     "openFilesFolders": "\u00c5bn Arkiver & mapper",
-    "chatgptWorkNote": "Stil dine sp\u00f8rgsm\u00e5l i ChatGPT i tilstanden Work \u2014 Bristlenoses v\u00e6rkt\u00f8jer er ikke tilg\u00e6ngelige i Chat.",
+    "chatgptWorkNote": "Stil dine sp\u00f8rgsm\u00e5l i ChatGPT i tilstanden Work, og start med @Bristlenose \u2014 ellers bruges Bristlenoses v\u00e6rkt\u00f8jer ikke.",
     "genericHow": "Giv disse to v\u00e6rdier til enhver MCP-kompatibel agent:",
     "clients": {
       "generic": "Generisk MCP"

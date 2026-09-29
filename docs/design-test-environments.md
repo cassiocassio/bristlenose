@@ -6,6 +6,9 @@ trued-against: HEAD@main on 2026-09-02
 
 ## Changelog
 
+- _2026-09-29_ — §3.6: the guests have SIP off (every Cirrus `-base`/`-xcode`
+  image does), so they can't answer a permissions question until SIP is
+  re-enabled. Found when a macOS 27 TCC test passed for the wrong reason.
 - _2026-09-25_ — the two guests exist (§3.6): Sequoia 15.7.3 and Tahoe 26.6.2
   under tart on an external SSD, with the host now on 27. §2's table and §6 updated. First
   runs found a Sequoia-only sidebar defect and a Tahoe-only 8-pt column offset; both
@@ -153,6 +156,14 @@ because they carry machine paths. What matters here:
   25 Sep 2026 once these guests proved it (XCTest and Testing are floored at 14.0).
   It was 26.1 before that (`design-platform-policy.md` Pillar 3).
 - **Guests build unsigned** (`CI=1` in `test-swift.sh`, as on the GitHub runner).
+- **SIP is off in both guests, and in every Cirrus `-base` or `-xcode` image.**
+  Cirrus's base build runs `disable-sip.pkr.hcl`; only `-vanilla` keeps SIP on. So
+  these guests are **invalid for any TCC, sandbox or container-protection test**.
+  On 29 Sep 2026 a cross-team container read "succeeded" in a SIP-off macOS 27
+  guest with no tccd event at all, and was silently denied once SIP was back on.
+  Re-enable it in Recovery (`tart run <vm> --recovery` ▸ Utilities ▸ Terminal ▸
+  `csrutil enable`, reboot), and put `csrutil status` beside every permissions
+  result. The measured run is in `design-mcp-files-and-folders.md` §1.
 - **The guest screen must be set from inside the guest.** Tart's `--display` alone left
   it at 1024×768 points, which clamps any test that opens a wide window.
 - **Measured findings on the first day:** on 15 a transient 1-pt split reading at mount

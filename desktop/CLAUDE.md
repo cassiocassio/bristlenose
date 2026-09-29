@@ -661,6 +661,24 @@ read-only `/mcp/` endpoint. Native surface since the extension shipped
   consent-version bump yet for the agent recipient class" — was stale and
   is removed: it shipped 1 Aug 2026, `09b348b1` + `6df94d4f`, and
   `AIConsentView.currentVersion` is 2.)_
+- **macOS 27 silently blocks the shipped Node `.mcpb` for any agent app
+  that has never been granted, and how Claude launches a server decides
+  it.** Measured 29 Sep 2026 in a clean, SIP-on 27.0 guest
+  (`docs/design-mcp-files-and-folders.md` §1). Claude Desktop runs a
+  **Node** server *inside its own* `Claude Helper (Plugin)` utility process
+  (`node.mojom.NodeService`; "Using built-in Node.js" in the log), so Claude
+  is the responsible process. The container read is then cross-team:
+  `EPERM`, and tccd records a denial for `com.anthropic.claudefordesktop`
+  with no dialog. A **`type: binary`** server is spawned through
+  `Claude.app/Contents/Helpers/disclaimer --pgroup` ("Using basic execution"
+  in the log), so the binary is its own responsible process, and a
+  Z56GZVA2QB-signed binary reads our container with no grant. Two
+  debugging traps from the same run: the Node proxy's stderr lands in
+  `~/Library/Logs/Claude/main.log` as `[UtilityProcess stderr] [bn-proxy]`,
+  **not** in `mcp-server-Bristlenose.log`, which carries only the protocol
+  frames; and installing a same-named `.mcpb` over an existing one only
+  **previews** it (the dialog offers Uninstall), so a proxy swap is
+  uninstall-then-install.
 
 ## Settings window (Cmd+,)
 

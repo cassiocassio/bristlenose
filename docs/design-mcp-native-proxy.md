@@ -101,11 +101,22 @@ path inside a signed app bundle (tested with a path in a working tree).
   `@Bristlenose` chip is offered in the picker, but the model reports it can't
   access the plugin, and no process starts. *Measured.* OpenAI's plugins page
   says plugins work "in Chat or Work"; that is not what this build does.
+- **The same holds for a server added in `~/.codex/config.toml`**
+  (`[mcp_servers.bristlenose]` with `url` and `http_headers`, exactly as
+  Settings ▸ MCP Agents ▸ ChatGPT & Codex gives it). In Chat the model said the
+  tool *"is not available in the tools exposed to this chat"*. In Work the same
+  entry answered with a real quote. *Measured*, 29 Sep 2026, with the spike
+  plugin uninstalled so only the config entry could supply the tools. So
+  "ask in Work mode" is true for both routes.
 - **ChatGPT asks per tool** ("Allow the bristlenose MCP server to run tool
   X?" — Always allow / Deny / Allow once). "Always allow" on one tool did not
   cover the next. *Measured.* After marking every tool
   `annotations.readOnlyHint: true`, six tool calls ran with **no approval card
   at all**. *Inferred* that the annotation is the cause; nothing else changed.
+  The config-file route talks to `bristlenose serve`'s own `/mcp/`, whose tools
+  are **not** annotated, and there ChatGPT asked per tool again (*measured*).
+  So annotating the server's tools in `bristlenose/server/mcp_server.py` is the
+  fix for that route too.
 - **The model may reach for ChatGPT's own Computer Use instead** ("Allow
   ChatGPT to use Bristlenose?" — screenshots of the app) when a question names
   the app. Naming the tools in the question avoided it. *Measured, once.*

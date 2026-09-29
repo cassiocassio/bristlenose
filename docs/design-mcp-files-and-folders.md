@@ -27,6 +27,27 @@ depends on the Codex-plugin spike, now written up in
 > any channel where the native proxy cannot ship. See
 > [`design-mcp-native-proxy.md`](design-mcp-native-proxy.md) §5–§6.
 
+> **App Store verdict, 29 Sep 2026: this doc is the recovery path, not the
+> primary route, on either channel.** The disclaimed native proxy can't ship
+> on the Mac App Store: it calls a private symbol App Review has already cited
+> under §2.5.1, and it is an unsandboxed executable, which the upload
+> validator rejects. The recommended route for both channels, **measured on
+> the host**, is:
+> - the handshake moves into our **Team-ID-prefixed app group container**
+>   (`Z56GZVA2QB.app.bristlenose`);
+> - the proxy is a **sandboxed binary carrying that group**, with no inherit;
+> - macOS lets it read the container even with Claude or Terminal as the
+>   responsible process, and tccd is never consulted.
+>
+> Not yet repeated with ChatGPT or Claude Desktop as the parent, and not yet
+> through a TestFlight upload. So the Files & Folders flow and copy here
+> stay needed for **(a)** today's Node `.mcpb` users, until the new proxy
+> ships, and **(b)** permanently, as the recovery path if the group route
+> fails on some host. Don't build a primary onboarding step around it if the
+> group route ships: the `permission` state becomes rare, and the copy stays
+> for when it happens. The full review is in the maintainer's private handoff
+> notes; the public summary is `design-mcp-native-proxy.md` §6.
+
 ## 1. What changed underneath us
 
 The extension finds Bristlenose by reading a handshake file inside our app
@@ -46,8 +67,11 @@ Apple's macOS 27 release note, verbatim: *"Accessing files in other developer
 teams' app data containers and app group containers no longer prompts the user
 for authorization; such accesses are denied by default and can be managed by
 the user in Privacy & Security settings."* The boundary is the **Team ID**, so
-moving the handshake into the `group.app.bristlenose` app group would not
-escape it.
+moving the handshake into an app group does not help **while the reader is
+another team's process** (Claude's or ChatGPT's Node). It does help when the
+reader is **our own sandboxed binary carrying the group**. Then it's a
+same-team read, which is the App Store session's measured route (banner
+above).
 
 ### Measured, 29 Sep 2026 (this Mac, macOS 27.0, build 26A428)
 
@@ -283,7 +307,12 @@ protocol, never the client.* What we *can* observe is weaker than it looks:
 
 So on macOS 27 the note is **always shown** under each install row. It costs
 two lines of footnote, it's true every time it's read, and the button makes it
-actionable.
+actionable. **That holds only while the Node `.mcpb` is the shipped proxy.** If
+the app-group proxy ships (banner at the top), a fresh install no longer
+meets the block, and an always-on note would pre-announce a step most
+researchers never see. Then the copy moves out of the pane's primary flow
+and lives in the in-chat `permission` message and on the help page, where
+it's read only when it's true.
 
 The in-chat message (§3) is the other half, and it is **the only channel that
 reaches the moment of failure**. The pane is read before; the tool result is

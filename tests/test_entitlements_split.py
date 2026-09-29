@@ -256,8 +256,9 @@ class TestTheArtefactGatesCheckTheSplitToo:
             "nothing between it and a published image"
         )
         assert 'fail "app group"' in body, (
-            "an app group on Developer-ID must FAIL the gate — Apple will not "
-            "authorise one on that channel"
+            "the wrong app group on Developer-ID must FAIL the gate — the "
+            "Background Assets group is App-Store-only, and the team group the "
+            "MCP helper reads must be there"
         )
 
     def test_neither_gate_matches_the_bare_entitlement_name(self) -> None:

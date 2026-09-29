@@ -203,12 +203,20 @@ else
     # Until 12 Sep 2026 this gate read no entitlements at all, so the typo
     # had nothing between it and a published image.
     DMG_ENTS="$(codesign -d --entitlements :- "$INNER_APP" 2>/dev/null || echo "")"
+    TEAM_GROUP="${TEAM_ID:-Z56GZVA2QB}.app.bristlenose"
     if [ -z "$DMG_ENTS" ]; then
         warn "entitlements" "could not be read — cannot check the channel split"
-    elif grep -q '<key>com.apple.security.application-groups</key>' <<<"$DMG_ENTS"; then
-        fail "app group" "PRESENT — that is the MAS entitlements file; Developer-ID must not carry it"
+    elif ! grep -q '<key>com.apple.security.application-groups</key>' <<<"$DMG_ENTS"; then
+        # Since 29 Sep 2026 the .dmg carries the Team-ID-prefixed group: the
+        # native MCP helper reads its handshake there (design-mcp-native-proxy
+        # §6.9 P1). No group at all means Agent Access cannot work.
+        fail "app group" "ABSENT — the team group ${TEAM_GROUP} is what the MCP helper reads"
+    elif grep -q '<string>group.app.bristlenose</string>' <<<"$DMG_ENTS"; then
+        fail "app group" "group.app.bristlenose PRESENT — that is the MAS entitlements file; Developer-ID must not carry it"
+    elif ! grep -q "<string>${TEAM_GROUP}</string>" <<<"$DMG_ENTS"; then
+        fail "app group" "the team group ${TEAM_GROUP} is missing — the MCP helper cannot read the handshake"
     else
-        pass "app group" "absent, as Developer-ID requires"
+        pass "app group" "team group only (${TEAM_GROUP}), as Developer-ID requires"
     fi
 
     # Alpha life remaining. Reported, not gated — a short-lived sampler is a

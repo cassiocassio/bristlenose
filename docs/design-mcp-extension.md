@@ -73,6 +73,12 @@ did not account for.
 
 ## Changelog
 
+- _29 Sep 2026 (later)_ — **one status section and work list for macOS 27
+  and the native proxy**, just above §1. It gathers the measurements (the
+  silent block and the switch for Claude and ChatGPT; Claude's disclaimer for
+  binary servers; the group route; Apple's validator and TestFlight processing
+  of build 3907), the two commits now on `main` (`d086f08d`, `4945dce2`), and
+  the 18-item list of work left.
 - _29 Sep 2026_ — **two measured corrections, no design change.** §5c's
   "prompt-once-then-silent" was a **macOS 26** result. On macOS 27 a
   cross-team container read is denied with no dialog
@@ -135,6 +141,116 @@ did not account for.
   Figma's shipped extension.
 
 ---
+
+## macOS 27 and the native proxy: status and work list (29 Sep 2026)
+
+One place for where this feature stands after 29 Sep 2026, when three
+sessions and a macOS 27 guest measured it. The reasoning lives in the linked
+docs; this section is the state and the work left, in order.
+
+- [`design-mcp-files-and-folders.md`](design-mcp-files-and-folders.md): the
+  Files & Folders step, its copy, and the 21-locale strings.
+- [`design-mcp-native-proxy.md`](design-mcp-native-proxy.md): the proxy that
+  removes the step (§6.4 is the recommended architecture, §6.5–§6.8 the Apple
+  results).
+
+### What is known (all measured unless marked)
+
+- **macOS 27 silently blocks today's Node `.mcpb`** for any agent app that has
+  never been granted. There's no dialog. The fix is System Settings ▸ Privacy
+  & Security ▸ Files & Folders ▸ *(app)* ▸ Bristlenose. This is measured for
+  ChatGPT on the host, and for a clean Claude in a SIP-on 27.0 guest. Grants
+  from macOS 26 carry over.
+- **Claude runs Node servers in its own helper (blocked) and binary servers
+  through its `Helpers/disclaimer` (not blocked).** So a team-signed binary
+  reads our container with no grant and no private SPI.
+- **A sandboxed proxy carrying our Team-ID app group reads the group
+  container** under ChatGPT, Claude Desktop, Claude Code and Terminal, with no
+  TCC involved. **The Files & Folders switch does not reach the group
+  container**, and **can't rescue a sandboxed reader** (the second is inferred).
+- **ChatGPT runs tools in Work mode only,** on both the plugin route and the
+  config-file route. Over the config file it asks for approval per tool; the
+  tools declare no `readOnlyHint`, and with the hint the prompts stopped
+  (inferred as the cause).
+- **Apple's automated pipeline accepts the App Store shape.** First
+  `altool --validate-app`, then upload processing of **TestFlight build 3907**:
+  `VALID`, `APP_STORE_ELIGIBLE`, expiring 28 Dec 2026. **Not settled:** human
+  App Review, which internal TestFlight skips.
+- **A sandboxed helper's own container remembers its first signer.** A
+  different signer with the same bundle identifier hangs at launch, and for
+  minutes it blocked the trusted build too (native-proxy §6.6).
+
+### Shipped to `main`, not yet released
+
+- `d086f08d`: the proxy's macOS 27 sentence names the Files & Folders switch
+  and the host the package declares (`BRISTLENOSE_MCP_HOST`, fallback "your
+  AI app"). It also adds the Claude tab's note and **Open Files & Folders**
+  button, 2 keys × 21 locales, and a proxy runtime test.
+- `4945dce2`: the ChatGPT tab's "ask in Work mode" line, 1 key × 21 locales.
+
+### Work list, in order
+
+**A. With the next release**
+1. A CHANGELOG line under **Fixed**, for the two commits above.
+2. Deploy the website help draft's Part 1
+   (`docs/drafts/connect-an-agent-macos27.md`), turning its `BUILD` comments
+   into text now that the button exists.
+
+**B. Check 3907 (maintainer, minutes)**
+3. Install 3907 from TestFlight. Then read the helper's entitlements with
+   `codesign -d --entitlements - …/Contents/Helpers/bristlenose-mcp` and
+   confirm the team group survived Apple's re-signing. **Reading is safe on
+   this Mac; running the helper is not.** It shares its identifier with the
+   Developer ID spike helper that already ran here, so it would hit the §6.6
+   signer trap and hang.
+4. **3907 cannot pass a normal end-to-end test.** Its host is unchanged 0.31.5
+   and never writes the group handshake. A **manual** run is possible, because
+   the helper is the spike build and keeps `--seed` to seed the group by hand,
+   but only on a clean Mac or user account.
+
+**C. Build the native proxy.** This is the recommendation, not yet a decision.
+5. **Decide:** adopt native-proxy §6.4, the sandboxed app-group binary on both
+   channels.
+6. **Host half:** apply `docs/drafts/native-proxy-group-handshake/`, which also
+   writes the handshake into the group. Keep writing the data-container copy
+   for as long as any unsandboxed reader ships, because installed extensions
+   never update themselves. Open items in that README: `$(TeamIdentifierPrefix)`
+   on a real Release archive; the Developer ID profile must authorise the group
+   (re-export); Debug entitlements; the sidecar's cleanup of the group copy.
+7. **Bundle the helper,** sandboxed and carrying the group, with **a different
+   bundle identifier per channel** (the §6.6 trap).
+8. **Claude channel:** a `type: binary` `.mcpb` assembled at runtime from the
+   Apple-re-signed helper. Unverified.
+9. **ChatGPT channel:** the marketplace bundled in the app, and
+   `codex://plugins/bristlenose?marketplacePath=…`. The tab gets **Install
+   Plugin…** (chosen), and its 3 strings × 21 are drafted in
+   files-and-folders §8. Check the da, sv, nb and tr words against ChatGPT's
+   own localisation.
+10. **Port the Node proxy's missing states** to the native proxy (native-proxy
+    §4.3).
+11. **Then the copy follows:** the pane stops pre-announcing Files & Folders.
+    The proxy's `permission` sentence stays as a recovery path, for unsandboxed
+    readers only; the sandboxed build says "install the extension again, or
+    check for an update". Deploy the help draft's Part 2.
+12. **End-to-end on a real TestFlight build:** Claude and ChatGPT each read a
+    study with Files & Folders off, on a clean account.
+13. **App Review notes** for §2.5.2 / §2.4.5(ii) ("installs code into other
+    apps") before external TestFlight or store submission.
+
+**D. Related, found the same day**
+14. Mark the MCP tools read-only (`readOnlyHint`), in the server and in the
+    proxy's static copy. A session is on it.
+15. The red Swift test `ServeManagerStartGuardTests/aFailedServeCanBeRestartedOnTheSameProject`,
+    which fails on `main` itself. A session is on it.
+16. **Agent Access can be switched on the wrong row.** When two sidebar rows
+    point at one folder, the menu bar's Agent Access item reads and toggles
+    by path, and resolves to the newest row (antenna investigation's Defect B,
+    `TODO.md` 29 Sep). It's a correctness issue on an exposure control.
+17. The 3907 upload went around `upload-testflight.sh`'s build-number gate by
+    calling `altool` directly. Decide whether spike builds need a sanctioned
+    path.
+18. The `.mcpb` still has no icon: already owed above, and confirmed again in
+    the guest.
 
 ## 1. Why the current path cannot ship
 

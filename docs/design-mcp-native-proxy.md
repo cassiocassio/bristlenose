@@ -699,15 +699,29 @@ D3's gate adds: `LC_BUILD_VERSION minos` equals the app's deployment target.
   **Install plugin** copies `0.0.9` into the cache.
 
 So ChatGPT is outcome B: an update costs two extra clicks on the page our link already opens. The
-`.olderRelease` foot line on the ChatGPT tab says so (mockup 2.3). Claude's half of P0.5 is still
-open: it needs Claude Desktop, which wasn't in this session's computer-use grant.
+`.olderRelease` foot line on the ChatGPT tab says so (mockup 2.3).
+
+**P0.5 for Claude Desktop, measured the same evening (maintainer clicking, Claude's `main.log`
+read).** A probe `.mcpb` (`local.mcpb.bristlenose.bn-open-probe`) opened by a sandboxed app:
+- at the **same** version as the installed one, Claude shows its preview with only **Uninstall**
+  (the Node-era observation, reproduced);
+- at a **higher** version it offers **Update**. The log shows *"Installing unsigned extension from
+  …/Containers/app.bristlenose.openprobe-7e1a/Data/tmp/bn-open-probe.mcpb"* and then *"Successfully
+  installed … v0.0.2"* straight over v0.0.1, with no uninstall in between.
+
+So Claude is outcome A. **Update Extension…** works in one click, as long as the manifest version
+rises with every build, which D8's build-number-in-the-version already guarantees. Only
+**Reinstall Extension…** at an unchanged version would land on the Uninstall-only preview; the ladder
+offers Reinstall only for `.differentBuild`/`.newerRelease`, where the versions differ.
 
 **P0.4, partly measured the same evening.** A sandboxed probe (Developer ID, fresh id) wrote a
 dummy `.mcpb` into its own container's `tmp` and opened it with Claude via
 `NSWorkspace.open(_:withApplicationAt:)`. LaunchServices ran its download-style XProtect check on the
 file (`operation:lsopen`, risk level 2) and delivered it. Claude logged *"Handling DXT/MCPB file: 1
-path(s)"*, and tccd logged no AppData request or denial for Claude. Whether Claude's install preview
-then appeared isn't known yet: it wasn't observable from here. Two points follow for P4. A file written
+path(s)"*, and tccd logged no AppData request or denial for Claude. The install then completed: at 19:32 Claude logged *"Installing unsigned extension from
+…/Containers/app.bristlenose.openprobe-7e1a/Data/tmp/bn-open-probe.mcpb"* and *"Successfully installed
+… v0.0.1"*. So **Claude reads an extension file written into a sandboxed app's own container**
+(LaunchServices hands it over, and no cross-team block applies), and finding 42's fear doesn't hold. Two points follow for P4. A file written
 by a sandboxed app is treated like a download, so expect quarantine on what Claude extracts, which the
 original P0.4 list already covers. And "Claude can't read our container" is **not** the blocker it was
 feared to be: this path goes through LaunchServices, not a cross-team path read.
@@ -792,8 +806,8 @@ register in every Settings frame for this reason.
   - P0.1 (**done 29 Sep**, passes on 15/26/27; see §6.7): on clean SIP-on macOS **15 and 26** guests, launch (a) a Developer-ID host carrying the team group, and (b) the real profile-less helper as a foreign app's child; read taskgated. This is the least-discussed, highest-impact unknown: if 15/26 enforce the "Disallowing" check, the `.dmg` host breaks at launch for everyone on those versions.
   - P0.2 (**done 29 Sep**, see §6.7: entitlements survive; four signer classes; the TestFlight→store move is the new unknown, with a local Development-vs-Distribution proxy test as P0.2b): install TestFlight 3907 on a clean account; read both copies' signer, id and entitlements (ffmpeg as control). Sets D1's count. Then **expire 3907** in App Store Connect (**done 29 Sep**) and delete the spike binaries (both carry `--seed`).
   - P0.3: re-export the `.dmg` with the group requested; confirm the minted profile lists it.
-  - P0.4: end to end through **Claude's own extraction** of a runtime `.mcpb`, on a clean 27 guest: quarantine flag, exec bit, `__MACOSX` entries, `spctl`; it answers with Files & Folders off.
-  - P0.5: a second install at a bumped version, on each host: what ChatGPT and Claude offer. (**ChatGPT done 29 Sep: outcome B**, ⋯ ▸ Uninstall then Install plugin; Claude still to do.)
+  - P0.4 (**install path measured 29 Sep**: Claude reads and installs a `.mcpb` from a sandboxed app's container; the helper-inside-it half, meaning quarantine, exec bit and `spctl` under Claude's extraction, still waits for P4's real artefact): end to end through **Claude's own extraction** of a runtime `.mcpb`, on a clean 27 guest: quarantine flag, exec bit, `__MACOSX` entries, `spctl`; it answers with Files & Folders off.
+  - P0.5: a second install at a bumped version, on each host: what ChatGPT and Claude offer. (**done 29 Sep**: ChatGPT outcome B, ⋯ ▸ Uninstall then Install plugin; Claude outcome A, Update in place when the version rises.)
 - **P1 — host half** (**landed 29 Sep**: both copies written, D4 fail-closed via `MCPHandshake.writeBoth` with a read-back test; Swift 1553 passed, Python 5617 passed; P0.3 turned out not to gate it), only after P0.1 and P0.3 pass: the draft patch, amended to fail closed (D4) with a read-back test, and the reader set written into design-mcp-extension §3.1.
 - **P2 — helper** (**first half landed 29 Sep**: `desktop/mcp-helper/main.swift` + `build-helper.sh`, the D3 gate `desktop/scripts/check-mcp-helper.sh`, `tests/test_mcp_helper.py`; both channels build and pass the gate, the gate is proved red on six bad inputs, and the Developer-ID build answers from the group on a clean macOS 15 guest. **Not yet wired into the Copy phase**, so nothing ships) per D1–D3, source moved to `desktop/mcp-helper/`; the tool list read from the `BN-TOOLS-JSON` block with its annotations; that block moves out of `desktop/mcpb/` before the Node extension is retired, **and `tests/test_mcpb_proxy.py` moves with it in the same commit** (re-point `_PROXY_JS` and the regex). It is the only check that the static tool list and its annotations match the server's `tools/list`, and it looks like it belongs to the Node extension, so it would otherwise be deleted with it and leave the helper's list unguarded.
 - **P3 — ChatGPT**: marketplace per D7, Install Plugin… per D8, link query encoded strictly (unit-tested with `& + # %` and spaces).

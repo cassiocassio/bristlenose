@@ -481,7 +481,7 @@ http_headers = { "Authorization" = "Bearer ••••••••••••"
 </div>
 
 <!-- ============================================================ -->
-<h2>5 · After a Bristlenose update <small>ChatGPT measured 29 Sep: outcome B · Claude still to measure</small></h2>
+<h2>5 · After a Bristlenose update <small>measured 29 Sep: ChatGPT outcome B · Claude outcome A</small></h2>
 <div class="grid">
   <div class="cell"><p class="cap">Outcome A · the host updates in place (1 click there)</p>
   <div class="strip" style="margin:0">
@@ -499,6 +499,7 @@ http_headers = { "Authorization" = "Bearer ••••••••••••"
 </div>
 <div class="cm">
 <ul>
+<li><b>Claude, measured:</b> a higher manifest version shows <b>Update</b> and replaces the installed copy in place (v0.0.1 → v0.0.2, no uninstall). The same version only offers Uninstall, which Reinstall never hits, because the ladder offers it only when the versions differ.</li>
 <li><b>ChatGPT, measured:</b> the page shows the new version number but offers only Try now; ⋯ holds a single item, Uninstall (no confirmation), and Install plugin then copies the new version. That is two extra clicks on the page our link already opens, so the fix is one sentence in the foot line (2.3), not a new control.</li>
 <li><b>Most updates never reach this screen.</b> An older helper keeps working as long as the MCP contract still matches (<code>mcp.contract</code>). The "outdated" sentence (section 6) only fires when it doesn't. So outcome B costs a detour only in a release that breaks the contract. The pane's "Update" is advice, not an alarm.</li>
 <li><b>The version stamp (D8) is what makes outcome A possible at all.</b> Without the build number in it, ChatGPT would treat a new build as the version it already cached.</li>

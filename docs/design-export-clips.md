@@ -284,7 +284,7 @@ _Proposed 29 Sep 2026, from the closed GitHub issue #59 ("overlay subtitles" was
 |---|---|---|---|
 | What | `<clip name>.vtt` (or `.srt`) beside each clip | a `mov_text` (tx3g) subtitle track inside the `.mp4` | text drawn into the video pixels |
 | Re-encode? | No | No, video stays stream-copied (`-c:v copy -c:s mov_text`) | **Yes** |
-| Plays in | VLC, IINA, browsers via `<track>`; PowerPoint 365 via *Insert ▸ Captions* (needs a manual step per video) | QuickTime Player (*View ▸ Subtitles*), VLC, IINA; PowerPoint and Keynote: **unverified** | everything, including PowerPoint, Keynote, Teams, Slack, LinkedIn and a phone |
+| Plays in | VLC, IINA, browsers via `<track>`; PowerPoint (Windows, Mac, web) via *Insert Captions*, once per video, then switched on in Slide Show; never picked up automatically | QuickTime Player (*View ▸ Subtitles*), VLC, IINA, PowerPoint for Mac/iOS; **not** PowerPoint for Windows (reads only CEA-608/708); Keynote: no | everything, including PowerPoint, Keynote, Teams, Slack, LinkedIn and a phone |
 | Viewer can turn off | Yes | Yes | No |
 | Editable / translatable later | Yes, it's a text file | Only by re-muxing | No |
 | Colour per speaker | WebVTT voice spans (`<v P3>`) with `::cue` styling in browsers; elsewhere **unverified** | tx3g can style per cue; players mostly ignore it (**unverified**) | Full control |
@@ -314,12 +314,37 @@ The two delivery modes answer the font question differently. That is the argumen
 
   **Recommendation: bundle Inter for burn-in.** A deck will be in the client's brand font, which no choice of ours can match, so the aim is a neutral, highly legible sans. Being identical everywhere matters more than feeling native for a file that gets passed from laptop to laptop. If the AVFoundation backend is ever built, it could offer the system font on the Mac, but that is a channel fork to take deliberately, not by default.
 
+### Prior art — surveyed 29 Sep 2026
+
+Sources were read on the page unless marked *claimed* (a secondary source or a search snippet only).
+
+- **PowerPoint can show captions, but not by itself.** A `.vtt` sitting next to the file is never picked up. Each video needs *Playback ▸ Insert Captions ▸ Insert Captions* once (Windows 2016+, Mac 16.63+, web; SRT is accepted from Windows 2411 and Mac 16.91). After that, in Slide Show, the viewer turns them on from the play bar's *Audio and Subtitles* menu (Alt/⌥+J). [Add captions](https://support.microsoft.com/en-us/office/add-closed-captions-or-subtitles-to-media-in-powerpoint-df091537-fb22-4507-898f-2358ddc0df18), [playback](https://support.microsoft.com/en-us/office/accessibility-features-in-video-and-audio-playback-on-powerpoint-ef62b701-c0ad-48e8-8473-4e8dbb0f7dd8).
+- **PowerPoint and an embedded track:** PowerPoint for Mac and iOS read **MPEG-4 Timed Text**, which is our `mov_text` track. PowerPoint for Windows and mobile web read only **CEA-608/708**, so the `mov_text` track is invisible there. Microsoft's own caveat is that playback "may or may not" work depending on version. [Supported types](https://support.microsoft.com/en-us/accessibility/powerpoint/closed-caption-file-types-supported-by-powerpoint).
+  - **Consequence:** soft subtitles reach a PowerPoint audience only if the researcher inserted the file and the presenter remembered to switch them on, live, in front of the client. That is the job the burn-in checkbox does.
+- **Keynote has no caption feature** and ignores subtitle tracks (*claimed*, Apple Community threads only). **Google Slides:** Drive accepts `.vtt`/`.srt` on a video, but nothing says Slides shows them.
+- **No UX research tool burns captions into exported clips.** Dovetail's highlight-reel download says outright that subtitles are not included "even if they are enabled in the video player". Condens, Great Question and Grain document no caption option on their clip exports; Marvin shows captions only in its own player (*claimed*). This would be a first in the category.
+- **BBC Subtitle Guidelines** ([source](https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/)):
+  - §8.1 white on a black background.
+  - §9.1 a wide sans (Reith Sans, Verdana, Tiresias).
+  - §9.2.1 font size 1/15 of video height (6.67%) with a line height of 8%, for 16:9.
+  - §9.2.4 the box is exactly the line height, with no gap between lines, plus 0.5 em each side.
+  - §10 bottom-centre, inside the central 90% vertically and 75% horizontally.
+  - §3.1 lines at most 68% of the width online (37 characters for broadcast).
+  - §3.3 at most 2 lines.
+  - §8.3 speaker colours white, yellow, cyan, green (kept for the later cross-speaker export).
+- **Netflix** ([source](https://partnerhelp.netflixstudios.com/hc/en-us/articles/217350977)): 42 characters per line, 2 lines, 20 characters per second (adult content), white, Arial as a placeholder, and no box specified.
+- **DCMP Captioning Key** ([source](https://dcmp.org/learn/captioningkey/597)): white, medium-weight sans, and "a translucent box is preferred … especially on light backgrounds". Light backgrounds are exactly our screen-share case.
+- **Box opacity:** sources split — BBC solid, DCMP translucent, YouTube's default reported as 75% black (*claimed*).
+- **Social reels** (Hormozi/Submagic style: uppercase, heavy stroke, 4–6 words, pop-in animation; Kapwing defaults to Montserrat) are **not the model**. They are built for silent vertical feeds competing for a thumb. Legibility research also runs against them: all-caps is slower to read at a glance ([NN/g on the MIT AgeLab study](https://www.nngroup.com/articles/glanceable-fonts/)). Their one transferable lesson is short cues.
+- **Size when projected:** AVIXA's DISCAS viewing standard puts the minimum element height at about 2.5–3.5% of *screen* height for typical room geometry ([source](https://www.avixa.org/resources/display-image-size-calculators/learn-more-about-display-size)). A clip at half slide height halves our text, so we need about 5–7% of *clip* height. That lands on the BBC's 6.67%.
+- **Fonts:** Atkinson Hyperlegible Next (Braille Institute; free, 7 weights, 150+ languages; [source](https://www.brailleinstitute.org/freefont/)) is designed for letterform distinction at low vision, and it is a wide humanist sans of the kind BBC §9.1 and DCMP ask for. It is a serious rival to Inter here. No study compares Inter, SF or Netflix Sans for subtitles.
+
 ### Size — experiments owed
 
 Nothing is decided here until a clip has been seen in a real deck. The case to design for is a **video shrunk inside a slide**, not full screen: a clip often occupies half a slide, so the text must survive at 50% scale on a projector. Proposed matrix:
 
-- Text height at 4%, 5.5% and 7% of frame height (size as a fraction of the frame, so 720p and 1080p come out the same).
-- Two box opacities.
+- Font size at 5%, 6.67% (the BBC's 1/15) and 8% of frame height, with line height ×1.2 (size as a fraction of the frame, so 720p and 1080p come out the same). The prior art above predicts 6.67% wins.
+- Box at 75% and 100% black; font Inter vs Atkinson Hyperlegible Next.
 - Three sources: a 720p Zoom screen share, 1080p Teams speaker view, and a portrait phone recording.
 - Each output placed in a PowerPoint and a Keynote slide at full-slide and half-slide size, viewed on a laptop and on a TV or projector.
 

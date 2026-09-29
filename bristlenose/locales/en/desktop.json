@@ -985,6 +985,7 @@
     "claudeDesktopPromptNote": "The first time you ask a question, macOS asks once whether Claude may access data from other apps. Click Allow \u2014 that permission is how the extension finds Bristlenose.",
     "filesFoldersNote": "The first time you ask a question, macOS blocks {{app}} from reading Bristlenose, without asking. To allow it, open System Settings \u25b8 Privacy & Security \u25b8 Files & Folders, expand {{app}} and turn on Bristlenose \u2014 then ask again.",
     "openFilesFolders": "Open Files & Folders",
+    "chatgptWorkNote": "In ChatGPT, ask in Work mode \u2014 Bristlenose\u2019s tools aren\u2019t available in Chat.",
     "genericHow": "Give these two values to any MCP-compatible agent:",
     "clients": {
       "generic": "Generic MCP"

@@ -980,6 +980,7 @@
     "claudeDesktopPromptNote": "Na primeira pergunta, o macOS pergunta uma \u00fanica vez se o Claude pode aceder a dados de outras aplica\u00e7\u00f5es. Clique em \u201cPermitir\u201d \u2014 \u00e9 assim que a extens\u00e3o encontra o Bristlenose.",
     "filesFoldersNote": "Na primeira pergunta, o macOS impede que o {{app}} leia o Bristlenose, sem perguntar. Para o permitir, abra Defini\u00e7\u00f5es do Sistema \u25b8 Privacidade e seguran\u00e7a \u25b8 Ficheiros e pastas, expanda o {{app}} e ative o Bristlenose. Depois volte a perguntar.",
     "openFilesFolders": "Abrir Ficheiros e pastas",
+    "chatgptWorkNote": "No ChatGPT, pergunte no modo Work \u2014 as ferramentas do Bristlenose n\u00e3o est\u00e3o dispon\u00edveis no Chat.",
     "genericHow": "Forne\u00e7a estes dois valores a qualquer agente compat\u00edvel com MCP:",
     "clients": {
       "generic": "MCP gen\u00e9rico"

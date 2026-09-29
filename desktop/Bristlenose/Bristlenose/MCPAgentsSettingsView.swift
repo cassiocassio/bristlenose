@@ -140,6 +140,21 @@ struct MCPAgentsSettingsView: View {
         }
     }
 
+    /// ChatGPT runs MCP tools in Work mode (and the Codex workspace) but not
+    /// in ordinary Chat, where the Bristlenose chip is still offered and the
+    /// model says it can't reach it. Measured for the plugin route 29 Sep 2026;
+    /// on the ChatGPT tab only, in both the placeholder and the live branch so
+    /// the pane keeps its shape (§3.7).
+    @ViewBuilder
+    private var chatGPTWorkNote: some View {
+        if client == .chatgptCodex {
+            Text(i18n.t("desktop.mcpAgents.chatgptWorkNote"))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
     // MARK: - macOS 27 Files & Folders
 
     /// macOS 27 denies an agent app's read of another team's container with no
@@ -1058,6 +1073,7 @@ struct MCPAgentsSettingsView: View {
                     Spacer()
                     copyButton(live: false)
                 }
+                chatGPTWorkNote
             } else if !serveManager.mcpMounted {
                 Text(i18n.t("desktop.connectAgent.unavailable"))
                     .font(.callout)
@@ -1082,6 +1098,7 @@ struct MCPAgentsSettingsView: View {
                     Spacer()
                     copyButton(live: true)
                 }
+                chatGPTWorkNote
             }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)

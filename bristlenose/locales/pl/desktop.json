@@ -1024,6 +1024,7 @@
     "claudeDesktopPromptNote": "Przy pierwszym pytaniu macOS zapyta jeden raz, czy Claude mo\u017ce uzyska\u0107 dost\u0119p do danych z innych aplikacji. Kliknij \u201ePozw\u00f3l\u201d \u2014 dzi\u0119ki temu rozszerzenie znajdzie Bristlenose.",
     "filesFoldersNote": "Przy pierwszym pytaniu macOS, nie prosz\u0105c o zgod\u0119, zablokuje aplikacji {{app}} dost\u0119p do Bristlenose. Aby na to pozwoli\u0107, otw\u00f3rz Ustawienia systemowe \u25b8 Prywatno\u015b\u0107 i\u00a0ochrona \u25b8 Pliki i foldery, rozwi\u0144 pozycj\u0119 {{app}} i w\u0142\u0105cz Bristlenose, a potem zapytaj ponownie.",
     "openFilesFolders": "Otw\u00f3rz Pliki i foldery",
+    "chatgptWorkNote": "W ChatGPT zadawaj pytania w trybie Work \u2014 narz\u0119dzia Bristlenose nie s\u0105 dost\u0119pne w trybie Chat.",
     "genericHow": "Podaj te dwie warto\u015bci dowolnemu agentowi zgodnemu z MCP:",
     "clients": {
       "generic": "Og\u00f3lne MCP"

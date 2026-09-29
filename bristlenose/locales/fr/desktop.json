@@ -980,6 +980,7 @@
     "claudeDesktopPromptNote": "\u00c0 la premi\u00e8re question, macOS demande une seule fois si Claude peut acc\u00e9der aux donn\u00e9es d\u2019autres apps. Cliquez sur \u00ab Autoriser \u00bb \u2014 c\u2019est ainsi que l\u2019extension trouve Bristlenose.",
     "filesFoldersNote": "\u00c0 la premi\u00e8re question, macOS emp\u00eache {{app}} de lire Bristlenose, sans rien demander. Pour l\u2019autoriser, ouvrez R\u00e9glages\u00a0Syst\u00e8me \u25b8 Confidentialit\u00e9 et s\u00e9curit\u00e9 \u25b8 Fichiers et dossiers, d\u00e9veloppez {{app}} et activez Bristlenose, puis posez \u00e0 nouveau la question.",
     "openFilesFolders": "Ouvrir Fichiers et dossiers",
+    "chatgptWorkNote": "Dans ChatGPT, posez vos questions en mode Work : les outils de Bristlenose ne sont pas disponibles dans Chat.",
     "genericHow": "Fournissez ces deux valeurs \u00e0 tout agent compatible MCP :",
     "clients": {
       "generic": "MCP g\u00e9n\u00e9rique"

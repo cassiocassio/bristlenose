@@ -1023,6 +1023,7 @@
     "claudeDesktopPromptNote": "P\u0159i prvn\u00ed ot\u00e1zce se macOS jednou zept\u00e1, zda m\u016f\u017ee Claude p\u0159istupovat k dat\u016fm z jin\u00fdch aplikac\u00ed. Klepn\u011bte na \u201ePovolit\u201c \u2014 d\u00edky tomuto opr\u00e1vn\u011bn\u00ed roz\u0161\u00ed\u0159en\u00ed najde Bristlenose.",
     "filesFoldersNote": "P\u0159i prvn\u00ed ot\u00e1zce macOS bez dotazu zablokuje aplikaci {{app}} p\u0159\u00edstup k Bristlenose. Chcete-li to povolit, otev\u0159ete Nastaven\u00ed syst\u00e9mu \u25b8 Soukrom\u00ed a\u00a0zabezpe\u010den\u00ed \u25b8 Soubory a\u00a0slo\u017eky, rozbalte polo\u017eku {{app}} a zapn\u011bte Bristlenose. Pak se zeptejte znovu.",
     "openFilesFolders": "Otev\u0159\u00edt Soubory a\u00a0slo\u017eky",
+    "chatgptWorkNote": "V ChatGPT se ptejte v re\u017eimu Work \u2014 v re\u017eimu Chat nejsou n\u00e1stroje Bristlenose k dispozici.",
     "genericHow": "Zadejte tyto dv\u011b hodnoty libovoln\u00e9mu agentovi kompatibiln\u00edmu s MCP:",
     "clients": {
       "generic": "Obecn\u00e9 MCP"

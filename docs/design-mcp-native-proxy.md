@@ -644,6 +644,120 @@ What this settles and what it doesn't:
 - §2.5.2 / §2.4.5(ii), "installs code into other apps". This applies to
   today's `.mcpb` as well, and needs review notes whichever route ships.
 
+## 6.9 Implementation plan (v1, 29 Sep 2026 — draft for review)
+
+**Decision taken:** adopt §6.4 (work-list item 5). ChatGPT is the other main
+host after Claude; a Node-dependent plugin cannot serve researchers, and the
+Files & Folders step is a poor first run on macOS 27. Goal: Claude Desktop and
+ChatGPT read Bristlenose on macOS 27 with **no Node and no Files & Folders
+step**, on both the Mac App Store and the Developer-ID `.dmg`, with nothing
+private-SPI. Gemini later, on the same helper.
+
+Grounding (how the repo builds today): the sidecar and ffmpeg are compiled and
+**signed by scripts before archiving** (`ensure-sidecar.sh` →
+`sign-sidecar.sh` / `sign-ffmpeg.sh`, identity from `SIGN_IDENTITY` per
+channel), then copied in by the *Copy Sidecar Resources* phase. ffmpeg's
+entitlements (`app-sandbox` + `inherit`) are the textbook nested-helper set.
+No target builds Swift outside the app; nothing lives in `Contents/Helpers`.
+The helper follows the **ffmpeg pattern**, not a new Xcode target.
+
+### P0 — cheap checks before any product code (each can stop the plan)
+
+1. **macOS 15 and 26:** clean SIP-on guests (`-vanilla` images) run the group
+   probe as a foreign app's child. Floor is 15.0; every group measurement so far
+   is on 27.
+2. **Apple re-signing:** install TestFlight 3907 on a clean account; read
+   `Contents/Helpers/bristlenose-mcp`'s signer and entitlements (maintainer).
+3. **Developer-ID profile:** re-export the `.dmg` archive with the team group
+   requested; confirm Xcode mints a profile listing it (removes taskgated
+   "Disallowing").
+4. **Zip in the sandbox:** a Swift test that builds a `.mcpb` via
+   `NSFileCoordinator` `.forUploading` and checks the helper keeps its exec bit
+   and signature (the host cannot exec `/usr/bin/zip`).
+
+### P1 — host half
+
+Apply `docs/drafts/native-proxy-group-handshake/` (dual-write handshake, team
+group in both entitlements files, split test). Behind no flag: writing a second
+copy is inert until a reader exists.
+
+### P2 — the helper, built and signed like ffmpeg
+
+- Source: `desktop/mcp-helper/main.swift`, the `GROUP_VARIANT` of the spike
+  **only** (no disclaim variant, no `--seed`, no `BRISTLENOSE_DEV_*` in
+  release). Tools compiled in from the Node proxy's `BN-TOOLS-JSON` block, with
+  `readOnlyHint`.
+- `desktop/scripts/build-mcp-helper.sh`: `swiftc` + embedded Info.plist, signed
+  with the channel's `SIGN_IDENTITY`, entitlements
+  `desktop/bristlenose-mcp-helper.entitlements` (`app-sandbox`,
+  `network.client`, the literal team group — codesign does not expand build
+  variables). **Per-channel identifier** (§6.6):
+  `app.bristlenose.mcp-proxy` (App Store) / `app.bristlenose.mcp-proxy.devid`
+  (`.dmg`), chosen from the identity type the way `build-all.sh` /
+  `build-dmg.sh` already gate it. Output
+  `desktop/Bristlenose/Resources/bristlenose-mcp`.
+- Called from `ensure-sidecar.sh` (both channels). Covered by
+  `sidecar-source-hash.sh`, so an edit trips the freshness gate.
+- Copy phase: into `Contents/Helpers/bristlenose-mcp`.
+- Gates: `check-release-binary.sh` also scans `Contents/Helpers`; a new check
+  that the helper is sandboxed, carries the team group, has the channel's
+  identifier and no `responsibility_*` symbol; `test-check-pkg-shippable.sh`
+  gets a Helpers case.
+- Ad-hoc/Debug builds: an ad-hoc helper cannot open the group (not our team),
+  and Debug does not write it. Dev keeps the Node `.mcpb`; the native path is
+  exercised in Release-signed builds only. Stated, not worked around.
+
+### P3 — ChatGPT channel
+
+- Marketplace in the bundle:
+  `Contents/Resources/chatgpt-marketplace/.agents/plugins/marketplace.json` +
+  `plugins/bristlenose/{.codex-plugin/plugin.json, .mcp.json, bin/bristlenose-mcp}`
+  (a copy of the helper; `.mcp.json` runs `./bin/bristlenose-mcp` with
+  `cwd "./"` and `env BRISTLENOSE_MCP_HOST=ChatGPT`). Built by
+  `build-mcp-helper.sh`; the plugin `version` is the app version.
+- Settings ▸ MCP Agents ▸ ChatGPT & Codex: **Install Plugin…** opens
+  `codex://plugins/bristlenose?marketplacePath=<encoded path from Bundle.main>`;
+  no `codex://` handler → link to chatgpt.com/download. Strings from
+  `design-mcp-files-and-folders.md` §8 (21 locales drafted). The TOML dialect
+  stays, below it, for Codex CLI users.
+
+### P4 — Claude channel
+
+- The installer assembles the `.mcpb` at runtime from the bundled (re-signed)
+  helper: `manifest.json` with `server.type: binary`,
+  `command: ${__dirname}/server/bristlenose-mcp`,
+  `env BRISTLENOSE_MCP_HOST=Claude`, zipped in the container (P0.4), opened as
+  today. Claude disclaims binary servers, so the helper is its own responsible
+  process (§4.4).
+- The Node `.mcpb` stays in the bundle as the fallback until P6 passes, then is
+  retired (with `check-mcpb.sh` rewritten for the binary manifest).
+
+### P5 — copy switch-over and flag
+
+- A `UserDefaults` flag (`BristlenoseNativeAgentProxy`, default **off**) picks
+  native vs Node install for both tabs until P6 passes; then default on, then
+  the flag and the Node path are removed.
+- With the flag on: the pane stops pre-announcing Files & Folders; the proxy's
+  permission sentence is the recovery path only for unsandboxed readers
+  (design-mcp-files-and-folders §4(c)); help Part 2.
+
+### P6 — verification
+
+Unit tests (handshake, installer manifest, zip, URL encoding); script gate
+tests; a local Release `.dmg` build; a TestFlight build; end-to-end on a clean
+user account: Claude and ChatGPT each answer a cited question, macOS 15 / 26 /
+27, with Files & Folders untouched.
+
+### P7 — App Review notes
+
+§2.5.2 / §2.4.5(ii): the helper is a read-only proxy the user installs into
+their own AI app; it reads only data the user shares, over loopback.
+
+### Out of scope for v1
+
+Mach IPC instead of a handshake file (option 2); Gemini; the duplicate-row
+exposure bug (antenna session, item 16).
+
 ## 7. Recipes
 
 ```bash

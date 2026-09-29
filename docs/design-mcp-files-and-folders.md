@@ -664,3 +664,46 @@ someone reads ChatGPT's localised labels (§1, unmeasured #4).
 `claudeDesktopPromptNote` is kept unchanged for macOS ≤ 26. No ChatGPT
 counterpart is drafted for 26: whether ChatGPT gets the 26-era dialog is
 untested, so there's nothing to quote yet.
+
+### Native-proxy state: the ChatGPT tab's three strings (drafted, not built)
+
+For §4(c)'s "when the native proxy ships" row; the button label is **Install
+Plugin…** (maintainer's choice, 29 Sep 2026). Each locale is built from its
+own reviewed Claude-tab sibling (`install`, `claudeDesktopHint`,
+`downloadClaudeDesktop`), so register and phrasing are already settled.
+The only new word is "plug-in", lifted from Apple's loctables (Script
+Editor's `Plug-ins` and IMDaemonCore's `Plug-in Service`). Apple writes a
+non-breaking hyphen (U+2011) in cs `plug‑in`; keep it.
+
+**Check against ChatGPT's own localisation before shipping** (as with
+Work/Chat, its strings are compiled into its bundle, so we can't read them
+yet): **da** (Apple's list says "Tilbehør", its service string "Plug-in", and
+the draft uses "plug-in"), **sv** "insticksfil", **nb** "tillegg" and **tr**
+"yazılım eki". They're Apple's terms but may not be what ChatGPT calls it.
+
+Proposed keys: `desktop.mcpAgents.chatgptPluginHint`,
+`desktop.mcpAgents.installPlugin`, `desktop.mcpAgents.downloadChatGPT`.
+
+| | hint | button | no ChatGPT |
+|---|---|---|---|
+| en | Adds Bristlenose to ChatGPT as a plugin. ChatGPT will ask you to confirm. | Install Plugin… | ChatGPT isn't installed — download it from chatgpt.com |
+| es | Añade Bristlenose a ChatGPT como módulo. ChatGPT pedirá confirmación. | Instalar módulo… | ChatGPT no está instalado; descárgalo en chatgpt.com |
+| ca | Afegeix el Bristlenose al ChatGPT com a connector. El ChatGPT et demanarà que ho confirmis. | Instal·la el connector… | El ChatGPT no està instal·lat — baixa'l de chatgpt.com |
+| ja | Bristlenose をプラグインとして ChatGPT に追加します。ChatGPT が確認を求めます。 | プラグインをインストール… | ChatGPT がインストールされていません。chatgpt.com からダウンロードしてください |
+| fr | Ajoute Bristlenose à ChatGPT comme module. ChatGPT vous demandera de confirmer. | Installer le module… | ChatGPT n'est pas installé — téléchargez-le sur chatgpt.com |
+| de | Fügt Bristlenose als Plug-In zu ChatGPT hinzu. ChatGPT bittet um Bestätigung. | Plug-In installieren… | ChatGPT ist nicht installiert — Download auf chatgpt.com |
+| ko | Bristlenose를 ChatGPT에 플러그인으로 추가합니다. ChatGPT가 확인을 요청합니다. | 플러그인 설치… | ChatGPT가 설치되어 있지 않습니다. chatgpt.com에서 다운로드하세요 |
+| cs | Přidá Bristlenose do ChatGPT jako plug‑in. ChatGPT požádá o potvrzení. | Instalovat plug‑in… | ChatGPT není nainstalován — stáhněte jej z chatgpt.com |
+| it | Aggiunge Bristlenose a ChatGPT come plugin. ChatGPT chiederà conferma. | Installa plugin… | ChatGPT non è installato: scaricalo da chatgpt.com |
+| pl | Dodaje Bristlenose do ChatGPT jako wtyczkę. ChatGPT poprosi o potwierdzenie. | Zainstaluj wtyczkę… | ChatGPT nie jest zainstalowany — pobierz go z chatgpt.com |
+| ru | Добавляет Bristlenose в ChatGPT как плагин. ChatGPT попросит подтверждение. | Установить плагин… | ChatGPT не установлен — скачайте его с chatgpt.com |
+| uk | Додає Bristlenose до ChatGPT як плагін. ChatGPT попросить підтвердження. | Встановити плагін… | ChatGPT не встановлено — завантажте його з chatgpt.com |
+| da | Tilføjer Bristlenose til ChatGPT som et plug-in. ChatGPT beder om bekræftelse. | Installer plug-in… | ChatGPT er ikke installeret — hent det på chatgpt.com |
+| sv | Lägger till Bristlenose i ChatGPT som en insticksfil. ChatGPT ber om bekräftelse. | Installera insticksfil… | ChatGPT är inte installerat — hämta det på chatgpt.com |
+| nb | Legger til Bristlenose i ChatGPT som et tillegg. ChatGPT ber om bekreftelse. | Installer tillegg… | ChatGPT er ikke installert — last det ned fra chatgpt.com |
+| tr | Bristlenose'u ChatGPT'ye yazılım eki olarak ekler. ChatGPT onay ister. | Yazılım Ekini Yükle… | ChatGPT yüklü değil — chatgpt.com adresinden indirin |
+| nl | Voegt Bristlenose als plug-in toe aan ChatGPT. ChatGPT vraagt om bevestiging. | Plug-in installeren… | ChatGPT is niet geïnstalleerd — download het via chatgpt.com |
+| fi | Lisää Bristlenosen ChatGPT:hen liitännäisenä. ChatGPT pyytää vahvistuksen. | Asenna liitännäinen… | ChatGPT:tä ei ole asennettu — lataa se osoitteesta chatgpt.com |
+| pt-BR | Adiciona o Bristlenose ao ChatGPT como plug-in. O ChatGPT pedirá confirmação. | Instalar plug-in… | O ChatGPT não está instalado — baixe em chatgpt.com |
+| pt-PT | Adiciona o Bristlenose ao ChatGPT como plug-in. O ChatGPT pedirá confirmação. | Instalar plug-in… | O ChatGPT não está instalado — descarregue-o em chatgpt.com |
+| zh-Hant | 將 Bristlenose 以外掛模組形式加入 ChatGPT。ChatGPT 會要求你確認。 | 安裝外掛模組⋯ | 尚未安裝 ChatGPT — 請前往 chatgpt.com 下載 |

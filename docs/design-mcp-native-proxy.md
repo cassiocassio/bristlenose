@@ -374,7 +374,10 @@ Two independent reasons, either sufficient:
 application group (`Z56GZVA2QB.app.bristlenose…`).** Such a process can list,
 read and write that group's container with no grant and no tccd request.
 Measured with all four launching apps: Claude Code, Terminal, ChatGPT and
-Claude Desktop. Apple's app-groups documentation
+Claude Desktop. In the first three a *foreign* app was the responsible process.
+Under Claude Desktop the probe was its own responsible process, because Claude
+disclaims binary servers, so that row shows the route works with Claude rather
+than surviving a foreign responsible process. Apple's app-groups documentation
 gives the reason: macOS checks that the accessing code signature contains the
 same Developer Team ID.
 
@@ -385,7 +388,7 @@ Measured on 29 Sep 2026 with a probe group, `Z56GZVA2QB.app.bristlenose.batest`:
 | team-signed, sandboxed, with the group | Claude Code (team Q6L2SF6YDW), even with a cached denial for our containers | **list, write, read ok** |
 | same | fresh Terminal | **ok** |
 | same | **ChatGPT.app** (probe run as a ChatGPT plugin's server) | **list, write, read, delete ok** |
-| same | **Claude Desktop**, launched through its `Helpers/disclaimer`, so the responsible process is the probe itself (clean macOS 27 guest, SIP on, Files & Folders off) | **mkdir, write, read, unlink ok** |
+| same | **Claude Desktop**, launched through its `Helpers/disclaimer`, so the responsible process is the probe itself (clean macOS 27 guest, SIP on, Files & Folders off) | **mkdir, write, read, unlink ok**; its read of our *data* container was hidden by its own sandboxing (*"The folder 'Bristlenose' doesn't exist"*), as expected |
 | team-signed, unsandboxed, no group | Claude Desktop (via `disclaimer`, responsible = the probe) | **ok, and it read our data container too**: a same-team reader, because Claude disclaims binary servers (§4.4) |
 | team-signed, unsandboxed, no group | ChatGPT.app | denied |
 | team-signed, **unsandboxed but with** the group | fresh Terminal | denied: the entitlement only counts when sandboxed (*inferred* from one run) |

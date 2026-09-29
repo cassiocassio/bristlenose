@@ -39,8 +39,9 @@ depends on the Codex-plugin spike, now written up in
 > - macOS lets it read the container even with Claude or Terminal as the
 >   responsible process, and tccd is never consulted.
 >
-> Not yet repeated with ChatGPT or Claude Desktop as the parent, and not yet
-> through a TestFlight upload. So the Files & Folders flow and copy here
+> Repeated with **Claude Desktop** as the parent on 29 Sep 2026 in a clean
+> macOS 27 guest with SIP on: it passes (§1, measured #1). Not yet repeated
+> with ChatGPT as the parent, and not yet through a TestFlight upload. So the Files & Folders flow and copy here
 > stay needed for **(a)** today's Node `.mcpb` users, until the new proxy
 > ships, and **(b)** permanently, as the recovery path if the group route
 > fails on some host. Don't build a primary onboarding step around it if the
@@ -109,11 +110,32 @@ above).
 
 ### Not measured, and the copy depends on them
 
-1. **A new Claude Desktop install on 27.** Expected to hit the same silent
-   denial (same cross-team read), not proven. The existing grant on this Mac
-   carried over the upgrade, so testing needs a Mac or a user account that has
-   never granted Claude. **Don't reset this Mac's grant to find out.** Claude
-   is the shipped path and the working setup here.
+1. ~~**A new Claude Desktop install on 27.**~~ **Measured 29 Sep 2026: silently
+   denied, same as ChatGPT.** A clean macOS 27.0 (26A428) guest under tart, with
+   **SIP enabled** (`csrutil status` checked beside every result), Claude
+   2.9939.2 never granted anything, Bristlenose 0.31.5 serving with Agent Access
+   on. The first question through the shipped Node `.mcpb` got the proxy's
+   `permission` sentence: stderr `handshake read permission-blocked (TCC) …
+   EPERM`, and tccd *"kTCCServiceSystemPolicyAppDataDetailed does not allow
+   prompting; recording denied"*, subject `com.anthropic.claudefordesktop`.
+   **No dialog.** Files & Folders then listed **Claude**. Two things came out
+   of the same run:
+   - **Claude runs a Node `.mcpb` inside its own `Claude Helper (Plugin)`
+     utility process** (`node.mojom.NodeService`), so Claude is the
+     responsible process and the read is cross-team. That's why it's denied.
+   - **Claude runs a `type: binary` `.mcpb` through its own
+     `Claude.app/Contents/Helpers/disclaimer`**, so the binary is its own
+     responsible process. A binary signed by our team then reads our
+     container as a same-team read, and tccd is never asked: the native
+     helper and both app-group probes, sandboxed and not, all read with the
+     Files & Folders switch **off**. So on the Claude channel, a binary
+     proxy removes this step with no private SPI
+     ([`design-mcp-native-proxy.md`](design-mcp-native-proxy.md)).
+   A first run was **invalid**: Cirrus `-base`/`-xcode` images ship with SIP
+   off, and there the Node read "succeeded". Only `-vanilla` keeps SIP on.
+   Not yet measured: turning the switch on and asking again under Claude.
+   The fix is measured for ChatGPT only. Evidence and runbook are on the test
+   drive, in the maintainer's notes.
 2. ~~**Does the agent app appear in Files & Folders *before* its first denied
    read?**~~ **Settled 29 Sep 2026, by the pane's own contract: no.** Files &
    Folders lists only apps that have requested access (*"Apps that appear here
@@ -381,11 +403,11 @@ history.
 1. ~~**Settle the English** of the three strings in §8.~~ **Settled 29 Sep
    2026: the English v1 in §8 stands as drafted.** The 20 translations are
    pasted in one pass when this is built (21 full locales, not `zh-Hant-HK`).
-2. **Run the Claude-on-27 test** (§1, unmeasured #1) on a clean account before
-   the Claude tab's note says "blocks". If Claude turns out still to prompt, the
-   Claude tab keeps its 26 note and only ChatGPT gets the step. Plan: a macOS
-   27 guest under tart (`ghcr.io/cirruslabs/macos-golden-gate-base`, built on
-   vanilla 27.0), which has never granted Claude anything.
+2. ~~**Run the Claude-on-27 test.**~~ **Done 29 Sep 2026: Claude is silently
+   blocked too** (§1, #1), so the Claude tab's note does say "blocks". New
+   decision this opens: a `type: binary` `.mcpb` makes the step unnecessary on
+   the Claude channel, because Claude disclaims binary servers. If that ships,
+   the Claude tab's note falls to the recovery-path role (§4).
 3. **ChatGPT plugin: ship or not.** Draft (a) is safe to ship on its own.
    Draft (b) waits for the install gesture and the Node question.
 4. **Website deploy.** The help-page draft replaces a paragraph that is

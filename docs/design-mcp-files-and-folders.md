@@ -5,7 +5,10 @@ last-trued: 2026-09-29
 
 # Agent access on macOS 27 — the Files & Folders step
 
-_Drafted 29 Sep 2026 for review. **Nothing here is built.** No code, locale or
+_Drafted 29 Sep 2026 for review. **Update, same day: the Claude/Node half
+(§3, the Claude tab of §4, two of the three §8 keys) is built and on `main`
+as `d086f08d`**, applied from the tested patch. The ChatGPT Work-mode line (patch
+`0002`) and everything in §4(c)'s native-proxy state are still unbuilt. No code, locale or
 manifest file has changed. This doc holds the measured facts, the proposed
 copy for every surface (proxy, Settings pane, help page), and the per-locale
 strings ready to paste once the English is settled. Mockup:
@@ -379,7 +382,7 @@ ChatGPT, Claude Code and Terminal). The Files & Folders note leaves the pane.
 |---|---|---|
 | Claude Desktop | hint + install row, **no note** under it | today's tab, minus the pre-announce |
 | ChatGPT & Codex, hint | "Adds Bristlenose to ChatGPT as a plugin. ChatGPT will ask you to confirm." | `claudeDesktopHint` |
-| ChatGPT & Codex, button | **Install Plugin…** (the pane's one prominent button on this tab). Alternative from the App Store session: **Add to ChatGPT**, which names the destination. The maintainer's call. | `mcpAgents.install` ("Install Extension…"). "Plugin" is ChatGPT's own word for it. |
+| ChatGPT & Codex, button | **Install Plugin…** (the pane's one prominent button on this tab). **Chosen by the maintainer, 29 Sep 2026**, over "Add to ChatGPT". | `mcpAgents.install` ("Install Extension…"). "Plugin" is ChatGPT's own word for it. |
 | ChatGPT & Codex, no handler | "ChatGPT isn't installed — download it from chatgpt.com" | `downloadClaudeDesktop`. Link to `https://chatgpt.com/download` (verified 29 Sep 2026: `openai.com/chatgpt/download` redirects there). |
 | ChatGPT & Codex, below row | `chatgptWorkNote`, unchanged | — |
 | ChatGPT & Codex, fallback | the TOML/form dialect stays below, under a secondary heading ("Or connect by hand") | keeps the no-install route |

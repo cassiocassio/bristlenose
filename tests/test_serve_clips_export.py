@@ -576,7 +576,19 @@ class TestSessionSubtitlesRoute:
 
 
 class TestLivePlayerPage:
-    def test_player_is_served_from_the_template_not_the_baked_copy(self, client: TestClient) -> None:
+    def test_player_is_served_from_the_template_not_the_baked_copy(self, tmp_path: Path) -> None:
+        # The player route is registered by the prod SPA mount, which refuses to
+        # serve anything under /report/ without a React bundle. CI builds none,
+        # so give the mount a stand-in index.html (the prod_app_factory pattern
+        # in test_server_status_page.py); `dev=True` does not select the dev
+        # mount (root CLAUDE.md, "CI `test` job doesn't `npm run build`").
+        static_dir = tmp_path / "static"
+        (static_dir / "assets").mkdir(parents=True)
+        (static_dir / "index.html").write_text(
+            '<!doctype html><html><head></head><body><div id="bn-app-root"></div></body></html>')
+        with patch("bristlenose.server.app._STATIC_DIR", static_dir):
+            app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        client = AuthTestClient(app)
         resp = client.get("/report/assets/bristlenose-player.html")
         assert resp.status_code == 200
         assert 'id="bristlenose-video"' in resp.text

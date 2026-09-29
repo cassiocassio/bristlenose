@@ -645,6 +645,32 @@ doesn't. A local proxy for it: create the helper's container under an Apple Deve
 launch an Apple Distribution one with the same id (two Apple-anchored leaves, like TestFlight and the
 store). If it hangs, the TestFlight→store move probably does too.
 
+**P0.2b, measured 29 Sep 2026: what the helper's container remembers.** A sandboxed probe with a fresh
+id, signed Apple Development, then Apple Distribution, then Apple Development again, reading the team
+group each time:
+
+| Launch | Signer (secinitd's category) | Result |
+|---|---|---|
+| 1 | Apple Development (`development`) | read ok, 0 s; secinitd *"initializing owners for container … `signer:development`"* |
+| 2 | Apple Distribution, local (`enterprise`) | killed at 90 s; secinitd *"binary identity … `signer:enterprise` not in ACL for container … `[{teamIdentifier, validationCategory: development, signingIdentifier}]`; prompting"* |
+| 3 | Apple Development again | also hung 90 s, while the first prompt was still pending |
+
+So the container's owner list holds **team + signing identifier + validation category**, not a
+certificate hash. A renewed certificate of the same kind should therefore not trip it. A different
+*kind* does, and the "hang" is secinitd waiting on a permission alert, shown via UserNotificationCenter
+(running during the test), which a helper started by ChatGPT or Claude has no good way to surface.
+The container can't be deleted from Terminal (`Operation not permitted`).
+
+What that means for the plan:
+- **`.dmg` (`developer_id`) vs store:** different ids (D1). Fine.
+- **TestFlight → App Store** for one tester: Apple DTS says an App Store/TestFlight swap
+  "shouldn't trigger this alert" (Quinn, forum thread 732768, June 2023), so the two categories are
+  meant to be treated as one. That's stated for apps, and unmeasured for a bare helper; check it at
+  the first store release on a tester's Mac.
+- **The maintainer's Mac:** a locally exported App Store build is `enterprise`, while TestFlight is
+  `testflight`. Never run a locally exported store build's helper on a Mac that runs the TestFlight
+  one. Debug builds carry no helper (D2), so everyday work is unaffected.
+
 ### 6.8 Still open
 
 - **Human App Review** of the agent-access feature: a submission, with review

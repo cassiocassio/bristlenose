@@ -498,7 +498,8 @@ http_headers = { "Authorization" = "Bearer ••••••••••••"
 <tr><td>Runtime on the user's Mac</td><td>Xcode, DEVONthink and ACE ship a helper inside the app bundle. Notion falls back to <code>npx mcp-remote</code></td><td>A signed, sandboxed helper inside the bundle. No Node</td><td class="v-ok">Match</td></tr>
 <tr><td>Where you turn it on</td><td>DEVONthink: Settings ▸ AI ▸ MCP, a switch per provider. ACE: a per-client button that shows that client's steps. Xcode: one toggle</td><td>Settings ▸ MCP Agents, a tab per client, plus per-project Agent Access from the Project menu and the sidebar</td><td class="v-ok">Match</td></tr>
 <tr><td>Preferred vs manual route</td><td>Figma labels one "preferred" route per client, with a manual fallback and deeplinks</td><td>Install… is the preferred route; "Or connect by hand" is the manual one. Both installs are links (<code>codex://</code>, <code>.mcpb</code>)</td><td class="v-ok">Match</td></tr>
-<tr><td><b>Is it connected? Is it working?</b></td><td><b>Xcode</b>: "alerts you when the external agent connects … and when it's active". <b>Notion</b>: every agent app listed as Connected / Not Connected, disconnect in-app. Figma: "enabled and running" confirmation</td><td>The button still says <b>Install</b> after a successful install. The only signals are a 2-minute "asked recently" subtitle and the register's Last asked column</td><td class="v-bad">Fall short</td></tr>
+<tr><td><b>Is it connected? Is it working?</b></td><td><b>Xcode</b>: "alerts you when the external agent connects … and when it's active". <b>Notion</b>: every agent app listed as Connected / Not Connected, disconnect in-app. Figma: "enabled and running" confirmation</td><td><b>Active: the sidebar antenna</b> (shipped). It is solid while a project is exposed, radiates while an agent is reading that project, and signs off with two taps when the agent has finished. It's per project, and it fires for every host. The register's Last asked column records it afterwards. <b>Not covered:</b> "connected" before the first question, which host asked, and the Settings install row, which still says Install after a successful install</td><td class="v-ok">Exceed on active</td></tr>
+<tr><td>… and before the first question</td><td>Xcode's alert fires on connect, before any work</td><td>Nothing until the first question, and nothing that names the host</td><td class="v-mid">Short, narrowly</td></tr>
 <tr><td>Scope control</td><td>DEVONthink: exclude one item or a whole database; encrypted databases excluded automatically; "Redact sensitive content". Notion: full user permissions</td><td>Per project, off by default; only open projects; Anonymise; read-only tools</td><td class="v-mid">Match DEVONthink per database; short of its per-item exclusion; exceed Notion</td></tr>
 <tr><td>Errors and recovery</td><td>Notion and Figma: a troubleshooting page mapping each failure to one fix. None of the five speaks inside the chat</td><td>Every failure is one sentence naming one fix, spoken by the agent where the user is looking (section 6). The help page's troubleshooting table is still to be written</td><td class="v-ok">Exceed in context</td></tr>
 <tr><td>ChatGPT Work vs Chat</td><td>ACE: "Standard Chat mode does not support local MCP", with screenshots of the mode selector and the Work toggle</td><td>One line in the pane. "Try now" lands in a Codex thread, which works. The help page has no screenshot yet</td><td class="v-mid">Match in the pane; short in the docs</td></tr>
@@ -507,7 +508,7 @@ http_headers = { "Authorization" = "Bearer ••••••••••••"
 </tbody>
 </table>
 
-<h3 style="margin:26px 0 4px;font-size:15px">Closing the one real gap: connected and active</h3>
+<h3 style="margin:26px 0 4px;font-size:15px">Closing the narrow gap: connected, and which host</h3>
 <div class="grid">
   <div class="cell"><p class="cap">Proposal · after the host has reached Bristlenose</p>
   <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
@@ -518,24 +519,23 @@ http_headers = { "Authorization" = "Bearer ••••••••••••"
     <p class="foot">In ChatGPT, ask in Work mode — Bristlenose’s tools aren’t available in Chat.</p>
     <div class="disc">Or connect by hand</div>
   </div></div></div>
-  <div class="cell"><p class="cap">Proposal · while a question is being answered</p>
-  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">MCP Agents</div></div>
-  <div class="pane">
-    <div class="segs"><div class="seg">Claude Desktop</div><div class="seg">Claude Code</div><div class="seg on">ChatGPT &amp; Codex</div><div class="seg">Generic MCP</div></div>
-    <p class="callout">Adds Bristlenose to ChatGPT as a plugin. ChatGPT will open and ask you to install it.</p>
-    <div class="ext"><div class="icon">❋</div><div class="nm"><b>Bristlenose</b><div class="s">ChatGPT is asking about Onboarding study now</div></div><button class="bbtn">Reinstall Plugin…</button></div>
-    <p class="foot">In ChatGPT, ask in Work mode — Bristlenose’s tools aren’t available in Chat.</p>
-    <div class="disc">Or connect by hand</div>
+  <div class="cell"><p class="cap">Already shipped · the sidebar antenna, per project</p>
+  <div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">Bristlenose</div></div>
+  <div class="pane" style="padding:10px 0;background:var(--chrome)">
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 16px;font-size:13px"><span style="flex:1"><b style="font-weight:600">Onboarding study</b><div style="color:var(--dim);font-size:11px">14 sessions</div></span><span style="color:var(--accent)">((·))</span></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 16px;font-size:13px;background:rgba(0,122,255,.10)"><span style="flex:1"><b style="font-weight:600">Checkout interviews</b><div style="color:var(--dim);font-size:11px">9 sessions</div></span><span style="color:var(--ink)">(·)</span></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 16px;font-size:13px"><span style="flex:1"><b style="font-weight:600">Pilot</b><div style="color:var(--dim);font-size:11px">3 sessions</div></span></div>
   </div></div></div>
 </div>
 <div class="cm">
-<p><b>How this stays inside "know the protocol, never the client".</b> Both lines are facts about <i>our own endpoint</i>: the helper announced itself with its host label and build, and we recorded it. They say nothing about ChatGPT's state. Two small changes make it work:</p>
+<p><b>The antenna already answers "is it working?"</b> (right-hand frame, drawn loosely: the real one is the SF Symbol <code>antenna.radiowaves.left.and.right</code>, animated through its three variable-value frames). It is solid for an exposed project, radiates while an agent reads it, and taps twice when the agent has finished. That beats Xcode's alert on two counts: it's per project, and it says when the agent has <i>finished</i>. Nothing in this plan should duplicate it, so the "is asking now" subtitle I first drew here is withdrawn.</p>
+<p><b>What's left is narrow.</b> The antenna can't show "connected" before the first question or <i>which</i> host asked, and the install row still says Install after a successful install. Two small changes close it, both facts about <i>our own endpoint</i>, not about the client:</p>
 <ul>
-<li><b>At MCP <code>initialize</code>, the helper probes <code>/api/health</code> once</b>, sending its host label and build. Today it touches serve only inside a tool call, so "connected" can't show until the first question. With the probe, it shows the moment "Try now" opens a thread. The native helper reads the group with no TCC check, so the early read costs nothing. This is not D5's rejected breadcrumb, because the helper writes nothing.</li>
-<li><b>Serve keeps the last contact per host</b> (D8 already keys by host). With that in place, the ladder's <code>.matching</code> state turns into a bordered "Reinstall Plugin…" and the pane has no filled button at rest. That's the HIG's "nothing to do here". Before first contact it's Install, filled.</li>
+<li><b>At MCP <code>initialize</code>, the helper checks in once</b> (<code>/api/health</code>, carrying its host label and build). The row can then say "ChatGPT connected today at 14:02" the moment "Try now" opens a thread. The helper writes nothing, so this isn't D5's rejected breadcrumb.</li>
+<li><b>Serve keeps the last check-in per host</b> (D8 already keys by host). After that, <code>.matching</code> becomes a bordered "Reinstall Plugin…", and at rest the pane has no filled button.</li>
 </ul>
-<p>With both changes, Bristlenose <b>matches Xcode</b> (connected, then active) and <b>Notion</b> (a per-app state line). It does so without claiming anything about a state we can't see: "connected" means "reached us", and it's worded that way. Agent Access off is our "Disconnect", and it already exists per project.</p>
-<p><b>The other two shortfalls, and what I'd do.</b> ChatGPT Work vs Chat in the docs: when the help page (work-list item 2) ships, give it ACE's treatment, with a screenshot of the Chat | Work toggle and one sentence on why Chat can't reach a local app. Per-item exclusion (DEVONthink): this is a product question, not part of this plan. A per-session "exclude from agents" would be the Bristlenose version. Park it.</p>
+<p>Worth it? It's optional. For a researcher, the first question plus the antenna already proves it works. The check-in mostly fixes the Settings row, which would otherwise read as if the install hadn't taken.</p>
+<p><b>The other shortfalls, and what I'd do.</b> ChatGPT Work vs Chat in the docs: when the help page (work-list item 2) ships, give it ACE's treatment, with a screenshot of the Chat | Work toggle and one sentence on why Chat can't reach a local app. Per-item exclusion (DEVONthink): this is a product question, not part of this plan. A per-session "exclude from agents" would be the Bristlenose version. Park it.</p>
 </div>
 
 </div>

@@ -245,8 +245,12 @@ docs; this section is the state and the work left, in order.
 **D. Related, found the same day**
 14. Mark the MCP tools read-only (`readOnlyHint`), in the server and in the
     proxy's static copy. A session is on it.
-15. The red Swift test `ServeManagerStartGuardTests/aFailedServeCanBeRestartedOnTheSameProject`,
-    which fails on `main` itself. A session is on it.
+15. ~~The red Swift test `ServeManagerStartGuardTests/aFailedServeCanBeRestartedOnTheSameProject`,
+    which fails on `main` itself.~~ **Done 29 Sep 2026** (`55628d90`). The
+    test was wrong, not the guard: it resolved the sidecar mode from the app
+    bundle, so it failed in any checkout with no built sidecar (`start()`
+    returns at its `mode` guard) and spawned a real sidecar where one was
+    embedded. It now injects `.external(port:)`.
 16. **Agent Access can be switched on the wrong row.** When two sidebar rows
     point at one folder, the menu bar's Agent Access item reads and toggles
     by path, and resolves to the newest row (antenna investigation's Defect B,

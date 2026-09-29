@@ -65,6 +65,9 @@ cd ~/Code/bristlenose && git apply docs/drafts/macos27-agent-access/0002-*.patch
   `ServeManagerStartGuardTests/aFailedServeCanBeRestartedOnTheSameProject`, which
   **fails identically on the unpatched base**. It's a pre-existing red on
   `main`, not caused by these patches, and is flagged as its own task.
+  _(Fixed 29 Sep 2026, `55628d90`: the test depended on the build embedding a
+  sidecar, which a fresh checkout does not, so it failed here and passed in the
+  main repo. The product was correct.)_
 
 ## Not verified
 

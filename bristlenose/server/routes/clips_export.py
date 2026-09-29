@@ -18,6 +18,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
+from sqlalchemy.orm import Session as DbSession
 
 from bristlenose.server.clip_backend import FFmpegBackend
 from bristlenose.server.clip_manifest import (
@@ -27,13 +28,26 @@ from bristlenose.server.clip_manifest import (
     build_clip_manifest,
     merge_adjacent_clips,
 )
+from bristlenose.server.clip_subtitles import (
+    Correction,
+    Cue,
+    SegmentInput,
+    WordTiming,
+    apply_correction,
+    build_cues,
+    to_srt,
+    to_webvtt,
+    tokens_for_segment,
+)
 from bristlenose.server.export_core import pick_featured_quotes
 from bristlenose.server.models import (
     Person,
     Project,
     Quote,
+    QuoteEdit,
     QuoteState,
     SessionSpeaker,
+    TranscriptSegment,
 )
 from bristlenose.server.models import Session as SessionModel
 
@@ -184,6 +198,91 @@ def _quotes_to_quotelike(
     return result
 
 
+def _load_segments(
+    db: DbSession, project_id: int, session_id: str, start: float, end: float,
+) -> list[SegmentInput]:
+    """Transcript segments overlapping ``[start, end]`` for one session."""
+    rows = (
+        db.query(TranscriptSegment)
+        .join(SessionModel, SessionModel.id == TranscriptSegment.session_id)
+        .filter(
+            SessionModel.project_id == project_id,
+            SessionModel.session_id == session_id,
+            TranscriptSegment.end_time > start,
+            TranscriptSegment.start_time < end,
+        )
+        .order_by(TranscriptSegment.start_time)
+        .all()
+    )
+    segments: list[SegmentInput] = []
+    for row in rows:
+        words: tuple[WordTiming, ...] | None = None
+        if row.words_json:
+            try:
+                words = tuple(
+                    WordTiming(text=w["t"], start=float(w["s"]), end=float(w["e"]))
+                    for w in json.loads(row.words_json)
+                )
+            except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+                words = None
+        segments.append(SegmentInput(
+            speaker_code=row.speaker_code,
+            start=row.start_time,
+            end=row.end_time,
+            text=row.text,
+            words=words or None,
+        ))
+    return segments
+
+
+def _load_corrections(
+    db: DbSession, project_id: int, session_id: str, start: float, end: float,
+) -> list[Correction]:
+    """The researcher's latest edit of each quote overlapping ``[start, end]``."""
+    rows = (
+        db.query(Quote, QuoteEdit.edited_text)
+        .join(QuoteEdit, QuoteEdit.quote_id == Quote.id)
+        .filter(
+            Quote.project_id == project_id,
+            Quote.session_id == session_id,
+            Quote.end_timecode > start,
+            Quote.start_timecode < end,
+        )
+        .order_by(QuoteEdit.edited_at.desc())
+        .all()
+    )
+    latest: dict[int, Correction] = {}
+    for quote, edited in rows:
+        if quote.id in latest or edited == quote.text:
+            continue
+        latest[quote.id] = Correction(
+            speaker_code=quote.participant_id,
+            start=quote.start_timecode,
+            end=quote.end_timecode,
+            original=quote.text,
+            corrected=edited,
+        )
+    return sorted(latest.values(), key=lambda c: c.start)
+
+
+def _build_clip_cues(db: DbSession, project_id: int, spec: ClipSpec) -> list[Cue]:
+    """Subtitle cues for one clip: everyone audible, with corrections applied.
+
+    Never carries a speaker's name: speakers are told apart by colour only.
+    """
+    segments = _load_segments(db, project_id, spec.session_id, spec.start, spec.end)
+    tokens = [tok for seg in segments for tok in tokens_for_segment(seg)]
+    for corr in _load_corrections(db, project_id, spec.session_id, spec.start, spec.end):
+        tokens, fell_back = apply_correction(tokens, corr)
+        if fell_back:
+            logger.info(
+                "Clip subtitles: correction at %.1fs in %s spread evenly "
+                "(could not be placed word by word)",
+                corr.start, spec.session_id,
+            )
+    return build_cues(tokens, spec.start, spec.end, spec.participant_id)
+
+
 # ---------------------------------------------------------------------------
 # Async job runner
 # ---------------------------------------------------------------------------
@@ -196,8 +295,14 @@ async def _run_clip_extraction(
     participant_count: int,
     use_hours: bool,
     anonymise: bool,
+    cues_by_clip: dict[int, list[Cue]] | None = None,
 ) -> None:
-    """Extract clips in background. Updates module-level _jobs state."""
+    """Extract clips in background. Updates module-level _jobs state.
+
+    Each clip with transcript text gets a ``.vtt`` beside it and the same
+    cues muxed in as a soft subtitle track. A clip whose subtitle mux fails
+    is cut again without subtitles rather than lost.
+    """
     backend = FFmpegBackend()
     job = _jobs.get(project_id)
     if job is None:
@@ -217,18 +322,42 @@ async def _run_clip_extraction(
         job["progress"] = i
         job["current_clip"] = filename.rsplit(".", 1)[0]  # strip extension
 
-        # Run FFmpeg in a thread to avoid blocking the event loop
-        result = await asyncio.to_thread(
-            backend.extract_clip, spec.source_path, output_path, spec.start, spec.end,
-        )
+        cues = (cues_by_clip or {}).get(i) or []
+        stem = filename.rsplit(".", 1)[0]
+        srt_path = clips_dir / f".{stem}.srt.tmp"
+        result = None
+        try:
+            if cues:
+                srt_path.write_text(to_srt(cues), encoding="utf-8")
+                # Run FFmpeg in a thread to avoid blocking the event loop
+                result = await asyncio.to_thread(
+                    backend.extract_clip, spec.source_path, output_path,
+                    spec.start, spec.end, srt_path,
+                )
+                if result is None:
+                    logger.warning(
+                        "Subtitle track failed for %s; cutting without it", filename,
+                    )
+            if result is None:
+                result = await asyncio.to_thread(
+                    backend.extract_clip, spec.source_path, output_path,
+                    spec.start, spec.end,
+                )
+        finally:
+            srt_path.unlink(missing_ok=True)
 
         if result is not None:
             job["completed_count"] = job.get("completed_count", 0) + 1
+            vtt_name: str | None = None
+            if cues:
+                vtt_name = f"{stem}.vtt"
+                (clips_dir / vtt_name).write_text(to_webvtt(cues), encoding="utf-8")
             manifest_entries.append({
                 "quote_id": spec.quote_id,
                 "participant_id": spec.participant_id,
                 "session_id": spec.session_id,
                 "filename": filename,
+                "subtitles": vtt_name,
                 "start": spec.start,
                 "end": spec.end,
             })
@@ -374,6 +503,12 @@ async def start_clip_extraction(
         participant_ids = {s.participant_id for s in specs}
         participant_count = len(participant_ids)
 
+        # Subtitles are built now, while the DB session is open; the job
+        # runs after this request returns.
+        cues_by_clip = {
+            i: _build_clip_cues(db, project_id, spec) for i, spec in enumerate(specs)
+        }
+
         # Create clips directory
         clips_dir = output_dir / "clips"
         clips_dir.mkdir(parents=True, exist_ok=True)
@@ -393,7 +528,7 @@ async def start_clip_extraction(
         asyncio.create_task(
             _run_clip_extraction(
                 project_id, specs, clips_dir, participant_count,
-                use_hours, anonymise,
+                use_hours, anonymise, cues_by_clip,
             )
         )
 

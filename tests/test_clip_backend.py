@@ -139,3 +139,36 @@ class TestExtractClip:
             output.write_bytes(b"clip")
             FFmpegBackend().extract_clip(source, output, 10.0, 20.0)
             assert mock_run.call_args[1]["timeout"] == timeout
+
+
+class TestSubtitleMux:
+    def _run(self, tmp_path: Path, subtitles: Path | None) -> list[str]:
+        source = tmp_path / "source.mp4"
+        source.write_bytes(b"fake")
+        output = tmp_path / "clip.mp4"
+        output.write_bytes(b"clip")
+        mock_result = MagicMock(returncode=0, stderr="")
+        with patch(
+            "bristlenose.server.clip_backend.subprocess.run", return_value=mock_result,
+        ) as mock_run:
+            FFmpegBackend().extract_clip(source, output, 10.0, 20.0, subtitles)
+        return list(mock_run.call_args[0][0])
+
+    def test_without_subtitles_the_command_is_unchanged(self, tmp_path: Path) -> None:
+        args = self._run(tmp_path, None)
+        assert args[1:] == [
+            "-ss", "10.000", "-to", "20.000", "-i", str(tmp_path / "source.mp4"),
+            "-c", "copy", "-y", str(tmp_path / "clip.mp4"),
+        ]
+
+    def test_subtitles_are_a_second_input_muxed_as_mov_text(self, tmp_path: Path) -> None:
+        srt = tmp_path / "clip.srt"
+        srt.write_text("1\n00:00:00,000 --> 00:00:01,000\nhi\n")
+        args = self._run(tmp_path, srt)
+        joined = " ".join(args)
+        assert f"-i {srt}" in joined
+        # Only the source's video and audio, so a data track can't break the cut.
+        assert "-map 0:v? -map 0:a? -map 1:0" in joined
+        assert "-c copy -c:s mov_text" in joined
+        # The seek stays an input option on the source, before its -i.
+        assert args.index("-ss") < args.index(str(tmp_path / "source.mp4"))

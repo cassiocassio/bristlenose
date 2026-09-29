@@ -23,8 +23,13 @@ class ClipBackend(Protocol):
 
     def extract_clip(
         self, source: Path, output: Path, start: float, end: float,
+        subtitles: Path | None = None,
     ) -> Path | None:
-        """Extract a clip. Returns output path on success, None on failure."""
+        """Extract a clip. Returns output path on success, None on failure.
+
+        ``subtitles`` (an SRT file, timed from the clip's start) is muxed in
+        as a soft subtitle track when given.
+        """
         ...
 
     def check_available(self) -> tuple[bool, str]:
@@ -43,11 +48,20 @@ class FFmpegBackend:
 
     def extract_clip(
         self, source: Path, output: Path, start: float, end: float,
+        subtitles: Path | None = None,
     ) -> Path | None:
         """Extract a clip using FFmpeg stream-copy into .mp4 container.
 
         Uses ``-ss`` before ``-i`` (input seeking) for speed.
         Stream-copy (``-c copy``) preserves codec without re-encoding.
+
+        With ``subtitles``, the file is a second input muxed as a ``mov_text``
+        track (MPEG-4 Timed Text), still without re-encoding the video. Only
+        the source's video and audio are mapped, so a data or timecode track
+        in a Zoom or Teams file can't break the cut. The cut starts on the
+        requested frame, not the keyframe before it — ffmpeg writes an edit
+        list — so subtitles timed from ``start`` stay in sync (measured
+        frame-exact, 29 Sep 2026).
         """
         output.parent.mkdir(parents=True, exist_ok=True)
 
@@ -64,17 +78,19 @@ class FFmpegBackend:
             return None
 
         ffmpeg = bundled_binary_path("ffmpeg") or "ffmpeg"
+        cmd = [ffmpeg, "-ss", f"{start:.3f}", "-to", f"{end:.3f}", "-i", str(source)]
+        if subtitles is not None:
+            cmd += [
+                "-i", str(subtitles),
+                "-map", "0:v?", "-map", "0:a?", "-map", "1:0",
+                "-c", "copy", "-c:s", "mov_text",
+            ]
+        else:
+            cmd += ["-c", "copy"]
+        cmd += ["-y", str(output)]
         try:
             result = subprocess.run(
-                [
-                    ffmpeg,
-                    "-ss", f"{start:.3f}",
-                    "-to", f"{end:.3f}",
-                    "-i", str(source),
-                    "-c", "copy",
-                    "-y",
-                    str(output),
-                ],
+                cmd,
                 capture_output=True,
                 text=True,
                 timeout=120,

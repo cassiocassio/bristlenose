@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -9,6 +11,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from bristlenose.server.app import create_app
+from bristlenose.server.clip_manifest import ClipSpec
+from bristlenose.server.clip_subtitles import Cue, to_webvtt
+from bristlenose.server.models import Quote, QuoteEdit
 from bristlenose.server.routes import clips_export
 from tests.conftest import AuthTestClient
 
@@ -210,3 +215,108 @@ class TestRevealClips:
         # The tmp_path clips_dir is not inside the fixture dir, so this should be
         # rejected by the is_relative_to check.
         assert resp.status_code in (403, 404)
+
+
+# ---------------------------------------------------------------------------
+# Subtitles
+# ---------------------------------------------------------------------------
+
+
+def _spec(source: Path, start: float = 7.0, end: float = 20.0) -> ClipSpec:
+    return ClipSpec(
+        quote_id="q-p1-10", participant_id="p1", session_id="s1",
+        source_path=source, start=start, end=end, raw_start=10.0,
+        speaker_name="", quote_gist="i found the dashboard",
+        is_audio_only=False, is_starred=True, is_hero=False,
+    )
+
+
+class TestClipCues:
+    """Built against the smoke project's real transcript and quote rows."""
+
+    def _db(self, client: TestClient):  # type: ignore[no-untyped-def]
+        return client.app.state.db_factory()  # type: ignore[attr-defined]
+
+    def test_everyone_audible_is_subtitled_with_bbc_colours(self, client: TestClient) -> None:
+        db = self._db(client)
+        try:
+            cues = clips_export._build_clip_cues(db, 1, _spec(_FIXTURE_DIR / "x.mp4"))
+        finally:
+            db.close()
+        # The padding before the quote carries the moderator's question.
+        assert cues[0].speaker_code == "m1" and cues[0].colour == "yellow"
+        assert {c.speaker_code: c.colour for c in cues}["p1"] == "white"
+        assert cues[0].start == 0.0
+        assert all(c.end <= 13.0 + 1e-9 for c in cues)
+        text = " ".join(line for c in cues for line in c.lines)
+        assert "dashboard pretty confusing" in text
+
+    def test_researcher_correction_reaches_the_subtitles(self, client: TestClient) -> None:
+        db = self._db(client)
+        try:
+            quote = db.query(Quote).filter(Quote.start_timecode == 10.0).one()
+            db.add(QuoteEdit(
+                quote_id=quote.id,
+                edited_text=quote.text.replace("dashboard", "DashBoard Pro"),
+            ))
+            db.commit()
+            cues = clips_export._build_clip_cues(db, 1, _spec(_FIXTURE_DIR / "x.mp4"))
+        finally:
+            db.close()
+        text = " ".join(line for c in cues for line in c.lines)
+        assert "DashBoard Pro" in text
+        assert "the dashboard pretty" not in text
+
+    def test_no_speaker_name_or_code_in_the_subtitles(self, client: TestClient) -> None:
+        db = self._db(client)
+        try:
+            cues = clips_export._build_clip_cues(db, 1, _spec(_FIXTURE_DIR / "x.mp4"))
+        finally:
+            db.close()
+        vtt = to_webvtt(cues)
+        assert "p1" not in vtt and "m1" not in vtt
+
+
+class TestExtractionWritesSubtitles:
+    def _cues(self) -> list[Cue]:
+        return [Cue(start=0.0, end=2.0, speaker_code="p1", colour="white", lines=("Hi.",))]
+
+    def _run(self, tmp_path: Path, cues: dict[int, list[Cue]], fail_with_subs: bool) -> dict:
+        calls: list[Path | None] = []
+
+        def fake_extract(self, source, output, start, end, subtitles=None):  # type: ignore[no-untyped-def]
+            calls.append(subtitles)
+            if subtitles is not None:
+                assert subtitles.exists()  # the temp SRT is there while ffmpeg runs
+                if fail_with_subs:
+                    return None
+            output.write_bytes(b"clip")
+            return output
+
+        clips_export._jobs[1] = {"status": "running", "progress": 0, "total": 1}
+        with patch.object(clips_export.FFmpegBackend, "extract_clip", fake_extract):
+            asyncio.run(clips_export._run_clip_extraction(
+                1, [_spec(tmp_path / "src.mp4")], tmp_path, 1, False, False, cues,
+            ))
+        manifest = json.loads((tmp_path / "clips_manifest.json").read_text())
+        return {"calls": calls, "manifest": manifest}
+
+    def test_vtt_beside_the_clip_and_in_the_manifest(self, tmp_path: Path) -> None:
+        out = self._run(tmp_path, {0: self._cues()}, fail_with_subs=False)
+        entry = out["manifest"]["clips"][0]
+        assert entry["subtitles"] == entry["filename"].rsplit(".", 1)[0] + ".vtt"
+        assert (tmp_path / entry["subtitles"]).read_text().startswith("WEBVTT")
+        assert len(out["calls"]) == 1 and out["calls"][0] is not None
+        assert not list(tmp_path.glob(".*.srt.tmp"))  # temp SRT cleaned up
+
+    def test_failed_subtitle_mux_still_cuts_the_clip(self, tmp_path: Path) -> None:
+        out = self._run(tmp_path, {0: self._cues()}, fail_with_subs=True)
+        assert out["calls"][0] is not None and out["calls"][1] is None
+        assert out["manifest"]["completed"] == 1
+        assert not list(tmp_path.glob(".*.srt.tmp"))
+
+    def test_no_transcript_text_means_no_vtt(self, tmp_path: Path) -> None:
+        out = self._run(tmp_path, {}, fail_with_subs=False)
+        assert out["manifest"]["clips"][0]["subtitles"] is None
+        assert out["calls"] == [None]
+        assert not list(tmp_path.glob("*.vtt"))

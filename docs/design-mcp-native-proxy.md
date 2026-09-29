@@ -136,8 +136,13 @@ restarting ChatGPT leaves the plugin dead until the next restart. The first
 no-Node run looked like a pass for that reason and had to be redone with a
 restart and a control.
 
-Claude Desktop is different: `.mcpb` extensions of `type: node` run on the
-Node that Claude ships.
+Claude Desktop is different: a `.mcpb` extension of `type: node` runs inside
+Claude's own utility process, `Claude Helper (Plugin).app`
+(`--utility-sub-type=node.mojom.NodeService`), whose parent is Claude. It is not
+a separate `node` binary, and no process carries our `index.js` in its argv, so
+`ps | grep index.js` finds nothing under Claude. Its container reads are
+therefore Claude's. *Measured in a macOS 27 guest; that fact does not depend
+on SIP.*
 
 ## 3. macOS 27: who is allowed to read our container
 
@@ -213,6 +218,12 @@ So:
   seatbelt sandbox, not macOS privacy. Probe from Terminal via a `.command`
   file (`open -a Terminal x.command`), which is a clean host with its own
   identity.
+- **A test VM with SIP off measures nothing here.** Cirrus Labs' Tart
+  `macos-*-base` and `-xcode` images disable System Integrity Protection; only
+  `-vanilla` keeps it on. In a SIP-off macOS 27 guest, Claude Desktop's first
+  read through the shipped Node `.mcpb` returned data with no dialog, no TCC
+  row and no tccd line, which is meaningless. Check `csrutil status` in any
+  guest before believing a privacy result from it (29 Sep 2026).
 - **Always read tccd, and read the attribution.** `/usr/bin/log show --start
   "<time>" --predicate 'process == "tccd"' --style compact`, then follow one
   `msgID` through `AUTHREQ_ATTRIBUTION` (responsible / accessing) →

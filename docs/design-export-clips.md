@@ -297,10 +297,11 @@ Only **C is foolproof** for "drop it into PowerPoint and press play". A and B ar
 
 ### Styling — decided 29 Sep 2026
 
-- **White text on a semi-opaque black box, not an outline.** Most Zoom and Teams recordings are screen shares of mostly white UI, where outlined white text disappears. The box stays readable on any background.
+- **The BBC Subtitle Guidelines are the spec.** Where they give a number, we use it. The BBC tested this guidance with viewers; we have no grounds to second-guess it, and it is the tradition the maintainer came into user research through. The figures are listed under Prior art below.
+- **White text on a solid black box, not an outline** (BBC §8.1, §9.2.4). Most Zoom and Teams recordings are screen shares of mostly white UI, where outlined white text disappears. The box stays readable on any background.
 - **One colour, white. No speaker labels and no per-speaker colours.** A quote is one participant's voice by construction: quotes are filtered for participant speech and narrowed to a single speaker. Most interviews are 1:1, and a viewer can tell from context who is speaking. `P3:`-style badges would only distract.
 - **Kept for later:** exporting an **arbitrary transcript range across speakers** is the one future surface where a clip holds two voices. When it exists, use the BBC convention (speaker colours in the order white, yellow, cyan, green, with a dash on each change of speaker) rather than code labels.
-- **Two lines of at most ~42 characters each**, with cues broken on word timings and never mid-word. The characters-per-line figure depends on the font and the size, so it gets settled by the experiments below.
+- **Layout per the BBC:** at most 2 lines (§3.3), each no wider than 68% of the frame (§3.1), bottom-centre inside the central 90% of the height (§10). Font size 1/15 of frame height (6.67%) with a line height of 8% (§9.2.1). The box is exactly one line high with no gap between lines, plus 0.5 em each side (§9.2.4). Cues break on word timings, never mid-word.
 
 ### Font
 
@@ -312,7 +313,7 @@ The two delivery modes answer the font question differently. That is the argumen
   - *The machine's system font* (SF on a Mac). It looks native in a Keynote deck, but the output then depends on where it was made: the CLI on Linux would burn DejaVu or whatever fontconfig finds. SF would also only be reachable cleanly through CoreText, i.e. the future AVFoundation backend. Handing libass the SF font file directly is fragile and a licensing grey area (**unverified**).
   - *One bundled font, Inter* (OFL). The pixels come out identical on every channel. The metrics are known, so line wrapping and sizing can be computed and tested once rather than per machine. It costs a few hundred KB in the bundle for one weight (**estimate**).
 
-  **Recommendation: bundle Inter for burn-in.** A deck will be in the client's brand font, which no choice of ours can match, so the aim is a neutral, highly legible sans. Being identical everywhere matters more than feeling native for a file that gets passed from laptop to laptop. If the AVFoundation backend is ever built, it could offer the system font on the Mac, but that is a channel fork to take deliberately, not by default.
+  **Recommendation: bundle one font for burn-in, chosen by the BBC's criterion — "a wide font" (§9.1).** The BBC's own examples cannot be bundled: Reith Sans is the BBC's in-house face, and Verdana is Microsoft's and not redistributable. Tiresias's licence is unverified. So the choice is between **Inter** and **Atkinson Hyperlegible Next**, both OFL-style free and both wide; the sanity check below picks. A deck will be in the client's brand font, which no choice of ours can match, so the aim is a neutral, highly legible sans. Being identical everywhere matters more than feeling native for a file that gets passed from laptop to laptop. If the AVFoundation backend is ever built, it could offer the system font on the Mac, but that is a channel fork to take deliberately, not by default.
 
 ### Prior art — surveyed 29 Sep 2026
 
@@ -339,14 +340,14 @@ Sources were read on the page unless marked *claimed* (a secondary source or a s
 - **Size when projected:** AVIXA's DISCAS viewing standard puts the minimum element height at about 2.5–3.5% of *screen* height for typical room geometry ([source](https://www.avixa.org/resources/display-image-size-calculators/learn-more-about-display-size)). A clip at half slide height halves our text, so we need about 5–7% of *clip* height. That lands on the BBC's 6.67%.
 - **Fonts:** Atkinson Hyperlegible Next (Braille Institute; free, 7 weights, 150+ languages; [source](https://www.brailleinstitute.org/freefont/)) is designed for letterform distinction at low vision, and it is a wide humanist sans of the kind BBC §9.1 and DCMP ask for. It is a serious rival to Inter here. No study compares Inter, SF or Netflix Sans for subtitles.
 
-### Size — experiments owed
+### Size — BBC figures, one sanity check owed
 
-Nothing is decided here until a clip has been seen in a real deck. The case to design for is a **video shrunk inside a slide**, not full screen: a clip often occupies half a slide, so the text must survive at 50% scale on a projector. Proposed matrix:
+**Adopt the BBC numbers above as they stand.** The one situation the BBC guidance was not written for is a **video shrunk inside a slide**: a clip often fills only half a slide, which halves the text. The AVIXA arithmetic under Prior art says 6.67% of clip height still clears the projected minimum at half-slide size. One check confirms it before anything ships:
 
-- Font size at 5%, 6.67% (the BBC's 1/15) and 8% of frame height, with line height ×1.2 (size as a fraction of the frame, so 720p and 1080p come out the same). The prior art above predicts 6.67% wins.
-- Box at 75% and 100% black; font Inter vs Atkinson Hyperlegible Next.
-- Three sources: a 720p Zoom screen share, 1080p Teams speaker view, and a portrait phone recording.
-- Each output placed in a PowerPoint and a Keynote slide at full-slide and half-slide size, viewed on a laptop and on a TV or projector.
+- Render one clip at the BBC size in each candidate font.
+- Use two sources: a 720p Zoom screen share (white UI, the hard case) and a 1080p Teams speaker view.
+- Place each in a PowerPoint slide at half-slide size and view it on a projector or TV from the back of a room.
+- If it reads, ship the BBC numbers and whichever font read better. If it doesn't, that is a finding worth writing down, not a reason to tune by eye.
 
 **Tooling note:** Homebrew's ffmpeg has **no** `subtitles`/`ass` filter (checked 29 Sep 2026), and the bundled binary exits 133 outside the sandbox. The experiments therefore need the unsigned martin-riedl 8.1 download that `desktop/scripts/fetch-ffmpeg.sh` pins.
 

@@ -116,7 +116,7 @@ procurement; under-listing would be a compliance risk.
 | `distro` | 1.9.0 | Apache Software License | <https://github.com/python-distro/distro> |
 | `docstring_parser` | 0.18.0 | MIT License | <https://github.com/rr-/docstring_parser> |
 | `et_xmlfile` | 2.0.0 | MIT License | <https://foss.heptapod.net/openpyxl/et_xmlfile> |
-| `fastapi` | 0.141.1 | MIT | <https://github.com/fastapi/fastapi> |
+| `fastapi` | 0.142.0 | MIT | <https://github.com/fastapi/fastapi> |
 | `filelock` | 4.0.6 | MIT | <https://github.com/tox-dev/py-filelock> |
 | `flatbuffers` | 25.12.19 | Apache Software License | <https://google.github.io/flatbuffers/> |
 | `fsspec` | 2026.9.0 | BSD-3-Clause | <https://github.com/fsspec/filesystem_spec> |
@@ -145,8 +145,8 @@ procurement; under-listing would be a compliance risk.
 | `mcp` | 2.2.0 | MIT License | <https://modelcontextprotocol.io> |
 | `mcp-types` | 2.2.0 | MIT License | <https://modelcontextprotocol.io> |
 | `mdurl` | 0.1.2 | MIT License | <https://github.com/executablebooks/mdurl> |
-| `mlx` | 0.32.2 | MIT | <https://github.com/ml-explore/mlx> |
-| `mlx-metal` | 0.32.2 | MIT | <https://github.com/ml-explore/mlx> |
+| `mlx` | 0.32.3 | MIT | <https://github.com/ml-explore/mlx> |
+| `mlx-metal` | 0.32.3 | MIT | <https://github.com/ml-explore/mlx> |
 | `mlx-whisper` | 0.4.3 | MIT | <https://github.com/ml-explore/mlx-examples> |
 | `more-itertools` | 11.1.0 | MIT | <https://github.com/more-itertools/more-itertools> |
 | `mpmath` | 1.3.0 | BSD License | <http://mpmath.org/> |
@@ -154,7 +154,7 @@ procurement; under-listing would be a compliance risk.
 | `networkx` | 3.7 | BSD-3-Clause | <https://networkx.org/> |
 | `numba` | 0.67.0 | BSD License | <https://numba.pydata.org> |
 | `numpy` | 2.4.6 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | <https://numpy.org> |
-| `openai` | 3.20.0 | Apache-2.0 | <https://github.com/openai/openai-python> |
+| `openai` | 3.22.0 | Apache-2.0 | <https://github.com/openai/openai-python> |
 | `openpyxl` | 3.1.5 | MIT License | <https://openpyxl.readthedocs.io> |
 | `opentelemetry-api` | 1.45.0 | Apache-2.0 | <https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api> |
 | `packaging` | 26.3 | Apache-2.0 OR BSD-2-Clause | <https://github.com/pypa/packaging> |
@@ -175,14 +175,14 @@ procurement; under-listing would be a compliance risk.
 | `python-multipart` | 0.0.32 | Apache-2.0 | <https://github.com/Kludex/python-multipart> |
 | `PyYAML` | 6.0.3 | MIT License | <https://pyyaml.org/> |
 | `referencing` | 0.37.0 | MIT | <https://github.com/python-jsonschema/referencing> |
-| `regex` | 2026.9.10 | Apache-2.0 AND CNRI-Python | <https://github.com/mrabarnett/mrab-regex> |
+| `regex` | 2026.9.29 | Apache-2.0 AND CNRI-Python | <https://github.com/mrabarnett/mrab-regex> |
 | `requests` | 2.34.2 | Apache Software License | <https://github.com/psf/requests> |
 | `requests-file` | 3.0.1 | Apache Software License | <https://codeberg.org/dashea/requests-file> |
 | `rich` | 15.0.0 | MIT License | <https://github.com/Textualize/rich> |
 | `rpds-py` | 2026.6.3 | MIT | <https://github.com/crate-py/rpds> |
 | `scipy` | 1.18.1 | BSD License | <https://scipy.org/> |
 | `shellingham` | 1.5.4 | ISC License (ISCL) | <https://github.com/sarugaku/shellingham> |
-| `smart_open` | 8.0.1 | MIT License | <https://github.com/piskvorky/smart_open> |
+| `smart_open` | 8.0.2 | MIT License | <https://github.com/piskvorky/smart_open> |
 | `sniffio` | 1.3.1 | Apache Software License; MIT License | <https://github.com/python-trio/sniffio> |
 | `spacy-legacy` | 3.0.12 | MIT License | <https://spacy.io> |
 | `spacy-loggers` | 1.0.5 | MIT | <https://github.com/explosion/spacy-loggers> |

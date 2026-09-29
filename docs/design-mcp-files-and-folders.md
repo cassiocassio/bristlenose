@@ -245,18 +245,20 @@ the copy button:
 
 **(b) The plugin era.** The tab takes the Claude Desktop tab's shape: hint,
 install row, Files & Folders step naming ChatGPT, plus the Work line. The
-install gesture itself is **not designed here**. The spike hasn't answered
-whether `codex://plugins/install/bristlenose?marketplace=…` works against a
-marketplace that isn't registered yet, and that decides whether the button is
-one click or a paste. Two known blockers to name before this ships:
+install gesture itself is **not designed here**. The spike has since measured
+that a one-click install works from the `marketplace.json` **file** path
+(`codex://plugins/<name>?marketplacePath=…`), per
+[`design-mcp-native-proxy.md`](design-mcp-native-proxy.md). Two known
+blockers to name before this ships:
 
-- **Node from PATH.** ChatGPT spawns the proxy with the login-shell PATH. On
-  the test Mac that resolved to Homebrew's node. **On a Mac with no
-  user-installed Node, nothing on that PATH supplies one.** ChatGPT's bundled
-  `cua_node` isn't on it. The `.mcpb` doesn't have this problem, because
-  Claude Desktop ships its own Node for extensions. Until it's solved, the
-  plugin path works only for researchers who happen to have Node. No copy can
-  fix that, and the tab mustn't imply otherwise.
+- **Node is not supplied.** ChatGPT spawns the proxy with the login-shell
+  PATH, and **measured with a control, ChatGPT does not supply Node to
+  plugins.** On the test Mac `node` resolved to Homebrew's. The `.mcpb` doesn't
+  have this problem, because Claude Desktop ships its own Node for extensions.
+  A Node proxy under ChatGPT works only for researchers who happen to have
+  Node. No copy can fix that, and the tab mustn't imply otherwise. The native
+  proxy (`design-mcp-native-proxy.md`) removes this blocker and the Files &
+  Folders step together, if its private SPI can ship.
 - **The TOML path doesn't go away.** It's the one ChatGPT route with no
   permission step and no Node dependency. Keep it as the fallback, as the
   Generic MCP tab is for everything else.

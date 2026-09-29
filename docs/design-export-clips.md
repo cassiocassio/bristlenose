@@ -293,7 +293,16 @@ _Proposed 29 Sep 2026, from the closed GitHub issue #59 ("overlay subtitles" was
 
 Only **C is foolproof** for "drop it into PowerPoint and press play". A and B are cheap and keep the stream-copy guarantee (Decision 2), but each needs the viewer's player to cooperate.
 
-**Burning in is possible with what we already ship.** The bundled ffmpeg (martin-riedl 8.1 build) was configured with `--enable-libass --enable-libfreetype --enable-libharfbuzz --enable-libx264`, and its binary carries the `subtitles` and `drawtext` filter names (read from the binary's strings, 29 Sep 2026). The binary itself exits 133 when run outside the sandbox, so this was **not run**. The path would be: write an `.ass` file per clip, then `-vf subtitles=clip.ass:fontsdir=<bundled fonts>` with x264, or with `h264_videotoolbox` for hardware encoding. **Risk:** inside the sandbox, fontconfig may not find system fonts, so bundle the chosen font (Inter, below) and pass `fontsdir`. A future AVFoundation backend would do the same job natively: `AVVideoCompositionCoreAnimationTool` with `CATextLayer`s, hardware encoding and system fonts, with no libass involved.
+**Burning in is possible with what we already ship — and the trial ran (29 Sep 2026).** The bundled ffmpeg (martin-riedl build — the binary on disk reports **8.0.1**, though `desktop/scripts/fetch-ffmpeg.sh` pins 8.1, so the bundle predates the pin) was configured with `--enable-libass --enable-libfreetype --enable-libharfbuzz --enable-libx264`, and its binary carries the `subtitles` and `drawtext` filter names (read from the binary's strings, 29 Sep 2026). The binary itself exits 133 when run outside the sandbox, so this was **not run**. The path would be: write an `.ass` file per clip, then `-vf subtitles=clip.ass:fontsdir=<bundled fonts>` with x264, or with `h264_videotoolbox` for hardware encoding. **Risk:** inside the sandbox, fontconfig may not find system fonts, so bundle the chosen font (Inter, below) and pass `fontsdir`. A future AVFoundation backend would do the same job natively: `AVVideoCompositionCoreAnimationTool` with `CATextLayer`s, hardware encoding and system fonts, with no libass involved.
+
+  **Trial, measured 29 Sep 2026.** The bundled binary exits 133 when run outside the sandbox, but a copy re-signed ad hoc (`codesign --remove-signature` then `codesign -s - --force`) runs without a download. It has `subtitles`, `ass` and `drawtext`, plus `libx264` and `h264_videotoolbox`. Two FOSSDA clips (18 s and 21 s, 1280×720) were each converted from their `.vtt` to `.ass`:
+  - Inter, from `~/Library/Fonts` via `fontsdir`, at 48 px = 1/15 of the frame height;
+  - `BorderStyle=3` for the box, with 75% black (`&H40000000`) and padding 0.15 × font size;
+  - side margins of 16% (lines no wider than 68% of the frame) and a bottom margin of 5%;
+  - `WrapStyle 2`, keeping the `.vtt`'s own line breaks;
+  - speaker colour as a `\c` override.
+
+  They were burned with `libx264 -crf 18 -preset veryfast` and the audio copied: **about 0.6 s per clip, 2–3 MB each.** Frames were checked, and Inter rendered, not a fallback. The maintainer confirmed it in QuickTime ("burn in works"). On these Zoom recordings the text lands in the black letterbox band, so the box is invisible there; a screen share without letterboxing is the case that exercises it.
 
 ### Styling — decided 29 Sep 2026
 
@@ -377,6 +386,32 @@ What that changes, and what it doesn't:
 3. **Audio-only sessions** (`.m4a`) can't carry burned-in text. A possible extension is an "audiogram": render a plain `.mp4` of a title card (the gist) with the subtitles over it, so audio quotes can go into a deck too. This is not decided.
 
 **Still open:** whether the burned copy replaces the clean clip or sits beside it (`… (subtitled).mp4`; the Font section argues for beside). Font (Inter) and size (the BBC's) are decided.
+
+### The embedded track needs a language tag — found 29 Sep 2026
+
+QuickTime showed nothing for an exported clip until the track was tagged. With the track's language `und`, macOS's own player framework offers two options, "Unknown language" and "Unknown language Forced", and picks the **Forced** one by default. That option shows only lines flagged as forced; ours are none, so *Subtitles ▸ On (Language)* displays nothing. Re-muxed with `language=eng`, it offers "English" and QuickTime shows the track. macOS 27 then also offers a live-translated track ("Spanish (Spain) Translated"), which exists only because the subtitles are real text.
+
+The language is known upstream but lost before the export. Whisper detects it per session (since 0.31.0, `cca68462`), `SessionTranscript.detected_language` holds it, and the transcript header records `# Language: ja (detected)`. But the serve database has **no column** for it and the importer doesn't read the header. The header is also deliberately omitted when the language was pinned with `--whisper-language`, which for tagging is exactly the right value. Proposed chain:
+1. a `Session.language` column (Alembic migration);
+2. the importer reads it from the header;
+3. a pinned language is recorded with its provenance (`(set)` beside `(detected)`);
+4. the clip track is tagged with the ISO 639-2 code, and later the player's `<track srclang>`.
+
+Still unknown by construction: platform transcripts (Teams, Zoom, docx) and projects from before 0.31.0. **Open:** their fallback, `und` (honest, hidden until chosen) or the researcher's app language.
+
+### Subtitles in Bristlenose's own player — scope added 29 Sep 2026, not built
+
+The maintainer wants the popout player to show the same subtitles, switched on and off from **Appearance** and/or the **Video** menu. Mapped, not designed:
+- The popout is a web page, `bristlenose/theme/templates/player.html`, opened with `window.open` and hosted in a `WKWebView` window (`WebView.swift` `createWebViewWith`).
+- It is controlled over `postMessage` (`bristlenose-seek` and `bristlenose-command`). A `toggleSubtitles` command would sit beside `togglePip`.
+- The Video menu reaches it through `bridgeHandler.menuAction` → `useKeyboardShortcuts` → `sendCommand`. A checkmark item follows the Focus Mode `Toggle` pattern (`MenuCommands.swift`).
+
+Three traps:
+1. **The player page is a copy baked into each project** by the sealed static renderer (`_write_player_html`), so an edit to the template never reaches existing projects. It needs a live route, as the theme CSS has.
+2. **A `<track src>` can't send the bearer token.** The `.vtt` has to come from a route the auth cookie covers, or be fetched with the token and handed to the track as a blob URL.
+3. **The popout `WKWebView` isn't registered with the bridge**, so an Appearance toggle reaches the player through the report page (`sendCommand`) or shared `localStorage`. It must not go through `.bristlenosePrefsChanged`, which restarts serve.
+
+A whole-session `.vtt` route can reuse `clip_subtitles.py`'s cue building.
 
 ---
 

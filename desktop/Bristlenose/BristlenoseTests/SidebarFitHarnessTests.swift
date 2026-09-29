@@ -257,6 +257,21 @@ final class UnconstrainedWindow: NSWindow {
     }
 }
 
+/// The rigs' windows are on screen but transparent and click-through, so a
+/// suite run does not throw a minute of resizing windows over the desktop
+/// of whoever is running it. They have to stay on screen: with no display, Core
+/// Animation stops advancing and the animated scenarios fail (desktop/CLAUDE.md),
+/// and a window moved off every screen has no display to run on. Occlusion was
+/// surveyed during the diagnosis and changed nothing, which is why transparency
+/// is safe. To watch a run, pass `TEST_RUNNER_BRISTLENOSE_SIDEBAR_HARNESS_VISIBLE=1`
+/// to xcodebuild (the prefix is how an env var reaches the test process).
+@MainActor
+func hideHarnessWindow(_ window: NSWindow) {
+    guard ProcessInfo.processInfo.environment["BRISTLENOSE_SIDEBAR_HARNESS_VISIBLE"] != "1" else { return }
+    window.alphaValue = 0
+    window.ignoresMouseEvents = true
+}
+
 @MainActor
 struct SidebarFitRig {
     let probe = SidebarFitProbe()
@@ -294,6 +309,7 @@ struct SidebarFitRig {
             window.contentView?.layoutSubtreeIfNeeded()
             splitController?.splitView.autosaveName = identifier + SidebarAutosaveMigration.keySuffix
         }
+        hideHarnessWindow(window)
         window.orderFront(nil)
         await settle()
     }

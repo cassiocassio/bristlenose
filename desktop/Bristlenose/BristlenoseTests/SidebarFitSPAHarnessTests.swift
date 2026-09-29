@@ -240,6 +240,7 @@ struct SPARig {
         if unifiedToolbar { window.toolbarStyle = .unified }
         window.contentViewController = host
         window.setContentSize(NSSize(width: width, height: 700))
+        hideHarnessWindow(window)
         window.orderFront(nil)
         await settle()
     }

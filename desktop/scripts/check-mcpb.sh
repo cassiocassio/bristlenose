@@ -79,9 +79,9 @@ with zipfile.ZipFile(path) as z:
                 "proxy VERSION is the unstamped placeholder — "
                 "build-mcpb.sh must stamp it before packing"
             )
-        if b"BRISTLENOSE_DEV_MCP_HANDSHAKE" in data:
+        if b"BRISTLENOSE_DEV_" in data:
             failures.append(
-                f"dev handshake override shipped in {name} — "
+                f"a BRISTLENOSE_DEV_* override shipped in {name} — "
                 "build-mcpb.sh must strip mcpb-dev-only lines"
             )
 

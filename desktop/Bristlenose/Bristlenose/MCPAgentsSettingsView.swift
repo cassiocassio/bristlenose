@@ -140,6 +140,25 @@ struct MCPAgentsSettingsView: View {
         }
     }
 
+    // MARK: - macOS 27 Files & Folders
+
+    /// macOS 27 denies an agent app's read of another team's container with no
+    /// prompt (`kTCCServiceSystemPolicyAppDataDetailed`); macOS 26 asked once.
+    /// A platform fact, read once. It is not a fact about the client.
+    static let macOSDeniesCrossTeamContainerReads: Bool =
+        ProcessInfo.processInfo.isOperatingSystemAtLeast(
+            OperatingSystemVersion(majorVersion: 27, minorVersion: 0, patchVersion: 0))
+
+    /// Files & Folders directly (verified to open that pane on 27.0). If the
+    /// anchor ever stops resolving, fall back to System Settings itself rather
+    /// than to nothing: a button that does nothing reads as our bug.
+    static func openFilesAndFolders() {
+        let pane = URL(string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_FilesAndFolders")!
+        if !NSWorkspace.shared.open(pane) {
+            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:")!)
+        }
+    }
+
     // MARK: - Derived serve state
 
     private var endpoint: String? {
@@ -983,10 +1002,36 @@ struct MCPAgentsSettingsView: View {
                 // OWN dialog wording and button label (lifted from
                 // TCC.framework's Localizable.loctable), so the sentence
                 // read here matches the dialog seen a moment later.
-                Text(i18n.t("desktop.mcpAgents.claudeDesktopPromptNote"))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                //
+                // macOS 27 changed the mechanism under this note: a cross-team
+                // container read is DENIED with no dialog, and the grant is a
+                // switch in Files & Folders (measured 29 Sep 2026 for Claude and
+                // ChatGPT, docs/design-mcp-files-and-folders.md §1). So on 27 the
+                // note names the switch and offers the one click we can give.
+                // The app cannot see another app's TCC state, so it's always
+                // shown on 27: from here a denial looks the same as "nobody has
+                // asked yet". The button sits on the note's trailing edge, the
+                // same shape as `addressNote` + Copy Config on the other tabs.
+                if Self.macOSDeniesCrossTeamContainerReads {
+                    HStack(alignment: .top) {
+                        Text(i18n.t("desktop.mcpAgents.filesFoldersNote", ["app": "Claude"]))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer()
+                        // Bordered, not prominent: Install stays the pane's one
+                        // filled button. No ellipsis: nothing more happens in THIS
+                        // app, and Apple's own "Open System Settings" has none.
+                        Button(i18n.t("desktop.mcpAgents.openFilesFolders")) {
+                            Self.openFilesAndFolders()
+                        }
+                    }
+                } else {
+                    Text(i18n.t("desktop.mcpAgents.claudeDesktopPromptNote"))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             } else if endpoint == nil {
                 // Nothing is serving, so there is no address and no token —
                 // but the SHAPE of the config is the useful thing to a

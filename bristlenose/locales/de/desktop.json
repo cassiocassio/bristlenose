@@ -978,6 +978,8 @@
     "downloadClaudeDesktop": "Claude Desktop ist nicht installiert \u2014 Download auf claude.ai",
     "claudeDesktopHint": "F\u00fcgt Bristlenose als Erweiterung zu Claude Desktop hinzu. Claude Desktop bittet um Best\u00e4tigung.",
     "claudeDesktopPromptNote": "Bei der ersten Frage fragt macOS einmalig, ob Claude auf Daten aus anderen Apps zugreifen darf. Auf \u201eErlauben\u201c klicken \u2014 so findet die Erweiterung Bristlenose.",
+    "filesFoldersNote": "Bei der ersten Frage blockiert macOS den Zugriff von {{app}} auf Bristlenose, ohne nachzufragen. Zum Freigeben Systemeinstellungen \u25b8 Datenschutz & Sicherheit \u25b8 Dateien & Ordner \u00f6ffnen, {{app}} aufklappen und Bristlenose aktivieren \u2014 dann erneut fragen.",
+    "openFilesFolders": "Dateien & Ordner \u00f6ffnen",
     "genericHow": "Geben Sie diese beiden Werte an einen beliebigen MCP-kompatiblen Agenten weiter:",
     "clients": {
       "generic": "Generisches MCP"

@@ -22,6 +22,20 @@ const HANDSHAKES = [
   path.join(os.homedir(), "Library/Application Support/Bristlenose/mcp-handshake.json"),
 ].filter(Boolean);
 
+// Which app this package runs inside, as the PACKAGE declares it in its
+// manifest's env (the .mcpb says "Claude"). Declared, never detected: the
+// proxy knows the protocol, not the client. Must equal the app's row label
+// in System Settings ▸ Files & Folders, i.e. its display name. Absent (a
+// hand-rolled config), the sentences say "your AI app", the same fallback
+// the native proxy uses (experiments/mcp-native-proxy/main.swift).
+const HOST = (process.env.BRISTLENOSE_MCP_HOST || "").trim();
+// macOS 27 (Darwin 27; macOS 26 is Darwin 25) denies a cross-team container
+// read with NO dialog, and the grant lives in Files & Folders. That's a
+// platform fact, not a client fact. Measured 29 Sep 2026
+// (docs/design-mcp-files-and-folders.md §1).
+let SILENT_TCC = process.platform === "darwin" && parseInt(os.release(), 10) >= 27;
+if (process.env.BRISTLENOSE_DEV_DARWIN_MAJOR) SILENT_TCC = parseInt(process.env.BRISTLENOSE_DEV_DARWIN_MAJOR, 10) >= 27; // mcpb-dev-only
+
 const VERSION = "0.0.0-dev";  // stamped at pack time by build-mcpb.sh;
                               // "-dev" means an unpacked dev-loop install.
 const log = (...a) => console.error("[bn-proxy]", ...a);
@@ -71,12 +85,23 @@ const MSG = {
     "this project's agent access is turned on, then ask again. " + GROUNDING,
   upstream: (status) => "Bristlenose answered with an unexpected error (HTTP " + status +
     "), so there is no study data for this question. " + GROUNDING,
-  // TCC denied/unanswered: name the macOS prompt in ITS words, and the
-  // recovery. Deliberately not "reinstall" — the extension is fine.
-  permission: "macOS is asking whether Claude may access data from other apps — " +
-    "that permission is how this extension finds Bristlenose. Tell the person to " +
-    "click Allow on the macOS dialog (or grant it in System Settings ▸ Privacy & " +
-    "Security), then ask again. " + GROUNDING,
+  // TCC denied. Deliberately not "reinstall": the extension is fine. On
+  // macOS 27 there is no dialog to click, so the sentence names the switch
+  // and says there's no prompt (a model otherwise tells the person to look
+  // for one), and heads off "reinstall"/"turn on Agent Access" explicitly.
+  // "expand", not "find": the row is a disclosure. §3 of
+  // docs/design-mcp-files-and-folders.md is the source of this wording.
+  permission: SILENT_TCC
+    ? "macOS has blocked " + (HOST || "your AI app") + " from reading Bristlenose. " +
+      "On this version of macOS there is no prompt — the access stays off until the " +
+      "person turns it on. Tell the person to open System Settings ▸ Privacy & " +
+      "Security ▸ Files & Folders, expand " + (HOST || "your AI app") +
+      " in the list, and turn on Bristlenose, then ask again. Nothing in Bristlenose " +
+      "needs changing. " + GROUNDING
+    : "macOS is asking whether " + (HOST || "your AI app") + " may access data from " +
+      "other apps — that permission is how this extension finds Bristlenose. Tell the " +
+      "person to click Allow on the macOS dialog (or grant it in System Settings ▸ " +
+      "Privacy & Security), then ask again. " + GROUNDING,
 };
 
 // Static tool list — served even when Bristlenose is closed (the fallback is
@@ -212,8 +237,9 @@ const TOOLS = [
 
 // TCC: the handshake lives in Bristlenose's app container, and when the
 // reader is Claude Desktop's Node process macOS attributes the read to
-// "Claude" and fires the SystemPolicyAppData prompt ("would like to access
-// data from other apps"). Measured 1 Aug 2026 — the spike's shell-read
+// "Claude". On macOS 26 that fires the SystemPolicyAppData prompt ("would
+// like to access data from other apps"); on macOS 27 it is denied with no
+// prompt (SystemPolicyAppDataDetailed; see MSG.permission). Measured 1 Aug 2026 — the spike's shell-read
 // evidence did NOT transfer to Claude-spawned processes (design §5c's
 // recorded caveat, resolved the bad way). One prompt is fine and sticky;
 // an unthrottled reader is a DIALOG STORM: every unanswered attempt spawns

@@ -978,6 +978,8 @@
     "downloadClaudeDesktop": "El Claude Desktop no està instal·lat — baixa'l de claude.ai",
     "claudeDesktopHint": "Afegeix el Bristlenose al Claude Desktop com a extensió. El Claude Desktop et demanarà que ho confirmis.",
     "claudeDesktopPromptNote": "La primera vegada que facis una pregunta, el macOS et demanarà un cop si el Claude pot accedir a dades d'altres apps. Fes clic a Permet — aquest permís és el que fa que l'extensió trobi el Bristlenose.",
+    "filesFoldersNote": "La primera vegada que facis una pregunta, el macOS impedir\u00e0 que l'app {{app}} llegeixi el Bristlenose, sense preguntar-ho. Per permetre-ho, obre Configuraci\u00f3 del Sistema \u25b8 Privacitat i seguretat \u25b8 Arxius i carpetes, desplega l'app {{app}} i activa el Bristlenose; despr\u00e9s torna a preguntar.",
+    "openFilesFolders": "Obre Arxius i carpetes",
     "genericHow": "Dona aquests dos valors a qualsevol agent compatible amb MCP:",
     "clients": {
       "generic": "MCP genèric"

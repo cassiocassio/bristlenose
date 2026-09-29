@@ -978,6 +978,8 @@
     "downloadClaudeDesktop": "Claude Desktop is niet ge\u00efnstalleerd \u2014 download het via claude.ai",
     "claudeDesktopHint": "Voegt Bristlenose als extensie toe aan Claude Desktop. Claude Desktop vraagt om bevestiging.",
     "claudeDesktopPromptNote": "De eerste keer dat je een vraag stelt, vraagt macOS eenmalig of Claude toegang mag krijgen tot gegevens uit andere apps. Klik op \u2018Sta toe\u2019 \u2014 zo vindt de extensie Bristlenose.",
+    "filesFoldersNote": "De eerste keer dat je een vraag stelt, voorkomt macOS zonder te vragen dat {{app}} Bristlenose leest. Om dat toe te staan, open je Systeeminstellingen \u25b8 Privacy en beveiliging \u25b8 Bestanden en mappen, klap je {{app}} uit en schakel je Bristlenose in. Stel daarna je vraag opnieuw.",
+    "openFilesFolders": "Open Bestanden en mappen",
     "genericHow": "Geef deze twee waarden aan elke MCP-compatibele agent:",
     "clients": {
       "generic": "Generieke MCP"

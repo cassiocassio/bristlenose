@@ -56,7 +56,7 @@ The report includes:
 - **Self-contained HTML export** -- one-click bundle for stakeholders, optional anonymisation
 - **Send to Miro** -- push analysed quotes straight onto a Miro board (a native sheet on macOS; a panel in the browser report)
 - **Incremental analysis** -- add more interviews to a finished project and re-run; your starred, tagged, and edited quotes carry across, and new material is flagged
-- **Ask your study from your own agent** -- a read-only MCP endpoint hands Claude, Claude Code, ChatGPT or Codex four tools over your curated quotes, themes, signals and codebook; on macOS it installs as a one-click extension with no address or token to paste, and each project is exposed only when you turn agent access on
+- **Ask your study from your own agent** -- a read-only MCP endpoint hands Claude, Claude Code, ChatGPT or Codex four tools over your curated quotes, themes, signals and codebook; on macOS it installs into Claude Desktop as a one-click extension and into the ChatGPT app as a one-click plugin, with no address, token or permission to set, and each project is exposed only when you turn agent access on
 - **22 UI languages** -- en, es, ca, fr, de, ko, ja, cs, it, pt-BR, pt-PT, zh-Hant, zh-Hant-HK, nl, fi, pl, ru, uk, da, sv, nb, tr (`--lang` flag; ten are machine-seeded community previews awaiting native review on [Weblate](https://hosted.weblate.org/projects/bristlenose/) -- Catalan is the exception among them, seeded on top of a glossary its native reviewers ratified first)
 
 

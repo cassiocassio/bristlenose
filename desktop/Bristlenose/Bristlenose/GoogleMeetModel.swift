@@ -796,6 +796,32 @@ struct CloudImportRow: Identifiable, Equatable {
         return localState.statusLabel(i18n)
     }
 
+    /// Which house kind `statusLabel` speaks in. Same switch, same order: the
+    /// video decides first, and only an available one defers to the local state.
+    ///
+    /// The view used to take the kind from `localState.messageKind` alone, which
+    /// is nil for `.notImported` — so every video status on a row not yet
+    /// imported had its label computed and then discarded, and "Needs access"
+    /// rendered as an empty cell. Stated beside the label so the two cannot
+    /// disagree about which half of the row is talking.
+    var statusKind: MessageKind? {
+        switch video {
+        case .notOrganiser, .notRecorded:
+            // Neutral. Someone else's meeting is the commonest row in an
+            // ordinary month, and a column of orange for it would leave orange
+            // meaning nothing; the dead checkbox already says it is withheld.
+            // An un-recorded meeting withheld nothing at all.
+            return .info
+        case .notResolved, .notOnThisPlan, .needsScope, .unsupported:
+            // A recording that exists and cannot be had — ours to fix for a
+            // failed match, the researcher's to chase for a scope, plan or
+            // tenant policy. Either way it earns the eye.
+            return .warning
+        case .available:
+            return localState.messageKind
+        }
+    }
+
     /// Whether this row survives the filter field.
     ///
     /// **Titles and people, not titles alone.** The filter used to test the

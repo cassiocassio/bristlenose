@@ -953,7 +953,7 @@ extension CloudImportOutlineView {
                 // pending and running are *status*, not kinds.
                 view.configureText(i18n.t("desktop.cloudImport.statusQueued"),
                                    colour: .secondaryLabelColor, bold: false)
-            } else if let label = row.statusLabel(i18n), let kind = row.localState.messageKind {
+            } else if let label = row.statusLabel(i18n), let kind = row.statusKind {
                 view.configure(label, kind: kind, bold: false)
             } else {
                 view.configureEmpty()

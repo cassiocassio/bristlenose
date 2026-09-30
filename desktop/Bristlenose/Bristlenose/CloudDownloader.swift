@@ -150,6 +150,19 @@ final class CloudDownloader: NSObject {
     /// `URLSessionDownloadDelegate` offers no route to pass context in.
     private var progressHandler: (@Sendable (Int64, Int64?) -> Void)?
 
+    /// The session task behind the current transfer, captured in
+    /// `didCreateTask` so its byte counters can be sampled. Written on the
+    /// delegate queue and read from the sampling task, hence the lock.
+    private let taskLock = NSLock()
+    private var _currentTask: URLSessionTask?
+    private var currentTask: URLSessionTask? {
+        get { taskLock.withLock { _currentTask } }
+        set { taskLock.withLock { _currentTask = newValue } }
+    }
+
+    /// How often a transfer's byte count is read while it runs.
+    static let progressSampleInterval: Duration = .milliseconds(250)
+
     init(session: URLSession? = nil, fileManager: FileManager = .default) {
         self.fileManager = fileManager
         // A configuration of our own so the redirect delegate is guaranteed to
@@ -214,8 +227,39 @@ final class CloudDownloader: NSObject {
         // array bookkeeping rather than in the network. The task streams to
         // disk in the kernel's own buffers and reports progress through the
         // delegate.
+        //
+        // **Progress is sampled, not delivered.** The async
+        // `download(for:delegate:)` never calls `didWriteData` — not on the
+        // task delegate, not on a session delegate — and KVO on
+        // `task.progress` fires once at the start and once at the end.
+        // Measured 30 Sep 2026 on macOS 27 against a 100 MB file: zero
+        // `didWriteData` calls and two KVO ticks, while `countOfBytesReceived`
+        // rose steadily across thirty 250 ms samples. So every row sat on
+        // "Queued" with nothing moving until the file landed, on all three
+        // platforms. The delegate method stays below in case a future OS
+        // honours it; the sampler is what the row actually runs on.
         self.progressHandler = progress
-        defer { self.progressHandler = nil }
+        self.currentTask = nil
+        let fallbackTotal = request.expected.sizeBytes
+        let sampler = Task { [weak self] in
+            var last: Int64 = -1
+            while !Task.isCancelled {
+                try? await Task.sleep(for: Self.progressSampleInterval)
+                guard let task = self?.currentTask else { continue }
+                let received = task.countOfBytesReceived
+                guard received != last else { continue }
+                last = received
+                let expected = task.countOfBytesExpectedToReceive
+                // Zoom's CDN often omits Content-Length; the listing's size is
+                // the next best denominator, and nil (indeterminate) the last.
+                progress(received, expected > 0 ? expected : fallbackTotal)
+            }
+        }
+        defer {
+            sampler.cancel()
+            self.progressHandler = nil
+            self.currentTask = nil
+        }
 
         let (tempURL, response) = try await session.download(for: urlRequest, delegate: self)
 
@@ -325,6 +369,12 @@ extension CloudDownloader: URLSessionDownloadDelegate {
 }
 
 extension CloudDownloader: URLSessionTaskDelegate {
+    /// The one per-task callback the async API does deliver — and the only
+    /// route to the task whose byte counters the progress sampler reads.
+    func urlSession(_ session: URLSession, didCreateTask task: URLSessionTask) {
+        currentTask = task
+    }
+
     func urlSession(
         _ session: URLSession,
         task: URLSessionTask,

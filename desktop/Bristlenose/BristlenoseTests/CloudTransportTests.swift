@@ -32,6 +32,10 @@ final class StubURLProtocol: URLProtocol {
         var body: Data = Data()
         /// When set, the request fails at the transport rather than answering.
         var failure: URLError?
+        /// Deliver the body in this many pieces, `chunkDelay` apart, so a
+        /// transfer is observably in flight rather than done in one callback.
+        var chunks: Int = 1
+        var chunkDelay: TimeInterval = 0
 
         /// A 302 to `location`. `URLSession` will consult the task delegate's
         /// `willPerformHTTPRedirection` before issuing the second request,
@@ -135,6 +139,19 @@ final class StubURLProtocol: URLProtocol {
         }
 
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        if stub.chunks > 1, !stub.body.isEmpty {
+            let size = (stub.body.count + stub.chunks - 1) / stub.chunks
+            let pieces = stride(from: 0, to: stub.body.count, by: size).map {
+                stub.body.subdata(in: $0..<min($0 + size, stub.body.count))
+            }
+            for (i, piece) in pieces.enumerated() {
+                DispatchQueue.global().asyncAfter(deadline: .now() + stub.chunkDelay * Double(i + 1)) {
+                    self.client?.urlProtocol(self, didLoad: piece)
+                    if i == pieces.count - 1 { self.client?.urlProtocolDidFinishLoading(self) }
+                }
+            }
+            return
+        }
         if !stub.body.isEmpty { client?.urlProtocol(self, didLoad: stub.body) }
         client?.urlProtocolDidFinishLoading(self)
     }
@@ -393,6 +410,43 @@ struct DownloadDiskTests {
         // Exactly one file, under the final name — the .part is gone, which is
         // what makes "derive already-imported state from stat" safe.
         #expect(leftovers == ["interview.mp4"])
+    }
+
+    @Test("A transfer in flight reports progress before it lands")
+    func progressArrivesMidTransfer() async throws {
+        // The async `download(for:delegate:)` never calls `didWriteData`, so a
+        // downloader that relied on it reported one figure — the final one —
+        // and every row sat on "Queued" for the whole transfer (30 Sep 2026,
+        // a 252 MB Teams recording). A figure strictly between zero and the
+        // total is the proof the row had something to draw.
+        StubURLProtocol.reset()
+        var stub = StubURLProtocol.Stub.mp4(bytes: 64 * 1024)
+        stub.chunks = 8
+        stub.chunkDelay = 0.2
+        StubURLProtocol.enqueue(stub)
+        let scratch = Scratch()
+        defer { scratch.destroy() }
+
+        final class Seen: @unchecked Sendable {
+            private let lock = NSLock()
+            private var values: [Int64] = []
+            func add(_ v: Int64) { lock.withLock { values.append(v) } }
+            var all: [Int64] { lock.withLock { values } }
+        }
+        let seen = Seen()
+        let downloader = CloudDownloader(session: StubURLProtocol.session())
+        let request = CloudDownloadRequest(
+            url: URL(string: "https://api.example.test/file")!,
+            accessToken: "T",
+            policy: .meet,
+            expected: ExpectedFile(sizeBytes: 64 * 1024, expectedFormat: .mp4),
+            destination: scratch.url.appendingPathComponent("interview.mp4")
+        )
+        let bytes = try await downloader.download(request) { written, _ in seen.add(written) }
+
+        #expect(bytes == 64 * 1024)
+        #expect(seen.all.contains { $0 > 0 && $0 < 64 * 1024 },
+                "only saw \(seen.all) — no figure while the transfer was in flight")
     }
 }
 

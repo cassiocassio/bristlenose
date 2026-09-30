@@ -243,16 +243,30 @@ final class CloudDownloader: NSObject {
         let fallbackTotal = request.expected.sizeBytes
         let sampler = Task { [weak self] in
             var last: Int64 = -1
-            while !Task.isCancelled {
-                try? await Task.sleep(for: Self.progressSampleInterval)
-                guard let task = self?.currentTask else { continue }
-                let received = task.countOfBytesReceived
-                guard received != last else { continue }
-                last = received
-                let expected = task.countOfBytesExpectedToReceive
-                // Zoom's CDN often omits Content-Length; the listing's size is
-                // the next best denominator, and nil (indeterminate) the last.
-                progress(received, expected > 0 ? expected : fallbackTotal)
+            while true {
+                // A thrown sleep is the stop signal. `try?` here would run the
+                // body once more after cancellation — exactly the late sample
+                // the lock below exists to rule out.
+                do { try await Task.sleep(for: Self.progressSampleInterval) } catch { return }
+                guard let self else { return }
+                // Read and report under the lock the teardown clears the task
+                // with. Once `defer` has nilled it, no sample is mid-flight, so
+                // every progress hop is queued ahead of the caller's
+                // continuation — the store clears the row's bar on settling,
+                // and a sample landing after that would put it back on a row
+                // already marked Imported, with a cancel button that does
+                // nothing. `progress` only builds a value and enqueues a hop,
+                // so calling it under the lock cannot re-enter here.
+                self.taskLock.withLock {
+                    guard let task = self._currentTask else { return }
+                    let received = task.countOfBytesReceived
+                    guard received != last else { return }
+                    last = received
+                    let expected = task.countOfBytesExpectedToReceive
+                    // Zoom's CDN often omits Content-Length; the listing's
+                    // size is the next best denominator, nil the last.
+                    progress(received, expected > 0 ? expected : fallbackTotal)
+                }
             }
         }
         defer {

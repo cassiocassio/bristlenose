@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Speaker split check</title>
+<style>
+:root {
+  --bg: #fbfbfa; --panel: #ffffff; --text: #1d1d1f; --muted: #6e6e73; --line: #e3e3e6;
+  --agree: #e3f5e6; --agree-edge: #34a853; --disagree: #fde5e3; --disagree-edge: #d93025;
+  --m: #1a5fd6; --m-bg: #e5eefc; --p: #b25b00; --p-bg: #fdefd9; --b: #6b4bb8; --b-bg: #eee8fa;
+  --focus: #007aff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161617; --panel: #1f1f21; --text: #f2f2f3; --muted: #9a9aa0; --line: #333337;
+    --agree: #16301c; --agree-edge: #4cc46a; --disagree: #3a1a18; --disagree-edge: #ff6b5e;
+    --m: #8fb5ff; --m-bg: #1e2c48; --p: #ffb866; --p-bg: #3d2a12; --b: #c3aaff; --b-bg: #2d2445;
+    --focus: #4da3ff;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+header { position: sticky; top: 0; z-index: 5; background: var(--panel);
+  border-bottom: 1px solid var(--line); padding: 12px 16px; }
+h1 { font-size: 17px; margin: 0 0 8px; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: transparent; color: var(--text); padding: 5px 10px;
+  font: inherit; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--focus); color: #fff; }
+.btn { border: 1px solid var(--line); background: var(--panel); color: var(--text);
+  border-radius: 8px; padding: 5px 10px; font: inherit; cursor: pointer; }
+.legend { color: var(--muted); font-size: 12px; display: flex; gap: 12px; flex-wrap: wrap; }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px;
+  margin-right: 4px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px;
+  margin-top: 10px; }
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+.card h3 { margin: 0 0 4px; font-size: 12px; color: var(--muted); font-weight: 600;
+  text-transform: uppercase; letter-spacing: .04em; }
+.big { font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.small { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+main { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; padding: 16px; }
+@media (max-width: 900px) { main { grid-template-columns: minmax(0, 1fr); }
+  aside { order: -1; } }
+aside { position: sticky; top: 210px; align-self: start; }
+video { width: 100%; border-radius: 10px; background: #000; }
+.hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px;
+  font-size: 11px; }
+table { width: 100%; border-collapse: separate; border-spacing: 0 3px; }
+th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; padding: 4px 8px; }
+td { padding: 6px 8px; vertical-align: top; }
+tr.row td:first-child { border-left: 4px solid transparent; border-radius: 6px 0 0 6px; }
+tr.row td:last-child { border-radius: 0 6px 6px 0; }
+tr.agree td { background: var(--agree); }
+tr.agree td:first-child { border-left-color: var(--agree-edge); }
+tr.disagree td { background: var(--disagree); }
+tr.disagree td:first-child { border-left-color: var(--disagree-edge); }
+tr.focused td { box-shadow: inset 0 2px 0 var(--focus), inset 0 -2px 0 var(--focus); }
+.t { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; cursor: pointer; }
+.t:hover { color: var(--focus); text-decoration: underline; }
+.who { white-space: nowrap; width: 1%; }
+.pill { display: inline-block; min-width: 92px; padding: 2px 8px; border-radius: 999px;
+  font-size: 12px; font-weight: 600; }
+.pill.M { color: var(--m); background: var(--m-bg); }
+.pill.P { color: var(--p); background: var(--p-bg); }
+.mark { display: inline-block; width: 16px; margin-left: 4px; font-weight: 700; }
+.ok { color: var(--agree-edge); } .bad { color: var(--disagree-edge); }
+.pick { display: inline-flex; gap: 3px; }
+.pick button { border: 1px solid var(--line); background: var(--panel); color: var(--muted);
+  border-radius: 6px; padding: 2px 7px; font: 600 12px/1.4 inherit; cursor: pointer; }
+.pick button[data-v="M"][aria-pressed="true"] { background: var(--m); border-color: var(--m); color: #fff; }
+.pick button[data-v="P"][aria-pressed="true"] { background: var(--p); border-color: var(--p); color: #fff; }
+.pick button[data-v="B"][aria-pressed="true"] { background: var(--b); border-color: var(--b); color: #fff; }
+.pick button[data-v="U"][aria-pressed="true"] { background: var(--muted); border-color: var(--muted); color: #fff; }
+.empty { color: var(--muted); padding: 24px 8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Speaker split: opening sample (shipped) vs whole transcript</h1>
+  <div class="bar">
+    <div class="seg" id="sessions" role="group" aria-label="Session"></div>
+    <div class="seg" id="filters" role="group" aria-label="Show">
+      <button data-f="all">All rows</button>
+      <button data-f="disagree">Disagreements</button>
+      <button data-f="todo">Unlabelled</button>
+    </div>
+    <button class="btn" id="download">Download labels (JSON)</button>
+    <button class="btn" id="copy">Copy labels</button>
+    <div class="legend">
+      <span><span class="sw" style="background:var(--agree);border:2px solid var(--agree-edge)"></span>both methods agree</span>
+      <span><span class="sw" style="background:var(--disagree);border:2px solid var(--disagree-edge)"></span>they disagree</span>
+      <span>Actual: <b>M</b> moderator · <b>P</b> participant · <b>Both</b> segment has both voices · <b>?</b> can't tell</span>
+    </div>
+  </div>
+  <div class="stats" id="stats"></div>
+</header>
+<main>
+  <section>
+    <table>
+      <thead><tr><th>Time</th><th>Text</th><th>Opening sample</th><th>Whole transcript</th><th>Actually</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </section>
+  <aside>
+    <video id="video" controls preload="metadata"></video>
+    <div class="small" id="source"></div>
+    <div class="hint">Click a time to play that segment.
+      <kbd>j</kbd>/<kbd>k</kbd> move · <kbd>m</kbd> <kbd>p</kbd> <kbd>b</kbd> <kbd>u</kbd> label and advance ·
+      <kbd>space</kbd> play row · <kbd>0</kbd> clear</div>
+  </aside>
+</main>
+<script>
+const DATA = /*DATA*/null;
+const KEY = "speaker-split-labels:" + DATA.run;
+const NAMES = { M: "Moderator", P: "Participant" };
+let labels = {};
+try { labels = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
+let session = DATA.sessions[0].session_id, filter = "all", focus = null, stopAt = null;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmt = (t) => { t = Math.floor(t); const m = Math.floor(t / 60), s = t % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`; };
+const sess = () => DATA.sessions.find((s) => s.session_id === session);
+const key = (sid, i) => `${sid}:${i}`;
+function save() { try { localStorage.setItem(KEY, JSON.stringify(labels)); } catch (e) {} }
+
+function visible() {
+  return sess().segments.filter((g) =>
+    filter === "all" ? true :
+    filter === "disagree" ? g.sampled !== g.whole :
+    !labels[key(session, g.i)]);
+}
+
+function mark(pred, actual) {
+  if (actual !== "M" && actual !== "P") return "";
+  return pred === actual ? '<span class="mark ok">✓</span>' : '<span class="mark bad">✗</span>';
+}
+
+function rowHtml(g) {
+  const a = labels[key(session, g.i)];
+  const cls = (g.sampled === g.whole ? "agree" : "disagree") + (focus === g.i ? " focused" : "");
+  const btn = (v, t) => `<button data-v="${v}" aria-pressed="${a === v}">${t}</button>`;
+  return `<tr class="row ${cls}" data-i="${g.i}">
+    <td class="t" data-play="${g.i}">${fmt(g.start)}</td>
+    <td>${esc(g.text)}</td>
+    <td class="who"><span class="pill ${g.sampled}">${NAMES[g.sampled] || g.sampled}</span>${mark(g.sampled, a)}</td>
+    <td class="who"><span class="pill ${g.whole}">${NAMES[g.whole] || g.whole}</span>${mark(g.whole, a)}</td>
+    <td class="who"><span class="pick">${btn("M", "M")}${btn("P", "P")}${btn("B", "Both")}${btn("U", "?")}</span></td>
+  </tr>`;
+}
+
+function render() {
+  const rows = visible();
+  $("rows").innerHTML = rows.length ? rows.map(rowHtml).join("")
+    : '<tr><td colspan="5" class="empty">Nothing here.</td></tr>';
+  $("sessions").innerHTML = DATA.sessions.map((s) =>
+    `<button data-s="${s.session_id}" aria-pressed="${s.session_id === session}">${s.session_id} · ${esc(s.source.slice(0, 22))}</button>`).join("");
+  document.querySelectorAll("#filters button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.f === filter));
+  renderStats();
+}
+
+function score(segs, sid) {
+  const r = { n: 0, both: 0, unsure: 0, s: 0, w: 0, dis: 0, disS: 0, disW: 0, total: segs.length,
+    agree: segs.filter((g) => g.sampled === g.whole).length };
+  for (const g of segs) {
+    const a = labels[key(sid, g.i)];
+    if (a === "B") r.both++;
+    if (a === "U") r.unsure++;
+    if (a !== "M" && a !== "P") continue;
+    r.n++; if (g.sampled === a) r.s++; if (g.whole === a) r.w++;
+    if (g.sampled !== g.whole) { r.dis++; if (g.sampled === a) r.disS++; if (g.whole === a) r.disW++; }
+  }
+  return r;
+}
+const pct = (a, b) => (b ? Math.round((100 * a) / b) + "%" : "–");
+
+function card(title, r) {
+  return `<div class="card"><h3>${title}</h3>
+    <div class="big">sample ${pct(r.s, r.n)} · whole ${pct(r.w, r.n)}</div>
+    <div class="small">correct of ${r.n} labelled M/P (${r.s} vs ${r.w}) · +${r.both} both, ${r.unsure} unsure</div>
+    <div class="small">methods agree on ${r.agree}/${r.total} rows · of ${r.dis} labelled disagreements: sample right ${r.disS}, whole right ${r.disW}</div>
+  </div>`;
+}
+
+function renderStats() {
+  const all = { n: 0, both: 0, unsure: 0, s: 0, w: 0, dis: 0, disS: 0, disW: 0, total: 0, agree: 0 };
+  let html = "";
+  for (const s of DATA.sessions) {
+    const r = score(s.segments, s.session_id);
+    for (const k in all) all[k] += r[k];
+    html += card(s.session_id, r);
+  }
+  $("stats").innerHTML = html + card("All sessions", all);
+}
+
+function setVideo() {
+  const s = sess();
+  if ($("video").dataset.s !== session) {
+    $("video").dataset.s = session;
+    if (s.video) $("video").src = s.video; else $("video").removeAttribute("src");
+  }
+  $("source").textContent = s.source;
+}
+
+function play(i) {
+  const g = sess().segments[i];
+  const v = $("video");
+  v.currentTime = Math.max(0, g.start - 0.2);
+  stopAt = g.end + 0.4;
+  v.play().catch(() => {});
+}
+$("video").addEventListener("timeupdate", () => {
+  if (stopAt !== null && $("video").currentTime >= stopAt) { $("video").pause(); stopAt = null; }
+});
+
+function setFocus(i, scroll) {
+  focus = i; render();
+  if (scroll) document.querySelector(`tr[data-i="${i}"]`)?.scrollIntoView({ block: "center" });
+}
+function step(d) {
+  const rows = visible().map((g) => g.i);
+  if (!rows.length) return;
+  const at = rows.indexOf(focus);
+  setFocus(rows[Math.min(rows.length - 1, Math.max(0, at === -1 ? 0 : at + d))], true);
+}
+function label(i, v) {
+  const k = key(session, i);
+  if (v === null || labels[k] === v) delete labels[k]; else labels[k] = v;
+  save();
+}
+
+$("rows").addEventListener("click", (e) => {
+  const tr = e.target.closest("tr[data-i]"); if (!tr) return;
+  const i = +tr.dataset.i;
+  const b = e.target.closest("button[data-v]");
+  if (b) { label(i, b.dataset.v); setFocus(i); return; }
+  if (e.target.closest("[data-play]")) play(i);
+  setFocus(i);
+});
+$("sessions").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-s]"); if (!b) return;
+  session = b.dataset.s; focus = null; setVideo(); render();
+});
+$("filters").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-f]"); if (!b) return;
+  filter = b.dataset.f; render();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (k === "j" || k === "arrowdown") { e.preventDefault(); step(1); }
+  else if (k === "k" || k === "arrowup") { e.preventDefault(); step(-1); }
+  else if (focus !== null && "mpbu".includes(k) && k.length === 1) {
+    labels[key(session, focus)] = k.toUpperCase(); save();
+    const before = focus; step(1); if (focus === before) render();
+  } else if (focus !== null && k === "0") { label(focus, null); render(); }
+  else if (focus !== null && k === " ") { e.preventDefault(); play(focus); }
+});
+
+function exportJson() {
+  const stats = {};
+  for (const s of DATA.sessions) stats[s.session_id] = score(s.segments, s.session_id);
+  return JSON.stringify({ run: DATA.run, exported_at: new Date().toISOString(), labels, stats }, null, 1);
+}
+$("download").addEventListener("click", () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([exportJson()], { type: "application/json" }));
+  a.download = `speaker-labels-${DATA.run}.json`; a.click();
+});
+$("copy").addEventListener("click", () => navigator.clipboard?.writeText(exportJson()));
+
+setVideo(); render();
+</script>
+</body>
+</html>

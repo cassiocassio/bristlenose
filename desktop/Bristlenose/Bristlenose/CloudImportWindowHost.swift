@@ -25,8 +25,6 @@ struct CloudImportWindowHost: View {
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) { fixtureBanner }
-        // Diagnostics ▸ Cloud Import ▸ Window Tint; adds nothing when unset.
-        .modifier(ScopeLabWindowTint())
     }
 
     /// A visible, unmissable band when the window is showing fixtures.

@@ -132,8 +132,6 @@ private struct DiagnosticsMenuContent: View {
     /// Used by the DEBUG harness section's "Grid Specimen" (navigates the SPA).
     @ObservedObject var bridgeHandler: BridgeHandler
     @Environment(\.openWindow) private var openWindow
-    @AppStorage(ScopeLabStyle.key) private var scopeLab: ScopeLabStyle = .shipping
-    @AppStorage(ScopeLabTint.key) private var scopeLabTint: ScopeLabTint = .palette
 
     var body: some View {
         // Section 1 — user diagnostics, every channel. Reveal-existing-data
@@ -232,17 +230,6 @@ private struct DiagnosticsMenuContent: View {
                     if let key = CloudGrantStore.firstAccountKey(for: .zoom) {
                         CloudGrantStore.disconnect(.zoom, accountKey: key)
                     }
-                }
-
-                Divider()
-
-                // The time-scope pull-down's styling options, live on the
-                // open window (review of 30 Sep 2026). `CloudImportScopeLab.swift`.
-                Picker("Scope Control", selection: $scopeLab) {
-                    ForEach(ScopeLabStyle.allCases) { Text($0.menuTitle).tag($0) }
-                }
-                Picker("Window Tint", selection: $scopeLabTint) {
-                    ForEach(ScopeLabTint.allCases) { Text($0.menuTitle).tag($0) }
                 }
             }
         }

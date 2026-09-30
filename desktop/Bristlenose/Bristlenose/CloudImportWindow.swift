@@ -50,18 +50,8 @@ struct CloudImportWindow: View {
     /// name and place a study from inside this popup.
     @State private var destination: CloudImportDestinations.Choice = .newProject
 
-    /// Diagnostics ▸ Cloud Import ▸ Scope Control. Unset is the shipping
-    /// rendering; see `CloudImportScopeLab.swift`.
-    @AppStorage(ScopeLabStyle.key) private var scopeLab: ScopeLabStyle = .shipping
-
     var body: some View {
         VStack(spacing: 0) {
-            if scopeLab == .scopeBar, platform.windowChoices.count > 1 {
-                ScopeLabBar(choices: platform.windowChoices,
-                            selection: $store.windowDays,
-                            label: { i18n.plural("desktop.cloudImport.scopeChoice", count: $0) })
-                Divider()
-            }
             content
             Divider()
             footer
@@ -137,16 +127,7 @@ struct CloudImportWindow: View {
     /// `CloudPlatform` and this control disappears by itself.
     @ToolbarContentBuilder
     private var windowScopePicker: some ToolbarContent {
-        if platform.windowChoices.count > 1, scopeLab != .shipping, scopeLab.inToolbar {
-            // Diagnostics ▸ Cloud Import ▸ Scope Control — the review's options,
-            // live. The shipping branch below is untouched.
-            if scopeLab.hidesToolbarGlass {
-                ToolbarItem(placement: .primaryAction) { scopeLabMenu }
-                    .withoutSharedBackground()
-            } else {
-                ToolbarItem(placement: .primaryAction) { scopeLabMenu }
-            }
-        } else if platform.windowChoices.count > 1, scopeLab.inToolbar {
+        if platform.windowChoices.count > 1 {
             ToolbarItem(placement: .primaryAction) {
                 // **A borderless pull-down, not a bordered pop-up.**
                 //
@@ -188,24 +169,21 @@ struct CloudImportWindow: View {
                                      count: store.windowDays))
                 }
                 .menuStyle(.borderlessButton)
+                // **Primary, not the window's accent.** The borderless style
+                // draws its label in the tint, and this window is tinted with
+                // the palette's blue, so a scope at its default read as a link
+                // or a primary action. Colour on this line is for emphasis and
+                // state; a filter sitting at its default has neither.
+                .tint(.primary)
                 .fixedSize()
                 .help(i18n.t("desktop.cloudImport.scopeHelp"))
             }
-        }
-    }
-
-    /// The scope pull-down as the Diagnostics style draws it.
-    private var scopeLabMenu: some View {
-        ScopeLabMenu(style: scopeLab,
-                     title: i18n.plural("desktop.cloudImport.scopeChoice", count: store.windowDays),
-                     help: i18n.t("desktop.cloudImport.scopeHelp")) {
-            Picker(i18n.t("desktop.cloudImport.scopeLabel"), selection: $store.windowDays) {
-                ForEach(platform.windowChoices, id: \.self) { days in
-                    Text(i18n.plural("desktop.cloudImport.scopeChoice", count: days)).tag(days)
-                }
-            }
-            .pickerStyle(.inline)
-            .labelsHidden()
+            // **Out of the toolbar's glass.** macOS 26 wraps every toolbar
+            // item in its own capsule; a text label gets one as big as the
+            // search field beside it, which made the quietest control in the
+            // window weigh the same as the filter. Chosen 30 Sep 2026 from a
+            // Diagnostics lab of every reviewed style. No-op below macOS 26.
+            .withoutSharedBackground()
         }
     }
 
@@ -466,9 +444,6 @@ struct CloudImportWindow: View {
     private var footer: some View {
         HStack(spacing: 12) {
             arithmeticLine
-            if scopeLab == .footer, platform.windowChoices.count > 1 {
-                scopeLabMenu
-            }
             Spacer(minLength: 12)
             if store.phase == .loaded, store.blanketRefusal == nil, !(store.listing?.rows.isEmpty ?? true) {
                 Text(i18n.t("desktop.cloudImport.destinationLabel")).font(.caption).foregroundStyle(.secondary)
@@ -765,8 +740,7 @@ struct CloudImportWindow: View {
         // the redundancy already removed from the footer's "in window".
         // Restored only when the picker is hidden, so a single-choice platform
         // still states its scope somewhere.
-        if store.phase == .loaded,
-           platform.windowChoices.count == 1 || scopeLab == .subtitleOnly {
+        if store.phase == .loaded, platform.windowChoices.count == 1 {
             parts.append(i18n.plural("desktop.cloudImport.subtitleWindow", count: store.windowDays))
         }
         return parts.joined(separator: " · ")

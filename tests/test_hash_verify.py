@@ -290,21 +290,34 @@ def test_stage_verified_inputs_changed(tmp_path: Path):
     ) is False
 
 
-def test_stage_verified_inputs_changed_invalidates_manifest(tmp_path: Path):
-    """Input change removes the stage from manifest (like hash mismatch)."""
+def test_stage_verified_inputs_changed_takes_the_stage_off_the_cache_path(tmp_path: Path):
+    """An input change DEMOTES the stage — off the full-cache path, per-session
+    records kept. Until 1 Oct 2026 it popped the record "like hash mismatch",
+    and the per-session resume that followed then saw no completed sessions
+    and recomputed every one: adding one recording re-Whispered the whole
+    project. A hash mismatch still pops (nothing in a corrupt file can be
+    trusted — `test_stage_verified_mismatch_invalidates_manifest`); a changed
+    input is not corruption, and `fresh_session_ids` decides per session.
+    """
     f = tmp_path / "quotes.json"
     f.write_bytes(b'[]')
     h = hash_bytes(f.read_bytes())
     m = _manifest_with_stage(
         STAGE_QUOTE_EXTRACTION,
         content_hash=h,
+        sessions={
+            "s1": SessionRecord(status=StageStatus.COMPLETE, session_id="s1", input_hash="fp"),
+        },
         input_hashes={"upstream": "old"},
     )
     _is_stage_verified(
         m, STAGE_QUOTE_EXTRACTION, [f],
         current_input_hashes={"upstream": "new"},
     )
-    assert STAGE_QUOTE_EXTRACTION not in m.stages
+    assert STAGE_QUOTE_EXTRACTION in m.stages
+    assert m.stages[STAGE_QUOTE_EXTRACTION].status != StageStatus.COMPLETE
+    assert m.stages[STAGE_QUOTE_EXTRACTION].sessions is not None
+    assert "s1" in m.stages[STAGE_QUOTE_EXTRACTION].sessions
 
 
 def test_stage_verified_no_stored_input_hashes_backward_compat(tmp_path: Path):

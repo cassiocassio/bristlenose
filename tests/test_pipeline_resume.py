@@ -895,3 +895,127 @@ def test_assign_speaker_codes_always_reruns():
 
     # Global numbering continues
     assert next_pnum == 3
+
+
+# ---------------------------------------------------------------------------
+# 0a — a stale stage keeps its per-session records; inputs are checked first
+# ---------------------------------------------------------------------------
+#
+# Until 1 Oct 2026 an input-hash mismatch POPPED the stage record, so the
+# per-session resume path that followed saw no completed sessions and
+# recomputed every one of them — adding one recording re-Whispered the whole
+# project. The stage is now demoted instead, and the per-session path decides
+# session by session from the fingerprints.
+
+
+def _manifest_with_fingerprinted_sessions(tmp_path: Path, stage: str) -> Path:
+    from bristlenose.manifest import load_manifest  # noqa: F401
+
+    m = create_manifest("p", "1.0")
+    mark_stage_running(m, stage)
+    mark_session_complete(m, stage, "s1", input_hash="fp-s1", content_hash=None)
+    mark_session_complete(m, stage, "s2", input_hash="fp-s2", content_hash=None)
+    mark_stage_complete(m, stage, content_hash=None, input_hashes={"upstream": "OLD"})
+    write_manifest(m, tmp_path)
+    return tmp_path
+
+
+def test_input_mismatch_demotes_the_stage_but_keeps_its_sessions(tmp_path: Path):
+    from bristlenose.manifest import load_manifest
+    from bristlenose.pipeline import _is_stage_verified
+
+    _manifest_with_fingerprinted_sessions(tmp_path, STAGE_TOPIC_SEGMENTATION)
+    out = tmp_path / ".bristlenose" / "intermediate" / "topic_boundaries.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("[]")
+    prev = load_manifest(tmp_path)
+
+    verified = _is_stage_verified(
+        prev, STAGE_TOPIC_SEGMENTATION, [out], current_input_hashes={"upstream": "NEW"},
+    )
+
+    assert verified is False
+    assert STAGE_TOPIC_SEGMENTATION in prev.stages, "demoted, not popped"
+    assert _is_stage_cached(prev, STAGE_TOPIC_SEGMENTATION) is False
+    assert get_completed_session_ids(prev, STAGE_TOPIC_SEGMENTATION) == {"s1", "s2"}
+
+
+def test_content_corruption_still_pops_the_stage(tmp_path: Path):
+    """A corrupt intermediate is not a changed input — nothing in it can be
+    trusted, per-session records included."""
+    from bristlenose.hashing import hash_bytes
+    from bristlenose.manifest import load_manifest
+    from bristlenose.pipeline import _is_stage_verified
+
+    m = create_manifest("p", "1.0")
+    mark_stage_running(m, STAGE_TOPIC_SEGMENTATION)
+    mark_session_complete(m, STAGE_TOPIC_SEGMENTATION, "s1", input_hash="fp")
+    mark_stage_complete(
+        m, STAGE_TOPIC_SEGMENTATION, content_hash=hash_bytes(b"good"),
+        input_hashes={"upstream": "U"},
+    )
+    write_manifest(m, tmp_path)
+    out = tmp_path / ".bristlenose" / "intermediate" / "topic_boundaries.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("corrupt")
+    prev = load_manifest(tmp_path)
+
+    assert _is_stage_verified(
+        prev, STAGE_TOPIC_SEGMENTATION, [out], current_input_hashes={"upstream": "U"},
+    ) is False
+    assert STAGE_TOPIC_SEGMENTATION not in prev.stages
+
+
+def test_a_newly_watched_input_does_not_invalidate_a_legacy_record(tmp_path: Path):
+    """The quote stage now also watches the transcripts. A record written
+    before that key existed is compared on the keys it recorded, stamped with
+    the full set on the hit, and strict from the next run. Strict comparison
+    here would re-extract every project's quotes once on upgrade — paid LLM
+    calls and a reshuffled report nobody asked for."""
+    from bristlenose.manifest import load_manifest
+    from bristlenose.pipeline import _inputs_changed, _is_stage_verified
+
+    assert _inputs_changed({"upstream": "U"}, {"upstream": "U", "transcripts": "T"}) is False
+    assert _inputs_changed({"upstream": "U"}, {"upstream": "V", "transcripts": "T"}) is True
+    assert _inputs_changed({"upstream": "U", "pii": "x"}, {"upstream": "U"}) is True, (
+        "a key the record watched and the current run does not is a changed contract"
+    )
+    assert _inputs_changed({"upstream": "U"}, {"upstream": "U"}) is False
+    assert _inputs_changed(None, {"upstream": "U"}) is False
+
+    _manifest_with_fingerprinted_sessions(tmp_path, STAGE_QUOTE_EXTRACTION)
+    out = tmp_path / ".bristlenose" / "intermediate" / "extracted_quotes.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("[]")
+    prev = load_manifest(tmp_path)
+    assert _is_stage_verified(
+        prev, STAGE_QUOTE_EXTRACTION, [out],
+        current_input_hashes={"upstream": "OLD", "transcripts": "T"},
+    ) is True
+
+
+def test_speaker_stage_checks_inputs_before_looking_for_files(tmp_path: Path):
+    """With the exists-loop first, a missing per-session file returned False
+    before the input check ever ran, so the stage stayed COMPLETE in the
+    previous manifest while its inputs had changed — and the per-session
+    path then trusted every record it held."""
+    from bristlenose.manifest import load_manifest
+    from bristlenose.pipeline import _is_speaker_stage_verified
+
+    _manifest_with_fingerprinted_sessions(tmp_path, STAGE_IDENTIFY_SPEAKERS)
+    si_dir = tmp_path / ".bristlenose" / "intermediate" / "speaker-info"
+    si_dir.mkdir(parents=True)
+    (si_dir / "s1.json").write_text("{}")
+    # s2.json deliberately missing
+    prev = load_manifest(tmp_path)
+
+    verified = _is_speaker_stage_verified(
+        prev, STAGE_IDENTIFY_SPEAKERS,
+        {"s1": si_dir / "s1.json", "s2": si_dir / "s2.json"},
+        current_input_hashes={"upstream": "NEW"},
+    )
+    assert verified is False
+    assert _is_stage_cached(prev, STAGE_IDENTIFY_SPEAKERS) is False, (
+        "the input change must be acted on even though a file is missing"
+    )
+    assert get_completed_session_ids(prev, STAGE_IDENTIFY_SPEAKERS) == {"s1", "s2"}

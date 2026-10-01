@@ -453,3 +453,157 @@ def test_mark_stage_complete_missing_path_is_no_op_guard(tmp_path: Path):
     rec = m.stages[STAGE_QUOTE_EXTRACTION]
     assert rec.status == StageStatus.COMPLETE
     assert rec.content_hash == "abc"
+
+
+# ---------------------------------------------------------------------------
+# Per-session input fingerprints (0a, 1 Oct 2026)
+# ---------------------------------------------------------------------------
+#
+# A SessionRecord is a claim that the session's cached output is good. Until
+# now it did not say WHAT it was good for, so a session whose files changed —
+# a transcript dropped beside an already-analysed video — was served from the
+# cache whenever another session's change kept the stage off the full-cache
+# path (measured 30 Sep 2026: "transcript arriving after the video was
+# analysed: ignored if the same batch brings a new recording").
+
+
+def test_mark_session_complete_stores_input_hash():
+    m = create_manifest("p", "1.0")
+    mark_stage_running(m, STAGE_TRANSCRIBE)
+    mark_session_complete(m, STAGE_TRANSCRIBE, "s1", input_hash="fp-1")
+    assert m.stages[STAGE_TRANSCRIBE].sessions["s1"].input_hash == "fp-1"
+
+
+def test_session_record_input_hash_default_none():
+    """A legacy record has no fingerprint — and None must read as 'unknown',
+    never as 'unchanged'."""
+    from bristlenose.manifest import SessionRecord
+
+    rec = SessionRecord(status=StageStatus.COMPLETE, session_id="s1")
+    assert rec.input_hash is None
+
+
+def test_input_hash_roundtrip(tmp_path: Path):
+    m = create_manifest("p", "1.0")
+    mark_stage_running(m, STAGE_QUOTE_EXTRACTION)
+    mark_session_complete(m, STAGE_QUOTE_EXTRACTION, "s1", input_hash="fp-q1")
+    write_manifest(m, tmp_path)
+    loaded = load_manifest(tmp_path)
+    assert loaded is not None
+    assert loaded.stages[STAGE_QUOTE_EXTRACTION].sessions["s1"].input_hash == "fp-q1"
+
+
+def test_legacy_manifest_without_input_hash_loads(tmp_path: Path):
+    """Manifests written before the field existed must still load."""
+    import json
+
+    data = {
+        "schema_version": 1, "project_name": "p", "pipeline_version": "0.31.0",
+        "created_at": "2026-09-01T00:00:00+00:00", "updated_at": "2026-09-01T00:00:00+00:00",
+        "stages": {
+            "transcribe": {
+                "status": "complete",
+                "sessions": {"s1": {"status": "complete", "session_id": "s1"}},
+            }
+        },
+    }
+    (tmp_path / ".bristlenose").mkdir()
+    (tmp_path / ".bristlenose" / "pipeline-manifest.json").write_text(json.dumps(data))
+    loaded = load_manifest(tmp_path)
+    assert loaded is not None
+    assert loaded.stages["transcribe"].sessions["s1"].input_hash is None
+
+
+class TestFreshSessionIds:
+    """`fresh_session_ids`: the per-session work list, fingerprint-aware."""
+
+    def _manifest(self, records: dict[str, str | None]):
+        from bristlenose.manifest import fresh_session_ids  # noqa: F401 — import check
+
+        m = create_manifest("p", "1.0")
+        mark_stage_running(m, STAGE_TRANSCRIBE)
+        for sid, fp in records.items():
+            mark_session_complete(m, STAGE_TRANSCRIBE, sid, input_hash=fp)
+        return m
+
+    def test_matching_fingerprint_is_fresh(self):
+        from bristlenose.manifest import fresh_session_ids
+
+        m = self._manifest({"s1": "a", "s2": "b"})
+        assert fresh_session_ids(m, STAGE_TRANSCRIBE, {"s1": "a", "s2": "b"}) == {"s1", "s2"}
+
+    def test_changed_fingerprint_is_not_fresh(self):
+        from bristlenose.manifest import fresh_session_ids
+
+        m = self._manifest({"s1": "a", "s2": "b"})
+        assert fresh_session_ids(m, STAGE_TRANSCRIBE, {"s1": "a", "s2": "CHANGED"}) == {"s1"}
+
+    def test_absent_fingerprint_means_recompute(self):
+        """A legacy record cannot say what it was computed from, so it is not
+        reused. Treating None as 'unchanged' is how a stale session gets
+        served; this is the review's correction (§0, 0a)."""
+        from bristlenose.manifest import fresh_session_ids
+
+        m = self._manifest({"s1": None, "s2": "b"})
+        assert fresh_session_ids(m, STAGE_TRANSCRIBE, {"s1": "a", "s2": "b"}) == {"s2"}
+
+    def test_session_no_longer_present_is_not_fresh(self):
+        from bristlenose.manifest import fresh_session_ids
+
+        m = self._manifest({"s1": "a", "s2": "b"})
+        assert fresh_session_ids(m, STAGE_TRANSCRIBE, {"s1": "a"}) == {"s1"}
+
+    def test_failed_record_is_never_fresh(self):
+        from bristlenose.manifest import fresh_session_ids, mark_session_failed
+
+        m = self._manifest({"s1": "a"})
+        mark_session_failed(m, STAGE_TRANSCRIBE, "s2")
+        assert fresh_session_ids(m, STAGE_TRANSCRIBE, {"s1": "a", "s2": "x"}) == {"s1"}
+
+    def test_no_manifest_or_stage_is_empty(self):
+        from bristlenose.manifest import fresh_session_ids
+
+        assert fresh_session_ids(None, STAGE_TRANSCRIBE, {"s1": "a"}) == set()
+        m = create_manifest("p", "1.0")
+        assert fresh_session_ids(m, STAGE_TRANSCRIBE, {"s1": "a"}) == set()
+
+
+class TestCarryForwardSessions:
+    def test_copies_kept_records_and_stamps_fingerprints(self):
+        from bristlenose.manifest import carry_forward_sessions
+
+        prev = create_manifest("p", "1.0")
+        mark_stage_running(prev, STAGE_TOPIC_SEGMENTATION)
+        mark_session_complete(
+            prev, STAGE_TOPIC_SEGMENTATION, "s1", provider="anthropic", content_hash="c1",
+        )
+        mark_session_complete(prev, STAGE_TOPIC_SEGMENTATION, "s2", input_hash="old")
+        mark_session_complete(prev, STAGE_TOPIC_SEGMENTATION, "s3")
+
+        new = create_manifest("p", "1.0")
+        mark_stage_running(new, STAGE_TOPIC_SEGMENTATION)
+        carry_forward_sessions(
+            new, prev, STAGE_TOPIC_SEGMENTATION, {"s1", "s2"}, {"s1": "fp1", "s2": "fp2"},
+        )
+        recs = new.stages[STAGE_TOPIC_SEGMENTATION].sessions
+        assert set(recs) == {"s1", "s2"}, "a record outside `keep` is not carried"
+        assert recs["s1"].provider == "anthropic" and recs["s1"].content_hash == "c1"
+        assert recs["s1"].input_hash == "fp1"
+        assert recs["s2"].input_hash == "fp2", "the fingerprint is re-stamped, not kept stale"
+        # The previous manifest is not mutated.
+        assert prev.stages[STAGE_TOPIC_SEGMENTATION].sessions["s2"].input_hash == "old"
+
+    def test_synthesises_a_record_when_the_previous_manifest_had_none(self):
+        """A full-cache hit proves every session's inputs are unchanged, so a
+        legacy manifest with no per-session records can be back-filled —
+        from the next run on, the per-session path has fingerprints to use."""
+        from bristlenose.manifest import carry_forward_sessions
+
+        prev = create_manifest("p", "1.0")
+        mark_stage_complete(prev, STAGE_TRANSCRIBE)  # legacy: no sessions at all
+        new = create_manifest("p", "1.0")
+        carry_forward_sessions(new, prev, STAGE_TRANSCRIBE, {"s1"}, {"s1": "fp1"})
+        rec = new.stages[STAGE_TRANSCRIBE].sessions["s1"]
+        assert rec.status == StageStatus.COMPLETE
+        assert rec.input_hash == "fp1"
+        assert get_completed_session_ids(new, STAGE_TRANSCRIBE) == {"s1"}

@@ -62,7 +62,12 @@ def write_vtt(input_dir: Path, stem: str, cues: list[tuple[str | None, str]]) ->
         lines.append("")
         t += 10
     path = input_dir / f"{stem}.vtt"
-    path.write_text("\n".join(lines), encoding="utf-8")
+    content = "\n".join(lines)
+    # Rewriting an unchanged file would move its mtime, and mtime is part of
+    # the transcribe stage's input hash — the harness must not look like a
+    # researcher who re-saved the transcript.
+    if not path.exists() or path.read_text(encoding="utf-8") != content:
+        path.write_text(content, encoding="utf-8")
     return path
 
 
@@ -392,3 +397,88 @@ class TestPlatformNamesReachThePeopleFile:
         participants = h.people()["participants"]
         names = {code: p["editable"]["full_name"] for code, p in participants.items()}
         assert "Brian" in names.values()
+
+
+# ── 0a: a session whose files changed is recomputed; the others are not ─────
+#
+# The defects these pin (docs/design-cloud-import-transcripts.md §2):
+#   * a transcript arriving after the video was analysed was IGNORED if the
+#     same batch brought a new recording (the new recording kept the stage
+#     off the full-cache path, and the per-session path trusted every record);
+#   * otherwise it re-Whispered EVERY session (the stage record was popped).
+
+
+class TestPerSessionFingerprints:
+    def test_late_transcript_with_new_recording_is_not_ignored(self, tmp_path: Path) -> None:
+        early = datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc)
+        later = datetime(2026, 9, 8, 10, 0, tzinfo=timezone.utc)
+
+        def sessions(d: Path, run: int) -> list[InputSession]:
+            if run == 0:
+                return [audio_session(d, 1, "P07 Interview", when=early)]
+            return [
+                pair_session(d, 1, "P07 Interview", TEAMS_PAIR, when=early),
+                audio_session(d, 2, "P08 Interview", when=later),
+            ]
+
+        h = run_pipeline(tmp_path, sessions, runs=2)
+
+        # Run 1 Whispered the bare recording; run 2 Whispered only the new one.
+        assert h.transcribed == [["s1"], ["s2"]]
+        # The late transcript replaced the Whisper text for s1 …
+        segs = h.session_segments()
+        assert {s.source for s in segs["s1"]} == {"vtt"}
+        assert {s.speaker_label for s in h.speaker_segments("s1")} == {
+            "Martin Storey", "Priya Nair",
+        }
+        # … and everything downstream of it was redone for s1, not served stale.
+        assert sorted(h.quoted[1]) == ["s1", "s2"]
+
+    def test_adding_a_recording_does_not_rewhisper_the_others(self, tmp_path: Path) -> None:
+        def sessions(d: Path, run: int) -> list[InputSession]:
+            out = [audio_session(d, 1, "A"), audio_session(d, 2, "B")]
+            if run == 1:
+                out.append(audio_session(d, 3, "C"))
+            return out
+
+        h = run_pipeline(tmp_path, sessions, runs=2)
+        assert h.transcribed == [["s1", "s2"], ["s3"]]
+        # Speaker ID, topics and quotes likewise ran only for the new session.
+        assert len(h.split_calls) == 3
+        assert h.quoted[1] == ["s3"]
+
+    def test_an_untouched_project_is_served_from_cache(self, tmp_path: Path) -> None:
+        h = run_pipeline(
+            tmp_path,
+            lambda d, _i: [pair_session(d, 1, "P07", TEAMS_PAIR), audio_session(d, 2, "P08")],
+            runs=2,
+        )
+        assert h.transcribed == [["s2"]], "run 2 Whispered nothing"
+        assert len(h.split_calls) == 1
+        assert len(h.quoted) == 1, "run 2 extracted nothing"
+
+    def test_a_parser_change_reparses_platform_sessions_only(
+        self, tmp_path: Path, monkeypatch,
+    ) -> None:
+        """Bumping the subtitle parser version re-reads every session that has
+        a transcript file and leaves the Whisper sessions cached."""
+        from bristlenose.stages import s03_parse_subtitles
+
+        def sessions(d: Path, _run: int) -> list[InputSession]:
+            return [pair_session(d, 1, "P07", TEAMS_PAIR), audio_session(d, 2, "P08")]
+
+        h = run_pipeline(tmp_path, sessions, runs=1)
+        parsed_once = h.log().count("Parsed 12 segments from P07.vtt")
+        assert parsed_once == 1
+        monkeypatch.setattr(s03_parse_subtitles, "SUBTITLE_PARSER_VERSION", 999)
+        h2 = run_pipeline(tmp_path, sessions, runs=1)
+
+        assert h.transcribed == [["s2"]]
+        assert h2.transcribed in ([], [[]]), "the Whisper session stayed cached"
+        assert h2.log().count("Parsed 12 segments from P07.vtt") == 2, "s1 was re-read"
+        # The re-parse produced the same segments, so everything downstream
+        # was rightly served from cache: the content-hash cascade only moves
+        # when the output moves. A parser that changed its output would carry
+        # on through speaker ID, topics and quotes for s1 alone.
+        assert h2.quoted == []
+        assert {s.source for s in h2.session_segments()["s1"]} == {"vtt"}

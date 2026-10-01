@@ -43,6 +43,16 @@ class SessionRecord(BaseModel):
     provider: str | None = None  # "anthropic", "google", etc.
     model: str | None = None  # "claude-sonnet-4-20250514", etc.
     content_hash: str | None = None  # SHA-256 of the session output file
+    #: Fingerprint of what this session's output was computed FROM — its file
+    #: list for transcription, its segments for speaker ID, its transcript (and
+    #: topic map) for topics and quotes. ``fresh_session_ids`` reuses a record
+    #: only when the fingerprint still matches; ``None`` (a record written
+    #: before 1 Oct 2026) means "unknown", and unknown is recomputed, never
+    #: trusted. The stage-level ``input_hashes`` could not tell one session's
+    #: change from another's, which is how a transcript dropped beside an
+    #: analysed video was served from the Whisper cache whenever a sibling's
+    #: change kept the stage off the full-cache path.
+    input_hash: str | None = None
     # Phase 1f cost extension — additive, defaults to None for back-compat.
     input_tokens: int | None = None
     output_tokens: int | None = None
@@ -258,6 +268,7 @@ def mark_session_complete(
     provider: str | None = None,
     model: str | None = None,
     content_hash: str | None = None,
+    input_hash: str | None = None,
 ) -> None:
     """Mark a single session as complete within a per-session stage.
 
@@ -265,6 +276,10 @@ def mark_session_complete(
     after all sessions are done.  If the pipeline crashes before that call,
     the stage is left as RUNNING and ``_is_stage_cached()`` returns False,
     which triggers the per-session resume path on the next run.
+
+    ``input_hash`` is the fingerprint of what the session was computed from
+    (see ``SessionRecord.input_hash``); pass it so the next run can tell a
+    still-valid record from a stale one.
     """
     record = manifest.stages.get(stage)
     if record is None:
@@ -279,7 +294,75 @@ def mark_session_complete(
         provider=provider,
         model=model,
         content_hash=content_hash,
+        input_hash=input_hash,
     )
+    manifest.updated_at = _now_iso()
+
+
+def fresh_session_ids(
+    manifest: PipelineManifest | None,
+    stage: str,
+    current: dict[str, str],
+) -> set[str]:
+    """Session ids whose cached output can be reused: COMPLETE, and computed
+    from exactly the inputs they would be computed from now.
+
+    ``current`` maps every session the run holds to its present fingerprint.
+    A record whose ``input_hash`` is ``None`` is never fresh: it was written
+    before fingerprints existed and cannot say what it is good for, so it is
+    recomputed. A session absent from ``current`` is not fresh either — it is
+    no longer in the project.
+    """
+    fresh: set[str] = set()
+    for sid in get_completed_session_ids(manifest, stage):
+        record = manifest.stages[stage].sessions[sid]  # type: ignore[union-attr, index]
+        if record.input_hash is not None and current.get(sid) == record.input_hash:
+            fresh.add(sid)
+    return fresh
+
+
+def carry_forward_sessions(
+    manifest: PipelineManifest,
+    prev_manifest: PipelineManifest | None,
+    stage: str,
+    keep: set[str],
+    input_hashes: dict[str, str],
+) -> None:
+    """Copy the per-session records in ``keep`` from the previous manifest into
+    this run's, each stamped with its current fingerprint.
+
+    A session in ``keep`` that the previous manifest has no record for (a
+    manifest written before per-session records, or a full-cache hit on a
+    stage that never recorded sessions) gets a fresh COMPLETE record. That is
+    honest on the one path that calls it with such a manifest — the
+    full-cache hit, whose stage-level hash has just proved every input
+    unchanged — and it is what gives a legacy project fingerprints to work
+    from on its next run instead of recomputing everything.
+
+    Never mutates ``prev_manifest``.
+    """
+    record = manifest.stages.get(stage)
+    if record is None:
+        record = StageRecord(status=StageStatus.RUNNING, started_at=_now_iso())
+        manifest.stages[stage] = record
+    if record.sessions is None:
+        record.sessions = {}
+    prev_sessions: dict[str, SessionRecord] = {}
+    if prev_manifest is not None:
+        prev_record = prev_manifest.stages.get(stage)
+        if prev_record is not None and prev_record.sessions:
+            prev_sessions = prev_record.sessions
+    for sid in sorted(keep):
+        prev = prev_sessions.get(sid)
+        if prev is not None and prev.status == StageStatus.COMPLETE:
+            record.sessions[sid] = prev.model_copy(update={"input_hash": input_hashes.get(sid)})
+        else:
+            record.sessions[sid] = SessionRecord(
+                status=StageStatus.COMPLETE,
+                session_id=sid,
+                completed_at=_now_iso(),
+                input_hash=input_hashes.get(sid),
+            )
     manifest.updated_at = _now_iso()
 
 

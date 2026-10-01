@@ -40,8 +40,9 @@ from bristlenose.manifest import (
     STAGE_TOPIC_SEGMENTATION,
     PipelineManifest,
     StageStatus,
+    carry_forward_sessions,
     create_manifest,
-    get_completed_session_ids,
+    fresh_session_ids,
     load_manifest,
     mark_session_complete,
     mark_session_failed,
@@ -54,6 +55,7 @@ from bristlenose.manifest import STAGE_TRANSCRIBE as _M_STAGE_TRANSCRIBE
 from bristlenose.models import (
     ExtractedQuote,
     FileType,
+    FullTranscript,
     InputFile,
     InputSession,
     PiiCleanTranscript,
@@ -238,6 +240,46 @@ def _is_stage_cached(manifest: PipelineManifest | None, stage: str) -> bool:
     return record is not None and record.status == StageStatus.COMPLETE
 
 
+def _inputs_changed(
+    stored: dict[str, str] | None,
+    current: dict[str, str] | None,
+) -> bool:
+    """Did a stage's watched inputs change since the record was written?
+
+    Compared key by key. A key the stored record never recorded is a
+    **newly watched input**, not a change: the record is compared on what it
+    knew, stamped with the full current set on the hit, and strict from the
+    next run. Strict comparison here would have re-extracted every existing
+    project's quotes once when the quote stage began watching the
+    transcripts (1 Oct 2026) — paid LLM calls and a reshuffled report nobody
+    asked for, on a record that is no worse than it was the day before. A
+    key the record watched and the current run no longer does IS a change:
+    the contract moved under it.
+
+    Either side ``None`` means a legacy manifest with no inputs recorded at
+    all, which passes as before (backward compat).
+    """
+    if stored is None or current is None:
+        return False
+    if any(key not in current for key in stored):
+        return True
+    return any(stored[key] != value for key, value in current.items() if key in stored)
+
+
+def _demote_stage(manifest: PipelineManifest, stage: str) -> None:
+    """Take *stage* off the full-cache path but keep its per-session records.
+
+    An input change used to POP the record, so the per-session resume that
+    followed saw no completed sessions and recomputed every one — adding a
+    single recording re-Whispered the whole project. Demoting to PARTIAL
+    keeps ``get_completed_session_ids`` working; ``fresh_session_ids`` then
+    decides session by session from the fingerprints.
+    """
+    record = manifest.stages.get(stage)
+    if record is not None:
+        record.status = StageStatus.PARTIAL
+
+
 def _is_stage_verified(
     manifest: PipelineManifest | None,
     stage: str,
@@ -251,33 +293,33 @@ def _is_stage_verified(
     disk and its SHA-256 must match the hash stored in the manifest.
 
     Phase 2c adds input change detection: if *current_input_hashes* is
-    provided and differs from the stored ``input_hashes``, the stage is
-    stale even though its output file is intact.
+    provided and differs from the stored ``input_hashes`` (per
+    ``_inputs_changed``), the stage is stale even though its output file is
+    intact — it is demoted, keeping its per-session records for the
+    fingerprint-aware resume that follows.
 
     Old manifests with ``content_hash=None`` or ``input_hashes=None``
     pass unconditionally (backward compat).
 
-    On hash mismatch the stage is removed from *manifest* so that
-    downstream per-session resume logic (``get_completed_session_ids``)
-    won't attempt to load data from the corrupt file.
+    On a CONTENT hash mismatch the stage is removed from *manifest*: nothing
+    in a corrupt file can be trusted, per-session records included, so
+    ``get_completed_session_ids`` must not load from it.
     """
     if not _is_stage_cached(manifest, stage):
         return False
+    record = manifest.stages[stage]  # type: ignore[union-attr]
+
+    # Phase 2c: input change detection — before the files, so a missing
+    # output cannot hide a changed input behind a plain False.
+    if _inputs_changed(record.input_hashes, current_input_hashes):
+        logger.info("Stage %s inputs changed — re-running", stage)
+        _print_warn(f"{stage}: inputs changed since last run — re-running stage")
+        _demote_stage(manifest, stage)  # type: ignore[arg-type]
+        return False
+
     for p in output_paths:
         if not p.exists():
             return False
-    record = manifest.stages[stage]  # type: ignore[union-attr]
-
-    # Phase 2c: input change detection
-    if (
-        current_input_hashes is not None
-        and record.input_hashes is not None
-        and record.input_hashes != current_input_hashes
-    ):
-        logger.info("Stage %s inputs changed — re-running", stage)
-        _print_warn(f"{stage}: inputs changed since last run — re-running stage")
-        manifest.stages.pop(stage, None)  # type: ignore[union-attr]
-        return False
 
     expected = record.content_hash
     if expected is None:
@@ -312,26 +354,28 @@ def _is_speaker_stage_verified(
     ``SessionRecord.content_hash``.  Each session file is verified
     independently.
 
-    On hash mismatch the stage is removed from *manifest* so that
-    downstream per-session resume logic won't load corrupt data.
+    Inputs are checked BEFORE the files exist-loop: with the loop first, a
+    missing per-session file returned False before the input check ran, so
+    the stage stayed COMPLETE while its inputs had changed, and the
+    per-session path then trusted every record it held. An input change
+    demotes the stage (keeping its records for the fingerprint-aware resume);
+    a content-hash mismatch removes it, so nothing is loaded from a corrupt
+    file.
     """
     if not _is_stage_cached(manifest, stage):
         return False
-    for path in session_files.values():
-        if not path.exists():
-            return False
     record = manifest.stages[stage]  # type: ignore[union-attr]
 
     # Phase 2c: input change detection
-    if (
-        current_input_hashes is not None
-        and record.input_hashes is not None
-        and record.input_hashes != current_input_hashes
-    ):
+    if _inputs_changed(record.input_hashes, current_input_hashes):
         logger.info("Stage %s inputs changed — re-running", stage)
         _print_warn(f"{stage}: inputs changed since last run — re-running stage")
-        manifest.stages.pop(stage, None)  # type: ignore[union-attr]
+        _demote_stage(manifest, stage)  # type: ignore[arg-type]
         return False
+
+    for path in session_files.values():
+        if not path.exists():
+            return False
 
     if record.sessions is None:
         return True
@@ -349,6 +393,56 @@ def _is_speaker_stage_verified(
 def _print_hash_mismatch(stage: str, path: Path) -> None:
     """Log a warning when a cached file fails hash verification."""
     _print_warn(f"{stage}: {path.name} changed on disk — re-running stage")
+
+
+# ---------------------------------------------------------------------------
+# Per-session input fingerprints (0a, docs/design-cloud-import-transcripts.md)
+# ---------------------------------------------------------------------------
+#
+# The stage-level ``input_hashes`` say whether ANYTHING changed; these say
+# WHICH session changed, so the per-session resume can keep the others.
+# Read dynamically rather than bound at import, so a test can bump a version
+# between two runs of the same process.
+
+
+def _transcript_parser_version() -> str:
+    from bristlenose.stages import s03_parse_subtitles, s04_parse_docx
+
+    return (
+        f"s03={s03_parse_subtitles.SUBTITLE_PARSER_VERSION};"
+        f"s04={s04_parse_docx.DOCX_PARSER_VERSION}"
+    )
+
+
+def _session_input_fingerprint(session: InputSession) -> str:
+    """What transcription of *session* depends on: its files (identity, size,
+    mtime) and, when any of them is a transcript file, the parser that reads
+    it. A Whisper-only session's fingerprint does not move on a parser bump."""
+    parts = hash_file_metadata([f.path for f in session.files])
+    if session.has_existing_transcript:
+        parts += f"|parser={_transcript_parser_version()}"
+    return hash_bytes(parts.encode("utf-8"))
+
+
+def _json_dumps_sorted(obj: object) -> str:
+    """Canonical JSON for fingerprinting: sorted keys, no whitespace."""
+    import json as _json
+
+    return _json.dumps(obj, sort_keys=True, separators=(",", ":"))
+
+
+def _segments_fingerprint(segments: list[TranscriptSegment]) -> str:
+    """What speaker identification of a session depends on: its segments."""
+    payload = _json_dumps_sorted([seg.model_dump(mode="json") for seg in segments])
+    return hash_bytes(payload.encode("utf-8"))
+
+
+def _transcript_fingerprint(transcript: FullTranscript, *extra: str) -> str:
+    """What topics (and, with the topic map, quotes) of a session depend on:
+    the transcript as the stage sees it — text, roles and codes — plus any
+    *extra* inputs the caller names."""
+    payload = _json_dumps_sorted(transcript.model_dump(mode="json"))
+    return hash_bytes("|".join([payload, *extra]).encode("utf-8"))
 
 
 def _discard_stale_redaction(output_dir: Path) -> None:
@@ -463,9 +557,14 @@ def _record_session_outcomes(
     *,
     provider: str | None = None,
     model: str | None = None,
+    input_hashes: dict[str, str] | None = None,
 ) -> set[str]:
     """Write one manifest record per session: COMPLETE, or FAILED for those the
     stage's outcome named. Returns the set recorded as failed.
+
+    ``input_hashes`` maps session id → the fingerprint the session was
+    computed from (``SessionRecord.input_hash``), stamped on each COMPLETE
+    record so the next run can tell a still-valid one from a stale one.
 
     Named for what it writes, not for what it skips: it does not *omit* failed
     sessions, it *records* them, and the difference is the whole fix — an
@@ -508,6 +607,7 @@ def _record_session_outcomes(
             continue
         mark_session_complete(
             manifest, stage, sid, provider=provider, model=model,
+            input_hash=(input_hashes or {}).get(sid),
         )
     return skipped
 
@@ -965,6 +1065,22 @@ class Pipeline:
             _ss_path = intermediate / "session_segments.json"
             _source_paths = [f.path for s in sessions for f in s.files]
             _tx_input_hashes = {"source_files": hash_file_metadata(_source_paths)}
+            if any(s.has_existing_transcript for s in sessions):
+                # The parser is an input to any session read from a transcript
+                # file. Folded into the existing value rather than added as a
+                # key so that a parser fix REACHES a project that has one
+                # (`_inputs_changed` tolerates a new key; it does not tolerate a
+                # changed value), while a Whisper-only project's record is
+                # untouched by it.
+                _tx_input_hashes["source_files"] = hash_bytes(
+                    f"{_tx_input_hashes['source_files']}|parser={_transcript_parser_version()}"
+                    .encode()
+                )
+            # Per session: what ITS transcription was computed from, so the
+            # per-session resume below can keep the sessions whose files did
+            # not change and redo only the ones whose did — a transcript
+            # dropped beside an analysed video, a parser bump.
+            _tx_session_fps = {s.session_id: _session_input_fingerprint(s) for s in sessions}
             # Outer-scope defaults — both branches below populate these.
             # ``_transcribe_elapsed`` stays None on full-cache-hit (stage
             # didn't run this invocation; ``duration_ms`` reflects only
@@ -987,13 +1103,22 @@ class Pipeline:
                     f"Transcribed {count_noun(len(sessions), 'session')}"
                     f" ({count_noun(total_segments, 'segment')})",
                 )
+                # The stage-level hash has just proved every input unchanged:
+                # carry the per-session records into this run's manifest with
+                # their current fingerprints. Without this a full-cache run
+                # wrote a record with no sessions, and the next change
+                # recomputed everything.
+                carry_forward_sessions(
+                    manifest, _prev_manifest, _M_STAGE_TRANSCRIBE,
+                    set(session_segments), _tx_session_fps,
+                )
             else:
                 import json as _json
 
-                # Per-session resume: load cached segments for completed
-                # sessions and only transcribe the remaining ones.
-                _cached_tx_sids = get_completed_session_ids(
-                    _prev_manifest, _M_STAGE_TRANSCRIBE,
+                # Per-session resume: keep the sessions whose fingerprint still
+                # matches and only transcribe the rest.
+                _cached_tx_sids = fresh_session_ids(
+                    _prev_manifest, _M_STAGE_TRANSCRIBE, _tx_session_fps,
                 )
                 _cached_segments: dict[str, list[TranscriptSegment]] = {}
                 if _cached_tx_sids and _ss_path.exists():
@@ -1028,18 +1153,11 @@ class Pipeline:
                     self._summary.reflow_scope = ReflowScopeEnum.RESTRUCTURE
 
                 mark_stage_running(manifest, _M_STAGE_TRANSCRIBE)
-                # Carry forward session records from previous manifest
-                if _cached_tx_sids and _prev_manifest is not None:
-                    _prev_tx_rec = _prev_manifest.stages.get(
-                        _M_STAGE_TRANSCRIBE,
-                    )
-                    if _prev_tx_rec and _prev_tx_rec.sessions:
-                        rec_tx = manifest.stages[_M_STAGE_TRANSCRIBE]
-                        rec_tx.sessions = {
-                            sid: sr
-                            for sid, sr in _prev_tx_rec.sessions.items()
-                            if sr.status == StageStatus.COMPLETE
-                        }
+                # Carry forward the still-fresh session records only.
+                carry_forward_sessions(
+                    manifest, _prev_manifest, _M_STAGE_TRANSCRIBE,
+                    _cached_tx_sids, _tx_session_fps,
+                )
 
                 # Whisper preflight is front-loaded (runs right after
                 # ingest), so by the time we hit transcribe stage 5 the
@@ -1102,6 +1220,7 @@ class Pipeline:
                     for sid in _fresh_segments:
                         mark_session_complete(
                             manifest, _M_STAGE_TRANSCRIBE, sid,
+                            input_hash=_tx_session_fps.get(sid),
                         )
                 else:
                     _fresh_segments = {}
@@ -1262,6 +1381,11 @@ class Pipeline:
                 if s.session_id in session_segments
             }
             _si_input_hashes = {"upstream": _tx_hash or _MISSING_HASH}
+            # Per session: the segments as they enter this stage. Taken now,
+            # before the cached path swaps in the role-bearing copies.
+            _si_session_fps = {
+                sid: _segments_fingerprint(segs) for sid, segs in session_segments.items()
+            }
             # Verb-advance: both the cached and fresh paths flow from the
             # check below (no enable-gate), so this is the one site that fires
             # on every run including cache-verified / transcript-only.
@@ -1289,11 +1413,15 @@ class Pipeline:
                         for seg in _si_data["segments_with_roles"]
                     ]
                 _print_cached_step("Identified speakers")
+                carry_forward_sessions(
+                    manifest, _prev_manifest, STAGE_IDENTIFY_SPEAKERS,
+                    set(session_segments), _si_session_fps,
+                )
             else:
-                # Per-session resume: load cached speaker info for completed
-                # sessions and only run LLM on the remaining ones.
-                _cached_si_sids = get_completed_session_ids(
-                    _prev_manifest, STAGE_IDENTIFY_SPEAKERS,
+                # Per-session resume: keep the sessions whose segments are
+                # unchanged and only run the LLM on the rest.
+                _cached_si_sids = fresh_session_ids(
+                    _prev_manifest, STAGE_IDENTIFY_SPEAKERS, _si_session_fps,
                 )
                 all_speaker_infos = {}
                 if _cached_si_sids and _si_dir.is_dir():
@@ -1328,18 +1456,11 @@ class Pipeline:
                 }
 
                 mark_stage_running(manifest, STAGE_IDENTIFY_SPEAKERS)
-                # Carry forward session records from previous manifest
-                if _cached_si_sids and _prev_manifest is not None:
-                    _prev_si_rec = _prev_manifest.stages.get(
-                        STAGE_IDENTIFY_SPEAKERS,
-                    )
-                    if _prev_si_rec and _prev_si_rec.sessions:
-                        rec_si = manifest.stages[STAGE_IDENTIFY_SPEAKERS]
-                        rec_si.sessions = {
-                            sid: sr
-                            for sid, sr in _prev_si_rec.sessions.items()
-                            if sr.status == StageStatus.COMPLETE
-                        }
+                # Carry forward the still-fresh session records only.
+                carry_forward_sessions(
+                    manifest, _prev_manifest, STAGE_IDENTIFY_SPEAKERS,
+                    _cached_si_sids, _si_session_fps,
+                )
 
                 status.update("[dim]Identifying speakers...[/dim]")
                 t0 = time.perf_counter()
@@ -1447,6 +1568,7 @@ class Pipeline:
                             manifest, STAGE_IDENTIFY_SPEAKERS, sid,
                             provider=self.settings.llm_provider,
                             model=self.settings.llm_model,
+                            input_hash=_si_session_fps.get(sid),
                         )
 
                     # Write speaker info cache for fresh sessions
@@ -1692,6 +1814,11 @@ class Pipeline:
                 "upstream": _tx_hash or _MISSING_HASH,
                 "pii_enabled": str(self.settings.pii_enabled),
             }
+            # Per session: the transcript as this stage sees it (text, roles,
+            # codes — redacted when redaction is on).
+            _topic_session_fps = {
+                t.session_id: _transcript_fingerprint(t) for t in clean_transcripts
+            }
             self._emit_stage_entry(STAGE_TOPICS)
             if _is_stage_verified(
                 _prev_manifest, STAGE_TOPIC_SEGMENTATION, [_tb_path],
@@ -1708,11 +1835,15 @@ class Pipeline:
                 _print_cached_step(
                     f"Segmented {count_noun(total_boundaries, 'topic boundary')}",
                 )
+                carry_forward_sessions(
+                    manifest, _prev_manifest, STAGE_TOPIC_SEGMENTATION,
+                    {tm.session_id for tm in topic_maps}, _topic_session_fps,
+                )
             else:
-                # Per-session resume: load cached topic maps for completed
-                # sessions and only run LLM on the remaining ones.
-                _cached_topic_sids = get_completed_session_ids(
-                    _prev_manifest, STAGE_TOPIC_SEGMENTATION,
+                # Per-session resume: keep the sessions whose transcript is
+                # unchanged and only run the LLM on the rest.
+                _cached_topic_sids = fresh_session_ids(
+                    _prev_manifest, STAGE_TOPIC_SEGMENTATION, _topic_session_fps,
                 )
                 _cached_topic_maps: list[SessionTopicMap] = []
                 if _cached_topic_sids and _tb_path.exists():
@@ -1735,18 +1866,11 @@ class Pipeline:
                 ]
 
                 mark_stage_running(manifest, STAGE_TOPIC_SEGMENTATION)
-                # Carry forward session records from previous manifest
-                if _cached_topic_sids and _prev_manifest is not None:
-                    _prev_rec = _prev_manifest.stages.get(
-                        STAGE_TOPIC_SEGMENTATION,
-                    )
-                    if _prev_rec and _prev_rec.sessions:
-                        rec = manifest.stages[STAGE_TOPIC_SEGMENTATION]
-                        rec.sessions = {
-                            sid: sr
-                            for sid, sr in _prev_rec.sessions.items()
-                            if sr.status == StageStatus.COMPLETE
-                        }
+                # Carry forward the still-fresh session records only.
+                carry_forward_sessions(
+                    manifest, _prev_manifest, STAGE_TOPIC_SEGMENTATION,
+                    _cached_topic_sids, _topic_session_fps,
+                )
 
                 status.update("[dim]Segmenting topics...[/dim]")
                 t0 = time.perf_counter()
@@ -1773,6 +1897,7 @@ class Pipeline:
                         _seg_outcome,
                         provider=self.settings.llm_provider,
                         model=self.settings.llm_model,
+                        input_hashes=_topic_session_fps,
                     )
                 else:
                     _fresh_topic_maps = []
@@ -1856,7 +1981,26 @@ class Pipeline:
             # ── Stage 9: Quote extraction ────────────────────────────
             _quote_errors: list[str] = []
             _eq_path = intermediate / "extracted_quotes.json"
-            _qe_input_hashes = {"upstream": _tb_hash or _MISSING_HASH}
+            # Quotes depend on the transcripts as well as the topic map. With
+            # only the map watched, a changed transcript whose boundaries came
+            # back identical served the OLD quotes (measured: stale quotes).
+            _topic_maps_by_sid = {tm.session_id: tm for tm in topic_maps}
+            _quote_session_fps = {
+                t.session_id: _transcript_fingerprint(
+                    t,
+                    _json_dumps_sorted(
+                        _topic_maps_by_sid[t.session_id].model_dump(mode="json")
+                    ) if t.session_id in _topic_maps_by_sid else "",
+                )
+                for t in clean_transcripts
+            }
+            _qe_input_hashes = {
+                "upstream": _tb_hash or _MISSING_HASH,
+                "transcripts": hash_bytes(
+                    "|".join(f"{sid}={fp}" for sid, fp in sorted(_topic_session_fps.items()))
+                    .encode("utf-8")
+                ),
+            }
             # Outer-scope defaults — both branches below populate these.
             # `_cached_q_count` carries the number of quotes that came from
             # cache (full-cache-hit branch loads all; per-session branch
@@ -1881,11 +2025,15 @@ class Pipeline:
                 # the truth ("all cached, all good") instead of "0/0".
                 _cached_q_count = len(all_quotes)
                 _print_cached_step(f"Extracted {count_noun(len(all_quotes), 'quote')}")
+                carry_forward_sessions(
+                    manifest, _prev_manifest, STAGE_QUOTE_EXTRACTION,
+                    {t.session_id for t in clean_transcripts}, _quote_session_fps,
+                )
             else:
-                # Per-session resume: load cached quotes for completed
-                # sessions and only run LLM on the remaining ones.
-                _cached_quote_sids = get_completed_session_ids(
-                    _prev_manifest, STAGE_QUOTE_EXTRACTION,
+                # Per-session resume: keep the sessions whose transcript and
+                # topic map are unchanged and only run the LLM on the rest.
+                _cached_quote_sids = fresh_session_ids(
+                    _prev_manifest, STAGE_QUOTE_EXTRACTION, _quote_session_fps,
                 )
                 _cached_quotes: list[ExtractedQuote] = []
                 if _cached_quote_sids and _eq_path.exists():
@@ -1912,18 +2060,11 @@ class Pipeline:
                 ]
 
                 mark_stage_running(manifest, STAGE_QUOTE_EXTRACTION)
-                # Carry forward session records from previous manifest
-                if _cached_quote_sids and _prev_manifest is not None:
-                    _prev_rec_q = _prev_manifest.stages.get(
-                        STAGE_QUOTE_EXTRACTION,
-                    )
-                    if _prev_rec_q and _prev_rec_q.sessions:
-                        rec_q = manifest.stages[STAGE_QUOTE_EXTRACTION]
-                        rec_q.sessions = {
-                            sid: sr
-                            for sid, sr in _prev_rec_q.sessions.items()
-                            if sr.status == StageStatus.COMPLETE
-                        }
+                # Carry forward the still-fresh session records only.
+                carry_forward_sessions(
+                    manifest, _prev_manifest, STAGE_QUOTE_EXTRACTION,
+                    _cached_quote_sids, _quote_session_fps,
+                )
 
                 status.update("[dim]Extracting quotes...[/dim]")
                 t0 = time.perf_counter()
@@ -1955,6 +2096,7 @@ class Pipeline:
                         _fresh_quote_outcome,
                         provider=self.settings.llm_provider,
                         model=self.settings.llm_model,
+                        input_hashes=_quote_session_fps,
                     )
                 else:
                     _fresh_quotes = []

@@ -17,6 +17,12 @@ from bristlenose.utils.timecodes import parse_timecode
 
 logger = logging.getLogger(__name__)
 
+#: Bump when this module changes what it emits for the same bytes — the
+#: pipeline folds it into the transcribe stage's input fingerprint, so a
+#: .docx session is re-parsed on the next run rather than served from a cache
+#: the old parser wrote. Sibling of ``SUBTITLE_PARSER_VERSION`` in s03.
+DOCX_PARSER_VERSION = 1
+
 # Teams transcript patterns:
 # "Speaker Name  00:01:23" or "Speaker Name 0:01:23"
 _TEAMS_SPEAKER_LINE = re.compile(

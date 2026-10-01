@@ -260,6 +260,33 @@ li { max-width:72ch; }
 .agent .turn .who { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase; letter-spacing:.06em; color:var(--bn-colour-muted); margin-bottom:.25rem; }
 .agent .tool { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); background:var(--bn-colour-quote-bg); border-radius:var(--bn-radius-sm); padding:.35rem .5rem; margin:.3rem 0; white-space:pre; overflow-x:auto; }
 
+/* ── shipped proposed vocabulary, applied to the split person badge ───────
+   .badge-proposed / .badge-action-pill / .badge-action-accept / .badge-action-deny
+   are atoms/badge.css verbatim (pulse, dashed border, hover pill). The only
+   adaptation: the dash goes on both halves of the split badge, not on a wrapper. */
+:root { --bn-colour-positive: var(--bn-positive); --bn-colour-negative: light-dark(#dc2626, #f87171); }
+@keyframes bn-proposed-pulse { 0% { opacity:.5; } 50% { opacity:.78; } 100% { opacity:.5; } }
+.bn-person-badge.badge-proposed { animation:bn-proposed-pulse 3s ease-in-out infinite; position:relative; cursor:pointer; }
+.bn-person-badge.badge-proposed .bn-speaker-badge-code, .bn-person-badge.badge-proposed .bn-speaker-badge-name { border-style:dashed; }
+.bn-person-badge.badge-proposed:hover, .bn-person-badge.badge-proposed.hover { animation:none; opacity:1 !important; }
+.badge-action-pill { position:absolute; top:calc(-0.3rem - 1px); right:calc(-0.3rem - 1px - 1rem); display:flex; gap:0; background:var(--bn-colour-bg);
+  border-radius:var(--bn-radius-pill); box-shadow:0 1px 4px rgba(0,0,0,.16), 0 0 1px rgba(0,0,0,.06); opacity:0; transition:opacity var(--bn-transition-fast);
+  pointer-events:none; overflow:hidden; z-index:1; }
+.badge-proposed:hover .badge-action-pill, .badge-proposed.hover .badge-action-pill, .badge-proposed:focus-within .badge-action-pill { opacity:1; pointer-events:auto; }
+.badge-action-deny, .badge-action-accept { display:flex; align-items:center; justify-content:center; width:1rem; height:1rem; font-size:var(--bn-text-micro);
+  font-weight:var(--bn-weight-strong); cursor:pointer; border:none; background:transparent; padding:0; font-family:var(--bn-font-body); }
+.badge-action-deny { color:var(--bn-colour-negative); }
+.badge-action-accept { color:var(--bn-colour-positive); border-left:1px solid var(--bn-colour-border); }
+.badge-action-deny:hover { background:#fef2f2; } .badge-action-accept:hover { background:#dcfce7; }
+.badge-action-deny:focus-visible, .badge-action-accept:focus-visible { outline:2px solid var(--bn-colour-accent); outline-offset:-2px; }
+@media (prefers-reduced-motion:reduce) { .bn-person-badge.badge-proposed { animation:none; opacity:.7; } }
+/* the unresolved slot: the code lozenge itself is the control */
+.bn-person-badge.unknown .bn-speaker-badge-code { color:var(--bn-colour-muted); border-style:dashed; cursor:pointer; }
+.vocab { display:flex; flex-wrap:wrap; gap:1.2rem 2.2rem; }
+.vocab-item { display:flex; flex-direction:column; gap:.4rem; min-width:12rem; }
+.vocab-cap { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase; letter-spacing:.08em; color:var(--bn-colour-muted); }
+kbd { font-family:var(--bn-font-mono); font-size:.8em; border:1px solid var(--bn-colour-border); border-bottom-width:2px; border-radius:3px; padding:0 .3em; }
+
 /* grouped picker (design-people §B9) + sweep line (§B10) — PROPOSED */
 .menu { display:inline-block; min-width:16rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); background:var(--bn-colour-bg); box-shadow:0 8px 24px var(--bn-colour-shadow); padding:.3rem 0; font-size:var(--bn-text-label); }
 .menu .gh { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); padding:.35rem .9rem .15rem; }
@@ -347,6 +374,7 @@ li { max-width:72ch; }
     <li><b>The decision is taken, not built.</b> Decision 1 (24 Aug 2026): identity lives above codes; the escape is naming, and naming session 9's moderator "Mike" renumbers him to <code>m2</code>. Decision 2 (25 Aug): moderators and observers are named in exports, participants are not. None of the UX that carries either decision exists in the tree, and the register that says the People lens "ships" is wrong.</li>
     <li><b>The researcher's one available correction makes it worse.</b> The pencil on <code>m1</code> opens an editor in every session at once (measured broken in Chromium and WebKit), a commit renames every session, the server writes one <code>Person</code> row of twelve, and the next run or reload reverts or spreads the edit by whichever row the database returns first.</li>
     <li><b>It travels.</b> Moderator names are preserved in the HTML export by design, so the wrong colleague is credited with running a session in the one deliverable the recipient cannot check, and the MCP overview answers an agent with the same name for every session.</li>
+    <li><b>Decided 1 Oct 2026, route C (Part 5b):</b> unknown is stored as unknown. A session's moderator is <code>null</code> until a platform label proposes an identity or a person picks one; identities are minted on that evidence and numbered as they appear; <code>m?</code> renders the gap; proposed badges use the shipped AutoCode treatment in the app and read plain in the export; nothing asks the researcher to do anything. Names and identities move to the database; <code>people.yaml</code> is read once and retired as a store.</li>
     <li><b>The cloud-import transcripts plan is right to defer naming moderators from platform labels</b>, and its study-wide-code idea (Q4) is the cheapest route to a fix, provided the key is the platform's participant id, not a display string, which decision 1's "never auto-merge on name equality" would otherwise forbid.</li>
   </ol>
 </div>
@@ -357,6 +385,7 @@ li { max-width:72ch; }
   <li><a href="#asbuilt">3 · What we have now: mechanism and schema</a></li>
   <li><a href="#failures">4 · Failure modes, illustrated (F1–F12)</a></li>
   <li><a href="#designout">5 · What the settled design does about it (D1–D4)</a></li>
+  <li><a href="#routec">5b · Route C, decided 1 Oct 2026: the moderator state engine (E1–E8)</a></li>
   <li><a href="#gaps">6 · The gap register</a></li>
   <li><a href="#needs">7 · What we need, in order</a></li>
   <li><a href="#challenges">8 · The challenges</a></li>
@@ -1102,6 +1131,7 @@ m2:
 
 <div class="part" id="designout">Part 5 <small>What the settled design does about it — decision 1 (24 Aug 2026) and decision 2 (25 Aug 2026), drawn. Nothing in this part is built. The chrome says "proposed" on every frame.</small></div>
 <h2>Designing the failure out, not warning about it</h2>
+<div class="callout"><b>Read with Part 5b.</b> Decided 1 Oct 2026, after this part was drawn: route C replaces the renumber-on-rename mechanism (D1, D2) with identity-minted codes and a per-session map whose value may be <code>null</code>. D1's grouped picker survives unchanged; D3 survives as the platform-evidence path; D4's italic interim survives for migrated studies only (E7). The frames below are kept as the record of the argument, per the mockup register's rule that nothing is deleted.</div>
 <div class="prose">
 <p>The stance in design-people.md governs the shape of the fix: <b>pick the typical case confidently, render a wrinkle so it is obvious to someone who was in the room, and make the fix cost one action.</b> One moderator per study is the typical case, so <code>m1</code> everywhere stays the default. The wrinkle is a second moderator, and the one action is naming them in the session where they appear. Everything below follows from "a code has one name everywhere": the only way for session 9's moderator to be Mike is for Mike to be a different code.</p>
 </div>
@@ -1264,6 +1294,321 @@ account renamed in Teams stays one.</span></pre></div>
   </div>
 </div>
 
+
+<div class="part" id="routec">Part 5b <small>Route C, decided 1 Oct 2026 — unknown stored as unknown, identities minted on evidence or a pick, drawn with the shipped proposed-badge vocabulary (atoms/badge.css <code>.badge-proposed</code> + <code>.badge-action-pill</code>). Supersedes D1/D2's renumber-on-rename within this report; D1's picker survives, D4 survives for migrated studies only.</small></div>
+<h2>The moderator state engine</h2>
+<div class="prose">
+<p>Eight calls taken in conversation on 1 Oct 2026, recorded here so the frames below can be read against them:</p>
+</div>
+<div class="tblwrap"><table class="tbl">
+<tr><th>#</th><th>Decided</th><th>Consequence in the frames</th></tr>
+<tr><td class="c">P1</td><td class="k">A platform-proposed moderator is tentative in the app, plain in the export and MCP</td><td>Dashed, pulsing split badge with the accept/deny pill on hover; the exported roles line states the platform's name as fact</td></tr>
+<tr><td class="c">P2</td><td class="k">Name-only platform labels mint one identity per distinct name within a study</td><td>"Martin B Storey" in eight files is one <code>m1</code> proposed on eight sessions, origin "from the transcript"; a recorded carve-out from decision 1 for this evidence class</td></tr>
+<tr><td class="c">P3</td><td class="k">Nothing asks. No "looks like you" line, no confirm prompt</td><td>The badge reads <code>m1 Martin B Storey</code>; right-click changes it or nothing happens. "That's Me" is a menu item, never an offer. The heading line states a count and asks for nothing</td></tr>
+<tr><td class="c">P4</td><td class="k">Observers use the same engine; the count line counts moderators only</td><td><code>o?</code> rows exist and rest silently</td></tr>
+<tr><td class="c">I1</td><td class="k">Wait for the transcripts plan's 0b; key the per-session map by its stable session identity</td><td>No assignment can move to the wrong interview when an older recording is added; 0b is the first package</td></tr>
+<tr><td class="c">I2</td><td class="k">Studies in the field migrate to "proposed on every session, origin inherited"</td><td>Frame E7: the old name stays everywhere it was shown, drawn tentative</td></tr>
+<tr><td class="c">I3</td><td class="k">Two picker implementations: a web popover in the browser, a native <code>NSMenu</code> on the Mac; visual parity tuned later in a Diagnostics side-by-side mockup; wiring first</td><td>Frames draw the web popover; the native twin is named, not drawn</td></tr>
+<tr><td class="c">I4</td><td class="k">Me comes from the account name; no settings UI in v1</td><td>"That's Me (Martin Storey)" is seeded from <code>NSFullUserName</code> on the Mac and the GECOS field on the CLI</td></tr>
+<tr><td class="c">I5</td><td class="k"><code>people.yaml</code> is retired as a store; the database is the only home for names, identities, the per-session map and origin</td><td>The state panels below show rows, not a file. A legacy <code>people.yaml</code> is read once on first import after upgrade, then ignored, never deleted. Computed stats move to an intermediate JSON</td></tr>
+<tr><td class="c">I6</td><td class="k">The per-session map is <code>session_speakers.person_id</code>, made nullable, plus <code>state</code> and <code>evidence</code>; <code>persons</code> gain a per-project <code>code</code>, a <code>uuid</code> and an <code>origin</code></td><td>One Alembic revision on tables that exist; one <code>Person</code> per identity instead of one per session; <code>NULL</code> is <code>m?</code></td></tr>
+<tr><td class="c">I7</td><td class="k">The pipeline runs the importer at the end of every run</td><td>The database always exists after a run, whoever ran it; serve becomes a reader; the importer proposes from evidence and never overwrites a confirmed row</td></tr>
+<tr><td class="c">I8</td><td class="k">The markdown report and the sealed static HTML get no investment</td><td>With no <code>people.yaml</code> to read they fall back to codes, as their existing missing-file path already does. The exported HTML is the report to share</td></tr>
+</table></div>
+
+<div class="prose">
+<p>Defaults taken without asking, change them if wrong: unidentified slots export as "Moderator not identified"; identities take numbers in identification order and Me gets no reserved number; a moderator's short name defaults the way a participant's does; a heard name pre-fills the Someone New… field.</p>
+</div>
+
+<!-- ───────────────────────────── E1 ───────────────────────────── -->
+<div class="bench" id="e1">
+  <div class="bench-head"><h3><span class="fnum">E1</span>The vocabulary: four states of one badge</h3>
+    <p class="sub">The split person badge in each state the engine can hold. The tentative treatment is the AutoCode proposed badge's, unchanged: dashed border, the slow pulse, and the ✗ | ✓ pill that appears on hover. Nothing new is drawn.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>Sessions lens · speaker entries · one per state</span><span class="tag proposed">proposed · reuses .badge-proposed and .badge-action-pill verbatim</span></div>
+    <div class="screen">
+      <div class="vocab">
+        <div class="vocab-item"><div class="vocab-cap">null</div><span class="bn-session-speaker-entry"><span class="bn-person-badge unknown"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m?</span></span></span><span class="bn-speaker-editable-name unnamed">Moderator</span></span></div>
+        <div class="vocab-item"><div class="vocab-cap">null, with a hint</div><span class="bn-session-speaker-entry"><span class="bn-person-badge unknown"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m?</span></span></span><span class="bn-speaker-editable-name unnamed">Moderator</span><span class="bn-name-source">heard “Kerri”</span></span></div>
+        <div class="vocab-item"><div class="vocab-cap">proposed (platform label)</div><span class="bn-session-speaker-entry"><span class="bn-person-badge badge-proposed"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span><span class="bn-speaker-badge-name">Martin B Storey</span></span><span class="badge-action-pill"><span class="badge-action-deny" role="button" tabindex="0" aria-label="Deny">&times;</span><span class="badge-action-accept" role="button" tabindex="0" aria-label="Accept">&check;</span></span></span></span></div>
+        <div class="vocab-item"><div class="vocab-cap">proposed, hovered</div><span class="bn-session-speaker-entry"><span class="bn-person-badge badge-proposed hover"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span><span class="bn-speaker-badge-name">Martin B Storey</span></span><span class="badge-action-pill"><span class="badge-action-deny" role="button" tabindex="0" aria-label="Deny">&times;</span><span class="badge-action-accept" role="button" tabindex="0" aria-label="Accept">&check;</span></span></span></span></div>
+        <div class="vocab-item"><div class="vocab-cap">confirmed</div><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span><span class="bn-speaker-badge-name">Martin B Storey</span></span></span></span></div>
+        <div class="vocab-item"><div class="vocab-cap">confirmed, linked to Me</div><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span><span class="bn-speaker-badge-name">Martin B Storey (Me)</span></span></span></span></div>
+        <div class="vocab-item"><div class="vocab-cap">proposed, inherited (migration)</div><span class="bn-session-speaker-entry"><span class="bn-person-badge badge-proposed"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span><span class="bn-speaker-badge-name">Martin Storey</span></span><span class="badge-action-pill"><span class="badge-action-deny" role="button" tabindex="0" aria-label="Deny">&times;</span><span class="badge-action-accept" role="button" tabindex="0" aria-label="Accept">&check;</span></span></span><span class="bn-name-source">inherited</span></span></div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>What each means</dt><dd><b>null</b>: nobody knows; the pipeline's default for a Whisper session. <b>proposed</b>: the platform said so (a Teams or Meet account label, a <code>.docx</code> speaker line, a Zoom <code>Name:</code> that passes the 1c rule), or the name was inherited by migration. <b>confirmed</b>: a person said so, by pick, ✓, That's Me or Someone New…. A hint is not a state: a heard name annotates a null slot and pre-fills the new-person field, and never mints anything.</dd>
+      <dt>What ✓ and ✗ do</dt><dd>✓ moves the slot to confirmed with no other change (keyboard <kbd>a</kbd>, as on tags). ✗ returns the slot to null and leaves the identity in the cast (<kbd>d</kbd>). Neither is required: a proposed badge that is never touched reads correctly for ever (P3).</dd>
+      <dt>Why the pill is not needy UX</dt><dd>It is hidden until hover or focus, exactly as it ships on proposed tags, and the pulse is the only resting signal. The researcher's attention is invited, not demanded, and the export does not carry either (P1).</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ───────────────────────────── E2 ───────────────────────────── -->
+<div class="bench" id="e2">
+  <div class="bench-head"><h3><span class="fnum">E2</span>The study after two weeks: three Teams imports, three hand-dropped recordings</h3>
+    <p class="sub">Sessions 1–3 arrived from Teams with labels (Martin, Martin, Kerri). Sessions 4–6 were dragged in as video. The researcher has so far picked one of them. Nothing was inferred for the other two.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>Sessions lens · route C</span><span class="tag proposed">proposed · not built</span></div>
+    <div class="split">
+      <div class="screen">
+        <div class="lens-head"><h4>Sessions</h4><span class="mod">Moderated by Martin B Storey and Kerri Ng · 2 not identified</span></div>
+        <div class="sg" role="table">
+          <div class="sg-row head"><div class="sg-cell">#</div><div class="sg-cell">Speakers</div><div class="sg-cell">Start</div><div class="sg-cell">Duration</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#e2">#1</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge badge-proposed"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span><span class="bn-speaker-badge-name">Martin B Storey</span></span><span class="badge-action-pill"><span class="badge-action-deny">&times;</span><span class="badge-action-accept">&check;</span></span></span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p1</span></span></span><span class="bn-speaker-editable-name">Sarah Chen</span><button class="bn-name-pencil" type="button">&#x270E;</button></span></div><div class="sg-cell sg-start">6 Jan 2026</div><div class="sg-cell sg-dur">48:02</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#e2">#2</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge badge-proposed"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span><span class="bn-speaker-badge-name">Martin B Storey</span></span><span class="badge-action-pill"><span class="badge-action-deny">&times;</span><span class="badge-action-accept">&check;</span></span></span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p2</span></span></span><span class="bn-speaker-editable-name">Amara Nwosu</span><button class="bn-name-pencil" type="button">&#x270E;</button></span></div><div class="sg-cell sg-start">6 Jan 2026</div><div class="sg-cell sg-dur">39:51</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#e2">#3</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge badge-proposed"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m2</span><span class="bn-speaker-badge-name">Kerri Ng</span></span><span class="badge-action-pill"><span class="badge-action-deny">&times;</span><span class="badge-action-accept">&check;</span></span></span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p3</span></span></span><span class="bn-speaker-editable-name">Mary A.</span><button class="bn-name-pencil" type="button">&#x270E;</button></span></div><div class="sg-cell sg-start">8 Jan 2026</div><div class="sg-cell sg-dur">44:51</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#e2">#4</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span><span class="bn-speaker-badge-name">Martin B Storey</span></span></span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p4</span></span></span><span class="bn-speaker-editable-name">Marrian Boateng</span><button class="bn-name-pencil" type="button">&#x270E;</button></span></div><div class="sg-cell sg-start">10 Jan 2026</div><div class="sg-cell sg-dur">42:10</div></div>
+          <div class="sg-row focus"><div class="sg-cell sg-id"><a href="#e2">#5</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge unknown"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m?</span></span></span><span class="bn-speaker-editable-name unnamed">Moderator</span><span class="bn-name-source">heard “Kerri”</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p5</span></span></span><span class="bn-speaker-editable-name">Mary O.</span><button class="bn-name-pencil" type="button">&#x270E;</button></span></div><div class="sg-cell sg-start">14 Jan 2026</div><div class="sg-cell sg-dur">46:20</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#e2">#6</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge unknown"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m?</span></span></span><span class="bn-speaker-editable-name unnamed">Moderator</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p6</span></span></span><span class="bn-speaker-editable-name">Mickael</span><button class="bn-name-pencil" type="button">&#x270E;</button></span></div><div class="sg-cell sg-start">15 Jan 2026</div><div class="sg-cell sg-dur">38:44</div></div>
+        </div>
+      </div>
+      <div class="state"><div class="state-label">bristlenose.db — session_speakers is the map; persons are the identities</div><pre>session_speakers   <span class="dim">(session key is 0b's stable identity)</span>
+ session  tag   person_id  state       evidence      hint
+ s1       m1    → 11       <span class="ok">proposed</span>    teams-label
+ s2       m1    → 11       <span class="ok">proposed</span>    teams-label
+ s3       m1    → 12       <span class="ok">proposed</span>    teams-label
+ s4       m1    → 11       <span class="ok">confirmed</span>   pick
+ s5       m1    <span class="hl">NULL</span>                               heard "Kerri"
+ s6       m1    <span class="hl">NULL</span>
+
+persons
+ id  code  uuid    full_name        origin           me
+ 11  m1    7c1e…   Martin B Storey  from-transcript  no
+ 12  m2    a90d…   Kerri Ng         from-transcript  no
+
+<span class="dim">tag = the per-session [m1] token in transcripts-raw/,
+a within-session speaker tag, not an identity.
+people.yaml: read once if present, then ignored.</span></pre></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>What the pipeline did</dt><dd>Minted <code>m1</code> and <code>m2</code> from the Teams labels (P2), proposed them on their sessions, and wrote <code>null</code> for the three Whisper sessions. The heard name on session 5 is a hint on the row, not an assignment.</dd>
+      <dt>What the researcher did</dt><dd>One pick, on session 4, after looking at it the day it landed. Sessions 1–3 were never touched and read correctly. Sessions 5 and 6 are honest gaps.</dd>
+      <dt>The heading line</dt><dd>States two facts and asks nothing: who moderated, and how many sessions have no moderator identified. It is absent when the count is zero and it counts moderators only (P4). It is the same sentence the export will carry.</dd>
+      <dt>Why the database, not the file</dt><dd>Names and identities are researcher state, like stars and tags, which have never had a file twin. One store ends the dual truth, the best-effort write-through, the downgrade hazard of every new YAML block, and the one-name-per-code key this report is about. The pipeline carries <i>evidence</i> forward in its intermediates (labels, heard names, speaker tags); the importer, now run at the end of every pipeline run, turns evidence into proposals and never touches a confirmed row.</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ───────────────────────────── E3 ───────────────────────────── -->
+<div class="bench" id="e3">
+  <div class="bench-head"><h3><span class="fnum">E3</span>Picking: session 5 was Kerri's</h3>
+    <p class="sub">The researcher right-clicks the <code>m?</code> badge, or clicks it. The cast of this study opens, most likely first. The hint promoted Kerri to the top. Return.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>Sessions lens · row #5 · the web popover (the Mac raises the same list as an NSMenu)</span><span class="tag proposed">proposed · not built</span></div>
+    <div class="screen">
+      <div class="sg" role="table" style="margin-bottom:.8rem">
+        <div class="sg-row head"><div class="sg-cell">#</div><div class="sg-cell">Speakers</div><div class="sg-cell">Start</div><div class="sg-cell">Duration</div></div>
+        <div class="sg-row focus"><div class="sg-cell sg-id"><a href="#e3">#5</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge unknown"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m?</span></span></span><span class="bn-speaker-editable-name unnamed">Moderator</span><span class="bn-name-source">heard “Kerri”</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p5</span></span></span><span class="bn-speaker-editable-name">Mary O.</span></span></div><div class="sg-cell sg-start">14 Jan 2026</div><div class="sg-cell sg-dur">46:20</div></div>
+      </div>
+      <div class="menu" role="menu" aria-label="Moderator of session 5">
+        <div class="gh">Moderator of session 5</div>
+        <div class="mi sel"><span class="badge">m2</span><span>Kerri Ng</span><span class="cnt">heard here</span></div>
+        <div class="mi"><span class="badge">m1</span><span>Martin B Storey</span><span class="cnt">3 sessions</span></div>
+        <div class="mi"><span>That's Me (Martin Storey)</span></div>
+        <div class="sep"></div>
+        <div class="mi"><span>Someone New…</span></div>
+        <div class="sep"></div>
+        <div class="mi"><span>Not a Moderator ▸</span></div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="sg" role="table">
+        <div class="sg-row"><div class="sg-cell sg-id"><a href="#e3">#5</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m2</span><span class="bn-speaker-badge-name">Kerri Ng</span></span></span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p5</span></span></span><span class="bn-speaker-editable-name">Mary O.</span></span></div><div class="sg-cell sg-start">14 Jan 2026</div><div class="sg-cell sg-dur">46:20</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>Ordering is the ergonomics</dt><dd>Top item highlighted, never pre-selected (§B4): the hinted identity, else the most frequent in this study, else Me. Two gestures, zero decisions in the common case. Keyboard: Return opens on a focused badge, arrows move, Return picks.</dd>
+      <dt>What the pick writes</dt><dd>One row: <code>session_speakers(s5, m1).person_id = 12, state = confirmed, evidence = pick</code>. No renumber, no rename, no cascade. ⌘Z puts <code>NULL</code> back. Edit ▸ Undo reads <i>Undo Pick Moderator</i>.</dd>
+      <dt>One trap, and its mitigation</dt><dd>With <code>m1</code> minted from Teams as "Martin B Storey" and Me seeded as "Martin Storey", the list holds both. Picking "That's Me" on a null slot mints a second Martin. Ordering keeps the Teams identity above Me when it already holds sessions, so the natural one click is the right one; "That's Me" on the <i>existing</i> <code>m1</code> badge links it to Me instead (E5), and a duplicate is mergeable later from the People lens.</dd>
+      <dt>The Mac twin</dt><dd>The same list raised as a native <code>NSMenu</code> from the bridge (§B10), so it escapes the web view and speaks to VoiceOver. Visual parity between the web badge and the native item is tuned later in a Diagnostics side-by-side mockup (I3). The storyboard draws the web popover only.</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ───────────────────────────── E4 ───────────────────────────── -->
+<div class="bench" id="e4">
+  <div class="bench-head"><h3><span class="fnum">E4</span>Someone new: session 6 was Mike's</h3>
+    <p class="sub">Nobody in the cast ran session 6. The researcher picks Someone New…, the list closes, the row's name field opens, they type, Return. Create and name is one act.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>Sessions lens · row #6 · after Someone New…</span><span class="tag proposed">proposed · not built</span></div>
+    <div class="screen">
+      <div class="sg" role="table" style="margin-bottom:.8rem">
+        <div class="sg-row focus"><div class="sg-cell sg-id"><a href="#e4">#6</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge unknown"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m?</span></span></span><span class="bn-speaker-editable-name editing">Mike Alv<span class="caret"></span></span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p6</span></span></span><span class="bn-speaker-editable-name">Mickael</span></span></div><div class="sg-cell sg-start">15 Jan 2026</div><div class="sg-cell sg-dur">38:44</div></div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="sg" role="table">
+        <div class="sg-row"><div class="sg-cell sg-id"><a href="#e4">#6</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m3</span><span class="bn-speaker-badge-name">Mike Alvarez</span></span></span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p6</span></span></span><span class="bn-speaker-editable-name">Mickael</span></span></div><div class="sg-cell sg-start">15 Jan 2026</div><div class="sg-cell sg-dur">38:44</div></div>
+      </div>
+      <div class="lens-head" style="margin-top:1rem"><h4>Sessions</h4><span class="mod">Moderated by Martin B Storey, Kerri Ng and Mike Alvarez</span></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>What it writes</dt><dd>One <code>persons</code> row: code <code>m3</code>, a fresh UUID, name "Mike Alvarez", origin typed; then the slot's <code>person_id</code> and <code>state = confirmed</code>. The number is the next free one in this project and is never reused.</dd>
+      <dt>The field</dt><dd>The shipped editing tint (molecules/editable-text.css idiom 3). A heard name would have pre-filled it. This is where "Kerri" becomes "Kerry" before an identity exists, which is why a hearing never mints on its own.</dd>
+      <dt>The count line</dt><dd>Gone, because the count is zero. Nothing else changed.</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ───────────────────────────── E5 ───────────────────────────── -->
+<div class="bench" id="e5">
+  <div class="bench-head"><h3><span class="fnum">E5</span>Changing your mind, and renaming a person</h3>
+    <p class="sub">Two edits that look alike and do different things. Re-picking session 3 moves one slot. Renaming Kerri moves nothing and changes her everywhere.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>Sessions lens · ① right-click on #3's badge · ② rename on #5</span><span class="tag proposed">proposed · not built</span></div>
+    <div class="split">
+      <div class="screen">
+        <div class="menu" role="menu" aria-label="m2 Kerri Ng, session 3" style="margin-bottom:.9rem">
+          <div class="gh">m2 Kerri Ng · session 3</div>
+          <div class="mi"><span>Confirm</span><span class="cnt">a</span></div>
+          <div class="mi"><span>That's Me</span></div>
+          <div class="mi"><span>Change Name…</span></div>
+          <div class="sep"></div>
+          <div class="gh">Moderator of session 3 is ▸</div>
+          <div class="mi"><span class="badge">m1</span><span>Martin B Storey</span></div>
+          <div class="mi sel"><span class="badge">m3</span><span>Mike Alvarez</span></div>
+          <div class="mi"><span>Someone New…</span></div>
+          <div class="sep"></div>
+          <div class="mi"><span>Not Identified</span></div>
+          <div class="mi"><span>Not a Moderator ▸</span></div>
+        </div>
+        <div class="sg" role="table">
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#e5">#3</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m3</span><span class="bn-speaker-badge-name">Mike Alvarez</span></span></span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p3</span></span></span><span class="bn-speaker-editable-name">Mary A.</span></span></div><div class="sg-cell sg-start">8 Jan 2026</div><div class="sg-cell sg-dur">44:51</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#e5">#5</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m2</span><span class="bn-speaker-badge-name">Kerry Ng</span></span></span><button class="bn-name-pencil on" type="button">&#x270E;</button></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p5</span></span></span><span class="bn-speaker-editable-name">Mary O.</span></span></div><div class="sg-cell sg-start">14 Jan 2026</div><div class="sg-cell sg-dur">46:20</div></div>
+        </div>
+      </div>
+      <div class="state"><div class="state-label">three different writes</div><pre><span class="dim">① re-pick: one slot moves</span>
+session_speakers(s3, m1).person_id: <span class="hl">12</span> → <span class="ok">13</span>, state confirmed
+persons[12] unchanged (still Kerri, still holds s5)
+
+<span class="dim">② rename: the person changes, no slot moves</span>
+persons[12].full_name: <span class="hl">Kerri Ng</span> → <span class="ok">Kerry Ng</span>, origin typed
+  shown on s5 now, and on s3 had it still been hers;
+  the Teams label stays recorded as evidence on the rows
+
+<span class="dim">③ "That's Me" on an existing badge: a link, not a slot</span>
+persons[11].me: no → <span class="ok">yes</span>
+  renders "Martin B Storey (Me)"; name unchanged unless edited</pre></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>The menu's zones</dt><dd>Per §B3 and §I: state picks within a zone. On a proposed badge the first zone offers Confirm; on a confirmed one it does not. The identity zone names its scope ("Moderator of session 3 is ▸"), because a slot pick reaches one session and a rename reaches a person, and the researcher cannot see the anchor.</dd>
+      <dt>Why rename does not ask about scope</dt><dd>A name belongs to a person and a person has one name (§0, §F S8). "Kerri" to "Kerry" is a spelling fact about her, so every session she holds follows. If the researcher meant "this session was someone else", that is the identity zone, one item down, and it moves words nowhere either.</dd>
+      <dt>Change of mind is free</dt><dd>Any slot can be re-picked any number of times. Each is one undo entry. Nothing is ever locked by having been confirmed.</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ───────────────────────────── E6 ───────────────────────────── -->
+<div class="bench" id="e6">
+  <div class="bench-head"><h3><span class="fnum">E6</span>What leaves the machine while a slot is still null</h3>
+    <p class="sub">Exported the evening of E2, before sessions 5 and 6 were picked. Proposed names are plain, unidentified slots say so, and no colleague is credited with a session they did not run.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>Exported report · session 5 page · and the MCP overview</span><span class="tag proposed">proposed · not built</span></div>
+    <div class="split">
+      <div class="screen">
+        <div class="tx-head"><h4>Session 5 · <span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p5</span></span></span></h4><div class="bn-transcript-roles"><span>Moderator not identified</span></div></div>
+        <div class="tx-seg segment-moderator"><span class="tc">00:00</span><span class="badge">m?</span><span class="txt">Thanks for making the time. Before we start, can you tell me a bit about your ward?</span></div>
+        <div class="tx-seg"><span class="tc">00:14</span><span class="badge">p5</span><span class="txt">Night charge nurse, Bay 3 and 4, mostly post-op…</span></div>
+        <div class="tx-head" style="margin-top:1.2rem"><h4>Session 1 · <span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p1</span></span></span></h4><div class="bn-transcript-roles"><span>Moderator Martin B Storey</span></div></div>
+      </div>
+      <div class="state"><div class="state-label">MCP · project_overview</div><pre>speakers: {"m1": "researcher", "m2": "researcher", "p1": …}
+speaker_names: {"m1": "Martin B Storey", "m2": "Kerri Ng"}
+sessions:
+  s1 {moderator: "m1"}  s2 {moderator: "m1"}
+  s3 {moderator: "m2"}  s4 {moderator: "m1"}
+  s5 {moderator: <span class="ok">null</span>}  s6 {moderator: <span class="ok">null</span>}
+
+<span class="dim">INVARIANTS gains one line: a null moderator means
+"not identified", never "no moderator".</span></pre></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>Plain in the export (P1)</dt><dd>The platform asserted "Martin B Storey"; the export states it. The dashed treatment and the pill are app chrome and never travel, as the proposed-tag pill already never travels (templates/export.css hides it).</dd>
+      <dt>"Not identified" is unfinished, not anonymised</dt><dd>Decision 2 names moderators. The wording must read as a gap in the researcher's work, not as a privacy choice; "Moderator" alone would read as the latter.</dd>
+      <dt>F6 and F7, closed by construction</dt><dd>No slot can carry a name it was not given, so nothing wrong can be exported, and the agent is handed <code>null</code> rather than a first-wins name.</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ───────────────────────────── E7 ───────────────────────────── -->
+<div class="bench" id="e7">
+  <div class="bench-head"><h3><span class="fnum">E7</span>A study from the field, the morning after upgrading</h3>
+    <p class="sub">Twelve sessions, one <code>m1</code> name typed in August. Every slot becomes proposed with origin "inherited" (I2). Nothing moved, nothing was lost, and every badge now says how it got there.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>Sessions lens · migrated study</span><span class="tag proposed">proposed · not built</span></div>
+    <div class="screen">
+      <div class="lens-head"><h4>Sessions</h4><span class="mod">Moderated by Martin Storey</span></div>
+      <div class="sg" role="table">
+        <div class="sg-row head"><div class="sg-cell">#</div><div class="sg-cell">Speakers</div><div class="sg-cell">Start</div><div class="sg-cell">Duration</div></div>
+        <div class="sg-row"><div class="sg-cell sg-id"><a href="#e7">#1</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge badge-proposed"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span><span class="bn-speaker-badge-name">Martin Storey</span></span><span class="badge-action-pill"><span class="badge-action-deny">&times;</span><span class="badge-action-accept">&check;</span></span></span><span class="bn-name-source">inherited</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p1</span></span></span><span class="bn-speaker-editable-name">Sarah Chen</span></span></div><div class="sg-cell sg-start">6 Jan 2026</div><div class="sg-cell sg-dur">48:02</div></div>
+        <div class="sg-row"><div class="sg-cell sg-id"><a href="#e7">#9</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge badge-proposed"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span><span class="bn-speaker-badge-name">Martin Storey</span></span><span class="badge-action-pill"><span class="badge-action-deny">&times;</span><span class="badge-action-accept">&check;</span></span></span><span class="bn-name-source">inherited</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p9</span></span></span><span class="bn-speaker-editable-name">Priya Raman</span></span></div><div class="sg-cell sg-start">14 Jan 2026</div><div class="sg-cell sg-dur">42:10</div></div>
+        <div class="sg-row"><div class="sg-cell sg-id"><a href="#e7">#12</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge badge-proposed"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span><span class="bn-speaker-badge-name">Martin Storey</span></span><span class="badge-action-pill"><span class="badge-action-deny">&times;</span><span class="badge-action-accept">&check;</span></span></span><span class="bn-name-source">inherited</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p12</span></span></span><span class="bn-speaker-editable-name">Nadia Haddad</span></span></div><div class="sg-cell sg-start">16 Jan 2026</div><div class="sg-cell sg-dur">37:58</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>Why proposed and not confirmed</dt><dd>The August name was typed once and spread by the slot (F10). Confirming it on twelve sessions would launder an inference into an assertion. Proposed keeps the name everywhere it was shown and tells the truth about session 9, where one re-pick makes Mike <code>m2</code>.</dd>
+      <dt>Why not <code>m?</code></dt><dd>Twelve question marks on a finished study is the migration asking the researcher to redo work the old model never asked for. The inherited name reads correctly in eleven places; the treatment says "check if you care" and the pill makes checking one keystroke.</dd>
+      <dt>Origin as a word</dt><dd>"inherited" joins "from the transcript" and "heard" in the provenance vocabulary the people-provenance mockup settled. It is the one origin that exists only because of the upgrade and it ages out as slots are confirmed.</dd>
+      <dt>How it happens</dt><dd>On the first import after upgrade the importer reads the legacy <code>people.yaml</code> once: each named <code>m</code>/<code>o</code> entry becomes one <code>persons</code> row with origin inherited, proposed on every session that carried the code; participant names come across the same way. The file is then ignored and never deleted; it is the researcher's.</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ───────────────────────────── E8 ───────────────────────────── -->
+<div class="bench" id="e8">
+  <div class="bench-head"><h3><span class="fnum">E8</span>The two machines, drawn</h3>
+    <p class="sub">A session's slot and a person's identity are separate objects with separate states. The slot machine is three states and never infers; the identity machine is where linking and renaming live.</p></div>
+  <div class="diagram" aria-label="State machines for a moderator slot and an identity">
+  <svg viewBox="0 0 940 330" width="940" height="330" role="img">
+    <text class="t b" x="20" y="24">A session's moderator slot</text>
+    <rect class="bx" x="20" y="40" width="150" height="54" rx="27"/><text class="t b" x="54" y="62">null · m?</text><text class="m" x="40" y="80">pipeline default</text>
+    <rect class="bx" x="300" y="40" width="170" height="54" rx="27"/><text class="t b" x="330" y="62">proposed</text><text class="m" x="318" y="80">platform label · inherited</text>
+    <rect class="bx" x="600" y="40" width="160" height="54" rx="27"/><text class="t b" x="640" y="62">confirmed</text><text class="m" x="622" y="80">a person said so</text>
+    <path class="ln" d="M170 58 H300" marker-end="url(#ah)"/><text class="m" x="190" y="50">evidence arrives</text>
+    <path class="ln" d="M470 58 H600" marker-end="url(#ah)"/><text class="m" x="490" y="50">✓ · pick · That's Me</text>
+    <path class="ln" d="M95 94 C 95 150, 680 150, 680 94" marker-end="url(#ah)"/><text class="m" x="330" y="140">pick · Someone New…</text>
+    <path class="ln" d="M385 94 C 385 125, 110 125, 100 94" marker-end="url(#ah)"/><text class="m" x="175" y="118">✗ · Not Identified</text>
+    <path class="ln" d="M680 94 C 740 170, 600 170, 650 94" marker-end="url(#ah)"/><text class="m" x="690" y="160">re-pick (change of mind)</text>
+    <text class="m" x="20" y="195">Absent on purpose: null → anything by inference · proposed by a hearing · any transition from the signed-in account · a re-run touching a non-null slot.</text>
+
+    <text class="t b" x="20" y="235">An identity (minted when a slot first gets one)</text>
+    <rect class="bx store" x="20" y="250" width="150" height="54" rx="27"/><text class="t b" x="60" y="272">own</text><text class="m" x="36" y="290">number · name · uuid</text>
+    <rect class="bx store" x="300" y="250" width="170" height="54" rx="27"/><text class="t b" x="330" y="272">linked (Me · bank)</text><text class="m" x="326" y="290">That's Me · a bank pick</text>
+    <rect class="bx store" x="600" y="250" width="160" height="54" rx="27"/><text class="t b" x="650" y="272">retired</text><text class="m" x="612" y="290">merged into another</text>
+    <path class="ln" d="M170 268 H300" marker-end="url(#ah)"/><path class="ln" d="M470 268 H600" marker-end="url(#ah)"/><text class="m" x="490" y="258">Same Person As ▸</text>
+    <text class="m" x="20" y="322">Rename changes the identity's name in place, in any state; number is never reused.</text>
+    <defs><marker id="ah" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="var(--bn-colour-muted)"/></marker></defs>
+  </svg>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>Why two machines</dt><dd>"This session's moderator is identity X" and "identity X is the same human as Me" are different claims with different evidence. Teams can establish the first; only a person can establish the second. Collapsing them is how a label match would become an identity assertion.</dd>
+      <dt>What v1 holds</dt><dd>Both machines, project-scoped, in the project database: <code>persons</code> rows with codes and UUIDs as identities, <code>session_speakers</code> rows as slots, Me from the account as a link target, the bank absent. v2 lengthens the identity list with colleagues from the instance store; it changes no transition and no table.</dd>
+    </dl>
+  </div>
+</div>
+
 <div class="part" id="gaps">Part 6 <small>The gap register — measured against design-people.md at 1446e4d</small></div>
 <h2>What is missing, and what kind of missing it is</h2>
 <div class="prose">
@@ -1294,12 +1639,20 @@ account renamed in Teams stays one.</span></pre></div>
 <tr><td class="c">G21</td><td class="k">The transcripts plan keys study-wide moderator codes two ways (§0 participant id; §3 display name) and Q4 asks the owner which</td><td>design-cloud-import-transcripts.md lines 121, 148, 454–455, 753–754</td><td>F11 D3</td><td><span class="pill open">open</span> owner call; this report recommends §0's key (challenge 5)</td></tr>
 <tr><td class="c">G22</td><td class="k">The §4 VTT contract carries display names (<code>&lt;v Name&gt;</code>) and no participant id, so D3 cannot be keyed by id without the writer emitting one</td><td>design-cloud-import-transcripts.md §4 items 3–4; Meet's <code>participants.list</code> has ids (§1), Zoom's <code>Name:</code> prefix has none</td><td>D3</td><td><span class="pill open">open</span> a contract addition (a NOTE map or an attribute per cue) decided with G21</td></tr>
 <tr><td class="c">G23</td><td class="k">The collision is announced only as a WARNING in the per-project log</td><td><code>people.py:213–225</code>; TODO.md:269 ("the weakest available surface")</td><td>F2 D4</td><td><span class="pill open">open</span> a <code>MessageKind</code> call under design-pipeline-diagnostic-popover.md; D4's sweep line is the SPA-side answer once origin exists</td></tr>
+<tr><td class="c">G25</td><td class="k"><code>people.yaml</code> is a second store for researcher state, with a best-effort write-through and a downgrade hazard on every new block</td><td><code>server/CLAUDE.md</code> § Names architecture; <code>routes/data.py:223–299</code>; design-people §J2</td><td>E2</td><td><span class="pill decided">decided · not built</span> retired as a store on 1 Oct 2026 (Part 5b, I5); read once on upgrade, then ignored</td></tr>
 <tr><td class="c">G24</td><td class="k">Role identification samples the first five minutes and maps UNKNOWN to a <code>p</code> code</td><td><code>s05b_identify_speakers.py</code> (<code>seg.start_time &gt; 300</code>); design-people J3</td><td>F9</td><td><span class="pill decided">decided · not built</span> the repair (observer mis-filing, §B7a) is the product, not a better classifier</td></tr>
 </table></div>
 
 <div class="part" id="needs">Part 7 <small>What we need, in the order the dependencies allow</small></div>
 <h2>Four tranches</h2>
 <div class="prose">
+<h3>Decided 1 Oct 2026 — the route C package (see Part 5b)</h3>
+<ul>
+  <li><b>First:</b> the transcripts plan's 0b sticky session identity, lifted out as its own package (I1). Everything below keys on it.</li>
+  <li><b>v1, both channels, project scope:</b> the schema delta (I6): <code>session_speakers.person_id</code> nullable plus <code>state</code> and <code>evidence</code>, <code>persons.code</code>/<code>uuid</code>/<code>origin</code>/<code>me</code>, one revision and the head-pin bump; the importer run at the end of every pipeline run (I7), proposing from the intermediates and never overwriting a confirmed row; the pipeline stops writing <code>people.yaml</code> and writes its stats to an intermediate; the one-time legacy import (I5, E7); identities minted on platform evidence (per id, or per distinct name within a study, P2) or a pick; <code>m?</code> and the proposed treatment on the split badge (E1); the picker as a web popover and a native <code>NSMenu</code> twin, wiring first, visual parity in a Diagnostics side-by-side mockup later (I3); Me seeded from the account name (I4); "Moderator not identified" in the export and <code>null</code> in the MCP overview with one added INVARIANTS line (E6); migration to proposed-inherited (E7); the stored labels and per-session evidence column; the count line, moderators only (P4).</li>
+  <li><b>Also in v1, because the file made a promise:</b> README, the man page, the website's CLI doc and <code>server/CLAUDE.md</code>'s names architecture stop describing <code>people.yaml</code> as editable; the file's header comment is the last thing a researcher reads before editing it.</li>
+  <li><b>Not in v1:</b> the bank, cross-study links, folder scope, Settings ▸ General, Contacts, any work on the markdown report or the sealed static HTML (I8).</li>
+</ul>
 <h3>Now — no decision needed, nothing the renumber will undo</h3>
 <ul>
   <li><b>One pencil, one editor.</b> Key <code>editingCode</code>, the test id and the aria-label by <code>(session_id, code)</code> (G7, G8). Ends the measured collapse in F3 without touching a store.</li>
@@ -1333,8 +1686,8 @@ account renamed in Teams stays one.</span></pre></div>
 <h2>Twelve things to design around</h2>
 <div class="prose">
 <ol>
-  <li><b>Files in the field.</b> <code>people.yaml</code> is the one file researchers hand-edit, with copies in the field since the 14 Jul TestFlight. Any reshape needs a migration; any new block carries a downgrade hazard, because <code>write_people_file</code> does a <code>model_dump()</code> and an older binary silently drops what it does not know (§J2). The renumber is the design that needs neither, which is a large part of why it won.</li>
-  <li><b>Three stores, one invariant, no transaction across them.</b> YAML, SQLite and <code>transcripts-raw/</code> each hold the code, and a renumber must change all three or leave a reader that disagrees (D2). The DB half has an ordering constraint (free <code>m1</code> before taking <code>m2</code>); the YAML half has no create path in the write-through; the file half is the open J4 question.</li>
+  <li><b>Files in the field.</b> <i>Dissolved 1 Oct 2026 by retiring the file as a store (Part 5b, I5); the record stands.</i> <code>people.yaml</code> is the one file researchers hand-edit, with copies in the field since the 14 Jul TestFlight. Any reshape needs a migration; any new block carries a downgrade hazard, because <code>write_people_file</code> does a <code>model_dump()</code> and an older binary silently drops what it does not know (§J2). The renumber is the design that needs neither, which is a large part of why it won.</li>
+  <li><b>Three stores, one invariant, no transaction across them.</b> <i>Reduced to two on 1 Oct 2026: the database and the raw transcripts, whose bracket tokens are now within-session tags rather than identities (Part 5b).</i> YAML, SQLite and <code>transcripts-raw/</code> each hold the code, and a renumber must change all three or leave a reader that disagrees (D2). The DB half has an ordering constraint (free <code>m1</code> before taking <code>m2</code>); the YAML half has no create path in the write-through; the file half is the open J4 question.</li>
   <li><b>The fixture that cannot exist.</b> Until a second moderator can be <code>m2</code>, no test can express "two moderators across sessions", so the header, the sidebar and scope-at-rename have no red test to write first. The sequencing inverts the obvious order (TODO.md:583): the renumber lands before any of the surfaces it fixes can be gated.</li>
   <li><b>Tests that pin the limitation.</b> <code>test_multi_session_moderator_codes_collide_and_are_warned</code> is a contract that the loss is announced; it must be re-homed, not deleted, when the loss stops happening. The sidebar's MULTI_MODERATOR fixture is the opposite problem: a passing test about a world the pipeline cannot produce.</li>
   <li><b>What counts as identity evidence.</b> decision 1 forbids merging on name equality at every altitude, for good reason: two Marys are two people. A platform participant id is not a name; it is the platform asserting that one account spoke. Q4 must be answered with that distinction stated, or the first implementation will merge on the display string because that is what the VTT contract carries (G21, G22). Two "M. Alvarez" accounts in one tenant is rare and must still be two codes.</li>

@@ -342,3 +342,53 @@ class TestSplitterGateWiring:
         }
         assert roles["Martin Storey"] == SpeakerRole.RESEARCHER
         assert roles["Priya Nair"] == SpeakerRole.PARTICIPANT
+
+
+# ── 1d: the platform's name beats the LLM's guess ────────────────────────────
+
+
+def _guessing_role_pass(segments: list[TranscriptSegment]) -> list[SpeakerInfo]:
+    """The LLM role pass as it behaves on a named transcript: right about the
+    roles, and confidently wrong about the participant's name."""
+    labels = {seg.speaker_label or "Unknown" for seg in segments}
+    infos = []
+    for label in sorted(labels):
+        if label == "Martin Storey":
+            infos.append(SpeakerInfo(speaker_label=label, role=SpeakerRole.RESEARCHER))
+        elif label == "Priya Nair":
+            infos.append(SpeakerInfo(
+                speaker_label=label, role=SpeakerRole.PARTICIPANT,
+                person_name="Pri", job_title="Designer",
+            ))
+        elif label == "Speaker B":
+            infos.append(SpeakerInfo(
+                speaker_label=label, role=SpeakerRole.PARTICIPANT, person_name="Brian",
+            ))
+        else:
+            infos.append(SpeakerInfo(speaker_label=label, role=SpeakerRole.RESEARCHER))
+    return infos
+
+
+class TestPlatformNamesReachThePeopleFile:
+    def test_platform_name_beats_the_llm_guess(self, tmp_path: Path) -> None:
+        h = run_pipeline(
+            tmp_path,
+            lambda d, _i: [pair_session(d, 1, "P07 Interview", TEAMS_PAIR)],
+            role_pass=_guessing_role_pass,
+        )
+        participants = h.people()["participants"]
+        p1 = participants["p1"]["editable"]
+        assert p1["full_name"] == "Priya Nair"
+        assert p1["role"] == "Designer", "the LLM still supplies what the platform cannot"
+
+    def test_llm_name_still_used_when_whisper_had_no_label(self, tmp_path: Path) -> None:
+        """Control: on a bare recording the splitter's labels are placeholders,
+        so the LLM's name is the best there is and is kept."""
+        h = run_pipeline(
+            tmp_path,
+            lambda d, _i: [audio_session(d, 1, "bare")],
+            role_pass=_guessing_role_pass,
+        )
+        participants = h.people()["participants"]
+        names = {code: p["editable"]["full_name"] for code, p in participants.items()}
+        assert "Brian" in names.values()

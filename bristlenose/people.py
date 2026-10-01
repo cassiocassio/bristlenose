@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 import yaml
 
 from bristlenose.models import (
+    PLATFORM_TRANSCRIPT_SOURCES,
     FullTranscript,
     InputSession,
     PeopleFile,
@@ -361,31 +362,42 @@ def is_generic_label(label: str) -> bool:
 
 def extract_names_from_labels(
     transcripts: list[FullTranscript],
+    *,
+    platform_only: bool = False,
 ) -> dict[str, str]:
     """Extract probable real names from ``speaker_label`` metadata.
 
     Teams/VTT transcripts often have real names as speaker labels
     (e.g. "Sarah Jones" instead of "Speaker A").  Returns
-    ``{participant_id: name}`` for labels that look like real names.
+    ``{participant_code: name}`` for labels that look like real names —
+    keyed by each participant's speaker code when the segments carry one, so
+    every named participant in a two-participant session gets a name, not
+    only the session's primary one; a transcript without codes keys on its
+    ``participant_id`` as before.
+
+    With ``platform_only``, only labels written by a transcript FILE count
+    (``PLATFORM_TRANSCRIPT_SOURCES``): the platform's own record of who
+    spoke, which ``auto_populate_names`` lets beat the LLM's guess.
     """
     names: dict[str, str] = {}
     for transcript in transcripts:
-        pid = transcript.participant_id
-        # Find the dominant PARTICIPANT-role speaker label.
-        label_counts: dict[str, int] = {}
+        # Per participant code, how often each label appears.
+        label_counts: dict[str, dict[str, int]] = {}
         for seg in transcript.segments:
-            if seg.speaker_role == SpeakerRole.PARTICIPANT and seg.speaker_label:
-                label_counts[seg.speaker_label] = (
-                    label_counts.get(seg.speaker_label, 0) + 1
-                )
-        if not label_counts:
-            continue
-        # Pick the most frequent label.
-        label = max(label_counts, key=label_counts.get)  # type: ignore[arg-type]
-        # Skip placeholders, numbers and phone labels.
-        if is_generic_label(label):
-            continue
-        names[pid] = label.strip()
+            if seg.speaker_role != SpeakerRole.PARTICIPANT or not seg.speaker_label:
+                continue
+            if platform_only and seg.source not in PLATFORM_TRANSCRIPT_SOURCES:
+                continue
+            pid = seg.speaker_code or transcript.participant_id
+            counts = label_counts.setdefault(pid, {})
+            counts[seg.speaker_label] = counts.get(seg.speaker_label, 0) + 1
+        for pid, counts in label_counts.items():
+            # Pick the most frequent label.
+            label = max(counts, key=counts.get)  # type: ignore[arg-type]
+            # Skip placeholders, numbers and phone labels.
+            if is_generic_label(label):
+                continue
+            names[pid] = label.strip()
     return names
 
 
@@ -398,21 +410,37 @@ def auto_populate_names(
     people: PeopleFile,
     speaker_infos: dict[str, SpeakerInfo],
     label_names: dict[str, str],
+    *,
+    platform_names: dict[str, str] | None = None,
 ) -> None:
     """Pre-populate empty ``full_name``/``role`` fields from extracted data.
 
     Only fills fields that are currently empty — never overwrites user edits.
-    Priority: LLM-extracted name > speaker-label metadata name.
+    Priority: platform-transcript name > LLM-extracted name > other label.
+
+    ``platform_names`` is what the platform itself wrote against each
+    participant's turns (``extract_names_from_labels(..., platform_only=True)``).
+    It is the one source that is not a guess, so it beats the LLM's
+    ``person_name`` — measured on the Talismanic study, the model's "Pri" had
+    been overwriting Teams' own "Priya Nair". Participants only: moderators
+    are not named from labels in this slice (every session's moderator is
+    ``m1``, so the last session processed would win — see
+    ``docs/design-cloud-import-transcripts.md`` §0b). ``label_names`` keeps
+    its old place for labels of unknown provenance, so the LLM still beats a
+    generic label.
 
     Mutates *people* in place.
     """
+    platform_names = platform_names or {}
     for pid, entry in people.participants.items():
         ed = entry.editable
 
-        # full_name: LLM > label metadata
+        # full_name: platform label (participants) > LLM > other label metadata
         if not ed.full_name:
             info = speaker_infos.get(pid)
-            if info and info.person_name:
+            if pid.startswith("p") and pid in platform_names:
+                ed.full_name = platform_names[pid]
+            elif info and info.person_name:
                 ed.full_name = info.person_name
             elif pid in label_names:
                 ed.full_name = label_names[pid]

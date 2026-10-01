@@ -18,8 +18,24 @@ import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
-from bristlenose.models import FileType, InputFile, TranscriptSegment
+from bristlenose.models import (
+    CLOUD_TRANSCRIPT_SOURCE,
+    SUBTITLE_SOURCES,
+    FileType,
+    InputFile,
+    TranscriptSegment,
+)
 from bristlenose.utils.timecodes import parse_timecode
+
+__all__ = [
+    "CLOUD_TRANSCRIPT_SOURCE",
+    "SUBTITLE_PARSER_VERSION",
+    "SUBTITLE_SOURCES",
+    "CloudTranscriptNote",
+    "CloudTranscriptVersionError",
+    "parse_subtitle_file",
+    "read_cloud_transcript_note",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -29,16 +45,6 @@ logger = logging.getLogger(__name__)
 #: from a cache the old parser wrote (``docs/design-cloud-import-transcripts.md``
 #: §0, "The parser version goes into the transcribe input hash").
 SUBTITLE_PARSER_VERSION = 2
-
-#: ``TranscriptSegment.source`` for cues read from a cloud transcript. A
-#: vendor ``.vtt`` stays ``"vtt"``; downstream gates (the speaker splitter,
-#: the one-transcript-per-session choice) read this to know the file was
-#: written by our own import and is authoritative about who spoke.
-CLOUD_TRANSCRIPT_SOURCE = "cloud-vtt"
-
-#: Every source value a subtitle file can produce. Used by the stages that ask
-#: "did this transcript come from a file rather than from Whisper?".
-SUBTITLE_SOURCES = frozenset({"srt", "vtt", CLOUD_TRANSCRIPT_SOURCE})
 
 # One voice span in a cue: <v Speaker Name>text</v>. Teams omits the closing
 # tag on the last voice, and a cue can carry two voices back to back, so the

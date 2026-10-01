@@ -150,6 +150,64 @@ class TestExtractNamesFromLabels:
         result = extract_names_from_labels([t1, t2])
         assert result == {"p1": "Alice Walker", "p2": "Bob Chen"}
 
+    # -- Phone labels (1 Oct 2026) ------------------------------------------
+    #
+    # Teams and Zoom label a dial-in caller with their number. Masked or not,
+    # it is never a name — and an unmasked one is PII that would otherwise
+    # land in people.yaml as somebody's full_name.
+
+    def test_masked_phone_label_is_not_a_name(self) -> None:
+        t = _transcript("p1", "+44 7700 ****23")
+        assert extract_names_from_labels([t]) == {}
+
+    def test_unmasked_phone_label_is_not_a_name(self) -> None:
+        t = _transcript("p1", "+1 (555) 010-9876")
+        assert extract_names_from_labels([t]) == {}
+
+    # -- Every named participant, not only the primary one ------------------
+
+    def test_two_participants_in_one_session_both_get_names(self) -> None:
+        """A paired interview: the people file is keyed by speaker code, so
+        the second participant's name must be keyed by hers, not lost under
+        the session's primary participant."""
+        t = FullTranscript(
+            session_id="s1",
+            participant_id="p1",
+            source_file="test.vtt",
+            session_date=_NOW,
+            duration_seconds=600.0,
+            segments=[
+                TranscriptSegment(
+                    start_time=0.0, end_time=10.0, text="Hello",
+                    speaker_label="Martin Storey", speaker_role=SpeakerRole.RESEARCHER,
+                    speaker_code="m1", source="vtt",
+                ),
+                TranscriptSegment(
+                    start_time=10.0, end_time=20.0, text="Hi",
+                    speaker_label="Priya Nair", speaker_role=SpeakerRole.PARTICIPANT,
+                    speaker_code="p1", source="vtt",
+                ),
+                TranscriptSegment(
+                    start_time=20.0, end_time=30.0, text="Hi too",
+                    speaker_label="Dev Patel", speaker_role=SpeakerRole.PARTICIPANT,
+                    speaker_code="p2", source="vtt",
+                ),
+            ],
+        )
+        assert extract_names_from_labels([t]) == {"p1": "Priya Nair", "p2": "Dev Patel"}
+
+    # -- Platform provenance ------------------------------------------------
+
+    def test_platform_only_takes_labels_a_file_wrote(self) -> None:
+        from_teams = _transcript("p1", "Priya Nair")
+        for seg in from_teams.segments:
+            seg.source = "vtt"
+        from_whisper = _transcript("p2", "Priya Nair")
+        for seg in from_whisper.segments:
+            seg.source = "whisper"
+        result = extract_names_from_labels([from_teams, from_whisper], platform_only=True)
+        assert result == {"p1": "Priya Nair"}
+
 
 # ---------------------------------------------------------------------------
 # auto_populate_names
@@ -197,6 +255,37 @@ class TestAutoPopulateNames:
         people = _people(("p1", "", "", ""))
         auto_populate_names(people, {}, {"p1": "John Smith"})
         assert people.participants["p1"].editable.full_name == "John Smith"
+
+    # -- The platform's own name beats the LLM's guess (1d, 1 Oct 2026) -----
+
+    def test_platform_name_beats_llm_for_a_participant(self) -> None:
+        """Measured on the Talismanic study: Teams wrote "Priya Nair" on every
+        turn and the LLM's "Pri" won. The platform's record is not a guess."""
+        people = _people(("p1", "", "", ""))
+        info = SpeakerInfo(
+            speaker_label="Priya Nair",
+            role=SpeakerRole.PARTICIPANT,
+            person_name="Pri",
+            job_title="Designer",
+        )
+        auto_populate_names(
+            people, {"p1": info}, {"p1": "Priya Nair"}, platform_names={"p1": "Priya Nair"},
+        )
+        assert people.participants["p1"].editable.full_name == "Priya Nair"
+        # The LLM still contributes what the platform cannot: the job title.
+        assert people.participants["p1"].editable.role == "Designer"
+
+    def test_platform_name_never_overwrites_a_typed_name(self) -> None:
+        people = _people(("p1", "Typed By Researcher", "", ""))
+        auto_populate_names(people, {}, {}, platform_names={"p1": "Priya Nair"})
+        assert people.participants["p1"].editable.full_name == "Typed By Researcher"
+
+    def test_platform_name_is_for_participants_only(self) -> None:
+        """Moderators are not named from labels in this slice: every session's
+        moderator is m1, so the last session processed would win."""
+        people = _people(("m1", "", "", ""))
+        auto_populate_names(people, {}, {}, platform_names={"m1": "Martin Storey"})
+        assert people.participants["m1"].editable.full_name == ""
 
     def test_no_data_leaves_empty(self) -> None:
         people = _people(("p1", "", "", ""))

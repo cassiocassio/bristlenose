@@ -231,6 +231,23 @@ class Word(BaseModel):
     confidence: float = 1.0
 
 
+#: ``TranscriptSegment.source`` for cues read from a transcript Bristlenose's
+#: own cloud import wrote (it carries a ``NOTE bristlenose-cloud-transcript``
+#: block — ``docs/design-cloud-import-transcripts.md`` §4). A vendor ``.vtt``
+#: stays ``"vtt"``.
+CLOUD_TRANSCRIPT_SOURCE = "cloud-vtt"
+
+#: Sources a subtitle file can produce (stage 3).
+SUBTITLE_SOURCES = frozenset({"srt", "vtt", CLOUD_TRANSCRIPT_SOURCE})
+
+#: Every source that came from a transcript FILE rather than from Whisper. The
+#: platform — or the researcher's own export — decided who spoke, so a label on
+#: one of these is a *platform label*: never second-guessed by a model, and it
+#: beats the LLM's guess at a participant's name. Whisper backends write their
+#: own names ("whisper", "mlx-whisper", "faster-whisper").
+PLATFORM_TRANSCRIPT_SOURCES = frozenset(SUBTITLE_SOURCES | {"docx"})
+
+
 class TranscriptSegment(BaseModel):
     """A contiguous segment of speech from one speaker."""
 
@@ -241,7 +258,7 @@ class TranscriptSegment(BaseModel):
     speaker_role: SpeakerRole = SpeakerRole.UNKNOWN
     speaker_code: str = ""  # "p1", "m1", "m2", "o1" — per-segment speaker identity
     words: list[Word] = Field(default_factory=list)
-    source: str = ""  # "whisper", "srt", "vtt", "docx"
+    source: str = ""  # "whisper" / "mlx-whisper" / "faster-whisper", "srt", "vtt", "cloud-vtt", "docx"
     segment_index: int = -1  # 0-based ordinal within the session transcript
 
 

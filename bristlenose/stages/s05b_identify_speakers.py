@@ -8,9 +8,13 @@ from enum import Enum
 from typing import Any
 
 from bristlenose.llm.boundary import wrap_untrusted
-from bristlenose.models import SpeakerRole, TranscriptSegment
+from bristlenose.models import (
+    CLOUD_TRANSCRIPT_SOURCE,
+    PLATFORM_TRANSCRIPT_SOURCES,
+    SpeakerRole,
+    TranscriptSegment,
+)
 from bristlenose.people import is_generic_label
-from bristlenose.stages.s03_parse_subtitles import CLOUD_TRANSCRIPT_SOURCE, SUBTITLE_SOURCES
 
 
 @dataclass
@@ -27,7 +31,7 @@ logger = logging.getLogger(__name__)
 #: Segment sources that came from a transcript FILE rather than from Whisper.
 #: The platform (or the researcher's own export) decided who spoke; nothing
 #: downstream may second-guess that with a model.
-PLATFORM_SOURCES = frozenset(SUBTITLE_SOURCES | {"docx"})
+PLATFORM_SOURCES = PLATFORM_TRANSCRIPT_SOURCES
 
 
 class SplitGate(str, Enum):

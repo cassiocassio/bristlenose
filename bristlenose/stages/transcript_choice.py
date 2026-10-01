@@ -23,9 +23,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bristlenose.models import FileType, InputFile, TranscriptSegment
+from bristlenose.models import (
+    CLOUD_TRANSCRIPT_SOURCE,
+    FileType,
+    InputFile,
+    TranscriptSegment,
+)
 from bristlenose.people import is_generic_label
-from bristlenose.stages.s03_parse_subtitles import CLOUD_TRANSCRIPT_SOURCE
 
 #: Spans within this fraction of the longest candidate's span are the same
 #: coverage. Teams' .vtt and .docx of one meeting differ by seconds; a

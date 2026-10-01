@@ -2170,8 +2170,11 @@ class Pipeline:
             computed_stats = compute_participant_stats(sessions, transcripts)
             people = merge_people(existing_people, computed_stats)
 
-            # Auto-populate names from speaker labels and LLM extraction.
+            # Auto-populate names from speaker labels and LLM extraction. A
+            # name the platform wrote (Teams, Meet, Zoom, a .docx export) is
+            # the record; the LLM's person_name is a guess and ranks below it.
             label_names = extract_names_from_labels(transcripts)
+            platform_names = extract_names_from_labels(transcripts, platform_only=True)
             pid_speaker_info: dict[str, SpeakerInfo] = {}
             for sid, infos in all_speaker_infos.items():
                 label_code_map = all_label_code_maps.get(sid, {})
@@ -2183,7 +2186,9 @@ class Pipeline:
                         pid_speaker_info[code] = info
                     elif info.role == SpeakerRole.RESEARCHER and code.startswith("m"):
                         pid_speaker_info[code] = info
-            auto_populate_names(people, pid_speaker_info, label_names)
+            auto_populate_names(
+                people, pid_speaker_info, label_names, platform_names=platform_names,
+            )
             suggest_short_names(people)
 
             write_people_file(people, output_dir)

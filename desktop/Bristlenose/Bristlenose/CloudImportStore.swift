@@ -316,7 +316,7 @@ final class CloudImportStore: ObservableObject {
     /// reading of "you already have two of these".
     var fetchOrder: [CloudImportRow] {
         rows
-            .filter { ticked.contains($0.id) && $0.isSelectable }
+            .filter { ticked.contains($0.id) && $0.isSelectable(includingWaiting: includeWaiting) }
             .sorted { lhs, rhs in
                 switch (lhs.expiresAt, rhs.expiresAt) {
                 case let (l?, r?): return l < r
@@ -353,10 +353,110 @@ final class CloudImportStore: ObservableObject {
     /// batch by construction rather than by bookkeeping — a Retry that
     /// re-fetches two failed rows reports those two and not the eighteen the
     /// first batch already handed over.
+    ///
+    /// A transcript that landed is a file this batch wrote, so it is announced
+    /// too: the folder watcher is seeded with these names, and a `.vtt` it was
+    /// not told about would read as a surprise beside a recording the
+    /// researcher deliberately imported.
     var landedFiles: [URL] {
-        outcomes.values.compactMap {
-            guard case .imported(_, let url) = $0 else { return nil }
-            return url
+        outcomes.values.flatMap { outcome -> [URL] in
+            guard case .imported(_, let url, let transcript) = outcome else { return [] }
+            if case .imported(let vtt) = transcript { return [url, vtt] }
+            return [url]
+        }
+    }
+
+    // MARK: - Waiting on a transcript
+
+    /// The footer's *Include N waiting on transcription* (§0 item 2).
+    ///
+    /// A checkbox about **this batch**, not a setting: it starts off on every
+    /// window and is never remembered — the store is built per window, so a
+    /// stored property resets with it. On, it lets a waiting row be ticked by
+    /// hand; bulk gestures still skip waiting rows (`CloudImportRow.isSelectable`).
+    /// Off again, the waiting rows it let in are unticked, or they would sit
+    /// drawn as ticked-and-disabled — the same picture as a held file — while
+    /// `fetchOrder` had already dropped them.
+    @Published var includeWaiting = false {
+        didSet {
+            guard !includeWaiting, includeWaiting != oldValue else { return }
+            for row in rows where row.isWaitingForTranscript { ticked.remove(row.id) }
+        }
+    }
+
+    /// How many rows are held back for a transcript on its way. Over the whole
+    /// listing, not the filtered outline: the checkbox enables rows wherever
+    /// the filter has put them, and ticks survive filtering.
+    var waitingCount: Int { rows.filter(\.isWaitingForTranscript).count }
+
+    /// How often an open window asks again about waiting rows (§0 item 2:
+    /// "~30 s on Teams, ~60 s on Meet and Zoom"). Teams is quicker because its
+    /// signal is an inference that becomes a fact when the transcript posts;
+    /// Meet and Zoom state the wait and are polled more gently against their
+    /// per-user quotas.
+    static func transcriptRecheckInterval(for platform: CloudPlatform) -> Duration {
+        switch platform {
+        case .teams:       return .seconds(30)
+        case .meet, .zoom: return .seconds(60)
+        }
+    }
+
+    /// Re-checks waiting rows on an interval, for as long as the surrounding
+    /// task lives — and the surrounding task is the **window's** `.task`, so the
+    /// wait is window-scoped by construction: SwiftUI cancels it the moment the
+    /// window closes, and nothing polls while no window is open (§0 item 2,
+    /// "no persisted pending state, no tokens used while the window is closed").
+    ///
+    /// Each pass asks only about rows still waiting, and asks nothing when
+    /// none are — a quiet window costs one wake-up a minute and no network.
+    func watchTranscripts() async {
+        let interval = Self.transcriptRecheckInterval(for: platform)
+        while !Task.isCancelled {
+            // A thrown sleep is the stop signal; `try?` would run one more
+            // pass after cancellation and ask the network from a closed window.
+            do { try await Task.sleep(for: interval) } catch { return }
+            // Not during a batch: the adapter is reading the plans it made at
+            // list time to pair each landing media file with its transcript,
+            // and the researcher has already decided what this batch holds.
+            guard !isFetching else { continue }
+            let waiting = rows.filter { $0.transcript.isWaiting }.map(\.id)
+            guard !waiting.isEmpty else { continue }
+            let changes = await source.recheckTranscripts(rowIDs: waiting)
+            guard !Task.isCancelled else { return }
+            applyTranscriptChanges(changes)
+        }
+    }
+
+    /// Apply what a re-check found: the rows move to their new state, and a
+    /// transcript that **arrived** ticks its row — "the row turns Available,
+    /// ticks itself, and the Import count updates" (§0 item 2). A row that
+    /// stopped waiting for another reason (no transcript after all, can't be
+    /// put on the clock) becomes tickable and is left for the researcher.
+    ///
+    /// Internal rather than private so the arrival can be driven without a
+    /// clock: the interval above is the one part of this a test cannot afford
+    /// to wait for.
+    func applyTranscriptChanges(_ changes: [String: TranscriptAvailability]) {
+        guard !changes.isEmpty, var current = listing else { return }
+        var arrived: [String] = []
+        var moved = false
+        for index in current.rows.indices {
+            let row = current.rows[index]
+            guard let next = changes[row.id], next != row.transcript else { continue }
+            if row.transcript.isWaiting, next == .available { arrived.append(row.id) }
+            current.rows[index] = row.withTranscript(next)
+            moved = true
+        }
+        // One publish, through the property that rebuilds the outline — and
+        // none at all for an answer that only restated the wait, or a quiet
+        // window would redraw its whole grid once a minute.
+        guard moved else { return }
+        listing = current
+        // Ticked only where the tick can act: a held row that gained a
+        // transcript has nothing to fetch.
+        for id in arrived {
+            guard let row = rows.first(where: { $0.id == id }), row.isSelectable else { continue }
+            ticked.insert(id)
         }
     }
 
@@ -552,7 +652,12 @@ final class CloudImportStore: ObservableObject {
         // Looked up in the **visible** rows, not the whole listing. A row the
         // filter has hidden is not a row the researcher is acting on, and
         // ticking one puts a file they cannot see into the fetch queue.
-        guard let row = visibleRows.first(where: { $0.id == rowID }), row.isSelectable else {
+        //
+        // The one gesture that reaches a waiting row, and only with the
+        // footer's checkbox on. Every bulk gesture below reads the plain
+        // `isSelectable`, which refuses waiting rows whatever the checkbox says.
+        guard let row = visibleRows.first(where: { $0.id == rowID }),
+              row.isSelectable(includingWaiting: includeWaiting) else {
             return false
         }
         if ticked.contains(rowID) { ticked.remove(rowID) } else { ticked.insert(rowID) }

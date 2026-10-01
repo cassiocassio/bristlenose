@@ -596,24 +596,20 @@ final class ZoomSource: CloudImportSource {
             // design refuses. Absent, and said so, rather than an empty line
             // pretending to be a roster.
             roster: .unsupported,
-            // **`.unsupported` is wrong here and is left standing on purpose.**
-            // It means "the platform doesn't offer it at all", which flatly
-            // contradicts `CloudPlatform.servesTranscript` — Zoom does serve a
-            // VTT, on the same call as the video. A missing one usually means
-            // *not yet*: the transcript is produced after the recording, and
-            // Zoom's own guidance is 15–30 minutes, occasionally up to 24 hours
-            // for a long meeting. So a study imported the same afternoon it was
-            // recorded would be told, permanently, that Zoom does not do
-            // transcripts.
-            //
-            // Not fixed because nothing reads this field — `CloudImportRow`
-            // stores `transcript` and no view renders it — so the honest cases
-            // (`ZoomPreflight.audioTranscriptEnabled` says the account makes
-            // none, versus it makes them and this one has not landed) would be
-            // a new `ArtifactAvailability` case feeding a dormant value into a
-            // dormant field on a parked platform. Whoever renders the transcript
-            // column should read this comment first and add the case then.
-            transcript: choice.transcript != nil ? .available : .unsupported,
+            // **Half honest, and said so.** A `TRANSCRIPT` file in the listing
+            // is a transcript; its absence is read as "none was made", which
+            // is right for an account with "Create audio transcript" off and
+            // wrong for the first hours after a call, when Zoom is still
+            // producing it (15–30 minutes, occasionally a day). The honest
+            // pair — `.expected` while `ZoomPreflight.audioTranscriptEnabled`
+            // says one is coming and the file is under 24 h old — is Phase 5
+            // of design-cloud-import-transcripts.md, with the time-overlap
+            // pairing for a stopped-and-restarted meeting (§1a). Until then
+            // the cell reads *No transcript* with an info glyph, never a
+            // warning, and Bristlenose transcribes. Zoom's `fetch` does not
+            // yet write the §4 file, so an "Available" row imports its media
+            // and reports the transcript *Not imported*.
+            transcript: choice.transcript != nil ? .available : .notProvided,
             organiser: nil
         )
     }

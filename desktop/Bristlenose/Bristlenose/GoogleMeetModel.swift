@@ -379,6 +379,235 @@ enum ArtifactAvailability: Hashable {
     var isAvailable: Bool { self == .available }
 }
 
+// MARK: - Transcript availability
+
+/// Whether, and in what state, a transcript exists for one recording.
+///
+/// Its own type rather than more cases on `ArtifactAvailability`, because the
+/// two answer different questions and share only a few words. The video's
+/// states decide whether a row can be *fetched at all*; the transcript's decide
+/// whether the fetch **waits**, and what the Transcript column says. Folding
+/// them together would put `.expected` — a state the video can never be in —
+/// into the four exhaustive switches on the video, each then carrying a case
+/// that cannot fire, and `isWithheld`'s whole argument rests on those switches
+/// naming only states the video can take.
+///
+/// Design: docs/design-cloud-import-transcripts.md §5e, the states table. The
+/// cell copy for each case is `cellKey`, the kind it speaks in is `cellKind`,
+/// and both are pinned against the locale files by
+/// `tests/test_cloud_transcript_keys.py`.
+enum TranscriptAvailability: Hashable, Sendable {
+    /// A transcript exists and is fetched with the recording.
+    case available
+    /// One is coming and the platform says so — on Meet, a transcript resource
+    /// in `STARTED`/`ENDED`. The row waits: disabled checkbox, *Waiting for
+    /// transcript* in Status, until the footer's checkbox includes it.
+    case expected
+    /// The call ended and nobody transcribed it. Bristlenose transcribes.
+    case notProvided
+    /// A transcript exists without speaker attribution — Teams'
+    /// `SpeakerAttributionNotAllowed`, a Zoom VTT with no `Name:`. Fetched,
+    /// and the speakers are left unseparated downstream, which the pipeline's
+    /// split gate states rather than guesses at.
+    case noSpeakerNames
+    /// The transcript permission needs an administrator (Teams, §5b). Said
+    /// once, in a bar, when Phase 3 lands; the cell itself is glyphless.
+    case needsAdminApproval
+    /// A scope we don't hold is required — Meet's `meetings.space.readonly`.
+    case needsScope(String)
+    /// This account's plan or edition produces none.
+    case unavailable
+    /// A transcript exists and cannot be put on this recording's clock: the
+    /// recording has no `startTime`, or the duration check failed (§5c).
+    /// Bristlenose transcribes rather than file the wrong words under this
+    /// participant with every timing looking plausible.
+    case notResolved
+    /// It existed and has gone — Meet keeps transcripts 30 days, Zoom
+    /// auto-deletes. Nothing to fetch; the recording may still be here.
+    case noLongerAvailable
+
+    /// Whether the row waits on this. The one state that gates the tick.
+    var isWaiting: Bool { self == .expected }
+
+    /// Whether a listing holding this row earns a Transcript column at all.
+    ///
+    /// True for the states that say a transcript exists or existed for *this
+    /// call*. The account-level facts — no scope, no plan, an administrator to
+    /// ask — do not bring the column on their own: each is one sentence about
+    /// the account, said once by the blanket banner or the Status column, and
+    /// a column repeating it down every row is the empty-column shape
+    /// `showsScheduledColumn` already refuses. `.notProvided` is the ordinary
+    /// month of calls nobody transcribed, and brings nothing either.
+    var bringsColumn: Bool {
+        switch self {
+        case .available, .expected, .noSpeakerNames, .notResolved, .noLongerAvailable:
+            return true
+        case .notProvided, .needsAdminApproval, .needsScope, .unavailable:
+            return false
+        }
+    }
+
+    /// The locale key the Transcript cell renders.
+    ///
+    /// Four of the nine reuse a Status word — the same concept, in the same
+    /// window, so the same translation — and are measured by the Status
+    /// column already. The five new ones are measured by
+    /// `CloudImportTranscriptColumn`.
+    var cellKey: String {
+        switch self {
+        case .available:          return "desktop.cloudImport.transcriptAvailable"
+        case .expected:           return "desktop.cloudImport.transcriptExpected"
+        case .notProvided:        return "desktop.cloudImport.transcriptNone"
+        case .noSpeakerNames:     return "desktop.cloudImport.transcriptNoSpeakerNames"
+        case .needsAdminApproval: return "desktop.cloudImport.transcriptNeedsApproval"
+        case .needsScope:         return "desktop.cloudImport.statusNeedsAccess"
+        case .unavailable:        return "desktop.cloudImport.statusUnavailable"
+        case .notResolved:        return "desktop.cloudImport.statusNotResolved"
+        case .noLongerAvailable:  return "desktop.cloudImport.statusNoLongerAvailable"
+        }
+    }
+
+    /// Which house kind the cell speaks in. Nil is glyphless grey — the
+    /// vocabulary's *pending* and *plain* states, which are status, not kinds
+    /// (`bristlenose/ui_kinds.py`). The same table as §5e: a word and its glyph
+    /// are tinted together, and a kind looks identical here and in Status.
+    var cellKind: MessageKind? {
+        switch self {
+        case .available, .expected, .needsAdminApproval:
+            return nil
+        case .notProvided, .noSpeakerNames:
+            return .info
+        case .needsScope, .unavailable, .notResolved, .noLongerAvailable:
+            return .warning
+        }
+    }
+}
+
+/// What happened to the transcript half of a row whose media imported.
+///
+/// Carried on `FetchOutcome.imported` rather than as a second outcome, because
+/// the row is one recording and the transcript is a half of it: one checkbox,
+/// one outcome, one line in the Transcript column afterwards.
+enum TranscriptOutcome: Equatable, Sendable {
+    /// Landed beside the media, under the stem the media carries.
+    case imported(at: URL)
+    /// It was available and did not arrive — the entries could not be read, or
+    /// the clock check refused them. The row is partial and the warning says so.
+    case didNotArrive
+    /// Not attempted: the researcher imported without waiting, the platform
+    /// serves none, or there was none to fetch.
+    case notImported
+
+    var cellKey: String {
+        switch self {
+        case .imported:     return "desktop.cloudImport.statusImported"
+        case .didNotArrive: return "desktop.cloudImport.transcriptDidNotArrive"
+        case .notImported:  return "desktop.cloudImport.transcriptNotImported"
+        }
+    }
+
+    var cellKind: MessageKind {
+        switch self {
+        case .imported:     return .success
+        case .didNotArrive: return .warning
+        case .notImported:  return .skipped
+        }
+    }
+}
+
+// MARK: - Meet: deciding the transcript state
+
+/// A transcript resource as Meet lists it (`conferenceRecords.transcripts`),
+/// reduced to what the decision reads. A call where transcription was stopped
+/// and restarted has several, and a recording is paired with every one that
+/// overlaps it (§1a).
+struct MeetTranscriptSummary: Equatable, Sendable {
+    enum State: Equatable, Sendable {
+        /// An active transcription session. Entries are not readable yet.
+        case started
+        /// The session ended; the file is still being generated.
+        case ended
+        /// Generated. The only state with entries behind it.
+        case fileGenerated
+        /// A state this adapter has not met. Read as "not generated", which is
+        /// the safe direction: a transcript we cannot read is one we wait for,
+        /// then stop waiting for, never one we claim to have.
+        case unknown
+
+        init(_ raw: String?) {
+            switch raw {
+            case "STARTED":        self = .started
+            case "ENDED":          self = .ended
+            case "FILE_GENERATED": self = .fileGenerated
+            default:               self = .unknown
+            }
+        }
+    }
+
+    /// `conferenceRecords/*/transcripts/*`.
+    let name: String
+    let state: State
+    let startedAt: Date?
+    let endedAt: Date?
+}
+
+/// The row-level verdict on a Meet recording's transcript, from the facts the
+/// listing holds. Pure, so §5e's table can be asserted without a tenant.
+enum MeetTranscriptDecision {
+
+    /// How long a transcript may sit un-generated before *Expected* becomes
+    /// *No transcript* — Google's own "usually within a few hours… up to 24
+    /// hours" (§1a). Waiting too long costs a minute's patience at the window;
+    /// giving up too early costs the speaker names, so this errs long.
+    static let patience: TimeInterval = 24 * 3600
+
+    /// The transcripts that could belong to this recording: every one whose
+    /// span intersects the recording's. A transcript or a recording with no
+    /// clock cannot be excluded and counts as overlapping — a wrong exclusion
+    /// here is a transcript silently never fetched.
+    static func overlapping(
+        _ transcripts: [MeetTranscriptSummary],
+        recordingStart: Date?,
+        recordingEnd: Date?
+    ) -> [MeetTranscriptSummary] {
+        guard let recordingStart else { return transcripts }
+        return transcripts.filter { transcript in
+            if let end = transcript.endedAt, end < recordingStart { return false }
+            if let recordingEnd, let start = transcript.startedAt, start > recordingEnd { return false }
+            return true
+        }
+    }
+
+    /// §5e's Meet column, as a function.
+    ///
+    /// - `FILE_GENERATED` among the overlapping transcripts → *Available*, or
+    ///   *Couldn't match* when the recording carries no `startTime`, because
+    ///   without it the words cannot be put on the file's clock (§5c).
+    /// - Only `STARTED`/`ENDED` → *Expected*, the certain signal — unless the
+    ///   newest has been coming for longer than `patience`, when it reads as
+    ///   *No transcript*.
+    /// - None at all → *No transcript* on an ended call; *Expected* on a call
+    ///   still in progress, where one may yet be started.
+    static func availability(
+        recordingStart: Date?,
+        recordingEnd: Date?,
+        callEnded: Bool,
+        transcripts: [MeetTranscriptSummary],
+        now: Date
+    ) -> TranscriptAvailability {
+        let relevant = overlapping(transcripts, recordingStart: recordingStart,
+                                   recordingEnd: recordingEnd)
+        guard !relevant.isEmpty else { return callEnded ? .notProvided : .expected }
+        if relevant.contains(where: { $0.state == .fileGenerated }) {
+            return recordingStart == nil ? .notResolved : .available
+        }
+        let newest = relevant.compactMap { $0.endedAt ?? $0.startedAt }.max()
+            ?? recordingEnd ?? recordingStart
+        if let newest, now.timeIntervalSince(newest) > patience { return .notProvided }
+        return .expected
+    }
+}
+
 // MARK: - Row state
 
 // NOTE: The per-row *local file* state (`ImportRowState`) lives in
@@ -506,8 +735,8 @@ struct CloudImportRow: Identifiable, Equatable {
 
     /// Local file state — shared with the Teams side.
     ///
-    /// The one `var` on this type, and deliberately: every other field is a
-    /// fact about the *remote* listing and is fixed the moment the adapter
+    /// One of the two `var`s on this type, and deliberately: every other field
+    /// is a fact about the *remote* listing and is fixed the moment the adapter
     /// built the row, while this one answers a question about the destination
     /// folder that only the destination knows. A `with`-style mutation cannot
     /// drop a field the way re-invoking this type's eighteen-argument
@@ -517,7 +746,13 @@ struct CloudImportRow: Identifiable, Equatable {
     /// Per-artifact availability, resolved at list time.
     let video: ArtifactAvailability
     let roster: ArtifactAvailability
-    let transcript: ArtifactAvailability
+    /// The other `var`, for the other fact that moves while the window is
+    /// open: a transcript the platform was still producing at list time can
+    /// arrive minutes later, and the store re-checks waiting rows on an
+    /// interval (`CloudImportStore.watchTranscripts`). Written only through
+    /// `withTranscript(_:)`, for the same reason `localState` has its three
+    /// `marked…` producers — one greppable name per transition.
+    private(set) var transcript: TranscriptAvailability
 
     /// Who organised it, when it wasn't the signed-in user. Present means "not
     /// yours" — and naming them is the point: the fix is to ping them, and a
@@ -594,7 +829,7 @@ struct CloudImportRow: Identifiable, Equatable {
         localState: ImportRowState,
         video: ArtifactAvailability,
         roster: ArtifactAvailability,
-        transcript: ArtifactAvailability,
+        transcript: TranscriptAvailability,
         organiser: Attendee?,
         scheduledAt: Date? = nil,
         scheduledDuration: TimeInterval? = nil,
@@ -672,6 +907,28 @@ struct CloudImportRow: Identifiable, Equatable {
         return copy
     }
 
+    /// The same row with its transcript in a new state — the only write to
+    /// `transcript` after listing. Produced by the store's re-check of waiting
+    /// rows, when a transcript the platform was still generating arrives, or
+    /// stops being expected.
+    func withTranscript(_ transcript: TranscriptAvailability) -> CloudImportRow {
+        var copy = self
+        copy.transcript = transcript
+        return copy
+    }
+
+    /// Whether this row is held back for a transcript that is on its way.
+    ///
+    /// The transcript is `.expected`, the recording is fetchable, and nothing
+    /// local already holds it — a held row has nothing to wait for, and a row
+    /// with no reachable video has a bigger problem than its transcript. This
+    /// is the row that draws a disabled checkbox over *Waiting for transcript*
+    /// (§0 item 2): the wait is evident and hard to get round, and the only
+    /// way round it is the footer's checkbox.
+    var isWaitingForTranscript: Bool {
+        transcript.isWaiting && localState.isSelectable && video.isAvailable
+    }
+
     /// Whether this row has a file behind it at all.
     ///
     /// Not the same question as `isSelectable`, which also asks whether we
@@ -721,10 +978,21 @@ struct CloudImportRow: Identifiable, Equatable {
     }
 
     /// Whether this row can be ticked. Local state decides first (an already-held
-    /// file is not re-fetchable), then remote availability.
-    var isSelectable: Bool {
-        guard localState.isSelectable else { return false }
-        return video.isAvailable
+    /// file is not re-fetchable), then remote availability, then the wait.
+    ///
+    /// **A waiting row is not selectable here**, and every bulk gesture reads
+    /// this one — ⌘A, the meeting header's box, shift-click, the outline's
+    /// fetchable count — so none of them can sweep a waiting row into a batch
+    /// (§0 item 2: "bulk ticks never include a waiting row"). Only a single
+    /// click, with the footer's checkbox on, reaches the waiting row, through
+    /// `isSelectable(includingWaiting:)`.
+    var isSelectable: Bool { isSelectable(includingWaiting: false) }
+
+    /// `isSelectable`, with the footer's *Include N waiting on transcription*
+    /// applied. The store passes its own flag; nothing else should pass `true`.
+    func isSelectable(includingWaiting: Bool) -> Bool {
+        guard localState.isSelectable, video.isAvailable else { return false }
+        return includingWaiting || !transcript.isWaiting
     }
 
     /// Whether this row's checkbox draws as ticked.

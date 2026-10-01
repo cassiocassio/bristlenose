@@ -273,6 +273,29 @@ enum CloudImportOutline {
         rows.isEmpty || rows.contains { $0.scheduledAt != nil }
     }
 
+    // MARK: - Whether the Transcript column has anything to say
+
+    /// Whether the Transcript column earns its place in a listing of `rows`.
+    ///
+    /// The Scheduled rule, applied to the other fact that can be absent for a
+    /// whole listing (§5e, "columns are shown when they would have something in
+    /// them"): the column appears when some row has a transcript to show or one
+    /// on its way, and not when every row says *No transcript* or the account
+    /// cannot have one. Which states count is the row's own judgement,
+    /// `TranscriptAvailability.bringsColumn`, so a new state has to say which
+    /// side it falls on.
+    ///
+    /// Unlike its twin this returns **false for an empty listing**. The window
+    /// never mounts the grid without rows, so neither answer is observable
+    /// there; and for a caller that asks early, "nothing to show" is the honest
+    /// reading of no rows, where for Scheduled it was "no evidence either way".
+    ///
+    /// Ask this of the **whole** listing, never of the filtered subset, for the
+    /// reason the twin gives: a filter keystroke must not take a column away.
+    static func showsTranscriptColumn(for rows: [CloudImportRow]) -> Bool {
+        rows.contains { $0.transcript.bringsColumn }
+    }
+
     // MARK: - Building it
 
     /// Group rows into days → meetings → recordings.
@@ -481,6 +504,13 @@ enum CloudImportOutline {
             parts.append(String(describing: row.localState))
             parts.append(String(row.showsCheckbox))
             parts.append(String(row.isSelectable))
+            // The transcript's state is drawn by the Transcript cell and, for a
+            // waiting row, by the title's colour and the Status cell — and it
+            // is the one remote fact that moves while the window is open, when
+            // the re-check finds a transcript has landed. Without it here that
+            // arrival would never force the full reload that redraws them.
+            parts.append(String(describing: row.transcript))
+            parts.append(String(row.isWaitingForTranscript))
             parts.append(row.attendees.map(\.listLabel).joined(separator: ","))
             return parts.joined(separator: "|")
         }

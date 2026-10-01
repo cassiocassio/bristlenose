@@ -634,9 +634,14 @@ final class TeamsSource: CloudImportSource {
             localState: .notImported,
             video: item.downloadURL == nil ? .unsupported : .available,
             roster: attendees.isEmpty ? .needsScope(MicrosoftScopes.calendarsRead) : .available,
-            // Admin-consent-only, even delegated. Not requested, so never
-            // available — stated rather than silently missing.
-            transcript: .needsScope("OnlineMeetingTranscript.Read.All"),
+            // Admin-consent-only, even delegated, and not requested at first
+            // sign-in — so the state is "an administrator has to approve
+            // this", not a scope the researcher could grant themselves.
+            // Stated once, in a bar, when the Phase 3 incremental consent
+            // lands (design-cloud-import-transcripts.md §5b); until then it
+            // brings no Transcript column, so the Teams window is drawn
+            // exactly as it ships.
+            transcript: .needsAdminApproval,
             organiser: nil,
             scheduledAt: scheduledAt,
             scheduledDuration: scheduledEnd.flatMap { end in

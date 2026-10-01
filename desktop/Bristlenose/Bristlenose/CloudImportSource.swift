@@ -52,7 +52,13 @@ enum FetchOutcome: Equatable {
     /// second derivation in the store would be a second chance to disagree,
     /// and the disagreement would surface as a surprise-files count pill on a
     /// row that had just imported them deliberately.
-    case imported(bytes: Int64, at: URL)
+    ///
+    /// `transcript` is the other half of the row (§5a): fetched inside the same
+    /// call, after the media is published, and never on its own — a lone
+    /// `.vtt` would become a text-only session. Defaulted so an adapter that
+    /// serves no transcript (Teams, until its admin consent lands) says so by
+    /// saying nothing.
+    case imported(bytes: Int64, at: URL, transcript: TranscriptOutcome = .notImported)
     /// Carries a **case, not a sentence**. It used to carry the English
     /// sentence, and the row rendered it verbatim — so the cloud-import window
     /// was fully localised (38 `i18n.t` sites) while the failure rows inside it
@@ -135,6 +141,15 @@ protocol CloudImportSource: AnyObject {
         destination: URL,
         progress: @escaping @Sendable (FetchProgress) -> Void
     ) async -> FetchOutcome
+
+    /// Ask again about rows whose transcript was still being produced.
+    ///
+    /// Called by the store on an interval **while the import window is open**,
+    /// and never otherwise — the wait is window-scoped by design (§0 item 2):
+    /// no persisted pending state, no tokens spent while the window is closed.
+    /// Returns only the rows whose state moved; an empty answer is "nothing
+    /// yet", which is the ordinary one.
+    func recheckTranscripts(rowIDs: [String]) async -> [String: TranscriptAvailability]
 }
 
 // MARK: - Fixtures
@@ -191,6 +206,10 @@ enum CloudImportScenario: String, CaseIterable, Identifiable {
 extension CloudImportSource {
     /// Most platforms need nothing before a batch.
     func prepareBatch(rowIDs: [String]) async throws {}
+
+    /// A platform that cannot say whether a transcript is coming has nothing
+    /// to re-check; its rows never read `.expected`, so this is never asked.
+    func recheckTranscripts(rowIDs: [String]) async -> [String: TranscriptAvailability] { [:] }
 }
 
 /// Store state a Diagnostics fixture lays over its listing: the per-row fetch
@@ -310,7 +329,20 @@ final class FixtureCloudSource: CloudImportSource {
         let name = CloudDownloadNaming.filename(
             title: row.title, startsAt: row.startsAt, fileExtension: "mp4",
             part: row.siblingOrdinal)
-        return .imported(bytes: total, at: destination.appendingPathComponent(name))
+        // The transcript half follows the same rule: a row listed with one
+        // "lands" it under the media's stem, so the Transcript column's
+        // after-fetch states are reachable from Diagnostics.
+        let transcript: TranscriptOutcome
+        if row.transcript == .available {
+            let vtt = CloudDownloadNaming.filename(
+                title: row.title, startsAt: row.startsAt, fileExtension: "vtt",
+                part: row.siblingOrdinal)
+            transcript = .imported(at: destination.appendingPathComponent(vtt))
+        } else {
+            transcript = .notImported
+        }
+        return .imported(bytes: total, at: destination.appendingPathComponent(name),
+                         transcript: transcript)
     }
 
     // MARK: Shapes
@@ -386,6 +418,7 @@ final class FixtureCloudSource: CloudImportSource {
         meeting: String? = nil,
         local: ImportRowState = .notImported,
         video: ArtifactAvailability = .available,
+        transcript: TranscriptAvailability = .available,
         organiser: CloudImportRow.Attendee? = nil
     ) -> CloudImportRow {
         let scheduled = day(daysAgo, hour: hour, minute: minute)
@@ -415,7 +448,7 @@ final class FixtureCloudSource: CloudImportSource {
             localState: local,
             video: video,
             roster: .available,
-            transcript: .available,
+            transcript: transcript,
             organiser: organiser,
             scheduledAt: scheduled,
             scheduledDuration: booked,
@@ -431,6 +464,14 @@ final class FixtureCloudSource: CloudImportSource {
         let landed = URL(fileURLWithPath: "/dev/null")
         seed.outcomes["st-imported"] = .imported(bytes: 1, at: landed)
         seed.outcomes["st-stopped"] = .cancelled
+        // The Transcript column's three after-fetch states, on rows whose
+        // media imported — the only rows that have a transcript outcome.
+        seed.outcomes["st-t-imported"] = .imported(bytes: 1, at: landed,
+                                                   transcript: .imported(at: landed))
+        seed.outcomes["st-t-didnotarrive"] = .imported(bytes: 1, at: landed,
+                                                       transcript: .didNotArrive)
+        seed.outcomes["st-t-notimported"] = .imported(bytes: 1, at: landed,
+                                                      transcript: .notImported)
         for failure in CloudFetchFailure.allCases {
             seed.outcomes["st-fail-\(failure.rawValue)"] =
                 .failed(reason: failure, isRetryable: true)
@@ -462,11 +503,13 @@ final class FixtureCloudSource: CloudImportSource {
         func add(_ id: String, _ title: String, daysAgo: Int,
                  local: ImportRowState = .notImported,
                  video: ArtifactAvailability = .available,
+                 transcript: TranscriptAvailability = .available,
                  organiser: CloudImportRow.Attendee? = nil) {
             out.append(row(id: id, title: title, daysAgo: daysAgo,
                            hour: 8 + minute / 60, minute: minute % 60,
                            minutes: 45, gigabytes: 1.2,
-                           local: local, video: video, organiser: organiser))
+                           local: local, video: video, transcript: transcript,
+                           organiser: organiser))
             minute += 20
         }
 
@@ -505,6 +548,28 @@ final class FixtureCloudSource: CloudImportSource {
         add("st-bar", "In flight: 40%", daysAgo: 4)
         add("st-bar-unknown", "In flight: size unknown", daysAgo: 4)
         add("st-queued", "In flight: queued", daysAgo: 4)
+
+        // The transcript half (§5e). Every state the Transcript column can
+        // draw, so its width can be judged by eye in any language — plus the
+        // one Status it brings: a waiting row's disabled box over *Waiting for
+        // transcript*, which also puts the footer's checkbox on screen.
+        minute = 0
+        add("st-t-available", "Transcript: available", daysAgo: 5, transcript: .available)
+        add("st-t-expected", "Transcript: expected (waiting)", daysAgo: 5, transcript: .expected)
+        add("st-t-none", "Transcript: none", daysAgo: 5, transcript: .notProvided)
+        add("st-t-nonames", "Transcript: no speaker names", daysAgo: 5, transcript: .noSpeakerNames)
+        add("st-t-approval", "Transcript: needs approval", daysAgo: 5, transcript: .needsAdminApproval)
+        add("st-t-scope", "Transcript: needs access", daysAgo: 5,
+            transcript: .needsScope("meetings.space.readonly"))
+        add("st-t-unavailable", "Transcript: unavailable", daysAgo: 5, transcript: .unavailable)
+        add("st-t-notresolved", "Transcript: can't be put on the clock", daysAgo: 5,
+            transcript: .notResolved)
+        add("st-t-gone", "Transcript: no longer available", daysAgo: 5, transcript: .noLongerAvailable)
+        // After a fetch — the outcomes are in `diagnosticSeed`.
+        add("st-t-imported", "Transcript fetch: imported", daysAgo: 5)
+        add("st-t-didnotarrive", "Transcript fetch: didn't arrive", daysAgo: 5)
+        add("st-t-notimported", "Transcript fetch: not imported (went ahead)", daysAgo: 5,
+            transcript: .expected)
         return out
     }
 

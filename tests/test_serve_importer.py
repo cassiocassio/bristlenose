@@ -1843,3 +1843,51 @@ class TestTranscriptLanguageHeader:
         with patch.object(importer, "_parse_transcript_headers", with_language):
             import_project(db, _FIXTURE_DIR)
         assert db.query(SessionModel).one().language == "ja"
+
+
+class TestRedactedSourceHeader:
+    """A cooked transcript says ``# Source: [REDACTED]``; the importer must
+    still find the recording, and takes the real name from the raw sibling."""
+
+    def _write(self, directory: Path, sid: str, source: str) -> None:
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / f"{sid}.txt").write_text(
+            f"# Transcript: {sid}\n# Source: {source}\n# Duration: 00:10\n", encoding="utf-8",
+        )
+
+    def test_redacted_source_resolves_to_the_raw_transcripts_source(self, tmp_path: Path) -> None:
+        from bristlenose.server.importer import (
+            _parse_transcript_headers,
+            _resolve_redacted_sources,
+        )
+
+        self._write(tmp_path / "transcripts-cooked", "s1", "[REDACTED]")
+        self._write(tmp_path / "transcripts-raw", "s1", "Interview with Sarah Jones.mp4")
+        meta = _parse_transcript_headers(tmp_path / "transcripts-cooked")
+        assert meta["s1"]["source"] == "[REDACTED]"
+
+        _resolve_redacted_sources(meta, tmp_path / "transcripts-raw")
+        assert meta["s1"]["source"] == "Interview with Sarah Jones.mp4"
+
+    def test_a_real_source_is_left_alone(self, tmp_path: Path) -> None:
+        from bristlenose.server.importer import (
+            _parse_transcript_headers,
+            _resolve_redacted_sources,
+        )
+
+        self._write(tmp_path / "transcripts-raw", "s1", "a.mp4")
+        meta = _parse_transcript_headers(tmp_path / "transcripts-raw")
+        _resolve_redacted_sources(meta, tmp_path / "does-not-exist")
+        assert meta["s1"]["source"] == "a.mp4"
+
+    def test_no_raw_sibling_means_no_source_file(self, tmp_path: Path) -> None:
+        """The marker never reaches the database as a filename."""
+        from bristlenose.server.importer import (
+            _parse_transcript_headers,
+            _resolve_redacted_sources,
+        )
+
+        self._write(tmp_path / "transcripts-cooked", "s1", "[REDACTED]")
+        meta = _parse_transcript_headers(tmp_path / "transcripts-cooked")
+        _resolve_redacted_sources(meta, tmp_path / "transcripts-raw")
+        assert meta["s1"]["source"] == ""

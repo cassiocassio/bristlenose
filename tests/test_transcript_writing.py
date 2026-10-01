@@ -269,6 +269,21 @@ def test_write_cooked_transcripts_txt_header(tmp_path: Path) -> None:
     assert "# PII entities redacted: 2" in content
 
 
+def test_cooked_transcripts_do_not_name_the_recording(tmp_path: Path) -> None:
+    """A recording's filename is a meeting title, and meeting titles name
+    people — "Interview with Sarah Jones.mp4". The redacted file carries a
+    marker in its Source line; the raw file keeps the real value."""
+    transcript = _make_cooked_transcript()
+    write_cooked_transcripts([transcript], tmp_path)
+    write_cooked_transcripts_md([transcript], tmp_path)
+    txt = (tmp_path / "s1.txt").read_text()
+    md = (tmp_path / "s1.md").read_text()
+    assert "# Source: [REDACTED]" in txt
+    assert "**Source:** [REDACTED]" in md
+    assert "interview_01.mp4" not in txt
+    assert "interview_01.mp4" not in md
+
+
 def test_write_cooked_transcripts_txt_participant_codes(tmp_path: Path) -> None:
     transcript = _make_cooked_transcript()
     write_cooked_transcripts([transcript], tmp_path)
@@ -332,13 +347,20 @@ def test_parser_reads_legacy_role_format(tmp_path: Path) -> None:
 
 
 def test_parser_extracts_metadata(tmp_path: Path) -> None:
-    """Parser correctly reads header metadata from .txt files."""
+    """Parser correctly reads header metadata from .txt files.
+
+    Written through the raw writer: a cooked file's Source is the redaction
+    marker by design (``test_cooked_transcripts_do_not_name_the_recording``),
+    and the parser reads back whatever the header says."""
     from bristlenose.pipeline import load_transcripts_from_dir
 
     transcript = _make_cooked_transcript()
-    write_cooked_transcripts([transcript], tmp_path)
-    loaded = load_transcripts_from_dir(tmp_path)
+    write_raw_transcripts([transcript], tmp_path / "raw")
+    loaded = load_transcripts_from_dir(tmp_path / "raw")
     assert loaded[0].source_file == "interview_01.mp4"
+
+    write_cooked_transcripts([transcript], tmp_path / "cooked")
+    assert load_transcripts_from_dir(tmp_path / "cooked")[0].source_file == "[REDACTED]"
 
 
 def test_parser_mixed_timecode_formats(tmp_path: Path) -> None:

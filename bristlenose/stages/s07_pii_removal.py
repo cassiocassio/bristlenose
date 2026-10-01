@@ -433,6 +433,7 @@ def write_cooked_transcripts(
         List of written file paths.
     """
     from bristlenose.utils.markdown import (
+        REDACTED_SOURCE,
         format_cooked_segment_txt,
         format_transcript_header_txt,
     )
@@ -445,9 +446,11 @@ def write_cooked_transcripts(
         filename = f"{transcript.session_id}.txt"
         path = output_dir / filename
 
+        # The recording's filename is a meeting title, and a meeting title
+        # names people. The redacted file does not carry it; the raw one does.
         header = format_transcript_header_txt(
             participant_id=transcript.session_id,
-            source_file=transcript.source_file,
+            source_file=REDACTED_SOURCE,
             session_date=transcript.session_date.isoformat(),
             duration=format_timecode(transcript.duration_seconds),
             label="Transcript (cooked)",
@@ -490,6 +493,7 @@ def write_cooked_transcripts_md(
         List of written file paths.
     """
     from bristlenose.utils.markdown import (
+        REDACTED_SOURCE,
         format_cooked_segment_md,
         format_transcript_header_md,
     )
@@ -504,7 +508,7 @@ def write_cooked_transcripts_md(
 
         header = format_transcript_header_md(
             participant_id=transcript.session_id,
-            source_file=transcript.source_file,
+            source_file=REDACTED_SOURCE,
             session_date=transcript.session_date.isoformat(),
             duration=format_timecode(transcript.duration_seconds),
             label="Transcript (cooked)",

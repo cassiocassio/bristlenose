@@ -51,6 +51,7 @@ from bristlenose.server.models import (
     Session as SessionModel,
 )
 from bristlenose.utils.fs import is_os_metadata
+from bristlenose.utils.markdown import REDACTED_SOURCE
 from bristlenose.utils.timecodes import parse_header_datetime, parse_timecode
 
 logger = logging.getLogger(__name__)
@@ -294,6 +295,7 @@ def import_project(db: Session, project_dir: Path) -> Project:
     # --- Parse transcripts for session metadata --------------------------
     transcripts_dir = _find_transcripts_dir(project_dir, output_dir)
     session_meta = _parse_transcript_headers(transcripts_dir)
+    _resolve_redacted_sources(session_meta, output_dir / "transcripts-raw")
 
     # --- Build sessions from all data sources ----------------------------
     # Collect all session_ids from quotes, transcripts, etc.
@@ -441,6 +443,31 @@ def _parse_transcript_headers(
         }
 
     return result
+
+
+def _resolve_redacted_sources(
+    session_meta: dict[str, dict[str, Any]],
+    raw_dir: Path,
+) -> None:
+    """Replace a redacted ``Source`` with the raw transcript's real one.
+
+    A cooked transcript's header says ``# Source: [REDACTED]`` — the
+    recording's filename is a meeting title, and meeting titles name people
+    (``utils.markdown.REDACTED_SOURCE``). The importer still has to find the
+    media file for playback, and ``transcripts-raw/`` keeps the real value
+    (redaction protects the onward artefact, not the disk — D4). A session
+    with no raw sibling keeps the marker cleared to ``""``, which
+    ``_import_source_files`` already treats as "no source file".
+
+    Mutates ``session_meta`` in place.
+    """
+    if not any(meta.get("source") == REDACTED_SOURCE for meta in session_meta.values()):
+        return
+    raw_meta = _parse_transcript_headers(raw_dir)
+    for sid, meta in session_meta.items():
+        if meta.get("source") != REDACTED_SOURCE:
+            continue
+        meta["source"] = raw_meta.get(sid, {}).get("source", "")
 
 
 def _import_source_files(

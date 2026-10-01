@@ -103,6 +103,15 @@ Example: > [05:23] \u201cI couldn\u2019t find the button\u201d \u2014 p1"""
 # --- Plain-text (.txt) transcripts ----------------------------------------
 
 TRANSCRIPT_HEADER_TXT = "# {key}: {value}"
+
+#: What a redacted ("cooked") transcript carries as its ``Source`` instead of
+#: the recording's filename. A meeting title names its participants — "Interview
+#: with Sarah Jones.mp4", "2026-09-24 0934 — Priya Nair.mp4" — so writing the
+#: real name into the one artefact whose job is to carry no names undid the
+#: redaction in its header (1 Oct 2026). The raw transcript keeps the real
+#: value (D4: raw stays on disk), and readers that need the media path — the
+#: serve importer — take it from there.
+REDACTED_SOURCE = "[REDACTED]"
 """A single header line in a .txt transcript file.
 Lines are prefixed with ``#`` so they read as comments.
 Example: # Transcript: p1"""

@@ -501,6 +501,14 @@ final class CloudImportStore: ObservableObject {
             listing = result
             accountEmail = source.accountEmail
             phase = .loaded
+            // Diagnostics ▸ Cloud Import ▸ Every Status: the outcomes and bars
+            // a real batch would produce, laid over the fixture's listing.
+            if let seed = (source as? FixtureCloudSource)?.diagnosticSeed {
+                outcomes = seed.outcomes
+                progress = seed.progress
+                ticked = seed.queued
+                isFetching = !seed.queued.isEmpty
+            }
             // Pre-tick nothing. §9 declines to promote Select All for the same
             // reason: the list is *recordings you organised*, mixing research
             // calls with workshops and readouts, so a default of "all" is close

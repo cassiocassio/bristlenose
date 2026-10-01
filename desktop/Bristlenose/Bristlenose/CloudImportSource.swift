@@ -159,6 +159,11 @@ enum CloudImportScenario: String, CaseIterable, Identifiable {
     case scopeDeclined
     case paginatorCapped
     case partialFailure
+    /// One row for every string the Status column can show — each video
+    /// availability, each local state, each fetch outcome including all
+    /// `CloudFetchFailure` sentences, and the in-flight bar and Queued — so
+    /// the column can be judged by eye in any language. Titles name the state.
+    case everyStatus
 
     var id: String { rawValue }
 
@@ -178,6 +183,7 @@ enum CloudImportScenario: String, CaseIterable, Identifiable {
         case .scopeDeclined:               return "Drive Scope Declined"
         case .paginatorCapped:             return "Paginator Capped (partial list)"
         case .partialFailure:              return "Partial Failure After Fetch"
+        case .everyStatus:                 return "Every Status (one row each)"
         }
     }
 }
@@ -185,6 +191,16 @@ enum CloudImportScenario: String, CaseIterable, Identifiable {
 extension CloudImportSource {
     /// Most platforms need nothing before a batch.
     func prepareBatch(rowIDs: [String]) async throws {}
+}
+
+/// Store state a Diagnostics fixture lays over its listing: the per-row fetch
+/// results and in-flight bars that a real batch would otherwise have to
+/// produce. Applied once, when the listing lands.
+struct CloudImportDiagnosticSeed {
+    var outcomes: [String: FetchOutcome] = [:]
+    var progress: [String: FetchProgress] = [:]
+    /// Rows drawn as "Queued": ticked, with the store marked as fetching.
+    var queued: Set<String> = []
 }
 
 /// A `CloudImportSource` backed by generated shapes rather than a network.
@@ -408,10 +424,97 @@ final class FixtureCloudSource: CloudImportSource {
         )
     }
 
+    /// What `.everyStatus` lays over its listing; nil for every other scenario.
+    var diagnosticSeed: CloudImportDiagnosticSeed? {
+        guard scenario == .everyStatus else { return nil }
+        var seed = CloudImportDiagnosticSeed()
+        let landed = URL(fileURLWithPath: "/dev/null")
+        seed.outcomes["st-imported"] = .imported(bytes: 1, at: landed)
+        seed.outcomes["st-stopped"] = .cancelled
+        for failure in CloudFetchFailure.allCases {
+            seed.outcomes["st-fail-\(failure.rawValue)"] =
+                .failed(reason: failure, isRetryable: true)
+        }
+        seed.progress["st-bar"] = FetchProgress(
+            rowID: "st-bar", fraction: 0.4,
+            bytesWritten: 400_000_000, bytesExpected: 1_000_000_000)
+        seed.progress["st-bar-unknown"] = FetchProgress(
+            rowID: "st-bar-unknown", fraction: nil,
+            bytesWritten: 120_000_000, bytesExpected: nil)
+        seed.queued = ["st-queued"]
+        return seed
+    }
+
+    /// `.everyStatus`'s rows, grouped by day: what the recording is, what is on
+    /// disk, how a fetch ended, and what is in flight. Long names are the real
+    /// shapes — an organiser with a double-barrelled name, a volume with a
+    /// year in it — because the column is judged on its widest content.
+    private func everyStatusRows() -> [CloudImportRow] {
+        let longOrganiser = CloudImportRow.Attendee(
+            displayName: "Margarethe Okafor-Whitcombe",
+            email: "m.okafor-whitcombe@nhs.example",
+            isOrganiser: true, isExternal: true)
+        let anonymous = CloudImportRow.Attendee(
+            displayName: nil, email: "j.whitfield@outlook.example",
+            isOrganiser: true, isExternal: true)
+        var out: [CloudImportRow] = []
+        var minute = 0
+        func add(_ id: String, _ title: String, daysAgo: Int,
+                 local: ImportRowState = .notImported,
+                 video: ArtifactAvailability = .available,
+                 organiser: CloudImportRow.Attendee? = nil) {
+            out.append(row(id: id, title: title, daysAgo: daysAgo,
+                           hour: 8 + minute / 60, minute: minute % 60,
+                           minutes: 45, gigabytes: 1.2,
+                           local: local, video: video, organiser: organiser))
+            minute += 20
+        }
+
+        // The recording itself.
+        add("st-v-organiser", "Video: organised by someone (long name)", daysAgo: 1,
+            video: .notOrganiser(organiser: longOrganiser.displayName), organiser: longOrganiser)
+        add("st-v-someone", "Video: organised by someone (no name)", daysAgo: 1,
+            video: .notOrganiser(organiser: nil), organiser: anonymous)
+        add("st-v-notrecorded", "Video: not recorded", daysAgo: 1, video: .notRecorded)
+        add("st-v-notresolved", "Video: can't tell which recording", daysAgo: 1, video: .notResolved)
+        add("st-v-plan", "Video: needs a paid plan", daysAgo: 1, video: .notOnThisPlan)
+        add("st-v-scope", "Video: needs access", daysAgo: 1, video: .needsScope("drive.readonly"))
+        add("st-v-unsupported", "Video: unavailable", daysAgo: 1, video: .unsupported)
+
+        // What is on disk.
+        minute = 0
+        add("st-l-imported", "Local: in this project", daysAgo: 2, local: .imported)
+        add("st-l-provider", "Local: evicted to a sync provider", daysAgo: 2,
+            local: .notDownloaded(provider: "Google Drive"))
+        add("st-l-volume", "Local: on an unplugged drive", daysAgo: 2,
+            local: .driveNotConnected(volume: "Research Archive 2026"))
+        add("st-l-damaged", "Local: damaged", daysAgo: 2, local: .damaged)
+        add("st-l-viewonly", "Local: view only", daysAgo: 2, local: .viewOnly)
+        add("st-l-gone", "Local: no longer available", daysAgo: 2, local: .noLongerAvailable)
+
+        // How a fetch ended.
+        minute = 0
+        add("st-imported", "Fetch: imported", daysAgo: 3)
+        add("st-stopped", "Fetch: stopped", daysAgo: 3)
+        for failure in CloudFetchFailure.allCases {
+            add("st-fail-\(failure.rawValue)", "Fetch failed: \(failure.rawValue)", daysAgo: 3)
+        }
+
+        // In flight.
+        minute = 0
+        add("st-bar", "In flight: 40%", daysAgo: 4)
+        add("st-bar-unknown", "In flight: size unknown", daysAgo: 4)
+        add("st-queued", "In flight: queued", daysAgo: 4)
+        return out
+    }
+
     private func rows() -> [CloudImportRow] {
         switch scenario {
         case .signedOut, .signInIncomplete, .loading, .emptyWindow:
             return []
+
+        case .everyStatus:
+            return everyStatusRows()
 
         case .personalAccountNoRecordings:
             // The trap this scenario exists for: a full, convincing calendar

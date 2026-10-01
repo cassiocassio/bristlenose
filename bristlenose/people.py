@@ -3,6 +3,17 @@
 The people file (``people.yaml``) lives in the output directory and tracks
 every participant across pipeline runs.  Computed stats are refreshed on
 each run; human-editable fields (name, role, persona, notes) are preserved.
+
+**Decided 1 Oct 2026, not yet built: the file is retired as a store.**
+Names, identities, the per-session moderator map and name origin move to the
+project database (``session_speakers.person_id`` nullable + ``state`` +
+``evidence``; ``persons`` with a per-project code, uuid, origin and ``me``);
+the pipeline carries evidence in its intermediates and runs the importer at
+the end of every run; a legacy ``people.yaml`` is read once on the first
+import after upgrade, then ignored and never deleted.  Record:
+``docs/design-people.md`` §C2 and §E decision 1 (corrected), work package
+§H H9; drawn in ``docs/mockups/moderator-identity-failure-states.html``
+Part 5b.  Everything in this module describes what ships until H9 lands.
 """
 
 from __future__ import annotations
@@ -140,10 +151,18 @@ def compute_participant_stats(
     first moderator is ``m1``.  This dict is keyed by code alone, so in a
     multi-session study the last session's ``m1`` overwrites the earlier ones
     and only one survives into ``people.yaml``.  Collisions are collected and
-    reported in a single WARNING rather than passing silently.  The fix is to give
-    ``people.yaml`` the person↔session split the serve-mode DB already has
-    (``SessionSpeaker``) — Layer 11 in
-    ``docs/design-transcript-speaker-editing-roadmap.md``.
+    reported in a single WARNING rather than passing silently.
+
+    The fix is **not** a ``(session, code)`` rekey of this file — that was
+    considered and rejected (``docs/design-transcript-speaker-editing-roadmap.md``
+    §11c, 25 Aug 2026).  Decided 1 Oct 2026: a session's moderator slot lives
+    on ``session_speakers`` and is ``null`` until a platform label proposes an
+    identity or a researcher picks one; the per-session ``m1`` token stays as a
+    within-session tag, and this file is retired as a store.  See
+    ``docs/design-people.md`` §E decision 1 (corrected) and §H H9.  Until that
+    lands this function behaves as described above, and
+    ``tests/test_people.py::test_multi_session_moderator_codes_collide_and_are_warned``
+    pins the limitation, not a desired end state.
     """
     transcript_map: dict[str, FullTranscript] = {
         t.session_id: t for t in transcripts
@@ -218,10 +237,10 @@ def compute_participant_stats(
         )
         logger.warning(
             "Speaker code reused across sessions: %s. people.yaml holds one entry "
-            "per code, so the earlier sessions' stats are discarded. Moderator and "
-            "observer codes restart at 1 each session and cross-session speaker "
-            "identity is not yet modelled — see Layer 11 in "
-            "docs/design-transcript-speaker-editing-roadmap.md.",
+            "per code, so the earlier sessions' stats are discarded and one name "
+            "covers every session that carries the code. Moderator and observer "
+            "codes restart at 1 each session; per-session moderator identity is "
+            "decided but not yet built — see docs/design-people.md, decision 1.",
             detail,
         )
 
@@ -255,6 +274,12 @@ def merge_people(
     * New participants are added with empty editable defaults.
     * Participants present in the old file but absent from the current run
       are **kept** (the user may still want their notes).
+
+    Preserving editable fields *by key* is correct for a code that names one
+    person and is what spreads a typed moderator name to every session that
+    shares the code (storyboard frame F10): a name typed for session 9's ``m1``
+    is kept against stats that are now session 13's.  Route C removes the
+    shared key rather than this rule — see the module docstring.
     """
     people = PeopleFile(last_updated=datetime.now(tz=timezone.utc))
 
@@ -428,6 +453,15 @@ def auto_populate_names(
     ``docs/design-cloud-import-transcripts.md`` §0b). ``label_names`` keeps
     its old place for labels of unknown provenance, so the LLM still beats a
     generic label.
+
+    For a shared moderator code the ``speaker_infos`` entry is whichever
+    session the caller iterated last (``pipeline.py``, the ``pid_speaker_info``
+    loop), including one whose ``person_name`` is empty — so the name on
+    ``m1`` is an accident of session order (storyboard frame F2).  Under route
+    C (``docs/design-people.md`` §E decision 1, corrected 1 Oct 2026) an LLM
+    hearing becomes a hint on an unidentified slot and never fills a name;
+    only a platform label proposes one.  The never-overwrite rule survives as
+    "never touch a confirmed row".
 
     Mutates *people* in place.
     """

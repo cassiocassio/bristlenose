@@ -293,6 +293,19 @@ See `docs/design-react-islands.md` for the 6-step "Adding a new island" checklis
 
 ## Names architecture (YAML canonical, DB materialized)
 
+> **Decided 1 Oct 2026, not yet built: this architecture is retired.** The
+> database becomes the only home for names, identities, the per-session
+> moderator map and origin; the pipeline carries evidence in its intermediates
+> and runs the importer at the end of every run; a legacy `people.yaml` is read
+> once on the first import after upgrade, then ignored and never deleted. The
+> per-session map is `session_speakers.person_id` made nullable (null renders as
+> `m?`) plus `state` and `evidence`; `persons` gain a per-project `code`, a
+> `uuid`, an `origin` and `me`, one row per identity instead of one per session.
+> Record: `docs/design-people.md` §C2 and §E decision 1 (corrected), §H H9;
+> drawn in `docs/mockups/moderator-identity-failure-states.html` Part 5b.
+> Everything below describes what ships at HEAD and stays true until H9 lands;
+> when it does, rewrite this section rather than annotate it further.
+
 `people.yaml` is the single source of truth for participant names. The SQLite `Person` table is a materialized view, populated from YAML on import and kept in sync via write-through.
 
 ### Import path (YAML → DB)
@@ -332,7 +345,7 @@ The server currently loads one project (project ID 1). Multi-project is future w
 - **Instance-scoped tables** (no `project_id`): `Person`, `CodebookGroup`, `TagDefinition`. These are shared across projects by design. **Never add `project_id` to these tables** — cross-project identity and codebook reuse depend on them being global
 - **Project-scoped tables** (have `project_id` FK): `Quote`, `Session`, `ScreenCluster`, `ThemeGroup`, and all researcher-state tables. **Every new analysis/state table must include `project_id`**
 - **Frontend project ID**: read from `data-project-id` attribute via `useProjectId()` hook or `apiBase()` helper. **Never hardcode `/api/projects/1/...` in new code** — use `apiBase()` which reads the injected `BRISTLENOSE_API_BASE` global. Existing hardcoded locations are tracked in the design doc
-- **Person rows are created per-import, not deduped** — two "John Smith" rows from different projects is correct. Merging is a future human-driven action via `person_links` table, not an automatic process
+- **Person rows are created per-import, not deduped** — two "John Smith" rows from different projects is correct. Merging is a future human-driven action via `person_links` table, not an automatic process. **Within one project this changes under route C** (`docs/design-people.md` §E decision 1, corrected 1 Oct 2026): one `Person` per identity, minted when a platform label or a researcher's pick first establishes it, and `session_speakers.person_id` nullable so a session can have a moderator nobody has identified. Today the importer creates one `Person` per `(session, code)` and seeds every `m1` row from the one `people.yaml` entry — the mechanism behind the moderator collision the storyboard draws
 - **`SessionSpeaker`** joins Person↔Session (with speaker code + role). It has no `project_id` because it inherits project scope through Session. This is correct — don't add `project_id` to it
 - **Per-project SQLite files** — each project gets its own DB at `<output_dir>/.bristlenose/bristlenose.db`. Cross-project data (person links, app settings) will live in the instance DB at `~/.config/bristlenose/bristlenose.db`. Don't store cross-project relationships in per-project DBs
 
@@ -388,7 +401,7 @@ Tests: `tests/test_server_lifecycle.py` (unit + 1 SIGTERM-delivery smoke test).
 - **Baked HTML requires re-render to pick up new JS** — the static HTML report on disk contains a snapshot of the JS from the last `bristlenose render`.  In production (no `--dev`), editing `.js` source files has no effect until you re-render.  The live reload only works in `--dev` mode.  If something works in dev but not in the static file, the static file is stale
 - **`pip install -e .` and render are separate steps** — an editable install makes Python changes visible immediately, but the rendered HTML is a separate artifact.  Adding a new JS file to `_JS_FILES` requires both `pip install -e .` (so Python sees the new list) and `bristlenose render` (so the static HTML includes it).  In dev mode, only a server restart is needed (uvicorn picks up the Python change, live reload reads the new file)
 - **Importer reads people.yaml** — `_import_speakers()` requires `output_dir` parameter to find `people.yaml`. On re-import, `_update_persons_from_people()` only fills empty Person fields — never overwrites non-empty values. This means browser edits survive server restarts
-- **Write-through is best-effort** — `_write_through_people_yaml()` in `routes/data.py` logs a warning on failure but doesn't fail the API request. The DB is always updated; YAML update is secondary
+- **Write-through is best-effort** — `_write_through_people_yaml()` in `routes/data.py` logs a warning on failure but doesn't fail the API request. The DB is always updated; YAML update is secondary. Both this and the importer's YAML read go when `people.yaml` is retired as a store (decided 1 Oct 2026, `docs/design-people.md` §C2); until then note that `put_people` writes `.first()` of the speaker rows for a code and `get_people` iterates with no ordering, so a code shared across sessions can read back a different name from the one just written (storyboard frame F4)
 - **Codebook tab stale counts on initial load** — the CodebookPanel re-fetches via MutationObserver when its parent `.bn-tab-panel` gains `.active`.  This covers the race where vanilla JS `PUT /tags` hasn't finished when the panel first mounts.  Will be unnecessary once tag writes move from localStorage PUT to React CRUD
 - **Source file paths lose subdirectory in transcript headers** — the pipeline writes `# Source: filename.mov` (just `.path.name`, no subdirectory) into transcript headers (`merge_transcript.py`, `render_output.py`). The importer reads this and resolves the file against `project_dir`. If the media file lives in a subdirectory (e.g. `interviews/`), the direct path doesn't exist. `_import_source_files()` handles this by scanning one level of subdirectories under `project_dir` — mirroring `ingest.discover_files()`. If video playback returns 404 in serve mode: (1) check `Session.source_file` in the DB — if it's missing the subdirectory, delete `bristlenose.db` and restart to force re-import; (2) check the server is running from the correct directory (worktree). The video-map API (`GET /api/projects/{id}/video-map`) converts DB paths to `/media/` URIs via `_file_to_media_uri()` in `sessions.py`. `PlayerContext.tsx` fetches this in SPA mode (no IIFE globals exist because the SPA HTML is generated directly, not from baked HTML)
 

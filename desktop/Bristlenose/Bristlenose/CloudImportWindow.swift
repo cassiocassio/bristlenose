@@ -82,6 +82,12 @@ struct CloudImportWindow: View {
             // routine this serves.
             store.setDestination(destinationFolder(for: destination))
             if store.accountEmail != nil, store.listing == nil { await store.load() }
+            // Then stay on watch for transcripts that were still being produced
+            // when the listing landed. Runs until SwiftUI cancels this task —
+            // on close, or when a re-open hands the view a new store — which is
+            // what makes the wait window-scoped (§0 item 2): nothing polls, and
+            // no token is spent, while no window is open.
+            await store.watchTranscripts()
         }
         // Follows how the window was opened, including a re-open from a
         // different project while it is already on screen — one window globally
@@ -452,6 +458,7 @@ struct CloudImportWindow: View {
     private var footer: some View {
         HStack(spacing: 12) {
             arithmeticLine
+            includeWaitingToggle
             Spacer(minLength: 12)
             if store.phase == .loaded, store.blanketRefusal == nil, !(store.listing?.rows.isEmpty ?? true) {
                 Text(i18n.t("desktop.cloudImport.destinationLabel")).font(.caption).foregroundStyle(.secondary)
@@ -461,6 +468,27 @@ struct CloudImportWindow: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 9)
+    }
+
+    /// §0 item 2's one way round the wait: the count, then this, then Project
+    /// and Import — whose count is what the researcher will get.
+    ///
+    /// A checkbox, not a switch, because it is about this batch and not a
+    /// setting; it starts off on every open and is never remembered. **Not
+    /// drawn at all when nothing is waiting**, so the ordinary window — where
+    /// the transcripts arrived days ago — never mentions it. Neutral chrome:
+    /// the system checkbox and plain text, nothing tinted or prominent.
+    /// Disabled mid-batch, since the batch was decided when Import was pressed.
+    @ViewBuilder
+    private var includeWaitingToggle: some View {
+        if store.phase == .loaded, store.waitingCount > 0 {
+            Toggle(isOn: $store.includeWaiting) {
+                Text(i18n.plural("desktop.cloudImport.includeWaiting", count: store.waitingCount))
+            }
+            .toggleStyle(.checkbox)
+            .font(.callout)
+            .disabled(store.isFetching)
+        }
     }
 
     /// §6's first honest-batch requirement, and the only place in the design

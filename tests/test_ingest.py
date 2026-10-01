@@ -493,3 +493,87 @@ class TestGroupIntoSessions:
         assert sessions[0].session_id == "s1"
         assert sessions[0].participant_id == "p1"
         assert sessions[0].session_id != sessions[0].participant_id
+
+
+# ---------------------------------------------------------------------------
+# Recurring meetings (0c) — a BN download stamp keeps same-titled days apart
+# ---------------------------------------------------------------------------
+
+
+class TestRecurringMeetings:
+    """Cloud import names every file ``YYYY-MM-DD HHMM — Title``. Stripping the
+    stamp is what lets a video meet its hand-fetched transcript (above), and it
+    is also what used to fold a weekly meeting's five recordings into ONE
+    session. Stamped files group by (stamp, title); an unstamped file joins a
+    stamped group only when exactly one group carries its title.
+    """
+
+    def test_recurring_bn_titles_stay_separate(self) -> None:
+        files = [
+            _file("2026-09-03 1000 — Weekly research sync.mp4", FileType.VIDEO),
+            _file("2026-09-10 1000 — Weekly research sync.mp4", FileType.VIDEO),
+            _file("2026-09-17 1000 — Weekly research sync.mp4", FileType.VIDEO),
+        ]
+        sessions = group_into_sessions(files)
+        assert len(sessions) == 3
+        assert all(len(s.files) == 1 for s in sessions)
+
+    def test_stamped_pair_shares_a_session(self) -> None:
+        """The import writes the transcript with the media's byte-identical
+        stem (§4 item 1), so the pair carries one stamp and one title."""
+        files = [
+            _file("2026-09-03 1000 — Weekly research sync.mp4", FileType.VIDEO),
+            _file("2026-09-03 1000 — Weekly research sync.vtt", FileType.SUBTITLE_VTT),
+            _file("2026-09-10 1000 — Weekly research sync.mp4", FileType.VIDEO),
+            _file("2026-09-10 1000 — Weekly research sync.vtt", FileType.SUBTITLE_VTT),
+        ]
+        sessions = group_into_sessions(files)
+        assert len(sessions) == 2
+        assert all(len(s.files) == 2 for s in sessions)
+        assert all(s.has_existing_transcript for s in sessions)
+
+    def test_unstamped_transcript_joins_the_only_matching_stamped_group(self) -> None:
+        """Cloud video + hand-fetched Teams transcript = one session: the case
+        the prefix strip exists for, and it must survive the stamp grouping."""
+        files = [
+            _file("2026-08-12 1400 — P07 Interview.mp4", FileType.VIDEO),
+            _file("P07 Interview-20260812_140000-Meeting Transcript.vtt", FileType.SUBTITLE_VTT),
+            _file("2026-08-13 1100 — P08 Interview.mp4", FileType.VIDEO),
+        ]
+        sessions = group_into_sessions(files)
+        assert len(sessions) == 2
+        p07 = next(s for s in sessions if any("P07" in f.path.name for f in s.files))
+        assert len(p07.files) == 2
+        assert p07.has_existing_transcript is True
+
+    def test_unstamped_transcript_with_two_candidate_days_joins_neither(self) -> None:
+        """Two recordings of 'Weekly research sync' and one bare transcript:
+        there is no way to know which day it belongs to, so guessing would
+        hand one interview's words to another. It stays its own session —
+        stated by the pipeline as a transcript with no recording, not merged."""
+        files = [
+            _file("2026-09-03 1000 — Weekly research sync.mp4", FileType.VIDEO),
+            _file("2026-09-10 1000 — Weekly research sync.mp4", FileType.VIDEO),
+            _file("Weekly research sync.vtt", FileType.SUBTITLE_VTT),
+        ]
+        sessions = group_into_sessions(files)
+        assert len(sessions) == 3
+        videos = [s for s in sessions if s.files[0].file_type == FileType.VIDEO]
+        assert all(s.has_existing_transcript is False for s in videos)
+
+    def test_unstamped_files_still_group_among_themselves(self) -> None:
+        """No stamped group in sight: today's behaviour, unchanged."""
+        files = [
+            _file("User Research 20260130_093012-Meeting Recording.mp4", FileType.VIDEO),
+            _file("User Research.vtt", FileType.SUBTITLE_VTT),
+        ]
+        sessions = group_into_sessions(files)
+        assert len(sessions) == 1
+        assert len(sessions[0].files) == 2
+
+    def test_sibling_halves_of_one_call_stay_apart(self) -> None:
+        files = [
+            _file("2026-08-12 1400 — P07 Interview.mp4", FileType.VIDEO),
+            _file("2026-08-12 1400 — P07 Interview (2).mp4", FileType.VIDEO),
+        ]
+        assert len(group_into_sessions(files)) == 2

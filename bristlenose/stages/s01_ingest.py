@@ -389,6 +389,14 @@ _BN_DOWNLOAD_PREFIX_RE = re.compile(
     r"^\d{4}-\d{2}-\d{2}\s+\d{4}\s*[—–-]\s*",
 )
 
+# The same prefix, keeping the stamp. `group_into_sessions` uses it to tell a
+# weekly meeting's recordings apart: the stamp is stripped for *matching* (so
+# a hand-fetched transcript can meet its video) but kept for *grouping* (so
+# five Tuesdays are five sessions, not one). See `_stamp_and_title`.
+_BN_DOWNLOAD_STAMP_RE = re.compile(
+    r"^(?P<stamp>\d{4}-\d{2}-\d{2}\s+\d{4})\s*[—–-]\s*(?P<title>.+)$",
+)
+
 
 def _normalise_stem(stem: str) -> str:
     """Normalise a filename stem for session matching.
@@ -431,12 +439,57 @@ def _is_zoom_local_dir(dir_name: str) -> bool:
     return bool(_ZOOM_LOCAL_DIR_RE.match(dir_name))
 
 
+def _stamp_and_title(stem: str) -> tuple[str | None, str]:
+    """Split a lowercased stem into Bristlenose's download stamp and its key.
+
+    Returns ``(stamp, key)`` — ``stamp`` is ``"2026-09-03 1000"`` for a file
+    our import named and ``None`` for everything else; ``key`` is the
+    normalised stem both kinds of file match on.
+    """
+    m = _BN_DOWNLOAD_STAMP_RE.match(stem)
+    stamp = m.group("stamp") if m else None
+    return stamp, _normalise_stem(stem)
+
+
+def _group_by_stem(files: list[InputFile]) -> list[list[InputFile]]:
+    """Group files whose normalised stems match, keeping recurring meetings apart.
+
+    A file carrying our download stamp is grouped by (stamp, key), so two
+    Tuesdays of "Weekly research sync" are two sessions. An unstamped file is
+    grouped by key alone, and then joins a stamped group only when **exactly
+    one** stamped group carries its key — the hand-fetched transcript beside
+    the one imported video it belongs to. With two candidate days there is no
+    way to know which one it is, and guessing would hand one interview's words
+    to another; it stays its own session, which the pipeline then states as a
+    transcript without a recording rather than merging it silently.
+    """
+    stamped: dict[tuple[str, str], list[InputFile]] = {}
+    unstamped: dict[str, list[InputFile]] = {}
+    for f in files:
+        stamp, key = _stamp_and_title(f.path.stem.lower())
+        if stamp is not None:
+            stamped.setdefault((stamp, key), []).append(f)
+        else:
+            unstamped.setdefault(key, []).append(f)
+
+    groups: list[list[InputFile]] = list(stamped.values())
+    for key, group_files in unstamped.items():
+        candidates = [g for (_stamp, k), g in stamped.items() if k == key]
+        if len(candidates) == 1:
+            candidates[0].extend(group_files)
+        else:
+            groups.append(group_files)
+    return groups
+
+
 def group_into_sessions(files: list[InputFile]) -> list[InputSession]:
     """Group files into sessions and assign participant numbers.
 
     Grouping heuristic:
     1. Files in a Zoom-style subdirectory are grouped by directory.
-    2. Remaining files sharing the same normalised stem are one session.
+    2. Remaining files sharing the same normalised stem are one session —
+       with Bristlenose's own download stamp keeping same-titled meetings on
+       different days apart (`_group_by_stem`).
     3. Otherwise, each file is its own session.
 
     Stems are normalised to strip platform naming conventions (Teams date/suffix,
@@ -456,17 +509,14 @@ def group_into_sessions(files: list[InputFile]) -> list[InputSession]:
             remaining.append(f)
 
     # -- Pass 2: normalised stem matching on remaining files ---------------------
-    stem_groups: dict[str, list[InputFile]] = {}
-    for f in remaining:
-        stem = _normalise_stem(f.path.stem.lower())
-        stem_groups.setdefault(stem, []).append(f)
+    stem_groups = _group_by_stem(remaining)
 
     # -- Merge both grouping passes into raw sessions --------------------------
     raw_sessions: list[tuple[datetime, list[InputFile]]] = []
     for _dir, group_files in zoom_dir_groups.items():
         session_date = min(f.created_at for f in group_files)
         raw_sessions.append((session_date, group_files))
-    for _stem, group_files in stem_groups.items():
+    for group_files in stem_groups:
         session_date = min(f.created_at for f in group_files)
         raw_sessions.append((session_date, group_files))
 

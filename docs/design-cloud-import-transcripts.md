@@ -1,5 +1,5 @@
 ---
-status: in-progress — pipeline half landed 1 Oct 2026, import half to do
+status: in-progress — pipeline half landed 1 Oct 2026; import half written blind the same day, uncompiled (§0c)
 last-trued: 2026-10-01
 owner: cloud import + pipeline
 supersedes-in-part: docs/design-cloud-import.md §3 "Google's transcript is out of scope" (v1 descope, 16 Aug 2026)
@@ -238,6 +238,190 @@ take on or avoid. Answers so far:
     chrome are folded into §0a and §5e.
 - Still to answer: the Meet status-labels session. The status-column session's answer came via the
   import-window session above.
+
+## 0c. The import half, written blind (1 Oct 2026) — pick up on the Mac
+
+**Status.** The Swift half of the first slice (§0) is on the branch, **uncompiled**: written in a cloud
+session with no Xcode, reviewed there by five agents (code-review, silent-failure-hunter,
+what-would-james-bach-say, i18n-review, what-would-gruber-say), with every finding that could be
+applied blind applied. Nothing in it has run. The half of the contract that *can* be proven without a
+Mac is green: `check-locales.py --strict`, the pytest locale gates (`test_swift_i18n_keys_resolve.py`
+sees every `cellKey` literal; `test_locale_key_readers.py` the orphans; `test_cloud_transcript_keys.py`
+the plural forms), and a Python oracle that reproduced the three VTT goldens byte for byte. **Treat
+every Swift claim below as a claim about intent until the first `test-swift.sh` run** — including the
+ones in §5a–§5e that this section says are done.
+
+### What is on the branch
+
+Six commits, oldest first; each Swift one says "(Swift, uncompiled)" in its subject:
+
+1. **The writer and the clock** — `PlatformTranscript.swift`: `PlatformTranscriptWriter` (§4: NOTE block,
+   `<v>` per cue, escaping, `HH:MM:SS.mmm`) and `PlatformTranscriptRebase` (§5c: integer-millisecond
+   shift, drop wholly-outside, clamp, count drops, tail check *before* clamping). Goldens under
+   `tests/fixtures/platform-transcripts/cloud-transcript-{named,unnamed,rebased-drops}.vtt`, read via
+   `#filePath` so Python and Swift pin the same bytes.
+2. **Schema** — `TranscriptAvailability` on `CloudImportRow` (nine states, `cellKey`/`cellKind`/
+   `bringsColumn`), `TranscriptOutcome` on `FetchOutcome.imported`, `isSelectable(includingWaiting:)`,
+   `isWaitingForTranscript`, `withTranscript(_:)`, `recheckTranscripts(rowIDs:)` on the protocol.
+3. **Meet transport** — `transcripts.list` once per recorded call (sequential after that call's
+   `recordings.list`, so the transport tests can queue stubs), `participants.list`,
+   `transcripts.entries.list`, `MeetTranscriptPlan` keyed like `driveFileIDs`, `fetchTranscript` inside
+   `fetch` after the media publishes, `recheckTranscripts`, `CloudImportLocalMatch.mediaDuration(of:)`.
+4. **The grid** — the Transcript column (`syncTranscriptColumn` after Size, remove-not-hide,
+   `CloudImportTranscriptColumn.minimumWidth` through the real cell), the waiting row (disabled box,
+   secondary title, *Waiting for transcript* in Status with a spinner), the footer checkbox
+   (`CloudImportWindow.includeWaitingToggle`), `watchTranscripts()` on the window's `.task`.
+5. **Strings** — ten keys in 21 locales, glossary rows for *Transcript*, the pytest gate.
+6. **Review fixes** — the list below.
+
+Tests, all unrun: `PlatformTranscriptTests`, `CloudImportTranscriptTests` (three suites),
+`MeetTranscriptDecisionTests`, `MeetTranscriptAssemblyTests`, `CloudImportTranscriptColumnWidthTests`;
+edits to `CloudTransportTests` (two Meet tests gained transcript stubs, one new) and
+`CloudImportHandoffTests` (the outcome's new argument).
+
+### What the review changed, applied blind
+
+- **Slice, then judge.** `tailRunsPast` ran over the whole call's cues, so any Meet transcript that
+  outlasted the recording by more than 2 s was refused — always the earlier half of a stop/restart
+  recording. `MeetTranscriptAssembly.assemble` now slices entries to the recording's API window when
+  `endTime` is known (counted as `slicedAfterEnd`), and the tail check runs only when it is not.
+- **Every overlapping transcript must be `FILE_GENERATED`** for *Available*; one generated beside one
+  still `ENDED` is *Expected*, because the generated half alone is half a conversation the pipeline
+  would then trust over Whisper. `generatedBesideStartedStillWaits` replaces the first draft's
+  opposite expectation.
+- **A coverage floor** — `MeetTranscriptAssembly.coverageFloor = 0.5`: cues ending before the midpoint
+  of the media are refused as `.sparseCoverage`, the §1a truncated-entries case made mechanical. Every
+  successful fetch logs `coverage=`, so the floor can be tuned from real runs rather than argued.
+- **`participantNames` returns nil on failure.** It returned `[:]`, which wrote every cue unnamed with
+  `speakers: none` — the pipeline's *leave this interview unseparated* signal — and marked the row
+  Imported. Entries that named participants none of whom resolved are refused (`.noSpeakerResolved`).
+- **A refused `transcripts.list` at listing time reads *Couldn't match*, not *No transcript*.**
+  `MeetHarvest.Record.transcripts` is optional so "could not ask" survives to the row; the
+  transport test `refusedTranscriptListDoesNotClaimNone` pins it.
+- **Patience on an empty list for a live call** — a call whose `endTime` Google never served no longer
+  holds its recording *Expected* for ever.
+- **`TranscriptOutcome.notFetched(TranscriptAvailability)`.** A row listed *No transcript* keeps that
+  word after Import; `.notImported` (the cyan *skipped*) is exactly the researcher's own choice — they
+  went ahead while it was *Expected*. `FetchOutcome.imported` lost its default so Teams and Zoom say
+  `.notFetched(row.transcript)` explicitly. *Imported* in the Transcript column is its own key,
+  `transcriptImported` (fr *Importée*, ca *Importada*; every other locale reuses its Status word).
+- **The transcript half's failure cells are honest about who failed.** No listing token or no media
+  on disk → `.didNotArrive`, logged; a missing plan (a re-list wiped them mid-batch) →
+  `.notFetched(row.transcript)`.
+- **Re-check hygiene.** `recheckTranscripts` snapshots the plans at entry and reads the token on the
+  main actor; a listing grant that will not renew tells every row *Couldn't match* rather than
+  spinning; the store re-checks `isFetching` after the await; an arrival ticks only a visible row with
+  no outcome; `includeWaiting` resets on every `load()`; turning it off mid-batch unticks nothing.
+- **Grid.** `shouldSelectItem` honours the footer checkbox (the one way round the wait was
+  mouse-only); a waiting row the researcher has included and ticked stops drawing as waiting (title
+  colour and Status both — `drawsAsWaiting` in the coordinator, and `Column.meeting` joined
+  `refreshChangedRows` for it); the dead header over an all-waiting meeting says the wait, not
+  *allAlreadyHere*; the Transcript column has a `maxWidth`; the spinner is hidden from accessibility
+  and left out under Reduce Motion.
+- **One atomic writer.** `CloudDownloader.publish(_:to:)` is extracted from the download's step 5 and
+  `fetchTranscript` calls it (§0a's "do not write a second atomic writer").
+- **`parseRFC3339` trims 6- and 9-digit fractions to 3** before Foundation's parser sees them.
+- **Strings:** ko / zh-Hant / ja `includeWaiting_other` now name the counted noun; it / pt-PT /
+  zh-Hant use the glossary's speaker word; fr takes the typographic apostrophe (and its
+  `statusWaitingPermission` twin with it).
+
+### Build and test on the Mac
+
+```bash
+# the whole Swift suite — through caffeinate, because the sidebar harness fails while the display sleeps
+caffeinate -d -i env BN_DERIVED_DATA=/tmp/bn-dd desktop/scripts/test-swift.sh
+
+# or only the new suites, once it builds
+cd desktop/Bristlenose
+xcodebuild build-for-testing -scheme Bristlenose -configuration Debug -destination 'platform=macOS,arch=arm64'
+xcodebuild test-without-building -scheme Bristlenose -destination 'platform=macOS,arch=arm64' \
+  -only-testing:BristlenoseTests/PlatformTranscriptTests \
+  -only-testing:BristlenoseTests/MeetTranscriptDecisionTests \
+  -only-testing:BristlenoseTests/MeetTranscriptAssemblyTests \
+  -only-testing:BristlenoseTests/TranscriptAvailabilityTests \
+  -only-testing:BristlenoseTests/TranscriptWaitingRowTests \
+  -only-testing:BristlenoseTests/TranscriptStoreTests \
+  -only-testing:BristlenoseTests/CloudImportTranscriptColumnWidthTests \
+  -only-testing:BristlenoseTests/CloudTransportTests
+```
+
+A single test wants the trailing `()` (`desktop/CLAUDE.md`). Expect the build to fail first; the
+places to look are listed next. Then the checks that cannot run here: `desktop/scripts/check-appearance-seam.sh`,
+`check-menu-routing.sh`, a `test-swift.sh` run of the *whole* suite (the schema change touches every
+cloud-import test), and **Diagnostics ▸ Cloud Import ▸ Meet ▸ Every Status** by eye — the twelve new
+fixture rows (`st-t-*`) are there for the column widths and the glyph colours, which no test sees.
+
+### Compile unknowns — where to look first
+
+- `GoogleMeetSource.fetchTranscript`: `let (rebased, refusal) = MeetTranscriptAssembly.judge(…)`
+  destructuring a labelled tuple; `switch availability` with a `default`; `Logger` interpolations such
+  as `\(claimed ?? -1, privacy: .public)`.
+- `GoogleMeetSource.harvest`: `Self.transcripts(ofRecord:)` — the local `let transcripts` shadows the
+  static, hence `Self.`; written as an `if` statement because `await` may not sit to the right of `?:`.
+- `usableListingToken()` is `@MainActor` on a class that is not; `transcriptPlans` is read from
+  nonisolated async methods, as `driveFileIDs` already is (Swift 5 language mode).
+- `TranscriptOutcome.cellKind` is `MessageKind?`; `transcriptView` binds `let kind: MessageKind?` from
+  both branches of an `if`.
+- `Coordinator.RowState` gained `waiting` and `awaitingGrant`; one construction site (`rowState(for:)`).
+- Swift Testing shapes: `arguments:` with a `struct Row: Sendable` table and with array literals of an
+  enum with an associated-value case; `try #require` then `#expect` in an `async throws` test;
+  `guard case .sparseCoverage(let fraction)? = refusal`.
+- `StatusCellView.configureWaiting`: an `NSProgressIndicator` in the glyph slot of an `NSStackView`,
+  `NSWorkspace.shared.accessibilityDisplayShouldReduceMotion`, `setAccessibilityElement(false)`.
+- `CloudImportTranscriptColumnWidthTests`: the ~103 pt fitting floor and the glyph `alignmentRect`
+  widths are the parts only a Mac can measure; the oracle is Status's.
+- The transport tests assume `StubURLProtocol`'s FIFO order per call is recordings → transcripts →
+  `spaces.get`. With one record per test that holds; the harvest's concurrency across records is
+  unchanged.
+
+### Live-tenant measurements the code is waiting for
+
+- **`endTime − startTime` vs the probed duration.** `recordingDurationTolerance = 1 s`; every fetch
+  logs `meet_transcript clock probed= claimed= delta=`. If every row says `duration_mismatch`, the
+  tolerance is wrong or the probe is — not Google. §0 item 1 asked for exactly this measurement.
+- **Fractional seconds** in Google's timestamps through `parseRFC3339` (now trimmed to 3 digits).
+- **`AVFoundation` duration on a Drive-served MP4** (`CloudImportLocalMatch.mediaDuration(of:)`);
+  `probe_failed` in the log means the NOTE carried Google's figure and the clock check was skipped.
+- **429s.** `participants.list` and `entries.list` run sequentially per fetch; the listing's
+  `transcripts.list` runs once per recorded call inside the existing concurrent harvest.
+- **Coverage of a finished transcript** (`coverage=`), to set `coverageFloor` from data.
+- Whether `transcripts.list` ever omits `startTime` (then `overlapping` keeps it, by design).
+
+### Owner decisions, open
+
+1. **The footer checkbox's verb.** *Include {N} waiting on transcription* **enables** the rows; it
+   does not tick them (the design says enable). Gruber: either make turning it on tick them, or rename
+   it *Allow…*. Nothing changed pending the call.
+2. **The spinner** in the *Waiting for transcript* cell. Gruber: drop it (glyphless grey, like
+   Queued) or gate it. Gated (Reduce Motion, accessibility-hidden), not dropped.
+3. **A meeting header over one ticked half and one waiting half reads mixed**, while a *held* child is
+   still ignored (HIG; Gruber and Bach). code-review preferred ignoring waiting children too. Decided
+   mixed — a held file is out of the batch for good, a waiting one can still join it, and *mixed* is
+   what says there is more here to tick. `headerReadsMixedOverWaitingChild` carries the reasoning.
+4. **Zoom lists `.available`** when the recording carries a `TRANSCRIPT` file and never fetches it
+   until Phase 5, so after Import its cell reads *Available* in grey. Acceptable for a flag-off
+   adapter; revisit with Phase 5.
+5. **A held row's Transcript cell** shows the listing's word; its Status is blank by design. Blank
+   both?
+6. **`probed ?? claimed`.** When the probe fails, the NOTE records Google's duration and the clock
+   check is skipped (logged). Refuse instead?
+7. **Deliberately not built** (per §0's scope): the two footer rewordings and the footer arithmetic
+   split (§5e); "ticked by default on next open"; the `.bristlenose/importing` sentinel; the pipeline
+   reading `media-duration:`; Teams Phase 3 and Zoom Phase 5; `.sparseCoverage` has no Teams/Zoom
+   analogue (no entries there).
+8. **Strings left for a native reading.** i18n-review suggested ru/uk `transcriptAvailable` →
+   *Доступно*, pl → *Dostępne*, cs `transcriptDidNotArrive` → *Nedoručeno*. Not applied: each current
+   value agrees in gender with the glossary's transcript noun, so the suggestion is a register choice
+   (impersonal, like the Status column) rather than a fix. Likewise *Speaker* glossary rows for the
+   twenty locales without one (ja has it) — a glossary row is an agreed term, and these would be
+   seeded from machine translations.
+
+### Also found while writing
+
+- `Coordinator.RowState` had no `awaitingGrant` field, so the Status cell's switch from *Waiting for
+  permission* to *Queued* never redrew on its own. Pre-existing; fixed in passing.
+- `transcripts.list` is the first per-record lookup made *after* `recordings.list` rather than
+  alongside it; the harvest's per-call cost is one more round trip on a per-minute quota.
 
 ## 1. What each platform will give us
 

@@ -59,6 +59,14 @@ struct CloudImportOutlineView: NSViewRepresentable {
     /// live below SwiftUI's reach, so the one object they all need has to be
     /// handed down explicitly.
     @ObservedObject var i18n: I18n
+    /// The narrowest the grid can be drawn without clipping its last column.
+    ///
+    /// The window owns its minimum size and the grid owns the numbers that
+    /// decide it — Status is sized to the active locale's longest status, so a
+    /// fixed window floor was right in one language and clipped Status at the
+    /// window's edge in another. Reported, not read: the window has no other
+    /// way to learn what AppKit's inset style and seven columns add up to.
+    var onMinimumWidth: (CGFloat) -> Void = { _ in }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(store: store, platform: platform, i18n: i18n)
@@ -116,9 +124,12 @@ struct CloudImportOutlineView: NSViewRepresentable {
         // on `controlBackgroundColor`: two greys and a seam, at its worst in
         // the one-or-two-row state that is this window's commonest.
         context.coordinator.outline = outline
+        context.coordinator.onMinimumWidth = onMinimumWidth
         // Before the first reload, so the column set is right on the first
         // frame rather than corrected on the second.
         context.coordinator.syncScheduledColumn()
+        context.coordinator.syncStatusColumnWidth()
+        context.coordinator.reportMinimumWidth()
         context.coordinator.reload(force: true)
         // The list is what this window is for, so it takes the keyboard rather
         // than leaving it to the toolbar's filter field. Without this the
@@ -136,8 +147,13 @@ struct CloudImportOutlineView: NSViewRepresentable {
         context.coordinator.store = store
         context.coordinator.platform = platform
         context.coordinator.i18n = i18n
+        context.coordinator.onMinimumWidth = onMinimumWidth
         context.coordinator.syncExpiresColumn()
         context.coordinator.syncScheduledColumn()
+        // The language can change under an open window, and with it the
+        // longest status the column has to hold.
+        context.coordinator.syncStatusColumnWidth()
+        context.coordinator.reportMinimumWidth()
         context.coordinator.reload(force: false)
     }
 
@@ -185,6 +201,8 @@ struct CloudImportOutlineView: NSViewRepresentable {
         // change under the same window.
         outline.addTableColumn(column(Column.expires, i18n.t("desktop.cloudImport.columnExpires"),
                                       width: 92, min: 72, max: 160))
+        // The minimum here is a placeholder: `syncStatusColumnWidth` replaces it
+        // with a measured one before the first frame.
         outline.addTableColumn(column(Column.status, i18n.t("desktop.cloudImport.columnStatus"),
                                       width: 150, min: 110))
     }
@@ -260,6 +278,15 @@ extension CloudImportOutlineView {
                 queued: store.isFetching && store.ticked.contains(row.id)
             )
         }
+
+        var onMinimumWidth: (CGFloat) -> Void = { _ in }
+        /// The locale the Status minimum was last measured in. `updateNSView`
+        /// runs on every progress tick; measuring fifteen strings on each would
+        /// be work for an answer that only changes with the language.
+        private var statusWidthLocale: String?
+        private var reportedMinimumWidth: CGFloat = 0
+        /// The column set and minimums the last report was computed from.
+        private var fittedColumns: [String] = []
 
         init(store: CloudImportStore, platform: CloudPlatform, i18n: I18n) {
             self.store = store
@@ -475,6 +502,66 @@ extension CloudImportOutlineView {
             default:
                 break
             }
+        }
+
+        /// Sizes Status to hold the longest status it can show in this language.
+        ///
+        /// It was a fixed 110pt, which clips "Imported" in Russian and Polish
+        /// and every warning in German, Finnish and Italian. Measured rather
+        /// than tabulated, so a retranslation moves the column with it.
+        func syncStatusColumnWidth() {
+            guard let outline, statusWidthLocale != i18n.locale,
+                  let column = outline.tableColumns.first(where: { $0.identifier == Column.status })
+            else { return }
+            statusWidthLocale = i18n.locale
+            let minimum = CloudImportStatusColumn.minimumWidth(i18n)
+            column.minWidth = minimum
+            // Explicit, because a width restored by `autosaveTableColumns` from a
+            // build with a lower minimum is not something to leave to AppKit.
+            if column.width < minimum { column.width = minimum }
+        }
+
+        /// Tells the window how narrow it may go, after any column came, went or
+        /// changed its minimum.
+        ///
+        /// The overhead — the inset style's edge padding plus the intercell
+        /// spacing — is read from AppKit's own column geometry rather than
+        /// written down here. But `rect(ofColumn:)` answers from the table's
+        /// last re-fit, not from the widths as they now stand: setting a
+        /// column's width leaves it stale through `tile()` and a run-loop pass,
+        /// and only `sizeToFit()` (or a window resize) brings it level. So the
+        /// table is re-fitted first — which is also what makes a Status that
+        /// grew on a language change reach the screen, rather than clip until
+        /// the window is next resized. Done only when the column set or a
+        /// minimum actually moved, so a progress tick never re-fits, and only
+        /// once the table is in a window (`OutlineView.viewDidMoveToWindow`
+        /// calls back here), because a re-fit needs a frame to fit to.
+        func reportMinimumWidth() {
+            guard let outline, let scrollView = outline.enclosingScrollView,
+                  outline.window != nil, outline.numberOfColumns > 0 else { return }
+            let columns = outline.tableColumns
+            let signature = columns.map { "\($0.identifier.rawValue):\($0.minWidth)" }
+                + ["scroller:\(scrollView.scrollerStyle.rawValue)"]
+            guard signature != fittedColumns else { return }
+            fittedColumns = signature
+            outline.sizeToFit()
+            let widths = columns.reduce(0) { $0 + $1.width }
+            let minimums = columns.reduce(0) { $0 + $1.minWidth }
+            let first = outline.rect(ofColumn: 0)
+            let last = outline.rect(ofColumn: columns.count - 1)
+            // Leading padding counted twice: the inset style is symmetric.
+            let overhead = last.maxX + first.minX - widths
+            // A legacy (always-visible) scroller takes its width out of the
+            // clip view; an overlay one takes nothing.
+            let scroller = scrollView.scrollerStyle == .legacy
+                ? NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy) : 0
+            let minimum = ceil(minimums + overhead + scroller)
+            guard minimum != reportedMinimumWidth else { return }
+            reportedMinimumWidth = minimum
+            // Deferred: this runs inside `updateNSView`, and writing SwiftUI
+            // state from there is a mutation during a view update.
+            let report = onMinimumWidth
+            DispatchQueue.main.async { report(minimum) }
         }
 
         // MARK: Data source
@@ -997,6 +1084,13 @@ extension CloudImportOutlineView {
 private final class OutlineView: NSOutlineView {
     weak var coordinator: CloudImportOutlineView.Coordinator?
 
+    /// The grid's minimum can only be measured once there is a frame to fit to,
+    /// and `makeNSView` runs before the view has a window.
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window != nil { coordinator?.reportMinimumWidth() }
+    }
+
     override func keyDown(with event: NSEvent) {
         if event.charactersIgnoringModifiers == " " {
             MainActor.assumeIsolated {
@@ -1219,6 +1313,73 @@ private final class TwoLineCellView: OutlineCellView {
             titleColour: .tertiaryLabelColor,
             accessibility: notApplicable
         )
+    }
+}
+
+/// How wide the Status column must be to show every status it can, whole.
+///
+/// Measured through a real `StatusCellView` — its font, glyph, stack spacing,
+/// insets, and the bar-and-cancel layout — so the answer tracks the cell rather
+/// than a copy of its arithmetic that the next layout tweak would leave behind.
+enum CloudImportStatusColumn {
+    /// The statuses below are every one the column draws from a fixed string,
+    /// split by how the cell renders them. Imported stands alone because it is
+    /// the only one set in semibold.
+    static let importedKey = "desktop.cloudImport.statusImported"
+    /// Drawn without a glyph: pending and running are status, not kinds.
+    static let glyphlessKeys = [
+        "desktop.cloudImport.statusQueued",
+        "desktop.cloudImport.statusWaitingPermission",
+    ]
+    /// Drawn with a `MessageKind` glyph. Measured with the widest of the five
+    /// symbols rather than each one's own, so a key moving between kinds
+    /// cannot outgrow the column. The Meet video statuses are among them:
+    /// a row not yet imported shows its video's reason (`statusKind`).
+    static let glyphKeys = [
+        "desktop.cloudImport.statusInThisProject",
+        "desktop.cloudImport.statusStopped",
+        "desktop.cloudImport.statusSomeoneElse",
+        "desktop.cloudImport.statusNotRecorded",
+        "desktop.cloudImport.statusNotResolved",
+        "desktop.cloudImport.statusNeedsPaidPlan",
+        "desktop.cloudImport.statusNeedsAccess",
+        "desktop.cloudImport.statusUnavailable",
+        "desktop.cloudImport.statusNoLongerAvailable",
+        "desktop.cloudImport.statusDamaged",
+        "desktop.cloudImport.statusViewOnly",
+    ]
+    /// Statuses that interpolate something with no bound — a provider name, a
+    /// volume name. These truncate, and the cell's tooltip carries them whole.
+    /// So do the organiser's name and the failure sentences, which have no
+    /// `status*` key at all.
+    static let unboundedKeys = [
+        "desktop.cloudImport.statusOnProvider",
+        "desktop.cloudImport.statusOnVolume",
+    ]
+
+    @MainActor
+    static func minimumWidth(_ i18n: I18n) -> CGFloat {
+        let widestKind = MessageKind.allCases.max { glyphWidth($0) < glyphWidth($1) } ?? .warning
+        let cell = StatusCellView(frame: .zero)
+        var widest: CGFloat = 0
+        func measure() { widest = max(widest, cell.fittingSize.width) }
+
+        cell.configure(i18n.t(importedKey), kind: .success, bold: true); measure()
+        for key in glyphKeys {
+            cell.configure(i18n.t(key), kind: widestKind, bold: false); measure()
+        }
+        for key in glyphlessKeys {
+            cell.configureText(i18n.t(key), colour: .secondaryLabelColor, bold: false); measure()
+        }
+        cell.configureProgress(0.5, name: "", i18n: i18n, onCancel: {}); measure()
+        return ceil(widest)
+    }
+
+    /// The alignment-rect width, which is what `NSImageView` lays out by — not
+    /// `size`, which for the warning triangle is half a point wider.
+    private static func glyphWidth(_ kind: MessageKind) -> CGFloat {
+        NSImage(systemSymbolName: kind.symbolName, accessibilityDescription: nil)?
+            .alignmentRect.width ?? 0
     }
 }
 

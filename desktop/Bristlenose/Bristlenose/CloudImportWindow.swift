@@ -50,13 +50,20 @@ struct CloudImportWindow: View {
     /// name and place a study from inside this popup.
     @State private var destination: CloudImportDestinations.Choice = .newProject
 
+    /// Reported by the grid once its columns are known. Zero until then, which
+    /// leaves the fixed floor in charge of the states that have no grid.
+    @State private var gridMinimumWidth: CGFloat = 0
+
     var body: some View {
         VStack(spacing: 0) {
             content
             Divider()
             footer
         }
-        .frame(minWidth: 760, minHeight: 420)
+        // The grid's own minimum wins when it is wider: Status is sized to the
+        // longest status in the active language, and a floor below the sum of
+        // the columns clips it at the window's edge instead of in the cell.
+        .frame(minWidth: max(760, gridMinimumWidth), minHeight: 420)
         .navigationTitle(platform.windowTitle(i18n))
         .navigationSubtitle(subtitle)
         .searchable(text: $store.filterText, placement: .toolbar, prompt: i18n.t("desktop.cloudImport.filter"))
@@ -350,7 +357,8 @@ struct CloudImportWindow: View {
                 }
             }
         } else {
-            CloudImportOutlineView(store: store, platform: platform, i18n: i18n)
+            CloudImportOutlineView(store: store, platform: platform, i18n: i18n,
+                                   onMinimumWidth: { gridMinimumWidth = $0 })
         }
     }
 

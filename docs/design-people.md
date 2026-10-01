@@ -32,7 +32,13 @@ built. The people *file* and its endpoints predate it and do ship —
   with no settings UI. The importer runs at the end of every pipeline run; a legacy `people.yaml`
   is read once and then ignored. The markdown report and the sealed static HTML get no investment.
   Observers share the engine; the count line counts moderators only. Sections touched: §0, §B3,
-  §B4, §B6, §C2, §C5, §D, §E decision 1, §G, §H (H9), §J2, §J4.
+  §B4, §B6, §C2, §C5, §D, §E decision 1, §G, §H (H9), §J2, §J4. **Later the same day: §H H9 is
+  the delivery plan** — six phases, each shippable and gated, with UX iteration 2 and a review
+  pass between the data layer and the web UX — and
+  [`mockups/moderator-identity-iteration-2.html`](mockups/moderator-identity-iteration-2.html)
+  redraws route C in the shipped stylesheet with only shipped strings, superseding the
+  storyboard's E-frames for anything about pixels. Drawing it found one consequence the
+  storyboard could not: the shipped action pill overhangs onto the name in the Sessions grid.
 - _2026-08-25_ — **H8 done — §J, the concrete deltas.** Headline finding: **the role endpoint is not a
   step-1 operation.** Because `kind` *is* role, `p4 → observer` is a recode touching seven things — the
   unique constraint, N segments, quote attribution, the stable key, a `people.yaml` path that cannot
@@ -1662,7 +1668,7 @@ same day — see changelog) merged with an independent decomposition.*
 | **H5** ✅ | **The menu as the function** *(done 25 Aug 2026 — §I)* | Turn §B3's claim into the actual function: the full (surface × object-state) enumeration and the string plan | The state vocabulary the function takes (§C5's machines × me/not-me), unreachable cells struck; the bare-`Role ▸`-vs-scoped question (one drawn frame in six carries the scope label today); the me-item convention (three renderings live — settle on "That's Me (Name)" top-level, "Name (Me)" in lists); bench 3's propagation sheet redrawn to obey its own pattern **and** §B8 (offer in a sentence; sheet lists matches with checkboxes) | A decision-table appendix, each row citing its generating rule; the complete string inventory as ICU templates under the **label-plus-chooser** localisation contract (§B2) | H1 H3 H4 |
 | **H6** ◑ | **Bank + picker** *(spec landed 25 Aug 2026; two control conflicts open)* | Spec the two lists (§B4 people-across-studies, §B9 cast-in-session) to buildable fidelity | Presentation per H4's host; create-and-name inline flow; bank composition/order; the quote-card variant's follow-up line; the wrong-Steve failure path | §B4/§B9 expanded from argument to spec; mockup benches redrawn **against the pinned cast** (below) — the p4 double-booking, Sarah's two codes, Jane's o1/o2-vs-p4 timeline, and the three-Mikes collision all resolve to it | H1 H5 |
 | **H7** ◑ | **People lens + old-mockup** *(lens reframed 25 Aug 2026; mockup judged UPDATE, edits pending)* | Spec the lens at three scopes; bring [`people-lens-scopes.html`](mockups/people-lens-scopes.html) to the settled model or visibly supersede it | Whether the old mockup is updated or banner-superseded (it predates the stance: its Separate sheet is primary, its folder scope is a suggestion engine, its decision-1 framing is open — all now wrong); the roster-not-table default; the drives-come-and-go caveat; whether "Everyone" belongs in a report lens at all | §B5/§B6 expanded to full spec with the tells table; one coherent mockup story across both files | H1 H2 H3 H5 |
-| **H9** | **Route C, v1** *(decided 1 Oct 2026; not built)* | Ship the moderator slot engine, project-scoped, on both channels | **First:** the transcripts plan's 0b stable session identity, lifted out as its own package — everything below keys on it. **Then:** the schema delta of §C2 (one revision, head-pin bump); the importer at the end of every pipeline run, proposing from the intermediates and never overwriting a confirmed row; the pipeline stops writing `people.yaml` and writes stats to an intermediate; the one-time legacy import as inherited-proposed; `m?` and the proposed treatment on the split badge; the picker as a web popover and a native `NSMenu` twin — wiring first, visual parity later in a Diagnostics side-by-side mockup; Me from the account name; "Moderator not identified" in the export and `null` in the MCP overview with one added `INVARIANTS` line; stored labels and the per-session evidence column; the count line, moderators only; README, man page, website CLI doc and `server/CLAUDE.md` stop promising an editable `people.yaml`. **Not in v1:** the bank, cross-study links, folder scope, Settings ▸ General, Contacts, the markdown report, the sealed static HTML | Frames E1–E8 in the storyboard; the pinned-limitation test re-homed as the map's own; the sidebar's impossible MULTI_MODERATOR fixture replaced | — |
+| **H9** | **Route C, v1** *(decided 1 Oct 2026; not built — plan below)* | Ship the moderator slot engine, project-scoped, on both channels | **Six phases, each shippable and gated** — [H9 · the delivery plan](#h9--route-c--the-delivery-plan-decided-1-oct-2026-not-built) below: 0 session identity (the transcripts plan's 0b, lifted out), 1 the data layer with no UI, 2 the web UX, 3 the native twin, 4 platform evidence, 5 migration, docs and release. UX iteration 2 and a `/usual-suspects` pass sit between 1 and 2. **Not in v1:** the bank, cross-study links, folder scope, Settings ▸ General, Contacts, the markdown report, the sealed static HTML | [`mockups/moderator-identity-iteration-2.html`](mockups/moderator-identity-iteration-2.html) (R1–R14, real pixels) and the storyboard's E1–E8 (the argument); the pinned-limitation test re-homed as the map's own; the sidebar's impossible MULTI_MODERATOR fixture replaced | 0b first |
 | **H8** ✅ | **Schema + API deltas** *(done 25 Aug 2026 — §J)* | Make §C concrete — implementation-last, now reachable | Name-origin representation per field + the two sentinels; the narrowed write payload; the role endpoint; the renumber/remap operations; **the Quotes-lens membership filter that does not exist today** (§C4) keyed on `SessionSpeaker` role; the importer `source` fix; membership storage per H3 | A final appendix: one table per §D step mapping capability → schema delta → endpoint delta → migration note, citing settled decisions rather than re-arguing them | all of H2–H7 |
 
 ### The pinned cast
@@ -1859,6 +1865,111 @@ naming is **H3** (decision 2); and confirming ja **ターン** and zh-Hant **發
 with native reviewers before they harden — 發言 deliberately assigns the same Han
 characters the opposite role to ja, which a future consistency sweep will try to
 undo. Both turn-nouns are marked *pending native review* in the CSV note.
+
+### H9 · Route C — the delivery plan (decided 1 Oct 2026; not built)
+
+*The twelve decisions are in the changelog entry of that date, in the storyboard's
+Part 5b, and in the sections they touched (§B3, §B4, §B6, §C2, §C5, §E decision 1,
+§J2, §J4). This section is the order of work, what each step ships, and how we
+know it worked. Written before any of it exists; a step that turns out to be
+wrong is corrected here, with the date, not silently in code.*
+
+**Three principles the sequence follows.** Each phase is shippable on its own
+and leaves the product no worse than it found it — Phase 1 in particular changes
+nothing a researcher can see except that two moderators' names stop overwriting
+each other. Each phase has a gate that is mechanical where it can be and named
+as human where it cannot. And the UX is iterated once more on paper, in the
+shipped stylesheet, *before* the first pixel is wired — because the two things
+most likely to be wrong are the ones nobody can see until they are drawn with
+real tokens (the pill overhang below was the first proof).
+
+#### The six phases
+
+| Phase | Ships | Gate — how we know | Needs |
+|---|---|---|---|
+| **0 · Session identity** | The transcripts plan's 0b, lifted out as its own package: a stable per-session identity that survives re-import, re-ordering and the arrival of an older recording; the existing `sessions` rows migrated onto it. Nothing else — this is a prerequisite, not a feature | A test adds an older recording to a fixture study and every `session_speakers` row keeps its session; the smoke fixture carries the identity; `bristlenose status` reads the same session count before and after | — |
+| **1 · The data layer, no UI** | One Alembic revision: `session_speakers.person_id` nullable, plus `state` (`null` · `proposed` · `confirmed`) and `evidence`; `persons` gain the per-project `code`, a `uuid`, `origin` and `me`. One `Person` per identity instead of one per (session, code). The importer runs at the end of every pipeline run, proposes from the intermediates (platform labels → one identity per distinct label, P2), and never overwrites a confirmed row. The pipeline stops writing `people.yaml` and writes the computed stats to an intermediate. A legacy `people.yaml` is read once on the first run after upgrade — inherited-proposed on every session that carried the code — then ignored, never deleted. `GET /people` keeps its shape (code → name, nulls omitted) so every surface renders unchanged; `PUT /people` narrows to the fields it may write; `resolve_speaker_names` reads identities. The WARNING in `compute_participant_stats` retires with the YAML write it describes | The pinned-limitation test (two sessions, two moderators) re-homed as the map's own: both names survive. The sidebar's impossible MULTI_MODERATOR fixture replaced by one the importer can now produce. `tests/test_serve_export_coverage.py` green — no new GET without a classification. `check-locales.py --strict` untouched (no strings yet). The one visible change — two moderators' names no longer overwrite — pinned by a test that fails on `main` today | 0 |
+| **UX iteration 2 + review** *(between 1 and 2; done 1 Oct 2026, review pending)* | [`mockups/moderator-identity-iteration-2.html`](mockups/moderator-identity-iteration-2.html): route C drawn with the shipped stylesheet inlined verbatim and only shipped strings and idioms — see below | A `/usual-suspects` pass on the mockup and this section, with `ux-critique`, `what-would-gruber-say` (the native twin), `i18n-review` (four keys, gender-marking in fr/ca/es) and `silent-failure-hunter` (Phase 1's "never overwrites a confirmed row" and "read once") the personas that matter most. Its findings are folded into Phase 2's scope before Phase 2 starts | 1 |
+| **2 · The web UX** | `m?` on the split badge; the proposed treatment — three lines of composition CSS in `molecules/person-badge.css` so `.badge-proposed` dashes the halves instead of ringing the pair; the pill wired: ✓ confirms, ✗ returns the slot to `null`; the picker as a popover from the badge, rows per §B9 (identities as split badges, *That's Me (Name)*, *New Moderator…*), opened by click or right-click; the inline name field on a null slot is the Someone-New path (commit mints and assigns); the four strings seeded into the 21 full locales; the sidebar's "multiple moderators" test counts identities with `null` as one of them; `export.css` and `isExportMode()` drop the class, the pill and the pencil in the leave-behind; the exported roles line reads the one sentence on a null slot; the MCP overview carries `"moderator": <code or null>` on each session item plus one `INVARIANTS` line | vitest on `SessionsTable`, `TranscriptPage` and `SessionsSidebar` asserting **the payload each pick sends** — the 0.29.1 lesson: a test that proves the switch renders is not a test of the wire. `tests/test_export_css_selectors.py` green on the new selectors. `check-locales.py --strict`. One E2E spec: pick on session 4 in the grid → the roles line on transcript 4 shows `m1`. The MCP contract test covers a null session | 1, review |
+| **3 · The native twin** | A `person-menu` bridge message (anchor, slot state, the identities, Me) → an `NSMenu` built from the same keys, raised by the host for a right-click on any person badge; selecting *New Moderator…* tells the webview to open the inline editor; Edit ▸ Undo carries the pick (the `undo-state` frontend half §B10 already specified); a Diagnostics fixture that renders the web popover and the native menu side by side over one payload, for the visual-parity pass that comes *after* the wiring | Swift tests build the menu from a fixture payload and assert items, order and the checked row; a `test_menu_title_keys.py`-style pin that the native menu reads the same four keys the popover does; the human check: on the Mac, open the picker from the grid and from the transcript header in one session — same items, same order | 2 |
+| **4 · Platform evidence** | Participant ids in the VTT `NOTE` (the transcripts plan §4's `participants:` display-name → id map); the importer prefers an id over a display name; identities join across sessions on the id; when an id arrives for an identity that was minted from a name, the id attaches to it (same name) or wins (different name — the name is then the researcher's to fix) | Fixture pairs with and without ids; the P2 carve-out pinned both ways: one display name across files → one identity, two ids with one display name → two; the attach-or-win rule pinned | 1 (independent of 2 and 3; may land before them) |
+| **5 · Migration, docs, release** | The upgrade path proved on a 0.31.x project folder: the legacy read, inherited-proposed everywhere, the file left in place. README, `man/bristlenose.1`, the website's `docs-src/cli.md` and `server/CLAUDE.md` stop promising an editable `people.yaml`; §C2 and §J here trued; `SECURITY.md`'s export line re-read against decision 2. CHANGELOG under **New** — a minor bump | `scripts/check-doc-surfaces.sh`; a release-notes sentence for studies in the field, written by the owner, saying that moderator names are now tentative until confirmed and that nothing was lost | all |
+
+**What this deliberately does not ship** (unchanged from the row above): the bank,
+cross-study links, folder scope, Settings ▸ General, Contacts, the markdown
+report and the sealed static HTML — the last two fall back to codes when
+`people.yaml` is gone, which their existing missing-file path already does.
+
+#### UX iteration 2 — what it is, and what it found
+
+The storyboard's Part 5b (E1–E8) made the argument and recorded the decisions,
+but its frames approximated the type and drew two things the product would never
+say: origin chips ("heard …", "inherited") and a hand-rolled menu. The owner's
+rule for the next pass was explicit — real tokens, existing UX, no invented
+copy, both renderings. So iteration 2 is built the other way round: the shipped
+theme CSS is inlined **verbatim** (index.css order, each block headed by its
+source path and line range, diffable against the tree), every frame is a shipped
+class in a new *state*, and every string is one that ships today or one of the
+four below. Frames are derived, not chosen: slot state (`null` · `proposed` ·
+`confirmed`) × surface (Sessions grid, picker, inline editor, transcript header
+and roles line, session sidebar, Project lens line, export, MCP overview, a
+migrated study, the Mac). Four shipped switches sit on the page — appearance,
+palette, `data-platform="desktop"` for the SF Pro ladder, and the
+`data-person-display="code"` mode — because a state that survives all four is
+a state that will survive the product.
+
+What drawing it with real pixels found, none of which the storyboard could:
+
+- **The shipped pill overhangs onto the name in the grid** (R3). `.badge-action-pill`
+  hangs 1 rem past the badge's right edge; on a quote card that is whitespace, in
+  the decomposed speakers cell it is the first letter of the name. One rule fixes
+  it — hang the pill left inside `.bn-session-speaker-entry` — and it goes in
+  Phase 2's scope.
+- **The proposed treatment needs three lines, not zero** (R1). `.badge-proposed`
+  adds a dashed border; on the split badge that is a ring around two solid
+  boxes. The composition rule moves the dash onto the halves.
+- **The roles line needs no new string** (R8): it already reads "Moderator"
+  followed by a badge, so a null slot renders *Moderator m?* as it stands.
+- **The sidebar would hide the gap** (R9) under its current "multiple
+  moderators" test, which counts distinct names; it must count identities with
+  `null` as one of them.
+- **That's Me on a proposed slot should adopt, not duplicate** (R5): mark the
+  proposed identity as Me, keep its heard spelling, confirm the slot. Anywhere
+  else it assigns the Me identity, minting it on first use. Recorded as a
+  recommendation for the review, not a decision.
+- **Everything else was already there**: the unnamed placeholder word, the
+  editing tint, the dropdown idiom, the export gate, the display mode.
+
+#### The string plan
+
+Four keys, housed in the `people` block §I4 reserves, seeded into the 21 full
+locales (zh-Hant-HK gets none). The English is the owner's; the mockup carries
+placeholders and says so in its chrome bars.
+
+| Key | Placeholder | Where | Notes |
+|---|---|---|---|
+| `people.thatsMe` | That's Me ({{name}}) | picker, top level; the `NSMenu` | §I3's settled form; name from `NSFullUserName` on the Mac and the GECOS field on the CLI; `That's Me…` when the account has no name |
+| `people.me` | {{name}} (Me) | picker rows, once Me has a code | §I3's list form, rendered in the badge's name half; the top-level item is not offered once its row is in the list |
+| `people.newModerator` | New Moderator… | picker, after the separator; the `NSMenu` | §B9's spelling. The storyboard used *Someone New…*; H1 carries the choice. One key either way; fr/ca/es gender-marking per H1 |
+| `export.moderatorNotIdentified` | Moderator not identified | the exported transcript's roles line; the `m?` lozenge's aria-label | the 1 Oct default. Delete it and the export reads *Moderator m?* like the app |
+
+#### Human-only checks, and what to measure
+
+Three checks nothing in pytest or vitest can see, to be walked once Phase 2 is
+on a branch: whether a proposed lozenge in the grid reads as the same thing as a
+proposed tag on a quote card to someone who has used AutoCode (watch one person
+meet it cold); whether `m?` beside the placeholder word reads as *unknown* or as
+*broken* — if broken, the export's sentence may need to come into the app too;
+and, on the Mac, whether the picker from the grid and from the transcript header
+are indistinguishable in one session.
+
+Three numbers, from the telemetry the product already keeps and the rows this
+adds: the share of sessions with a confirmed moderator thirty days after
+upgrade (the honest-data claim — a study that stays at zero is fine, a study
+stuck at *proposed* everywhere means the pill is not being found); identities
+per study against distinct platform labels (never more — P2 says one per label);
+and the count of ✗ on platform proposals, because every one is a study where the
+carve-out guessed wrong, and that is the number that decides whether P2 holds.
 
 ---
 

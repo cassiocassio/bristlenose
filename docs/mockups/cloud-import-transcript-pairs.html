@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloud import — transcript pairs</title>
+<style>
+:root{
+  color-scheme: light dark;
+  --bg:#f2f2f7; --page:#fff; --ink:#1d1d1f; --dim:#6e6e73; --faint:#8e8e93;
+  --line:#d8d8dc; --hairline:#e6e6ea; --chrome:#ececed; --chrome2:#e4e4e6;
+  --accent:#007aff; --warn:#c9500f; --good:#1a7f37; --bad:#d70015; --grouphdr:#f0f0f3;
+  --bar:#f6f6f7; --note:#f6f6f9; --rowsel:rgba(0,122,255,.07);
+  --shadow:0 12px 40px rgba(0,0,0,.16), 0 2px 6px rgba(0,0,0,.10);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#161618; --page:#1e1e20; --ink:#f2f2f7; --dim:#a1a1a6; --faint:#78787d;
+    --line:#3a3a3d; --hairline:#2c2c2f; --chrome:#2a2a2c; --chrome2:#242426;
+    --accent:#0a84ff; --warn:#ff9f45; --good:#4ac26b; --bad:#ff6961; --grouphdr:#28282b;
+    --bar:#232326; --note:#202024; --rowsel:rgba(10,132,255,.14);
+    --shadow:0 12px 40px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;padding:40px 24px 90px;
+  font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto}
+h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+h2{font-size:17px;margin:56px 0 4px;letter-spacing:-.01em}
+.sub{color:var(--dim);margin:0 0 8px;max-width:84ch}
+.meta{color:var(--faint);font-size:12px;margin:0 0 20px}
+.key{display:flex;gap:18px;font-size:12px;color:var(--dim);margin:0 0 30px}
+.key span{display:inline-flex;align-items:center;gap:6px}
+.key i{width:14px;height:10px;border-radius:2px;display:inline-block}
+.key .a{background:var(--page);border:.5px solid var(--line)}
+.key .c{background:repeating-linear-gradient(45deg,var(--note),var(--note) 4px,transparent 4px,transparent 8px);border-left:2px solid var(--accent)}
+.scroll-x{overflow-x:auto;padding:4px 0 18px}
+
+/* window chrome as it is now: title + account, the scope as plain primary
+   text (no capsule, no blue), the filter field */
+.win{background:var(--page);border-radius:10px;box-shadow:var(--shadow);overflow:hidden;border:.5px solid var(--line)}
+.tbar{background:linear-gradient(var(--chrome),var(--chrome2));border-bottom:.5px solid var(--line);
+      padding:0 14px;height:52px;display:flex;align-items:center;gap:12px}
+.lights{display:flex;gap:8px;margin-right:4px}
+.lights i{width:12px;height:12px;border-radius:50%;display:block}
+.lights i:nth-child(1){background:#ff5f57}.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
+.titles .t{font-weight:700;font-size:13px;line-height:1.2}
+.titles .s{color:var(--dim);font-size:11.5px;line-height:1.2}
+.tbar .grow{margin-left:auto}
+.scope{font-size:12.5px;color:var(--ink);white-space:nowrap}
+.scope .chev{color:var(--faint);margin-left:3px;font-size:10px}
+.filter{border:.5px solid var(--line);border-radius:7px;padding:4px 10px;color:var(--faint);font-size:12px;min-width:160px;background:var(--page)}
+
+.bar{display:flex;gap:10px;align-items:center;padding:8px 14px;background:var(--bar);border-bottom:.5px solid var(--line);font-size:12.5px}
+.bar .grow{margin-left:auto}
+.sym{display:inline-flex;width:16px;justify-content:center}
+.sym svg{width:15px;height:15px}
+.sbtn{border:.5px solid var(--line);background:var(--page);border-radius:6px;padding:3px 10px;font-size:12px;white-space:nowrap;color:var(--ink)}
+
+table{border-collapse:separate;border-spacing:0;font-size:12.5px;table-layout:fixed;width:100%}
+thead th{text-align:left;font-weight:600;color:var(--dim);font-size:11.5px;padding:7px 8px;background:var(--page);
+  border-bottom:.5px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+thead th.r{text-align:right}
+thead th.new{color:var(--ink)}
+td{padding:7px 8px;vertical-align:top;border-bottom:.5px solid var(--hairline);overflow:hidden}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.size{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;color:var(--dim)}
+.ttl{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub2{color:var(--faint);font-size:11.5px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dash{color:var(--faint)}
+tr.day th{background:var(--grouphdr);font-weight:700;color:var(--ink);font-size:11.5px;padding:5px 8px;
+  border-top:.5px solid var(--line);border-bottom:.5px solid var(--line);text-align:left}
+tr.sel td{background:var(--rowsel)}
+.kid .ttl{padding-left:20px;font-weight:500}
+.tri{display:inline-block;width:11px;color:var(--faint);font-size:9px}
+
+/* one cell vocabulary for Status and Transcript: MessageKind glyph, or
+   glyphless secondary for pending; never the accent colour on static text */
+.st{white-space:nowrap;display:flex;align-items:center;gap:4px;overflow:hidden}
+.st span.w{overflow:hidden;text-overflow:ellipsis}
+.st svg{width:13px;height:13px;flex:none}
+.st.plain,.st.pending{color:var(--dim)}
+.st.info{color:var(--accent)}
+.st.skip{color:#32ade6}
+.st.warn{color:var(--warn)}
+.st.ok{color:var(--good);font-weight:600}
+.st.err{color:var(--bad);font-weight:600}
+.tip{position:relative;overflow:visible}
+td.tip{overflow:visible}
+.tip .bubble{position:absolute;left:8px;top:30px;z-index:5;background:var(--page);color:var(--ink);border:.5px solid var(--line);
+  box-shadow:0 4px 14px rgba(0,0,0,.18);border-radius:6px;padding:6px 9px;font-size:11.5px;white-space:nowrap}
+.only{color:var(--faint);font-size:11px;font-weight:500}
+tr.wait .ttl{color:var(--dim);font-weight:500}
+.spin{width:11px;height:11px;flex:none;border-radius:50%;border:1.6px solid var(--line);border-top-color:var(--dim);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+
+.foot{display:flex;align-items:center;gap:8px;padding:9px 14px;border-top:.5px solid var(--line);background:var(--page);font-size:12.5px}
+.foot .grow{margin-left:auto}
+.foot .cap{color:var(--dim);font-size:11.5px}
+.strip{background:var(--page);border:.5px solid var(--line);border-radius:8px;margin:0 0 6px;overflow:hidden}
+.strip .foot{border-top:0}
+.slab{font:600 10.5px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--faint);letter-spacing:.04em;margin:14px 0 4px}
+.btn[disabled]{opacity:.45}
+.red{color:var(--bad);font-weight:600}
+.org{color:var(--warn)}
+.lnk{color:var(--accent);font-size:11.5px;text-decoration:none}
+.incl{display:flex;align-items:center;gap:5px;margin-left:14px;font-size:12.5px;color:var(--ink);white-space:nowrap}
+.pick{border:.5px solid var(--line);border-radius:6px;padding:3px 8px;font-size:12px;background:var(--page);white-space:nowrap}
+.pick .chev{color:var(--faint);margin-left:4px;font-size:10px}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;white-space:nowrap}
+.btn2{background:var(--page);color:var(--ink);border:.5px solid var(--line);border-radius:6px;padding:5px 12px;font-size:12px;white-space:nowrap}
+.dot{color:var(--faint)}
+
+.sheetwrap{display:flex;justify-content:center;padding:26px 0 30px;border-radius:10px;
+  background:linear-gradient(rgba(0,0,0,.18),rgba(0,0,0,.18)),var(--page)}
+.sheet{width:420px;background:var(--page);border-radius:12px;box-shadow:var(--shadow);border:.5px solid var(--line);padding:20px 22px 16px}
+.sheet h3{margin:0 0 8px;font-size:13.5px}
+.sheet p{margin:0 0 10px;font-size:12.5px}
+.sheet .fine{color:var(--dim);font-size:11.5px}
+.sheet ul{margin:0 0 10px 18px;padding:0;font-size:12px;color:var(--dim)}
+.sheet .row{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+
+.note{margin:16px 0 0;padding:12px 16px;border-left:2px solid var(--accent);
+  background:repeating-linear-gradient(45deg,var(--note),var(--note) 6px,transparent 6px,transparent 12px);font-size:12.5px;color:var(--dim)}
+.note .lab{font:600 10.5px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.06em;color:var(--faint);text-transform:uppercase;display:block;margin-bottom:6px}
+.note b{color:var(--ink)}
+.note ul{margin:6px 0 0 18px;padding:0}
+.note li{margin:0 0 6px}
+.note table{font-size:12px;table-layout:auto;width:auto;margin:6px 0}
+.note td,.note th{border:0;padding:2px 12px 2px 0;background:none;color:var(--dim);text-align:left;font-weight:normal;vertical-align:top}
+.note th{color:var(--ink);font-weight:600}
+code{font:11.5px ui-monospace,SFMono-Regular,Menlo,monospace}
+svg.defs{position:absolute;width:0;height:0}
+</style>
+</head>
+<body>
+<!-- stand-ins for SF Symbols: info.circle, exclamationmark.triangle(.fill), checkmark.circle, xmark.octagon -->
+<svg class="defs" aria-hidden="true">
+  <symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 7v4.3M8 4.6v.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 16 16"><path d="M8 1.8l6.6 11.6H1.4z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+  <symbol id="i-warnfill" viewBox="0 0 16 16"><path d="M8 1.8l6.6 11.6H1.4z" fill="#ffcc00" stroke="#c9a200" stroke-width=".6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.1" stroke="#1d1d1f" stroke-width="1.4" stroke-linecap="round"/></symbol>
+  <symbol id="i-ok" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5 8.2l2 2 4-4.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-skip" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M4.8 8h6.4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-err" viewBox="0 0 16 16"><path d="M5.4 1.6h5.2l3.8 3.8v5.2l-3.8 3.8H5.4l-3.8-3.8V5.4z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M6 6l4 4M10 6l-4 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></symbol>
+</svg>
+
+<div class="wrap">
+<h1>A meeting is a recording <i>and</i> its transcript</h1>
+<p class="sub">Option A, chosen 1 Oct 2026. The transcript gets its own <b>Transcript</b> column, and one checkbox per recording fetches everything that belongs to it. A recording whose transcript is still being made <b>waits</b>: its row is greyed, its checkbox is disabled, Status shows a spinner, and it ticks itself when the transcript lands. The only way past the wait is the footer's <i>Include {N} waiting on transcription</i>. Drawn against the window as it is now: the scope is plain text with no capsule, Status is sized to its longest translation, and the window's minimum width comes from its columns.</p>
+<p class="meta">1 Oct 2026 · proposal, revised after review and timing research · names and meetings invented · column widths are the shipped defaults (Meeting 320, Scheduled/Recorded/Expires 92, Size 74); Transcript and Status at their measured English minimums</p>
+<div class="key"><span><i class="a"></i>What ships (the window)</span><span><i class="c"></i>Commentary (not in the product)</span></div>
+
+<!-- ===== 1. Teams before approval ===== -->
+<h2>1 · Teams, before your organisation has approved transcripts</h2>
+<div class="scroll-x"><div class="win" style="min-width:1010px">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div>
+    <div class="titles"><div class="t">Import from Microsoft Teams</div><div class="s">m.storey@acme-research.co.uk</div></div>
+    <div class="grow"></div><div class="scope">Last 30 days<span class="chev">⌄</span></div><div class="filter">Filter</div></div>
+  <div class="bar"><span class="sym"><svg><use href="#i-warnfill"/></svg></span>
+    <span><b>Transcripts need your IT team's approval.</b> Recordings import as usual.</span>
+    <span class="grow"></span><button class="sbtn">Request Approval…</button></div>
+  <table>
+    <colgroup><col style="width:26px"><col><col style="width:92px"><col style="width:74px"><col style="width:142px"><col style="width:92px"><col style="width:150px"></colgroup>
+    <thead><tr><th></th><th>Meeting</th><th>Recorded</th><th class="r">Size</th><th class="new">Transcript</th><th>Expires</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr class="day"><th colspan="7">Wed 24 Sep</th></tr>
+      <tr class="sel"><td><input type="checkbox" checked></td>
+        <td><div class="ttl">P07 Interview</div></td>
+        <td class="num">09:34<div class="sub2">52m 11s</div></td>
+        <td class="size">1.1 GB</td><td><div class="st pending"><span class="w">Needs approval</span></div></td>
+        <td class="num">in 118 days</td><td></td></tr>
+      <tr class="sel"><td><input type="checkbox" checked></td>
+        <td><div class="ttl">P08 Interview</div></td>
+        <td class="num">14:03<div class="sub2">41m 27s</div></td>
+        <td class="size">874 MB</td><td><div class="st pending"><span class="w">Needs approval</span></div></td>
+        <td class="num">in 118 days</td><td></td></tr>
+      
+    </tbody>
+  </table>
+  <div class="foot"><span><b>2 meetings</b></span>
+    <span class="grow"></span><span class="cap">Project:</span><span class="pick">New Project…<span class="chev">⌄</span></span>
+    <button class="btn">Import 2 Recordings</button></div>
+</div></div>
+
+<div class="sheetwrap" style="margin-top:6px">
+  <div class="sheet">
+    <h3>Ask your IT admin to allow Teams transcripts?</h3>
+    <p>Even for meetings you organised, Microsoft needs an administrator to approve before an app can read transcripts. Bristlenose asks to read:</p>
+    <ul><li>Your meeting transcripts</li><li>Meeting details, to match transcripts to recordings</li><li>Recording start times, to line transcripts up with the video</li></ul>
+    <p class="fine">If your organisation uses approval requests, Microsoft emails you the decision. Recordings keep importing meanwhile.</p>
+    <div class="row"><button class="btn2">Not Now</button><button class="btn">Request Approval…</button></div>
+  </div>
+</div>
+
+<div class="note"><span class="lab">Commentary</span>
+<ul>
+<li><b>Drawn as the window is today on a tenant without calendar access</b>: no Scheduled column and no attendee line. The title comes from the recording's filename. The only addition is the Transcript column.</li>
+<li><b>The sheet is 23% shorter</b>, about 87 words cut to 67. It still names all three permissions. The email line is conditional, because not every tenant has approval requests switched on.</li>
+<li><b>The bar is a system Label on a plain bar</b>, not a painted panel. Its detail is one clause, because the sheet explains the rest. In the cells, “Needs approval” is glyphless secondary text, because the bar already says why.</li>
+<li><b>After the request</b>, the bar reads: “Approval requested. Open Import again once your IT team has approved it.” It has no button. The app cannot see the admin's decision, so it does not claim one.</li>
+<li><b>Status keeps the video's reason</b> on rows that are not yet imported, using <code>statusKind</code> (30 Sep).</li>
+</ul></div>
+
+<!-- ===== 2. Teams approved ===== -->
+<h2>2 · Teams, approved: every transcript state, including one that is on its way</h2>
+<div class="scroll-x"><div class="win" style="min-width:1010px">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div>
+    <div class="titles"><div class="t">Import from Microsoft Teams</div><div class="s">m.storey@acme-research.co.uk</div></div>
+    <div class="grow"></div><div class="scope">Last 30 days<span class="chev">⌄</span></div><div class="filter">Filter</div></div>
+  <table>
+    <colgroup><col style="width:26px"><col><col style="width:92px"><col style="width:92px"><col style="width:74px"><col style="width:142px"><col style="width:92px"><col style="width:150px"></colgroup>
+    <thead><tr><th></th><th>Meeting</th><th>Scheduled</th><th>Recorded</th><th class="r">Size</th><th class="new">Transcript</th><th>Expires</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr class="day"><th colspan="8">Today</th></tr>
+      <tr class="wait"><td><input type="checkbox" disabled></td>
+        <td><div class="ttl">P10 Interview</div><div class="sub2">Dana Okonkwo</div></td>
+        <td class="num">10:00<div class="sub2">1h</div></td><td class="num">10:03<div class="sub2">48m 20s</div></td>
+        <td class="size">960 MB</td>
+        <td><div class="st pending"><span class="w">Expected</span></div></td>
+        <td class="num">in 120 days</td><td><div class="st pending"><span class="spin"></span><span class="w">Waiting for transcript</span></div></td></tr>
+
+      <tr class="day"><th colspan="8">Wed 24 Sep</th></tr>
+      <tr class="sel"><td><input type="checkbox" checked></td>
+        <td><div class="ttl">P07 Interview</div><div class="sub2">Priya Raman</div></td>
+        <td class="num">09:30<div class="sub2">1h</div></td><td class="num">09:34<div class="sub2">52m 11s</div></td>
+        <td class="size">1.1 GB</td><td><div class="st plain"><span class="w">Available</span></div></td>
+        <td class="num">in 118 days</td><td></td></tr>
+      <tr class="sel"><td><input type="checkbox" checked></td>
+        <td><div class="ttl">P08 Interview</div><div class="sub2">Tomas Lind</div></td>
+        <td class="num">14:00<div class="sub2">45m</div></td><td class="num">14:03<div class="sub2">41m 27s</div></td>
+        <td class="size">874 MB</td><td><div class="st plain"><span class="w">Available</span></div></td>
+        <td class="num">in 118 days</td><td></td></tr>
+
+      <tr class="day"><th colspan="8">Mon 22 Sep</th></tr>
+      <tr class="sel"><td><input type="checkbox" checked></td>
+        <td><div class="ttl">P05 Interview</div><div class="sub2">Aoife Brennan</div></td>
+        <td class="num">11:00<div class="sub2">1h</div></td><td class="num">11:02<div class="sub2">55m 04s</div></td>
+        <td class="size">48 KB<div class="sub2 only">transcript</div></td><td><div class="st plain"><span class="w">Available</span></div></td>
+        <td class="num">in 116 days</td><td><div class="st info"><svg><use href="#i-ok"/></svg><span class="w">In this project</span></div></td></tr>
+      <tr class="sel"><td><input type="checkbox" checked></td>
+        <td><div class="ttl">P06 Interview</div><div class="sub2">Femi Adeyemi</div></td>
+        <td class="num">15:00<div class="sub2">1h</div></td><td class="num">15:01<div class="sub2">49m 50s</div></td>
+        <td class="size">1.0 GB</td><td><div class="st info"><svg><use href="#i-info"/></svg><span class="w">No transcript</span></div></td>
+        <td class="num">in 116 days</td><td></td></tr>
+
+      <tr class="day"><th colspan="8">Fri 19 Sep</th></tr>
+      <tr><td><input type="checkbox" checked disabled></td>
+        <td><div class="ttl">P04 Interview</div><div class="sub2">Simon Ellery</div></td>
+        <td class="num">09:00<div class="sub2">1h</div></td><td class="num">09:04<div class="sub2">50m 12s</div></td>
+        <td class="size">1.0 GB</td><td><div class="st info"><svg><use href="#i-ok"/></svg><span class="w">In this project</span></div></td>
+        <td class="num">in 113 days</td><td><div class="st info"><svg><use href="#i-ok"/></svg><span class="w">In this project</span></div></td></tr>
+      <tr class="sel"><td><input type="checkbox" checked></td>
+        <td><div class="ttl">P03 Interview</div><div class="sub2">Ines García</div></td>
+        <td class="num">14:00<div class="sub2">1h</div></td><td class="num">14:02<div class="sub2">47m 52s</div></td>
+        <td class="size">1.0 GB</td><td><div class="st info"><svg><use href="#i-info"/></svg><span class="w">No speaker names</span></div></td>
+        <td class="num">in 113 days</td><td></td></tr>
+      <tr class="sel"><td><input type="checkbox" checked></td>
+        <td><div class="ttl">Weekly research sync</div><div class="sub2">Dana Okonkwo · Simon Ellery</div></td>
+        <td class="num">16:00<div class="sub2">30m</div></td><td class="num">16:01<div class="sub2">27m 09s</div></td>
+        <td class="size">388 MB</td><td><div class="st warn"><svg><use href="#i-warn"/></svg><span class="w">Couldn't match</span></div></td>
+        <td class="num">in 113 days</td><td></td></tr>
+    </tbody>
+  </table>
+  <div class="foot"><span><b>7 meetings</b></span>
+    <label class="incl"><input type="checkbox"> Include 1 waiting on transcription</label>
+    <span class="grow"></span><span class="cap">Project:</span><span class="pick">Ward handover study<span class="chev">⌄</span></span>
+    <button class="btn">Import 4 Recordings and 1 Transcript</button></div>
+</div></div>
+
+<div class="note"><span class="lab">Commentary</span>
+<table>
+<tr><th>Cell</th><th>Kind (glyph and colour from <code>MessageKind</code>, as Status draws them)</th><th>Meaning; what the tick does</th></tr>
+<tr><td>Available</td><td>plain</td><td>fetched with the recording.</td></tr>
+<tr><td>Expected</td><td>glyphless</td><td>transcription ran but the file isn't ready. <b>The checkbox is disabled</b> and Status says <i>Waiting for transcript</i>, the same way Status already explains every other disabled box. The only way past it is the footer's <i>Include {N} waiting on transcription</i>, which is off by default.</td></tr>
+<tr><td>No transcript</td><td>info</td><td>none was made, or none arrived within the window below. Bristlenose transcribes.</td></tr>
+<tr><td>No speaker names</td><td>info</td><td>the words arrived without names. Speakers are left unseparated, not guessed.</td></tr>
+<tr><td>Couldn't match</td><td>warning</td><td>the transcript couldn't be lined up with this recording, so it is left out rather than mistimed.</td></tr>
+<tr><td>Needs approval</td><td>glyphless; the bar is the warning</td><td>frame 1. Teams only.</td></tr>
+<tr><td>Needs access</td><td>warning</td><td>Meet: you declined the Meet permission at sign-in.</td></tr>
+<tr><td>Unavailable</td><td>warning</td><td>your organisation, plan or language rules it out; the tooltip says which.</td></tr>
+<tr><td>No longer available</td><td>warning</td><td>the platform has deleted it.</td></tr>
+<tr><td>In this project</td><td>info</td><td>both halves are here.</td></tr>
+<tr><td>Imported</td><td>success</td><td>after a fetch. Regular weight; the row's Status keeps the semibold.</td></tr>
+<tr><td>Didn't arrive</td><td>warning</td><td>after a fetch: the recording landed, the transcript didn't.</td></tr>
+<tr><td>Not imported</td><td>skipped</td><td>after a fetch: you went ahead without waiting for an <i>Expected</i> transcript.</td></tr>
+</table>
+<ul>
+<li><b>The window is for recognition, not inspection</b> (owner, 1 Oct 2026). A researcher picks the right call by day, title and the external names from the invite. The Transcript cell says only whether there is a transcript; speaker names and counts come after import, not here.</li>
+<li><b>No empty columns.</b> Scheduled appears because the approval brought calendar access and some calls matched an event. Calls with no event show a dash. With no calendar access (frame 1), no call has a time and the column isn't there. This is today's rule (<code>showsScheduledColumn</code>), unchanged. Transcript follows the same rule: if no row has a transcript to show or one on its way, the column isn't drawn.</li>
+<li><b>Waiting is the default, and it is hard to get round</b> (owner, 1 Oct 2026). A platform transcript with real speaker names beats Bristlenose's own guess in nearly every case, so a row whose transcript is on its way has a <b>disabled</b> checkbox, and Status says <i>Waiting for transcript</i>. Nobody has to read the Transcript column or a tooltip to see why the box is grey.
+  <ul>
+  <li><b>The row looks unfinished, and finishes itself while you watch</b> (owner, 1 Oct 2026). Right after a session, nobody reads small text, and a bold title beside a checkbox gets ticked. So a waiting row has its title in secondary colour, a disabled box, and a spinner in Status: the same “give it a minute” cue the Teams chat gives. While the window is open it re-checks waiting rows (about every 30 s on Teams, where transcripts usually take minutes). When one lands, the row turns <i>Available</i>, ticks itself, and the Import count goes up. Nothing is remembered, and checking stops when the window closes.</li>
+<li><b>One way round it, in plain sight, in the footer</b> (owner's layout, 1 Oct 2026). Reading left to right: the count, then <b>☐ Include {N} waiting on transcription</b>, then Project and the Import button, whose count is what the researcher will actually get. The checkbox is off every time the window opens and never remembered. <b>The checkbox and its text are not drawn at all when nothing is waiting.</b> Ticking it enables the waiting rows, still unticked; the researcher then ticks the ones they need, and the button's count follows.</li>
+  <li><b>Final states are never gated.</b> Needs approval, Unavailable and No transcript mean nothing is coming. Those rows stay tickable, so an IT refusal never stops anyone working.</li>
+  <li><b>Bulk ticks never include a waiting row</b>, even with the footer box on: ⌘A and a meeting's header checkbox leave them alone.</li>
+  <li>Recordings don't expire for weeks to months, so waiting costs nothing. When the window is next opened, the row reads <i>Available</i> and is ticked.</li>
+  </ul></li>
+<li><b>How “Expected” is known differs by platform</b>, and the copy is only as sure as the signal:
+  <ul>
+  <li><b>Meet</b> is certain. A transcript resource in <code>STARTED</code> or <code>ENDED</code> state means one is coming. No resource on an ended call means none was made.</li>
+  <li><b>Zoom</b> is a good guess. The host's “Create audio transcript” setting is on and the recording is listed without its <code>TRANSCRIPT</code> file.</li>
+  <li><b>Teams</b> is a guess. Recording starts transcription by default, but Graph lists a transcript only once it is ready. So <i>Expected</i> is shown only for a few hours after the meeting, and after that it becomes <i>No transcript</i>.</li>
+  </ul></li>
+<li><b>Expected becomes No transcript</b> after 4 hours on Teams, and 24 hours on Meet and Zoom (measured from the recording appearing). Typical waits are minutes on Teams and a few hours on Meet and Zoom. Vendors allow up to a day. After that, the honest word is that it didn't come.</li>
+<li><b>P05: the recording is here and the transcript isn't.</b> Ticked, the Size cell shows the transcript's own size and says <i>transcript</i>, so the tick is honest about what it fetches. This needs the recording matched by a stored platform id, not by duration (plan §0 item 4, Q11), so it ships after the first slice.</li>
+<li><b>The button names transcripts only when a tick fetches one alone.</b> Otherwise it stays today's “Import N Recordings”, because a transcript rides with its recording.</li>
+</ul></div>
+
+<!-- ===== 3. Meet ===== -->
+<h2>3 · Google Meet: a call with two recordings, no new permission</h2>
+<div class="scroll-x"><div class="win" style="min-width:930px">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div>
+    <div class="titles"><div class="t">Import from Google Meet</div><div class="s">martin@finca342.org</div></div>
+    <div class="grow"></div><div class="scope">Last 30 days<span class="chev">⌄</span></div><div class="filter">Filter</div></div>
+  <table>
+    <colgroup><col style="width:26px"><col><col style="width:92px"><col style="width:92px"><col style="width:74px"><col style="width:142px"><col style="width:150px"></colgroup>
+    <thead><tr><th></th><th>Meeting</th><th>Scheduled</th><th>Recorded</th><th class="r">Size</th><th class="new">Transcript</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr class="day"><th colspan="7">Today</th></tr>
+      <tr><td><input type="checkbox" style="accent-color:var(--accent)" checked></td>
+        <td><div class="ttl"><span class="tri">▾</span>P11 Interview</div><div class="sub2">Ana Ruiz · Joan Ferrer</div></td>
+        <td class="num">12:00<div class="sub2">1h</div></td><td class="dash">—</td><td class="size dash">—</td><td class="dash">—</td><td></td></tr>
+      <tr class="kid sel"><td><input type="checkbox" checked></td>
+        <td><div class="ttl">Recording 1</div></td>
+        <td class="dash">—</td><td class="num">12:02<div class="sub2">31m 10s</div></td><td class="size dash">—</td>
+        <td><div class="st plain"><span class="w">Available</span></div></td><td></td></tr>
+      <tr class="kid wait"><td><input type="checkbox" disabled></td>
+        <td><div class="ttl">Recording 2</div></td>
+        <td class="dash">—</td><td class="num">12:36<div class="sub2">22m 48s</div></td><td class="size dash">—</td>
+        <td><div class="st pending"><span class="w">Expected</span></div></td><td><div class="st pending"><span class="spin"></span><span class="w">Waiting for transcript</span></div></td></tr>
+
+      <tr class="day"><th colspan="7">Yesterday</th></tr>
+      <tr class="sel"><td><input type="checkbox" checked></td>
+        <td><div class="ttl">Banyalbufar discussion</div><div class="sub2">Tomeu Colom</div></td>
+        <td class="num">23:00<div class="sub2">1h</div></td><td class="num">22:45<div class="sub2">58m 04s</div></td>
+        <td class="size dash">—</td><td><div class="st plain"><span class="w">Available</span></div></td><td></td></tr>
+
+      <tr class="day"><th colspan="7">Tue 2 Sep</th></tr>
+      <tr><td><input type="checkbox"></td>
+        <td><div class="ttl">P02 Interview</div><div class="sub2">Leo Martin</div></td>
+        <td class="num">10:00<div class="sub2">1h</div></td><td class="num">10:01<div class="sub2">50m 02s</div></td>
+        <td class="size dash">—</td><td><div class="st warn"><svg><use href="#i-warn"/></svg><span class="w">No longer available</span></div></td><td></td></tr>
+    </tbody>
+  </table>
+  <div class="foot"><span>3 meetings <span class="dot">·</span> <b>4 recordings</b></span>
+    <label class="incl"><input type="checkbox"> Include 1 waiting on transcription</label>
+    <span class="grow"></span><span class="cap">Project:</span><span class="pick">New Project…<span class="chev">⌄</span></span>
+    <button class="btn">Import 2 Recordings</button></div>
+</div></div>
+
+<div class="note"><span class="lab">Commentary</span>
+<ul>
+<li><b>The meeting's checkbox is mixed</b> while Recording 2 waits for its transcript. The header's state follows what its children would fetch, not only whether their recordings are new (review finding 39).</li>
+<li><b>One transcript, two recordings.</b> Each recording takes the part of the transcript that falls inside it, re-timed to that recording's start. Stopping and restarting transcription can also make <i>several</i> transcripts for one recording, so a row is built from every piece that overlaps it.</li>
+<li><b>No Expires column on Meet</b>, as today. Google deletes the transcript's API copy 30 days after the meeting, which shows as <i>No longer available</i>. Before that, the deadline is in the cell's tooltip.</li>
+<li><b>Expected is certain on Meet.</b> The API reports a transcript in progress, so this cell is never a guess here.</li>
+</ul></div>
+
+<!-- ===== 4. After the fetch ===== -->
+<h2>4 · After the fetch: what arrived, said once</h2>
+<div class="scroll-x"><div class="win" style="min-width:1010px">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div>
+    <div class="titles"><div class="t">Import from Microsoft Teams</div><div class="s">m.storey@acme-research.co.uk</div></div>
+    <div class="grow"></div><div class="scope">Last 30 days<span class="chev">⌄</span></div><div class="filter">Filter</div></div>
+  <table>
+    <colgroup><col style="width:26px"><col><col style="width:92px"><col style="width:92px"><col style="width:74px"><col style="width:142px"><col style="width:92px"><col style="width:150px"></colgroup>
+    <thead><tr><th></th><th>Meeting</th><th>Scheduled</th><th>Recorded</th><th class="r">Size</th><th class="new">Transcript</th><th>Expires</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td><input type="checkbox" checked disabled></td><td><div class="ttl">P10 Interview</div></td>
+        <td class="num">10:00</td><td class="num">10:03</td><td class="size">960 MB</td>
+        <td><div class="st skip"><svg><use href="#i-skip"/></svg><span class="w">Not imported</span></div></td><td class="num">in 120 days</td>
+        <td><div class="st ok"><svg><use href="#i-ok"/></svg><span class="w">Imported</span></div></td></tr>
+      <tr><td><input type="checkbox" checked disabled></td><td><div class="ttl">P07 Interview</div></td>
+        <td class="num">09:30</td><td class="num">09:34</td><td class="size">1.1 GB</td>
+        <td><div class="st ok" style="font-weight:400"><svg><use href="#i-ok"/></svg><span class="w">Imported</span></div></td><td class="num">in 118 days</td>
+        <td><div class="st ok"><svg><use href="#i-ok"/></svg><span class="w">Imported</span></div></td></tr>
+      <tr><td><input type="checkbox" checked disabled></td><td><div class="ttl">P06 Interview</div></td>
+        <td class="num">15:00</td><td class="num">15:01</td><td class="size">1.0 GB</td>
+        <td><div class="st info"><svg><use href="#i-info"/></svg><span class="w">No transcript</span></div></td><td class="num">in 116 days</td>
+        <td><div class="st ok"><svg><use href="#i-ok"/></svg><span class="w">Imported</span></div></td></tr>
+      <tr><td><input type="checkbox" checked disabled></td><td><div class="ttl">P08 Interview</div></td>
+        <td class="num">14:00</td><td class="num">14:03</td><td class="size">874 MB</td>
+        <td><div class="st warn"><svg><use href="#i-warn"/></svg><span class="w">Didn't arrive</span></div></td><td class="num">in 118 days</td>
+        <td><div class="st ok"><svg><use href="#i-ok"/></svg><span class="w">Imported</span></div></td></tr>
+    </tbody>
+  </table>
+  <div class="foot"><span><b>4 imported</b> <span class="dot">·</span> 3 without transcript</span>
+    <span class="grow"></span><button class="btn">Done</button></div>
+</div></div>
+
+<div class="note"><span class="lab">Commentary</span>
+<ul>
+<li><b>Everything imported is analysed now, so there is no hold.</b> P10's transcript was <i>Expected</i>; the researcher turned on <i>Include {N} waiting on transcription</i> and ticked it, to go ahead without waiting. Its cell reads <i>Not imported</i>, in the <b>skipped</b> kind (cyan <code>minus.circle.fill</code>, “deliberate, not empty”), because that was a choice, not a failure. Left unticked, it would have stayed <i>Expected</i> and imported as a pair later.</li>
+<li><b>P08's recording arrived but its transcript didn't</b>, so the cell is a <b>warning</b>, not an error. The row is partial, which <code>ui_kinds</code> files under warning. The reason is in the tooltip. The row's own Status is still a success. The report marks P08's speakers as identified by Bristlenose (“check names”). <b>No in-window retry</b>: retrying after analysis would re-cut starred quotes, so it waits for Phase 4's per-session choice.</li>
+<li><b>The footer counts what needs attention</b>, not the happy total.</li>
+</ul></div>
+
+<!-- ===== 5. German, minimum width ===== -->
+<h2>5 · Deutsch, at the window's minimum width: the new column joins the width machinery</h2>
+<div class="scroll-x"><div class="win" style="width:882px">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div>
+    <div class="titles"><div class="t">Aus Microsoft Teams importieren</div><div class="s">m.storey@acme-research.co.uk</div></div>
+    <div class="grow"></div><div class="scope">Letzte 30 Tage<span class="chev">⌄</span></div><div class="filter" style="min-width:120px">Filtern</div></div>
+  <table>
+    <colgroup><col style="width:26px"><col style="width:200px"><col style="width:72px"><col style="width:72px"><col style="width:60px"><col style="width:174px"><col style="width:72px"><col style="width:156px"></colgroup>
+    <thead><tr><th></th><th>Besprechung</th><th>Geplant</th><th>Aufgezeichnet</th><th class="r">Größe</th><th class="new">Transkript</th><th>Läuft ab</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td><input type="checkbox" checked></td>
+        <td><div class="ttl">P07 Interview</div><div class="sub2">Priya Raman</div></td>
+        <td class="num">09:30</td><td class="num">09:34</td><td class="size">1,1 GB</td>
+        <td><div class="st plain"><span class="w">Verfügbar</span></div></td><td class="num">in 118 T.</td><td></td></tr>
+      <tr class="wait"><td><input type="checkbox" disabled></td>
+        <td><div class="ttl">P10 Interview</div><div class="sub2">Dana Okonkwo</div></td>
+        <td class="num">10:00</td><td class="num">10:03</td><td class="size">960 MB</td>
+        <td><div class="st pending"><span class="w">Erwartet</span></div></td><td class="num">in 120 T.</td><td><div class="st pending"><span class="spin"></span><span class="w">Wartet auf Transkript</span></div></td></tr>
+      <tr><td><input type="checkbox" checked></td>
+        <td><div class="ttl">P03 Interview</div><div class="sub2">Ines García</div></td>
+        <td class="num">14:00</td><td class="num">14:02</td><td class="size">1,0 GB</td>
+        <td><div class="st info"><svg><use href="#i-info"/></svg><span class="w">Keine Sprechernamen</span></div></td><td class="num">in 113 T.</td><td></td></tr>
+      <tr><td><input type="checkbox" disabled></td>
+        <td><div class="ttl">Q3-Roadmap-Review</div><div class="sub2">Dana Okonkwo</div></td>
+        <td class="num">16:00</td><td class="num">16:02</td><td class="size">402 MB</td>
+        <td><div class="st warn"><svg><use href="#i-warn"/></svg><span class="w">Nicht zuzuordnen</span></div></td><td class="num">in 118 T.</td>
+        <td><div class="st warn"><svg><use href="#i-warn"/></svg><span class="w">Nicht mehr verfügbar</span></div></td></tr>
+    </tbody>
+  </table>
+  <div class="foot"><span><b>4 Besprechungen</b></span>
+    <label class="incl"><input type="checkbox"> 1 wartende einbeziehen</label>
+    <span class="grow"></span><span class="cap">Projekt:</span><span class="pick">Neues Projekt…<span class="chev">⌄</span></span>
+    <button class="btn">2 Aufzeichnungen importieren</button></div>
+</div></div>
+
+<div class="note"><span class="lab">Commentary</span>
+<ul>
+<li><b>Transcript is sized the way Status now is.</b> In the working tree (30 Sep), <code>CloudImportStatusColumn.minimumWidth(i18n)</code> measures every string the column can show, through a real cell. The grid then reports its minimum to the window (<code>onMinimumWidth</code>; floor <code>max(760, grid)</code>). Once that work lands, the measurer is <b>generalised</b> to take a key list, so Status and Transcript share one, rather than copied into a sibling. <code>reportMinimumWidth</code> already sums whatever columns exist, so it needs no change.</li>
+<li><b>Transcript is added and removed, never hidden.</b> A <code>syncTranscriptColumn</code> shaped like <code>syncScheduledColumn</code> adds it only when some row could have a transcript, so a Zoom account with transcription off, or a consumer Google account, pays no width for it. Removing rather than hiding stops <code>autosaveTableColumns</code> restoring a column stuck hidden.</li>
+<li><b>Cost in width</b> (estimated here; the code measures it): one more column of about 142 pt in English and about 175 pt in German (“Keine Sprechernamen”), plus an intercell gap. That puts the Teams window's floor near 820 pt in English and 880 pt in German, against today's 760. Meet has no Expires column, so its window is about 90 pt narrower.</li>
+<li><b>Headers truncate; status words never do.</b> “Aufgezeichnet” clips at its 72 pt minimum, as it does today. Names, titles and organisers stay unbounded and carry a tooltip.</li>
+<li>The German state words are a first draft for review, not seeded strings.</li>
+</ul></div>
+
+<h2>6 · Every state of the footer</h2>
+<p class="sub">Left: the count. Middle: the waiting checkbox, only when something is waiting. Right: Project and the one button. Teams in English; Meet differs only where noted.</p>
+<div class="slab">A · LOADING, SIGNED OUT, EMPTY LIST, OR A BLANKET REFUSAL</div><div class="strip"><div class="foot"><span class="cap">&nbsp;</span><span class="grow"></span></div></div>
+<div class="slab">B · LISTED, NOTHING TICKED</div><div class="strip"><div class="foot"><span><b>7 meetings</b></span><span class="grow"></span><span class="cap">Project:</span><span class="pick">Ward handover study<span class="chev">⌄</span></span><button class="btn" disabled>Import</button></div></div>
+<div class="slab">C · SOME TICKED</div><div class="strip"><div class="foot"><span><b>7 meetings</b></span><span class="grow"></span><span class="cap">Project:</span><span class="pick">Ward handover study<span class="chev">⌄</span></span><button class="btn">Import 4 Recordings</button></div></div>
+<div class="slab">C2 · A TICK FETCHES A TRANSCRIPT ALONE (recording already in the project)</div><div class="strip"><div class="foot"><span><b>7 meetings</b></span><span class="grow"></span><span class="cap">Project:</span><span class="pick">Ward handover study<span class="chev">⌄</span></span><button class="btn">Import 4 Recordings and 1 Transcript</button></div></div>
+<div class="slab">C3 · ONLY TRANSCRIPTS TICKED</div><div class="strip"><div class="foot"><span><b>7 meetings</b></span><span class="grow"></span><span class="cap">Project:</span><span class="pick">Ward handover study<span class="chev">⌄</span></span><button class="btn">Import 2 Transcripts</button></div></div>
+<div class="slab">D · SOMETHING IS WAITING ON TRANSCRIPTION</div><div class="strip"><div class="foot"><span><b>7 meetings</b></span><label class="incl"><input type="checkbox"> Include 1 waiting on transcription</label><span class="grow"></span><span class="cap">Project:</span><span class="pick">Ward handover study<span class="chev">⌄</span></span><button class="btn">Import 4 Recordings</button></div></div>
+<div class="slab">D2 · …INCLUDED, AND THE WAITING ROW TICKED BY HAND</div><div class="strip"><div class="foot"><span><b>7 meetings</b></span><label class="incl"><input type="checkbox" checked> Include 1 waiting on transcription</label><span class="grow"></span><span class="cap">Project:</span><span class="pick">Ward handover study<span class="chev">⌄</span></span><button class="btn">Import 5 Recordings</button></div></div>
+<div class="slab">E · SOMETHING WITHHELD THAT YOU COULD ACT ON (someone else's meeting, a permission, a plan, a tenant block)</div><div class="strip"><div class="foot"><span>7 meetings <span class="dot">·</span> <b>5 you can fetch</b> <span class="dot">·</span> 2 organised by others &nbsp;<a class="lnk" href="#">Recordings permissions</a></span><span class="grow"></span><span class="cap">Project:</span><span class="pick">Ward handover study<span class="chev">⌄</span></span><button class="btn">Import 5 Recordings</button></div></div>
+<div class="slab">F · MEET: A CALL MADE MORE THAN ONE RECORDING</div><div class="strip"><div class="foot"><span>3 meetings <span class="dot">·</span> <b>4 recordings</b></span><span class="grow"></span><span class="cap">Project:</span><span class="pick">Ward handover study<span class="chev">⌄</span></span><button class="btn">Import 4 Recordings</button></div></div>
+<div class="slab">G · FILTER ON ("Priya"): counts follow the filtered list; "organised by others" is suppressed</div><div class="strip"><div class="foot"><span><b>1 meeting</b></span><span class="grow"></span><span class="cap">Project:</span><span class="pick">Ward handover study<span class="chev">⌄</span></span><button class="btn">Import 1 Recording</button></div></div>
+<div class="slab">H · THE LISTING STOPPED AT ITS PAGE CAP</div><div class="strip"><div class="foot"><span>at least 50 meetings &nbsp;<span class="org">⚠︎ Partial list</span></span><span class="grow"></span><span class="cap">Project:</span><span class="pick">Ward handover study<span class="chev">⌄</span></span><button class="btn" disabled>Import</button></div></div>
+<div class="slab">I · FETCHING: progress is on the rows; the waiting checkbox is hidden</div><div class="strip"><div class="foot"><span><b>7 meetings</b></span><span class="grow"></span><span class="cap">Project:</span><span class="pick">Ward handover study<span class="chev">⌄</span></span><button class="btn2">Stop</button></div></div>
+<div class="slab">J · DONE</div><div class="strip"><div class="foot"><span><b>4 imported</b></span><span class="grow"></span><button class="btn">Done</button></div></div>
+<div class="slab">K · DONE, A RECORDING FAILED</div><div class="strip"><div class="foot"><span><b>3 imported</b> <span class="dot">·</span> <span class="red">1 failed</span></span><span class="grow"></span><button class="btn">Retry 1</button></div></div>
+<div class="slab">L · DONE, A TRANSCRIPT DIDN'T ARRIVE (the recording did)</div><div class="strip"><div class="foot"><span><b>4 imported</b> <span class="dot">·</span> <span class="org">1 transcript didn't arrive</span></span><span class="grow"></span><button class="btn">Done</button></div></div>
+<div class="slab">M · AFTER A BATCH, A WAITING TRANSCRIPT ARRIVED AND ITS ROW TICKED ITSELF</div><div class="strip"><div class="foot"><span><b>4 imported</b></span><span class="grow"></span><span class="cap">Project:</span><span class="pick">Ward handover study<span class="chev">⌄</span></span><button class="btn">Import 1 Recording</button></div></div>
+<div class="note"><span class="lab">Commentary</span>
+<ul>
+<li><b>New in this work:</b> the waiting checkbox (D, D2), the button naming transcripts (C2, C3), “1 transcript didn't arrive” (L), and a waiting row arriving after a batch (M). <b>Changed:</b> the bare count when nothing is withheld (B–D, G), where today says “7 meetings · 7 you can fetch”. <b>Unchanged:</b> A, E, F, H, I, J, K.</li>
+<li><b>When “· N you can fetch” appears</b> is the existing <code>counts.withholding</code> predicate, the one that already decides the permissions link (<code>isWithheld</code>). It covers someone else's meeting, a missing scope, a plan limit or a tenant block. Rows already in the project, not recorded, no longer available, or waiting on transcription never trigger it.</li>
+<li><b>L names only a loss you didn't expect.</b> Meetings that never had a transcript, and rows you chose to import without waiting, aren't counted there; each row's Transcript cell already says so. L has no retry button: the recording is already being analysed, and bringing a transcript in afterwards waits for the per-session re-processing work (plan Phase 4).</li>
+<li><b>M follows from the window checking while it is open.</b> The button changes from Done back to Import because there is something new to import.</li>
+<li>A blanket refusal and the approval bar live above the grid, not in the footer. The footer hides Project and the button whenever there is nothing to import into (A).</li>
+</ul></div>
+
+<!-- ===== 7. Zoom ===== -->
+<h2>7 · Zoom, as built (flagged off), with the Transcript column added</h2>
+<div class="scroll-x"><div class="win" style="min-width:900px">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div>
+    <div class="titles"><div class="t">Import from Zoom</div><div class="s">martin@stmarystrust.example</div></div>
+    <div class="grow"></div><div class="scope">Last 30 days<span class="chev">⌄</span></div><div class="filter">Filter</div></div>
+  <table>
+    <colgroup><col style="width:26px"><col><col style="width:92px"><col style="width:74px"><col style="width:142px"><col style="width:92px"><col style="width:150px"></colgroup>
+    <thead><tr><th></th><th>Meeting</th><th>Recorded</th><th class="r">Size</th><th class="new">Transcript</th><th>Expires</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr class="day"><th colspan="7">Today</th></tr>
+      <tr class="wait"><td><input type="checkbox" disabled></td>
+        <td><div class="ttl">P14 Interview: triage nurse</div></td>
+        <td class="num">11:02<div class="sub2">48m</div></td><td class="size">44 MB</td>
+        <td><div class="st pending"><span class="w">Expected</span></div></td>
+        <td class="num">in 29 days</td><td><div class="st pending"><span class="spin"></span><span class="w">Waiting for transcript</span></div></td></tr>
+      <tr class="day"><th colspan="7">Tue 23 Sep</th></tr>
+      <tr class="sel"><td><input type="checkbox" checked></td>
+        <td><div class="ttl">P12 Interview: ward sister</div></td>
+        <td class="num">09:30<div class="sub2">55m</div></td><td class="size">51 MB</td>
+        <td><div class="st plain"><span class="w">Available</span></div></td>
+        <td class="num" style="color:var(--warn)">in 5 days</td><td></td></tr>
+      <tr class="sel"><td><input type="checkbox" checked></td>
+        <td><div class="ttl">P13 Interview: discharge planner</div></td>
+        <td class="num">14:00<div class="sub2">41m</div></td><td class="size">38 MB</td>
+        <td><div class="st info"><svg><use href="#i-info"/></svg><span class="w">No speaker names</span></div></td>
+        <td class="num">in 22 days</td><td></td></tr>
+    </tbody>
+  </table>
+  <div class="foot"><span><b>3 meetings</b></span>
+    <label class="incl"><input type="checkbox"> Include 1 waiting on transcription</label>
+    <span class="grow"></span><span class="cap">Project:</span><span class="pick">Ward handover study<span class="chev">⌄</span></span>
+    <button class="btn">Import 2 Recordings</button></div>
+</div></div>
+
+<div class="slab" style="margin-top:22px">7b · THE SAME ACCOUNT WITH “CREATE AUDIO TRANSCRIPT” TURNED OFF: said once, and no empty column</div>
+<div class="scroll-x"><div class="win" style="min-width:900px">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div>
+    <div class="titles"><div class="t">Import from Zoom</div><div class="s">martin@stmarystrust.example</div></div>
+    <div class="grow"></div><div class="scope">Last 30 days<span class="chev">⌄</span></div><div class="filter">Filter</div></div>
+  <div class="bar"><span class="sym"><svg style="color:var(--accent)"><use href="#i-info"/></svg></span>
+    <span>“Create audio transcript” is off in your Zoom settings, so recordings will import without transcripts.</span></div>
+  <table>
+    <colgroup><col style="width:26px"><col><col style="width:92px"><col style="width:74px"><col style="width:92px"><col style="width:150px"></colgroup>
+    <thead><tr><th></th><th>Meeting</th><th>Recorded</th><th class="r">Size</th><th>Expires</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr class="day"><th colspan="6">Tue 23 Sep</th></tr>
+      <tr class="sel"><td><input type="checkbox" checked></td>
+        <td><div class="ttl">P12 Interview: ward sister</div></td>
+        <td class="num">09:30<div class="sub2">55m</div></td><td class="size">51 MB</td>
+        <td class="num" style="color:var(--warn)">in 5 days</td><td></td></tr>
+      <tr class="sel"><td><input type="checkbox" checked></td>
+        <td><div class="ttl">P13 Interview: discharge planner</div></td>
+        <td class="num">14:00<div class="sub2">41m</div></td><td class="size">38 MB</td>
+        <td class="num">in 22 days</td><td></td></tr>
+    </tbody>
+  </table>
+  <div class="foot"><span><b>2 meetings</b></span>
+    <span class="grow"></span><span class="cap">Project:</span><span class="pick">Ward handover study<span class="chev">⌄</span></span>
+    <button class="btn">Import 2 Recordings</button></div>
+</div></div>
+
+<div class="note"><span class="lab">Commentary</span>
+<ul>
+<li><b>Drawn as the adapter builds it today</b>, plus the Transcript column:
+  <ul>
+  <li>The title is the meeting topic, with no attendee line: Zoom's list call has no roster.</li>
+  <li>There is no Scheduled column, because Zoom has no calendar here.</li>
+  <li>Recorded shows the duration in Zoom's whole minutes.</li>
+  <li>Expires comes from <code>auto_delete_date</code>, orange under a week as on every platform.</li>
+  <li>Sizes are small because <code>ZoomFileSelection</code> prefers the <b>audio-only M4A</b> over the video files.</li>
+  </ul></li>
+<li><b>How Zoom says Expected:</b> the host's “Create audio transcript” setting is on, and this recording has no transcript file yet. Zoom typically delivers it a couple of hours after the recording; after 24 h the row turns <i>No transcript</i>. Speaker names arrive as <code>Name: text</code>; Bristlenose rewrites them to voice tags with the existing <code>splitSpeaker</code>.</li>
+<li><b>7b: the setting is account-wide, so it is said once.</b> When it is off, the bar explains, and with nothing to show the Transcript column isn't drawn. The sentence already exists in the adapter as <code>ZoomPreflight.transcriptCaveat</code>, in English and never rendered; it gets a locale key. This bar is <b>info</b>, not a warning: nothing is wrong, the account was simply set up that way.</li>
+<li><b>Before any of this can be seen live</b>, Zoom's sign-in needs the Associated Domains entitlement restored (plan §1b, “Blocker”).</li>
+</ul></div>
+</div>
+</body>
+</html>

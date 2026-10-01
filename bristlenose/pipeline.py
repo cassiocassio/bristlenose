@@ -2840,6 +2840,10 @@ class Pipeline:
         from bristlenose.stages.s03_parse_subtitles import parse_subtitle_file
         from bristlenose.stages.s04_parse_docx import DocxParseRefusedError, parse_docx_file
         from bristlenose.stages.s05_transcribe import transcribe_sessions
+        from bristlenose.stages.transcript_choice import (
+            ParsedTranscriptFile,
+            choose_transcript,
+        )
 
         session_segments: dict[str, list[TranscriptSegment]] = {}
         parse_failures: list[StageFailure] = []
@@ -2881,44 +2885,44 @@ class Pipeline:
             )
 
         for session in sessions:
-            segments: list[TranscriptSegment] = []
-
-            # Try subtitle files first
+            # Every transcript file the session carries is parsed, and then
+            # exactly ONE is used (0d, docs/design-cloud-import-transcripts.md).
+            # Concatenating them gave every turn twice when Teams' .vtt and
+            # .docx sat side by side.
+            candidates: list[ParsedTranscriptFile] = []
             for f in session.files:
                 if f.file_type in (FileType.SUBTITLE_SRT, FileType.SUBTITLE_VTT):
-                    try:
-                        subs = parse_subtitle_file(f)
-                        segments.extend(subs)
-                        logger.info(
-                            "%s: Parsed %d segments from %s",
-                            session.session_id,
-                            len(subs),
-                            f.path.name,
-                        )
-                    except Exception as exc:
-                        _record_parse_failure(
-                            session.session_id, f, "s03_parse_subtitles", exc
-                        )
+                    stage, parse = "s03_parse_subtitles", parse_subtitle_file
+                elif f.file_type == FileType.DOCX:
+                    stage, parse = "s04_parse_docx", parse_docx_file
+                else:
+                    continue
+                try:
+                    parsed = parse(f)
+                except Exception as exc:
+                    _record_parse_failure(session.session_id, f, stage, exc)
+                    continue
+                logger.info(
+                    "%s: Parsed %d segments from %s",
+                    session.session_id,
+                    len(parsed),
+                    f.path.name,
+                )
+                candidates.append(ParsedTranscriptFile(f, parsed))
 
-            # Try docx files
-            for f in session.files:
-                if f.file_type == FileType.DOCX:
-                    try:
-                        docs = parse_docx_file(f)
-                        segments.extend(docs)
-                        logger.info(
-                            "%s: Parsed %d segments from %s",
-                            session.session_id,
-                            len(docs),
-                            f.path.name,
-                        )
-                    except Exception as exc:
-                        _record_parse_failure(
-                            session.session_id, f, "s04_parse_docx", exc
-                        )
-
-            if segments:
-                session_segments[session.session_id] = segments
+            if candidates:
+                chosen, superseded = choose_transcript(candidates)
+                if chosen.segments:
+                    session_segments[session.session_id] = chosen.segments
+                for other in superseded:
+                    # Stated, never silent: the researcher dropped this file in
+                    # and would otherwise believe it was read.
+                    msg = (
+                        f"{session.session_id}: {other.file.path.name} superseded by "
+                        f"{chosen.file.path.name} (one transcript per session)"
+                    )
+                    logger.warning(msg)
+                    _print_warn(msg)
             # If no existing transcript, audio will be transcribed below
 
         # Sessions whose transcript failed to parse and that produced nothing

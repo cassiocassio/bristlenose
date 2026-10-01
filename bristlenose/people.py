@@ -331,6 +331,33 @@ _GENERIC_LABEL_RE = re.compile(
     re.IGNORECASE,
 )
 
+# A dial-in caller's label is their phone number, masked or not —
+# "+44 7700 ****23", "+1 (555) 010-9876". Teams and Zoom both write these.
+# Never a name: it is a digit string, and an unmasked one is PII that would
+# otherwise land in people.yaml as somebody's full_name.
+_MASKED_PHONE_RE = re.compile(r"^\+?[\d\s()*#•·.\-]{6,}$")
+
+
+def is_generic_label(label: str) -> bool:
+    """Is this speaker label a placeholder rather than a person's name?
+
+    True for Whisper/diarisation placeholders ("Speaker A", "SPEAKER_00",
+    "Unknown"), bare numbers, and phone numbers, masked or whole. Every
+    surface that turns a label into a name asks this one question — the
+    people file, the one-transcript-per-session choice, the splitter gate —
+    so a new placeholder shape is added here and nowhere else.
+    """
+    stripped = label.strip()
+    if not stripped:
+        return True
+    if _GENERIC_LABEL_RE.match(stripped):
+        return True
+    if stripped.isdigit():
+        return True
+    if _MASKED_PHONE_RE.match(stripped) and any(ch.isdigit() or ch == "*" for ch in stripped):
+        return True
+    return False
+
 
 def extract_names_from_labels(
     transcripts: list[FullTranscript],
@@ -355,11 +382,8 @@ def extract_names_from_labels(
             continue
         # Pick the most frequent label.
         label = max(label_counts, key=label_counts.get)  # type: ignore[arg-type]
-        # Skip generic labels.
-        if _GENERIC_LABEL_RE.match(label):
-            continue
-        # Skip purely numeric labels.
-        if label.strip().isdigit():
+        # Skip placeholders, numbers and phone labels.
+        if is_generic_label(label):
             continue
         names[pid] = label.strip()
     return names

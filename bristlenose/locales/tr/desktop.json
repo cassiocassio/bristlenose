@@ -1146,7 +1146,18 @@
     "zoomCloudRecordingOff": "Bu Zoom hesab\u0131nda bulut kayd\u0131 kapal\u0131, bu y\u00fczden Bristlenose\u2019un alaca\u011f\u0131 bir \u015fey yok. Kendi Mac\u2019inize kaydedilenler yine de Finder\u2019dan s\u00fcr\u00fcklenebilir.",
     "zoomTranscriptOff": "Zoom kay\u0131t ayarlar\u0131n\u0131zda \u201cSes d\u00f6k\u00fcm\u00fc olu\u015ftur\u201d kapal\u0131, bu y\u00fczden bu kay\u0131tlarla birlikte d\u00f6k\u00fcm gelmeyecek.",
     "restoredEmptyTitle": "Henüz alınacak bir şey yok",
-    "restoredEmptyBody": "Başlamak için Dosya ▸ Al’ı seçin."
+    "restoredEmptyBody": "Başlamak için Dosya ▸ Al’ı seçin.",
+    "columnTranscript": "De\u015fifre",
+    "transcriptAvailable": "Kullan\u0131labilir",
+    "transcriptExpected": "Bekleniyor",
+    "transcriptNone": "De\u015fifre yok",
+    "transcriptNoSpeakerNames": "Konu\u015fmac\u0131 ad\u0131 yok",
+    "transcriptNeedsApproval": "Onay gerekir",
+    "transcriptDidNotArrive": "Gelmedi",
+    "transcriptNotImported": "\u0130\u00e7e aktar\u0131lmad\u0131",
+    "statusWaitingForTranscript": "De\u015fifre bekleniyor",
+    "includeWaiting_one": "De\u015fifre bekleyen {{count}} kayd\u0131 dahil et",
+    "includeWaiting_other": "De\u015fifre bekleyen {{count}} kayd\u0131 dahil et"
   },
   "unsupportedSubset": {
     "title": "Bristlenose klasörleri çözümler",

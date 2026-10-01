@@ -1146,7 +1146,18 @@
     "zoomCloudRecordingOff": "Molninspelning \u00e4r avst\u00e4ngd f\u00f6r det h\u00e4r Zoom-kontot, s\u00e5 det finns inget f\u00f6r Bristlenose att h\u00e4mta. Inspelningar som sparats p\u00e5 din egen Mac kan fortfarande dras in fr\u00e5n Finder.",
     "zoomTranscriptOff": "\u201dSkapa ljudtranskription\u201d \u00e4r avst\u00e4ngt i dina Zoom-inspelningsinst\u00e4llningar, s\u00e5 de h\u00e4r inspelningarna kommer utan transkriptioner.",
     "restoredEmptyTitle": "Inget att importera ännu",
-    "restoredEmptyBody": "Välj Arkiv ▸ Importera för att börja."
+    "restoredEmptyBody": "Välj Arkiv ▸ Importera för att börja.",
+    "columnTranscript": "Transkription",
+    "transcriptAvailable": "Tillg\u00e4nglig",
+    "transcriptExpected": "V\u00e4ntas",
+    "transcriptNone": "Ingen transkription",
+    "transcriptNoSpeakerNames": "Inga talarnamn",
+    "transcriptNeedsApproval": "Kr\u00e4ver godk\u00e4nnande",
+    "transcriptDidNotArrive": "Kom inte fram",
+    "transcriptNotImported": "Inte importerad",
+    "statusWaitingForTranscript": "V\u00e4ntar p\u00e5 transkription",
+    "includeWaiting_one": "Ta med {{count}} som v\u00e4ntar p\u00e5 transkription",
+    "includeWaiting_other": "Ta med {{count}} som v\u00e4ntar p\u00e5 transkription"
   },
   "unsupportedSubset": {
     "title": "Bristlenose analyserar mappar",

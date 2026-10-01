@@ -1146,7 +1146,18 @@
     "zoomCloudRecordingOff": "Pilvitallennus on pois k\u00e4yt\u00f6st\u00e4 t\u00e4ll\u00e4 Zoom-tilill\u00e4, joten Bristlenosella ei ole mit\u00e4\u00e4n haettavaa. Omalle Macille tallennetut tallenteet voi yh\u00e4 vet\u00e4\u00e4 sis\u00e4\u00e4n Finderista.",
     "zoomTranscriptOff": "\u201dLuo \u00e4\u00e4nitekstitys\u201d on pois k\u00e4yt\u00f6st\u00e4 Zoomin tallennusasetuksissa, joten n\u00e4iden tallenteiden mukana ei tule tekstityksi\u00e4.",
     "restoredEmptyTitle": "Ei vielä mitään tuotavaa",
-    "restoredEmptyBody": "Aloita valitsemalla Arkisto ▸ Tuo."
+    "restoredEmptyBody": "Aloita valitsemalla Arkisto ▸ Tuo.",
+    "columnTranscript": "Litterointi",
+    "transcriptAvailable": "Saatavilla",
+    "transcriptExpected": "Tulossa",
+    "transcriptNone": "Ei litterointia",
+    "transcriptNoSpeakerNames": "Ei puhujien nimi\u00e4",
+    "transcriptNeedsApproval": "Vaatii hyv\u00e4ksynn\u00e4n",
+    "transcriptDidNotArrive": "Ei saapunut",
+    "transcriptNotImported": "Ei tuotu",
+    "statusWaitingForTranscript": "Odottaa litterointia",
+    "includeWaiting_one": "Sis\u00e4llyt\u00e4 {{count}} litterointia odottava",
+    "includeWaiting_other": "Sis\u00e4llyt\u00e4 {{count}} litterointia odottavaa"
   },
   "unsupportedSubset": {
     "title": "Bristlenose analysoi kansioita",

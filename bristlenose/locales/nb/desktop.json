@@ -1146,7 +1146,18 @@
     "zoomCloudRecordingOff": "Skyopptak er sl\u00e5tt av for denne Zoom-kontoen, s\u00e5 det er ingenting for Bristlenose \u00e5 hente. Opptak lagret p\u00e5 din egen Mac kan fortsatt dras inn fra Finder.",
     "zoomTranscriptOff": "\u00abLag lydtranskripsjon\u00bb er sl\u00e5tt av i Zoom-opptaksinnstillingene dine, s\u00e5 disse opptakene kommer uten transkripsjoner.",
     "restoredEmptyTitle": "Ingenting å importere ennå",
-    "restoredEmptyBody": "Velg Arkiv ▸ Importer for å begynne."
+    "restoredEmptyBody": "Velg Arkiv ▸ Importer for å begynne.",
+    "columnTranscript": "Transkripsjon",
+    "transcriptAvailable": "Tilgjengelig",
+    "transcriptExpected": "Forventes",
+    "transcriptNone": "Ingen transkripsjon",
+    "transcriptNoSpeakerNames": "Ingen talernavn",
+    "transcriptNeedsApproval": "Krever godkjenning",
+    "transcriptDidNotArrive": "Kom ikke fram",
+    "transcriptNotImported": "Ikke importert",
+    "statusWaitingForTranscript": "Venter p\u00e5 transkripsjon",
+    "includeWaiting_one": "Ta med {{count}} som venter p\u00e5 transkripsjon",
+    "includeWaiting_other": "Ta med {{count}} som venter p\u00e5 transkripsjon"
   },
   "unsupportedSubset": {
     "title": "Bristlenose analyserer mapper",

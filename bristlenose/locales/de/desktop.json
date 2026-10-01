@@ -1146,7 +1146,18 @@
     "zoomCloudRecordingOff": "Cloud-Aufzeichnung ist f\u00fcr dieses Zoom-Konto ausgeschaltet, also gibt es f\u00fcr Bristlenose nichts abzurufen. Auf deinem Mac gespeicherte Aufzeichnungen lassen sich weiterhin aus dem Finder hereinziehen.",
     "zoomTranscriptOff": "\u201eAudiotranskript erstellen\u201c ist in deinen Zoom-Aufzeichnungseinstellungen aus, daher kommen zu diesen Aufzeichnungen keine Transkripte.",
     "restoredEmptyTitle": "Noch nichts zu importieren",
-    "restoredEmptyBody": "Wählen Sie „Ablage“ ▸ „Importieren“, um zu beginnen."
+    "restoredEmptyBody": "Wählen Sie „Ablage“ ▸ „Importieren“, um zu beginnen.",
+    "columnTranscript": "Transkript",
+    "transcriptAvailable": "Verf\u00fcgbar",
+    "transcriptExpected": "Erwartet",
+    "transcriptNone": "Kein Transkript",
+    "transcriptNoSpeakerNames": "Keine Sprechernamen",
+    "transcriptNeedsApproval": "Genehmigung n\u00f6tig",
+    "transcriptDidNotArrive": "Nicht angekommen",
+    "transcriptNotImported": "Nicht importiert",
+    "statusWaitingForTranscript": "Warten auf Transkript",
+    "includeWaiting_one": "{{count}} mit ausstehender Transkription einbeziehen",
+    "includeWaiting_other": "{{count}} mit ausstehender Transkription einbeziehen"
   },
   "unsupportedSubset": {
     "title": "Bristlenose analysiert Ordner",

@@ -1146,7 +1146,18 @@
     "zoomCloudRecordingOff": "La grabaci\u00f3n en la nube est\u00e1 desactivada en esta cuenta de Zoom, as\u00ed que no hay nada que Bristlenose pueda descargar. Las grabaciones guardadas en tu Mac se pueden arrastrar desde el Finder.",
     "zoomTranscriptOff": "\u00abCrear transcripci\u00f3n de audio\u00bb est\u00e1 desactivado en los ajustes de grabaci\u00f3n de Zoom, as\u00ed que estas grabaciones no traer\u00e1n transcripciones.",
     "restoredEmptyTitle": "Todav\u00eda no hay nada que importar",
-    "restoredEmptyBody": "Selecciona Archivo \u25b8 Importar para empezar."
+    "restoredEmptyBody": "Selecciona Archivo \u25b8 Importar para empezar.",
+    "columnTranscript": "Transcripci\u00f3n",
+    "transcriptAvailable": "Disponible",
+    "transcriptExpected": "Prevista",
+    "transcriptNone": "Sin transcripci\u00f3n",
+    "transcriptNoSpeakerNames": "Sin nombres de hablantes",
+    "transcriptNeedsApproval": "Requiere aprobaci\u00f3n",
+    "transcriptDidNotArrive": "No lleg\u00f3",
+    "transcriptNotImported": "No importada",
+    "statusWaitingForTranscript": "Esperando la transcripci\u00f3n",
+    "includeWaiting_one": "Incluir {{count}} a la espera de transcripci\u00f3n",
+    "includeWaiting_other": "Incluir {{count}} a la espera de transcripci\u00f3n"
   },
   "unsupportedSubset": {
     "title": "Bristlenose analiza carpetas",

@@ -733,3 +733,22 @@ Lens,Vy,sv,"Bristlenose's word for one of the five report views. Never the optic
 Lens,Görünüm,tr,"Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review"
 Lens,Подання,uk,"Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review - not Apple's Вид/Вигляд because 'в виде X' reads as 'in the form of X'; reviewer to confirm"
 Lens,檢視,zh-Hant,"Bristlenose's word for one of the five report views. Never the optical word (Apple ships Lens as the camera part in all 21 locales). Apple's own View noun, measured from the shipping .loctable corpus 21 Sep 2026; or the bare lens name in the locale's UI-name quoting (ja/zh-Hant). Build on the same noun as nav.* - never a fresh coinage. PENDING native review - this View noun is for a menu label; in running prose this locale uses the bare lens name in corner brackets, see the rule"
+Transcript,Transcripción,es,QDA-product register; the import window's Transcript column and the transcript states beside it
+Transcript,Transcripció,ca,QDA-product register; the import window's Transcript column and the transcript states beside it
+Transcript,Transcription,fr,QDA-product register; the import window's Transcript column and the transcript states beside it
+Transcript,Transkript,de,QDA-product register; the import window's Transcript column and the transcript states beside it
+Transcript,Trascrizione,it,QDA-product register; the import window's Transcript column and the transcript states beside it
+Transcript,Transcrição,pt-BR,QDA-product register; the import window's Transcript column and the transcript states beside it
+Transcript,Transcrição,pt-PT,QDA-product register; the import window's Transcript column and the transcript states beside it
+Transcript,Transcript,nl,QDA-product register; the import window's Transcript column and the transcript states beside it
+Transcript,Transkription,sv,QDA-product register; the import window's Transcript column and the transcript states beside it
+Transcript,Transskription,da,QDA-product register; the import window's Transcript column and the transcript states beside it
+Transcript,Transkripsjon,nb,QDA-product register; the import window's Transcript column and the transcript states beside it
+Transcript,Litterointi,fi,QDA-product register; the import window's Transcript column and the transcript states beside it
+Transcript,Transkrypcja,pl,QDA-product register; the import window's Transcript column and the transcript states beside it
+Transcript,Přepis,cs,QDA-product register; the import window's Transcript column and the transcript states beside it
+Transcript,Транскрипт,ru,QDA-product register; the import window's Transcript column and the transcript states beside it
+Transcript,Транскрипт,uk,QDA-product register; the import window's Transcript column and the transcript states beside it
+Transcript,Deşifre,tr,QDA-product register; the import window's Transcript column and the transcript states beside it
+Transcript,전사,ko,QDA-product register; the import window's Transcript column and the transcript states beside it
+Transcript,逐字稿,zh-Hant,QDA-product register; the import window's Transcript column and the transcript states beside it

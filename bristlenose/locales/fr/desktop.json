@@ -1146,7 +1146,18 @@
     "zoomCloudRecordingOff": "L\u2019enregistrement dans le cloud est d\u00e9sactiv\u00e9 sur ce compte Zoom : Bristlenose n\u2019a donc rien \u00e0 r\u00e9cup\u00e9rer. Les enregistrements conserv\u00e9s sur votre Mac peuvent toujours \u00eatre gliss\u00e9s depuis le Finder.",
     "zoomTranscriptOff": "\u00ab\u00a0Cr\u00e9er une transcription audio\u00a0\u00bb est d\u00e9sactiv\u00e9 dans vos r\u00e9glages d\u2019enregistrement Zoom : ces enregistrements n\u2019auront donc pas de transcription.",
     "restoredEmptyTitle": "Rien \u00e0 importer pour l\u2019instant",
-    "restoredEmptyBody": "Choisissez Fichier \u25b8 Importer pour commencer."
+    "restoredEmptyBody": "Choisissez Fichier \u25b8 Importer pour commencer.",
+    "columnTranscript": "Transcription",
+    "transcriptAvailable": "Disponible",
+    "transcriptExpected": "Attendue",
+    "transcriptNone": "Pas de transcription",
+    "transcriptNoSpeakerNames": "Sans noms d'intervenants",
+    "transcriptNeedsApproval": "Approbation requise",
+    "transcriptDidNotArrive": "Non re\u00e7ue",
+    "transcriptNotImported": "Non import\u00e9e",
+    "statusWaitingForTranscript": "En attente de la transcription",
+    "includeWaiting_one": "Inclure {{count}} en attente de transcription",
+    "includeWaiting_other": "Inclure {{count}} en attente de transcription"
   },
   "unsupportedSubset": {
     "title": "Bristlenose analyse des dossiers",

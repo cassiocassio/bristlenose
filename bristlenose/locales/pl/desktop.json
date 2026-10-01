@@ -1222,7 +1222,20 @@
     "zoomCloudRecordingOff": "Nagrywanie w chmurze jest wy\u0142\u0105czone na tym koncie Zoom, wi\u0119c Bristlenose nie ma czego pobra\u0107. Nagrania zapisane na Macu wci\u0105\u017c mo\u017cna przeci\u0105gn\u0105\u0107 z Findera.",
     "zoomTranscriptOff": "\u201eUtw\u00f3rz transkrypcj\u0119 audio\u201d jest wy\u0142\u0105czone w ustawieniach nagrywania Zoom, wi\u0119c do tych nagra\u0144 nie b\u0119dzie transkrypcji.",
     "restoredEmptyTitle": "Nie ma jeszcze nic do zaimportowania",
-    "restoredEmptyBody": "Wybierz Plik ▸ Importuj, aby zacząć."
+    "restoredEmptyBody": "Wybierz Plik ▸ Importuj, aby zacząć.",
+    "columnTranscript": "Transkrypcja",
+    "transcriptAvailable": "Dost\u0119pna",
+    "transcriptExpected": "Oczekiwana",
+    "transcriptNone": "Brak transkrypcji",
+    "transcriptNoSpeakerNames": "Brak nazw m\u00f3wc\u00f3w",
+    "transcriptNeedsApproval": "Wymaga zatwierdzenia",
+    "transcriptDidNotArrive": "Nie dotar\u0142a",
+    "transcriptNotImported": "Nie zaimportowano",
+    "statusWaitingForTranscript": "Oczekiwanie na transkrypcj\u0119",
+    "includeWaiting_few": "Uwzgl\u0119dnij {{count}} nagrania oczekuj\u0105ce na transkrypcj\u0119",
+    "includeWaiting_many": "Uwzgl\u0119dnij {{count}} nagra\u0144 oczekuj\u0105cych na transkrypcj\u0119",
+    "includeWaiting_one": "Uwzgl\u0119dnij {{count}} nagranie oczekuj\u0105ce na transkrypcj\u0119",
+    "includeWaiting_other": "Uwzgl\u0119dnij {{count}} nagra\u0144 oczekuj\u0105cych na transkrypcj\u0119"
   },
   "unsupportedSubset": {
     "title": "Bristlenose analizuje foldery",

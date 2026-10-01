@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Moderator identity — failure states and the way out · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css + colors/palette-*.css), the same block
+   person-actions-everywhere.html and codebook-library-states.html carry.
+
+   REUSED verbatim: .bn-person-badge / .bn-speaker-badge--split
+   (molecules/person-badge.css), .bn-speaker-editable-name editing tint
+   (molecules/editable-text.css), the sessions-grid row shape
+   (organisms/sessions-grid.css, reduced to the four columns the argument
+   needs), the "Moderated by …" header string (locales/en/common.json
+   sessions.moderatedBy), the unnamed placeholder words
+   (sessions.speakerPlaceholder.*).
+
+   NEW and therefore FLAGGED "proposed" in the frame chrome: the grouped
+   picker with the bank (design-people.md §B9/§B4), the sweep line with Undo
+   (§B10), the origin mark on a guessed name (people-provenance-paths.html
+   bench 8). Nothing in a "shipped" frame is invented; every one cites the
+   file:line that draws it, read at commit 1446e4d (1 Oct 2026).
+
+   Companion: docs/design-people.md (the spec this report measures against),
+   person-actions-everywhere.html bench 9 (the rename that renumbers),
+   people-provenance-paths.html (the origin marks).
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  /* editing tint (molecules/editable-text.css idiom 3: a name on neutral ground tints) */
+  --bn-field-edit-edge: var(--bn-colour-accent);
+  --bn-field-edit-offset: 1px;
+  --bn-field-edit-fill-on-page: var(--bn-colour-hover);
+  --bn-field-edit-radius: var(--bn-radius-sm);
+  /* commentary-only semantic tints (never in a shipped frame) */
+  --rep-wrong:   light-dark(#b42318, #f97066);
+  --rep-wrong-bg:light-dark(#fef3f2, #3b1d1b);
+  --rep-right:   light-dark(#067647, #75e0a7);
+  --rep-right-bg:light-dark(#ecfdf3, #15362a);
+  --rep-warn:    light-dark(#b54708, #fdb022);
+  --rep-warn-bg: light-dark(#fffaeb, #3d2b0f);
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+}
+/* An explicit viewer choice wins both ways; light-dark() follows color-scheme. */
+:root[data-theme="dark"]  { color-scheme: dark; }
+:root[data-theme="light"] { color-scheme: light; }
+
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap { max-width:960px; margin:0 auto; padding-block:clamp(1.25rem,3vw,3rem) 6rem; padding-inline:clamp(1rem,3vw,2rem); }
+a { color:var(--bn-colour-accent); }
+code, .mono { font-family:var(--bn-font-mono); font-size:.86em; }
+code { background:var(--bn-colour-badge-bg); padding:.05em .3em; border-radius:var(--bn-radius-sm); }
+pre code { background:none; padding:0; }
+h1,h2,h3 { text-wrap:balance; }
+p { max-width:72ch; }
+li { max-width:72ch; }
+
+/* ── masthead + toc ───────────────────────────────────────────────────── */
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2.1rem); margin:.35rem 0 .5rem; font-weight:490; line-height:1.2; }
+.masthead p { color:var(--bn-colour-muted); margin:.4rem 0; }
+.stamp { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-top:.6rem; }
+.toc { columns:2; column-gap:2rem; font-size:var(--bn-text-label); margin:0 0 var(--bn-space-xl); padding:0; list-style:none; }
+.toc li { break-inside:avoid; margin:.2rem 0; }
+.toc li a { text-decoration:none; }
+.toc li a:hover { text-decoration:underline; }
+@media (max-width:600px) { .toc { columns:1; } }
+
+.controls { display:flex; gap:.4rem; align-items:center; margin-bottom:var(--bn-space-lg); flex-wrap:wrap; }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+.pbtn:focus-visible { outline:2px solid var(--bn-colour-accent); outline-offset:2px; }
+
+/* ── the tl;dr ────────────────────────────────────────────────────────── */
+.tldr { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:1rem 1.2rem; margin-bottom:var(--bn-space-xl); background:var(--bn-colour-quote-bg); }
+.tldr h2 { margin:0 0 .5rem; font-size:var(--bn-text-heading); font-weight:490; }
+.tldr ol { margin:.3rem 0 0; padding-left:1.2rem; font-size:var(--bn-text-label); }
+.tldr li { margin:.35rem 0; max-width:80ch; }
+
+/* ── zone key ─────────────────────────────────────────────────────────── */
+.key { display:flex; gap:1.5rem; flex-wrap:wrap; padding:.9rem 1.1rem; border:1px solid var(--bn-colour-border);
+  border-radius:var(--bn-radius-lg); margin-bottom:var(--bn-space-xl); }
+.key-item { display:flex; gap:.6rem; align-items:flex-start; font-size:var(--bn-text-label); flex:1; min-width:16rem; }
+.key-swatch { width:2.4rem; height:2.4rem; border-radius:var(--bn-radius-md); flex-shrink:0; }
+.key-swatch.artefact { border:1px solid var(--bn-colour-border-hover); background:var(--bn-colour-bg); }
+.key-swatch.state { border:1px dashed var(--bn-colour-border-hover); background:var(--bn-colour-quote-bg); }
+.key-swatch.commentary { border-left:3px solid var(--bn-colour-muted);
+  background-image:repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in srgb, var(--bn-colour-muted) 12%, transparent) 5px 10px); }
+.key-item b { font-weight:490; display:block; }
+.key-item span { color:var(--bn-colour-muted); }
+
+/* ── parts + benches ──────────────────────────────────────────────────── */
+.part { font-size:var(--bn-text-caption); font-weight:490; color:var(--bn-colour-accent); text-transform:uppercase;
+  letter-spacing:.05em; margin:3.5rem 0 .3rem; font-family:var(--bn-font-mono); border-top:1px solid var(--bn-colour-border); padding-top:1.4rem; }
+.part small { display:block; text-transform:none; letter-spacing:0; font-family:var(--bn-font-body);
+  color:var(--bn-colour-muted); font-weight:420; margin-top:.25rem; font-size:var(--bn-text-label); }
+.part + h2, .sec-h2 { font-size:var(--bn-text-title); font-weight:490; margin:.2rem 0 .8rem; }
+.prose p, .prose li { font-size:var(--bn-text-body); }
+.prose p { margin:.6rem 0; }
+.prose ul, .prose ol { padding-left:1.2rem; }
+.prose h3 { font-size:var(--bn-text-heading); font-weight:490; margin:1.6rem 0 .4rem; }
+.bench { margin:2.6rem 0; }
+.bench-head h3 { font-size:var(--bn-text-heading); font-weight:490; margin:0 0 .2rem; }
+.bench-head .sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0 0 .9rem; max-width:78ch; }
+.fnum { font-family:var(--bn-font-mono); color:var(--bn-colour-accent); font-size:var(--bn-text-caption); margin-right:.4rem; }
+
+/* frame = screenshot chrome. Everything INSIDE .screen is product pixels. */
+.frame { border:1px solid var(--bn-colour-border-hover); border-radius:var(--bn-radius-lg); overflow:hidden;
+  box-shadow:0 2px 10px var(--bn-colour-shadow); margin-bottom:.9rem; background:var(--bn-colour-bg); }
+.chrome { display:flex; align-items:center; gap:.5rem; padding:.4rem .7rem; border-bottom:1px solid var(--bn-colour-border);
+  background:var(--bn-colour-quote-bg); font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.06em; flex-wrap:wrap; }
+.chrome .dots { display:flex; gap:4px; }
+.chrome .dots i { width:8px; height:8px; border-radius:50%; background:var(--bn-off-track); display:block; }
+.chrome .tag { margin-left:auto; }
+.chrome .tag.shipped { color:var(--bn-colour-muted); }
+.chrome .tag.proposed { color:var(--bn-colour-accent); }
+.chrome .tag.plan { color:var(--rep-warn); }
+.screen { padding:1rem 1.2rem 1.2rem; overflow-x:auto; }
+/* two-pane frame: pixels left, invisible state right */
+.split { display:grid; grid-template-columns:minmax(0,3fr) minmax(0,2fr); }
+.split > .screen { border-right:1px solid var(--bn-colour-border); }
+.state { padding:.9rem 1rem 1.1rem; background:var(--bn-colour-quote-bg); font-size:var(--bn-text-caption); min-width:0; overflow-x:auto; }
+.state-label { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase; letter-spacing:.08em; color:var(--bn-colour-muted); margin-bottom:.45rem; }
+.state pre { margin:0; font-family:var(--bn-font-mono); font-size:.7rem; line-height:1.45; white-space:pre; }
+.state .hl { background:var(--rep-wrong-bg); color:var(--rep-wrong); border-radius:2px; }
+.state .ok { background:var(--rep-right-bg); color:var(--rep-right); border-radius:2px; }
+.state .dim { color:var(--bn-colour-muted); }
+@media (max-width:720px) { .split { grid-template-columns:1fr; } .split > .screen { border-right:none; border-bottom:1px solid var(--bn-colour-border); } }
+
+/* commentary zone — deliberately not-the-product */
+.note { border-left:3px solid var(--bn-colour-muted); border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0;
+  padding:.9rem 1.1rem; margin-bottom:2.2rem;
+  background-image:repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--bn-colour-muted) 9%, transparent) 6px 12px); }
+.note-label { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase; letter-spacing:.08em;
+  color:var(--bn-colour-muted); margin-bottom:.5rem; }
+.st { display:grid; grid-template-columns:auto 1fr; gap:.3rem .8rem; font-size:var(--bn-text-label); align-items:baseline; }
+.st dt { font-weight:490; color:var(--bn-colour-muted); white-space:nowrap; }
+.st dd { margin:0; max-width:80ch; }
+.note p { font-size:var(--bn-text-label); margin:.7rem 0 0; max-width:80ch; }
+.note ul, .note ol { font-size:var(--bn-text-label); margin:.7rem 0 0; padding-left:1.1rem; max-width:80ch; }
+.note li { margin:.25rem 0; }
+@media (max-width:520px) { .st { grid-template-columns:1fr; } .st dt { margin-top:.4rem; } }
+
+/* ── shipped molecules, reused ────────────────────────────────────────── */
+.bn-person-badge { display:inline-flex; align-items:center; gap:0; white-space:nowrap; }
+.bn-speaker-badge--split { display:inline-flex; align-items:center; gap:0; padding:0; border-radius:var(--bn-radius-sm); overflow:hidden; background:none; vertical-align:baseline; }
+.bn-speaker-badge--split .bn-speaker-badge-code { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); padding:var(--bn-space-xs) .4rem;
+  background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-sm); }
+.bn-speaker-badge--split .bn-speaker-badge-name { font-family:var(--bn-font-body); font-size:var(--bn-text-badge); font-weight:var(--bn-weight-emphasis);
+  padding:var(--bn-space-xs) .45rem var(--bn-space-xs) .35rem; background:var(--bn-colour-quote-bg); color:var(--bn-colour-text);
+  border:1px solid var(--bn-colour-border); border-left:none; border-radius:0 var(--bn-radius-sm) var(--bn-radius-sm) 0; }
+.bn-speaker-badge--split .bn-speaker-badge-code:not(:last-child) { border-right:none; border-radius:var(--bn-radius-sm) 0 0 var(--bn-radius-sm); }
+.badge { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); padding:var(--bn-space-xs) .45rem; border-radius:var(--bn-radius-sm);
+  background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); white-space:nowrap; border:1px solid var(--bn-colour-border); }
+
+/* sessions grid, reduced to id · speakers · start · duration (organisms/sessions-grid.css) */
+.sg { display:grid; grid-template-columns:max-content minmax(14rem,max-content) minmax(7rem,1fr) max-content; font-size:var(--bn-text-label); min-width:34rem; }
+.sg-row { display:grid; grid-column:1 / -1; grid-template-columns:subgrid; align-items:start; border-bottom:1px solid var(--bn-colour-border); }
+.sg-row:last-child { border-bottom:none; }
+.sg-row.head { border-bottom-width:2px; font-weight:var(--bn-weight-emphasis); }
+.sg-row.head .sg-cell { padding-block:.6rem; }
+.sg-cell { padding:.5rem var(--bn-space-md); min-width:0; }
+.sg-id a { color:var(--bn-colour-accent); text-decoration:none; }
+.sg-dur { font-variant-numeric:tabular-nums; color:var(--bn-colour-muted); }
+.sg-start { color:var(--bn-colour-muted); }
+.sg-row.focus { background:var(--bn-colour-hover); }
+.bn-session-speaker-entry { display:inline-flex; align-items:center; gap:.3rem; margin:.1rem .9rem .1rem 0; white-space:nowrap; }
+.bn-speaker-editable-name { padding:1px 3px; margin:-1px -3px; border-radius:var(--bn-field-edit-radius); }
+.bn-speaker-editable-name.unnamed { color:var(--bn-colour-muted); font-style:italic; }
+.bn-speaker-editable-name[contenteditable="true"], .bn-speaker-editable-name.editing { outline:1px solid var(--bn-field-edit-edge); outline-offset:var(--bn-field-edit-offset); background:var(--bn-field-edit-fill-on-page); cursor:text; }
+.bn-speaker-editable-name.guess { font-style:italic; }
+.bn-name-pencil { font:inherit; font-size:var(--bn-text-caption); background:none; border:none; color:var(--bn-colour-muted); cursor:pointer; padding:0 .15rem; }
+.bn-name-pencil.on { color:var(--bn-colour-accent); }
+.bn-name-source { font-size:var(--bn-text-micro); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-left:.2rem; }
+/* lens header line, as the Sessions lens renders sessions.moderatedBy */
+.lens-head { display:flex; flex-wrap:wrap; align-items:baseline; gap:.3rem 1rem; margin:0 0 .8rem; }
+.lens-head h4 { margin:0; font-size:var(--bn-text-heading); font-weight:490; }
+.lens-head .mod { color:var(--bn-colour-muted); font-size:var(--bn-text-label); }
+.caret { display:inline-block; width:1px; height:1em; background:var(--bn-colour-text); vertical-align:-2px; margin-left:1px; animation:blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity:0; } }
+@media (prefers-reduced-motion:reduce) { .caret { animation:none; } }
+
+/* transcript page header (TranscriptPage.tsx sticky header + roles line) */
+.tx-head { border-bottom:1px solid var(--bn-colour-border); padding-bottom:.6rem; margin-bottom:.8rem; }
+.tx-head h4 { margin:0 0 .3rem; font-size:var(--bn-text-heading); font-weight:490; }
+.bn-transcript-roles { font-size:var(--bn-text-label); color:var(--bn-colour-muted); }
+.tx-seg { display:grid; grid-template-columns:auto auto 1fr; gap:.6rem; align-items:baseline; font-size:var(--bn-text-label); padding:.3rem 0; }
+.tx-seg .tc { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.tx-seg.segment-moderator .txt { color:var(--bn-colour-muted); }
+
+/* sidebar replica (SessionsSidebar.tsx) */
+.sb { width:220px; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:.6rem; background:var(--bn-colour-quote-bg); font-size:var(--bn-text-label); }
+.sb-h { font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.04em; color:var(--bn-colour-muted); font-weight:490; padding:.3rem .5rem .5rem; }
+.sb-row { display:flex; gap:.45rem; align-items:center; padding:.3rem .5rem; border-radius:var(--bn-radius-md); }
+.sb-row.active { background:var(--bn-colour-hover); }
+.sb-row .n { color:var(--bn-colour-muted); font-variant-numeric:tabular-nums; width:1.6rem; }
+
+/* dashboard header (routes/dashboard.py moderator_header) */
+.dash-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.6rem; margin:.6rem 0 .9rem; }
+.stat { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); padding:.5rem .7rem; }
+.stat b { display:block; font-size:var(--bn-text-title); font-weight:490; font-variant-numeric:tabular-nums; }
+.stat span { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.dash-sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); }
+
+/* agent transcript (MCP client) */
+.agent { display:flex; flex-direction:column; gap:.6rem; max-width:40rem; }
+.agent .turn { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:.6rem .85rem; font-size:var(--bn-text-label); }
+.agent .turn.you { background:var(--bn-colour-hover); border-color:transparent; align-self:flex-end; }
+.agent .turn .who { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase; letter-spacing:.06em; color:var(--bn-colour-muted); margin-bottom:.25rem; }
+.agent .tool { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); background:var(--bn-colour-quote-bg); border-radius:var(--bn-radius-sm); padding:.35rem .5rem; margin:.3rem 0; white-space:pre; overflow-x:auto; }
+
+/* grouped picker (design-people §B9) + sweep line (§B10) — PROPOSED */
+.menu { display:inline-block; min-width:16rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); background:var(--bn-colour-bg); box-shadow:0 8px 24px var(--bn-colour-shadow); padding:.3rem 0; font-size:var(--bn-text-label); }
+.menu .gh { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); padding:.35rem .9rem .15rem; }
+.menu .mi { display:flex; gap:.6rem; align-items:center; padding:.25rem .9rem; }
+.menu .mi.sel { background:var(--bn-colour-accent); color:#fff; }
+.menu .mi.sel .badge { background:rgba(255,255,255,.2); color:#fff; border-color:transparent; }
+.menu .mi .cnt { margin-left:auto; color:var(--bn-colour-muted); font-size:var(--bn-text-caption); }
+.menu .mi.sel .cnt { color:rgba(255,255,255,.8); }
+.menu .sep { border-top:1px solid var(--bn-colour-border); margin:.3rem 0; }
+.sweep { font-size:var(--bn-text-label); margin:.8rem 0 0; padding:.5rem .7rem; border-left:3px solid var(--bn-colour-accent); background:var(--bn-colour-quote-bg); border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; max-width:60ch; }
+.sweep a { margin-left:.5rem; }
+
+/* yaml / log / file blocks inside artefacts */
+.file { font-family:var(--bn-font-mono); font-size:.72rem; line-height:1.5; margin:0; padding:.7rem .9rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); background:var(--bn-colour-quote-bg); white-space:pre; overflow-x:auto; }
+.file .hl { background:var(--rep-wrong-bg); color:var(--rep-wrong); }
+.file .ok { background:var(--rep-right-bg); color:var(--rep-right); }
+.file .dim { color:var(--bn-colour-muted); }
+.file-name { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted); margin:0 0 .3rem; text-transform:uppercase; letter-spacing:.06em; }
+.log { font-family:var(--bn-font-mono); font-size:.72rem; line-height:1.5; margin:0; padding:.7rem .9rem; border-radius:var(--bn-radius-md); background:light-dark(#1a1a1a,#0a0a0a); color:light-dark(#d1d5db,#d1d5db); white-space:pre-wrap; overflow-x:auto; }
+.log .w { color:#fdb022; }
+.two { display:grid; grid-template-columns:1fr 1fr; gap:1rem; align-items:start; }
+@media (max-width:720px) { .two { grid-template-columns:1fr; } }
+.arrow-down { text-align:center; color:var(--bn-colour-muted); font-size:1.2rem; line-height:1; margin:.2rem 0; }
+
+/* ── diagrams (commentary furniture) ─────────────────────────────────── */
+.diagram { margin:1rem 0 1.4rem; overflow-x:auto; }
+.diagram svg { display:block; max-width:100%; height:auto; font-family:var(--bn-font-body); }
+.diagram .bx { fill:var(--bn-colour-bg); stroke:var(--bn-colour-border-hover); }
+.diagram .bx.store { fill:var(--bn-colour-quote-bg); }
+.diagram .bx.bad { stroke:var(--rep-wrong); }
+.diagram .t { fill:var(--bn-colour-text); font-size:12px; }
+.diagram .t.b { font-weight:490; }
+.diagram .m { fill:var(--bn-colour-muted); font-size:11px; }
+.diagram .mono { font-family:var(--bn-font-mono); font-size:11px; fill:var(--bn-colour-text); }
+.diagram .ln { stroke:var(--bn-colour-muted); fill:none; stroke-width:1.2; }
+.diagram .ln.bad { stroke:var(--rep-wrong); }
+.diagram .bad-t { fill:var(--rep-wrong); font-size:11px; font-weight:490; }
+.diagram .ok-t { fill:var(--rep-right); font-size:11px; font-weight:490; }
+
+/* ── tables (commentary furniture) ────────────────────────────────────── */
+.tblwrap { overflow-x:auto; margin:1rem 0 1.6rem; }
+.tbl { width:100%; border-collapse:collapse; font-size:var(--bn-text-label); min-width:40rem; }
+.tbl th, .tbl td { text-align:left; vertical-align:top; padding:.5rem .7rem; border-bottom:1px solid var(--bn-colour-border); }
+.tbl th { font-weight:490; color:var(--bn-colour-muted); text-transform:uppercase; font-size:var(--bn-text-caption); letter-spacing:.05em; }
+.tbl tr:last-child td { border-bottom:none; }
+.tbl td.k { font-weight:490; min-width:10rem; }
+.tbl td.c { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); white-space:nowrap; }
+.pill { display:inline-block; font-size:var(--bn-text-micro); font-weight:490; letter-spacing:.05em; text-transform:uppercase; padding:.1rem .45rem; border-radius:var(--bn-radius-pill); border:1px solid transparent; white-space:nowrap; }
+.pill.open { color:var(--rep-wrong); background:var(--rep-wrong-bg); }
+.pill.blocked { color:var(--rep-warn); background:var(--rep-warn-bg); }
+.pill.free { color:var(--rep-right); background:var(--rep-right-bg); }
+.pill.decided { color:var(--bn-colour-accent); background:var(--bn-colour-hover); }
+.pill.suspect { color:var(--bn-colour-muted); border-color:var(--bn-colour-border); }
+.pill.measured { color:var(--rep-right); border-color:var(--rep-right); }
+.pill.read { color:var(--bn-colour-muted); border-color:var(--bn-colour-border); }
+
+.callout { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); padding:.8rem 1rem; margin:1rem 0; font-size:var(--bn-text-label); background:var(--bn-colour-quote-bg); }
+.callout b { font-weight:490; }
+.quoted { font-size:var(--bn-text-body); border-left:3px solid var(--bn-colour-accent); padding:.5rem .9rem; margin:1rem 0; background:var(--bn-colour-quote-bg); border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; max-width:72ch; }
+.quoted p { margin:0; }
+.quoted .src { display:block; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-top:.4rem; }
+.footer { margin-top:4rem; border-top:1px solid var(--bn-colour-border); padding-top:1rem; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="masthead">
+  <div class="eyebrow">Bristlenose · person identity · report</div>
+  <h1>Moderator identity: what we have, what breaks, what we need</h1>
+  <p>A code-truth report on the one-name-per-code limit as it meets moderators and observers: every prior investigation and decision indexed, the as-built mechanism and schema mapped, and the consequences for the researcher drawn as frames so the failure modes can be designed out rather than argued about.</p>
+  <p class="stamp">Read against commit <code>1446e4d</code> (1 Oct 2026). "Shipped" frames cite the file that draws them. "Measured" claims were observed by someone running code (the transcripts plan, 30 Sep); "read" claims come from reading the code at HEAD without executing it.</p>
+</div>
+
+<div class="controls" aria-label="Palette">
+  <span class="lbl">Palette</span>
+  <button class="pbtn on" data-pal="default" type="button">Default</button>
+  <button class="pbtn" data-pal="edo" type="button">Edo</button>
+</div>
+
+<div class="tldr">
+  <h2>In five sentences</h2>
+  <ol>
+    <li><b>The mechanism is settled and the symptom is live.</b> A speaker code carries exactly one name everywhere in a study (<code>docs/design-people.md</code> §0), participant codes are numbered study-wide, and moderator and observer codes restart at <code>m1</code>/<code>o1</code> in every session (<code>s05b_identify_speakers.py:451</code>). Two moderators in one study therefore share one slot, and one name.</li>
+    <li><b>The decision is taken, not built.</b> Decision 1 (24 Aug 2026): identity lives above codes; the escape is naming, and naming session 9's moderator "Mike" renumbers him to <code>m2</code>. Decision 2 (25 Aug): moderators and observers are named in exports, participants are not. None of the UX that carries either decision exists in the tree, and the register that says the People lens "ships" is wrong.</li>
+    <li><b>The researcher's one available correction makes it worse.</b> The pencil on <code>m1</code> opens an editor in every session at once (measured broken in Chromium and WebKit), a commit renames every session, the server writes one <code>Person</code> row of twelve, and the next run or reload reverts or spreads the edit by whichever row the database returns first.</li>
+    <li><b>It travels.</b> Moderator names are preserved in the HTML export by design, so the wrong colleague is credited with running a session in the one deliverable the recipient cannot check, and the MCP overview answers an agent with the same name for every session.</li>
+    <li><b>The cloud-import transcripts plan is right to defer naming moderators from platform labels</b>, and its study-wide-code idea (Q4) is the cheapest route to a fix, provided the key is the platform's participant id, not a display string, which decision 1's "never auto-merge on name equality" would otherwise forbid.</li>
+  </ol>
+</div>
+
+<ul class="toc">
+  <li><a href="#origin">1 · Where the finding came from</a></li>
+  <li><a href="#prior">2 · Prior investigations, plans, specs, decisions</a></li>
+  <li><a href="#asbuilt">3 · What we have now: mechanism and schema</a></li>
+  <li><a href="#failures">4 · Failure modes, illustrated (F1–F12)</a></li>
+  <li><a href="#designout">5 · What the settled design does about it (D1–D4)</a></li>
+  <li><a href="#gaps">6 · The gap register</a></li>
+  <li><a href="#needs">7 · What we need, in order</a></li>
+  <li><a href="#challenges">8 · The challenges</a></li>
+  <li><a href="#method">9 · Method and what could not be read</a></li>
+</ul>
+
+<div class="key" aria-label="How to read the frames">
+  <div class="key-item"><span class="key-swatch artefact"></span><div><b>Artefact</b><span>Product pixels in a screenshot frame. Shipped frames are the app at <code>1446e4d</code>, drawn from the cited source; proposed frames draw the settled design and say so in their chrome.</span></div></div>
+  <div class="key-item"><span class="key-swatch state"></span><div><b>Invisible state</b><span>What the files and tables hold at that moment: <code>people.yaml</code>, the <code>persons</code> and <code>session_speakers</code> rows, the request on the wire. Red is the wrong value.</span></div></div>
+  <div class="key-item"><span class="key-swatch commentary"></span><div><b>Commentary</b><span>Hatched and ruled. Cause, consequence, who sees it, whether it leaves the machine. Never the product.</span></div></div>
+</div>
+
+<div class="part" id="origin">Part 1 <small>Where the finding came from</small></div>
+<h2>A review finding on the cloud-import transcripts plan</h2>
+<div class="prose">
+<p>The sentence under review is a finding against <code>docs/design-cloud-import-transcripts.md</code> (status: proposal; the HEAD commit of this branch). Its own §0b records the same fact from the other side, and §3 item 1d acts on it:</p>
+<div class="quoted">
+  <p>"1d names participants only in the first slice. <code>people.yaml</code> and the SPA name editor both key on the speaker code, and every session's moderator is <code>m1</code>. So writing moderator names would make the last session processed win, and the SPA editor for <code>m1</code> is itself broken: it opens in every session with an <code>m1</code>, the editors steal focus, and the edit collapses (<code>SessionsTable.tsx:443</code>, measured in Chromium and WebKit). Moderator names wait for study-wide moderator identity."</p>
+  <span class="src">design-cloud-import-transcripts.md §0b, "Names", 1 Oct 2026</span>
+</div>
+<p>The literal wording of the finding ("the rule that every named speaker gets a name will hit that one-name-per-code limit for moderators…") is not in the tree. It belongs to the review log of the 30 Sep eight-agent pass, which the plan cites as the maintainer's private review notes and which this clone does not hold. The plan's "every named speaker" became "every named <b>participant</b>" in 1d as a result of it; that narrowing is the finding, applied.</p>
+<p>The plan is inconsistent about the deferred step it points at. §0 "Deliberately later" calls it <b>1c, study-wide moderator codes by platform participant id, not display name</b>; §3 files the same idea under 1d as <b>"platform-named moderators get study-wide codes by display name: Martin is <code>m1</code> in every session, Mike <code>m2</code>"</b>, and §8 Q4 asks the owner which. The difference between those two keys is the whole of challenge 5 below.</p>
+</div>
+
+<div class="part" id="prior">Part 2 <small>Prior investigations, plans, specs and decisions, indexed</small></div>
+<h2>Everything that has already been said about this</h2>
+<div class="prose">
+<p>The governing document is <code>docs/design-people.md</code> (27 Aug 2026, status pending). It deliberately does not restate the collision; it points at the roadmap's §11c for the mechanics and settles what to do about it. This report follows the same rule: it indexes, it measures, and it does not re-argue a settled decision.</p>
+</div>
+
+<h3 class="sec-h2" style="font-size:var(--bn-text-heading)">A · Design docs and specs</h3>
+<div class="tblwrap"><table class="tbl">
+<tr><th>Document</th><th>What it says about moderators, codes and names</th><th>Decided or deferred</th></tr>
+<tr><td class="k">design-people.md</td><td>§0: <b>a code has one name everywhere in the study</b>; <code>p</code> codes are study-wide, <code>m</code>/<code>o</code> restart per session and that is right for the one-moderator study (~95%). Scale table: the extra person in a session is an observer in ~95% of cases; the <code>m1</code> collision is a tail case. §A J10: "separate one code that is two people" is the one defect that <b>travels into an export</b>. §B4: the bank (moderators and observers only) is blocked on an instance database. §B9: the grouped, creatable picker. §B10: compound undo (rename + renumber as one act). §C4: no FK from quotes or segments to persons, which is why one-name-per-code is free and why the collision is representable. §C5: the name machine, with <code>cleared</code> sticky. §D: naming is step 1, "what naming implies" (the renumber) is step 4. §J: role is a recode; <code>persons.uuid</code>; narrowed PUT payload; the downgrade hazard of any new <code>people.yaml</code> block.</td><td><b>Decision 1 settled 24 Aug 2026</b>: identity above codes; rename in a session renumbers (<code>m1</code> in s9 → <code>m2</code> Mike); the <code>(session, code)</code> rekey of <code>people.yaml</code> rejected because it would let one code carry two names. Never auto-merge on name equality. <b>Decision 2 settled 25 Aug</b>: the participant line governs anonymisation; moderators and observers are named, instance-wide and singular. Open: J4 render-time derivation of codes; H6's two picker specs contradict on one control; the French moderator word; the job-title label.</td></tr>
+<tr><td class="k">design-transcript-speaker-editing-roadmap.md §11</td><td>§11c owns the collision mechanics: last session's <code>m1</code> wins; the static sessions table shows no moderator on earlier sessions; <code>merge_people()</code> keeps a typed name against stats that are now another session's (mislabelling, not loss); the WARNING and its pinned test; the eight readers a rekey would have touched. 11a/11b (<code>person_links</code>, merge UI) demoted to a back-fill.</td><td>Superseded note, 25 Aug 2026: the rekey "was considered and rejected"; the collision is "the name model working correctly on a code that names two people"; the work moves to the renumber-and-remap path.</td></tr>
+<tr><td class="k">design-speaker-editing.md</td><td>Four transcript operations; naming is "a pick, not a keystroke" (trued 25 Aug); the quote-attribution recommendation superseded by §B9; open: pipeline re-runs overwriting corrections.</td><td>Operation 1 corrected to bank-not-free-text. Open questions at lines 216–226.</td></tr>
+<tr><td class="k">design-speaker-role-detection.md</td><td>Why role detection failed on non-UXR formats (FOSSDA: "Moderated by Zach" with interviewees coded <code>m1</code>); options B and C shipped (word-count asymmetry, generalised prompt). Keeps the enum value <code>researcher</code>.</td><td>Shipped Apr 2026. Renaming the enum "worth doing" but not done; the <code>[RESEARCHER]</code> round-trip pins it.</td></tr>
+<tr><td class="k">design-html-report.md § People file, § Moderator identification</td><td>The people file; auto name/role extraction (LLM beats label; human edits never overwritten); "Phase 1: per-session only, no cross-session moderator linking"; "Phase 2 (not yet implemented): cross-session moderator linking (<code>same_as</code> field)".</td><td>Phase 2 is <b>stale</b>: superseded by decision 1 but not marked so. Candidate for a truing pass.</td></tr>
+<tr><td class="k">design-multi-project.md §2</td><td>The person identity model across projects: <code>person_links</code>, the UUID requirement, folder scoping, transitivity; "a freelance moderator runs 3 studies: <code>m1</code> in each, Person rows separate"; principle 4, "I'm m1" is opt-in; §7 "profile → moderator connection: UX research needed".</td><td>Status note (H0): suggestion-driven linking demoted to the back-fill; the bank prevents the duplicates it would reconcile.</td></tr>
+<tr><td class="k">design-cloud-import.md</td><td>Line 1135/1151: "'you' is the organiser, not necessarily the moderator… must not auto-assign the signed-in user as moderator"; roster names are provisional; §8 whether to trust platform transcripts, open.</td><td>Decided: the signed-in account is never auto-made <code>m1</code>.</td></tr>
+<tr><td class="k">design-cloud-import-transcripts.md</td><td>§0b Names (quoted above); §2 measured: "all sessions' <code>m1</code> share one name, sometimes the wrong person's; a platform name loses to the LLM's guess ('Pri')"; §3 1d; §0a reuse map row "Moderator codes: deferred"; §8 Q4.</td><td>Deferred out of the first slice; Q4 open to the owner; the §0/§3 key disagreement unresolved.</td></tr>
+<tr><td class="k">design-platform-transcripts.md</td><td>3c "preserve platform speaker names" and 5c, both unchecked.</td><td>Open.</td></tr>
+<tr><td class="k">design-export-html.md · design-export-sharing.md · SECURITY.md</td><td>The anonymisation boundary: <code>p*</code> blanked, <code>m*</code>/<code>o*</code> kept; SECURITY.md:192 corrects "stripped by default" (it is not); line 194 states the participant line.</td><td>Decision 2 encoded; the hint string was corrected (en reads "Moderators and observers keep their names").</td></tr>
+<tr><td class="k">glossary.md · design-decisions.md</td><td>Rows for moderator / participant / observer / speaker / turn (H1); <code>researcher</code> stays the stored value. design-decisions.md:382–384 still says exports strip names by default and uses the retired "research team" rationale.</td><td>Three stale claims in design-decisions.md; truing owed.</td></tr>
+<tr><td class="k">Mockups</td><td><code>person-actions-everywhere.html</code> (bench 9: "Mike is now m2 in session 9. Martin stays m1 in sessions 1–8", with Undo); <code>people-lens-scopes.html</code> (bench 2 recommended the <code>(session, code)</code> rekey, now superseded; H7 judged the file UPDATE, edits pending); <code>people-provenance-paths.html</code> (origin marks "From the transcript / Heard in the session / You set this"; bench 8: a confirmed name must be a recorded state).</td><td><b>STATUS.md is wrong for two of them</b>: it lists <code>person-actions-everywhere.html</code> as "IMPLEMENTED — person actions ship across surfaces" and <code>people-lens-scopes.html</code> as "IMPLEMENTED — the people lens ships". The router has no People route and <code>frontend/src</code> has zero <code>onContextMenu</code> handlers. Gap G17.</td></tr>
+</table></div>
+
+<h3 class="sec-h2" style="font-size:var(--bn-text-heading)">B · Plans, TODO and tracker items</h3>
+<div class="tblwrap"><table class="tbl">
+<tr><th>Where</th><th>What it records</th><th>State</th></tr>
+<tr><td class="k">TODO.md:265–269 (22 Aug 2026)</td><td>The two-session repro; the stages CLAUDE.md line that said the opposite corrected; "<b>Not re-keyed, deliberately</b>"; the aggregated WARNING added; "a log line is the weakest available surface for 'your report is missing a moderator'".</td><td>Open design call: which <code>MessageKind</code> (design-pipeline-diagnostic-popover.md) the collision earns.</td></tr>
+<tr><td class="k">TODO.md:583 (27 Aug 2026)</td><td>Two more surfaces key on the bare code and were unrecorded: <code>grounding.py</code> resolves names <b>first-wins</b> (the MCP and chat-lens answer carries one moderator's name for every session), and the DOM test ids <code>bn-name-m1</code> collide. "Three surfaces, three policies for one datum." Sequencing inverts: no failing test for the header or provenance chips can be written until the renumber exists, because <code>people.yaml</code> cannot hold two <code>m1</code> names; the <code>sessions.py</code> header dedup is <b>blocked, not deferred</b>.</td><td>Open; sequencing settled (renumber first).</td></tr>
+<tr><td class="k">README.md:313 · docs/ROADMAP.md:38</td><td>"Cross-session moderator linking … (currently each session tracks moderators independently)" / "Cross-session speaker linking".</td><td>Stale framing (linking is the back-fill, naming is the mechanism).</td></tr>
+<tr><td class="k">GitHub #25, #26</td><td>#25 "Moderator identification Phase 2: cross-session linking" (opened 4 Feb 2026) asked for <code>same_as</code>, auto-linking signals and a linking UI.</td><td>Closed <b>not planned</b> 27 Sep 2026: "Superseded by docs/design-people.md". #26 closed the same day.</td></tr>
+<tr><td class="k">Pinned tests</td><td><code>tests/test_people.py::test_multi_session_moderator_codes_collide_and_are_warned</code> pins "the limitation, not a desired end state" and requires the loss be announced. <code>test_moderator_identification.py::test_two_researchers</code> pins <code>m1</code>+<code>m2</code> within one session. <code>SessionsTable.test.tsx</code> "m1 appears in both sessions" renders two pencils for one person. <code>SessionsSidebar.test.tsx</code>'s MULTI_MODERATOR fixture uses <code>m1</code> in s1 and <code>m2</code> in s2, a shape the pipeline cannot produce across sessions.</td><td>The transcripts plan says the collision test "stays as is". Re-home, never delete, when the renumber lands (CLAUDE.md: a test pinning a contract outlives the default it is phrased around).</td></tr>
+</table></div>
+
+<h3 class="sec-h2" style="font-size:var(--bn-text-heading)">C · What shipped, and when</h3>
+<div class="tblwrap"><table class="tbl">
+<tr><th>Date</th><th>Commit / release</th><th>Change</th></tr>
+<tr><td class="c">31 Jan 2026</td><td class="c">83746ae9 · 0.4.1</td><td>The people file and display names.</td></tr>
+<tr><td class="c">1 Feb 2026</td><td class="c">0.6.2</td><td>Names editable; auto name/role extraction. "LLM results take priority over metadata, human edits never overwritten."</td></tr>
+<tr><td class="c">2–3 Feb 2026</td><td class="c">202136fc · 0.6.8</td><td>Moderator identification Phase 1 with <b>per-session</b> codes. The counters that restart date from here.</td></tr>
+<tr><td class="c">11 Feb 2026</td><td class="c">f2c42b51 · 0.9.1</td><td>Moderator and observer names in project stats ("Moderated by …").</td></tr>
+<tr><td class="c">14 Feb 2026</td><td class="c">9dd2f42f</td><td><code>Person</code> and <code>SessionSpeaker</code> schema; the docstring says the join "makes cross-session moderator linking possible". Nothing has ever written a shared <code>person_id</code>.</td></tr>
+<tr><td class="c">23 Feb 2026</td><td class="c">45380392</td><td>Names architecture: YAML canonical, DB materialised, write-through.</td></tr>
+<tr><td class="c">28 Feb 2026</td><td class="c">02767c2a</td><td>Inline name editing in the sessions table, keyed by code.</td></tr>
+<tr><td class="c">16 Apr 2026</td><td class="c">3bb355ed · bec69b96</td><td>Speaker detection rewrite and the four speaker design docs.</td></tr>
+<tr><td class="c">17 Jul 2026</td><td class="c">ae522367</td><td>Moderator detection fix: the stored role is never "moderator"; surfaces key on the <code>m</code> prefix.</td></tr>
+<tr><td class="c">31 Jul 2026</td><td class="c">6a84dca6 · 0.23.0</td><td>MCP Anonymise switch; <code>grounding.resolve_speaker_names</code> (first-wins by code).</td></tr>
+<tr><td class="c">19–20 Aug 2026</td><td class="c">773707fb · 57777276</td><td>The first §11c text and the provenance mockup; "a moderator lost to a code collision now says so" (the WARNING). The commit body: "This does not fix that."</td></tr>
+<tr><td class="c">22 Aug 2026</td><td class="c">c106f8a9 · 0.27.0</td><td>"Not re-keyed by (session_id, code)"; Re-analyse counts renamed speakers (desktop).</td></tr>
+<tr><td class="c">27 Aug 2026</td><td class="c">52146963 · c188db76 · deb62808 · 5a43c829</td><td>design-people.md lands; glossary vocabulary; <code>[OBSERVER]</code> in the extraction prompt and job titles blanked under anonymise; TODO.md:583.</td></tr>
+<tr><td class="c">31 Aug 2026</td><td class="c">0.29.0</td><td>Exports not anonymised by default; speaker ID runs before PII redaction.</td></tr>
+<tr><td class="c">21–22 Sep 2026</td><td class="c">5bcd9c9b · 12c7c9b4</td><td>design-people's "nothing here is built" corrected (the file and endpoints do ship); the i18n wiring plan archived, unblocking the dead speaker-role keys.</td></tr>
+<tr><td class="c">27 Sep 2026</td><td class="c">#25 closed</td><td>Phase 2 linking closed not-planned, superseded by design-people.</td></tr>
+<tr><td class="c">30 Sep–1 Oct 2026</td><td class="c">3a302803 · 1446e4d</td><td>The whole-transcript splitting experiment; the cloud-import transcripts plan with the finding this report answers.</td></tr>
+</table></div>
+
+<h3 class="sec-h2" style="font-size:var(--bn-text-heading)">D · The prompts</h3>
+<div class="prose">
+<ul>
+  <li><code>llm/prompts/speaker-identification.md</code> (v0.1.1): reads about the first five minutes; roles <code>researcher</code> (the one who "drives the conversation"), <code>participant</code>, <code>observer</code>; extracts <code>person_name</code> and <code>job_title</code>; a prompt-injection guard on names. This is where a moderator's name comes from on a Whisper transcript, once per session, from one five-minute window.</li>
+  <li><code>llm/prompts/speaker-splitting.md</code> (v0.1.1): the common case is "interviewer + interviewee"; the sample window is the open question the 30 Sep labelling answers.</li>
+  <li><code>llm/prompts/quote-extraction.md</code> rule 1 names <code>[RESEARCHER]</code> and, since 27 Aug, <code>[OBSERVER]</code>: "an observer is never a data source".</li>
+</ul>
+</div>
+
+<h3 class="sec-h2" style="font-size:var(--bn-text-heading)">E · Open questions explicitly recorded somewhere</h3>
+<div class="prose">
+<ul>
+  <li><b>Q4</b> (transcripts plan §8): when the platform names the moderator, a study-wide code? And the §0 vs §3 disagreement on the key (participant id vs display name).</li>
+  <li><b>J4</b> (design-people §J): can code derivation be render-time only, leaving <code>transcripts-raw/</code> bracket tokens as provenance, or must a recode rewrite them? Decides whether step 4 is medium or large.</li>
+  <li><b>H6</b>: <code>New Moderator…</code> as an anchored popover with a text field over the bank, or a pure <code>NSMenu</code> submenu. "A text field is what an NSMenu cannot host."</li>
+  <li><b>I5</b>: <code>Not a Speaker</code> semantics; <code>Not the Same Person</code> placement; <code>Role in All N Sessions</code> on a mixed row; three unprecedented chrome nouns (lens, client, study); common-word suppression.</li>
+  <li><b>H1 owner calls</b>: fr <i>Animateur</i> vs <i>Modérateur</i> (the same person named two ways in one report today); the job-title label; <code>Someone New…</code>.</li>
+  <li><b>TODO.md:269</b>: which <code>MessageKind</code> the collision warning earns on the pill or popover.</li>
+  <li><b>§F</b>: S13 silent observers (deferred, "commoner than it looks"); S16 focus groups; S17 double import (a people symptom with a session-management mechanism).</li>
+  <li><b>The bank's store</b>: blocked until the instance database of design-multi-project.md §2 exists; <code>~/.config/bristlenose/bristlenose.db</code> is occupied, so it is <code>instance.db</code>.</li>
+</ul>
+</div>
+
+<div class="part" id="asbuilt">Part 3 <small>What we have now: the mechanism, the schema, and who wins</small></div>
+<h2>How a moderator's name gets to the screen</h2>
+<div class="prose">
+<p>Seven hops, every one of them keyed by the bare speaker code. Read left to right: the pipeline mints codes, the people file keeps one entry per code, the serve importer fans that one entry out into one <code>Person</code> row per session, and the routes fold it back by code in three different ways.</p>
+</div>
+<div class="diagram" aria-label="Name flow from pipeline to surfaces">
+<svg viewBox="0 0 940 300" width="940" height="300" role="img">
+  <!-- row 1: pipeline -->
+  <rect class="bx" x="10" y="20" width="150" height="62" rx="6"/>
+  <text class="t b" x="20" y="40">s05b · assign codes</text>
+  <text class="m" x="20" y="56">mod_counter = 0 per session</text>
+  <text class="mono" x="20" y="72">m1 m1 m1 … m1</text>
+
+  <rect class="bx" x="190" y="20" width="150" height="62" rx="6"/>
+  <text class="t b" x="200" y="40">s05b · LLM, first 5 min</text>
+  <text class="m" x="200" y="56">person_name per session</text>
+  <text class="mono" x="200" y="72">s12 → "Martin", s9 → "Mike"</text>
+
+  <rect class="bx bad" x="370" y="20" width="170" height="62" rx="6"/>
+  <text class="t b" x="380" y="40">pipeline.py:2152</text>
+  <text class="m" x="380" y="56">pid_speaker_info[code] = info</text>
+  <text class="bad-t" x="380" y="72">last session iterated wins</text>
+
+  <rect class="bx store bad" x="570" y="20" width="170" height="62" rx="6"/>
+  <text class="t b" x="580" y="40">people.yaml</text>
+  <text class="m" x="580" y="56">participants: dict[code]</text>
+  <text class="bad-t" x="580" y="72">one entry for m1, 12 sessions</text>
+
+  <rect class="bx" x="770" y="20" width="160" height="62" rx="6"/>
+  <text class="t b" x="780" y="40">people.py:244</text>
+  <text class="m" x="780" y="56">merge_people: editable kept</text>
+  <text class="m" x="780" y="72">by key, computed replaced</text>
+
+  <path class="ln" d="M160 51 H190"/><path class="ln" d="M340 51 H370"/><path class="ln bad" d="M540 51 H570"/><path class="ln" d="M740 51 H770"/>
+
+  <!-- row 2: serve -->
+  <rect class="bx" x="570" y="120" width="170" height="62" rx="6"/>
+  <text class="t b" x="580" y="140">importer.py:870</text>
+  <text class="m" x="580" y="156">new Person per (session, code)</text>
+  <text class="m" x="580" y="172">name = people[code]</text>
+  <path class="ln bad" d="M655 82 V120"/>
+
+  <rect class="bx store" x="370" y="120" width="170" height="62" rx="6"/>
+  <text class="t b" x="380" y="140">persons × 12</text>
+  <text class="m" x="380" y="156">all seeded "Martin Storey"</text>
+  <text class="m" x="380" y="172">session_speakers (sid, m1)</text>
+  <path class="ln" d="M570 151 H540"/>
+
+  <!-- row 3: readers -->
+  <rect class="bx" x="10" y="215" width="150" height="70" rx="6"/>
+  <text class="t b" x="20" y="235">GET /people</text>
+  <text class="m" x="20" y="251">dict by code, no ORDER BY</text>
+  <text class="bad-t" x="20" y="267">last row returned wins</text>
+
+  <rect class="bx" x="190" y="215" width="150" height="70" rx="6"/>
+  <text class="t b" x="200" y="235">PUT /people</text>
+  <text class="m" x="200" y="251">.first() for the code</text>
+  <text class="bad-t" x="200" y="267">one row of twelve written</text>
+
+  <rect class="bx" x="370" y="215" width="170" height="70" rx="6"/>
+  <text class="t b" x="380" y="235">/sessions /dashboard</text>
+  <text class="t b" x="380" y="251">/transcripts /quotes</text>
+  <text class="ok-t" x="380" y="267">per (session, code) row</text>
+
+  <rect class="bx" x="570" y="215" width="170" height="70" rx="6"/>
+  <text class="t b" x="580" y="235">grounding.py:449</text>
+  <text class="m" x="580" y="251">names.setdefault(code, name)</text>
+  <text class="bad-t" x="580" y="267">first row wins (MCP, chat)</text>
+
+  <rect class="bx" x="770" y="215" width="160" height="70" rx="6"/>
+  <text class="t b" x="780" y="235">SessionsTable.tsx:439</text>
+  <text class="m" x="780" y="251">people[code].short_name</text>
+  <text class="m" x="780" y="267">before the per-session name</text>
+
+  <path class="ln" d="M455 182 V200 H85 V215"/><path class="ln" d="M455 200 H265 V215"/><path class="ln" d="M455 200 V215"/><path class="ln" d="M455 200 H655 V215"/>
+  <path class="ln" d="M85 285 V292 H850 V285"/>
+</svg>
+</div>
+
+<div class="note">
+  <div class="note-label">Commentary — the three stores and their keys</div>
+  <dl class="st">
+    <dt>people.yaml</dt><dd><code>PeopleFile.participants: dict[str, PersonEntry]</code> keyed by code (<code>models.py:476</code>). <code>compute_participant_stats</code> overwrites <code>stats[code]</code> per session and logs one WARNING per run naming the sessions (<code>people.py:194–225</code>). <code>merge_people</code> keeps the <i>editable</i> block by key, so a typed name outlives the stats it was typed against.</dd>
+    <dt>bristlenose.db</dt><dd><code>session_speakers</code> is unique on <code>(session_id, speaker_code)</code> and is the <b>only</b> foreign key to <code>persons</code> (<code>server/models.py:286–311</code>). The importer creates a <b>new</b> <code>Person</code> per (session, code) and seeds its name from the flat <code>people[code]</code> (<code>importer.py:870–908</code>). The join that "makes cross-session moderator linking possible" has never been written to by anything.</dd>
+    <dt>transcripts-raw/*.txt</dt><dd>Every line carries its code in brackets, <code>[00:16] [m1] (Speaker B) …</code>; the importer re-derives role from the prefix (<code>importer.py:870–877</code>). A recode that is not render-time has to rewrite these.</dd>
+    <dt>Not stored anywhere</dt><dd>The original speaker labels, the label→code map, name origin, "this guess was checked", and a <code>cleared</code> state. Absence is the only signal, and the pipeline refills absence (<code>people.py:373–400</code>).</dd>
+  </dl>
+</div>
+
+<h3 class="sec-h2" style="font-size:var(--bn-text-heading)">The schema, as it stands</h3>
+<div class="diagram" aria-label="Entity relationships around persons">
+<svg viewBox="0 0 900 250" width="900" height="250" role="img">
+  <rect class="bx store" x="330" y="15" width="240" height="78" rx="6"/>
+  <text class="t b" x="342" y="35">persons — instance-scoped, no project_id</text>
+  <text class="mono" x="342" y="53">id · full_name · short_name · role_title</text>
+  <text class="mono" x="342" y="69">persona · notes · created_at</text>
+  <text class="m" x="342" y="85">no unique constraint; "two Jim Smith rows are fine"</text>
+
+  <rect class="bx store" x="330" y="125" width="240" height="94" rx="6"/>
+  <text class="t b" x="342" y="145">session_speakers</text>
+  <text class="mono" x="342" y="163">session_id FK · person_id FK</text>
+  <text class="mono" x="342" y="179">speaker_code "m1" · speaker_role "researcher"</text>
+  <text class="mono" x="342" y="195">words_spoken · pct_* (never written)</text>
+  <text class="m" x="342" y="211">UNIQUE(session_id, speaker_code)</text>
+  <path class="ln" d="M450 93 V125"/><text class="m" x="458" y="113">person_id — the only FK to persons</text>
+
+  <rect class="bx" x="40" y="140" width="220" height="64" rx="6"/>
+  <text class="t b" x="52" y="160">sessions</text>
+  <text class="mono" x="52" y="178">session_id "s9" · session_number</text>
+  <text class="m" x="52" y="194">UNIQUE(project_id, session_id)</text>
+  <path class="ln" d="M260 172 H330"/>
+
+  <rect class="bx" x="640" y="125" width="230" height="46" rx="6"/>
+  <text class="t b" x="652" y="145">transcript_segments</text>
+  <text class="mono" x="652" y="161">speaker_code "m1" (plain String(20))</text>
+  <path class="ln" d="M640 148 H570" stroke-dasharray="4 3"/>
+  <text class="m" x="590" y="112">no FK —</text>
+  <text class="m" x="590" y="124">by convention</text>
+
+  <rect class="bx" x="640" y="190" width="230" height="46" rx="6"/>
+  <text class="t b" x="652" y="210">quotes</text>
+  <text class="mono" x="652" y="226">participant_id "p4" · session_id "s9" (strings)</text>
+  <path class="ln" d="M640 213 H570" stroke-dasharray="4 3"/>
+  <text class="m" x="590" y="246">stable key (project, session, participant_id, start)</text>
+</svg>
+</div>
+
+<div class="note">
+  <div class="note-label">Commentary — why the schema can hold the collision, and why it cannot represent the fix yet</div>
+  <p>Nothing in the schema says a code names one person: the join key from a quote or a segment to a person is a string resolved by convention, so <code>(s1, m1)</code> and <code>(s9, m1)</code> are two <code>session_speakers</code> rows pointing at two <code>persons</code> rows that both read "Martin Storey". That is design-people §C4's point: the denormalisation is why renaming by code is free, and why the schema never objects to one code carrying two humans. The rows that could carry the fix exist (<code>session_speakers.person_id</code> could point two sessions at one person; a second moderator could be <code>m2</code>) and nothing writes them. There is no role endpoint, no rename-with-renumber endpoint, and no create-a-person endpoint (<code>routes/data.py</code> exposes <code>GET</code>/<code>PUT /people</code> only).</p>
+</div>
+
+<h3 class="sec-h2" style="font-size:var(--bn-text-heading)">Which name wins when one code has several</h3>
+<div class="tblwrap"><table class="tbl">
+<tr><th>Surface</th><th>Key</th><th>Rule at 1446e4d</th><th>Where</th></tr>
+<tr><td class="k">people.yaml</td><td>code</td><td>One entry; computed stats from the <b>last session</b> in order; a typed name stays with the key whatever the stats now describe</td><td><code>people.py:194–225</code>, <code>:244–275</code></td></tr>
+<tr><td class="k">Auto-fill from the LLM</td><td>code</td><td>The <b>last session iterated</b> supplies <code>m1</code>'s guess, even when that session's guess is empty; observers are never filled at all</td><td><code>pipeline.py:2152–2162</code>, <code>people.py:373–400</code></td></tr>
+<tr><td class="k">GET /people</td><td>code</td><td>Iterates every speaker row with no ORDER BY; the <b>last row returned</b> wins</td><td><code>routes/data.py:307–332</code></td></tr>
+<tr><td class="k">PUT /people</td><td>code</td><td><code>.first()</code> speaker row for the code; writes <b>one</b> Person of N; then YAML write-through by code</td><td><code>routes/data.py:335–374</code>, <code>:223–299</code></td></tr>
+<tr><td class="k">/sessions, /dashboard, /transcripts, /quotes, clips</td><td>(session, code)</td><td>The per-session Person row, which the importer seeded from the one YAML entry, so they agree with each other and disagree with nothing until a PUT splits them</td><td><code>routes/sessions.py:139–150</code>, <code>routes/dashboard.py:613–622</code></td></tr>
+<tr><td class="k">"Moderated by …" header</td><td>name</td><td>De-duplicated by <b>name</b>, so two moderators with one name read as one</td><td><code>routes/sessions.py:152–158</code></td></tr>
+<tr><td class="k">Sessions sidebar</td><td>name</td><td>"Multiple moderators" means more than one distinct <b>name</b>; shows only <code>moderators[0]</code>'s code</td><td><code>SessionsSidebar.tsx:28–37</code>, <code>:302–304</code></td></tr>
+<tr><td class="k">React sessions table</td><td>code</td><td>Prefers <code>/people</code>'s short name over the per-session name; the editor state is keyed by code</td><td><code>SessionsTable.tsx:131</code>, <code>:439–443</code></td></tr>
+<tr><td class="k">MCP overview, chat lens</td><td>code</td><td><code>names.setdefault</code>: the <b>first</b> non-empty name wins; <code>{}</code> for everyone when Anonymise is on</td><td><code>grounding.py:418–450</code></td></tr>
+<tr><td class="k">CSV / XLSX</td><td>(session, code)</td><td><code>full_name</code> only; participants only (no moderator rows exist in a quotes export)</td><td><code>export_core.py:311–330</code></td></tr>
+<tr><td class="k">Static report (sealed)</td><td>code</td><td>Rows grouped by <code>computed.session_id</code>, so the moderator appears under the last session only; dropped from rows entirely when there is exactly one moderator code</td><td><code>s12_render/dashboard.py:61–101</code></td></tr>
+</table></div>
+
+<div class="callout"><b>Three policies for one datum.</b> YAML is last-session-wins, <code>GET /people</code> is last-row-wins, <code>PUT /people</code> is first-row-wins, the MCP is first-row-wins, and the per-session routes are correct by construction and seeded wrong. None of them is a bug in isolation; together they mean the researcher cannot predict what a rename will do, which is the property frames F3–F5 draw.</div>
+
+<div class="part" id="failures">Part 4 <small>Failure modes, illustrated — the pinned cast: ward handover app, round 2, 12 sessions, Jan 2026. Martin Storey (you) moderated every session except 9, which Mike Alvarez covered. Jane Smith (client-side, Meridian Health) observed s1 and s3; Tom Blake observed s3.</small></div>
+<h2>What the researcher sees, and what the files hold</h2>
+
+<!-- ───────────────────────────── F1 ───────────────────────────── -->
+<div class="bench" id="f1">
+  <div class="bench-head"><h3><span class="fnum">F1</span>Twelve sessions, one moderator slot</h3>
+    <p class="sub">The Sessions lens the morning after the run. Every row carries <code>m1</code>, and every <code>m1</code> carries the one name the slot can hold. Session 9 was Mike's.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>Sessions lens · serve mode · 1446e4d</span><span class="tag shipped">shipped · read from code</span></div>
+    <div class="split">
+      <div class="screen">
+        <div class="lens-head"><h4>Sessions</h4><span class="mod">Moderated by Martin Storey</span></div>
+        <div class="sg" role="table">
+          <div class="sg-row head"><div class="sg-cell">#</div><div class="sg-cell">Speakers</div><div class="sg-cell">Start</div><div class="sg-cell">Duration</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#f1">#1</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Martin Storey</span><button class="bn-name-pencil" type="button" aria-label="Edit name for m1">&#x270E;</button></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p1</span></span></span><span class="bn-speaker-editable-name">Sarah Chen</span><button class="bn-name-pencil" type="button" aria-label="Edit name for p1">&#x270E;</button></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">o1</span></span></span><span class="bn-speaker-editable-name unnamed">Observer</span><button class="bn-name-pencil" type="button" aria-label="Edit name for o1">&#x270E;</button></span></div><div class="sg-cell sg-start">6 Jan 2026</div><div class="sg-cell sg-dur">48:02</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#f1">#2</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Martin Storey</span><button class="bn-name-pencil" type="button" aria-label="Edit name for m1">&#x270E;</button></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p2</span></span></span><span class="bn-speaker-editable-name">Amara Nwosu</span><button class="bn-name-pencil" type="button" aria-label="Edit name for p2">&#x270E;</button></span></div><div class="sg-cell sg-start">6 Jan 2026</div><div class="sg-cell sg-dur">39:51</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#f1">#8</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Martin Storey</span><button class="bn-name-pencil" type="button" aria-label="Edit name for m1">&#x270E;</button></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p8</span></span></span><span class="bn-speaker-editable-name">Femi</span><button class="bn-name-pencil" type="button" aria-label="Edit name for p8">&#x270E;</button></span></div><div class="sg-cell sg-start">13 Jan 2026</div><div class="sg-cell sg-dur">51:17</div></div>
+          <div class="sg-row focus"><div class="sg-cell sg-id"><a href="#f1">#9</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Martin Storey</span><button class="bn-name-pencil" type="button" aria-label="Edit name for m1">&#x270E;</button></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p9</span></span></span><span class="bn-speaker-editable-name">Priya Raman</span><button class="bn-name-pencil" type="button" aria-label="Edit name for p9">&#x270E;</button></span></div><div class="sg-cell sg-start">14 Jan 2026</div><div class="sg-cell sg-dur">42:10</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#f1">#10</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Martin Storey</span><button class="bn-name-pencil" type="button" aria-label="Edit name for m1">&#x270E;</button></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p10</span></span></span><span class="bn-speaker-editable-name">Owen Daly</span><button class="bn-name-pencil" type="button" aria-label="Edit name for p10">&#x270E;</button></span></div><div class="sg-cell sg-start">15 Jan 2026</div><div class="sg-cell sg-dur">44:36</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#f1">#12</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Martin Storey</span><button class="bn-name-pencil" type="button" aria-label="Edit name for m1">&#x270E;</button></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p12</span></span></span><span class="bn-speaker-editable-name">Nadia Haddad</span><button class="bn-name-pencil" type="button" aria-label="Edit name for p12">&#x270E;</button></span></div><div class="sg-cell sg-start">16 Jan 2026</div><div class="sg-cell sg-dur">37:58</div></div>
+        </div>
+      </div>
+      <div class="state"><div class="state-label">people.yaml after the run</div><pre>participants:
+  <span class="hl">m1:</span>
+    computed:
+      session_id: <span class="hl">s12</span>      <span class="dim"># last session wins</span>
+      words_spoken: 2104
+      pct_time_speaking: 23.4
+    editable:
+      full_name: <span class="hl">Martin Storey</span>  <span class="dim"># heard in s12</span>
+      short_name: Martin Storey
+  p1:
+    computed: {session_id: s1, …}
+    editable: {full_name: Sarah Chen, …}
+  <span class="dim">… p2 … p12 …</span>
+  o1:
+    computed: {session_id: <span class="hl">s3</span>, …}  <span class="dim"># s1's o1 gone</span>
+    editable: {full_name: "", …}
+<span class="dim">(no entry for session 9's moderator exists, and none can)</span></pre></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>Cause</dt><dd><code>assign_speaker_codes</code> resets <code>mod_counter</code> on every call (<code>s05b_identify_speakers.py:451–456</code>), so Mike is <code>m1</code> in s9 exactly as Martin is in s1. <code>compute_participant_stats</code> keys its dict by code (<code>people.py:198</code>); the last session's <code>m1</code> survives into <code>people.yaml</code>. The importer seeds twelve <code>Person</code> rows from that one entry (<code>importer.py:885–890</code>), so every per-session surface agrees, and all twelve agree on the wrong colleague for session 9.</dd>
+      <dt>Who sees it</dt><dd>Nobody who was not in the room. The row for #9 is pixel-identical to the eleven correct ones. The "Moderated by" header dedupes by name (<code>routes/sessions.py:152–158</code>) and the sidebar counts moderators by distinct name (<code>SessionsSidebar.tsx:34–37</code>), so neither can show a second moderator exists. This is the invisible-wrongness design-people §"The stance" names as the thing that is not acceptable.</dd>
+      <dt>What is lost</dt><dd>Session 1's observer row: <code>o1</code> is Jane in s1 and Tom in s3, and the s3 stats overwrote hers (F9). Session-level moderator stats for eleven sessions.</dd>
+      <dt>Travels?</dt><dd>Yes, unchanged, into the HTML export and the MCP roster (F6, F7).</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ───────────────────────────── F2 ───────────────────────────── -->
+<div class="bench" id="f2">
+  <div class="bench-head"><h3><span class="fnum">F2</span>Which session's guess won is an accident of order</h3>
+    <p class="sub">The same study, three run orders. The name on <code>m1</code> is whatever the <b>last</b> session's five-minute LLM sample produced, filled only if the field was empty, with no record of where it came from.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>people.yaml · three outcomes of one pipeline</span><span class="tag shipped">shipped · read from code</span></div>
+    <div class="screen">
+      <div class="two">
+        <div><p class="file-name">A · sessions iterate s1 … s12 — s12 is Martin's</p><pre class="file">m1:
+  editable:
+    full_name: <span class="hl">Martin Storey</span>
+<span class="dim"># correct for 11 sessions, wrong for s9</span></pre></div>
+        <div><p class="file-name">B · Mike's session happened to be processed last</p><pre class="file">m1:
+  editable:
+    full_name: <span class="hl">Mike Alvarez</span>
+<span class="dim"># wrong for 11 sessions, right for one</span></pre></div>
+        <div><p class="file-name">C · the last session's sample named nobody</p><pre class="file">m1:
+  editable:
+    full_name: <span class="hl">""</span>
+<span class="dim"># eleven sessions heard "Martin"; the slot is empty</span></pre></div>
+        <div><p class="file-name">D · the measured case (transcripts plan §2)</p><pre class="file">m1:
+  editable:
+    full_name: <span class="hl">Pri</span>
+<span class="dim"># a platform label lost to the model's guess</span></pre></div>
+      </div>
+      <p class="file-name" style="margin-top:.9rem">&lt;output&gt;/.bristlenose/bristlenose.log — the only place the loss is stated</p>
+      <pre class="log"><span class="w">WARNING</span> bristlenose.people: Speaker code reused across sessions: m1 in s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12 (only s12 survives); o1 in s1, s3 (only s3 survives). people.yaml holds one entry per code, so the earlier sessions' stats are discarded. Moderator and observer codes restart at 1 each session and cross-session speaker identity is not yet modelled — see Layer 11 in docs/design-transcript-speaker-editing-roadmap.md.</pre>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>Cause</dt><dd><code>pipeline.py:2152–2162</code> builds <code>pid_speaker_info[code] = info</code> across all sessions; for a shared code the last assignment wins, including an assignment whose <code>person_name</code> is empty. <code>auto_populate_names</code> then fills <code>full_name</code> only when it is empty (<code>people.py:389–394</code>). Outcome C is the quiet one: a name the model heard eleven times is discarded because the twelfth window did not repeat it.</dd>
+      <dt>What is missing</dt><dd>Origin. Nothing records that "Martin Storey" was heard in s12 rather than typed by the researcher, so the next frame's correction and this frame's guess are indistinguishable on disk (design-people §C1, "no recorded name origin"; §C5's <code>guess</code> state is the only one that invites action, and it cannot be rendered because it is not stored).</dd>
+      <dt>The warning</dt><dd>One aggregated line per run, in a log under a hidden directory. TODO.md:269 already calls a log line "the weakest available surface" and leaves the pill/popover decision open. The Mac app's project row reads <i>Analysed</i> with a tick.</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ───────────────────────────── F3 ───────────────────────────── -->
+<div class="bench" id="f3">
+  <div class="bench-head"><h3><span class="fnum">F3</span>The pencil on session 9 opens twelve editors</h3>
+    <p class="sub">The researcher knows session 9 was Mike's and reaches for the one control the lens offers. The edit state is keyed by code, so every <code>m1</code> enters edit mode at once; the editors contend for focus and the edit collapses.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>Sessions lens · after clicking the pencil on #9</span><span class="tag shipped">shipped · measured in Chromium and WebKit (plan §0b)</span></div>
+    <div class="screen">
+      <div class="sg" role="table">
+        <div class="sg-row head"><div class="sg-cell">#</div><div class="sg-cell">Speakers</div><div class="sg-cell">Start</div><div class="sg-cell">Duration</div></div>
+        <div class="sg-row"><div class="sg-cell sg-id"><a href="#f3">#1</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name editing">Martin Storey</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p1</span></span></span><span class="bn-speaker-editable-name">Sarah Chen</span><button class="bn-name-pencil" type="button" aria-label="Edit name for p1">&#x270E;</button></span></div><div class="sg-cell sg-start">6 Jan 2026</div><div class="sg-cell sg-dur">48:02</div></div>
+        <div class="sg-row"><div class="sg-cell sg-id"><a href="#f3">#2</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name editing">Martin Storey</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p2</span></span></span><span class="bn-speaker-editable-name">Amara Nwosu</span><button class="bn-name-pencil" type="button" aria-label="Edit name for p2">&#x270E;</button></span></div><div class="sg-cell sg-start">6 Jan 2026</div><div class="sg-cell sg-dur">39:51</div></div>
+        <div class="sg-row"><div class="sg-cell sg-id"><a href="#f3">#8</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name editing">Martin Storey</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p8</span></span></span><span class="bn-speaker-editable-name">Femi</span><button class="bn-name-pencil" type="button" aria-label="Edit name for p8">&#x270E;</button></span></div><div class="sg-cell sg-start">13 Jan 2026</div><div class="sg-cell sg-dur">51:17</div></div>
+        <div class="sg-row focus"><div class="sg-cell sg-id"><a href="#f3">#9</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name editing">Mi<span class="caret"></span></span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p9</span></span></span><span class="bn-speaker-editable-name">Priya Raman</span><button class="bn-name-pencil" type="button" aria-label="Edit name for p9">&#x270E;</button></span></div><div class="sg-cell sg-start">14 Jan 2026</div><div class="sg-cell sg-dur">42:10</div></div>
+        <div class="sg-row"><div class="sg-cell sg-id"><a href="#f3">#10</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name editing">Martin Storey</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p10</span></span></span><span class="bn-speaker-editable-name">Owen Daly</span><button class="bn-name-pencil" type="button" aria-label="Edit name for p10">&#x270E;</button></span></div><div class="sg-cell sg-start">15 Jan 2026</div><div class="sg-cell sg-dur">44:36</div></div>
+        <div class="sg-row"><div class="sg-cell sg-id"><a href="#f3">#12</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name editing">Martin Storey</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p12</span></span></span><span class="bn-speaker-editable-name">Nadia Haddad</span><button class="bn-name-pencil" type="button" aria-label="Edit name for p12">&#x270E;</button></span></div><div class="sg-cell sg-start">16 Jan 2026</div><div class="sg-cell sg-dur">37:58</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>Cause</dt><dd><code>const [editingCode, setEditingCode] = useState&lt;string | null&gt;(null)</code> (<code>SessionsTable.tsx:131</code>) and <code>const isEditing = editingCode === sp.speaker_code</code> (<code>:443</code>). One code, one editing state, twelve rows. The transcripts plan measured the rest: the editors steal focus from each other and the edit collapses.</dd>
+      <dt>Assistive tech</dt><dd>Twelve buttons announce <i>"Edit name for m1"</i> (<code>sessions.editName</code>), and twelve nodes carry <code>data-testid="bn-name-m1"</code> (<code>:466</code>, <code>:501</code>), so no test and no screen-reader user can address session 9's control. TODO.md:583.</dd>
+      <dt>Not a data defect</dt><dd>Keying the editor by <code>(session, code)</code> is a pure UI fix that touches no store. It stops the collapse; it does not stop F4.</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ───────────────────────────── F4 ───────────────────────────── -->
+<div class="bench" id="f4">
+  <div class="bench-head"><h3><span class="fnum">F4</span>Rename one, rename all; reload, and it depends on row order</h3>
+    <p class="sub">Suppose the editor survives and the researcher commits "Mike Alvarez" on session 9. The lens applies it to every session, the server writes one <code>Person</code> row of twelve, and the next load picks whichever row the query returns last.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>Sessions lens · ① the commit</span><span class="tag shipped">shipped · read from code</span></div>
+    <div class="split">
+      <div class="screen">
+        <div class="lens-head"><h4>Sessions</h4><span class="mod">Moderated by Mike Alvarez</span></div>
+        <div class="sg" role="table">
+          <div class="sg-row head"><div class="sg-cell">#</div><div class="sg-cell">Speakers</div><div class="sg-cell">Start</div><div class="sg-cell">Duration</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#f4">#1</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Mike Alvarez</span><button class="bn-name-pencil" type="button">&#x270E;</button></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p1</span></span></span><span class="bn-speaker-editable-name">Sarah Chen</span><button class="bn-name-pencil" type="button">&#x270E;</button></span></div><div class="sg-cell sg-start">6 Jan 2026</div><div class="sg-cell sg-dur">48:02</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#f4">#8</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Mike Alvarez</span><button class="bn-name-pencil" type="button">&#x270E;</button></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p8</span></span></span><span class="bn-speaker-editable-name">Femi</span><button class="bn-name-pencil" type="button">&#x270E;</button></span></div><div class="sg-cell sg-start">13 Jan 2026</div><div class="sg-cell sg-dur">51:17</div></div>
+          <div class="sg-row focus"><div class="sg-cell sg-id"><a href="#f4">#9</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Mike Alvarez</span><button class="bn-name-pencil" type="button">&#x270E;</button></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p9</span></span></span><span class="bn-speaker-editable-name">Priya Raman</span><button class="bn-name-pencil" type="button">&#x270E;</button></span></div><div class="sg-cell sg-start">14 Jan 2026</div><div class="sg-cell sg-dur">42:10</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#f4">#12</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Mike Alvarez</span><button class="bn-name-pencil" type="button">&#x270E;</button></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p12</span></span></span><span class="bn-speaker-editable-name">Nadia Haddad</span><button class="bn-name-pencil" type="button">&#x270E;</button></span></div><div class="sg-cell sg-start">16 Jan 2026</div><div class="sg-cell sg-dur">37:58</div></div>
+        </div>
+      </div>
+      <div class="state"><div class="state-label">on the wire, then in the database</div><pre>PUT /api/projects/1/people
+{ "m1": { "full_name": "Martin Storey",
+          "short_name": <span class="hl">"Mike Alvarez"</span>,
+          "role": "" } }
+<span class="dim">— the whole map, keyed by code (api.ts:283–295)</span>
+
+persons                         session_speakers
+#1  short_name <span class="hl">Mike Alvarez</span>  ← (s1,  m1)   <span class="dim">.first()</span>
+#2  short_name Martin Storey   ← (s2,  m1)
+#3  short_name Martin Storey   ← (s3,  m1)
+ …
+#9  short_name Martin Storey   ← (s9,  m1)   <span class="dim">Mike's session</span>
+ …
+#12 short_name Martin Storey   ← (s12, m1)
+
+people.yaml  m1.editable.short_name: <span class="hl">Mike Alvarez</span></pre></div>
+    </div>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>Sessions lens · ② after reload</span><span class="tag shipped">shipped · read from code</span></div>
+    <div class="split">
+      <div class="screen">
+        <div class="lens-head"><h4>Sessions</h4><span class="mod">Moderated by Mike Alvarez, Martin Storey</span></div>
+        <div class="sg" role="table">
+          <div class="sg-row head"><div class="sg-cell">#</div><div class="sg-cell">Speakers</div><div class="sg-cell">Start</div><div class="sg-cell">Duration</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#f4">#1</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Martin Storey</span><button class="bn-name-pencil" type="button">&#x270E;</button></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p1</span></span></span><span class="bn-speaker-editable-name">Sarah Chen</span><button class="bn-name-pencil" type="button">&#x270E;</button></span></div><div class="sg-cell sg-start">6 Jan 2026</div><div class="sg-cell sg-dur">48:02</div></div>
+          <div class="sg-row focus"><div class="sg-cell sg-id"><a href="#f4">#9</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Martin Storey</span><button class="bn-name-pencil" type="button">&#x270E;</button></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p9</span></span></span><span class="bn-speaker-editable-name">Priya Raman</span><button class="bn-name-pencil" type="button">&#x270E;</button></span></div><div class="sg-cell sg-start">14 Jan 2026</div><div class="sg-cell sg-dur">42:10</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#f4">#12</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Martin Storey</span><button class="bn-name-pencil" type="button">&#x270E;</button></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p12</span></span></span><span class="bn-speaker-editable-name">Nadia Haddad</span><button class="bn-name-pencil" type="button">&#x270E;</button></span></div><div class="sg-cell sg-start">16 Jan 2026</div><div class="sg-cell sg-dur">37:58</div></div>
+        </div>
+      </div>
+      <div class="state"><div class="state-label">what each reader answers for "m1"</div><pre>GET /people          → <span class="hl">Martin Storey</span>   <span class="dim">last row returned (s12)</span>
+/sessions row #1     → Mike Alvarez     <span class="dim">person #1</span>
+/sessions row #9     → <span class="hl">Martin Storey</span>   <span class="dim">person #9, untouched</span>
+moderator_names      → [Mike Alvarez, Martin Storey]
+                       <span class="dim">two names, "one" moderator</span>
+MCP overview         → <span class="hl">Mike Alvarez</span>     <span class="dim">first row (s1)</span>
+people.yaml          → Mike Alvarez     <span class="dim">write-through by code</span>
+next pipeline run    → Mike Alvarez     <span class="dim">everywhere (F10)</span>
+
+<span class="dim">The grid shows /people's answer in every row
+(SessionsTable.tsx:439), so the edit "reverted".</span></pre></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>Cause</dt><dd>Three code paths, three keys. The optimistic update renames the code in every session (<code>SessionsTable.tsx:169–183</code>). <code>put_people</code> takes <code>.first()</code> of the speaker rows for the code and writes that one <code>Person</code> (<code>routes/data.py:350–366</code>). <code>get_people</code> iterates every speaker row with no ordering and lets the last overwrite (<code>:322–329</code>). SQLite returns rows in insertion order unless a plan says otherwise, which is why "reverted" is the likely rendering and not the guaranteed one.</dd>
+      <dt>The invariant, broken in the DB only</dt><dd>design-people §0 says a code has one name everywhere. The SPA and <code>people.yaml</code> keep that promise; the DB now holds two names for <code>m1</code>, which no surface was written to expect. The honest interim write is "update every <code>Person</code> row for the code", which is what the importer's seeding already assumes; the honest read is a deterministic order. Both are small, and both are within the settled model.</dd>
+      <dt>Second trap</dt><dd>If <code>GET /people</code> failed at load, <code>peopleMap</code> is <code>null</code>, the <code>PUT</code> never fires, and the rename changes the screen only (<code>:186–197</code>); the transcripts plan's §0b records a Mac-app editing regression of this shape, unconfirmed.</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ───────────────────────────── F5 ───────────────────────────── -->
+<div class="bench" id="f5">
+  <div class="bench-head"><h3><span class="fnum">F5</span>The sidebar and the header cannot say "two moderators"</h3>
+    <p class="sub">Both derive "how many moderators" from distinct <b>names</b>. With one slot there is one name, so the second moderator is undetectable; with F4's split there are two names for one slot, so one moderator reads as two.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>Sessions sidebar + dashboard header · the two renderings</span><span class="tag shipped">shipped · read from code</span></div>
+    <div class="screen">
+      <div class="two">
+        <div>
+          <p class="file-name">before any edit — one name, one slot</p>
+          <div class="sb"><div class="sb-h">Sessions</div>
+            <div class="sb-row"><span class="n">1</span><span class="badge">p1</span><span>Sarah Chen</span></div>
+            <div class="sb-row"><span class="n">8</span><span class="badge">p8</span><span>Femi</span></div>
+            <div class="sb-row active"><span class="n">9</span><span class="badge">p9</span><span>Priya Raman</span></div>
+            <div class="sb-row"><span class="n">10</span><span class="badge">p10</span><span>Owen Daly</span></div>
+          </div>
+          <div class="dash-sub" style="margin-top:.6rem">Moderated by Martin Storey</div>
+        </div>
+        <div>
+          <p class="file-name">after F4 — two names, one slot</p>
+          <div class="sb"><div class="sb-h">Sessions</div>
+            <div class="sb-row"><span class="n">1</span><span class="badge">m1</span><span class="badge">p1</span><span>Sarah Chen</span></div>
+            <div class="sb-row"><span class="n">8</span><span class="badge">m1</span><span class="badge">p8</span><span>Femi</span></div>
+            <div class="sb-row active"><span class="n">9</span><span class="badge">m1</span><span class="badge">p9</span><span>Priya Raman</span></div>
+            <div class="sb-row"><span class="n">10</span><span class="badge">m1</span><span class="badge">p10</span><span>Owen Daly</span></div>
+          </div>
+          <div class="dash-sub" style="margin-top:.6rem">Moderated by Mike Alvarez, Martin Storey</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>Cause</dt><dd><code>SessionsSidebar.tsx:34–37</code>: <code>hasMultipleModerators = new Set(moderators.map(sp =&gt; sp.name)).size &gt; 1</code>, then every row shows <code>moderators[0]</code>'s code badge, which is <code>m1</code> on every row, which says nothing. The header joins distinct names (<code>routes/sessions.py:152–158</code>, <code>routes/dashboard.py:613–622</code>).</dd>
+      <dt>Why the dedup cannot simply go</dt><dd>TODO.md:583: removing it yields "Moderated by Sarah, Sarah, Sarah", a faithful render of collided data. The header is <b>blocked</b> on the renumber; once a second moderator is <code>m2</code> the dedup is by code and correct for free.</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ───────────────────────────── F6 ───────────────────────────── -->
+<div class="bench" id="f6">
+  <div class="bench-head"><h3><span class="fnum">F6</span>It travels: the client's copy credits the wrong colleague</h3>
+    <p class="sub">The researcher exports the report with participant names removed, as the dialog offers. Moderator names are kept by design (decision 2). Session 9's page, in the file handed to Meridian Health, says Martin ran it.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>Export dialog, then the exported report's session 9 page · file://</span><span class="tag shipped">shipped · read from code</span></div>
+    <div class="split">
+      <div class="screen">
+        <div class="callout" style="margin:0 0 1rem"><label style="display:flex;gap:.5rem;align-items:flex-start"><input type="checkbox" checked disabled style="margin-top:.2rem"><span><b>Remove participant names from labels</b><br><span style="color:var(--bn-colour-muted)">Strips participant names from metadata, filenames, and speaker labels, leaving codes (p1, p2). Moderators and observers keep their names. Names spoken inside quotes are NOT removed.</span></span></label></div>
+        <div class="tx-head"><h4>Session 9 · <span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p9</span></span></span></h4><div class="bn-transcript-roles"><span>Moderator Martin Storey</span></div></div>
+        <div class="tx-seg segment-moderator"><span class="tc">00:00</span><span class="badge">m1</span><span class="txt">Thanks for making the time. Before we start, can you tell me a bit about your ward?</span></div>
+        <div class="tx-seg"><span class="tc">00:14</span><span class="badge">p9</span><span class="txt">We're a thirty-bed surgical ward, handover's at seven and half past seven…</span></div>
+        <div class="tx-seg segment-moderator"><span class="tc">00:41</span><span class="badge">m1</span><span class="txt">And who's in the room for that?</span></div>
+      </div>
+      <div class="state"><div class="state-label">_anonymise_data, routes/export.py:111–202</div><pre>/people
+  p9  full_name  <span class="ok">""</span>   short_name <span class="ok">""</span>   role <span class="ok">""</span>
+  m1  full_name  <span class="hl">Martin Storey</span>        <span class="dim">kept: m*</span>
+/transcripts/s9
+  speakers[m1].name  <span class="hl">Martin Storey</span>
+/sessions
+  moderator_names   [<span class="hl">Martin Storey</span>]
+/dashboard
+  moderator_header  "Moderated by <span class="hl">Martin Storey</span>"
+
+<span class="dim">Recipient's view: a fact about who conducted
+the interview, stated once per page, and the
+one fact in the file they cannot verify.</span></pre></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>Why this is the serious one</dt><dd>design-people §A J10: separating one code that is two people is "the one defect in this document that travels into an export, where the recipient cannot detect it". The mechanism is correct (decision 2: colleagues are named, subjects are not) and the collision rides it. A client-side observer's clarifying questions in s9 are now attributed under a moderator who was not there.</dd>
+      <dt>What does not travel</dt><dd>CSV/XLSX carry participant quotes only; Miro cards carry codes only; clip filenames name participants only. The MCP roster does travel, in its own way (F7).</dd>
+      <dt>Who it harms</dt><dd>Mike, whose session is unattributed, and the researcher, whose deliverable states something false in a register the reader trusts because the subjects' names were visibly removed.</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ───────────────────────────── F7 ───────────────────────────── -->
+<div class="bench" id="f7">
+  <div class="bench-head"><h3><span class="fnum">F7</span>The agent answers with the first name it found</h3>
+    <p class="sub">With Agent Access on, a researcher's own Claude Desktop asks the project who ran session 9. The MCP overview carries one name per code, chosen first-wins, and the model answers in the confident register the tool's data deserves.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>Claude Desktop · bristlenose MCP · project_overview</span><span class="tag shipped">shipped · read from code</span></div>
+    <div class="screen">
+      <div class="agent">
+        <div class="turn you"><div class="who">You</div>Who moderated session 9 of the ward handover study, and how long did it run?</div>
+        <div class="turn"><div class="who">Claude</div>
+          <div class="tool">bristlenose · project_overview(project_id=1)
+→ sessions: [{session_id: "s9", session_date: "2026-01-14", duration_seconds: 2530}, …]
+→ speakers: {"m1": "researcher", "p1": "participant", …}
+→ speaker_names: {"m1": "Martin Storey", "p1": "Sarah Chen", …}</div>
+          Session 9 (14 January 2026, 42 minutes) was moderated by <b>Martin Storey</b> (m1), with one participant, p9 Priya Raman.</div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>Cause</dt><dd><code>resolve_speaker_names</code> builds a code→name map with <code>names.setdefault(sp.speaker_code, display)</code> (<code>grounding.py:449</code>): first row wins. The overview's roster collapses codes across sessions the same way (<code>mcp_server.py:451–458</code>). Twelve rows, one name, chosen by iteration order; after F4 it is the <i>other</i> name from the one the grid shows.</dd>
+      <dt>Scope</dt><dd>The in-app chat lens is code-only by design (<code>grounding.py:55–57</code>), so it cannot name the wrong person; it can only decline to name. The MCP surface is the one that names, and it hands the name to a model that will not hedge.</dd>
+      <dt>Recorded where</dt><dd>TODO.md:583 names this as "a different defect from the anonymise one": "which of N moderators wins", unrecorded until 27 Aug.</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ───────────────────────────── F8 ───────────────────────────── -->
+<div class="bench" id="f8">
+  <div class="bench-head"><h3><span class="fnum">F8</span>The number is an accident of who spoke first</h3>
+    <p class="sub">Rachel Okonjo apprenticed on session 5 and ran 6 and 7 herself. Within a session two moderators work. Across sessions the counter restarts, so the same human is <code>m2</code>, then <code>m1</code>, and in session 7, where she opened, Martin becomes <code>m2</code>. The names on the slots never move; the people under them do.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>Sessions lens · rows 5–7</span><span class="tag shipped">shipped · read from code</span></div>
+    <div class="split">
+      <div class="screen">
+        <div class="sg" role="table">
+          <div class="sg-row head"><div class="sg-cell">#</div><div class="sg-cell">Speakers</div><div class="sg-cell">Start</div><div class="sg-cell">Duration</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#f8">#5</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Martin Storey</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m2</span></span></span><span class="bn-speaker-editable-name">Rachel Okonjo</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p5</span></span></span><span class="bn-speaker-editable-name">Mary O.</span></span></div><div class="sg-cell sg-start">9 Jan 2026</div><div class="sg-cell sg-dur">46:20</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#f8">#6</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Martin Storey</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p6</span></span></span><span class="bn-speaker-editable-name">Mary A.</span></span></div><div class="sg-cell sg-start">12 Jan 2026</div><div class="sg-cell sg-dur">40:05</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#f8">#7</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Martin Storey</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m2</span></span></span><span class="bn-speaker-editable-name">Rachel Okonjo</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p7</span></span></span><span class="bn-speaker-editable-name">Mickael</span></span></div><div class="sg-cell sg-start">12 Jan 2026</div><div class="sg-cell sg-dur">38:44</div></div>
+        </div>
+      </div>
+      <div class="state"><div class="state-label">who the codes actually point at</div><pre>s5   m1 = Martin   m2 = Rachel      <span class="ok">as shown</span>
+s6   m1 = <span class="hl">Rachel</span>   (alone)          <span class="dim">shown as Martin</span>
+s7   m1 = <span class="hl">Rachel</span>   m2 = <span class="hl">Martin</span>      <span class="dim">she spoke first</span>
+
+label_role is built from first occurrence
+(s05b_identify_speakers.py:443–447); the
+mod_counter increments in that order (:454–456).
+
+people.yaml  m1.full_name = Martin Storey
+             m2.full_name = Rachel Okonjo
+<span class="dim">Both names are right about somebody. Neither
+is right about session 7.</span></pre></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>Cause</dt><dd>Two things that are both correct on their own: codes are per-session ordinals, and names are per-code. decision 1 calls this the <code>m</code>/<code>o</code> namespace "over-colliding <i>and</i> over-fragmenting", because the number "comes from within-session ordering, which has nothing to do with identity".</dd>
+      <dt>Why §F S11 "already handled" is not a contradiction</dt><dd>Two moderators in one session works (<code>test_two_researchers</code>). The register row is about one session; this frame is about three, and the sidebar's MULTI_MODERATOR fixture (<code>m1</code> in s1, <code>m2</code> in s2) draws a shape the pipeline cannot produce across sessions, so the test is specifying a world that does not exist.</dd>
+      <dt>Consequence</dt><dd>Rachel's two sessions are credited to Martin; Martin's turns in session 7 are credited to Rachel, in the transcript, in the exported roles line, and in the coverage "% moderator" arithmetic, which is per code and still sums correctly.</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ───────────────────────────── F9 ───────────────────────────── -->
+<div class="bench" id="f9">
+  <div class="bench-head"><h3><span class="fnum">F9</span>Jane is <code>o1</code>, then <code>o2</code>; Tom is <code>o1</code></h3>
+    <p class="sub">Jane Smith (Meridian Health) observed session 1 alone and session 3 beside Tom Blake, who spoke first. Observers are never auto-named, so the researcher typed "Jane Smith" on <code>o1</code> in session 1. The slot now names Tom's words in session 3, and Jane's own s3 turns sit under an empty <code>o2</code>.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>Sessions lens rows 1 and 3 · transcript s3</span><span class="tag shipped">shipped · read from code</span></div>
+    <div class="split">
+      <div class="screen">
+        <div class="sg" role="table" style="margin-bottom:1rem">
+          <div class="sg-row head"><div class="sg-cell">#</div><div class="sg-cell">Speakers</div><div class="sg-cell">Start</div><div class="sg-cell">Duration</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#f9">#1</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Martin Storey</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p1</span></span></span><span class="bn-speaker-editable-name">Sarah Chen</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">o1</span></span></span><span class="bn-speaker-editable-name">Jane Smith</span></span></div><div class="sg-cell sg-start">6 Jan 2026</div><div class="sg-cell sg-dur">48:02</div></div>
+          <div class="sg-row focus"><div class="sg-cell sg-id"><a href="#f9">#3</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Martin Storey</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p3</span></span></span><span class="bn-speaker-editable-name">Mary A.</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">o1</span></span></span><span class="bn-speaker-editable-name">Jane Smith</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">o2</span></span></span><span class="bn-speaker-editable-name unnamed">Observer</span></span></div><div class="sg-cell sg-start">7 Jan 2026</div><div class="sg-cell sg-dur">44:51</div></div>
+        </div>
+        <div class="tx-head"><h4>Session 3 · <span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p3</span><span class="bn-speaker-badge-name">Mary A.</span></span></span></h4><div class="bn-transcript-roles"><span>Moderator Martin Storey</span>, <span>observers Jane Smith and o2</span></div></div>
+        <div class="tx-seg segment-moderator"><span class="tc">31:40</span><span class="badge">o1</span><span class="txt">Sorry, can I jump in: is that the paper form or the one on the trolley screen?</span></div>
+        <div class="tx-seg"><span class="tc">31:48</span><span class="badge">p3</span><span class="txt">The trolley one, but half the time it's not charged…</span></div>
+        <div class="tx-seg segment-moderator"><span class="tc">32:05</span><span class="badge">o2</span><span class="txt">That matches what we saw on Bay 4 last week.</span></div>
+      </div>
+      <div class="state"><div class="state-label">the observer slots</div><pre>s1   o1 = Jane
+s3   o1 = <span class="hl">Tom</span>  (spoke first)   o2 = <span class="hl">Jane</span>
+
+people.yaml
+  o1: {computed: {session_id: s3}, editable: {full_name: <span class="hl">Jane Smith</span>}}
+  o2: {computed: {session_id: s3}, editable: {full_name: ""}}
+
+auto-fill never reaches observers:
+  pipeline.py:2152–2162 maps PARTICIPANT and
+  RESEARCHER infos only.
+Tom's question at 31:40 is credited to Jane.
+Jane's own s3 turns are an unnamed o2.
+"observers Jane Smith and o2" is the roles line
+(TranscriptPage.tsx:247–280, name falls back to code).</pre></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>Why observers matter more than the scale table suggests</dt><dd>design-people's own correction: the extra person in a session is an observer in ~95% of cases, so observer repair is the dominant correction, and the <code>o</code> namespace has both failures the <code>m</code> namespace has. On top of that, observers are the one class the pipeline never names at all, so every observer row begins as "Observer" and every name on one was typed into a slot that moves.</dd>
+      <dt>Disclosure</dt><dd>Under decision 2 observers are named in exports. A client-side observer's question attributed to another client-side observer is a small wrong fact in a client's own document.</dd>
+      <dt>Also systemic</dt><dd>Role identification samples the first five minutes (<code>s05b</code>, <code>seg.start_time &gt; 300</code>), so an observer who first speaks at 31:40 is classified by the heuristic that scores question ratio, and both <code>UNKNOWN</code> and <code>PARTICIPANT</code> become a <code>p</code> code. Tom's question could as easily have minted <code>p13</code>. design-people J3.</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ───────────────────────────── F10 ───────────────────────────── -->
+<div class="bench" id="f10">
+  <div class="bench-head"><h3><span class="fnum">F10</span>The correction becomes the next error</h3>
+    <p class="sub">Say the researcher won F3 and F4 and <code>people.yaml</code> now reads <code>m1: Mike Alvarez</code>, typed with session 9 in mind. A thirteenth interview arrives, Martin runs it, and the pipeline does exactly what it promises: it never overwrites a name a human set.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>Sessions lens · after the next run</span><span class="tag shipped">shipped · read from code</span></div>
+    <div class="split">
+      <div class="screen">
+        <div class="lens-head"><h4>Sessions</h4><span class="mod">Moderated by Mike Alvarez</span></div>
+        <div class="sg" role="table">
+          <div class="sg-row head"><div class="sg-cell">#</div><div class="sg-cell">Speakers</div><div class="sg-cell">Start</div><div class="sg-cell">Duration</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#f10">#9</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Mike Alvarez</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p9</span></span></span><span class="bn-speaker-editable-name">Priya Raman</span></span></div><div class="sg-cell sg-start">14 Jan 2026</div><div class="sg-cell sg-dur">42:10</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#f10">#12</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Mike Alvarez</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p12</span></span></span><span class="bn-speaker-editable-name">Nadia Haddad</span></span></div><div class="sg-cell sg-start">16 Jan 2026</div><div class="sg-cell sg-dur">37:58</div></div>
+          <div class="sg-row focus"><div class="sg-cell sg-id"><a href="#f10">#13</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Mike Alvarez</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p13</span></span></span><span class="bn-speaker-editable-name">Grace Whitfield</span></span></div><div class="sg-cell sg-start">22 Jan 2026</div><div class="sg-cell sg-dur">45:12</div></div>
+        </div>
+      </div>
+      <div class="state"><div class="state-label">merge_people, people.py:244–275</div><pre>existing  m1.editable.full_name = <span class="hl">Mike Alvarez</span>  <span class="dim">(typed)</span>
+computed  m1 ← s13 stats (Martin's session)
+
+merged    m1.computed  = s13          <span class="dim">replaced</span>
+          m1.editable  = Mike Alvarez <span class="dim">preserved by key</span>
+
+auto_populate_names: full_name non-empty → untouched
+                     (people.py:389, "never overwrites user edits")
+
+<span class="dim">The researcher corrected one session. Thirteen
+sessions now say Mike, and the one that was wrong
+before is the only one that is right.</span></pre></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>Cause</dt><dd>The rule that protects typed names (<code>merge_people</code> preserves editable fields by key; <code>auto_populate_names</code> fills only empties) is correct and settled: design-people §B8, "never second-guess a name the researcher set". It is correct about a code that names one person. On a code that names two, it preserves the mislabel with the same loyalty.</dd>
+      <dt>No way to say "this one session"</dt><dd>The sentence "session 9's moderator is Mike" has nowhere to live in a per-code file. decision 1 is exactly the observation that the only representable version of that sentence is "Mike is a different code".</dd>
+      <dt>Roadmap §11c called this</dt><dd>"a name the researcher typed for session 1's moderator stays attached to an entry whose stats are now session 2's — mislabelling, not just loss."</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ───────────────────────────── F11 ───────────────────────────── -->
+<div class="bench" id="f11">
+  <div class="bench-head"><h3><span class="fnum">F11</span>The platform knew, and the slot cannot take it</h3>
+    <p class="sub">The finding under review. Teams labels every cue with the account that spoke. Twelve transcripts carry two moderator names between them, each on the right session. There is one place to put them.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>cloud-import transcripts plan · §3 1d, §8 Q4</span><span class="tag plan">plan · three outcomes of one rule</span></div>
+    <div class="screen">
+      <div class="two">
+        <div><p class="file-name">What arrives: 2026-01-14 0934 — P09 Interview.vtt</p><pre class="file">WEBVTT
+
+NOTE bristlenose-cloud-transcript 1
+source: teams
+speakers: named
+media: 2026-01-14 0934 — P09 Interview.mp4
+
+00:00:00.400 --> 00:00:13.900
+&lt;v <span class="ok">Mike Alvarez</span>&gt;Thanks for making the time…&lt;/v&gt;</pre>
+        <p class="file-name" style="margin-top:.6rem">… and eleven siblings</p><pre class="file">&lt;v <span class="ok">Martin Storey</span>&gt;… &lt;/v&gt;   <span class="dim">s1, s2 … s8, s10, s11, s12</span></pre></div>
+        <div><p class="file-name">What the slot can hold</p>
+        <pre class="file"><span class="dim">① "every named speaker gets a name" (the draft rule)</span>
+m1:
+  editable: {full_name: <span class="hl">&lt;whichever session is processed last&gt;</span>}
+
+<span class="dim">② 1d as reviewed: name participants only</span>
+m1:
+  editable: {full_name: <span class="hl">""</span>}   <span class="dim">"Moderator" ×12, the names discarded</span>
+
+<span class="dim">③ Q4: study-wide codes from the platform</span>
+m1:
+  editable: {full_name: <span class="ok">Martin Storey</span>}   <span class="dim">s1–s8, s10–s12</span>
+m2:
+  editable: {full_name: <span class="ok">Mike Alvarez</span>}    <span class="dim">s9</span></pre></div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>The finding, restated</dt><dd>Outcome ① is the sentence under review: a per-session fact written through a per-code slot makes the last writer win, and with twelve correct inputs produces one correct output and eleven wrong ones, or one wrong and eleven right, depending on order. The review was right to strike the draft rule.</dd>
+      <dt>What ② costs</dt><dd>Honesty at the price of twelve "Moderator" placeholders in a study where the platform stated the name on every turn. It is the right first slice because it is the only outcome that is wrong nowhere; it is also the outcome F11 exists to make visibly unsatisfying.</dd>
+      <dt>What ③ needs</dt><dd>decision 1's mechanism, entered from the platform instead of from a rename: a second moderator is a second code, assigned at <code>assign_speaker_codes</code> time by an identity the platform asserts. The plan's §0 says key by <b>participant id</b>; its §3 says by <b>display name</b>. Only the first is compatible with decision 1's "never auto-merge on name equality", and it is the one to keep (challenge 5).</dd>
+      <dt>Also in play</dt><dd>"Platform name beats LLM <code>person_name</code>" is agreed for platform labels (plan §0b), but <code>test_llm_priority_over_label</code> pins the opposite for generic labels; the plan already says re-home that contract, not invert it.</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ───────────────────────────── F12 ───────────────────────────── -->
+<div class="bench" id="f12">
+  <div class="bench-head"><h3><span class="fnum">F12</span>The sealed static report shows eleven sessions with no moderator</h3>
+    <p class="sub">Every <code>bristlenose run</code> still writes the deprecated HTML byproduct. Its sessions table groups codes by the <code>computed.session_id</code> on each <code>people.yaml</code> entry, so the one <code>m1</code> entry belongs to session 12 and no other.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>bristlenose-ward-handover-report.html · sessions table (Jinja2, sealed)</span><span class="tag shipped">shipped · deprecated surface · read from code</span></div>
+    <div class="screen">
+      <div class="dash-sub" style="margin-bottom:.6rem">Moderated by <span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span><span class="bn-speaker-badge-name">Martin Storey</span></span></span></div>
+      <div class="sg" role="table">
+        <div class="sg-row head"><div class="sg-cell">#</div><div class="sg-cell">Speakers</div><div class="sg-cell">Start</div><div class="sg-cell">Duration</div></div>
+        <div class="sg-row"><div class="sg-cell sg-id"><a href="#f12">#1</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p1</span><span class="bn-speaker-badge-name">Sarah Chen</span></span></span></span></div><div class="sg-cell sg-start">6 Jan 2026</div><div class="sg-cell sg-dur">48:02</div></div>
+        <div class="sg-row"><div class="sg-cell sg-id"><a href="#f12">#3</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p3</span><span class="bn-speaker-badge-name">Mary A.</span></span></span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">o1</span><span class="bn-speaker-badge-name">Jane Smith</span></span></span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">o2</span></span></span></span></div><div class="sg-cell sg-start">7 Jan 2026</div><div class="sg-cell sg-dur">44:51</div></div>
+        <div class="sg-row"><div class="sg-cell sg-id"><a href="#f12">#9</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p9</span><span class="bn-speaker-badge-name">Priya Raman</span></span></span></span></div><div class="sg-cell sg-start">14 Jan 2026</div><div class="sg-cell sg-dur">42:10</div></div>
+        <div class="sg-row"><div class="sg-cell sg-id"><a href="#f12">#12</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p12</span><span class="bn-speaker-badge-name">Nadia Haddad</span></span></span></span></div><div class="sg-cell sg-start">16 Jan 2026</div><div class="sg-cell sg-dur">37:58</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>Cause</dt><dd><code>s12_render/dashboard.py:61–73</code> groups by <code>entry.computed.session_id</code>; line 89 drops moderators from every row when there is exactly one moderator code, so the header is the only place a moderator appears at all. With the collision there is always exactly one code.</dd>
+      <dt>Status</dt><dd>The React SPA is the product and the Jinja2 renderer is a sealed byproduct (CLAUDE.md), so this frame is a record, not a work item. It is here because the same researcher sees both files in the same output folder and the two disagree about how many moderators the study had.</dd>
+    </dl>
+  </div>
+</div>
+
+<div class="part" id="designout">Part 5 <small>What the settled design does about it — decision 1 (24 Aug 2026) and decision 2 (25 Aug 2026), drawn. Nothing in this part is built. The chrome says "proposed" on every frame.</small></div>
+<h2>Designing the failure out, not warning about it</h2>
+<div class="prose">
+<p>The stance in design-people.md governs the shape of the fix: <b>pick the typical case confidently, render a wrinkle so it is obvious to someone who was in the room, and make the fix cost one action.</b> One moderator per study is the typical case, so <code>m1</code> everywhere stays the default. The wrinkle is a second moderator, and the one action is naming them in the session where they appear. Everything below follows from "a code has one name everywhere": the only way for session 9's moderator to be Mike is for Mike to be a different code.</p>
+</div>
+
+<!-- ───────────────────────────── D1 ───────────────────────────── -->
+<div class="bench" id="d1">
+  <div class="bench-head"><h3><span class="fnum">D1</span>Name the moderator in session 9, and he becomes <code>m2</code></h3>
+    <p class="sub">The sessions-grid speaker entry offers <code>m1 Is ▸</code>, a grouped cast list with the bank of colleagues under it. Picking Mike asserts an identity, the app notices <code>m1</code> is Martin elsewhere, and renumbers. One sentence, one Undo, no dialog.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>Sessions lens · row #9 · m1 Is ▸ (design-people §B9, §B4; bench 9 of person-actions-everywhere)</span><span class="tag proposed">proposed · not built</span></div>
+    <div class="screen">
+      <div class="sg" role="table" style="margin-bottom:.8rem">
+        <div class="sg-row head"><div class="sg-cell">#</div><div class="sg-cell">Speakers</div><div class="sg-cell">Start</div><div class="sg-cell">Duration</div></div>
+        <div class="sg-row"><div class="sg-cell sg-id"><a href="#d1">#8</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Martin Storey</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p8</span></span></span><span class="bn-speaker-editable-name">Femi</span></span></div><div class="sg-cell sg-start">13 Jan 2026</div><div class="sg-cell sg-dur">51:17</div></div>
+        <div class="sg-row focus"><div class="sg-cell sg-id"><a href="#d1">#9</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Martin Storey</span><button class="bn-name-pencil on" type="button" aria-label="Edit name for m1 in session 9">&#x270E;</button></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p9</span></span></span><span class="bn-speaker-editable-name">Priya Raman</span></span></div><div class="sg-cell sg-start">14 Jan 2026</div><div class="sg-cell sg-dur">42:10</div></div>
+      </div>
+      <div class="menu" role="menu" aria-label="m1 Is">
+        <div class="gh">m1 Is ▸</div>
+        <div class="mi"><span class="badge">m1</span><span>That's Me (Martin Storey)</span></div>
+        <div class="sep"></div>
+        <div class="mi"><span>Steve Nakamura</span><span class="cnt">3 studies</span></div>
+        <div class="mi"><span>Rachel Okonjo</span><span class="cnt">2 studies</span></div>
+        <div class="mi sel"><span>Mike Alvarez</span><span class="cnt">1 study</span></div>
+        <div class="sep"></div>
+        <div class="mi"><span>Someone New…</span></div>
+      </div>
+      <p class="sweep"><b>Mike is now m2 in session 9.</b> Martin stays m1 in sessions 1–8 and 10–12.<a href="#d1">Undo</a></p>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>What the researcher did</dt><dd>Said who the moderator in front of them is. They did not think "separate <code>m1</code> into two people" and no verb asks them to. decision 1: "renumbering is a consequence of naming, not a separate verb"; the <code>Separate…</code> sheet remains for the aggregate-level case and is secondary.</dd>
+      <dt>What the app did</dt><dd>Noticed <code>m1</code> carries Martin's name in eleven other sessions, concluded this is a different person, minted <code>m2</code> for session 9, and <b>said so in one sentence with the scope in the words</b> (§B3: wide-reaching items name their scope). The sweep line's Undo is top-of-stack ⌘Z and vanishes when superseded (§B10). Edit ▸ Undo reads <i>Undo Rename Moderator</i>, never bare Undo.</dd>
+      <dt>Why the bank, not a text field</dt><dd>§B4: naming a moderator is "a pick, not a keystroke", and picking is a <b>link</b>, not a copy, so Mike's row joins the Mike who already exists across studies (J4, J12 as a side effect). The bank holds moderators and observers only, never participants, never pre-selects, shows a study count, and keeps <i>Someone New…</i> as the escape. <b>It has no store today</b>: <code>Person</code> rows do not span projects (one SQLite per project), so the bank needs <code>instance.db</code> first (§B4 measured blocker, §J2).</dd>
+      <dt>Lexical rule</dt><dd><code>m1 Is ▸</code> names a speaker, so nothing moves but labels and numbers. <code>All of m1's Turns Are ▸</code> would name speech and move words. §B2 keeps them in different menu zones so the 41-turn word-move and the relabel cannot be one slip apart.</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ───────────────────────────── D2 ───────────────────────────── -->
+<div class="bench" id="d2">
+  <div class="bench-head"><h3><span class="fnum">D2</span>What the three stores hold after the renumber</h3>
+    <p class="sub">The same act, seen from the files. <code>people.yaml</code> keeps its shape and gains a key; the DB rows for session 9 change code; the bracket tokens in <code>transcripts-raw/s9.txt</code> are the open question.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>people.yaml · bristlenose.db · transcripts-raw/s9.txt · after "Mike is now m2"</span><span class="tag proposed">proposed · §J4 open on the third store</span></div>
+    <div class="screen">
+      <div class="two">
+        <div><p class="file-name">people.yaml — no reshape, one new key</p><pre class="file">participants:
+  m1:
+    computed: {session_id: s12, …}
+    editable:
+      full_name: Martin Storey
+  <span class="ok">m2:</span>
+    computed: {session_id: s9, words_spoken: 1 711, …}
+    editable:
+      full_name: <span class="ok">Mike Alvarez</span>
+      <span class="dim"># origin: you set this (step 2 field)</span>
+  p1: …</pre>
+        <p class="file-name" style="margin-top:.6rem">bristlenose.db</p><pre class="file">session_speakers
+  (s9, <span class="hl">m1</span>) → (s9, <span class="ok">m2</span>)   person_id → Mike's row
+transcript_segments   s9 rows: speaker_code <span class="ok">m2</span>
+quotes                s9 rows: participant_id unchanged (p9)
+<span class="dim">UNIQUE(session_id, speaker_code): free m1 before taking m2,
+or the constraint fires mid-transaction (§J1).</span></pre></div>
+        <div><p class="file-name">transcripts-raw/s9.txt — two honest answers</p><pre class="file"><span class="dim"># Session: s9 · Source: 2026-01-14 0934 — P09 Interview.mp4</span>
+[00:00] [<span class="hl">m1</span>] (Mike Alvarez) Thanks for making the time…
+[00:14] [p9] (Priya Raman) We're a thirty-bed surgical ward…
+
+<span class="dim">(a) render-time derivation: the token stays as written,
+    provenance of what the pipeline said; every reader maps
+    (s9, m1) → m2 through session_speakers.
+(b) recode: rewrite the file so the token reads [m2]; the
+    reader regex is \d{1,2} and the file is the one
+    researchers hand-edit and re-import.</span></pre>
+        <p class="file-name" style="margin-top:.6rem">what no longer needs to exist</p><pre class="file"><span class="dim">no (session, code) rekey of people.yaml   (rejected 25 Aug)
+no migration of files in the field
+no "Separate m1" primary verb
+no name-equality merge, at any altitude</span></pre></div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>Why the file keeps its shape</dt><dd>Roadmap §11c's migration argument became part of the case against the rekey: under renumbering "there is no reshape and no migration". A file written on 14 Jul by a TestFlight build stays valid input; it simply gains an <code>m2</code> when someone names one.</dd>
+      <dt>The seven things a recode touches</dt><dd>§J1 counts them: the unique constraint ordering, N segment rows, quote attribution (cheap, §C4), the quote stable key (which carries <code>participant_id</code> and breaks on re-import), the <code>people.yaml</code> key (the write-through has no rekey path today), the bracket tokens on disk, and any export already distributed (unreachable). For a <i>moderator</i> renumber the quote half is moot, because quotes are participant-only; that is what makes <code>m</code>/<code>o</code> the cheap end of step 4.</dd>
+      <dt>The open question</dt><dd>§J4: render-time derivation keeps <code>transcripts-raw/</code> as provenance and makes the renumber a DB-and-YAML operation; a recode makes every file agree and costs a rewrite path plus a round-trip with the importer. The answer decides whether step 4 is medium or large, and it is not yet settled. This report does not settle it; it notes that the moderator case needs only the cheaper half of either answer.</dd>
+      <dt>Undo</dt><dd>Rename-and-renumber is one act in the user's mind and must undo as one (§B10). The <code>undo-state</code> bridge is dead on the frontend half (<code>bridge.ts</code> hard-codes <code>canUndo: false</code>), which is why §D prices the undo bridge as a step-1 gate.</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ───────────────────────────── D3 ───────────────────────────── -->
+<div class="bench" id="d3">
+  <div class="bench-head"><h3><span class="fnum">D3</span>Platform-named moderators get study-wide codes without anyone typing</h3>
+    <p class="sub">The transcripts plan's Q4, keyed the way its §0 says and not the way its §3 says: by the platform's participant identity. The same outcome as D1, reached at <code>assign_speaker_codes</code> time instead of from a rename.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>Sessions lens · after importing twelve Teams pairs</span><span class="tag proposed">proposed · plan Q4, owner call open</span></div>
+    <div class="split">
+      <div class="screen">
+        <div class="lens-head"><h4>Sessions</h4><span class="mod">Moderated by Martin Storey and Mike Alvarez</span></div>
+        <div class="sg" role="table">
+          <div class="sg-row head"><div class="sg-cell">#</div><div class="sg-cell">Speakers</div><div class="sg-cell">Start</div><div class="sg-cell">Duration</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#d3">#8</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Martin Storey</span><span class="bn-name-source">From the transcript</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p8</span></span></span><span class="bn-speaker-editable-name">Femi</span></span></div><div class="sg-cell sg-start">13 Jan 2026</div><div class="sg-cell sg-dur">51:17</div></div>
+          <div class="sg-row focus"><div class="sg-cell sg-id"><a href="#d3">#9</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m2</span></span></span><span class="bn-speaker-editable-name">Mike Alvarez</span><span class="bn-name-source">From the transcript</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p9</span></span></span><span class="bn-speaker-editable-name">Priya Raman</span></span></div><div class="sg-cell sg-start">14 Jan 2026</div><div class="sg-cell sg-dur">42:10</div></div>
+          <div class="sg-row"><div class="sg-cell sg-id"><a href="#d3">#10</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Martin Storey</span><span class="bn-name-source">From the transcript</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p10</span></span></span><span class="bn-speaker-editable-name">Owen Daly</span></span></div><div class="sg-cell sg-start">15 Jan 2026</div><div class="sg-cell sg-dur">44:36</div></div>
+        </div>
+      </div>
+      <div class="state"><div class="state-label">assign_speaker_codes, with a study-wide moderator map</div><pre>study_moderators: dict[platform_id, code]
+  "8f1c…@tenant"  → m1   <span class="dim">Martin, 11 sessions</span>
+  "c07a…@tenant"  → m2   <span class="dim">Mike, 1 session</span>
+
+per session:
+  RESEARCHER label with a platform id
+    → code = study_moderators.setdefault(id, next_m)
+  RESEARCHER label without one (Whisper)
+    → per-session counter, as today
+
+<span class="dim">Key by the account, not the string: two
+"M. Alvarez" accounts stay two codes, one
+account renamed in Teams stays one.</span></pre></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>Why it is decision 1 and not an exception to it</dt><dd>decision 1 forbids merging on <i>name equality</i> because a name is not evidence of identity: "<code>p3</code> Mary and <code>p5</code> Mary are routinely two different people". A platform participant id is not a name. It is the platform asserting that the same account spoke, which is the same class of evidence as the researcher picking Mike from the bank. The plan's §0 wording ("by platform participant id, not display name") is the one that survives contact with decision 1; the §3 wording ("by display name") does not, and Q4 should be answered in §0's terms.</dd>
+      <dt>What it buys</dt><dd>F11 outcome ③ with zero typing, the "Moderated by" header correct by code, the sidebar able to say two moderators, and the export right in the only case that travels. It also makes the renumber path (D1/D2) a second entrance to a mechanism that already exists, rather than the only one.</dd>
+      <dt>What it does not do</dt><dd>Name anyone the platform did not name (a Whisper session keeps the per-session counter), join the Teams Martin to the Meet Martin (different ids; the bank or a rename does that), or decide who is "me" (design-cloud-import.md: the signed-in account is never auto-made <code>m1</code>).</dd>
+      <dt>Origin mark</dt><dd>"From the transcript" is the provenance label the people-provenance mockup settled (bench 8: a confirmed name is a recorded state). It is drawn here because the sentence is only true once origin is stored per field (§J3, step 2).</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ───────────────────────────── D4 ───────────────────────────── -->
+<div class="bench" id="d4">
+  <div class="bench-head"><h3><span class="fnum">D4</span>Until then: a guess looks like a guess, and the loss is said where it happened</h3>
+    <p class="sub">The interim render that needs no renumber: names the pipeline heard are italic, their origin is one small word, and one absent-when-zero line under the heading names the wrinkle. Zero geometry, one translated string.</p></div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span>Sessions lens · heading + sweep line (design-people §B6, provenance bench 8)</span><span class="tag proposed">proposed · needs name origin per field (step 2)</span></div>
+    <div class="screen">
+      <div class="lens-head"><h4>Sessions</h4><span class="mod">Moderated by <i>Martin Storey</i></span></div>
+      <p class="sweep" style="margin:0 0 .8rem"><b>1 moderator name was heard in one session and applied to 12.</b> If a different colleague ran any of them, name them there.</p>
+      <div class="sg" role="table">
+        <div class="sg-row head"><div class="sg-cell">#</div><div class="sg-cell">Speakers</div><div class="sg-cell">Start</div><div class="sg-cell">Duration</div></div>
+        <div class="sg-row"><div class="sg-cell sg-id"><a href="#d4">#8</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name guess">Martin Storey</span><span class="bn-name-source">Heard in session 12</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p8</span></span></span><span class="bn-speaker-editable-name">Femi</span></span></div><div class="sg-cell sg-start">13 Jan 2026</div><div class="sg-cell sg-dur">51:17</div></div>
+        <div class="sg-row"><div class="sg-cell sg-id"><a href="#d4">#9</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name guess">Martin Storey</span><span class="bn-name-source">Heard in session 12</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p9</span></span></span><span class="bn-speaker-editable-name">Priya Raman</span></span></div><div class="sg-cell sg-start">14 Jan 2026</div><div class="sg-cell sg-dur">42:10</div></div>
+        <div class="sg-row"><div class="sg-cell sg-id"><a href="#d4">#12</a></div><div class="sg-cell"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name guess">Martin Storey</span><span class="bn-name-source">Heard in this session</span></span><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p12</span></span></span><span class="bn-speaker-editable-name">Nadia Haddad</span></span></div><div class="sg-cell sg-start">16 Jan 2026</div><div class="sg-cell sg-dur">37:58</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <dl class="st">
+      <dt>What this is and is not</dt><dd>It is the stance's second half: being wrong is acceptable, being wrong <i>invisibly</i> is not. It does not fix the slot. It makes the eleven inherited names look like what they are (a guess copied from one window) and puts the sentence the researcher needs next to the rows it is about, instead of in a log under a hidden directory (F2). The sweep line is the house pattern (§B6 "one absent-when-zero line", §B10's Undo-Send precedent); it is not a toast, which the house rules ban.</dd>
+      <dt>What it depends on</dt><dd>Name origin stored per field with the two sentinels (never recorded; cleared), which is step 2 of §D and §J3. Without origin, italic cannot be rendered truthfully: every <code>people.yaml</code> in the field today has no record of which names were typed. The copy "Heard in the session" / "From the transcript" / "You set this" is already adjudicated (people-provenance-paths.html; TODO.md:583).</dd>
+      <dt>Why it is still worth drawing</dt><dd>It is the cheapest change that ends the invisible case, and it is independent of the instance database, the bank, the menu host and the undo bridge, which gate D1. If step 1 slips, D4 is what the researcher should get in the meantime.</dd>
+    </dl>
+  </div>
+</div>
+
+<div class="part" id="gaps">Part 6 <small>The gap register — measured against design-people.md at 1446e4d</small></div>
+<h2>What is missing, and what kind of missing it is</h2>
+<div class="prose">
+<p>Five kinds. <span class="pill open">open</span> a defect or absence nothing has decided about yet. <span class="pill decided">decided · not built</span> the design settles it and the tree does not carry it. <span class="pill blocked">blocked</span> cannot move until something else lands, and that something is named. <span class="pill free">free win</span> independent of every decision and small. <span class="pill suspect">suspected</span> read from code, not reproduced.</p>
+</div>
+<div class="tblwrap"><table class="tbl">
+<tr><th>#</th><th>Gap</th><th>Evidence</th><th>Frame</th><th>Kind</th></tr>
+<tr><td class="c">G1</td><td class="k">Moderator and observer codes restart per session</td><td><code>s05b_identify_speakers.py:451–456</code>; the right default for the one-moderator study (§0) and the whole of the collision</td><td>F1 F8</td><td><span class="pill decided">decided · not built</span> decision 1 keeps the default and adds the escape</td></tr>
+<tr><td class="c">G2</td><td class="k"><code>people.yaml</code> holds one entry per code; the last session's stats win and a typed name stays with the key</td><td><code>people.py:194–225</code>, <code>:244–275</code>; roadmap §11c; pinned by <code>test_multi_session_moderator_codes_collide_and_are_warned</code></td><td>F1 F10</td><td><span class="pill decided">decided · not built</span> the renumber (§D step 4), never a rekey</td></tr>
+<tr><td class="c">G3</td><td class="k">The auto-filled name is whichever session was iterated last, including an empty guess over eleven non-empty ones</td><td><code>pipeline.py:2152–2162</code>; <code>people.py:389–394</code></td><td>F2</td><td><span class="pill open">open</span> needs a call: an empty slot is the only honest state until origin is stored (G11); preferring any non-empty guess makes outcome A/B more likely, not less</td></tr>
+<tr><td class="c">G4</td><td class="k">Observers are never auto-named</td><td><code>pipeline.py:2152–2162</code> maps participant and researcher infos only</td><td>F9</td><td><span class="pill blocked">blocked</span> on study-wide <code>o</code> codes: auto-naming into a slot that restarts per session would manufacture F9 without a researcher typing anything</td></tr>
+<tr><td class="c">G5</td><td class="k"><code>GET /people</code> has no ordering; the last row returned wins</td><td><code>routes/data.py:317–329</code></td><td>F4</td><td><span class="pill free">free win</span> order deterministically (by session number), and document which row speaks for a code</td></tr>
+<tr><td class="c">G6</td><td class="k"><code>PUT /people</code> writes one <code>Person</code> row of N for the code</td><td><code>routes/data.py:350–366</code> (<code>.first()</code>); the importer seeds all N from one entry (<code>importer.py:885–890</code>)</td><td>F4</td><td><span class="pill free">free win</span> update every <code>Person</code> row the code points at; this restores §0's invariant in the one store that breaks it, and changes nothing the renumber will later undo</td></tr>
+<tr><td class="c">G7</td><td class="k">The editor state is keyed by code, so one pencil opens N editors and the edit collapses</td><td><code>SessionsTable.tsx:131</code>, <code>:443</code>; measured in Chromium and WebKit (plan §0b)</td><td>F3</td><td><span class="pill free">free win</span> key <code>editingCode</code> by <code>(session_id, code)</code>; pure UI</td></tr>
+<tr><td class="c">G8</td><td class="k">Duplicate <code>data-testid="bn-name-m1"</code> and twelve identical pencil labels</td><td><code>SessionsTable.tsx:466</code>, <code>:501</code>; TODO.md:583</td><td>F3</td><td><span class="pill free">free win</span> with G7: include the session in the id and the label ("Edit name for m1 in session 9")</td></tr>
+<tr><td class="c">G9</td><td class="k">MCP and chat-lens name resolution is first-wins by code</td><td><code>grounding.py:449</code>; <code>mcp_server.py:451–458</code>; TODO.md:583</td><td>F7</td><td><span class="pill open">open</span> correct by construction once a second moderator is <code>m2</code>; until then only consistency with G5/G6 is available</td></tr>
+<tr><td class="c">G10</td><td class="k">"Moderated by" dedupes by name; the sidebar detects multiple moderators by distinct names</td><td><code>routes/sessions.py:152–158</code>; <code>SessionsSidebar.tsx:34–37</code></td><td>F5</td><td><span class="pill blocked">blocked</span> on the renumber (TODO.md:583: removing the dedup renders collided data faithfully as "Sarah, Sarah, Sarah")</td></tr>
+<tr><td class="c">G11</td><td class="k">No name origin per field; no <code>cleared</code> sentinel; a confirmed guess and an unchecked guess are the same bytes</td><td>design-people §C1, §C5, §J3; <code>people.py:373–400</code> refills absence</td><td>F2 D4</td><td><span class="pill decided">decided · not built</span> step 2; the sentinels must be chosen before the field ships</td></tr>
+<tr><td class="c">G12</td><td class="k">No role endpoint; a role change is a recode of seven things</td><td>design-people §J1; <code>routes/data.py</code> exposes GET/PUT people only</td><td>—</td><td><span class="pill decided">decided · not built</span> role as a recorded override in step 1, the recode with step 4</td></tr>
+<tr><td class="c">G13</td><td class="k">The bank has no store: <code>Person</code> rows live in one SQLite per project</td><td><code>server/db.py:27</code>; design-people §B4 measured blocker; §J2 names <code>instance.db</code></td><td>D1</td><td><span class="pill blocked">blocked</span> on the instance database of design-multi-project.md §2</td></tr>
+<tr><td class="c">G14</td><td class="k">The undo bridge is dead on the web half; compound verbs (rename + renumber) cannot undo as one act</td><td><code>bridge.ts</code> hard-codes <code>canUndo: false</code>; design-people §B10, §D step-1 gate</td><td>D1 D2</td><td><span class="pill blocked">blocked</span> a step-1 gate by the spec's own pricing</td></tr>
+<tr><td class="c">G15</td><td class="k">The quote stable key carries <code>participant_id</code>, so a recode of a <code>p</code> code does not survive re-import</td><td>design-people §B10, §J4; <code>_pinned_quote_ids</code> has no re-attribution arm</td><td>D2</td><td><span class="pill open">open</span> moot for a moderator renumber (no quotes), live for the observer mis-filing repair (<code>p → o</code>)</td></tr>
+<tr><td class="c">G16</td><td class="k">Whether codes are derived at render time or rewritten into <code>transcripts-raw/</code></td><td>design-people §J4, "not yet settled"</td><td>D2</td><td><span class="pill open">open</span> decides the size of step 4</td></tr>
+<tr><td class="c">G17</td><td class="k">The mockup register says the people lens and person actions ship</td><td><code>docs/mockups/STATUS.md</code> rows for <code>person-actions-everywhere.html</code> and <code>people-lens-scopes.html</code>; the router has no People route and <code>frontend/src</code> has zero <code>onContextMenu</code> handlers</td><td>—</td><td><span class="pill free">free win</span> re-register both as PROPOSED (the lens) and PROPOSED · partly superseded by design-people §B (the actions); the check script cannot judge state, only presence</td></tr>
+<tr><td class="c">G18</td><td class="k">Docs and comments that still name the rejected rekey or the retired linking phase</td><td><code>people.py:136–145</code> docstring and <code>:218–224</code> WARNING text ("the fix is to give <code>people.yaml</code> the person↔session split"); <code>stages/CLAUDE.md:60</code>, <code>:215</code> (signature with a <code>session_id</code> parameter the function does not take); <code>design-html-report.md:76</code> Phase 2 <code>same_as</code>; <code>README.md:313</code>; <code>ROADMAP.md:38</code>; <code>design-decisions.md:382–384</code>; <code>design-mcp-server.md:855</code></td><td>—</td><td><span class="pill free">free win</span> a truing pass; the WARNING text is user-visible in the log and points researchers at a rejected design</td></tr>
+<tr><td class="c">G19</td><td class="k">The Mac Re-analyse sheet counts every <code>Person</code> row with a non-empty <code>full_name</code> as a researcher's rename</td><td><code>CurationCountsReader.swift:73–77</code>; the pipeline fills <code>full_name</code> from LLM and label names, and there are N rows per code</td><td>—</td><td><span class="pill suspect">suspected</span> not run; if true the sheet overstates "renamed speakers" by the session count and counts guesses as edits</td></tr>
+<tr><td class="c">G20</td><td class="k">No fixture can hold two <code>m1</code> names, so no failing test for the header, the sidebar or scope-at-rename can be written today; the sidebar's MULTI_MODERATOR fixture draws a shape the pipeline cannot produce</td><td>TODO.md:583; <code>SessionsSidebar.test.tsx:146–186</code></td><td>F5 F8</td><td><span class="pill blocked">blocked</span> the renumber lands first; re-home the pinned-limitation test then, never delete it</td></tr>
+<tr><td class="c">G21</td><td class="k">The transcripts plan keys study-wide moderator codes two ways (§0 participant id; §3 display name) and Q4 asks the owner which</td><td>design-cloud-import-transcripts.md lines 121, 148, 454–455, 753–754</td><td>F11 D3</td><td><span class="pill open">open</span> owner call; this report recommends §0's key (challenge 5)</td></tr>
+<tr><td class="c">G22</td><td class="k">The §4 VTT contract carries display names (<code>&lt;v Name&gt;</code>) and no participant id, so D3 cannot be keyed by id without the writer emitting one</td><td>design-cloud-import-transcripts.md §4 items 3–4; Meet's <code>participants.list</code> has ids (§1), Zoom's <code>Name:</code> prefix has none</td><td>D3</td><td><span class="pill open">open</span> a contract addition (a NOTE map or an attribute per cue) decided with G21</td></tr>
+<tr><td class="c">G23</td><td class="k">The collision is announced only as a WARNING in the per-project log</td><td><code>people.py:213–225</code>; TODO.md:269 ("the weakest available surface")</td><td>F2 D4</td><td><span class="pill open">open</span> a <code>MessageKind</code> call under design-pipeline-diagnostic-popover.md; D4's sweep line is the SPA-side answer once origin exists</td></tr>
+<tr><td class="c">G24</td><td class="k">Role identification samples the first five minutes and maps UNKNOWN to a <code>p</code> code</td><td><code>s05b_identify_speakers.py</code> (<code>seg.start_time &gt; 300</code>); design-people J3</td><td>F9</td><td><span class="pill decided">decided · not built</span> the repair (observer mis-filing, §B7a) is the product, not a better classifier</td></tr>
+</table></div>
+
+<div class="part" id="needs">Part 7 <small>What we need, in the order the dependencies allow</small></div>
+<h2>Four tranches</h2>
+<div class="prose">
+<h3>Now — no decision needed, nothing the renumber will undo</h3>
+<ul>
+  <li><b>One pencil, one editor.</b> Key <code>editingCode</code>, the test id and the aria-label by <code>(session_id, code)</code> (G7, G8). Ends the measured collapse in F3 without touching a store.</li>
+  <li><b>One name per code in the database too.</b> <code>put_people</code> updates every <code>Person</code> row the code resolves to; <code>get_people</code> orders by session number (G5, G6). After this, F4's reload shows the name the researcher typed, everywhere, which is what the invariant promises and what the YAML already does. The MCP roster then agrees with the grid (G9) by consequence.</li>
+  <li><b>Say it where it happened.</b> Decide the <code>MessageKind</code> for "a speaker code was reused across sessions" (G23). Until origin exists the honest wording is about sessions, not names: <i>"m1 appears in 12 sessions; one name covers all of them."</i></li>
+  <li><b>True the register and the comments</b> (G17, G18). The WARNING text researchers can read points them at a rejected design; the mockup register says a lens ships that does not exist.</li>
+  <li><b>Pick the empty-slot policy</b> (G3). Recommendation: keep the empty slot when the last window named nobody, because without origin an empty value is the only one that claims nothing; revisit when D4 can render a guess as a guess.</li>
+</ul>
+<h3>Next — step 1 of §D, the prerequisites the spec already prices</h3>
+<ul>
+  <li>The narrowed <code>PUT /people</code> payload (<code>str | None</code> fields, assign only what was sent; §J2). Back-compatible, and the precondition for "confirm" changing no value.</li>
+  <li>Name origin per field with the two sentinels (§J3), decided before the field ships. This unlocks D4 and every italic in the design.</li>
+  <li><code>persons.uuid</code>, one Alembic revision plus the head pin in <code>tests/test_migrations.py</code>.</li>
+  <li>The undo bridge's frontend half (G14), because every step-1 act is drawn with an Undo.</li>
+  <li>The instance database (G13), because the bank is the keystone of "a pick, not a keystroke" and has nowhere to write today.</li>
+</ul>
+<h3>Then — step 4, the moderator half first</h3>
+<ul>
+  <li>A rename in a session that detects a shared <code>m</code>/<code>o</code> code carrying a different name and mints the next free code for that session: <code>session_speakers</code> and <code>transcript_segments</code> updated under the unique constraint's ordering, <code>people.yaml</code> gaining a key through a write-through that can create (today it cannot; §J1), the sweep line with the scope in its words, one undo entry. Quotes are untouched for <code>m</code>/<code>o</code>, which is why this half is cheaper than the participant half.</li>
+  <li>Settle G16 (render-time derivation vs rewriting the bracket tokens) before the first recode ships, because the answer changes what "undo" has to put back.</li>
+  <li>Re-home the pinned-limitation test as the renumber's own test; replace the sidebar's impossible fixture with the shape the pipeline now produces; then the header and sidebar dedupe by code and G10 closes for free.</li>
+</ul>
+<h3>With the transcripts plan — Q4, answered in §0's terms</h3>
+<ul>
+  <li>Study-wide codes for <b>platform-labelled</b> researchers, keyed by the platform's participant identity where the platform exposes one, carried into the §4 contract (G22). Where it does not, stay per-session and let D1 do the joining; do not substitute a display string for an identity.</li>
+  <li>Keep 1d as reviewed for the first slice (participants only). F11 outcome ② is wrong nowhere; it is simply unsatisfying, and D3 is what makes it unnecessary.</li>
+</ul>
+</div>
+
+<div class="part" id="challenges">Part 8 <small>The challenges — what makes this harder than it looks from the grid</small></div>
+<h2>Twelve things to design around</h2>
+<div class="prose">
+<ol>
+  <li><b>Files in the field.</b> <code>people.yaml</code> is the one file researchers hand-edit, with copies in the field since the 14 Jul TestFlight. Any reshape needs a migration; any new block carries a downgrade hazard, because <code>write_people_file</code> does a <code>model_dump()</code> and an older binary silently drops what it does not know (§J2). The renumber is the design that needs neither, which is a large part of why it won.</li>
+  <li><b>Three stores, one invariant, no transaction across them.</b> YAML, SQLite and <code>transcripts-raw/</code> each hold the code, and a renumber must change all three or leave a reader that disagrees (D2). The DB half has an ordering constraint (free <code>m1</code> before taking <code>m2</code>); the YAML half has no create path in the write-through; the file half is the open J4 question.</li>
+  <li><b>The fixture that cannot exist.</b> Until a second moderator can be <code>m2</code>, no test can express "two moderators across sessions", so the header, the sidebar and scope-at-rename have no red test to write first. The sequencing inverts the obvious order (TODO.md:583): the renumber lands before any of the surfaces it fixes can be gated.</li>
+  <li><b>Tests that pin the limitation.</b> <code>test_multi_session_moderator_codes_collide_and_are_warned</code> is a contract that the loss is announced; it must be re-homed, not deleted, when the loss stops happening. The sidebar's MULTI_MODERATOR fixture is the opposite problem: a passing test about a world the pipeline cannot produce.</li>
+  <li><b>What counts as identity evidence.</b> decision 1 forbids merging on name equality at every altitude, for good reason: two Marys are two people. A platform participant id is not a name; it is the platform asserting that one account spoke. Q4 must be answered with that distinction stated, or the first implementation will merge on the display string because that is what the VTT contract carries (G21, G22). Two "M. Alvarez" accounts in one tenant is rare and must still be two codes.</li>
+  <li><b>The bank's store does not exist.</b> "A pick, not a keystroke" needs rows that span projects, and every <code>Person</code> row lives in a per-project SQLite. The instance database is a prerequisite of the keystone, and it is a new database with its own migration story.</li>
+  <li><b>Compound undo across a dead bridge.</b> Rename-and-renumber, name-from-the-bank-and-link, re-attribute-and-fall-out-of-the-lens: each is one act to the researcher and two or three writes to the system, and the channel that would let ⌘Z span them is wired on the Swift side and not on the web side.</li>
+  <li><b>Observers are the common case and the unnamed one.</b> The extra person is an observer ~95% of the time; observers are never auto-named; their codes restart per session and fragment when someone else speaks first (F9). Auto-naming them before study-wide codes exist would spread the mislabel without a human in the loop (G4).</li>
+  <li><b>The warning has no good home yet.</b> A log line is read by nobody; a toast is banned; the popover vocabulary is a five-kind taxonomy with a flowchart for new messages. Until origin exists, the sentence can only be about sessions and codes, which is less than the researcher wants to hear and all the system can truthfully say.</li>
+  <li><b>Localisation of a menu that does not exist.</b> §I4 counts 141 seedable keys for the person menu across 21 full locales, with the label-plus-chooser contract (§B2) because Korean and Japanese cannot close an English cloze sentence; the fr moderator word is itself an open owner call. The sweep line in D1 is one more plural-bearing string in 21 files.</li>
+  <li><b>The sealed renderer disagrees and will keep disagreeing.</b> The static HTML byproduct groups by <code>computed.session_id</code> and drops moderators from rows; it is frozen by decision, so the two files in one output folder will describe the study's moderators differently until the byproduct is repurposed.</li>
+  <li><b>The register that says it shipped.</b> Two mockups are listed IMPLEMENTED for a lens that does not exist. The gate behind the register checks presence, not truth, by design; the truth has to be put there by hand, and a reader who trusts the register will skip this whole problem as solved.</li>
+</ol>
+</div>
+
+<div class="part" id="method">Part 9 <small>Method, and what could not be read</small></div>
+<h2>How this was produced</h2>
+<div class="prose">
+<ul>
+  <li><b>Read, not run.</b> Every "shipped" frame is drawn from the cited source at <code>1446e4d</code>. Nothing was executed; no pipeline was run on any data. Frames F3's collapse and the §2 "Pri" case are <b>measured</b> claims borrowed from the transcripts plan (30 Sep–1 Oct 2026), which ran code. F4's reload order is read from SQLite's default row order and is labelled a likely rendering, not a guaranteed one.</li>
+  <li><b>Two subagent passes</b> mapped the implementation (pipeline, people file, schema, routes, SPA, exports, Swift, tests) and the prior work (docs, TODO, changelog, commits, prompts, issues). Their file:line citations were spot-checked against the tree before being drawn; where they disagreed with older docs (the <code>assign_speaker_codes</code> signature, the <code>SessionSpeaker</code> line number) the tree won.</li>
+  <li><b>Not readable from this clone:</b> the maintainer's private planning and review tree (gitignored), including the 30 Sep review log that holds the finding's literal wording and the Zoom parking brief; the clone is shallow (50 commits from 29 Sep), so commit dates before that came from the GitHub API via the subagent and the pickaxe searches cover only the last three days of history.</li>
+  <li><b>The cast</b> is design-people.md §H's pinned cast (ward handover app, round 2), extended with participants for sessions 9–13 and a second colleague (Rachel) for F8, so the frames can be compared with <code>person-actions-everywhere.html</code> bench 9 and <code>people-provenance-paths.html</code> without translation.</li>
+  <li><b>What this report does not do.</b> It does not re-argue decisions 1 or 2, propose a rekey, or invent a new verb. The two things it recommends beyond the spec are small and inside the settled model: write every row for a code (G6) and key the editor by session (G7).</li>
+</ul>
+</div>
+
+<div class="footer">Report drawn 1 Oct 2026 against <code>1446e4d</code>. Design of record: <code>docs/design-people.md</code> (§E decisions 1 and 2, §B4, §B9, §B10, §J). Mechanics: <code>docs/design-transcript-speaker-editing-roadmap.md</code> §11c. The finding: <code>docs/design-cloud-import-transcripts.md</code> §0b, §3 1d, §8 Q4. Register row: <code>docs/mockups/STATUS.md</code>.</div>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  var buttons = document.querySelectorAll('.pbtn[data-pal]');
+  function setPal(p) {
+    root.setAttribute('data-color-theme', p);
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].classList.toggle('on', buttons[i].getAttribute('data-pal') === p);
+    }
+    try { localStorage.setItem('bn-mockup-palette', p); } catch (e) {}
+  }
+  for (var i = 0; i < buttons.length; i++) {
+    buttons[i].addEventListener('click', function (ev) { setPal(ev.currentTarget.getAttribute('data-pal')); });
+  }
+  var saved = null;
+  try { saved = localStorage.getItem('bn-mockup-palette'); } catch (e) {}
+  if (saved === 'edo') setPal('edo');
+})();
+</script>
+</body>
+</html>

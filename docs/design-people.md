@@ -1521,6 +1521,12 @@ restate it.
   turn-noun in nine locales and the ja *Observer* drift is corrected. Still owed:
   the wording for person-level team membership and the job-title field's label —
   both owner calls, §H
+- [`mockups/moderator-identity-failure-states.html`](mockups/moderator-identity-failure-states.html)
+  — **1 Oct 2026, a code-truth report**: the `m1`/`o1` collision drawn frame by
+  frame as it ships (sessions grid, the pencil that opens twelve editors, the
+  export, the MCP roster, the re-run that spreads a correction), then decision 1's
+  rename-renumbers drawn as the way out; a gap register measured against this
+  doc, and the challenges. It indexes; it does not re-argue anything settled here
 
 ---
 

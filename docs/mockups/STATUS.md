@@ -64,6 +64,7 @@ state is still evidenced, the day is not.
 | `cloud-import-sidebar-progress.html` | 17 Aug 2026 | IMPLEMENTED — `ProjectSubtitle.importingBatch` renders “3 of 4” per this |
 | `cloud-import-states.html` | 15 Aug 2026 | IMPLEMENTED — cloud import ships (16 Swift files); MS + Google tenants live |
 | `cloud-import-three-platforms.html` | 16 Aug 2026 | IMPLEMENTED — Teams / Google / Zoom surfaces ship |
+| `cloud-import-transcript-pairs.html` | 1 Oct 2026 | *unreviewed* — landed with `1446e4d` (the transcripts plan, §5e names it as the grid mockup); not yet classified against the code |
 
 ## codebook
 
@@ -122,6 +123,8 @@ state is still evidenced, the day is not.
 | `mcp-agents-pane.html` | 22 Aug 2026 | IMPLEMENTED — “the pane design is … drawn at the shipped” size; `MCPAgentsSettingsView.swift` ships |
 | `mcp-extension-ux.html` | 3 Aug 2026 | IMPLEMENTED — the `.mcpb` extension shipped 1 Aug 2026 |
 | `mcp-spike-ux-walkthrough.html` | 1 Aug 2026 | PROPOSED 1 Aug 2026 · IMPLEMENTED — the spike accepted 30 Jul 2026 |
+| `mcp-files-and-folders.html` | 29 Sep 2026 | *unreviewed* — landed with `8f29792`; `docs/design-mcp-files-and-folders.md` describes it as the fallback route's copy; not yet classified against the code |
+| `mcp-native-proxy-decisions.html` | 29 Sep 2026 | *unreviewed* — landed with `c6a653b` alongside `docs/design-mcp-native-proxy.md`; not yet classified against the code |
 
 ## miro
 
@@ -208,6 +211,9 @@ state is still evidenced, the day is not.
 | `app-icon-directions.html` | 26 Sep 2026 | *unreviewed* |
 | `edit-affordance-states.html` | 22 Sep 2026 | *unreviewed* |
 | `project-condition-poc.html` | 28 Sep 2026 | *unreviewed* |
+| `search-flow.html` | 29 Sep 2026 | *unreviewed* — landed with `92e7ff0` (the federated-search proposal); not yet classified against the code |
+| `search-ideas.html` | 29 Sep 2026 | *unreviewed* — landed with `92e7ff0`; not yet classified against the code |
+| `toolbar-search.html` | 29 Sep 2026 | *unreviewed* — landed with `92e7ff0`; not yet classified against the code |
 
 ## out-of-credit
 
@@ -222,6 +228,7 @@ state is still evidenced, the day is not.
 | `redaction-indicator.html` | 13 Sep 2026 | *unreviewed* — added by `a4c51086` ("the report says when it was redacted"); called "the decided design" by `docs/design-redact-pii.md:1330`. `piiRedactedAction` exists in the locales, so something shipped; whether it is this has not been checked. |
 | `people-lens-scopes.html` | 27 Aug 2026 | IMPLEMENTED — the people lens ships |
 | `people-provenance-paths.html` | 19 Aug 2026 | SANDPIT — provenance-path diagrams for the people lens |
+| `moderator-identity-failure-states.html` | 1 Oct 2026 | PROPOSED 1 Oct 2026 — a code-truth report, not a design: frames F1–F12 draw the `m1`/`o1` collision as it ships at `1446e4d` (each cites the file that draws it), frames D1–D4 draw `design-people.md` §E decision 1 / §B9 / §B10, which are settled and **not built**. Sibling of `person-actions-everywhere.html` bench 9; the two IMPLEMENTED rows above it are wrong (no People route, zero `onContextMenu` handlers at HEAD) and are listed as gap G17 in the report |
 
 ## pipeline
 

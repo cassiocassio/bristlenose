@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any
 
 from bristlenose.llm.boundary import wrap_untrusted
 from bristlenose.models import SpeakerRole, TranscriptSegment
+from bristlenose.people import is_generic_label
+from bristlenose.stages.s03_parse_subtitles import CLOUD_TRANSCRIPT_SOURCE, SUBTITLE_SOURCES
 
 
 @dataclass
@@ -20,6 +23,65 @@ class SpeakerInfo:
     job_title: str = ""
 
 logger = logging.getLogger(__name__)
+
+#: Segment sources that came from a transcript FILE rather than from Whisper.
+#: The platform (or the researcher's own export) decided who spoke; nothing
+#: downstream may second-guess that with a model.
+PLATFORM_SOURCES = frozenset(SUBTITLE_SOURCES | {"docx"})
+
+
+class SplitGate(str, Enum):
+    """What the speaker-splitting pre-pass should do with a session."""
+
+    #: Whisper output with at most one label: hand it to `split_single_speaker_llm`.
+    SPLIT = "split"
+    #: Two or more speakers already — nothing to split.
+    SEPARATED = "separated"
+    #: A platform transcript that names one account, or a cloud transcript that
+    #: names nobody. Kept as written, and STATED: the splitter must not run.
+    NOT_SEPARATED = "not_separated"
+
+
+def real_speaker_names(segments: list[TranscriptSegment]) -> set[str]:
+    """The labels on *segments* that are people's names, not placeholders."""
+    return {
+        seg.speaker_label
+        for seg in segments
+        if seg.speaker_label and not is_generic_label(seg.speaker_label)
+    }
+
+
+def split_gate(segments: list[TranscriptSegment]) -> SplitGate:
+    """Decide whether the LLM splitter may run on a session.
+
+    The splitter reads the first 5–8 minutes and carries the last label to
+    the end of the file (``docs/design-speaker-splitting.md``). On a bare
+    recording that is the best available; on a platform transcript it is a
+    regression — it overwrote the one real name an in-room interview carried
+    with "Speaker A/B" (measured, 30 Sep 2026). So:
+
+    * two or more labels → already separated;
+    * a platform transcript (subtitle or docx source) carrying a real name →
+      that name is the account, not a voice; never split (product call Q3);
+    * a cloud transcript whose writer said ``speakers: none`` → the platform
+      could not separate them and neither should a model guessing from text
+      — an INTERIM rule while whole-transcript splitting is being measured;
+    * a vendor subtitle file with no names at all (a bare caption track) and
+      every Whisper transcript → split, as today.
+    """
+    if not segments:
+        return SplitGate.SEPARATED
+    labels = {seg.speaker_label or "Unknown" for seg in segments}
+    if len(labels) >= 2:
+        return SplitGate.SEPARATED
+
+    from_platform = all(seg.source in PLATFORM_SOURCES for seg in segments)
+    if from_platform:
+        if real_speaker_names(segments):
+            return SplitGate.NOT_SEPARATED
+        if all(seg.source == CLOUD_TRANSCRIPT_SOURCE for seg in segments):
+            return SplitGate.NOT_SEPARATED
+    return SplitGate.SPLIT
 
 
 def speaker_info_to_dict(info: SpeakerInfo) -> dict[str, Any]:

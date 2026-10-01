@@ -496,3 +496,79 @@ class TestInterviewerHeuristic:
                 assert seg.speaker_role == SpeakerRole.PARTICIPANT, (
                     f"Expected PARTICIPANT for guest segment: {seg.text[:40]!r}"
                 )
+
+
+# ---------------------------------------------------------------------------
+# The gate in front of the splitter (1b, 1 Oct 2026)
+# ---------------------------------------------------------------------------
+#
+# `split_single_speaker_llm` itself is unchanged — its window, its propagation
+# and its prompt are another session's open question. What changed is WHICH
+# sessions reach it: a platform transcript that names its speakers never does,
+# because the splitter overwrote the one real name an in-room interview carried
+# with "Speaker A/B" (measured, 30 Sep 2026).
+
+
+def _platform_seg(label: str | None, source: str, i: int = 0) -> TranscriptSegment:
+    return TranscriptSegment(
+        start_time=float(i * 10), end_time=float(i * 10 + 9), text="words here",
+        speaker_label=label, source=source,
+    )
+
+
+class TestSplitGate:
+    def _gate(self, labels: list[str | None], source: str):
+        from bristlenose.stages.s05b_identify_speakers import split_gate
+
+        return split_gate([_platform_seg(lbl, source, i) for i, lbl in enumerate(labels)])
+
+    def test_whisper_with_no_labels_splits(self) -> None:
+        from bristlenose.stages.s05b_identify_speakers import SplitGate
+
+        assert self._gate([None] * 5, "whisper") is SplitGate.SPLIT
+        assert self._gate([None] * 5, "mlx-whisper") is SplitGate.SPLIT
+
+    def test_whisper_with_one_placeholder_label_splits(self) -> None:
+        from bristlenose.stages.s05b_identify_speakers import SplitGate
+
+        assert self._gate(["Speaker 1"] * 5, "faster-whisper") is SplitGate.SPLIT
+
+    def test_two_labels_are_already_separated(self) -> None:
+        from bristlenose.stages.s05b_identify_speakers import SplitGate
+
+        assert self._gate(["Ana", "Bruno", "Ana"], "vtt") is SplitGate.SEPARATED
+        assert self._gate(["Speaker A", "Speaker B"], "whisper") is SplitGate.SEPARATED
+
+    def test_one_real_name_on_a_platform_transcript_is_the_account(self) -> None:
+        """Two people in a room, one Teams account: the name is real and it
+        is kept. Splitting would overwrite it with Speaker A/B."""
+        from bristlenose.stages.s05b_identify_speakers import SplitGate
+
+        assert self._gate(["Martin Storey"] * 6, "vtt") is SplitGate.NOT_SEPARATED
+        assert self._gate(["Martin Storey"] * 6, "docx") is SplitGate.NOT_SEPARATED
+        assert self._gate(["Martin Storey"] * 6, "srt") is SplitGate.NOT_SEPARATED
+
+    def test_cloud_transcript_with_no_names_is_not_separated(self) -> None:
+        """The writer said `speakers: none`; a model guessing from text does
+        not get to override the platform (interim rule, §0 item 3)."""
+        from bristlenose.stages.s03_parse_subtitles import CLOUD_TRANSCRIPT_SOURCE
+        from bristlenose.stages.s05b_identify_speakers import SplitGate
+
+        assert self._gate([None] * 6, CLOUD_TRANSCRIPT_SOURCE) is SplitGate.NOT_SEPARATED
+
+    def test_vendor_captions_with_no_names_still_split(self) -> None:
+        """A bare caption track dropped in by hand behaves as it did yesterday."""
+        from bristlenose.stages.s05b_identify_speakers import SplitGate
+
+        assert self._gate([None] * 6, "vtt") is SplitGate.SPLIT
+        assert self._gate(["Speaker 1"] * 6, "srt") is SplitGate.SPLIT
+
+    def test_a_phone_number_is_not_a_name(self) -> None:
+        from bristlenose.stages.s05b_identify_speakers import SplitGate
+
+        assert self._gate(["+44 7700 ****23"] * 6, "vtt") is SplitGate.SPLIT
+
+    def test_empty_session_has_nothing_to_split(self) -> None:
+        from bristlenose.stages.s05b_identify_speakers import SplitGate, split_gate
+
+        assert split_gate([]) is SplitGate.SEPARATED

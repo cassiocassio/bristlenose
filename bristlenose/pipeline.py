@@ -780,11 +780,14 @@ class Pipeline:
         from bristlenose.stages.s02_extract_audio import extract_audio_for_sessions
         from bristlenose.stages.s05b_identify_speakers import (
             SpeakerInfo,
+            SplitGate,
             assign_speaker_codes,
             identify_speaker_roles_heuristic,
             identify_speaker_roles_llm,
+            real_speaker_names,
             speaker_info_from_dict,
             speaker_info_to_dict,
+            split_gate,
             split_single_speaker_llm,
         )
         from bristlenose.stages.s06_merge_transcript import (
@@ -1344,14 +1347,34 @@ class Pipeline:
                 _speaker_errors: list[str] = []
 
                 if _remaining_si_sids:
-                    # Split single-speaker transcripts (LLM pre-pass)
+                    # Split single-speaker transcripts (LLM pre-pass) — but
+                    # never a platform transcript that names its speakers, and
+                    # never a cloud transcript whose writer said it could not
+                    # separate them. `split_gate` holds the rule; a session it
+                    # keeps whole is stated, because the researcher will see
+                    # one voice where there were two and must know why.
+                    _gates = {
+                        sid: split_gate(session_segments[sid])
+                        for sid in sorted(_remaining_si_sids)
+                    }
                     _split_sids = [
-                        sid for sid in _remaining_si_sids
-                        if len(set(
-                            seg.speaker_label or "Unknown"
-                            for seg in session_segments[sid]
-                        )) <= 1
+                        sid for sid, gate in _gates.items()
+                        if gate is SplitGate.SPLIT
                     ]
+                    for sid, gate in _gates.items():
+                        if gate is not SplitGate.NOT_SEPARATED:
+                            continue
+                        _names = real_speaker_names(session_segments[sid])
+                        _what = (
+                            f"one speaker ({next(iter(_names))})" if _names
+                            else "no speakers"
+                        )
+                        _msg = (
+                            f"{sid}: speakers not separated — the transcript names "
+                            f"{_what}; kept as the platform wrote it, not split"
+                        )
+                        logger.warning(_msg)
+                        _print_warn(_msg)
                     if _split_sids:
                         _sem_split = asyncio.Semaphore(concurrency)
 

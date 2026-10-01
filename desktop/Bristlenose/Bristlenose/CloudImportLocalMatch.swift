@@ -386,6 +386,15 @@ enum CloudImportLocalMatch {
         }
     }
 
+    /// The probed length of one media file, for the transcript writer's
+    /// `media-duration:` line and the clock check in front of it (§5c). The
+    /// same AVFoundation read the scan uses, so the number the transcript is
+    /// cut to is the number the already-imported match will later measure.
+    /// Nil when the file will not open or is a placeholder.
+    static func mediaDuration(of url: URL) async -> TimeInterval? {
+        await probe(url)?.duration
+    }
+
     /// Measure one file, or decline to.
     private static func probe(_ url: URL) async -> LocalRecording? {
         // **Never open a placeholder.** Reading a container header faults the

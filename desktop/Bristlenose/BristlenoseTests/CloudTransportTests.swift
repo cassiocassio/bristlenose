@@ -874,13 +874,15 @@ struct AdapterRowDerivationTests {
 
     /// The stub queue is FIFO across every URL, so the order below is the order
     /// `list` actually makes its calls: identity, the calendar page, the
-    /// window's conference records, each record's recordings, then the room of
-    /// each record that produced a file.
+    /// window's conference records, each record's recordings, **then each
+    /// recorded call's transcripts**, then the room of each record that
+    /// produced a file.
     ///
     /// That last call is what makes the join exact — `spaces.get` returns the
     /// meeting code the calendar event already carries — and omitting it from
     /// this fixture is a good way to watch a booked meeting arrive as an
-    /// instant one.
+    /// instant one. The transcripts call sits between because it is made per
+    /// recorded call, sequentially after that call's recordings (1 Oct 2026).
     @Test("Two FILE_GENERATED recordings become two rows of one meeting")
     func twoRecordingsBecomeTwoRows() async throws {
         let start = Date().addingTimeInterval(-3 * 3600)
@@ -897,9 +899,12 @@ struct AdapterRowDerivationTests {
           "conferenceData":{"conferenceId":"abc-defg-hij",
             "conferenceSolution":{"key":{"type":"hangoutsMeet"}}}}]}
         """))
+        // A past conference carries `endTime` — Google documents it as "set
+        // for past conferences" — and the transcript decision reads it.
         StubURLProtocol.enqueue(.json("""
         {"conferenceRecords":[{"name":"conferenceRecords/rec-1","space":"spaces/sp-1",
-          "startTime":"\(iso.string(from: start))"}]}
+          "startTime":"\(iso.string(from: start))",
+          "endTime":"\(iso.string(from: start.addingTimeInterval(4800)))"}]}
         """))
         StubURLProtocol.enqueue(.json("""
         {"recordings":[
@@ -910,6 +915,13 @@ struct AdapterRowDerivationTests {
            "startTime":"\(iso.string(from: start.addingTimeInterval(2400)))",
            "endTime":"\(iso.string(from: start.addingTimeInterval(4700)))"},
           {"name":"r3","state":"STARTED","driveDestination":{"file":"file-C"}}]}
+        """))
+        // One transcript spanning the whole call: generated, so both halves
+        // read *Available* and pair with it at fetch time.
+        StubURLProtocol.enqueue(.json("""
+        {"transcripts":[{"name":"conferenceRecords/rec-1/transcripts/t-1","state":"FILE_GENERATED",
+          "startTime":"\(iso.string(from: start.addingTimeInterval(60)))",
+          "endTime":"\(iso.string(from: start.addingTimeInterval(4750)))"}]}
         """))
         StubURLProtocol.enqueue(.json(#"{"meetingCode":"abc-defg-hij"}"#))
 
@@ -930,6 +942,10 @@ struct AdapterRowDerivationTests {
         // `STARTED` has no bytes behind it yet; offering it would produce a
         // fetch that 404s minutes after the researcher ticks it.
         #expect(listing.rows.allSatisfy { $0.video == .available })
+        // The one generated transcript overlaps both halves, so each pairs
+        // with it — and neither waits.
+        #expect(listing.rows.allSatisfy { $0.transcript == .available })
+        #expect(listing.rows.allSatisfy(\.isSelectable))
         // Both clocks, and they disagree — which is the whole reason the grid
         // has two columns.
         let first = listing.rows.min { $0.startsAt < $1.startsAt }
@@ -969,7 +985,8 @@ struct AdapterRowDerivationTests {
         // One call in the window, and it is not that meeting's room.
         StubURLProtocol.enqueue(.json("""
         {"conferenceRecords":[{"name":"conferenceRecords/rec-9","space":"spaces/sp-9",
-          "startTime":"\(iso.string(from: called))"}]}
+          "startTime":"\(iso.string(from: called))",
+          "endTime":"\(iso.string(from: called.addingTimeInterval(120)))"}]}
         """))
         StubURLProtocol.enqueue(.json("""
         {"recordings":[{"name":"r1","state":"FILE_GENERATED",
@@ -977,6 +994,8 @@ struct AdapterRowDerivationTests {
           "startTime":"\(iso.string(from: called.addingTimeInterval(60)))",
           "endTime":"\(iso.string(from: called.addingTimeInterval(74)))"}]}
         """))
+        // Nobody transcribed this one, and the call has ended.
+        StubURLProtocol.enqueue(.json(#"{"transcripts":[]}"#))
         StubURLProtocol.enqueue(.json(#"{"meetingCode":"osp-jwrt-wff"}"#))
 
         let source = GoogleMeetSource(
@@ -996,6 +1015,10 @@ struct AdapterRowDerivationTests {
         #expect(instant.recordedAt != nil)
         #expect(instant.duration == 14)
         #expect(instant.video == .available, "there is a file and we can reach it")
+        // No transcript resource on an ended call: Bristlenose transcribes,
+        // and the row is not held waiting for one.
+        #expect(instant.transcript == .notProvided)
+        #expect(instant.isSelectable)
 
         let meeting = try #require(listing.rows.first { !$0.isUnscheduled })
         #expect(meeting.title == "P05 Interview")

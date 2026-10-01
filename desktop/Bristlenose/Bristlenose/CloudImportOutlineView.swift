@@ -125,6 +125,10 @@ struct CloudImportOutlineView: NSViewRepresentable {
         // the one-or-two-row state that is this window's commonest.
         context.coordinator.outline = outline
         context.coordinator.onMinimumWidth = onMinimumWidth
+        // Taken now, before any re-fit has squeezed them to a frame: these are
+        // the widths the window is opened wide enough to show.
+        context.coordinator.openingWidths = Dictionary(
+            uniqueKeysWithValues: outline.tableColumns.map { ($0.identifier, $0.width) })
         // Before the first reload, so the column set is right on the first
         // frame rather than corrected on the second.
         context.coordinator.syncScheduledColumn()
@@ -154,6 +158,11 @@ struct CloudImportOutlineView: NSViewRepresentable {
         // longest status the column has to hold.
         context.coordinator.syncStatusColumnWidth()
         context.coordinator.reportMinimumWidth()
+        // A second chance for the one-time window fit, in case the window had
+        // no frame yet when the grid was attached. Deferred: resizing the
+        // window from inside a view update is a mutation during that update.
+        let coordinator = context.coordinator
+        DispatchQueue.main.async { coordinator.fitWindowToOpeningWidths() }
         context.coordinator.reload(force: false)
     }
 
@@ -285,6 +294,13 @@ extension CloudImportOutlineView {
         /// be work for an answer that only changes with the language.
         private var statusWidthLocale: String?
         private var reportedMinimumWidth: CGFloat = 0
+        /// The inset style's edge padding plus intercell spacing, as measured by
+        /// the last `reportMinimumWidth`.
+        private var lastOverhead: CGFloat = 0
+        /// What each column asks for when the window opens: its created (or
+        /// autosave-restored) width, and Status's preferred width.
+        var openingWidths: [NSUserInterfaceItemIdentifier: CGFloat] = [:]
+        private var didFitWindow = false
         /// The column set and minimums the last report was computed from.
         private var fittedColumns: [String] = []
 
@@ -519,6 +535,57 @@ extension CloudImportOutlineView {
             // Explicit, because a width restored by `autosaveTableColumns` from a
             // build with a lower minimum is not something to leave to AppKit.
             if column.width < minimum { column.width = minimum }
+            // **Opens wide enough for every regular message**, failure
+            // sentences included — a default that cuts off "The download
+            // failed." is careless, whatever the minimum allows. The minimum
+            // still leaves the sentences out, so the column can be dragged
+            // narrower and the tooltip carries the rest.
+            let preferred = CloudImportStatusColumn.preferredWidth(i18n)
+            openingWidths[Column.status] = max(openingWidths[Column.status] ?? 0, preferred)
+            if column.width < preferred {
+                column.width = preferred
+                // A width set in code reaches the screen only through a re-fit,
+                // and `reportMinimumWidth` re-fits only when a minimum moves.
+                if outline.window != nil { outline.sizeToFit() }
+            }
+        }
+
+        /// Widens the window, once, when it opens narrower than its columns'
+        /// opening widths — Status at its preferred width, the rest as created.
+        ///
+        /// `.defaultSize` cannot do this: it is a number fixed at build time in
+        /// one language, and it is ignored for a window whose frame was
+        /// restored from a narrower session. Measured here instead, from the
+        /// columns themselves, in the language the window opened in. Only ever
+        /// grows, never past the screen, and never again after the first fit,
+        /// so a window the researcher narrows stays narrowed.
+        func fitWindowToOpeningWidths() {
+            guard !didFitWindow, let outline, let window = outline.window,
+                  let scrollView = outline.enclosingScrollView,
+                  outline.numberOfColumns > 0, scrollView.frame.width > 0,
+                  reportedMinimumWidth > 0
+            else { return }
+            didFitWindow = true
+            let columns = outline.tableColumns
+            let wanted = columns.map { max($0.minWidth, openingWidths[$0.identifier] ?? $0.width) }
+            let scroller = scrollView.scrollerStyle == .legacy
+                ? NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy) : 0
+            let needed = ceil(wanted.reduce(0, +) + lastOverhead + scroller)
+            let shortfall = needed - scrollView.frame.width
+            if shortfall > 0 {
+                var frame = window.frame
+                frame.size.width += shortfall
+                if let screen = window.screen?.visibleFrame {
+                    frame.size.width = min(frame.size.width, screen.width)
+                    if frame.maxX > screen.maxX {
+                        frame.origin.x = max(screen.minX, screen.maxX - frame.width)
+                    }
+                }
+                window.setFrame(frame, display: true)
+                window.contentView?.layoutSubtreeIfNeeded()
+            }
+            for (column, width) in zip(columns, wanted) { column.width = width }
+            outline.sizeToFit()
         }
 
         /// Tells the window how narrow it may go, after any column came, went or
@@ -551,6 +618,7 @@ extension CloudImportOutlineView {
             let last = outline.rect(ofColumn: columns.count - 1)
             // Leading padding counted twice: the inset style is symmetric.
             let overhead = last.maxX + first.minX - widths
+            lastOverhead = overhead
             // A legacy (always-visible) scroller takes its width out of the
             // clip view; an overlay one takes nothing.
             let scroller = scrollView.scrollerStyle == .legacy
@@ -1088,7 +1156,12 @@ private final class OutlineView: NSOutlineView {
     /// and `makeNSView` runs before the view has a window.
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        if window != nil { coordinator?.reportMinimumWidth() }
+        guard window != nil else { return }
+        coordinator?.reportMinimumWidth()
+        // A turn later, so the window has taken its opening frame first.
+        DispatchQueue.main.async { [weak self] in
+            self?.coordinator?.fitWindowToOpeningWidths()
+        }
     }
 
     override func keyDown(with event: NSEvent) {
@@ -1372,6 +1445,21 @@ enum CloudImportStatusColumn {
             cell.configureText(i18n.t(key), colour: .secondaryLabelColor, bold: false); measure()
         }
         cell.configureProgress(0.5, name: "", i18n: i18n, onCancel: {}); measure()
+        return ceil(widest)
+    }
+
+    /// What Status opens at: everything `minimumWidth` measures, plus every
+    /// fetch-failure sentence, drawn as the error row draws it. The organiser's
+    /// name and the provider and volume names are still left out — they have no
+    /// bound — and truncate to the tooltip.
+    @MainActor
+    static func preferredWidth(_ i18n: I18n) -> CGFloat {
+        let cell = StatusCellView(frame: .zero)
+        var widest = minimumWidth(i18n)
+        for failure in CloudFetchFailure.allCases {
+            cell.configure(i18n.t(failure.localeKey), kind: .error, bold: false)
+            widest = max(widest, cell.fittingSize.width)
+        }
         return ceil(widest)
     }
 

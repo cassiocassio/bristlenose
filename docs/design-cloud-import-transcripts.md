@@ -149,8 +149,17 @@ with Whisper and the LLM stubbed) now lives in `tests/test_pipeline_platform_tra
 - **0b sticky ids**, with rename carry-over, a re-identification-key file, atomic and locked writes, and
   a migration seeded from the serve DB. Imports get birthtime = download date, so they sort last and
   renumber nothing. **So §5f, dating files to the meeting, must not ship before 0b**, or every import of
-  an older meeting cross-wires stars.
-- 1c, study-wide moderator codes (by platform participant id, not display name), 1e and 1f.
+  an older meeting cross-wires stars. **Promoted 1 Oct 2026:** 0b is no longer "later" for the people
+  work — `docs/design-people.md` §H H9 keys the per-session moderator map by 0b's stable session
+  identity and lists 0b as its first package. The Meet slice may still ship before it; moderator
+  identity does not.
+- ~~1c, study-wide moderator codes (by platform participant id, not display name)~~ **Decided
+  1 Oct 2026 (Q4):** study-wide moderator *identities* are minted from platform labels — by
+  participant id where the platform supplies one, else one identity per distinct display name within
+  the study — proposed on their sessions, never confirmed by inference. The mechanism and the
+  rendering belong to `docs/design-people.md` §E decision 1 (corrected) and
+  `docs/mockups/moderator-identity-failure-states.html` Part 5b; this plan's part is to carry the
+  evidence (§4). Still later: 1e and 1f.
 - Phases 3 (Teams) and 5 (Zoom), and Phase 4.
 
 The pre-existing cross-wiring bug (§2, "adding an older recording") is still live for hand-dropped
@@ -177,7 +186,7 @@ implementation, the verdict says so.
 | Pairing recording + transcript | `_normalise_stem`, `_BN_DOWNLOAD_PREFIX_RE`, `_TEAMS_SUFFIX_RE`, `_GMEET_TAIL_RE`; `tests/test_ingest.py` (50), with real specimens | **Extend** for recurring titles (0c). The tested case "cloud video + hand-fetched transcript become one session" (the reason the prefix strip exists) must stay green |
 | Splitter gate | `split_single_speaker_llm` guard; `tests/test_speaker_splitting.py` (15) | **Extend** the guard (named platform transcripts never split) |
 | Names in people.yaml | `auto_populate_names`, `extract_names_from_labels`; `tests/test_name_extraction.py` | **Contract change, flagged.** `test_llm_priority_over_label` pins "LLM beats label". "Platform beats LLM" applies **only to platform-transcript labels**. Re-home that test's contract rather than invert it, because it still holds for generic labels |
-| Moderator codes | `tests/test_people.py::test_multi_session_moderator_codes_collide_and_are_warned` pins the collision as a *known limitation* (Layer 11) | **Deferred** (study-wide codes are out of the first slice). That test stays as is |
+| Moderator codes | `tests/test_people.py::test_multi_session_moderator_codes_collide_and_are_warned` pins the collision as a *known limitation* (Layer 11) | **Decided 1 Oct 2026, built separately** (design-people §H H9, route C): a session's moderator slot is `null` · `proposed` · `confirmed` on `session_speakers`, `m?` when null; platform labels propose and mint identities; `people.yaml` is retired as a store. That test stays as is until the map lands, then is re-homed as the map's own test, never deleted |
 | Resume caches (0a) | `tests/test_pipeline_resume.py` (37), `test_manifest*` | **Extend**; the stubbed harnesses become new cases here |
 | Admin approval (Teams) | `TeamsOAuth`'s `adminApprovalRequired` classifier (AADSTS90094 / 65001) and its `signInAdminApproval` copy; `TeamsSignInFailureTests`. `signIn(scopes:)` already takes a scope list | **Reuse** for the Request Approval round trip: same classifier, same failure copy. New code is only the second `signIn` call and the bar |
 | Teams listing | `TeamsSource` calendar join, `TeamsRecordingName`; `TeamsSourceTests` (30) pin the request sequence, `TeamsRecordingNameTests` (12) | **Append** the meeting/transcript calls after today's; update the sequence tests deliberately |
@@ -227,6 +236,12 @@ take on or avoid. Answers so far:
     the last session processed win, and the SPA editor for `m1` is itself broken: it opens in every
     session with an `m1`, the editors steal focus, and the edit collapses (`SessionsTable.tsx:443`,
     measured in Chromium and WebKit). Moderator names wait for study-wide moderator identity.
+    **Decided 1 Oct 2026:** that identity is route C in `docs/design-people.md` §E decision 1
+    (corrected): the slot is `null` until a label proposes or a person picks, platform labels mint
+    identities (by id, else per distinct name within the study), nothing infers and nothing asks,
+    and `people.yaml` is retired as a store — so both halves of the sentence above
+    ("`people.yaml` and the SPA name editor both key on the speaker code") are being replaced,
+    not worked around. Until H9 lands, 1d stays as written.
   - **Don't parse names from filenames.** The owner rejected it: filename conventions are "all over
     the place".
   - "Names populate" is not "names are editable": a Mac-app editing regression is reported and
@@ -691,8 +706,11 @@ immediately.
     from labels in the first slice** (§0b: one `people.yaml` entry per code, and the `m1` editor bug).
   - The platform name beats the LLM's `person_name`.
   - A masked phone label is never a name.
-  - **Platform-named moderators get study-wide codes by display name**: Martin is `m1` in every
-    session, Mike `m2`. Product call Q4.
+  - **Platform-named moderators get study-wide identities** — decided 1 Oct 2026 (Q4): by platform
+    participant id where one is supplied, else one identity per distinct display name within the
+    study; Martin is `m1` in every session, Mike `m2`, both *proposed* and shown with the proposed
+    treatment in the app, plain in the export. A session whose transcript names no moderator stays
+    `m?`. Ships with design-people §H H9, keyed by 0b.
 - **1e `.docx` turns get real ends.** Each turn ends at the next turn's start, capped by a
   words-per-second estimate; the last turn ends at the media's duration.
 - **1f Language.** The transcript's language comes from its NOTE, as a BCP-47 tag (`de`, `pt-BR`,
@@ -758,7 +776,11 @@ Agreed between the two working sessions and measured through `s01`/`s03`.
    to the **media file's t=0**, with end > start.
 3. **Cues.** Exactly one `<v Display Name>text</v>` per cue (MEASURED: a two-voice cue gives the whole
    cue to the first voice). No `Name:` prefix is left in the text. An unnamed transcript has **no**
-   `<v>` at all, and never an invented "Speaker 1".
+   `<v>` at all, and never an invented "Speaker 1". **Proposed addition (1 Oct 2026, for Q4):** where
+   the platform supplies a stable participant id (Meet's `participants.list`; Teams `metadataContent`
+   if it carries one — unmeasured), the NOTE carries a `participants:` map of display name → id, so
+   the pipeline can mint moderator identities by id rather than by string. A display name alone still
+   mints one identity per distinct name within the study (design-people §E decision 1, corrected).
 4. **Provenance** (MEASURED: webvtt-py skips it):
    ```
    WEBVTT
@@ -990,7 +1012,14 @@ App Store: no new entitlement. Import is ingress; consent was already settled on
 - **Q3 One account, two people in the room.** When a transcript names one account for everyone: keep
   the platform text and mark the session "speakers not separated" (proposed), or fall back to Whisper
   plus the splitter?
-- **Q4 Moderators across sessions.** When the platform names the moderator, should they get a
+- **Q4 Moderators across sessions.** **Answered 1 Oct 2026: yes, as identities, not as a renumbering
+  of per-session codes.** A platform-named moderator gets one study-wide identity (`m1`, `m2`…)
+  minted by participant id where available, else per distinct display name within the study,
+  proposed on each of their sessions and never confirmed by inference; a session with no label stays
+  `m?`. The §0 and §3 wordings of the key are reconciled above. Mechanism and rendering:
+  `docs/design-people.md` §E decision 1 (corrected) and
+  `docs/mockups/moderator-identity-failure-states.html` Part 5b. The question as originally asked
+  is kept for the record: When the platform names the moderator, should they get a
   study-wide code (Martin = `m1` everywhere)? This fits decision 1 in `docs/design-people.md`.
 - **Q5 The grid.** **Decided 1 Oct 2026: Option A**, a Transcript column, measured and added or removed
   the way Status and Scheduled already are (§5e). Speaker names go in the cell's tooltip.

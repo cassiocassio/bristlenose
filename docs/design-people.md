@@ -15,6 +15,24 @@ built. The people *file* and its endpoints predate it and do ship —
 
 ## Changelog
 
+- _2026-10-01_ — **Route C decided: unknown is stored as unknown, and `people.yaml` is retired
+  as a store.** Twelve calls taken with the owner against the storyboard in
+  [`mockups/moderator-identity-failure-states.html`](mockups/moderator-identity-failure-states.html)
+  Part 5b (frames E1–E8). The `m`/`o` half of **§E decision 1 is corrected**: a session's moderator
+  slot is `null` · `proposed` · `confirmed`, rendered `m?` when null; identities are minted on
+  platform evidence or a pick and numbered as they appear; the renumber-on-rename mechanism is
+  replaced by a per-session map, which is `session_speakers.person_id` made nullable plus `state`
+  and `evidence`. **Nothing infers and nothing asks** — no "looks like you" line, no confirm prompt;
+  a proposed slot wears the shipped AutoCode `.badge-proposed` treatment in the app and reads plain
+  in the export. Name-only platform labels mint one identity per distinct name within a study — a
+  recorded carve-out from "never auto-merge on name equality" for that evidence class. Default
+  reach for a moderator pick is **narrow**; §B3's wide default is scoped to surfaces where rows
+  genuinely arrive together. Keyed by the transcripts plan's 0b stable session identity, which
+  lands first. Migration: inherited-proposed on every session. Me is seeded from the account name
+  with no settings UI. The importer runs at the end of every pipeline run; a legacy `people.yaml`
+  is read once and then ignored. The markdown report and the sealed static HTML get no investment.
+  Observers share the engine; the count line counts moderators only. Sections touched: §0, §B3,
+  §B4, §B6, §C2, §C5, §D, §E decision 1, §G, §H (H9), §J2, §J4.
 - _2026-08-25_ — **H8 done — §J, the concrete deltas.** Headline finding: **the role endpoint is not a
   step-1 operation.** Because `kind` *is* role, `p4 → observer` is a recode touching seven things — the
   unique constraint, N segments, quote attribution, the stable key, a `people.yaml` path that cannot
@@ -223,9 +241,9 @@ Worth stating first, because it bounds the work and prevents re-derivation:
 | Short-name derivation is genuinely careful — honorific stripping, family-name-first detection, 337 surnames, and collision handling that yields "Sarah J." / "Sarah K." | `people.py` `suggest_short_names` |
 | `people.yaml` is canonical, the DB is a materialised view, and browser edits write through to both | `design-html-report.md` § People file |
 | Speaker codes are the public identity; display names are a working tool | `SECURITY.md`, `docs/glossary.md` |
-| **A name belongs to a code, and a code has one name — everywhere in the study.** `people.yaml` is keyed by code and holds one name per key | `people.py`, `models.py` `PeopleFile` |
+| **A name belongs to a code, and a code has one name — everywhere in the study.** `people.yaml` is keyed by code and holds one name per key. *Corrected 1 Oct 2026: a name belongs to a **person**; a code is the derived label of an identity, and a session's `m`/`o` slot may hold no identity at all (`m?`). The invariant survives one level up — a person has one name everywhere — and `people.yaml` is retired as the store (§C2)* | `people.py`, `models.py` `PeopleFile` |
 | `p` codes are globally numbered across a study, so they never collide — one human returning gets several, which is normal | `s05b_identify_speakers.py:460` |
-| `m`/`o` codes restart per session, which is the **right** answer whenever there is one moderator — about 95% of studies | `s05b_identify_speakers.py`, §E decision 1 |
+| `m`/`o` codes restart per session, which is the **right** answer whenever there is one moderator — about 95% of studies. *Corrected 1 Oct 2026: the per-session `[m1]` token stays and becomes a within-session tag; the identity shown on the badge is minted on evidence or a pick, and absent until then (§E decision 1, corrected)* | `s05b_identify_speakers.py`, §E decision 1 |
 | Role detection is format-agnostic since Apr 2026 — word-count asymmetry plus a generalised prompt | `design-speaker-role-detection.md` |
 
 The gaps are narrower than the surface area suggests, and are named in §C.
@@ -490,6 +508,14 @@ you get there is deliberate:
   the People lens; you go to the quote. A row that stands for twelve sessions has
   no business offering an action that touches one paragraph.
 
+> **Scoped 1 Oct 2026, for moderator identity.** The wide default was written for
+> housekeeping across rows that arrive together. Moderator rows do not: sessions
+> land one to three at a time over weeks, and "who moderated this one?" is a
+> one-click part of looking at the new session. So a moderator pick defaults
+> **narrow on every surface**, the Sessions grid included; the wide case is
+> multi-select plus one pick, later, if batches ever hurt. No sweep line offers
+> the sweep, because nothing asks (decision 1, corrected).
+
 **And the pattern that reconciles the two**, used everywhere in this design: *do
 the narrow thing, then offer the wide one in a sentence.* Fix the spelling, then
 "it appears 6 times in the transcript — fix those too?". Name the moderator in
@@ -525,6 +551,11 @@ Naming a moderator should be a **pick, not a keystroke**: *"oh yes, that m1 is
 Steve."* The bank is not a new store — `Person` rows are already
 instance-scoped — it is a query over rows that exist, ordered by use, with
 **Me** seeded from `NSFullUserName()` at the top.
+
+*1 Oct 2026: in v1 there is no bank and no settings UI. **Me** is seeded from the
+account name (`NSFullUserName` on the Mac, the GECOS field on the CLI) and appears
+in the picker as `That's Me (Martin Storey)`; it is never applied by inference and
+never offered as a match. Settings ▸ General and Contacts are later.*
 
 **Picking a name from the bank is a link, not a copy.** Choosing "Steve
 Nakamura" asserts that this `m1` *is* the Steve who already exists — which is
@@ -671,6 +702,15 @@ control is not an unpublished one, and the instance simply is not in the file.
 A guessed name is **italic** and nothing else. An unnamed row is empty. Counts
 live in a single **absent-when-zero** line under the heading — *"2 people barely
 spoke and were never asked a question. Were they observing?"*
+
+*1 Oct 2026, two additions, neither new geometry.* A moderator slot with no identity
+renders its code lozenge as **`m?`**, and the lozenge is the control. A slot proposed
+by a platform label reuses the shipped AutoCode proposed-badge treatment verbatim
+(`atoms/badge.css` `.badge-proposed` + `.badge-action-pill`: dashed border, slow
+pulse, the ✗ | ✓ pill on hover); confirmed slots are plain. The count line under the
+heading states "N not identified", counts moderators only, is absent when zero, and
+asks for nothing. The export carries neither the treatment nor the pill: a proposed
+name reads plain there, a null slot reads "Moderator not identified".
 
 No chips, no dots, no per-row marks. With a dozen rows the argument is **not**
 that marks are unaffordable — at this scale they would fit. It is that they are
@@ -991,7 +1031,26 @@ Stated as consequences of §A/§B, not as a schema proposal.
   [`design-multi-project.md`](design-multi-project.md) §2; do not re-derive them.
 - **The code becomes a derived label, recomputed from the speaker→person map**,
   rather than a stored identity — the settled outcome of §E decision 1, and the
-  only structural item here.
+  only structural item here. *Made concrete 1 Oct 2026: the map is
+  `session_speakers.person_id`, made **nullable** (null is `m?`), plus `state`
+  (`proposed` · `confirmed`) and `evidence` (`platform-id` · `platform-name` ·
+  `inherited` · `pick`); `persons` gain a per-project `code`, a `uuid`, an
+  `origin` and `me`. One Alembic revision on tables that exist; one `Person` per
+  identity instead of one per session.*
+- ***`people.yaml` is retired as a store (1 Oct 2026).*** Names, identities, the
+  per-session map and origin live in the project database like stars and tags,
+  which never had a file twin. The pipeline carries *evidence* forward in its
+  intermediates (platform labels, heard names, the per-session speaker tags) and
+  writes computed stats to an intermediate JSON; **the importer runs at the end of
+  every pipeline run**, turns evidence into proposals, and never overwrites a
+  confirmed row. A legacy `people.yaml` is read once on the first import after
+  upgrade (its `m`/`o` names become inherited-proposed on every session that
+  carried the code; participant names come across the same way), then ignored and
+  never deleted. The user-facing surfaces that promise an editable file (README,
+  the man page, the website's CLI doc, `server/CLAUDE.md` § Names architecture,
+  the file's own header) change in the same release. The markdown report and the
+  sealed static HTML get no investment: with no file to read they fall back to
+  codes, as their missing-file path already does.
 
 ### C3 · Surfaces that would need the same component
 
@@ -1087,6 +1146,27 @@ Rules the transitions imply:
 - Only **`guess`** invites action. The other five states are places to rest,
   which is why one italic treatment and one count line covers the whole machine.
 
+**The moderator slot — per session (added 1 Oct 2026).** Separate from, and
+beneath, the identity machine: it answers "who moderated *this* session", and only
+a platform or a person may answer it.
+
+```
+   null ── platform label · inherited by migration ──▶ proposed ── ✓ · pick · That's Me ──▶ confirmed
+    ▲                                                     │                                    │
+    └──────────── ✗ · Not Identified ─────────────────────┘        re-pick (change of mind) ◀──┘
+   null ─────────────────── pick · Someone New… ────────────────────────────────────────▶ confirmed
+```
+
+Rules: `null` renders as `m?` and is a legitimate resting state (moderators hold no
+quotes, so the findings are untouched and the export says "not identified"). A
+**heard** name is a hint on a null slot, never a proposal — Whisper's "Kerri" is
+exactly the error the researcher corrects in the Someone New… field before an
+identity exists. A platform label proposes; a label with a participant id, or a
+distinct display name within one study, mints the identity it proposes. Absent on
+purpose: null → anything by inference, proposed by a hearing, any transition from
+the signed-in account, a re-run touching a non-null slot. Observers share the
+machine (`o?`).
+
 **Identity — per code, relative to other codes.**
 
 ```
@@ -1124,7 +1204,7 @@ is independently useful and independently shippable.
 | **1** | "m1 is me." · "That m1 is Steve." · "p4 is Jane Smith." · "Jane is an observer." | **Every session, every path** — 10–30 times a study | **Small — plus two real prerequisites, and one item that does not belong here (J1: role is a recode, so it belongs with step 4).** `PUT /people` exists; role needs one endpoint; "that's me" needs no typing. But **the bank has no store** — `Person` rows do not span projects today (§B4 spec), so it needs the instance DB of `design-multi-project.md` §2 first; and `NSFullUserName()` has zero uses in `desktop/`. But every step-1 act is drawn with an Undo, and the undo bridge is dead (`canUndo` hard-coded false, `NSUndoManager` used nowhere) — **the undo contract is a step-1 gate, not a parallel workstream** (§H, H4) |
 | **2** | "Michel Hurlly is Mickael Hurley." · "Call him Mike." · "Yes, that guess is right." | Every study with raw audio | **Medium.** Name origin per field, a `cleared` state, a narrowed write payload, and a `full_name` editor |
 | **3** | "That quote was Sarah, not Jane." | A few times a study — **and it is what gets published** | **Small-to-medium.** The speech moves (§B9): a whole-turn quote is one segment update; a fragment inside a longer turn is a turn split whose split point the quote's own timecodes supply. ⌘Z spans card and speech. Plus the lens needs the membership filter it currently lacks (§C4) |
-| **4** | **What naming implies.** "p6 is the same Mary as p3." · "The moderator in s9 is Mike, not Martin" → Mike becomes `m2` | Follows from step 1 — **no separate UX, no blocking decision** | **Medium.** Speaker→person remap, moderator renumber, stats recompute. All bookkeeping behind an act the researcher has already performed |
+| **4** | **What naming implies.** "p6 is the same Mary as p3." · "The moderator in s9 is Mike, not Martin" → Mike becomes `m2` | Follows from step 1 — **no separate UX, no blocking decision** | **Medium.** Speaker→person remap, moderator renumber, stats recompute. All bookkeeping behind an act the researcher has already performed. *1 Oct 2026: for `m`/`o` the renumber is gone — "the moderator in s9 is Mike" is one row (`session_speakers(s9).person_id`), and the v1 package in §H H9 ships it with step 1* |
 | **5** | "That whole paragraph was Sarah." | Concentrated on raw audio | **Largest.** Batch segment endpoints, split/merge, word-timing division, stats recompute, the unsolved quote cascade |
 | — | "This is the same ward sister from round 1." | Mostly **prevented** by step 1's bank | Shrinks to a back-fill |
 
@@ -1250,6 +1330,36 @@ Two consequences that change the plan:
 Codes stay study-unique and get renumbered when identity diverges, which is
 Option A of the original fork — reached by a much cheaper route than the sheet
 it was first drawn with.
+
+> **Corrected 1 Oct 2026 — the `m`/`o` half.** The reading above kept the
+> per-session `m1` slot and made the escape a renumber. The owner's objection,
+> argued through the storyboard
+> ([`mockups/moderator-identity-failure-states.html`](mockups/moderator-identity-failure-states.html)
+> Part 5b), is that a code on screen is a claim: `m1` on every session says
+> "these are one human", `m1 m2 m3` says "these are different humans", and with
+> no evidence both are unwarranted. The honest third rendering is **no claim**:
+> a session's moderator slot is **`null`** until a platform label proposes an
+> identity or a person picks one, and renders as **`m?`**. Identities are
+> minted on that evidence or that pick, numbered in identification order, never
+> reused. The per-session `[m1]` token in `transcripts-raw/` stays as written and
+> becomes a within-session tag, which answers §J4's render-time question for
+> `m`/`o`. The participant half of this decision is unchanged: `p` codes are
+> per-session slots joined by naming, because the quote stable key carries
+> `participant_id`.
+>
+> Three rules follow. **Nothing infers and nothing asks**: no "looks like you"
+> offer, no confirmation prompt; `That's Me` is a menu item, and a proposed
+> badge that is never touched reads correctly for ever. **Evidence tiers**: a
+> platform participant id mints; a platform display name mints one identity per
+> distinct name within a study (a recorded carve-out from "never auto-merge on
+> name equality", because a tenant's account label is not a name the model
+> heard); a researcher's pick asserts; an LLM hearing is a hint and never mints.
+> **Reach is narrow**: a pick names one session; the common case costs one click
+> per new session on the day it lands, which is cheaper than the habit a wide
+> default breeds. The renumber path, the `Separate…` sheet as a primary verb and
+> the `(session, code)` rekey are all gone; the rekey's rejection stands for the
+> reason it always had, since the file it would have reshaped is itself retired
+> (§C2).
 
 ### Decision 2 — **settled 25 Aug 2026.** The line is the participant line, not the team line
 
@@ -1522,11 +1632,14 @@ restate it.
   the wording for person-level team membership and the job-title field's label —
   both owner calls, §H
 - [`mockups/moderator-identity-failure-states.html`](mockups/moderator-identity-failure-states.html)
-  — **1 Oct 2026, a code-truth report**: the `m1`/`o1` collision drawn frame by
-  frame as it ships (sessions grid, the pencil that opens twelve editors, the
-  export, the MCP roster, the re-run that spreads a correction), then decision 1's
-  rename-renumbers drawn as the way out; a gap register measured against this
-  doc, and the challenges. It indexes; it does not re-argue anything settled here
+  — **1 Oct 2026, a code-truth report and, in Part 5b, the decision record**: the
+  `m1`/`o1` collision drawn frame by frame as it ships (sessions grid, the pencil
+  that opens twelve editors, the export, the MCP roster, the re-run that spreads a
+  correction); D1–D4 draw the rename-renumbers mechanism this doc carried until
+  1 Oct; E1–E8 draw route C as decided (the slot states with the shipped
+  proposed-badge treatment, the six-session study, the pick, Someone New…, change
+  of mind and rename, the export and MCP with a null slot, the migrated study, the
+  two machines); a gap register measured against this doc, and the challenges
 
 ---
 
@@ -1549,6 +1662,7 @@ same day — see changelog) merged with an independent decomposition.*
 | **H5** ✅ | **The menu as the function** *(done 25 Aug 2026 — §I)* | Turn §B3's claim into the actual function: the full (surface × object-state) enumeration and the string plan | The state vocabulary the function takes (§C5's machines × me/not-me), unreachable cells struck; the bare-`Role ▸`-vs-scoped question (one drawn frame in six carries the scope label today); the me-item convention (three renderings live — settle on "That's Me (Name)" top-level, "Name (Me)" in lists); bench 3's propagation sheet redrawn to obey its own pattern **and** §B8 (offer in a sentence; sheet lists matches with checkboxes) | A decision-table appendix, each row citing its generating rule; the complete string inventory as ICU templates under the **label-plus-chooser** localisation contract (§B2) | H1 H3 H4 |
 | **H6** ◑ | **Bank + picker** *(spec landed 25 Aug 2026; two control conflicts open)* | Spec the two lists (§B4 people-across-studies, §B9 cast-in-session) to buildable fidelity | Presentation per H4's host; create-and-name inline flow; bank composition/order; the quote-card variant's follow-up line; the wrong-Steve failure path | §B4/§B9 expanded from argument to spec; mockup benches redrawn **against the pinned cast** (below) — the p4 double-booking, Sarah's two codes, Jane's o1/o2-vs-p4 timeline, and the three-Mikes collision all resolve to it | H1 H5 |
 | **H7** ◑ | **People lens + old-mockup** *(lens reframed 25 Aug 2026; mockup judged UPDATE, edits pending)* | Spec the lens at three scopes; bring [`people-lens-scopes.html`](mockups/people-lens-scopes.html) to the settled model or visibly supersede it | Whether the old mockup is updated or banner-superseded (it predates the stance: its Separate sheet is primary, its folder scope is a suggestion engine, its decision-1 framing is open — all now wrong); the roster-not-table default; the drives-come-and-go caveat; whether "Everyone" belongs in a report lens at all | §B5/§B6 expanded to full spec with the tells table; one coherent mockup story across both files | H1 H2 H3 H5 |
+| **H9** | **Route C, v1** *(decided 1 Oct 2026; not built)* | Ship the moderator slot engine, project-scoped, on both channels | **First:** the transcripts plan's 0b stable session identity, lifted out as its own package — everything below keys on it. **Then:** the schema delta of §C2 (one revision, head-pin bump); the importer at the end of every pipeline run, proposing from the intermediates and never overwriting a confirmed row; the pipeline stops writing `people.yaml` and writes stats to an intermediate; the one-time legacy import as inherited-proposed; `m?` and the proposed treatment on the split badge; the picker as a web popover and a native `NSMenu` twin — wiring first, visual parity later in a Diagnostics side-by-side mockup; Me from the account name; "Moderator not identified" in the export and `null` in the MCP overview with one added `INVARIANTS` line; stored labels and the per-session evidence column; the count line, moderators only; README, man page, website CLI doc and `server/CLAUDE.md` stop promising an editable `people.yaml`. **Not in v1:** the bank, cross-study links, folder scope, Settings ▸ General, Contacts, the markdown report, the sealed static HTML | Frames E1–E8 in the storyboard; the pinned-limitation test re-homed as the map's own; the sidebar's impossible MULTI_MODERATOR fixture replaced | — |
 | **H8** ✅ | **Schema + API deltas** *(done 25 Aug 2026 — §J)* | Make §C concrete — implementation-last, now reachable | Name-origin representation per field + the two sentinels; the narrowed write payload; the role endpoint; the renumber/remap operations; **the Quotes-lens membership filter that does not exist today** (§C4) keyed on `SessionSpeaker` role; the importer `source` fix; membership storage per H3 | A final appendix: one table per §D step mapping capability → schema delta → endpoint delta → migration note, citing settled decisions rather than re-arguing them | all of H2–H7 |
 
 ### The pinned cast
@@ -1952,7 +2066,10 @@ needs no recode and no cascade.
 - **Role as an override** rides in a **new additive top-level block** in
   `people.yaml`, keyed `(session, code)` — legal because §0 constrains *names*,
   and role is per-session by §C5. `participants:` keeps its shape, so every file
-  in the field since 14 Jul remains valid input.
+  in the field since 14 Jul remains valid input. *Superseded 1 Oct 2026: there is
+  no new block, because there is no file. Role, like the moderator slot, is a
+  column on `session_speakers` (§C2); the downgrade hazard below applies to the
+  one-time legacy import and to nothing after it.*
 
 > **The downgrade hazard, which applies to every new block.**
 > `write_people_file` does a `model_dump()`, so an **older binary that rewrites
@@ -1990,7 +2107,11 @@ asserted for a name no human reviewed.
   derivation can be **render-time only** — in which case the bracket tokens in
   `transcripts-raw/` are provenance and stay as written — or whether a recode
   must rewrite those files. The answer determines whether §D step 4 is medium or
-  large, and it is not yet settled.
+  large, and it is not yet settled. *Settled for `m`/`o` on 1 Oct 2026:
+  render-time only — the bracket tokens are within-session tags and provenance,
+  and every reader resolves `(session, tag) → person` through
+  `session_speakers`. Still open for `p` recodes, where the quote stable key
+  carries `participant_id`.*
 
 ### J5 · Free wins — defects that ship without waiting for any of this
 

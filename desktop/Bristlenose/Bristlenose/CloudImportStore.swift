@@ -432,12 +432,19 @@ final class CloudImportStore: ObservableObject {
             // list time to pair each landing media file with its transcript,
             // and the researcher has already decided what this batch holds.
             guard !isFetching else { continue }
+            // Nor while a listing is in flight: `list()` rebuilds the plans the
+            // re-check reads, off the main actor, and the two must not overlap.
+            guard phase == .loaded else { continue }
+            let listingAsked = listTask
             let waiting = rows.filter { $0.transcript.isWaiting }.map(\.id)
             guard !waiting.isEmpty else { continue }
             let changes = await source.recheckTranscripts(rowIDs: waiting)
             // Re-checked after the await as well: a batch that started while
-            // the network was being asked must not have rows ticked under it.
-            guard !Task.isCancelled, !isFetching else { continue }
+            // the network was being asked must not have rows ticked under it,
+            // and answers about the previous listing are not answers about
+            // this one (row ids survive a re-list; the facts behind them need not).
+            guard !Task.isCancelled, !isFetching,
+                  phase == .loaded, listTask == listingAsked else { continue }
             applyTranscriptChanges(changes)
         }
     }

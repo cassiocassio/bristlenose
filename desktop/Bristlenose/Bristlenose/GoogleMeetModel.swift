@@ -645,10 +645,25 @@ enum MeetTranscriptAssembly {
             return (empty, .tailPastMedia)
         }
         let rebased = PlatformTranscriptRebase.rebase(result.cues, by: 0, mediaDuration: mediaDuration)
-        guard let lastEnd = rebased.cues.map(\.end).max() else { return (rebased, .noCues) }
-        let coverage = lastEnd / mediaDuration
-        guard coverage >= coverageFloor else { return (rebased, .sparseCoverage(coverage)) }
+        guard !rebased.cues.isEmpty else { return (rebased, .noCues) }
+        let covered = coverage(of: rebased.cues, mediaDuration: mediaDuration)
+        guard covered >= coverageFloor else { return (rebased, .sparseCoverage(covered)) }
         return (rebased, nil)
+    }
+
+    /// The share of the media the cues span, first word to last — not where
+    /// they end. Measured from the end alone, transcription switched on at
+    /// minute 30 of a 40-minute interview reads as full coverage, and the
+    /// pipeline would trust ten minutes of words over Whisper for all forty.
+    /// The span is the honest floor for that case; a hole in the middle is
+    /// not caught here (pauses make a union of spoken intervals too noisy to
+    /// set a floor against).
+    static func coverage(of cues: [PlatformTranscriptCue], mediaDuration: TimeInterval) -> Double {
+        guard mediaDuration > 0,
+              let first = cues.map(\.start).min(),
+              let last = cues.map(\.end).max()
+        else { return 0 }
+        return (last - first) / mediaDuration
     }
 }
 

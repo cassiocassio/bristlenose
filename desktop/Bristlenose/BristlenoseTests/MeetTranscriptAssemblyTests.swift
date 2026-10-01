@@ -8,8 +8,6 @@ import Testing
 // assembled transcript is refused rather than written — each of which would
 // otherwise read as a perfectly good transcript with every clip δ out, or half
 // a conversation marked Imported.
-//
-// NOT YET RUN ON A MAC — written in a cloud session with no Xcode (1 Oct 2026).
 
 @Suite("Meet transcript assembly")
 struct MeetTranscriptAssemblyTests {
@@ -37,7 +35,9 @@ struct MeetTranscriptAssemblyTests {
             names: names, recordingStart: t0, recordingEnd: nil)
         #expect(result.cues.map(\.text) == ["Before the button", "First", "Second"])
         #expect(result.cues.map(\.speaker) == ["Priya Shah", "Priya Shah", "Tom Okafor"])
-        #expect(result.cues[0].start == -12.4, "not yet clamped — the rebase does that")
+        // `Date` subtraction carries ~1e-7 of error at today's epoch; the
+        // rebase settles every time in integer milliseconds, so compare at that grain.
+        #expect(abs(result.cues[0].start - -12.4) < 0.000_5, "not yet clamped — the rebase does that")
         #expect(result.referencedSpeakers == 3)
         #expect(result.unresolvedSpeakers == 0)
         #expect(result.language == "en-US")
@@ -146,6 +146,19 @@ struct MeetTranscriptAssemblyTests {
         #expect(abs(fraction - 0.2) < 0.001)
         #expect(judge(result([cue(0, 100), cue(100, 520)]), duration: 1_000, endKnown: true) == nil,
                 "past the midpoint is accepted")
+    }
+
+    /// Transcription switched on late: the cues run to the end, so a check on
+    /// the last cue alone reads full coverage for a transcript of the last
+    /// quarter of the interview.
+    @Test("Cues that start late are sparse even though they reach the end")
+    func lateStartIsSparse() {
+        let refusal = judge(result([cue(750, 900), cue(900, 1_000)]), duration: 1_000, endKnown: true)
+        guard case .sparseCoverage(let fraction)? = refusal else {
+            Issue.record("expected sparseCoverage, got \(String(describing: refusal))")
+            return
+        }
+        #expect(abs(fraction - 0.25) < 0.001)
     }
 
     @Test("A sound transcript is rebased, not refused")

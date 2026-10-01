@@ -6,10 +6,6 @@ import Testing
 // The transcript half of an import row: what it says, whether the row waits,
 // and how the wait is got round. Design: docs/design-cloud-import-transcripts.md
 // §0 item 2 (the wait) and §5e (the column and its states).
-//
-// NOT YET RUN ON A MAC — written in a cloud session with no Xcode (1 Oct 2026).
-// The decisions are pinned here so the first Mac run tells us where the
-// writing went wrong, rather than where the compiler did.
 
 // MARK: - What the cell says
 
@@ -213,7 +209,7 @@ struct TranscriptWaitingRowTests {
         let tick = CloudImportOutline.parentTick(for: children, ticked: [])
         #expect(tick.draw == .off)
         #expect(!tick.isEnabled)
-        #expect(children.allSatisfy(\.isWaitingForTranscript))
+        #expect(children.allSatisfy { $0.isWaitingForTranscript })
     }
 
     @Test("A transcript's arrival is a new row value, not a mutation anyone else can make")

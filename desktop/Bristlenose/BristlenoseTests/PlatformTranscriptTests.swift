@@ -7,9 +7,7 @@ import Testing
 // byte — the same three files `tests/test_parse_subtitles.py` parses on the
 // Python side. One writer, one reader, one set of bytes between them.
 //
-// NOT YET RUN ON A MAC. Written in a cloud session with no Xcode (1 Oct 2026);
-// the first `desktop/scripts/test-swift.sh` after this lands is the first time
-// any of it compiles. If a golden comparison fails, diff the rendered string
+// If a golden comparison fails, diff the rendered string
 // against the fixture before touching either: the fixture is what pytest
 // already accepts, so it is the writer that moves.
 

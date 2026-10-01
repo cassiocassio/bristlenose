@@ -5,8 +5,6 @@ import Testing
 
 // §5e's Meet column, pinned without a tenant: what the transcripts Google
 // lists for a call say about one recording's transcript.
-//
-// NOT YET RUN ON A MAC — written in a cloud session with no Xcode (1 Oct 2026).
 
 @Suite("Meet transcript decision")
 struct MeetTranscriptDecisionTests {

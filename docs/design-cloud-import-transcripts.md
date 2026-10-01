@@ -1,5 +1,5 @@
 ---
-status: in-progress — pipeline half landed 1 Oct 2026; import half written blind the same day, uncompiled (§0c)
+status: in-progress — pipeline half landed 1 Oct 2026; import half written blind the same day, built and green on the Mac the same evening (§0c); live-tenant measurements and owner decisions open
 last-trued: 2026-10-01
 owner: cloud import + pipeline
 supersedes-in-part: docs/design-cloud-import.md §3 "Google's transcript is out of scope" (v1 descope, 16 Aug 2026)
@@ -240,6 +240,30 @@ take on or avoid. Answers so far:
   import-window session above.
 
 ## 0c. The import half, written blind (1 Oct 2026) — pick up on the Mac
+
+**On the Mac, 1 Oct 2026 (evening).** Rebased onto `main` and built. The app target compiled first
+time; the test bundle needed two `#expect(xs.allSatisfy(\.keyPath))` rewritten as closures (the macro
+reads a key-path argument as a throwing function) and one `== -12.4` compared at millisecond grain
+(`Date` subtraction carries ~1e-7). Then **1732 passed, 0 failed**, every transcript suite by name;
+pytest 5789 passed; `check-appearance-seam.sh` and `check-menu-routing.sh` clean. A code review of the
+compiled half found and fixed three things:
+
+- **Coverage measured from the last cue's end alone** accepted a transcript switched on late — cues
+  from minute 30 to 40 of a 40-minute interview read as full coverage. `MeetTranscriptAssembly.coverage`
+  is now the first-to-last span; `lateStartIsSparse` pins it. A hole in the middle is still not caught.
+- **A refused `transcripts.list` read *Couldn't match* at listing and *No transcript* after Import**,
+  because the plan stored `?? []`. `MeetTranscriptPlan.transcripts` is optional now, and a second
+  refusal at fetch is `.notFetched(.notResolved)`.
+- **A row whose plan a re-list wiped kept *Available* after Import** with no `.vtt` written: it is now
+  *Didn't arrive* (or *Not imported* if it was still expected). Zoom's grey *Available* is decision 4
+  below, unchanged.
+- **The re-check could overlap a re-list** (`list()` rebuilds the plans off the main actor). The store
+  now re-checks only while `phase == .loaded`, and drops answers if the listing changed during the await.
+
+Raised and left for the owner: decision 6 below (fail closed when the duration probe fails), an arrival
+re-ticking a row the researcher had deliberately unticked, and `CloudDownloader.publish` replacing a
+stray `X.vtt` already sitting where the new media's transcript goes. Still unrun: the live-tenant
+measurements below, and **Diagnostics ▸ Cloud Import ▸ Meet ▸ Every Status** by eye.
 
 **Status.** The Swift half of the first slice (§0) is on the branch, **uncompiled**: written in a cloud
 session with no Xcode, reviewed there by five agents (code-review, silent-failure-hunter,

@@ -945,7 +945,7 @@ struct AdapterRowDerivationTests {
         // The one generated transcript overlaps both halves, so each pairs
         // with it — and neither waits.
         #expect(listing.rows.allSatisfy { $0.transcript == .available })
-        #expect(listing.rows.allSatisfy(\.isSelectable))
+        #expect(listing.rows.allSatisfy { $0.isSelectable })
         // Both clocks, and they disagree — which is the whole reason the grid
         // has two columns.
         let first = listing.rows.min { $0.startsAt < $1.startsAt }

@@ -9,10 +9,6 @@ import Testing
 // independent oracle (`NSString.size(withAttributes:)` plus the cell's insets
 // by hand) so a measurement that undercounts fails here rather than agreeing
 // with itself.
-//
-// NOT YET RUN ON A MAC — written in a cloud session with no Xcode (1 Oct 2026).
-// The glyph widths and the cell's fitting floor (~103 pt, from the hidden stop
-// button's constraints) are the parts a Mac has to confirm.
 
 @Suite("Transcript column width")
 @MainActor

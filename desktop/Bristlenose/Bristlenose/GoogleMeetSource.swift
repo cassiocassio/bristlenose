@@ -323,9 +323,12 @@ private struct MeetTranscriptPlan: Sendable {
     /// When the *call* began: what `rebased-by:` is measured from.
     let callStart: Date?
     let callEnded: Bool
-    /// As listed. `fetch` and the re-check ask Google again rather than trust
-    /// this, because a transcript is exactly the thing that moves after listing.
-    let transcripts: [MeetTranscriptSummary]
+    /// As listed, or nil when the listing could not ask. `fetch` and the
+    /// re-check ask Google again rather than trust this, because a transcript
+    /// is exactly the thing that moves after listing — and nil survives here
+    /// so a second refusal at fetch time still reads *Couldn't match*, never
+    /// an empty list's *No transcript*.
+    let transcripts: [MeetTranscriptSummary]?
 
     func availability(transcripts current: [MeetTranscriptSummary], now: Date) -> TranscriptAvailability {
         MeetTranscriptDecision.availability(
@@ -1137,7 +1140,7 @@ final class GoogleMeetSource: CloudImportSource {
             recordingEnd: recording.endedAt,
             callStart: record.start,
             callEnded: record.end != nil,
-            transcripts: record.transcripts ?? [])
+            transcripts: record.transcripts)
         transcriptPlans[rowID] = plan
         guard let listed = record.transcripts else {
             // Google could not be asked — a refusal, a quota, a dropped
@@ -1711,7 +1714,14 @@ final class GoogleMeetSource: CloudImportSource {
             // A re-list during the batch wipes the plans (`list()` clears
             // them with `driveFileIDs`, which the same re-list already breaks).
             Self.log.notice("meet_transcript outcome=not_fetched reason=no_plan")
-            return .notFetched(row.transcript)
+            switch row.transcript {
+            // The listing promised one, and no `.vtt` was written: carrying
+            // *Available* past Import would claim a file that is not there.
+            case .available: return .didNotArrive
+            // Included while still being produced — the researcher's own call.
+            case .expected:  return .notImported
+            default:         return .notFetched(row.transcript)
+            }
         }
         // The media must be there before anything is written beside it — a
         // lone `.vtt` is a text-only session (§4 item 5). It always is, since
@@ -1736,8 +1746,13 @@ final class GoogleMeetSource: CloudImportSource {
         // to the listing's snapshot — a stale *Available* then proceeds to the
         // entries, which fail honestly if they are not there.
         let now = Date()
-        let current = await Self.transcripts(ofRecord: plan.recordName, accessToken: token,
-                                             session: session) ?? plan.transcripts
+        guard let current = await Self.transcripts(ofRecord: plan.recordName, accessToken: token,
+                                                   session: session) ?? plan.transcripts else {
+            // Neither the listing nor this re-ask could find out. Not *No
+            // transcript* — nobody was able to look.
+            Self.log.notice("meet_transcript outcome=not_fetched reason=transcripts_unlisted")
+            return .notFetched(.notResolved)
+        }
         let availability = plan.availability(transcripts: current, now: now)
         switch availability {
         case .available:
@@ -1870,7 +1885,7 @@ final class GoogleMeetSource: CloudImportSource {
                 """)
             return .didNotArrive
         }
-        let coverage = (rebased.cues.map(\.end).max() ?? 0) / duration
+        let coverage = MeetTranscriptAssembly.coverage(of: rebased.cues, mediaDuration: duration)
         Self.log.notice("""
             meet_transcript outcome=imported cues=\(rebased.cues.count, privacy: .public) \
             dropped=\(rebased.dropped, privacy: .public) \

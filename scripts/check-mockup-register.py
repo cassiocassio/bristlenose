@@ -171,7 +171,7 @@ def main() -> int:
         print(f"\n{len(orphans)} register row(s) name a file that does not exist:")
         for n in orphans:
             print(f"  {n}")
-        print("\n  Renamed or deleted? Update or remove the row.")
+        print("\n  Renamed, deleted, or not yet `git add`ed? The gate asks git, not the disk. Update or remove the row, or add the file.")
     if silent:
         print(f"\n{len(silent)} row(s) name no lifecycle state:")
         for n in silent:

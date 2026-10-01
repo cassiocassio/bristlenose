@@ -55,7 +55,7 @@ thing looks the way it does, and that argument is usually the expensive part.
 **A new mockup must be added to the register**, and CI enforces it:
 `scripts/check-mockup-register.py`, wired to `.github/workflows/mockup-register.yml`
 on any change under `docs/mockups/`. It checks that every file has a row, that
-every row names a real file, and that every row names a state — not that the
+every row names a real file — *real* meaning git knows about it, so `git add` a new mockup before running the gate or its row reads as an orphan — and that every row names a state — not that the
 state is *right*, which is a judgement against the code that no script can make.
 `*unreviewed*` is a valid entry: say nothing rather than guess.
 

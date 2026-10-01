@@ -1,6 +1,6 @@
 ---
-status: proposal
-last-trued: 2026-09-30
+status: in-progress — pipeline half landed 1 Oct 2026, import half to do
+last-trued: 2026-10-01
 owner: cloud import + pipeline
 supersedes-in-part: docs/design-cloud-import.md §3 "Google's transcript is out of scope" (v1 descope, 16 Aug 2026)
 ---
@@ -112,6 +112,38 @@ review changed them.
     `replaceItemAt`.
   - Meet's download re-attaches the token on any redirect host.
   - `--redact-pii` leaves the meeting title in the `# Source:` header of the cooked transcripts.
+
+**Pipeline half of the slice — landed on `main`, 1 Oct 2026** (seven commits, each test-first; the
+Swift half — writer, grid, transport — is still to do and must produce the golden `.vtt` files
+byte for byte):
+
+| Item | What landed | Where |
+|---|---|---|
+| 0a | `SessionRecord.input_hash` per stage (files + parser version / segments / transcript / transcript + topic map); `fresh_session_ids` reuses a record only on a match, and a record with no fingerprint is recomputed; an input change *demotes* the stage instead of popping it; `_is_speaker_stage_verified` checks inputs before files; quotes watch the transcripts | `manifest.py`, `pipeline.py`; `tests/test_pipeline_platform_transcripts.py::TestPerSessionFingerprints` |
+| 0c | stamped files group by (stamp, title); an unstamped file joins only a unique match | `s01_ingest._group_by_stem`; `tests/test_ingest.py::TestRecurringMeetings` |
+| 0d | one transcript per session: named > coverage (10 % tolerance) > cloud VTT > VTT/SRT > DOCX; losers stated in log + CLI | `stages/transcript_choice.py`; `tests/test_transcript_choice.py` |
+| 1a | NOTE block read (1.x accepted, other majors refused loudly), multi-voice cues split with time shared by text length, names and text html-unescaped, BCP-47 `language` exposed; cues carry `source="cloud-vtt"`; the colon heuristic is off for cloud files | `s03_parse_subtitles`; `tests/test_parse_subtitles.py`; golden fixtures `tests/fixtures/platform-transcripts/cloud-transcript-{named,unnamed,rebased-drops}.vtt` |
+| 1b | `split_gate()`: a platform transcript with a real name, or a cloud transcript with none, is `NOT_SEPARATED` — kept whole and stated; Whisper and bare caption tracks split as before | `s05b_identify_speakers`; `tests/test_speaker_splitting.py::TestSplitGate` |
+| 1c | `Name: text` accepts any script with combining marks, commas, `(Guest)`, pronouns, the fullwidth colon; a sentence-opener list and a six-word cap refuse `Honestly:`, `Note:`, `Gern:`, `http:`; the 22 xfails are passes | `s03._looks_like_speaker_name`; `tests/test_international_names.py` |
+| 1d | platform label beats the LLM's `person_name`, participants only; names keyed by speaker code; phone labels (masked or whole) are never names | `people.py`; `tests/test_name_extraction.py` |
+| — | `--redact-pii` writes `# Source: [REDACTED]` in cooked transcripts; the importer takes the media path from the raw sibling | `s07`, `server/importer.py` |
+
+Two judgement calls made while building, both reversible and worth the owner's eye:
+
+- **`_inputs_changed` tolerates a stage-level key the stored record never recorded** (compared on what
+  the record knew, stamped on the hit, strict from then on). Strict comparison would have re-extracted
+  every existing project's quotes once on upgrade when the quote stage began watching the transcripts
+  — paid LLM calls and a reshuffled report nobody asked for. The *parser version* is deliberately
+  exempt from that tolerance (folded into the transcribe `source_files` value), so a parser fix does
+  reach a project that has a transcript file; the cost is that such a project re-Whispers its bare
+  recordings once, because their pre-fingerprint records cannot prove themselves fresh.
+- **"Speakers not separated" is stated on the terminal and in the log**, not in `PipelineSummary` — no
+  slot for a non-failure note exists, and inventing one is a Swift-side change. If the Mac should show
+  it, that is a new `StageOutcome` field plus the fixture bump, per the three-altitude rule in
+  `CLAUDE.md`.
+
+What the harnesses in the scratch area did (reproduce each §2 defect through the real `Pipeline.run`
+with Whisper and the LLM stubbed) now lives in `tests/test_pipeline_platform_transcripts.py`.
 
 **Deliberately later:**
 - **0b sticky ids**, with rename carry-over, a re-identification-key file, atomic and locked writes, and
@@ -381,14 +413,14 @@ serves `200 application/json` with `webcredentials` for `Z56GZVA2QB.app.bristlen
 | Recording + transcript become one session | Yes, by filename stem | MEASURED; `s01_ingest.py:388` strips BN's download stamp |
 | Transcript used instead of Whisper | Yes | MEASURED; `s02_extract_audio.py:67`, `pipeline.py:2942` |
 | Splitter skipped when 2+ names | Yes | MEASURED; `s05b_identify_speakers.py:219` |
-| **Transcript arriving after the video was analysed** | **Ignored** if the same batch brings a new recording; otherwise it re-Whispers *every* session | MEASURED, real `Pipeline.run` with stubs |
+| **Transcript arriving after the video was analysed** | ~~**Ignored** if the same batch brings a new recording; otherwise it re-Whispers *every* session~~ **Fixed 1 Oct 2026 (0a)**: the changed session is redone, the rest are kept | MEASURED, real `Pipeline.run` with stubs; pinned in `tests/test_pipeline_platform_transcripts.py` |
 | **Adding an older recording** | **Cross-wires sessions**: one interview's transcript under another's id; a researcher's star and typed name move to a different interview; the wrong video plays | MEASURED through a scratch serve DB. Pre-existing, not cloud-specific |
-| Same-titled meetings on different days | **Merged into one session** | MEASURED; the stamp is stripped from every file |
-| One named speaker (in-room interview) | Splitter overwrites the real name with "Speaker A/B" | MEASURED |
-| Non-ASCII names in `Name: text` files | Lost (`José Álvarez` → no speaker); "Honestly:" becomes a speaker | MEASURED |
-| Moderator names | All sessions' `m1` share one name, sometimes the wrong person's; a platform name loses to the LLM's guess ("Pri") | MEASURED |
+| Same-titled meetings on different days | ~~**Merged into one session**~~ **Fixed 1 Oct 2026 (0c)** | MEASURED; grouped by (stamp, title) |
+| One named speaker (in-room interview) | ~~Splitter overwrites the real name with "Speaker A/B"~~ **Fixed 1 Oct 2026 (1b)**: kept whole, stated | MEASURED |
+| Non-ASCII names in `Name: text` files | ~~Lost (`José Álvarez` → no speaker); "Honestly:" becomes a speaker~~ **Fixed 1 Oct 2026 (1c)** | MEASURED |
+| Moderator names | All sessions' `m1` share one name, sometimes the wrong person's (open: 0b / study-wide codes); ~~a platform name loses to the LLM's guess ("Pri")~~ **participants fixed 1 Oct 2026 (1d)** | MEASURED |
 | `.docx` turns | zero duration: talk time 0%; the transcript page highlights the *next* turn | MEASURED / INFERRED |
-| `.vtt` + `.docx` for one meeting | every turn twice | MEASURED |
+| `.vtt` + `.docx` for one meeting | ~~every turn twice~~ **Fixed 1 Oct 2026 (0d)**: one is used, the other stated as superseded | MEASURED |
 | Refused `.docx` beside a video | the session is lost; no Whisper fallback | MEASURED |
 
 The last eight rows are pipeline defects that bite **hand-dropped** transcripts today. Import makes

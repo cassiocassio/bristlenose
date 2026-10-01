@@ -14,8 +14,6 @@ Tests every code path that touches participant names:
 
 from __future__ import annotations
 
-import pytest
-
 from bristlenose.models import (
     FullTranscript,
     PeopleFile,
@@ -146,12 +144,10 @@ class TestColonSpeakerPattern:
 
     # -- Comma in Zoom display names (known failure — see real Zoom data) ---
 
-    @pytest.mark.xfail(reason="Comma not in _COLON_SPEAKER_PATTERN char class")
     def test_zoom_affiliation_comma(self) -> None:
         """Zoom displays affiliation after comma: 'Sanjay Gupta, WUD'."""
         assert _extract_speaker("Sanjay Gupta, WUD: Good afternoon") == "Sanjay Gupta, WUD"
 
-    @pytest.mark.xfail(reason="Comma not in _COLON_SPEAKER_PATTERN char class")
     def test_zoom_affiliation_no_space(self) -> None:
         """No space after comma."""
         assert _extract_speaker("Rajat Verma,WUD: Hello") == "Rajat Verma,WUD"
@@ -167,108 +163,86 @@ class TestColonSpeakerPattern:
     def test_spanish_de_la(self) -> None:
         assert _extract_speaker("Maria de la Cruz: Hola") == "Maria de la Cruz"
 
-    @pytest.mark.xfail(reason="ü is not in [A-Za-z] range")
     def test_german_von(self) -> None:
         assert _extract_speaker("Klaus von Bülow: Guten Tag") == "Klaus von Bülow"
 
-    @pytest.mark.xfail(reason="ü is not in [A-Za-z] range")
     def test_umlaut_in_name(self) -> None:
         """German umlaut — outside ASCII A-Za-z."""
         assert _extract_speaker("Jürgen Müller: Hallo") == "Jürgen Müller"
 
-    @pytest.mark.xfail(reason="accented chars not in [A-Za-z] range")
     def test_french_accented(self) -> None:
         """French accented characters."""
         assert _extract_speaker("René Détienne: Bonjour") == "René Détienne"
 
-    @pytest.mark.xfail(reason="accented chars not in [A-Za-z] range")
     def test_spanish_accented(self) -> None:
         """Spanish tilde."""
         assert _extract_speaker("José Muñoz: Buenos días") == "José Muñoz"
 
-    @pytest.mark.xfail(reason="accented chars not in [A-Za-z] range")
     def test_portuguese_cedilla(self) -> None:
         assert _extract_speaker("João Gonçalves: Olá") == "João Gonçalves"
 
-    @pytest.mark.xfail(reason="accented chars not in [A-Za-z] range")
     def test_turkish_dotless_i(self) -> None:
         """Turkish İ/ı distinction."""
         assert _extract_speaker("Işık Barış: Merhaba") == "Işık Barış"
 
-    @pytest.mark.xfail(reason="accented chars not in [A-Za-z] range")
     def test_polish_diacritics(self) -> None:
         assert _extract_speaker("Łukasz Wójcik: Dzień dobry") == "Łukasz Wójcik"
 
-    @pytest.mark.xfail(reason="accented chars not in [A-Za-z] range")
     def test_czech_hacek(self) -> None:
         assert _extract_speaker("Jiří Dvořák: Dobrý den") == "Jiří Dvořák"
 
-    @pytest.mark.xfail(reason="accented chars not in [A-Za-z] range")
     def test_icelandic_eth_thorn(self) -> None:
         """Icelandic ð and þ."""
         assert _extract_speaker("Guðrún Þórdís: Halló") == "Guðrún Þórdís"
 
-    @pytest.mark.xfail(reason="accented chars not in [A-Za-z] range")
     def test_vietnamese_diacritics(self) -> None:
         """Vietnamese uses extensive diacritics."""
         assert _extract_speaker("Nguyễn Thị Minh: Xin chào") == "Nguyễn Thị Minh"
 
-    @pytest.mark.xfail(reason="accented chars not in [A-Za-z] range")
     def test_scandinavian_ae_oe(self) -> None:
         """Norwegian/Danish Æ Ø Å."""
         assert _extract_speaker("Bjørn Ødegård: Hei") == "Bjørn Ødegård"
 
     # -- Non-Latin scripts (Zoom allows display names in any script) --------
 
-    @pytest.mark.xfail(reason="regex only allows A-Za-z")
     def test_chinese_characters(self) -> None:
         """Chinese name in native script."""
         assert _extract_speaker("张伟: 你好") == "张伟"
 
-    @pytest.mark.xfail(reason="regex only allows A-Za-z")
     def test_japanese_kanji(self) -> None:
         assert _extract_speaker("田中裕子: おはようございます") == "田中裕子"
 
-    @pytest.mark.xfail(reason="regex only allows A-Za-z")
     def test_korean_hangul(self) -> None:
         assert _extract_speaker("박지현: 동의합니다") == "박지현"
 
-    @pytest.mark.xfail(reason="regex only allows A-Za-z")
     def test_arabic_script(self) -> None:
         """Arabic name in native script (RTL)."""
         assert _extract_speaker("محمد أحمد: مرحبا") == "محمد أحمد"
 
-    @pytest.mark.xfail(reason="regex only allows A-Za-z")
     def test_hebrew_script(self) -> None:
         assert _extract_speaker("שרה כהן: שלום") == "שרה כהן"
 
-    @pytest.mark.xfail(reason="regex only allows A-Za-z")
     def test_cyrillic_russian(self) -> None:
         """Russian name in Cyrillic."""
         assert _extract_speaker("Борис Ельцин: Здравствуйте") == "Борис Ельцин"
 
-    @pytest.mark.xfail(reason="regex only allows A-Za-z")
     def test_devanagari_hindi(self) -> None:
         assert _extract_speaker("पुष्पेन्द्र सिंह: नमस्ते") == "पुष्पेन्द्र सिंह"
 
-    @pytest.mark.xfail(reason="regex only allows A-Za-z")
     def test_thai_script(self) -> None:
         assert _extract_speaker("สมชาย: สวัสดีครับ") == "สมชาย"
 
-    @pytest.mark.xfail(reason="regex only allows A-Za-z")
     def test_georgian_script(self) -> None:
         assert _extract_speaker("ნინო: გამარჯობა") == "ნინო"
 
     # -- Should NOT match (false positive risks) ----------------------------
 
     def test_url_in_text(self) -> None:
-        """'https' is 5 alpha chars followed by colon — matches the speaker
-        pattern as a false positive.  This is a known limitation of the
-        colon-based heuristic.  In practice, VTT cue text rarely starts
-        with a bare URL scheme."""
-        # Documenting current behaviour, not asserting it's ideal
-        result = _extract_speaker("https: this is a link")
-        assert result == "https"  # false positive — accepted tradeoff
+        """'https' is 5 alpha chars followed by a colon. It used to match as
+        a speaker (an accepted tradeoff); the scheme words are now on the
+        not-a-speaker list."""
+        assert _extract_speaker("https: this is a link") is None
+        assert _extract_speaker("http: this is a link") is None
 
     def test_timestamp_colon(self) -> None:
         """'00:01:23' should not match."""
@@ -286,6 +260,54 @@ class TestColonSpeakerPattern:
     def test_number_prefix(self) -> None:
         """Name starting with digit should not match."""
         assert _extract_speaker("2pac: All eyes on me") is None
+
+    # -- Sentence openers that take a colon (false positives, 1 Oct 2026) ---
+    #
+    # A mononym ("Suharto: Welcome") and a discourse word ("Honestly: I never
+    # found it") have the same shape, so the regex alone cannot tell them
+    # apart. A short list of words that are not anybody's name does.
+
+    def test_honestly_is_not_a_speaker(self) -> None:
+        assert _extract_speaker("Honestly: I never found the basket button") is None
+
+    def test_note_is_not_a_speaker(self) -> None:
+        assert _extract_speaker("Note: the prototype crashed twice") is None
+
+    def test_german_gern_is_not_a_speaker(self) -> None:
+        assert _extract_speaker("Gern: ich habe die App installiert") is None
+
+    def test_okay_so_are_not_speakers(self) -> None:
+        assert _extract_speaker("Okay: let me think") is None
+        assert _extract_speaker("So: what happened next?") is None
+
+    def test_a_name_that_is_also_a_word_still_matches(self) -> None:
+        """Hope, Frank and Grace are people. The list holds discourse words
+        and labels, never anything that is a given name."""
+        assert _extract_speaker("Hope: I liked it") == "Hope"
+        assert _extract_speaker("Frank: not really") == "Frank"
+
+    def test_a_sentence_is_not_a_speaker(self) -> None:
+        """Seven words before a colon is a clause, not a display name."""
+        assert _extract_speaker(
+            "What I would really like to see here: a basket button"
+        ) is None
+
+    def test_digits_in_the_name_are_refused(self) -> None:
+        """'Meeting at 10:30 was fine' — the clock time is not a speaker."""
+        assert _extract_speaker("Meeting at 10:30 was fine") is None
+
+    # -- Shapes the platforms produce ---------------------------------------
+
+    def test_fullwidth_colon(self) -> None:
+        """Chinese and Japanese display names are followed by U+FF1A."""
+        assert _extract_speaker("张伟：你好") == "张伟"
+
+    def test_guest_suffix(self) -> None:
+        """Teams marks external attendees '(Guest)'."""
+        assert _extract_speaker("Sarah Jones (Guest): Hello") == "Sarah Jones (Guest)"
+
+    def test_pronouns_suffix(self) -> None:
+        assert _extract_speaker("Sarah Jones (she/her): Hello") == "Sarah Jones (she/her)"
 
 
 # ═══════════════════════════════════════════════════════════════════════════

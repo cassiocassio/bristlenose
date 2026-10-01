@@ -284,8 +284,10 @@ private struct MeetHarvest: Sendable {
         /// Every transcript resource on the call, in every state. Asked for
         /// only where the call produced a recording — a call with no file has
         /// no row that could carry one — so a record with recordings and an
-        /// empty list here means Google was asked and had none.
-        let transcripts: [MeetTranscriptSummary]
+        /// empty list here means Google was asked and had none. **Nil means
+        /// Google could not be asked**, which is a different fact from none,
+        /// and the row says so rather than reading *No transcript*.
+        let transcripts: [MeetTranscriptSummary]?
     }
 
     var records: [MeetHarvest.Record] = []
@@ -305,7 +307,8 @@ private struct HarvestedCall: Sendable {
     let record: ConferenceRecordsPage.Record
     let recordings: [MeetHarvest.Recording]
     let sawGenerated: Bool
-    let transcripts: [MeetTranscriptSummary]
+    /// Nil when the transcripts could not be listed — see `MeetHarvest.Record`.
+    let transcripts: [MeetTranscriptSummary]?
 }
 
 /// What `fetch` needs to pair a landing media file with its transcript, kept
@@ -1134,9 +1137,19 @@ final class GoogleMeetSource: CloudImportSource {
             recordingEnd: recording.endedAt,
             callStart: record.start,
             callEnded: record.end != nil,
-            transcripts: record.transcripts)
+            transcripts: record.transcripts ?? [])
         transcriptPlans[rowID] = plan
-        return plan.availability(transcripts: record.transcripts, now: now)
+        guard let listed = record.transcripts else {
+            // Google could not be asked — a refusal, a quota, a dropped
+            // connection on one of several concurrent lookups. Not *No
+            // transcript*, which is the calm claim the plan exists to stop,
+            // and which the re-check would never revisit. *Couldn't match*
+            // is the nearest honest cell: a warning, still tickable, and
+            // Bristlenose transcribes; the next listing asks again.
+            Self.log.notice("meet_transcript plan=unknown reason=transcripts_unlisted")
+            return .notResolved
+        }
+        return plan.availability(transcripts: listed, now: now)
     }
 
     /// Every recording across a call's conference records, deduplicated and in
@@ -1305,9 +1318,17 @@ final class GoogleMeetSource: CloudImportSource {
             // and this is one round trip per recorded call on a quota that is
             // per minute. Sequential after the recordings, not alongside:
             // the same call's two lookups in a fixed order is what lets a
-            // transport test queue its answers.
-            let transcripts = found.isEmpty ? []
-                : (await transcripts(ofRecord: name, accessToken: accessToken, session: session) ?? [])
+            // transport test queue its answers. The optional is carried, not
+            // collapsed: "could not ask" and "none" are different rows.
+            // A statement, not a ternary: `await` may not sit to the right of
+            // a non-assignment operator, and `?:` is one.
+            let transcripts: [MeetTranscriptSummary]?
+            if found.isEmpty {
+                transcripts = []
+            } else {
+                transcripts = await Self.transcripts(ofRecord: name, accessToken: accessToken,
+                                                     session: session)
+            }
             return HarvestedCall(record: record, recordings: found, sawGenerated: generated,
                                  transcripts: transcripts)
         }
@@ -1515,9 +1536,9 @@ final class GoogleMeetSource: CloudImportSource {
     ///
     /// - Returns: nil when Google could not be asked — a transport failure or a
     ///   refusal — so the caller can tell "none" from "unknown". The listing
-    ///   treats unknown as none (the row says *No transcript* and Bristlenose
-    ///   transcribes, which is the safe direction); a fetch treats it as "did
-    ///   not arrive".
+    ///   renders unknown as *Couldn't match* (a warning, still tickable); a
+    ///   fetch falls back to the listing's snapshot and lets the entries fail
+    ///   honestly; a re-check leaves the row for the next pass.
     private static func transcripts(
         ofRecord name: String,
         accessToken: String,
@@ -1553,17 +1574,23 @@ final class GoogleMeetSource: CloudImportSource {
     /// Only the names: a participant with no readable name is left out, and
     /// an entry pointing at one is written without a voice tag rather than
     /// with an invented speaker.
+    ///
+    /// - Returns: nil when the list could not be read. **Not an empty map**:
+    ///   an empty map writes every cue unnamed and `speakers: none`, which the
+    ///   pipeline reads as "leave this interview unseparated" — a green tick
+    ///   over a two-person transcript with no speakers, from one 429.
     private static func participantNames(
         ofRecord name: String,
         accessToken: String,
         session: URLSession
-    ) async -> [String: String] {
-        let pages: [ParticipantsPage]? = await collectPages(
+    ) async -> [String: String]? {
+        guard let pages: [ParticipantsPage] = await collectPages(
             path: "\(name)/participants",
             query: [URLQueryItem(name: "pageSize", value: "250")],
             phase: "participants", accessToken: accessToken, session: session,
             next: \.nextPageToken)
-        let listed = (pages ?? []).flatMap { $0.participants ?? [] }
+        else { return nil }
+        let listed = pages.flatMap { $0.participants ?? [] }
         var names: [String: String] = [:]
         for participant in listed {
             guard let key = participant.name, let displayName = participant.displayName else { continue }
@@ -1661,35 +1688,75 @@ final class GoogleMeetSource: CloudImportSource {
         return pages
     }
 
+    /// The listing token, renewed if it had aged out, read on the main actor
+    /// where `tokens` is written — so a fetch running off it never reads the
+    /// property mid-write from another row's renewal.
+    @MainActor
+    private func usableListingToken() async -> String? {
+        guard await renewedListingTokenIfNeeded() else { return nil }
+        return tokens?.accessToken
+    }
+
     /// The transcript half of `fetch`, after the media has been published.
     ///
-    /// Everything that can go wrong here ends in one of two honest cells
-    /// rather than a thrown error: *Not imported* when there was nothing to
-    /// fetch or the researcher went ahead without waiting, *Didn't arrive*
-    /// when a transcript existed and could not be brought down whole and on
-    /// the right clock. The media is already on disk either way — a transcript
-    /// is never the reason a recording fails to import.
+    /// Everything that can go wrong here ends in an honest cell rather than a
+    /// thrown error: *Not imported* when the researcher went ahead without
+    /// waiting, the listing's own word when there was nothing to fetch, and
+    /// *Didn't arrive* when a transcript existed and could not be brought down
+    /// whole, named, and on the right clock. The media is already on disk
+    /// either way — a transcript is never the reason a recording fails to
+    /// import.
     private func fetchTranscript(for row: CloudImportRow, media: URL) async -> TranscriptOutcome {
-        guard let plan = transcriptPlans[row.id] else { return .notImported }
-        guard await renewedListingTokenIfNeeded(), let token = tokens?.accessToken else {
-            Self.log.notice("meet_transcript outcome=not_imported reason=no_listing_token")
-            return .notImported
+        guard let plan = transcriptPlans[row.id] else {
+            // A re-list during the batch wipes the plans (`list()` clears
+            // them with `driveFileIDs`, which the same re-list already breaks).
+            Self.log.notice("meet_transcript outcome=not_fetched reason=no_plan")
+            return .notFetched(row.transcript)
+        }
+        // The media must be there before anything is written beside it — a
+        // lone `.vtt` is a text-only session (§4 item 5). It always is, since
+        // the downloader has just published it; said anyway, because the
+        // property is the whole point of the ordering.
+        guard FileManager.default.fileExists(atPath: media.path) else {
+            Self.log.notice("meet_transcript outcome=did_not_arrive reason=media_missing")
+            return .didNotArrive
+        }
+        guard let token = await usableListingToken() else {
+            // Media down, transcript listed, and no token to fetch it with:
+            // it existed and did not come, which is the warning, not the
+            // skipped glyph.
+            Self.log.notice("meet_transcript outcome=did_not_arrive reason=no_listing_token")
+            return .didNotArrive
         }
 
         // Ask again rather than trust the listing: a transcript is the one
         // thing that routinely lands *between* listing and fetching, and a row
         // the researcher included while it was still expected may have its
-        // file by the time the media is down.
+        // file by the time the media is down. An unreadable re-list falls back
+        // to the listing's snapshot — a stale *Available* then proceeds to the
+        // entries, which fail honestly if they are not there.
         let now = Date()
         let current = await Self.transcripts(ofRecord: plan.recordName, accessToken: token,
                                              session: session) ?? plan.transcripts
         let availability = plan.availability(transcripts: current, now: now)
-        guard availability == .available, let t0 = plan.recordingStart else {
+        switch availability {
+        case .available:
+            break
+        case .expected:
+            // The one *skipped*: the researcher included the row without
+            // waiting, and it is still being produced.
+            Self.log.notice("meet_transcript outcome=not_imported reason=still_expected")
+            return .notImported
+        default:
             Self.log.notice("""
-                meet_transcript outcome=not_imported \
+                meet_transcript outcome=not_fetched \
                 availability=\(String(describing: availability), privacy: .public)
                 """)
-            return .notImported
+            return .notFetched(availability)
+        }
+        guard let t0 = plan.recordingStart else {
+            // `.available` already requires it; stated for the compiler.
+            return .notFetched(.notResolved)
         }
 
         // §5c, the clock. The media's own length is the duration the cues are
@@ -1698,6 +1765,12 @@ final class GoogleMeetSource: CloudImportSource {
         // describes.
         let probed = await CloudImportLocalMatch.mediaDuration(of: media)
         let claimed = plan.recordingEnd.map { $0.timeIntervalSince(t0) }
+        if probed == nil {
+            // The clock check is skipped and the NOTE carries Google's figure
+            // rather than a measurement. Said, so a run where every row logs
+            // this is recognisable as one where the probe is failing.
+            Self.log.notice("meet_transcript clock probe_failed claimed=\(claimed ?? -1, privacy: .public)")
+        }
         guard let duration = probed ?? claimed, duration > 0 else {
             Self.log.notice("meet_transcript outcome=did_not_arrive reason=no_duration")
             return .didNotArrive
@@ -1716,54 +1789,65 @@ final class GoogleMeetSource: CloudImportSource {
             }
         }
 
-        let names = await Self.participantNames(ofRecord: plan.recordName, accessToken: token,
-                                                session: session)
+        guard let names = await Self.participantNames(ofRecord: plan.recordName, accessToken: token,
+                                                      session: session) else {
+            Self.log.notice("meet_transcript outcome=did_not_arrive reason=participants_unreadable")
+            return .didNotArrive
+        }
 
-        // Every generated transcript that overlaps the recording, in one list
-        // on the recording's clock. A stopped-and-restarted transcription is
-        // two resources and one conversation.
+        // Every generated transcript that overlaps the recording, read whole.
+        // A stopped-and-restarted transcription is two resources and one
+        // conversation; `.available` has already required all of them to be
+        // generated.
         let generated = MeetTranscriptDecision.overlapping(
             current, recordingStart: t0, recordingEnd: plan.recordingEnd
         ).filter { $0.state == .fileGenerated }
-        var cues: [PlatformTranscriptCue] = []
-        var languages: [String: Int] = [:]
-        var unresolvedSpeakers = 0
+        var entries: [MeetTranscriptAssembly.Entry] = []
+        var malformed = 0
         for transcript in generated {
-            guard let entries = await Self.entries(ofTranscript: transcript.name, accessToken: token,
-                                                   session: session) else {
+            guard let page = await Self.entries(ofTranscript: transcript.name, accessToken: token,
+                                                session: session) else {
                 Self.log.notice("meet_transcript outcome=did_not_arrive reason=entries_unreadable")
                 return .didNotArrive
             }
-            for entry in entries {
-                guard let text = entry.text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                      let start = entry.startTime.flatMap(Self.parseRFC3339),
-                      let end = entry.endTime.flatMap(Self.parseRFC3339)
+            for entry in page {
+                guard let text = entry.text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 else { continue }
-                let speaker = entry.participant.flatMap { names[$0] }
-                if speaker == nil { unresolvedSpeakers += 1 }
-                if let language = entry.languageCode, !language.isEmpty {
-                    languages[language, default: 0] += 1
+                guard let start = entry.startTime.flatMap(Self.parseRFC3339),
+                      let end = entry.endTime.flatMap(Self.parseRFC3339)
+                else {
+                    // Counted, so a systematic parse failure reads as what it
+                    // is and not as "nobody spoke inside the recording".
+                    malformed += 1
+                    continue
                 }
-                cues.append(PlatformTranscriptCue(
-                    start: start.timeIntervalSince(t0), end: end.timeIntervalSince(t0),
-                    speaker: speaker, text: text))
+                entries.append(MeetTranscriptAssembly.Entry(
+                    start: start, end: end, participant: entry.participant,
+                    text: text, language: entry.languageCode))
             }
         }
-        cues.sort { $0.start < $1.start }
-
-        guard !PlatformTranscriptRebase.tailRunsPast(cues, by: 0, mediaDuration: duration) else {
-            Self.log.notice("meet_transcript outcome=did_not_arrive reason=tail_past_media")
-            return .didNotArrive
+        if malformed > 0 {
+            Self.log.notice("meet_transcript entries_unparseable=\(malformed, privacy: .public) kept=\(entries.count, privacy: .public)")
         }
-        let rebased = PlatformTranscriptRebase.rebase(cues, by: 0, mediaDuration: duration)
-        guard !rebased.cues.isEmpty else {
-            Self.log.notice("meet_transcript outcome=did_not_arrive reason=no_cues_inside_media")
+
+        // On the recording's clock, sliced to its window, and judged.
+        let assembled = MeetTranscriptAssembly.assemble(
+            entries: entries, names: names, recordingStart: t0, recordingEnd: plan.recordingEnd)
+        let (rebased, refusal) = MeetTranscriptAssembly.judge(
+            assembled, mediaDuration: duration, recordingEndKnown: plan.recordingEnd != nil)
+        if let refusal {
+            Self.log.notice("""
+                meet_transcript outcome=did_not_arrive \
+                reason=\(String(describing: refusal), privacy: .public) \
+                entries=\(entries.count, privacy: .public) \
+                malformed=\(malformed, privacy: .public)
+                """)
             return .didNotArrive
         }
 
         let note = PlatformTranscriptNote(
             source: .meet,
-            language: languages.max { $0.value < $1.value }?.key,
+            language: assembled.language,
             media: media.lastPathComponent,
             mediaDuration: duration,
             // How far the call's own zero sits from the record button — the
@@ -1773,28 +1857,26 @@ final class GoogleMeetSource: CloudImportSource {
         let rendered = PlatformTranscriptWriter.render(cues: rebased.cues, note: note)
 
         // §4 items 1 and 5: the media's own stem, so the pipeline pairs them by
-        // name with nothing derived twice; `.part` then an atomic rename, after
-        // the media — which is already published by the time this runs, so a
-        // lone `.vtt` cannot land.
+        // name with nothing derived twice; the downloader's own publish step
+        // (`.part`, then one rename), after the media — which is already
+        // published by the time this runs, so a lone `.vtt` cannot land.
         let destination = media.deletingPathExtension().appendingPathExtension("vtt")
-        let part = destination.appendingPathExtension("part")
         do {
-            try? FileManager.default.removeItem(at: part)
-            try Data(rendered.utf8).write(to: part)
-            _ = try? FileManager.default.removeItem(at: destination)
-            try FileManager.default.moveItem(at: part, to: destination)
+            try CloudDownloader.publish(Data(rendered.utf8), to: destination)
         } catch {
-            try? FileManager.default.removeItem(at: part)
             Self.log.notice("""
                 meet_transcript outcome=did_not_arrive reason=write_failed \
                 error=\(error.localizedDescription, privacy: .public)
                 """)
             return .didNotArrive
         }
+        let coverage = (rebased.cues.map(\.end).max() ?? 0) / duration
         Self.log.notice("""
             meet_transcript outcome=imported cues=\(rebased.cues.count, privacy: .public) \
             dropped=\(rebased.dropped, privacy: .public) \
-            unresolvedSpeakers=\(unresolvedSpeakers, privacy: .public) \
+            slicedAfterEnd=\(assembled.slicedAfterEnd, privacy: .public) \
+            coverage=\(coverage, privacy: .public) \
+            unresolvedSpeakers=\(assembled.unresolvedSpeakers, privacy: .public) \
             transcripts=\(generated.count, privacy: .public)
             """)
         return .imported(at: destination)
@@ -1803,15 +1885,24 @@ final class GoogleMeetSource: CloudImportSource {
     /// Ask Google again about rows whose transcript was still being produced.
     ///
     /// One `transcripts.list` per distinct call, not per row — two halves of one
-    /// recording share a record. Reads the plans and writes nothing, so it can
-    /// run while nothing else does and never races a batch (the store does not
-    /// call it mid-fetch anyway). Returns the recomputed state for every row it
-    /// could re-check; the store ignores the ones that did not move.
+    /// recording share a record. Reads the plans **once, at entry**, and writes
+    /// nothing, so a re-list clearing them mid-way cannot be observed here.
+    /// Returns the recomputed state for every row it could re-check; the store
+    /// ignores the ones that did not move.
+    ///
+    /// A wait has to end with a stated outcome (§1a). A listing grant that will
+    /// not renew is final — nothing this window can do will ever answer — so
+    /// every row is told *Couldn't match* rather than left spinning. A refused
+    /// or dropped list for one call is left out, and asked again next pass.
     func recheckTranscripts(rowIDs: [String]) async -> [String: TranscriptAvailability] {
-        guard await renewedListingTokenIfNeeded(), let token = tokens?.accessToken else { return [:] }
+        let plans = transcriptPlans
+        guard let token = await usableListingToken() else {
+            Self.log.notice("meet_transcript recheck refused=no_listing_token rows=\(rowIDs.count, privacy: .public)")
+            return Dictionary(uniqueKeysWithValues: rowIDs.map { ($0, TranscriptAvailability.notResolved) })
+        }
         var byRecord: [String: [String]] = [:]
         for id in rowIDs {
-            guard let plan = transcriptPlans[id] else { continue }
+            guard let plan = plans[id] else { continue }
             byRecord[plan.recordName, default: []].append(id)
         }
         var answers: [String: TranscriptAvailability] = [:]
@@ -1820,7 +1911,7 @@ final class GoogleMeetSource: CloudImportSource {
             guard let current = await Self.transcripts(ofRecord: recordName, accessToken: token,
                                                        session: session) else { continue }
             for id in ids {
-                guard let plan = transcriptPlans[id] else { continue }
+                guard let plan = plans[id] else { continue }
                 answers[id] = plan.availability(transcripts: current, now: now)
             }
         }
@@ -2070,10 +2161,15 @@ final class GoogleMeetSource: CloudImportSource {
 
     static func parseRFC3339(_ string: String) -> Date? {
         if let d = formatter.date(from: string) { return d }
-        // Google emits fractional seconds on some resources and not others.
+        // Google emits fractional seconds on some resources and not others —
+        // and, being protobuf `Timestamp`s, with 3, 6 or 9 digits. Foundation's
+        // parser is only documented for three, so the rest are cut to three
+        // before it looks: a microsecond is below anything a cue is drawn to.
         let withFractional = ISO8601DateFormatter()
         withFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return withFractional.date(from: string)
+        let trimmed = string.replacingOccurrences(
+            of: #"\.(\d{3})\d+"#, with: ".$1", options: .regularExpression)
+        return withFractional.date(from: trimmed)
     }
 
     /// Builds the attendee list, applying the two filters that are correctness

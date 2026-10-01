@@ -786,7 +786,10 @@ final class TeamsSource: CloudImportSource {
                     bytesExpected: total
                 ))
             }
-            return .imported(bytes: bytes, at: request.destination)
+            // No transcript half until the Phase 3 admin consent lands; the
+            // listing's own word stands in the cell.
+            return .imported(bytes: bytes, at: request.destination,
+                             transcript: .notFetched(row.transcript))
         } catch let error as CloudDownloadError {
             if case .cancelled = error { return .cancelled }
             return .failed(

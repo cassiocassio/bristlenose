@@ -1155,6 +1155,7 @@
     "transcriptNeedsApproval": "Kr\u00e4ver godk\u00e4nnande",
     "transcriptDidNotArrive": "Kom inte fram",
     "transcriptNotImported": "Inte importerad",
+    "transcriptImported": "Importerad",
     "statusWaitingForTranscript": "V\u00e4ntar p\u00e5 transkription",
     "includeWaiting_one": "Ta med {{count}} som v\u00e4ntar p\u00e5 transkription",
     "includeWaiting_other": "Ta med {{count}} som v\u00e4ntar p\u00e5 transkription"

@@ -52,7 +52,9 @@ struct CloudImportTranscriptColumnWidthTests {
 
     @Test("Every shipped locale is found")
     func localesAreFound() {
-        #expect(Self.locales.count == 21)
+        // At least the 21 full locales shipping today; a 22nd must not fail
+        // this, and a path mistake that found none must.
+        #expect(Self.locales.count >= 21)
     }
 
     @Test("The minimum holds every transcript state, whole, in every locale",
@@ -130,6 +132,10 @@ struct CloudImportTranscriptColumnWidthTests {
         for outcome in outcomes {
             #expect(CloudImportTranscriptColumn.glyphKeys.contains(outcome.cellKey),
                     "\(outcome) renders an unmeasured key")
+        }
+        // `.notFetched` renders the availability's own key, measured above.
+        for state in states {
+            #expect(classified.contains(TranscriptOutcome.notFetched(state).cellKey))
         }
     }
 }

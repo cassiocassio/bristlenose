@@ -1155,6 +1155,7 @@
     "transcriptNeedsApproval": "Krever godkjenning",
     "transcriptDidNotArrive": "Kom ikke fram",
     "transcriptNotImported": "Ikke importert",
+    "transcriptImported": "Importert",
     "statusWaitingForTranscript": "Venter p\u00e5 transkripsjon",
     "includeWaiting_one": "Ta med {{count}} som venter p\u00e5 transkripsjon",
     "includeWaiting_other": "Ta med {{count}} som venter p\u00e5 transkripsjon"

@@ -491,27 +491,164 @@ enum TranscriptAvailability: Hashable, Sendable {
 enum TranscriptOutcome: Equatable, Sendable {
     /// Landed beside the media, under the stem the media carries.
     case imported(at: URL)
-    /// It was available and did not arrive — the entries could not be read, or
-    /// the clock check refused them. The row is partial and the warning says so.
+    /// It was available and did not arrive — the entries could not be read,
+    /// nobody in them could be named, or the clock check refused them. The row
+    /// is partial and the warning says so.
     case didNotArrive
-    /// Not attempted: the researcher imported without waiting, the platform
-    /// serves none, or there was none to fetch.
+    /// The researcher imported without waiting: the transcript was still
+    /// expected when the media came down, and it was not asked for. The one
+    /// state drawn as *skipped* — a deliberate choice, not an absence.
     case notImported
+    /// Nothing was fetched and the listing's own word stands, **as it stood at
+    /// fetch time**. A row that read *No transcript* before Import must read it
+    /// after, not turn into a "skipped" the researcher never chose; and it is
+    /// captured rather than read live, because the re-check can still move the
+    /// row's listed state after the batch, and a held recording must not then
+    /// claim a transcript it never got.
+    case notFetched(TranscriptAvailability)
 
     var cellKey: String {
         switch self {
-        case .imported:     return "desktop.cloudImport.statusImported"
-        case .didNotArrive: return "desktop.cloudImport.transcriptDidNotArrive"
-        case .notImported:  return "desktop.cloudImport.transcriptNotImported"
+        case .imported:          return "desktop.cloudImport.transcriptImported"
+        case .didNotArrive:      return "desktop.cloudImport.transcriptDidNotArrive"
+        case .notImported:       return "desktop.cloudImport.transcriptNotImported"
+        case .notFetched(let a): return a.cellKey
         }
     }
 
-    var cellKind: MessageKind {
+    /// Nil is the glyphless grey a listing word that stands keeps.
+    var cellKind: MessageKind? {
         switch self {
-        case .imported:     return .success
-        case .didNotArrive: return .warning
-        case .notImported:  return .skipped
+        case .imported:          return .success
+        case .didNotArrive:      return .warning
+        case .notImported:       return .skipped
+        case .notFetched(let a): return a.cellKind
         }
+    }
+}
+
+// MARK: - Meet: assembling the cues
+
+/// Turns Meet's transcript entries into cues on **one recording's** clock, and
+/// judges whether the result is a transcript worth writing.
+///
+/// Pure, so §5c's silent-failure risk is pinned without a tenant: a transcript
+/// that is δ seconds off, or half a conversation, or nobody's words, reads
+/// perfectly and shifts every clip. A Meet transcript belongs to the *call*;
+/// a recording is a sub-interval of it, and a stopped-and-restarted recording
+/// is two sub-intervals sharing one transcript. So the cues are sliced to the
+/// recording's own window before anything else is decided about them.
+enum MeetTranscriptAssembly {
+
+    /// One utterance as Meet serves it, with its clock already parsed.
+    struct Entry: Equatable, Sendable {
+        let start: Date
+        let end: Date
+        /// `conferenceRecords/*/participants/*`, or nil when Meet named nobody.
+        let participant: String?
+        let text: String
+        let language: String?
+    }
+
+    struct Result: Equatable, Sendable {
+        /// Inside the recording's window, sorted, on its clock — not yet clamped.
+        var cues: [PlatformTranscriptCue]
+        /// The most common language code among the kept entries.
+        var language: String?
+        /// Kept entries that named a participant, and how many of those names
+        /// could not be resolved.
+        var referencedSpeakers: Int
+        var unresolvedSpeakers: Int
+        /// Entries dropped for starting after the recording's API end — the
+        /// rest of the call, not this recording's words.
+        var slicedAfterEnd: Int
+    }
+
+    /// Why an assembled transcript is refused rather than written.
+    enum Refusal: Equatable, Sendable {
+        /// Nothing said inside the recording.
+        case noCues
+        /// Entries named participants and not one resolved to a name — the
+        /// participants list was wrong or stale, and writing `speakers: none`
+        /// would tell the pipeline to leave a two-person interview unseparated.
+        case noSpeakerResolved
+        /// With no API end to slice by, the tail is the only evidence, and it
+        /// runs past the file (§5c).
+        case tailPastMedia
+        /// The cues stop well before the recording does. Either Google has not
+        /// finished writing them (§1a: entries arrive truncated), or the
+        /// transcription was stopped early — and a partial transcript is worse
+        /// than none, because the pipeline would trust it over Whisper for the
+        /// whole recording. Carries the fraction so the log can say it.
+        case sparseCoverage(Double)
+    }
+
+    /// How much of the recording the cues must reach. An interview whose
+    /// transcript stops before the midpoint is not one Google has finished.
+    static let coverageFloor = 0.5
+
+    /// - Parameter recordingEnd: the recording's API end. Known, it slices the
+    ///   call's transcript to this recording; unknown, the tail check below is
+    ///   the only guard against the wrong recording's words.
+    static func assemble(
+        entries: [Entry],
+        names: [String: String],
+        recordingStart t0: Date,
+        recordingEnd: Date?
+    ) -> Result {
+        let windowEnd = recordingEnd?.timeIntervalSince(t0)
+        var cues: [PlatformTranscriptCue] = []
+        var languages: [String: Int] = [:]
+        var referenced = 0, unresolved = 0, sliced = 0
+        for entry in entries {
+            let start = entry.start.timeIntervalSince(t0)
+            if let windowEnd, start >= windowEnd {
+                sliced += 1
+                continue
+            }
+            let speaker = entry.participant.flatMap { names[$0] }
+            if entry.participant != nil {
+                referenced += 1
+                if speaker == nil { unresolved += 1 }
+            }
+            if let language = entry.language, !language.isEmpty {
+                languages[language, default: 0] += 1
+            }
+            cues.append(PlatformTranscriptCue(
+                start: start, end: entry.end.timeIntervalSince(t0),
+                speaker: speaker, text: entry.text))
+        }
+        cues.sort { $0.start < $1.start }
+        return Result(
+            cues: cues,
+            language: languages.max { $0.value < $1.value }?.key,
+            referencedSpeakers: referenced,
+            unresolvedSpeakers: unresolved,
+            slicedAfterEnd: sliced)
+    }
+
+    /// Rebase to the media and judge. The checks run in the order a wrong
+    /// answer gets cheaper to detect: nothing at all, nobody named, the tail
+    /// (only without an API end), then coverage of what survived the clamp.
+    static func judge(
+        _ result: Result,
+        mediaDuration: TimeInterval,
+        recordingEndKnown: Bool
+    ) -> (rebased: PlatformTranscriptRebase.Outcome, refusal: Refusal?) {
+        let empty = PlatformTranscriptRebase.Outcome(cues: [], dropped: 0)
+        guard !result.cues.isEmpty else { return (empty, .noCues) }
+        if result.referencedSpeakers > 0, result.unresolvedSpeakers == result.referencedSpeakers {
+            return (empty, .noSpeakerResolved)
+        }
+        if !recordingEndKnown,
+           PlatformTranscriptRebase.tailRunsPast(result.cues, by: 0, mediaDuration: mediaDuration) {
+            return (empty, .tailPastMedia)
+        }
+        let rebased = PlatformTranscriptRebase.rebase(result.cues, by: 0, mediaDuration: mediaDuration)
+        guard let lastEnd = rebased.cues.map(\.end).max() else { return (rebased, .noCues) }
+        let coverage = lastEnd / mediaDuration
+        guard coverage >= coverageFloor else { return (rebased, .sparseCoverage(coverage)) }
+        return (rebased, nil)
     }
 }
 
@@ -580,14 +717,19 @@ enum MeetTranscriptDecision {
 
     /// §5e's Meet column, as a function.
     ///
-    /// - `FILE_GENERATED` among the overlapping transcripts → *Available*, or
+    /// - **Every** overlapping transcript `FILE_GENERATED` → *Available*, or
     ///   *Couldn't match* when the recording carries no `startTime`, because
-    ///   without it the words cannot be put on the file's clock (§5c).
-    /// - Only `STARTED`/`ENDED` → *Expected*, the certain signal — unless the
-    ///   newest has been coming for longer than `patience`, when it reads as
-    ///   *No transcript*.
+    ///   without it the words cannot be put on the file's clock (§5c). One
+    ///   generated beside one still `ENDED` is *still settling*: writing the
+    ///   generated half alone would hand the pipeline half a conversation it
+    ///   then trusts over Whisper, so the row waits for the rest.
+    /// - Anything still `STARTED`/`ENDED` → *Expected*, the certain signal —
+    ///   unless the newest has been coming for longer than `patience`, when it
+    ///   reads as *No transcript*.
     /// - None at all → *No transcript* on an ended call; *Expected* on a call
-    ///   still in progress, where one may yet be started.
+    ///   still in progress, where one may yet be started — with the same
+    ///   patience, measured from the recording, so a wait on a call whose end
+    ///   the listing never saw still ends.
     static func availability(
         recordingStart: Date?,
         recordingEnd: Date?,
@@ -597,8 +739,13 @@ enum MeetTranscriptDecision {
     ) -> TranscriptAvailability {
         let relevant = overlapping(transcripts, recordingStart: recordingStart,
                                    recordingEnd: recordingEnd)
-        guard !relevant.isEmpty else { return callEnded ? .notProvided : .expected }
-        if relevant.contains(where: { $0.state == .fileGenerated }) {
+        guard !relevant.isEmpty else {
+            if callEnded { return .notProvided }
+            if let anchor = recordingEnd ?? recordingStart,
+               now.timeIntervalSince(anchor) > patience { return .notProvided }
+            return .expected
+        }
+        if relevant.allSatisfy({ $0.state == .fileGenerated }) {
             return recordingStart == nil ? .notResolved : .available
         }
         let newest = relevant.compactMap { $0.endedAt ?? $0.startedAt }.max()

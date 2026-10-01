@@ -1155,6 +1155,7 @@
     "transcriptNeedsApproval": "Goedkeuring nodig",
     "transcriptDidNotArrive": "Niet aangekomen",
     "transcriptNotImported": "Niet ge\u00efmporteerd",
+    "transcriptImported": "Ge\u00efmporteerd",
     "statusWaitingForTranscript": "Wacht op transcript",
     "includeWaiting_one": "{{count}} in afwachting van transcriptie meenemen",
     "includeWaiting_other": "{{count}} in afwachting van transcriptie meenemen"

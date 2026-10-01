@@ -279,6 +279,13 @@ extension CloudImportOutlineView {
             /// tree and moves the structural fingerprint instead.
             let transcriptOutcome: String?
             let queued: Bool
+            /// Whether the row is drawn as waiting: the store's judgement,
+            /// which also knows about outcomes, and whether the researcher has
+            /// ticked it through the footer — a ticked row has stopped waiting.
+            let waiting: Bool
+            /// The grant wait reads this and nothing else did, so the switch
+            /// from "Waiting for permission" to "Queued" never redrew.
+            let awaitingGrant: Bool
         }
 
         private func state(of row: CloudImportRow) -> RowState {
@@ -304,8 +311,17 @@ extension CloudImportOutlineView {
                 inFlight: progress != nil,
                 outcome: outcome,
                 transcriptOutcome: transcriptOutcome,
-                queued: store.isFetching && store.ticked.contains(row.id)
+                queued: store.isFetching && store.ticked.contains(row.id),
+                waiting: drawsAsWaiting(row),
+                awaitingGrant: store.isAwaitingGrant && store.ticked.contains(row.id)
             )
+        }
+
+        /// A waiting row that the researcher has included and ticked has
+        /// stopped waiting — they decided not to — so it draws like any other
+        /// ticked row, with the Transcript cell alone still saying *Expected*.
+        private func drawsAsWaiting(_ row: CloudImportRow) -> Bool {
+            store.isWaiting(row) && !store.ticked.contains(row.id)
         }
 
         var onMinimumWidth: (CGFloat) -> Void = { _ in }
@@ -406,8 +422,9 @@ extension CloudImportOutlineView {
             cellStates = seen
             guard !changed.isEmpty else { return }
             // Transcript is in the list and may be absent from the table; the
-            // `>= 0` filter below drops a column that isn't there.
-            let columns = [Column.tick, Column.status, Column.transcript].compactMap {
+            // `>= 0` filter below drops a column that isn't there. Meeting is
+            // in it because a waiting row's title colour follows its tick.
+            let columns = [Column.tick, Column.meeting, Column.status, Column.transcript].compactMap {
                 outline.column(withIdentifier: $0)
             }.filter { $0 >= 0 }
             guard !columns.isEmpty else { return }
@@ -567,10 +584,11 @@ extension CloudImportOutlineView {
             case (true, .none):
                 let column = NSTableColumn(identifier: Column.transcript)
                 column.title = i18n.t("desktop.cloudImport.columnTranscript")
-                // Placeholders: the width sync below replaces both with
+                // Placeholders: the width sync below replaces all three with
                 // measured values before the first frame.
                 column.width = 120
                 column.minWidth = 100
+                column.maxWidth = 200
                 outline.addTableColumn(column)
                 if let size = outline.tableColumns.firstIndex(where: { $0.identifier == Column.size }),
                    let transcript = outline.tableColumns.firstIndex(where: { $0.identifier == Column.transcript }) {
@@ -592,6 +610,10 @@ extension CloudImportOutlineView {
             transcriptWidthLocale = i18n.locale
             let minimum = CloudImportTranscriptColumn.minimumWidth(i18n)
             column.minWidth = minimum
+            // Capped like Recorded, Size and Scheduled: under uniform
+            // autoresizing an uncapped one-word column would grow with the
+            // window alongside Meeting, which is the column the slack is for.
+            column.maxWidth = minimum + 40
             if column.width < minimum { column.width = minimum }
             // Registered here, not in `makeNSView`: the column did not exist
             // when the opening widths were taken, and a column the window is
@@ -764,7 +786,10 @@ extension CloudImportOutlineView {
             // The checkbox is the selection; the highlight is only ever focus,
             // and focus belongs where an action can land.
             guard let row = (item as? CloudImportOutline.Node)?.row else { return false }
-            return row.isSelectable
+            // With the footer's checkbox on, an action can land on a waiting
+            // row too — so the keyboard must be able to reach it, or the one
+            // way round the wait is mouse-only.
+            return row.isSelectable(includingWaiting: store.includeWaiting)
         }
 
         func outlineView(_ outlineView: NSOutlineView, heightOfRowByItem item: Any) -> CGFloat {
@@ -904,12 +929,17 @@ extension CloudImportOutlineView {
                     view.configureEmpty()
                     return view
                 }
+                // A dead header over recordings that are all waiting is dead
+                // for the wait, not because the files are here.
+                let allWaiting = children.allSatisfy { $0.isWaitingForTranscript }
                 view.configure(
                     payload: .meeting(children.map(\.id)),
                     state: draw == .on ? .on : (draw == .mixed ? .mixed : .off),
                     enabled: tick.isEnabled,
                     label: meetingAccessibilityName(for: node, children: children),
-                    reason: tick.isEnabled ? nil : i18n.t("desktop.cloudImport.allAlreadyHere"),
+                    reason: tick.isEnabled ? nil
+                        : i18n.t(allWaiting ? "desktop.cloudImport.statusWaitingForTranscript"
+                                            : "desktop.cloudImport.allAlreadyHere"),
                     target: self,
                     action: #selector(tickChanged(_:))
                 )
@@ -1046,8 +1076,10 @@ extension CloudImportOutlineView {
                 // A waiting row looks unfinished (§0 item 2): the title in
                 // secondary colour, over a disabled box, beside a Status that
                 // says what it is waiting for. The one row whose title is not
-                // in label colour, so the eye reads "not yet" before the words.
-                let titleColour: NSColor = recording.row.isWaitingForTranscript
+                // in label colour, so the eye reads "not yet" before the words
+                // — until the researcher includes and ticks it, when it has
+                // stopped waiting and draws like any other ticked row.
+                let titleColour: NSColor = drawsAsWaiting(recording.row)
                     ? .secondaryLabelColor : .labelColor
                 if let ordinal = recording.ordinal {
                     // A child says only what distinguishes it from its
@@ -1205,16 +1237,17 @@ extension CloudImportOutlineView {
                 // pending and running are *status*, not kinds.
                 view.configureText(i18n.t("desktop.cloudImport.statusQueued"),
                                    colour: .secondaryLabelColor, bold: false)
-            } else if row.isWaitingForTranscript {
-                // Below progress, outcome, the grant and Queued — a waiting row
-                // the researcher included and is now fetching says Queued like
-                // any other — and above the row's own label, which it replaces
-                // (§5e: "a disabled Waiting for transcript row goes through the
-                // row-label path, so it can't collide with Queued"). Glyphless,
-                // with a spinner where the glyph would be: pending is status,
-                // not a kind, and the spinner is the cue that the row is
-                // finishing itself — the open window re-checks and the row
-                // ticks itself when the transcript lands (§0 item 2).
+            } else if drawsAsWaiting(row) {
+                // Below progress, outcome, the grant and Queued, and above the
+                // row's own label, which it replaces (§5e: "a disabled Waiting
+                // for transcript row goes through the row-label path, so it
+                // can't collide with Queued"). Not for a row the researcher has
+                // included and ticked — they decided not to wait, and the row
+                // must not say the opposite. Glyphless, with a spinner where
+                // the glyph would be: pending is status, not a kind, and the
+                // spinner is the cue that the row is finishing itself — the
+                // open window re-checks and the row ticks itself when the
+                // transcript lands (§0 item 2).
                 view.configureWaiting(i18n.t("desktop.cloudImport.statusWaitingForTranscript"))
             } else if let label = row.statusLabel(i18n), let kind = row.statusKind {
                 view.configure(label, kind: kind, bold: false)
@@ -1240,20 +1273,26 @@ extension CloudImportOutlineView {
                 view.configureEmpty()
                 return view
             }
+            // After a fetch the outcome speaks — including a listing word that
+            // stands, captured at fetch time. Before one, the listing's state.
+            // Regular weight even for Imported: the media's own "Imported" in
+            // Status is the row's headline, in semibold; this is the second
+            // line of the same news.
+            let key: String
+            let kind: MessageKind?
             if let outcome = store.outcomes[row.id], case .imported(_, _, let transcript) = outcome {
-                // Regular weight even for Imported: the media's own "Imported"
-                // in Status is the row's headline, in semibold; this is the
-                // second line of the same news.
-                view.configure(i18n.t(transcript.cellKey), kind: transcript.cellKind, bold: false)
-                return view
+                key = transcript.cellKey
+                kind = transcript.cellKind
+            } else {
+                key = row.transcript.cellKey
+                kind = row.transcript.cellKind
             }
-            if let kind = row.transcript.cellKind {
-                view.configure(i18n.t(row.transcript.cellKey), kind: kind, bold: false)
+            if let kind {
+                view.configure(i18n.t(key), kind: kind, bold: false)
             } else {
                 // Available, Expected, Needs approval: plain grey, no glyph —
                 // the states that are status rather than kinds.
-                view.configureText(i18n.t(row.transcript.cellKey),
-                                   colour: .secondaryLabelColor, bold: false)
+                view.configureText(i18n.t(key), colour: .secondaryLabelColor, bold: false)
             }
             return view
         }
@@ -1635,9 +1674,9 @@ enum CloudImportTranscriptColumn {
     static let glyphKeys = [
         "desktop.cloudImport.transcriptNone",
         "desktop.cloudImport.transcriptNoSpeakerNames",
+        "desktop.cloudImport.transcriptImported",
         "desktop.cloudImport.transcriptDidNotArrive",
         "desktop.cloudImport.transcriptNotImported",
-        "desktop.cloudImport.statusImported",
         "desktop.cloudImport.statusNeedsAccess",
         "desktop.cloudImport.statusUnavailable",
         "desktop.cloudImport.statusNotResolved",
@@ -1709,6 +1748,9 @@ private final class StatusCellView: OutlineCellView {
         spinner.isDisplayedWhenStopped = false
         spinner.isHidden = true
         spinner.setContentHuggingPriority(.required, for: .horizontal)
+        // The label beside it already says what it is; an unnamed busy
+        // indicator would be announced on top of it.
+        spinner.setAccessibilityElement(false)
 
         row.orientation = .horizontal
         row.spacing = 4
@@ -1845,6 +1887,11 @@ private final class StatusCellView: OutlineCellView {
     /// status, not a kind, and the vocabulary draws it grey.
     func configureWaiting(_ text: String) {
         configureText(text, colour: .secondaryLabelColor, bold: false)
+        // Under Reduce Motion the spinner is left out rather than stopped: a
+        // stationary progress indicator reads as a stalled process, and the
+        // words carry the state on their own — the same glyphless grey the
+        // column's other two waits already use.
+        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
         spinner.isHidden = false
         spinner.startAnimation(nil)
     }

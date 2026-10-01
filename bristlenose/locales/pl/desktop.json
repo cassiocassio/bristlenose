@@ -1231,6 +1231,7 @@
     "transcriptNeedsApproval": "Wymaga zatwierdzenia",
     "transcriptDidNotArrive": "Nie dotar\u0142a",
     "transcriptNotImported": "Nie zaimportowano",
+    "transcriptImported": "Zaimportowano",
     "statusWaitingForTranscript": "Oczekiwanie na transkrypcj\u0119",
     "includeWaiting_few": "Uwzgl\u0119dnij {{count}} nagrania oczekuj\u0105ce na transkrypcj\u0119",
     "includeWaiting_many": "Uwzgl\u0119dnij {{count}} nagra\u0144 oczekuj\u0105cych na transkrypcj\u0119",

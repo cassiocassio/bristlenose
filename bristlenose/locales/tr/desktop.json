@@ -1155,6 +1155,7 @@
     "transcriptNeedsApproval": "Onay gerekir",
     "transcriptDidNotArrive": "Gelmedi",
     "transcriptNotImported": "\u0130\u00e7e aktar\u0131lmad\u0131",
+    "transcriptImported": "\u0130\u00e7e aktar\u0131ld\u0131",
     "statusWaitingForTranscript": "De\u015fifre bekleniyor",
     "includeWaiting_one": "De\u015fifre bekleyen {{count}} kayd\u0131 dahil et",
     "includeWaiting_other": "De\u015fifre bekleyen {{count}} kayd\u0131 dahil et"

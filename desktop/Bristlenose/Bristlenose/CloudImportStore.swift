@@ -380,14 +380,27 @@ final class CloudImportStore: ObservableObject {
     @Published var includeWaiting = false {
         didSet {
             guard !includeWaiting, includeWaiting != oldValue else { return }
-            for row in rows where row.isWaitingForTranscript { ticked.remove(row.id) }
+            // Not mid-batch: the queue was decided when Import was pressed,
+            // and unticking a row that is downloading would drop its Status
+            // from Queued back to the wait. The footer disables the checkbox
+            // then; this is the store's own copy of the rule.
+            guard !isFetching else { return }
+            for row in rows where isWaiting(row) { ticked.remove(row.id) }
         }
+    }
+
+    /// Whether a row is waiting *now*: held back for a transcript on its way,
+    /// and not yet fetched in this window. After a batch a row keeps its
+    /// outcome until the destination scan marks it held, and in that gap it is
+    /// not waiting for anything.
+    func isWaiting(_ row: CloudImportRow) -> Bool {
+        row.isWaitingForTranscript && outcomes[row.id] == nil
     }
 
     /// How many rows are held back for a transcript on its way. Over the whole
     /// listing, not the filtered outline: the checkbox enables rows wherever
     /// the filter has put them, and ticks survive filtering.
-    var waitingCount: Int { rows.filter(\.isWaitingForTranscript).count }
+    var waitingCount: Int { rows.filter { isWaiting($0) }.count }
 
     /// How often an open window asks again about waiting rows (§0 item 2:
     /// "~30 s on Teams, ~60 s on Meet and Zoom"). Teams is quicker because its
@@ -422,7 +435,9 @@ final class CloudImportStore: ObservableObject {
             let waiting = rows.filter { $0.transcript.isWaiting }.map(\.id)
             guard !waiting.isEmpty else { continue }
             let changes = await source.recheckTranscripts(rowIDs: waiting)
-            guard !Task.isCancelled else { return }
+            // Re-checked after the await as well: a batch that started while
+            // the network was being asked must not have rows ticked under it.
+            guard !Task.isCancelled, !isFetching else { continue }
             applyTranscriptChanges(changes)
         }
     }
@@ -452,10 +467,15 @@ final class CloudImportStore: ObservableObject {
         // window would redraw its whole grid once a minute.
         guard moved else { return }
         listing = current
-        // Ticked only where the tick can act: a held row that gained a
-        // transcript has nothing to fetch.
+        // Ticked only where the tick can act and be seen: a held row that
+        // gained a transcript has nothing to fetch; a row this window already
+        // fetched is not waiting (its media is down and Done is showing); and
+        // a row the filter has hidden is not a row the researcher is acting
+        // on — the same rule `toggle` keeps.
+        let visible = Set(visibleRows.map(\.id))
         for id in arrived {
-            guard let row = rows.first(where: { $0.id == id }), row.isSelectable else { continue }
+            guard let row = rows.first(where: { $0.id == id }), row.isSelectable,
+                  outcomes[id] == nil, visible.contains(id) else { continue }
             ticked.insert(id)
         }
     }
@@ -601,6 +621,10 @@ final class CloudImportStore: ObservableObject {
             listing = result
             accountEmail = source.accountEmail
             phase = .loaded
+            // A new listing is a new batch to decide: the footer's "include
+            // the waiting rows" is off again, as it is on every open (§0 item
+            // 2), rather than carried over to rows the researcher has not seen.
+            includeWaiting = false
             // Diagnostics ▸ Cloud Import ▸ Every Status: the outcomes and bars
             // a real batch would produce, laid over the fixture's listing.
             if let seed = (source as? FixtureCloudSource)?.diagnosticSeed {

@@ -1113,12 +1113,13 @@
     "transcriptAvailable": "\u53ef\u7528",
     "transcriptExpected": "\u7522\u751f\u4e2d",
     "transcriptNone": "\u7121\u9010\u5b57\u7a3f",
-    "transcriptNoSpeakerNames": "\u7121\u8b1b\u8005\u540d\u7a31",
+    "transcriptNoSpeakerNames": "\u7121\u8aaa\u8a71\u8005\u540d\u7a31",
     "transcriptNeedsApproval": "\u9700\u8981\u6838\u51c6",
     "transcriptDidNotArrive": "\u672a\u9001\u9054",
     "transcriptNotImported": "\u672a\u532f\u5165",
+    "transcriptImported": "\u5df2\u532f\u5165",
     "statusWaitingForTranscript": "\u6b63\u5728\u7b49\u5f85\u9010\u5b57\u7a3f",
-    "includeWaiting_other": "\u5305\u542b {{count}} \u500b\u7b49\u5f85\u9010\u5b57\u7a3f\u7684\u9304\u5f71"
+    "includeWaiting_other": "\u5305\u542b {{count}} \u6bb5\u7b49\u5f85\u9010\u5b57\u7a3f\u7684\u9304\u5f71"
   },
   "unsupportedSubset": {
     "title": "Bristlenose 分析的是檔案夾",

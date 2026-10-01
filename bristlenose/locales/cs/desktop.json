@@ -1214,6 +1214,7 @@
     "transcriptNeedsApproval": "Vy\u017eaduje schv\u00e1len\u00ed",
     "transcriptDidNotArrive": "Nedorazil",
     "transcriptNotImported": "Neimportov\u00e1no",
+    "transcriptImported": "Importov\u00e1no",
     "statusWaitingForTranscript": "\u010cek\u00e1 na p\u0159epis",
     "includeWaiting_few": "Zahrnout {{count}} nahr\u00e1vky \u010dekaj\u00edc\u00ed na p\u0159epis",
     "includeWaiting_one": "Zahrnout {{count}} nahr\u00e1vku \u010dekaj\u00edc\u00ed na p\u0159epis",

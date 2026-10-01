@@ -1155,6 +1155,7 @@
     "transcriptNeedsApproval": "Kr\u00e6ver godkendelse",
     "transcriptDidNotArrive": "Kom ikke frem",
     "transcriptNotImported": "Ikke importeret",
+    "transcriptImported": "Importeret",
     "statusWaitingForTranscript": "Venter p\u00e5 transskription",
     "includeWaiting_one": "Medtag {{count}}, der venter p\u00e5 transskription",
     "includeWaiting_other": "Medtag {{count}}, der venter p\u00e5 transskription"

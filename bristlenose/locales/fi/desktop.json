@@ -1155,6 +1155,7 @@
     "transcriptNeedsApproval": "Vaatii hyv\u00e4ksynn\u00e4n",
     "transcriptDidNotArrive": "Ei saapunut",
     "transcriptNotImported": "Ei tuotu",
+    "transcriptImported": "Tuotu",
     "statusWaitingForTranscript": "Odottaa litterointia",
     "includeWaiting_one": "Sis\u00e4llyt\u00e4 {{count}} litterointia odottava",
     "includeWaiting_other": "Sis\u00e4llyt\u00e4 {{count}} litterointia odottavaa"

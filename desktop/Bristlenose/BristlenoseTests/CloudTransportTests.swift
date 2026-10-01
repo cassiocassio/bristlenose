@@ -1028,6 +1028,49 @@ struct AdapterRowDerivationTests {
         #expect(meeting.isUnscheduled == false)
     }
 
+    /// The same guard for the transcript half: "Google would not tell us" and
+    /// "Google had none" arrive at the row as the same empty list, and the
+    /// second is the calm claim a re-check would never revisit. A refused
+    /// `transcripts.list` reads *Couldn't match* — a warning, still tickable,
+    /// Bristlenose transcribes — and the next listing asks again.
+    @Test("A refused transcript list never reads as 'No transcript'")
+    func refusedTranscriptListDoesNotClaimNone() async throws {
+        let called = Date().addingTimeInterval(-2 * 3600)
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime]
+
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json(#"{"email":"martin@stmarystrust.example"}"#))
+        StubURLProtocol.enqueue(.json(#"{"items":[]}"#))
+        StubURLProtocol.enqueue(.json("""
+        {"conferenceRecords":[{"name":"conferenceRecords/rec-9","space":"spaces/sp-9",
+          "startTime":"\(iso.string(from: called))",
+          "endTime":"\(iso.string(from: called.addingTimeInterval(120)))"}]}
+        """))
+        StubURLProtocol.enqueue(.json("""
+        {"recordings":[{"name":"r1","state":"FILE_GENERATED",
+          "driveDestination":{"file":"file-Z"},
+          "startTime":"\(iso.string(from: called.addingTimeInterval(60)))",
+          "endTime":"\(iso.string(from: called.addingTimeInterval(74)))"}]}
+        """))
+        // The transcripts call is refused outright.
+        StubURLProtocol.enqueue(.json(
+            #"{"error":{"code":403,"status":"PERMISSION_DENIED","message":"denied"}}"#, status: 403))
+        StubURLProtocol.enqueue(.json(#"{"meetingCode":"osp-jwrt-wff"}"#))
+
+        let source = GoogleMeetSource(
+            config: GoogleOAuthConfig(clientID: "cid.apps.googleusercontent.com"),
+            session: StubURLProtocol.session(),
+            restoredTokens: googleTokens())
+        let listing = await source.list(window: window)
+
+        let row = try #require(listing.rows.first)
+        #expect(row.video == .available, "the recording itself is fine")
+        #expect(row.transcript == .notResolved, "unknown is not none")
+        #expect(row.isSelectable, "a refusal must not stop work")
+        #expect(!row.isWaitingForTranscript)
+    }
+
     /// The blanket-claim guard, one layer below the blanket.
     ///
     /// "We could not read your calls" and "nobody recorded anything" arrive at

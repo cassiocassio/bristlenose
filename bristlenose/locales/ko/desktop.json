@@ -1117,8 +1117,9 @@
     "transcriptNeedsApproval": "\uc2b9\uc778 \ud544\uc694",
     "transcriptDidNotArrive": "\ub3c4\ucc29\ud558\uc9c0 \uc54a\uc74c",
     "transcriptNotImported": "\uac00\uc838\uc624\uc9c0 \uc54a\uc74c",
+    "transcriptImported": "\uac00\uc838\uc634",
     "statusWaitingForTranscript": "\uc804\uc0ac \ub300\uae30 \uc911",
-    "includeWaiting_other": "\uc804\uc0ac \ub300\uae30 \uc911\uc778 {{count}}\uac1c \ud3ec\ud568"
+    "includeWaiting_other": "\uc804\uc0ac \ub300\uae30 \uc911\uc778 \ub179\ud654 {{count}}\uac74 \ud3ec\ud568"
   },
   "unsupportedSubset": {
     "title": "Bristlenose\ub294 \ud3f4\ub354\ub97c \ubd84\uc11d\ud569\ub2c8\ub2e4",

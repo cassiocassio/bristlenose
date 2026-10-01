@@ -1160,6 +1160,7 @@
     "transcriptNeedsApproval": "Needs approval",
     "transcriptDidNotArrive": "Didn't arrive",
     "transcriptNotImported": "Not imported",
+    "transcriptImported": "Imported",
     "statusWaitingForTranscript": "Waiting for transcript",
     "includeWaiting_one": "Include {{count}} waiting on transcription",
     "includeWaiting_other": "Include {{count}} waiting on transcription"

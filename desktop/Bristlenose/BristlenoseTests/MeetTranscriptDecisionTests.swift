@@ -54,6 +54,17 @@ struct MeetTranscriptDecisionTests {
         #expect(decide([], callEnded: false) == .expected)
     }
 
+    /// A wait has to end with a stated outcome (§1a). A call whose end the
+    /// listing never saw — Google serving no `endTime`, or a call left open —
+    /// must not hold its recording as *Expected* for ever, so the empty case
+    /// takes the same patience, measured from the recording.
+    @Test("No transcript on a call that never ended gives up after a day")
+    func noneOnLiveCallExpires() {
+        let aDayLater = now.addingTimeInterval(MeetTranscriptDecision.patience + 60)
+        #expect(decide([], callEnded: false, at: aDayLater) == .notProvided)
+        #expect(decide([], callEnded: false) == .expected, "within a day the wait holds")
+    }
+
     /// Waiting too long costs a minute's patience; giving up too early costs
     /// the speaker names. So the wait errs long, and still ends.
     @Test("Expected becomes No transcript after a day")
@@ -91,10 +102,18 @@ struct MeetTranscriptDecisionTests {
         #expect(decide([before, unclocked]) == .expected)
     }
 
-    @Test("Generated wins over an in-progress sibling")
-    func generatedWinsOverStarted() {
+    /// A stopped-and-restarted transcription is two resources and one
+    /// conversation. One generated beside one still being written is a
+    /// transcript that is *still settling*: writing the generated half alone
+    /// would hand the pipeline half a conversation it then trusts over Whisper
+    /// for the whole recording. (The first draft read this as *Available*.)
+    @Test("A generated transcript beside an in-progress sibling still waits")
+    func generatedBesideStartedStillWaits() {
         #expect(decide([transcript(.started, name: "t-1"),
-                        transcript(.fileGenerated, name: "t-2")]) == .available)
+                        transcript(.fileGenerated, name: "t-2")]) == .expected)
+        #expect(decide([transcript(.fileGenerated, name: "t-1"),
+                        transcript(.fileGenerated, name: "t-2")]) == .available,
+                "both generated: the whole conversation is there")
     }
 
     /// A state this adapter has not met reads as "not generated" — waited for,

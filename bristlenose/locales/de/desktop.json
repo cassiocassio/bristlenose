@@ -1155,6 +1155,7 @@
     "transcriptNeedsApproval": "Genehmigung n\u00f6tig",
     "transcriptDidNotArrive": "Nicht angekommen",
     "transcriptNotImported": "Nicht importiert",
+    "transcriptImported": "Importiert",
     "statusWaitingForTranscript": "Warten auf Transkript",
     "includeWaiting_one": "{{count}} mit ausstehender Transkription einbeziehen",
     "includeWaiting_other": "{{count}} mit ausstehender Transkription einbeziehen"

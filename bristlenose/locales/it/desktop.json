@@ -1151,10 +1151,11 @@
     "transcriptAvailable": "Disponibile",
     "transcriptExpected": "Prevista",
     "transcriptNone": "Nessuna trascrizione",
-    "transcriptNoSpeakerNames": "Senza nomi dei parlanti",
+    "transcriptNoSpeakerNames": "Senza nomi degli interlocutori",
     "transcriptNeedsApproval": "Richiede approvazione",
     "transcriptDidNotArrive": "Non arrivata",
     "transcriptNotImported": "Non importata",
+    "transcriptImported": "Importata",
     "statusWaitingForTranscript": "In attesa della trascrizione",
     "includeWaiting_one": "Includi {{count}} in attesa di trascrizione",
     "includeWaiting_other": "Includi {{count}} in attesa di trascrizione"

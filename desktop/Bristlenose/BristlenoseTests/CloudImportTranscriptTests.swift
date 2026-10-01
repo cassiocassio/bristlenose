@@ -71,11 +71,25 @@ struct TranscriptAvailabilityTests {
     func outcomes() {
         let url = URL(fileURLWithPath: "/tmp/x.vtt")
         #expect(TranscriptOutcome.imported(at: url).cellKind == .success)
-        #expect(TranscriptOutcome.imported(at: url).cellKey == "desktop.cloudImport.statusImported")
+        #expect(TranscriptOutcome.imported(at: url).cellKey == "desktop.cloudImport.transcriptImported")
         #expect(TranscriptOutcome.didNotArrive.cellKind == .warning)
         #expect(TranscriptOutcome.didNotArrive.cellKey == "desktop.cloudImport.transcriptDidNotArrive")
         #expect(TranscriptOutcome.notImported.cellKind == .skipped)
         #expect(TranscriptOutcome.notImported.cellKey == "desktop.cloudImport.transcriptNotImported")
+    }
+
+    /// A row that read *No transcript* before Import must read it after: the
+    /// "skipped" glyph is for the one choice the researcher made (going ahead
+    /// while the transcript was still expected), never for an absence.
+    @Test("A fetch that had nothing to fetch keeps the listing's word, as it stood", arguments: [
+        TranscriptAvailability.notProvided, .noSpeakerNames, .needsAdminApproval,
+        .needsScope("x"), .unavailable, .notResolved, .noLongerAvailable,
+    ])
+    func notFetchedKeepsTheListingWord(state: TranscriptAvailability) {
+        let outcome = TranscriptOutcome.notFetched(state)
+        #expect(outcome.cellKey == state.cellKey)
+        #expect(outcome.cellKind == state.cellKind)
+        #expect(outcome != .notImported)
     }
 
     @Test("The column follows the listing, not the platform")
@@ -169,15 +183,37 @@ struct TranscriptWaitingRowTests {
     /// The meeting header summarises what its children *draw*, and acts on
     /// the ones that can act — so a call with one half waiting still offers
     /// its box, and that box ticks only the half that is ready.
-    @Test("A meeting header ticks the ready half and leaves the waiting half alone")
-    func headerSkipsWaitingChild() {
+    ///
+    /// With the ready half ticked the header reads **mixed**, not on: the
+    /// waiting half draws an empty box directly beneath it, and a header that
+    /// said "all" over an empty box would contradict the row (HIG: a parent
+    /// checkbox summarises the state of its children). This is also the right
+    /// distinction from a *held* child, which the header ignores — a held file
+    /// is here and out of this batch for good; a waiting one can still join it
+    /// through the footer, and *mixed* is what says there is more here to tick.
+    /// Decided 1 Oct 2026 (review); the first draft of this test expected `.on`.
+    @Test("A meeting header ticks the ready half, leaves the waiting half, and reads mixed")
+    func headerReadsMixedOverWaitingChild() {
         let children = [row("a", transcript: .available, meeting: "m"),
                         row("b", transcript: .expected, meeting: "m")]
         let tick = CloudImportOutline.parentTick(for: children, ticked: [])
         #expect(tick.draw == .off)
         #expect(tick.isEnabled, "one child can still act")
         let after = CloudImportOutline.parentTick(for: children, ticked: ["a"])
-        #expect(after.draw == .on, "the waiting child is drawn unticked and does not make the header mixed")
+        #expect(after.draw == .mixed, "the waiting child's empty box is beneath the header, so the header is not 'all'")
+    }
+
+    /// A call whose recordings are *all* waiting has a dead header for the
+    /// wait, not because the files are already here — the view picks its
+    /// tooltip from this predicate.
+    @Test("A header over only-waiting children is dead and draws off")
+    func headerOverOnlyWaitingChildren() {
+        let children = [row("a", transcript: .expected, meeting: "m"),
+                        row("b", transcript: .expected, meeting: "m")]
+        let tick = CloudImportOutline.parentTick(for: children, ticked: [])
+        #expect(tick.draw == .off)
+        #expect(!tick.isEnabled)
+        #expect(children.allSatisfy(\.isWaitingForTranscript))
     }
 
     @Test("A transcript's arrival is a new row value, not a mutation anyone else can make")
@@ -223,9 +259,12 @@ struct TranscriptStoreTests {
             progress: @escaping @Sendable (FetchProgress) -> Void
         ) async -> FetchOutcome {
             let media = destination.appendingPathComponent("\(row.id).mp4")
-            let transcript: TranscriptOutcome = row.transcript == .available
-                ? .imported(at: destination.appendingPathComponent("\(row.id).vtt"))
-                : .notImported
+            let transcript: TranscriptOutcome
+            switch row.transcript {
+            case .available: transcript = .imported(at: destination.appendingPathComponent("\(row.id).vtt"))
+            case .expected:  transcript = .notImported
+            default:         transcript = .notFetched(row.transcript)
+            }
             return .imported(bytes: 1_024, at: media, transcript: transcript)
         }
 
@@ -274,6 +313,34 @@ struct TranscriptStoreTests {
         #expect(store.fetchOrder.map(\.id) == ["ready"])
     }
 
+    /// §0 item 2: "Off each time the window opens, never remembered." A
+    /// re-list is a new batch to decide, so the checkbox falls back off with
+    /// it rather than silently applying to rows the researcher has not seen.
+    @Test("A fresh listing resets the footer checkbox")
+    func reloadResetsTheCheckbox() async {
+        let store = CloudImportStore(source: StubSource(rows: [row("wait", .expected)]))
+        await store.load()
+        store.includeWaiting = true
+        await store.load()
+        #expect(!store.includeWaiting)
+    }
+
+    /// A row the researcher has included and ticked has stopped waiting: it
+    /// must not be counted as waiting, and it must not draw as waiting. The
+    /// store's predicate is what the view reads for both.
+    @Test("A row fetched this batch is no longer 'waiting', whatever the listing says")
+    func fetchedRowStopsWaiting() async {
+        let store = CloudImportStore(source: StubSource(rows: [row("wait", .expected)]))
+        await store.load()
+        #expect(store.isWaiting(store.rows[0]))
+        store.includeWaiting = true
+        store.toggle("wait")
+        store.startFetch(destination: URL(fileURLWithPath: "/tmp/bn-test"), projectID: UUID())
+        await settle(store)
+        #expect(!store.isWaiting(store.rows[0]), "its outcome is showing; there is nothing to wait for")
+        #expect(store.waitingCount == 0)
+    }
+
     /// §0 item 2: "Bulk ticks (⌘A, a meeting's header checkbox) never include
     /// a waiting row" — with the checkbox on as well as off.
     @Test("Select All and the meeting header never sweep a waiting row in")
@@ -299,6 +366,21 @@ struct TranscriptStoreTests {
         #expect(store.ticked.contains("wait"), "the row ticks itself")
         #expect(store.waitingCount == 0)
         #expect(store.tickedCount == 1)
+    }
+
+    /// The arrival tick is for a row the researcher can see and has not dealt
+    /// with. A row the filter hides is not one they are acting on, so it moves
+    /// to Available and is left unticked — the same rule `toggle` keeps.
+    @Test("An arrival on a filtered-out row updates it but does not tick it")
+    func arrivalOnHiddenRowDoesNotTick() async {
+        let store = CloudImportStore(source: StubSource(rows: [row("P05 wait", .expected),
+                                                               row("P06 ready", .available)]))
+        await store.load()
+        store.filterText = "P06"
+        #expect(store.visibleRows.map(\.id) == ["P06 ready"])
+        store.applyTranscriptChanges(["P05 wait": .available])
+        #expect(store.rows.first { $0.id == "P05 wait" }?.transcript == .available)
+        #expect(!store.ticked.contains("P05 wait"), "hidden, so not ticked under the researcher")
     }
 
     @Test("A transcript that stops being expected for another reason frees the row but does not tick it")

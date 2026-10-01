@@ -1155,6 +1155,7 @@
     "transcriptNeedsApproval": "Cal aprovaci\u00f3",
     "transcriptDidNotArrive": "No ha arribat",
     "transcriptNotImported": "No importada",
+    "transcriptImported": "Importada",
     "statusWaitingForTranscript": "Esperant la transcripci\u00f3",
     "includeWaiting_one": "Inclou {{count}} a l'espera de transcripci\u00f3",
     "includeWaiting_other": "Inclou {{count}} a l'espera de transcripci\u00f3"

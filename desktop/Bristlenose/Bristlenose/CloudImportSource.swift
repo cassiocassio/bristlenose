@@ -55,10 +55,11 @@ enum FetchOutcome: Equatable {
     ///
     /// `transcript` is the other half of the row (§5a): fetched inside the same
     /// call, after the media is published, and never on its own — a lone
-    /// `.vtt` would become a text-only session. Defaulted so an adapter that
-    /// serves no transcript (Teams, until its admin consent lands) says so by
-    /// saying nothing.
-    case imported(bytes: Int64, at: URL, transcript: TranscriptOutcome = .notImported)
+    /// `.vtt` would become a text-only session. **No default**: an adapter that
+    /// fetched none says so with `.notFetched(row.transcript)`, so the cell
+    /// keeps the listing's own word — a default of *Not imported* would draw
+    /// the "you chose to skip it" glyph on every Teams and Zoom row.
+    case imported(bytes: Int64, at: URL, transcript: TranscriptOutcome)
     /// Carries a **case, not a sentence**. It used to carry the English
     /// sentence, and the row rendered it verbatim — so the cloud-import window
     /// was fully localised (38 `i18n.t` sites) while the failure rows inside it
@@ -330,16 +331,21 @@ final class FixtureCloudSource: CloudImportSource {
             title: row.title, startsAt: row.startsAt, fileExtension: "mp4",
             part: row.siblingOrdinal)
         // The transcript half follows the same rule: a row listed with one
-        // "lands" it under the media's stem, so the Transcript column's
-        // after-fetch states are reachable from Diagnostics.
+        // "lands" it under the media's stem, a row included while waiting is
+        // the one *Not imported*, and every other row keeps its listed word —
+        // so the Transcript column's after-fetch states are reachable from
+        // Diagnostics.
         let transcript: TranscriptOutcome
-        if row.transcript == .available {
+        switch row.transcript {
+        case .available:
             let vtt = CloudDownloadNaming.filename(
                 title: row.title, startsAt: row.startsAt, fileExtension: "vtt",
                 part: row.siblingOrdinal)
             transcript = .imported(at: destination.appendingPathComponent(vtt))
-        } else {
+        case .expected:
             transcript = .notImported
+        default:
+            transcript = .notFetched(row.transcript)
         }
         return .imported(bytes: total, at: destination.appendingPathComponent(name),
                          transcript: transcript)
@@ -462,10 +468,13 @@ final class FixtureCloudSource: CloudImportSource {
         guard scenario == .everyStatus else { return nil }
         var seed = CloudImportDiagnosticSeed()
         let landed = URL(fileURLWithPath: "/dev/null")
-        seed.outcomes["st-imported"] = .imported(bytes: 1, at: landed)
+        // A media-only import: the listing said *No transcript* and the cell
+        // goes on saying so after the fetch — the fourth after-fetch state.
+        seed.outcomes["st-imported"] = .imported(bytes: 1, at: landed,
+                                                 transcript: .notFetched(.notProvided))
         seed.outcomes["st-stopped"] = .cancelled
-        // The Transcript column's three after-fetch states, on rows whose
-        // media imported — the only rows that have a transcript outcome.
+        // The Transcript column's other three after-fetch states, on rows
+        // whose media imported — the only rows that have a transcript outcome.
         seed.outcomes["st-t-imported"] = .imported(bytes: 1, at: landed,
                                                    transcript: .imported(at: landed))
         seed.outcomes["st-t-didnotarrive"] = .imported(bytes: 1, at: landed,
@@ -537,7 +546,7 @@ final class FixtureCloudSource: CloudImportSource {
 
         // How a fetch ended.
         minute = 0
-        add("st-imported", "Fetch: imported", daysAgo: 3)
+        add("st-imported", "Fetch: imported", daysAgo: 3, transcript: .notProvided)
         add("st-stopped", "Fetch: stopped", daysAgo: 3)
         for failure in CloudFetchFailure.allCases {
             add("st-fail-\(failure.rawValue)", "Fetch failed: \(failure.rawValue)", daysAgo: 3)

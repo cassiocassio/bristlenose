@@ -1155,6 +1155,7 @@
     "transcriptNeedsApproval": "Requiere aprobaci\u00f3n",
     "transcriptDidNotArrive": "No lleg\u00f3",
     "transcriptNotImported": "No importada",
+    "transcriptImported": "Importada",
     "statusWaitingForTranscript": "Esperando la transcripci\u00f3n",
     "includeWaiting_one": "Incluir {{count}} a la espera de transcripci\u00f3n",
     "includeWaiting_other": "Incluir {{count}} a la espera de transcripci\u00f3n"

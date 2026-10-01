@@ -329,6 +329,28 @@ final class CloudDownloader: NSObject {
         return written
     }
 
+    /// Publishes bytes we produced ourselves the way step 5 above publishes a
+    /// download: written beside the destination as `.part`, then one
+    /// same-volume rename, so the destination never names a partial file for
+    /// even an instant. The transcript the import writes next to a recording is
+    /// the second caller — one atomic writer, not two (design-cloud-import-
+    /// transcripts.md §0a).
+    ///
+    /// On failure the `.part` is removed and the error rethrown; the
+    /// destination is untouched.
+    static func publish(_ data: Data, to destination: URL, fileManager: FileManager = .default) throws {
+        let part = destination.appendingPathExtension("part")
+        try? fileManager.removeItem(at: part)
+        do {
+            try data.write(to: part)
+            _ = try? fileManager.removeItem(at: destination)
+            try fileManager.moveItem(at: part, to: destination)
+        } catch {
+            try? fileManager.removeItem(at: part)
+            throw error
+        }
+    }
+
     /// The first few bytes, for the magic-number check. Reads a handle rather
     /// than the file, so a 2 GB recording costs sixteen bytes to identify.
     static func readHead(of url: URL, count: Int) -> [UInt8] {

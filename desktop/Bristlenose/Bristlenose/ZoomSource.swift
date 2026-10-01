@@ -677,7 +677,10 @@ final class ZoomSource: CloudImportSource {
                     bytesExpected: total
                 ))
             }
-            return .imported(bytes: bytes, at: request.destination)
+            // The VTT is Phase 5; until then the listing's own word stands in
+            // the cell rather than a "skipped" the researcher never chose.
+            return .imported(bytes: bytes, at: request.destination,
+                             transcript: .notFetched(row.transcript))
         } catch let error as CloudDownloadError {
             if case .cancelled = error { return .cancelled }
             // **A known loss, taken deliberately.** This used to interpolate

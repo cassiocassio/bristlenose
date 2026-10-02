@@ -67,6 +67,69 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+## 0.32.0 — 30 Sep 2026 · Tier 1 (minor — clip subtitles, the ChatGPT plugin, player keys, the native Claude extension)
+
+**What shipped.** Exported clips carry subtitles (a `.vtt` beside each clip and a
+language-tagged track inside it, BBC-styled; an optional burned-in copy; CJK line
+breaking), the video player shows subtitles and has Mac keyboard controls, the
+projects column scrolls under the toolbar, and agent access gained **Install
+Plugin…** for ChatGPT and a native, sandboxed helper for Claude Desktop that needs
+no Files & Folders step on macOS 27 (`docs/design-mcp-native-proxy.md` §6.9–§6.11).
+Fixed: the macOS 27 agent block, a crash on closing the player then clicking a
+timecode, the Video menu greyed out with the player in front, CJK word timings,
+and PyAV 19 breaking transcription (below). Five sessions' work in one release;
+driven under a `/goal` from 23:14 BST to the tag at 01:31.
+
+**Verified 9 of 9** (`release.sh verify 0.32.0`, exit 0) at ~01:55 BST: PyPI (wheel
+uploaded 00:43Z, 12 min after the tag), GitHub Release, Homebrew, TestFlight 4035,
+`.dmg`, Snap edge, Copr, and the website (`deploy.sh --yes` after PyPI answered —
+8 of 9 until then).
+
+### Six attempts, five causes, none in the product's own code paths
+
+| attempt | stopped at | cause | fix |
+|---|---|---|---|
+| 1 | preflight | **PyAV 19.0.0** (published 17:46Z that day) removed the `metadata_errors` argument faster-whisper passes to `av.open()` — every decode a `TypeError`. Found by the preflight's dependency-majors row, measured on a real clip (19 fails, 18.1.0 decodes 120 s) | `av<19` pin, pinning-register row, a Fixed line (`4503c4cb`) |
+| 1 | preflight | `gates_without_proof` 14 > 13: the new `check-mcp-helper.sh` had never been seen red | proved on mutants (an ad-hoc copy; a mismatched pair) and declared in `gate-proofs.json` |
+| 2 | preflight | `pytest_skip_sites` 35 > 30: the helper tests added five skips. Two were broken builds wearing a skip (a failed `swiftc`, a missing clang) | those two now fail; ceiling 33 for the three macOS-only guards (`5562f459`) |
+| 3 | build-dmg | the `.dmg` gate refused **any** app group, written before the helper made the team group part of the Developer-ID contract. The image itself was notarised and stapled | the rule now refuses `group.app.bristlenose` and requires the team group (`1c5fca23`) |
+| 4, 5 | build-all | dep drift: fastapi 0.142.1, then filelock 4.0.7, published while the run was going | the driver's `deps-inventory` remedy, then a commit each |
+| 5 | ci-green (stopped by hand) | two tests red on every CI cell, green locally: the player-page test needed a built bundle CI does not have, and the subtitle-export test lost its job to a closed event loop | stand-in bundle (`9ba1fe4d`); `with client` (`56d24a73`, now a gotcha in `bristlenose/server/CLAUDE.md`) |
+
+The third is the one worth carrying. **A gate encodes the artefact contract on the
+day it was written, and a feature that legitimately changes the contract has to
+change the gate in the same commit** — `check-dmg-shippable.sh` had no idea the
+helper existed, and nothing ran it before release night because the `.dmg` is only
+built there. The `.pkg` gate had been updated with the helper (section 6b); its
+sibling had not.
+
+The fifth is the known trap in root `CLAUDE.md` ("CI `test` job doesn't `npm run
+build`"), walked into anyway: a test written against `create_app` that only passed
+because this Mac has `server/static/` built.
+
+### Timing (from `events.jsonl`)
+
+| step | s |
+|---|---|
+| preflight (attempt 3) | 153 |
+| build-all (final, attempt 5) | 418 |
+| build-dmg (final, attempt 3) | 811 |
+| ci-green (after the retry) | 161 |
+| testflight | 387 |
+| dmg publish | 135 |
+| tag · snap | 4 |
+| **first start → tag** | **~2 h 16 min** (22:14Z → 00:31Z), of which ~1 h 40 was attempts that stopped |
+| tag → PyPI wheel | ~12 min |
+
+The `.dmg` publish was back to ~2 min (0.31.5's 21 min was not repeated).
+
+### What is owed
+
+- The `.dmg` gate's new rule has the pinning test's message updated but no
+  red-on-mutant proof of its own (a Developer-ID image carrying the MAS group).
+- `copr-cli` is not installed on the release Mac, so the Copr token was checked for
+  expiry but not for login.
+
 ## 0.31.5 — 29 Sep 2026 · Tier 1 (patch — serve's file routes closed, and CI made green first)
 
 **What shipped.** Four serve security fixes found the same evening — the PII

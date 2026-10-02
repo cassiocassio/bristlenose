@@ -271,6 +271,17 @@ def _get_db(request: Request) -> Session:
 
 The factory is stored on `app.state` during `create_app()`.  Each route creates its own session and **must close it** in a `finally` block.
 
+### Testing a route that starts a background task: hold the client open
+
+A route that `asyncio.create_task(...)`s a job (clip export, AutoCode) and a test
+that then polls a status route need **`with client:`** around both. Without it,
+Starlette's `TestClient` runs each request on its own event loop, which closes when
+that request returns, so the task the POST started is frozen and the job stays
+`running` until the test's deadline. It passed on this Mac and failed on three Linux
+cells in the 0.32.0 release (`test_export_writes_a_vtt_built_from_the_transcript`,
+fixed `56d24a73`); a 0.5 s fake clip reproduces it locally on demand. Tests that
+seed `_jobs` directly and read the status once don't need it.
+
 ## React island integration
 
 > **Dead as of 21 Sep 2026 — nothing reads these markers.** `serve_report_html()` does not exist in the tree, and neither does `_REACT_APP_MOUNT`; serve mode emits `<div id="bn-app-root">` directly (`server/app.py:657`) and the browser mounts the whole SPA there. The sealed Jinja2 renderer still *writes* `<!-- bn-app -->` and `<!-- bn-session-table -->` (`s12_render/report.py:189`, `:219`, `:235`, `:485`), but no Python reads either one. Per-island substitution is history; do not copy the pattern for a new island.

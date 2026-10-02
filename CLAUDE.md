@@ -1455,7 +1455,21 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 
 ## Current status
 
-**Internal TestFlight since 14 Jul 2026** — shipping build **0.31.5 (3906)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
+**Internal TestFlight since 14 Jul 2026** — shipping build **0.32.0 (4035)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
+
+**0.32.0 shipped 30 Sep 2026, overnight — tag `v0.32.0` on `d49df5d4` at
+01:31 BST, TestFlight build 4035, verified 9 of 9.** A minor: clip subtitles (a `.vtt` and a
+language-tagged track per clip, an optional burned-in copy, CJK line breaking),
+subtitles and keyboard controls in the video player, and agent access through a
+native sandboxed helper — **Install Plugin…** for ChatGPT, and a Claude extension
+that needs no Files & Folders step on macOS 27. Six attempts, none for a product
+defect: PyAV 19 shipped that evening and broke faster-whisper's decoder (pinned
+`av<19`, and 0.31.5 fresh installs off the Apple-Silicon Mac app were broken
+until the tag); two ratchets the helper's own tests pushed over; the `.dmg` gate
+still refusing *any* app group, written before the helper made the team group
+part of the Developer-ID contract; two dependency publishes mid-run; and two
+tests green here and red on every CI cell. Full account: `docs/release-log.md`
+§ 0.32.0.
 
 **0.31.5 shipped 29 Sep 2026, overnight and unattended — tag `v0.31.5` on
 `e173aaa1`, TestFlight build 3906.** A patch: serve's unauthenticated file

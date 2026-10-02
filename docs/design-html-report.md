@@ -65,7 +65,7 @@ Within each session, speakers are assigned **speaker codes** that distinguish mo
 
 - **Code scheme**: `p1` = participant (uses session's participant_id), `m1`/`m2` = moderator(s) (researcher role), `o1` = observer. A session's `.txt` file contains segments from all speakers: `[00:16] [m1] Can you tell me...` / `[00:28] [p1] Yeah I've been using...`
 - **Model field**: `TranscriptSegment.speaker_code: str = ""` — per-segment speaker identity. Default empty string for backward compat (existing code that doesn't set it falls back to `transcript.participant_id`)
-- **Assignment**: `assign_speaker_codes(session_id, next_participant_number, segments)` in `identify_speakers.py` — called after Stage 5b role classification. Groups segments by `speaker_label`, maps each label to a code based on its `speaker_role` (RESEARCHER → m1/m2, OBSERVER → o1, PARTICIPANT/UNKNOWN → globally-numbered `p{next_participant_number}`). Returns `(dict[str, str], int)` — label→code map and updated next participant number. The pipeline passes `next_participant_number` across sessions for unique p-codes across the study
+- **Assignment**: `assign_speaker_codes(next_participant_number, segments)` in `s05b_identify_speakers.py` — called after Stage 5b role classification. Groups segments by `speaker_label`, maps each label to a code based on its `speaker_role` (RESEARCHER → m1/m2, OBSERVER → o1, PARTICIPANT/UNKNOWN → globally-numbered `p{next_participant_number}`). Returns `(dict[str, str], int)` — label→code map and updated next participant number. The pipeline passes `next_participant_number` across sessions for unique p-codes across the study
 - **Disk format**: `write_raw_transcripts()` and `write_cooked_transcripts()` now write `seg.speaker_code` instead of `transcript.participant_id` for the bracket token. File is still named `p1_raw.txt` (session identity), but contains `[m1]` and `[p1]` segments
 - **Parser**: `load_transcripts_from_dir()` recognises `[m1]` → `speaker_role=RESEARCHER, speaker_code="m1"`, `[o1]` → `speaker_role=OBSERVER, speaker_code="o1"`, `[p1]` → `speaker_code="p1"` (role stays UNKNOWN for backward compat with old files)
 - **People entries**: `compute_participant_stats()` in `people.py` creates `PersonComputed` entries for moderator/observer codes found in segments, alongside the session participant entry. Moderators get full `PersonEntry` in `people.yaml` with editable name/role fields
@@ -74,6 +74,14 @@ Within each session, speakers are assigned **speaker codes** that distinguish mo
 - **CSS**: `.segment-moderator .segment-body` and `.segment-moderator .segment-speaker` use `--bn-colour-muted` — moderator text is visually receded so participant answers stand out
 - **Backward compat**: Old `.txt` files with `[p1]` for all segments continue to work — all segments get `speaker_role=UNKNOWN`, no `.segment-moderator` class, rendered identically to before
 - **Phase 2 (not yet implemented)**: Cross-session moderator linking (`same_as` field in people.yaml), web UI for declaring "m1 in sessions 1,2,4 = same person", aggregated moderator stats
+
+  > **Superseded 1 Oct 2026 — this Phase 2 will not be built.** Moderator identity is decided as
+  > route C in [design-people.md](design-people.md) §E decision 1 (the "Corrected 1 Oct 2026"
+  > block): each session's moderator slot is `null` · `proposed` · `confirmed` in
+  > `session_speakers`, identities are minted on platform evidence or a researcher's pick, and
+  > `people.yaml` is retired as a store — so there is no `same_as` field. Two sessions share a
+  > moderator when their slots hold the same identity, not when a link record says so. Delivery
+  > plan: §H H9 of the same doc. Not built yet. The Phase 1 description above is still what ships.
 - **Tests**: `tests/test_moderator_identification.py` — 21 tests: `assign_speaker_codes()` (6 cases), transcript round-trip (5), backward compat (2), people stats (2), HTML rendering (5), CSS (1)
 
 ### Name editing in HTML report

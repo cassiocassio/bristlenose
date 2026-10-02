@@ -35,7 +35,7 @@ Shaped with design notes but not the current priority. Open an issue if one of t
 
 - **Windows** via winget and a Windows credential store (#44)
 - **Transcript editing** — strike sections, correct text, with an audit trail ([design-transcript-editing.md](design-transcript-editing.md))
-- **Cross-session speaker linking** — moderator and participant identity across interviews ([design-transcript-speaker-editing-roadmap.md](design-transcript-speaker-editing-roadmap.md))
+- **Cross-session speaker linking** — moderator and participant identity across interviews ([design-transcript-speaker-editing-roadmap.md](design-transcript-speaker-editing-roadmap.md)). _Superseded 1 Oct 2026 for moderators: decided as route C, a per-session moderator slot named from platform evidence or the researcher's pick, with `people.yaml` retired as a store — [design-people.md](design-people.md) §E decision 1, delivery plan §H H9. Not built yet._
 - **Edit writeback** — propagate edits from the report back into source transcript files (#21)
 - ~~**.docx export** — Word output for stakeholder sharing (#20)~~ — **dropped.** The original single-page report was HTML + Markdown, and a Word doc was imagined alongside it — but the HTML/Markdown report, CSV/XLS quote export, self-contained HTML leave-behind, and Miro push now cover stakeholder sharing far better than a flat Word file would. Not planned.
 - **Multi-page reports** — tabs or linked pages for very large corpora (#51)

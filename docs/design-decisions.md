@@ -383,6 +383,8 @@ Moderators and observers stay in the roles line below the header. Their turns ar
 
 Moderator and observer names are never stripped — they are part of the research team, not research subjects. Full names and surnames are never shown in the report UI; they exist only in `people.yaml` for the researcher's reference.
 
+_1 Oct 2026: `people.yaml` is retired as the store for names under route C — names, identities and the per-session moderator slot move to the project database, and a legacy file is read once on upgrade (`docs/design-people.md` §C2 and §E decision 1; delivery plan §H H9). Not built yet, so the sentence above still describes what ships. The boundary itself is unchanged: participants anonymised, moderators and observers named._
+
 _See also: `SECURITY.md` §Anonymisation boundary_
 
 ### Credential storage

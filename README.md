@@ -310,7 +310,7 @@ Transcription hardware is auto-detected. Apple Silicon uses MLX on Metal GPU. NV
 ### Platform
 
 - **Windows installer** -- native setup wizard so you don't need Python or the command line
-- **Cross-session moderator linking** -- recognise the same moderator across sessions (currently each session tracks moderators independently)
+- **Moderator identity across sessions** -- name each session's moderator from the meeting platform's own label or your pick, so sessions run by different people stop sharing one moderator name
 
 Priorities may shift. If something is missing that matters to you, [open an issue](https://github.com/cassiocassio/bristlenose/issues).
 

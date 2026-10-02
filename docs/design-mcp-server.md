@@ -451,6 +451,13 @@ Two consequences for the build:
    refuse. Worth carrying back to `design-multi-project.md` §2, which currently
    anticipates a "suggestion algorithm": the domain argues for building the
    declaration and skipping the suggester.
+   _Trued 1 Oct 2026: carried back. `design-multi-project.md` §2 gained a status
+   note on 25 Aug 2026 demoting the suggester to a back-fill, and within a study
+   moderator identity is now decided as route C — a per-session slot in
+   `session_speakers`, minted on platform evidence or a researcher's pick, with
+   `people.yaml` retired as a store (`design-people.md` §E decision 1, delivery
+   plan §H H9; not built yet). Cross-study links are outside route C's v1, so
+   point 1 stands._
 3. **The server must actively discourage the inference.** Dropping the feature is
    not sufficient — an assistant handed two projects will match "Jim Smith" to
    "Jim Smith" by itself. The `instructions` field has to say plainly that person

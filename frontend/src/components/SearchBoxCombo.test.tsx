@@ -157,6 +157,27 @@ describe("tokens", () => {
     expect(combo.onTokenRemove).toHaveBeenCalledWith(tokens[0]);
   });
 
+  it("a chip's menu works from the keyboard: focus moves in, arrows cycle, Esc returns to the chip", () => {
+    const { combo } = setup(tokens, "");
+    const chip = screen.getAllByTestId("s-token")[1];
+    act(() => chip.focus());
+    fireEvent.click(chip); // Enter or Space on a button clicks it
+    const menu = screen.getByRole("menu");
+    const items = within(menu).getAllByRole("menuitemradio");
+    expect(document.activeElement).toBe(items[0]);
+    fireEvent.keyDown(menu, { key: "ArrowDown" });
+    expect(document.activeElement).toBe(items[1]);
+    fireEvent.keyDown(menu, { key: "ArrowUp" });
+    fireEvent.keyDown(menu, { key: "ArrowUp" }); // wraps past the first to Remove
+    expect(document.activeElement).toBe(within(menu).getByRole("menuitem"));
+    fireEvent.keyDown(document.activeElement!, { key: "Enter" });
+    expect(combo.onTokenRemove).toHaveBeenCalledWith(tokens[1]);
+    fireEvent.click(chip);
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(document.activeElement).toBe(chip);
+  });
+
   it("⌫ in the empty field selects the last chip, and a second ⌫ removes it", () => {
     const { input, combo } = setup(tokens, "");
     act(() => input.focus());

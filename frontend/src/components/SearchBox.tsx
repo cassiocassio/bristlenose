@@ -125,23 +125,40 @@ export function SearchBox({
   // Cleanup timer on unmount
   useEffect(() => () => clearTimeout(timerRef.current), []);
 
-  // A token's menu closes on a click outside it and on Esc.
+  // A token's menu closes on a click outside it. Opening it moves the focus
+  // to its first item, as a WAI-ARIA menu does, so it works from the keyboard.
+  const menuRef = useRef<HTMLUListElement>(null);
   useEffect(() => {
     if (menuFor === null) return;
+    menuRef.current?.querySelector<HTMLElement>('[role^="menuitem"]:not([aria-disabled="true"])')?.focus();
     const onMouse = (e: MouseEvent) => {
       if ((e.target as Element | null)?.closest?.(".search-token-wrap.menu-open")) return;
       setMenuFor(null);
     };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMenuFor(null);
-    };
     document.addEventListener("mousedown", onMouse);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onMouse);
-      document.removeEventListener("keydown", onKey);
-    };
+    return () => document.removeEventListener("mousedown", onMouse);
   }, [menuFor]);
+
+  /** ↓ / ↑ move between the menu's items and wrap; Esc closes it and gives the
+   *  focus back to its chip; Tab closes it. */
+  function handleMenuKeyDown(e: React.KeyboardEvent<HTMLUListElement>, chip: HTMLElement | null) {
+    const items = Array.from(
+      e.currentTarget.querySelectorAll<HTMLElement>('[role^="menuitem"]:not([aria-disabled="true"])'),
+    );
+    const at = items.indexOf(document.activeElement as HTMLElement);
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const step = e.key === "ArrowDown" ? 1 : -1;
+      items[(((at + step) % items.length) + items.length) % items.length]?.focus();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      setMenuFor(null);
+      chip?.focus();
+    } else if (e.key === "Tab") {
+      setMenuFor(null);
+    }
+  }
 
   function handleToggle() {
     if (expanded) {
@@ -385,8 +402,12 @@ export function SearchBox({
                   </button>
                   {open && (
                     <ul
+                      ref={menuRef}
                       className="search-token-menu"
                       role="menu"
+                      onKeyDown={(e) =>
+                        handleMenuKeyDown(e, e.currentTarget.parentElement?.querySelector("button") ?? null)
+                      }
                       data-testid={testId ? `${testId}-token-menu` : undefined}
                     >
                       {wire.modes.map((m) => (

@@ -16,9 +16,12 @@ trued-against: HEAD on 2026-10-03
 > migration — serve reads the stage's record file directly, because the tables
 > exist to hold researcher overrides and there is no editing UI yet; the Mac has
 > no guide picker — the lens tells the researcher where the guide goes (a folder
-> named “Discussion guide” beside the recordings). **Still owed:** scoring on the
-> real gold-labelled sessions; overrides and their tables; the Mac guide import
-> and a scoped re-run; cohort baselines for the cost forecast. §7 has the detail.
+> named “Discussion guide” beside the recordings). **On the Mac, Analyse builds a
+> missing discussion** (4 Oct): it appears for an analysed project with no record,
+> or whose guide changed since, and resumes — so only this stage runs and edits
+> are kept; Re-analyse, which starts over, is never suggested. **Still owed:**
+> scoring on the real gold-labelled sessions; overrides and their tables; a
+> native guide picker; cohort baselines for the cost forecast. §7 has the detail.
 
 *How the Discussion lens becomes a first-class part of the Bristlenose
 architecture rather than a spike. Companion to
@@ -549,7 +552,12 @@ until Phase 5.
    overrides, export classification and anonymisation. Exit: a re-run preserves
    overrides; a dropped quote re-imports cleanly.
    **Status 3 Oct 2026: API, status, export and anonymisation built; tables,
-   importer and overrides deferred.** `routes/discussion.py` reads the record
+   importer and overrides deferred.** Two review fixes on 4 Oct, each found on a
+   real project: quotes sharing a (session, participant, second) key are matched
+   by text (24 of 308 collided on one project, and hiding one hid both), and a
+   quote the report does not hold is left out and counted (42 of 284 on another),
+   so the lens never shows a quote Quotes cannot hide. An anonymised export drops
+   a guide section nobody asked about, title and all. `routes/discussion.py` reads the record
    file and returns `{status, record}` — not_run, stale (built from other quotes,
    checked against `extracted_quotes.json`), ready, partial, failed. A hidden quote
    is left out and an edited one shows its edit, joined to `Quote` rows on
@@ -567,9 +575,12 @@ until Phase 5.
 5. **macOS** — Tab, flagged rail row, menus, guide import, scoped re-run. Exit:
    Swift suite green; guide added in the app re-runs only this stage.
    **Status 3 Oct 2026: the rail row, ⌘6 and the View menu show it always; the
-   preview flag and its Diagnostics toggle are deleted.** Guide import and the
-   scoped re-run are owed — today a guide reaches a run through the folder and a
-   re-analyse, which re-runs only the stage when nothing else changed.
+   preview flag and its Diagnostics toggle are deleted.** The scoped re-run is
+   **Analyse** (4 Oct): the folder watcher flags an analysed project with no
+   record, or a guide folder newer than the record, and the sidebar offers
+   Analyse, which resumes. A native guide picker is still owed. The lens's copy
+   forks by platform (`dt()`): the CLI is told to run `bristlenose run` again,
+   the Mac to choose Analyse, an exported report gets one plain line.
 6. **Ship** — i18n across 21 locales, NavBar entry, export embed, flags on,
    design doc trued, a public mockup with synthetic data in `docs/mockups/`,
    CHANGELOG under **New** (a minor bump).

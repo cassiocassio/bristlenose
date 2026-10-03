@@ -14,6 +14,14 @@ trued-against: HEAD@main (42bf545f) on 2026-09-12 (per-session resume; outcome 3
 
 ## Changelog
 
+- _2026-10-04_ — **Analyse** gained a fourth reason to appear: an analysed project
+  whose Discussion lens has no record, or whose guide folder changed after the
+  record was written (`UnanalysedState.discussionWanted`, measured by
+  `ProjectFolderWatcher.discussionWanted`). Analyse resumes, so only the
+  discussion stage runs and edits are kept; without it the Mac's only re-run was
+  **Re-analyse…**, which starts over. Checked before the top-level-files guard in
+  `hasWorkToDo`, because a project whose recordings sit in a subfolder has none
+  and still has a discussion to build. Pinned by `DiscussionAnalyseTests`.
 - _2026-08-22_ — §7's last question answered, and it was a defect rather than a
   design gap: a re-analysis that failed before ingest completed read as *never
   analysed* on the next launch, because `parseManifest` returned `.idle` at the
@@ -279,6 +287,7 @@ Where each verb can be reached, and what gates it.
 |---|---|---|---|
 | **Analyse** | sidebar context menu, Project menu | folder-shaped, has path, not running, **and there is work to do** | Shipped (`8975254a`, `1c5bebfa`) |
 | **Analyse** (auto) | after a cloud-import batch lands | folder-shaped project | Shipped (`1490dcde`) |
+| **Analyse** (discussion) | sidebar context menu | analysed, and the discussion record is missing or older than the guide folder | Shipped 4 Oct 2026 — resumes; only the discussion stage runs |
 | **Analyse** | the project detail pane | never run **and** files present | Shipped (§6.3) |
 | **Analyse** | the files popover | the popover is open **and** `analyseIsOffered` | Shipped 27 Aug (§6.2 amendment) — was the sheet |
 | **File ▸ Add Files…** | File menu | a project is selected | Shipped |

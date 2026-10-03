@@ -230,6 +230,15 @@ describe("review fixes, 3 Oct 2026", () => {
     expect((row as HTMLElement).dataset.item).toBe("");
   });
 
+  it("each mark explains itself on hover, the house ? cursor way", () => {
+    const { container } = render(<DiscussionView data={data} />);
+    const tips = new Set([...container.querySelectorAll(".dl-mk")].map((m) => m.getAttribute("title")));
+    expect(tips).toEqual(new Set([
+      "In your guide, and asked", "In your guide, never asked in any session",
+      "Not in your guide — asked as it came up",
+    ]));
+  });
+
   it("every navigator row says its provenance in words, not only by its mark", () => {
     const { container } = render(<DiscussionView data={data} />);
     const rows = [...container.querySelectorAll(".dl-row-btn")];

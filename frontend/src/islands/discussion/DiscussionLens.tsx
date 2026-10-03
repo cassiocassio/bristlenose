@@ -77,6 +77,12 @@ const S = {
   markBoth: "planned and asked",
   markHollow: "planned, never asked",
   markPlus: "not in the guide",
+  // Hover meanings for the marks — the house "? cursor + title" pattern
+  // (Signals' metric labels and intensity dots).
+  tipPlanned: "In your guide",
+  tipBoth: "In your guide, and asked",
+  tipHollow: "In your guide, never asked in any session",
+  tipPlus: "Not in your guide — asked as it came up",
   notHere: (n: number) => `, not asked in session ${n}`,
   announceSession: (n: number, q: number) => `Session ${n}, ${q} ${q === 1 ? "question" : "questions"}`,
   announceFocus: (text: string) => `Focused on ${text}`,
@@ -399,6 +405,10 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
     </span>
   );
 
+  const markTip = (r: NavRow) =>
+    mode === "planned" ? S.tipPlanned
+      : r.mark === "dot" ? S.tipBoth : r.mark === "hollow" ? S.tipHollow : S.tipPlus;
+
   const markText = (r: NavRow) =>
     mode === "planned" ? S.markPlanned
       : r.mark === "dot" ? S.markBoth : r.mark === "hollow" ? S.markHollow : S.markPlus;
@@ -416,7 +426,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
       <div key={r.id} className={cls.join(" ")} data-id={r.id}>
         <button type="button" className="dl-row-btn" title={r.title} onClick={() => focusRow(r)}
           aria-pressed={r.sessions.length ? on : undefined} aria-disabled={r.sessions.length ? undefined : true}>
-          <span className="dl-mk" aria-hidden="true">
+          <span className="dl-mk" aria-hidden="true" title={markTip(r)}>
             {r.mark === "plus" ? "+" : <span className={r.mark === "hollow" ? "dl-dot hollow" : "dl-dot"} />}
           </span>
           <span className="dl-tx">{r.text}</span>

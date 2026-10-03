@@ -108,7 +108,9 @@
     appearance: none; background: none; border: 0; padding: 0; margin: 0;
     font: inherit; color: inherit; text-align: left; cursor: pointer;
 }
-.dl-mk { width: 1.1em; flex: none; text-align: center; color: var(--bn-colour-muted); }
+/* cursor: help + a title on the mark: the house "hover here for info" pattern
+   (signals.css .metric-label and .intensity-dots; moderator-question.css). */
+.dl-mk { width: 1.1em; flex: none; text-align: center; color: var(--bn-colour-muted); cursor: help; }
 /* Provenance dots: 60% of the glyph they replace, centred where it sat. */
 .dl-dot {
     display: inline-block; width: 6px; height: 6px; border-radius: 50%;

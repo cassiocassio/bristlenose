@@ -230,9 +230,20 @@ describe("review fixes, 3 Oct 2026", () => {
     expect((row as HTMLElement).dataset.item).toBe("");
   });
 
+  it("Normalised questions carries a small key of the marks; Your guide does not", () => {
+    render(<DiscussionView data={data} />);
+    const key = screen.getByRole("note", { name: "Key" });
+    expect(key).toHaveClass("bn-pipeline-key");
+    for (const t of ["Asked as planned", "Planned, never asked", "Not in your guide", "Grey: not asked in this session"]) {
+      expect(within(key).getByText(t, { exact: false })).toBeInTheDocument();
+    }
+    fireEvent.click(screen.getByRole("radio", { name: "Your guide" }));
+    expect(screen.queryByRole("note", { name: "Key" })).toBeNull();
+  });
+
   it("each mark explains itself on hover, the house ? cursor way", () => {
     const { container } = render(<DiscussionView data={data} />);
-    const tips = new Set([...container.querySelectorAll(".dl-mk")].map((m) => m.getAttribute("title")));
+    const tips = new Set([...container.querySelectorAll(".dl-row .dl-mk")].map((m) => m.getAttribute("title")));
     expect(tips).toEqual(new Set([
       "In your guide, and asked", "In your guide, never asked in any session",
       "Not in your guide — asked as it came up",

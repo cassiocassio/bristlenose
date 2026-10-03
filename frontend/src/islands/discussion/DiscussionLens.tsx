@@ -79,6 +79,11 @@ const S = {
   markPlus: "not in the guide",
   // Hover meanings for the marks — the house "? cursor + title" pattern
   // (Signals' metric labels and intensity dots).
+  key: "Key",
+  keyBoth: "Asked as planned",
+  keyHollow: "Planned, never asked",
+  keyPlus: "Not in your guide",
+  keyGrey: "Grey: not asked in this session",
   tipPlanned: "In your guide",
   tipBoth: "In your guide, and asked",
   tipHollow: "In your guide, never asked in any session",
@@ -579,6 +584,26 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
             {rows.map(row)}
           </div>
         ))}
+        {mode === "merged" && (
+          // The Settings ▸ Pipeline symbol key, reused as is (its classes set the
+          // type and spacing); the marks are the rows' own, so they match exactly.
+          <div className="bn-pipeline-key dl-key" role="note" aria-label={S.key}>
+            <div className="bn-pipeline-key-group">
+              <span className="bn-pipeline-key-item">
+                <span className="dl-mk" aria-hidden="true"><span className="dl-dot" /></span>{S.keyBoth}
+              </span>
+              <span className="bn-pipeline-key-item">
+                <span className="dl-mk" aria-hidden="true"><span className="dl-dot hollow" /></span>{S.keyHollow}
+              </span>
+              <span className="bn-pipeline-key-item">
+                <span className="dl-mk" aria-hidden="true">+</span>{S.keyPlus}
+              </span>
+            </div>
+            <div className="bn-pipeline-key-group">
+              <span className="bn-pipeline-key-item">{S.keyGrey}</span>
+            </div>
+          </div>
+        )}
       </nav>
 
       <div ref={gutRef} className="dl-gut">

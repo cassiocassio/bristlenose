@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: built (88622103), awaiting QA
 date: 3 Oct 2026
 revision: 2 (after the 3 Oct review)
 mockup: docs/mockups/desktop-sidebar-footer-version-feedback.html
@@ -31,9 +31,9 @@ The precedent for the button is Claude's desktop app. Nothing else goes in the f
 4. **The button stays small and subtle.** The glyph is unchanged. Only its invisible click area grows to 22 × 22 (`.frame(width: 22, height: 22).contentShape(Rectangle())`), which meets Apple's 20 pt minimum without adding pixels.
 5. **The tooltip has no ellipsis.** Add a new key, `desktop.chrome.sendFeedbackHelp` = "Send Feedback", used for both `.help` and `.accessibilityLabel`. Each locale takes its value by stripping the ellipsis (`…` or `⋯`) from its existing `desktop.menu.help.sendFeedback`, so the menu and the button use the same words.
 
-## Still open
+## Decided after review, and still open
 
-6. **The stage word: alpha, beta, or none.** See the discussion in the conversation of 3 Oct. The mockup has a switch. Whichever word is chosen, the key is stage-neutral (`desktop.chrome.prereleaseVersion` = `"{{version}} <word>"`), so changing the word later is a value change, not a code change.
+6. **The stage word is beta** (decided 3 Oct 2026). Researchers read "beta" as "usable, a bit rough"; "alpha" is engineering jargon. TestFlight already calls every build a beta. The word goes before a paid App Store launch either way. The key is stage-neutral (`desktop.chrome.prereleaseVersion` = `"{{version}} beta"`), so a later change is a value change. Swept the same day: the `.dmg` expiry pill and alert, README, SECURITY.md, and on the website the terms page, the welcome page and the homepage.
 7. **How the word is kept off the App Store.** It can't be gated at runtime: App Review uses the same StoreKit sandbox receipt as TestFlight (`DistributionChannel.swift`), and §2.2 rejects apps presented as betas.
    - **Current plan:** a compile-time `ReleaseStage.showsPrereleaseVersion`, plus a line on the App Store submission checklist (in the maintainer's private notes, kept outside the public tree).
    - **Review is not a backstop:** a reviewer can miss a 10 pt label.

@@ -1244,5 +1244,14 @@
     "title": "Bristlenose analizuje foldery",
     "body": "Ten projekt powstał z pojedynczych plików, więc nie można go przeanalizować.",
     "filesHeading": "Pliki w tym projekcie"
+  },
+  "discussion": {
+    "notRun": "Ten projekt zosta\u0142 przeanalizowany, zanim pojawi\u0142a si\u0119 dyskusja. Zostanie utworzona przy nast\u0119pnej analizie projektu, na przyk\u0142ad gdy dodasz wywiady.",
+    "stale": "Cytaty zmieni\u0142y si\u0119 od utworzenia dyskusji. Zostanie utworzona od nowa przy nast\u0119pnej analizie projektu.",
+    "notBuilt": "Nie uda\u0142o si\u0119 utworzy\u0107 dyskusji dla tego projektu. Przy nast\u0119pnej analizie projektu nast\u0105pi kolejna pr\u00f3ba.",
+    "guideHowTo": "Umie\u015b\u0107 sw\u00f3j scenariusz (Word, Markdown lub zwyk\u0142y tekst) w folderze o nazwie \u201eDiscussion guide\u201d obok nagra\u0144. Zostanie u\u017cyty przy nast\u0119pnej analizie projektu.",
+    "guideProblem": {
+      "unreadable": "Nie uda\u0142o si\u0119 odczyta\u0107 Twojego scenariusza. Sprawd\u017a, czy si\u0119 otwiera; zostanie odczytany ponownie przy nast\u0119pnej analizie projektu."
+    }
   }
 }

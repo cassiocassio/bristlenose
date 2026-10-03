@@ -2,11 +2,10 @@
  * Discussion lens — the researcher's line of enquiry as planned and as asked,
  * with every participant's answers under the question that drew them.
  *
- * DEV-GATED (docs/design-discussion-lens-plan.md, Phase 4 behind IS_DEV; §9 has
- * what this preview settles and what it does not). It reads synthetic data
- * through loadDiscussion(); quote cards are read-only (star, hide and tag arrive
- * with QuoteGroup once quotes have store ids), and the copy is English until
- * Phase 6.
+ * Shipped for beta 3 Oct 2026 (docs/design-discussion-lens-plan.md). It reads the
+ * project's record through loadDiscussion() — codes from /discussion, names from
+ * /sessions; quote cards are read-only (star, hide and tag arrive with QuoteGroup
+ * once quotes have store ids).
  *
  * Interaction (decided 3 Oct 2026): focus is sticky and click-driven — a
  * navigator row or a question locks focus until clicked again or Esc; nothing
@@ -17,6 +16,7 @@
  */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import i18n from "../../i18n";
 import { Badge } from "../../components/Badge";
@@ -24,6 +24,7 @@ import { PersonBadge } from "../../components/PersonBadge";
 import { SectionHeading } from "../../components/SectionHeading";
 import { announce } from "../../utils/announce";
 import { isExportMode } from "../../utils/exportData";
+import { dt } from "../../utils/platformTranslation";
 import { MIN_WIDTH, RESIZE_STEP } from "./split";
 import {
   capNames,
@@ -46,11 +47,17 @@ import { readLensState, writeLensState } from "./lensState";
 import type { DiscussionData, DiscussionQuote, DiscussionSession, DiscussionTurn } from "./types";
 import "./discussion.css";
 
-/** English until Phase 6 moves these to locale keys. */
 // The lens's strings, from `common.discussion.*`. Getters read the active
-// language when called; each component also calls useTranslation(), so a
-// language change re-renders them (frontend/CLAUDE.md: i18n.t outside hooks).
+// language when called. RULE: every component that reads `S` must call
+// useTranslation(), or it will not re-render on a language change — nothing
+// else flags it (frontend/CLAUDE.md: i18n.t outside hooks).
 const d = (key: string, vars?: Record<string, unknown>) => i18n.t(`discussion.${key}`, vars);
+// Copy that tells the researcher what to DO forks by platform (dt): the CLI
+// re-runs `bristlenose run`, which resumes and re-runs only this stage; on the
+// Mac the only re-run is Re-analyse, which starts over and discards edits — so
+// the Mac copy never sends anyone there (review, 3 Oct 2026).
+const tAny = ((k: string) => i18n.t(k)) as unknown as TFunction;
+const p = (key: string) => dt(tAny, `discussion.${key}`);
 const S = {
   get title() { return d("title"); },
   get show() { return d("show"); },
@@ -88,7 +95,7 @@ const S = {
   // (Signals' metric labels and intensity dots).
   get addGuide() { return d("addGuide"); },
   get replaceGuide() { return d("replaceGuide"); },
-  get guideHowTo() { return d("guideHowTo"); },
+  get guideHowTo() { return p("guideHowTo"); },
   get key() { return d("key"); },
   get keyBoth() { return d("keyBoth"); },
   get keyHollow() { return d("keyHollow"); },
@@ -103,12 +110,13 @@ const S = {
     d("announceSession", { n, questions: d("questionCount", { count: q }) }),
   announceFocus: (text: string) => d("announceFocus", { text }),
   get announceClear() { return d("announceClear"); },
-  get notRun() { return d("notRun"); },
-  get stale() { return d("stale"); },
-  get notBuilt() { return d("notBuilt"); },
+  get notRun() { return p("notRun"); },
+  get stale() { return p("stale"); },
+  get notBuilt() { return p("notBuilt"); },
+  get exportNone() { return d("exportNone"); },
   get unmoderated() { return d("unmoderated"); },
   get allUnreliable() { return d("allUnreliable"); },
-  guideProblem: (code: string) => d(`guideProblem.${code}`),
+  guideProblem: (code: string) => p(`guideProblem.${code}`),
   sessionState: (state: string) => d(`sessionState.${state}`),
 };
 
@@ -193,16 +201,19 @@ export function DiscussionLens() {
   if (failed) return shell(<p className="bn-empty-state" role="alert">{S.failed}</p>);
   if (!load) return shell(<p className="bn-empty-state" aria-busy="true">{S.loading}</p>);
   // Each state says what it is and what to do; none reads as "no questions".
-  if (load.status === "stale") return shell(<p className="bn-empty-state">{S.stale}</p>);
-  if (load.status === "failed") return shell(<p className="bn-empty-state">{failedReason(load.data)}</p>);
+  // An exported report's reader cannot re-run anything, so it gets one plain line.
+  const none = (researcher: string) =>
+    shell(<p className="bn-empty-state">{isExportMode() ? S.exportNone : researcher}</p>);
+  if (load.status === "stale") return none(S.stale);
+  if (load.status === "failed") return none(failedReason(load.data));
   const data = load.data;
-  if (!data) return shell(<p className="bn-empty-state">{S.notRun}</p>);
+  if (!data) return none(S.notRun);
   if (!data.sessions.length) return shell(<p className="bn-empty-state">{S.noSessions}</p>);
   return <DiscussionView data={data} />;
 }
 
 export function DiscussionView({ data }: { data: DiscussionData }) {
-  useTranslation();
+  const { i18n: tr } = useTranslation();
   const order = useMemo(() => data.sessions.map((s) => s.id), [data]);
   const saved = useMemo(() => readLensState(), []);
   const [mode, setMode] = useState<Mode>(data.guide ? saved.mode : "merged");
@@ -236,18 +247,23 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   // Bristlenose's "en" is British English: en-GB has no serial comma.
   const list = useMemo<ListFormatter | null>(() => {
     if (!ListFormat) return null;
-    const lang = document.documentElement.lang || "en";
+    // The language actually serving the strings ("en"), not the detected tag
+    // ("en-US"), which would put an American serial comma into British copy.
+    const lang = tr.resolvedLanguage || tr.language || "en";
     try {
       return new ListFormat(lang === "en" ? "en-GB" : lang, { style: "long", type: "conjunction" });
     } catch {
       return null;
     }
-  }, []);
+  }, [tr.resolvedLanguage, tr.language]);
   const join = useCallback((n: string[]) => (list ? list.format(n) : n.join(", ")), [list]);
-  // The ONE place a participant's name is resolved — Phase 3 swaps it for /people,
-  // so an anonymised export never carries names in the discussion payload (§9.C).
+  // Names arrive joined from /sessions (loadDiscussion), never in the discussion
+  // payload, so an anonymised export shows codes (plan §9.C).
   const namesOf = useCallback((s: DiscussionSession) => capNames(s.participants, join, S.others), [join]);
-  const fullNames = useCallback((s: DiscussionSession) => join(s.participants.map((p) => p.name)), [join]);
+  // An anonymised export blanks names: join only the ones there are, or a
+  // session reads "#1  and " to a screen reader.
+  const fullNames = useCallback(
+    (s: DiscussionSession) => join(s.participants.map((p) => p.name).filter(Boolean)), [join]);
   const byId = useMemo(() => new Map(data.sessions.map((s) => [s.id, s])), [data]);
   const num = useCallback((sid: string) => byId.get(sid)?.number ?? 0, [byId]);
 
@@ -592,7 +608,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
             <button key={s.id} type="button" role="radio" aria-checked={s.id === session} data-value={s.id}
               tabIndex={s.id === session ? 0 : -1} className="dl-sess"
               onKeyDown={(e) => onRadioKeys(e, order, session, selectSession)}
-              aria-label={S.sessionLabel(s.number, fullNames(s))} title={`${S.session(s.number)}: ${fullNames(s)}`}
+              aria-label={S.sessionLabel(s.number, fullNames(s))} title={fullNames(s) ? `${S.session(s.number)}: ${fullNames(s)}` : S.session(s.number)}
               onClick={() => selectSession(s.id)}>
               {sessionBadge(s.id, namesOf(s))}
             </button>
@@ -622,7 +638,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
             {rows.map(row)}
           </div>
         ))}
-        {data.guide_problem && (
+        {data.guide_problem && !isExportMode() && (
           // A guide that is there but went unread says so — never "no guide".
           <p className="dl-before" role="status">{S.guideProblem(data.guide_problem)}</p>
         )}
@@ -633,7 +649,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
           // goes; the Mac's native picker is later work (plan §4).
           <>
             <button type="button" className="bn-btn bn-btn-secondary bn-btn-sm" onClick={() => setGuideNote(true)}>
-              {data.guide ? S.replaceGuide : S.addGuide}
+              {data.guide || data.guide_problem ? S.replaceGuide : S.addGuide}
             </button>
             {guideNote && <p className="dl-before" role="status">{S.guideHowTo}</p>}
           </>

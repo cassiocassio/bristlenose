@@ -554,7 +554,7 @@
     "markPlus": "ei rungossa",
     "addGuide": "Lis\u00e4\u00e4 runko\u2026",
     "replaceGuide": "Korvaa runko\u2026",
-    "guideHowTo": "Tallenna runko (Word, Markdown tai pelkk\u00e4 teksti) tallenteiden viereen kansioon nimelt\u00e4 \u201dDiscussion guide\u201d ja analysoi projekti sitten uudelleen.",
+    "guideHowTo": "Tallenna runko (Word, Markdown tai pelkk\u00e4 teksti) tallenteiden viereen kansioon nimelt\u00e4 \u201dDiscussion guide\u201d ja suorita sitten bristlenose run uudelleen projektikansiolle.",
     "key": "Selite",
     "keyBoth": "Kysytty suunnitellusti",
     "keyHollow": "Suunniteltu, ei koskaan kysytty",
@@ -568,21 +568,22 @@
     "announceSession": "Istunto {{n}}, {{questions}}",
     "announceFocus": "Kohdistettu: {{text}}",
     "announceClear": "Kohdistus poistettu",
-    "notRun": "T\u00e4ll\u00e4 projektilla ei viel\u00e4 ole keskustelua. Analysoi projekti uudelleen sen luomiseksi.",
-    "stale": "Sitaatit ovat muuttuneet keskustelun luomisen j\u00e4lkeen. Analysoi projekti uudelleen sen luomiseksi uudestaan.",
-    "notBuilt": "T\u00e4m\u00e4n projektin keskustelua ei voitu luoda. Analysoi projekti uudelleen ja yrit\u00e4 uudestaan.",
+    "notRun": "T\u00e4ll\u00e4 projektilla ei viel\u00e4 ole keskustelua. Suorita bristlenose run uudelleen projektikansiolle sen luomiseksi; valmiit vaiheet k\u00e4ytet\u00e4\u00e4n uudelleen.",
+    "stale": "Sitaatit ovat muuttuneet keskustelun luomisen j\u00e4lkeen. Suorita bristlenose run uudelleen projektikansiolle sen luomiseksi uudestaan.",
+    "notBuilt": "T\u00e4m\u00e4n projektin keskustelua ei voitu luoda. Suorita bristlenose run uudelleen projektikansiolle ja yrit\u00e4 uudestaan.",
+    "exportNone": "T\u00e4lle raportille ei luotu keskustelua.",
     "unmoderated": "Miss\u00e4\u00e4n istunnossa ei ole moderaattoria, joten n\u00e4ytett\u00e4vi\u00e4 kysymyksi\u00e4 ei ole. Keskustelu on tarkoitettu moderoiduille haastatteluille.",
     "allUnreliable": "Moderaattoria ei voitu erottaa luotettavasti miss\u00e4\u00e4n istunnossa, joten kysymyksi\u00e4 ei voida n\u00e4ytt\u00e4\u00e4.",
     "guideProblem": {
-      "unreadable": "Runkoa ei voitu lukea. Varmista, ett\u00e4 se aukeaa, ja analysoi projekti sitten uudelleen.",
+      "unreadable": "Runkoa ei voitu lukea. Varmista, ett\u00e4 se aukeaa, ja suorita sitten bristlenose run uudelleen projektikansiolle.",
       "too_large": "Runko on liian suuri luettavaksi. Yli 2 Mt:n runkoa ei k\u00e4ytet\u00e4.",
-      "symlink": "Runko on linkki muualla olevaan tiedostoon. Tallenna itse tiedosto kansioon.",
+      "symlink": "Runko tai sen kansio on linkki toiseen paikkaan. Tallenna itse tiedosto oikeaan kansioon.",
       "unsupported_format": "Runko on muodossa, jota Bristlenose ei osaa lukea. K\u00e4yt\u00e4 Wordia, Markdownia tai pelkk\u00e4\u00e4 teksti\u00e4.",
       "folder_unreadable": "Rungon kansiota ei voitu avata.",
       "empty_parse": "Rungosta ei l\u00f6ytynyt kysymyksi\u00e4."
     },
     "sessionState": {
-      "failed": "T\u00e4t\u00e4 istuntoa ei voitu lukea. Analysoi projekti uudelleen ja yrit\u00e4 uudestaan.",
+      "failed": "T\u00e4m\u00e4n istunnon kysymyksi\u00e4 ei voitu luokitella.",
       "no_moderator": "T\u00e4st\u00e4 istunnosta ei tunnistettu moderaattoria, joten siin\u00e4 ei ole n\u00e4ytett\u00e4vi\u00e4 kysymyksi\u00e4.",
       "moderator_unreliable": "Moderaattoria ei voitu erottaa luotettavasti t\u00e4ss\u00e4 istunnossa, joten sen kysymyksi\u00e4 ei ole luokiteltu."
     }

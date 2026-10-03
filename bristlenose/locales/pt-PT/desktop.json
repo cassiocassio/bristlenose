@@ -1166,5 +1166,14 @@
     "title": "O Bristlenose analisa pastas",
     "body": "Este projeto foi criado a partir de ficheiros soltos, pelo que n\u00e3o pode ser analisado.",
     "filesHeading": "Ficheiros deste projeto"
+  },
+  "discussion": {
+    "notRun": "Este projeto foi analisado antes de a discuss\u00e3o existir. Ser\u00e1 criada da pr\u00f3xima vez que o projeto for analisado, por exemplo quando adicionar entrevistas.",
+    "stale": "As cita\u00e7\u00f5es mudaram desde que a discuss\u00e3o foi criada. Ser\u00e1 recriada da pr\u00f3xima vez que o projeto for analisado.",
+    "notBuilt": "N\u00e3o foi poss\u00edvel criar a discuss\u00e3o deste projeto. Ser\u00e1 tentado de novo da pr\u00f3xima vez que o projeto for analisado.",
+    "guideHowTo": "Coloque o seu gui\u00e3o (Word, Markdown ou texto simples) numa pasta chamada \u201cDiscussion guide\u201d junto das grava\u00e7\u00f5es. Ser\u00e1 utilizado da pr\u00f3xima vez que o projeto for analisado.",
+    "guideProblem": {
+      "unreadable": "N\u00e3o foi poss\u00edvel ler o seu gui\u00e3o. Verifique se abre; ser\u00e1 lido de novo da pr\u00f3xima vez que o projeto for analisado."
+    }
   }
 }

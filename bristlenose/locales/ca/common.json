@@ -554,7 +554,7 @@
     "markPlus": "no \u00e9s a la guia",
     "addGuide": "Afegeix la teva guia\u2026",
     "replaceGuide": "Substitueix la teva guia\u2026",
-    "guideHowTo": "Posa la teva guia (Word, Markdown o text sense format) en una carpeta anomenada \u201cDiscussion guide\u201d al costat de les gravacions i torna a analitzar el projecte.",
+    "guideHowTo": "Posa la teva guia (Word, Markdown o text sense format) en una carpeta anomenada \u201cDiscussion guide\u201d al costat de les gravacions i torna a executar bristlenose run a la carpeta del projecte.",
     "key": "Llegenda",
     "keyBoth": "Preguntada tal com estava previst",
     "keyHollow": "Prevista, mai preguntada",
@@ -568,21 +568,22 @@
     "announceSession": "Sessi\u00f3 {{n}}, {{questions}}",
     "announceFocus": "Enfocat a {{text}}",
     "announceClear": "S\u2019ha tret l\u2019enfocament",
-    "notRun": "Aquest projecte encara no t\u00e9 discussi\u00f3. Torna a analitzar el projecte per crear-la.",
-    "stale": "Les cites han canviat des que es va crear la discussi\u00f3. Torna a analitzar el projecte per tornar-la a crear.",
-    "notBuilt": "No s\u2019ha pogut crear la discussi\u00f3 d\u2019aquest projecte. Torna a analitzar el projecte per tornar-ho a provar.",
+    "notRun": "Aquest projecte encara no t\u00e9 discussi\u00f3. Torna a executar bristlenose run a la carpeta del projecte per crear-la; els passos acabats es reutilitzen.",
+    "stale": "Les cites han canviat des que es va crear la discussi\u00f3. Torna a executar bristlenose run a la carpeta del projecte per tornar-la a crear.",
+    "notBuilt": "No s\u2019ha pogut crear la discussi\u00f3 d\u2019aquest projecte. Torna a executar bristlenose run a la carpeta del projecte per tornar-ho a provar.",
+    "exportNone": "No s\u2019ha creat cap discussi\u00f3 per a aquest informe.",
     "unmoderated": "Cap sessi\u00f3 no t\u00e9 moderador, de manera que no hi ha preguntes per mostrar. La discussi\u00f3 \u00e9s per a entrevistes moderades.",
     "allUnreliable": "No s\u2019ha pogut distingir de manera fiable el moderador en cap sessi\u00f3, de manera que no es poden mostrar preguntes.",
     "guideProblem": {
-      "unreadable": "No s\u2019ha pogut llegir la teva guia. Comprova que s\u2019obre i torna a analitzar el projecte.",
+      "unreadable": "No s\u2019ha pogut llegir la teva guia. Comprova que s\u2019obre i torna a executar bristlenose run a la carpeta del projecte.",
       "too_large": "La teva guia \u00e9s massa gran per llegir-la. No es fan servir guies de m\u00e9s de 2 MB.",
-      "symlink": "La teva guia \u00e9s un enlla\u00e7 a un fitxer d\u2019una altra ubicaci\u00f3. Posa el fitxer mateix a la carpeta.",
+      "symlink": "La teva guia, o la seva carpeta, \u00e9s un enlla\u00e7 a una altra ubicaci\u00f3. Posa el fitxer mateix en una carpeta real.",
       "unsupported_format": "La teva guia t\u00e9 un format que Bristlenose no pot llegir. Fes servir Word, Markdown o text sense format.",
       "folder_unreadable": "No s\u2019ha pogut obrir la carpeta de la guia.",
       "empty_parse": "No s\u2019han trobat preguntes a la teva guia."
     },
     "sessionState": {
-      "failed": "No s\u2019ha pogut llegir aquesta sessi\u00f3. Torna a analitzar el projecte per tornar-ho a provar.",
+      "failed": "No s\u2019han pogut classificar les preguntes d\u2019aquesta sessi\u00f3.",
       "no_moderator": "No s\u2019ha identificat cap moderador en aquesta sessi\u00f3, de manera que no t\u00e9 preguntes per mostrar.",
       "moderator_unreliable": "No s\u2019ha pogut distingir de manera fiable el moderador en aquesta sessi\u00f3, de manera que les seves preguntes no estan classificades."
     }

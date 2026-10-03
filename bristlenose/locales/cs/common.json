@@ -617,7 +617,7 @@
     "markPlus": "nen\u00ed ve sc\u00e9n\u00e1\u0159i",
     "addGuide": "P\u0159idat sc\u00e9n\u00e1\u0159\u2026",
     "replaceGuide": "Nahradit sc\u00e9n\u00e1\u0159\u2026",
-    "guideHowTo": "Ulo\u017ete sc\u00e9n\u00e1\u0159 (Word, Markdown nebo prost\u00fd text) do slo\u017eky s n\u00e1zvem \u201eDiscussion guide\u201c vedle nahr\u00e1vek a projekt znovu analyzujte.",
+    "guideHowTo": "Ulo\u017ete sc\u00e9n\u00e1\u0159 (Word, Markdown nebo prost\u00fd text) do slo\u017eky s n\u00e1zvem \u201eDiscussion guide\u201c vedle nahr\u00e1vek a spus\u0165te znovu bristlenose run na slo\u017eku projektu.",
     "key": "Legenda",
     "keyBoth": "Polo\u017eeno podle pl\u00e1nu",
     "keyHollow": "Pl\u00e1nov\u00e1no, nikdy nepolo\u017eeno",
@@ -631,21 +631,22 @@
     "announceSession": "Sezen\u00ed {{n}}, {{questions}}",
     "announceFocus": "Zam\u011b\u0159eno na {{text}}",
     "announceClear": "Zam\u011b\u0159en\u00ed zru\u0161eno",
-    "notRun": "Tento projekt zat\u00edm nem\u00e1 diskuzi. Projekt znovu analyzujte, aby se vytvo\u0159ila.",
-    "stale": "Cit\u00e1ty se od vytvo\u0159en\u00ed diskuze zm\u011bnily. Projekt znovu analyzujte, aby se vytvo\u0159ila znovu.",
-    "notBuilt": "Diskuzi pro tento projekt se nepoda\u0159ilo vytvo\u0159it. Projekt znovu analyzujte a zkuste to znovu.",
+    "notRun": "Tento projekt zat\u00edm nem\u00e1 diskuzi. Spus\u0165te znovu bristlenose run na slo\u017eku projektu, aby se vytvo\u0159ila; dokon\u010den\u00e9 kroky se pou\u017eij\u00ed znovu.",
+    "stale": "Cit\u00e1ty se od vytvo\u0159en\u00ed diskuze zm\u011bnily. Spus\u0165te znovu bristlenose run na slo\u017eku projektu, aby se vytvo\u0159ila znovu.",
+    "notBuilt": "Diskuzi pro tento projekt se nepoda\u0159ilo vytvo\u0159it. Spus\u0165te znovu bristlenose run na slo\u017eku projektu a zkuste to znovu.",
+    "exportNone": "Pro tuto zpr\u00e1vu nebyla vytvo\u0159ena \u017e\u00e1dn\u00e1 diskuze.",
     "unmoderated": "\u017d\u00e1dn\u00e9 sezen\u00ed nem\u00e1 moder\u00e1tora, tak\u017ee nejsou \u017e\u00e1dn\u00e9 ot\u00e1zky k zobrazen\u00ed. Diskuze je ur\u010dena pro moderovan\u00e9 rozhovory.",
     "allUnreliable": "Moder\u00e1tora se v \u017e\u00e1dn\u00e9m sezen\u00ed nepoda\u0159ilo spolehliv\u011b rozli\u0161it, tak\u017ee nelze zobrazit \u017e\u00e1dn\u00e9 ot\u00e1zky.",
     "guideProblem": {
-      "unreadable": "V\u00e1\u0161 sc\u00e9n\u00e1\u0159 se nepoda\u0159ilo p\u0159e\u010d\u00edst. Ov\u011b\u0159te, \u017ee se otev\u0159e, a projekt znovu analyzujte.",
+      "unreadable": "V\u00e1\u0161 sc\u00e9n\u00e1\u0159 se nepoda\u0159ilo p\u0159e\u010d\u00edst. Ov\u011b\u0159te, \u017ee se otev\u0159e, a spus\u0165te znovu bristlenose run na slo\u017eku projektu.",
       "too_large": "V\u00e1\u0161 sc\u00e9n\u00e1\u0159 je p\u0159\u00edli\u0161 velk\u00fd. Sc\u00e9n\u00e1\u0159 nad 2 MB se nepou\u017eije.",
-      "symlink": "V\u00e1\u0161 sc\u00e9n\u00e1\u0159 je odkaz na soubor jinde. Vlo\u017ete do slo\u017eky samotn\u00fd soubor.",
+      "symlink": "V\u00e1\u0161 sc\u00e9n\u00e1\u0159 nebo jeho slo\u017eka je odkaz na jin\u00e9 m\u00edsto. Vlo\u017ete samotn\u00fd soubor do skute\u010dn\u00e9 slo\u017eky.",
       "unsupported_format": "V\u00e1\u0161 sc\u00e9n\u00e1\u0159 je ve form\u00e1tu, kter\u00fd Bristlenose neum\u00ed p\u0159e\u010d\u00edst. Pou\u017eijte Word, Markdown nebo prost\u00fd text.",
       "folder_unreadable": "Slo\u017eku se sc\u00e9n\u00e1\u0159em se nepoda\u0159ilo otev\u0159\u00edt.",
       "empty_parse": "Ve va\u0161em sc\u00e9n\u00e1\u0159i nebyly nalezeny \u017e\u00e1dn\u00e9 ot\u00e1zky."
     },
     "sessionState": {
-      "failed": "Toto sezen\u00ed se nepoda\u0159ilo p\u0159e\u010d\u00edst. Projekt znovu analyzujte a zkuste to znovu.",
+      "failed": "Ot\u00e1zky tohoto sezen\u00ed se nepoda\u0159ilo za\u0159adit.",
       "no_moderator": "V tomto sezen\u00ed nebyl rozpozn\u00e1n \u017e\u00e1dn\u00fd moder\u00e1tor, tak\u017ee nem\u00e1 \u017e\u00e1dn\u00e9 ot\u00e1zky k zobrazen\u00ed.",
       "moderator_unreliable": "Moder\u00e1tora se v tomto sezen\u00ed nepoda\u0159ilo spolehliv\u011b rozli\u0161it, tak\u017ee jeho ot\u00e1zky nejsou za\u0159azeny."
     }

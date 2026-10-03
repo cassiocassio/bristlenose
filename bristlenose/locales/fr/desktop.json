@@ -1166,5 +1166,14 @@
     "title": "Bristlenose analyse des dossiers",
     "body": "Ce projet a \u00e9t\u00e9 cr\u00e9\u00e9 \u00e0 partir de fichiers isol\u00e9s ; il ne peut donc pas \u00eatre analys\u00e9.",
     "filesHeading": "Fichiers de ce projet"
+  },
+  "discussion": {
+    "notRun": "Ce projet a \u00e9t\u00e9 analys\u00e9 avant l\u2019arriv\u00e9e de la discussion. Elle sera cr\u00e9\u00e9e \u00e0 la prochaine analyse du projet, par exemple lorsque vous ajouterez des entretiens.",
+    "stale": "Les verbatim ont chang\u00e9 depuis la cr\u00e9ation de la discussion. Elle sera recr\u00e9\u00e9e \u00e0 la prochaine analyse du projet.",
+    "notBuilt": "Impossible de cr\u00e9er la discussion de ce projet. Une nouvelle tentative aura lieu \u00e0 la prochaine analyse du projet.",
+    "guideHowTo": "Placez votre guide (Word, Markdown ou texte brut) dans un dossier nomm\u00e9 \u00ab Discussion guide \u00bb \u00e0 c\u00f4t\u00e9 de vos enregistrements. Il sera utilis\u00e9 \u00e0 la prochaine analyse du projet.",
+    "guideProblem": {
+      "unreadable": "Impossible de lire votre guide. V\u00e9rifiez qu\u2019il s\u2019ouvre ; il sera relu \u00e0 la prochaine analyse du projet."
+    }
   }
 }

@@ -1166,5 +1166,14 @@
     "title": "Bristlenose analyseert mappen",
     "body": "Dit project is gemaakt van losse bestanden en kan daarom niet worden geanalyseerd.",
     "filesHeading": "Bestanden in dit project"
+  },
+  "discussion": {
+    "notRun": "Dit project is geanalyseerd voordat de discussie bestond. Ze wordt gemaakt bij de volgende analyse van het project, bijvoorbeeld als je interviews toevoegt.",
+    "stale": "De citaten zijn veranderd sinds de discussie werd gemaakt. Ze wordt opnieuw gemaakt bij de volgende analyse van het project.",
+    "notBuilt": "De discussie voor dit project kon niet worden gemaakt. Bij de volgende analyse van het project wordt het opnieuw geprobeerd.",
+    "guideHowTo": "Zet je gids (Word, Markdown of platte tekst) in een map met de naam \u2018Discussion guide\u2019 naast je opnamen. Hij wordt gebruikt bij de volgende analyse van het project.",
+    "guideProblem": {
+      "unreadable": "Je gids kon niet worden gelezen. Controleer of hij opent; hij wordt opnieuw gelezen bij de volgende analyse van het project."
+    }
   }
 }

@@ -554,7 +554,7 @@
     "markPlus": "rehberde yok",
     "addGuide": "Rehberinizi ekleyin\u2026",
     "replaceGuide": "Rehberinizi de\u011fi\u015ftirin\u2026",
-    "guideHowTo": "Rehberinizi (Word, Markdown veya d\u00fcz metin) kay\u0131tlar\u0131n\u0131z\u0131n yan\u0131ndaki \u201cDiscussion guide\u201d adl\u0131 bir klas\u00f6re koyun, ard\u0131ndan projeyi yeniden analiz edin.",
+    "guideHowTo": "Rehberinizi (Word, Markdown veya d\u00fcz metin) kay\u0131tlar\u0131n\u0131z\u0131n yan\u0131ndaki \u201cDiscussion guide\u201d adl\u0131 bir klas\u00f6re koyun, ard\u0131ndan proje klas\u00f6r\u00fcnde bristlenose run komutunu yeniden \u00e7al\u0131\u015ft\u0131r\u0131n.",
     "key": "A\u00e7\u0131klama",
     "keyBoth": "Planland\u0131\u011f\u0131 gibi soruldu",
     "keyHollow": "Planland\u0131, hi\u00e7 sorulmad\u0131",
@@ -568,21 +568,22 @@
     "announceSession": "Oturum {{n}}, {{questions}}",
     "announceFocus": "Odak: {{text}}",
     "announceClear": "Odak kald\u0131r\u0131ld\u0131",
-    "notRun": "Bu projenin hen\u00fcz bir tart\u0131\u015fmas\u0131 yok. Olu\u015fturmak i\u00e7in projeyi yeniden analiz edin.",
-    "stale": "Tart\u0131\u015fma olu\u015fturulduktan sonra al\u0131nt\u0131lar de\u011fi\u015fti. Yeniden olu\u015fturmak i\u00e7in projeyi yeniden analiz edin.",
-    "notBuilt": "Bu projenin tart\u0131\u015fmas\u0131 olu\u015fturulamad\u0131. Tekrar denemek i\u00e7in projeyi yeniden analiz edin.",
+    "notRun": "Bu projenin hen\u00fcz bir tart\u0131\u015fmas\u0131 yok. Olu\u015fturmak i\u00e7in proje klas\u00f6r\u00fcnde bristlenose run komutunu yeniden \u00e7al\u0131\u015ft\u0131r\u0131n; tamamlanan ad\u0131mlar yeniden kullan\u0131l\u0131r.",
+    "stale": "Tart\u0131\u015fma olu\u015fturulduktan sonra al\u0131nt\u0131lar de\u011fi\u015fti. Yeniden olu\u015fturmak i\u00e7in proje klas\u00f6r\u00fcnde bristlenose run komutunu yeniden \u00e7al\u0131\u015ft\u0131r\u0131n.",
+    "notBuilt": "Bu projenin tart\u0131\u015fmas\u0131 olu\u015fturulamad\u0131. Tekrar denemek i\u00e7in proje klas\u00f6r\u00fcnde bristlenose run komutunu yeniden \u00e7al\u0131\u015ft\u0131r\u0131n.",
+    "exportNone": "Bu rapor i\u00e7in tart\u0131\u015fma olu\u015fturulmad\u0131.",
     "unmoderated": "Hi\u00e7bir oturumda moderat\u00f6r yok, bu y\u00fczden g\u00f6sterilecek soru yok. Tart\u0131\u015fma, moderat\u00f6rl\u00fc g\u00f6r\u00fc\u015fmeler i\u00e7indir.",
     "allUnreliable": "Hi\u00e7bir oturumda moderat\u00f6r g\u00fcvenilir bi\u00e7imde ay\u0131rt edilemedi, bu y\u00fczden soru g\u00f6sterilemiyor.",
     "guideProblem": {
-      "unreadable": "Rehberiniz okunamad\u0131. A\u00e7\u0131ld\u0131\u011f\u0131ndan emin olun, ard\u0131ndan projeyi yeniden analiz edin.",
+      "unreadable": "Rehberiniz okunamad\u0131. A\u00e7\u0131ld\u0131\u011f\u0131ndan emin olun, ard\u0131ndan proje klas\u00f6r\u00fcnde bristlenose run komutunu yeniden \u00e7al\u0131\u015ft\u0131r\u0131n.",
       "too_large": "Rehberiniz okunamayacak kadar b\u00fcy\u00fck. 2 MB'den b\u00fcy\u00fck rehberler kullan\u0131lmaz.",
-      "symlink": "Rehberiniz ba\u015fka yerdeki bir dosyaya ba\u011flant\u0131. Klas\u00f6re dosyan\u0131n kendisini koyun.",
+      "symlink": "Rehberiniz veya klas\u00f6r\u00fc ba\u015fka bir konuma ba\u011flant\u0131. Dosyan\u0131n kendisini ger\u00e7ek bir klas\u00f6re koyun.",
       "unsupported_format": "Rehberiniz Bristlenose'un okuyamad\u0131\u011f\u0131 bir bi\u00e7imde. Word, Markdown veya d\u00fcz metin kullan\u0131n.",
       "folder_unreadable": "Rehber klas\u00f6r\u00fc a\u00e7\u0131lamad\u0131.",
       "empty_parse": "Rehberinizde soru bulunamad\u0131."
     },
     "sessionState": {
-      "failed": "Bu oturum okunamad\u0131. Tekrar denemek i\u00e7in projeyi yeniden analiz edin.",
+      "failed": "Bu oturumun sorular\u0131 s\u0131n\u0131fland\u0131r\u0131lamad\u0131.",
       "no_moderator": "Bu oturumda moderat\u00f6r belirlenemedi, bu y\u00fczden g\u00f6sterilecek soru yok.",
       "moderator_unreliable": "Bu oturumda moderat\u00f6r g\u00fcvenilir bi\u00e7imde ay\u0131rt edilemedi, bu y\u00fczden sorular\u0131 s\u0131n\u0131fland\u0131r\u0131lmad\u0131."
     }

@@ -1,8 +1,11 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fixture from "./fixture.json";
 import { DiscussionLens, DiscussionView } from "./DiscussionLens";
 import { joinNames } from "./loadDiscussion";
+import i18n from "../../i18n";
+import enDesktop from "@locales/en/desktop.json";
+import { _resetPlatformCache } from "../../utils/platform";
 import { resetLensState } from "./lensState";
 import type { DiscussionData } from "./types";
 
@@ -345,6 +348,11 @@ const sessionList = data.sessions.map((s) => ({
 
 const api = vi.hoisted(() => ({ apiGet: vi.fn(), getSessionList: vi.fn() }));
 vi.mock("../../utils/api", () => api);
+const exportState = vi.hoisted(() => ({ on: false }));
+vi.mock("../../utils/exportData", async (orig) => ({
+  ...(await orig<typeof import("../../utils/exportData")>()),
+  isExportMode: () => exportState.on,
+}));
 
 function serve(status: string, rec: unknown) {
   api.apiGet.mockResolvedValue({ status, record: rec });
@@ -388,7 +396,60 @@ describe("DiscussionLens", () => {
   });
 });
 
+describe("platform and export copy", () => {
+  afterEach(() => {
+    exportState.on = false;
+    delete document.documentElement.dataset.platform;
+    _resetPlatformCache();
+  });
+
+  it("the CLI is told to run bristlenose run again", async () => {
+    serve("not_run", null);
+    render(<DiscussionLens />);
+    expect(await screen.findByText(/Run bristlenose run on the project folder again/)).toBeInTheDocument();
+  });
+
+  it("the Mac is never sent to Re-analyse, which starts over and discards edits", async () => {
+    document.documentElement.dataset.platform = "desktop";
+    _resetPlatformCache();
+    // The app registers the desktop namespace at start-up when <html> says
+    // desktop; this test flips the platform after start-up, so register it here.
+    i18n.addResourceBundle("en", "desktop", enDesktop, true, true);
+    for (const status of ["not_run", "stale"] as const) {
+      serve(status, null);
+      const { unmount } = render(<DiscussionLens />);
+      const text = (await screen.findByText(/next time the project is analysed/)).textContent ?? "";
+      expect(text).not.toMatch(/re-analyse|bristlenose run/i);
+      unmount();
+    }
+  });
+
+  it("an exported report's reader gets one plain line, not an instruction", async () => {
+    exportState.on = true;
+    serve("not_run", null);
+    render(<DiscussionLens />);
+    expect(await screen.findByText("No discussion was built for this report.")).toBeInTheDocument();
+  });
+});
+
 describe("joinNames", () => {
+  it("names a code from its own session: p1 is a different person in each", () => {
+    const two = {
+      ...record,
+      sessions: [
+        { ...record.sessions[0], id: "s1", participants: ["p1"] },
+        { ...record.sessions[0], id: "s2", participants: ["p1"] },
+      ],
+      quotes: [],
+    };
+    const list = [
+      { session_id: "s1", session_number: 1, session_date: null, speakers: [{ speaker_code: "p1", name: "Asha", role: "participant" }] },
+      { session_id: "s2", session_number: 2, session_date: null, speakers: [{ speaker_code: "p1", name: "Ben", role: "participant" }] },
+    ];
+    const joined = joinNames(two as never, list);
+    expect(joined.sessions.map((s) => s.participants[0].name)).toEqual(["Asha", "Ben"]);
+  });
+
   it("names each participant and quote from its own session, by code", () => {
     const joined = joinNames(record as never, sessionList);
     expect(joined.sessions[0].participants).toEqual(data.sessions[0].participants);
@@ -403,6 +464,20 @@ describe("joinNames", () => {
   });
 });
 
+describe("language", () => {
+  afterEach(async () => {
+    await act(async () => { await i18n.changeLanguage("en"); });
+  });
+
+  it("re-renders in the new language without remounting (the getters are read live)", async () => {
+    render(<DiscussionView data={data} />);
+    expect(heading()).toBe("Session 1");
+    i18n.addResourceBundle("xx", "common", { discussion: { session: "Sitzung {{n}}" } }, true, true);
+    await act(async () => { await i18n.changeLanguage("xx"); });
+    expect(heading()).toBe("Sitzung 1");
+  });
+});
+
 describe("degraded records", () => {
   it("a guide that is there but unread says why", () => {
     render(<DiscussionView data={{ ...data, guide: false, spine: [], guide_problem: "unsupported_format" }} />);
@@ -412,7 +487,7 @@ describe("degraded records", () => {
   it("a session that could not be read says so, never 'no questions'", () => {
     const sessions = data.sessions.map((s, i) => (i === 0 ? { ...s, state: "failed" as const } : s));
     render(<DiscussionView data={{ ...data, sessions }} />);
-    expect(screen.getByText(/This session could not be read/)).toBeInTheDocument();
+    expect(screen.getByText(/questions could not be classified/)).toBeInTheDocument();
     expect(screen.queryByText("No questions found in this session")).toBeNull();
   });
 });

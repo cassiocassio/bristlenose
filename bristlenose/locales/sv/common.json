@@ -554,7 +554,7 @@
     "markPlus": "inte i guiden",
     "addGuide": "L\u00e4gg till din guide \u2026",
     "replaceGuide": "Ers\u00e4tt din guide \u2026",
-    "guideHowTo": "L\u00e4gg din guide (Word, Markdown eller vanlig text) i en mapp som heter \u201dDiscussion guide\u201d bredvid dina inspelningar och analysera sedan projektet igen.",
+    "guideHowTo": "L\u00e4gg din guide (Word, Markdown eller vanlig text) i en mapp som heter \u201dDiscussion guide\u201d bredvid dina inspelningar och k\u00f6r sedan bristlenose run igen p\u00e5 projektmappen.",
     "key": "Teckenf\u00f6rklaring",
     "keyBoth": "St\u00e4lld som planerat",
     "keyHollow": "Planerad, aldrig st\u00e4lld",
@@ -568,21 +568,22 @@
     "announceSession": "Session {{n}}, {{questions}}",
     "announceFocus": "Fokus p\u00e5 {{text}}",
     "announceClear": "Fokus borttaget",
-    "notRun": "Det finns ingen diskussion f\u00f6r det h\u00e4r projektet \u00e4n. Analysera projektet igen f\u00f6r att skapa den.",
-    "stale": "Citaten har \u00e4ndrats sedan diskussionen skapades. Analysera projektet igen f\u00f6r att skapa den p\u00e5 nytt.",
-    "notBuilt": "Det gick inte att skapa diskussionen f\u00f6r det h\u00e4r projektet. Analysera projektet igen f\u00f6r att f\u00f6rs\u00f6ka p\u00e5 nytt.",
+    "notRun": "Det finns ingen diskussion f\u00f6r det h\u00e4r projektet \u00e4n. K\u00f6r bristlenose run igen p\u00e5 projektmappen f\u00f6r att skapa den; f\u00e4rdiga steg \u00e5teranv\u00e4nds.",
+    "stale": "Citaten har \u00e4ndrats sedan diskussionen skapades. K\u00f6r bristlenose run igen p\u00e5 projektmappen f\u00f6r att skapa den p\u00e5 nytt.",
+    "notBuilt": "Det gick inte att skapa diskussionen f\u00f6r det h\u00e4r projektet. K\u00f6r bristlenose run igen p\u00e5 projektmappen f\u00f6r att f\u00f6rs\u00f6ka p\u00e5 nytt.",
+    "exportNone": "Ingen diskussion skapades f\u00f6r den h\u00e4r rapporten.",
     "unmoderated": "Ingen session har n\u00e5gon moderator, s\u00e5 det finns inga fr\u00e5gor att visa. Diskussionen \u00e4r till f\u00f6r modererade intervjuer.",
     "allUnreliable": "Moderatorn kunde inte s\u00e4rskiljas tillf\u00f6rlitligt i n\u00e5gon session, s\u00e5 inga fr\u00e5gor kan visas.",
     "guideProblem": {
-      "unreadable": "Det gick inte att l\u00e4sa din guide. Kontrollera att den g\u00e5r att \u00f6ppna och analysera sedan projektet igen.",
+      "unreadable": "Det gick inte att l\u00e4sa din guide. Kontrollera att den g\u00e5r att \u00f6ppna och k\u00f6r sedan bristlenose run igen p\u00e5 projektmappen.",
       "too_large": "Din guide \u00e4r f\u00f6r stor f\u00f6r att l\u00e4sas. En guide st\u00f6rre \u00e4n 2 MB anv\u00e4nds inte.",
-      "symlink": "Din guide \u00e4r en l\u00e4nk till en fil n\u00e5gon annanstans. L\u00e4gg sj\u00e4lva filen i mappen.",
+      "symlink": "Din guide, eller dess mapp, \u00e4r en l\u00e4nk till en annan plats. L\u00e4gg sj\u00e4lva filen i en riktig mapp.",
       "unsupported_format": "Din guide har ett format som Bristlenose inte kan l\u00e4sa. Anv\u00e4nd Word, Markdown eller vanlig text.",
       "folder_unreadable": "Det gick inte att \u00f6ppna guidens mapp.",
       "empty_parse": "Inga fr\u00e5gor hittades i din guide."
     },
     "sessionState": {
-      "failed": "Det gick inte att l\u00e4sa den h\u00e4r sessionen. Analysera projektet igen f\u00f6r att f\u00f6rs\u00f6ka p\u00e5 nytt.",
+      "failed": "Fr\u00e5gorna i den h\u00e4r sessionen kunde inte klassificeras.",
       "no_moderator": "Ingen moderator identifierades i den h\u00e4r sessionen, s\u00e5 det finns inga fr\u00e5gor att visa.",
       "moderator_unreliable": "Moderatorn kunde inte s\u00e4rskiljas tillf\u00f6rlitligt i den h\u00e4r sessionen, s\u00e5 fr\u00e5gorna \u00e4r inte klassificerade."
     }

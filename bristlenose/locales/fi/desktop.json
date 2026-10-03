@@ -1166,5 +1166,14 @@
     "title": "Bristlenose analysoi kansioita",
     "body": "Tämä projekti luotiin yksittäisistä tiedostoista, joten sitä ei voi analysoida.",
     "filesHeading": "Tämän projektin tiedostot"
+  },
+  "discussion": {
+    "notRun": "T\u00e4m\u00e4 projekti analysoitiin ennen keskustelun k\u00e4ytt\u00f6\u00f6nottoa. Keskustelu luodaan, kun projekti analysoidaan seuraavan kerran, esimerkiksi kun lis\u00e4\u00e4t haastatteluja.",
+    "stale": "Sitaatit ovat muuttuneet keskustelun luomisen j\u00e4lkeen. Keskustelu luodaan uudelleen, kun projekti analysoidaan seuraavan kerran.",
+    "notBuilt": "T\u00e4m\u00e4n projektin keskustelua ei voitu luoda. Sit\u00e4 yritet\u00e4\u00e4n uudelleen, kun projekti analysoidaan seuraavan kerran.",
+    "guideHowTo": "Tallenna runko (Word, Markdown tai pelkk\u00e4 teksti) tallenteiden viereen kansioon nimelt\u00e4 \u201dDiscussion guide\u201d. Sit\u00e4 k\u00e4ytet\u00e4\u00e4n, kun projekti analysoidaan seuraavan kerran.",
+    "guideProblem": {
+      "unreadable": "Runkoa ei voitu lukea. Varmista, ett\u00e4 se aukeaa; se luetaan uudelleen, kun projekti analysoidaan seuraavan kerran."
+    }
   }
 }

@@ -554,7 +554,7 @@
     "markPlus": "ikke i guiden",
     "addGuide": "Tilf\u00f8j din guide \u2026",
     "replaceGuide": "Erstat din guide \u2026",
-    "guideHowTo": "L\u00e6g din guide (Word, Markdown eller almindelig tekst) i en mappe med navnet \u201cDiscussion guide\u201d ved siden af dine optagelser, og analys\u00e9r derefter projektet igen.",
+    "guideHowTo": "L\u00e6g din guide (Word, Markdown eller almindelig tekst) i en mappe med navnet \u201cDiscussion guide\u201d ved siden af dine optagelser, og k\u00f8r derefter bristlenose run igen p\u00e5 projektmappen.",
     "key": "Signaturforklaring",
     "keyBoth": "Stillet som planlagt",
     "keyHollow": "Planlagt, aldrig stillet",
@@ -568,21 +568,22 @@
     "announceSession": "Session {{n}}, {{questions}}",
     "announceFocus": "Fokus p\u00e5 {{text}}",
     "announceClear": "Fokus fjernet",
-    "notRun": "Der er endnu ingen diskussion for dette projekt. Analys\u00e9r projektet igen for at oprette den.",
-    "stale": "Citaterne er \u00e6ndret, siden diskussionen blev oprettet. Analys\u00e9r projektet igen for at oprette den p\u00e5 ny.",
-    "notBuilt": "Diskussionen for dette projekt kunne ikke oprettes. Analys\u00e9r projektet igen for at pr\u00f8ve igen.",
+    "notRun": "Der er endnu ingen diskussion for dette projekt. K\u00f8r bristlenose run igen p\u00e5 projektmappen for at oprette den; f\u00e6rdige trin genbruges.",
+    "stale": "Citaterne er \u00e6ndret, siden diskussionen blev oprettet. K\u00f8r bristlenose run igen p\u00e5 projektmappen for at oprette den p\u00e5 ny.",
+    "notBuilt": "Diskussionen for dette projekt kunne ikke oprettes. K\u00f8r bristlenose run igen p\u00e5 projektmappen for at pr\u00f8ve igen.",
+    "exportNone": "Der blev ikke oprettet nogen diskussion for denne rapport.",
     "unmoderated": "Ingen session har en moderator, s\u00e5 der er ingen sp\u00f8rgsm\u00e5l at vise. Diskussionen er beregnet til modererede interviews.",
     "allUnreliable": "Moderatoren kunne ikke skelnes p\u00e5lideligt i nogen session, s\u00e5 der kan ikke vises sp\u00f8rgsm\u00e5l.",
     "guideProblem": {
-      "unreadable": "Din guide kunne ikke l\u00e6ses. Kontroll\u00e9r, at den kan \u00e5bnes, og analys\u00e9r derefter projektet igen.",
+      "unreadable": "Din guide kunne ikke l\u00e6ses. Kontroll\u00e9r, at den kan \u00e5bnes, og k\u00f8r derefter bristlenose run igen p\u00e5 projektmappen.",
       "too_large": "Din guide er for stor til at blive l\u00e6st. En guide p\u00e5 over 2 MB bruges ikke.",
-      "symlink": "Din guide er et link til en fil et andet sted. L\u00e6g selve filen i mappen.",
+      "symlink": "Din guide, eller dens mappe, er et link til et andet sted. L\u00e6g selve filen i en rigtig mappe.",
       "unsupported_format": "Din guide er i et format, Bristlenose ikke kan l\u00e6se. Brug Word, Markdown eller almindelig tekst.",
       "folder_unreadable": "Guidens mappe kunne ikke \u00e5bnes.",
       "empty_parse": "Der blev ikke fundet sp\u00f8rgsm\u00e5l i din guide."
     },
     "sessionState": {
-      "failed": "Denne session kunne ikke l\u00e6ses. Analys\u00e9r projektet igen for at pr\u00f8ve igen.",
+      "failed": "Sp\u00f8rgsm\u00e5lene i denne session kunne ikke klassificeres.",
       "no_moderator": "Der blev ikke identificeret nogen moderator i denne session, s\u00e5 der er ingen sp\u00f8rgsm\u00e5l at vise.",
       "moderator_unreliable": "Moderatoren kunne ikke skelnes p\u00e5lideligt i denne session, s\u00e5 sp\u00f8rgsm\u00e5lene er ikke klassificeret."
     }

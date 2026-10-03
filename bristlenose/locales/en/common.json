@@ -556,7 +556,7 @@
     "addGuide": "Add your guide…",
     "replaceGuide": "Replace your guide…",
     "_comment_guideHowTo": "“Discussion guide” is the folder name the code looks for (bristlenose/discussion/guide.py). Keep it in English in every translation, or a researcher following the sentence makes a folder that is never read.",
-    "guideHowTo": "Put your guide — Word, Markdown or plain text — in a folder named “Discussion guide” beside your recordings, then re-analyse the project.",
+    "guideHowTo": "Put your guide — Word, Markdown or plain text — in a folder named “Discussion guide” beside your recordings, then run bristlenose run on the project folder again.",
     "key": "Key",
     "keyBoth": "Asked as planned",
     "keyHollow": "Planned, never asked",
@@ -570,21 +570,22 @@
     "announceSession": "Session {{n}}, {{questions}}",
     "announceFocus": "Focused on {{text}}",
     "announceClear": "Focus cleared",
-    "notRun": "There is no discussion for this project yet. Re-analyse the project to build it.",
-    "stale": "The quotes have changed since the discussion was built. Re-analyse the project to rebuild it.",
-    "notBuilt": "The discussion could not be built for this project. Re-analyse the project to try again.",
+    "notRun": "There is no discussion for this project yet. Run bristlenose run on the project folder again to build it; finished steps are reused.",
+    "stale": "The quotes have changed since the discussion was built. Run bristlenose run on the project folder again to rebuild it.",
+    "notBuilt": "The discussion could not be built for this project. Run bristlenose run on the project folder again to retry it.",
+    "exportNone": "No discussion was built for this report.",
     "unmoderated": "No session has a moderator, so there are no questions to show. The Discussion lens is for moderated interviews.",
     "allUnreliable": "The moderator could not be told apart reliably in any session, so no questions can be shown.",
     "guideProblem": {
-      "unreadable": "Your guide could not be read. Check that it opens, then re-analyse the project.",
+      "unreadable": "Your guide could not be read. Check that it opens, then run bristlenose run on the project folder again.",
       "too_large": "Your guide is too large to read. A guide over 2 MB is not used.",
-      "symlink": "Your guide is a link to a file elsewhere. Put the file itself in the folder.",
+      "symlink": "Your guide, or its folder, is a link to somewhere else. Put the file itself in a real folder.",
       "unsupported_format": "Your guide is in a format Bristlenose can’t read. Use Word, Markdown or plain text.",
       "folder_unreadable": "The guide folder could not be opened.",
       "empty_parse": "No questions were found in your guide."
     },
     "sessionState": {
-      "failed": "This session could not be read. Re-analyse the project to try again.",
+      "failed": "This session’s questions could not be classified.",
       "no_moderator": "No moderator was identified in this session, so it has no questions to show.",
       "moderator_unreliable": "The moderator could not be told apart reliably in this session, so its questions are not classified."
     }

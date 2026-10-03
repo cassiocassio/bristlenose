@@ -554,7 +554,7 @@
     "markPlus": "niet in de gids",
     "addGuide": "Je gids toevoegen…",
     "replaceGuide": "Je gids vervangen…",
-    "guideHowTo": "Zet je gids (Word, Markdown of platte tekst) in een map met de naam ‘Discussion guide’ naast je opnamen en analyseer het project daarna opnieuw.",
+    "guideHowTo": "Zet je gids (Word, Markdown of platte tekst) in een map met de naam ‘Discussion guide’ naast je opnamen en voer bristlenose run opnieuw uit op de projectmap.",
     "key": "Legenda",
     "keyBoth": "Gevraagd zoals gepland",
     "keyHollow": "Gepland, nooit gevraagd",
@@ -568,21 +568,22 @@
     "announceSession": "Sessie {{n}}, {{questions}}",
     "announceFocus": "Focus op {{text}}",
     "announceClear": "Focus gewist",
-    "notRun": "Er is nog geen discussie voor dit project. Analyseer het project opnieuw om er een te maken.",
-    "stale": "De citaten zijn veranderd sinds de discussie werd gemaakt. Analyseer het project opnieuw om haar opnieuw te maken.",
-    "notBuilt": "De discussie voor dit project kon niet worden gemaakt. Analyseer het project opnieuw om het nog eens te proberen.",
+    "notRun": "Er is nog geen discussie voor dit project. Voer bristlenose run opnieuw uit op de projectmap om er een te maken; afgeronde stappen worden hergebruikt.",
+    "stale": "De citaten zijn veranderd sinds de discussie werd gemaakt. Voer bristlenose run opnieuw uit op de projectmap om haar opnieuw te maken.",
+    "notBuilt": "De discussie voor dit project kon niet worden gemaakt. Voer bristlenose run opnieuw uit op de projectmap om het nog eens te proberen.",
+    "exportNone": "Voor dit rapport is geen discussie gemaakt.",
     "unmoderated": "Geen enkele sessie heeft een moderator, dus er zijn geen vragen om te tonen. De discussie is bedoeld voor gemodereerde interviews.",
     "allUnreliable": "De moderator kon in geen enkele sessie betrouwbaar worden onderscheiden, dus er kunnen geen vragen worden getoond.",
     "guideProblem": {
-      "unreadable": "Je gids kon niet worden gelezen. Controleer of hij opent en analyseer het project daarna opnieuw.",
+      "unreadable": "Je gids kon niet worden gelezen. Controleer of hij opent en voer bristlenose run opnieuw uit op de projectmap.",
       "too_large": "Je gids is te groot om te lezen. Een gids van meer dan 2 MB wordt niet gebruikt.",
-      "symlink": "Je gids is een koppeling naar een bestand elders. Zet het bestand zelf in de map.",
+      "symlink": "Je gids, of de map ervan, is een koppeling naar een andere plek. Zet het bestand zelf in een echte map.",
       "unsupported_format": "Je gids heeft een indeling die Bristlenose niet kan lezen. Gebruik Word, Markdown of platte tekst.",
       "folder_unreadable": "De map van de gids kon niet worden geopend.",
       "empty_parse": "Er zijn geen vragen gevonden in je gids."
     },
     "sessionState": {
-      "failed": "Deze sessie kon niet worden gelezen. Analyseer het project opnieuw om het nog eens te proberen.",
+      "failed": "De vragen van deze sessie konden niet worden ingedeeld.",
       "no_moderator": "Er is in deze sessie geen moderator herkend, dus er zijn geen vragen om te tonen.",
       "moderator_unreliable": "De moderator kon in deze sessie niet betrouwbaar worden onderscheiden, dus de vragen zijn niet ingedeeld."
     }

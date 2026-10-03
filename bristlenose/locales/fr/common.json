@@ -554,7 +554,7 @@
     "markPlus": "absente du guide",
     "addGuide": "Ajouter votre guide\u2026",
     "replaceGuide": "Remplacer votre guide\u2026",
-    "guideHowTo": "Placez votre guide (Word, Markdown ou texte brut) dans un dossier nomm\u00e9 \u00ab Discussion guide \u00bb \u00e0 c\u00f4t\u00e9 de vos enregistrements, puis r\u00e9analysez le projet.",
+    "guideHowTo": "Placez votre guide (Word, Markdown ou texte brut) dans un dossier nomm\u00e9 \u00ab Discussion guide \u00bb \u00e0 c\u00f4t\u00e9 de vos enregistrements, puis relancez bristlenose run sur le dossier du projet.",
     "key": "L\u00e9gende",
     "keyBoth": "Pos\u00e9e comme pr\u00e9vu",
     "keyHollow": "Pr\u00e9vue, jamais pos\u00e9e",
@@ -568,21 +568,22 @@
     "announceSession": "Entretien {{n}}, {{questions}}",
     "announceFocus": "Focus sur {{text}}",
     "announceClear": "Focus retir\u00e9",
-    "notRun": "Ce projet n\u2019a pas encore de discussion. R\u00e9analysez le projet pour la cr\u00e9er.",
-    "stale": "Les verbatim ont chang\u00e9 depuis la cr\u00e9ation de la discussion. R\u00e9analysez le projet pour la recr\u00e9er.",
-    "notBuilt": "Impossible de cr\u00e9er la discussion de ce projet. R\u00e9analysez le projet pour r\u00e9essayer.",
+    "notRun": "Ce projet n\u2019a pas encore de discussion. Relancez bristlenose run sur le dossier du projet pour la cr\u00e9er ; les \u00e9tapes termin\u00e9es sont r\u00e9utilis\u00e9es.",
+    "stale": "Les verbatim ont chang\u00e9 depuis la cr\u00e9ation de la discussion. Relancez bristlenose run sur le dossier du projet pour la recr\u00e9er.",
+    "notBuilt": "Impossible de cr\u00e9er la discussion de ce projet. Relancez bristlenose run sur le dossier du projet pour r\u00e9essayer.",
+    "exportNone": "Aucune discussion n\u2019a \u00e9t\u00e9 cr\u00e9\u00e9e pour ce rapport.",
     "unmoderated": "Aucun entretien n\u2019a de mod\u00e9rateur : il n\u2019y a donc aucune question \u00e0 afficher. La discussion s\u2019adresse aux entretiens mod\u00e9r\u00e9s.",
     "allUnreliable": "Le mod\u00e9rateur n\u2019a pu \u00eatre distingu\u00e9 de fa\u00e7on fiable dans aucun entretien : aucune question ne peut donc \u00eatre affich\u00e9e.",
     "guideProblem": {
-      "unreadable": "Impossible de lire votre guide. V\u00e9rifiez qu\u2019il s\u2019ouvre, puis r\u00e9analysez le projet.",
+      "unreadable": "Impossible de lire votre guide. V\u00e9rifiez qu\u2019il s\u2019ouvre, puis relancez bristlenose run sur le dossier du projet.",
       "too_large": "Votre guide est trop volumineux pour \u00eatre lu. Un guide de plus de 2 Mo n\u2019est pas utilis\u00e9.",
-      "symlink": "Votre guide est un lien vers un fichier situ\u00e9 ailleurs. Placez le fichier lui-m\u00eame dans le dossier.",
+      "symlink": "Votre guide, ou son dossier, est un lien vers un autre emplacement. Placez le fichier lui-m\u00eame dans un vrai dossier.",
       "unsupported_format": "Votre guide est dans un format que Bristlenose ne sait pas lire. Utilisez Word, Markdown ou du texte brut.",
       "folder_unreadable": "Impossible d\u2019ouvrir le dossier du guide.",
       "empty_parse": "Aucune question n\u2019a \u00e9t\u00e9 trouv\u00e9e dans votre guide."
     },
     "sessionState": {
-      "failed": "Impossible de lire cet entretien. R\u00e9analysez le projet pour r\u00e9essayer.",
+      "failed": "Les questions de cet entretien n\u2019ont pas pu \u00eatre class\u00e9es.",
       "no_moderator": "Aucun mod\u00e9rateur n\u2019a \u00e9t\u00e9 identifi\u00e9 dans cet entretien : il n\u2019a donc aucune question \u00e0 afficher.",
       "moderator_unreliable": "Le mod\u00e9rateur n\u2019a pas pu \u00eatre distingu\u00e9 de fa\u00e7on fiable dans cet entretien : ses questions ne sont donc pas class\u00e9es."
     }

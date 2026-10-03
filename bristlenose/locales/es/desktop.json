@@ -1166,5 +1166,14 @@
     "title": "Bristlenose analiza carpetas",
     "body": "Este proyecto se cre\u00f3 a partir de archivos sueltos, as\u00ed que no se puede analizar.",
     "filesHeading": "Archivos de este proyecto"
+  },
+  "discussion": {
+    "notRun": "Este proyecto se analiz\u00f3 antes de que existiera la discusi\u00f3n. Se crear\u00e1 la pr\u00f3xima vez que se analice el proyecto, por ejemplo al a\u00f1adir entrevistas.",
+    "stale": "Las citas han cambiado desde que se cre\u00f3 la discusi\u00f3n. Se volver\u00e1 a crear la pr\u00f3xima vez que se analice el proyecto.",
+    "notBuilt": "No se pudo crear la discusi\u00f3n de este proyecto. Se volver\u00e1 a intentar la pr\u00f3xima vez que se analice el proyecto.",
+    "guideHowTo": "Pon tu gu\u00eda (Word, Markdown o texto sin formato) en una carpeta llamada \u201cDiscussion guide\u201d junto a tus grabaciones. Se usar\u00e1 la pr\u00f3xima vez que se analice el proyecto.",
+    "guideProblem": {
+      "unreadable": "No se pudo leer tu gu\u00eda. Comprueba que se abre; se volver\u00e1 a leer la pr\u00f3xima vez que se analice el proyecto."
+    }
   }
 }

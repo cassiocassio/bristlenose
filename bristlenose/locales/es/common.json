@@ -554,7 +554,7 @@
     "markPlus": "no est\u00e1 en la gu\u00eda",
     "addGuide": "A\u00f1adir tu gu\u00eda\u2026",
     "replaceGuide": "Sustituir tu gu\u00eda\u2026",
-    "guideHowTo": "Pon tu gu\u00eda (Word, Markdown o texto sin formato) en una carpeta llamada \u201cDiscussion guide\u201d junto a tus grabaciones y reanaliza el proyecto.",
+    "guideHowTo": "Pon tu gu\u00eda (Word, Markdown o texto sin formato) en una carpeta llamada \u201cDiscussion guide\u201d junto a tus grabaciones y vuelve a ejecutar bristlenose run en la carpeta del proyecto.",
     "key": "Leyenda",
     "keyBoth": "Preguntada seg\u00fan lo previsto",
     "keyHollow": "Prevista, nunca preguntada",
@@ -568,21 +568,22 @@
     "announceSession": "Sesi\u00f3n {{n}}, {{questions}}",
     "announceFocus": "Enfocado en {{text}}",
     "announceClear": "Enfoque quitado",
-    "notRun": "Este proyecto a\u00fan no tiene discusi\u00f3n. Reanaliza el proyecto para crearla.",
-    "stale": "Las citas han cambiado desde que se cre\u00f3 la discusi\u00f3n. Reanaliza el proyecto para volver a crearla.",
-    "notBuilt": "No se pudo crear la discusi\u00f3n de este proyecto. Reanaliza el proyecto para intentarlo de nuevo.",
+    "notRun": "Este proyecto a\u00fan no tiene discusi\u00f3n. Vuelve a ejecutar bristlenose run en la carpeta del proyecto para crearla; los pasos terminados se reutilizan.",
+    "stale": "Las citas han cambiado desde que se cre\u00f3 la discusi\u00f3n. Vuelve a ejecutar bristlenose run en la carpeta del proyecto para volver a crearla.",
+    "notBuilt": "No se pudo crear la discusi\u00f3n de este proyecto. Vuelve a ejecutar bristlenose run en la carpeta del proyecto para reintentarlo.",
+    "exportNone": "No se cre\u00f3 ninguna discusi\u00f3n para este informe.",
     "unmoderated": "Ninguna sesi\u00f3n tiene moderador, as\u00ed que no hay preguntas que mostrar. La vista de discusi\u00f3n es para entrevistas moderadas.",
     "allUnreliable": "No se pudo distinguir con fiabilidad al moderador en ninguna sesi\u00f3n, as\u00ed que no se pueden mostrar preguntas.",
     "guideProblem": {
-      "unreadable": "No se pudo leer tu gu\u00eda. Comprueba que se abre y reanaliza el proyecto.",
+      "unreadable": "No se pudo leer tu gu\u00eda. Comprueba que se abre y vuelve a ejecutar bristlenose run en la carpeta del proyecto.",
       "too_large": "Tu gu\u00eda es demasiado grande para leerla. No se usan gu\u00edas de m\u00e1s de 2 MB.",
-      "symlink": "Tu gu\u00eda es un enlace a un archivo de otra ubicaci\u00f3n. Pon el propio archivo en la carpeta.",
+      "symlink": "Tu gu\u00eda, o su carpeta, es un enlace a otra ubicaci\u00f3n. Pon el propio archivo en una carpeta real.",
       "unsupported_format": "Tu gu\u00eda est\u00e1 en un formato que Bristlenose no puede leer. Usa Word, Markdown o texto sin formato.",
       "folder_unreadable": "No se pudo abrir la carpeta de la gu\u00eda.",
       "empty_parse": "No se encontraron preguntas en tu gu\u00eda."
     },
     "sessionState": {
-      "failed": "No se pudo leer esta sesi\u00f3n. Reanaliza el proyecto para intentarlo de nuevo.",
+      "failed": "No se pudieron clasificar las preguntas de esta sesi\u00f3n.",
       "no_moderator": "No se identific\u00f3 ning\u00fan moderador en esta sesi\u00f3n, as\u00ed que no tiene preguntas que mostrar.",
       "moderator_unreliable": "No se pudo distinguir con fiabilidad al moderador en esta sesi\u00f3n, as\u00ed que sus preguntas no est\u00e1n clasificadas."
     }

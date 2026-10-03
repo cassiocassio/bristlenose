@@ -554,7 +554,7 @@
     "markPlus": "fora do roteiro",
     "addGuide": "Adicionar seu roteiro\u2026",
     "replaceGuide": "Substituir seu roteiro\u2026",
-    "guideHowTo": "Coloque seu roteiro (Word, Markdown ou texto simples) em uma pasta chamada \u201cDiscussion guide\u201d ao lado das grava\u00e7\u00f5es e reanalise o projeto.",
+    "guideHowTo": "Coloque seu roteiro (Word, Markdown ou texto simples) em uma pasta chamada \u201cDiscussion guide\u201d ao lado das grava\u00e7\u00f5es e execute bristlenose run de novo na pasta do projeto.",
     "key": "Legenda",
     "keyBoth": "Perguntada como previsto",
     "keyHollow": "Prevista, nunca perguntada",
@@ -568,21 +568,22 @@
     "announceSession": "Sess\u00e3o {{n}}, {{questions}}",
     "announceFocus": "Foco em {{text}}",
     "announceClear": "Foco removido",
-    "notRun": "Este projeto ainda n\u00e3o tem discuss\u00e3o. Reanalise o projeto para cri\u00e1-la.",
-    "stale": "As cita\u00e7\u00f5es mudaram desde que a discuss\u00e3o foi criada. Reanalise o projeto para recri\u00e1-la.",
-    "notBuilt": "N\u00e3o foi poss\u00edvel criar a discuss\u00e3o deste projeto. Reanalise o projeto para tentar de novo.",
+    "notRun": "Este projeto ainda n\u00e3o tem discuss\u00e3o. Execute bristlenose run de novo na pasta do projeto para cri\u00e1-la; as etapas conclu\u00eddas s\u00e3o reaproveitadas.",
+    "stale": "As cita\u00e7\u00f5es mudaram desde que a discuss\u00e3o foi criada. Execute bristlenose run de novo na pasta do projeto para recri\u00e1-la.",
+    "notBuilt": "N\u00e3o foi poss\u00edvel criar a discuss\u00e3o deste projeto. Execute bristlenose run de novo na pasta do projeto para tentar novamente.",
+    "exportNone": "Nenhuma discuss\u00e3o foi criada para este relat\u00f3rio.",
     "unmoderated": "Nenhuma sess\u00e3o tem moderador, por isso n\u00e3o h\u00e1 perguntas para mostrar. A discuss\u00e3o \u00e9 para entrevistas moderadas.",
     "allUnreliable": "N\u00e3o foi poss\u00edvel distinguir o moderador com seguran\u00e7a em nenhuma sess\u00e3o, por isso nenhuma pergunta pode ser mostrada.",
     "guideProblem": {
-      "unreadable": "N\u00e3o foi poss\u00edvel ler seu roteiro. Verifique se ele abre e reanalise o projeto.",
+      "unreadable": "N\u00e3o foi poss\u00edvel ler seu roteiro. Verifique se ele abre e execute bristlenose run de novo na pasta do projeto.",
       "too_large": "Seu roteiro \u00e9 grande demais para ser lido. Um roteiro com mais de 2 MB n\u00e3o \u00e9 usado.",
-      "symlink": "Seu roteiro \u00e9 um link para um arquivo em outro lugar. Coloque o pr\u00f3prio arquivo na pasta.",
+      "symlink": "Seu roteiro, ou a pasta dele, \u00e9 um link para outro lugar. Coloque o pr\u00f3prio arquivo em uma pasta real.",
       "unsupported_format": "Seu roteiro est\u00e1 em um formato que o Bristlenose n\u00e3o consegue ler. Use Word, Markdown ou texto simples.",
       "folder_unreadable": "N\u00e3o foi poss\u00edvel abrir a pasta do roteiro.",
       "empty_parse": "Nenhuma pergunta foi encontrada no seu roteiro."
     },
     "sessionState": {
-      "failed": "N\u00e3o foi poss\u00edvel ler esta sess\u00e3o. Reanalise o projeto para tentar de novo.",
+      "failed": "N\u00e3o foi poss\u00edvel classificar as perguntas desta sess\u00e3o.",
       "no_moderator": "Nenhum moderador foi identificado nesta sess\u00e3o, por isso ela n\u00e3o tem perguntas para mostrar.",
       "moderator_unreliable": "N\u00e3o foi poss\u00edvel distinguir o moderador com seguran\u00e7a nesta sess\u00e3o, por isso as perguntas dela n\u00e3o est\u00e3o classificadas."
     }

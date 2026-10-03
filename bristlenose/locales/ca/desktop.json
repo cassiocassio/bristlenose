@@ -1166,5 +1166,14 @@
     "title": "Bristlenose analitza carpetes",
     "body": "Aquest projecte s’ha creat a partir de fitxers solts, per això no es pot analitzar.",
     "filesHeading": "Fitxers d’aquest projecte"
+  },
+  "discussion": {
+    "notRun": "Aquest projecte es va analitzar abans que exist\u00eds la discussi\u00f3. Es crear\u00e0 la propera vegada que s\u2019analitzi el projecte, per exemple quan afegeixis entrevistes.",
+    "stale": "Les cites han canviat des que es va crear la discussi\u00f3. Es tornar\u00e0 a crear la propera vegada que s\u2019analitzi el projecte.",
+    "notBuilt": "No s\u2019ha pogut crear la discussi\u00f3 d\u2019aquest projecte. Es tornar\u00e0 a provar la propera vegada que s\u2019analitzi el projecte.",
+    "guideHowTo": "Posa la teva guia (Word, Markdown o text sense format) en una carpeta anomenada \u201cDiscussion guide\u201d al costat de les gravacions. Es far\u00e0 servir la propera vegada que s\u2019analitzi el projecte.",
+    "guideProblem": {
+      "unreadable": "No s\u2019ha pogut llegir la teva guia. Comprova que s\u2019obre; es tornar\u00e0 a llegir la propera vegada que s\u2019analitzi el projecte."
+    }
   }
 }

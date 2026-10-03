@@ -554,7 +554,7 @@
     "markPlus": "nicht im Leitfaden",
     "addGuide": "Leitfaden hinzuf\u00fcgen \u2026",
     "replaceGuide": "Leitfaden ersetzen \u2026",
-    "guideHowTo": "Legen Sie Ihren Leitfaden (Word, Markdown oder reiner Text) in einen Ordner namens \u201eDiscussion guide\u201c neben Ihren Aufnahmen und analysieren Sie das Projekt dann erneut.",
+    "guideHowTo": "Legen Sie Ihren Leitfaden (Word, Markdown oder reiner Text) in einen Ordner namens \u201eDiscussion guide\u201c neben Ihren Aufnahmen und f\u00fchren Sie bristlenose run erneut f\u00fcr den Projektordner aus.",
     "key": "Legende",
     "keyBoth": "Wie geplant gefragt",
     "keyHollow": "Geplant, nie gefragt",
@@ -568,21 +568,22 @@
     "announceSession": "Interview {{n}}, {{questions}}",
     "announceFocus": "Fokus auf {{text}}",
     "announceClear": "Fokus aufgehoben",
-    "notRun": "F\u00fcr dieses Projekt gibt es noch keine Diskussion. Analysieren Sie das Projekt erneut, um sie zu erstellen.",
-    "stale": "Die Zitate haben sich ge\u00e4ndert, seit die Diskussion erstellt wurde. Analysieren Sie das Projekt erneut, um sie neu zu erstellen.",
-    "notBuilt": "Die Diskussion f\u00fcr dieses Projekt konnte nicht erstellt werden. Analysieren Sie das Projekt erneut, um es noch einmal zu versuchen.",
+    "notRun": "F\u00fcr dieses Projekt gibt es noch keine Diskussion. F\u00fchren Sie bristlenose run erneut f\u00fcr den Projektordner aus, um sie zu erstellen; abgeschlossene Schritte werden wiederverwendet.",
+    "stale": "Die Zitate haben sich ge\u00e4ndert, seit die Diskussion erstellt wurde. F\u00fchren Sie bristlenose run erneut f\u00fcr den Projektordner aus, um sie neu zu erstellen.",
+    "notBuilt": "Die Diskussion f\u00fcr dieses Projekt konnte nicht erstellt werden. F\u00fchren Sie bristlenose run erneut f\u00fcr den Projektordner aus, um es noch einmal zu versuchen.",
+    "exportNone": "F\u00fcr diesen Bericht wurde keine Diskussion erstellt.",
     "unmoderated": "Kein Interview hat eine Moderation, daher gibt es keine Fragen zum Anzeigen. Die Diskussion ist f\u00fcr moderierte Interviews gedacht.",
     "allUnreliable": "Die Moderation lie\u00df sich in keinem Interview zuverl\u00e4ssig unterscheiden, daher k\u00f6nnen keine Fragen angezeigt werden.",
     "guideProblem": {
-      "unreadable": "Ihr Leitfaden konnte nicht gelesen werden. Pr\u00fcfen Sie, ob er sich \u00f6ffnen l\u00e4sst, und analysieren Sie das Projekt dann erneut.",
+      "unreadable": "Ihr Leitfaden konnte nicht gelesen werden. Pr\u00fcfen Sie, ob er sich \u00f6ffnen l\u00e4sst, und f\u00fchren Sie bristlenose run erneut f\u00fcr den Projektordner aus.",
       "too_large": "Ihr Leitfaden ist zu gro\u00df zum Lesen. Ein Leitfaden \u00fcber 2 MB wird nicht verwendet.",
-      "symlink": "Ihr Leitfaden ist ein Verweis auf eine Datei an einem anderen Ort. Legen Sie die Datei selbst in den Ordner.",
+      "symlink": "Ihr Leitfaden oder sein Ordner ist ein Verweis auf einen anderen Ort. Legen Sie die Datei selbst in einen echten Ordner.",
       "unsupported_format": "Ihr Leitfaden hat ein Format, das Bristlenose nicht lesen kann. Verwenden Sie Word, Markdown oder reinen Text.",
       "folder_unreadable": "Der Ordner mit dem Leitfaden konnte nicht ge\u00f6ffnet werden.",
       "empty_parse": "In Ihrem Leitfaden wurden keine Fragen gefunden."
     },
     "sessionState": {
-      "failed": "Dieses Interview konnte nicht gelesen werden. Analysieren Sie das Projekt erneut, um es noch einmal zu versuchen.",
+      "failed": "Die Fragen dieses Interviews konnten nicht zugeordnet werden.",
       "no_moderator": "In diesem Interview wurde keine Moderation erkannt, daher gibt es keine Fragen zum Anzeigen.",
       "moderator_unreliable": "Die Moderation lie\u00df sich in diesem Interview nicht zuverl\u00e4ssig unterscheiden, daher sind die Fragen nicht zugeordnet."
     }

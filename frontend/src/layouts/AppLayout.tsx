@@ -422,6 +422,7 @@ function AppShell() {
     // Revisit if v2 replaces v1 under its own name.
     else if (path.startsWith("/report/codebook")) key = "nav.codebook";
     else if (path.startsWith("/report/signals")) key = "nav.signals";
+    else if (path.startsWith("/report/discussion")) key = "nav.discussion";
     announce(i18n.t("announce.navigatedTo", { label: i18n.t(key) }));
   }, [location.pathname]);
 

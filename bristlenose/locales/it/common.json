@@ -554,7 +554,7 @@
     "markPlus": "non nella traccia",
     "addGuide": "Aggiungi la tua traccia…",
     "replaceGuide": "Sostituisci la tua traccia…",
-    "guideHowTo": "Metti la tua traccia (Word, Markdown o testo semplice) in una cartella chiamata “Discussion guide” accanto alle registrazioni, poi rianalizza il progetto.",
+    "guideHowTo": "Metti la tua traccia (Word, Markdown o testo semplice) in una cartella chiamata “Discussion guide” accanto alle registrazioni, poi esegui di nuovo bristlenose run sulla cartella del progetto.",
     "key": "Legenda",
     "keyBoth": "Chiesta come previsto",
     "keyHollow": "Prevista, mai chiesta",
@@ -568,21 +568,22 @@
     "announceSession": "Sessione {{n}}, {{questions}}",
     "announceFocus": "Focus su {{text}}",
     "announceClear": "Focus rimosso",
-    "notRun": "Questo progetto non ha ancora una discussione. Rianalizza il progetto per crearla.",
-    "stale": "Le citazioni sono cambiate da quando è stata creata la discussione. Rianalizza il progetto per ricrearla.",
-    "notBuilt": "Impossibile creare la discussione per questo progetto. Rianalizza il progetto per riprovare.",
+    "notRun": "Questo progetto non ha ancora una discussione. Esegui di nuovo bristlenose run sulla cartella del progetto per crearla; i passaggi completati vengono riutilizzati.",
+    "stale": "Le citazioni sono cambiate da quando è stata creata la discussione. Esegui di nuovo bristlenose run sulla cartella del progetto per ricrearla.",
+    "notBuilt": "Impossibile creare la discussione per questo progetto. Esegui di nuovo bristlenose run sulla cartella del progetto per riprovare.",
+    "exportNone": "Per questo report non è stata creata nessuna discussione.",
     "unmoderated": "Nessuna sessione ha un moderatore, quindi non ci sono domande da mostrare. La discussione è pensata per interviste moderate.",
     "allUnreliable": "In nessuna sessione è stato possibile distinguere con certezza il moderatore, quindi non si possono mostrare domande.",
     "guideProblem": {
-      "unreadable": "Impossibile leggere la tua traccia. Controlla che si apra, poi rianalizza il progetto.",
+      "unreadable": "Impossibile leggere la tua traccia. Controlla che si apra, poi esegui di nuovo bristlenose run sulla cartella del progetto.",
       "too_large": "La tua traccia è troppo grande per essere letta. Una traccia oltre 2 MB non viene usata.",
-      "symlink": "La tua traccia è un collegamento a un file altrove. Metti il file vero e proprio nella cartella.",
+      "symlink": "La tua traccia, o la sua cartella, è un collegamento a un’altra posizione. Metti il file vero e proprio in una cartella reale.",
       "unsupported_format": "La tua traccia è in un formato che Bristlenose non sa leggere. Usa Word, Markdown o testo semplice.",
       "folder_unreadable": "Impossibile aprire la cartella della traccia.",
       "empty_parse": "Nella tua traccia non è stata trovata nessuna domanda."
     },
     "sessionState": {
-      "failed": "Impossibile leggere questa sessione. Rianalizza il progetto per riprovare.",
+      "failed": "Non è stato possibile classificare le domande di questa sessione.",
       "no_moderator": "In questa sessione non è stato identificato nessun moderatore, quindi non ci sono domande da mostrare.",
       "moderator_unreliable": "In questa sessione non è stato possibile distinguere con certezza il moderatore, quindi le sue domande non sono classificate."
     }

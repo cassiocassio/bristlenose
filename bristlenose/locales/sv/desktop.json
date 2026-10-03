@@ -1166,5 +1166,14 @@
     "title": "Bristlenose analyserar mappar",
     "body": "Det här projektet skapades från enskilda filer och kan därför inte analyseras.",
     "filesHeading": "Filer i det här projektet"
+  },
+  "discussion": {
+    "notRun": "Det h\u00e4r projektet analyserades innan diskussionen fanns. Den skapas n\u00e4sta g\u00e5ng projektet analyseras, till exempel n\u00e4r du l\u00e4gger till intervjuer.",
+    "stale": "Citaten har \u00e4ndrats sedan diskussionen skapades. Den skapas p\u00e5 nytt n\u00e4sta g\u00e5ng projektet analyseras.",
+    "notBuilt": "Det gick inte att skapa diskussionen f\u00f6r det h\u00e4r projektet. Det g\u00f6rs ett nytt f\u00f6rs\u00f6k n\u00e4sta g\u00e5ng projektet analyseras.",
+    "guideHowTo": "L\u00e4gg din guide (Word, Markdown eller vanlig text) i en mapp som heter \u201dDiscussion guide\u201d bredvid dina inspelningar. Den anv\u00e4nds n\u00e4sta g\u00e5ng projektet analyseras.",
+    "guideProblem": {
+      "unreadable": "Det gick inte att l\u00e4sa din guide. Kontrollera att den g\u00e5r att \u00f6ppna; den l\u00e4ses igen n\u00e4sta g\u00e5ng projektet analyseras."
+    }
   }
 }

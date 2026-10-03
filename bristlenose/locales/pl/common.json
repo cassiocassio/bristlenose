@@ -628,7 +628,7 @@
     "markPlus": "spoza scenariusza",
     "addGuide": "Dodaj sw\u00f3j scenariusz\u2026",
     "replaceGuide": "Zast\u0105p sw\u00f3j scenariusz\u2026",
-    "guideHowTo": "Umie\u015b\u0107 sw\u00f3j scenariusz (Word, Markdown lub zwyk\u0142y tekst) w folderze o nazwie \u201eDiscussion guide\u201d obok nagra\u0144, a potem ponownie przeanalizuj projekt.",
+    "guideHowTo": "Umie\u015b\u0107 sw\u00f3j scenariusz (Word, Markdown lub zwyk\u0142y tekst) w folderze o nazwie \u201eDiscussion guide\u201d obok nagra\u0144, a potem uruchom ponownie bristlenose run na folderze projektu.",
     "key": "Legenda",
     "keyBoth": "Zadane zgodnie z planem",
     "keyHollow": "Zaplanowane, nigdy niezadane",
@@ -642,21 +642,22 @@
     "announceSession": "Sesja {{n}}, {{questions}}",
     "announceFocus": "Skupiono na: {{text}}",
     "announceClear": "Usuni\u0119to skupienie",
-    "notRun": "Ten projekt nie ma jeszcze dyskusji. Przeanalizuj projekt ponownie, aby j\u0105 utworzy\u0107.",
-    "stale": "Cytaty zmieni\u0142y si\u0119 od utworzenia dyskusji. Przeanalizuj projekt ponownie, aby utworzy\u0107 j\u0105 od nowa.",
-    "notBuilt": "Nie uda\u0142o si\u0119 utworzy\u0107 dyskusji dla tego projektu. Przeanalizuj projekt ponownie, aby spr\u00f3bowa\u0107 jeszcze raz.",
+    "notRun": "Ten projekt nie ma jeszcze dyskusji. Uruchom ponownie bristlenose run na folderze projektu, aby j\u0105 utworzy\u0107; uko\u0144czone etapy zostan\u0105 u\u017cyte ponownie.",
+    "stale": "Cytaty zmieni\u0142y si\u0119 od utworzenia dyskusji. Uruchom ponownie bristlenose run na folderze projektu, aby utworzy\u0107 j\u0105 od nowa.",
+    "notBuilt": "Nie uda\u0142o si\u0119 utworzy\u0107 dyskusji dla tego projektu. Uruchom ponownie bristlenose run na folderze projektu, aby spr\u00f3bowa\u0107 jeszcze raz.",
+    "exportNone": "Dla tego raportu nie utworzono dyskusji.",
     "unmoderated": "\u017badna sesja nie ma moderatora, wi\u0119c nie ma pyta\u0144 do pokazania. Dyskusja jest przeznaczona do wywiad\u00f3w moderowanych.",
     "allUnreliable": "W \u017cadnej sesji nie uda\u0142o si\u0119 wiarygodnie odr\u00f3\u017cni\u0107 moderatora, wi\u0119c nie mo\u017cna pokaza\u0107 pyta\u0144.",
     "guideProblem": {
-      "unreadable": "Nie uda\u0142o si\u0119 odczyta\u0107 Twojego scenariusza. Sprawd\u017a, czy si\u0119 otwiera, a potem ponownie przeanalizuj projekt.",
+      "unreadable": "Nie uda\u0142o si\u0119 odczyta\u0107 Twojego scenariusza. Sprawd\u017a, czy si\u0119 otwiera, a potem uruchom ponownie bristlenose run na folderze projektu.",
       "too_large": "Tw\u00f3j scenariusz jest za du\u017cy, by go odczyta\u0107. Scenariusz ponad 2 MB nie jest u\u017cywany.",
-      "symlink": "Tw\u00f3j scenariusz to \u0142\u0105cze do pliku w innym miejscu. Umie\u015b\u0107 w folderze sam plik.",
+      "symlink": "Tw\u00f3j scenariusz lub jego folder to \u0142\u0105cze do innego miejsca. Umie\u015b\u0107 sam plik w prawdziwym folderze.",
       "unsupported_format": "Tw\u00f3j scenariusz ma format, kt\u00f3rego Bristlenose nie potrafi odczyta\u0107. U\u017cyj Worda, Markdownu lub zwyk\u0142ego tekstu.",
       "folder_unreadable": "Nie uda\u0142o si\u0119 otworzy\u0107 folderu ze scenariuszem.",
       "empty_parse": "W Twoim scenariuszu nie znaleziono pyta\u0144."
     },
     "sessionState": {
-      "failed": "Nie uda\u0142o si\u0119 odczyta\u0107 tej sesji. Przeanalizuj projekt ponownie, aby spr\u00f3bowa\u0107 jeszcze raz.",
+      "failed": "Nie uda\u0142o si\u0119 sklasyfikowa\u0107 pyta\u0144 z tej sesji.",
       "no_moderator": "W tej sesji nie rozpoznano moderatora, wi\u0119c nie ma w niej pyta\u0144 do pokazania.",
       "moderator_unreliable": "W tej sesji nie uda\u0142o si\u0119 wiarygodnie odr\u00f3\u017cni\u0107 moderatora, wi\u0119c jego pytania nie s\u0105 sklasyfikowane."
     }

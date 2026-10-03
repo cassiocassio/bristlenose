@@ -25,6 +25,7 @@ vi.mock("../utils/api", () => ({
   putDeletedBadges: vi.fn(),
 }));
 vi.mock("../utils/badgeStyle", () => ({ probeBadgeStyles: vi.fn() }));
+vi.mock("../utils/announce", () => ({ announce: vi.fn() }));
 
 import {
   NativeSearchSync,
@@ -38,6 +39,7 @@ import { personToken, tagToken } from "../utils/searchTokens";
 import { postSearchBadgeStyles } from "../shims/bridge";
 import { probeBadgeStyles } from "../utils/badgeStyle";
 import { _resetEmbeddedCache } from "../utils/embedded";
+import { announce } from "../utils/announce";
 import type { WireSuggestionRow } from "../utils/searchBridge";
 
 const tag = (name: string, colour_set = "ux", colour_index = 0): TagResponse => ({
@@ -187,6 +189,23 @@ describe("NativeSearchSync posts badge styles in the Mac app", () => {
     );
   });
 
+  it("says how many quotes a settled search left, since the web toolbar is not drawn here", async () => {
+    vi.useFakeTimers();
+    try {
+      initFromQuotes([q("a", "p3"), q("b", "p2")]);
+      render(
+        <MemoryRouter initialEntries={["/report/quotes"]}>
+          <NativeSearchSync />
+        </MemoryRouter>,
+      );
+      act(() => setSearchQuery("late"));
+      act(() => vi.advanceTimersByTime(800));
+      expect(announce).toHaveBeenCalledWith("2 matching");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("does nothing outside the Mac app", async () => {
     delete (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__;
     _resetEmbeddedCache();
@@ -200,5 +219,6 @@ describe("NativeSearchSync posts badge styles in the Mac app", () => {
     await new Promise((r) => setTimeout(r, 10));
     expect(postSearchBadgeStyles).not.toHaveBeenCalled();
     expect(probeBadgeStyles).not.toHaveBeenCalled();
+    expect(announce).not.toHaveBeenCalled(); // the browser toolbar says it there
   });
 });

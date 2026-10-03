@@ -11,7 +11,7 @@
  * CSV/XLSX export actions moved to ExportDropdown in NavBar (v0.15).
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { SearchBox, type SearchCombo } from "../components/SearchBox";
 import { applyNativeSearchAction, searchSuggestionsFor } from "../components/NativeSearchSync";
@@ -36,7 +36,7 @@ import { useFocusMode, toggleFocusMode } from "../contexts/FocusModeStore";
 import { filterQuotes } from "../utils/filter";
 import { isEmbedded } from "../utils/embedded";
 import { isActiveQuery } from "../utils/searchMatch";
-import { announce } from "../utils/announce";
+import { useSearchAnnouncement } from "../hooks/useSearchAnnouncement";
 
 // ── Component ─────────────────────────────────────────────────────────
 
@@ -62,16 +62,7 @@ export function Toolbar() {
     return undefined; // default label from ViewSwitcher
   }, [store.searchQuery, store.searchTokens, visibleCount, t]);
 
-  // One announcement per settled search, not one per keystroke (§6): what a
-  // screen-reader user cannot see is how many quotes the search left.
-  const countRef = useRef(visibleCount);
-  countRef.current = visibleCount;
-  const searching = isActiveQuery(store.searchQuery) || store.searchTokens.length > 0;
-  useEffect(() => {
-    if (isEmbedded() || !searching) return;
-    const timer = setTimeout(() => announce(t("toolbar.matching", { count: countRef.current })), 700);
-    return () => clearTimeout(timer);
-  }, [store.searchQuery, store.searchTokens, searching, t]);
+  useSearchAnnouncement(store, !isEmbedded());
 
   // ── Search suggestions and tokens (design-search §4–§6) ─────────────
 

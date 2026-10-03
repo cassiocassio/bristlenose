@@ -52,6 +52,7 @@ import { quoteTags, suggest, type SearchPerson, type Suggestion } from "../utils
 import type { TagResponse } from "../utils/types";
 import { tabFromPath } from "./LensSubtitleSync";
 import { useLocaleStore } from "../i18n/LocaleStore";
+import { useSearchAnnouncement } from "../hooks/useSearchAnnouncement";
 
 // The project's people, fetched once per mount, are held by the quotes store
 // (setSearchPeople) so the menu actions, dispatched from AppLayout outside this
@@ -292,6 +293,8 @@ export function NativeSearchSync(): null {
   const styleCache = useRef<BadgeStyleCache>(emptyBadgeStyleCache());
   const active = isEmbedded() && onQuotes;
   const appearance = useAppearanceSignature(active);
+  // The web toolbar renders nothing in the Mac app, so the count is said here.
+  useSearchAnnouncement(store, active);
 
   // Fetched each time the Quotes lens is entered: a person is renamed in the
   // Sessions lens, and nothing announces it, so the names offered (and the

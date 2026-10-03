@@ -627,18 +627,24 @@ struct ContentView: View {
                 // column, not on `projectList`: attached there (where the New
                 // Folder button sat since Phase 1) it never reached the window
                 // toolbar — measured 3 Oct, no item before the split-view
-                // separator. It goes away with the column, as the toggle does.
+                // separator. Shown only while the column is: with the sidebar
+                // hidden SwiftUI keeps a column's items beside the toggle, but
+                // the new row would land somewhere the researcher can't see —
+                // NetNewsWire's + likewise goes with its sidebar (owner, 3 Oct).
+                // File ▸ New Project / New Folder stay available either way.
                 .toolbar {
-                    ToolbarItem(placement: .automatic) {
-                        Menu {
-                            Button(i18n.t("desktop.menu.file.newProject")) { createNewProject() }
-                            Button(i18n.t("desktop.menu.file.newFolder")) { createNewFolder() }
-                        } label: {
-                            // `Label` + `.help`: VoiceOver name, tooltip and the
-                            // toolbar's Icon-and-Text mode from one string.
-                            Label(i18n.t("desktop.toolbar.add"), systemImage: "plus")
+                    if SidebarToggle.isVisible(columnVisibility) {
+                        ToolbarItem(placement: .automatic) {
+                            Menu {
+                                Button(i18n.t("desktop.menu.file.newProject")) { createNewProject() }
+                                Button(i18n.t("desktop.menu.file.newFolder")) { createNewFolder() }
+                            } label: {
+                                // `Label` + `.help`: VoiceOver name, tooltip and the
+                                // toolbar's Icon-and-Text mode from one string.
+                                Label(i18n.t("desktop.toolbar.add"), systemImage: "plus")
+                            }
+                            .help(i18n.t("desktop.toolbar.add"))
                         }
-                        .help(i18n.t("desktop.toolbar.add"))
                     }
                 }
         } detail: {

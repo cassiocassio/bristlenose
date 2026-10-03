@@ -412,3 +412,18 @@ def test_prompts_format_without_stray_braces(name):
     t = get_prompt_template(name)
     vars_ = set(re.findall(r"\{(\w+)\}", t.user))
     t.user.format(**{v: "x" for v in vars_})  # raises on an unescaped literal brace
+
+
+def test_analyze_finds_the_guide_beside_its_output_or_one_level_up(tmp_path):
+    from bristlenose.discussion.guide import guide_home
+
+    project = tmp_path / "study"
+    out = project / "bristlenose-output"
+    out.mkdir(parents=True)
+    write_guide(project)
+    # output is bristlenose-output/: the guide is one level up
+    assert guide_home(out, out.parent) == project
+    # output is the project folder itself (`analyze transcripts-raw/`)
+    assert guide_home(project, project.parent) == project
+    # no guide anywhere: the first candidate, so "no guide" is still answered
+    assert guide_home(tmp_path / "x", tmp_path) == tmp_path / "x"

@@ -3022,12 +3022,16 @@ class Pipeline:
             )
 
             # ── Discussion lens (switch: discussion_lens) ──
-            # `analyze` has no project folder of its own; the guide sits beside
-            # the recordings, which is the output folder's parent in the
-            # default layout.
+            # `analyze` has no project folder of its own. Its output is the
+            # project folder (the default for `transcripts-raw/`) or
+            # `bristlenose-output/` inside it, so look in both, then beside the
+            # transcripts. Measured 3 Oct 2026: parent-only missed the guide.
+            from bristlenose.discussion.guide import guide_home
+
             await self._run_discussion(
-                clean_transcripts, all_quotes, output_dir.parent, output_dir,
-                llm_client, None, None,
+                clean_transcripts, all_quotes,
+                guide_home(output_dir, output_dir.parent, transcripts_dir.parent),
+                output_dir, llm_client, None, None,
             )
 
             # ── Render ──

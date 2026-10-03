@@ -79,6 +79,18 @@ def _locate(project_dir: Path) -> Path | None:
         return None
 
 
+def guide_home(*candidates: Path) -> Path:
+    """The first candidate that holds a guide folder, else the first candidate.
+
+    For callers that are handed something other than the project folder —
+    `bristlenose analyze` gets a transcripts folder, and its output lands
+    either in the project folder or in `bristlenose-output/` inside it."""
+    for c in candidates:
+        if _locate(c) is not None:
+            return c
+    return candidates[0]
+
+
 def find_guide(project_dir: Path) -> Guide | None:
     """The guide in the reserved folder, or None when there is no guide.
 

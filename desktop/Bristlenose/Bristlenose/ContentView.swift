@@ -2451,6 +2451,16 @@ struct ContentView: View {
         )
     }
 
+    /// The gap that puts Search in its own glass capsule. `ToolbarSpacer` is
+    /// macOS 26; on 15 there is nothing to split and the builder emits nothing.
+    /// Gated here, once, the way `withoutSharedBackground()` is.
+    @ToolbarContentBuilder
+    private var searchSeparator: some ToolbarContent {
+        if #available(macOS 26.0, *) {
+            ToolbarSpacer(.fixed, placement: .primaryAction)
+        }
+    }
+
     @ToolbarContentBuilder
     private var toolbarTrailing: some ToolbarContent {
         // Report-only actions — hidden when the lens surface can't act, on the
@@ -2512,20 +2522,32 @@ struct ContentView: View {
                 }
             }
 
-            // Search — rightmost in `.primaryAction` (Notes / Mail / Finder
-            // convention). Quotes has a native expanding search field wired to
-            // the SPA store; the other lenses show a disabled button that
-            // reserves the slot until per-lens search lands (Sessions →
-            // transcript, Codebook → codes, Analysis → signals). The Project
-            // dashboard has nothing to search, so no item there.
-            ToolbarItem(placement: .primaryAction) {
-                switch bridgeHandler.activeTab {
-                case .quotes:
+            // Search — rightmost, and on its own (NetNewsWire / Mail): a fixed
+            // spacer splits it out of the actions capsule on macOS 26, so it
+            // keeps its own glass and its input affordance when the window is
+            // wide, and stays its own thing when narrow. On 15 the items sit
+            // together, as they always did. One control for the four lenses
+            // that will have search; it only filters on Quotes (toolbar rev 3,
+            // 3 Oct 2026). The Project dashboard has nothing to search, so no
+            // item and no spacer there. NOT a `.searchable` field — see the
+            // `.searchable` gotcha in desktop/CLAUDE.md.
+            if let tab = bridgeHandler.activeTab,
+               [.quotes, .sessions, .codebook, .signals].contains(tab) {
+                searchSeparator
+                // Measured 3 Oct 2026: `.status` was tried for this item, to see
+                // whether that zone lands after the overflow chevron the way
+                // AppKit places NSSearchToolbarItem in Photos. It is the
+                // toolbar's centre on macOS 26, and when tight it folds into `»`
+                // like anything else — the magnifier inoperable in a menu. So
+                // `.primaryAction`, and the chevron sits after search when the
+                // toolbar is tight; only an NSSearchToolbarItem gets the other
+                // order, and SwiftUI reaches that only via `.searchable`.
+                ToolbarItem(placement: .primaryAction) {
+                    // When the toolbar is tight the open field wins and the
+                    // actions capsule folds into `»` (Photos): the control
+                    // raises its own NSToolbarItem priority — see
+                    // `ToolbarItemPriority`.
                     QuotesSearchToolbarControl(bridgeHandler: bridgeHandler, i18n: i18n)
-                case .sessions, .codebook, .signals:
-                    SearchComingSoonButton(i18n: i18n)
-                default:
-                    EmptyView()
                 }
             }
         }

@@ -87,6 +87,23 @@ enum SidebarFitTrace {
             + "webSafeLeft=\(web.map { "\(Int($0.safeAreaInsets.left))" } ?? "nil")"
     }
 
+    /// One line per toolbar item: identifier, priority, whether it is on the
+    /// bar or in `»`, and its view's frame in the window. For the search item
+    /// drawn half off the edge (3 Oct 2026): is it placed, and how wide does
+    /// the toolbar think it is.
+    @MainActor
+    static func noteToolbar(_ toolbar: NSToolbar) {
+        guard isEnabled else { return }
+        let visible = Set(toolbar.visibleItems?.map { $0.itemIdentifier } ?? [])
+        let parts = toolbar.items.map { item -> String in
+            let id = item.itemIdentifier.rawValue.suffix(28)
+            let frame = item.view.map { $0.convert($0.bounds, to: nil) }
+            let f = frame.map { "x=\(Int($0.minX)) w=\(Int($0.width))" } ?? "no-view"
+            return "\(id) p=\(item.visibilityPriority.rawValue) \(visible.contains(item.itemIdentifier) ? "on" : "»") \(f)"
+        }
+        log.notice("toolbar | \(parts.joined(separator: " · "), privacy: .public)")
+    }
+
     @MainActor
     private static func findWebView(in view: NSView) -> WKWebView? {
         if let web = view as? WKWebView { return web }

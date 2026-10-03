@@ -745,9 +745,10 @@ private struct FindMenuContent: View {
     var body: some View {
         Divider()
 
-        // Search exists on exactly one lens — the Quotes toolbar capsule. The
-        // other three carry `SearchComingSoonButton`, a deliberately disabled
-        // slot. So the whole family is lens-scoped, the shape the View menu
+        // Search *filters* on exactly one lens — Quotes. The toolbar control
+        // is shown on Sessions, Codebook and Signals too (toolbar rev 3), but
+        // inert there, and focusing an inert field is worse than a dimmed menu
+        // item. So the whole family stays lens-scoped, the shape the View menu
         // already uses three times: "a live-but-inert menu item is worse than a
         // dimmed one."
         //

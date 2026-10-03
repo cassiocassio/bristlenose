@@ -615,3 +615,24 @@ lens uses its own column so it can reach 60%), quote cards with actions (they
 arrive with `QuoteGroup` once quotes have store ids), the macOS `Tab`, locale
 keys (English until Phase 6), and the screen-reader announcement for this route
 (falls through to "Project", as Specimen does).
+
+**Reviewed the same day** (code, accessibility, design system) and fixed: kept
+out of exported reports by an alias stub (the export inlines every dynamic
+import — the same leak the locale files had) and redirected outside dev; badge
+rows that flickered between full and collapsed; digit keys acting under an open
+dialog; focus shown by the shipped active and selection styles instead of
+opacity (which took readable text to ~2:1); arrow keys in both radio groups;
+provenance and "not asked here" in words; session and focus changes announced;
+navigator titles as headings; the shipped `.drag-handle`; no Planned view
+without a guide; unclassified turns shown; state kept across a lens switch. The
+person badge's highlight ring is now inset in shipped CSS — the split badge
+clips its overflow, so the old outer ring showed as a sliver.
+
+**Left open, deliberately:** quotes are matched to questions by time, not by
+the record's `after_item` (an item asked twice in a session makes that key
+ambiguous; recomputing guarantees no quote is dropped) — decide when Phase 3
+fixes the key; a quote after an instruction or chat turn folds into the
+previous question, which is wrong after a task instruction; one Tab stop per
+badge makes a long Tab path through a big guide (roving tabindex inside the
+navigator is the fix); the app-only top bleed is written but unverified in the
+app; bare digit keys share the house-wide WCAG 2.1.4 exposure.

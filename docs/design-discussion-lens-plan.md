@@ -429,8 +429,8 @@ overrides keyed on durable ids, never on labels.
   panel (docx, md, txt) and `DiscussionGuide.install` copies the file into the
   guide folder — reusing one of any case, replacing a same-named file, stamping
   it with the current time so the watcher reads it as newer than the record —
-  then starts Analyse if the pipeline is free. No drop target: a drop onto the
-  report would compete with the sidebar's project drops. The folder name and
+  then starts Analyse if the pipeline is free. The drop target is not built.
+  The folder name and
   formats are pinned against the pipeline's by
   `tests/test_discussion_guide_parity.py`.
 - **Built 3 Oct 2026 as a preview, then shipped the same day**: `Tab.discussion`

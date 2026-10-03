@@ -63,8 +63,15 @@ struct TabTests {
     /// keep now they agree.
     @Test func allCases_areTheKnownRoster() {
         #expect(Tab.allCases == [
-            .project, .sessions, .quotes, .codebook, .signals,
+            .project, .sessions, .quotes, .codebook, .signals, .discussion,
         ])
+    }
+
+    /// The parked Discussion lens resolves from its route like any other, so the
+    /// rail lights the right row once its flag puts the row there.
+    @Test func fromPath_discussion() {
+        #expect(Tab.from(path: "/report/discussion/") == .discussion)
+        #expect(Tab.from(path: "/report/discussion") == .discussion)
     }
 
     /// Every route round-trips through `Tab.from(path:)`.
@@ -98,6 +105,7 @@ struct TabTests {
         #expect(Tab.quotes.rawValue == "quotes")
         #expect(Tab.codebook.rawValue == "codebook")
         #expect(Tab.signals.rawValue == "signals")
+        #expect(Tab.discussion.rawValue == "discussion")
     }
 }
 
@@ -123,6 +131,8 @@ struct TabTests {
         // mounted by AppLayout rather than gated here.
         #expect(!Tab.project.hasLeftPanel)
         #expect(!Tab.sessions.hasLeftPanel)
+        // Its navigator is a column inside the page, not the shared panel.
+        #expect(!Tab.discussion.hasLeftPanel)
     }
 
     @Test func everyCaseIsDecided() {
@@ -132,9 +142,10 @@ struct TabTests {
         for tab in Tab.allCases {
             _ = tab.hasLeftPanel
         }
-        // Five since `codebookV2` was folded into `codebook` (baa1aa0e). The
-        // number is the tripwire, so move it deliberately — it went stale there
-        // and the suite was red on main until 31 Aug 2026.
-        #expect(Tab.allCases.count == 5)
+        // Five since `codebookV2` was folded into `codebook` (baa1aa0e); six
+        // with the parked `.discussion` (3 Oct 2026). The number is the
+        // tripwire, so move it deliberately — it went stale once and the suite
+        // was red on main until 31 Aug 2026.
+        #expect(Tab.allCases.count == 6)
     }
 }

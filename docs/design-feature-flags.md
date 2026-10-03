@@ -287,12 +287,17 @@ because it is reachable by users, invisible to the type checker, and has no
 "shipped state" test. This has not been exercised; the first use should
 confirm the shape and update this section.
 
-**Swift has no parked-feature flag.** `#if DEBUG` is the wrong tool (§ 2):
-it hides from Release only, and a tester cannot flip it. If a native feature
-needs parking, an `enum FeatureFlags { static var … }` with the same three
-rules and the same two test shapes is the shape to copy, and the flag must
-default off in *every* build configuration, `DEBUG` included, so the Swift
-suite runs against the shipped state. Also unexercised.
+**Swift's parked-feature flags are `BristlenoseFlags`** (`BristlenoseFlags.swift`)
+— corrected 3 Oct 2026; this paragraph said Swift had none, while the enum held
+three. Each flag is a `UserDefaults` key, default off in *every* build
+configuration (`DEBUG` included, so the Swift suite runs against the shipped
+state), flipped with `defaults write app.bristlenose <key> -bool YES`, and read
+by views through `@AppStorage(key)` so a flip redraws live. `#if DEBUG` is the
+wrong tool (§ 2): it hides from Release only, and a tester cannot flip it. The
+fourth flag, `discussionLens`, is the first with a reader that takes an injected
+`UserDefaults` (`discussionLens(_:)`) so its default-off is tested, and the first
+a tester can flip from the app itself (Diagnostics ▸ Discussion Lens (Preview)) —
+the shape to copy for the next one.
 
 ## 7. Decision table
 

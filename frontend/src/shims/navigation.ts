@@ -28,6 +28,8 @@ const TAB_ROUTES: Record<string, string> = {
   // it, and the day it was broken the lens just went quietly to /report/.
   codebookV2: "/report/codebook-v2/",
   signals: "/report/signals/",
+  // Parked preview lens: reached from the Mac rail only when its flag is on.
+  discussion: "/report/discussion/",
   settings: "/report/settings/",
   about: "/report/about/",
 };

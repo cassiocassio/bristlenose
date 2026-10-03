@@ -202,6 +202,10 @@ struct ContentView: View {
     @AppStorage("showAnalysisAnimation") private var showAnalysisAnimation = true
     /// Also gates the build-info capsule: the same "show me the machinery"
     /// switch as the Diagnostics menu, so one toggle hides both.
+    /// Observed so the AppKit sidebar's lens rows follow the Discussion preview
+    /// flag live (the SwiftUI rail observes it itself).
+    @AppStorage(BristlenoseFlags.discussionLensKey)
+    private var discussionLensPreview: Bool = false
     @AppStorage(DiagnosticsPreference.key)
     private var showDiagnostics: Bool = DiagnosticsPreference.defaultValue
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -2666,7 +2670,7 @@ struct ContentView: View {
                 projectIndex: projectIndex,
                 i18n: i18n,
                 selection: $selection,
-                lenses: LensItem.all,
+                lenses: LensItem.lenses(discussion: discussionLensPreview),
                 activeTab: bridgeHandler.activeTab,
                 lensesEnabled: lensAvailability.isAvailable,
                 onActivateLens: { bridgeHandler.activateLens($0) },

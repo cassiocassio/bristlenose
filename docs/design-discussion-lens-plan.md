@@ -394,6 +394,12 @@ overrides keyed on durable ids, never on labels.
   location, then a scoped re-run of the discussion stage. Today's intake paths
   (`ContentView.swift:1701, 1767, 1848, 2051, 1169-1191`) all treat `.docx` and
   `.txt` as transcripts.
+- **Built 3 Oct 2026 as a preview**: `Tab.discussion` (route
+  `/report/discussion/`, no shared left panel, restores to the top), the rail row
+  last (⌘6, `questionmark.bubble`) behind `BristlenoseFlags.discussionLens`, which a
+  tester switches from Diagnostics ▸ Discussion Lens (Preview). The SPA route opens
+  in dev builds and inside the app (`isEmbedded()`); the app has no address bar, so
+  the flagged row is the only way in. It still reads the synthetic study.
 - **Parking while it is built**: `Tab` case always present; the rail row appended
   behind a flag. `design-feature-flags.md:290-295` recommends an
   `enum FeatureFlags { static var … }`, defaulting off in every configuration —

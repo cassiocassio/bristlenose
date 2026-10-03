@@ -1,11 +1,12 @@
 import Foundation
 
-/// The five top-level navigation tabs in the toolbar segmented control.
+/// The top-level lenses. Five ship; `.discussion` is a parked preview whose rail
+/// row appears only when `BristlenoseFlags.discussionLens` is on (LensItem.lenses).
 ///
 /// Raw values match the keys expected by `window.switchToTab(tab)` in
 /// `frontend/src/shims/navigation.ts`.
 enum Tab: String, CaseIterable, Identifiable {
-    case project, sessions, quotes, codebook, signals
+    case project, sessions, quotes, codebook, signals, discussion
 
     var id: String { rawValue }
 
@@ -17,6 +18,7 @@ enum Tab: String, CaseIterable, Identifiable {
         case .quotes:    "Quotes"
         case .codebook:  "Codebooks"
         case .signals:   "Signals"
+        case .discussion: "Discussion"
         }
     }
 
@@ -50,6 +52,7 @@ enum Tab: String, CaseIterable, Identifiable {
         case .quotes:    "/report/quotes/"
         case .codebook:  "/report/codebook/"
         case .signals:   "/report/signals/"
+        case .discussion: "/report/discussion/"
         }
     }
 
@@ -65,7 +68,10 @@ enum Tab: String, CaseIterable, Identifiable {
     var hasLeftPanel: Bool {
         switch self {
         case .quotes, .codebook, .signals: true
-        case .project, .sessions: false
+        // The Discussion lens carries its own navigator column inside the page
+        // (it widens to 60% of the lens; the shared panel stops at 480px), so
+        // there is no shared panel to toggle. Plan §9 records it as unsettled.
+        case .project, .sessions, .discussion: false
         }
     }
 
@@ -76,6 +82,7 @@ enum Tab: String, CaseIterable, Identifiable {
     /// to avoid swallowing all `/report/...` paths.
     static func from(path: String) -> Tab? {
         if path.hasPrefix("/report/signals")  { return .signals }
+        if path.hasPrefix("/report/discussion") { return .discussion }
         // The lens was renamed on 20 Sep 2026; a bookmarked or embedded
         // old path still has to land somewhere real.
         if path.hasPrefix("/report/analysis") { return .signals }

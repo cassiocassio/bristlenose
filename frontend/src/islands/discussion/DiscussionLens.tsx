@@ -44,6 +44,7 @@ import "./discussion.css";
 
 /** English until Phase 6 moves these to locale keys. */
 const S = {
+  title: "Discussion",
   show: "Show",
   planned: "Planned",
   merged: "Merged",
@@ -134,9 +135,17 @@ export function DiscussionLens() {
       live = false;
     };
   }, []);
-  if (failed) return <p className="bn-empty-state" role="alert">{S.failed}</p>;
-  if (!data) return <p className="bn-empty-state" aria-busy="true">{S.loading}</p>;
-  if (!data.sessions.length) return <p className="bn-empty-state">{S.noSessions}</p>;
+  // Every state carries a titled zone, as Signals' do, so the lens opens at the
+  // same height loading, failed or empty as it does with data (lens template).
+  const shell = (body: React.ReactNode) => (
+    <section>
+      <SectionHeading>{S.title}</SectionHeading>
+      {body}
+    </section>
+  );
+  if (failed) return shell(<p className="bn-empty-state" role="alert">{S.failed}</p>);
+  if (!data) return shell(<p className="bn-empty-state" aria-busy="true">{S.loading}</p>);
+  if (!data.sessions.length) return shell(<p className="bn-empty-state">{S.noSessions}</p>);
   return <DiscussionView data={data} />;
 }
 

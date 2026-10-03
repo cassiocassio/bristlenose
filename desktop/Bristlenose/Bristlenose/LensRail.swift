@@ -17,10 +17,14 @@ struct LensRail: View {
     /// `.disabled(selectedProject == nil || !bridgeHandler.isReady)`. The dimming
     /// *is* the "pick a project first" teaching (spec §3.1).
     let isEnabled: Bool
+    /// Observed so the rail redraws when the Discussion preview is switched on
+    /// or off; `LensItem.all` reads the same key.
+    @AppStorage(BristlenoseFlags.discussionLensKey)
+    private var discussionLens: Bool = false
 
     var body: some View {
         VStack(spacing: 1) {
-            ForEach(LensItem.all) { item in
+            ForEach(LensItem.lenses(discussion: discussionLens)) { item in
                 LensRow(bridgeHandler: bridgeHandler, i18n: i18n, item: item)
             }
         }

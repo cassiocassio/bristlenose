@@ -29,7 +29,17 @@ struct LensItem: Identifiable {
     /// became the only Codebook lens on 31 Aug 2026 and took `tag` back from
     /// the temporary `tag.square` that distinguished the two.
     ///
-    static let all: [LensItem] = {
+    /// Computed, not stored: the Discussion preview row follows its flag, which a
+    /// tester switches from the Diagnostics menu. Views that iterate this observe
+    /// `@AppStorage(BristlenoseFlags.discussionLensKey)` so they redraw on the switch.
+    static var all: [LensItem] {
+        lenses(discussion: BristlenoseFlags.discussionLens())
+    }
+
+    /// The rail for a given flag state — pure, so both states are testable.
+    /// Discussion goes last, after Signals, so the five shipping lenses keep
+    /// ⌘1–⌘5 and it takes ⌘6 (`questionmark.bubble`, chosen 3 Oct 2026).
+    static func lenses(discussion: Bool) -> [LensItem] {
         var lenses: [LensItem] = [
             LensItem(tab: .project,  systemImage: "target"),
             LensItem(tab: .sessions, systemImage: "person.2"),
@@ -37,8 +47,11 @@ struct LensItem: Identifiable {
             LensItem(tab: .codebook, systemImage: "tag"),
         ]
         lenses.append(LensItem(tab: .signals, systemImage: "square.grid.3x3"))
+        if discussion {
+            lenses.append(LensItem(tab: .discussion, systemImage: "questionmark.bubble"))
+        }
         return lenses
-    }()
+    }
 
     /// Icon for `tab`, resolved from `all` so every surface that shows a lens
     /// glyph reads the *same* settled set — the sidebar rail and the View menu's
@@ -46,6 +59,6 @@ struct LensItem: Identifiable {
     /// `LensItemTests`), so the fallback is unreachable; it exists only to keep
     /// the return non-optional at call sites.
     static func systemImage(for tab: Tab) -> String {
-        all.first { $0.tab == tab }?.systemImage ?? "circle"
+        lenses(discussion: true).first { $0.tab == tab }?.systemImage ?? "circle"
     }
 }

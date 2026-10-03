@@ -208,6 +208,20 @@ template work.
 | Quotes | TocSidebar | ✓ | ✓ | – | body |
 | Codebook | CodebookSidebar | – | – | – | body |
 | Analysis | SignalsSidebar | – | – | ✓ | body |
+| Discussion *(dev/flagged preview, 3 Oct 2026)* | own navigator column, ≤60% of the lens | – | – | – | body |
+
+**Discussion is a declared exception, pending a decision (3 Oct 2026).** Its
+navigator is a column inside the page, not the shared left panel, because the
+shared panel stops at 480px and the guide's rows of session badges need up to
+60%; a 56px gutter (`--bn-gutter-left + --bn-space-lg`) between navigator and
+content carries the wires. Consequences recorded by the geometry review the same
+day: its first heading is reached by a lens-private datum selector, its
+navigator's first row is not on the panel datum, the browser keeps the 36px rail
+column, and a sticky bar of lens controls sits above the content in the app
+where the house pattern moves such controls into native chrome. Resolving it
+means hosting the navigator in `SidebarLayout` with a per-lens maximum
+(`SidebarStore`), and moving Planned | Merged and the session picker into the
+native toolbar on the Mac — plan §3, §9.
 
 **Superseded 26 Sep 2026 — there is no `scroll: pane` variant.** Signals
 scrolls the body like every other lens; the inspector is `position: sticky;
@@ -242,6 +256,7 @@ nothing — the h1 has to earn its place by naming the *zone*. They clicked
 | Codebook | "Codes" *(rename pending)* | one zone; h1 + description, the description carries the new info |
 | Sessions | "Sessions" | one zone, titled like every other titled lens — **superseded 6 Aug 2026**, see note below |
 | Project | **none** | dashboard/overview, name's in the titlebar; no titled content zone |
+| Discussion *(preview)* | "Session N" | one zone: the session being read; "Discussion" only while loading or empty |
 
 > **Superseded 6 Aug 2026 (Martin).** Sessions now carries a "Sessions" h1 with the
 > full `.section-heading` treatment, matching Quotes and Analysis. The original

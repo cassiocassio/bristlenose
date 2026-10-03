@@ -377,6 +377,7 @@ function AppShell() {
         if (path.startsWith("/report/sessions")) return "sessions";
         if (path.startsWith("/report/codebook")) return "codebook";
         if (path.startsWith("/report/signals")) return "signals";
+        if (path.startsWith("/report/discussion")) return "discussion";
         return "project";
       },
       getFocusedQuoteId: () => focusedIdBridgeRef.current,

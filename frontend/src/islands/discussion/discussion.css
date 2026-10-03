@@ -83,11 +83,15 @@
     height: calc(100vh - var(--dl-bar-h, 0px));
     overflow-y: auto;
     padding-top: var(--bn-space-sm);
-    padding-bottom: 40vh;
+    padding-bottom: var(--bn-space-xl);   /* the template's page bottom (.center) */
     background: var(--bn-colour-inspector-bg);
     border-right: 1px solid var(--bn-colour-border);
 }
 .dl-nav .toc-heading .badge { margin-left: var(--bn-space-xs); vertical-align: 1px; }
+/* Each section is a labelled group, so every heading is its group's first child
+   and the shipped `.toc-heading:first-child { margin-top: 0 }` matched them all.
+   Give back the shipped 1rem between sections (sidebar.css .toc-heading). */
+.dl-nav [role="group"] + [role="group"] > .toc-heading { margin-top: 1rem; }
 .dl-nav .dl-row { display: flex; gap: var(--bn-space-xs); align-items: baseline; }
 .dl-row-btn {
     flex: 1; min-width: 0; display: flex; gap: var(--bn-space-xs); align-items: baseline;
@@ -142,9 +146,11 @@
     grid-column: 3;
     grid-row: 2;
     min-width: 0;
-    padding: var(--bn-space-md) var(--bn-center-pad-right, var(--bn-gutter-left)) 40vh 0;
+    padding: var(--bn-space-md) var(--bn-center-pad-right, var(--bn-gutter-left)) var(--bn-space-xl) 0;
 }
-.dl-content > section { max-width: var(--bn-max-width); }
+/* The reading width caps the content, never the section: a capped section cuts
+   the heading's full-pane keyline short (Codebook's defect; lens template). */
+.dl-meta, .dl-group, .dl-before { max-width: var(--bn-max-width); }
 /* The bar above is the lens's datum; the first heading sits flush under its pad. */
 .dl-content > section > .section-heading:first-child { margin-top: 0; }
 .dl-meta {
@@ -190,7 +196,7 @@
     .dl-lens { grid-template-columns: minmax(0, 1fr); margin-left: 0; margin-right: 0; }
     .dl-lens .dl-nav, .dl-gut, .dl-bar .dimension-toggle { display: none; }
     .dl-sessions, .dl-content { grid-column: 1; }
-    .dl-content { padding-right: 0; }
+    .dl-content, .dl-sessions { padding-right: 0; }   /* the lens no longer bleeds here */
 }
 @media (prefers-reduced-motion: reduce) {
     .dl-wire { transition: none; }

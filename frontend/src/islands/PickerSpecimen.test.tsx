@@ -2,9 +2,6 @@ import { fireEvent, render, screen } from "@testing-library/react";
 
 import { PickerSpecimen } from "./PickerSpecimen";
 
-vi.mock("../shims/bridge", () => ({ postSearchBadgeStyles: vi.fn() }));
-vi.mock("../utils/badgeStyle", () => ({ probeBadgeStyles: vi.fn(() => ({ tags: {}, people: {} })) }));
-
 const menu = () => document.querySelector(".bn-person-picker") as HTMLElement;
 const items = () => Array.from(menu().querySelectorAll<HTMLElement>(".export-dropdown-item"));
 

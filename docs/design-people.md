@@ -2024,17 +2024,24 @@ tree; the Mac column runs on the calibrated `tokens-desktop.css` ladder). For
 the decision itself use **Diagnostics ▸ Picker Lab** (DEBUG builds,
 `PickerLabView.swift` + `/report/picker-specimen`): the picker in stock AppKit
 in a real `NSPopover` beside the SPA's version on the fronted sidecar, one
-scenario control driving both. The native badges are painted from the styles
-the web half measures off the real `PersonBadge` and posts over
-`search-badge-styles` — the search chips' path — so any badge difference is a
-finding about that bridge. The two gaps found before anyone looked are closed:
-the wire now carries right and bottom padding and the line height (search commit
-"the review's fixes — punctuation, apostrophes, a parked code token, the mac
-clear"), and the painter uses them, so the native name half is no longer ~1.6 px
-short on the right or ~0.5 px short in height. Both halves follow the Sessions switcher's
+scenario control driving both. Both halves follow the Sessions switcher's
 chooser model (`docs/design-sessions-popover-navigation.md` §Interaction): one
 click commits, arrows move the highlight, Return commits, Escape dismisses, and
 the native list is that switcher's table.
+
+**The Mac popover is a hybrid (owner, 3 Oct 2026).** Inside the popover it is a
+pull-down menu — the system menu font in label colour, the menu's own
+checkmark, 24 pt rows (measured from `NSMenu` on macOS 27, the same at both
+sizes; Small only drops the type to 11 pt and the segmented control to 20 pt),
+the source-list capsule — while the person stays the person: the house native
+badge, `SpeakerBadgeView`, the same entity the Sessions switcher draws, in a
+column pinned to the widest code so names line up and a new row's `m3` never
+gives way to what is typed. A menu of full split badges read oddly inside a Mac
+menu; a menu with no badge loses the entity. The web report and the CLI SPA are
+unchanged: the hybrid is the native popover's alone. (An earlier lab painted the
+native badges from styles the web half measured; that path fell back to grey
+text whenever the web half had not posted, so the native half now needs nothing
+from it.)
 
 #### UX iteration 2 — what it is, and what it found
 

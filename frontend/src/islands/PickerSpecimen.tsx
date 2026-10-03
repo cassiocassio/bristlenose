@@ -7,10 +7,9 @@
  * beside an AppKit twin in a real NSPopover; the point of the pair is to judge
  * web against native on the actual rendering, not on a mockup of either.
  *
- * It also measures the real badges (`probeBadgeStyles`) and posts them over
- * the production `search-badge-styles` message, so the native half draws its
- * badges from what this page resolved — the same path the search chips use
- * (docs/design-search.md §7a). Nothing on the native side holds a colour.
+ * The native half draws its person with the house native badge
+ * (`SpeakerBadgeView`), so nothing here is sent across; this page is the
+ * report's own look, unchanged by the native popover's menu hybrid.
  *
  * Route always registered at /report/picker-specimen and lazy-loaded, like
  * /report/specimen; reachable only from the Diagnostics menu. English-only by
@@ -21,9 +20,6 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import { PersonBadge } from "../components/PersonBadge";
-import { useAppearanceSignature } from "../components/NativeSearchSync";
-import { postSearchBadgeStyles } from "../shims/bridge";
-import { probeBadgeStyles } from "../utils/badgeStyle";
 
 type Role = "moderator" | "participant" | "observer";
 interface Person { code: string; name: string }
@@ -120,7 +116,6 @@ export function PickerSpecimen() {
   const [draft, setDraft] = useState("");
   const itemRefs = useRef<Record<string, HTMLElement | null>>({});
   const typed = useRef({ buffer: "", at: 0 });
-  const appearance = useAppearanceSignature(true);
 
   const rowsFor = useCallback(
     (r: Role) => [...people[r].map((p) => p.code), NEW, ...(r === "participant" ? [] : ["me"])],
@@ -135,16 +130,6 @@ export function PickerSpecimen() {
   useEffect(() => {
     if (open) itemRefs.current[selected]?.focus();
   }, [open, selected, role]);
-
-  // Measure the real badges and hand them to the native half.
-  useEffect(() => {
-    const host = document.getElementById("bn-app-root") ?? document.body;
-    const all = Object.values(people).flat();
-    const timer = window.setTimeout(() => {
-      postSearchBadgeStyles(probeBadgeStyles(host, { tags: [], people: all }));
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [people, appearance]);
 
   const choose = (id: string) => {
     if (id === "me") setAnswer({ code: meCode(), name: ME, confirmed: true });

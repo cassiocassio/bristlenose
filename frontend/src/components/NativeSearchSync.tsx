@@ -250,7 +250,7 @@ function appearanceSignature(): string {
 /** Re-renders when the appearance changes: the theme, palette or person-display
  *  attribute on <html>, or the system's light/dark (which the Mac app's web view
  *  follows). */
-export function useAppearanceSignature(enabled: boolean): string {
+function useAppearanceSignature(enabled: boolean): string {
   const [signature, setSignature] = useState(appearanceSignature);
   useEffect(() => {
     if (!enabled) return;

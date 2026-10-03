@@ -1168,12 +1168,12 @@
     "filesHeading": "Bu projedeki dosyalar"
   },
   "discussion": {
-    "notRun": "Bu proje, tart\u0131\u015fma \u00f6zelli\u011fi eklenmeden \u00f6nce analiz edildi. Tart\u0131\u015fma, proje bir sonraki analiz edildi\u011finde olu\u015fturulur; \u00f6rne\u011fin g\u00f6r\u00fc\u015fme ekledi\u011finizde.",
+    "notRun": "Bu proje, tart\u0131\u015fma \u00f6zelli\u011fi eklenmeden \u00f6nce analiz edildi. Olu\u015fturmak i\u00e7in kenar \u00e7ubu\u011funda projenin men\u00fcs\u00fcnden Analiz Et\u2019i se\u00e7in. Tamamlanan ad\u0131mlar yeniden kullan\u0131l\u0131r ve d\u00fczenlemeleriniz korunur.",
     "stale": "Tart\u0131\u015fma olu\u015fturulduktan sonra al\u0131nt\u0131lar de\u011fi\u015fti. Proje bir sonraki analiz edildi\u011finde yeniden olu\u015fturulur.",
     "notBuilt": "Bu projenin tart\u0131\u015fmas\u0131 olu\u015fturulamad\u0131. Proje bir sonraki analiz edildi\u011finde yeniden denenir.",
-    "guideHowTo": "Rehberinizi (Word, Markdown veya d\u00fcz metin) kay\u0131tlar\u0131n\u0131z\u0131n yan\u0131ndaki \u201cDiscussion guide\u201d adl\u0131 bir klas\u00f6re koyun. Proje bir sonraki analiz edildi\u011finde kullan\u0131l\u0131r.",
+    "guideHowTo": "Rehberinizi (Word, Markdown veya d\u00fcz metin) kay\u0131tlar\u0131n\u0131z\u0131n yan\u0131ndaki \u201cDiscussion guide\u201d adl\u0131 bir klas\u00f6re koyun, ard\u0131ndan kenar \u00e7ubu\u011funda projenin men\u00fcs\u00fcnden Analiz Et\u2019i se\u00e7in.",
     "guideProblem": {
-      "unreadable": "Rehberiniz okunamad\u0131. A\u00e7\u0131ld\u0131\u011f\u0131ndan emin olun; proje bir sonraki analiz edildi\u011finde yeniden okunur."
+      "unreadable": "Rehberiniz okunamad\u0131. A\u00e7\u0131ld\u0131\u011f\u0131ndan emin olun, ard\u0131ndan kenar \u00e7ubu\u011funda projenin men\u00fcs\u00fcnden Analiz Et\u2019i se\u00e7in."
     }
   }
 }

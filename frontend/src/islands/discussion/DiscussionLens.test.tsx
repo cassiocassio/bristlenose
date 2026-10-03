@@ -415,10 +415,13 @@ describe("platform and export copy", () => {
     // The app registers the desktop namespace at start-up when <html> says
     // desktop; this test flips the platform after start-up, so register it here.
     i18n.addResourceBundle("en", "desktop", enDesktop, true, true);
-    for (const status of ["not_run", "stale"] as const) {
+    for (const [status, says] of [
+      ["not_run", /choose Analyse from the project’s menu in the sidebar/],
+      ["stale", /next time the project is analysed/],
+    ] as const) {
       serve(status, null);
       const { unmount } = render(<DiscussionLens />);
-      const text = (await screen.findByText(/next time the project is analysed/)).textContent ?? "";
+      const text = (await screen.findByText(says)).textContent ?? "";
       expect(text).not.toMatch(/re-analyse|bristlenose run/i);
       unmount();
     }

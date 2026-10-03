@@ -49,6 +49,15 @@ struct UnanalysedState: Equatable {
     /// published state would move), leaving the pane's count stale.
     let ingestableFileCount: Int
 
+    /// An analysed project whose Discussion lens has nothing to show yet — no
+    /// record (analysed before the lens existed), or a guide folder changed
+    /// after the record was written. Offers **Analyse**, which resumes: only
+    /// the discussion stage runs and nothing the researcher edited is lost.
+    /// Without it the only re-run on the Mac is **Re-analyse…**, which starts
+    /// over (decided 4 Oct 2026). Defaulted so the many test constructions of
+    /// this state stay as they are.
+    var discussionWanted: Bool = false
+
     /// Whether the folder holds anything the pipeline would ingest. Derived, so
     /// the gate and the promised count cannot drift apart.
     var hasIngestableFiles: Bool { ingestableFileCount > 0 }
@@ -297,12 +306,44 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
             missingFiles: missingFiles,
             sessionCount: snapshot.sessionCount,
             totalDurationSeconds: snapshot.totalDurationSeconds,
-            ingestableFileCount: ingestableCount
+            ingestableFileCount: ingestableCount,
+            discussionWanted: (snapshot.sessionCount ?? 0) > 0
+                && Self.discussionWanted(projectRoot: projectURL)
         )
         guard Self.shouldPublish(state, lastPublished: lastPublished) else { return }
         lastPublished = state
         let cb = onChange
         DispatchQueue.main.async { cb(state) }
+    }
+
+    /// The record the Discussion stage writes, and the guide folder beside the
+    /// recordings — both found the way the pipeline finds them
+    /// (`bristlenose/discussion/guide.py`): the output folder if there is one,
+    /// and the guide folder by name, case-blind.
+    nonisolated static func discussionWanted(projectRoot: URL, fileManager: FileManager = .default) -> Bool {
+        let output = projectRoot.appendingPathComponent("bristlenose-output")
+        var isDir: ObjCBool = false
+        let outputDir = fileManager.fileExists(atPath: output.path, isDirectory: &isDir) && isDir.boolValue
+            ? output : projectRoot
+        let record = outputDir.appendingPathComponent(".bristlenose/intermediate/discussion.json")
+        guard let recordDate = modified(record, fileManager) else { return true }
+        guard let entries = try? fileManager.contentsOfDirectory(
+            at: projectRoot, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]),
+              let guide = entries.first(where: { $0.lastPathComponent.lowercased() == "discussion guide" })
+        else { return false }
+        // The folder's own date moves when a file is added or removed; a file's
+        // moves when it is saved in place.
+        var newest = modified(guide, fileManager) ?? .distantPast
+        let inside = (try? fileManager.contentsOfDirectory(
+            at: guide, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
+        for file in inside {
+            if let d = modified(file, fileManager), d > newest { newest = d }
+        }
+        return newest > recordDate
+    }
+
+    private nonisolated static func modified(_ url: URL, _ fileManager: FileManager) -> Date? {
+        (try? fileManager.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date
     }
 
     /// Whether a freshly-computed state is worth publishing.

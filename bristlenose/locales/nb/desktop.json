@@ -1168,12 +1168,12 @@
     "filesHeading": "Filer i dette prosjektet"
   },
   "discussion": {
-    "notRun": "Dette prosjektet ble analysert f\u00f8r diskusjonen fantes. Den lages neste gang prosjektet analyseres, for eksempel n\u00e5r du legger til intervjuer.",
+    "notRun": "Dette prosjektet ble analysert f\u00f8r diskusjonen fantes. Velg Analyser i prosjektets meny i sidepanelet for \u00e5 lage den. Ferdige trinn brukes p\u00e5 nytt, og endringene dine beholdes.",
     "stale": "Sitatene er endret siden diskusjonen ble laget. Den lages p\u00e5 nytt neste gang prosjektet analyseres.",
     "notBuilt": "Kunne ikke lage diskusjonen for dette prosjektet. Det pr\u00f8ves igjen neste gang prosjektet analyseres.",
-    "guideHowTo": "Legg guiden din (Word, Markdown eller ren tekst) i en mappe som heter \u00abDiscussion guide\u00bb ved siden av opptakene. Den brukes neste gang prosjektet analyseres.",
+    "guideHowTo": "Legg guiden din (Word, Markdown eller ren tekst) i en mappe som heter \u00abDiscussion guide\u00bb ved siden av opptakene, og velg Analyser i prosjektets meny i sidepanelet.",
     "guideProblem": {
-      "unreadable": "Kunne ikke lese guiden din. Sjekk at den kan \u00e5pnes; den leses p\u00e5 nytt neste gang prosjektet analyseres."
+      "unreadable": "Kunne ikke lese guiden din. Sjekk at den kan \u00e5pnes, og velg Analyser i prosjektets meny i sidepanelet."
     }
   }
 }

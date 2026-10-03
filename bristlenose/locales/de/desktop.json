@@ -1168,12 +1168,12 @@
     "filesHeading": "Dateien in diesem Projekt"
   },
   "discussion": {
-    "notRun": "Dieses Projekt wurde analysiert, bevor es die Diskussion gab. Sie wird bei der n\u00e4chsten Analyse des Projekts erstellt, zum Beispiel wenn Sie Interviews hinzuf\u00fcgen.",
+    "notRun": "Dieses Projekt wurde analysiert, bevor es die Diskussion gab. W\u00e4hlen Sie zum Erstellen \u201eAnalysieren\u201c im Men\u00fc des Projekts in der Seitenleiste. Abgeschlossene Schritte werden wiederverwendet, und Ihre \u00c4nderungen bleiben erhalten.",
     "stale": "Die Zitate haben sich ge\u00e4ndert, seit die Diskussion erstellt wurde. Sie wird bei der n\u00e4chsten Analyse des Projekts neu erstellt.",
     "notBuilt": "Die Diskussion f\u00fcr dieses Projekt konnte nicht erstellt werden. Bei der n\u00e4chsten Analyse des Projekts wird es erneut versucht.",
-    "guideHowTo": "Legen Sie Ihren Leitfaden (Word, Markdown oder reiner Text) in einen Ordner namens \u201eDiscussion guide\u201c neben Ihren Aufnahmen. Er wird bei der n\u00e4chsten Analyse des Projekts verwendet.",
+    "guideHowTo": "Legen Sie Ihren Leitfaden (Word, Markdown oder reiner Text) in einen Ordner namens \u201eDiscussion guide\u201c neben Ihren Aufnahmen und w\u00e4hlen Sie dann \u201eAnalysieren\u201c im Men\u00fc des Projekts in der Seitenleiste.",
     "guideProblem": {
-      "unreadable": "Ihr Leitfaden konnte nicht gelesen werden. Pr\u00fcfen Sie, ob er sich \u00f6ffnen l\u00e4sst; er wird bei der n\u00e4chsten Analyse des Projekts erneut gelesen."
+      "unreadable": "Ihr Leitfaden konnte nicht gelesen werden. Pr\u00fcfen Sie, ob er sich \u00f6ffnen l\u00e4sst, und w\u00e4hlen Sie dann \u201eAnalysieren\u201c im Men\u00fc des Projekts in der Seitenleiste."
     }
   }
 }

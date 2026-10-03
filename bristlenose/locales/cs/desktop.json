@@ -1228,12 +1228,12 @@
     "filesHeading": "Soubory v tomto projektu"
   },
   "discussion": {
-    "notRun": "Tento projekt byl analyzov\u00e1n d\u0159\u00edve, ne\u017e diskuze existovala. Vytvo\u0159\u00ed se p\u0159i p\u0159\u00ed\u0161t\u00ed anal\u00fdze projektu, nap\u0159\u00edklad kdy\u017e p\u0159id\u00e1te rozhovory.",
+    "notRun": "Tento projekt byl analyzov\u00e1n d\u0159\u00edve, ne\u017e diskuze existovala. Vytvo\u0159\u00edte ji volbou Analyzovat v nab\u00eddce projektu na bo\u010dn\u00edm panelu. Dokon\u010den\u00e9 kroky se pou\u017eij\u00ed znovu a va\u0161e \u00fapravy z\u016fstanou zachov\u00e1ny.",
     "stale": "Cit\u00e1ty se od vytvo\u0159en\u00ed diskuze zm\u011bnily. P\u0159i p\u0159\u00ed\u0161t\u00ed anal\u00fdze projektu se vytvo\u0159\u00ed znovu.",
     "notBuilt": "Diskuzi pro tento projekt se nepoda\u0159ilo vytvo\u0159it. P\u0159i p\u0159\u00ed\u0161t\u00ed anal\u00fdze projektu se to zkus\u00ed znovu.",
-    "guideHowTo": "Ulo\u017ete sc\u00e9n\u00e1\u0159 (Word, Markdown nebo prost\u00fd text) do slo\u017eky s n\u00e1zvem \u201eDiscussion guide\u201c vedle nahr\u00e1vek. Pou\u017eije se p\u0159i p\u0159\u00ed\u0161t\u00ed anal\u00fdze projektu.",
+    "guideHowTo": "Ulo\u017ete sc\u00e9n\u00e1\u0159 (Word, Markdown nebo prost\u00fd text) do slo\u017eky s n\u00e1zvem \u201eDiscussion guide\u201c vedle nahr\u00e1vek a v nab\u00eddce projektu na bo\u010dn\u00edm panelu zvolte Analyzovat.",
     "guideProblem": {
-      "unreadable": "V\u00e1\u0161 sc\u00e9n\u00e1\u0159 se nepoda\u0159ilo p\u0159e\u010d\u00edst. Ov\u011b\u0159te, \u017ee se otev\u0159e; p\u0159i p\u0159\u00ed\u0161t\u00ed anal\u00fdze projektu se na\u010dte znovu."
+      "unreadable": "V\u00e1\u0161 sc\u00e9n\u00e1\u0159 se nepoda\u0159ilo p\u0159e\u010d\u00edst. Ov\u011b\u0159te, \u017ee se otev\u0159e, a v nab\u00eddce projektu na bo\u010dn\u00edm panelu zvolte Analyzovat."
     }
   }
 }

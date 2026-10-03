@@ -1168,12 +1168,12 @@
     "filesHeading": "Filer i dette projekt"
   },
   "discussion": {
-    "notRun": "Dette projekt blev analyseret, f\u00f8r diskussionen fandtes. Den oprettes, n\u00e6ste gang projektet analyseres, for eksempel n\u00e5r du tilf\u00f8jer interviews.",
+    "notRun": "Dette projekt blev analyseret, f\u00f8r diskussionen fandtes. V\u00e6lg Analys\u00e9r i projektets menu i indholdsoversigten for at oprette den. F\u00e6rdige trin genbruges, og dine \u00e6ndringer bevares.",
     "stale": "Citaterne er \u00e6ndret, siden diskussionen blev oprettet. Den oprettes p\u00e5 ny, n\u00e6ste gang projektet analyseres.",
     "notBuilt": "Diskussionen for dette projekt kunne ikke oprettes. Der pr\u00f8ves igen, n\u00e6ste gang projektet analyseres.",
-    "guideHowTo": "L\u00e6g din guide (Word, Markdown eller almindelig tekst) i en mappe med navnet \u201cDiscussion guide\u201d ved siden af dine optagelser. Den bruges, n\u00e6ste gang projektet analyseres.",
+    "guideHowTo": "L\u00e6g din guide (Word, Markdown eller almindelig tekst) i en mappe med navnet \u201cDiscussion guide\u201d ved siden af dine optagelser, og v\u00e6lg Analys\u00e9r i projektets menu i indholdsoversigten.",
     "guideProblem": {
-      "unreadable": "Din guide kunne ikke l\u00e6ses. Kontroll\u00e9r, at den kan \u00e5bnes; den l\u00e6ses igen, n\u00e6ste gang projektet analyseres."
+      "unreadable": "Din guide kunne ikke l\u00e6ses. Kontroll\u00e9r, at den kan \u00e5bnes, og v\u00e6lg Analys\u00e9r i projektets menu i indholdsoversigten."
     }
   }
 }

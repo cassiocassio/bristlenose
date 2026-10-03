@@ -2327,8 +2327,12 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// click, wrongly hiding one leaves them with no way forward at all.
     nonisolated static func hasWorkToDo(_ data: UnanalysedState?) -> Bool {
         guard let data else { return true }
-        guard data.hasIngestableFiles else { return false }
         let alreadyAnalysed = (data.sessionCount ?? 0) > 0
+        // Before the top-level-files guard: an analysed project whose recordings
+        // sit in a subfolder has no top-level files, and still has a discussion
+        // to build. The run resumes, so nothing else is redone.
+        if alreadyAnalysed && data.discussionWanted { return true }
+        guard data.hasIngestableFiles else { return false }
         return !alreadyAnalysed || !data.newFiles.isEmpty
     }
 

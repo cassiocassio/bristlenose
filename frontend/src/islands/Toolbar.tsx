@@ -16,10 +16,9 @@ import { useTranslation } from "react-i18next";
 import { SearchBox } from "../components/SearchBox";
 import { ViewSwitcher } from "../components/ViewSwitcher";
 import { ToolbarButton } from "../components/ToolbarButton";
-import { useQuotesStore, setSearchQuery, setViewMode } from "../contexts/QuotesContext";
+import { filterStateOf, useQuotesStore, setSearchQuery, setViewMode } from "../contexts/QuotesContext";
 import { useFocusMode, toggleFocusMode } from "../contexts/FocusModeStore";
 import { filterQuotes } from "../utils/filter";
-import type { FilterState } from "../utils/filter";
 import { isEmbedded } from "../utils/embedded";
 import { isActiveQuery } from "../utils/searchMatch";
 
@@ -32,17 +31,7 @@ export function Toolbar() {
 
   // ── Derived state ─────────────────────────────────────────────────
 
-  const filterState: FilterState = useMemo(
-    () => ({
-      searchQuery: store.searchQuery,
-      viewMode: store.viewMode,
-      tagFilter: store.tagFilter,
-      hidden: store.hidden,
-      starred: store.starred,
-      tags: store.tags,
-    }),
-    [store.searchQuery, store.viewMode, store.tagFilter, store.hidden, store.starred, store.tags],
-  );
+  const filterState = filterStateOf(store);
 
   const visibleCount = useMemo(
     () => filterQuotes(store.quotes, filterState).length,
@@ -51,11 +40,11 @@ export function Toolbar() {
 
   // View switcher label (matches vanilla: shows count when filtered)
   const viewLabel = useMemo(() => {
-    if (isActiveQuery(store.searchQuery)) {
+    if (isActiveQuery(store.searchQuery) || store.searchTokens.length > 0) {
       return t("toolbar.matching", { count: visibleCount });
     }
     return undefined; // default label from ViewSwitcher
-  }, [store.searchQuery, visibleCount, t]);
+  }, [store.searchQuery, store.searchTokens, visibleCount, t]);
 
   // ── Render ────────────────────────────────────────────────────────
 

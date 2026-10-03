@@ -23,6 +23,8 @@ export interface SuggestSource {
   quotes: QuoteResponse[];
   /** The store's per-quote tags (QuotesStore.tags); falls back to `quote.tags`. */
   tags?: Record<string, TagResponse[]>;
+  /** The store's text edits (QuotesStore.edits), made this session or loaded. */
+  edits?: Record<string, string>;
   /** The project's people, keyed by speaker code (GET /people). */
   people?: Record<string, SearchPerson>;
   /** Quotes the researcher can see before this query. Default: all of them. */
@@ -50,13 +52,19 @@ export function quoteTags(q: QuoteResponse, tags?: Record<string, TagResponse[]>
   return tags?.[q.dom_id] ?? q.tags;
 }
 
+/** The text a researcher sees on the card: their edit if any, else the original. */
+export function quoteDisplayText(q: QuoteResponse, edits?: Record<string, string>): string {
+  return edits?.[q.dom_id] ?? q.edited_text ?? q.text;
+}
+
 /** The fields free text is matched against (spec §3.4). */
 export function quoteSearchFields(
   q: QuoteResponse,
   tags?: Record<string, TagResponse[]>,
+  edits?: Record<string, string>,
 ): string[] {
   return [
-    q.edited_text ?? q.text,
+    quoteDisplayText(q, edits),
     q.speaker_name,
     ...quoteTags(q, tags).map((t) => t.name),
     q.sentiment ?? "",
@@ -67,8 +75,9 @@ export function quoteMatches(
   q: QuoteResponse,
   terms: SearchTerm[],
   tags?: Record<string, TagResponse[]>,
+  edits?: Record<string, string>,
 ): boolean {
-  return matchesAll(quoteSearchFields(q, tags), terms);
+  return matchesAll(quoteSearchFields(q, tags, edits), terms);
 }
 
 // ── Suggest ─────────────────────────────────────────────────────────────
@@ -93,7 +102,7 @@ export function suggest(
   // Free text: only once the query is long enough to filter by.
   if (isActiveQuery(query)) {
     let count = 0;
-    for (const q of visible) if (quoteMatches(q, terms, source.tags)) count++;
+    for (const q of visible) if (quoteMatches(q, terms, source.tags, source.edits)) count++;
     out.push({ kind: "text", id: "text", query, count });
   }
 

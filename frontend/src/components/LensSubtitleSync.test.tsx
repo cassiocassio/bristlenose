@@ -1,5 +1,15 @@
-import { describe, expect, it } from "vitest";
-import { tabFromPath } from "./LensSubtitleSync";
+import { describe, expect, it, vi } from "vitest";
+import { render, waitFor, act } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { LensSubtitleSync, tabFromPath } from "./LensSubtitleSync";
+import { addSearchToken, initFromQuotes, resetStore } from "../contexts/QuotesContext";
+import { personToken } from "../utils/searchTokens";
+import { quotesSubtitle } from "../utils/lensSubtitle";
+import type { QuoteResponse } from "../utils/types";
+
+vi.mock("../utils/api", () => ({
+  getCodebook: vi.fn().mockResolvedValue({ groups: [], ungrouped: [], all_tag_names: [] }),
+}));
 
 /**
  * The tag this returns is matched against the Swift `Tab` rawValue before the
@@ -36,5 +46,28 @@ describe("tabFromPath — longest prefix first", () => {
     expect(tabFromPath("/report/quotes")).toBe("quotes");
     expect(tabFromPath("/report/signals")).toBe("signals");
     expect(tabFromPath("/report/sessions")).toBe("sessions");
+  });
+});
+
+describe("the Quotes subtitle counts what the filters leave", () => {
+  const q = (dom_id: string, participant_id: string) =>
+    ({
+      dom_id, participant_id, text: "x", verbatim_excerpt: "x", session_id: "s1", speaker_name: participant_id,
+      start_timecode: 0, end_timecode: 1, sentiment: null, intensity: 1, researcher_context: null,
+      quote_type: "section", topic_label: "", is_starred: false, is_hidden: false, edited_text: null,
+      tags: [], deleted_badges: [], proposed_tags: [], segment_index: 0,
+    }) as QuoteResponse;
+
+  it("narrows with a search token", async () => {
+    resetStore();
+    initFromQuotes([q("a", "p1"), q("b", "p2"), q("c", "p2")]);
+    render(
+      <MemoryRouter initialEntries={["/report/quotes"]}>
+        <LensSubtitleSync />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(document.title).toBe(quotesSubtitle(3)));
+    act(() => addSearchToken(personToken("p2")));
+    await waitFor(() => expect(document.title).toBe(quotesSubtitle(2)));
   });
 });

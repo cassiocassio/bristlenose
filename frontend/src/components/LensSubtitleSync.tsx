@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 
 import { useSignalStore } from "../contexts/SignalStore";
-import { useQuotesStore } from "../contexts/QuotesContext";
+import { filterStateOf, useQuotesStore } from "../contexts/QuotesContext";
 import { postLensSubtitle, postQuotesFilter } from "../shims/bridge";
 import { getCodebook } from "../utils/api";
 import { isEmbedded } from "../utils/embedded";
@@ -72,14 +72,7 @@ export function LensSubtitleSync(): null {
   useEffect(() => {
     let subtitle = "";
     if (tab === "quotes") {
-      const visible = filterQuotes(store.quotes, {
-        searchQuery: store.searchQuery,
-        viewMode: store.viewMode,
-        tagFilter: store.tagFilter,
-        hidden: store.hidden,
-        starred: store.starred,
-        tags: store.tags,
-      }).length;
+      const visible = filterQuotes(store.quotes, filterStateOf(store)).length;
       subtitle = quotesSubtitle(visible, store.viewMode === "starred");
     } else if (tab === "signals") {
       subtitle = signalsSubtitle(signals.signals.length);

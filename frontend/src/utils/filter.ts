@@ -8,6 +8,7 @@
 
 import { isActiveQuery, parseQuery, type SearchTerm } from "./searchMatch";
 import { quoteMatches } from "./searchSuggest";
+import { tokenHighlightTerms, tokenMatches, type SearchToken } from "./searchTokens";
 import type { QuoteResponse, TagResponse } from "./types";
 
 export interface TagFilterState {
@@ -27,12 +28,16 @@ export const EMPTY_TAG_FILTER: TagFilterState = {
 
 export interface FilterState {
   searchQuery: string;
+  /** Person and tag tokens in the search field, AND-ed with the text. */
+  searchTokens: SearchToken[];
   viewMode: "all" | "starred";
   tagFilter: TagFilterState;
   /** Store maps for current state (hidden, starred, tags). */
   hidden: Record<string, boolean>;
   starred: Record<string, boolean>;
   tags: Record<string, TagResponse[]>;
+  /** Text edits (QuotesStore.edits): search reads what the card shows. */
+  edits: Record<string, string>;
 }
 
 /**
@@ -45,6 +50,8 @@ export interface FilterState {
  * 4. Search query: every typed word must start a word in the quote text,
  *    speaker name, tag names or sentiment (docs/design-search.md §3; active
  *    from 2 characters)
+ * 5. Search tokens: every person and tag token must let the quote through
+ *    under its current meaning (docs/design-search.md §5)
  */
 export function isQuoteVisible(q: QuoteResponse, f: FilterState): boolean {
   // 1. Hidden quotes are always excluded
@@ -58,7 +65,10 @@ export function isQuoteVisible(q: QuoteResponse, f: FilterState): boolean {
 
   // 4. Search filter
   const terms = activeTerms(f.searchQuery);
-  if (terms && !quoteMatches(q, terms, f.tags)) return false;
+  if (terms && !quoteMatches(q, terms, f.tags, f.edits)) return false;
+
+  // 5. Search tokens
+  for (const token of f.searchTokens) if (!tokenMatches(q, token, f.tags, f.edits)) return false;
 
   return true;
 }
@@ -109,4 +119,22 @@ function activeTerms(query: string): SearchTerm[] | null {
     lastTerms = isActiveQuery(query) ? parseQuery(query) : null;
   }
   return lastTerms;
+}
+
+// ── Highlighting ─────────────────────────────────────────────────────────
+
+// One array per filter state, so every card gets the same reference.
+const highlightCache = new WeakMap<FilterState, SearchTerm[]>();
+
+/**
+ * What to mark in quote text: the typed words, plus the names a "mentions"
+ * token found and the tag name a "text contains" token found.
+ */
+export function highlightTermsOf(f: FilterState): SearchTerm[] {
+  let terms = highlightCache.get(f);
+  if (!terms) {
+    terms = [...(activeTerms(f.searchQuery) ?? []), ...f.searchTokens.flatMap(tokenHighlightTerms)];
+    highlightCache.set(f, terms);
+  }
+  return terms;
 }

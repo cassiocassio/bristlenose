@@ -1,6 +1,7 @@
 import { render, fireEvent, act } from "@testing-library/react";
 import { Toolbar } from "./Toolbar";
-import { initFromQuotes, resetStore } from "../contexts/QuotesContext";
+import { addSearchToken, initFromQuotes, resetStore } from "../contexts/QuotesContext";
+import { personToken } from "../utils/searchTokens";
 import { _resetEmbeddedCache } from "../utils/embedded";
 import type { QuoteResponse } from "../utils/types";
 
@@ -121,6 +122,16 @@ describe("Toolbar", () => {
     fireEvent.change(getByTestId("bn-toolbar-search-input"), { target: { value: "us" } });
     act(() => vi.advanceTimersByTime(150));
     expect(label()).toContain("1 matching");
+  });
+
+  it("shows the matching count when only tokens are narrowing", () => {
+    initFromQuotes([
+      makeQuote({ dom_id: "q-1", participant_id: "p1" }),
+      makeQuote({ dom_id: "q-2", participant_id: "p2" }),
+    ]);
+    const { getByTestId } = render(<Toolbar />);
+    act(() => addSearchToken(personToken("p2")));
+    expect(getByTestId("bn-toolbar-view-switcher-btn").textContent).toContain("1 matching");
   });
 
   it("view switcher changes mode", () => {

@@ -16,7 +16,10 @@ import {
   setViewMode,
   setTagFilter,
   toggleStar,
+  addSearchToken,
+  commitEdit,
 } from "../contexts/QuotesContext";
+import { personToken, tagToken } from "../utils/searchTokens";
 
 vi.mock("../utils/api", () => ({
   apiGet: vi.fn(),
@@ -230,6 +233,36 @@ describe("Toolbar → Store → Quote Islands integration", () => {
       expect(screen.queryByText(/onboarding was really smooth/i)).not.toBeInTheDocument();
       const marks = [...document.querySelectorAll("mark.search-mark")].map((m) => m.textContent);
       expect(marks).toEqual(["navigation"]);
+    });
+  });
+
+  it("a 'text contains' token keeps the quotes that say it and marks the words", async () => {
+    render(<QuoteSections projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getByText(/onboarding was really smooth/i)).toBeInTheDocument();
+    });
+
+    act(() => addSearchToken({ ...tagToken({ name: "navigation" }), mode: "contains" }));
+    await waitFor(() => {
+      expect(screen.queryByText(/onboarding was really smooth/i)).not.toBeInTheDocument();
+      const marks = [...document.querySelectorAll("mark.search-mark")].map((m) => m.textContent);
+      expect(marks).toEqual(["navigation"]);
+    });
+  });
+
+  it("a 'mentions' token keeps the quotes that name the person, read from a fresh edit, and marks the name", async () => {
+    render(<QuoteSections projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getByText(/onboarding was really smooth/i)).toBeInTheDocument();
+    });
+
+    act(() => commitEdit("q-P1-10", "Bob showed me where onboarding starts"));
+    const bob = personToken("P2", { full_name: "Bob Ames", short_name: "Bob" });
+    act(() => addSearchToken({ ...bob, mode: "mentions" }));
+    await waitFor(() => {
+      expect(screen.queryByText(/confused by the navigation/i)).not.toBeInTheDocument();
+      const marks = [...document.querySelectorAll("mark.search-mark")].map((m) => m.textContent);
+      expect(marks).toEqual(["Bob"]);
     });
   });
 

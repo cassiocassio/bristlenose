@@ -44,6 +44,7 @@ import {
   starActionIsUnstar,
 } from "../contexts/QuotesContext";
 import { useSidebarStore, toggleTagGroupHidden } from "../contexts/SidebarStore";
+import type { SearchTerm } from "../utils/searchMatch";
 
 // ── Icons ───────────────────────────────────────────────────────────────
 
@@ -178,8 +179,8 @@ interface QuoteGroupProps {
   transcriptCache?: TranscriptCache;
   /** Whether any session in this project has a moderator speaker. */
   hasModerator: boolean;
-  /** Current search query — passed to QuoteCard for highlighting. */
-  searchQuery?: string;
+  /** What QuoteCard marks in quote text (`highlightTermsOf`, utils/filter.ts). */
+  highlight?: SearchTerm[];
 }
 
 export function QuoteGroup({
@@ -200,7 +201,7 @@ export function QuoteGroup({
   hasMedia,
   transcriptCache,
   hasModerator,
-  searchQuery,
+  highlight,
 }: QuoteGroupProps) {
   const { t } = useTranslation();
   // ── Shared quote state ─────────────────────────────────────────────────
@@ -1010,7 +1011,7 @@ export function QuoteGroup({
               onQuoteHoverLeave={handleQuoteHoverLeave}
               onPillHoverEnter={handlePillHoverEnter}
               onPillHoverLeave={handlePillHoverLeave}
-              searchQuery={searchQuery}
+              highlight={highlight}
             />
           );
         })}

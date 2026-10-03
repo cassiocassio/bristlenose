@@ -15,9 +15,8 @@ import { useDropdown } from "../hooks/useDropdown";
 import { useMenuKeyboard } from "../hooks/useMenuKeyboard";
 import { useProjectId } from "../hooks/useProjectId";
 import { useFocus } from "../contexts/FocusContext";
-import { useQuotesStore } from "../contexts/QuotesContext";
+import { filterStateOf, useQuotesStore } from "../contexts/QuotesContext";
 import { filterQuotes } from "../utils/filter";
-import type { FilterState } from "../utils/filter";
 import {
   copyQuotesToClipboard,
   saveQuotesSpreadsheet,
@@ -84,17 +83,7 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
   const store = useQuotesStore();
   const { selectedIds } = useFocus();
 
-  const filterState: FilterState = useMemo(
-    () => ({
-      searchQuery: store.searchQuery,
-      viewMode: store.viewMode,
-      tagFilter: store.tagFilter,
-      hidden: store.hidden,
-      starred: store.starred,
-      tags: store.tags,
-    }),
-    [store.searchQuery, store.viewMode, store.tagFilter, store.hidden, store.starred, store.tags],
-  );
+  const filterState = filterStateOf(store);
 
   const visibleQuotes = useMemo(
     () => (onQuotes ? filterQuotes(store.quotes, filterState) : []),

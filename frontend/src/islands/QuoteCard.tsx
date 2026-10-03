@@ -32,7 +32,8 @@ import { getTagBg } from "../utils/colours";
 import { isExportMode } from "../utils/exportData";
 import { reportHref } from "../utils/reportHref";
 import { featureFlags } from "../utils/featureFlags";
-import { highlightText } from "../utils/highlight";
+import { highlightTerms } from "../utils/highlight";
+import type { SearchTerm } from "../utils/searchMatch";
 import { useCropEdit } from "../hooks/useCropEdit";
 import { useFocus, useQuoteFocusState } from "../contexts/FocusContext";
 
@@ -132,8 +133,9 @@ interface QuoteCardProps {
   onQuoteHoverLeave: (domId: string) => void;
   onPillHoverEnter: (domId: string) => void;
   onPillHoverLeave: (domId: string) => void;
-  /** Current search query — used for highlighting matching text. */
-  searchQuery?: string;
+  /** What to mark in the quote text: the typed words plus what a "mentions" or
+   *  "text contains" token found (`highlightTermsOf`, utils/filter.ts). */
+  highlight?: SearchTerm[];
 }
 
 export function QuoteCard({
@@ -179,7 +181,7 @@ export function QuoteCard({
   exhaustedBelow,
   contextAbove,
   contextBelow,
-  searchQuery,
+  highlight,
 }: QuoteCardProps) {
   const { t } = useTranslation();
   const [isTagInputOpen, setIsTagInputOpen] = useState(false);
@@ -595,7 +597,7 @@ export function QuoteCard({
         data-edit-key={`${domId}:text`}
       >
         {crop.hasLeftCrop && <span className="crop-ellipsis">{"\u2026"}</span>}
-        {searchQuery ? highlightText(displayText, searchQuery) : displayText}
+        {highlight ? highlightTerms(displayText, highlight) : displayText}
         {crop.hasRightCrop && <span className="crop-ellipsis">{"\u2026"}</span>}
       </span>
     );

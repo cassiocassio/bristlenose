@@ -63,6 +63,7 @@ const EN = [
   "The {t} page kept losing what I’d entered.",
   "If they’d said up front about {t} I’d have been fine.",
   "I liked that the {t} information was right there.",
+  "I agree with {who} about the {t}, it was confusing.",
 ];
 const BY_LANG: Record<string, string[]> = {
   es: ["No sabía si la entrega costaba más.", "El montaje fue más difícil de lo que pensé."],
@@ -116,9 +117,12 @@ export function syntheticProject(options: SyntheticOptions = {}): SyntheticProje
     const who = CAST[castIndex];
     for (let k = 0; k < perSession; k++) {
       const topic = pick(TOPICS);
+      // "{who}" names another English-speaking cast member, so a "mentions"
+      // token has something real to find.
+      const other = pick(CAST.filter((c, i) => c.lang === "en" && i !== castIndex));
       const text =
         who.lang === "en" || rand() < 0.3
-          ? pick(EN).replace("{t}", topic)
+          ? pick(EN).replace("{t}", topic).replace("{who}", other.short)
           : pick(BY_LANG[who.lang]);
       const quoteTags: TagResponse[] = [];
       const n = Math.floor(rand() * 3); // 0–2 tags

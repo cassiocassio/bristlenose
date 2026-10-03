@@ -62,6 +62,7 @@ import { toggleInspector, useInspectorStore } from "../contexts/InspectorStore";
 import { panelFit, useSidebarStore, wantedWidth } from "../contexts/SidebarStore";
 import {
   setSearchQuery,
+  clearSearchTokens,
   setViewMode,
   setTagFilter,
   getQuotesSnapshot,
@@ -564,8 +565,9 @@ function AppShell() {
           break;
         }
         case "allQuotes":
-          // Explicit "All Quotes" command — full reset (search + tags + mode).
+          // Explicit "All Quotes" command — full reset (search + tokens + tags + mode).
           setSearchQuery("");
+          clearSearchTokens();
           setTagFilter(EMPTY_TAG_FILTER);
           setViewMode("all");
           break;

@@ -17,6 +17,8 @@ vi.mock("../contexts/QuotesContext", () => ({
     tags: {},
     quotes: [{ dom_id: "q1" }],
   }),
+  // filterQuotes is mocked to pass everything through, so the state's shape is moot.
+  filterStateOf: () => ({}),
 }));
 vi.mock("../utils/filter", () => ({ filterQuotes: (qs: unknown[]) => qs }));
 vi.mock("../utils/exportActions", () => ({

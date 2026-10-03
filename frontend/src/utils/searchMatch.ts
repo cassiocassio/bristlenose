@@ -37,6 +37,8 @@ const WORD_CHAR = /[\p{L}\p{N}\p{M}]/u;
 const ACCENTED_SCRIPT = /[\p{Script=Latin}\p{Script=Greek}\p{Script=Cyrillic}\p{Script=Arabic}\p{Script=Hebrew}]/u;
 /** Scripts written without spaces between words: a term may match mid-word. */
 const UNSPACED = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}]/u;
+/** Korean: particles attach to the word they follow, so a name ends mid-"word". */
+const HANGUL = /\p{Script=Hangul}/u;
 /** Scripts where one character is already a word. */
 const ONE_CHAR_WORD = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u;
 const QUOTE_MARKS = /["\u201C\u201D\u201E\u00AB\u00BB\u300C\u300D]/gu;
@@ -128,6 +130,8 @@ export interface SearchTerm {
   text: string;
   /** True when the term may match mid-word (unspaced scripts). */
   anywhere: boolean;
+  /** True when the term must also END at a word boundary (see wholeWordsTerm). */
+  whole?: boolean;
 }
 
 const OPEN_QUOTES = new Set(['"', "“", "”", "„", "«", "»", "「", "」"]);
@@ -166,6 +170,20 @@ export function parseQuery(query: string): SearchTerm[] {
 
 function makeTerm(kind: "word" | "phrase", text: string): SearchTerm {
   return { kind, text, anywhere: kind === "phrase" || UNSPACED.test(text) };
+}
+
+/**
+ * A term for a known name or label, matched as whole words: "Tom" finds
+ * "Tom said" and "Tom's", never "Tomorrow". Used by the tokens that look for a
+ * person's name or a tag's name in quote text (docs/design-search.md §5).
+ * Unspaced scripts match anywhere; Korean need not end at a word boundary,
+ * because a particle follows the name directly (김민지가).
+ */
+export function wholeWordsTerm(text: string): SearchTerm | null {
+  const folded = fold(text).trim();
+  if (!folded) return null;
+  const unspaced = UNSPACED.test(folded);
+  return { kind: "phrase", text: folded, anywhere: unspaced, whole: !unspaced && !HANGUL.test(folded) };
 }
 
 /**
@@ -213,7 +231,8 @@ function termPositions(folded: string, term: SearchTerm): number[] {
     // A kept combining mark belongs to the letter before it: "ハ" must not
     // match the first half of "パ".
     const splitsLetter = end < folded.length && MARK.test(folded[end]);
-    if ((term.anywhere || isWordStart(folded, at)) && !splitsLetter) out.push(at);
+    const endsWord = !term.whole || end === folded.length || !WORD_CHAR.test(folded[end]);
+    if ((term.anywhere || isWordStart(folded, at)) && !splitsLetter && endsWord) out.push(at);
     from = at + 1;
   }
   return out;

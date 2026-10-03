@@ -153,16 +153,22 @@ type SearchToken =
 | Token | Meaning | A quote passes when |
 |---|---|---|
 | Person | **Said by** (default) | its `participant_id` is the code |
-| Person | **Mentions** | its text contains one of the person's names as a phrase (§3). Disabled in the menu when the person has no name, only a code. |
+| Person | **Mentions** | its text contains one of the person's names as **whole words**: *Tom* finds *Tom said* and *Tom's*, never *Tomorrow*. Korean may be followed directly by a particle (*김민지가*); Chinese and Japanese match anywhere. Disabled in the menu when the person has no name, only a code. |
 | Person | **Not** | its `participant_id` is not the code |
 | Tag | **Tagged** (default) | it carries the tag (store edits included) |
-| Tag | **Text contains** | its text contains the tag name as a phrase |
+| Tag | **Text contains** | its text contains the tag name as whole words (*price*, not *pricey*) |
 | Tag | **Not tagged** | it does not carry the tag |
 
 - **A token is the real badge inside a light container**: the meaning word
   (*said by*, *mentions*, *not*, *tagged*, *contains*, *not tagged*), then the
   badge exactly as it appears on a quote card, then a ▾ disclosure. Only the
   container and the word are new; the badge is not restyled (§7a).
+- **Text means what the card shows**: the researcher's edit if there is one,
+  including one made this session (QuotesStore `edits`), for typed words,
+  *mentions* and *text contains* alike.
+- **A token is addressed by its person or tag, never its position**, so a
+  meaning menu left open on one token can't act on another after the list
+  changes under it.
 - Tokens and free text combine with **AND**. Tokens sit before the free text,
   as in Mail.
 - Tokens apply **on top of** hidden, starred and the tag sidebar. They never
@@ -329,10 +335,10 @@ Each phase ends green and committed.
 | Phase | Work | Exit check |
 |---|---|---|
 | **P1 Matcher** | `searchMatch.ts`, contract fixture, `highlight.tsx` and `filter.ts` switched to it | vitest green; every shipped search behaviour still covered, the D4 change asserted. **Done 3 Oct 2026**: matcher and fixture (53 matching cases, 15 activation cases), then the Quotes filter, highlights, the "N matching" label, the search box and ⌘E (sends its selection as a quoted phrase) switched to it. A test pins that the search menu's count equals the list a researcher gets on ↩, with hidden, starred and store tag edits in play |
-| **P2 Tokens** | token types + predicates; `searchTokens` in QuotesStore with add/remove/set-mode actions; **one** `filterStateOf(store)` replacing the six hand-built `FilterState`s (Toolbar, QuoteSections, QuoteThemes, ExportDropdown, LensSubtitleSync, `getVisibleQuotes`); highlight of mentions/contains | exports and subtitle counts honour tokens (asserted) |
+| **P2 Tokens** | token types + predicates; `searchTokens` in QuotesStore with add/remove/set-mode actions; **one** `filterStateOf(store)` replacing the six hand-built `FilterState`s (Toolbar, QuoteSections, QuoteThemes, ExportDropdown, LensSubtitleSync, `getVisibleQuotes`); highlight of mentions/contains | exports and subtitle counts honour tokens (asserted). **Done 3 Oct 2026**, headless (no way to add a token from the screen until P4): `utils/searchTokens.ts`; `filterStateOf` is referentially stable, so it sits in dependency lists as itself and a new filter (a token, a filter-menu row) is added once; the quote cards take parsed `highlight` terms instead of the raw query. Asserted: the web Export menu's scope, the native counts (`getVisibleQuotes`), the window subtitle and the "N matching" label all narrow with tokens; said-by/not and tagged/not-tagged partition a synthetic project exactly; mentions and contains agree with an independently written whole-word check |
 | **P3 Recognisers** | `searchSuggest.ts`, pure; people from `getPeople()` (embedded in the export) | unit tests. **Done 3 Oct 2026**, headless: rule tests on a hand-built project, invariants and an independently written matcher over the seeded synthetic project (`searchSynthetic.ts`), and a 10,000-quote scale test (2–8 ms a keystroke warm, 17 ms cold, on an M-series Mac) |
-| **P4 Browser UI** | combobox, rows, chips, meaning menus; CSS in `bristlenose/theme/molecules/search.css`; locale keys ×21 | vitest; `check-locales.py --strict`; browser QA |
-| **P5 Mac** | bridge messages; `BadgeStyle` probe in the SPA; native badge views painted from it; native chips and popover with lens SF Symbols; Swift tests incl. the badge snapshot (§7a) | `desktop/scripts/test-swift.sh`; `.app` QA side by side with the card badge, both palettes and schemes |
+| **P4 Browser UI** | combobox, rows, chips, meaning menus; CSS in `bristlenose/theme/molecules/search.css`; locale keys ×21. **Owed from P2:** Esc must reach tokens (`useKeyboardShortcuts`' `clearSearch` returns false when the query is empty, so it never clears them), and the ⓧ decision (§12 Q2) | vitest; `check-locales.py --strict`; browser QA |
+| **P5 Mac** | **owed from P2:** `postQuotesFilter` sends only the query, so until tokens cross the bridge a token-narrowed list would sit under an empty native field; bridge messages; `BadgeStyle` probe in the SPA; native badge views painted from it; native chips and popover with lens SF Symbols; Swift tests incl. the badge snapshot (§7a) | `desktop/scripts/test-swift.sh`; `.app` QA side by side with the card badge, both palettes and schemes |
 | **P6 Docs** | true `design-html-report.md`'s search section and `platform-text-map.md`; set this doc's status to shipped | — |
 
 ## 12. Open questions
@@ -353,3 +359,11 @@ Each phase ends green and committed.
    SPA computes the order once and both the browser and the native menu draw
    it, so the two surfaces agree. Pass the UI locale explicitly if the order
    must not depend on the machine.
+7. **Short names that are ordinary words** (*Will*, *Grace*, *Mark*, *May*):
+   *mentions* matches them as whole words, so "I will" counts as mentioning
+   Will. The highlight shows why each quote matched. The alternative, using
+   only the full name when the short name is a dictionary word, would miss
+   "Will said".
+8. **Tokens and a refetch.** `initFromQuotes(…, replace)` resets the store, so
+   a re-analyse refetch clears tokens along with the query. A token costs
+   more to rebuild than a typed word; decide whether it should survive.

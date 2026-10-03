@@ -21,6 +21,15 @@ import type {
   ThemeResponse,
 } from "../utils/types";
 import type { TagFilterState, FilterState } from "../utils/filter";
+import {
+  canMention,
+  PERSON_MODES,
+  sameSubject,
+  TAG_MODES,
+  type PersonMode,
+  type SearchToken,
+  type TagMode,
+} from "../utils/searchTokens";
 import { EMPTY_TAG_FILTER, filterQuotes } from "../utils/filter";
 import {
   putHidden,
@@ -66,6 +75,8 @@ export interface QuotesState {
   viewMode: "all" | "starred";
   /** Current search query, as typed (filters from 2 characters; utils/searchMatch.ts). */
   searchQuery: string;
+  /** Person and tag tokens held by the search field (utils/searchTokens.ts). */
+  searchTokens: SearchToken[];
   /** Tag filter state — tracks which tags are unchecked. */
   tagFilter: TagFilterState;
 }
@@ -83,6 +94,7 @@ function emptyState(): QuotesState {
     uncategorised: [],
     viewMode: "all",
     searchQuery: "",
+    searchTokens: [],
     tagFilter: EMPTY_TAG_FILTER,
   };
 }
@@ -116,15 +128,44 @@ export function getQuotesSnapshot(): QuotesState {
  *  for exports: hidden and filtered-out quotes are excluded. Shared with the
  *  SPA dropdown (which filters the same way) so both surfaces agree. */
 export function getVisibleQuotes(store: QuotesState): QuoteResponse[] {
-  const f: FilterState = {
+  return filterQuotes(store.quotes, filterStateOf(store));
+}
+
+let lastFilterState: FilterState | null = null;
+
+/**
+ * The one filter state every surface reads: the Quotes sections and themes,
+ * the toolbar count, the lens subtitle, the export scope and the counts.
+ * Referentially stable while the fields it reads are unchanged, so it can sit
+ * in a dependency list as itself; a new filter (a token, a menu row) is added
+ * here once rather than at each site.
+ */
+export function filterStateOf(store: QuotesState): FilterState {
+  const c = lastFilterState;
+  if (
+    c &&
+    c.searchQuery === store.searchQuery &&
+    c.searchTokens === store.searchTokens &&
+    c.viewMode === store.viewMode &&
+    c.tagFilter === store.tagFilter &&
+    c.hidden === store.hidden &&
+    c.starred === store.starred &&
+    c.tags === store.tags &&
+    c.edits === store.edits
+  ) {
+    return c;
+  }
+  lastFilterState = {
     searchQuery: store.searchQuery,
+    searchTokens: store.searchTokens,
     viewMode: store.viewMode,
     tagFilter: store.tagFilter,
     hidden: store.hidden,
     starred: store.starred,
     tags: store.tags,
+    edits: store.edits,
   };
-  return filterQuotes(store.quotes, f);
+  return lastFilterState;
 }
 
 function subscribe(listener: () => void): () => void {
@@ -522,6 +563,61 @@ export function denyProposedTag(domId: string, proposalId: number): void {
 /** Set the search query. No API call — UI-only state. */
 export function setSearchQuery(query: string): void {
   setState((prev) => ({ ...prev, searchQuery: query }));
+}
+
+/**
+ * Add a person or tag token. A token for a person or tag already present is
+ * ignored, so choosing the same suggestion twice changes nothing.
+ */
+export function addSearchToken(token: SearchToken): void {
+  setState((prev) =>
+    prev.searchTokens.some((t) => sameSubject(t, token))
+      ? prev
+      : { ...prev, searchTokens: [...prev.searchTokens, token] },
+  );
+}
+
+/**
+ * Remove the token for this person or tag (the field's ⌫ and a token menu's
+ * Remove). Addressed by subject, not position, so a menu opened on one token
+ * can't act on another after the list has changed under it.
+ */
+export function removeSearchToken(token: SearchToken): void {
+  setState((prev) => {
+    const searchTokens = prev.searchTokens.filter((t) => !sameSubject(t, token));
+    return searchTokens.length === prev.searchTokens.length ? prev : { ...prev, searchTokens };
+  });
+}
+
+/**
+ * Change what the token for this person or tag means. A person takes said /
+ * mentions / not; a tag takes tagged / contains / not. A mode the token can't
+ * take is ignored, as is "mentions" for a person with no name to look for.
+ * Addressed by subject, like removeSearchToken.
+ */
+export function setSearchTokenMode(subject: SearchToken, mode: PersonMode | TagMode): void {
+  setState((prev) => {
+    const index = prev.searchTokens.findIndex((t) => sameSubject(t, subject));
+    const token = prev.searchTokens[index];
+    if (!token || token.mode === mode) return prev;
+    let next: SearchToken;
+    if (token.kind === "person" && (PERSON_MODES as readonly string[]).includes(mode)) {
+      if (mode === "mentions" && !canMention(token)) return prev;
+      next = { ...token, mode: mode as PersonMode };
+    } else if (token.kind === "tag" && (TAG_MODES as readonly string[]).includes(mode)) {
+      next = { ...token, mode: mode as TagMode };
+    } else {
+      return prev;
+    }
+    const searchTokens = prev.searchTokens.slice();
+    searchTokens[index] = next;
+    return { ...prev, searchTokens };
+  });
+}
+
+/** Remove every token. */
+export function clearSearchTokens(): void {
+  setState((prev) => (prev.searchTokens.length === 0 ? prev : { ...prev, searchTokens: [] }));
 }
 
 /** Set the view mode (all / starred). No API call — UI-only state. */

@@ -26,7 +26,16 @@ import {
   setTagFilter,
   useQuotesStore,
   starActionIsUnstar,
+  addSearchToken,
+  removeSearchToken,
+  setSearchTokenMode,
+  clearSearchTokens,
+  filterStateOf,
+  getQuotesSnapshot,
+  getVisibleQuotes,
+  useQuoteCounts,
 } from "./QuotesContext";
+import { personToken, tagToken } from "../utils/searchTokens";
 import { EMPTY_TAG_FILTER } from "../utils/filter";
 import { _resetExportCache } from "../utils/exportData";
 
@@ -650,5 +659,120 @@ describe("QuotesStore", () => {
         "section-cluster-5:title": "Home screen",
       });
     });
+  });
+});
+
+// ── Search tokens ────────────────────────────────────────────────────────
+
+describe("search tokens", () => {
+  const quotes = [
+    makeQuote({ dom_id: "a", participant_id: "p1", text: "Tom was right about the price" }),
+    makeQuote({ dom_id: "b", participant_id: "p2", text: "the price went up", tags: [TAG_FRUSTRATION] }),
+    makeQuote({ dom_id: "c", participant_id: "p2", text: "fine" }),
+  ];
+  const tom = personToken("p2", { full_name: "Tom Fletcher", short_name: "Tom" });
+  const tokens = () => getQuotesSnapshot().searchTokens;
+  const visible = () => getVisibleQuotes(getQuotesSnapshot()).map((q) => q.dom_id);
+
+  beforeEach(() => initFromQuotes(quotes));
+
+  it("starts with none", () => {
+    expect(tokens()).toEqual([]);
+  });
+
+  it("adds a token once: choosing the same person again changes nothing", () => {
+    act(() => addSearchToken(tom));
+    act(() => addSearchToken({ ...tom, mode: "not" }));
+    expect(tokens()).toEqual([tom]);
+  });
+
+  it("narrows the visible quotes, which is what exports and counts read", () => {
+    act(() => addSearchToken(tom));
+    expect(visible()).toEqual(["b", "c"]);
+    const { result } = renderHook(() => useQuoteCounts());
+    expect(result.current.total).toBe(2);
+  });
+
+  it("ANDs tokens with each other and with the typed text", () => {
+    act(() => addSearchToken(tom));
+    act(() => addSearchToken(tagToken(TAG_FRUSTRATION)));
+    expect(visible()).toEqual(["b"]);
+    act(() => setSearchQuery("fine"));
+    expect(visible()).toEqual([]);
+  });
+
+  it("changes a token's meaning in place", () => {
+    act(() => addSearchToken(tom));
+    act(() => setSearchTokenMode(tom, "mentions"));
+    expect(tokens()[0].mode).toBe("mentions");
+    expect(visible()).toEqual(["a"]);
+    act(() => setSearchTokenMode(tom, "not"));
+    expect(visible()).toEqual(["a"]);
+  });
+
+  it("refuses a meaning the token can't take", () => {
+    act(() => addSearchToken(tom));
+    act(() => setSearchTokenMode(tom, "tagged"));
+    expect(tokens()[0].mode).toBe("said");
+    const p9 = personToken("p9");
+    act(() => addSearchToken(p9));
+    act(() => setSearchTokenMode(p9, "mentions")); // no name to look for
+    expect(tokens()[1].mode).toBe("said");
+  });
+
+  it("acts on the token it was given, even after another was removed", () => {
+    const trust = tagToken({ name: "Trust" });
+    act(() => addSearchToken(trust));
+    act(() => addSearchToken(tom));
+    act(() => removeSearchToken(trust));
+    act(() => setSearchTokenMode(trust, "not")); // a menu still open on the removed token
+    expect(tokens()).toEqual([tom]); // tom is untouched
+  });
+
+  it("finds what the researcher has just written in a quote", () => {
+    act(() => commitEdit("c", "Tom said so"));
+    act(() => addSearchToken({ ...tom, mode: "mentions" }));
+    expect(visible()).toEqual(["a", "c"]);
+    act(() => clearSearchTokens());
+    act(() => setSearchQuery("said"));
+    expect(visible()).toEqual(["c"]);
+  });
+
+  it("removes one token, ignores one that isn't there, and clears them all", () => {
+    act(() => addSearchToken(tom));
+    act(() => addSearchToken(tagToken(TAG_FRUSTRATION)));
+    act(() => removeSearchToken(personToken("p9")));
+    expect(tokens()).toHaveLength(2);
+    act(() => removeSearchToken(tom));
+    expect(tokens().map((t) => t.kind)).toEqual(["tag"]);
+    act(() => clearSearchTokens());
+    expect(tokens()).toEqual([]);
+    expect(visible()).toEqual(["a", "b", "c"]);
+  });
+});
+
+describe("filterStateOf", () => {
+  beforeEach(() => initFromQuotes([makeQuote({ dom_id: "a" })]));
+
+  it("returns the same object while nothing it reads has changed", () => {
+    const first = filterStateOf(getQuotesSnapshot());
+    act(() => deleteBadge("a", "negative")); // badges are not a filter
+    expect(filterStateOf(getQuotesSnapshot())).toBe(first);
+  });
+
+  it("returns a new object when a quote's text is edited, because search reads it", () => {
+    const first = filterStateOf(getQuotesSnapshot());
+    act(() => commitEdit("a", "new words"));
+    expect(filterStateOf(getQuotesSnapshot())).not.toBe(first);
+  });
+
+  it("returns a new object when a filter changes, tokens included", () => {
+    const first = filterStateOf(getQuotesSnapshot());
+    act(() => addSearchToken(personToken("P1")));
+    const second = filterStateOf(getQuotesSnapshot());
+    expect(second).not.toBe(first);
+    expect(second.searchTokens).toHaveLength(1);
+    act(() => setSearchQuery("login"));
+    expect(filterStateOf(getQuotesSnapshot())).not.toBe(second);
   });
 });

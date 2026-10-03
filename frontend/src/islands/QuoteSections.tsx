@@ -15,9 +15,14 @@ import { useTranscriptCache } from "../hooks/useTranscriptCache";
 import type { QuoteResponse, QuotesListResponse } from "../utils/types";
 import type { TagGroupInfo } from "./QuoteGroup";
 import type { TagVocabularyGroup } from "../components";
-import { initFromQuotes, initHeadingEdits, useQuotesStore } from "../contexts/QuotesContext";
+import {
+  filterStateOf,
+  initFromQuotes,
+  initHeadingEdits,
+  useQuotesStore,
+} from "../contexts/QuotesContext";
 import { useFocus } from "../contexts/FocusContext";
-import { filterQuotes } from "../utils/filter";
+import { filterQuotes, highlightTermsOf } from "../utils/filter";
 import { QuoteGroup } from "./QuoteGroup";
 import { useLastRun } from "../contexts/LastRunStore";
 import { useRefetching, refetchOverlayProps } from "../hooks/useRefetching";
@@ -126,17 +131,7 @@ export function QuoteSections({ projectId, refreshKey = 0 }: QuoteSectionsProps)
   // ── Filter state from toolbar ──────────────────────────────────────────
 
   const store = useQuotesStore();
-  const filterState = useMemo(
-    () => ({
-      searchQuery: store.searchQuery,
-      viewMode: store.viewMode,
-      tagFilter: store.tagFilter,
-      hidden: store.hidden,
-      starred: store.starred,
-      tags: store.tags,
-    }),
-    [store.searchQuery, store.viewMode, store.tagFilter, store.hidden, store.starred, store.tags],
-  );
+  const filterState = filterStateOf(store);
 
   // Build a map of cluster_id → original (unfiltered) quotes for the hidden counter.
   const allQuotesMap = useMemo(() => {
@@ -242,7 +237,7 @@ export function QuoteSections({ projectId, refreshKey = 0 }: QuoteSectionsProps)
             hasMedia={hasMedia}
             transcriptCache={transcriptCache}
             hasModerator={data.has_moderator}
-            searchQuery={store.searchQuery}
+            highlight={highlightTermsOf(filterState)}
           />
         );
       })}

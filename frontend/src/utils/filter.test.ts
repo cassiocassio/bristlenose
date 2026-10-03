@@ -39,11 +39,13 @@ function makeTag(name: string): TagResponse {
 function baseFilter(overrides: Partial<FilterState> = {}): FilterState {
   return {
     searchQuery: "",
+    searchTokens: [],
     viewMode: "all",
     tagFilter: EMPTY_TAG_FILTER,
     hidden: {},
     starred: {},
     tags: {},
+    edits: {},
     ...overrides,
   };
 }
@@ -304,6 +306,10 @@ describe("filterQuotes agrees with the search menu's count", () => {
   const tags = Object.fromEntries(
     quotes.filter((_, i) => i % 5 === 0).map((q) => [q.dom_id, [makeTag("delivery time")]]),
   );
+  // And the researcher's text edits: search reads what the card shows.
+  const edits = Object.fromEntries(
+    quotes.filter((_, i) => i % 11 === 0).map((q) => [q.dom_id, "the delivery promise was broken"]),
+  );
 
   it.each([
     ["all", "delivery"],
@@ -314,12 +320,14 @@ describe("filterQuotes agrees with the search menu's count", () => {
     ["starred", "delivery"],
     ["starred", "conf"],
     ["all", "delivery time"],
+    ["all", "promise"],
   ] as const)("%s, %j", (viewMode, query) => {
-    const f = baseFilter({ searchQuery: query, viewMode, hidden, starred, tags });
+    const f = baseFilter({ searchQuery: query, viewMode, hidden, starred, tags, edits });
     const listed = filterQuotes(quotes, f).length;
     const menu = suggest(query, {
       quotes,
       tags,
+      edits,
       isVisible: (q) => isQuoteVisible(q, { ...f, searchQuery: "" }),
     }).find((r) => r.kind === "text");
     expect(menu?.count).toBe(listed);

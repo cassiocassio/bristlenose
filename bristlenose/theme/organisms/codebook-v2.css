@@ -368,6 +368,7 @@
    Purely dimensional: no colour, no new token. If v2 ships, these move up. */
 .v2-layout .bn-btn-sm,
 .v2-nav .bn-btn-sm,
+.dl-nav .bn-btn-sm,
 .section-heading .bn-btn-sm { font-size: var(--bn-text-caption); padding: 0.25rem 0.7rem; }
 
 /* `.v2-nav` is the sidebar navigator, which is NOT inside `.v2-layout` — it is
@@ -379,7 +380,8 @@
    list, it is what you do when the list has not got what you want, and at row
    spacing it reads as a fourth section heading's worth of list. Left inset
    matches `.toc-link`'s text edge so it hangs off the same margin as the rows. */
-.v2-nav .bn-btn-sm { margin: var(--bn-space-lg) var(--bn-space-sm) 0; }
+.v2-nav .bn-btn-sm,
+.dl-nav .bn-btn-sm { margin: var(--bn-space-lg) var(--bn-space-sm) 0; }  /* + the Discussion lens's navigator (Add your guide…) */
 
 .v2-layout .bn-btn-lg,
 .section-heading .bn-btn-lg { font-size: var(--bn-text-body); padding: 0.5rem 1.15rem; }

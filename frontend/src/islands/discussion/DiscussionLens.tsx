@@ -79,6 +79,9 @@ const S = {
   markPlus: "not in the guide",
   // Hover meanings for the marks — the house "? cursor + title" pattern
   // (Signals' metric labels and intensity dots).
+  addGuide: "Add your guide…",
+  replaceGuide: "Replace your guide…",
+  guidePreviewNote: "In this preview the guide is fixed — adding your own arrives with the analysis step.",
   key: "Key",
   keyBoth: "Asked as planned",
   keyHollow: "Planned, never asked",
@@ -170,6 +173,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   const saved = useMemo(() => readLensState(), []);
   const [mode, setMode] = useState<Mode>(data.guide ? saved.mode : "merged");
   const [guideView, setGuideView] = useState<GuideView>(saved.guideView);
+  const [guideNote, setGuideNote] = useState(false);
   const [session, setSession] = useState<string>(
     saved.session && order.includes(saved.session) ? saved.session : (order[0] ?? ""),
   );
@@ -584,6 +588,18 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
             {rows.map(row)}
           </div>
         ))}
+        {(mode === "planned" || !data.guide) && (
+          // The house small secondary button at the foot of a navigator — the
+          // Codebook navigator's Browse Library is the precedent. Preview only: no
+          // picker yet (the app's web view has none, and no stage reads a guide
+          // until Phase 2), so it says so rather than pretending (plan §4).
+          <>
+            <button type="button" className="bn-btn bn-btn-secondary bn-btn-sm" onClick={() => setGuideNote(true)}>
+              {data.guide ? S.replaceGuide : S.addGuide}
+            </button>
+            {guideNote && <p className="dl-before" role="status">{S.guidePreviewNote}</p>}
+          </>
+        )}
         {mode === "merged" && (
           // The Settings ▸ Pipeline symbol key, reused as is (its classes set the
           // type and spacing); the marks are the rows' own, so they match exactly.

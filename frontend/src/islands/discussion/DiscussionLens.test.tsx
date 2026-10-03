@@ -230,6 +230,19 @@ describe("review fixes, 3 Oct 2026", () => {
     expect((row as HTMLElement).dataset.item).toBe("");
   });
 
+  it("offers to add or replace the guide with the house small button, and says what the preview does", () => {
+    const { unmount } = render(<DiscussionView data={{ ...data, guide: false, spine: [] }} />);
+    const add = screen.getByRole("button", { name: "Add your guide…" });
+    expect(add).toHaveClass("bn-btn", "bn-btn-secondary", "bn-btn-sm");
+    fireEvent.click(add);
+    expect(screen.getByRole("status").textContent).toMatch(/preview the guide is fixed/);
+    unmount();
+    render(<DiscussionView data={data} />);
+    expect(screen.queryByRole("button", { name: /your guide…/ })).toBeNull(); // Normalised, with a guide
+    fireEvent.click(screen.getByRole("radio", { name: "Your guide" }));
+    expect(screen.getByRole("button", { name: "Replace your guide…" })).toBeInTheDocument();
+  });
+
   it("Normalised questions carries a small key of the marks; Your guide does not", () => {
     render(<DiscussionView data={data} />);
     const key = screen.getByRole("note", { name: "Key" });

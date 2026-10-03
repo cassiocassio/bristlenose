@@ -1,0 +1,543 @@
+{
+  "_doc": "Search MATCHING contract: what counts as a match for a typed query, across every search surface. Asserted today by frontend/src/utils/searchMatch.test.ts against frontend/src/utils/searchMatch.ts. The Python/SQLite search core (docs/design-search.md D1) must assert this same file when it lands, so a query finds the same quotes in the browser, the Mac app and the CLI. Rules: docs/design-search.md §3.",
+  "_how_to_use": "`match` cases: `query` is what the researcher typed; `match` is whether `text` matches; `marked` is the list of substrings of `text` that a highlight wraps, in text order. Marks are given as the marked TEXT, not as offsets, because JavaScript counts UTF-16 units and Python counts code points. `active` cases: whether a query is long enough to filter by. `known_limits` are asserted too: they record behaviour we have accepted, so a future implementation cannot change it silently in either direction.",
+  "active": [
+    [
+      "",
+      false,
+      "empty"
+    ],
+    [
+      "   ",
+      false,
+      "whitespace only"
+    ],
+    [
+      "a",
+      false,
+      "one Latin letter is not enough"
+    ],
+    [
+      "ab",
+      true,
+      "two letters are (changed from three on 3 Oct 2026)"
+    ],
+    [
+      " a ",
+      false,
+      "spaces don't count"
+    ],
+    [
+      "\"a\"",
+      false,
+      "quote marks don't count"
+    ],
+    [
+      "p3",
+      true,
+      "a speaker code is two characters"
+    ],
+    [
+      "ий",
+      true,
+      "two Cyrillic letters"
+    ],
+    [
+      "東",
+      true,
+      "one Chinese character is a word"
+    ],
+    [
+      "で",
+      true,
+      "one Japanese kana"
+    ],
+    [
+      "한",
+      false,
+      "Korean spaces its words, so it follows the Latin rule"
+    ],
+    [
+      "é",
+      false,
+      "a letter plus a separate accent is one letter"
+    ],
+    [
+      "ﬁ",
+      true,
+      "a ligature counts as its two letters"
+    ],
+    [
+      "パ",
+      true,
+      "one Japanese kana with a voicing mark"
+    ],
+    [
+      "ก",
+      false,
+      "one Thai letter is not enough"
+    ]
+  ],
+  "match": [
+    {
+      "why": "word at the start of the text",
+      "text": "I got all the way to the end",
+      "query": "end",
+      "match": true,
+      "marked": [
+        "end"
+      ]
+    },
+    {
+      "why": "a word must START a word in the text",
+      "text": "the best price",
+      "query": "st",
+      "match": false,
+      "marked": []
+    },
+    {
+      "why": "every occurrence at a word start is marked",
+      "text": "Eileen Storey and Steppe",
+      "query": "st",
+      "match": true,
+      "marked": [
+        "St",
+        "St"
+      ]
+    },
+    {
+      "why": "words match in any order",
+      "text": "which is more than the shelf",
+      "query": "shelf more",
+      "match": true,
+      "marked": [
+        "more",
+        "shelf"
+      ]
+    },
+    {
+      "why": "every word must match",
+      "text": "which is more than the shelf",
+      "query": "shelf sofa",
+      "match": false,
+      "marked": [
+        "shelf"
+      ]
+    },
+    {
+      "why": "a quoted phrase matches as written",
+      "text": "which is more than the shelf",
+      "query": "\"than the shelf\"",
+      "match": true,
+      "marked": [
+        "than the shelf"
+      ]
+    },
+    {
+      "why": "a quoted phrase keeps its word order",
+      "text": "which is more than the shelf",
+      "query": "\"shelf the than\"",
+      "match": false,
+      "marked": []
+    },
+    {
+      "why": "an unclosed quote runs to the end of the query",
+      "text": "which is more than the shelf",
+      "query": "\"than the",
+      "match": true,
+      "marked": [
+        "than the"
+      ]
+    },
+    {
+      "why": "curly quotes make a phrase too",
+      "text": "which is more than the shelf",
+      "query": "“than the shelf”",
+      "match": true,
+      "marked": [
+        "than the shelf"
+      ]
+    },
+    {
+      "why": "phrase and word together",
+      "text": "which is more than the shelf",
+      "query": "\"the shelf\" more",
+      "match": true,
+      "marked": [
+        "more",
+        "the shelf"
+      ]
+    },
+    {
+      "why": "case is folded",
+      "text": "Delivery was late",
+      "query": "DELIV",
+      "match": true,
+      "marked": [
+        "Deliv"
+      ]
+    },
+    {
+      "why": "accents in the text are folded",
+      "text": "José said no",
+      "query": "jose",
+      "match": true,
+      "marked": [
+        "José"
+      ]
+    },
+    {
+      "why": "accents in the query are folded",
+      "text": "Jose said no",
+      "query": "josé",
+      "match": true,
+      "marked": [
+        "Jose"
+      ]
+    },
+    {
+      "why": "Russian ё folds to е",
+      "text": "ещё один раз",
+      "query": "еще",
+      "match": true,
+      "marked": [
+        "ещё"
+      ]
+    },
+    {
+      "why": "German umlaut folds to the bare vowel",
+      "text": "Müller rang back",
+      "query": "muller",
+      "match": true,
+      "marked": [
+        "Müller"
+      ]
+    },
+    {
+      "why": "Turkish dotted capital İ folds to i",
+      "text": "İstanbul store",
+      "query": "istanbul",
+      "match": true,
+      "marked": [
+        "İstanbul"
+      ]
+    },
+    {
+      "why": "full-width letters fold to ASCII",
+      "text": "ＩＫＥＡ store",
+      "query": "ikea",
+      "match": true,
+      "marked": [
+        "ＩＫＥＡ"
+      ]
+    },
+    {
+      "why": "curly apostrophe in the text matches a straight one",
+      "text": "I don’t know",
+      "query": "don't",
+      "match": true,
+      "marked": [
+        "don’t"
+      ]
+    },
+    {
+      "why": "acute accent used as an apostrophe",
+      "text": "I don´t know",
+      "query": "don't",
+      "match": true,
+      "marked": [
+        "don´t"
+      ]
+    },
+    {
+      "why": "a match ending inside a ligature marks the whole character, never zero width",
+      "text": "the ﬁrst time",
+      "query": "f",
+      "match": true,
+      "marked": [
+        "ﬁ"
+      ]
+    },
+    {
+      "why": "Chinese matches mid-word",
+      "text": "我住在東京很多年",
+      "query": "東京",
+      "match": true,
+      "marked": [
+        "東京"
+      ]
+    },
+    {
+      "why": "one Chinese character matches mid-word",
+      "text": "我住在東京",
+      "query": "京",
+      "match": true,
+      "marked": [
+        "京"
+      ]
+    },
+    {
+      "why": "Japanese kana matches mid-word",
+      "text": "東京に住んでいます",
+      "query": "でい",
+      "match": true,
+      "marked": [
+        "でい"
+      ]
+    },
+    {
+      "why": "Korean matches at the start of a word",
+      "text": "서울에서 왔어요",
+      "query": "서울",
+      "match": true,
+      "marked": [
+        "서울"
+      ]
+    },
+    {
+      "why": "runs of whitespace match one space",
+      "text": "more   than\nthe shelf",
+      "query": "\"than the\"",
+      "match": true,
+      "marked": [
+        "than\nthe"
+      ]
+    },
+    {
+      "why": "punctuation before a word is a word boundary",
+      "text": "(delivery) costs",
+      "query": "deliv",
+      "match": true,
+      "marked": [
+        "deliv"
+      ]
+    },
+    {
+      "why": "a hyphen is a word boundary",
+      "text": "e-mail address",
+      "query": "mail",
+      "match": true,
+      "marked": [
+        "mail"
+      ]
+    },
+    {
+      "why": "digits after a colon start a word",
+      "text": "at 12:04 she paused",
+      "query": "04",
+      "match": true,
+      "marked": [
+        "04"
+      ]
+    },
+    {
+      "why": "an empty query matches everything and marks nothing",
+      "text": "anything at all",
+      "query": "  ",
+      "match": true,
+      "marked": []
+    },
+    {
+      "why": "Japanese voicing marks change the word: ハン does not find パン",
+      "text": "パンを買った",
+      "query": "ハン",
+      "match": false,
+      "marked": []
+    },
+    {
+      "why": "a match may not end inside a Japanese letter: ハ does not find パ",
+      "text": "パンを買った",
+      "query": "ハ",
+      "match": false,
+      "marked": []
+    },
+    {
+      "why": "half-width katakana finds full-width",
+      "text": "ｶﾞｲﾄﾞを読んだ",
+      "query": "ガイド",
+      "match": true,
+      "marked": [
+        "ｶﾞｲﾄﾞ"
+      ]
+    },
+    {
+      "why": "Thai tone marks change the word",
+      "text": "ข่าวดี",
+      "query": "ข้าว",
+      "match": false,
+      "marked": []
+    },
+    {
+      "why": "Hindi vowel signs change the word",
+      "text": "काम हो गया",
+      "query": "कम",
+      "match": false,
+      "marked": []
+    },
+    {
+      "why": "Hindi does not match from the middle of a word",
+      "text": "काम हो गया",
+      "query": "म",
+      "match": false,
+      "marked": []
+    },
+    {
+      "why": "Greek accents fold away",
+      "text": "Αθήνα",
+      "query": "αθηνα",
+      "match": true,
+      "marked": [
+        "Αθήνα"
+      ]
+    },
+    {
+      "why": "Greek final sigma folds to σ",
+      "text": "ΟΔΟΣ ΕΡΜΟΥ",
+      "query": "οδος",
+      "match": true,
+      "marked": [
+        "ΟΔΟΣ"
+      ]
+    },
+    {
+      "why": "German ß folds to ss",
+      "text": "Straße",
+      "query": "strasse",
+      "match": true,
+      "marked": [
+        "Straße"
+      ]
+    },
+    {
+      "why": "and ß typed in the query works too",
+      "text": "Strasse",
+      "query": "straße",
+      "match": true,
+      "marked": [
+        "Strasse"
+      ]
+    },
+    {
+      "why": "an accent written as a separate character still folds",
+      "text": "José said no",
+      "query": "jose",
+      "match": true,
+      "marked": [
+        "José"
+      ]
+    },
+    {
+      "why": "a soft hyphen is invisible, not a word break",
+      "text": "deliv­ery was late",
+      "query": "delivery",
+      "match": true,
+      "marked": [
+        "deliv­ery"
+      ]
+    },
+    {
+      "why": "a zero-width space is invisible",
+      "text": "deliv​ery was late",
+      "query": "delivery",
+      "match": true,
+      "marked": [
+        "deliv​ery"
+      ]
+    },
+    {
+      "why": "a byte-order mark is invisible",
+      "text": "a﻿b",
+      "query": "ab",
+      "match": true,
+      "marked": [
+        "a﻿b"
+      ]
+    },
+    {
+      "why": "next-line (U+0085) is whitespace",
+      "text": "morethan",
+      "query": "\"more than\"",
+      "match": true,
+      "marked": [
+        "morethan"
+      ]
+    },
+    {
+      "why": "an underscore is a word boundary",
+      "text": "foo_bar",
+      "query": "bar",
+      "match": true,
+      "marked": [
+        "bar"
+      ]
+    },
+    {
+      "why": "an apostrophe is a word boundary: brien finds O'Brien",
+      "text": "Mrs O'Brien called",
+      "query": "brien",
+      "match": true,
+      "marked": [
+        "Brien"
+      ]
+    },
+    {
+      "why": "and so re marks they're (accepted)",
+      "text": "they're late",
+      "query": "re",
+      "match": true,
+      "marked": [
+        "re"
+      ]
+    },
+    {
+      "why": "smart single quotes in the query act like plain words",
+      "text": "which is more than the shelf",
+      "query": "‘than the’",
+      "match": true,
+      "marked": [
+        "than",
+        "the"
+      ]
+    },
+    {
+      "why": "a Korean query matches the syllables it begins, as the keyboard composes them",
+      "text": "서울에서 왔어요",
+      "query": "서우",
+      "match": true,
+      "marked": [
+        "서울"
+      ]
+    }
+  ],
+  "known_limits": [
+    {
+      "why": "Turkish dotless ı does not fold to i",
+      "text": "kırmızı kanepe",
+      "query": "kirmizi",
+      "match": false,
+      "marked": []
+    },
+    {
+      "why": "German ü does not match ue",
+      "text": "Müller rang back",
+      "query": "mueller",
+      "match": false,
+      "marked": []
+    },
+    {
+      "why": "Korean particles are not split off: a suffix does not match",
+      "text": "서울에서 왔어요",
+      "query": "에서",
+      "match": false,
+      "marked": []
+    },
+    {
+      "why": "no typo tolerance yet",
+      "text": "Delivery was late",
+      "query": "delivrey",
+      "match": false,
+      "marked": []
+    }
+  ],
+  "_python_notes": "When the Python core asserts this file, three defaults differ from JavaScript and must not be used as-is: str.lower() is final-sigma-aware while this contract folds every sigma to σ; re's \\w includes the underscore while a word here is letters, digits and combining marks; and the stdlib re has no Unicode Script property, so the scripts named in searchMatch.ts (accented: Latin, Greek, Cyrillic, Arabic, Hebrew; unspaced: Han, Hiragana, Katakana, Thai) need the `regex` package or explicit ranges. Whitespace is JavaScript's \\s plus U+0085, with U+FEFF treated as invisible."
+}

@@ -11,23 +11,33 @@
  *     ("st" finds "Storey" and "Steppe", not "best").
  *   - A term in double quotes matches as an exact phrase (still word-initial).
  *   - Case, accents and width are folded: "Jose" finds "José", "ё" finds "е",
- *     "ＡＢＣ" finds "abc". Curly and straight apostrophes are the same.
+ *     "ＡＢＣ" finds "abc", "strasse" finds "Straße". Curly and straight
+ *     apostrophes are the same. Accents are stripped ONLY in scripts where they
+ *     are optional marks (Latin, Greek, Cyrillic, Arabic, Hebrew); in Japanese,
+ *     Thai or Hindi a combining mark changes the word (パン is not ハン), so it
+ *     is kept, and a match may not end just before one.
+ *   - Invisible characters (soft hyphen, zero-width space) are ignored.
  *   - Chinese and Japanese have no spaces, so a term written in those scripts
  *     matches anywhere, not only at a word start.
  *   - A query is active from 2 characters, or 1 Chinese/Japanese character.
+ *   - Apostrophes at the edge of a typed word are ignored, so smart single
+ *     quotes (‘than the’) behave like the plain words.
  */
 
 // ── Folding ─────────────────────────────────────────────────────────────
 
-const COMBINING = /\p{M}/gu;
-const APOSTROPHES = /[‘’ʼ`´]/g;
-const WORD_CHAR = /[\p{L}\p{N}]/u;
-/** Scripts written without spaces between words. */
+const MARK = /\p{M}/u;
+const FORMAT = /\p{Cf}/u;
+const SPACE = /[\s\u0085]/u;
+const APOSTROPHES = /[\u2018\u2019\u02BC\u0060\u00B4]/g;
+const WORD_CHAR = /[\p{L}\p{N}\p{M}]/u;
+/** Scripts whose combining marks are optional accents, safe to fold away. */
+const ACCENTED_SCRIPT = /[\p{Script=Latin}\p{Script=Greek}\p{Script=Cyrillic}\p{Script=Arabic}\p{Script=Hebrew}]/u;
+/** Scripts written without spaces between words: a term may match mid-word. */
 const UNSPACED = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}]/u;
-
-function foldChar(ch: string): string {
-  return ch.toLowerCase().normalize("NFKD").replace(COMBINING, "").replace(APOSTROPHES, "'");
-}
+/** Scripts where one character is already a word. */
+const ONE_CHAR_WORD = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u;
+const QUOTE_MARKS = /["\u201C\u201D\u201E\u00AB\u00BB\u300C\u300D]/gu;
 
 /** Folded text plus, for every folded UTF-16 unit, its index in the original. */
 export interface Folded {
@@ -36,41 +46,76 @@ export interface Folded {
   map: number[];
 }
 
-const cache = new Map<string, Folded>();
-const CACHE_MAX = 20_000;
-
 /**
- * Fold a string for matching, keeping a map back to the original so marks can
- * be drawn on the unfolded text. Whitespace runs collapse to one space.
+ * The one folding walk, per code point:
+ *   - format characters (soft hyphen, zero-width space, BOM) vanish;
+ *   - whitespace becomes one space, runs collapse;
+ *   - apostrophes unify, case folds, compatibility forms decompose (NFKD);
+ *   - a combining mark is dropped only after a letter of an ACCENTED_SCRIPT,
+ *     which also covers marks written as separate characters ("e" + U+0301);
+ *   - ß → ss and final ς → σ, as Python's casefold does.
  */
-export function foldWithMap(s: string): Folded {
-  const hit = cache.get(s);
-  if (hit) return hit;
+function foldCore(s: string, map: number[] | null): string {
   let text = "";
-  const map: number[] = [];
   let i = 0;
+  let stripMarks = false;
+  const emit = (unit: string) => {
+    if (unit === " " && (text.length === 0 || text[text.length - 1] === " ")) return;
+    map?.push(i);
+    text += unit;
+  };
   for (const ch of s) {
-    if (/\s/u.test(ch)) {
-      if (text.length > 0 && text[text.length - 1] !== " ") {
-        text += " ";
-        map.push(i);
-      }
+    if (FORMAT.test(ch)) {
+      // invisible: no output, no boundary
+    } else if (SPACE.test(ch)) {
+      emit(" ");
+      stripMarks = false;
     } else {
-      const f = foldChar(ch);
-      for (let k = 0; k < f.length; k++) map.push(i);
-      text += f;
+      const decomposed = ch.replace(APOSTROPHES, "'").toLowerCase().normalize("NFKD");
+      for (const cp of decomposed) {
+        if (MARK.test(cp)) {
+          if (stripMarks) continue;
+        } else {
+          stripMarks = ACCENTED_SCRIPT.test(cp);
+        }
+        const out = cp === "ß" ? "ss" : cp === "ς" ? "σ" : SPACE.test(cp) ? " " : cp;
+        // UTF-16 units, so the map stays one entry per unit of `text`.
+        for (let k = 0; k < out.length; k++) emit(out[k]);
+      }
     }
     i += ch.length;
   }
-  map.push(i);
-  if (cache.size >= CACHE_MAX) cache.clear();
-  const folded = { text, map };
-  cache.set(s, folded);
-  return folded;
+  map?.push(i);
+  return text;
 }
 
+// Two caches. Matching folds every quote on every keystroke, so its cache must
+// hold a whole project's fields; it stores only the folded string. Highlighting
+// needs the index map too, but only for the few quotes on screen.
+const textCache = new Map<string, string>();
+const TEXT_CACHE_MAX = 200_000;
+const mapCache = new Map<string, Folded>();
+const MAP_CACHE_MAX = 2_000;
+
+/** Fold a string for matching (case, accents, width, apostrophes, whitespace). */
 export function fold(s: string): string {
-  return foldWithMap(s).text;
+  const hit = textCache.get(s);
+  if (hit !== undefined) return hit;
+  const text = foldCore(s, null);
+  if (textCache.size >= TEXT_CACHE_MAX) textCache.clear();
+  textCache.set(s, text);
+  return text;
+}
+
+/** Fold a string and keep a map back to the original, for drawing marks. */
+export function foldWithMap(s: string): Folded {
+  const hit = mapCache.get(s);
+  if (hit) return hit;
+  const map: number[] = [];
+  const folded = { text: foldCore(s, map), map };
+  if (mapCache.size >= MAP_CACHE_MAX) mapCache.clear();
+  mapCache.set(s, folded);
+  return folded;
 }
 
 // ── Query parsing ───────────────────────────────────────────────────────
@@ -95,7 +140,10 @@ export function parseQuery(query: string): SearchTerm[] {
     buf = "";
     if (!text) return;
     if (kind === "word") {
-      for (const w of text.split(" ")) if (w) terms.push(makeTerm("word", w));
+      for (const raw of text.split(" ")) {
+        const w = raw.replace(/^'+|'+$/g, "");
+        if (w) terms.push(makeTerm("word", w));
+      }
     } else {
       terms.push(makeTerm("phrase", text));
     }
@@ -120,8 +168,11 @@ function makeTerm(kind: "word" | "phrase", text: string): SearchTerm {
 
 /** True once the query is long enough to filter by. */
 export function isActiveQuery(query: string): boolean {
-  const compact = query.replace(/[\s"“”„«»「」]/gu, "");
-  if (UNSPACED.test(compact)) return compact.length >= 1;
+  // Count what the folded query holds, recomposed (NFC) so a Korean syllable
+  // or "e" + accent counts once and a ligature counts as its letters.
+  const compact = fold(query.replace(QUOTE_MARKS, "")).replace(/ /g, "").normalize("NFC");
+  if (!compact) return false;
+  if (ONE_CHAR_WORD.test(compact)) return true;
   return [...compact].length >= 2;
 }
 
@@ -139,7 +190,11 @@ function termPositions(folded: string, term: SearchTerm): number[] {
   for (;;) {
     const at = folded.indexOf(term.text, from);
     if (at < 0) break;
-    if (term.anywhere || isWordStart(folded, at)) out.push(at);
+    const end = at + term.text.length;
+    // A kept combining mark belongs to the letter before it: "ハ" must not
+    // match the first half of "パ".
+    const splitsLetter = end < folded.length && MARK.test(folded[end]);
+    if ((term.anywhere || isWordStart(folded, at)) && !splitsLetter) out.push(at);
     from = at + 1;
   }
   return out;
@@ -164,7 +219,11 @@ export function markRanges(text: string, terms: SearchTerm[]): Array<[number, nu
   const ranges: Array<[number, number]> = [];
   for (const term of terms) {
     for (const at of termPositions(folded, term)) {
-      ranges.push([map[at], map[at + term.text.length]]);
+      // A match can end inside one original character that folded to several
+      // units ("ﬁ" → "fi"): extend to that character's end, never a zero width.
+      let end = at + term.text.length;
+      while (end < folded.length && map[end] === map[end - 1]) end++;
+      ranges.push([map[at], map[end]]);
     }
   }
   ranges.sort((a, b) => a[0] - b[0] || a[1] - b[1]);

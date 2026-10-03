@@ -1,6 +1,8 @@
 # Desktop nav + toolbar rearrangement — UX spec
 
 **Status:** Shipped (Phase 1), 22 Jun 2026 — the lens rail + rebuilt toolbar landed (`LensRail.swift` + the `ContentView.swift` toolbar; the centre tab `Picker` is gone). The planning voice below is now historical intent. **NB:** §2.2's "project list reused verbatim" premise was overtaken by the AppKit `NSOutlineView` sidebar rewrite (flag-gated, default-off today) — see `design-desktop-sidebar-appkit.md` and the §2.2 note. (Orig: Draft · Phase 1 · 21 Jun 2026, rev 2 — folded the `/usual-suspects` review + user decisions.)
+
+**Rev 3 — 3 Oct 2026 (decided, not yet built):** New Project / New Folder move to a `+⌄` in the sidebar's own toolbar (§3.3); the trailing toolbar is one actions capsule plus Search on its own (§4.3); Search becomes the native `.searchable` field (§4.4); §4.5 trued to the shipped title and per-lens subtitle. Visuals: `docs/mockups/desktop-toolbar-and-footer-options.html`.
 **Accompanies:** `docs/mockups/desktop-nav-toolbar-rearrangement.html`
 **Review:** Phase-1 plan-review run (5 review agents + parsimony pass); findings + dispositions logged locally (gitignored).
 **Extends:** `docs/design-project-sidebar.md` (row anatomy, project index) · `desktop/CLAUDE.md` (toolbar morphing, bridge)
@@ -53,10 +55,25 @@ Variable height, not the current always-reserved two-line band:
 - **Idle row** → single tight line (icon · name · count). **Live row** → a second line appears *only* while there is status (run progress). Animate the height change — but **guard `@Environment(\.accessibilityReduceMotion)`** (instant resize when on), and **never reflow a row under an active pointer or during a drag-reorder** (spatial-stability: don't shove a row out from under the reader's cursor).
 - **Title-line trailing order** (resolves the collision with the same-day-trued `design-project-sidebar.md` "Row anatomy"): the **session count** is the default occupant; the **storage/sync qualifier** (iCloud arrow, external-drive hint) *replaces* it when the project is unavailable/syncing. Precedence: in-flight scan > failure glyph > availability qualifier > count. The activity/copy ring keeps the *subtitle* trailing slot during runs.
 
-### 3.3 Top controls + New
-- **Sidebar show/hide** → standard `sidebar.left` at the sidebar's top-trailing (auto-provided by `NavigationSplitView`). Nothing else in the traffic-light strip.
-- **New Project** → a **`+ New project` row at the top of the projects list** — a plain `+ New project` row, **no inline `⌘N` hint** (on the Mac, shortcuts are learned from the menu bar, not list rows; the `+ …⌘N` inline hint is a web/Electron habit). The shortcut lives in File ▸ New Project (`⌘N`). *Not* the toolbar, *not* the traffic-light strip. Not Mac-purist, but pervasive — and it keeps the toolbar clean for the report. (Supersedes the sidebar-top `+` in rev 1, and reconciles with `design-project-sidebar.md` §"New Project placement".)
-- **New Folder** → File ▸ New Folder (`⇧⌘N`) + the list's right-click menu. Infrequent; no dedicated row.
+### 3.3 Top controls + New — *rev 3, 3 Oct 2026*
+**Decided (not yet built):** the sidebar's own toolbar carries two controls, NetNewsWire-style:
+- **Sidebar show/hide (`sidebar.left`) hard against the traffic lights.** It is the last control left when the sidebar is narrow, so it is always findable. *Build check:* where `NavigationSplitView`'s automatic toggle lands on macOS 15 and 26; if it isn't beside the traffic lights, hide it (`.toolbar(removing: .sidebarToggle)`) and place our own.
+- **`+⌄` trailing, right-aligned to the sidebar's width**, a menu of **New Project…** and **New Folder…** (the shipped `desktop.menu.file.newProject` / `newFolder` strings). It hides when the sidebar is narrow (prefer the system's toolbar overflow to a width rule we write) and disappears with the sidebar. The shortcuts stay in the File menu: New Project ⌘N, New Folder ⇧⌘N.
+
+**This replaces the rev-2 in-list `+ New project` row.** That row shipped grey (`.secondary`) and scrolled away with the list; the AppKit sidebar has no equivalent.
+
+**Evidence:** in a user interview, a Windows user did not find New. She would not drag and drop, expected to create a project before giving it interviews, and did not explore the Mac menus.
+
+**Alternatives considered and rejected** (all drawn in the mockup):
+- A labelled sidebar footer (Notes, Reminders, Mail's `+ −`): the label repeats the New Project call to action the main content area already shows when no project is selected.
+- A footer menu with a one-line description under each item (Things): too verbose.
+- A Settings gear in the footer: ⌘, and the app menu are where Settings lives on a Mac. If a gear ever ships, use `gearshape`, not sliders: sliders mean "adjust this view".
+
+**Still open:** whether a click on `+` opens the menu (`Menu`) or creates a New Project with the chevron opening the menu (`Menu(primaryAction:)`); and the toolbar placement inside the AppKit sidebar, which is hosted differently.
+
+**Related, still open — the empty project needs a button.** After New Project, the detail pane (`dragInterviewsPane`) says "Drag Interviews Here" and offers no button, a dead end for anyone who doesn't drag. Either the shipped **Add Files…** (`desktop.menu.file.addFiles`; today's picker takes files only) or a new **Choose Interviews…** with a picker that also takes folders.
+
+New Folder also stays in the list's right-click menu.
 
 ## 4. Toolbar
 
@@ -65,14 +82,14 @@ Variable height, not the current always-reserved two-line band:
 |---|---|---|
 | 5-tab picker | centre `.principal` | **→ sidebar** (the lenses) |
 | Back / Forward (`chevron.backward/forward`) | leading | **content leading** — grouped pair |
-| Sidebar toggle (`sidebar.left`) | auto | **sidebar top-trailing** — standard icon |
+| Sidebar toggle (`sidebar.left`) | auto | ~~sidebar top-trailing~~ → **against the traffic lights** (§3.3, rev 3) |
 | Left panel: Contents/Codes/Signals (`list.bullet`) | leading | **inspector toggle** · Quotes·Codebook·Analysis |
 | Tags (`sidebar.right`) | trailing | **inspector toggle** · Quotes |
 | Heatmap (`square.grid.2x2`) | trailing | **inspector toggle** · Analysis |
 | **Export (`square.and.arrow.up`)** | trailing | **visible trailing menu** — see §4.2 |
 | Search (`magnifyingglass`) | trailing | **trailing — rightmost** (see §4.4) |
 | Ollama pill (custom) | `.status` | **`.status`** — unchanged |
-| New Project / New Folder | sidebar bar / File menu | **in-list `+` row + File menu** (§3.3) |
+| New Project / New Folder | sidebar bar / File menu | ~~in-list `+` row~~ → **`+⌄` in the sidebar's toolbar + File menu** (§3.3, rev 3) |
 
 ### 4.2 Export — a visible menu, named *Export*
 **Export, not Share.** Bristlenose produces *standalone artefacts the recipient opens without installing Bristlenose* (`design-export-sharing.md`) — that's Export. Share (the macOS share sheet) sends a *pointer* via apps/people; we don't. The codebase already uses the Export verb. Icon: `square.and.arrow.up` (the universal send-out glyph the `.app` already uses).
@@ -95,18 +112,36 @@ It stays a **visible trailing toolbar `Menu`** (a researcher's primary output). 
 
 `ExportMenuButton` already morphs ("Export Report…" universal; Quotes-CSV on the Quotes tab; Signal-Cards-PPTX planned for Analysis) — extend it toward the web set above.
 
-### 4.3 Grouping & responsive collapse
-**Decision: keep the shipped spatial split** — each panel toggle sits *near the panel it controls*, because for a high-frequency control the proximity mapping beats oval-economy:
-- **Leading:** back/forward (history capsule) · the **left-panel toggle** (Contents/Codes/Signals, `list.bullet`) near the left web panel · title + subtitle.
-- **Trailing:** the **right-side inspector** (tags / heatmap) near the right panel · **Export** · **Search** (rightmost).
+### 4.3 Grouping & responsive collapse — *rev 3, 3 Oct 2026*
+**Leading, unchanged:** the lens's left-panel toggle (`list.bullet`) near the left web panel, then the back/forward group with its current behaviour, then title + subtitle.
 
-The **tag inspector keeps `sidebar.right`** (the right-panel glyph), deliberately *not* a tag glyph — the Codebook *lens* now owns `tag`, so a second tag would clash. This runs more than the ≤3-capsule ideal, accepted on purpose. **Rely on the system overflow** — never hand-roll a More menu, never overflow at default width (HIG). Pinned: sidebar toggle, back/forward, search, title (truncates); the trailing inspector folds into the auto `»` first, then Export.
+**Trailing: one actions capsule, then Search on its own.**
+- **The actions capsule, as today:** Export first, then the lens's own buttons. Quotes: Export · Starred · Tags. Codebook: Export · Library. Signals: Export · Heatmap. Project and Sessions: Export alone.
+- **Search is always the rightmost item, on its own.** In a wide window it has room for a real input field; in a narrow window it is still its own control, and focusing it expands it there. Multi-lens search is next, so search's prominence will only grow.
 
-### 4.4 Search — a port, not a restyle
-`searchToolbarBehavior(.minimize)` / `DefaultToolbarItem(kind: .search)` need a real `.searchable` field. **Today search is a native `QuotesSearchToolbarControl` capsule — no SwiftUI `.searchable` field** (until 12 Sep 2026 this read "a custom `Button` firing `menuAction(\"find\")` into the web bar"; that dispatch is deleted — ⌘F now drives the capsule directly via `BridgeHandler.requestSearchFocus()`, and there is no web search bar in embedded mode to fire into), so the minimise treatment is a no-op until that migrates. Decide at spec→code: keep the custom button (drop the minimise claim) or build a native `.searchable` that forwards to the web layer. Either way, search stays trailing-rightmost.
+The tag inspector keeps `sidebar.right`, deliberately not a tag glyph, because the Codebook lens owns `tag`.
 
-### 4.5 Title — avoid the duplicate-item trap
-Show project name + subtitle (`N participants · Hh MMm`), truncating with the subtitle preserved (Photos pattern); clip the **subtitle** before the name when tight (identity outranks metadata). **This reopens a documented fence:** `.navigationTitle` on the detail injects a *duplicate* toolbar title item — which is exactly why the prior in-toolbar project chip was removed "by user request" and the name routed to `NSWindow.title` via `WindowTitleManager` (`desktop/CLAUDE.md:409`, applied at `ContentView.swift:329`). Shipped as specced — the title is a **single explicit `ToolbarItem(placement: .navigation)`** at `ContentView.swift:1349`, *not* `.navigationTitle`, and must not sit where the system back affordance lives. This spec is the design pass that removal comment anticipated.
+**Narrow windows:** rely on the system overflow; never hand-roll a More menu. The actions capsule folds into the `»` chevron, Export included, since it is part of the capsule, until the capsule is just `»`. Search stays: it shrinks to a magnifier button on its own and expands in place when focused.
+
+### 4.4 Search — *rev 3, 3 Oct 2026: the native field*
+**Decided (not yet built):** replace the hand-rolled `QuotesSearchToolbarControl` capsule with SwiftUI's native **`.searchable`** toolbar field, placed as its own item at the far right (§4.3). Why:
+- **The look.** Today's capsule draws its own `.quaternary` fill, and macOS 26 wraps it in the shared glass capsule with Export and the lens buttons, so it reads as a dirty grey pill inside a glass pill. The system field is the clean, light glass that NetNewsWire and Photos get, and it picks up whatever sits behind it.
+- **The behaviour.** The native field collapses to a magnifier and expands when focused.
+
+The wiring stays as it is today:
+- typing is debounced 150 ms, then sent with `setQuotesSearch`;
+- a query pushed from the store is mirrored into the field;
+- ⌘F focuses the field (`requestSearchFocus`), via `.searchFocused`, which needs macOS 15.0, our floor.
+
+`searchToolbarBehavior(.minimize)` stays macOS-26-gated.
+
+**By lens, today:**
+- **Quotes:** live.
+- **Sessions, Codebook, Signals:** the field is present but does not respond yet. This replaces the disabled `SearchComingSoonButton`, and the user accepted it on 3 Oct 2026 because multi-lens search is next.
+- **Project:** no search, unchanged. It gets one when project-wide search (⌥⌘F) ships.
+
+### 4.5 Title — *trued 3 Oct 2026*
+The project name is `.navigationTitle` and the subtitle is `.navigationSubtitle`, both on the detail column. The custom `.navigation` title `ToolbarItem` and `WindowTitleManager` described here in rev 2 were removed on 23 Jun 2026; having both was what produced the duplicate title. The subtitle is already per lens: the SPA sends each lens's subtitle over the bridge (`lensSubtitle`), and Sessions computes its own count. An in-flight run outranks the subtitle, and a name clash prefixes the folder (`WindowSubtitle.swift`). Rev 3 changes nothing here.
 
 ### 4.6 Content under the toolbar — lean into glass
 On macOS 26+, take advantage of the material: the report content (quotes, codebook, …) **slides under the floating toolbar** instead of stopping at a hard boundary — edge-to-edge content, translucent chrome, the glass bar blurring whatever passes beneath it. This is the look to lean into where the OS supports it.
@@ -153,9 +188,16 @@ Per the test review, §6's appearance concerns are **taste the cohort and the de
 Lens rows are **named `View` structs** (`LensRow`), not inline closures (diffing identity). Subtitle updates fire on **stage-boundary events**, not sub-second ticks (verify `RunProgressSubtitle` isn't already churning before adding a throttle). Confirm "lens" stays a **code-internal** term (the product says "tabs"; a user-facing "lens" string would need a `glossary.md` entry).
 
 ## 7. Open decisions
-1. **Native search migration** — port to a native `.searchable` field now, or keep the web-routed button for now (§4.4). *A spec→code timing question, not a design call.*
+1. ~~Native search migration~~ — **decided 3 Oct 2026: native `.searchable`** (§4.4).
+2. The `+⌄` click behaviour and its placement inside the AppKit sidebar (§3.3).
+3. The empty project's button: **Add Files…** (shipped, files only) or **Choose Interviews…** (new, files and folders) (§3.3).
 
-**Decided:** floor **Sequoia 15.0** for coverage + adopt-latest-with-graceful-degradation (§0); Export = visible toolbar menu, Rename/Move/Show → context menu + menu bar not the toolbar (§4.2); inspectors = **spatial split**, tag inspector keeps `sidebar.right` (§4.3); New Project = in-list `+` row + `⌘N` (§3.3); Sessions = `person.2`, **Project = `target` kept** (rings echo the project-row `circle` — "the circle come alive") (§5); selection = separate `LensRail` (lens-as-mode), the `List` left untouched, dimmed-until-project (§3.1 — the SwiftUI build deliberately does *not* add a `.lens(Tab)` case; that one-List fold happened later in the AppKit `NSOutlineView` rewrite). **Parked:** the `3×3`/`2×2` grid-density clash (heatmap feature + icon need redesign).
+**Decided (rev 3, 3 Oct 2026):**
+- New Project / New Folder live in a `+⌄` in the sidebar's toolbar, with the sidebar toggle against the traffic lights (§3.3).
+- The trailing toolbar is one actions capsule, with Export first, then Search on its own at the far right (§4.3).
+- Search is the native `.searchable` field (§4.4).
+
+**Decided (rev 2):** floor **Sequoia 15.0** for coverage + adopt-latest-with-graceful-degradation (§0); Export = visible toolbar menu, Rename/Move/Show → context menu + menu bar not the toolbar (§4.2); inspectors = **spatial split**, tag inspector keeps `sidebar.right` (§4.3); New Project = in-list `+` row + `⌘N` (§3.3); Sessions = `person.2`, **Project = `target` kept** (rings echo the project-row `circle` — "the circle come alive") (§5); selection = separate `LensRail` (lens-as-mode), the `List` left untouched, dimmed-until-project (§3.1 — the SwiftUI build deliberately does *not* add a `.lens(Tab)` case; that one-List fold happened later in the AppKit `NSOutlineView` rewrite). **Parked:** the `3×3`/`2×2` grid-density clash (heatmap feature + icon need redesign).
 
 ## 8. Sources
 - Apple HIG — [Toolbars](https://developer.apple.com/design/human-interface-guidelines/toolbars) · [Sidebars](https://developer.apple.com/design/human-interface-guidelines/sidebars) · [Materials](https://developer.apple.com/design/human-interface-guidelines/materials)

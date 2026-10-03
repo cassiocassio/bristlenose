@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toolbar and Footer Options</title>
+<!--
+  Quick/loose mockup of NATIVE macOS chrome (the web design system does not draw
+  it). Icons are hand-drawn SVG stand-ins for the SF Symbols named in each title
+  attribute. Every visible string is a shipped key from
+  bristlenose/locales/en/desktop.json unless the frame's chrome bar flags it NEW.
+  Inputs: the 3 Oct 2026 toolbar conversation — NetNewsWire's toolbar sequence,
+  Things' sidebar footer, Mail's +/− under a list, and Bettina's interview
+  (did not find New, would not drag, did not explore the menus).
+-->
+<style>
+  :root{
+    color-scheme: light dark;
+    --page: light-dark(#ececef,#1b1b1d);
+    --win: light-dark(#ffffff,#232325);
+    --side: light-dark(#f2f2f4,#2a2a2d);
+    --line: light-dark(rgba(0,0,0,.10),rgba(255,255,255,.10));
+    --ink: light-dark(#1d1d1f,#f2f2f4);
+    --muted: light-dark(#6e6e73,#a1a1a6);
+    --faint: light-dark(#a8a8ad,#6b6b70);
+    --glass: light-dark(rgba(255,255,255,.92),rgba(60,60,64,.92));
+    --glass-line: light-dark(rgba(0,0,0,.09),rgba(255,255,255,.12));
+    --sel: light-dark(rgba(0,0,0,.08),rgba(255,255,255,.10));
+    --accent: light-dark(#007aff,#0a84ff);
+    --menu: light-dark(rgba(246,246,248,.98),rgba(44,44,47,.98));
+    --note-bg: light-dark(#fbf7ec,#2b2820);
+    --note-rule: light-dark(#d9c68f,#7a6a3c);
+    --new: light-dark(#b4561f,#f0a06a);
+    --shadow: 0 14px 40px rgba(0,0,0,.18);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--page);color:var(--ink);
+    font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .page{max-width:1080px;margin:0 auto;padding:28px 16px 64px}
+  h1{font-size:22px;font-weight:700;margin:0 0 6px}
+  h2{font-size:16px;font-weight:700;margin:44px 0 4px}
+  h3{font-size:13px;font-weight:600;margin:22px 0 8px;color:var(--muted)}
+  .lede{color:var(--muted);margin:0 0 16px;max-width:760px}
+
+  /* key */
+  .key{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:10px 0 4px}
+  .key span{display:inline-flex;align-items:center;gap:6px}
+  .key i{display:inline-block;width:18px;height:12px;border-radius:3px}
+  .key .k-art{background:var(--win);border:1px solid var(--line)}
+  .key .k-com{background:var(--note-bg);border-left:3px solid var(--note-rule)}
+
+  /* artefact frame chrome */
+  .frame{margin:10px 0}
+  .fchrome{font:11px/1 ui-monospace,"SF Mono",Menlo,monospace;color:var(--muted);
+    display:flex;gap:10px;align-items:center;margin:0 0 6px 2px;flex-wrap:wrap}
+  .fchrome b{color:var(--ink);font-weight:600}
+  .fchrome .new{color:var(--new)}
+
+  /* window */
+  .win{background:var(--win);border:.5px solid var(--line);border-radius:12px;overflow:hidden;
+    box-shadow:var(--shadow);display:flex;position:relative}
+  .win.short{height:96px}
+  .win.tall{height:380px}
+  .side{flex:0 0 220px;background:var(--side);border-right:.5px solid var(--line);
+    display:flex;flex-direction:column;position:relative}
+  .side.collapsed{display:none}
+  .stb{height:52px;flex:0 0 52px;display:flex;align-items:center;padding:0 10px 0 14px;gap:8px}
+  .lights{display:flex;gap:7px}
+  .lights span{width:12px;height:12px;border-radius:50%}
+  .lights span:nth-child(1){background:#ff5f57}.lights span:nth-child(2){background:#febc2e}.lights span:nth-child(3){background:#28c840}
+  .stb .push{margin-left:auto;display:flex;gap:6px}
+  .side.narrow{flex-basis:150px}
+  .side.narrow .row,.side.narrow .sh{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .detail{flex:1;min-width:0;display:flex;flex-direction:column}
+  .dtb{height:52px;flex:0 0 52px;display:flex;align-items:center;gap:8px;padding:0 10px;
+    border-bottom:.5px solid var(--line)}
+  .dtb .lights{margin-right:6px}
+  .flex{flex:1}
+  .title{display:flex;flex-direction:column;line-height:1.15;min-width:0;margin-left:4px}
+  .title b{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .title small{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .title small.new{color:var(--new)}
+
+  /* glass capsules */
+  .cap{display:inline-flex;align-items:center;gap:2px;height:34px;padding:0 4px;border-radius:17px;
+    background:var(--glass);border:.5px solid var(--glass-line);box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .btn{width:32px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:14px;color:var(--ink)}
+  .btn.on{background:var(--sel)}
+  .btn.off{color:var(--faint)}
+  .btn svg{width:17px;height:17px}
+  .gap{width:10px}
+  .search{height:34px;border-radius:17px;background:light-dark(#fff,rgba(30,30,32,.9));border:.5px solid var(--glass-line);
+    display:inline-flex;align-items:center;gap:6px;padding:0 12px;color:var(--muted);width:200px;
+    box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .search.focus{border:1px solid var(--accent);box-shadow:0 0 0 3px light-dark(rgba(0,122,255,.25),rgba(10,132,255,.35));color:var(--ink)}
+  .search.focus .caret{display:inline-block;width:1px;height:15px;background:var(--accent);margin-left:-4px}
+  /* today: the hand-rolled capsule's .quaternary fill, nested inside the shared glass */
+  .search.dirty{background:light-dark(rgba(0,0,0,.07),rgba(255,255,255,.09));border:0;box-shadow:none;height:26px;border-radius:13px;width:150px;padding:0 8px}
+  .search svg{width:15px;height:15px}
+  .search.off{color:var(--faint)}
+  .navpair .btn svg{width:15px;height:15px}
+
+  /* sidebar list */
+  .slist{flex:1;overflow:hidden;padding:0 8px}
+  .sh{font-size:11px;font-weight:600;color:var(--muted);padding:10px 8px 4px}
+  .row{display:flex;align-items:center;gap:8px;height:28px;padding:0 8px;border-radius:7px;font-size:13px}
+  .row svg{width:15px;height:15px;color:var(--accent);flex:0 0 15px}
+  .row.proj svg{color:var(--muted)}
+  .row.sel{background:var(--sel)}
+  .row .n{margin-left:auto;color:var(--muted);font-size:12px}
+  .row.ghost{color:var(--muted)}
+  .row.ghost svg{color:var(--muted)}
+  .sfoot{height:44px;flex:0 0 44px;display:flex;align-items:center;padding:0 10px;border-top:.5px solid var(--line)}
+  .newbtn{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px 0 8px;border-radius:14px;
+    background:var(--sel);color:var(--ink);font-size:13px}
+  .newbtn svg{width:14px;height:14px}
+  .newbtn .chev{width:10px;height:10px;color:var(--muted)}
+  .sfoot .gear{margin-left:auto;color:var(--muted)}
+  .sfoot .gear svg{width:17px;height:17px}
+
+  /* pull-down menus */
+  .menu{position:absolute;z-index:3;background:var(--menu);border:.5px solid var(--glass-line);border-radius:10px;
+    box-shadow:0 10px 30px rgba(0,0,0,.22);padding:5px;min-width:180px;font-size:13px}
+  .menu .mi{padding:4px 10px;border-radius:5px}
+  .menu .mi:first-child{background:var(--accent);color:#fff}
+  .menu .mi small{display:block;font-size:11px;color:var(--muted);line-height:1.35;max-width:230px}
+  .menu .mi:first-child small{color:rgba(255,255,255,.85)}
+  .menu .mi small.new{color:var(--new)}
+  .menu .mi:first-child small.new{color:#ffe1cc}
+  .menu hr{border:0;border-top:.5px solid var(--line);margin:4px 6px}
+
+  /* detail body */
+  .body{flex:1;position:relative;overflow:hidden}
+  .ghostlines{padding:22px 28px}
+  .ghostlines i{display:block;height:9px;border-radius:5px;background:var(--sel);margin:0 0 12px}
+  .empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;padding:20px}
+  .empty svg{width:40px;height:40px;color:var(--muted);margin-bottom:6px}
+  .empty b{font-size:17px;font-weight:600}
+  .empty p{margin:0;color:var(--muted);max-width:300px}
+  .empty p.new{color:var(--new)}
+  .pbtn{margin-top:10px;height:28px;padding:0 14px;border-radius:7px;background:var(--accent);color:#fff;display:inline-flex;align-items:center;font-size:13px}
+  .pbtn.new{outline:1.5px dashed var(--new);outline-offset:3px}
+
+  /* commentary */
+  .note{background:var(--note-bg);border-left:3px solid var(--note-rule);border-radius:4px;padding:10px 14px;margin:12px 0 0;max-width:820px}
+  .note::before{content:"Commentary";display:block;font:600 10px/1 ui-monospace,"SF Mono",Menlo,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .note p{margin:0 0 6px}.note p:last-child{margin:0}
+  .note ul{margin:4px 0 0;padding-left:18px}
+  .note code{font:12px ui-monospace,"SF Mono",Menlo,monospace}
+
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,500px),1fr));gap:18px}
+  table.cmp{border-collapse:collapse;font-size:12px;margin:8px 0 0;width:100%;max-width:820px}
+  table.cmp th,table.cmp td{text-align:left;padding:5px 8px;border-bottom:.5px solid var(--line);vertical-align:top}
+  table.cmp th{color:var(--muted);font-weight:600}
+  @media (max-width:640px){ .side{flex-basis:170px} .search{width:120px} }
+</style>
+</head>
+<body>
+
+<!-- SF Symbol stand-ins -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="sidebar-left" viewBox="0 0 20 20"><rect x="2" y="3.5" width="16" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.4"/><line x1="7.5" y1="3.5" x2="7.5" y2="16.5" stroke="currentColor" stroke-width="1.4"/><line x1="3.8" y1="6.5" x2="5.8" y2="6.5" stroke="currentColor" stroke-width="1.2"/><line x1="3.8" y1="8.7" x2="5.8" y2="8.7" stroke="currentColor" stroke-width="1.2"/></symbol>
+    <symbol id="sidebar-right" viewBox="0 0 20 20"><rect x="2" y="3.5" width="16" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.4"/><line x1="12.5" y1="3.5" x2="12.5" y2="16.5" stroke="currentColor" stroke-width="1.4"/><line x1="14.2" y1="6.5" x2="16.2" y2="6.5" stroke="currentColor" stroke-width="1.2"/><line x1="14.2" y1="8.7" x2="16.2" y2="8.7" stroke="currentColor" stroke-width="1.2"/></symbol>
+    <symbol id="back" viewBox="0 0 20 20"><path d="M12.5 4.5 7 10l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="fwd" viewBox="0 0 20 20"><path d="M7.5 4.5 13 10l-5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="list" viewBox="0 0 20 20"><g fill="currentColor"><circle cx="4.5" cy="5.5" r="1.2"/><circle cx="4.5" cy="10" r="1.2"/><circle cx="4.5" cy="14.5" r="1.2"/></g><g stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="8" y1="5.5" x2="16.5" y2="5.5"/><line x1="8" y1="10" x2="16.5" y2="10"/><line x1="8" y1="14.5" x2="16.5" y2="14.5"/></g></symbol>
+    <symbol id="star" viewBox="0 0 20 20"><path d="M10 2.8l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L2.8 8.1l5-.7z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+    <symbol id="books" viewBox="0 0 20 20"><g fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="3.5" width="3.6" height="13" rx=".8"/><rect x="7.6" y="3.5" width="3.6" height="13" rx=".8"/><path d="M12.6 4.6l3-.8 2.6 11.6-3 .8z"/></g></symbol>
+    <symbol id="grid" viewBox="0 0 20 20"><g fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="3" width="6" height="6" rx="1.3"/><rect x="11" y="3" width="6" height="6" rx="1.3"/><rect x="3" y="11" width="6" height="6" rx="1.3"/><rect x="11" y="11" width="6" height="6" rx="1.3"/></g></symbol>
+    <symbol id="share" viewBox="0 0 20 20"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7.5H5.5a1.5 1.5 0 0 0-1.5 1.5v7a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5V9a1.5 1.5 0 0 0-1.5-1.5H13"/><path d="M10 12V2.5M7 5.3 10 2.4l3 2.9"/></g></symbol>
+    <symbol id="search" viewBox="0 0 20 20"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8.5" cy="8.5" r="5"/><line x1="12.3" y1="12.3" x2="16.5" y2="16.5"/></g></symbol>
+    <symbol id="more" viewBox="0 0 20 20"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5l5 5-5 5"/><path d="M10 5l5 5-5 5"/></g></symbol>
+    <symbol id="plus" viewBox="0 0 20 20"><g stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="10" y1="4" x2="10" y2="16"/><line x1="4" y1="10" x2="16" y2="10"/></g></symbol>
+    <symbol id="chev" viewBox="0 0 20 20"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="gear" viewBox="0 0 20 20"><g fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="10" cy="10" r="2.6"/><path d="M10 2.5v2.2M10 15.3v2.2M2.5 10h2.2M15.3 10h2.2M4.7 4.7l1.6 1.6M13.7 13.7l1.6 1.6M4.7 15.3l1.6-1.6M13.7 6.3l1.6-1.6" stroke-linecap="round"/><circle cx="10" cy="10" r="5.4"/></g></symbol>
+    <symbol id="sliders" viewBox="0 0 20 20"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><line x1="3" y1="5" x2="17" y2="5"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="15" x2="17" y2="15"/><circle cx="12" cy="5" r="1.8" fill="var(--side)"/><circle cx="7" cy="10" r="1.8" fill="var(--side)"/><circle cx="13" cy="15" r="1.8" fill="var(--side)"/></g></symbol>
+    <symbol id="target" viewBox="0 0 20 20"><g fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="4"/><circle cx="10" cy="10" r="1.2" fill="currentColor"/></g></symbol>
+    <symbol id="people" viewBox="0 0 20 20"><g fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7.5" cy="7" r="2.6"/><path d="M2.5 16c.5-3 2.5-4.5 5-4.5s4.5 1.5 5 4.5"/><circle cx="13.5" cy="7.5" r="2.2"/><path d="M13 11.6c2 .1 3.8 1.4 4.3 4"/></g></symbol>
+    <symbol id="quote" viewBox="0 0 20 20"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><line x1="8" y1="6" x2="17" y2="6"/><line x1="8" y1="10" x2="17" y2="10"/><line x1="3" y1="14" x2="17" y2="14"/><path d="M3 9.5V7.2C3 6 3.8 5.3 5 5"/></g></symbol>
+    <symbol id="tag" viewBox="0 0 20 20"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M3 3.5h6.5l7.5 7.5-6 6L3.5 9.5z"/><circle cx="7" cy="7" r="1.2"/></g></symbol>
+    <symbol id="circle" viewBox="0 0 20 20"><circle cx="10" cy="10" r="6.5" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+    <symbol id="tray" viewBox="0 0 40 40"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 5v18M13 16l7 7 7-7"/><path d="M6 23v8a3 3 0 0 0 3 3h22a3 3 0 0 0 3-3v-8"/></g></symbol>
+  </defs>
+</svg>
+
+<div class="page">
+  <h1>Toolbar and sidebar-footer options</h1>
+  <p class="lede">Mac app only. The toolbar has one capsule of actions (Export first, as today, then the lens's own buttons), then search on its own at the far right, as in NetNewsWire. The sidebar footer borrows Things and Mail. The empty-project pane answers Bettina's interview.</p>
+  <div class="key">
+    <span><i class="k-art"></i>Artefact: what would ship</span>
+    <span><i class="k-com"></i>Commentary: why</span>
+    <span style="color:var(--new)">orange in a frame's chrome bar or on a string = NEW copy, not a shipped key</span>
+  </div>
+
+  <!-- ================================================================ -->
+  <h2>1 · The toolbar sequence</h2>
+  <p class="lede">Each lens, today and proposed. The subtitle is the shipped per-lens subtitle; the counts are illustrative.</p>
+  <div id="lenses"></div>
+
+  <div class="note">
+    <p><b>Decided (3 Oct 2026; design doc §4.3–4.4, rev 3).</b> Leading is unchanged: the list toggle, then the back/forward group with its current behaviour, then the title and per-lens subtitle. Trailing has two groups:</p>
+    <ul>
+      <li><b>One actions capsule, as today:</b> Export first, then the lens's own buttons.</li>
+      <li><b>Search on its own, always the rightmost item:</b> the native <code>.searchable</code> field. It's live on Quotes. On Sessions, Codebook and Signals it's present but doesn't respond yet, which replaces today's disabled button; multi-lens search is next. Project has no search until project-wide search (⌥⌘F) ships.</li>
+    </ul>
+    <p><b>The field's look.</b> Today's hand-drawn capsule has a <code>.quaternary</code> fill, and macOS 26 wraps it in the shared glass, giving a grey pill inside a glass pill (frames marked “today”). The native field is the clean, light glass that NetNewsWire and Photos get.</p>
+  </div>
+
+  <h3>Narrow window: what folds first</h3>
+  <div id="narrow"></div>
+  <div class="note">
+    <p>When space runs out, the whole actions capsule folds into <code>»</code>, Export included, since it's part of the capsule. Search stays on its own: it shrinks to a magnifier and expands in place when focused. That's the native field's own behaviour. The back/forward group is untouched.</p>
+  </div>
+
+  <!-- ================================================================ -->
+  <h2>2 · A home for New Project and New Folder</h2>
+  <p class="lede">Bettina, a Windows user, didn't find New. She wouldn't drag, she expected to make a project before giving it any interviews, and she didn't explore the menu bar.</p>
+  <div class="grid2" id="footers"></div>
+
+  <div class="note">
+    <table class="cmp">
+      <tr><th>Option</th><th>Precedent</th><th>For</th><th>Against</th></tr>
+      <tr><td>A · today</td><td>—</td><td>Shipped</td><td>Grey reads as disabled; scrolls away with the list; Bettina missed it. The AppKit sidebar has no equivalent row.</td></tr>
+      <tr><td>B · labelled footer</td><td>Notes, Reminders, Mail's <code>+ −</code></td><td>Bottom-left is where Mac lists have always put Add; the label is what a Windows user scans for; keeps the toolbar for the report</td><td>The HIG's warning about controls slipping off the bottom of the screen. It's answered by ⌘N and the Welcome screen still being there.</td></tr>
+      <tr><td>C · explaining menu</td><td>Things</td><td>Explains what a project is at the moment you make one</td><td><b>Rejected:</b> too verbose. Also reads as apologetic, and Bettina's problem was finding New, not telling a project from a folder.</td></tr>
+      <tr><td>D · footer + gear</td><td>Things (sliders), Mail (<code>?</code>)</td><td>Gives Settings, and the AI key, a visible home</td><td><b>Rejected:</b> the labelled “New Project” repeats the call to action the main content area already shows when no project is selected. And ⌘, is where Settings lives on a Mac. If a gear ever ships, use the gear, not sliders: sliders mean “adjust this view”.</td></tr>
+      <tr><td>E · toolbar <code>+⌄</code></td><td>NetNewsWire</td><td>The purist option; disappears with the sidebar</td><td>Unlabelled, and another glass bubble in the toolbar.</td></tr>
+    </table>
+    <p style="margin-top:8px"><b>Decided (3 Oct 2026): E, the purist default.</b> The sidebar's own toolbar holds, in order:</p>
+    <ul>
+      <li><b>Sidebar toggle hard against the traffic lights.</b> It's the last control left when the sidebar is narrow, so it's always findable.</li>
+      <li><b><code>+⌄</code> trailing, right-aligned to the sidebar's width</b>, opening New Project… / New Folder… (both shipped <code>menu.file.*</code> strings). It hides when the sidebar is narrow, and disappears with the sidebar, as NetNewsWire's does.</li>
+    </ul>
+    <p>The in-list grey row (A) goes. B, C and D stay on the page as the alternatives we considered.</p>
+    <p><b>Build checks:</b> (1) where <code>NavigationSplitView</code>'s automatic sidebar toggle actually lands on macOS 15 and 26; design doc §3.3 assumed sidebar top-trailing, which this decision moves. (2) “Hides when narrow” should come from the system's toolbar overflow, not a width rule we write. (3) Bettina's discoverability gap is now covered by ⌘N, the Welcome screen for a first project, and the empty project's own button (section 3), not by a label.</p>
+    <p><b>Still open:</b> whether a click on <code>+</code> opens the menu or makes a New Project directly (with the chevron opening the menu); and where the <code>+</code> sits in the AppKit sidebar.</p>
+    <p><b>Not drawn:</b> no <code>−</code> beside the <code>+</code>. Deleting a project stays in the right-click menu and the menu bar, with its confirmation.</p>
+  </div>
+
+  <!-- ================================================================ -->
+  <h2>3 · The empty project: fill it without dragging</h2>
+  <p class="lede">After New Project, the detail pane asks for interviews. Today it only accepts a drop.</p>
+  <div class="grid2" id="empties"></div>
+  <div class="note">
+    <p>Bettina's “make it first” model already works up to the second step: New Project creates the project and puts its name into rename mode. Then the pane says “Drag Interviews Here” with no button, which is a dead end for anyone who doesn't drag (<code>dragInterviewsPane</code>, <code>ContentView.swift</code>).</p>
+    <p><b>Option 2a</b> reuses the shipped <code>menu.file.addFiles</code> (“Add Files…”). No new string, but today's picker (<code>addFilesToSelectedProject</code>) takes files only, not folders. <b>Option 2b</b> adds two new strings and needs a picker that also accepts folders, since researchers often have one folder per study. Either way the drop still works, and the button is the pane's primary action rather than an extra.</p>
+  </div>
+</div>
+
+<script>
+const I = (id, cls='') => `<svg class="${cls}" aria-hidden="true"><use href="#${id}"/></svg>`;
+const B = (id, title, cls='') => `<span class="btn ${cls}" title="${title}">${I(id)}</span>`;
+const cap = items => items.length ? `<span class="cap">${items.join('')}</span>` : '';
+
+const nav = cap([B('back','chevron.backward — Back (⌘[)'), B('fwd','chevron.forward — Forward (⌘])','off')]).replace('class="cap"','class="cap navpair"');
+
+// lens: [name, leadingButton, viewButtons, currentSearchState, proposedSubtitle]
+const lenses = [
+  ['Project',  null,
+     [], 'none', 'Kitchen study · 16 sessions · 18h 23m'],
+  ['Sessions', B('list','list.bullet — Switch Session'),
+     [], 'disabled', '16 sessions · 18h 23m'],
+  ['Quotes',   B('list','list.bullet — Show Contents (⌘⌥L)'),
+     [B('star','star — Starred Quotes Only','on'), B('sidebar-right','sidebar.right — Show Tags (⌘⌥T)')], 'live', '212 quotes · 14 starred'],
+  ['Codebook', B('list','list.bullet — Show Codes (⌘⌥L)'),
+     [B('books','books.vertical — Library')], 'disabled', '4 codebooks on · 38 tags'],
+  ['Signals',  B('list','list.bullet — Show Signals (⌘⌥L)'),
+     [B('grid','square.grid.2x2 — Show Heatmap (m)')], 'disabled', '23 signals'],
+];
+const exportBtn = B('share','square.and.arrow.up — Export (⌘⇧E)');
+const titleBlock = (sub) => `<span class="title"><b>Kitchen study</b><small>${sub}</small></span>`;
+const searchField = (state, w) => state==='none' ? '' :
+  `<span class="search ${state==='disabled'?'off':''}" style="${w?'width:'+w+'px':''}" title="${state==='disabled'?'Search isn’t available in this view yet':'Search (⌘F)'}">${I('search')}Search</span>`;
+
+function toolbarCurrent(l){
+  const [name, lead, views, s] = l;
+  const trailing = [exportBtn, ...views];
+  if (s==='disabled') trailing.push(B('search','magnifyingglass — Search isn’t available in this view yet','off'));
+  if (s==='live') trailing.push(`<span class="search dirty">${I('search')}Search</span>`);
+  return `${lead?cap([lead]):''}${nav}${titleBlock(l[4])}<span class="flex"></span>${cap(trailing)}`;
+}
+// mode: 'wide' | 'narrow' | 'narrow-focus'
+function toolbarProposed(l, mode='wide'){
+  const [name, lead, views, s, sub] = l;
+  const head = `${lead?cap([lead]):''}${nav}${titleBlock(sub)}<span class="flex"></span>`;
+  if (mode==='narrow')
+    return head + cap([B('more','» overflow — Export, Starred, Tags')]) + '<span class="gap"></span>' + cap([B('search','magnifyingglass — Search (⌘F)')]);
+  if (mode==='narrow-focus')
+    return head + cap([B('more','» overflow — Export, Starred, Tags')]) + '<span class="gap"></span>' +
+      `<span class="search focus" style="width:190px">${I('search')}<span class="caret"></span></span>`;
+  const search = s==='none' ? '' : '<span class="gap"></span>' + searchField('live');
+  return head + cap([exportBtn, ...views]) + search;
+}
+const win = (inner, side=true, w='') => `<div class="win short" style="${w}">${side?`<div class="side"><div class="stb"><span class="lights"><span></span><span></span><span></span></span><span class="push">${B('sidebar-left','sidebar.left')}</span></div></div>`:''}<div class="detail"><div class="dtb">${side?'':'<span class="lights"><span></span><span></span><span></span></span>'+B('sidebar-left','sidebar.left')}${inner}</div></div></div>`;
+
+document.getElementById('lenses').innerHTML = lenses.map(l => `
+  <div class="frame"><div class="fchrome"><b>${l[0]}</b> · today</div>${win(toolbarCurrent(l))}</div>
+  <div class="frame"><div class="fchrome"><b>${l[0]}</b> · actions capsule + search on its own</div>${win(toolbarProposed(l))}</div>`).join('');
+
+document.getElementById('narrow').innerHTML = `
+  <div class="frame"><div class="fchrome"><b>Quotes</b> · narrow window, sidebar hidden</div>${win(toolbarProposed(lenses[2], 'narrow'), false, 'max-width:640px')}</div>
+  <div class="frame"><div class="fchrome"><b>Quotes</b> · narrow window, search focused</div>${win(toolbarProposed(lenses[2], 'narrow-focus'), false, 'max-width:640px')}</div>`;
+
+// ---------- sidebar footers ----------
+const lensRows = `<div class="sh">&nbsp;</div>
+  <div class="row">${I('target')}Project</div><div class="row">${I('people')}Sessions</div>
+  <div class="row sel">${I('quote')}Quotes</div><div class="row">${I('tag')}Codebook</div><div class="row">${I('grid')}Signals</div>`;
+const projRows = `<div class="sh">Projects</div>
+  <div class="row proj sel">${I('circle')}Kitchen study<span class="n">16</span></div>
+  <div class="row proj">${I('circle')}Banking app<span class="n">9</span></div>
+  <div class="row proj">${I('circle')}Clinic intake<span class="n">12</span></div>`;
+const newBtn = `<span class="newbtn">${I('plus')}New Project${I('chev','chev')}</span>`;
+const side = ({top='', stbExtra='', foot='', menu='', narrow=false}) => `
+  <div class="side${narrow?' narrow':''}"><div class="stb"><span class="lights"><span></span><span></span><span></span></span>${B('sidebar-left','sidebar.left')}<span class="push">${stbExtra}</span></div>
+  <div class="slist">${lensRows}${top}${projRows}</div>${foot?`<div class="sfoot">${foot}</div>`:''}${menu}</div>`;
+const sideWin = (sidebar) => `<div class="win tall">${sidebar}<div class="detail"><div class="dtb"><span class="title"><b>Kitchen study</b><small>16 Sessions · 18h 23m</small></span></div><div class="body"><div class="ghostlines"><i style="width:60%"></i><i style="width:85%"></i><i style="width:72%"></i><i style="width:40%"></i></div></div></div></div>`;
+
+const plainMenu = `<div class="menu" style="left:10px;bottom:50px"><div class="mi">New Project…</div><div class="mi">New Folder…</div></div>`;
+const descMenu = `<div class="menu" style="left:10px;bottom:50px;min-width:250px">
+  <div class="mi">New Project…<small class="new">One study: its interviews, and the quotes and themes drawn from them.</small></div><hr>
+  <div class="mi">New Folder…<small class="new">Keep projects together, for example by client.</small></div></div>`;
+const nnwMenu = `<div class="menu" style="left:150px;top:46px"><div class="mi">New Project…</div><div class="mi">New Folder…</div></div>`;
+
+const plusMenu = `<span class="cap">${B('plus','plus — New Project… / New Folder…')}<svg style="width:9px;height:9px;margin:0 6px 0 -4px;color:var(--muted)" aria-hidden="true"><use href="#chev"/></svg></span>`;
+const footers = [
+  ['E', 'DEFAULT · +⌄ in the sidebar toolbar (NetNewsWire), menu open', '',
+    side({stbExtra:plusMenu, menu:`<div class="menu" style="right:-30px;top:46px"><div class="mi">New Project…</div><div class="mi">New Folder…</div></div>`})],
+  ['E', 'DEFAULT · narrow sidebar: + hides, the toggle stays by the lights', '',
+    side({narrow:true})],
+  ['A', 'today: grey row at the top of the list (replaced)', '',
+    side({top:`<div class="sh">&nbsp;</div><div class="row ghost">${I('plus')}New Project…</div>`})],
+  ['B', 'alternative · labelled footer (Notes / Reminders / Mail)', 'button label: shipped chrome.newProject',
+    side({foot:newBtn, menu:plainMenu})],
+  ['C', 'alternative · footer + explaining menu (Things)', '<span class="new">menu descriptions: NEW copy (draft)</span>',
+    side({foot:newBtn, menu:descMenu})],
+  ['D', 'alternative · footer + Settings gear', '<span class="new">gear tooltip “Settings”: NEW key</span>',
+    side({foot:`${newBtn}<span class="btn gear" title="gearshape — Settings (⌘,)">${I('gear')}</span>`})],
+];
+document.getElementById('footers').innerHTML = footers.map(([k,label,flag,sb]) =>
+  `<div class="frame"><div class="fchrome"><b>${k}</b> · ${label} ${flag}</div>${sideWin(sb)}</div>`).join('');
+
+// ---------- empty project ----------
+const emptyWin = (inner) => `<div class="win tall">${side({})}<div class="detail"><div class="dtb"><span class="title"><b>New Project</b><small>&nbsp;</small></span></div><div class="body">${inner}</div></div></div>`;
+const empties = [
+  ['1', 'today', '',
+    `<div class="empty">${I('tray')}<b>Drag Interviews Here</b><p>Add interview recordings or transcripts to get started.</p></div>`],
+  ['2a', 'primary button, shipped label', 'button: shipped menu.file.addFiles',
+    `<div class="empty">${I('tray')}<b>Drag Interviews Here</b><p>Add interview recordings or transcripts to get started.</p><span class="pbtn">Add Files…</span></div>`],
+  ['2b', 'primary button, new label', '<span class="new">button + secondary line: NEW copy</span>',
+    `<div class="empty">${I('tray')}<b>Add Interviews</b><p>Add interview recordings or transcripts to get started.</p><span class="pbtn new">Choose Interviews…</span><p class="new" style="font-size:12px">or drag them here</p></div>`],
+];
+document.getElementById('empties').innerHTML = empties.map(([k,label,flag,inner]) =>
+  `<div class="frame"><div class="fchrome"><b>${k}</b> · ${label} ${flag}</div>${emptyWin(inner)}</div>`).join('');
+</script>
+</body>
+</html>

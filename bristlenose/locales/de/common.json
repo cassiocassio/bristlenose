@@ -48,7 +48,7 @@
   },
   "search": {
     "ariaLabel": "Zitate durchsuchen",
-    "placeholder": "Zitate filtern…",
+    "placeholder": "Zitate, Personen, Tags suchen",
     "clearAriaLabel": "Suche löschen",
     "suggest": {
       "textRow": "Zitate mit \u201e{{query}}\u201c",

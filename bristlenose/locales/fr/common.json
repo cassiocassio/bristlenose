@@ -48,7 +48,7 @@
   },
   "search": {
     "ariaLabel": "Rechercher des verbatim",
-    "placeholder": "Filtrer les verbatim…",
+    "placeholder": "Rechercher des verbatim, personnes, étiquettes",
     "clearAriaLabel": "Effacer la recherche",
     "suggest": {
       "textRow": "Verbatim contenant \u00ab\u202f{{query}}\u202f\u00bb",

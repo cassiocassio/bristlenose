@@ -70,7 +70,7 @@
   },
   "search": {
     "ariaLabel": "Szukaj w cytatach",
-    "placeholder": "Filtruj cytaty…",
+    "placeholder": "Szukaj cytatów, osób, tagów",
     "clearAriaLabel": "Wyczyść wyszukiwanie",
     "suggest": {
       "textRow": "Cytaty zawieraj\u0105ce \u201e{{query}}\u201d",

@@ -58,7 +58,7 @@
   },
   "search": {
     "ariaLabel": "Zoek in citaten",
-    "placeholder": "Citaten filteren…",
+    "placeholder": "Zoek citaten, personen, tags",
     "clearAriaLabel": "Zoekopdracht wissen",
     "suggest": {
       "textRow": "Citaten met “{{query}}”",

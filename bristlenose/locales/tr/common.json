@@ -58,7 +58,7 @@
   },
   "search": {
     "ariaLabel": "Alıntılarda ara",
-    "placeholder": "Alıntıları filtrele…",
+    "placeholder": "Alıntı, kişi, etiket ara",
     "clearAriaLabel": "Aramayı temizle",
     "suggest": {
       "textRow": "\u201c{{query}}\u201d i\u00e7eren al\u0131nt\u0131lar",

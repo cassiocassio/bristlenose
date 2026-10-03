@@ -52,7 +52,7 @@
   },
   "search": {
     "ariaLabel": "搜尋引述",
-    "placeholder": "篩選引述⋯",
+    "placeholder": "搜尋引述、人員、標籤",
     "clearAriaLabel": "清除搜尋",
     "suggest": {
       "textRow": "\u542b\u300c{{query}}\u300d\u7684\u5f15\u8ff0",

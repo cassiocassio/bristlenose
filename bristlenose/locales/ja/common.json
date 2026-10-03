@@ -54,7 +54,7 @@
   },
   "search": {
     "ariaLabel": "発言を検索",
-    "placeholder": "発言をフィルタ…",
+    "placeholder": "発言、人物、タグを検索",
     "clearAriaLabel": "検索をクリア",
     "suggest": {
       "textRow": "\u300c{{query}}\u300d\u3092\u542b\u3080\u767a\u8a00",

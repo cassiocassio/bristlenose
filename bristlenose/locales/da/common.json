@@ -58,7 +58,7 @@
   },
   "search": {
     "ariaLabel": "Søg i citater",
-    "placeholder": "Filtrér citater…",
+    "placeholder": "Søg i citater, personer, tags",
     "clearAriaLabel": "Ryd søgning",
     "suggest": {
       "textRow": "Citater med \u201e{{query}}\u201c",

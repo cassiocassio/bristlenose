@@ -58,7 +58,7 @@
   },
   "search": {
     "ariaLabel": "Sök citat",
-    "placeholder": "Filtrera citat…",
+    "placeholder": "Sök citat, personer, taggar",
     "clearAriaLabel": "Rensa sökning",
     "suggest": {
       "textRow": "Citat som inneh\u00e5ller \u201d{{query}}\u201d",

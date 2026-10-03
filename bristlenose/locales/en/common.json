@@ -58,7 +58,7 @@
   },
   "search": {
     "ariaLabel": "Search quotes",
-    "placeholder": "Filter quotes…",
+    "placeholder": "Search quotes, people, tags",
     "clearAriaLabel": "Clear search",
     "suggest": {
       "textRow": "Quotes containing “{{query}}”",

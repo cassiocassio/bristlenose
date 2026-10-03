@@ -1,11 +1,14 @@
 import { render, fireEvent, act } from "@testing-library/react";
 import { Toolbar } from "./Toolbar";
-import { addSearchToken, initFromQuotes, resetStore } from "../contexts/QuotesContext";
+import { addSearchToken, initFromQuotes, resetStore, setSearchQuery } from "../contexts/QuotesContext";
+import { announce } from "../utils/announce";
 import { personToken } from "../utils/searchTokens";
 import { _resetEmbeddedCache } from "../utils/embedded";
 import type { QuoteResponse } from "../utils/types";
 
 // Mock API
+vi.mock("../utils/announce", () => ({ announce: vi.fn() }));
+
 vi.mock("../utils/api", () => ({
   getPeople: vi.fn().mockResolvedValue({}),
   putHidden: vi.fn(),
@@ -144,5 +147,24 @@ describe("Toolbar", () => {
 
     // Label should now say "Starred quotes"
     expect(getByTestId("bn-toolbar-view-switcher-btn").textContent).toContain("Starred quotes");
+  });
+
+  it("announces how many quotes a settled search leaves, once, not per keystroke", () => {
+    vi.useFakeTimers();
+    try {
+      initFromQuotes([makeQuote(), makeQuote({ dom_id: "q2", text: "nothing relevant here" })]);
+      render(<Toolbar />);
+      vi.mocked(announce).mockClear();
+      act(() => setSearchQuery("us"));
+      act(() => vi.advanceTimersByTime(300));
+      act(() => setSearchQuery("usab"));
+      act(() => vi.advanceTimersByTime(300));
+      expect(announce).not.toHaveBeenCalled(); // still typing
+      act(() => vi.advanceTimersByTime(500));
+      expect(announce).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(announce).mock.calls[0][0]).toBe("1 matching");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

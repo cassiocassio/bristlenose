@@ -58,7 +58,7 @@
   },
   "search": {
     "ariaLabel": "Buscar citações",
-    "placeholder": "Filtrar citações…",
+    "placeholder": "Buscar citações, pessoas, etiquetas",
     "clearAriaLabel": "Limpar busca",
     "suggest": {
       "textRow": "Cita\u00e7\u00f5es com \u201c{{query}}\u201d",

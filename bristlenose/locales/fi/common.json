@@ -58,7 +58,7 @@
   },
   "search": {
     "ariaLabel": "Hae sitaateista",
-    "placeholder": "Suodata sitaatteja…",
+    "placeholder": "Hae sitaatteja, henkilöitä, tunnisteita",
     "clearAriaLabel": "Tyhjennä haku",
     "suggest": {
       "textRow": "Sitaatit, joissa on \u201d{{query}}\u201d",

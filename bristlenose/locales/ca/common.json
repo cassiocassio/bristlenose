@@ -58,7 +58,7 @@
   },
   "search": {
     "ariaLabel": "Cerca cites",
-    "placeholder": "Filtra les cites…",
+    "placeholder": "Cerca cites, persones, etiquetes",
     "clearAriaLabel": "Esborra la cerca",
     "suggest": {
       "textRow": "Cites que contenen \u00ab{{query}}\u00bb",

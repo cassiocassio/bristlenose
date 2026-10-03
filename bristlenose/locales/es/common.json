@@ -48,7 +48,7 @@
   },
   "search": {
     "ariaLabel": "Buscar citas",
-    "placeholder": "Filtrar citas…",
+    "placeholder": "Buscar citas, personas, etiquetas",
     "clearAriaLabel": "Borrar búsqueda",
     "suggest": {
       "textRow": "Citas que contienen \u00ab{{query}}\u00bb",

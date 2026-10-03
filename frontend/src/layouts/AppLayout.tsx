@@ -80,6 +80,7 @@ import { isEditing } from "../utils/editing";
 import { isEmbedded } from "../utils/embedded";
 import { getExportData } from "../utils/exportData";
 import { DEFAULT_HEALTH_RESPONSE, type HealthResponse } from "../utils/health";
+import { asPhrase } from "../utils/searchMatch";
 
 // ── CSV helpers (shared with Toolbar — duplicated to avoid coupling) ─────
 
@@ -377,7 +378,6 @@ function AppShell() {
         if (path.startsWith("/report/sessions")) return "sessions";
         if (path.startsWith("/report/codebook")) return "codebook";
         if (path.startsWith("/report/signals")) return "signals";
-        if (path.startsWith("/report/discussion")) return "discussion";
         return "project";
       },
       getFocusedQuoteId: () => focusedIdBridgeRef.current,
@@ -469,7 +469,9 @@ function AppShell() {
         case "useSelectionForFind": {
           const sel = window.getSelection()?.toString().trim() ?? "";
           if (sel) {
-            setSearchQuery(sel);
+            // Quoted, so the selection is found as exact text even when it
+            // starts mid-word; a bare query would need every word to start one.
+            setSearchQuery(asPhrase(sel));
             postFindPasteboardWrite(sel);
           }
           focusSearchInput();
@@ -477,8 +479,9 @@ function AppShell() {
         }
         case "findNext":
         case "findPrevious": {
+          // The system find pasteboard holds raw text, as ⌘E wrote it.
           const text = (payload as { text?: string } | undefined)?.text ?? "";
-          if (text) setSearchQuery(text);
+          if (text) setSearchQuery(asPhrase(text));
           focusSearchInput();
           break;
         }

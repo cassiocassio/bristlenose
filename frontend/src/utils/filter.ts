@@ -6,6 +6,8 @@
  * pattern (style.display = 'none' on blockquotes).
  */
 
+import { isActiveQuery, parseQuery, type SearchTerm } from "./searchMatch";
+import { quoteMatches } from "./searchSuggest";
 import type { QuoteResponse, TagResponse } from "./types";
 
 export interface TagFilterState {
@@ -40,7 +42,9 @@ export interface FilterState {
  * 1. Hidden quotes are always excluded
  * 2. View mode: "starred" only shows starred quotes
  * 3. Tag filter: check quote tags against unchecked set
- * 4. Search query: match against quote text, speaker name, tag names (min 3 chars)
+ * 4. Search query: every typed word must start a word in the quote text,
+ *    speaker name, tag names or sentiment (docs/design-search.md §3; active
+ *    from 2 characters)
  */
 export function isQuoteVisible(q: QuoteResponse, f: FilterState): boolean {
   // 1. Hidden quotes are always excluded
@@ -52,8 +56,9 @@ export function isQuoteVisible(q: QuoteResponse, f: FilterState): boolean {
   // 3. Tag filter
   if (!passesTagFilter(q, f)) return false;
 
-  // 4. Search filter (min 3 chars)
-  if (f.searchQuery.length >= 3 && !matchesSearch(q, f)) return false;
+  // 4. Search filter
+  const terms = activeTerms(f.searchQuery);
+  if (terms && !quoteMatches(q, terms, f.tags)) return false;
 
   return true;
 }
@@ -93,22 +98,15 @@ function passesTagFilter(q: QuoteResponse, f: FilterState): boolean {
 
 // ── Search ────────────────────────────────────────────────────────────────
 
-function matchesSearch(q: QuoteResponse, f: FilterState): boolean {
-  const query = f.searchQuery.toLowerCase();
+// isQuoteVisible runs once per quote with the same query, so parse it once.
+let lastQuery: string | null = null;
+let lastTerms: SearchTerm[] | null = null;
 
-  // Check quote text (prefer edited text if available)
-  const text = (q.edited_text ?? q.text).toLowerCase();
-  if (text.includes(query)) return true;
-
-  // Check speaker name
-  if (q.speaker_name.toLowerCase().includes(query)) return true;
-
-  // Check tag names (store overrides)
-  const quoteTags = f.tags[q.dom_id] ?? q.tags;
-  if (quoteTags.some((t) => t.name.toLowerCase().includes(query))) return true;
-
-  // Check sentiment
-  if (q.sentiment && q.sentiment.toLowerCase().includes(query)) return true;
-
-  return false;
+/** The parsed query, or null while it is too short to filter by. */
+function activeTerms(query: string): SearchTerm[] | null {
+  if (query !== lastQuery) {
+    lastQuery = query;
+    lastTerms = isActiveQuery(query) ? parseQuery(query) : null;
+  }
+  return lastTerms;
 }

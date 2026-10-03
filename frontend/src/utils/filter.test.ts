@@ -1,4 +1,6 @@
 import { filterQuotes, isQuoteVisible, EMPTY_TAG_FILTER } from "./filter";
+import { suggest } from "./searchSuggest";
+import { syntheticProject } from "./searchSynthetic";
 import type { FilterState } from "./filter";
 import type { QuoteResponse, TagResponse } from "./types";
 
@@ -151,10 +153,37 @@ describe("isQuoteVisible", () => {
 
   // ── Search ──────────────────────────────────────────────────────
 
-  it("ignores search queries shorter than 3 chars", () => {
+  it("ignores a one-character query", () => {
     const q = makeQuote({ text: "Hello" });
-    const f = baseFilter({ searchQuery: "He" });
-    expect(isQuoteVisible(q, f)).toBe(true);
+    expect(isQuoteVisible(q, baseFilter({ searchQuery: "x" }))).toBe(true);
+  });
+
+  it("filters from two characters", () => {
+    expect(isQuoteVisible(makeQuote({ text: "Hello" }), baseFilter({ searchQuery: "He" }))).toBe(true);
+    expect(isQuoteVisible(makeQuote({ text: "World" }), baseFilter({ searchQuery: "He" }))).toBe(false);
+  });
+
+  it("matches only at the start of a word", () => {
+    const q = makeQuote({ text: "This is about usability testing" });
+    expect(isQuoteVisible(q, baseFilter({ searchQuery: "usab" }))).toBe(true);
+    expect(isQuoteVisible(q, baseFilter({ searchQuery: "ability" }))).toBe(false);
+  });
+
+  it("matches words in any order, each in any field", () => {
+    const q = makeQuote({ text: "This is about usability", speaker_name: "Alice" });
+    expect(isQuoteVisible(q, baseFilter({ searchQuery: "usability alice" }))).toBe(true);
+    expect(isQuoteVisible(q, baseFilter({ searchQuery: "alice navigation" }))).toBe(false);
+  });
+
+  it("matches a quoted phrase only as written", () => {
+    const q = makeQuote({ text: "more than the shelf" });
+    expect(isQuoteVisible(q, baseFilter({ searchQuery: '"than the shelf"' }))).toBe(true);
+    expect(isQuoteVisible(q, baseFilter({ searchQuery: '"shelf the than"' }))).toBe(false);
+  });
+
+  it("folds accents", () => {
+    const q = makeQuote({ text: "José said no" });
+    expect(isQuoteVisible(q, baseFilter({ searchQuery: "jose" }))).toBe(true);
   });
 
   it("matches search query against quote text", () => {
@@ -261,5 +290,39 @@ describe("filterQuotes", () => {
   it("returns all quotes when no filters active", () => {
     const quotes = [makeQuote({ dom_id: "q-p1-1" }), makeQuote({ dom_id: "q-p1-2" })];
     expect(filterQuotes(quotes, baseFilter())).toHaveLength(2);
+  });
+});
+
+// The count the search menu shows must be the list the researcher gets on ↩.
+describe("filterQuotes agrees with the search menu's count", () => {
+  const { quotes } = syntheticProject({ seed: 11, sessions: 30, quotesPerSession: 8, extraTags: 20 });
+  // Hide every 7th quote and star every 3rd, so both filters are in play.
+  const hidden = Object.fromEntries(quotes.filter((_, i) => i % 7 === 0).map((q) => [q.dom_id, true]));
+  const starred = Object.fromEntries(quotes.filter((_, i) => i % 3 === 0).map((q) => [q.dom_id, true]));
+  // The researcher's own tag edits live in the store, not on the quote: both
+  // sides must read them, or the menu and the list disagree on "delivery time".
+  const tags = Object.fromEntries(
+    quotes.filter((_, i) => i % 5 === 0).map((q) => [q.dom_id, [makeTag("delivery time")]]),
+  );
+
+  it.each([
+    ["all", "delivery"],
+    ["all", "pri"],
+    ["all", "the delivery"],
+    ["all", '"was more than"'],
+    ["all", "花"],
+    ["starred", "delivery"],
+    ["starred", "conf"],
+    ["all", "delivery time"],
+  ] as const)("%s, %j", (viewMode, query) => {
+    const f = baseFilter({ searchQuery: query, viewMode, hidden, starred, tags });
+    const listed = filterQuotes(quotes, f).length;
+    const menu = suggest(query, {
+      quotes,
+      tags,
+      isVisible: (q) => isQuoteVisible(q, { ...f, searchQuery: "" }),
+    }).find((r) => r.kind === "text");
+    expect(menu?.count).toBe(listed);
+    expect(listed).toBeGreaterThan(0);
   });
 });

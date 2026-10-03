@@ -6,12 +6,36 @@ describe("highlightText", () => {
     expect(highlightText("Hello world", "")).toBe("Hello world");
   });
 
-  it("returns plain string when query is shorter than 3 chars", () => {
-    expect(highlightText("Hello world", "He")).toBe("Hello world");
+  it("returns plain string for a one-character query", () => {
+    expect(highlightText("Hello world", "H")).toBe("Hello world");
   });
 
-  it("returns plain string when query is exactly 2 chars", () => {
+  it("marks a two-character query where it starts a word", () => {
+    const { container } = render(<>{highlightText("Hello world", "He")}</>);
+    expect([...container.querySelectorAll("mark")].map((m) => m.textContent)).toEqual(["He"]);
+  });
+
+  it("does not mark inside a word", () => {
     expect(highlightText("Hello world", "lo")).toBe("Hello world");
+  });
+
+  it("marks each word on its own, whatever order they were typed in", () => {
+    const { container } = render(<>{highlightText("more than the shelf", "shelf more")}</>);
+    expect([...container.querySelectorAll("mark")].map((m) => m.textContent)).toEqual([
+      "more",
+      "shelf",
+    ]);
+    expect(container.textContent).toBe("more than the shelf");
+  });
+
+  it("marks a quoted phrase whole", () => {
+    const { container } = render(<>{highlightText("more than the shelf", '"than the"')}</>);
+    expect([...container.querySelectorAll("mark")].map((m) => m.textContent)).toEqual(["than the"]);
+  });
+
+  it("marks the accented original when the query has no accent", () => {
+    const { container } = render(<>{highlightText("José said no", "jose")}</>);
+    expect(container.querySelector("mark")?.textContent).toBe("José");
   });
 
   it("returns plain string when there is no match", () => {

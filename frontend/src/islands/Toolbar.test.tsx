@@ -105,6 +105,24 @@ describe("Toolbar", () => {
     expect(getByTestId("bn-toolbar-view-switcher-btn").textContent).toContain("matching");
   });
 
+  it("shows the matching count from two characters, and not for one", () => {
+    initFromQuotes([
+      makeQuote({ dom_id: "q-1", text: "Test quote about usability" }),
+      makeQuote({ dom_id: "q-2", text: "Something else" }),
+    ]);
+    const { getByTestId } = render(<Toolbar />);
+    fireEvent.click(getByTestId("bn-toolbar-search-toggle"));
+    const label = () => getByTestId("bn-toolbar-view-switcher-btn").textContent;
+
+    fireEvent.change(getByTestId("bn-toolbar-search-input"), { target: { value: "u" } });
+    act(() => vi.advanceTimersByTime(150));
+    expect(label()).not.toContain("matching");
+
+    fireEvent.change(getByTestId("bn-toolbar-search-input"), { target: { value: "us" } });
+    act(() => vi.advanceTimersByTime(150));
+    expect(label()).toContain("1 matching");
+  });
+
   it("view switcher changes mode", () => {
     initFromQuotes([makeQuote({ is_starred: true }), makeQuote({ dom_id: "q-p1-2" })]);
     const { getByTestId, getByText } = render(<Toolbar />);

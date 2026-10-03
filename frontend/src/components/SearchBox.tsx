@@ -4,7 +4,8 @@
  * Controlled component: receives `value` and fires `onChange`.
  * Debounces input by 150ms before notifying parent.
  * Matches vanilla search.js behaviour: magnifying glass toggle,
- * collapsible field, clear button, min 3 chars for activation.
+ * collapsible field, clear button. The field shows as active once the query is
+ * long enough to filter by (2 characters; utils/searchMatch.ts).
  *
  * Reuses molecules/search.css (.search-container, .search-input, .search-clear).
  */
@@ -12,6 +13,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Tooltip } from "./Tooltip";
+import { isActiveQuery } from "../utils/searchMatch";
 
 export interface SearchBoxProps {
   /** The committed search query (from store). */
@@ -94,7 +96,7 @@ export function SearchBox({
   const containerClass = [
     "search-container",
     expanded ? "expanded" : "",
-    localValue.length >= 3 ? "has-query" : "",
+    isActiveQuery(localValue) ? "has-query" : "",
   ]
     .filter(Boolean)
     .join(" ");

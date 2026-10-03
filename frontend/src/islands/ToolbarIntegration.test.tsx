@@ -218,6 +218,33 @@ describe("Toolbar → Store → Quote Islands integration", () => {
     });
   });
 
+  it("each word matches on its own, in any field, and only text words are marked", async () => {
+    render(<QuoteSections projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getByText(/onboarding was really smooth/i)).toBeInTheDocument();
+    });
+
+    // "bob" is the speaker, "navigation" is in the text: Bob's quote only.
+    act(() => setSearchQuery("bob navigation"));
+    await waitFor(() => {
+      expect(screen.queryByText(/onboarding was really smooth/i)).not.toBeInTheDocument();
+      const marks = [...document.querySelectorAll("mark.search-mark")].map((m) => m.textContent);
+      expect(marks).toEqual(["navigation"]);
+    });
+  });
+
+  it("no longer matches from the middle of a word", async () => {
+    render(<QuoteSections projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getByText(/onboarding was really smooth/i)).toBeInTheDocument();
+    });
+
+    act(() => setSearchQuery("ooth"));
+    await waitFor(() => {
+      expect(screen.queryByText(/smooth/i)).not.toBeInTheDocument();
+    });
+  });
+
   it("starred view mode filters out non-starred quotes", async () => {
     render(<QuoteSections projectId="1" />);
     await waitFor(() => {

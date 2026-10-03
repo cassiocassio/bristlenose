@@ -64,7 +64,7 @@ export interface QuotesState {
   uncategorised: QuoteResponse[];
   /** Current view mode for the quotes tab. */
   viewMode: "all" | "starred";
-  /** Current search query (min 3 chars to activate filtering). */
+  /** Current search query, as typed (filters from 2 characters; utils/searchMatch.ts). */
   searchQuery: string;
   /** Tag filter state — tracks which tags are unchecked. */
   tagFilter: TagFilterState;

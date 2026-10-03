@@ -4,43 +4,38 @@
  * Returns a React fragment of text nodes and <mark className="search-mark">
  * elements. The existing search.css provides .search-mark styling.
  *
- * If query is empty or < 3 chars, returns the text unchanged (as a string).
- * Matching is case-insensitive. All occurrences are highlighted.
+ * Marks follow the same rules as the filter (utils/searchMatch.ts): each typed
+ * word is marked where it starts a word, a quoted phrase where it appears
+ * whole, with case and accents folded. Below the activation length (2
+ * characters) the text is returned unchanged, as a string.
  */
 
 import React from "react";
+import { isActiveQuery, markRanges, parseQuery } from "./searchMatch";
 
 /**
- * Split text by search query and wrap matches in <mark> elements.
+ * Wrap every match of `query` in `text` in a <mark>.
  *
  * @param text   The text to highlight
- * @param query  The search query (minimum 3 chars to activate)
- * @returns      React nodes with matches wrapped, or plain string if no query
+ * @param query  The search query as typed
+ * @returns      React nodes with matches wrapped, or the plain string if none
  */
-export function highlightText(
-  text: string,
-  query: string,
-): React.ReactNode {
-  if (query.length < 3) return text;
+export function highlightText(text: string, query: string): React.ReactNode {
+  if (!isActiveQuery(query)) return text;
+  const ranges = markRanges(text, parseQuery(query));
+  if (ranges.length === 0) return text;
 
-  // Escape regex special characters in the query
-  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const regex = new RegExp(`(${escaped})`, "gi");
-  const parts = text.split(regex);
-
-  if (parts.length === 1) return text; // No match
-
-  return (
-    <>
-      {parts.map((part, i) =>
-        regex.test(part) ? (
-          <mark key={i} className="search-mark">
-            {part}
-          </mark>
-        ) : (
-          <React.Fragment key={i}>{part}</React.Fragment>
-        ),
-      )}
-    </>
-  );
+  const parts: React.ReactNode[] = [];
+  let at = 0;
+  for (const [start, end] of ranges) {
+    if (start > at) parts.push(<React.Fragment key={`t${at}`}>{text.slice(at, start)}</React.Fragment>);
+    parts.push(
+      <mark key={`m${start}`} className="search-mark">
+        {text.slice(start, end)}
+      </mark>,
+    );
+    at = end;
+  }
+  if (at < text.length) parts.push(<React.Fragment key={`t${at}`}>{text.slice(at)}</React.Fragment>);
+  return <>{parts}</>;
 }

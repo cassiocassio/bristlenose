@@ -21,6 +21,7 @@ import { useFocusMode, toggleFocusMode } from "../contexts/FocusModeStore";
 import { filterQuotes } from "../utils/filter";
 import type { FilterState } from "../utils/filter";
 import { isEmbedded } from "../utils/embedded";
+import { isActiveQuery } from "../utils/searchMatch";
 
 // ── Component ─────────────────────────────────────────────────────────
 
@@ -50,7 +51,7 @@ export function Toolbar() {
 
   // View switcher label (matches vanilla: shows count when filtered)
   const viewLabel = useMemo(() => {
-    if (store.searchQuery.length >= 3) {
+    if (isActiveQuery(store.searchQuery)) {
       return t("toolbar.matching", { count: visibleCount });
     }
     return undefined; // default label from ViewSwitcher

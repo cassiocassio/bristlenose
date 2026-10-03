@@ -71,21 +71,21 @@ describe("SearchBox", () => {
     expect(onChange).toHaveBeenCalledWith("");
   });
 
-  it("adds has-query class when query >= 3 chars", () => {
-    const { getByTestId } = render(
-      <SearchBox value="" onChange={vi.fn()} data-testid="search" />,
-    );
-    fireEvent.click(getByTestId("search-toggle"));
-    fireEvent.change(getByTestId("search-input"), { target: { value: "abc" } });
-    expect(getByTestId("search").classList.contains("has-query")).toBe(true);
-  });
-
-  it("does not add has-query class when query < 3 chars", () => {
+  it("adds has-query class once the query is long enough to filter by (2 chars)", () => {
     const { getByTestId } = render(
       <SearchBox value="" onChange={vi.fn()} data-testid="search" />,
     );
     fireEvent.click(getByTestId("search-toggle"));
     fireEvent.change(getByTestId("search-input"), { target: { value: "ab" } });
+    expect(getByTestId("search").classList.contains("has-query")).toBe(true);
+  });
+
+  it("does not add has-query class for one character", () => {
+    const { getByTestId } = render(
+      <SearchBox value="" onChange={vi.fn()} data-testid="search" />,
+    );
+    fireEvent.click(getByTestId("search-toggle"));
+    fireEvent.change(getByTestId("search-input"), { target: { value: "a" } });
     expect(getByTestId("search").classList.contains("has-query")).toBe(false);
   });
 

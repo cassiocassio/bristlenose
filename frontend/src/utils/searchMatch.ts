@@ -9,7 +9,9 @@
  * The rules (docs/mockups/toolbar-search.html, decided 28 Sep 2026):
  *   - Each typed word matches on its own, in any order, as the START of a word
  *     ("st" finds "Storey" and "Steppe", not "best").
- *   - A term in double quotes matches as an exact phrase (still word-initial).
+ *   - A term in double quotes matches as exact text, anywhere: "boarding was"
+ *     finds "onboarding was". Quoting is the way to search for a fragment, and
+ *     what ⌘E (Use Selection for Find) sends.
  *   - Case, accents and width are folded: "Jose" finds "José", "ё" finds "е",
  *     "ＡＢＣ" finds "abc", "strasse" finds "Straße". Curly and straight
  *     apostrophes are the same. Accents are stripped ONLY in scripts where they
@@ -163,14 +165,31 @@ export function parseQuery(query: string): SearchTerm[] {
 }
 
 function makeTerm(kind: "word" | "phrase", text: string): SearchTerm {
-  return { kind, text, anywhere: UNSPACED.test(text) };
+  return { kind, text, anywhere: kind === "phrase" || UNSPACED.test(text) };
 }
 
-/** True once the query is long enough to filter by. */
+/**
+ * Turn selected text into a query that finds it exactly: a quoted phrase,
+ * with any double quotes inside it removed so they can't end it early.
+ */
+export function asPhrase(text: string): string {
+  const inner = text.replace(QUOTE_MARKS, " ").replace(/\s+/gu, " ").trim();
+  return inner ? `"${inner}"` : "";
+}
+
+/**
+ * True once the query is long enough to filter by: its parsed terms hold at
+ * least 2 characters, or 1 Chinese or Japanese character. Counted after
+ * parsing, so quote marks and edge apostrophes don't count ("'s" is one
+ * letter), and recomposed (NFC) so a Korean syllable or "e" + accent counts
+ * once and a ligature counts as its letters.
+ */
 export function isActiveQuery(query: string): boolean {
-  // Count what the folded query holds, recomposed (NFC) so a Korean syllable
-  // or "e" + accent counts once and a ligature counts as its letters.
-  const compact = fold(query.replace(QUOTE_MARKS, "")).replace(/ /g, "").normalize("NFC");
+  const compact = parseQuery(query)
+    .map((t) => t.text)
+    .join("")
+    .replace(/ /g, "")
+    .normalize("NFC");
   if (!compact) return false;
   if (ONE_CHAR_WORD.test(compact)) return true;
   return [...compact].length >= 2;

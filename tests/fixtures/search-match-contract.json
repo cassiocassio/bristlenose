@@ -76,6 +76,21 @@
       "ก",
       false,
       "one Thai letter is not enough"
+    ],
+    [
+      "''",
+      false,
+      "apostrophes alone are not a search"
+    ],
+    [
+      "’’",
+      false,
+      "nor are curly ones"
+    ],
+    [
+      "'s",
+      false,
+      "an edge apostrophe is dropped, leaving one letter"
     ]
   ],
   "match": [
@@ -506,6 +521,31 @@
       "match": true,
       "marked": [
         "서울"
+      ]
+    },
+    {
+      "why": "a quoted phrase is exact text and matches anywhere, even mid-word: how to search for a fragment",
+      "text": "The onboarding was really smooth",
+      "query": "\"boarding was\"",
+      "match": true,
+      "marked": [
+        "boarding was"
+      ]
+    },
+    {
+      "why": "a quoted fragment still may not end inside a letter",
+      "text": "パンを買った",
+      "query": "\"ハ\"",
+      "match": false,
+      "marked": []
+    },
+    {
+      "why": "quoting a Korean particle finds it",
+      "text": "서울에서 왔어요",
+      "query": "\"에서\"",
+      "match": true,
+      "marked": [
+        "에서"
       ]
     }
   ],

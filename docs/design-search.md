@@ -68,12 +68,16 @@ core asserts the same file when it lands).
    changes the word (`パン` is bread, `ハン` is not), so it is kept, and a match
    may not end just before one (`ハ` does not find `パ`).
 2. **Terms.** The query splits on spaces into words. Text inside double quotes
-   (straight, curly, « », 「 」) is one phrase term. An unclosed quote runs to
+   (straight, curly, « », 「 」) is one phrase term, matched as **exact text,
+   anywhere**: `"boarding was"` finds *onboarding was*. Quoting is how to
+   search for a fragment, and it is what ⌘E (Use Selection for Find) sends, so
+   a selection always finds the quote it came from. An unclosed quote runs to
    the end. Apostrophes at the edge of a word are dropped, so smart single
    quotes (‘than the’) act as the plain words.
-3. **Word-initial.** A term matches only at the start of a word (`st` finds
-   *Storey*, not *best*). Exception: a term in Chinese, Japanese or Thai script
-   matches anywhere, because those scripts don't space words.
+3. **Word-initial.** A word matches only at the start of a word (`st` finds
+   *Storey*, not *best*). Exceptions: a quoted phrase (rule 2), and a term in
+   Chinese, Japanese or Thai script, which matches anywhere because those
+   scripts don't space words.
 4. **All terms, any field.** A quote matches when **every** term matches in
    **some** searchable field. The fields are:
    - the quote text (the edited text if there is one);
@@ -84,7 +88,9 @@ core asserts the same file when it lands).
    So *tom delivery* finds Tom's quote about delivery.
 5. **Activation.** Free text filters from **2 characters**, or 1 Chinese or
    Japanese character (today: 3; decided 3 Oct 2026). Characters are counted
-   after folding, so a letter written with a separate accent counts once.
+   in the parsed terms, after folding: quote marks and edge apostrophes don't
+   count (`''` and `'s` are not searches), and a letter written with a
+   separate accent counts once.
    Recognisers run from **1 character**.
 6. **Highlights** mark every matching occurrence of every term, on the original
    (unfolded) text.
@@ -322,7 +328,7 @@ Each phase ends green and committed.
 
 | Phase | Work | Exit check |
 |---|---|---|
-| **P1 Matcher** | `searchMatch.ts`, contract fixture, `highlight.tsx` and `filter.ts` switched to it | vitest green; every shipped search behaviour still covered, the D4 change asserted. **Matcher and fixture done 3 Oct 2026** (53 matching cases, 15 activation cases); the switch-over of `filter.ts` and `highlight.tsx` is still to do |
+| **P1 Matcher** | `searchMatch.ts`, contract fixture, `highlight.tsx` and `filter.ts` switched to it | vitest green; every shipped search behaviour still covered, the D4 change asserted. **Done 3 Oct 2026**: matcher and fixture (53 matching cases, 15 activation cases), then the Quotes filter, highlights, the "N matching" label, the search box and ⌘E (sends its selection as a quoted phrase) switched to it. A test pins that the search menu's count equals the list a researcher gets on ↩, with hidden, starred and store tag edits in play |
 | **P2 Tokens** | token types + predicates; `searchTokens` in QuotesStore with add/remove/set-mode actions; **one** `filterStateOf(store)` replacing the six hand-built `FilterState`s (Toolbar, QuoteSections, QuoteThemes, ExportDropdown, LensSubtitleSync, `getVisibleQuotes`); highlight of mentions/contains | exports and subtitle counts honour tokens (asserted) |
 | **P3 Recognisers** | `searchSuggest.ts`, pure; people from `getPeople()` (embedded in the export) | unit tests. **Done 3 Oct 2026**, headless: rule tests on a hand-built project, invariants and an independently written matcher over the seeded synthetic project (`searchSynthetic.ts`), and a 10,000-quote scale test (2–8 ms a keystroke warm, 17 ms cold, on an M-series Mac) |
 | **P4 Browser UI** | combobox, rows, chips, meaning menus; CSS in `bristlenose/theme/molecules/search.css`; locale keys ×21 | vitest; `check-locales.py --strict`; browser QA |

@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from "vitest";
 import contractJson from "../../../tests/fixtures/search-match-contract.json";
-import { isActiveQuery, markRanges, matchesAll, parseQuery } from "./searchMatch";
+import { asPhrase, isActiveQuery, markRanges, matchesAll, parseQuery } from "./searchMatch";
 
 interface MatchCase {
   why: string;
@@ -57,7 +57,7 @@ describe("parseQuery", () => {
   it("splits words and keeps a quoted phrase whole", () => {
     expect(parseQuery('more "than the" shelf')).toEqual([
       { kind: "word", text: "more", anywhere: false },
-      { kind: "phrase", text: "than the", anywhere: false },
+      { kind: "phrase", text: "than the", anywhere: true }, // quoted = exact text, anywhere
       { kind: "word", text: "shelf", anywhere: false },
     ]);
   });
@@ -80,5 +80,22 @@ describe("matchesAll across fields", () => {
     const fields = ["the delivery was £45", "Tom Fletcher"];
     expect(matchesAll(fields, parseQuery("tom delivery"))).toBe(true);
     expect(matchesAll(fields, parseQuery("tom assembly"))).toBe(false);
+  });
+});
+
+describe("asPhrase (what ⌘E Use Selection for Find sends)", () => {
+  it("quotes a selection so it is found exactly, even when it starts mid-word", () => {
+    const query = asPhrase("boarding was");
+    expect(query).toBe('"boarding was"');
+    expect(matchesAll(["The onboarding was really smooth"], parseQuery(query))).toBe(true);
+  });
+
+  it("removes double quotes inside the selection, which would end the phrase early", () => {
+    expect(asPhrase('she said "no" twice')).toBe('"she said no twice"');
+  });
+
+  it("collapses line breaks and returns nothing for an empty selection", () => {
+    expect(asPhrase("more\n  than")).toBe('"more than"');
+    expect(asPhrase("  ")).toBe("");
   });
 });

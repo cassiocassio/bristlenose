@@ -49,6 +49,7 @@ Settled by the maintainer on 28 Sep 2026. Build on them, don't reopen them.
 | Sessions, Codebook and Signals lens search | Idea 14 |
 | Folder scope | Idea 10 |
 | Server search, MCP reuse | D1 |
+| Curation filters as a menu (needs review, edited, hidden) | `design-quotes-filter-menu.md`, a door onto the same P2 predicate |
 
 ## 3. Matching rules (the contract)
 

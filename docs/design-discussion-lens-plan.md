@@ -371,7 +371,9 @@ overrides keyed on durable ids, never on labels.
 - `Tab.swift`: case `:8`, label `:13-21`, `route` `:46-54` (keep the
   `case .x: "…"` shape — the parity test parses it), `hasLeftPanel` `:65-70`,
   `from(path:)` `:77-93` (new prefix before any shorter shared prefix).
-- `LensItem.swift:32-41`: the rail row. **⌘6 is automatic** —
+- `LensItem.swift:32-41`: the rail row, symbol **`questionmark.bubble`** — chosen
+  3 Oct 2026 over `bubble.left.and.bubble.right`, knowing a question mark can read
+  as Help. **⌘6 is automatic** —
   `MenuCommands.swift:915-928` numbers from `LensItem.all`.
 - `MenuCommands.swift`: `leftPanelKey` `:863-870` (**SILENT** — the View menu says
   "Contents"), `focusModeTabs` `:846`, Quotes-only gates `:836, 900, 1045, 1053,

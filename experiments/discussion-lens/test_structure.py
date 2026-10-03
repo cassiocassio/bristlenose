@@ -79,6 +79,12 @@ def test_consolidated_adlib_joins_its_planned_section_and_topic_makes_emergent()
     assert stats["unconsolidated_turns"] == 0
 
 
+def test_turns_the_model_skipped_are_counted():
+    T = turns_of(("a", 10, "q1"), ("a", 20, "q2"), ("a", 30, "q3"))
+    _, stats = apply_labels(spine(), [Label("a@00:10", "chat")], [], [], T)
+    assert stats["unlabelled_turns"] == 2
+
+
 def test_unplanned_turn_the_consolidator_dropped_still_appears():
     T = turns_of(("a", 10, "an ad-lib nobody consolidated"))
     secs, stats = apply_labels(spine(), [Label("a@00:10", "adlib", section_id="s2", terse="Ad-lib")], [], [], T)

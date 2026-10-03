@@ -119,6 +119,9 @@ def apply_labels(spine: list[Section], labels: list[Label], consolidated: list[C
     by_section = {s.id: s for s in sections}
     label_of = {lb.turn_id: lb for lb in labels if lb.turn_id in turns}
     stats["invented_turn_ids"] = sum(1 for lb in labels if lb.turn_id not in turns)
+    # The other direction: askable turns the model skipped (a truncated response
+    # loses the end of a session). Counted, so a degraded run is visible.
+    stats["unlabelled_turns"] = len(turns) - len(label_of)
 
     for lb in label_of.values():
         if lb.kind == "planned":

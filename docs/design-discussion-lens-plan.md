@@ -65,13 +65,19 @@ lesson: the same guide drew 4, 6 and 5 sections across three runs):
    planned sections and items. No guide: skip.
 2. **Classify each moderator turn** against the frozen spine: matches planned
    item *N* / ad-lib in section *X* / new-cluster label / not a question. One
-   batched call per session, not one call over the whole corpus.
-3. **Code builds the structure**: invented ids dropped, the promotion rule
-   (≥2 sessions, ≥3 items), sections ordered by median relative time, homeless
-   questions placed by flow, standalone. (Ported from `structure()` in
-   `scripts/spike_discussion_routing.py`.)
-4. **Route quotes** to sections (batched LLM), then **anchor corroboration** in
-   code (the last question asked before the quote, fresh within a window).
+   batched call per session, not one call over the whole corpus. Then
+   **consolidate** the unplanned residue in one small call across sessions:
+   which unplanned questions are the same question, one name per new topic,
+   with the planned section titles given for scale.
+3. **Code builds the structure**: invented ids dropped (and skipped turns
+   counted), the promotion rule (**≥2 sessions, ≥3 asks** — asks, not distinct
+   items; measured 3 Oct, §9), sections ordered by median relative time,
+   homeless questions placed by flow, standalone. Ported from
+   `experiments/discussion-lens/structure.py`, which is tested rule by rule.
+4. **Route quotes** by the **conversational anchor** first (the last question
+   asked before the quote, fresh within 240 s; code) with the topic (batched
+   LLM) as corroboration. The spike measured anchor alone at 0.97 against 0.94
+   when a confident topic may override it — see §9.F before choosing the rule.
 
 **Input is the in-memory redacted transcripts**, moderator turns selected by
 `seg.speaker_role == RESEARCHER`, after s07. Never `session_segments.json`
@@ -450,6 +456,9 @@ until Phase 5.
    with the researcher's labels meets a threshold agreed before the run (unplanned
    share within ±5 points, section agreement on quotes); cost measured per session.
    Needs the labelling pass on the workbook. Only then does Python in the package move.
+   **Status 3 Oct 2026: built in `experiments/discussion-lens/`; all four exit
+   criteria pass on a synthetic answer key (README there). Scoring on the real,
+   gold-labelled sessions is still owed — the gate stays closed until it passes.**
 2. **Pipeline stage, off by default** — models, productionised prompts, stage
    module, the four vocabularies and the rest of §1.4, journal, cache keys, the
    ingest guard. Exit: the stage runs on the real three-session corpus, scores
@@ -476,3 +485,133 @@ language steer, `_build_cause`, Welford timing, and the anchor already computed
 by `get_moderator_question`'s logic (re-expressed by time). The genuinely new
 parts are the stage's structure rules, the guide input, the overrides layer and
 the wires.
+
+## 9. Impact and safety review — 3 Oct 2026
+
+Three read-only reviews of this plan against the code at HEAD — impact on the
+rest of the app, silent failure, and security/privacy — plus the Phase 1a spike's
+measurements. **Verdict: Phase 2 is safe to build behind an off switch once A–D
+below are in it. Phase 3 is not safe as written** until C is decided: the
+contract the spike inherited carries participant names and the whole guide into
+an endpoint the export anonymiser does not know. The dev-gated lens (Phase 4
+preview, built the same day) changes nothing a user can reach: a registered
+route, lazy chunks outside first paint (202.5 of 220 kB, unchanged set), no
+server, Swift or locale change.
+
+### A. Failure must be recorded, and must not hijack project status
+
+The highest risk, found by two reviews independently.
+
+- **Report this stage's failure on the lens, not as a run bucket.** A bucket in
+  `run_condition.py` and Swift's `totalFailureCount` (`PipelineSummary.swift:39`)
+  turns a provider hiccup in an optional, on-by-default stage into a Partial
+  project — and a scoped re-run's terminus then replaces the last report's status
+  (`run_condition.py:52, 216-219`; `EventLogReader.swift:264`), hiding real
+  transcript failures. Use an AutoCode-style status on the lens.
+- **Per-session records.** Mark each session complete or failed
+  (`manifest.py:370-402`) so a lost session derives PARTIAL. A stage-level
+  `mark_stage_complete` alone repeats the s09 incident (`manifest.py:247-250`,
+  `pipeline.py:235-240`).
+- **No state may be "absence".** A failed or partial stage needs its own lens
+  status (§2.3 lists only not-run / no-guide / parse-failed / ready). Delete
+  `discussion.json` when the stage starts and stamp it with the quotes hash it
+  was built from, so last run's file is never imported against new quotes. A
+  guide that is present but parses to nothing is a failure, not "no guide".
+- **Skipped turns are counted and shown.** A turn the model never labelled must
+  not default to chat (hidden by default): count it (`unlabelled_turns`) and give
+  it a visible "unclassified" kind. Fixed in the spike.
+
+### B. Cost and time forecasts must grow with the study
+
+- Give the classify step its **own telemetry id with a per-session prefix**
+  (`pricing.py:326, 360`) and add it to `timing.py`'s per-session stages. One id
+  for parse + N classify + consolidate + route counts once per run, so the
+  forecast falls further short as studies grow — for spend that is on by default.
+- `timing.py:305, 340` needs a skip-when-off branch, like PII.
+- **The off switch does not exist yet**: a `config.py` field (pattern:
+  `pii_enabled`, `:188`) plus an environment variable from Swift (pattern:
+  `PIIModelPack.swift:102`).
+
+### C. Privacy and export — decide before Phase 3
+
+- **Codes, not names, in the payload.** The discussion GET returns speaker codes
+  only; the SPA takes names from `/people`, which `_anonymise_data`
+  (`server/routes/export.py:111-205`) already blanks. The dev lens already
+  resolves names in one function for this swap.
+- **The guide is not all evidence.** Store titles only for `instruction`
+  sections (consent, logistics, welfare). Never return a guide path. In an
+  anonymised export, leave out the guide's filename and its never-asked lines,
+  and say in the export copy that the guide is included. Removing the guide
+  deletes its rows and its parsed intermediate.
+- **Gate the anonymiser like the route list.** A test that fails when an
+  `EMBED_PATH_TEMPLATES` entry declares no anonymiser handling — and note that
+  `test_serve_export_coverage.py` checks classification only, not that the
+  assembly at `export.py:418-500` actually calls the handler.
+
+### D. Prompt safety
+
+- **No `fill()`.** The spike's repeated `str.replace` re-scanned substituted
+  text (fixed there, single pass); production uses `get_prompt_template`
+  (`llm/prompts/__init__.py:108`) and `.format`.
+- Add all four prompt ids to `PROMPTS_WITH_BOUNDARY`
+  (`tests/test_prompt_boundary.py:29`) and every untrusted keyword — guide,
+  spine, turns, planned, questions, sections, quotes — to `CALL_SITES` (`:149`).
+  Model output fed to the next step (spine, topics, section list) is untrusted
+  too, and stays wrapped.
+- Clip over-long labels rather than fail a call (one field must not fail a
+  session); log the exception type, never `str(exc)` — a `ValidationError`
+  prints guide text into `bristlenose.log`.
+
+### E. The guide's location and the paths that cannot see it
+
+- Put the reserved-folder exclusion in `is_bristlenose_artefact`
+  (`utils/fs.py:75`) so every scan site gets it — ingest scans three levels deep
+  (`s01_ingest.py:99, 207`) and the importer has its own scan (`importer.py:504`).
+- **Existing projects:** a guide `.docx` already in a project was ingested as a
+  session. Moving it to the reserved folder makes the stale-session path
+  (`importer.py:1870-1925`) delete that session and its edits — write the
+  migration note.
+- The Mac folder watcher looks at the top level only (`ProjectFolderWatcher`
+  `filterEligible` `:343-353`), so a guide replaced by hand in Finder is never
+  noticed — decision 0.3's "replaceable by hand" has no trigger on the Mac.
+- `bristlenose analyze` (`cli.py:1487`) gets a transcripts folder, not the
+  project, so it cannot find the guide; it also re-parses `.txt`, so §1.1's
+  "never re-parse" cannot hold there.
+- Untimed `.docx` transcripts (`s04_parse_docx.py:355`) give no moderator turns
+  and a meaningless anchor: a per-session "no timing" state. A guide in a cloud
+  folder may be dataless (`utils/fs.py:108`).
+
+### F. Routing — what the spike measured
+
+- **Anchor first.** On the synthetic key the anchor alone placed 0.97 of quotes;
+  letting a confident topic override it, 0.94. Measure on the real sessions
+  (where July's anchor agreed with the topic on 69 of 101) before fixing the rule.
+- A quote anchored to a **standalone** question loses its anchor (the spike's
+  `section_of_item` excludes standalone items) — give standalone an explicit
+  route. Show an Unrouted bucket and assert routed + unrouted equals the count.
+- **Quote identity drifts**: the importer matches on exact float timecodes
+  (`importer.py:977-988`), so a re-extraction at 63.2 instead of 63.0 orphans a
+  route. Count unmatched route keys at import and expose the count.
+
+### G. Corrections to this plan
+
+`get_prompt_template` is at `llm/prompts/__init__.py:108`, not `:73`;
+`ContentView.swift` citations moved ~21 lines on 3 Oct (`acceptedExtensions`
+`:1722`, intake paths `:1160/:1196/:1736/:1788/:1803/:2072`, toolbar
+`:2347-2367`); `_emit_stage_entry`/`_emit_remaining` are `:848/:741`;
+`--clean` (`cli.py:1242-1265`) now stashes the output aside rather than deleting
+it — a guide outside `bristlenose-output/` survives either way. About 70 other
+citations held.
+
+### What the dev-gated lens does and does not settle
+
+Built 3 Oct 2026 in `frontend/src/islands/discussion/` (route
+`/report/discussion`, NavBar link under `IS_DEV`). It settles the screen: the
+navigator, the sticky header with person-badge sessions and the "you are here"
+mark, the session column with questions folding forward, sticky click focus,
+wires, the 200px–60% split, the narrow layout, page scroll like every lens. It
+does **not** settle: the shared left panel (`SidebarLayout`, 480px cap — the
+lens uses its own column so it can reach 60%), quote cards with actions (they
+arrive with `QuoteGroup` once quotes have store ids), the macOS `Tab`, locale
+keys (English until Phase 6), and the screen-reader announcement for this route
+(falls through to "Project", as Specimen does).

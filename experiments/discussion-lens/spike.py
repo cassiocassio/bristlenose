@@ -32,7 +32,7 @@ import time
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from structure import (  # noqa: E402
@@ -80,6 +80,12 @@ class SpineOut(BaseModel):
     sections: list[SpineSectionOut]
 
 
+def _clip(v: object, cap: int) -> object:
+    """An over-long label is clipped, never a validation error: one long field must
+    not fail a whole session's labels (silent-failure review, 3 Oct)."""
+    return v[: cap - 1].rstrip() + "…" if isinstance(v, str) and len(v) > cap else v
+
+
 class TurnLabelOut(BaseModel):
     turn_id: str
     kind: Literal["planned", "adlib", "new", "instruction", "chat"]
@@ -87,7 +93,12 @@ class TurnLabelOut(BaseModel):
     section_id: str = ""
     cluster: str = ""
     role: Literal["opening", "core", "closing"] = "core"
-    terse: str = Field(default="", max_length=40)
+    terse: str = ""
+
+    @field_validator("terse", mode="before")
+    @classmethod
+    def _terse(cls, v: object) -> object:
+        return _clip(v, 30)
 
 
 class SessionLabelsOut(BaseModel):
@@ -115,7 +126,12 @@ class ConsolidateOut(BaseModel):
 class RouteOut(BaseModel):
     quote_id: str
     section_id: str
-    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    confidence: float = 0.0
+
+    @field_validator("confidence", mode="before")
+    @classmethod
+    def _conf(cls, v: object) -> object:  # out of range is clamped, not a failed batch
+        return min(1.0, max(0.0, float(v))) if isinstance(v, (int, float)) else 0.0
 
 
 class RouteBatchOut(BaseModel):
@@ -176,9 +192,9 @@ def load_prompt(name: str) -> tuple[str, str]:
 
 
 def fill(template: str, **vars: str) -> str:
-    for k, v in vars.items():
-        template = template.replace("{" + k + "}", v)
-    return template
+    """Single pass: a value is never re-scanned, so a guide line containing
+    `{turns}` cannot pull the next block into itself (security review, 3 Oct)."""
+    return re.sub(r"\{(\w+)\}", lambda m: vars.get(m.group(1), m.group(0)), template)
 
 
 # ── the four steps ───────────────────────────────────────────────────────────
@@ -314,7 +330,10 @@ async def run_once(client: LLMClient, guide_text: str | None, every: dict[str, l
                       "origin": s.origin, "items": [item_json(it) for it in s.items]} for s in sections],
         "standalone": [item_json(it) for it in standalone],
         "turns": [{"id": t.id, "session": t.session, "sec": t.sec, "time": fmt_tc(t.sec), "text": t.text,
-                   "kind": label_kind.get(t.id, "chat"), "item": item_of_turn.get(t.id)}
+                   # an askable turn the model never labelled is UNCLASSIFIED, not chat:
+                   # chat is hidden by default, and a skipped turn must stay visible
+                   "kind": label_kind.get(t.id, "unclassified" if t.id in turns else "chat"),
+                   "item": item_of_turn.get(t.id)}
                   for ts in every.values() for t in ts],
         "quotes": quotes,
         "stats": dict(stats),

@@ -394,7 +394,15 @@ pipeline-summary fixtures, `test_tab_route_parity`, `test_serve_export_coverage`
 Each phase lands on `main` behind the flags and leaves the product unchanged
 until Phase 5.
 
-1. **Decisions** (§0).
+1. **Decisions** (§0) — all taken 3 Oct 2026.
+1a. **A serious spike, outside the package.** In `scripts/` and `experiments/` only — no
+   change under `bristlenose/`. Build the four-step design for real: the frozen
+   spine (parse once, classify turns per session against it), `structure()` as
+   tested pure functions, routing with the anchor, and a scorer against the gold
+   labels. Exit: the structure holds across three runs of the same input; agreement
+   with the researcher's labels meets a threshold agreed before the run (unplanned
+   share within ±5 points, section agreement on quotes); cost measured per session.
+   Needs the labelling pass on the workbook. Only then does Python in the package move.
 2. **Pipeline stage, off by default** — models, productionised prompts, stage
    module, the four vocabularies and the rest of §1.4, journal, cache keys, the
    ingest guard. Exit: the stage runs on the real three-session corpus, scores

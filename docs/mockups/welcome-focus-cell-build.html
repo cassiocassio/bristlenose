@@ -38,6 +38,33 @@
                     Micro-transitions (the 320ms dissolve) do NOT stretch —
                     that is stated policy, not an omission.
 
+
+  ─────────────────────────────────────────────────────────────────────────────
+  SUPERSEDED IN PART — 3 Oct 2026. Read the geometry here as the 21 Sep spiral,
+  not as current. Two changes landed on 3 Oct that move the ground under it:
+
+   · Welcome opens in its OWN WINDOW (12:38, "welcome opens in its own window;
+     the main window's empty state is the drop card"), so the sidebar is no
+     longer in the path. This page derives the cell from a main-window width
+     minus a 220pt sidebar; that subtraction is gone. WelcomeWindow's own
+     naturalContentWidth is 800 and minimumContentWidth ~327.
+   · Below 600pt of content width the spiral STACKS, and the two rotating
+     cells lay out every slot of their pool and size to the TALLEST (15:45,
+     "stacked study tools and science are as deep as their tallest slot").
+
+  What that does to this page's headline finding: the ~7pt slot at a 700pt main
+  window was a consequence of a φ-square squeezed by the sidebar, and it has
+  been DESIGNED OUT rather than merely re-measured. The live spiral range is
+  content 600–800 → cell ~341–465 → slot ~81–205pt, and below 600 it stacks and
+  sizes to its pool. Note the shipped direction is this page's `fill` mode —
+  measure the slots, size to them — not the fixed cap.
+
+  Still good here: the card DOM and CSS, the focus transform, the token values,
+  the tempo arithmetic, and the ⌥⌘F keycap reasoning. Those were read from
+  source and none of them moved. The φ arithmetic is still correct for the
+  spiral; it is the INPUT WIDTH that changed.
+  ─────────────────────────────────────────────────────────────────────────────
+
   Status: 21 Sep 2026. Nothing built in Swift; there is no `.focus` case.
 -->
 <style>

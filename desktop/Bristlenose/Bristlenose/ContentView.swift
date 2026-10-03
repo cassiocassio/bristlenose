@@ -277,6 +277,9 @@ struct ContentView: View {
     /// interviews here"). Drives the accent-ring drop affordance on that pane.
     @State private var emptyProjectDropTargeted = false
 
+    /// The same, for the no-selection pane ("Drop a folder").
+    @State private var noSelectionDropTargeted = false
+
     /// Alert state for duplicate folder drop warning.
 
     /// "Added N files to X" sheet shown after a copy completes (Plan §11).
@@ -3326,16 +3329,31 @@ struct ContentView: View {
                 description: Text(i18n.t("desktop.chrome.multipleSelectedHint"))
             )
         } else {
-            // No project selected, or none yet: the drop card alone, centred.
-            // Welcome is its own window since Model 2 (design-welcome-screen.md,
-            // 3 Oct 2026), opened at launch or from Help — never by a deselect.
-            WelcomeDropCard(onDropURLs: { urls in
+            // No project selected, or none yet: the drop target, in the same native
+            // empty-state idiom as an empty project's pane (`dragInterviewsPane`) —
+            // stock `ContentUnavailableView`, system greys, accent ring while a
+            // Finder drag hovers. Welcome is its own window since Model 2
+            // (design-welcome-screen.md, 3 Oct 2026), opened at launch or from
+            // Help — never by a deselect.
+            ContentUnavailableView(
+                i18n.t("desktop.welcome.dropFolderTitle"),
+                systemImage: "tray.and.arrow.down",
+                description: Text(i18n.t("desktop.welcome.dropFolderHint"))
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .overlay {
+                if noSelectionDropTargeted {
+                    RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(Color.accentColor, lineWidth: 2)
+                        .padding(12)
+                }
+            }
+            .dropDestination(for: URL.self) { urls, _ in
                 let directories = urls.filter { $0.hasDirectoryPath }
                 let files = urls.filter { !$0.hasDirectoryPath }
                 createProjectFromURLs(directories: directories, files: files)
-            })
-            .frame(width: 340)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                return true
+            } isTargeted: { noSelectionDropTargeted = $0 }
         }
     }
 

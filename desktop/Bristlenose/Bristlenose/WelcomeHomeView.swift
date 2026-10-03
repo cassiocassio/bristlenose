@@ -417,45 +417,6 @@ struct WelcomeHomeView: View {
     private func url(_ s: String) -> URL { URL(string: s) ?? URL(string: "https://bristlenose.app")! }
 }
 
-// MARK: - Drop-a-folder card (the main window's empty state)
-
-/// The Drop-a-folder card. It used to sit at the foot of the Study tools cell; under
-/// Model 2 (design-welcome-screen.md, 3 Oct 2026) it is the main window's whole empty
-/// state — zero projects, or none selected — unchanged and centred, and the Welcome
-/// window carries no drop target at all, so a folder has one place to go.
-struct WelcomeDropCard: View {
-    @EnvironmentObject var i18n: I18n
-    /// Folders/files dropped on the card → create a project.
-    var onDropURLs: ([URL]) -> Void
-    @State private var dropTargeted = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Image(systemName: dropTargeted ? "tray.and.arrow.down.fill" : "tray.and.arrow.down")
-                .font(.system(size: 24, weight: .light))
-                .foregroundStyle(dropTargeted ? Color.accentColor : .secondary)
-            Text(i18n.t("desktop.welcome.dropFolderTitle")).font(.title3).fontWeight(.semibold)
-            Text(i18n.t("desktop.welcome.dropFolderHint"))
-                .font(.body).foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(RoundedRectangle(cornerRadius: 10)
-            .fill(Color(nsColor: .textBackgroundColor))
-            .opacity(dropTargeted ? 0.6 : 1))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(dropTargeted ? Color.accentColor : Color(nsColor: .separatorColor),
-                              style: StrokeStyle(lineWidth: dropTargeted ? 2 : 1.5, lineCap: .round,
-                                                 dash: dropTargeted ? [] : [1, 3]))
-        )
-        .dropDestination(for: URL.self) { urls, _ in
-            onDropURLs(urls)
-            return true
-        } isTargeted: { dropTargeted = $0 }
-    }
-}
-
 // MARK: - Spiral layout (natural size, or one reflow step below it)
 
 /// Lays the five cells out as the golden spiral — Study tools, Scientific

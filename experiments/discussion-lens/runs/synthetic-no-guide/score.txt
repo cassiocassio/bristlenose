@@ -1,0 +1,11 @@
+turn kind accuracy           0.47
+budget promoted              False
+recipes not promoted         False
+recipes landed in            {'e2': 3}
+emergent sections            ['About You', 'Delivery Issues', 'Shopping Habits', 'Budget & Spend', 'App & Ordering']
+turn section F1              0.48
+item merge F1                0.93
+quote section (final)        0.71
+quote section (anchor only)  0.66
+quote section (topic only)   0.71
+  ✗ quote section accuracy ≥ 0.8 (mean 0.71)

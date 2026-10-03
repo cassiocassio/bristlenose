@@ -1,0 +1,31 @@
+                             run 1  run 2  run 3
+turn kind accuracy           1.00  ·  1.00  ·  0.98
+turn kind errors             {}  ·  {}  ·  {'unplanned → planned': 1}
+planned item accuracy        1.00  ·  1.00  ·  1.00
+unplanned share gold         30.77  ·  30.77  ·  30.77
+unplanned share pred         30.77  ·  30.77  ·  28.21
+never-asked kept             1/1 (g2.3)  ·  1/1 (g2.3)  ·  0/1 (g2.3)
+budget promoted              True  ·  True  ·  True
+recipes not promoted         True  ·  True  ·  True
+recipes landed in            {'s3': 1, 's4': 2}  ·  {'s3': 1, 's4': 2}  ·  {'s3': 3}
+emergent sections            ['Budget & Prices']  ·  ['Budget & Prices']  ·  ['Budget & Prices']
+turn section F1              1.00  ·  1.00  ·  1.00
+item merge F1                1.00  ·  1.00  ·  1.00
+quote section (final)        0.94  ·  0.94  ·  0.94
+quote section (anchor only)  0.97  ·  0.97  ·  0.97
+quote section (topic only)   0.94  ·  0.94  ·  0.94
+quote routing                {'agree': 35, 'topic': 3}  ·  {'agree': 35, 'topic': 3}  ·  {'agree': 35, 'topic': 3}
+cost usd                     0.12  ·  0.10  ·  0.10
+calls                        7  ·  6  ·  6
+
+stability: section agreement between runs 0.957–1.000 · item agreement 1.000–1.000
+           1 distinct section signature(s)
+             · About you | Planning the week | Budget & Prices | Ordering in the app | Delivery and collection | Wrap-up
+
+Phase 1a exit criteria (synthetic):
+  ✓ unplanned share within ±5 points (worst 2.6)
+  ✓ quote section accuracy ≥ 0.8 (mean 0.94)
+  ✓ recurring topic promoted, one-session tangent not, every run
+  ✓ stable across runs: section agreement ≥ 0.9 (min 0.957)
+
+cost: $0.3156 over 3 run(s), 19 calls

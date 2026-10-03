@@ -1,0 +1,665 @@
+{
+ "spine": {
+  "g0": {
+   "title": "Consent and recording",
+   "kind": "instruction",
+   "items": {
+    "g0.1": "Confirm consent to record, and that they can stop at any time"
+   }
+  },
+  "g1": {
+   "title": "About you",
+   "kind": "questions",
+   "items": {
+    "g1.1": "Tell me a little about yourself and who you live with",
+    "g1.2": "How often do you do a \"big shop\"?"
+   }
+  },
+  "g2": {
+   "title": "Planning the week",
+   "kind": "questions",
+   "items": {
+    "g2.1": "How do you decide what to buy each week?",
+    "g2.2": "Do you write a list? Where does it live?",
+    "g2.3": "Who else has a say in what gets bought?",
+    "g2.4": "What happens when plans change mid-week?"
+   }
+  },
+  "g3": {
+   "title": "Ordering in the app",
+   "kind": "questions",
+   "items": {
+    "g3.1": "Walk me through the last time you ordered",
+    "g3.2": "What's hard to find?",
+    "g3.3": "How do you feel about substitutions?"
+   }
+  },
+  "g4": {
+   "title": "Delivery and collection",
+   "kind": "questions",
+   "items": {
+    "g4.1": "How do you choose a delivery slot?",
+    "g4.2": "Have you ever collected instead of having it delivered?",
+    "g4.3": "Tell me about a time a delivery went wrong"
+   }
+  },
+  "g5": {
+   "title": "Wrap-up",
+   "kind": "questions",
+   "items": {
+    "g5.1": "If you could change one thing about the app, what would it be?",
+    "g5.2": "Anything else you'd like to add?"
+   }
+  }
+ },
+ "turns": {
+  "s1@00:30": {
+   "kind": "chat",
+   "text": "Hi Asha, can you hear me okay? The connection seems a bit choppy."
+  },
+  "s1@00:53": {
+   "kind": "instr",
+   "text": "Before we start, are you happy for me to record this? You can stop at any point."
+  },
+  "s1@01:16": {
+   "kind": "planned",
+   "text": "So to begin, tell me a little bit about yourself and who's at home with you.",
+   "item": "g1.1",
+   "section": "g1"
+  },
+  "s1@01:45": {
+   "kind": "planned",
+   "text": "And how often would you say you do a proper big shop?",
+   "item": "g1.2",
+   "section": "g1"
+  },
+  "s1@02:10": {
+   "kind": "planned",
+   "text": "How do you decide what actually goes in the basket each week?",
+   "item": "g2.1",
+   "section": "g2"
+  },
+  "s1@02:36": {
+   "kind": "planned",
+   "text": "Do you write it down as a list at all?",
+   "item": "g2.2",
+   "section": "g2"
+  },
+  "s1@03:00": {
+   "kind": "adlib",
+   "text": "Is that note something you'd ever print out, or is it always the phone?",
+   "section": "g2",
+   "item": "adlib:list-medium"
+  },
+  "s1@03:26": {
+   "kind": "new",
+   "text": "Do you set yourselves a budget for the week?",
+   "section": "new:budget",
+   "item": "new:set-budget"
+  },
+  "s1@03:51": {
+   "kind": "new",
+   "text": "How do you keep track of what you're actually spending?",
+   "section": "new:budget",
+   "item": "new:track-spend"
+  },
+  "s1@04:16": {
+   "kind": "planned",
+   "text": "What happens when the week's plans change halfway through?",
+   "item": "g2.4",
+   "section": "g2"
+  },
+  "s1@04:40": {
+   "kind": "chat",
+   "text": "Right, that makes sense, thank you."
+  },
+  "s1@04:46": {
+   "kind": "planned",
+   "text": "Can you walk me through the last time you ordered in the app?",
+   "item": "g3.1",
+   "section": "g3"
+  },
+  "s1@05:12": {
+   "kind": "planned",
+   "text": "Was anything hard to find?",
+   "item": "g3.2",
+   "section": "g3"
+  },
+  "s1@05:33": {
+   "kind": "planned",
+   "text": "How do you feel about substitutions?",
+   "item": "g3.3",
+   "section": "g3"
+  },
+  "s1@05:58": {
+   "kind": "planned",
+   "text": "How do you choose which delivery slot to book?",
+   "item": "g4.1",
+   "section": "g4"
+  },
+  "s1@06:22": {
+   "kind": "planned",
+   "text": "Have you ever collected it yourself instead?",
+   "item": "g4.2",
+   "section": "g4"
+  },
+  "s1@06:46": {
+   "kind": "planned",
+   "text": "If you could change one thing about the app, what would it be?",
+   "item": "g5.1",
+   "section": "g5"
+  },
+  "s1@07:11": {
+   "kind": "planned",
+   "text": "Is there anything else you'd like to add before we finish?",
+   "item": "g5.2",
+   "section": "g5"
+  },
+  "s1@07:31": {
+   "kind": "chat",
+   "text": "Brilliant, thank you so much for your time today Asha."
+  },
+  "s2@00:30": {
+   "kind": "chat",
+   "text": "Hello Ben, thanks for joining, let me just share my screen."
+  },
+  "s2@00:38": {
+   "kind": "instr",
+   "text": "I'm going to record the session if that's okay with you, and you can stop it whenever you like."
+  },
+  "s2@01:01": {
+   "kind": "planned",
+   "text": "Could you start by telling me about yourself and your household?",
+   "item": "g1.1",
+   "section": "g1"
+  },
+  "s2@01:26": {
+   "kind": "planned",
+   "text": "Since you mentioned your evenings are busy, how do you pick a delivery slot?",
+   "item": "g4.1",
+   "section": "g4"
+  },
+  "s2@01:53": {
+   "kind": "planned",
+   "text": "Has a delivery ever gone wrong for you?",
+   "item": "g4.3",
+   "section": "g4"
+  },
+  "s2@02:17": {
+   "kind": "adlib",
+   "text": "What did the shop do to put that right?",
+   "section": "g4",
+   "item": "adlib:missed-fix"
+  },
+  "s2@02:42": {
+   "kind": "planned",
+   "text": "Going back a step, how do you decide what to buy each week?",
+   "item": "g2.1",
+   "section": "g2"
+  },
+  "s2@03:08": {
+   "kind": "new",
+   "text": "Which app do you keep your recipes in?",
+   "section": "new:recipes",
+   "item": "new:which-app"
+  },
+  "s2@03:33": {
+   "kind": "new",
+   "text": "Does anything go from the recipe app straight into your basket?",
+   "section": "new:recipes",
+   "item": "new:to-basket"
+  },
+  "s2@03:58": {
+   "kind": "new",
+   "text": "Do you ever share recipes with your flatmate through it?",
+   "section": "new:recipes",
+   "item": "new:shared"
+  },
+  "s2@04:22": {
+   "kind": "planned",
+   "text": "So once you've got the list, walk me through placing the order.",
+   "item": "g3.1",
+   "section": "g3"
+  },
+  "s2@04:48": {
+   "kind": "planned",
+   "text": "What do you think about substitutions?",
+   "item": "g3.3",
+   "section": "g3"
+  },
+  "s2@05:11": {
+   "kind": "new",
+   "text": "Have rising prices changed the way you shop at all?",
+   "section": "new:budget",
+   "item": "new:prices-changed"
+  },
+  "s2@05:36": {
+   "kind": "chat",
+   "text": "Mm-hm, that's really interesting."
+  },
+  "s2@05:42": {
+   "kind": "planned",
+   "text": "If you could change one thing about the app, what would that be?",
+   "item": "g5.1",
+   "section": "g5"
+  },
+  "s2@06:08": {
+   "kind": "chat",
+   "text": "Great, thanks Ben, that's all my questions for today."
+  },
+  "s3@00:30": {
+   "kind": "chat",
+   "text": "Hi Carla, sorry, give me one moment while I get the recording going."
+  },
+  "s3@00:39": {
+   "kind": "instr",
+   "text": "Just to confirm, you're happy for this to be recorded, and you can ask me to stop at any time?"
+  },
+  "s3@01:02": {
+   "kind": "planned",
+   "text": "Tell me a bit about yourself and who you live with.",
+   "item": "g1.1",
+   "section": "g1"
+  },
+  "s3@01:28": {
+   "kind": "planned",
+   "text": "How do you work out what to buy each week?",
+   "item": "g2.1",
+   "section": "g2"
+  },
+  "s3@01:54": {
+   "kind": "new",
+   "text": "And is there a set amount you try to stay within?",
+   "section": "new:budget",
+   "item": "new:set-budget"
+  },
+  "s3@02:19": {
+   "kind": "new",
+   "text": "Do you go looking for offers at all?",
+   "section": "new:budget",
+   "item": "new:offers"
+  },
+  "s3@02:44": {
+   "kind": "planned",
+   "text": "Where do you keep the shopping list?",
+   "item": "g2.2",
+   "section": "g2"
+  },
+  "s3@03:08": {
+   "kind": "planned",
+   "text": "Talk me through the last time you placed an order.",
+   "item": "g3.1",
+   "section": "g3"
+  },
+  "s3@03:33": {
+   "kind": "planned",
+   "text": "Is there anything you find hard to find in there?",
+   "item": "g3.2",
+   "section": "g3"
+  },
+  "s3@03:59": {
+   "kind": "adlib",
+   "text": "What did you do when a substitute came that was wrong?",
+   "section": "g3",
+   "item": "adlib:wrong-sub"
+  },
+  "s3@04:25": {
+   "kind": "new",
+   "text": "Have you noticed prices going up much lately?",
+   "section": "new:budget",
+   "item": "new:prices-changed"
+  },
+  "s3@04:49": {
+   "kind": "planned",
+   "text": "And how do you choose your delivery slot?",
+   "item": "g4.1",
+   "section": "g4"
+  },
+  "s3@05:14": {
+   "kind": "planned",
+   "text": "Has a delivery ever gone wrong?",
+   "item": "g4.3",
+   "section": "g4"
+  },
+  "s3@05:38": {
+   "kind": "chat",
+   "text": "Okay, thank you, that's really helpful."
+  },
+  "s3@05:44": {
+   "kind": "planned",
+   "text": "Is there anything else at all you'd like to tell me?",
+   "item": "g5.2",
+   "section": "g5"
+  },
+  "s3@06:10": {
+   "kind": "chat",
+   "text": "Lovely, thank you Carla, that's us done for today."
+  }
+ },
+ "quotes": [
+  {
+   "session_id": "s1",
+   "participant_id": "p1",
+   "start": 86.54,
+   "time": "01:26",
+   "text": "I live in a terraced house in Leeds with my partner and our two kids, who are seven and ten, so the fridge empties quickly.",
+   "section": "g1"
+  },
+  {
+   "session_id": "s1",
+   "participant_id": "p1",
+   "start": 113.77,
+   "time": "01:53",
+   "text": "Once a week, usually Sunday evening, and then there's always a top-up shop on Wednesday for milk and bread.",
+   "section": "g1"
+  },
+  {
+   "session_id": "s1",
+   "participant_id": "p1",
+   "start": 138.69,
+   "time": "02:18",
+   "text": "I look at what we've got in the cupboards first, then I plan maybe four dinners and fill in the gaps around those.",
+   "section": "g2"
+  },
+  {
+   "session_id": "s1",
+   "participant_id": "p1",
+   "start": 164.38,
+   "time": "02:44",
+   "text": "Always, there's a shared note on my phone that my partner adds to whenever we run out of something.",
+   "section": "g2"
+  },
+  {
+   "session_id": "s1",
+   "participant_id": "p1",
+   "start": 190.08,
+   "time": "03:10",
+   "text": "Always the phone, paper lists just get lost in my coat pocket and then I'm stood in the kitchen guessing.",
+   "section": "g2"
+  },
+  {
+   "session_id": "s1",
+   "participant_id": "p1",
+   "start": 214.23,
+   "time": "03:34",
+   "text": "We try to keep it under a hundred and twenty pounds, but it creeps up every month without us really noticing.",
+   "section": "new:budget"
+  },
+  {
+   "session_id": "s1",
+   "participant_id": "p1",
+   "start": 239.15,
+   "time": "03:59",
+   "text": "Honestly I just watch the running total in the basket and start taking things out when it goes over a hundred.",
+   "section": "new:budget"
+  },
+  {
+   "session_id": "s1",
+   "participant_id": "p1",
+   "start": 263.69,
+   "time": "04:23",
+   "text": "Then the vegetables go off, that's the honest answer, and I feel guilty throwing half a bag of spinach away.",
+   "section": "g2"
+  },
+  {
+   "session_id": "s1",
+   "participant_id": "p1",
+   "start": 295.69,
+   "time": "04:55",
+   "text": "I opened the favourites tab, ticked most of last week's things, then searched for the odd extra like birthday candles.",
+   "section": "g3"
+  },
+  {
+   "session_id": "s1",
+   "participant_id": "p1",
+   "start": 318.31,
+   "time": "05:18",
+   "text": "The candles, actually, I searched three different ways and it kept showing me candle-shaped cake toppers instead.",
+   "section": "g3"
+  },
+  {
+   "session_id": "s1",
+   "participant_id": "p1",
+   "start": 340.15,
+   "time": "05:40",
+   "text": "They make me nervous, last time they swapped oat milk for a chocolate oat drink and my son was delighted but I wasn't.",
+   "section": "g3"
+  },
+  {
+   "session_id": "s1",
+   "participant_id": "p1",
+   "start": 365.46,
+   "time": "06:05",
+   "text": "I book the cheapest one on Sunday night, even if it means unpacking shopping at nine o'clock when I'm exhausted.",
+   "section": "g4"
+  },
+  {
+   "session_id": "s1",
+   "participant_id": "p1",
+   "start": 388.85,
+   "time": "06:28",
+   "text": "Once, when the slots were all gone before Christmas, and the car park pickup was quicker than I expected it to be.",
+   "section": "g4"
+  },
+  {
+   "session_id": "s1",
+   "participant_id": "p1",
+   "start": 415.31,
+   "time": "06:55",
+   "text": "Let me lock substitutions per item, so the milk is never swapped but the bread can be anything at all.",
+   "section": "g5"
+  },
+  {
+   "session_id": "s2",
+   "participant_id": "p2",
+   "start": 69.85,
+   "time": "01:09",
+   "text": "It's just me and my flatmate in Bristol, we split some things but mostly shop separately for our own meals.",
+   "section": "g1"
+  },
+  {
+   "session_id": "s2",
+   "participant_id": "p2",
+   "start": 95.92,
+   "time": "01:35",
+   "text": "I pick whatever's free after eight, because I'm never home before then and I hate the idea of a missed delivery.",
+   "section": "g4"
+  },
+  {
+   "session_id": "s2",
+   "participant_id": "p2",
+   "start": 120.08,
+   "time": "02:00",
+   "text": "The driver once left everything with a neighbour I'd never met, and the frozen stuff had defrosted by the time I found it.",
+   "section": "g4"
+  },
+  {
+   "session_id": "s2",
+   "participant_id": "p2",
+   "start": 145.38,
+   "time": "02:25",
+   "text": "They refunded the frozen items after I sent photos, but it took two separate chats with the support bot to get there.",
+   "section": "g4"
+  },
+  {
+   "session_id": "s2",
+   "participant_id": "p2",
+   "start": 171.85,
+   "time": "02:51",
+   "text": "Mostly I follow recipes I've saved, I'll pick three for the week and buy exactly what those need and nothing else.",
+   "section": "g2"
+  },
+  {
+   "session_id": "s2",
+   "participant_id": "p2",
+   "start": 196.0,
+   "time": "03:15",
+   "text": "A free recipe app with a meal planner in it, I've been using it for about two years now and it's full.",
+   "section": "new:recipes"
+  },
+  {
+   "session_id": "s2",
+   "participant_id": "p2",
+   "start": 221.69,
+   "time": "03:41",
+   "text": "No, I type every ingredient in by hand, which is the most tedious part of the whole weekly routine for me.",
+   "section": "new:recipes"
+  },
+  {
+   "session_id": "s2",
+   "participant_id": "p2",
+   "start": 246.62,
+   "time": "04:06",
+   "text": "Sometimes I send her a link when I've cooked something good, but she never actually makes any of them.",
+   "section": "new:recipes"
+  },
+  {
+   "session_id": "s2",
+   "participant_id": "p2",
+   "start": 271.54,
+   "time": "04:31",
+   "text": "I search item by item from the recipe list, which takes ages because the search doesn't understand quantities at all.",
+   "section": "g3"
+  },
+  {
+   "session_id": "s2",
+   "participant_id": "p2",
+   "start": 294.54,
+   "time": "04:54",
+   "text": "I turn them off completely, I'd rather have nothing than the wrong thing turn up when I'm cooking to a recipe.",
+   "section": "g3"
+  },
+  {
+   "session_id": "s2",
+   "participant_id": "p2",
+   "start": 319.46,
+   "time": "05:19",
+   "text": "Yes, I've stopped buying branded pasta and sauces, and I buy meat on the reduced shelf whenever I can find it.",
+   "section": "new:budget"
+  },
+  {
+   "session_id": "s2",
+   "participant_id": "p2",
+   "start": 351.08,
+   "time": "05:51",
+   "text": "Let me paste a whole recipe in and have the app build the basket for me, with the right quantities already worked out.",
+   "section": "g5"
+  },
+  {
+   "session_id": "s3",
+   "participant_id": "p3",
+   "start": 70.62,
+   "time": "01:10",
+   "text": "I live with my mum, who doesn't use the internet at all, so I do all of the shopping for both of us now.",
+   "section": "g1"
+  },
+  {
+   "session_id": "s3",
+   "participant_id": "p3",
+   "start": 96.69,
+   "time": "01:36",
+   "text": "Mum tells me what she fancies on Saturday, and I add the basics we always need on top of whatever she's asked for.",
+   "section": "g2"
+  },
+  {
+   "session_id": "s3",
+   "participant_id": "p3",
+   "start": 122.77,
+   "time": "02:02",
+   "text": "Eighty pounds is the limit, because it comes out of mum's pension and she checks the receipt very carefully every week.",
+   "section": "new:budget"
+  },
+  {
+   "session_id": "s3",
+   "participant_id": "p3",
+   "start": 146.92,
+   "time": "02:26",
+   "text": "Every single week, I sort by price per kilo and I'll switch brands without a second thought if it saves us money.",
+   "section": "new:budget"
+  },
+  {
+   "session_id": "s3",
+   "participant_id": "p3",
+   "start": 171.08,
+   "time": "02:51",
+   "text": "On the fridge, on paper, because mum needs to be able to add things to it herself while I'm out at work.",
+   "section": "g2"
+  },
+  {
+   "session_id": "s3",
+   "participant_id": "p3",
+   "start": 196.38,
+   "time": "03:16",
+   "text": "I'll be honest, I spent most of that order hunting through the offers page, the actual ordering bit was the quick part.",
+   "section": "new:budget"
+  },
+  {
+   "session_id": "s3",
+   "participant_id": "p3",
+   "start": 221.69,
+   "time": "03:41",
+   "text": "Mum's particular brand of decaf tea, it's listed under a different name in the app and it took me ages to find it.",
+   "section": "g3"
+  },
+  {
+   "session_id": "s3",
+   "participant_id": "p3",
+   "start": 247.77,
+   "time": "04:07",
+   "text": "I rejected it at the door, the driver was lovely about it and the refund was on my card the very next morning.",
+   "section": "g3"
+  },
+  {
+   "session_id": "s3",
+   "participant_id": "p3",
+   "start": 272.69,
+   "time": "04:32",
+   "text": "Massively, the same basket is about fifteen pounds more than it was last spring, and mum notices every penny of it.",
+   "section": "new:budget"
+  },
+  {
+   "session_id": "s3",
+   "participant_id": "p3",
+   "start": 296.85,
+   "time": "04:56",
+   "text": "Saturday morning, so mum can be up and dressed when the driver comes and help put things away in the right places.",
+   "section": "g4"
+  },
+  {
+   "session_id": "s3",
+   "participant_id": "p3",
+   "start": 320.62,
+   "time": "05:20",
+   "text": "Once it arrived two hours late, which meant mum had to sit waiting by the window all morning, and she was quite upset.",
+   "section": "g4"
+  },
+  {
+   "session_id": "s3",
+   "participant_id": "p3",
+   "start": 353.0,
+   "time": "05:53",
+   "text": "Only that the app should have a simple mode for older people, mum would love to order her own things one day.",
+   "section": "g5"
+  }
+ ],
+ "sessions": {
+  "s1": {
+   "name": "Asha",
+   "participant_id": "p1",
+   "duration": "07:39",
+   "seconds": 459.4
+  },
+  "s2": {
+   "name": "Ben",
+   "participant_id": "p2",
+   "duration": "06:16",
+   "seconds": 376.4
+  },
+  "s3": {
+   "name": "Carla",
+   "participant_id": "p3",
+   "duration": "06:17",
+   "seconds": 377.9
+  }
+ }
+}

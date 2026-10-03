@@ -1,0 +1,62 @@
+# Transcript: s2
+# Source: synthetic
+# Duration: 06:16
+# Language: en
+
+[00:30] [m1] Hello Ben, thanks for joining, let me just share my screen.
+
+[00:38] [m1] I'm going to record the session if that's okay with you, and you can stop it whenever you like.
+
+[00:49] [p2] Sure, that's no problem at all for me.
+
+[01:01] [m1] Could you start by telling me about yourself and your household?
+
+[01:09] [p2] It's just me and my flatmate in Bristol, we split some things but mostly shop separately for our own meals.
+
+[01:26] [m1] Since you mentioned your evenings are busy, how do you pick a delivery slot?
+
+[01:35] [p2] I pick whatever's free after eight, because I'm never home before then and I hate the idea of a missed delivery.
+
+[01:53] [m1] Has a delivery ever gone wrong for you?
+
+[02:00] [p2] The driver once left everything with a neighbour I'd never met, and the frozen stuff had defrosted by the time I found it.
+
+[02:17] [m1] What did the shop do to put that right?
+
+[02:25] [p2] They refunded the frozen items after I sent photos, but it took two separate chats with the support bot to get there.
+
+[02:42] [m1] Going back a step, how do you decide what to buy each week?
+
+[02:51] [p2] Mostly I follow recipes I've saved, I'll pick three for the week and buy exactly what those need and nothing else.
+
+[03:08] [m1] Which app do you keep your recipes in?
+
+[03:15] [p2] A free recipe app with a meal planner in it, I've been using it for about two years now and it's full.
+
+[03:33] [m1] Does anything go from the recipe app straight into your basket?
+
+[03:41] [p2] No, I type every ingredient in by hand, which is the most tedious part of the whole weekly routine for me.
+
+[03:58] [m1] Do you ever share recipes with your flatmate through it?
+
+[04:06] [p2] Sometimes I send her a link when I've cooked something good, but she never actually makes any of them.
+
+[04:22] [m1] So once you've got the list, walk me through placing the order.
+
+[04:31] [p2] I search item by item from the recipe list, which takes ages because the search doesn't understand quantities at all.
+
+[04:48] [m1] What do you think about substitutions?
+
+[04:54] [p2] I turn them off completely, I'd rather have nothing than the wrong thing turn up when I'm cooking to a recipe.
+
+[05:11] [m1] Have rising prices changed the way you shop at all?
+
+[05:19] [p2] Yes, I've stopped buying branded pasta and sauces, and I buy meat on the reduced shelf whenever I can find it.
+
+[05:36] [m1] Mm-hm, that's really interesting.
+
+[05:42] [m1] If you could change one thing about the app, what would that be?
+
+[05:51] [p2] Let me paste a whole recipe in and have the app build the basket for me, with the right quantities already worked out.
+
+[06:08] [m1] Great, thanks Ben, that's all my questions for today.

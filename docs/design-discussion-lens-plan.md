@@ -503,6 +503,25 @@ until Phase 5.
      with its contract fixture (`bristlenose pipeline` does not list it). The
      Mac never sets the flag, so the Discussion preview reads only the fixture.
      All are owed before the flag can default on.
+   - **Silent-failure review, 3 Oct 2026 — eight findings, all fixed and each
+     pinned by a test proved red against the old code.** A corrupt or locked
+     `.docx` in the guide folder crashed the run; the reader now never raises,
+     and a guide that is there but unused (unreadable, too large, a symlink,
+     another format, or parsed to nothing) sets `guide_problem` on the record
+     and makes it `partial`, instead of reading as "no guide". A failed parse,
+     consolidation or routing call belongs to no session, so the run is left
+     RUNNING and retried, not cached as complete. An empty classify reply fails
+     its session. One failed routing batch keeps the others. A cache hit
+     carries its manifest record forward (it was dropped, so alternate runs
+     paid again). The folder is matched case-blind, by ingest too. Transcripts
+     joined the cache key, because the record quotes the moderator verbatim. An
+     unreliable session's questions stay visible as `unclassified`.
+   - `bristlenose analyze` looks for the guide beside the output folder
+     (`output_dir.parent`), right for the default layout and blind to an
+     `--output` elsewhere; it also never caches, since it carries no manifest.
+   - The under-attribution check outlives the old opening-window splitter on
+     purpose: caches from before 3 Oct 2026 keep its labels on resume
+     (`discussion/moderator.py` docstring).
    - The four spike prompts in `llm/prompts/` (`parse-discussion-guide` etc.)
      are **not** archived: `scripts/spike_discussion_routing.py` still loads them.
    - The guide folder name, `Discussion guide`, is provisional and lives only in

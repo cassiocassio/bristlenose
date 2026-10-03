@@ -792,14 +792,15 @@ body.dragging * {
 
 /* Not-imported codebook links — muted but clickable.
    Click opens the browse modal so the user can read about it and import.
-   Accent hover signals interactivity (not a dead end). */
+   Accent hover signals interactivity (not a dead end).
+   Muted by colour, never by opacity: muted text alone clears WCAG AA on the
+   panel, and an opacity dim on top of it took readable, clickable rows to
+   about 2:1. */
 .toc-link.not-imported {
     color: var(--bn-colour-muted);
-    opacity: 0.5;
 }
 
 .toc-link.not-imported:hover {
-    opacity: 1;
     color: var(--bn-colour-accent);
     background: var(--bn-colour-hover);
 }
@@ -814,20 +815,6 @@ body.dragging * {
     display: flex;
     align-items: flex-start;
     gap: var(--bn-space-xs);
-}
-
-/* not-imported rows keep muted text + full opacity dip via .not-imported;
-   the dot itself is transparent, so the reserved slot still aligns labels. */
-.toc-link.codebook-toc-link.not-imported {
-    opacity: 1;                        /* dim the label, not the whole row */
-    color: var(--bn-colour-muted);
-}
-.toc-link.codebook-toc-link.not-imported .codebook-toc-label {
-    opacity: 0.6;
-    transition: opacity var(--bn-transition-fast);
-}
-.toc-link.codebook-toc-link.not-imported:hover .codebook-toc-label {
-    opacity: 1;
 }
 
 /* Disabled (switched-off) codebook: muted label, grey dot — still a live

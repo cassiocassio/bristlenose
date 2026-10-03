@@ -562,3 +562,69 @@ class TestStickySessions:
         assert after["Bea Baker"] == before["Bea Baker"]
         assert after["Cal Cooper"] == before["Cal Cooper"]
         assert after["Ann Archer"] not in before.values(), "Ann gets a new number"
+
+
+# ── Each session's moderator is named from that session ─────────────────────
+#
+# Moderator codes restart per session, so people.yaml (keyed by code) holds one
+# name for every session's m1. The pipeline now also writes each session's own
+# moderator and observer names, which is what serve names them from.
+
+JO_PAIR = [
+    ("Jo Lee", "Shall we start with the checkout?"),
+    ("Sam Okafor", "Sure, I bought a lamp there yesterday."),
+] * 3
+
+
+def _two_moderator_roles(segments: list[TranscriptSegment]) -> list[SpeakerInfo]:
+    labels = {seg.speaker_label or "Unknown" for seg in segments}
+    infos = []
+    for label in sorted(labels):
+        if label in ("Martin Storey", "Jo Lee"):
+            infos.append(SpeakerInfo(speaker_label=label, role=SpeakerRole.RESEARCHER,
+                                     person_name="Marty" if label == "Martin Storey" else "",
+                                     job_title="UX researcher"))
+        elif label == "Speaker A":
+            infos.append(SpeakerInfo(speaker_label=label, role=SpeakerRole.RESEARCHER,
+                                     person_name="Dana Whitfield"))
+        else:
+            infos.append(SpeakerInfo(speaker_label=label, role=SpeakerRole.PARTICIPANT))
+    return infos
+
+
+class TestPerSessionModeratorNames:
+    def test_two_sessions_name_their_own_moderator(self, tmp_path: Path) -> None:
+        from bristlenose.people import load_session_speakers
+
+        h = run_pipeline(
+            tmp_path,
+            lambda d, _i: [
+                pair_session(d, 1, "P07 Interview", TEAMS_PAIR),
+                pair_session(d, 2, "P08 Interview", JO_PAIR),
+            ],
+            role_pass=_two_moderator_roles,
+        )
+        names = load_session_speakers(h.output_dir)
+        assert names is not None
+        # The platform's label beats the LLM's "Marty", as for participants.
+        assert names["s1"]["m1"] == {
+            "full_name": "Martin Storey", "short_name": "Martin", "role": "UX researcher",
+        }
+        assert names["s2"]["m1"]["full_name"] == "Jo Lee"
+        # Participants are not in it: their codes are study-wide.
+        assert all(code[0] in "mo" for per in names.values() for code in per)
+
+    def test_a_whisper_session_takes_the_name_heard_in_it(self, tmp_path: Path) -> None:
+        from bristlenose.people import load_session_speakers
+
+        h = run_pipeline(
+            tmp_path,
+            lambda d, _i: [
+                pair_session(d, 1, "P07 Interview", TEAMS_PAIR),
+                audio_session(d, 2, "bare"),
+            ],
+            role_pass=_two_moderator_roles,
+        )
+        names = load_session_speakers(h.output_dir)
+        assert names["s2"]["m1"]["full_name"] == "Dana Whitfield"
+        assert names["s1"]["m1"]["full_name"] == "Martin Storey"

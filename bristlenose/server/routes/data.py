@@ -53,6 +53,21 @@ class PersonData(BaseModel):
     role: str = ""
 
 
+class SpeakerNameEdit(BaseModel):
+    """A per-session rename: only the fields sent are changed."""
+
+    full_name: str | None = None
+    short_name: str | None = None
+    role: str | None = None
+
+
+def _is_session_scoped(speaker_code: str) -> bool:
+    """Moderator and observer codes restart in every session (``m1`` is "the
+    first moderator in this session"), so a bare code does not name one
+    person. Their names are written per session, never through ``/people``."""
+    return speaker_code[:1] in ("m", "o")
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -342,11 +357,18 @@ def put_people(
 
     Updates both the DB (immediate, for UI responsiveness) and
     ``people.yaml`` (write-through, so pipeline re-runs see edits).
+
+    Participant codes only. A moderator or observer code names a different
+    person in each session, so applying it here would rename whichever
+    session's ``m1`` came first — and the Sessions table sends the whole map,
+    so every participant rename used to do exactly that. Those entries are
+    ignored; ``PUT …/sessions/{sid}/speakers/{code}`` renames one session's.
     """
     db = _get_db(request)
     try:
         project = _check_project(db, project_id)
         session_ids = _session_ids_for_project(db, project_id)
+        data = {code: pd for code, pd in data.items() if not _is_session_scoped(code)}
         for speaker_code, person_data in data.items():
             sp = (
                 db.query(SessionSpeaker)
@@ -369,6 +391,52 @@ def put_people(
         # Write-through: update people.yaml so pipeline re-runs see edits.
         _write_through_people_yaml(project.output_dir, data)
 
+        return {"status": "ok"}
+    finally:
+        db.close()
+
+
+@router.put("/projects/{project_id}/sessions/{session_id}/speakers/{speaker_code}")
+def put_session_speaker(
+    project_id: int,
+    session_id: str,
+    speaker_code: str,
+    request: Request,
+    data: SpeakerNameEdit,
+) -> dict[str, str]:
+    """Rename one session's speaker — how a moderator or observer is named.
+
+    Changes only the fields sent. Not written through to ``people.yaml``:
+    that file has one entry for every session's ``m1``, which is the bug this
+    route exists to step around (``docs/design-people.md`` §H H9).
+    """
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+        sess = (
+            db.query(SessionModel)
+            .filter_by(project_id=project_id, session_id=session_id)
+            .first()
+        )
+        if not sess:
+            raise HTTPException(status_code=404, detail="Session not found")
+        sp = (
+            db.query(SessionSpeaker)
+            .filter_by(session_id=sess.id, speaker_code=speaker_code)
+            .first()
+        )
+        if not sp:
+            raise HTTPException(status_code=404, detail="Speaker not found")
+        person = db.get(Person, sp.person_id)
+        if not person:
+            raise HTTPException(status_code=404, detail="Speaker not found")
+        if data.full_name is not None:
+            person.full_name = data.full_name
+        if data.short_name is not None:
+            person.short_name = data.short_name
+        if data.role is not None:
+            person.role_title = data.role
+        db.commit()
         return {"status": "ok"}
     finally:
         db.close()

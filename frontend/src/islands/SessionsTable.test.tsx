@@ -494,3 +494,118 @@ describe("SessionsTable speaker names and assistive tech", () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Moderators are named per session
+// ---------------------------------------------------------------------------
+//
+// Moderator codes restart in every session, so two sessions' `m1` are two
+// people, and /people — keyed by code — holds only one of their names. The
+// table must show each session's own (from /sessions), open one editor at a
+// time, and rename one session's moderator without touching the other.
+
+const twoModerators = {
+  ...sessionsResponse,
+  sessions: [
+    {
+      ...sessionsResponse.sessions[0],
+      speakers: [
+        { speaker_code: "m1", name: "Martin", role: "researcher" },
+        { speaker_code: "p1", name: "Alice", role: "participant" },
+      ],
+    },
+    {
+      ...sessionsResponse.sessions[1],
+      speakers: [
+        { speaker_code: "m1", name: "Jo", role: "researcher" },
+        { speaker_code: "p2", name: "Bob", role: "participant" },
+      ],
+    },
+  ],
+  moderator_names: ["Martin", "Jo"],
+};
+
+function mockTwoModerators() {
+  (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+    (url: string) => {
+      if (url.includes("/sessions")) {
+        return Promise.resolve({ ok: true, json: async () => twoModerators });
+      }
+      if (url.includes("/people")) {
+        // What the server sends: one m1, whichever session's came last.
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ ...peopleResponse, m1: { full_name: "Jo Lee", short_name: "Jo", role: "" } }),
+        });
+      }
+      return Promise.resolve({ ok: false, status: 404, json: async () => ({}) });
+    },
+  );
+}
+
+function putCalls(): Array<{ url: string; body: unknown }> {
+  return (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
+    .filter((call: unknown[]) => (call[1] as { method?: string } | undefined)?.method === "PUT")
+    .map((call: unknown[]) => ({
+      url: call[0] as string,
+      body: JSON.parse((call[1] as { body: string }).body),
+    }));
+}
+
+describe("SessionsTable moderators are named per session", () => {
+  it("shows each session's own moderator, not /people's single m1", async () => {
+    mockTwoModerators();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    await waitFor(() => {
+      const [s1, s2] = screen.getAllByTestId("bn-name-m1");
+      expect(s1.textContent).toBe("Martin");
+      expect(s2.textContent).toBe("Jo");
+    });
+  });
+
+  it("opens one editor, in the session clicked", async () => {
+    mockTwoModerators();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    fireEvent.click(screen.getAllByTestId("bn-name-pencil-m1")[1]);
+    const [s1, s2] = screen.getAllByTestId("bn-name-m1");
+    expect(s2.getAttribute("contenteditable")).toBe("true");
+    expect(s1.getAttribute("contenteditable")).not.toBe("true");
+  });
+
+  it("renames one session's moderator with one per-session PUT", async () => {
+    mockTwoModerators();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    fireEvent.click(screen.getAllByTestId("bn-name-pencil-m1")[1]);
+    const editing = screen.getAllByTestId("bn-name-m1")[1];
+    editing.textContent = "Joanna";
+    fireEvent.keyDown(editing, { key: "Enter" });
+
+    await waitFor(() => {
+      const [s1, s2] = screen.getAllByTestId("bn-name-m1");
+      expect(s2.textContent).toBe("Joanna");
+      expect(s1.textContent).toBe("Martin");
+    });
+    // The wire, not just the render: exactly one write, to this session.
+    const puts = putCalls();
+    expect(puts).toHaveLength(1);
+    expect(puts[0].url).toMatch(/\/sessions\/s2\/speakers\/m1$/);
+    expect(puts[0].body).toEqual({ short_name: "Joanna" });
+  });
+
+  it("still renames a participant through /people", async () => {
+    mockTwoModerators();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    fireEvent.click(screen.getByTestId("bn-name-pencil-p1"));
+    const nameEl = screen.getByTestId("bn-name-p1");
+    nameEl.textContent = "Alicia";
+    fireEvent.keyDown(nameEl, { key: "Enter" });
+    await waitFor(() => expect(putCalls()).toHaveLength(1));
+    const [put] = putCalls();
+    expect(put.url).toMatch(/\/people$/);
+    expect((put.body as Record<string, { short_name: string }>).p1.short_name).toBe("Alicia");
+  });
+});

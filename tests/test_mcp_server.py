@@ -1290,3 +1290,51 @@ class TestProjectIdentityInEveryPayload:
         # consumer can compare across calls and notice a switch.
         names = {name: call(db)["project"]["name"] for name, call in _tools.items()}
         assert len(set(names.values())) == 1, names
+
+
+class TestModeratorsAreNamedPerSession:
+    """Moderator codes restart in every session, so ``m1`` in two sessions can
+    be two people. The flat code map used to give every session's ``m1`` the
+    first session's name; now moderators and observers are named on each
+    session row, behind the same Anonymise gate."""
+
+    def _two_moderators(self, db) -> None:
+        from bristlenose.server.models import Session as SessionModel
+
+        first = db.query(SessionModel).one()
+        mod = next(sp for sp in first.session_speakers if sp.speaker_code == "m1")
+        person = db.get(Person, mod.person_id)
+        person.full_name, person.short_name = "Martin Storey", "Martin"
+        jo = Person(full_name="Jo Lee", short_name="Jo")
+        db.add(jo)
+        db.flush()
+        second = SessionModel(
+            project_id=first.project_id, session_id="s2", session_number=2,
+        )
+        db.add(second)
+        db.flush()
+        db.add(SessionSpeaker(
+            session_id=second.id, person_id=jo.id, speaker_code="m1", speaker_role="researcher",
+        ))
+        db.commit()
+
+    def test_each_session_row_names_its_own_moderator(self, db) -> None:
+        self._two_moderators(db)
+        overview = _tool_get_project_overview(db, 1, None)
+        rows = {r["session_id"]: r for r in overview["sessions"]["items"]}
+        assert rows["s1"]["speakers"] == [{"code": "m1", "role": "researcher", "name": "Martin"}]
+        assert rows["s2"]["speakers"] == [{"code": "m1", "role": "researcher", "name": "Jo"}]
+        flat = {s["code"]: s for s in overview["participants"]["speakers"]}
+        assert "name" not in flat["m1"], "a moderator code does not name one person"
+
+    def test_anonymise_removes_the_session_names_too(self, db) -> None:
+        from bristlenose.server.models import Project
+
+        self._two_moderators(db)
+        db.query(Project).one().mcp_anonymise = True
+        db.commit()
+        overview = _tool_get_project_overview(db, 1, None)
+        blob = json.dumps(overview)
+        assert "Martin" not in blob and "Jo" not in blob
+        rows = {r["session_id"]: r for r in overview["sessions"]["items"]}
+        assert rows["s2"]["speakers"] == [{"code": "m1", "role": "researcher"}]

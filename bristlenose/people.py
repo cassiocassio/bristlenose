@@ -562,3 +562,129 @@ def suggest_short_names(people: PeopleFile) -> None:
         else:
             short = given
         people.participants[pid].editable.short_name = short
+
+
+# ---------------------------------------------------------------------------
+# Per-session moderator and observer names
+# ---------------------------------------------------------------------------
+#
+# Moderator and observer codes restart in every session (``m1`` is "the first
+# moderator *in this session*"), so ``people.yaml``, keyed by code, can hold
+# only one name for all of them — the last session processed wins. The serve
+# DB already keeps one speaker row per (session, code); this file is what lets
+# it name each one from its own session. Participants are not in it: their
+# codes are study-wide and ``people.yaml`` names them correctly.
+#
+# A step towards route C (``docs/design-people.md`` §H H9), not route C itself:
+# no identities, no ``m?``. Decided by the owner on 3 Oct 2026 as the weekend
+# fix; the identity layer builds on the per-session rows this fills.
+
+SESSION_SPEAKERS_FILENAME = "session-speakers.json"
+SESSION_SPEAKERS_VERSION = 1
+
+
+def session_speakers_path(output_dir: Path) -> Path:
+    return output_dir / ".bristlenose" / "intermediate" / SESSION_SPEAKERS_FILENAME
+
+
+def session_speaker_names(
+    transcripts: list[FullTranscript],
+    speaker_infos: dict[str, list[SpeakerInfo]],
+    label_codes: dict[str, dict[str, str]],
+) -> dict[str, dict[str, dict[str, str]]]:
+    """Name each session's moderators and observers from that session alone.
+
+    Returns ``{session_id: {code: {"full_name", "short_name", "role"}}}`` for
+    ``m*``/``o*`` codes. The precedence is the participants' one
+    (``auto_populate_names``): the label a platform transcript wrote, then the
+    LLM's ``person_name`` for that speaker in *this* session, then any label
+    that is not a placeholder. ``role`` is the LLM's job title.
+    """
+    result: dict[str, dict[str, dict[str, str]]] = {}
+    for transcript in transcripts:
+        sid = transcript.session_id
+        # Per code: label counts, and which labels a platform wrote.
+        counts: dict[str, dict[str, int]] = {}
+        platform: dict[str, set[str]] = {}
+        for seg in transcript.segments:
+            code = seg.speaker_code
+            if not code or code[0] not in "mo" or not seg.speaker_label:
+                continue
+            c = counts.setdefault(code, {})
+            c[seg.speaker_label] = c.get(seg.speaker_label, 0) + 1
+            if seg.source in PLATFORM_TRANSCRIPT_SOURCES:
+                platform.setdefault(code, set()).add(seg.speaker_label)
+
+        codes_for_label = label_codes.get(sid, {})
+        llm: dict[str, SpeakerInfo] = {}
+        for info in speaker_infos.get(sid, []):
+            code = codes_for_label.get(info.speaker_label, "")
+            if code and code[0] in "mo":
+                llm[code] = info
+
+        names: dict[str, dict[str, str]] = {}
+        for code in sorted(set(counts) | set(llm)):
+            label = max(counts[code], key=counts[code].get) if code in counts else ""  # type: ignore[arg-type]
+            real_label = "" if is_generic_label(label) else label.strip()
+            info = llm.get(code)
+            if real_label and real_label in platform.get(code, set()):
+                full_name = real_label
+            elif info and info.person_name:
+                full_name = info.person_name
+            else:
+                full_name = real_label
+            role = info.job_title if info and info.job_title else ""
+            if not full_name and not role:
+                continue
+            names[code] = {
+                "full_name": full_name,
+                "short_name": _extract_given_name(full_name) if full_name else "",
+                "role": role,
+            }
+        if names:
+            result[sid] = names
+    return result
+
+
+def write_session_speakers(
+    names: dict[str, dict[str, dict[str, str]]], output_dir: Path,
+) -> Path:
+    """Write the per-session names atomically (they are names: kept hidden)."""
+    import json
+    import os
+    import tempfile
+
+    path = session_speakers_path(output_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {"version": SESSION_SPEAKERS_VERSION, "sessions": names}
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".session-speakers.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, indent=2, ensure_ascii=False)
+            fh.write("\n")
+        os.replace(tmp, path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
+    return path
+
+
+def load_session_speakers(output_dir: Path) -> dict[str, dict[str, dict[str, str]]] | None:
+    """Read the per-session names, or ``None`` if the project has not been
+    re-run since they were introduced (the caller falls back to
+    ``people.yaml``)."""
+    import json
+
+    path = session_speakers_path(output_dir)
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        logger.warning("Could not read %s; moderator names fall back to people.yaml", path)
+        return None
+    if not isinstance(data, dict) or data.get("version") != SESSION_SPEAKERS_VERSION:
+        logger.warning("Unexpected format in %s; moderator names fall back to people.yaml", path)
+        return None
+    sessions = data.get("sessions")
+    return sessions if isinstance(sessions, dict) else None

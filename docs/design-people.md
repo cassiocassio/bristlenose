@@ -15,6 +15,13 @@ built. The people *file* and its endpoints predate it and do ship —
 
 ## Changelog
 
+- _2026-10-03_ — **Per-session moderator names shipped as the weekend fix — not Phase 1.** Measuring
+  Phase 1 before building it found its row unsound (see the second dated block under H9's table), so
+  the owner chose the smaller fix: each session's moderator and observer are named from that
+  session (`.bristlenose/intermediate/session-speakers.json` → the importer), renamed one session
+  at a time (`PUT …/sessions/{sid}/speakers/{code}`), and `PUT /people` no longer touches `m*`/`o*`.
+  Badges still read `m1`; no identities, no `m?`. The serve app, the export and the MCP overview
+  stop colliding; the CLI's markdown and sealed static HTML still do.
 - _2026-10-03_ — **H9 Phase 0 landed, and two upgrade obligations dropped by the owner.** Sessions
   and speakers now keep their numbers across runs (`bristlenose/session_registry.py`,
   `.bristlenose/sessions.json`): an older recording arriving late is numbered last instead of
@@ -1919,6 +1926,33 @@ real tokens (the pill overhang below was the first proof).
 > with the registry disabled). The file holds speaker labels beside codes, so it is a
 > re-identification key like `pii_summary.txt`: written `0600`, inside `.bristlenose/`, which serve's
 > dot-directory guard already refuses.
+
+> **Corrected 3 Oct 2026 — Phase 1's row, measured before building, and the step taken instead.**
+> A read-only inventory of every reader of names and codes found three things the row does not say.
+> **(1) "`GET /people` keeps its shape so every surface renders unchanged" is false:** the Sessions
+> table looks names up in `/people` by the raw per-session code, so once moderators are identities
+> with per-project codes, routes must emit the identity's code (session 2's moderator reads `m2`) —
+> a visible change across ~10 server routes. **(2) Four sites inner-join `session_speakers` to
+> `persons`** (`routes/transcript.py`, `grounding.resolve_speaker_names`, `export_core._load_speakers`,
+> `routes/clips_export._load_speaker_names`): a nullable `person_id` drops an unidentified moderator
+> from those surfaces instead of rendering `m?`. **(3) The importer never sets per-session stats**
+> (`words_spoken`, `pct_*`, `source_file` stay at their defaults), so "stats to an intermediate" needs
+> an importer half. Also unstated: under "an LLM hearing never mints", Whisper-only sessions lose the
+> moderator name they show today until someone picks one. Phase 1 stands as decided and needs these
+> four folded in before it is built. **What shipped instead** (owner's call, same day): the serve DB
+> already held one speaker row per (session, code), and the collision entered only because the
+> importer seeded every `m1` from the one `people.yaml` entry. The pipeline now writes each session's
+> moderator/observer names (platform label > the LLM's `person_name` in that session > a real label);
+> the importer names `m*`/`o*` from them, and on re-import replaces a name still equal to the shared
+> `people.yaml` value (the collision) while keeping a per-session rename. The Sessions table edits one
+> session's moderator (`${session}:${code}` editing key, which also ended the one-click-opens-every-`m1`
+> bug); the MCP overview names moderators on each session row, and `INVARIANTS` says `m1` in two
+> sessions can be two people. This is forward-compatible with Phase 1: the per-session rows are the
+> slots route C keys on, and the evidence file is the importer input it planned. Gates:
+> `tests/test_serve_per_session_moderators.py`, `TestPerSessionModeratorNames` in
+> `tests/test_pipeline_platform_transcripts.py`, `TestModeratorsAreNamedPerSession` in
+> `tests/test_mcp_server.py`, and the payload tests in `SessionsTable.test.tsx` — each proved red
+> against the old behaviour.
 
 **What this deliberately does not ship** (unchanged from the row above): the bank,
 cross-study links, folder scope, Settings ▸ General, Contacts, the markdown

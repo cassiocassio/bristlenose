@@ -2314,8 +2314,10 @@ class Pipeline:
                 extract_names_from_labels,
                 load_people_file,
                 merge_people,
+                session_speaker_names,
                 suggest_short_names,
                 write_people_file,
+                write_session_speakers,
             )
 
             existing_people = load_people_file(output_dir)
@@ -2344,6 +2346,13 @@ class Pipeline:
             suggest_short_names(people)
 
             write_people_file(people, output_dir)
+            # Moderator and observer codes restart per session, so the people
+            # file can hold one name for all of them; serve names each
+            # session's from this instead.
+            write_session_speakers(
+                session_speaker_names(transcripts, all_speaker_infos, all_label_code_maps),
+                output_dir,
+            )
             display_names = build_display_name_map(people)
 
             # ── Stage 12: Render output ──────────────────────────────

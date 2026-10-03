@@ -865,6 +865,13 @@ def _import_speakers(
 
     # Load people.yaml once for all sessions.
     people = _load_people_for_import(output_dir)
+    # Moderator and observer codes restart in every session, so people.yaml
+    # holds one name for every session's m1. When the pipeline wrote each
+    # session's own names, those name m*/o* speakers instead; a project not
+    # re-run since then falls back to people.yaml as before.
+    from bristlenose.people import load_session_speakers
+
+    session_names = load_session_speakers(output_dir)
 
     for txt_file in sorted(transcripts_dir.glob("*.txt")):
         if is_os_metadata(txt_file):
@@ -881,8 +888,11 @@ def _import_speakers(
         if existing_speakers:
             # Speakers exist — update Person rows from people.yaml
             # (fill empty fields only, never overwrite).
-            if people:
-                _update_persons_from_people(db, existing_speakers, people)
+            if people or session_names is not None:
+                _update_persons_from_people(
+                    db, existing_speakers, people or {},
+                    _session_entries(session_names, sid),
+                )
             continue
 
         content = txt_file.read_text(encoding="utf-8")
@@ -903,18 +913,20 @@ def _import_speakers(
             else:
                 role = "participant"
 
-            # Populate from people.yaml if available
+            # Populate from people.yaml, or for a moderator/observer from
+            # this session's own names when the pipeline wrote them.
             full_name = ""
             short_name = ""
             role_title = ""
             persona = ""
             notes = ""
-            if people and code in people:
-                full_name = people[code].get("full_name", "")
-                short_name = people[code].get("short_name", "")
-                role_title = people[code].get("role", "")
-                persona = people[code].get("persona", "")
-                notes = people[code].get("notes", "")
+            source = _name_source(code, people, _session_entries(session_names, sid))
+            if source:
+                full_name = source.get("full_name", "")
+                short_name = source.get("short_name", "")
+                role_title = source.get("role", "")
+                persona = source.get("persona", "")
+                notes = source.get("notes", "")
 
             person = Person(
                 full_name=full_name,
@@ -935,18 +947,78 @@ def _import_speakers(
             db.add(sp)
 
 
+def _session_entries(
+    session_names: dict[str, dict[str, dict[str, str]]] | None, sid: str,
+) -> dict[str, dict[str, str]] | None:
+    """This session's moderator/observer names, or ``None`` when the project
+    predates the per-session file (so people.yaml still names them)."""
+    if session_names is None:
+        return None
+    return session_names.get(sid, {})
+
+
+def _name_source(
+    code: str,
+    people: dict[str, dict[str, str]] | None,
+    session_entries: dict[str, dict[str, str]] | None,
+) -> dict[str, str] | None:
+    """Where a speaker's names come from.
+
+    A moderator or observer code restarts in every session, so once the
+    pipeline has written per-session names it is named from those alone —
+    never from the people.yaml entry every session's ``m1`` shares, even when
+    its own session has no name to offer. Participants keep people.yaml.
+    """
+    if code[:1] in ("m", "o") and session_entries is not None:
+        return session_entries.get(code)
+    return people.get(code) if people else None
+
+
+def _repair_collided_names(
+    db: Session,
+    sp: SessionSpeaker,
+    shared: dict[str, str] | None,
+    session_entries: dict[str, dict[str, str]],
+) -> None:
+    """Name a moderator/observer from its own session on re-import.
+
+    A project imported before the per-session file existed gave every
+    session's ``m1`` the one people.yaml entry. A field that still equals that
+    shared value is the collision, not a choice, so it takes this session's
+    own value (empty if the session has none); an empty field is filled as
+    usual. Anything else is a researcher's per-session rename — which is never
+    written back to people.yaml — and is kept.
+    """
+    person = db.get(Person, sp.person_id)
+    if not person:
+        return
+    own = session_entries.get(sp.speaker_code) or {}
+    shared = shared or {}
+    for attr, key in (("full_name", "full_name"), ("short_name", "short_name"),
+                      ("role_title", "role")):
+        current = getattr(person, attr) or ""
+        is_collided = bool(current) and current == (shared.get(key) or "")
+        if not current or is_collided:
+            setattr(person, attr, own.get(key, ""))
+
+
 def _update_persons_from_people(
     db: Session,
     speakers: list[SessionSpeaker],
     people: dict[str, dict[str, str]],
+    session_entries: dict[str, dict[str, str]] | None = None,
 ) -> None:
     """Update existing Person rows from ``people.yaml`` (fill empty only).
 
-    Never overwrites non-empty fields — researcher edits made via the
-    browser UI take priority over pipeline-generated names.
+    Moderators and observers come from ``session_entries`` when given (see
+    ``_name_source``). Never overwrites non-empty fields — researcher edits
+    made via the browser UI take priority over pipeline-generated names.
     """
     for sp in speakers:
-        yaml_data = people.get(sp.speaker_code)
+        if sp.speaker_code[:1] in ("m", "o") and session_entries is not None:
+            _repair_collided_names(db, sp, people.get(sp.speaker_code), session_entries)
+            continue
+        yaml_data = _name_source(sp.speaker_code, people, session_entries)
         if not yaml_data:
             continue
         person = db.get(Person, sp.person_id)

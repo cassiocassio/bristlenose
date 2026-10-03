@@ -294,6 +294,25 @@ export function putPeople(data: Record<string, PersonData>): void {
   firePut("/people", data);
 }
 
+/** Moderator and observer codes restart in every session — `m1` is "the first
+ *  moderator in this session" — so a bare code does not name one person. Their
+ *  names live per session (`putSessionSpeaker`), never in `/people`. */
+export function isSessionScopedCode(code: string): boolean {
+  return code.startsWith("m") || code.startsWith("o");
+}
+
+/** Rename one session's speaker; only the fields sent change. */
+export function putSessionSpeaker(
+  sessionId: string,
+  speakerCode: string,
+  edit: Partial<PersonData>,
+): void {
+  firePut(
+    `/sessions/${encodeURIComponent(sessionId)}/speakers/${encodeURIComponent(speakerCode)}`,
+    edit,
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Moderator question helper
 // ---------------------------------------------------------------------------

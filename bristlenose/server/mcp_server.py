@@ -38,8 +38,10 @@ from typing import TYPE_CHECKING, Any
 from bristlenose.server.grounding import (
     INVARIANTS,
     SIGNAL_LENSES,
+    is_session_scoped_code,
     load_signals,
     quote_dom_id,
+    resolve_session_speaker_names,
     resolve_speaker_names,
 )
 from bristlenose.utils.timecodes import format_timecode
@@ -450,12 +452,29 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
     # and the agent joins code→name from this one map.
     speakers: dict[str, str] = {}
     session_db_ids = [s.id for s in sessions]
+    # Moderators and observers per session: their codes restart in every
+    # session, so the flat map can carry their code and role but not a name.
+    sid_of = {s.id: s.session_id for s in sessions}
+    session_team: dict[str, list[tuple[str, str]]] = {}
     if session_db_ids:
         for sp in db.query(SessionSpeaker).filter(
             SessionSpeaker.session_id.in_(session_db_ids)
         ):
             speakers.setdefault(sp.speaker_code, sp.speaker_role)
+            if is_session_scoped_code(sp.speaker_code):
+                session_team.setdefault(sid_of[sp.session_id], []).append(
+                    (sp.speaker_code, sp.speaker_role)
+                )
     speaker_names = resolve_speaker_names(db, project_id)
+    session_names = resolve_session_speaker_names(db, project_id)
+    for row in session_rows:
+        team = sorted(session_team.get(row["session_id"], []))
+        if team:
+            names = session_names.get(row["session_id"], {})
+            row["speakers"] = [
+                {"code": code, "role": role, **({"name": names[code]} if code in names else {})}
+                for code, role in team
+            ]
 
     def _counts(join_model: Any, key_attr: str, label_of: dict[int, str]) -> list[dict[str, Any]]:
         counts: dict[int, int] = {}

@@ -55,6 +55,9 @@ INVARIANTS: tuple[str, ...] = (
     "Speakers are identified by code only (p1 = participant, m1 = moderator, "
     "o1 = observer). Never guess who a speaker is, and never join a speaker "
     "with any person outside this study's data.",
+    "Moderator and observer codes are numbered within each session, so m1 in "
+    "two sessions can be two different people; their names, where given, are "
+    "on each session, not on the code.",
     "Never compare raw counts across studies of different sizes; any "
     "cross-study comparison needs each study's denominators (participant "
     "and quote counts) stated alongside it.",
@@ -444,10 +447,51 @@ def resolve_speaker_names(db: SASession, project_id: int) -> dict[str, str]:
         .filter(SessionSpeaker.session_id.in_(session_ids))
     )
     for sp, person in rows:
+        # A moderator or observer code names a different person in each
+        # session, so code → name would pick one session's at random (it was
+        # first-wins). Those are named per session by the function below.
+        if is_session_scoped_code(sp.speaker_code):
+            continue
         display = person.short_name or person.full_name or ""
         if display:
             names.setdefault(sp.speaker_code, display)
     return names
+
+
+def is_session_scoped_code(code: str) -> bool:
+    """``m*``/``o*`` codes restart in every session; ``p*`` codes are study-wide."""
+    return code[:1] in ("m", "o")
+
+
+def resolve_session_speaker_names(
+    db: SASession, project_id: int,
+) -> dict[str, dict[str, str]]:
+    """Session id → moderator/observer code → display name.
+
+    The same gate as ``resolve_speaker_names`` (``{}`` under Anonymise), and
+    the same display policy. Participants are not here: their codes are
+    study-wide, so the flat map names them.
+    """
+    from bristlenose.server.models import Person, Project, SessionSpeaker
+    from bristlenose.server.models import Session as SessionModel
+
+    project = db.get(Project, project_id)
+    if project is None or _mcp_anonymise_active(project):
+        return {}
+    result: dict[str, dict[str, str]] = {}
+    rows = (
+        db.query(SessionModel.session_id, SessionSpeaker.speaker_code, Person)
+        .join(SessionSpeaker, SessionSpeaker.session_id == SessionModel.id)
+        .join(Person, SessionSpeaker.person_id == Person.id)
+        .filter(SessionModel.project_id == project_id)
+    )
+    for sid, code, person in rows:
+        if not is_session_scoped_code(code):
+            continue
+        display = person.short_name or person.full_name or ""
+        if display:
+            result.setdefault(sid, {})[code] = display
+    return result
 
 
 #: Lenses ``load_signals`` accepts.

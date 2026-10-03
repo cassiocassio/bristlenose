@@ -17,7 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { EditableText, JourneyChain, PersonBadge, SectionHeading, Sparkline, Thumbnail } from "../components";
 import type { SparklineItem } from "../components/Sparkline";
 import { PlayerContext } from "../contexts/PlayerContext";
-import { apiGet, getPeople, putPeople } from "../utils/api";
+import { apiGet, getPeople, isSessionScopedCode, putPeople, putSessionSpeaker } from "../utils/api";
 import type { PersonData } from "../utils/api";
 import { postProjectAction } from "../shims/bridge";
 import { isEmbedded } from "../utils/embedded";
@@ -128,7 +128,9 @@ export function SessionsTable({
   const [data, setData] = useState<SessionsListResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [peopleMap, setPeopleMap] = useState<Record<string, PersonData> | null>(null);
-  const [editingCode, setEditingCode] = useState<string | null>(null);
+  // `${session_id}:${speaker_code}` — moderator codes repeat across sessions,
+  // so a bare code opened the editor in every session that had an `m1`.
+  const [editingKey, setEditingKey] = useState<string | null>(null);
 
   const [isRefetching, setIsRefetching] = useState(false);
 
@@ -159,28 +161,40 @@ export function SessionsTable({
   }, [projectId, refreshKey]);
 
   const handleNameCommit = useCallback(
-    (speakerCode: string, newName: string) => {
-      setEditingCode(null);
+    (sessionId: string, speakerCode: string, newName: string) => {
+      setEditingKey(null);
       // putPeople already short-circuits offline, but that only suppresses the
       // WRITE — the optimistic update below is what the researcher would see
       // change and then silently revert on reload. Guard the visible half too.
       if (isExportMode()) return;
 
-      // Optimistic update: update speakers in all sessions.
+      // Optimistic update. A participant code is study-wide, so every session
+      // showing it changes; a moderator or observer code names a different
+      // person in each session, so only this one does.
+      const sessionScoped = isSessionScopedCode(speakerCode);
       setData((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
-          sessions: prev.sessions.map((sess) => ({
-            ...sess,
-            speakers: sess.speakers.map((sp) =>
-              sp.speaker_code === speakerCode
-                ? { ...sp, name: newName }
-                : sp,
-            ),
-          })),
+          sessions: prev.sessions.map((sess) =>
+            sessionScoped && sess.session_id !== sessionId
+              ? sess
+              : {
+                  ...sess,
+                  speakers: sess.speakers.map((sp) =>
+                    sp.speaker_code === speakerCode
+                      ? { ...sp, name: newName }
+                      : sp,
+                  ),
+                },
+          ),
         };
       });
+
+      if (sessionScoped) {
+        putSessionSpeaker(sessionId, speakerCode, { short_name: newName });
+        return;
+      }
 
       // Update people map and fire PUT.
       setPeopleMap((prev) => {
@@ -309,9 +323,9 @@ export function SessionsTable({
             key={sess.session_id}
             session={sess}
             peopleMap={peopleMap}
-            editingCode={editingCode}
-            onEditStart={setEditingCode}
-            onCancelEdit={() => setEditingCode(null)}
+            editingKey={editingKey}
+            onEditStart={setEditingKey}
+            onCancelEdit={() => setEditingKey(null)}
             onNameCommit={handleNameCommit}
           />
         ))}
@@ -331,17 +345,17 @@ function shortName(name: string): string {
 function SessionRow({
   session,
   peopleMap,
-  editingCode,
+  editingKey,
   onEditStart,
   onCancelEdit,
   onNameCommit,
 }: {
   session: SessionResponse;
   peopleMap: Record<string, PersonData> | null;
-  editingCode: string | null;
-  onEditStart: (code: string) => void;
+  editingKey: string | null;
+  onEditStart: (key: string) => void;
   onCancelEdit: () => void;
-  onNameCommit: (code: string, newName: string) => void;
+  onNameCommit: (sessionId: string, code: string, newName: string) => void;
 }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -435,12 +449,17 @@ function SessionRow({
       </div>
       <div className="bn-sessions-cell bn-cell-speakers bn-session-speakers" role="cell">
         {speakers.map((sp) => {
-          const person = peopleMap?.[sp.speaker_code];
+          // /people has one entry per code, so for a moderator or observer it
+          // holds whichever session's name came last: use this session's.
+          const person = isSessionScopedCode(sp.speaker_code)
+            ? undefined
+            : peopleMap?.[sp.speaker_code];
+          const editKey = `${session_id}:${sp.speaker_code}`;
           const displayName = person?.short_name || sp.name || "";
           const fullName = person?.full_name || "";
           const nameTitle =
             fullName && fullName !== displayName ? fullName : undefined;
-          const isEditing = editingCode === sp.speaker_code;
+          const isEditing = editingKey === editKey;
 
           return (
             <span key={sp.speaker_code} className="bn-session-speaker-entry">
@@ -450,7 +469,7 @@ function SessionRow({
               />
               {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
               <span
-                onClick={isEditing || isExportMode() ? undefined : () => onEditStart(sp.speaker_code)}
+                onClick={isEditing || isExportMode() ? undefined : () => onEditStart(editKey)}
                 title={nameTitle}
               >
                 <EditableText
@@ -458,7 +477,7 @@ function SessionRow({
                   originalValue={sp.name}
                   trigger="external"
                   isEditing={isEditing}
-                  onCommit={(newName) => onNameCommit(sp.speaker_code, newName)}
+                  onCommit={(newName) => onNameCommit(session_id, sp.speaker_code, newName)}
                   onCancel={() => onCancelEdit()}
                   className="bn-speaker-editable-name bn-speaker-name-full"
                   placeholder={speakerRolePlaceholder(sp.speaker_code, t)}
@@ -496,7 +515,7 @@ function SessionRow({
               {!isEditing && !isExportMode() && (
                 <button
                   className="bn-name-pencil"
-                  onClick={() => onEditStart(sp.speaker_code)}
+                  onClick={() => onEditStart(editKey)}
                   aria-label={t("sessions.editName", { code: sp.speaker_code })}
                   data-testid={`bn-name-pencil-${sp.speaker_code}`}
                 >

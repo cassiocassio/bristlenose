@@ -352,10 +352,13 @@ class TestDashboardHeaders:
         assert isinstance(data["observer_header"], str)
 
     def test_moderator_header_after_rename(self, client: TestClient) -> None:
-        """After renaming m1, the header should include the name."""
+        """After renaming m1, the header should include the name.
+
+        A moderator is renamed per session (its code restarts in every
+        session); ``PUT /people`` ignores ``m*``/``o*`` since 3 Oct 2026."""
         client.put(
-            "/api/projects/1/people",
-            json={"m1": {"full_name": "Sarah Chen", "short_name": "Sarah", "role": ""}},
+            "/api/projects/1/sessions/s1/speakers/m1",
+            json={"full_name": "Sarah Chen", "short_name": "Sarah", "role": ""},
         )
         data = client.get("/api/projects/1/dashboard").json()
         assert "Sarah" in data["moderator_header"]

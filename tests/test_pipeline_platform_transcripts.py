@@ -327,6 +327,30 @@ class TestSplitterGateWiring:
         assert "speakers not separated" in h.log()
         assert "Martin Storey" in h.log()
 
+    def test_a_nameless_cloud_transcript_reaches_the_splitter(self, tmp_path: Path) -> None:
+        """`speakers: none` kept the interview as one voice until 4 Oct 2026;
+        now the whole-transcript splitter guesses, and nothing is "stated"."""
+        fixture = Path(__file__).parent / "fixtures" / "platform-transcripts" / "cloud-transcript-unnamed.vtt"
+
+        def sessions(d: Path, _i: int) -> list[InputSession]:
+            media = _media(d, "Kiosk round 2")
+            vtt_path = d / "Kiosk round 2.vtt"
+            if not vtt_path.exists():
+                vtt_path.write_text(fixture.read_text(encoding="utf-8"), encoding="utf-8")
+            vtt = InputFile(
+                path=vtt_path, file_type=FileType.SUBTITLE_VTT, created_at=_T0,
+                size_bytes=vtt_path.stat().st_size,
+            )
+            return [InputSession(
+                session_id="s1", session_number=1, participant_id="p1", participant_number=1,
+                files=[media, vtt], audio_path=None, has_existing_transcript=True,
+                session_date=_T0,
+            )]
+
+        h = run_pipeline(tmp_path, sessions)
+        assert h.split_calls == ["Right, shall we start with the kiosk?"]
+        assert "speakers not separated" not in h.log()
+
     def test_mixed_project_splits_only_the_bare_recording(self, tmp_path: Path) -> None:
         h = run_pipeline(
             tmp_path,

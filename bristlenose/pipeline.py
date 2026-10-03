@@ -1624,14 +1624,11 @@ class Pipeline:
                     for sid, gate in _gates.items():
                         if gate is not SplitGate.NOT_SEPARATED:
                             continue
-                        _names = real_speaker_names(session_segments[sid])
-                        _what = (
-                            f"one speaker ({next(iter(_names))})" if _names
-                            else "no speakers"
-                        )
+                        # NOT_SEPARATED is only ever a single real name now.
+                        _name = next(iter(real_speaker_names(session_segments[sid])))
                         _msg = (
                             f"{sid}: speakers not separated — the transcript names "
-                            f"{_what}; kept as the platform wrote it, not split"
+                            f"one speaker ({_name}); kept as the platform wrote it, not split"
                         )
                         logger.warning(_msg)
                         _print_warn(_msg)

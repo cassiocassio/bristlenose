@@ -9,7 +9,6 @@ from typing import Any
 
 from bristlenose.llm.boundary import wrap_untrusted
 from bristlenose.models import (
-    CLOUD_TRANSCRIPT_SOURCE,
     PLATFORM_TRANSCRIPT_SOURCES,
     SpeakerRole,
     TranscriptSegment,
@@ -41,8 +40,9 @@ class SplitGate(str, Enum):
     SPLIT = "split"
     #: Two or more speakers already — nothing to split.
     SEPARATED = "separated"
-    #: A platform transcript that names one account, or a cloud transcript that
-    #: names nobody. Kept as written, and STATED: the splitter must not run.
+    #: A platform transcript that names one account. Kept as written, and
+    #: STATED: the splitter must not run. (A cloud transcript that names nobody
+    #: was here too until 4 Oct 2026; it now splits.)
     NOT_SEPARATED = "not_separated"
 
 
@@ -68,11 +68,12 @@ def split_gate(segments: list[TranscriptSegment]) -> SplitGate:
     * two or more labels → already separated;
     * a platform transcript (subtitle or docx source) carrying a real name →
       that name is the account, not a voice; never split (product call Q3);
-    * a cloud transcript whose writer said ``speakers: none`` → the platform
-      could not separate them and neither should a model guessing from text
-      — an INTERIM rule while whole-transcript splitting is being measured;
-    * a vendor subtitle file with no names at all (a bare caption track) and
-      every Whisper transcript → split, as today.
+    * a transcript with no names at all — a cloud transcript whose writer
+      said ``speakers: none``, a bare caption track, every Whisper
+      transcript → split. The cloud case was held back as NOT_SEPARATED
+      while whole-transcript splitting was measured; it splits since
+      4 Oct 2026 (owner's call), because a guess from the whole text beats
+      one voice for the whole interview.
     """
     if not segments:
         return SplitGate.SEPARATED
@@ -81,11 +82,8 @@ def split_gate(segments: list[TranscriptSegment]) -> SplitGate:
         return SplitGate.SEPARATED
 
     from_platform = all(seg.source in PLATFORM_SOURCES for seg in segments)
-    if from_platform:
-        if real_speaker_names(segments):
-            return SplitGate.NOT_SEPARATED
-        if all(seg.source == CLOUD_TRANSCRIPT_SOURCE for seg in segments):
-            return SplitGate.NOT_SEPARATED
+    if from_platform and real_speaker_names(segments):
+        return SplitGate.NOT_SEPARATED
     return SplitGate.SPLIT
 
 

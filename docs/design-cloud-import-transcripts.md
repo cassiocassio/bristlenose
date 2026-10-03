@@ -81,7 +81,9 @@ review changed them.
      while a pair is half-landed.
 3. **An unnamed transcript went back to the 5–8-minute splitter**, which is the defect this plan exists
    to remove. Replacement: `speakers: none`, like a single account, means **"speakers not separated"**,
-   and the splitter does not run.
+   and the splitter does not run. *4 Oct 2026: reversed for `speakers: none`.* The splitter now reads the
+   whole transcript, so a nameless transcript splits like any other (owner's call); a single account
+   name is still kept whole.
 4. **Fetching the missing half later** could write a transcript beside the wrong recording, because the
    local match is by duration and siblings often share a length. It could also rebuild a different
    filename after a time-zone change. Deferred with the hold. When it returns, it must pair by a
@@ -123,7 +125,7 @@ byte for byte):
 | 0c | stamped files group by (stamp, title); an unstamped file joins only a unique match | `s01_ingest._group_by_stem`; `tests/test_ingest.py::TestRecurringMeetings` |
 | 0d | one transcript per session: named > coverage (10 % tolerance) > cloud VTT > VTT/SRT > DOCX; losers stated in log + CLI | `stages/transcript_choice.py`; `tests/test_transcript_choice.py` |
 | 1a | NOTE block read (1.x accepted, other majors refused loudly), multi-voice cues split with time shared by text length, names and text html-unescaped, BCP-47 `language` exposed; cues carry `source="cloud-vtt"`; the colon heuristic is off for cloud files | `s03_parse_subtitles`; `tests/test_parse_subtitles.py`; golden fixtures `tests/fixtures/platform-transcripts/cloud-transcript-{named,unnamed,rebased-drops}.vtt` |
-| 1b | `split_gate()`: a platform transcript with a real name, or a cloud transcript with none, is `NOT_SEPARATED` — kept whole and stated; Whisper and bare caption tracks split as before | `s05b_identify_speakers`; `tests/test_speaker_splitting.py::TestSplitGate` |
+| 1b | `split_gate()`: a platform transcript with a real name is `NOT_SEPARATED` — kept whole and stated; Whisper, bare caption tracks and (since 4 Oct 2026) cloud transcripts with no names split | `s05b_identify_speakers`; `tests/test_speaker_splitting.py::TestSplitGate` |
 | 1c | `Name: text` accepts any script with combining marks, commas, `(Guest)`, pronouns, the fullwidth colon; a sentence-opener list and a six-word cap refuse `Honestly:`, `Note:`, `Gern:`, `http:`; the 22 xfails are passes | `s03._looks_like_speaker_name`; `tests/test_international_names.py` |
 | 1d | platform label beats the LLM's `person_name`, participants only; names keyed by speaker code; phone labels (masked or whole) are never names | `people.py`; `tests/test_name_extraction.py` |
 | — | `--redact-pii` writes `# Source: [REDACTED]` in cooked transcripts; the importer takes the media path from the raw sibling | `s07`, `server/importer.py` |
@@ -228,8 +230,8 @@ take on or avoid. Answers so far:
     permanent one. If whole-transcript splitting proves reliable, one shared account (two people in a
     room) is exactly where a fixed splitter should run.
   - *3 Oct 2026: measured and shipped.* Whole-transcript splitting, in parts, replaced the window
-    (`docs/design-speaker-splitting.md` § Measured). Whether the interim *not separated* rule should
-    now let the splitter run is the owner's call, not yet made.
+    (`docs/design-speaker-splitting.md` § Measured). The owner then let nameless cloud transcripts
+    split (4 Oct 2026); a single account name is still kept whole.
   - Agreed: "never split a named platform transcript", and "platform name beats LLM person_name" for
     platform labels.
   - Noted: Teams' own announcements ("Recording started by you…") turn up as speech in a Whisper

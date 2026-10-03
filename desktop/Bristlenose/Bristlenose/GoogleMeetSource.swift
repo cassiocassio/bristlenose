@@ -1580,8 +1580,9 @@ final class GoogleMeetSource: CloudImportSource {
     ///
     /// - Returns: nil when the list could not be read. **Not an empty map**:
     ///   an empty map writes every cue unnamed and `speakers: none`, which the
-    ///   pipeline reads as "leave this interview unseparated" — a green tick
-    ///   over a two-person transcript with no speakers, from one 429.
+    ///   pipeline then splits by guessing from the text alone — a green tick
+    ///   over a guess where Google had the names, from one 429. (Until 4 Oct
+    ///   2026 the pipeline left such a transcript unseparated instead.)
     private static func participantNames(
         ofRecord name: String,
         accessToken: String,

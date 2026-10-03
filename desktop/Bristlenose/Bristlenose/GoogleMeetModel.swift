@@ -570,7 +570,8 @@ enum MeetTranscriptAssembly {
         case noCues
         /// Entries named participants and not one resolved to a name — the
         /// participants list was wrong or stale, and writing `speakers: none`
-        /// would tell the pipeline to leave a two-person interview unseparated.
+        /// would have the pipeline guess the speakers from the text when
+        /// Google had their names.
         case noSpeakerResolved
         /// With no API end to slice by, the tail is the only evidence, and it
         /// runs past the file (§5c).

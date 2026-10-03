@@ -613,13 +613,13 @@ class TestSplitGate:
         assert self._gate(["Martin Storey"] * 6, "docx") is SplitGate.NOT_SEPARATED
         assert self._gate(["Martin Storey"] * 6, "srt") is SplitGate.NOT_SEPARATED
 
-    def test_cloud_transcript_with_no_names_is_not_separated(self) -> None:
-        """The writer said `speakers: none`; a model guessing from text does
-        not get to override the platform (interim rule, §0 item 3)."""
+    def test_cloud_transcript_with_no_names_splits(self) -> None:
+        """The writer said `speakers: none`. Until 4 Oct 2026 that kept the
+        interview as one voice; now the whole-transcript splitter guesses."""
         from bristlenose.stages.s03_parse_subtitles import CLOUD_TRANSCRIPT_SOURCE
         from bristlenose.stages.s05b_identify_speakers import SplitGate
 
-        assert self._gate([None] * 6, CLOUD_TRANSCRIPT_SOURCE) is SplitGate.NOT_SEPARATED
+        assert self._gate([None] * 6, CLOUD_TRANSCRIPT_SOURCE) is SplitGate.SPLIT
 
     def test_vendor_captions_with_no_names_still_split(self) -> None:
         """A bare caption track dropped in by hand behaves as it did yesterday."""

@@ -790,21 +790,6 @@ body.dragging * {
    CODEBOOK SIDEBAR — codebook-level navigation
    ══════════════════════════════════════════════════════════════════ */
 
-/* Not-imported codebook links — muted but clickable.
-   Click opens the browse modal so the user can read about it and import.
-   Accent hover signals interactivity (not a dead end).
-   Muted by colour, never by opacity: muted text alone clears WCAG AA on the
-   panel, and an opacity dim on top of it took readable, clickable rows to
-   about 2:1. */
-.toc-link.not-imported {
-    color: var(--bn-colour-muted);
-}
-
-.toc-link.not-imported:hover {
-    color: var(--bn-colour-accent);
-    background: var(--bn-colour-hover);
-}
-
 /* ── Codebook status dot ──────────────────────────────────────────
    Each codebook row in the Codebook-tab sidebar carries a leading dot
    that echoes the enable/disable switch: blue = on, grey = disabled,

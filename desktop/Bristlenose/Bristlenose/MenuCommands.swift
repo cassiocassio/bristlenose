@@ -303,6 +303,9 @@ private struct DebugMenuContent: View {
         // pinning and safe-area choices crossed.
         Button("Sidebar Lab") { openWindow(id: "sidebar-lab") }
 
+        // The moderator-identity picker, AppKit beside WebKit, on real tokens.
+        Button("Picker Lab") { openWindow(id: "picker-lab") }
+
         // Debug lens — test content on a visible grid, inside the report
         // webview itself (measures the production CSS in situ). Routes the
         // SPA to /report/specimen; needs a served project.

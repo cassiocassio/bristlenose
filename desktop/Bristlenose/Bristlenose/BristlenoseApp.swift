@@ -477,6 +477,19 @@ struct BristlenoseApp: App {
         .defaultSize(width: 1200, height: 760)
         .commandsRemoved()
 
+        // The moderator-identity picker built twice — stock AppKit in a real
+        // NSPopover beside the SPA's version on the fronted sidecar — so web
+        // against native is judged on the real rendering. The native badges
+        // are painted from styles the web half measures. Diagnostics ▸ Picker Lab.
+        Window("Picker Lab", id: "picker-lab") {
+            PickerLabView()
+                .environmentObject(serveFleet)
+                .environmentObject(i18n)
+                .tint(paletteAccent)
+        }
+        .defaultSize(width: 1100, height: 640)
+        .commandsRemoved()   // no auto Window-menu entry — see Type Parity above
+
         #endif
     }
 }

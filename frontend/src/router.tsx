@@ -17,6 +17,7 @@ import { QuotesTab } from "./pages/QuotesTab";
 import { CodebookV2Tab } from "./pages/CodebookV2Tab";
 import { SignalsTab } from "./pages/SignalsTab";
 import { SpecimenTab } from "./pages/SpecimenTab";
+import { PickerSpecimenTab } from "./pages/PickerSpecimenTab";
 import { DiscussionTab } from "./pages/DiscussionTab";
 import { isExportMode } from "./utils/exportData";
 
@@ -51,6 +52,10 @@ export const routes = [
       // desktop entry via Diagnostics menu). Route always registered: the
       // page is benign specimen content and lazy-loads only when visited.
       { path: "specimen", element: <SpecimenTab /> },
+      // Web half of Diagnostics ▸ Picker Lab (the moderator-identity picker,
+      // beside its AppKit twin). Same terms as Specimen: always registered,
+      // lazy, reachable only from the Diagnostics menu.
+      { path: "picker-specimen", element: <PickerSpecimenTab /> },
       // Discussion lens — dev-gated while it is built (NavBar link under IS_DEV,
       // docs/design-discussion-lens-plan.md Phase 4). Route always registered,
       // like Specimen: it reads a synthetic fixture and lazy-loads only when visited.

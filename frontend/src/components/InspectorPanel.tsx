@@ -25,6 +25,7 @@ import {
   setInspectorHeight,
   MIN_HEIGHT,
   DEFAULT_HEIGHT,
+  type InspectorDimension,
 } from "../contexts/InspectorStore";
 import { useVerticalDragResize } from "../hooks/useVerticalDragResize";
 import { useTranslation } from "react-i18next";
@@ -35,32 +36,56 @@ export const PANE_HEIGHT_VAR = "--bn-inspector-pane-height";
 
 // ── DimensionToggle — for the heatmap table's top-left <th> cell ─────────
 
+const DIMENSIONS: InspectorDimension[] = ["section", "theme"];
+
+/** Arrow keys move and select within the radio group (roving tabindex);
+ *  same contract as `onRadioKeys` in the Discussion lens. */
+function nextDimension(key: string, current: InspectorDimension): InspectorDimension | null {
+  const i = DIMENSIONS.indexOf(current);
+  const n = DIMENSIONS.length;
+  if (key === "ArrowRight" || key === "ArrowDown") return DIMENSIONS[(i + 1) % n];
+  if (key === "ArrowLeft" || key === "ArrowUp") return DIMENSIONS[(i - 1 + n) % n];
+  if (key === "Home") return DIMENSIONS[0];
+  if (key === "End") return DIMENSIONS[n - 1];
+  return null;
+}
+
 export function DimensionToggle({ hasBoth }: { hasBoth: boolean }) {
   const { activeDimension } = useInspectorStore();
   const { t } = useTranslation();
+  const buttons = useRef<Partial<Record<InspectorDimension, HTMLButtonElement | null>>>({});
 
   if (!hasBoth) {
     return <>{activeDimension === "section" ? t("signals.section") : t("signals.theme")}</>;
   }
 
+  // Key handler sits on each radio: jsx-a11y rejects one on the radiogroup.
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    const next = nextDimension(e.key, activeDimension);
+    if (next === null) return;
+    e.preventDefault();
+    setInspectorDimension(next);
+    buttons.current[next]?.focus();
+  };
+
   return (
     <span className="dimension-toggle" role="radiogroup" aria-label={t("signals.dimension")}>
-      <button
-        className={`dimension-btn${activeDimension === "section" ? " active" : ""}`}
-        role="radio"
-        aria-checked={activeDimension === "section"}
-        onClick={() => setInspectorDimension("section")}
-      >
-        {t("signals.section")}
-      </button>
-      <button
-        className={`dimension-btn${activeDimension === "theme" ? " active" : ""}`}
-        role="radio"
-        aria-checked={activeDimension === "theme"}
-        onClick={() => setInspectorDimension("theme")}
-      >
-        {t("signals.theme")}
-      </button>
+      {DIMENSIONS.map((dim) => (
+        <button
+          key={dim}
+          ref={(el) => {
+            buttons.current[dim] = el;
+          }}
+          className={`dimension-btn${activeDimension === dim ? " active" : ""}`}
+          role="radio"
+          aria-checked={activeDimension === dim}
+          tabIndex={activeDimension === dim ? 0 : -1}
+          onClick={() => setInspectorDimension(dim)}
+          onKeyDown={onKeyDown}
+        >
+          {dim === "section" ? t("signals.section") : t("signals.theme")}
+        </button>
+      ))}
     </span>
   );
 }

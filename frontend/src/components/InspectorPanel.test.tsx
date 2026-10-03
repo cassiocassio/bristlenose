@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
-import { InspectorPanel, PANE_HEIGHT_VAR, type InspectorSource } from "./InspectorPanel";
+import {
+  DimensionToggle,
+  InspectorPanel,
+  PANE_HEIGHT_VAR,
+  type InspectorSource,
+} from "./InspectorPanel";
 import {
   resetInspectorStore,
   openInspector,
@@ -173,5 +178,47 @@ describe("InspectorPanel", () => {
     // cb-1 has only sectionContent. Even if dimension is "theme", it falls back.
     render(<InspectorPanel sources={SOURCES} />);
     expect(screen.getByTestId("ux-section")).toBeTruthy();
+  });
+});
+
+describe("DimensionToggle", () => {
+  const radio = (name: string) => screen.getByRole("radio", { name });
+
+  it("is one tab stop: only the checked radio is tabbable", () => {
+    render(<DimensionToggle hasBoth />);
+    expect(radio("Section").getAttribute("aria-checked")).toBe("true");
+    expect(radio("Section").tabIndex).toBe(0);
+    expect(radio("Theme").tabIndex).toBe(-1);
+  });
+
+  it("arrow keys move focus and selection, wrapping; Home and End jump", () => {
+    render(<DimensionToggle hasBoth />);
+    radio("Section").focus();
+
+    fireEvent.keyDown(radio("Section"), { key: "ArrowRight" });
+    expect(radio("Theme").getAttribute("aria-checked")).toBe("true");
+    expect(radio("Theme").tabIndex).toBe(0);
+    expect(radio("Section").tabIndex).toBe(-1);
+    expect(document.activeElement).toBe(radio("Theme"));
+
+    fireEvent.keyDown(radio("Theme"), { key: "ArrowDown" }); // wraps
+    expect(radio("Section").getAttribute("aria-checked")).toBe("true");
+    expect(document.activeElement).toBe(radio("Section"));
+
+    fireEvent.keyDown(radio("Section"), { key: "ArrowLeft" }); // wraps back
+    expect(radio("Theme").getAttribute("aria-checked")).toBe("true");
+
+    fireEvent.keyDown(radio("Theme"), { key: "Home" });
+    expect(radio("Section").getAttribute("aria-checked")).toBe("true");
+
+    fireEvent.keyDown(radio("Section"), { key: "End" });
+    expect(radio("Theme").getAttribute("aria-checked")).toBe("true");
+    expect(document.activeElement).toBe(radio("Theme"));
+  });
+
+  it("other keys do nothing", () => {
+    render(<DimensionToggle hasBoth />);
+    fireEvent.keyDown(radio("Section"), { key: "a" });
+    expect(radio("Section").getAttribute("aria-checked")).toBe("true");
   });
 });

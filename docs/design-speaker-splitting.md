@@ -159,8 +159,9 @@ not, because that truth is mostly swapped there.
 
 - **Stability:** the three whole runs label 407/435 segments the same.
 - **Where the shipped method works, they agree.** Inside the window the
-  shipped method reads, both methods score 45/47 on the timing truth. All of
-  the shipped method's loss is in the propagated tail.
+  shipped method reads, the shipped split and two of the three whole runs
+  score 45/47 on the timing truth (the other whole run, 39/47). All of the
+  shipped method's loss is in the propagated tail.
 - **The shipped method's high participant score is structural, not skill.**
   After the window it scores 0/39 moderator and 153/153 participant. That is
   the last label carried forward, and this window happened to end on a

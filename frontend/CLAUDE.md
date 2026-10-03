@@ -109,6 +109,20 @@ record had to move into the store first. (2) A test bounding the cost at "one
 write per quote" **could not fail** once the store deduped, because the caller's
 loop became harmless. Pin the contract (`toBe(1)`), not a bound.
 
+### A deliberate rule change that reddens almost nothing probably did not take
+
+The mirror of the entry below. On 3 Oct 2026 search's matching rule was changed
+from "each word on its own" to "words typed together are one run" — a change
+that should have turned every any-order test red — and the full suite came back
+with **2 failures out of 2170**. It looked like a cheap change. It was an inert
+one: `parseQuery` flushed a term on every space *before* the edited code ever
+saw a space, so the new joining logic received one word at a time. The two
+reds were a side effect on characters that fold into a space. A one-line probe
+(`parseQuery("shelf more")`) printed two terms and settled it; removing the
+early flush then produced the 14 failures the rule change actually implied.
+**Tell:** a behaviour change whose test fallout is much smaller than the
+behaviour. Before trusting it, probe the new behaviour directly on one input.
+
 ### Mutating a fix: a mutation that does NOT redden is a result, not a bad test
 
 Standard advice is to mutate the code back and watch the new test go red. Worth

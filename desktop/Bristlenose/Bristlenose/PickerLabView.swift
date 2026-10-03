@@ -310,8 +310,8 @@ private struct PickerPeopleList: NSViewRepresentable {
         guard let s = styles.people.values.first else { return 24 }
         let face = s.name ?? s.code
         let font = NSFont.systemFont(ofSize: CGFloat(face.size))
-        let line = ceil(font.ascender - font.descender + font.leading)
-        let chip = line + CGFloat(2 * face.padY) + CGFloat(2 * (s.code.border?.width ?? 0))
+        let line = face.lineHeight.map { CGFloat($0) } ?? ceil(font.ascender - font.descender + font.leading)
+        let chip = line + CGFloat(face.padY + face.padBottom) + CGFloat(2 * (s.code.border?.width ?? 0))
         return max(24, ceil(chip) + 6)
     }
 
@@ -528,12 +528,16 @@ struct BadgeStyleChip: View {
     }
 
     private func half(_ text: String, _ s: SearchBadgeStyle, leading: Double, trailing: Double) -> some View {
-        Text(text)
+        let bw = s.border?.width ?? 0
+        return Text(text)
             .font(Font(font(s)))
             .foregroundStyle(colour(s.text))
+            // CSS centres the glyphs in the line box; a fixed frame does the same.
+            .frame(height: s.lineHeight.map { CGFloat($0) })
             .padding(.leading, s.padX + leading)
-            .padding(.trailing, s.padX + trailing)
-            .padding(.vertical, s.padY + (s.border?.width ?? 0))
+            .padding(.trailing, s.padRight + trailing)
+            .padding(.top, s.padY + bw)
+            .padding(.bottom, s.padBottom + bw)
             .background(s.fill.map { colour($0) } ?? .clear)
     }
 

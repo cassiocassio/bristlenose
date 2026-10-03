@@ -2625,15 +2625,27 @@ struct ContentView: View {
     /// covers the SwiftUI list and the AppKit outline alike.
     ///
     /// On macOS 26 the list slides under the footer behind the system's soft
-    /// scroll edge. macOS 15 has no soft edge, so the text would run behind
-    /// text; there the footer stacks below the list instead.
+    /// scroll edge, as it does under the toolbar at the top. How depends on the
+    /// sidebar: the SwiftUI list gets the edge from `.safeAreaBar`; the AppKit
+    /// outline is an `NSScrollView`, which `.safeAreaBar` cannot reach (it cut
+    /// dead at the footer), so it gets a split view item accessory instead —
+    /// `SidebarFooterAccessory.swift`. macOS 15 has no soft edge, so the text
+    /// would run behind text; there the footer stacks below the list.
     @ViewBuilder
     private var sidebarWithFooter: some View {
         // Sets THIS window's sheet flag. The menu item's old app-wide
         // broadcast opened a sheet in every window.
         let footer = SidebarFooter(i18n: i18n) { showingFeedbackSheet = true }
         if #available(macOS 26, *) {
-            sidebar.safeAreaBar(edge: .bottom, spacing: 0) { footer }
+            if BristlenoseFlags.appKitSidebar {
+                // The outline runs under the accessory, as it already runs up
+                // under the toolbar; the accessory sits over it.
+                sidebar
+                    .ignoresSafeArea(.container, edges: .bottom)
+                    .background(SidebarFooterAccessoryInstaller(footer: footer))
+            } else {
+                sidebar.safeAreaBar(edge: .bottom, spacing: 0) { footer }
+            }
         } else {
             VStack(spacing: 0) {
                 sidebar

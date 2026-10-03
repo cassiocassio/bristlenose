@@ -116,10 +116,9 @@ Factor this into a small `@ViewBuilder`, so the `.navigationSplitViewColumnWidth
 
 ## Risks and build checks
 
-1. **AppKit sidebar (flag-gated, off by default):**
-   - `.safeAreaBar` around an `NSViewControllerRepresentable` may give no soft edge, and the outline may stop at the footer instead of sliding under it. Either is acceptable while the flag is off.
-   - Check with `defaults write app.bristlenose BristlenoseAppKitSidebar -bool YES`.
-   - If it matters later, the AppKit answer is the split view item's bottom-aligned accessory (macOS 26), not a SwiftUI wrapper.
+1. **AppKit sidebar: built as a split view item accessory (3 Oct 2026).** The prediction held: under `.safeAreaBar` the outline stopped dead at the footer, while the toolbar above it got the soft edge. On macOS 26 the AppKit path now hosts `SidebarFooter` in a bottom-aligned `NSSplitViewItemAccessoryViewController` with `preferredScrollEdgeEffectStyle = .soft` (26.1+; "automatic" on 26.0), installed by a probe view that finds the sidebar's `NSSplitViewItem` (`SidebarFooterAccessory.swift`); the outline ignores the bottom safe area so it runs under it, as it already does under the toolbar. The SwiftUI list keeps `.safeAreaBar`; macOS 15 keeps the stacked footer.
+   - **Measure, not given by the API:** the accessory's `automaticallyAppliesContentInsets` pads the accessory's own view, not the list. Whether the last row scrolls clear of the footer, and whether the scroller stops at it, has to be checked in the app.
+   - **Also check:** the soft edge actually appears (AppKit draws it where the scroll view underlaps the accessory); hiding and showing the column keeps exactly one footer; full screen; the empty-space deselect guard still holds with the table under the footer; window drag from the footer's empty middle.
 2. **Window drag:** the footer's empty middle must not start a window drag.
 3. **Debug builds show the version twice:** the footer and the bottom-right build-info capsule. Accepted: they answer different questions.
 

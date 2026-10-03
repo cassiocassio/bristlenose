@@ -152,6 +152,7 @@ state is still evidenced, the day is not.
 | `control-surface-parity.html` | 2 Jul 2026 | IMPLEMENTED — **approved Jul 2026**; the canonical cross-surface × cross-locale terms |
 | `debug-inspector-mockup.html` | 1 Aug 2026 | SANDPIT — debug instrument |
 | `desktop-nav-toolbar-rearrangement.html` | 21 Jun 2026 | IMPLEMENTED — “the interactive mockup” accompanying `design-desktop-nav-toolbar-rearrangement.md`; the menu/toolbar arrangement ships |
+| `desktop-sidebar-footer-version-feedback.html` | 3 Oct 2026 | PROPOSED 3 Oct 2026 · IMPLEMENTED 3 Oct 2026 (`88622103`) — the sidebar footer: version as plain text, ladybug Send Feedback, the list sliding under a soft edge; plan in `design-desktop-sidebar-footer.md` |
 | `docs-site-mockup.html` | 26 Jun 2026 | PROPOSED 26 Jun 2026 · IMPLEMENTED — self-declared throwaway, but the docs site was built: per-topic Markdown in the website repo’s `docs-src/`, published at bristlenose.app/docs/ |
 | `editable-themes-prototype.html` | 1 Aug 2026 | SANDPIT — theme-editing prototype |
 | `focus-mode-lab.html` | 4 Aug 2026 | SANDPIT — “Sandpit: real quote-card markup”; Focus Mode itself shipped in 0.24.0 |

@@ -221,7 +221,7 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
 <div class="page">
 
 <h1>Welcome in its own window (Model 2)</h1>
-<p class="lede">Bristlenose for Mac. The Welcome spiral, as shipped, moves out of the main window into one app-wide window of its own. The window opens at the spiral's natural size and can be resized like any other window. The drop card stays behind: the main window's empty states become the drop card alone, centred. Seven panels. At its natural size the spiral is unchanged, apart from losing the drop card. Panel 4 proposes how it reflows when the window is made narrow. The Model 1 alternative, where Welcome stays in the main window, is in <code>welcome-dismiss-options.html</code>.</p>
+<p class="lede">Bristlenose for Mac. The Welcome spiral, as shipped, moves out of the main window into one app-wide window of its own. The window opens at the spiral's natural size and can be resized like any other window. The drop card stays behind: the main window's empty states become the drop card alone, centred. Six panels. The model is chosen; the decisions taken so far are recorded in the commentary. At its natural size the spiral is unchanged, apart from losing the drop card. Panel 4 proposes how it reflows when the window is made narrow. The Model 1 alternative, where Welcome stays in the main window and was not chosen, is in <code>welcome-dismiss-options.html</code>.</p>
 
 <div class="controls" role="group" aria-label="Preview">
   <button data-scheme="light dark" aria-pressed="true">Follow system</button>
@@ -262,7 +262,7 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
 <h2><span class="n">3</span>The Welcome window, close up</h2>
 <div class="row">
   <div class="shot">
-    <div class="shot-bar"><span><b>3a · key, box ticked</b> (default)</span><span class="new">NEW COPY: "Show this window when Bristlenose opens"</span></div>
+    <div class="shot-bar"><span><b>3a · key, box ticked</b> (default)</span><span class="new">NEW COPY: "Show Welcome when Bristlenose opens"</span></div>
     <div class="scale"><div data-wwin='{"key":true,"foot":"on"}'></div></div>
   </div>
   <div class="shot">
@@ -271,7 +271,7 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
   </div>
 </div>
 <div class="comm">
-  <p>The checkbox sits at bottom-leading with the label Xcode uses ("Show this window when Xcode launches"), and Pixelmator Pro's is in the same place. It closes like any other window: the red traffic light or ⌘W. There is no X inside the content and no Close button. It is an ordinary titled window. It can be resized, minimised and zoomed, because no part of it needs a fixed frame. Xcode's welcome window is fixed-size and has no title bar. That works because Xcode's window is a launcher, and this one is not.</p>
+  <p>The checkbox sits at bottom-leading, where Xcode and Pixelmator Pro put theirs. <b>Wording decided:</b> "Show Welcome when Bristlenose opens", the §0 spec wording. Here it is also accurate, because deselecting a project no longer summons Welcome. It closes like any other window: the red traffic light or ⌘W. There is no X inside the content and no Close button. It is an ordinary titled window. It can be resized, minimised and zoomed, because no part of it needs a fixed frame. Xcode's welcome window is fixed-size and has no title bar. That works because Xcode's window is a launcher, and this one is not.</p>
   <p><b>Without the drop card,</b> Study tools gains about 90 pt of height, which goes to the illustration. That is the only change to the spiral. <b>Title</b> is the shipped <code>desktop.chrome.welcomeTitle</code> ("Welcome to Bristlenose"), the same string as the Help menu item, so the menu item and the window it opens have the same name.</p>
   <p><b>Opening size, derived rather than measured:</b> 800 pt content width gives a 760 × 470 pt spiral. The Scientific background cell is then about 284 × 285 pt, enough for the 208 × 152 pt cover fan to draw at scale 1 with its caption and link. That is the reasoning from <code>BookShelfView.coverFan</code>'s comments. Nobody has measured it yet. The Degradation Lab would confirm or move the number, and the spiral's φ geometry fixes everything else from that one width. <span class="con">Watch:</span> the spiral's φ geometry means a wider window makes it taller as well. Above the natural size it needs a cap or it outgrows the screen, so the natural size works as a maximum as well as the opening size.</p>
   <p><b>Rotators.</b> Each cell currently advances "per visit", where a visit is an appearance in the main window. In Model 2 a visit has to mean opening the window. With the box unticked, a researcher who never reopens it never sees past the first slot in any cell, so the Tip curriculum stops at slot one.</p>
@@ -308,35 +308,16 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
   </div>
 </div>
 <div class="comm">
-  <p>The two states are drawn the same: the existing drop card, unchanged, centred. The lens group stays dimmed because there is no project to apply it to. This is the one point where Model 2 and Model 1's "Welcome off" state (panel 3 of the sibling mockup) produce identical pixels. Model 2 makes this the <i>only</i> no-selection state, so the main window never shows teaching. ⌥⌘N windows open into this state as well, and none of them brings its own copy of Welcome.</p>
+  <p><b>Decided:</b> both states show the existing drop card, unchanged and centred, with no buttons added. The lens group stays dimmed because there is no project to apply it to. This is the one point where Model 2 and Model 1's "Welcome off" state (panel 3 of the sibling mockup) produce identical pixels. Model 2 makes this the <i>only</i> no-selection state, so the main window never shows teaching. ⌥⌘N windows open into this state as well, and none of them brings its own copy of Welcome.</p>
   <p><span class="pro">For:</span> every no-selection moment, whether it comes from deselecting, deleting the selected project or opening a new window, is now calm and shows one action. The main window's empty state no longer depends on window width.</p>
-  <p><span class="con">Against:</span> in 5a the main window alone is very bare: an empty sidebar and one card. If the researcher closed Welcome a moment ago, it is no longer there to say what the app is for. <span class="con">Also:</span> this window is titled "Welcome" today (<code>desktop.welcome.windowTitle</code>, <code>ContentView.swift:427</code>). That made sense while it showed the Welcome content. In Model 2 it no longer does, and it shares a name with the Welcome window. See panel 6.</p>
+  <p><span class="con">Against:</span> in 5a the main window alone is very bare: an empty sidebar and one card. If the researcher closed Welcome a moment ago, it is no longer there to say what the app is for. <span class="con">Also:</span> this window is titled "Welcome" today (<code>desktop.welcome.windowTitle</code>, <code>ContentView.swift:427</code>). That made sense while it showed the Welcome content. In Model 2 it no longer does, and the name it shares with the Welcome window is confusing in the window list. See panel 6b.</p>
 </div>
 
 <!-- ───────────────────────── 6 ───────────────────────── -->
-<h2><span class="n">6</span>Reopening it: Window and Help menus</h2>
+<h2><span class="n">6</span>Reopening it: Help ▸ Welcome to Bristlenose</h2>
 <div class="row">
   <div class="shot">
-    <div class="shot-bar"><span><b>6a · Window menu</b> (AppKit standard items + one)</span><span>reuses <code>chrome.welcomeTitle</code>, new placement</span></div>
-    <div class="menubar"><b>Bristlenose</b><span>File</span><span>Edit</span><span>View</span><span>Project</span><span class="open">Window</span><span>Help</span></div>
-    <div class="menu" style="--mx:214px">
-      <div class="mi">Minimize<span class="k">⌘M</span></div>
-      <div class="mi">Zoom</div>
-      <div class="mi">Fill<span class="k">⌃🌐F</span></div>
-      <div class="mi">Center<span class="k">⌃🌐C</span></div>
-      <div class="mi sub">Move &amp; Resize</div>
-      <div class="mi sub">Full Screen Tile</div>
-      <div class="sep"></div>
-      <div class="mi hl newmi">Welcome to Bristlenose</div>
-      <div class="sep"></div>
-      <div class="mi">Bring All to Front</div>
-      <div class="sep"></div>
-      <div class="mi"><span class="chk">✓</span>Welcome</div>
-      <div class="mi">Welcome to Bristlenose</div>
-    </div>
-  </div>
-  <div class="shot">
-    <div class="shot-bar"><span><b>6b · Help menu, as shipped</b></span><span>shipped keys only · behaviour changes</span></div>
+    <div class="shot-bar"><span><b>6a · Help menu, as shipped</b></span><span>shipped keys only · behaviour changes</span></div>
     <div class="menubar"><b>Bristlenose</b><span>File</span><span>Edit</span><span>View</span><span>Project</span><span>Window</span><span class="open">Help</span></div>
     <div class="menu" style="--mx:268px">
       <div class="mi">Bristlenose Help<span class="k">⌘?</span></div>
@@ -347,51 +328,41 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
       <div class="mi">Send Feedback…</div>
     </div>
   </div>
+  <div class="shot">
+    <div class="shot-bar"><span><b>6b · Window menu, AppKit standard</b> (no new item)</span><span>window list only</span></div>
+    <div class="menubar"><b>Bristlenose</b><span>File</span><span>Edit</span><span>View</span><span>Project</span><span class="open">Window</span><span>Help</span></div>
+    <div class="menu" style="--mx:214px">
+      <div class="mi">Minimize<span class="k">⌘M</span></div>
+      <div class="mi">Zoom</div>
+      <div class="mi">Fill<span class="k">⌃🌐F</span></div>
+      <div class="mi">Center<span class="k">⌃🌐C</span></div>
+      <div class="mi sub">Move &amp; Resize</div>
+      <div class="mi sub">Full Screen Tile</div>
+      <div class="sep"></div>
+      <div class="mi">Bring All to Front</div>
+      <div class="sep"></div>
+      <div class="mi"><span class="chk">✓</span>Welcome</div>
+      <div class="mi">Welcome to Bristlenose</div>
+    </div>
+  </div>
 </div>
 <div class="comm">
-  <p><b>6a.</b> Xcode keeps "Welcome to Xcode" in its Window menu. In Model 2 Welcome is a window, so the Window menu is a natural home for it. It has no shortcut, for the reason already in <code>MenuCommands.swift</code>: it is opened rarely, so a shortcut would not be remembered. <b>6b.</b> The Help item stays where it is, and what it does changes. Today it clears the selection to show the Welcome pane. In Model 2 it opens or focuses the Welcome window and leaves the main window's selection alone, so it stops being destructive to what the researcher was looking at. The research's "easy to find in a help area" argues for keeping Help. Whether Window should <i>also</i> have it, or whether one menu is enough, is open.</p>
-  <p><span class="con">The window list in 6a shows the naming collision:</span> "✓ Welcome" is the main window with no project selected, under its shipped title, and "Welcome to Bristlenose" is the new window. Nobody can tell them apart from the menu. A shipped alternative for the main window's empty title already exists: <code>desktop.chrome.noProjectSelected</code> ("No Project Selected"). Using it is a one-line change, but it is a decision for the owner, so it is not drawn here.</p>
+  <p><b>Decided:</b> Help is the only way back. Welcome is help more than anything else, so it lives in the Help menu. There is no extra Window-menu item. <b>6a</b> is the item as it ships, with no shortcut. What changes is what it does. Today it clears the selection to show the Welcome pane. In Model 2 it opens or focuses the Welcome window and leaves the main window's selection alone, so it no longer moves the researcher away from what they were looking at.</p>
+  <p><b>6b</b> is drawn only for its window list, which AppKit fills in by itself. Once open, Welcome appears there like any other window. <span class="con">The list shows a naming collision:</span> "✓ Welcome" is the main window with no project selected, under its shipped title, and "Welcome to Bristlenose" is the new window. A shipped alternative for the main window's empty title already exists: <code>desktop.chrome.noProjectSelected</code> ("No Project Selected"). That is still an open question.</p>
 </div>
 
-<!-- ───────────────────────── 7 ───────────────────────── -->
-<h2><span class="n">7</span>Edge case: main window full screen <span class="flag lofi">low fidelity</span></h2>
-<div class="row">
-  <div class="shot">
-    <div class="shot-bar"><span><b>7a · joins the full-screen Space</b> (auxiliary)</span><span>sketch</span></div>
-    <div class="lofi">
-      <div class="spaces"><span>Desktop 1</span><span class="on">Bristlenose (full screen)</span></div>
-      <div class="scr">
-        <div class="fsapp"><div class="s"></div><div class="d"><span class="box">Drop a folder</span></div></div>
-        <div class="ww" style="left:33%; top:16%; width:48%; height:62%">Welcome to Bristlenose</div>
-      </div>
-      <p class="cap">The window floats over the full-screen app, centred, so it is panel 2 again on a single screen. <code>collectionBehavior = .fullScreenAuxiliary</code>.</p>
-    </div>
-  </div>
-  <div class="shot">
-    <div class="shot-bar"><span><b>7b · stays on the desktop Space</b> (default)</span><span>sketch</span></div>
-    <div class="lofi">
-      <div class="spaces"><span class="on">Desktop 1</span><span>Bristlenose (full screen)</span></div>
-      <div class="scr" style="background:var(--wall)">
-        <div class="ww" style="left:26%; top:16%; width:48%; height:62%">Welcome to Bristlenose</div>
-      </div>
-      <p class="cap">Opening it from the menu switches Spaces, away from the work. Closing it does not switch back.</p>
-    </div>
-  </div>
-</div>
-<div class="comm">
-  <p>A full-screen main window has no "beside", so panel 1's placement is not available. <b>7a</b> keeps the researcher in context but brings back panel 2's problem of the window standing in the way, and the drop card under it is covered. <b>7b</b> is what AppKit does if nothing is set, and it is disorienting: the Space slides away when the researcher picks Help&nbsp;▸ Welcome. A third option, not drawn, is to open the window only at launch and never into a full-screen Space. That relies on the "launch only" answer to the first open question below.</p>
-</div>
+<p class="lede" style="margin-top:28px"><b style="color:var(--page-ink)">Full screen: decided, not drawn.</b> No special treatment. Welcome is an ordinary Mac window: if it ends up behind the main window, it stays behind. If the researcher takes the main window full screen, they get the normal behaviour, and they can make Welcome a full-screen tile beside it because macOS already offers that (Window&nbsp;▸ Full Screen Tile). No collection behaviour is set and no placement code is written for this case.</p>
 
 <!-- ───────────────────────── strings + questions ───────────────────────── -->
 <h2><span class="n">—</span>String plan</h2>
 <div class="comm">
   <table>
     <tr><th>String</th><th>Status</th><th>Where</th></tr>
-    <tr><td>Welcome to Bristlenose</td><td>shipped</td><td><code>desktop.chrome.welcomeTitle</code>: Help item, now also window title + Window item</td></tr>
+    <tr><td>Welcome to Bristlenose</td><td>shipped</td><td><code>desktop.chrome.welcomeTitle</code>: Help item, now also the window title</td></tr>
     <tr><td>Drop a folder · Drag a folder of recordings or transcripts here to add it as a project.</td><td>shipped</td><td><code>desktop.welcome.dropFolderTitle</code> / <code>…Hint</code></td></tr>
     <tr><td>Welcome (main window title, no selection)</td><td>shipped, <b>meaning changes</b></td><td><code>desktop.welcome.windowTitle</code>; alternative <code>desktop.chrome.noProjectSelected</code></td></tr>
     <tr><td>Projects</td><td>shipped</td><td><code>desktop.chrome.projects</code></td></tr>
-    <tr><td>Show this window when Bristlenose opens</td><td><b>new</b></td><td>Welcome window footer</td></tr>
+    <tr><td>Show Welcome when Bristlenose opens</td><td><b>new</b></td><td>Welcome window footer</td></tr>
     <tr><td>Minimize · Zoom · Fill · Center · Bring All to Front …</td><td>AppKit's</td><td>standard Window menu, system-localised</td></tr>
   </table>
   <p style="margin-top:8px">One new key, which goes into all 21 full locales. <code>zh-Hant-HK</code> inherits from <code>zh-Hant</code>. Spiral copy is unchanged.</p>
@@ -404,7 +375,7 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
   <p><b>3. Beside or over, and which window is key?</b> Panel 1 helps but needs a wide display. Panel 2 works everywhere but covers the drop card. Possible middle ground: beside the main window when there is room, otherwise offset so the drop card stays visible. That gives two behaviours to explain and test.</p>
   <p><b>4. Sheets on the main window.</b> If the AI-consent sheet, or any first-run sheet, is attached to the main window at launch, the Welcome window either competes with it for key or waits until it is dismissed. A Welcome window that is key and sitting over a window with a modal sheet is the worst case. Order of operations: sheet first, Welcome after?</p>
   <p><b>5. What counts as a "visit" for the rotators</b>, now that opening the window is the only way to see one (panel 3 commentary). Should each cell advance per opening, per launch, or on a timer while the window is open?</p>
-  <p><b>6. The main window's empty-state title</b> ("Welcome" vs "No Project Selected"), and whether the Window menu gets the item as well as Help (panel 6).</p>
+  <p><b>6. The main window's empty-state title</b>: "Welcome" or "No Project Selected" (panel 6b).</p>
   <p><b>7. Help&nbsp;▸ Welcome while the box is unticked.</b> Does it open the window once and leave the setting off, or turn the setting back on? Opening it once matches the HIG's "easy to find later" without overruling the user.</p>
   <p><b>8. Does unticking apply now or next launch?</b> In a window this matters less than it does in Model 1: unticking never makes the window vanish, and the box stays on screen until the researcher closes it. The question is only whether the window still opens at the next launch.</p>
   <p><b>9. Mirror the setting in Settings&nbsp;▸ Appearance?</b> This would be a grouped-form toggle beside "Show animation while analysing". Model 1's mockup already draws the row (<code>welcome-dismiss-options.html</code> panel 4). It carries over unchanged and isn't redrawn here.</p>
@@ -456,7 +427,7 @@ function stack(){
   </div><div class="scrollbar"></div>`;
 }
 function wwin(o){
-  const foot = `<label class="foot" role="checkbox" tabindex="0" aria-checked="${o.foot==='on'}"><span class="cb ${o.foot==='on'?'on':''}"></span>Show this window when Bristlenose opens</label>`;
+  const foot = `<label class="foot" role="checkbox" tabindex="0" aria-checked="${o.foot==='on'}"><span class="cb ${o.foot==='on'?'on':''}"></span>Show Welcome when Bristlenose opens</label>`;
   const w = o.narrow ? 420 : WW;
   return `<div class="win wwin ${o.key?'':'inactive'}" style="width:${w}px;height:${WH}px">
     <div class="wtb"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">Welcome to Bristlenose</div></div>

@@ -25,7 +25,7 @@ export interface NavHead {
   type: "head";
   id: string;
   title: string;
-  badge?: "instruction" | "new";
+  badge?: "instruction";
 }
 
 export interface NavRow {
@@ -64,7 +64,9 @@ export function mergedEntries(data: DiscussionData): NavEntry[] {
       type: "head",
       id: s.id,
       title: s.title,
-      badge: s.kind === "instruction" ? "instruction" : s.origin === "emergent" ? "new" : undefined,
+      // The approved mockup badges an instruction section only. (A "new" badge on
+      // emergent sections was added in the port without a decision; removed 3 Oct.)
+      badge: s.kind === "instruction" ? "instruction" : undefined,
     });
     for (const it of s.items) {
       out.push({ type: "row", id: it.id, text: it.terse, title: it.verbatim,

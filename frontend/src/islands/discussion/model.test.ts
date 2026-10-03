@@ -44,11 +44,12 @@ describe("markOf", () => {
 });
 
 describe("navigator entries", () => {
-  it("Merged lists every section and item, badging new and instruction sections", () => {
+  it("Merged lists every section and item, badging instruction sections only", () => {
     const e = mergedEntries(data);
     const heads = e.filter((x) => x.type === "head");
     expect(heads.map((h) => h.title)).toEqual(data.sections.map((s) => s.title));
-    expect(heads.some((h) => h.type === "head" && h.badge === "new")).toBe(true);
+    const emergent = data.sections.find((s) => s.origin === "emergent")!;
+    expect(heads.find((h) => h.id === emergent.id)).not.toHaveProperty("badge", expect.anything());
     expect(heads.some((h) => h.type === "head" && h.badge === "instruction")).toBe(true);
     const rows = e.filter((x): x is NavRow => x.type === "row");
     expect(rows.length).toBe(data.sections.reduce((n, s) => n + s.items.length, 0));

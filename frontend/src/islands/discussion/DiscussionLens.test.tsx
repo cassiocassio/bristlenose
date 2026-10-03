@@ -31,11 +31,11 @@ describe("DiscussionView", () => {
     expect(container.querySelectorAll(".dl-content blockquote.quote-card:not(.dl-ask)")).toHaveLength(quotes);
   });
 
-  it("Merged shows the promoted new section, badged as new", () => {
+  it("Merged shows the promoted new section, without a badge (as mocked up)", () => {
     render(<DiscussionView data={data} />);
     const emergent = data.sections.find((s) => s.origin === "emergent")!;
     const head = within(nav()).getByText(emergent.title, { exact: false });
-    expect(head.closest(".toc-heading")!.querySelector(".badge")!.textContent).toBe("new");
+    expect(head.closest(".toc-heading")!.querySelector(".badge")).toBeNull();
   });
 
   it("Planned shows the guide as written, every line with the solid dot", () => {

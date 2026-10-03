@@ -57,7 +57,6 @@ const S = {
   sessions: "Sessions",
   navigator: "Discussion guide",
   instruction: "instruction",
-  newSection: "new",
   standalone: "Standalone",
   session: (n: number) => `Session ${n}`,
   stats: (d: string, q: number, n: number) =>
@@ -565,7 +564,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
           <div key={head.id} role="group" aria-labelledby={`dl-h-${head.id}`}>
             <h2 id={`dl-h-${head.id}`} className="toc-heading">
               {head.id === "standalone" ? S.standalone : head.title}
-              {head.badge && <Badge text={head.badge === "instruction" ? S.instruction : S.newSection} variant="readonly" />}
+              {head.badge && <Badge text={S.instruction} variant="readonly" />}
             </h2>
             {rows.map(row)}
           </div>

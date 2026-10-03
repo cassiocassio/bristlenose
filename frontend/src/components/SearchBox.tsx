@@ -20,6 +20,9 @@ export interface SearchBoxProps {
   value: string;
   /** Called with the debounced query string. */
   onChange: (query: string) => void;
+  /** Clear the whole search (ⓧ, Esc, collapsing): the text and any tokens.
+   *  Defaults to `onChange("")`, which clears the text only. */
+  onClear?: () => void;
   /** Debounce delay in ms (default 150). */
   debounce?: number;
   "data-testid"?: string;
@@ -28,6 +31,7 @@ export interface SearchBoxProps {
 export function SearchBox({
   value,
   onChange,
+  onClear,
   debounce = 150,
   "data-testid": testId,
 }: SearchBoxProps) {
@@ -60,7 +64,7 @@ export function SearchBox({
       setExpanded(false);
       setLocalValue("");
       clearTimeout(timerRef.current);
-      onChange("");
+      clearAll();
     } else {
       setExpanded(true);
       // Focus the input after expansion
@@ -74,10 +78,15 @@ export function SearchBox({
     commitValue(v);
   }
 
+  function clearAll() {
+    if (onClear) onClear();
+    else onChange("");
+  }
+
   function handleClear() {
     setLocalValue("");
     clearTimeout(timerRef.current);
-    onChange("");
+    clearAll();
     inputRef.current?.focus();
   }
 

@@ -10,7 +10,7 @@
  *     codebook snapshot predates it
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TagSidebar, buildVisibleFrameworks, mergePendingTags } from "./TagSidebar";
@@ -238,5 +238,29 @@ describe("TagSidebar", () => {
 
     await waitFor(() => expect(screen.getByText("Sentiment-tag")).toBeTruthy());
     expect(screen.getByText("fishfish")).toBeTruthy();
+  });
+
+  it("its search box folds accents and matches word starts, as toolbar search does", async () => {
+    const names = ["Zoë's notes", "Søren", "Hidden costs", "Trust", "Pricing", "Delivery", "Returns", "Stock", "Support"];
+    vi.mocked(getCodebook).mockResolvedValue(withDefaultGroup(names.map(tag)));
+    render(<TagSidebar />);
+    const box = await waitFor(() => {
+      const el = document.querySelector<HTMLInputElement>(".tag-search-input");
+      expect(el).toBeTruthy();
+      return el!;
+    });
+
+    fireEvent.change(box, { target: { value: "zoe" } });
+    expect(screen.queryByText("Zoë's notes")).toBeTruthy();
+    expect(screen.queryByText("Trust")).toBeNull();
+
+    fireEvent.change(box, { target: { value: "soren" } });
+    expect(screen.queryByText("Søren")).toBeTruthy();
+
+    fireEvent.change(box, { target: { value: "cost" } });
+    expect(screen.queryByText("Hidden costs")).toBeTruthy();
+    // A word matches from its start: "ost" is inside "costs", not a word.
+    fireEvent.change(box, { target: { value: "ost" } });
+    expect(screen.queryByText("Hidden costs")).toBeNull();
   });
 });

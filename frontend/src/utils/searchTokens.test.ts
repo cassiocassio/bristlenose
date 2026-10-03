@@ -5,6 +5,7 @@ import {
   personToken,
   sameSubject,
   tagToken,
+  takeCodeTokens,
   tokenHighlightTerms,
   tokenMatches,
   type PersonMode,
@@ -212,3 +213,36 @@ describe("token invariants on a synthetic project", () => {
     expect(count(as(personToken("p3", project.people.p3), "mentions"))).toBeGreaterThan(0);
   });
 });
+
+describe("takeCodeTokens: a typed speaker code becomes a token once a space follows", () => {
+  const codes = ["p3", "m1", "m11"];
+  const codeOf = (w: string) => codes.find((c) => c === w.toLowerCase()) ?? null;
+  const take = (q: string) => takeCodeTokens(q, codeOf);
+
+  it("takes a code and its space, case-insensitively", () => {
+    expect(take("p3 ")).toEqual({ query: "", codes: ["p3"] });
+    expect(take("P3 ")).toEqual({ query: "", codes: ["p3"] });
+    expect(take("p3 late")).toEqual({ query: "late", codes: ["p3"] });
+    expect(take("late p3 ")).toEqual({ query: "late ", codes: ["p3"] });
+  });
+
+  it("waits for the space: m1 may be the start of m11", () => {
+    expect(take("m1")).toEqual({ query: "m1", codes: [] });
+    expect(take("late m1")).toEqual({ query: "late m1", codes: [] });
+    expect(take("m11 ")).toEqual({ query: "", codes: ["m11"] });
+  });
+
+  it("leaves words that are not codes, and codes inside a quoted phrase", () => {
+    expect(take("p33 ")).toEqual({ query: "p33 ", codes: [] });
+    expect(take("pricing ")).toEqual({ query: "pricing ", codes: [] });
+    expect(take('"p3 said" ')).toEqual({ query: '"p3 said" ', codes: [] });
+    expect(take("“p3 said” p3 ")).toEqual({ query: "“p3 said” ", codes: ["p3"] });
+  });
+
+  it("takes several, each once, and returns the query untouched when none", () => {
+    expect(take("p3 m1 p3 late")).toEqual({ query: "late", codes: ["p3", "m1"] });
+    const q = "  spaced   out ";
+    expect(take(q).query).toBe(q);
+  });
+});
+

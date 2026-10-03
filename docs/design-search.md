@@ -23,7 +23,7 @@ Settled by the maintainer on 28 Sep 2026. Build on them, don't reopen them.
 | D1 | The long-term engine is **SQLite FTS5 + Python**, shared by CLI, SPA and MCP. Core Spotlight is rejected. | Not built here. The matching rules below are pinned by a fixture so that core can be held to the same answers. |
 | D2 | The **first slice is TypeScript**, over data the SPA already holds. | No server work, no network call per keystroke. Works in serve mode, in the Mac app and in the offline HTML export. |
 | D3 | On the Mac, the **suggestions menu is native**, fed by the SPA. | The SPA computes suggestions and posts them over the bridge; SwiftUI draws them. One recogniser, drawn natively per surface. |
-| D4 | **Each typed word matches on its own**, in any order, as the start of a word. A **"quoted"** term matches as an exact phrase. | A behaviour change to shipped search (today: one contiguous substring). |
+| D4 | **Words typed together match together**, in order, from the start of a word: `want to go` finds *I want to go home*, never *want*, *to* and *go* scattered. A **"quoted"** term matches as exact text anywhere. *Revised 3 Oct 2026; it was "each typed word matches on its own, in any order". It is a quote engine: several typed words are something somebody said.* | People and tags are tokens (D6), so a query need not cross fields to find "Tom" and "delivery"; `tom "delivery"` still does. |
 | D5 | First recognisers: **phrase, word, participant code (speaker badge), participant name, tag**. | Sentiment, timecode, date, section, signal, session: later. |
 | D6 | **Tokens have a meaning menu** from the start: person = *said by / mentions / not*; tag = *tagged / text contains / not tagged*. | |
 | D7 | The **"Ask the report"** question row comes **later**. | Not in this slice. |
@@ -60,20 +60,25 @@ core asserts the same file when it lands).
 
 1. **Folding.** Case, diacritics and compatibility forms fold: `Jose` finds
    `José`, `е` finds `ё`, `ＡＢＣ` finds `abc`, `strasse` finds `Straße`, and
-   Greek final `ς` is `σ`. Curly and straight apostrophes are equal.
+   Greek final `ς` is `σ`. Latin letters with no Unicode decomposition fold
+   by lodash's `deburr` table: `soren` finds `Søren`, `lodz` finds `Łódź`,
+   `oeuvre` finds `œuvre`. Curly and straight apostrophes are equal.
    Whitespace runs are one space, and invisible characters (soft hyphen,
    zero-width space) are ignored.
    **Accents are folded only where they are optional:** Latin, Greek,
    Cyrillic, Arabic and Hebrew. In Japanese, Thai and Hindi a combining mark
    changes the word (`パン` is bread, `ハン` is not), so it is kept, and a match
    may not end just before one (`ハ` does not find `パ`).
-2. **Terms.** The query splits on spaces into words. Text inside double quotes
+2. **Terms.** The words typed between quotes are one run, matched in order
+   from the start of a word; the last word may still be being typed
+   (`than the sh` finds *than the shelf*). Text inside double quotes
    (straight, curly, « », 「 」) is one phrase term, matched as **exact text,
    anywhere**: `"boarding was"` finds *onboarding was*. Quoting is how to
    search for a fragment, and it is what ⌘E (Use Selection for Find) sends, so
    a selection always finds the quote it came from. An unclosed quote runs to
-   the end. Apostrophes at the edge of a word are dropped, so smart single
-   quotes (‘than the’) act as the plain words.
+   the end. Apostrophes at the edges of a run are dropped, so smart single
+   quotes (‘than the’) act as the plain words. Each run and each phrase may
+   match a different field (quote text, speaker, tag names, sentiment).
 3. **Word-initial.** A word matches only at the start of a word (`st` finds
    *Storey*, not *best*). Exceptions: a quoted phrase (rule 2), and a term in
    Chinese, Japanese or Thai script, which matches anywhere because those
@@ -352,15 +357,17 @@ Each phase ends green and committed.
 | **P1 Matcher** | `searchMatch.ts`, contract fixture, `highlight.tsx` and `filter.ts` switched to it | vitest green; every shipped search behaviour still covered, the D4 change asserted. **Done 3 Oct 2026**: matcher and fixture (53 matching cases, 15 activation cases), then the Quotes filter, highlights, the "N matching" label, the search box and ⌘E (sends its selection as a quoted phrase) switched to it. A test pins that the search menu's count equals the list a researcher gets on ↩, with hidden, starred and store tag edits in play |
 | **P2 Tokens** | token types + predicates; `searchTokens` in QuotesStore with add/remove/set-mode actions; **one** `filterStateOf(store)` replacing the six hand-built `FilterState`s (Toolbar, QuoteSections, QuoteThemes, ExportDropdown, LensSubtitleSync, `getVisibleQuotes`); highlight of mentions/contains | exports and subtitle counts honour tokens (asserted). **Done 3 Oct 2026**, headless (no way to add a token from the screen until P4): `utils/searchTokens.ts`; `filterStateOf` is referentially stable, so it sits in dependency lists as itself and a new filter (a token, a filter-menu row) is added once; the quote cards take parsed `highlight` terms instead of the raw query. Asserted: the web Export menu's scope, the native counts (`getVisibleQuotes`), the window subtitle and the "N matching" label all narrow with tokens; said-by/not and tagged/not-tagged partition a synthetic project exactly; mentions and contains agree with an independently written whole-word check |
 | **P3 Recognisers** | `searchSuggest.ts`, pure; people from `getPeople()` (embedded in the export) | unit tests. **Done 3 Oct 2026**, headless: rule tests on a hand-built project, invariants and an independently written matcher over the seeded synthetic project (`searchSynthetic.ts`), and a 10,000-quote scale test (2–8 ms a keystroke warm, 17 ms cold, on an M-series Mac) |
-| **P4 Browser UI** | combobox, rows, chips, meaning menus; CSS in `bristlenose/theme/molecules/search.css`; locale keys ×21. **Owed from P2:** Esc must reach tokens (`useKeyboardShortcuts`' `clearSearch` returns false when the query is empty, so it never clears them), and the ⓧ decision (§12 Q2) | vitest; `check-locales.py --strict`; browser QA |
+| **P4 Browser UI** | combobox, rows, chips, meaning menus; CSS in `bristlenose/theme/molecules/search.css`; locale keys ×21. Esc and ⓧ clear tokens too (done 3 Oct 2026, §12 Q2) | vitest; `check-locales.py --strict`; browser QA |
 | **P5 Mac** | **Plumbing done 3 Oct 2026**, headless: the menu, tokens and badge styles cross the bridge in both directions, pinned on both sides by `tests/fixtures/search-bridge-contract.json`; the `BadgeStyle` probe and its per-appearance cache in the SPA; Swift decodes and holds all three on `BridgeHandler`. **Remaining:** native badge views painted from the styles; native chips and popover with lens SF Symbols; the badge snapshot test (§7a) | `desktop/scripts/test-swift.sh`; `.app` QA side by side with the card badge, both palettes and schemes |
 | **P6 Docs** | true `design-html-report.md`'s search section and `platform-text-map.md`; set this doc's status to shipped | — |
 
 ## 12. Open questions
 
 1. ~~**Activation at 2 characters rather than 3.**~~ Decided 3 Oct 2026: 2.
-2. **The ⓧ button clears tokens as well as text.** Or should it clear text
-   only, with tokens removed one at a time, as in Mail?
+2. ~~**The ⓧ button clears tokens as well as text.**~~ Decided 3 Oct 2026:
+   ⓧ and Esc both empty the whole field, text and tokens, as Mail's does.
+   Backspacing the text away is not a clear: tokens go one at a time.
+   (`clearSearch` in QuotesContext; `SearchBox`'s `onClear`.)
 3. **Mentions.** Names only, from the people list. Nicknames and "the
    moderator" are not recognised.
 4. **No typed-letter emphasis inside badges** (§4). The badge is drawn exactly
@@ -374,33 +381,38 @@ Each phase ends green and committed.
    SPA computes the order once and both the browser and the native menu draw
    it, so the two surfaces agree. Pass the UI locale explicitly if the order
    must not depend on the machine.
-7. **Short names that are ordinary words** (*Will*, *Grace*, *Mark*, *May*):
+7. **Short names that are ordinary words** (*Will*, *Grace*, *Mark*, *May*). Typed text is now a run (D4), so `will smith` finds the name and `will` still finds *William* from the start of the word. The open part is the *mentions* token:
    *mentions* matches them as whole words, so "I will" counts as mentioning
    Will. The highlight shows why each quote matched. The alternative, using
    only the full name when the short name is a dictionary word, would miss
    "Will said".
-8. **Tokens and a refetch.** `initFromQuotes(…, replace)` resets the store, so
-   a re-analyse refetch clears tokens along with the query. A token costs
-   more to rebuild than a typed word; decide whether it should survive.
-9. **Moderator codes are per session.** `m1` in one session is not `m1` in
-   another, but a person token is addressed by code, so a *said by m1* token
+8. ~~**Tokens and a refetch.**~~ Decided 3 Oct 2026: the researcher never
+   asks for a refetch. It comes from a run finishing, an AutoCode catch-up
+   finishing in the background, or an AutoCode report being applied, so it
+   keeps what they were looking at: the query, tokens, starred-only and the tag
+   filter (`initFromQuotes(…, replace)`). It used to clear all four.
+9. **Speaker codes are tokens.** Decided 3 Oct 2026: a code typed as a word
+   and followed by a space (`p3 `, `M1 `) becomes a *said by* token; the space
+   is what tells `m1` from the start of `m11`. Codes in a quoted phrase stay
+   text, and only codes of people with quotes count (`takeCodeTokens`).
+   **Still open:** moderator codes are per session, so a *said by m1* token
    matches every session's first moderator. Participant codes are
-   project-wide and unaffected. Decide whether a moderator token carries its
-   session, or whether moderators are offered at all.
+   project-wide and unaffected.
 10. **Who closes the native menu on the free-text row.** Choosing it leaves
     the query as typed (the contract's `commit-text`), so no new
     `search-suggestions` arrives to empty the menu. The native side should
     close it on that choice; the SPA cannot tell it to.
-11. **Badge styles are keyed by folded tag name**, so two tags whose names
+11. **Accepted 3 Oct 2026. Badge styles are keyed by folded tag name**, so two tags whose names
     differ only by case or accents share one style, as they share one
     suggestion (Q5). If they sit in codebooks with different colours, the
     native chip takes whichever was measured last.
-12. **Letters with a stroke do not fold.** *Søren*, *Łódź* and *Đorđe* need
-    *ø*, *ł*, *đ* typed; Unicode gives them no decomposition, so the accent
-    folding that makes *Zoe* find *Zoë* does not reach them. Both sides of the
-    contract agree (`known_limits` in the fixture). Folding them is a small
-    table; the question is whether a Danish or Polish researcher expects it.
-13. **The tag sidebar's own search box lowercases and matches anywhere, with
-    no folding** (`TagSidebar.tsx` `tagMatchesSearch`), so it finds *Zoë* from
-    *zoë* but not from *zoe*, where toolbar search does. Two boxes in one lens
-    that disagree on accents. Switching it to `searchMatch.ts` is small.
+12. ~~**Letters with a stroke do not fold.**~~ Decided 3 Oct 2026: nobody
+    should have to type an accent. Latin letters that Unicode gives no
+    decomposition (ø ł đ æ œ þ ı) fold by lodash's `deburr` table, an
+    off-the-shelf one rather than ours, applied to Latin-1 and Latin
+    Extended-A letters only, so it never reaches a script whose marks are kept.
+    *Søren*, *Łódź*, *Đorđe*, *œuvre* and *kırmızı* are match cases in the
+    contract now. German *ü* still does not match *ue* (typing *u* does).
+13. ~~**The tag sidebar's search box did not fold.**~~ Decided 3 Oct 2026:
+    one fold for everything. It uses `searchMatch.ts` now, so it folds accents
+    and matches a word from its start, as toolbar search does.

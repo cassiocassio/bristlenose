@@ -16,7 +16,13 @@ import { useTranslation } from "react-i18next";
 import { SearchBox } from "../components/SearchBox";
 import { ViewSwitcher } from "../components/ViewSwitcher";
 import { ToolbarButton } from "../components/ToolbarButton";
-import { filterStateOf, useQuotesStore, setSearchQuery, setViewMode } from "../contexts/QuotesContext";
+import {
+  clearSearch,
+  filterStateOf,
+  useQuotesStore,
+  setSearchQuery,
+  setViewMode,
+} from "../contexts/QuotesContext";
 import { useFocusMode, toggleFocusMode } from "../contexts/FocusModeStore";
 import { filterQuotes } from "../utils/filter";
 import { isEmbedded } from "../utils/embedded";
@@ -57,6 +63,7 @@ export function Toolbar() {
       <SearchBox
         value={store.searchQuery}
         onChange={setSearchQuery}
+        onClear={clearSearch}
         data-testid="bn-toolbar-search"
       />
       <ViewSwitcher

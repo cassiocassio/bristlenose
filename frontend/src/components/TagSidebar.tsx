@@ -29,6 +29,7 @@ import type {
   TagResponse,
 } from "../utils/types";
 import { EMPTY_TAG_FILTER } from "../utils/filter";
+import { matchesAll, parseQuery } from "../utils/searchMatch";
 import { useQuotesStore, setTagFilter, addTag } from "../contexts/QuotesContext";
 import { useFocus } from "../contexts/FocusContext";
 import {
@@ -273,6 +274,10 @@ export function TagSidebar() {
   const [codebook, setCodebook] = useState<CodebookResponse | null>(null);
   const [projectName, setProjectName] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  // The toolbar search's rules (searchMatch.ts), so the two boxes in this lens
+  // agree: "zoe" finds "Zoë" here too, and a word matches from its start.
+  // Declared here, ahead of the stats memo that filters with it.
+  const searchTerms = useMemo(() => parseQuery(search), [search]);
   const [showUsedOnly, setShowUsedOnly] = useState(false);
 
   const store = useQuotesStore();
@@ -444,15 +449,13 @@ export function TagSidebar() {
 
   // ── Search filter ───────────────────────────────────────────────────
 
-  const searchLower = search.toLowerCase();
-
   function tagMatchesSearch(t: CodebookTagResponse): boolean {
-    return !search || t.name.toLowerCase().includes(searchLower);
+    return !search || matchesAll([t.name], searchTerms);
   }
 
   function groupMatchesSearch(g: CodebookGroupResponse): boolean {
     if (!search) return true;
-    if (g.name.toLowerCase().includes(searchLower)) return true;
+    if (matchesAll([g.name], searchTerms)) return true;
     return g.tags.some(tagMatchesSearch);
   }
 

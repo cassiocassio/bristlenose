@@ -71,6 +71,17 @@ describe("SearchBox", () => {
     expect(onChange).toHaveBeenCalledWith("");
   });
 
+  it("ⓧ and Esc clear the whole search through onClear when it is given", () => {
+    const onChange = vi.fn();
+    const onClear = vi.fn();
+    const { getByTestId } = render(
+      <SearchBox value="hello" onChange={onChange} onClear={onClear} data-testid="search" />,
+    );
+    fireEvent.click(getByTestId("search-clear"));
+    expect(onClear).toHaveBeenCalledTimes(1);
+    expect(onChange).not.toHaveBeenCalledWith("");
+  });
+
   it("adds has-query class once the query is long enough to filter by (2 chars)", () => {
     const { getByTestId } = render(
       <SearchBox value="" onChange={vi.fn()} data-testid="search" />,

@@ -126,23 +126,32 @@
       ]
     },
     {
-      "why": "words match in any order",
+      "why": "words typed together match together, in order, as a quote says them",
       "text": "which is more than the shelf",
-      "query": "shelf more",
+      "query": "more than the",
       "match": true,
-      "marked": [
-        "more",
-        "shelf"
-      ]
+      "marked": ["more than the"]
     },
     {
-      "why": "every word must match",
+      "why": "a run of words starts at a word start, so the last word may still be being typed",
       "text": "which is more than the shelf",
-      "query": "shelf sofa",
+      "query": "than the sh",
+      "match": true,
+      "marked": ["than the sh"]
+    },
+    {
+      "why": "and not inside a word",
+      "text": "which is more than the shelf",
+      "query": "ore than",
       "match": false,
-      "marked": [
-        "shelf"
-      ]
+      "marked": []
+    },
+    {
+      "why": "words out of order do not match: a researcher typing words is looking for what somebody said, not for each word somewhere",
+      "text": "which is more than the shelf",
+      "query": "shelf more",
+      "match": false,
+      "marked": []
     },
     {
       "why": "a quoted phrase matches as written",
@@ -514,10 +523,7 @@
       "text": "which is more than the shelf",
       "query": "‘than the’",
       "match": true,
-      "marked": [
-        "than",
-        "the"
-      ]
+      "marked": ["than the"]
     },
     {
       "why": "a Korean query matches the syllables it begins, as the keyboard composes them",
@@ -644,14 +650,11 @@
       ]
     },
     {
-      "why": "a highlight covers the whole emoji, skin tone included",
+      "why": "a skin tone is folded away, so a plain emoji finds a toned one, and the highlight covers the whole emoji",
       "text": "👍🏽 great",
       "query": "👍 great",
       "match": true,
-      "marked": [
-        "👍🏽",
-        "great"
-      ]
+      "marked": ["👍🏽 great"]
     },
     {
       "why": "a match may not begin inside a letter",
@@ -659,16 +662,58 @@
       "query": "\"゚ン\"",
       "match": false,
       "marked": []
+    },
+    {
+      "why": "Latin letters with no decomposition fold by lodash's deburr table: ø",
+      "text": "Søren said",
+      "query": "soren",
+      "match": true,
+      "marked": ["Søren"]
+    },
+    {
+      "why": "and Polish ł with the accents around it",
+      "text": "Łódź store",
+      "query": "lodz",
+      "match": true,
+      "marked": ["Łódź"]
+    },
+    {
+      "why": "Turkish dotless ı folds to i",
+      "text": "kırmızı kanepe",
+      "query": "kirmizi",
+      "match": true,
+      "marked": ["kırmızı"]
+    },
+    {
+      "why": "đ folds to d",
+      "text": "Đorđe called",
+      "query": "dorde",
+      "match": true,
+      "marked": ["Đorđe"]
+    },
+    {
+      "why": "a ligature folds to its two letters",
+      "text": "the œuvre of",
+      "query": "oeuvre",
+      "match": true,
+      "marked": ["œuvre"]
+    },
+    {
+      "why": "æ folds to ae",
+      "text": "Ærø ferry",
+      "query": "aero",
+      "match": true,
+      "marked": ["Ærø"]
+    },
+    {
+      "why": "þ folds to th",
+      "text": "Þórunn said",
+      "query": "thorunn",
+      "match": true,
+      "marked": ["Þórunn"]
     }
   ],
   "known_limits": [
-    {
-      "why": "Turkish dotless ı does not fold to i",
-      "text": "kırmızı kanepe",
-      "query": "kirmizi",
-      "match": false,
-      "marked": []
-    },
     {
       "why": "German ü does not match ue",
       "text": "Müller rang back",
@@ -689,21 +734,7 @@
       "query": "delivrey",
       "match": false,
       "marked": []
-    },
-    {
-      "why": "stroke letters do not fold: soren does not find Søren (decision pending, design-search §12)",
-      "text": "Søren said",
-      "query": "soren",
-      "match": false,
-      "marked": []
-    },
-    {
-      "why": "nor Polish ł: lodz does not find Łódź (decision pending)",
-      "text": "Łódź store",
-      "query": "lodz",
-      "match": false,
-      "marked": []
     }
   ],
-  "_python_notes": "When the Python core asserts this file, three defaults differ from JavaScript and must not be used as-is: str.lower() is final-sigma-aware while this contract folds every sigma to σ; re's \\w includes the underscore while a word here is letters, digits and combining marks; and the stdlib re has no Unicode Script property, so the scripts named in searchMatch.ts (accented: Latin, Greek, Cyrillic, Arabic, Hebrew; unspaced: Han, Hiragana, Katakana, Thai) need the `regex` package or explicit ranges. Whitespace is JavaScript's \\s plus U+0085, with U+FEFF treated as invisible. Since 3 Oct 2026 also: decompose (NFKD) BEFORE case folding so compatibility capitals fold ('™' is 'tm'); fold double quote marks (\" “ ” „ « » 「 」) to a space; drop format characters AND variation selectors (U+FE0F); treat a letter of Han, Hiragana, Katakana or Thai before or after a word as a word boundary; and widen a highlight to whole extended grapheme clusters (the stdlib cannot: use `regex`'s \\X)."
+  "_python_notes": "When the Python core asserts this file, three defaults differ from JavaScript and must not be used as-is: str.lower() is final-sigma-aware while this contract folds every sigma to σ; re's \\w includes the underscore while a word here is letters, digits and combining marks; and the stdlib re has no Unicode Script property, so the scripts named in searchMatch.ts (accented: Latin, Greek, Cyrillic, Arabic, Hebrew; unspaced: Han, Hiragana, Katakana, Thai) need the `regex` package or explicit ranges. Whitespace is JavaScript's \\s plus U+0085, with U+FEFF treated as invisible. Since 3 Oct 2026 also: decompose (NFKD) BEFORE case folding so compatibility capitals fold ('™' is 'tm'); fold double quote marks (\" “ ” „ « » 「 」) to a space; drop format characters AND variation selectors (U+FE0F); treat a letter of Han, Hiragana, Katakana or Thai before or after a word as a word boundary; and widen a highlight to whole extended grapheme clusters (the stdlib cannot: use `regex`'s \\X). Since 3 Oct 2026 the Latin letters Unicode gives no decomposition (Latin-1 Supplement and Latin Extended-A: ø ł đ æ œ þ ı …) fold by lodash's `deburr` table, applied to those letters only and before NFKD. Python should take the same table rather than `unidecode`, which also transliterates other scripts. Also since 3 Oct 2026: words typed between quotes are ONE run term (whitespace does not split them), trimmed of apostrophes and spaces at its edges; and emoji skin-tone modifiers (Emoji_Modifier) are invisible like variation selectors."
 }

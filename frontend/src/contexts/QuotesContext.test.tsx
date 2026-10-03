@@ -189,6 +189,45 @@ describe("QuotesStore", () => {
       expect(result.current.hidden).toEqual({ "q-P2-200": true });
     });
 
+    it("replace keeps what the researcher is looking at: search, tokens, starred-only, tag filter", () => {
+      // A refetch is never the researcher's doing (a run or an AutoCode
+      // catch-up finishing), so it must not clear their search.
+      const q1 = makeQuote({ dom_id: "q-P1-100" });
+      initFromQuotes([q1]);
+      const filter = { ...EMPTY_TAG_FILTER, unchecked: ["pricing"] };
+      act(() => {
+        setSearchQuery("delivery");
+        addSearchToken(personToken("p1", { full_name: "Ann Lee", short_name: "Ann" }));
+        setViewMode("starred");
+        setTagFilter(filter);
+      });
+      initFromQuotes([makeQuote({ dom_id: "q-P2-200" })], true);
+      const s = getQuotesSnapshot();
+      expect(s.searchQuery).toBe("delivery");
+      expect(s.searchTokens.map((t) => t.kind === "person" && t.code)).toEqual(["p1"]);
+      expect(s.viewMode).toBe("starred");
+      expect(s.tagFilter).toEqual(filter);
+      expect(s.quotes.map((q) => q.dom_id)).toEqual(["q-P2-200"]); // the data was replaced
+    });
+
+    it("a speaker code typed with a space becomes a said-by token, named from the quotes", () => {
+      initFromQuotes([
+        makeQuote({ dom_id: "a", participant_id: "p3", speaker_name: "Priya" }),
+        makeQuote({ dom_id: "b", participant_id: "m1", speaker_name: "m1" }),
+      ]);
+      act(() => setSearchQuery("p3"));
+      expect(getQuotesSnapshot().searchTokens).toEqual([]); // no space yet
+      act(() => setSearchQuery("P3 late"));
+      const s = getQuotesSnapshot();
+      expect(s.searchQuery).toBe("late");
+      expect(s.searchTokens).toEqual([{ kind: "person", code: "p3", names: ["Priya"], mode: "said" }]);
+
+      act(() => setSearchQuery("m1 p3 "));
+      expect(getQuotesSnapshot().searchTokens.map((t) => t.kind === "person" && t.code)).toEqual(["p3", "m1"]);
+      act(() => setSearchQuery("p9 ")); // nobody with quotes is p9: it stays text
+      expect(getQuotesSnapshot().searchQuery).toBe("p9 ");
+    });
+
     it("skips falsy values (no spurious keys for unstarred/unhidden quotes)", () => {
       const q = makeQuote();
       initFromQuotes([q]);

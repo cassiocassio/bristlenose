@@ -123,6 +123,12 @@ struct QuotesSearchToolbarControl: View {
             if !newValue.isEmpty { expanded = true }
             if newValue != text { text = newValue }
         }
+        // A typed code becomes a token ("p3 " → said by p3) and leaves the
+        // text. When the store's query was already empty it does not change, so
+        // the observer above never fires and "p3 " would stay in the field.
+        .onChange(of: bridgeHandler.quotesSearchTokens) { _, _ in
+            if bridgeHandler.quotesSearchQuery != text { text = bridgeHandler.quotesSearchQuery }
+        }
         // Edit ▸ Find (⌘F). Both assignments are load-bearing: when collapsed,
         // `expanded` renders the field and its `.task` takes focus; when already
         // expanded, `.task` does not re-fire, so `focused` is the only thing that

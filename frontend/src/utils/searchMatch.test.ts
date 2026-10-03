@@ -47,7 +47,7 @@ describe("search matching contract", () => {
   it("covers every rule in the spec at least once", () => {
     // A guard against the fixture shrinking: these are the §3 rules.
     const whys = contract.match.map((c) => c.why).join(" | ");
-    for (const rule of ["any order", "phrase", "START", "accents", "Chinese", "whitespace"]) {
+    for (const rule of ["in order", "phrase", "word start", "accents", "Chinese", "whitespace"]) {
       expect(whys).toContain(rule);
     }
   });
@@ -66,8 +66,19 @@ describe("parseQuery", () => {
     expect(parseQuery("JOSÉ").map((t) => t.text)).toEqual(["jose"]);
   });
 
+  it("keeps words typed together as one run", () => {
+    expect(parseQuery("want  to go")).toEqual([{ kind: "word", text: "want to go", anywhere: false }]);
+    // A quoted phrase splits the runs around it.
+    expect(parseQuery('late "than the" shelf').map((t) => [t.kind, t.text])).toEqual([
+      ["word", "late"],
+      ["phrase", "than the"],
+      ["word", "shelf"],
+    ]);
+  });
+
   it("marks Chinese and Japanese terms as matching anywhere", () => {
-    expect(parseQuery("東京 tokyo").map((t) => t.anywhere)).toEqual([true, false]);
+    expect(parseQuery("東京").map((t) => t.anywhere)).toEqual([true]);
+    expect(parseQuery("tokyo").map((t) => t.anywhere)).toEqual([false]);
   });
 
   it("ignores an empty pair of quotes", () => {
@@ -76,10 +87,12 @@ describe("parseQuery", () => {
 });
 
 describe("matchesAll across fields", () => {
-  it("lets each word match a different field", () => {
+  it("lets each term match a different field, but a run of words stays in one", () => {
     const fields = ["the delivery was £45", "Tom Fletcher"];
-    expect(matchesAll(fields, parseQuery("tom delivery"))).toBe(true);
-    expect(matchesAll(fields, parseQuery("tom assembly"))).toBe(false);
+    expect(matchesAll(fields, parseQuery("tom fletcher"))).toBe(true);
+    expect(matchesAll(fields, parseQuery('tom "delivery"'))).toBe(true);
+    // Typed together, they are what somebody said: no quote says "tom delivery".
+    expect(matchesAll(fields, parseQuery("tom delivery"))).toBe(false);
   });
 });
 

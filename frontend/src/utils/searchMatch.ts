@@ -7,13 +7,19 @@
  * when it lands, can be held to the same answers.
  *
  * The rules (docs/mockups/toolbar-search.html, decided 28 Sep 2026):
- *   - Each typed word matches on its own, in any order, as the START of a word
- *     ("st" finds "Storey" and "Steppe", not "best").
+ *   - Words typed together match together, in order, from the START of a word
+ *     ("st" finds "Storey" and "Steppe", not "best"; "want to go" finds
+ *     "I want to go home", not "go … want … to"). It is a quote engine: a
+ *     researcher typing several words is looking for something somebody said.
+ *     (Decided 3 Oct 2026; until then each word matched on its own.)
  *   - A term in double quotes matches as exact text, anywhere: "boarding was"
  *     finds "onboarding was". Quoting is the way to search for a fragment, and
  *     what ⌘E (Use Selection for Find) sends.
  *   - Case, accents and width are folded: "Jose" finds "José", "ё" finds "е",
- *     "ＡＢＣ" finds "abc", "strasse" finds "Straße". Curly and straight
+ *     "ＡＢＣ" finds "abc", "strasse" finds "Straße", "soren" finds "Søren".
+ *     Nobody should have to type an accent to find a name. Latin letters that
+ *     Unicode gives no decomposition (ø ł đ æ œ þ ı) fold by lodash's `deburr`
+ *     table rather than one of our own. Curly and straight
  *     apostrophes are the same. Accents are stripped ONLY in scripts where they
  *     are optional marks (Latin, Greek, Cyrillic, Arabic, Hebrew); in Japanese,
  *     Thai or Hindi a combining mark changes the word (パン is not ハン), so it
@@ -26,13 +32,21 @@
  *     quotes (‘than the’) behave like the plain words.
  */
 
+import deburr from "lodash.deburr";
+
 // ── Folding ─────────────────────────────────────────────────────────────
 
+/** The letters `deburr` folds: Latin-1 Supplement and Latin Extended-A, less
+ *  × and ÷. Only these go through it, so its own mark stripping never reaches
+ *  a script whose marks we keep. */
+const DEBURR_LATIN = /[\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u017F]/u;
+
 const MARK = /\p{M}/u;
-/** Invisible: format characters (soft hyphen, zero-width space, BOM) and emoji
- *  variation selectors (❤ and ❤️ are one heart). Dropped from text and query. */
-const INVISIBLE = /[\p{Cf}\p{Variation_Selector}]/u;
-const INVISIBLE_G = /[\p{Cf}\p{Variation_Selector}]/gu;
+/** Invisible: format characters (soft hyphen, zero-width space, BOM), emoji
+ *  variation selectors (❤ and ❤️ are one heart) and skin tones (👍 finds 👍🏽).
+ *  Dropped from text and query; a highlight still covers the whole emoji. */
+const INVISIBLE = /[\p{Cf}\p{Variation_Selector}\p{Emoji_Modifier}]/u;
+const INVISIBLE_G = /[\p{Cf}\p{Variation_Selector}\p{Emoji_Modifier}]/gu;
 const SPACE = /[\s\u0085]/u;
 const APOSTROPHES = /[\u2018\u2019\u02BC\u0060\u00B4]/g;
 const WORD_CHAR = /[\p{L}\p{N}\p{M}]/u;
@@ -88,7 +102,7 @@ function foldCore(s: string, map: number[] | null): string {
       // Apostrophes before NFKD (U+00B4 decomposes to a space and an accent)
       // and after it (U+0149 decomposes to U+02BC + n); case after NFKD, so a
       // compatibility capital ("™" → "TM", "𝐃" → "D") is lowered too.
-      const decomposed = ch
+      const decomposed = (DEBURR_LATIN.test(ch) ? deburr(ch) : ch)
         .replace(APOSTROPHES, "'")
         .normalize("NFKD")
         .replace(APOSTROPHES, "'")
@@ -164,6 +178,11 @@ export interface SearchTerm {
 
 const OPEN_QUOTES = new Set(['"', "“", "”", "„", "«", "»", "「", "」"]);
 
+/** A mark that opens or closes a quoted phrase in a query. */
+export function isPhraseQuote(ch: string): boolean {
+  return OPEN_QUOTES.has(ch);
+}
+
 /** Split a typed query into word and "quoted phrase" terms. */
 export function parseQuery(query: string): SearchTerm[] {
   const terms: SearchTerm[] = [];
@@ -174,10 +193,11 @@ export function parseQuery(query: string): SearchTerm[] {
     buf = "";
     if (!text) return;
     if (kind === "word") {
-      for (const raw of text.split(" ")) {
-        const w = trimApostrophes(raw);
-        if (w) terms.push(makeTerm("word", w));
-      }
+      // Words typed together are a phrase: "want to go" finds those words in
+      // that order, never want, to and go scattered through a quote. It starts
+      // at a word start, so the last word may still be being typed.
+      const w = trimApostrophes(text);
+      if (w) terms.push(makeTerm("word", w));
     } else {
       terms.push(makeTerm("phrase", text));
     }
@@ -187,8 +207,6 @@ export function parseQuery(query: string): SearchTerm[] {
     if (OPEN_QUOTES.has(ch)) {
       flush(inPhrase ? "phrase" : "word");
       inPhrase = !inPhrase;
-    } else if (!inPhrase && /\s/u.test(ch)) {
-      flush("word");
     } else {
       buf += ch;
     }
@@ -198,11 +216,13 @@ export function parseQuery(query: string): SearchTerm[] {
 }
 
 /** Strip apostrophes from both ends, in linear time. */
+/** Trim apostrophes from the edges of a run, and the spaces they leave
+ *  behind ("` ¨" folds to an apostrophe, a space and a mark). */
 function trimApostrophes(w: string): string {
   let a = 0;
   let b = w.length;
-  while (a < b && w[a] === "'") a++;
-  while (b > a && w[b - 1] === "'") b--;
+  while (a < b && (w[a] === "'" || w[a] === " ")) a++;
+  while (b > a && (w[b - 1] === "'" || w[b - 1] === " ")) b--;
   return w.slice(a, b);
 }
 
@@ -330,7 +350,8 @@ export function termMatches(text: string, term: SearchTerm): boolean {
 
 /**
  * True when every term matches in at least one of `fields` (each term may
- * match a different field: "tom delivery" finds Tom's quote about delivery).
+ * match a different field: `tom "delivery"` finds Tom's quote about delivery;
+ * typed together, "tom delivery" is one run and must be said).
  */
 export function matchesAll(fields: string[], terms: SearchTerm[]): boolean {
   return terms.every((term) => fields.some((f) => f && termMatches(f, term)));

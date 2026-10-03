@@ -24,13 +24,16 @@ import type { TagFilterState, FilterState } from "../utils/filter";
 import {
   canMention,
   PERSON_MODES,
+  personToken,
   sameSubject,
   TAG_MODES,
+  takeCodeTokens,
   type PersonMode,
   type SearchToken,
   type TagMode,
 } from "../utils/searchTokens";
 import { EMPTY_TAG_FILTER, filterQuotes } from "../utils/filter";
+import { foldKey } from "../utils/searchMatch";
 import {
   putHidden,
   putStarred,
@@ -195,6 +198,12 @@ function setState(updater: (prev: QuotesState) => QuotesState): void {
  * Pass `replace: true` on re-fetch (bn:tags-changed) to atomically
  * clear-and-set, avoiding race conditions between the two islands.
  *
+ * A replace resets the data and keeps the researcher's view: the search text,
+ * its tokens, starred-only and the tag filter. The researcher never asks for a
+ * refetch (a run finishing, an AutoCode catch-up finishing in the background,
+ * an AutoCode report applied), so it must not take away what they were
+ * looking at.
+ *
  * `uncategorised` (the read-only floor) is set in the same atomic update so a
  * `replace` never leaves a wipe window; omit it to leave the current floor
  * untouched (e.g. legacy callers / tests).
@@ -205,7 +214,15 @@ export function initFromQuotes(
   uncategorised?: QuoteResponse[],
 ): void {
   setState((prev) => {
-    const base = replace ? emptyState() : prev;
+    const base = replace
+      ? {
+          ...emptyState(),
+          viewMode: prev.viewMode,
+          searchQuery: prev.searchQuery,
+          searchTokens: prev.searchTokens,
+          tagFilter: prev.tagFilter,
+        }
+      : prev;
     const hidden = { ...base.hidden };
     const starred = { ...base.starred };
     const edits = { ...base.edits };
@@ -560,9 +577,42 @@ export function denyProposedTag(domId: string, proposalId: number): void {
 
 // ── Toolbar actions (Step 4) ─────────────────────────────────────────
 
-/** Set the search query. No API call — UI-only state. */
+/**
+ * Set the search query. No API call — UI-only state.
+ *
+ * A speaker code typed as a word and followed by a space ("p3 ", "M1 ")
+ * becomes a person token and leaves the text: codes are how researchers name
+ * people, and the space is what tells "m1" from the start of "m11". Only codes
+ * of people with quotes count, the same people the suggestions offer.
+ */
 export function setSearchQuery(query: string): void {
-  setState((prev) => ({ ...prev, searchQuery: query }));
+  setState((prev) => {
+    let byCode: Map<string, { code: string; name?: string }> | null = null;
+    const codeOf = (word: string): string | null => {
+      if (!byCode) {
+        byCode = new Map();
+        for (const q of prev.quotes) {
+          const code = q.participant_id;
+          if (!code) continue;
+          const seen = byCode.get(foldKey(code));
+          const name = q.speaker_name && q.speaker_name !== code ? q.speaker_name : undefined;
+          if (!seen) byCode.set(foldKey(code), { code, name });
+          else if (!seen.name && name) seen.name = name;
+        }
+      }
+      return byCode.get(foldKey(word))?.code ?? null;
+    };
+    const taken = takeCodeTokens(query, codeOf);
+    if (taken.codes.length === 0) {
+      return prev.searchQuery === query ? prev : { ...prev, searchQuery: query };
+    }
+    const searchTokens = prev.searchTokens.slice();
+    for (const code of taken.codes) {
+      const token = personToken(code, undefined, byCode!.get(foldKey(code))?.name);
+      if (!searchTokens.some((t) => sameSubject(t, token))) searchTokens.push(token);
+    }
+    return { ...prev, searchQuery: taken.query, searchTokens };
+  });
 }
 
 /**
@@ -618,6 +668,19 @@ export function setSearchTokenMode(subject: SearchToken, mode: PersonMode | TagM
 /** Remove every token. */
 export function clearSearchTokens(): void {
   setState((prev) => (prev.searchTokens.length === 0 ? prev : { ...prev, searchTokens: [] }));
+}
+
+/**
+ * Clear the whole search: the text and every token, as ⓧ and Esc do (Mail's
+ * field empties to nothing). Backspacing the text away is not this: a token
+ * goes one at a time.
+ */
+export function clearSearch(): void {
+  setState((prev) =>
+    prev.searchQuery === "" && prev.searchTokens.length === 0
+      ? prev
+      : { ...prev, searchQuery: "", searchTokens: [] },
+  );
 }
 
 /** Set the view mode (all / starred). No API call — UI-only state. */

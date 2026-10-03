@@ -19,7 +19,7 @@ import { isExportMode } from "../utils/exportData";
 import { usePlayer } from "../contexts/PlayerContext";
 import {
   useQuotesStore,
-  setSearchQuery,
+  clearSearch as clearStoreSearch,
   setTagFilter,
   addTag,
   getLastUsedTag,
@@ -260,8 +260,8 @@ export function useKeyboardShortcuts({
 
   const clearSearch = useCallback((): boolean => {
     const s = storeRef.current;
-    if (s.searchQuery) {
-      setSearchQuery("");
+    if (s.searchQuery || s.searchTokens.length > 0) {
+      clearStoreSearch(); // the text and the tokens, as ⓧ does
       return true;
     }
     return false;

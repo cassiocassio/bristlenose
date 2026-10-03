@@ -171,10 +171,11 @@ describe("isQuoteVisible", () => {
     expect(isQuoteVisible(q, baseFilter({ searchQuery: "ability" }))).toBe(false);
   });
 
-  it("matches words in any order, each in any field", () => {
+  it("matches words typed together in order, as said; one word may match the speaker", () => {
     const q = makeQuote({ text: "This is about usability", speaker_name: "Alice" });
-    expect(isQuoteVisible(q, baseFilter({ searchQuery: "usability alice" }))).toBe(true);
-    expect(isQuoteVisible(q, baseFilter({ searchQuery: "alice navigation" }))).toBe(false);
+    expect(isQuoteVisible(q, baseFilter({ searchQuery: "about usab" }))).toBe(true);
+    expect(isQuoteVisible(q, baseFilter({ searchQuery: "usability about" }))).toBe(false);
+    expect(isQuoteVisible(q, baseFilter({ searchQuery: "alice" }))).toBe(true);
   });
 
   it("matches a quoted phrase only as written", () => {

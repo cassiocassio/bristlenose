@@ -119,10 +119,14 @@ describe("suggest — rows and counts", () => {
     expect(suggest("p", source).some((r) => r.kind === "text")).toBe(false);
   });
 
-  it("lets each word match a different field, and offers no person for a mixed query", () => {
+  it("lets each term match a different field, and offers no person for a mixed query", () => {
     // Tom's three quotes: two say delivery, one is tagged "delivery time".
+    expect(suggest('tom "delivery"', source)).toEqual([
+      { kind: "text", id: "text", query: 'tom "delivery"', count: 3 },
+    ]);
+    // Typed together the words are a run, and nobody said "tom delivery".
     expect(suggest("tom delivery", source)).toEqual([
-      { kind: "text", id: "text", query: "tom delivery", count: 3 },
+      { kind: "text", id: "text", query: "tom delivery", count: 0 },
     ]);
   });
 
@@ -210,16 +214,16 @@ describe("suggest — invariants on a synthetic project", () => {
     }
   });
 
-  // An oracle written a different way from searchMatch: a regex per word over
-  // accent-stripped text. Only for queries whose words are plain ASCII, where
-  // the two definitions must agree.
+  // An oracle written a different way from searchMatch: one regex for the
+  // typed words in order, from a word start, over accent-stripped text. Only
+  // for queries whose words are plain ASCII, where the two must agree.
   function naiveCount(q: string): number {
     const strip = (x: string) => x.normalize("NFD").replace(/\p{M}/gu, "");
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
-    const res = words.map((w) => new RegExp(`(^|[^\\p{L}\\p{N}])${w}`, "iu"));
+    const re = new RegExp(`(^|[^\\p{L}\\p{N}])${words.join("\\s+")}`, "iu");
     return project.quotes.filter((x) => {
       const fields = [x.text, x.speaker_name, ...x.tags.map((t) => t.name), x.sentiment ?? ""].map(strip);
-      return res.every((re) => fields.some((f) => re.test(f)));
+      return fields.some((f) => re.test(f));
     }).length;
   }
 
@@ -233,6 +237,7 @@ describe("suggest — invariants on a synthetic project", () => {
 
   it("the oracle is not vacuous", () => {
     expect(naiveCount("delivery")).toBeGreaterThan(0);
+    expect(naiveCount("the delivery")).toBeGreaterThan(0); // the run case is exercised
     expect(naiveCount("zzq")).toBe(0);
   });
 

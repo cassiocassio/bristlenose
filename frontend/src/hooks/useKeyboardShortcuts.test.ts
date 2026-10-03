@@ -16,7 +16,11 @@ import {
   useQuotesStore,
   addTag,
   getLastUsedTag,
+  addSearchToken,
+  getQuotesSnapshot,
+  setSearchQuery,
 } from "../contexts/QuotesContext";
+import { tagToken } from "../utils/searchTokens";
 import { resetSidebarStore } from "../contexts/SidebarStore";
 import { resetInspectorStore } from "../contexts/InspectorStore";
 import { isFocusMode, _resetFocusMode } from "../contexts/FocusModeStore";
@@ -491,6 +495,30 @@ describe("useKeyboardShortcuts", () => {
   });
 
   describe("escape cascade", () => {
+    it("Escape clears the whole search, tokens included, before anything else", () => {
+      const { getCtx, unmount } = renderWithProviders();
+      act(() => getCtx().setFocus("q-1"));
+      act(() => {
+        setSearchQuery("late");
+        addSearchToken(tagToken({ name: "Pricing" }));
+      });
+
+      act(() => pressKey("Escape"));
+      expect(getQuotesSnapshot().searchQuery).toBe("");
+      expect(getQuotesSnapshot().searchTokens).toEqual([]);
+      expect(getCtx().focusedId).toBe("q-1"); // the search went first
+
+      unmount();
+    });
+
+    it("Escape clears tokens left alone in the field", () => {
+      const { unmount } = renderWithProviders();
+      act(() => addSearchToken(tagToken({ name: "Pricing" })));
+      act(() => pressKey("Escape"));
+      expect(getQuotesSnapshot().searchTokens).toEqual([]);
+      unmount();
+    });
+
     it("Escape clears focus when focused", () => {
       const { getCtx, unmount } = renderWithProviders();
       act(() => getCtx().setFocus("q-1"));

@@ -395,10 +395,8 @@ describe("markRanges", () => {
   });
 
   it("FIXED D8: the mark covers the whole emoji, skin tone included", () => {
-    expect(markRanges("👍\uD83C\uDFFD great", parseQuery("👍 great"))).toEqual([
-      [0, 4],
-      [5, 10],
-    ]);
+    // A skin tone folds away, so the run "👍 great" is one mark over all of it.
+    expect(markRanges("👍\uD83C\uDFFD great", parseQuery("👍 great"))).toEqual([[0, 10]]);
   });
 });
 
@@ -418,18 +416,18 @@ function oracleParse(q: string): { kind: string; text: string }[] {
     buf = "";
     if (!t) return;
     if (kind === "phrase") terms.push({ kind, text: t });
-    else
-      for (const raw of t.split(" ")) {
-        const w = raw.replace(/^'+|'+$/g, "");
-        if (w) terms.push({ kind, text: w });
-      }
+    else {
+      // Words typed together are one run (decided 3 Oct 2026); only the run's
+      // edges lose their apostrophes.
+      const w = t.replace(/^[' ]+|[' ]+$/g, "");
+      if (w) terms.push({ kind, text: w });
+    }
   };
   for (const ch of q) {
     if (ch === '"') {
       flush(inPhrase ? "phrase" : "word");
       inPhrase = !inPhrase;
-    } else if (!inPhrase && /\s/.test(ch)) flush("word");
-    else buf += ch;
+    } else buf += ch;
   }
   flush(inPhrase ? "phrase" : "word");
   return terms;
@@ -684,13 +682,19 @@ describe("script boundaries", () => {
     expect(matches("I ❤ it", "❤\uFE0F it")).toBe(true);
   });
 
-  it.fails("UNDOCUMENTED LIMIT: stroke and ligature letters do not fold (ø, ł, æ, œ, đ)", () => {
-    // Not in the contract's known_limits (which name only ı and ü→ue).
-    // Bristlenose ships da, nb and pl locales; "soren" finds nothing for Søren.
+  it("FIXED: stroke and ligature letters fold (ø, ł, æ, œ, đ), by lodash's deburr table", () => {
+    // Bristlenose ships da, nb and pl locales; nobody should have to type ø.
     expect(matches("Søren said", "soren")).toBe(true);
-  });
-  it.fails("UNDOCUMENTED LIMIT: Polish ł", () => {
     expect(matches("Łódź store", "lodz")).toBe(true);
+    expect(matches("Ærø ferry", "aero")).toBe(true);
+    expect(matches("the œuvre of", "oeuvre")).toBe(true);
+    expect(matches("Đorđe called", "dorde")).toBe(true);
+    // Typed with the letter, it still finds itself.
+    expect(matches("Søren said", "søren")).toBe(true);
+  });
+  it("deburr reaches only Latin letters: Japanese and Hindi keep their marks", () => {
+    expect(matches("ハン", "パン")).toBe(false);
+    expect(matches("× 3", "x")).toBe(false); // × is not a letter, so not an x
   });
 });
 

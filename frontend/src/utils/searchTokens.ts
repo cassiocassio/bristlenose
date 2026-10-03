@@ -8,7 +8,7 @@
  * "not"; a tag is "tagged", "text contains" or "not tagged".
  */
 
-import { foldKey, termMatches, wholeWordsTerm, type SearchTerm } from "./searchMatch";
+import { foldKey, isPhraseQuote, termMatches, wholeWordsTerm, type SearchTerm } from "./searchMatch";
 import { quoteDisplayText, quoteTags, type SearchPerson } from "./searchSuggest";
 import type { QuoteResponse, TagResponse } from "./types";
 
@@ -46,6 +46,52 @@ export function personToken(
     .map((n) => n?.trim() ?? "")
     .filter((n) => n && n !== code);
   return { kind: "person", code, names: [...new Set(names)], mode: "said" };
+}
+
+/**
+ * Take speaker codes typed as whole words out of the query, so they can become
+ * person tokens. A code counts once a space (or more typing) follows it, since
+ * "m1" on its own may be the start of "m11"; a code inside a quoted phrase is
+ * text. Returns the query without those words, and the codes in typed order.
+ * `codeOf` answers the project's code for a typed word ("P3" → "p3"), or null.
+ */
+export function takeCodeTokens(
+  query: string,
+  codeOf: (word: string) => string | null,
+): { query: string; codes: string[] } {
+  const codes: string[] = [];
+  let out = "";
+  let inPhrase = false;
+  let i = 0;
+  const chars = [...query];
+  while (i < chars.length) {
+    const ch = chars[i];
+    if (isPhraseQuote(ch)) {
+      inPhrase = !inPhrase;
+      out += ch;
+      i++;
+      continue;
+    }
+    if (inPhrase || /\s/u.test(ch)) {
+      out += ch;
+      i++;
+      continue;
+    }
+    // A word outside a phrase: up to the next space or quote mark.
+    let j = i;
+    while (j < chars.length && !/\s/u.test(chars[j]) && !isPhraseQuote(chars[j])) j++;
+    const word = chars.slice(i, j).join("");
+    const followedBySpace = j < chars.length && /\s/u.test(chars[j]);
+    const code = followedBySpace ? codeOf(word) : null;
+    if (code !== null) {
+      if (!codes.includes(code)) codes.push(code);
+      while (j < chars.length && /\s/u.test(chars[j])) j++; // and its space
+    } else {
+      out += word;
+    }
+    i = j;
+  }
+  return codes.length === 0 ? { query, codes } : { query: out, codes };
 }
 
 /** A tag token, tagged by default. */

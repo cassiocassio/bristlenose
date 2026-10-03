@@ -19,13 +19,12 @@ describe("highlightText", () => {
     expect(highlightText("Hello world", "lo")).toBe("Hello world");
   });
 
-  it("marks each word on its own, whatever order they were typed in", () => {
-    const { container } = render(<>{highlightText("more than the shelf", "shelf more")}</>);
-    expect([...container.querySelectorAll("mark")].map((m) => m.textContent)).toEqual([
-      "more",
-      "shelf",
-    ]);
+  it("marks words typed together as one run, and nothing when they are out of order", () => {
+    const { container } = render(<>{highlightText("more than the shelf", "than the")}</>);
+    expect([...container.querySelectorAll("mark")].map((m) => m.textContent)).toEqual(["than the"]);
     expect(container.textContent).toBe("more than the shelf");
+    const out = render(<>{highlightText("more than the shelf", "shelf more")}</>);
+    expect(out.container.querySelectorAll("mark")).toHaveLength(0);
   });
 
   it("marks a quoted phrase whole", () => {

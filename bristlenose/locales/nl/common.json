@@ -73,9 +73,9 @@
         "notWord": "behalve"
       },
       "tag": {
-        "tagged": "Getagd “{{tag}}”",
+        "tagged": "Getagd met “{{tag}}”",
         "contains": "Tekst bevat “{{tag}}”",
-        "not": "Niet getagd “{{tag}}”",
+        "not": "Niet getagd met “{{tag}}”",
         "taggedWord": "getagd",
         "containsWord": "bevat",
         "notWord": "niet getagd"

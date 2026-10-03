@@ -73,10 +73,10 @@
         "notWord": "excepte"
       },
       "tag": {
-        "tagged": "Etiquetat \u00ab{{tag}}\u00bb",
+        "tagged": "Amb l\u2019etiqueta \u00ab{{tag}}\u00bb",
         "contains": "El text cont\u00e9 \u00ab{{tag}}\u00bb",
         "not": "Sense l\u2019etiqueta \u00ab{{tag}}\u00bb",
-        "taggedWord": "etiquetat",
+        "taggedWord": "amb etiqueta",
         "containsWord": "cont\u00e9",
         "notWord": "sense etiqueta"
       },

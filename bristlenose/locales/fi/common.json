@@ -66,10 +66,10 @@
     "token": {
       "person": {
         "said": "Puhuja: {{name}}",
-        "mentions": "Mainitsee: {{name}}",
+        "mentions": "Mainittu: {{name}}",
         "not": "Paitsi: {{name}}",
         "saidWord": "puhuja",
-        "mentionsWord": "mainitsee",
+        "mentionsWord": "mainittu",
         "notWord": "paitsi"
       },
       "tag": {

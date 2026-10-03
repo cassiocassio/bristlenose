@@ -62,9 +62,9 @@
         "tagged": "\u201c{{tag}}\u201d \ud0dc\uadf8 \uc788\uc74c",
         "contains": "\ubcf8\ubb38\uc5d0 \u201c{{tag}}\u201d \ud3ec\ud568",
         "not": "\u201c{{tag}}\u201d \ud0dc\uadf8 \uc5c6\uc74c",
-        "taggedWord": "\ud0dc\uadf8 \uc788\uc74c",
-        "containsWord": "\ubcf8\ubb38 \ud3ec\ud568",
-        "notWord": "\ud0dc\uadf8 \uc5c6\uc74c"
+        "taggedWord": "\ud0dc\uadf8",
+        "containsWord": "\ubcf8\ubb38",
+        "notWord": "\ud0dc\uadf8 \uc81c\uc678"
       },
       "remove": "\uc81c\uac70"
     }

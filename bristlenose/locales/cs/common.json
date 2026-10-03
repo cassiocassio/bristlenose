@@ -74,10 +74,10 @@
     "token": {
       "person": {
         "said": "Mluv\u00ed: {{name}}",
-        "mentions": "Zmi\u0148uje: {{name}}",
+        "mentions": "Zm\u00ednka: {{name}}",
         "not": "Krom\u011b: {{name}}",
         "saidWord": "mluv\u00ed",
-        "mentionsWord": "zmi\u0148uje",
+        "mentionsWord": "zm\u00ednka",
         "notWord": "krom\u011b"
       },
       "tag": {

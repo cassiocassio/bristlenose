@@ -59,14 +59,14 @@
         "mentions": "Menciona a {{name}}",
         "not": "Excepto {{name}}",
         "saidWord": "dicho por",
-        "mentionsWord": "menciona",
+        "mentionsWord": "menciona a",
         "notWord": "excepto"
       },
       "tag": {
-        "tagged": "Etiquetado \u00ab{{tag}}\u00bb",
+        "tagged": "Con la etiqueta \u00ab{{tag}}\u00bb",
         "contains": "El texto contiene \u00ab{{tag}}\u00bb",
         "not": "Sin la etiqueta \u00ab{{tag}}\u00bb",
-        "taggedWord": "etiquetado",
+        "taggedWord": "con etiqueta",
         "containsWord": "contiene",
         "notWord": "sin etiqueta"
       },

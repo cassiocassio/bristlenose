@@ -79,10 +79,10 @@
       "person": {
         "said": "M\u00f3wi: {{name}}",
         "mentions": "Wzmianka: {{name}}",
-        "not": "Wyklucz: {{name}}",
+        "not": "Oprócz: {{name}}",
         "saidWord": "m\u00f3wi",
         "mentionsWord": "wzmianka",
-        "notWord": "wyklucz"
+        "notWord": "oprócz"
       },
       "tag": {
         "tagged": "Z tagiem \u201e{{tag}}\u201d",

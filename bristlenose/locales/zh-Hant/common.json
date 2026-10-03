@@ -67,12 +67,12 @@
         "notWord": "\u6392\u9664"
       },
       "tag": {
-        "tagged": "\u6a19\u7c64\u300c{{tag}}\u300d",
+        "tagged": "\u6709\u6a19\u7c64\u300c{{tag}}\u300d",
         "contains": "\u5167\u6587\u542b\u300c{{tag}}\u300d",
-        "not": "\u7121\u6a19\u7c64\u300c{{tag}}\u300d",
+        "not": "\u4e0d\u542b\u6a19\u7c64\u300c{{tag}}\u300d",
         "taggedWord": "\u6709\u6a19\u7c64",
         "containsWord": "\u5167\u6587\u542b",
-        "notWord": "\u7121\u6a19\u7c64"
+        "notWord": "\u6392\u9664\u6a19\u7c64"
       },
       "remove": "\u79fb\u9664"
     }

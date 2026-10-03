@@ -355,7 +355,7 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
 <div class="comm">
   <p><b>Decided:</b> both states show the existing drop card, unchanged and centred, with no buttons added. The lens group stays dimmed because there is no project to apply it to. This is the one point where Model 2 and Model 1's "Welcome off" state (panel 3 of the sibling mockup) produce identical pixels. Model 2 makes this the <i>only</i> no-selection state, so the main window never shows teaching. ⌥⌘N windows open into this state as well, and none of them brings its own copy of Welcome.</p>
   <p><span class="pro">For:</span> every no-selection moment, whether it comes from deselecting, deleting the selected project or opening a new window, is now calm and shows one action. The main window's empty state no longer depends on window width.</p>
-  <p><span class="con">Against:</span> in 5a the main window alone is very bare: an empty sidebar and one card. If the researcher closed Welcome a moment ago, it is no longer there to say what the app is for. <span class="con">Also:</span> this window is titled "Welcome" today (<code>desktop.welcome.windowTitle</code>, <code>ContentView.swift:427</code>). That made sense while it showed the Welcome content. In Model 2 it no longer does, and the name it shares with the Welcome window is confusing in the window list. See panel 6b.</p>
+  <p><span class="con">Against:</span> in 5a the main window alone is very bare: an empty sidebar and one card. If the researcher closed Welcome a moment ago, it is no longer there to say what the app is for. <b>Title, decided:</b> with no project selected the window is titled "Bristlenose". It used to be "Welcome" (<code>desktop.welcome.windowTitle</code>, <code>ContentView.swift:427</code>), which no longer fits once the Welcome content has left this window. See panel 6b.</p>
 </div>
 
 <!-- ───────────────────────── 6 ───────────────────────── -->
@@ -386,14 +386,14 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
       <div class="sep"></div>
       <div class="mi">Bring All to Front</div>
       <div class="sep"></div>
-      <div class="mi"><span class="chk">✓</span>Welcome</div>
+      <div class="mi"><span class="chk">✓</span>Bristlenose</div>
       <div class="mi">Welcome to Bristlenose</div>
     </div>
   </div>
 </div>
 <div class="comm">
   <p><b>Decided:</b> Help is the only way back. Welcome is help more than anything else, so it lives in the Help menu. There is no extra Window-menu item. <b>6a</b> is the item as it ships, with no shortcut. What changes is what it does. Today it clears the selection to show the Welcome pane. In Model 2 it opens or focuses the Welcome window and leaves the main window's selection alone, so it no longer moves the researcher away from what they were looking at.</p>
-  <p><b>6b</b> is drawn only for its window list, which AppKit fills in by itself. Once open, Welcome appears there like any other window. <span class="con">The list shows a naming collision:</span> "✓ Welcome" is the main window with no project selected, under its shipped title, and "Welcome to Bristlenose" is the new window. A shipped alternative for the main window's empty title already exists: <code>desktop.chrome.noProjectSelected</code> ("No Project Selected"). That is still an open question (question 3 below).</p>
+  <p><b>6b</b> is drawn only for its window list, which AppKit fills in by itself. Once open, Welcome appears there like any other window. <b>Decided:</b> with no project selected, the main window is titled "Bristlenose". That is the simplest fix, and the convention library apps already follow (Music, Notes, Photos). It ends the collision the shipped title "Welcome" caused, where two near-identical rows were listed and the one called "Welcome" was the window without Welcome in it. Extra empty windows number as "Bristlenose 2" and so on. The app name is not translated.</p>
 </div>
 
 <p class="lede" style="margin-top:28px"><b style="color:var(--page-ink)">Full screen: decided, not drawn.</b> No special treatment. Welcome is an ordinary Mac window: if it ends up behind the main window, it stays behind. If the researcher takes the main window full screen, they get the normal behaviour, and they can make Welcome a full-screen tile beside it because macOS already offers that (Window&nbsp;▸ Full Screen Tile). No collection behaviour is set and no placement code is written for this case.</p>
@@ -405,7 +405,7 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
     <tr><th>String</th><th>Status</th><th>Where</th></tr>
     <tr><td>Welcome to Bristlenose</td><td>shipped</td><td><code>desktop.chrome.welcomeTitle</code>: Help item, now also the window title</td></tr>
     <tr><td>Drop a folder · Drag a folder of recordings or transcripts here to add it as a project.</td><td>shipped</td><td><code>desktop.welcome.dropFolderTitle</code> / <code>…Hint</code></td></tr>
-    <tr><td>Welcome (main window title, no selection)</td><td>shipped, <b>meaning changes</b></td><td><code>desktop.welcome.windowTitle</code>; alternative <code>desktop.chrome.noProjectSelected</code></td></tr>
+    <tr><td>Bristlenose (main window title, no selection)</td><td>app name, not a key</td><td>replaces <code>desktop.welcome.windowTitle</code> at <code>ContentView.swift:427</code>, which then has no caller and can be removed from all locales</td></tr>
     <tr><td>Projects</td><td>shipped</td><td><code>desktop.chrome.projects</code></td></tr>
     <tr><td>Show Welcome when Bristlenose opens</td><td><b>new</b></td><td>Welcome window footer + Appearance legend</td></tr>
     <tr><td>Study tools, scientific background and a tip, shown in the main window when no project is selected.</td><td><b>new</b>, owner-shortened (see 3c)</td><td>Appearance help line</td></tr>
@@ -418,7 +418,7 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
 <div class="comm">
   <p>A read-only <code>what-would-gruber-say</code> pass over 5b0d53f4. <b>Where you have since ruled, your ruling stands, and it is marked below.</b> Items settled before the review are left out.</p>
   <p><b>Window type.</b> A regular titled window: resizable, minimisable, closed with ⌘W, not an <code>NSPanel</code>. Title "Welcome to Bristlenose". <span class="con">Implementation trap:</span> SwiftUI's <code>Window("…", id:)</code> adds its own "open" item to the Window menu, which breaks the help-only route back. Fix with <code>.commandsRemoved()</code>. Keep the window-list entry, Mission Control and ⌘` membership, because it is a real window.</p>
-  <p><b>Main window title.</b> Retire "Welcome" for the main window's no-selection title (<code>ContentView.swift:427</code>) and use "Bristlenose" or the shipped "No Project Selected", so the collision in panel 6b goes away. Still open, question 3.</p>
+  <p><b>Main window title.</b> Retire "Welcome" for the main window's no-selection title (<code>ContentView.swift:427</code>) and use "Bristlenose" or the shipped "No Project Selected", so the collision in panel 6b goes away. <b>Ruled:</b> "Bristlenose".</p>
   <p><b>Launch and restoration.</b> "Opens" means a cold launch only. A Dock reopen with no windows makes a main window, not Welcome. State restoration must not override the checkbox: <code>.restorationBehavior(.disabled)</code> plus <code>.defaultLaunchBehavior(.presented)</code>, gated on the setting (both on macOS 15). <b>Matches the ruling:</b> launch only.</p>
   <p><b>Placement and key.</b> Make Welcome <i>key</i>: VoiceOver announces it, and one ⌘W gets the researcher back to the task. Drag and drop works on a window that isn't key, so there is no reason to open it without focus. Place it beside the main window when there is room, otherwise offset to the trailing side so the centred drop card stays visible. Never centre it over the main window. Autosave the frame, so the natural size applies only on first open. Defer it until any first-run sheet has been dismissed. <span class="con">Overruled:</span> the first open is centred over the main window (panel 1), and the consent sheet does not hold Welcome back. <b>Agreed:</b> key, and the frame is remembered after the first open.</p>
   <p><b>Checkbox semantics.</b> Help&nbsp;▸ Welcome while the box is unticked shows the window <i>once</i> and leaves the setting off. Unticking takes effect at the next launch and never closes the window. ⌘W closes the window and never changes the setting. This follows Xcode and Pixelmator Pro. <b>The ruling matches</b> on unticking and ⌘W. Help while the box is unticked is still open (question 1 below).</p>
@@ -430,14 +430,13 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
 
 <h2><span class="n">✓</span>Decided</h2>
 <div class="comm">
-  <p><b>Model 2</b>: Welcome is its own window, the spiral as shipped minus the drop card. <b>Checkbox</b>: "Show Welcome when Bristlenose opens". <b>Opens</b> only at launch, never on deselect. <b>First open</b>: centred over the main window, key (panel 1). <b>Later opens</b>: the frame the researcher left it in. <b>Resizable</b>: reflows narrow (panel 4b), and the baton follows comic-strip reading order (left to right, top to bottom). <b>Ticking or unticking</b> never closes the window and governs the next launch only. <b>The AI-consent sheet</b> stays modal on the main window and is met once Welcome is moved aside. <b>Rotator visits</b> are invisible in v1. <b>No drop target in Welcome</b>: dropping lives in the main window's empty states, which show the existing drop card, unchanged and centred, with nothing added. <b>Reopen</b> via Help&nbsp;▸ Welcome to Bristlenose only. <b>Full screen</b> gets no special treatment.</p>
+  <p><b>Model 2</b>: Welcome is its own window, the spiral as shipped minus the drop card. <b>Checkbox</b>: "Show Welcome when Bristlenose opens". <b>Opens</b> only at launch, never on deselect. <b>First open</b>: centred over the main window, key (panel 1). <b>Later opens</b>: the frame the researcher left it in. <b>Resizable</b>: reflows narrow (panel 4b), and the baton follows comic-strip reading order (left to right, top to bottom). <b>Ticking or unticking</b> never closes the window and governs the next launch only. <b>The AI-consent sheet</b> stays modal on the main window and is met once Welcome is moved aside. <b>Rotator visits</b> are invisible in v1. <b>No drop target in Welcome</b>: dropping lives in the main window's empty states, which show the existing drop card, unchanged and centred, with nothing added. <b>Main window title</b> with no project selected: "Bristlenose". <b>Reopen</b> via Help&nbsp;▸ Welcome to Bristlenose only. <b>Full screen</b> gets no special treatment.</p>
 </div>
 
 <h2><span class="n">?</span>Still open</h2>
 <div class="comm">
   <p><b>1. Help&nbsp;▸ Welcome while the box is unticked.</b> Does it open the window once and leave the setting off, or turn the setting back on? Gruber recommends opening it once. Because the checkbox is in the window, the researcher can re-tick it there.</p>
   <p><b>2. Mirror the setting in Settings&nbsp;▸ Appearance (panel 3c), and if so, with what help line?</b> The line drawn there describes Model 1 ("shown in the main window when no project is selected").</p>
-  <p><b>3. The main window's empty-state title</b>: "Welcome" today, which collides with the Welcome window in the Window list (panel 6b). Gruber suggests "Bristlenose" or the shipped "No Project Selected".</p>
 </div>
 
 </div>
@@ -496,7 +495,7 @@ function mwin(o){
   const projs = o.sb === 'projects' ? PROJECTS.map(([c,n]) => `<div class="proj"><span class="ic ${c}"></span>${n}</div>`).join('') : '';
   return `<div class="win ${o.key?'':'inactive'}" style="width:${MW}px;height:${MH}px">
     <div class="sb"><div class="lights"><i></i><i></i><i></i><span class="sbbtn"></span></div>${lenses}<h6>Projects</h6>${projs}</div>
-    <div class="detail"><div class="tb"><span class="wtitle">Welcome</span></div><div class="pane">${DROP}</div></div></div>`;
+    <div class="detail"><div class="tb"><span class="wtitle">Bristlenose</span></div><div class="pane">${DROP}</div></div></div>`;
 }
 const MBAR = `<div class="mbar"><b>Bristlenose</b><span>File</span><span>Edit</span><span>View</span><span>Project</span><span>Window</span><span>Help</span><span class="clock">Sat 3 Oct 09:41</span></div>`;
 function scene(kind){

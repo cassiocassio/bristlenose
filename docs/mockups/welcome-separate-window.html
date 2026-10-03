@@ -38,6 +38,8 @@
   --menu-bg: light-dark(rgba(246,246,246,.96), rgba(40,40,42,.96));
   --control-bg: light-dark(#ffffff, #3a3a3c);
   --off-track: light-dark(#e3e3e6, #3f3f43);
+  --form-row-bg: light-dark(#ffffff, #2c2c2e);
+  --form-bg: light-dark(#f2f2f5, #1e1e1e);
   --light-off: light-dark(#d6d6d8, #4b4b4e);
   --page-bg: light-dark(#e9e9ec, #121214);
   --page-ink: light-dark(#1d1d1f, #e7e7ea);
@@ -173,11 +175,32 @@ h2 .flag{ font:500 10.5px var(--mono); letter-spacing:.06em; text-transform:uppe
 .win.inactive .cb.on{ background:light-dark(#b8b8bd,#6a6a6e); }
 .foot:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; border-radius:4px; }
 
+/* Settings window — Form .grouped */
+.settings{ width:640px; border-radius:12px; overflow:hidden; background:var(--form-bg); box-shadow:0 0 0 .5px rgba(0,0,0,.25), 0 18px 40px rgba(0,0,0,.18); color:var(--label); }
+.stb{ background:var(--titlebar-bg); border-bottom:.5px solid var(--separator); padding:10px 14px 8px; }
+.stb .title{ text-align:center; font-size:13px; font-weight:600; margin-top:-16px; margin-bottom:10px; }
+.tabs{ display:flex; justify-content:center; gap:4px; }
+.tabs div{ width:84px; padding:5px 0 4px; border-radius:7px; text-align:center; font-size:11px; color:var(--secondary); }
+.tabs div i{ display:block; width:22px; height:18px; margin:0 auto 3px; border-radius:5px; border:1.5px solid currentColor; opacity:.7; }
+.tabs .sel{ background:light-dark(rgba(0,0,0,.07),rgba(255,255,255,.1)); color:var(--accent); }
+.form{ padding:18px 22px 22px; display:flex; flex-direction:column; gap:14px; max-height:520px; overflow:hidden; }
+.sec{ background:var(--form-row-bg); border-radius:8px; border:.5px solid var(--separator); }
+.frow{ display:flex; align-items:center; gap:12px; padding:9px 12px; }
+.frow + .frow{ border-top:.5px solid var(--separator); }
+.frow .lab{ flex:1; }
+.frow .help{ display:block; font-size:11px; color:var(--secondary); margin-top:2px; max-width:56ch; }
+.popup{ font-size:12px; padding:2px 6px 2px 9px; border-radius:5px; background:var(--control-bg); box-shadow:0 0 0 .5px var(--separator), 0 .5px 1.5px rgba(0,0,0,.15); display:flex; gap:8px; align-items:center; white-space:nowrap; }
+.popup::after{ content:"⌃⌄"; font-size:8px; letter-spacing:-1px; writing-mode:vertical-lr; color:#fff; background:var(--accent); border-radius:3px; padding:1px 2px; line-height:1; }
+.sw{ width:38px; height:22px; border-radius:11px; background:var(--accent); position:relative; flex:none; }
+.sw::after{ content:""; position:absolute; top:2px; left:18px; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.25); }
+.sw.off{ background:var(--off-track); } .sw.off::after{ left:2px; }
+.frow.newrow{ outline:1.5px dashed light-dark(#d98a00,#f5c27a); outline-offset:-3px; border-radius:8px; }
+
 /* menus */
-.menubar{ width:100%; max-width:560px; height:26px; background:light-dark(rgba(246,246,246,.9),rgba(30,30,32,.9)); border-radius:8px 8px 0 0; display:flex; align-items:center; gap:16px; padding:0 14px; font-size:13px; color:var(--label); }
+.menubar{ width:100%; max-width:560px; height:26px; overflow:hidden; white-space:nowrap; background:light-dark(rgba(246,246,246,.9),rgba(30,30,32,.9)); border-radius:8px 8px 0 0; display:flex; align-items:center; gap:16px; padding:0 14px; font-size:13px; color:var(--label); }
 .menubar b{ font-weight:600; }
 .menubar .open{ background:light-dark(rgba(0,0,0,.1),rgba(255,255,255,.15)); border-radius:4px; padding:1px 7px; margin:0 -7px; }
-.menu{ width:300px; margin-left:var(--mx,120px); background:var(--menu-bg); border-radius:0 0 9px 9px; box-shadow:0 0 0 .5px rgba(0,0,0,.2), 0 10px 26px rgba(0,0,0,.22); padding:5px; font-size:13px; color:var(--label); }
+.menu{ width:min(300px,100%); margin-left:max(0px, min(var(--mx,120px), 100% - 300px)); background:var(--menu-bg); border-radius:0 0 9px 9px; box-shadow:0 0 0 .5px rgba(0,0,0,.2), 0 10px 26px rgba(0,0,0,.22); padding:5px; font-size:13px; color:var(--label); }
 .mi{ display:flex; padding:3px 10px 3px 22px; border-radius:5px; position:relative; }
 .mi .k{ margin-left:auto; color:var(--secondary); letter-spacing:.5px; }
 .mi .chk{ position:absolute; left:7px; }
@@ -211,7 +234,7 @@ h2 .flag{ font:500 10.5px var(--mono); letter-spacing:.06em; text-transform:uppe
 .comm .pro{ color:light-dark(#1d7a3a,#6fd08f); font-weight:600; } .comm .con{ color:light-dark(#b42318,#ff8f85); font-weight:600; }
 .comm code, td code{ font-family:var(--mono); font-size:11.5px; }
 table{ border-collapse:collapse; width:100%; font-size:12px; }
-th,td{ text-align:left; padding:6px 8px; border-bottom:1px solid var(--separator); vertical-align:top; }
+th,td{ overflow-wrap:anywhere; text-align:left; padding:6px 8px; border-bottom:1px solid var(--separator); vertical-align:top; }
 th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
 
 @media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
@@ -221,7 +244,7 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
 <div class="page">
 
 <h1>Welcome in its own window (Model 2)</h1>
-<p class="lede">Bristlenose for Mac. The Welcome spiral, as shipped, moves out of the main window into one app-wide window of its own. The window opens at the spiral's natural size and can be resized like any other window. The drop card stays behind: the main window's empty states become the drop card alone, centred. Six panels. The model is chosen; the decisions taken so far are recorded in the commentary. At its natural size the spiral is unchanged, apart from losing the drop card. Panel 4 proposes how it reflows when the window is made narrow. The Model 1 alternative, where Welcome stays in the main window and was not chosen, is in <code>welcome-dismiss-options.html</code>.</p>
+<p class="lede">Bristlenose for Mac. The Welcome spiral, as shipped, moves out of the main window into one app-wide window of its own. The window opens at the spiral's natural size and can be resized like any other window. The drop card stays behind: the main window's empty states become the drop card alone, centred. Six panels plus the Appearance row (3c). The model is chosen; the decisions taken so far are recorded in the commentary. At its natural size the spiral is unchanged, apart from losing the drop card. Panel 4 proposes how it reflows when the window is made narrow. The Model 1 alternative, where Welcome stays in the main window and was not chosen, is in <code>welcome-dismiss-options.html</code>.</p>
 
 <div class="controls" role="group" aria-label="Preview">
   <button data-scheme="light dark" aria-pressed="true">Follow system</button>
@@ -275,6 +298,27 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
   <p><b>Without the drop card,</b> Study tools gains about 90 pt of height, which goes to the illustration. That is the only change to the spiral. <b>Title</b> is the shipped <code>desktop.chrome.welcomeTitle</code> ("Welcome to Bristlenose"), the same string as the Help menu item, so the menu item and the window it opens have the same name.</p>
   <p><b>Opening size, derived rather than measured:</b> 800 pt content width gives a 760 × 470 pt spiral. The Scientific background cell is then about 284 × 285 pt, enough for the 208 × 152 pt cover fan to draw at scale 1 with its caption and link. That is the reasoning from <code>BookShelfView.coverFan</code>'s comments. Nobody has measured it yet. The Degradation Lab would confirm or move the number, and the spiral's φ geometry fixes everything else from that one width. <span class="con">Watch:</span> the spiral's φ geometry means a wider window makes it taller as well. Above the natural size it needs a cap or it outgrows the screen, so the natural size works as a maximum as well as the opening size.</p>
   <p><b>Rotators.</b> Each cell currently advances "per visit", where a visit is an appearance in the main window. In Model 2 a visit has to mean opening the window. With the box unticked, a researcher who never reopens it never sees past the first slot in any cell, so the Tip curriculum stops at slot one.</p>
+</div>
+
+<div class="shot" style="margin-top:22px">
+  <div class="shot-bar"><span><b>3c · Settings ▸ Appearance, the same setting mirrored</b> (existing sections abridged)</span><span class="new">NEW COPY: legend + help (dashed row) · help line as the owner shortened it</span></div>
+  <div class="scale"><div class="settings" data-w="640">
+    <div class="stb">
+      <div class="lights"><i></i><i></i><i></i></div>
+      <div class="title">Appearance</div>
+      <div class="tabs"><div><i></i>General</div><div class="sel"><i></i>Appearance</div><div><i></i>LLM Provider</div><div><i></i>Transcription</div><div><i></i>MCP Agents</div><div><i></i>Accounts</div></div>
+    </div>
+    <div class="form">
+      <div class="sec"><div class="frow"><span class="lab">Application appearance</span><span class="popup">Use system appearance</span></div></div>
+      <div class="sec"><div class="frow"><span class="lab">Colour palette<span class="help">Recolours the whole app. Edo uses warm washi paper and Prussian-blue ink.</span></span><span class="popup">Default</span></div></div>
+      <div class="sec"><div class="frow newrow"><span class="lab">Show Welcome when Bristlenose opens<span class="help">Study tools, scientific background and a tip, shown in the main window when no project is selected.</span></span><span class="sw"></span></div></div>
+      <div class="sec"><div class="frow"><span class="lab">Show animation while analysing<span class="help">Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.</span></span><span class="sw"></span></div></div>
+    </div>
+  </div></div>
+</div>
+<div class="comm">
+  <p><b>Decided:</b> the row exists. It is the same setting as the footer checkbox, drawn in the pane's own idiom as a grouped-form <code>Toggle</code>, which renders as a switch, next to its nearest sibling "Show animation while analysing". The help line is the one you shortened, drawn verbatim.</p>
+  <p><span class="con">Check:</span> that line was written for Model 1. Under Model 2, "shown in the main window when no project is selected" is no longer true: Welcome is its own window and opens at launch. One candidate, owner to choose: "Opens a window of study tools, scientific background and a tip."</p>
 </div>
 
 <!-- ───────────────────────── 4 ───────────────────────── -->
@@ -362,10 +406,25 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
     <tr><td>Drop a folder · Drag a folder of recordings or transcripts here to add it as a project.</td><td>shipped</td><td><code>desktop.welcome.dropFolderTitle</code> / <code>…Hint</code></td></tr>
     <tr><td>Welcome (main window title, no selection)</td><td>shipped, <b>meaning changes</b></td><td><code>desktop.welcome.windowTitle</code>; alternative <code>desktop.chrome.noProjectSelected</code></td></tr>
     <tr><td>Projects</td><td>shipped</td><td><code>desktop.chrome.projects</code></td></tr>
-    <tr><td>Show Welcome when Bristlenose opens</td><td><b>new</b></td><td>Welcome window footer</td></tr>
+    <tr><td>Show Welcome when Bristlenose opens</td><td><b>new</b></td><td>Welcome window footer + Appearance legend</td></tr>
+    <tr><td>Study tools, scientific background and a tip, shown in the main window when no project is selected.</td><td><b>new</b>, owner-shortened (see 3c)</td><td>Appearance help line</td></tr>
     <tr><td>Minimize · Zoom · Fill · Center · Bring All to Front …</td><td>AppKit's</td><td>standard Window menu, system-localised</td></tr>
   </table>
-  <p style="margin-top:8px">One new key, which goes into all 21 full locales. <code>zh-Hant-HK</code> inherits from <code>zh-Hant</code>. Spiral copy is unchanged.</p>
+  <p style="margin-top:8px">Two new keys, which go into all 21 full locales. <code>zh-Hant-HK</code> inherits from <code>zh-Hant</code>. Spiral copy is unchanged.</p>
+</div>
+
+<h2><span class="n">G</span>Mac-native review (Gruber and friends): recommendations, not decisions</h2>
+<div class="comm">
+  <p>A read-only <code>what-would-gruber-say</code> pass over 5b0d53f4, checked again against the decisions recorded above. Items the decisions already settled are left out.</p>
+  <p><b>Window type.</b> A regular titled window: resizable, minimisable, closed with ⌘W, not an <code>NSPanel</code>. Title "Welcome to Bristlenose". <span class="con">Implementation trap:</span> SwiftUI's <code>Window("…", id:)</code> adds its own "open" item to the Window menu, which breaks the help-only route back. Fix with <code>.commandsRemoved()</code>. Keep the window-list entry, Mission Control and ⌘` membership, because it is a real window.</p>
+  <p><b>Main window title.</b> Retire "Welcome" for the main window's no-selection title (<code>ContentView.swift:427</code>) and use "Bristlenose" or the shipped "No Project Selected", so the collision in panel 6b goes away. This answers open question 6.</p>
+  <p><b>Launch and restoration.</b> "Opens" means a cold launch only. A Dock reopen with no windows makes a main window, not Welcome. State restoration must not override the checkbox: <code>.restorationBehavior(.disabled)</code> plus <code>.defaultLaunchBehavior(.presented)</code>, gated on the setting (both on macOS 15). This answers open question 1: launch only.</p>
+  <p><b>Placement and key.</b> Make Welcome <i>key</i>: VoiceOver announces it, and one ⌘W gets the researcher back to the task. Drag and drop works on a window that isn't key, so panel 1's argument for not-key falls away. Place it beside the main window when there is room, otherwise offset to the trailing side so the centred drop card stays visible. Never centre it over the main window (panel 2). Autosave the frame, so the natural size applies only on first open. Defer it until any first-run sheet has been dismissed. This answers open questions 2–4: key, beside or offset, last frame, sheet first.</p>
+  <p><b>Checkbox semantics.</b> Help&nbsp;▸ Welcome while the box is unticked shows the window <i>once</i> and leaves the setting off. Unticking takes effect at the next launch and never closes the window. ⌘W closes the window and never changes the setting. This follows Xcode and Pixelmator Pro, and answers open questions 7 and 8.</p>
+  <p><b>Rotators.</b> One advance per window open, no timer. Accept that someone with the box unticked rarely advances. This answers open question 5.</p>
+  <p><b>Dropping a folder on Welcome</b> (open question 10). Make the whole Welcome window a drop target. A drop creates the project in the frontmost main window, or a new one, selects it and brings that window forward. Welcome stays open. Gruber also says a second drop card <i>inside</i> Welcome would be acceptable (Photos Import precedent), which runs against your decision to remove the card from Welcome. The whole-window drop is the half that does not reopen that decision.</p>
+  <p><b>Accessibility, a finding in shipped code rather than in this mockup.</b> <code>SlotRotator</code> is <code>.focusable()</code> with <code>.focusEffectDisabled()</code> (<code>WelcomeHomeView.swift:603–604</code>): a focusable control with no focus ring, which fails Full Keyboard Access in either model. Also give the cells an <code>.accessibilitySortPriority</code> so VoiceOver reads them in curriculum order, with the checkbox last.</p>
+  <p><b>Main window with only the drop card</b> is enough. File&nbsp;▸ New Project is the labelled alternative (Photos and Music precedent). This agrees with the decision in panel 5. Stage Manager groups both windows. In full screen, AppKit leaves Welcome on the desktop Space, which matches the full-screen decision.</p>
 </div>
 
 <h2><span class="n">?</span>Open questions (surfaced, not answered)</h2>
@@ -378,7 +437,7 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
   <p><b>6. The main window's empty-state title</b>: "Welcome" or "No Project Selected" (panel 6b).</p>
   <p><b>7. Help&nbsp;▸ Welcome while the box is unticked.</b> Does it open the window once and leave the setting off, or turn the setting back on? Opening it once matches the HIG's "easy to find later" without overruling the user.</p>
   <p><b>8. Does unticking apply now or next launch?</b> In a window this matters less than it does in Model 1: unticking never makes the window vanish, and the box stays on screen until the researcher closes it. The question is only whether the window still opens at the next launch.</p>
-  <p><b>9. Mirror the setting in Settings&nbsp;▸ Appearance?</b> This would be a grouped-form toggle beside "Show animation while analysing". Model 1's mockup already draws the row (<code>welcome-dismiss-options.html</code> panel 4). It carries over unchanged and isn't redrawn here.</p>
+  <p><b>9. Appearance help line.</b> The row is decided (panel 3c). Its help line still says "in the main window" (see 3c's commentary).</p>
   <p><b>10. Drop on the Welcome window?</b> With no drop card it has no drop target. A folder dropped on it does nothing. Should the whole window accept the drop and pass it to the main window, or should it refuse visibly?</p>
 </div>
 

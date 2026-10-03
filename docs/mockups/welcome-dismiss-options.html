@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en-GB" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Welcome pane — ways to switch it off</title>
+<!--
+  bn-accurate mockup of a NATIVE surface (WelcomeHomeView.swift, SwiftUI).
+  The web --bn-* tokens do not paint this pane; AppKit's semantic colours do.
+  So the :root block below inlines the system values the Swift reads
+  (Color.accentColor, .secondary, NSColor.separatorColor, textBackgroundColor)
+  plus the shipped Edo accent from WelcomeIllustrations.swift:1408, and the
+  v1 cell-tint ramp from WelcomeHomeView.swift (3 / 7 / 12 / 18 / 26 % accent).
+  Geometry follows WelcomeHomeView.body: 20pt margin, spiral w × w/1.618, pinned top.
+  Drop card: 14pt padding, radius 10, 1.5pt round-cap dash [1,3], tray.and.arrow.down.
+-->
+<style>
+:root{
+  color-scheme: light dark;
+  --accent: light-dark(#007aff, #0a84ff);
+  --label: light-dark(rgba(0,0,0,.85), rgba(255,255,255,.86));
+  --secondary: light-dark(rgba(0,0,0,.50), rgba(255,255,255,.55));
+  --tertiary: light-dark(rgba(0,0,0,.26), rgba(255,255,255,.25));
+  --separator: light-dark(rgba(0,0,0,.10), rgba(255,255,255,.12));
+  --detail-bg: light-dark(#ffffff, #1e1e1e);
+  --text-bg: light-dark(#ffffff, #1e1e1e);
+  --card-base: light-dark(#f6f6f7, #262628);
+  --sidebar-bg: light-dark(#ecebef, #2b2a2e);
+  --titlebar-bg: light-dark(#f4f4f5, #2a2a2c);
+  --menu-bg: light-dark(rgba(246,246,246,.96), rgba(40,40,42,.96));
+  --control-bg: light-dark(#ffffff, #3a3a3c);
+  --form-row-bg: light-dark(#ffffff, #2c2c2e);
+  --form-bg: light-dark(#f2f2f5, #1e1e1e);
+  --off-track: light-dark(#e3e3e6, #3f3f43);
+  --page-bg: light-dark(#e9e9ec, #121214);
+  --page-ink: light-dark(#1d1d1f, #e7e7ea);
+  --page-muted: light-dark(#5b5b62, #a1a1aa);
+  --font: -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+[data-color-theme="edo"]{ --accent: light-dark(#0f5c9e, #4d9fe0); }
+
+*{ box-sizing:border-box; }
+body{ margin:0; padding:28px 24px 80px; background:var(--page-bg); color:var(--page-ink); font:13px/1.45 var(--font); }
+.page{ max-width:1180px; margin:0 auto; }
+h1{ font-size:20px; font-weight:600; margin:0 0 6px; }
+h2{ font-size:15px; font-weight:600; margin:44px 0 4px; }
+h2 .n{ font-family:var(--mono); font-size:12px; color:var(--page-muted); margin-right:8px; font-weight:400; }
+h2 .flag{ font:500 10.5px var(--mono); letter-spacing:.06em; text-transform:uppercase; padding:2px 6px; border-radius:4px; margin-left:8px; vertical-align:2px; }
+.flag.pref{ background:color-mix(in srgb, var(--accent) 16%, transparent); color:var(--accent); }
+.flag.cmp{ background:light-dark(#fde7c6,#4a3412); color:light-dark(#8a4b00,#f5c27a); }
+.flag.park{ background:var(--off-track); color:var(--page-muted); }
+.lede{ color:var(--page-muted); max-width:82ch; margin:0 0 14px; }
+.controls{ display:flex; gap:8px; margin:14px 0 6px; flex-wrap:wrap; }
+.controls button{ font:12px var(--font); padding:4px 10px; border-radius:6px; border:1px solid var(--separator); background:var(--control-bg); color:var(--page-ink); cursor:pointer; }
+.controls button[aria-pressed="true"]{ border-color:var(--accent); color:var(--accent); }
+
+/* key */
+.key{ display:flex; gap:14px; flex-wrap:wrap; margin:16px 0 4px; font-size:12px; color:var(--page-muted); }
+.key span{ display:inline-flex; align-items:center; gap:6px; }
+.key i{ width:22px; height:14px; border-radius:3px; display:inline-block; }
+.key .ka{ background:var(--detail-bg); border:1px solid var(--separator); }
+.key .kc{ background:repeating-linear-gradient(135deg, transparent 0 5px, var(--separator) 5px 6px); border-left:3px solid var(--page-muted); }
+
+/* ═══ ARTEFACT ZONE ═══ */
+.shot{ margin:10px 0 0; }
+.shot-bar{ font:11px var(--mono); color:var(--page-muted); padding:0 2px 6px; display:flex; gap:10px; justify-content:space-between; flex-wrap:wrap; }
+.shot-bar b{ color:var(--page-ink); font-weight:500; }
+.shot-bar .new{ color:light-dark(#8a4b00,#f5c27a); }
+.row{ display:grid; gap:20px; grid-template-columns:1fr 1fr; align-items:start; }
+.row3{ display:grid; gap:20px; grid-template-columns:repeat(3,1fr); align-items:start; }
+@media (max-width:900px){ .row,.row3{ grid-template-columns:1fr; } }
+.row > *, .row3 > *{ min-width:0; }
+.scale{ overflow:hidden; width:100%; }
+
+.win{ width:860px; height:560px; border-radius:12px; overflow:hidden; display:flex; position:relative;
+      background:var(--detail-bg); box-shadow:0 0 0 .5px rgba(0,0,0,.25), 0 18px 40px rgba(0,0,0,.18); font-family:var(--font); color:var(--label); }
+.win.nosb .sb{ display:none; }
+
+.sb{ width:210px; flex:none; background:var(--sidebar-bg); border-right:.5px solid var(--separator); padding:12px 10px; display:flex; flex-direction:column; }
+.lights{ display:flex; gap:8px; align-items:center; height:20px; padding-left:4px; }
+.lights i{ width:12px; height:12px; border-radius:50%; display:block; }
+.lights i:nth-child(1){ background:#ff5f57; } .lights i:nth-child(2){ background:#febc2e; } .lights i:nth-child(3){ background:#28c840; }
+.lights .sbbtn{ margin-left:auto; width:22px; height:16px; border:1.4px solid var(--secondary); border-radius:3px; position:relative; }
+.lights .sbbtn::after{ content:""; position:absolute; left:6px; top:0; bottom:0; border-left:1.4px solid var(--secondary); }
+.sb h6{ margin:22px 6px 6px; font-size:11px; font-weight:600; color:var(--secondary); }
+.proj{ display:flex; align-items:center; gap:8px; padding:5px 6px; border-radius:6px; font-size:13px; }
+.proj .ic{ width:18px; height:18px; border-radius:50%; border:2px solid var(--accent); flex:none; opacity:.9; }
+.proj .ic.b{ border-color:#af52de; } .proj .ic.c{ border-color:#34c759; } .proj .ic.d{ border-color:#ff9500; }
+
+.detail{ flex:1; position:relative; display:flex; flex-direction:column; min-width:0; }
+.tb{ height:52px; flex:none; display:flex; align-items:center; padding:0 16px; }
+.win.nosb .tb{ padding-left:16px; }
+.win.nosb .tb .lights{ padding-left:0; }
+.pane{ position:relative; flex:1; min-height:0; }
+.layer{ position:absolute; inset:0; transition:opacity .28s ease; }
+.layer.hidden{ opacity:0; pointer-events:none; }
+
+/* golden spiral — WelcomeHomeView.spiral */
+.spiralwrap{ padding:0 20px; }
+.spiral{ width:100%; aspect-ratio:1.618; display:flex; gap:8px; }
+.g{ display:flex; gap:8px; min-width:0; min-height:0; }
+.g.v{ flex-direction:column; }
+.maj{ flex:1.618 1 0; } .min{ flex:1 1 0; }
+.cell{ border-radius:8px; padding:10px; overflow:hidden; display:flex; flex-direction:column; gap:6px; min-width:0; min-height:0; border:.5px solid var(--separator); }
+.cell.lg{ border-radius:10px; padding:16px; gap:8px; }
+.t1{ background:color-mix(in srgb, var(--accent) 3%, var(--card-base)); }
+.t2{ background:color-mix(in srgb, var(--accent) 7%, var(--card-base)); }
+.t3{ background:color-mix(in srgb, var(--accent) 12%, var(--card-base)); }
+.t4{ background:color-mix(in srgb, var(--accent) 18%, var(--card-base)); }
+.t5{ background:color-mix(in srgb, var(--accent) 26%, var(--card-base)); }
+.tag{ font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:.4px; color:var(--secondary); }
+.title3{ font-size:15px; font-weight:600; }
+.body{ font-size:13px; color:var(--secondary); }
+.cta{ font-size:12px; color:var(--accent); padding:2px 0; }
+.illus{ flex:1; min-height:30px; border-radius:6px; background:
+   linear-gradient(var(--separator),var(--separator)) 14px 18px/40% 6px no-repeat,
+   linear-gradient(var(--separator),var(--separator)) 14px 32px/58% 6px no-repeat,
+   linear-gradient(color-mix(in srgb,var(--accent) 35%,transparent),color-mix(in srgb,var(--accent) 35%,transparent)) 14px 46px/22% 6px no-repeat,
+   color-mix(in srgb, var(--text-bg) 70%, transparent); }
+.ai-glyph{ width:22px; height:22px; border-radius:50%; border:1.5px solid var(--tertiary); }
+
+/* drop card — WelcomeHomeView.dropCard */
+.drop{ padding:14px; border-radius:10px; background:var(--text-bg); position:relative; display:flex; flex-direction:column; gap:3px; flex:none; }
+.drop::after{ content:""; position:absolute; inset:0; border-radius:10px; pointer-events:none;
+  /* 1.5pt round-cap dash [1,3] approximated as a dotted border */
+  border:1.5px dotted var(--tertiary); }
+.drop svg{ width:26px; height:26px; color:var(--secondary); }
+.drop .title3{ margin-top:2px; }
+.drop.centred{ position:absolute; left:50%; top:50%; transform:translate(-50%,-58%); width:340px; }
+
+/* footer checkbox — NEW (Toggle .checkbox style, bottom-leading, 20pt inset) */
+.foot{ position:absolute; left:20px; bottom:16px; display:flex; align-items:center; gap:7px; font-size:13px; color:var(--label); cursor:default; user-select:none; }
+.cb{ width:14px; height:14px; border-radius:3.5px; flex:none; border:.5px solid light-dark(rgba(0,0,0,.28),rgba(255,255,255,.3)); background:var(--control-bg);
+     box-shadow:0 .5px 1px rgba(0,0,0,.12); display:grid; place-items:center; }
+.cb.on{ background:var(--accent); border-color:transparent; }
+.cb.on::after{ content:""; width:7px; height:4px; border:solid #fff; border-width:0 0 1.8px 1.8px; transform:translateY(-1px) rotate(-45deg); }
+.foot.live{ cursor:pointer; }
+
+/* X close (comparison) — SF xmark.circle.fill-ish, 16pt */
+.xbtn{ position:absolute; top:-30px; left:20px; width:18px; height:18px; border-radius:50%; background:light-dark(#c7c7cc,#5a5a5f); display:grid; place-items:center; z-index:2; }
+.xbtn::before,.xbtn::after{ content:""; position:absolute; width:9px; height:1.6px; background:light-dark(#fff,#1e1e1e); border-radius:1px; transform:rotate(45deg); }
+.xbtn::after{ transform:rotate(-45deg); }
+
+/* footer crop for wording panel */
+.crop{ height:120px; width:100%; overflow:hidden; border-radius:10px; position:relative; background:var(--detail-bg);
+       box-shadow:0 0 0 .5px rgba(0,0,0,.25); }
+.crop .spiral-tail{ position:absolute; left:20px; right:20px; top:-60px; height:90px; display:flex; gap:8px; }
+.crop .spiral-tail div{ border-radius:10px; border:.5px solid var(--separator); }
+
+/* Settings window — Form .grouped */
+.settings{ width:640px; border-radius:12px; overflow:hidden; background:var(--form-bg); box-shadow:0 0 0 .5px rgba(0,0,0,.25), 0 18px 40px rgba(0,0,0,.18); color:var(--label); }
+.stb{ background:var(--titlebar-bg); border-bottom:.5px solid var(--separator); padding:10px 14px 8px; }
+.stb .title{ text-align:center; font-size:13px; font-weight:600; margin-top:-16px; margin-bottom:10px; }
+.tabs{ display:flex; justify-content:center; gap:4px; }
+.tabs div{ width:84px; padding:5px 0 4px; border-radius:7px; text-align:center; font-size:11px; color:var(--secondary); }
+.tabs div i{ display:block; width:22px; height:18px; margin:0 auto 3px; border-radius:5px; border:1.5px solid currentColor; opacity:.7; }
+.tabs .sel{ background:light-dark(rgba(0,0,0,.07),rgba(255,255,255,.1)); color:var(--accent); }
+.form{ padding:18px 22px 22px; display:flex; flex-direction:column; gap:14px; max-height:520px; overflow:hidden; }
+.sec{ background:var(--form-row-bg); border-radius:8px; border:.5px solid var(--separator); }
+.frow{ display:flex; align-items:center; gap:12px; padding:9px 12px; }
+.frow + .frow{ border-top:.5px solid var(--separator); }
+.frow .lab{ flex:1; }
+.frow .help{ display:block; font-size:11px; color:var(--secondary); margin-top:2px; max-width:56ch; }
+.popup{ font-size:12px; padding:2px 6px 2px 9px; border-radius:5px; background:var(--control-bg); box-shadow:0 0 0 .5px var(--separator), 0 .5px 1.5px rgba(0,0,0,.15); display:flex; gap:8px; align-items:center; white-space:nowrap; }
+.popup::after{ content:"⌃⌄"; font-size:8px; letter-spacing:-1px; writing-mode:vertical-lr; color:#fff; background:var(--accent); border-radius:3px; padding:1px 2px; line-height:1; }
+.sw{ width:38px; height:22px; border-radius:11px; background:var(--accent); position:relative; flex:none; }
+.sw::after{ content:""; position:absolute; top:2px; left:18px; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.25); }
+.sw.off{ background:var(--off-track); } .sw.off::after{ left:2px; }
+.frow.newrow{ outline:1.5px dashed light-dark(#d98a00,#f5c27a); outline-offset:-3px; border-radius:8px; }
+
+/* menus */
+.menubar{ width:100%; max-width:560px; height:26px; background:light-dark(rgba(246,246,246,.9),rgba(30,30,32,.9)); border-radius:8px 8px 0 0; display:flex; align-items:center; gap:16px; padding:0 14px; font-size:13px; color:var(--label); }
+.menubar b{ font-weight:600; }
+.menubar .open{ background:light-dark(rgba(0,0,0,.1),rgba(255,255,255,.15)); border-radius:4px; padding:1px 7px; margin:0 -7px; }
+.menu{ width:290px; margin-left:var(--mx,120px); background:var(--menu-bg); border-radius:0 0 9px 9px; box-shadow:0 0 0 .5px rgba(0,0,0,.2), 0 10px 26px rgba(0,0,0,.22); padding:5px; font-size:13px; color:var(--label); }
+.mi{ display:flex; padding:3px 10px 3px 22px; border-radius:5px; position:relative; }
+.mi .k{ margin-left:auto; color:var(--secondary); letter-spacing:.5px; }
+.mi.dis{ color:var(--tertiary); } .mi.dis .k{ color:var(--tertiary); }
+.mi.hl{ background:var(--accent); color:#fff; } .mi.hl .k{ color:rgba(255,255,255,.8); }
+.mi.newmi{ outline:1.5px dashed light-dark(#d98a00,#f5c27a); outline-offset:-1px; }
+.mi.hl.newmi{ outline-color:#fff; }
+.sep{ height:1px; background:var(--separator); margin:5px 10px; }
+
+/* parked lo-fi */
+.lofi{ border:1.5px dashed var(--tertiary); border-radius:12px; padding:20px; background:repeating-linear-gradient(0deg, transparent 0 23px, light-dark(rgba(0,0,0,.03),rgba(255,255,255,.03)) 23px 24px); color:var(--page-muted); font-family:var(--font); }
+.lofi .q{ font-size:13px; color:var(--page-ink); margin-bottom:10px; }
+.lofi .radio{ display:flex; align-items:center; gap:8px; padding:3px 0; font-size:13px; }
+.lofi .radio i{ width:13px; height:13px; border-radius:50%; border:1.5px solid var(--tertiary); }
+.lofi .radio.on i{ border:4px solid var(--accent); }
+.dots{ display:grid; grid-template-columns:repeat(26, 1fr); gap:3px; margin-top:12px; }
+.dots i{ aspect-ratio:1; border-radius:2px; background:var(--off-track); }
+.dots i.l1{ background:color-mix(in srgb,var(--accent) 25%,var(--off-track)); }
+.dots i.l2{ background:color-mix(in srgb,var(--accent) 55%,var(--off-track)); }
+.dots i.l3{ background:var(--accent); }
+
+/* ═══ COMMENTARY ZONE ═══ */
+.comm{ margin-top:14px; padding:12px 14px 12px 16px; border-left:3px solid var(--page-muted); border-radius:0 8px 8px 0;
+       background:repeating-linear-gradient(135deg, transparent 0 7px, light-dark(rgba(0,0,0,.035),rgba(255,255,255,.04)) 7px 8px), light-dark(rgba(255,255,255,.5),rgba(255,255,255,.03));
+       font-size:12.5px; color:var(--page-ink); max-width:100%; }
+.comm::before{ content:"Commentary"; display:block; font:500 10px var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--page-muted); margin-bottom:6px; }
+.comm p{ margin:0 0 6px; } .comm p:last-child{ margin:0; }
+.comm .pro{ color:light-dark(#1d7a3a,#6fd08f); font-weight:600; } .comm .con{ color:light-dark(#b42318,#ff8f85); font-weight:600; }
+.comm code, .lede code, td code{ font-family:var(--mono); font-size:11.5px; }
+table{ border-collapse:collapse; width:100%; font-size:12px; }
+th,td{ text-align:left; padding:6px 8px; border-bottom:1px solid var(--separator); vertical-align:top; }
+th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
+
+@media (prefers-reduced-motion: reduce){ .layer{ transition:none; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>Welcome pane — ways to switch it off</h1>
+<p class="lede">Bristlenose for Mac, no project selected. Seven panels comparing how a researcher turns off <code>WelcomeHomeView</code>. These are whole-pane options only: per-card dismissal, a sidebar Home row, a separate Welcome window and the sample project are out of scope. Panel 1 is the preferred option. Its checkboxes are live. Tick and untick them to compare the two meanings of "off".</p>
+
+<div class="controls" role="group" aria-label="Preview">
+  <button data-scheme="light dark" aria-pressed="true">Follow system</button>
+  <button data-scheme="light" aria-pressed="false">Light</button>
+  <button data-scheme="dark" aria-pressed="false">Dark</button>
+  <button data-palette="default" aria-pressed="true">Default palette</button>
+  <button data-palette="edo" aria-pressed="false">Edo palette</button>
+</div>
+<div class="key">
+  <span><i class="ka"></i>Artefact: pixels that would ship. No labels inside the frame.</span>
+  <span><i class="kc"></i>Commentary: tradeoffs and reasoning. Not the product.</span>
+  <span style="font-family:var(--mono)">frame bar: <b style="color:var(--page-ink)">state</b> · <span style="color:light-dark(#8a4b00,#f5c27a)">NEW COPY</span> = owner-written, not a shipped key</span>
+</div>
+
+<!-- ───────────────────────── 1 ───────────────────────── -->
+<h2><span class="n">1</span>Footer checkbox in the Welcome pane <span class="flag pref">preferred</span></h2>
+<p class="lede">The checkbox sits in the empty space under the spiral, at bottom-leading. Pixelmator Pro and Xcode put theirs in the same place.</p>
+
+<div class="shot">
+  <div class="shot-bar"><span><b>1 · Welcome showing, box ticked</b> (default)</span><span class="new">NEW COPY: "Show Welcome when Bristlenose opens"</span></div>
+  <div class="scale"><div data-win='{"sb":"projects","pane":"welcome","foot":"on"}'></div></div>
+</div>
+
+<div class="row" style="margin-top:22px">
+  <div class="shot half">
+    <div class="shot-bar"><span><b>1a · after unticking: applies next time</b></span><span>click the box</span></div>
+    <div class="scale"><div data-win='{"sb":"projects","pane":"welcome","foot":"off","live":"deferred"}'></div></div>
+  </div>
+  <div class="shot half">
+    <div class="shot-bar"><span><b>1b · after unticking: applies now</b> (0.28s cross-fade)</span><span>click the box · <a href="#" data-reset="1b" style="color:var(--accent)">reset</a></span></div>
+    <div class="scale"><div id="w1b" data-win='{"sb":"projects","pane":"welcome","foot":"on","live":"immediate"}'></div></div>
+  </div>
+</div>
+<div class="comm">
+  <p><span class="pro">For:</span> the control sits on the surface it governs, and it is the idiom Mac users already know from Xcode and Pixelmator Pro. It is one stock <code>Toggle</code> with <code>.toggleStyle(.checkbox)</code>, adds nothing to the spiral, and the spiral's fixed geometry already leaves the space below it empty. The setting persists, which answers the Photoshop complaint that "off" did not stick.</p>
+  <p><span class="con">Against:</span> a checkbox is easy to miss at the bottom of a wide window. At narrow widths the spiral is short and the box sits a long way below the drop card.</p>
+  <p><b>1a vs 1b.</b> <b>1a</b> (applies next time) is how Xcode behaved: the box records a preference, and nothing moves under the pointer. Re-ticking works because the box is still on screen. The cost is that unticking appears to do nothing until the next launch or deselect. <b>1b</b> (applies now) gives instant feedback, but the checkbox fades out with the pane. Turning Welcome back on then needs panel 4 (Settings), panel 5 (View menu) or Help&nbsp;▸ Welcome to Bristlenose. If 1b, which of those is the route back?</p>
+</div>
+
+<!-- ───────────────────────── 2 ───────────────────────── -->
+<h2><span class="n">2</span>Wording variant</h2>
+<p class="lede">Two crops of the same footer, showing the same control with different labels.</p>
+<div class="row">
+  <div class="shot">
+    <div class="shot-bar"><span><b>2a · "…when Bristlenose opens"</b></span><span class="new">NEW COPY · §0 spec wording</span></div>
+    <div class="crop"><div class="spiral-tail"><div class="t1" style="flex:1.618"></div><div class="t2" style="flex:1"></div></div>
+      <label class="foot"><span class="cb on"></span>Show Welcome when Bristlenose opens</label></div>
+  </div>
+  <div class="shot">
+    <div class="shot-bar"><span><b>2b · "…when no project is open"</b></span><span class="new">NEW COPY</span></div>
+    <div class="crop"><div class="spiral-tail"><div class="t1" style="flex:1.618"></div><div class="t2" style="flex:1"></div></div>
+      <label class="foot"><span class="cb on"></span>Show Welcome when no project is open</label></div>
+  </div>
+</div>
+<div class="comm">
+  <p><b>2a</b> uses the wording already in the spec (§0) and matches Xcode's "Show this window when Xcode launches". It is <span class="con">inaccurate</span>, though: Welcome also appears when the selection is cleared (Help&nbsp;▸ Welcome, a click on empty sidebar space, deleting the selected project) and when a new window opens with ⌥⌘N. A researcher who unticks it and then deselects a project would reasonably expect it to stay away.</p>
+  <p><b>2b</b> <span class="pro">describes every entry point</span>. "Open" is slightly off, because a project is <i>selected</i> in the sidebar rather than opened. "Selected" is accurate but reads like engineering. Both wordings run about 20 % longer in German and Finnish. The footer has room for that, but the Appearance row in panel 4 does not have much.</p>
+</div>
+
+<!-- ───────────────────────── 3 ───────────────────────── -->
+<h2><span class="n">3</span>What the pane shows when Welcome is off</h2>
+<p class="lede">The existing drop card, unchanged, centred in the detail area. Nothing new is added.</p>
+<div class="row">
+  <div class="shot half">
+    <div class="shot-bar"><span><b>3a · no projects yet</b></span><span>shipped keys only</span></div>
+    <div class="scale"><div data-win='{"sb":"empty","pane":"drop"}'></div></div>
+  </div>
+  <div class="shot half">
+    <div class="shot-bar"><span><b>3b · projects exist, none selected</b></span><span>shipped keys only</span></div>
+    <div class="scale"><div data-win='{"sb":"projects","pane":"drop"}'></div></div>
+  </div>
+</div>
+<div class="comm">
+  <p>The drop card is already the only real action on the Welcome pane, so it stays and the teaching goes. It keeps its 14pt padding, dotted border and <code>tray.and.arrow.down</code> glyph. "Drop a folder" and "Drag a folder of recordings or transcripts here…" are shipped keys (<code>desktop.welcome.dropFolderTitle</code>/<code>Hint</code>).</p>
+  <p><span class="con">Watch:</span> in 3a someone who turned Welcome off on a previous install, or after removing every project, gets an empty sidebar and a single card. That is probably fine for someone who chose it. Should a first run on a clean defaults domain always show Welcome, whatever the setting? A fresh install has no setting stored, so it would show Welcome anyway unless the defaults domain survived an uninstall. <span class="con">Also:</span> centring the card is new. Today it sits inside the Study tools cell. Pinning it to the top, where the spiral used to start, would be the other choice.</p>
+</div>
+
+<!-- ───────────────────────── 4 ───────────────────────── -->
+<h2><span class="n">4</span>Settings ▸ Appearance, mirrored setting</h2>
+<div class="shot">
+  <div class="shot-bar"><span><b>4 · Settings ▸ Appearance</b> (Form .grouped, existing sections abridged)</span><span class="new">NEW COPY: legend + help (dashed row)</span></div>
+  <div class="settings">
+    <div class="stb">
+      <div class="lights"><i></i><i></i><i></i></div>
+      <div class="title">Appearance</div>
+      <div class="tabs"><div><i></i>General</div><div class="sel"><i></i>Appearance</div><div><i></i>LLM Provider</div><div><i></i>Transcription</div><div><i></i>MCP Agents</div><div><i></i>Accounts</div></div>
+    </div>
+    <div class="form">
+      <div class="sec"><div class="frow"><span class="lab">Application appearance</span><span class="popup">Use system appearance</span></div></div>
+      <div class="sec"><div class="frow"><span class="lab">Colour palette<span class="help">Recolours the whole app. Edo uses warm washi paper and Prussian-blue ink.</span></span><span class="popup">Default</span></div></div>
+      <div class="sec"><div class="frow newrow"><span class="lab">Show Welcome when Bristlenose opens<span class="help">Study tools, scientific background and a tip, shown in the main window when no project is selected. Turn this off to see only the drop target.</span></span><span class="sw"></span></div></div>
+      <div class="sec"><div class="frow"><span class="lab">Assign a random icon to new projects<span class="help">Each new project gets a distinctive icon so it's easy to recognise in the sidebar. Turn this off to keep the plain ring and choose icons yourself.</span></span><span class="sw"></span></div></div>
+      <div class="sec"><div class="frow"><span class="lab">Show animation while analysing<span class="help">Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.</span></span><span class="sw"></span></div></div>
+    </div>
+  </div>
+</div>
+<div class="comm">
+  <p>The row is drawn in the pane's own idiom: a <code>Toggle</code> with a legend and a help line, matching "Show animation while analysing", which is the nearest sibling in both meaning and phrasing. In a grouped form, macOS renders it as a switch, not a checkbox. The footer control in panel 1 and this one are two views of one <code>@AppStorage</code> key.</p>
+  <p><span class="pro">For:</span> the HIG's "easy to find later in a settings area", and this row is the route back if panel 1b is chosen. <span class="con">Against:</span> it cannot be the only control, because nobody looks for Welcome in Appearance. On its own it would recreate Photoshop's buried preference. Placement: Appearance (as spec'd in §0) or General? It changes what the window shows, so Appearance is defensible.</p>
+</div>
+
+<!-- ───────────────────────── 5 ───────────────────────── -->
+<h2><span class="n">5</span>View menu item</h2>
+<div class="row">
+  <div class="shot">
+    <div class="shot-bar"><span><b>5a · View, Welcome showing</b></span><span class="new">NEW COPY: "Hide Welcome"</span></div>
+    <div class="menubar"><b>Bristlenose</b><span>File</span><span>Edit</span><span class="open">View</span><span>Project</span><span>Window</span><span>Help</span></div>
+    <div class="menu" style="--mx:142px">
+      <div class="mi">Hide Projects<span class="k">⌥⌘S</span></div>
+      <div class="mi dis">Show Contents<span class="k">⌥⌘L</span></div>
+      <div class="mi dis">Show Tags<span class="k">⌥⌘T</span></div>
+      <div class="mi">Hide All Sidebars<span class="k">⌥⌘\</span></div>
+      <div class="sep"></div>
+      <div class="mi hl newmi">Hide Welcome</div>
+      <div class="sep"></div>
+      <div class="mi dis">All Quotes</div>
+      <div class="mi dis">Starred Quotes Only</div>
+      <div class="sep"></div>
+      <div class="mi dis">Focus Mode<span class="k">⌥⌘F</span></div>
+      <div class="sep"></div>
+      <div class="mi dis">Zoom In<span class="k">⌘=</span></div>
+      <div class="mi dis">Zoom Out<span class="k">⌘−</span></div>
+      <div class="mi dis">Actual Size<span class="k">⌘0</span></div>
+    </div>
+  </div>
+  <div class="shot">
+    <div class="shot-bar"><span><b>5b · View, Welcome off</b></span><span class="new">NEW COPY: "Show Welcome"</span></div>
+    <div class="menubar"><b>Bristlenose</b><span>File</span><span>Edit</span><span class="open">View</span><span>Project</span><span>Window</span><span>Help</span></div>
+    <div class="menu" style="--mx:142px">
+      <div class="mi">Hide Projects<span class="k">⌥⌘S</span></div>
+      <div class="mi dis">Show Contents<span class="k">⌥⌘L</span></div>
+      <div class="mi dis">Show Tags<span class="k">⌥⌘T</span></div>
+      <div class="mi">Hide All Sidebars<span class="k">⌥⌘\</span></div>
+      <div class="sep"></div>
+      <div class="mi hl newmi">Show Welcome</div>
+      <div class="sep"></div>
+      <div class="mi dis">All Quotes</div>
+      <div class="mi dis">Starred Quotes Only</div>
+      <div class="sep"></div>
+      <div class="mi dis">Focus Mode<span class="k">⌥⌘F</span></div>
+    </div>
+  </div>
+</div>
+<div class="shot" style="margin-top:22px; max-width:560px">
+  <div class="shot-bar"><span><b>5c · Help, as shipped</b> (for the open question below)</span><span>shipped keys only</span></div>
+  <div class="menubar"><b>Bristlenose</b><span>File</span><span>Edit</span><span>View</span><span>Project</span><span>Window</span><span class="open">Help</span></div>
+  <div class="menu" style="--mx:268px">
+    <div class="mi">Bristlenose Help<span class="k">⌘?</span></div>
+    <div class="mi hl">Welcome to Bristlenose</div>
+    <div class="mi">Keyboard Shortcuts</div>
+    <div class="sep"></div>
+    <div class="mi">Release Notes</div>
+    <div class="mi">Send Feedback…</div>
+  </div>
+</div>
+<div class="comm">
+  <p>The item follows the dynamic <code>Hide/Show Projects</code> pattern (a label that names the action, not a checkmark Toggle). No shortcut, for the same reason Help&nbsp;▸ Welcome has none: the action is rare and a shortcut would not be remembered.</p>
+  <p><span class="pro">For:</span> it can be found by menu search, the label always says what will happen, and in panel 1b it is a route back that does not involve Settings. <span class="con">Against:</span> it overlaps with Help&nbsp;▸ Welcome to Bristlenose. "Show Welcome" in View and "Welcome to Bristlenose" in Help would do almost the same thing, one persistently and one once, and the difference between them cannot be read from the labels. Is View&nbsp;▸ Hide/Show Welcome the persistent setting? If so, Help stays a one-off visit and the two menus divide the work cleanly. If it is only a one-off, it duplicates Help.</p>
+</div>
+
+<!-- ───────────────────────── 6 ───────────────────────── -->
+<h2><span class="n">6</span>X close button on the pane <span class="flag cmp">for comparison only</span></h2>
+<div class="row">
+  <div class="shot half">
+    <div class="shot-bar"><span><b>6a · sidebar showing</b></span><span>no new copy (icon-only; needs an a11y label)</span></div>
+    <div class="scale"><div data-win='{"sb":"projects","pane":"welcome","x":"pane"}'></div></div>
+  </div>
+  <div class="shot half">
+    <div class="shot-bar"><span><b>6b · sidebar hidden</b> (⌥⌘S)</span><span></span></div>
+    <div class="scale"><div data-win='{"sb":"hidden","pane":"welcome","x":"pane"}'></div></div>
+  </div>
+</div>
+<div class="comm">
+  <p>The X sits top-leading, where macOS puts close. <span class="con">That position is exactly the problem.</span> In 6b, with the sidebar hidden, the traffic lights move into the detail area's title bar, and the pane's X ends up next to the window's red close button. Two circles a few points apart, one closing the window and one closing the pane. Moving the X to top-trailing avoids the collision, but that is the Windows and web position, not the Mac one.</p>
+  <p><span class="con">Also:</span> an X implies "this card, now", which brings back the per-card reading that has already been rejected. It does not say whether the close persists. If it does, the way back is hidden (the Photoshop problem in reverse). If it does not, the pane comes back on every deselect, which is nagging. A labelled checkbox states its rule. An X does not.</p>
+</div>
+
+<!-- ───────────────────────── 7 ───────────────────────── -->
+<h2><span class="n">7</span>Safari-style picker <span class="flag park">parked · future · low fidelity</span></h2>
+<div class="row">
+  <div class="shot">
+    <div class="shot-bar"><span><b>7a · picker</b> (sketch)</span><span class="new">NEW COPY throughout</span></div>
+    <div class="lofi">
+      <div class="q">When no project is open, show:</div>
+      <div class="radio"><i></i>Drop target</div>
+      <div class="radio"><i></i>Drop target + one tip</div>
+      <div class="radio on"><i></i>Welcome</div>
+      <div class="radio"><i></i>Research activity</div>
+    </div>
+  </div>
+  <div class="shot">
+    <div class="shot-bar"><span><b>7b · "Research activity"</b> (sketch)</span><span></span></div>
+    <div class="lofi">
+      <div class="q">Sessions analysed, last 6 months</div>
+      <div class="dots" id="dots"></div>
+    </div>
+  </div>
+</div>
+<div class="comm">
+  <p>The model is Safari's "New windows open with". The on/off checkbox becomes a choice of what fills the empty state, and two of the choices (one tip; activity) are new surfaces that need designing first. <span class="pro">Why park it rather than drop it:</span> it is where panel 1 leads if researchers ask for something between "everything" and "nothing". Panel 1's boolean would migrate cleanly, with on = Welcome and off = Drop target. <span class="con">Why not this month:</span> two of the four options do not exist, and the activity grid needs a definition of "activity" (sessions? quotes? analysis runs?) that nobody has settled.</p>
+</div>
+
+<!-- ───────────────────────── strings + questions ───────────────────────── -->
+<h2><span class="n">—</span>String plan</h2>
+<div class="comm">
+  <table>
+    <tr><th>String</th><th>Status</th><th>Where</th></tr>
+    <tr><td>Drop a folder · Drag a folder of recordings or transcripts here to add it as a project.</td><td>shipped</td><td><code>desktop.welcome.dropFolderTitle</code> / <code>…Hint</code></td></tr>
+    <tr><td>Welcome to Bristlenose</td><td>shipped</td><td><code>desktop.chrome.welcomeTitle</code> (Help menu)</td></tr>
+    <tr><td>Hide Projects · Show Contents · Hide All Sidebars · All Quotes · …</td><td>shipped</td><td><code>desktop.menu.view.*</code></td></tr>
+    <tr><td>Show Welcome when Bristlenose opens / …when no project is open</td><td><b>new</b> (one of the two)</td><td>footer checkbox + Appearance legend</td></tr>
+    <tr><td>Appearance help line ("Study tools, scientific background and a tip…")</td><td><b>new</b>, placeholder</td><td>Appearance row</td></tr>
+    <tr><td>Hide Welcome · Show Welcome</td><td><b>new</b> (if panel 5)</td><td><code>desktop.menu.view.*</code></td></tr>
+    <tr><td>Picker question + four options</td><td><b>new</b>, parked</td><td>panel 7 only</td></tr>
+  </table>
+  <p style="margin-top:8px">Any new key goes into all 21 full locales. <code>zh-Hant-HK</code> is the exception and inherits from <code>zh-Hant</code>.</p>
+</div>
+
+<h2><span class="n">?</span>Open questions (surfaced, not answered)</h2>
+<div class="comm">
+  <p><b>1. Checkbox wording.</b> "…when Bristlenose opens" (spec, Xcode precedent, but inaccurate) or "…when no project is open" (accurate, but uses "open" where the app says "select")?</p>
+  <p><b>2. Help&nbsp;▸ Welcome to Bristlenose while the setting is off.</b> Does it show Welcome <i>once</i> and leave the setting off, so the next deselect shows the drop target again? Or does it turn the setting back <i>on</i>? Showing it once matches the HIG's "find it later" without overruling the user. Turning it on is simpler to explain, but a visit to Help then has a persistent side effect. If once: in panel 1a the footer box shows unticked while Welcome is on screen, which is honest and also makes re-ticking easy.</p>
+  <p><b>3. 1a or 1b</b>: does unticking apply next time or now? This decides whether panel 4 or 5 has to exist as a route back.</p>
+</div>
+
+</div>
+
+<script>
+// One renderer so every frame draws the same window, cast and geometry.
+const TRAY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10"/><path d="M8.5 9.5 12 13l3.5-3.5"/><path d="M3.5 13.5 5.6 6.8A1.5 1.5 0 0 1 7 5.8h1.5M15.5 5.8H17a1.5 1.5 0 0 1 1.4 1L20.5 13.5V18a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 18z"/><path d="M3.5 13.5h4.5l1 2h6l1-2h4.5"/></svg>';
+const DROP = (cls='') => `<div class="drop ${cls}">${TRAY}<div class="title3">Drop a folder</div><div class="body">Drag a folder of recordings or transcripts here to add it as a project.</div></div>`;
+const PROJECTS = [['a','Checkout usability, Feb'],['b','Onboarding interviews'],['c','Clinic pilot, wave 2'],['d','Pricing page diary study']];
+
+function spiral(){
+  return `<div class="spiralwrap"><div class="spiral">
+    <div class="cell lg t1 maj">
+      <span class="tag">Study tools</span>
+      <div class="title3">AutoCode</div>
+      <div class="body">Let AutoCode propose tags across every quote — you Accept or Deny.</div>
+      <div class="cta">AI helps tag →</div>
+      <div class="illus"></div>
+      ${DROP()}
+    </div>
+    <div class="g v min">
+      <div class="cell lg t2 maj"><span class="tag">Scientific background</span><div class="title3">Emergent themes</div><div class="body">Themes emerge from participants’ own words, not a fixed taxonomy (Braun &amp; Clarke, 2006).</div><div class="cta">Learn more →</div></div>
+      <div class="g min">
+        <div class="cell t3 maj"><span class="tag">Tip</span><div class="body">From a folder of recordings to a readable report in minutes.</div><div class="cta">First analysis →</div></div>
+        <div class="g v min">
+          <div class="cell t4 maj"><span class="tag">AI</span><div class="ai-glyph"></div><div class="cta">Setup →</div></div>
+          <div class="cell t5 min"><div class="body" style="font-size:11px">Review AI &amp; privacy settings…</div></div>
+        </div>
+      </div>
+    </div>
+  </div></div>`;
+}
+function footer(state, live){
+  const label = 'Show Welcome when Bristlenose opens';
+  return `<label class="foot ${live ? 'live' : ''}" ${live ? `data-live="${live}" role="checkbox" tabindex="0" aria-checked="${state==='on'}"` : ''}><span class="cb ${state==='on' ? 'on' : ''}"></span>${label}</label>`;
+}
+function win(o){
+  const sb = o.sb === 'hidden' ? '' : `<div class="sb"><div class="lights"><i></i><i></i><i></i><span class="sbbtn"></span></div>
+      <h6>Projects</h6>${o.sb === 'projects' ? PROJECTS.map(([c,n]) => `<div class="proj"><span class="ic ${c}"></span>${n}</div>`).join('') : ''}</div>`;
+  const tb = o.sb === 'hidden' ? `<div class="tb"><div class="lights"><i></i><i></i><i></i><span class="sbbtn" style="margin-left:14px"></span></div></div>` : `<div class="tb"></div>`;
+  let pane;
+  if (o.pane === 'drop') pane = `<div class="layer">${DROP('centred')}</div>`;
+  else {
+    const welcome = `<div class="layer welcome">${o.x === 'pane' ? '<span class="xbtn"></span>' : ''}${spiral()}${o.foot ? footer(o.foot, o.live) : ''}</div>`;
+    const drop = o.live === 'immediate' ? `<div class="layer drop-only hidden">${DROP('centred')}</div>` : '';
+    pane = welcome + drop;
+  }
+  return `<div class="win ${o.sb === 'hidden' ? 'nosb' : ''}">${sb}<div class="detail">${tb}<div class="pane">${pane}</div></div></div>`;
+}
+document.querySelectorAll('[data-win]').forEach(el => { el.dataset.init = el.dataset.win; el.innerHTML = win(JSON.parse(el.dataset.win)); });
+// Fit each 860pt window to its column (zoom keeps geometry identical, just smaller).
+const fit = () => document.querySelectorAll('.scale').forEach(sc => { const w = sc.querySelector('.win'); if (w) w.style.zoom = Math.min(1, sc.clientWidth / 860); });
+new ResizeObserver(fit).observe(document.body); fit();
+
+function toggle(foot){
+  const cb = foot.querySelector('.cb'); const on = !cb.classList.contains('on');
+  cb.classList.toggle('on', on); foot.setAttribute('aria-checked', on);
+  if (foot.dataset.live === 'immediate' && !on){
+    const w = foot.closest('.win');
+    w.querySelector('.welcome').classList.add('hidden');
+    w.querySelector('.drop-only').classList.remove('hidden');
+  }
+}
+document.addEventListener('click', e => {
+  const f = e.target.closest('.foot.live'); if (f) { e.preventDefault(); toggle(f); }
+  const r = e.target.closest('[data-reset]'); if (r) { e.preventDefault(); const el = document.getElementById('w1b'); el.innerHTML = win(JSON.parse(el.dataset.init)); fit(); }
+});
+document.addEventListener('keydown', e => { const f = e.target.closest && e.target.closest('.foot.live'); if (f && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); toggle(f); } });
+
+// activity sketch: deterministic pseudo-random
+const dots = document.getElementById('dots'); let s = 7;
+for (let i = 0; i < 26*7; i++){ s = (s*9301 + 49297) % 233280; const r = s/233280; const d = document.createElement('i');
+  if (r > .9) d.className = 'l3'; else if (r > .78) d.className = 'l2'; else if (r > .62) d.className = 'l1'; dots.appendChild(d); }
+
+// preview controls
+document.querySelectorAll('[data-scheme]').forEach(b => b.onclick = () => {
+  document.documentElement.style.colorScheme = b.dataset.scheme;
+  document.querySelectorAll('[data-scheme]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+document.querySelectorAll('[data-palette]').forEach(b => b.onclick = () => {
+  document.documentElement.dataset.colorTheme = b.dataset.palette;
+  document.querySelectorAll('[data-palette]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+</script>
+</body>
+</html>

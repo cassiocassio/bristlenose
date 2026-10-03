@@ -197,18 +197,25 @@ recognised text, a menu opens under it.
 | Input | Menu open | Menu closed |
 |---|---|---|
 | typing | recompute rows; keep the highlighted row while it is still offered (rows are addressed by id), else row 1 (free text) | open when there are rows. Only an edit opens it: text the store or a lens switch puts back does not |
-| ↓ / ↑ | move the highlight (wraps) | open the menu |
-| ↩ | apply the highlighted row. A free-text row commits the query now (no debounce wait); a person or tag row becomes a token and **clears the typed text** | commit the query |
+| ↓ / ↑ | move the highlight (wraps). Within the 150 ms debounce the rows are still the last query's, so the first press sends the text instead and the rows it brings are the ones moved through | open the menu |
+| ↩ | apply the highlighted row. A free-text row commits the query now (no debounce wait); a person or tag row becomes a token and **clears the typed text**. Within the debounce it only commits the text: a row computed for the previous query is never chosen | commit the query |
 | Esc | close the menu | empty the field, text **and** tokens, as ⓧ does and as Mail's field does (decided 3 Oct 2026, §12 Q2); on the Mac it also collapses the field |
 | ⌫ in an empty input | — | first press selects the last token, second removes it |
-| click a token | — | opens its meaning menu (radio items + Remove) |
+| click a token, or ↩ / Space / ↓ on it | — | opens its meaning menu (radio items + Remove) with the focus on its first item; ↓ ↑ Home End move, Esc returns to the chip. A choice returns the focus to the chip; Remove gives it to the next chip or the input, never the page. No key pressed on a chip or in its menu reaches the report's quote shortcuts |
 | blur | close the menu | — |
 
-Accessibility: WAI-ARIA combobox. The input carries `role="combobox"`,
-`aria-expanded` and `aria-activedescendant`; the menu is a `listbox` with
-labelled groups; token menus are `menu` with `menuitemradio`. There is one
-polite live-region announcement per settled query, of the form
-*"23 quotes · 2 suggestions"*, not one per row.
+Accessibility: WAI-ARIA combobox. The input carries its own label,
+`role="combobox"`, `aria-expanded` and `aria-activedescendant`; the menu is a
+`listbox` with labelled groups, each option named as the Mac speaks it
+(*"p3 Zoë Ng, 2"*). Token menus are `menu` (named by their chip) with
+`menuitemradio` items reached by the arrows (`tabindex -1`); a dimmed meaning
+is still reached, so it is still heard. A chip is named by what it shows, code
+included, so a Voice Control user can say it. The highlighted option and a
+focused menu item carry the 2px accent ring: the fill alone is about 1.05:1.
+There is one polite live-region announcement per settled query, *"23
+matching"* (`toolbar.matching`, already translated), not one per row — the
+suggestion count was dropped as noise. Not yet announced: a first ⌫ selecting
+a chip, a chip's removal, and the search being cleared (they need new strings).
 
 ## 7. Mac
 
@@ -325,13 +332,12 @@ chips are that kind of copy, hand-kept in `WelcomeIllustrations.swift`.) So:
 
 ## 8. i18n
 
-New keys in `common.json`, in all 21 full locales (not `zh-Hant-HK`). **Seeded 4 Oct 2026** for the keys the Mac menu and chips read (`textRow`, the six menu labels, the six chip words, `remove`), with English pinned in `en-value-pins.json`; `people`, `tags` and `announce` wait for the browser UI that reads them. In pl, ru, uk, cs, fi and tr the person labels take a colon form (*Mówi: Priya*) so a name is never inflected wrongly:
+New keys in `common.json`, in all 21 full locales (not `zh-Hant-HK`). **Seeded 4 Oct 2026** for the keys the Mac menu and chips read (`textRow`, the six menu labels, the six chip words, `remove`), with English pinned in `en-value-pins.json`; `people` was seeded with the browser UI (4 Oct 2026); the tags group reuses `tags.tags` and the announcement reuses `toolbar.matching`, so neither has a key of its own. In pl, ru, uk, cs, fi and tr the person labels take a colon form (*Mówi: Priya*) so a name is never inflected wrongly:
 
 | Key | English |
 |---|---|
 | `search.suggest.textRow` | Quotes containing “{{query}}” |
 | `search.suggest.people` | People (group label, screen readers) |
-| `search.suggest.tags` | Tags (group label, screen readers) |
 | `search.token.person.said` | Said by {{name}} |
 | `search.token.person.mentions` | Mentions {{name}} |
 | `search.token.person.not` | Not {{name}} |
@@ -345,7 +351,6 @@ New keys in `common.json`, in all 21 full locales (not `zh-Hant-HK`). **Seeded 4
 | `search.token.tag.taggedWord` | tagged |
 | `search.token.tag.containsWord` | contains |
 | `search.token.tag.notWord` | not tagged |
-| `search.announce` | {{count}} quotes (CLDR plurals) |
 
 Each locale uses its own quotation marks; don't copy the English `“ ”`.
 `search.placeholder` changed from *Filter quotes…* to *Search quotes, people,
@@ -381,7 +386,7 @@ Each phase ends green and committed.
 | **P1 Matcher** | `searchMatch.ts`, contract fixture, `highlight.tsx` and `filter.ts` switched to it | vitest green; every shipped search behaviour still covered, the D4 change asserted. **Done 3 Oct 2026**: matcher and fixture (53 matching cases, 15 activation cases), then the Quotes filter, highlights, the "N matching" label, the search box and ⌘E (sends its selection as a quoted phrase) switched to it. A test pins that the search menu's count equals the list a researcher gets on ↩, with hidden, starred and store tag edits in play |
 | **P2 Tokens** | token types + predicates; `searchTokens` in QuotesStore with add/remove/set-mode actions; **one** `filterStateOf(store)` replacing the six hand-built `FilterState`s (Toolbar, QuoteSections, QuoteThemes, ExportDropdown, LensSubtitleSync, `getVisibleQuotes`); highlight of mentions/contains | exports and subtitle counts honour tokens (asserted). **Done 3 Oct 2026**, headless (no way to add a token from the screen until P4): `utils/searchTokens.ts`; `filterStateOf` is referentially stable, so it sits in dependency lists as itself and a new filter (a token, a filter-menu row) is added once; the quote cards take parsed `highlight` terms instead of the raw query. Asserted: the web Export menu's scope, the native counts (`getVisibleQuotes`), the window subtitle and the "N matching" label all narrow with tokens; said-by/not and tagged/not-tagged partition a synthetic project exactly; mentions and contains agree with an independently written whole-word check |
 | **P3 Recognisers** | `searchSuggest.ts`, pure; people from `getPeople()` (embedded in the export) | unit tests. **Done 3 Oct 2026**, headless: rule tests on a hand-built project, invariants and an independently written matcher over the seeded synthetic project (`searchSynthetic.ts`), and a 10,000-quote scale test (2–8 ms a keystroke warm, 17 ms cold, on an M-series Mac) |
-| **P4 Browser UI** | **Built 4 Oct 2026** (`SearchBox.tsx` with `combo`, `searchKeys.ts`, CSS in `molecules/search.css`): the same rows, chips, meaning menus and keys as the Mac, from the same `searchSuggestionsFor` and `searchBridge` labels; a WAI-ARIA combobox (`aria-activedescendant`, options never focused), people and tags as labelled groups. With tokens the field shrinks and wraps its chips rather than spilling out of the column (the toolbar right-aligns). The placeholder reword (§8) and one live announcement per settled search (§6, reusing the translated `toolbar.matching`) landed the same night | vitest; `check-locales.py --strict`; browser QA |
+| **P4 Browser UI** | **Built 4 Oct 2026** (`SearchBox.tsx` with `combo`, `searchKeys.ts`, CSS in `molecules/search.css`): the same rows, chips, meaning menus and keys as the Mac, from the same `searchSuggestionsFor` and `searchBridge` labels; a WAI-ARIA combobox (`aria-activedescendant`, options never focused), people and tags as labelled groups. With tokens the field shrinks and wraps its chips rather than spilling out of the column (the toolbar right-aligns). The placeholder reword (§8) and one live announcement per settled search (§6, reusing the translated `toolbar.matching`) landed the same night. Code and WCAG reviews the same night; their fixes landed too: focus never drops to the page from a chip menu, chip keys never reach the quote shortcuts, the accent ring on the highlight, the debounce cannot choose a stale row, Safari IME (§6) | vitest; e2e `search.spec.ts`; `check-locales.py --strict`; browser QA |
 | **P5 Mac** | **Native menu and chips built 3 Oct 2026** (`SearchFieldViews.swift`, wired in `QuotesToolbarControls.swift`); wording approved and the §8 keys seeded in 21 locales on 4 Oct 2026. **Plumbing done 3 Oct 2026**, headless: the menu, tokens and badge styles cross the bridge in both directions, pinned on both sides by `tests/fixtures/search-bridge-contract.json`; the `BadgeStyle` probe and its per-appearance cache in the SPA; Swift decodes and holds all three on `BridgeHandler`. **Remaining:** the badge snapshot test against a web PNG (§7a); VoiceOver for the list (it is a non-key window, so the field would need to announce the highlighted row) | `desktop/scripts/test-swift.sh`; `.app` QA side by side with the card badge, both palettes and schemes |
 | **P6 Docs** | true `design-html-report.md`'s search section and `platform-text-map.md`; set this doc's status to shipped | — |
 
@@ -425,6 +430,13 @@ Each phase ends green and committed.
    **Still open:** moderator codes are per session, so a *said by m1* token
    matches every session's first moderator. Participant codes are
    project-wide and unaffected.
+   **Also open (code review, 4 Oct 2026): a code in the middle of a phrase.**
+   *Apple M1 chip* or *the M1 motorway* makes a *said by m1* token whenever a
+   moderator has quotes, and the words either side are spliced into one run,
+   *the motorway*, which nobody typed and which usually matches nothing.
+   Options: take a code only at the start of the text (as Mail's
+   tokens-first field does); or keep the rule and leave the neighbours as two
+   runs. Quote marks escape it today, which nobody will think of.
 10. **Who closes the native menu on the free-text row.** Choosing it leaves
     the query as typed (the contract's `commit-text`), so no new
     `search-suggestions` arrives to empty the menu. The native side should

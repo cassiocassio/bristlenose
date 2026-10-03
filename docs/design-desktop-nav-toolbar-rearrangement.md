@@ -57,17 +57,19 @@ Variable height, not the current always-reserved two-line band:
 
 ### 3.3 Top controls + New — *rev 3, 3 Oct 2026*
 **Decided (not yet built):** the sidebar's own toolbar carries two controls, NetNewsWire-style:
-- **Sidebar show/hide (`sidebar.left`) hard against the traffic lights.** It is the last control left when the sidebar is narrow, so it is always findable. *Build check:* where `NavigationSplitView`'s automatic toggle lands on macOS 15 and 26; if it isn't beside the traffic lights, hide it (`.toolbar(removing: .sidebarToggle)`) and place our own.
-- **`+⌄` trailing, right-aligned to the sidebar's width**, a menu of **New Project…** and **New Folder…** (the shipped `desktop.menu.file.newProject` / `newFolder` strings). It hides when the sidebar is narrow (prefer the system's toolbar overflow to a width rule we write) and disappears with the sidebar. The shortcuts stay in the File menu: New Project ⌘N, New Folder ⇧⌘N.
+- **Sidebar show/hide (`sidebar.left`) beside the traffic lights — the system's, untouched.** `NavigationSplitView` already places it there on macOS 26/27, and `SidebarAutoCollapse` (`DetailFloor.swift`) plus `SidebarFitHarnessTests` drive it through AppKit's `toggleSidebar:`. Rev 3 does **not** place a toggle of its own; the earlier draft's "hide the system one and place ours" was withdrawn in the plan review (3 Oct 2026, Finding 38: a hand-placed toggle lives in the sidebar column and vanishes with it).
+- **`+⌄` trailing in the sidebar's toolbar**, a plain menu of **New Project…** and **New Folder…** (the shipped `desktop.menu.file.newProject` / `newFolder` strings). It takes the slot of the existing New Folder button (`folder.badge.plus`, `ContentView.swift:2743`, there since Phase 1): same `ToolbarItem(placement: .automatic)` on `projectList`, the `Button` swapped for a `Menu`. Nothing else moves. It goes away with the sidebar, as that button does; what happens at a narrow sidebar is whatever the system does with the slot (observed, not engineered). The shortcuts stay in the File menu: New Project ⌘N, New Folder ⇧⌘N.
+- **The AppKit sidebar (flag-off) has no toolbar item today and gets none in rev 3** — adding one there means attaching `.toolbar` to the representable that carries the §1.4 top-edge fix (`design-desktop-sidebar-appkit.md`), untested; a follow-up for that sidebar's cutover.
 
-**This replaces the rev-2 in-list `+ New project` row.** That row shipped grey (`.secondary`) and scrolled away with the list; the AppKit sidebar has no equivalent.
+**This replaces the rev-2 in-list `+ New project` row.** That row shipped grey (`.secondary`) and scrolled away with the list; the AppKit sidebar has no equivalent. Its removal is a separate commit, proven against the macOS-26 `Section` trap its comment names.
 
 **Evidence:** in a user interview, a Windows user did not find New. She would not drag and drop, expected to create a project before giving it interviews, and did not explore the Mac menus.
 
-**Alternatives considered and rejected** (all drawn in the mockup):
-- A labelled sidebar footer (Notes, Reminders, Mail's `+ −`): the label repeats the New Project call to action the main content area already shows when no project is selected.
-- A footer menu with a one-line description under each item (Things): too verbose.
-- A Settings gear in the footer: ⌘, and the app menu are where Settings lives on a Mac. If a gear ever ships, use `gearshape`, not sliders: sliders mean "adjust this view".
+**How the decision was reached, 3 Oct 2026** (all options drawn in the mockup). The conversation went B → C → D → E:
+- **B, a labelled sidebar footer** (Notes, Reminders; Mail's `+ −` under a list) — proposed first; the HIG's warning about crucial controls at the bottom of a window was weighed against ⌘N and the Welcome window still existing. Set aside once E was chosen: its label repeats the New Project prompt the main area shows. *(That premise was corrected the same afternoon: since `399d5da1` the no-selection main window shows a drop-only card; B stays rejected on E's merits.)*
+- **C, B plus Things' explaining menu** (a one-line description under New Project / New Folder) — rejected as too verbose; the user's problem was finding New, not telling a project from a folder.
+- **D, B plus a Settings gear** (Things' sliders; Mail's `?`) — rejected: ⌘, and the app menu are where Settings lives on a Mac, and the Welcome AI cell covers day one. If a gear ever ships, use `gearshape`, not sliders: sliders mean "adjust this view". The owner's verdict on the B+C+D stack: "too apologetic".
+- **E, the purist default** — NetNewsWire's `+⌄` in the sidebar's toolbar, chosen; **plain menu, not `Menu(primaryAction:)`**, so a click reveals New Folder (decided later the same day).
 
 **Click behaviour — decided 3 Oct 2026:** a plain `Menu`, as in NetNewsWire. A click opens New Project… / New Folder…, which makes New Folder discoverable rather than hidden behind a chevron. **Still open (build check):** the toolbar placement inside the AppKit sidebar, which is hosted differently.
 

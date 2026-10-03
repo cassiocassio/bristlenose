@@ -172,6 +172,7 @@
     <symbol id="share" viewBox="0 0 20 20"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7.5H5.5a1.5 1.5 0 0 0-1.5 1.5v7a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5V9a1.5 1.5 0 0 0-1.5-1.5H13"/><path d="M10 12V2.5M7 5.3 10 2.4l3 2.9"/></g></symbol>
     <symbol id="search" viewBox="0 0 20 20"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8.5" cy="8.5" r="5"/><line x1="12.3" y1="12.3" x2="16.5" y2="16.5"/></g></symbol>
     <symbol id="more" viewBox="0 0 20 20"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5l5 5-5 5"/><path d="M10 5l5 5-5 5"/></g></symbol>
+    <symbol id="folder-plus" viewBox="0 0 20 20"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M2.5 5.5h5l1.5 1.5h8.5v8.5a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1z"/><path d="M11 10v4M9 12h4" stroke-linecap="round"/></g></symbol>
     <symbol id="plus" viewBox="0 0 20 20"><g stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="10" y1="4" x2="10" y2="16"/><line x1="4" y1="10" x2="16" y2="10"/></g></symbol>
     <symbol id="chev" viewBox="0 0 20 20"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="gear" viewBox="0 0 20 20"><g fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="10" cy="10" r="2.6"/><path d="M10 2.5v2.2M10 15.3v2.2M2.5 10h2.2M15.3 10h2.2M4.7 4.7l1.6 1.6M13.7 13.7l1.6 1.6M4.7 15.3l1.6-1.6M13.7 6.3l1.6-1.6" stroke-linecap="round"/><circle cx="10" cy="10" r="5.4"/></g></symbol>
@@ -228,13 +229,15 @@
       <tr><td>D · footer + gear</td><td>Things (sliders), Mail (<code>?</code>)</td><td>Gives Settings, and the AI key, a visible home</td><td><b>Rejected:</b> the labelled “New Project” repeats the call to action the main content area already shows when no project is selected. And ⌘, is where Settings lives on a Mac. If a gear ever ships, use the gear, not sliders: sliders mean “adjust this view”.</td></tr>
       <tr><td>E · toolbar <code>+⌄</code></td><td>NetNewsWire</td><td>The purist option; disappears with the sidebar</td><td>Unlabelled, and another glass bubble in the toolbar.</td></tr>
     </table>
-    <p style="margin-top:8px"><b>Decided (3 Oct 2026): E, the purist default.</b> The sidebar's own toolbar holds, in order:</p>
+    <p style="margin-top:8px"><b>How the decision was reached (3 Oct 2026).</b> In order: B (a labelled footer, from Notes/Reminders/Mail's <code>+ −</code>) → C (B plus Things' explaining menu) → D (B plus a Settings gear, from Things' sliders and Mail's <code>?</code>) → the owner called the stack “too apologetic” and “non-standard” → back to B stripped bare → E, the purist NetNewsWire default, chosen; C rejected as too verbose, D rejected because its label repeats the main area's New Project prompt and ⌘, is where Settings lives. Click behaviour: a plain menu, so New Folder is discovered (decided later the same day). Spec: §3.3 rev 3.</p>
+    <p><b>Decided: E.</b> The sidebar's own toolbar holds, in order:</p>
     <ul>
       <li><b>Sidebar toggle hard against the traffic lights.</b> It's the last control left when the sidebar is narrow, so it's always findable.</li>
       <li><b><code>+⌄</code> trailing, right-aligned to the sidebar's width</b>, opening New Project… / New Folder… (both shipped <code>menu.file.*</code> strings). It hides when the sidebar is narrow, and disappears with the sidebar, as NetNewsWire's does.</li>
     </ul>
     <p>The in-list grey row (A) goes. B, C and D stay on the page as the alternatives we considered.</p>
-    <p><b>Build checks:</b> (1) where <code>NavigationSplitView</code>'s automatic sidebar toggle actually lands on macOS 15 and 26; design doc §3.3 assumed sidebar top-trailing, which this decision moves. (2) “Hides when narrow” should come from the system's toolbar overflow, not a width rule we write. (3) Bettina's discoverability gap is now covered by ⌘N, the Welcome screen for a first project, and the empty project's own button (section 3), not by a label.</p>
+    <p><b>Implementation (plan reviewed 3 Oct 2026, five agents + parsimony pass):</b> the smallest change. The sidebar already has a toolbar item — today's New Folder button (<code>folder.badge.plus</code>, frame A) — and the <code>+⌄</code> takes that exact slot: same modifier, same placement, the button swapped for a menu. The sidebar toggle is <b>not touched</b>: it is the system's, already beside the traffic lights, and the fit-to-width logic and its tests drive it through AppKit. The flag-off AppKit sidebar has no toolbar item today and gets none in rev 3. Removing the grey row is its own commit, proven against the macOS 26 empty-list trap before it lands.</p>
+    <p><b>Build checks:</b> (1) hiding when narrow is whatever the system does with the slot — observed, not engineered. (2) Bettina's discoverability gap is covered by the visible <code>+</code>, ⌘N, and the empty project's own button (section 3). <b>Correction:</b> the main window with nothing selected now shows a drop-only card (<code>399d5da1</code>, 3 Oct 2026), so “the main area already shows New Project” — the reason given against D — no longer holds; D stays rejected on the ⌘, grounds.</p>
     <p><b>Click behaviour, decided:</b> a plain menu, as in NetNewsWire. A click opens New Project… / New Folder…, so New Folder gets discovered. <b>Build check:</b> where the <code>+</code> sits in the AppKit sidebar.</p>
     <p><b>Not drawn:</b> no <code>−</code> beside the <code>+</code>. Deleting a project stays in the right-click menu and the menu bar, with its confirmation.</p>
   </div>
@@ -325,12 +328,12 @@ const nnwMenu = `<div class="menu" style="left:150px;top:46px"><div class="mi">N
 
 const plusMenu = `<span class="cap">${B('plus','plus — New Project… / New Folder…')}<svg style="width:9px;height:9px;margin:0 6px 0 -4px;color:var(--muted)" aria-hidden="true"><use href="#chev"/></svg></span>`;
 const footers = [
-  ['E', 'DEFAULT · +⌄ in the sidebar toolbar (NetNewsWire), menu open', '',
+  ['E', 'DECIDED · +⌄ takes the New Folder button’s slot in the sidebar toolbar (NetNewsWire), menu open', '',
     side({stbExtra:plusMenu, menu:`<div class="menu" style="right:-30px;top:46px"><div class="mi">New Project…</div><div class="mi">New Folder…</div></div>`})],
-  ['E', 'DEFAULT · narrow sidebar: + hides, the toggle stays by the lights', '',
+  ['E', 'DECIDED · sidebar hidden or narrow: + goes with it; the toggle is the system’s, untouched', '',
     side({narrow:true})],
-  ['A', 'today: grey row at the top of the list (replaced)', '',
-    side({top:`<div class="sh">&nbsp;</div><div class="row ghost">${I('plus')}New Project…</div>`})],
+  ['A', 'today: grey row at the top of the list, and a New Folder button in the sidebar toolbar (both replaced)', '',
+    side({stbExtra:`<span class="cap">${B('folder-plus','folder.badge.plus — New Folder (today)')}</span>`, top:`<div class="sh">&nbsp;</div><div class="row ghost">${I('plus')}New Project…</div>`})],
   ['B', 'alternative · labelled footer (Notes / Reminders / Mail)', 'button label: shipped chrome.newProject',
     side({foot:newBtn, menu:plainMenu})],
   ['C', 'alternative · footer + explaining menu (Things)', '<span class="new">menu descriptions: NEW copy (draft)</span>',

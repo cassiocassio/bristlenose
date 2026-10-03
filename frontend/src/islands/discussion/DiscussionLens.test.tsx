@@ -23,7 +23,7 @@ beforeEach(() => {
 describe("DiscussionView", () => {
   it("opens on Merged and the first session, with the session's questions and quotes", () => {
     const { container } = render(<DiscussionView data={data} />);
-    expect(screen.getByRole("radio", { name: "Merged" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "Normalised questions" })).toHaveAttribute("aria-checked", "true");
     expect(heading()).toBe("Session 1");
     const asked = data.turns.filter((t) => t.session === "s1" && t.item).length;
     expect(container.querySelectorAll(".dl-content .dl-ask")).toHaveLength(asked);
@@ -40,7 +40,7 @@ describe("DiscussionView", () => {
 
   it("Planned shows the guide as written, every line with the solid dot", () => {
     const { container } = render(<DiscussionView data={data} />);
-    fireEvent.click(screen.getByRole("radio", { name: "Planned" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Your guide" }));
     const rows = container.querySelectorAll(".dl-nav .dl-row");
     expect(rows).toHaveLength(data.spine.reduce((n, s) => n + s.items.length, 0));
     expect(container.querySelectorAll(".dl-nav .dl-dot.hollow")).toHaveLength(0);
@@ -182,9 +182,28 @@ describe("review fixes, 3 Oct 2026", () => {
     expect(landed).not.toBe("Session 1");
   });
 
+  it("names the views Normalised questions then Your guide, in that order", () => {
+    render(<DiscussionView data={data} />);
+    const radios = within(screen.getByRole("radiogroup", { name: "Show" })).getAllByRole("radio");
+    expect(radios.map((r) => r.textContent)).toEqual(["Normalised questions", "Your guide"]);
+  });
+
+  it("Your guide offers Summary or Original; Original shows the guide's own wording", () => {
+    const { container } = render(<DiscussionView data={data} />);
+    expect(screen.queryByRole("radiogroup", { name: "Show your guide as" })).toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: "Your guide" }));
+    const views = screen.getByRole("radiogroup", { name: "Show your guide as" });
+    expect(within(views).getByRole("radio", { name: "Summary" })).toBeChecked();
+    const first = data.spine.find((sec) => sec.items.length && sec.kind !== "instruction")!.items[0];
+    const text = () => container.querySelector(`.dl-row[data-id="${first.id}"] .dl-tx`)!.textContent;
+    expect(text()).toBe(first.terse);
+    fireEvent.click(within(views).getByRole("radio", { name: "Original" }));
+    expect(text()).toBe(first.text);
+  });
+
   it("with no guide there is no Planned view to offer", () => {
     render(<DiscussionView data={{ ...data, guide: false, spine: [] }} />);
-    expect(screen.queryByRole("radio", { name: "Planned" })).toBeNull();
+    expect(screen.queryByRole("radio", { name: "Your guide" })).toBeNull();
   });
 
   it("a turn the model never classified is shown, marked, and wired to nothing", () => {
@@ -253,11 +272,11 @@ describe("review fixes, 3 Oct 2026", () => {
 
   it("remembers mode, session and focus across a lens switch", () => {
     const first = render(<DiscussionView data={data} />);
-    fireEvent.click(screen.getByRole("radio", { name: "Planned" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Your guide" }));
     fireEvent.keyDown(document, { key: "3" });
     first.unmount();
     render(<DiscussionView data={data} />);
-    expect(screen.getByRole("radio", { name: "Planned" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "Your guide" })).toHaveAttribute("aria-checked", "true");
     expect(heading()).toBe("Session 3");
   });
 });

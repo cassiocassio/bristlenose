@@ -32,6 +32,7 @@ import {
   shownSession,
   wirePath,
   type Focus,
+  type GuideView,
   type Mode,
   type NavEntry,
   type NavRow,
@@ -46,8 +47,11 @@ import "./discussion.css";
 const S = {
   title: "Discussion",
   show: "Show",
-  planned: "Planned",
-  merged: "Merged",
+  planned: "Your guide",
+  merged: "Normalised questions",
+  guideView: "Show your guide as",
+  summary: "Summary",
+  original: "Original",
   sessions: "Sessions",
   navigator: "Discussion guide",
   instruction: "instruction",
@@ -153,6 +157,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   const order = useMemo(() => data.sessions.map((s) => s.id), [data]);
   const saved = useMemo(() => readLensState(), []);
   const [mode, setMode] = useState<Mode>(data.guide ? saved.mode : "merged");
+  const [guideView, setGuideView] = useState<GuideView>(saved.guideView);
   const [session, setSession] = useState<string>(
     saved.session && order.includes(saved.session) ? saved.session : (order[0] ?? ""),
   );
@@ -166,8 +171,8 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   const [splitHover, setSplitHover] = useState(false);
 
   useEffect(() => {
-    if (!dragging) writeLensState({ mode, session, focus, navWidth: navW });
-  }, [mode, session, focus, navW, dragging]);
+    if (!dragging) writeLensState({ mode, guideView, session, focus, navWidth: navW });
+  }, [mode, guideView, session, focus, navW, dragging]);
 
   const lensRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
@@ -196,7 +201,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   const byId = useMemo(() => new Map(data.sessions.map((s) => [s.id, s])), [data]);
   const num = useCallback((sid: string) => byId.get(sid)?.number ?? 0, [byId]);
 
-  const entries = useMemo(() => navEntries(data, mode), [data, mode]);
+  const entries = useMemo(() => navEntries(data, mode, guideView), [data, mode, guideView]);
   const column = useMemo(() => sessionColumn(data, session), [data, session]);
   const stats = useMemo(() => sessionStats(data, session), [data, session]);
   const lit = useMemo(() => litTurns(data, session, focus), [data, session, focus]);
@@ -504,7 +509,8 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
     !!focus && (focus.turn ? focus.turn === b : focus.item === a && lit.has(b));
 
   const style = effectiveW ? ({ "--dl-nav-w": `${effectiveW}px` } as React.CSSProperties) : undefined;
-  const modes: Mode[] = ["planned", "merged"];
+  // Normalised questions first: it is the view the lens opens on.
+  const modes: Mode[] = ["merged", "planned"];
 
   return (
     <div ref={lensRef} className={`dl-lens${focus ? " has-focus" : ""}`} style={style} data-testid="discussion-lens">
@@ -536,6 +542,18 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
       </div>
 
       <nav ref={navRef} id="dl-nav" className="dl-nav toc-sidebar-body" aria-label={S.navigator}>
+        {mode === "planned" && data.guide && (
+          // Native radios: arrow keys and announcement come with the element.
+          <div className="dl-guide-view" role="radiogroup" aria-label={S.guideView}>
+            {(["summary", "original"] as const).map((v) => (
+              <label key={v}>
+                <input type="radio" name="dl-guide-view" value={v} checked={guideView === v}
+                  onChange={() => setGuideView(v)} />
+                {v === "summary" ? S.summary : S.original}
+              </label>
+            ))}
+          </div>
+        )}
         {sections.map(({ head, rows }) => (
           <div key={head.id} role="group" aria-labelledby={`dl-h-${head.id}`}>
             <h2 id={`dl-h-${head.id}`} className="toc-heading">

@@ -6,17 +6,18 @@
  * DiscussionStore on the SignalStore pattern (plan §3).
  */
 
-import type { Focus, Mode } from "./model";
+import type { Focus, GuideView, Mode } from "./model";
 
 export interface LensState {
   mode: Mode;
+  guideView: GuideView;
   session: string | null;
   focus: Focus | null;
   navWidth: number | null;
 }
 
 const WIDTH_KEY = "bn-discussion-nav-width";
-let memory: Omit<LensState, "navWidth"> = { mode: "merged", session: null, focus: null };
+let memory: Omit<LensState, "navWidth"> = { mode: "merged", guideView: "summary", session: null, focus: null };
 
 export function readLensState(): LensState {
   let navWidth: number | null = null;
@@ -30,7 +31,7 @@ export function readLensState(): LensState {
 }
 
 export function writeLensState(s: LensState): void {
-  memory = { mode: s.mode, session: s.session, focus: s.focus };
+  memory = { mode: s.mode, guideView: s.guideView, session: s.session, focus: s.focus };
   try {
     if (s.navWidth) localStorage.setItem(WIDTH_KEY, String(Math.round(s.navWidth)));
   } catch {
@@ -40,7 +41,7 @@ export function writeLensState(s: LensState): void {
 
 /** For tests: forget everything. */
 export function resetLensState(): void {
-  memory = { mode: "merged", session: null, focus: null };
+  memory = { mode: "merged", guideView: "summary", session: null, focus: null };
   try {
     localStorage.removeItem(WIDTH_KEY);
   } catch {

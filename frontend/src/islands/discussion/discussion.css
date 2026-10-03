@@ -90,6 +90,14 @@
     border-right: 1px solid var(--bn-colour-border);
 }
 .dl-nav .toc-heading .badge { margin-left: var(--bn-space-xs); vertical-align: 1px; }
+/* Your guide: Summary | Original. Small native radios at caption size, above
+   the first section, so the choice reads as a setting of this view. */
+.dl-guide-view {
+    display: flex; gap: var(--bn-space-md); margin: 0 0 var(--bn-space-sm);
+    font-size: var(--bn-text-caption); line-height: var(--bn-text-caption-lh); color: var(--bn-colour-muted);
+}
+.dl-guide-view label { display: inline-flex; align-items: center; gap: var(--bn-space-xs); cursor: pointer; }
+.dl-guide-view input { margin: 0; accent-color: var(--bn-colour-accent); }
 /* Each section is a labelled group, so every heading is its group's first child
    and the shipped `.toc-heading:first-child { margin-top: 0 }` matched them all.
    Give back the shipped 1rem between sections (sidebar.css .toc-heading). */

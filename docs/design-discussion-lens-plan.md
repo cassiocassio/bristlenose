@@ -306,9 +306,12 @@ overrides keyed on durable ids, never on labels.
   use `.toc-heading` / `.toc-link` — the Quotes TOC style, chosen over the Signals
   rows on 3 Oct 2026. In Planned every row carries the solid "planned" dot, so the
   mark explains itself before the researcher switches to Merged.
-- **Sticky header — decided 3 Oct 2026.** Planned | Merged is the shipped
-  `.dimension-toggle` (the Signals inspector's Section | Theme), at its natural
-  width. Each session is the shipped `PersonBadge` with `#N` as its code and the
+- **Sticky header — decided 3 Oct 2026.** The two views are named **Normalised
+  questions | Your guide** (in that order — the first is the one the lens opens
+  on; renamed from Merged | Planned the same day), in the shipped
+  `.dimension-toggle` (the Signals inspector's Section | Theme) at its natural
+  width. Your guide carries two small native radios, **Summary | Original**: the
+  guide's short labels, or its own wording. Each session is the shipped `PersonBadge` with `#N` as its code and the
   participant names as its name half — no session-badge styling of our own, and
   no duration (that stays in the line under the session heading). Names cap at
   two: `Sarah and Mike`, else `Bettina and 4 others` — one new counted string with

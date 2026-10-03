@@ -11,7 +11,12 @@ import type {
   DiscussionTurn,
 } from "./types";
 
+/** The navigator's two views. Labels (3 Oct 2026): "merged" is shown as
+ *  "Normalised questions", "planned" as "Your guide". */
 export type Mode = "planned" | "merged";
+
+/** Within Your guide: the guide's short labels, or its own wording. */
+export type GuideView = "summary" | "original";
 
 /** Provenance mark in the navigator's margin. */
 export type Mark = "dot" | "hollow" | "plus";
@@ -78,7 +83,7 @@ export function mergedEntries(data: DiscussionData): NavEntry[] {
 
 /** Planned: the guide as written. Every line is planned, so every line carries the
  *  solid dot; where it was asked comes from the merged item with the same id. */
-export function plannedEntries(data: DiscussionData): NavEntry[] {
+export function plannedEntries(data: DiscussionData, view: GuideView = "summary"): NavEntry[] {
   const order = sessionOrder(data);
   const merged = new Map<string, DiscussionItem>();
   for (const s of data.sections) for (const it of s.items) merged.set(it.id, it);
@@ -88,15 +93,16 @@ export function plannedEntries(data: DiscussionData): NavEntry[] {
       badge: s.kind === "instruction" ? "instruction" : undefined });
     for (const it of s.items) {
       const m = merged.get(it.id);
-      out.push({ type: "row", id: it.id, text: it.terse, title: it.text, mark: "dot",
+      out.push({ type: "row", id: it.id, text: view === "original" ? it.text : it.terse,
+        title: it.text, mark: "dot",
         sessions: m ? itemSessions(m, order) : [] });
     }
   }
   return out;
 }
 
-export function navEntries(data: DiscussionData, mode: Mode): NavEntry[] {
-  return mode === "planned" && data.guide ? plannedEntries(data) : mergedEntries(data);
+export function navEntries(data: DiscussionData, mode: Mode, view: GuideView = "summary"): NavEntry[] {
+  return mode === "planned" && data.guide ? plannedEntries(data, view) : mergedEntries(data);
 }
 
 // ── the session column ──────────────────────────────────────────────────────

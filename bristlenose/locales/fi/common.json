@@ -315,10 +315,10 @@
     "sentimentLike": "Hyvä",
     "sentimentLove": "Erinomainen",
     "helpUsImprove": "Auta meitä kehittämään",
-    "placeholder": "Kerro, mikä on hyödyllistä ja mitä pitäisi korjata...",
+    "placeholder": "Kerro, mikä on hyödyllistä ja mitä pitäisi korjata…",
     "send": "Lähetä",
-    "sending": "Lähetetään...",
-    "anonymous": "Anonyymi – vain arviosi ja viestisi jaetaan.",
+    "sending": "Lähetetään…",
+    "anonymous": "Anonyymi – vain arviosi, viestisi ja Bristlenosen versio jaetaan.",
     "sent": "Palaute lähetetty – kiitos!",
     "copiedToClipboard": "Kopioitu leikepöydälle – liitä sähköpostiin tai ilmoitukseen.",
     "copyFailed": "Kopiointi ei onnistunut — lähetä palaute manuaalisesti."

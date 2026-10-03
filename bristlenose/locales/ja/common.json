@@ -308,10 +308,10 @@
     "sentimentLike": "良い",
     "sentimentLove": "とても良い",
     "helpUsImprove": "改善にご協力ください",
-    "placeholder": "役に立っている点、改善が必要な点を教えてください...",
+    "placeholder": "役に立っている点、改善が必要な点を教えてください…",
     "send": "送信",
-    "sending": "送信中...",
-    "anonymous": "匿名 — 評価とメッセージのみが共有されます。",
+    "sending": "送信中…",
+    "anonymous": "匿名 — 評価、メッセージ、Bristlenose のバージョンのみが共有されます。",
     "sent": "フィードバックを送信しました — ありがとうございます!",
     "copiedToClipboard": "クリップボードにコピーしました — メールや Issue に貼り付けてください。",
     "copyFailed": "コピーできませんでした — フィードバックは手動で送信してください。"

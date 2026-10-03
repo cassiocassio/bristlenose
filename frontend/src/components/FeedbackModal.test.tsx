@@ -93,7 +93,7 @@ describe("FeedbackModal", () => {
         }),
       );
       expect(onClose).toHaveBeenCalledOnce();
-      expect(vi.mocked(toast)).toHaveBeenCalledWith("Feedback sent - thank you!");
+      expect(vi.mocked(toast)).toHaveBeenCalledWith("Feedback sent — thank you!");
     });
   });
 
@@ -121,7 +121,7 @@ describe("FeedbackModal", () => {
     await waitFor(() => {
       expect(writeText).toHaveBeenCalledOnce();
       expect(vi.mocked(toast)).toHaveBeenCalledWith(
-        "Copied to clipboard - paste into an email or issue.",
+        "Copied to clipboard — paste into an email or issue.",
       );
     });
   });
@@ -147,7 +147,7 @@ describe("FeedbackModal", () => {
       expect(writeText).toHaveBeenCalledOnce();
       expect(onClose).toHaveBeenCalledOnce();
       expect(vi.mocked(toast)).toHaveBeenCalledWith(
-        "Copied to clipboard - paste into an email or issue.",
+        "Copied to clipboard — paste into an email or issue.",
       );
     });
   });

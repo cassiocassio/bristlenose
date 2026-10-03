@@ -315,10 +315,10 @@
     "sentimentLike": "Bra",
     "sentimentLove": "Utmärkt",
     "helpUsImprove": "Hjälp oss bli bättre",
-    "placeholder": "Berätta vad som är användbart och vad som behöver åtgärdas...",
+    "placeholder": "Berätta vad som är användbart och vad som behöver åtgärdas…",
     "send": "Skicka",
-    "sending": "Skickar...",
-    "anonymous": "Anonymt – endast ditt betyg och meddelande delas.",
+    "sending": "Skickar…",
+    "anonymous": "Anonymt – endast ditt betyg, ditt meddelande och Bristlenose-versionen delas.",
     "sent": "Feedback skickad – tack!",
     "copiedToClipboard": "Kopierat till urklipp – klistra in i ett mejl eller ärende.",
     "copyFailed": "Kunde inte kopiera — skicka feedback manuellt."

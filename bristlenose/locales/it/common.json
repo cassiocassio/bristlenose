@@ -315,12 +315,12 @@
     "sentimentLike": "Buono",
     "sentimentLove": "Eccellente",
     "helpUsImprove": "Aiutaci a migliorare",
-    "placeholder": "Raccontaci cosa è utile e cosa va sistemato...",
+    "placeholder": "Raccontaci cosa è utile e cosa va sistemato…",
     "send": "Invia",
-    "sending": "Invio...",
-    "anonymous": "Anonimo - vengono condivisi solo la valutazione e il messaggio.",
-    "sent": "Feedback inviato - grazie!",
-    "copiedToClipboard": "Copiato negli appunti - incollalo in un'email o in una segnalazione.",
+    "sending": "Invio…",
+    "anonymous": "Anonimo – vengono condivisi solo la valutazione, il messaggio e la versione di Bristlenose.",
+    "sent": "Feedback inviato – grazie!",
+    "copiedToClipboard": "Copiato negli appunti – incollalo in un'email o in una segnalazione.",
     "copyFailed": "Impossibile copiare — invia il feedback manualmente."
   },
 

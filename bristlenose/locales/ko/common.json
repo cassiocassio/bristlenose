@@ -294,10 +294,10 @@
     "sentimentLike": "좋음",
     "sentimentLove": "훌륭함",
     "helpUsImprove": "개선에 도움을 주세요",
-    "placeholder": "유용한 점과 개선이 필요한 점을 알려주세요...",
+    "placeholder": "유용한 점과 개선이 필요한 점을 알려주세요…",
     "send": "보내기",
-    "sending": "전송 중...",
-    "anonymous": "익명 - 평가와 메시지만 공유됩니다.",
+    "sending": "전송 중…",
+    "anonymous": "익명 - 평가, 메시지, Bristlenose 버전만 공유됩니다.",
     "sent": "피드백이 전송되었습니다 - 감사합니다!",
     "copiedToClipboard": "클립보드에 복사되었습니다 - 이메일이나 이슈에 붙여넣으세요.",
     "copyFailed": "복사할 수 없습니다 — 수동으로 피드백을 제출해 주세요."

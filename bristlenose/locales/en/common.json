@@ -316,12 +316,12 @@
     "sentimentLike": "Good",
     "sentimentLove": "Excellent",
     "helpUsImprove": "Help us improve",
-    "placeholder": "Tell us what's useful and what needs fixing...",
+    "placeholder": "Tell us what's useful and what needs fixing…",
     "send": "Send",
-    "sending": "Sending...",
-    "anonymous": "Anonymous - only your rating and message are shared.",
-    "sent": "Feedback sent - thank you!",
-    "copiedToClipboard": "Copied to clipboard - paste into an email or issue.",
+    "sending": "Sending…",
+    "anonymous": "Anonymous — only your rating, your message and the Bristlenose version are shared.",
+    "sent": "Feedback sent — thank you!",
+    "copiedToClipboard": "Copied to clipboard — paste into an email or issue.",
     "copyFailed": "Could not copy — please submit feedback manually."
   },
 

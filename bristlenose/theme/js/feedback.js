@@ -60,7 +60,7 @@ function buildFeedbackContent() {
     '  <button type="button" class="feedback-btn feedback-btn-cancel">Cancel</button>',
     '  <button type="button" class="feedback-btn feedback-btn-send" disabled>Send</button>',
     '</div>',
-    '<p class="bn-modal-footer">Anonymous \u2014 only your rating and message are shared.</p>'
+    '<p class="bn-modal-footer">Anonymous \u2014 only your rating, your message and the Bristlenose version are shared.</p>'
   );
 
   return html.join('\n');

@@ -315,12 +315,12 @@
     "sentimentLike": "İyi",
     "sentimentLove": "Mükemmel",
     "helpUsImprove": "Geliştirmemize yardımcı olun",
-    "placeholder": "Neyin yararlı olduğunu ve neyin düzeltilmesi gerektiğini bize bildirin...",
+    "placeholder": "Neyin yararlı olduğunu ve neyin düzeltilmesi gerektiğini bize bildirin…",
     "send": "Gönder",
-    "sending": "Gönderiliyor...",
-    "anonymous": "Anonim - yalnızca değerlendirmeniz ve mesajınız paylaşılır.",
-    "sent": "Geri bildirim gönderildi - teşekkürler!",
-    "copiedToClipboard": "Panoya kopyalandı - bir e-postaya veya soruna yapıştırın.",
+    "sending": "Gönderiliyor…",
+    "anonymous": "Anonim – yalnızca değerlendirmeniz, mesajınız ve Bristlenose sürümü paylaşılır.",
+    "sent": "Geri bildirim gönderildi – teşekkürler!",
+    "copiedToClipboard": "Panoya kopyalandı – bir e-postaya veya soruna yapıştırın.",
     "copyFailed": "Kopyalanamadı — lütfen geri bildirimi elle gönderin."
   },
 

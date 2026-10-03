@@ -14,14 +14,16 @@ trued-against: HEAD on 2026-10-03
 > one emergent, 40 of 40 quotes placed, and a quote hidden in the database left
 > out of the lens. **Built differently from this plan, on purpose:** no tables or
 > migration — serve reads the stage's record file directly, because the tables
-> exist to hold researcher overrides and there is no editing UI yet; the Mac has
-> no guide picker — the lens tells the researcher where the guide goes (a folder
-> named “Discussion guide” beside the recordings). **On the Mac, Analyse builds a
+> exist to hold researcher overrides and there is no editing UI yet; in a
+> browser the lens tells the researcher where the guide goes (a folder named
+> “Discussion guide” beside the recordings), and on the Mac “Add your guide…”
+> opens a native open panel that copies the file there and starts Analyse
+> (4 Oct; no drop target). **On the Mac, Analyse builds a
 > missing discussion** (4 Oct): it appears for an analysed project with no record,
 > or whose guide changed since, and resumes — so only this stage runs and edits
 > are kept; Re-analyse, which starts over, is never suggested. **Still owed:**
-> scoring on the real gold-labelled sessions; overrides and their tables; a
-> native guide picker; cohort baselines for the cost forecast. §7 has the detail.
+> scoring on the real gold-labelled sessions; overrides and their tables;
+> cohort baselines for the cost forecast. §7 has the detail.
 
 *How the Discussion lens becomes a first-class part of the Bristlenose
 architecture rather than a spike. Companion to
@@ -422,6 +424,15 @@ overrides keyed on durable ids, never on labels.
   location, then a scoped re-run of the discussion stage. Today's intake paths
   (`ContentView.swift:1701, 1767, 1848, 2051, 1169-1191`) all treat `.docx` and
   `.txt` as transcripts.
+  **Built 4 Oct 2026, the panel only:** the button posts
+  `choose-discussion-guide`; `ContentView.chooseDiscussionGuide` opens the
+  panel (docx, md, txt) and `DiscussionGuide.install` copies the file into the
+  guide folder — reusing one of any case, replacing a same-named file, stamping
+  it with the current time so the watcher reads it as newer than the record —
+  then starts Analyse if the pipeline is free. No drop target: a drop onto the
+  report would compete with the sidebar's project drops. The folder name and
+  formats are pinned against the pipeline's by
+  `tests/test_discussion_guide_parity.py`.
 - **Built 3 Oct 2026 as a preview, then shipped the same day**: `Tab.discussion`
   (route `/report/discussion/`, no shared left panel, restores to the top), the
   rail row last (⌘6, `questionmark.bubble`). It was first behind a
@@ -578,7 +589,8 @@ until Phase 5.
    preview flag and its Diagnostics toggle are deleted.** The scoped re-run is
    **Analyse** (4 Oct): the folder watcher flags an analysed project with no
    record, or a guide folder newer than the record, and the sidebar offers
-   Analyse, which resumes. A native guide picker is still owed. The lens's copy
+   Analyse, which resumes. On the Mac, “Add your guide…” opens a native panel,
+   copies the guide in and starts Analyse (4 Oct, §4). The lens's copy
    forks by platform (`dt()`): the CLI is told to run `bristlenose run` again,
    the Mac to choose Analyse, an exported report gets one plain line.
 6. **Ship** — i18n across 21 locales, NavBar entry, export embed, flags on,

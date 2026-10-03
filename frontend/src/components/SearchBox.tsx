@@ -23,6 +23,10 @@ export interface SearchBoxProps {
   /** Clear the whole search (ⓧ, Esc, collapsing): the text and any tokens.
    *  Defaults to `onChange("")`, which clears the text only. */
   onClear?: () => void;
+  /** Re-read `value` whenever this changes, even if `value` did not. A typed
+   *  code that becomes a token leaves an empty query, which is the value the
+   *  store already held, so without it the field would go on showing "p3 ". */
+  syncKey?: unknown;
   /** Debounce delay in ms (default 150). */
   debounce?: number;
   "data-testid"?: string;
@@ -32,6 +36,7 @@ export function SearchBox({
   value,
   onChange,
   onClear,
+  syncKey,
   debounce = 150,
   "data-testid": testId,
 }: SearchBoxProps) {
@@ -45,7 +50,7 @@ export function SearchBox({
   useEffect(() => {
     setLocalValue(value);
     if (value.length > 0) setExpanded(true);
-  }, [value]);
+  }, [value, syncKey]);
 
   const commitValue = useCallback(
     (v: string) => {

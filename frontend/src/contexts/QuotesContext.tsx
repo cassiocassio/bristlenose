@@ -33,7 +33,9 @@ import {
   type TagMode,
 } from "../utils/searchTokens";
 import { EMPTY_TAG_FILTER, filterQuotes } from "../utils/filter";
+import { featureFlags } from "../utils/featureFlags";
 import { foldKey } from "../utils/searchMatch";
+import type { SearchPerson } from "../utils/searchSuggest";
 import {
   putHidden,
   putStarred,
@@ -297,6 +299,7 @@ export function initHeadingEdits(
 /** Clear all state. Used for test isolation and before re-fetch. */
 export function resetStore(): void {
   state = emptyState();
+  searchPeople = undefined;
   lastUsedTag = null;
   listeners.forEach((l) => l());
 }
@@ -577,13 +580,28 @@ export function denyProposedTag(domId: string, proposalId: number): void {
 
 // ── Toolbar actions (Step 4) ─────────────────────────────────────────
 
+// The project's people (GET /people), when something has fetched them: the Mac
+// app's search does. A token for a typed code names the person from here, as a
+// token chosen from the menu does; without it, from the name on their quotes.
+let searchPeople: Record<string, SearchPerson> | undefined;
+
+export function setSearchPeople(map: Record<string, SearchPerson> | undefined): void {
+  searchPeople = map;
+}
+
+export function getSearchPeople(): Record<string, SearchPerson> | undefined {
+  return searchPeople;
+}
+
 /**
  * Set the search query. No API call — UI-only state.
  *
  * A speaker code typed as a word and followed by a space ("p3 ", "M1 ")
  * becomes a person token and leaves the text: codes are how researchers name
  * people, and the space is what tells "m1" from the start of "m11". Only codes
- * of people with quotes count, the same people the suggestions offer.
+ * of people with a quote that is not hidden count, so a token never names
+ * someone whose every quote is hidden. Parked behind `searchCodeTokens` until
+ * the field draws tokens.
  */
 export function setSearchQuery(query: string): void {
   setState((prev) => {
@@ -593,7 +611,7 @@ export function setSearchQuery(query: string): void {
         byCode = new Map();
         for (const q of prev.quotes) {
           const code = q.participant_id;
-          if (!code) continue;
+          if (!code || prev.hidden[q.dom_id]) continue;
           const seen = byCode.get(foldKey(code));
           const name = q.speaker_name && q.speaker_name !== code ? q.speaker_name : undefined;
           if (!seen) byCode.set(foldKey(code), { code, name });
@@ -602,13 +620,15 @@ export function setSearchQuery(query: string): void {
       }
       return byCode.get(foldKey(word))?.code ?? null;
     };
-    const taken = takeCodeTokens(query, codeOf);
+    const taken = featureFlags.searchCodeTokens
+      ? takeCodeTokens(query, codeOf)
+      : { query, codes: [] as string[] };
     if (taken.codes.length === 0) {
       return prev.searchQuery === query ? prev : { ...prev, searchQuery: query };
     }
     const searchTokens = prev.searchTokens.slice();
     for (const code of taken.codes) {
-      const token = personToken(code, undefined, byCode!.get(foldKey(code))?.name);
+      const token = personToken(code, searchPeople?.[code], byCode!.get(foldKey(code))?.name);
       if (!searchTokens.some((t) => sameSubject(t, token))) searchTokens.push(token);
     }
     return { ...prev, searchQuery: taken.query, searchTokens };

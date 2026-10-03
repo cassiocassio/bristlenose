@@ -71,6 +71,19 @@ export interface FeatureFlags {
    * embed — only the hover reveal is withheld.
    */
   proposalRationaleTooltip: boolean;
+
+  /**
+   * A speaker code typed into search and followed by a space ("p3 ", "M1 ")
+   * leaves the text and becomes a *said by* person token (`takeCodeTokens`,
+   * applied in `QuotesContext.setSearchQuery`).
+   *
+   * Built 3 Oct 2026 on the owner's decision (design-search §12 Q9), held
+   * back the same day because nothing draws a token yet: the chips are P4
+   * (browser) and P5 (Mac). Switched on now, typing "p3 " would empty the
+   * field and filter the report with nothing on screen saying why. Flip it
+   * when the chips ship. Design doc: `docs/design-search.md` §11, §12.
+   */
+  searchCodeTokens: boolean;
 }
 
 /** The shipped state. Change these to flip a feature back on. */
@@ -78,6 +91,7 @@ const DEFAULTS: FeatureFlags = {
   quoteContextExpansion: false,
   moderatorQuestionPill: false,
   proposalRationaleTooltip: false,
+  searchCodeTokens: false,
 };
 
 export const featureFlags: FeatureFlags = { ...DEFAULTS };

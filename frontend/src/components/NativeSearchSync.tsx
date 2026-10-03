@@ -17,9 +17,12 @@ import { useLocation } from "react-router-dom";
 
 import {
   addSearchToken,
+  clearSearch,
   filterStateOf,
   getQuotesSnapshot,
+  getSearchPeople,
   removeSearchToken,
+  setSearchPeople,
   setSearchQuery,
   setSearchTokenMode,
   useQuotesStore,
@@ -50,17 +53,17 @@ import type { TagResponse } from "../utils/types";
 import { tabFromPath } from "./LensSubtitleSync";
 import { useLocaleStore } from "../i18n/LocaleStore";
 
-// The project's people, fetched once per mount. Module-level so the menu
-// actions (dispatched from AppLayout, outside this component) see the same map.
-let people: Record<string, SearchPerson> | undefined;
+// The project's people, fetched once per mount, are held by the quotes store
+// (setSearchPeople) so the menu actions, dispatched from AppLayout outside this
+// component, and a code typed into the field ("p3 ") name a person the same way.
 
 /** For tests: what `getPeople()` would have returned. */
 export function _setNativeSearchPeople(map: Record<string, SearchPerson> | undefined): void {
-  people = map;
+  setSearchPeople(map);
 }
 
 /** What the menu offers for the store as it stands. Exported for tests. */
-export function nativeSuggestions(store: QuotesState, knownPeople = people) {
+export function nativeSuggestions(store: QuotesState, knownPeople = getSearchPeople()) {
   const f = filterStateOf(store);
   const visibleBefore = { ...f, searchQuery: "" };
   const rows = suggest(
@@ -86,7 +89,7 @@ function choiceContext(store: QuotesState): ChoiceContext {
       ?.speaker_name;
   const tags: TagResponse[] = [];
   for (const q of store.quotes) tags.push(...quoteTags(q, store.tags));
-  return { people, nameOnQuotes, tags };
+  return { people: getSearchPeople(), nameOnQuotes, tags };
 }
 
 /**
@@ -121,6 +124,10 @@ export function applyNativeSearchAction(action: string, payload: unknown): boole
       if (subject) removeSearchToken(subjectToken(subject));
       return true;
     }
+    case "clearSearch":
+      // The native field's clear button and Esc: the text and every token.
+      clearSearch();
+      return true;
     default:
       return false;
   }
@@ -287,7 +294,7 @@ export function NativeSearchSync(): null {
     getPeople()
       .then((map) => {
         if (cancelled) return;
-        people = map;
+        setSearchPeople(map);
         setPeopleLoaded((n) => n + 1);
       })
       .catch((err) => {

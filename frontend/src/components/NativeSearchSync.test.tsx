@@ -54,7 +54,8 @@ const q = (dom_id: string, participant_id: string, tags: TagResponse[] = []) =>
 
 const style = (sizePx: number): BadgeStyle => ({
   bg: { r: 1, g: 1, b: 1, a: 1 }, fg: { r: 0, g: 0, b: 0, a: 1 }, border: null,
-  fontFamily: "mono", sizePx, weight: 400, padX: 7, padY: 2, radius: 3,
+  fontFamily: "mono", sizePx, weight: 400, padX: 7, padY: 2, padRight: 7, padBottom: 2,
+  lineHeightPx: 16, radius: 3,
 });
 
 /** A probe that "measures" every badge it is asked for, sized by call. */

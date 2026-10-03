@@ -205,8 +205,15 @@ struct SearchBadgeStyle: Equatable {
     let size: Double
     /// CSS font weight, 100…900.
     let weight: Double
+    /// Left and top padding (the names readers that pad symmetrically use).
     let padX: Double
     let padY: Double
+    /// Right and bottom padding. A person's name half is padded on one side
+    /// only; an older SPA that sends neither means "as left and top".
+    let padRight: Double
+    let padBottom: Double
+    /// The line box in points, or nil when the CSS left it `normal`.
+    let lineHeight: Double?
     let radius: Double
 
     init?(wire: Any?) {
@@ -233,6 +240,9 @@ struct SearchBadgeStyle: Equatable {
         self.weight = min(max(weight, 100), 900)
         self.padX = max(padX, 0)
         self.padY = max(padY, 0)
+        self.padRight = max(Self.number(d["padRight"]) ?? padX, 0)
+        self.padBottom = max(Self.number(d["padBottom"]) ?? padY, 0)
+        self.lineHeight = Self.number(d["lineHeightPx"]).flatMap { $0 > 0 ? $0 : nil }
         self.radius = max(radius, 0)
     }
 
@@ -308,5 +318,10 @@ enum SearchBridgeAction {
 
     static func removeToken(_ subject: SearchSubject) -> (String, [String: Any]) {
         ("removeSearchToken", ["subject": subject.wire])
+    }
+
+    /// The field's clear button or Esc: the text and every token.
+    static func clear() -> (String, [String: Any]) {
+        ("clearSearch", [:])
     }
 }

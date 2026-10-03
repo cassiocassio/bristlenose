@@ -28,8 +28,13 @@
  *   - Chinese and Japanese have no spaces, so a term written in those scripts
  *     matches anywhere, not only at a word start.
  *   - A query is active from 2 characters, or 1 Chinese/Japanese character.
- *   - Apostrophes at the edge of a typed word are ignored, so smart single
- *     quotes (‘than the’) behave like the plain words.
+ *   - Punctuation is whitespace, in text and query alike, so a run finds its
+ *     words across a comma, hyphen or ellipsis ("yes it was" finds "Yes, it
+ *     was"). Apostrophes at the edge of a word are dropped on both sides, so
+ *     smart single quotes (‘than the’) and possessives (students’) behave like
+ *     the plain words; one inside a word stays (don't).
+ *   - Whether a run may start mid-word is decided by its first letter: a
+ *     Chinese or Japanese run may, a Latin one may not ("ing 東京").
  */
 
 import deburr from "lodash.deburr";
@@ -65,6 +70,13 @@ const QUOTE_MARKS = /["\u201C\u201D\u201E\u00AB\u00BB\u300C\u300D]/gu;
 /** Double quote marks in text fold to a space: they are punctuation around
  *  speech, and a quoted phrase in the query cannot contain one. */
 const QUOTE_MARK = /["\u201C\u201D\u201E\u00AB\u00BB\u300C\u300D]/u;
+/** Punctuation folds to a space, on both sides, so a run of typed words finds
+ *  them across a comma, a hyphen or an ellipsis: "yes it was" finds "Yes, it
+ *  was", "well known" finds "well-known". Apostrophes are kept (don't, Tom's);
+ *  the single quote marks are apostrophes here. */
+const PUNCT = /\p{P}/u;
+const APOSTROPHE_LIKE = /['\u2018\u2019]/u;
+const isPunct = (c: string) => PUNCT.test(c) && !APOSTROPHE_LIKE.test(c);
 
 /** Folded text plus, for every folded UTF-16 unit, its index in the original. */
 export interface Folded {
@@ -95,7 +107,7 @@ function foldCore(s: string, map: number[] | null): string {
   for (const ch of s) {
     if (INVISIBLE.test(ch)) {
       // invisible: no output, no boundary
-    } else if (SPACE.test(ch) || QUOTE_MARK.test(ch)) {
+    } else if (SPACE.test(ch) || QUOTE_MARK.test(ch) || isPunct(ch)) {
       emit(" ");
       stripMarks = false;
     } else {
@@ -116,7 +128,13 @@ function foldCore(s: string, map: number[] | null): string {
           stripMarks = ACCENTED_SCRIPT.test(cp);
         }
         const out =
-          cp === "ß" ? "ss" : cp === "ς" ? "σ" : SPACE.test(cp) || QUOTE_MARK.test(cp) ? " " : cp;
+          cp === "ß"
+            ? "ss"
+            : cp === "ς"
+              ? "σ"
+              : SPACE.test(cp) || QUOTE_MARK.test(cp) || isPunct(cp)
+                ? " "
+                : cp;
         // UTF-16 units, so the map stays one entry per unit of `text`.
         for (let k = 0; k < out.length; k++) emit(out[k]);
       }
@@ -124,7 +142,39 @@ function foldCore(s: string, map: number[] | null): string {
     i += ch.length;
   }
   map?.push(i);
-  return text;
+  return dropEdgeApostrophes(text, map);
+}
+
+/**
+ * Drop apostrophes at the edge of a word, in text and query alike, so single
+ * quote marks used as quotation (‘than the’) and possessive plurals
+ * (students’) match the plain words. One inside a word stays (don't, Tom's).
+ * Spaces left doubled or leading by a drop collapse, as `emit` keeps them.
+ */
+function dropEdgeApostrophes(text: string, map: number[] | null): string {
+  if (!text.includes("'")) return text;
+  let out = "";
+  const kept: number[] = [];
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === "'") {
+      let j = i + 1;
+      while (j < text.length && text[j] === "'") j++;
+      const prev = out.length > 0 ? out[out.length - 1] : " ";
+      const next = j < text.length ? text[j] : " ";
+      if (prev === " " || next === " ") continue;
+    } else if (c === " " && (out.length === 0 || out[out.length - 1] === " ")) {
+      continue;
+    }
+    out += c;
+    if (map) kept.push(map[i]);
+  }
+  if (map) {
+    kept.push(map[text.length]);
+    map.length = 0;
+    map.push(...kept);
+  }
+  return out;
 }
 
 // Two caches. Matching folds every quote on every keystroke, so its cache must
@@ -227,7 +277,10 @@ function trimApostrophes(w: string): string {
 }
 
 function makeTerm(kind: "word" | "phrase", text: string): SearchTerm {
-  return { kind, text, anywhere: kind === "phrase" || UNSPACED.test(text) };
+  // Where a run may start is decided by its first letter: "東京 tokyo" may
+  // start mid-text, "ing 東京" must start a word.
+  const first = String.fromCodePoint(text.codePointAt(0) ?? 0);
+  return { kind, text, anywhere: kind === "phrase" || UNSPACED.test(first) };
 }
 
 /**

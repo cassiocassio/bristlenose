@@ -604,6 +604,13 @@ final class BridgeHandler: ObservableObject {
         menuAction(action, payload: payload)
     }
 
+    /// Empty the search: the text and every token (the field's clear button
+    /// and Esc, as Mail's field empties to nothing).
+    func clearQuotesSearch() {
+        let (action, payload) = SearchBridgeAction.clear()
+        menuAction(action, payload: payload)
+    }
+
     // MARK: - Window active state
 
     /// Toggle the `bn-window-inactive` CSS class on the document root.

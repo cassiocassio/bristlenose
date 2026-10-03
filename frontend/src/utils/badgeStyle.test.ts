@@ -42,6 +42,9 @@ function style(over: Partial<StyleSource> = {}): StyleSource {
     fontWeight: "500",
     paddingLeft: "6px",
     paddingTop: "1.5px",
+    paddingRight: "6px",
+    paddingBottom: "1.5px",
+    lineHeight: "16px",
     borderTopLeftRadius: "4px",
     ...over,
   };
@@ -60,8 +63,18 @@ describe("readBadgeStyle", () => {
       weight: 500,
       padX: 6,
       padY: 1.5,
+      padRight: 6,
+      padBottom: 1.5,
+      lineHeightPx: 16,
       radius: 4,
     });
+  });
+
+  it("sends each side's padding and the line box, so a one-sided name half matches", () => {
+    const name = readBadgeStyle(style({ paddingLeft: "0px", paddingRight: "1.6px", lineHeight: "15.5px" }), ctx);
+    expect([name.padX, name.padRight, name.lineHeightPx]).toEqual([0, 1.6, 15.5]);
+    // "normal" is a font metric, not a length: sent as unknown, not as 0.
+    expect(readBadgeStyle(style({ lineHeight: "normal" }), ctx).lineHeightPx).toBeNull();
   });
 
   it("a transparent fill is no fill", () => {

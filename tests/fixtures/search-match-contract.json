@@ -711,6 +711,55 @@
       "query": "thorunn",
       "match": true,
       "marked": ["Þórunn"]
+    },
+    {
+      "why": "punctuation between words is whitespace: a run of typed words finds them across a comma",
+      "text": "Yes, it was fine",
+      "query": "yes it was",
+      "match": true,
+      "marked": ["Yes, it was"]
+    },
+    {
+      "why": "and across a hyphen or an ellipsis",
+      "text": "I want to... go home",
+      "query": "want to go",
+      "match": true,
+      "marked": ["want to... go"]
+    },
+    {
+      "why": "a hyphenated word is found by its words",
+      "text": "a well-known fact",
+      "query": "well known",
+      "match": true,
+      "marked": ["well-known"]
+    },
+    {
+      "why": "single quote marks around part of a run are quotation, not letters",
+      "text": "which is more than the shelf",
+      "query": "‘than the’ shelf",
+      "match": true,
+      "marked": ["than the shelf"]
+    },
+    {
+      "why": "an apostrophe at a word's edge in the text drops too (students' work)",
+      "text": "the students’ work was late",
+      "query": "students work",
+      "match": true,
+      "marked": ["students’ work"]
+    },
+    {
+      "why": "an apostrophe inside a word is kept",
+      "text": "I don't know",
+      "query": "dont",
+      "match": false,
+      "marked": []
+    },
+    {
+      "why": "a run starts where its first letter says: Latin must start a word, even before Chinese",
+      "text": "testing 東京",
+      "query": "ing 東京",
+      "match": false,
+      "marked": []
     }
   ],
   "known_limits": [
@@ -736,5 +785,5 @@
       "marked": []
     }
   ],
-  "_python_notes": "When the Python core asserts this file, three defaults differ from JavaScript and must not be used as-is: str.lower() is final-sigma-aware while this contract folds every sigma to σ; re's \\w includes the underscore while a word here is letters, digits and combining marks; and the stdlib re has no Unicode Script property, so the scripts named in searchMatch.ts (accented: Latin, Greek, Cyrillic, Arabic, Hebrew; unspaced: Han, Hiragana, Katakana, Thai) need the `regex` package or explicit ranges. Whitespace is JavaScript's \\s plus U+0085, with U+FEFF treated as invisible. Since 3 Oct 2026 also: decompose (NFKD) BEFORE case folding so compatibility capitals fold ('™' is 'tm'); fold double quote marks (\" “ ” „ « » 「 」) to a space; drop format characters AND variation selectors (U+FE0F); treat a letter of Han, Hiragana, Katakana or Thai before or after a word as a word boundary; and widen a highlight to whole extended grapheme clusters (the stdlib cannot: use `regex`'s \\X). Since 3 Oct 2026 the Latin letters Unicode gives no decomposition (Latin-1 Supplement and Latin Extended-A: ø ł đ æ œ þ ı …) fold by lodash's `deburr` table, applied to those letters only and before NFKD. Python should take the same table rather than `unidecode`, which also transliterates other scripts. Also since 3 Oct 2026: words typed between quotes are ONE run term (whitespace does not split them), trimmed of apostrophes and spaces at its edges; and emoji skin-tone modifiers (Emoji_Modifier) are invisible like variation selectors."
+  "_python_notes": "When the Python core asserts this file, three defaults differ from JavaScript and must not be used as-is: str.lower() is final-sigma-aware while this contract folds every sigma to σ; re's \\w includes the underscore while a word here is letters, digits and combining marks; and the stdlib re has no Unicode Script property, so the scripts named in searchMatch.ts (accented: Latin, Greek, Cyrillic, Arabic, Hebrew; unspaced: Han, Hiragana, Katakana, Thai) need the `regex` package or explicit ranges. Whitespace is JavaScript's \\s plus U+0085, with U+FEFF treated as invisible. Since 3 Oct 2026 also: decompose (NFKD) BEFORE case folding so compatibility capitals fold ('™' is 'tm'); fold double quote marks (\" “ ” „ « » 「 」) to a space; drop format characters AND variation selectors (U+FE0F); treat a letter of Han, Hiragana, Katakana or Thai before or after a word as a word boundary; and widen a highlight to whole extended grapheme clusters (the stdlib cannot: use `regex`'s \\X). Since 3 Oct 2026 the Latin letters Unicode gives no decomposition (Latin-1 Supplement and Latin Extended-A: ø ł đ æ œ þ ı …) fold by lodash's `deburr` table, applied to those letters only and before NFKD. Python should take the same table rather than `unidecode`, which also transliterates other scripts. Also since 3 Oct 2026: words typed between quotes are ONE run term (whitespace does not split them), trimmed of apostrophes and spaces at its edges; and emoji skin-tone modifiers (Emoji_Modifier) are invisible like variation selectors; punctuation (\\p{P}, except the apostrophe and the curly single quotes) folds to a space; an apostrophe at a word's edge is dropped from text and query alike (one inside a word stays); and whether a run may start mid-word is decided by its first letter's script."
 }

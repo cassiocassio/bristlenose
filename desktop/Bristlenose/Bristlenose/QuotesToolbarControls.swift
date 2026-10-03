@@ -214,7 +214,8 @@ struct QuotesSearchToolbarControl: View {
     private func clear() {
         text = ""
         debounce?.cancel()
-        if bridgeHandler.activeTab == .quotes { bridgeHandler.setQuotesSearch("") }
+        // The text and every token, as the SPA's clear and Esc do.
+        if bridgeHandler.activeTab == .quotes { bridgeHandler.clearQuotesSearch() }
     }
 
     private func clearAndCollapse() {

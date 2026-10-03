@@ -47,8 +47,17 @@ export interface BadgeStyle {
   fontFamily: "mono" | "body";
   sizePx: number;
   weight: number;
+  /** Left and top padding. Kept under these names for the readers that
+   *  draw padding symmetrically; `padRight`/`padBottom` give the other sides. */
   padX: number;
   padY: number;
+  /** A person badge's name half is padded on one side only, so the right and
+   *  bottom are sent too rather than assumed equal to the left and top. */
+  padRight: number;
+  padBottom: number;
+  /** The line box, in px; null when the CSS leaves it `normal`. Without it a
+   *  native badge is a fraction of a point shorter than the card's. */
+  lineHeightPx: number | null;
   radius: number;
 }
 
@@ -79,6 +88,9 @@ export type StyleSource = Pick<
   | "fontWeight"
   | "paddingLeft"
   | "paddingTop"
+  | "paddingRight"
+  | "paddingBottom"
+  | "lineHeight"
   | "borderTopLeftRadius"
 >;
 
@@ -136,6 +148,11 @@ export function readBadgeStyle(cs: StyleSource, ctx: ReadContext): BadgeStyle {
     weight: Math.round(px(cs.fontWeight)) || 400,
     padX: px(cs.paddingLeft),
     padY: px(cs.paddingTop),
+    padRight: px(cs.paddingRight),
+    padBottom: px(cs.paddingBottom),
+    lineHeightPx: Number.isFinite(parseFloat(cs.lineHeight)) && cs.lineHeight.trim().endsWith("px")
+      ? parseFloat(cs.lineHeight)
+      : null,
     radius: px(cs.borderTopLeftRadius),
   };
 }

@@ -80,6 +80,25 @@ describe("SearchBox", () => {
     fireEvent.click(getByTestId("search-clear"));
     expect(onClear).toHaveBeenCalledTimes(1);
     expect(onChange).not.toHaveBeenCalledWith("");
+
+    // Esc in the field, with text in it, goes the same way.
+    const input = getByTestId("search").querySelector("input")!;
+    fireEvent.change(input, { target: { value: "late" } });
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(onClear).toHaveBeenCalledTimes(2);
+  });
+
+  it("re-reads the store's value when syncKey changes, even if the value did not", () => {
+    const onChange = vi.fn();
+    const { getByTestId, rerender } = render(
+      <SearchBox value="" onChange={onChange} syncKey={1} data-testid="search" />,
+    );
+    const input = getByTestId("search").querySelector("input")!;
+    fireEvent.change(input, { target: { value: "p3 " } });
+    expect(input.value).toBe("p3 ");
+    // The store took "p3 " as a token: its query is "" again, as before.
+    rerender(<SearchBox value="" onChange={onChange} syncKey={2} data-testid="search" />);
+    expect(input.value).toBe("");
   });
 
   it("adds has-query class once the query is long enough to filter by (2 chars)", () => {

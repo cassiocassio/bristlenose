@@ -64,6 +64,7 @@ export function Toolbar() {
         value={store.searchQuery}
         onChange={setSearchQuery}
         onClear={clearSearch}
+        syncKey={store.searchTokens}
         data-testid="bn-toolbar-search"
       />
       <ViewSwitcher

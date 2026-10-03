@@ -367,7 +367,9 @@ describe("markRanges", () => {
   it("FIXED D9: a term that BEGINS with a combining mark matches inside a letter", () => {
     // The start-side twin of the contract's "a match may not end inside a
     // letter": termPositions checks the end, never the start.
-    expect(matches(")\u0301\u0301", "\u0301\u0301")).toBe(false);
+    // On a symbol that stays a character ("+"; ")" is punctuation and folds to
+    // a space now, after which a mark stands alone and may match).
+    expect(matches("+\u0301\u0301", "\u0301\u0301")).toBe(false);
   });
   it("FIXED D9: Thai — the vowel ำ alone decomposes to a mark first, and marks half of กำ", () => {
     expect(markRanges("\u0E01\u0E33", parseQuery("\u0E33"))).toEqual([]);
@@ -402,26 +404,54 @@ describe("markRanges", () => {
 
 // ── 3. An independent oracle for the ASCII domain ───────────────────────
 
-/** In ASCII, folding is lower case plus backtick-as-apostrophe plus whitespace runs. */
-const foldA = (s: string) => s.toLowerCase().replace(/`/g, "'");
+/**
+ * In ASCII, folding (written from the spec, not the code): lower case; letters
+ * and digits are word characters; whitespace and punctuation (\\p{P}, except
+ * the apostrophe) are one space, runs collapsed, none leading; a backtick is
+ * an apostrophe, kept only between two word characters (don't), dropped at a
+ * word's edge (‘than the’, students'); other symbols ($ + < = > ^ | ~) stay.
+ * Returns the folded text and, per folded character, its index in `s`.
+ */
 const isWordA = (c: string | undefined) => c !== undefined && /[a-z0-9]/i.test(c);
-const isSpaceA = (c: string | undefined) => c !== undefined && /\s/.test(c);
+const isApostropheA = (c: string) => c === "'" || c === "`";
+const isSepA = (c: string) => /\s/.test(c) || (/\p{P}/u.test(c) && c !== "'");
+function foldA(s: string): { text: string; map: number[] } {
+  let text = "";
+  const map: number[] = [];
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (isApostropheA(c)) {
+      let j = i + 1;
+      while (j < s.length && isApostropheA(s[j])) j++;
+      const prev = text[text.length - 1];
+      const inside = prev !== undefined && prev !== " " && j < s.length && !isSepA(s[j]);
+      if (inside) {
+        text += "'";
+        map.push(i);
+      }
+    } else if (isSepA(c)) {
+      if (text.length > 0 && text[text.length - 1] !== " ") {
+        text += " ";
+        map.push(i);
+      }
+    } else {
+      text += c.toLowerCase();
+      map.push(i);
+    }
+  }
+  return { text, map };
+}
 
 function oracleParse(q: string): { kind: string; text: string }[] {
   const terms: { kind: string; text: string }[] = [];
   let buf = "";
   let inPhrase = false;
   const flush = (kind: "word" | "phrase") => {
-    const t = foldA(buf).replace(/\s+/g, " ").trim();
+    const t = foldA(buf).text.trim();
     buf = "";
     if (!t) return;
-    if (kind === "phrase") terms.push({ kind, text: t });
-    else {
-      // Words typed together are one run (decided 3 Oct 2026); only the run's
-      // edges lose their apostrophes.
-      const w = t.replace(/^[' ]+|[' ]+$/g, "");
-      if (w) terms.push({ kind, text: w });
-    }
+    // Words typed together are one run (decided 3 Oct 2026).
+    terms.push({ kind, text: t });
   };
   for (const ch of q) {
     if (ch === '"') {
@@ -436,29 +466,16 @@ function oracleParse(q: string): { kind: string; text: string }[] {
 /** Every [start, end) in `text` where the folded term matches, written from the spec, not the code. */
 function oracleRanges(text: string, term: { kind: string; text: string }, whole = false): Array<[number, number]> {
   const out: Array<[number, number]> = [];
-  for (let i = 0; i < text.length; i++) {
-    if (term.kind === "word" || whole) {
-      if (i > 0 && isWordA(text[i - 1])) continue;
-    }
-    let j = i;
-    let ok = true;
-    for (const c of term.text) {
-      if (c === " ") {
-        if (!isSpaceA(text[j])) {
-          ok = false;
-          break;
-        }
-        while (isSpaceA(text[j])) j++;
-      } else {
-        if (j >= text.length || foldA(text[j]) !== c) {
-          ok = false;
-          break;
-        }
-        j++;
-      }
-    }
-    if (ok && whole && j < text.length && isWordA(text[j])) ok = false;
-    if (ok) out.push([i, j]);
+  const { text: f, map } = foldA(text);
+  for (let i = 0; i + term.text.length <= f.length; i++) {
+    if (f.slice(i, i + term.text.length) !== term.text) continue;
+    if ((term.kind === "word" || whole) && i > 0 && isWordA(f[i - 1])) continue;
+    const j = i + term.text.length;
+    if (whole && j < f.length && isWordA(f[j])) continue;
+    // A mark runs to where the next folded character starts, so it takes in
+    // what folding dropped after the match (a word-edge apostrophe), as it
+    // takes in an accent dropped from a letter.
+    out.push([map[i], j < f.length ? map[j] : text.length]);
   }
   return out;
 }
@@ -692,9 +709,10 @@ describe("script boundaries", () => {
     // Typed with the letter, it still finds itself.
     expect(matches("Søren said", "søren")).toBe(true);
   });
-  it("deburr reaches only Latin letters: Japanese and Hindi keep their marks", () => {
-    expect(matches("ハン", "パン")).toBe(false);
-    expect(matches("× 3", "x")).toBe(false); // × is not a letter, so not an x
+  it("deburr reaches only Latin letters: a mark Hindi keeps is not stripped by it", () => {
+    // deburr strips U+0300–U+036F wherever it sees them; applied outside Latin
+    // it would turn क́ into क and let a match end before a kept mark.
+    expect(matches("\u0915\u0301", "\u0915")).toBe(false);
   });
 });
 

@@ -92,14 +92,15 @@
       }
     ],
     "search_badge_styles": {
-      "_comment": "How each badge in the menu and the chips is drawn, measured from the report's own CSS (docs/design-search.md §7a). Keys: a tag's folded name (a row's id after `tag:`, a token's styleKey) or a speaker code. Colours are display-P3, 0…1. `bg` null means no fill; `border` null means none; a person's `name` null means the badge shows the code alone.",
+      "_comment": "How each badge in the menu and the chips is drawn, measured from the report's own CSS (docs/design-search.md §7a). Keys: a tag's folded name (a row's id after `tag:`, a token's styleKey) or a speaker code. Colours are display-P3, 0…1. `bg` null means no fill; `border` null means none; a person's `name` null means the badge shows the code alone. `padX`/`padY` are the left and top padding; `padRight`/`padBottom` the other sides (a name half is padded on one side only); `lineHeightPx` null means the CSS left it `normal`.",
       "wire": {
         "tags": {
           "zoning": {
             "bg": { "r": 0.86, "g": 0.93, "b": 0.98, "a": 1 },
             "fg": { "r": 0.1, "g": 0.25, "b": 0.45, "a": 1 },
             "border": null,
-            "fontFamily": "body", "sizePx": 12, "weight": 400, "padX": 6, "padY": 1, "radius": 4
+            "fontFamily": "body", "sizePx": 12, "weight": 400, "padX": 6, "padY": 1, "padRight": 6, "padBottom": 1,
+            "lineHeightPx": 16, "radius": 4
           }
         },
         "people": {
@@ -108,13 +109,15 @@
               "bg": null,
               "fg": { "r": 0.35, "g": 0.35, "b": 0.38, "a": 1 },
               "border": { "colour": { "r": 0.8, "g": 0.8, "b": 0.82, "a": 1 }, "widthPx": 1 },
-              "fontFamily": "mono", "sizePx": 11, "weight": 600, "padX": 5, "padY": 1, "radius": 3
+              "fontFamily": "mono", "sizePx": 11, "weight": 600, "padX": 5, "padY": 1, "padRight": 5, "padBottom": 1,
+              "lineHeightPx": 15, "radius": 3
             },
             "name": {
               "bg": null,
               "fg": { "r": 0.1, "g": 0.1, "b": 0.12, "a": 1 },
               "border": null,
-              "fontFamily": "body", "sizePx": 13, "weight": 500, "padX": 0, "padY": 0, "radius": 0
+              "fontFamily": "body", "sizePx": 13, "weight": 500, "padX": 0, "padY": 0, "padRight": 1.6, "padBottom": 0,
+              "lineHeightPx": null, "radius": 0
             }
           },
           "p9": {
@@ -122,7 +125,8 @@
               "bg": null,
               "fg": { "r": 0.35, "g": 0.35, "b": 0.38, "a": 1 },
               "border": { "colour": { "r": 0.8, "g": 0.8, "b": 0.82, "a": 1 }, "widthPx": 1 },
-              "fontFamily": "mono", "sizePx": 11, "weight": 600, "padX": 5, "padY": 1, "radius": 3
+              "fontFamily": "mono", "sizePx": 11, "weight": 600, "padX": 5, "padY": 1, "padRight": 5, "padBottom": 1,
+              "lineHeightPx": 15, "radius": 3
             },
             "name": null
           }
@@ -218,6 +222,13 @@
         "action": "removeSearchToken",
         "payload": { "subject": { "kind": "tag", "name": "ZONING" } },
         "before": { "query": "", "tokens": [{ "kind": "tag", "name": "Zoning", "mode": "tagged" }] },
+        "effect": { "query": "", "tokens": [] }
+      },
+      {
+        "name": "clearing the field empties the text and every token, as Esc and the clear button do",
+        "action": "clearSearch",
+        "payload": {},
+        "before": { "query": "zo", "tokens": [{ "kind": "tag", "name": "Zoning", "mode": "tagged" }] },
         "effect": { "query": "", "tokens": [] }
       },
       {

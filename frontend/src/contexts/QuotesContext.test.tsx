@@ -33,10 +33,12 @@ import {
   filterStateOf,
   getQuotesSnapshot,
   getVisibleQuotes,
+  setSearchPeople,
   useQuoteCounts,
 } from "./QuotesContext";
 import { personToken, tagToken } from "../utils/searchTokens";
 import { EMPTY_TAG_FILTER } from "../utils/filter";
+import { featureFlags, resetFeatureFlags } from "../utils/featureFlags";
 import { _resetExportCache } from "../utils/exportData";
 
 // ── Mocks ────────────────────────────────────────────────────────────────
@@ -106,6 +108,7 @@ const TAG_FRUSTRATION: TagResponse = {
 
 beforeEach(() => {
   resetStore();
+  resetFeatureFlags();
   vi.clearAllMocks();
 });
 
@@ -210,7 +213,15 @@ describe("QuotesStore", () => {
       expect(s.quotes.map((q) => q.dom_id)).toEqual(["q-P2-200"]); // the data was replaced
     });
 
+    it("a typed code stays text while the flag is off: nothing draws a token yet", () => {
+      initFromQuotes([makeQuote({ dom_id: "a", participant_id: "p3", speaker_name: "Priya" })]);
+      act(() => setSearchQuery("p3 late"));
+      expect(getQuotesSnapshot().searchQuery).toBe("p3 late");
+      expect(getQuotesSnapshot().searchTokens).toEqual([]);
+    });
+
     it("a speaker code typed with a space becomes a said-by token, named from the quotes", () => {
+      featureFlags.searchCodeTokens = true;
       initFromQuotes([
         makeQuote({ dom_id: "a", participant_id: "p3", speaker_name: "Priya" }),
         makeQuote({ dom_id: "b", participant_id: "m1", speaker_name: "m1" }),
@@ -226,6 +237,24 @@ describe("QuotesStore", () => {
       expect(getQuotesSnapshot().searchTokens.map((t) => t.kind === "person" && t.code)).toEqual(["p3", "m1"]);
       act(() => setSearchQuery("p9 ")); // nobody with quotes is p9: it stays text
       expect(getQuotesSnapshot().searchQuery).toBe("p9 ");
+    });
+
+    it("a code whose every quote is hidden stays text", () => {
+      featureFlags.searchCodeTokens = true;
+      initFromQuotes([makeQuote({ dom_id: "a", participant_id: "p5", is_hidden: true })]);
+      act(() => setSearchQuery("p5 "));
+      expect(getQuotesSnapshot().searchTokens).toEqual([]);
+      expect(getQuotesSnapshot().searchQuery).toBe("p5 ");
+    });
+
+    it("a typed code names the person from the people list when one has been fetched, as a click does", () => {
+      featureFlags.searchCodeTokens = true;
+      initFromQuotes([makeQuote({ dom_id: "a", participant_id: "p3", speaker_name: "Priya" })]);
+      setSearchPeople({ p3: { full_name: "Priya Shah", short_name: "Priya" } });
+      act(() => setSearchQuery("p3 "));
+      expect(getQuotesSnapshot().searchTokens).toEqual([
+        { kind: "person", code: "p3", names: ["Priya Shah", "Priya"], mode: "said" },
+      ]);
     });
 
     it("skips falsy values (no spurious keys for unstarred/unhidden quotes)", () => {

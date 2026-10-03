@@ -155,12 +155,18 @@ struct BridgeSearchContractTests {
         #expect(tag.border == nil)
         #expect(tag.family == .body)
         #expect([tag.size, tag.weight, tag.padX, tag.padY, tag.radius] == [12, 400, 6, 1, 4])
+        #expect([tag.padRight, tag.padBottom] == [6, 1])
+        #expect(tag.lineHeight == 16)
 
         let p3 = try #require(styles.people["p3"])
         #expect(p3.code.family == .mono)
         #expect(p3.code.fill == nil)
         #expect(p3.code.border == .init(colour: BadgeColour(red: 0.8, green: 0.8, blue: 0.82, opacity: 1), width: 1))
         #expect(p3.name?.weight == 500)
+        // The name half is padded on the right only, and its line box is unknown.
+        #expect(p3.name?.padX == 0)
+        #expect(p3.name?.padRight == 1.6)
+        #expect(p3.name?.lineHeight == nil)
         #expect(try #require(styles.people["p9"]).name == nil)  // the code alone
     }
 
@@ -190,6 +196,10 @@ struct BridgeSearchContractTests {
 
         #expect(styles.tags.keys.sorted() == ["posture"])  // "broken" has no fg
         #expect(styles.tags["posture"]?.family == .body)  // "serif" is not known here
+        // An older SPA sends no right/bottom padding: as left and top, not zero.
+        #expect(styles.tags["posture"]?.padRight == 6)
+        #expect(styles.tags["posture"]?.padBottom == 1)
+        #expect(styles.tags["posture"]?.lineHeight == nil)
         #expect(styles.people.keys.sorted() == ["p2"])  // p1 has no code half
         #expect(styles.people["p2"]?.name == nil)  // a malformed name draws the code alone
     }
@@ -229,6 +239,8 @@ struct BridgeSearchContractTests {
             switch action {
             case "applySearchSuggestion":
                 built = SearchBridgeAction.applySuggestion(id: try #require(payload["id"] as? String))
+            case "clearSearch":
+                built = SearchBridgeAction.clear()
             case "setSearchTokenMode", "removeSearchToken":
                 // A subject this app cannot express (a future kind) is never
                 // sent by it; the SPA's half pins that it ignores one.

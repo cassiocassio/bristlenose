@@ -54,7 +54,9 @@ describe("DiscussionView", () => {
     fireEvent.click(btn);
     expect(heading()).toBe(`Session ${s2.number}`);
     expect(btn).toHaveAttribute("aria-checked", "true");
-    expect(btn.querySelector(".dl-here .bn-person-badge-highlighted")).not.toBeNull();
+    // option C: the navigator's selection vocabulary, no ring
+    expect(btn.querySelector(".dl-here .bn-person-badge")).not.toBeNull();
+    expect(btn.querySelector(".bn-person-badge-highlighted")).toBeNull();
   });
 
   it("digit keys pick a session, unless another handler already claimed the key", () => {

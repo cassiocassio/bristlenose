@@ -314,10 +314,12 @@ overrides keyed on durable ids, never on labels.
   two: `Sarah and Mike`, else `Bettina and 4 others` — one new counted string with
   plural forms; the list itself comes from `Intl.ListFormat` in the UI locale
   (`en` is British: no serial comma); the full list goes in the tooltip.
-  **Selected = "you are here"**: the `#N` in accent at emphasis weight plus the
-  shipped `.bn-person-badge-highlighted` ring, the same mark on that session's
-  badge in every navigator row and on the `#N ▾` pull-down; in the header the
-  session also takes the toggle's selected fill (`--bn-colour-hover`). Not solved:
+  **Selected = "you are here"** — option C of the badge playground, chosen
+  3 Oct 2026 over A (the shipped `.bn-person-badge-highlighted` ring): the
+  navigator's own selection vocabulary (`.toc-link.active`), no ring. The `#N` in
+  accent, the same mark on that session's badge in every navigator row and on the
+  `#N ▾` pull-down; in the header the name half also sits on the selection fill
+  (`--bn-nav-selection-bg`) in accent. Not solved:
   with many sessions the header still wraps to a second line — the cap only
   removes the long-names case.
 - **Session heading line**: one `PersonBadge` per participant, then duration,

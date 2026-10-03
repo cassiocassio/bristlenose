@@ -62,17 +62,19 @@
     background: none; border: 0; border-radius: var(--bn-radius-md);
     color: var(--bn-colour-text); font: inherit; cursor: pointer;
 }
-.dl-sess:hover, .dl-sess[aria-checked="true"] { background: var(--bn-colour-hover); }
+.dl-sess:hover { background: var(--bn-colour-hover); }
 /* A group session's names are capped in copy ("Bettina and 4 others"); this is
    the backstop for very long single names. */
 .dl-sess .bn-speaker-badge-name { max-width: 16em; overflow: hidden; text-overflow: ellipsis; }
 .dl-sess:focus-visible, .dl-chip:focus-visible, .dl-row-btn:focus-visible, .dl-ask-btn:focus-visible {
     outline: 2px solid var(--bn-colour-accent); outline-offset: 1px;
 }
-/* "You are here": the selected session's #N in accent at emphasis weight — the
-   selected segment of the Planned | Merged toggle (.dimension-btn.active) — with
-   the shipped highlight ring. Same mark in the header and every navigator row. */
-.dl-here .bn-speaker-badge-code { color: var(--bn-colour-accent); font-weight: var(--bn-weight-emphasis); }
+/* "You are here" — option C of the badge playground (chosen 3 Oct 2026): the
+   navigator's own selection vocabulary (.toc-link.active), no ring. The #N in
+   accent; in the header, the name half on the selection fill in accent too.
+   Navigator rows carry #N only, so there the accent #N is the whole mark. */
+.dl-here .bn-speaker-badge-code { color: var(--bn-colour-accent); }
+.dl-here .bn-speaker-badge-name { background: var(--bn-nav-selection-bg); color: var(--bn-colour-accent); }
 
 /* ── navigator ── */
 .dl-lens .dl-nav {

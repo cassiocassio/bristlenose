@@ -45,6 +45,7 @@ Spec'd here, absent from `WelcomeHomeView.swift` — do not read the sections be
 | **Model 2 on-device QA** | changelog 2026-10-03 | Built 3 Oct 2026 and green in the Swift suite, but **not yet walked on a real Mac**: first launch (Welcome centred over the main window and key), close/reopen from Help (last frame restored), untick → relaunch (no Welcome), Settings ▸ Appearance mirror, narrow resize (one-step stack), legacy scroll bars ("Show scroll bars: Always" must not flip a full-width window to the stack), and the AI-consent sheet on first run. |
 | **Cells across a range of widths (open design task)** | §2 Model 2 note | In the stacked arrangement the lower block stretches to the window's width, so the Scientific background cell is drawn up to ~560 pt wide where it was designed at ~287 pt. Its illustrations are fixed compositions centred in their box: at ~430 pt the Emergent-themes columns sit centred with the second column clipped (screenshot QA, 3 Oct 2026). Two directions, not yet chosen: refactor the cells and illustrations to work across a range of widths a little wider than today, or keep the stacked block at its natural width and leading-aligned. Owner to decide. |
 | **Measure the two widths** | §2 Model 2 note | 800 pt opening content width and ≈327 pt minimum are **derived, not measured** (`WelcomeSpiralLayout.naturalWidth`). Confirm in the Degradation Lab; if `naturalWidth` moves, bump `WelcomeWindow.frameAutosaveName` so saved frames from the old size do not fight the new limits. Study tools has never been seen at 287 pt wide (stacked, minimum) — the two-CTA Codebooks slot and the chevron gutters are the ones to look at. |
+| **Focus slot for Study tools (planned, not built)** | §Cell 1 ▸ Focus slot | A ninth pool slot teaching Focus Mode, which shipped in 0.24.0, reached Signals on 21 Sep 2026, and is taught nowhere on Welcome. Candidate chosen and drawn; `WelcomeIllustration` has no `.focus` case and no locale keys exist. Two calls open — the CTA has no docs page, and `cap 176` vs the measuring `fill` mechanism. Mockups: `docs/mockups/welcome-focus-cell.html` (four candidates, one rejected) and `welcome-focus-cell-build.html` (the pixel-true harness). |
 | Delight cell — swimming fish | §3 Cell 5 | Placeholder link only. |
 | AI cell — configured-state **rotator** | §3 Cell 4 | Configured pool exists but picks **once at construction**, at random. Not a `SlotRotator`. |
 | AI cell — set-up links (`Docs`) | §3 Cell 4 | Only a single `Setup →` deep-link to Settings. |
@@ -147,6 +148,51 @@ So the rotating content is seen **when you visit home** (first run / after closi
 **How an in-app CTA is declared.** `SlotItem.primaryDestination: SlotDestination?` — set it *instead of* `href` (which the slot leaves empty) and the renderer swaps the `Link` for a `Button` styled to read as the same accent link. It is a plain tag, **not** a stored closure: `SettingsWindow` is `@MainActor` while the `WelcomeContent` pools are non-isolated `static let`s, so the call belongs in the view (`SlotRotator.slotView`, mirroring the AI cell's `Setup →`) and the content model stays pure data. Note the rotator path is the one that renders these — `slotBody`, used only by the unreachable configured-AI branch, does not handle `primaryDestination`.
 
 **Withheld — Redact PII (2 Aug 2026; reason halved 12 Sep 2026).** Was slot 9 ("Remove personal details automatically, before analysis." → `/docs/redact-pii.html`). Commented out verbatim in `studyTools` because the `.app` cannot run it. **Two reasons were given and only one survives.** The capability is no longer *absent*: presidio and spaCy have been **bundled** in the sidecar since 12 Sep 2026 — `bristlenose-sidecar.spec:248` says so in its own comment, and only the ~425 MB `en_core_web_lg` weights are excluded and fetched at runtime as pure data. What is still true is that the capability is **unreachable**: `pii_enabled` defaults false, `piiEnabled` is read by `PIIModelPack` and **written by nothing**, there is no Privacy control in Settings' six tabs, and redaction stays CLI-only via `--redact-pii` (`WelcomeHomeView.swift:69-78`, which carries the same correction). It also contradicted §Cell 3, which deliberately *skips* `redact-pii` from the Tip curriculum for being CLI-only. Restore the line when the capability ships on the Mac (tracked in the maintainer's private planning notes, §2 Broken ▸ Should).
+
+#### Focus slot — planned, drawn, not built (21 Sep 2026; geometry re-derived 3 Oct)
+
+A **ninth** Study-tools slot teaching Focus Mode. Candidate **A, "the dissolve"**, chosen from four
+drawn alternatives. Nothing is built: there is no `.focus` case in `WelcomeIllustration`, no
+`tools.focus` key in any locale, and no entry in the pool above.
+
+| Field | Value | Note |
+|---|---|---|
+| Title | **Focus** | A bare noun, like every other title in the pool — not "Focus Mode", which is the toolbar's control label. |
+| Line | Press `⌥` `⌘` `F` to read the quotes alone — everything else recedes until you reach for it. | 83 chars, inverted-pyramid with an em-dash hinge so `WelcomeClauseFit` drops the clause and leaves a grammatical 33-char core. The first draft was 110 chars — **the longest line in the pool**, against ingest's 96. |
+| CTA | ⚠️ **undecided** | No docs page owns Focus. `keyboard-shortcuts.html` is Star & hide's, and `appearance.html` is about palette and light/dark, which is the confusion to avoid. |
+| Illustration | `.focus`, webview, cap **176** | The transform is the shipped `focus-mode.css` doing the shipped dissolve; a SwiftUI rebuild would fork a second source of truth for rules that file owns. |
+| Position | after **Star & hide** | Its conceptual neighbour — both are bare-key reading states, and the pair reads as curate, then read. |
+
+**It teaches ⌥⌘F, not the SPA's bare `z`, and that is a ONE-slot change.** The surface is Mac-only,
+so it teaches the Mac route — **View ▸ Focus Mode**, `MenuCommands.swift`. Checked rather than
+assumed: `grep -n keyboardShortcut MenuCommands.swift` lists ~30 items and **Star, Hide and Add Tag
+are not among them**, so their bare `s`/`h`/`t` are the only route there is and the existing *Tag*
+and *Star & hide* slots need no change. Rendering follows three settled rules with no judgement in
+them — modifier order Fn→⌃→⌥→⇧→⌘; the key **uppercases because it is modified** (`F`, the same rule
+that keeps `t`/`s`/`h` lowercase); and the skin is **split**, which `design-keycaps.md` §2 assigns to
+first-time onboarding. **No Swift change is needed**: `welcomeKeyText` hands each markdown `code` run
+whole to `KeycapInline.run`, so authoring the line as three adjacent runs — `` `⌥` `⌘` `F` `` —
+yields three caps, where a single `` `⌥⌘F` `` would draw one cap with three glyphs on it. Worth
+knowing while writing it: **⌥⌘S and ⌥⌘T are already taken, by *sidebar* toggles**, not by Star and Tag.
+
+**A ninth slot costs nothing in stacked height — measured 3 Oct 2026.** Since the stacked
+arrangement the cell lays out every slot of its pool and sizes to the **tallest**, with illustrations
+contributing their natural height, so a new slot's cap sets a floor on the whole cell at every visit.
+Study tools' caps are 160 · 176 · 160 · 190 · 160 · 100 · 148 · **196**, so **ingest already sets the
+floor at 196** and a Focus cap of 176 sits strictly under it. Had the cap been chosen at 210 it would
+have made the cell taller for every slot — the constraint to check before picking a cap, and one that
+did not exist when these were drawn.
+
+**The pool-size worry is answered by the code, not by a decision.** The rotator was argued on the
+carousel research's "manual deck of 3–7"; live slots are 8, and Focus makes 9. `SlotRotator`'s page
+indicator is **windowed** on the iOS scrolling-dots prior art — active dot central, outermost dot
+shrinking as the "more that way" cue — with `maxDotsCap = 9`. So nine is exactly the cap and nothing
+degrades; the **tenth** (Redact PII, written and translated, waiting on a Privacy control) windows
+with no new work.
+
+**The mockups' φ geometry is superseded in its input, not its arithmetic.** Both were drawn against
+a spiral derived from the *main* window minus a 220 pt sidebar. Since Welcome opens in its own window
+that subtraction is gone, and below 600 pt of content width the spiral stacks. Their banners say so.
 
 _Set changes: (19 Jul 2026) Export split into **Video clips** + **Send to Miro** as separate illustrated tools; **Tag** kept with its own art; copy reuses existing house lines (Tips pool for clips/Miro). (1 Aug 2026) **Connect an AI agent** added as a new slot when the MCP extension shipped — not one of the original eight. (2 Aug 2026) **Redact PII** withheld; the four superseded screenshot imagesets (`welcome-{autocoding,codes,tag,star}`) deleted now their slots are drawn. (14 Aug 2026) The last three imagesets (`welcome-{clips,miro,ingest}`) deleted with their slots drawn; the `image:` mechanism removed from `SlotItem` and `slotView`._
 

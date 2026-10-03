@@ -125,7 +125,9 @@ async def run_method(name: str, base: list[dict], client: LLMClient) -> list[str
     for s in segs:
         s.speaker_label = None
         s.speaker_role = SpeakerRole.UNKNOWN
-    if name == "sampled":
+    if name in ("sampled", "production"):
+        # "sampled" was the opening-window splitter; from 3 Oct 2026 the same
+        # production function reads the whole transcript in chunks.
         await split_single_speaker_llm(segs, client)
     else:
         await split_whole(segs, client)
@@ -177,7 +179,9 @@ async def main(args: argparse.Namespace) -> None:
         runs = json.loads(Path(args.out).read_text())["runs"]
     else:
         client = LLMClient(load_settings())
-        runs = {"sampled": await run_method("sampled", whisper, client)}
+        runs = {}
+        for i in range(args.production_runs):
+            runs[f"production_{i + 1}"] = await run_method("production", whisper, client)
         for i in range(args.whole_runs):
             runs[f"whole_{i + 1}"] = await run_method("whole", whisper, client)
 
@@ -212,6 +216,8 @@ if __name__ == "__main__":
     p.add_argument("moderator")
     p.add_argument("out")
     p.add_argument("--whole-runs", type=int, default=3)
+    p.add_argument("--production-runs", type=int, default=1,
+                   help="runs of the shipped split_single_speaker_llm (chunked since 3 Oct 2026)")
     p.add_argument("--verify-threshold", type=float, default=0.5)
     p.add_argument("--rescore", action="store_true",
                    help="re-score the runs already saved in OUT; makes no LLM calls")

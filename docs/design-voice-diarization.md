@@ -54,7 +54,8 @@ cloud. Do not take torch back into the sidecar for this.
   (`word_timestamps=True` at `s05_transcribe.py:457` and `:607`), but no
   speaker identity.
 - `split_gate()` → `split_single_speaker_llm()` guesses speaker changes from
-  the first 5–8 minutes of text and carries the last label to the end.
+  the text: the whole transcript, in parts, since 3 Oct 2026. Before that it
+  read the first 5–8 minutes and carried the last label to the end.
 - `identify_speaker_roles_heuristic()` then `identify_speaker_roles_llm()`
   assign roles and names, then `assign_speaker_codes()` runs, then
   `s06_merge_transcript` merges adjacent same-speaker segments.

@@ -94,35 +94,100 @@ class TestSplitSuccess:
         assert segments[4].speaker_label == "Speaker B"
 
     @pytest.mark.asyncio
-    async def test_carry_forward_beyond_sample_window(self) -> None:
-        """Segments beyond the sample window get the last speaker's label."""
+    async def test_late_segments_are_read_not_inherited(self) -> None:
+        """The whole transcript is read: a turn ten minutes in gets its own label.
+
+        Until 3 Oct 2026 only the first 5-8 minutes were sent and the last label
+        was carried to the end, so segment 3 here came back as Speaker B.
+        """
         from bristlenose.llm.structured import SpeakerBoundary, SpeakerSplitAssignment
         from bristlenose.stages.s05b_identify_speakers import split_single_speaker_llm
 
         segments = [
             _seg(0.0, 10.0, "Welcome.", None),
             _seg(11.0, 20.0, "Thanks.", None),
-            # Beyond sample window (ceiling = min(max(300, 630*0.18), 480) = 300s)
-            _seg(610.0, 620.0, "This is later in the conversation.", None),
-            _seg(621.0, 630.0, "Much later.", None),
+            _seg(610.0, 620.0, "So what happened next?", None),
+            _seg(621.0, 630.0, "We went back to the shop.", None),
         ]
-
-        mock_result = SpeakerSplitAssignment(
+        mock_client = AsyncMock()
+        mock_client.analyze = AsyncMock(return_value=SpeakerSplitAssignment(
             speaker_count=2,
             boundaries=[
                 SpeakerBoundary(segment_index=0, speaker_id="Speaker A"),
                 SpeakerBoundary(segment_index=1, speaker_id="Speaker B"),
+                SpeakerBoundary(segment_index=2, speaker_id="Speaker A"),
+                SpeakerBoundary(segment_index=3, speaker_id="Speaker B"),
             ],
-        )
-
-        mock_client = AsyncMock()
-        mock_client.analyze = AsyncMock(return_value=mock_result)
+        ))
 
         await split_single_speaker_llm(segments, mock_client)
 
-        # Segments beyond sample window carry forward last boundary speaker
-        assert segments[2].speaker_label == "Speaker B"
-        assert segments[3].speaker_label == "Speaker B"
+        prompt = mock_client.analyze.call_args.kwargs["user_prompt"]
+        assert "We went back to the shop." in prompt
+        assert [s.speaker_label for s in segments] == [
+            "Speaker A", "Speaker B", "Speaker A", "Speaker B",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_long_transcript_is_read_in_parts_that_carry_identities(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Each part after the first is shown the lines before it, labelled."""
+        import bristlenose.stages.s05b_identify_speakers as s05b
+        from bristlenose.llm.structured import SpeakerBoundary, SpeakerSplitAssignment
+
+        monkeypatch.setattr(s05b, "SPLIT_CHUNK_SEGMENTS", 3)
+        segments = [_seg(i * 10.0, i * 10.0 + 9, f"line {i}", None) for i in range(7)]
+        parts = [
+            [(0, "Speaker A"), (1, "Speaker B")],
+            [(3, "Speaker A"), (5, "Speaker B")],  # line 4 stays A
+            [],  # no change in the last part: line 6 continues as B
+        ]
+        mock_client = AsyncMock()
+        mock_client.analyze = AsyncMock(side_effect=[
+            SpeakerSplitAssignment(speaker_count=2, boundaries=[
+                SpeakerBoundary(segment_index=i, speaker_id=who) for i, who in part
+            ])
+            for part in parts
+        ])
+
+        await s05b.split_single_speaker_llm(segments, mock_client)
+
+        assert mock_client.analyze.call_count == 3
+        prompts = [c.kwargs["user_prompt"] for c in mock_client.analyze.call_args_list]
+        assert "untrusted_labelled_lines" not in prompts[0]
+        assert "[2] (Speaker B) line 2" in prompts[1]
+        assert "[5] (Speaker B) line 5" in prompts[2]
+        assert "[6] line 6" in prompts[2] and "[2] line 2" not in prompts[2]
+        assert [s.speaker_label for s in segments] == [
+            "Speaker A", "Speaker B", "Speaker B",
+            "Speaker A", "Speaker A", "Speaker B", "Speaker B",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_a_failed_later_part_keeps_the_parts_already_labelled(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import bristlenose.stages.s05b_identify_speakers as s05b
+        from bristlenose.llm.structured import SpeakerBoundary, SpeakerSplitAssignment
+
+        monkeypatch.setattr(s05b, "SPLIT_CHUNK_SEGMENTS", 2)
+        segments = [_seg(i * 10.0, i * 10.0 + 9, f"line {i}", None) for i in range(5)]
+        mock_client = AsyncMock()
+        mock_client.analyze = AsyncMock(side_effect=[
+            SpeakerSplitAssignment(speaker_count=2, boundaries=[
+                SpeakerBoundary(segment_index=0, speaker_id="Speaker A"),
+                SpeakerBoundary(segment_index=1, speaker_id="Speaker B"),
+            ]),
+            RuntimeError("rate limited"),
+        ])
+        errors: list[str] = []
+
+        await s05b.split_single_speaker_llm(segments, mock_client, errors=errors)
+
+        assert mock_client.analyze.call_count == 2  # stops at the failure
+        assert [s.speaker_label for s in segments] == ["Speaker A"] + ["Speaker B"] * 4
+        assert errors == ["speaker splitting (part 2 of 3): rate limited"]
 
     @pytest.mark.asyncio
     async def test_single_speaker_confirmed_no_change(self) -> None:
@@ -502,8 +567,8 @@ class TestInterviewerHeuristic:
 # The gate in front of the splitter (1b, 1 Oct 2026)
 # ---------------------------------------------------------------------------
 #
-# `split_single_speaker_llm` itself is unchanged — its window, its propagation
-# and its prompt are another session's open question. What changed is WHICH
+# `split_single_speaker_llm` was unchanged by this gate; its window and
+# propagation were replaced on 3 Oct 2026 by whole-transcript splitting. What changed is WHICH
 # sessions reach it: a platform transcript that names its speakers never does,
 # because the splitter overwrote the one real name an in-room interview carried
 # with "Speaker A/B" (measured, 30 Sep 2026).

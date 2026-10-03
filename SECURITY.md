@@ -151,7 +151,12 @@ Person names in clear context (~90% recall), email addresses, phone numbers in s
 
 ### Speaker identification and PII timing
 
-Speaker identification (Stage 5b) sends a small portion of raw transcript to the LLM **before** PII redaction runs (Stage 7), because it needs names and roles to work correctly. This is typically the most PII-dense portion of an interview (introductions, name confirmations). With Ollama (local models), this stays on your machine. With cloud LLM providers, this portion is sent unredacted.
+Speaker identification (Stage 5b) sends raw transcript to the LLM **before** PII redaction runs (Stage 7), because it needs names and turn-taking to work correctly. How much depends on the source:
+
+- **A recording with no platform transcript** (Whisper does the transcription): the **whole transcript** is sent, in parts, to work out who is speaking. Until 3 Oct 2026 this was the first 5–8 minutes; reading the whole transcript is what fixed speakers being mislabelled after the opening minutes.
+- **Every session**: the first 5 minutes are sent to tell the researcher from the participant and pick up names.
+
+With Ollama (local models), this stays on your machine. With cloud LLM providers, this text is sent unredacted. Redaction applies from Stage 7 on: the analysis stages after it, and the report, use the redacted text.
 
 ### Audit trail
 

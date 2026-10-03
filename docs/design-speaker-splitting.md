@@ -48,16 +48,18 @@ Location: `bristlenose/stages/s05b_identify_speakers.py`
 
 **Guard**: count unique `speaker_label` values. If >=2 distinct labels already exist, return segments unchanged.
 
-**Sample window**: `min(max(300, total_duration * 0.18), 480)` seconds — i.e. at least 5 minutes, up to 18% of the recording, capped at 8 minutes. (Longer than the 5-minute window used for role identification — splitting needs more context to establish conversational patterns.) Boundaries detected within this window are then forward-propagated to every remaining segment: the last detected speaker label is applied to all later segments without further analysis.
+**Whole transcript, in parts** (since 3 Oct 2026): every segment is read, `SPLIT_CHUNK_SEGMENTS` (200) at a time and in order. Each part after the first is shown the last `SPLIT_CONTEXT_SEGMENTS` (12) lines already labelled, in an `<untrusted_labelled_lines_*>` envelope, and told to keep using the same speaker identifiers. Parts are needed because the response is close to one boundary per segment in a real interview (281 boundaries for 377 segments, measured), so one call on a 2-hour recording would exceed some providers' output caps. The parts run in sequence, since each needs the labels before it; sessions still run concurrently.
+
+*Until 3 Oct 2026* the splitter read a sample window of `min(max(300, total_duration * 0.18), 480)` seconds and carried the last label it saw to every later segment. § Measured below is why that changed.
 
 **Input format**: numbered lines (`[0] text`, `[1] text`, ...) without timecodes. The LLM doesn't need timing information to detect speaker changes.
 
 **Output format**: boundary markers — `(segment_index, speaker_id, person_name)`. Each boundary means "from this segment index onwards, this speaker is talking." This is simpler and more robust than per-segment assignment:
 - Fewer items for the LLM to return
-- Naturally handles segments beyond the sample window (carry-forward last speaker)
+- A part's leading lines, before its first boundary, continue the label the previous part ended on
 - Boundaries are sorted and applied in a single pass
 
-**Fallback**: on any exception, log the error and return segments unchanged. The existing single-speaker path continues — no worse than before.
+**Fallback**: if the first part fails, log the error and return segments unchanged — the single-speaker path continues. If a later part fails, the parts already labelled stand and every remaining segment carries the last label (the old behaviour, now only past a failure); the error names the part (`speaker splitting (part 2 of 3): …`). If the model finds only one speaker overall, the original labels are kept.
 
 ### Pipeline integration
 
@@ -117,13 +119,15 @@ Default assumption: 2 speakers (interviewer + interviewee). Returns `speaker_cou
 ## Limitations
 
 - **Text-only**: relies on linguistic cues, not acoustic features. Won't work for rapid back-and-forth without name mentions or clear conversational structure
-- **Sample window**: LLM only inspects the first 5–8 minutes (`min(max(300, dur*0.18), 480)`s). The last detected speaker label is then forward-propagated to every later segment. Two consequences worth knowing for long-form recordings:
-  - Speakers who first appear past the sample window won't be detected at all
-  - Speakers who turn-take normally inside the window will *also* be flattened past it — every subsequent segment inherits whichever label was last set. For an 18-minute raw recording the propagation zone is ~13 minutes; for a 2-hour recording it's ~112 minutes. If you have raw long-form audio (no platform transcript), prefer Teams / Zoom platform transcripts when possible — they bring their own diarization. Tracked under *Future → Full-transcript splitting* below.
+- **Sample window — removed 3 Oct 2026.** Until then the LLM read only the first 5–8 minutes and carried the last label to the end, so a 2-hour recording had ~112 minutes of propagated labels. Whole-transcript splitting replaced it (§ Measured).
+- **Cost and time grow with length.** Every segment is sent, in sequential parts, so a long session takes several calls. The whole transcript also reaches the provider *before* PII redaction (stage 7), where it used to be the first few minutes — `SECURITY.md` § Speaker identification and PII timing.
+- **Existing projects keep their old split.** Speaker results are cached per session and the cache is keyed on the transcripts, not the splitter, so re-running a project analysed before 3 Oct 2026 reuses the old labels; only a run from scratch (`--clean`) re-splits.
 - **No overlapping speech**: assumes one speaker per segment. If a segment contains two speakers talking simultaneously, it gets assigned to one
 - **LLM accuracy varies**: local models (Ollama) are less reliable than cloud models for structured output. The 3-retry mechanism in `_analyze_local()` helps but doesn't guarantee correct boundary detection
 
 ## Measured: opening sample vs whole transcript (3 Oct 2026)
+
+**Outcome: whole-transcript splitting, in parts, shipped the same day** (owner's call). The last two rows of the table below are the shipped function — `split_single_speaker_llm` itself, three parts for this 435-segment session — scored the same way; "sampled" is the function it replaced, and "whole" the single-call experiment.
 
 The propagation limit above was measured, not just reasoned about. Harness:
 `experiments/speaker_split_full/` (`run.py`, `eval_platform.py`, `page.html`).
@@ -156,6 +160,8 @@ not, because that truth is mostly swapped there.
 | whole, runs 1–3 | text | 84–92/95 (88–97%) | 214–217/243 (88–89%) | 89–91% |
 | sampled (shipped) | timing | 42/81 (52%) | 156/158 (99%) | 83% |
 | whole, runs 1–3 | timing | 68–74/81 (84–91%) | 140–144/158 (89–91%) | 87–91% |
+| **shipped, chunked (200), 2 runs** | text | 81–84/95 (85–88%) | 225–232/243 (93–95%) | 91–94% |
+| **shipped, chunked (200), 2 runs** | timing | 63–65/81 (78–80%) | 141–146/158 (89–92%) | 85–88% |
 
 - **Stability:** the three whole runs label 407/435 segments the same.
 - **Where the shipped method works, they agree.** Inside the window the
@@ -194,4 +200,4 @@ exists for these; the labels are not in yet.
 
 - **Acoustic diarization (pyannote)**: optional `pip install bristlenose[diarize]` extra for raw recordings where text-based splitting is insufficient. Would run as a true diarization step on the audio before transcription
 - **Confidence scoring**: the LLM could return confidence per boundary, allowing the pipeline to flag uncertain splits for human review
-- **Full-transcript splitting**: split the whole transcript rather than relying solely on the first 5–8 minutes. Measured above: it roughly doubles how many moderator segments are found, at a cost of about one participant segment in ten. Long recordings need it done in chunks, carrying the speaker identities from one chunk to the next, because a single response would hit output-token caps. Not built; the decision to adopt it is open.
+- ~~**Full-transcript splitting**~~ — **shipped 3 Oct 2026**, in parts that carry speaker identities across (§ Design, § Measured).

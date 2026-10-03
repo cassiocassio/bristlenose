@@ -58,8 +58,9 @@ def real_speaker_names(segments: list[TranscriptSegment]) -> set[str]:
 def split_gate(segments: list[TranscriptSegment]) -> SplitGate:
     """Decide whether the LLM splitter may run on a session.
 
-    The splitter reads the first 5–8 minutes and carries the last label to
-    the end of the file (``docs/design-speaker-splitting.md``). On a bare
+    The splitter guesses speakers from the text alone — the whole transcript,
+    in parts, since 3 Oct 2026; until then the first 5–8 minutes with the last
+    label carried to the end (``docs/design-speaker-splitting.md``). On a bare
     recording that is the best available; on a platform transcript it is a
     regression — it overwrote the one real name an in-room interview carried
     with "Speaker A/B" (measured, 30 Sep 2026). So:
@@ -258,6 +259,17 @@ def identify_speaker_roles_heuristic(
     return segments
 
 
+#: Segments per splitter call. One 35-minute interview (377 Whisper segments)
+#: came back with 281 boundaries — nearly one per segment — so a single call
+#: on a 2-hour recording would exceed some providers' output caps (gpt-4o:
+#: 16,384 tokens). 200 keeps each structured response well under them.
+SPLIT_CHUNK_SEGMENTS = 200
+
+#: Already-labelled lines shown ahead of each later chunk, so the model keeps
+#: the same speaker identifiers for the same people from chunk to chunk.
+SPLIT_CONTEXT_SEGMENTS = 12
+
+
 async def split_single_speaker_llm(
     segments: list[TranscriptSegment],
     llm_client: object,
@@ -270,8 +282,19 @@ async def split_single_speaker_llm(
     to detect speaker changes from conversational context (names, turn-taking,
     topic shifts) and updates ``speaker_label`` on each segment.
 
+    The whole transcript is read, in chunks of ``SPLIT_CHUNK_SEGMENTS``,
+    sequentially: each later chunk is shown the last few lines already
+    labelled so the speaker identifiers carry across. Until 3 Oct 2026 only
+    the first 5–8 minutes were read and the last label was carried to the end
+    of the file; measured against a Teams transcript's named turns, that found
+    38% of the moderator's segments where whole-transcript splitting finds
+    88–97% (``docs/design-speaker-splitting.md`` § Measured).
+
     If the transcript already has 2+ distinct speaker labels, returns
-    segments unchanged.
+    segments unchanged. If the model finds only one speaker overall, the
+    original labels are kept. If a later chunk fails, the chunks already
+    labelled stand and the rest carry the last label, as the opening-sample
+    splitter did.
 
     Mutates *segments* in place (sets ``speaker_label``).
 
@@ -293,104 +316,91 @@ async def split_single_speaker_llm(
 
     from bristlenose.llm.client import LLMClient
     from bristlenose.llm.prompts import get_prompt_template
+    from bristlenose.llm.structured import SpeakerSplitAssignment
 
     client: LLMClient = llm_client  # type: ignore[assignment]
-
-    # Build sample: at least 5 min, up to 18% of total duration, capped at 8 min.
-    # Intros and speaker establishment rarely last longer than 8 minutes.
-    total_duration = segments[-1].end_time if segments else 0.0
-    sample_ceiling = min(max(300.0, total_duration * 0.18), 480.0)
-    sample_lines: list[str] = []
-    for i, seg in enumerate(segments):
-        if seg.start_time > sample_ceiling:
-            break
-        sample_lines.append(f"[{i}] {seg.text}")
-
-    if not sample_lines:
-        return segments
-
-    sample_text = "\n".join(sample_lines)
     _tmpl = get_prompt_template("speaker-splitting")
 
-    try:
-        from bristlenose.llm.structured import SpeakerSplitAssignment
+    labels: list[str | None] = [None] * len(segments)
+    names: dict[str, str] = {}
+    current: str | None = None
+    n_chunks = -(-len(segments) // SPLIT_CHUNK_SEGMENTS)
 
-        result = await client.analyze(
-            system_prompt=_tmpl.system,
-            user_prompt=_tmpl.user.format(
-                transcript_sample=wrap_untrusted("transcript", sample_text),
-                segment_count=len(sample_lines),
-            ),
-            response_model=SpeakerSplitAssignment,
-            prompt_template=_tmpl,
-        )
+    for chunk_no, first in enumerate(range(0, len(segments), SPLIT_CHUNK_SEGMENTS)):
+        last = min(first + SPLIT_CHUNK_SEGMENTS, len(segments))
+        lines = "\n".join(f"[{i}] {segments[i].text}" for i in range(first, last))
+        prior_context = ""
+        if first > 0 and current is not None:
+            lo = max(0, first - SPLIT_CONTEXT_SEGMENTS)
+            labelled = "\n".join(
+                f"[{i}] ({labels[i]}) {segments[i].text}" for i in range(lo, first)
+            )
+            prior_context = (
+                "These lines come just before the part to label and are already "
+                "labelled. Use the same speaker identifiers for the same people:\n"
+                + wrap_untrusted("labelled_lines", labelled)
+                + "\n\n"
+            )
+        try:
+            result = await client.analyze(
+                system_prompt=_tmpl.system,
+                user_prompt=_tmpl.user.format(
+                    prior_context=prior_context,
+                    transcript_sample=wrap_untrusted("transcript", lines),
+                    segment_count=last - first,
+                    first_index=first,
+                ),
+                response_model=SpeakerSplitAssignment,
+                prompt_template=_tmpl,
+            )
+        except Exception as exc:
+            if current is None:
+                logger.debug("LLM speaker splitting failed, keeping single speaker: %s", exc)
+                if errors is not None:
+                    errors.append(f"speaker splitting: {exc}")
+                return segments
+            # Keep what earlier chunks found; carry the last label onward.
+            logger.warning(
+                "Speaker splitting failed on part %d of %d; segments from %d on "
+                "keep the last detected speaker: %s",
+                chunk_no + 1, n_chunks, first, exc,
+            )
+            if errors is not None:
+                errors.append(f"speaker splitting (part {chunk_no + 1} of {n_chunks}): {exc}")
+            for i in range(first, len(segments)):
+                labels[i] = current
+            break
 
-        if result.speaker_count <= 1:
-            logger.info("LLM speaker splitting: single speaker confirmed")
-            return segments
-
-        # Sort boundaries by segment index, filter out-of-range
-        boundaries = sorted(
-            (b for b in result.boundaries if b.segment_index < len(segments)),
+        bounds = sorted(
+            (b for b in result.boundaries if first <= b.segment_index < last),
             key=lambda b: b.segment_index,
         )
+        if current is None and bounds:
+            current = bounds[0].speaker_id  # the first chunk opens on its first boundary
+        j = 0
+        for i in range(first, last):
+            while j < len(bounds) and i >= bounds[j].segment_index:
+                current = bounds[j].speaker_id
+                j += 1
+            labels[i] = current
+        for b in bounds:
+            if b.person_name:
+                names.setdefault(b.speaker_id, b.person_name)
 
-        if not boundaries:
-            return segments
-
-        # Ensure first boundary starts at segment 0
-        if boundaries[0].segment_index != 0:
-            boundaries.insert(0, type(boundaries[0])(
-                segment_index=0,
-                speaker_id=boundaries[0].speaker_id,
-            ))
-
-        # Apply boundaries to all segments (including those beyond sample window)
-        current_label = boundaries[0].speaker_id
-        boundary_idx = 1
-        for i, seg in enumerate(segments):
-            # Advance to next boundary if we've reached it
-            while (
-                boundary_idx < len(boundaries)
-                and i >= boundaries[boundary_idx].segment_index
-            ):
-                current_label = boundaries[boundary_idx].speaker_id
-                boundary_idx += 1
-            seg.speaker_label = current_label
-
-        # Log the speaker names extracted
-        names = {
-            b.speaker_id: b.person_name
-            for b in boundaries
-            if b.person_name
-        }
-        logger.debug(
-            "LLM speaker splitting: %d speakers detected, %d boundaries, names=%s",
-            result.speaker_count,
-            len(boundaries),
-            names or "(none extracted)",
-        )
-
-        # Surface the sample-window propagation limit (see
-        # docs/design-speaker-splitting.md) as INFO so it lands in
-        # support-bundle log review; thresholds are policy (no unit-test).
-        tail_seconds = total_duration - sample_ceiling
-        if tail_seconds > 120.0 and tail_seconds / total_duration > 0.25:
-            logger.info(
-                "Speaker splitting analysed first %.0fs of %.0fs; later "
-                "segments inherit the last detected label. For accurate "
-                "long-form diarization, prefer Teams / Zoom transcripts.",
-                sample_ceiling,
-                total_duration,
-            )
-
+    distinct = {label for label in labels if label is not None}
+    if len(distinct) <= 1:
+        logger.info("LLM speaker splitting: single speaker confirmed")
         return segments
 
-    except Exception as exc:
-        logger.debug("LLM speaker splitting failed, keeping single speaker: %s", exc)
-        if errors is not None:
-            errors.append(f"speaker splitting: {exc}")
-        return segments
+    for seg, label in zip(segments, labels):
+        if label is not None:
+            seg.speaker_label = label
+
+    logger.debug(
+        "LLM speaker splitting: %d speakers over %d segments in %d part(s), names=%s",
+        len(distinct), len(segments), n_chunks, names or "(none extracted)",
+    )
+    return segments
 
 
 async def identify_speaker_roles_llm(

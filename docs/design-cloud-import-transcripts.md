@@ -13,8 +13,8 @@ report's speakers are the platform's real names for every turn. No LLM guesses w
 Whisper-and-splitter pass runs on audio that already has an authoritative transcript.
 
 **Why now.** On 30 Sep 2026 an audit of the Talismanic study found the failure this plan removes. For a
-bare video, `split_single_speaker_llm` reads only the first 5–8 minutes, and every later segment
-inherits the last label. In session 2 that attributed the last 29 minutes to the moderator. When a
+bare video, `split_single_speaker_llm` read only the first 5–8 minutes, and every later segment
+inherited the last label (it reads the whole transcript since 3 Oct 2026). In session 2 that attributed the last 29 minutes to the moderator. When a
 real transcript sits beside the video, none of this happens: the Talismanic Teams `.docx` session kept
 both names across all 214 turns. So the transcript is the fix. What is missing is getting it in
 automatically, and a pipeline that is safe to hand it to.
@@ -227,6 +227,9 @@ take on or avoid. Answers so far:
   - "No names or a single account name means *speakers not separated*" is an **interim** rule, not a
     permanent one. If whole-transcript splitting proves reliable, one shared account (two people in a
     room) is exactly where a fixed splitter should run.
+  - *3 Oct 2026: measured and shipped.* Whole-transcript splitting, in parts, replaced the window
+    (`docs/design-speaker-splitting.md` § Measured). Whether the interim *not separated* rule should
+    now let the splitter run is the owner's call, not yet made.
   - Agreed: "never split a named platform transcript", and "platform name beats LLM person_name" for
     platform labels.
   - Noted: Teams' own announcements ("Recording started by you…") turn up as speech in a Whisper

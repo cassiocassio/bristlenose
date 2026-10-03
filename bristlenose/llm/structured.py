@@ -19,7 +19,7 @@ class SpeakerBoundary(BaseModel):
         ge=0,
         description=(
             "0-based index of the transcript line where this speaker starts talking. "
-            "The first boundary must have segment_index=0."
+            "The first boundary must be at the first line index shown."
         ),
     )
     speaker_id: str = Field(
@@ -43,7 +43,7 @@ class SpeakerSplitAssignment(BaseModel):
         description=(
             "Speaker change boundaries in chronological order. "
             "Each boundary means 'from this segment index onwards, this speaker is talking'. "
-            "Must start with segment_index=0."
+            "Must start at the first line index shown."
         )
     )
 

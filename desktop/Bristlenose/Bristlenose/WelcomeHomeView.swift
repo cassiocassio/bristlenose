@@ -525,10 +525,13 @@ struct WelcomeSpiralLayout: Layout {
                 + minorBlock(in: CGRect(x: studyWidth + gutter, y: 0,
                                         width: w - studyWidth - gutter, height: h))
         }
-        // Stacked: Study tools keeps its square, up to the spiral's height; the
-        // rest of the spiral sits underneath at its natural height.
+        // Stacked: Study tools is a square at the minimum width (its content fits a
+        // ~287 pt square, owner QA 3 Oct 2026) and grows no faster than φ above it,
+        // capped at the spiral's height. A full square at every width left a tall
+        // empty band under the link once the stack was wider than ~400 pt. The rest
+        // of the spiral sits underneath at its natural height.
         let h = naturalHeight
-        let studyHeight = min(w, h)
+        let studyHeight = min(h, max(minimumWidth, w / 1.618))
         return [CGRect(x: 0, y: 0, width: w, height: studyHeight)]
             + minorBlock(in: CGRect(x: 0, y: studyHeight + gutter, width: w, height: h))
     }

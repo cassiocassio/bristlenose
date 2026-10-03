@@ -68,6 +68,16 @@ struct WelcomeSpiralLayoutTests {
         #expect(WelcomeWindow.stackBelowContentWidth < WelcomeWindow.naturalContentWidth)
     }
 
+    @Test("stacked, Study tools is a square at the minimum and flatter above it")
+    func stackedStudyToolsHeight() {
+        let atMin = L.frames(width: L.minimumWidth, stacked: true)[0]
+        #expect(abs(atMin.height - atMin.width) < 0.5)
+        let wide = L.frames(width: 560, stacked: true)[0]
+        #expect(wide.height < wide.width)
+        #expect(abs(wide.height - 560 / 1.618) < 0.5)
+        #expect(wide.height <= L.naturalHeight)
+    }
+
     @Test("at the minimum width the inner block is exactly its natural size")
     func minimumIsTheScienceCell() {
         let natural = L.frames(width: L.naturalWidth, stacked: false)

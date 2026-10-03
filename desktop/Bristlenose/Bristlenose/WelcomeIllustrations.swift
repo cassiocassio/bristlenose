@@ -2543,7 +2543,9 @@ enum WelcomeIllustrationHTML {
           document.getElementById("mQ2").textContent=S["q2"];
           function fit(){
             var b=document.getElementById("board");
-            var s=Math.min((window.innerWidth-2)/b.offsetWidth,(window.innerHeight-4)/b.offsetHeight);
+            // Never above natural size: a wide stacked cell scaled the stickies past
+            // the cell's own body text (owner QA, 3 Oct 2026). Shrinks to fit still.
+            var s=Math.min(1,(window.innerWidth-2)/b.offsetWidth,(window.innerHeight-4)/b.offsetHeight);
             if(isFinite(s)&&s>0) b.style.transform="translateY(-50%) scale("+s+")";
           }
           requestAnimationFrame(fit);

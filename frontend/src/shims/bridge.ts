@@ -13,6 +13,7 @@ import { isEmbedded } from "../utils/embedded";
 import { setLocale as setStoreLocale } from "../i18n/LocaleStore";
 import { isPalette } from "../utils/bootPalette";
 import { isSupportedLocale } from "../i18n/index";
+import type { WireSuggestionRow, WireSuggestions, WireToken } from "../utils/searchBridge";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -44,7 +45,8 @@ export type BridgeMessage =
   | { type: "focus-change"; quoteId: string | null }
   | { type: "quote-action-state"; starIsUnstar: boolean; lastTagName: string | null }
   | { type: "lens-subtitle"; tab: string; subtitle: string }
-  | { type: "quotes-filter"; searchQuery: string; viewMode: string }
+  | { type: "quotes-filter"; searchQuery: string; viewMode: string; tokens: WireToken[] }
+  | { type: "search-suggestions"; query: string; rows: WireSuggestionRow[] }
   | { type: "focus-mode"; active: boolean }
   | { type: "subtitle-prefs"; player: boolean; burn: boolean }
   | {
@@ -256,8 +258,21 @@ export function postLensSubtitle(tab: string, subtitle: string): void {
  * originate (Cmd+E selection, All Quotes reset). Native echo-guards on value
  * equality. No-ops outside WKWebView.
  */
-export function postQuotesFilter(searchQuery: string, viewMode: string): void {
-  postNativeMessage({ type: "quotes-filter", searchQuery, viewMode });
+export function postQuotesFilter(
+  searchQuery: string,
+  viewMode: string,
+  tokens: WireToken[] = [],
+): void {
+  postNativeMessage({ type: "quotes-filter", searchQuery, viewMode, tokens });
+}
+
+/**
+ * Send the search menu's rows to the native field, which draws them as its own
+ * menu (docs/design-search.md §7). Labels are already localised; an empty
+ * `rows` closes the menu. No-ops outside WKWebView.
+ */
+export function postSearchSuggestions(suggestions: WireSuggestions): void {
+  postNativeMessage({ type: "search-suggestions", ...suggestions });
 }
 
 /**

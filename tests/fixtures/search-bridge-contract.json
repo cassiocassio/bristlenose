@@ -1,0 +1,161 @@
+{
+  "_comment": "The search bridge, both ends (docs/design-search.md §7). Vitest (frontend/src/utils/searchBridge.test.ts) builds each web→native payload from `input` and asserts it equals `wire`, and applies each native→web payload to a store and asserts `effect`. Swift (BridgeSearchContractTests.swift) decodes every `wire` exactly as BridgeHandler receives it, and builds every native→web `payload` from its senders. Offsets in `typed` are UTF-16 code units. Change a shape here first, then both sides.",
+  "version": 1,
+  "web_to_native": {
+    "search_suggestions": [
+      {
+        "name": "text, a named person with an emoji, a code-only person, a tag",
+        "input": {
+          "query": "zo",
+          "suggestions": [
+            { "kind": "text", "id": "text", "query": "zo", "count": 4 },
+            { "kind": "person", "id": "person:p3", "code": "p3", "name": "👩‍💻 Zoë Ng", "count": 2 },
+            { "kind": "person", "id": "person:p9", "code": "p9", "name": null, "count": 1 },
+            { "kind": "tag", "id": "tag:zoning", "tag": { "name": "Zoning", "codebook_group": "", "colour_set": "", "colour_index": 0 }, "count": 1 }
+          ]
+        },
+        "wire": {
+          "query": "zo",
+          "rows": [
+            { "id": "text", "kind": "text", "label": "Quotes containing “zo”", "typed": [[19, 21]], "count": 4 },
+            { "id": "person:p3", "kind": "person", "label": "👩‍💻 Zoë Ng", "typed": [[6, 8]], "count": 2, "code": "p3" },
+            { "id": "person:p9", "kind": "person", "label": "p9", "typed": [], "count": 1, "code": "p9" },
+            { "id": "tag:zoning", "kind": "tag", "label": "Zoning", "typed": [[0, 2]], "count": 1 }
+          ]
+        }
+      },
+      {
+        "name": "an empty menu closes the native one",
+        "input": { "query": "", "suggestions": [] },
+        "wire": { "query": "", "rows": [] }
+      }
+    ],
+    "quotes_filter_tokens": [
+      {
+        "name": "a person who can be mentioned, a code-only person, a tag; names cross unescaped",
+        "input": [
+          { "kind": "person", "code": "p3", "names": ["Zoë O'Brien <Ng>"], "mode": "mentions" },
+          { "kind": "person", "code": "p9", "names": [], "mode": "said" },
+          { "kind": "tag", "name": "Zoning", "mode": "not" }
+        ],
+        "wire": [
+          {
+            "kind": "person",
+            "subject": { "kind": "person", "code": "p3" },
+            "styleKey": "p3",
+            "label": "Zoë O'Brien <Ng>",
+            "mode": "mentions",
+            "modes": [
+              { "id": "said", "label": "Said by Zoë O'Brien <Ng>", "enabled": true },
+              { "id": "mentions", "label": "Mentions Zoë O'Brien <Ng>", "enabled": true },
+              { "id": "not", "label": "Not Zoë O'Brien <Ng>", "enabled": true }
+            ]
+          },
+          {
+            "kind": "person",
+            "subject": { "kind": "person", "code": "p9" },
+            "styleKey": "p9",
+            "label": "p9",
+            "mode": "said",
+            "modes": [
+              { "id": "said", "label": "Said by p9", "enabled": true },
+              { "id": "mentions", "label": "Mentions p9", "enabled": false },
+              { "id": "not", "label": "Not p9", "enabled": true }
+            ]
+          },
+          {
+            "kind": "tag",
+            "subject": { "kind": "tag", "name": "Zoning" },
+            "styleKey": "zoning",
+            "label": "Zoning",
+            "mode": "not",
+            "modes": [
+              { "id": "tagged", "label": "Tagged “Zoning”", "enabled": true },
+              { "id": "contains", "label": "Text contains “Zoning”", "enabled": true },
+              { "id": "not", "label": "Not tagged “Zoning”", "enabled": true }
+            ]
+          }
+        ]
+      }
+    ],
+    "swift_tolerates": {
+      "_comment": "A newer SPA may send a kind this app does not know. Swift drops that row or token and keeps the rest; it never fails the message.",
+      "search_suggestions": {
+        "query": "pos",
+        "rows": [
+          { "id": "sentiment:positive", "kind": "sentiment", "label": "Positive", "typed": [[0, 3]], "count": 9 },
+          { "id": "tag:posture", "kind": "tag", "label": "Posture", "typed": [[0, 3]], "count": 2 }
+        ]
+      },
+      "tokens": [
+        { "kind": "session", "subject": { "kind": "session", "id": "s2" }, "label": "Session 2", "mode": "in", "modes": [] },
+        { "kind": "tag", "subject": { "kind": "tag", "name": "Posture" }, "label": "Posture", "mode": "tagged", "modes": [] }
+      ]
+    }
+  },
+  "native_to_web": {
+    "_comment": "`before` is the store's tokens and query; `effect` is what they are afterwards. A payload that names nothing current is ignored.",
+    "project": {
+      "people": { "p3": { "full_name": "Zoë Ng", "short_name": "Zoë" } },
+      "quote_tags": ["Zoning", "Pricing"]
+    },
+    "cases": [
+      {
+        "name": "a person row adds a said-by token and clears what was typed",
+        "action": "applySearchSuggestion",
+        "payload": { "id": "person:p3" },
+        "before": { "query": "zo", "tokens": [] },
+        "effect": { "query": "", "tokens": [{ "kind": "person", "code": "p3", "names": ["Zoë Ng", "Zoë"], "mode": "said" }] }
+      },
+      {
+        "name": "a tag row adds a tagged token, spelt as the project spells it",
+        "action": "applySearchSuggestion",
+        "payload": { "id": "tag:zoning" },
+        "before": { "query": "zon", "tokens": [] },
+        "effect": { "query": "", "tokens": [{ "kind": "tag", "name": "Zoning", "mode": "tagged" }] }
+      },
+      {
+        "name": "the free-text row leaves the query as typed",
+        "action": "applySearchSuggestion",
+        "payload": { "id": "text" },
+        "before": { "query": "zo", "tokens": [] },
+        "effect": { "query": "zo", "tokens": [] }
+      },
+      {
+        "name": "a tag that has gone since the menu was drawn is ignored",
+        "action": "applySearchSuggestion",
+        "payload": { "id": "tag:onboarding" },
+        "before": { "query": "on", "tokens": [] },
+        "effect": { "query": "on", "tokens": [] }
+      },
+      {
+        "name": "a meaning change addresses the token by its person",
+        "action": "setSearchTokenMode",
+        "payload": { "subject": { "kind": "person", "code": "p3" }, "mode": "not" },
+        "before": { "query": "", "tokens": [{ "kind": "person", "code": "p3", "names": ["Zoë Ng"], "mode": "said" }] },
+        "effect": { "query": "", "tokens": [{ "kind": "person", "code": "p3", "names": ["Zoë Ng"], "mode": "not" }] }
+      },
+      {
+        "name": "a meaning the subject cannot take is ignored",
+        "action": "setSearchTokenMode",
+        "payload": { "subject": { "kind": "person", "code": "p3" }, "mode": "tagged" },
+        "before": { "query": "", "tokens": [{ "kind": "person", "code": "p3", "names": ["Zoë Ng"], "mode": "said" }] },
+        "effect": { "query": "", "tokens": [{ "kind": "person", "code": "p3", "names": ["Zoë Ng"], "mode": "said" }] }
+      },
+      {
+        "name": "remove matches a tag whatever its case",
+        "action": "removeSearchToken",
+        "payload": { "subject": { "kind": "tag", "name": "ZONING" } },
+        "before": { "query": "", "tokens": [{ "kind": "tag", "name": "Zoning", "mode": "tagged" }] },
+        "effect": { "query": "", "tokens": [] }
+      },
+      {
+        "name": "a subject of a kind this SPA does not know is ignored",
+        "action": "removeSearchToken",
+        "payload": { "subject": { "kind": "session", "id": "s2" } },
+        "before": { "query": "", "tokens": [{ "kind": "tag", "name": "Zoning", "mode": "tagged" }] },
+        "effect": { "query": "", "tokens": [{ "kind": "tag", "name": "Zoning", "mode": "tagged" }] }
+      }
+    ]
+  }
+}

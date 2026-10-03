@@ -27,6 +27,7 @@ import { ActivityChipStack, normaliseAutoCode } from "../components/ActivityChip
 import type { ActivityJob } from "../components/ActivityChipStack";
 import { AnnounceRegion } from "../components/AnnounceRegion";
 import { LensSubtitleSync } from "../components/LensSubtitleSync";
+import { applyNativeSearchAction, NativeSearchSync } from "../components/NativeSearchSync";
 import { PlayerProvider } from "../contexts/PlayerContext";
 import { FocusProvider, useFocus } from "../contexts/FocusContext";
 import { useActivityJobs, removeJob } from "../contexts/ActivityStore";
@@ -441,6 +442,8 @@ function AppShell() {
 
     const handler = (e: Event) => {
       const { action, payload } = (e as CustomEvent).detail;
+      // The native search field's menu and tokens (docs/design-search.md §7).
+      if (applyNativeSearchAction(action, payload)) return;
       switch (action) {
         case "toggleLeftPanel":
           sidebarAnimations.toggleToc();
@@ -780,6 +783,7 @@ function AppShell() {
       <ActivityChipStack jobs={chipJobs} onDismiss={removeJob} />
       <AnnounceRegion />
       <LensSubtitleSync />
+      <NativeSearchSync />
       {IS_DEV && (
         <Suspense fallback={null}>
           <PlaygroundHUD />

@@ -4,6 +4,7 @@ import { useLocation } from "react-router-dom";
 import { useSignalStore } from "../contexts/SignalStore";
 import { filterStateOf, useQuotesStore } from "../contexts/QuotesContext";
 import { postLensSubtitle, postQuotesFilter } from "../shims/bridge";
+import { tokensToWire } from "../utils/searchBridge";
 import { getCodebook } from "../utils/api";
 import { isEmbedded } from "../utils/embedded";
 import { filterQuotes } from "../utils/filter";
@@ -88,7 +89,9 @@ export function LensSubtitleSync(): null {
       // starred toggle) — only on the Quotes lens, where those controls live.
       // Native equality-guards the assigns, so the occasional same-value post
       // (this effect also fires on signals/codebook changes) is a no-op.
-      if (tab === "quotes") postQuotesFilter(store.searchQuery, store.viewMode);
+      if (tab === "quotes") {
+        postQuotesFilter(store.searchQuery, store.viewMode, tokensToWire(store.searchTokens));
+      }
     }
   }, [tab, store, signals, codebook]);
 

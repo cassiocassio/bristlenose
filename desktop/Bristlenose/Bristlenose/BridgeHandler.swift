@@ -208,6 +208,15 @@ final class BridgeHandler: ObservableObject {
     /// View-menu All Quotes / Starred Quotes Only checkmarks.
     @Published var quotesViewMode: String = "all"
 
+    /// The search menu the SPA computed for the native field's text
+    /// (`search-suggestions`, docs/design-search.md §7). Labels arrive
+    /// localised; empty rows mean "no menu". Sole writer: the inbound message.
+    @Published var searchSuggestions: SearchSuggestions = .empty
+
+    /// The person and tag tokens in the search, mirrored from `quotes-filter`.
+    /// Sole writer: the inbound message, like `quotesSearchQuery`.
+    @Published var quotesSearchTokens: [SearchTokenChip] = []
+
     /// Whether the report is in Focus Mode. Mirrored from the SPA (`focus-mode`
     /// message) — the web side owns the state; this drives only the View-menu
     /// checkmark. Resets to false on `reset()` because a project switch remounts
@@ -570,6 +579,26 @@ final class BridgeHandler: ObservableObject {
         menuAction("setSearchQuery", payload: ["text": text])
     }
 
+    /// The researcher chose a row of the native search menu. The id names the
+    /// row's person or tag, so a choice made after the menu changed still adds
+    /// what was clicked. The SPA applies it and echoes the new state back.
+    func applySearchSuggestion(id: String) {
+        let (action, payload) = SearchBridgeAction.applySuggestion(id: id)
+        menuAction(action, payload: payload)
+    }
+
+    /// Change what a token means (said by / mentions / not, …).
+    func setSearchTokenMode(_ subject: SearchSubject, mode: String) {
+        let (action, payload) = SearchBridgeAction.setTokenMode(subject, mode: mode)
+        menuAction(action, payload: payload)
+    }
+
+    /// Remove a token from the search.
+    func removeSearchToken(_ subject: SearchSubject) {
+        let (action, payload) = SearchBridgeAction.removeToken(subject)
+        menuAction(action, payload: payload)
+    }
+
     // MARK: - Window active state
 
     /// Toggle the `bn-window-inactive` CSS class on the document root.
@@ -840,6 +869,14 @@ final class BridgeHandler: ObservableObject {
             let vm = body["viewMode"] as? String ?? "all"
             if q != quotesSearchQuery { quotesSearchQuery = q }
             if vm != quotesViewMode { quotesViewMode = vm }
+            let tokens = SearchTokenChip.decodeAll(body["tokens"])
+            if tokens != quotesSearchTokens { quotesSearchTokens = tokens }
+
+        case "search-suggestions":
+            // Sole writer, equality-guarded: the SPA posts only when the menu
+            // changes, but a remount re-posts the same rows.
+            let menu = SearchSuggestions(message: body)
+            if menu != searchSuggestions { searchSuggestions = menu }
 
         case "focus-mode":
             // Sole writer. The SPA owns Focus Mode; the View-menu checkmark is a
@@ -1003,6 +1040,8 @@ final class BridgeHandler: ObservableObject {
         undoLabel = nil
         quotesSearchQuery = ""
         quotesViewMode = "all"
+        searchSuggestions = .empty
+        quotesSearchTokens = []
         focusModeActive = false
         // The saved values, which the next webview is seeded with.
         playerSubtitlesOn = UserDefaults.standard.bool(forKey: Self.playerSubtitlesKey)

@@ -2007,6 +2007,23 @@ the first moderator; whether a "don't know who" row is needed; whether the Parti
 §J) ships with the first picker or after it, with its undo; and the participant
 list's scope.
 
+**Judge web against native in the app, not in the mockup.** The mockup's Mac
+column is CSS, and checking it against a real AppKit render (its *Calibration*
+bench, 3 Oct 2026) found it wrong in three places: list selection is
+`selectedContentBackgroundColor` (#0064E1 / #0059D1), not the accent; macOS 27's
+selected segment is a grey pill, not a raised white one; and the field's bezel
+is 22 pt with ~5 pt corners. Its type tokens were right (212 of 212 match the
+tree; the Mac column runs on the calibrated `tokens-desktop.css` ladder). For
+the decision itself use **Diagnostics ▸ Picker Lab** (DEBUG builds,
+`PickerLabView.swift` + `/report/picker-specimen`): the picker in stock AppKit
+in a real `NSPopover` beside the SPA's version on the fronted sidecar, one
+scenario control driving both. The native badges are painted from the styles
+the web half measures off the real `PersonBadge` and posts over
+`search-badge-styles` — the search chips' path — so any badge difference is a
+finding about that bridge. One is known before anyone looks: the wire carries
+`padX` from `padding-left` only, and the name half is padded 5.6 / 7.2 px, so a
+native name half is ~1.6 px short on the right (search chips share it).
+
 #### UX iteration 2 — what it is, and what it found
 
 The storyboard's Part 5b (E1–E8) made the argument and recorded the decisions,

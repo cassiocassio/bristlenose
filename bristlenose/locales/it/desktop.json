@@ -719,6 +719,7 @@
     }
   },
   "toolbar": {
+    "add": "Aggiungi",
     "switchSession": "Cambia sessione",
     "back": "Indietro (⌘[)",
     "forward": "Avanti (⌘])",

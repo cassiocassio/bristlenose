@@ -754,6 +754,7 @@
     }
   },
   "toolbar": {
+    "add": "P\u0159idat",
     "switchSession": "P\u0159epnout sezen\u00ed",
     "back": "Zpět (⌘[)",
     "forward": "Vpřed (⌘])",

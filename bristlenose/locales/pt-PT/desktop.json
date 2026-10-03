@@ -719,6 +719,7 @@
     }
   },
   "toolbar": {
+    "add": "Adicionar",
     "switchSession": "Mudar de sess\u00e3o",
     "back": "Recuar (⌘[)",
     "forward": "Avançar (⌘])",

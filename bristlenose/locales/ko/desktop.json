@@ -701,6 +701,7 @@
     }
   },
   "toolbar": {
+    "add": "\ucd94\uac00",
     "switchSession": "\uc138\uc158 \uc804\ud658",
     "back": "뒤로 (⌘[)",
     "forward": "앞으로 (⌘])",

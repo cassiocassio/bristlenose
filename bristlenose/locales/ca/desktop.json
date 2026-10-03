@@ -719,6 +719,7 @@
     }
   },
   "toolbar": {
+    "add": "Afegeix",
     "switchSession": "Canvia de sessió",
     "back": "Enrere (⌘[)",
     "forward": "Endavant (⌘])",

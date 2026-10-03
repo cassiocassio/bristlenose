@@ -719,6 +719,7 @@
     }
   },
   "toolbar": {
+    "add": "Ekle",
     "switchSession": "Oturum De\u011fi\u015ftir",
     "back": "Geri (⌘[)",
     "forward": "İleri (⌘])",

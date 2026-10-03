@@ -719,6 +719,7 @@
     }
   },
   "toolbar": {
+    "add": "L\u00e4gg till",
     "switchSession": "Byt session",
     "back": "Bakåt (⌘[)",
     "forward": "Framåt (⌘])",

@@ -719,6 +719,7 @@
     }
   },
   "toolbar": {
+    "add": "Lis\u00e4\u00e4",
     "switchSession": "Vaihda istuntoa",
     "back": "Takaisin (⌘[)",
     "forward": "Eteenpäin (⌘])",

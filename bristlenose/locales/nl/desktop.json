@@ -719,6 +719,7 @@
     }
   },
   "toolbar": {
+    "add": "Voeg toe",
     "switchSession": "Sessie wisselen",
     "back": "Terug (⌘[)",
     "forward": "Vooruit (⌘])",

@@ -719,6 +719,7 @@
     }
   },
   "toolbar": {
+    "add": "Ajouter",
     "switchSession": "Changer d'entretien",
     "back": "Précédent (⌘[)",
     "forward": "Suivant (⌘])",

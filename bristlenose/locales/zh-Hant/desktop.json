@@ -701,6 +701,7 @@
     }
   },
   "toolbar": {
+    "add": "\u52a0\u5165",
     "switchSession": "\u5207\u63db\u5834\u6b21",
     "back": "返回（⌘[）",
     "forward": "前往（⌘]）",

@@ -755,6 +755,7 @@
     }
   },
   "toolbar": {
+    "add": "Dodaj",
     "switchSession": "Prze\u0142\u0105cz sesj\u0119",
     "back": "Wstecz (⌘[)",
     "forward": "Naprzód (⌘])",

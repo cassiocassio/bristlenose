@@ -719,6 +719,7 @@
     }
   },
   "toolbar": {
+    "add": "Hinzuf\u00fcgen",
     "switchSession": "Interview wechseln",
     "back": "Zurück (⌘[)",
     "forward": "Vorwärts (⌘])",

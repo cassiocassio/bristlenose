@@ -121,7 +121,10 @@ struct SearchSuggestions: Equatable {
 struct SearchTokenChip: Equatable, Identifiable {
     struct Mode: Equatable, Identifiable {
         let id: String
+        /// The menu item: "Said by Priya Shah".
         let label: String
+        /// The chip's word while this meaning is chosen: "said by".
+        let word: String
         let enabled: Bool
     }
 
@@ -133,10 +136,16 @@ struct SearchTokenChip: Equatable, Identifiable {
     /// folded by the SPA), so this side never has to reproduce its folding.
     let styleKey: String
     let label: String
+    /// The last item of the chip's menu ("Remove"); empty from an SPA that
+    /// predates it, in which case the menu has no Remove (Esc and ⓧ still clear).
+    let removeLabel: String
     let mode: String
     let modes: [Mode]
 
     var id: SearchSubject { subject }
+
+    /// The word the chip shows before its badge.
+    var word: String { modes.first { $0.id == mode }?.word ?? "" }
 
     init?(wire: Any) {
         guard let d = wire as? [String: Any],
@@ -149,10 +158,12 @@ struct SearchTokenChip: Equatable, Identifiable {
         self.subject = subject
         self.styleKey = d["styleKey"] as? String ?? ""
         self.label = label
+        self.removeLabel = d["removeLabel"] as? String ?? ""
         self.mode = mode
         self.modes = (d["modes"] as? [[String: Any]] ?? []).compactMap { m in
             guard let id = m["id"] as? String, let label = m["label"] as? String else { return nil }
-            return Mode(id: id, label: label, enabled: m["enabled"] as? Bool ?? true)
+            return Mode(id: id, label: label, word: m["word"] as? String ?? "",
+                        enabled: m["enabled"] as? Bool ?? true)
         }
     }
 

@@ -196,10 +196,10 @@ recognised text, a menu opens under it.
 
 | Input | Menu open | Menu closed |
 |---|---|---|
-| typing | recompute rows; highlight row 1 (free text) | open when there are rows |
+| typing | recompute rows; keep the highlighted row while it is still offered (rows are addressed by id), else row 1 (free text) | open when there are rows. Only an edit opens it: text the store or a lens switch puts back does not |
 | ↓ / ↑ | move the highlight (wraps) | open the menu |
 | ↩ | apply the highlighted row. A free-text row commits the query now (no debounce wait); a person or tag row becomes a token and **clears the typed text** | commit the query |
-| Esc | close the menu | today's cascade: clear text, then collapse. The ⓧ button clears text **and** tokens |
+| Esc | close the menu | empty the field, text **and** tokens, as ⓧ does and as Mail's field does (decided 3 Oct 2026, §12 Q2); on the Mac it also collapses the field |
 | ⌫ in an empty input | — | first press selects the last token, second removes it |
 | click a token | — | opens its meaning menu (radio items + Remove) |
 | blur | close the menu | — |
@@ -215,11 +215,20 @@ polite live-region announcement per settled query, of the form
 The field is the native capsule (`QuotesToolbarControls.swift`). The web
 toolbar stays hidden in embedded mode.
 
-- **Tokens render as native chips inside the capsule, before the text field.**
-  Each chip is a SwiftUI `Menu` offering the meanings plus Remove.
-- **The suggestions menu is native**: a SwiftUI popover anchored under the
-  capsule, with SF Symbols glyphs and a trailing count. ↑/↓/↩/Esc go to the
-  popover while the field has focus.
+- **Tokens render as native chips inside the field, before the text.** A chip
+  is a button that opens a real `NSMenu` of the meanings (the chosen one
+  ticked, *mentions* dimmed for a code-only person) and Remove. Not a SwiftUI
+  `Menu`: on macOS it flattens its label to a title and cannot draw the
+  coloured badge. (`SearchFieldViews.swift`, built 3 Oct 2026.)
+- **The suggestions list is native**: a borderless child window under the
+  field that never becomes key, so the caret stays in the field while it is
+  open. That is the pattern of Apple's *CustomMenus* sample and of Safari's
+  address bar; a popover was the first plan and would take key status from
+  the field mid-typing. Rows carry the Quotes lens's SF Symbol for the free
+  text and the badge itself for people and tags, with the count right-aligned;
+  the highlight is the system selection. ↑/↓ move it (wrapping), ↩ chooses,
+  Esc closes the list and then empties the field, a click chooses, and ⌫ in
+  an empty field selects the last token and then removes it.
 - **The SPA stays the source of truth.** Native sends keystrokes (as today) and
   user choices; the SPA recognises, applies, and posts back state.
 
@@ -230,7 +239,7 @@ Bridge contract (additions to `frontend/src/shims/bridge.ts` and `BridgeHandler.
 | native → web | `setSearchQuery` (exists) | `{text}` |
 | web → native | `search-suggestions` | `{query, rows: [{id, kind, label, typed: [[start,end]], count, code?}]}`: labels are **already localised** by the SPA; `id` is stable for the subject (`text`, `person:<code>`, `tag:<folded name>`), so a stale click still applies what was clicked; `typed` offsets are UTF-16; person rows carry their `code` |
 | native → web | `applySearchSuggestion` | `{id}` |
-| web → native | `quotes-filter` (exists, grows) | `{searchQuery, viewMode, tokens: [{kind, subject, styleKey, label, mode, modes: [{id, label, enabled}]}]}`: `styleKey` is the speaker code or the **folded** tag name, so Swift never reimplements `fold` |
+| web → native | `quotes-filter` (exists, grows) | `{searchQuery, viewMode, tokens: [{kind, subject, styleKey, label, removeLabel, mode, modes: [{id, label, word, enabled}]}]}`: `styleKey` is the speaker code or the **folded** tag name, so Swift never reimplements `fold`; `word` is what the chip shows for that meaning (*said by*) and `removeLabel` the menu's last item |
 | web → native | `search-badge-styles` | `{tags: {<folded name>: BadgeStyle}, people: {<code>: {code: BadgeStyle, name: BadgeStyle \| null}}}`, keyed as `styleKey` and a row id's suffix; colours as display-P3 components (§7a) |
 | native → web | `setSearchTokenMode` | `{subject, mode}`: `subject` is `{kind: "person", code}` or `{kind: "tag", name}`, never a position (§5) |
 | native → web | `removeSearchToken` | `{subject}` |
@@ -330,6 +339,12 @@ New keys in `common.json`, in all 21 full locales (not `zh-Hant-HK`):
 | `search.token.tag.contains` | Text contains “{{tag}}” |
 | `search.token.tag.not` | Not tagged “{{tag}}” |
 | `search.token.remove` | Remove |
+| `search.token.person.saidWord` | said by (the chip's word, lower case) |
+| `search.token.person.mentionsWord` | mentions |
+| `search.token.person.notWord` | not |
+| `search.token.tag.taggedWord` | tagged |
+| `search.token.tag.containsWord` | contains |
+| `search.token.tag.notWord` | not tagged |
 | `search.announce` | {{count}} quotes (CLDR plurals) |
 
 Each locale uses its own quotation marks; don't copy the English `“ ”`.
@@ -367,7 +382,7 @@ Each phase ends green and committed.
 | **P2 Tokens** | token types + predicates; `searchTokens` in QuotesStore with add/remove/set-mode actions; **one** `filterStateOf(store)` replacing the six hand-built `FilterState`s (Toolbar, QuoteSections, QuoteThemes, ExportDropdown, LensSubtitleSync, `getVisibleQuotes`); highlight of mentions/contains | exports and subtitle counts honour tokens (asserted). **Done 3 Oct 2026**, headless (no way to add a token from the screen until P4): `utils/searchTokens.ts`; `filterStateOf` is referentially stable, so it sits in dependency lists as itself and a new filter (a token, a filter-menu row) is added once; the quote cards take parsed `highlight` terms instead of the raw query. Asserted: the web Export menu's scope, the native counts (`getVisibleQuotes`), the window subtitle and the "N matching" label all narrow with tokens; said-by/not and tagged/not-tagged partition a synthetic project exactly; mentions and contains agree with an independently written whole-word check |
 | **P3 Recognisers** | `searchSuggest.ts`, pure; people from `getPeople()` (embedded in the export) | unit tests. **Done 3 Oct 2026**, headless: rule tests on a hand-built project, invariants and an independently written matcher over the seeded synthetic project (`searchSynthetic.ts`), and a 10,000-quote scale test (2–8 ms a keystroke warm, 17 ms cold, on an M-series Mac) |
 | **P4 Browser UI** | combobox, rows, chips, meaning menus; CSS in `bristlenose/theme/molecules/search.css`; locale keys ×21; then flip `searchCodeTokens` (§12 Q9) once chips draw. Esc and ⓧ clear tokens too (done 3 Oct 2026, §12 Q2) | vitest; `check-locales.py --strict`; browser QA |
-| **P5 Mac** | **Plumbing done 3 Oct 2026**, headless: the menu, tokens and badge styles cross the bridge in both directions, pinned on both sides by `tests/fixtures/search-bridge-contract.json`; the `BadgeStyle` probe and its per-appearance cache in the SPA; Swift decodes and holds all three on `BridgeHandler`. **Remaining:** native badge views painted from the styles; native chips and popover with lens SF Symbols; the badge snapshot test (§7a) | `desktop/scripts/test-swift.sh`; `.app` QA side by side with the card badge, both palettes and schemes |
+| **P5 Mac** | **Native menu and chips built 3 Oct 2026** (`SearchFieldViews.swift`, wired in `QuotesToolbarControls.swift`); their English renders through the SPA's `defaultValue`s until the §8 keys are seeded in 21 locales, which waits on the owner approving the wording and must land before a release. **Plumbing done 3 Oct 2026**, headless: the menu, tokens and badge styles cross the bridge in both directions, pinned on both sides by `tests/fixtures/search-bridge-contract.json`; the `BadgeStyle` probe and its per-appearance cache in the SPA; Swift decodes and holds all three on `BridgeHandler`. **Remaining:** the badge snapshot test against a web PNG (§7a); VoiceOver for the list (it is a non-key window, so the field would need to announce the highlighted row) | `desktop/scripts/test-swift.sh`; `.app` QA side by side with the card badge, both palettes and schemes |
 | **P6 Docs** | true `design-html-report.md`'s search section and `platform-text-map.md`; set this doc's status to shipped | — |
 
 ## 12. Open questions

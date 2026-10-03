@@ -57,7 +57,11 @@ export interface WireSuggestions {
 
 export interface WireTokenMode {
   id: string;
+  /** The menu item: "Said by Priya Shah". */
   label: string;
+  /** The word the chip shows before the badge while this meaning is chosen:
+   *  "said by". Lower case, as it reads inside the field (§5). */
+  word: string;
   enabled: boolean;
 }
 
@@ -70,6 +74,8 @@ export interface WireToken {
   styleKey: string;
   /** The person's name (or code) or the tag's name. */
   label: string;
+  /** The last item of the chip's menu. */
+  removeLabel: string;
   mode: string;
   modes: WireTokenMode[];
 }
@@ -133,6 +139,19 @@ const TAG_MODE_COPY: Record<TagMode, [string, string]> = {
   not: ["search.token.tag.not", "Not tagged “{{tag}}”"],
 };
 
+/** The chip's word for each meaning, shown before the badge. */
+const PERSON_MODE_WORD: Record<PersonMode, [string, string]> = {
+  said: ["search.token.person.saidWord", "said by"],
+  mentions: ["search.token.person.mentionsWord", "mentions"],
+  not: ["search.token.person.notWord", "not"],
+};
+
+const TAG_MODE_WORD: Record<TagMode, [string, string]> = {
+  tagged: ["search.token.tag.taggedWord", "tagged"],
+  contains: ["search.token.tag.containsWord", "contains"],
+  not: ["search.token.tag.notWord", "not tagged"],
+};
+
 /** How a token is named in its menu: the person's first known name, else
  *  their code; the tag's name. */
 export function tokenLabel(token: SearchToken): string {
@@ -159,15 +178,18 @@ export function tokensToWire(tokens: SearchToken[]): WireToken[] {
         ? PERSON_MODES.map((id) => ({
             id,
             label: t(PERSON_MODE_COPY[id][0], PERSON_MODE_COPY[id][1], { name: label }),
+            word: t(PERSON_MODE_WORD[id][0], PERSON_MODE_WORD[id][1]),
             enabled: id !== "mentions" || canMention(token),
           }))
         : TAG_MODES.map((id) => ({
             id,
             label: t(TAG_MODE_COPY[id][0], TAG_MODE_COPY[id][1], { tag: label }),
+            word: t(TAG_MODE_WORD[id][0], TAG_MODE_WORD[id][1]),
             enabled: true,
           }));
     return {
       kind: token.kind, subject: subjectOf(token), styleKey: styleKeyOf(token), label,
+      removeLabel: t("search.token.remove", "Remove"),
       mode: token.mode, modes,
     };
   });

@@ -101,6 +101,32 @@ struct QuotesSearchToolbarControl: View {
     @State private var text = ""
     @State private var debounce: Task<Void, Never>?
     @FocusState private var focused: Bool
+    /// The suggestions row ↩ would choose, by id (a row's position moves as
+    /// new rows arrive; its id names its subject). Nil means the first row.
+    @State private var highlightID: String?
+    /// The list is closed until the researcher edits the text, and closes
+    /// again on Esc, a choice, or a click away. Text put back by the store or
+    /// a lens switch never opens it (`seed`).
+    @State private var menuDismissed = true
+    /// A value the code just wrote into `text`, so its `onChange` is not taken
+    /// for typing.
+    @State private var seeded: String?
+    /// The token a first ⌫ in the empty field selected (§6).
+    @State private var selectedToken: SearchSubject?
+    /// Where the pointer was when the list opened: a list that opens under a
+    /// resting pointer must not let it take the highlight from the free text.
+    @State private var openMouse: NSPoint?
+    @State private var fieldWidth: CGFloat = 0
+    @State private var chipsWidth: CGFloat = 0
+
+    private var onQuotes: Bool { bridgeHandler.activeTab == .quotes }
+    private var tokens: [SearchTokenChip] { onQuotes ? bridgeHandler.quotesSearchTokens : [] }
+    private var rows: [SearchSuggestionRow] { onQuotes ? bridgeHandler.searchSuggestions.rows : [] }
+    private var rowIDs: [String] { rows.map(\.id) }
+    private var highlighted: String? { SearchFieldKeys.highlighted(highlightID, rows: rowIDs) }
+    private var menuOpen: Bool {
+        SearchFieldKeys.isOpen(focused: focused, text: text, rows: rows.count, dismissed: menuDismissed)
+    }
 
     var body: some View {
         Group {
@@ -121,14 +147,23 @@ struct QuotesSearchToolbarControl: View {
         // Guarded so the SPA echo of the user's own typing never clobbers it.
         .onChange(of: bridgeHandler.quotesSearchQuery) { _, newValue in
             if !newValue.isEmpty { expanded = true }
-            if newValue != text { text = newValue }
+            seed(newValue)
         }
         // A typed code becomes a token ("p3 " → said by p3) and leaves the
         // text. When the store's query was already empty it does not change, so
         // the observer above never fires and "p3 " would stay in the field.
-        .onChange(of: bridgeHandler.quotesSearchTokens) { _, _ in
-            if bridgeHandler.quotesSearchQuery != text { text = bridgeHandler.quotesSearchQuery }
+        .onChange(of: bridgeHandler.quotesSearchTokens) { _, tokens in
+            seed(bridgeHandler.quotesSearchQuery)
+            if !tokens.isEmpty { expanded = true }
+            if let s = selectedToken, !tokens.contains(where: { $0.subject == s }) { selectedToken = nil }
         }
+        // New rows keep the highlighted row while it is still offered; a re-post
+        // that only moves counts (AutoCode, a hide) must not snap it back.
+        .onChange(of: bridgeHandler.searchSuggestions) { _, _ in
+            if let h = highlightID, !rowIDs.contains(h) { highlightID = nil }
+        }
+        .onChange(of: menuOpen) { _, open in openMouse = open ? NSEvent.mouseLocation : nil }
+        .onChange(of: focused) { _, isFocused in if !isFocused { selectedToken = nil } }
         // Edit ▸ Find (⌘F). Both assignments are load-bearing: when collapsed,
         // `expanded` renders the field and its `.task` takes focus; when already
         // expanded, `.task` does not re-fire, so `focused` is the only thing that
@@ -150,10 +185,10 @@ struct QuotesSearchToolbarControl: View {
         .onChange(of: bridgeHandler.activeTab) { _, tab in
             debounce?.cancel()
             if tab == .quotes {
-                text = bridgeHandler.quotesSearchQuery
-                expanded = !text.isEmpty
+                seed(bridgeHandler.quotesSearchQuery)
+                expanded = !text.isEmpty || !bridgeHandler.quotesSearchTokens.isEmpty
             } else {
-                text = ""
+                seed("")
                 expanded = false
             }
         }
@@ -165,13 +200,45 @@ struct QuotesSearchToolbarControl: View {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(.secondary)
                         .font(.system(size: 12))
+                    // Tokens sit before the text, as in Mail (§5), in a strip that
+                    // scrolls past a cap so three people do not push the rest of
+                    // the toolbar into `»`.
+                    if !tokens.isEmpty { tokenStrip }
                     TextField(i18n.t("desktop.toolbar.search"), text: $text)
                         .textFieldStyle(.plain)
                         .frame(width: 150)
                         .focused($focused)
-                        .onChange(of: text) { _, newValue in scheduleSearch(newValue) }
-                        .onSubmit { collapseIfEmpty() }
-                        .onExitCommand { clearAndCollapse() }
+                        .onChange(of: text) { _, newValue in
+                            if newValue == seeded { seeded = nil; return }  // the code wrote it
+                            seeded = nil
+                            menuDismissed = false
+                            selectedToken = nil
+                            highlightID = nil
+                            scheduleSearch(newValue)
+                        }
+                        // ↩ on a closed list commits now, without the debounce wait.
+                        .onSubmit {
+                            commitNow()
+                            collapseIfEmpty()
+                        }
+                        .onExitCommand {
+                            // Esc closes the list first, then empties the field.
+                            if menuOpen { menuDismissed = true } else { clearAndCollapse() }
+                        }
+                        // While an input method composes (Japanese, Chinese,
+                        // Korean), its candidates own these keys.
+                        .onKeyPress(.downArrow) { SearchFieldKeys.isComposing ? .ignored : moveHighlight(1) }
+                        .onKeyPress(.upArrow) { SearchFieldKeys.isComposing ? .ignored : moveHighlight(-1) }
+                        .onKeyPress(.return) {
+                            guard menuOpen, !SearchFieldKeys.isComposing, let id = highlighted else { return .ignored }
+                            choose(id)
+                            return .handled
+                        }
+                        // Key-down only: a held ⌫ that empties the text must not
+                        // go on to select and remove the tokens.
+                        .onKeyPress(SearchFieldKeys.deleteKey, phases: .down) { _ in
+                            SearchFieldKeys.isComposing ? .ignored : backspace()
+                        }
                     // Always laid out, shown only with text: adding it on the
                     // first character widened the whole item by its width.
                     Button(action: clear) {
@@ -181,16 +248,26 @@ struct QuotesSearchToolbarControl: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(i18n.t("desktop.toolbar.searchClear"))
-                    .opacity(text.isEmpty ? 0 : 1)
-                    .disabled(text.isEmpty)
-                    .accessibilityHidden(text.isEmpty)
+                    .opacity(isEmpty ? 0 : 1)
+                    .disabled(isEmpty)
+                    .accessibilityHidden(isEmpty)
                 }
                 .padding(.horizontal, 4)
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { fieldWidth = $0 }
+                .background(SuggestionsAnchor(
+                    isOpen: menuOpen,
+                    content: AnyView(SearchSuggestionsList(
+                        rows: rows, styles: bridgeHandler.searchBadgeStyles, highlightID: highlighted,
+                        width: max(320, fieldWidth),
+                        onChoose: { choose($0) }, onHover: { hover($0) }
+                    )),
+                    onDismiss: { menuDismissed = true }
+                ))
                 // `.task` (not `.onAppear`) — toolbar-hosted views fire `.onAppear`
                 // unreliably on macOS 26 (desktop/CLAUDE.md). Seed only when empty
                 // so a re-expand mid-typing can't clobber an in-flight keystroke.
                 .task {
-                    if text.isEmpty { text = bridgeHandler.quotesSearchQuery }
+                    if text.isEmpty { seed(bridgeHandler.quotesSearchQuery) }
                     focused = true
                 }
     }
@@ -211,8 +288,120 @@ struct QuotesSearchToolbarControl: View {
         }
     }
 
+    /// The chips, in a strip that grows to a cap and then scrolls, keeping the
+    /// newest token in view.
+    private var tokenStrip: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 4) {
+                    ForEach(tokens) { chip in
+                        SearchTokenChipView(
+                            chip: chip, styles: bridgeHandler.searchBadgeStyles,
+                            selected: chip.subject == selectedToken,
+                            onOpen: { menuDismissed = true },
+                            onMode: { bridgeHandler.setSearchTokenMode(chip.subject, mode: $0) },
+                            onRemove: { bridgeHandler.removeSearchToken(chip.subject) }
+                        )
+                        .id(chip.subject)
+                    }
+                }
+                .fixedSize()
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { chipsWidth = $0 }
+            }
+            .frame(width: min(chipsWidth, 280))
+            .onChange(of: tokens.map(\.subject)) { _, subjects in
+                if let last = subjects.last { proxy.scrollTo(last, anchor: .trailing) }
+            }
+        }
+    }
+
+    /// Nothing typed and no tokens: the clear button has nothing to clear.
+    private var isEmpty: Bool { text.isEmpty && tokens.isEmpty }
+
+    /// Write `text` from the code (the store's echo, a lens switch, a clear):
+    /// not typing, so it neither re-sends the text nor opens the list.
+    private func seed(_ value: String) {
+        if value != text {
+            seeded = value
+            text = value
+        }
+        menuDismissed = true
+    }
+
+    private func moveHighlight(_ step: Int) -> KeyPress.Result {
+        guard onQuotes, !rows.isEmpty else { return .ignored }
+        if menuOpen {
+            highlightID = SearchFieldKeys.move(highlighted, by: step, rows: rowIDs)
+            announceHighlight()
+        } else if !text.isEmpty {
+            menuDismissed = false  // ↓ on a closed list opens it
+        }
+        return .handled
+    }
+
+    /// The list is a window that never becomes key, so VoiceOver's focus stays
+    /// on the field and would hear nothing as ↓ moves through it. Say the row.
+    private func announceHighlight() {
+        guard let id = highlighted, let row = rows.first(where: { $0.id == id }) else { return }
+        NSAccessibility.post(
+            element: NSApp as Any, notification: .announcementRequested,
+            userInfo: [.announcement: SuggestionLabel.spoken(row),
+                       .priority: NSAccessibilityPriorityLevel.high.rawValue]
+        )
+    }
+
+    /// A hover takes the highlight only once the pointer has moved since the
+    /// list opened, so a list that opens under a resting pointer keeps the
+    /// free text as ↩'s default.
+    private func hover(_ id: String) {
+        if let start = openMouse {
+            if NSEvent.mouseLocation == start { return }
+            openMouse = nil
+        }
+        highlightID = id
+    }
+
+    /// Send what was typed now, without the debounce wait.
+    private func commitNow() {
+        debounce?.cancel()
+        if onQuotes, text != bridgeHandler.quotesSearchQuery { bridgeHandler.setQuotesSearch(text) }
+    }
+
+    /// Choose a row by id. The free text commits what was typed now and closes
+    /// the list (the SPA leaves the query as it is, so no new rows would arrive
+    /// to close it). A person or tag becomes a token, and the SPA clears what
+    /// was typed to find it; the pending push of that text is cancelled, or it
+    /// could land after the token and put the text back.
+    private func choose(_ id: String) {
+        guard let row = rows.first(where: { $0.id == id }) else { return }
+        if row.kind == .text {
+            commitNow()
+            menuDismissed = true
+        } else {
+            debounce?.cancel()
+            bridgeHandler.applySearchSuggestion(id: row.id)
+            highlightID = nil
+            menuDismissed = true
+        }
+    }
+
+    private func backspace() -> KeyPress.Result {
+        switch SearchFieldKeys.backspace(text: text, tokens: tokens, selected: selectedToken) {
+        case .passThrough:
+            return .ignored
+        case .select(let subject):
+            selectedToken = subject
+            return .handled
+        case .remove(let subject):
+            selectedToken = nil
+            bridgeHandler.removeSearchToken(subject)
+            return .handled
+        }
+    }
+
     private func clear() {
-        text = ""
+        seed("")
+        selectedToken = nil
         debounce?.cancel()
         // The text and every token, as the SPA's clear and Esc do.
         if bridgeHandler.activeTab == .quotes { bridgeHandler.clearQuotesSearch() }
@@ -224,7 +413,7 @@ struct QuotesSearchToolbarControl: View {
     }
 
     private func collapseIfEmpty() {
-        if text.isEmpty { expanded = false }
+        if isEmpty { expanded = false }
     }
 }
 

@@ -93,6 +93,9 @@ struct BridgeSearchContractTests {
         #expect(tokens[2].modes.map(\.label) == [
             "Tagged “Zoning”", "Text contains “Zoning”", "Not tagged “Zoning”",
         ])
+        // The chip shows the chosen meaning's word; its menu ends in Remove.
+        #expect(tokens.map(\.word) == ["mentions", "said by", "not tagged"])
+        #expect(tokens.map(\.removeLabel) == ["Remove", "Remove", "Remove"])
     }
 
     /// Before tokens existed, `quotes-filter` carried no `tokens` field. An

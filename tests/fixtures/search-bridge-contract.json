@@ -57,11 +57,12 @@
             "subject": { "kind": "person", "code": "p3" },
             "styleKey": "p3",
             "label": "Zoë O'Brien <Ng>",
+            "removeLabel": "Remove",
             "mode": "mentions",
             "modes": [
-              { "id": "said", "label": "Said by Zoë O'Brien <Ng>", "enabled": true },
-              { "id": "mentions", "label": "Mentions Zoë O'Brien <Ng>", "enabled": true },
-              { "id": "not", "label": "Not Zoë O'Brien <Ng>", "enabled": true }
+              { "id": "said", "label": "Said by Zoë O'Brien <Ng>", "word": "said by", "enabled": true },
+              { "id": "mentions", "label": "Mentions Zoë O'Brien <Ng>", "word": "mentions", "enabled": true },
+              { "id": "not", "label": "Not Zoë O'Brien <Ng>", "word": "not", "enabled": true }
             ]
           },
           {
@@ -69,11 +70,12 @@
             "subject": { "kind": "person", "code": "p9" },
             "styleKey": "p9",
             "label": "p9",
+            "removeLabel": "Remove",
             "mode": "said",
             "modes": [
-              { "id": "said", "label": "Said by p9", "enabled": true },
-              { "id": "mentions", "label": "Mentions p9", "enabled": false },
-              { "id": "not", "label": "Not p9", "enabled": true }
+              { "id": "said", "label": "Said by p9", "word": "said by", "enabled": true },
+              { "id": "mentions", "label": "Mentions p9", "word": "mentions", "enabled": false },
+              { "id": "not", "label": "Not p9", "word": "not", "enabled": true }
             ]
           },
           {
@@ -81,11 +83,12 @@
             "subject": { "kind": "tag", "name": "Zoning" },
             "styleKey": "zoning",
             "label": "Zoning",
+            "removeLabel": "Remove",
             "mode": "not",
             "modes": [
-              { "id": "tagged", "label": "Tagged “Zoning”", "enabled": true },
-              { "id": "contains", "label": "Text contains “Zoning”", "enabled": true },
-              { "id": "not", "label": "Not tagged “Zoning”", "enabled": true }
+              { "id": "tagged", "label": "Tagged “Zoning”", "word": "tagged", "enabled": true },
+              { "id": "contains", "label": "Text contains “Zoning”", "word": "contains", "enabled": true },
+              { "id": "not", "label": "Not tagged “Zoning”", "word": "not tagged", "enabled": true }
             ]
           }
         ]

@@ -326,6 +326,14 @@ overrides keyed on durable ids, never on labels.
   questions and quotes lit, the rest dimmed — until the same thing is clicked
   again or Esc. Focus on a navigator row survives a session switch, so one topic
   can be stepped through every session.
+- **Navigator width — decided 3 Oct 2026: up to 60% of the lens**, not the shared
+  480px. With many sessions a row of session badges is wide (10 badges ≈ 250px), and
+  dragging the split wider is how the researcher gets them back in full; below a
+  row's share of the width they collapse to a `#N ▾` pull-down. The SPA shares one
+  left-panel width across lenses with fixed 200–480px bounds (`useDragResize`
+  `MIN_WIDTH`/`MAX_WIDTH`, `SidebarStore.ts`), so this needs a per-lens maximum
+  there — and a decision on whether the Discussion width is remembered separately
+  from the other lenses'.
 - **Unanswered questions fold forward.** Consecutive questions that drew no quotes
   join the next question that did, as one group (questions, then its quotes);
   groups are separated by the keyline, and the moderator's turn renders as a

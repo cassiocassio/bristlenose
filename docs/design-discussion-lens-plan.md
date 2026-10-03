@@ -315,7 +315,22 @@ overrides keyed on durable ids, never on labels.
   `/report/quotes` (`useKeyboardShortcuts.ts:575`), and so does the menu-action
   mirror (`:73`, `:693-698`). Extend both, plus the `[` (`:477-495`) and `z`
   (`:533-551`, must match `focus-mode.css`) lens lists.
-- **Responsive**: under the narrow breakpoint, Merged only (design decision).
+- **Responsive — decided 3 Oct 2026**: under the narrow breakpoint, **the session
+  column only** — the questions in the order they were asked, with their answers.
+  The navigator, the wires and the Planned/Merged switch drop away; the session
+  badges stay. (This reverses the earlier "Merged only": the transcript is the
+  useful half when only one fits.)
+- **Focus is sticky and click-driven — decided 3 Oct 2026.** Nothing reacts to the
+  pointer passing over; hover tracing flickered and was dropped. Clicking a
+  navigator row (shipped `.toc-link.active`) or a question locks focus — its wires,
+  questions and quotes lit, the rest dimmed — until the same thing is clicked
+  again or Esc. Focus on a navigator row survives a session switch, so one topic
+  can be stepped through every session.
+- **Unanswered questions fold forward.** Consecutive questions that drew no quotes
+  join the next question that did, as one group (questions, then its quotes);
+  groups are separated by the keyline, and the moderator's turn renders as a
+  transparent `blockquote.quote-card` so its timecode and text columns align with
+  the participants' by construction.
 - **Empty state, no guide**: drop target + **Add a discussion guide**. In the
   browser this needs an upload route (there is none today — import is native);
   on the Mac it is the native path below. CLI users can place the file in the

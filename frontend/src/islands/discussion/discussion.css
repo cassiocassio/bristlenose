@@ -133,11 +133,13 @@
     height: calc(100vh - var(--dl-bar-h, 0px));
 }
 .dl-wires { width: 100%; height: 100%; overflow: visible; pointer-events: none; }
-.dl-wire { fill: none; stroke: var(--bn-colour-accent); stroke-width: 1.3; opacity: .5; transition: opacity var(--bn-transition-fast); }
+/* Hairlines, like the 1px keylines around them (3 Oct 2026: the mockup's 1.3/2px read
+   chunky at real size). */
+.dl-wire { fill: none; stroke: var(--bn-colour-accent); stroke-width: 1; opacity: .5; transition: opacity var(--bn-transition-fast); }
 .dl-wire.stub { opacity: .4; stroke-linecap: round; stroke-linejoin: round; }
 .dl-end { fill: var(--bn-colour-accent); }
 .dl-lens.has-focus .dl-wire:not(.hot), .dl-lens.has-focus .dl-end:not(.hot) { opacity: var(--bn-focus-ghost-opacity); }
-.dl-lens.has-focus .dl-wire.hot { opacity: 1; stroke-width: 2; }
+.dl-lens.has-focus .dl-wire.hot { opacity: 1; stroke-width: 1.5; }
 /* The shipped .drag-handle (absolute, full height) on the navigator's edge. */
 .dl-split { left: -3px; }
 

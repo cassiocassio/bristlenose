@@ -61,7 +61,7 @@ Apple's text (same feed): *"Configures the behavior for search in the toolbar…
 
 ### G. The sidebar `+⌄` — unaffected
 
-`ToolbarItem(placement: .automatic)` on `projectList` with a `Menu`; same slot the New Folder button held since Phase 1. None of the above applies: it goes away with the column, and the column has no overflow problem.
+`ToolbarItem(placement: .automatic)` with a `Menu`, on the sidebar column in `ContentView.splitViewCore` and built only while the sidebar is visible (c5c2a24d, c2630892). It was first put on `projectList`, the New Folder button's old slot, and did not show: that view is not rendered on the AppKit sidebar path. None of the above applies: it goes away with the column, and the column has no overflow problem.
 
 ## How Photos and NetNewsWire actually do it — verified, not inferred
 

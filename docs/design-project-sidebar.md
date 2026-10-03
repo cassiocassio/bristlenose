@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-07-28
-trued-against: working tree @main on 2026-07-28 (rename slice uncommitted)
+last-trued: 2026-10-03
+trued-against: HEAD@main on 2026-10-03 (new-item slice: +⌄, grey row removed, rename-on-create)
 ---
 
 > **Trued 2026-06-15 (`per-project-activity` @ `518e6d3`):** the per-project run glance **moved onto the
@@ -31,6 +31,7 @@ trued-against: working tree @main on 2026-07-28 (rename slice uncommitted)
 
 ## Changelog
 
+- _2026-10-03_ — **new-item slice** (`/true-the-docs --topic toolbar`): New Project / New Folder moved to a `+⌄` menu on the sidebar column (shown only while the sidebar is visible), the grey in-list `+ New Project…` row and the `folder.badge.plus` toolbar button are gone, New Project lost its ellipsis, and New Project now opens for inline rename on the AppKit path as New Folder did. Trued §"New Project placement", §"Rename interaction", Phase 2 and Phase 3 lines.
 - _2026-07-28_ — **rename slice trued against the shipped AppKit path** (`/true-the-docs --topic sidebar-rename`). Three reversals: §"Rename interaction" L224 *"Enter key does NOT trigger rename"* — **reversed**, Return now begins rename, because selection already opens in this sidebar so Return has no "open" job to collide with (the 14-app survey that produced the original conclusion is preserved, with the reasoning for why it doesn't govern here); §Phase 2 "not shipped" slow-double-click bullet and its 2026-04-23 override banner — **both flipped**, the "needs NSEvent monitor or AppKit subclass" remedy they prescribed is exactly what shipped (`SidebarOutlineView` + `doubleClickInterval`-deferred arm). Mechanism deliberately **not** mirrored here — `design-desktop-sidebar-appkit.md` §2.6 is canonical; this doc keeps design intent + survey. Re-anchored rename from `ProjectRow.swift`/`FolderRow.swift` (being-deleted SwiftUI path) to `ProjectSidebarOutline.swift`. Anchors are `file:line`, not SHAs — the work was uncommitted at truing time.
 - _2026-06-22_ — added a **"Substrate + ownership"** banner after §Context delineating this doc (sidebar behaviour/content) from the two newer docs that now own slices of the surface: `design-desktop-nav-toolbar-rearrangement.md` (the relocated lens rail) and `design-desktop-sidebar-appkit.md` (the SwiftUI `List` → AppKit `NSOutlineView` migration, alpha default at cutover). Cross-ref'd §"Row anatomy" to the appkit §2.4 cell port. **No behaviour claims changed** — the SwiftUI content here is accurate for the flag-OFF default build; the banner closes the cross-doc drift risk (those mechanics are deleted at cutover). Anchors: `ProjectSidebarOutline.swift`, `OutlineNode.swift`, `LensRail.swift`, `BristlenoseFlags.swift`.
 - _2026-06-21_ — re-trued against `main` after the `project-status-line` + `warm-sidecar-pool` merges, which landed the day *after* the 18 Jun truing (its front-matter SHA `bcb4187` is an ancestor of the rewrite — false-fresh). Added copy-on-row to §"Row anatomy" (`"Copying · N%"` ring + hover-cancel + context-menu; standalone `CopyProgressPill` deleted); flipped §"Click behaviour" — switch-back now re-points to a parked warm sidecar (Phase A2). Anchors: `ProjectSubtitle.swift`, `ProjectRow.swift`, `ParkedSidecar.swift`, `ServeManager.swift`; commits `0842081`, `4313bff`, `beaac38`.
@@ -129,7 +130,7 @@ The canonical spec is the `ProjectRow.swift` doc-comment; this is its design hom
 > **Shipped 3 Oct 2026 (toolbar rev 3):** a `+⌄` menu of **New Project** / **New Folder…** in the sidebar's own title bar (on the sidebar column; the New Folder button it replaces sat on the SwiftUI list, which the AppKit outline does not render, so it never showed there; it hides when the sidebar does) — the NetNewsWire pattern, a plain menu so the click that looks for New Project finds New Folder. The grey in-list `+ New Project…` row that shipped from June to October is gone: a user interview found it unfound. File ▸ New Project (⌘N) / New Folder (⇧⌘N) stay the keyboard paths. The alternatives considered (labelled footer, Things' explaining menu, a Settings gear) and why each lost: `docs/design-desktop-nav-toolbar-rearrangement.md` §3.3 and the mockup `docs/mockups/desktop-toolbar-and-footer-options.html`.
 
 The options this section originally listed, kept as history:
-- Toolbar `+` button (most standard macOS pattern — Mail, Notes, Reminders) — **this one shipped**
+- Toolbar `+` button (most standard macOS pattern — Mail, Notes, Reminders) — **this one shipped**, as a `+⌄` plain menu (New Project / New Folder…) on the sidebar column, shown only while the sidebar is visible (3 Oct 2026)
 - `+` at bottom of sidebar list
 - Subtle drag target / proxy row in the sidebar
 - File > New Project (Cmd+N) always available as keyboard path
@@ -226,7 +227,7 @@ Based on survey of 14 macOS apps:
 - **Slow second click** on name in sidebar → inline text field (universal across all Mac apps). ✅ Shipped. Named "slow double-click" below and in older notes; the shipped gesture is deliberately **not** a double-click — a double-click *cancels* it (§2.6).
 - **Right-click > Rename** (common, include in context menu) ✅ shipped, project **and** folder
 - **Menu bar > Project > Rename** (no keyboard shortcut — rename is infrequent) ✅ shipped, still no accelerator
-- **New project from drop/create** → item appears with name selected inline for editing (Finder pattern, used by 9 of 14 apps). ✅ shipped for **New Folder**; drag-created *projects* deliberately adopt the folder/first-item stem with no rename prompt (see Phase 2).
+- **New project from drop/create** → item appears with name selected inline for editing (Finder pattern, used by 9 of 14 apps). ✅ shipped for **New Folder** and, since 3 Oct 2026, **New Project** (both from the `+⌄`, ⌘N / ⇧⌘N); drag-created *projects* deliberately adopt the folder/first-item stem with no rename prompt (see Phase 2).
 - **Commit**: Return. **Cancel**: Escape. ✅ Plus **commit-on-blur** (click-away saves — Finder/Notes/Xcode all do this; cancel-on-blur is a web habit).
 - **No dialog, no sheet** — inline only, always ✅
 
@@ -449,7 +450,7 @@ Bottom-left of sidebar, like Mail's "Updated just now" area.
 Replace `ProjectStub` array with `ProjectIndex` loading from `projects.json`.
 - `ProjectIndex.swift` — model, load/save, `@Published` for SwiftUI observation
 - `ProjectRow.swift` — sidebar row view with selection highlight
-- "New Project" via `NSOpenPanel` (folder picker) — creates index entry, starts serve
+- "New Project" via `NSOpenPanel` (folder picker) — creates index entry, starts serve _(Phase 1 plan; as built, New Project creates an empty row and opens it for rename — no panel)_
 - Plain file paths (no bookmarks yet)
 - Project menu wired: Show in Finder, Rename (inline), Delete (index + output)
 - No folders, no archive, no drag-from-Finder
@@ -465,7 +466,7 @@ Replace `ProjectStub` array with `ProjectIndex` loading from `projects.json`.
   - Single/multiple files → one project, `inputFiles` = exactly the dropped files (never siblings)
   - Mixed files + folders → one project, all paths in `inputFiles`
   - No dedup — same folder dropped twice creates two projects (user may analyse differently)
-  - Project named after first item (folder name or filename stem) — drag-create adopts it with no inline rename ("+ New Project" still prompts; commit `09f8625`)
+  - Project named after first item (folder name or filename stem) — drag-create adopts it with no inline rename (New Project from the `+⌄` or ⌘N still opens for rename; commit `09f8625`)
 - `Project.inputFiles` (`input_files` in JSON) — optional `[String]?`. nil = scan whole directory (backward compatible). Populated = process only listed files/directories. Follows Logic Pro / Final Cut precedent: project is a logical container, files are references
 - Right-click context menu on project rows: Show in Finder, Rename, Delete (destructive role)
 - Context menu actions scoped to right-clicked row (not necessarily the selected row)
@@ -506,7 +507,7 @@ Replace `ProjectStub` array with `ProjectIndex` loading from `projects.json`.
 - `Folder` struct replaces `FolderStub` — `id`, `name`, `collapsed`, `createdAt` (backward-compatible decoder)
 - `folderId: UUID?` on `Project` — nil = root level
 - `SidebarSelection` enum — `List(selection:)` handles both `.project(UUID)` and `.folder(UUID)`
-- Create folder: File > New Folder (⇧⌘N), sidebar `folder.badge.plus` button, inline rename on creation
+- Create folder: File > New Folder (⇧⌘N), the sidebar's `+⌄` menu (the `folder.badge.plus` toolbar button it replaced, 3 Oct 2026), inline rename on creation
 - "Move to" submenu in context menu and Project menu — lists all folders + "No Folder" for root
 - Folder context menu: Rename Folder, Archive Folder (disabled — Phase 5), Delete Folder
 - Delete folder: projects inside move to root level, folder removed

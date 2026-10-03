@@ -620,13 +620,14 @@ struct ContentView: View {
                     ideal: SidebarAutoCollapse.columnIdeal,
                     max: SidebarAutoCollapse.columnMax
                 )
-                // `+⌄` in the sidebar's title bar: New Project… / New Folder…, a
+                // `+⌄` in the sidebar's title bar: New Project / New Folder…, a
                 // plain menu as in NetNewsWire so New Folder is discovered by the
                 // click that looks for New Project (toolbar rev 3, 3 Oct 2026;
                 // design-desktop-nav-toolbar-rearrangement.md §3.3). On the
-                // column, not on `projectList`: attached there (where the New
-                // Folder button sat since Phase 1) it never reached the window
-                // toolbar — measured 3 Oct, no item before the split-view
+                // column, not on `projectList`: that view is only rendered on the
+                // SwiftUI sidebar path, so attached there (the New Folder
+                // button's slot since Phase 1) it never showed on the AppKit
+                // outline — measured 3 Oct, no item before the split-view
                 // separator. Shown only while the column is: with the sidebar
                 // hidden SwiftUI keeps a column's items beside the toggle, but
                 // the new row would land somewhere the researcher can't see —

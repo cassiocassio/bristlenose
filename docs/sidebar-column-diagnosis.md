@@ -15,6 +15,9 @@ area: desktop — projects column (NavigationSplitView) + report web view
 
 ## Changelog
 
+- _2026-10-03_ — option F gained a banner pointing to
+  `docs/design-desktop-toolbar-appkit.md`, which banks the NSToolbar move
+  measured that day (toolbar rev 3).
 - _2026-09-28 (later)_ — the residual: a mid-animation reading could still
   give the column up before the late hide. Closed with a 1-s late-report
   window; `SidebarFitHarnessTests.s24`.

@@ -1,13 +1,15 @@
 ---
 status: partial
-last-trued: 2026-09-29
-trued-against: HEAD@main (502b36c6) on 2026-09-29
-last-trued-sections: [rename slice (2026-07-28), §3.3 reorder slice (2026-09-12), folder-expansion slice (2026-09-26), top-edge slice (2026-09-29)]
+last-trued: 2026-10-03
+trued-against: HEAD@main on 2026-10-03
+last-trued-sections: [rename slice (2026-07-28), §3.3 reorder slice (2026-09-12), folder-expansion slice (2026-09-26), top-edge slice (2026-09-29), new-item slice (2026-10-03)]
 ---
 
 # Desktop sidebar — native AppKit source list (`NSOutlineView`)
 
 ## Changelog
+
+- _2026-10-03_ — **new-item slice trued** (`/true-the-docs --topic toolbar`). New Project now opens for inline rename on this path too (it set only the SwiftUI path's `renamingProjectID` until 3 Oct). The New-Project affordance is a `+⌄` plain menu on the sidebar column — it is not part of the outline, which never had the SwiftUI path's grey in-list row. §2.6 and §3.4 trued; old text kept inline.
 
 - _2026-09-29_ — **top-edge slice trued** (`/true-the-docs --topic sidebar top edge`, after *"sidebar top edge: the list runs under the toolbar and headings scroll away, as in photos and notes"*). The doc said `floatsGroupRows = true` in three places (§1.3, §2 recipe, §2.1) and nothing about the column's top edge. Scrolled, that pinning stuck the **blank** lens heading under the toolbar as a 32 pt frosted band with a 0.5 pt line, and the hosted outline stopped at the toolbar's bottom edge, so there was a hard clip and no soft scroll edge. Photos and Notes on the same OS pin nothing and let rows fade under the traffic lights. Shipped: headings scroll, the outline runs under the toolbar. §1.4 gains the top-edge paragraph, §3.1 the blank-heading note, §5 the Sidebar Lab, §6 the top-edge QA points and a retired seam risk. The old text stays inline as the delta. The Lab's fixed-lens layouts were explored and not chosen, so §4 decision 1 stands.
 - _2026-09-26_ — **folder-expansion slice trued** (`/true-the-docs`, after the fix in *"sidebar folders stay collapsed: the AppKit outline persists expand/collapse"*). §3.4's *"`outlineView(shouldExpandItem:)` + persist on expand/collapse"* row described a port that never happened: the outline **read** `Folder.collapsed` on every `reloadAndRestore()` and **nothing wrote it**, so a triangle click collapsed the view only and the next `update()` — a selection change, a run's progress tick — sprang every folder open. The SwiftUI path's `DisclosureGroup` binding had been the only writer; the port carried the read and lost the write. Both rows (§2.5's reload table, §3.4) now record the as-built, original text kept as the delta. §5 gains the controller harness that pins it.
@@ -22,7 +24,7 @@ last-trued-sections: [rename slice (2026-07-28), §3.3 reorder slice (2026-09-12
 
 - **Cell port (Phase 4) complete** — `ProjectRow` ported to an AppKit cell verbatim (`28dae0d`, `52768b1`).
 - **Context menus** (project + folder) shipped via `NSMenuDelegate.menuNeedsUpdate` per `clickedRow` — **not** the speculative `menu(for:)` §2.2/§6 anticipated. Project menu is conditional (Stop Analysis · Cancel Copy · Show Diagnostics · Analyse · Locate, all state-gated · Show in Finder · **Rename** · Choose Icon · Move to → · Remove from Sidebar); folder menu is **3** items (**Rename** · Archive disabled · Delete). §6's "when menus land" is now closed (`96c31eb`).
-- **Inline rename SHIPPED** (28 Jul 2026) — supersedes the "DEFERRED" note that stood here, and with it the `ProjectSidebarOutline.swift` header's "one remaining controller-track item" framing. Reachable **four ways**, all funnelling into one seam (`beginRename(nodeID:)`, `ProjectSidebarOutline.swift:556`): context menu (project **and** folder), menu-bar Project ▸ Rename, **Return** on the selected row, and **slow-second-click** (the Photos-sidebar idiom). Plus rename-on-create for New Folder. Mechanism and its four guard-rails: **§2.6**.
+- **Inline rename SHIPPED** (28 Jul 2026) — supersedes the "DEFERRED" note that stood here, and with it the `ProjectSidebarOutline.swift` header's "one remaining controller-track item" framing. Reachable **four ways**, all funnelling into one seam (`beginRename(nodeID:)`, `ProjectSidebarOutline.swift:556`): context menu (project **and** folder), menu-bar Project ▸ Rename, **Return** on the selected row, and **slow-second-click** (the Photos-sidebar idiom). Plus rename-on-create for New Folder and (since 3 Oct 2026) New Project. Mechanism and its four guard-rails: **§2.6**.
 - **Top edge (29 Sep 2026)** — headings scroll with the list (`floatsGroupRows = false`, `ProjectSidebarOutline.swift:373`) and the outline runs under the toolbar (`.ignoresSafeArea(.container, edges: .top)`, `ContentView.swift:2640`), so rows fade softly under the traffic lights as in Photos and Notes. §1.4.
 - Failure/partial glyph → clickable `DiagnosticGlyphButton` (opens the diagnostic popover); default project icon `circle.fill` → open `circle` (`4e0c584`); Finder folder-of-videos drops wired via `SidebarExternalDrop` (3 cases — root/folder/project; empty-area folds to root, not a 4th case).
 
@@ -186,11 +188,11 @@ so **no unit test can catch any of them**; they're on-device acceptance only.
 Escape reverts · **click-away commits** (`controlTextDidEndEditing`, `:727`) · empty string reverts to
 the prior name, never writes a blank label.
 
-**Trigger plumbing.** `ProjectIndex.pendingRename: UUID?` (`ProjectIndex.swift:324`) mirrors
+**Trigger plumbing.** `ProjectIndex.pendingRename: UUID?` (`ProjectIndex.swift`; consumed by `maybeStartRename()` in `ProjectSidebarOutline.swift`; `NewItemFallback` in `WindowCommandFocus.swift` feeds it when no window is open) mirrors
 `pendingIconReveal` — a one-shot, non-persisted signal consumed by the controller off the tail of
 `update()` (`:543-549`). All four entry points plus rename-on-create feed it or `beginRename` directly.
 
-> **Dual-write during soak.** New Folder currently sets **both** `ContentView.renamingFolderID`
+> **Dual-write during soak.** New Folder (and, since 3 Oct 2026, New Project via `renamingProjectID`) currently sets **both** `ContentView.renamingFolderID`
 > (SwiftUI row) and `projectIndex.pendingRename` (AppKit controller), and both notification observers
 > are live simultaneously (`ProjectSidebarOutline.swift:356-361` and `ContentView.swift:2433-2440`).
 > The AppKit side is authoritative whenever the flag is on; the SwiftUI side is inert. **Both die at
@@ -237,7 +239,7 @@ The whole migration in one effort:
 | `FolderRow` (collapsible, rename) | `FolderRow.swift:9-78` | ✅ outline item + native disclosure; editable `textField` (§2.6) |
 | Inline rename (project/folder) | `:171`, `FolderRow:22-44` | ✅ **SHIPPED** — see **§2.6**. Note the semantics differ from the SwiftUI row: **Return *begins* rename** from the outline (`SidebarOutlineView.keyDown`, `:145-151` → `beginRenameSelected`, `:586`); it only *commits* once the field editor is already up. Esc reverts / blur commits / empty reverts, as before. |
 | Context menu (up to 10 project / 3 folder items, conditional visibility) | `ContentView.swift:1931` (folder), `:2163` (project) | ✅ `NSMenu` built per clicked row via `menuNeedsUpdate`; same conditional items. Both menus now carry **Rename** (`ProjectSidebarOutline.swift:1365`, `:1395`). |
-| 11 menu/undo notifications (`.createNewProject`…`.focusProjects`) | `:446-485,1959+` | drive the controller; **undo-restore writes the `selection` binding** → the outline renders it (§2.5) |
+| 11 menu/undo notifications (`.createNewProject`…`.focusProjects`) — _since replaced by `WindowCommand` cases routed through `ContentView.perform(_:)`; the outline's rename observers became `renameRequest`_ | `:446-485,1959+` | drive the controller; **undo-restore writes the `selection` binding** → the outline renders it (§2.5) |
 | Finder-file drops on rows / empty | `:1485,1549,1767` | `NSOutlineViewDataSource` pasteboard (validateDrop/acceptDrop) |
 | Internal project drag → folder; root + per-folder reorder | `:1457,1522,SidebarDrop.swift` | unified insertion model (Phase B fixes the gaps) |
 | Empty-click deselect (`SidebarDeselectMonitor`) | `:36-80` | **native** — monitor retired; but **keep the deselect → §2.5 funnel → `serveManager.stop()` side effect** (verify auto-deselect on both floors) |
@@ -247,7 +249,7 @@ The whole migration in one effort:
 | Icon-picker + diagnostic **popovers** | `:1821-1863,400-408` | anchored to the row via the **controller** (`NSPopover.show(relativeTo:of:)`), torn down on reload — NOT welded to a recycled cell |
 | Cmd+Delete remove + plain-Delete reserved | `MenuCommands.swift:470,552` | the outline becomes a new first responder — decide responder vs menu-notification routing; keep plain Delete free (`feedback_delete_key_layering`) |
 | Type-to-select ("ik" → IKEA) | — | **free native win** the SwiftUI `List` lacked — `textField.stringValue` makes it work; acceptance check |
-| New-Project affordance | `:1439-1445` | stays in-list / `⌘N` / menu — **must NOT become a pinned bottom outline row** (`feedback_no_bottom_of_sidebar_actions`) |
+| New-Project affordance | `:1439-1445` | ~~stays in-list / `⌘N` / menu~~ — **as of 3 Oct 2026:** a `+⌄` plain menu on the sidebar column (outside the outline) + `⌘N` / File menu; the SwiftUI path's in-list row is gone and this outline never had one. Still **must NOT become a pinned bottom outline row** (`feedback_no_bottom_of_sidebar_actions`) |
 | Multi-select → serve teardown (if kept — Q5) | `:622-631` | bridge emits the same `Set<SidebarSelection>` shape on Cmd/Shift-click so the stop-serve default arm fires |
 
 ---

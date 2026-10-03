@@ -127,6 +127,7 @@ byte for byte):
 | 1c | `Name: text` accepts any script with combining marks, commas, `(Guest)`, pronouns, the fullwidth colon; a sentence-opener list and a six-word cap refuse `Honestly:`, `Note:`, `Gern:`, `http:`; the 22 xfails are passes | `s03._looks_like_speaker_name`; `tests/test_international_names.py` |
 | 1d | platform label beats the LLM's `person_name`, participants only; names keyed by speaker code; phone labels (masked or whole) are never names | `people.py`; `tests/test_name_extraction.py` |
 | — | `--redact-pii` writes `# Source: [REDACTED]` in cooked transcripts; the importer takes the media path from the raw sibling | `s07`, `server/importer.py` |
+| 0b | *(3 Oct 2026)* sticky session ids and speaker codes: `.bristlenose/sessions.json` maps the grouping key (`s01_ingest.session_key`) to a sid and, per sid, label to code; applied after every `ingest` call; no migration from `# Source:` headers (owner: existing projects re-run) and no rename carry-over | `session_registry.py`, `pipeline.py`, `s05b.assign_speaker_codes(known=)`; `tests/test_session_registry.py`, `TestStickySessions` |
 
 Two judgement calls made while building, both reversible and worth the owner's eye:
 
@@ -146,7 +147,7 @@ What the harnesses in the scratch area did (reproduce each §2 defect through th
 with Whisper and the LLM stubbed) now lives in `tests/test_pipeline_platform_transcripts.py`.
 
 **Deliberately later:**
-- **0b sticky ids**, with rename carry-over, a re-identification-key file, atomic and locked writes, and
+- **0b sticky ids** — *landed 3 Oct 2026 without the migration or rename carry-over; see the table above.* Originally: with rename carry-over, a re-identification-key file, atomic and locked writes, and
   a migration seeded from the serve DB. Imports get birthtime = download date, so they sort last and
   renumber nothing. **So §5f, dating files to the meeting, must not ship before 0b**, or every import of
   an older meeting cross-wires stars. **Promoted 1 Oct 2026:** 0b is no longer "later" for the people

@@ -68,6 +68,7 @@ from bristlenose.models import (
 )
 from bristlenose.refusals import UnusableReason
 from bristlenose.refusals import stage_failure as refusal_stage_failure
+from bristlenose.session_registry import SessionRegistry
 from bristlenose.ui_kinds import MessageKind, cli_prefix
 from bristlenose.utils.fs import is_os_metadata
 from bristlenose.utils.text import count_noun
@@ -939,6 +940,11 @@ class Pipeline:
         if not sessions:
             console.print("[red]No supported files found.[/red]")
             return self._empty_result(output_dir)
+        # Sticky ids: a session keeps its number across runs, so a recording
+        # older than the ones already analysed cannot renumber them.
+        session_registry = SessionRegistry.load(output_dir)
+        sessions = session_registry.apply(sessions)
+        session_registry.save()
 
         ingest_elapsed = time.perf_counter() - t0
 
@@ -1622,17 +1628,20 @@ class Pipeline:
                         )
                     )
 
-            # assign_speaker_codes() always re-runs — global numbering
+            # assign_speaker_codes() always re-runs — global numbering, kept
+            # stable by the registry: a known speaker keeps their code, and a
+            # new participant is numbered after every code ever handed out.
             all_label_code_maps: dict[str, dict[str, str]] = {}
-            next_pnum = 1
+            next_pnum = session_registry.next_participant_number()
             for session in sessions:
                 sid = session.session_id
                 segments = session_segments.get(sid, [])
                 if not segments:
                     continue
                 label_map, next_pnum = assign_speaker_codes(
-                    next_pnum, segments,
+                    next_pnum, segments, known=session_registry.speakers_for(sid),
                 )
+                session_registry.record_speakers(sid, label_map)
                 all_label_code_maps[sid] = label_map
                 # Update session's participant_id from assigned codes
                 p_codes = [
@@ -1641,6 +1650,7 @@ class Pipeline:
                 if p_codes:
                     session.participant_id = p_codes[0]
                     session.participant_number = int(p_codes[0][1:])
+            session_registry.save()
 
             mark_stage_complete(
                 manifest, STAGE_IDENTIFY_SPEAKERS,
@@ -2462,6 +2472,9 @@ class Pipeline:
                 ),
                 summary=self._summary,
             )
+        session_registry = SessionRegistry.load(output_dir)
+        sessions = session_registry.apply(sessions)
+        session_registry.save()
 
         ingest_elapsed = time.perf_counter() - t0
 
@@ -3228,6 +3241,8 @@ class Pipeline:
         from bristlenose.stages.s01_ingest import ingest
 
         sessions = ingest(input_dir)
+        # Read-only: the ids the run gave these sessions.
+        sessions = SessionRegistry.load(output_dir).apply(sessions)
 
         # --- Load existing people file for display names ---
         from bristlenose.people import build_display_name_map, load_people_file

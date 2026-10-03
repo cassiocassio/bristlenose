@@ -483,6 +483,7 @@ async def identify_speaker_roles_llm(
 def assign_speaker_codes(
     next_participant_number: int,
     segments: list[TranscriptSegment],
+    known: dict[str, str] | None = None,
 ) -> tuple[dict[str, str], int]:
     """Assign speaker codes (p1, p2, m1, m2, o1...) based on identified roles.
 
@@ -498,9 +499,17 @@ def assign_speaker_codes(
     - ``m`` — moderator / researcher (per-session)
     - ``o`` — observer (per-session)
 
+    ``known`` is the session's label → code map from an earlier run
+    (``SessionRegistry.speakers_for``). A label keeps its code while its role
+    still matches the code's kind, so a participant's code — and every quote,
+    star and name keyed by it — survives a session being added elsewhere in
+    the study. Labels it does not cover are numbered as before. With no
+    ``known`` map the result is identical to a first run.
+
     Args:
         next_participant_number: The next available participant number (e.g. 1).
         segments: Segments with ``speaker_role`` already set.
+        known: Optional label → code map to keep stable.
 
     Returns:
         Tuple of (label-to-code mapping, next available participant number).
@@ -512,21 +521,41 @@ def assign_speaker_codes(
         if label not in label_role:
             label_role[label] = seg.speaker_role
 
-    # Assign codes per role
-    label_code: dict[str, str] = {}
-    mod_counter = 0
-    obs_counter = 0
-    for label, role in label_role.items():
+    def _prefix(role: SpeakerRole) -> str:
         if role == SpeakerRole.RESEARCHER:
-            mod_counter += 1
-            label_code[label] = f"m{mod_counter}"
-        elif role == SpeakerRole.OBSERVER:
-            obs_counter += 1
-            label_code[label] = f"o{obs_counter}"
-        else:
-            # PARTICIPANT and UNKNOWN get globally-numbered codes
-            label_code[label] = f"p{next_participant_number}"
+            return "m"
+        if role == SpeakerRole.OBSERVER:
+            return "o"
+        return "p"  # PARTICIPANT and UNKNOWN get globally-numbered codes
+
+    # Keep each label's earlier code while its role still matches.
+    label_code: dict[str, str] = {}
+    used: set[str] = set()
+    for label, role in label_role.items():
+        code = (known or {}).get(label)
+        if code and code[0] == _prefix(role) and code not in used:
+            label_code[label] = code
+            used.add(code)
+
+    # Number the rest. Moderator and observer codes are per session and skip
+    # any kept above; participant codes are global and come from the caller.
+    for label, role in label_role.items():
+        if label in label_code:
+            continue
+        prefix = _prefix(role)
+        if prefix == "p":
+            code = f"p{next_participant_number}"
             next_participant_number += 1
+        else:
+            n = 1
+            while f"{prefix}{n}" in used:
+                n += 1
+            code = f"{prefix}{n}"
+        label_code[label] = code
+        used.add(code)
+    # First-appearance order: the caller takes the first ``p`` code as the
+    # session's primary participant, and kept codes were inserted first.
+    label_code = {label: label_code[label] for label in label_role}
 
     # Stamp every segment
     for seg in segments:

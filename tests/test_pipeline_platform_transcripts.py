@@ -482,3 +482,83 @@ class TestPerSessionFingerprints:
         # on through speaker ID, topics and quotes for s1 alone.
         assert h2.quoted == []
         assert {s.source for s in h2.session_segments()["s1"]} == {"vtt"}
+
+
+# ── 0b: an older recording arriving later renumbers nothing ─────────────────
+#
+# The defect (docs/design-cloud-import-transcripts.md §2, "Adding an older
+# recording"): sessions were numbered by recording date on every run, so a
+# recording older than the analysed ones renumbered all of them — one
+# interview's transcript, stars and names moved onto another. ``_fake_ingest``
+# returns what the real ingest returns, date order with ids from 1, so the
+# renumbering the registry has to undo is genuinely there.
+
+ANN = [("Martin Storey", "Thanks for joining, Ann."), ("Ann Archer", "Ann speaking: the kiosk lost my basket.")] * 3
+BEA = [("Martin Storey", "Thanks for joining, Bea."), ("Bea Baker", "Bea speaking: I never found the till.")] * 3
+CAL = [("Martin Storey", "Thanks for joining, Cal."), ("Cal Cooper", "Cal speaking: the receipt was blank.")] * 3
+
+
+class TestStickySessions:
+    @staticmethod
+    def _sessions(d: Path, run: int) -> list[InputSession]:
+        day = lambda n: datetime(2026, 9, n, 10, 0, tzinfo=timezone.utc)  # noqa: E731
+        if run == 0:
+            return [
+                pair_session(d, 1, "Bea interview", BEA, when=day(10)),
+                pair_session(d, 2, "Cal interview", CAL, when=day(11)),
+            ]
+        # Ann was recorded first and dropped in last: by date she is s1.
+        return [
+            pair_session(d, 1, "Ann interview", ANN, when=day(9)),
+            pair_session(d, 2, "Bea interview", BEA, when=day(10)),
+            pair_session(d, 3, "Cal interview", CAL, when=day(11)),
+        ]
+
+    def test_adding_an_older_recording_does_not_cross_wire_transcripts(
+        self, tmp_path: Path,
+    ) -> None:
+        h = run_pipeline(tmp_path, self._sessions, runs=2)
+        raw = h.output_dir / "transcripts-raw"
+        assert "Bea speaking" in (raw / "s1.txt").read_text("utf-8")
+        assert "Cal speaking" in (raw / "s2.txt").read_text("utf-8")
+        assert "Ann speaking" in (raw / "s3.txt").read_text("utf-8")
+        # Only the newcomer was analysed on run 2; the others were served from
+        # cache under the ids they already had.
+        assert h.quoted == [["s1", "s2"], ["s3"]]
+
+    def test_star_stays_with_its_interview_after_an_older_recording_is_added(
+        self, tmp_path: Path,
+    ) -> None:
+        """A star hangs off its quote, and the quote is keyed by
+        (session, participant code, start). Keys surviving is not enough —
+        without stickiness the newcomer *reuses* ``(s1, p1)`` — so each key
+        must still point at the same interview."""
+
+        def interviews(h: Harness) -> dict[tuple, str]:
+            raw = h.output_dir / "transcripts-raw"
+            who = {}
+            for q in json.loads((h.intermediate / "extracted_quotes.json").read_text("utf-8")):
+                text = (raw / f"{q['session_id']}.txt").read_text("utf-8")
+                name = next(n for n in ("Ann", "Bea", "Cal") if f"{n} speaking" in text)
+                who[(q["session_id"], q["participant_id"], q["start_timecode"])] = name
+            return who
+
+        once = interviews(run_pipeline(tmp_path, self._sessions, runs=1))
+        twice = interviews(run_pipeline(tmp_path, lambda d, _i: self._sessions(d, 1), runs=1))
+        assert {k: twice.get(k) for k in once} == once, "every starred quote stays with its interview"
+        assert {who for k, who in twice.items() if k not in once} == {"Ann"}
+
+    def test_typed_name_stays_with_its_speaker_after_a_session_is_inserted(
+        self, tmp_path: Path,
+    ) -> None:
+        h = run_pipeline(tmp_path, self._sessions, runs=1)
+        codes = lambda h: {  # noqa: E731
+            p["editable"]["full_name"]: code for code, p in h.people()["participants"].items()
+            if code.startswith("p")
+        }
+        before = codes(h)
+        h2 = run_pipeline(tmp_path, lambda d, _i: self._sessions(d, 1), runs=1)
+        after = codes(h2)
+        assert after["Bea Baker"] == before["Bea Baker"]
+        assert after["Cal Cooper"] == before["Cal Cooper"]
+        assert after["Ann Archer"] not in before.values(), "Ann gets a new number"

@@ -482,6 +482,29 @@ def _group_by_stem(files: list[InputFile]) -> list[list[InputFile]]:
     return groups
 
 
+def session_key(files: list[InputFile]) -> str:
+    """The stable identity of a session's file group — what the grouping keys on.
+
+    Derived from the files rather than from the sid, so the same interview gets
+    the same key on every run however the sessions around it change. Mirrors
+    the three grouping passes: a Zoom local folder is its own key; a group that
+    holds a file carrying our download stamp is keyed by (stamp, title), since
+    an unstamped file only ever joins such a group; anything else is keyed by
+    its normalised stem. A later transcript joining an existing recording does
+    not change the key, which is the point — the session keeps its number.
+    """
+    for f in files:
+        parent = f.path.parent.name
+        if parent and _is_zoom_local_dir(parent):
+            return f"zoom:{parent}"
+    for f in files:
+        stamp, key = _stamp_and_title(f.path.stem.lower())
+        if stamp is not None:
+            return f"stamp:{stamp}|{key}"
+    _stamp, key = _stamp_and_title(files[0].path.stem.lower())
+    return f"stem:{key}"
+
+
 def group_into_sessions(files: list[InputFile]) -> list[InputSession]:
     """Group files into sessions and assign participant numbers.
 

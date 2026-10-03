@@ -222,8 +222,8 @@ Bridge contract (additions to `frontend/src/shims/bridge.ts` and `BridgeHandler.
 | web → native | `search-suggestions` | `{query, rows: [{id, kind, label, typed: [[start,end]], count}]}`: labels are **already localised** by the SPA |
 | native → web | `applySearchSuggestion` | `{id}` |
 | web → native | `quotes-filter` (exists, grows) | `{searchQuery, viewMode, tokens: [{kind, label, mode, modes: [{id, label, enabled}]}]}` |
-| native → web | `setSearchTokenMode` | `{index, mode}` |
-| native → web | `removeSearchToken` | `{index}` |
+| native → web | `setSearchTokenMode` | `{subject, mode}`: `subject` is `{kind: "person", code}` or `{kind: "tag", name}`, never a position (§5) |
+| native → web | `removeSearchToken` | `{subject}` |
 
 Because the SPA sends labels, the native side adds **no** locale keys for rows
 or meanings. The Swift parity rule applies: every new field gets its Swift

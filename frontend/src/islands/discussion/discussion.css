@@ -1,0 +1,182 @@
+/* Discussion lens — dev-gated (Phase 1a/4 of docs/design-discussion-lens-plan.md).
+   Imported by the lazy island only, so nothing here reaches the shipped theme
+   until the lens graduates (then it moves to bristlenose/theme/organisms/).
+
+   Layout, wires and states only: every piece of type comes from shipped tokens
+   and classes (.toc-heading, .toc-link, .dimension-toggle, .bn-person-badge,
+   blockquote.quote-card, .moderator-question-text, .section-heading).
+
+   Scroll model: the PAGE scrolls, like every lens (inspector.css, 26 Sep 2026).
+   The session column is in flow; the navigator and the gutter are sticky
+   panes the window's height, under a sticky header bar. Keep `overflow` off
+   every ancestor of the sticky panes, or they stop pinning. */
+
+.dl-lens {
+    --dl-nav-w: clamp(var(--bn-sidebar-width), 30vw, var(--bn-sidebar-max));
+    --dl-gut: 56px;
+    display: grid;
+    grid-template-columns: var(--dl-nav-w) var(--dl-gut) minmax(0, 1fr);
+    /* Full column width, like .signals-layout: bleed out of .center's side
+       padding so the navigator runs to the edge, and give the session column
+       the right-hand padding back. */
+    margin-left: calc(-1 * var(--bn-center-pad-left, 0px));
+    margin-right: calc(-1 * var(--bn-center-pad-right, 0px));
+}
+
+/* ── header bar ── */
+.dl-bar {
+    grid-column: 1 / -1;
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    display: grid;
+    grid-template-columns: subgrid;
+    align-items: center;
+    padding: var(--bn-space-sm) 0;
+    background: var(--bn-colour-bg);
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+.dl-bar .dimension-toggle { margin-left: var(--bn-space-sm); justify-self: start; }
+.dl-sessions { display: flex; flex-wrap: wrap; gap: var(--bn-space-sm); align-items: center; grid-column: 3; }
+.dl-sess {
+    display: inline-flex; align-items: center; padding: var(--bn-space-xs);
+    background: none; border: 0; border-radius: var(--bn-radius-md);
+    color: var(--bn-colour-text); font: inherit; cursor: pointer;
+}
+.dl-sess:hover, .dl-sess[aria-checked="true"] { background: var(--bn-colour-hover); }
+.dl-sess:focus-visible, .dl-chip:focus-visible, .dl-row-btn:focus-visible, .dl-ask-btn:focus-visible {
+    outline: 2px solid var(--bn-colour-accent); outline-offset: 1px;
+}
+/* "You are here": the selected session's #N in accent at emphasis weight — the
+   selected segment of the Planned | Merged toggle (.dimension-btn.active) — with
+   the shipped highlight ring. Same mark in the header and every navigator row. */
+.dl-here .bn-speaker-badge-code { color: var(--bn-colour-accent); font-weight: var(--bn-weight-emphasis); }
+
+/* ── navigator ── */
+.dl-lens .dl-nav {
+    grid-column: 1;
+    grid-row: 2;
+    position: sticky;
+    top: var(--dl-bar-h, 0px);
+    height: calc(100vh - var(--dl-bar-h, 0px));
+    overflow-y: auto;
+    padding-top: var(--bn-space-sm);
+    padding-bottom: 40vh;
+    background: var(--bn-colour-inspector-bg);
+    border-right: 1px solid var(--bn-colour-border);
+}
+.dl-nav .toc-heading .badge { margin-left: var(--bn-space-xs); vertical-align: 1px; }
+.dl-nav .dl-row { display: flex; gap: var(--bn-space-xs); align-items: baseline; }
+.dl-row-btn {
+    flex: 1; min-width: 0; display: flex; gap: var(--bn-space-xs); align-items: baseline;
+    appearance: none; background: none; border: 0; padding: 0; margin: 0;
+    font: inherit; color: inherit; text-align: left; cursor: pointer;
+}
+.dl-mk { width: 1.1em; flex: none; text-align: center; color: var(--bn-colour-muted); }
+/* Provenance dots: 60% of the glyph they replace, centred where it sat. */
+.dl-dot {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor; vertical-align: 1.6px;
+}
+.dl-dot.hollow { background: transparent; box-shadow: inset 0 0 0 1px currentColor; }
+.dl-tx { flex: 1; min-width: 0; overflow-wrap: break-word; }
+.dl-row.ghost, .dl-row.dim { opacity: .45; }
+.dl-row.unasked .dl-tx { font-style: italic; color: var(--bn-colour-muted); }
+
+/* Adaptive session badges: the full row while it fits in CHIP_SHARE of the
+   navigator, else one native pull-down showing #N. */
+.dl-chips { display: inline-flex; gap: var(--bn-space-xs); flex: none; }
+.dl-chip { appearance: none; background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
+.dl-pick { display: none; position: relative; flex: none; }
+.dl-pick select {
+    position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;
+    appearance: none; -webkit-appearance: none; border: 0; font: inherit;
+}
+.dl-pick:focus-within { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; border-radius: var(--bn-radius-sm); }
+.dl-row.compact .dl-chips { display: none; }
+.dl-row.compact .dl-pick { display: inline-flex; }
+
+/* ── gutter + wires ── */
+.dl-gut {
+    grid-column: 2;
+    grid-row: 2;
+    position: sticky;
+    top: var(--dl-bar-h, 0px);
+    height: calc(100vh - var(--dl-bar-h, 0px));
+    pointer-events: none;
+}
+.dl-wires { width: 100%; height: 100%; overflow: visible; }
+.dl-wire { fill: none; stroke: var(--bn-colour-accent); stroke-width: 1.3; opacity: .5; transition: opacity .15s; }
+.dl-wire.stub { opacity: .4; stroke-linecap: round; stroke-linejoin: round; }
+.dl-end { fill: var(--bn-colour-accent); }
+.dl-lens.has-focus .dl-wire:not(.hot), .dl-lens.has-focus .dl-end:not(.hot) { opacity: .08; }
+.dl-lens.has-focus .dl-wire.hot { opacity: 1; stroke-width: 2; }
+
+/* ── session column ── */
+.dl-content {
+    grid-column: 3;
+    grid-row: 2;
+    min-width: 0;
+    padding: 0 var(--bn-center-pad-right, var(--bn-gutter-left)) 40vh 0;
+}
+.dl-content > section { max-width: 46rem; }
+.dl-content > section > .section-heading:first-child { margin-top: var(--bn-space-md); }
+.dl-meta {
+    color: var(--bn-colour-muted); font-size: var(--bn-text-caption);
+    margin: 0 0 var(--bn-space-md);
+    display: flex; flex-wrap: wrap; gap: var(--bn-space-sm); align-items: center;
+}
+.dl-meta .dl-stats { white-space: nowrap; }
+
+/* Grouping uses the system's own vocabulary: proximity within a group, the
+   keyline between groups. Nothing moves horizontally. */
+.dl-group {
+    margin-top: var(--bn-space-lg); padding-top: var(--bn-space-md);
+    border-top: 1px solid var(--bn-colour-keyline);
+    scroll-margin-top: calc(var(--dl-bar-h, 0px) + var(--bn-space-md));
+}
+.dl-meta + .dl-group { border-top-color: transparent; margin-top: 0; }
+.dl-group blockquote.quote-card { margin: 2px 0 0; border-radius: 0; }
+.dl-group blockquote.dl-ask + blockquote.quote-card:not(.dl-ask) { margin-top: var(--bn-space-xs); border-top-right-radius: var(--bn-radius-md); }
+.dl-group > blockquote.quote-card:last-child:not(.dl-ask) { border-bottom-right-radius: var(--bn-radius-md); }
+/* The moderator's turn IS a quote card — same padding, same transparent 1px
+   left border, same timecode column — so both text margins line up with the
+   participants' cards by construction. */
+.dl-group blockquote.quote-card.dl-ask { background: transparent; border-left-color: transparent; margin-top: 0; }
+.dl-group blockquote.dl-ask + blockquote.dl-ask { padding-top: var(--bn-space-xs); }
+.dl-ask-btn {
+    appearance: none; background: none; border: 0; padding: 0; margin: 0;
+    font: inherit; color: inherit; text-align: left; cursor: pointer;
+}
+.dl-ask .moderator-question-text { font-size: var(--bn-text-label); color: var(--bn-colour-muted); }
+.dl-ask .speaker { margin-left: var(--bn-space-xs); }
+.dl-noans { display: block; color: var(--bn-colour-muted); font-size: var(--bn-text-caption); margin-top: var(--bn-space-xs); }
+.dl-before { color: var(--bn-colour-muted); font-size: var(--bn-text-caption); padding: var(--bn-space-xs) var(--bn-space-sm); }
+.dl-group blockquote.dl-ask.hot { background: var(--bn-nav-selection-bg); }
+
+/* Sticky focus dims what it does not light. */
+.dl-lens.has-focus .dl-row:not(.active), .dl-lens.has-focus .dl-content blockquote:not(.hot) { opacity: .4; }
+.dl-row, .dl-content blockquote { transition: opacity .15s; }
+
+/* ── the split ── */
+.dl-split {
+    grid-column: 2; grid-row: 2;
+    position: sticky; top: var(--dl-bar-h, 0px);
+    width: 6px; height: calc(100vh - var(--dl-bar-h, 0px));
+    margin-left: -3px; cursor: col-resize; z-index: 2; touch-action: none;
+}
+.dl-split:hover, .dl-split:focus-visible, .dl-split.dragging { background: var(--bn-colour-accent); opacity: .5; outline: none; }
+
+.dl-empty { padding: var(--bn-space-md) var(--bn-space-sm); color: var(--bn-colour-muted); font-size: var(--bn-text-caption); }
+
+/* Narrow: keep the transcript, drop the navigator. The session's questions, in
+   the order they were asked, with their answers, are the useful half. */
+@media (max-width: 900px) {
+    .dl-lens { grid-template-columns: minmax(0, 1fr); }
+    .dl-lens .dl-nav, .dl-gut, .dl-split, .dl-bar .dimension-toggle { display: none; }
+    .dl-sessions, .dl-content { grid-column: 1; }
+    .dl-content { padding-left: var(--bn-space-md); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .dl-row, .dl-content blockquote, .dl-wire { transition: none; }
+}

@@ -1,0 +1,1627 @@
+{
+ "spine": [
+  {
+   "id": "s1",
+   "title": "Consent and recording",
+   "kind": "instruction",
+   "items": [
+    {
+     "id": "s1.1",
+     "terse": "Consent & stop right",
+     "text": "Confirm consent to record, and that they can stop at any time"
+    }
+   ]
+  },
+  {
+   "id": "s2",
+   "title": "About you",
+   "kind": "questions",
+   "items": [
+    {
+     "id": "s2.1",
+     "terse": "About them & household",
+     "text": "Tell me a little about yourself and who you live with"
+    },
+    {
+     "id": "s2.2",
+     "terse": "Big shop frequency",
+     "text": "How often do you do a \"big shop\"?"
+    }
+   ]
+  },
+  {
+   "id": "s3",
+   "title": "Planning the week",
+   "kind": "questions",
+   "items": [
+    {
+     "id": "s3.1",
+     "terse": "Deciding what to buy",
+     "text": "How do you decide what to buy each week?"
+    },
+    {
+     "id": "s3.2",
+     "terse": "List & where it lives",
+     "text": "Do you write a list? Where does it live?"
+    },
+    {
+     "id": "s3.3",
+     "terse": "Others' input on shop",
+     "text": "Who else has a say in what gets bought?"
+    },
+    {
+     "id": "s3.4",
+     "terse": "Mid-week plan changes",
+     "text": "What happens when plans change mid-week?"
+    }
+   ]
+  },
+  {
+   "id": "s4",
+   "title": "Ordering in the app",
+   "kind": "questions",
+   "items": [
+    {
+     "id": "s4.1",
+     "terse": "Last order walkthrough",
+     "text": "Walk me through the last time you ordered"
+    },
+    {
+     "id": "s4.2",
+     "terse": "Hard to find items",
+     "text": "What's hard to find?"
+    },
+    {
+     "id": "s4.3",
+     "terse": "Feelings on subst.",
+     "text": "How do you feel about substitutions?"
+    }
+   ]
+  },
+  {
+   "id": "s5",
+   "title": "Delivery and collection",
+   "kind": "questions",
+   "items": [
+    {
+     "id": "s5.1",
+     "terse": "Choosing delivery slot",
+     "text": "How do you choose a delivery slot?"
+    },
+    {
+     "id": "s5.2",
+     "terse": "Ever collected?",
+     "text": "Have you ever collected instead of having it delivered?"
+    },
+    {
+     "id": "s5.3",
+     "terse": "Delivery gone wrong",
+     "text": "Tell me about a time a delivery went wrong"
+    }
+   ]
+  },
+  {
+   "id": "s6",
+   "title": "Wrap-up",
+   "kind": "questions",
+   "items": [
+    {
+     "id": "s6.1",
+     "terse": "One app change",
+     "text": "If you could change one thing about the app, what would it be?"
+    },
+    {
+     "id": "s6.2",
+     "terse": "Anything to add?",
+     "text": "Anything else you'd like to add?"
+    }
+   ]
+  }
+ ],
+ "turns": [
+  {
+   "id": "s1@00:30",
+   "session": "s1",
+   "sec": 30.0,
+   "time": "00:30",
+   "text": "Hi Asha, can you hear me okay? The connection seems a bit choppy.",
+   "kind": "chat",
+   "item": null
+  },
+  {
+   "id": "s1@00:53",
+   "session": "s1",
+   "sec": 53.0,
+   "time": "00:53",
+   "text": "Before we start, are you happy for me to record this? You can stop at any point.",
+   "kind": "instruction",
+   "item": null
+  },
+  {
+   "id": "s1@01:16",
+   "session": "s1",
+   "sec": 76.0,
+   "time": "01:16",
+   "text": "So to begin, tell me a little bit about yourself and who's at home with you.",
+   "kind": "planned",
+   "item": "s2.1"
+  },
+  {
+   "id": "s1@01:45",
+   "session": "s1",
+   "sec": 105.0,
+   "time": "01:45",
+   "text": "And how often would you say you do a proper big shop?",
+   "kind": "planned",
+   "item": "s2.2"
+  },
+  {
+   "id": "s1@02:10",
+   "session": "s1",
+   "sec": 130.0,
+   "time": "02:10",
+   "text": "How do you decide what actually goes in the basket each week?",
+   "kind": "planned",
+   "item": "s3.1"
+  },
+  {
+   "id": "s1@02:36",
+   "session": "s1",
+   "sec": 156.0,
+   "time": "02:36",
+   "text": "Do you write it down as a list at all?",
+   "kind": "planned",
+   "item": "s3.2"
+  },
+  {
+   "id": "s1@03:00",
+   "session": "s1",
+   "sec": 180.0,
+   "time": "03:00",
+   "text": "Is that note something you'd ever print out, or is it always the phone?",
+   "kind": "adlib",
+   "item": "a1"
+  },
+  {
+   "id": "s1@03:26",
+   "session": "s1",
+   "sec": 206.0,
+   "time": "03:26",
+   "text": "Do you set yourselves a budget for the week?",
+   "kind": "new",
+   "item": "a2"
+  },
+  {
+   "id": "s1@03:51",
+   "session": "s1",
+   "sec": 231.0,
+   "time": "03:51",
+   "text": "How do you keep track of what you're actually spending?",
+   "kind": "new",
+   "item": "a3"
+  },
+  {
+   "id": "s1@04:16",
+   "session": "s1",
+   "sec": 256.0,
+   "time": "04:16",
+   "text": "What happens when the week's plans change halfway through?",
+   "kind": "planned",
+   "item": "s3.4"
+  },
+  {
+   "id": "s1@04:40",
+   "session": "s1",
+   "sec": 280.0,
+   "time": "04:40",
+   "text": "Right, that makes sense, thank you.",
+   "kind": "chat",
+   "item": null
+  },
+  {
+   "id": "s1@04:46",
+   "session": "s1",
+   "sec": 286.0,
+   "time": "04:46",
+   "text": "Can you walk me through the last time you ordered in the app?",
+   "kind": "planned",
+   "item": "s4.1"
+  },
+  {
+   "id": "s1@05:12",
+   "session": "s1",
+   "sec": 312.0,
+   "time": "05:12",
+   "text": "Was anything hard to find?",
+   "kind": "planned",
+   "item": "s4.2"
+  },
+  {
+   "id": "s1@05:33",
+   "session": "s1",
+   "sec": 333.0,
+   "time": "05:33",
+   "text": "How do you feel about substitutions?",
+   "kind": "planned",
+   "item": "s4.3"
+  },
+  {
+   "id": "s1@05:58",
+   "session": "s1",
+   "sec": 358.0,
+   "time": "05:58",
+   "text": "How do you choose which delivery slot to book?",
+   "kind": "planned",
+   "item": "s5.1"
+  },
+  {
+   "id": "s1@06:22",
+   "session": "s1",
+   "sec": 382.0,
+   "time": "06:22",
+   "text": "Have you ever collected it yourself instead?",
+   "kind": "planned",
+   "item": "s5.2"
+  },
+  {
+   "id": "s1@06:46",
+   "session": "s1",
+   "sec": 406.0,
+   "time": "06:46",
+   "text": "If you could change one thing about the app, what would it be?",
+   "kind": "planned",
+   "item": "s6.1"
+  },
+  {
+   "id": "s1@07:11",
+   "session": "s1",
+   "sec": 431.0,
+   "time": "07:11",
+   "text": "Is there anything else you'd like to add before we finish?",
+   "kind": "planned",
+   "item": "s6.2"
+  },
+  {
+   "id": "s1@07:31",
+   "session": "s1",
+   "sec": 451.0,
+   "time": "07:31",
+   "text": "Brilliant, thank you so much for your time today Asha.",
+   "kind": "chat",
+   "item": null
+  },
+  {
+   "id": "s2@00:30",
+   "session": "s2",
+   "sec": 30.0,
+   "time": "00:30",
+   "text": "Hello Ben, thanks for joining, let me just share my screen.",
+   "kind": "chat",
+   "item": null
+  },
+  {
+   "id": "s2@00:38",
+   "session": "s2",
+   "sec": 38.0,
+   "time": "00:38",
+   "text": "I'm going to record the session if that's okay with you, and you can stop it whenever you like.",
+   "kind": "instruction",
+   "item": null
+  },
+  {
+   "id": "s2@01:01",
+   "session": "s2",
+   "sec": 61.0,
+   "time": "01:01",
+   "text": "Could you start by telling me about yourself and your household?",
+   "kind": "planned",
+   "item": "s2.1"
+  },
+  {
+   "id": "s2@01:26",
+   "session": "s2",
+   "sec": 86.0,
+   "time": "01:26",
+   "text": "Since you mentioned your evenings are busy, how do you pick a delivery slot?",
+   "kind": "planned",
+   "item": "s5.1"
+  },
+  {
+   "id": "s2@01:53",
+   "session": "s2",
+   "sec": 113.0,
+   "time": "01:53",
+   "text": "Has a delivery ever gone wrong for you?",
+   "kind": "planned",
+   "item": "s5.3"
+  },
+  {
+   "id": "s2@02:17",
+   "session": "s2",
+   "sec": 137.0,
+   "time": "02:17",
+   "text": "What did the shop do to put that right?",
+   "kind": "adlib",
+   "item": "a4"
+  },
+  {
+   "id": "s2@02:42",
+   "session": "s2",
+   "sec": 162.0,
+   "time": "02:42",
+   "text": "Going back a step, how do you decide what to buy each week?",
+   "kind": "planned",
+   "item": "s3.1"
+  },
+  {
+   "id": "s2@03:08",
+   "session": "s2",
+   "sec": 188.0,
+   "time": "03:08",
+   "text": "Which app do you keep your recipes in?",
+   "kind": "adlib",
+   "item": "a5"
+  },
+  {
+   "id": "s2@03:33",
+   "session": "s2",
+   "sec": 213.0,
+   "time": "03:33",
+   "text": "Does anything go from the recipe app straight into your basket?",
+   "kind": "adlib",
+   "item": "a6"
+  },
+  {
+   "id": "s2@03:58",
+   "session": "s2",
+   "sec": 238.0,
+   "time": "03:58",
+   "text": "Do you ever share recipes with your flatmate through it?",
+   "kind": "adlib",
+   "item": "a7"
+  },
+  {
+   "id": "s2@04:22",
+   "session": "s2",
+   "sec": 262.0,
+   "time": "04:22",
+   "text": "So once you've got the list, walk me through placing the order.",
+   "kind": "planned",
+   "item": "s4.1"
+  },
+  {
+   "id": "s2@04:48",
+   "session": "s2",
+   "sec": 288.0,
+   "time": "04:48",
+   "text": "What do you think about substitutions?",
+   "kind": "planned",
+   "item": "s4.3"
+  },
+  {
+   "id": "s2@05:11",
+   "session": "s2",
+   "sec": 311.0,
+   "time": "05:11",
+   "text": "Have rising prices changed the way you shop at all?",
+   "kind": "new",
+   "item": "a8"
+  },
+  {
+   "id": "s2@05:36",
+   "session": "s2",
+   "sec": 336.0,
+   "time": "05:36",
+   "text": "Mm-hm, that's really interesting.",
+   "kind": "chat",
+   "item": null
+  },
+  {
+   "id": "s2@05:42",
+   "session": "s2",
+   "sec": 342.0,
+   "time": "05:42",
+   "text": "If you could change one thing about the app, what would that be?",
+   "kind": "planned",
+   "item": "s6.1"
+  },
+  {
+   "id": "s2@06:08",
+   "session": "s2",
+   "sec": 368.0,
+   "time": "06:08",
+   "text": "Great, thanks Ben, that's all my questions for today.",
+   "kind": "chat",
+   "item": null
+  },
+  {
+   "id": "s3@00:30",
+   "session": "s3",
+   "sec": 30.0,
+   "time": "00:30",
+   "text": "Hi Carla, sorry, give me one moment while I get the recording going.",
+   "kind": "chat",
+   "item": null
+  },
+  {
+   "id": "s3@00:39",
+   "session": "s3",
+   "sec": 39.0,
+   "time": "00:39",
+   "text": "Just to confirm, you're happy for this to be recorded, and you can ask me to stop at any time?",
+   "kind": "instruction",
+   "item": null
+  },
+  {
+   "id": "s3@01:02",
+   "session": "s3",
+   "sec": 62.0,
+   "time": "01:02",
+   "text": "Tell me a bit about yourself and who you live with.",
+   "kind": "planned",
+   "item": "s2.1"
+  },
+  {
+   "id": "s3@01:28",
+   "session": "s3",
+   "sec": 88.0,
+   "time": "01:28",
+   "text": "How do you work out what to buy each week?",
+   "kind": "planned",
+   "item": "s3.1"
+  },
+  {
+   "id": "s3@01:54",
+   "session": "s3",
+   "sec": 114.0,
+   "time": "01:54",
+   "text": "And is there a set amount you try to stay within?",
+   "kind": "new",
+   "item": "a2"
+  },
+  {
+   "id": "s3@02:19",
+   "session": "s3",
+   "sec": 139.0,
+   "time": "02:19",
+   "text": "Do you go looking for offers at all?",
+   "kind": "new",
+   "item": "a9"
+  },
+  {
+   "id": "s3@02:44",
+   "session": "s3",
+   "sec": 164.0,
+   "time": "02:44",
+   "text": "Where do you keep the shopping list?",
+   "kind": "planned",
+   "item": "s3.2"
+  },
+  {
+   "id": "s3@03:08",
+   "session": "s3",
+   "sec": 188.0,
+   "time": "03:08",
+   "text": "Talk me through the last time you placed an order.",
+   "kind": "planned",
+   "item": "s4.1"
+  },
+  {
+   "id": "s3@03:33",
+   "session": "s3",
+   "sec": 213.0,
+   "time": "03:33",
+   "text": "Is there anything you find hard to find in there?",
+   "kind": "planned",
+   "item": "s4.2"
+  },
+  {
+   "id": "s3@03:59",
+   "session": "s3",
+   "sec": 239.0,
+   "time": "03:59",
+   "text": "What did you do when a substitute came that was wrong?",
+   "kind": "adlib",
+   "item": "a10"
+  },
+  {
+   "id": "s3@04:25",
+   "session": "s3",
+   "sec": 265.0,
+   "time": "04:25",
+   "text": "Have you noticed prices going up much lately?",
+   "kind": "new",
+   "item": "a8"
+  },
+  {
+   "id": "s3@04:49",
+   "session": "s3",
+   "sec": 289.0,
+   "time": "04:49",
+   "text": "And how do you choose your delivery slot?",
+   "kind": "planned",
+   "item": "s5.1"
+  },
+  {
+   "id": "s3@05:14",
+   "session": "s3",
+   "sec": 314.0,
+   "time": "05:14",
+   "text": "Has a delivery ever gone wrong?",
+   "kind": "planned",
+   "item": "s5.3"
+  },
+  {
+   "id": "s3@05:38",
+   "session": "s3",
+   "sec": 338.0,
+   "time": "05:38",
+   "text": "Okay, thank you, that's really helpful.",
+   "kind": "chat",
+   "item": null
+  },
+  {
+   "id": "s3@05:44",
+   "session": "s3",
+   "sec": 344.0,
+   "time": "05:44",
+   "text": "Is there anything else at all you'd like to tell me?",
+   "kind": "planned",
+   "item": "s6.2"
+  },
+  {
+   "id": "s3@06:10",
+   "session": "s3",
+   "sec": 370.0,
+   "time": "06:10",
+   "text": "Lovely, thank you Carla, that's us done for today.",
+   "kind": "chat",
+   "item": null
+  }
+ ],
+ "sections": [
+  {
+   "id": "s1",
+   "title": "Consent and recording",
+   "heading": "Consent and recording",
+   "kind": "instruction",
+   "origin": "planned",
+   "items": [
+    {
+     "id": "s1.1",
+     "terse": "Consent & stop right",
+     "verbatim": "Confirm consent to record, and that they can stop at any time",
+     "source": "planned",
+     "placed": "",
+     "role": "core",
+     "asks": []
+    }
+   ]
+  },
+  {
+   "id": "s2",
+   "title": "About you",
+   "heading": "About you",
+   "kind": "questions",
+   "origin": "planned",
+   "items": [
+    {
+     "id": "s2.1",
+     "terse": "About them & household",
+     "verbatim": "Tell me a little about yourself and who you live with",
+     "source": "both",
+     "placed": "",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s1@01:16",
+       "session": "s1",
+       "sec": 76.0
+      },
+      {
+       "turn": "s2@01:01",
+       "session": "s2",
+       "sec": 61.0
+      },
+      {
+       "turn": "s3@01:02",
+       "session": "s3",
+       "sec": 62.0
+      }
+     ]
+    },
+    {
+     "id": "s2.2",
+     "terse": "Big shop frequency",
+     "verbatim": "How often do you do a \"big shop\"?",
+     "source": "both",
+     "placed": "",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s1@01:45",
+       "session": "s1",
+       "sec": 105.0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "s3",
+   "title": "Planning the week",
+   "heading": "Planning the week",
+   "kind": "questions",
+   "origin": "planned",
+   "items": [
+    {
+     "id": "s3.1",
+     "terse": "Deciding what to buy",
+     "verbatim": "How do you decide what to buy each week?",
+     "source": "both",
+     "placed": "",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s1@02:10",
+       "session": "s1",
+       "sec": 130.0
+      },
+      {
+       "turn": "s2@02:42",
+       "session": "s2",
+       "sec": 162.0
+      },
+      {
+       "turn": "s3@01:28",
+       "session": "s3",
+       "sec": 88.0
+      }
+     ]
+    },
+    {
+     "id": "s3.2",
+     "terse": "List & where it lives",
+     "verbatim": "Do you write a list? Where does it live?",
+     "source": "both",
+     "placed": "",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s1@02:36",
+       "session": "s1",
+       "sec": 156.0
+      },
+      {
+       "turn": "s3@02:44",
+       "session": "s3",
+       "sec": 164.0
+      }
+     ]
+    },
+    {
+     "id": "s3.3",
+     "terse": "Others' input on shop",
+     "verbatim": "Who else has a say in what gets bought?",
+     "source": "planned",
+     "placed": "",
+     "role": "core",
+     "asks": []
+    },
+    {
+     "id": "s3.4",
+     "terse": "Mid-week plan changes",
+     "verbatim": "What happens when plans change mid-week?",
+     "source": "both",
+     "placed": "",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s1@04:16",
+       "session": "s1",
+       "sec": 256.0
+      }
+     ]
+    },
+    {
+     "id": "a1",
+     "terse": "Print note or phone?",
+     "verbatim": "Is that note something you'd ever print out, or is it always the phone?",
+     "source": "asked",
+     "placed": "",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s1@03:00",
+       "session": "s1",
+       "sec": 180.0
+      }
+     ]
+    },
+    {
+     "id": "a5",
+     "terse": "Which recipe app?",
+     "verbatim": "Which app do you keep your recipes in?",
+     "source": "asked",
+     "placed": "flow",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s2@03:08",
+       "session": "s2",
+       "sec": 188.0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "e1",
+   "title": "Budget & Prices",
+   "heading": "Budget management and price sensitivity",
+   "kind": "questions",
+   "origin": "emergent",
+   "items": [
+    {
+     "id": "a2",
+     "terse": "Set a weekly budget?",
+     "verbatim": "Do you set yourselves a budget for the week?",
+     "source": "asked",
+     "placed": "",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s1@03:26",
+       "session": "s1",
+       "sec": 206.0
+      },
+      {
+       "turn": "s3@01:54",
+       "session": "s3",
+       "sec": 114.0
+      }
+     ]
+    },
+    {
+     "id": "a3",
+     "terse": "Track actual spending?",
+     "verbatim": "How do you keep track of what you're actually spending?",
+     "source": "asked",
+     "placed": "",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s1@03:51",
+       "session": "s1",
+       "sec": 231.0
+      }
+     ]
+    },
+    {
+     "id": "a8",
+     "terse": "Rising prices impact?",
+     "verbatim": "Have rising prices changed the way you shop at all?",
+     "source": "asked",
+     "placed": "",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s2@05:11",
+       "session": "s2",
+       "sec": 311.0
+      },
+      {
+       "turn": "s3@04:25",
+       "session": "s3",
+       "sec": 265.0
+      }
+     ]
+    },
+    {
+     "id": "a9",
+     "terse": "Seek out offers?",
+     "verbatim": "Do you go looking for offers at all?",
+     "source": "asked",
+     "placed": "",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s3@02:19",
+       "session": "s3",
+       "sec": 139.0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "s4",
+   "title": "Ordering in the app",
+   "heading": "Ordering in the app",
+   "kind": "questions",
+   "origin": "planned",
+   "items": [
+    {
+     "id": "s4.1",
+     "terse": "Last order walkthrough",
+     "verbatim": "Walk me through the last time you ordered",
+     "source": "both",
+     "placed": "",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s1@04:46",
+       "session": "s1",
+       "sec": 286.0
+      },
+      {
+       "turn": "s2@04:22",
+       "session": "s2",
+       "sec": 262.0
+      },
+      {
+       "turn": "s3@03:08",
+       "session": "s3",
+       "sec": 188.0
+      }
+     ]
+    },
+    {
+     "id": "s4.2",
+     "terse": "Hard to find items",
+     "verbatim": "What's hard to find?",
+     "source": "both",
+     "placed": "",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s1@05:12",
+       "session": "s1",
+       "sec": 312.0
+      },
+      {
+       "turn": "s3@03:33",
+       "session": "s3",
+       "sec": 213.0
+      }
+     ]
+    },
+    {
+     "id": "s4.3",
+     "terse": "Feelings on subst.",
+     "verbatim": "How do you feel about substitutions?",
+     "source": "both",
+     "placed": "",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s1@05:33",
+       "session": "s1",
+       "sec": 333.0
+      },
+      {
+       "turn": "s2@04:48",
+       "session": "s2",
+       "sec": 288.0
+      }
+     ]
+    },
+    {
+     "id": "a10",
+     "terse": "Wrong substitute action?",
+     "verbatim": "What did you do when a substitute came that was wrong?",
+     "source": "asked",
+     "placed": "",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s3@03:59",
+       "session": "s3",
+       "sec": 239.0
+      }
+     ]
+    },
+    {
+     "id": "a6",
+     "terse": "Recipe app to basket?",
+     "verbatim": "Does anything go from the recipe app straight into your basket?",
+     "source": "asked",
+     "placed": "flow",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s2@03:33",
+       "session": "s2",
+       "sec": 213.0
+      }
+     ]
+    },
+    {
+     "id": "a7",
+     "terse": "Share recipes via app?",
+     "verbatim": "Do you ever share recipes with your flatmate through it?",
+     "source": "asked",
+     "placed": "flow",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s2@03:58",
+       "session": "s2",
+       "sec": 238.0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "s5",
+   "title": "Delivery and collection",
+   "heading": "Delivery and collection",
+   "kind": "questions",
+   "origin": "planned",
+   "items": [
+    {
+     "id": "s5.1",
+     "terse": "Choosing delivery slot",
+     "verbatim": "How do you choose a delivery slot?",
+     "source": "both",
+     "placed": "",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s1@05:58",
+       "session": "s1",
+       "sec": 358.0
+      },
+      {
+       "turn": "s2@01:26",
+       "session": "s2",
+       "sec": 86.0
+      },
+      {
+       "turn": "s3@04:49",
+       "session": "s3",
+       "sec": 289.0
+      }
+     ]
+    },
+    {
+     "id": "s5.2",
+     "terse": "Ever collected?",
+     "verbatim": "Have you ever collected instead of having it delivered?",
+     "source": "both",
+     "placed": "",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s1@06:22",
+       "session": "s1",
+       "sec": 382.0
+      }
+     ]
+    },
+    {
+     "id": "s5.3",
+     "terse": "Delivery gone wrong",
+     "verbatim": "Tell me about a time a delivery went wrong",
+     "source": "both",
+     "placed": "",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s2@01:53",
+       "session": "s2",
+       "sec": 113.0
+      },
+      {
+       "turn": "s3@05:14",
+       "session": "s3",
+       "sec": 314.0
+      }
+     ]
+    },
+    {
+     "id": "a4",
+     "terse": "Shop's remedy for error?",
+     "verbatim": "What did the shop do to put that right?",
+     "source": "asked",
+     "placed": "",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s2@02:17",
+       "session": "s2",
+       "sec": 137.0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "s6",
+   "title": "Wrap-up",
+   "heading": "Wrap-up",
+   "kind": "questions",
+   "origin": "planned",
+   "items": [
+    {
+     "id": "s6.1",
+     "terse": "One app change",
+     "verbatim": "If you could change one thing about the app, what would it be?",
+     "source": "both",
+     "placed": "",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s1@06:46",
+       "session": "s1",
+       "sec": 406.0
+      },
+      {
+       "turn": "s2@05:42",
+       "session": "s2",
+       "sec": 342.0
+      }
+     ]
+    },
+    {
+     "id": "s6.2",
+     "terse": "Anything to add?",
+     "verbatim": "Anything else you'd like to add?",
+     "source": "both",
+     "placed": "",
+     "role": "core",
+     "asks": [
+      {
+       "turn": "s1@07:11",
+       "session": "s1",
+       "sec": 431.0
+      },
+      {
+       "turn": "s3@05:44",
+       "session": "s3",
+       "sec": 344.0
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "quotes": [
+  {
+   "key": "q0",
+   "session": "s1",
+   "participant": "p1",
+   "name": "Asha",
+   "sec": 86.54,
+   "time": "01:26",
+   "text": "I live in a terraced house in Leeds with my partner and our two kids, who are seven and ten, so the fridge empties quickly.",
+   "after_item": "s2.1",
+   "section": "s2",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q1",
+   "session": "s1",
+   "participant": "p1",
+   "name": "Asha",
+   "sec": 113.77,
+   "time": "01:53",
+   "text": "Once a week, usually Sunday evening, and then there's always a top-up shop on Wednesday for milk and bread.",
+   "after_item": "s2.2",
+   "section": "s2",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q2",
+   "session": "s1",
+   "participant": "p1",
+   "name": "Asha",
+   "sec": 138.69,
+   "time": "02:18",
+   "text": "I look at what we've got in the cupboards first, then I plan maybe four dinners and fill in the gaps around those.",
+   "after_item": "s3.1",
+   "section": "s3",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q3",
+   "session": "s1",
+   "participant": "p1",
+   "name": "Asha",
+   "sec": 164.38,
+   "time": "02:44",
+   "text": "Always, there's a shared note on my phone that my partner adds to whenever we run out of something.",
+   "after_item": "s3.2",
+   "section": "s3",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q4",
+   "session": "s1",
+   "participant": "p1",
+   "name": "Asha",
+   "sec": 190.08,
+   "time": "03:10",
+   "text": "Always the phone, paper lists just get lost in my coat pocket and then I'm stood in the kitchen guessing.",
+   "after_item": "a1",
+   "section": "s3",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q5",
+   "session": "s1",
+   "participant": "p1",
+   "name": "Asha",
+   "sec": 214.23,
+   "time": "03:34",
+   "text": "We try to keep it under a hundred and twenty pounds, but it creeps up every month without us really noticing.",
+   "after_item": "a2",
+   "section": "e1",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q6",
+   "session": "s1",
+   "participant": "p1",
+   "name": "Asha",
+   "sec": 239.15,
+   "time": "03:59",
+   "text": "Honestly I just watch the running total in the basket and start taking things out when it goes over a hundred.",
+   "after_item": "a3",
+   "section": "e1",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q7",
+   "session": "s1",
+   "participant": "p1",
+   "name": "Asha",
+   "sec": 263.69,
+   "time": "04:23",
+   "text": "Then the vegetables go off, that's the honest answer, and I feel guilty throwing half a bag of spinach away.",
+   "after_item": "s3.4",
+   "section": "s3",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q8",
+   "session": "s1",
+   "participant": "p1",
+   "name": "Asha",
+   "sec": 295.69,
+   "time": "04:55",
+   "text": "I opened the favourites tab, ticked most of last week's things, then searched for the odd extra like birthday candles.",
+   "after_item": "s4.1",
+   "section": "s4",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q9",
+   "session": "s1",
+   "participant": "p1",
+   "name": "Asha",
+   "sec": 318.31,
+   "time": "05:18",
+   "text": "The candles, actually, I searched three different ways and it kept showing me candle-shaped cake toppers instead.",
+   "after_item": "s4.2",
+   "section": "s4",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q10",
+   "session": "s1",
+   "participant": "p1",
+   "name": "Asha",
+   "sec": 340.15,
+   "time": "05:40",
+   "text": "They make me nervous, last time they swapped oat milk for a chocolate oat drink and my son was delighted but I wasn't.",
+   "after_item": "s4.3",
+   "section": "s4",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q11",
+   "session": "s1",
+   "participant": "p1",
+   "name": "Asha",
+   "sec": 365.46,
+   "time": "06:05",
+   "text": "I book the cheapest one on Sunday night, even if it means unpacking shopping at nine o'clock when I'm exhausted.",
+   "after_item": "s5.1",
+   "section": "s5",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q12",
+   "session": "s1",
+   "participant": "p1",
+   "name": "Asha",
+   "sec": 388.85,
+   "time": "06:28",
+   "text": "Once, when the slots were all gone before Christmas, and the car park pickup was quicker than I expected it to be.",
+   "after_item": "s5.2",
+   "section": "s5",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q13",
+   "session": "s1",
+   "participant": "p1",
+   "name": "Asha",
+   "sec": 415.31,
+   "time": "06:55",
+   "text": "Let me lock substitutions per item, so the milk is never swapped but the bread can be anything at all.",
+   "after_item": "s6.1",
+   "section": "s6",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q14",
+   "session": "s2",
+   "participant": "p2",
+   "name": "Ben",
+   "sec": 69.85,
+   "time": "01:09",
+   "text": "It's just me and my flatmate in Bristol, we split some things but mostly shop separately for our own meals.",
+   "after_item": "s2.1",
+   "section": "s2",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q15",
+   "session": "s2",
+   "participant": "p2",
+   "name": "Ben",
+   "sec": 95.92,
+   "time": "01:35",
+   "text": "I pick whatever's free after eight, because I'm never home before then and I hate the idea of a missed delivery.",
+   "after_item": "s5.1",
+   "section": "s5",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q16",
+   "session": "s2",
+   "participant": "p2",
+   "name": "Ben",
+   "sec": 120.08,
+   "time": "02:00",
+   "text": "The driver once left everything with a neighbour I'd never met, and the frozen stuff had defrosted by the time I found it.",
+   "after_item": "s5.3",
+   "section": "s5",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q17",
+   "session": "s2",
+   "participant": "p2",
+   "name": "Ben",
+   "sec": 145.38,
+   "time": "02:25",
+   "text": "They refunded the frozen items after I sent photos, but it took two separate chats with the support bot to get there.",
+   "after_item": "a4",
+   "section": "s5",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q18",
+   "session": "s2",
+   "participant": "p2",
+   "name": "Ben",
+   "sec": 171.85,
+   "time": "02:51",
+   "text": "Mostly I follow recipes I've saved, I'll pick three for the week and buy exactly what those need and nothing else.",
+   "after_item": "s3.1",
+   "section": "s3",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q19",
+   "session": "s2",
+   "participant": "p2",
+   "name": "Ben",
+   "sec": 196.0,
+   "time": "03:16",
+   "text": "A free recipe app with a meal planner in it, I've been using it for about two years now and it's full.",
+   "after_item": "a5",
+   "section": "s3",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q20",
+   "session": "s2",
+   "participant": "p2",
+   "name": "Ben",
+   "sec": 221.69,
+   "time": "03:41",
+   "text": "No, I type every ingredient in by hand, which is the most tedious part of the whole weekly routine for me.",
+   "after_item": "a6",
+   "section": "s4",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q21",
+   "session": "s2",
+   "participant": "p2",
+   "name": "Ben",
+   "sec": 246.62,
+   "time": "04:06",
+   "text": "Sometimes I send her a link when I've cooked something good, but she never actually makes any of them.",
+   "after_item": "a7",
+   "section": "s4",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q22",
+   "session": "s2",
+   "participant": "p2",
+   "name": "Ben",
+   "sec": 271.54,
+   "time": "04:31",
+   "text": "I search item by item from the recipe list, which takes ages because the search doesn't understand quantities at all.",
+   "after_item": "s4.1",
+   "section": "s4",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q23",
+   "session": "s2",
+   "participant": "p2",
+   "name": "Ben",
+   "sec": 294.54,
+   "time": "04:54",
+   "text": "I turn them off completely, I'd rather have nothing than the wrong thing turn up when I'm cooking to a recipe.",
+   "after_item": "s4.3",
+   "section": "s4",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q24",
+   "session": "s2",
+   "participant": "p2",
+   "name": "Ben",
+   "sec": 319.46,
+   "time": "05:19",
+   "text": "Yes, I've stopped buying branded pasta and sauces, and I buy meat on the reduced shelf whenever I can find it.",
+   "after_item": "a8",
+   "section": "e1",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q25",
+   "session": "s2",
+   "participant": "p2",
+   "name": "Ben",
+   "sec": 351.08,
+   "time": "05:51",
+   "text": "Let me paste a whole recipe in and have the app build the basket for me, with the right quantities already worked out.",
+   "after_item": "s6.1",
+   "section": "s4",
+   "how": "topic",
+   "sentiment": null
+  },
+  {
+   "key": "q26",
+   "session": "s3",
+   "participant": "p3",
+   "name": "Carla",
+   "sec": 70.62,
+   "time": "01:10",
+   "text": "I live with my mum, who doesn't use the internet at all, so I do all of the shopping for both of us now.",
+   "after_item": "s2.1",
+   "section": "s2",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q27",
+   "session": "s3",
+   "participant": "p3",
+   "name": "Carla",
+   "sec": 96.69,
+   "time": "01:36",
+   "text": "Mum tells me what she fancies on Saturday, and I add the basics we always need on top of whatever she's asked for.",
+   "after_item": "s3.1",
+   "section": "s3",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q28",
+   "session": "s3",
+   "participant": "p3",
+   "name": "Carla",
+   "sec": 122.77,
+   "time": "02:02",
+   "text": "Eighty pounds is the limit, because it comes out of mum's pension and she checks the receipt very carefully every week.",
+   "after_item": "a2",
+   "section": "e1",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q29",
+   "session": "s3",
+   "participant": "p3",
+   "name": "Carla",
+   "sec": 146.92,
+   "time": "02:26",
+   "text": "Every single week, I sort by price per kilo and I'll switch brands without a second thought if it saves us money.",
+   "after_item": "a9",
+   "section": "e1",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q30",
+   "session": "s3",
+   "participant": "p3",
+   "name": "Carla",
+   "sec": 171.08,
+   "time": "02:51",
+   "text": "On the fridge, on paper, because mum needs to be able to add things to it herself while I'm out at work.",
+   "after_item": "s3.2",
+   "section": "s3",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q31",
+   "session": "s3",
+   "participant": "p3",
+   "name": "Carla",
+   "sec": 196.38,
+   "time": "03:16",
+   "text": "I'll be honest, I spent most of that order hunting through the offers page, the actual ordering bit was the quick part.",
+   "after_item": "s4.1",
+   "section": "e1",
+   "how": "topic",
+   "sentiment": null
+  },
+  {
+   "key": "q32",
+   "session": "s3",
+   "participant": "p3",
+   "name": "Carla",
+   "sec": 221.69,
+   "time": "03:41",
+   "text": "Mum's particular brand of decaf tea, it's listed under a different name in the app and it took me ages to find it.",
+   "after_item": "s4.2",
+   "section": "s4",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q33",
+   "session": "s3",
+   "participant": "p3",
+   "name": "Carla",
+   "sec": 247.77,
+   "time": "04:07",
+   "text": "I rejected it at the door, the driver was lovely about it and the refund was on my card the very next morning.",
+   "after_item": "a10",
+   "section": "s5",
+   "how": "topic",
+   "sentiment": null
+  },
+  {
+   "key": "q34",
+   "session": "s3",
+   "participant": "p3",
+   "name": "Carla",
+   "sec": 272.69,
+   "time": "04:32",
+   "text": "Massively, the same basket is about fifteen pounds more than it was last spring, and mum notices every penny of it.",
+   "after_item": "a8",
+   "section": "e1",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q35",
+   "session": "s3",
+   "participant": "p3",
+   "name": "Carla",
+   "sec": 296.85,
+   "time": "04:56",
+   "text": "Saturday morning, so mum can be up and dressed when the driver comes and help put things away in the right places.",
+   "after_item": "s5.1",
+   "section": "s5",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q36",
+   "session": "s3",
+   "participant": "p3",
+   "name": "Carla",
+   "sec": 320.62,
+   "time": "05:20",
+   "text": "Once it arrived two hours late, which meant mum had to sit waiting by the window all morning, and she was quite upset.",
+   "after_item": "s5.3",
+   "section": "s5",
+   "how": "agree",
+   "sentiment": null
+  },
+  {
+   "key": "q37",
+   "session": "s3",
+   "participant": "p3",
+   "name": "Carla",
+   "sec": 353.0,
+   "time": "05:53",
+   "text": "Only that the app should have a simple mode for older people, mum would love to order her own things one day.",
+   "after_item": "s6.2",
+   "section": "s6",
+   "how": "agree",
+   "sentiment": null
+  }
+ ],
+ "version": 1,
+ "sessions": [
+  {
+   "id": "s1",
+   "number": 1,
+   "participants": [
+    {
+     "code": "p1",
+     "name": "Asha"
+    }
+   ],
+   "duration": "07:39",
+   "seconds": 451.0
+  },
+  {
+   "id": "s2",
+   "number": 2,
+   "participants": [
+    {
+     "code": "p2",
+     "name": "Ben"
+    }
+   ],
+   "duration": "06:16",
+   "seconds": 368.0
+  },
+  {
+   "id": "s3",
+   "number": 3,
+   "participants": [
+    {
+     "code": "p3",
+     "name": "Carla"
+    }
+   ],
+   "duration": "06:17",
+   "seconds": 370.0
+  }
+ ],
+ "standalone": [],
+ "guide": true
+}

@@ -17,6 +17,7 @@ import { QuotesTab } from "./pages/QuotesTab";
 import { CodebookV2Tab } from "./pages/CodebookV2Tab";
 import { SignalsTab } from "./pages/SignalsTab";
 import { SpecimenTab } from "./pages/SpecimenTab";
+import { DiscussionTab } from "./pages/DiscussionTab";
 import { isExportMode } from "./utils/exportData";
 
 export const routes = [
@@ -50,6 +51,10 @@ export const routes = [
       // desktop entry via Diagnostics menu). Route always registered: the
       // page is benign specimen content and lazy-loads only when visited.
       { path: "specimen", element: <SpecimenTab /> },
+      // Discussion lens — dev-gated while it is built (NavBar link under IS_DEV,
+      // docs/design-discussion-lens-plan.md Phase 4). Route always registered,
+      // like Specimen: it reads a synthetic fixture and lazy-loads only when visited.
+      { path: "discussion", element: <DiscussionTab /> },
       { path: "about", element: <Navigate to="/report/" replace /> },
       // Catch-all: unknown sub-paths redirect to project tab
       { path: "*", element: <Navigate to="/report/" replace /> },

@@ -620,6 +620,27 @@ struct ContentView: View {
                     ideal: SidebarAutoCollapse.columnIdeal,
                     max: SidebarAutoCollapse.columnMax
                 )
+                // `+⌄` in the sidebar's title bar: New Project… / New Folder…, a
+                // plain menu as in NetNewsWire so New Folder is discovered by the
+                // click that looks for New Project (toolbar rev 3, 3 Oct 2026;
+                // design-desktop-nav-toolbar-rearrangement.md §3.3). On the
+                // column, not on `projectList`: attached there (where the New
+                // Folder button sat since Phase 1) it never reached the window
+                // toolbar — measured 3 Oct, no item before the split-view
+                // separator. It goes away with the column, as the toggle does.
+                .toolbar {
+                    ToolbarItem(placement: .automatic) {
+                        Menu {
+                            Button(i18n.t("desktop.menu.file.newProject")) { createNewProject() }
+                            Button(i18n.t("desktop.menu.file.newFolder")) { createNewFolder() }
+                        } label: {
+                            // `Label` + `.help`: VoiceOver name, tooltip and the
+                            // toolbar's Icon-and-Text mode from one string.
+                            Label(i18n.t("desktop.toolbar.add"), systemImage: "plus")
+                        }
+                        .help(i18n.t("desktop.toolbar.add"))
+                    }
+                }
         } detail: {
             detail
                 .toolbar {
@@ -2796,28 +2817,6 @@ struct ContentView: View {
         // Empty-space deselection is handled by SidebarDeselectMonitor (NSEvent
         // local monitor on the NavigationSplitView background) — no SwiftUI
         // gesture needed here, which avoids macOS 26 List selection conflicts.
-        // `+⌄` in the sidebar's title bar: New Project… / New Folder…, a plain
-        // menu as in NetNewsWire so New Folder is discovered by the click that
-        // looks for New Project (toolbar rev 3, 3 Oct 2026; the user-interview
-        // evidence is in design-desktop-nav-toolbar-rearrangement.md §3.3).
-        // It takes the slot the New Folder button held since Phase 1 — same
-        // ToolbarItem, same placement — and nothing else about the sidebar or
-        // its toolbar moves: the sidebar toggle is the system's, driven by the
-        // fit-to-width logic, and this item goes away with the column as the
-        // button did. Direct calls, as the button made.
-        .toolbar {
-            ToolbarItem(placement: .automatic) {
-                Menu {
-                    Button(i18n.t("desktop.menu.file.newProject")) { createNewProject() }
-                    Button(i18n.t("desktop.menu.file.newFolder")) { createNewFolder() }
-                } label: {
-                    // `Label` + `.help`: VoiceOver name, tooltip and the
-                    // toolbar's Icon-and-Text mode from one string.
-                    Label(i18n.t("desktop.toolbar.add"), systemImage: "plus")
-                }
-                .help(i18n.t("desktop.toolbar.add"))
-            }
-        }
         .navigationTitle(i18n.t("desktop.chrome.projects"))
     }
 

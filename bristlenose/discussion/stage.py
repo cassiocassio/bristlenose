@@ -64,6 +64,7 @@ STAGE_ID = "discussion"                         # manifest / Cause.stage vocabul
 TELEMETRY_ID = "s11b_discussion"                # per-run calls: parse, consolidate, route
 TELEMETRY_CLASSIFY_ID = "s11c_discussion_classify"  # one call per session (pricing: per-session)
 ROUTE_BATCH = 25
+_PROGRAMMING_ERRORS = (TypeError, KeyError, AttributeError, NameError, AssertionError, IndexError)
 
 
 def quotes_sha(quotes: list[ExtractedQuote]) -> str:
@@ -159,8 +160,19 @@ async def _route(client: LLMClient, sections: list[st.Section],
                                          quotes=wrap_untrusted("quotes", qb)),
             response_model=RouteBatchOut, prompt_template=tmpl,
         )
-    outs = await asyncio.gather(*(one(keyed[i:i + ROUTE_BATCH]) for i in range(0, len(keyed), ROUTE_BATCH)))
-    return {r.quote_id: r for o in outs for r in o.routes}
+    outs = await asyncio.gather(*(one(keyed[i:i + ROUTE_BATCH]) for i in range(0, len(keyed), ROUTE_BATCH)),
+                                return_exceptions=True)
+    failures = [o for o in outs if isinstance(o, BaseException)]
+    routed = {r.quote_id: r for o in outs if isinstance(o, RouteBatchOut) for r in o.routes}
+    if failures:  # one bad batch does not discard the others; the caller records it
+        raise _PartialRouteError(routed, failures[0])
+    return routed
+
+
+class _PartialRouteError(Exception):
+    def __init__(self, routed: dict[str, RouteOut], cause: BaseException) -> None:
+        super().__init__(type(cause).__name__)
+        self.routed, self.cause = routed, cause
 
 
 # ── the stage ────────────────────────────────────────────────────────────────
@@ -181,7 +193,11 @@ async def run_discussion(
 
     def fail(exc: BaseException, session_id: str | None = None) -> None:
         # The exception TYPE only: a ValidationError's message can echo guide text (§9.D).
-        logger.warning("discussion: %s failed: %s", session_id or "stage", type(exc).__name__)
+        # A programming error keeps its traceback (source lines, never values),
+        # or it reads as one more provider hiccup in the log.
+        logger.log(logging.ERROR if isinstance(exc, _PROGRAMMING_ERRORS) else logging.WARNING,
+                   "discussion: %s failed: %s", session_id or "stage", type(exc).__name__,
+                   exc_info=isinstance(exc, _PROGRAMMING_ERRORS))
         outcome.failed.append(StageFailure(session_id=session_id, cause=_build_cause(
             exc, stage=STAGE_ID, provider=llm_client.provider, session_id=session_id)))
 
@@ -191,17 +207,19 @@ async def run_discussion(
     record.guide_sha = guide.sha if guide else NO_GUIDE_SHA
     if guide is not None:
         stats["guide_files_ignored"] = len(guide.ignored)
-        if not guide.text:
-            stats["guide_unreadable"] = 1  # present but empty is a failure, not "no guide"
-        else:
+        # A guide that is there but unused is said so, never read as "no guide".
+        record.guide_problem = guide.problem
+        if guide.text:
             try:
                 with _llm_telemetry.stage(TELEMETRY_ID):
                     spine = await _parse_guide(llm_client, guide)
+                if not spine:  # read, but the model found no structure in it
+                    record.guide_problem = "empty_parse"
             except Exception as exc:  # noqa: BLE001 — optional stage: record, never abandon
                 fail(exc)
                 stats["guide_parse_failed"] = 1
-        if guide.text and not spine:
-            stats["guide_unreadable"] = stats.get("guide_unreadable", 0) + int("guide_parse_failed" not in stats)
+        if record.guide_problem:
+            stats[f"guide_{record.guide_problem}"] = 1
     record.guide = bool(spine)
 
     # 2a. moderator turns per session, with the reliability checks
@@ -241,7 +259,12 @@ async def run_discussion(
         async with sem:
             try:
                 with _llm_telemetry.stage(TELEMETRY_CLASSIFY_ID), _llm_telemetry.session(sid):
-                    return sid, await _classify(llm_client, spine, ts)
+                    got = await _classify(llm_client, spine, ts)
+                sent = {t.id for t in ts}
+                if not any(lb.turn_id in sent for lb in got):
+                    # an empty reply must not read as "no questions asked"
+                    raise ValueError("classify labelled none of the turns it was sent")
+                return sid, got
             except Exception as exc:  # noqa: BLE001
                 fail(exc, sid)
                 return sid, None
@@ -283,6 +306,10 @@ async def run_discussion(
         try:
             with _llm_telemetry.stage(TELEMETRY_ID):
                 topical = await _route(llm_client, sections, keyed)
+        except _PartialRouteError as part:  # anchor-only for the failed batches
+            topical = part.routed
+            fail(part.cause)
+            stats["route_failed"] = 1
         except Exception as exc:  # noqa: BLE001
             fail(exc)
             stats["route_failed"] = 1
@@ -323,9 +350,13 @@ async def run_discussion(
     item_of = {x: it.id for s in sections for it in s.items for x in it.turns}
     item_of.update({x: it.id for it in standalone for x in it.turns})
     kind_of = {lb.turn_id: lb.kind for lb in labels}
+    state_of = {s.id: s.state for s in record.sessions}
     for sid, ts in every.items():
         for x in ts:
-            unread = x.id in turns or x.id in failed_turns
+            # never read as chat: a turn we could not classify, including every
+            # askable-length turn of a session whose moderator we could not trust
+            unread = (x.id in turns or x.id in failed_turns
+                      or (state_of.get(sid) != "ok" and len(x.text.split()) >= MIN_WORDS))
             kind = kind_of.get(x.id, "unclassified" if unread else "chat")
             record.turns.append(RecordTurn(id=x.id, session=sid, sec=x.sec, time=format_timecode(x.sec),
                                            text=x.text, kind=kind, item=item_of.get(x.id),  # type: ignore[arg-type]
@@ -334,5 +365,6 @@ async def run_discussion(
     record.stats = stats
     ok = sum(1 for s in record.sessions if s.state == "ok")
     record.status = ("failed" if ok == 0 and record.sessions else
-                     "partial" if outcome.failed or ok < len(record.sessions) else "complete")
+                     "partial" if outcome.failed or ok < len(record.sessions) or record.guide_problem
+                     else "complete")
     return record, outcome

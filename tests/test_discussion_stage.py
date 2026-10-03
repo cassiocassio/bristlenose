@@ -193,6 +193,84 @@ def test_a_guide_that_will_not_parse_is_a_failure_not_no_guide(tmp_path):
     assert outcome.failed and outcome.failed[0].session_id is None
 
 
+def test_an_unreadable_guide_is_said_so_on_the_record(tmp_path):
+    folder = tmp_path / GUIDE_FOLDER
+    folder.mkdir()
+    (folder / "guide.docx").write_bytes(b"not a zip")
+    ts, qs = two_sessions()
+    record, _ = run(ts, qs, tmp_path, FakeClient())
+    assert record.guide_problem == "unreadable" and not record.guide
+    assert record.status == "partial"  # never "complete, no guide"
+
+
+class EmptyClient(FakeClient):
+    """Valid but empty replies: the shape a model gives when it finds nothing."""
+
+    def __init__(self, empty: tuple[type, ...]):
+        super().__init__()
+        self.empty = empty
+
+    async def analyze(self, system_prompt, user_prompt, response_model, max_tokens=None, prompt_template=None):
+        if response_model in self.empty:
+            self.calls.append(response_model.__name__)
+            return response_model.model_validate({"sections": []} if response_model is SpineOut
+                                                 else {"labels": []})
+        return await super().analyze(system_prompt, user_prompt, response_model, max_tokens, prompt_template)
+
+
+def test_an_empty_classify_reply_is_a_failed_session_not_no_questions(tmp_path):
+    ts, qs = two_sessions()
+    record, outcome = run(ts, qs, tmp_path, EmptyClient((SessionLabelsOut,)))
+    assert {s.state for s in record.sessions} == {"failed"} and record.status == "failed"
+    assert {f.session_id for f in outcome.failed} == {"s1", "s2"}
+    assert all(t.kind == "unclassified" for t in record.turns if len(t.text.split()) >= 3)
+
+
+def test_a_guide_that_parses_to_nothing_is_said_so(tmp_path):
+    write_guide(tmp_path)
+    ts, qs = two_sessions()
+    record, _ = run(ts, qs, tmp_path, EmptyClient((SpineOut,)))
+    assert record.guide_problem == "empty_parse" and record.status == "partial"
+
+
+def test_an_unreliable_sessions_questions_stay_visible(tmp_path):
+    ts, qs = two_sessions()
+    # whisper over-attribution: the moderator speaks most of the words
+    ts.append(transcript("s3", [seg(10, P, "p3", "hi", "mlx-whisper")] +
+                         [seg(30 + i * 60, M, "m1", "and how do you feel about the budget", "mlx-whisper")
+                          for i in range(10)], duration=700))
+    record, _ = run(ts, qs, tmp_path, FakeClient())
+    assert next(s for s in record.sessions if s.id == "s3").state == "moderator_unreliable"
+    s3 = [t for t in record.turns if t.session == "s3"]
+    assert s3 and all(t.kind == "unclassified" for t in s3)  # not "chat"
+
+
+def test_a_numeric_string_confidence_is_a_number():
+    assert RouteOut(quote_id="q0", section_id="s1", confidence="0.9").confidence == 0.9
+    assert RouteOut(quote_id="q0", section_id="s1", confidence="high").confidence == 0.0
+
+
+def test_one_failed_route_batch_keeps_the_others(tmp_path):
+    ts, qs = two_sessions()
+    many = [quote("s1", 42 + i, f"quote number {i}") for i in range(30)]  # two batches of 25 + 5
+
+    class OneBadBatch(FakeClient):
+        async def analyze(self, system_prompt, user_prompt, response_model, max_tokens=None, prompt_template=None):
+            if response_model is RouteBatchOut:
+                ids = re.findall(r"^(q\d+) \|", user_prompt, re.M)
+                if "q0" in ids:
+                    raise RuntimeError("batch failed")
+                return RouteBatchOut(routes=[RouteOut(quote_id=i, section_id="s2", confidence=0.9) for i in ids])
+            return await super().analyze(system_prompt, user_prompt, response_model, max_tokens, prompt_template)
+
+    write_guide(tmp_path)
+    record, outcome = run(ts, many, tmp_path, OneBadBatch())
+    assert record.stats.get("route_failed") == 1 and outcome.failed
+    second = [q for q in record.quotes if q.sec >= 42 + 25]  # the batch that succeeded
+    assert second and all(q.how != "anchor" or q.section for q in second)
+    assert any(q.how in ("topic", "agree") for q in second)
+
+
 def test_routing_failure_falls_back_to_the_anchor(tmp_path):
     ts, qs = two_sessions()
     record, _ = run(ts, qs, tmp_path, FakeClient(fail_kinds=(RouteBatchOut,)))
@@ -261,12 +339,20 @@ def test_reads_the_newest_and_reports_the_rest(tmp_path):
     assert g and g.text == "new guide" and g.ignored == ["guide.md"]
 
 
-def test_ignores_lock_files_dotfiles_and_other_types(tmp_path):
+def test_ignores_lock_files_and_dotfiles(tmp_path):
     folder = tmp_path / GUIDE_FOLDER
     folder.mkdir()
-    for name in ("~$guide.docx", ".DS_Store", "notes.pdf"):
+    for name in ("~$guide.docx", ".DS_Store"):
         (folder / name).write_text("x")
-    assert find_guide(tmp_path) is None
+    assert find_guide(tmp_path) is None  # tool state only: there is no guide
+
+
+def test_a_guide_in_another_format_is_there_but_unread(tmp_path):
+    folder = tmp_path / GUIDE_FOLDER
+    folder.mkdir()
+    (folder / "notes.pdf").write_text("x")
+    g = find_guide(tmp_path)
+    assert g is not None and g.problem == "unsupported_format" and g.text == ""
 
 
 def test_refuses_a_symlinked_folder_and_an_oversize_file(tmp_path):
@@ -274,18 +360,49 @@ def test_refuses_a_symlinked_folder_and_an_oversize_file(tmp_path):
     real.mkdir()
     (real / "guide.md").write_text("x")
     (tmp_path / GUIDE_FOLDER).symlink_to(real, target_is_directory=True)
-    assert find_guide(tmp_path) is None
+    g = find_guide(tmp_path)
+    assert g is not None and g.problem == "symlink" and g.text == ""  # refused, not "no guide"
     other = tmp_path / "p2"
     folder = other / GUIDE_FOLDER
     folder.mkdir(parents=True)
     (folder / "guide.md").write_bytes(b"x" * (MAX_GUIDE_BYTES + 1))
-    assert find_guide(other) is None
+    g = find_guide(other)
+    assert g is not None and g.problem == "too_large" and g.text == ""
 
 
 def test_an_empty_guide_is_present_but_unreadable(tmp_path):
     write_guide(tmp_path, "   ")
     g = find_guide(tmp_path)
-    assert g is not None and g.text == "" and g.sha
+    assert g is not None and g.text == "" and g.sha and g.problem == "unreadable"
+
+
+@pytest.mark.parametrize("payload", [b"", b"not a zip", b"PK\x03\x04truncated",
+                                     b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"])  # last: Word's encrypted container
+def test_a_corrupt_or_locked_docx_never_raises(tmp_path, payload):
+    folder = tmp_path / GUIDE_FOLDER
+    folder.mkdir()
+    (folder / "guide.docx").write_bytes(payload)
+    g = find_guide(tmp_path)
+    assert g is not None and g.problem == "unreadable"
+
+
+def test_a_zip_that_is_not_a_docx_never_raises(tmp_path):
+    import zipfile
+    folder = tmp_path / GUIDE_FOLDER
+    folder.mkdir()
+    with zipfile.ZipFile(folder / "guide.docx", "w") as z:
+        z.writestr("hello.txt", "hi")
+    assert find_guide(tmp_path).problem == "unreadable"
+
+
+def test_the_folder_is_found_whatever_its_case_and_ingest_skips_it(tmp_path):
+    from bristlenose.discussion.guide import is_guide_folder
+    folder = tmp_path / GUIDE_FOLDER.upper()
+    folder.mkdir()
+    (folder / "guide.md").write_text("# Guide\n- Who do you live with?\n")
+    assert is_guide_folder(folder)
+    g = find_guide(tmp_path)
+    assert g is not None and g.text.startswith("# Guide")
 
 
 @pytest.mark.parametrize("name", ["discussion-parse-guide", "discussion-classify-turns",

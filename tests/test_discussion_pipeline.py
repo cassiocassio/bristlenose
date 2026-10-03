@@ -7,6 +7,7 @@ import asyncio
 import json
 
 from bristlenose.config import load_settings
+from bristlenose.discussion.guide import GUIDE_FOLDER
 from bristlenose.manifest import STAGE_DISCUSSION, STAGE_ORDER, StageStatus, create_manifest
 from bristlenose.pipeline import Pipeline
 from bristlenose.stages.s01_ingest import discover_files
@@ -139,3 +140,58 @@ def test_the_stage_announces_itself_fresh_and_cached(tmp_path):
     assert "discussion" in seen and elapsed is not None  # a fresh run is timed
     seen, elapsed = run(first)
     assert "discussion" in seen and elapsed is None  # cached: announced, not timed
+
+
+# ── caching, after the silent-failure review of 3 Oct 2026 ───────────────────
+
+
+def _runs(tmp_path, clients, transcripts=None):
+    """Consecutive runs, each handed the previous run's manifest as `prev`."""
+    calls, prev = [], None
+    for client in clients:
+        manifest = create_manifest("p", "0")
+        pipeline = Pipeline(load_settings(discussion_lens=True))
+        ts, quotes = two_sessions()
+        asyncio.run(pipeline._run_discussion(
+            transcripts or ts, quotes, tmp_path, tmp_path / "bristlenose-output",
+            client, manifest, prev))
+        calls.append(len(client.calls))
+        prev = manifest
+    return calls, prev
+
+
+def test_a_cached_run_carries_its_record_so_the_next_is_cached_too(tmp_path):
+    write_guide(tmp_path)
+    calls, last = _runs(tmp_path, [FakeClient(), FakeClient(), FakeClient()])
+    assert calls[0] > 0 and calls[1:] == [0, 0]
+    assert STAGE_DISCUSSION in last.stages
+
+
+def test_a_failed_run_level_call_is_retried_not_cached(tmp_path):
+    from tests.test_discussion_stage import ConsolidateOut, SpineOut
+
+    write_guide(tmp_path)
+    for kind in (SpineOut, ConsolidateOut):
+        calls, last = _runs(tmp_path, [FakeClient(fail_kinds=(kind,)), FakeClient()])
+        assert calls[1] > 0, kind  # the second run pays again rather than serving the gap
+        assert last.stages[STAGE_DISCUSSION].status == StageStatus.COMPLETE
+
+
+def test_a_changed_transcript_reruns_the_stage(tmp_path):
+    write_guide(tmp_path)
+    _, first = _runs(tmp_path, [FakeClient()])
+    ts, quotes = two_sessions()
+    ts[0].segments[2].text = "Tell me who shares your home with you"  # a redaction would do this
+    client = FakeClient()
+    asyncio.run(Pipeline(load_settings(discussion_lens=True))._run_discussion(
+        ts, quotes, tmp_path, tmp_path / "bristlenose-output", client,
+        create_manifest("p", "0"), first))
+    assert client.calls
+
+
+def test_a_corrupt_guide_never_ends_the_run(tmp_path):
+    folder = tmp_path / GUIDE_FOLDER
+    folder.mkdir()
+    (folder / "guide.docx").write_bytes(b"\xd0\xcf\x11\xe0 an encrypted Word file")
+    path = _run(tmp_path, FakeClient(), manifest=create_manifest("p", "0"))
+    assert json.loads(path.read_text())["guide_problem"] == "unreadable"

@@ -75,6 +75,7 @@ from bristlenose.utils.fs import is_os_metadata
 from bristlenose.utils.text import count_noun
 
 if TYPE_CHECKING:  # annotation only — s01 stays a lazy import
+    from bristlenose.discussion.models import DiscussionRecord
     from bristlenose.llm.client import LLMClient
     from bristlenose.stages.s01_ingest import SkippedFile
 
@@ -228,6 +229,30 @@ def _print_warn_step(message: str, elapsed: float) -> None:
 def _print_cached_step(message: str) -> None:
     """Cached pipeline step — SUCCESS with ``(cached)`` suffix."""
     _print_stage(message, MessageKind.SUCCESS, suffix="(cached)")
+
+
+def _discussion_line(record: DiscussionRecord, *, retry: bool) -> tuple[str, MessageKind]:
+    """The Discussion stage's CLI line: what it built, and what fell short."""
+    unread = sum(s.state == "failed" for s in record.sessions)
+    if record.status == "failed":
+        why = "no session could be read" if unread else "no session had a clear moderator"
+        tail = " · retried next run" if retry else ""
+        return f"Discussion lens not built — {why}{tail}", MessageKind.WARNING
+    n_asked = sum(t.kind in ("planned", "adlib", "new") for t in record.turns)
+    line = f"Placed quotes under {count_noun(n_asked, 'question')} asked"
+    short: list[str] = []
+    if record.guide_problem:
+        short.append("guide not read")
+    unclear = sum(s.state in ("no_moderator", "moderator_unreliable") for s in record.sessions)
+    if unread:
+        short.append(f"{count_noun(unread, 'session')} not read")
+    if unclear:
+        short.append(f"{count_noun(unclear, 'session')} without a clear moderator")
+    if retry:
+        short.append("retried next run")
+    if record.status == "complete" and not short:
+        return line, MessageKind.SUCCESS
+    return " · ".join([line, *short]), MessageKind.WARNING
 
 
 # Sentinel for missing upstream hash — won't match any real SHA-256 digest,
@@ -891,23 +916,37 @@ class Pipeline:
         import time
 
         from bristlenose.discussion.guide import NO_GUIDE_SHA, find_guide
+        from bristlenose.discussion.models import DiscussionRecord
         from bristlenose.discussion.stage import quotes_sha, run_discussion
         from bristlenose.timing import STAGE_DISCUSSION as _T_STAGE_DISCUSSION
 
         path = output_dir / ".bristlenose" / "intermediate" / "discussion.json"
-        guide = find_guide(project_dir)
+        guide = find_guide(project_dir)  # never raises: a bad guide is a recorded problem
         input_hashes = {
             "quotes": quotes_sha(quotes),
             "guide": guide.sha if guide else NO_GUIDE_SHA,
+            # The record carries the moderator's questions verbatim, so it is
+            # stale whenever a transcript is — a redaction switched on included.
+            "transcripts": hash_bytes("|".join(
+                _transcript_fingerprint(t)
+                for t in sorted(transcripts, key=lambda t: t.session_id)).encode()),
         }
         if _is_stage_verified(
             prev_manifest, STAGE_DISCUSSION, [path], current_input_hashes=input_hashes,
         ):
             self._emit_stage_entry(_T_STAGE_DISCUSSION)
-            _print_cached_step("Placed quotes under the questions asked")
+            if manifest is not None and prev_manifest is not None:
+                # carry the record into this run's manifest, or the next run
+                # finds no record and pays for the whole stage again
+                manifest.stages[STAGE_DISCUSSION] = (
+                    prev_manifest.stages[STAGE_DISCUSSION].model_copy(deep=True))
+                write_manifest(manifest, output_dir)
+            cached = DiscussionRecord.model_validate_json(path.read_text(encoding="utf-8"))
+            line, kind = _discussion_line(cached, retry=False)
+            _print_stage(line, kind, suffix="(cached)")
             return None
 
-        # A record built from other quotes must not outlive this attempt.
+        # A record built from other inputs must not outlive this attempt.
         path.unlink(missing_ok=True)
         if manifest is not None:
             mark_stage_running(manifest, STAGE_DISCUSSION)
@@ -917,15 +956,19 @@ class Pipeline:
             from bristlenose.llm.client import LLMClient
 
             client = llm_client or LLMClient(self.settings)
-            record, _outcome = await run_discussion(transcripts, quotes, project_dir, client)
+            record, outcome = await run_discussion(transcripts, quotes, project_dir, client)
         except Exception as exc:  # noqa: BLE001 — optional stage: never abandons the run
-            logger.warning("discussion stage failed: %s", type(exc).__name__)
+            logger.error("discussion stage failed: %s", type(exc).__name__, exc_info=True)
             _print_warn_step("Discussion lens not built", time.perf_counter() - t0)
             return None
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(record.model_dump_json(indent=2), encoding="utf-8")
         elapsed = time.perf_counter() - t0
 
+        # A failed call on the guide, the consolidation or the routing belongs
+        # to no session, so the session map cannot carry it: such a run is left
+        # RUNNING and runs again, rather than cached as complete for good.
+        run_level_failure = any(f.session_id is None for f in outcome.failed)
         if manifest is not None:
             for sess in record.sessions:
                 # Only a failed call is retried; a session with no usable
@@ -934,21 +977,17 @@ class Pipeline:
                     mark_session_failed(manifest, STAGE_DISCUSSION, sess.id)
                 else:
                     mark_session_complete(manifest, STAGE_DISCUSSION, sess.id)
-            mark_stage_complete(
-                manifest, STAGE_DISCUSSION,
-                content_hash=hash_bytes(path.read_bytes()),
-                input_hashes=input_hashes,
-            )
+            if not run_level_failure:
+                mark_stage_complete(
+                    manifest, STAGE_DISCUSSION,
+                    content_hash=hash_bytes(path.read_bytes()),
+                    input_hashes=input_hashes,
+                )
             write_manifest(manifest, output_dir)
 
-        n_asked = sum(t.kind in ("planned", "adlib", "new") for t in record.turns)
-        message = f"Placed quotes under {count_noun(n_asked, 'question')} asked"
-        if record.status == "complete":
-            _print_step(message, elapsed)
-        elif record.status == "partial":
-            _print_warn_step(message + " · some sessions not read", elapsed)
-        else:
-            _print_warn_step("Discussion lens not built", elapsed)
+        retry = run_level_failure or any(s.state == "failed" for s in record.sessions)
+        line, kind = _discussion_line(record, retry=retry)
+        _print_stage(line, kind, elapsed)
         self._emit_remaining(_T_STAGE_DISCUSSION, elapsed)
         return elapsed
 

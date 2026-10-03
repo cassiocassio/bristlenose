@@ -31,6 +31,11 @@ class Guide:
     text: str
     sha: str
     ignored: list[str]  # other files in the folder, not read (zero or one guide)
+    # Why a guide that is THERE was not used. Never "no guide" (§9.A): the
+    # researcher put a file in the folder and the lens must say it went unread.
+    # "" | "unreadable" | "too_large" | "symlink" | "unsupported_format" |
+    # "folder_unreadable"
+    problem: str = ""
 
 
 def guide_folder(project_dir: Path) -> Path:
@@ -38,19 +43,25 @@ def guide_folder(project_dir: Path) -> Path:
 
 
 def is_guide_folder(path: Path) -> bool:
-    """True for the reserved folder itself — ingest's skip test."""
-    return path.name == GUIDE_FOLDER
+    """True for the reserved folder itself — ingest's skip test. Case-blind,
+    because the Mac's filesystem is: "Discussion Guide" is the same folder to
+    ``find_guide``, and must not be ingested as a session."""
+    return path.name.casefold() == GUIDE_FOLDER.casefold()
 
 
-def _candidates(folder: Path) -> list[Path]:
-    out = []
-    for p in folder.iterdir():
-        if p.name.startswith(".") or p.name.startswith("~$"):  # dotfiles, Word lock files
-            continue
-        if p.is_symlink() or not p.is_file() or p.suffix.lower() not in GUIDE_EXTENSIONS:
-            continue
-        out.append(p)
-    return out
+def _meta_sha(path: Path) -> str:
+    """A cache key for a file that cannot be read: replacing it changes this."""
+    try:
+        st = path.lstat()
+        key = f"{path.name}|{st.st_size}|{st.st_mtime_ns}"
+    except OSError:
+        key = path.name
+    return hashlib.sha256(key.encode()).hexdigest()
+
+
+def _visible(folder: Path) -> list[Path]:
+    # dotfiles and Word lock files are tool state, never the researcher's guide
+    return [p for p in folder.iterdir() if not p.name.startswith((".", "~$"))]
 
 
 def _read_text(path: Path) -> str:
@@ -61,25 +72,59 @@ def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
+def _locate(project_dir: Path) -> Path | None:
+    try:
+        return next((p for p in project_dir.iterdir() if is_guide_folder(p)), None)
+    except OSError:
+        return None
+
+
 def find_guide(project_dir: Path) -> Guide | None:
-    """The guide in the reserved folder, or None. One guide: if several files are
-    there, the most recently modified one is read and the rest are reported."""
-    folder = guide_folder(project_dir)
+    """The guide in the reserved folder, or None when there is no guide.
+
+    Never raises: the stage is optional and a researcher's file must not end a
+    run. A file that is there but cannot be used comes back with ``problem``
+    set and ``text`` empty. One guide: if several files are there, the most
+    recently modified one is read and the rest are reported."""
+    folder = _locate(project_dir)
+    if folder is None:
+        return None
+    try:
+        return _find_in(folder)
+    except OSError:  # a file vanished or locked between listing and reading
+        return Guide(folder, "", _meta_sha(folder), [], "folder_unreadable")
+
+
+def _find_in(folder: Path) -> Guide | None:
+    if folder.is_symlink():
+        logger.warning("discussion guide folder is a symlink — refused")
+        return Guide(folder, "", _meta_sha(folder), [], "symlink")
     if not folder.is_dir():
         return None
-    if folder.is_symlink():
-        logger.warning("discussion guide folder is a symlink — refused: %s", folder.name)
-        return None
-    files = sorted(_candidates(folder), key=lambda p: p.stat().st_mtime, reverse=True)
-    if not files:
-        return None
-    path, rest = files[0], files[1:]
+    try:
+        visible = _visible(folder)
+        files = [p for p in visible if p.is_file()]
+    except OSError:
+        return Guide(folder, "", _meta_sha(folder), [], "folder_unreadable")
+    usable = [p for p in files
+              if not p.is_symlink() and p.suffix.lower() in GUIDE_EXTENSIONS]
+    if not usable:
+        if not files:
+            return None  # an empty folder is no guide
+        files.sort(key=lambda p: p.lstat().st_mtime, reverse=True)
+        refused = "symlink" if any(p.is_symlink() for p in files) else "unsupported_format"
+        return Guide(files[0], "", _meta_sha(files[0]), [p.name for p in files[1:]], refused)
+    usable.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    path, rest = usable[0], [p.name for p in usable[1:]]
     if path.stat().st_size > MAX_GUIDE_BYTES:
-        logger.warning("discussion guide is over %d bytes — refused: %s", MAX_GUIDE_BYTES, path.name)
-        return None
-    raw = path.read_bytes()
-    text = _read_text(path).strip()
+        logger.warning("discussion guide is over %d bytes — refused", MAX_GUIDE_BYTES)
+        return Guide(path, "", _meta_sha(path), rest, "too_large")
+    try:
+        sha = hashlib.sha256(path.read_bytes()).hexdigest()
+        text = _read_text(path).strip()
+    except Exception as exc:  # noqa: BLE001 — a corrupt or locked document is the researcher's file, not our fault
+        logger.warning("discussion guide could not be read: %s", type(exc).__name__)
+        return Guide(path, "", _meta_sha(path), rest, "unreadable")
     if not text:
-        # Present but unreadable is a failure the stage records — never "no guide" (§9.A).
-        return Guide(path, "", hashlib.sha256(raw).hexdigest(), [p.name for p in rest])
-    return Guide(path, text, hashlib.sha256(raw).hexdigest(), [p.name for p in rest])
+        return Guide(path, "", sha, rest, "unreadable")
+    return Guide(path, text, sha, rest)

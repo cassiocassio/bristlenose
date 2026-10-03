@@ -115,7 +115,10 @@ class RouteOut(BaseModel):
     @field_validator("confidence", mode="before")
     @classmethod
     def _conf(cls, v: object) -> object:  # out of range is clamped, not a failed batch
-        return min(1.0, max(0.0, float(v))) if isinstance(v, (int, float)) else 0.0
+        try:  # a numeric string ("0.9") is a number, not a zero
+            return min(1.0, max(0.0, float(v))) if isinstance(v, (int, float, str)) else 0.0
+        except ValueError:
+            return 0.0
 
 
 class RouteBatchOut(BaseModel):
@@ -212,6 +215,9 @@ class DiscussionRecord(BaseModel):
     status: Literal["complete", "partial", "failed"] = "complete"
     guide: bool = False
     guide_sha: str = ""          # the guide this was built from ("" = none)
+    # A guide that was there and went unread, and why (guide.Guide.problem;
+    # "empty_parse" when the model found no structure). "" = read, or none.
+    guide_problem: str = ""
     quotes_sha: str = ""         # the quotes it was built from: a stale record is refused
     sessions: list[RecordSession] = Field(default_factory=list)
     spine: list[RecordSpineSection] = Field(default_factory=list)

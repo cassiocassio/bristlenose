@@ -319,6 +319,8 @@ overrides keyed on durable ids, never on labels.
 - **Non-question turns: hidden by default — decided 3 Oct 2026**, with nothing
   marking where they were. A toggle still shows them; where it lives in the app
   (View menu or lens toolbar) is not decided.
+- **Never-asked guide lines: shown by default — decided 3 Oct 2026** (hollow dot in
+  Merged, dimmed). A toggle can hide them.
 - **Store**: `DiscussionStore` on the `SignalStore.ts` pattern (module-level
   `useSyncExternalStore`, `reset*()` for tests): mode, selected session, focused
   item.

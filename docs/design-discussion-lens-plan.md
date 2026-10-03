@@ -26,7 +26,10 @@ behaviour goes missing; those are the ones this plan exists to stop.*
    anonymisation — plus guide input: no upload route exists, so for v1 a CLI
    user places the guide in the reserved location by hand and `bristlenose run`
    picks it up; a browser upload is a later nicety.
-2. **Where the guide file lives.** It must survive **Re-analyse, which runs with
+2. **Zero or one guide per project — DECIDED 3 Oct 2026.** One slot: adding
+   fills it, replacing overwrites it, removing empties it. No guide history,
+   no multiple guides per study.
+3. **Where the guide file lives.** It must survive **Re-analyse, which runs with
    `--clean` and deletes the whole output folder** — database and `.bristlenose/`
    included (`cli.py:1241-1263`). The July plan (guide in `.bristlenose/`) would
    lose it. It is an *input*, so it belongs beside the recordings, in a place
@@ -34,12 +37,12 @@ behaviour goes missing; those are the ones this plan exists to stop.*
    (visible in Finder, replaceable by hand); a reserved filename; or a
    dot-folder (survives, but invisible to the researcher). **Recommend the
    reserved subfolder.**
-3. **When the stage runs.** It is an LLM stage (≈ $0.18 for three 30-minute
+4. **When the stage runs.** It is an LLM stage (≈ $0.18 for three 30-minute
    sessions on Sonnet 4.6, measured). Run it on every analysis by default, or
    only once the researcher opens the lens / adds a guide? **Recommend: on by
    default with no guide (Merged only), cheap enough to always have; a guide
    added later triggers a scoped re-run of this stage alone.**
-4. **Session-specific questions** ("did you have trouble getting here?"). Merged
+5. **Session-specific questions** ("did you have trouble getting here?"). Merged
    is a record, so they appear (design doc, 3 Oct). Whether the reconcile step
    should also *mark* them, keeping them out of the cross-session structure, is
    open. **Recommend no for v1** (simplicity), revisit with the gold labels.
@@ -205,7 +208,7 @@ paragraphs (`s04_parse_docx.py:191, 346`), and its questions are extracted as
 quotes. A `.md`/`.txt` guide is refused as unsupported and lands in
 `summary.ingest.failed`. Fix both sides together:
 
-- `s01_ingest.py`: skip the reserved guide location (decision 0.2).
+- `s01_ingest.py`: skip the reserved guide location (decision 0.3).
 - Swift `ProjectFolderWatcher.swift:142-159` `eligibleExtensions` and
   `ContentView.swift:1701` `acceptedExtensions`: skip it too.
   `tests/test_accepted_extension_parity.py:50,59` holds the two lists together.

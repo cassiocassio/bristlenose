@@ -1,7 +1,6 @@
 import Foundation
 
-/// The top-level lenses. Five ship; `.discussion` is a parked preview whose rail
-/// row appears only when `BristlenoseFlags.discussionLens` is on (LensItem.lenses).
+/// The top-level lenses, in rail order (`LensItem.all`).
 ///
 /// Raw values match the keys expected by `window.switchToTab(tab)` in
 /// `frontend/src/shims/navigation.ts`.

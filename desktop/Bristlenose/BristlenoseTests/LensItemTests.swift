@@ -9,60 +9,20 @@ import Testing
 /// and the §5 icon assignments. A dropped row or a typo'd icon is a silent visual
 /// regression these assertions catch.
 @Suite struct LensItemTests {
-    /// The shipping rail. One row per lens, no build-configuration fork: the
-    /// second Codebook row that rode here in DEBUG was the v2 lens, and v2
-    /// became the only Codebook lens on 31 Aug 2026.
-    ///
-    /// Read through `lenses(discussion:)`, never `all`: `all` follows the
-    /// machine's own defaults, so a developer who has switched the Discussion
-    /// preview on would see this go red for a correct rail.
+    /// The rail, in order. Discussion is last, so the five older lenses keep
+    /// ⌘1–⌘5 and it takes ⌘6. It was a flagged preview row until it shipped for
+    /// beta on 3 Oct 2026; no flag remains, so no machine's defaults can hide it.
     @Test func all_hasOneRowPerTab_inSidebarOrder() {
-        #expect(LensItem.lenses(discussion: false).map(\.tab) == [
-            .project, .sessions, .quotes, .codebook, .signals,
-        ])
-    }
-
-    /// The Discussion preview adds exactly one row, last — so the five shipping
-    /// lenses keep ⌘1–⌘5 and it takes ⌘6.
-    @Test func discussionPreview_appendsOneRowLast() {
-        #expect(LensItem.lenses(discussion: true).map(\.tab) == [
+        #expect(LensItem.all.map(\.tab) == [
             .project, .sessions, .quotes, .codebook, .signals, .discussion,
         ])
-        #expect(LensItem.lenses(discussion: true).last?.systemImage == "questionmark.bubble")
     }
 
-    /// Off unless switched on — in every build configuration, DEBUG included,
-    /// so the suite runs against the shipped state.
-    @Test func discussionFlag_defaultsOff_andReadsItsKey() throws {
-        let suite = "LensItemTests.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
-        #expect(BristlenoseFlags.discussionLens(defaults) == false)
-        defaults.set(true, forKey: BristlenoseFlags.discussionLensKey)
-        #expect(BristlenoseFlags.discussionLens(defaults) == true)
-    }
-
-    /// The icon resolves whatever the flag says — a remembered Discussion lens
-    /// must not draw a placeholder circle on a machine where the flag is off.
-    @Test func discussionIcon_resolvesWithTheFlagOff() {
-        #expect(LensItem.systemImage(for: .discussion) == "questionmark.bubble")
-    }
-
-    /// Every rail row is a distinct tab, and every SHIPPING tab has a row.
-    ///
-    /// No longer `LensItem.all.count == Tab.allCases.count`: that held only
-    /// while the two sets were identical, so it would have passed in DEBUG by
-    /// coincidence and failed in Release for a correct rail. It asserted the
-    /// arithmetic rather than the invariant.
-    @Test func all_coversEveryShippingTabExactlyOnce() {
-        let tabs = LensItem.lenses(discussion: false).map(\.tab)
-        for tab in Tab.allCases where tab != .discussion {
-            #expect(tabs.filter { $0 == tab }.count == 1)
-        }
-        #expect(!tabs.contains(.discussion))
-        let preview = LensItem.lenses(discussion: true).map(\.tab)
+    /// Every tab has exactly one row.
+    @Test func all_coversEveryTabExactlyOnce() {
+        let tabs = LensItem.all.map(\.tab)
         for tab in Tab.allCases {
-            #expect(preview.filter { $0 == tab }.count == 1)
+            #expect(tabs.filter { $0 == tab }.count == 1)
         }
     }
 
@@ -79,17 +39,18 @@ import Testing
     }
 
     @Test func icons_matchSpecSection5() {
-        let icons = Dictionary(uniqueKeysWithValues: LensItem.lenses(discussion: true).map { ($0.tab, $0.systemImage) })
+        let icons = Dictionary(uniqueKeysWithValues: LensItem.all.map { ($0.tab, $0.systemImage) })
         #expect(icons[.project] == "target")
         #expect(icons[.sessions] == "person.2")
         #expect(icons[.quotes] == "text.quote")
         #expect(icons[.codebook] == "tag")
         #expect(icons[.signals] == "square.grid.3x3")
         #expect(icons[.discussion] == "questionmark.bubble")
+        #expect(LensItem.systemImage(for: .discussion) == "questionmark.bubble")
     }
 
     @Test func ids_areUnique() {
-        let ids = LensItem.lenses(discussion: true).map(\.id)
+        let ids = LensItem.all.map(\.id)
         #expect(Set(ids).count == ids.count)
     }
 }

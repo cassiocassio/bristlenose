@@ -51,16 +51,4 @@ enum BristlenoseFlags {
         UserDefaults.standard.bool(forKey: cloudImportZoomKey)
     }
 
-    /// The **Discussion lens** preview — a sixth rail row (⌘6,
-    /// `questionmark.bubble`). **Default off.** The lens reads a SYNTHETIC study
-    /// until the pipeline stage and API exist (Phases 2–3 of
-    /// `docs/design-discussion-lens-plan.md`), so it is for trying the design
-    /// with people, never for a researcher's own data. A tester switches it from
-    /// Diagnostics ▸ Discussion Lens (Preview); the rail, the View menu and the
-    /// sidebar read the key via `@AppStorage`, so a flip redraws live. Or:
-    /// `defaults write app.bristlenose BristlenoseDiscussionLens -bool YES`
-    static let discussionLensKey = "BristlenoseDiscussionLens"
-    static func discussionLens(_ defaults: UserDefaults = .standard) -> Bool {
-        defaults.bool(forKey: discussionLensKey)
-    }
 }

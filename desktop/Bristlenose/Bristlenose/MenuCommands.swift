@@ -132,8 +132,6 @@ private struct DiagnosticsMenuContent: View {
     /// Used by the DEBUG harness section's "Grid Specimen" (navigates the SPA).
     @ObservedObject var bridgeHandler: BridgeHandler
     @Environment(\.openWindow) private var openWindow
-    @AppStorage(BristlenoseFlags.discussionLensKey)
-    private var discussionLens: Bool = false
 
     var body: some View {
         // Section 1 — user diagnostics, every channel. Reveal-existing-data
@@ -162,12 +160,6 @@ private struct DiagnosticsMenuContent: View {
             DiagnosticsActions.copyBuildProvenance(serveManager: serveManager)
         }
         Button("Shoal Screensaver") { openWindow(id: "shoal-view") }
-
-        // A parked lens a tester can switch on (BristlenoseFlags; plan §4). Here
-        // because this is the menu a TestFlight tester can already reach, and the
-        // preview shows a synthetic study — never a researcher's own data.
-        Divider()
-        Toggle("Discussion Lens (Preview)", isOn: $discussionLens)
 
         if DistributionChannel.current.exposesDebugTools {
             Divider()
@@ -857,10 +849,6 @@ private struct ViewMenuContent: View {
     /// `useKeyboardShortcuts.ts` lists the same lenses, and the two must agree.
     static let focusModeTabs: Set<Tab> = [.quotes, .signals]
 
-    /// Observed so ⌘6 appears and disappears with the Discussion preview.
-    @AppStorage(BristlenoseFlags.discussionLensKey)
-    private var discussionLens: Bool = false
-
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
     @FocusedValue(\.windowCommands) private var windowCommands
@@ -928,7 +916,7 @@ private struct ViewMenuContent: View {
         // same array is what makes that structural rather than a promise. It
         // also means the DEBUG-only v2 lens gets its number automatically and
         // Release keeps five.
-        ForEach(Array(LensItem.lenses(discussion: discussionLens).enumerated()), id: \.element.id) { index, lens in
+        ForEach(Array(LensItem.all.enumerated()), id: \.element.id) { index, lens in
             let tab = lens.tab
             Button(tab.localizedLabel(i18n), systemImage: lens.systemImage) {
                 bridgeHandler.activateLens(tab)

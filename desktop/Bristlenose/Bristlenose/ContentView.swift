@@ -2741,18 +2741,15 @@ struct ContentView: View {
     /// `if` rather than an indentation change over seventy lines.
     private var projectList: some View {
         List(selection: $selection) {
-            // "+ New Project" lives outside the Section. Per desktop/CLAUDE.md:
-            // `Section + Button + ForEach.onMove + conditional Text` drops
-            // Section content when `projects.isEmpty == true` on macOS 26.
-            // Section here contains only the ForEach.
-            Button {
-                createNewProject()
-            } label: {
-                Label(i18n.t("desktop.menu.file.newProject"), systemImage: "plus")
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-
+            // No "+ New Project" row here any more (toolbar rev 3, 3 Oct 2026):
+            // it shipped grey and scrolled away with the list, and a user
+            // interview found it unfound. New Project lives in the sidebar
+            // title bar's `+⌄` and in File ▸ New Project. The Section still
+            // contains only the ForEach — desktop/CLAUDE.md's macOS-26 trap
+            // (`Section + Button + ForEach.onMove + conditional Text` dropping
+            // Section content when the list is empty) was about a Button
+            // *inside* the Section; the empty-state hint below stays outside
+            // it for the same reason.
             Section {
                 ForEach(projectIndex.sidebarItems) { item in
                     switch item {

@@ -126,7 +126,7 @@ The canonical spec is the `ProjectRow.swift` doc-comment; this is its design hom
 
 ### "New Project" placement
 
-> **Shipped 3 Oct 2026 (toolbar rev 3):** a `+⌄` menu of **New Project…** / **New Folder…** in the sidebar's own title bar (on the sidebar column; the New Folder button it replaces sat on the SwiftUI list, which the AppKit outline does not render, so it never showed there; it hides when the sidebar does) — the NetNewsWire pattern, a plain menu so the click that looks for New Project finds New Folder. The grey in-list `+ New Project…` row that shipped from June to October is gone: a user interview found it unfound. File ▸ New Project (⌘N) / New Folder (⇧⌘N) stay the keyboard paths. The alternatives considered (labelled footer, Things' explaining menu, a Settings gear) and why each lost: `docs/design-desktop-nav-toolbar-rearrangement.md` §3.3 and the mockup `docs/mockups/desktop-toolbar-and-footer-options.html`.
+> **Shipped 3 Oct 2026 (toolbar rev 3):** a `+⌄` menu of **New Project** / **New Folder…** in the sidebar's own title bar (on the sidebar column; the New Folder button it replaces sat on the SwiftUI list, which the AppKit outline does not render, so it never showed there; it hides when the sidebar does) — the NetNewsWire pattern, a plain menu so the click that looks for New Project finds New Folder. The grey in-list `+ New Project…` row that shipped from June to October is gone: a user interview found it unfound. File ▸ New Project (⌘N) / New Folder (⇧⌘N) stay the keyboard paths. The alternatives considered (labelled footer, Things' explaining menu, a Settings gear) and why each lost: `docs/design-desktop-nav-toolbar-rearrangement.md` §3.3 and the mockup `docs/mockups/desktop-toolbar-and-footer-options.html`.
 
 The options this section originally listed, kept as history:
 - Toolbar `+` button (most standard macOS pattern — Mail, Notes, Reminders) — **this one shipped**
@@ -268,7 +268,7 @@ Based on survey of 14 macOS apps:
 ```
 File
 ┌──────────────────────────────┐
-│ New Project…           ⌘N    │
+│ New Project            ⌘N    │
 │ New Folder…            ⇧⌘N   │
 │ New Window             ⌥⌘N   │   ← ⇧⌘O retired 20 Aug 2026
 ├──────────────────────────────┤
@@ -380,7 +380,7 @@ All items disabled when nothing is selected.
 - Drop animation: drag image zooms into target (free with AppKit)
 - UTType registration: `.mpeg4Movie`, `.quickTimeMovie`, `.mpeg4Audio`, `.wav`, `.mp3`, `.plainText`, plus custom UTTypes for `.srt`/`.vtt`. Reject `.html`, `.py`, `.json` etc
 - `ContentUnavailableView` as drag target for empty sidebar
-- **Menu bar equivalents for everything**: File > New Project…, context menu > Add Interviews…
+- **Menu bar equivalents for everything**: File > New Project, context menu > Add Interviews…
 
 ### What drag does NOT do
 

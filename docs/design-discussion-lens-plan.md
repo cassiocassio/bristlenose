@@ -297,8 +297,28 @@ overrides keyed on durable ids, never on labels.
   (`design-lens-template.md:229-262`); add a variants-table row.
 - **Navigator**: modelled on `components/SignalsSidebar.tsx`, in the shared left
   panel (`SidebarLayout.tsx:123-135`, width from `SidebarStore.ts:26-41`). Rows
-  use `.toc-heading` / `.toc-link`; session switch uses `.badge.session-id-badge`
-  (`#1`). Planned | Merged in a sticky header.
+  use `.toc-heading` / `.toc-link` — the Quotes TOC style, chosen over the Signals
+  rows on 3 Oct 2026. In Planned every row carries the solid "planned" dot, so the
+  mark explains itself before the researcher switches to Merged.
+- **Sticky header — decided 3 Oct 2026.** Planned | Merged is the shipped
+  `.dimension-toggle` (the Signals inspector's Section | Theme), at its natural
+  width. Each session is the shipped `PersonBadge` with `#N` as its code and the
+  participant names as its name half — no session-badge styling of our own, and
+  no duration (that stays in the line under the session heading). Names cap at
+  two: `Sarah and Mike`, else `Bettina and 4 others` — one new counted string with
+  plural forms; the list itself comes from `Intl.ListFormat` in the UI locale
+  (`en` is British: no serial comma); the full list goes in the tooltip.
+  **Selected = "you are here"**: the `#N` in accent at emphasis weight plus the
+  shipped `.bn-person-badge-highlighted` ring, the same mark on that session's
+  badge in every navigator row and on the `#N ▾` pull-down; in the header the
+  session also takes the toggle's selected fill (`--bn-colour-hover`). Not solved:
+  with many sessions the header still wraps to a second line — the cap only
+  removes the long-names case.
+- **Session heading line**: one `PersonBadge` per participant, then duration,
+  question and quote counts; it wraps, the counts staying one unit.
+- **Non-question turns: hidden by default — decided 3 Oct 2026**, with nothing
+  marking where they were. A toggle still shows them; where it lives in the app
+  (View menu or lens toolbar) is not decided.
 - **Store**: `DiscussionStore` on the `SignalStore.ts` pattern (module-level
   `useSyncExternalStore`, `reset*()` for tests): mode, selected session, focused
   item.

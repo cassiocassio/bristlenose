@@ -48,7 +48,13 @@ async def split_whole(segments: list[TranscriptSegment], client: LLMClient) -> d
         response_model=SpeakerSplitAssignment,
         prompt_template=tmpl,
     )
-    bounds = sorted(result.boundaries, key=lambda b: b.segment_index)
+    # The same guards as production's split_single_speaker_llm.
+    bounds = sorted(
+        (b for b in result.boundaries if b.segment_index < len(segments)),
+        key=lambda b: b.segment_index,
+    )
+    if result.speaker_count <= 1 or not bounds:
+        return result.model_dump()
     label, j = bounds[0].speaker_id, 1
     for i, seg in enumerate(segments):
         while j < len(bounds) and i >= bounds[j].segment_index:

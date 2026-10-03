@@ -123,8 +123,74 @@ Default assumption: 2 speakers (interviewer + interviewee). Returns `speaker_cou
 - **No overlapping speech**: assumes one speaker per segment. If a segment contains two speakers talking simultaneously, it gets assigned to one
 - **LLM accuracy varies**: local models (Ollama) are less reliable than cloud models for structured output. The 3-retry mechanism in `_analyze_local()` helps but doesn't guarantee correct boundary detection
 
+## Measured: opening sample vs whole transcript (3 Oct 2026)
+
+The propagation limit above was measured, not just reasoned about. Harness:
+`experiments/speaker_split_full/` (`run.py`, `eval_platform.py`, `page.html`).
+Data and results stay outside the tracked tree because they carry participant
+speech. "Whole" is the shipped prompt and model (Sonnet 4.6) given every
+segment instead of the sample. Each method is followed by the shipped
+heuristic and LLM role passes.
+
+**Against platform ground truth.** A 38-minute Teams interview came with its
+`.docx` transcript (named turns). The video was transcribed separately with
+Whisper, and each Whisper segment was scored against two truths built from
+that `.docx`:
+
+- **Text truth (primary).** Label a segment by whose nearby Teams text holds
+  its words: one speaker at least 0.7, the other under 0.4. 338 of 435
+  segments qualify.
+- **Timing truth.** Label a segment by whose turn interval covers at least
+  75% of it, and keep it only when half its words appear in that speaker's
+  nearby text. 239 segments qualify.
+
+The timing truth is the weaker of the two. Teams' turn starts often come
+late, so short moderator turns fall inside the participant's interval, and
+the filter keeps 47% of moderator segments against 81% of participant ones.
+With the filter off, the moderator ranking survives and overall accuracy does
+not, because that truth is mostly swapped there.
+
+| | truth | moderator segments right | participant segments right | all segments right |
+|---|---|---|---|---|
+| sampled (shipped) | text | 36/95 (38%) | 235/243 (97%) | 80% |
+| whole, runs 1–3 | text | 84–92/95 (88–97%) | 214–217/243 (88–89%) | 89–91% |
+| sampled (shipped) | timing | 42/81 (52%) | 156/158 (99%) | 83% |
+| whole, runs 1–3 | timing | 68–74/81 (84–91%) | 140–144/158 (89–91%) | 87–91% |
+
+- **Stability:** the three whole runs label 407/435 segments the same.
+- **Where the shipped method works, they agree.** Inside the window the
+  shipped method reads, both methods score 45/47 on the timing truth. All of
+  the shipped method's loss is in the propagated tail.
+- **The shipped method's high participant score is structural, not skill.**
+  After the window it scores 0/39 moderator and 153/153 participant. That is
+  the last label carried forward, and this window happened to end on a
+  participant line. A window that ends on the moderator flips the failure:
+  every later participant line becomes the moderator's. The Talismanic
+  session below is that case.
+- **Mixed segments:** 67 of 435 Whisper segments (15%) hold both voices by
+  the Teams timing. No segment-level method can get those right — see
+  *No overlapping speech* above.
+
+**Two bare recordings, no ground truth yet.** On the Talismanic project the
+methods agree on 66/71 and 60/61 segments inside the sample window, and on
+127/167 and 127/316 after it. In the 35-minute session the shipped split
+gives the moderator 69% of talk time. A hand-labelling page (`page.html`)
+exists for these; the labels are not in yet.
+
+**Costs not yet measured:**
+- *Output size grows with the session.* The 35-minute session returned 281
+  boundaries for 377 segments, which is close to one label per segment. A
+  2-hour recording would need ~1,000+ boundaries in one structured response.
+  That would exceed some providers' output caps (gpt-4o: 16,384 tokens) and
+  take minutes to stream. Long sessions therefore need the chunked passes
+  named under *Future*, not one call.
+- Input cost scales with length: roughly 4–6× the sampled call for a
+  30–40 minute session.
+- n = 1 platform session, with one moderator. Treat the numbers as
+  direction, not calibration.
+
 ## Future
 
 - **Acoustic diarization (pyannote)**: optional `pip install bristlenose[diarize]` extra for raw recordings where text-based splitting is insufficient. Would run as a true diarization step on the audio before transcription
 - **Confidence scoring**: the LLM could return confidence per boundary, allowing the pipeline to flag uncertain splits for human review
-- **Full-transcript splitting**: for very long recordings, chunk the transcript and split in multiple passes rather than relying solely on the first 10 minutes
+- **Full-transcript splitting**: split the whole transcript rather than relying solely on the first 5–8 minutes. Measured above: it roughly doubles how many moderator segments are found, at a cost of about one participant segment in ten. Long recordings need it done in chunks, carrying the speaker identities from one chunk to the next, because a single response would hit output-token caps. Not built; the decision to adopt it is open.

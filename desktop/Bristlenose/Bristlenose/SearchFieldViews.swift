@@ -387,9 +387,11 @@ struct SearchSuggestionsList: View {
                 MeasuredPersonBadge(code: row.code ?? row.label,
                                     name: row.label == row.code ? nil : row.label,
                                     style: styles.personStyle(for: row))
+                    .background(cardBacking(highlighted))
                     .overlay(highlightRing(highlighted))
             case .tag:
                 MeasuredTagBadge(text: row.label, style: styles.tagStyle(for: row))
+                    .background(cardBacking(highlighted))
                     .overlay(highlightRing(highlighted))
             }
             Spacer(minLength: 12)
@@ -406,6 +408,16 @@ struct SearchSuggestionsList: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(SuggestionLabel.spoken(row))
         .accessibilityAddTraits(highlighted ? .isSelected : [])
+    }
+
+    /// A badge with no fill of its own (a speaker code) is drawn on the card's
+    /// background on the web; on the selection colour it would be dark text on
+    /// blue. So a highlighted badge sits on the card's background, and reads
+    /// exactly as it does on a quote card.
+    @ViewBuilder private func cardBacking(_ on: Bool) -> some View {
+        if on {
+            RoundedRectangle(cornerRadius: 3).fill(Color(nsColor: .textBackgroundColor)).padding(-1)
+        }
     }
 
     /// On the selection colour a badge keeps its own colours and gains a thin

@@ -51,7 +51,8 @@ interface Answer { code: string; name: string; confirmed: boolean }
 
 export interface Scenario { role: Role; answer: Answer | null }
 
-/** The same four the native half offers; set from the lab's toolbar. */
+/** The same four the native half offers; chosen in the lab's toolbar, which
+ *  reloads this page with `?scenario=<name>`. */
 export const SCENARIOS: Record<string, Scenario> = {
   proposed: { role: "moderator", answer: { code: "m1", name: "Martin B Storey", confirmed: false } },
   confirmed: { role: "moderator", answer: { code: "m1", name: "Martin B Storey", confirmed: true } },
@@ -100,16 +101,21 @@ const PROPOSED_CSS = `
 .bn-person-picker .bn-picker-field .tag-input { width: 100%; font: inherit; }
 `;
 
-declare global {
-  interface Window { __pickerLab?: { setScenario: (name: string) => void } }
+/** The scenario the page opens on. The lab puts it in the URL rather than
+ *  pushing it after load, so a reload, a project switch or a slow chunk can
+ *  never leave the two halves on different scenarios. */
+function initialScenario(): Scenario {
+  const name = new URLSearchParams(window.location.search).get("scenario") ?? "proposed";
+  return SCENARIOS[name] ?? SCENARIOS.proposed;
 }
 
 export function PickerSpecimen() {
+  const [start] = useState(initialScenario);
   const [people, setPeople] = useState<Record<Role, Person[]>>(KNOWN);
-  const [role, setRole] = useState<Role>("moderator");
-  const [answer, setAnswer] = useState<Answer | null>(SCENARIOS.proposed.answer);
+  const [role, setRole] = useState<Role>(start.role);
+  const [answer, setAnswer] = useState<Answer | null>(start.answer);
   const [open, setOpen] = useState(true);
-  const [selected, setSelected] = useState<string>("m1");
+  const [selected, setSelected] = useState<string>(start.answer?.code ?? KNOWN[start.role][0].code);
   const [draft, setDraft] = useState("");
   const itemRefs = useRef<Record<string, HTMLLIElement | null>>({});
   const typed = useRef({ buffer: "", at: 0 });
@@ -120,19 +126,6 @@ export function PickerSpecimen() {
     [people],
   );
   const rows = rowsFor(role);
-
-  const applyScenario = useCallback((s: Scenario) => {
-    setRole(s.role);
-    setAnswer(s.answer);
-    setSelected(s.answer?.code ?? KNOWN[s.role][0].code);
-    setDraft("");
-    setOpen(true);
-  }, []);
-
-  useEffect(() => {
-    window.__pickerLab = { setScenario: (name) => SCENARIOS[name] && applyScenario(SCENARIOS[name]) };
-    return () => { delete window.__pickerLab; };
-  }, [applyScenario]);
 
   // The keyboard selection is real focus, so the shipped :focus styles draw it.
   useEffect(() => {
@@ -150,12 +143,18 @@ export function PickerSpecimen() {
   }, [people, appearance]);
 
   const choose = (id: string) => {
-    if (id === "me") setAnswer({ code: answer?.code ?? "m1", name: ME, confirmed: true });
+    if (id === "me") setAnswer({ code: meCode(), name: ME, confirmed: true });
     else {
       const p = people[role].find((x) => x.code === id);
       if (p) setAnswer({ code: p.code, name: p.name, confirmed: true });
     }
     setOpen(false);
+  };
+
+  /** That's Me answers this slot, so it keeps the slot's role prefix. */
+  const meCode = () => {
+    const prefix = ROLES.find((r) => r.id === role)!.prefix;
+    return answer?.code.startsWith(prefix) ? answer.code : `${prefix}${people[role].length + 1}`;
   };
 
   const create = () => {
@@ -170,7 +169,8 @@ export function PickerSpecimen() {
   };
 
   const onListKey = (e: KeyboardEvent<HTMLUListElement>) => {
-    if ((e.target as HTMLElement).tagName === "INPUT") return;
+    const tag = (e.target as HTMLElement).tagName;
+    if (tag === "INPUT" || tag === "BUTTON") return;
     const i = rows.indexOf(selected);
     if (e.key === "ArrowDown") { e.preventDefault(); setSelected(rows[Math.min(i + 1, rows.length - 1)]); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setSelected(rows[Math.max(i - 1, 0)]); }
@@ -178,7 +178,7 @@ export function PickerSpecimen() {
     else if (e.key === "Escape") { e.preventDefault(); setOpen(false); }
     else if (e.key.length === 1 && /\S/.test(e.key) && !e.metaKey && !e.ctrlKey) {
       // Type-to-jump, on code or name, the way a menu does.
-      const now = Date.now();
+      const now = e.timeStamp;
       typed.current.buffer = (now - typed.current.at < 800 ? typed.current.buffer : "") + e.key.toLowerCase();
       typed.current.at = now;
       const hit = people[role].find(
@@ -230,7 +230,6 @@ export function PickerSpecimen() {
                 tabIndex={-1}
                 onClick={() => choose(p.code)}
                 onKeyDown={(e) => { if (e.key === " ") { e.preventDefault(); choose(p.code); } }}
-                onMouseEnter={() => setSelected(p.code)}
               >
                 <span className={`export-dropdown-check${isAnswer ? " bn-picker-tick" : ""}`}>{isAnswer && CHECK}</span>
                 <BadgeFor code={p.code} name={p.name} proposed={isAnswer && !answer!.confirmed} />
@@ -246,9 +245,10 @@ export function PickerSpecimen() {
               tabIndex={-1}
               onClick={() => choose("me")}
               onKeyDown={(e) => { if (e.key === " ") { e.preventDefault(); choose("me"); } }}
-              onMouseEnter={() => setSelected("me")}
             >
-              <span className="export-dropdown-check" />
+              <span className={`export-dropdown-check${answer?.name === ME ? " bn-picker-tick" : ""}`}>
+                {answer?.name === ME && CHECK}
+              </span>
               {PERSON_CHECK}
               <span>That’s Me ({ME})</span>
             </li>

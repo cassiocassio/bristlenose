@@ -53,7 +53,13 @@ _SRC = _REPO_ROOT / "frontend" / "src"
 # `serve --dev` / a separate entry point, and are never in a researcher's
 # build. Same standing as CLI terminal chrome in docs/design-i18n.md
 # §"Which surfaces are targets" — a property of the surface, not a stage.
-_DEV_ONLY = frozenset({"components/PlaygroundFab.tsx", "pages/VisualDiff.tsx"})
+# PickerSpecimen is the web half of Diagnostics ▸ Picker Lab (DEBUG builds only),
+# English by design like the other contributor tools here.
+_DEV_ONLY = frozenset({
+    "components/PlaygroundFab.tsx",
+    "pages/VisualDiff.tsx",
+    "islands/PickerSpecimen.tsx",
+})
 
 # Shipping components that carry the defect today. Named so the debt is
 # visible and can only shrink: a new one fails as an unexpected finding, and a

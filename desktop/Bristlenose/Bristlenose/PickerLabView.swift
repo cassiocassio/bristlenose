@@ -21,12 +21,17 @@ import WebKit
 /// badges ever differ, that is a finding about the bridge, not the lab.
 ///
 /// The scenario control drives both halves; inside each, the controls are live.
+/// The web half takes its scenario from the URL (`?scenario=`), so a reload or
+/// a project switch cannot leave the halves showing different things; Reset
+/// starts both again from the chosen scenario.
 struct PickerLabView: View {
     @EnvironmentObject private var serveFleet: ServeFleet
     @EnvironmentObject private var i18n: I18n
     @StateObject private var bridge = BridgeHandler()
     @StateObject private var model = PickerLabModel()
     @State private var scenario = "proposed"
+    /// Bumped by Reset: a new URL reloads the web half from the scenario.
+    @State private var resetCount = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -38,6 +43,10 @@ struct PickerLabView: View {
                     Text("Participant slot").tag("participant")
                 }
                 .fixedSize()
+                Button("Reset") {
+                    resetCount += 1
+                    model.apply(scenario: scenario)
+                }
                 Spacer()
                 Text(bridge.searchBadgeStyles.people.isEmpty
                      ? "Waiting for badge styles from the web half…"
@@ -55,19 +64,15 @@ struct PickerLabView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .onChange(of: scenario) { _, name in apply(name) }
-        .onChange(of: bridge.isReady) { _, ready in if ready { apply(scenario) } }
+        .onChange(of: scenario) { _, name in model.apply(scenario: name) }
     }
 
-    private func apply(_ name: String) {
-        model.apply(scenario: name)
-        guard let webView = bridge.webView else { return }
-        Task { @MainActor in
-            // Structured argument (security rule 3) — no interpolation into JS.
-            _ = try? await webView.callAsyncJavaScript(
-                "window.__pickerLab && window.__pickerLab.setScenario(name);",
-                arguments: ["name": name], in: nil, contentWorld: .page)
-        }
+    private func specimenURL(_ base: URL) -> URL {
+        var c = URLComponents(url: base.appendingPathComponent("picker-specimen"),
+                              resolvingAgainstBaseURL: false)
+        c?.queryItems = [URLQueryItem(name: "scenario", value: scenario),
+                         URLQueryItem(name: "reset", value: String(resetCount))]
+        return c?.url ?? base
     }
 
     // MARK: Native half
@@ -92,12 +97,15 @@ struct PickerLabView: View {
            let project = serveFleet.frontedProject,
            let port = URLComponents(url: base, resolvingAgainstBaseURL: false)?.port {
             WebView(
-                url: base.appendingPathComponent("picker-specimen"),
+                url: specimenURL(base),
                 bridgeHandler: bridge,
                 session: ServeSession(projectID: project, port: port),
                 authToken: serveFleet.fronted?.authToken
             )
             .environmentObject(i18n)
+            // A new sidecar is a new view: the auth token is injected only when
+            // the view is made (desktop/CLAUDE.md, "keyed on project.id + port").
+            .id(ServeSession(projectID: project, port: port).viewID)
         } else {
             ContentUnavailableView(
                 "No serve running",
@@ -168,7 +176,10 @@ final class PickerLabModel: ObservableObject {
 
     func choose(_ id: String) {
         if id == Self.meRow {
-            answer = .init(code: answer?.code ?? "m1", name: Self.me, confirmed: true)
+            // That's Me answers this slot, so it keeps the slot's role prefix.
+            let code = (answer?.code.hasPrefix(role.prefix) ?? false)
+                ? answer!.code : "\(role.prefix)\((people[role]?.count ?? 0) + 1)"
+            answer = .init(code: code, name: Self.me, confirmed: true)
         } else if let p = people[role]?.first(where: { $0.code == id }) {
             answer = .init(code: p.code, name: p.name, confirmed: true)
         }
@@ -183,20 +194,6 @@ final class PickerLabModel: ObservableObject {
         answer = .init(code: code, name: name, confirmed: true)
         draft = ""
         isOpen = false
-    }
-
-    /// Type-to-jump on code or name, the way a menu does.
-    private var typed = ""
-    private var typedAt = Date.distantPast
-    func jump(_ character: String) {
-        let now = Date()
-        typed = (now.timeIntervalSince(typedAt) < 0.8 ? typed : "") + character.lowercased()
-        typedAt = now
-        if let hit = people[role]?.first(where: {
-            $0.code.hasPrefix(typed) || $0.name.lowercased().hasPrefix(typed)
-        }) {
-            selection = hit.code
-        }
     }
 }
 
@@ -218,7 +215,7 @@ private struct PopoverAnchor: View {
             }
         }
         .buttonStyle(.plain)
-        .background(PopoverHost(isOpen: model.isOpen) {
+        .background(PopoverHost(isOpen: model.isOpen, onClose: { model.isOpen = false }) {
             NativePersonPicker(model: model, bridge: bridge)
         })
     }
@@ -226,6 +223,7 @@ private struct PopoverAnchor: View {
 
 private struct PopoverHost<Content: View>: NSViewRepresentable {
     let isOpen: Bool
+    let onClose: () -> Void
     @ViewBuilder let content: () -> Content
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -239,10 +237,14 @@ private struct PopoverHost<Content: View>: NSViewRepresentable {
             host.sizingOptions = .preferredContentSize
             popover.contentViewController = host
             popover.behavior = .applicationDefined
+            popover.delegate = context.coordinator
         }
+        context.coordinator.onClose = onClose
         DispatchQueue.main.async {
             if isOpen, !popover.isShown, view.window != nil {
-                popover.show(relativeTo: view.bounds, of: view, preferredEdge: .maxY)
+                // Below the badge, as menus and pop-ups open. The host view is
+                // unflipped, so its bottom edge is minY.
+                popover.show(relativeTo: view.bounds, of: view, preferredEdge: .minY)
             } else if !isOpen, popover.isShown {
                 popover.close()
             }
@@ -253,11 +255,25 @@ private struct PopoverHost<Content: View>: NSViewRepresentable {
         coordinator.popover.close()
     }
 
-    final class Coordinator { let popover = NSPopover() }
+    /// `.applicationDefined` so the popover stays up while you look at the web
+    /// half; Escape closes it through the list, and every close reaches the
+    /// model here, so the next click on the badge opens it again.
+    final class Coordinator: NSObject, NSPopoverDelegate {
+        let popover = NSPopover()
+        var onClose: (() -> Void)?
+        func popoverDidClose(_ notification: Notification) { onClose?() }
+    }
 }
 
 // MARK: - The picker, in stock controls
 
+/// The list is the Sessions switcher's table (`SessionsPopoverList.swift`),
+/// because that surface already settled how a list in a popover behaves on
+/// this Mac (docs/design-sessions-popover-navigation.md §Interaction): single
+/// click commits and dismisses, arrows move the highlight, Return or Space
+/// commits, Escape dismisses, hover is the popover family's 6% wash, and the
+/// selection is the grey source-list capsule. A SwiftUI `List` gives none of
+/// that — click only selects, and a tap gesture on its rows breaks selection.
 private struct NativePersonPicker: View {
     @ObservedObject var model: PickerLabModel
     @ObservedObject var bridge: BridgeHandler
@@ -269,49 +285,196 @@ private struct NativePersonPicker: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
+            .frame(maxWidth: .infinity)
 
-            List(selection: $model.selection) {
-                ForEach(model.people[model.role] ?? [], id: \.code) { p in
-                    row(p).tag(p.code)
-                }
-                if model.role != .participant {
-                    Label("That’s Me (\(PickerLabModel.me))", systemImage: "person.crop.circle.badge.checkmark")
-                        .padding(.leading, 20)
-                        .tag(PickerLabModel.meRow)
-                }
-            }
-            .listStyle(.plain)
-            .scrollDisabled(true)
-            .frame(height: CGFloat(model.rows.count) * 24 + 4)
-            // Return and double-click choose — the native primary action.
-            .contextMenu(forSelectionType: String.self, menu: { _ in }) { ids in
-                if let id = ids.first { model.choose(id) }
-            }
-            .onKeyPress(characters: .alphanumerics, phases: .down) { press in
-                model.jump(press.characters)
-                return .handled
-            }
+            PickerPeopleList(model: model, styles: bridge.searchBadgeStyles)
+                .frame(height: PickerPeopleList.height(rows: model.rows.count,
+                                                       styles: bridge.searchBadgeStyles))
 
-            TextField("", text: $model.draft, prompt: Text(model.role.newPrompt))
+            TextField(model.role.newPrompt, text: $model.draft, prompt: Text(model.role.newPrompt))
                 .textFieldStyle(.roundedBorder)
                 .onSubmit { model.create() }
         }
         .padding(10)
         .frame(width: 280)
     }
+}
 
-    private func row(_ p: PickerPerson) -> some View {
-        let isAnswer = model.answer?.code == p.code && model.answer?.name == p.name
-        return HStack(spacing: 4) {
+private struct PickerPeopleList: NSViewRepresentable {
+    @ObservedObject var model: PickerLabModel
+    let styles: SearchBadgeStyles
+
+    /// Every row is one badge high. Measured from the badge style the web half
+    /// sent, so a taller chip makes a taller row instead of being clipped.
+    static func rowHeight(_ styles: SearchBadgeStyles) -> CGFloat {
+        guard let s = styles.people.values.first else { return 24 }
+        let face = s.name ?? s.code
+        let font = NSFont.systemFont(ofSize: CGFloat(face.size))
+        let line = ceil(font.ascender - font.descender + font.leading)
+        let chip = line + CGFloat(2 * face.padY) + CGFloat(2 * (s.code.border?.width ?? 0))
+        return max(24, ceil(chip) + 6)
+    }
+
+    static func height(rows: Int, styles: SearchBadgeStyles) -> CGFloat {
+        CGFloat(rows) * rowHeight(styles) + 4
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(model: model) }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let table = SessionsPopoverTableView()
+        configureSourceListTable(table)
+        table.dataSource = context.coordinator
+        table.delegate = context.coordinator
+        table.target = context.coordinator
+        table.action = #selector(Coordinator.rowClicked(_:))
+        table.commitHandler = { [weak coordinator = context.coordinator] in coordinator?.commitSelected() }
+        table.cancelHandler = { [weak model] in model?.isOpen = false }
+
+        let scroll = NSScrollView()
+        scroll.documentView = table
+        scroll.drawsBackground = false
+        scroll.hasVerticalScroller = false
+        context.coordinator.table = table
+        context.coordinator.update(model: model, styles: styles)
+        return scroll
+    }
+
+    func updateNSView(_ scroll: NSScrollView, context: Context) {
+        context.coordinator.update(model: model, styles: styles)
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate {
+        let model: PickerLabModel
+        weak var table: NSTableView?
+        private var rows: [String] = []
+        private var styles = SearchBadgeStyles.empty
+        private var signature = ""
+
+        init(model: PickerLabModel) { self.model = model }
+
+        func update(model: PickerLabModel, styles: SearchBadgeStyles) {
+            // Reload only when what the rows draw has changed — a reload on every
+            // publish would drop the hover wash under the pointer.
+            let sig = "\(model.role)|\(model.rows)|\(String(describing: model.answer))|\(model.people)|\(styles.people.count)"
+            if sig != signature {
+                signature = sig
+                rows = model.rows
+                self.styles = styles
+                table?.reloadData()
+            }
+            if let table, let id = model.selection, let i = rows.firstIndex(of: id), table.selectedRow != i {
+                table.selectRowIndexes(IndexSet(integer: i), byExtendingSelection: false)
+                table.scrollRowToVisible(i)
+            }
+        }
+
+        func numberOfRows(in tableView: NSTableView) -> Int { rows.count }
+
+        func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
+            SessionsPopoverHoverRowView()
+        }
+
+        func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
+            PickerPeopleList.rowHeight(styles)
+        }
+
+        func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+            let id = rows[row]
+            let content = PickerRowContent(id: id, model: model, styles: styles)
+            let cell = NSTableCellView()
+            let host = NSHostingView(rootView: content)
+            host.translatesAutoresizingMaskIntoConstraints = false
+            cell.addSubview(host)
+            NSLayoutConstraint.activate([
+                host.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 12),
+                host.trailingAnchor.constraint(lessThanOrEqualTo: cell.trailingAnchor, constant: -12),
+                host.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
+            ])
+            cell.setAccessibilityElement(true)
+            cell.setAccessibilityLabel(content.accessibilityText)
+            return cell
+        }
+
+        func tableViewSelectionDidChange(_ notification: Notification) {
+            // Highlight only — choosing happens on click, Return or Space.
+            guard let table, table.selectedRow >= 0, table.selectedRow < rows.count else { return }
+            let id = rows[table.selectedRow]
+            if model.selection != id { model.selection = id }
+        }
+
+        func tableView(_ tableView: NSTableView, typeSelectStringFor tableColumn: NSTableColumn?, row: Int) -> String? {
+            typeSelectString(rows[row])
+        }
+
+        /// Matches the start of any word, so "m2", "kerri" and "ng" all land —
+        /// AppKit's default only matches the start of the whole string.
+        func tableView(_ tableView: NSTableView, nextTypeSelectMatchFromRow startRow: Int,
+                       toRow endRow: Int, for searchString: String) -> Int {
+            guard !rows.isEmpty, (0..<rows.count).contains(startRow),
+                  (0..<rows.count).contains(endRow) else { return -1 }
+            let search = searchString.lowercased()
+            var row = startRow
+            repeat {   // [startRow, endRow) with wrap; equal bounds = one full sweep
+                let words = typeSelectString(rows[row]).lowercased().split(separator: " ")
+                if words.contains(where: { $0.hasPrefix(search) }) { return row }
+                row = (row + 1) % rows.count
+            } while row != endRow
+            return -1
+        }
+
+        private func typeSelectString(_ id: String) -> String {
+            if id == PickerLabModel.meRow { return "That’s Me \(PickerLabModel.me)" }
+            let name = model.people[model.role]?.first(where: { $0.code == id })?.name ?? ""
+            return "\(id) \(name)"
+        }
+
+        @objc func rowClicked(_ sender: Any?) {
+            guard let table, table.clickedRow >= 0, table.clickedRow < rows.count else { return }
+            model.choose(rows[table.clickedRow])
+        }
+
+        func commitSelected() {
+            guard let table, table.selectedRow >= 0, table.selectedRow < rows.count else { return }
+            model.choose(rows[table.selectedRow])
+        }
+    }
+}
+
+/// One row: the check gutter, then the person's badge (or That's Me).
+private struct PickerRowContent: View {
+    let id: String
+    let model: PickerLabModel
+    let styles: SearchBadgeStyles
+
+    private var person: PickerPerson? { model.people[model.role]?.first(where: { $0.code == id }) }
+    private var isMe: Bool { id == PickerLabModel.meRow }
+    private var isAnswer: Bool {
+        guard let a = model.answer else { return false }
+        return isMe ? a.name == PickerLabModel.me : (a.code == id && a.name == person?.name)
+    }
+    private var isProposed: Bool { isAnswer && !(model.answer?.confirmed ?? true) }
+
+    var accessibilityText: String {
+        let what = isMe ? "That’s Me, \(PickerLabModel.me)" : "\(id) \(person?.name ?? "")"
+        return what + (isAnswer ? (isProposed ? ", current answer, proposed" : ", current answer") : "")
+    }
+
+    var body: some View {
+        HStack(spacing: 4) {
             Image(systemName: "checkmark")
-                .font(.system(size: 12, weight: .semibold))
+                .imageScale(.small)
                 .foregroundStyle(Color(nsColor: .systemGreen))
                 .opacity(isAnswer ? 1 : 0)
                 .frame(width: 16)
-            BadgeStyleChip(code: p.code, name: p.name,
-                           proposed: isAnswer && !(model.answer?.confirmed ?? true),
-                           styles: bridge.searchBadgeStyles)
+            if isMe {
+                Label("That’s Me (\(PickerLabModel.me))", systemImage: "person.crop.circle.badge.checkmark")
+            } else if let person {
+                BadgeStyleChip(code: person.code, name: person.name, proposed: isProposed, styles: styles)
+            }
         }
+        .accessibilityHidden(true)
     }
 }
 
@@ -344,9 +507,12 @@ struct BadgeStyleChip: View {
         let radius = s.code.radius
         let outline = s.code.border.map { colour($0.colour) } ?? .clear
         let ring = colour((s.name ?? s.code).text)
+        let bw = s.code.border?.width ?? 0
         return HStack(spacing: 0) {
-            half(code, s.code)
-            if let n = s.name { half(name, n) }
+            // The outline is drawn inside the shape, so the outer edges carry the
+            // border width on top of their padding, as CSS's border box does.
+            half(code, s.code, leading: bw, trailing: s.name == nil ? bw : 0)
+            if let n = s.name { half(name, n, leading: 0, trailing: bw) }
         }
         .clipShape(RoundedRectangle(cornerRadius: radius))
         .overlay {
@@ -361,21 +527,37 @@ struct BadgeStyleChip: View {
         }
     }
 
-    private func half(_ text: String, _ s: SearchBadgeStyle) -> some View {
+    private func half(_ text: String, _ s: SearchBadgeStyle, leading: Double, trailing: Double) -> some View {
         Text(text)
             .font(Font(font(s)))
             .foregroundStyle(colour(s.text))
-            .padding(.horizontal, s.padX)
+            .padding(.leading, s.padX + leading)
+            .padding(.trailing, s.padX + trailing)
             .padding(.vertical, s.padY + (s.border?.width ?? 0))
             .background(s.fill.map { colour($0) } ?? .clear)
     }
 
     private func font(_ s: SearchBadgeStyle) -> NSFont {
-        // CSS weight → AppKit's -1…1 scale: 400 is regular (0), 500 medium (0.23).
-        let w = NSFont.Weight(rawValue: CGFloat((s.weight - 400) / 100 * 0.23))
+        let w = NSFont.Weight(rawValue: CGFloat(Self.appKitWeight(css: s.weight)))
         return s.family == .mono
             ? NSFont.monospacedSystemFont(ofSize: CGFloat(s.size), weight: w)
             : NSFont.systemFont(ofSize: CGFloat(s.size), weight: w)
+    }
+
+    /// CSS weight (100…900) to AppKit's scale, interpolated over Apple's own
+    /// named weights rather than a straight line: 490 lands just under medium.
+    static func appKitWeight(css: Double) -> Double {
+        let table: [(Double, Double)] = [
+            (100, NSFont.Weight.ultraLight.rawValue), (200, NSFont.Weight.thin.rawValue),
+            (300, NSFont.Weight.light.rawValue), (400, NSFont.Weight.regular.rawValue),
+            (500, NSFont.Weight.medium.rawValue), (600, NSFont.Weight.semibold.rawValue),
+            (700, NSFont.Weight.bold.rawValue), (800, NSFont.Weight.heavy.rawValue),
+            (900, NSFont.Weight.black.rawValue),
+        ].map { ($0.0, Double($0.1)) }
+        let w = min(max(css, 100), 900)
+        guard let hi = table.firstIndex(where: { $0.0 >= w }), hi > 0 else { return table[0].1 }
+        let (x0, y0) = table[hi - 1], (x1, y1) = table[hi]
+        return y0 + (y1 - y0) * (w - x0) / (x1 - x0)
     }
 
     private func colour(_ c: BadgeColour) -> Color {

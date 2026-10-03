@@ -106,6 +106,8 @@ const S = {
   get notRun() { return d("notRun"); },
   get stale() { return d("stale"); },
   get notBuilt() { return d("notBuilt"); },
+  get unmoderated() { return d("unmoderated"); },
+  get allUnreliable() { return d("allUnreliable"); },
   guideProblem: (code: string) => d(`guideProblem.${code}`),
   sessionState: (state: string) => d(`sessionState.${state}`),
 };
@@ -154,6 +156,18 @@ function onRadioKeys<T extends string>(e: React.KeyboardEvent, values: T[], curr
   );
 }
 
+/** Why a record has nothing to show. "Re-analyse to try again" only where a
+ *  re-run can help: an unmoderated study (solo think-aloud) has no questions at
+ *  all, and re-running cannot change that. */
+function failedReason(data: DiscussionData | null): string {
+  const states = data?.sessions.map((s) => s.state) ?? [];
+  if (states.length && states.every((s) => s === "no_moderator")) return S.unmoderated;
+  if (states.length && states.every((s) => s === "no_moderator" || s === "moderator_unreliable")) {
+    return S.allUnreliable;
+  }
+  return S.notBuilt;
+}
+
 export function DiscussionLens() {
   useTranslation();
   const [load, setLoad] = useState<DiscussionLoad | null>(null);
@@ -180,7 +194,7 @@ export function DiscussionLens() {
   if (!load) return shell(<p className="bn-empty-state" aria-busy="true">{S.loading}</p>);
   // Each state says what it is and what to do; none reads as "no questions".
   if (load.status === "stale") return shell(<p className="bn-empty-state">{S.stale}</p>);
-  if (load.status === "failed") return shell(<p className="bn-empty-state">{S.notBuilt}</p>);
+  if (load.status === "failed") return shell(<p className="bn-empty-state">{failedReason(load.data)}</p>);
   const data = load.data;
   if (!data) return shell(<p className="bn-empty-state">{S.notRun}</p>);
   if (!data.sessions.length) return shell(<p className="bn-empty-state">{S.noSessions}</p>);

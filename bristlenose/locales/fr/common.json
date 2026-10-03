@@ -571,6 +571,8 @@
     "notRun": "Ce projet n\u2019a pas encore de discussion. R\u00e9analysez le projet pour la cr\u00e9er.",
     "stale": "Les verbatim ont chang\u00e9 depuis la cr\u00e9ation de la discussion. R\u00e9analysez le projet pour la recr\u00e9er.",
     "notBuilt": "Impossible de cr\u00e9er la discussion de ce projet. R\u00e9analysez le projet pour r\u00e9essayer.",
+    "unmoderated": "Aucun entretien n\u2019a de mod\u00e9rateur : il n\u2019y a donc aucune question \u00e0 afficher. La discussion s\u2019adresse aux entretiens mod\u00e9r\u00e9s.",
+    "allUnreliable": "Le mod\u00e9rateur n\u2019a pu \u00eatre distingu\u00e9 de fa\u00e7on fiable dans aucun entretien : aucune question ne peut donc \u00eatre affich\u00e9e.",
     "guideProblem": {
       "unreadable": "Impossible de lire votre guide. V\u00e9rifiez qu\u2019il s\u2019ouvre, puis r\u00e9analysez le projet.",
       "too_large": "Votre guide est trop volumineux pour \u00eatre lu. Un guide de plus de 2 Mo n\u2019est pas utilis\u00e9.",

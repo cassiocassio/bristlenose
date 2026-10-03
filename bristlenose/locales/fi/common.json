@@ -571,6 +571,8 @@
     "notRun": "T\u00e4ll\u00e4 projektilla ei viel\u00e4 ole keskustelua. Analysoi projekti uudelleen sen luomiseksi.",
     "stale": "Sitaatit ovat muuttuneet keskustelun luomisen j\u00e4lkeen. Analysoi projekti uudelleen sen luomiseksi uudestaan.",
     "notBuilt": "T\u00e4m\u00e4n projektin keskustelua ei voitu luoda. Analysoi projekti uudelleen ja yrit\u00e4 uudestaan.",
+    "unmoderated": "Miss\u00e4\u00e4n istunnossa ei ole moderaattoria, joten n\u00e4ytett\u00e4vi\u00e4 kysymyksi\u00e4 ei ole. Keskustelu on tarkoitettu moderoiduille haastatteluille.",
+    "allUnreliable": "Moderaattoria ei voitu erottaa luotettavasti miss\u00e4\u00e4n istunnossa, joten kysymyksi\u00e4 ei voida n\u00e4ytt\u00e4\u00e4.",
     "guideProblem": {
       "unreadable": "Runkoa ei voitu lukea. Varmista, ett\u00e4 se aukeaa, ja analysoi projekti sitten uudelleen.",
       "too_large": "Runko on liian suuri luettavaksi. Yli 2 Mt:n runkoa ei k\u00e4ytet\u00e4.",

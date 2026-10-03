@@ -571,6 +571,8 @@
     "notRun": "Det finns ingen diskussion f\u00f6r det h\u00e4r projektet \u00e4n. Analysera projektet igen f\u00f6r att skapa den.",
     "stale": "Citaten har \u00e4ndrats sedan diskussionen skapades. Analysera projektet igen f\u00f6r att skapa den p\u00e5 nytt.",
     "notBuilt": "Det gick inte att skapa diskussionen f\u00f6r det h\u00e4r projektet. Analysera projektet igen f\u00f6r att f\u00f6rs\u00f6ka p\u00e5 nytt.",
+    "unmoderated": "Ingen session har n\u00e5gon moderator, s\u00e5 det finns inga fr\u00e5gor att visa. Diskussionen \u00e4r till f\u00f6r modererade intervjuer.",
+    "allUnreliable": "Moderatorn kunde inte s\u00e4rskiljas tillf\u00f6rlitligt i n\u00e5gon session, s\u00e5 inga fr\u00e5gor kan visas.",
     "guideProblem": {
       "unreadable": "Det gick inte att l\u00e4sa din guide. Kontrollera att den g\u00e5r att \u00f6ppna och analysera sedan projektet igen.",
       "too_large": "Din guide \u00e4r f\u00f6r stor f\u00f6r att l\u00e4sas. En guide st\u00f6rre \u00e4n 2 MB anv\u00e4nds inte.",

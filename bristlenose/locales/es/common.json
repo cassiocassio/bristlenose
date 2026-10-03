@@ -571,6 +571,8 @@
     "notRun": "Este proyecto a\u00fan no tiene discusi\u00f3n. Reanaliza el proyecto para crearla.",
     "stale": "Las citas han cambiado desde que se cre\u00f3 la discusi\u00f3n. Reanaliza el proyecto para volver a crearla.",
     "notBuilt": "No se pudo crear la discusi\u00f3n de este proyecto. Reanaliza el proyecto para intentarlo de nuevo.",
+    "unmoderated": "Ninguna sesi\u00f3n tiene moderador, as\u00ed que no hay preguntas que mostrar. La vista de discusi\u00f3n es para entrevistas moderadas.",
+    "allUnreliable": "No se pudo distinguir con fiabilidad al moderador en ninguna sesi\u00f3n, as\u00ed que no se pueden mostrar preguntas.",
     "guideProblem": {
       "unreadable": "No se pudo leer tu gu\u00eda. Comprueba que se abre y reanaliza el proyecto.",
       "too_large": "Tu gu\u00eda es demasiado grande para leerla. No se usan gu\u00edas de m\u00e1s de 2 MB.",

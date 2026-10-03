@@ -571,6 +571,8 @@
     "notRun": "F\u00fcr dieses Projekt gibt es noch keine Diskussion. Analysieren Sie das Projekt erneut, um sie zu erstellen.",
     "stale": "Die Zitate haben sich ge\u00e4ndert, seit die Diskussion erstellt wurde. Analysieren Sie das Projekt erneut, um sie neu zu erstellen.",
     "notBuilt": "Die Diskussion f\u00fcr dieses Projekt konnte nicht erstellt werden. Analysieren Sie das Projekt erneut, um es noch einmal zu versuchen.",
+    "unmoderated": "Kein Interview hat eine Moderation, daher gibt es keine Fragen zum Anzeigen. Die Diskussion ist f\u00fcr moderierte Interviews gedacht.",
+    "allUnreliable": "Die Moderation lie\u00df sich in keinem Interview zuverl\u00e4ssig unterscheiden, daher k\u00f6nnen keine Fragen angezeigt werden.",
     "guideProblem": {
       "unreadable": "Ihr Leitfaden konnte nicht gelesen werden. Pr\u00fcfen Sie, ob er sich \u00f6ffnen l\u00e4sst, und analysieren Sie das Projekt dann erneut.",
       "too_large": "Ihr Leitfaden ist zu gro\u00df zum Lesen. Ein Leitfaden \u00fcber 2 MB wird nicht verwendet.",

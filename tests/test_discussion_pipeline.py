@@ -195,3 +195,18 @@ def test_a_corrupt_guide_never_ends_the_run(tmp_path):
     (folder / "guide.docx").write_bytes(b"\xd0\xcf\x11\xe0 an encrypted Word file")
     path = _run(tmp_path, FakeClient(), manifest=create_manifest("p", "0"))
     assert json.loads(path.read_text())["guide_problem"] == "unreadable"
+
+
+def test_an_unmoderated_study_is_skipped_not_warned():
+    from bristlenose.discussion.models import DiscussionRecord, RecordSession
+    from bristlenose.pipeline import _discussion_line
+    from bristlenose.ui_kinds import MessageKind
+
+    solo = DiscussionRecord(status="failed", sessions=[
+        RecordSession(id=f"s{i}", number=i, state="no_moderator") for i in (1, 2)])
+    line, kind = _discussion_line(solo, retry=False)
+    assert kind == MessageKind.SKIPPED and "no session has a moderator" in line
+
+    unclear = DiscussionRecord(status="failed", sessions=[
+        RecordSession(id="s1", number=1, state="moderator_unreliable")])
+    assert _discussion_line(unclear, retry=False)[1] == MessageKind.WARNING

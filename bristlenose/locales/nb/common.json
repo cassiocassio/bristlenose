@@ -571,6 +571,8 @@
     "notRun": "Dette prosjektet har ingen diskusjon enn\u00e5. Analyser prosjektet p\u00e5 nytt for \u00e5 lage den.",
     "stale": "Sitatene er endret siden diskusjonen ble laget. Analyser prosjektet p\u00e5 nytt for \u00e5 lage den p\u00e5 nytt.",
     "notBuilt": "Kunne ikke lage diskusjonen for dette prosjektet. Analyser prosjektet p\u00e5 nytt for \u00e5 pr\u00f8ve igjen.",
+    "unmoderated": "Ingen \u00f8kt har en moderator, s\u00e5 det er ingen sp\u00f8rsm\u00e5l \u00e5 vise. Diskusjonen er laget for modererte intervjuer.",
+    "allUnreliable": "Moderatoren kunne ikke skilles ut p\u00e5litelig i noen \u00f8kt, s\u00e5 ingen sp\u00f8rsm\u00e5l kan vises.",
     "guideProblem": {
       "unreadable": "Kunne ikke lese guiden din. Sjekk at den kan \u00e5pnes, og analyser deretter prosjektet p\u00e5 nytt.",
       "too_large": "Guiden din er for stor til \u00e5 leses. En guide p\u00e5 over 2 MB brukes ikke.",

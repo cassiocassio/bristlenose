@@ -634,6 +634,8 @@
     "notRun": "Tento projekt zat\u00edm nem\u00e1 diskuzi. Projekt znovu analyzujte, aby se vytvo\u0159ila.",
     "stale": "Cit\u00e1ty se od vytvo\u0159en\u00ed diskuze zm\u011bnily. Projekt znovu analyzujte, aby se vytvo\u0159ila znovu.",
     "notBuilt": "Diskuzi pro tento projekt se nepoda\u0159ilo vytvo\u0159it. Projekt znovu analyzujte a zkuste to znovu.",
+    "unmoderated": "\u017d\u00e1dn\u00e9 sezen\u00ed nem\u00e1 moder\u00e1tora, tak\u017ee nejsou \u017e\u00e1dn\u00e9 ot\u00e1zky k zobrazen\u00ed. Diskuze je ur\u010dena pro moderovan\u00e9 rozhovory.",
+    "allUnreliable": "Moder\u00e1tora se v \u017e\u00e1dn\u00e9m sezen\u00ed nepoda\u0159ilo spolehliv\u011b rozli\u0161it, tak\u017ee nelze zobrazit \u017e\u00e1dn\u00e9 ot\u00e1zky.",
     "guideProblem": {
       "unreadable": "V\u00e1\u0161 sc\u00e9n\u00e1\u0159 se nepoda\u0159ilo p\u0159e\u010d\u00edst. Ov\u011b\u0159te, \u017ee se otev\u0159e, a projekt znovu analyzujte.",
       "too_large": "V\u00e1\u0161 sc\u00e9n\u00e1\u0159 je p\u0159\u00edli\u0161 velk\u00fd. Sc\u00e9n\u00e1\u0159 nad 2 MB se nepou\u017eije.",

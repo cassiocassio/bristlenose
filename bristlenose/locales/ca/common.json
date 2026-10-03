@@ -571,6 +571,8 @@
     "notRun": "Aquest projecte encara no t\u00e9 discussi\u00f3. Torna a analitzar el projecte per crear-la.",
     "stale": "Les cites han canviat des que es va crear la discussi\u00f3. Torna a analitzar el projecte per tornar-la a crear.",
     "notBuilt": "No s\u2019ha pogut crear la discussi\u00f3 d\u2019aquest projecte. Torna a analitzar el projecte per tornar-ho a provar.",
+    "unmoderated": "Cap sessi\u00f3 no t\u00e9 moderador, de manera que no hi ha preguntes per mostrar. La discussi\u00f3 \u00e9s per a entrevistes moderades.",
+    "allUnreliable": "No s\u2019ha pogut distingir de manera fiable el moderador en cap sessi\u00f3, de manera que no es poden mostrar preguntes.",
     "guideProblem": {
       "unreadable": "No s\u2019ha pogut llegir la teva guia. Comprova que s\u2019obre i torna a analitzar el projecte.",
       "too_large": "La teva guia \u00e9s massa gran per llegir-la. No es fan servir guies de m\u00e9s de 2 MB.",

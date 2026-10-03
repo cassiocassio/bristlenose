@@ -571,6 +571,8 @@
     "notRun": "Bu projenin hen\u00fcz bir tart\u0131\u015fmas\u0131 yok. Olu\u015fturmak i\u00e7in projeyi yeniden analiz edin.",
     "stale": "Tart\u0131\u015fma olu\u015fturulduktan sonra al\u0131nt\u0131lar de\u011fi\u015fti. Yeniden olu\u015fturmak i\u00e7in projeyi yeniden analiz edin.",
     "notBuilt": "Bu projenin tart\u0131\u015fmas\u0131 olu\u015fturulamad\u0131. Tekrar denemek i\u00e7in projeyi yeniden analiz edin.",
+    "unmoderated": "Hi\u00e7bir oturumda moderat\u00f6r yok, bu y\u00fczden g\u00f6sterilecek soru yok. Tart\u0131\u015fma, moderat\u00f6rl\u00fc g\u00f6r\u00fc\u015fmeler i\u00e7indir.",
+    "allUnreliable": "Hi\u00e7bir oturumda moderat\u00f6r g\u00fcvenilir bi\u00e7imde ay\u0131rt edilemedi, bu y\u00fczden soru g\u00f6sterilemiyor.",
     "guideProblem": {
       "unreadable": "Rehberiniz okunamad\u0131. A\u00e7\u0131ld\u0131\u011f\u0131ndan emin olun, ard\u0131ndan projeyi yeniden analiz edin.",
       "too_large": "Rehberiniz okunamayacak kadar b\u00fcy\u00fck. 2 MB'den b\u00fcy\u00fck rehberler kullan\u0131lmaz.",

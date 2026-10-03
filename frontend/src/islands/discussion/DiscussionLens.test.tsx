@@ -370,6 +370,16 @@ describe("DiscussionLens", () => {
     expect(screen.queryByTestId("discussion-lens")).toBeNull();
   });
 
+  it.each([
+    ["no_moderator", /Discussion lens is for moderated interviews/],
+    ["moderator_unreliable", /could not be told apart reliably in any session/],
+    ["failed", /could not be built for this project/],
+  ])("a failed record whose sessions are all %s says why — re-analyse only where it helps", async (state, text) => {
+    serve("failed", { ...record, sessions: record.sessions.map((s) => ({ ...s, state })) });
+    render(<DiscussionLens />);
+    expect(await screen.findByText(text)).toBeInTheDocument();
+  });
+
   it("a server failure is said, not shown as an empty lens", async () => {
     api.apiGet.mockRejectedValue(new Error("GET /discussion 500"));
     api.getSessionList.mockResolvedValue(sessionList);

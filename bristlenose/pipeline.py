@@ -235,6 +235,10 @@ def _discussion_line(record: DiscussionRecord, *, retry: bool) -> tuple[str, Mes
     """The Discussion stage's CLI line: what it built, and what fell short."""
     unread = sum(s.state == "failed" for s in record.sessions)
     if record.status == "failed":
+        if record.sessions and all(s.state == "no_moderator" for s in record.sessions):
+            # An unmoderated study (solo think-aloud, diary): nothing to build,
+            # nothing wrong, and re-running cannot change it.
+            return "Discussion lens skipped — no session has a moderator", MessageKind.SKIPPED
         why = "no session could be read" if unread else "no session had a clear moderator"
         tail = " · retried next run" if retry else ""
         return f"Discussion lens not built — {why}{tail}", MessageKind.WARNING

@@ -571,6 +571,8 @@
     "notRun": "Questo progetto non ha ancora una discussione. Rianalizza il progetto per crearla.",
     "stale": "Le citazioni sono cambiate da quando è stata creata la discussione. Rianalizza il progetto per ricrearla.",
     "notBuilt": "Impossibile creare la discussione per questo progetto. Rianalizza il progetto per riprovare.",
+    "unmoderated": "Nessuna sessione ha un moderatore, quindi non ci sono domande da mostrare. La discussione è pensata per interviste moderate.",
+    "allUnreliable": "In nessuna sessione è stato possibile distinguere con certezza il moderatore, quindi non si possono mostrare domande.",
     "guideProblem": {
       "unreadable": "Impossibile leggere la tua traccia. Controlla che si apra, poi rianalizza il progetto.",
       "too_large": "La tua traccia è troppo grande per essere letta. Una traccia oltre 2 MB non viene usata.",

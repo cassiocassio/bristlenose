@@ -571,6 +571,8 @@
     "notRun": "Er is nog geen discussie voor dit project. Analyseer het project opnieuw om er een te maken.",
     "stale": "De citaten zijn veranderd sinds de discussie werd gemaakt. Analyseer het project opnieuw om haar opnieuw te maken.",
     "notBuilt": "De discussie voor dit project kon niet worden gemaakt. Analyseer het project opnieuw om het nog eens te proberen.",
+    "unmoderated": "Geen enkele sessie heeft een moderator, dus er zijn geen vragen om te tonen. De discussie is bedoeld voor gemodereerde interviews.",
+    "allUnreliable": "De moderator kon in geen enkele sessie betrouwbaar worden onderscheiden, dus er kunnen geen vragen worden getoond.",
     "guideProblem": {
       "unreadable": "Je gids kon niet worden gelezen. Controleer of hij opent en analyseer het project daarna opnieuw.",
       "too_large": "Je gids is te groot om te lezen. Een gids van meer dan 2 MB wordt niet gebruikt.",

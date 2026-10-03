@@ -645,6 +645,8 @@
     "notRun": "Ten projekt nie ma jeszcze dyskusji. Przeanalizuj projekt ponownie, aby j\u0105 utworzy\u0107.",
     "stale": "Cytaty zmieni\u0142y si\u0119 od utworzenia dyskusji. Przeanalizuj projekt ponownie, aby utworzy\u0107 j\u0105 od nowa.",
     "notBuilt": "Nie uda\u0142o si\u0119 utworzy\u0107 dyskusji dla tego projektu. Przeanalizuj projekt ponownie, aby spr\u00f3bowa\u0107 jeszcze raz.",
+    "unmoderated": "\u017badna sesja nie ma moderatora, wi\u0119c nie ma pyta\u0144 do pokazania. Dyskusja jest przeznaczona do wywiad\u00f3w moderowanych.",
+    "allUnreliable": "W \u017cadnej sesji nie uda\u0142o si\u0119 wiarygodnie odr\u00f3\u017cni\u0107 moderatora, wi\u0119c nie mo\u017cna pokaza\u0107 pyta\u0144.",
     "guideProblem": {
       "unreadable": "Nie uda\u0142o si\u0119 odczyta\u0107 Twojego scenariusza. Sprawd\u017a, czy si\u0119 otwiera, a potem ponownie przeanalizuj projekt.",
       "too_large": "Tw\u00f3j scenariusz jest za du\u017cy, by go odczyta\u0107. Scenariusz ponad 2 MB nie jest u\u017cywany.",

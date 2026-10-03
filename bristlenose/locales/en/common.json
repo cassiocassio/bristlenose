@@ -573,6 +573,8 @@
     "notRun": "There is no discussion for this project yet. Re-analyse the project to build it.",
     "stale": "The quotes have changed since the discussion was built. Re-analyse the project to rebuild it.",
     "notBuilt": "The discussion could not be built for this project. Re-analyse the project to try again.",
+    "unmoderated": "No session has a moderator, so there are no questions to show. The Discussion lens is for moderated interviews.",
+    "allUnreliable": "The moderator could not be told apart reliably in any session, so no questions can be shown.",
     "guideProblem": {
       "unreadable": "Your guide could not be read. Check that it opens, then re-analyse the project.",
       "too_large": "Your guide is too large to read. A guide over 2 MB is not used.",

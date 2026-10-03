@@ -35,6 +35,13 @@ Text in `common.json`, `settings.json`, `enums.json`, and `server.json` that ren
 
 **i18n**: all 21 full locales (+ the `zh-Hant-HK` override fork).
 
+**Shared across a native seam: search.** The Mac app's toolbar search draws
+its suggestion rows, token chips and chip menus natively, but every word in
+them is a `common.search.*` key resolved by the SPA and sent over the bridge
+(`searchBridge.ts`, docs/design-search.md §7). The native side holds no search
+keys, so the browser field and the Mac field read the same in every locale,
+and a new search string is added once, in `common.json`.
+
 ---
 
 ## Desktop-only

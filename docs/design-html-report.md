@@ -150,7 +150,7 @@ Below the header rule, a sticky toolbar holds the view-switcher dropdown and exp
 
 Search-as-you-type filtering for report quotes. Collapsed by default to a magnifying glass icon on the left side of the toolbar.
 
-> **This section describes the sealed static report's vanilla search (`js/search.js`), which is frozen.** The search in the product (serve mode, the Mac app and the exported HTML) has different rules since 3 Oct 2026: each typed word matches on its own at the start of a word, a quoted phrase matches as exact text anywhere, accents fold, and filtering starts at 2 characters. Those rules are in `docs/design-search.md` §3.
+> **This section describes the sealed static report's vanilla search (`js/search.js`), which is frozen.** The search in the product (serve mode, the Mac app and the exported HTML) has different rules since 3 Oct 2026: words typed together match together, in order, from the start of a word; a quoted phrase matches as exact text anywhere; accents and punctuation fold; filtering starts at 2 characters; and people and tags become tokens with a menu of meanings, offered in a suggestions list under the field. Those rules are in `docs/design-search.md` §3–§6.
 
 - **HTML**: search container (`#search-container`) with toggle button (`#search-toggle`, SVG magnifying glass) and field wrapper (`.search-field` containing `#search-input` + `#search-clear`). Emitted in `render/report.py` before the view-switcher in the toolbar
 - **Expand/collapse**: clicking the icon toggles `.expanded` class on the container, showing/hiding the field. Escape key clears and collapses. Clicking icon when expanded+empty also collapses

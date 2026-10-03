@@ -19,6 +19,9 @@ trued-against: HEAD on 2026-09-27
 
 # Discussion lens — the researcher's guide, answered by the evidence
 
+> **Building it?** The implementation plan — every registration point, the
+> silent-failure traps, and the phases — is [design-discussion-lens-plan.md](design-discussion-lens-plan.md).
+
 *Design doc for a new macOS-app report lens that takes the researcher's own
 discussion guide and re-projects the extracted quotes onto it — organising
 findings by the researcher's **own domain model** instead of emergent themes.
@@ -79,6 +82,13 @@ spread.** Legible in a way emergent themes are not — it's the thinking they di
 answered by reality.
 
 ## Surface & packaging — macOS desktop only
+
+> **Superseded 3 Oct 2026.** The lens ships on **both** channels — the Mac app
+> and the CLI's SPA, plus exported HTML read-only. The free/paid line is the
+> CLI versus multi-project, not individual lenses. Everything is the same
+> webview code; the web adds a NavBar entry, the export embed and its
+> anonymisation. See [design-discussion-lens-plan.md](design-discussion-lens-plan.md) §0.
+> The section below is kept as the July reasoning.
 
 **The Discussion lens ships only in the bundled macOS app (`bn.app`), not in the
 open-source CLI / served SPA.** Product rationale: it's a **paid-tier lever** for

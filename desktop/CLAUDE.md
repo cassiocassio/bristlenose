@@ -393,7 +393,7 @@ Keyboard shortcuts: Cmd+1-5 (tabs) and Cmd+Opt+S (sidebar) live in the View menu
 **Principle: menus dim, toolbars morph.** The menu bar greys out unavailable items (HIG — discoverability). The toolbar shows/hides items per tab (Photos/Notes pattern — no greyed-out button graveyard).
 
 **Universal items** (always present):
-- **Search** (magnifying glass) — active on Quotes tab, dimmed elsewhere as "coming soon"
+- **Search** — its own trailing item after the actions capsule, folding last (`ToolbarItemPriority`). A live field on Quotes; on Sessions, Codebook and Signals the same field shows but does nothing yet (multi-lens search is coming); absent on Project. `QuotesToolbarControls.swift`, `docs/design-desktop-nav-toolbar-rearrangement.md` §4.4 (3 Oct 2026)
 - **Export** (share icon) — dropdown `Menu` whose contents change per tab. Always has "Export Report..." first. Quotes tab adds "Export Quotes as CSV"
 
 **Per-tab contextual items** (appear/disappear):

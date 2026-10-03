@@ -1483,7 +1483,8 @@ struct ContentView: View {
     private func createNewProject() {
         let project = projectIndex.addProject(name: i18n.t("desktop.chrome.newProject"), path: "")
         selection = [.project(project.id)]
-        renamingProjectID = project.id
+        renamingProjectID = project.id            // SwiftUI sidebar path (flag-off)
+        projectIndex.pendingRename = project.id   // AppKit sidebar path (shipping)
     }
 
     /// Create a new folder and put it in inline rename mode.

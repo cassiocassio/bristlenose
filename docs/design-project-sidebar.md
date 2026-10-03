@@ -14,7 +14,7 @@ trued-against: working tree @main on 2026-07-28 (rename slice uncommitted)
 > **Trued 2026-06-18 (`main` @ `bcb4187`, post `progress-text-surfacing` merge):** the running row's
 > **subtitle** now shows the live progress ladder (stage · N of M · ETA, e.g. "Transcribing · 2 of 3 ·
 > <1 min left"), not just a trailing spinner; drag-create **adopts the folder / first-item name with no
-> inline rename** ("+ New Project" still prompts); and the title-line **session count refreshes on run
+> inline rename** (New Project from the `+⌄` or ⌘N still opens the name for editing); and the title-line **session count refreshes on run
 > completion** (was stale until relaunch). New "Row anatomy (two-line)" section below is the doc home for
 > all three. Progress-ladder + ring details: `docs/design-sidebar-activity-indicators.md`.
 
@@ -368,7 +368,7 @@ All items disabled when nothing is selected.
 
 | Drag source | Drop target | Result |
 |-------------|-------------|--------|
-| Files/folder from Finder | Empty sidebar area | Create new project, name adopted from folder/first item (no inline rename; "+ New Project" still prompts) |
+| Files/folder from Finder | Empty sidebar area | Create new project, name adopted from folder/first item (no inline rename; New Project from the `+⌄` or ⌘N still opens the name for editing) |
 | Files/folder from Finder | Existing project row | Add interviews, toast: "Added 3 interviews to Mobile Banking Pilot" with Undo button |
 
 ### Native affordances

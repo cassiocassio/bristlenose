@@ -120,6 +120,9 @@
    on its own — never opacity. */
 .dl-nav .dl-row.ghost:not(.active), .dl-nav .dl-row.dim:not(.active) { color: var(--bn-colour-muted); }
 .dl-row.unasked .dl-tx { font-style: italic; }
+/* Never asked anywhere: nothing to focus, so no pointer either (the tooltip and
+   the screen-reader text still say what it is). */
+.dl-row-btn[aria-disabled="true"] { cursor: default; }
 
 /* Adaptive session badges: the full row while it fits in CHIP_SHARE of the
    navigator, else one native pull-down showing #N. */

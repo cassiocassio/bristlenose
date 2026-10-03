@@ -221,6 +221,9 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   );
 
   const focusRow = useCallback((row: NavRow) => {
+    // A line never asked in any session has nothing to light: focusing it would
+    // dim every wire and light nothing — a dead click. It does not take focus.
+    if (!row.sessions.length) return;
     if (focus && focus.item === row.id && !focus.turn) {
       setFocus(null); // clearing never moves the reader to another session
       announce(S.announceClear);
@@ -412,7 +415,8 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
     const shown = r.sessions.length ? shownSession(session, r.sessions) : null;
     return (
       <div key={r.id} className={cls.join(" ")} data-id={r.id}>
-        <button type="button" className="dl-row-btn" title={r.title} aria-pressed={on} onClick={() => focusRow(r)}>
+        <button type="button" className="dl-row-btn" title={r.title} onClick={() => focusRow(r)}
+          aria-pressed={r.sessions.length ? on : undefined} aria-disabled={r.sessions.length ? undefined : true}>
           <span className="dl-mk" aria-hidden="true">
             {r.mark === "plus" ? "+" : <span className={r.mark === "hollow" ? "dl-dot hollow" : "dl-dot"} />}
           </span>

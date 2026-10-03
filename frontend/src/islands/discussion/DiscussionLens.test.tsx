@@ -205,6 +205,16 @@ describe("review fixes, 3 Oct 2026", () => {
     expect(text()).toBe(first.text);
   });
 
+  it("a line never asked in any session does not take focus (no dead click)", () => {
+    const { container } = render(<DiscussionView data={data} />);
+    const never = data.sections.flatMap((s) => s.items).find((i) => !i.asks.length)!;
+    const btn = container.querySelector(`.dl-row[data-id="${never.id}"] .dl-row-btn`)!;
+    expect(btn).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(btn);
+    expect(container.querySelector(".dl-lens")).not.toHaveClass("has-focus");
+    expect(heading()).toBe("Session 1");
+  });
+
   it("with no guide there is no Planned view to offer", () => {
     render(<DiscussionView data={{ ...data, guide: false, spine: [] }} />);
     expect(screen.queryByRole("radio", { name: "Your guide" })).toBeNull();

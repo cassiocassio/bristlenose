@@ -2,6 +2,8 @@
 
 **Status:** Shipped (Phase 1), 22 Jun 2026 — the lens rail + rebuilt toolbar landed (`LensRail.swift` + the `ContentView.swift` toolbar; the centre tab `Picker` is gone). The planning voice below is now historical intent. **NB:** §2.2's "project list reused verbatim" premise was overtaken by the AppKit `NSOutlineView` sidebar rewrite (flag-gated, default-off today) — see `design-desktop-sidebar-appkit.md` and the §2.2 note. (Orig: Draft · Phase 1 · 21 Jun 2026, rev 2 — folded the `/usual-suspects` review + user decisions.)
 
+**The mockup is the primary record of the UX logic** — `docs/mockups/desktop-toolbar-and-footer-options.html` carries every chosen and rejected option as a frame, with the reasons; this section mirrors it.
+
 **Rev 3 — 3 Oct 2026 (decided, not yet built):** New Project / New Folder move to a `+⌄` in the sidebar's own toolbar (§3.3); the trailing toolbar is one actions capsule plus Search on its own (§4.3); Search becomes the native `.searchable` field (§4.4); §4.5 trued to the shipped title and per-lens subtitle. Visuals: `docs/mockups/desktop-toolbar-and-footer-options.html`.
 **Accompanies:** `docs/mockups/desktop-nav-toolbar-rearrangement.html`
 **Review:** Phase-1 plan-review run (5 review agents + parsimony pass); findings + dispositions logged locally (gitignored).
@@ -58,7 +60,7 @@ Variable height, not the current always-reserved two-line band:
 ### 3.3 Top controls + New — *rev 3, 3 Oct 2026*
 **Decided (not yet built):** the sidebar's own toolbar carries two controls, NetNewsWire-style:
 - **Sidebar show/hide (`sidebar.left`) beside the traffic lights — the system's, untouched.** `NavigationSplitView` already places it there on macOS 26/27, and `SidebarAutoCollapse` (`DetailFloor.swift`) plus `SidebarFitHarnessTests` drive it through AppKit's `toggleSidebar:`. Rev 3 does **not** place a toggle of its own; the earlier draft's "hide the system one and place ours" was withdrawn in the plan review (3 Oct 2026, Finding 38: a hand-placed toggle lives in the sidebar column and vanishes with it).
-- **`+⌄` trailing in the sidebar's toolbar**, a plain menu of **New Project…** and **New Folder…** (the shipped `desktop.menu.file.newProject` / `newFolder` strings). It takes the slot of the existing New Folder button (`folder.badge.plus`, `ContentView.swift:2743`, there since Phase 1): same `ToolbarItem(placement: .automatic)` on `projectList`, the `Button` swapped for a `Menu`. Nothing else moves. It goes away with the sidebar, as that button does; what happens at a narrow sidebar is whatever the system does with the slot (observed, not engineered). The shortcuts stay in the File menu: New Project ⌘N, New Folder ⇧⌘N.
+- **`+⌄` trailing in the sidebar's toolbar**, a plain menu of **New Project…** and **New Folder…** (the shipped `desktop.menu.file.newProject` / `newFolder` strings). The icon-only control's tooltip and VoiceOver label is **"Add"** (`desktop.toolbar.add`, decided 3 Oct 2026: one new key, each locale's value taken from Apple's own `Add`). Reusing "New Project…" (the menu also holds New Folder) or the panel prompt `chrome.addFilesPrompt` (couples two surfaces) was rejected. It takes the slot of the existing New Folder button (`folder.badge.plus`, `ContentView.swift:2743`, there since Phase 1): same `ToolbarItem(placement: .automatic)` on `projectList`, the `Button` swapped for a `Menu`. Nothing else moves. It goes away with the sidebar, as that button does; what happens at a narrow sidebar is whatever the system does with the slot (observed, not engineered). The shortcuts stay in the File menu: New Project ⌘N, New Folder ⇧⌘N.
 - **The AppKit sidebar (flag-off) has no toolbar item today and gets none in rev 3** — adding one there means attaching `.toolbar` to the representable that carries the §1.4 top-edge fix (`design-desktop-sidebar-appkit.md`), untested; a follow-up for that sidebar's cutover.
 
 **This replaces the rev-2 in-list `+ New project` row.** That row shipped grey (`.secondary`) and scrolled away with the list; the AppKit sidebar has no equivalent. Its removal is a separate commit, proven against the macOS-26 `Section` trap its comment names.
@@ -139,7 +141,7 @@ The wiring stays as it is today:
 
 **By lens, today:**
 - **Quotes:** live.
-- **Sessions, Codebook, Signals:** the field is present but does not respond yet. This replaces the disabled `SearchComingSoonButton`, and the user accepted it on 3 Oct 2026 because multi-lens search is next.
+- **Sessions, Codebook, Signals:** the field is present but does not respond yet, and its placeholder stays "Search". This replaces the disabled `SearchComingSoonButton`; the owner accepted it on 3 Oct 2026 because multi-lens search is next. An interim placeholder ("Search isn't available in this view yet", the deleted button's tooltip) was proposed in the plan review and **rejected the same day**: alpha, no interim redesign. The key `desktop.toolbar.searchComingSoon` is therefore deleted with `searchClear` and `searchShortcut`, which the orphan-key gate requires once their readers go.
 - **Project:** no search, unchanged. It gets one when project-wide search (⌥⌘F) ships.
 
 ### 4.5 Title — *trued 3 Oct 2026*

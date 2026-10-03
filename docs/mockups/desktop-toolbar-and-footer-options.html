@@ -195,6 +195,22 @@
     <span style="color:var(--new)">orange in a frame's chrome bar or on a string = NEW copy, not a shipped key</span>
   </div>
 
+  <div class="note" style="max-width:none">
+    <p><b>Decision record — 3 Oct 2026.</b> This page is the record of the UX logic; the markdown spec (<code>docs/design-desktop-nav-toolbar-rearrangement.md</code> rev 3) mirrors it. Every frame is labelled <b>today</b>, <b>DECIDED</b> or <b>REJECTED</b> in its chrome bar; the reasons sit in the commentary under each section.</p>
+    <table class="cmp">
+      <tr><th>#</th><th>Decision</th><th>Chosen</th><th>Not chosen, and why</th></tr>
+      <tr><td>1</td><td>Trailing toolbar</td><td>One actions capsule (Export first, then the lens's buttons) + Search on its own, always rightmost</td><td>Export as a third, separate group (first draft of this page): rejected, Export belongs in the capsule as today. Search inside the capsule (today): rejected, it loses its own input affordance when wide and its own identity when narrow.</td></tr>
+      <tr><td>2</td><td>Search field</td><td>The native <code>.searchable</code> field, clean glass</td><td>Today's hand-drawn capsule with a grey <code>.quaternary</code> fill: rejected, it draws a grey pill inside macOS 26's glass pill.</td></tr>
+      <tr><td>3</td><td>Lenses without search yet</td><td>The field is present and inert, placeholder stays “Search”</td><td>Today's disabled button: replaced (a disabled control is the one grey thing in the toolbar). An interim placeholder “Search isn't available in this view yet”: rejected, alpha, multi-lens search lands this week, no interim redesign.</td></tr>
+      <tr><td>4</td><td>Project lens</td><td>No search, unchanged</td><td>It gets one when project-wide search (⌥⌘F) ships; nothing changes today.</td></tr>
+      <tr><td>5</td><td>Where New Project / New Folder live</td><td>E: <code>+⌄</code> in the sidebar's toolbar, a plain menu, in the New Folder button's existing slot</td><td>A today's grey in-list row (missed in a user interview). B labelled footer, C footer + explaining menu, D footer + Settings gear: rejected, see section 2. <code>Menu(primaryAction:)</code>: rejected, a plain menu makes New Folder discoverable.</td></tr>
+      <tr><td>6</td><td>The <code>+</code>'s name</td><td>Tooltip and VoiceOver label “Add”, one new key, Apple's own translations</td><td>Reusing “New Project…” (misleading, the menu also holds New Folder) or the panel prompt “Add” (couples two surfaces): rejected.</td></tr>
+      <tr><td>7</td><td>Sidebar toggle</td><td>The system's, untouched</td><td>Hiding it and placing our own: withdrawn in the plan review, a hand-placed toggle lives in the sidebar column and vanishes with it, and the fit-to-width logic drives the system one.</td></tr>
+      <tr><td>8</td><td>Empty project</td><td>2b: primary “Choose Interviews…”, files and folders, through the existing Add Files panel</td><td>2a “Add Files…” (shipped string, files only): rejected. A drop-only pane (today): a dead end for anyone who doesn't drag.</td></tr>
+    </table>
+    <p><b>Implementation facts the frames assume:</b> the <code>+⌄</code> replaces <code>folder.badge.plus</code> on the project list, same placement; the flag-off AppKit sidebar has no toolbar item today and gets none yet; the leading group (list toggle, back/forward, title) is unchanged; nothing in this work touches the fit-to-width model (projects column vs report width).</p>
+  </div>
+
   <!-- ================================================================ -->
   <h2>1 · The toolbar sequence</h2>
   <p class="lede">Each lens, today and proposed. The subtitle is the shipped per-lens subtitle; the counts are illustrative.</p>
@@ -204,8 +220,10 @@
     <p><b>Decided (3 Oct 2026; design doc §4.3–4.4, rev 3).</b> Leading is unchanged: the list toggle, then the back/forward group with its current behaviour, then the title and per-lens subtitle. Trailing has two groups:</p>
     <ul>
       <li><b>One actions capsule, as today:</b> Export first, then the lens's own buttons.</li>
-      <li><b>Search on its own, always the rightmost item:</b> the native <code>.searchable</code> field. It's live on Quotes. On Sessions, Codebook and Signals it's present but doesn't respond yet, which replaces today's disabled button; multi-lens search is next. Project has no search until project-wide search (⌥⌘F) ships.</li>
+      <li><b>Search on its own, always the rightmost item:</b> the native <code>.searchable</code> field. Wide: room for a real input field. Narrow: still its own control, and focusing it expands it in place. Multi-lens search is next, so search's prominence will only grow.</li>
+      <li><b>Live on Quotes.</b> On Sessions, Codebook and Signals it's present but doesn't respond yet, which replaces today's disabled button. <b>Placeholder stays “Search”</b> there too (decided 3 Oct): alpha, no interim wording. Project has no search until ⌥⌘F ships.</li>
     </ul>
+    <p><b>Not chosen.</b> An earlier draft of this page put Export in a third group of its own, between the lens buttons and Search: rejected, Export stays first in the capsule as it is today. A lens-aware subtitle was floated as an idea and turned out to be already shipped (the SPA sends each lens's subtitle over the bridge), so it isn't a decision here.</p>
     <p><b>The field's look.</b> Today's hand-drawn capsule has a <code>.quaternary</code> fill, and macOS 26 wraps it in the shared glass, giving a grey pill inside a glass pill (frames marked “today”). The native field is the clean, light glass that NetNewsWire and Photos get.</p>
   </div>
 
@@ -248,7 +266,8 @@
   <div class="grid2" id="empties"></div>
   <div class="note">
     <p>Bettina's “make it first” model already works up to the second step: New Project creates the project and puts its name into rename mode. Then the pane says “Drag Interviews Here” with no button, which is a dead end for anyone who doesn't drag (<code>dragInterviewsPane</code>, <code>ContentView.swift</code>).</p>
-    <p><b>Decided (3 Oct 2026): 2b.</b> The pane keeps its shipped title and description and gains a primary <b>Choose Interviews…</b> button, whose picker accepts files and folders. That's one new key. Option 2a, rejected, reused the shipped <code>menu.file.addFiles</code> (“Add Files…”). No new string, but today's picker (<code>addFilesToSelectedProject</code>) takes files only, not folders. 2b needs a picker that also accepts folders, since researchers often keep one folder per study. Dropping still works.</p>
+    <p><b>Decided (3 Oct 2026): 2b.</b> The pane keeps its shipped title and description and gains a primary <b>Choose Interviews…</b> button, whose picker accepts files and folders. That's one new key. Option 2a, rejected, reused the shipped <code>menu.file.addFiles</code> (“Add Files…”). No new string, but today's picker (<code>addFilesToSelectedProject</code>) takes files only, not folders. 2b needs a picker that also accepts folders, since researchers often keep one folder per study. It reuses the Add Files panel rather than adding a second one; the two names for one act (“Choose Interviews…” on the pane, “Add Files…” in the menu) are accepted for now. Dropping still works.</p>
+    <p><b>Related, not in this work:</b> with no project selected the main window now shows a drop-only “Drop a folder” card (<code>399d5da1</code>, 3 Oct 2026) — the same dead end for a user who doesn't drag. That card belongs to the Welcome work; noted here so the next pass sees it.</p>
   </div>
 </div>
 
@@ -299,12 +318,12 @@ function toolbarProposed(l, mode='wide'){
 const win = (inner, side=true, w='') => `<div class="win short" style="${w}">${side?`<div class="side"><div class="stb"><span class="lights"><span></span><span></span><span></span></span><span class="push">${B('sidebar-left','sidebar.left')}</span></div></div>`:''}<div class="detail"><div class="dtb">${side?'':'<span class="lights"><span></span><span></span><span></span></span>'+B('sidebar-left','sidebar.left')}${inner}</div></div></div>`;
 
 document.getElementById('lenses').innerHTML = lenses.map(l => `
-  <div class="frame"><div class="fchrome"><b>${l[0]}</b> · today</div>${win(toolbarCurrent(l))}</div>
-  <div class="frame"><div class="fchrome"><b>${l[0]}</b> · actions capsule + search on its own</div>${win(toolbarProposed(l))}</div>`).join('');
+  <div class="frame"><div class="fchrome"><b>${l[0]}</b> · today (replaced)</div>${win(toolbarCurrent(l))}</div>
+  <div class="frame"><div class="fchrome"><b>${l[0]}</b> · DECIDED · actions capsule + search on its own</div>${win(toolbarProposed(l))}</div>`).join('');
 
 document.getElementById('narrow').innerHTML = `
-  <div class="frame"><div class="fchrome"><b>Quotes</b> · narrow window, sidebar hidden</div>${win(toolbarProposed(lenses[2], 'narrow'), false, 'max-width:640px')}</div>
-  <div class="frame"><div class="fchrome"><b>Quotes</b> · narrow window, search focused</div>${win(toolbarProposed(lenses[2], 'narrow-focus'), false, 'max-width:640px')}</div>`;
+  <div class="frame"><div class="fchrome"><b>Quotes</b> · DECIDED · narrow window, sidebar hidden</div>${win(toolbarProposed(lenses[2], 'narrow'), false, 'max-width:640px')}</div>
+  <div class="frame"><div class="fchrome"><b>Quotes</b> · DECIDED · narrow window, search focused</div>${win(toolbarProposed(lenses[2], 'narrow-focus'), false, 'max-width:640px')}</div>`;
 
 // ---------- sidebar footers ----------
 const lensRows = `<div class="sh">&nbsp;</div>
@@ -328,17 +347,17 @@ const nnwMenu = `<div class="menu" style="left:150px;top:46px"><div class="mi">N
 
 const plusMenu = `<span class="cap">${B('plus','plus — New Project… / New Folder…')}<svg style="width:9px;height:9px;margin:0 6px 0 -4px;color:var(--muted)" aria-hidden="true"><use href="#chev"/></svg></span>`;
 const footers = [
-  ['E', 'DECIDED · +⌄ takes the New Folder button’s slot in the sidebar toolbar (NetNewsWire), menu open', '',
+  ['E', 'DECIDED · +⌄ takes the New Folder button’s slot in the sidebar toolbar (NetNewsWire), menu open · tooltip/VoiceOver “Add”', '',
     side({stbExtra:plusMenu, menu:`<div class="menu" style="right:-30px;top:46px"><div class="mi">New Project…</div><div class="mi">New Folder…</div></div>`})],
   ['E', 'DECIDED · sidebar hidden or narrow: + goes with it; the toggle is the system’s, untouched', '',
     side({narrow:true})],
-  ['A', 'today: grey row at the top of the list, and a New Folder button in the sidebar toolbar (both replaced)', '',
+  ['A', 'today (replaced): grey row at the top of the list, and a New Folder button in the sidebar toolbar', '',
     side({stbExtra:`<span class="cap">${B('folder-plus','folder.badge.plus — New Folder (today)')}</span>`, top:`<div class="sh">&nbsp;</div><div class="row ghost">${I('plus')}New Project…</div>`})],
-  ['B', 'alternative · labelled footer (Notes / Reminders / Mail)', 'button label: shipped chrome.newProject',
+  ['B', 'REJECTED · labelled footer (Notes / Reminders / Mail)', 'button label: shipped chrome.newProject',
     side({foot:newBtn, menu:plainMenu})],
-  ['C', 'alternative · footer + explaining menu (Things)', '<span class="new">menu descriptions: NEW copy (draft)</span>',
+  ['C', 'REJECTED · footer + explaining menu (Things)', '<span class="new">menu descriptions: NEW copy (draft)</span>',
     side({foot:newBtn, menu:descMenu})],
-  ['D', 'alternative · footer + Settings gear', '<span class="new">gear tooltip “Settings”: NEW key</span>',
+  ['D', 'REJECTED · footer + Settings gear', '<span class="new">gear tooltip “Settings”: NEW key</span>',
     side({foot:`${newBtn}<span class="btn gear" title="gearshape — Settings (⌘,)">${I('gear')}</span>`})],
 ];
 document.getElementById('footers').innerHTML = footers.map(([k,label,flag,sb]) =>
@@ -347,11 +366,11 @@ document.getElementById('footers').innerHTML = footers.map(([k,label,flag,sb]) =
 // ---------- empty project ----------
 const emptyWin = (inner) => `<div class="win tall">${side({})}<div class="detail"><div class="dtb"><span class="title"><b>New Project</b><small>&nbsp;</small></span></div><div class="body">${inner}</div></div></div>`;
 const empties = [
-  ['1', 'today', '',
+  ['1', 'today (replaced)', '',
     `<div class="empty">${I('tray')}<b>Drag Interviews Here</b><p>Add interview recordings or transcripts to get started.</p></div>`],
-  ['2a', 'primary button, shipped label', 'button: shipped menu.file.addFiles',
+  ['2a', 'REJECTED · primary button, shipped label, files only', 'button: shipped menu.file.addFiles',
     `<div class="empty">${I('tray')}<b>Drag Interviews Here</b><p>Add interview recordings or transcripts to get started.</p><span class="pbtn">Add Files…</span></div>`],
-  ['2b', 'DECIDED · primary button, files and folders', '<span class="new">button: NEW key</span>',
+  ['2b', 'DECIDED · primary button, files and folders, same panel as File ▸ Add Files…', '<span class="new">button: NEW key</span>',
     `<div class="empty">${I('tray')}<b>Drag Interviews Here</b><p>Add interview recordings or transcripts to get started.</p><span class="pbtn new">Choose Interviews…</span></div>`],
 ];
 document.getElementById('empties').innerHTML = empties.map(([k,label,flag,inner]) =>

@@ -400,7 +400,7 @@ stays JS, because it is computed from state, not from width. This kills S7's
 class rather than the instance — but it is the biggest change of the cheap
 ones, and only worth it if the readings pick H2.
 
-**F. Hand the whole split to `NSSplitViewController` (the large option).**
+**F. Hand the whole split to `NSSplitViewController` (the large option).** _3 Oct 2026: the toolbar half of this option now has its own brief — `docs/design-desktop-toolbar-appkit.md` — with the measured reasons SwiftUI's toolbar cannot do what Photos and NetNewsWire do, and the two unmeasured questions below restated as the spike to run first._
 Session 1's question 4. What it buys that A does not: the detail floor
 becomes `detailItem.minimumThickness = webMinWidth`, the collapse-on-resize
 becomes `sidebarItem.canCollapseFromWindowResize` (already `true`), and

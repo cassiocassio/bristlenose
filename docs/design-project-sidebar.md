@@ -126,8 +126,10 @@ The canonical spec is the `ProjectRow.swift` doc-comment; this is its design hom
 
 ### "New Project" placement
 
-Explore options — possibilities include:
-- Toolbar `+` button (most standard macOS pattern — Mail, Notes, Reminders)
+> **Shipped 3 Oct 2026 (toolbar rev 3):** a `+⌄` menu of **New Project…** / **New Folder…** in the sidebar's own title bar, in the slot the New Folder button held since Phase 1 — the NetNewsWire pattern, a plain menu so the click that looks for New Project finds New Folder. The grey in-list `+ New Project…` row that shipped from June to October is gone: a user interview found it unfound. File ▸ New Project (⌘N) / New Folder (⇧⌘N) stay the keyboard paths. The alternatives considered (labelled footer, Things' explaining menu, a Settings gear) and why each lost: `docs/design-desktop-nav-toolbar-rearrangement.md` §3.3 and the mockup `docs/mockups/desktop-toolbar-and-footer-options.html`.
+
+The options this section originally listed, kept as history:
+- Toolbar `+` button (most standard macOS pattern — Mail, Notes, Reminders) — **this one shipped**
 - `+` at bottom of sidebar list
 - Subtle drag target / proxy row in the sidebar
 - File > New Project (Cmd+N) always available as keyboard path

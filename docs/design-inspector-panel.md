@@ -80,7 +80,9 @@ The heatmap columns contain single-digit numbers but their headers (sentiment na
 
 - Grab handle: `role="separator"`, `aria-orientation="horizontal"`, `aria-valuenow`/`min`/`max`
 - Source tabs: `role="tablist"` / `role="tab"` / `role="tabpanel"`
-- Dimension toggle: `role="radiogroup"` with `role="radio"` options
+- Dimension toggle: `role="radiogroup"` with `role="radio"` options — one Tab stop (roving
+  tabindex: only the checked radio is `tabIndex=0`); Arrow keys select and move focus, wrapping,
+  Home/End jump. Handler on each radio, since jsx-a11y rejects one on the group (3 Oct 2026)
 
 ### Open questions / future work
 

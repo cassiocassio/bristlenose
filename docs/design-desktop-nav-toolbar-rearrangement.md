@@ -69,9 +69,9 @@ Variable height, not the current always-reserved two-line band:
 - A footer menu with a one-line description under each item (Things): too verbose.
 - A Settings gear in the footer: ⌘, and the app menu are where Settings lives on a Mac. If a gear ever ships, use `gearshape`, not sliders: sliders mean "adjust this view".
 
-**Still open:** whether a click on `+` opens the menu (`Menu`) or creates a New Project with the chevron opening the menu (`Menu(primaryAction:)`); and the toolbar placement inside the AppKit sidebar, which is hosted differently.
+**Click behaviour — decided 3 Oct 2026:** a plain `Menu`, as in NetNewsWire. A click opens New Project… / New Folder…, which makes New Folder discoverable rather than hidden behind a chevron. **Still open (build check):** the toolbar placement inside the AppKit sidebar, which is hosted differently.
 
-**Related, still open — the empty project needs a button.** After New Project, the detail pane (`dragInterviewsPane`) says "Drag Interviews Here" and offers no button, a dead end for anyone who doesn't drag. Either the shipped **Add Files…** (`desktop.menu.file.addFiles`; today's picker takes files only) or a new **Choose Interviews…** with a picker that also takes folders.
+**Related — the empty project gets a button, decided 3 Oct 2026.** After New Project, the detail pane (`dragInterviewsPane`) says "Drag Interviews Here" and offers no button, a dead end for anyone who doesn't drag. It gains a primary **Choose Interviews…** button: one new locale key, in the 21 full locales. The button opens a picker that accepts files and folders. Today's `addFilesToSelectedProject` takes files only, so the button needs a picker that also accepts directories. Dropping still works. The pane's title and description are unchanged.
 
 New Folder also stays in the list's right-click menu.
 
@@ -189,8 +189,8 @@ Lens rows are **named `View` structs** (`LensRow`), not inline closures (diffing
 
 ## 7. Open decisions
 1. ~~Native search migration~~ — **decided 3 Oct 2026: native `.searchable`** (§4.4).
-2. The `+⌄` click behaviour and its placement inside the AppKit sidebar (§3.3).
-3. The empty project's button: **Add Files…** (shipped, files only) or **Choose Interviews…** (new, files and folders) (§3.3).
+2. ~~The `+⌄` click behaviour~~ — **decided: a plain menu** (§3.3). Its placement inside the AppKit sidebar is a build check.
+3. ~~The empty project's button~~ — **decided: Choose Interviews…**, with a picker that accepts files and folders (§3.3).
 
 **Decided (rev 3, 3 Oct 2026):**
 - New Project / New Folder live in a `+⌄` in the sidebar's toolbar, with the sidebar toggle against the traffic lights (§3.3).

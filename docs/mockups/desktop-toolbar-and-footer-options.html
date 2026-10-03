@@ -235,7 +235,7 @@
     </ul>
     <p>The in-list grey row (A) goes. B, C and D stay on the page as the alternatives we considered.</p>
     <p><b>Build checks:</b> (1) where <code>NavigationSplitView</code>'s automatic sidebar toggle actually lands on macOS 15 and 26; design doc §3.3 assumed sidebar top-trailing, which this decision moves. (2) “Hides when narrow” should come from the system's toolbar overflow, not a width rule we write. (3) Bettina's discoverability gap is now covered by ⌘N, the Welcome screen for a first project, and the empty project's own button (section 3), not by a label.</p>
-    <p><b>Still open:</b> whether a click on <code>+</code> opens the menu or makes a New Project directly (with the chevron opening the menu); and where the <code>+</code> sits in the AppKit sidebar.</p>
+    <p><b>Click behaviour, decided:</b> a plain menu, as in NetNewsWire. A click opens New Project… / New Folder…, so New Folder gets discovered. <b>Build check:</b> where the <code>+</code> sits in the AppKit sidebar.</p>
     <p><b>Not drawn:</b> no <code>−</code> beside the <code>+</code>. Deleting a project stays in the right-click menu and the menu bar, with its confirmation.</p>
   </div>
 
@@ -245,7 +245,7 @@
   <div class="grid2" id="empties"></div>
   <div class="note">
     <p>Bettina's “make it first” model already works up to the second step: New Project creates the project and puts its name into rename mode. Then the pane says “Drag Interviews Here” with no button, which is a dead end for anyone who doesn't drag (<code>dragInterviewsPane</code>, <code>ContentView.swift</code>).</p>
-    <p><b>Option 2a</b> reuses the shipped <code>menu.file.addFiles</code> (“Add Files…”). No new string, but today's picker (<code>addFilesToSelectedProject</code>) takes files only, not folders. <b>Option 2b</b> adds two new strings and needs a picker that also accepts folders, since researchers often have one folder per study. Either way the drop still works, and the button is the pane's primary action rather than an extra.</p>
+    <p><b>Decided (3 Oct 2026): 2b.</b> The pane keeps its shipped title and description and gains a primary <b>Choose Interviews…</b> button, whose picker accepts files and folders. That's one new key. Option 2a, rejected, reused the shipped <code>menu.file.addFiles</code> (“Add Files…”). No new string, but today's picker (<code>addFilesToSelectedProject</code>) takes files only, not folders. 2b needs a picker that also accepts folders, since researchers often keep one folder per study. Dropping still works.</p>
   </div>
 </div>
 
@@ -348,8 +348,8 @@ const empties = [
     `<div class="empty">${I('tray')}<b>Drag Interviews Here</b><p>Add interview recordings or transcripts to get started.</p></div>`],
   ['2a', 'primary button, shipped label', 'button: shipped menu.file.addFiles',
     `<div class="empty">${I('tray')}<b>Drag Interviews Here</b><p>Add interview recordings or transcripts to get started.</p><span class="pbtn">Add Files…</span></div>`],
-  ['2b', 'primary button, new label', '<span class="new">button + secondary line: NEW copy</span>',
-    `<div class="empty">${I('tray')}<b>Add Interviews</b><p>Add interview recordings or transcripts to get started.</p><span class="pbtn new">Choose Interviews…</span><p class="new" style="font-size:12px">or drag them here</p></div>`],
+  ['2b', 'DECIDED · primary button, files and folders', '<span class="new">button: NEW key</span>',
+    `<div class="empty">${I('tray')}<b>Drag Interviews Here</b><p>Add interview recordings or transcripts to get started.</p><span class="pbtn new">Choose Interviews…</span></div>`],
 ];
 document.getElementById('empties').innerHTML = empties.map(([k,label,flag,inner]) =>
   `<div class="frame"><div class="fchrome"><b>${k}</b> · ${label} ${flag}</div>${emptyWin(inner)}</div>`).join('');

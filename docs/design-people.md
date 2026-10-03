@@ -1959,6 +1959,44 @@ cross-study links, folder scope, Settings ▸ General, Contacts, the markdown
 report and the sealed static HTML — the last two fall back to codes when
 `people.yaml` is gone, which their existing missing-file path already does.
 
+#### UX iteration 3 — the owner's review, 3 Oct 2026
+
+Drawn in [`mockups/moderator-identity-picker-v3.html`](mockups/moderator-identity-picker-v3.html)
+(web picker and a native Mac popover side by side). Decided by the owner
+reviewing iteration 2; these supersede it where they differ.
+
+- **No ✗ | ✓ pill.** Borrowing the proposed-tag accept/deny was the problem:
+  after *deny* the system has learnt nothing and has no way to ask who it was.
+  A proposed (front-runner) name reads **grey**, with a **green tick** beside it
+  (the shipped accept colour); the tick confirms, and the name turns to **solid
+  ink**. Hover previews the ink.
+- **"It was someone else" is the picker.** Clicking the lozenge opens a flexible
+  name picker — a better UX than deny, though more complex.
+- **The picker's first line is the role**: Moderator | Participant | Observer, on
+  the shipped `.dimension-toggle`. It opens on the speaker's current role; when the
+  pipeline got the role right — nearly always — nobody switches. The segments exist
+  for misidentification.
+- **Each segment lists the known people of that role, all of them, in a plain
+  list.** A v1 study has fewer than ten names and fewer than three moderators.
+  Search-as-you-type for thousands of people (Dovetail's picker) is a later
+  extension of the same box.
+- **That's Me carries a symbol** (SF Symbols on the Mac; an in-house glyph on the
+  web, which cannot use SF Symbols).
+- **New person: a field** whose hint follows the segment — *New moderator / New
+  participant / New observer* (one key per role, for languages that inflect it).
+- **Any name in the Sessions grid is fixed by clicking it**, proposed ones
+  included. This replaces iteration 2's *New Moderator…* item (R6).
+- **Unknown speakers keep the shipped grey italic role word** beside `m?`.
+  Unchanged on purpose.
+
+Still open, listed in the mockup's Part 3: web popover vs native popover (the
+mockup recommends web first, everywhere, and argues NSMenu is the wrong native
+primitive for a field plus a segmented control); whether hover darkening hides
+the proposed state; whether renaming a proposed name confirms it; whether a
+"don't know who" row is needed; whether the Participant segment (a real recode,
+§J) ships with the first picker or after it, with its undo; and the participant
+list's scope.
+
 #### UX iteration 2 — what it is, and what it found
 
 The storyboard's Part 5b (E1–E8) made the argument and recorded the decisions,

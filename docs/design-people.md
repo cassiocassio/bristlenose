@@ -2020,9 +2020,14 @@ in a real `NSPopover` beside the SPA's version on the fronted sidecar, one
 scenario control driving both. The native badges are painted from the styles
 the web half measures off the real `PersonBadge` and posts over
 `search-badge-styles` — the search chips' path — so any badge difference is a
-finding about that bridge. One is known before anyone looks: the wire carries
-`padX` from `padding-left` only, and the name half is padded 5.6 / 7.2 px, so a
-native name half is ~1.6 px short on the right (search chips share it).
+finding about that bridge. Two are known before anyone looks, both gaps in the
+wire rather than the painter, and the search chips share them: `padX` comes
+from `padding-left` only while the name half is padded 5.6 / 7.2 px, so a native
+name half is ~1.6 px short on the right; and line-height is not sent, ~0.5 px of
+height at the desktop ladder's 1.231. Both halves follow the Sessions switcher's
+chooser model (`docs/design-sessions-popover-navigation.md` §Interaction): one
+click commits, arrows move the highlight, Return commits, Escape dismisses, and
+the native list is that switcher's table.
 
 #### UX iteration 2 — what it is, and what it found
 

@@ -355,6 +355,28 @@ lens groups quotes by **research question and intent**: what the team is
 trying to find out, and what the answers were. Not by section, not by theme.
 It is another lens over the same quotes; most of it exists already.
 
+### Decided 3 Oct 2026 — v1 shows a record, never a new guide
+
+**The lens's left pane shows one of two things: the researcher's own guide
+(Planned), or the merged guide (Merged).** Nothing else. We are not in the
+discussion-guide-writing business; the job is to track the structure of the
+questions the researcher chose to ask in the moment, offer that structure as
+navigation, and connect it to the verbatim wording of what was asked, so
+planned and actual can be compared and reflected on.
+
+- **Merged is a record of what was asked, not a proposed guide.** Its wording
+  and framing must never say or imply "here is your new guide".
+- **Some asked questions belong to one person on one day.** "Did you have
+  trouble getting here — the tube strike?" is a real question in that session
+  and not one to put to anyone else. Folding such questions into something
+  presented as reusable is a judgement the researcher makes, not one the model
+  makes for them.
+- **No LLM-authored guide content in v1.** The "detailed guide" used in the
+  spike (a synthetic expansion of the real guide) stays as test material only.
+  Offering an expanded guide after the first few interviews, built from the
+  researcher's plan plus what they actually asked and never imposed, is a
+  separate post-v1 idea, parked in the maintainer's planning notes.
+
 ### Measured on real interviews (27 Sep)
 
 Corpus: the maintainer's own IKEA/"favourite object" guide (27 lines) and a

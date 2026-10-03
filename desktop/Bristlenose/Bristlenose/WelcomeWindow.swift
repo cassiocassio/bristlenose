@@ -51,7 +51,10 @@ enum WelcomeWindow {
     /// Tallest useful height: the stacked arrangement at the minimum width, with
     /// the same margins and footer. Caps the green button's zoom, which would
     /// otherwise stretch a narrow window into a tall empty one.
-    static let maximumContentHeight = WelcomeSpiralLayout.stackedHeight(width: WelcomeSpiralLayout.minimumWidth) + 40 + 48
+    static let maximumContentHeight = WelcomeSpiralLayout.stackedHeight(
+        width: WelcomeSpiralLayout.minimumWidth,
+        studyHeight: WelcomeSpiralLayout.naturalHeight * 1.5,
+        scienceHeight: WelcomeSpiralLayout.naturalHeight * 1.5) + 40 + 48
 
     /// Whether this launch should open the window. Read once per launch.
     static var showsOnLaunch: Bool {

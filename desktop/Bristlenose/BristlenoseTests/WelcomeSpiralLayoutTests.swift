@@ -42,7 +42,7 @@ struct WelcomeSpiralLayoutTests {
     @Test("stacked, only the outermost split flips — at every width the window allows")
     func oneStepReflow() {
         for width in [L.minimumWidth, 400, 600, L.naturalWidth] {
-            let f = L.frames(width: width, stacked: true)
+            let f = L.frames(width: width, stacked: true, studyHeight: 300, scienceHeight: 320)
             let (study, science, tip, ai, delight) = (f[0], f[1], f[2], f[3], f[4])
             // Study tools on top, at the full width.
             #expect(study.minY == 0 && abs(study.width - width) < 0.5)
@@ -51,8 +51,9 @@ struct WelcomeSpiralLayoutTests {
             #expect(ai.minX > tip.maxX, "AI wrapped under Tip at \(width)")
             #expect(ai.minY == tip.minY)
             #expect(delight.minX == ai.minX && delight.minY > ai.maxY)
-            // …at the spiral's natural height.
-            #expect(abs((delight.maxY - science.minY) - L.naturalHeight) < 0.5)
+            // Science as deep as it asked; Tip/AI/Delight at their natural height.
+            #expect(abs(science.height - 320) < 0.5)
+            #expect(abs((delight.maxY - tip.minY) - L.naturalInnerHeight) < 0.5)
         }
     }
 
@@ -68,14 +69,16 @@ struct WelcomeSpiralLayoutTests {
         #expect(WelcomeWindow.stackBelowContentWidth < WelcomeWindow.naturalContentWidth)
     }
 
-    @Test("stacked, Study tools is a square at the minimum and flatter above it")
-    func stackedStudyToolsHeight() {
-        let atMin = L.frames(width: L.minimumWidth, stacked: true)[0]
-        #expect(abs(atMin.height - atMin.width) < 0.5)
-        let wide = L.frames(width: 560, stacked: true)[0]
-        #expect(wide.height < wide.width)
-        #expect(abs(wide.height - 560 / 1.618) < 0.5)
-        #expect(wide.height <= L.naturalHeight)
+    @Test("stacked, Study tools and Scientific background take the heights their content asks")
+    func stackedTakesMeasuredHeights() {
+        let f = L.frames(width: 420, stacked: true, studyHeight: 410, scienceHeight: 333)
+        #expect(abs(f[0].height - 410) < 0.5)
+        #expect(abs(f[1].minY - (410 + 8)) < 0.5)
+        #expect(abs(f[1].height - 333) < 0.5)
+        #expect(f[2].minY > f[1].maxY)
+        // The window's height cap is built from the same function, generously.
+        #expect(WelcomeWindow.maximumContentHeight
+                > L.stackedHeight(width: L.minimumWidth, studyHeight: 410, scienceHeight: 333))
     }
 
     @Test("at the minimum width the inner block is exactly its natural size")

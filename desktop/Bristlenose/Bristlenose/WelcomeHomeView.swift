@@ -268,6 +268,7 @@ struct WelcomeHomeView: View {
             aiCell.welcomeReadingOrder(2)
             delightCell.accessibilitySortPriority(1)   // a Button: stays an element, not a container
         }
+        .environment(\.welcomeStacked, stacked)
         .accessibilityElement(children: .contain)   // the cells are siblings here, so the priorities compare
     }
 
@@ -292,6 +293,7 @@ struct WelcomeHomeView: View {
         VStack(alignment: .leading, spacing: 8) {
             tag(i18n.t("desktop.welcome.home.tags.studyTools"))
             SlotRotator(items: WelcomeContent.studyTools, storageKey: "welcome.rotator.tools",
+                        sizesToTallestWhenStacked: true,
                         onCurrent: { item, userPicked in report(.studyTools, item, userPicked) })
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -303,6 +305,7 @@ struct WelcomeHomeView: View {
         VStack(alignment: .leading, spacing: 8) {
             tag(i18n.t("desktop.welcome.home.tags.science"))
             SlotRotator(items: WelcomeContent.science, storageKey: "welcome.rotator.science",
+                        sizesToTallestWhenStacked: true,
                         onCurrent: { item, userPicked in report(.science, item, userPicked) })
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -455,12 +458,12 @@ struct WelcomeSpiralLayout: Layout {
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let w = Self.clampedWidth(proposal.width)
-        let bottom = Self.frames(width: w, stacked: stacked).map(\.maxY).max() ?? 0
+        let bottom = arrangement(width: w, subviews: subviews).map(\.maxY).max() ?? 0
         return CGSize(width: w, height: bottom)
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let frames = Self.frames(width: Self.clampedWidth(bounds.width), stacked: stacked)
+        let frames = arrangement(width: Self.clampedWidth(bounds.width), subviews: subviews)
         for (subview, frame) in zip(subviews, frames) {
             subview.place(at: CGPoint(x: bounds.minX + frame.minX, y: bounds.minY + frame.minY),
                           anchor: .topLeading, proposal: ProposedViewSize(frame.size))
@@ -471,13 +474,36 @@ struct WelcomeSpiralLayout: Layout {
         min(max(proposed ?? naturalWidth, minimumWidth), naturalWidth)
     }
 
-    /// Height of the stacked arrangement at a given width.
-    static func stackedHeight(width w: CGFloat) -> CGFloat {
-        frames(width: w, stacked: true).map(\.maxY).max() ?? 0
+    /// The frames for this pass. Stacked, Study tools and Scientific background are
+    /// as deep as their content asks — their rotators report the tallest slot of their
+    /// pool as an ideal height — clamped so a mis-measure can neither collapse a cell
+    /// nor run the stack away.
+    private func arrangement(width w: CGFloat, subviews: Subviews) -> [CGRect] {
+        guard stacked, subviews.count >= 2 else { return Self.frames(width: w, stacked: stacked) }
+        func ideal(_ i: Int) -> CGFloat {
+            let h = subviews[i].sizeThatFits(ProposedViewSize(width: w, height: nil)).height
+            return min(max(h, Self.minimumMeasuredHeight), Self.naturalHeight * 1.5)
+        }
+        return Self.frames(width: w, stacked: true, studyHeight: ideal(0), scienceHeight: ideal(1))
+    }
+
+    /// Floor for a measured cell height — below it the measurement is not believed.
+    static let minimumMeasuredHeight: CGFloat = 160
+
+    /// Height of the stacked arrangement at a given width, for given (or estimated)
+    /// Study tools and Scientific background heights.
+    static func stackedHeight(width w: CGFloat, studyHeight: CGFloat? = nil,
+                              scienceHeight: CGFloat? = nil) -> CGFloat {
+        frames(width: w, stacked: true, studyHeight: studyHeight, scienceHeight: scienceHeight)
+            .map(\.maxY).max() ?? 0
     }
 
     /// Frames in cell order: Study tools, Scientific background, Tip, AI, Delight.
-    static func frames(width w: CGFloat, stacked: Bool) -> [CGRect] {
+    /// Stacked, `studyHeight` / `scienceHeight` are the measured content heights;
+    /// without them the layout falls back to an estimate (a test, or a cell that has
+    /// not reported).
+    static func frames(width w: CGFloat, stacked: Bool,
+                       studyHeight: CGFloat? = nil, scienceHeight: CGFloat? = nil) -> [CGRect] {
         if !stacked {
             // The spiral keeps φ at any width it is drawn at.
             let h = w / 1.618
@@ -486,27 +512,36 @@ struct WelcomeSpiralLayout: Layout {
                 + minorBlock(in: CGRect(x: studyWidth + gutter, y: 0,
                                         width: w - studyWidth - gutter, height: h))
         }
-        // Stacked: Study tools is a square at the minimum width (its content fits a
-        // ~287 pt square, owner QA 3 Oct 2026) and grows no faster than φ above it,
-        // capped at the spiral's height. A full square at every width left a tall
-        // empty band under the link once the stack was wider than ~400 pt. The rest
-        // of the spiral sits underneath at its natural height.
-        let h = naturalHeight
-        let studyHeight = min(h, max(minimumWidth, w / 1.618))
-        return [CGRect(x: 0, y: 0, width: w, height: studyHeight)]
-            + minorBlock(in: CGRect(x: 0, y: studyHeight + gutter, width: w, height: h))
+        // Stacked: Study tools on top, then Scientific background, each as deep as
+        // its tallest slot (owner decision, 3 Oct 2026); then Tip beside (AI over
+        // Delight) at their natural height. The estimate below is only a fallback.
+        let study = studyHeight ?? min(naturalHeight, max(minimumWidth, w / 1.618))
+        let science = scienceHeight ?? naturalScienceHeight
+        let scienceFrame = CGRect(x: 0, y: study + gutter, width: w, height: science)
+        return [CGRect(x: 0, y: 0, width: w, height: study), scienceFrame]
+            + innerBlock(in: CGRect(x: 0, y: scienceFrame.maxY + gutter,
+                                    width: w, height: naturalInnerHeight))
     }
+
+    /// Scientific background's height in the natural spiral.
+    static let naturalScienceHeight: CGFloat = (naturalHeight - gutter) * phi
+    /// Tip / AI / Delight block's height in the natural spiral.
+    static let naturalInnerHeight: CGFloat = naturalHeight - naturalScienceHeight - gutter
 
     /// Science over (Tip beside (AI over Delight)) — the spiral's inner three splits.
     private static func minorBlock(in r: CGRect) -> [CGRect] {
         let science = CGRect(x: r.minX, y: r.minY, width: r.width, height: (r.height - gutter) * phi)
         let restY = science.maxY + gutter
-        let restHeight = r.maxY - restY
-        let tip = CGRect(x: r.minX, y: restY, width: (r.width - gutter) * phi, height: restHeight)
+        return [science] + innerBlock(in: CGRect(x: r.minX, y: restY, width: r.width, height: r.maxY - restY))
+    }
+
+    /// Tip beside (AI over Delight).
+    private static func innerBlock(in r: CGRect) -> [CGRect] {
+        let tip = CGRect(x: r.minX, y: r.minY, width: (r.width - gutter) * phi, height: r.height)
         let x2 = tip.maxX + gutter
-        let ai = CGRect(x: x2, y: restY, width: r.maxX - x2, height: (restHeight - gutter) * phi)
+        let ai = CGRect(x: x2, y: r.minY, width: r.maxX - x2, height: (r.height - gutter) * phi)
         let delight = CGRect(x: x2, y: ai.maxY + gutter, width: r.maxX - x2, height: r.maxY - ai.maxY - gutter)
-        return [science, tip, ai, delight]
+        return [tip, ai, delight]
     }
 }
 
@@ -630,6 +665,12 @@ private struct SlotRotator: View {
     @EnvironmentObject var i18n: I18n
     let items: [SlotItem]
     let curriculum: Bool
+    /// In the stacked arrangement, report the TALLEST slot of the pool as this
+    /// rotator's height, so the cell is as deep as its content wants and keeps one
+    /// height as it pages (see `tallestSlotGhost`). In the spiral the geometry sets
+    /// the depth and this does nothing.
+    let sizesToTallestWhenStacked: Bool
+    @Environment(\.welcomeStacked) private var stacked
     /// Baton: report the current slot, and whether the RESEARCHER put it there.
     /// A first appearance is registration; a chevron, swipe, dot or arrow key is intent.
     let onCurrent: ((SlotItem, Bool) -> Void)?
@@ -643,9 +684,11 @@ private struct SlotRotator: View {
     @Environment(\.colorScheme) private var scheme
 
     init(items: [SlotItem], storageKey: String, curriculum: Bool = false,
+         sizesToTallestWhenStacked: Bool = false,
          onCurrent: ((SlotItem, Bool) -> Void)? = nil) {
         self.items = items
         self.curriculum = curriculum
+        self.sizesToTallestWhenStacked = sizesToTallestWhenStacked
         self.onCurrent = onCurrent
         self._lastIndex = AppStorage(wrappedValue: -1, storageKey)
         self._visits = AppStorage(wrappedValue: 0, storageKey + ".visits")
@@ -661,10 +704,13 @@ private struct SlotRotator: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            slotView(items[min(index, max(0, count - 1))])
-                .id(index)
-                .transition(.opacity)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            ZStack(alignment: .topLeading) {
+                if stacked && sizesToTallestWhenStacked { tallestSlotGhost }
+                slotView(items[min(index, max(0, count - 1))])
+                    .id(index)
+                    .transition(.opacity)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             if count > 1 { dots }
         }
         .overlay(alignment: .leading)  { chevron("chevron.left")  { go(index - 1) } }
@@ -787,6 +833,48 @@ private struct SlotRotator: View {
                 Link(cta(label2), destination: url2).font(.callout).padding(.vertical, 2)
             }
         }
+    }
+
+    // Every slot of the pool, laid out invisibly at the real width with each
+    // illustration as a spacer of its natural height. The ZStack is as tall as the
+    // TALLEST slot, which is what the cell reports as its ideal height in the stacked
+    // arrangement — so no slot clips, and paging never changes the cell's height
+    // (owner decision, 3 Oct 2026: tallest slot, not the current one, which would
+    // make the whole stack breathe on every page turn). Text is measured, not
+    // counted: wrapping varies by slot, width and locale.
+    private var tallestSlotGhost: some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(items) { item in ghostSlot(item) }
+        }
+        .hidden()
+        .accessibilityHidden(true)
+    }
+
+    private func ghostSlot(_ item: SlotItem) -> some View {
+        let slot = resolve(item, i18n)
+        return VStack(alignment: .leading, spacing: 3) {
+            if let title = slot.title {
+                Text(title).font(.title3).fontWeight(.semibold)
+            }
+            if let more = slot.more {
+                tipBody(joinSentences(slot.text, more))
+            } else if !slot.text.isEmpty {
+                welcomeKeyText(slot.text, dark: scheme == .dark).font(.body)
+            }
+            if item.illustration != .none {
+                Color.clear
+                    .frame(height: illustrationNaturalHeight(item.illustration))
+                    .padding(.vertical, 8)
+            }
+            if item.primaryDestination != nil || !item.href.isEmpty {
+                Text(cta(slot.linkLabel)).font(.callout).padding(.vertical, 2)
+            }
+            if let href2 = item.href2, !href2.isEmpty, let label2 = slot.linkLabel2 {
+                Text(cta(label2)).font(.callout).padding(.vertical, 2)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     // One tip-body candidate for `ViewThatFits`. NO `.fixedSize` — that would force the
@@ -1054,4 +1142,16 @@ private func previewI18n() -> I18n {
 #Preview("Home · AI configured") {
     WelcomeHomeView(aiConfigured: true).frame(width: 940, height: 600)
         .environmentObject(previewI18n())
+}
+
+// MARK: - Stacked arrangement flag
+
+private struct WelcomeStackedKey: EnvironmentKey { static let defaultValue = false }
+
+extension EnvironmentValues {
+    /// Whether the Welcome spiral is in its stacked arrangement (`WelcomeSpiralLayout`).
+    var welcomeStacked: Bool {
+        get { self[WelcomeStackedKey.self] }
+        set { self[WelcomeStackedKey.self] = newValue }
+    }
 }

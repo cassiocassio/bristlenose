@@ -122,7 +122,7 @@ export interface SessionColumn {
  *  into the next question that did, as one group. */
 export function sessionColumn(data: DiscussionData, session: string): SessionColumn {
   const asked = data.turns
-    .filter((t) => t.session === session && t.item)
+    .filter((t) => t.session === session && (t.item || t.kind === "unclassified"))
     .sort((a, b) => a.sec - b.sec);
   const quotes = data.quotes.filter((q) => q.session === session).sort((a, b) => a.sec - b.sec);
   const answers = new Map<string, DiscussionQuote[]>(asked.map((t) => [t.id, []]));

@@ -62,8 +62,11 @@ export interface DiscussionTurn {
   sec: number;
   time: string;
   text: string;
-  kind: "planned" | "adlib" | "new" | "instruction" | "chat";
+  /** "unclassified": an askable turn the model never labelled. Always shown —
+   *  hiding it with the non-questions would lose a question silently (§9.A). */
+  kind: "planned" | "adlib" | "new" | "instruction" | "chat" | "unclassified";
   item: string | null; // the merged item this turn asks, or null for a non-question
+  speaker?: string;    // the moderator's code; "m1" when the record predates the field
 }
 
 export interface DiscussionQuote {

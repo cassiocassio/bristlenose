@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import fixture from "./fixture.json";
 import { DiscussionLens, DiscussionView } from "./DiscussionLens";
+import { resetLensState } from "./lensState";
 import type { DiscussionData } from "./types";
 
 const data = fixture as unknown as DiscussionData;
@@ -15,11 +16,8 @@ function heading() {
 }
 
 beforeEach(() => {
-  try {
-    localStorage.clear();
-  } catch {
-    // jsdom without Web Storage
-  }
+  resetLensState();
+  document.getElementById("bn-app-root")?.remove();
 });
 
 describe("DiscussionView", () => {
@@ -112,7 +110,7 @@ describe("DiscussionView", () => {
     const multi = data.sections.flatMap((s) => s.items).find((i) => new Set(i.asks.map((a) => a.session)).size > 1)!;
     const target = data.sessions.find((s) => s.id !== "s1" && multi.asks.some((a) => a.session === s.id))!;
     const chip = container.querySelector(`.dl-row[data-id="${multi.id}"] .dl-chips`)!;
-    fireEvent.click(within(chip as HTMLElement).getByRole("button", { name: new RegExp(`^Session ${target.number}:`) }));
+    fireEvent.click(within(chip as HTMLElement).getByRole("button", { name: new RegExp(`^#${target.number} `) }));
     expect(heading()).toBe(`Session ${target.number}`);
     expect(container.querySelector(`.dl-row[data-id="${multi.id}"]`)).toHaveClass("active");
   });
@@ -137,6 +135,128 @@ describe("DiscussionView", () => {
     render(<DiscussionView data={group} />);
     expect(screen.getByRole("radio", { name: /^#1/ }).textContent).toContain("Bettina and 2 others");
     expect(screen.getByRole("radio", { name: /^#1/ })).toHaveAttribute("title", "Session 1: Bettina, Priya and Christopher");
+    // the accessible name carries the visible "#1" and every name in full
+    expect(screen.getByRole("radio", { name: "#1 Bettina, Priya and Christopher" })).toBeInTheDocument();
+  });
+});
+
+describe("review fixes, 3 Oct 2026", () => {
+  it("arrow keys move the session radio group, with one tab stop", () => {
+    render(<DiscussionView data={data} />);
+    const radios = within(screen.getByRole("radiogroup", { name: "Sessions" })).getAllByRole("radio");
+    expect(radios.map((r) => r.tabIndex)).toEqual([0, -1, -1]);
+    fireEvent.keyDown(radios[0], { key: "ArrowRight" });
+    expect(heading()).toBe("Session 2");
+    fireEvent.keyDown(radios[1], { key: "End" });
+    expect(heading()).toBe("Session 3");
+    fireEvent.keyDown(radios[2], { key: "ArrowRight" });  // wraps
+    expect(heading()).toBe("Session 1");
+  });
+
+  it("digit keys do nothing while a dialog owns the keyboard", () => {
+    const root = document.createElement("div");
+    root.id = "bn-app-root";
+    document.body.appendChild(root);
+    render(<DiscussionView data={data} />);
+    root.setAttribute("inert", "");
+    fireEvent.keyDown(document, { key: "2" });
+    expect(heading()).toBe("Session 1");
+    root.removeAttribute("inert");
+    fireEvent.keyDown(document, { key: "2" });
+    expect(heading()).toBe("Session 2");
+  });
+
+  it("clearing a row's focus never moves the reader to another session", () => {
+    const { container } = render(<DiscussionView data={data} />);
+    const elsewhere = data.sections.flatMap((s) => s.items)
+      .find((i) => i.asks.length && !i.asks.some((a) => a.session === "s1"))!;
+    const btn = container.querySelector(`.dl-row[data-id="${elsewhere.id}"] .dl-row-btn`)!;
+    fireEvent.click(btn);                         // jumps to a session that asked it
+    const landed = heading();
+    fireEvent.keyDown(document, { key: "1" });    // reader moves on
+    fireEvent.click(btn);                         // still focused on the row: this clears
+    expect(container.querySelector(".dl-lens")).not.toHaveClass("has-focus");
+    expect(heading()).toBe("Session 1");
+    expect(landed).not.toBe("Session 1");
+  });
+
+  it("with no guide there is no Planned view to offer", () => {
+    render(<DiscussionView data={{ ...data, guide: false, spine: [] }} />);
+    expect(screen.queryByRole("radio", { name: "Planned" })).toBeNull();
+  });
+
+  it("a turn the model never classified is shown, marked, and wired to nothing", () => {
+    const t = data.turns.find((x) => x.session === "s1" && x.kind === "chat")!;
+    const d = { ...data, turns: data.turns.map((x) => (x.id === t.id ? { ...x, kind: "unclassified" as const } : x)) };
+    const { container } = render(<DiscussionView data={d} />);
+    const row = container.querySelector(`.dl-ask[data-turn="${t.id}"]`)!;
+    expect(row).not.toBeNull();
+    expect(row.textContent).toContain("not classified");
+    expect((row as HTMLElement).dataset.item).toBe("");
+  });
+
+  it("every navigator row says its provenance in words, not only by its mark", () => {
+    const { container } = render(<DiscussionView data={data} />);
+    const rows = [...container.querySelectorAll(".dl-row-btn")];
+    expect(rows.length).toBeGreaterThan(0);
+    for (const r of rows) expect(r.querySelector(".bn-sr-only")!.textContent).toMatch(/planned|not in the guide/);
+  });
+
+  it("section titles in the navigator are headings, labelling their rows", () => {
+    render(<DiscussionView data={data} />);
+    const first = data.sections.find((s) => s.items.length)!;
+    expect(within(nav()).getByRole("group", { name: new RegExp(first.title) })).toBeInTheDocument();
+    expect(within(nav()).getAllByRole("heading", { level: 2 }).length).toBe(data.sections.length);
+  });
+
+  it("collapsed badge rows stay collapsed frame after frame (no measure-of-hidden flicker)", async () => {
+    // jsdom measures nothing: give the badges a width only while they are shown,
+    // which is exactly the browser behaviour that made a collapsed row reopen.
+    const desc = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollWidth");
+    const navDesc = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientWidth");
+    Object.defineProperty(HTMLElement.prototype, "scrollWidth", {
+      configurable: true,
+      get(this: HTMLElement) {
+        if (!this.classList.contains("dl-chips")) return 0;
+        return this.closest(".dl-row")?.classList.contains("compact") ? 0 : 50 * this.children.length;
+      },
+    });
+    Object.defineProperty(HTMLElement.prototype, "clientWidth", {
+      configurable: true,
+      get(this: HTMLElement) {
+        return this.classList.contains("dl-nav") ? 300 : 0;
+      },
+    });
+    try {
+      const { container } = render(<DiscussionView data={data} />);
+      const frames = async () => act(async () => {
+        await new Promise((r) => setTimeout(r, 40));
+      });
+      await frames();
+      const after1 = [...container.querySelectorAll(".dl-row.compact")].map((r) => (r as HTMLElement).dataset.id);
+      expect(after1.length).toBeGreaterThan(0); // 3 badges × 50 > 30% of 300
+      // every frame, not two frames apart: a flicker alternates, so comparing
+      // frames an even distance apart would pass it (it did, on the first draft)
+      for (let i = 0; i < 3; i++) {
+        fireEvent.scroll(window);
+        await frames();
+        const now = [...container.querySelectorAll(".dl-row.compact")].map((r) => (r as HTMLElement).dataset.id);
+        expect(now).toEqual(after1);
+      }
+    } finally {
+      if (desc) Object.defineProperty(HTMLElement.prototype, "scrollWidth", desc);
+      if (navDesc) Object.defineProperty(HTMLElement.prototype, "clientWidth", navDesc);
+    }
+  });
+
+  it("remembers mode, session and focus across a lens switch", () => {
+    const first = render(<DiscussionView data={data} />);
+    fireEvent.click(screen.getByRole("radio", { name: "Planned" }));
+    fireEvent.keyDown(document, { key: "3" });
+    first.unmount();
+    render(<DiscussionView data={data} />);
+    expect(screen.getByRole("radio", { name: "Planned" })).toHaveAttribute("aria-checked", "true");
+    expect(heading()).toBe("Session 3");
   });
 });
 

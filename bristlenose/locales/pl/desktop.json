@@ -323,7 +323,9 @@
       }
     },
     "folderNamePlaceholder": "Nazwa folderu",
-    "projectNamePlaceholder": "Nazwa projektu"
+    "projectNamePlaceholder": "Nazwa projektu",
+    "prereleaseVersion": "{{version}} beta",
+    "sendFeedbackHelp": "Wyślij opinię"
   },
   "player": {
     "windowTitle": "Odtwarzacz Bristlenose"

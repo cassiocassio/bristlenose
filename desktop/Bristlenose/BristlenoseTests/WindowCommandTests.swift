@@ -39,6 +39,15 @@ struct WindowCommandTests {
         #expect(WindowCommand.newFolder.isEnabled(hasKeyWindow: false))
     }
 
+    @Test("Send Feedback survives having no window")
+    func feedbackNeverDims() {
+        // It moved from an app-wide broadcast (every window opened a sheet) to
+        // the front window's sink. Without the fallback, routing to the key
+        // window would dim it on the Welcome window and in Settings, where a
+        // tester is most likely to reach for it.
+        #expect(WindowCommand.showFeedback.isEnabled(hasKeyWindow: false))
+    }
+
     @Test("everything that needs a selection dims without one")
     func selectionCommandsDimWithoutAWindow() {
         // Not exhaustive by construction — `hasAppLevelFallback` defaults to

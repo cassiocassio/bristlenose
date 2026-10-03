@@ -289,7 +289,9 @@
       }
     },
     "folderNamePlaceholder": "Klasör adı",
-    "projectNamePlaceholder": "Proje adı"
+    "projectNamePlaceholder": "Proje adı",
+    "prereleaseVersion": "{{version}} beta",
+    "sendFeedbackHelp": "Geri Bildirim Gönder"
   },
   "player": {
     "windowTitle": "Bristlenose Oynat\u0131c\u0131"

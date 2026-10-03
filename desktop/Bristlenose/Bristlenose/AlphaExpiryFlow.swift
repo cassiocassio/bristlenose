@@ -32,7 +32,7 @@ struct AlphaExpiryFlow: ViewModifier {
     func body(content: Content) -> some View {
         content
             .onAppear { if AlphaBuild.isExpired() { route = .expired } }
-            .alert("This Bristlenose alpha has expired", isPresented: presenting(.expired)) {
+            .alert("This Bristlenose beta has expired", isPresented: presenting(.expired)) {
                 Button("Get Bristlenose") { openSiteAndQuit() }
                     .keyboardShortcut(.defaultAction)
                 // Reset here (not only in onDismiss) so a stale `true` from a

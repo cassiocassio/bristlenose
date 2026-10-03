@@ -289,7 +289,9 @@
       }
     },
     "folderNamePlaceholder": "Mappnamn",
-    "projectNamePlaceholder": "Projektnamn"
+    "projectNamePlaceholder": "Projektnamn",
+    "prereleaseVersion": "{{version}} beta",
+    "sendFeedbackHelp": "Skicka feedback"
   },
   "player": {
     "windowTitle": "Bristlenose-spelare"

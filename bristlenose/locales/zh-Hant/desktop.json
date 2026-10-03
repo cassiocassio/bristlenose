@@ -272,7 +272,9 @@
       }
     },
     "folderNamePlaceholder": "檔案夾名稱",
-    "projectNamePlaceholder": "專案名稱"
+    "projectNamePlaceholder": "專案名稱",
+    "prereleaseVersion": "{{version}} Beta版",
+    "sendFeedbackHelp": "傳送意見回饋"
   },
   "player": {
     "windowTitle": "Bristlenose \u64ad\u653e\u5668"

@@ -289,7 +289,9 @@
       }
     },
     "folderNamePlaceholder": "Mappenavn",
-    "projectNamePlaceholder": "Projektnavn"
+    "projectNamePlaceholder": "Projektnavn",
+    "prereleaseVersion": "{{version}} beta",
+    "sendFeedbackHelp": "Send feedback"
   },
   "player": {
     "windowTitle": "Bristlenose-afspiller"

@@ -289,7 +289,9 @@
       }
     },
     "folderNamePlaceholder": "Nome della cartella",
-    "projectNamePlaceholder": "Nome del progetto"
+    "projectNamePlaceholder": "Nome del progetto",
+    "prereleaseVersion": "{{version}} beta",
+    "sendFeedbackHelp": "Invia un feedback"
   },
   "player": {
     "windowTitle": "Lettore Bristlenose"

@@ -289,7 +289,9 @@
       }
     },
     "folderNamePlaceholder": "Kansion nimi",
-    "projectNamePlaceholder": "Projektin nimi"
+    "projectNamePlaceholder": "Projektin nimi",
+    "prereleaseVersion": "{{version}} beta",
+    "sendFeedbackHelp": "Lähetä palautetta"
   },
   "player": {
     "windowTitle": "Bristlenose-soitin"

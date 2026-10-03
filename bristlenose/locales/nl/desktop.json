@@ -289,7 +289,9 @@
       }
     },
     "folderNamePlaceholder": "Mapnaam",
-    "projectNamePlaceholder": "Projectnaam"
+    "projectNamePlaceholder": "Projectnaam",
+    "prereleaseVersion": "{{version}} bèta",
+    "sendFeedbackHelp": "Stuur feedback"
   },
   "player": {
     "windowTitle": "Bristlenose-speler"

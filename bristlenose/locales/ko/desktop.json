@@ -272,7 +272,9 @@
       }
     },
     "folderNamePlaceholder": "\ud3f4\ub354 \uc774\ub984",
-    "projectNamePlaceholder": "\ud504\ub85c\uc81d\ud2b8 \uc774\ub984"
+    "projectNamePlaceholder": "\ud504\ub85c\uc81d\ud2b8 \uc774\ub984",
+    "prereleaseVersion": "{{version}} 베타",
+    "sendFeedbackHelp": "피드백 보내기"
   },
   "player": {
     "windowTitle": "Bristlenose \ud50c\ub808\uc774\uc5b4"

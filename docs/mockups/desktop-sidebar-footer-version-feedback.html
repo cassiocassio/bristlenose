@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sidebar Version Footer</title>
+<!--
+  Mockup of NATIVE macOS chrome (the web design system does not draw it), so the
+  stylesheet is lifted from docs/mockups/desktop-toolbar-and-footer-options.html
+  (3 Oct 2026, toolbar rev 3) rather than from bristlenose/theme/. The sidebar
+  toolbar draws rev 3's decided +⌄, so this sits beside that decision.
+
+  The lozenge copies the shipped Debug build-info capsule in ContentView.swift
+  (.overlay(alignment: .bottomTrailing)): .system(size: 10, design: .monospaced),
+  .foregroundStyle(.secondary), padding 8h/4v, .background(.thinMaterial, in: Capsule()).
+  The bug is SF Symbol `ladybug` (there is no plain `bug` symbol), a hand-drawn
+  stand-in here. Every visible string is a shipped key unless the frame's chrome
+  bar flags it NEW.
+-->
+<style>
+  :root{
+    color-scheme: light dark;
+    --page: light-dark(#ececef,#1b1b1d);
+    --win: light-dark(#ffffff,#232325);
+    --side: light-dark(#f2f2f4,#2a2a2d);
+    --line: light-dark(rgba(0,0,0,.10),rgba(255,255,255,.10));
+    --ink: light-dark(#1d1d1f,#f2f2f4);
+    --muted: light-dark(#6e6e73,#a1a1a6);
+    --faint: light-dark(#a8a8ad,#6b6b70);
+    --glass: light-dark(rgba(255,255,255,.92),rgba(60,60,64,.92));
+    --glass-line: light-dark(rgba(0,0,0,.09),rgba(255,255,255,.12));
+    --thin: light-dark(rgba(255,255,255,.62),rgba(255,255,255,.08));
+    --thin-line: light-dark(rgba(0,0,0,.06),rgba(255,255,255,.07));
+    --sel: light-dark(rgba(0,0,0,.08),rgba(255,255,255,.10));
+    --hover: light-dark(rgba(0,0,0,.06),rgba(255,255,255,.09));
+    --accent: light-dark(#007aff,#0a84ff);
+    --tip: light-dark(#f6f6f6,#3a3a3c);
+    --note-bg: light-dark(#fbf7ec,#2b2820);
+    --note-rule: light-dark(#d9c68f,#7a6a3c);
+    --new: light-dark(#b4561f,#f0a06a);
+    --shadow: 0 14px 40px rgba(0,0,0,.18);
+  }
+  .dark{color-scheme:dark}
+  .light{color-scheme:light}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--page);color:var(--ink);
+    font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .page{max-width:1080px;margin:0 auto;padding:28px 16px 64px}
+  h1{font-size:22px;font-weight:700;margin:0 0 6px}
+  h2{font-size:16px;font-weight:700;margin:40px 0 4px}
+  .lede{color:var(--muted);margin:0 0 16px;max-width:760px}
+  .key{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:10px 0 4px}
+  .key span{display:inline-flex;align-items:center;gap:6px}
+  .key i{display:inline-block;width:18px;height:12px;border-radius:3px}
+  .key .k-art{background:var(--win);border:1px solid var(--line)}
+  .key .k-com{background:var(--note-bg);border-left:3px solid var(--note-rule)}
+
+  .frame{margin:10px 0;color:var(--ink)}
+  .fchrome{font:11px/1 ui-monospace,"SF Mono",Menlo,monospace;color:var(--muted);
+    display:flex;gap:10px;align-items:center;margin:0 0 6px 2px;flex-wrap:wrap}
+  .fchrome b{color:var(--ink);font-weight:600}
+  .fchrome .new{color:var(--new)}
+
+  .win{color:var(--ink);background:var(--win);border:.5px solid var(--line);border-radius:12px;overflow:hidden;
+    box-shadow:var(--shadow);display:flex;position:relative;height:420px}
+  .side{flex:0 0 220px;background:var(--side);border-right:.5px solid var(--line);
+    display:flex;flex-direction:column;position:relative}
+  .side.min{flex-basis:200px}
+  .stb{height:52px;flex:0 0 52px;display:flex;align-items:center;padding:0 10px 0 14px;gap:8px}
+  .lights{display:flex;gap:7px}
+  .lights span{width:12px;height:12px;border-radius:50%}
+  .lights span:nth-child(1){background:#ff5f57}.lights span:nth-child(2){background:#febc2e}.lights span:nth-child(3){background:#28c840}
+  .stb .push{margin-left:auto;display:flex;gap:6px}
+  .detail{flex:1;min-width:0;display:flex;flex-direction:column;position:relative}
+  .dtb{height:52px;flex:0 0 52px;display:flex;align-items:center;gap:8px;padding:0 14px;border-bottom:.5px solid var(--line)}
+  .title{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+  .title b{font-weight:600;font-size:13px}
+  .title small{font-size:11px;color:var(--muted)}
+  .cap{display:inline-flex;align-items:center;gap:2px;height:34px;padding:0 4px;border-radius:17px;
+    background:var(--glass);border:.5px solid var(--glass-line);box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .btn{width:32px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:14px;color:var(--ink)}
+  .btn svg{width:17px;height:17px}
+
+  .slist{flex:1;overflow:hidden;padding:0 8px}
+  .sh{font-size:11px;font-weight:600;color:var(--muted);padding:10px 8px 4px}
+  .row{display:flex;align-items:center;gap:8px;height:28px;padding:0 8px;border-radius:7px;font-size:13px;white-space:nowrap}
+  .row svg{width:15px;height:15px;color:var(--accent);flex:0 0 15px}
+  .row.proj svg{color:var(--muted)}
+  .row.sel{background:var(--sel)}
+  .row .n{margin-left:auto;color:var(--muted);font-size:12px}
+  .row.cut{opacity:.55;-webkit-mask-image:linear-gradient(#000 20%,transparent);mask-image:linear-gradient(#000 20%,transparent)}
+
+  /* ── the proposal: sidebar footer ── */
+  .slist{padding-bottom:44px}
+  .sfoot{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:6px;padding:14px 10px 10px 16px;z-index:2;
+    background:linear-gradient(to bottom, transparent, var(--side) 62%)}
+  /* macOS 26 soft scroll edge: blur fades in behind the footer */
+  .sfoot::before{content:"";position:absolute;inset:0;z-index:-1;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    -webkit-mask-image:linear-gradient(to bottom,transparent,#000 70%);mask-image:linear-gradient(to bottom,transparent,#000 70%)}
+  /* macOS 15 fallback: footer stacked below the list, no slide-under */
+  .side.m15 .slist{padding-bottom:0}
+  .side.m15 .sfoot{position:static;background:none;padding-top:6px}
+  .side.m15 .sfoot::before{display:none}
+  .ver{font:10px/1.2 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;font-variant-numeric:tabular-nums;
+    color:var(--muted);white-space:nowrap}
+  .bug{margin-left:auto;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;
+    border-radius:5px;color:var(--muted)}
+  .bug svg{width:14px;height:14px}
+  .bug.hover{background:var(--hover);color:var(--ink)}
+  .bug.press{background:var(--sel);color:var(--ink)}
+  .bug.focus{box-shadow:0 0 0 3px light-dark(rgba(0,122,255,.45),rgba(10,132,255,.55))}
+  .tip{position:absolute;right:-6px;bottom:38px;background:var(--tip);color:var(--ink);font-size:12px;
+    padding:3px 7px;border-radius:5px;border:.5px solid var(--glass-line);box-shadow:0 3px 10px rgba(0,0,0,.18);white-space:nowrap;z-index:3}
+
+  /* the shipped Debug overlay, for comparison */
+  .diag{position:absolute;right:8px;bottom:8px;font:10px/1 ui-monospace,"SF Mono",Menlo,monospace;color:var(--muted);
+    padding:4px 8px;border-radius:999px;background:var(--thin);border:.5px solid var(--thin-line);white-space:nowrap}
+
+  .body{flex:1;position:relative;overflow:hidden}
+  .ghostlines{padding:22px 28px}
+  .ghostlines i{display:block;height:9px;border-radius:5px;background:var(--sel);margin:0 0 12px}
+
+  /* sheet (Send Feedback, shipped FeedbackSheet — schematic) */
+  .scrim{position:absolute;inset:52px 0 0 0;display:flex;justify-content:center;align-items:flex-start;padding-top:10px}
+  .sheet{width:330px;background:var(--win);border:.5px solid var(--glass-line);border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.28);padding:16px}
+  .sheet b{display:block;font-size:13px;margin-bottom:10px}
+  .sheet i{display:block;height:9px;border-radius:5px;background:var(--sel);margin:0 0 10px}
+  .sheet .ta{height:70px;border-radius:6px;border:.5px solid var(--line);margin:4px 0 12px}
+  .sheet .btns{display:flex;justify-content:flex-end;gap:8px}
+  .sheet .btns span{height:22px;padding:0 12px;border-radius:6px;font-size:12px;display:inline-flex;align-items:center;background:var(--sel)}
+  .sheet .btns span.p{background:var(--accent);color:#fff}
+
+  .zoom{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-end;padding:22px;background:var(--side);border-radius:12px;border:.5px solid var(--line)}
+  .zoom figure{margin:0;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+  .zoom figcaption{font:11px ui-monospace,"SF Mono",Menlo,monospace;color:var(--muted)}
+  .ver.x2{font-size:20px;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  .cap2{font:20px/1 ui-monospace,"SF Mono",Menlo,monospace;color:var(--muted);padding:8px 16px;border-radius:999px;background:var(--thin);border:1px solid var(--thin-line);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  .bug.x2{width:44px;height:44px;margin:0}.bug.x2 svg{width:28px;height:28px}
+
+  .note{background:var(--note-bg);border-left:3px solid var(--note-rule);border-radius:4px;padding:10px 14px;margin:12px 0 0;max-width:840px}
+  .note::before{content:"Commentary";display:block;font:600 10px/1 ui-monospace,"SF Mono",Menlo,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .note p{margin:0 0 6px}.note p:last-child{margin:0}
+  .note ul{margin:4px 0 0;padding-left:18px}
+  .note code{font:12px ui-monospace,"SF Mono",Menlo,monospace}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,500px),1fr));gap:18px}
+  table.cmp{border-collapse:collapse;font-size:12px;margin:8px 0 0;width:100%}
+  table.cmp th,table.cmp td{text-align:left;padding:5px 8px;border-bottom:.5px solid var(--line);vertical-align:top}
+  table.cmp th{color:var(--muted);font-weight:600}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="sidebar-left" viewBox="0 0 20 20"><rect x="2" y="3.5" width="16" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.4"/><line x1="7.5" y1="3.5" x2="7.5" y2="16.5" stroke="currentColor" stroke-width="1.4"/><line x1="3.8" y1="6.5" x2="5.8" y2="6.5" stroke="currentColor" stroke-width="1.2"/><line x1="3.8" y1="8.7" x2="5.8" y2="8.7" stroke="currentColor" stroke-width="1.2"/></symbol>
+    <symbol id="plus" viewBox="0 0 20 20"><g stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="10" y1="4" x2="10" y2="16"/><line x1="4" y1="10" x2="16" y2="10"/></g></symbol>
+    <symbol id="chev" viewBox="0 0 20 20"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="target" viewBox="0 0 20 20"><g fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="4"/><circle cx="10" cy="10" r="1.2" fill="currentColor"/></g></symbol>
+    <symbol id="people" viewBox="0 0 20 20"><g fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7.5" cy="7" r="2.6"/><path d="M2.5 16c.5-3 2.5-4.5 5-4.5s4.5 1.5 5 4.5"/><circle cx="13.5" cy="7.5" r="2.2"/><path d="M13 11.6c2 .1 3.8 1.4 4.3 4"/></g></symbol>
+    <symbol id="quote" viewBox="0 0 20 20"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><line x1="8" y1="6" x2="17" y2="6"/><line x1="8" y1="10" x2="17" y2="10"/><line x1="3" y1="14" x2="17" y2="14"/><path d="M3 9.5V7.2C3 6 3.8 5.3 5 5"/></g></symbol>
+    <symbol id="tag" viewBox="0 0 20 20"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M3 3.5h6.5l7.5 7.5-6 6L3.5 9.5z"/><circle cx="7" cy="7" r="1.2"/></g></symbol>
+    <symbol id="grid" viewBox="0 0 20 20"><g fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="3" width="6" height="6" rx="1.3"/><rect x="11" y="3" width="6" height="6" rx="1.3"/><rect x="3" y="11" width="6" height="6" rx="1.3"/><rect x="11" y="11" width="6" height="6" rx="1.3"/></g></symbol>
+    <symbol id="circle" viewBox="0 0 20 20"><circle cx="10" cy="10" r="6.5" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+    <!-- stand-in for SF Symbol `ladybug` -->
+    <symbol id="ladybug" viewBox="0 0 20 20"><g fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7.2 5.6a2.8 2.4 0 0 1 5.6 0"/>
+      <ellipse cx="10" cy="11.6" rx="5.4" ry="6"/>
+      <line x1="10" y1="5.8" x2="10" y2="17.6"/>
+      <path d="M7.6 3.2 8.6 4.6M12.4 3.2 11.4 4.6"/>
+      <path d="M4.6 9.4 2.6 8.4M4.4 12.6H2.4M5 15.6l-1.8 1.2M15.4 9.4l2-1M15.6 12.6h2M15 15.6l1.8 1.2"/>
+    </g><g fill="currentColor"><circle cx="7.6" cy="10" r=".9"/><circle cx="12.4" cy="10" r=".9"/><circle cx="7.8" cy="13.8" r=".9"/><circle cx="12.2" cy="13.8" r=".9"/></g></symbol>
+  </defs>
+</svg>
+
+<div class="page">
+  <h1>Sidebar footer: version and Send Feedback</h1>
+  <p class="lede">Mac app only. At the bottom of the sidebar: the app version as small plain text on the left, and a small borderless bug button on the right that opens Send Feedback in this window. The version is shown to everyone while we're in alpha. Rev 2, after the 3 Oct review: plain text instead of a capsule, the list slides under a soft edge, the tooltip has no ellipsis.</p>
+  <div class="key">
+    <span><i class="k-art"></i>Artefact: what would ship</span>
+    <span><i class="k-com"></i>Commentary: why</span>
+    <span style="color:var(--new)">orange in a frame's chrome bar = NEW copy, not a shipped key</span>
+  </div>
+  <div class="key" role="group" aria-label="Release-stage word">
+    <span>Stage word (not part of the artefact):</span>
+    <label><input type="radio" name="stage" value="alpha" checked> alpha</label>
+    <label><input type="radio" name="stage" value="beta"> beta</label>
+    <label><input type="radio" name="stage" value=""> none</label>
+  </div>
+
+  <h2>1 · The footer: macOS 26 and later (soft edge), and macOS 15</h2>
+  <div class="grid2" id="main"></div>
+  <div class="note">
+    <p><b>What it's made of.</b> The version is plain <code>Text</code>: <code>.caption2</code> (10 pt), <code>.monospacedDigit()</code>, <code>.secondary</code>, no background. That's the usual “Version x” footer, and it sits on the sidebar's own vibrancy, so Reduce Transparency and Increase Contrast take care of themselves. The bug is SF Symbol <code>ladybug</code> (there's no plain <code>bug</code>) in a <code>.borderless</code> button, <code>.secondary</code>, with no bezel at rest. The glyph stays small; only its invisible click area is 22 × 22.</p>
+    <p><b>The list slides under.</b> On macOS 26 and later the footer is a <code>.safeAreaBar</code>, which gives the system's soft scroll edge: rows fade and blur as they pass beneath it (the CSS blur here only approximates it). macOS 15 has no soft edge, so text would run behind text; there the footer stacks below the list instead (the macOS 15 frames). No rule above it on either.</p>
+  </div>
+
+  <h2>2 · Narrowest sidebar (200 pt, <code>columnMin</code>)</h2>
+  <div class="grid2" id="narrow"></div>
+  <div class="note">
+    <p>At 200 pt the version text (~62 pt) and the button (22 pt) leave plenty of air, so nothing truncates. A long version string (<code>0.32.10 alpha</code>) still fits. When the sidebar is hidden, the footer goes with it; Help ▸ Send Feedback… is still there.</p>
+  </div>
+
+  <h2>3 · Button states</h2>
+  <div class="grid2" id="states"></div>
+  <div class="note">
+    <p>Hover shows the borderless hover fill (macOS 26 only; 15 shows the tooltip alone) and the tooltip “Send Feedback”, a new key without the menu item's ellipsis, also used as the VoiceOver label. Clicking opens the shipped native <code>FeedbackSheet</code> <b>in this window only</b>: the button sets this window's sheet state directly, not the app-wide broadcast the menu uses today. It works with no project selected, since the sheet falls back to its serve-free config. Focus ring only with Full Keyboard Access on.</p>
+  </div>
+
+  <h2>4 · Debug builds: two versions on screen</h2>
+  <div class="grid2" id="debug"></div>
+  <div class="note">
+    <p>In a Debug build with Show Diagnostics on, the existing build-info capsule still sits bottom-right of the detail pane. The version then appears twice, which is fine: the capsule carries branch, SHA and sidecar for QA screenshots; the footer is the one line a tester can read out. Not proposed: trimming the version out of the Debug capsule. It's Debug-only and its format is documented in <code>BuildInfo.swift</code>.</p>
+  </div>
+
+  <h2>5 · At 2×: the Debug capsule (unchanged) and the footer</h2>
+  <div class="zoom" id="zoom"></div>
+  <div class="note">
+    <p>Rev 1 copied the capsule. Rev 2 drops it: on a sidebar the material sat on top of the sidebar's own material, it read as one of the app's clickable status pills, and Reduce Transparency turned it into a solid pale blob. Drawn at doubled sizes, so it shows shape and spacing, not antialiasing.</p>
+  </div>
+</div>
+
+<script>
+const I = (id) => `<svg aria-hidden="true"><use href="#${id}"/></svg>`;
+const B = (id, title) => `<span class="btn" title="${title}">${I(id)}</span>`;
+const plusMenu = `<span class="cap">${B('plus','plus — New Project… / New Folder…')}<svg style="width:9px;height:9px;margin:0 6px 0 -4px;color:var(--muted)" aria-hidden="true"><use href="#chev"/></svg></span>`;
+
+const rows = `<div class="sh">&nbsp;</div>
+  <div class="row">${I('target')}Project</div><div class="row">${I('people')}Sessions</div>
+  <div class="row sel">${I('quote')}Quotes</div><div class="row">${I('tag')}Codebook</div><div class="row">${I('grid')}Signals</div>
+  <div class="sh">Projects</div>
+  <div class="row proj sel">${I('circle')}Kitchen study<span class="n">16</span></div>
+  <div class="row proj">${I('circle')}Banking app<span class="n">9</span></div>
+  <div class="row proj">${I('circle')}Clinic intake<span class="n">12</span></div>
+  <div class="row proj">${I('circle')}Pension switch<span class="n">7</span></div>
+  <div class="row proj">${I('circle')}Ward handover<span class="n">14</span></div>
+  <div class="row proj">${I('circle')}Onboarding diary<span class="n">11</span></div>
+  <div class="row proj">${I('circle')}Pharmacy pilot<span class="n">8</span></div>`;
+
+const foot = ({ver='0.32.0 alpha', bug='', tip=false}={}) =>
+  `<div class="sfoot"><span class="ver">${ver}</span>
+     <span class="bug ${bug}" title="ladybug — Send Feedback">${I('ladybug')}</span>
+     ${tip?'<span class="tip">Send Feedback</span>':''}</div>`;
+
+const win = ({scheme='', min=false, f={}, diag=false, sheet=false, m15=false}={}) => `
+  <div class="win ${scheme}">
+    <div class="side${min?' min':''}${m15?' m15':''}">
+      <div class="stb"><span class="lights"><span></span><span></span><span></span></span>${B('sidebar-left','sidebar.left')}<span class="push">${plusMenu}</span></div>
+      <div class="slist">${rows}</div>
+      ${foot(f)}
+    </div>
+    <div class="detail">
+      <div class="dtb"><span class="title"><b>Kitchen study</b><small>212 quotes · 14 starred</small></span></div>
+      <div class="body"><div class="ghostlines"><i style="width:60%"></i><i style="width:85%"></i><i style="width:72%"></i><i style="width:40%"></i><i style="width:66%"></i></div></div>
+      ${diag?'<span class="diag">0.32.0 · main@f4b8f2ee · Debug · sidecar=bundled</span>':''}
+      ${sheet?'<div class="scrim"><div class="sheet"><b>Send Feedback</b><i style="width:90%"></i><i style="width:55%"></i><div class="ta"></div><div class="btns"><span>Cancel</span><span class="p">Send</span></div></div></div>':''}
+    </div>
+  </div>`;
+
+const frame = (label, flag, html) => `<div class="frame"><div class="fchrome"><b>${label}</b>${flag?' · '+flag:''}</div>${html}</div>`;
+const NEWV = '<span class="new">stage word: NEW string (see plan, decision 2)</span>';
+
+document.getElementById('main').innerHTML =
+  frame('macOS 26+ · light · 220 pt', NEWV, win({scheme:'light'})) +
+  frame('macOS 26+ · dark · 220 pt', NEWV, win({scheme:'dark'})) +
+  frame('macOS 15 · light · footer below the list', '', win({scheme:'light', m15:true})) +
+  frame('macOS 15 · dark', '', win({scheme:'dark', m15:true}));
+
+document.getElementById('narrow').innerHTML =
+  frame('light · 200 pt', '', win({scheme:'light', min:true})) +
+  frame('dark · 200 pt · long version', '', win({scheme:'dark', min:true, f:{ver:'0.32.10 alpha'}}));
+
+document.getElementById('states').innerHTML =
+  frame('hover (macOS 26)', '<span class="new">tooltip “Send Feedback”: NEW key, no ellipsis</span>', win({scheme:'light', f:{bug:'hover', tip:true}})) +
+  frame('click → shipped FeedbackSheet', '', win({scheme:'light', f:{bug:'press'}, sheet:true}));
+
+document.getElementById('debug').innerHTML =
+  frame('Debug · Show Diagnostics on', 'capsule = shipped', win({scheme:'light', diag:true})) +
+  frame('Debug · dark', '', win({scheme:'dark', diag:true}));
+
+document.getElementById('zoom').innerHTML = ['light','dark'].map(s => `
+  <div class="${s}" style="display:flex;flex-direction:column;gap:14px;padding:18px;border-radius:10px;background:var(--side);color:var(--ink);flex:1 1 300px;min-width:0">
+    <figure><span class="cap2">0.32.0 · main@f4b8f2ee · Debug</span><figcaption>shipped Debug capsule, Debug builds only (${s})</figcaption></figure>
+    <figure><span style="display:flex;align-items:center;gap:40px"><span class="ver x2">0.32.0 alpha</span><span class="bug x2">${I('ladybug')}</span></span><figcaption>footer: plain text + bug (${s})</figcaption></figure>
+  </div>`).join('');
+
+// stage-word switch: rewrites every version label in place
+const verText = new Map();
+document.querySelectorAll('.ver').forEach(el => verText.set(el, el.textContent.replace(/\s*alpha$/, '')));
+document.querySelectorAll('input[name=stage]').forEach(r => r.addEventListener('change', () => {
+  const w = document.querySelector('input[name=stage]:checked').value;
+  verText.forEach((v, el) => { el.textContent = w ? `${v} ${w}` : v; });
+}));
+</script>
+</body>
+</html>

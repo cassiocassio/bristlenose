@@ -23,7 +23,7 @@ struct AlphaExpiryPill: View {
         if let days = daysRemaining, (0...Self.showWithinDays).contains(days) {
             StatusPill(
                 isPresented: $showingDetail,
-                accessibilityLabel: "Bristlenose alpha. \(spokenRemaining(days))."
+                accessibilityLabel: "Bristlenose beta. \(spokenRemaining(days))."
             ) {
                 Image(systemName: "hourglass")
                     .imageScale(.small)
@@ -39,7 +39,7 @@ struct AlphaExpiryPill: View {
 
     private func popover(_ days: Int) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Bristlenose alpha")
+            Text("Bristlenose beta")
                 .font(.system(.callout).weight(.semibold))
             Text(bodyText(days))
                 .font(.callout)
@@ -62,9 +62,9 @@ struct AlphaExpiryPill: View {
     // Terse pill label — the hourglass already says "time-limited".
     private func pillText(_ days: Int) -> String {
         switch days {
-        case 0:  return "Alpha · today"
-        case 1:  return "Alpha · 1d"
-        default: return "Alpha · \(days)d"
+        case 0:  return "Beta · today"
+        case 1:  return "Beta · 1d"
+        default: return "Beta · \(days)d"
         }
     }
 

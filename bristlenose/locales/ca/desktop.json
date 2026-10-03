@@ -289,7 +289,9 @@
       }
     },
     "folderNamePlaceholder": "Nom de la carpeta",
-    "projectNamePlaceholder": "Nom del projecte"
+    "projectNamePlaceholder": "Nom del projecte",
+    "prereleaseVersion": "{{version}} beta",
+    "sendFeedbackHelp": "Envia comentaris"
   },
   "player": {
     "windowTitle": "Reproductor de Bristlenose"

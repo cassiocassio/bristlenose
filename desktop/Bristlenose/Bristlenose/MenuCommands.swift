@@ -1751,6 +1751,7 @@ private struct VideoMenuContent: View {
 private struct HelpMenuContent: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
+    @FocusedValue(\.windowCommands) private var windowCommands
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -1783,12 +1784,18 @@ private struct HelpMenuContent: View {
             Self.open("https://bristlenose.app/docs/changelog.html")
         }
 
-        // Always opens the native FeedbackSheet (report lens, status page, or
-        // welcome screen). `openFeedback` posts `.showFeedbackSheet`; ContentView
-        // presents it with the live-serve config or the serve-free `.serverless`
-        // fallback when no project is selected.
+        // Opens the native FeedbackSheet in the FRONT window only, with the
+        // live-serve config or the serve-free `.serverless` fallback when no
+        // project is selected. It used to post the app-wide `.showFeedbackSheet`
+        // broadcast, which every window answered. With no project window in
+        // front (Settings, the Welcome window) it still falls back to that
+        // broadcast, so the item never dims and never goes dead.
         Button(i18n.t("desktop.menu.help.sendFeedback")) {
-            bridgeHandler.openFeedback()
+            if let windowCommands {
+                windowCommands.perform(.showFeedback)
+            } else {
+                bridgeHandler.openFeedback()
+            }
         }
 
         Divider()

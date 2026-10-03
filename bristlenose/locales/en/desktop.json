@@ -290,7 +290,9 @@
       }
     },
     "folderNamePlaceholder": "Folder name",
-    "projectNamePlaceholder": "Project name"
+    "projectNamePlaceholder": "Project name",
+    "prereleaseVersion": "{{version}} beta",
+    "sendFeedbackHelp": "Send Feedback"
   },
   "player": {
     "windowTitle": "Bristlenose Player"

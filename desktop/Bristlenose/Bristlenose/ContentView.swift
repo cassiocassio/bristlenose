@@ -58,6 +58,17 @@ private struct SidebarDeselectMonitor: NSViewRepresentable {
             let point = tableView.convert(event.locationInWindow, from: nil)
             // Only act when click is inside the table view but below all rows.
             guard tableView.bounds.contains(point) else { return }
+            // …and lands on the table itself, not on something drawn over it.
+            // On macOS 26 the list slides under the sidebar footer, so a click
+            // on its Send Feedback button is inside the table's bounds, below
+            // the last row — and would otherwise clear the selection.
+            if let content = window.contentView,
+               let hit = content.hitTest(
+                   content.superview?.convert(event.locationInWindow, from: nil)
+                       ?? event.locationInWindow),
+               hit !== tableView, !hit.isDescendant(of: tableView) {
+                return
+            }
             if tableView.row(at: point) < 0 {
                 DispatchQueue.main.async { self.deselect() }
             }
@@ -600,7 +611,7 @@ struct ContentView: View {
             // On the column, not the split view: there it is inert (AppKit
             // reported min 140, no max). The range is also what
             // `restingColumnWidth` trusts.
-            sidebar
+            sidebarWithFooter
                 .navigationSplitViewColumnWidth(
                     min: SidebarAutoCollapse.columnMin,
                     ideal: SidebarAutoCollapse.columnIdeal,
@@ -1362,6 +1373,8 @@ struct ContentView: View {
             if serveManager?.runningPort != nil { showingMiroSheet = true }
         case .showSessionsSwitcher:
             sessionsSwitcherRequest += 1
+        case .showFeedback:
+            showingFeedbackSheet = true
         case .applyDebugFixture(let scenario):
             applyDebugFixture(named: scenario)
 
@@ -2554,6 +2567,28 @@ struct ContentView: View {
     }
 
     // MARK: - Sidebar
+
+    /// The sidebar with its footer: version on the left, Send Feedback on the
+    /// right (`docs/design-desktop-sidebar-footer.md`). Wraps `sidebar`, so it
+    /// covers the SwiftUI list and the AppKit outline alike.
+    ///
+    /// On macOS 26 the list slides under the footer behind the system's soft
+    /// scroll edge. macOS 15 has no soft edge, so the text would run behind
+    /// text; there the footer stacks below the list instead.
+    @ViewBuilder
+    private var sidebarWithFooter: some View {
+        // Sets THIS window's sheet flag. The menu item's old app-wide
+        // broadcast opened a sheet in every window.
+        let footer = SidebarFooter(i18n: i18n) { showingFeedbackSheet = true }
+        if #available(macOS 26, *) {
+            sidebar.safeAreaBar(edge: .bottom, spacing: 0) { footer }
+        } else {
+            VStack(spacing: 0) {
+                sidebar
+                footer
+            }
+        }
+    }
 
     @ViewBuilder
     private var sidebar: some View {

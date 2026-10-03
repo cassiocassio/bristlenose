@@ -20,7 +20,7 @@ Bristlenose transcribes on your machine and sends the transcripts to a frontier 
 
 Expect about $0.40 per hour of interview audio with Claude — provider costs vary.
 
-Pre-release software, without warranty. All feedback welcome.  
+Beta software, without warranty. All feedback welcome.  
 <!-- TODO: screenshot of an HTML report here -->
 
 Bristlenose is built by me, Martin Storey, a practising user researcher. It's free and open source under AGPL-3.0.

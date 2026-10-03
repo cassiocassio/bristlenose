@@ -46,6 +46,11 @@ enum WindowCommand: Equatable {
     case showMiro
     /// View ▸ Switch Session (⌘⌥L on the Sessions lens).
     case showSessionsSwitcher
+    /// Help ▸ Send Feedback… — the sheet opens in the front window only. It was
+    /// an app-wide `.showFeedbackSheet` broadcast, so with three windows open
+    /// three sheets appeared. Has an app-level fallback: feedback must never
+    /// dim for want of a window.
+    case showFeedback
     /// Diagnostics ▸ Diagnostic fixtures — inject a named scenario into this
     /// window's selected project.
     case applyDebugFixture(scenario: String)
@@ -97,7 +102,7 @@ extension WindowCommand {
     /// dim, which is what every Mac app does with a utility window frontmost.
     var hasAppLevelFallback: Bool {
         switch self {
-        case .newProject, .newFolder: return true
+        case .newProject, .newFolder, .showFeedback: return true
         default: return false
         }
     }

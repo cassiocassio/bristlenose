@@ -323,7 +323,9 @@
       }
     },
     "folderNamePlaceholder": "Имя папки",
-    "projectNamePlaceholder": "Имя проекта"
+    "projectNamePlaceholder": "Имя проекта",
+    "prereleaseVersion": "{{version}} бета-версия",
+    "sendFeedbackHelp": "Отправить отзыв"
   },
   "player": {
     "windowTitle": "\u041f\u0440\u043e\u0438\u0433\u0440\u044b\u0432\u0430\u0442\u0435\u043b\u044c Bristlenose"

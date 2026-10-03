@@ -260,25 +260,26 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
 </div>
 
 <!-- ───────────────────────── 1 ───────────────────────── -->
-<h2><span class="n">1</span>First launch, no projects: Welcome beside the main window, not key</h2>
+<h2><span class="n">1</span>First open: Welcome centred over the main window, key</h2>
 <div class="shot">
-  <div class="shot-bar"><span><b>1 · main window key, Welcome open beside it</b></span><span class="new">NEW COPY: footer checkbox (see 3)</span></div>
-  <div class="scale"><div data-scene="beside"></div></div>
-</div>
-<div class="comm">
-  <p><span class="pro">For:</span> the task and the teaching sit side by side, and the teaching can be ignored at no cost. The research found this is the arrangement that helps without getting in the way. The drop card is live and is the only target in the key window, so a researcher with a folder ready can drop it straight away. The Welcome window is no longer tied to the main window's 700 pt minimum, which exists so a report can be shown. It opens at the spiral's natural size and handles narrow widths on its own terms, by reflowing (panel 4) rather than scaling content down. The scaling machinery (the shelf's 0.29 scale, <code>WelcomeClauseFit</code>) stops being the main way the spiral copes with width.</p>
-  <p><span class="con">Against:</span> "beside" needs room. At 1000 + 800 pt it fits only a display wider than about 1850 pt. That includes a 27″ at its default scale, but not a 13″–15″ laptop, where the two windows would overlap or the Welcome window would go off screen. A window that is not key is also easy to miss, and it is the first thing a new user sees of the app. Opening it without making it key is unusual on macOS: launch normally makes the newest window key. AppKit needs an explicit <code>orderFront</code> with no <code>makeKey</code> to do it, and the window falls behind on the next click anywhere.</p>
-</div>
-
-<!-- ───────────────────────── 2 ───────────────────────── -->
-<h2><span class="n">2</span>Same, Welcome centred over the main window, key <span class="flag cmp">for comparison</span></h2>
-<div class="shot">
-  <div class="shot-bar"><span><b>2 · Welcome key, centred over the main window</b></span><span>the usual default for a launch window (Xcode, Pixelmator Pro)</span></div>
+  <div class="shot-bar"><span><b>1 · very first launch, no projects</b></span><span class="new">NEW COPY: footer checkbox (see 3)</span></div>
   <div class="scale"><div data-scene="over"></div></div>
 </div>
 <div class="comm">
-  <p><span class="pro">For:</span> this is what AppKit does by default, and it is the Xcode and Pixelmator Pro precedent. It cannot be missed, and it works on any screen size.</p>
-  <p><span class="con">Against: the teaching stands between the researcher and the task.</span> At 800 pt the Welcome window covers the whole centre of a 1000 pt main window, drop card included. The one action available is hidden behind a lesson the researcher has to close first. Xcode and Pixelmator get away with this because their launch window <i>is</i> the launcher: it has New and Open and a recents list. Bristlenose's launcher is the main window, so the Welcome window has nothing to offer the researcher's next step. It can only be dismissed. Dragging a folder from Finder onto the visible strip of sidebar is not a drop target either.</p>
+  <p><b>Decided.</b> On the very first open, Welcome is centred over the main window and is key. It is naturally smaller than the main window, so the main window's title bar and sidebar show around it, and the researcher can see there is a window underneath. From there it is normal window mechanics. On a small screen they will close it, minimise it, or slide it mostly off screen. On a big screen they have more room to arrange the two, and some will drag it to another Space. A click on the main window brings that window forward and Welcome falls behind it. That is fine: the researcher wanted to try the app more than read Welcome, and they now know Welcome exists.</p>
+  <p><b>Every later open</b> restores the frame the researcher left it in, including size and position. It is a normal macOS window and the screen is theirs. The natural size and the centred position apply only the first time.</p>
+  <p><b>The AI-consent sheet</b> is modal and attached to the main window. It is the first thing the researcher meets once Welcome is closed or moved aside, and the app cannot be used until it is dismissed. Welcome does not wait for it, and it does not compete for anything: it is a separate window, while the sheet belongs to the main window.</p>
+  <p>The Welcome window is no longer tied to the main window's 700 pt minimum, which exists so a report can be shown. It handles narrow widths on its own terms, by reflowing (panel 4) rather than scaling content down.</p>
+</div>
+
+<!-- ───────────────────────── 2 ───────────────────────── -->
+<h2><span class="n">2</span>After a click on the main window: Welcome behind it, or moved beside it</h2>
+<div class="shot">
+  <div class="shot-bar"><span><b>2 · main window key, Welcome dragged beside it</b> (a large screen)</span><span>normal window mechanics, nothing designed</span></div>
+  <div class="scale"><div data-scene="beside"></div></div>
+</div>
+<div class="comm">
+  <p>No placement code is needed for this state. It is drawn to show what happens on a wide display when the researcher arranges the two windows: the drop card is live and the Welcome window, no longer key, sits to one side and can be ignored. On a laptop the same click leaves Welcome behind the main window, out of sight. The frame they leave it in is the frame it opens in next time.</p>
 </div>
 
 <!-- ───────────────────────── 3 ───────────────────────── -->
@@ -297,7 +298,7 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
   <p>The checkbox sits at bottom-leading, where Xcode and Pixelmator Pro put theirs. <b>Wording decided:</b> "Show Welcome when Bristlenose opens", the §0 spec wording. Here it is also accurate, because deselecting a project no longer summons Welcome. It closes like any other window: the red traffic light or ⌘W. There is no X inside the content and no Close button. It is an ordinary titled window. It can be resized, minimised and zoomed, because no part of it needs a fixed frame. Xcode's welcome window is fixed-size and has no title bar. That works because Xcode's window is a launcher, and this one is not.</p>
   <p><b>Without the drop card,</b> Study tools gains about 90 pt of height, which goes to the illustration. That is the only change to the spiral. <b>Title</b> is the shipped <code>desktop.chrome.welcomeTitle</code> ("Welcome to Bristlenose"), the same string as the Help menu item, so the menu item and the window it opens have the same name.</p>
   <p><b>Opening size, derived rather than measured:</b> 800 pt content width gives a 760 × 470 pt spiral. The Scientific background cell is then about 284 × 285 pt, enough for the 208 × 152 pt cover fan to draw at scale 1 with its caption and link. That is the reasoning from <code>BookShelfView.coverFan</code>'s comments. Nobody has measured it yet. The Degradation Lab would confirm or move the number, and the spiral's φ geometry fixes everything else from that one width. <span class="con">Watch:</span> the spiral's φ geometry means a wider window makes it taller as well. Above the natural size it needs a cap or it outgrows the screen, so the natural size works as a maximum as well as the opening size.</p>
-  <p><b>Rotators.</b> Each cell currently advances "per visit", where a visit is an appearance in the main window. In Model 2 a visit has to mean opening the window. With the box unticked, a researcher who never reopens it never sees past the first slot in any cell, so the Tip curriculum stops at slot one.</p>
+  <p><b>Rotators.</b> The visit count is invisible to the researcher in v1. It is an implementation detail, not a design question, and nothing in the window shows it.</p><p><b>Checkbox behaviour, decided.</b> Ticking or unticking never closes the window. The researcher keeps it open or closes it, with the box set either way, and the box governs only whether it opens at the next launch.</p>
 </div>
 
 <div class="shot" style="margin-top:22px">
@@ -317,7 +318,7 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
   </div></div>
 </div>
 <div class="comm">
-  <p><b>Decided:</b> the row exists. It is the same setting as the footer checkbox, drawn in the pane's own idiom as a grouped-form <code>Toggle</code>, which renders as a switch, next to its nearest sibling "Show animation while analysing". The help line is the one you shortened, drawn verbatim.</p>
+  <p><b>Proposed, not decided</b> (question 2 below). It is the same setting as the footer checkbox, drawn in the pane's own idiom as a grouped-form <code>Toggle</code>, which renders as a switch, next to its nearest sibling "Show animation while analysing". The help line is the one you shortened, drawn verbatim.</p>
   <p><span class="con">Check:</span> that line was written for Model 1. Under Model 2, "shown in the main window when no project is selected" is no longer true: Welcome is its own window and opens at launch. One candidate, owner to choose: "Opens a window of study tools, scientific background and a tip."</p>
 </div>
 
@@ -335,7 +336,7 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
 </div>
 <div class="comm">
   <p>Below a breakpoint, the spiral gives up its φ geometry and the cells stack in spiral order: Study tools, Scientific background, Tip, AI, then the privacy card. Each cell keeps its tint and its large/small treatment and takes its natural height. The column scrolls, and the footer checkbox stays pinned at the bottom. Fonts stay at their semantic sizes. Nothing scales down. This is the same rule the spec already sets ("never squish the architecture"), applied by switching the layout instead of shrinking it.</p>
-  <p><span class="pro">For:</span> the window behaves like a normal Mac window: it is resizable and has a sensible minimum (about 360 pt is enough for one cell's copy), and it never shrinks content below its designed size. A researcher can park it as a narrow strip beside the main window on a laptop, which makes panel 1's "beside" placement work on a 13″ screen as well.</p>
+  <p><span class="pro">For:</span> the window behaves like a normal Mac window: it is resizable and has a sensible minimum (about 360 pt is enough for one cell's copy), and it never shrinks content below its designed size. A researcher can park it as a narrow strip beside the main window on a laptop, which means a laptop user can keep it beside the main window as well.</p>
   <p><span class="con">Against:</span> two layouts to build and test instead of one. The baton, which passes the animation along the spiral, now needs an order for the stack too. Reading top to bottom is the obvious one. Where the breakpoint goes, and whether there is an in-between step (two columns), is undecided. <span class="con">Also:</span> this is the first change to the spiral's own layout that the mockup proposes, and only below the natural size.</p>
 </div>
 
@@ -392,7 +393,7 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
 </div>
 <div class="comm">
   <p><b>Decided:</b> Help is the only way back. Welcome is help more than anything else, so it lives in the Help menu. There is no extra Window-menu item. <b>6a</b> is the item as it ships, with no shortcut. What changes is what it does. Today it clears the selection to show the Welcome pane. In Model 2 it opens or focuses the Welcome window and leaves the main window's selection alone, so it no longer moves the researcher away from what they were looking at.</p>
-  <p><b>6b</b> is drawn only for its window list, which AppKit fills in by itself. Once open, Welcome appears there like any other window. <span class="con">The list shows a naming collision:</span> "✓ Welcome" is the main window with no project selected, under its shipped title, and "Welcome to Bristlenose" is the new window. A shipped alternative for the main window's empty title already exists: <code>desktop.chrome.noProjectSelected</code> ("No Project Selected"). That is still an open question.</p>
+  <p><b>6b</b> is drawn only for its window list, which AppKit fills in by itself. Once open, Welcome appears there like any other window. <span class="con">The list shows a naming collision:</span> "✓ Welcome" is the main window with no project selected, under its shipped title, and "Welcome to Bristlenose" is the new window. A shipped alternative for the main window's empty title already exists: <code>desktop.chrome.noProjectSelected</code> ("No Project Selected"). That is still an open question (question 3 below).</p>
 </div>
 
 <p class="lede" style="margin-top:28px"><b style="color:var(--page-ink)">Full screen: decided, not drawn.</b> No special treatment. Welcome is an ordinary Mac window: if it ends up behind the main window, it stays behind. If the researcher takes the main window full screen, they get the normal behaviour, and they can make Welcome a full-screen tile beside it because macOS already offers that (Window&nbsp;▸ Full Screen Tile). No collection behaviour is set and no placement code is written for this case.</p>
@@ -415,30 +416,28 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
 
 <h2><span class="n">G</span>Mac-native review (Gruber and friends): recommendations, not decisions</h2>
 <div class="comm">
-  <p>A read-only <code>what-would-gruber-say</code> pass over 5b0d53f4, checked again against the decisions recorded above. Items the decisions already settled are left out.</p>
+  <p>A read-only <code>what-would-gruber-say</code> pass over 5b0d53f4. <b>Where you have since ruled, your ruling stands, and it is marked below.</b> Items settled before the review are left out.</p>
   <p><b>Window type.</b> A regular titled window: resizable, minimisable, closed with ⌘W, not an <code>NSPanel</code>. Title "Welcome to Bristlenose". <span class="con">Implementation trap:</span> SwiftUI's <code>Window("…", id:)</code> adds its own "open" item to the Window menu, which breaks the help-only route back. Fix with <code>.commandsRemoved()</code>. Keep the window-list entry, Mission Control and ⌘` membership, because it is a real window.</p>
-  <p><b>Main window title.</b> Retire "Welcome" for the main window's no-selection title (<code>ContentView.swift:427</code>) and use "Bristlenose" or the shipped "No Project Selected", so the collision in panel 6b goes away. This answers open question 6.</p>
-  <p><b>Launch and restoration.</b> "Opens" means a cold launch only. A Dock reopen with no windows makes a main window, not Welcome. State restoration must not override the checkbox: <code>.restorationBehavior(.disabled)</code> plus <code>.defaultLaunchBehavior(.presented)</code>, gated on the setting (both on macOS 15). This answers open question 1: launch only.</p>
-  <p><b>Placement and key.</b> Make Welcome <i>key</i>: VoiceOver announces it, and one ⌘W gets the researcher back to the task. Drag and drop works on a window that isn't key, so panel 1's argument for not-key falls away. Place it beside the main window when there is room, otherwise offset to the trailing side so the centred drop card stays visible. Never centre it over the main window (panel 2). Autosave the frame, so the natural size applies only on first open. Defer it until any first-run sheet has been dismissed. This answers open questions 2–4: key, beside or offset, last frame, sheet first.</p>
-  <p><b>Checkbox semantics.</b> Help&nbsp;▸ Welcome while the box is unticked shows the window <i>once</i> and leaves the setting off. Unticking takes effect at the next launch and never closes the window. ⌘W closes the window and never changes the setting. This follows Xcode and Pixelmator Pro, and answers open questions 7 and 8.</p>
-  <p><b>Rotators.</b> One advance per window open, no timer. Accept that someone with the box unticked rarely advances. This answers open question 5.</p>
-  <p><b>Dropping a folder on Welcome</b> (open question 10). Make the whole Welcome window a drop target. A drop creates the project in the frontmost main window, or a new one, selects it and brings that window forward. Welcome stays open. Gruber also says a second drop card <i>inside</i> Welcome would be acceptable (Photos Import precedent), which runs against your decision to remove the card from Welcome. The whole-window drop is the half that does not reopen that decision.</p>
+  <p><b>Main window title.</b> Retire "Welcome" for the main window's no-selection title (<code>ContentView.swift:427</code>) and use "Bristlenose" or the shipped "No Project Selected", so the collision in panel 6b goes away. Still open, question 3.</p>
+  <p><b>Launch and restoration.</b> "Opens" means a cold launch only. A Dock reopen with no windows makes a main window, not Welcome. State restoration must not override the checkbox: <code>.restorationBehavior(.disabled)</code> plus <code>.defaultLaunchBehavior(.presented)</code>, gated on the setting (both on macOS 15). <b>Matches the ruling:</b> launch only.</p>
+  <p><b>Placement and key.</b> Make Welcome <i>key</i>: VoiceOver announces it, and one ⌘W gets the researcher back to the task. Drag and drop works on a window that isn't key, so there is no reason to open it without focus. Place it beside the main window when there is room, otherwise offset to the trailing side so the centred drop card stays visible. Never centre it over the main window. Autosave the frame, so the natural size applies only on first open. Defer it until any first-run sheet has been dismissed. <span class="con">Overruled:</span> the first open is centred over the main window (panel 1), and the consent sheet does not hold Welcome back. <b>Agreed:</b> key, and the frame is remembered after the first open.</p>
+  <p><b>Checkbox semantics.</b> Help&nbsp;▸ Welcome while the box is unticked shows the window <i>once</i> and leaves the setting off. Unticking takes effect at the next launch and never closes the window. ⌘W closes the window and never changes the setting. This follows Xcode and Pixelmator Pro. <b>The ruling matches</b> on unticking and ⌘W. Help while the box is unticked is still open (question 1 below).</p>
+  <p><b>Rotators.</b> One advance per window open, no timer. <b>Ruling:</b> it is an invisible implementation detail in v1.</p>
+  <p><b>Dropping a folder on Welcome.</b> Make the whole Welcome window a drop target. A drop creates the project in the frontmost main window, or a new one, selects it and brings that window forward. Welcome stays open. Gruber also says a second drop card <i>inside</i> Welcome would be acceptable (Photos Import precedent), which runs against your decision to remove the card from Welcome. The whole-window drop is the half that does not reopen that decision. <span class="con">Overruled:</span> Welcome has no drop target of any kind. Dropping belongs to the main window's empty state only, so there is no confusion about where a folder goes.</p>
   <p><b>Accessibility, a finding in shipped code rather than in this mockup.</b> <code>SlotRotator</code> is <code>.focusable()</code> with <code>.focusEffectDisabled()</code> (<code>WelcomeHomeView.swift:603–604</code>): a focusable control with no focus ring, which fails Full Keyboard Access in either model. Also give the cells an <code>.accessibilitySortPriority</code> so VoiceOver reads them in curriculum order, with the checkbox last.</p>
   <p><b>Main window with only the drop card</b> is enough. File&nbsp;▸ New Project is the labelled alternative (Photos and Music precedent). This agrees with the decision in panel 5. Stage Manager groups both windows. In full screen, AppKit leaves Welcome on the desktop Space, which matches the full-screen decision.</p>
 </div>
 
-<h2><span class="n">?</span>Open questions (surfaced, not answered)</h2>
+<h2><span class="n">✓</span>Decided</h2>
 <div class="comm">
-  <p><b>1. When does it appear?</b> Only at launch, if the box is ticked? Or also when the main window has no selection, for example after deleting the last project? Launch-only follows Xcode and keeps every deselect calm. Showing it on deselect brings back Model 1's behaviour in a second window.</p>
-  <p><b>2. Reopen at the last frame, or always at the natural size?</b> The Mac convention is to restore a window's last frame, and a researcher who parked it as a narrow strip (panel 4b) would expect it back there. Always opening at the natural size guarantees the designed first impression every time, at the cost of discarding the user's choice.</p>
-  <p><b>3. Beside or over, and which window is key?</b> Panel 1 helps but needs a wide display. Panel 2 works everywhere but covers the drop card. Possible middle ground: beside the main window when there is room, otherwise offset so the drop card stays visible. That gives two behaviours to explain and test.</p>
-  <p><b>4. Sheets on the main window.</b> If the AI-consent sheet, or any first-run sheet, is attached to the main window at launch, the Welcome window either competes with it for key or waits until it is dismissed. A Welcome window that is key and sitting over a window with a modal sheet is the worst case. Order of operations: sheet first, Welcome after?</p>
-  <p><b>5. What counts as a "visit" for the rotators</b>, now that opening the window is the only way to see one (panel 3 commentary). Should each cell advance per opening, per launch, or on a timer while the window is open?</p>
-  <p><b>6. The main window's empty-state title</b>: "Welcome" or "No Project Selected" (panel 6b).</p>
-  <p><b>7. Help&nbsp;▸ Welcome while the box is unticked.</b> Does it open the window once and leave the setting off, or turn the setting back on? Opening it once matches the HIG's "easy to find later" without overruling the user.</p>
-  <p><b>8. Does unticking apply now or next launch?</b> In a window this matters less than it does in Model 1: unticking never makes the window vanish, and the box stays on screen until the researcher closes it. The question is only whether the window still opens at the next launch.</p>
-  <p><b>9. Appearance help line.</b> The row is decided (panel 3c). Its help line still says "in the main window" (see 3c's commentary).</p>
-  <p><b>10. Drop on the Welcome window?</b> With no drop card it has no drop target. A folder dropped on it does nothing. Should the whole window accept the drop and pass it to the main window, or should it refuse visibly?</p>
+  <p><b>Model 2</b>: Welcome is its own window, the spiral as shipped minus the drop card. <b>Checkbox</b>: "Show Welcome when Bristlenose opens". <b>Opens</b> only at launch, never on deselect. <b>First open</b>: centred over the main window, key (panel 1). <b>Later opens</b>: the frame the researcher left it in. <b>Resizable</b>: reflows narrow (panel 4b). <b>Ticking or unticking</b> never closes the window and governs the next launch only. <b>The AI-consent sheet</b> stays modal on the main window and is met once Welcome is moved aside. <b>Rotator visits</b> are invisible in v1. <b>No drop target in Welcome</b>: dropping lives in the main window's empty states, which show the existing drop card, unchanged and centred, with nothing added. <b>Reopen</b> via Help&nbsp;▸ Welcome to Bristlenose only. <b>Full screen</b> gets no special treatment.</p>
+</div>
+
+<h2><span class="n">?</span>Still open</h2>
+<div class="comm">
+  <p><b>1. Help&nbsp;▸ Welcome while the box is unticked.</b> Does it open the window once and leave the setting off, or turn the setting back on? Gruber recommends opening it once. Because the checkbox is in the window, the researcher can re-tick it there.</p>
+  <p><b>2. Mirror the setting in Settings&nbsp;▸ Appearance (panel 3c), and if so, with what help line?</b> The line drawn there describes Model 1 ("shown in the main window when no project is selected").</p>
+  <p><b>3. The main window's empty-state title</b>: "Welcome" today, which collides with the Welcome window in the Window list (panel 6b). Gruber suggests "Bristlenose" or the shipped "No Project Selected".</p>
 </div>
 
 </div>

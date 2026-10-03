@@ -161,6 +161,42 @@ transparency copy.
 - Wire the three other paths: `run_analysis_only` (`:2633`), `run_render_only`
   (`:3166`), and the importer.
 
+### 1.6a Lifecycle — any order, re-merged on every change
+
+The lens must work in whatever order the study happens: a merged structure
+from the first one or two interviews with no guide, a guide uploaded later,
+more interviews after that, a guide replaced or removed. Every one of those is
+an ordinary incremental run, because the guide's fingerprint and the session
+set are both inputs to the stage's cache key (§1.6).
+
+| Event | Re-runs | Cost (Sonnet 4.6, measured ≈ $0.06 per session) |
+|---|---|---|
+| Interviews, no guide | classify each session, structure in code, route quotes | ≈ $0.06 per session |
+| Guide added | parse once, re-merge all sessions, re-route | whole stage + one small parse |
+| More interviews | the whole stage (v1) | ≈ $0.06 per session in the study |
+| Guide replaced | as added | as added |
+| Guide removed | re-merge with no guide | whole stage |
+
+Three requirements that make a re-merge feel stable rather than reshuffled:
+
+1. **Identity across runs.** Planned sections are anchored to guide items.
+   Emergent sections are matched to the previous run's by ask-site overlap,
+   the way themes are matched by quote overlap (`importer.py:1037`), so a new
+   interview does not rename and reorder the navigator.
+2. **Overrides across a guide swap.** Researcher edits key on item ids, and a
+   new guide brings new planned ids. Re-attach by ask-site where possible;
+   **show** the researcher any that cannot be re-attached — never drop them
+   silently.
+3. **Say what it rests on.** The header states the number of sessions the merge
+   is built from. With one session the promotion rule (≥2 sessions) cannot
+   apply at all, and an early merge must not read as settled.
+
+**Optimisation path, not v1:** classify only new sessions against the frozen
+spine (per-session cache, as s08/s09 do), plus one small corpus-level call to
+reconcile their new-cluster labels with the existing emergent sections; re-route
+only quotes whose section could have changed. Worth it when studies are large;
+at ≈ $1.20 a pass for 20 sessions the whole-stage re-run is fine.
+
 ### 1.7 Ingest must not eat the guide
 
 Today **a `.docx` guide becomes a fake interview**: `classify_file`

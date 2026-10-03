@@ -49,6 +49,8 @@ const S = {
   show: "Show",
   planned: "Your guide",
   merged: "Normalised questions",
+  plannedTip: "Your discussion guide, as written",
+  mergedTip: "What was asked in every session, merged with your guide",
   guideView: "Show your guide as",
   summary: "Summary",
   original: "Original",
@@ -520,6 +522,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
             {modes.map((m) => (
               <button key={m} type="button" role="radio" aria-checked={mode === m} data-value={m}
                 tabIndex={mode === m ? 0 : -1} onKeyDown={(e) => onRadioKeys(e, modes, mode, setMode)}
+                title={m === "planned" ? S.plannedTip : S.mergedTip}
                 className={`dimension-btn${mode === m ? " active" : ""}`} onClick={() => setMode(m)}>
                 {m === "planned" ? S.planned : S.merged}
               </button>

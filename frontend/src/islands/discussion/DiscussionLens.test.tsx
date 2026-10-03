@@ -186,6 +186,10 @@ describe("review fixes, 3 Oct 2026", () => {
     render(<DiscussionView data={data} />);
     const radios = within(screen.getByRole("radiogroup", { name: "Show" })).getAllByRole("radio");
     expect(radios.map((r) => r.textContent)).toEqual(["Normalised questions", "Your guide"]);
+    expect(radios.map((r) => r.getAttribute("title"))).toEqual([
+      "What was asked in every session, merged with your guide",
+      "Your discussion guide, as written",
+    ]);
   });
 
   it("Your guide offers Summary or Original; Original shows the guide's own wording", () => {

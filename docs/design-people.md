@@ -1970,9 +1970,11 @@ reviewing iteration 2; these supersede it where they differ.
   no way to ask who it was. In the grid a name the system is not sure of wears
   the **dotted surround round the whole badge**, as a proposed tag does, with the
   name in grey (hover darkens it); confirmed is a plain badge in solid ink.
-- **Yes is said in the picker.** Clicking a name or badge opens it. The **green
-  tick** (the shipped accept colour, in the menu's check gutter) marks the
-  current answer: the dotted most-likely name, or the name already chosen. The
+- **Yes is said in the picker.** Clicking a name or badge opens it. The **menu's
+  own tick** marks the current answer — AppKit's menu checkmark in label colour
+  on the Mac, the shipped `✓` in the Export menu's check gutter on the web
+  (revised 3 Oct 2026 from a green tick, which got lost on the grey selection in
+  Picker Lab): the dotted most-likely name, or the name already chosen. The
   **selection opens on the ticked row**, so yes is click, Enter. Other names are
   possibles. **Dotted only until the first yes:** picking the dotted name
   confirms it (solid); after that, whichever name is picked is simply the current
@@ -1990,8 +1992,13 @@ reviewing iteration 2; these supersede it where they differ.
   extension of the same box.
 - **That's Me carries a symbol** (SF Symbols on the Mac; an in-house glyph on the
   web, which cannot use SF Symbols).
-- **New person: a field** whose hint follows the segment — *New moderator / New
-  participant / New observer* (one key per role, for languages that inflect it).
+- **New person: the next badge.** The list's next row is the code they will get
+  (`p7` after `p1`–`p6`) with the name half as the field, hint following the
+  segment — *New moderator / New participant / New observer* (one key per role,
+  for languages that inflect it). Same column, same type as the badges above,
+  growing as you type, so it reads as making another badge (revised 3 Oct 2026
+  from a separate field under the list). Arrowing onto it puts the cursor in the
+  name; Return creates; the arrows leave it.
 - **A new person arrives through the picker's field**, replacing iteration 2's
   *New Moderator…* item (R6). (The earlier "click any name in the grid to edit"
   note is superseded: a click now opens the picker; where spelling fixes live is

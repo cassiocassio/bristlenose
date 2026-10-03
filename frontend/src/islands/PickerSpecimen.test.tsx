@@ -13,9 +13,9 @@ describe("PickerSpecimen", () => {
     render(<PickerSpecimen />);
     const [m1, m2] = items();
     expect(m1.getAttribute("aria-checked")).toBe("true");
-    expect(m1.querySelector(".bn-picker-tick svg")).not.toBeNull();
+    expect(m1.querySelector(".export-dropdown-check")?.textContent).toBe("✓");
     expect(m1.querySelector(".badge-proposed")).not.toBeNull();
-    expect(m2.querySelector(".bn-picker-tick")).toBeNull();
+    expect(m2.querySelector(".export-dropdown-check")?.textContent).toBe("");
     expect(document.activeElement).toBe(m1);
   });
 
@@ -31,9 +31,26 @@ describe("PickerSpecimen", () => {
   it("the role segments switch the list, and Participant has no That's Me", () => {
     render(<PickerSpecimen />);
     fireEvent.click(screen.getByRole("radio", { name: "Participant" }));
-    expect(items()).toHaveLength(6);
+    expect(items()).toHaveLength(7); // six people and the new-person row
     expect(menu().querySelector(".bn-picker-me")).toBeNull();
     expect(screen.getByPlaceholderText("New participant")).toBeInTheDocument();
+  });
+
+  it("someone new is the next badge, after the people it would join", () => {
+    render(<PickerSpecimen />);
+    fireEvent.click(screen.getByRole("radio", { name: "Participant" }));
+    const rows = items();
+    const fresh = rows[6];
+    expect(fresh.classList.contains("bn-picker-new")).toBe(true);
+    expect(fresh.querySelector(".bn-speaker-badge-code")?.textContent).toBe("p7");
+    expect(fresh.querySelector(".bn-speaker-badge-name input")?.getAttribute("placeholder")).toBe("New participant");
+  });
+
+  it("arrowing onto the new row puts the cursor in its name", () => {
+    render(<PickerSpecimen />);
+    fireEvent.keyDown(menu(), { key: "ArrowDown" });
+    fireEvent.keyDown(menu(), { key: "ArrowDown" });
+    expect(document.activeElement).toBe(screen.getByPlaceholderText("New moderator"));
   });
 
   it("type-to-jump moves the selection by name", () => {
@@ -86,6 +103,6 @@ describe("PickerSpecimen", () => {
     const anchor = document.querySelector(".bn-picker-anchor") as HTMLElement;
     expect(anchor.textContent).toContain("o2");
     fireEvent.click(anchor);
-    expect(menu().querySelector(".bn-picker-me .bn-picker-tick svg")).not.toBeNull();
+    expect(menu().querySelector(".bn-picker-me .export-dropdown-check")?.textContent).toBe("✓");
   });
 });

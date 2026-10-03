@@ -45,6 +45,8 @@ const KNOWN: Record<Role, Person[]> = {
 };
 
 const ME = "Martin Storey";
+/** The row for someone new, in the list after the people it would join. */
+const NEW = "new";
 
 /** The slot's answer: who it is, and whether a person has said yes. */
 interface Answer { code: string; name: string; confirmed: boolean }
@@ -60,11 +62,9 @@ export const SCENARIOS: Record<string, Scenario> = {
   participant: { role: "participant", answer: { code: "p3", name: "Mary Adeyemi", confirmed: false } },
 };
 
-const CHECK = (
-  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M3.5 8.5l3 3 6-7" />
-  </svg>
-);
+/** The shipped menu tick: ExportDropdown's check gutter draws a plain ✓ in
+ *  text colour, the web counterpart of a Mac menu's checkmark. */
+const CHECK = "\u2713";
 const PERSON_CHECK = (
   <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <circle cx="8" cy="6.5" r="3" /><path d="M2.5 16.5c.6-3 2.8-4.6 5.5-4.6 1.2 0 2.3.3 3.2.9" /><path d="M12.5 15l2 2 3.5-4" />
@@ -84,21 +84,22 @@ const PROPOSED_CSS = `
 .bn-person-picker .dimension-btn { flex: 1; }
 .bn-person-picker .dimension-btn:first-child { border-right: none; }
 .bn-person-picker .dimension-btn + .dimension-btn { border-left: 1px solid var(--bn-colour-border); }
-/* The tick, only in the picker, in the shipped check gutter. */
-.bn-person-picker .bn-picker-tick { color: var(--bn-colour-positive); }
-.bn-person-picker .export-dropdown-check svg,
 .bn-person-picker .bn-picker-me svg { width: 1em; height: 1em; vertical-align: -0.125em; }
 .bn-person-picker .bn-picker-me svg { color: var(--bn-colour-accent); flex: none; }
 /* The Export menu's box, opened in place for the lab. */
 .bn-person-picker.export-dropdown-menu { position: static; margin: 0; }
-.bn-person-picker .bn-picker-head,
-.bn-person-picker .bn-picker-field { padding: 0.4rem 0.85rem; list-style: none; }
-.bn-person-picker .bn-picker-field .tag-input-box {
-  display: block; font-family: var(--bn-font-body); font-size: var(--bn-text-label);
-  border-color: var(--bn-colour-border); background: var(--bn-colour-bg);
+.bn-person-picker .bn-picker-head { padding: 0.4rem 0.85rem; list-style: none; }
+/* Someone new is the next badge: the code it will get, and its name half as the
+   field. The name half sizes to its text (a hidden copy sets the width, the
+   input lies over it), so typing grows a badge like the ones above. */
+.bn-person-picker .bn-picker-new-name { display: inline-grid; }
+.bn-person-picker .bn-picker-new-name > * { grid-area: 1 / 1; font: inherit; white-space: pre; }
+.bn-person-picker .bn-picker-new-name > span { visibility: hidden; min-width: 2ch; }
+.bn-person-picker .bn-picker-new-name > input {
+  width: 100%; min-width: 0; padding: 0; border: none; background: none; color: inherit; outline: none;
 }
-.bn-person-picker .bn-picker-field .tag-input-box:focus-within { border-color: var(--bn-field-edit-edge); }
-.bn-person-picker .bn-picker-field .tag-input { width: 100%; font: inherit; }
+.bn-person-picker .bn-picker-new-name > input::placeholder { color: var(--bn-colour-muted); }
+.bn-person-picker .bn-picker-new:focus-within { background: var(--bn-colour-hover); }
 `;
 
 /** The scenario the page opens on. The lab puts it in the URL rather than
@@ -117,15 +118,18 @@ export function PickerSpecimen() {
   const [open, setOpen] = useState(true);
   const [selected, setSelected] = useState<string>(start.answer?.code ?? KNOWN[start.role][0].code);
   const [draft, setDraft] = useState("");
-  const itemRefs = useRef<Record<string, HTMLLIElement | null>>({});
+  const itemRefs = useRef<Record<string, HTMLElement | null>>({});
   const typed = useRef({ buffer: "", at: 0 });
   const appearance = useAppearanceSignature(true);
 
   const rowsFor = useCallback(
-    (r: Role) => [...people[r].map((p) => p.code), ...(r === "participant" ? [] : ["me"])],
+    (r: Role) => [...people[r].map((p) => p.code), NEW, ...(r === "participant" ? [] : ["me"])],
     [people],
   );
   const rows = rowsFor(role);
+  const prefix = ROLES.find((r) => r.id === role)!.prefix;
+  /** The code someone new would get: the next number in this role. */
+  const nextCode = `${prefix}${people[role].length + 1}`;
 
   // The keyboard selection is real focus, so the shipped :focus styles draw it.
   useEffect(() => {
@@ -152,16 +156,12 @@ export function PickerSpecimen() {
   };
 
   /** That's Me answers this slot, so it keeps the slot's role prefix. */
-  const meCode = () => {
-    const prefix = ROLES.find((r) => r.id === role)!.prefix;
-    return answer?.code.startsWith(prefix) ? answer.code : `${prefix}${people[role].length + 1}`;
-  };
+  const meCode = () => (answer?.code.startsWith(prefix) ? answer.code : nextCode);
 
   const create = () => {
     const name = draft.trim();
     if (!name) return;
-    const prefix = ROLES.find((r) => r.id === role)!.prefix;
-    const code = `${prefix}${people[role].length + 1}`;
+    const code = nextCode;
     setPeople((prev) => ({ ...prev, [role]: [...prev[role], { code, name }] }));
     setAnswer({ code, name, confirmed: true });
     setDraft("");
@@ -174,7 +174,7 @@ export function PickerSpecimen() {
     const i = rows.indexOf(selected);
     if (e.key === "ArrowDown") { e.preventDefault(); setSelected(rows[Math.min(i + 1, rows.length - 1)]); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setSelected(rows[Math.max(i - 1, 0)]); }
-    else if (e.key === "Enter") { e.preventDefault(); choose(selected); }
+    else if (e.key === "Enter") { e.preventDefault(); if (selected !== NEW) choose(selected); }
     else if (e.key === "Escape") { e.preventDefault(); setOpen(false); }
     else if (e.key.length === 1 && /\S/.test(e.key) && !e.metaKey && !e.ctrlKey) {
       // Type-to-jump, on code or name, the way a menu does.
@@ -231,12 +231,42 @@ export function PickerSpecimen() {
                 onClick={() => choose(p.code)}
                 onKeyDown={(e) => { if (e.key === " ") { e.preventDefault(); choose(p.code); } }}
               >
-                <span className={`export-dropdown-check${isAnswer ? " bn-picker-tick" : ""}`}>{isAnswer && CHECK}</span>
+                <span className="export-dropdown-check" aria-hidden="true">{isAnswer ? CHECK : ""}</span>
                 <BadgeFor code={p.code} name={p.name} proposed={isAnswer && !answer!.confirmed} />
               </li>
             );
           })}
-          <li className="export-dropdown-separator" role="separator" />
+          <li
+            className="export-dropdown-item export-dropdown-scope bn-picker-new"
+            role="none"
+            onClick={() => setSelected(NEW)}
+          >
+            <span className="export-dropdown-check" aria-hidden="true" />
+            <span className="bn-person-badge">
+              <span className="bn-speaker-badge--split">
+                <span className="bn-speaker-badge-code">{nextCode}</span>
+                <span className="bn-speaker-badge-name bn-picker-new-name">
+                  <span aria-hidden="true">{draft || roleMeta.newLabel}</span>
+                  <input
+                    ref={(el) => { itemRefs.current[NEW] = el; }}
+                    placeholder={roleMeta.newLabel}
+                    aria-label={roleMeta.newLabel}
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    onFocus={() => setSelected(NEW)}
+                    onKeyDown={(e) => {
+                      const i = rows.indexOf(NEW);
+                      if (e.key === "Enter") { e.preventDefault(); create(); }
+                      else if (e.key === "Escape") { e.preventDefault(); setOpen(false); }
+                      else if (e.key === "ArrowUp") { e.preventDefault(); setSelected(rows[Math.max(i - 1, 0)]); }
+                      else if (e.key === "ArrowDown" && i < rows.length - 1) { e.preventDefault(); setSelected(rows[i + 1]); }
+                    }}
+                  />
+                </span>
+              </span>
+            </span>
+          </li>
+          {role !== "participant" && <li className="export-dropdown-separator" role="separator" />}
           {role !== "participant" && (
             <li
               ref={(el) => { itemRefs.current.me = el; }}
@@ -246,25 +276,11 @@ export function PickerSpecimen() {
               onClick={() => choose("me")}
               onKeyDown={(e) => { if (e.key === " ") { e.preventDefault(); choose("me"); } }}
             >
-              <span className={`export-dropdown-check${answer?.name === ME ? " bn-picker-tick" : ""}`}>
-                {answer?.name === ME && CHECK}
-              </span>
+              <span className="export-dropdown-check" aria-hidden="true">{answer?.name === ME ? CHECK : ""}</span>
               {PERSON_CHECK}
               <span>That’s Me ({ME})</span>
             </li>
           )}
-          <li className="bn-picker-field">
-            <span className="tag-input-box">
-              <input
-                className="tag-input"
-                placeholder={roleMeta.newLabel}
-                aria-label={roleMeta.newLabel}
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); create(); } }}
-              />
-            </span>
-          </li>
         </ul>
       )}
     </div>

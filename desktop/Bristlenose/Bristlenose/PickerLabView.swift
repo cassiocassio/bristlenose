@@ -135,6 +135,8 @@ struct PickerAnswer: Equatable { let code: String; let name: String; let confirm
 final class PickerLabModel: ObservableObject {
     static let me = "Martin Storey"
     static let meRow = "me"
+    /// The row for someone new, after the people it would join.
+    static let newRow = "new"
 
     @Published var role: PickerRole = .moderator
     @Published var people: [PickerRole: [PickerPerson]] = [
@@ -148,9 +150,22 @@ final class PickerLabModel: ObservableObject {
     @Published var selection: String? = "m1"
     @Published var draft = ""
     @Published var isOpen = true
+    /// Bumped when an arrow key leaves the new-person field, so the list takes
+    /// the keyboard back.
+    @Published var focusListRequest = 0
 
     var rows: [String] {
-        (people[role] ?? []).map(\.code) + (role == .participant ? [] : [Self.meRow])
+        (people[role] ?? []).map(\.code) + [Self.newRow] + (role == .participant ? [] : [Self.meRow])
+    }
+
+    /// The code someone new would get: the next number in this role.
+    var nextCode: String { "\(role.prefix)\((people[role]?.count ?? 0) + 1)" }
+
+    /// An arrow key in the new-person field moves to the row above or below.
+    func leaveField(by delta: Int) {
+        guard let i = rows.firstIndex(of: Self.newRow), rows.indices.contains(i + delta) else { return }
+        selection = rows[i + delta]
+        focusListRequest += 1
     }
 
     func apply(scenario: String) {
@@ -175,10 +190,10 @@ final class PickerLabModel: ObservableObject {
     }
 
     func choose(_ id: String) {
+        guard id != Self.newRow else { return }   // the new row is typed into, not chosen
         if id == Self.meRow {
             // That's Me answers this slot, so it keeps the slot's role prefix.
-            let code = (answer?.code.hasPrefix(role.prefix) ?? false)
-                ? answer!.code : "\(role.prefix)\((people[role]?.count ?? 0) + 1)"
+            let code = (answer?.code.hasPrefix(role.prefix) ?? false) ? answer!.code : nextCode
             answer = .init(code: code, name: Self.me, confirmed: true)
         } else if let p = people[role]?.first(where: { $0.code == id }) {
             answer = .init(code: p.code, name: p.name, confirmed: true)
@@ -189,7 +204,7 @@ final class PickerLabModel: ObservableObject {
     func create() {
         let name = draft.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return }
-        let code = "\(role.prefix)\((people[role]?.count ?? 0) + 1)"
+        let code = nextCode
         people[role, default: []].append(.init(code: code, name: name))
         answer = .init(code: code, name: name, confirmed: true)
         draft = ""
@@ -287,13 +302,9 @@ private struct NativePersonPicker: View {
             .labelsHidden()
             .frame(maxWidth: .infinity)
 
+            // Someone new is the list's next row: the code they would get, and a
+            // name half to type into — so it reads as making another badge.
             PickerPeopleList(model: model, styles: bridge.searchBadgeStyles)
-                .frame(height: PickerPeopleList.height(rows: model.rows.count,
-                                                       styles: bridge.searchBadgeStyles))
-
-            TextField(model.role.newPrompt, text: $model.draft, prompt: Text(model.role.newPrompt))
-                .textFieldStyle(.roundedBorder)
-                .onSubmit { model.create() }
         }
         .padding(10)
         .frame(width: 280)
@@ -315,8 +326,12 @@ private struct PickerPeopleList: NSViewRepresentable {
         return max(24, ceil(chip) + 6)
     }
 
-    static func height(rows: Int, styles: SearchBadgeStyles) -> CGFloat {
-        CGFloat(rows) * rowHeight(styles) + 4
+    /// The list is exactly as tall as its rows, read from the table itself,
+    /// so a source-list inset can never clip the last one.
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSScrollView, context: Context) -> CGSize? {
+        guard let table = context.coordinator.table, table.numberOfRows > 0 else { return nil }
+        let height = table.rect(ofRow: table.numberOfRows - 1).maxY + 2
+        return CGSize(width: proposal.width ?? 260, height: height)
     }
 
     func makeCoordinator() -> Coordinator { Coordinator(model: model) }
@@ -335,6 +350,8 @@ private struct PickerPeopleList: NSViewRepresentable {
         scroll.documentView = table
         scroll.drawsBackground = false
         scroll.hasVerticalScroller = false
+        scroll.automaticallyAdjustsContentInsets = false
+        scroll.contentInsets = NSEdgeInsetsZero
         context.coordinator.table = table
         context.coordinator.update(model: model, styles: styles)
         return scroll
@@ -351,6 +368,7 @@ private struct PickerPeopleList: NSViewRepresentable {
         private var rows: [String] = []
         private var styles = SearchBadgeStyles.empty
         private var signature = ""
+        private var focusListRequest = 0
 
         init(model: PickerLabModel) { self.model = model }
 
@@ -363,6 +381,10 @@ private struct PickerPeopleList: NSViewRepresentable {
                 rows = model.rows
                 self.styles = styles
                 table?.reloadData()
+            }
+            if model.focusListRequest != focusListRequest {
+                focusListRequest = model.focusListRequest
+                table?.window?.makeFirstResponder(table)
             }
             if let table, let id = model.selection, let i = rows.firstIndex(of: id), table.selectedRow != i {
                 table.selectRowIndexes(IndexSet(integer: i), byExtendingSelection: false)
@@ -402,6 +424,23 @@ private struct PickerPeopleList: NSViewRepresentable {
             guard let table, table.selectedRow >= 0, table.selectedRow < rows.count else { return }
             let id = rows[table.selectedRow]
             if model.selection != id { model.selection = id }
+            // Arriving on the new row puts the cursor in its name.
+            if id == PickerLabModel.newRow { focusNewField() }
+        }
+
+        func focusNewField() {
+            guard let table, let i = rows.firstIndex(of: PickerLabModel.newRow) else { return }
+            DispatchQueue.main.async {
+                guard let cell = table.view(atColumn: 0, row: i, makeIfNecessary: true),
+                      let field = Self.editableField(in: cell) else { return }
+                table.window?.makeFirstResponder(field)
+            }
+        }
+
+        private static func editableField(in view: NSView) -> NSTextField? {
+            if let field = view as? NSTextField, field.isEditable { return field }
+            for sub in view.subviews { if let f = editableField(in: sub) { return f } }
+            return nil
         }
 
         func tableView(_ tableView: NSTableView, typeSelectStringFor tableColumn: NSTableColumn?, row: Int) -> String? {
@@ -426,18 +465,21 @@ private struct PickerPeopleList: NSViewRepresentable {
 
         private func typeSelectString(_ id: String) -> String {
             if id == PickerLabModel.meRow { return "That’s Me \(PickerLabModel.me)" }
+            if id == PickerLabModel.newRow { return "" }
             let name = model.people[model.role]?.first(where: { $0.code == id })?.name ?? ""
             return "\(id) \(name)"
         }
 
         @objc func rowClicked(_ sender: Any?) {
             guard let table, table.clickedRow >= 0, table.clickedRow < rows.count else { return }
-            model.choose(rows[table.clickedRow])
+            let id = rows[table.clickedRow]
+            if id == PickerLabModel.newRow { focusNewField() } else { model.choose(id) }
         }
 
         func commitSelected() {
             guard let table, table.selectedRow >= 0, table.selectedRow < rows.count else { return }
-            model.choose(rows[table.selectedRow])
+            let id = rows[table.selectedRow]
+            if id == PickerLabModel.newRow { focusNewField() } else { model.choose(id) }
         }
     }
 }
@@ -445,7 +487,7 @@ private struct PickerPeopleList: NSViewRepresentable {
 /// One row: the check gutter, then the person's badge (or That's Me).
 private struct PickerRowContent: View {
     let id: String
-    let model: PickerLabModel
+    @ObservedObject var model: PickerLabModel
     let styles: SearchBadgeStyles
 
     private var person: PickerPerson? { model.people[model.role]?.first(where: { $0.code == id }) }
@@ -457,18 +499,27 @@ private struct PickerRowContent: View {
     private var isProposed: Bool { isAnswer && !(model.answer?.confirmed ?? true) }
 
     var accessibilityText: String {
+        if id == PickerLabModel.newRow { return "\(model.nextCode), \(model.role.newPrompt)" }
         let what = isMe ? "That’s Me, \(PickerLabModel.me)" : "\(id) \(person?.name ?? "")"
         return what + (isAnswer ? (isProposed ? ", current answer, proposed" : ", current answer") : "")
     }
 
     var body: some View {
         HStack(spacing: 4) {
-            Image(systemName: "checkmark")
-                .imageScale(.small)
-                .foregroundStyle(Color(nsColor: .systemGreen))
+            // AppKit's own menu checkmark, in label colour, as a Mac menu draws it.
+            Image(nsImage: NSImage(named: NSImage.menuOnStateTemplateName) ?? NSImage())
+                .renderingMode(.template)
+                .foregroundStyle(.primary)
                 .opacity(isAnswer ? 1 : 0)
                 .frame(width: 16)
-            if isMe {
+            if id == PickerLabModel.newRow {
+                BadgeStyleChip(code: model.nextCode, name: "", proposed: false, styles: styles,
+                               field: .init(text: $model.draft, prompt: model.role.newPrompt,
+                                            onSubmit: { model.create() },
+                                            onExit: { model.isOpen = false },
+                                            onUp: { model.leaveField(by: -1) },
+                                            onDown: { model.leaveField(by: 1) }))
+            } else if isMe {
                 Label("That’s Me (\(PickerLabModel.me))", systemImage: "person.crop.circle.badge.checkmark")
             } else if let person {
                 BadgeStyleChip(code: person.code, name: person.name, proposed: isProposed, styles: styles)
@@ -488,10 +539,28 @@ struct BadgeStyleChip: View {
     let name: String
     let proposed: Bool
     let styles: SearchBadgeStyles
+    /// When set, the name half is a field: someone new, as the badge they will be.
+    var field: Field? = nil
+
+    struct Field {
+        let text: Binding<String>
+        let prompt: String
+        let onSubmit: () -> Void
+        let onExit: () -> Void
+        let onUp: () -> Void
+        let onDown: () -> Void
+    }
 
     var body: some View {
         if let style = styles.people[code] ?? sameRoleStyle {
             chip(style)
+        } else if let field {
+            HStack(spacing: 6) {
+                Text(code).foregroundStyle(.tertiary)
+                TextField(field.prompt, text: field.text, prompt: Text(field.prompt))
+                    .textFieldStyle(.plain)
+                    .onSubmit(field.onSubmit)
+            }
         } else {
             Text("\(code) \(name)").foregroundStyle(.tertiary)
         }
@@ -511,8 +580,9 @@ struct BadgeStyleChip: View {
         return HStack(spacing: 0) {
             // The outline is drawn inside the shape, so the outer edges carry the
             // border width on top of their padding, as CSS's border box does.
-            half(code, s.code, leading: bw, trailing: s.name == nil ? bw : 0)
-            if let n = s.name { half(name, n, leading: 0, trailing: bw) }
+            half(code, s.code, leading: bw, trailing: s.name == nil && field == nil ? bw : 0)
+            if let field { editableHalf(field, s.name ?? s.code, trailing: bw) }
+            else if let n = s.name { half(name, n, leading: 0, trailing: bw) }
         }
         .clipShape(RoundedRectangle(cornerRadius: radius))
         .overlay {
@@ -535,6 +605,33 @@ struct BadgeStyleChip: View {
             // CSS centres the glyphs in the line box; a fixed frame does the same.
             .frame(height: s.lineHeight.map { CGFloat($0) })
             .padding(.leading, s.padX + leading)
+            .padding(.trailing, s.padRight + trailing)
+            .padding(.top, s.padY + bw)
+            .padding(.bottom, s.padBottom + bw)
+            .background(s.fill.map { colour($0) } ?? .clear)
+    }
+
+    /// The name half as a field. A hidden copy of the text sets the width, so
+    /// the badge grows as you type, the way the web half's does.
+    private func editableHalf(_ f: Field, _ s: SearchBadgeStyle, trailing: Double) -> some View {
+        let bw = s.border?.width ?? 0
+        let face = Font(font(s))
+        let shown = f.text.wrappedValue.isEmpty ? f.prompt : f.text.wrappedValue
+        return Text(shown + " ")
+            .font(face)
+            .hidden()
+            .overlay(alignment: .leading) {
+                TextField(f.prompt, text: f.text, prompt: Text(f.prompt))
+                    .textFieldStyle(.plain)
+                    .font(face)
+                    .foregroundStyle(colour(s.text))
+                    .onSubmit(f.onSubmit)
+                    .onExitCommand(perform: f.onExit)
+                    .onKeyPress(.upArrow) { f.onUp(); return .handled }
+                    .onKeyPress(.downArrow) { f.onDown(); return .handled }
+            }
+            .frame(height: s.lineHeight.map { CGFloat($0) })
+            .padding(.leading, s.padX)
             .padding(.trailing, s.padRight + trailing)
             .padding(.top, s.padY + bw)
             .padding(.bottom, s.padBottom + bw)

@@ -1,8 +1,14 @@
 ---
-status: pending
-last-trued: 2026-09-27
-trued-against: HEAD on 2026-09-27
+status: shipped-beta
+last-trued: 2026-10-03
+trued-against: HEAD on 2026-10-03
 ---
+
+<!-- 2026-10-03: shipped for beta on both channels — the stage on by default, the
+     lens in the web nav, the Mac rail and the HTML export. This doc stays the
+     design intent; what was built, and how it departs from the plan, is in the
+     banner of design-discussion-lens-plan.md. The 26 Jul note below ("the
+     feature is unbuilt") is history. -->
 
 <!-- Resurrected 2026-09-27. Phase A spike run for the first time, on real
      interviews; the design gained a RECONCILE step (the guide as planned ⋈ the

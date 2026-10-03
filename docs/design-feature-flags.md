@@ -293,11 +293,14 @@ three. Each flag is a `UserDefaults` key, default off in *every* build
 configuration (`DEBUG` included, so the Swift suite runs against the shipped
 state), flipped with `defaults write app.bristlenose <key> -bool YES`, and read
 by views through `@AppStorage(key)` so a flip redraws live. `#if DEBUG` is the
-wrong tool (§ 2): it hides from Release only, and a tester cannot flip it. The
-fourth flag, `discussionLens`, is the first with a reader that takes an injected
-`UserDefaults` (`discussionLens(_:)`) so its default-off is tested, and the first
-a tester can flip from the app itself (Diagnostics ▸ Discussion Lens (Preview)) —
-the shape to copy for the next one.
+wrong tool (§ 2): it hides from Release only, and a tester cannot flip it. A
+fourth flag, `discussionLens`, showed the shape to copy for the next one — a
+reader taking an injected `UserDefaults` so its default-off is tested, and a
+Diagnostics toggle a tester can flip from the app itself — and was deleted when
+the lens shipped (3 Oct 2026). **Delete a flag when its feature ships;** a flag
+left defaulting on is a key whose leftover `false` on a tester's machine hides
+the feature. `git show f7721fa1 -- desktop/Bristlenose/Bristlenose/BristlenoseFlags.swift`
+has the shape.
 
 ## 7. Decision table
 

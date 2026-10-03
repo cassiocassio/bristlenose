@@ -1,10 +1,24 @@
 ---
-status: pending
+status: shipped-beta
 last-trued: 2026-10-03
 trued-against: HEAD on 2026-10-03
 ---
 
 # Discussion lens — implementation plan
+
+> **Shipped for beta, 3 Oct 2026.** The stage runs on every analysis
+> (`discussion_lens`, on by default; `BRISTLENOSE_DISCUSSION_LENS=0` turns it
+> off), serve answers `GET /api/projects/{id}/discussion`, and the lens is in
+> the web nav, the Mac rail (⌘6) and the HTML export, in 21 languages. Proved
+> end to end on a real run of the synthetic corpus: the guide's six sections plus
+> one emergent, 40 of 40 quotes placed, and a quote hidden in the database left
+> out of the lens. **Built differently from this plan, on purpose:** no tables or
+> migration — serve reads the stage's record file directly, because the tables
+> exist to hold researcher overrides and there is no editing UI yet; the Mac has
+> no guide picker — the lens tells the researcher where the guide goes (a folder
+> named “Discussion guide” beside the recordings). **Still owed:** scoring on the
+> real gold-labelled sessions; overrides and their tables; the Mac guide import
+> and a scoped re-run; cohort baselines for the cost forecast. §7 has the detail.
 
 *How the Discussion lens becomes a first-class part of the Bristlenose
 architecture rather than a spike. Companion to
@@ -405,12 +419,11 @@ overrides keyed on durable ids, never on labels.
   location, then a scoped re-run of the discussion stage. Today's intake paths
   (`ContentView.swift:1701, 1767, 1848, 2051, 1169-1191`) all treat `.docx` and
   `.txt` as transcripts.
-- **Built 3 Oct 2026 as a preview**: `Tab.discussion` (route
-  `/report/discussion/`, no shared left panel, restores to the top), the rail row
-  last (⌘6, `questionmark.bubble`) behind `BristlenoseFlags.discussionLens`, which a
-  tester switches from Diagnostics ▸ Discussion Lens (Preview). The SPA route opens
-  in dev builds and inside the app (`isEmbedded()`); the app has no address bar, so
-  the flagged row is the only way in. It still reads the synthetic study.
+- **Built 3 Oct 2026 as a preview, then shipped the same day**: `Tab.discussion`
+  (route `/report/discussion/`, no shared left panel, restores to the top), the
+  rail row last (⌘6, `questionmark.bubble`). It was first behind a
+  `BristlenoseFlags.discussionLens` flag with a Diagnostics toggle; both were
+  deleted when it shipped for beta, so no leftover default can hide it.
 - **Parking while it is built**: `Tab` case always present; the rail row appended
   behind a flag. `design-feature-flags.md:290-295` recommends an
   `enum FeatureFlags { static var … }`, defaulting off in every configuration —
@@ -501,11 +514,9 @@ until Phase 5.
      announces itself on entry, cached or fresh, and the Mac shows "Matching
      quotes to questions" (all 21 locales) with no session count, since its
      per-session calls emit none (`nonSessionStages`).
-   - **Not yet registered, so silent with the flag on:** cohort baselines (the
-     pre-run cost forecast omits the stage) and the pipeline-view catalogue
-     with its contract fixture (`bristlenose pipeline` does not list it). The
-     Mac never sets the flag, so the Discussion preview reads only the fixture.
-     All are owed before the flag can default on.
+   - **Not registered:** cohort baselines — they are generated from real runs
+     and none existed — so the pre-run cost forecast omits the stage. The
+     pipeline-view catalogue lists it since the default flipped on (3 Oct).
    - **Silent-failure review, 3 Oct 2026 — eight findings, all fixed and each
      pinned by a test proved red against the old code.** A corrupt or locked
      `.docx` in the guide folder crashed the run; the reader now never raises,
@@ -519,29 +530,51 @@ until Phase 5.
      paid again). The folder is matched case-blind, by ingest too. Transcripts
      joined the cache key, because the record quotes the moderator verbatim. An
      unreliable session's questions stay visible as `unclassified`.
-   - `bristlenose analyze` looks for the guide beside the output folder
-     (`output_dir.parent`), right for the default layout and blind to an
-     `--output` elsewhere; it also never caches, since it carries no manifest.
+   - `bristlenose analyze` looks for the guide in the output folder, its
+     parent, then beside the transcripts (`guide.guide_home`) — parent-only
+     missed it on the default `transcripts-raw/` layout, found on a real run. It
+     never caches, since it carries no manifest.
    - The under-attribution check outlives the old opening-window splitter on
      purpose: caches from before 3 Oct 2026 keep its labels on resume
      (`discussion/moderator.py` docstring).
    - The four spike prompts in `llm/prompts/` (`parse-discussion-guide` etc.)
      are **not** archived: `scripts/spike_discussion_routing.py` still loads them.
-   - The guide folder name, `Discussion guide`, is provisional and lives only in
-     `discussion/guide.py`.
+   - The guide folder name, `Discussion guide`, lives in `discussion/guide.py`
+     and, since the lens shipped, in the `guideHowTo` sentence of all 21 locales
+     (kept in English there — the code matches it literally). Renaming it is now
+     a 22-file change.
    - Owed: the run on the real gold-labelled corpus. The exit is not met until it
      passes.
 3. **Data and serve** — tables, migration, importer, API, status field,
    overrides, export classification and anonymisation. Exit: a re-run preserves
    overrides; a dropped quote re-imports cleanly.
+   **Status 3 Oct 2026: API, status, export and anonymisation built; tables,
+   importer and overrides deferred.** `routes/discussion.py` reads the record
+   file and returns `{status, record}` — not_run, stale (built from other quotes,
+   checked against `extracted_quotes.json`), ready, partial, failed. A hidden quote
+   is left out and an edited one shows its edit, joined to `Quote` rows on
+   (session, participant, start to 0.01 s), so the lens never disagrees with
+   Quotes. Codes only; the SPA takes names from `/sessions`. Embedded in the HTML
+   export; an anonymised export keeps only the guide lines that were asked.
 4. **SPA lens** behind `IS_DEV` — store, navigator, page, wires, keyboard,
    responsive, empty state. Exit: lens-datum and lenses-load-clean green with
    the new rows; usable in a browser on the real corpus.
+   **Status 3 Oct 2026: off the dev gate, in the nav, reading the API.** Each
+   record status says what it means and what to do; a guide that went unread
+   says why; a session that could not be read says so, never "no questions". The
+   "Add your guide…" button tells the researcher where the guide goes and is
+   hidden in an export.
 5. **macOS** — Tab, flagged rail row, menus, guide import, scoped re-run. Exit:
    Swift suite green; guide added in the app re-runs only this stage.
+   **Status 3 Oct 2026: the rail row, ⌘6 and the View menu show it always; the
+   preview flag and its Diagnostics toggle are deleted.** Guide import and the
+   scoped re-run are owed — today a guide reaches a run through the folder and a
+   re-analyse, which re-runs only the stage when nothing else changed.
 6. **Ship** — i18n across 21 locales, NavBar entry, export embed, flags on,
    design doc trued, a public mockup with synthetic data in `docs/mockups/`,
    CHANGELOG under **New** (a minor bump).
+   **Status 3 Oct 2026: i18n, NavBar, export embed and flags done; the public
+   mockup and the CHANGELOG entry are left to the release.**
 
 ## 8. Reuse, not reinvention
 

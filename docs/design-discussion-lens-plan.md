@@ -29,7 +29,8 @@ behaviour goes missing; those are the ones this plan exists to stop.*
 2. **Zero or one guide per project — DECIDED 3 Oct 2026.** One slot: adding
    fills it, replacing overwrites it, removing empties it. No guide history,
    no multiple guides per study.
-3. **Where the guide file lives.** It must survive **Re-analyse, which runs with
+3. **Where the guide file lives — DECIDED 3 Oct 2026: a reserved subfolder** beside the recordings.
+   Reasoning kept: It must survive **Re-analyse, which runs with
    `--clean` and deletes the whole output folder** — database and `.bristlenose/`
    included (`cli.py:1241-1263`). The July plan (guide in `.bristlenose/`) would
    lose it. It is an *input*, so it belongs beside the recordings, in a place
@@ -37,12 +38,13 @@ behaviour goes missing; those are the ones this plan exists to stop.*
    (visible in Finder, replaceable by hand); a reserved filename; or a
    dot-folder (survives, but invisible to the researcher). **Recommend the
    reserved subfolder.**
-4. **When the stage runs.** It is an LLM stage (≈ $0.18 for three 30-minute
+4. **When the stage runs — DECIDED 3 Oct 2026: on by default** (Merged only with no guide).
+   Reasoning kept: It is an LLM stage (≈ $0.18 for three 30-minute
    sessions on Sonnet 4.6, measured). Run it on every analysis by default, or
    only once the researcher opens the lens / adds a guide? **Recommend: on by
    default with no guide (Merged only), cheap enough to always have; a guide
    added later triggers a scoped re-run of this stage alone.**
-5. **Session-specific questions** ("did you have trouble getting here?"). Merged
+5. **Session-specific questions — DECIDED 3 Oct 2026: no marking in v1.** ("did you have trouble getting here?"). Merged
    is a record, so they appear (design doc, 3 Oct). Whether the reconcile step
    should also *mark* them, keeping them out of the cross-session structure, is
    open. **Recommend no for v1** (simplicity), revisit with the gold labels.

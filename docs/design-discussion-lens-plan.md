@@ -335,6 +335,9 @@ overrides keyed on durable ids, never on labels.
   (View menu or lens toolbar) is not decided.
 - **Never-asked guide lines: shown by default — decided 3 Oct 2026** (hollow dot in
   Merged, dimmed). A toggle can hide them.
+- **Emergent sections carry no "new" badge — decided 3 Oct 2026.** It was not in
+  the approved mockup; the `+` mark on each unplanned line already says it
+  (`5341ff47`). Don't reintroduce it without a mockup.
 - **Store**: `DiscussionStore` on the `SignalStore.ts` pattern (module-level
   `useSyncExternalStore`, `reset*()` for tests): mode, selected session, focused
   item.

@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en-GB" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Welcome in its own window — Model 2</title>
+<!--
+  bn-accurate mockup of a NATIVE surface (WelcomeHomeView.swift, SwiftUI) — "Model 2":
+  the Welcome spiral, minus its drop card, moved into its own window — resizable,
+  opening at the spiral's natural design size, with its own (smaller) minimum.
+  Sibling: welcome-dismiss-options.html ("Model 1", Welcome stays in the main window).
+
+  Same token block as the sibling so the two models are drawn identically. The web
+  --bn-* tokens do not paint this surface; AppKit's semantic colours do, so :root
+  inlines the system values the Swift reads (Color.accentColor, .secondary,
+  NSColor.separatorColor, textBackgroundColor), the Edo accent from
+  WelcomeIllustrations.swift, and the v1 cell-tint ramp (3/7/12/18/26 % accent).
+
+  Geometry: WelcomeHomeView.body — 20pt margin, spiral w × w/1.618, pinned top,
+  gutter 8, golden split 0.618. Drop card: 14pt padding, radius 10, 1.5pt dotted.
+  Main window drawn at 1000 × 640 (the shipping default width, design-welcome-screen.md
+  2026-08-20 entry). Welcome window opens at 800pt content width — DERIVED, not shipped:
+  see panel 3 commentary. Panel 4's narrow reflow is a proposal, not shipped layout.
+-->
+<style>
+:root{
+  color-scheme: light dark;
+  --accent: light-dark(#007aff, #0a84ff);
+  --label: light-dark(rgba(0,0,0,.85), rgba(255,255,255,.86));
+  --secondary: light-dark(rgba(0,0,0,.50), rgba(255,255,255,.55));
+  --tertiary: light-dark(rgba(0,0,0,.26), rgba(255,255,255,.25));
+  --separator: light-dark(rgba(0,0,0,.10), rgba(255,255,255,.12));
+  --detail-bg: light-dark(#ffffff, #1e1e1e);
+  --text-bg: light-dark(#ffffff, #1e1e1e);
+  --card-base: light-dark(#f6f6f7, #262628);
+  --sidebar-bg: light-dark(#ecebef, #2b2a2e);
+  --titlebar-bg: light-dark(#f4f4f5, #2a2a2c);
+  --menu-bg: light-dark(rgba(246,246,246,.96), rgba(40,40,42,.96));
+  --control-bg: light-dark(#ffffff, #3a3a3c);
+  --off-track: light-dark(#e3e3e6, #3f3f43);
+  --light-off: light-dark(#d6d6d8, #4b4b4e);
+  --page-bg: light-dark(#e9e9ec, #121214);
+  --page-ink: light-dark(#1d1d1f, #e7e7ea);
+  --page-muted: light-dark(#5b5b62, #a1a1aa);
+  --wall: light-dark(linear-gradient(160deg,#b9c8dc 0%,#d9cfe0 45%,#e8d9c9 100%), linear-gradient(160deg,#1c2433 0%,#2a2232 50%,#33291f 100%));
+  --font: -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+[data-color-theme="edo"]{ --accent: light-dark(#0f5c9e, #4d9fe0); }
+
+*{ box-sizing:border-box; }
+body{ margin:0; padding:28px 16px 80px; background:var(--page-bg); color:var(--page-ink); font:13px/1.45 var(--font); }
+.page{ max-width:1180px; margin:0 auto; }
+h1{ font-size:20px; font-weight:600; margin:0 0 6px; }
+h2{ font-size:15px; font-weight:600; margin:44px 0 4px; }
+h2 .n{ font-family:var(--mono); font-size:12px; color:var(--page-muted); margin-right:8px; font-weight:400; }
+h2 .flag{ font:500 10.5px var(--mono); letter-spacing:.06em; text-transform:uppercase; padding:2px 6px; border-radius:4px; margin-left:8px; vertical-align:2px; }
+.flag.cmp{ background:light-dark(#fde7c6,#4a3412); color:light-dark(#8a4b00,#f5c27a); }
+.flag.lofi{ background:var(--off-track); color:var(--page-muted); }
+.lede{ color:var(--page-muted); max-width:82ch; margin:0 0 14px; }
+.lede code{ font-family:var(--mono); font-size:11.5px; }
+.controls{ display:flex; gap:8px; margin:14px 0 6px; flex-wrap:wrap; }
+.controls button{ font:12px var(--font); padding:4px 10px; border-radius:6px; border:1px solid var(--separator); background:var(--control-bg); color:var(--page-ink); cursor:pointer; }
+.controls button[aria-pressed="true"]{ border-color:var(--accent); color:var(--accent); }
+
+.key{ display:flex; gap:14px; flex-wrap:wrap; margin:16px 0 4px; font-size:12px; color:var(--page-muted); }
+.key span{ display:inline-flex; align-items:center; gap:6px; }
+.key i{ width:22px; height:14px; border-radius:3px; display:inline-block; }
+.key .ka{ background:var(--detail-bg); border:1px solid var(--separator); }
+.key .kc{ background:repeating-linear-gradient(135deg, transparent 0 5px, var(--separator) 5px 6px); border-left:3px solid var(--page-muted); }
+
+/* ═══ ARTEFACT ZONE ═══ */
+.shot{ margin:10px 0 0; min-width:0; }
+.shot-bar{ font:11px var(--mono); color:var(--page-muted); padding:0 2px 6px; display:flex; gap:10px; justify-content:space-between; flex-wrap:wrap; }
+.shot-bar b{ color:var(--page-ink); font-weight:500; }
+.shot-bar .new{ color:light-dark(#8a4b00,#f5c27a); }
+.row{ display:grid; gap:20px; grid-template-columns:1fr 1fr; align-items:start; }
+@media (max-width:900px){ .row{ grid-template-columns:1fr; } }
+.row > *{ min-width:0; }
+.scale{ overflow:hidden; width:100%; }
+.scale > *{ transform-origin:top left; }
+
+/* desktop scene */
+.desk{ position:relative; overflow:hidden; border-radius:10px; background:var(--wall); box-shadow:0 0 0 .5px rgba(0,0,0,.2); }
+.mbar{ position:absolute; left:0; right:0; top:0; height:26px; display:flex; align-items:center; gap:18px; padding:0 16px;
+       background:light-dark(rgba(255,255,255,.55),rgba(20,20,22,.55)); backdrop-filter:blur(12px); font-size:13px; color:var(--label); z-index:50; }
+.mbar b{ font-weight:600; } .mbar .clock{ margin-left:auto; font-variant-numeric:tabular-nums; }
+.mbar .open{ background:light-dark(rgba(0,0,0,.1),rgba(255,255,255,.15)); border-radius:4px; padding:1px 7px; margin:0 -7px; }
+.at{ position:absolute; }
+
+/* window chrome */
+.win{ border-radius:12px; overflow:hidden; display:flex; position:relative; background:var(--detail-bg); font-family:var(--font); color:var(--label);
+      box-shadow:0 0 0 .5px rgba(0,0,0,.25), 0 22px 50px rgba(0,0,0,.28); }
+.win.inactive{ box-shadow:0 0 0 .5px rgba(0,0,0,.18), 0 10px 24px rgba(0,0,0,.14); }
+.lights{ display:flex; gap:8px; align-items:center; height:20px; }
+.lights i{ width:12px; height:12px; border-radius:50%; display:block; }
+.lights i:nth-child(1){ background:#ff5f57; } .lights i:nth-child(2){ background:#febc2e; } .lights i:nth-child(3){ background:#28c840; }
+.lights i.dis, .win.inactive .lights i{ background:var(--light-off) !important; }
+.lights .sbbtn{ margin-left:auto; width:22px; height:16px; border:1.4px solid var(--secondary); border-radius:3px; position:relative; }
+.lights .sbbtn::after{ content:""; position:absolute; left:6px; top:0; bottom:0; border-left:1.4px solid var(--secondary); }
+.win.inactive .wtitle{ color:var(--tertiary); }
+
+/* main window */
+.sb{ width:220px; flex:none; background:var(--sidebar-bg); border-right:.5px solid var(--separator); padding:12px 10px; display:flex; flex-direction:column; }
+.sb .lights{ padding-left:4px; }
+.lens{ display:flex; align-items:center; gap:8px; padding:4px 6px; font-size:13px; color:var(--tertiary); }
+.lens .g{ width:16px; height:14px; border-radius:3px; border:1.4px solid currentColor; flex:none; }
+.lens:first-of-type{ margin-top:16px; }
+.sb h6{ margin:18px 6px 6px; font-size:11px; font-weight:600; color:var(--secondary); }
+.proj{ display:flex; align-items:center; gap:8px; padding:5px 6px; border-radius:6px; font-size:13px; }
+.proj .ic{ width:18px; height:18px; border-radius:50%; border:2px solid var(--accent); flex:none; opacity:.9; }
+.proj .ic.b{ border-color:#af52de; } .proj .ic.c{ border-color:#34c759; } .proj .ic.d{ border-color:#ff9500; }
+.detail{ flex:1; position:relative; display:flex; flex-direction:column; min-width:0; }
+.tb{ height:52px; flex:none; display:flex; align-items:center; padding:0 18px; }
+.wtitle{ font-size:15px; font-weight:600; }
+.pane{ position:relative; flex:1; min-height:0; }
+
+/* drop card — WelcomeHomeView.dropCard, unchanged, centred */
+.drop{ padding:14px; border-radius:10px; background:var(--text-bg); position:relative; display:flex; flex-direction:column; gap:3px; }
+.drop::after{ content:""; position:absolute; inset:0; border-radius:10px; pointer-events:none; border:1.5px dotted var(--tertiary); }
+.drop svg{ width:26px; height:26px; color:var(--secondary); }
+.drop.centred{ position:absolute; left:50%; top:50%; transform:translate(-50%,-58%); width:340px; }
+
+/* welcome window — titled, resizable, opens at natural size */
+.wwin{ flex-direction:column; }
+.wtb{ height:28px; flex:none; display:flex; align-items:center; padding:0 10px; position:relative; background:var(--titlebar-bg); border-bottom:.5px solid var(--separator); }
+.wtb .wtitle{ position:absolute; left:0; right:0; text-align:center; font-size:13px; pointer-events:none; }
+.wbody{ position:relative; flex:1; }
+
+/* golden spiral — WelcomeHomeView.spiral, drop card removed from Study tools */
+.spiralwrap{ padding:20px 20px 0; }
+.spiral{ width:100%; aspect-ratio:1.618; display:flex; gap:8px; }
+.g2{ display:flex; gap:8px; min-width:0; min-height:0; }
+.g2.v{ flex-direction:column; }
+.maj{ flex:1.618 1 0; } .min{ flex:1 1 0; }
+.cell{ border-radius:8px; padding:10px; overflow:hidden; display:flex; flex-direction:column; gap:6px; min-width:0; min-height:0; border:.5px solid var(--separator); }
+.cell.lg{ border-radius:10px; padding:16px; gap:8px; }
+.t1{ background:color-mix(in srgb, var(--accent) 3%, var(--card-base)); }
+.t2{ background:color-mix(in srgb, var(--accent) 7%, var(--card-base)); }
+.t3{ background:color-mix(in srgb, var(--accent) 12%, var(--card-base)); }
+.t4{ background:color-mix(in srgb, var(--accent) 18%, var(--card-base)); }
+.t5{ background:color-mix(in srgb, var(--accent) 26%, var(--card-base)); }
+.tag{ font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:.4px; color:var(--secondary); }
+.title3{ font-size:15px; font-weight:600; }
+.body{ font-size:13px; color:var(--secondary); }
+.cta{ font-size:12px; color:var(--accent); padding:2px 0; }
+.illus{ flex:1; min-height:30px; border-radius:6px; background:
+   linear-gradient(var(--separator),var(--separator)) 14px 18px/40% 6px no-repeat,
+   linear-gradient(var(--separator),var(--separator)) 14px 32px/58% 6px no-repeat,
+   linear-gradient(color-mix(in srgb,var(--accent) 35%,transparent),color-mix(in srgb,var(--accent) 35%,transparent)) 14px 46px/22% 6px no-repeat,
+   color-mix(in srgb, var(--text-bg) 70%, transparent); }
+.fan{ position:relative; height:118px; flex:none; }
+.fan i{ position:absolute; top:0; width:84px; height:118px; border-radius:3px 6px 6px 3px; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+.fan i:nth-child(1){ left:0; background:light-dark(#c9553d,#a8432f); z-index:4; }
+.fan i:nth-child(2){ left:30px; background:light-dark(#2f5d8a,#3b6fa3); z-index:3; opacity:.86; }
+.fan i:nth-child(3){ left:60px; background:light-dark(#e2b33c,#b98f24); z-index:2; opacity:.72; }
+.fan i:nth-child(4){ left:90px; background:light-dark(#4f7d55,#3f6a45); z-index:1; opacity:.58; }
+.ai-glyph{ width:22px; height:22px; border-radius:50%; border:1.5px solid var(--tertiary); }
+
+/* narrow reflow — PROPOSAL (panel 4) */
+.stack{ position:absolute; left:0; right:0; top:0; bottom:48px; overflow:hidden; padding:20px 20px 0; display:flex; flex-direction:column; gap:8px; }
+.stack .cell{ flex:none; }
+.wbody:has(.stack){ border-bottom:none; }
+.stack + .scrollbar{ position:absolute; right:4px; top:22px; width:5px; height:38%; border-radius:3px; background:light-dark(rgba(0,0,0,.28),rgba(255,255,255,.3)); }
+.wbody:has(.stack) .foot{ background:var(--detail-bg); left:0; right:0; bottom:0; padding:12px 20px 16px; border-top:.5px solid var(--separator); }
+
+/* footer checkbox — NEW (Toggle .checkbox, bottom-leading, 20pt inset) */
+.foot{ position:absolute; left:20px; bottom:16px; display:flex; align-items:center; gap:7px; font-size:13px; color:var(--label); cursor:pointer; user-select:none; }
+.cb{ width:14px; height:14px; border-radius:3.5px; flex:none; border:.5px solid light-dark(rgba(0,0,0,.28),rgba(255,255,255,.3)); background:var(--control-bg);
+     box-shadow:0 .5px 1px rgba(0,0,0,.12); display:grid; place-items:center; }
+.cb.on{ background:var(--accent); border-color:transparent; }
+.cb.on::after{ content:""; width:7px; height:4px; border:solid #fff; border-width:0 0 1.8px 1.8px; transform:translateY(-1px) rotate(-45deg); }
+.win.inactive .cb.on{ background:light-dark(#b8b8bd,#6a6a6e); }
+.foot:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; border-radius:4px; }
+
+/* menus */
+.menubar{ width:100%; max-width:560px; height:26px; background:light-dark(rgba(246,246,246,.9),rgba(30,30,32,.9)); border-radius:8px 8px 0 0; display:flex; align-items:center; gap:16px; padding:0 14px; font-size:13px; color:var(--label); }
+.menubar b{ font-weight:600; }
+.menubar .open{ background:light-dark(rgba(0,0,0,.1),rgba(255,255,255,.15)); border-radius:4px; padding:1px 7px; margin:0 -7px; }
+.menu{ width:300px; margin-left:var(--mx,120px); background:var(--menu-bg); border-radius:0 0 9px 9px; box-shadow:0 0 0 .5px rgba(0,0,0,.2), 0 10px 26px rgba(0,0,0,.22); padding:5px; font-size:13px; color:var(--label); }
+.mi{ display:flex; padding:3px 10px 3px 22px; border-radius:5px; position:relative; }
+.mi .k{ margin-left:auto; color:var(--secondary); letter-spacing:.5px; }
+.mi .chk{ position:absolute; left:7px; }
+.mi.dis{ color:var(--tertiary); } .mi.dis .k{ color:var(--tertiary); }
+.mi.hl{ background:var(--accent); color:#fff; } .mi.hl .k{ color:rgba(255,255,255,.8); }
+.mi.newmi{ outline:1.5px dashed light-dark(#d98a00,#f5c27a); outline-offset:-1px; }
+.mi.hl.newmi{ outline-color:#fff; }
+.mi.sub::after{ content:"›"; margin-left:auto; color:var(--secondary); }
+.sep{ height:1px; background:var(--separator); margin:5px 10px; }
+
+/* lo-fi */
+.lofi{ border:1.5px dashed var(--tertiary); border-radius:12px; padding:14px; background:repeating-linear-gradient(0deg, transparent 0 23px, light-dark(rgba(0,0,0,.03),rgba(255,255,255,.03)) 23px 24px); color:var(--page-muted); font-family:var(--font); }
+.lofi .scr{ position:relative; aspect-ratio:16/10; border:1.5px solid var(--tertiary); border-radius:6px; background:light-dark(#fafafa,#1a1a1c); overflow:hidden; }
+.lofi .fsapp{ position:absolute; inset:0; display:flex; }
+.lofi .fsapp .s{ width:22%; border-right:1.5px solid var(--tertiary); }
+.lofi .fsapp .d{ flex:1; display:grid; place-items:center; }
+.lofi .box{ border:1.5px dashed var(--tertiary); border-radius:6px; padding:4px 8px; font-size:11px; }
+.lofi .ww{ position:absolute; border:1.5px solid var(--accent); border-radius:6px; background:color-mix(in srgb, var(--accent) 10%, light-dark(#fff,#1a1a1c)); display:grid; place-items:center; font-size:11px; color:var(--accent); }
+.lofi .cap{ font-size:12px; color:var(--page-ink); margin:8px 0 0; }
+.lofi .arrow{ position:absolute; font-size:22px; color:var(--page-muted); }
+.lofi .spaces{ display:flex; gap:6px; margin-bottom:8px; }
+.lofi .spaces span{ font:10.5px var(--mono); padding:2px 6px; border:1px solid var(--tertiary); border-radius:4px; }
+.lofi .spaces span.on{ border-color:var(--accent); color:var(--accent); }
+
+/* ═══ COMMENTARY ZONE ═══ */
+.comm{ margin-top:14px; padding:12px 14px 12px 16px; border-left:3px solid var(--page-muted); border-radius:0 8px 8px 0;
+       background:repeating-linear-gradient(135deg, transparent 0 7px, light-dark(rgba(0,0,0,.035),rgba(255,255,255,.04)) 7px 8px), light-dark(rgba(255,255,255,.5),rgba(255,255,255,.03));
+       font-size:12.5px; color:var(--page-ink); }
+.comm::before{ content:"Commentary"; display:block; font:500 10px var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--page-muted); margin-bottom:6px; }
+.comm p{ margin:0 0 6px; } .comm p:last-child{ margin:0; }
+.comm .pro{ color:light-dark(#1d7a3a,#6fd08f); font-weight:600; } .comm .con{ color:light-dark(#b42318,#ff8f85); font-weight:600; }
+.comm code, td code{ font-family:var(--mono); font-size:11.5px; }
+table{ border-collapse:collapse; width:100%; font-size:12px; }
+th,td{ text-align:left; padding:6px 8px; border-bottom:1px solid var(--separator); vertical-align:top; }
+th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
+
+@media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>Welcome in its own window (Model 2)</h1>
+<p class="lede">Bristlenose for Mac. The Welcome spiral, as shipped, moves out of the main window into one app-wide window of its own. The window opens at the spiral's natural size and can be resized like any other window. The drop card stays behind: the main window's empty states become the drop card alone, centred. Seven panels. At its natural size the spiral is unchanged, apart from losing the drop card. Panel 4 proposes how it reflows when the window is made narrow. The Model 1 alternative, where Welcome stays in the main window, is in <code>welcome-dismiss-options.html</code>.</p>
+
+<div class="controls" role="group" aria-label="Preview">
+  <button data-scheme="light dark" aria-pressed="true">Follow system</button>
+  <button data-scheme="light" aria-pressed="false">Light</button>
+  <button data-scheme="dark" aria-pressed="false">Dark</button>
+  <button data-palette="default" aria-pressed="true">Default palette</button>
+  <button data-palette="edo" aria-pressed="false">Edo palette</button>
+</div>
+<div class="key">
+  <span><i class="ka"></i>Artefact: pixels that would ship. No labels inside the frame.</span>
+  <span><i class="kc"></i>Commentary: tradeoffs and reasoning. Not the product.</span>
+  <span style="font-family:var(--mono)">frame bar: <b style="color:var(--page-ink)">state</b> · <span style="color:light-dark(#8a4b00,#f5c27a)">NEW COPY</span> = owner-written, not a shipped key</span>
+</div>
+
+<!-- ───────────────────────── 1 ───────────────────────── -->
+<h2><span class="n">1</span>First launch, no projects: Welcome beside the main window, not key</h2>
+<div class="shot">
+  <div class="shot-bar"><span><b>1 · main window key, Welcome open beside it</b></span><span class="new">NEW COPY: footer checkbox (see 3)</span></div>
+  <div class="scale"><div data-scene="beside"></div></div>
+</div>
+<div class="comm">
+  <p><span class="pro">For:</span> the task and the teaching sit side by side, and the teaching can be ignored at no cost. The research found this is the arrangement that helps without getting in the way. The drop card is live and is the only target in the key window, so a researcher with a folder ready can drop it straight away. The Welcome window is no longer tied to the main window's 700 pt minimum, which exists so a report can be shown. It opens at the spiral's natural size and handles narrow widths on its own terms, by reflowing (panel 4) rather than scaling content down. The scaling machinery (the shelf's 0.29 scale, <code>WelcomeClauseFit</code>) stops being the main way the spiral copes with width.</p>
+  <p><span class="con">Against:</span> "beside" needs room. At 1000 + 800 pt it fits only a display wider than about 1850 pt. That includes a 27″ at its default scale, but not a 13″–15″ laptop, where the two windows would overlap or the Welcome window would go off screen. A window that is not key is also easy to miss, and it is the first thing a new user sees of the app. Opening it without making it key is unusual on macOS: launch normally makes the newest window key. AppKit needs an explicit <code>orderFront</code> with no <code>makeKey</code> to do it, and the window falls behind on the next click anywhere.</p>
+</div>
+
+<!-- ───────────────────────── 2 ───────────────────────── -->
+<h2><span class="n">2</span>Same, Welcome centred over the main window, key <span class="flag cmp">for comparison</span></h2>
+<div class="shot">
+  <div class="shot-bar"><span><b>2 · Welcome key, centred over the main window</b></span><span>the usual default for a launch window (Xcode, Pixelmator Pro)</span></div>
+  <div class="scale"><div data-scene="over"></div></div>
+</div>
+<div class="comm">
+  <p><span class="pro">For:</span> this is what AppKit does by default, and it is the Xcode and Pixelmator Pro precedent. It cannot be missed, and it works on any screen size.</p>
+  <p><span class="con">Against: the teaching stands between the researcher and the task.</span> At 800 pt the Welcome window covers the whole centre of a 1000 pt main window, drop card included. The one action available is hidden behind a lesson the researcher has to close first. Xcode and Pixelmator get away with this because their launch window <i>is</i> the launcher: it has New and Open and a recents list. Bristlenose's launcher is the main window, so the Welcome window has nothing to offer the researcher's next step. It can only be dismissed. Dragging a folder from Finder onto the visible strip of sidebar is not a drop target either.</p>
+</div>
+
+<!-- ───────────────────────── 3 ───────────────────────── -->
+<h2><span class="n">3</span>The Welcome window, close up</h2>
+<div class="row">
+  <div class="shot">
+    <div class="shot-bar"><span><b>3a · key, box ticked</b> (default)</span><span class="new">NEW COPY: "Show this window when Bristlenose opens"</span></div>
+    <div class="scale"><div data-wwin='{"key":true,"foot":"on"}'></div></div>
+  </div>
+  <div class="shot">
+    <div class="shot-bar"><span><b>3b · not key, box unticked</b></span><span>click either box: it is live</span></div>
+    <div class="scale"><div data-wwin='{"key":false,"foot":"off"}'></div></div>
+  </div>
+</div>
+<div class="comm">
+  <p>The checkbox sits at bottom-leading with the label Xcode uses ("Show this window when Xcode launches"), and Pixelmator Pro's is in the same place. It closes like any other window: the red traffic light or ⌘W. There is no X inside the content and no Close button. It is an ordinary titled window. It can be resized, minimised and zoomed, because no part of it needs a fixed frame. Xcode's welcome window is fixed-size and has no title bar. That works because Xcode's window is a launcher, and this one is not.</p>
+  <p><b>Without the drop card,</b> Study tools gains about 90 pt of height, which goes to the illustration. That is the only change to the spiral. <b>Title</b> is the shipped <code>desktop.chrome.welcomeTitle</code> ("Welcome to Bristlenose"), the same string as the Help menu item, so the menu item and the window it opens have the same name.</p>
+  <p><b>Opening size, derived rather than measured:</b> 800 pt content width gives a 760 × 470 pt spiral. The Scientific background cell is then about 284 × 285 pt, enough for the 208 × 152 pt cover fan to draw at scale 1 with its caption and link. That is the reasoning from <code>BookShelfView.coverFan</code>'s comments. Nobody has measured it yet. The Degradation Lab would confirm or move the number, and the spiral's φ geometry fixes everything else from that one width. <span class="con">Watch:</span> the spiral's φ geometry means a wider window makes it taller as well. Above the natural size it needs a cap or it outgrows the screen, so the natural size works as a maximum as well as the opening size.</p>
+  <p><b>Rotators.</b> Each cell currently advances "per visit", where a visit is an appearance in the main window. In Model 2 a visit has to mean opening the window. With the box unticked, a researcher who never reopens it never sees past the first slot in any cell, so the Tip curriculum stops at slot one.</p>
+</div>
+
+<!-- ───────────────────────── 4 ───────────────────────── -->
+<h2><span class="n">4</span>Resized narrow: the cells stack</h2>
+<div class="row" style="grid-template-columns:1.9fr 1fr">
+  <div class="shot">
+    <div class="shot-bar"><span><b>4a · natural size</b> (opening frame)</span><span>as 3a</span></div>
+    <div class="scale"><div data-wwin='{"key":true,"foot":"on"}'></div></div>
+  </div>
+  <div class="shot">
+    <div class="shot-bar"><span><b>4b · dragged narrow</b> (420 pt)</span><span>proposal · scrolls</span></div>
+    <div class="scale"><div data-wwin='{"key":true,"foot":"on","narrow":true}'></div></div>
+  </div>
+</div>
+<div class="comm">
+  <p>Below a breakpoint, the spiral gives up its φ geometry and the cells stack in spiral order: Study tools, Scientific background, Tip, AI, then the privacy card. Each cell keeps its tint and its large/small treatment and takes its natural height. The column scrolls, and the footer checkbox stays pinned at the bottom. Fonts stay at their semantic sizes. Nothing scales down. This is the same rule the spec already sets ("never squish the architecture"), applied by switching the layout instead of shrinking it.</p>
+  <p><span class="pro">For:</span> the window behaves like a normal Mac window: it is resizable and has a sensible minimum (about 360 pt is enough for one cell's copy), and it never shrinks content below its designed size. A researcher can park it as a narrow strip beside the main window on a laptop, which makes panel 1's "beside" placement work on a 13″ screen as well.</p>
+  <p><span class="con">Against:</span> two layouts to build and test instead of one. The baton, which passes the animation along the spiral, now needs an order for the stack too. Reading top to bottom is the obvious one. Where the breakpoint goes, and whether there is an in-between step (two columns), is undecided. <span class="con">Also:</span> this is the first change to the spiral's own layout that the mockup proposes, and only below the natural size.</p>
+</div>
+
+<!-- ───────────────────────── 5 ───────────────────────── -->
+<h2><span class="n">5</span>Main window empty states, Welcome window closed</h2>
+<div class="row">
+  <div class="shot">
+    <div class="shot-bar"><span><b>5a · no projects yet</b></span><span>shipped keys only</span></div>
+    <div class="scale"><div data-mwin='{"sb":"empty","key":true}'></div></div>
+  </div>
+  <div class="shot">
+    <div class="shot-bar"><span><b>5b · projects exist, none selected</b></span><span>shipped keys only</span></div>
+    <div class="scale"><div data-mwin='{"sb":"projects","key":true}'></div></div>
+  </div>
+</div>
+<div class="comm">
+  <p>The two states are drawn the same: the existing drop card, unchanged, centred. The lens group stays dimmed because there is no project to apply it to. This is the one point where Model 2 and Model 1's "Welcome off" state (panel 3 of the sibling mockup) produce identical pixels. Model 2 makes this the <i>only</i> no-selection state, so the main window never shows teaching. ⌥⌘N windows open into this state as well, and none of them brings its own copy of Welcome.</p>
+  <p><span class="pro">For:</span> every no-selection moment, whether it comes from deselecting, deleting the selected project or opening a new window, is now calm and shows one action. The main window's empty state no longer depends on window width.</p>
+  <p><span class="con">Against:</span> in 5a the main window alone is very bare: an empty sidebar and one card. If the researcher closed Welcome a moment ago, it is no longer there to say what the app is for. <span class="con">Also:</span> this window is titled "Welcome" today (<code>desktop.welcome.windowTitle</code>, <code>ContentView.swift:427</code>). That made sense while it showed the Welcome content. In Model 2 it no longer does, and it shares a name with the Welcome window. See panel 6.</p>
+</div>
+
+<!-- ───────────────────────── 6 ───────────────────────── -->
+<h2><span class="n">6</span>Reopening it: Window and Help menus</h2>
+<div class="row">
+  <div class="shot">
+    <div class="shot-bar"><span><b>6a · Window menu</b> (AppKit standard items + one)</span><span>reuses <code>chrome.welcomeTitle</code>, new placement</span></div>
+    <div class="menubar"><b>Bristlenose</b><span>File</span><span>Edit</span><span>View</span><span>Project</span><span class="open">Window</span><span>Help</span></div>
+    <div class="menu" style="--mx:214px">
+      <div class="mi">Minimize<span class="k">⌘M</span></div>
+      <div class="mi">Zoom</div>
+      <div class="mi">Fill<span class="k">⌃🌐F</span></div>
+      <div class="mi">Center<span class="k">⌃🌐C</span></div>
+      <div class="mi sub">Move &amp; Resize</div>
+      <div class="mi sub">Full Screen Tile</div>
+      <div class="sep"></div>
+      <div class="mi hl newmi">Welcome to Bristlenose</div>
+      <div class="sep"></div>
+      <div class="mi">Bring All to Front</div>
+      <div class="sep"></div>
+      <div class="mi"><span class="chk">✓</span>Welcome</div>
+      <div class="mi">Welcome to Bristlenose</div>
+    </div>
+  </div>
+  <div class="shot">
+    <div class="shot-bar"><span><b>6b · Help menu, as shipped</b></span><span>shipped keys only · behaviour changes</span></div>
+    <div class="menubar"><b>Bristlenose</b><span>File</span><span>Edit</span><span>View</span><span>Project</span><span>Window</span><span class="open">Help</span></div>
+    <div class="menu" style="--mx:268px">
+      <div class="mi">Bristlenose Help<span class="k">⌘?</span></div>
+      <div class="mi hl">Welcome to Bristlenose</div>
+      <div class="mi">Keyboard Shortcuts</div>
+      <div class="sep"></div>
+      <div class="mi">Release Notes</div>
+      <div class="mi">Send Feedback…</div>
+    </div>
+  </div>
+</div>
+<div class="comm">
+  <p><b>6a.</b> Xcode keeps "Welcome to Xcode" in its Window menu. In Model 2 Welcome is a window, so the Window menu is a natural home for it. It has no shortcut, for the reason already in <code>MenuCommands.swift</code>: it is opened rarely, so a shortcut would not be remembered. <b>6b.</b> The Help item stays where it is, and what it does changes. Today it clears the selection to show the Welcome pane. In Model 2 it opens or focuses the Welcome window and leaves the main window's selection alone, so it stops being destructive to what the researcher was looking at. The research's "easy to find in a help area" argues for keeping Help. Whether Window should <i>also</i> have it, or whether one menu is enough, is open.</p>
+  <p><span class="con">The window list in 6a shows the naming collision:</span> "✓ Welcome" is the main window with no project selected, under its shipped title, and "Welcome to Bristlenose" is the new window. Nobody can tell them apart from the menu. A shipped alternative for the main window's empty title already exists: <code>desktop.chrome.noProjectSelected</code> ("No Project Selected"). Using it is a one-line change, but it is a decision for the owner, so it is not drawn here.</p>
+</div>
+
+<!-- ───────────────────────── 7 ───────────────────────── -->
+<h2><span class="n">7</span>Edge case: main window full screen <span class="flag lofi">low fidelity</span></h2>
+<div class="row">
+  <div class="shot">
+    <div class="shot-bar"><span><b>7a · joins the full-screen Space</b> (auxiliary)</span><span>sketch</span></div>
+    <div class="lofi">
+      <div class="spaces"><span>Desktop 1</span><span class="on">Bristlenose (full screen)</span></div>
+      <div class="scr">
+        <div class="fsapp"><div class="s"></div><div class="d"><span class="box">Drop a folder</span></div></div>
+        <div class="ww" style="left:33%; top:16%; width:48%; height:62%">Welcome to Bristlenose</div>
+      </div>
+      <p class="cap">The window floats over the full-screen app, centred, so it is panel 2 again on a single screen. <code>collectionBehavior = .fullScreenAuxiliary</code>.</p>
+    </div>
+  </div>
+  <div class="shot">
+    <div class="shot-bar"><span><b>7b · stays on the desktop Space</b> (default)</span><span>sketch</span></div>
+    <div class="lofi">
+      <div class="spaces"><span class="on">Desktop 1</span><span>Bristlenose (full screen)</span></div>
+      <div class="scr" style="background:var(--wall)">
+        <div class="ww" style="left:26%; top:16%; width:48%; height:62%">Welcome to Bristlenose</div>
+      </div>
+      <p class="cap">Opening it from the menu switches Spaces, away from the work. Closing it does not switch back.</p>
+    </div>
+  </div>
+</div>
+<div class="comm">
+  <p>A full-screen main window has no "beside", so panel 1's placement is not available. <b>7a</b> keeps the researcher in context but brings back panel 2's problem of the window standing in the way, and the drop card under it is covered. <b>7b</b> is what AppKit does if nothing is set, and it is disorienting: the Space slides away when the researcher picks Help&nbsp;▸ Welcome. A third option, not drawn, is to open the window only at launch and never into a full-screen Space. That relies on the "launch only" answer to the first open question below.</p>
+</div>
+
+<!-- ───────────────────────── strings + questions ───────────────────────── -->
+<h2><span class="n">—</span>String plan</h2>
+<div class="comm">
+  <table>
+    <tr><th>String</th><th>Status</th><th>Where</th></tr>
+    <tr><td>Welcome to Bristlenose</td><td>shipped</td><td><code>desktop.chrome.welcomeTitle</code>: Help item, now also window title + Window item</td></tr>
+    <tr><td>Drop a folder · Drag a folder of recordings or transcripts here to add it as a project.</td><td>shipped</td><td><code>desktop.welcome.dropFolderTitle</code> / <code>…Hint</code></td></tr>
+    <tr><td>Welcome (main window title, no selection)</td><td>shipped, <b>meaning changes</b></td><td><code>desktop.welcome.windowTitle</code>; alternative <code>desktop.chrome.noProjectSelected</code></td></tr>
+    <tr><td>Projects</td><td>shipped</td><td><code>desktop.chrome.projects</code></td></tr>
+    <tr><td>Show this window when Bristlenose opens</td><td><b>new</b></td><td>Welcome window footer</td></tr>
+    <tr><td>Minimize · Zoom · Fill · Center · Bring All to Front …</td><td>AppKit's</td><td>standard Window menu, system-localised</td></tr>
+  </table>
+  <p style="margin-top:8px">One new key, which goes into all 21 full locales. <code>zh-Hant-HK</code> inherits from <code>zh-Hant</code>. Spiral copy is unchanged.</p>
+</div>
+
+<h2><span class="n">?</span>Open questions (surfaced, not answered)</h2>
+<div class="comm">
+  <p><b>1. When does it appear?</b> Only at launch, if the box is ticked? Or also when the main window has no selection, for example after deleting the last project? Launch-only follows Xcode and keeps every deselect calm. Showing it on deselect brings back Model 1's behaviour in a second window.</p>
+  <p><b>2. Reopen at the last frame, or always at the natural size?</b> The Mac convention is to restore a window's last frame, and a researcher who parked it as a narrow strip (panel 4b) would expect it back there. Always opening at the natural size guarantees the designed first impression every time, at the cost of discarding the user's choice.</p>
+  <p><b>3. Beside or over, and which window is key?</b> Panel 1 helps but needs a wide display. Panel 2 works everywhere but covers the drop card. Possible middle ground: beside the main window when there is room, otherwise offset so the drop card stays visible. That gives two behaviours to explain and test.</p>
+  <p><b>4. Sheets on the main window.</b> If the AI-consent sheet, or any first-run sheet, is attached to the main window at launch, the Welcome window either competes with it for key or waits until it is dismissed. A Welcome window that is key and sitting over a window with a modal sheet is the worst case. Order of operations: sheet first, Welcome after?</p>
+  <p><b>5. What counts as a "visit" for the rotators</b>, now that opening the window is the only way to see one (panel 3 commentary). Should each cell advance per opening, per launch, or on a timer while the window is open?</p>
+  <p><b>6. The main window's empty-state title</b> ("Welcome" vs "No Project Selected"), and whether the Window menu gets the item as well as Help (panel 6).</p>
+  <p><b>7. Drop on the Welcome window?</b> With no drop card it has no drop target. A folder dropped on it does nothing. Should the whole window accept the drop and pass it to the main window, or should it refuse visibly?</p>
+</div>
+
+</div>
+
+<script>
+const TRAY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10"/><path d="M8.5 9.5 12 13l3.5-3.5"/><path d="M3.5 13.5 5.6 6.8A1.5 1.5 0 0 1 7 5.8h1.5M15.5 5.8H17a1.5 1.5 0 0 1 1.4 1L20.5 13.5V18a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 18z"/><path d="M3.5 13.5h4.5l1 2h6l1-2h4.5"/></svg>';
+const DROP = `<div class="drop centred">${TRAY}<div class="title3">Drop a folder</div><div class="body">Drag a folder of recordings or transcripts here to add it as a project.</div></div>`;
+const LENSES = ['Project','Sessions','Quotes','Codebooks','Signals'];
+const PROJECTS = [['a','Checkout usability, Feb'],['b','Onboarding interviews'],['c','Clinic pilot, wave 2'],['d','Pricing page diary study']];
+const MW = 1000, MH = 640, WW = 800;
+
+// Spiral exactly as shipped, minus the drop card (WelcomeHomeView.spiral).
+function spiral(){
+  return `<div class="spiralwrap"><div class="spiral">
+    <div class="cell lg t1 maj">
+      <span class="tag">Study tools</span>
+      <div class="title3">AutoCode</div>
+      <div class="body">Let AutoCode propose tags across every quote — you Accept or Deny.</div>
+      <div class="cta">AI helps tag →</div>
+      <div class="illus"></div>
+    </div>
+    <div class="g2 v min">
+      <div class="cell lg t2 maj"><span class="tag">Scientific background</span><div class="fan"><i></i><i></i><i></i><i></i></div><div class="body">Braun &amp; Clarke — themes are built from participants’ own words.</div><div class="cta">Learn more →</div></div>
+      <div class="g2 min">
+        <div class="cell t3 maj"><span class="tag">Tip</span><div class="body">From a folder of recordings to a readable report in minutes.</div><div class="cta">First analysis →</div></div>
+        <div class="g2 v min">
+          <div class="cell t4 maj"><span class="tag">AI</span><div class="ai-glyph"></div><div class="cta">Setup →</div></div>
+          <div class="cell t5 min"><div class="body" style="font-size:11px">Review AI &amp; privacy settings…</div></div>
+        </div>
+      </div>
+    </div>
+  </div></div>`;
+}
+const SPIRAL_H = Math.round((WW - 40) / 1.618);           // 470
+const WH = 28 + 20 + SPIRAL_H + 56;                         // title bar + top margin + spiral + footer band
+
+// Below the breakpoint: same cells, same tints, stacked in spiral order.
+function stack(){
+  return `<div class="stack">
+    <div class="cell lg t1"><span class="tag">Study tools</span><div class="title3">AutoCode</div><div class="body">Let AutoCode propose tags across every quote — you Accept or Deny.</div><div class="cta">AI helps tag →</div><div class="illus" style="flex:none;height:120px"></div></div>
+    <div class="cell lg t2"><span class="tag">Scientific background</span><div class="fan"><i></i><i></i><i></i><i></i></div><div class="body">Braun &amp; Clarke — themes are built from participants’ own words.</div><div class="cta">Learn more →</div></div>
+    <div class="cell t3"><span class="tag">Tip</span><div class="body">From a folder of recordings to a readable report in minutes.</div><div class="cta">First analysis →</div></div>
+    <div class="cell t4"><span class="tag">AI</span><div class="ai-glyph"></div><div class="cta">Setup →</div></div>
+    <div class="cell t5"><div class="body" style="font-size:11px">Review AI &amp; privacy settings…</div></div>
+  </div><div class="scrollbar"></div>`;
+}
+function wwin(o){
+  const foot = `<label class="foot" role="checkbox" tabindex="0" aria-checked="${o.foot==='on'}"><span class="cb ${o.foot==='on'?'on':''}"></span>Show this window when Bristlenose opens</label>`;
+  const w = o.narrow ? 420 : WW;
+  return `<div class="win wwin ${o.key?'':'inactive'}" style="width:${w}px;height:${WH}px">
+    <div class="wtb"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">Welcome to Bristlenose</div></div>
+    <div class="wbody">${o.narrow ? stack() : spiral()}${foot}</div></div>`;
+}
+function mwin(o){
+  const lenses = LENSES.map(l => `<div class="lens"><span class="g"></span>${l}</div>`).join('');
+  const projs = o.sb === 'projects' ? PROJECTS.map(([c,n]) => `<div class="proj"><span class="ic ${c}"></span>${n}</div>`).join('') : '';
+  return `<div class="win ${o.key?'':'inactive'}" style="width:${MW}px;height:${MH}px">
+    <div class="sb"><div class="lights"><i></i><i></i><i></i><span class="sbbtn"></span></div>${lenses}<h6>Projects</h6>${projs}</div>
+    <div class="detail"><div class="tb"><span class="wtitle">Welcome</span></div><div class="pane">${DROP}</div></div></div>`;
+}
+const MBAR = `<div class="mbar"><b>Bristlenose</b><span>File</span><span>Edit</span><span>View</span><span>Project</span><span>Window</span><span>Help</span><span class="clock">Sat 3 Oct 09:41</span></div>`;
+function scene(kind){
+  if (kind === 'beside'){
+    const W = 40 + MW + 30 + WW + 40, H = 26 + 40 + MH + 50;
+    return `<div class="desk" style="width:${W}px;height:${H}px" data-w="${W}">${MBAR}
+      <div class="at" style="left:40px;top:66px;z-index:2">${mwin({sb:'empty',key:true})}</div>
+      <div class="at" style="left:${40+MW+30}px;top:96px;z-index:1">${wwin({key:false,foot:'on'})}</div></div>`;
+  }
+  const W = 1400, H = 26 + 40 + MH + 50, mx = (W - MW) / 2, my = 66;
+  return `<div class="desk" style="width:${W}px;height:${H}px" data-w="${W}">${MBAR}
+    <div class="at" style="left:${mx}px;top:${my}px;z-index:1">${mwin({sb:'empty',key:false})}</div>
+    <div class="at" style="left:${mx + (MW-WW)/2}px;top:${my + (MH-WH)/2 + 10}px;z-index:2">${wwin({key:true,foot:'on'})}</div></div>`;
+}
+
+document.querySelectorAll('[data-scene]').forEach(el => el.innerHTML = scene(el.dataset.scene));
+document.querySelectorAll('[data-wwin]').forEach(el => { const o = JSON.parse(el.dataset.wwin); el.innerHTML = wwin(o); el.firstElementChild.dataset.w = o.narrow ? 420 : WW; });
+document.querySelectorAll('[data-mwin]').forEach(el => { el.innerHTML = mwin(JSON.parse(el.dataset.mwin)); el.firstElementChild.dataset.w = MW; });
+
+// Zoom each artefact to its column; geometry stays identical, just smaller.
+const fit = () => document.querySelectorAll('.scale').forEach(sc => {
+  const a = sc.querySelector('[data-w]'); if (a) a.style.zoom = Math.min(1, sc.clientWidth / +a.dataset.w); });
+new ResizeObserver(fit).observe(document.body); fit();
+
+function toggle(f){ const cb = f.querySelector('.cb'); const on = !cb.classList.contains('on'); cb.classList.toggle('on', on); f.setAttribute('aria-checked', on); }
+document.addEventListener('click', e => { const f = e.target.closest('.foot'); if (f){ e.preventDefault(); toggle(f); } });
+document.addEventListener('keydown', e => { const f = e.target.closest && e.target.closest('.foot'); if (f && (e.key === ' ' || e.key === 'Enter')){ e.preventDefault(); toggle(f); } });
+
+document.querySelectorAll('[data-scheme]').forEach(b => b.onclick = () => {
+  document.documentElement.style.colorScheme = b.dataset.scheme;
+  document.querySelectorAll('[data-scheme]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+document.querySelectorAll('[data-palette]').forEach(b => b.onclick = () => {
+  document.documentElement.dataset.colorTheme = b.dataset.palette;
+  document.querySelectorAll('[data-palette]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+</script>
+</body>
+</html>

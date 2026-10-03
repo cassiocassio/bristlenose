@@ -25,6 +25,7 @@ import asyncio
 import hashlib
 import logging
 import re
+from collections.abc import Sequence
 from pathlib import Path
 
 from bristlenose.discussion import structure as st
@@ -149,13 +150,13 @@ async def _route(client: LLMClient, sections: list[st.Section],
     tmpl = get_prompt_template("discussion-route-quotes")
     block = "\n".join(f"{s.id} | {s.heading or s.title} | " + "; ".join(it.terse for it in s.items if it.turns)
                       for s in sections if s.kind != "instruction")
-    wrapped = wrap_untrusted("sections", block)
 
     async def one(batch: list[tuple[str, ExtractedQuote]]) -> RouteBatchOut:
         qb = "\n".join(f"{k} | {q.text}" for k, q in batch)
         return await client.analyze(
             system_prompt=tmpl.system,
-            user_prompt=tmpl.user.format(sections=wrapped, quotes=wrap_untrusted("quotes", qb)),
+            user_prompt=tmpl.user.format(sections=wrap_untrusted("sections", block),
+                                         quotes=wrap_untrusted("quotes", qb)),
             response_model=RouteBatchOut, prompt_template=tmpl,
         )
     outs = await asyncio.gather(*(one(keyed[i:i + ROUTE_BATCH]) for i in range(0, len(keyed), ROUTE_BATCH)))
@@ -166,7 +167,7 @@ async def _route(client: LLMClient, sections: list[st.Section],
 
 
 async def run_discussion(
-    transcripts: list[FullTranscript],
+    transcripts: Sequence[FullTranscript],
     quotes: list[ExtractedQuote],
     project_dir: Path,
     llm_client: LLMClient,

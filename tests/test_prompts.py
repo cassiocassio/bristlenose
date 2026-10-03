@@ -14,6 +14,10 @@ PROMPT_NAMES = [
     "quote-extraction",
     "quote-clustering",
     "thematic-grouping",
+    "discussion-parse-guide",
+    "discussion-classify-turns",
+    "discussion-consolidate",
+    "discussion-route-quotes",
 ]
 
 EXPECTED_VARIABLES: dict[str, set[str]] = {
@@ -22,6 +26,10 @@ EXPECTED_VARIABLES: dict[str, set[str]] = {
     "quote-extraction": {"topic_boundaries", "transcript_text"},
     "quote-clustering": {"quotes_json"},
     "thematic-grouping": {"quotes_json"},
+    "discussion-parse-guide": {"guide"},
+    "discussion-classify-turns": {"spine", "turns"},
+    "discussion-consolidate": {"planned", "questions"},
+    "discussion-route-quotes": {"sections", "quotes"},
 }
 
 _VAR_RE = re.compile(r"\{(\w+)\}")
@@ -64,6 +72,13 @@ class TestPromptLoading:
             "transcript_text": "text",
             "topic_boundaries": "bounds",
             "quotes_json": "[]",
+            "guide": "guide",
+            "spine": "spine",
+            "turns": "turns",
+            "planned": "planned",
+            "questions": "questions",
+            "sections": "sections",
+            "quotes": "quotes",
         }
         pair = get_prompt(name)
         expected = EXPECTED_VARIABLES[name]

@@ -39,6 +39,10 @@ PROMPTS_WITH_BOUNDARY: list[str] = [
     "speaker-splitting",
     "chat-lens",
     "chat-lens-support",
+    "discussion-parse-guide",
+    "discussion-classify-turns",
+    "discussion-consolidate",
+    "discussion-route-quotes",
 ]
 
 
@@ -159,6 +163,13 @@ CALL_SITES: list[tuple[str, str]] = [
     ("bristlenose/server/codebook_builder.py", "formatted_quotes"),
     ("bristlenose/server/chat_lens.py", "corpus_text"),
     ("bristlenose/server/chat_lens.py", "claims_block"),
+    ("bristlenose/discussion/stage.py", "guide"),
+    ("bristlenose/discussion/stage.py", "spine"),
+    ("bristlenose/discussion/stage.py", "turns"),
+    ("bristlenose/discussion/stage.py", "planned"),
+    ("bristlenose/discussion/stage.py", "questions"),
+    ("bristlenose/discussion/stage.py", "sections"),
+    ("bristlenose/discussion/stage.py", "quotes"),
 ]
 
 

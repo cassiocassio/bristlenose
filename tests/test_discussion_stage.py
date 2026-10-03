@@ -26,7 +26,13 @@ from bristlenose.discussion.models import (
 )
 from bristlenose.discussion.moderator import moderator_turns
 from bristlenose.discussion.stage import run_discussion
-from bristlenose.models import ExtractedQuote, FullTranscript, QuoteType, SpeakerRole, TranscriptSegment
+from bristlenose.models import (
+    ExtractedQuote,
+    FullTranscript,
+    QuoteType,
+    SpeakerRole,
+    TranscriptSegment,
+)
 
 # ── fixtures ─────────────────────────────────────────────────────────────────
 

@@ -46,6 +46,7 @@ _STAGE_DISPLAY: dict[str, str] = {
     "topic_segmentation": "Topics",
     "quote_extraction": "Quotes",
     "cluster_and_group": "Clusters & themes",
+    "discussion": "Discussion",
     "render": "Report",
 }
 
@@ -229,6 +230,13 @@ def get_project_status(output_dir: Path) -> ProjectStatus | None:
         _build_stage_info(stage_key, manifest, intermediate_dir, output_dir)
         for stage_key in _DISPLAY_STAGES
     ]
+    # Off by default, so shown only where a run recorded it — a project that
+    # never opted in must not read as having a stage still to do.
+    if "discussion" in manifest.stages:
+        stages.insert(
+            len(stages) - 1,
+            _build_stage_info("discussion", manifest, intermediate_dir, output_dir),
+        )
 
     return ProjectStatus(
         project_name=manifest.project_name,

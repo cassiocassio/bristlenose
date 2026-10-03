@@ -111,6 +111,16 @@ def test_the_generating_stages_append_the_steer(stage: str) -> None:
     )
 
 
+
+def test_the_discussion_stage_steers_what_it_writes() -> None:
+    """Its normalised question labels are generated text the lens renders, so
+    classify and consolidate carry the steer. Parsing the guide does not: it
+    transcribes the researcher's own words, in whatever language they wrote."""
+    src = Path("bristlenose/discussion/stage.py").read_text(encoding="utf-8")
+    assert src.count("system_prompt=tmpl.system + output_language_steer()") == 2
+    assert "system_prompt=tmpl.system,  # transcribes the guide: no language steer" in src
+
+
 def test_the_fallback_bucket_is_not_english_in_a_spanish_run() -> None:
     """The one English string left in a fully-steered Spanish run was ours.
 

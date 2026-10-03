@@ -72,7 +72,7 @@ def test_load_manifest_missing(tmp_path: Path):
 
 
 def test_stage_order_has_all_stages():
-    assert len(STAGE_ORDER) == 10
+    assert len(STAGE_ORDER) == 11
     assert STAGE_INGEST == STAGE_ORDER[0]
 
 

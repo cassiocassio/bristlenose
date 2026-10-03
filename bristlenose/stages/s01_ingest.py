@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import NamedTuple
 
+from bristlenose.discussion.guide import is_guide_folder
 from bristlenose.models import (
     FileType,
     InputFile,
@@ -220,6 +221,11 @@ def _scan_dir(
                 # which is the same scanner-parity gap
                 # `tests/test_accepted_extension_parity.py` exists to catch.
                 if entry.name == OUTPUT_DIR_NAME:
+                    continue
+                # The researcher's discussion guide, beside the recordings — a
+                # document *about* the study, never a session of it. A .docx
+                # in there would otherwise be ingested as a transcript.
+                if depth == 0 and is_guide_folder(entry):
                     continue
                 if depth + 1 < _MAX_SCAN_DEPTH:
                     _scan_dir(entry, depth + 1, files, skipped)

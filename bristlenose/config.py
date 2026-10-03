@@ -243,6 +243,13 @@ class BristlenoseSettings(BaseSettings):
     # citations are honest, not whether the model can answer.
     experimental_chat_lens: bool = True
 
+    # Discussion lens — the guide merged with the questions actually asked, and
+    # every quote placed under the question that drew it
+    # (docs/design-discussion-lens-plan.md). OFF by default: the stage costs
+    # extra LLM calls per run and has been scored on synthetic sessions only.
+    # Opt in with BRISTLENOSE_DISCUSSION_LENS=1.
+    discussion_lens: bool = False
+
     # Miro
     miro_access_token: str = ""
     miro_client_id: str = ""  # OAuth app client id (PKCE, no secret); empty = paste-token only

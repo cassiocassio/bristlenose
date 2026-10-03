@@ -323,7 +323,7 @@ def _local_covered_stages(buckets: dict[str, dict[str, Any]]) -> set[str]:
 
 
 # Stages that issue one call per participant. Everything else is per-run.
-_PER_SESSION_STAGE_PREFIXES = ("s05b", "s08", "s09")
+_PER_SESSION_STAGE_PREFIXES = ("s05b", "s08", "s09", "s11c")
 
 
 def _is_per_session_stage(stage_id: str) -> bool:
@@ -337,7 +337,7 @@ def _forecast_from_baselines(
 ) -> tuple[int, int] | None:
     """Sum baseline medians per stage; multiply per-session stages by n_sessions.
 
-    Per-session vs per-run is inferred from ``stage_id``: stages 5b/8/9 are
+    Per-session vs per-run is inferred from ``stage_id``: stages 5b/8/9/11c are
     per-session (one row per participant), stages 10/11 are per-run.
 
     ``skip_stages`` names stages the local log already answered for, so the

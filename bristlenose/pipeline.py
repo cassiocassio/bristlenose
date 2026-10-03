@@ -7,7 +7,7 @@ import json
 import logging
 import re
 import shutil
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -31,6 +31,7 @@ from bristlenose.hashing import hash_bytes, hash_file_metadata, verify_file_hash
 from bristlenose.llm import telemetry as _llm_telemetry
 from bristlenose.manifest import (
     STAGE_CLUSTER_AND_GROUP,
+    STAGE_DISCUSSION,
     STAGE_EXTRACT_AUDIO,
     STAGE_IDENTIFY_SPEAKERS,
     STAGE_INGEST,
@@ -74,6 +75,7 @@ from bristlenose.utils.fs import is_os_metadata
 from bristlenose.utils.text import count_noun
 
 if TYPE_CHECKING:  # annotation only — s01 stays a lazy import
+    from bristlenose.llm.client import LLMClient
     from bristlenose.stages.s01_ingest import SkippedFile
 
 logger = logging.getLogger(__name__)
@@ -862,6 +864,85 @@ class Pipeline:
             eta_remaining_seconds=self._last_eta_remaining,
             predicted_total_seconds=self._last_predicted_total,
         )
+
+    async def _run_discussion(
+        self,
+        transcripts: Sequence[FullTranscript],
+        quotes: list[ExtractedQuote],
+        project_dir: Path,
+        output_dir: Path,
+        llm_client: LLMClient | None,
+        manifest: PipelineManifest | None,
+        prev_manifest: PipelineManifest | None,
+    ) -> None:
+        """The Discussion lens's stage, after themes and before render.
+
+        Off unless ``discussion_lens`` is set — and then truly off: no file is
+        read, written or removed. Optional by design, so it never abandons the
+        run; a failure is recorded on the lens's own record (plan §9.A) and
+        not in the run summary. Nothing in this process reads its output —
+        serve does — so a cache hit has nothing to load.
+        """
+        if not self.settings.discussion_lens:
+            return
+        import time
+
+        from bristlenose.discussion.guide import NO_GUIDE_SHA, find_guide
+        from bristlenose.discussion.stage import quotes_sha, run_discussion
+
+        path = output_dir / ".bristlenose" / "intermediate" / "discussion.json"
+        guide = find_guide(project_dir)
+        input_hashes = {
+            "quotes": quotes_sha(quotes),
+            "guide": guide.sha if guide else NO_GUIDE_SHA,
+        }
+        if _is_stage_verified(
+            prev_manifest, STAGE_DISCUSSION, [path], current_input_hashes=input_hashes,
+        ):
+            _print_cached_step("Placed quotes under the questions asked")
+            return
+
+        # A record built from other quotes must not outlive this attempt.
+        path.unlink(missing_ok=True)
+        if manifest is not None:
+            mark_stage_running(manifest, STAGE_DISCUSSION)
+        t0 = time.perf_counter()
+        try:
+            from bristlenose.llm.client import LLMClient
+
+            client = llm_client or LLMClient(self.settings)
+            record, _outcome = await run_discussion(transcripts, quotes, project_dir, client)
+        except Exception as exc:  # noqa: BLE001 — optional stage: never abandons the run
+            logger.warning("discussion stage failed: %s", type(exc).__name__)
+            _print_warn_step("Discussion lens not built", time.perf_counter() - t0)
+            return
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(record.model_dump_json(indent=2), encoding="utf-8")
+        elapsed = time.perf_counter() - t0
+
+        if manifest is not None:
+            for sess in record.sessions:
+                # Only a failed call is retried; a session with no usable
+                # moderator turns is a finding about the transcript, not a fault.
+                if sess.state == "failed":
+                    mark_session_failed(manifest, STAGE_DISCUSSION, sess.id)
+                else:
+                    mark_session_complete(manifest, STAGE_DISCUSSION, sess.id)
+            mark_stage_complete(
+                manifest, STAGE_DISCUSSION,
+                content_hash=hash_bytes(path.read_bytes()),
+                input_hashes=input_hashes,
+            )
+            write_manifest(manifest, output_dir)
+
+        n_asked = sum(t.kind in ("planned", "adlib", "new") for t in record.turns)
+        message = f"Placed quotes under {count_noun(n_asked, 'question')} asked"
+        if record.status == "complete":
+            _print_step(message, elapsed)
+        elif record.status == "partial":
+            _print_warn_step(message + " · some sessions not read", elapsed)
+        else:
+            _print_warn_step("Discussion lens not built", elapsed)
 
     async def run(self, input_dir: Path, output_dir: Path) -> PipelineResult:
         """Run the full pipeline: ingest → transcribe → analyse → output.
@@ -2305,6 +2386,12 @@ class Pipeline:
             )
             write_manifest(manifest, output_dir)
 
+            # ── Discussion lens (off by default) ───────────────────────
+            await self._run_discussion(
+                clean_transcripts, all_quotes, input_dir, output_dir,
+                llm_client, manifest, _prev_manifest,
+            )
+
             # ── People file ───────────────────────────────────────────
             status.update("[dim]Updating people file...[/dim]")
             from bristlenose.people import (
@@ -2878,6 +2965,15 @@ class Pipeline:
                 f"Clustered {count_noun(len(screen_clusters), 'screen')}"
                 f" · Grouped {count_noun(len(theme_groups), 'theme')}",
                 _cg_elapsed_a,
+            )
+
+            # ── Discussion lens (off by default) ──
+            # `analyze` has no project folder of its own; the guide sits beside
+            # the recordings, which is the output folder's parent in the
+            # default layout.
+            await self._run_discussion(
+                clean_transcripts, all_quotes, output_dir.parent, output_dir,
+                llm_client, None, None,
             )
 
             # ── Render ──

@@ -50,6 +50,7 @@ STAGE_LABELS: list[tuple[str, str, bool]] = [
     ("topic_segmentation", "Topic segmentation", True),
     ("quote_extraction", "Quote extraction", True),
     ("cluster_and_group", "Cluster & group", True),
+    ("discussion", "Discussion", True),
     ("render", "Render", False),
 ]
 _STAGE_ORDER = {sid: i for i, (sid, _, _) in enumerate(STAGE_LABELS)}

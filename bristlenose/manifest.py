@@ -101,6 +101,8 @@ STAGE_PII_REMOVAL = "pii_removal"
 STAGE_TOPIC_SEGMENTATION = "topic_segmentation"
 STAGE_QUOTE_EXTRACTION = "quote_extraction"
 STAGE_CLUSTER_AND_GROUP = "cluster_and_group"
+# Off by default (`discussion_lens`); a run without it writes no record.
+STAGE_DISCUSSION = "discussion"
 STAGE_RENDER = "render"
 
 # Ordered list for the full `run()` pipeline.
@@ -114,6 +116,7 @@ STAGE_ORDER = [
     STAGE_TOPIC_SEGMENTATION,
     STAGE_QUOTE_EXTRACTION,
     STAGE_CLUSTER_AND_GROUP,
+    STAGE_DISCUSSION,
     STAGE_RENDER,
 ]
 

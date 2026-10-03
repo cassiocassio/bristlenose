@@ -140,6 +140,9 @@ transparency copy.
 
 ### 1.5 Journal and summary
 
+*Superseded by §9.A — no summary bucket; failure lives on the lens's record.
+Kept for the record of what a bucket would have cost.*
+
 - `events.py:302-330`: `PipelineSummary.discussion: StageOutcome | None = None`.
   Truncation picks it up (`events.py:546`).
 - **SILENT**: `run_condition.py:120-121` hard-codes the bucket tuple — a failing
@@ -475,6 +478,31 @@ until Phase 5.
    ingest guard. Exit: the stage runs on the real three-session corpus, scores
    against the gold labels, and `bristlenose pipeline` / `status` / the run
    inspector / the cost forecast all show it.
+   **Status 3 Oct 2026: built behind `discussion_lens` (default off,
+   `BRISTLENOSE_DISCUSSION_LENS=1`).** As built, where it differs from §1:
+   - One package, `bristlenose/discussion/` (structure, models, moderator,
+     guide, stage) — not `models.py` + `llm/structured.py`. `PipelineResult`
+     gains no slot: nothing in the run reads the record; serve will.
+   - Runs after cluster-and-group, before the people file and render, on the
+     full and `analyze` paths. Writes `.bristlenose/intermediate/discussion.json`;
+     cached on the quotes hash plus the guide sha (`"none"` without one), and the
+     file is removed before a rerun so a stale record cannot outlive it. Per-session
+     manifest records: only a failed call is FAILED (and reruns the stage);
+     `no_moderator` / `moderator_unreliable` are findings, recorded complete.
+   - Registered: manifest `STAGE_ORDER`, `bristlenose status` (shown only where a
+     run recorded it), run-inspector label (`is_llm`), `s11c` per-session pricing,
+     the hand-kept prompt / boundary / language test lists.
+   - **Not yet registered, so silent with the flag on:** `timing.py` (the
+     estimate omits the stage and no progress verb is emitted — the Mac shows the
+     previous stage's verb while it runs), cohort baselines, the pipeline-view
+     catalogue and its contract fixture, Swift `RunProgressSubtitle`, and the 21
+     locale stage names. All are owed before the flag can default on.
+   - The four spike prompts in `llm/prompts/` (`parse-discussion-guide` etc.)
+     are **not** archived: `scripts/spike_discussion_routing.py` still loads them.
+   - The guide folder name, `Discussion guide`, is provisional and lives only in
+     `discussion/guide.py`.
+   - Owed: the run on the real gold-labelled corpus. The exit is not met until it
+     passes.
 3. **Data and serve** — tables, migration, importer, API, status field,
    overrides, export classification and anonymisation. Exit: a re-run preserves
    overrides; a dropped quote re-imports cleanly.
@@ -546,8 +574,10 @@ The highest risk, found by two reviews independently.
 ### C. Privacy and export — decide before Phase 3
 
 - **Codes, not names, in the payload.** The discussion GET returns speaker codes
-  only; the SPA takes names from `/people`, which `_anonymise_data`
-  (`server/routes/export.py:111-205`) already blanks. The dev lens already
+  only. Names resolve per (session, code) from the session speakers
+  (`people.load_session_speakers`, since `6f94a9f6`) — **not** `/people`,
+  whose single row per moderator code is wrong across sessions. Check
+  `_anonymise_data` (`server/routes/export.py:111-205`) blanks that source too. The dev lens already
   resolves names in one function for this swap.
 - **The guide is not all evidence.** Store titles only for `instruction`
   sections (consent, logistics, welfare). Never return a guide path. In an
@@ -575,9 +605,13 @@ The highest risk, found by two reviews independently.
 
 ### E. The guide's location and the paths that cannot see it
 
-- Put the reserved-folder exclusion in `is_bristlenose_artefact`
-  (`utils/fs.py:75`) so every scan site gets it — ingest scans three levels deep
-  (`s01_ingest.py:99, 207`) and the importer has its own scan (`importer.py:504`).
+- ~~Put the reserved-folder exclusion in `is_bristlenose_artefact`~~ — **as
+  built, in `s01_ingest._scan_dir` at the top level only.** That function means
+  "files Bristlenose wrote", and the guide is the researcher's; it also matches
+  at every depth, which would swallow a researcher's own subfolder of that name
+  three levels down. The importer's scan (`importer.py:504`) only re-finds an
+  already-ingested session's file by name and never discovers one, so ingest is
+  the single discovery site.
 - **Existing projects:** a guide `.docx` already in a project was ingested as a
   session. Moving it to the reserved folder makes the stale-session path
   (`importer.py:1870-1925`) delete that session and its edits — write the

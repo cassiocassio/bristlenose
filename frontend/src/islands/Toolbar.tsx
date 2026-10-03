@@ -11,18 +11,27 @@
  * CSV/XLSX export actions moved to ExportDropdown in NavBar (v0.15).
  */
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { SearchBox } from "../components/SearchBox";
+import { SearchBox, type SearchCombo } from "../components/SearchBox";
+import { applyNativeSearchAction, searchSuggestionsFor } from "../components/NativeSearchSync";
 import { ViewSwitcher } from "../components/ViewSwitcher";
 import { ToolbarButton } from "../components/ToolbarButton";
 import {
   clearSearch,
   filterStateOf,
+  getSearchPeople,
+  removeSearchToken,
+  setSearchPeople,
+  setSearchTokenMode,
   useQuotesStore,
   setSearchQuery,
   setViewMode,
 } from "../contexts/QuotesContext";
+import { getPeople } from "../utils/api";
+import { foldKey } from "../utils/searchMatch";
+import { quoteTags } from "../utils/searchSuggest";
+import type { PersonMode, TagMode } from "../utils/searchTokens";
 import { useFocusMode, toggleFocusMode } from "../contexts/FocusModeStore";
 import { filterQuotes } from "../utils/filter";
 import { isEmbedded } from "../utils/embedded";
@@ -52,6 +61,49 @@ export function Toolbar() {
     return undefined; // default label from ViewSwitcher
   }, [store.searchQuery, store.searchTokens, visibleCount, t]);
 
+  // ── Search suggestions and tokens (design-search §4–§6) ─────────────
+
+  // The people list, once, so a person is offered by every name /people knows
+  // (the export embeds it). Absent, people are offered by code and by the name
+  // on their quotes — degraded, not broken.
+  const [peopleLoaded, setPeopleLoaded] = useState(() => getSearchPeople() !== undefined);
+  useEffect(() => {
+    if (isEmbedded() || peopleLoaded) return;
+    let cancelled = false;
+    getPeople()
+      .then((map) => {
+        if (cancelled) return;
+        setSearchPeople(map);
+        setPeopleLoaded(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [peopleLoaded]);
+
+  const combo = useMemo((): SearchCombo => {
+    const colours = new Map<string, { colourSet: string; colourIndex: number }>();
+    for (const q of store.quotes) {
+      for (const tag of quoteTags(q, store.tags)) {
+        const key = foldKey(tag.name);
+        if (!colours.has(key) && tag.colour_set) {
+          colours.set(key, { colourSet: tag.colour_set, colourIndex: tag.colour_index });
+        }
+      }
+    }
+    return {
+      tokens: store.searchTokens,
+      suggestions: isEmbedded() ? [] : searchSuggestionsFor(store),
+      tagColour: (name) => colours.get(foldKey(name)) ?? null,
+      onChoose: (id) => applyNativeSearchAction("applySearchSuggestion", { id }),
+      onTokenMode: (token, mode) => setSearchTokenMode(token, mode as PersonMode | TagMode),
+      onTokenRemove: removeSearchToken,
+    };
+    // peopleLoaded: the people list arrived after the store last changed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store, peopleLoaded]);
+
   // ── Render ────────────────────────────────────────────────────────
 
   // Embedded: search + starred live in the native toolbar, tags in the sidebar.
@@ -65,6 +117,7 @@ export function Toolbar() {
         onChange={setSearchQuery}
         onClear={clearSearch}
         syncKey={store.searchTokens}
+        combo={combo}
         data-testid="bn-toolbar-search"
       />
       <ViewSwitcher

@@ -22,6 +22,7 @@ import {
 import { personToken, tagToken } from "../utils/searchTokens";
 
 vi.mock("../utils/api", () => ({
+  getPeople: vi.fn().mockResolvedValue({}),
   apiGet: vi.fn(),
   getCodebook: vi.fn(),
   putHidden: vi.fn(),

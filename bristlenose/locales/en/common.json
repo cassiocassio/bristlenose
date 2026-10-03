@@ -61,7 +61,8 @@
     "placeholder": "Filter quotes…",
     "clearAriaLabel": "Clear search",
     "suggest": {
-      "textRow": "Quotes containing “{{query}}”"
+      "textRow": "Quotes containing “{{query}}”",
+      "people": "People"
     },
     "token": {
       "person": {

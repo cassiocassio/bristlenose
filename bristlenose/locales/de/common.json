@@ -51,7 +51,8 @@
     "placeholder": "Zitate filtern…",
     "clearAriaLabel": "Suche löschen",
     "suggest": {
-      "textRow": "Zitate mit \u201e{{query}}\u201c"
+      "textRow": "Zitate mit \u201e{{query}}\u201c",
+      "people": "Personen"
     },
     "token": {
       "person": {

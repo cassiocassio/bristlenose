@@ -33,7 +33,6 @@ import {
   type TagMode,
 } from "../utils/searchTokens";
 import { EMPTY_TAG_FILTER, filterQuotes } from "../utils/filter";
-import { featureFlags } from "../utils/featureFlags";
 import { foldKey } from "../utils/searchMatch";
 import type { SearchPerson } from "../utils/searchSuggest";
 import {
@@ -600,8 +599,7 @@ export function getSearchPeople(): Record<string, SearchPerson> | undefined {
  * becomes a person token and leaves the text: codes are how researchers name
  * people, and the space is what tells "m1" from the start of "m11". Only codes
  * of people with a quote that is not hidden count, so a token never names
- * someone whose every quote is hidden. Parked behind `searchCodeTokens` until
- * the field draws tokens.
+ * someone whose every quote is hidden.
  */
 export function setSearchQuery(query: string): void {
   setState((prev) => {
@@ -620,9 +618,7 @@ export function setSearchQuery(query: string): void {
       }
       return byCode.get(foldKey(word))?.code ?? null;
     };
-    const taken = featureFlags.searchCodeTokens
-      ? takeCodeTokens(query, codeOf)
-      : { query, codes: [] as string[] };
+    const taken = takeCodeTokens(query, codeOf);
     if (taken.codes.length === 0) {
       return prev.searchQuery === query ? prev : { ...prev, searchQuery: query };
     }

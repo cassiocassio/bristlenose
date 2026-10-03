@@ -61,7 +61,8 @@
     "placeholder": "Filtrér citater…",
     "clearAriaLabel": "Ryd søgning",
     "suggest": {
-      "textRow": "Citater med \u201e{{query}}\u201c"
+      "textRow": "Citater med \u201e{{query}}\u201c",
+      "people": "Personer"
     },
     "token": {
       "person": {

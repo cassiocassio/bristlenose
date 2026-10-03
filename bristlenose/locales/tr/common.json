@@ -61,7 +61,8 @@
     "placeholder": "Alıntıları filtrele…",
     "clearAriaLabel": "Aramayı temizle",
     "suggest": {
-      "textRow": "\u201c{{query}}\u201d i\u00e7eren al\u0131nt\u0131lar"
+      "textRow": "\u201c{{query}}\u201d i\u00e7eren al\u0131nt\u0131lar",
+      "people": "Ki\u015filer"
     },
     "token": {
       "person": {

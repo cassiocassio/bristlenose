@@ -61,7 +61,8 @@
     "placeholder": "Citaten filteren…",
     "clearAriaLabel": "Zoekopdracht wissen",
     "suggest": {
-      "textRow": "Citaten met “{{query}}”"
+      "textRow": "Citaten met “{{query}}”",
+      "people": "Personen"
     },
     "token": {
       "person": {

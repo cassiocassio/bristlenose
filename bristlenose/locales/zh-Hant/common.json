@@ -55,7 +55,8 @@
     "placeholder": "篩選引述⋯",
     "clearAriaLabel": "清除搜尋",
     "suggest": {
-      "textRow": "\u542b\u300c{{query}}\u300d\u7684\u5f15\u8ff0"
+      "textRow": "\u542b\u300c{{query}}\u300d\u7684\u5f15\u8ff0",
+      "people": "\u4eba\u54e1"
     },
     "token": {
       "person": {

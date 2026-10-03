@@ -61,7 +61,8 @@
     "placeholder": "Suodata sitaatteja…",
     "clearAriaLabel": "Tyhjennä haku",
     "suggest": {
-      "textRow": "Sitaatit, joissa on \u201d{{query}}\u201d"
+      "textRow": "Sitaatit, joissa on \u201d{{query}}\u201d",
+      "people": "Henkil\u00f6t"
     },
     "token": {
       "person": {

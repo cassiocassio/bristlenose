@@ -7,6 +7,7 @@ import type { QuoteResponse } from "../utils/types";
 
 // Mock API
 vi.mock("../utils/api", () => ({
+  getPeople: vi.fn().mockResolvedValue({}),
   putHidden: vi.fn(),
   putStarred: vi.fn(),
   putEdits: vi.fn(),

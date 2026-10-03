@@ -61,7 +61,8 @@
     "placeholder": "Filtra le citazioni…",
     "clearAriaLabel": "Cancella ricerca",
     "suggest": {
-      "textRow": "Citazioni che contengono \u201c{{query}}\u201d"
+      "textRow": "Citazioni che contengono \u201c{{query}}\u201d",
+      "people": "Persone"
     },
     "token": {
       "person": {

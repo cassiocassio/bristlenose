@@ -51,7 +51,8 @@
     "placeholder": "Filtrer les verbatim…",
     "clearAriaLabel": "Effacer la recherche",
     "suggest": {
-      "textRow": "Verbatim contenant \u00ab\u202f{{query}}\u202f\u00bb"
+      "textRow": "Verbatim contenant \u00ab\u202f{{query}}\u202f\u00bb",
+      "people": "Personnes"
     },
     "token": {
       "person": {

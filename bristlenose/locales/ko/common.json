@@ -47,7 +47,8 @@
     "placeholder": "인용문 필터…",
     "clearAriaLabel": "검색 지우기",
     "suggest": {
-      "textRow": "\u201c{{query}}\u201d \ud3ec\ud568 \uc778\uc6a9\ubb38"
+      "textRow": "\u201c{{query}}\u201d \ud3ec\ud568 \uc778\uc6a9\ubb38",
+      "people": "\uc0ac\ub78c"
     },
     "token": {
       "person": {

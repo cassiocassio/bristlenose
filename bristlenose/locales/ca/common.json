@@ -61,7 +61,8 @@
     "placeholder": "Filtra les cites…",
     "clearAriaLabel": "Esborra la cerca",
     "suggest": {
-      "textRow": "Cites que contenen \u00ab{{query}}\u00bb"
+      "textRow": "Cites que contenen \u00ab{{query}}\u00bb",
+      "people": "Persones"
     },
     "token": {
       "person": {

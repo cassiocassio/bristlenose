@@ -91,3 +91,198 @@
     border-radius: 2px;
     padding: 0 1px;
 }
+
+/* ── Tokens and suggestions (docs/design-search.md §4–§6) ──────────────
+   Tokens sit before the text inside the field, as in Mail: the meaning word,
+   the real badge, ▾. The suggestions list and a token's meaning menu take
+   the toolbar dropdown's look (organisms/toolbar.css .view-switcher-menu). */
+
+/* The toolbar right-aligns its items, so a field that will not shrink spills
+   out of the column to the left. With tokens it shrinks, and the chips wrap
+   onto a second line rather than scroll (a scrolling strip would clip each
+   chip's menu). */
+.search-container.has-tokens {
+    min-width: 0;
+    flex: 0 1 auto;
+}
+
+.search-container.has-tokens .search-field {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    min-width: 0;
+    gap: var(--bn-space-xs);
+    padding: 2px 1.6rem 2px 4px;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    background: var(--bn-colour-bg);
+    transition: border-color var(--bn-transition-fast);
+}
+
+.search-container.has-tokens .search-field:focus-within {
+    border-color: var(--bn-colour-accent);
+}
+
+.search-container.has-tokens .search-input {
+    flex: 1 1 5rem;
+    min-width: 5rem;
+    width: 8rem;
+    border: none;
+    padding-left: 2px;
+    background: transparent;
+}
+
+.search-container.has-tokens .search-clear {
+    display: block;
+}
+
+.search-tokens {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--bn-space-xs);
+    min-width: 0;
+}
+
+.search-token-wrap {
+    position: relative;
+}
+
+.search-token {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 1px 4px 1px 7px;
+    border: none;
+    border-radius: var(--bn-radius-md);
+    background: var(--bn-colour-quote-bg);
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-muted);
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.search-token.selected {
+    box-shadow: 0 0 0 2px var(--bn-colour-accent);
+}
+
+.search-token-disclosure {
+    display: block;
+    flex-shrink: 0;
+}
+
+.search-token-menu,
+.search-listbox {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin: 0.25rem 0 0;
+    padding: 0.25rem;
+    list-style: none;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    box-shadow: 0 4px 12px var(--bn-colour-shadow);
+    z-index: 200;
+}
+
+.search-token-menu {
+    min-width: 12rem;
+}
+
+.search-listbox {
+    min-width: 22rem;
+}
+
+.search-token-menu li {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    padding: 0.4rem 0.6rem;
+    border-radius: var(--bn-radius-sm);
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-text);
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.search-token-menu li:hover,
+.search-token-menu li:focus {
+    background: var(--bn-colour-quote-bg);
+    outline: none;
+}
+
+.search-token-menu li.disabled {
+    color: var(--bn-colour-muted);
+    cursor: default;
+}
+
+.search-token-menu li.disabled:hover {
+    background: none;
+}
+
+.search-token-menu .menu-icon {
+    display: inline-block;
+    width: 1em;
+    text-align: center;
+    color: var(--bn-colour-muted);
+}
+
+.search-token-menu li.search-token-menu-separator {
+    height: 1px;
+    margin: 0.25rem 0.4rem;
+    padding: 0;
+    background: var(--bn-colour-border);
+    cursor: default;
+}
+
+.search-option {
+    display: grid;
+    grid-template-columns: 18px 1fr auto;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    min-height: 1.9rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--bn-radius-sm);
+    font-size: var(--bn-text-label);
+    cursor: pointer;
+}
+
+.search-option.highlighted {
+    background: var(--bn-colour-quote-bg);
+}
+
+.search-option-glyph {
+    color: var(--bn-colour-muted);
+}
+
+/* A badge is the recognition: no glyph beside it, so it starts at the edge. */
+.search-option-badge {
+    grid-column: 1 / 3;
+}
+
+.search-option-rest {
+    color: var(--bn-colour-muted);
+}
+
+.search-option-typed {
+    color: var(--bn-colour-text);
+}
+
+.search-option-count {
+    color: var(--bn-colour-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.search-group {
+    margin-top: 0.25rem;
+    padding-top: 0.25rem;
+    border-top: 1px solid var(--bn-colour-border);
+}
+
+.search-group > ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}

@@ -61,7 +61,8 @@
     "placeholder": "Filtrar citações…",
     "clearAriaLabel": "Limpar procura",
     "suggest": {
-      "textRow": "Cita\u00e7\u00f5es com \u201c{{query}}\u201d"
+      "textRow": "Cita\u00e7\u00f5es com \u201c{{query}}\u201d",
+      "people": "Pessoas"
     },
     "token": {
       "person": {

@@ -61,7 +61,8 @@
     "placeholder": "Filtrer sitater …",
     "clearAriaLabel": "Tøm søket",
     "suggest": {
-      "textRow": "Sitater som inneholder \u00ab{{query}}\u00bb"
+      "textRow": "Sitater som inneholder \u00ab{{query}}\u00bb",
+      "people": "Personer"
     },
     "token": {
       "person": {

@@ -73,7 +73,8 @@
     "placeholder": "Filtruj cytaty…",
     "clearAriaLabel": "Wyczyść wyszukiwanie",
     "suggest": {
-      "textRow": "Cytaty zawieraj\u0105ce \u201e{{query}}\u201d"
+      "textRow": "Cytaty zawieraj\u0105ce \u201e{{query}}\u201d",
+      "people": "Osoby"
     },
     "token": {
       "person": {

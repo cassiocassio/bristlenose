@@ -57,7 +57,8 @@
     "placeholder": "発言をフィルタ…",
     "clearAriaLabel": "検索をクリア",
     "suggest": {
-      "textRow": "\u300c{{query}}\u300d\u3092\u542b\u3080\u767a\u8a00"
+      "textRow": "\u300c{{query}}\u300d\u3092\u542b\u3080\u767a\u8a00",
+      "people": "\u4eba\u7269"
     },
     "token": {
       "person": {

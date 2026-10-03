@@ -48,7 +48,7 @@ import {
   type ChoiceContext,
   type WireSuggestionRow,
 } from "../utils/searchBridge";
-import { quoteTags, suggest, type SearchPerson } from "../utils/searchSuggest";
+import { quoteTags, suggest, type SearchPerson, type Suggestion } from "../utils/searchSuggest";
 import type { TagResponse } from "../utils/types";
 import { tabFromPath } from "./LensSubtitleSync";
 import { useLocaleStore } from "../i18n/LocaleStore";
@@ -64,9 +64,18 @@ export function _setNativeSearchPeople(map: Record<string, SearchPerson> | undef
 
 /** What the menu offers for the store as it stands. Exported for tests. */
 export function nativeSuggestions(store: QuotesState, knownPeople = getSearchPeople()) {
+  return suggestionsToWire(store.searchQuery, searchSuggestionsFor(store, knownPeople));
+}
+
+/**
+ * The suggestions for the store's query, under its tokens and filters: the
+ * one computation both the Mac field (over the bridge) and the browser field
+ * (the toolbar's SearchBox) draw, so they offer the same rows and counts.
+ */
+export function searchSuggestionsFor(store: QuotesState, knownPeople = getSearchPeople()): Suggestion[] {
   const f = filterStateOf(store);
   const visibleBefore = { ...f, searchQuery: "" };
-  const rows = suggest(
+  return suggest(
     store.searchQuery,
     {
       quotes: store.quotes,
@@ -80,7 +89,6 @@ export function nativeSuggestions(store: QuotesState, knownPeople = getSearchPeo
       excludeTags: store.searchTokens.flatMap((t) => (t.kind === "tag" ? [t.name] : [])),
     },
   );
-  return suggestionsToWire(store.searchQuery, rows);
 }
 
 function choiceContext(store: QuotesState): ChoiceContext {

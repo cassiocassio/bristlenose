@@ -51,7 +51,8 @@
     "placeholder": "Filtrar citas…",
     "clearAriaLabel": "Borrar búsqueda",
     "suggest": {
-      "textRow": "Citas que contienen \u00ab{{query}}\u00bb"
+      "textRow": "Citas que contienen \u00ab{{query}}\u00bb",
+      "people": "Personas"
     },
     "token": {
       "person": {

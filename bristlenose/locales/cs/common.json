@@ -69,7 +69,8 @@
     "placeholder": "Filtrovat citáty…",
     "clearAriaLabel": "Vymazat hledání",
     "suggest": {
-      "textRow": "Cit\u00e1ty obsahuj\u00edc\u00ed \u201e{{query}}\u201c"
+      "textRow": "Cit\u00e1ty obsahuj\u00edc\u00ed \u201e{{query}}\u201c",
+      "people": "Lid\u00e9"
     },
     "token": {
       "person": {

@@ -55,7 +55,29 @@
   "search": {
     "ariaLabel": "発言を検索",
     "placeholder": "発言をフィルタ…",
-    "clearAriaLabel": "検索をクリア"
+    "clearAriaLabel": "検索をクリア",
+    "suggest": {
+      "textRow": "\u300c{{query}}\u300d\u3092\u542b\u3080\u767a\u8a00"
+    },
+    "token": {
+      "person": {
+        "said": "{{name}}\u306e\u767a\u8a00",
+        "mentions": "{{name}}\u306b\u8a00\u53ca",
+        "not": "{{name}}\u4ee5\u5916",
+        "saidWord": "\u767a\u8a00\u8005",
+        "mentionsWord": "\u8a00\u53ca",
+        "notWord": "\u9664\u5916"
+      },
+      "tag": {
+        "tagged": "\u30bf\u30b0\u300c{{tag}}\u300d\u3042\u308a",
+        "contains": "\u672c\u6587\u306b\u300c{{tag}}\u300d\u3092\u542b\u3080",
+        "not": "\u30bf\u30b0\u300c{{tag}}\u300d\u306a\u3057",
+        "taggedWord": "\u30bf\u30b0\u3042\u308a",
+        "containsWord": "\u672c\u6587\u306b\u542b\u3080",
+        "notWord": "\u30bf\u30b0\u306a\u3057"
+      },
+      "remove": "\u53d6\u308a\u9664\u304f"
+    }
   },
   "quotes": {
     "hiddenCount_other": "\u975e\u8868\u793a\u306e\u5f15\u7528 {{count}} \u4ef6",

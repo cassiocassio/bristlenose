@@ -59,7 +59,29 @@
   "search": {
     "ariaLabel": "Cerca cites",
     "placeholder": "Filtra les cites…",
-    "clearAriaLabel": "Esborra la cerca"
+    "clearAriaLabel": "Esborra la cerca",
+    "suggest": {
+      "textRow": "Cites que contenen \u00ab{{query}}\u00bb"
+    },
+    "token": {
+      "person": {
+        "said": "Dit per {{name}}",
+        "mentions": "Menciona {{name}}",
+        "not": "Excepte {{name}}",
+        "saidWord": "dit per",
+        "mentionsWord": "menciona",
+        "notWord": "excepte"
+      },
+      "tag": {
+        "tagged": "Etiquetat \u00ab{{tag}}\u00bb",
+        "contains": "El text cont\u00e9 \u00ab{{tag}}\u00bb",
+        "not": "Sense l\u2019etiqueta \u00ab{{tag}}\u00bb",
+        "taggedWord": "etiquetat",
+        "containsWord": "cont\u00e9",
+        "notWord": "sense etiqueta"
+      },
+      "remove": "Suprimeix"
+    }
   },
   "quotes": {
     "hiddenCount_one": "{{count}} cita oculta",

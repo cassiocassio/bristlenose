@@ -59,7 +59,29 @@
   "search": {
     "ariaLabel": "Buscar citações",
     "placeholder": "Filtrar citações…",
-    "clearAriaLabel": "Limpar busca"
+    "clearAriaLabel": "Limpar busca",
+    "suggest": {
+      "textRow": "Cita\u00e7\u00f5es com \u201c{{query}}\u201d"
+    },
+    "token": {
+      "person": {
+        "said": "Dito por {{name}}",
+        "mentions": "Menciona {{name}}",
+        "not": "Exceto {{name}}",
+        "saidWord": "dito por",
+        "mentionsWord": "menciona",
+        "notWord": "exceto"
+      },
+      "tag": {
+        "tagged": "Com a etiqueta \u201c{{tag}}\u201d",
+        "contains": "O texto cont\u00e9m \u201c{{tag}}\u201d",
+        "not": "Sem a etiqueta \u201c{{tag}}\u201d",
+        "taggedWord": "com etiqueta",
+        "containsWord": "cont\u00e9m",
+        "notWord": "sem etiqueta"
+      },
+      "remove": "Remover"
+    }
   },
   "quotes": {
     "hiddenCount_one": "{{count}} cita\u00e7\u00e3o oculta",

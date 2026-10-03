@@ -45,7 +45,29 @@
   "search": {
     "ariaLabel": "인용문 검색",
     "placeholder": "인용문 필터…",
-    "clearAriaLabel": "검색 지우기"
+    "clearAriaLabel": "검색 지우기",
+    "suggest": {
+      "textRow": "\u201c{{query}}\u201d \ud3ec\ud568 \uc778\uc6a9\ubb38"
+    },
+    "token": {
+      "person": {
+        "said": "{{name}}\uc758 \ubc1c\uc5b8",
+        "mentions": "{{name}} \uc5b8\uae09",
+        "not": "{{name}} \uc81c\uc678",
+        "saidWord": "\ubc1c\uc5b8\uc790",
+        "mentionsWord": "\uc5b8\uae09",
+        "notWord": "\uc81c\uc678"
+      },
+      "tag": {
+        "tagged": "\u201c{{tag}}\u201d \ud0dc\uadf8 \uc788\uc74c",
+        "contains": "\ubcf8\ubb38\uc5d0 \u201c{{tag}}\u201d \ud3ec\ud568",
+        "not": "\u201c{{tag}}\u201d \ud0dc\uadf8 \uc5c6\uc74c",
+        "taggedWord": "\ud0dc\uadf8 \uc788\uc74c",
+        "containsWord": "\ubcf8\ubb38 \ud3ec\ud568",
+        "notWord": "\ud0dc\uadf8 \uc5c6\uc74c"
+      },
+      "remove": "\uc81c\uac70"
+    }
   },
   "quotes": {
     "hiddenCount_other": "\uc228\uae34 \uc778\uc6a9 {{count}}\uac1c",

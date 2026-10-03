@@ -59,7 +59,29 @@
   "search": {
     "ariaLabel": "Search quotes",
     "placeholder": "Filter quotes…",
-    "clearAriaLabel": "Clear search"
+    "clearAriaLabel": "Clear search",
+    "suggest": {
+      "textRow": "Quotes containing “{{query}}”"
+    },
+    "token": {
+      "person": {
+        "said": "Said by {{name}}",
+        "mentions": "Mentions {{name}}",
+        "not": "Not {{name}}",
+        "saidWord": "said by",
+        "mentionsWord": "mentions",
+        "notWord": "not"
+      },
+      "tag": {
+        "tagged": "Tagged “{{tag}}”",
+        "contains": "Text contains “{{tag}}”",
+        "not": "Not tagged “{{tag}}”",
+        "taggedWord": "tagged",
+        "containsWord": "contains",
+        "notWord": "not tagged"
+      },
+      "remove": "Remove"
+    }
   },
   "quotes": {
     "hiddenCount_one": "{{count}} hidden quote",

@@ -59,7 +59,29 @@
   "search": {
     "ariaLabel": "Zoek in citaten",
     "placeholder": "Citaten filteren…",
-    "clearAriaLabel": "Zoekopdracht wissen"
+    "clearAriaLabel": "Zoekopdracht wissen",
+    "suggest": {
+      "textRow": "Citaten met “{{query}}”"
+    },
+    "token": {
+      "person": {
+        "said": "Gezegd door {{name}}",
+        "mentions": "Noemt {{name}}",
+        "not": "Behalve {{name}}",
+        "saidWord": "gezegd door",
+        "mentionsWord": "noemt",
+        "notWord": "behalve"
+      },
+      "tag": {
+        "tagged": "Getagd “{{tag}}”",
+        "contains": "Tekst bevat “{{tag}}”",
+        "not": "Niet getagd “{{tag}}”",
+        "taggedWord": "getagd",
+        "containsWord": "bevat",
+        "notWord": "niet getagd"
+      },
+      "remove": "Verwijder"
+    }
   },
   "quotes": {
     "hiddenCount_one": "{{count}} verborgen citaat",

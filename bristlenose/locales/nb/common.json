@@ -59,7 +59,29 @@
   "search": {
     "ariaLabel": "Søk i sitater",
     "placeholder": "Filtrer sitater …",
-    "clearAriaLabel": "Tøm søket"
+    "clearAriaLabel": "Tøm søket",
+    "suggest": {
+      "textRow": "Sitater som inneholder \u00ab{{query}}\u00bb"
+    },
+    "token": {
+      "person": {
+        "said": "Sagt av {{name}}",
+        "mentions": "Nevner {{name}}",
+        "not": "Unntatt {{name}}",
+        "saidWord": "sagt av",
+        "mentionsWord": "nevner",
+        "notWord": "unntatt"
+      },
+      "tag": {
+        "tagged": "Tagget \u00ab{{tag}}\u00bb",
+        "contains": "Teksten inneholder \u00ab{{tag}}\u00bb",
+        "not": "Ikke tagget \u00ab{{tag}}\u00bb",
+        "taggedWord": "tagget",
+        "containsWord": "inneholder",
+        "notWord": "ikke tagget"
+      },
+      "remove": "Fjern"
+    }
   },
   "quotes": {
     "hiddenCount_one": "{{count}} skjult sitat",

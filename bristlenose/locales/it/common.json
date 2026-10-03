@@ -59,7 +59,29 @@
   "search": {
     "ariaLabel": "Cerca tra le citazioni",
     "placeholder": "Filtra le citazioni…",
-    "clearAriaLabel": "Cancella ricerca"
+    "clearAriaLabel": "Cancella ricerca",
+    "suggest": {
+      "textRow": "Citazioni che contengono \u201c{{query}}\u201d"
+    },
+    "token": {
+      "person": {
+        "said": "Detto da {{name}}",
+        "mentions": "Menziona {{name}}",
+        "not": "Tranne {{name}}",
+        "saidWord": "detto da",
+        "mentionsWord": "menziona",
+        "notWord": "tranne"
+      },
+      "tag": {
+        "tagged": "Con il tag \u201c{{tag}}\u201d",
+        "contains": "Il testo contiene \u201c{{tag}}\u201d",
+        "not": "Senza il tag \u201c{{tag}}\u201d",
+        "taggedWord": "con tag",
+        "containsWord": "contiene",
+        "notWord": "senza tag"
+      },
+      "remove": "Rimuovi"
+    }
   },
   "quotes": {
     "hiddenCount_one": "{{count}} citazione nascosta",

@@ -67,7 +67,29 @@
   "search": {
     "ariaLabel": "Hledat v citátech",
     "placeholder": "Filtrovat citáty…",
-    "clearAriaLabel": "Vymazat hledání"
+    "clearAriaLabel": "Vymazat hledání",
+    "suggest": {
+      "textRow": "Cit\u00e1ty obsahuj\u00edc\u00ed \u201e{{query}}\u201c"
+    },
+    "token": {
+      "person": {
+        "said": "Mluv\u00ed: {{name}}",
+        "mentions": "Zmi\u0148uje: {{name}}",
+        "not": "Krom\u011b: {{name}}",
+        "saidWord": "mluv\u00ed",
+        "mentionsWord": "zmi\u0148uje",
+        "notWord": "krom\u011b"
+      },
+      "tag": {
+        "tagged": "Se \u0161t\u00edtkem \u201e{{tag}}\u201c",
+        "contains": "Text obsahuje \u201e{{tag}}\u201c",
+        "not": "Bez \u0161t\u00edtku \u201e{{tag}}\u201c",
+        "taggedWord": "se \u0161t\u00edtkem",
+        "containsWord": "obsahuje",
+        "notWord": "bez \u0161t\u00edtku"
+      },
+      "remove": "Odebrat"
+    }
   },
   "quotes": {
     "hiddenCount_one": "{{count}} skryt\u00fd cit\u00e1t",

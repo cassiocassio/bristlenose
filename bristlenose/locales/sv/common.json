@@ -59,7 +59,29 @@
   "search": {
     "ariaLabel": "Sök citat",
     "placeholder": "Filtrera citat…",
-    "clearAriaLabel": "Rensa sökning"
+    "clearAriaLabel": "Rensa sökning",
+    "suggest": {
+      "textRow": "Citat som inneh\u00e5ller \u201d{{query}}\u201d"
+    },
+    "token": {
+      "person": {
+        "said": "Sagt av {{name}}",
+        "mentions": "N\u00e4mner {{name}}",
+        "not": "Utom {{name}}",
+        "saidWord": "sagt av",
+        "mentionsWord": "n\u00e4mner",
+        "notWord": "utom"
+      },
+      "tag": {
+        "tagged": "Taggat \u201d{{tag}}\u201d",
+        "contains": "Texten inneh\u00e5ller \u201d{{tag}}\u201d",
+        "not": "Inte taggat \u201d{{tag}}\u201d",
+        "taggedWord": "taggat",
+        "containsWord": "inneh\u00e5ller",
+        "notWord": "inte taggat"
+      },
+      "remove": "Ta bort"
+    }
   },
   "quotes": {
     "hiddenCount_one": "{{count}} dolt citat",

@@ -71,7 +71,29 @@
   "search": {
     "ariaLabel": "Поиск по цитатам",
     "placeholder": "Фильтровать цитаты…",
-    "clearAriaLabel": "Очистить поиск"
+    "clearAriaLabel": "Очистить поиск",
+    "suggest": {
+      "textRow": "\u0426\u0438\u0442\u0430\u0442\u044b, \u0441\u043e\u0434\u0435\u0440\u0436\u0430\u0449\u0438\u0435 \u00ab{{query}}\u00bb"
+    },
+    "token": {
+      "person": {
+        "said": "\u0413\u043e\u0432\u043e\u0440\u0438\u0442: {{name}}",
+        "mentions": "\u0423\u043f\u043e\u043c\u0438\u043d\u0430\u043d\u0438\u0435: {{name}}",
+        "not": "\u041a\u0440\u043e\u043c\u0435: {{name}}",
+        "saidWord": "\u0433\u043e\u0432\u043e\u0440\u0438\u0442",
+        "mentionsWord": "\u0443\u043f\u043e\u043c\u0438\u043d\u0430\u043d\u0438\u0435",
+        "notWord": "\u043a\u0440\u043e\u043c\u0435"
+      },
+      "tag": {
+        "tagged": "\u0421 \u0442\u0435\u0433\u043e\u043c \u00ab{{tag}}\u00bb",
+        "contains": "\u0412 \u0442\u0435\u043a\u0441\u0442\u0435 \u0435\u0441\u0442\u044c \u00ab{{tag}}\u00bb",
+        "not": "\u0411\u0435\u0437 \u0442\u0435\u0433\u0430 \u00ab{{tag}}\u00bb",
+        "taggedWord": "\u0441 \u0442\u0435\u0433\u043e\u043c",
+        "containsWord": "\u0432 \u0442\u0435\u043a\u0441\u0442\u0435",
+        "notWord": "\u0431\u0435\u0437 \u0442\u0435\u0433\u0430"
+      },
+      "remove": "\u0423\u0431\u0440\u0430\u0442\u044c"
+    }
   },
   "quotes": {
     "hiddenCount_one": "{{count}} \u0441\u043a\u0440\u044b\u0442\u0430\u044f \u0446\u0438\u0442\u0430\u0442\u0430",

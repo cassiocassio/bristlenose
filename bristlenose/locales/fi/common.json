@@ -59,7 +59,29 @@
   "search": {
     "ariaLabel": "Hae sitaateista",
     "placeholder": "Suodata sitaatteja…",
-    "clearAriaLabel": "Tyhjennä haku"
+    "clearAriaLabel": "Tyhjennä haku",
+    "suggest": {
+      "textRow": "Sitaatit, joissa on \u201d{{query}}\u201d"
+    },
+    "token": {
+      "person": {
+        "said": "Puhuja: {{name}}",
+        "mentions": "Mainitsee: {{name}}",
+        "not": "Paitsi: {{name}}",
+        "saidWord": "puhuja",
+        "mentionsWord": "mainitsee",
+        "notWord": "paitsi"
+      },
+      "tag": {
+        "tagged": "Tunniste \u201d{{tag}}\u201d",
+        "contains": "Teksti sis\u00e4lt\u00e4\u00e4 \u201d{{tag}}\u201d",
+        "not": "Ei tunnistetta \u201d{{tag}}\u201d",
+        "taggedWord": "tunniste",
+        "containsWord": "sis\u00e4lt\u00e4\u00e4",
+        "notWord": "ei tunnistetta"
+      },
+      "remove": "Poista"
+    }
   },
   "quotes": {
     "hiddenCount_one": "{{count}} piilotettu sitaatti",

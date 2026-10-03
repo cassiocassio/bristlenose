@@ -49,7 +49,29 @@
   "search": {
     "ariaLabel": "Rechercher des verbatim",
     "placeholder": "Filtrer les verbatim…",
-    "clearAriaLabel": "Effacer la recherche"
+    "clearAriaLabel": "Effacer la recherche",
+    "suggest": {
+      "textRow": "Verbatim contenant \u00ab\u202f{{query}}\u202f\u00bb"
+    },
+    "token": {
+      "person": {
+        "said": "Dit par {{name}}",
+        "mentions": "Mentionne {{name}}",
+        "not": "Sauf {{name}}",
+        "saidWord": "dit par",
+        "mentionsWord": "mentionne",
+        "notWord": "sauf"
+      },
+      "tag": {
+        "tagged": "\u00c9tiquet\u00e9 \u00ab\u202f{{tag}}\u202f\u00bb",
+        "contains": "Le texte contient \u00ab\u202f{{tag}}\u202f\u00bb",
+        "not": "Sans l\u2019\u00e9tiquette \u00ab\u202f{{tag}}\u202f\u00bb",
+        "taggedWord": "\u00e9tiquet\u00e9",
+        "containsWord": "contient",
+        "notWord": "sans \u00e9tiquette"
+      },
+      "remove": "Retirer"
+    }
   },
   "quotes": {
     "hiddenCount_one": "{{count}} citation masqu\u00e9e",

@@ -59,7 +59,29 @@
   "search": {
     "ariaLabel": "Alıntılarda ara",
     "placeholder": "Alıntıları filtrele…",
-    "clearAriaLabel": "Aramayı temizle"
+    "clearAriaLabel": "Aramayı temizle",
+    "suggest": {
+      "textRow": "\u201c{{query}}\u201d i\u00e7eren al\u0131nt\u0131lar"
+    },
+    "token": {
+      "person": {
+        "said": "S\u00f6yleyen: {{name}}",
+        "mentions": "Bahsedilen: {{name}}",
+        "not": "Hari\u00e7: {{name}}",
+        "saidWord": "s\u00f6yleyen",
+        "mentionsWord": "bahsedilen",
+        "notWord": "hari\u00e7"
+      },
+      "tag": {
+        "tagged": "Etiketli: \u201c{{tag}}\u201d",
+        "contains": "Metinde ge\u00e7en: \u201c{{tag}}\u201d",
+        "not": "Etiketsiz: \u201c{{tag}}\u201d",
+        "taggedWord": "etiketli",
+        "containsWord": "metinde",
+        "notWord": "etiketsiz"
+      },
+      "remove": "Kald\u0131r"
+    }
   },
   "quotes": {
     "hiddenCount_one": "{{count}} gizli al\u0131nt\u0131",

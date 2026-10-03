@@ -49,7 +49,29 @@
   "search": {
     "ariaLabel": "Zitate durchsuchen",
     "placeholder": "Zitate filtern…",
-    "clearAriaLabel": "Suche löschen"
+    "clearAriaLabel": "Suche löschen",
+    "suggest": {
+      "textRow": "Zitate mit \u201e{{query}}\u201c"
+    },
+    "token": {
+      "person": {
+        "said": "Gesagt von {{name}}",
+        "mentions": "Erw\u00e4hnt {{name}}",
+        "not": "Au\u00dfer {{name}}",
+        "saidWord": "gesagt von",
+        "mentionsWord": "erw\u00e4hnt",
+        "notWord": "au\u00dfer"
+      },
+      "tag": {
+        "tagged": "Getaggt mit \u201e{{tag}}\u201c",
+        "contains": "Text enth\u00e4lt \u201e{{tag}}\u201c",
+        "not": "Nicht getaggt mit \u201e{{tag}}\u201c",
+        "taggedWord": "getaggt",
+        "containsWord": "enth\u00e4lt",
+        "notWord": "nicht getaggt"
+      },
+      "remove": "Entfernen"
+    }
   },
   "quotes": {
     "hiddenCount_one": "{{count}} ausgeblendetes Zitat",

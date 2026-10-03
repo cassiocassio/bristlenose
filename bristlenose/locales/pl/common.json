@@ -71,7 +71,29 @@
   "search": {
     "ariaLabel": "Szukaj w cytatach",
     "placeholder": "Filtruj cytaty…",
-    "clearAriaLabel": "Wyczyść wyszukiwanie"
+    "clearAriaLabel": "Wyczyść wyszukiwanie",
+    "suggest": {
+      "textRow": "Cytaty zawieraj\u0105ce \u201e{{query}}\u201d"
+    },
+    "token": {
+      "person": {
+        "said": "M\u00f3wi: {{name}}",
+        "mentions": "Wzmianka: {{name}}",
+        "not": "Wyklucz: {{name}}",
+        "saidWord": "m\u00f3wi",
+        "mentionsWord": "wzmianka",
+        "notWord": "wyklucz"
+      },
+      "tag": {
+        "tagged": "Z tagiem \u201e{{tag}}\u201d",
+        "contains": "Tekst zawiera \u201e{{tag}}\u201d",
+        "not": "Bez tagu \u201e{{tag}}\u201d",
+        "taggedWord": "z tagiem",
+        "containsWord": "zawiera",
+        "notWord": "bez tagu"
+      },
+      "remove": "Usu\u0144"
+    }
   },
   "quotes": {
     "hiddenCount_one": "{{count}} ukryty cytat",

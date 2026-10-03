@@ -77,7 +77,15 @@ export function SearchBox({
   const [expandedState, setExpanded] = useState(value.length > 0);
   // A field holding tokens is open, whatever opened it (a menu choice, ⌘E).
   const expanded = expandedState || tokens.length > 0;
-  const [localValue, setLocalValue] = useState(value);
+  const [localValue, setLocalState] = useState(value);
+  // What the field holds, readable from the effect below without making the
+  // field a dependency of it (which would make every keystroke an "external"
+  // change). Written wherever the field is.
+  const localRef = useRef(value);
+  const setLocalValue = (v: string) => {
+    localRef.current = v;
+    setLocalState(v);
+  };
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const listId = useId();
@@ -95,8 +103,6 @@ export function SearchBox({
   // Sync local value when parent value changes (e.g. external clear). The
   // store echoing what was just typed is not a change: it must not close the
   // list the typing opened.
-  const localRef = useRef(localValue);
-  localRef.current = localValue;
   useEffect(() => {
     if (value === localRef.current) return;
     setLocalValue(value);

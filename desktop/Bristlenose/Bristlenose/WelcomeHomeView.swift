@@ -1,12 +1,14 @@
 import SwiftUI
 import AppKit
 
-// MARK: - Welcome home (first-run / .noSelection / ⌘⇧1)
+// MARK: - Welcome home (its own window — WelcomeWindow.swift)
 //
 // The layout is a FIXED golden (Fibonacci) spiral — architecture, not a
-// suggestion. It grows as wide as the content area and keeps its φ proportions
-// (height = width / 1.618), pinned to the TOP; the space below is left for
-// later. Fonts stay at fixed semantic sizes (no scaling); cell content aligns
+// suggestion. It draws at its natural size (`WelcomeSpiralLayout.naturalWidth`)
+// and keeps its φ proportions (height = width / 1.618), pinned to the TOP.
+// Narrower than that, it reflows in exactly ONE step (see the layout) rather
+// than shrinking. Since Model 2 (design-welcome-screen.md, 3 Oct 2026) it lives
+// in its own window and the Drop-a-folder card lives in the main window. Fonts stay at fixed semantic sizes (no scaling); cell content aligns
 // top-leading. It never reflows and cells never resize to their content —
 // copy is cut to fit editorially, the looping illustrations self-scale to the
 // slot they're handed, and the cell clips as the final backstop.
@@ -218,12 +220,13 @@ struct WelcomeHomeView: View {
 
     /// TODO: bind to real provider-configured state.
     var aiConfigured: Bool = false
-    /// Folders/files dropped on the Drop-a-folder card → create a project.
-    var onDropURLs: ([URL]) -> Void = { _ in }
+
+    /// The footer checkbox and Settings ▸ Appearance are two views of this one
+    /// key. Unticking never closes the window — it governs the next launch.
+    @AppStorage(WelcomeWindow.showOnLaunchKey) private var showOnLaunch = true
 
     // Configured-AI card still shows a single per-construction pick (not yet a rotator).
     @State private var aiItem = WelcomeContent.pick(WelcomeContent.aiConfigured)
-    @State private var dropTargeted = false
 
     // Only one cell animates at a time; the baton travels the golden spiral.
     @StateObject private var baton = WelcomeBaton()
@@ -231,33 +234,54 @@ struct WelcomeHomeView: View {
     @Environment(\.openURL) private var openURL
 
     var body: some View {
+        // The arrangement is decided by the WINDOW's width, read outside the scroll
+        // view: inside it, a legacy (always-shown) scroller or a window shorter than
+        // the spiral takes ~15 pt of width and would flip a full-width window to the
+        // stacked arrangement. Width alone decides; height only decides scrolling.
         GeometryReader { geo in
-            let w = geo.size.width - 40                     // 20pt margin each side
-            spiral
-                .frame(width: w, height: w / 1.618)         // full width, φ proportions
-                .padding(20)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)  // pin top; space below
-                .task { baton.setReduceMotion(reduceMotion) }               // start the baton (off under reduce-motion)
-                .onChange(of: reduceMotion) { _, new in baton.setReduceMotion(new) }
-                .onDisappear { baton.stop() }
+            ScrollView(.vertical) {
+                spiral(stacked: geo.size.width < WelcomeWindow.naturalContentWidth - 1)
+                    .padding(20)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)   // pin top
+            }
+            // At the natural size nothing scrolls and nothing should bounce; only the
+            // one-step stack below it is taller than the window.
+            .scrollBounceBehavior(.basedOnSize)
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) { footer }
+        .task { baton.setReduceMotion(reduceMotion) }               // start the baton (off under reduce-motion)
+        .onChange(of: reduceMotion) { _, new in baton.setReduceMotion(new) }
+        .onDisappear { baton.stop() }
     }
 
-    // Golden spiral: major square first, alternating axis, curling inward.
+    // Golden spiral: major square first, alternating axis, curling inward. The five
+    // cells are FLAT children of one Layout, never nested views, so switching between
+    // the spiral and the stacked reflow moves them without rebuilding them — a rebuilt
+    // `SlotRotator` would count a fresh visit on every window resize.
     // VoiceOver reads by position unless told otherwise, and the spiral's positions
-    // don't run in curriculum order. Higher priority reads first. A footer control,
-    // if this pane ever gains one, takes 0 so it reads last.
-    private var spiral: some View {
-        GoldenSplit(.horizontal) { studyToolsCell.welcomeReadingOrder(5) } minor: {
-            GoldenSplit(.vertical) { scienceCell.welcomeReadingOrder(4) } minor: {
-                GoldenSplit(.horizontal) { tipCell.welcomeReadingOrder(3) } minor: {
-                    GoldenSplit(.vertical) { aiCell.welcomeReadingOrder(2) } minor: {
-                        delightCell.accessibilitySortPriority(1)   // a Button: stays an element, not a container
-                    }
-                }
-            }
+    // don't run in curriculum order. Higher priority reads first; the footer takes 0.
+    private func spiral(stacked: Bool) -> some View {
+        WelcomeSpiralLayout(stacked: stacked) {
+            studyToolsCell.welcomeReadingOrder(5)
+            scienceCell.welcomeReadingOrder(4)
+            tipCell.welcomeReadingOrder(3)
+            aiCell.welcomeReadingOrder(2)
+            delightCell.accessibilitySortPriority(1)   // a Button: stays an element, not a container
         }
         .accessibilityElement(children: .contain)   // the cells are siblings here, so the priorities compare
+    }
+
+    /// "Show Welcome when Bristlenose opens" — bottom-leading, the Xcode / Pixelmator
+    /// Pro place for it. Pinned, so it stays put while the stacked reflow scrolls.
+    private var footer: some View {
+        Toggle(i18n.t("settings.appearance.welcomeLegend"), isOn: $showOnLaunch)
+            .toggleStyle(.checkbox)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 16)
+            .background(Color(nsColor: .windowBackgroundColor))
+            .accessibilitySortPriority(0)
     }
 
     // MARK: cells (tints resolve per cell via WelcomeCellTint — v1 ramp by default,
@@ -270,7 +294,6 @@ struct WelcomeHomeView: View {
             SlotRotator(items: WelcomeContent.studyTools, storageKey: "welcome.rotator.tools",
                         onCurrent: { item, userPicked in report(.studyTools, item, userPicked) })
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            dropCard
         }
         .welcomeCell(.studyTools, large: true)
         .batonCell(.studyTools, baton)
@@ -388,7 +411,25 @@ struct WelcomeHomeView: View {
         }
     }
 
-    private var dropCard: some View {
+    private func markdown(_ s: String) -> AttributedString {
+        (try? AttributedString(markdown: s)) ?? AttributedString(s)
+    }
+    private func url(_ s: String) -> URL { URL(string: s) ?? URL(string: "https://bristlenose.app")! }
+}
+
+// MARK: - Drop-a-folder card (the main window's empty state)
+
+/// The Drop-a-folder card. It used to sit at the foot of the Study tools cell; under
+/// Model 2 (design-welcome-screen.md, 3 Oct 2026) it is the main window's whole empty
+/// state — zero projects, or none selected — unchanged and centred, and the Welcome
+/// window carries no drop target at all, so a folder has one place to go.
+struct WelcomeDropCard: View {
+    @EnvironmentObject var i18n: I18n
+    /// Folders/files dropped on the card → create a project.
+    var onDropURLs: ([URL]) -> Void
+    @State private var dropTargeted = false
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             Image(systemName: dropTargeted ? "tray.and.arrow.down.fill" : "tray.and.arrow.down")
                 .font(.system(size: 24, weight: .light))
@@ -413,39 +454,90 @@ struct WelcomeHomeView: View {
             return true
         } isTargeted: { dropTargeted = $0 }
     }
-
-    private func markdown(_ s: String) -> AttributedString {
-        (try? AttributedString(markdown: s)) ?? AttributedString(s)
-    }
-    private func url(_ s: String) -> URL { URL(string: s) ?? URL(string: "https://bristlenose.app")! }
 }
 
-// MARK: - Golden split (major 0.618 first, minor takes the rest)
+// MARK: - Spiral layout (natural size, or one reflow step below it)
 
-private struct GoldenSplit<Major: View, Minor: View>: View {
-    enum Axis { case horizontal, vertical }
-    private let axis: Axis
-    private let major: Major
-    private let minor: Minor
-    private let phi: CGFloat = 0.618
-    private let gutter: CGFloat = 8
+/// Lays the five cells out as the golden spiral — Study tools, Scientific
+/// background, Tip, AI, Delight; major 0.618 first, alternating axis, curling
+/// inward — at its **natural size**, which is also the widest it ever draws.
+///
+/// Narrower than that it reflows in exactly **one** step: the outermost split turns
+/// from side-by-side to stacked, so Study tools goes on top at the full width and
+/// the rest of the spiral sits underneath at its natural height. Nothing inside
+/// that block ever moves — the window's minimum width (`minimumWidth`) is the
+/// Scientific background cell's natural width, so AI never wraps under Tip — and
+/// nothing scales. Reading order (and the baton's) is comic-strip: left to right,
+/// then top to bottom, which the cell order already is in both arrangements.
+///
+/// A `Layout` rather than nested stacks so the cells keep their identity when the
+/// arrangement changes (see `WelcomeHomeView.spiral`).
+struct WelcomeSpiralLayout: Layout {
+    /// The one reflow step, decided by the caller from the window's width (see
+    /// `WelcomeHomeView.body` for why not from the proposal).
+    var stacked: Bool
 
-    init(_ axis: Axis, @ViewBuilder major: () -> Major, @ViewBuilder minor: () -> Minor) {
-        self.axis = axis; self.major = major(); self.minor = minor()
+    /// The spiral's natural width: 760 pt is where the Scientific background cell is
+    /// wide enough for the shelf's 208 pt cover fan to draw at scale 1 with its
+    /// caption and link. Derived, not yet measured — the Degradation Lab is the
+    /// place to confirm it.
+    static let naturalWidth: CGFloat = 760
+    static let naturalHeight: CGFloat = naturalWidth / 1.618
+    /// The Scientific background cell's natural width — the narrowest the stacked
+    /// arrangement may be drawn without the minor block having to move.
+    static let minimumWidth: CGFloat = (naturalWidth - gutter) * (1 - phi)
+
+    private static let phi: CGFloat = 0.618
+    private static let gutter: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let w = Self.clampedWidth(proposal.width)
+        let bottom = Self.frames(width: w, stacked: stacked).map(\.maxY).max() ?? 0
+        return CGSize(width: w, height: bottom)
     }
-    var body: some View {
-        GeometryReader { geo in
-            switch axis {
-            case .horizontal:
-                HStack(spacing: gutter) {
-                    major.frame(width: (geo.size.width - gutter) * phi); minor
-                }
-            case .vertical:
-                VStack(spacing: gutter) {
-                    major.frame(height: (geo.size.height - gutter) * phi); minor
-                }
-            }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let frames = Self.frames(width: Self.clampedWidth(bounds.width), stacked: stacked)
+        for (subview, frame) in zip(subviews, frames) {
+            subview.place(at: CGPoint(x: bounds.minX + frame.minX, y: bounds.minY + frame.minY),
+                          anchor: .topLeading, proposal: ProposedViewSize(frame.size))
         }
+    }
+
+    private static func clampedWidth(_ proposed: CGFloat?) -> CGFloat {
+        min(max(proposed ?? naturalWidth, minimumWidth), naturalWidth)
+    }
+
+    /// Height of the stacked arrangement at a given width.
+    static func stackedHeight(width w: CGFloat) -> CGFloat {
+        frames(width: w, stacked: true).map(\.maxY).max() ?? 0
+    }
+
+    /// Frames in cell order: Study tools, Scientific background, Tip, AI, Delight.
+    static func frames(width w: CGFloat, stacked: Bool) -> [CGRect] {
+        let h = naturalHeight
+        if !stacked {
+            let studyWidth = (w - gutter) * phi
+            return [CGRect(x: 0, y: 0, width: studyWidth, height: h)]
+                + minorBlock(in: CGRect(x: studyWidth + gutter, y: 0,
+                                        width: w - studyWidth - gutter, height: h))
+        }
+        // Stacked: Study tools keeps its square, up to the spiral's height.
+        let studyHeight = min(w, h)
+        return [CGRect(x: 0, y: 0, width: w, height: studyHeight)]
+            + minorBlock(in: CGRect(x: 0, y: studyHeight + gutter, width: w, height: h))
+    }
+
+    /// Science over (Tip beside (AI over Delight)) — the spiral's inner three splits.
+    private static func minorBlock(in r: CGRect) -> [CGRect] {
+        let science = CGRect(x: r.minX, y: r.minY, width: r.width, height: (r.height - gutter) * phi)
+        let restY = science.maxY + gutter
+        let restHeight = r.maxY - restY
+        let tip = CGRect(x: r.minX, y: restY, width: (r.width - gutter) * phi, height: restHeight)
+        let x2 = tip.maxX + gutter
+        let ai = CGRect(x: x2, y: restY, width: r.maxX - x2, height: (restHeight - gutter) * phi)
+        let delight = CGRect(x: x2, y: ai.maxY + gutter, width: r.maxX - x2, height: r.maxY - ai.maxY - gutter)
+        return [science, tip, ai, delight]
     }
 }
 

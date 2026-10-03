@@ -42,6 +42,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// where `openWindow` is reachable from.
     @MainActor var openProjectWindow: (() -> Void)?
 
+    /// Whether this launch has already decided about the Welcome window. The first
+    /// main window to appear decides; ⌥⌘N, a Dock reopen or a restored second
+    /// window must not open Welcome again — it opens at launch only.
+    @MainActor var welcomeOfferedThisLaunch = false
+
     /// Clicking the Dock icon with no project window open.
     ///
     /// Until 16 Aug 2026 this did nothing: `Window ▸ Bristlenose` was the only
@@ -186,6 +191,18 @@ struct BristlenoseApp: App {
                     // Dock-icon click with no project window open — see
                     // `AppDelegate.applicationShouldHandleReopen`.
                     appDelegate.openProjectWindow = { openWindow(id: "main") }
+                    // Welcome opens at launch, once, when the researcher has left
+                    // its checkbox ticked (design-welcome-screen.md, Model 2).
+                    // One runloop hop later than this `onAppear`, so AppKit has
+                    // finished making the main window key and Welcome reliably
+                    // arrives in front of it. Never over an expired alpha: that
+                    // window's block-and-quit sheet must not sit behind a lesson.
+                    if !appDelegate.welcomeOfferedThisLaunch {
+                        appDelegate.welcomeOfferedThisLaunch = true
+                        if WelcomeWindow.showsOnLaunch && !AlphaBuild.isExpired() {
+                            Task { @MainActor in openWindow(id: WelcomeWindow.id) }
+                        }
+                    }
                     // The MCP Agents pane's live inputs (Now-showing line,
                     // payloads, the agent-access list).
                     SettingsWindow.shared.serveFleet = serveFleet
@@ -318,6 +335,23 @@ struct BristlenoseApp: App {
         // otherwise contributes an automatic Window-menu reopen entry, and HIG
         // reserves that menu for windows that are *currently open*. Reopening
         // belongs in File, which is where the import item lives.
+        // Welcome — its own window since Model 2 (design-welcome-screen.md,
+        // 3 Oct 2026). `.commandsRemoved()` because it is help: Help ▸ Welcome
+        // to Bristlenose is its only opener, and a Window-menu opener would be a
+        // second. Launch presentation is ours, not SwiftUI's — suppressed and
+        // never restored, so the checkbox alone decides (see the main window's
+        // `onAppear`); its frame is remembered by `WelcomeWindowContent`.
+        Window(i18n.t("desktop.chrome.welcomeTitle"), id: WelcomeWindow.id) {
+            WelcomeWindowContent()
+                .environmentObject(i18n)
+                .tint(paletteAccent)
+        }
+        .defaultSize(width: WelcomeWindow.naturalContentWidth, height: WelcomeWindow.naturalContentHeight)
+        .windowResizability(.contentSize)
+        .restorationBehavior(.disabled)
+        .defaultLaunchBehavior(.suppressed)
+        .commandsRemoved()
+
         Window("Import", id: "cloud-import") {
             CloudImportWindowHost()
                 .environmentObject(projectIndex)

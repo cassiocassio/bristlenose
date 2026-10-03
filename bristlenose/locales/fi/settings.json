@@ -21,6 +21,8 @@
     "diagnosticsHelp": "Lis\u00e4\u00e4 Diagnostiikka-valikon, jonka ty\u00f6kaluilla voi tutkia analyyseja. Ottaa k\u00e4ytt\u00f6\u00f6n my\u00f6s raporttin\u00e4kym\u00e4n web-tarkastelun.",
     "animationLegend": "Näytä animaatio analyysin aikana",
     "animationHelp": "Toista pääikkunassa parveilevien sanojen animaatio, kun projektia analysoidaan. Poista tämä käytöstä nähdäksesi tavallisen edistymisen sen sijaan.",
+    "welcomeLegend": "N\u00e4yt\u00e4 Tervetuloa-ikkuna, kun Bristlenose avataan",
+    "welcomeHelp": "Avaa ikkunan, jossa on tutkimusty\u00f6kaluja, tieteellist\u00e4 taustaa ja vinkki.",
     "randomIconsLegend": "Määritä uusille projekteille satunnainen kuvake",
     "randomIconsHelp": "Jokainen uusi projekti saa erottuvan kuvakkeen, jotta se on helppo tunnistaa sivupalkissa. Poista tämä käytöstä säilyttääksesi tavallisen renkaan ja valitaksesi kuvakkeet itse.",
     "legend": "Sovelluksen ulkoasu",

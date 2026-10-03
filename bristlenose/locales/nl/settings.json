@@ -21,6 +21,8 @@
     "diagnosticsHelp": "Voegt een menu Diagnose toe met hulpmiddelen om analyses te onderzoeken. Schakelt ook de webinspector in de rapportweergave in.",
     "animationLegend": "Toon animatie tijdens het analyseren",
     "animationHelp": "Speelt een animatie van zwermende woorden af in het hoofdvenster terwijl een project wordt geanalyseerd. Schakel dit uit om in plaats daarvan de gewone voortgang te zien.",
+    "welcomeLegend": "Toon Welkom bij het openen van Bristlenose",
+    "welcomeHelp": "Opent een venster met onderzoekstools, een wetenschappelijke basis en een tip.",
     "randomIconsLegend": "Ken nieuwe projecten een willekeurig symbool toe",
     "randomIconsHelp": "Elk nieuw project krijgt een herkenbaar symbool, zodat het makkelijk te herkennen is in de zijbalk. Schakel dit uit om de eenvoudige ring te houden en zelf symbolen te kiezen.",
     "legend": "Weergave van de app",

@@ -44,8 +44,6 @@ enum WindowCommand: Equatable {
     case showAIConsent
     /// Quotes ▸ Send to Miro…
     case showMiro
-    /// Help ▸ Welcome to Bristlenose — deselect, revealing the welcome pane.
-    case showWelcome
     /// View ▸ Switch Session (⌘⌥L on the Sessions lens).
     case showSessionsSwitcher
     /// Diagnostics ▸ Diagnostic fixtures — inject a named scenario into this

@@ -25,6 +25,8 @@
     "dark": "Escura",
     "animationLegend": "Mostrar a animação durante a análise",
     "animationHelp": "Reproduz uma animação de palavras em revoada na janela principal enquanto um projeto é analisado. Desative para ver o progresso simples no lugar.",
+    "welcomeLegend": "Mostrar as boas-vindas ao abrir o Bristlenose",
+    "welcomeHelp": "Abre uma janela com ferramentas, base cient\u00edfica e uma dica.",
     "randomIconsLegend": "Atribuir um ícone aleatório a novos projetos",
     "randomIconsHelp": "Cada novo projeto recebe um ícone distinto para que seja fácil reconhecê-lo na barra lateral. Desative para manter o círculo simples e escolher os ícones você mesmo."
   },

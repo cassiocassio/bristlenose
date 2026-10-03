@@ -35,6 +35,8 @@ struct AppearanceSettingsView: View {
     @State private var language: String = I18n.resolvedLocale
     @AppStorage(RandomProjectIcon.defaultsKey) private var randomProjectIcons: Bool = true
     @AppStorage("showAnalysisAnimation") private var showAnalysisAnimation: Bool = true
+    /// Mirrors the Welcome window's footer checkbox — one setting, two views.
+    @AppStorage(WelcomeWindow.showOnLaunchKey) private var showWelcomeOnLaunch: Bool = true
     @AppStorage(DiagnosticsPreference.key)
     private var showDiagnosticsMenu: Bool = DiagnosticsPreference.defaultValue
 
@@ -130,6 +132,14 @@ struct AppearanceSettingsView: View {
                 Toggle(isOn: $showAnalysisAnimation) {
                     Text(i18n.t("settings.appearance.animationLegend"))
                     Text(i18n.t("settings.appearance.animationHelp"))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Section {
+                Toggle(isOn: $showWelcomeOnLaunch) {
+                    Text(i18n.t("settings.appearance.welcomeLegend"))
+                    Text(i18n.t("settings.appearance.welcomeHelp"))
                         .foregroundStyle(.secondary)
                 }
             }

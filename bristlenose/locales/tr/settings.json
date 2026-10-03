@@ -21,6 +21,8 @@
     "diagnosticsHelp": "Analizleri incelemek i\u00e7in ara\u00e7lar i\u00e7eren bir Tan\u0131lama men\u00fcs\u00fc ekler. Rapor g\u00f6r\u00fcn\u00fcm\u00fcnde Web Denetleyici'yi de etkinle\u015ftirir.",
     "animationLegend": "Çözümleme sırasında animasyonu göster",
     "animationHelp": "Bir proje çözümlenirken ana pencerede sürü hâlinde uçuşan sözcük animasyonunu oynatır. Bunun yerine sade ilerlemeyi görmek için kapatın.",
+    "welcomeLegend": "Bristlenose a\u00e7\u0131ld\u0131\u011f\u0131nda Ho\u015f Geldiniz penceresini g\u00f6ster",
+    "welcomeHelp": "\u00c7al\u0131\u015fma ara\u00e7lar\u0131, bilimsel arka plan ve bir ipucu i\u00e7eren bir pencere a\u00e7ar.",
     "randomIconsLegend": "Yeni projelere rastgele bir simge ata",
     "randomIconsHelp": "Her yeni proje, kenar çubuğunda kolayca tanınabilmesi için ayırt edici bir simge alır. Sade halkayı korumak ve simgeleri kendiniz seçmek için bunu kapatın.",
     "legend": "Uygulama görünümü",

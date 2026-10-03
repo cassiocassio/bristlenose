@@ -381,8 +381,8 @@ struct ContentView: View {
     }
 
     /// Which set of windows this one is a duplicate of, for titling — keyed on
-    /// the **menu row**, not the lens. Nil on the welcome screen: an unselected
-    /// window shows "Welcome", and two of those are not worth numbering.
+    /// the **menu row**, not the lens. Nil with no project selected: an unselected
+    /// window shows "Bristlenose", and two of those are not worth numbering.
     ///
     /// `countSubtitle` rather than `activeTab`, because Project, Sessions and a
     /// not-yet-reported lens all render the same session count — see
@@ -419,12 +419,16 @@ struct ContentView: View {
     /// target. The **content** gates on the serve; the **window** does not.
     private var windowProject: Project? { selectedProject }
 
-    /// The window's title: the project's name, or "Welcome" with none selected,
+    /// The window's title: the project's name, or "Bristlenose" with none selected,
     /// plus an ordinal when a sibling window already shows the same lens of the
     /// same study (mockup E4 — nine identical Window-menu rows is the case that
     /// earned it).
     private var windowTitle: String {
-        let base = windowProject?.name ?? i18n.t("desktop.welcome.windowTitle")
+        // With no project the window is "Bristlenose", not "Welcome": the Welcome
+        // content has its own window now, "Welcome to Bristlenose", and the two
+        // must not read alike in the Window menu's list. The app name is not
+        // translated, so there is no key.
+        let base = windowProject?.name ?? "Bristlenose"
         return base + WindowRoster.suffix(for: windowRoster.assignments[windowID] ?? 1)
     }
 
@@ -1356,9 +1360,6 @@ struct ContentView: View {
             // panel uses, so it needs a live serve. The entry is only reachable
             // with a project open; this is the belt.
             if serveManager?.runningPort != nil { showingMiroSheet = true }
-        case .showWelcome:
-            // Deselect — the same effect as clicking the sidebar's empty space.
-            selection = []
         case .showSessionsSwitcher:
             sessionsSwitcherRequest += 1
         case .applyDebugFixture(let scenario):
@@ -3290,12 +3291,16 @@ struct ContentView: View {
                 description: Text(i18n.t("desktop.chrome.multipleSelectedHint"))
             )
         } else {
-            // New rotating-slots welcome home (design-welcome-screen.md).
-            WelcomeHomeView(onDropURLs: { urls in
+            // No project selected, or none yet: the drop card alone, centred.
+            // Welcome is its own window since Model 2 (design-welcome-screen.md,
+            // 3 Oct 2026), opened at launch or from Help — never by a deselect.
+            WelcomeDropCard(onDropURLs: { urls in
                 let directories = urls.filter { $0.hasDirectoryPath }
                 let files = urls.filter { !$0.hasDirectoryPath }
                 createProjectFromURLs(directories: directories, files: files)
             })
+            .frame(width: 340)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 

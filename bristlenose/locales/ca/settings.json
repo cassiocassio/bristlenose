@@ -21,6 +21,8 @@
     "diagnosticsHelp": "Afegeix un menú Diagnòstic amb eines per inspeccionar les execucions d'anàlisi. També activa l'Inspector Web a la vista de l'informe.",
     "animationLegend": "Mostra l'animació mentre s'analitza",
     "animationHelp": "Reprodueix una animació de paraules en estol a la finestra principal mentre s'analitza un projecte. Desactiva-ho per veure el progrés sense adornaments.",
+    "welcomeLegend": "Mostra la benvinguda en obrir el Bristlenose",
+    "welcomeHelp": "Obre una finestra amb eines d\u2019estudi, fonaments cient\u00edfics i un consell.",
     "randomIconsLegend": "Assigna una icona aleatòria als projectes nous",
     "randomIconsHelp": "Cada projecte nou rep una icona distintiva perquè sigui fàcil de reconèixer a la barra lateral. Desactiva-ho per mantenir l'anella simple i triar les icones tu mateix.",
     "legend": "Aspecte de l'aplicació",

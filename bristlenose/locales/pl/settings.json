@@ -21,6 +21,8 @@
     "diagnosticsHelp": "Dodaje menu Diagnostyka z narz\u0119dziami do badania przebiegu analiz. W\u0142\u0105cza tak\u017ce inspektora WWW w widoku raportu.",
     "animationLegend": "Pokazuj animację podczas analizy",
     "animationHelp": "Odtwarzaj w oknie głównym animację słów w locie stadnym podczas analizy projektu. Wyłącz ją, aby zamiast tego zobaczyć zwykły postęp.",
+    "welcomeLegend": "Pokazuj powitanie przy otwieraniu Bristlenose",
+    "welcomeHelp": "Otwiera okno z narz\u0119dziami, podstawami naukowymi i wskaz\u00f3wk\u0105.",
     "randomIconsLegend": "Przypisuj losową ikonę nowym projektom",
     "randomIconsHelp": "Każdy nowy projekt otrzymuje charakterystyczną ikonę, aby łatwo było go rozpoznać na pasku bocznym. Wyłącz tę opcję, aby zachować zwykły pierścień i samodzielnie wybierać ikony.",
     "legend": "Wygląd aplikacji",

@@ -21,6 +21,8 @@
     "diagnosticsHelp": "P\u0159id\u00e1 nab\u00eddku Diagnostika s n\u00e1stroji pro zkoum\u00e1n\u00ed pr\u016fb\u011bhu anal\u00fdz. Zapne tak\u00e9 webov\u00fd inspektor v zobrazen\u00ed reportu.",
     "animationLegend": "Zobrazovat animaci během analýzy",
     "animationHelp": "Během analýzy projektu přehrávat v hlavním okně animaci hejna slov. Vypnutím uvidíte místo toho prostý průběh.",
+    "welcomeLegend": "Zobrazit uv\u00edt\u00e1n\u00ed p\u0159i otev\u0159en\u00ed Bristlenose",
+    "welcomeHelp": "Otev\u0159e okno s n\u00e1stroji pro studii, v\u011bdeck\u00fdm pozad\u00edm a tipem.",
     "randomIconsLegend": "P\u0159i\u0159adit nov\u00fdm projekt\u016fm n\u00e1hodnou ikonu",
     "randomIconsHelp": "Ka\u017ed\u00fd nov\u00fd projekt dostane v\u00fdraznou ikonu, tak\u017ee ho v postrann\u00edm panelu snadno pozn\u00e1te. Vypnut\u00edm zachov\u00e1te jednoduch\u00fd krou\u017eek a ikony si zvol\u00edte sami.",
     "legend": "Vzhled aplikace",

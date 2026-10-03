@@ -21,6 +21,8 @@
     "diagnosticsHelp": "F\u00fcgt ein Diagnosemen\u00fc mit Werkzeugen zur Untersuchung von Analysen hinzu. Aktiviert au\u00dferdem den Web-Inspektor in der Berichtsansicht.",
     "animationLegend": "Animation w\u00e4hrend der Analyse anzeigen",
     "animationHelp": "W\u00e4hrend der Analyse eines Projekts eine Wortschwarm-Animation im Hauptfenster abspielen. Schalten Sie sie aus, um stattdessen den einfachen Fortschritt zu sehen.",
+    "welcomeLegend": "Willkommensfenster beim \u00d6ffnen von Bristlenose anzeigen",
+    "welcomeHelp": "\u00d6ffnet ein Fenster mit Studienwerkzeugen, Forschungshintergrund und einem Tipp.",
     "randomIconsLegend": "Neuen Projekten ein zuf\u00e4lliges Symbol zuweisen",
     "randomIconsHelp": "Jedes neue Projekt erh\u00e4lt ein unverwechselbares Symbol, das in der Seitenleiste leicht zu erkennen ist. Deaktivieren Sie diese Option, um den schlichten Ring beizubehalten und Symbole selbst zu w\u00e4hlen.",
     "legend": "Erscheinungsbild",

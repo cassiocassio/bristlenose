@@ -48,7 +48,7 @@ struct WindowCommandTests {
             .addFiles, .renameProject, .renameFolder, .deleteFolder,
             .moveProject(toFolder: nil), .revealTranscripts, .locateProject,
             .stopProject, .removeFromSidebar, .showAIConsent, .showMiro,
-            .showWelcome, .showSessionsSwitcher,
+            .showSessionsSwitcher,
         ]
         for command in needsAWindow {
             #expect(!command.isEnabled(hasKeyWindow: false), "\(command) should dim")

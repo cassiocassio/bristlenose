@@ -1751,7 +1751,7 @@ private struct VideoMenuContent: View {
 private struct HelpMenuContent: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
-    @FocusedValue(\.windowCommands) private var windowCommands
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         // Help, Keyboard Shortcuts, and Acknowledgements open external pages in
@@ -1763,17 +1763,15 @@ private struct HelpMenuContent: View {
         }
         .keyboardShortcut("?", modifiers: .command)
 
-        // Re-openable way back to the app-level Welcome home pane. No shortcut —
-        // it's a rare, unmemorable destination (per the deliberate no-⌘⇧1 call);
-        // discoverability comes from living in Help, not a keybinding. Clears the
-        // project selection; ContentView shows WelcomeHomeView on no-selection.
-        // Reuses the vetted, all-locale `chrome.welcomeTitle` ("Welcome to
-        // Bristlenose") kept from the retired WelcomeView — see
-        // docs/design-welcome-screen.md §Copy & i18n; this is now a live reference.
+        // Opens (or brings forward) the Welcome window — the only opener it has,
+        // because Welcome is help (Model 2, docs/design-welcome-screen.md). No
+        // shortcut: a rare, unmemorable destination (the deliberate no-⌘⇧1 call).
+        // Always enabled — it needs no main window — and it leaves every main
+        // window's selection, and the show-at-launch setting, exactly as they are.
+        // Its label is the window's title, `chrome.welcomeTitle`.
         Button(i18n.t("desktop.chrome.welcomeTitle")) {
-            windowCommands?.perform(.showWelcome)
+            openWindow(id: WelcomeWindow.id)
         }
-        .disabled(!WindowCommand.showWelcome.isEnabled(hasKeyWindow: windowCommands != nil))
 
         Button(i18n.t("desktop.menu.help.keyboardShortcuts")) {
             Self.open("https://bristlenose.app/docs/keyboard-shortcuts.html")

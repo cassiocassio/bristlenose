@@ -708,11 +708,15 @@ private struct SlotRotator: View {
         .background(SwipeCatcher { dir in go(index + dir) })
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
-        // Focusable for the arrow keys, WITH the system focus ring. It was once
-        // hidden with `.focusEffectDisabled()` as intrusive, which left a control
-        // that takes focus and never shows it: a Full Keyboard Access user could
-        // not tell where they were (WCAG 2.4.7). Don't disable it again.
-        .focusable()
+        // Focusable the way a BUTTON is (`.activate`), with the system focus ring.
+        // Plain `.focusable()` made the rotator a text-field-like focus target, so
+        // the Welcome window, opening key, handed it focus at once and a ring sat
+        // round Study tools for every mouse user (owner QA, 3 Oct 2026). With
+        // `.activate` it is reached by keyboard navigation (Tab under Keyboard
+        // navigation / Full Keyboard Access) and shows the ring then — WCAG 2.4.7
+        // still holds — and never takes focus on its own. Don't go back to
+        // `.focusEffectDisabled()`: that hides the ring from the people who need it.
+        .focusable(interactions: .activate)
         .onKeyPress(.leftArrow)  { go(index - 1); return .handled }
         .onKeyPress(.rightArrow) { go(index + 1); return .handled }
         .accessibilityElement(children: .contain)

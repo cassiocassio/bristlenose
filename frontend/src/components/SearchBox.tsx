@@ -23,7 +23,7 @@ import { PersonBadge } from "./PersonBadge";
 import { Tooltip } from "./Tooltip";
 import { getTagBg } from "../utils/colours";
 import { isActiveQuery } from "../utils/searchMatch";
-import { suggestionsToWire, tokensToWire, type WireToken } from "../utils/searchBridge";
+import { spokenRow, suggestionsToWire, tokensToWire, type WireToken } from "../utils/searchBridge";
 import { backspaceAction, highlightedRow, moveHighlight, tokenKey } from "../utils/searchKeys";
 import type { Suggestion } from "../utils/searchSuggest";
 import type { SearchToken } from "../utils/searchTokens";
@@ -87,6 +87,7 @@ export function SearchBox({
     setLocalState(v);
   };
   const inputRef = useRef<HTMLInputElement>(null);
+  const tokensRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const listId = useId();
 
@@ -145,25 +146,48 @@ export function SearchBox({
     return () => document.removeEventListener("mousedown", onMouse);
   }, [menuFor]);
 
-  /** ↓ / ↑ move between the menu's items and wrap; Esc closes it and gives the
-   *  focus back to its chip; Tab closes it. */
+  /** ↓ / ↑ move between the menu's items and wrap, Home / End go to the ends
+   *  (a dimmed meaning is still reached, so it is still heard); Esc closes it
+   *  and gives the focus back to its chip; Tab closes it and moves on from the
+   *  chip. No key reaches the report's shortcuts while the menu has the focus:
+   *  a letter or ↩ here must not star or play the focused quote. */
   function handleMenuKeyDown(e: React.KeyboardEvent<HTMLUListElement>, chip: HTMLElement | null) {
-    const items = Array.from(
-      e.currentTarget.querySelectorAll<HTMLElement>('[role^="menuitem"]:not([aria-disabled="true"])'),
-    );
+    e.stopPropagation();
+    const items = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('[role^="menuitem"]'));
     const at = items.indexOf(document.activeElement as HTMLElement);
-    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    const go = (i: number) => {
       e.preventDefault();
-      const step = e.key === "ArrowDown" ? 1 : -1;
-      items[(((at + step) % items.length) + items.length) % items.length]?.focus();
-    } else if (e.key === "Escape") {
+      items[((i % items.length) + items.length) % items.length]?.focus();
+    };
+    if (e.key === "ArrowDown") go(at + 1);
+    else if (e.key === "ArrowUp") go(at - 1);
+    else if (e.key === "Home") go(0);
+    else if (e.key === "End") go(items.length - 1);
+    else if (e.key === "Escape") {
       e.preventDefault();
-      e.stopPropagation();
       setMenuFor(null);
       chip?.focus();
     } else if (e.key === "Tab") {
+      // Focus the chip first, so the browser's Tab moves on from it rather
+      // than from an item that is about to go.
+      chip?.focus();
       setMenuFor(null);
     }
+  }
+
+  /** A meaning was chosen or the token removed: the menu goes, and the focus
+   *  goes back to the chip — or, the chip being gone, to the next chip, or the
+   *  field. Never to the page. */
+  function closeMenuAfterChoice(index: number, removed: boolean) {
+    setMenuFor(null);
+    const chips = () =>
+      Array.from(tokensRef.current?.querySelectorAll<HTMLElement>(".search-token") ?? []);
+    if (!removed) {
+      chips()[index]?.focus();
+      return;
+    }
+    // The chip goes on the next render; focus after it has.
+    requestAnimationFrame(() => (chips()[index] ?? chips()[index - 1] ?? inputRef.current)?.focus());
   }
 
   function handleToggle() {
@@ -183,6 +207,9 @@ export function SearchBox({
   function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
     const v = e.target.value;
     setLocalValue(v);
+    // Typing into the field keeps it open whatever opened it: the `/` key
+    // focuses it from outside React (useKeyboardShortcuts).
+    setExpanded(true);
     setListDismissed(false);
     setHighlightId(null);
     setSelectedToken(null);
@@ -225,9 +252,23 @@ export function SearchBox({
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     // An input method composing (Japanese, Chinese, Korean) owns these keys.
-    if (e.nativeEvent.isComposing) return;
+    // Safari sends the ↩ that confirms a conversion after compositionend,
+    // with isComposing false and keyCode 229.
+    if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
+    // Within the debounce the rows are still the last query's: what is
+    // highlighted may not match what was typed since. Send the text now and
+    // act on the rows it brings.
+    const stale = localValue !== value;
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-      if (!combo || rows.length === 0) return;
+      if (!combo) return;
+      if (stale) {
+        e.preventDefault();
+        commitNow();
+        setHighlightId(null);
+        setListDismissed(false);
+        return;
+      }
+      if (rows.length === 0) return;
       e.preventDefault();
       if (listOpen) setHighlightId(moveHighlight(highlighted, e.key === "ArrowDown" ? 1 : -1, rowIds));
       else if (localValue.trim() !== "") setListDismissed(false);
@@ -235,8 +276,11 @@ export function SearchBox({
     }
     if (e.key === "Enter") {
       e.preventDefault();
-      if (listOpen && highlighted) choose(highlighted);
-      else commitNow();
+      if (listOpen && highlighted && !stale) choose(highlighted);
+      else {
+        commitNow();
+        setListDismissed(true);
+      }
       return;
     }
     if (e.key === "Backspace" && combo && !e.repeat) {
@@ -320,6 +364,7 @@ export function SearchBox({
         id={optionId(row.id)}
         role="option"
         aria-selected={on}
+        aria-label={spokenRow(row)}
         className={`search-option${on ? " highlighted" : ""}`}
         // Keep the focus in the field: a mousedown would blur it first.
         onMouseDown={(e) => e.preventDefault()}
@@ -353,6 +398,7 @@ export function SearchBox({
           className="search-toggle"
           onClick={handleToggle}
           aria-label={t("search.ariaLabel")}
+          aria-expanded={expanded}
           data-testid={testId ? `${testId}-toggle` : undefined}
         >
           <svg
@@ -372,7 +418,7 @@ export function SearchBox({
       </Tooltip>
       <div className="search-field">
         {tokens.length > 0 && (
-          <div className="search-tokens">
+          <div className="search-tokens" ref={tokensRef}>
             {tokens.map((token, i) => {
               const key = tokenKey(token);
               const wire = wireTokens[i];
@@ -380,13 +426,26 @@ export function SearchBox({
               const open = menuFor === key;
               return (
                 <span key={key} className={`search-token-wrap${open ? " menu-open" : ""}`}>
+                  {/* Named by what it shows — the word and the badge, code
+                      included — so the name spoken is the name seen. */}
                   <button
                     type="button"
+                    id={`${listId}-token-${i}`}
                     className={`search-token${selectedToken === key ? " selected" : ""}`}
                     aria-haspopup="menu"
                     aria-expanded={open}
-                    aria-label={current?.label ?? wire.label}
                     onClick={() => setMenuFor(open ? null : key)}
+                    onKeyDown={(e) => {
+                      // The report's shortcuts act on the focused quote; a key
+                      // pressed on a chip is the chip's. ↓ opens its menu, as a
+                      // menu button does.
+                      if (e.key === "Escape") return;
+                      e.stopPropagation();
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        setMenuFor(key);
+                      }
+                    }}
                     data-testid={testId ? `${testId}-token` : undefined}
                   >
                     {current?.word && <span className="search-token-word">{current.word}</span>}
@@ -411,6 +470,7 @@ export function SearchBox({
                       ref={menuRef}
                       className="search-token-menu"
                       role="menu"
+                      aria-labelledby={`${listId}-token-${i}`}
                       onKeyDown={(e) =>
                         handleMenuKeyDown(e, e.currentTarget.parentElement?.querySelector("button") ?? null)
                       }
@@ -422,20 +482,20 @@ export function SearchBox({
                           role="menuitemradio"
                           aria-checked={m.id === wire.mode}
                           aria-disabled={!m.enabled}
-                          tabIndex={m.enabled ? 0 : -1}
+                          tabIndex={-1}
                           className={[m.id === wire.mode ? "active" : "", m.enabled ? "" : "disabled"]
                             .filter(Boolean)
                             .join(" ")}
                           onClick={() => {
                             if (!m.enabled) return;
                             combo!.onTokenMode(token, m.id);
-                            setMenuFor(null);
+                            closeMenuAfterChoice(i, false);
                           }}
                           onKeyDown={(e) => {
                             if ((e.key === "Enter" || e.key === " ") && m.enabled) {
                               e.preventDefault();
                               combo!.onTokenMode(token, m.id);
-                              setMenuFor(null);
+                              closeMenuAfterChoice(i, false);
                             }
                           }}
                         >
@@ -448,16 +508,16 @@ export function SearchBox({
                       <li role="separator" className="search-token-menu-separator" />
                       <li
                         role="menuitem"
-                        tabIndex={0}
+                        tabIndex={-1}
                         onClick={() => {
                           combo!.onTokenRemove(token);
-                          setMenuFor(null);
+                          closeMenuAfterChoice(i, true);
                         }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
                             combo!.onTokenRemove(token);
-                            setMenuFor(null);
+                            closeMenuAfterChoice(i, true);
                           }
                         }}
                       >
@@ -478,11 +538,16 @@ export function SearchBox({
           className="search-input"
           type="text"
           placeholder={t("search.placeholder")}
+          aria-label={t("search.ariaLabel")}
           autoComplete="off"
           value={localValue}
           onChange={handleInput}
           onKeyDown={handleKeyDown}
-          onFocus={() => setFocused(true)}
+          onFocus={() => {
+            setFocused(true);
+            // Focused is open, however the focus arrived.
+            setExpanded(true);
+          }}
           onBlur={() => {
             setFocused(false);
             setSelectedToken(null);

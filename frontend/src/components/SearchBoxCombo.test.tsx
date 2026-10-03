@@ -29,9 +29,30 @@ function setup(tokens: SearchToken[] = [], value = "") {
   };
   const onChange = vi.fn();
   const onClear = vi.fn();
-  render(<SearchBox value={value} onChange={onChange} onClear={onClear} combo={combo} data-testid="s" />);
+  // The store echoes the committed query back as `value`, as the real one does.
+  function Echoing() {
+    const [v, setV] = useState(value);
+    return (
+      <SearchBox
+        value={v}
+        onChange={(q) => {
+          onChange(q);
+          setV(q);
+        }}
+        onClear={onClear}
+        combo={combo}
+        data-testid="s"
+      />
+    );
+  }
+  render(<Echoing />);
   const input = screen.getByTestId("s-input") as HTMLInputElement;
   return { combo, onChange, onClear, input };
+}
+
+/** Let the debounce send what was typed, so the rows are the query's. */
+function settle() {
+  act(() => vi.advanceTimersByTime(200));
 }
 
 /** Focus and type, as a user does: the list opens only on an edit. */
@@ -67,12 +88,34 @@ describe("the suggestions list", () => {
   it("↓ ↩ chooses a person, which becomes a token and clears the text", () => {
     const { input, combo } = setup();
     type(input, "zo");
+    settle();
     fireEvent.keyDown(input, { key: "ArrowDown" });
     expect(screen.getAllByRole("option")[1]).toHaveAttribute("aria-selected", "true");
     fireEvent.keyDown(input, { key: "Enter" });
     expect(combo.onChoose).toHaveBeenCalledWith("person:p3");
     expect(input.value).toBe("");
     expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
+  it("names each row by its label and count, a person with their code", () => {
+    const { input } = setup();
+    type(input, "zo");
+    expect(screen.getAllByRole("option")[1]).toHaveAttribute("aria-label", "p3 Zoë Ng, 2");
+  });
+
+  it("within the debounce, ↓ sends the text now and ↩ never chooses a row from the last query", () => {
+    const { input, combo, onChange } = setup([], "z");
+    type(input, "zo"); // the rows on screen are still for "z"
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    expect(onChange).toHaveBeenCalledWith("zo");
+    expect(screen.getAllByRole("option")[0]).toHaveAttribute("aria-selected", "true");
+    type(input, "zon");
+    fireEvent.keyDown(input, { key: "ArrowDown" }); // sends "zon"
+    fireEvent.keyDown(input, { key: "ArrowDown" }); // now moves
+    type(input, "zone"); // stale again, with a person highlighted
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(combo.onChoose).not.toHaveBeenCalled();
+    expect(onChange).toHaveBeenLastCalledWith("zone");
   });
 
   it("↩ on the free text commits the query now, without the debounce wait", () => {
@@ -106,8 +149,21 @@ describe("the suggestions list", () => {
     const { input, combo } = setup();
     type(input, "zo");
     fireEvent.keyDown(input, { key: "Enter", isComposing: true });
+    // Safari's confirming ↩ arrives after compositionend, marked only by 229.
+    fireEvent.keyDown(input, { key: "Enter", keyCode: 229 });
     expect(combo.onChoose).not.toHaveBeenCalled();
     expect(screen.getByRole("listbox")).toBeInTheDocument();
+  });
+
+  it("opens the field when it takes the focus, however the focus arrived", () => {
+    // The `/` shortcut focuses the input from outside React; typing must not
+    // then collapse the field under the cursor.
+    setup();
+    const container = screen.getByTestId("s");
+    const input = screen.getByTestId("s-input") as HTMLInputElement;
+    expect(container).not.toHaveClass("expanded");
+    type(input, "zo");
+    expect(container).toHaveClass("expanded");
   });
 });
 
@@ -140,7 +196,8 @@ describe("tokens", () => {
     expect(chips[0]).toHaveTextContent("p3");
     expect(chips[0]).toHaveTextContent("Zoë Ng");
     expect(chips[1]).toHaveTextContent("tagged");
-    expect(chips[1]).toHaveAttribute("aria-label", "Tagged “Zoning”");
+    // Named by what it shows, so a Voice Control user can say the code.
+    expect(chips[0]).not.toHaveAttribute("aria-label");
   });
 
   it("a chip's menu changes the meaning, or removes the token", () => {
@@ -172,10 +229,38 @@ describe("tokens", () => {
     expect(document.activeElement).toBe(within(menu).getByRole("menuitem"));
     fireEvent.keyDown(document.activeElement!, { key: "Enter" });
     expect(combo.onTokenRemove).toHaveBeenCalledWith(tokens[1]);
+    act(() => vi.advanceTimersByTime(20));
+    expect(document.activeElement).not.toBe(document.body); // never dropped to the page
+    fireEvent.click(chip);
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "End" });
+    expect(document.activeElement).toBe(within(screen.getByRole("menu")).getByRole("menuitem"));
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Home" });
+    fireEvent.keyDown(document.activeElement!, { key: "Enter" }); // choose a meaning
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(document.activeElement).toBe(chip);
     fireEvent.click(chip);
     fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
     expect(screen.queryByRole("menu")).toBeNull();
     expect(document.activeElement).toBe(chip);
+  });
+
+  it("keys on a chip or in its menu never reach the report's shortcuts", () => {
+    setup(tokens, "");
+    const seen = vi.fn();
+    document.addEventListener("keydown", seen);
+    try {
+      const chip = screen.getAllByTestId("s-token")[0];
+      fireEvent.keyDown(chip, { key: "Enter" });
+      fireEvent.keyDown(chip, { key: "s" });
+      fireEvent.click(chip);
+      const menu = screen.getByRole("menu");
+      expect(menu).toHaveAttribute("aria-labelledby", chip.id);
+      fireEvent.keyDown(document.activeElement!, { key: "s" });
+      fireEvent.keyDown(document.activeElement!, { key: "Enter" });
+      expect(seen).not.toHaveBeenCalled();
+    } finally {
+      document.removeEventListener("keydown", seen);
+    }
   });
 
   it("⌫ in the empty field selects the last chip, and a second ⌫ removes it", () => {
@@ -188,6 +273,17 @@ describe("tokens", () => {
     expect(combo.onTokenRemove).not.toHaveBeenCalled();
     fireEvent.keyDown(input, { key: "Backspace" });
     expect(combo.onTokenRemove).toHaveBeenCalledWith(tokens[1]);
+  });
+
+  it("removing the last chip from a focused field leaves the field open", () => {
+    const combo = (t: SearchToken[]): SearchCombo => ({
+      tokens: t, suggestions: [], tagColour: () => null,
+      onChoose: vi.fn(), onTokenMode: vi.fn(), onTokenRemove: vi.fn(),
+    });
+    const { rerender } = render(<SearchBox value="" onChange={vi.fn()} combo={combo(tokens)} data-testid="s" />);
+    act(() => (screen.getByTestId("s-input") as HTMLInputElement).focus());
+    rerender(<SearchBox value="" onChange={vi.fn()} combo={combo([])} data-testid="s" />);
+    expect(screen.getByTestId("s")).toHaveClass("expanded");
   });
 
   it("Esc with tokens and no text empties the field", () => {

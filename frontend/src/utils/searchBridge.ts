@@ -103,6 +103,15 @@ function textRowLabel(query: string): { label: string; typed: Array<[number, num
 }
 
 /** The suggestion rows as the native menu draws them. */
+/** What a screen reader hears for a row: the label (a person with their code
+ *  first, as the badge shows it), then the count after a pause. The same
+ *  string the Mac list speaks (`SuggestionLabel.spoken`). */
+export function spokenRow(row: WireSuggestionRow): string {
+  const label =
+    row.kind === "person" && row.code && row.label !== row.code ? `${row.code} ${row.label}` : row.label;
+  return `${label}, ${row.count.toLocaleString()}`;
+}
+
 export function suggestionsToWire(query: string, suggestions: Suggestion[]): WireSuggestions {
   const terms = parseQuery(query);
   const rows = suggestions.map((s): WireSuggestionRow => {

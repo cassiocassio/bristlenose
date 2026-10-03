@@ -2434,7 +2434,7 @@ class Pipeline:
             )
             write_manifest(manifest, output_dir)
 
-            # ── Discussion lens (off by default) ───────────────────────
+            # ── Discussion lens (switch: discussion_lens) ──────────────
             _discussion_elapsed = await self._run_discussion(
                 clean_transcripts, all_quotes, input_dir, output_dir,
                 llm_client, manifest, _prev_manifest,
@@ -3021,7 +3021,7 @@ class Pipeline:
                 _cg_elapsed_a,
             )
 
-            # ── Discussion lens (off by default) ──
+            # ── Discussion lens (switch: discussion_lens) ──
             # `analyze` has no project folder of its own; the guide sits beside
             # the recordings, which is the output folder's parent in the
             # default layout.

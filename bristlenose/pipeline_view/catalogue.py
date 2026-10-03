@@ -138,7 +138,7 @@ class PipelineStageDef(BaseModel):
 
 # ── Backend options (catalogue cells) ───────────────────────────────────────
 
-# Shared by all five LLM stages. v2: each provider carries its own `requires`
+# Shared by all six LLM stages. v2: each provider carries its own `requires`
 # (provider-level eligibility) and `models` (the dispatch unit). Quality is
 # re-keyed to (stage, provider, model) in `_LLM_QUALITY` below.
 _LLM_BACKENDS: list[BackendOption] = [
@@ -418,6 +418,13 @@ STAGES: list[PipelineStageDef] = [
         viable_backends=_LLM_BACKENDS,
     ),
     PipelineStageDef(
+        id="discussion",
+        name="Discussion",
+        kind="llm",
+        notes="Set by your provider choice. Merges the questions asked with your guide.",
+        viable_backends=_LLM_BACKENDS,
+    ),
+    PipelineStageDef(
         id="apple_foundation_models",
         name="Apple Foundation Models",
         kind="apple_fm",
@@ -550,16 +557,16 @@ class QualityRating(BaseModel):
 
 
 # Shared LLM cells, keyed (stage, provider, model). Same (provider, model)
-# keyset across all five LLM stages — `test_quality.py` enforces parity.
+# keyset across all six LLM stages — `test_quality.py` enforces parity.
 # Azure + Apple FM omitted by design: Azure's model is synthesised at render
 # time from settings.azure_deployment (no catalogue model to rate); Apple FM
 # stays untested (renders as ?) until the probe ships. Editorial judgements
 # only; refine from cohort signal as it arrives.
 #
 # Structural stages (speaker_identification, topic_segmentation) rate Local as
-# `good`; synthesis stages (quote_extraction, quote_clustering,
+# `good`; synthesis stages (quote_extraction, quote_clustering, discussion,
 # thematic_grouping) rate it `marginal` — the per-stage variation v2 exists to
-# surface. claude/openai ratings are uniform across all five stages.
+# surface. claude/openai ratings are uniform across all six stages.
 #
 # **Gemini ships unrated (renders as ? untested), and so do Haiku 4.5 and Luna.**
 # The ratings this table used to carry were editorial judgements about specific
@@ -668,6 +675,22 @@ _LLM_QUALITY: dict[tuple[str, str, str], QualityRating] = {
         rating="excellent", source="editorial", recommended=True
     ),
     ("thematic_grouping", "local", "llama3.2:3b"): QualityRating(
+        rating="marginal",
+        note_key="pipeline.quality.local_thematic_grouping_drift",
+        source="community",
+    ),
+    # ── discussion — cross-session synthesis like thematic grouping; the same
+    # editorial class judgement, and the same small-model caution ──
+    ("discussion", "claude", "claude-sonnet-4-6"): QualityRating(
+        rating="excellent", source="editorial", default=True, recommended=True
+    ),
+    ("discussion", "claude", "claude-opus-5"): QualityRating(
+        rating="excellent", source="editorial", recommended=True
+    ),
+    ("discussion", "openai", "gpt-5.6-terra"): QualityRating(
+        rating="excellent", source="editorial", recommended=True
+    ),
+    ("discussion", "local", "llama3.2:3b"): QualityRating(
         rating="marginal",
         note_key="pipeline.quality.local_thematic_grouping_drift",
         source="community",

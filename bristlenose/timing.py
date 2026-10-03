@@ -34,7 +34,7 @@ STAGE_PII = "pii"
 STAGE_TOPICS = "topics"
 STAGE_QUOTES = "quotes"
 STAGE_CLUSTER = "cluster"
-# Conditional: present only when `discussion_lens` (off by default). Several
+# Conditional: present only when `discussion_lens` (on by default). Several
 # calls per run, one of them per session, so it scales like cluster does.
 STAGE_DISCUSSION = "discussion"
 STAGE_RENDER = "render"

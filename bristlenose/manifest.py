@@ -101,7 +101,7 @@ STAGE_PII_REMOVAL = "pii_removal"
 STAGE_TOPIC_SEGMENTATION = "topic_segmentation"
 STAGE_QUOTE_EXTRACTION = "quote_extraction"
 STAGE_CLUSTER_AND_GROUP = "cluster_and_group"
-# Off by default (`discussion_lens`); a run without it writes no record.
+# Switched by `discussion_lens`; a run with it off writes no record.
 STAGE_DISCUSSION = "discussion"
 STAGE_RENDER = "render"
 

@@ -337,7 +337,8 @@ class TestTimingEstimator:
         est = TimingEstimator(key, tmp_path)
         result = est.initial_estimate(10.0, 5)
         assert result is not None
-        # PII and Discussion are conditional and off by default: every OTHER
+        # PII and Discussion are conditional — the estimator counts them only
+        # when told they will run, and this call does not say so: every OTHER
         # stage is in the breakdown, and those two are deliberately not.
         for stage in ALL_STAGES:
             if stage in (STAGE_PII, STAGE_DISCUSSION):

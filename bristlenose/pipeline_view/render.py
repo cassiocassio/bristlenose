@@ -9,7 +9,7 @@ v2: eligibility + quality resolve at **(provider, model)** grain. Each stage's
 `alternatives` is a flat list of `ModelAvailability` — one row per catalogued
 model, plus synthesised rows for runtime-detected models (Azure deployment,
 user-pulled Ollama models, dispatched-but-uncatalogued models). The v1.5
-`llm_summary` dedup is deleted: the five LLM stages no longer share one card,
+`llm_summary` dedup is deleted: the LLM stages no longer share one card,
 because v2 surfaces per-stage quality variation (Local is `good` for
 structural stages, `marginal` for synthesis). Collapse-when-uniform is a pure
 render concern (CLI / React); the payload always carries per-model rows.

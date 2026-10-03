@@ -60,14 +60,14 @@ def test_every_requirement_has_a_translation_key() -> None:
                     )
 
 
-def test_five_llm_stages_share_identical_viable_backends() -> None:
+def test_six_llm_stages_share_identical_viable_backends() -> None:
     """If someone hand-edits one LLM stage's options, this catches the drift.
 
     Load-bearing: dedup at code level relies on the shared `_LLM_BACKENDS`
     constant; the render layer's collapse-when-uniform relies on this equality.
     """
     llm_stages = [s for s in STAGES if s.kind == "llm"]
-    assert len(llm_stages) == 5, f"expected 5 LLM stages, found {len(llm_stages)}"
+    assert len(llm_stages) == 6, f"expected 6 LLM stages, found {len(llm_stages)}"
     first_ids = [o.id for o in llm_stages[0].viable_backends]
     for stage in llm_stages[1:]:
         ids = [o.id for o in stage.viable_backends]

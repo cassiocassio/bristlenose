@@ -245,10 +245,12 @@ class BristlenoseSettings(BaseSettings):
 
     # Discussion lens — the guide merged with the questions actually asked, and
     # every quote placed under the question that drew it
-    # (docs/design-discussion-lens-plan.md). OFF by default: the stage costs
-    # extra LLM calls per run and has been scored on synthetic sessions only.
-    # Opt in with BRISTLENOSE_DISCUSSION_LENS=1.
-    discussion_lens: bool = False
+    # (docs/design-discussion-lens-plan.md). ON by default since 3 Oct 2026, when
+    # the lens shipped for beta: it costs about $0.06 a session per full run
+    # (cached on later runs while quotes, guide and transcripts are unchanged).
+    # The switch has inverted — BRISTLENOSE_DISCUSSION_LENS=0 now turns it OFF;
+    # it was the opt-in while the stage was built.
+    discussion_lens: bool = True
 
     # Miro
     miro_access_token: str = ""

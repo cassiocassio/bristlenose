@@ -244,14 +244,20 @@ struct WelcomeHomeView: View {
     }
 
     // Golden spiral: major square first, alternating axis, curling inward.
+    // VoiceOver reads by position unless told otherwise, and the spiral's positions
+    // don't run in curriculum order. Higher priority reads first. A footer control,
+    // if this pane ever gains one, takes 0 so it reads last.
     private var spiral: some View {
-        GoldenSplit(.horizontal) { studyToolsCell } minor: {
-            GoldenSplit(.vertical) { scienceCell } minor: {
-                GoldenSplit(.horizontal) { tipCell } minor: {
-                    GoldenSplit(.vertical) { aiCell } minor: { delightCell }
+        GoldenSplit(.horizontal) { studyToolsCell.welcomeReadingOrder(5) } minor: {
+            GoldenSplit(.vertical) { scienceCell.welcomeReadingOrder(4) } minor: {
+                GoldenSplit(.horizontal) { tipCell.welcomeReadingOrder(3) } minor: {
+                    GoldenSplit(.vertical) { aiCell.welcomeReadingOrder(2) } minor: {
+                        delightCell.accessibilitySortPriority(1)   // a Button: stays an element, not a container
+                    }
                 }
             }
         }
+        .accessibilityElement(children: .contain)   // the cells are siblings here, so the priorities compare
     }
 
     // MARK: cells (tints resolve per cell via WelcomeCellTint — v1 ramp by default,
@@ -534,6 +540,11 @@ private func joinSentences(_ head: String, _ tail: String) -> String {
 // MARK: - Baton wiring for a cell
 
 private extension View {
+    /// One cell = one VoiceOver group, placed in the curriculum order by `rank`.
+    func welcomeReadingOrder(_ rank: Double) -> some View {
+        accessibilityElement(children: .contain).accessibilitySortPriority(rank)
+    }
+
     /// Everything a welcome cell owes the baton: whether it may animate, and how its
     /// illustration says it has played out. One modifier so a new cell cannot wire half
     /// of it — the environment default for `welcomeAnimationActive` is TRUE, so a cell
@@ -600,8 +611,11 @@ private struct SlotRotator: View {
         .background(SwipeCatcher { dir in go(index + dir) })
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
+        // Focusable for the arrow keys, WITH the system focus ring. It was once
+        // hidden with `.focusEffectDisabled()` as intrusive, which left a control
+        // that takes focus and never shows it: a Full Keyboard Access user could
+        // not tell where they were (WCAG 2.4.7). Don't disable it again.
         .focusable()
-        .focusEffectDisabled()   // keep keyboard focus (arrow keys), drop the intrusive focus ring
         .onKeyPress(.leftArrow)  { go(index - 1); return .handled }
         .onKeyPress(.rightArrow) { go(index + 1); return .handled }
         .accessibilityElement(children: .contain)

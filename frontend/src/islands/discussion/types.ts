@@ -1,8 +1,9 @@
 /**
  * Discussion lens — data contract, version 1.
  *
- * The shape `experiments/discussion-lens/spike.py` writes (`run_once`), and the
- * shape the Phase 3 API will serve. One record per project: the guide as written
+ * The shape the lens renders. The server sends the stage's record
+ * (`bristlenose/discussion/models.py`) with speaker codes only;
+ * `loadDiscussion` joins names from `/sessions` to build this. One record per project: the guide as written
  * (`spine`), the merged record of what was planned and what was asked
  * (`sections`), every moderator turn, and every quote with the question it
  * answers and the section it was routed to.
@@ -19,6 +20,8 @@ export interface DiscussionSession {
   participants: DiscussionParticipant[];
   duration: string;    // "07:39"
   seconds: number;
+  /** Why a session contributes nothing — never read as "no questions asked". */
+  state?: "ok" | "failed" | "no_moderator" | "moderator_unreliable";
 }
 
 /** Where an item was asked: one per moderator turn. */
@@ -86,6 +89,8 @@ export interface DiscussionQuote {
 export interface DiscussionData {
   version: 1;
   guide: boolean;
+  /** A guide that is there but went unread, and why ("" = read, or none). */
+  guide_problem?: string;
   sessions: DiscussionSession[];
   spine: SpineSection[];
   sections: DiscussionSection[];

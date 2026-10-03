@@ -1,7 +1,8 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import fixture from "./fixture.json";
 import { DiscussionLens, DiscussionView } from "./DiscussionLens";
+import { joinNames } from "./loadDiscussion";
 import { resetLensState } from "./lensState";
 import type { DiscussionData } from "./types";
 
@@ -230,12 +231,12 @@ describe("review fixes, 3 Oct 2026", () => {
     expect((row as HTMLElement).dataset.item).toBe("");
   });
 
-  it("offers to add or replace the guide with the house small button, and says what the preview does", () => {
+  it("offers to add or replace the guide with the house small button, and says where the guide goes", () => {
     const { unmount } = render(<DiscussionView data={{ ...data, guide: false, spine: [] }} />);
     const add = screen.getByRole("button", { name: "Add your guide…" });
     expect(add).toHaveClass("bn-btn", "bn-btn-secondary", "bn-btn-sm");
     fireEvent.click(add);
-    expect(screen.getByRole("status").textContent).toMatch(/preview the guide is fixed/);
+    expect(screen.getByRole("status").textContent).toMatch(/folder named “Discussion guide”/);
     unmount();
     render(<DiscussionView data={data} />);
     expect(screen.queryByRole("button", { name: /your guide…/ })).toBeNull(); // Normalised, with a guide
@@ -328,9 +329,80 @@ describe("review fixes, 3 Oct 2026", () => {
   });
 });
 
+// The record as the server sends it: codes only. Built from the synthetic
+// fixture so the shape matches the lens's own data.
+const record = {
+  ...data,
+  sessions: data.sessions.map((s) => ({ ...s, participants: s.participants.map((p) => p.code) })),
+  quotes: data.quotes.map(({ key: _key, name: _name, ...q }) => q),
+};
+const sessionList = data.sessions.map((s) => ({
+  session_id: s.id,
+  session_number: s.number,
+  session_date: null,
+  speakers: s.participants.map((p) => ({ speaker_code: p.code, name: p.name, role: "participant" })),
+}));
+
+const api = vi.hoisted(() => ({ apiGet: vi.fn(), getSessionList: vi.fn() }));
+vi.mock("../../utils/api", () => api);
+
+function serve(status: string, rec: unknown) {
+  api.apiGet.mockResolvedValue({ status, record: rec });
+  api.getSessionList.mockResolvedValue(sessionList);
+}
+
 describe("DiscussionLens", () => {
-  it("loads the data and renders the lens", async () => {
+  it("loads the record, joins names from the sessions, and renders the lens", async () => {
+    serve("ready", record);
     render(<DiscussionLens />);
     expect(await screen.findByTestId("discussion-lens")).toBeInTheDocument();
+    expect(api.apiGet).toHaveBeenCalledWith("/discussion");
+  });
+
+  it.each([
+    ["not_run", null, /no discussion for this project yet/],
+    ["stale", null, /quotes have changed since the discussion was built/],
+    ["failed", record, /could not be built for this project/],
+  ])("says what a %s record means and what to do", async (status, rec, text) => {
+    serve(status, rec);
+    render(<DiscussionLens />);
+    expect(await screen.findByText(text)).toBeInTheDocument();
+    expect(screen.queryByTestId("discussion-lens")).toBeNull();
+  });
+
+  it("a server failure is said, not shown as an empty lens", async () => {
+    api.apiGet.mockRejectedValue(new Error("GET /discussion 500"));
+    api.getSessionList.mockResolvedValue(sessionList);
+    render(<DiscussionLens />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("could not be loaded");
+  });
+});
+
+describe("joinNames", () => {
+  it("names each participant and quote from its own session, by code", () => {
+    const joined = joinNames(record as never, sessionList);
+    expect(joined.sessions[0].participants).toEqual(data.sessions[0].participants);
+    expect(joined.quotes[0].name).toBe(data.quotes[0].name);
+  });
+
+  it("leaves a name the sessions list blanked (an anonymised export) blank", () => {
+    const blank = sessionList.map((s) => ({ ...s, speakers: s.speakers.map((sp) => ({ ...sp, name: "" })) }));
+    const joined = joinNames(record as never, blank);
+    expect(joined.sessions.every((s) => s.participants.every((p) => p.name === ""))).toBe(true);
+    expect(joined.quotes.every((q) => q.name === "")).toBe(true);
+  });
+});
+
+describe("degraded records", () => {
+  it("a guide that is there but unread says why", () => {
+    render(<DiscussionView data={{ ...data, guide: false, spine: [], guide_problem: "unsupported_format" }} />);
+    expect(screen.getByText(/format Bristlenose can’t read/)).toBeInTheDocument();
+  });
+
+  it("a session that could not be read says so, never 'no questions'", () => {
+    const sessions = data.sessions.map((s, i) => (i === 0 ? { ...s, state: "failed" as const } : s));
+    render(<DiscussionView data={{ ...data, sessions }} />);
+    expect(screen.getByText(/This session could not be read/)).toBeInTheDocument();
+    expect(screen.queryByText("No questions found in this session")).toBeNull();
   });
 });

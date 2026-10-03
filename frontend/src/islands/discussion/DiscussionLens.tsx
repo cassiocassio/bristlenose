@@ -17,10 +17,13 @@
  */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import i18n from "../../i18n";
 import { Badge } from "../../components/Badge";
 import { PersonBadge } from "../../components/PersonBadge";
 import { SectionHeading } from "../../components/SectionHeading";
 import { announce } from "../../utils/announce";
+import { isExportMode } from "../../utils/exportData";
 import { MIN_WIDTH, RESIZE_STEP } from "./split";
 import {
   capNames,
@@ -38,63 +41,73 @@ import {
   type NavRow,
   type WireEnd,
 } from "./model";
-import { loadDiscussion } from "./loadDiscussion";
+import { loadDiscussion, type DiscussionLoad } from "./loadDiscussion";
 import { readLensState, writeLensState } from "./lensState";
 import type { DiscussionData, DiscussionQuote, DiscussionSession, DiscussionTurn } from "./types";
 import "./discussion.css";
 
 /** English until Phase 6 moves these to locale keys. */
+// The lens's strings, from `common.discussion.*`. Getters read the active
+// language when called; each component also calls useTranslation(), so a
+// language change re-renders them (frontend/CLAUDE.md: i18n.t outside hooks).
+const d = (key: string, vars?: Record<string, unknown>) => i18n.t(`discussion.${key}`, vars);
 const S = {
-  title: "Discussion",
-  show: "Show",
-  planned: "Your guide",
-  merged: "Normalised questions",
-  plannedTip: "Your discussion guide, as written",
-  mergedTip: "What was asked in every session, merged with your guide",
-  guideView: "Show your guide as",
-  summary: "Summary",
-  original: "Original",
-  sessions: "Sessions",
-  navigator: "Discussion guide",
-  instruction: "instruction",
-  standalone: "Standalone",
-  session: (n: number) => `Session ${n}`,
-  stats: (d: string, q: number, n: number) =>
-    `${d} · ${q} ${q === 1 ? "question" : "questions"} · ${n} ${n === 1 ? "quote" : "quotes"}`,
-  noAnswers: "No quotes from this question",
-  before: "Before the first question",
-  noQuestions: "No questions found in this session",
-  noSessions: "No sessions to show yet.",
-  unclassified: "not classified",
-  others: (first: string, n: number) => `${first} and ${n} ${n === 1 ? "other" : "others"}`,
-  askedIn: (n: number) => `Asked in ${n} sessions — show a session`,
-  sessionLabel: (n: number, names: string) => `#${n} ${names}`,
-  resize: "Resize the discussion guide",
-  resizeText: (pct: number) => `Guide ${pct}% of width`,
-  loading: "Loading the discussion…",
-  failed: "The discussion could not be loaded.",
-  markPlanned: "planned",
-  markBoth: "planned and asked",
-  markHollow: "planned, never asked",
-  markPlus: "not in the guide",
+  get title() { return d("title"); },
+  get show() { return d("show"); },
+  get planned() { return d("planned"); },
+  get merged() { return d("merged"); },
+  get plannedTip() { return d("plannedTip"); },
+  get mergedTip() { return d("mergedTip"); },
+  get guideView() { return d("guideView"); },
+  get summary() { return d("summary"); },
+  get original() { return d("original"); },
+  get sessions() { return d("sessions"); },
+  get navigator() { return d("navigator"); },
+  get instruction() { return d("instruction"); },
+  get standalone() { return d("standalone"); },
+  session: (n: number) => d("session", { n }),
+  stats: (duration: string, q: number, n: number) =>
+    d("stats", { duration, questions: d("questionCount", { count: q }), quotes: d("quoteCount", { count: n }) }),
+  get noAnswers() { return d("noAnswers"); },
+  get before() { return d("before"); },
+  get noQuestions() { return d("noQuestions"); },
+  get noSessions() { return d("noSessions"); },
+  get unclassified() { return d("unclassified"); },
+  others: (first: string, n: number) => d("others", { first, count: n }),
+  askedIn: (n: number) => d("askedIn", { count: n }),
+  sessionLabel: (n: number, names: string) => d("sessionLabel", { n, names }),
+  get resize() { return d("resize"); },
+  resizeText: (pct: number) => d("resizeText", { pct }),
+  get loading() { return d("loading"); },
+  get failed() { return d("failed"); },
+  get markPlanned() { return d("markPlanned"); },
+  get markBoth() { return d("markBoth"); },
+  get markHollow() { return d("markHollow"); },
+  get markPlus() { return d("markPlus"); },
   // Hover meanings for the marks — the house "? cursor + title" pattern
   // (Signals' metric labels and intensity dots).
-  addGuide: "Add your guide…",
-  replaceGuide: "Replace your guide…",
-  guidePreviewNote: "In this preview the guide is fixed — adding your own arrives with the analysis step.",
-  key: "Key",
-  keyBoth: "Asked as planned",
-  keyHollow: "Planned, never asked",
-  keyPlus: "Not in your guide",
-  keyGrey: "Grey: not asked in this session",
-  tipPlanned: "In your guide",
-  tipBoth: "In your guide, and asked",
-  tipHollow: "In your guide, never asked in any session",
-  tipPlus: "Not in your guide — asked as it came up",
-  notHere: (n: number) => `, not asked in session ${n}`,
-  announceSession: (n: number, q: number) => `Session ${n}, ${q} ${q === 1 ? "question" : "questions"}`,
-  announceFocus: (text: string) => `Focused on ${text}`,
-  announceClear: "Focus cleared",
+  get addGuide() { return d("addGuide"); },
+  get replaceGuide() { return d("replaceGuide"); },
+  get guideHowTo() { return d("guideHowTo"); },
+  get key() { return d("key"); },
+  get keyBoth() { return d("keyBoth"); },
+  get keyHollow() { return d("keyHollow"); },
+  get keyPlus() { return d("keyPlus"); },
+  get keyGrey() { return d("keyGrey"); },
+  get tipPlanned() { return d("tipPlanned"); },
+  get tipBoth() { return d("tipBoth"); },
+  get tipHollow() { return d("tipHollow"); },
+  get tipPlus() { return d("tipPlus"); },
+  notHere: (n: number) => d("notHere", { n }),
+  announceSession: (n: number, q: number) =>
+    d("announceSession", { n, questions: d("questionCount", { count: q }) }),
+  announceFocus: (text: string) => d("announceFocus", { text }),
+  get announceClear() { return d("announceClear"); },
+  get notRun() { return d("notRun"); },
+  get stale() { return d("stale"); },
+  get notBuilt() { return d("notBuilt"); },
+  guideProblem: (code: string) => d(`guideProblem.${code}`),
+  sessionState: (state: string) => d(`sessionState.${state}`),
 };
 
 /** Intl.ListFormat is ES2021; the app's `lib` is ES2020, and every browser and
@@ -142,12 +155,13 @@ function onRadioKeys<T extends string>(e: React.KeyboardEvent, values: T[], curr
 }
 
 export function DiscussionLens() {
-  const [data, setData] = useState<DiscussionData | null>(null);
+  useTranslation();
+  const [load, setLoad] = useState<DiscussionLoad | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     let live = true;
     loadDiscussion().then(
-      (d) => live && setData(d),
+      (l) => live && setLoad(l),
       () => live && setFailed(true),
     );
     return () => {
@@ -163,12 +177,18 @@ export function DiscussionLens() {
     </section>
   );
   if (failed) return shell(<p className="bn-empty-state" role="alert">{S.failed}</p>);
-  if (!data) return shell(<p className="bn-empty-state" aria-busy="true">{S.loading}</p>);
+  if (!load) return shell(<p className="bn-empty-state" aria-busy="true">{S.loading}</p>);
+  // Each state says what it is and what to do; none reads as "no questions".
+  if (load.status === "stale") return shell(<p className="bn-empty-state">{S.stale}</p>);
+  if (load.status === "failed") return shell(<p className="bn-empty-state">{S.notBuilt}</p>);
+  const data = load.data;
+  if (!data) return shell(<p className="bn-empty-state">{S.notRun}</p>);
   if (!data.sessions.length) return shell(<p className="bn-empty-state">{S.noSessions}</p>);
   return <DiscussionView data={data} />;
 }
 
 export function DiscussionView({ data }: { data: DiscussionData }) {
+  useTranslation();
   const order = useMemo(() => data.sessions.map((s) => s.id), [data]);
   const saved = useMemo(() => readLensState(), []);
   const [mode, setMode] = useState<Mode>(data.guide ? saved.mode : "merged");
@@ -588,16 +608,20 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
             {rows.map(row)}
           </div>
         ))}
-        {(mode === "planned" || !data.guide) && (
+        {data.guide_problem && (
+          // A guide that is there but went unread says so — never "no guide".
+          <p className="dl-before" role="status">{S.guideProblem(data.guide_problem)}</p>
+        )}
+        {(mode === "planned" || !data.guide) && !isExportMode() && (
           // The house small secondary button at the foot of a navigator — the
-          // Codebook navigator's Browse Library is the precedent. Preview only: no
-          // picker yet (the app's web view has none, and no stage reads a guide
-          // until Phase 2), so it says so rather than pretending (plan §4).
+          // Codebook navigator's Browse Library is the precedent. There is no
+          // picker in the web view, so it tells the researcher where the guide
+          // goes; the Mac's native picker is later work (plan §4).
           <>
             <button type="button" className="bn-btn bn-btn-secondary bn-btn-sm" onClick={() => setGuideNote(true)}>
               {data.guide ? S.replaceGuide : S.addGuide}
             </button>
-            {guideNote && <p className="dl-before" role="status">{S.guidePreviewNote}</p>}
+            {guideNote && <p className="dl-before" role="status">{S.guideHowTo}</p>}
           </>
         )}
         {mode === "merged" && (
@@ -654,7 +678,11 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
               ))}
               <span className="dl-stats">{S.stats(current.duration, stats.questions, stats.quotes)}</span>
             </div>
-            {column.groups.length === 0 && <p className="dl-before">{S.noQuestions}</p>}
+            {current.state && current.state !== "ok" ? (
+              <p className="dl-before" role="note">{S.sessionState(current.state)}</p>
+            ) : (
+              column.groups.length === 0 && <p className="dl-before">{S.noQuestions}</p>
+            )}
             {column.before.length > 0 && (
               <div className="dl-group">
                 {column.groups.length > 0 && <div className="dl-before">{S.before}</div>}

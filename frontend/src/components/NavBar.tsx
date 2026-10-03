@@ -24,6 +24,7 @@ const TAB_ROUTES = [
   { to: "/report/quotes/", key: "nav.quotes" },
   { to: "/report/codebook/", key: "nav.codebook" },
   { to: "/report/signals/", key: "nav.signals" },
+  { to: "/report/discussion/", key: "nav.discussion" },
 ] as const;
 
 /** Dev mode — same signal AppLayout uses for the responsive playground. */
@@ -55,13 +56,6 @@ export function NavBar({ onExportReport, onSendToMiro, onSettings, onHelp }: Nav
         // precedent as the responsive playground).
         <NavLink to="/report/specimen" className={tabClassName}>
           Specimen
-        </NavLink>
-      )}
-      {IS_DEV && (
-        // Discussion lens — dev only while it is built (synthetic data, English
-        // copy until Phase 6 of docs/design-discussion-lens-plan.md).
-        <NavLink to="/report/discussion" className={tabClassName}>
-          Discussion
         </NavLink>
       )}
       <div className="bn-tab-spacer" />

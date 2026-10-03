@@ -73,11 +73,11 @@ describe("NavBar", () => {
     // DEV=true — so exclude them as a *class* rather than by name. Naming one
     // meant the second dev lens (Codebook v2) broke a test about how nav links
     // are marked up, which is not what it is asserting.
-    const DEV_ONLY = ["Specimen", "Codebook v2", "Discussion"];
+    const DEV_ONLY = ["Specimen", "Codebook v2"];
     const links = screen
       .getAllByRole("link")
       .filter((a) => !DEV_ONLY.includes(a.textContent ?? ""));
-    expect(links).toHaveLength(5);
+    expect(links).toHaveLength(6);
   });
 
   it("nav is a <nav> element (not role=tablist)", () => {

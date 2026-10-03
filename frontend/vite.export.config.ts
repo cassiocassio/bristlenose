@@ -30,10 +30,6 @@ export default defineConfig({
       // every one of them into the single chunk. That was 1,802 KB of a 3.38 MB
       // report. See docs/design-export-locale.md.
       "./localeLoader": path.resolve(__dirname, "src/i18n/localeLoader.export.ts"),
-      // The dev-gated Discussion lens: its route is registered, but the export
-      // inlines every dynamic import, which would put the lens and its synthetic
-      // fixture into every exported report. Same mechanism, same fix.
-      "./pages/DiscussionTab": path.resolve(__dirname, "src/pages/DiscussionTab.export.tsx"),
     },
   },
   build: {

@@ -56,9 +56,8 @@ export const routes = [
       // beside its AppKit twin). Same terms as Specimen: always registered,
       // lazy, reachable only from the Diagnostics menu.
       { path: "picker-specimen", element: <PickerSpecimenTab /> },
-      // Discussion lens — dev-gated while it is built (NavBar link under IS_DEV,
-      // docs/design-discussion-lens-plan.md Phase 4). Route always registered,
-      // like Specimen: it reads a synthetic fixture and lazy-loads only when visited.
+      // Discussion lens — the researcher's guide merged with what was asked
+      // (docs/design-discussion-lens-plan.md). Lazy-loaded when visited.
       { path: "discussion", element: <DiscussionTab /> },
       { path: "about", element: <Navigate to="/report/" replace /> },
       // Catch-all: unknown sub-paths redirect to project tab

@@ -285,7 +285,8 @@
         "quotes": "Etsitään sitaatteja",
         "cluster": "Ryhmitellään teemoja",
         "render": "Rakennetaan raporttia",
-        "pii": "Poistetaan henkil\u00f6tietoja"
+        "pii": "Poistetaan henkil\u00f6tietoja",
+        "discussion": "Yhdistet\u00e4\u00e4n sitaatteja kysymyksiin"
       }
     },
     "folderNamePlaceholder": "Kansion nimi",

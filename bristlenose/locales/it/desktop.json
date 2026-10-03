@@ -285,7 +285,8 @@
         "quotes": "Individuazione delle citazioni",
         "cluster": "Raggruppamento dei temi",
         "render": "Generazione del report",
-        "pii": "Rimozione delle informazioni personali"
+        "pii": "Rimozione delle informazioni personali",
+        "discussion": "Associazione delle citazioni alle domande"
       }
     },
     "folderNamePlaceholder": "Nome della cartella",

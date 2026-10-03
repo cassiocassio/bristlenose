@@ -286,7 +286,8 @@
         "quotes": "Finding quotes",
         "cluster": "Grouping themes",
         "render": "Building report",
-        "pii": "Redacting personal information"
+        "pii": "Redacting personal information",
+        "discussion": "Matching quotes to questions"
       }
     },
     "folderNamePlaceholder": "Folder name",

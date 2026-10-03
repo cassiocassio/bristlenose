@@ -565,6 +565,7 @@
  "desktop.chrome.pipeline.resuming": "c494e3",
  "desktop.chrome.pipeline.sessionsCount": "98a39d",
  "desktop.chrome.pipeline.stage.cluster": "7efe5c",
+ "desktop.chrome.pipeline.stage.discussion": "752035",
  "desktop.chrome.pipeline.stage.pii": "565e3e",
  "desktop.chrome.pipeline.stage.quotes": "69fa25",
  "desktop.chrome.pipeline.stage.render": "7d2e77",

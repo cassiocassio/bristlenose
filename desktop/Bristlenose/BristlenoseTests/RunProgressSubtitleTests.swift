@@ -123,10 +123,10 @@ import Testing
         #expect(compose(stage: "topics", complete: 3, total: 8) == "Finding topics · 3 of 8")
     }
 
-    @Test func nonSessionStagesAreClusterAndRender() {
+    @Test func nonSessionStagesAreClusterDiscussionAndRender() {
         // Pins the suppression set. If Python ever emits a live count for one of
         // these, remove it here (and vice-versa for a new count-less stage).
-        #expect(RunProgressSubtitle.nonSessionStages == ["cluster", "render"])
+        #expect(RunProgressSubtitle.nonSessionStages == ["cluster", "discussion", "render"])
     }
 
     // MARK: - Edge cases
@@ -162,7 +162,8 @@ import Testing
     /// that shipped the first cut: the manifest ids didn't match the wire ids).
     @Test func knownStagesMatchEstimatorVocabulary() {
         #expect(RunProgressSubtitle.knownStages
-            == ["transcribe", "speakers", "pii", "topics", "quotes", "cluster", "render"])
+            == ["transcribe", "speakers", "pii", "topics", "quotes", "cluster", "discussion",
+                "render"])
     }
 
     @Test func zeroTotalOmitsCount() {

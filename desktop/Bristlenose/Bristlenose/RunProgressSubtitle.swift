@@ -21,14 +21,16 @@ enum RunProgressSubtitle {
     /// (NOT the finer `manifest.py STAGE_ORDER`: the estimator folds ingest /
     /// extract-audio / merge into its neighbours and never emits them as a
     /// progress stage; `pii` IS emitted, conditionally, since 12 Sep 2026 —
-    /// before that the ring froze through redaction). Verified against real
+    /// before that the ring froze through redaction — and so is `discussion`,
+    /// only when the Discussion lens is switched on). Verified against real
     /// event logs — events say
     /// `speakers` / `topics`, not `identify_speakers` / `topic_segmentation`.
     /// The verb for each is localised via `desktop.chrome.pipeline.stage.<id>`.
     /// An id outside this set yields no verb: the guard stops an unexpected id
     /// from rendering as a raw key. Keep in sync with `timing.py ALL_STAGES`.
     static let knownStages: Set<String> = [
-        "transcribe", "speakers", "pii", "topics", "quotes", "cluster", "render",
+        "transcribe", "speakers", "pii", "topics", "quotes", "cluster", "discussion",
+        "render",
     ]
 
     /// Localisation key for a stage verb, or nil when the id is unknown/absent.
@@ -37,8 +39,9 @@ enum RunProgressSubtitle {
         return "desktop.chrome.pipeline.stage.\(stage)"
     }
 
-    /// Stages that are a single cross-session call and carry no per-session
-    /// fraction: theming/cluster (s10/s11) and render (s12).
+    /// Stages that carry no per-session fraction: theming/cluster (s10/s11),
+    /// the Discussion stage (its per-session calls emit no count) and render
+    /// (s12).
     ///
     /// **Why suppression is needed at all.** `RunProgressMath.apply` overwrites
     /// the session pair only on an event that *carries* it, so whatever the last
@@ -61,7 +64,7 @@ enum RunProgressSubtitle {
     /// this display, which never names one; do not build a "now processing X"
     /// on top of it. And the denominator is the **remaining** work on a
     /// resumed run, with `sessions_cached` carrying the rest.
-    static let nonSessionStages: Set<String> = ["cluster", "render"]
+    static let nonSessionStages: Set<String> = ["cluster", "discussion", "render"]
 
     /// Localised "~N min left" / "<1 min left", or nil when there's no usable
     /// estimate. Minute granularity (not seconds) so the text doesn't jitter at
@@ -100,7 +103,7 @@ enum RunProgressSubtitle {
         // The detail markers (per-session fraction, ETA) that trail the verb.
         var detail: [String] = []
         // Suppress the "N of M" for stages that carry no live per-session count
-        // (cluster/render) — the value there is a stale carry-over from the last
+        // (cluster/discussion/render) — the value there is a stale carry-over from the last
         // per-session stage, not this stage's progress.
         let suppressCount = stage.map(nonSessionStages.contains) ?? false
         if let complete = sessionsComplete, let total = sessionsTotal, total > 0,

@@ -93,3 +93,49 @@ def test_ingest_never_reads_the_guide_as_a_session(tmp_path):
     found = discover_files(tmp_path, skipped)
     assert [f.path.name for f in found] == ["interview.vtt"]
     assert skipped == []
+
+
+# ── timing and progress ──────────────────────────────────────────────────────
+
+
+def _estimator(tmp_path):
+    from bristlenose.timing import TimingEstimator, WelfordStat
+
+    est = TimingEstimator("h", tmp_path)
+    est._profile = {s: WelfordStat(mean=10.0, n=5) for s in ("cluster", "discussion", "render")}
+    return est
+
+
+def test_the_estimate_counts_the_stage_only_when_it_will_run(tmp_path):
+    off = _estimator(tmp_path).initial_estimate(0, 3)
+    on = _estimator(tmp_path).initial_estimate(0, 3, discussion_enabled=True)
+    assert "discussion" not in off.breakdown
+    assert on.breakdown["discussion"] == 30.0
+
+
+def test_a_stage_that_is_off_is_never_remaining(tmp_path):
+    est = _estimator(tmp_path)
+    est.initial_estimate(0, 3)
+    remaining = est.stage_completed("cluster", 30.0)
+    assert "discussion" not in remaining.breakdown
+
+
+def test_the_stage_announces_itself_fresh_and_cached(tmp_path):
+    write_guide(tmp_path)
+    out = tmp_path / "bristlenose-output"
+    first = create_manifest("p", "0")
+    transcripts, quotes = two_sessions()
+
+    def run(prev):
+        pipeline = Pipeline(load_settings(discussion_lens=True))
+        seen: list = []
+        pipeline.set_progress_sink(lambda **f: seen.append(f.get("stage")))
+        elapsed = asyncio.run(pipeline._run_discussion(
+            transcripts, quotes, tmp_path, out, FakeClient(), first if prev is None else
+            create_manifest("p", "0"), prev))
+        return seen, elapsed
+
+    seen, elapsed = run(None)
+    assert "discussion" in seen and elapsed is not None  # a fresh run is timed
+    seen, elapsed = run(first)
+    assert "discussion" in seen and elapsed is None  # cached: announced, not timed

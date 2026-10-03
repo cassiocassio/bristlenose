@@ -285,7 +285,8 @@
         "quotes": "Extraction des citations",
         "cluster": "Regroupement des th\u00e8mes",
         "render": "Cr\u00e9ation du rapport",
-        "pii": "Suppression des informations personnelles"
+        "pii": "Suppression des informations personnelles",
+        "discussion": "Rattachement des citations aux questions"
       }
     },
     "folderNamePlaceholder": "Nom du dossier",

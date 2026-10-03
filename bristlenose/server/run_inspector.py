@@ -83,6 +83,7 @@ _PROGRESS_STAGE_TO_MANIFEST = {
     "topics": "topic_segmentation",
     "quotes": "quote_extraction",
     "cluster": "cluster_and_group",
+    "discussion": "discussion",
     "render": "render",
 }
 

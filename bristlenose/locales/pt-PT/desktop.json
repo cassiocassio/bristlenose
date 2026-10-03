@@ -285,7 +285,8 @@
         "quotes": "A encontrar citações",
         "cluster": "A agrupar temas",
         "render": "A criar relatório",
-        "pii": "A remover informa\u00e7\u00f5es pessoais"
+        "pii": "A remover informa\u00e7\u00f5es pessoais",
+        "discussion": "A associar cita\u00e7\u00f5es \u00e0s perguntas"
       }
     },
     "folderNamePlaceholder": "Nome da pasta",

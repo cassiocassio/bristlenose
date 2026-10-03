@@ -285,7 +285,8 @@
         "quotes": "Hittar citat",
         "cluster": "Grupperar teman",
         "render": "Bygger rapport",
-        "pii": "Tar bort personuppgifter"
+        "pii": "Tar bort personuppgifter",
+        "discussion": "Kopplar citat till frågor"
       }
     },
     "folderNamePlaceholder": "Mappnamn",

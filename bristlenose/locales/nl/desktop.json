@@ -285,7 +285,8 @@
         "quotes": "Citaten zoeken",
         "cluster": "Thema's groeperen",
         "render": "Rapport bouwen",
-        "pii": "Persoonsgegevens verwijderen"
+        "pii": "Persoonsgegevens verwijderen",
+        "discussion": "Citaten aan vragen koppelen"
       }
     },
     "folderNamePlaceholder": "Mapnaam",

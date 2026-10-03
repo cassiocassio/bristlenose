@@ -34,6 +34,9 @@ STAGE_PII = "pii"
 STAGE_TOPICS = "topics"
 STAGE_QUOTES = "quotes"
 STAGE_CLUSTER = "cluster"
+# Conditional: present only when `discussion_lens` (off by default). Several
+# calls per run, one of them per session, so it scales like cluster does.
+STAGE_DISCUSSION = "discussion"
 STAGE_RENDER = "render"
 
 # Stages driven by session count (1 LLM call per session).
@@ -47,6 +50,7 @@ ALL_STAGES = (
     STAGE_TOPICS,
     STAGE_QUOTES,
     STAGE_CLUSTER,
+    STAGE_DISCUSSION,
     STAGE_RENDER,
 )
 
@@ -232,6 +236,7 @@ class TimingEstimator:
         # Set by initial_estimate(); read by both loops below so a disabled PII
         # stage is neither predicted nor counted as "remaining" for ever.
         self._pii_enabled = False
+        self._discussion_enabled = False
         # Input sizes set by caller after ingest.
         self.audio_minutes: float = 0.0
         self.session_count: int = 0
@@ -287,11 +292,13 @@ class TimingEstimator:
         *,
         skip_transcription: bool = False,
         pii_enabled: bool = False,
+        discussion_enabled: bool = False,
     ) -> Estimate | None:
         """Compute upfront estimate after ingest. Returns None if no history."""
         self.audio_minutes = audio_minutes
         self.session_count = session_count
         self._pii_enabled = pii_enabled
+        self._discussion_enabled = discussion_enabled
 
         if not self.has_history():
             return None
@@ -304,6 +311,8 @@ class TimingEstimator:
             if skip_transcription and stage == STAGE_TRANSCRIBE:
                 continue
             if stage == STAGE_PII and not pii_enabled:
+                continue
+            if stage == STAGE_DISCUSSION and not discussion_enabled:
                 continue
             secs, sd = self._estimate_stage(stage)
             total += secs
@@ -339,6 +348,8 @@ class TimingEstimator:
                 continue
             if s == STAGE_PII and not self._pii_enabled:
                 continue  # never runs this run — not "remaining", just absent
+            if s == STAGE_DISCUSSION and not self._discussion_enabled:
+                continue
             secs, sd = self._estimate_stage(s)
             remaining_total += secs
             remaining_var += sd ** 2

@@ -285,7 +285,8 @@
         "quotes": "S'estan cercant les cites",
         "cluster": "S'estan agrupant els temes",
         "render": "S'està generant l'informe",
-        "pii": "S'est\u00e0 suprimint la informaci\u00f3 personal"
+        "pii": "S'est\u00e0 suprimint la informaci\u00f3 personal",
+        "discussion": "S'estan relacionant les cites amb les preguntes"
       }
     },
     "folderNamePlaceholder": "Nom de la carpeta",

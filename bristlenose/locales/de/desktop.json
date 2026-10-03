@@ -285,7 +285,8 @@
         "quotes": "Zitate werden gesucht",
         "cluster": "Themen werden gruppiert",
         "render": "Bericht wird erstellt",
-        "pii": "Personenbezogene Daten werden entfernt"
+        "pii": "Personenbezogene Daten werden entfernt",
+        "discussion": "Zitate werden Fragen zugeordnet"
       }
     },
     "folderNamePlaceholder": "Ordnername",

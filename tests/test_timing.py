@@ -10,6 +10,7 @@ from bristlenose.timing import (
     _SESSION_STAGES,
     ALL_STAGES,
     STAGE_CLUSTER,
+    STAGE_DISCUSSION,
     STAGE_PII,
     STAGE_QUOTES,
     STAGE_RENDER,
@@ -336,10 +337,10 @@ class TestTimingEstimator:
         est = TimingEstimator(key, tmp_path)
         result = est.initial_estimate(10.0, 5)
         assert result is not None
-        # PII is conditional and off by default: every OTHER stage is in the
-        # breakdown, and pii is deliberately not.
+        # PII and Discussion are conditional and off by default: every OTHER
+        # stage is in the breakdown, and those two are deliberately not.
         for stage in ALL_STAGES:
-            if stage == STAGE_PII:
+            if stage in (STAGE_PII, STAGE_DISCUSSION):
                 assert stage not in result.breakdown
             else:
                 assert stage in result.breakdown

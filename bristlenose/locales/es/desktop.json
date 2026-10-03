@@ -285,7 +285,8 @@
         "quotes": "Buscando citas",
         "cluster": "Agrupando temas",
         "render": "Generando informe",
-        "pii": "Eliminando informaci\u00f3n personal"
+        "pii": "Eliminando informaci\u00f3n personal",
+        "discussion": "Relacionando citas con preguntas"
       }
     },
     "folderNamePlaceholder": "Nombre de la carpeta",

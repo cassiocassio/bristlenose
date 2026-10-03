@@ -285,7 +285,8 @@
         "quotes": "Alıntılar bulunuyor",
         "cluster": "Temalar gruplanıyor",
         "render": "Rapor oluşturuluyor",
-        "pii": "Ki\u015fisel bilgiler kald\u0131r\u0131l\u0131yor"
+        "pii": "Ki\u015fisel bilgiler kald\u0131r\u0131l\u0131yor",
+        "discussion": "Al\u0131nt\u0131lar sorularla e\u015fle\u015ftiriliyor"
       }
     },
     "folderNamePlaceholder": "Klasör adı",

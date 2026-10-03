@@ -490,13 +490,19 @@ until Phase 5.
      manifest records: only a failed call is FAILED (and reruns the stage);
      `no_moderator` / `moderator_unreliable` are findings, recorded complete.
    - Registered: manifest `STAGE_ORDER`, `bristlenose status` (shown only where a
-     run recorded it), run-inspector label (`is_llm`), `s11c` per-session pricing,
-     the hand-kept prompt / boundary / language test lists.
-   - **Not yet registered, so silent with the flag on:** `timing.py` (the
-     estimate omits the stage and no progress verb is emitted — the Mac shows the
-     previous stage's verb while it runs), cohort baselines, the pipeline-view
-     catalogue and its contract fixture, Swift `RunProgressSubtitle`, and the 21
-     locale stage names. All are owed before the flag can default on.
+     run recorded it), run-inspector label (`is_llm`) and progress mapping, `s11c`
+     per-session pricing, the hand-kept prompt / boundary / language test lists.
+     Timing: `discussion` in `ALL_STAGES`, skipped in the estimate and the
+     remaining time when the flag is off (as PII is), sized by session count,
+     with its actual recorded for Welford on a fresh run. Progress: the stage
+     announces itself on entry, cached or fresh, and the Mac shows "Matching
+     quotes to questions" (all 21 locales) with no session count, since its
+     per-session calls emit none (`nonSessionStages`).
+   - **Not yet registered, so silent with the flag on:** cohort baselines (the
+     pre-run cost forecast omits the stage) and the pipeline-view catalogue
+     with its contract fixture (`bristlenose pipeline` does not list it). The
+     Mac never sets the flag, so the Discussion preview reads only the fixture.
+     All are owed before the flag can default on.
    - The four spike prompts in `llm/prompts/` (`parse-discussion-guide` etc.)
      are **not** archived: `scripts/spike_discussion_routing.py` still loads them.
    - The guide folder name, `Discussion guide`, is provisional and lives only in

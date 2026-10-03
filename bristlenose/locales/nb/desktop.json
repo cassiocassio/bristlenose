@@ -285,7 +285,8 @@
         "quotes": "Finner sitater",
         "cluster": "Grupperer temaer",
         "render": "Bygger rapport",
-        "pii": "Fjerner personopplysninger"
+        "pii": "Fjerner personopplysninger",
+        "discussion": "Knytter sitater til spørsmål"
       }
     },
     "folderNamePlaceholder": "Mappenavn",

@@ -874,7 +874,7 @@ class Pipeline:
         llm_client: LLMClient | None,
         manifest: PipelineManifest | None,
         prev_manifest: PipelineManifest | None,
-    ) -> None:
+    ) -> float | None:
         """The Discussion lens's stage, after themes and before render.
 
         Off unless ``discussion_lens`` is set — and then truly off: no file is
@@ -882,13 +882,17 @@ class Pipeline:
         run; a failure is recorded on the lens's own record (plan §9.A) and
         not in the run summary. Nothing in this process reads its output —
         serve does — so a cache hit has nothing to load.
+
+        Returns the seconds a fresh run took, for the timing actuals, or None
+        when it did not run (off, cached, or failed before finishing).
         """
         if not self.settings.discussion_lens:
-            return
+            return None
         import time
 
         from bristlenose.discussion.guide import NO_GUIDE_SHA, find_guide
         from bristlenose.discussion.stage import quotes_sha, run_discussion
+        from bristlenose.timing import STAGE_DISCUSSION as _T_STAGE_DISCUSSION
 
         path = output_dir / ".bristlenose" / "intermediate" / "discussion.json"
         guide = find_guide(project_dir)
@@ -899,13 +903,15 @@ class Pipeline:
         if _is_stage_verified(
             prev_manifest, STAGE_DISCUSSION, [path], current_input_hashes=input_hashes,
         ):
+            self._emit_stage_entry(_T_STAGE_DISCUSSION)
             _print_cached_step("Placed quotes under the questions asked")
-            return
+            return None
 
         # A record built from other quotes must not outlive this attempt.
         path.unlink(missing_ok=True)
         if manifest is not None:
             mark_stage_running(manifest, STAGE_DISCUSSION)
+        self._emit_stage_entry(_T_STAGE_DISCUSSION)
         t0 = time.perf_counter()
         try:
             from bristlenose.llm.client import LLMClient
@@ -915,7 +921,7 @@ class Pipeline:
         except Exception as exc:  # noqa: BLE001 — optional stage: never abandons the run
             logger.warning("discussion stage failed: %s", type(exc).__name__)
             _print_warn_step("Discussion lens not built", time.perf_counter() - t0)
-            return
+            return None
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(record.model_dump_json(indent=2), encoding="utf-8")
         elapsed = time.perf_counter() - t0
@@ -943,6 +949,8 @@ class Pipeline:
             _print_warn_step(message + " · some sessions not read", elapsed)
         else:
             _print_warn_step("Discussion lens not built", elapsed)
+        self._emit_remaining(_T_STAGE_DISCUSSION, elapsed)
+        return elapsed
 
     async def run(self, input_dir: Path, output_dir: Path) -> PipelineResult:
         """Run the full pipeline: ingest → transcribe → analyse → output.
@@ -1070,6 +1078,7 @@ class Pipeline:
                     total_audio_mins, len(sessions),
                     skip_transcription=self.settings.skip_transcription,
                     pii_enabled=self.settings.pii_enabled,
+                    discussion_enabled=self.settings.discussion_lens,
                 )
                 if _est is not None:
                     self._emit(PipelineEvent(
@@ -2387,10 +2396,16 @@ class Pipeline:
             write_manifest(manifest, output_dir)
 
             # ── Discussion lens (off by default) ───────────────────────
-            await self._run_discussion(
+            _discussion_elapsed = await self._run_discussion(
                 clean_transcripts, all_quotes, input_dir, output_dir,
                 llm_client, manifest, _prev_manifest,
             )
+            if _discussion_elapsed is not None:
+                from bristlenose.timing import STAGE_DISCUSSION as _T_STAGE_DISCUSSION
+
+                _stage_actuals[_T_STAGE_DISCUSSION] = StageActual(
+                    elapsed=_discussion_elapsed, input_size=_n_sessions,
+                )
 
             # ── People file ───────────────────────────────────────────
             status.update("[dim]Updating people file...[/dim]")

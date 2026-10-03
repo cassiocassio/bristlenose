@@ -39,6 +39,7 @@ from bristlenose.server.routes.codebook_builder import (
 )
 from bristlenose.server.routes.dashboard import router as dashboard_router
 from bristlenose.server.routes.data import router as data_router
+from bristlenose.server.routes.discussion import router as discussion_router
 from bristlenose.server.routes.doctor import router as doctor_router
 from bristlenose.server.routes.export import router as export_router
 from bristlenose.server.routes.health import router as health_router
@@ -238,6 +239,7 @@ def create_app(
     app.include_router(quotes_export_router)
     app.include_router(runs_router)
     app.include_router(sessions_router)
+    app.include_router(discussion_router)
     app.include_router(quotes_router)
     app.include_router(transcript_router)
     app.include_router(data_router)

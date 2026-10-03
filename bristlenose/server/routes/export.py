@@ -60,6 +60,7 @@ EMBED_PATH_TEMPLATES: frozenset[str] = frozenset(
         "/projects/{project_id}/hidden-tag-groups",
         "/projects/{project_id}/transcripts/{session_id}",
         "/projects/{project_id}/quotes/{dom_id}/moderator-question",
+        "/projects/{project_id}/discussion",
     }
 )
 
@@ -200,6 +201,19 @@ def _anonymise_data(endpoints: dict[str, Any]) -> None:
                 sess["source_filename"] = _neutralise_filename(
                     sid, sess.get("source_filename", "")
                 )
+
+    # Discussion: codes only, no names (names come from /sessions, blanked
+    # above). The guide is the researcher's document, not evidence: keep only
+    # the lines that were asked, so its never-asked lines and planned-only
+    # items leave with the anonymised report (plan §9.C).
+    disc = (endpoints.get("/discussion") or {}).get("record")
+    if isinstance(disc, dict):
+        asked = {it.get("id") for sec in disc.get("sections", [])
+                 for it in sec.get("items", []) if it.get("source") == "both"}
+        for sec in disc.get("spine", []):
+            sec["items"] = [it for it in sec.get("items", []) if it.get("id") in asked]
+        for sec in disc.get("sections", []):
+            sec["items"] = [it for it in sec.get("items", []) if it.get("source") != "planned"]
 
     # Project info (/info): project_name, session_count, participant_count are
     # fine — no PII.
@@ -399,6 +413,7 @@ def export_report(
         get_hidden_tag_groups as _get_hidden_tag_groups_handler,
     )
     from bristlenose.server.routes.data import get_people as _get_people_handler
+    from bristlenose.server.routes.discussion import get_discussion_payload
     from bristlenose.server.routes.quotes import _quote_dom_id
     from bristlenose.server.routes.quotes import (
         get_moderator_question as _get_moderator_question_handler,
@@ -436,6 +451,12 @@ def export_report(
         sessions = _get_sessions_handler(project_id, db=db)
     finally:
         db.close()
+
+    disc_db = request.app.state.db_factory()
+    try:
+        discussion = get_discussion_payload(disc_db, project_id, request.app.state.project_dir)
+    finally:
+        disc_db.close()
 
     # Sentiment analysis
     sentiment = _get_sentiment_analysis_handler(project_id, request, top_n=20)
@@ -500,6 +521,7 @@ def export_report(
         "/signals/codebooks": jsonable_encoder(codebook_analysis),
         "/framework-states": jsonable_encoder(framework_states),
         "/hidden-tag-groups": jsonable_encoder(hidden_tag_groups),
+        "/discussion": jsonable_encoder(discussion),
     }
     for sid, tx in transcripts.items():
         endpoints[f"/transcripts/{sid}"] = jsonable_encoder(tx)

@@ -127,21 +127,21 @@ The tag inspector keeps `sidebar.right`, deliberately not a tag glyph, because t
 
 **Narrow windows:** rely on the system overflow; never hand-roll a More menu. The actions capsule folds into the `»` chevron, Export included, since it is part of the capsule, until the capsule is just `»`. Search stays: it shrinks to a magnifier button on its own and expands in place when focused.
 
-### 4.4 Search — *rev 3, 3 Oct 2026: the native field*
-**Decided (not yet built):** replace the hand-rolled `QuotesSearchToolbarControl` capsule with SwiftUI's native **`.searchable`** toolbar field, placed as its own item at the far right (§4.3). Why:
+### 4.4 Search — *rev 3, 3 Oct 2026*
+**Native `.searchable` was decided in the morning and REJECTED in the afternoon, by measurement.** A spike attached it to the detail column (a zero-size carrier in `.background`, so the detail's type never changed). It placed the field correctly, never remounted the web view, and gave the **detail column a hard minimum width** — 938 pt, the window's width at the moment the projects column collapsed — which `NSSplitView` honoured by overflow: the projects column pushed off the window's left edge, exactly the failure `DetailFloor` exists to prevent (`docs/sidebar-column-diagnosis.md`). `main` at the same widths was clean. The field's placement is a contract with the split view we cannot see or override, so **`.searchable` is not used on the detail column**, now or later.
+
+**What ships instead:** the existing `QuotesSearchToolbarControl` (magnifier → expanding field), moved out of the actions capsule into its own glass at the far right (`ToolbarSpacer(.fixed)` on macOS 26+; together on 15), with its grey `.quaternary` fill removed so the system glass is the only chrome, and shown on all four searchable lenses (inert off Quotes). Toolbar-only; no column geometry is touched. The original native-field rationale follows, kept because it still describes the look being aimed at:
 - **The look.** Today's capsule draws its own `.quaternary` fill, and macOS 26 wraps it in the shared glass capsule with Export and the lens buttons, so it reads as a dirty grey pill inside a glass pill. The system field is the clean, light glass that NetNewsWire and Photos get, and it picks up whatever sits behind it.
-- **The behaviour.** The native field collapses to a magnifier and expands when focused.
+- **The behaviour.** The native field collapses to a magnifier and expands when focused — the hand-rolled control already does this.
 
 The wiring stays as it is today:
 - typing is debounced 150 ms, then sent with `setQuotesSearch`;
 - a query pushed from the store is mirrored into the field;
-- ⌘F focuses the field (`requestSearchFocus`), via `.searchFocused`, which needs macOS 15.0, our floor.
-
-`searchToolbarBehavior(.minimize)` stays macOS-26-gated.
+- ⌘F focuses the field (`requestSearchFocus`).
 
 **By lens, today:**
 - **Quotes:** live.
-- **Sessions, Codebook, Signals:** the field is present but does not respond yet, and its placeholder stays "Search". This replaces the disabled `SearchComingSoonButton`; the owner accepted it on 3 Oct 2026 because multi-lens search is next. An interim placeholder ("Search isn't available in this view yet", the deleted button's tooltip) was proposed in the plan review and **rejected the same day**: alpha, no interim redesign. The key `desktop.toolbar.searchComingSoon` is therefore deleted with `searchClear` and `searchShortcut`, which the orphan-key gate requires once their readers go.
+- **Sessions, Codebook, Signals:** the control is present but does not respond yet, and its placeholder stays "Search". This replaces the disabled `SearchComingSoonButton`; the owner accepted it on 3 Oct 2026 because multi-lens search is next. An interim placeholder ("Search isn't available in this view yet", the deleted button's tooltip) was proposed in the plan review and **rejected the same day**: alpha, no interim redesign. Only `desktop.toolbar.searchComingSoon` loses its reader and is deleted (`searchClear` stays read by the control).
 - **Project:** no search, unchanged. It gets one when project-wide search (⌥⌘F) ships.
 
 ### 4.5 Title — *trued 3 Oct 2026*
@@ -192,14 +192,14 @@ Per the test review, §6's appearance concerns are **taste the cohort and the de
 Lens rows are **named `View` structs** (`LensRow`), not inline closures (diffing identity). Subtitle updates fire on **stage-boundary events**, not sub-second ticks (verify `RunProgressSubtitle` isn't already churning before adding a throttle). Confirm "lens" stays a **code-internal** term (the product says "tabs"; a user-facing "lens" string would need a `glossary.md` entry).
 
 ## 7. Open decisions
-1. ~~Native search migration~~ — **decided 3 Oct 2026: native `.searchable`** (§4.4).
+1. ~~Native search migration~~ — **decided 3 Oct 2026, then reversed by the spike the same day: NOT `.searchable`; the existing control, own capsule, no grey fill** (§4.4).
 2. ~~The `+⌄` click behaviour~~ — **decided: a plain menu** (§3.3). Its placement inside the AppKit sidebar is a build check.
 3. ~~The empty project's button~~ — **decided: Choose Interviews…**, with a picker that accepts files and folders (§3.3).
 
 **Decided (rev 3, 3 Oct 2026):**
 - New Project / New Folder live in a `+⌄` in the sidebar's toolbar, with the sidebar toggle against the traffic lights (§3.3).
 - The trailing toolbar is one actions capsule, with Export first, then Search on its own at the far right (§4.3).
-- Search is the native `.searchable` field (§4.4).
+- Search is the existing control in its own capsule, grey fill removed; native `.searchable` was spiked and rejected the same day — it gives the detail column a minimum width (§4.4).
 
 **Decided (rev 2):** floor **Sequoia 15.0** for coverage + adopt-latest-with-graceful-degradation (§0); Export = visible toolbar menu, Rename/Move/Show → context menu + menu bar not the toolbar (§4.2); inspectors = **spatial split**, tag inspector keeps `sidebar.right` (§4.3); New Project = in-list `+` row + `⌘N` (§3.3); Sessions = `person.2`, **Project = `target` kept** (rings echo the project-row `circle` — "the circle come alive") (§5); selection = separate `LensRail` (lens-as-mode), the `List` left untouched, dimmed-until-project (§3.1 — the SwiftUI build deliberately does *not* add a `.lens(Tab)` case; that one-List fold happened later in the AppKit `NSOutlineView` rewrite). **Parked:** the `3×3`/`2×2` grid-density clash (heatmap feature + icon need redesign).
 

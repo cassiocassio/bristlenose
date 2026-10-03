@@ -161,7 +161,9 @@ h2 .flag{ font:500 10.5px var(--mono); letter-spacing:.06em; text-transform:uppe
 
 /* narrow reflow — PROPOSAL (panel 4) */
 .stack{ position:absolute; left:0; right:0; top:0; bottom:48px; overflow:hidden; padding:20px 20px 0; display:flex; flex-direction:column; gap:8px; }
-.stack .cell{ flex:none; }
+.stack > .cell{ flex:none; }
+.stack.scrolled{ justify-content:flex-end; padding-bottom:8px; }
+.stack.scrolled + .scrollbar{ top:auto; bottom:56px; }
 .wbody:has(.stack){ border-bottom:none; }
 .stack + .scrollbar{ position:absolute; right:4px; top:22px; width:5px; height:38%; border-radius:3px; background:light-dark(rgba(0,0,0,.28),rgba(255,255,255,.3)); }
 .wbody:has(.stack) .foot{ background:var(--detail-bg); left:0; right:0; bottom:0; padding:12px 20px 16px; border-top:.5px solid var(--separator); }
@@ -302,7 +304,7 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
 </div>
 
 <div class="shot" style="margin-top:22px">
-  <div class="shot-bar"><span><b>3c · Settings ▸ Appearance, the same setting mirrored</b> (existing sections abridged)</span><span class="new">NEW COPY: legend + help (dashed row) · help line as the owner shortened it</span></div>
+  <div class="shot-bar"><span><b>3c · Settings ▸ Appearance, the same setting mirrored</b> (existing sections abridged)</span><span class="new">NEW COPY: legend + help (dashed row) · help line approved</span></div>
   <div class="scale"><div class="settings" data-w="640">
     <div class="stb">
       <div class="lights"><i></i><i></i><i></i></div>
@@ -312,32 +314,35 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
     <div class="form">
       <div class="sec"><div class="frow"><span class="lab">Application appearance</span><span class="popup">Use system appearance</span></div></div>
       <div class="sec"><div class="frow"><span class="lab">Colour palette<span class="help">Recolours the whole app. Edo uses warm washi paper and Prussian-blue ink.</span></span><span class="popup">Default</span></div></div>
-      <div class="sec"><div class="frow newrow"><span class="lab">Show Welcome when Bristlenose opens<span class="help">Study tools, scientific background and a tip, shown in the main window when no project is selected.</span></span><span class="sw"></span></div></div>
+      <div class="sec"><div class="frow newrow"><span class="lab">Show Welcome when Bristlenose opens<span class="help">Opens a window of study tools, scientific background and a tip.</span></span><span class="sw"></span></div></div>
       <div class="sec"><div class="frow"><span class="lab">Show animation while analysing<span class="help">Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.</span></span><span class="sw"></span></div></div>
     </div>
   </div></div>
 </div>
 <div class="comm">
-  <p><b>Decided:</b> the row exists. It is the same setting as the footer checkbox, drawn in the pane's own idiom as a grouped-form <code>Toggle</code>, which renders as a switch, next to its nearest sibling "Show animation while analysing". The help line is the one you shortened, drawn verbatim.</p>
-  <p><span class="con">Check:</span> that line was written for Model 1. Under Model 2, "shown in the main window when no project is selected" is no longer true: Welcome is its own window and opens at launch. One candidate, owner to choose: "Opens a window of study tools, scientific background and a tip."</p>
+  <p><b>Decided:</b> the row exists. It is the same setting as the footer checkbox, drawn in the pane's own idiom as a grouped-form <code>Toggle</code>, which renders as a switch, next to its nearest sibling "Show animation while analysing". <b>Help line, decided:</b> "Opens a window of study tools, scientific background and a tip." It replaces the Model 1 line, which described Welcome as appearing in the main window.</p>
 </div>
 
 <!-- ───────────────────────── 4 ───────────────────────── -->
-<h2><span class="n">4</span>Resized narrow: the cells stack</h2>
-<div class="row" style="grid-template-columns:1.9fr 1fr">
+<h2><span class="n">4</span>Resized to its minimum width: Study tools moves on top</h2>
+<div class="row" style="grid-template-columns:2.4fr 1fr 1fr">
   <div class="shot">
     <div class="shot-bar"><span><b>4a · natural size</b> (opening frame)</span><span>as 3a</span></div>
     <div class="scale"><div data-wwin='{"key":true,"foot":"on"}'></div></div>
   </div>
   <div class="shot">
-    <div class="shot-bar"><span><b>4b · dragged narrow</b> (420 pt)</span><span>proposal · scrolls</span></div>
+    <div class="shot-bar"><span><b>4b · minimum width</b> (≈327 pt)</span><span>top</span></div>
     <div class="scale"><div data-wwin='{"key":true,"foot":"on","narrow":true}'></div></div>
+  </div>
+  <div class="shot">
+    <div class="shot-bar"><span><b>4c · same, scrolled to the end</b></span><span>rest of spiral unchanged</span></div>
+    <div class="scale"><div data-wwin='{"key":true,"foot":"on","narrow":true,"scrolled":true}'></div></div>
   </div>
 </div>
 <div class="comm">
-  <p>Below a breakpoint, the spiral gives up its φ geometry and the cells stack in spiral order: Study tools, Scientific background, Tip, AI, then the privacy card. Each cell keeps its tint and its large/small treatment and takes its natural height. The column scrolls, and the footer checkbox stays pinned at the bottom. Fonts stay at their semantic sizes. Nothing scales down. This is the same rule the spec already sets ("never squish the architecture"), applied by switching the layout instead of shrinking it.</p>
-  <p><span class="pro">For:</span> the window behaves like a normal Mac window: it is resizable and has a sensible minimum (about 360 pt is enough for one cell's copy), and it never shrinks content below its designed size. A researcher can park it as a narrow strip beside the main window on a laptop, which means a laptop user can keep it beside the main window as well.</p>
-  <p><span class="con">Against:</span> two layouts to build and test instead of one. The baton, which passes the animation along the spiral, now needs an order for the stack too. <b>Decided:</b> reading order, like a comic strip: left to right, then top to bottom. In the single column that means straight down. In any in-between layout with two columns it means across each row, then down. Where the breakpoint goes, and whether there is an in-between step (two columns), is undecided. <span class="con">Also:</span> this is the first change to the spiral's own layout that the mockup proposes, and only below the natural size.</p>
+  <p><b>Decided: one reflow step, no more.</b> The window's minimum width is the Scientific background cell's natural width plus the 20 pt margins, about 327 pt (derived, not measured). Below the natural size only the <i>outermost</i> golden split turns from side by side to stacked: Study tools moves on top at the same width, and the rest of the spiral sits underneath at its natural geometry. The window cannot get narrow enough for anything inside that block to move, so AI never wraps under Tip. The column scrolls and the footer checkbox stays pinned. Fonts stay at their semantic sizes and nothing scales down, which is the spec's "never squish the architecture" rule, kept by moving one cell rather than shrinking any.</p>
+  <p><b>Baton order, decided:</b> comic-strip reading order, left to right and then top to bottom. Stacked, that is Study tools first and then the rest of the spiral in its usual order. At the natural size it is unchanged.</p>
+  <p><span class="pro">For:</span> a normal resizable Mac window with a real minimum, one extra layout state rather than a family of them, and a narrow strip that a laptop user can keep beside the main window. <span class="con">Cost:</span> this changes spec §2's "does not reflow" rule, but only below the natural size, and only by flipping one split.</p>
 </div>
 
 <!-- ───────────────────────── 5 ───────────────────────── -->
@@ -408,7 +413,7 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
     <tr><td>Bristlenose (main window title, no selection)</td><td>app name, not a key</td><td>replaces <code>desktop.welcome.windowTitle</code> at <code>ContentView.swift:427</code>, which then has no caller and can be removed from all locales</td></tr>
     <tr><td>Projects</td><td>shipped</td><td><code>desktop.chrome.projects</code></td></tr>
     <tr><td>Show Welcome when Bristlenose opens</td><td><b>new</b></td><td>Welcome window footer + Appearance legend</td></tr>
-    <tr><td>Study tools, scientific background and a tip, shown in the main window when no project is selected.</td><td><b>new</b>, owner-shortened (see 3c)</td><td>Appearance help line</td></tr>
+    <tr><td>Opens a window of study tools, scientific background and a tip.</td><td><b>new</b>, approved</td><td>Appearance help line</td></tr>
     <tr><td>Minimize · Zoom · Fill · Center · Bring All to Front …</td><td>AppKit's</td><td>standard Window menu, system-localised</td></tr>
   </table>
   <p style="margin-top:8px">Two new keys, which go into all 21 full locales. <code>zh-Hant-HK</code> inherits from <code>zh-Hant</code>. Spiral copy is unchanged.</p>
@@ -430,12 +435,12 @@ th{ font-weight:600; color:var(--page-muted); font-size:11px; text-transform:upp
 
 <h2><span class="n">✓</span>Decided</h2>
 <div class="comm">
-  <p><b>Model 2</b>: Welcome is its own window, the spiral as shipped minus the drop card. <b>Checkbox</b>: "Show Welcome when Bristlenose opens". <b>Opens</b> only at launch, never on deselect. <b>First open</b>: centred over the main window, key (panel 1). <b>Later opens</b>: the frame the researcher left it in. <b>Resizable</b>: reflows narrow (panel 4b), and the baton follows comic-strip reading order (left to right, top to bottom). <b>Ticking or unticking</b> never closes the window and governs the next launch only. <b>The AI-consent sheet</b> stays modal on the main window and is met once Welcome is moved aside. <b>Rotator visits</b> are invisible in v1. <b>No drop target in Welcome</b>: dropping lives in the main window's empty states, which show the existing drop card, unchanged and centred, with nothing added. <b>Main window title</b> with no project selected: "Bristlenose". <b>One setting, two views:</b> the footer checkbox and the Settings&nbsp;▸ Appearance switch (panel 3c) are the same setting. Help&nbsp;▸ Welcome opens the window <i>without</i> changing the setting, and the box shows its current state. Ticking it in either place turns it back on. <b>Reopen</b> via Help&nbsp;▸ Welcome to Bristlenose only. <b>Full screen</b> gets no special treatment.</p>
+  <p><b>Model 2</b>: Welcome is its own window, the spiral as shipped minus the drop card. <b>Checkbox</b>: "Show Welcome when Bristlenose opens". <b>Opens</b> only at launch, never on deselect. <b>First open</b>: centred over the main window, key (panel 1). <b>Later opens</b>: the frame the researcher left it in. <b>Resizable</b> down to a minimum width equal to the Scientific background cell plus margins. Below the natural size only the outermost split flips, so Study tools moves on top and the rest of the spiral is unchanged (panels 4b and 4c). The baton follows comic-strip reading order. <b>Ticking or unticking</b> never closes the window and governs the next launch only. <b>The AI-consent sheet</b> stays modal on the main window and is met once Welcome is moved aside. <b>Rotator visits</b> are invisible in v1. <b>No drop target in Welcome</b>: dropping lives in the main window's empty states, which show the existing drop card, unchanged and centred, with nothing added. <b>Main window title</b> with no project selected: "Bristlenose". <b>One setting, two views:</b> the footer checkbox and the Settings&nbsp;▸ Appearance switch (panel 3c) are the same setting. Help&nbsp;▸ Welcome opens the window <i>without</i> changing the setting, and the box shows its current state. Ticking it in either place turns it back on. <b>Reopen</b> via Help&nbsp;▸ Welcome to Bristlenose only. <b>Full screen</b> gets no special treatment.</p>
 </div>
 
 <h2><span class="n">?</span>Still open</h2>
 <div class="comm">
-  <p><b>1. The Appearance help line.</b> The row is decided (panel 3c), but the line drawn there still describes Model 1 ("shown in the main window when no project is selected"). One candidate: "Opens a window of study tools, scientific background and a tip."</p>
+  <p>Nothing. Every question this mockup raised has been ruled on.</p>
 </div>
 
 </div>
@@ -472,22 +477,31 @@ function spiral(){
 const SPIRAL_H = Math.round((WW - 40) / 1.618);           // 470
 const WH = 28 + 20 + SPIRAL_H + 56;                         // title bar + top margin + spiral + footer band
 
-// Below the breakpoint: same cells, same tints, stacked in spiral order.
-function stack(){
-  return `<div class="stack">
+// At the minimum width (= the Scientific background cell's natural width) only the
+// OUTERMOST golden split flips: Study tools goes on top, and the rest of the spiral
+// sits below it at its natural geometry. Nothing inside the minor block reflows.
+const NARROW = Math.round((WW - 40 - 8) * 0.382) + 40;     // 287 + margins = 327
+function stack(scrolled){
+  return `<div class="stack ${scrolled ? 'scrolled' : ''}">
     <div class="cell lg t1"><span class="tag">Study tools</span><div class="title3">AutoCode</div><div class="body">Let AutoCode propose tags across every quote — you Accept or Deny.</div><div class="cta">AI helps tag →</div><div class="illus" style="flex:none;height:120px"></div></div>
-    <div class="cell lg t2"><span class="tag">Scientific background</span><div class="fan"><i></i><i></i><i></i><i></i></div><div class="body">The practical guide to reflexive thematic analysis — themes from participants’ own words.</div><div class="cta">Learn more →</div></div>
-    <div class="cell t3"><span class="tag">Tip</span><div class="body">From a folder of recordings to a readable report in minutes.</div><div class="cta">First analysis →</div></div>
-    <div class="cell t4"><span class="tag">AI</span><div class="ai-glyph"></div><div class="cta">Setup →</div></div>
-    <div class="cell t5"><div class="body" style="font-size:11px">Review AI &amp; privacy settings…</div></div>
+    <div class="g2 v" style="flex:none;height:${SPIRAL_H}px">
+      <div class="cell lg t2 maj"><span class="tag">Scientific background</span><div class="fan"><i></i><i></i><i></i><i></i></div><div class="body">The practical guide to reflexive thematic analysis — themes from participants’ own words.</div><div class="cta">Learn more →</div></div>
+      <div class="g2 min">
+        <div class="cell t3 maj"><span class="tag">Tip</span><div class="body">From a folder of recordings to a readable report in minutes.</div><div class="cta">First analysis →</div></div>
+        <div class="g2 v min">
+          <div class="cell t4 maj"><span class="tag">AI</span><div class="ai-glyph"></div><div class="cta">Setup →</div></div>
+          <div class="cell t5 min"><div class="body" style="font-size:11px">Review AI &amp; privacy settings…</div></div>
+        </div>
+      </div>
+    </div>
   </div><div class="scrollbar"></div>`;
 }
 function wwin(o){
   const foot = `<label class="foot" role="checkbox" tabindex="0" aria-checked="${o.foot==='on'}"><span class="cb ${o.foot==='on'?'on':''}"></span>Show Welcome when Bristlenose opens</label>`;
-  const w = o.narrow ? 420 : WW;
+  const w = o.narrow ? NARROW : WW;
   return `<div class="win wwin ${o.key?'':'inactive'}" style="width:${w}px;height:${WH}px">
     <div class="wtb"><div class="lights"><i></i><i></i><i></i></div><div class="wtitle">Welcome to Bristlenose</div></div>
-    <div class="wbody">${o.narrow ? stack() : spiral()}${foot}</div></div>`;
+    <div class="wbody">${o.narrow ? stack(o.scrolled) : spiral()}${foot}</div></div>`;
 }
 function mwin(o){
   const lenses = LENSES.map(l => `<div class="lens"><span class="g"></span>${l}</div>`).join('');
@@ -511,7 +525,7 @@ function scene(kind){
 }
 
 document.querySelectorAll('[data-scene]').forEach(el => el.innerHTML = scene(el.dataset.scene));
-document.querySelectorAll('[data-wwin]').forEach(el => { const o = JSON.parse(el.dataset.wwin); el.innerHTML = wwin(o); el.firstElementChild.dataset.w = o.narrow ? 420 : WW; });
+document.querySelectorAll('[data-wwin]').forEach(el => { const o = JSON.parse(el.dataset.wwin); el.innerHTML = wwin(o); el.firstElementChild.dataset.w = o.narrow ? NARROW : WW; });
 document.querySelectorAll('[data-mwin]').forEach(el => { el.innerHTML = mwin(JSON.parse(el.dataset.mwin)); el.firstElementChild.dataset.w = MW; });
 
 // Zoom each artefact to its column; geometry stays identical, just smaller.

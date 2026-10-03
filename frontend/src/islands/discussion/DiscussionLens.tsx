@@ -184,7 +184,12 @@ export function DiscussionLens() {
     let live = true;
     loadDiscussion().then(
       (l) => live && setLoad(l),
-      () => live && setFailed(true),
+      (e: unknown) => {
+        // A 401, a 500 and an unknown record version all read the same on
+        // screen, so the cause has to reach the console.
+        console.error("discussion: load failed", e);
+        if (live) setFailed(true);
+      },
     );
     return () => {
       live = false;

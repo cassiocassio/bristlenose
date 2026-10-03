@@ -1059,3 +1059,6 @@ def test_pii_stage_reports_how_far_through_the_transcripts_it_is(
     # stage_fraction is the ring's own 0..1 for this stage; the last one must
     # reach 1.0 or the ring stalls short of the stage boundary.
     assert counted[-1]["stage_fraction"] == 1.0
+
+# These drive the whole pipeline to test other stages (conftest.no_discussion_stage).
+pytestmark = pytest.mark.usefixtures("no_discussion_stage")

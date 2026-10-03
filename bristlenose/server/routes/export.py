@@ -214,6 +214,11 @@ def _anonymise_data(endpoints: dict[str, Any]) -> None:
             sec["items"] = [it for it in sec.get("items", []) if it.get("id") in asked]
         for sec in disc.get("sections", []):
             sec["items"] = [it for it in sec.get("items", []) if it.get("source") != "planned"]
+        # A guide section nobody asked about leaves too, title and all — a title
+        # alone ("Your divorce and custody arrangements") is the guide talking.
+        disc["spine"] = [sec for sec in disc.get("spine", []) if sec.get("items")]
+        disc["sections"] = [sec for sec in disc.get("sections", [])
+                            if sec.get("items") or sec.get("origin") == "emergent"]
 
     # Project info (/info): project_name, session_count, participant_count are
     # fine — no PII.

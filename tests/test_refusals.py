@@ -493,3 +493,6 @@ class TestBristlenoseArtefactsAreNeverRefusals:
 
         assert files == []
         assert [sf.path.name for sf in skipped] == ["bristlenose-notes.txt"]
+
+# These drive the whole pipeline to test other stages (conftest.no_discussion_stage).
+pytestmark = pytest.mark.usefixtures("no_discussion_stage")

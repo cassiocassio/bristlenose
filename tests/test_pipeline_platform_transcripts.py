@@ -22,6 +22,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from bristlenose.config import BristlenoseSettings
 from bristlenose.events import StageOutcome
 from bristlenose.models import (
@@ -652,3 +654,6 @@ class TestPerSessionModeratorNames:
         names = load_session_speakers(h.output_dir)
         assert names["s2"]["m1"]["full_name"] == "Dana Whitfield"
         assert names["s1"]["m1"]["full_name"] == "Martin Storey"
+
+# These drive the whole pipeline to test other stages (conftest.no_discussion_stage).
+pytestmark = pytest.mark.usefixtures("no_discussion_stage")

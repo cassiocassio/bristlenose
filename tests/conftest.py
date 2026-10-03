@@ -155,3 +155,19 @@ def sample_quotes() -> list[ExtractedQuote]:
             researcher_context="When asked about what makes it a nightmare",
         ),
     ]
+
+
+@pytest.fixture
+def no_discussion_stage(monkeypatch):
+    """For suites that drive the whole pipeline to test OTHER stages.
+
+    The Discussion stage is on by default, so with mocked settings or a mocked
+    LLM client it ran, failed inside, and logged a traceback while the suite
+    stayed green — testing a broken optional stage by accident (silent-failure
+    review, 3 Oct 2026). The stage has its own suites.
+    """
+    from unittest.mock import AsyncMock
+
+    from bristlenose.pipeline import Pipeline
+
+    monkeypatch.setattr(Pipeline, "_run_discussion", AsyncMock(return_value=None))

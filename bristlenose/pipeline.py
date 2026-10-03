@@ -963,6 +963,12 @@ class Pipeline:
             record, outcome = await run_discussion(transcripts, quotes, project_dir, client)
         except Exception as exc:  # noqa: BLE001 — optional stage: never abandons the run
             logger.error("discussion stage failed: %s", type(exc).__name__, exc_info=True)
+            # Leave a failed record, not none: no record reads as "never run".
+            # The manifest stays RUNNING, so the next run tries again.
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(DiscussionRecord(
+                status="failed", quotes_sha=input_hashes["quotes"], guide_sha=input_hashes["guide"],
+            ).model_dump_json(indent=2), encoding="utf-8")
             _print_warn_step("Discussion lens not built", time.perf_counter() - t0)
             return None
         path.parent.mkdir(parents=True, exist_ok=True)

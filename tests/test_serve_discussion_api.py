@@ -123,6 +123,36 @@ def test_an_unreadable_record_is_not_run_not_an_error(project):
     assert client.get("/api/projects/1/discussion").json()["status"] == "not_run"
 
 
+def test_quotes_sharing_a_key_are_matched_by_text(project):
+    """The model gives whole-second timecodes, so two quotes can share a key
+    and the report keeps one row for it. Hiding that one must not hide the
+    other, and the other must keep its own words."""
+    intermediate, client, quotes = project
+    s, p, t, text = quotes[0]
+    record = _record(quotes)
+    twin = dict(record["quotes"][0], text="A different quote at the same second")
+    record["quotes"].append(twin)
+    _write(intermediate, record)
+    served = client.get("/api/projects/1/discussion").json()["record"]
+    # the report holds the first; the twin is not in it, so it is left out and counted
+    assert [q["text"] for q in served["quotes"] if q["sec"] == t] == [text]
+    assert served["stats"]["quotes_not_in_report"] == 1
+    assert client.put("/api/projects/1/hidden", json={f"q-{p}-{int(t)}": True}).status_code == 200
+    served = client.get("/api/projects/1/discussion").json()["record"]
+    assert not [q for q in served["quotes"] if q["sec"] == t]
+
+
+def test_a_quote_the_report_does_not_hold_is_left_out(project):
+    """Never clustered or themed, so not in Quotes — and nothing could hide it."""
+    intermediate, client, quotes = project
+    record = _record(quotes)
+    record["quotes"].append(dict(record["quotes"][0], sec=9999.0, text="never in the report"))
+    _write(intermediate, record)
+    served = client.get("/api/projects/1/discussion").json()["record"]
+    assert all(q["sec"] != 9999.0 for q in served["quotes"])
+    assert len(served["quotes"]) == len(quotes)
+
+
 def test_the_anonymised_export_keeps_only_the_guide_lines_that_were_asked():
     from bristlenose.server.routes.export import _anonymise_data
 
@@ -131,3 +161,22 @@ def test_the_anonymised_export_keeps_only_the_guide_lines_that_were_asked():
     record = endpoints["/discussion"]["record"]
     assert [i["id"] for i in record["spine"][0]["items"]] == ["s1.1"]
     assert [i["id"] for i in record["sections"][0]["items"]] == ["s1.1"]
+
+
+def test_the_anonymised_export_drops_a_guide_section_nobody_asked_about():
+    from bristlenose.server.routes.export import _anonymise_data
+
+    rec = _record([])
+    rec["spine"].append({"id": "s2", "title": "Your divorce and custody arrangements",
+                         "kind": "questions", "items": [{"id": "s2.1", "terse": "x", "text": "x"}]})
+    rec["sections"].append({"id": "s2", "title": "Your divorce and custody arrangements",
+                            "heading": "h", "kind": "questions", "origin": "planned", "items": [
+                                {"id": "s2.1", "terse": "x", "verbatim": "x", "source": "planned",
+                                 "placed": "", "role": "core", "asks": []}]})
+    rec["sections"].append({"id": "e1", "title": "Prices", "heading": "Prices", "kind": "questions",
+                            "origin": "emergent", "items": []})
+    endpoints = {"/discussion": {"status": "ready", "record": rec}}
+    _anonymise_data(endpoints)
+    text = str(endpoints["/discussion"])
+    assert "divorce" not in text
+    assert [s["id"] for s in endpoints["/discussion"]["record"]["sections"]] == ["s1", "e1"]

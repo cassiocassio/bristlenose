@@ -664,3 +664,6 @@ class TestReanalysingWithRedactionReplacesTheText:
             "the file on disk must win — otherwise a corrected transcript "
             "never reaches the served report"
         )
+
+# These drive the whole pipeline to test other stages (conftest.no_discussion_stage).
+pytestmark = pytest.mark.usefixtures("no_discussion_stage")

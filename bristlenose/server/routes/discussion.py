@@ -59,8 +59,17 @@ def _current_quotes_sha(intermediate: Path) -> str | None:
         return None
 
 
-def _quote_overlay(db: Session, project_id: int) -> dict[tuple[str, str, float], tuple[bool, str]]:
-    """(session, participant, start rounded to 0.01 s) → (hidden, current text)."""
+class _ReportQuote:
+    """One quote as the report holds it: the row, its hidden flag, its edit."""
+
+    __slots__ = ("hidden", "text", "edit")
+
+    def __init__(self, hidden: bool, text: str, edit: str | None) -> None:
+        self.hidden, self.text, self.edit = hidden, text, edit
+
+
+def _report_quotes(db: Session, project_id: int) -> dict[tuple[str, str, float], _ReportQuote]:
+    """(session, participant, start rounded to 0.01 s) → the report's quote."""
     rows = db.query(Quote).filter_by(project_id=project_id).all()
     hidden = {s.quote_id for s in db.query(QuoteState).join(Quote, QuoteState.quote_id == Quote.id)
               .filter(Quote.project_id == project_id, QuoteState.is_hidden).all()}
@@ -70,9 +79,47 @@ def _quote_overlay(db: Session, project_id: int) -> dict[tuple[str, str, float],
         edited[e.quote_id] = e.edited_text  # the latest edit wins
     return {
         (q.session_id, q.participant_id, round(q.start_timecode, 2)):
-            (q.id in hidden, edited.get(q.id, q.text))
+            _ReportQuote(q.id in hidden, q.text, edited.get(q.id))
         for q in rows
     }
+
+
+def _key(q: dict[str, Any]) -> tuple[str, str, float]:
+    return (q.get("session", ""), q.get("participant", ""), round(float(q.get("sec", 0.0)), 2))
+
+
+def _as_the_report_shows_them(
+    quotes: list[dict[str, Any]], report: dict[tuple[str, str, float], _ReportQuote],
+) -> tuple[list[dict[str, Any]], int]:
+    """The record's quotes as the Quotes lens shows them, and how many the
+    report does not hold.
+
+    Two quotes can share a key — the model gives whole-second timecodes — and
+    the report keeps one row per key, so a shared key is matched by its text:
+    hiding or editing one quote must never touch the other (silent-failure
+    review, 3 Oct 2026: 24 collisions in 308 quotes on a real project). A quote
+    the report does not hold — never clustered or themed — is left out, as
+    Quotes leaves it out, so nothing appears here that Quotes cannot hide.
+    """
+    shared: dict[tuple[str, str, float], int] = {}
+    for q in quotes:
+        shared[_key(q)] = shared.get(_key(q), 0) + 1
+    shown: list[dict[str, Any]] = []
+    absent = 0
+    for q in quotes:
+        row = report.get(_key(q))
+        if row is None:
+            absent += 1
+            continue
+        if shared[_key(q)] > 1 and q.get("text") != row.text:
+            absent += 1  # the report's row at this key is a different quote
+            continue
+        if row.hidden:
+            continue
+        if row.edit is not None:
+            q["text"] = row.edit
+        shown.append(q)
+    return shown, absent
 
 
 def get_discussion_payload(db: Session, project_id: int, project_dir: Path | None) -> DiscussionResponse:
@@ -95,18 +142,11 @@ def get_discussion_payload(db: Session, project_id: int, project_dir: Path | Non
     if current is not None and record.get("quotes_sha") and record["quotes_sha"] != current:
         return DiscussionResponse(status="stale")
 
-    overlay = _quote_overlay(db, project_id)
-    shown: list[dict[str, Any]] = []
-    for q in record.get("quotes", []):
-        key = (q.get("session", ""), q.get("participant", ""), round(float(q.get("sec", 0.0)), 2))
-        state = overlay.get(key)
-        if state is not None:
-            is_hidden, text = state
-            if is_hidden:
-                continue
-            q["text"] = text
-        shown.append(q)
-    record["quotes"] = shown
+    report = _report_quotes(db, project_id)
+    if report:  # an empty table is an import still in flight, not a project with no quotes
+        record["quotes"], absent = _as_the_report_shows_them(record.get("quotes", []), report)
+        if absent:
+            record.setdefault("stats", {})["quotes_not_in_report"] = absent
 
     raw_status = record.get("status", "complete")
     status: DiscussionStatus = (

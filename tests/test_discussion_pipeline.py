@@ -210,3 +210,17 @@ def test_an_unmoderated_study_is_skipped_not_warned():
     unclear = DiscussionRecord(status="failed", sessions=[
         RecordSession(id="s1", number=1, state="moderator_unreliable")])
     assert _discussion_line(unclear, retry=False)[1] == MessageKind.WARNING
+
+
+def test_a_crashed_stage_leaves_a_failed_record_not_none(tmp_path, monkeypatch):
+    """No record reads as "never run"; a crash must say it failed."""
+    import bristlenose.discussion.stage as stage_mod
+
+    async def boom(*a, **k):
+        raise RuntimeError("unexpected")
+
+    monkeypatch.setattr(stage_mod, "run_discussion", boom)
+    manifest = create_manifest("p", "0")
+    path = _run(tmp_path, FakeClient(), manifest=manifest)
+    assert json.loads(path.read_text())["status"] == "failed"
+    assert manifest.stages[STAGE_DISCUSSION].status != StageStatus.COMPLETE  # retried next run

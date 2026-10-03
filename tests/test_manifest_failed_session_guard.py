@@ -402,3 +402,6 @@ def test_a_failed_session_is_retried_on_the_next_run(tmp_path: Path) -> None:
         "indistinguishable from never-attempted and derives to COMPLETE"
     )
     assert get_completed_session_ids(manifest, STAGE_QUOTE_EXTRACTION) == {"s1", "s3"}
+
+# These drive the whole pipeline to test other stages (conftest.no_discussion_stage).
+pytestmark = pytest.mark.usefixtures("no_discussion_stage")

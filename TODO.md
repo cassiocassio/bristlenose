@@ -707,7 +707,7 @@ Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NL
 | `docs/design-export-html.md` | Self-contained HTML export + cross-cutting export concerns |
 | `docs/design-miro-bridge.md` | Miro API integration (OAuth, board creation, layout — post-beta) |
 | `docs/design-html-report.md` | HTML report, people file, transcript pages |
-| `docs/design-discussion-lens.md` | Discussion lens — the researcher's guide merged with the questions actually asked, as a navigator over quotes grouped by question; both channels. Shipped for beta 3 Oct 2026 (stage on by default, lens in nav, Mac rail and export); plan and what's owed: `docs/design-discussion-lens-plan.md` banner and §7 — real-corpus scoring, overrides, Mac guide import |
+| `docs/design-discussion-lens.md` | Discussion lens — the researcher's guide merged with the questions actually asked, as a navigator over quotes grouped by question; both channels. Shipped for beta 3 Oct 2026 (stage on by default, lens in nav, Mac rail and export); plan and what's owed: `docs/design-discussion-lens-plan.md` banner and §7 — real-corpus scoring, overrides, cohort baselines (the Mac guide panel landed 4 Oct) |
 | `docs/design-responsive-layout.md` | Responsive layout, density setting, breakpoints |
 | `docs/design-doctor-and-snap.md` | Doctor command, snap packaging |
 | `docs/design-serve-doctor.md` | Serve-mode doctor checks, Vite auto-discovery |

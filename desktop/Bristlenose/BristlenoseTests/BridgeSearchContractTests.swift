@@ -141,6 +141,78 @@ struct BridgeSearchContractTests {
         #expect(bridge.quotesSearchTokens.isEmpty)
     }
 
+    @Test func badgeStylesDecodeAsTheSPASendsThem() throws {
+        let wire = try #require((try webToNative()["search_badge_styles"] as? [String: Any])?["wire"] as? [String: Any])
+
+        let bridge = BridgeHandler()
+        bridge.handleMessage(wire.merging(["type": "search-badge-styles"]) { a, _ in a })
+        let styles = bridge.searchBadgeStyles
+
+        #expect(styles.tags.keys.sorted() == ["zoning"])
+        let tag = try #require(styles.tags["zoning"])
+        #expect(tag.fill == BadgeColour(red: 0.86, green: 0.93, blue: 0.98, opacity: 1))
+        #expect(tag.text == BadgeColour(red: 0.1, green: 0.25, blue: 0.45, opacity: 1))
+        #expect(tag.border == nil)
+        #expect(tag.family == .body)
+        #expect([tag.size, tag.weight, tag.padX, tag.padY, tag.radius] == [12, 400, 6, 1, 4])
+
+        let p3 = try #require(styles.people["p3"])
+        #expect(p3.code.family == .mono)
+        #expect(p3.code.fill == nil)
+        #expect(p3.code.border == .init(colour: BadgeColour(red: 0.8, green: 0.8, blue: 0.82, opacity: 1), width: 1))
+        #expect(p3.name?.weight == 500)
+        #expect(try #require(styles.people["p9"]).name == nil)  // the code alone
+    }
+
+    /// A row finds its badge by its id, a token by its styleKey — the same
+    /// folded name, so this side never folds.
+    @Test func rowsAndTokensFindTheirBadges() throws {
+        let menuWire = try #require((try webToNative()["search_suggestions"] as? [[String: Any]])?.first?["wire"] as? [String: Any])
+        let stylesWire = try #require((try webToNative()["search_badge_styles"] as? [String: Any])?["wire"] as? [String: Any])
+        let tokensWire = try #require((try webToNative()["quotes_filter_tokens"] as? [[String: Any]])?.first?["wire"])
+        let menu = SearchSuggestions(message: menuWire)
+        let styles = SearchBadgeStyles(message: stylesWire)
+        let tokens = SearchTokenChip.decodeAll(tokensWire)
+
+        #expect(styles.personStyle(for: menu.rows[1]) != nil)  // p3
+        #expect(styles.personStyle(for: menu.rows[2])?.name == nil)  // p9, code alone
+        #expect(styles.tagStyle(for: menu.rows[3]) == styles.tags["zoning"])
+        #expect(styles.tagStyle(for: menu.rows[0]) == nil)  // the text row has no badge
+        #expect(styles.personStyle(for: menu.rows[3]) == nil)
+        #expect(styles.tags[tokens[2].styleKey] == styles.tags["zoning"])
+        #expect(styles.people[tokens[0].styleKey] == styles.people["p3"])
+    }
+
+    @Test func malformedBadgeStylesAreDroppedNotFatal() throws {
+        let tolerant = try #require(try webToNative()["swift_tolerates"] as? [String: Any])
+        let wire = try #require(tolerant["search_badge_styles"] as? [String: Any])
+        let styles = SearchBadgeStyles(message: wire)
+
+        #expect(styles.tags.keys.sorted() == ["posture"])  // "broken" has no fg
+        #expect(styles.tags["posture"]?.family == .body)  // "serif" is not known here
+        #expect(styles.people.keys.sorted() == ["p2"])  // p1 has no code half
+        #expect(styles.people["p2"]?.name == nil)  // a malformed name draws the code alone
+    }
+
+    @Test func badgeNumbersAreCheckedNotTrusted() {
+        #expect(SearchBadgeStyle.number(12) == 12)
+        #expect(SearchBadgeStyle.number(0.5) == 0.5)
+        #expect(SearchBadgeStyle.number(true) == nil)
+        #expect(SearchBadgeStyle.number("12") == nil)
+        #expect(SearchBadgeStyle.number(Double.nan) == nil)
+        #expect(BadgeColour(wire: ["r": 2, "g": -1, "b": 0.5, "a": 1])
+            == BadgeColour(red: 1, green: 0, blue: 0.5, opacity: 1))
+    }
+
+    @Test func resetClearsTheBadgeStyles() throws {
+        let wire = try #require((try webToNative()["search_badge_styles"] as? [String: Any])?["wire"] as? [String: Any])
+        let bridge = BridgeHandler()
+        bridge.handleMessage(wire.merging(["type": "search-badge-styles"]) { a, _ in a })
+        #expect(bridge.searchBadgeStyles != .empty)
+        bridge.reset()
+        #expect(bridge.searchBadgeStyles == .empty)
+    }
+
     // MARK: native → web
 
     /// Every native→web payload in the fixture is one our senders produce, so

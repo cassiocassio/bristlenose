@@ -25,6 +25,19 @@
         }
       },
       {
+        "name": "a query that is also a word of the row's own template marks the query, not the template",
+        "input": {
+          "query": "containing",
+          "suggestions": [{ "kind": "text", "id": "text", "query": "containing", "count": 0 }]
+        },
+        "wire": {
+          "query": "containing",
+          "rows": [
+            { "id": "text", "kind": "text", "label": "Quotes containing “containing”", "typed": [[19, 29]], "count": 0 }
+          ]
+        }
+      },
+      {
         "name": "an empty menu closes the native one",
         "input": { "query": "", "suggestions": [] },
         "wire": { "query": "", "rows": [] }
@@ -78,6 +91,44 @@
         ]
       }
     ],
+    "search_badge_styles": {
+      "_comment": "How each badge in the menu and the chips is drawn, measured from the report's own CSS (docs/design-search.md §7a). Keys: a tag's folded name (a row's id after `tag:`, a token's styleKey) or a speaker code. Colours are display-P3, 0…1. `bg` null means no fill; `border` null means none; a person's `name` null means the badge shows the code alone.",
+      "wire": {
+        "tags": {
+          "zoning": {
+            "bg": { "r": 0.86, "g": 0.93, "b": 0.98, "a": 1 },
+            "fg": { "r": 0.1, "g": 0.25, "b": 0.45, "a": 1 },
+            "border": null,
+            "fontFamily": "body", "sizePx": 12, "weight": 400, "padX": 6, "padY": 1, "radius": 4
+          }
+        },
+        "people": {
+          "p3": {
+            "code": {
+              "bg": null,
+              "fg": { "r": 0.35, "g": 0.35, "b": 0.38, "a": 1 },
+              "border": { "colour": { "r": 0.8, "g": 0.8, "b": 0.82, "a": 1 }, "widthPx": 1 },
+              "fontFamily": "mono", "sizePx": 11, "weight": 600, "padX": 5, "padY": 1, "radius": 3
+            },
+            "name": {
+              "bg": null,
+              "fg": { "r": 0.1, "g": 0.1, "b": 0.12, "a": 1 },
+              "border": null,
+              "fontFamily": "body", "sizePx": 13, "weight": 500, "padX": 0, "padY": 0, "radius": 0
+            }
+          },
+          "p9": {
+            "code": {
+              "bg": null,
+              "fg": { "r": 0.35, "g": 0.35, "b": 0.38, "a": 1 },
+              "border": { "colour": { "r": 0.8, "g": 0.8, "b": 0.82, "a": 1 }, "widthPx": 1 },
+              "fontFamily": "mono", "sizePx": 11, "weight": 600, "padX": 5, "padY": 1, "radius": 3
+            },
+            "name": null
+          }
+        }
+      }
+    },
     "swift_tolerates": {
       "_comment": "A newer SPA may send a kind this app does not know. Swift drops that row or token and keeps the rest; it never fails the message.",
       "search_suggestions": {
@@ -90,7 +141,27 @@
       "tokens": [
         { "kind": "session", "subject": { "kind": "session", "id": "s2" }, "label": "Session 2", "mode": "in", "modes": [] },
         { "kind": "tag", "subject": { "kind": "tag", "name": "Posture" }, "label": "Posture", "mode": "tagged", "modes": [] }
-      ]
+      ],
+      "search_badge_styles": {
+        "_comment": "An entry missing a required field is dropped and the rest kept, except that a person whose name half is malformed keeps the code half and is drawn as the code alone. A font family this app does not know is drawn in the body font.",
+        "tags": {
+          "posture": {
+            "bg": null, "fg": { "r": 0, "g": 0, "b": 0, "a": 1 }, "border": null,
+            "fontFamily": "serif", "sizePx": 12, "weight": 400, "padX": 6, "padY": 1, "radius": 4
+          },
+          "broken": { "bg": null, "border": null, "fontFamily": "body", "sizePx": 12 }
+        },
+        "people": {
+          "p1": { "name": null },
+          "p2": {
+            "code": {
+              "bg": null, "fg": { "r": 0, "g": 0, "b": 0, "a": 1 }, "border": null,
+              "fontFamily": "mono", "sizePx": 11, "weight": 600, "padX": 5, "padY": 1, "radius": 3
+            },
+            "name": { "fontFamily": "body" }
+          }
+        }
+      }
     }
   },
   "native_to_web": {

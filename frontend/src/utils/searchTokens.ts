@@ -8,7 +8,7 @@
  * "not"; a tag is "tagged", "text contains" or "not tagged".
  */
 
-import { fold, termMatches, wholeWordsTerm, type SearchTerm } from "./searchMatch";
+import { foldKey, termMatches, wholeWordsTerm, type SearchTerm } from "./searchMatch";
 import { quoteDisplayText, quoteTags, type SearchPerson } from "./searchSuggest";
 import type { QuoteResponse, TagResponse } from "./types";
 
@@ -56,7 +56,7 @@ export function tagToken(tag: Pick<TagResponse, "name">): TagToken {
 /** Two tokens name the same person or the same tag (meaning aside). */
 export function sameSubject(a: SearchToken, b: SearchToken): boolean {
   if (a.kind === "person" && b.kind === "person") return a.code === b.code;
-  if (a.kind === "tag" && b.kind === "tag") return fold(a.name) === fold(b.name);
+  if (a.kind === "tag" && b.kind === "tag") return foldKey(a.name) === foldKey(b.name);
   return false;
 }
 
@@ -82,8 +82,8 @@ function termsOf(token: SearchToken): SearchTerm[] {
 }
 
 function carriesTag(q: QuoteResponse, name: string, tags?: Record<string, TagResponse[]>): boolean {
-  const key = fold(name);
-  return quoteTags(q, tags).some((t) => fold(t.name) === key);
+  const key = foldKey(name);
+  return quoteTags(q, tags).some((t) => foldKey(t.name) === key);
 }
 
 /** True when the quote passes this token under its current meaning. */

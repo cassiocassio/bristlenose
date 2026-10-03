@@ -18,7 +18,7 @@
  */
 
 import i18n from "../i18n";
-import { fold, markRanges, parseQuery } from "./searchMatch";
+import { foldKey, markRanges, parseQuery } from "./searchMatch";
 import type { SearchPerson, Suggestion } from "./searchSuggest";
 import {
   canMention,
@@ -79,11 +79,21 @@ export interface WireToken {
 const t = (key: string, defaultValue: string, vars: Record<string, string> = {}) =>
   i18n.t(key, { defaultValue, ...vars });
 
-/** Ranges of `needle` (as typed) inside `label`: where the free-text row
- *  quotes it. Empty when the translation does not contain it verbatim. */
-function rangeOf(label: string, needle: string): Array<[number, number]> {
-  const at = needle ? label.indexOf(needle) : -1;
-  return at < 0 ? [] : [[at, at + needle.length]];
+const SENTINEL = "\u0000";
+
+/**
+ * The free-text row's label and where the typed query sits in it. The label is
+ * rendered once with a sentinel to find the placeholder, so the range lands on
+ * the query and never on the template's own words ("containing", "Quotes"), in
+ * any language. Values are not escaped (i18n escapeValue: false), so offsets
+ * before the placeholder are the same in both renderings.
+ */
+function textRowLabel(query: string): { label: string; typed: Array<[number, number]> } {
+  const key = "search.suggest.textRow";
+  const fallback = "Quotes containing “{{query}}”";
+  const at = t(key, fallback, { query: SENTINEL }).indexOf(SENTINEL);
+  const label = t(key, fallback, { query });
+  return { label, typed: at < 0 || !query ? [] : [[at, at + query.length]] };
 }
 
 /** The suggestion rows as the native menu draws them. */
@@ -92,8 +102,8 @@ export function suggestionsToWire(query: string, suggestions: Suggestion[]): Wir
   const rows = suggestions.map((s): WireSuggestionRow => {
     switch (s.kind) {
       case "text": {
-        const label = t("search.suggest.textRow", "Quotes containing “{{query}}”", { query: s.query });
-        return { id: s.id, kind: "text", label, typed: rangeOf(label, s.query), count: s.count };
+        const { label, typed } = textRowLabel(s.query);
+        return { id: s.id, kind: "text", label, typed, count: s.count };
       }
       case "person": {
         const label = s.name ?? s.code;
@@ -131,7 +141,7 @@ export function tokenLabel(token: SearchToken): string {
 
 /** A token's key into `search-badge-styles` (see `WireToken.styleKey`). */
 export function styleKeyOf(token: SearchToken): string {
-  return token.kind === "person" ? token.code : fold(token.name);
+  return token.kind === "person" ? token.code : foldKey(token.name);
 }
 
 export function subjectOf(token: SearchToken): WireSubject {
@@ -230,7 +240,7 @@ export function choiceForId(id: unknown, ctx: ChoiceContext): SuggestionChoice |
     const key = id.slice("tag:".length);
     if (!key) return null;
     for (const tag of ctx.tags) {
-      if (fold(tag.name) === key) return { kind: "add-token", token: tagToken(tag) };
+      if (foldKey(tag.name) === key) return { kind: "add-token", token: tagToken(tag) };
     }
     return null; // the tag has gone since the menu was drawn
   }

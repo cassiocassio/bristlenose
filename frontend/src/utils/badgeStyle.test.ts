@@ -10,7 +10,15 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { probeBadgeStyles, readBadgeStyle, type ReadContext, type StyleSource } from "./badgeStyle";
+import contractJson from "../../../tests/fixtures/search-bridge-contract.json";
+import {
+  probeBadgeStyles,
+  readBadgeStyle,
+  type BadgeStyle,
+  type BadgeStyles,
+  type ReadContext,
+  type StyleSource,
+} from "./badgeStyle";
 
 const MONO = `"SF Mono", ui-monospace, Menlo, monospace`;
 
@@ -73,10 +81,13 @@ describe("readBadgeStyle", () => {
     expect(readBadgeStyle(style({ fontFamily: "Menlo, monospace" }), ctx).fontFamily).toBe("body");
   });
 
-  it("an unresolvable colour degrades instead of throwing", () => {
+  it("an unresolvable colour degrades instead of throwing, and says so", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const s = readBadgeStyle(style({ color: "var(--nope)", backgroundColor: "var(--nope)" }), ctx);
     expect(s.fg).toEqual({ r: 0, g: 0, b: 0, a: 1 });
     expect(s.bg).toBeNull();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("var(--nope)"));
+    warn.mockRestore();
   });
 });
 
@@ -101,7 +112,7 @@ describe("probeBadgeStyles", () => {
     document.body.appendChild(host);
     const styles = probeBadgeStyles(host, subjects, { toP3, monoFamily: MONO });
 
-    expect(Object.keys(styles.tags).sort()).toEqual(["cafe \"quotes\"", "zoning"]); // folded, like the search ids
+    expect(Object.keys(styles.tags).sort()).toEqual(["cafe quotes", "zoning"]); // folded keys, like the search ids (quote marks fold to spaces)
     expect(Object.keys(styles.people).sort()).toEqual(["p3", "p9"]);
     expect(styles.people.p3.name).not.toBeNull();
     expect(styles.people.p9.name).toBeNull();
@@ -118,5 +129,37 @@ describe("probeBadgeStyles", () => {
     const host = document.createElement("div");
     expect(probeBadgeStyles(host, { tags: [], people: [] })).toEqual({ tags: {}, people: {} });
     expect(host.childElementCount).toBe(0);
+  });
+});
+
+describe("the search-badge-styles wire (search-bridge-contract.json)", () => {
+  const wire = (contractJson as unknown as { web_to_native: { search_badge_styles: { wire: BadgeStyles } } })
+    .web_to_native.search_badge_styles.wire;
+  const fixtureStyles: BadgeStyle[] = [
+    ...Object.values(wire.tags),
+    ...Object.values(wire.people).flatMap((p) => (p.name ? [p.code, p.name] : [p.code])),
+  ];
+  const keys = (o: object) => Object.keys(o).sort();
+  const ctx: ReadContext = { toP3, monoFamily: MONO };
+
+  it("every style in the fixture has exactly the fields the reader sends", () => {
+    const read = readBadgeStyle(style({ borderTopWidth: "1px", borderTopStyle: "solid" }), ctx);
+    expect(read.border).not.toBeNull(); // so the border's own fields are compared too
+    for (const s of fixtureStyles) {
+      expect(keys(s)).toEqual(keys(read));
+      expect(keys(s.fg)).toEqual(keys(read.fg));
+      if (s.bg) expect(keys(s.bg)).toEqual(keys(read.fg));
+      if (s.border) {
+        expect(keys(s.border)).toEqual(keys(read.border!));
+        expect(keys(s.border.colour)).toEqual(keys(read.fg));
+      }
+    }
+    expect(fixtureStyles.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("the fixture covers no fill, a border, and a code-only person", () => {
+    expect(fixtureStyles.some((s) => s.bg === null)).toBe(true);
+    expect(fixtureStyles.some((s) => s.border !== null)).toBe(true);
+    expect(Object.values(wire.people).some((p) => p.name === null)).toBe(true);
   });
 });

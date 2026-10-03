@@ -14,6 +14,7 @@ import { setLocale as setStoreLocale } from "../i18n/LocaleStore";
 import { isPalette } from "../utils/bootPalette";
 import { isSupportedLocale } from "../i18n/index";
 import type { WireSuggestionRow, WireSuggestions, WireToken } from "../utils/searchBridge";
+import type { BadgeStyles } from "../utils/badgeStyle";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -47,6 +48,7 @@ export type BridgeMessage =
   | { type: "lens-subtitle"; tab: string; subtitle: string }
   | { type: "quotes-filter"; searchQuery: string; viewMode: string; tokens: WireToken[] }
   | { type: "search-suggestions"; query: string; rows: WireSuggestionRow[] }
+  | ({ type: "search-badge-styles" } & BadgeStyles)
   | { type: "focus-mode"; active: boolean }
   | { type: "subtitle-prefs"; player: boolean; burn: boolean }
   | {
@@ -273,6 +275,16 @@ export function postQuotesFilter(
  */
 export function postSearchSuggestions(suggestions: WireSuggestions): void {
   postNativeMessage({ type: "search-suggestions", ...suggestions });
+}
+
+/**
+ * Send the resolved look of every badge the native menu and chips draw, keyed
+ * as their `styleKey` (docs/design-search.md §7a): the native side paints
+ * exactly these values and holds no palette of its own. Re-sent when the
+ * palette, the appearance or a tag's colour changes. No-ops outside WKWebView.
+ */
+export function postSearchBadgeStyles(styles: BadgeStyles): void {
+  postNativeMessage({ type: "search-badge-styles", ...styles });
 }
 
 /**

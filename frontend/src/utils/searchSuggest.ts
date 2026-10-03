@@ -10,7 +10,7 @@
  * `isVisible` (hidden, starred, tag sidebar, existing tokens) and the row.
  */
 
-import { fold, isActiveQuery, matchesAll, parseQuery, type SearchTerm } from "./searchMatch";
+import { foldKey, isActiveQuery, matchesAll, parseQuery, type SearchTerm } from "./searchMatch";
 import type { QuoteResponse, TagResponse } from "./types";
 
 /** A person as the people endpoint returns them, keyed by speaker code. */
@@ -94,7 +94,7 @@ export function suggest(
   const cap = options.cap ?? 3;
   const typed = terms.map((t) => t.text).join(" ");
   const excludeCodes = new Set(options.excludeCodes ?? []);
-  const excludeTags = new Set([...(options.excludeTags ?? [])].map(fold));
+  const excludeTags = new Set([...(options.excludeTags ?? [])].map(foldKey));
   const visible = source.isVisible ? source.quotes.filter(source.isVisible) : source.quotes;
 
   const out: Suggestion[] = [];
@@ -120,7 +120,7 @@ export function suggest(
     }
     const seen = new Set<string>();
     for (const tag of quoteTags(q, source.tags)) {
-      const key = fold(tag.name);
+      const key = foldKey(tag.name);
       if (seen.has(key)) continue;
       seen.add(key);
       const entry = tagsByKey.get(key);
@@ -138,7 +138,7 @@ export function suggest(
       (n): n is string => Boolean(n),
     );
     if (!matchesAll([code, ...names], terms)) continue;
-    const exact = [code, ...names].some((f) => fold(f) === typed);
+    const exact = [code, ...names].some((f) => foldKey(f) === typed);
     const name = person?.short_name || person?.full_name || nameOnQuotes.get(code) || null;
     people.push({ s: { kind: "person", id: `person:${code}`, code, name, count }, exact });
   }

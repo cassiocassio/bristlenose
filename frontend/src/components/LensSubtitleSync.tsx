@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 
 import { useSignalStore } from "../contexts/SignalStore";
 import { filterStateOf, useQuotesStore } from "../contexts/QuotesContext";
+import { useLocaleStore } from "../i18n/LocaleStore";
 import { postLensSubtitle, postQuotesFilter } from "../shims/bridge";
 import { tokensToWire } from "../utils/searchBridge";
 import { getCodebook } from "../utils/api";
@@ -47,6 +48,8 @@ export function LensSubtitleSync(): null {
   const { pathname } = useLocation();
   const tab = tabFromPath(pathname);
   const store = useQuotesStore();
+  // The subtitle and the token labels are i18n strings: re-post on a language change.
+  const { locale } = useLocaleStore();
   const signals = useSignalStore();
   const [codebook, setCodebook] = useState<CodebookResponse | null>(null);
 
@@ -93,7 +96,7 @@ export function LensSubtitleSync(): null {
         postQuotesFilter(store.searchQuery, store.viewMode, tokensToWire(store.searchTokens));
       }
     }
-  }, [tab, store, signals, codebook]);
+  }, [tab, store, signals, codebook, locale]);
 
   return null;
 }

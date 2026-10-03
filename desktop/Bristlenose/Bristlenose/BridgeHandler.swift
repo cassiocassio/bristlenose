@@ -217,6 +217,11 @@ final class BridgeHandler: ObservableObject {
     /// Sole writer: the inbound message, like `quotesSearchQuery`.
     @Published var quotesSearchTokens: [SearchTokenChip] = []
 
+    /// How the badges in the search menu and chips are drawn, measured by the
+    /// SPA (`search-badge-styles`, docs/design-search.md §7a). Sole writer:
+    /// the inbound message, which replaces the whole set.
+    @Published var searchBadgeStyles: SearchBadgeStyles = .empty
+
     /// Whether the report is in Focus Mode. Mirrored from the SPA (`focus-mode`
     /// message) — the web side owns the state; this drives only the View-menu
     /// checkmark. Resets to false on `reset()` because a project switch remounts
@@ -878,6 +883,12 @@ final class BridgeHandler: ObservableObject {
             let menu = SearchSuggestions(message: body)
             if menu != searchSuggestions { searchSuggestions = menu }
 
+        case "search-badge-styles":
+            // Sole writer, equality-guarded. The SPA posts when the badges it
+            // shows, or the appearance they were measured in, change.
+            let styles = SearchBadgeStyles(message: body)
+            if styles != searchBadgeStyles { searchBadgeStyles = styles }
+
         case "focus-mode":
             // Sole writer. The SPA owns Focus Mode; the View-menu checkmark is a
             // mirror, never a second source of truth — a native @State flag would
@@ -1042,6 +1053,7 @@ final class BridgeHandler: ObservableObject {
         quotesViewMode = "all"
         searchSuggestions = .empty
         quotesSearchTokens = []
+        searchBadgeStyles = .empty
         focusModeActive = false
         // The saved values, which the next webview is seeded with.
         playerSubtitlesOn = UserDefaults.standard.bool(forKey: Self.playerSubtitlesKey)

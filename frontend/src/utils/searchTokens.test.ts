@@ -86,6 +86,17 @@ describe("person tokens", () => {
     expect(tokenMatches(Q("p1", "he said so"), m, undefined, { "p1-he said so": "Tom said so" })).toBe(true);
   });
 
+  it("mentions a Latin name followed or surrounded by Chinese or Japanese", () => {
+    const m = as(tom, "mentions");
+    expect(tokenMatches(Q("p1", "Tomさんが言った"), m)).toBe(true);
+    expect(tokenMatches(Q("p1", "我和Tom说过"), m)).toBe(true);
+  });
+
+  it("does not mention a different Korean name that shares the first syllables", () => {
+    const kim = as(personToken("p8", { full_name: "김민지", short_name: "" }), "mentions");
+    expect(tokenMatches(Q("p1", "김민직이 왔다"), kim)).toBe(false);
+  });
+
   it("mentions a Korean name with a particle after it, and a Japanese name mid-sentence", () => {
     const kim = as(personToken("p8", { full_name: "김민지", short_name: "" }), "mentions");
     expect(tokenMatches(Q("p1", "김민지가 먼저 말했어요"), kim)).toBe(true);

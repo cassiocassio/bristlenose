@@ -27,7 +27,7 @@ import { createRoot } from "react-dom/client";
 import { Badge } from "../components/Badge";
 import { PersonBadge } from "../components/PersonBadge";
 import { getTagBg } from "./colours";
-import { fold } from "./searchMatch";
+import { foldKey } from "./searchMatch";
 import type { TagResponse } from "./types";
 
 /** A colour in the display-P3 space, each component 0…1. */
@@ -100,14 +100,30 @@ function normaliseFamily(f: string): string {
   return f.replace(/["']/g, "").replace(/\s*,\s*/g, ",").trim().toLowerCase();
 }
 
+const warnedColours = new Set<string>();
+
+/**
+ * A colour that could not be resolved is drawn as no fill (or black text), but
+ * never silently: a native chip that differs from the card breaks the parity
+ * rule (§7a), so it says so once per value.
+ */
+function resolveColour(css: string, ctx: ReadContext): P3Colour | null {
+  const colour = ctx.toP3(css);
+  if (!colour && css && !warnedColours.has(css)) {
+    warnedColours.add(css);
+    console.warn(`badgeStyle: could not resolve colour ${JSON.stringify(css)}; the native badge will not match the card`);
+  }
+  return colour;
+}
+
 /** A badge's style from what the browser resolved for it. */
 export function readBadgeStyle(cs: StyleSource, ctx: ReadContext): BadgeStyle {
-  const fg = ctx.toP3(cs.color) ?? { r: 0, g: 0, b: 0, a: 1 };
-  const bg = TRANSPARENT.test(cs.backgroundColor.trim()) ? null : ctx.toP3(cs.backgroundColor);
+  const fg = resolveColour(cs.color, ctx) ?? { r: 0, g: 0, b: 0, a: 1 };
+  const bg = TRANSPARENT.test(cs.backgroundColor.trim()) ? null : resolveColour(cs.backgroundColor, ctx);
   const borderWidth = px(cs.borderTopWidth);
   const borderColour =
     borderWidth > 0 && cs.borderTopStyle !== "none" && cs.borderTopStyle !== "hidden"
-      ? ctx.toP3(cs.borderTopColor)
+      ? resolveColour(cs.borderTopColor, ctx)
       : null;
   const family = normaliseFamily(cs.fontFamily);
   const mono = normaliseFamily(ctx.monoFamily);
@@ -181,7 +197,7 @@ export function probeBadgeStyles(
           text: t.name,
           variant: "user",
           colour: t.colour_set ? getTagBg(t.colour_set, t.colour_index) : undefined,
-          "data-testid": `probe-tag-${fold(t.name)}`,
+          "data-testid": `probe-tag-${foldKey(t.name)}`,
         }),
       ),
       ...subjects.people.map((p) =>
@@ -195,8 +211,8 @@ export function probeBadgeStyles(
     flushSync(() => root.render(createElement("div", { className: "badges" }, elements)));
 
     for (const t of subjects.tags) {
-      const el = probe.querySelector(`[data-testid="probe-tag-${CSS.escape(fold(t.name))}"]`);
-      if (el) out.tags[fold(t.name)] = readBadgeStyle(getComputedStyle(el), ctx);
+      const el = probe.querySelector(`[data-testid="probe-tag-${CSS.escape(foldKey(t.name))}"]`);
+      if (el) out.tags[foldKey(t.name)] = readBadgeStyle(getComputedStyle(el), ctx);
     }
     for (const p of subjects.people) {
       const wrap = probe.querySelector(`[data-probe-person="${CSS.escape(p.code)}"]`);

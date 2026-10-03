@@ -47,8 +47,9 @@ enum SearchSubject: Equatable, Hashable {
 struct SearchSuggestionRow: Equatable, Identifiable {
     enum Kind: String { case text, person, tag }
 
-    /// Stable for the subject (`text`, `person:<code>`, `tag:<name>`); sent
-    /// back as-is when the row is chosen.
+    /// Stable for the subject (`text`, `person:<code>`, `tag:<folded name>`);
+    /// sent back as-is when the row is chosen. A badge style is keyed by the
+    /// part after the prefix.
     let id: String
     let kind: Kind
     /// Localised by the SPA, drawn as-is.
@@ -157,6 +158,139 @@ struct SearchTokenChip: Equatable, Identifiable {
 
     static func decodeAll(_ wire: Any?) -> [SearchTokenChip] {
         (wire as? [Any] ?? []).compactMap(SearchTokenChip.init(wire:))
+    }
+}
+
+/// A colour in display-P3, each component 0…1, as the SPA measured it.
+struct BadgeColour: Equatable {
+    let red: Double
+    let green: Double
+    let blue: Double
+    let opacity: Double
+
+    init(red: Double, green: Double, blue: Double, opacity: Double) {
+        self.red = red
+        self.green = green
+        self.blue = blue
+        self.opacity = opacity
+    }
+
+    init?(wire: Any?) {
+        guard let d = wire as? [String: Any],
+              let r = SearchBadgeStyle.number(d["r"]), let g = SearchBadgeStyle.number(d["g"]),
+              let b = SearchBadgeStyle.number(d["b"]), let a = SearchBadgeStyle.number(d["a"])
+        else { return nil }
+        let unit = { (x: Double) in min(max(x, 0), 1) }
+        self.init(red: unit(r), green: unit(g), blue: unit(b), opacity: unit(a))
+    }
+}
+
+/// How one badge is drawn, measured by the SPA from the report's own CSS
+/// (docs/design-search.md §7a), so a chip in the native field matches the
+/// badge on the card without this side knowing any colour or size.
+struct SearchBadgeStyle: Equatable {
+    enum Family: String { case mono, body }
+
+    struct Border: Equatable {
+        let colour: BadgeColour
+        let width: Double
+    }
+
+    /// Nil when the badge has no fill.
+    let fill: BadgeColour?
+    let text: BadgeColour
+    let border: Border?
+    let family: Family
+    /// CSS pixels, which are points.
+    let size: Double
+    /// CSS font weight, 100…900.
+    let weight: Double
+    let padX: Double
+    let padY: Double
+    let radius: Double
+
+    init?(wire: Any?) {
+        guard let d = wire as? [String: Any],
+              let text = BadgeColour(wire: d["fg"]),
+              let size = Self.number(d["sizePx"]), size > 0,
+              let weight = Self.number(d["weight"]),
+              let padX = Self.number(d["padX"]), let padY = Self.number(d["padY"]),
+              let radius = Self.number(d["radius"])
+        else { return nil }
+        // Absent and null both mean "none"; a fill or border that is present
+        // but unreadable is dropped rather than drawn wrong.
+        self.fill = BadgeColour(wire: d["bg"])
+        if let b = d["border"] as? [String: Any], let colour = BadgeColour(wire: b["colour"]),
+           let width = Self.number(b["widthPx"]), width > 0 {
+            self.border = Border(colour: colour, width: width)
+        } else {
+            self.border = nil
+        }
+        self.text = text
+        // A family a newer SPA adds is drawn in the body font: degraded, not wrong.
+        self.family = (d["fontFamily"] as? String).flatMap(Family.init(rawValue:)) ?? .body
+        self.size = size
+        self.weight = min(max(weight, 100), 900)
+        self.padX = max(padX, 0)
+        self.padY = max(padY, 0)
+        self.radius = max(radius, 0)
+    }
+
+    /// A finite JSON number. `JSONSerialization` hands numbers over as
+    /// `NSNumber`, which bridges to `Double` whether it was written 12 or 12.0;
+    /// a JSON boolean also bridges, so it is refused by its type first.
+    static func number(_ value: Any?) -> Double? {
+        guard let n = value as? NSNumber, CFGetTypeID(n) != CFBooleanGetTypeID() else { return nil }
+        let x = n.doubleValue
+        return x.isFinite ? x : nil
+    }
+}
+
+/// A person's badge: the speaker code, and the name beside it when the report
+/// shows one.
+struct SearchPersonBadgeStyle: Equatable {
+    let code: SearchBadgeStyle
+    let name: SearchBadgeStyle?
+
+    init?(wire: Any?) {
+        guard let d = wire as? [String: Any], let code = SearchBadgeStyle(wire: d["code"]) else {
+            return nil
+        }
+        self.code = code
+        // A malformed name half draws the code alone rather than losing the badge.
+        self.name = SearchBadgeStyle(wire: d["name"])
+    }
+}
+
+/// The styles of every badge the menu and chips currently show
+/// (`search-badge-styles`). Each message replaces the last. Tags are keyed by
+/// folded name (a row's id after `tag:`, a token's `styleKey`), people by code.
+struct SearchBadgeStyles: Equatable {
+    var tags: [String: SearchBadgeStyle]
+    var people: [String: SearchPersonBadgeStyle]
+
+    static let empty = SearchBadgeStyles(tags: [:], people: [:])
+
+    init(tags: [String: SearchBadgeStyle], people: [String: SearchPersonBadgeStyle]) {
+        self.tags = tags
+        self.people = people
+    }
+
+    init(message body: [String: Any]) {
+        tags = (body["tags"] as? [String: Any] ?? [:]).compactMapValues(SearchBadgeStyle.init(wire:))
+        people = (body["people"] as? [String: Any] ?? [:]).compactMapValues(SearchPersonBadgeStyle.init(wire:))
+    }
+
+    /// A person row's badge style. A token looks up `people[styleKey]` directly.
+    func personStyle(for row: SearchSuggestionRow) -> SearchPersonBadgeStyle? {
+        guard row.kind == .person, let code = row.code else { return nil }
+        return people[code]
+    }
+
+    /// A tag row's badge style. A token looks up `tags[styleKey]` directly.
+    func tagStyle(for row: SearchSuggestionRow) -> SearchBadgeStyle? {
+        guard row.kind == .tag, row.id.hasPrefix("tag:") else { return nil }
+        return tags[String(row.id.dropFirst("tag:".count))]
     }
 }
 

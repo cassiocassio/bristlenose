@@ -2843,16 +2843,22 @@ h1 {
 .m-segs .m-tc { font-family: var(--bn-font-mono); font-size: var(--bn-text-caption); color: var(--bn-colour-muted); padding-top: .15rem; }
 .m-segs .m-sp { text-align: right; }
 
-/* ── NEW — the one composition rule this iteration proposes (3 lines) ──
+/* ── NEW — the one composition rule this iteration proposes ──
    `.badge-proposed` was written for `.badge`, a single box with no border of
    its own, so it ADDS a dashed border. The split badge is two boxes that each
-   already carry a solid 1px border; applying the class to the wrapper draws a
-   dashed ring around a solid pair. The rule below moves the dash onto the
-   halves and drops the ring. Pulse, hover, pill and keyboard focus all come
-   from atoms/badge.css unchanged. Proposed home: molecules/person-badge.css. */
+   carry a solid 1px border on three sides; applying the class to the wrapper
+   draws a dashed ring around a solid pair. The rule below draws ONE dashed
+   ring around the whole badge, as on a proposed tag, and drops the halves'
+   own borders (1px off each half, 1px onto the ring: same outer size).
+   Corrected 3 Oct 2026: the first version set `border-style: dashed` on the
+   halves, which revived the inner edges the shipped rule removes with
+   `border-right/left: none` — at the default 3px width, in the text colour —
+   and drew a heavy dotted seam between code and name. The owner: "use the
+   dotted surround like tags". Proposed home: molecules/person-badge.css. */
 .bn-person-badge.badge-proposed { border: none; }
+.bn-person-badge.badge-proposed .bn-speaker-badge--split { border: 1px dashed currentColor; }
 .bn-person-badge.badge-proposed .bn-speaker-badge-code,
-.bn-person-badge.badge-proposed .bn-speaker-badge-name { border-style: dashed; }
+.bn-person-badge.badge-proposed .bn-speaker-badge-name { border: none; }
 
 @media (prefers-reduced-motion: reduce) { .badge-proposed { animation: none; } }
 </style>

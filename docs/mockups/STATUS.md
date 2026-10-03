@@ -153,6 +153,7 @@ state is still evidenced, the day is not.
 | `debug-inspector-mockup.html` | 1 Aug 2026 | SANDPIT — debug instrument |
 | `desktop-nav-toolbar-rearrangement.html` | 21 Jun 2026 | IMPLEMENTED — “the interactive mockup” accompanying `design-desktop-nav-toolbar-rearrangement.md`; the menu/toolbar arrangement ships |
 | `desktop-sidebar-footer-version-feedback.html` | 3 Oct 2026 | PROPOSED 3 Oct 2026 · IMPLEMENTED 3 Oct 2026 (`88622103`) — the sidebar footer: version as plain text, ladybug Send Feedback, the list sliding under a soft edge; plan in `design-desktop-sidebar-footer.md` |
+| `desktop-toolbar-and-footer-options.html` | 3 Oct 2026 | *unreviewed* — added by the toolbar rev 3 session; the decision record for `design-desktop-nav-toolbar-rearrangement.md` rev 3. Not classified by its owner |
 | `docs-site-mockup.html` | 26 Jun 2026 | PROPOSED 26 Jun 2026 · IMPLEMENTED — self-declared throwaway, but the docs site was built: per-topic Markdown in the website repo’s `docs-src/`, published at bristlenose.app/docs/ |
 | `editable-themes-prototype.html` | 1 Aug 2026 | SANDPIT — theme-editing prototype |
 | `focus-mode-lab.html` | 4 Aug 2026 | SANDPIT — “Sandpit: real quote-card markup”; Focus Mode itself shipped in 0.24.0 |
@@ -316,6 +317,7 @@ state is still evidenced, the day is not.
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
 | `welcome-carousel-playground.html` | 15 Jul 2026 | SANDPIT — carousel instrument from the same series; `welcome-fibonacci-rotating.html` is canonical |
+| `welcome-dismiss-options.html` | 3 Oct 2026 | *unreviewed* — added by the welcome model 2 session (ways to switch off the macOS welcome pane). Not classified by its owner |
 | `welcome-fibonacci-composed.html` | 15 Jul 2026 | PROPOSED 15 Jul 2026 · SUPERSEDED by `welcome-fibonacci-rotating.html` (canonical) |
 | `welcome-fibonacci-refine.html` | 15 Jul 2026 | PROPOSED 15 Jul 2026 · SUPERSEDED by `welcome-fibonacci-rotating.html` (canonical) |
 | `welcome-fibonacci-rotating.html` | 15 Jul 2026 | IMPLEMENTED — the **canonical** fibonacci welcome; the others in the series are its drafts |
@@ -324,6 +326,7 @@ state is still evidenced, the day is not.
 | `welcome-layout-experiments.html` | 15 Jul 2026 | PROPOSED 15 Jul 2026 · SUPERSEDED by `welcome-fibonacci-rotating.html` (canonical) |
 | `welcome-science-animations.html` | 25 Jul 2026 | IMPLEMENTED — “**reference spec**” for `WelcomeIllustrations.swift`, and the website welcome cells were ported from it |
 | `welcome-science-disclosure.html` | 19 Jul 2026 | SANDPIT — disclosure variants for the science welcome cell; the cell itself ships (`welcome-science-animations.html`) |
+| `welcome-separate-window.html` | 3 Oct 2026 | *unreviewed* — added by the welcome model 2 session (welcome in its own window). Not classified by its owner |
 | `welcome-studytools-animations.html` | 20 Aug 2026 | IMPLEMENTED — cited from `WelcomeHomeView.swift`’s own doc comment |
 | `welcome-focus-cell-build.html` | 22 Sep 2026 | *unreviewed* |
 | `welcome-focus-cell.html` | 22 Sep 2026 | *unreviewed* |

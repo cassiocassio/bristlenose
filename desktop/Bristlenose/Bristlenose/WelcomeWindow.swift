@@ -33,6 +33,17 @@ enum WelcomeWindow {
     static let naturalContentWidth = WelcomeSpiralLayout.naturalWidth + 40
     /// Narrowest content width: the Scientific background cell plus margins.
     static let minimumContentWidth = WelcomeSpiralLayout.minimumWidth + 40
+    /// Below this content width the spiral stacks (Study tools on top); at or above
+    /// it, the spiral narrows with the window. Set by eye on a real window, 3 Oct
+    /// 2026: at ~600 pt the spiral is still legible, and stacking any earlier gave
+    /// a window barely narrower than natural a Study tools cell as tall as it was
+    /// wide, mostly empty.
+    static let stackBelowContentWidth: CGFloat = 600
+
+    /// Whether a window of this content width shows the stacked arrangement.
+    static func stacks(atContentWidth width: CGFloat) -> Bool {
+        width < stackBelowContentWidth
+    }
     /// Opening height: margins, the spiral, and the footer checkbox — with a few
     /// points of slack over the footer's nominal 8 + checkbox + 16, so a taller
     /// control style or text size does not make the natural size scroll.

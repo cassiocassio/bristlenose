@@ -240,7 +240,7 @@ struct WelcomeHomeView: View {
         // stacked arrangement. Width alone decides; height only decides scrolling.
         GeometryReader { geo in
             ScrollView(.vertical) {
-                spiral(stacked: geo.size.width < WelcomeWindow.naturalContentWidth - 1)
+                spiral(stacked: WelcomeWindow.stacks(atContentWidth: geo.size.width))
                     .padding(20)
                     .frame(maxWidth: .infinity, alignment: .topLeading)   // pin top
             }
@@ -462,7 +462,9 @@ struct WelcomeDropCard: View {
 /// background, Tip, AI, Delight; major 0.618 first, alternating axis, curling
 /// inward — at its **natural size**, which is also the widest it ever draws.
 ///
-/// Narrower than that it reflows in exactly **one** step: the outermost split turns
+/// Between the natural size and `WelcomeWindow.stackBelowContentWidth` it stays a
+/// spiral and narrows with the window. Narrower than that it reflows in exactly
+/// **one** step: the outermost split turns
 /// from side-by-side to stacked, so Study tools goes on top at the full width and
 /// the rest of the spiral sits underneath at its natural height. Nothing inside
 /// that block ever moves — the window's minimum width (`minimumWidth`) is the
@@ -515,14 +517,17 @@ struct WelcomeSpiralLayout: Layout {
 
     /// Frames in cell order: Study tools, Scientific background, Tip, AI, Delight.
     static func frames(width w: CGFloat, stacked: Bool) -> [CGRect] {
-        let h = naturalHeight
         if !stacked {
+            // The spiral keeps φ at any width it is drawn at.
+            let h = w / 1.618
             let studyWidth = (w - gutter) * phi
             return [CGRect(x: 0, y: 0, width: studyWidth, height: h)]
                 + minorBlock(in: CGRect(x: studyWidth + gutter, y: 0,
                                         width: w - studyWidth - gutter, height: h))
         }
-        // Stacked: Study tools keeps its square, up to the spiral's height.
+        // Stacked: Study tools keeps its square, up to the spiral's height; the
+        // rest of the spiral sits underneath at its natural height.
+        let h = naturalHeight
         let studyHeight = min(w, h)
         return [CGRect(x: 0, y: 0, width: w, height: studyHeight)]
             + minorBlock(in: CGRect(x: 0, y: studyHeight + gutter, width: w, height: h))

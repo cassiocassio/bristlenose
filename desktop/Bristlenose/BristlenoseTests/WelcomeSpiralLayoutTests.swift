@@ -31,6 +31,14 @@ struct WelcomeSpiralLayoutTests {
         #expect(f.allSatisfy { $0.maxX <= L.naturalWidth + 0.5 && $0.maxY <= L.naturalHeight + 0.5 })
     }
 
+    @Test("narrowed but not stacked, the spiral keeps its φ proportions")
+    func narrowedSpiralKeepsPhi() {
+        let w: CGFloat = 560
+        let f = L.frames(width: w, stacked: false)
+        #expect(abs((f.map(\.maxY).max() ?? 0) - w / 1.618) < 0.5)
+        #expect(f[2].minY > f[1].maxY && f[3].minX > f[2].maxX)
+    }
+
     @Test("stacked, only the outermost split flips — at every width the window allows")
     func oneStepReflow() {
         for width in [L.minimumWidth, 400, 600, L.naturalWidth] {
@@ -46,6 +54,18 @@ struct WelcomeSpiralLayoutTests {
             // …at the spiral's natural height.
             #expect(abs((delight.maxY - science.minY) - L.naturalHeight) < 0.5)
         }
+    }
+
+    @Test("the spiral holds down to ~600 pt and stacks only below it")
+    func breakpoint() {
+        #expect(!WelcomeWindow.stacks(atContentWidth: WelcomeWindow.naturalContentWidth))
+        #expect(!WelcomeWindow.stacks(atContentWidth: WelcomeWindow.stackBelowContentWidth))
+        #expect(WelcomeWindow.stacks(atContentWidth: WelcomeWindow.stackBelowContentWidth - 1))
+        #expect(WelcomeWindow.stacks(atContentWidth: WelcomeWindow.minimumContentWidth))
+        // The breakpoint sits strictly between the window's limits, or one of the
+        // two arrangements would be unreachable.
+        #expect(WelcomeWindow.minimumContentWidth < WelcomeWindow.stackBelowContentWidth)
+        #expect(WelcomeWindow.stackBelowContentWidth < WelcomeWindow.naturalContentWidth)
     }
 
     @Test("at the minimum width the inner block is exactly its natural size")

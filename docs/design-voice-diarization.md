@@ -15,6 +15,8 @@ ran. **INFERRED** is reasoning, not measurement.
 
 ## TL;DR
 
+**4 Oct 2026, scored against a Teams transcript's named turns:** voice plus the shipped text splitter gets about 45% fewer segments wrong than the text splitter alone (22 → 12 of 286), and on lines long enough to quote, 12 → 4 (§ Measured against platform ground truth). The points below predate that measurement.
+
 1. **Voice beats the shipped splitter on our own data, without hand labels.**
    On the 36-minute Talismanic session (s2), the shipped opening-sample
    splitter gives the moderator **86 %** of talk time. A local voice method
@@ -347,6 +349,41 @@ Two traps this design has to respect:
 - **The pipeline must state what voice decided**, the same way
   `NOT_SEPARATED` is stated, so a researcher who sees "Voice 1/Voice 2" with
   no names knows why.
+
+## Measured against platform ground truth (4 Oct 2026)
+
+Option A's voice pass (TitaNet-small, one embedding per Whisper segment,
+two clusters; `experiments/speaker_split_full/voice.py`) was scored against
+the named turns of a Teams `.docx` transcript, on the same 385 Whisper
+segments (real word timings) as the shipped text splitter. The text splitter
+is the one shipped on 3 Oct 2026: whole transcript, in parts. Voice clusters
+got their roles from the shipped LLM role pass, as the product would, and
+segments too short to embed (27, under 0.6 s) kept the text label.
+Scoring: `experiments/speaker_split_full/eval_voice.py`; truths as in
+`docs/design-speaker-splitting.md` § Measured.
+
+| Method | Wrong, text truth (286 scored) | Wrong, timing truth (212 scored) | Word accuracy (text truth) |
+|---|---|---|---|
+| Text splitter alone (2 runs) | 22, 22 | 29, 26 | 95% |
+| Voice alone | 17 | 18 | 98.5% |
+| **Voice, text where voice has no verdict** | **12, 12** | **15, 15** | **98.8%** |
+
+- **About 45% fewer wrong segments** than the text splitter alone (22 → 12;
+  27 → 15 on the timing truth), and about 75% fewer wrong words.
+- **The mistakes left are short.** Of the 12, eight are one- to three-word
+  backchannels ("Yeah.", "Okay."), mostly too short to embed. On lines of
+  four or more words, the ones that can become quotes, text alone gets 12
+  wrong and voice with text gets 4.
+- **The role pass mapped the clusters correctly.** The oracle permutation
+  picks the same mapping.
+- **Cheap, as before:** 15 s of embedding for 38 minutes of audio on CPU;
+  centroid cosine 0.26 (WeSpeaker on the same audio: 0.87, close to
+  "one voice").
+- **Not measured:** segments that hold both voices (65 of 385 by the Teams
+  timing). Re-cutting them at word level is what Option A adds beyond this
+  per-segment pass, and there is no word-level truth to score it against.
+  Also one session, one Teams recording, one moderator; the research above
+  found a Meet recording harder.
 
 ## The first experiment (free, local, proposed — not run)
 

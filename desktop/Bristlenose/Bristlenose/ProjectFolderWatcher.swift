@@ -329,7 +329,8 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
         guard let recordDate = modified(record, fileManager) else { return true }
         guard let entries = try? fileManager.contentsOfDirectory(
             at: projectRoot, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]),
-              let guide = entries.first(where: { $0.lastPathComponent.lowercased() == "discussion guide" })
+              let guide = entries.first(where: {
+                  $0.lastPathComponent.lowercased() == DiscussionGuide.folderName.lowercased() })
         else { return false }
         // The folder's own date moves when a file is added or removed; a file's
         // moves when it is saved in place.

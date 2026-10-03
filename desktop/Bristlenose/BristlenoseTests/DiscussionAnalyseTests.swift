@@ -77,6 +77,52 @@ import Testing
         #expect(ProjectFolderWatcher.discussionWanted(projectRoot: root))
     }
 
+    // MARK: - installing a chosen guide
+
+    private func source(_ name: String, _ text: String) throws -> URL {
+        // Its own folder, so the file keeps the exact name a researcher chose.
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("src-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let url = dir.appendingPathComponent(name)
+        try Data(text.utf8).write(to: url)
+        try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSinceNow: -86_400)],
+                                              ofItemAtPath: url.path)
+        return url
+    }
+
+    @Test func installCreatesTheFolderAndMakesTheDiscussionWanted() throws {
+        let root = try project()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try writeRecord(root, at: Date(timeIntervalSinceNow: -60))
+        // a guide last saved yesterday must still read as newer than the record
+        let dest = try DiscussionGuide.install(try source("guide.md", "# Guide"), into: root)
+        #expect(dest.deletingLastPathComponent().lastPathComponent == DiscussionGuide.folderName)
+        #expect(ProjectFolderWatcher.discussionWanted(projectRoot: root))
+    }
+
+    @Test func installUsesTheFolderThatIsThere_whateverItsCase() throws {
+        let root = try project()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(
+            at: root.appendingPathComponent("discussion GUIDE"), withIntermediateDirectories: true)
+        let dest = try DiscussionGuide.install(try source("guide.txt", "x"), into: root)
+        #expect(dest.deletingLastPathComponent().lastPathComponent == "discussion GUIDE")
+        let folders = try FileManager.default.contentsOfDirectory(atPath: root.path)
+        #expect(folders.filter { $0.lowercased() == "discussion guide" }.count == 1)
+    }
+
+    @Test func choosingTheSameNameAgainReplacesIt_andLeavesOtherFilesAlone() throws {
+        let root = try project()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try DiscussionGuide.install(try source("guide.md", "old"), into: root)
+        let other = try DiscussionGuide.install(try source("notes.txt", "keep me"), into: root)
+        let dest = try DiscussionGuide.install(try source("guide.md", "new"), into: root)
+        #expect(try String(contentsOf: dest, encoding: .utf8) == "new")
+        #expect(try String(contentsOf: other, encoding: .utf8) == "keep me")
+        let names = try FileManager.default.contentsOfDirectory(atPath: dest.deletingLastPathComponent().path)
+        #expect(Set(names) == ["guide.md", "notes.txt"])  // no staged leftovers
+    }
+
     @Test func aGuideOlderThanTheRecordIsNotWanted() throws {
         let root = try project()
         defer { try? FileManager.default.removeItem(at: root) }

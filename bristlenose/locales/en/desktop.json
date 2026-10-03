@@ -1176,6 +1176,8 @@
     "notRun": "This project was analysed before the Discussion lens existed. To build it, choose Analyse from the project\u2019s menu in the sidebar. Finished steps are reused, and your edits are kept.",
     "stale": "The quotes have changed since the discussion was built. It is rebuilt the next time the project is analysed.",
     "notBuilt": "The discussion could not be built for this project. It is tried again the next time the project is analysed.",
+    "choosePanelMessage": "Choose your discussion guide \u2014 Word, Markdown or plain text.",
+    "copyFailed": "Your guide could not be copied into the project folder.",
     "guideHowTo": "Put your guide \u2014 Word, Markdown or plain text \u2014 in a folder named \u201cDiscussion guide\u201d beside your recordings, then choose Analyse from the project\u2019s menu in the sidebar.",
     "guideProblem": {
       "unreadable": "Your guide could not be read. Check that it opens, then choose Analyse from the project\u2019s menu in the sidebar."

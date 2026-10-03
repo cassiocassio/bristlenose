@@ -1171,6 +1171,8 @@
     "notRun": "Este proyecto se analiz\u00f3 antes de que existiera la discusi\u00f3n. Para crearla, elige Analizar en el men\u00fa del proyecto en la barra lateral. Los pasos terminados se reutilizan y tus cambios se conservan.",
     "stale": "Las citas han cambiado desde que se cre\u00f3 la discusi\u00f3n. Se volver\u00e1 a crear la pr\u00f3xima vez que se analice el proyecto.",
     "notBuilt": "No se pudo crear la discusi\u00f3n de este proyecto. Se volver\u00e1 a intentar la pr\u00f3xima vez que se analice el proyecto.",
+    "choosePanelMessage": "Elige tu gu\u00eda de discusi\u00f3n: Word, Markdown o texto sin formato.",
+    "copyFailed": "No se pudo copiar tu gu\u00eda en la carpeta del proyecto.",
     "guideHowTo": "Pon tu gu\u00eda (Word, Markdown o texto sin formato) en una carpeta llamada \u201cDiscussion guide\u201d junto a tus grabaciones y elige Analizar en el men\u00fa del proyecto en la barra lateral.",
     "guideProblem": {
       "unreadable": "No se pudo leer tu gu\u00eda. Comprueba que se abre y elige Analizar en el men\u00fa del proyecto en la barra lateral."

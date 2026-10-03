@@ -880,6 +880,8 @@
  "desktop.connectAgent.sessions_one": "355260",
  "desktop.connectAgent.sessions_other": "3268b0",
  "desktop.connectAgent.unavailable": "c04433",
+ "desktop.discussion.choosePanelMessage": "439be8",
+ "desktop.discussion.copyFailed": "dc5006",
  "desktop.discussion.guideHowTo": "ac8c11",
  "desktop.discussion.guideProblem.unreadable": "259450",
  "desktop.discussion.notBuilt": "6fc800",

@@ -25,6 +25,8 @@ import { SectionHeading } from "../../components/SectionHeading";
 import { announce } from "../../utils/announce";
 import { isExportMode } from "../../utils/exportData";
 import { dt } from "../../utils/platformTranslation";
+import { isEmbedded } from "../../utils/embedded";
+import { postProjectAction } from "../../shims/bridge";
 import { MIN_WIDTH, RESIZE_STEP } from "./split";
 import {
   capNames,
@@ -649,11 +651,13 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
         )}
         {(mode === "planned" || !data.guide) && !isExportMode() && (
           // The house small secondary button at the foot of a navigator — the
-          // Codebook navigator's Browse Library is the precedent. There is no
-          // picker in the web view, so it tells the researcher where the guide
-          // goes; the Mac's native picker is later work (plan §4).
+          // Codebook navigator's Browse Library is the precedent. In the Mac app
+          // it opens the native panel, which copies the guide in and re-runs
+          // (plan §4); a browser has no way to write into the project folder,
+          // so there it says where the guide goes.
           <>
-            <button type="button" className="bn-btn bn-btn-secondary bn-btn-sm" onClick={() => setGuideNote(true)}>
+            <button type="button" className="bn-btn bn-btn-secondary bn-btn-sm"
+              onClick={() => (isEmbedded() ? postProjectAction("choose-discussion-guide") : setGuideNote(true))}>
               {data.guide || data.guide_problem ? S.replaceGuide : S.addGuide}
             </button>
             {guideNote && <p className="dl-before" role="status">{S.guideHowTo}</p>}

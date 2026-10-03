@@ -6,6 +6,7 @@ import { joinNames } from "./loadDiscussion";
 import i18n from "../../i18n";
 import enDesktop from "@locales/en/desktop.json";
 import { _resetPlatformCache } from "../../utils/platform";
+import { _resetEmbeddedCache } from "../../utils/embedded";
 import { resetLensState } from "./lensState";
 import type { DiscussionData } from "./types";
 
@@ -348,6 +349,11 @@ const sessionList = data.sessions.map((s) => ({
 
 const api = vi.hoisted(() => ({ apiGet: vi.fn(), getSessionList: vi.fn() }));
 vi.mock("../../utils/api", () => api);
+const bridge = vi.hoisted(() => ({ postProjectAction: vi.fn() }));
+vi.mock("../../shims/bridge", async (orig) => ({
+  ...(await orig<typeof import("../../shims/bridge")>()),
+  postProjectAction: bridge.postProjectAction,
+}));
 const exportState = vi.hoisted(() => ({ on: false }));
 vi.mock("../../utils/exportData", async (orig) => ({
   ...(await orig<typeof import("../../utils/exportData")>()),
@@ -432,6 +438,30 @@ describe("platform and export copy", () => {
     serve("not_run", null);
     render(<DiscussionLens />);
     expect(await screen.findByText("No discussion was built for this report.")).toBeInTheDocument();
+  });
+});
+
+describe("the guide button in the Mac app", () => {
+  afterEach(() => {
+    delete (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__;
+    _resetEmbeddedCache();
+    bridge.postProjectAction.mockReset();
+  });
+
+  it("asks the app for its native panel instead of describing the folder", () => {
+    (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__ = true;
+    _resetEmbeddedCache();
+    render(<DiscussionView data={{ ...data, guide: false, spine: [] }} />);
+    fireEvent.click(screen.getByRole("button", { name: "Add your guide…" }));
+    expect(bridge.postProjectAction).toHaveBeenCalledWith("choose-discussion-guide");
+    expect(screen.queryByText(/folder named “Discussion guide”/)).toBeNull();
+  });
+
+  it("in a browser it says where the guide goes, and asks nothing of a host", () => {
+    render(<DiscussionView data={{ ...data, guide: false, spine: [] }} />);
+    fireEvent.click(screen.getByRole("button", { name: "Add your guide…" }));
+    expect(bridge.postProjectAction).not.toHaveBeenCalled();
+    expect(screen.getByText(/folder named “Discussion guide”/)).toBeInTheDocument();
   });
 });
 

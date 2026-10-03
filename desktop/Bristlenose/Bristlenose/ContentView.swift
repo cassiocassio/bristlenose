@@ -1017,6 +1017,7 @@ struct ContentView: View {
             bridgeHandler.activateLens(tab)
             restoreAnchor(project.lastAnchor, on: tab)
         }
+        .onChange(of: bridgeHandler.chooseGuideRequests) { _, _ in chooseDiscussionGuide() }
         // Remember where they leave it. Gated on having restored first — see
         // `lensRestoredFor`.
         .onChange(of: bridgeHandler.activeTab) { _, tab in
@@ -1209,6 +1210,43 @@ struct ContentView: View {
                 // Reuse the drop path — extension filtering, copy, and the
                 // incremental-run wire (Phase 1) all live in handleDropOnProject.
                 handleDropOnProject(id: id, urls: panel.urls)
+            }
+        }
+    }
+
+    /// The Discussion lens's "Add your guide…" on the Mac (plan §4): a native
+    /// open panel, the file copied into the project's guide folder, then
+    /// **Analyse** — which resumes, so only the discussion stage runs and
+    /// nothing the researcher edited is lost. Busy pipeline: the copy still
+    /// lands, and the sidebar offers Analyse once the run is free.
+    private func chooseDiscussionGuide() {
+        guard let project = selectedProject, !project.path.isEmpty else { return }
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = DiscussionGuide.contentTypes
+        panel.message = i18n.t("desktop.discussion.choosePanelMessage")
+        panel.adoptHostAppearance()
+        panel.begin { response in
+            Task { @MainActor in
+                guard response == .OK, let url = panel.url else { return }
+                do {
+                    try DiscussionGuide.install(url, into: URL(fileURLWithPath: project.path))
+                } catch {
+                    let alert = NSAlert()
+                    alert.messageText = i18n.t("desktop.discussion.copyFailed")
+                    alert.informativeText = error.localizedDescription
+                    if let host = PanelHost.window {
+                        alert.beginSheetModal(for: host)
+                    } else {
+                        alert.runModal()
+                    }
+                    return
+                }
+                if SidebarOutlineController.pipelineIsFree(pipelineRunner.state[project.id]) {
+                    pipelineRunner.start(project: project)
+                }
             }
         }
     }

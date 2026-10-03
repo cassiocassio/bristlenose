@@ -1171,6 +1171,8 @@
     "notRun": "Questo progetto \u00e8 stato analizzato prima che esistesse la discussione. Per crearla, scegli Analizza dal menu del progetto nella barra laterale. I passaggi completati vengono riutilizzati e le tue modifiche restano.",
     "stale": "Le citazioni sono cambiate da quando \u00e8 stata creata la discussione. Verr\u00e0 ricreata alla prossima analisi del progetto.",
     "notBuilt": "Impossibile creare la discussione per questo progetto. Si riprover\u00e0 alla prossima analisi del progetto.",
+    "choosePanelMessage": "Scegli la tua traccia di intervista: Word, Markdown o testo semplice.",
+    "copyFailed": "Impossibile copiare la tua traccia nella cartella del progetto.",
     "guideHowTo": "Metti la tua traccia (Word, Markdown o testo semplice) in una cartella chiamata \u201cDiscussion guide\u201d accanto alle registrazioni, poi scegli Analizza dal menu del progetto nella barra laterale.",
     "guideProblem": {
       "unreadable": "Impossibile leggere la tua traccia. Controlla che si apra, poi scegli Analizza dal menu del progetto nella barra laterale."

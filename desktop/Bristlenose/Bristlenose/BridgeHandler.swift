@@ -176,6 +176,11 @@ final class BridgeHandler: ObservableObject {
     /// Ask the Quotes search capsule to expand and focus. See `focusSearchRequests`.
     func requestSearchFocus() { focusSearchRequests += 1 }
 
+    /// The Discussion lens asked to choose a guide. A counter the window
+    /// observes, as `focusSearchRequests` is: this handler is per window, so the
+    /// open panel belongs to the window whose lens asked.
+    @Published private(set) var chooseGuideRequests = 0
+
     /// Whether the web layer has an undo action available.
     @Published var canUndo = false
 
@@ -1134,6 +1139,9 @@ final class BridgeHandler: ObservableObject {
         case "open-feedback":
             // Status page (SPA absent) asked for the native feedback sheet.
             NotificationCenter.default.post(name: .showFeedbackSheet, object: nil)
+
+        case "choose-discussion-guide":
+            chooseGuideRequests += 1
 
         case "reveal-in-finder":
             // Reveal a folder (highlighted in its parent) in Finder. Sandbox-safe:

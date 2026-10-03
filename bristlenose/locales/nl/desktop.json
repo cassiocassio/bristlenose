@@ -1171,6 +1171,8 @@
     "notRun": "Dit project is geanalyseerd voordat de discussie bestond. Kies om haar te maken Analyseer in het menu van het project in de navigatiekolom. Afgeronde stappen worden hergebruikt en je wijzigingen blijven behouden.",
     "stale": "De citaten zijn veranderd sinds de discussie werd gemaakt. Ze wordt opnieuw gemaakt bij de volgende analyse van het project.",
     "notBuilt": "De discussie voor dit project kon niet worden gemaakt. Bij de volgende analyse van het project wordt het opnieuw geprobeerd.",
+    "choosePanelMessage": "Kies je gespreksgids: Word, Markdown of platte tekst.",
+    "copyFailed": "Je gids kon niet naar de projectmap worden gekopieerd.",
     "guideHowTo": "Zet je gids (Word, Markdown of platte tekst) in een map met de naam \u2018Discussion guide\u2019 naast je opnamen en kies Analyseer in het menu van het project in de navigatiekolom.",
     "guideProblem": {
       "unreadable": "Je gids kon niet worden gelezen. Controleer of hij opent en kies Analyseer in het menu van het project in de navigatiekolom."

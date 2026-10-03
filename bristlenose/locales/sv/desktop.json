@@ -1171,6 +1171,8 @@
     "notRun": "Det h\u00e4r projektet analyserades innan diskussionen fanns. V\u00e4lj Analysera i projektets meny i sidof\u00e4ltet f\u00f6r att skapa den. F\u00e4rdiga steg \u00e5teranv\u00e4nds och dina \u00e4ndringar finns kvar.",
     "stale": "Citaten har \u00e4ndrats sedan diskussionen skapades. Den skapas p\u00e5 nytt n\u00e4sta g\u00e5ng projektet analyseras.",
     "notBuilt": "Det gick inte att skapa diskussionen f\u00f6r det h\u00e4r projektet. Det g\u00f6rs ett nytt f\u00f6rs\u00f6k n\u00e4sta g\u00e5ng projektet analyseras.",
+    "choosePanelMessage": "V\u00e4lj din intervjuguide \u2013 Word, Markdown eller vanlig text.",
+    "copyFailed": "Det gick inte att kopiera din guide till projektmappen.",
     "guideHowTo": "L\u00e4gg din guide (Word, Markdown eller vanlig text) i en mapp som heter \u201dDiscussion guide\u201d bredvid dina inspelningar och v\u00e4lj Analysera i projektets meny i sidof\u00e4ltet.",
     "guideProblem": {
       "unreadable": "Det gick inte att l\u00e4sa din guide. Kontrollera att den g\u00e5r att \u00f6ppna och v\u00e4lj Analysera i projektets meny i sidof\u00e4ltet."

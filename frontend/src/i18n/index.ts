@@ -1,8 +1,9 @@
 /**
  * i18n — i18next initialisation for the Bristlenose frontend.
  *
- * English is bundled inline (zero-latency). Other locales are loaded lazily
- * via dynamic import() when the user changes locale in Settings.
+ * English is bundled inline (zero-latency) — except the `desktop` namespace,
+ * see `desktopEnReady`. Other locales are loaded lazily via dynamic import()
+ * when the user changes locale in Settings.
  *
  * @module i18n
  */
@@ -14,7 +15,6 @@ import LanguageDetector from "i18next-browser-languagedetector";
 import enCommon from "@locales/en/common.json";
 import enSettings from "@locales/en/settings.json";
 import enEnums from "@locales/en/enums.json";
-import enDesktop from "@locales/en/desktop.json";
 import { getExportData } from "../utils/exportData";
 import { loadLocaleResources } from "./localeLoader";
 
@@ -86,7 +86,6 @@ i18n
         common: enCommon,
         settings: enSettings,
         enums: enEnums,
-        ...(_isDesktopMode ? { desktop: enDesktop } : {}),
       },
     },
     // Region/script variants borrow from a base locale before English.
@@ -106,6 +105,28 @@ i18n
     saveMissing: false,
     missingKeyHandler: false,
   });
+
+/**
+ * Resolves once English `desktop` is registered; `null` in a browser.
+ *
+ * It is the one English namespace not bundled. Most of it is the macOS app's
+ * own chrome — menus, Welcome, native errors — which I18n.swift reads from the
+ * app bundle, and the SPA reads it at two `dt()` sites. Bundled, it was 18 kB
+ * gzipped of every browser visitor's first paint, for strings a browser never
+ * registers (measured 4 Oct 2026, docs/design-perf-regression-gate.md). On the
+ * Mac, main.tsx waits for this before mounting, so `dt()` never paints the CLI
+ * wording first; the fetch is from the loopback sidecar.
+ */
+export const desktopEnReady: Promise<void> | null = _isDesktopMode
+  ? import("@locales/en/desktop.json").then(
+      (m) => {
+        i18n.addResourceBundle("en", "desktop", m.default, true, true);
+      },
+      () => {
+        // Unreachable chunk: dt() falls back to the base key, as before load.
+      },
+    )
+  : null;
 
 // Keep <html lang> in sync so screen readers use the correct pronunciation engine.
 i18n.on("languageChanged", (lng: string) => {

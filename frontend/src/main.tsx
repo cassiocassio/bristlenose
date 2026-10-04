@@ -5,7 +5,7 @@ import { isExportMode } from "./utils/exportData";
 import { redirectHashToPathname } from "./utils/hashRedirect";
 
 // Initialise i18next — must be imported before any component that uses useTranslation.
-import "./i18n";
+import { desktopEnReady } from "./i18n";
 
 // Translucent chrome (spike): mirror __BRISTLENOSE_EMBEDDED__ into an HTML
 // attribute the CSS cascade can gate on. The native WKUserScript sets
@@ -28,7 +28,10 @@ const appRoot = document.getElementById("bn-app-root");
 if (appRoot) {
   // Hash redirect only in serve mode — export uses hash router
   if (!isExportMode()) redirectHashToPathname();
-  createRoot(appRoot).render(<RouterProvider router={router} />);
+  const mount = () => createRoot(appRoot).render(<RouterProvider router={router} />);
+  // On the Mac, mount once the English desktop strings are in (desktopEnReady).
+  if (desktopEnReady) void desktopEnReady.then(mount);
+  else mount();
 }
 
 // ── Legacy island mode ──────────────────────────────────────────────────

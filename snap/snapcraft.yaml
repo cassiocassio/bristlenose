@@ -47,9 +47,8 @@ parts:
     plugin: python
     source: .
     python-packages:
-      # voice: the stage-5b voice pass (sherpa-onnx, which vendors its own
-      # libonnxruntime.so beside _sherpa_onnx*.so, found by rpath, and never
-      # imports the separate onnxruntime package). Manylinux cp312 wheels for
+      # voice: the stage-5b voice pass (kaldi-native-fbank, plus the
+      # onnxruntime faster-whisper already brings). Manylinux cp312 wheels for
       # amd64 and arm64, so nothing builds from source. The 40 MB model is NOT
       # bundled: it is fetched on first use into $SNAP_USER_COMMON/models/
       # (the network plug), hash-checked (docs/design-voice-diarization.md).
@@ -115,7 +114,7 @@ parts:
       $CRAFT_PART_INSTALL/bin/python3 - <<'PY'
       from bristlenose.doctor import CheckStatus, check_bundle_voice
       from bristlenose.stages.s05b_voice import voice_runtime_available
-      assert voice_runtime_available(), "sherpa_onnx is missing from the snap"
+      assert voice_runtime_available(), "the voice runtime is missing from the snap"
       r = check_bundle_voice()
       assert r.status == CheckStatus.OK, r.detail
       print("voice runtime:", r.detail)

@@ -39,7 +39,9 @@ ran. **INFERRED** is reasoning, not measurement.
 5. **It is cheap.** Embedding each Whisper segment and clustering takes
    **~0.005× real time on CPU**: about 11 s for 36 minutes of audio. The code
    (sherpa-onnx) is 37 MB with its own onnxruntime, with no torch, no numba
-   and no subprocess. The models are 6 MB + ~40 MB. (MEASURED)
+   and no subprocess. The models are 6 MB + ~40 MB. (MEASURED) _The shipped
+   pass runs on onnxruntime + kaldi-native-fbank instead, since 4 Oct 2026
+   (§ Licence)._
 
 **Recommendation:** run the first experiment below (free, local, ~1 hour of
 labelling). If it confirms the agreement figures against hand labels, build
@@ -127,6 +129,27 @@ itself. The first experiment below covers the ones that matter most.
 
 ### A. ONNX voice pass in Python, every channel (recommended first build)
 
+**Runtime since 4 Oct 2026 (later the same day): onnxruntime + kaldi-native-fbank,
+not sherpa-onnx** — the owner's call from § Licence, because sherpa's published
+wheels statically link espeak-ng (GPL-3.0-or-later). `s05b_voice._TitaNet` runs the
+same TitaNet-small file through the `onnxruntime` package with sherpa's NeMo front
+end (kaldi-native-fbank features, per-feature normalisation, no padding). Through
+the shipped code it matches sherpa on every 3 s window of two public FOSSDA
+interviews — 794/794 and 788/788 verdicts, worst embedding cosine 1.000000 — and is
+slightly faster (15.1 s against 17.0 s); `experiments/voice_onnx_equivalence/`
+re-runs that check. `VOICE_VERSION` stays `1`: the output did not change. The `voice`
+extra is now `onnxruntime` (already core through faster-whisper) and
+`kaldi-native-fbank`; the Mac sidecar ships onnxruntime's Python binding and drops
+its unused 33 MB C library — measured in a built sidecar: 39 MB of onnxruntime
+where sherpa's 37 MB was, plus 0.56 MB of kaldi-native-fbank, no sherpa and no
+`libonnxruntime.*.dylib`; `doctor --self-test` in the frozen bundle printed
+`✓ Bundle: voice  onnxruntime 1.30.0 and kaldi-native-fbank 1.22.3 load`, and a
+real `run` through the frozen binary (a 4-minute FOSSDA cut, Homebrew ffmpeg via
+`BRISTLENOSE_FFMPEG` because the bundled one is sandbox-signed) logged
+`voice_pass | method=voice+text`, 39 of 41 segments judged, 1 relabelled, centroid
+cosine 0.104, 1.7 s. The Snap and Copr carry one onnxruntime instead of two, and are
+**not yet re-proven** on the new extra (`TODO.md`). Paragraphs below that name sherpa describe the build as it was.
+
 **Built on the CLI, 4 Oct 2026** — the per-segment variant measured above, in `bristlenose/stages/s05b_voice.py`, behind the optional `voice` extra; through the shipped stage 5b code it scores 12–13 wrong of 286 against 22 for the text split alone. A real `bristlenose run` on the same 38-minute Teams recording (4 Oct 2026, `bd37eba1`) printed `Identified speakers (voice-checked: 1 session)` in 47.9 s for the stage: the text split as three sequential parts (12,665 input / 2,956 output tokens, about $0.08), the voice pass 12.7 s with no tokens (401 of 429 segments judged, 43 relabelled, centroid cosine 0.24), the role pass about $0.01. The report credits the moderator with 25% of the words; the Teams transcript says 30%. The session's speaker cache carries the `speaker_split` record and the log a `voice_pass |` line, so start, finish, time, cost and outcome are all on disk. **In the Mac app since 4 Oct 2026:** `build-sidecar.sh` installs the `voice` extra and the spec `collect_all`s `sherpa_onnx` (its vendored `libonnxruntime.dylib` signs with every other dylib; `doctor --self-test` gains `Bundle: voice`, which fails the build if the native runtime does not load). The model is **not** bundled: it downloads on first use into the app container, hash-verified, exactly as on the CLI — the same runtime-fetch shape as the Whisper model, keeping the pinned-hash path (a bundled copy would come in through the unverified override) and needing no Swift change. The Health window shows a Voice pass row. **In the Fedora Copr package since 4 Oct 2026 (on `main`, unreleased):** `rpm/make-srpm.sh` vendors the extra (`BN_EXTRAS="serve,voice"`) and the spec installs `bristlenose[serve,voice]`; the model is fetched on first use into `~/.cache/bristlenose/models/`, as on the CLI. Proven on a clean Fedora 43 x86_64 box (2 vCPU) with an SRPM built from a local dist, then `mock` offline (exit 0), then `dnf install`: a real `bristlenose run` on a public 21.7-minute two-speaker oral history (FOSSDA) printed `Identified speakers (voice-checked: 1 session)` and recorded `method=voice+text` — 145 of 152 segments judged, 6 relabelled, centroid cosine 0.21, **14.4 s on CPU** — and the run went on to finish end to end (`Done in 14m 48s`, 15 quotes, about $0.26 of LLM). Linux is the one channel that loads **two** onnxruntimes into one process — faster-whisper's Silero VAD uses the `onnxruntime` package (1.30.0) in stage 5, and sherpa-onnx carries its own 1.28.2 — which the Mac never does, since the sidecar excludes the package. They cannot collide: the package links its runtime statically into its pybind module and needs no `libonnxruntime.so` soname, while sherpa's extension resolves its own copy through an `$ORIGIN` rpath (`readelf`/`ldd` on the installed RPM). `%check` now loads them in that order. Packaging detail and the CVE obligation: `design-fedora-packaging.md` §4 and §7. It reaches Copr users with the **next release**: PyPI's 0.32.0 does not declare the `voice` extra, so a Copr build of 0.32.0 refuses at the SRPM step by design. **In the Snap since 4 Oct 2026 (on `main`, unreleased; edge picks it up at the next dispatch):** `snap/snapcraft.yaml` installs `.[serve,voice]` (cp312 manylinux wheels, amd64 and arm64, nothing built from source), and `override-build` fails the pack if `sherpa_onnx` is absent or will not load. No new interface: the model comes over the existing `network` plug into `$SNAP_USER_COMMON/models/` (writable, survives refreshes). Measured on a strict-confined amd64 install (Ubuntu 24.04, 2 vCPU), built with `snapcraft pack --destructive-mode`: `readelf`/`ldd` show `_sherpa_onnx*.so` resolving `libonnxruntime.so` and the vendored `libasound` through its `$ORIGIN` rpath, all inside `/snap`; `doctor --self-test` gives `Bundle: voice … load`; and a real `bristlenose run` on a synthetic 2.3-minute two-voice interview (macOS `say`, two voices) printed `Identified speakers (voice-checked: 1 session)`, fetched the model (40,257,283 bytes, mode 0600) and recorded `method=voice+text`: 21 of 23 segments judged, 7 relabelled, centroid cosine 0.62, **3.9 s**, run done in 3 m 39 s for about $0.11. That run proves the channel, not the quality: on TTS audio Whisper's segments straddle turns, so most of them hold both voices (the re-cut below). As on Copr, faster-whisper's onnxruntime and sherpa's own load into one process without collision. Cost: **+12.3 MB** to the download (xz squashfs of the two directories; the snap is 401 MB) and +44.7 MB installed. One AppArmor denial falls in the pass's window, a read of `/sys/bus/pci/devices/` (onnxruntime's device discovery). It is harmless, and faster-whisper's onnxruntime already raised the same one before this change. The espeak-ng finding (the licence bullet below) applies to the snap's wheel too, which is fine under AGPL. arm64 is declared in `snapcraft.yaml` and its wheel exists, but only amd64 was built and run (CI builds amd64 alone). **Not yet built:** the word-level re-cut of segments that hold both voices.
 
 
@@ -172,7 +195,8 @@ Whisper segments.
   - Alternative: drive onnxruntime directly. It is already a core dependency
     on the CLI through faster-whisper, so that costs 0 MB there, but needs
     ~200 lines of segmentation post-processing that sherpa-onnx already
-    provides.
+    provides. _(The per-segment pass needs no segmentation, and this is what
+    shipped: about 100 lines, § Licence.)_
 - **Mac sidecar cost (INFERRED, to verify in a build):**
   - About 37 MB of code into a 425 MB bundle. The sidecar currently
     **excludes** `onnxruntime` (58 MB, S3 trim, 4 May 2026). sherpa-onnx
@@ -403,8 +427,19 @@ Scoring: `experiments/speaker_split_full/eval_voice.py`; truths as in
 
 ## Licence: espeak-ng in the sherpa-onnx wheels — options for the owner (4 Oct 2026)
 
-**Not decided.** This is the measured ground for the owner's call. Scripts and
-logs were in the session scratchpad; the commands that matter are inline.
+**Decided 4 Oct 2026: option 2, on every channel.** sherpa-onnx is gone from the
+`voice` extra, the dev extra, the sidecar spec, the RPM and the snap; the pass runs
+TitaNet through onnxruntime with kaldi-native-fbank features (§ A, top). That takes
+espeak-ng — and with it any GPL-3.0 copyright holder's standing to object — out of
+everything Bristlenose conveys. What remains is permissive: onnxruntime (MIT, with
+its `ThirdPartyNotices.txt` of Apache/BSD/MIT/MPL components, none GPL-only),
+kaldi-native-fbank (Apache-2.0), and the model (the NeMo Toolkit licence,
+Apache-2.0). Those require their notices to travel with the binary — the notices
+item `TODO.md` already lists for the Mac bundle — and nothing more. The brief below
+is kept as the record of the choice.
+
+**Options brief as written (not decided at the time).** Scripts and logs were in
+the session scratchpad; the commands that matter are inline.
 
 **The finding, re-measured.** The published sherpa-onnx 1.13.8 wheels
 statically link espeak-ng (GPL-3.0-or-later) from sherpa's TTS code. On the
@@ -586,7 +621,8 @@ reaches the model. A port that pads the way the code *reads* scores 0.89 on
 - **`THIRD-PARTY-BINARIES.md`:** yes, done with this brief. It is the licence
   inventory `SECURITY.md` points to, and it named no GPL-3.0 component. Its
   generator reads wheel metadata, which says "Apache", so a regeneration would
-  never surface this on its own. The row goes away if option 1 or 2 lands.
+  never surface this on its own. _Replaced with option 2 by rows for the
+  onnxruntime binding and kaldi-native-fbank._
 - **`SECURITY.md`:** no change. It defers licences to the inventory.
 - **Website:** no change. `content/terms.html` says AGPL-3.0 governs "the
   software itself" and lists no third-party licences. The bundle already ships
@@ -594,7 +630,10 @@ reaches the model. A port that pads the way the code *reads* scores 0.89 on
   wording.
 - **Snap:** `snap/snapcraft.yaml` still declares `license: AGPL-3.0-only`,
   while the snap now ships the `voice` extra (`09876530`). That field needs the
-  same compound expression the RPM's `License:` now carries.
+  same compound expression the RPM's `License:` now carries. _Moot under
+  option 2: with no copyleft component left, `AGPL-3.0-only` is no less
+  accurate than it was before the voice pass, and the RPM's field dropped its
+  GPL and LGPL terms._
 - **Aside, not licence:** TitaNet-small refuses a span over 12,288 frames
   (~123 s): `RuntimeError … 12288 by 17998`. `refine_speakers_by_voice`
   catches it and the whole session falls back to the text split. Whisper's

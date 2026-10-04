@@ -66,8 +66,8 @@ class TestClusterVoices:
         assert vc.clusters[-1] is None and vc.margins[-1] == 0.0
 
     def test_an_empty_or_nan_embedding_is_no_verdict_not_a_voice(self) -> None:
-        """sherpa-onnx returns an EMPTY vector for an empty slice rather than
-        raising; before the guard, empty vectors clustered as one voice and the
+        """An embedder can return an EMPTY vector for an empty slice rather
+        than raising (sherpa-onnx did); before the guard, empty vectors clustered as one voice and the
         whole session was relabelled to one speaker, recorded as success."""
         spans = [(i * 10.0, i * 10.0 + 3.0) for i in range(12)]
         truth = {a: i % 2 for i, (a, _) in enumerate(spans)}
@@ -219,7 +219,7 @@ class TestRefine:
         with (
             patch.object(voice, "load_audio_16k",
                          return_value=np.full(130 * voice.SAMPLE_RATE, 0.1, dtype=np.float32)),
-            patch.object(voice, "_sherpa_embedder", return_value=_embedder(truth)),
+            patch.object(voice, "_titanet_embedder", return_value=_embedder(truth)),
         ):
             rec = voice.refine_speakers_by_voice(segs, Path("a.wav"), Path("m.onnx"))
         assert rec.method == "voice+text" and rec.reason == ""
@@ -243,6 +243,78 @@ class _Resp(io.BytesIO):
 
     def __exit__(self, *a):
         return False
+
+
+class _FakeSession:
+    """Stands in for onnxruntime.InferenceSession: the model's metadata, and
+    what the pass hands it."""
+
+    def __init__(self, meta: dict[str, str]) -> None:
+        self.meta = meta
+        self.calls: list[dict] = []
+
+    def get_modelmeta(self):
+        return type("Meta", (), {"custom_metadata_map": self.meta})()
+
+    def run(self, outputs, feeds):
+        assert outputs == ["embs"]
+        self.calls.append(feeds)
+        return [np.ones((1, 192), dtype=np.float32)]
+
+
+_TITANET_META = {
+    "sample_rate": "16000", "feat_dim": "80", "window_size_ms": "25",
+    "window_stride_ms": "10", "window_type": "hann",
+    "feature_normalize_type": "per_feature", "framework": "nemo",
+}
+
+
+class TestTitaNetFrontEnd:
+    """The NeMo front end the pass runs in place of sherpa-onnx. Equivalence
+    with sherpa's embeddings is measured by experiments/voice_onnx_equivalence/
+    (it needs the model); these pin the parts a refactor could quietly change."""
+
+    @pytest.fixture
+    def model(self, monkeypatch):
+        import onnxruntime
+
+        fake = _FakeSession(dict(_TITANET_META))
+        monkeypatch.setattr(onnxruntime, "InferenceSession", lambda *a, **kw: fake)
+        return voice._TitaNet("m.onnx", threads=1), fake
+
+    def test_the_model_sees_every_frame_and_no_padding(self, model) -> None:
+        """sherpa resizes its buffer to a multiple of 16 frames but never hands
+        the padding to the model; padding here scored 0.89 against it."""
+        m, fake = model
+        audio = np.random.default_rng(0).standard_normal(16000).astype(np.float32) * 0.1
+        assert m.embed(audio).shape == (192,)
+        feeds = fake.calls[0]
+        frames = 1 + (16000 - 400) // 160  # snip_edges, 25 ms window, 10 ms hop
+        assert frames % 16 != 0
+        assert feeds["audio_signal"].shape == (1, 80, frames)
+        assert feeds["length"].tolist() == [frames]
+
+    def test_features_are_normalised_per_feature(self, model) -> None:
+        m, fake = model
+        audio = np.random.default_rng(1).standard_normal(32000).astype(np.float32) * 0.1
+        m.embed(audio)
+        x = fake.calls[0]["audio_signal"][0]  # (80, frames)
+        assert np.allclose(x.mean(axis=1), 0.0, atol=1e-4)
+        assert np.allclose(x.std(axis=1), 1.0, atol=1e-2)
+
+    def test_a_slice_shorter_than_one_frame_is_no_embedding(self, model) -> None:
+        m, fake = model
+        assert m.embed(np.zeros(160, dtype=np.float32)) is None
+        assert fake.calls == []
+
+    def test_a_model_without_per_feature_normalisation_is_refused(self, monkeypatch) -> None:
+        import onnxruntime
+
+        meta = dict(_TITANET_META, feature_normalize_type="global-mean")
+        monkeypatch.setattr(onnxruntime, "InferenceSession",
+                            lambda *a, **kw: _FakeSession(meta))
+        with pytest.raises(ValueError, match="per-feature"):
+            voice._TitaNet("m.onnx", threads=1)
 
 
 class TestModel:
@@ -546,12 +618,12 @@ class TestBundleSelfTest:
         real_import = builtins.__import__
 
         def broken(name, *a, **kw):
-            if name == "sherpa_onnx":
-                raise OSError("dlopen: libonnxruntime.dylib not found")
+            if name == "kaldi_native_fbank":
+                raise OSError("dlopen: libkaldi-native-fbank-core.dylib not found")
             return real_import(name, *a, **kw)
 
         monkeypatch.setattr(voice, "voice_runtime_available", lambda: True)
         monkeypatch.setattr(builtins, "__import__", broken)
         monkeypatch.setattr(sys, "frozen", False, raising=False)
         result = check_bundle_voice()
-        assert result.status == CheckStatus.FAIL and "libonnxruntime" in result.detail
+        assert result.status == CheckStatus.FAIL and "libkaldi-native-fbank-core" in result.detail

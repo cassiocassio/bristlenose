@@ -174,9 +174,9 @@ done
 # --find-links so pip does not try to fetch pysrt from an index that has no
 # wheel for it.
 echo "    pass B: the rest, as x86_64 wheels"
-# The extras the RPM ships. `voice` is the speaker voice pass (stage 5b,
-# sherpa-onnx — a native extension with its OWN vendored onnxruntime); it is
-# here for parity with the CLI and the Mac app. The spec's %install names the
+# The extras the RPM ships. `voice` is the speaker voice pass (stage 5b:
+# kaldi-native-fbank, plus the onnxruntime faster-whisper already brings); it
+# is here for parity with the CLI and the Mac app. The spec's %install names the
 # same list; change both together.
 BN_EXTRAS="serve,voice"
 # Resolve against the metadata of the wheel that will actually ship. Against
@@ -234,7 +234,7 @@ done
 # An extra that the resolved bristlenose does not declare is a WARNING to pip,
 # not an error, so a dropped extra produces a complete-looking wheelhouse. Ask
 # the wheelhouse for each extra's own native wheels rather than trusting exit 0.
-for _w in "sherpa_onnx-*-cp${BN_TARGET_PY//./}-*.whl" "sherpa_onnx_core-*.whl"; do
+for _w in "kaldi_native_fbank-*-cp${BN_TARGET_PY//./}-*.whl"; do
     ls "$WORK/vendor/"$_w >/dev/null 2>&1 || {
         echo "error: no $_w in the wheelhouse — the voice extra did not resolve." >&2
         echo "       Does bristlenose $VERSION declare it? (PyPI releases before" >&2

@@ -11,6 +11,15 @@ trued-against: HEAD on 2026-08-28
 
 ## Changelog
 
+- _2026-10-04, later_ — **the voice pass drops sherpa-onnx** (owner's call, from the
+  options in `docs/design-voice-diarization.md` § Licence). The `voice` extra is now
+  `kaldi-native-fbank` (Apache-2.0, one manylinux cp314 wheel, ~0.3 MB) plus the
+  `onnxruntime` package faster-whisper already brings, so the RPM loses the sherpa
+  wheels' second onnxruntime (1.28.2), their bundled `libasound`, and the statically
+  linked espeak-ng. `License:` drops `GPL-3.0-or-later` and `LGPL-2.1-or-later`;
+  `%check` runs the same `check_bundle_voice` self-test as the Mac build;
+  `make-srpm.sh` asserts the knf wheel instead of the sherpa pair. **Not yet re-proven
+  in `mock` or by a real Fedora run** — the next local-dist build should be.
 - _2026-10-04_ — **the voice pass joins the RPM** (`voice` extra, sherpa-onnx), for
   parity with the CLI and the Mac app. Proven on a clean Fedora 43 x86_64 box from a
   local dist (PyPI's 0.32.0 has no `voice` extra, so the Copr channel carries it from
@@ -666,6 +675,11 @@ are the ones to hold onto:
   wheelhouse, so a CVE in `ctranslate2`, `numpy` or `onnxruntime` is invisible to the
   distro's own machinery. The existing dependency process (`cassandra`,
   `docs/dependency-premortem-log.md`) is the only thing standing there.
+  - **Retired the same day (4 Oct 2026): the two sub-items below describe the
+    sherpa-onnx wheels, which the voice pass no longer uses** — it runs on the
+    `onnxruntime` package already in the wheelhouse plus `kaldi-native-fbank`
+    (Apache-2.0). Kept as the record of why; the second onnxruntime, `libasound` and
+    espeak-ng are gone with them (changelog, top).
   - **Since 4 Oct 2026 that includes native code `pip` cannot see either.**
     The voice pass (`voice` extra) vendors `sherpa-onnx` 1.13.8 + `sherpa-onnx-core`
     (Apache-2.0), and inside those two wheels sit binaries no package metadata names:

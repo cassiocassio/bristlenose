@@ -19,7 +19,12 @@
 
 import os
 
-from PyInstaller.utils.hooks import collect_all, collect_submodules, copy_metadata
+from PyInstaller.utils.hooks import (
+    collect_all,
+    collect_dynamic_libs,
+    collect_submodules,
+    copy_metadata,
+)
 
 PROJECT_ROOT = os.path.abspath(os.path.join(SPECPATH, ".."))
 
@@ -82,13 +87,16 @@ _JSONSCHEMA_SPEC_DATAS, _JSONSCHEMA_SPEC_BINARIES, _JSONSCHEMA_SPEC_HIDDEN = col
 )
 _JSONSCHEMA_DATAS, _JSONSCHEMA_BINARIES, _JSONSCHEMA_HIDDEN = collect_all("jsonschema")
 
-# The voice pass (bristlenose/stages/s05b_voice.py, the `voice` extra). The
-# package carries a native extension plus its OWN vendored onnxruntime
-# (`sherpa_onnx/lib/libonnxruntime.dylib`, linked via @rpath/@loader_path) —
-# `collect_all` keeps the dylib beside the `.so` that loads it. The
-# `onnxruntime` entry in `excludes` below drops the separate Python package of
-# that name, which sherpa never imports, so it does not touch this dylib.
-_SHERPA_DATAS, _SHERPA_BINARIES, _SHERPA_HIDDEN = collect_all("sherpa_onnx")
+# The voice pass (bristlenose/stages/s05b_voice.py, the `voice` extra) runs
+# TitaNet through the `onnxruntime` package and computes its features with
+# `kaldi_native_fbank`. NOT sherpa-onnx: its published wheels statically link
+# espeak-ng, GPL-3.0-or-later (docs/design-voice-diarization.md § Licence).
+# kaldi_native_fbank's extension (`_kaldi_native_fbank*.so`, top level) loads
+# `kaldi_native_fbank/lib/libkaldi-native-fbank-core.dylib` by @loader_path;
+# collecting the package's dynamic libs keeps that path. onnxruntime comes in
+# through pyinstaller-hooks-contrib's hook; the trims below the Analysis drop
+# what the voice pass never loads.
+_KNF_BINARIES = collect_dynamic_libs("kaldi_native_fbank")
 
 a = Analysis(
     # Entry point: run `bristlenose serve` directly.
@@ -101,7 +109,7 @@ a = Analysis(
         *_MCP_BINARIES,
         *_JSONSCHEMA_SPEC_BINARIES,
         *_JSONSCHEMA_BINARIES,
-        *_SHERPA_BINARIES,
+        *_KNF_BINARIES,
     ],
     datas=[
         *_MLX_DATAS,
@@ -110,7 +118,6 @@ a = Analysis(
         *_MCP_DATAS,
         *_JSONSCHEMA_SPEC_DATAS,
         *_JSONSCHEMA_DATAS,
-        *_SHERPA_DATAS,
         # starlette is pure Python, so PyInstaller bytecompiles it into the
         # archive and leaves no dist-info in _internal/ — which meant the
         # shipped 0.29.1 could not say which starlette it carried (ledger
@@ -198,7 +205,6 @@ a = Analysis(
         *_JSONSCHEMA_SPEC_HIDDEN,
         *_JSONSCHEMA_HIDDEN,
         *_SQLADMIN_HIDDEN,
-        *_SHERPA_HIDDEN,
         *collect_submodules("rich"),
         # LLM providers (dynamically imported in llm/client.py)
         "anthropic",
@@ -289,13 +295,16 @@ a = Analysis(
         # (it uses MLX arrays exclusively), so the whole .torch subpackage
         # is dead under our usage. Keeps the rest of scipy intact.
         "scipy._lib.array_api_compat.torch",
-        # S3 step 3: onnxruntime is reached via faster_whisper.vad and via
-        # torch.onnx._internal.exporter. Both upstreams are excluded /
-        # unused on Mac (faster_whisper already in excludes; torch is MLX-
-        # alternative-path, not us). Dropping the whole package sheds 58 MB
-        # AND removes onnxruntime.transformers.machine_info from torch's
-        # incoming-edge list.
-        "onnxruntime",
+        # S3 step 3, revised 4 Oct 2026: onnxruntime itself now ships, for
+        # the voice pass. Only the parts it never loads stay out — and
+        # `onnxruntime.transformers` is the one that matters, because its
+        # `machine_info` was torch's incoming edge from this package (the
+        # reason the whole package used to be excluded). The 33 MB C library
+        # `libonnxruntime.<ver>.dylib` is dropped below the Analysis: the
+        # Python binding (`onnxruntime_pybind11_state.so`) links it statically.
+        "onnxruntime.transformers",
+        "onnxruntime.quantization",
+        "onnxruntime.tools",
         # S3 step 4: torch (288 MB) — the headline trim. After steps 1–3
         # the only remaining torch importers in the modulegraph are
         # functorch.* (torch's own internal cycle, gone with torch) and
@@ -443,6 +452,20 @@ _strip_literals(
 _strip_literals(
     a, "spacy.about", [("spacy-models", "spacy-modelx")], required=False
 )
+
+# onnxruntime's C library (`onnxruntime/capi/libonnxruntime.<ver>.dylib`, 33 MB
+# at 1.30.0) is collected by the contrib hook but never loaded from Python: the
+# binding links the runtime statically (`otool -L` on
+# `onnxruntime_pybind11_state.so` names no libonnxruntime), and the voice pass
+# was measured working with the file moved aside (4 Oct 2026). Refuse to build
+# if the trim stops matching, so a renamed file costs a build, not 33 MB.
+_ORT_C_LIB = [b for b in a.binaries
+              if os.path.basename(b[0]).startswith("libonnxruntime.")
+              and os.path.dirname(b[0]).replace(os.sep, "/").endswith("onnxruntime/capi")]
+if len(_ORT_C_LIB) != 1:
+    raise SystemExit(f"onnxruntime C-library trim matched {len(_ORT_C_LIB)} entries, "
+                     f"expected 1: {[b[0] for b in _ORT_C_LIB]}")
+a.binaries = [b for b in a.binaries if b not in _ORT_C_LIB]
 
 pyz = PYZ(a.pure)
 

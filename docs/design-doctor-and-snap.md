@@ -123,7 +123,7 @@ A second class of checks, distinct from runtime dependency health. Runs via `bri
 | 6 | `check_bundle_alembic` | `bristlenose/server/migrations/` scripts present |
 | 7 | `check_bundle_admin_panel` | SQLAdmin's Jinja2 templates + static assets (third-party package data) |
 | 8 | `check_bundle_mcp` | MCP server + its lazily-loaded schema data (third-party package data) |
-| 9 | `check_bundle_voice` | sherpa-onnx imports and its vendored `libonnxruntime.dylib` loads (the voice pass, since 4 Oct 2026); FAIL in a frozen bundle when missing or unloadable. The model is not bundled — it is fetched on first use — so none is loaded here |
+| 9 | `check_bundle_voice` | onnxruntime and kaldi-native-fbank load and compute one filterbank (the voice pass, since 4 Oct 2026; sherpa-onnx until later that day); FAIL in a frozen bundle when missing or unloadable. The model is not bundled — it is fetched on first use — so none is loaded here |
 
 **Invocation contract:** the self-test runs in `desktop/scripts/ensure-sidecar.sh` step 3a, **pre-sign**, and writes a stamp; `build-all.sh` step 2a then *verifies that stamp* and fails on absent or stale. It does **not** run the test, and cannot: `sign-sidecar.sh` applies `com.apple.security.app-sandbox` unconditionally, and a sandbox-signed binary aborts in `_libsecinit_appsandbox` when exec'd standalone (exit 133, reproduced 22 Sep 2026). Failure of any check aborts the build — the invariant is that a shipped sidecar must pass self-test.
 

@@ -1443,16 +1443,16 @@ def check_bundle_mcp() -> CheckResult:
 
 
 def check_bundle_voice() -> CheckResult:
-    """The voice pass's native runtime (sherpa-onnx + its vendored onnxruntime).
+    """The voice pass's native runtime: onnxruntime and kaldi-native-fbank.
 
-    Importing ``sherpa_onnx`` loads ``_sherpa_onnx*.so``, which links
-    ``@rpath/libonnxruntime.dylib`` beside it — so a spec that dropped the
-    dylib fails here, at build time, instead of every Mac session silently
-    falling back to text-only speaker splitting ("voice pass failed"). Building
-    a config pins the API ``s05b_voice`` calls. The model is not bundled (it is
-    fetched on first use), so none is loaded here.
+    Both are native code, so presence is not enough: this loads each one and
+    computes one filterbank, so a spec that dropped a library (kaldi-native-
+    fbank's ``libkaldi-native-fbank-core.dylib``, found by @loader_path) fails
+    here, at build time, instead of every Mac session silently falling back to
+    text-only speaker splitting ("voice pass failed"). The model is not bundled
+    (it is fetched on first use), so none is loaded here.
 
-    In a frozen bundle the package is expected, since build-sidecar.sh installs
+    In a frozen bundle the runtime is expected, since build-sidecar.sh installs
     the ``voice`` extra, and so it is in the snap (snapcraft.yaml installs
     ``.[serve,voice]``); elsewhere its absence is a legal install.
     """
@@ -1469,37 +1469,48 @@ def check_bundle_voice() -> CheckResult:
         if getattr(sys, "frozen", False):
             return CheckResult(
                 status=CheckStatus.FAIL, label=label,
-                detail="sherpa_onnx missing from the bundle (keep collect_all('sherpa_onnx') "
-                       "and the voice extra in build-sidecar.sh)",
+                detail="voice runtime (onnxruntime, kaldi_native_fbank) missing from the "
+                       "bundle (keep both in the spec and the voice extra in build-sidecar.sh)",
                 fix_key="bundle_dir_missing",
             )
         if os.environ.get("SNAP"):
             return CheckResult(
                 status=CheckStatus.FAIL, label=label,
-                detail="sherpa_onnx missing from the snap (keep the voice extra in "
-                       "snap/snapcraft.yaml's python-packages)",
+                detail="voice runtime (onnxruntime, kaldi_native_fbank) missing from the snap "
+                       "(keep the voice extra in snap/snapcraft.yaml's python-packages)",
                 fix_key="bundle_dir_missing",
             )
         return CheckResult(status=CheckStatus.OK, label=label,
                            detail="voice extra not installed (legal outside the app bundle)")
     try:
-        import sherpa_onnx
+        import kaldi_native_fbank as knf
+        import onnxruntime
     except Exception as exc:  # ImportError, or OSError from a missing dylib
         return CheckResult(
             status=CheckStatus.FAIL, label=label,
-            detail=f"sherpa_onnx is installed but will not load: {exc}",
+            detail=f"voice runtime is installed but will not load: {exc}",
             fix_key="bundle_dir_missing",
         )
     try:
-        sherpa_onnx.SpeakerEmbeddingExtractorConfig(model="unused.onnx", num_threads=1)
+        if "CPUExecutionProvider" not in onnxruntime.get_available_providers():
+            raise RuntimeError("onnxruntime has no CPU execution provider")
+        opts = knf.FbankOptions()
+        opts.frame_opts.dither = 0.0
+        opts.mel_opts.num_bins = 80
+        fbank = knf.OnlineFbank(opts)
+        fbank.accept_waveform(16000, [0.0] * 8000)
+        fbank.input_finished()
+        if fbank.num_frames_ready == 0:
+            raise RuntimeError("kaldi_native_fbank produced no frames from 0.5 s of audio")
     except Exception as exc:
         return CheckResult(
             status=CheckStatus.FAIL, label=label,
-            detail=f"sherpa_onnx imports but its embedding API changed: {exc}",
+            detail=f"voice runtime loads but does not work: {exc}",
             fix_key="bundle_dir_missing",
         )
     return CheckResult(status=CheckStatus.OK, label=label,
-                       detail="sherpa-onnx and its onnxruntime load")
+                       detail=f"onnxruntime {onnxruntime.__version__} and kaldi-native-fbank "
+                              f"{getattr(knf, '__version__', '?')} load")
 
 
 def run_bundle_integrity() -> DoctorReport:

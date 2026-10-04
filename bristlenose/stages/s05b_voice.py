@@ -2,7 +2,7 @@
 
 The text splitter (`split_single_speaker_llm`) guesses speaker changes from
 the words alone. This pass embeds each Whisper segment's audio with a speaker
-model (TitaNet-small through sherpa-onnx), clusters the embeddings into two
+model (TitaNet-small, run through onnxruntime), clusters the embeddings into two
 voices, and relabels every segment the model could judge. Segments too short
 to embed keep the text splitter's label. Measured against a Teams transcript's
 named turns, that combination got 12 of 286 segments wrong where the text
@@ -127,10 +127,13 @@ class VoiceRecord:
 
 
 def voice_runtime_available() -> bool:
-    """True when the ``voice`` extra (sherpa-onnx) is installed."""
+    """True when the ``voice`` runtime is installed: onnxruntime (already a
+    core dependency on the CLI, through faster-whisper) and kaldi-native-fbank,
+    which the ``voice`` extra adds."""
     import importlib.util
 
-    return importlib.util.find_spec("sherpa_onnx") is not None
+    return all(importlib.util.find_spec(m) is not None
+               for m in ("onnxruntime", "kaldi_native_fbank"))
 
 
 def voice_model_cache_path() -> Path:
@@ -358,7 +361,7 @@ def cluster_voices(
 
     ``embed(start, end)`` returns an embedding vector for that span, or None
     when it could not make one. An empty or non-finite vector also counts as
-    no verdict — sherpa-onnx returns an empty one for an empty slice rather
+    no verdict — an embedder may return an empty one for an empty slice rather
     than raising, and an empty vector would otherwise cluster as a voice.
     Returns None when too few segments are long enough to find two voices.
     """
@@ -464,36 +467,107 @@ def merge_voice_and_text(
 # ---------------------------------------------------------------------------
 
 
+class _TitaNet:
+    """TitaNet-small through onnxruntime, with the NeMo front end sherpa-onnx
+    uses (``speaker-embedding-extractor-nemo-impl.h`` at v1.13.8).
+
+    Driven directly rather than through sherpa-onnx because sherpa's published
+    wheels statically link espeak-ng (GPL-3.0-or-later) from their TTS code,
+    which an App Store binary cannot carry (`docs/design-voice-diarization.md`
+    § Licence). Measured equivalent on 4 Oct 2026: cosine 1.000000 to sherpa's
+    embedding on every span, and the same verdict from ``cluster_voices`` on
+    794 of 794 windows of a 40-minute interview
+    (``experiments/voice_onnx_equivalence/``).
+
+    The feature settings are read from the model's own metadata where it has
+    them; the rest are sherpa's fixed choices for NeMo models.
+    """
+
+    def __init__(self, model_path: str, threads: int) -> None:
+        import onnxruntime as ort
+
+        opts = ort.SessionOptions()
+        opts.intra_op_num_threads = threads
+        opts.inter_op_num_threads = 1
+        self.session = ort.InferenceSession(
+            model_path, opts, providers=["CPUExecutionProvider"])
+        meta = self.session.get_modelmeta().custom_metadata_map
+        if int(meta.get("sample_rate", SAMPLE_RATE)) != SAMPLE_RATE:
+            raise ValueError(f"voice model expects {meta['sample_rate']} Hz audio")
+        if meta.get("feature_normalize_type", "") != "per_feature":
+            raise ValueError("voice model is not a NeMo per-feature model")
+        self.feat_dim = int(meta.get("feat_dim", 80))
+        self.frame_length_ms = float(meta.get("window_size_ms", 25))
+        self.frame_shift_ms = float(meta.get("window_stride_ms", 10))
+        self.window_type = meta.get("window_type", "hann")
+
+    def features(self, samples: Any) -> Any:
+        """Log-mel filterbank frames, ``(frames, feat_dim)``, or None when the
+        slice is too short for one frame."""
+        import kaldi_native_fbank as knf
+        import numpy as np
+
+        o = knf.FbankOptions()
+        o.frame_opts.dither = 0.0
+        o.frame_opts.snip_edges = True
+        o.frame_opts.samp_freq = SAMPLE_RATE
+        o.frame_opts.frame_shift_ms = self.frame_shift_ms
+        o.frame_opts.frame_length_ms = self.frame_length_ms
+        o.frame_opts.remove_dc_offset = False
+        o.frame_opts.preemph_coeff = 0.97
+        o.frame_opts.window_type = self.window_type
+        o.frame_opts.round_to_power_of_two = True
+        o.mel_opts.num_bins = self.feat_dim
+        o.mel_opts.low_freq = 0.0
+        o.mel_opts.high_freq = -400.0
+        o.mel_opts.is_librosa = True
+        fbank = knf.OnlineFbank(o)
+        fbank.accept_waveform(SAMPLE_RATE, np.asarray(samples, dtype=np.float32).tolist())
+        fbank.input_finished()
+        n = fbank.num_frames_ready
+        if n == 0:
+            return None
+        return np.stack([np.asarray(fbank.get_frame(i), dtype=np.float32) for i in range(n)])
+
+    def embed(self, samples: Any) -> Any:
+        import numpy as np
+
+        feats = self.features(samples)
+        if feats is None:
+            return None
+        n = feats.shape[0]
+        mean = feats.mean(axis=0)
+        std = np.sqrt(((feats - mean) ** 2).mean(axis=0))
+        feats = (feats - mean) / (std + 1e-5)
+        # No padding. sherpa resizes its buffer to a multiple of 16 frames, but
+        # the tensor it hands the model keeps the unpadded frame count, so the
+        # padding never reaches the model; padding here scored 0.89 against it
+        # on 0.7 s spans.
+        (emb,) = self.session.run(
+            ["embs"],
+            {"audio_signal": feats.T[None, :, :].astype(np.float32),
+             "length": np.array([n], dtype=np.int64)},
+        )
+        return emb[0]
+
+
 @functools.lru_cache(maxsize=1)
-def _extractor(model_path: str, mtime_ns: int) -> Any:
+def _model(model_path: str, mtime_ns: int) -> _TitaNet:
     """One loaded model per run, not per session (keyed on the file's mtime, so
     a re-fetched model in a long-lived serve process is reloaded). The pipeline
     runs the pass one session at a time (a semaphore of one), so it is never
     used by two threads at once; raise that semaphore and this needs a lock."""
-    import sherpa_onnx
-
-    return sherpa_onnx.SpeakerEmbeddingExtractor(
-        sherpa_onnx.SpeakerEmbeddingExtractorConfig(
-            model=model_path, num_threads=min(4, os.cpu_count() or 1),
-        )
-    )
+    return _TitaNet(model_path, threads=min(4, os.cpu_count() or 1))
 
 
-def _sherpa_embedder(model_path: Path, audio: Any) -> Callable[[float, float], Any]:
-    import numpy as np
-
-    extractor = _extractor(str(model_path), model_path.stat().st_mtime_ns)
+def _titanet_embedder(model_path: Path, audio: Any) -> Callable[[float, float], Any]:
+    model = _model(str(model_path), model_path.stat().st_mtime_ns)
 
     def embed(start: float, end: float) -> Any:
         lo, hi = int(start * SAMPLE_RATE), int(end * SAMPLE_RATE)
         if hi <= lo:
             return None
-        stream = extractor.create_stream()
-        stream.accept_waveform(SAMPLE_RATE, audio[lo:hi])
-        stream.input_finished()
-        if not extractor.is_ready(stream):
-            return None
-        return np.array(extractor.compute(stream))
+        return model.embed(audio[lo:hi])
 
     return embed
 
@@ -525,7 +599,7 @@ def refine_speakers_by_voice(
         else:
             audio = load_audio_16k(audio_path)
             spans = segment_spans(segments, audio_seconds=len(audio) / SAMPLE_RATE)
-            vc = cluster_voices(spans, _sherpa_embedder(model_path, audio))
+            vc = cluster_voices(spans, _titanet_embedder(model_path, audio))
             if vc is None:
                 rec.reason = f"fewer than {MIN_FIT_SEGMENTS} segments long enough to compare voices"
             else:

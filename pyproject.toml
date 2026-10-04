@@ -97,7 +97,7 @@ dev = [
     "mlx-whisper>=0.4; sys_platform == 'darwin' and platform_machine == 'arm64'",
     # The voice pass's runtime, so its code path runs in the dev venv rather
     # than being an undeclared install (the presidio lesson above).
-    "sherpa-onnx>=1.12",
+    "kaldi-native-fbank>=1.22",
 ]
 
 # Serve mode runtime — `bristlenose serve`, the FastAPI + SQLite
@@ -148,12 +148,17 @@ mcp = [
 # Voice pass for speaker identification (stage 5b): tells two speakers apart
 # by how they sound, on top of the text splitter's guess. Opt-in on the CLI;
 # the run falls back to the text labels without it. SHIPS in the desktop
-# sidecar (build-sidecar.sh installs [serve,apple,desktop,mcp,voice]; the spec
-# collect_all's sherpa_onnx). Its model (TitaNet-small, 40 MB, Apache-2.0 via
-# NeMo) is fetched on first use and hash-verified, on both channels — inside
-# the app container on the Mac (docs/design-voice-diarization.md § Option A).
+# sidecar (build-sidecar.sh installs [serve,apple,desktop,mcp,voice]). Its
+# model (TitaNet-small, 40 MB, Apache-2.0 via NeMo) is fetched on first use and
+# hash-verified, on every channel — inside the app container on the Mac
+# (docs/design-voice-diarization.md § Option A). onnxruntime runs the model and
+# is already a core dependency through faster-whisper; it is named here because
+# s05b imports it directly. NOT sherpa-onnx: its published wheels statically
+# link espeak-ng (GPL-3.0-or-later), which an App Store binary cannot carry
+# (docs/design-voice-diarization.md § Licence).
 voice = [
-    "sherpa-onnx>=1.12",
+    "onnxruntime>=1.14",
+    "kaldi-native-fbank>=1.22",
 ]
 
 # Release-time tooling. Run on the release machine when cutting a

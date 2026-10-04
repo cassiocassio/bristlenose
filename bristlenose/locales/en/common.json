@@ -631,5 +631,19 @@
       "no_moderator": "No moderator was identified in this session, so it has no questions to show.",
       "moderator_unreliable": "The moderator could not be told apart reliably in this session, so its questions are not classified."
     }
+  },
+  "undo": {
+    "undo": {
+      "renameModerator": "Undo Rename Moderator",
+      "renameParticipant": "Undo Rename Participant",
+      "renameObserver": "Undo Rename Observer",
+      "confirmName": "Undo Confirm Name"
+    },
+    "redo": {
+      "renameModerator": "Redo Rename Moderator",
+      "renameParticipant": "Redo Rename Participant",
+      "renameObserver": "Redo Rename Observer",
+      "confirmName": "Redo Confirm Name"
+    }
   }
 }

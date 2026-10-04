@@ -703,5 +703,19 @@
       "no_moderator": "W tej sesji nie rozpoznano moderatora, wi\u0119c nie ma w niej pyta\u0144 do pokazania.",
       "moderator_unreliable": "W tej sesji nie uda\u0142o si\u0119 wiarygodnie odr\u00f3\u017cni\u0107 moderatora, wi\u0119c jego pytania nie s\u0105 sklasyfikowane."
     }
+  },
+  "undo": {
+    "undo": {
+      "renameModerator": "Cofnij zmianę nazwy moderatora",
+      "renameParticipant": "Cofnij zmianę nazwy uczestnika",
+      "renameObserver": "Cofnij zmianę nazwy obserwatora",
+      "confirmName": "Cofnij potwierdzenie nazwy"
+    },
+    "redo": {
+      "renameModerator": "Przywróć zmianę nazwy moderatora",
+      "renameParticipant": "Przywróć zmianę nazwy uczestnika",
+      "renameObserver": "Przywróć zmianę nazwy obserwatora",
+      "confirmName": "Przywróć potwierdzenie nazwy"
+    }
   }
 }

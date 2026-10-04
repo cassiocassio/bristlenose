@@ -538,6 +538,9 @@ export interface SpeakerResponse {
   /** False while the name is the pipeline's proposal; a person's pick or typed
    *  name confirms it (`session_speakers.name_confirmed`, migration 012). */
   name_confirmed?: boolean;
+  /** The two stored names behind `name` — what an undo puts back. */
+  full_name?: string;
+  short_name?: string;
 }
 
 export interface SourceFileResponse {

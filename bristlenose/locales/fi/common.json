@@ -629,5 +629,19 @@
       "no_moderator": "T\u00e4st\u00e4 istunnosta ei tunnistettu moderaattoria, joten siin\u00e4 ei ole n\u00e4ytett\u00e4vi\u00e4 kysymyksi\u00e4.",
       "moderator_unreliable": "Moderaattoria ei voitu erottaa luotettavasti t\u00e4ss\u00e4 istunnossa, joten sen kysymyksi\u00e4 ei ole luokiteltu."
     }
+  },
+  "undo": {
+    "undo": {
+      "renameModerator": "Peru moderaattorin uudelleennimeäminen",
+      "renameParticipant": "Peru osallistujan uudelleennimeäminen",
+      "renameObserver": "Peru tarkkailijan uudelleennimeäminen",
+      "confirmName": "Peru nimen vahvistaminen"
+    },
+    "redo": {
+      "renameModerator": "Nimeä moderaattori sittenkin uudelleen",
+      "renameParticipant": "Nimeä osallistuja sittenkin uudelleen",
+      "renameObserver": "Nimeä tarkkailija sittenkin uudelleen",
+      "confirmName": "Vahvista nimi sittenkin"
+    }
   }
 }

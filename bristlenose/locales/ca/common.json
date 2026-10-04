@@ -629,5 +629,19 @@
       "no_moderator": "No s\u2019ha identificat cap moderador en aquesta sessi\u00f3, de manera que no t\u00e9 preguntes per mostrar.",
       "moderator_unreliable": "No s\u2019ha pogut distingir de manera fiable el moderador en aquesta sessi\u00f3, de manera que les seves preguntes no estan classificades."
     }
+  },
+  "undo": {
+    "undo": {
+      "renameModerator": "Desfés el canvi de nom del moderador",
+      "renameParticipant": "Desfés el canvi de nom del participant",
+      "renameObserver": "Desfés el canvi de nom de l’observador",
+      "confirmName": "Desfés la confirmació del nom"
+    },
+    "redo": {
+      "renameModerator": "Refés el canvi de nom del moderador",
+      "renameParticipant": "Refés el canvi de nom del participant",
+      "renameObserver": "Refés el canvi de nom de l’observador",
+      "confirmName": "Refés la confirmació del nom"
+    }
   }
 }

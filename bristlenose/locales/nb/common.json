@@ -629,5 +629,19 @@
       "no_moderator": "Ingen moderator ble identifisert i denne \u00f8kten, s\u00e5 den har ingen sp\u00f8rsm\u00e5l \u00e5 vise.",
       "moderator_unreliable": "Moderatoren kunne ikke skilles ut p\u00e5litelig i denne \u00f8kten, s\u00e5 sp\u00f8rsm\u00e5lene er ikke klassifisert."
     }
+  },
+  "undo": {
+    "undo": {
+      "renameModerator": "Angre navneendring for moderator",
+      "renameParticipant": "Angre navneendring for deltaker",
+      "renameObserver": "Angre navneendring for observatør",
+      "confirmName": "Angre bekreftelse av navn"
+    },
+    "redo": {
+      "renameModerator": "Utfør navneendring for moderator likevel",
+      "renameParticipant": "Utfør navneendring for deltaker likevel",
+      "renameObserver": "Utfør navneendring for observatør likevel",
+      "confirmName": "Utfør bekreftelse av navn likevel"
+    }
   }
 }

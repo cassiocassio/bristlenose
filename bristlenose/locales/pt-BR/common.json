@@ -629,5 +629,19 @@
       "no_moderator": "Nenhum moderador foi identificado nesta sess\u00e3o, por isso ela n\u00e3o tem perguntas para mostrar.",
       "moderator_unreliable": "N\u00e3o foi poss\u00edvel distinguir o moderador com seguran\u00e7a nesta sess\u00e3o, por isso as perguntas dela n\u00e3o est\u00e3o classificadas."
     }
+  },
+  "undo": {
+    "undo": {
+      "renameModerator": "Desfazer Renomear moderador",
+      "renameParticipant": "Desfazer Renomear participante",
+      "renameObserver": "Desfazer Renomear observador",
+      "confirmName": "Desfazer Confirmar nome"
+    },
+    "redo": {
+      "renameModerator": "Refazer Renomear moderador",
+      "renameParticipant": "Refazer Renomear participante",
+      "renameObserver": "Refazer Renomear observador",
+      "confirmName": "Refazer Confirmar nome"
+    }
   }
 }

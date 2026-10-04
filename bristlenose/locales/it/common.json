@@ -629,5 +629,19 @@
       "no_moderator": "In questa sessione non è stato identificato nessun moderatore, quindi non ci sono domande da mostrare.",
       "moderator_unreliable": "In questa sessione non è stato possibile distinguere con certezza il moderatore, quindi le sue domande non sono classificate."
     }
+  },
+  "undo": {
+    "undo": {
+      "renameModerator": "Annulla Rinomina moderatore",
+      "renameParticipant": "Annulla Rinomina partecipante",
+      "renameObserver": "Annulla Rinomina osservatore",
+      "confirmName": "Annulla Conferma nome"
+    },
+    "redo": {
+      "renameModerator": "Ripristina Rinomina moderatore",
+      "renameParticipant": "Ripristina Rinomina partecipante",
+      "renameObserver": "Ripristina Rinomina osservatore",
+      "confirmName": "Ripristina Conferma nome"
+    }
   }
 }

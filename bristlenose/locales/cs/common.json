@@ -692,5 +692,19 @@
       "no_moderator": "V tomto sezen\u00ed nebyl rozpozn\u00e1n \u017e\u00e1dn\u00fd moder\u00e1tor, tak\u017ee nem\u00e1 \u017e\u00e1dn\u00e9 ot\u00e1zky k zobrazen\u00ed.",
       "moderator_unreliable": "Moder\u00e1tora se v tomto sezen\u00ed nepoda\u0159ilo spolehliv\u011b rozli\u0161it, tak\u017ee jeho ot\u00e1zky nejsou za\u0159azeny."
     }
+  },
+  "undo": {
+    "undo": {
+      "renameModerator": "Odvolat akci Přejmenovat moderátora",
+      "renameParticipant": "Odvolat akci Přejmenovat účastníka",
+      "renameObserver": "Odvolat akci Přejmenovat pozorovatele",
+      "confirmName": "Odvolat akci Potvrdit jméno"
+    },
+    "redo": {
+      "renameModerator": "Opakovat akci Přejmenovat moderátora",
+      "renameParticipant": "Opakovat akci Přejmenovat účastníka",
+      "renameObserver": "Opakovat akci Přejmenovat pozorovatele",
+      "confirmName": "Opakovat akci Potvrdit jméno"
+    }
   }
 }

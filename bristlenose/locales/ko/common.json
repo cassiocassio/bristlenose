@@ -599,5 +599,19 @@
       "no_moderator": "\uc774 \uc138\uc158\uc5d0\uc11c \uc9c4\ud589\uc790\ub97c \uc2dd\ubcc4\ud558\uc9c0 \ubabb\ud574 \ud45c\uc2dc\ud560 \uc9c8\ubb38\uc774 \uc5c6\uc2b5\ub2c8\ub2e4.",
       "moderator_unreliable": "\uc774 \uc138\uc158\uc5d0\uc11c \uc9c4\ud589\uc790\ub97c \ud655\uc2e4\ud788 \uad6c\ubd84\ud558\uc9c0 \ubabb\ud574 \uc9c8\ubb38\uc774 \ubd84\ub958\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4."
     }
+  },
+  "undo": {
+    "undo": {
+      "renameModerator": "진행자 이름 변경 실행 취소",
+      "renameParticipant": "참가자 이름 변경 실행 취소",
+      "renameObserver": "관찰자 이름 변경 실행 취소",
+      "confirmName": "이름 확인 실행 취소"
+    },
+    "redo": {
+      "renameModerator": "진행자 이름 변경 복귀",
+      "renameParticipant": "참가자 이름 변경 복귀",
+      "renameObserver": "관찰자 이름 변경 복귀",
+      "confirmName": "이름 확인 복귀"
+    }
   }
 }

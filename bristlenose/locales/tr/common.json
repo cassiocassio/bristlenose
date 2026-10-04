@@ -629,5 +629,19 @@
       "no_moderator": "Bu oturumda moderat\u00f6r belirlenemedi, bu y\u00fczden g\u00f6sterilecek soru yok.",
       "moderator_unreliable": "Bu oturumda moderat\u00f6r g\u00fcvenilir bi\u00e7imde ay\u0131rt edilemedi, bu y\u00fczden sorular\u0131 s\u0131n\u0131fland\u0131r\u0131lmad\u0131."
     }
+  },
+  "undo": {
+    "undo": {
+      "renameModerator": "Moderatörün Adını Değiştirmeyi Geri Al",
+      "renameParticipant": "Katılımcının Adını Değiştirmeyi Geri Al",
+      "renameObserver": "Gözlemcinin Adını Değiştirmeyi Geri Al",
+      "confirmName": "Adı Onaylamayı Geri Al"
+    },
+    "redo": {
+      "renameModerator": "Moderatörün Adını Değiştirmeyi Yinele",
+      "renameParticipant": "Katılımcının Adını Değiştirmeyi Yinele",
+      "renameObserver": "Gözlemcinin Adını Değiştirmeyi Yinele",
+      "confirmName": "Adı Onaylamayı Yinele"
+    }
   }
 }

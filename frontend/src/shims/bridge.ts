@@ -15,6 +15,7 @@ import { isPalette } from "../utils/bootPalette";
 import { isSupportedLocale } from "../i18n/index";
 import type { WireSuggestionRow, WireSuggestions, WireToken } from "../utils/searchBridge";
 import type { BadgeStyles } from "../utils/badgeStyle";
+import { getUndoState } from "../contexts/UndoStore";
 import type { WirePersonPicker } from "../utils/personPickerBridge";
 
 // ---------------------------------------------------------------------------
@@ -51,6 +52,13 @@ export type BridgeMessage =
   | { type: "search-suggestions"; query: string; rows: WireSuggestionRow[] }
   | ({ type: "search-badge-styles" } & BadgeStyles)
   | { type: "focus-mode"; active: boolean }
+  | {
+      type: "undo-state";
+      canUndo: boolean;
+      canRedo: boolean;
+      undoLabel: string | null;
+      redoLabel: string | null;
+    }
   | ({ type: "person-picker" } & WirePersonPicker)
   | { type: "subtitle-prefs"; player: boolean; burn: boolean }
   | {
@@ -299,6 +307,20 @@ export function postPersonPicker(message: WirePersonPicker): void {
 }
 
 /**
+ * Tell the native Edit menu what the report's undo stack holds: whether Undo
+ * and Redo are available, and their full labels ("Undo Rename Moderator").
+ * Posted by UndoSync on every change. No-ops outside WKWebView.
+ */
+export function postUndoState(
+  canUndo: boolean,
+  canRedo: boolean,
+  undoLabel: string | null,
+  redoLabel: string | null,
+): void {
+  postNativeMessage({ type: "undo-state", canUndo, canRedo, undoLabel, redoLabel });
+}
+
+/**
  * Mirror the report's Focus Mode state to the native View menu's checkmark.
  *
  * The SPA is the source of truth — the menu item dispatches `focusMode` and
@@ -404,9 +426,8 @@ export function installBridge(deps: BridgeDeps): void {
         focusedQuoteId: deps.getFocusedQuoteId(),
         selectedIds: deps.getSelectedIds(),
         isEditing: deps.getIsEditing(),
-        // Stubs — wired when undo store ships.
-        canUndo: false,
-        canRedo: false,
+        canUndo: getUndoState().canUndo,
+        canRedo: getUndoState().canRedo,
         hasPlayer: deps.getHasPlayer(),
         playerPlaying: deps.getPlayerPlaying(),
       };

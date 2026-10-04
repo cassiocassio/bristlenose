@@ -619,5 +619,19 @@
       "no_moderator": "\u3053\u306e\u30bb\u30c3\u30b7\u30e7\u30f3\u3067\u306f\u30e2\u30c7\u30ec\u30fc\u30bf\u30fc\u3092\u7279\u5b9a\u3067\u304d\u306a\u304b\u3063\u305f\u305f\u3081\u3001\u8868\u793a\u3059\u308b\u8cea\u554f\u304c\u3042\u308a\u307e\u305b\u3093\u3002",
       "moderator_unreliable": "\u3053\u306e\u30bb\u30c3\u30b7\u30e7\u30f3\u3067\u306f\u30e2\u30c7\u30ec\u30fc\u30bf\u30fc\u3092\u78ba\u5b9f\u306b\u533a\u5225\u3067\u304d\u306a\u304b\u3063\u305f\u305f\u3081\u3001\u8cea\u554f\u306f\u5206\u985e\u3055\u308c\u3066\u3044\u307e\u305b\u3093\u3002"
     }
+  },
+  "undo": {
+    "undo": {
+      "renameModerator": "取り消す - モデレーターの名称変更",
+      "renameParticipant": "取り消す - 参加者の名称変更",
+      "renameObserver": "取り消す - オブザーバーの名称変更",
+      "confirmName": "取り消す - 名前の確認"
+    },
+    "redo": {
+      "renameModerator": "やり直す - モデレーターの名称変更",
+      "renameParticipant": "やり直す - 参加者の名称変更",
+      "renameObserver": "やり直す - オブザーバーの名称変更",
+      "confirmName": "やり直す - 名前の確認"
+    }
   }
 }

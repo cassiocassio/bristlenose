@@ -164,8 +164,17 @@ async function apiDeleteJson<T>(path: string): Promise<T> {
 }
 
 function firePut(path: string, body: unknown): void {
-  if (isExportMode()) return; // No server in export mode
-  fetch(`${apiBase()}${path}`, {
+  sendPut(path, body).catch(() => undefined);
+}
+
+/**
+ * The awaitable `firePut`: same request, same toast on failure, but the caller
+ * can wait for it — which an ordered sequence of writes needs (an undo must
+ * land after the act it reverses). Rejects after toasting.
+ */
+export function sendPut(path: string, body: unknown): Promise<void> {
+  if (isExportMode()) return Promise.resolve(); // No server in export mode
+  return fetch(`${apiBase()}${path}`, {
     method: "PUT",
     headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
@@ -190,6 +199,7 @@ function firePut(path: string, body: unknown): void {
         }),
         4000,
       );
+      throw err;
     });
 }
 

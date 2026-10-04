@@ -629,5 +629,19 @@
       "no_moderator": "Aucun mod\u00e9rateur n\u2019a \u00e9t\u00e9 identifi\u00e9 dans cet entretien : il n\u2019a donc aucune question \u00e0 afficher.",
       "moderator_unreliable": "Le mod\u00e9rateur n\u2019a pas pu \u00eatre distingu\u00e9 de fa\u00e7on fiable dans cet entretien : ses questions ne sont donc pas class\u00e9es."
     }
+  },
+  "undo": {
+    "undo": {
+      "renameModerator": "Annuler le changement de nom de l’animateur",
+      "renameParticipant": "Annuler le changement de nom du participant",
+      "renameObserver": "Annuler le changement de nom de l’observateur",
+      "confirmName": "Annuler la confirmation du nom"
+    },
+    "redo": {
+      "renameModerator": "Rétablir le changement de nom de l’animateur",
+      "renameParticipant": "Rétablir le changement de nom du participant",
+      "renameObserver": "Rétablir le changement de nom de l’observateur",
+      "confirmName": "Rétablir la confirmation du nom"
+    }
   }
 }

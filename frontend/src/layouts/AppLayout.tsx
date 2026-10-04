@@ -28,6 +28,7 @@ import { ActivityChipStack, normaliseAutoCode } from "../components/ActivityChip
 import type { ActivityJob } from "../components/ActivityChipStack";
 import { AnnounceRegion } from "../components/AnnounceRegion";
 import { LensSubtitleSync } from "../components/LensSubtitleSync";
+import { UndoSync } from "../components/UndoSync";
 import { applyNativeSearchAction, NativeSearchSync } from "../components/NativeSearchSync";
 import { PlayerProvider } from "../contexts/PlayerContext";
 import { FocusProvider, useFocus } from "../contexts/FocusContext";
@@ -820,6 +821,7 @@ function AppShell() {
       <ActivityChipStack jobs={chipJobs} onDismiss={removeJob} />
       <AnnounceRegion />
       <LensSubtitleSync />
+      <UndoSync />
       <NativeSearchSync />
       {IS_DEV && (
         <Suspense fallback={null}>

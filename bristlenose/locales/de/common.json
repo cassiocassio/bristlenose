@@ -629,5 +629,19 @@
       "no_moderator": "In diesem Interview wurde keine Moderation erkannt, daher gibt es keine Fragen zum Anzeigen.",
       "moderator_unreliable": "Die Moderation lie\u00df sich in diesem Interview nicht zuverl\u00e4ssig unterscheiden, daher sind die Fragen nicht zugeordnet."
     }
+  },
+  "undo": {
+    "undo": {
+      "renameModerator": "Moderator umbenennen widerrufen",
+      "renameParticipant": "Teilnehmer umbenennen widerrufen",
+      "renameObserver": "Beobachter umbenennen widerrufen",
+      "confirmName": "Namen bestätigen widerrufen"
+    },
+    "redo": {
+      "renameModerator": "Moderator umbenennen wiederholen",
+      "renameParticipant": "Teilnehmer umbenennen wiederholen",
+      "renameObserver": "Beobachter umbenennen wiederholen",
+      "confirmName": "Namen bestätigen wiederholen"
+    }
   }
 }

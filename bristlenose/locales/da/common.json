@@ -629,5 +629,19 @@
       "no_moderator": "Der blev ikke identificeret nogen moderator i denne session, s\u00e5 der er ingen sp\u00f8rgsm\u00e5l at vise.",
       "moderator_unreliable": "Moderatoren kunne ikke skelnes p\u00e5lideligt i denne session, s\u00e5 sp\u00f8rgsm\u00e5lene er ikke klassificeret."
     }
+  },
+  "undo": {
+    "undo": {
+      "renameModerator": "Fortryd Omdøb moderator",
+      "renameParticipant": "Fortryd Omdøb deltager",
+      "renameObserver": "Fortryd Omdøb observatør",
+      "confirmName": "Fortryd Bekræft navn"
+    },
+    "redo": {
+      "renameModerator": "Gentag Omdøb moderator",
+      "renameParticipant": "Gentag Omdøb deltager",
+      "renameObserver": "Gentag Omdøb observatør",
+      "confirmName": "Gentag Bekræft navn"
+    }
   }
 }

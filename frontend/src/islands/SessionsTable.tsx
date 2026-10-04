@@ -6,12 +6,13 @@
  * existing static HTML report.
  *
  * Speaker names are editable inline: code-only PersonBadge + EditableText
- * + pencil icon. Edits update short_name via PUT /people (fire-and-forget).
+ * + pencil icon. Every rename goes through `nameSpeaker` (utils/speakerNames),
+ * which writes it and makes it undoable.
  *
  * CSS classes match the existing theme so styles apply without changes.
  */
 
-import { Suspense, lazy, useCallback, useContext, useEffect, useState } from "react";
+import { Suspense, lazy, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { EditableText, JourneyChain, PersonBadge, SectionHeading, Sparkline, Thumbnail } from "../components";
@@ -34,7 +35,13 @@ function hasNativePersonPicker(): boolean {
 }
 import type { SparklineItem } from "../components/Sparkline";
 import { PlayerContext } from "../contexts/PlayerContext";
-import { apiGet, getPeople, isSessionScopedCode, putPeople, putSessionSpeaker } from "../utils/api";
+import { apiGet, getPeople, isSessionScopedCode } from "../utils/api";
+import {
+  PEOPLE_CHANGED_EVENT,
+  type PeopleChangedDetail,
+  type SpeakerNameState,
+} from "../utils/peopleChanged";
+import { nameSpeaker } from "../utils/speakerNames";
 import type { PersonData } from "../utils/api";
 import { postPersonPicker, postProjectAction } from "../shims/bridge";
 import { isEmbedded } from "../utils/embedded";
@@ -187,102 +194,127 @@ export function SessionsTable({
       );
   }, [projectId, refreshKey]);
 
+  // The grid's own copy, read by the write paths below at call time, so an
+  // undo entry records what the slot held at the moment of the act.
+  const dataRef = useRef(data);
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
+
+  /** What a slot holds, as the grid knows it. A missing flag reads as
+   *  confirmed, as the grid draws it. */
+  const slotState = useCallback((sessionId: string, code: string): SpeakerNameState | null => {
+    const sess = dataRef.current?.sessions.find((s) => s.session_id === sessionId);
+    const sp = sess?.speakers.find((x) => x.speaker_code === code);
+    if (!sp) return null;
+    return {
+      full_name: sp.full_name,
+      short_name: sp.short_name ?? sp.name,
+      confirmed: sp.name_confirmed !== false,
+    };
+  }, []);
+
+  /** Draw a slot's state. A participant code is study-wide, so every session
+   *  showing it changes; a moderator or observer code names a different person
+   *  in each session, so only this one does. */
+  const drawSlot = useCallback((sessionId: string, code: string, state: SpeakerNameState) => {
+    const sessionScoped = isSessionScopedCode(code);
+    setData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        sessions: prev.sessions.map((sess) =>
+          sessionScoped && sess.session_id !== sessionId
+            ? sess
+            : {
+                ...sess,
+                speakers: sess.speakers.map((sp) =>
+                  sp.speaker_code === code
+                    ? {
+                        ...sp,
+                        name: state.short_name || state.full_name || "",
+                        full_name: state.full_name ?? sp.full_name,
+                        short_name: state.short_name,
+                        name_confirmed: state.confirmed,
+                      }
+                    : sp,
+                ),
+              },
+        ),
+      };
+    });
+    if (!sessionScoped) {
+      setPeopleMap((prev) =>
+        prev && prev[code]
+          ? {
+              ...prev,
+              [code]: {
+                ...prev[code],
+                full_name: state.full_name ?? prev[code].full_name,
+                short_name: state.short_name,
+              },
+            }
+          : prev,
+      );
+    }
+  }, []);
+
+  /** Every way a name changes here — the inline editor, either picker — ends
+   *  in one undoable write (docs/design-people.md §B10). */
+  const renameSlot = useCallback(
+    (sessionId: string, code: string, change: (before: SpeakerNameState) => SpeakerNameState) => {
+      // An export has no server: suppress the visible half too, or the change
+      // would show and then silently revert on reload.
+      if (isExportMode()) return;
+      const before = slotState(sessionId, code);
+      if (!before) return;
+      const after = change(before);
+      drawSlot(sessionId, code, after);
+      void nameSpeaker({ sessionId, code, before, after });
+    },
+    [slotState, drawSlot],
+  );
+
+  // Undo and redo redraw the slot they changed.
+  useEffect(() => {
+    const onChanged = (e: Event) => {
+      const { sessionId, code, state } = (e as CustomEvent<PeopleChangedDetail>).detail;
+      drawSlot(sessionId, code, state);
+    };
+    window.addEventListener(PEOPLE_CHANGED_EVENT, onChanged);
+    return () => window.removeEventListener(PEOPLE_CHANGED_EVENT, onChanged);
+  }, [drawSlot]);
+
   const handleNameCommit = useCallback(
     (sessionId: string, speakerCode: string, newName: string) => {
       setEditingKey(null);
-      // putPeople already short-circuits offline, but that only suppresses the
-      // WRITE — the optimistic update below is what the researcher would see
-      // change and then silently revert on reload. Guard the visible half too.
-      if (isExportMode()) return;
-
-      // Optimistic update. A participant code is study-wide, so every session
-      // showing it changes; a moderator or observer code names a different
-      // person in each session, so only this one does.
-      const sessionScoped = isSessionScopedCode(speakerCode);
-      setData((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          sessions: prev.sessions.map((sess) =>
-            sessionScoped && sess.session_id !== sessionId
-              ? sess
-              : {
-                  ...sess,
-                  speakers: sess.speakers.map((sp) =>
-                    sp.speaker_code === speakerCode
-                      ? { ...sp, name: newName, name_confirmed: true }
-                      : sp,
-                  ),
-                },
-          ),
-        };
-      });
-
-      if (sessionScoped) {
-        putSessionSpeaker(sessionId, speakerCode, { short_name: newName });
-        return;
-      }
-
-      // Update people map and fire PUT.
-      setPeopleMap((prev) => {
-        if (!prev) return prev;
-        const updated = {
-          ...prev,
-          [speakerCode]: {
-            ...prev[speakerCode],
-            short_name: newName,
-          },
-        };
-        putPeople(updated);
-        return updated;
-      });
+      renameSlot(sessionId, speakerCode, (before) => ({
+        ...before,
+        short_name: newName,
+        confirmed: true,
+      }));
     },
-    [],
+    [renameSlot],
   );
 
   // A pick or a confirm from either picker. A participant's rename goes the
-  // inline editor's way (/people, which confirms a changed name); a moderator's
-  // or observer's names only this session. The optimistic copy carries the yes.
+  // inline editor's way (its short name); a moderator's or observer's pick
+  // sets both names, for this session only.
   const applyPickerChoice = useCallback(
     (sessionId: string, speakerCode: string, choice: PersonPickerChoice) => {
-      if (isExportMode()) return;
-      const sessionScoped = isSessionScopedCode(speakerCode);
-      if (choice.kind === "name" && !sessionScoped) {
-        handleNameCommit(sessionId, speakerCode, choice.name);
-        return;
-      }
-      setData((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          sessions: prev.sessions.map((sess) =>
-            sess.session_id !== sessionId
-              ? sess
-              : {
-                  ...sess,
-                  speakers: sess.speakers.map((sp) =>
-                    sp.speaker_code !== speakerCode
-                      ? sp
-                      : {
-                          ...sp,
-                          ...(choice.kind === "name" ? { name: choice.name } : {}),
-                          name_confirmed: true,
-                        },
-                  ),
-                },
-          ),
-        };
-      });
       if (choice.kind === "confirm") {
-        putSessionSpeaker(sessionId, speakerCode, { confirmed: true });
+        renameSlot(sessionId, speakerCode, (before) => ({ ...before, confirmed: true }));
+      } else if (!isSessionScopedCode(speakerCode)) {
+        handleNameCommit(sessionId, speakerCode, choice.name);
       } else {
-        putSessionSpeaker(sessionId, speakerCode, {
+        renameSlot(sessionId, speakerCode, () => ({
           full_name: choice.name,
           short_name: choice.name,
-        });
+          confirmed: true,
+        }));
       }
     },
-    [handleNameCommit],
+    [renameSlot, handleNameCommit],
   );
 
   // The Mac app's native picker answers through the menu-action channel.

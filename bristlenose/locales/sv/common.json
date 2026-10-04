@@ -629,5 +629,19 @@
       "no_moderator": "Ingen moderator identifierades i den h\u00e4r sessionen, s\u00e5 det finns inga fr\u00e5gor att visa.",
       "moderator_unreliable": "Moderatorn kunde inte s\u00e4rskiljas tillf\u00f6rlitligt i den h\u00e4r sessionen, s\u00e5 fr\u00e5gorna \u00e4r inte klassificerade."
     }
+  },
+  "undo": {
+    "undo": {
+      "renameModerator": "Ångra Byt namn på moderator",
+      "renameParticipant": "Ångra Byt namn på deltagare",
+      "renameObserver": "Ångra Byt namn på observatör",
+      "confirmName": "Ångra Bekräfta namn"
+    },
+    "redo": {
+      "renameModerator": "Gör om Byt namn på moderator",
+      "renameParticipant": "Gör om Byt namn på deltagare",
+      "renameObserver": "Gör om Byt namn på observatör",
+      "confirmName": "Gör om Bekräfta namn"
+    }
   }
 }

@@ -629,5 +629,19 @@
       "no_moderator": "Er is in deze sessie geen moderator herkend, dus er zijn geen vragen om te tonen.",
       "moderator_unreliable": "De moderator kon in deze sessie niet betrouwbaar worden onderscheiden, dus de vragen zijn niet ingedeeld."
     }
+  },
+  "undo": {
+    "undo": {
+      "renameModerator": "Herstel naam moderator wijzigen",
+      "renameParticipant": "Herstel naam deelnemer wijzigen",
+      "renameObserver": "Herstel naam waarnemer wijzigen",
+      "confirmName": "Herstel naam bevestigen"
+    },
+    "redo": {
+      "renameModerator": "Opnieuw naam moderator wijzigen",
+      "renameParticipant": "Opnieuw naam deelnemer wijzigen",
+      "renameObserver": "Opnieuw naam waarnemer wijzigen",
+      "confirmName": "Opnieuw naam bevestigen"
+    }
   }
 }

@@ -599,5 +599,19 @@
       "no_moderator": "\u6b64\u5834\u6b21\u672a\u80fd\u8fa8\u8b58\u4e3b\u6301\u4eba\uff0c\u56e0\u6b64\u6c92\u6709\u53ef\u986f\u793a\u7684\u554f\u984c\u3002",
       "moderator_unreliable": "\u6b64\u5834\u6b21\u7121\u6cd5\u53ef\u9760\u5730\u5340\u5206\u4e3b\u6301\u4eba\uff0c\u56e0\u6b64\u554f\u984c\u672a\u5206\u985e\u3002"
     }
+  },
+  "undo": {
+    "undo": {
+      "renameModerator": "還原重新命名主持人",
+      "renameParticipant": "還原重新命名參與者",
+      "renameObserver": "還原重新命名觀察員",
+      "confirmName": "還原確認名稱"
+    },
+    "redo": {
+      "renameModerator": "重做重新命名主持人",
+      "renameParticipant": "重做重新命名參與者",
+      "renameObserver": "重做重新命名觀察員",
+      "confirmName": "重做確認名稱"
+    }
   }
 }

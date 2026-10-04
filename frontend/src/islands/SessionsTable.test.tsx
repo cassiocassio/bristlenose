@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
+  act,
   render as rtlRender,
   screen,
   fireEvent,
@@ -9,6 +10,8 @@ import { MemoryRouter } from "react-router-dom";
 import { SessionsTable } from "./SessionsTable";
 import { _resetEmbeddedCache } from "../utils/embedded";
 import { _resetExportCache } from "../utils/exportData";
+import { getUndoState, redo, resetUndoStore, undo } from "../contexts/UndoStore";
+import { resetSpeakerNameQueue } from "../utils/speakerNames";
 
 // SessionsTable uses useNavigate (journey deep-links) — provide a Router.
 const render = (ui: Parameters<typeof rtlRender>[0]) =>
@@ -92,6 +95,9 @@ function mockFetchResponses() {
 
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn());
+  // Module-level: an entry from one test must not be undone by the next.
+  resetUndoStore();
+  resetSpeakerNameQueue();
 });
 
 // ---------------------------------------------------------------------------
@@ -243,16 +249,17 @@ describe("SessionsTable name editing", () => {
       expect(screen.getByTestId("bn-name-p1").textContent).toBe("Alicia");
     });
 
-    // PUT should have been called
-    const putCalls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.filter(
-      (call: unknown[]) => {
-        const opts = call[1] as { method?: string } | undefined;
-        return opts?.method === "PUT";
-      },
-    );
-    expect(putCalls.length).toBe(1);
-    const putBody = JSON.parse((putCalls[0][1] as { body: string }).body);
-    expect(putBody.p1.short_name).toBe("Alicia");
+    // A participant is named through /people (written through to
+    // people.yaml), then the slot says yes on the per-session route.
+    const putCalls = () =>
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.filter(
+        (call: unknown[]) => (call[1] as { method?: string } | undefined)?.method === "PUT",
+      );
+    await waitFor(() => expect(putCalls().length).toBe(2));
+    expect(putCalls()[0][0]).toMatch(/\/people$/);
+    expect(JSON.parse((putCalls()[0][1] as { body: string }).body).p1.short_name).toBe("Alicia");
+    expect(putCalls()[1][0]).toMatch(/\/sessions\/s1\/speakers\/p1$/);
+    expect(JSON.parse((putCalls()[1][1] as { body: string }).body)).toEqual({ confirmed: true });
   });
 
   it("cancels on Escape without changing name", async () => {
@@ -592,11 +599,39 @@ describe("SessionsTable moderators are named per session", () => {
       expect(s2.textContent).toBe("Joanna");
       expect(s1.textContent).toBe("Martin");
     });
-    // The wire, not just the render: exactly one write, to this session.
+    // The wire, not just the render: exactly one write, to this session,
+    // carrying the slot's whole state (what an undo puts back). This fixture
+    // predates /sessions reporting full_name, so none is sent — the stored
+    // one is left alone rather than blanked.
+    await waitFor(() => expect(putCalls()).toHaveLength(1));
     const puts = putCalls();
-    expect(puts).toHaveLength(1);
     expect(puts[0].url).toMatch(/\/sessions\/s2\/speakers\/m1$/);
-    expect(puts[0].body).toEqual({ short_name: "Joanna" });
+    expect(puts[0].body).toEqual({ short_name: "Joanna", confirmed: true });
+  });
+
+  it("Edit ▸ Undo puts the session's moderator back, name and flag", async () => {
+    mockTwoModerators();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    fireEvent.click(screen.getAllByTestId("bn-name-pencil-m1")[1]);
+    const editing = screen.getAllByTestId("bn-name-m1")[1];
+    editing.textContent = "Joanna";
+    fireEvent.keyDown(editing, { key: "Enter" });
+    await waitFor(() => expect(putCalls()).toHaveLength(1));
+    expect(getUndoState().undoAction).toBe("renameModerator");
+
+    await act(async () => {
+      await undo();
+    });
+    expect(screen.getAllByTestId("bn-name-m1").map((n) => n.textContent)).toEqual(["Martin", "Jo"]);
+    expect(putCalls()[1].url).toMatch(/\/sessions\/s2\/speakers\/m1$/);
+    // The fixture's slot carries no flag, which the grid reads as confirmed.
+    expect(putCalls()[1].body).toEqual({ short_name: "Jo", confirmed: true });
+
+    await act(async () => {
+      await redo();
+    });
+    expect(screen.getAllByTestId("bn-name-m1")[1].textContent).toBe("Joanna");
   });
 
   it("still renames a participant through /people", async () => {
@@ -607,7 +642,7 @@ describe("SessionsTable moderators are named per session", () => {
     const nameEl = screen.getByTestId("bn-name-p1");
     nameEl.textContent = "Alicia";
     fireEvent.keyDown(nameEl, { key: "Enter" });
-    await waitFor(() => expect(putCalls()).toHaveLength(1));
+    await waitFor(() => expect(putCalls()).toHaveLength(2));
     const [put] = putCalls();
     expect(put.url).toMatch(/\/people$/);
     expect((put.body as Record<string, { short_name: string }>).p1.short_name).toBe("Alicia");
@@ -704,8 +739,26 @@ describe("SessionsTable person picker", () => {
     fireEvent.keyDown(await pickerMenu(), { key: "Enter" });
     await waitFor(() => expect(puts()).toHaveLength(1));
     expect(puts()[0].url).toContain("/sessions/s1/speakers/m1");
-    expect(puts()[0].body).toEqual({ confirmed: true });
+    expect(puts()[0].body).toEqual({ short_name: "Sarah", confirmed: true });
     expect(screen.getAllByTestId("bn-picker-trigger-m1")[0].classList.contains("badge-proposed")).toBe(false);
+  });
+
+  it("undoing a confirm returns the name to proposed", async () => {
+    mockPicker();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    fireEvent.click(screen.getAllByTestId("bn-picker-trigger-m1")[0]);
+    fireEvent.keyDown(await pickerMenu(), { key: "Enter" });
+    await waitFor(() => expect(puts()).toHaveLength(1));
+    expect(getUndoState().undoAction).toBe("confirmName");
+
+    await act(async () => {
+      await undo();
+    });
+    expect(puts()[1].url).toContain("/sessions/s1/speakers/m1");
+    expect(puts()[1].body).toEqual({ short_name: "Sarah", confirmed: false });
+    expect(screen.getAllByTestId("bn-picker-trigger-m1")[0].classList.contains("badge-proposed")).toBe(true);
+    expect(screen.getAllByTestId("bn-name-m1")[0].textContent).toBe("Sarah");
   });
 
   it("picking another moderator's name renames only this session's", async () => {
@@ -717,7 +770,7 @@ describe("SessionsTable person picker", () => {
     fireEvent.click(kerri);
     await waitFor(() => expect(puts()).toHaveLength(1));
     expect(puts()[0].url).toContain("/sessions/s1/speakers/m1");
-    expect(puts()[0].body).toEqual({ full_name: "Kerri", short_name: "Kerri" });
+    expect(puts()[0].body).toEqual({ full_name: "Kerri", short_name: "Kerri", confirmed: true });
     expect(screen.getAllByTestId("bn-name-m1").map((n) => n.textContent)).toEqual(["Kerri", "Kerri"]);
   });
 

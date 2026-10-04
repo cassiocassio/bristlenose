@@ -2077,14 +2077,55 @@ work by this, not by the order the picker draws its rows.
 picker's confirm (`PUT …/sessions/{sid}/speakers/{code}` with
 `{"confirmed": true}`), says yes. `PUT /people` confirms only a participant
 whose name actually changed, because it receives the whole map on every write.
-Every name that predates 012 reads as proposed, accepted by the owner.
+Every name that predates 012 reads as proposed, accepted by the owner. A
+re-import never repairs a confirmed slot: equal to the shared people.yaml value
+is then a yes to it, not the pre-per-session collision.
 
-Still open, listed in the mockup's Part 3: where a spelling fix lives now
-that a click opens the picker; whether opening on an unknown slot pre-selects
-the first moderator; whether a "don't know who" row is needed; whether the Participant segment (a real recode,
-§J) ships with the first picker or after it, with its undo (planned in §J7:
-after it, as R2, with moderator ↔ observer first as R1); and the participant
-list's scope.
+**Built, 4 Oct 2026 — the picker (speaker ID v1.1).** Both pickers, on the
+Sessions grid, deciding with one model (`utils/personPicker.ts`:
+`personPickerRows` for what is offered, `personPickerChoice` for what a pick
+means), so they cannot disagree.
+
+- **Web** (`components/PersonPicker.tsx`): opened by the badge (a
+  `<button aria-haspopup="menu">`) or the name. Loaded lazily — the grid is
+  first paint, the picker a click away — and its strings are built inside the
+  lazy chunk for the same reason. Keys it handles stop there (the page's
+  Escape also clears the search); Escape or a choice returns focus to the badge.
+  The proposed ring is `.bn-person-proposed` in `molecules/person-badge.css`,
+  its own class: borrowing AutoCode's `.badge-proposed` drew two rings and a
+  pulse. An exported report draws every name plain and opens no picker.
+- **Native** (`PersonPickerPopover.swift`): the SPA sends `person-picker`
+  (slot, rows, anchor, every string localised) and the host shows a transient
+  `NSPopover` at the badge, Small. It sends back the bare name picked
+  (`personPickerChoose`); the SPA resolves it against the slot as the grid holds
+  it then, so a yes, a rename and a no-op are decided in one place. The popover
+  sizes to its widest row and never below its role segments (231 pt in English
+  at Small, 281 in Russian). A project switch closes it, because a pick names a
+  session and a code but no project. The web opens the native one only when the
+  host sets `__BRISTLENOSE_NATIVE_PERSON_PICKER__`, so an app build without it
+  falls back to the web picker rather than sending a message nothing answers.
+  Both directions are pinned by `tests/fixtures/person-picker-bridge-contract.json`,
+  read by vitest and by Swift.
+- **v1.1 rules, the owner's (4 Oct 2026):** the role segments show all three
+  roles with only the speaker's own enabled; moderator and observer rows are
+  every name known for that role in the study, each carrying this slot's own
+  code; a participant's picker holds only that participant; an unknown slot
+  pre-selects nothing, so Return cannot confirm a guess; That's Me is the Mac
+  account's name (`NSFullUserName`) and the browser has no such row; a spelling
+  fix is the pencil, a click is the picker; undo is ⌘Z (§B10), and picking
+  again also works.
+
+Still open: whether a "don't know who" row is needed; whether the Participant
+segment (a real recode, §J) ships with the first picker or after it, with its
+undo (planned in §J7: after it, as R2, with moderator ↔ observer first as R1);
+right-click as a second native surface; whether the keyboard lives in the list
+(v1) or the field (search later); what a light-dismiss does to a half-typed
+name; and five questions from the 4 Oct code review — a moderator pick copies
+the display name into both name fields, dropping a source slot's surname; the
+moderator list offers other sessions' unconfirmed guesses; That's Me and a
+matching name are both ticked; the proposed state is visual only (no
+accessible label); and a participant's write is two requests, so a failed
+second leaves the name restored but still confirmed on undo.
 
 **Judge web against native in the app, not in the mockup.** The mockup's Mac
 column is CSS, and checking it against a real AppKit render (its *Calibration*

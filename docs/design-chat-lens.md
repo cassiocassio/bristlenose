@@ -22,8 +22,9 @@ _Design note; the §6 prototype is built to the §5a corrections (flag-gated lab
 > conversational surface. Read that doc's §Positioning first — this feature was
 > the deliberate, scoped exception to it, and is parked behind it now. The lab
 > page is still mounted in every serve, the Mac sidecar included
-> (`experimental_chat_lens`, default on, `config.py`); whether to switch it off
-> while parked is an open call.
+> (`experimental_chat_lens`, default on, `config.py`). Left as it is by
+> decision, 4 Oct 2026: the lens comes back "later later", and switching the
+> lab off is not worth doing before then.
 
 ## Changelog
 

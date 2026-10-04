@@ -44,8 +44,9 @@ native: the VoiceOver announcements (chip selected, removed, search cleared)
 are read in Swift from the same `common.search.announce.*` keys
 (`QuotesToolbarControls.swift`); and the field's own chrome — placeholder and
 clear button — is `desktop.toolbar.search` / `searchClear`, so the Mac field
-says *Search* where the browser's says *Search quotes, people, tags* (trued
-4 Oct 2026).
+says *Search* where the browser's says *Search quotes, people, tags* — a
+deliberate fork, decided 4 Oct 2026: the Mac keeps the plain macOS toolbar
+word.
 
 ---
 

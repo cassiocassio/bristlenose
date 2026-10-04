@@ -2024,9 +2024,17 @@ reviewing iteration 2; these supersede it where they differ.
 - **Unknown speakers keep the shipped grey italic role word** beside `m?`.
   Unchanged on purpose.
 
-Still open, listed in the mockup's Part 3: web popover vs native popover (the
-mockup recommends web first, everywhere, and argues NSMenu is the wrong native
-primitive for a field plus a segmented control); where a spelling fix lives now
+**Decided by the owner, 4 Oct 2026: native on the Mac, web in the browser, and
+the native picker is Small.** "Every non-Mac pull-down menu is a giveaway, and
+we've done the work." The Mac app opens the AppKit popover built in Picker Lab
+(the hybrid below: pull-down menu metrics at the small size — 11 pt menu type,
+the small segmented control, 24 pt rows — with the house `SpeakerBadgeView`);
+the browser report and the CLI SPA open the web picker. This reverses the
+mockup's "web first, everywhere" recommendation. The mockup was right that
+`NSMenu` is the wrong primitive for a field plus a segmented control, which is
+why the native one is a popover that behaves as a menu rather than an `NSMenu`.
+
+Still open, listed in the mockup's Part 3: where a spelling fix lives now
 that a click opens the picker; whether opening on an unknown slot pre-selects
 the first moderator; whether a "don't know who" row is needed; whether the Participant segment (a real recode,
 §J) ships with the first picker or after it, with its undo; and the participant

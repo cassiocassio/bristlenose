@@ -148,8 +148,10 @@ final class PickerLabModel: ObservableObject {
     @Published var selection: String? = "m1"
     @Published var draft = ""
     @Published var isOpen = true
-    /// The small pull-down size: 11 pt type and a small segmented control.
-    @Published var small = false
+    /// The small pull-down size: 11 pt type and a small segmented control —
+    /// the owner's choice for the native picker (4 Oct 2026); Regular stays
+    /// a switch away for comparison.
+    @Published var small = true
     /// Bumped when an arrow key leaves the new-person field, so the list takes
     /// the keyboard back.
     @Published var focusListRequest = 0

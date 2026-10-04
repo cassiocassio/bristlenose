@@ -12,9 +12,9 @@ import {
 } from "./UndoStore";
 
 /** An entry whose undo/redo move a shared value, so tests read outcomes. */
-function setter(box: { v: string }, from: string, to: string, key = "undo.actions.test") {
+function setter(box: { v: string }, from: string, to: string, key = "test") {
   box.v = to;
-  pushUndo({ actionKey: key, undo: () => { box.v = from; }, redo: () => { box.v = to; } });
+  pushUndo({ action: key, undo: () => { box.v = from; }, redo: () => { box.v = to; } });
 }
 
 afterEach(() => resetUndoStore());
@@ -22,7 +22,7 @@ afterEach(() => resetUndoStore());
 describe("UndoStore", () => {
   it("starts with nothing to undo or redo", async () => {
     expect(getUndoState()).toEqual({
-      canUndo: false, canRedo: false, undoActionKey: null, redoActionKey: null,
+      canUndo: false, canRedo: false, undoAction: null, redoAction: null,
     });
     expect(await undo()).toBe(false);
     expect(await redo()).toBe(false);
@@ -30,12 +30,12 @@ describe("UndoStore", () => {
 
   it("undoes the most recent act first, then the one before", async () => {
     const box = { v: "a" };
-    setter(box, "a", "b", "undo.actions.first");
-    setter(box, "b", "c", "undo.actions.second");
-    expect(getUndoState().undoActionKey).toBe("undo.actions.second");
+    setter(box, "a", "b", "first");
+    setter(box, "b", "c", "second");
+    expect(getUndoState().undoAction).toBe("second");
     await undo();
     expect(box.v).toBe("b");
-    expect(getUndoState().undoActionKey).toBe("undo.actions.first");
+    expect(getUndoState().undoAction).toBe("first");
     await undo();
     expect(box.v).toBe("a");
     expect(getUndoState().canUndo).toBe(false);
@@ -89,10 +89,10 @@ describe("UndoStore", () => {
   it("the label moves before the write finishes, so a second ⌘Z takes the next entry", async () => {
     let release!: () => void;
     const slow = new Promise<void>((r) => { release = r; });
-    pushUndo({ actionKey: "undo.actions.first", undo: () => {}, redo: () => {} });
-    pushUndo({ actionKey: "undo.actions.second", undo: () => slow, redo: () => {} });
+    pushUndo({ action: "first", undo: () => {}, redo: () => {} });
+    pushUndo({ action: "second", undo: () => slow, redo: () => {} });
     const pending = undo();
-    expect(getUndoState().undoActionKey).toBe("undo.actions.first");
+    expect(getUndoState().undoAction).toBe("first");
     release();
     await pending;
   });

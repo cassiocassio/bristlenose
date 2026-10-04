@@ -15,9 +15,12 @@
  * outlived the page would have to live on the server
  * (docs/design-undo-catalog.md § The Swift ↔ Python divide, point 4).
  *
- * An entry carries the locale *key* of its action name, not the string, so a
- * language change re-labels the menu rather than leaving the old language in
- * it. The entry owns its own writes: the store only orders them.
+ * An entry carries an action *id*, not a string: the menu labels are the
+ * locale keys `undo.undo.<action>` and `undo.redo.<action>`, written whole per
+ * language — Apple's own "Undo Rename" is not "Undo" + "Rename" in Spanish,
+ * Russian or Norwegian — and a language change re-labels the menu rather than
+ * leaving the old language in it. The entry owns its own writes: the store
+ * only orders them.
  *
  * @module UndoStore
  */
@@ -25,9 +28,9 @@
 import { useSyncExternalStore } from "react";
 
 export interface UndoEntry {
-  /** Locale key of the action name, e.g. `undo.actions.renameModerator`.
-   *  Rendered into "Undo {{action}}" / "Redo {{action}}". */
-  actionKey: string;
+  /** The act, e.g. `renameModerator` — labelled by `undo.undo.<action>` and
+   *  `undo.redo.<action>`. */
+  action: string;
   undo: () => void | Promise<void>;
   redo: () => void | Promise<void>;
 }
@@ -35,9 +38,9 @@ export interface UndoEntry {
 export interface UndoState {
   canUndo: boolean;
   canRedo: boolean;
-  /** The action key the next undo would reverse, or null. */
-  undoActionKey: string | null;
-  redoActionKey: string | null;
+  /** The act the next undo would reverse, or null. */
+  undoAction: string | null;
+  redoAction: string | null;
 }
 
 /** Deep enough that nobody runs out in a session; bounded so a long one does
@@ -50,8 +53,8 @@ let redoStack: UndoEntry[] = [];
 const EMPTY: UndoState = {
   canUndo: false,
   canRedo: false,
-  undoActionKey: null,
-  redoActionKey: null,
+  undoAction: null,
+  redoAction: null,
 };
 let snapshot: UndoState = EMPTY;
 
@@ -63,8 +66,8 @@ function emit(): void {
   snapshot = {
     canUndo: !!top,
     canRedo: !!redoTop,
-    undoActionKey: top?.actionKey ?? null,
-    redoActionKey: redoTop?.actionKey ?? null,
+    undoAction: top?.action ?? null,
+    redoAction: redoTop?.action ?? null,
   };
   for (const listener of listeners) listener();
 }

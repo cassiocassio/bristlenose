@@ -65,7 +65,7 @@ Read-only Model Context Protocol server so a local agent (Claude Code,
 Claude Desktop, ChatGPT desktop, Codex) can read ONE project. Design +
 acceptance results: `docs/design-mcp-server.md`. Ships on BOTH channels
 since 30 Jul 2026: CLI via the optional extra, macOS app via the bundled
-sidecar (`build-sidecar.sh` installs `[serve,apple,desktop,mcp]`; the
+sidecar (`build-sidecar.sh` installs `[serve,apple,desktop,mcp,voice]`; the
 Connect Agent sheet + sidebar antenna badge are the desktop surface).
 
 - **Optional dependency.** `pip install 'bristlenose[mcp]'` (also in `dev`

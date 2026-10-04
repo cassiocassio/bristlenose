@@ -33,7 +33,7 @@
 #   --dry-run    report what WOULD rebuild and why; do no work; exit 0
 #
 # Prerequisites: the .tool-versions python + Node 24 on PATH; frontend deps installed.
-# The dedicated .venv-sidecar carries only .[serve,apple,desktop,mcp] so
+# The dedicated .venv-sidecar carries only .[serve,apple,desktop,mcp,voice] so
 # contributor packages never reach PyInstaller's analysis.
 
 set -euo pipefail
@@ -184,8 +184,14 @@ done
 # isn't excluded). The whole gate retires at docs/design-dev-environment.md
 # Phase 3, where `uv sync --check` subsumes both this fingerprint and .deps-ok.
 # Fixed 5 Aug 2026.
+# The extras the sidecar venv installs. Named once, and hashed into the deps
+# fingerprint: as a bare literal on the pip line, adding an extra here and
+# nowhere else changed nothing the fingerprint saw, so an incremental build
+# kept the old venv and silently shipped without it (found in review, 4 Oct 2026).
+SIDECAR_EXTRAS="serve,apple,desktop,mcp,voice"
+
 _deps_fingerprint() {
-    { shasum -a 256 "$ROOT/pyproject.toml"; "$PYTHON" -m pip freeze --exclude-editable; } \
+    { echo "extras=$SIDECAR_EXTRAS"; shasum -a 256 "$ROOT/pyproject.toml"; "$PYTHON" -m pip freeze --exclude-editable; } \
         | shasum -a 256 | cut -d ' ' -f1
 }
 
@@ -213,7 +219,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Layer V — sidecar venv (.venv-sidecar, .[serve,apple,desktop,mcp])
+# Layer V — sidecar venv (.venv-sidecar, .[serve,apple,desktop,mcp,voice])
 # ---------------------------------------------------------------------------
 venv_rebuilt=0
 need_v=0; v_reason=""
@@ -274,7 +280,7 @@ if [ "$need_v" = 1 ]; then
         cache_bypass=""
         { [ "$FORCE" = 1 ] || [ "$DEPS_ONLY" = 1 ]; } && cache_bypass="--no-cache-dir"
         "$SIDECAR_VENV/bin/pip" install $cache_bypass --quiet --upgrade pip
-        "$SIDECAR_VENV/bin/pip" install $cache_bypass -e "$ROOT[serve,apple,desktop,mcp]"
+        "$SIDECAR_VENV/bin/pip" install $cache_bypass -e "$ROOT[$SIDECAR_EXTRAS]"
         if ! "$PYTHON" -m PyInstaller --version >/dev/null 2>&1; then
             echo "error: PyInstaller not installed in fresh sidecar venv (check the 'desktop' extra)." >&2
             exit 1

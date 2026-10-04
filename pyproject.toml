@@ -146,11 +146,12 @@ mcp = [
 ]
 
 # Voice pass for speaker identification (stage 5b): tells two speakers apart
-# by how they sound, on top of the text splitter's guess. CLI opt-in; the run
-# falls back to the text labels without it. Its model (TitaNet-small, 40 MB,
-# Apache-2.0 via NeMo) is fetched on first use and hash-verified. NOT in the
-# desktop sidecar yet — that needs the bundle gates, signing and a bundled
-# model (docs/design-voice-diarization.md § Option A).
+# by how they sound, on top of the text splitter's guess. Opt-in on the CLI;
+# the run falls back to the text labels without it. SHIPS in the desktop
+# sidecar (build-sidecar.sh installs [serve,apple,desktop,mcp,voice]; the spec
+# collect_all's sherpa_onnx). Its model (TitaNet-small, 40 MB, Apache-2.0 via
+# NeMo) is fetched on first use and hash-verified, on both channels — inside
+# the app container on the Mac (docs/design-voice-diarization.md § Option A).
 voice = [
     "sherpa-onnx>=1.12",
 ]

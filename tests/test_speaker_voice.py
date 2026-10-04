@@ -252,7 +252,17 @@ class TestModel:
         monkeypatch.delenv(voice.VOICE_MODEL_ENV, raising=False)
         monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
 
+    def test_in_the_mac_app_the_model_lives_in_library_caches(self, tmp_path, monkeypatch) -> None:
+        import sys
+
+        monkeypatch.setattr(sys, "platform", "darwin")
+        monkeypatch.setenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", "1")
+        monkeypatch.setenv("HOME", str(tmp_path))
+        assert voice.voice_model_cache_path() == (
+            tmp_path / "Library" / "Caches" / "bristlenose" / "models" / voice.VOICE_MODEL_NAME)
+
     def test_cache_path_honours_snap_and_xdg(self, tmp_path, monkeypatch) -> None:
+        monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
         assert voice.voice_model_cache_path() == tmp_path / "bristlenose" / "models" / voice.VOICE_MODEL_NAME
         monkeypatch.setenv("SNAP_USER_COMMON", str(tmp_path / "snap"))
         assert voice.voice_model_cache_path() == tmp_path / "snap" / "models" / voice.VOICE_MODEL_NAME
@@ -455,6 +465,12 @@ class TestDoctor:
         assert "bristlenose[voice]" in states[1].detail
         assert "doctor --fetch" in states[2].detail
 
+    def test_in_the_mac_app_no_cli_command_is_suggested(self, monkeypatch) -> None:
+        monkeypatch.setenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", "1")
+        result = self._check(monkeypatch)
+        assert "first analysis" in result.detail
+        assert "bristlenose" not in result.detail and "pip" not in result.detail
+
     def test_an_override_says_what_runs_will_do(self, monkeypatch, tmp_path) -> None:
         from bristlenose.config import BristlenoseSettings
         from bristlenose.doctor import CheckStatus, check_voice
@@ -467,3 +483,48 @@ class TestDoctor:
             present = check_voice(BristlenoseSettings())
         assert missing.status == CheckStatus.WARN and "does not exist" in missing.detail
         assert present.status == CheckStatus.OK and "not hash-checked" in present.detail
+
+
+class TestBundleSelfTest:
+    """doctor --self-test runs pre-sign inside the frozen sidecar."""
+
+    def test_present_and_loadable(self) -> None:
+        from bristlenose.doctor import CheckStatus, check_bundle_voice
+
+        result = check_bundle_voice()
+        if voice.voice_runtime_available():
+            assert result.status == CheckStatus.OK and "load" in result.detail
+        else:
+            assert result.status == CheckStatus.OK and "not installed" in result.detail
+
+    def test_missing_in_a_frozen_bundle_fails_the_build(self, monkeypatch) -> None:
+        import sys
+
+        from bristlenose.doctor import CheckStatus, check_bundle_voice
+
+        monkeypatch.setattr(voice, "voice_runtime_available", lambda: False)
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        frozen = check_bundle_voice()
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        loose = check_bundle_voice()
+        assert frozen.status == CheckStatus.FAIL and "missing from the bundle" in frozen.detail
+        assert loose.status == CheckStatus.OK
+
+    def test_installed_but_unloadable_fails_everywhere(self, monkeypatch) -> None:
+        import builtins
+        import sys
+
+        from bristlenose.doctor import CheckStatus, check_bundle_voice
+
+        real_import = builtins.__import__
+
+        def broken(name, *a, **kw):
+            if name == "sherpa_onnx":
+                raise OSError("dlopen: libonnxruntime.dylib not found")
+            return real_import(name, *a, **kw)
+
+        monkeypatch.setattr(voice, "voice_runtime_available", lambda: True)
+        monkeypatch.setattr(builtins, "__import__", broken)
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        result = check_bundle_voice()
+        assert result.status == CheckStatus.FAIL and "libonnxruntime" in result.detail

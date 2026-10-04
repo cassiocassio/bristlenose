@@ -339,12 +339,14 @@ def check_voice(settings: BristlenoseSettings) -> CheckResult:
     """The optional voice pass in speaker identification (stages/s05b_voice.py).
 
     Informational: without it, speakers are told apart from the text alone, so
-    nothing here is a FAIL. A WARN only when an explicit override is broken. CLI doctor only — the desktop
-    sidecar does not ship the extra yet, so a row in its Health window would
-    always read "not installed".
+    nothing here is a FAIL. A WARN only when an explicit override is broken.
+    Also in ``run_local_checks`` (the Mac Health window) since the sidecar
+    ships the extra; that window shows these strings raw, in English.
     """
     import os
+    import sys
 
+    from bristlenose.config import hosted_by_desktop
     from bristlenose.stages.s05b_voice import (
         VOICE_MODEL_ENV,
         cached_voice_model,
@@ -352,10 +354,18 @@ def check_voice(settings: BristlenoseSettings) -> CheckResult:
     )
 
     label = "Voice pass"
+    # In the Mac app (the Health window) there is no terminal: say what will
+    # happen, never which command to type.
+    in_app = bool(getattr(sys, "frozen", False)) or hosted_by_desktop()
     if not settings.voice_pass:
         return CheckResult(status=CheckStatus.SKIP, label=label,
                            detail="switched off (BRISTLENOSE_VOICE_PASS)")
     if not voice_runtime_available():
+        if in_app:
+            # The app ships the extra, so its absence is a broken build.
+            return CheckResult(status=CheckStatus.WARN, label=label,
+                               detail="voice runtime missing from this build; speakers are "
+                                      "told apart from the text alone")
         return CheckResult(
             status=CheckStatus.SKIP, label=label,
             detail="optional, not installed: pip install 'bristlenose[voice]' "
@@ -372,6 +382,9 @@ def check_voice(settings: BristlenoseSettings) -> CheckResult:
                                   "the voice pass will be skipped")
     if cached_voice_model() is not None:
         return CheckResult(status=CheckStatus.OK, label=label, detail="model cached (40 MB)")
+    if in_app:
+        return CheckResult(status=CheckStatus.SKIP, label=label,
+                           detail="model downloads on first analysis (40 MB)")
     if settings.no_fetch:
         return CheckResult(status=CheckStatus.SKIP, label=label,
                            detail="model not cached, and no-fetch is set: the voice pass "
@@ -1430,6 +1443,57 @@ def check_bundle_mcp() -> CheckResult:
     )
 
 
+def check_bundle_voice() -> CheckResult:
+    """The voice pass's native runtime (sherpa-onnx + its vendored onnxruntime).
+
+    Importing ``sherpa_onnx`` loads ``_sherpa_onnx*.so``, which links
+    ``@rpath/libonnxruntime.dylib`` beside it — so a spec that dropped the
+    dylib fails here, at build time, instead of every Mac session silently
+    falling back to text-only speaker splitting ("voice pass failed"). Building
+    a config pins the API ``s05b_voice`` calls. The model is not bundled (it is
+    fetched on first use), so none is loaded here.
+
+    In a frozen bundle the package is expected, since build-sidecar.sh installs
+    the ``voice`` extra; elsewhere its absence is a legal install.
+    """
+    import sys
+
+    from bristlenose.stages.s05b_voice import voice_runtime_available
+
+    label = "Bundle: voice"
+    # Presence by find_spec, loadability by import: a package that is there
+    # but will not load (a missing dylib, an ABI mismatch) fails everywhere,
+    # instead of reading as "not installed" outside the bundle.
+    if not voice_runtime_available():
+        if getattr(sys, "frozen", False):
+            return CheckResult(
+                status=CheckStatus.FAIL, label=label,
+                detail="sherpa_onnx missing from the bundle (keep collect_all('sherpa_onnx') "
+                       "and the voice extra in build-sidecar.sh)",
+                fix_key="bundle_dir_missing",
+            )
+        return CheckResult(status=CheckStatus.OK, label=label,
+                           detail="voice extra not installed (legal outside the app bundle)")
+    try:
+        import sherpa_onnx
+    except Exception as exc:  # ImportError, or OSError from a missing dylib
+        return CheckResult(
+            status=CheckStatus.FAIL, label=label,
+            detail=f"sherpa_onnx is installed but will not load: {exc}",
+            fix_key="bundle_dir_missing",
+        )
+    try:
+        sherpa_onnx.SpeakerEmbeddingExtractorConfig(model="unused.onnx", num_threads=1)
+    except Exception as exc:
+        return CheckResult(
+            status=CheckStatus.FAIL, label=label,
+            detail=f"sherpa_onnx imports but its embedding API changed: {exc}",
+            fix_key="bundle_dir_missing",
+        )
+    return CheckResult(status=CheckStatus.OK, label=label,
+                       detail="sherpa-onnx and its onnxruntime load")
+
+
 def run_bundle_integrity() -> DoctorReport:
     """Run only the bundle-integrity checks.
 
@@ -1456,6 +1520,7 @@ def run_bundle_integrity() -> DoctorReport:
         check_bundle_alembic(),
         check_bundle_admin_panel(),
         check_bundle_mcp(),
+        check_bundle_voice(),
     ])
 
 
@@ -1497,6 +1562,7 @@ def run_local_checks(settings: BristlenoseSettings) -> DoctorReport:
         check_backend(),
         check_whisper_model(settings),
         check_pii(settings),
+        check_voice(settings),
         check_disk_space(settings),
         check_serve_deps(),
         check_auth_token_env(),

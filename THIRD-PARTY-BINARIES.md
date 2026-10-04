@@ -33,6 +33,7 @@ These are signed under our Apple Distribution identity (Team ID
 | `ffprobe` | 8.1 | <https://ffmpeg.martin-riedl.de/download/macos/arm64/1774549676_8.1/ffprobe.zip> | `fd2e6b7fad9c9aa2bec17c0d7211b5afcc00b4b5c9b63c120985e80c3c198af6` | LGPL-2.1+ |
 | `Python.framework` | 3.12.x | Copied from the build runner's installed Python (today: developer's local `python3.12`; a future GitHub Actions desktop-build job would use `actions/setup-python@v5` which is `python-build-standalone`) | _captured per build in `desktop/build/sign-manifest.json`_ | Python Software Foundation Licence |
 | PyInstaller bootloader (`bristlenose-sidecar` outer binary) | 6.x | <https://pyinstaller.org> | _captured per build in `desktop/build/sign-manifest.json`_ | GPL-2.0-or-later WITH PyInstaller-bootloader-exception (proprietary apps may embed the bootloader; see <https://github.com/pyinstaller/pyinstaller/blob/develop/COPYING.txt>) |
+| ONNX Runtime (`libonnxruntime.dylib`, vendored inside `sherpa-onnx-core`) | as vendored by `sherpa-onnx-core` (its wheel row is added when the release regenerates the auto block below) | <https://github.com/microsoft/onnxruntime>, via <https://github.com/k2-fsa/sherpa-onnx> | _signed per build; listed in `desktop/build/sign-manifest.json`_ | MIT |
 
 ### Bundled inside Python.framework (auto-generated)
 
@@ -223,6 +224,7 @@ mechanism, not re-implemented here.
 
 | Asset | Origin | Verification | Default |
 |---|---|---|---|
+| Voice model (TitaNet-small, `nemo_en_titanet_small.onnx`, 40 MB) | https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/ (redirects to release-assets.githubusercontent.com) | SHA-256 pinned in `bristlenose/stages/s05b_voice.py` (`ad4a1802…789e`), checked on download and at the start of each run; lands in the app container's `Library/Caches/bristlenose/models/` (purgeable, not backed up), not Application Support | Apache-2.0 (NVIDIA NeMo) |
 | Whisper model | https://huggingface.co/mlx-community/whisper-* | HuggingFace Hub built-in SHA verification (`hf_hub_download` checks file hashes against the repo manifest) | `large-v3-turbo` (override via `BRISTLENOSE_WHISPER_MODEL`) |
 
 If alpha bundles a model directly into the `.app` per

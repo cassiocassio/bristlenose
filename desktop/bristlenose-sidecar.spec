@@ -82,6 +82,14 @@ _JSONSCHEMA_SPEC_DATAS, _JSONSCHEMA_SPEC_BINARIES, _JSONSCHEMA_SPEC_HIDDEN = col
 )
 _JSONSCHEMA_DATAS, _JSONSCHEMA_BINARIES, _JSONSCHEMA_HIDDEN = collect_all("jsonschema")
 
+# The voice pass (bristlenose/stages/s05b_voice.py, the `voice` extra). The
+# package carries a native extension plus its OWN vendored onnxruntime
+# (`sherpa_onnx/lib/libonnxruntime.dylib`, linked via @rpath/@loader_path) —
+# `collect_all` keeps the dylib beside the `.so` that loads it. The
+# `onnxruntime` entry in `excludes` below drops the separate Python package of
+# that name, which sherpa never imports, so it does not touch this dylib.
+_SHERPA_DATAS, _SHERPA_BINARIES, _SHERPA_HIDDEN = collect_all("sherpa_onnx")
+
 a = Analysis(
     # Entry point: run `bristlenose serve` directly.
     [os.path.join(SPECPATH, "sidecar_entry.py")],
@@ -93,6 +101,7 @@ a = Analysis(
         *_MCP_BINARIES,
         *_JSONSCHEMA_SPEC_BINARIES,
         *_JSONSCHEMA_BINARIES,
+        *_SHERPA_BINARIES,
     ],
     datas=[
         *_MLX_DATAS,
@@ -101,6 +110,7 @@ a = Analysis(
         *_MCP_DATAS,
         *_JSONSCHEMA_SPEC_DATAS,
         *_JSONSCHEMA_DATAS,
+        *_SHERPA_DATAS,
         # starlette is pure Python, so PyInstaller bytecompiles it into the
         # archive and leaves no dist-info in _internal/ — which meant the
         # shipped 0.29.1 could not say which starlette it carried (ledger
@@ -188,6 +198,7 @@ a = Analysis(
         *_JSONSCHEMA_SPEC_HIDDEN,
         *_JSONSCHEMA_HIDDEN,
         *_SQLADMIN_HIDDEN,
+        *_SHERPA_HIDDEN,
         *collect_submodules("rich"),
         # LLM providers (dynamically imported in llm/client.py)
         "anthropic",

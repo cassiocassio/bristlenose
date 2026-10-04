@@ -278,7 +278,11 @@ Whisper segments.
     that is simpler; that is a size call, not a policy one.
 - **CLI channels:**
   - PyPI: shipped as the optional `[voice]` extra (onnxruntime + kaldi-native-fbank).
-  - Homebrew: a pip dependency in `post_install`, like the rest.
+  - Homebrew: a pip dependency in `post_install`, like the rest. **Done 4 Oct
+    2026**: the tap formula installs `bristlenose[serve,voice]` (tap `4980a55`);
+    Python 3.12 has onnxruntime and kaldi-native-fbank wheels for both Mac
+    architectures. Not yet proven by a fresh `brew install` — that waits for
+    0.33.0 on PyPI.
   - Snap (strict): no shellouts, and the model cache goes to
     `$SNAP_USER_COMMON` like Whisper's. **Done 4 Oct 2026**: +0.3 MB
     installed (onnxruntime is already there), no new interface (§ A above

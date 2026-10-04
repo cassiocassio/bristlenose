@@ -105,6 +105,8 @@ state is still evidenced, the day is not.
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
+| `discussion-guide-tabs.html` | 4 Oct 2026 | IMPLEMENTED 4 Oct 2026 — the Discussion lens's guide tabs with and without a guide: “Normalised questions” and “Your guide” / “Add your guide”, the upload block, Summary or the guide's file name as a link that chooses another, the key at the top showing only the marks in view, a faint mid dot when no guide is uploaded. Built in `islands/discussion/DiscussionLens.tsx` |
+| `discussion-lens-layout.html` | 4 Oct 2026 | IMPLEMENTED 4 Oct 2026 — what gives way as the window narrows: the projects column first, then the guide narrows to 200 px, then folds when the conversation would drop under its 368 px floor; the toolbar's Discussion Guide button. Built as `islands/discussion/guidePanel.ts` with the shared `fitPanels` rule |
 | `edo-colour-palette.html` | 2 Jul 2026 | IMPLEMENTED — `theme/colors/palette-edo.css` ships |
 | `edo-theme-studio.html` | 2 Jul 2026 | SANDPIT — the Edo palette tuner; `colors/palette-edo.css` ships |
 | `edo-website-palettes.html` | 26 Sep 2026 | *unreviewed* |

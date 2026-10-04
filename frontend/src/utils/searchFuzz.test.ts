@@ -83,7 +83,10 @@ class Rng {
 const ASCII_WORDS = [
   "delivery", "Delivery", "DELIV", "price", "best", "st", "Storey", "Steppe", "the", "shelf",
   "than", "more", "O'Brien", "they're", "don`t", "e-mail", "foo_bar", "12:04", "p3", "a", "ab", "x",
+  "co-op", "1,000", "3.5", "e.g", "C#", "50%",
 ];
+/** Typed only: the joined forms and a finished word (4 Oct 2026). */
+const ASCII_QUERY_ONLY = ["coop", "email", "1000", "35", "eg", "p3x", "?", "."];
 const ASCII_SEPS = [" ", "  ", "\t", "\n", ".", ",", "(", ")", "-", "_", "'", "`", "\u0000", "\u007f", ":", "/"];
 
 /** Double-quote marks the parser treats as phrase delimiters. Trigger for D2. */
@@ -414,12 +417,29 @@ describe("markRanges", () => {
  */
 const isWordA = (c: string | undefined) => c !== undefined && /[a-z0-9]/i.test(c);
 const isApostropheA = (c: string) => c === "'" || c === "`";
-const isSepA = (c: string) => /\s/.test(c) || (/\p{P}/u.test(c) && c !== "'");
-function foldA(s: string): { text: string; map: number[] } {
+const isSepA = (c: string) => /\s/.test(c) || (/\p{P}/u.test(c) && c !== "'" && !"#@%&".includes(c));
+const isLetterA = (c: string | undefined) => c !== undefined && /[a-z]/i.test(c);
+const isDigitA = (c: string | undefined) => c !== undefined && /[0-9]/.test(c);
+/** Joined form (spec: a hyphen between letters or digits; a full stop between
+ *  letters; a full stop or comma after a digit and before exactly three digits). */
+function joinsA(s: string, i: number): boolean {
+  const c = s[i];
+  const prev = s[i - 1];
+  const next = s[i + 1];
+  if (c === "-") return isWordA(prev) && isWordA(next);
+  if ((c === "." || c === ",") && isDigitA(prev)) {
+    let n = 0;
+    while (isDigitA(s[i + 1 + n])) n++;
+    if (n === 3) return true;
+  }
+  return c === "." && isLetterA(prev) && isLetterA(next);
+}
+function foldA(s: string, joined = false): { text: string; map: number[] } {
   let text = "";
   const map: number[] = [];
   for (let i = 0; i < s.length; i++) {
     const c = s[i];
+    if (joined && joinsA(s, i)) continue;
     if (isApostropheA(c)) {
       let j = i + 1;
       while (j < s.length && isApostropheA(s[j])) j++;
@@ -442,16 +462,31 @@ function foldA(s: string): { text: string; map: number[] } {
   return { text, map };
 }
 
-function oracleParse(q: string): { kind: string; text: string }[] {
-  const terms: { kind: string; text: string }[] = [];
+interface TermA {
+  kind: string;
+  text: string;
+  joined?: string;
+  whole?: boolean;
+}
+function oracleParse(q: string): TermA[] {
+  const terms: TermA[] = [];
   let buf = "";
   let inPhrase = false;
   const flush = (kind: "word" | "phrase") => {
     const t = foldA(buf).text.trim();
+    const raw = buf.trimEnd();
     buf = "";
     if (!t) return;
     // Words typed together are one run (decided 3 Oct 2026).
-    terms.push({ kind, text: t });
+    const term: TermA = { kind, text: t };
+    if (kind === "word") {
+      // Punctuation after the last word finishes it (4 Oct 2026).
+      const last = raw[raw.length - 1];
+      if (last !== undefined && isSepA(last) && !/\s/.test(last)) term.whole = true;
+      const j = foldA(raw, true).text.trim();
+      if (j !== t) term.joined = j;
+    }
+    terms.push(term);
   };
   for (const ch of q) {
     if (ch === '"') {
@@ -463,19 +498,27 @@ function oracleParse(q: string): { kind: string; text: string }[] {
   return terms;
 }
 
-/** Every [start, end) in `text` where the folded term matches, written from the spec, not the code. */
-function oracleRanges(text: string, term: { kind: string; text: string }, whole = false): Array<[number, number]> {
+/** Every [start, end) in `text` where the folded term matches, written from the spec, not the code.
+ *  A typed run is tried in its typed and joined forms, against the text's
+ *  plain and joined folds. */
+function oracleRanges(text: string, term: TermA, whole = false): Array<[number, number]> {
   const out: Array<[number, number]> = [];
-  const { text: f, map } = foldA(text);
-  for (let i = 0; i + term.text.length <= f.length; i++) {
-    if (f.slice(i, i + term.text.length) !== term.text) continue;
-    if ((term.kind === "word" || whole) && i > 0 && isWordA(f[i - 1])) continue;
-    const j = i + term.text.length;
-    if (whole && j < f.length && isWordA(f[j])) continue;
-    // A mark runs to where the next folded character starts, so it takes in
-    // what folding dropped after the match (a word-edge apostrophe), as it
-    // takes in an accent dropped from a letter.
-    out.push([map[i], j < f.length ? map[j] : text.length]);
+  const isWhole = whole || term.whole === true;
+  const folds = term.kind === "word" ? [foldA(text), foldA(text, true)] : [foldA(text)];
+  const texts = term.joined ? [term.text, term.joined] : [term.text];
+  for (const { text: f, map } of folds) {
+    for (const tt of texts) {
+      for (let i = 0; i + tt.length <= f.length; i++) {
+        if (f.slice(i, i + tt.length) !== tt) continue;
+        if ((term.kind === "word" || whole) && i > 0 && isWordA(f[i - 1])) continue;
+        const j = i + tt.length;
+        if (isWhole && j < f.length && isWordA(f[j])) continue;
+        // A mark runs to where the next folded character starts, so it takes in
+        // what folding dropped after the match (a word-edge apostrophe), as it
+        // takes in an accent dropped from a letter.
+        out.push([map[i], j < f.length ? map[j] : text.length]);
+      }
+    }
   }
   return out;
 }
@@ -493,13 +536,17 @@ function mergeRanges(rs: Array<[number, number]>): Array<[number, number]> {
 
 describe("ASCII oracle (independently written from docs/design-search.md §3)", () => {
   const ASCII_TEXT = [...ASCII_WORDS, ...ASCII_SEPS];
-  const ASCII_QUERY = [...ASCII_WORDS.map((w) => w.slice(0, 1 + (w.length >> 1))), ...ASCII_WORDS, " ", '"', "'", "`", "\t"];
+  const ASCII_QUERY = [
+    ...ASCII_WORDS.map((w) => w.slice(0, 1 + (w.length >> 1))), ...ASCII_WORDS, ...ASCII_QUERY_ONLY,
+    " ", '"', "'", "`", "\t",
+  ];
   const genA = (r: Rng) => [randomString(r, ASCII_TEXT, 10), randomString(r, ASCII_QUERY, 4)];
 
   it("parseQuery splits, quotes, folds and strips edge apostrophes as specified", () => {
     sweep("ascii parse", 3000, SEED + 5, genA, ([, q]) => {
-      const got = parseQuery(q).map((t) => ({ kind: t.kind, text: t.text }));
-      const want = oracleParse(q);
+      const shape = (t: TermA) => ({ kind: t.kind, text: t.text, joined: t.joined ?? null, whole: t.whole === true });
+      const got = parseQuery(q).map(shape);
+      const want = oracleParse(q).map(shape);
       if (JSON.stringify(got) !== JSON.stringify(want)) return `got ${JSON.stringify(got)} want ${JSON.stringify(want)}`;
       for (const t of parseQuery(q)) if (t.anywhere !== (t.kind === "phrase")) return `anywhere wrong on ${t.text}`;
       return null;

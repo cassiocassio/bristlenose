@@ -35,6 +35,10 @@
  *     the plain words; one inside a word stays (don't).
  *   - Whether a run may start mid-word is decided by its first letter: a
  *     Chinese or Japanese run may, a Latin one may not ("ing 東京").
+ *   - Decided 4 Oct 2026: # @ % & stay in the word (C#, #1, 50%, R&D);
+ *     punctuation after the last typed word finishes it ("why?" is not a
+ *     prefix); and a typed run also matches its joined form ("covid19" finds
+ *     "COVID-19", "1000" finds "1,000") — see "Joined forms" below.
  */
 
 import deburr from "lodash.deburr";
@@ -85,6 +89,57 @@ const APOSTROPHE_LIKE = /['\u2018\u2019]/u;
 const WORD_SYMBOL = /[#@%&\uFF03\uFF20\uFF05\uFF06\uFE5F\uFE6B\uFE6A\uFE60]/u;
 const isPunct = (c: string) => PUNCT.test(c) && !APOSTROPHE_LIKE.test(c) && !WORD_SYMBOL.test(c);
 
+// ── Joined forms ────────────────────────────────────────────────────────
+//
+// A word written with a mark inside it is also found written without it:
+// "covid19" finds "COVID-19", "coop" finds "co-op", "1000" finds "1,000",
+// "collecció" finds "col·lecció" — and the reverse, "co-op" finds "coop".
+// Lucene's WordDelimiterGraphFilter does this with its catenate options: the
+// split form and the joined form both match. Here the text is folded a second
+// way, with those marks dropped instead of turned into a space, and a typed run
+// is tried against both. Only marks INSIDE a word join: a hyphen or dash
+// between letters or digits; a middle dot, or a full stop, between letters;
+// and a thousands separator — a full stop, comma or narrow space followed by
+// exactly three digits — so "3.5" never becomes "35". Decided 4 Oct 2026.
+
+const DASH = /\p{Pd}/u;
+const LETTERISH = /[\p{L}\p{M}]/u;
+const LETTER_OR_DIGIT = /[\p{L}\p{N}\p{M}]/u;
+const DIGIT = /\p{Nd}/u;
+const LETTER_JOINERS = /[.\u00B7\u2027]/u;
+const THOUSANDS = /[.,\u00A0\u202F\u2009]/u;
+/** Could this text have a joined form at all? The in-word patterns themselves
+ *  (invisible characters allowed between), not just their marks: commas and
+ *  full stops are in nearly every quote, and testing for those alone folded
+ *  almost every quote twice on every keystroke (p95 57 ms on 10,000 quotes). */
+const INV = "[\\p{Cf}\\p{Variation_Selector}\\p{Emoji_Modifier}]*";
+const MAY_JOIN = new RegExp(
+  `[\\p{L}\\p{N}\\p{M}]${INV}\\p{Pd}${INV}[\\p{L}\\p{N}\\p{M}]` +
+    `|[\\p{L}\\p{M}]${INV}[.\\u00B7\\u2027]${INV}\\p{L}` +
+    `|\\p{Nd}${INV}[.,\\u00A0\\u202F\\u2009]${INV}\\p{Nd}`,
+  "u",
+);
+
+/** True when the code point at `k` is a mark inside a word, by its raw
+ *  neighbours (invisible characters skipped). */
+function joinsAt(cps: string[], k: number): boolean {
+  const c = cps[k];
+  let a = k - 1;
+  while (a >= 0 && INVISIBLE.test(cps[a])) a--;
+  let b = k + 1;
+  while (b < cps.length && INVISIBLE.test(cps[b])) b++;
+  const prev = a >= 0 ? cps[a] : "";
+  const next = b < cps.length ? cps[b] : "";
+  if (!prev || !next) return false;
+  if (DASH.test(c)) return LETTER_OR_DIGIT.test(prev) && LETTER_OR_DIGIT.test(next);
+  if (THOUSANDS.test(c) && DIGIT.test(prev)) {
+    let n = 0;
+    while (b + n < cps.length && DIGIT.test(cps[b + n])) n++;
+    if (n === 3) return true;
+  }
+  return LETTER_JOINERS.test(c) && LETTERISH.test(prev) && LETTERISH.test(next);
+}
+
 /** Folded text plus, for every folded UTF-16 unit, its index in the original. */
 export interface Folded {
   text: string;
@@ -102,18 +157,21 @@ export interface Folded {
  *     which also covers marks written as separate characters ("e" + U+0301);
  *   - ß → ss and final ς → σ, as Python's casefold does.
  */
-function foldCore(s: string, map: number[] | null): string {
+function foldCore(s: string, map: number[] | null, joined = false): string {
   let text = "";
   let i = 0;
   let stripMarks = false;
+  const cps = joined ? Array.from(s) : null;
+  let k = -1;
   const emit = (unit: string) => {
     if (unit === " " && (text.length === 0 || text[text.length - 1] === " ")) return;
     map?.push(i);
     text += unit;
   };
   for (const ch of s) {
-    if (INVISIBLE.test(ch)) {
-      // invisible: no output, no boundary
+    k++;
+    if (INVISIBLE.test(ch) || (cps !== null && joinsAt(cps, k))) {
+      // invisible, or a mark inside a word in the joined fold: no output
     } else if (SPACE.test(ch) || QUOTE_MARK.test(ch) || isPunct(ch)) {
       emit(" ");
       stripMarks = false;
@@ -210,6 +268,31 @@ export function foldKey(s: string): string {
   return fold(s).trim();
 }
 
+const joinedCache = new Map<string, string>();
+const joinedMapCache = new Map<string, Folded>();
+
+/** The joined fold (see "Joined forms"): the plain fold itself (the same
+ *  string) when nothing joins, decided once per text and cached. */
+function foldJoined(s: string): string {
+  const hit = joinedCache.get(s);
+  if (hit !== undefined) return hit;
+  const text = MAY_JOIN.test(s) ? foldCore(s, null, true) : fold(s);
+  if (joinedCache.size >= TEXT_CACHE_MAX) joinedCache.clear();
+  joinedCache.set(s, text);
+  return text;
+}
+
+function foldJoinedWithMap(s: string): Folded {
+  if (foldJoined(s) === fold(s)) return foldWithMap(s);
+  const hit = joinedMapCache.get(s);
+  if (hit) return hit;
+  const map: number[] = [];
+  const folded = { text: foldCore(s, map, true), map };
+  if (joinedMapCache.size >= MAP_CACHE_MAX) joinedMapCache.clear();
+  joinedMapCache.set(s, folded);
+  return folded;
+}
+
 /** Fold a string and keep a map back to the original, for drawing marks. */
 export function foldWithMap(s: string): Folded {
   const hit = mapCache.get(s);
@@ -231,6 +314,9 @@ export interface SearchTerm {
   anywhere: boolean;
   /** True when the term must also END at a word boundary (see wholeWordsTerm). */
   whole?: boolean;
+  /** A typed run's joined form, when it differs ("co-op" → "coop"). Runs are
+   *  also tried against the text's joined form (see "Joined forms"). */
+  joined?: string;
 }
 
 const OPEN_QUOTES = new Set(['"', "“", "”", "„", "«", "»", "「", "」"]);
@@ -260,6 +346,8 @@ export function parseQuery(query: string): SearchTerm[] {
       if (!w) return;
       const term = makeTerm("word", w);
       if (endsInPunctuation(raw)) term.whole = true;
+      const j = trimApostrophes(foldJoined(raw).trim());
+      if (j && j !== w) term.joined = j;
       terms.push(term);
     } else {
       terms.push(makeTerm("phrase", text));
@@ -416,9 +504,28 @@ function termPositions(folded: string, term: SearchTerm, firstOnly = false): num
   return out;
 }
 
+/** The term's forms: as typed, and joined when it differs. */
+function forms(term: SearchTerm): SearchTerm[] {
+  return term.joined ? [term, { ...term, text: term.joined }] : [term];
+}
+
+/** The ways `text` is folded for `term`: a typed run also tries the joined fold. */
+function foldsFor(text: string, term: SearchTerm, withMap: true): Folded[];
+function foldsFor(text: string, term: SearchTerm, withMap: false): string[];
+function foldsFor(text: string, term: SearchTerm, withMap: boolean): Array<Folded | string> {
+  const plain = fold(text);
+  if (term.kind !== "word") return [withMap ? foldWithMap(text) : plain];
+  const joined = foldJoined(text);
+  if (joined === plain) return [withMap ? foldWithMap(text) : plain];
+  return withMap ? [foldWithMap(text), foldJoinedWithMap(text)] : [plain, joined];
+}
+
 /** True when `term` matches somewhere in `text`. */
 export function termMatches(text: string, term: SearchTerm): boolean {
-  return termPositions(fold(text), term, true).length > 0;
+  for (const folded of foldsFor(text, term, false)) {
+    for (const f of forms(term)) if (termPositions(folded, f, true).length > 0) return true;
+  }
+  return false;
 }
 
 /**
@@ -432,15 +539,18 @@ export function matchesAll(fields: string[], terms: SearchTerm[]): boolean {
 
 /** Character ranges [start, end) in the ORIGINAL text to mark, merged and sorted. */
 export function markRanges(text: string, terms: SearchTerm[]): Array<[number, number]> {
-  const { text: folded, map } = foldWithMap(text);
   const ranges: Array<[number, number]> = [];
   for (const term of terms) {
-    for (const at of termPositions(folded, term)) {
-      // A match can end inside one original character that folded to several
-      // units ("ﬁ" → "fi"): extend to that character's end, never a zero width.
-      let end = at + term.text.length;
-      while (end < folded.length && map[end] === map[end - 1]) end++;
-      ranges.push([map[at], map[end]]);
+    for (const { text: folded, map } of foldsFor(text, term, true)) {
+      for (const f of forms(term)) {
+        for (const at of termPositions(folded, f)) {
+          // A match can end inside one original character that folded to several
+          // units ("ﬁ" → "fi"): extend to that character's end, never a zero width.
+          let end = at + f.text.length;
+          while (end < folded.length && map[end] === map[end - 1]) end++;
+          ranges.push([map[at], map[end]]);
+        }
+      }
     }
   }
   widenToGraphemes(text, ranges);

@@ -68,7 +68,22 @@ core asserts the same file when it lands).
    whitespace** on both sides, so `yes it was` finds *Yes, it was* and
    `well known` finds *well-known*; transcripts are full of commas. An
    apostrophe at the edge of a word drops on both sides (*students’ work*,
-   *‘than the’*); one inside a word stays (*don't*).
+   *‘than the’*); one inside a word stays (*don't*). Three refinements,
+   decided 4 Oct 2026 after a probe of the rule's consequences:
+   - **`# @ % &` stay in the word** (`C#`, `#1`, `50%`, `R&D`). Folded away,
+     `C#` and `#1` shrank to one character and searched nothing, even quoted,
+     and `50%` found *500*. They do not block a word start, so `hashtag`
+     finds *#hashtag*. Accepted cost: `R&D` does not find *R & D*.
+   - **Punctuation after the last typed word finishes it**: `why?` is a
+     whole word and does not find *whyever*.
+   - **Joined forms** (Lucene's `WordDelimiterGraphFilter`, catenate): a typed
+     run is also tried with in-word marks dropped, against the text folded the
+     same way, so `covid19` finds *COVID-19*, `coop` finds *co-op* and
+     `co-op` finds *coop*, `1000` finds *1,000*, *1 000* and *1.000*,
+     `colleccio` finds *col·lecció*. In-word marks: a dash between letters or
+     digits; a middle dot or full stop between letters; a thousands separator
+     followed by exactly three digits, so `35` never finds *3.5*. Quoted text
+     stays exact.
    **Accents are folded only where they are optional:** Latin, Greek,
    Cyrillic, Arabic and Hebrew. In Japanese, Thai and Hindi a combining mark
    changes the word (`パン` is bread, `ハン` is not), so it is kept, and a match

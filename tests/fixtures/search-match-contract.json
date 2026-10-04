@@ -851,6 +851,110 @@
       "marked": [
         "hashtag"
       ]
+    },
+    {
+      "why": "joined form: a word typed without its hyphen finds it with one (4 Oct 2026, Lucene's catenate)",
+      "text": "COVID-19 changed everything",
+      "query": "covid19",
+      "match": true,
+      "marked": [
+        "COVID-19"
+      ]
+    },
+    {
+      "why": "joined form, the other way: typed with a hyphen finds it written without",
+      "text": "the coop was shut",
+      "query": "co-op",
+      "match": true,
+      "marked": [
+        "coop"
+      ]
+    },
+    {
+      "why": "joined form: coop finds co-op",
+      "text": "the co-op was shut",
+      "query": "coop",
+      "match": true,
+      "marked": [
+        "co-op"
+      ]
+    },
+    {
+      "why": "joined form: email finds e-mail",
+      "text": "send an e-mail please",
+      "query": "email",
+      "match": true,
+      "marked": [
+        "e-mail"
+      ]
+    },
+    {
+      "why": "joined form: a thousands comma",
+      "text": "over 1,000 users",
+      "query": "1000",
+      "match": true,
+      "marked": [
+        "1,000"
+      ]
+    },
+    {
+      "why": "joined form: a thousands narrow space (French)",
+      "text": "plus de 1 000 personnes",
+      "query": "1000",
+      "match": true,
+      "marked": [
+        "1 000"
+      ]
+    },
+    {
+      "why": "joined form: a thousands full stop (German)",
+      "text": "über 1.000 Leute",
+      "query": "1000",
+      "match": true,
+      "marked": [
+        "1.000"
+      ]
+    },
+    {
+      "why": "a decimal is not a thousands separator: 35 does not find 3.5",
+      "text": "version 3.5 shipped",
+      "query": "35",
+      "match": false,
+      "marked": []
+    },
+    {
+      "why": "joined form: the Catalan middle dot",
+      "text": "una col·lecció de cites",
+      "query": "colleccio",
+      "match": true,
+      "marked": [
+        "col·lecció"
+      ]
+    },
+    {
+      "why": "joined form: a full stop between letters",
+      "text": "we use node.js daily",
+      "query": "nodejs",
+      "match": true,
+      "marked": [
+        "node.js"
+      ]
+    },
+    {
+      "why": "a quoted term is exact text: no joined form",
+      "text": "the co-op was shut",
+      "query": "\"coop\"",
+      "match": false,
+      "marked": []
+    },
+    {
+      "why": "the split form still matches as before",
+      "text": "COVID-19 changed everything",
+      "query": "covid 19",
+      "match": true,
+      "marked": [
+        "COVID-19"
+      ]
     }
   ],
   "known_limits": [
@@ -883,5 +987,5 @@
       "marked": []
     }
   ],
-  "_python_notes": "When the Python core asserts this file, three defaults differ from JavaScript and must not be used as-is: str.lower() is final-sigma-aware while this contract folds every sigma to σ; re's \\w includes the underscore while a word here is letters, digits and combining marks; and the stdlib re has no Unicode Script property, so the scripts named in searchMatch.ts (accented: Latin, Greek, Cyrillic, Arabic, Hebrew; unspaced: Han, Hiragana, Katakana, Thai) need the `regex` package or explicit ranges. Whitespace is JavaScript's \\s plus U+0085, with U+FEFF treated as invisible. Since 3 Oct 2026 also: decompose (NFKD) BEFORE case folding so compatibility capitals fold ('™' is 'tm'); fold double quote marks (\" “ ” „ « » 「 」) to a space; drop format characters AND variation selectors (U+FE0F); treat a letter of Han, Hiragana, Katakana or Thai before or after a word as a word boundary; and widen a highlight to whole extended grapheme clusters (the stdlib cannot: use `regex`'s \\X). Since 3 Oct 2026 the Latin letters Unicode gives no decomposition (Latin-1 Supplement and Latin Extended-A: ø ł đ æ œ þ ı …) fold by lodash's `deburr` table, applied to those letters only and before NFKD. Python should take the same table rather than `unidecode`, which also transliterates other scripts. Also since 3 Oct 2026: words typed between quotes are ONE run term (whitespace does not split them), trimmed of apostrophes and spaces at its edges; and emoji skin-tone modifiers (Emoji_Modifier) are invisible like variation selectors; punctuation (\\p{P}, except the apostrophe and the curly single quotes) folds to a space; an apostrophe at a word's edge is dropped from text and query alike (one inside a word stays); and whether a run may start mid-word is decided by its first letter's script."
+  "_python_notes": "When the Python core asserts this file, three defaults differ from JavaScript and must not be used as-is: str.lower() is final-sigma-aware while this contract folds every sigma to σ; re's \\w includes the underscore while a word here is letters, digits and combining marks; and the stdlib re has no Unicode Script property, so the scripts named in searchMatch.ts (accented: Latin, Greek, Cyrillic, Arabic, Hebrew; unspaced: Han, Hiragana, Katakana, Thai) need the `regex` package or explicit ranges. Whitespace is JavaScript's \\s plus U+0085, with U+FEFF treated as invisible. Since 3 Oct 2026 also: decompose (NFKD) BEFORE case folding so compatibility capitals fold ('™' is 'tm'); fold double quote marks (\" “ ” „ « » 「 」) to a space; drop format characters AND variation selectors (U+FE0F); treat a letter of Han, Hiragana, Katakana or Thai before or after a word as a word boundary; and widen a highlight to whole extended grapheme clusters (the stdlib cannot: use `regex`'s \\X). Since 3 Oct 2026 the Latin letters Unicode gives no decomposition (Latin-1 Supplement and Latin Extended-A: ø ł đ æ œ þ ı …) fold by lodash's `deburr` table, applied to those letters only and before NFKD. Python should take the same table rather than `unidecode`, which also transliterates other scripts. Also since 3 Oct 2026: words typed between quotes are ONE run term (whitespace does not split them), trimmed of apostrophes and spaces at its edges; and emoji skin-tone modifiers (Emoji_Modifier) are invisible like variation selectors; punctuation (\\p{P}, except the apostrophe and the curly single quotes) folds to a space; an apostrophe at a word's edge is dropped from text and query alike (one inside a word stays); and whether a run may start mid-word is decided by its first letter's script. Since 4 Oct 2026 also: # @ % & (and their full-width forms) are kept in a word but do not block a word start; punctuation after the last typed word sets whole=true on that run; and a typed (unquoted) run is tried in its typed and joined forms against the text's plain and joined folds — the joined fold drops a dash between letters or digits, a middle dot or full stop between letters, and a . , NBSP NNBSP or thin space after a digit followed by exactly three digits."
 }

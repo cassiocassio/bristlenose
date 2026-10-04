@@ -134,7 +134,7 @@ What that asks of the MCP tools:
 - **Filters a researcher speaks in**: by participant role ("practice managers")
   and by topic ("interviews about diabetes"). Not by interview date (owner,
   4 Oct 2026). `search_quotes` takes participant, section, theme, tag and
-  sentiment today. Role is a People schema enhancement: `Person.role_title`
+  sentiment today. Participant role (owner's name for it, not "job title") is a People schema enhancement: `Person.role_title`
   exists as free text, extracted by the pipeline and never shown in the report;
   see [`design-people.md`](../design-people.md) §H owner call 3.
 - **Meaning, still grounded**: "what they meant" is interpretation, so the answer

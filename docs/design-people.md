@@ -1870,6 +1870,11 @@ equally to the proposed replacement. ~~Reconcile the wiring doc first.~~
    code, but `people.yaml`'s key is `role` and is a documented hand-editable
    surface — renaming it is a file-format change for studies in the field. It
    collides with the incoming Role submenu either way.
+   **Decided 4 Oct 2026: "participant role", not "job title".** It is what a
+   researcher filters by ("the practice managers"), so it is expected to become a
+   structured, filterable attribute rather than a display string
+   (`docs/research/search-or-ask.md`). The collision with the speaker-kind
+   Role submenu and the `people.yaml` key are still open.
 4. **"Someone New…" → "New Person…"?** Unshipped, so free to change; the
    indefinite pronoun forces masculine agreement in fr/ca/es. But §B4's warmth is
    deliberate and "New Person" reads as a create command rather than an escape.

@@ -524,11 +524,19 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
       <div key={r.id} className={cls.join(" ")} data-id={r.id}>
         <button type="button" className="dl-row-btn" title={r.title} onClick={() => focusRow(r)}
           aria-pressed={r.sessions.length ? on : undefined} aria-disabled={r.sessions.length ? undefined : true}>
-          <span className="dl-mk" aria-hidden="true" title={markTip(r)}>
-            {r.mark === "plus" ? "+" : <span className={r.mark === "hollow" ? "dl-dot hollow" : "dl-dot"} />}
-          </span>
+          {data.guide ? (
+            <span className="dl-mk" aria-hidden="true" title={markTip(r)}>
+              {r.mark === "plus" ? "+" : <span className={r.mark === "hollow" ? "dl-dot hollow" : "dl-dot"} />}
+            </span>
+          ) : (
+            // No guide uploaded: nothing can be said about planned or off-guide
+            // (there almost certainly was a guide; it just isn't here). Only that
+            // these are the questions asked, normalised: a faint dot holds the
+            // column the marks use (4 Oct 2026).
+            <span className="dl-mk dl-mid" aria-hidden="true">·</span>
+          )}
           <span className="dl-tx">{r.text}</span>
-          <span className="bn-sr-only">{`, ${markText(r)}${asked || !r.sessions.length ? "" : S.notHere(num(session))}`}</span>
+          <span className="bn-sr-only">{`${data.guide ? `, ${markText(r)}` : ""}${asked || !r.sessions.length ? "" : S.notHere(num(session))}`}</span>
         </button>
         {shown && (
           <>
@@ -631,7 +639,8 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   // With no guide, the second tab is only where one is added: no key, no rows.
   const adding = mode === "planned" && !data.guide;
   const shownSections = adding ? [] : sections;
-  const keyMarks = new Set(shownSections.flatMap(({ rows }) => rows.map((r) => r.mark)));
+  // Without a guide the marks say nothing, so the key keeps only its grey line.
+  const keyMarks = new Set(data.guide ? shownSections.flatMap(({ rows }) => rows.map((r) => r.mark)) : []);
   // Normalised questions first: it is the view the lens opens on.
   const modes: Mode[] = ["merged", "planned"];
 
@@ -724,11 +733,12 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
             {guideButton(data.guide_problem ? S.replaceGuide : S.addGuide)}
           </div>
         )}
-        {keyMarks.size > 0 && (
+        {shownSections.length > 0 && (
           // The key first, so it scrolls away (4 Oct 2026). Only the marks this
           // view uses: with no guide that is "+" alone. The classes are the
           // Settings ▸ Pipeline symbol key's; the marks are the rows' own.
           <div className="bn-pipeline-key dl-key" role="note" aria-label={S.key}>
+            {keyMarks.size > 0 && (
             <div className="bn-pipeline-key-group">
               {keyMarks.has("dot") && (
                 <span className="bn-pipeline-key-item">
@@ -746,6 +756,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
                 </span>
               )}
             </div>
+            )}
             <div className="bn-pipeline-key-group">
               <span className="bn-pipeline-key-item dl-key-grey">{S.keyGrey}</span>
             </div>

@@ -243,7 +243,7 @@ describe("review fixes, 3 Oct 2026", () => {
     fireEvent.click(screen.getByRole("radio", { name: "Add your guide" }));
     expect(screen.getByRole("heading", { name: "Upload your discussion guide" })).toBeInTheDocument();
     expect(screen.getByText(/See the study as you planned it/)).toBeInTheDocument();
-    expect(screen.getByText("Docx, Markdown or text files.")).toBeInTheDocument();
+    expect(screen.getByText("Word, Markdown or plain text.")).toBeInTheDocument();
     // the tab is only that: the questions and the key stay on the first tab
     expect(document.querySelectorAll(".dl-nav .dl-row")).toHaveLength(0);
     expect(screen.queryByRole("note", { name: "Key" })).toBeNull();
@@ -634,6 +634,17 @@ describe("the guide tabs (4 Oct 2026)", () => {
     act(() => setPendingGuide("Home coffee guide.docx"));
     expect(screen.getByRole("status").textContent).toMatch(/^Reading your guide… Home coffee guide\.docx$/);
     expect(screen.queryByRole("button", { name: "Add your guide…" })).toBeNull();
+  });
+
+  it("with no guide uploaded, the questions carry a faint dot and no claim about the plan", () => {
+    const { container } = render(<DiscussionView data={{ ...data, guide: false, spine: [] }} />);
+    const rows = container.querySelectorAll(".dl-nav .dl-row");
+    expect(rows.length).toBeGreaterThan(0);
+    expect(container.querySelectorAll(".dl-nav .dl-row .dl-mid")).toHaveLength(rows.length);
+    expect(container.querySelector(".dl-nav .dl-row .dl-dot")).toBeNull();
+    expect(container.querySelector(".dl-nav .dl-row")?.textContent).not.toMatch(/\+|not in your guide/i);
+    const key = screen.getByRole("note", { name: "Key" });
+    expect(key.textContent).toBe("Grey: not asked in this session");
   });
 
   it("in an export with no guide there is nothing to add, so no tabs", () => {

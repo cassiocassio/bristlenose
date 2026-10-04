@@ -128,6 +128,8 @@ span.dl-guide-file { color: var(--bn-colour-muted); cursor: default; }
     color: var(--bn-colour-text);   /* the shared key is muted; see .dl-key-grey */
 }
 .dl-key .dl-mk { display: inline-block; cursor: default; }
+/* No guide uploaded: a faint mid dot where the marks go, asserting nothing. */
+.dl-nav .dl-mk.dl-mid { color: var(--bn-colour-muted); opacity: .6; }
 /* "Reading your guide…" and the file it is reading, while a run reads it. */
 .dl-reading { margin-bottom: var(--bn-space-sm); }
 .dl-reading-file { color: var(--bn-colour-muted); white-space: nowrap; }

@@ -585,7 +585,7 @@
     "addGuideTab": "Lis\u00e4\u00e4 runko",
     "addGuideHeading": "Lataa haastattelurunko",
     "addGuideIntro": "N\u00e4e tutkimus sellaisena kuin suunnittelit sen: esitetyt kysymykset yhdistettyin\u00e4 kaikkien osallistujien vastauksiin.",
-    "addGuideFormats": "Docx-, Markdown- tai tekstitiedostot.",
+    "addGuideFormats": "Word, Markdown tai pelkkä teksti.",
     "readingGuide": "Luetaan runkoa…",
     "chooseOtherGuide": "Valitse toinen runko",
     "replaceGuide": "Korvaa runko\u2026",

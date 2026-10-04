@@ -158,7 +158,7 @@ function body() {
   const how = surface === "mac"
     ? `<span class="btn pri" id="add">Add your guide…</span><div class="how" id="how" hidden>The Mac’s open panel appears (Word, Markdown or plain text). The guide is copied into the project and Analyse starts; only the discussion is rebuilt, and your edits are kept.</div>`
     : `<span class="btn pri" id="add">Add your guide…</span><div class="how" id="how" hidden>Put your guide — Word, Markdown or plain text — in a folder named “Discussion guide” beside your recordings, then run bristlenose run on the project folder again.</div>`;
-  return `<div class="sec" style="margin-top:12px">Upload your discussion guide</div><div class="empty" style="margin-top:6px">See the study as you planned it: questions asked, matched to all the participants’ answers.<br><br>Docx, Markdown or text files.</div>${how}`;
+  return `<div class="sec" style="margin-top:12px">Upload your discussion guide</div><div class="empty" style="margin-top:6px">See the study as you planned it: questions asked, matched to all the participants’ answers.<br><br>Word, Markdown or plain text.</div>${how}`;
 }
 
 function note() {

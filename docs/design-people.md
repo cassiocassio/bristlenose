@@ -1036,6 +1036,13 @@ Three consequences worth carrying:
   flag on the slot, sequenced through one write queue. The stack ends with the
   page — a reload, a Mac project switch (the web view remounts), or a new run.
   The inline sweep-line link is not built.
+  One interaction found while truing the undo catalog, open and not fixed in
+  0.33.0: the Mac's sidebar removal store (`UndoableRemovalStore`, app-wide)
+  outranks the report stack in Edit ▸ Undo, and since 19 Aug a pending removal
+  never expires. After any sidebar removal, ⌘Z and Edit ▸ Undo in every window
+  undo that removal, and the report's entries cannot be reached from the menu
+  or the key until it is undone or superseded. Recorded in
+  [`design-undo-catalog.md`](design-undo-catalog.md), the divide's point 2.
 
   **Star, hide and tag joined the stack the same day** (`QuotesContext.tsx`):
   star, unstar, hide, unhide, add tag, remove tag — one entry per gesture,

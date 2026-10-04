@@ -16,6 +16,8 @@ from __future__ import annotations
 import json
 import math
 
+import pytest
+
 from bristlenose.config import BristlenoseSettings
 from bristlenose.events import (
     KindEnum,
@@ -231,6 +233,9 @@ class _ColdEstimator:
     def stage_completed(self, stage: str, elapsed: float) -> None:
         return None
 
+    def skip_to(self, stage: str) -> tuple[bool, None]:
+        return False, None
+
 
 def test_emit_remaining_clears_carried_eta_when_estimate_goes_cold():
     # HIGH-3 regression guard. When the estimator returns None (cold start, or
@@ -260,3 +265,40 @@ def test_emit_remaining_clears_carried_eta_when_estimate_goes_cold():
     assert emitted["stage"] == "cluster"
     assert emitted["eta_remaining_seconds"] is None
     assert emitted["predicted_total_seconds"] is None
+
+
+def test_resumed_run_shows_only_the_time_left_to_run(tmp_path):
+    """Analyse on an analysed project: every stage before Discussion is cached,
+    so the ETA on entering it covers Discussion and Render, not the whole run
+    (the Mac showed ~14 min for a step that takes ~4)."""
+    from bristlenose.timing import (
+        STAGE_DISCUSSION,
+        TimingEstimator,
+        save_timing_data,
+    )
+
+    def stat(mean: float) -> dict:
+        return {"mean": mean, "m2": 1.0, "n": 5}
+
+    save_timing_data({"version": 1, "profiles": {"hw": {
+        "transcribe": stat(4.0), "speakers": stat(15.0), "topics": stat(15.0),
+        "quotes": stat(15.0), "cluster": stat(5.0), "discussion": stat(20.0),
+        "render": stat(0.5),
+    }}}, tmp_path)
+    est = TimingEstimator("hw", tmp_path)
+    initial = est.initial_estimate(10.0, 3, discussion_enabled=True)
+    assert initial is not None
+
+    collected: list[dict[str, object]] = []
+    pipeline = Pipeline(BristlenoseSettings(), estimator=est)
+    pipeline.set_progress_sink(lambda **fields: collected.append(fields))
+    pipeline._last_eta_remaining = initial.total_seconds
+    pipeline._last_predicted_total = initial.total_seconds
+
+    for stage in (STAGE_SPEAKERS, STAGE_TOPICS, STAGE_QUOTES, STAGE_CLUSTER):
+        pipeline._emit_stage_entry(stage)  # cache hits: entry, never completion
+    pipeline._emit_stage_entry(STAGE_DISCUSSION)
+
+    eta = collected[-1]["eta_remaining_seconds"]
+    assert collected[-1]["stage"] == "discussion"
+    assert eta == pytest.approx(20.0 * 3 + 0.5 * 3)  # discussion + render only

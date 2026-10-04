@@ -888,7 +888,22 @@ class Pipeline:
         cold-estimator paths, where ``_emit_remaining`` never fires. Use the
         timing.py stage names (STAGE_SPEAKERS…STAGE_RENDER) — the Swift
         RunProgressSubtitle.knownStages silently drops the manifest names.
+
+        Entering a stage also retires the stages before it that never reported
+        completion (cache-verified ones), so a resumed run's ETA covers only
+        what is left to run, not the whole pipeline.
         """
+        if self._estimator is not None:
+            changed, remaining = self._estimator.skip_to(stage)  # type: ignore[attr-defined]
+            if changed:
+                if remaining is None:
+                    self._last_eta_remaining = None
+                    self._last_predicted_total = None
+                else:
+                    elapsed = self._elapsed_seconds()
+                    self._last_eta_remaining = remaining.total_seconds
+                    self._last_predicted_total = (
+                        elapsed + remaining.total_seconds if elapsed is not None else None)
         self._emit_progress(
             stage=stage,
             eta_remaining_seconds=self._last_eta_remaining,

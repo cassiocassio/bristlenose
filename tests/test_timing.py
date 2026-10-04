@@ -244,6 +244,28 @@ class TestTimingEstimator:
         assert remaining is not None
         assert remaining.total_seconds < initial.total_seconds
 
+    def test_entering_a_stage_retires_the_cached_stages_before_it(self, tmp_path: Path) -> None:
+        """A resumed run: every stage before cluster came from cache, so only
+        cluster and render are left — not the whole-run 292.5 s."""
+        key = "test-hw"
+        _seed_profile(tmp_path, key, transcribe_rate=4.0, llm_rate=15.0)
+        est = TimingEstimator(key, tmp_path)
+        assert est.initial_estimate(10.0, 5).total_seconds == pytest.approx(292.5)
+
+        changed, remaining = est.skip_to(STAGE_CLUSTER)
+        assert changed and remaining is not None
+        assert remaining.total_seconds == pytest.approx(27.5)  # cluster 25 + render 2.5
+        assert est.skip_to(STAGE_CLUSTER) == (False, None)  # nothing new to retire
+
+    def test_skip_to_keeps_a_stage_that_ran(self, tmp_path: Path) -> None:
+        key = "test-hw"
+        _seed_profile(tmp_path, key, transcribe_rate=4.0, llm_rate=15.0)
+        est = TimingEstimator(key, tmp_path)
+        est.initial_estimate(10.0, 5)
+        est.stage_completed(STAGE_TRANSCRIBE, 50.0)  # really ran
+        est.skip_to(STAGE_SPEAKERS)
+        assert est._completed[STAGE_TRANSCRIBE] == 50.0
+
     def test_stage_completed_returns_none_near_end(self, tmp_path: Path) -> None:
         """When only trivial work remains, returns None (don't print)."""
         key = "test-hw"

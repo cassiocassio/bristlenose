@@ -365,6 +365,25 @@ class TimingEstimator:
             show_range=self._has_enough_for_range(),
         )
 
+    def skip_to(self, stage: str) -> tuple[bool, Estimate | None]:
+        """Entering ``stage`` means every stage before it is over. Mark the ones
+        that never reported completion — loaded from cache, or not run — as
+        taking no time, and return ``(changed, remaining)``.
+
+        Without this a resumed run went on showing the whole-run estimate: a
+        cached stage reports entry but never completion, so its prediction was
+        still "remaining" while a later stage ran (Analyse on an analysed Mac
+        project showed ~14 min for a step that takes ~4).
+        """
+        if stage not in ALL_STAGES:
+            return False, None
+        skipped = [s for s in ALL_STAGES[:ALL_STAGES.index(stage)] if s not in self._completed]
+        if not skipped:
+            return False, None
+        for s in skipped[:-1]:
+            self._completed[s] = 0.0
+        return True, self.stage_completed(skipped[-1], 0.0)
+
     def record_run(self, actuals: dict[str, StageActual]) -> None:
         """Update stored statistics with actual timings from this run."""
         for stage, actual in actuals.items():

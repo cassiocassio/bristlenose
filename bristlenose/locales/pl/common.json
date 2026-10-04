@@ -152,7 +152,7 @@
     "interviews": "Wywiady",
     "copyFolderPath": "Kopiuj ścieżkę folderu",
     "showInFinder": "Poka\u017c w Finderze",
-    "editName": "Edytuj nazwę dla {{code}}",
+    "editName": "Edytuj imię dla {{code}}",
     "speakerPlaceholder": {
       "moderator": "Moderator",
       "participant": "Uczestnik",
@@ -162,7 +162,7 @@
       "role": "Rola",
       "newModerator": "Nowy moderator",
       "newObserver": "Nowy obserwator",
-      "newNameFor": "Nowa nazwa dla {{code}}",
+      "newNameFor": "Nowe imię dla {{code}}",
       "thatsMe": "To ja ({{name}})",
       "proposedName": "{{code}}, proponowane imi\u0119 {{name}}"
     },
@@ -707,16 +707,16 @@
   },
   "undo": {
     "undo": {
-      "renameModerator": "Cofnij zmianę nazwy moderatora",
-      "renameParticipant": "Cofnij zmianę nazwy uczestnika",
-      "renameObserver": "Cofnij zmianę nazwy obserwatora",
-      "confirmName": "Cofnij potwierdzenie nazwy"
+      "renameModerator": "Cofnij zmianę imienia moderatora",
+      "renameParticipant": "Cofnij zmianę imienia uczestnika",
+      "renameObserver": "Cofnij zmianę imienia obserwatora",
+      "confirmName": "Cofnij potwierdzenie imienia"
     },
     "redo": {
-      "renameModerator": "Przywróć zmianę nazwy moderatora",
-      "renameParticipant": "Przywróć zmianę nazwy uczestnika",
-      "renameObserver": "Przywróć zmianę nazwy obserwatora",
-      "confirmName": "Przywróć potwierdzenie nazwy"
+      "renameModerator": "Przywróć zmianę imienia moderatora",
+      "renameParticipant": "Przywróć zmianę imienia uczestnika",
+      "renameObserver": "Przywróć zmianę imienia obserwatora",
+      "confirmName": "Przywróć potwierdzenie imienia"
     }
   }
 }

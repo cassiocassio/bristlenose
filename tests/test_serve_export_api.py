@@ -367,6 +367,47 @@ class TestExportAnonymise:
                 assert person["role"] == ""
         assert checked, "fixture has no p-codes; this test asserted nothing"
 
+    def test_anonymise_leaves_a_participant_name_nowhere_in_the_embed(
+        self, client: TestClient,
+    ) -> None:
+        """Walk every string in the decoded embed, not one field at a time.
+
+        Field-by-field checks on ``/people`` could not see ``full_name`` and
+        ``short_name`` arriving on ``/sessions`` speakers (4 Oct 2026), which
+        shipped them in View Source of an anonymised export. Decoded, so a
+        non-ASCII name escaped as ``\\u00e9`` cannot slip past a substring test.
+        """
+        planted = "Zebulon Quixoté"
+        put = client.put(
+            "/api/projects/1/people",
+            json={"p1": {"full_name": planted, "short_name": "Zebulon"}},
+        )
+        assert put.status_code == 200, put.text
+        named = self._extract_export_data(
+            client.get("/api/projects/1/export?anonymise=false").text,
+        )
+        assert planted in json.dumps(named, ensure_ascii=False), (
+            "the planted name never reached the embed; this test asserted nothing"
+        )
+
+        data = self._extract_export_data(
+            client.get("/api/projects/1/export?anonymise=true").text,
+        )
+        leaks: list[str] = []
+
+        def walk(node: object, path: str) -> None:
+            if isinstance(node, dict):
+                for k, v in node.items():
+                    walk(v, f"{path}.{k}")
+            elif isinstance(node, list):
+                for i, v in enumerate(node):
+                    walk(v, f"{path}[{i}]")
+            elif isinstance(node, str) and ("Zebulon" in node or "Quixot" in node):
+                leaks.append(path)
+
+        walk(data["endpoints"], "endpoints")
+        assert not leaks, f"participant name in an anonymised export at {leaks}"
+
     def test_anonymise_keeps_moderator_and_observer_names(self) -> None:
         """The boundary is the participant line, not team membership.
 

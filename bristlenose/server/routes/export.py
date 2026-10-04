@@ -152,6 +152,10 @@ def _anonymise_data(endpoints: dict[str, Any]) -> None:
         for spk in sess.get("speakers", []):
             if spk.get("speaker_code", "").startswith("p"):
                 spk["name"] = ""
+                # Carried for undo since 4 Oct 2026; blank them with the name.
+                for field in ("full_name", "short_name"):
+                    if field in spk:
+                        spk[field] = ""
 
     # Quotes — speaker names in sections and themes
     quotes = endpoints.get("/quotes") or {}

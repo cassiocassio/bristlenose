@@ -257,6 +257,30 @@ class TestTimingEstimator:
         assert remaining.total_seconds == pytest.approx(27.5)  # cluster 25 + render 2.5
         assert est.skip_to(STAGE_CLUSTER) == (False, None)  # nothing new to retire
 
+    def test_a_resume_opens_on_what_will_run_and_never_climbs_back(self, tmp_path: Path) -> None:
+        """No estimate offered that counts work the cache will do: the opening
+        figure leaves the cached stages out, and so does every update after."""
+        key = "test-hw"
+        _seed_profile(tmp_path, key, transcribe_rate=4.0, llm_rate=15.0)
+        est = TimingEstimator(key, tmp_path)
+        cached = {STAGE_TRANSCRIBE, STAGE_SPEAKERS, STAGE_TOPICS, STAGE_QUOTES}
+        opening = est.initial_estimate(10.0, 5, likely_cached=cached)
+        assert opening is not None and opening.total_seconds == pytest.approx(27.5)  # cluster + render
+        figures = [est.skip_to(s)[1] for s in (STAGE_SPEAKERS, STAGE_TOPICS, STAGE_QUOTES, STAGE_CLUSTER)]
+        assert all(f is None or f.total_seconds <= opening.total_seconds for f in figures)
+
+    def test_a_stage_guessed_cached_that_starts_is_counted(self, tmp_path: Path) -> None:
+        key = "test-hw"
+        _seed_profile(tmp_path, key, transcribe_rate=4.0, llm_rate=15.0)
+        est = TimingEstimator(key, tmp_path)
+        est.initial_estimate(10.0, 5, likely_cached={STAGE_TRANSCRIBE, STAGE_SPEAKERS, STAGE_TOPICS, STAGE_QUOTES})
+        est.skip_to(STAGE_SPEAKERS)
+        assert est.skip_to(STAGE_TOPICS)[1] is not None  # entry alone: still left out
+        assert est.skip_to(STAGE_TOPICS) == (False, None)
+        changed, remaining = est.stage_runs(STAGE_TOPICS)  # wrong guess: topics really runs
+        assert changed and remaining is not None
+        assert remaining.total_seconds == pytest.approx(75 + 25 + 2.5)  # topics + cluster + render
+
     def test_skip_to_keeps_a_stage_that_ran(self, tmp_path: Path) -> None:
         key = "test-hw"
         _seed_profile(tmp_path, key, transcribe_rate=4.0, llm_rate=15.0)

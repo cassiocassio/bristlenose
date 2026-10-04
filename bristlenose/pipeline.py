@@ -313,6 +313,59 @@ def _demote_stage(manifest: PipelineManifest, stage: str) -> None:
         record.status = StageStatus.PARTIAL
 
 
+def _likely_cached_stages(
+    prev: PipelineManifest | None,
+    session_ids: set[str],
+    *,
+    guide_sha: str,
+    pii_enabled: bool,
+    discussion_enabled: bool,
+) -> set[str]:
+    """Timing stages the previous run finished for every current session.
+
+    For the opening estimate only (``TimingEstimator.initial_estimate``): a
+    resumed run used to open on the whole pipeline's time ("~15 min" for a
+    one-minute discussion pass on 4 Oct 2026) and correct itself a few seconds
+    later. Read in pipeline order and stopped at the first stage that will run,
+    since everything after it runs too. A guide changed since the discussion was
+    built breaks the chain there. Render is never left out. A guess, and a
+    cautious one: stage entries make the figure exact once they arrive.
+    """
+    from bristlenose import manifest as m
+    from bristlenose import timing as t
+
+    if prev is None:
+        return set()
+    chain = [
+        (t.STAGE_TRANSCRIBE, m.STAGE_TRANSCRIBE, True),
+        (t.STAGE_SPEAKERS, m.STAGE_IDENTIFY_SPEAKERS, True),
+        (t.STAGE_PII, m.STAGE_PII_REMOVAL, True),
+        (t.STAGE_TOPICS, m.STAGE_TOPIC_SEGMENTATION, True),
+        (t.STAGE_QUOTES, m.STAGE_QUOTE_EXTRACTION, True),
+        (t.STAGE_CLUSTER, m.STAGE_CLUSTER_AND_GROUP, False),
+        (t.STAGE_DISCUSSION, m.STAGE_DISCUSSION, False),
+    ]
+    cached: set[str] = set()
+    for timing_stage, manifest_stage, per_session in chain:
+        if (timing_stage == t.STAGE_PII and not pii_enabled) or (
+                timing_stage == t.STAGE_DISCUSSION and not discussion_enabled):
+            continue  # will not run either way: neither cached nor a break
+        if timing_stage == t.STAGE_PII:
+            continue  # no cache: it always runs when on, so it is counted — but
+            # its output is deterministic, so the stages after it may still be cached
+        rec = prev.stages.get(manifest_stage)
+        if rec is None or rec.status != m.StageStatus.COMPLETE:
+            break
+        if per_session and rec.sessions is not None and not all(
+                (s := rec.sessions.get(sid)) is not None and s.status == m.StageStatus.COMPLETE
+                for sid in session_ids):
+            break
+        if timing_stage == t.STAGE_DISCUSSION and (rec.input_hashes or {}).get("guide") != guide_sha:
+            break
+        cached.add(timing_stage)
+    return cached
+
+
 def _is_stage_verified(
     manifest: PipelineManifest | None,
     stage: str,
@@ -896,19 +949,37 @@ class Pipeline:
         if self._estimator is not None:
             changed, remaining = self._estimator.skip_to(stage)  # type: ignore[attr-defined]
             if changed:
-                if remaining is None:
-                    self._last_eta_remaining = None
-                    self._last_predicted_total = None
-                else:
-                    elapsed = self._elapsed_seconds()
-                    self._last_eta_remaining = remaining.total_seconds
-                    self._last_predicted_total = (
-                        elapsed + remaining.total_seconds if elapsed is not None else None)
+                self._carry_eta(remaining)
         self._emit_progress(
             stage=stage,
             eta_remaining_seconds=self._last_eta_remaining,
             predicted_total_seconds=self._last_predicted_total,
         )
+
+    def _stage_runs(self, stage: str) -> None:
+        """The stage is doing real work, not loading its cache. Called at the top
+        of each fresh branch: a stage the opening estimate guessed was cached is
+        counted from here, and the corrected figure goes out at once."""
+        if self._estimator is None:
+            return
+        changed, remaining = self._estimator.stage_runs(stage)  # type: ignore[attr-defined]
+        if changed:
+            self._carry_eta(remaining)
+            self._emit_progress(
+                stage=stage,
+                eta_remaining_seconds=self._last_eta_remaining,
+                predicted_total_seconds=self._last_predicted_total,
+            )
+
+    def _carry_eta(self, remaining: Any) -> None:
+        """The figure stage-entry emits carry. None: no useful estimate — offer none."""
+        if remaining is None:
+            self._last_eta_remaining = None
+            self._last_predicted_total = None
+            return
+        elapsed = self._elapsed_seconds()
+        self._last_eta_remaining = remaining.total_seconds
+        self._last_predicted_total = elapsed + remaining.total_seconds if elapsed is not None else None
 
     async def _run_discussion(
         self,
@@ -979,6 +1050,7 @@ class Pipeline:
         if manifest is not None:
             mark_stage_running(manifest, STAGE_DISCUSSION)
         self._emit_stage_entry(_T_STAGE_DISCUSSION)
+        self._stage_runs(_T_STAGE_DISCUSSION)
         t0 = time.perf_counter()
         try:
             from bristlenose.llm.client import LLMClient
@@ -1153,11 +1225,20 @@ class Pipeline:
 
             _est = None
             if self._estimator is not None:
+                from bristlenose.discussion.guide import NO_GUIDE_SHA, find_guide
+
+                _guide = find_guide(input_dir) if self.settings.discussion_lens else None
                 _est = self._estimator.initial_estimate(
                     total_audio_mins, len(sessions),
                     skip_transcription=self.settings.skip_transcription,
                     pii_enabled=self.settings.pii_enabled,
                     discussion_enabled=self.settings.discussion_lens,
+                    likely_cached=_likely_cached_stages(
+                        _prev_manifest, {s.session_id for s in sessions},
+                        guide_sha=_guide.sha if _guide else NO_GUIDE_SHA,
+                        pii_enabled=self.settings.pii_enabled,
+                        discussion_enabled=self.settings.discussion_lens,
+                    ),
                 )
                 if _est is not None:
                     self._emit(PipelineEvent(
@@ -1290,6 +1371,7 @@ class Pipeline:
             else:
                 import json as _json
 
+                self._stage_runs(STAGE_TRANSCRIBE)
                 # Per-session resume: keep the sessions whose fingerprint still
                 # matches and only transcribe the rest.
                 _cached_tx_sids = fresh_session_ids(
@@ -1593,6 +1675,7 @@ class Pipeline:
                     set(session_segments), _si_session_fps,
                 )
             else:
+                self._stage_runs(STAGE_SPEAKERS)
                 # Per-session resume: keep the sessions whose segments are
                 # unchanged and only run the LLM on the rest.
                 _cached_si_sids = fresh_session_ids(
@@ -2083,6 +2166,7 @@ class Pipeline:
                     {tm.session_id for tm in topic_maps}, _topic_session_fps,
                 )
             else:
+                self._stage_runs(STAGE_TOPICS)
                 # Per-session resume: keep the sessions whose transcript is
                 # unchanged and only run the LLM on the rest.
                 _cached_topic_sids = fresh_session_ids(
@@ -2273,6 +2357,7 @@ class Pipeline:
                     {t.session_id for t in clean_transcripts}, _quote_session_fps,
                 )
             else:
+                self._stage_runs(STAGE_QUOTES)
                 # Per-session resume: keep the sessions whose transcript and
                 # topic map are unchanged and only run the LLM on the rest.
                 _cached_quote_sids = fresh_session_ids(
@@ -2456,6 +2541,7 @@ class Pipeline:
                     f" · Grouped {count_noun(len(theme_groups), 'theme')}",
                 )
             else:
+                self._stage_runs(STAGE_CLUSTER)
                 mark_stage_running(manifest, STAGE_CLUSTER_AND_GROUP)
                 status.update("[dim]Clustering and grouping...[/dim]")
                 t0 = time.perf_counter()

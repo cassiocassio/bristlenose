@@ -17,6 +17,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
+
     from bristlenose.config import BristlenoseSettings
 
 logger = logging.getLogger(__name__)
@@ -242,6 +244,10 @@ class TimingEstimator:
         self.session_count: int = 0
         # Track completed stages for remaining-time recalculation.
         self._completed: dict[str, float] = {}
+        # Stages the previous run finished for every session: left out of every
+        # figure until one actually starts (skip_to), so no estimate is offered
+        # that counts work the cache will do. Set by initial_estimate().
+        self._likely_cached: set[str] = set()
         # Pipeline start time (set externally).
         self._pipeline_start: float = 0.0
 
@@ -293,12 +299,20 @@ class TimingEstimator:
         skip_transcription: bool = False,
         pii_enabled: bool = False,
         discussion_enabled: bool = False,
+        likely_cached: Collection[str] = (),
     ) -> Estimate | None:
-        """Compute upfront estimate after ingest. Returns None if no history."""
+        """Compute upfront estimate after ingest. Returns None if no history.
+
+        ``likely_cached``: stages the previous run finished for every current
+        session (``pipeline._likely_cached_stages``), left out so a resumed run
+        does not open on the whole pipeline's time. Only the opening figure:
+        once stages report, ``skip_to`` and ``stage_completed`` are exact.
+        """
         self.audio_minutes = audio_minutes
         self.session_count = session_count
         self._pii_enabled = pii_enabled
         self._discussion_enabled = discussion_enabled
+        self._likely_cached = set(likely_cached)
 
         if not self.has_history():
             return None
@@ -313,6 +327,8 @@ class TimingEstimator:
             if stage == STAGE_PII and not pii_enabled:
                 continue
             if stage == STAGE_DISCUSSION and not discussion_enabled:
+                continue
+            if stage in likely_cached:
                 continue
             secs, sd = self._estimate_stage(stage)
             total += secs
@@ -335,7 +351,10 @@ class TimingEstimator:
         Returns None if no useful revision is available.
         """
         self._completed[stage] = elapsed
+        return self._remaining()
 
+    def _remaining(self) -> Estimate | None:
+        """The stages still to run, or None when there is no useful figure."""
         if not self.has_history():
             return None
 
@@ -349,6 +368,8 @@ class TimingEstimator:
             if s == STAGE_PII and not self._pii_enabled:
                 continue  # never runs this run — not "remaining", just absent
             if s == STAGE_DISCUSSION and not self._discussion_enabled:
+                continue
+            if s in self._likely_cached:
                 continue
             secs, sd = self._estimate_stage(s)
             remaining_total += secs
@@ -383,6 +404,15 @@ class TimingEstimator:
         for s in skipped[:-1]:
             self._completed[s] = 0.0
         return True, self.stage_completed(skipped[-1], 0.0)
+
+    def stage_runs(self, stage: str) -> tuple[bool, Estimate | None]:
+        """A stage is doing real work, not loading its cache. If the opening
+        guess had it cached, count it from now: ``(changed, remaining)``. Entry
+        alone cannot say this — a cached stage reports entry too."""
+        if stage not in self._likely_cached:
+            return False, None
+        self._likely_cached.discard(stage)
+        return True, self._remaining()
 
     def record_run(self, actuals: dict[str, StageActual]) -> None:
         """Update stored statistics with actual timings from this run."""

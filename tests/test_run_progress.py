@@ -302,3 +302,63 @@ def test_resumed_run_shows_only_the_time_left_to_run(tmp_path):
     eta = collected[-1]["eta_remaining_seconds"]
     assert collected[-1]["stage"] == "discussion"
     assert eta == pytest.approx(20.0 * 3 + 0.5 * 3)  # discussion + render only
+
+
+def _manifest(**stages):
+    from bristlenose.manifest import SessionRecord, StageRecord, StageStatus, create_manifest
+    m = create_manifest("t", "0")
+    for name, (sessions, inputs) in stages.items():
+        m.stages[name] = StageRecord(
+            status=StageStatus.COMPLETE,
+            sessions=None if sessions is None else {
+                sid: SessionRecord(status=StageStatus.COMPLETE, session_id=sid) for sid in sessions},
+            input_hashes=inputs)
+    return m
+
+
+def test_likely_cached_stages_reads_the_previous_run_in_order():
+    from bristlenose import manifest as m
+    from bristlenose.pipeline import _likely_cached_stages
+    from bristlenose.timing import STAGE_CLUSTER, STAGE_DISCUSSION, STAGE_TRANSCRIBE
+
+    ids = {"s1", "s2"}
+    full = {m.STAGE_TRANSCRIBE: (ids, None), m.STAGE_IDENTIFY_SPEAKERS: (ids, None),
+            m.STAGE_TOPIC_SEGMENTATION: (ids, None), m.STAGE_QUOTE_EXTRACTION: (ids, None),
+            m.STAGE_CLUSTER_AND_GROUP: (None, None), m.STAGE_DISCUSSION: (None, {"guide": "g1"})}
+    kw = {"pii_enabled": False, "discussion_enabled": True}
+    everything = _likely_cached_stages(_manifest(**full), ids, guide_sha="g1", **kw)
+    assert STAGE_DISCUSSION in everything and STAGE_CLUSTER in everything  # PII off is no break
+    # a new guide: discussion will run
+    assert STAGE_DISCUSSION not in _likely_cached_stages(_manifest(**full), ids, guide_sha="g2", **kw)
+    # a new session: transcription runs, and so does everything after it
+    assert _likely_cached_stages(_manifest(**full), ids | {"s3"}, guide_sha="g1", **kw) == set()
+    # no previous run: nothing is cached
+    assert _likely_cached_stages(None, ids, guide_sha="g1", **kw) == set()
+    assert STAGE_TRANSCRIBE in everything
+
+
+def test_a_resume_offers_only_the_work_left_and_rises_only_when_a_stage_really_runs(tmp_path):
+    from bristlenose.timing import STAGE_TOPICS, STAGE_TRANSCRIBE, TimingEstimator, save_timing_data
+
+    def stat(mean: float) -> dict:
+        return {"mean": mean, "m2": 1.0, "n": 5}
+
+    save_timing_data({"version": 1, "profiles": {"hw": {
+        "transcribe": stat(4.0), "speakers": stat(15.0), "topics": stat(15.0),
+        "quotes": stat(15.0), "cluster": stat(5.0), "render": stat(0.5),
+    }}}, tmp_path)
+    est = TimingEstimator("hw", tmp_path)
+    cached = {STAGE_TRANSCRIBE, STAGE_SPEAKERS, STAGE_TOPICS, STAGE_QUOTES}
+    opening = est.initial_estimate(10.0, 3, likely_cached=cached)
+    assert opening is not None and opening.total_seconds < 20  # cluster + render, not the whole run
+
+    collected: list[dict[str, object]] = []
+    pipeline = Pipeline(BristlenoseSettings(), estimator=est)
+    pipeline.set_progress_sink(lambda **fields: collected.append(fields))
+    pipeline._carry_eta(opening)
+    for stage in (STAGE_SPEAKERS, STAGE_TOPICS):
+        pipeline._emit_stage_entry(stage)
+    etas = [c["eta_remaining_seconds"] for c in collected]
+    assert all(e is None or e <= opening.total_seconds for e in etas)  # never climbs on a cache hit
+    pipeline._stage_runs(STAGE_TOPICS)  # the guess was wrong: topics really runs
+    assert collected[-1]["eta_remaining_seconds"] > opening.total_seconds

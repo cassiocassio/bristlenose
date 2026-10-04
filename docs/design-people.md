@@ -2166,6 +2166,20 @@ means), so they cannot disagree.
   The proposed ring is `.bn-person-proposed` in `molecules/person-badge.css`,
   its own class: borrowing AutoCode's `.badge-proposed` drew two rings and a
   pulse. An exported report draws every name plain and opens no picker.
+  A name row has no key handler of its own, on purpose: the list's handler
+  owns arrows, Enter, Space and type-to-jump, and a row handler as well chose
+  twice on Space (a scoped eslint-disable says so).
+- **Accessible proposed state** (`03efebb5`): a proposed name is announced
+  "m1, proposed name Sarah" on the grid badge (`aria-label`), on the web
+  picker's row and on the native popover's row — key
+  `sessions.picker.proposedName`, all 21 locales. The native popover uses the
+  wording the SPA sends as `labels.proposed`, so the bridge contract fixture is
+  version 2. "Proposed name" rather than "…, proposed" is an owner call: the
+  bare adjective has to agree with a noun in most locales.
+- **"Moderated by"** (`c30a4b33`): the Sessions grid's moderator and observer
+  lines come from the grid's own speakers — the same names the picker offers —
+  not from the payload's `moderator_names`, which is read once, so after a
+  picker rename the line named a moderator the grid no longer showed.
 - **Native** (`PersonPickerPopover.swift`): the SPA sends `person-picker`
   (slot, rows, anchor, every string localised) and the host shows a transient
   `NSPopover` at the badge, Small. It sends back the bare name picked
@@ -2176,6 +2190,11 @@ means), so they cannot disagree.
   session and a code but no project. The web opens the native one only when the
   host sets `__BRISTLENOSE_NATIVE_PERSON_PICKER__`, so an app build without it
   falls back to the web picker rather than sending a message nothing answers.
+  The anchor rect is moved down by the web view's top safe-area inset
+  (`PersonPickerPresenter.viewRect(zoom:viewportTop:boundsHeight:flipped:)`,
+  tested): the layout viewport starts below the toolbar and
+  `getBoundingClientRect` counts from it, so without the inset the popover
+  pointed a toolbar's height above the badge.
   Both directions are pinned by `tests/fixtures/person-picker-bridge-contract.json`,
   read by vitest and by Swift.
 - **v1.1 rules, the owner's (4 Oct 2026):** the role segments show all three
@@ -2192,11 +2211,10 @@ segment (a real recode, §J) ships with the first picker or after it, with its
 undo (planned in §J7: after it, as R2, with moderator ↔ observer first as R1);
 right-click as a second native surface; whether the keyboard lives in the list
 (v1) or the field (search later); what a light-dismiss does to a half-typed
-name; and five questions from the 4 Oct code review — a moderator pick copies
+name; and four questions from the 4 Oct code review — a moderator pick copies
 the display name into both name fields, dropping a source slot's surname; the
 moderator list offers other sessions' unconfirmed guesses; That's Me and a
-matching name are both ticked; the proposed state is visual only (no
-accessible label); and a participant's write is two requests, so a failed
+matching name are both ticked; and a participant's write is two requests, so a failed
 second leaves the name restored but still confirmed on undo.
 
 **Judge web against native in the app, not in the mockup.** The mockup's Mac

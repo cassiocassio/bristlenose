@@ -171,3 +171,18 @@ class TestSpeakerSlots:
         reg.record_speakers("s1", {"A": "p1", "M": "m1"})
         reg.record_speakers("s2", {"B": "p4"})
         assert reg.next_participant_number() == 5
+
+    def test_a_number_is_not_reissued_after_its_speaker_changes_role(
+        self, tmp_path: Path,
+    ) -> None:
+        # s2's participant is re-identified as an observer on a later run, so
+        # p2 leaves the map. A study's next participant must still be p3: a
+        # reissued p2 would carry the name typed for the old one.
+        reg = SessionRegistry.load(tmp_path)
+        reg.record_speakers("s1", {"A": "p1", "M": "m1"})
+        reg.record_speakers("s2", {"C": "p2", "D": "m1"})
+        reg.save()
+        reg = SessionRegistry.load(tmp_path)
+        reg.record_speakers("s2", {"C": "o1", "D": "m1"})
+        reg.save()
+        assert SessionRegistry.load(tmp_path).next_participant_number() == 3

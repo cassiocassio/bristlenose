@@ -15,6 +15,10 @@ The registry remembers two things across runs:
   while its role is unchanged; participant numbers are global and never
   reused, so a participant's code — and the quotes, stars and names keyed by
   it — stays with them when another session is added.
+- **participants_issued**: the highest participant number ever handed out.
+  The speaker map alone cannot say it: a speaker re-identified as a moderator
+  or observer leaves the map, and its number would be issued again, to someone
+  else, wearing the name typed for the first.
 
 A project with no file behaves exactly as before on its first run: sessions in
 date order, codes from 1. Entries for sessions that disappear are kept, so their
@@ -49,6 +53,7 @@ class SessionRegistry:
     path: Path
     sessions: dict[str, str] = field(default_factory=dict)
     speakers: dict[str, dict[str, str]] = field(default_factory=dict)
+    participants_issued: int = 0
 
     # ── persistence ──────────────────────────────────────────────────────
 
@@ -85,6 +90,7 @@ class SessionRegistry:
                 str(sid): {str(lbl): str(code) for lbl, code in labels.items()}
                 for sid, labels in speakers.items()
             },
+            participants_issued=int(data.get("participants_issued") or 0),
         )
 
     def save(self) -> None:
@@ -94,6 +100,7 @@ class SessionRegistry:
             "version": REGISTRY_VERSION,
             "sessions": dict(sorted(self.sessions.items())),
             "speakers": {sid: self.speakers[sid] for sid in sorted(self.speakers)},
+            "participants_issued": self.participants_issued,
         }
         fd, tmp = tempfile.mkstemp(dir=self.path.parent, prefix=".sessions.", suffix=".tmp")
         try:
@@ -149,17 +156,22 @@ class SessionRegistry:
 
     def record_speakers(self, sid: str, label_codes: dict[str, str]) -> None:
         """Remember this run's codes; labels no longer heard keep their entry."""
+        before = self._highest_participant()  # counts a code this update replaces
         self.speakers.setdefault(sid, {}).update(label_codes)
+        self.participants_issued = max(before, self._highest_participant())
 
     def next_participant_number(self) -> int:
         """One past every participant number ever handed out, in any session."""
+        return self._highest_participant() + 1
+
+    def _highest_participant(self) -> int:
         numbers = [
             _number(code)
             for labels in self.speakers.values()
             for code in labels.values()
             if code.startswith("p")
         ]
-        return max(numbers, default=0) + 1
+        return max(self.participants_issued, *numbers, 0)
 
 
 def _number(code: str) -> int:

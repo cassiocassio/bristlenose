@@ -1870,11 +1870,24 @@ equally to the proposed replacement. ~~Reconcile the wiring doc first.~~
    code, but `people.yaml`'s key is `role` and is a documented hand-editable
    surface — renaming it is a file-format change for studies in the field. It
    collides with the incoming Role submenu either way.
-   **Decided 4 Oct 2026: "participant role", not "job title".** It is what a
-   researcher filters by ("the practice managers"), so it is expected to become a
-   structured, filterable attribute rather than a display string
-   (`docs/research/search-or-ask.md`). The collision with the speaker-kind
-   Role submenu and the `people.yaml` key are still open.
+   **Reopened 4 Oct 2026, wider: "role" names three different things.**
+   Not "job title" (owner). But "role" is already doing three jobs, and
+   engineers read it as a fourth (permissions, ARIA):
+
+   | Concept | What it is | When it is set | Example |
+   |---|---|---|---|
+   | Kind of speaker | Who is talking in the transcript | Pipeline guesses, researcher corrects | moderator · participant · observer |
+   | Recruit spec | What the person was recruited as; a fact about them | Before fieldwork | practice manager, GP, receptionist |
+   | Persona | The archetype synthesised from many participants | After analysis | "the overstretched practice manager" |
+
+   The recruit spec is what a researcher filters by ("the practice managers"),
+   so it is expected to become a structured, filterable attribute rather than a
+   display string (`docs/research/search-or-ask.md`); `role_title` is its seed.
+   Persona is a first-class category the researcher assigns participants to.
+   Leaning: keep `role` as an internal name and never show the bare word; the
+   transcript surfaces say "speaker". **Open:** the user-facing name for the
+   recruit spec, whether persona is in scope for this work, and the
+   `people.yaml` key.
 4. **"Someone New…" → "New Person…"?** Unshipped, so free to change; the
    indefinite pronoun forces masculine agreement in fr/ca/es. But §B4's warmth is
    deliberate and "New Person" reads as a create command rather than an escape.

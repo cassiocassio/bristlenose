@@ -178,6 +178,22 @@ yet re-proven as packages** on the new extra (`TODO.md`).
 - **onnxruntime runs at ERROR log level,** as sherpa did.
 - **The RPM's `%check` and the snap's build hook assert the runtime is present before
   the self-test,** using explicit exits rather than `assert`.
+- **Snap, re-proven as a package the same day:** an arm64 snap built from
+  `2dc70a74` (`snapcraft pack --destructive-mode`, throwaway Multipass VM, 319 s,
+  340 MB), the first arm64 build. Its build hook printed the self-test line. It
+  installed strict-confined. Across all 478 shared objects it carries 0 `espeak_`
+  symbols and 0 espeak strings, where sherpa's extension in the same VM shows 66
+  strings (one `hf_xet` hit is `used_bytes`+`peak_used_bytes`). Inside
+  `snap run --shell`, the pass ran on the 4-minute cut with the model from
+  `$SNAP_USER_COMMON/models/`: 80/80 windows judged, centroid cosine 0.0842, the
+  same value as outside the snap. **Pre-existing and cosmetic:** under strict
+  confinement `import onnxruntime` itself prints one yellow `GPU device discovery
+  failed … Permission denied … /sys/bus/pci/devices` warning (AppArmor). No API or
+  environment variable runs early enough to silence it, and faster-whisper's Silero
+  VAD (`vad_filter=True`) already triggers it in stage 5 of every snap
+  transcription. The `hardware-observe` plug would remove it, which is a store
+  interface decision. The pass's own session logs no thread-affinity errors,
+  because it sets its thread count; a default pool does log them.
 - **Behaviour change worth knowing:** `voice_runtime_available()` is true whenever
   kaldi-native-fbank imports, since onnxruntime is a core dependency. A pip user who
   has that library for another reason gets the voice pass without asking. Before, the

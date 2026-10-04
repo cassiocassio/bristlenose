@@ -22,7 +22,13 @@ trued-against: HEAD on 2026-08-28
   runs the same `check_bundle_voice` self-test as the Mac build (a real onnxruntime session
   and one filterbank with the pass's options);
   `make-srpm.sh` asserts the knf wheel instead of the sherpa pair. **Not yet re-proven
-  in `mock` or by a real Fedora run** — the next local-dist build should be.
+  in `mock` or by a real Fedora run** — the next local-dist build should be. Proven the
+  same day up to the SRPM (Ubuntu 24.04 VM, local dist built from `2dc70a74`):
+  `make-srpm.sh` resolved **109 wheels / 229 MB** (110 / 243 MB with sherpa), SRPM
+  256 MB (271 MB); the vendor tarball holds `onnxruntime-1.30.0-cp314-…x86_64` and
+  `kaldi_native_fbank-1.22.3-cp314-…x86_64` and no sherpa; the spec's `License:` is the
+  reduced set; and with `BN_EXTRAS="serve"` the script stops with *no
+  kaldi_native_fbank-*-cp314-*.whl in the wheelhouse — the voice extra did not resolve*.
 - _2026-10-04_ — **the voice pass joins the RPM** (`voice` extra, sherpa-onnx), for
   parity with the CLI and the Mac app. Proven on a clean Fedora 43 x86_64 box from a
   local dist (PyPI's 0.32.0 has no `voice` extra, so the Copr channel carries it from

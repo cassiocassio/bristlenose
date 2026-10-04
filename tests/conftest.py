@@ -178,3 +178,37 @@ def no_discussion_stage(monkeypatch):
     from bristlenose.pipeline import Pipeline
 
     monkeypatch.setattr(Pipeline, "_run_discussion", AsyncMock(return_value=None))
+
+
+@pytest.fixture
+def no_local_llm_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
+    """Provider resolution sees nothing from the machine the suite runs on.
+
+    Four routes reach ``load_settings()`` from outside the test: env vars, a
+    ``.env`` walked up from cwd, the user-level config ``.env`` where
+    ``bristlenose configure``/``use`` store the current provider, and the
+    keychain. The second and third are read through
+    ``BristlenoseSettings.model_config["env_file"]``, which is computed ONCE,
+    at import — so patching ``_find_env_files`` cannot reach them. From the
+    repo root the gitignored ``.env`` happened to name the expected provider;
+    from a worktree the stored current provider leaked in instead
+    (``'google' == 'anthropic'``, 4 Oct 2026). CI has neither file.
+    """
+    from bristlenose import config
+    from bristlenose.config import BristlenoseSettings
+
+    monkeypatch.setitem(BristlenoseSettings.model_config, "env_file", None)
+    monkeypatch.setattr(config, "_find_env_files", lambda: [])
+    monkeypatch.setattr(config, "_populate_keys_from_keychain", lambda s: s)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg-config"))
+    monkeypatch.delenv("SNAP_USER_COMMON", raising=False)
+    monkeypatch.chdir(tmp_path)
+
+    monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
+    for name, field in BristlenoseSettings.model_fields.items():
+        if not (name.startswith(("llm_", "azure_")) or name.endswith("_api_key")):
+            continue
+        monkeypatch.delenv(f"BRISTLENOSE_{name.upper()}", raising=False)
+        for alias in getattr(field.validation_alias, "choices", ()):
+            monkeypatch.delenv(str(alias), raising=False)
+    return monkeypatch

@@ -35,17 +35,9 @@ KEYS_OFF: dict[str, str] = {
 
 
 @pytest.fixture
-def hermetic(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
-    """No keychain, no .env discovery, no provider/model/hosting env vars."""
-    monkeypatch.setattr(config, "_populate_keys_from_keychain", lambda s: s)
-    monkeypatch.setattr(config, "_find_env_files", lambda: [])
-    for var in (
-        "BRISTLENOSE_LLM_PROVIDER",
-        "BRISTLENOSE_LLM_MODEL",
-        "_BRISTLENOSE_HOSTED_BY_DESKTOP",
-    ):
-        monkeypatch.delenv(var, raising=False)
-    return monkeypatch
+def hermetic(no_local_llm_config: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
+    """No keychain, no .env files, no provider/model/key/hosting env vars."""
+    return no_local_llm_config
 
 
 def _load(**key_overrides: str) -> BristlenoseSettings:

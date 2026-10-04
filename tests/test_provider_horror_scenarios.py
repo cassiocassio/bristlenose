@@ -49,7 +49,7 @@ def _settings(**overrides: object) -> BristlenoseSettings:
 class TestNewUserNoConfig:
     """First-time user who just ran `pip install bristlenose` and typed `bristlenose run ./interviews`."""
 
-    def test_default_provider_is_anthropic(self) -> None:
+    def test_default_provider_is_anthropic(self, no_local_llm_config) -> None:
         """Default settings use Anthropic, which will fail without a key.
 
         Note: We explicitly set anthropic_api_key="" to simulate a user with no

@@ -165,7 +165,7 @@ Single ubuntu job, Node from `.tool-versions` (24). Runs the full frontend quali
 | SBOM generation + upload | No | Compliance artifact |
 | Vitest | Yes | Unit/integration tests — count lives in [testing/inventory.md](testing/inventory.md), which is generated. It said ~1265 here and was 1720 by 3 Sep 2026; a suite size restated in prose is a number that rots |
 | Vite build | Yes | Build errors are shipping errors |
-| size-limit | Yes | Bundle size gate (220 kB gzip — `frontend/package.json`) |
+| Bundle budget | Yes | First-paint gate, 222 kB gzip — `scripts/check-bundle-budget.py` (`npm run size`). Replaced size-limit's per-chunk globs on 5 Sep 2026; the ceiling was 220 kB until 4 Oct |
 
 ### e2e
 

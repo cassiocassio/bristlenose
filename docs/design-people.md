@@ -15,6 +15,11 @@ built. The people *file* and its endpoints predate it and do ship —
 
 ## Changelog
 
+- _2026-10-04_ — **Undo on speaker naming is built — the step-1 gate is open.** A pick, a
+  confirm or a typed name from the person picker, and the Sessions grid's inline rename, push one
+  entry on the report's undo stack (`contexts/UndoStore.ts`); Edit ▸ Undo on the Mac and ⌘Z /
+  Ctrl+Z in the browser pop it, putting back both stored names and the confirmed flag. The
+  `undo-state` channel is live end to end. Details under §B10.
 - _2026-10-04_ — **The cross-role recode is planned (§J7), and its premise corrected.** A
   speaker's kind is held on the slot in the serve DB and never reaches the pipeline by itself:
   the transcript fingerprint hashes roles and codes, so a recode stamped into the registry would
@@ -1010,6 +1015,21 @@ Three consequences worth carrying:
   side. What is missing is entirely frontend: `bridge.ts` hard-codes
   `canUndo: false` and nothing ever posts `undo-state`. This is why §D prices the
   undo bridge as a **step-1 gate**.
+
+  **Built, 4 Oct 2026.** One stack, page-scoped: `contexts/UndoStore.ts` holds it,
+  `components/UndoSync.tsx` posts `undo-state` with whole per-language labels
+  (`undo.undo.<action>` / `undo.redo.<action>` — Apple's own "Undo Rename" is not
+  a template plus a noun in Spanish, Russian or Norwegian), answers the menu's
+  `undo`/`redo`, and in the browser takes ⌘Z / ⇧⌘Z / Ctrl+Z / Ctrl+Y outside a
+  text field. On the Mac `BristlenoseWebView` hands ⌘Z to the Edit menu, as it
+  does ⌘,. Speaker naming is the first client: `utils/speakerNames.ts`'s
+  `nameSpeaker` writes a slot and records its before-state (`full_name`,
+  `short_name`, `confirmed` — `/sessions` now reports both names), so undoing a
+  confirm returns the name to proposed. A moderator or observer is one
+  per-session `PUT`; a participant is `PUT /people` (for `people.yaml`) then the
+  flag on the slot, sequenced through one write queue. The stack ends with the
+  page — a reload, a Mac project switch (the web view remounts), or a new run.
+  The inline sweep-line link is not built.
 - **Re-attribution breaks the quote stable key.** The importer's key is
   `(project_id, session_id, participant_id, start_timecode)` and re-attribution
   is not one of `_pinned_quote_ids`' arms — so a re-attributed quote does not
@@ -1029,7 +1049,7 @@ Implementation last, and smaller than it looks. Grouped by the job it serves.
 | **No editor for `full_name` anywhere in the SPA.** The Sessions pencil edits `short_name`; `full_name` appears only as a hover tooltip when it differs | `SessionsTable.tsx:439`, `:192`; comment at `:9` | J6 |
 | **No role endpoint.** `SessionSpeaker.speaker_role` is mutable in the DB; nothing exposes it | `design-speaker-editing.md` § What exists today | J3 |
 | **No contextual-menu machinery at all.** Zero `onContextMenu` handlers in `frontend/src` | grep | all |
-| **No undo.** `NSUndoManager` used nowhere; the `undo-state` bridge channel is dead on both ends; `bridge.ts` hard-codes `canUndo: false` | `design-undo-catalog.md` § What exists today | all |
+| ~~**No undo.** `NSUndoManager` used nowhere; the `undo-state` bridge channel is dead on both ends; `bridge.ts` hard-codes `canUndo: false`~~ — the channel is live and speaker naming is on the stack (4 Oct 2026, §B10) | `design-undo-catalog.md` § What exists today | all |
 | **No recorded name origin**, so a confirmed guess and an unchecked guess are indistinguishable | `design-html-report.md` § Auto name/role extraction | J7 |
 | **No `cleared` state** — a deleted name is refilled by the next run | roadmap; `people.py` `auto_populate_names` | J7 |
 | **Anonymisation decides by code prefix**, not by person | `server/routes/export.py` `_anonymise_data` | J13 |
@@ -2608,9 +2628,9 @@ Three consequences for the build:
 - **`m` ↔ `o` and the relabel half of a `p` recode: the inverse is the same act.**
   The endpoint returns the slot's previous `(override, person, confirmed)`, so the
   client can put it back exactly — including the identity a re-pick would not
-  restore by itself. ⌘Z carries it when the undo store lands (`canUndo` is still
-  stubbed false in `shims/bridge.ts`, §B10); until then, picking the old kind is
-  the undo. Not gated on the undo store: the act is cheap and fully reversible.
+  restore by itself. ⌘Z can carry it: the undo store landed on 4 Oct 2026
+  (§B10) — push an entry whose undo replays that previous state. Not gated on
+  it: the act is cheap and fully reversible.
 - **Re-analysis is not undoable.** It spends, and curation on the session's quotes
   that do not come back at the same start timecode is lost (pinned quotes excepted,
   `_pinned_quote_ids` in `importer.py`). So it is its own act, behind a confirm

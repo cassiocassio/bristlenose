@@ -30,6 +30,13 @@ so the scope call can be made with the whole surface visible rather than half.
 
 ## What exists today (verified)
 
+> _4 Oct 2026: the report now has a stack. `contexts/UndoStore.ts` is one
+> page-scoped stack; `components/UndoSync.tsx` posts `undo-state` (so the
+> second fact below is no longer true) and takes ⌘Z in the browser; ⇧⌘Z redoes.
+> Its only client so far is speaker naming (`utils/speakerNames.ts`,
+> [`design-people.md`](design-people.md) §B10). The table below is the 28 Jul
+> survey, kept as written._
+
 | Context | ⌘Z owner | Depth | Durable? |
 |---|---|---|---|
 | Text field / contenteditable focused (`isEditing`) | WebKit's native text undo | WebKit's own | ❌ lost on blur/commit |

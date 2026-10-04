@@ -29,6 +29,19 @@ trued-against: HEAD on 2026-08-28
   `kaldi_native_fbank-1.22.3-cp314-…x86_64` and no sherpa; the spec's `License:` is the
   reduced set; and with `BN_EXTRAS="serve"` the script stops with *no
   kaldi_native_fbank-*-cp314-*.whl in the wheelhouse — the voice extra did not resolve*.
+  **Then end to end** on a throwaway Fedora 43 x86_64 `aella` box (`m7i-flex.large`), from
+  `74dc2255` with Fedora's own python3.14: SRPM 109 wheels / 229 MB; `mock -r
+  fedora-43-x86_64` offline **passed in 547 s**, `%check` printing `imports OK` and `voice
+  runtime: onnxruntime 1.30.0 and kaldi-native-fbank 1.22.3 load` after opening Silero
+  VAD's session; binary RPM 200 MB (`bristlenose-0.32.0-1.fc43.x86_64`, 212 MB with
+  sherpa); `dnf install` on the clean box pulled `ffmpeg-free` 7.1.5 and reported the
+  reduced `License:`; the installed tree has no sherpa file and 0 `espeak_` symbols
+  across 225 shared objects; `bristlenose doctor` reads `Voice pass  model cached (40 MB)`,
+  which since `2dc70a74` means the model loaded; and the voice pass on the 4-minute FOSSDA
+  cut judged 80/80 windows at centroid cosine 0.0842, the same as on macOS and in the snap.
+  The box was terminated and confirmed by `aws ec2 describe-instances`. (A first attempt
+  passed mock and failed at install on the run script's own RPM path; mock names it
+  `…-1.fc43.x86_64.rpm`.)
 - _2026-10-04_ — **the voice pass joins the RPM** (`voice` extra, sherpa-onnx), for
   parity with the CLI and the Mac app. Proven on a clean Fedora 43 x86_64 box from a
   local dist (PyPI's 0.32.0 has no `voice` extra, so the Copr channel carries it from

@@ -155,8 +155,9 @@ arm64 VM (Multipass, Python 3.12): a wheel built from the commit installed with
 `nm -D --defined-only` over all 208 shared objects in that install found **0**
 `espeak_` symbols, where sherpa's own extension in the same VM shows 50. The Snap
 and the Copr RPM carry one onnxruntime instead of two. As packages: the arm64 snap is
-re-proven (below); Copr is proven up to the SRPM, and **its `mock` build, a real Fedora
-run and an amd64 snap build stay owed** (`TODO.md`).
+re-proven (below), and the Copr RPM end to end on Fedora 43 x86_64 (offline `mock`,
+`dnf install`, 0 espeak, the voice pass on real audio 80/80; `design-fedora-packaging.md`
+changelog). **Only an amd64 snap build stays owed** (`TODO.md`).
 
 **Hardened after review (4 Oct 2026, a code review and a silent-failure hunt):**
 - **The model is loaded once, before any session** (`load_voice_model`, called after

@@ -86,10 +86,23 @@ class TestDashboardStats:
         data = client.get("/api/projects/1/dashboard").json()
         assert data["stats"]["total_duration_human"] == "1m"
 
-    def test_total_words(self, client: TestClient) -> None:
+    def test_total_words(self, app_fx, client: TestClient) -> None:
+        """Every word spoken in the study — counted from the transcript.
+
+        Asserted as a value: the old ``isinstance`` check passed for a total
+        that was always 0, because nothing wrote ``words_spoken`` and the
+        dashboard hid the card.
+        """
+        from bristlenose.server.models import TranscriptSegment
+
+        db = app_fx.state.db_factory()
+        try:
+            expected = sum(len(t.split()) for (t,) in db.query(TranscriptSegment.text))
+        finally:
+            db.close()
+        assert expected > 0, "fixture has no transcript words; this test asserts nothing"
         data = client.get("/api/projects/1/dashboard").json()
-        # Smoke-test fixture VTT doesn't populate words_spoken; just check type.
-        assert isinstance(data["stats"]["total_words"], int)
+        assert data["stats"]["total_words"] == expected
 
     def test_ai_tags_count(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/dashboard").json()

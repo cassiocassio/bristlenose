@@ -456,7 +456,15 @@ def get_dashboard(
 
         session_rows: list[DashboardSessionResponse] = []
         total_duration_s = 0.0
-        total_words = 0
+        # Every word spoken, counted from the transcript as it is now. The
+        # per-speaker words_spoken column is never written, so summing it
+        # gave 0 and the Words card never showed.
+        total_words = sum(
+            len(text.split())
+            for (text,) in db.query(TranscriptSegment.text).filter(
+                TranscriptSegment.session_id.in_([s.id for s in sessions]),
+            )
+        )
 
         for sess in sessions:
             total_duration_s += sess.duration_seconds
@@ -475,8 +483,6 @@ def get_dashboard(
                         role=sp.speaker_role,
                     )
                 )
-
-                total_words += sp.words_spoken
 
                 if sp.speaker_role == "researcher" and name:
                     if name not in all_moderator_names:

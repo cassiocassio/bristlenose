@@ -1,7 +1,7 @@
 ---
 status: shipped-beta
-last-trued: 2026-10-03
-trued-against: HEAD on 2026-10-03
+last-trued: 2026-10-04
+trued-against: HEAD@main on 2026-10-04
 ---
 
 <!-- 2026-10-03: shipped for beta on both channels — the stage on by default, the
@@ -9,6 +9,13 @@ trued-against: HEAD on 2026-10-03
      design intent; what was built, and how it departs from the plan, is in the
      banner of design-discussion-lens-plan.md. The 26 Jul note below ("the
      feature is unbuilt") is history. -->
+
+<!-- 2026-10-04 (/true-the-docs --topic discussion lens): sections describing the
+     July straw man that v1 did not build are marked so in place — the native
+     empty-state page, territory/stance parse, the data structures, the signal
+     bars and the IA — with their bodies kept as the design reasoning. Shipped
+     facts added: the guide tabs, the key, the no-guide mid dot, guide_file, the
+     routing rule, the decided open decisions, the mockups. -->
 
 <!-- Resurrected 2026-09-27. Phase A spike run for the first time, on real
      interviews; the design gained a RECONCILE step (the guide as planned ⋈ the
@@ -33,6 +40,9 @@ discussion guide and re-projects the extracted quotes onto it — organising
 findings by the researcher's **own domain model** instead of emergent themes.
 Sibling to the Quotes and Signals lenses; reuses the quotes-page card, editing,
 and sequence machinery wholesale.*
+
+*Status as of 4 Oct 2026: shipped for beta — see the banner above and the plan's
+banner. The paragraph below is the July status, kept as history.*
 
 Status: **straw man, consolidated 26 Jul 2026** after a long design conversation
 and a usual-suspects review; **resurrected 27 Sep 2026** with a spike run on
@@ -114,6 +124,13 @@ the web NavBar the desktop does not show.)* *(Note: the repo is
 AGPL, so the code stays visible even though the feature is packaged
 desktop-only — a distribution decision, not a code-visibility one.)*
 
+> **Not built (4 Oct 2026).** No native empty-state page and no drop target.
+> With no guide, the SPA's second tab, **Add your guide**, shows the upload copy
+> and a button: on the Mac it opens the native open panel (`DiscussionGuide.swift`,
+> `ContentView.chooseDiscussionGuide`), copies the file into the project's
+> "Discussion guide" folder and starts Analyse; in a browser it says where the
+> file goes. See the plan's §3 and §4.
+
 **Two surfaces, one seam.** The **no-guide empty state is a native SwiftUI page**
 — it reuses the Welcome page's pattern (`WelcomeHomeView` + `WelcomeIllustrations`)
 and drop target (`.dropDestination(for: URL.self)`) plus File ▸ Add Files…
@@ -154,6 +171,14 @@ Settled scope decisions:
   territory routing. v1 is intent/field-match only.
 
 ## Ingest + parse
+
+> **As built (v1):** the `bristlenose/discussion/` package (guide, moderator,
+> structure, stage, models). The guide is a file in a "Discussion guide" folder
+> beside the recordings — copied there by the Mac's open panel or put there by
+> hand; no drag-drop — and the record keeps only its file name (`guide_file`,
+> blanked in an anonymised export). Where this section and "Data structures"
+> say the guide is stored in `.bristlenose/`, read the folder above. No
+> territory or stance parse shipped; see the plan's §1.
 
 A late analysis stage under `bristlenose/stages/` (Pydantic; needs the stage
 cache/resume machinery). Runs **after quote extraction (s09)**; it routes
@@ -197,6 +222,11 @@ re-transcription. Steps:
    the view never recomputes clustering on render).
 
 ## Data structures (straw man)
+
+> **Not built in v1.** The shipped models are in `bristlenose/discussion/models.py`
+> — spine sections and items, turn labels, consolidation, routes and the
+> `DiscussionRecord` — with no stance clusters, response groups or evidence
+> strength. Kept as the July design.
 
 ```
 DiscussionGuide                 # one per project
@@ -242,6 +272,12 @@ ArgumentRun                     # the SORT ATOM (visual = reused seq-* left-rule
 ```
 
 ## The lens view / information architecture
+
+> **Superseded by what shipped (4 Oct 2026).** The navigator is `.toc` rows with
+> provenance marks and a key, beside a session column of questions and quotes
+> joined by wires; no signal bars, scaffold disclosure, response groups or inline
+> label editing, and no minimap. The plan's §3 is the as-built description. Kept
+> as the July design.
 
 Reuses the Quotes page almost entirely — `QuoteCard`, `QuoteGroup`, badges,
 editing, and the `seq-*` run treatment. What changes is the **navigation** (the
@@ -291,6 +327,8 @@ no tags · no inspector · body scroll. h1 scheme: each territory is a
 `.section-heading` zone; response-groups and runs are **not** headings.
 
 ## Evidence, not coverage
+
+> **Signal bars not built in v1.** The no-coverage-score principle holds.
 
 The guide is a thinking map, not a checklist — so **there is no coverage/
 completeness score.** A territory answered thinly isn't a gap; a prepared question
@@ -345,7 +383,10 @@ total; everything else grounds to an existing atom/organism.
 
 - **Parser + router fail loud, never open.** Three tab states: no guide → native
   empty state; guide added but parse degenerate → fail-loud "couldn't read your
-  guide" (never the empty state); parsed OK → the lens.
+  guide" (never the empty state); parsed OK → the lens. *As built:* the record's
+  status (`not_run`, `stale`, `ready`, `partial`, `failed`) each says what it
+  means; a guide that is there but unread carries `guide_problem` and says why;
+  with no guide the lens shows the questions asked and an **Add your guide** tab.
 - **A4 stage invariants** (`stages/CLAUDE.md`): `Cause.message` from structured
   fields only, never `str(exc)` (prompts echo transcript text →
   `pipeline-events.jsonl` is a re-id surface); abandon-check before
@@ -374,7 +415,9 @@ It is another lens over the same quotes; most of it exists already.
 ### Decided 3 Oct 2026 — v1 shows a record, never a new guide
 
 **The lens's left pane shows one of two things: the researcher's own guide
-(Planned), or the merged guide (Merged).** Nothing else. We are not in the
+(Planned), or the merged guide (Merged).** *On screen (4 Oct):* **Your guide**
+and **Normalised questions**; with no guide the second tab reads **Add your
+guide** and is where one is added. Nothing else. We are not in the
 discussion-guide-writing business; the job is to track the structure of the
 questions the researcher chose to ask in the moment, offer that structure as
 navigation, and connect it to the verbatim wording of what was asked, so
@@ -441,6 +484,11 @@ which is the whole "planned vs retconned" story at a glance:
 | ● | planned, and asked (in N sessions) |
 | ○ | planned, never asked — shown, dimmed; absence is information, not a failure |
 | + | asked, never planned — an ad-lib |
+| · (faint) | no guide uploaded: a normalised question, nothing said about planned or not (4 Oct) |
+
+The key sits at the top of the navigator, in its box, and lists only the marks
+the current view uses; its "not asked in this session" line is in the rows' own
+grey (4 Oct).
 
 Rules — the LLM proposes items with their `turns`; **code** decides structure,
 so it is repeatable:
@@ -482,6 +530,10 @@ are s1, where the moderator spoke 8 times and the participant ran
 the whole site task unprompted — the anchor was minutes stale and the semantic
 route right every time. Most of the rest sit at task boundaries (replace ↔ buy
 ↔ reflect), where participants keep talking about the step they just left.
+
+*Shipped rule (`structure.py` `decide_route`):* where anchor and topic agree,
+that; where they disagree, the topic wins only at confidence ≥ 0.75 or with no
+fresh anchor (240 s). The July rule, kept as reasoning:
 
 **Rule:** semantic decides the territory. The anchor corroborates only while
 fresh — within a few minutes and not across an s08 topic boundary. Agreement →
@@ -612,9 +664,11 @@ measurable. Two tracks:
    existing call budget) vs embeddings (near-free at runtime, but net-new infra).
    *Rec: batched for v1; embeddings a v2 cost win.* **Spike ran batched (27 Sep):
    ≈ $0.18 for reconcile + route of 101 quotes.** Nothing measured argues for
-   embeddings in v1; ready to take.
+   embeddings in v1; ready to take. **Decided: batched, built in
+   `bristlenose/discussion/` (3 Oct).**
 2. **Fresh router vs parameterise `s11`** (which already routes quotes to buckets
-   with cross-session voting). *Rec: fresh router for v1 — decoupled.*
+   with cross-session voting). *Rec: fresh router for v1 — decoupled.* **Decided:
+   fresh router.**
 3. **Spike corpus** — a real project with a guide + transcripts (ideal), or
    synthesize one (pair transcripts with a plausible guide). Run privately.
    **Answered 27 Sep:** the real one exists (the private trial project + the IKEA
@@ -624,6 +678,10 @@ measurable. Two tracks:
    spike.
 
 ## Sequencing
+
+*4 Oct 2026: Phases A and B shipped (the plan's §7); the native empty-state page
+did not, and per-territory stance clustering, signal bars and embeddings are not
+built.*
 
 - **Phase A — routing spike (backend, no UI).** On one real project: parse guide →
   route existing quotes to territories (chosen mechanism, intent/field-only) →
@@ -638,6 +696,9 @@ measurable. Two tracks:
 
 ## Proof
 
+- **As built**, mocked first: `docs/mockups/discussion-lens-layout.html` (what
+  gives way as the window narrows) and `docs/mockups/discussion-guide-tabs.html`
+  (the tabs and the guide column with and without a guide).
 - **UX** is mockup-proven: `docs/mockups/mockup-discussion-lens.html` (the lens,
   incl. a deliberately dense territory, signal bars, run brackets, accurate
   PersonBadge/timecode/sentiment markup, native-empty-state toggle).

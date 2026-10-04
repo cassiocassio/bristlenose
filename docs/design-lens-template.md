@@ -221,7 +221,11 @@ column, and a sticky bar of lens controls sits above the content in the app
 where the house pattern moves such controls into native chrome. Resolving it
 means hosting the navigator in `SidebarLayout` with a per-lens maximum
 (`SidebarStore`), and moving Planned | Merged and the session picker into the
-native toolbar on the Mac — plan §3, §9.
+native toolbar on the Mac — plan §3, §9. *4 Oct 2026:* the navigator stays the lens's own
+column, but is now shown, hidden and fitted like the shared panel (its own
+remembered setting, the toolbar button, ⌥⌘L, `[`; the browser rail column now
+holds its button), and the Normalised questions | Your guide tabs moved into the
+navigator's own head rather than the native toolbar — plan §3, §4.
 
 **Superseded 26 Sep 2026 — there is no `scroll: pane` variant.** Signals
 scrolls the body like every other lens; the inspector is `position: sticky;

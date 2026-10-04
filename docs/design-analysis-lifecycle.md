@@ -287,7 +287,8 @@ Where each verb can be reached, and what gates it.
 |---|---|---|---|
 | **Analyse** | sidebar context menu, Project menu | folder-shaped, has path, not running, **and there is work to do** | Shipped (`8975254a`, `1c5bebfa`) |
 | **Analyse** (auto) | after a cloud-import batch lands | folder-shaped project | Shipped (`1490dcde`) |
-| **Analyse** (discussion) | sidebar context menu | analysed, and the discussion record is missing or older than the guide folder | Shipped 4 Oct 2026 — resumes; only the discussion stage runs |
+| **Analyse** (discussion) | sidebar context menu, Project menu | analysed, and the discussion record is missing or older than the guide folder | Shipped 4 Oct 2026 — resumes; only the discussion stage runs |
+| **Add your guide…** / the guide's file name (Discussion lens, Mac) | the lens's guide tab | always; starts Analyse only when the pipeline is free | Shipped 4 Oct 2026 — native open panel, copies the guide into the project, then Analyse (resumes); the tab says "Reading your guide…" until the run ends |
 | **Analyse** | the project detail pane | never run **and** files present | Shipped (§6.3) |
 | **Analyse** | the files popover | the popover is open **and** `analyseIsOffered` | Shipped 27 Aug (§6.2 amendment) — was the sheet |
 | **File ▸ Add Files…** | File menu | a project is selected | Shipped |

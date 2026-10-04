@@ -1,7 +1,7 @@
 ---
 status: shipped-beta
-last-trued: 2026-10-03
-trued-against: HEAD on 2026-10-03
+last-trued: 2026-10-04
+trued-against: HEAD@main on 2026-10-04
 ---
 
 # Discussion lens — implementation plan
@@ -18,12 +18,18 @@ trued-against: HEAD on 2026-10-03
 > browser the lens tells the researcher where the guide goes (a folder named
 > “Discussion guide” beside the recordings), and on the Mac “Add your guide…”
 > opens a native open panel that copies the file there and starts Analyse
-> (4 Oct; no drop target). **On the Mac, Analyse builds a
+> (4 Oct; no drop target) — the guide's file name in "Your guide" is a link that
+> does the same to choose a different one, and the tab says "Reading your
+> guide…" while the run reads it. The guide is a left panel shown and hidden like
+> the other lenses' (toolbar button, ⌥⌘L, `[`, a browser rail), with its own
+> remembered setting, starting open (§3, §4). **On the Mac, Analyse builds a
 > missing discussion** (4 Oct): it appears for an analysed project with no record,
 > or whose guide changed since, and resumes — so only this stage runs and edits
 > are kept; Re-analyse, which starts over, is never suggested. **Still owed:**
-> scoring on the real gold-labelled sessions; overrides and their tables;
-> cohort baselines for the cost forecast. §7 has the detail.
+> scoring on the real gold-labelled sessions (the stage shipped on by default
+> before it — §7.1); overrides and their tables; cohort baselines for the cost
+> forecast; a guide-language steer (§1.3); a fail-closed anonymiser gate (§7.3);
+> the CHANGELOG entry. §7 has the detail.
 
 *How the Discussion lens becomes a first-class part of the Bristlenose
 architecture rather than a spike. Companion to
@@ -97,6 +103,9 @@ lesson: the same guide drew 4, 6 and 5 sections across three runs):
    asked before the quote, fresh within 240 s; code) with the topic (batched
    LLM) as corroboration. The spike measured anchor alone at 0.97 against 0.94
    when a confident topic may override it — see §9.F before choosing the rule.
+   *Chosen:* where anchor and topic agree, that; where they disagree, the topic
+   wins only at confidence ≥ 0.75 or with no fresh anchor (`structure.py`
+   `decide_route`).
 
 **Input is the in-memory redacted transcripts**, moderator turns selected by
 `seg.speaker_role == RESEARCHER`, after s07. Never `session_segments.json`
@@ -137,7 +146,8 @@ transparency copy.
   (`system_prompt=_tmpl.system + output_language_steer()`, as `s08:166`), and the
   stage joins `tests/test_output_language.py:24` `STAGES` (**SILENT**). With a
   guide, labels should follow the *guide's* language (design doc, open decision
-  6) — the steer needs a guide-language override.
+  6) — the steer needs a guide-language override. *Not built:* the stage uses the
+  UI-language steer throughout; owed (banner).
 
 ### 1.4 Registration — the four stage vocabularies, and the rest
 
@@ -323,17 +333,33 @@ overrides keyed on durable ids, never on labels.
   (`templates/report.css:106-109`) or it renders 40px low; add a row to
   `e2e/tests/lens-datum.spec.ts:51-56`. h1 per content zone
   (`design-lens-template.md:229-262`); add a variants-table row.
-- **Navigator**: modelled on `components/SignalsSidebar.tsx`, in the shared left
-  panel (`SidebarLayout.tsx:123-135`, width from `SidebarStore.ts:26-41`). Rows
+- **Navigator**: modelled on `components/SignalsSidebar.tsx`. *As built:* its own
+  column inside the page, not the shared left panel — its width is remembered
+  apart (`lensState.ts`, `bn-discussion-nav-width`) and so is whether it is open
+  (`guidePanel.ts`, `bn-discussion-guide-open`, starting open); it is toggled and
+  fitted like the shared panel (§4, 4 Oct). *Planned:* the shared left panel
+  (`SidebarLayout.tsx:123-135`, width from `SidebarStore.ts:26-41`). Rows
   use `.toc-heading` / `.toc-link` — the Quotes TOC style, chosen over the Signals
-  rows on 3 Oct 2026. In Planned every row carries the solid "planned" dot, so the
-  mark explains itself before the researcher switches to Merged.
+  rows on 3 Oct 2026. In Your guide every row carries the solid "planned" dot, so the
+  mark explains itself before the researcher switches to Normalised questions.
+- **The key — 4 Oct 2026.** At the top of the navigator, so it scrolls away, in
+  the Settings ▸ Pipeline key's box (`bn-pipeline-key`). It lists only the marks
+  the current view uses; its text is the normal ink, and its "Grey: not asked in
+  this session" line is the rows' own grey, so the line shows what it explains.
+- **No guide uploaded — 4 Oct 2026.** Nothing can be said about planned or
+  off-guide (there almost certainly was a guide; it just is not here), so each
+  normalised question carries a faint mid dot instead of a mark, the key keeps
+  only its grey line, and screen readers hear no "not in your guide".
 - **Sticky header — decided 3 Oct 2026.** The two views are named **Normalised
   questions | Your guide** (in that order — the first is the one the lens opens
   on; renamed from Merged | Planned the same day), in the shipped
   `.dimension-toggle` (the Signals inspector's Section | Theme) at its natural
   width. Your guide carries two small native radios, **Summary | Original**: the
-  guide's short labels, or its own wording. Each session is the shipped `PersonBadge` with `#N` as its code and the
+  guide's short labels, or its own wording. *4 Oct:* both tabs are always there;
+  with no guide the second reads **Add your guide** (below), and with one whose
+  record carries `guide_file` the second radio is the guide's file name, shortened
+  Finder-style, as a link that chooses a different guide (records from before
+  keep "Original" and a "Replace your guide…" button). Each session is the shipped `PersonBadge` with `#N` as its code and the
   participant names as its name half — no session-badge styling of our own, and
   no duration (that stays in the line under the session heading). Names cap at
   two: `Sarah and Mike`, else `Bettina and 4 others` — one new counted string with
@@ -372,8 +398,15 @@ overrides keyed on durable ids, never on labels.
 - **Keyboard — SILENT**: every quote key returns early unless the path is
   `/report/quotes` (`useKeyboardShortcuts.ts:575`), and so does the menu-action
   mirror (`:73`, `:693-698`). Extend both, plus the `[` (`:477-495`) and `z`
-  (`:533-551`, must match `focus-mode.css`) lens lists.
-- **Responsive — decided 3 Oct 2026**: under the narrow breakpoint, **the session
+  (`:533-551`, must match `focus-mode.css`) lens lists. *4 Oct:* `[` toggles the
+  guide on this lens (`guidePanel.ts`); `z` (Focus Mode) does not include it
+  (`MenuCommands.swift` `focusModeTabs`) — not decided.
+- **Responsive — superseded 4 Oct 2026.** No breakpoint: the shared `fitPanels`
+  rule decides. The guide narrows to 200 px, then folds when the conversation
+  would fall under its 368 px floor (`CONTENT_FLOOR_PX`); one opened by hand never
+  folds for you; on the Mac the projects column folds first (mockup
+  `docs/mockups/discussion-lens-layout.html`). *The 3 Oct decision it replaced:*
+  under the narrow breakpoint, **the session
   column only** — the questions in the order they were asked, with their answers.
   The navigator, the wires and the Planned/Merged switch drop away; the session
   badges stay. (This reverses the earlier "Merged only": the transcript is the
@@ -391,16 +424,20 @@ overrides keyed on durable ids, never on labels.
   left-panel width across lenses with fixed 200–480px bounds (`useDragResize`
   `MIN_WIDTH`/`MAX_WIDTH`, `SidebarStore.ts`), so this needs a per-lens maximum
   there — and a decision on whether the Discussion width is remembered separately
-  from the other lenses'.
+  from the other lenses'. *Settled:* 60% of the lens (`NAV_MAX_SHARE`), remembered
+  separately.
 - **Unanswered questions fold forward.** Consecutive questions that drew no quotes
   join the next question that did, as one group (questions, then its quotes);
   groups are separated by the keyline, and the moderator's turn renders as a
   transparent `blockquote.quote-card` so its timecode and text columns align with
   the participants' by construction.
-- **Empty state, no guide**: drop target + **Add a discussion guide**. In the
-  browser this needs an upload route (there is none today — import is native);
-  on the Mac it is the native path below. CLI users can place the file in the
-  reserved location by hand.
+- **Empty state, no guide — as built 4 Oct 2026**: the second tab, **Add your
+  guide**, shows only "Upload your discussion guide", a line on what it gives you,
+  "Word, Markdown or plain text." and **Add your guide…** — the native panel on
+  the Mac (§4), where it is to be put in a browser (no upload route; CLI users
+  place the file by hand). No drop target. Mockup:
+  `docs/mockups/discussion-guide-tabs.html`. *Planned:* drop target + **Add a
+  discussion guide**.
 
 ## 4. The macOS app
 
@@ -434,7 +471,8 @@ overrides keyed on durable ids, never on labels.
   formats are pinned against the pipeline's by
   `tests/test_discussion_guide_parity.py`.
 - **Built 3 Oct 2026 as a preview, then shipped the same day**: `Tab.discussion`
-  (route `/report/discussion/`, no shared left panel, restores to the top), the
+  (route `/report/discussion/`, restores to the top; no shared left panel at
+  first — it has the panel toggle since 4 Oct, below), the
   rail row last (⌘6, `questionmark.bubble`). It was first behind a
   `BristlenoseFlags.discussionLens` flag with a Diagnostics toggle; both were
   deleted when it shipped for beta, so no leftover default can hide it.
@@ -449,10 +487,11 @@ overrides keyed on durable ids, never on labels.
   projects column folds first. It is the first lens to remember its own
   open/closed setting (`islands/discussion/guidePanel.ts`), starting open: the
   guide and the quotes are a pair, and hiding Contents on Quotes should not hide
-  it. The As planned / As asked tabs sit in the guide's own head, which carries
+  it. The Normalised questions / Your guide tabs sit in the guide's own head, which carries
   its grey and keyline up through the sticky bar. Mockup:
   `docs/mockups/discussion-lens-layout.html`.
-- **Parking while it is built**: `Tab` case always present; the rail row appended
+- **Parking while it is built** *(historical: the flag was deleted at ship, and
+  the `FeatureFlags` enum below was never built)*: `Tab` case always present; the rail row appended
   behind a flag. `design-feature-flags.md:290-295` recommends an
   `enum FeatureFlags { static var … }`, defaulting off in every configuration —
   never built; build it here. `LensItemTests` assert both states.
@@ -466,6 +505,10 @@ overrides keyed on durable ids, never on labels.
   `desktop.menu.view.showDiscussion` / `.hideDiscussion` (built at runtime by
   `PanelToggle.labelKey`, `SidebarVisibilityFocus.swift:133`); `titlebar.discussion_one/_other`;
   the stage verb; every lens string; aria labels; a `glossary.csv` row.
+  *As built:* `desktop.toolbar.discussionGuide` / `.showDiscussionGuide` and
+  `desktop.menu.view.showDiscussionGuide` / `.hideDiscussionGuide`, each on the
+  language's own word for the guide (`discussion.navigator`, e.g. ja
+  インタビューガイド). Not built: the titlebar keys and the `glossary.csv` row.
 - 21 full locales; `check-locales.py --strict`, `--stamp` for the new English
   values. **SILENT**: the Swift keys are built at runtime, so
   `test_swift_i18n_keys_resolve.py` skips them and a missing key falls back to
@@ -517,6 +560,9 @@ until Phase 5.
    **Status 3 Oct 2026: built in `experiments/discussion-lens/`; all four exit
    criteria pass on a synthetic answer key (README there). Scoring on the real,
    gold-labelled sessions is still owed — the gate stays closed until it passes.**
+   *4 Oct:* the stage shipped on by default for beta without passing this exit,
+   by decision (3 Oct: beta feedback on the lens was worth more than the wait);
+   the scoring is still owed.
 2. **Pipeline stage, off by default** — models, productionised prompts, stage
    module, the four vocabularies and the rest of §1.4, journal, cache keys, the
    ingest guard. Exit: the stage runs on the real three-session corpus, scores
@@ -575,7 +621,7 @@ until Phase 5.
      (kept in English there — the code matches it literally). Renaming it is now
      a 22-file change.
    - Owed: the run on the real gold-labelled corpus. The exit is not met until it
-     passes.
+     passes — and the stage shipped on by default anyway (§7.1, 4 Oct).
 3. **Data and serve** — tables, migration, importer, API, status field,
    overrides, export classification and anonymisation. Exit: a re-run preserves
    overrides; a dropped quote re-imports cleanly.
@@ -585,7 +631,10 @@ until Phase 5.
    by text (24 of 308 collided on one project, and hiding one hid both), and a
    quote the report does not hold is left out and counted (42 of 284 on another),
    so the lens never shows a quote Quotes cannot hide. An anonymised export drops
-   a guide section nobody asked about, title and all. `routes/discussion.py` reads the record
+   a guide section nobody asked about, title and all, and blanks the guide's file
+   name (`guide_file`, 4 Oct — a file name can name the client). Owed: the
+   fail-closed gate of §9.C, so a new record field is blanked unless declared
+   safe; today each field is handled by hand. `routes/discussion.py` reads the record
    file and returns `{status, record}` — not_run, stale (built from other quotes,
    checked against `extracted_quotes.json`), ready, partial, failed. A hidden quote
    is left out and an edited one shows its edit, joined to `Quote` rows on
@@ -614,7 +663,9 @@ until Phase 5.
    design doc trued, a public mockup with synthetic data in `docs/mockups/`,
    CHANGELOG under **New** (a minor bump).
    **Status 3 Oct 2026: i18n, NavBar, export embed and flags done; the public
-   mockup and the CHANGELOG entry are left to the release.**
+   mockup and the CHANGELOG entry are left to the release.** *4 Oct:* public
+   mockups done (`discussion-lens-layout.html`, `discussion-guide-tabs.html`,
+   synthetic data); the CHANGELOG entry is still owed.
 
 ## 8. Reuse, not reinvention
 
@@ -720,9 +771,12 @@ The highest risk, found by two reviews independently.
 - The Mac folder watcher looks at the top level only (`ProjectFolderWatcher`
   `filterEligible` `:343-353`), so a guide replaced by hand in Finder is never
   noticed — decision 0.3's "replaceable by hand" has no trigger on the Mac.
+  *Resolved 4 Oct:* `ProjectFolderWatcher.discussionWanted` compares the guide
+  folder's dates with the record's, and the sidebar offers Analyse.
 - `bristlenose analyze` (`cli.py:1487`) gets a transcripts folder, not the
   project, so it cannot find the guide; it also re-parses `.txt`, so §1.1's
-  "never re-parse" cannot hold there.
+  "never re-parse" cannot hold there. *The guide half resolved 3 Oct:*
+  `guide.guide_home` looks beside the output, its parent and the transcripts.
 - Untimed `.docx` transcripts (`s04_parse_docx.py:355`) give no moderator turns
   and a meaningless anchor: a per-session "no timing" state. A guide in a cloud
   folder may be dataless (`utils/fs.py:108`).
@@ -761,7 +815,9 @@ lens uses its own column so it can reach 60%; on 4 Oct it joined the shared
 toggle and fitting rule while keeping that column, §4), quote cards with actions (they
 arrive with `QuoteGroup` once quotes have store ids), the macOS `Tab`, locale
 keys (English until Phase 6), and the screen-reader announcement for this route
-(falls through to "Project", as Specimen does).
+(falls through to "Project", as Specimen does). *Since settled:* the macOS
+`Tab`, 21 locales, and the announcement (`nav.discussion`); quote cards with
+actions are still owed.
 
 **Reviewed the same day** (code, accessibility, design system) and fixed: kept
 out of exported reports by an alias stub (the export inlines every dynamic

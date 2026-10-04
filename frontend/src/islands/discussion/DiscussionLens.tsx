@@ -9,8 +9,9 @@
  *
  * Interaction (decided 3 Oct 2026): focus is sticky and click-driven — a
  * navigator row or a question locks focus until clicked again or Esc; nothing
- * reacts to the pointer passing over. Planned | Merged switches the navigator
- * (Merged only when there is no guide). Narrow windows keep the session column.
+ * reacts to the pointer passing over. Normalised questions | Your guide switches
+ * the navigator; with no guide the second tab is "Add your guide". The guide is a
+ * left panel fitted by the shared rule (guidePanel.ts), not cut at a breakpoint.
  * Focus is shown by the shipped active and selection styles, never by dimming
  * the rest: opacity drops readable text below AA (review, 3 Oct 2026).
  */
@@ -739,7 +740,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
         )}
         {shownSections.length > 0 && (
           // The key first, so it scrolls away (4 Oct 2026). Only the marks this
-          // view uses: with no guide that is "+" alone. The classes are the
+          // view uses: with no guide uploaded, none, so only the grey line. The classes are the
           // Settings ▸ Pipeline symbol key's; the marks are the rows' own.
           <div className="bn-pipeline-key dl-key" role="note" aria-label={S.key}>
             {keyMarks.size > 0 && (
